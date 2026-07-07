@@ -967,3 +967,11 @@ def test_resolve_cubo_projection_rows_categoria_componente_sub_and_custo_total_b
     )
     total = sum(r["valor_rs"] for r in rows)
     assert total == 0.0
+
+
+def test_category_shares_from_totals_empty_dict_returns_uniform_shares():
+    """Line 375->376: by_cat_total vazio -> retorna partes uniformes (1/len(categories))."""
+    from concilium.application.services.analytics.cube_projection_views import _category_shares_from_totals
+
+    result = _category_shares_from_totals({}, ("mao_obra", "equipamento"))
+    assert result == {"mao_obra": 0.5, "equipamento": 0.5}

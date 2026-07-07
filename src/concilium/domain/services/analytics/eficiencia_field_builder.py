@@ -23,6 +23,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+def _weighted_sum(weights: list[float], values: list[float]) -> float:
+    """Σ weights[i] * values[i] — colapsa a soma ponderada em uma única chamada."""
+    return sum(a * v for a, v in zip(weights, values, strict=True))
+
+
 @dataclass
 class CampoEficiencia:
     """Campo de eficiência materializado do canônico — fase de planejamento.
@@ -75,6 +80,22 @@ class CampoEficiencia:
 
     # ── Nível 2: decomposição causal global ───────────────────────────────────
 
+    def _dc_collect_for_item(self, item_id: str) -> tuple[list[float], list[float], list[float], list[float]]:
+        """Coleta (q_max, eta_clima, delta, eta_plan) das células válidas (qm > 0) de um item."""
+        q_max_list: list[float] = []
+        clima_list: list[float] = []
+        delta_list: list[float] = []
+        plan_list: list[float] = []
+        for sem in self.Eta_plan.get(item_id) or {}:
+            qm = (self.Q_max.get(item_id) or {}).get(sem, 0.0)
+            if qm <= 0:
+                continue
+            q_max_list.append(qm)
+            clima_list.append((self.Eta_clima.get(item_id) or {}).get(sem, 1.0))
+            delta_list.append((self.Delta.get(item_id) or {}).get(sem, 1.0))
+            plan_list.append((self.Eta_plan.get(item_id) or {}).get(sem, 1.0))
+        return q_max_list, clima_list, delta_list, plan_list
+
     def decomposicao_causal(self) -> dict[str, float]:
         """Contribuição ponderada de η_clima e δ para η_plan global.
 
@@ -86,23 +107,20 @@ class CampoEficiencia:
         plan_list: list[float] = []
 
         for item_id in self.atividades:
-            for sem in self.Eta_plan.get(item_id) or {}:
-                qm = (self.Q_max.get(item_id) or {}).get(sem, 0.0)
-                if qm <= 0:
-                    continue
-                q_max_list.append(qm)
-                clima_list.append((self.Eta_clima.get(item_id) or {}).get(sem, 1.0))
-                delta_list.append((self.Delta.get(item_id) or {}).get(sem, 1.0))
-                plan_list.append((self.Eta_plan.get(item_id) or {}).get(sem, 1.0))
+            qm_item, clima_item, delta_item, plan_item = self._dc_collect_for_item(item_id)
+            q_max_list += qm_item
+            clima_list += clima_item
+            delta_list += delta_item
+            plan_list += plan_item
 
         if not q_max_list:
             return {"eta_clima_global": 1.0, "delta_global": 1.0, "eta_plan_global": 1.0}
 
         Q_total = sum(q_max_list)
         alpha = [qm / Q_total for qm in q_max_list]
-        eta_clima_g = sum(a * e for a, e in zip(alpha, clima_list, strict=True))
-        delta_g = sum(a * d for a, d in zip(alpha, delta_list, strict=True))
-        eta_plan_g = sum(a * e for a, e in zip(alpha, plan_list, strict=True))
+        eta_clima_g = _weighted_sum(alpha, clima_list)
+        delta_g = _weighted_sum(alpha, delta_list)
+        eta_plan_g = _weighted_sum(alpha, plan_list)
         return {
             "eta_clima_global": round(eta_clima_g, 4),
             "delta_global": round(delta_g, 4),

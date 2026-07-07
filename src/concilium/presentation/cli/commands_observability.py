@@ -89,6 +89,39 @@ def show_status() -> None:
     rprint(table)
 
 
+def _render_sli_diario_table(sli: list) -> None:
+    if not sli:
+        rprint("[dim]SLI: sem dados de traces no Silver.[/dim]")
+        return
+    t = Table(title="SLI Diário (duration_ms)", show_header=True)
+    for col in ("date", "skill_id", "p50_ms", "p95_ms", "p99_ms", "n_spans"):
+        t.add_column(col)
+    for row in sli:
+        t.add_row(*[str(row.get(c, "")) for c in ("date", "skill_id", "p50_ms", "p95_ms", "p99_ms", "n_spans")])
+    rprint(t)
+
+
+def _render_fallback_rate_table(rates: list) -> None:
+    if not rates:
+        rprint("[dim]Fallback rate: sem dados de logs no Silver.[/dim]")
+        return
+    t = Table(title="Fallback Rate por Skill", show_header=True)
+    for col in ("date", "skill_id", "n_fallbacks", "n_total", "fallback_rate"):
+        t.add_column(col)
+    for row in rates:
+        t.add_row(*[str(row.get(c, "")) for c in ("date", "skill_id", "n_fallbacks", "n_total", "fallback_rate")])
+    rprint(t)
+
+
+def _render_alertas_ativos(alertas: list) -> None:
+    if not alertas:
+        rprint("\n[green]✓ Nenhum alerta ativo[/green]")
+        return
+    rprint(f"\n[bold red]⚠ {len(alertas)} alerta(s) ativo(s)[/bold red]")
+    for a in alertas:
+        rprint(f"  [red]• {a['tipo']}[/red] skill={a.get('skill_id')} date={a.get('date')}")
+
+
 @observability_app.command("report")
 def show_report() -> None:
     """Exibe tabelas Gold no terminal (SLIs, fallback rates, alertas)."""
@@ -97,38 +130,9 @@ def show_report() -> None:
     storage = _get_storage()
     agg = GoldAggregator(storage)
 
-    # SLIs
-    sli = agg.build_sli_diario()
-    if sli:
-        t = Table(title="SLI Diário (duration_ms)", show_header=True)
-        for col in ("date", "skill_id", "p50_ms", "p95_ms", "p99_ms", "n_spans"):
-            t.add_column(col)
-        for row in sli:
-            t.add_row(*[str(row.get(c, "")) for c in ("date", "skill_id", "p50_ms", "p95_ms", "p99_ms", "n_spans")])
-        rprint(t)
-    else:
-        rprint("[dim]SLI: sem dados de traces no Silver.[/dim]")
-
-    # Fallback rates
-    rates = agg.build_fallback_rate_por_skill()
-    if rates:
-        t = Table(title="Fallback Rate por Skill", show_header=True)
-        for col in ("date", "skill_id", "n_fallbacks", "n_total", "fallback_rate"):
-            t.add_column(col)
-        for row in rates:
-            t.add_row(*[str(row.get(c, "")) for c in ("date", "skill_id", "n_fallbacks", "n_total", "fallback_rate")])
-        rprint(t)
-    else:
-        rprint("[dim]Fallback rate: sem dados de logs no Silver.[/dim]")
-
-    # Alertas
-    alertas = agg.build_alertas_ativos()
-    if alertas:
-        rprint(f"\n[bold red]⚠ {len(alertas)} alerta(s) ativo(s)[/bold red]")
-        for a in alertas:
-            rprint(f"  [red]• {a['tipo']}[/red] skill={a.get('skill_id')} date={a.get('date')}")
-    else:
-        rprint("\n[green]✓ Nenhum alerta ativo[/green]")
+    _render_sli_diario_table(agg.build_sli_diario())
+    _render_fallback_rate_table(agg.build_fallback_rate_por_skill())
+    _render_alertas_ativos(agg.build_alertas_ativos())
 
 
 @observability_app.command("cycle")

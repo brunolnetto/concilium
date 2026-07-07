@@ -102,6 +102,53 @@ class CureReport:
 # ── 1. Erros físicos ─────────────────────────────────────────────────────────
 
 
+def _cure_encargos_alpha(ins: dict, cod: str, attrs: dict, report: CureReport, apply: bool) -> None:
+    """a) percentual_encargos_local armazenado como α (> 1.5) em vez de α-1."""
+    enc = attrs.get("percentual_encargos_local")
+    if enc is None:
+        return
+    try:
+        enc_f = float(enc)
+        if enc_f > ALPHA_MAX:
+            correto = enc_f - 1.0
+            report.add_fixed(
+                f"INSUMO {cod}: percentual_encargos_local {enc_f} → {correto:.3f} "
+                f"(era α armazenado como enc_local; corrigido para α-1)"
+            )
+            if apply:
+                attrs["percentual_encargos_local"] = round(correto, 4)
+                ins["atributos_especificos"] = attrs
+    except (TypeError, ValueError):
+        pass
+
+
+def _cure_preco_minimo(ins: dict, cod: str, report: CureReport, apply: bool) -> None:
+    """b) preco_unitario abaixo do mínimo mensal (ignora estagiários)."""
+    preco = float(ins.get("preco_unitario") or 0)
+    hm = _horas_mes(ins)
+    preco_h = preco / hm if hm > 0 else 0
+
+    if _is_estagiario(ins) or not (0 < preco_h < (SALARIO_MINIMO_MENSAL / HORAS_MES_PADRAO) * 0.95):
+        return
+
+    # Tenta correção via referência RFI
+    ref = RFI_PRECO_REFERENCIA.get(cod)
+    if ref:
+        report.add_fixed(
+            f"INSUMO {cod}: preco_unitario {preco} → {ref} "
+            f"(referência RFI; preco_h={preco_h:.2f}/h era abaixo do mínimo)"
+        )
+        if apply:
+            ins["preco_unitario"] = ref
+            ins["_cure_preco_at"] = _now_iso()
+    else:
+        report.add_manual(
+            f"INSUMO {cod}: preco_unitario {preco} R$/mês → R${preco_h:.2f}/h "
+            f"abaixo do mínimo legal (R${SALARIO_MINIMO_MENSAL / HORAS_MES_PADRAO:.2f}/h) — "
+            f"sem referência RFI para correção automática"
+        )
+
+
 def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> list[dict]:
     changed = [dict(i) for i in insumos]
 
@@ -112,46 +159,8 @@ def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> 
             continue
 
         attrs = ins.get("atributos_especificos") or {}
-
-        # a) percentual_encargos_local armazenado como α (> 1.5) em vez de α-1
-        enc = attrs.get("percentual_encargos_local")
-        if enc is not None:
-            try:
-                enc_f = float(enc)
-                if enc_f > ALPHA_MAX:
-                    correto = enc_f - 1.0
-                    report.add_fixed(
-                        f"INSUMO {cod}: percentual_encargos_local {enc_f} → {correto:.3f} "
-                        f"(era α armazenado como enc_local; corrigido para α-1)"
-                    )
-                    if apply:
-                        attrs["percentual_encargos_local"] = round(correto, 4)
-                        ins["atributos_especificos"] = attrs
-            except (TypeError, ValueError):
-                pass
-
-        # b) preco_unitario abaixo do mínimo mensal (ignora estagiários)
-        preco = float(ins.get("preco_unitario") or 0)
-        hm = _horas_mes(ins)
-        preco_h = preco / hm if hm > 0 else 0
-
-        if not _is_estagiario(ins) and 0 < preco_h < (SALARIO_MINIMO_MENSAL / HORAS_MES_PADRAO) * 0.95:
-            # Tenta correção via referência RFI
-            ref = RFI_PRECO_REFERENCIA.get(cod)
-            if ref:
-                report.add_fixed(
-                    f"INSUMO {cod}: preco_unitario {preco} → {ref} "
-                    f"(referência RFI; preco_h={preco_h:.2f}/h era abaixo do mínimo)"
-                )
-                if apply:
-                    ins["preco_unitario"] = ref
-                    ins["_cure_preco_at"] = _now_iso()
-            else:
-                report.add_manual(
-                    f"INSUMO {cod}: preco_unitario {preco} R$/mês → R${preco_h:.2f}/h "
-                    f"abaixo do mínimo legal (R${SALARIO_MINIMO_MENSAL / HORAS_MES_PADRAO:.2f}/h) — "
-                    f"sem referência RFI para correção automática"
-                )
+        _cure_encargos_alpha(ins, cod, attrs, report, apply)
+        _cure_preco_minimo(ins, cod, report, apply)
 
     return changed if apply else insumos
 
@@ -180,6 +189,87 @@ def _build_dup_map(insumos: list[dict]) -> dict[str, str]:
     return dup_map
 
 
+def _add_referencias_externas(
+    dup_map: dict[str, str], ins_by_code: dict[str, dict], report: CureReport, apply: bool
+) -> None:
+    """Adiciona codigo_referencia_externa ao canônico para cada P#### duplicado."""
+    for p_code, canonical in dup_map.items():
+        # `canonical` sempre vem de _build_dup_map, que o extrai de `insumos`
+        # (o mesmo iterável usado para montar ins_by_code acima), logo é
+        # sempre uma chave presente — sem necessidade de guard defensivo.
+        canon_ins = ins_by_code[canonical]
+        ext = canon_ins.get("codigo_referencia_externa") or ""
+        existing = [x.strip() for x in ext.split(",") if x.strip()] if ext else []
+        if p_code not in existing:
+            existing.append(p_code)
+            report.add_fixed(f"  {canonical}: codigo_referencia_externa += '{p_code}'")
+            if apply:
+                canon_ins["codigo_referencia_externa"] = ", ".join(existing)
+
+
+def _remove_duplicated_insumos(
+    dup_map: dict[str, str], ins_by_code: dict[str, dict], report: CureReport, apply: bool
+) -> list[dict]:
+    """Remove P#### do índice (ou apenas reporta em dry-run)."""
+    if apply:
+        codigos_para_remover = set(dup_map.keys())
+        new_insumos = [i for i in ins_by_code.values() if i["codigo"] not in codigos_para_remover]
+        report.add_fixed(f"  Removidos {len(codigos_para_remover)} insumos duplicados")
+        return new_insumos
+
+    for p_code, canonical in list(dup_map.items())[:5]:
+        report.add_fixed(f"  {p_code} → {canonical} (seria removido)")
+    if len(dup_map) > 5:
+        report.add_fixed(f"  ... e mais {len(dup_map) - 5} remoções")
+    return []
+
+
+def _update_producao_funcao_ids(
+    prod: dict, dup_map: dict[str, str], report: CureReport, apply: bool
+) -> tuple[dict, int]:
+    """Atualiza funcao_id de uma produção conforme dup_map; retorna (produção, refs_atualizadas)."""
+    p = dict(prod)
+    equipe = dict(p.get("composicao_padrao_equipe") or p.get("equipe") or {})
+    changed_equipe = False
+    refs_updated = 0
+    new_funcoes = []
+    for func in equipe.get("funcoes", []) or []:
+        f = dict(func)
+        if f.get("funcao_id") in dup_map:
+            old = f["funcao_id"]
+            new = dup_map[old]
+            if apply:
+                f["funcao_id"] = new
+            refs_updated += 1
+            report.add_fixed(f"  PROD {p.get('id', '?')}: funcao_id {old} → {new}")
+            changed_equipe = True
+        new_funcoes.append(f)
+    if changed_equipe and apply:
+        equipe["funcoes"] = new_funcoes
+        if "composicao_padrao_equipe" in p:
+            p["composicao_padrao_equipe"] = equipe
+        else:
+            p["equipe"] = equipe
+    return p, refs_updated
+
+
+def _update_producoes_funcao_ids(
+    producoes: list[dict], dup_map: dict[str, str], report: CureReport, apply: bool
+) -> list[dict]:
+    """Atualiza funcao_id nas producoes para todos os itens em dup_map."""
+    updated_prods: list[dict] = []
+    refs_updated = 0
+    for prod in producoes:
+        p, n = _update_producao_funcao_ids(prod, dup_map, report, apply)
+        refs_updated += n
+        updated_prods.append(p)
+
+    if refs_updated and not apply:
+        report.add_fixed(f"  {refs_updated} referência(s) de funcao_id seriam atualizadas")
+
+    return updated_prods
+
+
 def cure_duplicatas(
     insumos: list[dict],
     producoes: list[dict],
@@ -194,62 +284,10 @@ def cure_duplicatas(
 
     report.add_fixed(f"Duplicatas detectadas: {len(dup_map)} P#### → MO-NOME")
 
-    # Adiciona codigo_referencia_externa ao canônico
     ins_by_code = {i["codigo"]: dict(i) for i in insumos}
-    for p_code, canonical in dup_map.items():
-        # `canonical` sempre vem de _build_dup_map, que o extrai de `insumos`
-        # (o mesmo iterável usado para montar ins_by_code acima), logo é
-        # sempre uma chave presente — sem necessidade de guard defensivo.
-        canon_ins = ins_by_code[canonical]
-        ext = canon_ins.get("codigo_referencia_externa") or ""
-        existing = [x.strip() for x in ext.split(",") if x.strip()] if ext else []
-        if p_code not in existing:
-            existing.append(p_code)
-            report.add_fixed(f"  {canonical}: codigo_referencia_externa += '{p_code}'")
-            if apply:
-                canon_ins["codigo_referencia_externa"] = ", ".join(existing)
-
-    # Remove P#### do índice
-    if apply:
-        codigos_para_remover = set(dup_map.keys())
-        new_insumos = [i for i in ins_by_code.values() if i["codigo"] not in codigos_para_remover]
-        report.add_fixed(f"  Removidos {len(codigos_para_remover)} insumos duplicados")
-    else:
-        for p_code, canonical in list(dup_map.items())[:5]:
-            report.add_fixed(f"  {p_code} → {canonical} (seria removido)")
-        if len(dup_map) > 5:
-            report.add_fixed(f"  ... e mais {len(dup_map) - 5} remoções")
-        new_insumos = insumos
-
-    # Atualiza funcao_id nas producoes
-    updated_prods: list[dict] = []
-    refs_updated = 0
-    for prod in producoes:
-        p = dict(prod)
-        equipe = dict(p.get("composicao_padrao_equipe") or p.get("equipe") or {})
-        changed_equipe = False
-        new_funcoes = []
-        for func in equipe.get("funcoes", []) or []:
-            f = dict(func)
-            if f.get("funcao_id") in dup_map:
-                old = f["funcao_id"]
-                new = dup_map[old]
-                if apply:
-                    f["funcao_id"] = new
-                refs_updated += 1
-                report.add_fixed(f"  PROD {p.get('id', '?')}: funcao_id {old} → {new}")
-                changed_equipe = True
-            new_funcoes.append(f)
-        if changed_equipe and apply:
-            equipe["funcoes"] = new_funcoes
-            if "composicao_padrao_equipe" in p:
-                p["composicao_padrao_equipe"] = equipe
-            else:
-                p["equipe"] = equipe
-        updated_prods.append(p)
-
-    if refs_updated and not apply:
-        report.add_fixed(f"  {refs_updated} referência(s) de funcao_id seriam atualizadas")
+    _add_referencias_externas(dup_map, ins_by_code, report, apply)
+    new_insumos = _remove_duplicated_insumos(dup_map, ins_by_code, report, apply)
+    updated_prods = _update_producoes_funcao_ids(producoes, dup_map, report, apply)
 
     return (new_insumos if apply else insumos), (updated_prods if apply else producoes)
 
@@ -278,25 +316,28 @@ def cure_stale_rfi(insumos: list[dict], report: CureReport, apply: bool) -> list
 # ── 4. Equipment: deriva valor_locacao_mensal faltante ──────────────────────────
 
 
+def _cure_locacao_mensal_item(ins: dict, report: CureReport, apply: bool) -> bool:
+    """Deriva valor_locacao_mensal para um insumo EQUIPAMENTO; retorna True se derivado."""
+    if ins.get("tipo") != "EQUIPAMENTO":
+        return False
+    preco_h = float(ins.get("preco_unitario") or 0)
+    if preco_h <= 0:
+        return False
+    attrs = dict(ins.get("atributos_especificos") or {})
+    if attrs.get("valor_locacao_mensal"):
+        return False
+    hm = float(attrs.get("horas_mes") or HORAS_MES_PADRAO)
+    vlm = round(preco_h * hm, 2)
+    report.add_fixed(f"INSUMO {ins['codigo']}: valor_locacao_mensal ← {preco_h} × {hm} = {vlm} R$/mês (derivado)")
+    if apply:
+        attrs["valor_locacao_mensal"] = vlm
+        ins["atributos_especificos"] = attrs
+    return True
+
+
 def cure_locacao_mensal(insumos: list[dict], report: CureReport, apply: bool) -> list[dict]:
     changed = [dict(i) for i in insumos]
-    n = 0
-    for ins in changed:
-        if ins.get("tipo") != "EQUIPAMENTO":
-            continue
-        preco_h = float(ins.get("preco_unitario") or 0)
-        if preco_h <= 0:
-            continue
-        attrs = dict(ins.get("atributos_especificos") or {})
-        if attrs.get("valor_locacao_mensal"):
-            continue
-        hm = float(attrs.get("horas_mes") or HORAS_MES_PADRAO)
-        vlm = round(preco_h * hm, 2)
-        n += 1
-        report.add_fixed(f"INSUMO {ins['codigo']}: valor_locacao_mensal ← {preco_h} × {hm} = {vlm} R$/mês (derivado)")
-        if apply:
-            attrs["valor_locacao_mensal"] = vlm
-            ins["atributos_especificos"] = attrs
+    n = sum(1 for ins in changed if _cure_locacao_mensal_item(ins, report, apply))
     if n == 0:
         report.add_skipped("EQUIPAMENTO: todos têm valor_locacao_mensal ou preco_unitario=0")
     return changed if apply else insumos
@@ -305,8 +346,7 @@ def cure_locacao_mensal(insumos: list[dict], report: CureReport, apply: bool) ->
 # ── 5. Manual: não-automatizáveis ────────────────────────────────────────────
 
 
-def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport) -> None:
-    # Produções sem composição
+def _report_producoes_sem_composicao(producoes: list[dict], report: CureReport) -> None:
     for prod in producoes:
         eq = prod.get("composicao_padrao_equipe") or prod.get("equipe") or {}
         if not (eq.get("funcoes") or eq.get("equipamentos")):
@@ -315,15 +355,20 @@ def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport
                 f"PROD {pid}: sem composição de equipe (vh={prod.get('valor_horario')}) — dados de campo necessários"
             )
 
-    # Insumos semanticamente suspeitos
+
+def _report_insumos_suspeitos(insumos: list[dict], report: CureReport) -> None:
     for ins in insumos:
         desc = (ins.get("descricao") or "").lower()
-        if any(k in desc for k in ("sala ", "equipe ", "time ", "team ")):
-            if ins.get("tipo") == "MAO_OBRA":
-                report.add_manual(
-                    f"INSUMO {ins['codigo']}: '{ins.get('descricao')}' — "
-                    f"insumo MAO_OBRA com nome de grupo/sala; revisar modelagem"
-                )
+        if any(k in desc for k in ("sala ", "equipe ", "time ", "team ")) and ins.get("tipo") == "MAO_OBRA":
+            report.add_manual(
+                f"INSUMO {ins['codigo']}: '{ins.get('descricao')}' — "
+                f"insumo MAO_OBRA com nome de grupo/sala; revisar modelagem"
+            )
+
+
+def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport) -> None:
+    _report_producoes_sem_composicao(producoes, report)
+    _report_insumos_suspeitos(insumos, report)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -350,30 +395,44 @@ def main() -> None:
     producoes = bundle.get("producoes", []) or bundle.get("produtividades", [])
 
     report = CureReport()
+    insumos, producoes = _run_cure_steps(insumos, producoes, report, args.apply)
+    _print_cure_report(report, args.apply)
 
-    # Etapas de curação
+    if args.apply:
+        _save_bundle_and_validate(bundle, bundle_path, insumos, producoes)
+    else:
+        print("\n  Dry-run — use --apply para aplicar as correções")
+        sys.exit(1 if report.manual else 0)
+
+
+def _run_cure_steps(
+    insumos: list[dict], producoes: list[dict], report: CureReport, apply: bool
+) -> tuple[list[dict], list[dict]]:
     print("[1/5] Erros físicos (encargos + salário mínimo) ...")
-    insumos = cure_erros_fisicos(insumos, report, args.apply)
+    insumos = cure_erros_fisicos(insumos, report, apply)
 
     print("[2/5] Duplicatas (P#### → MO-NOME) ...")
-    insumos, producoes = cure_duplicatas(insumos, producoes, report, args.apply)
+    insumos, producoes = cure_duplicatas(insumos, producoes, report, apply)
 
     print("[3/5] Datas desatualizadas via merge RFI ...")
-    insumos = cure_stale_rfi(insumos, report, args.apply)
+    insumos = cure_stale_rfi(insumos, report, apply)
 
     print("[4/5] Equipamento sem valor_locacao_mensal ...")
-    insumos = cure_locacao_mensal(insumos, report, args.apply)
+    insumos = cure_locacao_mensal(insumos, report, apply)
 
     print("[5/5] Itens não-automatizáveis ...")
     report_manual(insumos, producoes, report)
 
-    # Relatório
+    return insumos, producoes
+
+
+def _print_cure_report(report: CureReport, apply: bool) -> None:
     print(f"\n{'─' * 65}")
     print(f"  Correções automáticas: {len(report.fixed)}")
     print(f"  Intervenção manual:    {len(report.manual)}")
     print()
     for msg in report.fixed:
-        prefix = "  ✓" if args.apply else "  →"
+        prefix = "  ✓" if apply else "  →"
         print(f"{prefix} {msg}")
     if report.manual:
         print("\n  Intervenção manual necessária:")
@@ -383,33 +442,29 @@ def main() -> None:
         for msg in report.skipped:
             print(f"  · {msg}")
 
-    if args.apply:
-        if "producoes" in bundle:
-            bundle["producoes"] = producoes
-        else:
-            bundle["produtividades"] = producoes
-        bundle["insumos"] = insumos
-        bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"\n  Bundle salvo: {bundle_path}")
-        print(f"  Insumos:   {len(insumos)}")
-        print(f"  Producoes: {len(producoes)}")
 
-        # Valida plausibilidade pós-curação
-        sys.path.insert(0, str(ROOT / "src"))
-        from concilium.application.catalog.plausibility_checker import verificar_plausibilidade
-
-        pos = verificar_plausibilidade(insumos, producoes)
-        r = pos["resumo"]
-        print(f"\n  Pós-curação: {r['erros']} erros | {r['avisos']} avisos | {r['infos']} infos")
-        if r["erros"] == 0:
-            print("  Status: OK — nenhum erro crítico residual")
-        else:
-            print("  Status: ATENÇÃO — erros residuais precisam de revisão manual")
+def _save_bundle_and_validate(bundle: dict, bundle_path: Path, insumos: list[dict], producoes: list[dict]) -> None:
+    if "producoes" in bundle:
+        bundle["producoes"] = producoes
     else:
-        print("\n  Dry-run — use --apply para aplicar as correções")
+        bundle["produtividades"] = producoes
+    bundle["insumos"] = insumos
+    bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"\n  Bundle salvo: {bundle_path}")
+    print(f"  Insumos:   {len(insumos)}")
+    print(f"  Producoes: {len(producoes)}")
 
-    if not args.apply:
-        sys.exit(1 if report.manual else 0)
+    # Valida plausibilidade pós-curação
+    sys.path.insert(0, str(ROOT / "src"))
+    from concilium.application.catalog.plausibility_checker import verificar_plausibilidade
+
+    pos = verificar_plausibilidade(insumos, producoes)
+    r = pos["resumo"]
+    print(f"\n  Pós-curação: {r['erros']} erros | {r['avisos']} avisos | {r['infos']} infos")
+    if r["erros"] == 0:
+        print("  Status: OK — nenhum erro crítico residual")
+    else:
+        print("  Status: ATENÇÃO — erros residuais precisam de revisão manual")
 
 
 if __name__ == "__main__":

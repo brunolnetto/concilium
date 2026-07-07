@@ -8,14 +8,34 @@ from datetime import date, timedelta
 from ._common import COLORS, init_mpl, safe_close_mpl
 
 
+def _fallback_horas_semana(canonical) -> float:
+    """Calcula horas/semana do regime de trabalho do projeto (0.0 se ausente ou inválido)."""
+    regime = getattr(getattr(canonical, "projeto", None), "regime_trabalho", None)
+    return float((getattr(regime, "horas_dia", 0) or 0) * (getattr(regime, "dias_semana", 0) or 0))
+
+
+def _fallback_litros_atividade(sa, equipe, horas_semana: float, liters: dict[str, float]) -> None:
+    """Acumula (in-place) os litros/semana de uma atividade agendada, por semana ISO."""
+    for semana_iso, d in (getattr(sa, "distribuicao_semanal", None) or {}).items():
+        n_eq = float(getattr(d, "num_equipes", 0) or 0)
+        if n_eq <= 0:
+            continue
+        eficiencia = float(getattr(d, "eficiencia", 1.0) or 1.0)
+        for equip in equipe.equipamentos:
+            consumo_lh = float(getattr(equip, "consumo_litros_hora", 0.0) or 0.0)
+            if consumo_lh <= 0:
+                continue
+            litros = consumo_lh * float(getattr(equip, "num_unidades", 0) or 0) * horas_semana * n_eq * eficiencia
+            liters[str(semana_iso)] += litros
+
+
 def _fallback_liters_from_canonical(canonical) -> dict[str, float]:
     """Fallback físico: calcula litros/semana a partir de equipes e cronograma."""
     cron = getattr(canonical, "cronograma", None)
     equipes = getattr(canonical, "equipes_diretas", None) or []
     if not cron or not getattr(cron, "scheduled_activities", None) or not equipes:
         return {}
-    regime = getattr(getattr(canonical, "projeto", None), "regime_trabalho", None)
-    horas_semana = float((getattr(regime, "horas_dia", 0) or 0) * (getattr(regime, "dias_semana", 0) or 0))
+    horas_semana = _fallback_horas_semana(canonical)
     if horas_semana <= 0:
         return {}
 
@@ -25,17 +45,7 @@ def _fallback_liters_from_canonical(canonical) -> dict[str, float]:
         equipe = by_item.get(sa.activity_id)
         if equipe is None:
             continue
-        for semana_iso, d in (getattr(sa, "distribuicao_semanal", None) or {}).items():
-            n_eq = float(getattr(d, "num_equipes", 0) or 0)
-            if n_eq <= 0:
-                continue
-            eficiencia = float(getattr(d, "eficiencia", 1.0) or 1.0)
-            for equip in equipe.equipamentos:
-                consumo_lh = float(getattr(equip, "consumo_litros_hora", 0.0) or 0.0)
-                if consumo_lh <= 0:
-                    continue
-                litros = consumo_lh * float(getattr(equip, "num_unidades", 0) or 0) * horas_semana * n_eq * eficiencia
-                liters[str(semana_iso)] += litros
+        _fallback_litros_atividade(sa, equipe, horas_semana, liters)
     return dict(liters)
 
 
@@ -75,6 +85,65 @@ def _week_months_contribution(week_iso: str, fuel_total_liters: float) -> dict[t
     return contributions
 
 
+def _build_week_liters(canonical, cubo) -> dict[str, float]:
+    """Agrega o consumo de diesel (litros) por semana ISO, a partir do cubo (ou fallback físico)."""
+    week_liters: dict[str, float] = defaultdict(float)
+    for celula in getattr(cubo, "celulas", None) or []:
+        fuel_l = float(getattr(celula, "consumo_diesel_L", 0.0) or 0.0)
+        if fuel_l > 0:
+            week_liters[str(celula.semana_iso)] += fuel_l
+
+    # Se o cubo monetário não carregou célula diesel (ex.: combustível embutido em equipamento),
+    # preserva a leitura física em litros via canonical (equipes × cronograma).
+    if not week_liters:
+        week_liters.update(_fallback_liters_from_canonical(canonical))
+    return week_liters
+
+
+def _build_monthly_wom(week_liters: dict[str, float]) -> dict[str, dict[int, float]]:
+    """Agrega litros/semana em litros por (mês, índice de semana do mês), dividindo semanas que cruzam meses."""
+    monthly_wom: dict[str, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    for semana_iso, liters in week_liters.items():
+        if liters <= 0:  # pragma: no branch
+            continue
+        for (bucket, wom), portion in _week_months_contribution(semana_iso, liters).items():
+            monthly_wom[bucket][wom] += portion
+    return monthly_wom
+
+
+def _plot_wom_stacked_bars(
+    ax, x: list[int], periodos: list[str], monthly_wom: dict[str, dict[int, float]], all_woms: list[int]
+) -> None:
+    """Desenha as barras empilhadas por WOM (semana do mês), com rótulos de valor, sobre `ax`."""
+    baseline = [0.0] * len(periodos)
+    for wom_idx in all_woms:
+        values = [monthly_wom[per].get(wom_idx, 0.0) / 1000.0 for per in periodos]
+        label = f"WOM #{wom_idx}"
+        bars = ax.bar(
+            x,
+            values,
+            bottom=baseline,
+            color=COLORS[(wom_idx - 1) % len(COLORS)],
+            alpha=0.85,
+            label=label,
+            width=0.7,
+        )
+        for bar, val in zip(bars, values, strict=False):
+            if val > 0:
+                mid_y = bar.get_y() + bar.get_height() / 2
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    mid_y,
+                    f"{val:.0f}",
+                    ha="center",
+                    va="center",
+                    fontsize=7,
+                    color="white",
+                    fontweight="bold",
+                )
+        baseline = [b + v for b, v in zip(baseline, values, strict=False)]
+
+
 def build(canonical, cubo) -> bytes | None:
     try:
         plt, fig_to_bytes = init_mpl()
@@ -82,23 +151,8 @@ def build(canonical, cubo) -> bytes | None:
         return None
     try:
         # Aggregate fuel consumption by (month, week-of-month index), splitting cross-month weeks.
-        monthly_wom: dict[str, dict[int, float]] = defaultdict(lambda: defaultdict(float))
-        week_liters: dict[str, float] = defaultdict(float)
-        for celula in getattr(cubo, "celulas", None) or []:
-            fuel_l = float(getattr(celula, "consumo_diesel_L", 0.0) or 0.0)
-            if fuel_l > 0:
-                week_liters[str(celula.semana_iso)] += fuel_l
-
-        # Se o cubo monetário não carregou célula diesel (ex.: combustível embutido em equipamento),
-        # preserva a leitura física em litros via canonical (equipes × cronograma).
-        if not week_liters:
-            week_liters.update(_fallback_liters_from_canonical(canonical))
-
-        for semana_iso, liters in week_liters.items():
-            if liters <= 0:  # pragma: no branch
-                continue
-            for (bucket, wom), portion in _week_months_contribution(semana_iso, liters).items():
-                monthly_wom[bucket][wom] += portion
+        week_liters = _build_week_liters(canonical, cubo)
+        monthly_wom = _build_monthly_wom(week_liters)
 
         if not monthly_wom:
             return None
@@ -110,34 +164,8 @@ def build(canonical, cubo) -> bytes | None:
         x = list(range(len(periodos)))
         fig_w = max(8, len(periodos) * 0.9 + 2)
         fig, ax = plt.subplots(figsize=(fig_w, 5))
-        baseline = [0.0] * len(periodos)
 
-        for wom_idx in all_woms:
-            values = [monthly_wom[per].get(wom_idx, 0.0) / 1000.0 for per in periodos]
-            label = f"WOM #{wom_idx}"
-            bars = ax.bar(
-                x,
-                values,
-                bottom=baseline,
-                color=COLORS[(wom_idx - 1) % len(COLORS)],
-                alpha=0.85,
-                label=label,
-                width=0.7,
-            )
-            for bar, val in zip(bars, values, strict=False):
-                if val > 0:
-                    mid_y = bar.get_y() + bar.get_height() / 2
-                    ax.text(
-                        bar.get_x() + bar.get_width() / 2,
-                        mid_y,
-                        f"{val:.0f}",
-                        ha="center",
-                        va="center",
-                        fontsize=7,
-                        color="white",
-                        fontweight="bold",
-                    )
-            baseline = [b + v for b, v in zip(baseline, values, strict=False)]
+        _plot_wom_stacked_bars(ax, x, periodos, monthly_wom, all_woms)
 
         ax.set_title("Consumo de Combustível no Tempo (por Semana do Mês)", fontsize=13, fontweight="bold")
         ax.set_ylabel("Consumo (kL)", fontsize=9)

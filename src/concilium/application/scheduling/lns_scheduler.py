@@ -112,87 +112,150 @@ class LnsScheduler:
         # ADR-079: pre-warm from initial_lambdas (RelatorioOportunidades) when available.
         lambdas: dict[tuple[str, str, str], float] = dict(self.initial_lambdas) if self.initial_lambdas else {}
 
-        best_output: ScheduleOutput | None = None
-        best_C_total = float("inf")
         seen_hashes: set[int] = set()
-        C_total_0: float | None = None
+        state: dict[str, Any] = {"best_output": None, "best_C_total": float("inf"), "C_total_0": None}
 
         for k in range(self.k_max):
             step_k = self.step_0 * (self.step_decay**k)
-
-            # ── 1. Schedule with λ-weighted priority ─────────────────────
-            priority_penalty = self._compute_priority_penalties(lambdas, topo)
-            sorted_topo = sorted(topo, key=lambda aid: priority_penalty.get(aid, 0.0))
-
-            try:
-                output = self._ssgs(act_map, sorted_topo, dag, pool, deadline)
-            except ScheduleError as exc:
-                _log.warning("LnsScheduler k=%d: SSGS failed: %s", k, exc)
+            should_stop = self._lns_iteration(
+                k, step_k, act_map, topo, dag, pool, deadline, lambdas, profiles, seen_hashes, state
+            )
+            if should_stop:
                 break
 
-            # Cycle detection
-            sched_hash = _schedule_hash(output.scheduled_activities)
-            if sched_hash in seen_hashes:
-                _log.debug("LnsScheduler: cycle detected at k=%d, exiting", k)
-                break
-            seen_hashes.add(sched_hash)
-
-            # ── 2. Oracle: perpetuation matching ────────────────────────
-            plans = _to_activity_plans(output.scheduled_activities)
-            sol = self.oracle.solve(plans, profiles)
-
-            C_mob = sol.mob_cost_actual
-            C_op = float(output.makespan)
-            C_total = C_op + C_mob
-
-            # Track initial cost for convergence
-            if C_total_0 is None:
-                C_total_0 = C_total if C_total > 0 else 1.0
-
-            n_concurrent = len(sol.concurrent_pairs_lost)
-
-            self.iteration_log.append(
-                {
-                    "k": k,
-                    "C_total": C_total,
-                    "C_mob": C_mob,
-                    "C_op": C_op,
-                    "n_concurrent": n_concurrent,
-                }
-            )
-
-            _log.debug(
-                "LnsScheduler k=%d: C_total=%.1f, C_mob=%.1f, C_op=%.1f, n_conc=%d",
-                k,
-                C_total,
-                C_mob,
-                C_op,
-                n_concurrent,
-            )
-
-            # Track best
-            if C_total < best_C_total:
-                best_C_total = C_total
-                best_output = output
-                self.best_mob_cost = C_mob
-
-            # ── 3. Convergence check ─────────────────────────────────────
-            if k > 0 and C_total_0 > 0:  # pragma: no branch
-                prev = self.iteration_log[-2]["C_total"]
-                delta_ratio = abs(prev - C_total) / C_total_0
-                if delta_ratio < self.convergence_tol:  # pragma: no branch
-                    _log.debug("LnsScheduler: converged at k=%d (Δ=%.5f)", k, delta_ratio)
-                    break
-
-            # ── 4. Subgradient λ update ───────────────────────────────────
-            for aid_i, aid_j, res in sol.concurrent_pairs_lost:
-                key = (aid_i, aid_j, res)
-                lambdas[key] = max(0.0, lambdas.get(key, 0.0) + step_k)
-
+        best_output = state["best_output"]
         if best_output is None:
             return self._empty_output()
 
         return best_output
+
+    def _lns_iteration(
+        self,
+        k: int,
+        step_k: float,
+        act_map: dict[str, Activity],
+        topo: list[str],
+        dag: ActivityDAG,
+        pool: ResourcePool,
+        deadline: int,
+        lambdas: dict[tuple[str, str, str], float],
+        profiles: dict[str, RampProfile],
+        seen_hashes: set[int],
+        state: dict[str, Any],
+    ) -> bool:
+        """Run one LNS iteration, mutating `lambdas`/`seen_hashes`/`state` in place.
+
+        Returns True if the outer loop should stop (SSGS failure, cycle, or convergence).
+        """
+        # ── 1. Schedule with λ-weighted priority ─────────────────────
+        sorted_topo = self._lns_sorted_topo(lambdas, topo)
+        output = self._lns_try_ssgs(act_map, sorted_topo, dag, pool, deadline, k)
+        if output is None:
+            return True
+
+        # Cycle detection
+        sched_hash = _schedule_hash(output.scheduled_activities)
+        if sched_hash in seen_hashes:
+            _log.debug("LnsScheduler: cycle detected at k=%d, exiting", k)
+            return True
+        seen_hashes.add(sched_hash)
+
+        # ── 2. Oracle: perpetuation matching ────────────────────────
+        sol, C_mob, C_op, C_total = self._lns_evaluate(output, profiles)
+
+        # Track initial cost for convergence
+        if state["C_total_0"] is None:
+            state["C_total_0"] = C_total if C_total > 0 else 1.0
+
+        n_concurrent = len(sol.concurrent_pairs_lost)
+        self._lns_log_iteration(k, C_total, C_mob, C_op, n_concurrent)
+
+        # Track best
+        if C_total < state["best_C_total"]:
+            state["best_C_total"] = C_total
+            state["best_output"] = output
+            self.best_mob_cost = C_mob
+
+        # ── 3. Convergence check ─────────────────────────────────────
+        if self._lns_converged(k, C_total, state["C_total_0"]):
+            return True
+
+        # ── 4. Subgradient λ update ───────────────────────────────────
+        self._lns_update_lambdas(lambdas, sol, step_k)
+        return False
+
+    def _lns_sorted_topo(
+        self,
+        lambdas: dict[tuple[str, str, str], float],
+        topo: list[str],
+    ) -> list[str]:
+        priority_penalty = self._compute_priority_penalties(lambdas, topo)
+        return sorted(topo, key=lambda aid: priority_penalty.get(aid, 0.0))
+
+    def _lns_try_ssgs(
+        self,
+        act_map: dict[str, Activity],
+        sorted_topo: list[str],
+        dag: ActivityDAG,
+        pool: ResourcePool,
+        deadline: int,
+        k: int,
+    ) -> ScheduleOutput | None:
+        try:
+            return self._ssgs(act_map, sorted_topo, dag, pool, deadline)
+        except ScheduleError as exc:
+            _log.warning("LnsScheduler k=%d: SSGS failed: %s", k, exc)
+            return None
+
+    def _lns_evaluate(
+        self,
+        output: ScheduleOutput,
+        profiles: dict[str, RampProfile],
+    ) -> tuple[Any, float, float, float]:
+        plans = _to_activity_plans(output.scheduled_activities)
+        sol = self.oracle.solve(plans, profiles)
+        C_mob = sol.mob_cost_actual
+        C_op = float(output.makespan)
+        C_total = C_op + C_mob
+        return sol, C_mob, C_op, C_total
+
+    def _lns_log_iteration(self, k: int, c_total: float, c_mob: float, c_op: float, n_concurrent: int) -> None:
+        self.iteration_log.append(
+            {
+                "k": k,
+                "C_total": c_total,
+                "C_mob": c_mob,
+                "C_op": c_op,
+                "n_concurrent": n_concurrent,
+            }
+        )
+        _log.debug(
+            "LnsScheduler k=%d: C_total=%.1f, C_mob=%.1f, C_op=%.1f, n_conc=%d",
+            k,
+            c_total,
+            c_mob,
+            c_op,
+            n_concurrent,
+        )
+
+    def _lns_converged(self, k: int, c_total: float, c_total_0: float) -> bool:
+        if k > 0 and c_total_0 > 0:  # pragma: no branch
+            prev = self.iteration_log[-2]["C_total"]
+            delta_ratio = abs(prev - c_total) / c_total_0
+            if delta_ratio < self.convergence_tol:  # pragma: no branch
+                _log.debug("LnsScheduler: converged at k=%d (Δ=%.5f)", k, delta_ratio)
+                return True
+        return False
+
+    @staticmethod
+    def _lns_update_lambdas(
+        lambdas: dict[tuple[str, str, str], float],
+        sol: Any,
+        step_k: float,
+    ) -> None:
+        for aid_i, aid_j, res in sol.concurrent_pairs_lost:
+            key = (aid_i, aid_j, res)
+            lambdas[key] = max(0.0, lambdas.get(key, 0.0) + step_k)
 
     # ── inner SSGS ────────────────────────────────────────────────────────────
 

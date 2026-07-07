@@ -118,45 +118,16 @@ class SerialScheduler:
         _check_feasibility(act_map, topo_order, earliest_start, deadline_weeks)
         resource_usage: dict[int, dict[str, int]] = {}
         scheduled: dict[str, ScheduledActivity] = {}
-
-        # ADR-081: SSGS com ready list — atividade só entra na fila quando todos
-        # os predecessores já foram agendados. Isso garante que o sort por priority
-        # nunca viola a ordem topológica, mesmo com thresholds θ < 1.0.
-        from collections import defaultdict as _ddict
-
-        in_degree: dict[str, int] = _ddict(int)
-        for _p, s in dag.precedence:
-            in_degree[s] += 1
-        ready: list[str] = [aid for aid in topo_order if in_degree[aid] == 0]
+        in_degree, ready = self._ssgs_init_ready_list(dag, topo_order)
 
         while ready:
             # Ordena a ready list pela regra de prioridade (float, earliest, etc.)
             ready = self._sort_by_priority(ready, act_map, total_float, earliest_start)
             aid = ready.pop(0)
-            a = act_map[aid]
-            preds = dag.predecessors(aid)
-            # Todos os predecessores estão em scheduled (invariante da ready list)
-            pred_finish = max(
-                (_pred_release(p, aid, scheduled[p].start_week - 1, dag, act_map) for p in preds),
-                default=0,
+            self._ssgs_schedule_activity(
+                aid, act_map, dag, scheduled, resource_usage, earliest_start, pool, deadline_weeks
             )
-            t = max(earliest_start[aid], pred_finish)
-            t = self._find_start(a, t, resource_usage, pool, deadline_weeks)
-            end = t + a.duration_weeks
-            scheduled[aid] = ScheduledActivity(
-                activity_id=aid,
-                start_week=t + 1,
-                end_week=end + 1,
-                duration_weeks=a.duration_weeks,
-                assigned_resources=dict(a.required_resources),
-                ramp_profile=a.ramp_profile,  # ADR-074: propagate for cost computation
-            )
-            _book_resources(a, t, end, resource_usage)
-            # Adiciona sucessores à ready list quando todos seus predecessores estão agendados
-            for succ in dag.successors(aid):
-                in_degree[succ] -= 1
-                if in_degree[succ] == 0:
-                    ready.append(succ)
+            self._ssgs_release_ready_successors(aid, dag, in_degree, ready)
         result_acts = list(scheduled.values())
         makespan_0 = max(s.end_week - 1 for s in result_acts) if result_acts else 0
         metrics = self._compute_metrics(result_acts, resource_usage, pool, makespan_0, deadline_weeks)
@@ -167,6 +138,60 @@ class SerialScheduler:
             metrics=metrics,
             heuristic=self.priority_rule,
         )
+
+    def _ssgs_init_ready_list(self, dag: ActivityDAG, topo_order: list[str]) -> tuple[dict[str, int], list[str]]:
+        """ADR-081: inicializa in_degree e a ready list do SSGS — atividade só entra
+        na fila quando todos os predecessores já foram agendados. Isso garante que o
+        sort por priority nunca viola a ordem topológica, mesmo com thresholds θ < 1.0."""
+        from collections import defaultdict as _ddict
+
+        in_degree: dict[str, int] = _ddict(int)
+        for _p, s in dag.precedence:
+            in_degree[s] += 1
+        ready = [aid for aid in topo_order if in_degree[aid] == 0]
+        return in_degree, ready
+
+    def _ssgs_schedule_activity(
+        self,
+        aid: str,
+        act_map: dict[str, Activity],
+        dag: ActivityDAG,
+        scheduled: dict[str, ScheduledActivity],
+        resource_usage: dict[int, dict[str, int]],
+        earliest_start: dict[str, int],
+        pool: ResourcePool,
+        deadline_weeks: int,
+    ) -> None:
+        """Resolve o start/end da atividade `aid` e registra em `scheduled` + `resource_usage`."""
+        a = act_map[aid]
+        preds = dag.predecessors(aid)
+        # Todos os predecessores estão em scheduled (invariante da ready list)
+        pred_finish = max(
+            (_pred_release(p, aid, scheduled[p].start_week - 1, dag, act_map) for p in preds),
+            default=0,
+        )
+        t = max(earliest_start[aid], pred_finish)
+        t = self._find_start(a, t, resource_usage, pool, deadline_weeks)
+        end = t + a.duration_weeks
+        scheduled[aid] = ScheduledActivity(
+            activity_id=aid,
+            start_week=t + 1,
+            end_week=end + 1,
+            duration_weeks=a.duration_weeks,
+            assigned_resources=dict(a.required_resources),
+            ramp_profile=a.ramp_profile,  # ADR-074: propagate for cost computation
+        )
+        _book_resources(a, t, end, resource_usage)
+
+    def _ssgs_release_ready_successors(
+        self, aid: str, dag: ActivityDAG, in_degree: dict[str, int], ready: list[str]
+    ) -> None:
+        """Adiciona sucessores de `aid` à ready list quando todos os seus predecessores
+        já estiverem agendados."""
+        for succ in dag.successors(aid):
+            in_degree[succ] -= 1
+            if in_degree[succ] == 0:
+                ready.append(succ)
 
     # ── internals ─────────────────────────────────────────────────────────────
 

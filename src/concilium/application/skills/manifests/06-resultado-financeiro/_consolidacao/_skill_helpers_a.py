@@ -51,6 +51,94 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _cat_find_part_by_item(canonical_in: CanonicalModel) -> dict[str, Any]:
+    """1. Itens com partição instancial categorial (pool, ADR-085 ativo)."""
+    part_by_item: dict[str, Any] = {}
+    for contrato in canonical_in.contratos_recurso:
+        for part in contrato.particao_por_item:
+            if part.custo_inst_mo or part.custo_inst_eq or part.custo_inst_comb or part.custo_inst_mat:
+                part_by_item[part.item_id] = part
+    return part_by_item
+
+
+def _cat_accumulate_particao(
+    cat: dict[str, float], part_by_item: dict[str, Any], nfrentes_por_item: dict[str, int]
+) -> set[str]:
+    contados: set[str] = set()
+    for item_id, part in part_by_item.items():
+        _nf = nfrentes_por_item.get(item_id, 1)
+        _mo = float(part.custo_inst_mo or 0.0) * _nf
+        _eq = float(part.custo_inst_eq or 0.0) * _nf
+        _comb = float(part.custo_inst_comb or 0.0) * _nf
+        _mat = float(part.custo_inst_mat or 0.0) * _nf
+        # Mob+demob+idle: custo contratual além do produtivo — vai para eq_aluguel (BDI_servicos)
+        _mob = float(getattr(part, "custo_mob_imputado", 0.0) or 0.0) * _nf
+        _demob = float(getattr(part, "custo_demob_imputado", 0.0) or 0.0) * _nf
+        _idle = float(getattr(part, "custo_ocioso_imputado", 0.0) or 0.0) * _nf
+        cat["mao_obra"] += _mo
+        cat["eq_aluguel"] += _eq + _mob + _demob + _idle
+        cat["material"] += _mat + _comb  # ADR-090: combustivel funde em material
+        cat["eq_combustivel"] += _comb  # diagnóstico granular
+        contados.add(item_id)
+    return contados
+
+
+def _cat_accumulate_equipe_inst(cat: dict[str, float], eq: Any) -> None:
+    """ADR-106 F7: usar custo_inst_* diretamente quando preenchidos (F3 garantiu isso)."""
+    _ct_mo = float(eq.custo_inst_mo or 0.0)
+    _ct_eq = float(getattr(eq, "custo_inst_eq", 0.0) or 0.0)
+    _ct_comb = float(getattr(eq, "custo_inst_comb", 0.0) or 0.0)
+    _ct_mat = float(getattr(eq, "custo_inst_mat", 0.0) or 0.0)
+    cat["mao_obra"] += _ct_mo
+    cat["eq_aluguel"] += _ct_eq
+    cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
+    cat["eq_combustivel"] += _ct_comb
+
+
+def _cat_accumulate_equipe_heuristica(cat: dict[str, float], eq: Any, ct: float) -> None:
+    """Fallback heurístico (legado) para equipes sem custo_inst_* preenchido.
+
+    NEP-037: incluir encargos na fração de MO para decomposição (encargos ficam em mao_obra).
+    """
+    _mo_mais_enc = float(eq.custo_mao_obra_mensal or 0.0) + float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0)
+    base = (
+        _mo_mais_enc
+        + float(eq.custo_equipamentos_mensal or 0.0)
+        + float(eq.custo_combustivel_total_mensal or 0.0)
+        + float(eq.custo_material_mensal or 0.0)
+    )
+    if base <= 0:
+        cat["mao_obra"] += ct
+        return
+    _ct_mo = ct * _mo_mais_enc / base
+    _ct_eq = ct * float(eq.custo_equipamentos_mensal or 0.0) / base
+    _ct_comb = ct * float(eq.custo_combustivel_total_mensal or 0.0) / base
+    _ct_mat = ct * float(eq.custo_material_mensal or 0.0) / base
+    cat["mao_obra"] += _ct_mo
+    cat["eq_aluguel"] += _ct_eq
+    cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
+    cat["eq_combustivel"] += _ct_comb
+
+
+def _cat_accumulate_equipes_sem_particao(
+    cat: dict[str, float], canonical_in: CanonicalModel, contados: set[str]
+) -> None:
+    """2. Demais itens: prioriza custo_inst_* se disponível (ADR-106 F7), senão heurística proporcional.
+
+    NEP-043: custo_inst_* armazena custo de 1 frente — multiplicar por num_equipes_base
+    (mesma correção de _br_build_venda_custo, que usa custo_total × n_frentes).
+    """
+    for eq in canonical_in.equipes_diretas:
+        if eq.item_id in contados:
+            continue
+        # ADR-091: custo_total já armazena o custo total de todas as frentes.
+        ct = float(eq.custo_total or 0.0)
+        if getattr(eq, "custo_inst_mo", None) is not None:
+            _cat_accumulate_equipe_inst(cat, eq)
+            continue
+        _cat_accumulate_equipe_heuristica(cat, eq, ct)
+
+
 def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str, float]:
     """ADR-085 D4/D5 / ADR-089: custo instancial por sub-propriedade (base bottom-up para BDI).
 
@@ -76,71 +164,9 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         for eq in canonical_in.equipes_diretas
     }
 
-    # 1. Itens com partição instancial categorial (pool, ADR-085 ativo)
-    part_by_item: dict[str, Any] = {}
-    for contrato in canonical_in.contratos_recurso:
-        for part in contrato.particao_por_item:
-            if part.custo_inst_mo or part.custo_inst_eq or part.custo_inst_comb or part.custo_inst_mat:
-                part_by_item[part.item_id] = part
-
-    contados: set[str] = set()
-    for item_id, part in part_by_item.items():
-        _nf = nfrentes_por_item.get(item_id, 1)
-        _mo = float(part.custo_inst_mo or 0.0) * _nf
-        _eq = float(part.custo_inst_eq or 0.0) * _nf
-        _comb = float(part.custo_inst_comb or 0.0) * _nf
-        _mat = float(part.custo_inst_mat or 0.0) * _nf
-        # Mob+demob+idle: custo contratual além do produtivo — vai para eq_aluguel (BDI_servicos)
-        _mob = float(getattr(part, "custo_mob_imputado", 0.0) or 0.0) * _nf
-        _demob = float(getattr(part, "custo_demob_imputado", 0.0) or 0.0) * _nf
-        _idle = float(getattr(part, "custo_ocioso_imputado", 0.0) or 0.0) * _nf
-        cat["mao_obra"] += _mo
-        cat["eq_aluguel"] += _eq + _mob + _demob + _idle
-        cat["material"] += _mat + _comb  # ADR-090: combustivel funde em material
-        cat["eq_combustivel"] += _comb  # diagnóstico granular
-        contados.add(item_id)
-
-    # 2. Demais itens: prioriza custo_inst_* se disponível (ADR-106 F7), senão heurística proporcional
-    # NEP-043: custo_inst_* armazena custo de 1 frente — multiplicar por num_equipes_base
-    # (mesma correção de _br_build_venda_custo, que usa custo_total × n_frentes).
-    for eq in canonical_in.equipes_diretas:
-        if eq.item_id in contados:
-            continue
-        # ADR-091: custo_total já armazena o custo total de todas as frentes.
-        ct = float(eq.custo_total or 0.0)
-
-        # ADR-106 F7: usar custo_inst_* diretamente quando preenchidos (F3 garantiu isso)
-        if getattr(eq, "custo_inst_mo", None) is not None:
-            _ct_mo = float(eq.custo_inst_mo or 0.0)
-            _ct_eq = float(getattr(eq, "custo_inst_eq", 0.0) or 0.0)
-            _ct_comb = float(getattr(eq, "custo_inst_comb", 0.0) or 0.0)
-            _ct_mat = float(getattr(eq, "custo_inst_mat", 0.0) or 0.0)
-            cat["mao_obra"] += _ct_mo
-            cat["eq_aluguel"] += _ct_eq
-            cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
-            cat["eq_combustivel"] += _ct_comb
-            continue
-
-        # Fallback heurístico (legado) para equipes sem custo_inst_* preenchido
-        # NEP-037: incluir encargos na fração de MO para decomposição (encargos ficam em mao_obra)
-        _mo_mais_enc = float(eq.custo_mao_obra_mensal or 0.0) + float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0)
-        base = (
-            _mo_mais_enc
-            + float(eq.custo_equipamentos_mensal or 0.0)
-            + float(eq.custo_combustivel_total_mensal or 0.0)
-            + float(eq.custo_material_mensal or 0.0)
-        )
-        if base <= 0:
-            cat["mao_obra"] += ct
-            continue
-        _ct_mo = ct * _mo_mais_enc / base
-        _ct_eq = ct * float(eq.custo_equipamentos_mensal or 0.0) / base
-        _ct_comb = ct * float(eq.custo_combustivel_total_mensal or 0.0) / base
-        _ct_mat = ct * float(eq.custo_material_mensal or 0.0) / base
-        cat["mao_obra"] += _ct_mo
-        cat["eq_aluguel"] += _ct_eq
-        cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
-        cat["eq_combustivel"] += _ct_comb
+    part_by_item = _cat_find_part_by_item(canonical_in)
+    contados = _cat_accumulate_particao(cat, part_by_item, nfrentes_por_item)
+    _cat_accumulate_equipes_sem_particao(cat, canonical_in, contados)
 
     # Aliases legados (retrocompat)
     cat["equipamentos"] = cat["eq_aluguel"]
@@ -223,10 +249,8 @@ def _cpu_familia(cpu_id: str) -> str:
     return cpu_id
 
 
-def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCustoCompleto]:
-    eap_by_id = {e.item_id: e for e in canonical_in.eap}
+def _catv_from_scheduled(acts: list, eap_by_id: dict) -> list[AtividadeCustoCompleto]:
     out: list[AtividadeCustoCompleto] = []
-    acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     for act in acts:
         eap_item = eap_by_id.get(act.activity_id)
         nome = (eap_item.descricao or act.activity_id) if eap_item else act.activity_id
@@ -240,24 +264,52 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
                 custo_indireto_atribuido=0.0,
             )
         )
-
-    if not out:
-        for eq in canonical_in.equipes_diretas:
-            if not eq.item_id:
-                continue
-            eap_item = eap_by_id.get(eq.item_id)
-            nome = (eap_item.descricao or eq.item_id) if eap_item else eq.item_id
-            out.append(
-                AtividadeCustoCompleto(
-                    atividade_id=eq.item_id,
-                    nome=nome,
-                    semana_inicio=0,
-                    semana_fim=0,
-                    custos_diretos=[],
-                    custo_indireto_atribuido=0.0,
-                )
-            )
     return out
+
+
+def _catv_from_equipes(equipes_diretas: list, eap_by_id: dict) -> list[AtividadeCustoCompleto]:
+    out: list[AtividadeCustoCompleto] = []
+    for eq in equipes_diretas:
+        if not eq.item_id:
+            continue
+        eap_item = eap_by_id.get(eq.item_id)
+        nome = (eap_item.descricao or eq.item_id) if eap_item else eq.item_id
+        out.append(
+            AtividadeCustoCompleto(
+                atividade_id=eq.item_id,
+                nome=nome,
+                semana_inicio=0,
+                semana_fim=0,
+                custos_diretos=[],
+                custo_indireto_atribuido=0.0,
+            )
+        )
+    return out
+
+
+def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCustoCompleto]:
+    eap_by_id = {e.item_id: e for e in canonical_in.eap}
+    acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
+    out = _catv_from_scheduled(acts, eap_by_id)
+    if not out:
+        out = _catv_from_equipes(canonical_in.equipes_diretas, eap_by_id)
+    return out
+
+
+def _bvc_totais_planejamento(planejamento: list) -> tuple[float, float, float]:
+    venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in planejamento if p.subtotal is not None)
+    venda_com_bdi = sum(p.subtotal.com_bdi.total for p in planejamento if p.subtotal is not None)
+    custo_materiais = sum(p.subtotal.sem_bdi.material for p in planejamento if p.subtotal is not None)
+    return venda_sem_bdi, venda_com_bdi, custo_materiais
+
+
+def _bvc_apply_fallback(venda_sem_bdi: float, venda_com_bdi: float, custo_direto_equipe: float) -> tuple[float, float]:
+    """Fallback: se planejamento vazio, venda_sem_bdi/venda_com_bdi = custo_direto_equipe."""
+    if not venda_sem_bdi and custo_direto_equipe > 0:
+        venda_sem_bdi = custo_direto_equipe
+    if not venda_com_bdi and custo_direto_equipe > 0:
+        venda_com_bdi = custo_direto_equipe
+    return venda_sem_bdi, venda_com_bdi
 
 
 def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, float, float, float]:
@@ -268,24 +320,37 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     Usar sempre o pool como base do custo operacional — o trunfo do pool é exatamente
     executar abaixo do PU×Q de catálogo, e isso deve aparecer no resultado financeiro.
     """
-    venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento if p.subtotal is not None)
-    venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento if p.subtotal is not None)
+    venda_sem_bdi, venda_com_bdi, custo_materiais = _bvc_totais_planejamento(canonical_in.planejamento)
 
     # ADR-091: custo_total já armazena o custo total de todas as frentes (normalizado
     # em skill-05 por divisão por num_equipes_paralelas antes de armazenar).
     # Não multiplicar por num_equipes_base — evitar dupla contagem.
     custo_direto_equipe = sum(float(e.custo_total or 0.0) for e in canonical_in.equipes_diretas)
-    custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento if p.subtotal is not None)
 
-    # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
-    if not venda_sem_bdi and custo_direto_equipe > 0:
-        venda_sem_bdi = custo_direto_equipe
-    if not venda_com_bdi and custo_direto_equipe > 0:
-        venda_com_bdi = custo_direto_equipe
+    venda_sem_bdi, venda_com_bdi = _bvc_apply_fallback(venda_sem_bdi, venda_com_bdi, custo_direto_equipe)
 
     # custo_direto_pool: pool é SEMPRE a base do custo operacional real.
     # Diferença vs venda_sem_bdi = economia (ou sobrepreço) capturado pelo pool.
     return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto_equipe
+
+
+def _br_append_gap_catalogo_validacao(validacoes: list, venda_sem_bdi: float, custo_direto: float) -> None:
+    """Informativo: gap catálogo vs operacional (frentes_equiv_necessarias global)."""
+    if venda_sem_bdi > 0 and custo_direto > 0:
+        frentes_glob = round(custo_direto / venda_sem_bdi, 3)
+        gap_abs = round(custo_direto - venda_sem_bdi, 2)
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-GAP-CATALOGO-OPERACIONAL",
+                status="AVISO" if frentes_glob > 1.2 else "OK",
+                mensagem=(
+                    f"Gap catálogo→operacional: PU×Q = R$ {venda_sem_bdi:,.0f} vs "
+                    f"custo direto real = R$ {custo_direto:,.0f} "
+                    f"(fator {frentes_glob:.3f}× — gap R$ {gap_abs:,.0f}). "
+                    "Todos os overheads são auditáveis no CuboPoolInstancial (ADR-086)."
+                ),
+            )
+        )
 
 
 def _build_resultado(
@@ -353,22 +418,7 @@ def _build_resultado(
             ),
         )
     )
-    # Informativo: gap catálogo vs operacional (frentes_equiv_necessarias global)
-    if venda_sem_bdi > 0 and custo_direto > 0:
-        frentes_glob = round(custo_direto / venda_sem_bdi, 3)
-        gap_abs = round(custo_direto - venda_sem_bdi, 2)
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-GAP-CATALOGO-OPERACIONAL",
-                status="AVISO" if frentes_glob > 1.2 else "OK",
-                mensagem=(
-                    f"Gap catálogo→operacional: PU×Q = R$ {venda_sem_bdi:,.0f} vs "
-                    f"custo direto real = R$ {custo_direto:,.0f} "
-                    f"(fator {frentes_glob:.3f}× — gap R$ {gap_abs:,.0f}). "
-                    "Todos os overheads são auditáveis no CuboPoolInstancial (ADR-086)."
-                ),
-            )
-        )
+    _br_append_gap_catalogo_validacao(validacoes, venda_sem_bdi, custo_direto)
     indir_kwargs = {f"indireto_{k.lower()}": v for k, v in custos_indiretos.items() if k != "MOB"}
     res = Resultado(
         venda=Venda(
@@ -412,15 +462,10 @@ def _build_resultado(
     )
 
 
-def _lesao_from_sched(sched: Any) -> dict:
-    """Extrai fatores de lesão de produtividade de uma ScheduledActivityCanonical."""
-    dist = getattr(sched, "distribuicao_semanal", None) or {}
-    if not dist:
-        return {}
+def _lesao_aggregates(dist: dict) -> tuple[float, int, float, float, int, float]:
+    """Agrega team_weeks/active_weeks/somas de clima-calendário/semanas lesadas/eMW."""
     team_weeks = sum(d.num_equipes for d in dist.values())
     active_weeks = sum(1 for d in dist.values() if d.num_equipes > 0)
-    if team_weeks == 0:
-        return {}
     soma_clima = sum(getattr(d, "fator_clima", 1.0) * d.num_equipes for d in dist.values())
     soma_cal = sum(getattr(d, "fator_calendario", 1.0) * d.num_equipes for d in dist.values())
     semanas_lesadas = sum(1 for d in dist.values() if getattr(d, "fator_clima", 1.0) < 0.90)
@@ -433,6 +478,17 @@ def _lesao_from_sched(sched: Any) -> dict:
         )
         for d in dist.values()
     )
+    return team_weeks, active_weeks, soma_clima, soma_cal, semanas_lesadas, emw
+
+
+def _lesao_from_sched(sched: Any) -> dict:
+    """Extrai fatores de lesão de produtividade de uma ScheduledActivityCanonical."""
+    dist = getattr(sched, "distribuicao_semanal", None) or {}
+    if not dist:
+        return {}
+    team_weeks, active_weeks, soma_clima, soma_cal, semanas_lesadas, emw = _lesao_aggregates(dist)
+    if team_weeks == 0:
+        return {}
     return {
         "team_weeks": team_weeks,
         "active_weeks": active_weeks,
@@ -478,6 +534,290 @@ def _build_diagnostico_lesao(
     return " | ".join(partes)
 
 
+def _pe_custo_autonomo_e_gap_pool(
+    equipe: Any,
+    custo_operacional_real: float,
+    n_frentes: int,
+    idle_por_item: dict | None,
+) -> tuple[float, float]:
+    """ADR-076: custo_total_autonomo (ADR-091: 1 frente × n_frentes) e gap_pool_overhead.
+
+    gap_pool_overhead usa idle real quando idle_por_item está disponível (pool ativo);
+    caso contrário, fallback para diferença entre custo operacional e custo autônomo.
+    """
+    _custo_1fr_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
+    if _custo_1fr_autonomo <= 0 and custo_operacional_real > 0:
+        _custo_1fr_autonomo = custo_operacional_real
+    custo_total_autonomo = _custo_1fr_autonomo * n_frentes
+
+    idle_item = (idle_por_item or {}).get(equipe.item_id, 0.0)
+    if idle_por_item is not None:
+        gap_pool_overhead = round(float(idle_item), 2)
+    else:
+        gap_pool_overhead = round(float(max(0.0, custo_operacional_real - custo_total_autonomo)), 2)
+    return custo_total_autonomo, gap_pool_overhead
+
+
+def _pe_frentes_nec(
+    venda_sem_bdi: float, custo_total_autonomo: float, custo_operacional_real: float, custo_venda_total: float
+) -> float:
+    frentes_nec = 1.0
+    if venda_sem_bdi > 0 and custo_total_autonomo > 0:
+        frentes_nec = round(custo_total_autonomo / venda_sem_bdi, 4)
+    elif custo_total_autonomo <= 0 and custo_venda_total > 0:
+        frentes_nec = round(custo_operacional_real / custo_venda_total, 4)
+    # ADR-076 Fallback: se frentes_nec >> 10 (absurdo), usar 1 como conservador
+    if frentes_nec > 10.0:
+        frentes_nec = 1.0
+    return frentes_nec
+
+
+def _pe_pu_calibrado(pu_catalogo_unitario: float, custo_total_autonomo: float, q: float) -> tuple[float, float]:
+    pu_aut_unit = custo_total_autonomo / q if custo_total_autonomo > 0 else 0.0
+    pu_calibrado_unitario = round(max(pu_catalogo_unitario, pu_aut_unit), 4)
+    ajuste_minimo_pct = 0.0
+    if pu_catalogo_unitario > 0:
+        ajuste_minimo_pct = round((pu_calibrado_unitario - pu_catalogo_unitario) / pu_catalogo_unitario * 100, 2)
+    return pu_calibrado_unitario, ajuste_minimo_pct
+
+
+def _pe_plan_calibracao(
+    plan: Any,
+    custo_total_autonomo: float,
+    custo_operacional_real: float,
+    custo_venda_total: float,
+) -> tuple[float, float, float, float]:
+    """ADR-076 Opção C/D: PU catálogo/calibrado, ajuste mínimo e frentes necessárias.
+
+    fe_nec = custo_total_autonomo / (PU_sbdi × Q) = 1/η_p. NOTA: PU_sbdi JÁ inclui
+    encargos no numerador (nota NEP-029: B_base×(1+enc)) — não remover encargos aqui.
+    """
+    if not (plan is not None and plan.subtotal and plan.quantitativo and plan.quantitativo > 0):
+        return 0.0, 0.0, 0.0, 1.0
+
+    Q = float(plan.quantitativo)
+    venda_sem_bdi = float(plan.subtotal.sem_bdi.total if (plan.subtotal and plan.subtotal.sem_bdi) else 0.0)
+    pu_catalogo_unitario = round(venda_sem_bdi / Q, 4) if Q > 0 else 0.0
+
+    frentes_nec = _pe_frentes_nec(venda_sem_bdi, custo_total_autonomo, custo_operacional_real, custo_venda_total)
+    pu_calibrado_unitario, ajuste_minimo_pct = _pe_pu_calibrado(pu_catalogo_unitario, custo_total_autonomo, Q)
+
+    return pu_catalogo_unitario, pu_calibrado_unitario, ajuste_minimo_pct, frentes_nec
+
+
+def _pe_lesao_e_equipes_efetivas(
+    equipe: Any,
+    permanencia_base: float,
+    sched_por_item: dict | None,
+) -> tuple[dict, float, int, float, float, int]:
+    """ADR-076 Lesão de Produtividade (via distribuicao_semanal)."""
+    lesao: dict = {}
+    sched = (sched_por_item or {}).get(equipe.item_id)
+    if sched is not None:
+        lesao = _lesao_from_sched(sched)
+
+    n_equipes_ef = (
+        round(lesao["team_weeks"] / lesao["active_weeks"], 2)
+        if lesao and lesao.get("active_weeks", 0) > 0
+        else round(permanencia_base / float(getattr(equipe, "permanencia_meses", 1.0) or 1.0), 2)
+    )
+    semanas_ativas_v = lesao.get("active_weeks", 0)
+    fator_clima_v = lesao.get("fator_clima", 1.0)
+    fator_cal_v = lesao.get("fator_cal", 1.0)
+    semanas_lesadas_v = lesao.get("semanas_lesadas_clima", 0)
+    return lesao, n_equipes_ef, semanas_ativas_v, fator_clima_v, fator_cal_v, semanas_lesadas_v
+
+
+def _pe_machine_weeks(lesao: dict) -> tuple[float, float, float]:
+    """TD-3: machine-weeks brutas/efetivas e η_real a partir do dict de lesão."""
+    machine_weeks_brutas = float(lesao.get("team_weeks", 0)) if lesao else 0.0
+    # TD-3: usar eMW exacto (Σ m_{ij}·η_j) de fator_total quando disponível
+    machine_weeks_efetivas = float(lesao.get("effective_machine_weeks", 0)) if lesao else 0.0
+    if machine_weeks_efetivas == 0 and machine_weeks_brutas > 0:
+        # fallback para produto das médias se effective_machine_weeks não computado
+        _feta = float(lesao.get("fator_clima", 1.0)) * float(lesao.get("fator_cal", 1.0)) if lesao else 1.0
+        machine_weeks_efetivas = round(machine_weeks_brutas * _feta, 4)
+    eta_real = round(machine_weeks_efetivas / machine_weeks_brutas, 4) if machine_weeks_brutas > 0 else 1.0
+    return machine_weeks_brutas, machine_weeks_efetivas, eta_real
+
+
+def _pe_camada2_producao(
+    plan: Any, custo_total_autonomo: float, lesao: dict
+) -> tuple[float, float, float, float, float]:
+    """NEP-042 Camada 2 — PU operacional autônomo, machine-weeks, η_real."""
+    _Q = float((plan.quantitativo if plan else 0) or 0)
+    pu_operacional_autonomo = round(custo_total_autonomo / _Q, 4) if _Q > 0 and custo_total_autonomo > 0 else 0.0
+    machine_weeks_brutas, machine_weeks_efetivas, eta_real = _pe_machine_weeks(lesao)
+    return _Q, pu_operacional_autonomo, machine_weeks_brutas, machine_weeks_efetivas, eta_real
+
+
+def _pe_camada3_pool(
+    equipe: Any, pool_total_por_item: dict | None, q: float, custo_total_autonomo: float
+) -> tuple[float, float, float]:
+    """NEP-042 / ADR-091 Camada 3 — custo pool instancial agregado e PU pool.
+
+    pool_total_por_item já armazena o custo total de todas as frentes — não
+    multiplicar por n_frentes (evitar dupla contagem).
+    """
+    _raw_pool = float((pool_total_por_item or {}).get(equipe.item_id, 0.0))
+    custo_pool_total = round(_raw_pool, 2) if _raw_pool > 0 else 0.0
+    custo_pool_por_unidade = round(custo_pool_total / q, 4) if q > 0 and custo_pool_total > 0 else 0.0
+    economia_pool_abs = round(custo_total_autonomo - custo_pool_total, 2)
+    return custo_pool_total, custo_pool_por_unidade, economia_pool_abs
+
+
+def _pe_gap_praticabilidade_abs(fator_clima_v: float, plan: Any, q: float) -> float:
+    """ADR-083 §4: gap excedente C_eps por η̄ < 1 (clima/terreno).
+
+    NEP-043: C_eps = (PU_mo + PU_eq) × Q × (1/η - 1). Diesel NÃO integra C_eps: ocorre
+    por produção (não por calendário), é constante em Q. Apenas MO e EQ acumulam custo
+    em intervalos não produtivos (extensão do prazo). fator_clima_v é a média ponderada
+    de η por team-weeks; gap = 0 quando η = 1.
+    """
+    gap_praticabilidade_abs = 0.0
+    if 0.0 < fator_clima_v < 0.9999 and plan is not None and q > 0:
+        # fator_clima_v == 0.0 (perda climática total em todas as semanas) é
+        # excluído acima: 1/η divergiria (ZeroDivisionError). Nesse cenário extremo
+        # o gap de praticabilidade não é quantificável por este modelo linear.
+        _pu = plan.preco_unitario if plan and plan.preco_unitario else None
+        _pu_mo_eq = (
+            float((getattr(_pu, "mao_obra", 0.0) or 0.0) + (getattr(_pu, "equipamentos", 0.0) or 0.0)) if _pu else 0.0
+        )
+        if _pu_mo_eq > 0:
+            # PU_mo_eq × Q já representa o custo total de MO+EQ para a atividade completa;
+            # não multiplicar por n_frentes (PU×Q é total, não por frente).
+            gap_praticabilidade_abs = round(_pu_mo_eq * q * (1.0 / fator_clima_v - 1.0), 2)
+    return gap_praticabilidade_abs
+
+
+def _pe_gap_escala_abs(equipe: Any, n_equipes_ef: float, custo_fixo_total: float) -> float:
+    """Custo adicional por usar N>1 equipes vs 1 equipe × permanência nominal."""
+    perm_nom = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
+    custo_base_cat = equipe.custo_fixo_mensal * perm_nom if perm_nom > 0 else custo_fixo_total / max(n_equipes_ef, 1.0)
+    return round(custo_base_cat * max(0.0, n_equipes_ef - 1.0), 2)
+
+
+def _pe_status_frentes(frentes_nec: float) -> Literal["OK", "AVISO", "CRITICO"]:
+    """Threshold status_frentes: OK ≤ 1.25, AVISO ≤ 1.5, CRITICO > 1.5."""
+    if frentes_nec <= 1.25:
+        return "OK"
+    if frentes_nec <= 1.5:
+        return "AVISO"
+    return "CRITICO"
+
+
+def _pe_lever_gap_escala(
+    gap_escala_abs: float, n_equipes_ef: float, custo_venda_total: float
+) -> LeverEquilibrio | None:
+    if gap_escala_abs <= 0:
+        return None
+    _cv = custo_venda_total
+    return LeverEquilibrio(
+        id="fechar_gap_escala",
+        tipo="custo",
+        descricao=f"Paralelismo: {n_equipes_ef:.1f}x frentes (quantizacao de equipes)",
+        delta_margin=round(gap_escala_abs, 2),
+        delta_margin_pct=round(gap_escala_abs / _cv, 6) if _cv > 0 else 0.0,
+        viavel=n_equipes_ef > 1.05,
+        restricoes=[f"Sequencializar estende prazo +{(n_equipes_ef - 1.0) * 100:.0f}%"] if n_equipes_ef > 1.5 else [],
+    )
+
+
+def _pe_lever_gap_praticabilidade(
+    gap_praticabilidade_abs: float, fator_clima_v: float, custo_venda_total: float
+) -> LeverEquilibrio | None:
+    if gap_praticabilidade_abs <= 0:
+        return None
+    _cv = custo_venda_total
+    return LeverEquilibrio(
+        id="fechar_gap_praticabilidade",
+        tipo="custo",
+        descricao=f"Praticabilidade: eta={fator_clima_v:.1%} aproveitamento efetivo",
+        delta_margin=round(gap_praticabilidade_abs, 2),
+        delta_margin_pct=round(gap_praticabilidade_abs / _cv, 6) if _cv > 0 else 0.0,
+        viavel=True,
+        restricoes=[],
+    )
+
+
+def _pe_lever_gap_pool(
+    gap_pool_overhead: float, particao_por_item: dict | None, equipe: Any, custo_venda_total: float
+) -> LeverEquilibrio | None:
+    """ADR-083: decompor gap_pool em overhead de ociosidade e economia de mob/demob."""
+    if gap_pool_overhead <= 0:
+        return None
+    _cv = custo_venda_total
+    _particao = (particao_por_item or {}).get(equipe.item_id)
+    _pool_restricoes: list[str] = []
+    if _particao is not None:
+        if _particao.overhead_ocioso > 0:
+            _pool_restricoes.append(f"Ociosidade de gap: R$ {_particao.overhead_ocioso:,.0f}")
+        if _particao.economia_mob > 0:
+            _pool_restricoes.append(f"Economia mob/demob: −R$ {_particao.economia_mob:,.0f}")
+        _saldo = _particao.overhead_ocioso - _particao.economia_mob
+        _pool_restricoes.append(
+            f"Saldo pool ({'+overhead' if _saldo > 0 else 'economia líquida'}): R$ {abs(_saldo):,.0f}"
+        )
+        # ADR-084 Fase 4: exibir predecessor_critico_id e overlap_semanas quando disponíveis
+        if getattr(_particao, "predecessor_critico_id", None):
+            _pool_restricoes.append(f"Predecessor critico: {_particao.predecessor_critico_id}")
+        if getattr(_particao, "overlap_semanas", 0.0) > 0:
+            _pool_restricoes.append(f"Sobreposicao: {_particao.overlap_semanas:.1f} semanas")
+    return LeverEquilibrio(
+        id="fechar_gap_pool",
+        tipo="custo",
+        descricao="ResourcePool: overhead mob/demob e ociosidade de contrato",
+        delta_margin=round(gap_pool_overhead, 2),
+        delta_margin_pct=round(gap_pool_overhead / _cv, 6) if _cv > 0 else 0.0,
+        viavel=True,
+        restricoes=_pool_restricoes,
+    )
+
+
+def _pe_lever_revisao_bdi(delta: float, ajuste_minimo_pct: float, custo_venda_total: float) -> LeverEquilibrio | None:
+    if delta >= 0:
+        return None
+    _cv = custo_venda_total
+    return LeverEquilibrio(
+        id="revisao_bdi_minima",
+        tipo="preco",
+        descricao=(
+            f"BDI: +{ajuste_minimo_pct:.1f}% no PU catalogo para PE nulo"
+            if ajuste_minimo_pct > 0
+            else "BDI: revisao minima de preco para cobrir ineficiencia"
+        ),
+        delta_margin=round(-delta, 2),
+        delta_margin_pct=round(-delta / _cv, 6) if _cv > 0 else 0.0,
+        viavel=True,
+        restricoes=["Lever de precificacao — fora do alcance do planejador"],
+    )
+
+
+def _pe_build_levers(
+    n_equipes_ef: float,
+    gap_escala_abs: float,
+    gap_praticabilidade_abs: float,
+    fator_clima_v: float,
+    gap_pool_overhead: float,
+    particao_por_item: dict | None,
+    equipe: Any,
+    delta: float,
+    ajuste_minimo_pct: float,
+    custo_venda_total: float,
+) -> list:
+    """ADR-082: Levers de ajuste do ponto de equilíbrio."""
+    levers: list = []
+    for lever in (
+        _pe_lever_gap_escala(gap_escala_abs, n_equipes_ef, custo_venda_total),
+        _pe_lever_gap_praticabilidade(gap_praticabilidade_abs, fator_clima_v, custo_venda_total),
+        _pe_lever_gap_pool(gap_pool_overhead, particao_por_item, equipe, custo_venda_total),
+        _pe_lever_revisao_bdi(delta, ajuste_minimo_pct, custo_venda_total),
+    ):
+        if lever is not None:
+            levers.append(lever)
+    return levers
+
+
 def _build_pe_for_equipe(
     equipe: Any,
     venda_por_item: dict,
@@ -510,115 +850,29 @@ def _build_pe_for_equipe(
     # skill-05). _n_frentes mantido apenas para gap_escala e diagnóstico.
     _n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
 
-    # ── ADR-076 campos quantitativos ──────────────────────────────────────────
-    # custo_total_autonomo: por ADR-091, custo_total_autonomo no canônico representa
-    # o custo de 1 frente autônoma → multiplicar por n_frentes para total.
-    _custo_1fr_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
-    if _custo_1fr_autonomo <= 0 and custo_operacional_real > 0:
-        _custo_1fr_autonomo = custo_operacional_real
-    custo_total_autonomo = _custo_1fr_autonomo * _n_frentes
-
-    # gap_pool_overhead: quando idle_por_item está disponível (pool ativo), usa idle real.
-    # Caso contrário, fallback para diferença entre custo operacional e custo autônomo.
-    idle_item = (idle_por_item or {}).get(equipe.item_id, 0.0)
-    if idle_por_item is not None:
-        gap_pool_overhead = round(float(idle_item), 2)
-    else:
-        gap_pool_overhead = round(float(max(0.0, custo_operacional_real - custo_total_autonomo)), 2)
-
-    # fe_nec = custo_total_autonomo / (PU_sbdi × Q) = 1/η_p
-    # NOTA: PU_sbdi JÁ inclui encargos no numerador (nota NEP-029: B_base×(1+enc)).
-    # Portanto fe_nec usa custo_total (com encargos) — não remover encargos aqui.
-    # custo_encargos_mensal serve para decomposição interna (ADR-104, cubo, memorial),
-    # não para calibração de fe_nec. Ver investigação de invariantes 2026-06-09.
-
-    pu_catalogo_unitario: float = 0.0
-    pu_calibrado_unitario: float = 0.0
-    ajuste_minimo_pct: float = 0.0
-    frentes_nec: float = 1.0
-    gap_praticabilidade_abs: float = 0.0
-    gap_escala_abs: float = 0.0
+    custo_total_autonomo, gap_pool_overhead = _pe_custo_autonomo_e_gap_pool(
+        equipe, custo_operacional_real, _n_frentes, idle_por_item
+    )
 
     plan = (planejamento_por_item or {}).get(equipe.item_id)
-    if plan is not None and plan.subtotal and plan.quantitativo and plan.quantitativo > 0:
-        Q = float(plan.quantitativo)
-        venda_sem_bdi = float(plan.subtotal.sem_bdi.total if (plan.subtotal and plan.subtotal.sem_bdi) else 0.0)
-        pu_catalogo_unitario = round(venda_sem_bdi / Q, 4) if Q > 0 else 0.0
-
-        if venda_sem_bdi > 0 and custo_total_autonomo > 0:
-            frentes_nec = round(custo_total_autonomo / venda_sem_bdi, 4)
-        elif custo_total_autonomo <= 0 and custo_venda_total > 0:
-            frentes_nec = round(custo_operacional_real / custo_venda_total, 4)
-
-        # ADR-076 Fallback: se frentes_nec >> 10 (absurdo), usar 1 como conservador
-        if frentes_nec > 10.0:
-            frentes_nec = 1.0
-
-        pu_aut_unit = custo_total_autonomo / Q if custo_total_autonomo > 0 else 0.0
-        pu_calibrado_unitario = round(max(pu_catalogo_unitario, pu_aut_unit), 4)
-        if pu_catalogo_unitario > 0:
-            ajuste_minimo_pct = round((pu_calibrado_unitario - pu_catalogo_unitario) / pu_catalogo_unitario * 100, 2)
-
-        # gap_praticabilidade é calculado após lesao ser resolvida (fator_clima_v necessário)
-
-    # ── ADR-076 Lesão de Produtividade (via distribuicao_semanal) ─────────────
-    lesao: dict = {}
-    sched = (sched_por_item or {}).get(equipe.item_id)
-    if sched is not None:
-        lesao = _lesao_from_sched(sched)
-
-    n_equipes_ef = (
-        round(lesao["team_weeks"] / lesao["active_weeks"], 2)
-        if lesao and lesao.get("active_weeks", 0) > 0
-        else round(permanencia_base / float(getattr(equipe, "permanencia_meses", 1.0) or 1.0), 2)
+    pu_catalogo_unitario, pu_calibrado_unitario, ajuste_minimo_pct, frentes_nec = _pe_plan_calibracao(
+        plan, custo_total_autonomo, custo_operacional_real, custo_venda_total
     )
-    semanas_ativas_v = lesao.get("active_weeks", 0)
-    fator_clima_v = lesao.get("fator_clima", 1.0)
-    fator_cal_v = lesao.get("fator_cal", 1.0)
-    semanas_lesadas_v = lesao.get("semanas_lesadas_clima", 0)
 
-    # NEP-042: Camada 2 — PU operacional autônomo, machine-weeks, η_real
-    _Q = float((plan.quantitativo if plan else 0) or 0)
-    pu_operacional_autonomo = round(custo_total_autonomo / _Q, 4) if _Q > 0 and custo_total_autonomo > 0 else 0.0
-    machine_weeks_brutas = float(lesao.get("team_weeks", 0)) if lesao else 0.0
-    # TD-3: usar eMW exacto (Σ m_{ij}·η_j) de fator_total quando disponível
-    machine_weeks_efetivas = float(lesao.get("effective_machine_weeks", 0)) if lesao else 0.0
-    if machine_weeks_efetivas == 0 and machine_weeks_brutas > 0:
-        # fallback para produto das médias se effective_machine_weeks não computado
-        _feta = float(lesao.get("fator_clima", 1.0)) * float(lesao.get("fator_cal", 1.0)) if lesao else 1.0
-        machine_weeks_efetivas = round(machine_weeks_brutas * _feta, 4)
-    eta_real = round(machine_weeks_efetivas / machine_weeks_brutas, 4) if machine_weeks_brutas > 0 else 1.0
+    lesao, n_equipes_ef, semanas_ativas_v, fator_clima_v, fator_cal_v, semanas_lesadas_v = _pe_lesao_e_equipes_efetivas(
+        equipe, permanencia_base, sched_por_item
+    )
 
-    # NEP-042 / ADR-091: Camada 3 — custo pool instancial agregado e PU pool.
-    # pool_total_por_item (particao_por_item) já armazena o custo total de todas as
-    # frentes — não multiplicar por n_frentes (evitar dupla contagem).
-    _raw_pool = float((pool_total_por_item or {}).get(equipe.item_id, 0.0))
-    custo_pool_total = round(_raw_pool, 2) if _raw_pool > 0 else 0.0
-    custo_pool_por_unidade = round(custo_pool_total / _Q, 4) if _Q > 0 and custo_pool_total > 0 else 0.0
-    economia_pool_abs = round(custo_total_autonomo - custo_pool_total, 2)
+    _Q, pu_operacional_autonomo, machine_weeks_brutas, machine_weeks_efetivas, eta_real = _pe_camada2_producao(
+        plan, custo_total_autonomo, lesao
+    )
 
-    # ADR-083 §4: gap_praticabilidade — custo excedente C_eps por η̄ < 1 (clima/terreno)
-    # NEP-043: C_eps = (PU_mo + PU_eq) × Q × (1/η - 1) × n_frentes
-    # Diesel NÃO integra C_eps: ocorre por produção (não por calendário), é constante em Q.
-    # Apenas MO e EQ acumulam custo em intervalos não produtivos (extensão do prazo).
-    # fator_clima_v é a média ponderada de η por team-weeks; gap = 0 quando η = 1.
-    if 0.0 < fator_clima_v < 0.9999 and plan is not None and _Q > 0:
-        # fator_clima_v == 0.0 (perda climática total em todas as semanas) é
-        # excluído acima: 1/η divergiria (ZeroDivisionError). Nesse cenário extremo
-        # o gap de praticabilidade não é quantificável por este modelo linear.
-        _pu = plan.preco_unitario if plan and plan.preco_unitario else None
-        _pu_mo_eq = (
-            float((getattr(_pu, "mao_obra", 0.0) or 0.0) + (getattr(_pu, "equipamentos", 0.0) or 0.0)) if _pu else 0.0
-        )
-        if _pu_mo_eq > 0:
-            # PU_mo_eq × Q já representa o custo total de MO+EQ para a atividade completa;
-            # não multiplicar por n_frentes (PU×Q é total, não por frente).
-            gap_praticabilidade_abs = round(_pu_mo_eq * _Q * (1.0 / fator_clima_v - 1.0), 2)
+    custo_pool_total, custo_pool_por_unidade, economia_pool_abs = _pe_camada3_pool(
+        equipe, pool_total_por_item, _Q, custo_total_autonomo
+    )
 
-    # gap_escala_abs: custo adicional por usar N>1 equipes vs 1 equipe × perm.nominal
-    perm_nom = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
-    custo_base_cat = equipe.custo_fixo_mensal * perm_nom if perm_nom > 0 else custo_fixo_total / max(n_equipes_ef, 1.0)
-    gap_escala_abs = round(custo_base_cat * max(0.0, n_equipes_ef - 1.0), 2)
+    gap_praticabilidade_abs = _pe_gap_praticabilidade_abs(fator_clima_v, plan, _Q)
+    gap_escala_abs = _pe_gap_escala_abs(equipe, n_equipes_ef, custo_fixo_total)
 
     diag = _build_diagnostico_lesao(
         n_equipes=n_equipes_ef,
@@ -629,89 +883,20 @@ def _build_pe_for_equipe(
         gap_pool=gap_pool_overhead,
     )
 
-    # Threshold status_frentes: OK ≤ 1.25, AVISO ≤ 1.5, CRITICO > 1.5
-    status_frentes: Literal["OK", "AVISO", "CRITICO"]
-    if frentes_nec <= 1.25:
-        status_frentes = "OK"
-    elif frentes_nec <= 1.5:
-        status_frentes = "AVISO"
-    else:
-        status_frentes = "CRITICO"
+    status_frentes = _pe_status_frentes(frentes_nec)
 
-    # ── ADR-082: Levers de ajuste do ponto de equilíbrio ─────────────────────
-    levers: list = []
-    _cv = custo_venda_total  # alias para legibilidade
-    if gap_escala_abs > 0:
-        levers.append(
-            LeverEquilibrio(
-                id="fechar_gap_escala",
-                tipo="custo",
-                descricao=f"Paralelismo: {n_equipes_ef:.1f}x frentes (quantizacao de equipes)",
-                delta_margin=round(gap_escala_abs, 2),
-                delta_margin_pct=round(gap_escala_abs / _cv, 6) if _cv > 0 else 0.0,
-                viavel=n_equipes_ef > 1.05,
-                restricoes=[f"Sequencializar estende prazo +{(n_equipes_ef - 1.0) * 100:.0f}%"]
-                if n_equipes_ef > 1.5
-                else [],
-            )
-        )
-    if gap_praticabilidade_abs > 0:
-        levers.append(
-            LeverEquilibrio(
-                id="fechar_gap_praticabilidade",
-                tipo="custo",
-                descricao=f"Praticabilidade: eta={fator_clima_v:.1%} aproveitamento efetivo",
-                delta_margin=round(gap_praticabilidade_abs, 2),
-                delta_margin_pct=round(gap_praticabilidade_abs / _cv, 6) if _cv > 0 else 0.0,
-                viavel=True,
-                restricoes=[],
-            )
-        )
-    if gap_pool_overhead > 0:
-        # ADR-083: decompor gap_pool em overhead de ociosidade e economia de mob/demob
-        _particao = (particao_por_item or {}).get(equipe.item_id)
-        _pool_restricoes: list[str] = []
-        if _particao is not None:
-            if _particao.overhead_ocioso > 0:
-                _pool_restricoes.append(f"Ociosidade de gap: R$ {_particao.overhead_ocioso:,.0f}")
-            if _particao.economia_mob > 0:
-                _pool_restricoes.append(f"Economia mob/demob: −R$ {_particao.economia_mob:,.0f}")
-            _saldo = _particao.overhead_ocioso - _particao.economia_mob
-            _pool_restricoes.append(
-                f"Saldo pool ({'+overhead' if _saldo > 0 else 'economia líquida'}): R$ {abs(_saldo):,.0f}"
-            )
-            # ADR-084 Fase 4: exibir predecessor_critico_id e overlap_semanas quando disponíveis
-            if getattr(_particao, "predecessor_critico_id", None):
-                _pool_restricoes.append(f"Predecessor critico: {_particao.predecessor_critico_id}")
-            if getattr(_particao, "overlap_semanas", 0.0) > 0:
-                _pool_restricoes.append(f"Sobreposicao: {_particao.overlap_semanas:.1f} semanas")
-        levers.append(
-            LeverEquilibrio(
-                id="fechar_gap_pool",
-                tipo="custo",
-                descricao="ResourcePool: overhead mob/demob e ociosidade de contrato",
-                delta_margin=round(gap_pool_overhead, 2),
-                delta_margin_pct=round(gap_pool_overhead / _cv, 6) if _cv > 0 else 0.0,
-                viavel=True,
-                restricoes=_pool_restricoes,
-            )
-        )
-    if delta < 0:
-        levers.append(
-            LeverEquilibrio(
-                id="revisao_bdi_minima",
-                tipo="preco",
-                descricao=(
-                    f"BDI: +{ajuste_minimo_pct:.1f}% no PU catalogo para PE nulo"
-                    if ajuste_minimo_pct > 0
-                    else "BDI: revisao minima de preco para cobrir ineficiencia"
-                ),
-                delta_margin=round(-delta, 2),
-                delta_margin_pct=round(-delta / _cv, 6) if _cv > 0 else 0.0,
-                viavel=True,
-                restricoes=["Lever de precificacao — fora do alcance do planejador"],
-            )
-        )
+    levers = _pe_build_levers(
+        n_equipes_ef,
+        gap_escala_abs,
+        gap_praticabilidade_abs,
+        fator_clima_v,
+        gap_pool_overhead,
+        particao_por_item,
+        equipe,
+        delta,
+        ajuste_minimo_pct,
+        custo_venda_total,
+    )
 
     return PontoEquilibrio(
         item_id=equipe.item_id,
@@ -927,59 +1112,104 @@ def _bpe_process_equipe(
     return pe
 
 
-def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> list[PontoEquilibrio]:
-    """Calcula ponto de equilíbrio para todas as equipes diretas."""
-    venda_por_item = {
-        p.item_id: p.subtotal.com_bdi.total for p in canonical_in.planejamento if p.item_id and p.subtotal
-    }
-    planejamento_por_item = {p.item_id: p for p in canonical_in.planejamento if p.item_id}
-    equipe_by_item = {e.item_id: e for e in canonical_in.equipes_diretas if e.item_id}
-    # Mapa activity_id → ScheduledActivityCanonical para extrair fatores de lesão climática
+def _bpe_build_sched_por_item(canonical_in: CanonicalModel) -> dict:
+    """Mapa activity_id → ScheduledActivityCanonical para extrair fatores de lesão climática."""
     sched_por_item: dict = {}
     if canonical_in.cronograma and canonical_in.cronograma.scheduled_activities:
         for sa in canonical_in.cronograma.scheduled_activities:
             sched_por_item[sa.activity_id] = sa
-    # ADR-083: particao causal de custo por item (hub: item_id → CustoParticionadoItem)
+    return sched_por_item
+
+
+def _bpe_build_particao_por_item(canonical_in: CanonicalModel) -> dict[str, CustoParticionadoItem]:
+    """ADR-083: particao causal de custo por item (hub: item_id → CustoParticionadoItem)."""
     particao_por_item: dict[str, CustoParticionadoItem] = {}
     for contrato in canonical_in.contratos_recurso:
         for part in contrato.particao_por_item:
             particao_por_item[part.item_id] = part
+    return particao_por_item
 
-    # NEP-042 D3: custo pool total por item — soma custo_total_particionado sobre TODOS os contratos
+
+def _bpe_build_pool_total_por_item(canonical_in: CanonicalModel) -> dict[str, float]:
+    """NEP-042 D3: custo pool total por item — soma custo_total_particionado sobre TODOS os contratos."""
     pool_total_por_item: dict[str, float] = {}
     for contrato in canonical_in.contratos_recurso:
         for part in contrato.particao_por_item:
             pool_total_por_item[part.item_id] = pool_total_por_item.get(part.item_id, 0.0) + float(
                 getattr(part, "custo_total_particionado", 0.0) or 0.0
             )
+    return pool_total_por_item
 
-    # Idle real por item: Σ(custo_idle_mo + custo_idle_eq) das instâncias do pool.
-    # Quando a política de late hire / early dismissal está ativa e não há standby,
-    # esse valor é 0 — e o lever ResourcePool no painel_equilibrio desaparece.
+
+def _bpe_build_idle_por_item(canonical_in: CanonicalModel) -> dict[str, float]:
+    """Idle real por item: Σ(custo_idle_mo + custo_idle_eq) das instâncias do pool.
+
+    Quando a política de late hire / early dismissal está ativa e não há standby,
+    esse valor é 0 — e o lever ResourcePool no painel_equilibrio desaparece.
+    """
     idle_por_item: dict[str, float] = {}
     for inst in canonical_in.instancias_recurso or []:
         idle = float(getattr(inst, "custo_idle_mo", 0.0) or 0.0) + float(getattr(inst, "custo_idle_eq", 0.0) or 0.0)
         if idle > 0:
             for ativ in getattr(inst, "atividades_cobertas", []) or []:
                 idle_por_item[str(ativ)] = idle_por_item.get(str(ativ), 0.0) + idle
+    return idle_por_item
 
-    pe_items = [
-        pe
-        for e in canonical_in.equipes_diretas
-        for pe in [
-            _bpe_process_equipe(
-                e,
-                venda_por_item,
-                validacoes,
-                planejamento_por_item,
-                sched_por_item,
-                particao_por_item,
-                idle_por_item,
-                pool_total_por_item,
-            )
-        ]
-        if pe is not None
-    ]
+
+def _bpe_build_lookup_maps(canonical_in: CanonicalModel) -> tuple[dict, dict, dict]:
+    venda_por_item = {
+        p.item_id: p.subtotal.com_bdi.total for p in canonical_in.planejamento if p.item_id and p.subtotal
+    }
+    planejamento_por_item = {p.item_id: p for p in canonical_in.planejamento if p.item_id}
+    equipe_by_item = {e.item_id: e for e in canonical_in.equipes_diretas if e.item_id}
+    return venda_por_item, planejamento_por_item, equipe_by_item
+
+
+def _bpe_collect_pe_items(
+    canonical_in: CanonicalModel,
+    venda_por_item: dict,
+    validacoes: list,
+    planejamento_por_item: dict,
+    sched_por_item: dict,
+    particao_por_item: dict,
+    idle_por_item: dict,
+    pool_total_por_item: dict,
+) -> list[PontoEquilibrio]:
+    pe_items: list[PontoEquilibrio] = []
+    for e in canonical_in.equipes_diretas:
+        pe = _bpe_process_equipe(
+            e,
+            venda_por_item,
+            validacoes,
+            planejamento_por_item,
+            sched_por_item,
+            particao_por_item,
+            idle_por_item,
+            pool_total_por_item,
+        )
+        if pe is not None:
+            pe_items.append(pe)
+    return pe_items
+
+
+def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> list[PontoEquilibrio]:
+    """Calcula ponto de equilíbrio para todas as equipes diretas."""
+    venda_por_item, planejamento_por_item, equipe_by_item = _bpe_build_lookup_maps(canonical_in)
+    sched_por_item = _bpe_build_sched_por_item(canonical_in)
+    particao_por_item = _bpe_build_particao_por_item(canonical_in)
+    pool_total_por_item = _bpe_build_pool_total_por_item(canonical_in)
+    idle_por_item = _bpe_build_idle_por_item(canonical_in)
+
+    pe_items = _bpe_collect_pe_items(
+        canonical_in,
+        venda_por_item,
+        validacoes,
+        planejamento_por_item,
+        sched_por_item,
+        particao_por_item,
+        idle_por_item,
+        pool_total_por_item,
+    )
     if pe_items:
         validacoes.append(
             ValidacaoItem(
@@ -1006,6 +1236,83 @@ def _as_bool(value: Any) -> bool:
     return False
 
 
+def _bridge_compute_n4(inputs: dict, custo_direto_equipe: float, benchmark_mode: bool) -> float | None:
+    if benchmark_mode:
+        return None
+    raw_n4 = inputs.get("custo_operacional_equipes") or (custo_direto_equipe if custo_direto_equipe > 0 else None)
+    return round(float(raw_n4), 2) if raw_n4 else None
+
+
+def _bridge_compute_delta_status(n3: float, n4: float | None) -> tuple[float | None, float | None, str]:
+    delta_abs = round(n4 - n3, 2) if n4 is not None else None
+    delta_pct = round(delta_abs / n4 * 100, 2) if delta_abs is not None and n4 else None
+    abs_pct = abs(delta_pct) if delta_pct is not None else None
+    status = (
+        "VERDE"
+        if abs_pct is not None and abs_pct <= 10
+        else (
+            "AMARELO" if abs_pct is not None and abs_pct <= 25 else ("VERMELHO" if abs_pct is not None else "SEM_DADOS")
+        )
+    )
+    return delta_abs, delta_pct, status
+
+
+def _bridge_compute_n123(venda_sem_bdi: float, pe_items: list) -> tuple[float, float, float, float, float]:
+    N1 = round(venda_sem_bdi, 2)
+    gap_escala = sum(float(getattr(pe, "gap_escala_abs", 0.0) or 0.0) for pe in pe_items)
+    gap_prat = sum(float(getattr(pe, "gap_praticabilidade_abs", 0.0) or 0.0) for pe in pe_items)
+    N2 = round(N1 + gap_escala, 2)
+    N3 = round(N2 + gap_prat, 2)
+    return N1, N2, N3, gap_escala, gap_prat
+
+
+def _bridge_build_dict(
+    n1: float,
+    n2: float,
+    n3: float,
+    n4: float | None,
+    n_pool: float,
+    fq: float,
+    praticabilidade: float,
+    gap_escala: float,
+    gap_prat: float,
+    delta_abs: float | None,
+    delta_pct: float | None,
+    status: str,
+) -> dict:
+    return {
+        "nivel_1_catalogo_base": n1,
+        "nivel_2_catalogo_escalado": n2,
+        "nivel_3_catalogo_normalizado": n3,
+        "nivel_4_operacional": n4,
+        # NEP-042: custo pool instancial explícito (Camada 3)
+        "nivel_pool_instancial": n_pool if n_pool > 0 else None,
+        "fator_quantizacao": fq,
+        "fator_praticabilidade": praticabilidade,
+        "desvio_escala_abs": round(gap_escala, 2),
+        "desvio_clima_abs": round(gap_prat, 2),
+        "delta_real_abs": delta_abs,
+        "delta_real_percentual": delta_pct,
+        "delta_estrutural_abs": round(n3 - n1, 2),
+        "necessidades_fracionadas": [],
+        "status_alerta": status,
+    }
+
+
+def _bridge_append_ok_validacao(
+    validacoes: list, n1: float, n2: float, n3: float, n4: float | None, n_pool: float, status: str
+) -> None:
+    n4_str = f"{n4:.0f}" if n4 is not None else "N/A"
+    pool_str = f" | pool={n_pool:.0f}" if n_pool > 0 else ""
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-BRIDGE-OK",
+            status="OK",
+            mensagem=f"Bridge: N1={n1:.0f} → N2={n2:.0f} → N3={n3:.0f} → N4={n4_str}{pool_str} | alerta={status}",
+        )
+    )
+
+
 def _build_bridge_from_pe(
     pe_items: list,
     venda_sem_bdi: float,
@@ -1023,64 +1330,21 @@ def _build_bridge_from_pe(
     try:
         benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
 
-        N1 = round(venda_sem_bdi, 2)
-        gap_escala = sum(float(getattr(pe, "gap_escala_abs", 0.0) or 0.0) for pe in pe_items)
-        gap_prat = sum(float(getattr(pe, "gap_praticabilidade_abs", 0.0) or 0.0) for pe in pe_items)
-        N2 = round(N1 + gap_escala, 2)
-        N3 = round(N2 + gap_prat, 2)
+        N1, N2, N3, gap_escala, gap_prat = _bridge_compute_n123(venda_sem_bdi, pe_items)
 
-        if benchmark_mode:
-            N4 = None
-        else:
-            raw_n4 = inputs.get("custo_operacional_equipes") or (
-                custo_direto_equipe if custo_direto_equipe > 0 else None
-            )
-            N4 = round(float(raw_n4), 2) if raw_n4 else None
+        N4 = _bridge_compute_n4(inputs, custo_direto_equipe, benchmark_mode)
+        delta_abs, delta_pct, status = _bridge_compute_delta_status(N3, N4)
 
-        delta_abs = round(N4 - N3, 2) if N4 is not None else None
-        delta_pct = round(delta_abs / N4 * 100, 2) if delta_abs is not None and N4 else None
-        abs_pct = abs(delta_pct) if delta_pct is not None else None
-        status = (
-            "VERDE"
-            if abs_pct is not None and abs_pct <= 10
-            else (
-                "AMARELO"
-                if abs_pct is not None and abs_pct <= 25
-                else ("VERMELHO" if abs_pct is not None else "SEM_DADOS")
-            )
-        )
         fq = round(N2 / N1, 4) if N1 > 0 else 1.0
         praticabilidade = round(N2 / N3, 4) if N3 > 0 else 1.0
 
         # NEP-042 D5: N_pool = custo pool instancial total (Camada 3)
         N_pool = round(sum(float(getattr(pe, "custo_pool_total", 0.0) or 0.0) for pe in pe_items), 2)
 
-        bridge = {
-            "nivel_1_catalogo_base": N1,
-            "nivel_2_catalogo_escalado": N2,
-            "nivel_3_catalogo_normalizado": N3,
-            "nivel_4_operacional": N4,
-            # NEP-042: custo pool instancial explícito (Camada 3)
-            "nivel_pool_instancial": N_pool if N_pool > 0 else None,
-            "fator_quantizacao": fq,
-            "fator_praticabilidade": praticabilidade,
-            "desvio_escala_abs": round(gap_escala, 2),
-            "desvio_clima_abs": round(gap_prat, 2),
-            "delta_real_abs": delta_abs,
-            "delta_real_percentual": delta_pct,
-            "delta_estrutural_abs": round(N3 - N1, 2),
-            "necessidades_fracionadas": [],
-            "status_alerta": status,
-        }
-        n4_str = f"{N4:.0f}" if N4 is not None else "N/A"
-        pool_str = f" | pool={N_pool:.0f}" if N_pool > 0 else ""
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-BRIDGE-OK",
-                status="OK",
-                mensagem=f"Bridge: N1={N1:.0f} → N2={N2:.0f} → N3={N3:.0f} → N4={n4_str}{pool_str} | alerta={status}",
-            )
+        bridge = _bridge_build_dict(
+            N1, N2, N3, N4, N_pool, fq, praticabilidade, gap_escala, gap_prat, delta_abs, delta_pct, status
         )
+        _bridge_append_ok_validacao(validacoes, N1, N2, N3, N4, N_pool, status)
         return bridge
     except Exception as exc:  # pragma: no cover
         validacoes.append(

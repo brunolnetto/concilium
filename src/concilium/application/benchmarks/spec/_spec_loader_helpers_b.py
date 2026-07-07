@@ -176,6 +176,21 @@ def _bii_build_mao_obra(cat: str, eq_detail: dict) -> dict | None:
     }
 
 
+def _bii_add_equipamentos_e_verbas(entry: dict, cat: str, detalhe: dict) -> None:
+    """Anexa sub-categorias de equipamentos e verbas vindas da planilha, se houver.
+
+    Auditoria AGIS 2026-06-11: componentes de equipamentos (locação+combustível de
+    veículos de apoio) e verbas vindos da planilha — habilitam BDI por sub-categoria
+    (equip → taxa de material/4%, fiel à coluna DIESEL da planilha; verbas → indireto).
+    """
+    eq_total = detalhe.get("equipamentos_mensal_total")
+    if isinstance(eq_total, (int, float)) and eq_total > 0:
+        entry["equipamentos"] = {"nome": f"EQUIP {cat}", "custo_fixo_mensal": round(float(eq_total), 2), "itens": []}
+    vb_total = detalhe.get("verbas_mensal_total")
+    if isinstance(vb_total, (int, float)) and vb_total > 0:
+        entry["verbas"] = {"nome": f"VERBAS {cat}", "custo_fixo_mensal": round(float(vb_total), 2), "itens": []}
+
+
 def _bii_build_entry(cat: str, data: dict, detalhe_por_cat: dict) -> dict:
     if cat == "MOB":
         custo_total_mob = data.get("custo_fixo_total") or data.get("custo_fixo_mensal_total", 0)
@@ -186,15 +201,7 @@ def _bii_build_entry(cat: str, data: dict, detalhe_por_cat: dict) -> dict:
     mo = _bii_build_mao_obra(cat, detalhe)
     if mo:
         entry["mao_de_obra"] = mo
-    # Auditoria AGIS 2026-06-11: componentes de equipamentos (locação+combustível de
-    # veículos de apoio) e verbas vindos da planilha — habilitam BDI por sub-categoria
-    # (equip → taxa de material/4%, fiel à coluna DIESEL da planilha; verbas → indireto).
-    eq_total = detalhe.get("equipamentos_mensal_total")
-    if isinstance(eq_total, (int, float)) and eq_total > 0:
-        entry["equipamentos"] = {"nome": f"EQUIP {cat}", "custo_fixo_mensal": round(float(eq_total), 2), "itens": []}
-    vb_total = detalhe.get("verbas_mensal_total")
-    if isinstance(vb_total, (int, float)) and vb_total > 0:
-        entry["verbas"] = {"nome": f"VERBAS {cat}", "custo_fixo_mensal": round(float(vb_total), 2), "itens": []}
+    _bii_add_equipamentos_e_verbas(entry, cat, detalhe)
     return entry
 
 

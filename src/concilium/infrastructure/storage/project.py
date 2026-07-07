@@ -388,6 +388,53 @@ class ProjectStore:
         """
         return Path(__file__).parents[4]
 
+    def _resolve_cpu_individual(self, concilium_root: Path, catalogo_base: str, cpu_id: str) -> dict | None:
+        individual = concilium_root / "config" / "catalogos" / catalogo_base / "cpus" / f"{cpu_id}.json"
+        if not individual.exists():
+            return None
+        try:
+            return json.loads(individual.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def _resolve_cpu_agregado(self, concilium_root: Path, catalogo_base: str, cpu_id: str) -> dict | None:
+        aggregate = concilium_root / "config" / "catalogos" / catalogo_base / "cpus.json"
+        if not aggregate.exists():
+            return None
+        try:
+            data = json.loads(aggregate.read_text(encoding="utf-8"))
+            cpus = data.get("cpus", data) if isinstance(data, dict) else data
+            for cpu in cpus if isinstance(cpus, list) else []:
+                if isinstance(cpu, dict) and cpu.get("codigo") == cpu_id:
+                    return cpu
+        except Exception:
+            pass
+        return None
+
+    def _resolve_cpu_catalogo_base(self, cpu_id: str) -> dict | None:
+        catalogo_base = self.meta.get("catalogo_base")
+        if not catalogo_base:
+            return None
+        concilium_root = self._concilium_root()
+        individual = self._resolve_cpu_individual(concilium_root, catalogo_base, cpu_id)
+        if individual is not None:
+            return individual
+        return self._resolve_cpu_agregado(concilium_root, catalogo_base, cpu_id)
+
+    def _resolve_cpu_snapshot(self, cpu_id: str) -> dict | None:
+        snaps_dir = self.root / "snapshots"
+        if not snaps_dir.exists():
+            return None
+        for snap_file in sorted(snaps_dir.glob("catalogo-*.json"), reverse=True):
+            try:
+                snap = json.loads(snap_file.read_text(encoding="utf-8"))
+                for cpu in snap.get("cpus", []) if isinstance(snap, dict) else []:
+                    if isinstance(cpu, dict) and cpu.get("codigo") == cpu_id:
+                        return cpu
+            except Exception:
+                continue
+        return None
+
     def resolve_cpu(self, cpu_id: str) -> dict | None:
         """Resolve CPU pelo id: override → catálogo base (individual + agregado) → snapshot."""
         # 1. Override local do projeto — via read_json para consistência com o store
@@ -395,39 +442,11 @@ class ProjectStore:
         if cpu_id in override:
             return override[cpu_id]
 
-        catalogo_base = self.meta.get("catalogo_base")
-        concilium_root = self._concilium_root()
+        from_catalogo_base = self._resolve_cpu_catalogo_base(cpu_id)
+        if from_catalogo_base is not None:
+            return from_catalogo_base
 
-        if catalogo_base:
-            individual = concilium_root / "config" / "catalogos" / catalogo_base / "cpus" / f"{cpu_id}.json"
-            if individual.exists():
-                try:
-                    return json.loads(individual.read_text(encoding="utf-8"))
-                except Exception:
-                    pass
-
-            aggregate = concilium_root / "config" / "catalogos" / catalogo_base / "cpus.json"
-            if aggregate.exists():
-                try:
-                    data = json.loads(aggregate.read_text(encoding="utf-8"))
-                    cpus = data.get("cpus", data) if isinstance(data, dict) else data
-                    for cpu in cpus if isinstance(cpus, list) else []:
-                        if isinstance(cpu, dict) and cpu.get("codigo") == cpu_id:
-                            return cpu
-                except Exception:
-                    pass
-
-        snaps_dir = self.root / "snapshots"
-        if snaps_dir.exists():
-            for snap_file in sorted(snaps_dir.glob("catalogo-*.json"), reverse=True):
-                try:
-                    snap = json.loads(snap_file.read_text(encoding="utf-8"))
-                    for cpu in snap.get("cpus", []) if isinstance(snap, dict) else []:
-                        if isinstance(cpu, dict) and cpu.get("codigo") == cpu_id:
-                            return cpu
-                except Exception:
-                    continue
-        return None
+        return self._resolve_cpu_snapshot(cpu_id)
 
     def list_escopos(self) -> list[str]:
         """Lista IDs de escopos existentes."""

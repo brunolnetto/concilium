@@ -265,6 +265,38 @@ class TestExtractDagSSFFTipo:
         assert any(ep.tipo == "FF" for ep in dag.extended_precedences)
         assert ("IT-W", "IT-Y") in dag.thresholds
 
+    def test_extract_edge_thresholds_ff_followed_by_another_pred_continues_loop(self):
+        """Mesmo cenário, chamando diretamente _extract_edge_thresholds_from_eap
+        (helper extraído de _extract_dag): branch FF->próximo predecessor."""
+        _extract_edge_thresholds_from_eap = _MOD._extract_edge_thresholds_from_eap
+
+        class FakePredFF:
+            item_id = "IT-X"
+            tipo = "FF"
+            lag = 1
+            completion_threshold_pct = 0.0
+
+        class FakePredFS:
+            item_id = "IT-W"
+            tipo = "FS"
+            lag = 0
+            completion_threshold_pct = 1.0
+
+        class FakeItem:
+            item_id = "IT-Y"
+            descricao = "Item Y"
+            predecessores = [FakePredFF(), FakePredFS()]
+
+            def predecessores_tipados(self):
+                return self.predecessores
+
+        class FakeCanonical:
+            eap = [FakeItem()]
+
+        thresholds, extended = _extract_edge_thresholds_from_eap(FakeCanonical())
+        assert any(ep.tipo == "FF" for ep in extended)
+        assert ("IT-W", "IT-Y") in thresholds
+
     def test_fs_tipo_uses_completion_threshold_pct(self):
         """Line 519: FS tipo (explicit or default) uses the real threshold,
         not the SS/FF topological sentinel of 1.0."""

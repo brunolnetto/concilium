@@ -214,6 +214,25 @@ class TestNotifyUserCreated:
         body = mock_send.call_args.kwargs["body"]
         assert "C:\\Concilium" not in body
 
+    def test_download_urls_only_linux_present_skips_windows_line(self):
+        """windows_url ausente (branch False) não impede a linha do Linux de ser incluída."""
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send") as mock_send:
+            svc.notify_user_created(
+                "client1",
+                "operator",
+                "client1@test.com",
+                '{"unix":true}',
+                '{"windows":true}',
+                proxy_download_urls={"windows": None, "linux": "https://example.com/concilium-mcp-proxy-linux"},
+            )
+        body = mock_send.call_args.kwargs["body"]
+        assert "C:\\Concilium" not in body
+        assert "https://example.com/concilium-mcp-proxy-linux" in body
+
     def test_download_urls_absent_when_all_none(self):
         from concilium.infrastructure.services.notification_service import NotificationService
 

@@ -17,6 +17,68 @@ def _bucket_from_week_iso(week_iso: str) -> str:
     return f"{anchor.year:04d}-{anchor.month:02d}"
 
 
+def _accumulate_by_period_activity(canonical, cubo) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+    by_period_activity: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    total_by_activity: dict[str, float] = defaultdict(float)
+
+    for celula, valor_cell in _iter_scaled_cubo_cells(canonical, cubo):
+        if str(getattr(celula, "componente_bdi", "")) != "custo_direto":
+            continue
+        atividade_id = str(getattr(celula, "atividade_id", "") or "")
+        if not atividade_id:
+            continue
+        bucket = _bucket_from_week_iso(str(celula.semana_iso))
+        value = float(valor_cell or 0.0)
+        by_period_activity[bucket][atividade_id] += value
+        total_by_activity[atividade_id] += value
+
+    return by_period_activity, total_by_activity
+
+
+def _draw_stacked_bars(ax, periodos: list[str], top_atividades: list[str], by_period_activity) -> None:
+    x = list(range(len(periodos)))
+    baseline = [0.0] * len(periodos)
+    scale = 1e6
+
+    for idx, atividade_id in enumerate(top_atividades):
+        vals = [by_period_activity[p].get(atividade_id, 0.0) / scale for p in periodos]
+        ax.bar(
+            x,
+            vals,
+            bottom=baseline,
+            color=COLORS[idx % len(COLORS)],
+            alpha=0.88,
+            width=0.72,
+            label=atividade_id,
+        )
+        baseline = [b + v for b, v in zip(baseline, vals, strict=False)]
+
+
+def _style_axes(ax, periodos: list[str]) -> None:
+    x = list(range(len(periodos)))
+    ax.set_xticks(x)
+    ax.set_xticklabels(periodos, rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("Custo direto (R$ Mi)", fontsize=9)
+    ax.set_xlabel("Mês", fontsize=9)
+    ax.set_title("Custo Direto ao Longo do Tempo (breakdown por atividade)", fontsize=11, fontweight="bold")
+    ax.grid(axis="y", alpha=0.3)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), fontsize=8, title="Atividades")
+
+
+def _add_coverage_note(fig, top_atividades: list[str], total_by_activity: dict[str, float]) -> None:
+    total_plot = sum(total_by_activity[a] for a in top_atividades)
+    total_all = sum(total_by_activity.values())
+    cobertura = (total_plot / total_all * 100.0) if total_all > 0 else 0.0
+    fig.text(
+        0.01,
+        0.01,
+        f"Top {len(top_atividades)} atividades cobrem {cobertura:.1f}% do custo direto total.",
+        fontsize=7.5,
+        color="#555",
+        ha="left",
+    )
+
+
 def build(canonical, cubo) -> bytes | None:
     try:
         plt, fig_to_bytes = init_mpl()
@@ -24,19 +86,7 @@ def build(canonical, cubo) -> bytes | None:
         return None
 
     try:
-        by_period_activity: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-        total_by_activity: dict[str, float] = defaultdict(float)
-
-        for celula, valor_cell in _iter_scaled_cubo_cells(canonical, cubo):
-            if str(getattr(celula, "componente_bdi", "")) != "custo_direto":
-                continue
-            atividade_id = str(getattr(celula, "atividade_id", "") or "")
-            if not atividade_id:
-                continue
-            bucket = _bucket_from_week_iso(str(celula.semana_iso))
-            value = float(valor_cell or 0.0)
-            by_period_activity[bucket][atividade_id] += value
-            total_by_activity[atividade_id] += value
+        by_period_activity, total_by_activity = _accumulate_by_period_activity(canonical, cubo)
 
         periodos = sorted(by_period_activity.keys())
         if not periodos:
@@ -47,43 +97,10 @@ def build(canonical, cubo) -> bytes | None:
         # total_by_activity não-vazio: top_atividades nunca é vazio aqui.
         top_atividades = sorted(total_by_activity, key=lambda a: -total_by_activity[a])[:8]
 
-        x = list(range(len(periodos)))
-        baseline = [0.0] * len(periodos)
-        scale = 1e6
-
         fig, ax = plt.subplots(figsize=(max(10, len(periodos) * 0.8 + 2), 6))
-        for idx, atividade_id in enumerate(top_atividades):
-            vals = [by_period_activity[p].get(atividade_id, 0.0) / scale for p in periodos]
-            ax.bar(
-                x,
-                vals,
-                bottom=baseline,
-                color=COLORS[idx % len(COLORS)],
-                alpha=0.88,
-                width=0.72,
-                label=atividade_id,
-            )
-            baseline = [b + v for b, v in zip(baseline, vals, strict=False)]
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(periodos, rotation=45, ha="right", fontsize=8)
-        ax.set_ylabel("Custo direto (R$ Mi)", fontsize=9)
-        ax.set_xlabel("Mês", fontsize=9)
-        ax.set_title("Custo Direto ao Longo do Tempo (breakdown por atividade)", fontsize=11, fontweight="bold")
-        ax.grid(axis="y", alpha=0.3)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), fontsize=8, title="Atividades")
-
-        total_plot = sum(total_by_activity[a] for a in top_atividades)
-        total_all = sum(total_by_activity.values())
-        cobertura = (total_plot / total_all * 100.0) if total_all > 0 else 0.0
-        fig.text(
-            0.01,
-            0.01,
-            f"Top {len(top_atividades)} atividades cobrem {cobertura:.1f}% do custo direto total.",
-            fontsize=7.5,
-            color="#555",
-            ha="left",
-        )
+        _draw_stacked_bars(ax, periodos, top_atividades, by_period_activity)
+        _style_axes(ax, periodos)
+        _add_coverage_note(fig, top_atividades, total_by_activity)
 
         fig.tight_layout(rect=(0, 0.06, 0.84, 1))
         return fig_to_bytes(fig)

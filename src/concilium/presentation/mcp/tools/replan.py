@@ -10,19 +10,11 @@ from concilium.domain.constants import META_MARGEM_PADRAO
 from concilium.infrastructure.auth.permission_guard import permission
 
 
-def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
-    """Estimativa linear do impacto de levers sobre os PEs sem re-executar o pipeline.
-
-    Modela o efeito de mudanças de regime (horas/dia, dias/semana) e
-    de capacidade (fator_equipes) sobre frentes_equivalentes_necessarias.
-
-    Não substitui a execução do pipeline — fornece feedback imediato ao
-    engenheiro antes de decidir se vale re-planejar formalmente.
-    """
+def _lever_prod_factor(canonical: Any, parametros: dict) -> tuple[float, float, float, float]:
+    """Resolve fator_equipes, novos horas/dia e dias/semana, e o prod_factor resultante."""
     fator_eq = float(parametros.get("fator_equipes", 1.0))
     horas_dia = int(parametros.get("horas_dia", 0)) or None
     dias_sem = int(parametros.get("dias_semana", 0)) or None
-    meta_margem = float(parametros.get("meta_margem_pct", META_MARGEM_PADRAO))
 
     regime = getattr(canonical, "projeto", None)
     regime = getattr(regime, "regime_trabalho", None) if regime else None
@@ -33,10 +25,34 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
     dias_novo = float(dias_sem) if dias_sem else base_dias
 
     prod_factor = (fator_eq * horas_novo * dias_novo) / (1.0 * base_horas * base_dias)
+    return fator_eq, horas_novo, dias_novo, prod_factor
 
-    pes = list(getattr(canonical, "ponto_equilibrio", []) or [])
-    resultado = getattr(canonical, "resultado", None)
 
+def _lever_status_frentes(fe_novo: float) -> str:
+    if fe_novo <= 1.25:
+        return "OK"
+    return "AVISO" if fe_novo <= 1.5 else "CRITICO"
+
+
+def _lever_simulate_item(pe: Any, prod_factor: float) -> tuple[dict[str, Any], float, float, float, float]:
+    fe_atual = float(getattr(pe, "frentes_equivalentes_necessarias", 1.0) or 1.0)
+    fe_novo = fe_atual / prod_factor if prod_factor > 0 else fe_atual
+    c_atual = float(getattr(pe, "custo_operacional_real", 0.0) or 0.0)
+    c_novo = c_atual * prod_factor
+    item = {
+        "item_id": pe.item_id,
+        "fe_nec_atual": round(fe_atual, 3),
+        "fe_nec_estimado": round(fe_novo, 3),
+        "custo_atual": round(c_atual, 2),
+        "custo_estimado": round(c_novo, 2),
+        "status_frentes_estimado": _lever_status_frentes(fe_novo),
+    }
+    return item, round(fe_atual, 3), round(fe_novo, 3), c_atual, c_novo
+
+
+def _lever_simulate_items(
+    pes: list[Any], prod_factor: float
+) -> tuple[list[dict[str, Any]], list[float], list[float], float, float]:
     itens_sim: list[dict[str, Any]] = []
     fe_atuais: list[float] = []
     fe_novos: list[float] = []
@@ -44,39 +60,57 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
     total_custo_novo = 0.0
 
     for pe in pes:
-        fe_atual = float(getattr(pe, "frentes_equivalentes_necessarias", 1.0) or 1.0)
-        fe_novo = fe_atual / prod_factor if prod_factor > 0 else fe_atual
-        c_atual = float(getattr(pe, "custo_operacional_real", 0.0) or 0.0)
-        c_novo = c_atual * prod_factor
+        item, fe_atual, fe_novo, c_atual, c_novo = _lever_simulate_item(pe, prod_factor)
+        itens_sim.append(item)
+        fe_atuais.append(fe_atual)
+        fe_novos.append(fe_novo)
         total_custo_atual += c_atual
         total_custo_novo += c_novo
-        fe_atuais.append(round(fe_atual, 3))
-        fe_novos.append(round(fe_novo, 3))
-        status_novo = "OK" if fe_novo <= 1.25 else ("AVISO" if fe_novo <= 1.5 else "CRITICO")
-        itens_sim.append(
-            {
-                "item_id": pe.item_id,
-                "fe_nec_atual": round(fe_atual, 3),
-                "fe_nec_estimado": round(fe_novo, 3),
-                "custo_atual": round(c_atual, 2),
-                "custo_estimado": round(c_novo, 2),
-                "status_frentes_estimado": status_novo,
-            }
-        )
+
+    return itens_sim, fe_atuais, fe_novos, total_custo_atual, total_custo_novo
+
+
+def _lever_custo_indireto(resultado: Any) -> float:
+    custo_indireto = 0.0
+    if resultado and resultado.custo:
+        for k in ("indireto_adm", "indireto_top", "indireto_lab", "indireto_qsms", "indireto_mob"):
+            custo_indireto += float(getattr(resultado.custo, k, 0.0) or 0.0)
+    return custo_indireto
+
+
+def _lever_margens(
+    resultado: Any, total_custo_atual: float, total_custo_novo: float, custo_indireto: float
+) -> tuple[float, float]:
+    venda = float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) if resultado else 0.0
+    margem_atual = (venda - total_custo_atual - custo_indireto) / venda if venda > 0 else 0.0
+    margem_nova = (venda - total_custo_novo - custo_indireto) / venda if venda > 0 else 0.0
+    return margem_atual, margem_nova
+
+
+def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
+    """Estimativa linear do impacto de levers sobre os PEs sem re-executar o pipeline.
+
+    Modela o efeito de mudanças de regime (horas/dia, dias/semana) e
+    de capacidade (fator_equipes) sobre frentes_equivalentes_necessarias.
+
+    Não substitui a execução do pipeline — fornece feedback imediato ao
+    engenheiro antes de decidir se vale re-planejar formalmente.
+    """
+    meta_margem = float(parametros.get("meta_margem_pct", META_MARGEM_PADRAO))
+    fator_eq, horas_novo, dias_novo, prod_factor = _lever_prod_factor(canonical, parametros)
+
+    pes = list(getattr(canonical, "ponto_equilibrio", []) or [])
+    resultado = getattr(canonical, "resultado", None)
+
+    itens_sim, fe_atuais, fe_novos, total_custo_atual, total_custo_novo = _lever_simulate_items(pes, prod_factor)
 
     n_crit_atual = sum(1 for fe in fe_atuais if fe > 1.25)
     n_crit_novo = sum(1 for fe in fe_novos if fe > 1.25)
     fe_med_atual = (sum(fe_atuais) / len(fe_atuais)) if fe_atuais else 0
     fe_med_novo = (sum(fe_novos) / len(fe_novos)) if fe_novos else 0
 
-    custo_indireto = 0.0
-    if resultado and resultado.custo:
-        for k in ("indireto_adm", "indireto_top", "indireto_lab", "indireto_qsms", "indireto_mob"):
-            custo_indireto += float(getattr(resultado.custo, k, 0.0) or 0.0)
-
-    venda = float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) if resultado else 0.0
-    margem_atual = (venda - total_custo_atual - custo_indireto) / venda if venda > 0 else 0.0
-    margem_nova = (venda - total_custo_novo - custo_indireto) / venda if venda > 0 else 0.0
+    custo_indireto = _lever_custo_indireto(resultado)
+    margem_atual, margem_nova = _lever_margens(resultado, total_custo_atual, total_custo_novo, custo_indireto)
 
     return {
         "tipo": "lever_adjust",

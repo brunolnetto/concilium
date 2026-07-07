@@ -92,24 +92,8 @@ except ImportError:
 # _SEMANAS_POR_MES agora importada de domain/constants.py (era 4.33, corrigido para 4.3482)
 
 
-def run_custos_indiretos(
-    canonical_in: CanonicalModel,
-    inputs: dict[str, Any],
-    catalogo: dict[str, Any] | None = None,
-    perfil: dict[str, Any] | None = None,
-    **kwargs: Any,
-) -> SkillResult:
-    """Popula seções 'indiretos' e 'indiretos_semanal' do canônico."""
-    validacoes: list[ValidacaoItem] = []
-
-    repo = RepositorioInsumo(catalogo) if catalogo else None
-    data_base = canonical_in.projeto.data_base_orcamento
-    overrides = _extract_overrides(inputs)
-    jurisdicao_id = inputs.get("jurisdicao_id")
-
-    _blocked = _get_pipeline_blocked(canonical_in)
-    mob_bloqueada = bool(_blocked & {"03-equipes-diretas", "05-equipes-e-alocacao"})
-
+def _check_mob_precondicoes(canonical_in: CanonicalModel, mob_bloqueada: bool, validacoes: list) -> None:
+    """Valida pré-condições de mobilização (MOB bloqueada ou equipes_diretas vazia) e registra avisos."""
     if mob_bloqueada:
         validacoes.append(
             ValidacaoItem(
@@ -130,6 +114,138 @@ def run_custos_indiretos(
                 mensagem="equipes_diretas vazia — usando 0 pessoas para cálculo de MOB",
             )
         )
+
+
+def _process_regular_categoria(
+    codigo: str,
+    cat: dict,
+    composicoes_input: dict,
+    categorias_config_raw: list[dict],
+    n_semanas: int,
+    repo: Any,
+    data_base: Any,
+    overrides: Any,
+    jurisdicao_id: Any,
+    canonical_in: CanonicalModel,
+    catalogo: dict[str, Any] | None,
+    dv4_policy: Any,
+    policy_scale: dict,
+    prazo_meses: float,
+) -> tuple[Indireto, list[IndiretoSemanal]]:
+    """Processa uma categoria indireta não-MOB: resolve composição, aplica DV4 e monta indireto + semanal."""
+    cat_obj = _resolve_categoria_comp(
+        codigo,
+        cat,
+        composicoes_input,
+        categorias_config_raw,
+        n_semanas,
+        repo,
+        data_base,
+        overrides,
+        jurisdicao_id,
+        canonical_in,
+        catalogo,
+    )
+    custo, cat_obj = _apply_dv4_scale_to_categoria(
+        cat_obj,
+        dv4_policy,
+        policy_scale,
+        n_semanas,
+        float(prazo_meses),
+    )
+    indireto = _build_indireto_from_cat_obj(
+        codigo,
+        cat["descricao"],
+        cat_obj,
+        custo,
+        n_semanas,
+        float(prazo_meses),
+    )
+    semanal = _build_semanal_breakdown(cat_obj, n_semanas, custo)
+    return indireto, semanal
+
+
+def _process_categorias_indiretas(
+    perfil: dict[str, Any] | None,
+    mob_bloqueada: bool,
+    categorias_config_raw: list[dict],
+    dados_mob: dict,
+    num_pessoas_direta: int,
+    prazo_meses: float,
+    n_semanas: int,
+    dv4_policy: Any,
+    policy_scale: dict,
+    mob_schedule: Any,
+    composicoes_input: dict,
+    repo: Any,
+    data_base: Any,
+    overrides: Any,
+    jurisdicao_id: Any,
+    canonical_in: CanonicalModel,
+    catalogo: dict[str, Any] | None,
+) -> tuple[list[Indireto], list[IndiretoSemanal]]:
+    """Itera as categorias indiretas do perfil, roteando MOB para o processamento especial e demais para o regular."""
+    indiretos_out: list[Indireto] = []
+    indiretos_semanal_out: list[IndiretoSemanal] = []
+
+    for cat in (perfil or {}).get("categorias_indireto", []):
+        codigo: str = cat["codigo"]
+        if codigo == "MOB" and mob_bloqueada:
+            continue
+        if codigo == "MOB":
+            indir, semanal = _process_mob_categoria(
+                cat,
+                categorias_config_raw,
+                dados_mob,
+                num_pessoas_direta,
+                prazo_meses,
+                n_semanas,
+                dv4_policy,
+                policy_scale,
+                mob_schedule=mob_schedule,
+            )
+        else:
+            indir, semanal = _process_regular_categoria(
+                codigo,
+                cat,
+                composicoes_input,
+                categorias_config_raw,
+                n_semanas,
+                repo,
+                data_base,
+                overrides,
+                jurisdicao_id,
+                canonical_in,
+                catalogo,
+                dv4_policy,
+                policy_scale,
+                prazo_meses,
+            )
+        indiretos_out.append(indir)
+        indiretos_semanal_out.extend(semanal)
+
+    return indiretos_out, indiretos_semanal_out
+
+
+def run_custos_indiretos(
+    canonical_in: CanonicalModel,
+    inputs: dict[str, Any],
+    catalogo: dict[str, Any] | None = None,
+    perfil: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> SkillResult:
+    """Popula seções 'indiretos' e 'indiretos_semanal' do canônico."""
+    validacoes: list[ValidacaoItem] = []
+
+    repo = RepositorioInsumo(catalogo) if catalogo else None
+    data_base = canonical_in.projeto.data_base_orcamento
+    overrides = _extract_overrides(inputs)
+    jurisdicao_id = inputs.get("jurisdicao_id")
+
+    _blocked = _get_pipeline_blocked(canonical_in)
+    mob_bloqueada = bool(_blocked & {"03-equipes-diretas", "05-equipes-e-alocacao"})
+
+    _check_mob_precondicoes(canonical_in, mob_bloqueada, validacoes)
 
     # Indiretos acompanham as atividades diretas: usar makespan do algoritmo de otimização.
     # A duração do canteiro é determinada pelo cronograma produtivo (RCPSP), não pelo prazo
@@ -152,59 +268,25 @@ def run_custos_indiretos(
     # ADR-105: Tentar obter mob_schedule do canônico (inferido por Skill-04)
     mob_schedule = getattr(canonical_in, "mob_schedule", None)
 
-    indiretos_out: list[Indireto] = []
-    indiretos_semanal_out: list[IndiretoSemanal] = []
-
-    for cat in (perfil or {}).get("categorias_indireto", []):
-        codigo: str = cat["codigo"]
-        if codigo == "MOB" and mob_bloqueada:
-            continue
-        if codigo == "MOB":
-            indir, semanal = _process_mob_categoria(
-                cat,
-                categorias_config_raw,
-                dados_mob,
-                num_pessoas_direta,
-                prazo_meses,
-                n_semanas,
-                dv4_policy,
-                policy_scale,
-                mob_schedule=mob_schedule,
-            )
-            indiretos_out.append(indir)
-            indiretos_semanal_out.extend(semanal)
-        else:
-            cat_obj = _resolve_categoria_comp(
-                codigo,
-                cat,
-                composicoes_input,
-                categorias_config_raw,
-                n_semanas,
-                repo,
-                data_base,
-                overrides,
-                jurisdicao_id,
-                canonical_in,
-                catalogo,
-            )
-            custo, cat_obj = _apply_dv4_scale_to_categoria(
-                cat_obj,
-                dv4_policy,
-                policy_scale,
-                n_semanas,
-                float(prazo_meses),
-            )
-            indiretos_out.append(
-                _build_indireto_from_cat_obj(
-                    codigo,
-                    cat["descricao"],
-                    cat_obj,
-                    custo,
-                    n_semanas,
-                    float(prazo_meses),
-                )
-            )
-            indiretos_semanal_out.extend(_build_semanal_breakdown(cat_obj, n_semanas, custo))
+    indiretos_out, indiretos_semanal_out = _process_categorias_indiretas(
+        perfil,
+        mob_bloqueada,
+        categorias_config_raw,
+        dados_mob,
+        num_pessoas_direta,
+        prazo_meses,
+        n_semanas,
+        dv4_policy,
+        policy_scale,
+        mob_schedule,
+        composicoes_input,
+        repo,
+        data_base,
+        overrides,
+        jurisdicao_id,
+        canonical_in,
+        catalogo,
+    )
 
     _validate_dv4_policy(dv4_policy, validacoes, policy_scale)
     _validate_razao_indireto_direto(perfil, canonical_in, indiretos_out, validacoes)

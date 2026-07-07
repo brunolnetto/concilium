@@ -298,6 +298,45 @@ def _find_reference_payload(slug: str, root: Path) -> Path | None:
     return next((p for p in candidates if p.exists()), None)
 
 
+def _load_meta_json(meta_path: Path) -> dict | None:
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _meta_matches_projeto(meta: dict, projeto_nome: str) -> bool:
+    nome = str(meta.get("nome") or "")
+    return not projeto_nome or projeto_nome in {nome, str(meta.get("id") or "")}
+
+
+def _load_canonical_for_meta(d: Path, meta: dict) -> dict | None:
+    # Prioriza versao ativa; fallback para v1.
+    current_version = str(meta.get("current_version") or "v1")
+    can_candidates = [
+        d / current_version / "canonical.json",
+        d / "v1" / "canonical.json",
+    ]
+    for can_path in can_candidates:
+        if can_path.exists():
+            return json.loads(can_path.read_text(encoding="utf-8"))
+    return None
+
+
+def _find_canonical_in_project_dir(d: Path, projeto_nome: str) -> dict | None:
+    if not d.is_dir():
+        return None
+    meta_path = d / "meta.json"
+    if not meta_path.exists():
+        return None
+    meta = _load_meta_json(meta_path)
+    if meta is None:
+        return None
+    if not _meta_matches_projeto(meta, projeto_nome):
+        return None
+    return _load_canonical_for_meta(d, meta)
+
+
 def _gdfb_load_canonical(bench: dict, r: Path) -> dict:
     """Carrega canonical.json do projeto associado ao benchmark."""
     projeto_nome = bench.get("projeto") or bench.get("slug", "")
@@ -306,28 +345,26 @@ def _gdfb_load_canonical(bench: dict, r: Path) -> dict:
         if not projects_root.exists() or not projects_root.is_dir():
             continue
         for d in projects_root.iterdir():
-            if not d.is_dir():
-                continue
-            meta_path = d / "meta.json"
-            if not meta_path.exists():
-                continue
-            try:
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            except Exception:
-                continue
-            nome = str(meta.get("nome") or "")
-            if projeto_nome and projeto_nome not in {nome, str(meta.get("id") or "")}:
-                continue
-            # Prioriza versao ativa; fallback para v1.
-            current_version = str(meta.get("current_version") or "v1")
-            can_candidates = [
-                d / current_version / "canonical.json",
-                d / "v1" / "canonical.json",
-            ]
-            for can_path in can_candidates:
-                if can_path.exists():
-                    return json.loads(can_path.read_text(encoding="utf-8"))
+            canonical = _find_canonical_in_project_dir(d, projeto_nome)
+            if canonical is not None:
+                return canonical
     return {}
+
+
+def _build_indiretos_from_categorias(payload: dict[str, Any], cats: tuple[str, ...]) -> dict[str, dict[str, float]]:
+    """Estrutura AGIS atual: categorias no topo com custos mensais/fixos."""
+    indiretos_out: dict[str, dict[str, float]] = {}
+    semanas = float((payload.get("rcpsp_spec") or {}).get("deadline_weeks") or 0.0)
+    # Evita hardcode de constante externa e mantém aproximação estável para benchmark.
+    semanas_por_mes = 4.34524
+    meses_estimados = semanas / semanas_por_mes if semanas > 0 else 0.0
+    for cat in cats:
+        row = payload.get(cat) or {}
+        mensal = float(row.get("custo_fixo_mensal_total") or 0.0)
+        one_time = float(row.get("custo_fixo_total") or 0.0)
+        total = one_time + (mensal * meses_estimados)
+        indiretos_out[cat] = {"custo_com_bdi": round(total, 2)}
+    return indiretos_out
 
 
 def _normalize_reference_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -344,21 +381,9 @@ def _normalize_reference_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "resultado": payload.get("resultado") or {},
     }
 
-    # Estrutura AGIS atual: categorias no topo com custos mensais/fixos.
     cats = ("ADM", "TOP", "LAB", "QSMS", "MOB")
     if all(cat in payload for cat in cats):
-        indiretos_out: dict[str, dict[str, float]] = {}
-        semanas = float((payload.get("rcpsp_spec") or {}).get("deadline_weeks") or 0.0)
-        # Evita hardcode de constante externa e mantém aproximação estável para benchmark.
-        semanas_por_mes = 4.34524
-        meses_estimados = semanas / semanas_por_mes if semanas > 0 else 0.0
-        for cat in cats:
-            row = payload.get(cat) or {}
-            mensal = float(row.get("custo_fixo_mensal_total") or 0.0)
-            one_time = float(row.get("custo_fixo_total") or 0.0)
-            total = one_time + (mensal * meses_estimados)
-            indiretos_out[cat] = {"custo_com_bdi": round(total, 2)}
-        normalized["indiretos"] = indiretos_out
+        normalized["indiretos"] = _build_indiretos_from_categorias(payload, cats)
 
     return normalized
 

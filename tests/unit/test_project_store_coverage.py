@@ -902,3 +902,17 @@ class TestResolveCpuFallbacks:
         (snap_dir / "catalogo-2024-01.json").write_text("NOT JSON", encoding="utf-8")
         result = store.resolve_cpu("CPU-ANY")
         assert result is None
+
+
+class TestConciliumRoot:
+    def test_concilium_root_resolves_repo_root_from_module_path(self, tmp_path):
+        """_concilium_root() real (não monkeypatched) resolve para um Path via
+        Path(__file__).parents[4] — usado para localizar catálogos Master (ADR-024)."""
+        from pathlib import Path
+
+        import concilium.infrastructure.storage.project as project_module
+
+        store = _make_store(tmp_path)
+        root = store._concilium_root()
+        assert isinstance(root, Path)
+        assert root == Path(project_module.__file__).resolve().parents[4]

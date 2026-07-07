@@ -127,13 +127,101 @@ def _build_categoria_from_dict(
     )
 
 
+def _breakdown_permanencia_override(
+    categoria: IndirectoCategoria,
+    n_semanas: int,
+    custo_total_override: float,
+    mo_mensal: float,
+    eq_mensal: float,
+    mensal_total: float,
+) -> list[IndiretoSemanal]:
+    """Distribui custo_total_override pelas semanas preservando a proporção dos componentes."""
+    result: list[IndiretoSemanal] = []
+    # Preserva a proporção entre componentes e garante soma semanal == custo total utilizado na categoria.
+    frac_mo = mo_mensal / mensal_total
+    frac_eq = eq_mensal / mensal_total
+
+    custo_sem_base = round(float(custo_total_override) / n_semanas, 2)
+    acumulado = 0.0
+    for w in range(n_semanas):
+        if w < (n_semanas - 1):
+            custo_sem = custo_sem_base
+        else:
+            custo_sem = round(float(custo_total_override) - acumulado, 2)
+        acumulado += custo_sem
+
+        mo_sem = round(custo_sem * frac_mo, 2)
+        eq_sem = round(custo_sem * frac_eq, 2)
+        vb_sem = round(custo_sem - mo_sem - eq_sem, 2)
+
+        result.append(
+            IndiretoSemanal(
+                semana=w,
+                categoria=categoria.categoria,
+                custo_mao_de_obra=mo_sem,
+                custo_equipamentos=eq_sem,
+                custo_verbas=vb_sem,
+                custo_semanal=round(custo_sem, 2),
+                ativa=True,
+            )
+        )
+    return result
+
+
+def _breakdown_permanencia_default(
+    categoria: IndirectoCategoria,
+    n_semanas: int,
+    mo_mensal: float,
+    eq_mensal: float,
+    vb_mensal: float,
+) -> list[IndiretoSemanal]:
+    result: list[IndiretoSemanal] = []
+    mo_sem = mo_mensal / _SEMANAS_POR_MES
+    eq_sem = eq_mensal / _SEMANAS_POR_MES
+    vb_sem = vb_mensal / _SEMANAS_POR_MES
+    custo_sem = mo_sem + eq_sem + vb_sem
+    for w in range(n_semanas):
+        result.append(
+            IndiretoSemanal(
+                semana=w,
+                categoria=categoria.categoria,
+                custo_mao_de_obra=round(mo_sem, 2),
+                custo_equipamentos=round(eq_sem, 2),
+                custo_verbas=round(vb_sem, 2),
+                custo_semanal=round(custo_sem, 2),
+                ativa=True,
+            )
+        )
+    return result
+
+
+def _breakdown_mob(categoria: IndirectoCategoria, n_semanas: int) -> list[IndiretoSemanal]:
+    # MOB: split entre semana 0 e semana final
+    result: list[IndiretoSemanal] = []
+    metade = round(categoria.custo_fixo_total / 2, 2)
+    for w in range(n_semanas):
+        ativa = w == 0 or w == (n_semanas - 1)
+        custo_w = metade if ativa else 0.0
+        result.append(
+            IndiretoSemanal(
+                semana=w,
+                categoria=categoria.categoria,
+                custo_mao_de_obra=0.0,
+                custo_equipamentos=0.0,
+                custo_verbas=round(custo_w, 2) if ativa else 0.0,
+                custo_semanal=round(custo_w, 2),
+                ativa=ativa,
+            )
+        )
+    return result
+
+
 def _build_semanal_breakdown(
     categoria: IndirectoCategoria,
     n_semanas: int,
     custo_total_override: float | None = None,
 ) -> list[IndiretoSemanal]:
     """Gera breakdown semanal para uma categoria (ADR-009 §D2)."""
-    result: list[IndiretoSemanal] = []
     if categoria.driver == "permanencia":
         mo_mensal = categoria.mao_de_obra.custo_fixo_mensal if categoria.mao_de_obra else 0.0
         eq_mensal = categoria.equipamentos.custo_fixo_mensal if categoria.equipamentos else 0.0
@@ -141,70 +229,13 @@ def _build_semanal_breakdown(
         mensal_total = mo_mensal + eq_mensal + vb_mensal
 
         if custo_total_override is not None and n_semanas > 0 and mensal_total > 0:
-            # Preserva a proporção entre componentes e garante soma semanal == custo total utilizado na categoria.
-            frac_mo = mo_mensal / mensal_total
-            frac_eq = eq_mensal / mensal_total
-
-            custo_sem_base = round(float(custo_total_override) / n_semanas, 2)
-            acumulado = 0.0
-            for w in range(n_semanas):
-                if w < (n_semanas - 1):
-                    custo_sem = custo_sem_base
-                else:
-                    custo_sem = round(float(custo_total_override) - acumulado, 2)
-                acumulado += custo_sem
-
-                mo_sem = round(custo_sem * frac_mo, 2)
-                eq_sem = round(custo_sem * frac_eq, 2)
-                vb_sem = round(custo_sem - mo_sem - eq_sem, 2)
-
-                result.append(
-                    IndiretoSemanal(
-                        semana=w,
-                        categoria=categoria.categoria,
-                        custo_mao_de_obra=mo_sem,
-                        custo_equipamentos=eq_sem,
-                        custo_verbas=vb_sem,
-                        custo_semanal=round(custo_sem, 2),
-                        ativa=True,
-                    )
-                )
-            return result
-
-        mo_sem = mo_mensal / _SEMANAS_POR_MES
-        eq_sem = eq_mensal / _SEMANAS_POR_MES
-        vb_sem = vb_mensal / _SEMANAS_POR_MES
-        custo_sem = mo_sem + eq_sem + vb_sem
-        for w in range(n_semanas):
-            result.append(
-                IndiretoSemanal(
-                    semana=w,
-                    categoria=categoria.categoria,
-                    custo_mao_de_obra=round(mo_sem, 2),
-                    custo_equipamentos=round(eq_sem, 2),
-                    custo_verbas=round(vb_sem, 2),
-                    custo_semanal=round(custo_sem, 2),
-                    ativa=True,
-                )
+            return _breakdown_permanencia_override(
+                categoria, n_semanas, float(custo_total_override), mo_mensal, eq_mensal, mensal_total
             )
-    else:
-        # MOB: split entre semana 0 e semana final
-        metade = round(categoria.custo_fixo_total / 2, 2)
-        for w in range(n_semanas):
-            ativa = w == 0 or w == (n_semanas - 1)
-            custo_w = metade if ativa else 0.0
-            result.append(
-                IndiretoSemanal(
-                    semana=w,
-                    categoria=categoria.categoria,
-                    custo_mao_de_obra=0.0,
-                    custo_equipamentos=0.0,
-                    custo_verbas=round(custo_w, 2) if ativa else 0.0,
-                    custo_semanal=round(custo_w, 2),
-                    ativa=ativa,
-                )
-            )
-    return result
+
+        return _breakdown_permanencia_default(categoria, n_semanas, mo_mensal, eq_mensal, vb_mensal)
+
+    return _breakdown_mob(categoria, n_semanas)
 
 
 def _custo_mob_legado(dados_mob: dict, num_pessoas_direta: int, prazo_meses: int) -> tuple[float, list[Mobilizacao]]:
@@ -582,6 +613,39 @@ def _apply_bdi_to_indiretos(
 # ---------------------------------------------------------------------------
 
 
+def _accrue_mobilizacao_fase(item: dict, semanal: dict[int, float], duracao_semanas: int) -> float:
+    custo = float(item.get("custo_fixo_total", 0.0) or 0.0)
+    if duracao_semanas > 0:
+        semanal[0] = round(semanal[0] + custo, 2)
+    return custo
+
+
+def _accrue_operacao_fase(item: dict, semanal: dict[int, float], duracao_semanas: int, duracao_meses: float) -> float:
+    custo_mensal = float(item.get("custo_fixo_mensal", 0.0) or 0.0)
+    custo_total_op = custo_mensal * duracao_meses
+    if duracao_semanas > 0:
+        custo_por_semana = custo_total_op / duracao_semanas
+        acumulado = 0.0
+        for s in range(duracao_semanas):
+            if s < duracao_semanas - 1:
+                parcela = round(custo_por_semana, 2)
+            else:
+                # última semana recebe o resíduo para preservar conservação
+                parcela = round(custo_total_op - acumulado, 2)
+            semanal[s] = round(semanal[s] + parcela, 2)
+            acumulado += parcela
+    return custo_total_op
+
+
+def _accrue_desmobilizacao_fase(
+    item: dict, semanal: dict[int, float], semana_final: int, duracao_semanas: int
+) -> float:
+    custo = float(item.get("custo_fixo_total", 0.0) or 0.0)
+    if duracao_semanas > 0:
+        semanal[semana_final] = round(semanal[semana_final] + custo, 2)
+    return custo
+
+
 def _distribuir_mob_fases(
     mob_items: list[dict],
     duracao_semanas: int,
@@ -633,32 +697,11 @@ def _distribuir_mob_fases(
             continue
 
         if fase == "mobilizacao" and driver == "projeto":
-            custo = float(item.get("custo_fixo_total", 0.0) or 0.0)
-            total_mob += custo
-            if duracao_semanas > 0:
-                semanal[0] = round(semanal[0] + custo, 2)
-
+            total_mob += _accrue_mobilizacao_fase(item, semanal, duracao_semanas)
         elif fase == "operacao" and driver == "mensal":
-            custo_mensal = float(item.get("custo_fixo_mensal", 0.0) or 0.0)
-            custo_total_op = custo_mensal * duracao_meses
-            total_operacao += custo_total_op
-            if duracao_semanas > 0:
-                custo_por_semana = custo_total_op / duracao_semanas
-                acumulado = 0.0
-                for s in range(duracao_semanas):
-                    if s < duracao_semanas - 1:
-                        parcela = round(custo_por_semana, 2)
-                    else:
-                        # última semana recebe o resíduo para preservar conservação
-                        parcela = round(custo_total_op - acumulado, 2)
-                    semanal[s] = round(semanal[s] + parcela, 2)
-                    acumulado += parcela
-
+            total_operacao += _accrue_operacao_fase(item, semanal, duracao_semanas, duracao_meses)
         elif fase == "desmobilizacao" and driver == "projeto":
-            custo = float(item.get("custo_fixo_total", 0.0) or 0.0)
-            total_demob += custo
-            if duracao_semanas > 0:
-                semanal[semana_final] = round(semanal[semana_final] + custo, 2)
+            total_demob += _accrue_desmobilizacao_fase(item, semanal, semana_final, duracao_semanas)
 
     return {
         "total_mob": round(total_mob, 2),

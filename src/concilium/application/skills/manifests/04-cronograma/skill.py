@@ -105,6 +105,76 @@ def _build_insumos_lookup(catalogo: dict[str, Any]) -> dict[str, dict]:
     return {ins["codigo"]: ins for ins in catalogo.get("insumos", []) if ins.get("codigo")}
 
 
+def _custo_hora_mao_de_obra(
+    composicao: dict, insumos_lookup: dict[str, dict], horas_mes: float, taxa_encargos: float
+) -> float:
+    """Soma custo horário de mão de obra da composição (NEP-029 D2, termo custo_hora_mo)."""
+    custo_hora = 0.0
+    for func in composicao.get("funcoes", []):
+        fid = func.get("funcao_id") or ""
+        n = float(func.get("num_pessoas", 1) or 1)  # planilha usa frações (0.5, 0.17)
+        ins = insumos_lookup.get(fid)
+        if not ins:
+            continue
+        pu = float(ins.get("preco_unitario", 0) or 0)
+        unidade = str(ins.get("unidade", "mes")).lower()
+        if unidade in ("h", "hora"):
+            # Taxa horária já em R$/h.
+            # Se o insumo indica que encargos já estão incluídos (convenção AGIS-FN-*),
+            # não aplicar taxa_encargos adicionalmente.
+            nota = str((ins.get("atributos_especificos") or {}).get("nota", "")).lower()
+            ja_com_encargos = "inclui encargos" in nota  # substring sem acentos
+            encargos = 0.0 if ja_com_encargos else taxa_encargos
+            custo_hora += n * pu * (1.0 + encargos)
+        else:
+            # Taxa mensal → converte para horária e aplica encargos
+            taxa_hora = pu / horas_mes if horas_mes > 0 else 0.0
+            custo_hora += n * taxa_hora * (1.0 + taxa_encargos)
+    return custo_hora
+
+
+def _resolve_diesel_insumo(insumos_lookup: dict[str, dict]) -> dict | None:
+    """Resolve o insumo de diesel pelos códigos aceitos, em ordem de preferência."""
+    for cod in ("MA-DIESEL-S10", "MA-DIESEL", "MA-DIESEL-ESCALA"):
+        if cod in insumos_lookup:
+            return insumos_lookup[cod]
+    return None
+
+
+def _custo_hora_combustivel_equip(equip: dict, ins: dict | None, n: float, diesel_ins: dict | None) -> float:
+    """Custo horário de combustível de um equipamento (NEP-029 D2, termo custo_hora_comb)."""
+    # Consumo em L/h pode vir do registro de producao (dois nomes:
+    # consumo_litros_hora_estimado ou consumo_litros_hora) ou do insumo de equip.
+    consumo = float(equip.get("consumo_litros_hora_estimado") or equip.get("consumo_litros_hora") or 0)
+    if consumo == 0 and ins:
+        consumo = float((ins.get("atributos_especificos") or {}).get("consumo_litros_hora", 0) or 0)
+    if consumo <= 0 or not diesel_ins:
+        return 0.0
+    # Usa preco_unitario (referência da planilha, ex: 6,99 R$/L).
+    # Preço regionalizado (SICRO) é referência de mercado regional, não o
+    # preço contratual — não usar para calibração de produtividade.
+    preco_diesel = float(diesel_ins.get("preco_unitario", 0) or 0)
+    return n * consumo * preco_diesel
+
+
+def _custo_hora_equipamentos(composicao: dict, insumos_lookup: dict[str, dict]) -> float:
+    """Soma custo horário de equipamentos + combustível da composição (NEP-029 D2,
+    termos custo_hora_eq + custo_hora_comb)."""
+    custo_hora = 0.0
+    diesel_ins = _resolve_diesel_insumo(insumos_lookup)
+
+    for equip in composicao.get("equipamentos", []):
+        eid = equip.get("equip_id") or ""
+        n = float(equip.get("num_unidades", 1) or 1)  # planilha usa frações (0.17)
+        ins = insumos_lookup.get(eid)
+        if ins:
+            pu = float(ins.get("preco_unitario", 0) or 0)
+            custo_hora += n * pu  # equipment insumos are in R$/h
+        custo_hora += _custo_hora_combustivel_equip(equip, ins, n, diesel_ins)
+
+    return custo_hora
+
+
 def _custo_hora_equipe(
     composicao: dict,
     insumos_lookup: dict[str, dict],
@@ -131,58 +201,78 @@ def _custo_hora_equipe(
     """
     if custo_hora_referencia and custo_hora_referencia > 0:
         return float(custo_hora_referencia)
-    custo_hora = 0.0
+    custo_hora_mo = _custo_hora_mao_de_obra(composicao, insumos_lookup, horas_mes, taxa_encargos)
+    custo_hora_eq_comb = _custo_hora_equipamentos(composicao, insumos_lookup)
+    return custo_hora_mo + custo_hora_eq_comb
 
-    # ── Mão de obra ──────────────────────────────────────────────────────────
-    for func in composicao.get("funcoes", []):
-        fid = func.get("funcao_id") or ""
-        n = float(func.get("num_pessoas", 1) or 1)  # planilha usa frações (0.5, 0.17)
-        ins = insumos_lookup.get(fid)
-        if not ins:
-            continue
-        pu = float(ins.get("preco_unitario", 0) or 0)
-        unidade = str(ins.get("unidade", "mes")).lower()
-        if unidade in ("h", "hora"):
-            # Taxa horária já em R$/h.
-            # Se o insumo indica que encargos já estão incluídos (convenção AGIS-FN-*),
-            # não aplicar taxa_encargos adicionalmente.
-            nota = str((ins.get("atributos_especificos") or {}).get("nota", "")).lower()
-            ja_com_encargos = "inclui encargos" in nota  # substring sem acentos
-            encargos = 0.0 if ja_com_encargos else taxa_encargos
-            custo_hora += n * pu * (1.0 + encargos)
-        else:
-            # Taxa mensal → converte para horária e aplica encargos
-            taxa_hora = pu / horas_mes if horas_mes > 0 else 0.0
-            custo_hora += n * taxa_hora * (1.0 + taxa_encargos)
 
-    # ── Equipamentos ─────────────────────────────────────────────────────────
-    diesel_ins: dict | None = None
-    for cod in ("MA-DIESEL-S10", "MA-DIESEL", "MA-DIESEL-ESCALA"):
-        if cod in insumos_lookup:
-            diesel_ins = insumos_lookup[cod]
-            break
+def _resolve_cpu_producao_context(cpu: dict, producao_lookup: dict[str, dict]) -> tuple[float, dict, dict] | None:
+    """Resolve (pu_sbdi, prod, composicao) para a CPU, ou None se deve ser pulada."""
+    pu_sbdi = float((cpu.get("precos_unitarios_sbdi") or {}).get("total") or 0)
+    if pu_sbdi <= 0:
+        return None
 
-    for equip in composicao.get("equipamentos", []):
-        eid = equip.get("equip_id") or ""
-        n = float(equip.get("num_unidades", 1) or 1)  # planilha usa frações (0.17)
-        ins = insumos_lookup.get(eid)
-        if ins:
-            pu = float(ins.get("preco_unitario", 0) or 0)
-            custo_hora += n * pu  # equipment insumos are in R$/h
+    prod_id = cpu.get("producao_id_ref") or ""
+    prod = producao_lookup.get(prod_id)
+    if not prod:
+        return None
 
-        # Combustível — consumo em L/h pode vir do registro de producao (dois nomes:
-        # consumo_litros_hora_estimado ou consumo_litros_hora) ou do insumo de equip.
-        consumo = float(equip.get("consumo_litros_hora_estimado") or equip.get("consumo_litros_hora") or 0)
-        if consumo == 0 and ins:
-            consumo = float((ins.get("atributos_especificos") or {}).get("consumo_litros_hora", 0) or 0)
-        if consumo > 0 and diesel_ins:
-            # Usa preco_unitario (referência da planilha, ex: 6,99 R$/L).
-            # Preço regionalizado (SICRO) é referência de mercado regional, não o
-            # preço contratual — não usar para calibração de produtividade.
-            preco_diesel = float(diesel_ins.get("preco_unitario", 0) or 0)
-            custo_hora += n * consumo * preco_diesel
+    # composicao_padrao_equipe está no producao record (ADR-053)
+    composicao = prod.get("composicao_padrao_equipe") or {}
+    if not composicao:
+        return None
 
-    return custo_hora
+    return pu_sbdi, prod, composicao
+
+
+def _apply_producao_canonico(
+    cpu_id: str,
+    pu_sbdi: float,
+    prod: dict,
+    custo_hora: float,
+    validacoes: list,
+) -> None:
+    """Deriva P_canonico, aplica a guarda de ratio e grava/valida o resultado em `prod`."""
+    P_canonico = custo_hora / pu_sbdi
+    P_original = float(prod.get("valor_horario") or prod.get("producao_horaria") or 0)
+
+    ratio = P_canonico / P_original if P_original > 0 else None
+
+    # Guarda de ratio: só aplicar P_canonico quando a discrepância é calibração
+    # (≤50% de diferença). Discrepâncias acima disso indicam dado de catálogo
+    # inconsistente (e.g., valor_horario padrão copiado incorretamente) — sinalizar
+    # como VAL-PROD-INCONSISTENCIA e preservar P_original para não quebrar o scheduler.
+    _RATIO_MIN, _RATIO_MAX = 0.5, 2.0
+    if ratio is not None and not (_RATIO_MIN <= ratio <= _RATIO_MAX):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PROD-INCONSISTENCIA",
+                status="AVISO",
+                mensagem=(
+                    f"CPU {cpu_id}: ratio P_can/P_orig={ratio:.3f} fora do intervalo aceitável "
+                    f"[{_RATIO_MIN},{_RATIO_MAX}]. "
+                    f"P_canonico={P_canonico:.2f} vs P_original={P_original:.2f}. "
+                    f"PU_sbdi={pu_sbdi:.4f} implica custo={custo_hora:.1f} R$/h → "
+                    "valor_horario ou precos_unitarios_sbdi precisa correção no catálogo."
+                ),
+            )
+        )
+        return  # não aplica P_canonico — preserva P_original
+
+    prod["valor_horario_canonico"] = P_canonico
+
+    ratio_txt = f" (ratio={ratio:.3f})" if ratio else ""
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-PROD-CANONICO",
+            status="OK",
+            mensagem=(
+                f"CPU {cpu_id}: P_canonico={P_canonico:.2f} "
+                f"[custo_hora={custo_hora:.2f}/PU_sbdi={pu_sbdi:.4f}]{ratio_txt}. "
+                "fe_nec → 1/η_p (resíduo de base eliminado)."
+            ),
+        )
+    )
 
 
 def _enrich_producao_canonico(
@@ -210,19 +300,10 @@ def _enrich_producao_canonico(
     """
     for cpu in cpu_lookup.values():
         cpu_id = cpu.get("codigo") or "?"
-        pu_sbdi = float((cpu.get("precos_unitarios_sbdi") or {}).get("total") or 0)
-        if pu_sbdi <= 0:
+        ctx = _resolve_cpu_producao_context(cpu, producao_lookup)
+        if ctx is None:
             continue
-
-        prod_id = cpu.get("producao_id_ref") or ""
-        prod = producao_lookup.get(prod_id)
-        if not prod:
-            continue
-
-        # composicao_padrao_equipe está no producao record (ADR-053)
-        composicao = prod.get("composicao_padrao_equipe") or {}
-        if not composicao:
-            continue
+        pu_sbdi, prod, composicao = ctx
 
         # Prioriza o custo horário de referência da planilha (gravado no registro de producao)
         # — zero dependência de lookup de insumos, identidade exata P_canonico = C.
@@ -237,46 +318,7 @@ def _enrich_producao_canonico(
         if custo_hora <= 0:
             continue
 
-        P_canonico = custo_hora / pu_sbdi
-        P_original = float(prod.get("valor_horario") or prod.get("producao_horaria") or 0)
-
-        ratio = P_canonico / P_original if P_original > 0 else None
-
-        # Guarda de ratio: só aplicar P_canonico quando a discrepância é calibração
-        # (≤50% de diferença). Discrepâncias acima disso indicam dado de catálogo
-        # inconsistente (e.g., valor_horario padrão copiado incorretamente) — sinalizar
-        # como VAL-PROD-INCONSISTENCIA e preservar P_original para não quebrar o scheduler.
-        _RATIO_MIN, _RATIO_MAX = 0.5, 2.0
-        if ratio is not None and not (_RATIO_MIN <= ratio <= _RATIO_MAX):
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-PROD-INCONSISTENCIA",
-                    status="AVISO",
-                    mensagem=(
-                        f"CPU {cpu_id}: ratio P_can/P_orig={ratio:.3f} fora do intervalo aceitável "
-                        f"[{_RATIO_MIN},{_RATIO_MAX}]. "
-                        f"P_canonico={P_canonico:.2f} vs P_original={P_original:.2f}. "
-                        f"PU_sbdi={pu_sbdi:.4f} implica custo={custo_hora:.1f} R$/h → "
-                        "valor_horario ou precos_unitarios_sbdi precisa correção no catálogo."
-                    ),
-                )
-            )
-            continue  # não aplica P_canonico — preserva P_original
-
-        prod["valor_horario_canonico"] = P_canonico
-
-        ratio_txt = f" (ratio={ratio:.3f})" if ratio else ""
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-PROD-CANONICO",
-                status="OK",
-                mensagem=(
-                    f"CPU {cpu_id}: P_canonico={P_canonico:.2f} "
-                    f"[custo_hora={custo_hora:.2f}/PU_sbdi={pu_sbdi:.4f}]{ratio_txt}. "
-                    "fe_nec → 1/η_p (resíduo de base eliminado)."
-                ),
-            )
-        )
+        _apply_producao_canonico(cpu_id, pu_sbdi, prod, custo_hora, validacoes)
 
 
 def _lookup_eficiencia(
@@ -384,6 +426,30 @@ def _event_occurs_on_day(evento: dict[str, Any], day: date) -> bool:
     return inicio <= day <= fim
 
 
+def _compute_dias_uteis_efetivos_semana(
+    week_start: date, dias_semana_regime: int, eventos: list
+) -> tuple[float, set[str]]:
+    """Calcula os dias úteis efetivos e os eventos aplicados em uma semana, dia a dia."""
+    dias_uteis_efetivos = 0.0
+    eventos_aplicados: set[str] = set()
+
+    for d in range(dias_semana_regime):
+        dia = week_start + timedelta(days=d)
+        fator_dia = 1.0
+        for evento in eventos:
+            if not isinstance(evento, dict):
+                continue
+            if _event_occurs_on_day(evento, dia):
+                _fo = evento.get("fator_operacao")
+                fator_evt = float(_fo if _fo is not None else 0.0)
+                fator_dia = min(fator_dia, max(0.0, min(1.0, fator_evt)))
+                if evento.get("id"):
+                    eventos_aplicados.add(str(evento["id"]))
+        dias_uteis_efetivos += fator_dia
+
+    return dias_uteis_efetivos, eventos_aplicados
+
+
 def _build_fator_calendario_semanal(
     semanas_obra: list[str],
     data_inicio: date,
@@ -397,22 +463,10 @@ def _build_fator_calendario_semanal(
     for idx, semana_key in enumerate(semanas_obra):
         week_start = data_inicio + timedelta(weeks=idx)
         dias_uteis_base = float(dias_semana_regime)
-        dias_uteis_efetivos = 0.0
-        eventos_aplicados: set[str] = set()
 
-        for d in range(dias_semana_regime):
-            dia = week_start + timedelta(days=d)
-            fator_dia = 1.0
-            for evento in eventos:
-                if not isinstance(evento, dict):
-                    continue
-                if _event_occurs_on_day(evento, dia):
-                    _fo = evento.get("fator_operacao")
-                    fator_evt = float(_fo if _fo is not None else 0.0)
-                    fator_dia = min(fator_dia, max(0.0, min(1.0, fator_evt)))
-                    if evento.get("id"):
-                        eventos_aplicados.add(str(evento["id"]))
-            dias_uteis_efetivos += fator_dia
+        dias_uteis_efetivos, eventos_aplicados = _compute_dias_uteis_efetivos_semana(
+            week_start, dias_semana_regime, eventos
+        )
 
         fator = dias_uteis_efetivos / dias_uteis_base if dias_uteis_base > 0 else 1.0
         fatores[semana_key] = round(max(0.0, min(1.0, fator)), 4)
@@ -491,22 +545,14 @@ def _extract_activities(
     return activities
 
 
-def _extract_dag(
-    canonical: CanonicalModel,
-    activity_ids: list[str],
-    activities: list[Activity] | None = None,
-) -> ActivityDAG:
-    """Extrai DAG do canônico ou infere sequência linear.
-
-    Se activities for None, extrai do canônico (legacy path).
-    Caso contrário, usa as activities fornecidas (com duração produtiva já calculada).
+def _extract_edge_thresholds_from_eap(canonical: CanonicalModel) -> tuple[dict[tuple[str, str], float], list]:
+    """Extrai edge_thresholds e precedências estendidas (SS/FF) a partir dos predecessores da EAP.
 
     ADR-081: Extrai completion_threshold_pct da EAP (predecessores).
     """
-    # ── Extrair arestas e thresholds ──────────────────────────────────────────
-    edge_thresholds: dict[tuple[str, str], float] = {}
     from concilium.application.scheduling.cpsat_scheduler import ExtendedPrecedence as _EP
 
+    edge_thresholds: dict[tuple[str, str], float] = {}
     extended: list[_EP] = []
 
     if canonical.eap:
@@ -524,14 +570,39 @@ def _extract_dag(
                     edge_thresholds[key] = 1.0  # sentinela topológico
                     extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo="FF", lag=lag))
 
+    return edge_thresholds, extended
+
+
+def _infer_linear_edge_thresholds(canonical: CanonicalModel, activity_ids: list[str]) -> dict[tuple[str, str], float]:
+    """Infere edge_thresholds a partir do activity_dag existente ou de uma sequência linear."""
+    edge_thresholds: dict[tuple[str, str], float] = {}
+    if canonical.activity_dag and canonical.activity_dag.arestas:
+        for edge in canonical.activity_dag.arestas:
+            edge_thresholds[(edge.de, edge.para)] = 1.0
+    else:
+        for i in range(len(activity_ids) - 1):
+            edge_thresholds[(activity_ids[i], activity_ids[i + 1])] = 1.0
+    return edge_thresholds
+
+
+def _extract_dag(
+    canonical: CanonicalModel,
+    activity_ids: list[str],
+    activities: list[Activity] | None = None,
+) -> ActivityDAG:
+    """Extrai DAG do canônico ou infere sequência linear.
+
+    Se activities for None, extrai do canônico (legacy path).
+    Caso contrário, usa as activities fornecidas (com duração produtiva já calculada).
+
+    ADR-081: Extrai completion_threshold_pct da EAP (predecessores).
+    """
+    # ── Extrair arestas e thresholds ──────────────────────────────────────────
+    edge_thresholds, extended = _extract_edge_thresholds_from_eap(canonical)
+
     # Se não há predecessores na EAP, inferir sequência linear
     if not edge_thresholds:
-        if canonical.activity_dag and canonical.activity_dag.arestas:
-            for edge in canonical.activity_dag.arestas:
-                edge_thresholds[(edge.de, edge.para)] = 1.0
-        else:
-            for i in range(len(activity_ids) - 1):
-                edge_thresholds[(activity_ids[i], activity_ids[i + 1])] = 1.0
+        edge_thresholds = _infer_linear_edge_thresholds(canonical, activity_ids)
 
     precedence = list(edge_thresholds.keys())
 
@@ -683,6 +754,147 @@ def _compute_productive_weeks(
     return max(1, math.ceil(Q / prod_per_week))
 
 
+def _funcao_tokens_composicao(funcs: list) -> list[str]:
+    """Tokens F:<funcao_id>:<qtd> ordenados, para a assinatura de composição."""
+    tokens: list[str] = []
+    for f in sorted(funcs, key=lambda x: str(x.get("funcao_id") or "")):
+        fid = str(f.get("funcao_id") or "").strip().upper()
+        qtd = round(float(f.get("num_pessoas", 1) or 1), 4)
+        if fid:
+            tokens.append(f"F:{fid}:{qtd}")
+    return tokens
+
+
+def _equipamento_tokens_composicao(equip: list) -> list[str]:
+    """Tokens E:<equip_id>:<qtd> ordenados, para a assinatura de composição."""
+    tokens: list[str] = []
+    for e in sorted(equip, key=lambda x: str(x.get("equip_id") or "")):
+        eid = str(e.get("equip_id") or "").strip().upper()
+        qtd = round(float(e.get("num_unidades", 1) or 1), 4)
+        if eid:
+            tokens.append(f"E:{eid}:{qtd}")
+    return tokens
+
+
+def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
+    """Deriva tipo fungível por assinatura de composição (não por regex de CPU id)."""
+    # O único call site (_enrich_activity_resources_from_catalog) já garante
+    # `comp.get("equipamentos") or comp.get("funcoes")` truthy antes de chamar
+    # esta função, então `equip`/`funcs` nunca são ambos vazios aqui.
+    tokens = _funcao_tokens_composicao(composicao.get("funcoes") or [])
+    tokens += _equipamento_tokens_composicao(composicao.get("equipamentos") or [])
+    if tokens:
+        signature = "|".join(tokens)
+        digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
+        return f"EQUIPE-COMP-{digest}"
+    raw = str(cpu_id or "").strip().upper()
+    return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
+
+
+def _dimensionar_frentes_atividade(
+    a: dict, Q: float, P: float, horas_semana: float, deadline_weeks: int
+) -> tuple[int, int]:
+    """Dimensiona (n_frentes, duration) de uma atividade (ADR-072 + ADR-091).
+
+    dur_1frente = ceil(Q / (P × horas_semana))
+    n_frentes   = n_max de ramp_params, ou o mínimo para caber no prazo
+    duration    = ceil(dur_1frente / n_frentes)
+    """
+    dur_1frente = max(1, math.ceil(Q / (P * horas_semana)))
+    # Usa n_max de ramp_params quando disponível (plano do projetista).
+    # Sem n_max, infere o mínimo de frentes para caber no prazo.
+    rp_pre = a.get("ramp_params") or {}
+    n_max_spec = int(rp_pre.get("n_max") or 0)
+    n_frentes = n_max_spec if n_max_spec > 0 else max(1, math.ceil(dur_1frente / deadline_weeks))
+    duration = max(1, math.ceil(dur_1frente / n_frentes))
+    return n_frentes, duration
+
+
+def _resolve_producao_do_item(item: Any, cpu_lookup: dict, producao_lookup: dict) -> tuple[float, dict] | None:
+    """Resolve (Q, producao) via CPU do item, ou None se CPU/producao ausentes/inválidos."""
+    Q = float(getattr(item, "quantitativo", 0) or 0)
+    cpu = cpu_lookup.get(getattr(item, "cpu_id", "") or "")
+    if not cpu or Q <= 0:
+        return None
+    prod = producao_lookup.get(cpu.get("producao_id_ref") or "")
+    if not prod:
+        return None
+    return Q, prod
+
+
+def _composicao_tem_recursos(comp: dict) -> bool:
+    """True se a composição declara ao menos um equipamento ou função (pool-relevante)."""
+    # Granularidade do pool: UMA equipe-tipo por CPU. Equipes da mesma CPU são
+    # fungíveis (compartilham o pool). A composicao_padrao_equipe (funções +
+    # equipamentos) alimenta o breakdown de custo da equipe (skill-05), não
+    # dimensões separadas de pool — evita double-counting do custo do item por
+    # tipo de recurso. required_resources = nº de frentes paralelas.
+    return bool(comp.get("equipamentos") or comp.get("funcoes"))
+
+
+def _resolve_producao_context_atividade(
+    item: Any, cpu_lookup: dict, producao_lookup: dict
+) -> tuple[float, dict, float] | None:
+    """Resolve (Q, comp, P) da produção associada ao item via catálogo, ou None se
+    algum elo da cadeia (CPU→producao→composicao_padrao_equipe) faltar/for inválido."""
+    resolved = _resolve_producao_do_item(item, cpu_lookup, producao_lookup)
+    if resolved is None:
+        return None
+    Q, prod = resolved
+    P = float(prod.get("valor_horario") or 0)
+    comp = prod.get("composicao_padrao_equipe") or {}
+    if P <= 0 or not comp or not _composicao_tem_recursos(comp):
+        return None
+    return Q, comp, P
+
+
+def _apply_activity_resource_enrichment(a: dict, tipo: str, n_frentes: int, duration: int) -> None:
+    """Grava required_resources/duration/ramp_profile computados na atividade."""
+    a["required_resources"] = {tipo: n_frentes}
+    a["duration_weeks"] = duration
+    a["n_frentes"] = n_frentes
+    a["_catalog_resources"] = True
+
+    # ramp_params com duration final → propagado via ramp_lookup em _build_scheduled_activities
+    rp = a.get("ramp_params")
+    if isinstance(rp, dict) and rp.get("n_max", 0) > 0:
+        a["ramp_profile_computed"] = _compute_ramp_profile(duration, rp, int(rp["n_max"]))
+
+
+def _enrich_activity_resources_from_catalog(
+    a: dict, item: Any, cpu_lookup: dict, producao_lookup: dict, horas_semana: float, deadline_weeks: int
+) -> bool:
+    """Enriquece uma atividade da spec com required_resources/duration a partir do
+    catálogo (CPU→producao→composicao_padrao_equipe). Retorna True se enriquecida."""
+    ctx = _resolve_producao_context_atividade(item, cpu_lookup, producao_lookup)
+    if ctx is None:
+        return False
+    Q, comp, P = ctx
+
+    n_frentes, duration = _dimensionar_frentes_atividade(a, Q, P, horas_semana, deadline_weeks)
+    tipo = _tipo_recurso_fungivel(str(item.cpu_id or ""), comp)
+    _apply_activity_resource_enrichment(a, tipo, n_frentes, duration)
+    return True
+
+
+def _resolve_horas_semana_enriquecimento(
+    spec: dict, canonical_in: CanonicalModel, activities: list, deadline_weeks: int
+) -> float | None:
+    """Retorna horas_semana quando o enriquecimento por catálogo é elegível, ou None
+    quando a spec já tem resource_pool/required_resources explícitos, não tem
+    atividades, ou o regime de trabalho/deadline é inválido."""
+    if not activities:
+        return None
+    # Não sobrescreve required_resources/resource_pool quando já explícitos
+    if spec.get("resource_pool") or any(a.get("required_resources") for a in activities):
+        return None
+    regime = canonical_in.projeto.regime_trabalho
+    horas_semana = regime.horas_dia * regime.dias_semana
+    if horas_semana <= 0 or deadline_weeks <= 0:
+        return None
+    return horas_semana
+
+
 def _enrich_spec_resources_from_catalog(
     spec: dict,
     canonical_in: CanonicalModel,
@@ -698,102 +910,24 @@ def _enrich_spec_resources_from_catalog(
     funcao_id é um tipo de recurso renovável; a atividade consome
     ``composição × n_frentes`` enquanto ativa e libera ao terminar.
 
-    Dimensionamento de frentes para caber no prazo (ADR-072 + ADR-091):
-        dur_1frente = ceil(Q / (P × horas_semana))
-        n_frentes   = max(1, ceil(dur_1frente / deadline_weeks))
-        duration    = ceil(dur_1frente / n_frentes)
-        required_r  = ceil(qtd_composição × n_frentes) por tipo
-
     Só atua quando a spec não traz required_resources/resource_pool explícitos
     (preserva specs explícitas). Grava de volta em ``spec`` para que
     _extract_activities_from_spec e _extract_pool_from_spec consumam.
     """
     activities = spec.get("activities") or []
-    if not activities:
-        return
-
-    # Não sobrescreve required_resources/resource_pool quando já explícitos
-    if spec.get("resource_pool") or any(a.get("required_resources") for a in activities):
-        return
-
-    regime = canonical_in.projeto.regime_trabalho
-    horas_semana = regime.horas_dia * regime.dias_semana
-    if horas_semana <= 0 or deadline_weeks <= 0:
+    horas_semana = _resolve_horas_semana_enriquecimento(spec, canonical_in, activities, deadline_weeks)
+    if horas_semana is None:
         return
 
     eap_by_id = {item.item_id: item for item in (canonical_in.eap or [])}
     enriquecidas = 0
 
-    def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
-        """Deriva tipo fungível por assinatura de composição (não por regex de CPU id)."""
-        # O único call site (abaixo) já garante `comp.get("equipamentos") or
-        # comp.get("funcoes")` truthy antes de chamar esta função (linha 779),
-        # então `equip`/`funcs` nunca são ambos vazios aqui.
-        equip = composicao.get("equipamentos") or []
-        funcs = composicao.get("funcoes") or []
-        tokens: list[str] = []
-        for f in sorted(funcs, key=lambda x: str(x.get("funcao_id") or "")):
-            fid = str(f.get("funcao_id") or "").strip().upper()
-            qtd = round(float(f.get("num_pessoas", 1) or 1), 4)
-            if fid:
-                tokens.append(f"F:{fid}:{qtd}")
-        for e in sorted(equip, key=lambda x: str(x.get("equip_id") or "")):
-            eid = str(e.get("equip_id") or "").strip().upper()
-            qtd = round(float(e.get("num_unidades", 1) or 1), 4)
-            if eid:
-                tokens.append(f"E:{eid}:{qtd}")
-        if tokens:
-            signature = "|".join(tokens)
-            digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
-            return f"EQUIPE-COMP-{digest}"
-        raw = str(cpu_id or "").strip().upper()
-        return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
-
     for a in activities:
         item = eap_by_id.get(a.get("item_id"))
         if item is None:
             continue
-        Q = float(getattr(item, "quantitativo", 0) or 0)
-        cpu = cpu_lookup.get(getattr(item, "cpu_id", "") or "")
-        if not cpu or Q <= 0:
-            continue
-        prod = producao_lookup.get(cpu.get("producao_id_ref") or "")
-        if not prod:
-            continue
-        P = float(prod.get("valor_horario") or 0)
-        comp = prod.get("composicao_padrao_equipe") or {}
-        if P <= 0 or not comp:
-            continue
-
-        dur_1frente = max(1, math.ceil(Q / (P * horas_semana)))
-        # Usa n_max de ramp_params quando disponível (plano do projetista).
-        # Sem n_max, infere o mínimo de frentes para caber no prazo.
-        rp_pre = a.get("ramp_params") or {}
-        n_max_spec = int(rp_pre.get("n_max") or 0)
-        n_frentes = n_max_spec if n_max_spec > 0 else max(1, math.ceil(dur_1frente / deadline_weeks))
-        duration = max(1, math.ceil(dur_1frente / n_frentes))
-
-        # Granularidade do pool: UMA equipe-tipo por CPU. Equipes da mesma CPU são
-        # fungíveis (compartilham o pool). A composicao_padrao_equipe (funções +
-        # equipamentos) alimenta o breakdown de custo da equipe (skill-05), não
-        # dimensões separadas de pool — evita double-counting do custo do item por
-        # tipo de recurso. required_resources = nº de frentes paralelas.
-        if not (comp.get("equipamentos") or comp.get("funcoes")):
-            continue
-        tipo = _tipo_recurso_fungivel(str(item.cpu_id or ""), comp)
-        rr = {tipo: n_frentes}
-
-        a["required_resources"] = rr
-        a["duration_weeks"] = duration
-        a["n_frentes"] = n_frentes
-        a["_catalog_resources"] = True
-
-        # ramp_params com duration final → propagado via ramp_lookup em _build_scheduled_activities
-        rp = a.get("ramp_params")
-        if isinstance(rp, dict) and rp.get("n_max", 0) > 0:
-            a["ramp_profile_computed"] = _compute_ramp_profile(duration, rp, int(rp["n_max"]))
-
-        enriquecidas += 1
+        if _enrich_activity_resources_from_catalog(a, item, cpu_lookup, producao_lookup, horas_semana, deadline_weeks):
+            enriquecidas += 1
 
     if enriquecidas:
         # resource_pool deixado para inferir_pool_minimo_from_spec (pico concorrente,
@@ -808,6 +942,85 @@ def _enrich_spec_resources_from_catalog(
                 ),
             )
         )
+
+
+def _resolve_spec_activity_productive_weeks(
+    a: dict,
+    window_w: int,
+    use_productive: bool,
+    canonical_in: CanonicalModel | None,
+    cpu_lookup: dict | None,
+    producao_lookup: dict | None,
+    validacoes: list | None,
+) -> int:
+    """Resolve a duração produtiva de uma atividade da spec (ADR-072)."""
+    if a.get("_catalog_resources"):
+        # Duração já dimensionada por _enrich_spec_resources_from_catalog
+        # (productive com n_frentes). Usar direto — sem recompute.
+        return window_w
+    if not use_productive:
+        return window_w  # fallback: sem alteração
+
+    # use_productive == True garante (ver call site) que os três são não-None.
+    assert canonical_in is not None
+    assert cpu_lookup is not None
+    assert producao_lookup is not None
+
+    n_res = max(1, sum(a.get("required_resources", {}).values()))
+    computed = _compute_productive_weeks(
+        a["item_id"],
+        n_res,
+        canonical_in,
+        cpu_lookup,
+        producao_lookup,
+        validacoes or [],
+    )
+    if computed is not None and computed < window_w:
+        return computed
+    return window_w  # fallback
+
+
+def _resolve_spec_activity_ramp_profile(a: dict, productive_w: int) -> list[float] | None:
+    """Resolve o ramp_profile de uma atividade da spec (ADR-074), com prioridade ao pré-computado."""
+    # ADR-074: derive ramp_profile from ramp_params if present.
+    # Prioridade: ramp_profile_computed (calculado no _enrich com duration final).
+    # Fallback: calcular com productive_w (specs sem enriquecimento de catálogo).
+    ramp_profile: list[float] | None = a.get("ramp_profile_computed") or None
+    if ramp_profile is None:
+        ramp_params = a.get("ramp_params")
+        if ramp_params and isinstance(ramp_params, dict) and productive_w > 0:
+            n_pico = int(ramp_params.get("n_max") or 1)
+            if n_pico > 0:
+                ramp_profile = _compute_ramp_profile(productive_w, ramp_params, n_pico)
+    return ramp_profile
+
+
+def _build_activity_from_spec_entry(
+    a: dict,
+    use_productive: bool,
+    canonical_in: CanonicalModel | None,
+    cpu_lookup: dict | None,
+    producao_lookup: dict | None,
+    validacoes: list | None,
+) -> Activity:
+    """Constrói uma Activity a partir de uma entrada de rcpsp_spec['activities']."""
+    window_w = int(a["duration_weeks"])
+    productive_w = _resolve_spec_activity_productive_weeks(
+        a, window_w, use_productive, canonical_in, cpu_lookup, producao_lookup, validacoes
+    )
+
+    ramp_profile = _resolve_spec_activity_ramp_profile(a, productive_w)
+    # Limpar campo temporário para não poluir o dict serializado
+    a.pop("ramp_profile_computed", None)
+
+    return Activity(
+        activity_id=a["item_id"],
+        description=a.get("descricao", a["item_id"]),
+        duration_weeks=productive_w,
+        required_resources=dict(a.get("required_resources", {})),
+        window_weeks=window_w if productive_w < window_w else None,
+        ramp_profile=ramp_profile,
+    )
 
 
 def _extract_activities_from_spec(
@@ -829,52 +1042,10 @@ def _extract_activities_from_spec(
     O ramp é aplicado após a redução de duração para a duração produtiva.
     """
     use_productive = canonical_in is not None and cpu_lookup is not None and producao_lookup is not None
-    activities = []
-    for a in spec["activities"]:
-        window_w = int(a["duration_weeks"])
-        productive_w = window_w  # fallback: sem alteração
-        if a.get("_catalog_resources"):
-            # Duração já dimensionada por _enrich_spec_resources_from_catalog
-            # (productive com n_frentes). Usar direto — sem recompute.
-            productive_w = window_w
-        elif use_productive:
-            n_res = max(1, sum(a.get("required_resources", {}).values()))
-            computed = _compute_productive_weeks(
-                a["item_id"],
-                n_res,
-                canonical_in,  # type: ignore[arg-type]
-                cpu_lookup,  # type: ignore[arg-type]
-                producao_lookup,  # type: ignore[arg-type]
-                validacoes or [],
-            )
-            if computed is not None and computed < window_w:
-                productive_w = computed
-            # else: keep productive_w = window_w (fallback)
-
-        # ADR-074: derive ramp_profile from ramp_params if present.
-        # Prioridade: ramp_profile_computed (calculado no _enrich com duration final).
-        # Fallback: calcular com productive_w (specs sem enriquecimento de catálogo).
-        ramp_profile: list[float] | None = a.get("ramp_profile_computed") or None
-        if ramp_profile is None:
-            ramp_params = a.get("ramp_params")
-            if ramp_params and isinstance(ramp_params, dict) and productive_w > 0:
-                n_pico = int(ramp_params.get("n_max") or 1)
-                if n_pico > 0:
-                    ramp_profile = _compute_ramp_profile(productive_w, ramp_params, n_pico)
-        # Limpar campo temporário para não poluir o dict serializado
-        a.pop("ramp_profile_computed", None)
-
-        activities.append(
-            Activity(
-                activity_id=a["item_id"],
-                description=a.get("descricao", a["item_id"]),
-                duration_weeks=productive_w,
-                required_resources=dict(a.get("required_resources", {})),
-                window_weeks=window_w if productive_w < window_w else None,
-                ramp_profile=ramp_profile,
-            )
-        )
-    return activities
+    return [
+        _build_activity_from_spec_entry(a, use_productive, canonical_in, cpu_lookup, producao_lookup, validacoes)
+        for a in spec["activities"]
+    ]
 
 
 def _extract_pool_from_spec(spec: dict, canonical_in: CanonicalModel | None = None) -> ResourcePool:
@@ -1000,6 +1171,60 @@ def _can_extract_dag(canonical: CanonicalModel) -> bool:
     return bool(canonical.activity_dag or canonical.atividades or canonical.eap)
 
 
+def _resolve_productivity_from_cpu_meta(cpu: dict) -> float | None:
+    """Verifica se a produtividade foi enriquecida diretamente em cpu_meta."""
+    cpu_meta = cpu.get("cpu_meta", {})
+    if isinstance(cpu_meta, dict) and "producao_horaria" in cpu_meta:
+        valor = cpu_meta.get("producao_horaria")
+        if valor is not None and isinstance(valor, (int, float)):
+            return float(valor)
+    return None
+
+
+def _resolve_productivity_from_lookup(
+    cpu: dict,
+    producao_lookup: dict[str, dict],
+    validacoes: list[ValidacaoItem],
+) -> float | None:
+    """Resolve produtividade via producao_id_ref no producao_lookup, avisando sobre campo legado."""
+    prod_id_ref = cpu.get("producao_id_ref")
+    if not (prod_id_ref and prod_id_ref in producao_lookup):
+        return None
+
+    prod_item = producao_lookup[prod_id_ref]
+    valor = prod_item.get("valor_horario")
+    if valor is None:
+        valor = prod_item.get("producao_horaria")
+        if valor is not None:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-PROD-04-PROD-LEGACY",
+                    status="AVISO",
+                    mensagem=(
+                        f"Produtividade {prod_id_ref} usa campo legado 'producao_horaria'. Migre para 'valor_horario'."
+                    ),
+                )
+            )
+    if valor is not None and isinstance(valor, (int, float)):
+        return float(valor)
+    return None
+
+
+def _warn_legacy_productivity_fields(cpu: dict, validacoes: list[ValidacaoItem]) -> None:
+    """Avisa quando a CPU usa campos legados de produtividade (producao_horaria/producao_id)."""
+    if "producao_horaria" in cpu or "producao_id" in cpu:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PROD-04-DEPRECATED",
+                status="AVISO",
+                mensagem=(
+                    f"CPU {cpu.get('codigo')} usa campos legados (producao_horaria/producao_id). "
+                    "Atualize para producao_id_ref."
+                ),
+            )
+        )
+
+
 def _resolve_productivity(
     cpu: dict,
     producao_lookup: dict[str, dict],
@@ -1015,43 +1240,15 @@ def _resolve_productivity(
     Also checks for stored productivity data in cpu_meta (from enrichment).
     """
     # First check if productivity was enriched directly from project data
-    cpu_meta = cpu.get("cpu_meta", {})
-    if isinstance(cpu_meta, dict) and "producao_horaria" in cpu_meta:
-        valor = cpu_meta.get("producao_horaria")
-        if valor is not None and isinstance(valor, (int, float)):
-            return float(valor)
+    valor = _resolve_productivity_from_cpu_meta(cpu)
+    if valor is not None:
+        return valor
 
-    prod_id_ref = cpu.get("producao_id_ref")
-    if prod_id_ref and prod_id_ref in producao_lookup:
-        prod_item = producao_lookup[prod_id_ref]
-        valor = prod_item.get("valor_horario")
-        if valor is None:
-            valor = prod_item.get("producao_horaria")
-            if valor is not None:
-                validacoes.append(
-                    ValidacaoItem(
-                        codigo="VAL-PROD-04-PROD-LEGACY",
-                        status="AVISO",
-                        mensagem=(
-                            f"Produtividade {prod_id_ref} usa campo legado 'producao_horaria'. "
-                            "Migre para 'valor_horario'."
-                        ),
-                    )
-                )
-        if valor is not None and isinstance(valor, (int, float)):
-            return float(valor)
+    valor = _resolve_productivity_from_lookup(cpu, producao_lookup, validacoes)
+    if valor is not None:
+        return valor
 
-    if "producao_horaria" in cpu or "producao_id" in cpu:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-PROD-04-DEPRECATED",
-                status="AVISO",
-                mensagem=(
-                    f"CPU {cpu.get('codigo')} usa campos legados (producao_horaria/producao_id). "
-                    "Atualize para producao_id_ref."
-                ),
-            )
-        )
+    _warn_legacy_productivity_fields(cpu, validacoes)
 
     validacoes.append(
         ValidacaoItem(
@@ -1270,6 +1467,93 @@ def _execute_manual_mode(
     return distribuicao_por_item
 
 
+def _rasfc_propagate_pool_config(rcpsp_spec: dict, inputs: dict) -> None:
+    """ADR-091 Fase 4: propaga pool_config (entrada first-class) para a spec
+    antes da inferência, sem expor resource_pool ao usuário."""
+    pool_config_in = inputs.get("pool_config")
+    if isinstance(pool_config_in, dict) and "pool_config" not in rcpsp_spec:
+        rcpsp_spec["pool_config"] = pool_config_in
+
+
+def _rasfc_enrich_from_catalog_if_available(
+    rcpsp_spec: dict,
+    canonical_in: CanonicalModel,
+    inputs: dict,
+    validacoes: list,
+    cpu_lookup: dict | None,
+    producao_lookup: dict | None,
+) -> None:
+    """Constrói required_resources + resource_pool + duração do catálogo
+    (composicao_padrao_equipe) — pré-requisito para o pool não degenerar."""
+    if not (cpu_lookup and producao_lookup):
+        return
+    deadline = int(
+        inputs.get("deadline_weeks")
+        or rcpsp_spec.get("deadline_weeks")
+        or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
+    )
+    _enrich_spec_resources_from_catalog(rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, deadline, validacoes)
+
+
+def _rasfc_report_pool_inferido_diag(rcpsp_spec: dict, validacoes: list) -> None:
+    """ADR-091: se o pool foi inferido, registra o tradeoff tempo×custo."""
+    diag = rcpsp_spec.get("pool_inferido_diag")
+    if not isinstance(diag, dict):
+        return
+    notas = "; ".join(diag.get("notas", [])) or "sem restrições adicionais"
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-POOL-INFER",
+            status="OK",
+            mensagem=(
+                f"Pool inferido (objetivo={diag.get('objetivo')}): "
+                f"{diag.get('pool_inferido')} | makespan~{diag.get('makespan_estimado_semanas')}sem "
+                f"(mín {diag.get('makespan_minimo_semanas')}sem) | {notas}"
+            ),
+        )
+    )
+
+
+def _rasfc_extract_from_spec(
+    rcpsp_spec: dict,
+    canonical_in: CanonicalModel,
+    inputs: dict,
+    validacoes: list,
+    cpu_lookup: dict | None,
+    producao_lookup: dict | None,
+) -> tuple[list, Any, Any] | None:
+    """Extrai (activities, dag, pool) a partir de rcpsp_spec. Retorna None em erro."""
+    _rasfc_propagate_pool_config(rcpsp_spec, inputs)
+    _rasfc_enrich_from_catalog_if_available(rcpsp_spec, canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
+    # ADR-072: pass lookups so productive duration is computed
+    activities = _extract_activities_from_spec(rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, validacoes)
+    if not activities:
+        validacoes.append(ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="rcpsp_spec sem atividades."))
+        return None
+    pool = _extract_pool_from_spec(rcpsp_spec, canonical_in)
+    _rasfc_report_pool_inferido_diag(rcpsp_spec, validacoes)
+    # ADR-081: passa eap_items para derivar precedência com thresholds
+    dag = _extract_dag_from_spec(rcpsp_spec, activities, eap_items=canonical_in.eap or [])
+    return activities, dag, pool
+
+
+def _rasfc_extract_from_canonical(
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict | None,
+    producao_lookup: dict | None,
+    validacoes: list,
+) -> tuple[list, Any, Any] | None:
+    """Extrai (activities, dag, pool) a partir do canônico (sem rcpsp_spec). Retorna None em erro."""
+    activities = _extract_activities(canonical_in, cpu_lookup, producao_lookup, validacoes)
+    if not activities:
+        validacoes.append(ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="Sem atividades."))
+        return None
+    # ADR-072: pass pre-computed activities to preserve duration_weeks calculation
+    dag = _extract_dag(canonical_in, [a.activity_id for a in activities], activities=activities)
+    pool = _extract_pool(canonical_in)
+    return activities, dag, pool
+
+
 def _rasfc_extract_inputs(
     canonical_in: CanonicalModel,
     inputs: dict,
@@ -1280,56 +1564,13 @@ def _rasfc_extract_inputs(
     """Extracts (activities, dag, pool, deadline_weeks) from spec or canonical. Returns None on error."""
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
-        # ADR-091 Fase 4: pool_config é entrada de negócio first-class. Quando
-        # fornecido em inputs (ou pela UI/formulário QQP/EAP), é propagado para a
-        # spec antes da inferência, sem expor resource_pool ao usuário.
-        pool_config_in = inputs.get("pool_config")
-        if isinstance(pool_config_in, dict) and "pool_config" not in rcpsp_spec:
-            rcpsp_spec["pool_config"] = pool_config_in
-        # Construir required_resources + resource_pool + duração do catálogo
-        # (composicao_padrao_equipe). Pré-requisito para o pool não degenerar.
-        if cpu_lookup and producao_lookup:
-            _deadline = int(
-                inputs.get("deadline_weeks")
-                or rcpsp_spec.get("deadline_weeks")
-                or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
-            )
-            _enrich_spec_resources_from_catalog(
-                rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, _deadline, validacoes
-            )
-        # ADR-072: pass lookups so productive duration is computed
-        activities = _extract_activities_from_spec(rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, validacoes)
-        if not activities:
-            validacoes.append(
-                ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="rcpsp_spec sem atividades.")
-            )
-            return None
-        pool = _extract_pool_from_spec(rcpsp_spec, canonical_in)
-        # ADR-091: se o pool foi inferido, registra o tradeoff tempo×custo
-        diag = rcpsp_spec.get("pool_inferido_diag")
-        if isinstance(diag, dict):
-            notas = "; ".join(diag.get("notas", [])) or "sem restrições adicionais"
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-POOL-INFER",
-                    status="OK",
-                    mensagem=(
-                        f"Pool inferido (objetivo={diag.get('objetivo')}): "
-                        f"{diag.get('pool_inferido')} | makespan~{diag.get('makespan_estimado_semanas')}sem "
-                        f"(mín {diag.get('makespan_minimo_semanas')}sem) | {notas}"
-                    ),
-                )
-            )
-        # ADR-081: passa eap_items para derivar precedência com thresholds
-        dag = _extract_dag_from_spec(rcpsp_spec, activities, eap_items=canonical_in.eap or [])
+        result = _rasfc_extract_from_spec(rcpsp_spec, canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
     else:
-        activities = _extract_activities(canonical_in, cpu_lookup, producao_lookup, validacoes)
-        if not activities:
-            validacoes.append(ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="Sem atividades."))
-            return None
-        # ADR-072: pass pre-computed activities to preserve duration_weeks calculation
-        dag = _extract_dag(canonical_in, [a.activity_id for a in activities], activities=activities)
-        pool = _extract_pool(canonical_in)
+        result = _rasfc_extract_from_canonical(canonical_in, cpu_lookup, producao_lookup, validacoes)
+
+    if result is None:
+        return None
+    activities, dag, pool = result
 
     if not pool.resources:
         validacoes.append(
@@ -1436,6 +1677,145 @@ def _run_auto_schedule_fallback_chain(
     return candidates_canonical, best_candidate
 
 
+def _resolve_item_for_scheduled_activity(
+    sa: Any,
+    activity_to_item: dict[str, str],
+    canonical_in: CanonicalModel,
+    validacoes: list[ValidacaoItem],
+) -> tuple[str, Any] | None:
+    """Resolve (item_id, item) para a scheduled activity; retorna None se deve ser pulada."""
+    item_id = activity_to_item.get(sa.activity_id)
+    if not item_id:
+        validacoes.append(
+            ValidacaoItem(codigo="VAL-CRON-CONVERT", status="AVISO", mensagem=f"{sa.activity_id} não mapeada.")
+        )
+        return None
+
+    item = _find_item_by_id(canonical_in.eap, item_id)
+    if not item:
+        return None
+
+    return item_id, item
+
+
+def _resolve_cpu_for_item(item: Any, cpu_lookup: dict[str, dict], validacoes: list[ValidacaoItem]) -> dict:
+    """Resolve a CPU do item, criando uma CPU sintética (com AVISO) se não encontrada no catálogo."""
+    cpu = cpu_lookup.get(item.cpu_id)
+    if not cpu:
+        # CPU not found - create synthetic CPU for scheduling to proceed
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-EAP-01",
+                status="AVISO",
+                mensagem=f"CPU {item.cpu_id} não encontrada no catálogo; usando CPU sintética.",
+            )
+        )
+        # Create synthetic CPU with reasonable defaults
+        cpu = {
+            "codigo": item.cpu_id,
+            "descricao": f"CPU sintética para {item.item_id}",
+            "producao_id_ref": None,
+        }
+    return cpu
+
+
+def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
+    """Pré-computa n_max (pico de alocação da atividade) para η_s = n_j/n_max (NEP-035)."""
+    # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
+    return (
+        max(
+            (
+                _infer_teams_from_resources(sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp)
+                for off in range(sa.duration_weeks)
+            ),
+            default=1,
+        )
+        or 1
+    )
+
+
+def _build_activity_distribuicao(
+    sa: Any,
+    item: Any,
+    cpu: dict,
+    ramp: Any,
+    n_max: int,
+    producao_semanal_base: float,
+    semanas_obra: list[str],
+    canonical_in: CanonicalModel,
+    prat_semanal: dict[str, float],
+    prat_mensal: dict[str, float],
+    fator_calendario_semanal: dict[str, float],
+) -> tuple[dict[str, DistribuicaoSemanal], float]:
+    """Constrói a distribuição semanal (célula a célula) de uma scheduled activity."""
+    distribuicao: dict[str, DistribuicaoSemanal] = {}
+    qtd_acumulada = 0.0
+
+    for week_offset in range(sa.duration_weeks):
+        week_num = sa.start_week + week_offset
+        semana_key = (
+            semanas_obra[week_num]
+            if week_num < len(semanas_obra)
+            else _iso_week_key(canonical_in.projeto.data_inicio + timedelta(weeks=week_num))
+        )
+
+        inferred_num_equipes = _infer_teams_from_resources(
+            sa.assigned_resources,
+            cpu,
+            week_offset,
+            sa.duration_weeks,
+            ramp_profile=ramp,
+        )
+        fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
+        fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
+        cell = _build_dist_cell(
+            producao_semanal_base,
+            inferred_num_equipes,
+            n_max,
+            fator_clima,
+            fator_calendario,
+            item.quantitativo,
+            qtd_acumulada,
+        )
+        qtd_acumulada = cell.qtd_acumulada
+        distribuicao[semana_key] = cell
+
+    return distribuicao, qtd_acumulada
+
+
+def _warn_if_activity_underdelivers(
+    item: Any,
+    item_id: str,
+    sa: Any,
+    qtd_acumulada: float,
+    canonical_in: CanonicalModel,
+    validacoes: list[ValidacaoItem],
+) -> None:
+    """ADR-082-cons: emite AVISO quando Σ q_ij < Q na janela agendada (não bloqueia)."""
+    # ADR-082-cons: checagem de completude também no caminho AUTO_SCHEDULE
+    # (antes só existia no modo manual) — torna VISÍVEL a sub-entrega Σ q_ij < Q
+    # antes silenciosa. Não bloqueia (AVISO): entregar Q sob clima é decisão de
+    # prazo/pool (estender janela ou +equipes — ADR-091), não um default.
+    if item.quantitativo <= 0:
+        return
+    pct_completude = qtd_acumulada / item.quantitativo
+    if pct_completude < 0.999:
+        p_bar = _mean_praticabilidade(canonical_in)
+        semanas_nec = math.ceil(sa.duration_weeks / p_bar) if p_bar > 0 else sa.duration_weeks
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-01",
+                status="AVISO",
+                mensagem=(
+                    f"Item '{item_id}' sub-entrega: Σ q_ij = {pct_completude * 100:.1f}% de Q na "
+                    f"janela agendada ({sa.duration_weeks}sem). Clima reduz a produção semanal além "
+                    f"da capacidade da janela. Para entregar Q (p̄={p_bar:.2f}): ~{semanas_nec}sem "
+                    "OU +equipes (decisão de prazo/pool — ADR-091)."
+                ),
+            )
+        )
+
+
 def _convert_schedule_to_distribuicao(
     schedule_selected: ScheduleCandidateCanonical,
     canonical_in: CanonicalModel,
@@ -1454,102 +1834,34 @@ def _convert_schedule_to_distribuicao(
     activity_to_item = _build_activity_item_map(canonical_in)
 
     for sa in schedule_selected.scheduled_activities:
-        item_id = activity_to_item.get(sa.activity_id)
-        if not item_id:
-            validacoes.append(
-                ValidacaoItem(codigo="VAL-CRON-CONVERT", status="AVISO", mensagem=f"{sa.activity_id} não mapeada.")
-            )
+        resolved = _resolve_item_for_scheduled_activity(sa, activity_to_item, canonical_in, validacoes)
+        if resolved is None:
             continue
+        item_id, item = resolved
 
-        item = _find_item_by_id(canonical_in.eap, item_id)
-        if not item:
-            continue
-
-        cpu = cpu_lookup.get(item.cpu_id)
-        if not cpu:
-            # CPU not found - create synthetic CPU for scheduling to proceed
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-EAP-01",
-                    status="AVISO",
-                    mensagem=f"CPU {item.cpu_id} não encontrada no catálogo; usando CPU sintética.",
-                )
-            )
-            # Create synthetic CPU with reasonable defaults
-            cpu = {
-                "codigo": item.cpu_id,
-                "descricao": f"CPU sintética para {item.item_id}",
-                "producao_id_ref": None,
-            }
+        cpu = _resolve_cpu_for_item(item, cpu_lookup, validacoes)
 
         P = _resolve_productivity(cpu, producao_lookup, validacoes)
         producao_semanal_base = P * regime.horas_dia * regime.dias_semana
         # NEP-035: pré-cômputo de n_max (pico de alocação da atividade) para η_s = n_j/n_max.
-        # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
         ramp = getattr(sa, "ramp_profile", None)
-        n_max = (
-            max(
-                (
-                    _infer_teams_from_resources(sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp)
-                    for off in range(sa.duration_weeks)
-                ),
-                default=1,
-            )
-            or 1
+        n_max = _compute_activity_n_max(sa, cpu, ramp)
+
+        distribuicao, qtd_acumulada = _build_activity_distribuicao(
+            sa,
+            item,
+            cpu,
+            ramp,
+            n_max,
+            producao_semanal_base,
+            semanas_obra,
+            canonical_in,
+            prat_semanal,
+            prat_mensal,
+            fator_calendario_semanal,
         )
-        distribuicao = {}
-        qtd_acumulada = 0.0
 
-        for week_offset in range(sa.duration_weeks):
-            week_num = sa.start_week + week_offset
-            semana_key = (
-                semanas_obra[week_num]
-                if week_num < len(semanas_obra)
-                else _iso_week_key(canonical_in.projeto.data_inicio + timedelta(weeks=week_num))
-            )
-
-            inferred_num_equipes = _infer_teams_from_resources(
-                sa.assigned_resources,
-                cpu,
-                week_offset,
-                sa.duration_weeks,
-                ramp_profile=ramp,
-            )
-            fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
-            fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
-            cell = _build_dist_cell(
-                producao_semanal_base,
-                inferred_num_equipes,
-                n_max,
-                fator_clima,
-                fator_calendario,
-                item.quantitativo,
-                qtd_acumulada,
-            )
-            qtd_acumulada = cell.qtd_acumulada
-            distribuicao[semana_key] = cell
-
-        # ADR-082-cons: checagem de completude também no caminho AUTO_SCHEDULE
-        # (antes só existia no modo manual) — torna VISÍVEL a sub-entrega Σ q_ij < Q
-        # antes silenciosa. Não bloqueia (AVISO): entregar Q sob clima é decisão de
-        # prazo/pool (estender janela ou +equipes — ADR-091), não um default.
-        if item.quantitativo > 0:
-            pct_completude = qtd_acumulada / item.quantitativo
-            if pct_completude < 0.999:
-                p_bar = _mean_praticabilidade(canonical_in)
-                semanas_nec = math.ceil(sa.duration_weeks / p_bar) if p_bar > 0 else sa.duration_weeks
-                validacoes.append(
-                    ValidacaoItem(
-                        codigo="VAL-CRON-01",
-                        status="AVISO",
-                        mensagem=(
-                            f"Item '{item_id}' sub-entrega: Σ q_ij = {pct_completude * 100:.1f}% de Q na "
-                            f"janela agendada ({sa.duration_weeks}sem). Clima reduz a produção semanal além "
-                            f"da capacidade da janela. Para entregar Q (p̄={p_bar:.2f}): ~{semanas_nec}sem "
-                            "OU +equipes (decisão de prazo/pool — ADR-091)."
-                        ),
-                    )
-                )
+        _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, canonical_in, validacoes)
 
         distribuicao_por_item[item_id] = distribuicao
 
@@ -1921,31 +2233,30 @@ def _determine_mode_and_distribuicao(
         return None, {}, [], None, True
 
 
-def _build_scheduled_activities(
-    canonical_in: CanonicalModel,
-    distribuicao_por_item: dict,
-    semanas_obra: list,
-    schedule_selected: ScheduleCandidateCanonical | None = None,
-) -> list:
-    from datetime import timedelta
+def _build_assigned_resources_lookup(schedule_selected: ScheduleCandidateCanonical | None) -> dict[str, dict]:
+    """Constrói o lookup activity_id → assigned_resources a partir do scheduler.
 
-    # Build lookup: activity_id → assigned_resources from the scheduler output.
-    # In AUTO mode, schedule_selected is a ScheduleCandidateCanonical whose
-    # scheduled_activities carry the RCPSP resource assignments.  In MANUAL mode
-    # schedule_selected is None (or has no activities), so assigned_resources stays
-    # empty — which is correct, as manual allocation doesn't model RCPSP resources.
+    In AUTO mode, schedule_selected is a ScheduleCandidateCanonical whose
+    scheduled_activities carry the RCPSP resource assignments.  In MANUAL mode
+    schedule_selected is None (or has no activities), so assigned_resources stays
+    empty — which is correct, as manual allocation doesn't model RCPSP resources.
+    """
     assigned_lookup: dict[str, dict] = {}
     if schedule_selected is not None:
         for sa in getattr(schedule_selected, "scheduled_activities", []):
             ar = getattr(sa, "assigned_resources", None)
             if ar:
                 assigned_lookup[sa.activity_id] = dict(ar)
+    return assigned_lookup
 
-    scheduled_activities_out = []
 
-    # ADR-072: Preservar duração original do scheduler em vez de recalcular
-    # Constrói mapa de item_id → duration_weeks do schedule_selected
-    # (activity_id do scheduler tem formato "item_id-atv-1", need to extract item_id)
+def _build_duration_and_ramp_lookup(
+    schedule_selected: ScheduleCandidateCanonical | None,
+) -> tuple[dict[str, int], dict[str, list[float] | None]]:
+    """Constrói os mapas item_id → duration_weeks/ramp_profile do schedule_selected (ADR-072).
+
+    activity_id do scheduler tem formato "item_id-atv-1", need to extract item_id.
+    """
     duration_lookup: dict[str, int] = {}
     ramp_lookup: dict[str, list[float] | None] = {}
     if schedule_selected is not None and getattr(schedule_selected, "scheduled_activities", None):
@@ -1959,38 +2270,94 @@ def _build_scheduled_activities(
                     item_id = activity_id
                 duration_lookup[item_id] = duration
                 ramp_lookup[item_id] = getattr(sa, "ramp_profile", None)
+    return duration_lookup, ramp_lookup
 
-    for item in canonical_in.eap:
-        distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
-        semanas_com_producao = [s for s, d in distribuicao_semanal.items() if d.qtd_executada > 0]
-        _di = canonical_in.projeto.data_inicio
-        start_week = _week_offset(semanas_com_producao[0], semanas_obra, _di) if semanas_com_producao else 0
-        end_week = _week_offset(semanas_com_producao[-1], semanas_obra, _di) if semanas_com_producao else 0
-        data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)
-        data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)
 
-        # ADR-072: Use original duration from scheduler if available
-        duration_from_scheduler = duration_lookup.get(item.item_id, None)
-        if duration_from_scheduler is not None:
-            duration_weeks = duration_from_scheduler
-        else:
-            # Fallback: calculate from scheduled weeks if no scheduler duration
-            duration_weeks = max(1, end_week - start_week + 1)
+def _build_scheduled_activity_for_item(
+    item: Any,
+    distribuicao_por_item: dict,
+    semanas_obra: list,
+    canonical_in: CanonicalModel,
+    assigned_lookup: dict[str, dict],
+    duration_lookup: dict[str, int],
+    ramp_lookup: dict[str, list[float] | None],
+) -> Any:
+    """Constrói o ScheduledActivityCanonical de um item da EAP a partir da distribuição semanal."""
+    from datetime import timedelta
 
-        scheduled_activities_out.append(
-            ScheduledActivityCanonical(
-                activity_id=item.item_id,
-                start_week=start_week,
-                end_week=end_week,
-                duration_weeks=duration_weeks,
-                data_inicio=data_inicio,
-                data_fim=data_fim,
-                distribuicao_semanal=distribuicao_semanal,
-                assigned_resources=assigned_lookup.get(item.item_id, {}),
-                ramp_profile=ramp_lookup.get(item.item_id),
-            )
+    distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
+    semanas_com_producao = [s for s, d in distribuicao_semanal.items() if d.qtd_executada > 0]
+    _di = canonical_in.projeto.data_inicio
+    start_week = _week_offset(semanas_com_producao[0], semanas_obra, _di) if semanas_com_producao else 0
+    end_week = _week_offset(semanas_com_producao[-1], semanas_obra, _di) if semanas_com_producao else 0
+    data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)
+    data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)
+
+    # ADR-072: Use original duration from scheduler if available
+    duration_from_scheduler = duration_lookup.get(item.item_id, None)
+    if duration_from_scheduler is not None:
+        duration_weeks = duration_from_scheduler
+    else:
+        # Fallback: calculate from scheduled weeks if no scheduler duration
+        duration_weeks = max(1, end_week - start_week + 1)
+
+    return ScheduledActivityCanonical(
+        activity_id=item.item_id,
+        start_week=start_week,
+        end_week=end_week,
+        duration_weeks=duration_weeks,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        distribuicao_semanal=distribuicao_semanal,
+        assigned_resources=assigned_lookup.get(item.item_id, {}),
+        ramp_profile=ramp_lookup.get(item.item_id),
+    )
+
+
+def _build_scheduled_activities(
+    canonical_in: CanonicalModel,
+    distribuicao_por_item: dict,
+    semanas_obra: list,
+    schedule_selected: ScheduleCandidateCanonical | None = None,
+) -> list:
+    # Build lookup: activity_id → assigned_resources from the scheduler output.
+    assigned_lookup = _build_assigned_resources_lookup(schedule_selected)
+
+    # ADR-072: Preservar duração original do scheduler em vez de recalcular
+    duration_lookup, ramp_lookup = _build_duration_and_ramp_lookup(schedule_selected)
+
+    scheduled_activities_out = [
+        _build_scheduled_activity_for_item(
+            item, distribuicao_por_item, semanas_obra, canonical_in, assigned_lookup, duration_lookup, ramp_lookup
         )
+        for item in canonical_in.eap
+    ]
     return scheduled_activities_out
+
+
+def _resolve_cronograma_algorithm(
+    mode: str | None, heuristic: str | None
+) -> Literal["manual_allocation", "MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP", "CP-SAT", "LNS"]:
+    """Resolve o algoritmo do Cronograma a partir do modo e da heurística selecionada."""
+    if mode == "MANUAL_ALLOCATION":
+        return "manual_allocation"
+    match heuristic:
+        case "MINSLK":
+            return "MINSLK"
+        case "LPT":
+            return "LPT"
+        case "MAXRES":
+            return "MAXRES"
+        case "ES":
+            return "ES"
+        case "GR":
+            return "GR"
+        case "CP-SAT":
+            return "CP-SAT"
+        case "LNS":
+            return "LNS"
+        case _:
+            return "MINSLK"
 
 
 def _build_cronograma_out(
@@ -2001,26 +2368,8 @@ def _build_cronograma_out(
     distribuicao_mensal: dict,
     validacoes: list,
 ) -> Cronograma:
-    _algo: Literal["manual_allocation", "MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP", "CP-SAT", "LNS"]
     heuristic = schedule_selected.heuristic if schedule_selected is not None else None
-    if mode == "MANUAL_ALLOCATION":
-        _algo = "manual_allocation"
-    elif heuristic == "MINSLK":
-        _algo = "MINSLK"
-    elif heuristic == "LPT":
-        _algo = "LPT"
-    elif heuristic == "MAXRES":
-        _algo = "MAXRES"
-    elif heuristic == "ES":
-        _algo = "ES"
-    elif heuristic == "GR":
-        _algo = "GR"
-    elif heuristic == "CP-SAT":
-        _algo = "CP-SAT"
-    elif heuristic == "LNS":
-        _algo = "LNS"
-    else:
-        _algo = "MINSLK"
+    _algo = _resolve_cronograma_algorithm(mode, heuristic)
 
     return Cronograma(
         algorithm=_algo,
@@ -2108,19 +2457,12 @@ def _expand_mobilizacao_policies(
     return result, curves
 
 
-def run_cronograma(
-    canonical_in: CanonicalModel,
-    inputs: dict[str, Any],
-    catalogo: dict[str, Any] | None = None,
-    **_kwargs: Any,
-) -> SkillResult:
-    """Gera cronograma semanal unificado com agregacao mensal. Modo: manual ou automatico."""
-    validacoes: list[ValidacaoItem] = []
-    catalogo = catalogo or {}
-
-    if not _validate_preconditions(canonical_in, validacoes):
-        return SkillResult(canonical_in, validacoes)
-
+def _run_cronograma_build_context(
+    canonical_in: CanonicalModel, inputs: dict[str, Any], catalogo: dict[str, Any], validacoes: list[ValidacaoItem]
+) -> tuple[Any, list, dict, dict, dict, list]:
+    """Monta lookups/regime/calendário e enriquece producao_lookup com P_canonico
+    (NEP-029 D2). Retorna (regime, semanas_obra, cpu_lookup, producao_lookup,
+    fator_calendario_semanal, calendario_operacional)."""
     regime = canonical_in.projeto.regime_trabalho
     semanas_obra = _semanas_entre(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
     cpu_lookup = _build_cpu_lookup(catalogo)
@@ -2140,7 +2482,7 @@ def run_cronograma(
     eap_cpu_ids = {item.cpu_id for item in (canonical_in.eap or []) if getattr(item, "cpu_id", None)}
     eap_cpu_lookup = {k: v for k, v in cpu_lookup.items() if k in eap_cpu_ids} if eap_cpu_ids else cpu_lookup
     _enrich_producao_canonico(eap_cpu_lookup, producao_lookup, insumos_lookup, horas_mes, taxa_encargos, validacoes)
-    prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
+
     calendario_config = (
         inputs.get("calendario_operacional") if isinstance(inputs.get("calendario_operacional"), dict) else {}
     )
@@ -2150,24 +2492,87 @@ def run_cronograma(
         regime.dias_semana,
         calendario_config,
     )
+    return regime, semanas_obra, cpu_lookup, producao_lookup, fator_calendario_semanal, calendario_operacional
+
+
+def _run_cronograma_validate_num_equipes_formato(num_equipes_por_item: Any, validacoes: list[ValidacaoItem]) -> bool:
+    """Valida que num_equipes_por_item é dict[item_id, dict[semana_iso, int]].
+    Retorna False (e registra VAL-CRON-EQUIPES-FORMATO) se algum valor for plano."""
+    if num_equipes_por_item is None or not isinstance(num_equipes_por_item, dict):
+        return True
+    flat_items = [k for k, v in num_equipes_por_item.items() if not isinstance(v, dict)]
+    if not flat_items:
+        return True
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-CRON-EQUIPES-FORMATO",
+            status="ERRO",
+            mensagem=(
+                f"num_equipes_por_item: valor deve ser dict[semana_iso, int], não int. "
+                f"Itens com formato errado: {flat_items[:3]}. "
+                f'Esperado: {{"item_id": {{"2025-W01": 2, "2025-W02": 3}}}}'
+            ),
+        )
+    )
+    return False
+
+
+def _run_cronograma_infer_mob_schedule(canonical_in: CanonicalModel, validacoes: list[ValidacaoItem]) -> Any:
+    """ADR-105: infere janelas de mobilização automaticamente a partir do EAP.
+    Retorna None (e registra VAL-MOB-SCHEDULE-ERRO) em caso de falha."""
+    try:
+        meta_dict = {
+            "data_inicio": canonical_in.projeto.data_inicio.isoformat(),
+            "data_termino": canonical_in.projeto.data_termino.isoformat(),
+        }
+        eap_list = [
+            {
+                "item_id": item.item_id,
+                "predecessores": [{"item_id": p.item_id} for p in item.predecessores_tipados()],
+            }
+            for item in canonical_in.eap
+        ]
+        mob_schedule = infer_mob_windows(meta_dict, eap_list)
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-MOB-SCHEDULE-OK",
+                status="OK",
+                mensagem="Janelas de mobilização inferidas com sucesso.",
+            )
+        )
+        return mob_schedule
+    except Exception as e:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-MOB-SCHEDULE-ERRO",
+                status="AVISO",
+                mensagem=f"Falha ao inferir janelas de mobilização: {str(e)}",
+            )
+        )
+        return None
+
+
+def run_cronograma(
+    canonical_in: CanonicalModel,
+    inputs: dict[str, Any],
+    catalogo: dict[str, Any] | None = None,
+    **_kwargs: Any,
+) -> SkillResult:
+    """Gera cronograma semanal unificado com agregacao mensal. Modo: manual ou automatico."""
+    validacoes: list[ValidacaoItem] = []
+    catalogo = catalogo or {}
+
+    if not _validate_preconditions(canonical_in, validacoes):
+        return SkillResult(canonical_in, validacoes)
+
+    regime, semanas_obra, cpu_lookup, producao_lookup, fator_calendario_semanal, calendario_operacional = (
+        _run_cronograma_build_context(canonical_in, inputs, catalogo, validacoes)
+    )
+    prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
-
-    if num_equipes_por_item is not None and isinstance(num_equipes_por_item, dict):
-        flat_items = [k for k, v in num_equipes_por_item.items() if not isinstance(v, dict)]
-        if flat_items:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-CRON-EQUIPES-FORMATO",
-                    status="ERRO",
-                    mensagem=(
-                        f"num_equipes_por_item: valor deve ser dict[semana_iso, int], não int. "
-                        f"Itens com formato errado: {flat_items[:3]}. "
-                        f'Esperado: {{"item_id": {{"2025-W01": 2, "2025-W02": 3}}}}'
-                    ),
-                )
-            )
-            return SkillResult(canonical_in, validacoes)
+    if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
+        return SkillResult(canonical_in, validacoes)
 
     wmp_curves: list = []
     mobilizacao_policies = inputs.get("mobilizacao_policies")
@@ -2213,36 +2618,7 @@ def run_cronograma(
         canonical_in, cronograma_out, scheduled_activities_out, validacoes
     )
 
-    # ADR-105: Inferir janelas de mobilização automaticamente
-    mob_schedule = None
-    try:
-        meta_dict = {
-            "data_inicio": canonical_in.projeto.data_inicio.isoformat(),
-            "data_termino": canonical_in.projeto.data_termino.isoformat(),
-        }
-        eap_list = [
-            {
-                "item_id": item.item_id,
-                "predecessores": [{"item_id": p.item_id} for p in item.predecessores_tipados()],
-            }
-            for item in canonical_in.eap
-        ]
-        mob_schedule = infer_mob_windows(meta_dict, eap_list)
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-MOB-SCHEDULE-OK",
-                status="OK",
-                mensagem="Janelas de mobilização inferidas com sucesso.",
-            )
-        )
-    except Exception as e:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-MOB-SCHEDULE-ERRO",
-                status="AVISO",
-                mensagem=f"Falha ao inferir janelas de mobilização: {str(e)}",
-            )
-        )
+    mob_schedule = _run_cronograma_infer_mob_schedule(canonical_in, validacoes)
 
     update_dict = {
         "cronograma": cronograma_out,

@@ -265,6 +265,52 @@ def _build_manifesto(projeto_nome: str, version: str, incluidos: list[dict[str, 
     return "\n".join(linhas)
 
 
+def _select_bundle_items(listagem: list[dict[str, Any]], filtro: list[str] | None) -> list[dict[str, Any]]:
+    """Seleciona os artefatos incluídos no bundle: outputs sempre, intermediários só via filtro explícito."""
+    return [
+        it
+        for it in listagem
+        if (it["kind"] == "outputs" or (filtro and it["nome"] in set(filtro))) and _matches_filtro(it, filtro)
+    ]
+
+
+def _safe_root_folder(projeto_nome: str, resolved: str) -> str:
+    """Deriva o nome seguro (sanitizado) da pasta raiz dentro do zip."""
+    safe_nome = "".join(c if c.isalnum() or c in "-_" else "_" for c in projeto_nome)[:40] or "projeto"
+    return f"concilium_{safe_nome}_{resolved}"
+
+
+def _write_bundle_zip(
+    base_dir: Path,
+    incluidos: list[dict[str, Any]],
+    root_folder: str,
+    manifesto: str,
+) -> tuple[bytes, list[str]]:
+    """Escreve o zip do bundle (MANIFESTO.md + artefatos) e retorna (bytes, nomes incluídos)."""
+    buffer = io.BytesIO()
+    nomes_no_zip: list[str] = []
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{root_folder}/MANIFESTO.md", manifesto)
+        nomes_no_zip.append("MANIFESTO.md")
+        for it in incluidos:
+            src = base_dir / it["kind"] / it["nome"]
+            if not src.exists():
+                continue
+            subpath = f"graficos/{it['nome']}" if it["nome"].lower().endswith(".png") else it["nome"]
+            zf.write(src, f"{root_folder}/{subpath}")
+            nomes_no_zip.append(subpath)
+    return buffer.getvalue(), nomes_no_zip
+
+
+def _resolve_transport(transport: Any | None) -> Any:
+    """Resolve o transporte de entrega, criando o default local base64 se necessário."""
+    if transport is None:
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
+
+        return LocalBase64Transport(max_mb=50.0)
+    return transport
+
+
 def build_bundle(
     store: Any, version: str | None, filtro: list[str] | None = None, transport: Any | None = None
 ) -> dict[str, Any]:
@@ -283,37 +329,17 @@ def build_bundle(
     projeto_nome = str(getattr(store, "meta", {}).get("nome", "projeto")) if hasattr(store, "meta") else "projeto"
     listagem = list_artifacts(store, resolved)["artefatos"]
     # Bundle de entrega prioriza outputs; intermediários só entram via filtro explícito de nome.
-    incluidos = [
-        it
-        for it in listagem
-        if (it["kind"] == "outputs" or (filtro and it["nome"] in set(filtro))) and _matches_filtro(it, filtro)
-    ]
+    incluidos = _select_bundle_items(listagem, filtro)
 
-    safe_nome = "".join(c if c.isalnum() or c in "-_" else "_" for c in projeto_nome)[:40] or "projeto"
-    root_folder = f"concilium_{safe_nome}_{resolved}"
+    root_folder = _safe_root_folder(projeto_nome, resolved)
 
     base_dir = _version_dir(store, resolved)
-    buffer = io.BytesIO()
-    nomes_no_zip: list[str] = []
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        manifesto = _build_manifesto(projeto_nome, resolved, incluidos)
-        zf.writestr(f"{root_folder}/MANIFESTO.md", manifesto)
-        nomes_no_zip.append("MANIFESTO.md")
-        for it in incluidos:
-            src = base_dir / it["kind"] / it["nome"]
-            if not src.exists():
-                continue
-            subpath = f"graficos/{it['nome']}" if it["nome"].lower().endswith(".png") else it["nome"]
-            zf.write(src, f"{root_folder}/{subpath}")
-            nomes_no_zip.append(subpath)
+    manifesto = _build_manifesto(projeto_nome, resolved, incluidos)
+    data, nomes_no_zip = _write_bundle_zip(base_dir, incluidos, root_folder, manifesto)
 
-    data = buffer.getvalue()
     nome_zip = f"{root_folder}.zip"
 
-    if transport is None:
-        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
-
-        transport = LocalBase64Transport(max_mb=50.0)
+    transport = _resolve_transport(transport)
 
     entrega = transport.deliver(nome=nome_zip, data=data, mime="application/zip", source_path=None)
     return {

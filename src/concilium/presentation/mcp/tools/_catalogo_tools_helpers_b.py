@@ -79,6 +79,104 @@ def _impl_tendencia_precos_catalogo(
     return _wrap_response(result)
 
 
+def _rfi_deltas_amostra(inner_high: list) -> list:
+    return [
+        {"codigo": i["catalog"].get("codigo") or i["catalog"].get("id"), "delta": i["delta"]}
+        for i in inner_high
+        if i["delta"]
+    ][:20]
+
+
+def _rfi_colisoes(inner_low: list) -> list:
+    return [
+        {
+            "cat_codigo": i["catalog"].get("codigo") or i["catalog"].get("id"),
+            "cat_descricao": i["catalog"].get("descricao", "")[:60],
+            "rfi_codigo": i["rfi"].get("codigo") or i["rfi"].get("id"),
+            "rfi_descricao": i["rfi"].get("descricao", "")[:60],
+            "score": i["score"],
+            "acao": f"RFI-{i['rfi'].get('codigo') or i['rfi'].get('id')} será criado",
+        }
+        for i in inner_low
+    ]
+
+
+def _rfi_novos(right_only: list) -> list:
+    return [
+        {
+            "codigo": i["rfi"].get("codigo") or i["rfi"].get("id"),
+            "descricao": i["rfi"].get("descricao", "")[:60],
+            "unidade": i["rfi"].get("unidade"),
+        }
+        for i in right_only
+    ][:30]
+
+
+def _rfi_summarize_report(rep: _MergeReport) -> dict:
+    """Sumariza um _MergeReport (insumos ou producoes) para a resposta de comparar_rfi_catalogo."""
+    return {
+        "inner_high": len(rep.inner_high),
+        "inner_high_com_delta": sum(1 for i in rep.inner_high if i["delta"]),
+        "inner_low": len(rep.inner_low),
+        "right_only": len(rep.right_only),
+        "left_only": len(rep.left_only),
+        "deltas_amostra": _rfi_deltas_amostra(rep.inner_high),
+        "colisoes": _rfi_colisoes(rep.inner_low),
+        "novos": _rfi_novos(rep.right_only),
+    }
+
+
+def _build_comparar_rfi_result(
+    dry_run: bool,
+    contexto_id: str,
+    cat_insumos: list,
+    cat_producoes: list,
+    rfi: dict,
+    rep_ins: _MergeReport,
+    rep_prod: _MergeReport,
+) -> dict:
+    """Monta o dict de resultado (sem aplicar merge) de comparar_rfi_catalogo."""
+    return {
+        "mode": "DRY_RUN" if dry_run else "APPLIED",
+        "contexto_id": contexto_id,
+        "catalogo_atual": {"insumos": len(cat_insumos), "producoes": len(cat_producoes)},
+        "rfi": {"insumos": len(rfi["insumos"]), "producoes": len(rfi["producoes"])},
+        "insumos": _rfi_summarize_report(rep_ins),
+        "producoes": _rfi_summarize_report(rep_prod),
+        "resumo": {
+            "atualizacoes_preco": sum(1 for i in rep_ins.inner_high if i["delta"]),
+            "novos_total": len(rep_ins.right_only) + len(rep_prod.right_only),
+            "colisoes_total": len(rep_ins.inner_low) + len(rep_prod.inner_low),
+        },
+    }
+
+
+def _apply_rfi_merge(
+    mod: _MergeRfiModule,
+    bundle: dict,
+    bundle_path: Path,
+    cat_insumos: list,
+    cat_producoes: list,
+    rfi: dict,
+    rep_ins: _MergeReport,
+    rep_prod: _MergeReport,
+    result: dict,
+) -> None:
+    """Aplica o merge RFI no bundle (persistindo em disco) e anota `result["aplicado"]`."""
+    new_ins = mod._apply_merge(cat_insumos, rfi["insumos"], rep_ins)
+    new_prod = mod._apply_merge(cat_producoes, rfi["producoes"], rep_prod, id_key="id")
+    if "producoes" in bundle:
+        bundle["producoes"] = new_prod
+    else:
+        bundle["produtividades"] = new_prod
+    bundle["insumos"] = new_ins
+    bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
+    result["aplicado"] = {
+        "insumos_novos": len(new_ins) - len(cat_insumos),
+        "producoes_novas": len(new_prod) - len(cat_producoes),
+    }
+
+
 def _impl_comparar_rfi_catalogo(
     contexto_id: str,
     dry_run: bool = True,
@@ -130,69 +228,10 @@ def _impl_comparar_rfi_catalogo(
     rep_ins, _ = mod._merge_entities(cat_insumos, rfi["insumos"])
     rep_prod, _ = mod._merge_entities(cat_producoes, rfi["producoes"], id_key="id")
 
-    def _summarize(rep: _MergeReport) -> dict:
-        return {
-            "inner_high": len(rep.inner_high),
-            "inner_high_com_delta": sum(1 for i in rep.inner_high if i["delta"]),
-            "inner_low": len(rep.inner_low),
-            "right_only": len(rep.right_only),
-            "left_only": len(rep.left_only),
-            "deltas_amostra": [
-                {
-                    "codigo": i["catalog"].get("codigo") or i["catalog"].get("id"),
-                    "delta": i["delta"],
-                }
-                for i in rep.inner_high
-                if i["delta"]
-            ][:20],
-            "colisoes": [
-                {
-                    "cat_codigo": i["catalog"].get("codigo") or i["catalog"].get("id"),
-                    "cat_descricao": i["catalog"].get("descricao", "")[:60],
-                    "rfi_codigo": i["rfi"].get("codigo") or i["rfi"].get("id"),
-                    "rfi_descricao": i["rfi"].get("descricao", "")[:60],
-                    "score": i["score"],
-                    "acao": f"RFI-{i['rfi'].get('codigo') or i['rfi'].get('id')} será criado",
-                }
-                for i in rep.inner_low
-            ],
-            "novos": [
-                {
-                    "codigo": i["rfi"].get("codigo") or i["rfi"].get("id"),
-                    "descricao": i["rfi"].get("descricao", "")[:60],
-                    "unidade": i["rfi"].get("unidade"),
-                }
-                for i in rep.right_only
-            ][:30],
-        }
-
-    result = {
-        "mode": "DRY_RUN" if dry_run else "APPLIED",
-        "contexto_id": contexto_id,
-        "catalogo_atual": {"insumos": len(cat_insumos), "producoes": len(cat_producoes)},
-        "rfi": {"insumos": len(rfi["insumos"]), "producoes": len(rfi["producoes"])},
-        "insumos": _summarize(rep_ins),
-        "producoes": _summarize(rep_prod),
-        "resumo": {
-            "atualizacoes_preco": sum(1 for i in rep_ins.inner_high if i["delta"]),
-            "novos_total": len(rep_ins.right_only) + len(rep_prod.right_only),
-            "colisoes_total": len(rep_ins.inner_low) + len(rep_prod.inner_low),
-        },
-    }
+    result = _build_comparar_rfi_result(dry_run, contexto_id, cat_insumos, cat_producoes, rfi, rep_ins, rep_prod)
 
     if not dry_run:
-        new_ins = mod._apply_merge(cat_insumos, rfi["insumos"], rep_ins)
-        new_prod = mod._apply_merge(cat_producoes, rfi["producoes"], rep_prod, id_key="id")
-        if "producoes" in bundle:
-            bundle["producoes"] = new_prod
-        else:
-            bundle["produtividades"] = new_prod
-        bundle["insumos"] = new_ins
-        bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
-        result["aplicado"] = {
-            "insumos_novos": len(new_ins) - len(cat_insumos),
-            "producoes_novas": len(new_prod) - len(cat_producoes),
-        }
+        _apply_rfi_merge(mod, bundle, bundle_path, cat_insumos, cat_producoes, rfi, rep_ins, rep_prod, result)
 
     return _wrap_response(result)
 
@@ -272,6 +311,90 @@ def _impl_avaliar_plausibilidade_catalogo(
     return _wrap_response(resultado)
 
 
+def _cpu_refs_faltantes(cpus: list[dict], insumos: list[dict]) -> list[dict]:
+    """Referências de CPU → Insumo (composicao_itens) que não existem no catálogo."""
+    insumo_codigos = {ins["codigo"] for ins in insumos if ins.get("codigo")}
+    faltantes: list[dict] = []
+    for cpu in cpus:
+        for item in cpu.get("composicao_itens", []):
+            iid = item.get("insumo_id", "")
+            if iid and iid not in insumo_codigos:
+                faltantes.append({"cpu": cpu.get("codigo"), "insumo_id_faltante": iid})
+    return faltantes
+
+
+def _cpu_prod_faltantes(cpus: list[dict], producoes: list[dict]) -> list[dict]:
+    """Referências de CPU → Producao que não existem no catálogo."""
+    prod_ids = {p.get("id") for p in producoes if p.get("id")}
+    faltantes: list[dict] = []
+    for cpu in cpus:
+        pid = cpu.get("producao_id_ref")
+        if pid and pid not in prod_ids:
+            faltantes.append({"cpu": cpu.get("codigo"), "producao_id_ref": pid})
+    return faltantes
+
+
+def _build_problemas_integridade(
+    pu_result: dict[str, Any], cpu_refs_faltantes: list[dict], cpu_prod_faltantes: list[dict]
+) -> list[dict]:
+    """Consolida os problemas de integridade categorizados por severidade."""
+    problemas: list[dict] = []
+    for r in pu_result["referencias_faltantes"]:
+        problemas.append({"severidade": "ERRO", "tipo": "REF_INSUMO_FALTANTE", **r})
+    for r in pu_result["pu_divergentes"]:
+        problemas.append({"severidade": "AVISO", "tipo": "PU_DIVERGENTE", **r})
+    for r in cpu_refs_faltantes:
+        problemas.append({"severidade": "ERRO", "tipo": "CPU_INSUMO_FALTANTE", **r})
+    for r in cpu_prod_faltantes:
+        problemas.append({"severidade": "AVISO", "tipo": "CPU_PROD_REF_FALTANTE", **r})
+    return problemas
+
+
+def _rfi_pendentes_section(rfi_insumos: list[dict], rfi_producoes: list[dict]) -> dict[str, Any]:
+    """Monta a seção rfi_pendentes do relatório de integridade."""
+    return {
+        "insumos": [{"codigo": i.get("codigo"), "descricao": i.get("descricao", "")[:50]} for i in rfi_insumos[:20]],
+        "producoes": [{"id": p.get("id"), "descricao": p.get("descricao", "")[:50]} for p in rfi_producoes[:20]],
+        "nota": "Entradas RFI- são colisões de código importadas — revisar e renomear se necessário.",
+    }
+
+
+def _build_integridade_resumo(
+    insumos: list, producoes: list, cpus: list, pu_result: dict, problemas: list, rfi_insumos: list, rfi_producoes: list
+) -> dict:
+    """Monta a seção `resumo` do relatório de integridade do catálogo."""
+    return {
+        "total_insumos": len(insumos),
+        "total_producoes": len(producoes),
+        "total_cpus": len(cpus),
+        "producoes_com_composicao": pu_result["com_composicao"],
+        "erros": sum(1 for p in problemas if p["severidade"] == "ERRO"),
+        "avisos": sum(1 for p in problemas if p["severidade"] == "AVISO"),
+        "insumos_rfi_pendentes": len(rfi_insumos),
+        "producoes_rfi_pendentes": len(rfi_producoes),
+    }
+
+
+def _build_integridade_response(
+    contexto_id: str,
+    insumos: list,
+    producoes: list,
+    cpus: list,
+    pu_result: dict,
+    problemas: list,
+    rfi_insumos: list,
+    rfi_producoes: list,
+) -> dict:
+    """Monta a resposta completa de verificar_integridade_catalogo."""
+    return {
+        "contexto_id": contexto_id,
+        "ok": not any(p["severidade"] == "ERRO" for p in problemas),
+        "resumo": _build_integridade_resumo(insumos, producoes, cpus, pu_result, problemas, rfi_insumos, rfi_producoes),
+        "problemas": problemas[:50],
+        "rfi_pendentes": _rfi_pendentes_section(rfi_insumos, rfi_producoes),
+    }
+
+
 def _impl_verificar_integridade_catalogo(
     contexto_id: str,
     alpha_clt: float = 1.777,
@@ -307,59 +430,19 @@ def _impl_verificar_integridade_catalogo(
     pu_result = calcular_catalogo(producoes, insumos, params)
 
     # 2. Referências de CPU → Insumo (composicao_itens)
-    insumo_codigos = {ins["codigo"] for ins in insumos if ins.get("codigo")}
-    cpu_refs_faltantes: list[dict] = []
-    for cpu in cpus:
-        for item in cpu.get("composicao_itens", []):
-            iid = item.get("insumo_id", "")
-            if iid and iid not in insumo_codigos:
-                cpu_refs_faltantes.append({"cpu": cpu.get("codigo"), "insumo_id_faltante": iid})
+    cpu_refs_faltantes = _cpu_refs_faltantes(cpus, insumos)
 
     # 3. Referências de CPU → Producao
-    prod_ids = {p.get("id") for p in producoes if p.get("id")}
-    cpu_prod_faltantes: list[dict] = []
-    for cpu in cpus:
-        pid = cpu.get("producao_id_ref")
-        if pid and pid not in prod_ids:
-            cpu_prod_faltantes.append({"cpu": cpu.get("codigo"), "producao_id_ref": pid})
+    cpu_prod_faltantes = _cpu_prod_faltantes(cpus, producoes)
 
     # 4. Insumos RFI importados sem referências (prefixados RFI-)
     rfi_insumos = [ins for ins in insumos if (ins.get("codigo") or "").startswith("RFI-")]
     rfi_producoes = [p for p in producoes if (p.get("id") or "").startswith("RFI-")]
 
-    problemas: list[dict] = []
-    for r in pu_result["referencias_faltantes"]:
-        problemas.append({"severidade": "ERRO", "tipo": "REF_INSUMO_FALTANTE", **r})
-    for r in pu_result["pu_divergentes"]:
-        problemas.append({"severidade": "AVISO", "tipo": "PU_DIVERGENTE", **r})
-    for r in cpu_refs_faltantes:
-        problemas.append({"severidade": "ERRO", "tipo": "CPU_INSUMO_FALTANTE", **r})
-    for r in cpu_prod_faltantes:
-        problemas.append({"severidade": "AVISO", "tipo": "CPU_PROD_REF_FALTANTE", **r})
+    problemas = _build_problemas_integridade(pu_result, cpu_refs_faltantes, cpu_prod_faltantes)
 
     return _wrap_response(
-        {
-            "contexto_id": contexto_id,
-            "ok": not any(p["severidade"] == "ERRO" for p in problemas),
-            "resumo": {
-                "total_insumos": len(insumos),
-                "total_producoes": len(producoes),
-                "total_cpus": len(cpus),
-                "producoes_com_composicao": pu_result["com_composicao"],
-                "erros": sum(1 for p in problemas if p["severidade"] == "ERRO"),
-                "avisos": sum(1 for p in problemas if p["severidade"] == "AVISO"),
-                "insumos_rfi_pendentes": len(rfi_insumos),
-                "producoes_rfi_pendentes": len(rfi_producoes),
-            },
-            "problemas": problemas[:50],
-            "rfi_pendentes": {
-                "insumos": [
-                    {"codigo": i.get("codigo"), "descricao": i.get("descricao", "")[:50]} for i in rfi_insumos[:20]
-                ],
-                "producoes": [
-                    {"id": p.get("id"), "descricao": p.get("descricao", "")[:50]} for p in rfi_producoes[:20]
-                ],
-                "nota": "Entradas RFI- são colisões de código importadas — revisar e renomear se necessário.",
-            },
-        }
+        _build_integridade_response(
+            contexto_id, insumos, producoes, cpus, pu_result, problemas, rfi_insumos, rfi_producoes
+        )
     )

@@ -154,20 +154,8 @@ def _build_all_atividades(eap: list, decomposicao_raw: list, validacoes: list) -
     return atividades_out
 
 
-def _build_dag_from_precedencias(
-    nos: list, nos_set: set, precedencias_raw: list, eap: list[EapItem], validacoes: list
-) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int]]:
-    """NEP-031 L4: retorna lista de (predecessora, sucessora, tipo, lag).
-
-    Fontes de precedência:
-    1. EapItem.predecessores (PrecedenciaItem ou str legado) — principal
-    2. inputs["precedencias"] (formato legado {predecessora, sucessora}) — compat.
-    """
-    # Na prática, nos são activity_ids derivados de item_ids. Usamos nome direto.
-    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]] = []
-
-    # Fonte 1: EapItem.predecessores tipados
-    # Build map from item_id to first activity_id (assume one activity per EAP item for scheduling)
+def _build_item_to_first_activity(nos: list) -> dict[str, str]:
+    """Mapeia item_id → primeira activity_id (assume uma atividade por item de EAP para scheduling)."""
     item_to_first_activity: dict[str, str] = {}
     for activity_id in nos:
         # activity_id format: "1.1-atv-1", "1.2-atv-1", etc.
@@ -176,7 +164,14 @@ def _build_dag_from_precedencias(
         item_id = parts[0] if len(parts) == 2 else activity_id
         if item_id not in item_to_first_activity:
             item_to_first_activity[item_id] = activity_id
+    return item_to_first_activity
 
+
+def _edges_from_eap_predecessores(
+    eap: list[EapItem], item_to_first_activity: dict[str, str], validacoes: list
+) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int]]:
+    """Fonte 1: extrai arestas válidas a partir de EapItem.predecessores_tipados()."""
+    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]] = []
     for item in eap:
         item_id = item.item_id
         if item_id not in item_to_first_activity:
@@ -199,8 +194,16 @@ def _build_dag_from_precedencias(
             else:
                 # Create single edge from predecessor activity to successor activity
                 arestas_validas.append((pred_activity, suc_activity, prec.tipo, prec.lag))
+    return arestas_validas
 
-    # Fonte 2: precedencias_raw (legado — apenas FS sem lag)
+
+def _append_edges_from_precedencias_raw(
+    precedencias_raw: list,
+    nos_set: set,
+    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]],
+    validacoes: list,
+) -> None:
+    """Fonte 2 (legado): adiciona arestas FS sem lag a partir de precedencias_raw, evitando duplicatas da Fonte 1."""
     for p in precedencias_raw:
         pred, suc = p.get("predecessora", ""), p.get("sucessora", "")
         if pred in nos_set and suc in nos_set:
@@ -211,6 +214,26 @@ def _build_dag_from_precedencias(
             validacoes.append(
                 ValidacaoItem(codigo="VAL-DAG-01", status="ERRO", mensagem=f"Precedência inválida: {pred} -> {suc}")
             )
+
+
+def _build_dag_from_precedencias(
+    nos: list, nos_set: set, precedencias_raw: list, eap: list[EapItem], validacoes: list
+) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int]]:
+    """NEP-031 L4: retorna lista de (predecessora, sucessora, tipo, lag).
+
+    Fontes de precedência:
+    1. EapItem.predecessores (PrecedenciaItem ou str legado) — principal
+    2. inputs["precedencias"] (formato legado {predecessora, sucessora}) — compat.
+    """
+    # Na prática, nos são activity_ids derivados de item_ids. Usamos nome direto.
+
+    # Fonte 1: EapItem.predecessores tipados
+    # Build map from item_id to first activity_id (assume one activity per EAP item for scheduling)
+    item_to_first_activity = _build_item_to_first_activity(nos)
+    arestas_validas = _edges_from_eap_predecessores(eap, item_to_first_activity, validacoes)
+
+    # Fonte 2: precedencias_raw (legado — apenas FS sem lag)
+    _append_edges_from_precedencias_raw(precedencias_raw, nos_set, arestas_validas, validacoes)
 
     if not any(v.codigo == "VAL-DAG-01" for v in validacoes):
         validacoes.append(ValidacaoItem(codigo="VAL-DAG-01", status="OK"))

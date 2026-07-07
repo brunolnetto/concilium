@@ -44,6 +44,53 @@ def _impl_listar_contextos() -> dict[str, Any]:
     return _wrap_response({"contextos": contextos})
 
 
+def _find_eap_sugerida(
+    catalogo: dict[str, Any], tipo_obra: str, cpus_lookup: dict[Any, dict[str, Any]]
+) -> list | None:
+    """Encontra a EAP sugerida (servicos_sugeridos) do template cujo tipo_obra corresponde (ADR-014).
+
+    Retorna None (não []) quando nenhum template corresponde — distingue "sem
+    template" de "template vazio", já que o caller só grava a chave no resultado
+    quando há match (ver _impl_pesquisar_catalogo)."""
+    tipo_upper = tipo_obra.upper()
+    for tmpl in catalogo.get("templates", []):
+        if tmpl.get("tipo_obra", "").upper() == tipo_upper:
+            servicos = []
+            for s in tmpl.get("servicos_sugeridos", []):
+                cid = s.get("cpu_id")
+                cpu = cpus_lookup.get(cid, {})
+                servicos.append(
+                    {
+                        "cpu_id": cid,
+                        "descricao": cpu.get("descricao", cid),
+                        "unidade": cpu.get("unidade", ""),
+                        "obrigatoriedade": s.get("obrigatoriedade", "tipico"),
+                    }
+                )
+            return servicos
+    return None
+
+
+def _buscar_cpus_por_texto(catalogo: dict[str, Any], query: str, limite: int) -> list:
+    query_norm = query.lower()
+    matches = []
+    for cpu in catalogo.get("cpus", []):
+        cod = str(cpu.get("codigo", "")).lower()
+        desc = str(cpu.get("descricao", "")).lower()
+        if query_norm in cod or query_norm in desc:
+            matches.append(
+                {
+                    "cpu_id": cpu.get("codigo"),
+                    "descricao": cpu.get("descricao"),
+                    "unidade": cpu.get("unidade"),
+                    "categoria": cpu.get("categoria"),
+                }
+            )
+            if len(matches) >= limite:
+                break
+    return matches
+
+
 def _impl_pesquisar_catalogo(
     contexto_id: str,
     query: str | None = None,
@@ -71,43 +118,13 @@ def _impl_pesquisar_catalogo(
 
     # 1. Templates de EAP (ADR-014)
     if tipo_obra:
-        tipo_upper = tipo_obra.upper()
-        for tmpl in catalogo.get("templates", []):
-            if tmpl.get("tipo_obra", "").upper() == tipo_upper:
-                servicos = []
-                for s in tmpl.get("servicos_sugeridos", []):
-                    cid = s.get("cpu_id")
-                    cpu = cpus_lookup.get(cid, {})
-                    servicos.append(
-                        {
-                            "cpu_id": cid,
-                            "descricao": cpu.get("descricao", cid),
-                            "unidade": cpu.get("unidade", ""),
-                            "obrigatoriedade": s.get("obrigatoriedade", "tipico"),
-                        }
-                    )
-                result["eap_sugerida"] = servicos
-                break
+        eap_sugerida = _find_eap_sugerida(catalogo, tipo_obra, cpus_lookup)
+        if eap_sugerida is not None:
+            result["eap_sugerida"] = eap_sugerida
 
     # 2. Busca Textual
     if query:
-        query_norm = query.lower()
-        matches = []
-        for cpu in catalogo.get("cpus", []):
-            cod = str(cpu.get("codigo", "")).lower()
-            desc = str(cpu.get("descricao", "")).lower()
-            if query_norm in cod or query_norm in desc:
-                matches.append(
-                    {
-                        "cpu_id": cpu.get("codigo"),
-                        "descricao": cpu.get("descricao"),
-                        "unidade": cpu.get("unidade"),
-                        "categoria": cpu.get("categoria"),
-                    }
-                )
-                if len(matches) >= limite:
-                    break
-        result["busca_resultados"] = matches
+        result["busca_resultados"] = _buscar_cpus_por_texto(catalogo, query, limite)
 
     return _wrap_response(result)
 
@@ -135,6 +152,65 @@ def _impl_consultar_saude_catalogo(contexto_id: str) -> dict[str, Any]:
             "total_cpus": len(catalogo.get("cpus", [])),
         }
     )
+
+
+def _save_preco_insumo_override_projeto(
+    projects_dir: Path,
+    projeto_id: str,
+    insumo_id: str,
+    novo_preco: float,
+    jurisdicao_id: str | None,
+    nota: str | None,
+) -> dict[str, Any]:
+    """Salva o novo preço como override de projeto (ADR-038), sem afetar o catálogo mestre."""
+    proj_path = projects_dir / projeto_id
+    if not proj_path.exists():
+        return {"erro": f"Projeto {projeto_id} não encontrado."}
+
+    overrides_file = proj_path / "overrides" / "catalog_prices.json"
+    overrides_file.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        overrides = {}
+        if overrides_file.exists():
+            overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
+
+        key = f"{insumo_id}::{jurisdicao_id or 'BASE'}"
+        overrides[key] = {
+            "preco": novo_preco,
+            "nota": nota or "Calibração local de projeto",
+            "jurisdicao": jurisdicao_id,
+        }
+
+        overrides_file.write_text(json.dumps(overrides, indent=2, ensure_ascii=False), encoding="utf-8")
+        return _wrap_response({"status": "SUCESSO", "layer": "PROJETO", "projeto_id": projeto_id, "insumo": insumo_id})
+    except Exception as e:
+        return {"erro": f"Erro ao salvar override de projeto: {e}"}
+
+
+def _save_preco_insumo_master(
+    insumo_file: Path,
+    insumo_id: str,
+    novo_preco: float,
+    jurisdicao_id: str | None,
+    nota: str | None,
+) -> dict[str, Any]:
+    """Persiste o novo preço direto no catálogo mestre (Master Layer)."""
+    try:
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        if jurisdicao_id:
+            if "regionalizacao" not in data:
+                data["regionalizacao"] = {}
+            data["regionalizacao"][jurisdicao_id] = {"preco": novo_preco, "nota": nota}
+        else:
+            data["preco_unitario"] = novo_preco
+            if nota:
+                data["nota_calibracao"] = nota
+
+        insumo_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        return _wrap_response({"status": "SUCESSO", "layer": "MASTER", "insumo_id": insumo_id})
+    except Exception as e:
+        return {"erro": f"Falha ao persistir no mestre: {e}"}
 
 
 def _impl_atualizar_preco_insumo(
@@ -173,49 +249,9 @@ def _impl_atualizar_preco_insumo(
         return {"erro": str(exc)}
 
     if projeto_id:
-        # Camada de Projeto (Project Layer Overrides)
-        proj_path = projects_dir / projeto_id
-        if not proj_path.exists():
-            return {"erro": f"Projeto {projeto_id} não encontrado."}
+        return _save_preco_insumo_override_projeto(projects_dir, projeto_id, insumo_id, novo_preco, jurisdicao_id, nota)
 
-        overrides_file = proj_path / "overrides" / "catalog_prices.json"
-        overrides_file.parent.mkdir(parents=True, exist_ok=True)
-
-        try:
-            overrides = {}
-            if overrides_file.exists():
-                overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
-
-            key = f"{insumo_id}::{jurisdicao_id or 'BASE'}"
-            overrides[key] = {
-                "preco": novo_preco,
-                "nota": nota or "Calibração local de projeto",
-                "jurisdicao": jurisdicao_id,
-            }
-
-            overrides_file.write_text(json.dumps(overrides, indent=2, ensure_ascii=False), encoding="utf-8")
-            return _wrap_response(
-                {"status": "SUCESSO", "layer": "PROJETO", "projeto_id": projeto_id, "insumo": insumo_id}
-            )
-        except Exception as e:
-            return {"erro": f"Erro ao salvar override de projeto: {e}"}
-
-    # Camada Master (Master Layer)
-    try:
-        data = json.loads(insumo_file.read_text(encoding="utf-8"))
-        if jurisdicao_id:
-            if "regionalizacao" not in data:
-                data["regionalizacao"] = {}
-            data["regionalizacao"][jurisdicao_id] = {"preco": novo_preco, "nota": nota}
-        else:
-            data["preco_unitario"] = novo_preco
-            if nota:
-                data["nota_calibracao"] = nota
-
-        insumo_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        return _wrap_response({"status": "SUCESSO", "layer": "MASTER", "insumo_id": insumo_id})
-    except Exception as e:
-        return {"erro": f"Falha ao persistir no mestre: {e}"}
+    return _save_preco_insumo_master(insumo_file, insumo_id, novo_preco, jurisdicao_id, nota)
 
 
 def _impl_consultar_preco_insumo_temporal(

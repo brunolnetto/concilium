@@ -204,6 +204,199 @@ def _week_to_idx(week_str: str) -> int:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _bppc_build_gap_max_lookup(resource_costs: dict[str, dict]) -> dict[str, int]:
+    """Constrói gap_r^max por tipo de recurso a partir de resource_costs (ignora entradas não-dict)."""
+    gap_max_por_tipo: dict[str, int] = {}
+    mob_demob_por_tipo: dict[str, float] = {}  # c_mob + c_demob per unit
+
+    for tipo_id, costs in resource_costs.items():
+        # Ignorar entradas que não são dicts (e.g., "_comment": "...")
+        if not isinstance(costs, dict):
+            continue
+        c_mob = float(costs.get("custo_mob_unit", 0.0))
+        c_demob = float(costs.get("custo_demob_unit", 0.0))
+        c_idle = float(costs.get("custo_idle_semanal_unit", 0.0))
+        unidade = str(costs.get("unidade_faturamento", "hora_prod"))
+
+        gap_max_por_tipo[tipo_id] = _gap_max_economico(c_mob, c_demob, c_idle, unidade)
+        mob_demob_por_tipo[tipo_id] = c_mob + c_demob
+
+    return gap_max_por_tipo
+
+
+def _bppc_atualizar_contratos(
+    contratos_recurso: list[Any], resource_costs: dict[str, dict], gap_max_por_tipo: dict[str, int]
+) -> None:
+    """Atualiza RecursoContrato in-place com os custos e gap_max_economico do tipo correspondente."""
+    for contrato in contratos_recurso:
+        tipo_id = getattr(contrato, "tipo_id", None)
+        if tipo_id and tipo_id in resource_costs:
+            costs = resource_costs[tipo_id]
+            contrato.custo_mob_unit = float(costs.get("custo_mob_unit", 0.0))
+            contrato.custo_demob_unit = float(costs.get("custo_demob_unit", 0.0))
+            contrato.custo_idle_semanal_unit = float(costs.get("custo_idle_semanal_unit", 0.0))
+            contrato.unidade_faturamento = str(costs.get("unidade_faturamento", "hora_prod"))
+            contrato.gap_max_economico = gap_max_por_tipo[tipo_id]
+
+
+def _bppc_build_activity_resources(rcpsp_spec: dict[str, Any]) -> dict[str, dict[str, int]]:
+    """Constrói {item_id: {tipo_id: quantidade}} a partir das activities do rcpsp_spec."""
+    activity_resources: dict[str, dict[str, int]] = {}
+    for act in rcpsp_spec.get("activities", []):
+        item_id = act.get("item_id", "")
+        reqs = act.get("required_resources", {})
+        if item_id and reqs:
+            activity_resources[item_id] = {k: int(v) for k, v in reqs.items()}
+    return activity_resources
+
+
+def _bppc_par_oportunidade(
+    id_a: str,
+    q_a: int,
+    id_b: str,
+    q_b: int,
+    tipo_id: str,
+    gap_max: int,
+    c_mob: float,
+    c_demob: float,
+    c_idle: float,
+    unidade: str,
+    start_idx: Any,
+    end_idx: Any,
+) -> OportunidadeCompartilhamento | None:
+    """Avalia o par (id_a, id_b) e retorna a oportunidade de compartilhamento, se houver ordem temporal."""
+    end_a = end_idx(id_a)
+    start_b = start_idx(id_b)
+    end_b = end_idx(id_b)
+    start_a = start_idx(id_a)
+
+    # Determinar quem termina antes (i = anterior, j = posterior)
+    if end_a <= start_b:
+        i_id, j_id, q_i, q_j = id_a, id_b, q_a, q_b
+        gap = start_b - end_a
+    elif end_b <= start_a:
+        i_id, j_id, q_i, q_j = id_b, id_a, q_b, q_a
+        gap = start_a - end_b
+    else:
+        # Sobreposição temporal — não gera oportunidade de perpetuação
+        return None
+
+    eta = _eta_perpetuacao(gap, c_mob, c_demob, c_idle, unidade)
+    ov = {tipo_id: min(q_i, q_j)}
+    max_q = max(q_i, q_j)
+    omega = min(q_i, q_j) / max_q if max_q > 0 else 0.0
+    mob_costs = {tipo_id: c_mob + c_demob}
+    delta = _delta_c_pot(q_i, q_j, ov, eta, mob_costs)
+    lambda0 = delta * omega
+    viavel = gap <= gap_max
+
+    return OportunidadeCompartilhamento(
+        atividade_i=i_id,
+        atividade_j=j_id,
+        tipo_id=tipo_id,
+        gap_semanas=gap,
+        gap_max_semanas=gap_max,
+        eta=round(eta, 6),
+        omega_bundle=round(omega, 6),
+        delta_c_pot=round(delta, 2),
+        lambda0=round(lambda0, 2),
+        recursos_compartilhaveis=ov,
+        economicamente_viavel=viavel,
+    )
+
+
+def _bppc_oportunidades_por_tipo(
+    tipo_id: str,
+    resource_costs: dict[str, dict],
+    gap_max_por_tipo: dict[str, int],
+    activity_resources: dict[str, dict[str, int]],
+    cron_lookup: dict[str, Any],
+) -> list[OportunidadeCompartilhamento]:
+    """Enumera todos os pares (i, j) de atividades que compartilham `tipo_id` e avalia cada oportunidade."""
+    costs_t = resource_costs[tipo_id]
+    c_mob = float(costs_t.get("custo_mob_unit", 0.0))
+    c_demob = float(costs_t.get("custo_demob_unit", 0.0))
+    c_idle = float(costs_t.get("custo_idle_semanal_unit", 0.0))
+    unidade = str(costs_t.get("unidade_faturamento", "hora_prod"))
+    gap_max = gap_max_por_tipo[tipo_id]
+
+    # Atividades que usam este tipo
+    atividades_tipo = [(iid, reqs[tipo_id]) for iid, reqs in activity_resources.items() if tipo_id in reqs]
+
+    if len(atividades_tipo) < 2:
+        return []
+
+    # Ordenar por semana_inicio para enumerar pares canonicamente
+    def _start_idx(iid: str) -> int:
+        sa = cron_lookup.get(iid)
+        if sa is None:
+            return 0
+        return _week_to_idx(getattr(sa, "semana_inicio", "S000"))
+
+    def _end_idx(iid: str) -> int:
+        sa = cron_lookup.get(iid)
+        if sa is None:
+            return 0
+        return _week_to_idx(getattr(sa, "semana_fim", "S000"))
+
+    atividades_tipo.sort(key=lambda x: _start_idx(x[0]))
+
+    # Enumerar todos os pares (a, b) — determinar ordem temporal depois
+    oportunidades: list[OportunidadeCompartilhamento] = []
+    for idx_a, (id_a, q_a) in enumerate(atividades_tipo):
+        for id_b, q_b in atividades_tipo[idx_a + 1 :]:
+            oport = _bppc_par_oportunidade(
+                id_a, q_a, id_b, q_b, tipo_id, gap_max, c_mob, c_demob, c_idle, unidade, _start_idx, _end_idx
+            )
+            if oport is not None:
+                oportunidades.append(oport)
+    return oportunidades
+
+
+def _bppc_append_validacoes(
+    validacoes: list[ValidacaoItem],
+    oportunidades: list[OportunidadeCompartilhamento],
+    podadas: int,
+    total_economia: float,
+    lambda0_total: float,
+    gap_max_por_tipo: dict[str, int],
+) -> None:
+    """Adiciona (in-place) os ValidacaoItem de resultado e, se houver, de arestas inviáveis."""
+    n_viaveis = len(oportunidades) - podadas
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-PRE-PROCESSAMENTO-OK",
+            status="OK",
+            mensagem=(
+                f"ADR-078: {len(oportunidades)} oportunidade(s) avaliada(s) para "
+                f"{len(gap_max_por_tipo)} tipo(s) — "
+                f"{n_viaveis} viável(is), {podadas} podada(s). "
+                f"Economia potencial: R$ {total_economia:,.2f}. "
+                f"λ_0 total: R$ {lambda0_total:,.2f}."
+            ),
+        )
+    )
+
+    if podadas:
+        inviáveis_desc = [
+            f"{o.atividade_i}→{o.atividade_j} ({o.tipo_id}, gap={o.gap_semanas}w > max={o.gap_max_semanas}w)"
+            for o in oportunidades
+            if not o.economicamente_viavel
+        ]
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-OPT-INVIAVEL",
+                status="AVISO",
+                mensagem=(
+                    f"ADR-078: {podadas} aresta(s) inviável(is) "
+                    f"(gap > gap_r^max) excluídas de G_r^viável: "
+                    + "; ".join(inviáveis_desc[:5])
+                    + ("..." if podadas > 5 else "")
+                ),
+            )
+        )
+
+
 def _build_pre_processamento_compartilhamento(
     contratos_recurso: list[Any],
     rcpsp_spec: dict[str, Any],
@@ -244,121 +437,21 @@ def _build_pre_processamento_compartilhamento(
         return None
 
     # ── 1. Construir lookup de custos por tipo ────────────────────────────────
-    gap_max_por_tipo: dict[str, int] = {}
-    mob_demob_por_tipo: dict[str, float] = {}  # c_mob + c_demob per unit
-
-    for tipo_id, costs in resource_costs.items():
-        # Ignorar entradas que não são dicts (e.g., "_comment": "...")
-        if not isinstance(costs, dict):
-            continue
-        c_mob = float(costs.get("custo_mob_unit", 0.0))
-        c_demob = float(costs.get("custo_demob_unit", 0.0))
-        c_idle = float(costs.get("custo_idle_semanal_unit", 0.0))
-        unidade = str(costs.get("unidade_faturamento", "hora_prod"))
-
-        gap_max_por_tipo[tipo_id] = _gap_max_economico(c_mob, c_demob, c_idle, unidade)
-        mob_demob_por_tipo[tipo_id] = c_mob + c_demob
+    gap_max_por_tipo = _bppc_build_gap_max_lookup(resource_costs)
 
     # ── 2. Atualizar RecursoContrato in-place ────────────────────────────────
-    for contrato in contratos_recurso:
-        tipo_id = getattr(contrato, "tipo_id", None)
-        if tipo_id and tipo_id in resource_costs:
-            costs = resource_costs[tipo_id]
-            contrato.custo_mob_unit = float(costs.get("custo_mob_unit", 0.0))
-            contrato.custo_demob_unit = float(costs.get("custo_demob_unit", 0.0))
-            contrato.custo_idle_semanal_unit = float(costs.get("custo_idle_semanal_unit", 0.0))
-            contrato.unidade_faturamento = str(costs.get("unidade_faturamento", "hora_prod"))
-            contrato.gap_max_economico = gap_max_por_tipo[tipo_id]
+    _bppc_atualizar_contratos(contratos_recurso, resource_costs, gap_max_por_tipo)
 
     # ── 3. Construir lookup de requisitos por atividade ───────────────────────
-    # {item_id: {tipo_id: quantidade}}
-    activity_resources: dict[str, dict[str, int]] = {}
-    for act in rcpsp_spec.get("activities", []):
-        item_id = act.get("item_id", "")
-        reqs = act.get("required_resources", {})
-        if item_id and reqs:
-            activity_resources[item_id] = {k: int(v) for k, v in reqs.items()}
+    activity_resources = _bppc_build_activity_resources(rcpsp_spec)
 
     # ── 4. Para cada tipo com resource_costs, enumerar pares (i, j) ──────────
     oportunidades: list[OportunidadeCompartilhamento] = []
-    tem_inviavel = False
-
     # Iterar apenas sobre tipos válidos (dict entries — ignora "_comment" e similares)
     for tipo_id in sorted(gap_max_por_tipo):
-        costs_t = resource_costs[tipo_id]
-        c_mob = float(costs_t.get("custo_mob_unit", 0.0))
-        c_demob = float(costs_t.get("custo_demob_unit", 0.0))
-        c_idle = float(costs_t.get("custo_idle_semanal_unit", 0.0))
-        unidade = str(costs_t.get("unidade_faturamento", "hora_prod"))
-        gap_max = gap_max_por_tipo[tipo_id]
-
-        # Atividades que usam este tipo
-        atividades_tipo = [(iid, reqs[tipo_id]) for iid, reqs in activity_resources.items() if tipo_id in reqs]
-
-        if len(atividades_tipo) < 2:
-            continue
-
-        # Ordenar por semana_inicio para enumerar pares canonicamente
-        def _start_idx(iid: str) -> int:
-            sa = cron_lookup.get(iid)
-            if sa is None:
-                return 0
-            return _week_to_idx(getattr(sa, "semana_inicio", "S000"))
-
-        def _end_idx(iid: str) -> int:
-            sa = cron_lookup.get(iid)
-            if sa is None:
-                return 0
-            return _week_to_idx(getattr(sa, "semana_fim", "S000"))
-
-        atividades_tipo.sort(key=lambda x: _start_idx(x[0]))
-
-        # Enumerar todos os pares (a, b) — determinar ordem temporal depois
-        for idx_a, (id_a, q_a) in enumerate(atividades_tipo):
-            for id_b, q_b in atividades_tipo[idx_a + 1 :]:
-                end_a = _end_idx(id_a)
-                start_b = _start_idx(id_b)
-                end_b = _end_idx(id_b)
-                start_a = _start_idx(id_a)
-
-                # Determinar quem termina antes (i = anterior, j = posterior)
-                if end_a <= start_b:
-                    i_id, j_id, q_i, q_j = id_a, id_b, q_a, q_b
-                    gap = start_b - end_a
-                elif end_b <= start_a:
-                    i_id, j_id, q_i, q_j = id_b, id_a, q_b, q_a
-                    gap = start_a - end_b
-                else:
-                    # Sobreposição temporal — não gera oportunidade de perpetuação
-                    continue
-
-                eta = _eta_perpetuacao(gap, c_mob, c_demob, c_idle, unidade)
-                ov = {tipo_id: min(q_i, q_j)}
-                max_q = max(q_i, q_j)
-                omega = min(q_i, q_j) / max_q if max_q > 0 else 0.0
-                mob_costs = {tipo_id: c_mob + c_demob}
-                delta = _delta_c_pot(q_i, q_j, ov, eta, mob_costs)
-                lambda0 = delta * omega
-                viavel = gap <= gap_max
-
-                if not viavel:
-                    tem_inviavel = True
-
-                oportunidades.append(
-                    OportunidadeCompartilhamento(
-                        atividade_i=i_id,
-                        atividade_j=j_id,
-                        tipo_id=tipo_id,
-                        gap_semanas=gap,
-                        gap_max_semanas=gap_max,
-                        eta=round(eta, 6),
-                        omega_bundle=round(omega, 6),
-                        delta_c_pot=round(delta, 2),
-                        lambda0=round(lambda0, 2),
-                        recursos_compartilhaveis=ov,
-                        economicamente_viavel=viavel,
-                    )
-                )
+        oportunidades.extend(
+            _bppc_oportunidades_por_tipo(tipo_id, resource_costs, gap_max_por_tipo, activity_resources, cron_lookup)
+        )
 
     # ── 5. Ordenar por delta_c_pot decrescente ────────────────────────────────
     oportunidades.sort(key=lambda o: -o.delta_c_pot)
@@ -378,39 +471,7 @@ def _build_pre_processamento_compartilhamento(
     )
 
     # ── 7. Validadores ────────────────────────────────────────────────────────
-    n_viaveis = len(oportunidades) - podadas
-    validacoes.append(
-        ValidacaoItem(
-            codigo="VAL-PRE-PROCESSAMENTO-OK",
-            status="OK",
-            mensagem=(
-                f"ADR-078: {len(oportunidades)} oportunidade(s) avaliada(s) para "
-                f"{len(gap_max_por_tipo)} tipo(s) — "
-                f"{n_viaveis} viável(is), {podadas} podada(s). "
-                f"Economia potencial: R$ {total_economia:,.2f}. "
-                f"λ_0 total: R$ {lambda0_total:,.2f}."
-            ),
-        )
-    )
-
-    if tem_inviavel:
-        inviáveis_desc = [
-            f"{o.atividade_i}→{o.atividade_j} ({o.tipo_id}, gap={o.gap_semanas}w > max={o.gap_max_semanas}w)"
-            for o in oportunidades
-            if not o.economicamente_viavel
-        ]
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-OPT-INVIAVEL",
-                status="AVISO",
-                mensagem=(
-                    f"ADR-078: {podadas} aresta(s) inviável(is) "
-                    f"(gap > gap_r^max) excluídas de G_r^viável: "
-                    + "; ".join(inviáveis_desc[:5])
-                    + ("..." if podadas > 5 else "")
-                ),
-            )
-        )
+    _bppc_append_validacoes(validacoes, oportunidades, podadas, total_economia, lambda0_total, gap_max_por_tipo)
 
     return relatorio
 
@@ -461,6 +522,169 @@ def _gap_coberto_por_recurso(sched: Any, tipo_id: str, t_start: int, t_end: int)
     return len(covered) == t_end - t_start
 
 
+def _dop_ordem_temporal(id_x: str, id_y: str, sa_map: dict[str, Any]) -> tuple[str, str] | None:
+    """Determina (i_id, j_id) tal que i termina antes de j começar; None se sobrepõem."""
+    sa_x, sa_y = sa_map[id_x], sa_map[id_y]
+    if sa_x.end_week <= sa_y.start_week:
+        return id_x, id_y
+    if sa_y.end_week <= sa_x.start_week:
+        return id_y, id_x
+    return None
+
+
+def _dop_delay_viola_float(
+    act_id: str, delay: int, dag: Any, act_map: dict[str, Any], cpm_es: dict[str, int], cpm_lf: dict[str, int]
+) -> bool:
+    """True se o delay de `act_id` viola o float de algum sucessor direto no DAG (critério 5)."""
+    if delay <= 0:
+        return False
+    for succ in dag.successors(act_id):
+        # act_map sempre contém `succ`: dag.topological_order() (chamado acima em
+        # _cpm_early_start/_cpm_late_finish) já teria levantado ValueError/KeyError se
+        # dag.precedence referenciasse uma atividade fora de dag.activities — logo `succ`
+        # é garantidamente uma chave válida de act_map neste ponto.
+        act_succ = act_map[succ]
+        tf_succ = cpm_lf[succ] - cpm_es.get(succ, 0) - act_succ.duration_weeks
+        if tf_succ < delay:
+            return True
+    return False
+
+
+def _dop_avaliar_par(
+    id_x: str,
+    id_y: str,
+    tipo_id: str,
+    sched: Any,
+    dag: Any,
+    sa_map: dict[str, Any],
+    act_map: dict[str, Any],
+    precedencias: set[frozenset],
+    e_gargalo: bool,
+    cpm_es: dict[str, int],
+    cpm_lf: dict[str, int],
+    custo_semana: float,
+    custo_indireto_semana: float,
+) -> OportunidadeCompartilhamentoParalelo | None:
+    """Avalia um par (id_x, id_y) contra os critérios 3-5 do ADR-110 §D1 e retorna a oportunidade, se viável."""
+    if frozenset([id_x, id_y]) in precedencias:
+        return None
+
+    ordem = _dop_ordem_temporal(id_x, id_y, sa_map)
+    if ordem is None:
+        return None
+    i_id, j_id = ordem
+
+    sa_i, sa_j = sa_map[i_id], sa_map[j_id]
+    act_i = act_map.get(i_id)
+    act_j = act_map.get(j_id)
+    if act_i is None or act_j is None:
+        return None
+
+    # Critério 4: gap entre i e j coberto por outras atividades do tipo
+    if not _gap_coberto_por_recurso(sched, tipo_id, sa_i.end_week, sa_j.start_week):
+        return None
+
+    d_i = act_i.duration_weeks
+    d_j = act_j.duration_weeks
+    t0 = sa_i.start_week  # ambas iniciam em t0 no cenário paralelo
+
+    # Delays individuais no cenário paralelo-com-alternância
+    new_ef_i = t0 + 2 * d_i
+    new_ef_j = t0 + 2 * d_j
+    delay_i = max(0, new_ef_i - sa_i.end_week)
+    delay_j = max(0, new_ef_j - sa_j.end_week)
+
+    # Critério 5 (gargalo): delay não pode violar float de sucessores diretos
+    if e_gargalo:
+        for act_id, delay in ((i_id, delay_i), (j_id, delay_j)):
+            if _dop_delay_viola_float(act_id, delay, dag, act_map, cpm_es, cpm_lf):
+                return None
+
+    delta_makespan = max(0, max(new_ef_i, new_ef_j) - sa_j.end_week) if e_gargalo else 0
+
+    semanas_frota = max(d_i, d_j)
+    delta_custo_frota = round(custo_semana * semanas_frota, 2)
+    delta_indiretos = round(custo_indireto_semana * delta_makespan, 2)
+    delta_liquido = round(delta_custo_frota - delta_indiretos, 2)
+
+    return OportunidadeCompartilhamentoParalelo(
+        atividade_i=i_id,
+        atividade_j=j_id,
+        tipo_recurso_id=tipo_id,
+        recurso_e_gargalo=e_gargalo,
+        delta_makespan_semanas=delta_makespan,
+        delta_custo_frota=delta_custo_frota,
+        delta_indiretos=delta_indiretos,
+        delta_liquido=delta_liquido,
+        economicamente_viavel=delta_liquido > 0,
+    )
+
+
+def _dop_oportunidades_para_tipo(
+    usuarios: list[str],
+    tipo_id: str,
+    sched: Any,
+    dag: Any,
+    sa_map: dict[str, Any],
+    act_map: dict[str, Any],
+    precedencias: set[frozenset],
+    e_gargalo: bool,
+    cpm_es: dict[str, int],
+    cpm_lf: dict[str, int],
+    custo_semana: float,
+    custo_indireto_semana: float,
+) -> list[OportunidadeCompartilhamentoParalelo]:
+    """Enumera todos os pares de `usuarios` de um mesmo tipo de recurso e avalia cada oportunidade."""
+    oportunidades: list[OportunidadeCompartilhamentoParalelo] = []
+    for idx_x in range(len(usuarios)):
+        for idx_y in range(idx_x + 1, len(usuarios)):
+            oport = _dop_avaliar_par(
+                usuarios[idx_x],
+                usuarios[idx_y],
+                tipo_id,
+                sched,
+                dag,
+                sa_map,
+                act_map,
+                precedencias,
+                e_gargalo,
+                cpm_es,
+                cpm_lf,
+                custo_semana,
+                custo_indireto_semana,
+            )
+            if oport is not None:
+                oportunidades.append(oport)
+    return oportunidades
+
+
+def _dop_contexto_tipo(
+    tipo_id: str, costs: Any, pool: Any, sched: Any, lpp: dict[str, str]
+) -> tuple[list[str], float, bool] | None:
+    """Valida os critérios 1-2 e monta o contexto (usuarios, custo_semana, e_gargalo) do tipo.
+
+    Retorna None quando o tipo não é elegível (não é dict, não é disputado, sem custo
+    de frota configurado, ou com menos de 2 usuários no cronograma).
+    """
+    if not isinstance(costs, dict):
+        return None
+    if pool.resources.get(tipo_id, 0) != 1:
+        return None
+
+    custo_semana = float(costs.get("custo_contrato_semana_unit", 0.0))
+    if custo_semana <= 0.0:
+        return None
+
+    usuarios: list[str] = [
+        sa.activity_id for sa in sched.scheduled_activities if sa.assigned_resources.get(tipo_id, 0) > 0
+    ]
+    if len(usuarios) < 2:
+        return None
+
+    e_gargalo = lpp.get(tipo_id, "equipamento") == "equipamento"
+    return usuarios, custo_semana, e_gargalo
+
+
 def _detectar_oportunidades_paralelo(
     sched: Any,
     dag: Any,
@@ -494,104 +718,27 @@ def _detectar_oportunidades_paralelo(
     resultado: list[OportunidadeCompartilhamentoParalelo] = []
 
     for tipo_id, costs in resource_costs.items():
-        if not isinstance(costs, dict):
+        contexto = _dop_contexto_tipo(tipo_id, costs, pool, sched, lpp)
+        if contexto is None:
             continue
-        if pool.resources.get(tipo_id, 0) != 1:
-            continue
+        usuarios, custo_semana, e_gargalo = contexto
 
-        custo_semana = float(costs.get("custo_contrato_semana_unit", 0.0))
-        if custo_semana <= 0.0:
-            continue
-
-        usuarios: list[str] = [
-            sa.activity_id for sa in sched.scheduled_activities if sa.assigned_resources.get(tipo_id, 0) > 0
-        ]
-        if len(usuarios) < 2:
-            continue
-
-        e_gargalo = lpp.get(tipo_id, "equipamento") == "equipamento"
-
-        for idx_x in range(len(usuarios)):
-            for idx_y in range(idx_x + 1, len(usuarios)):
-                id_x, id_y = usuarios[idx_x], usuarios[idx_y]
-
-                if frozenset([id_x, id_y]) in precedencias:
-                    continue
-
-                sa_x, sa_y = sa_map[id_x], sa_map[id_y]
-
-                if sa_x.end_week <= sa_y.start_week:
-                    i_id, j_id = id_x, id_y
-                elif sa_y.end_week <= sa_x.start_week:
-                    i_id, j_id = id_y, id_x
-                else:
-                    continue
-
-                sa_i, sa_j = sa_map[i_id], sa_map[j_id]
-                act_i = act_map.get(i_id)
-                act_j = act_map.get(j_id)
-                if act_i is None or act_j is None:
-                    continue
-
-                # Critério 4: gap entre i e j coberto por outras atividades do tipo
-                if not _gap_coberto_por_recurso(sched, tipo_id, sa_i.end_week, sa_j.start_week):
-                    continue
-
-                d_i = act_i.duration_weeks
-                d_j = act_j.duration_weeks
-                t0 = sa_i.start_week  # ambas iniciam em t0 no cenário paralelo
-
-                # Delays individuais no cenário paralelo-com-alternância
-                new_ef_i = t0 + 2 * d_i
-                new_ef_j = t0 + 2 * d_j
-                delay_i = max(0, new_ef_i - sa_i.end_week)
-                delay_j = max(0, new_ef_j - sa_j.end_week)
-
-                # Critério 5 (gargalo): delay não pode violar float de sucessores diretos
-                if e_gargalo:
-                    rejeitado = False
-                    for act_id, delay in ((i_id, delay_i), (j_id, delay_j)):
-                        if delay <= 0:
-                            continue
-                        for succ in dag.successors(act_id):
-                            # act_map sempre contém `succ`: dag.topological_order() (chamado
-                            # acima em _cpm_early_start/_cpm_late_finish) já teria levantado
-                            # ValueError/KeyError se dag.precedence referenciasse uma atividade
-                            # fora de dag.activities — logo `succ` é garantidamente uma chave
-                            # válida de act_map neste ponto.
-                            act_succ = act_map[succ]
-                            tf_succ = cpm_lf[succ] - cpm_es.get(succ, 0) - act_succ.duration_weeks
-                            if tf_succ < delay:
-                                rejeitado = True
-                                break
-                        if rejeitado:
-                            break
-                    if rejeitado:
-                        continue
-
-                if e_gargalo:
-                    delta_makespan = max(0, max(new_ef_i, new_ef_j) - sa_j.end_week)
-                else:
-                    delta_makespan = 0
-
-                semanas_frota = max(d_i, d_j)
-                delta_custo_frota = round(custo_semana * semanas_frota, 2)
-                delta_indiretos = round(custo_indireto_semana * delta_makespan, 2)
-                delta_liquido = round(delta_custo_frota - delta_indiretos, 2)
-
-                resultado.append(
-                    OportunidadeCompartilhamentoParalelo(
-                        atividade_i=i_id,
-                        atividade_j=j_id,
-                        tipo_recurso_id=tipo_id,
-                        recurso_e_gargalo=e_gargalo,
-                        delta_makespan_semanas=delta_makespan,
-                        delta_custo_frota=delta_custo_frota,
-                        delta_indiretos=delta_indiretos,
-                        delta_liquido=delta_liquido,
-                        economicamente_viavel=delta_liquido > 0,
-                    )
-                )
+        resultado.extend(
+            _dop_oportunidades_para_tipo(
+                usuarios,
+                tipo_id,
+                sched,
+                dag,
+                sa_map,
+                act_map,
+                precedencias,
+                e_gargalo,
+                cpm_es,
+                cpm_lf,
+                custo_semana,
+                custo_indireto_semana,
+            )
+        )
 
     resultado.sort(key=lambda o: -o.delta_liquido)
     return resultado

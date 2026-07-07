@@ -32,6 +32,44 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _validate_ramp_params(k_max: int, n_0: int, r: int, d: int, n_i: int) -> None:
+    """Shared consistency checks used both by the model validator and build()."""
+    if k_max < n_0:
+        raise ValueError(
+            f"K_max ({k_max}) must be >= n_0 ({n_0}): peak team count cannot be less than initial team count"
+        )
+    if r + d > n_i:
+        raise ValueError(f"r ({r}) + d ({d}) > n_i ({n_i}): ramp-up + ramp-down phases exceed activity duration")
+
+
+def _compute_m_vector(k_max: int, r: int, d: int, n_i: int, n_0: int) -> tuple[int, ...]:
+    """Compute m[t] per activity week (NEP-031 §L6): ramp-up, plateau, ramp-down."""
+    t_demob_start = n_i - d  # first ramp-down week index
+    c_mob_eff = (k_max - n_0) / r if r > 0 else 0.0
+    c_demob_eff = k_max / d if d > 0 else 0.0
+
+    m_list: list[int] = []
+    for t in range(n_i):
+        if d > 0 and t >= t_demob_start:
+            # Ramp-down phase takes precedence (covers the case r + d == n_i)
+            j = t - t_demob_start
+            val = max(k_max - math.floor(j * c_demob_eff), 0)
+        elif t < r:
+            # Ramp-up phase
+            val = min(n_0 + math.floor(t * c_mob_eff), k_max)
+        else:
+            # Plateau
+            val = k_max
+        m_list.append(val)
+    return tuple(m_list)
+
+
+def _boundary_dicts(m: tuple[int, ...], resources_per_team: dict[str, int]) -> tuple[dict[str, int], dict[str, int]]:
+    boundary_supply = {res: m[-1] * qty for res, qty in resources_per_team.items()}
+    boundary_demand = {res: m[0] * qty for res, qty in resources_per_team.items()}
+    return boundary_supply, boundary_demand
+
+
 class RampProfile(BaseModel):
     """Ramp hyperparameter — supplied by the planner, not optimised (ADR-075 D3).
 
@@ -63,15 +101,7 @@ class RampProfile(BaseModel):
 
     @model_validator(mode="after")
     def _validate_consistency(self) -> RampProfile:
-        if self.K_max < self.n_0:
-            raise ValueError(
-                f"K_max ({self.K_max}) must be >= n_0 ({self.n_0}): "
-                "peak team count cannot be less than initial team count"
-            )
-        if self.r + self.d > self.n_i:
-            raise ValueError(
-                f"r ({self.r}) + d ({self.d}) > n_i ({self.n_i}): ramp-up + ramp-down phases exceed activity duration"
-            )
+        _validate_ramp_params(self.K_max, self.n_0, self.r, self.d, self.n_i)
         return self
 
     # ── factory ──────────────────────────────────────────────────────────────
@@ -98,34 +128,10 @@ class RampProfile(BaseModel):
             resources_per_team: {resource_id: units per team}.
             n_0:         Teams at week 0 (default 1).
         """
-        if K_max < n_0:
-            raise ValueError(
-                f"K_max ({K_max}) must be >= n_0 ({n_0}): peak team count cannot be less than initial team count"
-            )
-        if r + d > n_i:
-            raise ValueError(f"r ({r}) + d ({d}) > n_i ({n_i}): ramp-up + ramp-down phases exceed activity duration")
+        _validate_ramp_params(K_max, n_0, r, d, n_i)
 
-        t_demob_start = n_i - d  # first ramp-down week index
-        c_mob_eff = (K_max - n_0) / r if r > 0 else 0.0
-        c_demob_eff = K_max / d if d > 0 else 0.0
-
-        m_list: list[int] = []
-        for t in range(n_i):
-            if d > 0 and t >= t_demob_start:
-                # Ramp-down phase takes precedence (covers the case r + d == n_i)
-                j = t - t_demob_start
-                val = max(K_max - math.floor(j * c_demob_eff), 0)
-            elif t < r:
-                # Ramp-up phase
-                val = min(n_0 + math.floor(t * c_mob_eff), K_max)
-            else:
-                # Plateau
-                val = K_max
-            m_list.append(val)
-
-        m = tuple(m_list)
-        boundary_supply = {res: m[-1] * qty for res, qty in resources_per_team.items()}
-        boundary_demand = {res: m[0] * qty for res, qty in resources_per_team.items()}
+        m = _compute_m_vector(K_max, r, d, n_i, n_0)
+        boundary_supply, boundary_demand = _boundary_dicts(m, resources_per_team)
 
         return cls(
             activity_id=activity_id,

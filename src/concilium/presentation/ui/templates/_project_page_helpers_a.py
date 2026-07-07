@@ -228,18 +228,20 @@ def _render_eap_composicao_section(composicao: list, has_equipe: bool) -> None:
         st.caption("Composição não registrada para esta CPU.")
 
 
-def _render_eap_item_body(item: dict, cpu_data: dict, qtd: object, unidade: str) -> None:
-    cpu_id = item.get("cpu_id", "—")
+def _render_eap_item_descricao(descricao_item: str, descricao_cpu: str) -> None:
     # Descrição: preferência para o campo da EAP, fallback para CPU
-    descricao_item = item.get("descricao") or ""
-    descricao_cpu = cpu_data.get("descricao") or cpu_data.get("nome") or ""
     if descricao_item:
         st.caption(f"**{descricao_item}**")
     elif descricao_cpu:
         st.caption(f"*CPU — {descricao_cpu}*")
-    observacao = item.get("observacao") or item.get("nota") or ""
+
+
+def _render_eap_item_observacao(observacao: str) -> None:
     if observacao:
         st.caption(f"📝 {observacao}")
+
+
+def _render_eap_item_metrics(cpu_id: object, qtd: object, unidade: str, cpu_data: dict) -> None:
     c1, c2, c3 = st.columns(3)
     c1.caption("CPU")
     c1.code(cpu_id)
@@ -248,11 +250,29 @@ def _render_eap_item_body(item: dict, cpu_data: dict, qtd: object, unidade: str)
     prod = cpu_data.get("producao_horaria") or "—"
     c3.caption("Produtividade")
     c3.metric("", f"{prod} {unidade}/h" if prod != "—" else "—")
+
+
+def _resolve_eap_equipe_flags(cpu_data: dict) -> tuple[dict, bool]:
     equipe = cpu_data.get("equipe") or {}
     funcoes = equipe.get("funcoes") or []
     equipamentos = equipe.get("equipamentos") or []
-    composicao = cpu_data.get("composicao_itens") or []
     has_equipe = bool(funcoes or equipamentos)
+    return equipe, has_equipe
+
+
+def _render_eap_item_body(item: dict, cpu_data: dict, qtd: object, unidade: str) -> None:
+    cpu_id = item.get("cpu_id", "—")
+    descricao_item = item.get("descricao") or ""
+    descricao_cpu = cpu_data.get("descricao") or cpu_data.get("nome") or ""
+    _render_eap_item_descricao(descricao_item, descricao_cpu)
+
+    observacao = item.get("observacao") or item.get("nota") or ""
+    _render_eap_item_observacao(observacao)
+
+    _render_eap_item_metrics(cpu_id, qtd, unidade, cpu_data)
+
+    equipe, has_equipe = _resolve_eap_equipe_flags(cpu_data)
+    composicao = cpu_data.get("composicao_itens") or []
     if has_equipe:
         _render_eap_equipe_section(equipe)
     _render_eap_composicao_section(composicao, has_equipe)

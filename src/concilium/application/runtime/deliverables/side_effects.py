@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .helpers.insumos import dedup_insumos, ingest_insumos, load_insumos_subdir
 from .helpers.serialization import json_default
@@ -108,6 +108,48 @@ def _load_output_image_bytes(project: ProjectHandle, v: str, file_name: str) -> 
         return None
 
 
+def _resolve_relatorio_canonical(result: SkillResult, project: ProjectHandle, v: str) -> Any:
+    """Resolve o canônico do resultado, ou carrega do project como fallback."""
+    canonical = getattr(result, "canonical", None)
+    if canonical is not None:
+        return canonical
+    try:
+        return project.load_canonical(v)
+    except Exception:
+        return None
+
+
+def _save_relatorio_md_outputs(rel_dict: dict, canonical: Any, project: ProjectHandle, v: str, md_content: str) -> None:
+    """Salva relatorio.md e resumo_executivo.md (ADR-093 D5)."""
+    project.save_output_file(md_content.encode("utf-8"), v, "relatorio.md")
+    try:
+        resumo_md = render_resumo_executivo(rel_dict, canonical=canonical)
+        project.save_output_file(resumo_md.encode("utf-8"), v, "resumo_executivo.md")
+    except Exception:  # pragma: no cover
+        pass
+
+
+def _resolve_relatorio_proj_nome(rel_dict: dict) -> str:
+    """Prioridade: meta.projeto → resumo.projeto → fallback genérico."""
+    return (
+        (rel_dict.get("meta") or {}).get("projeto")
+        or (rel_dict.get("resumo") or {}).get("projeto")
+        or "Relatório Financeiro"
+    )
+
+
+def _save_relatorio_pdf_output(rel_dict: dict, project: ProjectHandle, v: str) -> None:
+    """Renderiza e salva relatorio.pdf, com imagens resolvidas via project."""
+    proj_nome = _resolve_relatorio_proj_nome(rel_dict)
+
+    def provider(file_name):
+        return _load_output_image_bytes(project, v, file_name)
+
+    pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
+    if pdf_bytes:
+        project.save_output_file(pdf_bytes, v, "relatorio.pdf")
+
+
 def _save_relatorio_files(
     result: SkillResult, project: ProjectHandle, v: str, gerar_md: bool, gerar_pdf: bool, gerar_pngs: bool = True
 ) -> None:
@@ -116,39 +158,16 @@ def _save_relatorio_files(
         return
     try:
         rel_dict = json.loads(json.dumps(relatorio, default=_json_default))
-        canonical = getattr(result, "canonical", None)
-        if canonical is None:
-            try:
-                canonical = project.load_canonical(v)
-            except Exception:
-                canonical = None
+        canonical = _resolve_relatorio_canonical(result, project, v)
         md_content = render_financial_report_markdown(rel_dict, canonical=canonical)
         png_files = _save_relatorio_graficos_files(
             rel_dict, canonical, project, v, gerar_md, gerar_pdf, gerar_pngs=gerar_pngs
         )
         md_content = _append_png_gallery(md_content, png_files)
         if gerar_md:
-            project.save_output_file(md_content.encode("utf-8"), v, "relatorio.md")
-            # ADR-093 D5: resumo executivo de 1 página para decisores
-            try:
-                resumo_md = render_resumo_executivo(rel_dict, canonical=canonical)
-                project.save_output_file(resumo_md.encode("utf-8"), v, "resumo_executivo.md")
-            except Exception:  # pragma: no cover
-                pass
+            _save_relatorio_md_outputs(rel_dict, canonical, project, v, md_content)
         if gerar_pdf:
-            # Prioridade: meta.projeto → resumo.projeto → fallback genérico
-            proj_nome = (
-                (rel_dict.get("meta") or {}).get("projeto")
-                or (rel_dict.get("resumo") or {}).get("projeto")
-                or "Relatório Financeiro"
-            )
-
-            def provider(file_name):
-                return _load_output_image_bytes(project, v, file_name)
-
-            pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
-            if pdf_bytes:
-                project.save_output_file(pdf_bytes, v, "relatorio.pdf")
+            _save_relatorio_pdf_output(rel_dict, project, v)
     except Exception:  # pragma: no cover
         pass
 

@@ -57,67 +57,84 @@ class ConfigVersionService:
 
     # ── Listagem ─────────────────────────────────────────────────────────────
 
-    def list_entities(self) -> list[dict[str, Any]]:
-        """Lista todas as entidades disponíveis com histórico de versões."""
+    def _versioned_entity_item(self, entity_dir: Path) -> dict[str, Any]:
+        # Find metadata file: <entity>.json or contexto.json or perfil.json
+        meta = self._read_meta(entity_dir)
+        versions = self._list_versions(entity_dir)
+        current = self._read_current(entity_dir / "current")
+        return {
+            "id": meta.get("id") or entity_dir.name,
+            "nome": meta.get("nome") or entity_dir.name,
+            "descricao": meta.get("descricao") or "",
+            "current_version": current,
+            "versions": versions,
+            **{
+                k: meta[k]
+                for k in meta
+                if k not in ("id", "nome", "descricao", "current_version") and not k.startswith("$")
+            },
+        }
+
+    def _versioned_entities(self) -> tuple[list[dict[str, Any]], set[str]]:
         result: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
-
         for entity_dir in sorted(self._root.iterdir()):
             if not entity_dir.is_dir():
                 continue
-            # Find metadata file: <entity>.json or contexto.json or perfil.json
-            meta = self._read_meta(entity_dir)
-            versions = self._list_versions(entity_dir)
-            current = self._read_current(entity_dir / "current")
-            result.append(
+            item = self._versioned_entity_item(entity_dir)
+            result.append(item)
+            seen_ids.add(str(item["id"]))
+        return result, seen_ids
+
+    @staticmethod
+    def _flat_file_item(flat: Path, flat_id: str) -> dict[str, Any] | None:
+        try:
+            payload = json.loads(flat.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+        entity_id = str(payload.get("id") or payload.get("codigo") or flat_id)
+        return {
+            "id": entity_id,
+            "nome": payload.get("nome") or entity_id,
+            "descricao": payload.get("descricao") or "",
+            "current_version": "v1",
+            "versions": [
                 {
-                    "id": meta.get("id") or entity_dir.name,
-                    "nome": meta.get("nome") or entity_dir.name,
-                    "descricao": meta.get("descricao") or "",
-                    "current_version": current,
-                    "versions": versions,
-                    **{
-                        k: meta[k]
-                        for k in meta
-                        if k not in ("id", "nome", "descricao", "current_version") and not k.startswith("$")
-                    },
+                    "version": "v1",
+                    "created_at": payload.get("created_at"),
+                    "created_by": payload.get("created_by"),
+                    "motivo": payload.get("motivo") or "base_flat_file",
                 }
-            )
-            seen_ids.add(str(meta.get("id") or entity_dir.name))
+            ],
+            **{
+                k: payload[k]
+                for k in payload
+                if k not in ("id", "nome", "descricao", "current_version") and not str(k).startswith("$")
+            },
+        }
+
+    def _flat_file_entities(self, seen_ids: set[str]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for flat in sorted(self._root.glob("*.json")):
+            flat_id = flat.stem
+            if flat_id in seen_ids:
+                continue
+            item = self._flat_file_item(flat, flat_id)
+            if item is None:
+                continue
+            entity_id = str(item["id"])
+            if entity_id in seen_ids:
+                continue
+            result.append(item)
+            seen_ids.add(entity_id)
+        return result
+
+    def list_entities(self) -> list[dict[str, Any]]:
+        """Lista todas as entidades disponíveis com histórico de versões."""
+        result, seen_ids = self._versioned_entities()
 
         if self._include_flat_files:
-            for flat in sorted(self._root.glob("*.json")):
-                flat_id = flat.stem
-                if flat_id in seen_ids:
-                    continue
-                try:
-                    payload = json.loads(flat.read_text(encoding="utf-8"))
-                except Exception:
-                    continue
-                entity_id = str(payload.get("id") or payload.get("codigo") or flat_id)
-                if entity_id in seen_ids:
-                    continue
-                item = {
-                    "id": entity_id,
-                    "nome": payload.get("nome") or entity_id,
-                    "descricao": payload.get("descricao") or "",
-                    "current_version": "v1",
-                    "versions": [
-                        {
-                            "version": "v1",
-                            "created_at": payload.get("created_at"),
-                            "created_by": payload.get("created_by"),
-                            "motivo": payload.get("motivo") or "base_flat_file",
-                        }
-                    ],
-                    **{
-                        k: payload[k]
-                        for k in payload
-                        if k not in ("id", "nome", "descricao", "current_version") and not str(k).startswith("$")
-                    },
-                }
-                result.append(item)
-                seen_ids.add(entity_id)
+            result.extend(self._flat_file_entities(seen_ids))
 
         return result
 
@@ -143,6 +160,52 @@ class ConfigVersionService:
 
     # ── Criação de nova versão ───────────────────────────────────────────────
 
+    @staticmethod
+    def _next_version_name(existing: list[Path]) -> str:
+        last_n = 0
+        for f in existing:
+            try:
+                last_n = max(last_n, int(f.stem[1:]))
+            except ValueError:
+                pass
+        return f"v{last_n + 1}"
+
+    def _base_fields_for_new_version(self, entity_id: str, existing: list[Path]) -> dict[str, Any]:
+        if existing:
+            base = json.loads(existing[-1].read_text(encoding="utf-8"))
+        else:
+            flat_file = self._root / f"{entity_id}.json"
+            if not flat_file.exists():
+                return {}
+            try:
+                base = json.loads(flat_file.read_text(encoding="utf-8"))
+            except Exception:
+                base = {}
+        for k in ("version", "created_at", "created_by", "motivo"):
+            base.pop(k, None)
+        return base
+
+    def _sync_current_meta(self, entity_dir: Path, entity_id: str, new_entry: dict[str, Any], new_v: str) -> None:
+        meta_file = self._find_meta_file(entity_dir)
+        # _find_meta_file() only ever returns a path that already exists() (or None),
+        # so "meta_file truthy but not existing" is not a reachable state — the
+        # complement of the `if` is simply "meta_file is None".
+        if meta_file and meta_file.exists():
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            meta["current_version"] = new_v
+            meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        else:
+            bootstrap_meta = {
+                "id": new_entry.get("id") or entity_id,
+                "nome": new_entry.get("nome") or entity_id,
+                "descricao": new_entry.get("descricao") or "",
+                "current_version": new_v,
+            }
+            (entity_dir / "meta.json").write_text(
+                json.dumps(bootstrap_meta, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
     def create_version(
         self,
         entity_id: str,
@@ -156,28 +219,8 @@ class ConfigVersionService:
         versions_dir.mkdir(parents=True, exist_ok=True)
 
         existing = sorted(versions_dir.glob("v*.json"))
-        last_n = 0
-        for f in existing:
-            try:
-                last_n = max(last_n, int(f.stem[1:]))
-            except ValueError:
-                pass
-        new_v = f"v{last_n + 1}"
-
-        base: dict[str, Any] = {}
-        if existing:
-            base = json.loads(existing[-1].read_text(encoding="utf-8"))
-            for k in ("version", "created_at", "created_by", "motivo"):
-                base.pop(k, None)
-        else:
-            flat_file = self._root / f"{entity_id}.json"
-            if flat_file.exists():
-                try:
-                    base = json.loads(flat_file.read_text(encoding="utf-8"))
-                except Exception:
-                    base = {}
-                for k in ("version", "created_at", "created_by", "motivo"):
-                    base.pop(k, None)
+        new_v = self._next_version_name(existing)
+        base = self._base_fields_for_new_version(entity_id, existing)
 
         new_entry = {
             "version": new_v,
@@ -193,25 +236,7 @@ class ConfigVersionService:
 
         if make_current:
             (entity_dir / "current").write_text(new_v, encoding="utf-8")
-            meta_file = self._find_meta_file(entity_dir)
-            # _find_meta_file() only ever returns a path that already exists() (or None),
-            # so "meta_file truthy but not existing" is not a reachable state — the
-            # complement of the `if` is simply "meta_file is None".
-            if meta_file and meta_file.exists():
-                meta = json.loads(meta_file.read_text(encoding="utf-8"))
-                meta["current_version"] = new_v
-                meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-            else:
-                bootstrap_meta = {
-                    "id": new_entry.get("id") or entity_id,
-                    "nome": new_entry.get("nome") or entity_id,
-                    "descricao": new_entry.get("descricao") or "",
-                    "current_version": new_v,
-                }
-                (entity_dir / "meta.json").write_text(
-                    json.dumps(bootstrap_meta, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
+            self._sync_current_meta(entity_dir, entity_id, new_entry, new_v)
 
         return new_entry
 

@@ -22,6 +22,18 @@ _SILVER_PREFIX = "observability/silver"
 CanonicalProvider = Callable[[str], dict[str, Any] | None]
 
 
+def _aggregate_fallback_by_project(logs: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Agrega n_total/n_fallbacks por project_id a partir dos logs Silver."""
+    by_project: dict[str, dict[str, int]] = {}
+    for rec in logs:
+        pid = rec.get("project_id") or "unknown"
+        agg = by_project.setdefault(pid, {"n_total": 0, "n_fallbacks": 0})
+        agg["n_total"] += 1
+        if rec.get("fallback_type"):
+            agg["n_fallbacks"] += 1
+    return by_project
+
+
 class CrossDomainBuilder:
     """Constrói a tabela Gold cross-domain (observabilidade ⋈ canonical)."""
 
@@ -42,6 +54,26 @@ class CrossDomainBuilder:
                 pass
         return records
 
+    def _build_cross_domain_row(self, pid: str, agg: dict[str, int]) -> dict[str, Any]:
+        n_total = agg["n_total"]
+        n_fb = agg["n_fallbacks"]
+        fallback_rate = round(n_fb / n_total, 4) if n_total else 0.0
+
+        canonical = None
+        try:
+            canonical = self._canonical_provider(pid)
+        except Exception as e:
+            logger.warning("Falha ao obter canonical de %s: %s", pid, e)
+
+        return {
+            "project_id": pid,
+            "n_total": n_total,
+            "n_fallbacks": n_fb,
+            "fallback_rate": fallback_rate,
+            "custo_direto": (canonical or {}).get("custo_direto") if canonical else None,
+            "margem_pct": (canonical or {}).get("margem_pct") if canonical else None,
+        }
+
     def build(self) -> list[dict[str, Any]]:
         """Agrega fallback_rate por project_id e junta com o canonical resultado."""
         logs = self._read_silver_logs()
@@ -49,37 +81,9 @@ class CrossDomainBuilder:
             return []
 
         # Agrega por project_id (sem DuckDB — volume por projeto é pequeno)
-        by_project: dict[str, dict[str, int]] = {}
-        for rec in logs:
-            pid = rec.get("project_id") or "unknown"
-            agg = by_project.setdefault(pid, {"n_total": 0, "n_fallbacks": 0})
-            agg["n_total"] += 1
-            if rec.get("fallback_type"):
-                agg["n_fallbacks"] += 1
+        by_project = _aggregate_fallback_by_project(logs)
 
-        rows: list[dict[str, Any]] = []
-        for pid, agg in sorted(by_project.items()):
-            n_total = agg["n_total"]
-            n_fb = agg["n_fallbacks"]
-            fallback_rate = round(n_fb / n_total, 4) if n_total else 0.0
-
-            canonical = None
-            try:
-                canonical = self._canonical_provider(pid)
-            except Exception as e:
-                logger.warning("Falha ao obter canonical de %s: %s", pid, e)
-
-            rows.append(
-                {
-                    "project_id": pid,
-                    "n_total": n_total,
-                    "n_fallbacks": n_fb,
-                    "fallback_rate": fallback_rate,
-                    "custo_direto": (canonical or {}).get("custo_direto") if canonical else None,
-                    "margem_pct": (canonical or {}).get("margem_pct") if canonical else None,
-                }
-            )
-        return rows
+        return [self._build_cross_domain_row(pid, agg) for pid, agg in sorted(by_project.items())]
 
     def write(self) -> str:
         """Persiste a tabela cross-domain em Gold como JSON. Retorna o path."""

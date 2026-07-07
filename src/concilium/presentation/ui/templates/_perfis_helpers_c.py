@@ -33,13 +33,8 @@ from ._perfis_helpers_a import _render_entity_card, _render_new_version_form, _r
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def _render_tema_editor(base_url: str, actor: str, tema_id: str, tema_data: dict) -> None:
-    """Formulário tipado para edição de TemaVisual (ADR-064/065)."""
-    st.caption(
-        "Edite os campos abaixo. Ao salvar, uma nova versão é criada automaticamente. "
-        "Cores usam o seletor de cor — hex 6 dígitos sem '#' armazenado."
-    )
-
+def _tema_resolve_current_fields(tema_data: dict) -> dict:
+    """Resolve os campos da versão ativa do tema (ou os campos de topo, como fallback)."""
     versions = tema_data.get("versions") or []
     current_v = tema_data.get("current_version", "v1")
     current_fields: dict = {}
@@ -51,97 +46,173 @@ def _render_tema_editor(base_url: str, actor: str, tema_id: str, tema_data: dict
             break
     if not current_fields:
         current_fields = {k: vv for k, vv in tema_data.items() if k not in ("versions", "current_version")}
+    return current_fields
 
+
+def _tema_hex(val: str | None) -> str:
+    """Normaliza um valor de cor para '#RRGGBB', com fallback para branco."""
+    h = str(val or "FFFFFF").lstrip("#").upper()
+    return f"#{h if len(h) == 6 else 'FFFFFF'}"
+
+
+def _tema_render_identidade(current_fields: dict, tema_id: str) -> tuple[str, str]:
+    """Renderiza os campos de identidade (empresa, perfil de exibição) e retorna seus valores."""
+    col_emp, col_perf = st.columns(2)
+    empresa = col_emp.text_input(
+        "Nome da empresa",
+        value=str(current_fields.get("empresa") or ""),
+        key=f"tema-empresa-{tema_id}",
+        placeholder="Ex: MendesLobo Construtora",
+    )
+    perfil_opts = ["EXECUTIVO", "SIMPLES", "TECNICO"]
+    cur_perf = str(current_fields.get("perfil_exibicao") or "SIMPLES")
+    perfil_exibicao = col_perf.selectbox(
+        "Perfil de exibição",
+        options=perfil_opts,
+        index=perfil_opts.index(cur_perf) if cur_perf in perfil_opts else 0,
+        key=f"tema-perfil-{tema_id}",
+        help="Controla densidade e nível de detalhe dos artefatos",
+    )
+    return empresa, perfil_exibicao
+
+
+def _tema_render_cores(cores: dict, tema_id: str) -> dict[str, str]:
+    """Renderiza os color pickers de tema e retorna as cores escolhidas."""
+    st.markdown("**🎨 Cores**")
+    _color_defs = [
+        ("cabecalho_fundo", "Cabeçalho — fundo"),
+        ("cabecalho_texto", "Cabeçalho — texto"),
+        ("destaque", "Destaque"),
+        ("zebra_impar", "Zebra — linha ímpar"),
+        ("borda", "Bordas"),
+    ]
+    color_cols = st.columns(3)
+    picked_colors: dict[str, str] = {}
+    for i, (key_c, label_c) in enumerate(_color_defs):
+        picked = color_cols[i % 3].color_picker(
+            label_c,
+            value=_tema_hex(cores.get(key_c)),
+            key=f"tema-cor-{key_c}-{tema_id}",
+        )
+        picked_colors[key_c] = picked.lstrip("#").upper()
+    return picked_colors
+
+
+def _tema_render_tipografia(fontes: dict, tema_id: str) -> tuple[str, str, int, int, int]:
+    """Renderiza os campos de tipografia e retorna (fonte_cab, fonte_corpo, tam_titulo, tam_cab, tam_corpo)."""
+    st.markdown("**🔤 Tipografia**")
+    font_opts = ["Arial", "Helvetica", "Calibri", "Times New Roman", "Courier"]
+    fc_cur = str(fontes.get("cabecalho") or "Arial")
+    fb_cur = str(fontes.get("corpo") or "Arial")
+    typ_col1, typ_col2 = st.columns(2)
+    fonte_cab = typ_col1.selectbox(
+        "Fonte cabeçalho",
+        options=font_opts,
+        index=font_opts.index(fc_cur) if fc_cur in font_opts else 0,
+        key=f"tema-fc-{tema_id}",
+    )
+    fonte_corpo = typ_col2.selectbox(
+        "Fonte corpo",
+        options=font_opts,
+        index=font_opts.index(fb_cur) if fb_cur in font_opts else 0,
+        key=f"tema-fb-{tema_id}",
+    )
+    siz_col1, siz_col2, siz_col3 = st.columns(3)
+    tam_titulo = siz_col1.number_input(
+        "Tamanho título (pt)",
+        min_value=10,
+        max_value=24,
+        step=1,
+        value=int(fontes.get("tamanho_titulo") or 16),
+        key=f"tema-tt-{tema_id}",
+    )
+    tam_cab = siz_col2.number_input(
+        "Tamanho cabeçalho (pt)",
+        min_value=8,
+        max_value=16,
+        step=1,
+        value=int(fontes.get("tamanho_cabecalho") or 12),
+        key=f"tema-tc-{tema_id}",
+    )
+    tam_corpo = siz_col3.number_input(
+        "Tamanho corpo (pt)",
+        min_value=8,
+        max_value=14,
+        step=1,
+        value=int(fontes.get("tamanho_corpo") or 10),
+        key=f"tema-tb-{tema_id}",
+    )
+    return fonte_cab, fonte_corpo, tam_titulo, tam_cab, tam_corpo
+
+
+def _tema_save_new_version(
+    base_url: str,
+    actor: str,
+    tema_id: str,
+    motivo: str,
+    current_fields: dict,
+    empresa: str,
+    perfil_exibicao: str,
+    cores: dict,
+    picked_colors: dict[str, str],
+    fontes: dict,
+    fonte_cab: str,
+    fonte_corpo: str,
+    tam_titulo: int,
+    tam_cab: int,
+    tam_corpo: int,
+) -> None:
+    """Monta os novos campos e persiste a nova versão do tema via API (motivo já validado pelo chamador)."""
+    new_fields = {
+        **current_fields,
+        "empresa": empresa,
+        "perfil_exibicao": perfil_exibicao,
+        "cores": {**cores, **picked_colors},
+        "fontes": {
+            **(fontes or {}),
+            "cabecalho": fonte_cab,
+            "corpo": fonte_corpo,
+            "tamanho_titulo": tam_titulo,
+            "tamanho_cabecalho": tam_cab,
+            "tamanho_corpo": tam_corpo,
+        },
+    }
+    try:
+        api_call(
+            method="POST",
+            path=f"/api/temas/{tema_id}/versions",
+            payload={"fields": new_fields, "motivo": motivo},
+            base_url=base_url,
+            actor=actor,
+        )
+        st.success(f"Nova versão do tema `{tema_id}` criada com sucesso!")
+        st.rerun()
+    except Exception as exc:
+        st.error(f"Erro ao salvar: {exc}")
+
+
+def _render_tema_editor(base_url: str, actor: str, tema_id: str, tema_data: dict) -> None:
+    """Formulário tipado para edição de TemaVisual (ADR-064/065)."""
+    st.caption(
+        "Edite os campos abaixo. Ao salvar, uma nova versão é criada automaticamente. "
+        "Cores usam o seletor de cor — hex 6 dígitos sem '#' armazenado."
+    )
+
+    current_fields = _tema_resolve_current_fields(tema_data)
     cores = current_fields.get("cores") or {}
     fontes = current_fields.get("fontes") or {}
 
-    def _hex(val: str | None) -> str:
-        h = str(val or "FFFFFF").lstrip("#").upper()
-        return f"#{h if len(h) == 6 else 'FFFFFF'}"
-
     with st.form(f"tema-edit-form-{tema_id}"):
         # ── Identidade ──────────────────────────────────────────────────
-        col_emp, col_perf = st.columns(2)
-        empresa = col_emp.text_input(
-            "Nome da empresa",
-            value=str(current_fields.get("empresa") or ""),
-            key=f"tema-empresa-{tema_id}",
-            placeholder="Ex: MendesLobo Construtora",
-        )
-        perfil_opts = ["EXECUTIVO", "SIMPLES", "TECNICO"]
-        cur_perf = str(current_fields.get("perfil_exibicao") or "SIMPLES")
-        perfil_exibicao = col_perf.selectbox(
-            "Perfil de exibição",
-            options=perfil_opts,
-            index=perfil_opts.index(cur_perf) if cur_perf in perfil_opts else 0,
-            key=f"tema-perfil-{tema_id}",
-            help="Controla densidade e nível de detalhe dos artefatos",
-        )
+        empresa, perfil_exibicao = _tema_render_identidade(current_fields, tema_id)
 
         # ── 🎨 Cores (3 colunas) ────────────────────────────────────────
-        st.markdown("**🎨 Cores**")
-        _color_defs = [
-            ("cabecalho_fundo", "Cabeçalho — fundo"),
-            ("cabecalho_texto", "Cabeçalho — texto"),
-            ("destaque", "Destaque"),
-            ("zebra_impar", "Zebra — linha ímpar"),
-            ("borda", "Bordas"),
-        ]
-        color_cols = st.columns(3)
-        picked_colors: dict[str, str] = {}
-        for i, (key_c, label_c) in enumerate(_color_defs):
-            picked = color_cols[i % 3].color_picker(
-                label_c,
-                value=_hex(cores.get(key_c)),
-                key=f"tema-cor-{key_c}-{tema_id}",
-            )
-            picked_colors[key_c] = picked.lstrip("#").upper()
+        picked_colors = _tema_render_cores(cores, tema_id)
 
         st.divider()
 
         # ── 🔤 Tipografia ────────────────────────────────────────────────
-        st.markdown("**🔤 Tipografia**")
-        font_opts = ["Arial", "Helvetica", "Calibri", "Times New Roman", "Courier"]
-        fc_cur = str(fontes.get("cabecalho") or "Arial")
-        fb_cur = str(fontes.get("corpo") or "Arial")
-        typ_col1, typ_col2 = st.columns(2)
-        fonte_cab = typ_col1.selectbox(
-            "Fonte cabeçalho",
-            options=font_opts,
-            index=font_opts.index(fc_cur) if fc_cur in font_opts else 0,
-            key=f"tema-fc-{tema_id}",
-        )
-        fonte_corpo = typ_col2.selectbox(
-            "Fonte corpo",
-            options=font_opts,
-            index=font_opts.index(fb_cur) if fb_cur in font_opts else 0,
-            key=f"tema-fb-{tema_id}",
-        )
-        siz_col1, siz_col2, siz_col3 = st.columns(3)
-        tam_titulo = siz_col1.number_input(
-            "Tamanho título (pt)",
-            min_value=10,
-            max_value=24,
-            step=1,
-            value=int(fontes.get("tamanho_titulo") or 16),
-            key=f"tema-tt-{tema_id}",
-        )
-        tam_cab = siz_col2.number_input(
-            "Tamanho cabeçalho (pt)",
-            min_value=8,
-            max_value=16,
-            step=1,
-            value=int(fontes.get("tamanho_cabecalho") or 12),
-            key=f"tema-tc-{tema_id}",
-        )
-        tam_corpo = siz_col3.number_input(
-            "Tamanho corpo (pt)",
-            min_value=8,
-            max_value=14,
-            step=1,
-            value=int(fontes.get("tamanho_corpo") or 10),
-            key=f"tema-tb-{tema_id}",
-        )
+        fonte_cab, fonte_corpo, tam_titulo, tam_cab, tam_corpo = _tema_render_tipografia(fontes, tema_id)
 
         st.divider()
         motivo = st.text_input(
@@ -153,32 +224,23 @@ def _render_tema_editor(base_url: str, actor: str, tema_id: str, tema_data: dict
         if not motivo.strip():
             st.warning("Informe o motivo da alteração antes de salvar.")
             return
-        new_fields = {
-            **current_fields,
-            "empresa": empresa,
-            "perfil_exibicao": perfil_exibicao,
-            "cores": {**cores, **picked_colors},
-            "fontes": {
-                **(fontes or {}),
-                "cabecalho": fonte_cab,
-                "corpo": fonte_corpo,
-                "tamanho_titulo": tam_titulo,
-                "tamanho_cabecalho": tam_cab,
-                "tamanho_corpo": tam_corpo,
-            },
-        }
-        try:
-            api_call(
-                method="POST",
-                path=f"/api/temas/{tema_id}/versions",
-                payload={"fields": new_fields, "motivo": motivo},
-                base_url=base_url,
-                actor=actor,
-            )
-            st.success(f"Nova versão do tema `{tema_id}` criada com sucesso!")
-            st.rerun()
-        except Exception as exc:
-            st.error(f"Erro ao salvar: {exc}")
+        _tema_save_new_version(
+            base_url,
+            actor,
+            tema_id,
+            motivo,
+            current_fields,
+            empresa,
+            perfil_exibicao,
+            cores,
+            picked_colors,
+            fontes,
+            fonte_cab,
+            fonte_corpo,
+            tam_titulo,
+            tam_cab,
+            tam_corpo,
+        )
 
     _render_entity_card(current_fields, title="Resumo do tema ativo")
 
@@ -230,32 +292,36 @@ def _render_jurisdicoes_section(base_url: str, actor: str) -> None:
         _render_jurisdicao_editor(base_url, actor, selected, jur_data)
 
 
-def _render_jurisdicao_detail(jur_data: dict, versions: list[dict]) -> None:
-    current_v = jur_data.get("current_version", "v1")
-    current_data = next((v for v in versions if v.get("version") == current_v), jur_data)
-
+def _jd_render_metricas(current_data: dict, jur_data: dict, current_v: str) -> None:
+    """Renderiza as métricas de topo (código, nome, versão ativa) da jurisdição."""
     col_a, col_b, col_c = st.columns(3)
     col_a.metric("Código", current_data.get("codigo") or jur_data.get("id") or "—")
     col_b.metric("Nome", current_data.get("nome") or "—")
     col_c.metric("Versão ativa", current_data.get("version") or current_v)
 
-    provedores = current_data.get("provedores_referencia") or []
-    if provedores:
-        st.caption("Provedores de referência")
-        st.dataframe(
-            [
-                {
-                    "ID": p.get("id") or "—",
-                    "Base": p.get("base") or "—",
-                    "Referência": p.get("data_referencia") or "—",
-                }
-                for p in provedores
-                if isinstance(p, dict)
-            ],
-            hide_index=True,
-            use_container_width=True,
-        )
 
+def _jd_render_provedores(provedores: list) -> None:
+    """Renderiza a tabela de provedores de referência, se houver algum."""
+    if not provedores:
+        return
+    st.caption("Provedores de referência")
+    st.dataframe(
+        [
+            {
+                "ID": p.get("id") or "—",
+                "Base": p.get("base") or "—",
+                "Referência": p.get("data_referencia") or "—",
+            }
+            for p in provedores
+            if isinstance(p, dict)
+        ],
+        hide_index=True,
+        use_container_width=True,
+    )
+
+
+def _jd_render_origem(current_data: dict, current_v: str) -> None:
+    """Renderiza a legenda de origem (versão, data, autor, motivo) da versão ativa."""
     st.caption(
         "Origem da versão ativa: "
         f"{current_data.get('version') or current_v} · "
@@ -264,6 +330,15 @@ def _render_jurisdicao_detail(jur_data: dict, versions: list[dict]) -> None:
     )
     if current_data.get("motivo"):
         st.caption(f"Motivo: {current_data.get('motivo')}")
+
+
+def _render_jurisdicao_detail(jur_data: dict, versions: list[dict]) -> None:
+    current_v = jur_data.get("current_version", "v1")
+    current_data = next((v for v in versions if v.get("version") == current_v), jur_data)
+
+    _jd_render_metricas(current_data, jur_data, current_v)
+    _jd_render_provedores(current_data.get("provedores_referencia") or [])
+    _jd_render_origem(current_data, current_v)
 
 
 def _find_current_version_data(jur_data: dict) -> dict:

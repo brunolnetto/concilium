@@ -294,6 +294,47 @@ def _audit_q6_resultado(ref: dict[str, Any], cur: dict[str, Any]) -> Answer:
     )
 
 
+def _resolve_ref_path(data_dir: Path, slug: str) -> Path:
+    """Resolve o caminho de referencia.json entre os locais candidatos."""
+    for p in (data_dir / "artifacts" / "inputs" / "referencia.json", data_dir / "referencia.json"):
+        if p.exists():
+            return p
+    raise FileNotFoundError(f"referencia.json não encontrado para slug={slug}")
+
+
+def _load_ref_and_cur(slug: str, data_dir: Path, r: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Carrega referencia e resultado atual (canonical) para o slug."""
+    ref_path = _resolve_ref_path(data_dir, slug)
+    ref = _load_json(ref_path)
+    extr_path = data_dir / "extracao_intermediarios.json"
+    extr = _load_json(extr_path) if extr_path.exists() else {}
+    canonical_path = _resolve_canonical_path(extr, ref, r)
+    cur = _load_json(canonical_path)
+    return ref, cur
+
+
+def _run_all_answers(ref: dict[str, Any], cur: dict[str, Any]) -> list[Answer]:
+    """Executa as 6 perguntas de auditoria e retorna as respostas."""
+    return [
+        _audit_q1_insumos_equipes(ref, cur),
+        _audit_q2_custo_direto(ref, cur),
+        _audit_q3_orcamento(ref, cur),
+        _audit_q4_indiretos(ref, cur),
+        _audit_q5_ponto_equilibrio(ref, cur),
+        _audit_q6_resultado(ref, cur),
+    ]
+
+
+def _build_resumo(answers: list[Answer]) -> dict[str, int]:
+    """Constroi o resumo de contagem por status das respostas."""
+    return {
+        "passa": sum(1 for a in answers if a.status == "PASSA"),
+        "falha": sum(1 for a in answers if a.status == "FALHA"),
+        "na": sum(1 for a in answers if a.status == "N/A"),
+        "total": len(answers),
+    }
+
+
 def run_audit(slug: str, root: Path | None = None) -> dict[str, Any]:
     """Executa auditoria de 6 perguntas para o slug informado.
 
@@ -303,35 +344,12 @@ def run_audit(slug: str, root: Path | None = None) -> dict[str, Any]:
     """
     r = root or _DEFAULT_ROOT
     data_dir = r / "benchmarks" / "data" / slug
-    ref_path = None
-    for p in (data_dir / "artifacts" / "inputs" / "referencia.json", data_dir / "referencia.json"):
-        if p.exists():
-            ref_path = p
-            break
-    if ref_path is None:
-        raise FileNotFoundError(f"referencia.json não encontrado para slug={slug}")
-    ref = _load_json(ref_path)
-    extr_path = data_dir / "extracao_intermediarios.json"
-    extr = _load_json(extr_path) if extr_path.exists() else {}
-    canonical_path = _resolve_canonical_path(extr, ref, r)
-    cur = _load_json(canonical_path)
+    ref, cur = _load_ref_and_cur(slug, data_dir, r)
 
-    answers = [
-        _audit_q1_insumos_equipes(ref, cur),
-        _audit_q2_custo_direto(ref, cur),
-        _audit_q3_orcamento(ref, cur),
-        _audit_q4_indiretos(ref, cur),
-        _audit_q5_ponto_equilibrio(ref, cur),
-        _audit_q6_resultado(ref, cur),
-    ]
+    answers = _run_all_answers(ref, cur)
 
     return {
         "slug": slug,
-        "resumo": {
-            "passa": sum(1 for a in answers if a.status == "PASSA"),
-            "falha": sum(1 for a in answers if a.status == "FALHA"),
-            "na": sum(1 for a in answers if a.status == "N/A"),
-            "total": len(answers),
-        },
+        "resumo": _build_resumo(answers),
         "respostas": [{"pergunta": a.pergunta, "status": a.status, "evidencia": a.evidencia} for a in answers],
     }

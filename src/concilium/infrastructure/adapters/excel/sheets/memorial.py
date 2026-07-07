@@ -293,20 +293,8 @@ def render_memorial_bdi(wb, canonical) -> None:
     ws.freeze_panes = "B4"
 
 
-def render_memorial_mao_obra(wb: Workbook, canonical: CanonicalModel) -> None:
-    """MEMORIAL.MAO_OBRA — base de mão de obra efetivamente usada no projeto."""
-    ws = wb.create_sheet("MEMORIAL.MAO_OBRA")
-    _set_col_widths(ws, [22, 32, 12, 14, 16])
-    row = 1
-    _title_row(ws, row, "MEMORIAL.MAO_OBRA — INSUMOS UTILIZADOS", 5)
-    row += 1
-    ws.cell(row=row, column=1, value="Fonte: composições de EQUIPE.DIRETO e indiretos por categoria.").font = _font(
-        italic=True, size=9
-    )
-    row += 2
-    _header_row(ws, row, ["Funcao ID", "Descricao", "Papel", "Qtd Base", "Custo Mensal Unit."])
-    row += 1
-
+def _xl_memorial_mao_obra_agg(canonical: CanonicalModel) -> dict[str, dict[str, Any]]:
+    """Agrega mão de obra por funcao_id a partir das equipes diretas."""
     agg: dict[str, dict[str, Any]] = {}
     for eq in canonical.equipes_diretas or []:
         for f in eq.funcoes or []:
@@ -323,24 +311,89 @@ def render_memorial_mao_obra(wb: Workbook, canonical: CanonicalModel) -> None:
             rec["qtd"] += float(getattr(f, "num_pessoas", 0.0) or 0.0) * float(
                 getattr(eq, "num_equipes_base", 0.0) or 0.0
             )
+    return agg
+
+
+def _xl_memorial_mao_obra_row(ws: Any, row: int, func_id: str, rec: dict[str, Any], fill: Any) -> None:
+    vals = [func_id, rec["descricao"], str(rec["papel"]).upper(), rec["qtd"], rec["custo"]]
+    for col, val in enumerate(vals, 1):
+        cell = ws.cell(row=row, column=col, value=val)
+        cell.fill = fill
+        cell.border = _border()
+        if col == 5:
+            cell.number_format = "R$ #,##0.00"
+        if col == 4:
+            cell.number_format = "0.00"
+            cell.alignment = _align("right")
+
+
+def render_memorial_mao_obra(wb: Workbook, canonical: CanonicalModel) -> None:
+    """MEMORIAL.MAO_OBRA — base de mão de obra efetivamente usada no projeto."""
+    ws = wb.create_sheet("MEMORIAL.MAO_OBRA")
+    _set_col_widths(ws, [22, 32, 12, 14, 16])
+    row = 1
+    _title_row(ws, row, "MEMORIAL.MAO_OBRA — INSUMOS UTILIZADOS", 5)
+    row += 1
+    ws.cell(row=row, column=1, value="Fonte: composições de EQUIPE.DIRETO e indiretos por categoria.").font = _font(
+        italic=True, size=9
+    )
+    row += 2
+    _header_row(ws, row, ["Funcao ID", "Descricao", "Papel", "Qtd Base", "Custo Mensal Unit."])
+    row += 1
+
+    agg = _xl_memorial_mao_obra_agg(canonical)
 
     fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
     if not agg:
         ws.cell(row=row, column=1, value="Sem dados de mão de obra para memorial.").font = _font(italic=True, size=9)
     for i, (func_id, rec) in enumerate(sorted(agg.items())):
         fill = fills[i % 2]
-        vals = [func_id, rec["descricao"], str(rec["papel"]).upper(), rec["qtd"], rec["custo"]]
-        for col, val in enumerate(vals, 1):
-            cell = ws.cell(row=row, column=col, value=val)
-            cell.fill = fill
-            cell.border = _border()
-            if col == 5:
-                cell.number_format = "R$ #,##0.00"
-            if col == 4:
-                cell.number_format = "0.00"
-                cell.alignment = _align("right")
+        _xl_memorial_mao_obra_row(ws, row, func_id, rec, fill)
         row += 1
     _auto_fit_columns(ws)
+
+
+def _xl_memorial_equip_accumulate(agg: dict[str, dict[str, Any]], eq: Any, e: Any) -> None:
+    """Acumula um equipamento de uma equipe direta no dict agregador (mutação in-place)."""
+    key = str(e.equip_id or "")
+    if not key:
+        return
+    rec = agg.setdefault(
+        key,
+        {
+            "descricao": e.descricao or key,
+            "qtd": 0.0,
+            "custo": 0.0,
+            "comb": 0.0,
+        },
+    )
+    n = float(getattr(e, "num_unidades", 0.0) or 0.0) * float(getattr(eq, "num_equipes_base", 0.0) or 0.0)
+    rec["qtd"] += n
+    rec["custo"] += float(getattr(e, "custo_mensal", 0.0) or 0.0) * n
+    rec["comb"] += float(getattr(e, "custo_combustivel_mensal", 0.0) or 0.0) * n
+
+
+def _xl_memorial_equip_agg(canonical: CanonicalModel) -> dict[str, dict[str, Any]]:
+    """Agrega equipamentos por equip_id a partir das equipes diretas."""
+    agg: dict[str, dict[str, Any]] = {}
+    for eq in canonical.equipes_diretas or []:
+        for e in eq.equipamentos or []:
+            _xl_memorial_equip_accumulate(agg, eq, e)
+    return agg
+
+
+def _xl_memorial_equip_row(ws: Any, row: int, equip_id: str, rec: dict[str, Any], fill: Any) -> None:
+    total = float(rec["custo"]) + float(rec["comb"])
+    vals = [equip_id, rec["descricao"], rec["qtd"], rec["custo"], rec["comb"], total]
+    for col, val in enumerate(vals, 1):
+        cell = ws.cell(row=row, column=col, value=val)
+        cell.fill = fill
+        cell.border = _border()
+        if col >= 4:
+            cell.number_format = "R$ #,##0.00"
+        if col == 3:
+            cell.number_format = "0.00"
+            cell.alignment = _align("right")
 
 
 def render_memorial_equipamentos(wb: Workbook, canonical: CanonicalModel) -> None:
@@ -355,44 +408,33 @@ def render_memorial_equipamentos(wb: Workbook, canonical: CanonicalModel) -> Non
     _header_row(ws, row, ["Equip ID", "Descricao", "Qtd Base", "Custo Mensal", "Comb. Mensal", "Total Mensal"])
     row += 1
 
-    agg: dict[str, dict[str, Any]] = {}
-    for eq in canonical.equipes_diretas or []:
-        for e in eq.equipamentos or []:
-            key = str(e.equip_id or "")
-            if not key:
-                continue
-            rec = agg.setdefault(
-                key,
-                {
-                    "descricao": e.descricao or key,
-                    "qtd": 0.0,
-                    "custo": 0.0,
-                    "comb": 0.0,
-                },
-            )
-            n = float(getattr(e, "num_unidades", 0.0) or 0.0) * float(getattr(eq, "num_equipes_base", 0.0) or 0.0)
-            rec["qtd"] += n
-            rec["custo"] += float(getattr(e, "custo_mensal", 0.0) or 0.0) * n
-            rec["comb"] += float(getattr(e, "custo_combustivel_mensal", 0.0) or 0.0) * n
+    agg = _xl_memorial_equip_agg(canonical)
 
     fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
     if not agg:
         ws.cell(row=row, column=1, value="Sem dados de equipamentos para memorial.").font = _font(italic=True, size=9)
     for i, (equip_id, rec) in enumerate(sorted(agg.items())):
         fill = fills[i % 2]
-        total = float(rec["custo"]) + float(rec["comb"])
-        vals = [equip_id, rec["descricao"], rec["qtd"], rec["custo"], rec["comb"], total]
-        for col, val in enumerate(vals, 1):
-            cell = ws.cell(row=row, column=col, value=val)
-            cell.fill = fill
-            cell.border = _border()
-            if col >= 4:
-                cell.number_format = "R$ #,##0.00"
-            if col == 3:
-                cell.number_format = "0.00"
-                cell.alignment = _align("right")
+        _xl_memorial_equip_row(ws, row, equip_id, rec, fill)
         row += 1
     _auto_fit_columns(ws)
+
+
+def _xl_memorial_material_row(ws: Any, row: int, p: Any, fill: Any) -> None:
+    qtd = float(getattr(p, "quantitativo", 0.0) or 0.0)
+    pu_mat = float(getattr(getattr(p, "preco_unitario", None), "material", 0.0) or 0.0)
+    sem_bdi = float(getattr(getattr(getattr(p, "subtotal", None), "sem_bdi", None), "material", 0.0) or 0.0)
+    com_bdi = float(getattr(getattr(getattr(p, "subtotal", None), "com_bdi", None), "material", 0.0) or 0.0)
+    vals = [getattr(p, "item_id", "-"), getattr(p, "cpu_id", "-"), qtd, pu_mat, sem_bdi, com_bdi]
+    for col, val in enumerate(vals, 1):
+        cell = ws.cell(row=row, column=col, value=val)
+        cell.fill = fill
+        cell.border = _border()
+        if col >= 4:
+            cell.number_format = "R$ #,##0.00"
+        if col == 3:
+            cell.number_format = "0.00"
+            cell.alignment = _align("right")
 
 
 def render_memorial_materiais(wb: Workbook, canonical: CanonicalModel) -> None:
@@ -418,19 +460,7 @@ def render_memorial_materiais(wb: Workbook, canonical: CanonicalModel) -> None:
         if pu_mat <= 0.0:
             continue
         fill = fills[i % 2]
-        qtd = float(getattr(p, "quantitativo", 0.0) or 0.0)
-        sem_bdi = float(getattr(getattr(getattr(p, "subtotal", None), "sem_bdi", None), "material", 0.0) or 0.0)
-        com_bdi = float(getattr(getattr(getattr(p, "subtotal", None), "com_bdi", None), "material", 0.0) or 0.0)
-        vals = [getattr(p, "item_id", "-"), getattr(p, "cpu_id", "-"), qtd, pu_mat, sem_bdi, com_bdi]
-        for col, val in enumerate(vals, 1):
-            cell = ws.cell(row=row, column=col, value=val)
-            cell.fill = fill
-            cell.border = _border()
-            if col >= 4:
-                cell.number_format = "R$ #,##0.00"
-            if col == 3:
-                cell.number_format = "0.00"
-                cell.alignment = _align("right")
+        _xl_memorial_material_row(ws, row, p, fill)
         row += 1
         has_rows = True
 
@@ -443,6 +473,227 @@ def render_memorial_materiais(wb: Workbook, canonical: CanonicalModel) -> None:
 
 
 # ── MEMORIAL.CATALOGO ────────────────────────────────────────────────────────
+
+
+def _xl_catalogo_write_row_cells(ws: Any, row: int, vals: list, fmts: list, fill: Any, right_from_col: int) -> None:
+    """Escreve uma linha de células com fill/border/alignment/font/number_format padrão."""
+    for col, (v, fmt) in enumerate(zip(vals, fmts, strict=False), 1):
+        cell = ws.cell(row=row, column=col, value=v)
+        cell.fill = fill
+        cell.border = _border()
+        cell.alignment = _align("right" if col >= right_from_col else "left")
+        cell.font = _font(size=9)
+        if fmt:
+            cell.number_format = fmt
+
+
+def _xl_catalogo_fv(obj: Any, field: str, default: float = 0.0) -> float:
+    try:
+        return float(getattr(obj, field, None) or default)
+    except Exception:
+        return default
+
+
+def _xl_catalogo_secao1_header(ws: Any, row: int, NCOLS: int) -> int:
+    """Título e cabeçalho da Seção 1 (parâmetros por item); retorna row apos header."""
+    _section_row(ws, row, "1. PARÂMETROS DE CATÁLOGO — POR ITEM EAP", NCOLS)
+    row += 1
+    _header_row(
+        ws,
+        row,
+        [
+            "Item ID",
+            "CPU ID",
+            "Descrição",
+            "Un.",
+            "Qtd.",
+            "P_i (un/h)",
+            "PU MO s/BDI",
+            "PU EQ s/BDI",
+            "PU Diesel s/BDI",
+            "PU Total s/BDI",
+            "PU Total c/BDI",
+            "nEq",
+            "Custo Fixo/Mês",
+            "Perm. Efet. (m)",
+        ],
+    )
+    return row + 1
+
+
+def _xl_catalogo_secao1_row(ws: Any, row: int, item: Any, p: Any, eq: Any, fill: Any) -> None:
+    pu = getattr(p, "preco_unitario", None) if p else None
+    pu_bdi = getattr(p, "preco_unitario_com_bdi", None) if p else None
+
+    vals = [
+        item.item_id,
+        item.cpu_id,
+        getattr(item, "descricao", "") or item.cpu_id,
+        getattr(item, "unidade", ""),
+        _xl_catalogo_fv(item, "quantitativo"),
+        _xl_catalogo_fv(eq, "producao_horaria") if eq else 0.0,
+        _xl_catalogo_fv(pu, "mao_obra"),
+        _xl_catalogo_fv(pu, "equipamentos"),
+        _xl_catalogo_fv(pu, "diesel"),
+        _xl_catalogo_fv(pu, "total"),
+        _xl_catalogo_fv(pu_bdi, "total"),
+        int(_xl_catalogo_fv(eq, "num_equipes_base", 1)) if eq else 1,
+        _xl_catalogo_fv(eq, "custo_fixo_mensal"),
+        _xl_catalogo_fv(eq, "permanencia_efetiva_meses"),
+    ]
+    fmts = [
+        None,
+        None,
+        None,
+        None,
+        "#,##0.##",
+        "0.0000",
+        "#,##0.0000",
+        "#,##0.0000",
+        "#,##0.0000",
+        "#,##0.0000",
+        "#,##0.0000",
+        "0",
+        "#,##0.00",
+        "0.00",
+    ]
+
+    _xl_catalogo_write_row_cells(ws, row, vals, fmts, fill, right_from_col=5)
+
+
+def _xl_catalogo_secao1(ws: Any, row: int, eap: list, plan_map: dict, equipe_map: dict, fills: list, NCOLS: int) -> int:
+    """Seção 1: parâmetros de catálogo por item EAP; retorna row apos a seção + blank."""
+    row = _xl_catalogo_secao1_header(ws, row, NCOLS)
+    for i, item in enumerate(eap):
+        fill = fills[i % 2]
+        p = plan_map.get(item.item_id)
+        eq = equipe_map.get(item.item_id)
+        _xl_catalogo_secao1_row(ws, row, item, p, eq, fill)
+        row += 1
+    return row + 1
+
+
+def _xl_catalogo_secao2_header(ws: Any, row: int, NCOLS: int) -> int:
+    """Título e cabeçalho da Seção 2 (composição de equipes — funções)."""
+    _section_row(ws, row, "2. COMPOSIÇÃO DE EQUIPES — FUNÇÕES (MÃO DE OBRA)", NCOLS)
+    row += 1
+    _header_row(
+        ws,
+        row,
+        [
+            "Item ID",
+            "CPU ID",
+            "Função ID",
+            "Descrição",
+            "Num. Pessoas",
+            "Custo Unit. Mensal (R$)",
+            "Custo Total Mensal (R$)",
+            "Encargos Separados",
+            "Cat. Sindical",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ],
+    )
+    return row + 1
+
+
+def _xl_catalogo_secao2_row(ws: Any, row: int, item: Any, func: Any, j: int, fill: Any) -> None:
+    n_pessoas = int(getattr(func, "num_pessoas", 1) or 1)
+    custo_unit = float(getattr(func, "custo_mensal_unitario", 0) or 0)
+    custo_enc = float(getattr(func, "custo_encargos_mensal", 0) or 0)
+    cat = getattr(func, "categoria_sindical", "") or ""
+    vals = [
+        item.item_id if j == 0 else "",
+        item.cpu_id if j == 0 else "",
+        getattr(func, "funcao_id", ""),
+        getattr(func, "descricao", "") or getattr(func, "funcao_id", ""),
+        n_pessoas,
+        custo_unit,
+        round(n_pessoas * custo_unit, 2),
+        custo_enc,
+        cat,
+    ]
+    fmts = [None, None, None, None, "0", "#,##0.00", "#,##0.00", "#,##0.00", None]
+    _xl_catalogo_write_row_cells(ws, row, vals, fmts, fill, right_from_col=5)
+
+
+def _xl_catalogo_secao2(ws: Any, row: int, eap: list, equipe_map: dict, fills: list, NCOLS: int) -> int:
+    """Seção 2: composição de equipes por funções; retorna row apos a seção + blank."""
+    row = _xl_catalogo_secao2_header(ws, row, NCOLS)
+    for i, item in enumerate(eap):
+        eq = equipe_map.get(item.item_id)
+        if not eq:
+            continue
+        for j, func in enumerate(eq.funcoes or []):
+            fill = fills[(i + j) % 2]
+            _xl_catalogo_secao2_row(ws, row, item, func, j, fill)
+            row += 1
+    return row + 1
+
+
+def _xl_catalogo_secao3_header(ws: Any, row: int, NCOLS: int) -> int:
+    """Título e cabeçalho da Seção 3 (composição de equipes — equipamentos)."""
+    _section_row(ws, row, "3. COMPOSIÇÃO DE EQUIPES — EQUIPAMENTOS", NCOLS)
+    row += 1
+    _header_row(
+        ws,
+        row,
+        [
+            "Item ID",
+            "CPU ID",
+            "Equip. ID",
+            "Descrição",
+            "Num. Unidades",
+            "Aluguel Mensal/Unid. (R$)",
+            "Manutenção Mensal/Unid. (R$)",
+            "Comb. Mensal/Unid. (R$)",
+            "Total Mensal (R$)",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ],
+    )
+    return row + 1
+
+
+def _xl_catalogo_secao3_row(ws: Any, row: int, item: Any, equip: Any, j: int, fill: Any) -> None:
+    n_unid = int(getattr(equip, "num_unidades", 1) or 1)
+    alug = float(getattr(equip, "custo_locacao_mensal", 0) or 0)
+    manut = float(getattr(equip, "custo_manutencao_mensal", 0) or 0)
+    comb = float(getattr(equip, "custo_combustivel_mensal", 0) or 0)
+    total = n_unid * (alug + manut + comb)
+    vals = [
+        item.item_id if j == 0 else "",
+        item.cpu_id if j == 0 else "",
+        getattr(equip, "equip_id", ""),
+        getattr(equip, "descricao", "") or getattr(equip, "equip_id", ""),
+        n_unid,
+        alug,
+        manut,
+        comb,
+        round(total, 2),
+    ]
+    fmts = [None, None, None, None, "0", "#,##0.00", "#,##0.00", "#,##0.00", "#,##0.00"]
+    _xl_catalogo_write_row_cells(ws, row, vals, fmts, fill, right_from_col=5)
+
+
+def _xl_catalogo_secao3(ws: Any, row: int, eap: list, equipe_map: dict, fills: list, NCOLS: int) -> int:
+    """Seção 3: composição de equipes por equipamentos; retorna row apos a seção."""
+    row = _xl_catalogo_secao3_header(ws, row, NCOLS)
+    for i, item in enumerate(eap):
+        eq = equipe_map.get(item.item_id)
+        if not eq:
+            continue
+        for j, equip in enumerate(eq.equipamentos or []):
+            fill = fills[(i + j) % 2]
+            _xl_catalogo_secao3_row(ws, row, item, equip, j, fill)
+            row += 1
+    return row
 
 
 def render_memorial_catalogo(wb, canonical) -> None:
@@ -467,204 +718,8 @@ def render_memorial_catalogo(wb, canonical) -> None:
     _title_row(ws, row, "MEMORIAL DO CATÁLOGO — PARÂMETROS DE PRODUTIVIDADE E COMPOSIÇÃO POR ITEM EAP", NCOLS)
     row += 2
 
-    # ── Seção 1: Parâmetros por item ─────────────────────────────────────────
-    _section_row(ws, row, "1. PARÂMETROS DE CATÁLOGO — POR ITEM EAP", NCOLS)
-    row += 1
-    _header_row(
-        ws,
-        row,
-        [
-            "Item ID",
-            "CPU ID",
-            "Descrição",
-            "Un.",
-            "Qtd.",
-            "P_i (un/h)",
-            "PU MO s/BDI",
-            "PU EQ s/BDI",
-            "PU Diesel s/BDI",
-            "PU Total s/BDI",
-            "PU Total c/BDI",
-            "nEq",
-            "Custo Fixo/Mês",
-            "Perm. Efet. (m)",
-        ],
-    )
-    row += 1
-
-    for i, item in enumerate(eap):
-        fill = fills[i % 2]
-        p = plan_map.get(item.item_id)
-        eq = equipe_map.get(item.item_id)
-        pu = getattr(p, "preco_unitario", None) if p else None
-        pu_bdi = getattr(p, "preco_unitario_com_bdi", None) if p else None
-
-        def _fv(obj, field, default=0.0):
-            try:
-                return float(getattr(obj, field, None) or default)
-            except Exception:
-                return default
-
-        vals = [
-            item.item_id,
-            item.cpu_id,
-            getattr(item, "descricao", "") or item.cpu_id,
-            getattr(item, "unidade", ""),
-            _fv(item, "quantitativo"),
-            _fv(eq, "producao_horaria") if eq else 0.0,
-            _fv(pu, "mao_obra"),
-            _fv(pu, "equipamentos"),
-            _fv(pu, "diesel"),
-            _fv(pu, "total"),
-            _fv(pu_bdi, "total"),
-            int(_fv(eq, "num_equipes_base", 1)) if eq else 1,
-            _fv(eq, "custo_fixo_mensal"),
-            _fv(eq, "permanencia_efetiva_meses"),
-        ]
-        fmts = [
-            None,
-            None,
-            None,
-            None,
-            "#,##0.##",
-            "0.0000",
-            "#,##0.0000",
-            "#,##0.0000",
-            "#,##0.0000",
-            "#,##0.0000",
-            "#,##0.0000",
-            "0",
-            "#,##0.00",
-            "0.00",
-        ]
-
-        for col, (v, fmt) in enumerate(zip(vals, fmts, strict=False), 1):
-            cell = ws.cell(row=row, column=col, value=v)
-            cell.fill = fill
-            cell.border = _border()
-            cell.alignment = _align("right" if col > 4 else "left")
-            cell.font = _font(size=9)
-            if fmt:
-                cell.number_format = fmt
-        row += 1
-
-    row += 1
-
-    # ── Seção 2: Composição de equipes (funcoes) ──────────────────────────────
-    _section_row(ws, row, "2. COMPOSIÇÃO DE EQUIPES — FUNÇÕES (MÃO DE OBRA)", NCOLS)
-    row += 1
-    _header_row(
-        ws,
-        row,
-        [
-            "Item ID",
-            "CPU ID",
-            "Função ID",
-            "Descrição",
-            "Num. Pessoas",
-            "Custo Unit. Mensal (R$)",
-            "Custo Total Mensal (R$)",
-            "Encargos Separados",
-            "Cat. Sindical",
-            "",
-            "",
-            "",
-            "",
-            "",
-        ],
-    )
-    row += 1
-
-    for i, item in enumerate(eap):
-        eq = equipe_map.get(item.item_id)
-        if not eq:
-            continue
-        for j, func in enumerate(eq.funcoes or []):
-            fill = fills[(i + j) % 2]
-            n_pessoas = int(getattr(func, "num_pessoas", 1) or 1)
-            custo_unit = float(getattr(func, "custo_mensal_unitario", 0) or 0)
-            custo_enc = float(getattr(func, "custo_encargos_mensal", 0) or 0)
-            cat = getattr(func, "categoria_sindical", "") or ""
-            vals = [
-                item.item_id if j == 0 else "",
-                item.cpu_id if j == 0 else "",
-                getattr(func, "funcao_id", ""),
-                getattr(func, "descricao", "") or getattr(func, "funcao_id", ""),
-                n_pessoas,
-                custo_unit,
-                round(n_pessoas * custo_unit, 2),
-                custo_enc,
-                cat,
-            ]
-            fmts = [None, None, None, None, "0", "#,##0.00", "#,##0.00", "#,##0.00", None]
-            for col, (v, fmt) in enumerate(zip(vals, fmts, strict=False), 1):
-                cell = ws.cell(row=row, column=col, value=v)
-                cell.fill = fill
-                cell.border = _border()
-                cell.alignment = _align("right" if col >= 5 else "left")
-                cell.font = _font(size=9)
-                if fmt:
-                    cell.number_format = fmt
-            row += 1
-
-    row += 1
-
-    # ── Seção 3: Composição de equipes (equipamentos) ─────────────────────────
-    _section_row(ws, row, "3. COMPOSIÇÃO DE EQUIPES — EQUIPAMENTOS", NCOLS)
-    row += 1
-    _header_row(
-        ws,
-        row,
-        [
-            "Item ID",
-            "CPU ID",
-            "Equip. ID",
-            "Descrição",
-            "Num. Unidades",
-            "Aluguel Mensal/Unid. (R$)",
-            "Manutenção Mensal/Unid. (R$)",
-            "Comb. Mensal/Unid. (R$)",
-            "Total Mensal (R$)",
-            "",
-            "",
-            "",
-            "",
-            "",
-        ],
-    )
-    row += 1
-
-    for i, item in enumerate(eap):
-        eq = equipe_map.get(item.item_id)
-        if not eq:
-            continue
-        for j, equip in enumerate(eq.equipamentos or []):
-            fill = fills[(i + j) % 2]
-            n_unid = int(getattr(equip, "num_unidades", 1) or 1)
-            alug = float(getattr(equip, "custo_locacao_mensal", 0) or 0)
-            manut = float(getattr(equip, "custo_manutencao_mensal", 0) or 0)
-            comb = float(getattr(equip, "custo_combustivel_mensal", 0) or 0)
-            total = n_unid * (alug + manut + comb)
-            vals = [
-                item.item_id if j == 0 else "",
-                item.cpu_id if j == 0 else "",
-                getattr(equip, "equip_id", ""),
-                getattr(equip, "descricao", "") or getattr(equip, "equip_id", ""),
-                n_unid,
-                alug,
-                manut,
-                comb,
-                round(total, 2),
-            ]
-            fmts = [None, None, None, None, "0", "#,##0.00", "#,##0.00", "#,##0.00", "#,##0.00"]
-            for col, (v, fmt) in enumerate(zip(vals, fmts, strict=False), 1):
-                cell = ws.cell(row=row, column=col, value=v)
-                cell.fill = fill
-                cell.border = _border()
-                cell.alignment = _align("right" if col >= 5 else "left")
-                cell.font = _font(size=9)
-                if fmt:
-                    cell.number_format = fmt
-            row += 1
+    row = _xl_catalogo_secao1(ws, row, eap, plan_map, equipe_map, fills, NCOLS)
+    row = _xl_catalogo_secao2(ws, row, eap, equipe_map, fills, NCOLS)
+    _xl_catalogo_secao3(ws, row, eap, equipe_map, fills, NCOLS)
 
     ws.freeze_panes = "A4"

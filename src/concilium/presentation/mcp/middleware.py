@@ -67,92 +67,148 @@ else:  # pragma: no cover
         """Fallback no-op quando opentelemetry não está instalado."""
 
 
+def _decode_headers(raw_headers: list) -> tuple[dict, dict[str, str]]:
+    """Extrai todos os headers como dict bytes→bytes e dict str→str (para OTel propagation)."""
+    headers = {k.lower(): v for k, v in raw_headers}
+    headers_str: dict[str, str] = {k.decode("latin-1"): v.decode("latin-1") for k, v in raw_headers}
+    return headers, headers_str
+
+
+def _extract_otel_context(headers_str: dict[str, str]) -> Any:
+    """ADR-121 D4: extrai traceparent/tracestate e estabelece contexto OTel (best-effort)."""
+    if _OTEL_AVAILABLE and propagate is not None:
+        try:
+            ctx = propagate.extract(headers_str)
+            return context_attach(ctx)
+        except Exception:
+            pass  # propagação OTel é best-effort
+    return None
+
+
+def _decode_bearer_token(raw_token: str) -> tuple[Any, Any, dict]:
+    """Decodifica o JWT e seta roles/contexto de auditoria. Levanta exceção em token inválido."""
+    from concilium.infrastructure.auth.permission_guard import (
+        roles_from_token,
+        set_auth_context,
+        set_roles,
+    )
+    from concilium.infrastructure.auth.token_service import decode_token
+
+    claims = decode_token(raw_token)
+    token_var = set_roles(roles_from_token(claims))
+    # ADR-118: propaga user_id (sub) e tenant_id (tid) para auditoria
+    auth_ctx_tokens = set_auth_context(
+        claims.get("sub"),
+        claims.get("tid") or claims.get("tenant_id"),
+    )
+    return token_var, auth_ctx_tokens, claims
+
+
+def _inject_otel_baggage(claims: dict) -> Any:
+    """ADR-121 D6: injeta tenant_id e user_id como W3C Baggage (best-effort)."""
+    if _OTEL_AVAILABLE and set_baggage is not None:
+        try:
+            tenant_id = claims.get("tid") or claims.get("tenant_id")
+            user_id = claims.get("sub")
+            baggage_ctx = None
+            if tenant_id:
+                baggage_ctx = set_baggage("tenant.id", tenant_id, baggage_ctx)
+            if user_id:
+                baggage_ctx = set_baggage("user.id", user_id, baggage_ctx)
+            if baggage_ctx is not None:
+                # attach devolve token para detach no finally
+                return context_attach(baggage_ctx)
+        except Exception:
+            pass  # baggage é best-effort
+    return None
+
+
+async def _send_invalid_token_response(send: Any, exc: Exception) -> None:
+    await _send_json_response(
+        send,
+        401,
+        {"detail": f"Token MCP inválido: {exc}"},
+        headers=[(b"www-authenticate", b"Bearer")],
+    )
+
+
+async def _send_missing_auth_response(send: Any) -> None:
+    await _send_json_response(
+        send,
+        401,
+        {"detail": "Authorization: Bearer <token> ausente."},
+        headers=[(b"www-authenticate", b"Bearer")],
+    )
+
+
+def _reset_auth_state(token_var: Any, auth_ctx_tokens: Any, otel_ctx_token: Any) -> None:
+    if token_var is not None:
+        from concilium.infrastructure.auth.permission_guard import _current_roles
+
+        _current_roles.reset(token_var)
+    if auth_ctx_tokens is not None:
+        from concilium.infrastructure.auth.permission_guard import reset_auth_context
+
+        reset_auth_context(auth_ctx_tokens)
+    # ADR-121 D4/D6: desanexa contexto OTel (traceparent + baggage)
+    if otel_ctx_token is not None:
+        context_detach(otel_ctx_token)
+
+
 class McpAuthMiddleware:
     """ASGI middleware: valida JWT e seta _current_roles antes de cada tool call."""
 
     def __init__(self, app: Any) -> None:
         self._app = app
 
+    async def _authenticate(
+        self, auth: str, is_public_tool: bool, otel_ctx_token: Any, send: Any
+    ) -> tuple[Any, Any, Any, bool]:
+        """Processa o header Authorization. Retorna (token_var, auth_ctx_tokens, otel_ctx_token, handled).
+
+        `handled=True` significa que uma resposta de erro já foi enviada e o
+        chamador deve retornar imediatamente sem invocar o app downstream.
+        """
+        token_var = None
+        auth_ctx_tokens = None
+
+        if auth.startswith("Bearer "):
+            raw_token = auth[7:].strip()
+            try:
+                token_var, auth_ctx_tokens, claims = _decode_bearer_token(raw_token)
+                baggage_token = _inject_otel_baggage(claims)
+                if baggage_token is not None:
+                    otel_ctx_token = baggage_token
+            except Exception as exc:
+                if _auth_enabled() and not is_public_tool:
+                    await _send_invalid_token_response(send, exc)
+                    return token_var, auth_ctx_tokens, otel_ctx_token, True
+                # AUTH_ENABLED=0 ou tool público → ignorar erros de token
+        elif _auth_enabled() and not is_public_tool:
+            await _send_missing_auth_response(send)
+            return token_var, auth_ctx_tokens, otel_ctx_token, True
+
+        return token_var, auth_ctx_tokens, otel_ctx_token, False
+
     async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
         if scope["type"] != "http":
             await self._app(scope, receive, send)
             return
 
-        # Extrai todos os headers como dict str→str para OTel propagation
-        raw_headers = scope.get("headers", [])
-        headers = {k.lower(): v for k, v in raw_headers}
-        headers_str: dict[str, str] = {k.decode("latin-1"): v.decode("latin-1") for k, v in raw_headers}
+        headers, headers_str = _decode_headers(scope.get("headers", []))
 
         # Verifica se é uma chamada de tool público (não requer auth)
         is_public_tool = await _is_public_tool_call(scope, receive)
 
         auth: str = headers.get(b"authorization", b"").decode("latin-1")
 
-        token_var = None
-        auth_ctx_tokens = None
-        otel_ctx_token = None  # ADR-121 D4: token de contexto OTel para detach
+        # ADR-121 D4: token de contexto OTel para detach; extrai traceparent/tracestate
+        otel_ctx_token = _extract_otel_context(headers_str)
 
-        # ADR-121 D4: extrai traceparent/tracestate e estabelece contexto OTel
-        if _OTEL_AVAILABLE and propagate is not None:
-            try:
-                ctx = propagate.extract(headers_str)
-                otel_ctx_token = context_attach(ctx)
-            except Exception:
-                pass  # propagação OTel é best-effort
-
-        if auth.startswith("Bearer "):
-            raw_token = auth[7:].strip()
-            try:
-                from concilium.infrastructure.auth.permission_guard import (
-                    _current_roles,
-                    reset_auth_context,
-                    roles_from_token,
-                    set_auth_context,
-                    set_roles,
-                )
-                from concilium.infrastructure.auth.token_service import decode_token
-
-                claims = decode_token(raw_token)
-                token_var = set_roles(roles_from_token(claims))
-                # ADR-118: propaga user_id (sub) e tenant_id (tid) para auditoria
-                auth_ctx_tokens = set_auth_context(
-                    claims.get("sub"),
-                    claims.get("tid") or claims.get("tenant_id"),
-                )
-
-                # ADR-121 D6: injeta tenant_id e user_id como W3C Baggage
-                if _OTEL_AVAILABLE and set_baggage is not None:
-                    try:
-                        tenant_id = claims.get("tid") or claims.get("tenant_id")
-                        user_id = claims.get("sub")
-                        baggage_ctx = None
-                        if tenant_id:
-                            baggage_ctx = set_baggage("tenant.id", tenant_id, baggage_ctx)
-                        if user_id:
-                            baggage_ctx = set_baggage("user.id", user_id, baggage_ctx)
-                        if baggage_ctx is not None:
-                            # attach devolve token para detach no finally
-                            otel_ctx_token = context_attach(baggage_ctx)
-                    except Exception:
-                        pass  # baggage é best-effort
-
-            except Exception as exc:
-                if _auth_enabled() and not is_public_tool:
-                    await _send_json_response(
-                        send,
-                        401,
-                        {"detail": f"Token MCP inválido: {exc}"},
-                        headers=[(b"www-authenticate", b"Bearer")],
-                    )
-                    return
-                # AUTH_ENABLED=0 ou tool público → ignorar erros de token
-        elif _auth_enabled() and not is_public_tool:
-            await _send_json_response(
-                send,
-                401,
-                {"detail": "Authorization: Bearer <token> ausente."},
-                headers=[(b"www-authenticate", b"Bearer")],
-            )
+        token_var, auth_ctx_tokens, otel_ctx_token, handled = await self._authenticate(
+            auth, is_public_tool, otel_ctx_token, send
+        )
+        if handled:
             return
 
         try:
@@ -161,17 +217,7 @@ class McpAuthMiddleware:
                 receive = _make_cached_receive(scope["_body"], receive)
             await self._app(scope, receive, send)
         finally:
-            if token_var is not None:
-                from concilium.infrastructure.auth.permission_guard import _current_roles
-
-                _current_roles.reset(token_var)
-            if auth_ctx_tokens is not None:
-                from concilium.infrastructure.auth.permission_guard import reset_auth_context
-
-                reset_auth_context(auth_ctx_tokens)
-            # ADR-121 D4/D6: desanexa contexto OTel (traceparent + baggage)
-            if otel_ctx_token is not None:
-                context_detach(otel_ctx_token)
+            _reset_auth_state(token_var, auth_ctx_tokens, otel_ctx_token)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

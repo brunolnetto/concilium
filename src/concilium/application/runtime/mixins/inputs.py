@@ -18,68 +18,84 @@ class InputsMixin(_Base):
     Herda de RuntimeHost só em TYPE_CHECKING (ver ExecutionMixin para o mesmo padrão).
     """
 
+    def _apply_defaults_escopo_eap(self, project: Any, contexto: Any, normalized: dict[str, Any]) -> None:
+        """Aplica defaults de escopo/EAP (snapshots, metadados do projeto, coordenadas, regime) in-place."""
+        snap_ids = self.create_snapshots(project)
+        normalized.setdefault("snapshot_catalogo_id", snap_ids["catalogo"])
+        normalized.setdefault("snapshot_perfil_id", snap_ids["perfil"])
+        normalized.setdefault("contexto_id", contexto.id)
+
+        p_meta = project.meta
+        normalized.setdefault("nome", p_meta.get("nome"))
+        normalized.setdefault("tipo_obra", p_meta.get("tipo_obra", "terraplenagem"))
+        normalized.setdefault("localizacao", p_meta.get("localizacao", "Não Definido"))
+        normalized.setdefault("data_inicio", p_meta.get("data_inicio"))
+        normalized.setdefault("data_termino", p_meta.get("data_termino"))
+        normalized.setdefault("data_base_orcamento", p_meta.get("data_base_orcamento"))
+
+        if "coordenadas" not in normalized and "coordenadas" in p_meta:
+            normalized["coordenadas"] = p_meta["coordenadas"]
+        else:
+            normalized.setdefault(
+                "coordenadas",
+                {"lat": p_meta.get("coordenadas_lat", 0.0), "lng": p_meta.get("coordenadas_lng", 0.0)},
+            )
+
+        if "regime_trabalho" not in normalized:
+            normalized["regime_trabalho"] = {
+                "dias_semana": p_meta.get("dias_semana", 6),
+                "horas_dia": p_meta.get("horas_dia", 8),
+            }
+
+    def _apply_defaults_encargos(self, contexto: Any, normalized: dict[str, Any]) -> None:
+        """Aplica defaults de percentual de encargos sociais (jurisdição) in-place."""
+        jurisd = self.load_jurisdicao(contexto.jurisdicao_id)
+        motor = jurisd.get("motor_encargos_sociais", {})
+        # Preferência: campos específicos (ADR-097 F4) > percentual_total (retrocompat)
+        horista = motor.get("percentual_horista") or motor.get("percentual_total")
+        mensalista = motor.get("percentual_mensalista")
+        if horista is not None:
+            normalized["percentual_encargos"] = horista
+        if mensalista is not None:
+            normalized["percentual_encargos_mensalista"] = mensalista
+        if motor.get("percentual_pj") is not None:  # pragma: no branch
+            normalized["percentual_encargos_pj"] = motor["percentual_pj"]
+
+    def _apply_defaults_cronograma(self, project: Any, contexto: Any, normalized: dict[str, Any]) -> None:
+        """Aplica default de calendário operacional para a skill de cronograma in-place."""
+        proj_id = str(getattr(project, "id", "") or "")
+        normalized["calendario_operacional"] = self.load_calendario_operacional(
+            contexto.jurisdicao_id,
+            proj_id or None,
+        )
+
+    def _apply_defaults_relatorio(self, project: Any, normalized: dict[str, Any]) -> None:
+        """Aplica default de geração de Excel a partir da config de entregáveis do projeto in-place."""
+        try:
+            deliv_cfg = project.read_json("deliverables_config.json", {})
+            outputs = deliv_cfg.get("outputs", {}) if isinstance(deliv_cfg, dict) else {}
+            normalized.setdefault(
+                "gerar_excel",
+                bool(outputs.get("resultado_xlsx", outputs.get("cronograma_xlsx", True))),
+            )
+        except Exception:  # pragma: no cover
+            pass
+
     def _apply_runtime_defaults(
         self, skill_id: str, project: Any, contexto: Any, inputs: dict[str, Any]
     ) -> dict[str, Any]:
         normalized = dict(inputs)
         if skill_id == "01-escopo-e-eap":
-            snap_ids = self.create_snapshots(project)
-            normalized.setdefault("snapshot_catalogo_id", snap_ids["catalogo"])
-            normalized.setdefault("snapshot_perfil_id", snap_ids["perfil"])
-            normalized.setdefault("contexto_id", contexto.id)
-
-            p_meta = project.meta
-            normalized.setdefault("nome", p_meta.get("nome"))
-            normalized.setdefault("tipo_obra", p_meta.get("tipo_obra", "terraplenagem"))
-            normalized.setdefault("localizacao", p_meta.get("localizacao", "Não Definido"))
-            normalized.setdefault("data_inicio", p_meta.get("data_inicio"))
-            normalized.setdefault("data_termino", p_meta.get("data_termino"))
-            normalized.setdefault("data_base_orcamento", p_meta.get("data_base_orcamento"))
-
-            if "coordenadas" not in normalized and "coordenadas" in p_meta:
-                normalized["coordenadas"] = p_meta["coordenadas"]
-            else:
-                normalized.setdefault(
-                    "coordenadas",
-                    {"lat": p_meta.get("coordenadas_lat", 0.0), "lng": p_meta.get("coordenadas_lng", 0.0)},
-                )
-
-            if "regime_trabalho" not in normalized:
-                normalized["regime_trabalho"] = {
-                    "dias_semana": p_meta.get("dias_semana", 6),
-                    "horas_dia": p_meta.get("horas_dia", 8),
-                }
+            self._apply_defaults_escopo_eap(project, contexto, normalized)
 
         if skill_id in ("03-equipes-diretas", "05-equipes-e-alocacao") and "percentual_encargos" not in normalized:
-            jurisd = self.load_jurisdicao(contexto.jurisdicao_id)
-            motor = jurisd.get("motor_encargos_sociais", {})
-            # Preferência: campos específicos (ADR-097 F4) > percentual_total (retrocompat)
-            horista = motor.get("percentual_horista") or motor.get("percentual_total")
-            mensalista = motor.get("percentual_mensalista")
-            if horista is not None:
-                normalized["percentual_encargos"] = horista
-            if mensalista is not None:
-                normalized["percentual_encargos_mensalista"] = mensalista
-            if motor.get("percentual_pj") is not None:  # pragma: no branch
-                normalized["percentual_encargos_pj"] = motor["percentual_pj"]
+            self._apply_defaults_encargos(contexto, normalized)
 
         if skill_id == "04-cronograma" and "calendario_operacional" not in normalized:
-            proj_id = str(getattr(project, "id", "") or "")
-            normalized["calendario_operacional"] = self.load_calendario_operacional(
-                contexto.jurisdicao_id,
-                proj_id or None,
-            )
+            self._apply_defaults_cronograma(project, contexto, normalized)
 
         if skill_id == "10-relatorio-e-artefatos":
-            try:
-                deliv_cfg = project.read_json("deliverables_config.json", {})
-                outputs = deliv_cfg.get("outputs", {}) if isinstance(deliv_cfg, dict) else {}
-                normalized.setdefault(
-                    "gerar_excel",
-                    bool(outputs.get("resultado_xlsx", outputs.get("cronograma_xlsx", True))),
-                )
-            except Exception:  # pragma: no cover
-                pass
+            self._apply_defaults_relatorio(project, normalized)
 
         return normalized
 

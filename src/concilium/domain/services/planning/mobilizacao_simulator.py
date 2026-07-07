@@ -87,20 +87,58 @@ class WorkforcePolicySimulator:
         Raises:
             ValueError: if quantitativo <= 0 or producao_horaria < 0.
         """
+        self._validate_simulate_inputs(quantitativo, producao_horaria)
+
+        producao_semanal_base = producao_horaria * dias_semana * horas_dia
+        max_weeks = self._compute_max_weeks(producao_semanal_base, quantitativo, policy)
+
+        semanas, incompleta = self._simulate_weeks(
+            policy,
+            quantitativo,
+            producao_semanal_base,
+            max_weeks,
+            prat_semanal,
+            semanas_iso_por_offset,
+        )
+
+        return CurvaForca(
+            atividade_id=atividade_id,
+            quantitativo_alvo=quantitativo,
+            producao_horaria=producao_horaria,
+            dias_semana=dias_semana,
+            horas_dia=horas_dia,
+            policy=policy,
+            semanas=semanas,
+            incompleta=incompleta,
+        )
+
+    # ------------------------------------------------------------------
+    # Internal helpers — pure functions, no side effects
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_simulate_inputs(quantitativo: float, producao_horaria: float) -> None:
         if quantitativo <= 0:
             raise ValueError(f"quantitativo must be > 0, got {quantitativo}")
         if producao_horaria < 0:
             raise ValueError(f"producao_horaria must be >= 0, got {producao_horaria}")
 
-        producao_semanal_base = producao_horaria * dias_semana * horas_dia
-
-        # Guard computation: based on peak teams at full efficiency
+    def _compute_max_weeks(self, producao_semanal_base: float, quantitativo: float, policy: MobilizacaoPolicy) -> int:
+        """Guard computation: based on peak teams at full efficiency."""
         if producao_semanal_base <= 0 or policy.n_maximo <= 0:
-            max_weeks = 1  # Will immediately produce incompleta=True
-        else:
-            nominal_weeks = math.ceil(quantitativo / (producao_semanal_base * policy.n_maximo))
-            max_weeks = self.MAX_MULTIPLIER * max(1, nominal_weeks)
+            return 1  # Will immediately produce incompleta=True
+        nominal_weeks = math.ceil(quantitativo / (producao_semanal_base * policy.n_maximo))
+        return self.MAX_MULTIPLIER * max(1, nominal_weeks)
 
+    def _simulate_weeks(
+        self,
+        policy: MobilizacaoPolicy,
+        quantitativo: float,
+        producao_semanal_base: float,
+        max_weeks: int,
+        prat_semanal: dict[str, float] | None,
+        semanas_iso_por_offset: dict[int, str] | None,
+    ) -> tuple[list[CurvaForcaSemanal], bool]:
         semanas: list[CurvaForcaSemanal] = []
         qtd_acumulada = 0.0
         incompleta = False
@@ -139,20 +177,7 @@ class WorkforcePolicySimulator:
             # for-loop exhausted max_weeks without delivering Q
             incompleta = True
 
-        return CurvaForca(
-            atividade_id=atividade_id,
-            quantitativo_alvo=quantitativo,
-            producao_horaria=producao_horaria,
-            dias_semana=dias_semana,
-            horas_dia=horas_dia,
-            policy=policy,
-            semanas=semanas,
-            incompleta=incompleta,
-        )
-
-    # ------------------------------------------------------------------
-    # Internal helpers — pure functions, no side effects
-    # ------------------------------------------------------------------
+        return semanas, incompleta
 
     def _compute_n(self, policy: MobilizacaoPolicy, t: int) -> int:
         """Return the integer team count at week offset t.

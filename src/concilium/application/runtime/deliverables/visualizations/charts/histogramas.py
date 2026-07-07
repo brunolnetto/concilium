@@ -6,6 +6,41 @@ from ..chart_markdown_support import weekly_to_monthly_labels
 from ._common import HIST_COLORS, clean_series_label, init_mpl
 
 
+def _plot_stacked_breakdown(ax, x: list[int], labels: list[str], breakdown: dict) -> None:
+    """Desenha barras empilhadas por série (ex.: tipo de equipamento, função)."""
+    series_names = sorted(breakdown.keys())
+    baseline = [0.0] * len(labels)
+    for sidx, sname in enumerate(series_names):
+        svals = [float(v) if v is not None else 0.0 for v in breakdown[sname]]
+        svals = (svals + [0.0] * len(labels))[: len(labels)]
+        raw_label = clean_series_label(sname)
+        display_label = raw_label if len(raw_label) <= 22 else raw_label[:21] + "\u2026"
+        ax.bar(
+            x,
+            svals,
+            bottom=baseline,
+            alpha=0.85,
+            width=0.8,
+            label=display_label,
+            color=HIST_COLORS[sidx % len(HIST_COLORS)],
+        )
+        baseline = [b + v for b, v in zip(baseline, svals, strict=False)]
+    ax.legend(fontsize=7, loc="upper right")
+
+
+def _style_hist_axes(ax, display_labels: list[str], title: str, ylabel: str, n_values: int) -> None:
+    """Aplica títulos, ticks e grid ao eixo do histograma."""
+    tick_positions = [i for i, lbl in enumerate(display_labels) if lbl != "."]
+    tick_labels = [lbl for lbl in display_labels if lbl != "."]
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels(tick_labels, rotation=45, ha="right", fontsize=8)
+    ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
+    ax.set_ylabel(ylabel, fontsize=10)
+    ax.set_xlabel("Período", fontsize=10)
+    ax.grid(axis="y", alpha=0.3)
+    ax.set_xlim(-0.5, n_values - 0.5)
+
+
 def _build_hist(
     section: dict,
     title: str,
@@ -27,35 +62,10 @@ def _build_hist(
         fig, ax = plt.subplots(figsize=(14, 5))
         x = list(range(len(values)))
         if breakdown and isinstance(breakdown, dict):
-            series_names = sorted(breakdown.keys())
-            baseline = [0.0] * len(labels)
-            for sidx, sname in enumerate(series_names):
-                svals = [float(v) if v is not None else 0.0 for v in breakdown[sname]]
-                svals = (svals + [0.0] * len(labels))[: len(labels)]
-                raw_label = clean_series_label(sname)
-                display_label = raw_label if len(raw_label) <= 22 else raw_label[:21] + "\u2026"
-                ax.bar(
-                    x,
-                    svals,
-                    bottom=baseline,
-                    alpha=0.85,
-                    width=0.8,
-                    label=display_label,
-                    color=HIST_COLORS[sidx % len(HIST_COLORS)],
-                )
-                baseline = [b + v for b, v in zip(baseline, svals, strict=False)]
-            ax.legend(fontsize=7, loc="upper right")
+            _plot_stacked_breakdown(ax, x, labels, breakdown)
         else:
             ax.bar(x, values, color=base_color, alpha=0.85, width=0.8)
-        tick_positions = [i for i, lbl in enumerate(display_labels) if lbl != "."]
-        tick_labels = [lbl for lbl in display_labels if lbl != "."]
-        ax.set_xticks(tick_positions)
-        ax.set_xticklabels(tick_labels, rotation=45, ha="right", fontsize=8)
-        ax.set_title(title, fontsize=13, fontweight="bold", pad=12)
-        ax.set_ylabel(ylabel, fontsize=10)
-        ax.set_xlabel("Período", fontsize=10)
-        ax.grid(axis="y", alpha=0.3)
-        ax.set_xlim(-0.5, len(values) - 0.5)
+        _style_hist_axes(ax, display_labels, title, ylabel, len(values))
         fig.tight_layout()
         return fig_to_bytes(fig)
     except Exception:

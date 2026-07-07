@@ -970,46 +970,57 @@ def startup_check() -> None:
         raise ConfigurationError("\n".join(lines))
 
 
-def _check_storage(st: StorageSettings) -> list[str]:
+def _check_storage_azure_blob(st: StorageSettings) -> list[str]:
     errors: list[str] = []
-    b = st.backend
-    if b == "azure_blob":
-        if not st.azure.account:
-            errors.append("CONCILIUM__AZURE_ACCOUNT é obrigatório quando STORE_BACKEND=azure_blob")
-        if not st.azure.container:
-            errors.append("CONCILIUM__AZURE_CONTAINER é obrigatório quando STORE_BACKEND=azure_blob")
-        has_cred = st.azure.key or st.azure.connection_string
-        # sem key e sem connection_string = usa Managed Identity; aceitável em ACI
-        if not st.azure.account and not st.azure.connection_string:
-            errors.append(
-                "CONCILIUM__AZURE_ACCOUNT (ou CONCILIUM__AZURE_CONNECTION_STRING) "
-                "é obrigatório quando STORE_BACKEND=azure_blob"
-            )
-        _ = has_cred  # Managed Identity é válido sem key explícita
-    elif b == "s3":
-        if not st.s3.bucket:
-            errors.append("CONCILIUM__S3_BUCKET é obrigatório quando STORE_BACKEND=s3")
-    elif b == "sharepoint":
-        for var, val in [
-            ("CONCILIUM__SP_TENANT_ID", st.sharepoint.tenant_id),
-            ("CONCILIUM__SP_CLIENT_ID", st.sharepoint.client_id),
-            ("CONCILIUM__SP_DRIVE_ID", st.sharepoint.drive_id),
-        ]:
-            if not val:
-                errors.append(f"{var} é obrigatório quando STORE_BACKEND=sharepoint")
-        if not st.sharepoint.client_secret and not st.sharepoint.cert_path:
-            errors.append(
-                "CONCILIUM__SP_CLIENT_SECRET ou CONCILIUM__SP_CERT_PATH é obrigatório quando STORE_BACKEND=sharepoint"
-            )
-    elif b == "gdrive":
-        if not st.gdrive.root_folder_id:
-            errors.append("CONCILIUM__GDRIVE_ROOT_FOLDER_ID é obrigatório quando STORE_BACKEND=gdrive")
-    elif b not in ("filesystem", "local_json"):
+    if not st.azure.account:
+        errors.append("CONCILIUM__AZURE_ACCOUNT é obrigatório quando STORE_BACKEND=azure_blob")
+    if not st.azure.container:
+        errors.append("CONCILIUM__AZURE_CONTAINER é obrigatório quando STORE_BACKEND=azure_blob")
+    has_cred = st.azure.key or st.azure.connection_string
+    # sem key e sem connection_string = usa Managed Identity; aceitável em ACI
+    if not st.azure.account and not st.azure.connection_string:
         errors.append(
-            f"CONCILIUM__STORE_BACKEND={b!r} desconhecido. "
-            "Valores válidos: filesystem, azure_blob, s3, sharepoint, gdrive"
+            "CONCILIUM__AZURE_ACCOUNT (ou CONCILIUM__AZURE_CONNECTION_STRING) "
+            "é obrigatório quando STORE_BACKEND=azure_blob"
+        )
+    _ = has_cred  # Managed Identity é válido sem key explícita
+    return errors
+
+
+def _check_storage_sharepoint(st: StorageSettings) -> list[str]:
+    errors: list[str] = []
+    for var, val in [
+        ("CONCILIUM__SP_TENANT_ID", st.sharepoint.tenant_id),
+        ("CONCILIUM__SP_CLIENT_ID", st.sharepoint.client_id),
+        ("CONCILIUM__SP_DRIVE_ID", st.sharepoint.drive_id),
+    ]:
+        if not val:
+            errors.append(f"{var} é obrigatório quando STORE_BACKEND=sharepoint")
+    if not st.sharepoint.client_secret and not st.sharepoint.cert_path:
+        errors.append(
+            "CONCILIUM__SP_CLIENT_SECRET ou CONCILIUM__SP_CERT_PATH é obrigatório quando STORE_BACKEND=sharepoint"
         )
     return errors
+
+
+def _check_storage(st: StorageSettings) -> list[str]:
+    b = st.backend
+    if b == "azure_blob":
+        return _check_storage_azure_blob(st)
+    if b == "s3":
+        return ["CONCILIUM__S3_BUCKET é obrigatório quando STORE_BACKEND=s3"] if not st.s3.bucket else []
+    if b == "sharepoint":
+        return _check_storage_sharepoint(st)
+    if b == "gdrive":
+        if not st.gdrive.root_folder_id:
+            return ["CONCILIUM__GDRIVE_ROOT_FOLDER_ID é obrigatório quando STORE_BACKEND=gdrive"]
+        return []
+    if b not in ("filesystem", "local_json"):
+        return [
+            f"CONCILIUM__STORE_BACKEND={b!r} desconhecido. "
+            "Valores válidos: filesystem, azure_blob, s3, sharepoint, gdrive"
+        ]
+    return []
 
 
 def _check_auth(auth: AuthSettings) -> list[str]:

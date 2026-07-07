@@ -61,44 +61,85 @@ def _add_criticidade_validacoes(
         )
 
 
+def _pe_field(pe: Any, attr: str, default: float) -> float:
+    """Lê um atributo numérico do ponto_equilibrio com fallback seguro quando pe é None."""
+    return float(getattr(pe, attr, default) or default) if pe else default
+
+
+def _build_planejamento_row(
+    p: Any,
+    eap_item: Any,
+    pe: Any,
+    criticidade_lookup: dict[str, str],
+    has_criticidade: bool,
+) -> dict:
+    """Constrói uma linha de PLANEJAMENTO (item + camadas de precificação NEP-042)."""
+    subtotal = p.subtotal if p.subtotal is not None else SubtotalSemBdiComBdi()
+    row = {
+        "item_id": p.item_id,
+        "cpu_id": p.cpu_id,
+        "descricao": (eap_item.descricao if eap_item else ""),
+        "unidade": (eap_item.unidade if eap_item else ""),
+        "quantitativo": p.quantitativo,
+        "subtotal_sem_bdi_mo": subtotal.sem_bdi.mao_obra,
+        "subtotal_sem_bdi_eq": subtotal.sem_bdi.equipamentos,
+        "subtotal_sem_bdi_diesel": subtotal.sem_bdi.diesel,
+        "subtotal_sem_bdi_mat": subtotal.sem_bdi.material,
+        "subtotal_sem_bdi": subtotal.sem_bdi.total,
+        "subtotal_com_bdi": subtotal.com_bdi.total,
+        # Camada 1 — catálogo
+        "pu_total_sem_bdi": p.preco_unitario.total,
+        "pu_total_com_bdi": p.preco_unitario_com_bdi.total,
+        # NEP-042: Camada 2 — operacional autônomo
+        "pu_op_autonomo": _pe_field(pe, "pu_operacional_autonomo", 0.0),
+        "frentes_necessarias": _pe_field(pe, "frentes_equivalentes_necessarias", 1.0),
+        "eta_real": _pe_field(pe, "eta_real", 1.0),
+        # NEP-042: Camada 3 — burden de permanência instancial
+        "burden_pool": _pe_field(pe, "custo_pool_total", 0.0),
+        "economia_pool_abs": _pe_field(pe, "economia_pool_abs", 0.0),
+    }
+    if has_criticidade:
+        row["criticidade"] = criticidade_lookup.get(p.item_id, "-")
+    return row
+
+
 def _build_planejamento_rows(
     canonical_in: CanonicalModel, criticidade_lookup: dict[str, str], has_criticidade: bool
 ) -> list[dict]:
-    rows: list[dict] = []
     eap_by_item_id = {e.item_id: e for e in canonical_in.eap}
     # NEP-042: join com ponto_equilibrio para expor as três camadas de precificação
     pe_by_item = {pe.item_id: pe for pe in (canonical_in.ponto_equilibrio or []) if pe.item_id}
-    for p in canonical_in.planejamento:
-        eap_item = eap_by_item_id.get(p.item_id)
-        pe = pe_by_item.get(p.item_id)
-        subtotal = p.subtotal if p.subtotal is not None else SubtotalSemBdiComBdi()
-        row = {
-            "item_id": p.item_id,
-            "cpu_id": p.cpu_id,
-            "descricao": (eap_item.descricao if eap_item else ""),
-            "unidade": (eap_item.unidade if eap_item else ""),
-            "quantitativo": p.quantitativo,
-            "subtotal_sem_bdi_mo": subtotal.sem_bdi.mao_obra,
-            "subtotal_sem_bdi_eq": subtotal.sem_bdi.equipamentos,
-            "subtotal_sem_bdi_diesel": subtotal.sem_bdi.diesel,
-            "subtotal_sem_bdi_mat": subtotal.sem_bdi.material,
-            "subtotal_sem_bdi": subtotal.sem_bdi.total,
-            "subtotal_com_bdi": subtotal.com_bdi.total,
-            # Camada 1 — catálogo
-            "pu_total_sem_bdi": p.preco_unitario.total,
-            "pu_total_com_bdi": p.preco_unitario_com_bdi.total,
-            # NEP-042: Camada 2 — operacional autônomo
-            "pu_op_autonomo": float(getattr(pe, "pu_operacional_autonomo", 0.0) or 0.0) if pe else 0.0,
-            "frentes_necessarias": float(getattr(pe, "frentes_equivalentes_necessarias", 1.0) or 1.0) if pe else 1.0,
-            "eta_real": float(getattr(pe, "eta_real", 1.0) or 1.0) if pe else 1.0,
-            # NEP-042: Camada 3 — burden de permanência instancial
-            "burden_pool": float(getattr(pe, "custo_pool_total", 0.0) or 0.0) if pe else 0.0,
-            "economia_pool_abs": float(getattr(pe, "economia_pool_abs", 0.0) or 0.0) if pe else 0.0,
-        }
-        if has_criticidade:
-            row["criticidade"] = criticidade_lookup.get(p.item_id, "-")
-        rows.append(row)
-    return rows
+    return [
+        _build_planejamento_row(
+            p, eap_by_item_id.get(p.item_id), pe_by_item.get(p.item_id), criticidade_lookup, has_criticidade
+        )
+        for p in canonical_in.planejamento
+    ]
+
+
+def _build_tres_camadas_row(p: Any, eap_item: Any, pe: Any) -> dict:
+    """Constrói uma linha da view consolidada das três camadas de precificação (NEP-042 D4)."""
+    pu_op = _pe_field(pe, "pu_operacional_autonomo", 0.0)
+    economia = _pe_field(pe, "economia_pool_abs", 0.0)
+    custo_autonomo = pu_op * p.quantitativo if p.quantitativo else 0.0
+    economia_pct = (economia / custo_autonomo) if custo_autonomo > 0 else 0.0
+    return {
+        "item_id": p.item_id,
+        "cpu_id": p.cpu_id,
+        "descricao": eap_item.descricao if eap_item else "",
+        "unidade": eap_item.unidade if eap_item else "",
+        "quantitativo": p.quantitativo,
+        # Camada 1 — catálogo
+        "pu_cat": float(p.preco_unitario.total or 0.0),
+        # Camada 2 — operacional autônomo
+        "pu_op_autonomo": pu_op,
+        "frentes_necessarias": _pe_field(pe, "frentes_equivalentes_necessarias", 1.0),
+        "eta_real": _pe_field(pe, "eta_real", 1.0),
+        # Camada 3 — burden de permanência instancial
+        "pu_pool": _pe_field(pe, "custo_pool_por_unidade", 0.0),
+        "economia_pool_abs": economia,
+        "economia_pool_pct": round(economia_pct, 4),
+    }
 
 
 def _build_tres_camadas_rows(canonical_in: CanonicalModel) -> list[dict]:
@@ -109,38 +150,114 @@ def _build_tres_camadas_rows(canonical_in: CanonicalModel) -> list[dict]:
     Cada linha é um item da EAP com planejamento; itens sem ponto_equilibrio
     expõem apenas a camada de catálogo.
     """
-    rows: list[dict] = []
     eap_by_item = {e.item_id: e for e in canonical_in.eap}
     pe_by_item = {pe.item_id: pe for pe in (canonical_in.ponto_equilibrio or []) if pe.item_id}
-    for p in canonical_in.planejamento:
-        eap_item = eap_by_item.get(p.item_id)
-        pe = pe_by_item.get(p.item_id)
-        pu_op = float(getattr(pe, "pu_operacional_autonomo", 0.0) or 0.0) if pe else 0.0
-        economia = float(getattr(pe, "economia_pool_abs", 0.0) or 0.0) if pe else 0.0
-        custo_autonomo = pu_op * p.quantitativo if p.quantitativo else 0.0
-        economia_pct = (economia / custo_autonomo) if custo_autonomo > 0 else 0.0
-        rows.append(
-            {
-                "item_id": p.item_id,
-                "cpu_id": p.cpu_id,
-                "descricao": eap_item.descricao if eap_item else "",
-                "unidade": eap_item.unidade if eap_item else "",
-                "quantitativo": p.quantitativo,
-                # Camada 1 — catálogo
-                "pu_cat": float(p.preco_unitario.total or 0.0),
-                # Camada 2 — operacional autônomo
-                "pu_op_autonomo": pu_op,
-                "frentes_necessarias": float(getattr(pe, "frentes_equivalentes_necessarias", 1.0) or 1.0)
-                if pe
-                else 1.0,
-                "eta_real": float(getattr(pe, "eta_real", 1.0) or 1.0) if pe else 1.0,
-                # Camada 3 — burden de permanência instancial
-                "pu_pool": float(getattr(pe, "custo_pool_por_unidade", 0.0) or 0.0) if pe else 0.0,
-                "economia_pool_abs": economia,
-                "economia_pool_pct": round(economia_pct, 4),
-            }
-        )
-    return rows
+    return [
+        _build_tres_camadas_row(p, eap_by_item.get(p.item_id), pe_by_item.get(p.item_id))
+        for p in canonical_in.planejamento
+    ]
+
+
+def _ber_acao_sugerida(gap: float, dominante: str) -> str:
+    """Sugere uma ação corretiva com base no gap operacional e no componente dominante."""
+    if gap >= 0:
+        return "Manter baseline"
+    if dominante == "Diesel":
+        return "Rever logística e consumo de combustível"
+    if dominante == "Mão de Obra":
+        return "Ajustar produtividade/equipe"
+    if dominante == "Equipamentos":
+        return "Otimizar frota e utilização"
+    if dominante == "Materiais":
+        return "Rever traço e perdas de material"
+    return "Rebalancear composição operacional"
+
+
+def _ber_componentes_operacionais(eq: Any, custo_operacional: float) -> dict[str, float]:
+    """Distribui o custo_operacional_real pelos componentes mensais da equipe (proporcional)."""
+    mensal = {
+        "Mão de Obra": float(eq.custo_mao_obra_mensal or 0.0),
+        "Encargos Sociais": float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0),
+        "Equipamentos": float(eq.custo_equipamentos_mensal or 0.0),
+        "Materiais": float(eq.custo_material_mensal or 0.0),
+        "Diesel": float(eq.custo_combustivel_total_mensal or 0.0),
+    }
+    base = sum(mensal.values())
+    if base <= 0 or custo_operacional <= 0:
+        return {k: 0.0 for k in mensal}
+    fator = custo_operacional / base
+    return {k: v * fator for k, v in mensal.items()}
+
+
+def _ber_componentes_referencia(item_id: str, plan_by_item: dict) -> dict[str, float] | None:
+    """Extrai os componentes de custo de referência (subtotal sem BDI) do planejamento."""
+    plan = plan_by_item.get(item_id)
+    if plan is None or plan.subtotal is None or plan.subtotal.sem_bdi is None:
+        return None
+    sem = plan.subtotal.sem_bdi
+    return {
+        "Mão de Obra": float(sem.mao_obra or 0.0),
+        "Equipamentos": float(sem.equipamentos or 0.0),
+        "Materiais": float(sem.material or 0.0),
+        "Diesel": float(sem.diesel or 0.0),
+    }
+
+
+def _ber_componente_dominante(eq: Any, custo_operacional: float, gap_operacional: float, plan_by_item: dict) -> str:
+    """Identifica o componente de custo que mais explica o gap operacional vs. referência."""
+    componentes_op = _ber_componentes_operacionais(eq, custo_operacional)
+    referencia = _ber_componentes_referencia(eq.item_id, plan_by_item)
+    if referencia:
+        delta_comp = {k: componentes_op[k] - referencia.get(k, 0.0) for k in componentes_op}
+        if gap_operacional < 0:
+            # Déficit: dominante é o componente que mais contribui para estouro vs referência.
+            positivos = {k: v for k, v in delta_comp.items() if v > 0}
+            if positivos:
+                return max(positivos.items(), key=lambda kv: kv[1])[0]
+        else:
+            # Superávit: dominante é o componente com maior economia vs referência.
+            economias = {k: -v for k, v in delta_comp.items() if v < 0}
+            if economias:
+                return max(economias.items(), key=lambda kv: kv[1])[0]
+    # Fallback estável quando não há referência por componente.
+    return max(componentes_op.items(), key=lambda kv: kv[1])[0]
+
+
+def _ber_build_rows(eq: Any, pe: Any, plan_by_item: dict) -> tuple[dict, dict]:
+    """Constrói (equipe_row, analise_composicional_row) para uma equipe direta."""
+    custo_operacional = float(getattr(pe, "custo_operacional_real", 0.0) if pe is not None else eq.custo_total or 0.0)
+    custo_venda = float(getattr(pe, "custo_venda_cpu", 0.0) if pe is not None else 0.0)
+    gap_operacional = round(custo_venda - custo_operacional, 2)
+    # Gap percentual relativo ao custo operacional (mais interpretável para eficiência real).
+    gap_pct = (gap_operacional / custo_operacional) if custo_operacional > 0 else 0.0
+    dominante = _ber_componente_dominante(eq, custo_operacional, gap_operacional, plan_by_item)
+
+    equipe_row = {
+        "equipe_id": eq.equipe_id,
+        "item_id": eq.item_id,
+        "cpu_id": eq.cpu_id,
+        "custo_fixo_total": round(eq.custo_fixo_mensal * (eq.permanencia_meses or 0.0), 2),
+        "custo_total": eq.custo_total,
+        "permanencia_meses": eq.permanencia_meses,
+        "delta_pct": (getattr(pe, "delta_pct", None) if pe is not None else None),
+        "status_pe": (getattr(pe, "status_validacao", "N/A") if pe is not None else "N/A"),
+        # custo_venda_cpu: None quando não há ponto de equilíbrio calculado para o item
+        "custo_venda_cpu": (getattr(pe, "custo_venda_cpu", None) if pe is not None else None),
+    }
+    analise_row = {
+        "item_id": eq.item_id,
+        "custo_venda_cpu": round(custo_venda, 2),
+        "custo_operacional_real": round(custo_operacional, 2),
+        "gap_operacional": gap_operacional,
+        "gap_pct": round(gap_pct, 6),
+        "dominante": dominante,
+        "acao_sugerida": _ber_acao_sugerida(gap_operacional, dominante),
+        "custo_mao_obra": eq.custo_mao_obra_mensal,
+        "custo_equipamentos": eq.custo_equipamentos_mensal,
+        "custo_materiais": eq.custo_material_mensal,
+        "custo_diesel": eq.custo_combustivel_total_mensal,
+    }
+    return equipe_row, analise_row
 
 
 def _build_equipe_rows(canonical_in: CanonicalModel) -> tuple[list[dict], list[dict]]:
@@ -149,102 +266,11 @@ def _build_equipe_rows(canonical_in: CanonicalModel) -> tuple[list[dict], list[d
     pe_by_item = {pe.item_id: pe for pe in (canonical_in.ponto_equilibrio or []) if pe.item_id}
     plan_by_item = {p.item_id: p for p in canonical_in.planejamento if p.item_id}
 
-    def _acao_sugerida(gap: float, dominante: str) -> str:
-        if gap >= 0:
-            return "Manter baseline"
-        if dominante == "Diesel":
-            return "Rever logística e consumo de combustível"
-        if dominante == "Mão de Obra":
-            return "Ajustar produtividade/equipe"
-        if dominante == "Equipamentos":
-            return "Otimizar frota e utilização"
-        if dominante == "Materiais":
-            return "Rever traço e perdas de material"
-        return "Rebalancear composição operacional"
-
-    def _componentes_operacionais(eq: Any, custo_operacional: float) -> dict[str, float]:
-        mensal = {
-            "Mão de Obra": float(eq.custo_mao_obra_mensal or 0.0),
-            "Encargos Sociais": float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0),
-            "Equipamentos": float(eq.custo_equipamentos_mensal or 0.0),
-            "Materiais": float(eq.custo_material_mensal or 0.0),
-            "Diesel": float(eq.custo_combustivel_total_mensal or 0.0),
-        }
-        base = sum(mensal.values())
-        if base <= 0 or custo_operacional <= 0:
-            return {k: 0.0 for k in mensal}
-        fator = custo_operacional / base
-        return {k: v * fator for k, v in mensal.items()}
-
-    def _componentes_referencia(item_id: str) -> dict[str, float] | None:
-        plan = plan_by_item.get(item_id)
-        if plan is None or plan.subtotal is None or plan.subtotal.sem_bdi is None:
-            return None
-        sem = plan.subtotal.sem_bdi
-        return {
-            "Mão de Obra": float(sem.mao_obra or 0.0),
-            "Equipamentos": float(sem.equipamentos or 0.0),
-            "Materiais": float(sem.material or 0.0),
-            "Diesel": float(sem.diesel or 0.0),
-        }
-
-    def _componente_dominante(eq: Any, custo_operacional: float, gap_operacional: float) -> str:
-        componentes_op = _componentes_operacionais(eq, custo_operacional)
-        referencia = _componentes_referencia(eq.item_id)
-        if referencia:
-            delta_comp = {k: componentes_op[k] - referencia.get(k, 0.0) for k in componentes_op}
-            if gap_operacional < 0:
-                # Déficit: dominante é o componente que mais contribui para estouro vs referência.
-                positivos = {k: v for k, v in delta_comp.items() if v > 0}
-                if positivos:
-                    return max(positivos.items(), key=lambda kv: kv[1])[0]
-            else:
-                # Superávit: dominante é o componente com maior economia vs referência.
-                economias = {k: -v for k, v in delta_comp.items() if v < 0}
-                if economias:
-                    return max(economias.items(), key=lambda kv: kv[1])[0]
-        # Fallback estável quando não há referência por componente.
-        return max(componentes_op.items(), key=lambda kv: kv[1])[0]
-
     for eq in canonical_in.equipes_diretas:
         pe = pe_by_item.get(eq.item_id)
-        custo_operacional = float(
-            getattr(pe, "custo_operacional_real", 0.0) if pe is not None else eq.custo_total or 0.0
-        )
-        custo_venda = float(getattr(pe, "custo_venda_cpu", 0.0) if pe is not None else 0.0)
-        gap_operacional = round(custo_venda - custo_operacional, 2)
-        # Gap percentual relativo ao custo operacional (mais interpretável para eficiência real).
-        gap_pct = (gap_operacional / custo_operacional) if custo_operacional > 0 else 0.0
-        dominante = _componente_dominante(eq, custo_operacional, gap_operacional)
-        equipe_rows.append(
-            {
-                "equipe_id": eq.equipe_id,
-                "item_id": eq.item_id,
-                "cpu_id": eq.cpu_id,
-                "custo_fixo_total": round(eq.custo_fixo_mensal * (eq.permanencia_meses or 0.0), 2),
-                "custo_total": eq.custo_total,
-                "permanencia_meses": eq.permanencia_meses,
-                "delta_pct": (getattr(pe, "delta_pct", None) if pe is not None else None),
-                "status_pe": (getattr(pe, "status_validacao", "N/A") if pe is not None else "N/A"),
-                # custo_venda_cpu: None quando não há ponto de equilíbrio calculado para o item
-                "custo_venda_cpu": (getattr(pe, "custo_venda_cpu", None) if pe is not None else None),
-            }
-        )
-        analise_composicional.append(
-            {
-                "item_id": eq.item_id,
-                "custo_venda_cpu": round(custo_venda, 2),
-                "custo_operacional_real": round(custo_operacional, 2),
-                "gap_operacional": gap_operacional,
-                "gap_pct": round(gap_pct, 6),
-                "dominante": dominante,
-                "acao_sugerida": _acao_sugerida(gap_operacional, dominante),
-                "custo_mao_obra": eq.custo_mao_obra_mensal,
-                "custo_equipamentos": eq.custo_equipamentos_mensal,
-                "custo_materiais": eq.custo_material_mensal,
-                "custo_diesel": eq.custo_combustivel_total_mensal,
-            }
-        )
+        equipe_row, analise_row = _ber_build_rows(eq, pe, plan_by_item)
+        equipe_rows.append(equipe_row)
+        analise_composicional.append(analise_row)
     return equipe_rows, analise_composicional
 
 
@@ -299,6 +325,22 @@ def _bgs_min_units(eq) -> float:
     return min((e.num_unidades for e in eq.equipamentos if (e.num_unidades or 0) > 0), default=1)
 
 
+def _bgs_accumulate_equip_by_id(equip_by_id: dict, eq, wk: str, fator: float) -> None:
+    """Acumula, por equipamento identificado, a quantidade alocada na semana `wk`."""
+    for e in eq.equipamentos:
+        eid = e.descricao or e.equip_id or "?"
+        equip_by_id.setdefault(eid, {})
+        equip_by_id[eid][wk] = equip_by_id[eid].get(wk, 0.0) + fator * float(e.num_unidades or 0.0)
+
+
+def _bgs_accumulate_mo_by_funcao(mo_by_funcao: dict, eq, wk: str, fator: float) -> None:
+    """Acumula, por função normalizada, a quantidade de pessoas alocadas na semana `wk`."""
+    for f in eq.funcoes:
+        fid = _bgs_normalize_funcao_label(f.descricao or f.funcao_id or "?")
+        mo_by_funcao.setdefault(fid, {})
+        mo_by_funcao[fid][wk] = mo_by_funcao[fid].get(wk, 0.0) + fator * float(f.num_pessoas or 0.0)
+
+
 def _bgs_accumulate_week(
     wk: str,
     dist,
@@ -313,20 +355,13 @@ def _bgs_accumulate_week(
     n = float(getattr(dist, "num_equipes", 0) or 0.0)
     if n <= 0:
         return
-    equip_totals[wk] = equip_totals.get(wk, 0.0) + sum(
-        (n / min_units) * float(e.num_unidades or 0.0) for e in eq.equipamentos
-    )
-    mo_totals[wk] = mo_totals.get(wk, 0.0) + sum((n / min_units) * float(f.num_pessoas or 0.0) for f in eq.funcoes)
+    fator = n / min_units
+    equip_totals[wk] = equip_totals.get(wk, 0.0) + sum(fator * float(e.num_unidades or 0.0) for e in eq.equipamentos)
+    mo_totals[wk] = mo_totals.get(wk, 0.0) + sum(fator * float(f.num_pessoas or 0.0) for f in eq.funcoes)
     if equip_by_id is not None:
-        for e in eq.equipamentos:
-            eid = e.descricao or e.equip_id or "?"
-            equip_by_id.setdefault(eid, {})
-            equip_by_id[eid][wk] = equip_by_id[eid].get(wk, 0.0) + (n / min_units) * float(e.num_unidades or 0.0)
+        _bgs_accumulate_equip_by_id(equip_by_id, eq, wk, fator)
     if mo_by_funcao is not None:
-        for f in eq.funcoes:
-            fid = _bgs_normalize_funcao_label(f.descricao or f.funcao_id or "?")
-            mo_by_funcao.setdefault(fid, {})
-            mo_by_funcao[fid][wk] = mo_by_funcao[fid].get(wk, 0.0) + (n / min_units) * float(f.num_pessoas or 0.0)
+        _bgs_accumulate_mo_by_funcao(mo_by_funcao, eq, wk, fator)
 
 
 def _bgs_normalize_funcao_label(label: str) -> str:
@@ -343,6 +378,17 @@ def _bgs_normalize_funcao_label(label: str) -> str:
     return txt
 
 
+def _bgs_series_section(totals: dict, wks: list, by_group: dict | None, by_group_key: str) -> dict:
+    """Constrói uma seção {labels, values, [by_group_key]} de série semanal para o gráfico."""
+    section: dict = {
+        "labels": [str(wk) for wk in wks],
+        "values": [totals[wk] for wk in wks],
+    }
+    if by_group:
+        section[by_group_key] = {gid: [wk_map.get(wk, 0.0) for wk in wks] for gid, wk_map in by_group.items()}
+    return section
+
+
 def _bgs_build_graficos_dict(
     equip_totals: dict,
     mo_totals: dict,
@@ -353,18 +399,8 @@ def _bgs_build_graficos_dict(
     """Builds the base graficos dict with equipamentos, mao_obra and cronograma keys."""
     eq_wks = sorted(equip_totals)
     mo_wks = sorted(mo_totals)
-    eq_section: dict = {
-        "labels": [str(wk) for wk in eq_wks],
-        "values": [equip_totals[wk] for wk in eq_wks],
-    }
-    if equip_by_id:
-        eq_section["by_type"] = {eid: [wk_map.get(wk, 0.0) for wk in eq_wks] for eid, wk_map in equip_by_id.items()}
-    mo_section: dict = {
-        "labels": [str(wk) for wk in mo_wks],
-        "values": [mo_totals[wk] for wk in mo_wks],
-    }
-    if mo_by_funcao:
-        mo_section["by_funcao"] = {fid: [wk_map.get(wk, 0.0) for wk in mo_wks] for fid, wk_map in mo_by_funcao.items()}
+    eq_section = _bgs_series_section(equip_totals, eq_wks, equip_by_id, "by_type")
+    mo_section = _bgs_series_section(mo_totals, mo_wks, mo_by_funcao, "by_funcao")
     return {
         "equipamentos": eq_section,
         "mao_obra": mo_section,
@@ -420,6 +456,27 @@ def _build_graficos_section(canonical_in: CanonicalModel, eap_by_item_id: dict, 
     return graficos
 
 
+def _mbec_is_minimal(levers: list[dict], combo: tuple[int, ...], size: int, target: float) -> bool:
+    """Verifica se nenhum subconjunto próprio de `combo` já cobre o target (minimalidade)."""
+    from itertools import combinations as _combns
+
+    return not any(
+        sum(levers[j]["delta_margin_total"] for j in sub) >= target
+        for sub_size in range(1, size)
+        for sub in _combns(combo, sub_size)
+    )
+
+
+def _mbec_combo_entry(levers: list[dict], combo: tuple[int, ...], size: int, soma: float, target: float) -> dict:
+    """Constrói a entrada de resultado (tier, levers_ids, cobertura) para uma combinação minimal."""
+    return {
+        "tier": size,
+        "levers_ids": [levers[i]["id"] for i in combo],
+        "delta_disponivel": round(soma, 2),
+        "cobertura_pct": round(soma / target * 100, 1),
+    }
+
+
 def _minimal_break_even_combinations(levers: list[dict], deficit: float) -> list[dict]:
     """Retorna todos os subconjuntos minimais de levers suficientes para cobrir o deficit.
 
@@ -439,31 +496,13 @@ def _minimal_break_even_combinations(levers: list[dict], deficit: float) -> list
             soma = sum(levers[i]["delta_margin_total"] for i in combo)
             if soma < target:
                 continue
-            # Minimality: nenhum subconjunto próprio já cobre o target
-            is_minimal = not any(
-                sum(levers[j]["delta_margin_total"] for j in sub) >= target
-                for sub_size in range(1, size)
-                for sub in _combns(combo, sub_size)
-            )
-            if is_minimal:
-                result.append(
-                    {
-                        "tier": size,
-                        "levers_ids": [levers[i]["id"] for i in combo],
-                        "delta_disponivel": round(soma, 2),
-                        "cobertura_pct": round(soma / target * 100, 1),
-                    }
-                )
+            if _mbec_is_minimal(levers, combo, size, target):
+                result.append(_mbec_combo_entry(levers, combo, size, soma, target))
     return sorted(result, key=lambda x: (x["tier"], x["cobertura_pct"]))
 
 
-def _bgs_add_painel_equilibrio(graficos: dict, canonical_in: CanonicalModel) -> None:
-    """ADR-082: Agrega levers_equilibrio de todos os itens de ponto_equilibrio no graficos dict."""
-    pe_list = canonical_in.ponto_equilibrio or []
-    if not pe_list:
-        return
-
-    delta_total = round(sum(pe.delta for pe in pe_list), 2)
+def _bgs_aggregate_levers(pe_list: list) -> dict[str, dict]:
+    """Agrega levers_equilibrio de todos os itens somando delta_margin_total e item_count."""
     levers_agg: dict[str, dict] = {}
     for pe in pe_list:
         for lever in getattr(pe, "levers_equilibrio", []):
@@ -480,6 +519,39 @@ def _bgs_add_painel_equilibrio(graficos: dict, canonical_in: CanonicalModel) -> 
                 levers_agg[lever.id]["delta_margin_total"] + lever.delta_margin, 2
             )
             levers_agg[lever.id]["item_count"] += 1
+    return levers_agg
+
+
+def _bgs_mark_combinacoes(levers_sorted: list[dict], combinacoes: list[dict]) -> None:
+    """Marca cada lever (in-place) com sua participação nas combinações minimais de break-even."""
+    levers_em_combinacoes_tier1: set[str] = {lid for c in combinacoes if c["tier"] == 1 for lid in c["levers_ids"]}
+    levers_em_qualquer_combo: set[str] = {lid for c in combinacoes for lid in c["levers_ids"]}
+    for lv in levers_sorted:
+        lv["break_even_solo"] = lv["id"] in levers_em_combinacoes_tier1
+        lv["participa_combo"] = lv["id"] in levers_em_qualquer_combo
+
+
+def _bgs_frentes_nec_media(pe_list: list) -> float:
+    """Multiplicador médio de PU ponderado por custo_venda (frentes_nec media)."""
+    total_venda = sum(pe.custo_venda_cpu for pe in pe_list if pe.custo_venda_cpu > 0)
+    return (
+        (
+            sum(pe.frentes_equivalentes_necessarias * pe.custo_venda_cpu for pe in pe_list if pe.custo_venda_cpu > 0)
+            / total_venda
+        )
+        if total_venda > 0
+        else 1.0
+    )
+
+
+def _bgs_add_painel_equilibrio(graficos: dict, canonical_in: CanonicalModel) -> None:
+    """ADR-082: Agrega levers_equilibrio de todos os itens de ponto_equilibrio no graficos dict."""
+    pe_list = canonical_in.ponto_equilibrio or []
+    if not pe_list:
+        return
+
+    delta_total = round(sum(pe.delta for pe in pe_list), 2)
+    levers_agg = _bgs_aggregate_levers(pe_list)
 
     # "fechar_gap_escala" representa serializacao/paralelismo de frentes e tende a
     # gerar leitura ambigua no painel executivo. Mantemos foco em praticabilidade/pool.
@@ -488,23 +560,8 @@ def _bgs_add_painel_equilibrio(graficos: dict, canonical_in: CanonicalModel) -> 
     soma_levers = round(sum(lv["delta_margin_total"] for lv in levers_sorted), 2)
     combinacoes = _minimal_break_even_combinations(levers_sorted, delta_total)
 
-    # Marca cada lever com sua participação nas combinações minimais
-    levers_em_combinacoes_tier1: set[str] = {lid for c in combinacoes if c["tier"] == 1 for lid in c["levers_ids"]}
-    levers_em_qualquer_combo: set[str] = {lid for c in combinacoes for lid in c["levers_ids"]}
-    for lv in levers_sorted:
-        lv["break_even_solo"] = lv["id"] in levers_em_combinacoes_tier1
-        lv["participa_combo"] = lv["id"] in levers_em_qualquer_combo
-
-    # Multiplicador médio de PU ponderado por custo_venda (frentes_nec media)
-    total_venda = sum(pe.custo_venda_cpu for pe in pe_list if pe.custo_venda_cpu > 0)
-    frentes_nec_media = (
-        (
-            sum(pe.frentes_equivalentes_necessarias * pe.custo_venda_cpu for pe in pe_list if pe.custo_venda_cpu > 0)
-            / total_venda
-        )
-        if total_venda > 0
-        else 1.0
-    )
+    _bgs_mark_combinacoes(levers_sorted, combinacoes)
+    frentes_nec_media = _bgs_frentes_nec_media(pe_list)
 
     graficos["painel_equilibrio"] = {
         "delta_total": delta_total,
@@ -586,19 +643,17 @@ def _rra_build_criticidade_lookup(canonical_in: CanonicalModel) -> dict[str, str
     return lookup
 
 
-def _rra_build_pe_rows(canonical_in: CanonicalModel, resultado_section: dict[str, Any] | None = None) -> list[dict]:
-    """Builds ponto_equilibrio list for report with reconciled margins and gap decomposition."""
+def _rra_safe_float(value: Any) -> float:
+    """Converte para float com fallback seguro (None/erro -> 0.0)."""
+    try:
+        return float(value or 0.0)
+    except Exception:
+        return 0.0
 
-    def _f(value: Any) -> float:
-        try:
-            return float(value or 0.0)
-        except Exception:
-            return 0.0
 
-    pe_items = list(canonical_in.ponto_equilibrio or [])
-    if not pe_items:
-        return []
-
+def _rra_particao_by_item(canonical_in: CanonicalModel) -> dict[str, dict[str, float]]:
+    """Agrega custo produtivo/mob_demob/ociosidade particionado por item a partir dos contratos."""
+    _f = _rra_safe_float
     particao_by_item: dict[str, dict[str, float]] = {}
     for contrato in canonical_in.contratos_recurso or []:
         for part in getattr(contrato, "particao_por_item", None) or []:
@@ -618,7 +673,14 @@ def _rra_build_pe_rows(canonical_in: CanonicalModel, resultado_section: dict[str
                 getattr(part, "custo_demob_imputado", 0.0)
             )
             acc["ociosidade"] += _f(getattr(part, "custo_ocioso_imputado", 0.0))
+    return particao_by_item
 
+
+def _rra_totais_globais(
+    canonical_in: CanonicalModel, resultado_section: dict[str, Any] | None
+) -> tuple[float, float, float]:
+    """Resolve venda/custo_direto/custo_indireto globais, com fallback para canonical_in.resultado."""
+    _f = _rra_safe_float
     venda_global = _f((resultado_section or {}).get("preco_venda_total"))
     custo_direto_global = _f((resultado_section or {}).get("custo_direto"))
     custo_indireto_global = _f((resultado_section or {}).get("custo_indireto"))
@@ -635,102 +697,147 @@ def _rra_build_pe_rows(canonical_in: CanonicalModel, resultado_section: dict[str
             + _f(canonical_in.resultado.custo.indireto_qsms)
             + _f(canonical_in.resultado.custo.indireto_mob)
         )
+    return venda_global, custo_direto_global, custo_indireto_global
 
-    soma_venda_itens = sum(_f(pe.custo_venda_cpu) for pe in pe_items)
+
+def _rra_gap_particionado(
+    deficit: float, custo_produtivo: float, custo_mob_demob: float, custo_ociosidade: float
+) -> tuple[float, float, float]:
+    """Rateia o déficit operacional pelos componentes de custo particionados por item."""
+    base_particao = custo_produtivo + custo_mob_demob + custo_ociosidade
+    if deficit > 0 and base_particao > 0:
+        gap_produtivo = deficit * (custo_produtivo / base_particao)
+        gap_mob_demob = deficit * (custo_mob_demob / base_particao)
+        gap_ociosidade = deficit * (custo_ociosidade / base_particao)
+    else:
+        gap_produtivo = 0.0
+        gap_mob_demob = 0.0
+        gap_ociosidade = 0.0
+    return gap_produtivo, gap_mob_demob, gap_ociosidade
+
+
+def _rra_build_pe_row(
+    pe: Any,
+    venda_global: float,
+    custo_direto_global: float,
+    custo_indireto_global: float,
+    soma_venda_itens: float,
+    n_items: int,
+    particao_by_item: dict[str, dict[str, float]],
+) -> dict:
+    """Constrói uma linha da tabela ponto_equilibrio com margens reconciliadas e gap decomposto."""
+    _f = _rra_safe_float
+    venda_item = _f(pe.custo_venda_cpu)
+    op_item = _f(getattr(pe, "custo_operacional_real", 0.0))
+    gap_operacional = venda_item - op_item
+    margem_operacional_direta = (gap_operacional / venda_item) if venda_item > 0 else 0.0
+
+    share_receita = (venda_item / soma_venda_itens) if soma_venda_itens > 0 else (1.0 / n_items)
+    receita_atribuida = venda_global * share_receita
+    custo_direto_atribuido = custo_direto_global * share_receita
+    custo_indireto_atribuido = custo_indireto_global * share_receita
+    resultado_total_atribuido = receita_atribuida - custo_direto_atribuido - custo_indireto_atribuido
+    margem_total_atribuida = (resultado_total_atribuido / receita_atribuida) if receita_atribuida > 0 else 0.0
+
+    part = particao_by_item.get(pe.item_id, {})
+    custo_produtivo = _f(part.get("produtivo", 0.0))
+    custo_mob_demob = _f(part.get("mob_demob", 0.0))
+    custo_ociosidade = _f(part.get("ociosidade", 0.0))
+
+    deficit = max(0.0, op_item - venda_item)
+    gap_produtivo, gap_mob_demob, gap_ociosidade = _rra_gap_particionado(
+        deficit, custo_produtivo, custo_mob_demob, custo_ociosidade
+    )
+
+    return {
+        "item_id": pe.item_id,
+        "custo_fixo_equipe": pe.custo_fixo_equipe,
+        "custo_operacional_real": round(op_item, 2),
+        "custo_venda_cpu": round(venda_item, 2),
+        "frentes_equivalentes": getattr(pe, "frentes_equivalentes", 1.0),
+        "status_validacao": pe.status_validacao,
+        "margem_operacional_direta": round(margem_operacional_direta, 6),
+        "margem_total_atribuida": round(margem_total_atribuida, 6),
+        "receita_atribuida": round(receita_atribuida, 2),
+        "custo_direto_atribuido": round(custo_direto_atribuido, 2),
+        "custo_indireto_atribuido": round(custo_indireto_atribuido, 2),
+        "resultado_total_atribuido": round(resultado_total_atribuido, 2),
+        "gap_operacional": round(gap_operacional, 2),
+        "gap_produtivo": round(gap_produtivo, 2),
+        "gap_mob_demob": round(gap_mob_demob, 2),
+        "gap_ociosidade": round(gap_ociosidade, 2),
+        "custo_produtivo_particionado": round(custo_produtivo, 2),
+        "custo_mob_demob_particionado": round(custo_mob_demob, 2),
+        "custo_ociosidade_particionado": round(custo_ociosidade, 2),
+        # NEP-042: três camadas de precificação
+        "pu_cat": _f(getattr(pe, "pu_catalogo_unitario", 0.0)),
+        "pu_op_autonomo": _f(getattr(pe, "pu_operacional_autonomo", 0.0)),
+        "frentes_necessarias": _f(getattr(pe, "frentes_equivalentes_necessarias", 1.0)),
+        "eta_real": _f(getattr(pe, "eta_real", 1.0)),
+        "machine_weeks_brutas": _f(getattr(pe, "machine_weeks_brutas", 0.0)),
+        "machine_weeks_efetivas": _f(getattr(pe, "machine_weeks_efetivas", 0.0)),
+        "burden_pool": _f(getattr(pe, "custo_pool_total", 0.0)),
+        "economia_pool_abs": _f(getattr(pe, "economia_pool_abs", 0.0)),
+    }
+
+
+def _rra_build_pe_rows(canonical_in: CanonicalModel, resultado_section: dict[str, Any] | None = None) -> list[dict]:
+    """Builds ponto_equilibrio list for report with reconciled margins and gap decomposition."""
+
+    pe_items = list(canonical_in.ponto_equilibrio or [])
+    if not pe_items:
+        return []
+
+    particao_by_item = _rra_particao_by_item(canonical_in)
+    venda_global, custo_direto_global, custo_indireto_global = _rra_totais_globais(canonical_in, resultado_section)
+
+    soma_venda_itens = sum(_rra_safe_float(pe.custo_venda_cpu) for pe in pe_items)
     n_items = max(1, len(pe_items))
 
-    rows: list[dict] = []
-    for pe in pe_items:
-        venda_item = _f(pe.custo_venda_cpu)
-        op_item = _f(getattr(pe, "custo_operacional_real", 0.0))
-        gap_operacional = venda_item - op_item
-        margem_operacional_direta = (gap_operacional / venda_item) if venda_item > 0 else 0.0
-
-        share_receita = (venda_item / soma_venda_itens) if soma_venda_itens > 0 else (1.0 / n_items)
-        receita_atribuida = venda_global * share_receita
-        custo_direto_atribuido = custo_direto_global * share_receita
-        custo_indireto_atribuido = custo_indireto_global * share_receita
-        resultado_total_atribuido = receita_atribuida - custo_direto_atribuido - custo_indireto_atribuido
-        margem_total_atribuida = (resultado_total_atribuido / receita_atribuida) if receita_atribuida > 0 else 0.0
-
-        part = particao_by_item.get(pe.item_id, {})
-        custo_produtivo = _f(part.get("produtivo", 0.0))
-        custo_mob_demob = _f(part.get("mob_demob", 0.0))
-        custo_ociosidade = _f(part.get("ociosidade", 0.0))
-
-        deficit = max(0.0, op_item - venda_item)
-        base_particao = custo_produtivo + custo_mob_demob + custo_ociosidade
-        if deficit > 0 and base_particao > 0:
-            gap_produtivo = deficit * (custo_produtivo / base_particao)
-            gap_mob_demob = deficit * (custo_mob_demob / base_particao)
-            gap_ociosidade = deficit * (custo_ociosidade / base_particao)
-        else:
-            gap_produtivo = 0.0
-            gap_mob_demob = 0.0
-            gap_ociosidade = 0.0
-
-        rows.append(
-            {
-                "item_id": pe.item_id,
-                "custo_fixo_equipe": pe.custo_fixo_equipe,
-                "custo_operacional_real": round(op_item, 2),
-                "custo_venda_cpu": round(venda_item, 2),
-                "frentes_equivalentes": getattr(pe, "frentes_equivalentes", 1.0),
-                "status_validacao": pe.status_validacao,
-                "margem_operacional_direta": round(margem_operacional_direta, 6),
-                "margem_total_atribuida": round(margem_total_atribuida, 6),
-                "receita_atribuida": round(receita_atribuida, 2),
-                "custo_direto_atribuido": round(custo_direto_atribuido, 2),
-                "custo_indireto_atribuido": round(custo_indireto_atribuido, 2),
-                "resultado_total_atribuido": round(resultado_total_atribuido, 2),
-                "gap_operacional": round(gap_operacional, 2),
-                "gap_produtivo": round(gap_produtivo, 2),
-                "gap_mob_demob": round(gap_mob_demob, 2),
-                "gap_ociosidade": round(gap_ociosidade, 2),
-                "custo_produtivo_particionado": round(custo_produtivo, 2),
-                "custo_mob_demob_particionado": round(custo_mob_demob, 2),
-                "custo_ociosidade_particionado": round(custo_ociosidade, 2),
-                # NEP-042: três camadas de precificação
-                "pu_cat": _f(getattr(pe, "pu_catalogo_unitario", 0.0)),
-                "pu_op_autonomo": _f(getattr(pe, "pu_operacional_autonomo", 0.0)),
-                "frentes_necessarias": _f(getattr(pe, "frentes_equivalentes_necessarias", 1.0)),
-                "eta_real": _f(getattr(pe, "eta_real", 1.0)),
-                "machine_weeks_brutas": _f(getattr(pe, "machine_weeks_brutas", 0.0)),
-                "machine_weeks_efetivas": _f(getattr(pe, "machine_weeks_efetivas", 0.0)),
-                "burden_pool": _f(getattr(pe, "custo_pool_total", 0.0)),
-                "economia_pool_abs": _f(getattr(pe, "economia_pool_abs", 0.0)),
-            }
+    return [
+        _rra_build_pe_row(
+            pe,
+            venda_global,
+            custo_direto_global,
+            custo_indireto_global,
+            soma_venda_itens,
+            n_items,
+            particao_by_item,
         )
-    return rows
+        for pe in pe_items
+    ]
 
 
-def _rra_build_resultado_section(
-    res: Any,
-    benchmark_mode: bool = False,
-    benchmark_reference_projection: dict[str, Any] | None = None,
-) -> dict:
-    """Builds resultado section dict."""
-
-    def _num(value: Any) -> float | None:
-        try:
-            if value is None:
-                return None
-            return float(value)
-        except Exception:
+def _rrs_num(value: Any) -> float | None:
+    """Converte para float, retornando None em caso de valor ausente ou inválido."""
+    try:
+        if value is None:
             return None
+        return float(value)
+    except Exception:
+        return None
 
-    direto_equipes = float(res.custo.direto_equipes or 0.0)
-    # Fonte autoritativa única do relatório: custo direto operacional instancial (direto_equipes).
-    custo_direto_auth = direto_equipes
-    custo_direto_fonte = "operacional_equipes"
 
-    custo_indireto_calc = (
+def _rrs_delta_pct(tool: float, ref: float) -> float | None:
+    """Calcula a variação percentual da ferramenta em relação à referência."""
+    return round((tool - ref) / ref * 100, 2) if ref and ref > 0 else None
+
+
+def _rrs_custo_indireto_calc(res: Any) -> float:
+    """Soma os componentes de custo indireto (adm/top/lab/qsms/mob) do resultado."""
+    return (
         float(res.custo.indireto_adm or 0.0)
         + float(res.custo.indireto_top or 0.0)
         + float(res.custo.indireto_lab or 0.0)
         + float(res.custo.indireto_qsms or 0.0)
         + float(res.custo.indireto_mob or 0.0)
     )
+
+
+def _rrs_preco_venda_e_custo_total(
+    res: Any, custo_direto_auth: float, custo_indireto_calc: float
+) -> tuple[float, float]:
+    """Calcula preco_venda_total (operacional) e custo_total_calc (canônico, com fallback local)."""
     # ADR-085/ADR-114: preço de venda é o OPERACIONAL (total_custo_plus = custo_instancial×BDI + indiretos),
     # NÃO o de catálogo (total_com_bdi = PU_catalogo×Q×BDI). A margem é calculada sobre o preço que
     # a empresa cobra pelo que realmente executa — o catálogo serve como referência de mercado, não
@@ -744,32 +851,96 @@ def _rra_build_resultado_section(
     custo_total_calc = (
         custo_total_canonical if custo_total_canonical is not None else custo_direto_auth + custo_indireto_calc
     )
+    return preco_venda_total, custo_total_calc
+
+
+def _rrs_compute_custos(res: Any) -> tuple[float, float, float, float, float]:
+    """Calcula direto_equipes, custo_direto_auth, custo_indireto_calc, preco_venda_total e custo_total_calc."""
+    direto_equipes = float(res.custo.direto_equipes or 0.0)
+    # Fonte autoritativa única do relatório: custo direto operacional instancial (direto_equipes).
+    custo_direto_auth = direto_equipes
+
+    custo_indireto_calc = _rrs_custo_indireto_calc(res)
+    preco_venda_total, custo_total_calc = _rrs_preco_venda_e_custo_total(res, custo_direto_auth, custo_indireto_calc)
+    return direto_equipes, custo_direto_auth, custo_indireto_calc, preco_venda_total, custo_total_calc
+
+
+def _rrs_compute_razao_margem(
+    custo_direto_auth: float, custo_indireto_calc: float, preco_venda_total: float, custo_total_calc: float
+) -> tuple[float, float]:
+    """Calcula razao_indireto_direto e margem_pct a partir dos valores centrais do resultado."""
     # Valores calculados são sempre a fonte primária do relatório (NEP-030).
     # A referência fica armazenada separadamente para a seção de confronto.
     razao_id = custo_indireto_calc / custo_direto_auth if custo_direto_auth > 0 else 0
     margem_pct = (preco_venda_total - custo_total_calc) / preco_venda_total if preco_venda_total > 0 else 0
+    return razao_id, margem_pct
 
-    # Extrai referência para seção de confronto (apenas para exibição — não substitui calculado)
-    referencia: dict | None = None
-    if isinstance(benchmark_reference_projection, dict):
-        ref_direto = _num(benchmark_reference_projection.get("custo_direto"))
-        ref_indireto = _num(benchmark_reference_projection.get("custo_indireto"))
-        ref_total = _num(benchmark_reference_projection.get("custo_total"))
-        ref_preco = _num(benchmark_reference_projection.get("preco_venda"))
-        if ref_preco and ref_preco > 0:
 
-            def _delta_pct(tool: float, ref: float) -> float | None:
-                return round((tool - ref) / ref * 100, 2) if ref and ref > 0 else None
+def _rrs_compute_core(res: Any) -> tuple[float, float, float, float, float, float, float]:
+    """Calcula os valores centrais (custos, preço de venda, razão e margem) do resultado."""
+    direto_equipes, custo_direto_auth, custo_indireto_calc, preco_venda_total, custo_total_calc = _rrs_compute_custos(
+        res
+    )
+    razao_id, margem_pct = _rrs_compute_razao_margem(
+        custo_direto_auth, custo_indireto_calc, preco_venda_total, custo_total_calc
+    )
+    return (
+        direto_equipes,
+        custo_direto_auth,
+        custo_indireto_calc,
+        preco_venda_total,
+        custo_total_calc,
+        razao_id,
+        margem_pct,
+    )
 
-            referencia = {
-                "custo_direto": ref_direto,
-                "custo_indireto": ref_indireto,
-                "custo_total": ref_total,
-                "preco_venda": ref_preco,
-                "delta_custo_direto_pct": _delta_pct(custo_direto_auth, ref_direto) if ref_direto else None,
-                "delta_custo_indireto_pct": _delta_pct(custo_indireto_calc, ref_indireto) if ref_indireto else None,
-                "delta_preco_venda_pct": _delta_pct(preco_venda_total, ref_preco),
-            }
+
+def _rrs_build_referencia(
+    benchmark_reference_projection: dict[str, Any] | None,
+    custo_direto_auth: float,
+    custo_indireto_calc: float,
+    preco_venda_total: float,
+) -> dict | None:
+    """Extrai a seção de confronto (apenas exibição) a partir da projeção de referência."""
+    if not isinstance(benchmark_reference_projection, dict):
+        return None
+    ref_direto = _rrs_num(benchmark_reference_projection.get("custo_direto"))
+    ref_indireto = _rrs_num(benchmark_reference_projection.get("custo_indireto"))
+    ref_total = _rrs_num(benchmark_reference_projection.get("custo_total"))
+    ref_preco = _rrs_num(benchmark_reference_projection.get("preco_venda"))
+    if not (ref_preco and ref_preco > 0):
+        return None
+    return {
+        "custo_direto": ref_direto,
+        "custo_indireto": ref_indireto,
+        "custo_total": ref_total,
+        "preco_venda": ref_preco,
+        "delta_custo_direto_pct": _rrs_delta_pct(custo_direto_auth, ref_direto) if ref_direto else None,
+        "delta_custo_indireto_pct": _rrs_delta_pct(custo_indireto_calc, ref_indireto) if ref_indireto else None,
+        "delta_preco_venda_pct": _rrs_delta_pct(preco_venda_total, ref_preco),
+    }
+
+
+def _rra_build_resultado_section(
+    res: Any,
+    benchmark_mode: bool = False,
+    benchmark_reference_projection: dict[str, Any] | None = None,
+) -> dict:
+    """Builds resultado section dict."""
+    (
+        direto_equipes,
+        custo_direto_auth,
+        custo_indireto_calc,
+        preco_venda_total,
+        custo_total_calc,
+        razao_id,
+        margem_pct,
+    ) = _rrs_compute_core(res)
+    custo_direto_fonte = "operacional_equipes"
+
+    referencia = _rrs_build_referencia(
+        benchmark_reference_projection, custo_direto_auth, custo_indireto_calc, preco_venda_total
+    )
 
     return {
         "preco_venda_total": preco_venda_total,
@@ -864,45 +1035,11 @@ def _rra_build_relatorio(
     }
 
 
-def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | None:
-    """NEP-038: análise de compressão de cronograma por k-scaling de equipes.
+def _rcc_build_scheduled_activities(cronograma: Any) -> list:
+    """Reconstrói a lista de ScheduledActivity a partir do cronograma canônico."""
+    from concilium.application.scheduling import ScheduledActivity
 
-    Reconstrói ScheduleOutput + ActivityDAG a partir do canônico e chama
-    compute_compression_sensitivities com CP-SAT.
-
-    Retorna None quando não há cronograma ou contratos suficientes.
-    Falhas do CP-SAT são silenciosas (retorna None) para não bloquear o relatório.
-    """
-
-    cronograma = canonical_in.cronograma
-    if not cronograma or not cronograma.scheduled_activities:
-        return None
-
-    contratos_raw = canonical_in.contratos_recurso or []
-    if not contratos_raw:
-        return None
-
-    try:
-        from concilium.application.scheduling import (
-            Activity,
-            ActivityDAG,
-            ResourcePool,
-            ScheduledActivity,
-            ScheduleMetrics,
-            ScheduleOutput,
-            compute_compression_sensitivities,
-            format_compression_table,
-        )
-        from concilium.application.scheduling.cpsat_scheduler import (
-            CpSatScheduler,  # noqa: F401 – verifica que ortools está disponível
-        )
-    except ImportError:
-        return None
-
-    makespan = cronograma.makespan_weeks
-
-    # ── Reconstrói ScheduleOutput ────────────────────────────────────────────
-    sched_acts_sched = [
+    return [
         ScheduledActivity(
             activity_id=sa.activity_id,
             start_week=sa.start_week,
@@ -914,8 +1051,11 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
         for sa in cronograma.scheduled_activities
         if sa.assigned_resources
     ]
-    if not sched_acts_sched:
-        return None
+
+
+def _rcc_build_schedule_output(sched_acts_sched: list, makespan: int) -> Any:
+    """Constrói o ScheduleOutput (com métricas) a partir das atividades reconstruídas."""
+    from concilium.application.scheduling import ScheduleMetrics, ScheduleOutput
 
     metrics = ScheduleMetrics(
         makespan=makespan,
@@ -925,14 +1065,48 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
         critical_path_slack_min=0.0,
         resource_utilization_avg=0.0,
     )
-    sched_output = ScheduleOutput(
+    return ScheduleOutput(
         scheduled_activities=sched_acts_sched,
         makespan=makespan,
         feasible=True,
         metrics=metrics,
     )
 
-    # ── Reconstrói ActivityDAG ───────────────────────────────────────────────
+
+def _rcc_add_predecessor(
+    pred: Any,
+    iid: str,
+    aid_set: set[str],
+    prec: list[tuple[str, str]],
+    thresh: dict[tuple[str, str], float],
+) -> None:
+    """Adiciona (in-place) a precedência tipada de `pred` -> `iid`, se válida e ainda não presente."""
+    pid = getattr(pred, "predecessor_id", None) or getattr(pred, "item_id", None)
+    if pid and pid in aid_set and (pid, iid) not in set(prec):
+        prec.append((pid, iid))
+        th = getattr(pred, "completion_threshold_pct", None) or getattr(pred, "threshold", None) or 1.0
+        thresh[(pid, iid)] = float(th)
+
+
+def _rcc_build_precedencias(
+    canonical_in: CanonicalModel, aid_set: set[str]
+) -> tuple[list[tuple[str, str]], dict[tuple[str, str], float]]:
+    """Extrai as precedências tipadas (e thresholds) da EAP restritas ao conjunto de activity_ids."""
+    prec: list[tuple[str, str]] = []
+    thresh: dict[tuple[str, str], float] = {}
+    for item in canonical_in.eap or []:
+        iid = item.item_id
+        if iid not in aid_set:
+            continue
+        for pred in item.predecessores or []:
+            _rcc_add_predecessor(pred, iid, aid_set, prec, thresh)
+    return prec, thresh
+
+
+def _rcc_build_dag(canonical_in: CanonicalModel, sched_acts_sched: list) -> Any:
+    """Reconstrói a ActivityDAG (atividades + precedências tipadas) a partir do canônico."""
+    from concilium.application.scheduling import Activity, ActivityDAG
+
     acts = [
         Activity(
             activity_id=sa.activity_id,
@@ -943,22 +1117,15 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
         for sa in sched_acts_sched
     ]
     aid_set = {a.activity_id for a in acts}
-    prec: list[tuple[str, str]] = []
-    thresh: dict[tuple[str, str], float] = {}
-    for item in canonical_in.eap or []:
-        iid = item.item_id
-        if iid not in aid_set:
-            continue
-        for pred in item.predecessores or []:
-            pid = getattr(pred, "predecessor_id", None) or getattr(pred, "item_id", None)
-            if pid and pid in aid_set and (pid, iid) not in set(prec):
-                prec.append((pid, iid))
-                th = getattr(pred, "completion_threshold_pct", None) or getattr(pred, "threshold", None) or 1.0
-                thresh[(pid, iid)] = float(th)
+    prec, thresh = _rcc_build_precedencias(canonical_in, aid_set)
 
-    dag = ActivityDAG(activities=acts, precedence=prec, thresholds=thresh)
+    return ActivityDAG(activities=acts, precedence=prec, thresholds=thresh)
 
-    # ── Pool base ────────────────────────────────────────────────────────────
+
+def _rcc_build_pool(sched_acts_sched: list, contratos_raw: list) -> Any:
+    """Monta o ResourcePool base a partir das alocações e do piso contratual."""
+    from concilium.application.scheduling import ResourcePool
+
     pool_resources: dict[str, int] = {}
     for sa in sched_acts_sched:
         for r, n in (sa.assigned_resources or {}).items():
@@ -969,9 +1136,11 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
         qty = getattr(ct, "quantidade_contratada", None) or getattr(ct, "pool_size", None) or 0
         if tid and int(qty or 0) > 0:
             pool_resources[tid] = max(pool_resources.get(tid, 0), int(qty))
-    pool = ResourcePool(resources=pool_resources)
+    return ResourcePool(resources=pool_resources)
 
-    # ── Contratos para custo de instâncias ───────────────────────────────────
+
+def _rcc_build_contratos_dict(contratos_raw: list) -> dict[str, dict]:
+    """Monta o dict de custos de instância por tipo de contrato de recurso."""
     contratos_dict: dict[str, dict] = {}
     for ct in contratos_raw:
         tid = getattr(ct, "tipo_id", None)
@@ -984,8 +1153,11 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
                 getattr(ct, "custo_idle_semanal_unit", None) or getattr(ct, "custo_standby_unit", 0) or 0
             ),
         }
+    return contratos_dict
 
-    # ── custo_semana ────────────────────────────────────────────────────────
+
+def _rcc_compute_preco_venda(canonical_in: CanonicalModel) -> float:
+    """Extrai o preço de venda total do resultado, priorizando preco_venda_total."""
     res = canonical_in.resultado
     preco_venda = 0.0
     if res:
@@ -994,33 +1166,11 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
             if v and float(v) > 0:
                 preco_venda = float(v)
                 break
-    if preco_venda <= 0:
-        return None
-    custo_semana = preco_venda / makespan
+    return preco_venda
 
-    # ── Roda análise ────────────────────────────────────────────────────────
-    try:
-        results = compute_compression_sensitivities(
-            sched_output=sched_output,
-            dag=dag,
-            pool=pool,
-            contratos=contratos_dict,
-            custo_semana=custo_semana,
-            k_values=(2, 3),
-            scheduler_timeout=30.0,
-        )
-    except Exception:
-        return None
 
-    if not results:
-        return None
-
-    # ── Serializa para o dict do relatório ───────────────────────────────────
-    viáveis = [r for r in results if r.best_k is not None]
-    makespan_otimo = (
-        min(r.by_k[bk].makespan_new for r in viáveis if (bk := r.best_k) is not None) if viáveis else makespan
-    )
-
+def _rcc_serialize_itens(results: list) -> list[dict]:
+    """Serializa os resultados de compute_compression_sensitivities em entradas do relatório."""
     itens = []
     for r in results:
         entry: dict[str, Any] = {
@@ -1051,6 +1201,78 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
             },
         }
         itens.append(entry)
+    return itens
+
+
+def _rcc_prepare_context(canonical_in: CanonicalModel) -> tuple | None:
+    """Monta o contexto (schedule/DAG/pool/contratos/custo_semana) para a análise de compressão.
+
+    Retorna None quando faltam pré-requisitos (cronograma, contratos, ortools ou preço de venda
+    válido) — os mesmos guards que existiam inline em _rra_build_compressao_cronograma.
+    """
+    cronograma = canonical_in.cronograma
+    if not cronograma or not cronograma.scheduled_activities:
+        return None
+
+    contratos_raw = canonical_in.contratos_recurso or []
+    if not contratos_raw:
+        return None
+
+    try:
+        from concilium.application.scheduling import (
+            compute_compression_sensitivities,
+            format_compression_table,
+        )
+        from concilium.application.scheduling.cpsat_scheduler import (
+            CpSatScheduler,  # noqa: F401 – verifica que ortools está disponível
+        )
+    except ImportError:
+        return None
+
+    makespan = cronograma.makespan_weeks
+
+    # ── Reconstrói ScheduleOutput ────────────────────────────────────────────
+    sched_acts_sched = _rcc_build_scheduled_activities(cronograma)
+    if not sched_acts_sched:
+        return None
+
+    sched_output = _rcc_build_schedule_output(sched_acts_sched, makespan)
+
+    # ── Reconstrói ActivityDAG ───────────────────────────────────────────────
+    dag = _rcc_build_dag(canonical_in, sched_acts_sched)
+
+    # ── Pool base ────────────────────────────────────────────────────────────
+    pool = _rcc_build_pool(sched_acts_sched, contratos_raw)
+
+    # ── Contratos para custo de instâncias ───────────────────────────────────
+    contratos_dict = _rcc_build_contratos_dict(contratos_raw)
+
+    # ── custo_semana ────────────────────────────────────────────────────────
+    preco_venda = _rcc_compute_preco_venda(canonical_in)
+    if preco_venda <= 0:
+        return None
+    custo_semana = preco_venda / makespan
+
+    return (
+        makespan,
+        sched_output,
+        dag,
+        pool,
+        contratos_dict,
+        custo_semana,
+        compute_compression_sensitivities,
+        format_compression_table,
+    )
+
+
+def _rcc_serialize_relatorio(results: list, makespan: int, custo_semana: float, format_compression_table: Any) -> dict:
+    """Serializa a lista de results de compute_compression_sensitivities no dict do relatório."""
+    viáveis = [r for r in results if r.best_k is not None]
+    makespan_otimo = (
+        min(r.by_k[bk].makespan_new for r in viáveis if (bk := r.best_k) is not None) if viáveis else makespan
+    )
+
+    itens = _rcc_serialize_itens(results)
 
     return {
         "makespan_base": makespan,
@@ -1062,6 +1284,50 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
         "itens": itens,
         "tabela_texto": format_compression_table(results),
     }
+
+
+def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | None:
+    """NEP-038: análise de compressão de cronograma por k-scaling de equipes.
+
+    Reconstrói ScheduleOutput + ActivityDAG a partir do canônico e chama
+    compute_compression_sensitivities com CP-SAT.
+
+    Retorna None quando não há cronograma ou contratos suficientes.
+    Falhas do CP-SAT são silenciosas (retorna None) para não bloquear o relatório.
+    """
+    ctx = _rcc_prepare_context(canonical_in)
+    if ctx is None:
+        return None
+    (
+        makespan,
+        sched_output,
+        dag,
+        pool,
+        contratos_dict,
+        custo_semana,
+        compute_compression_sensitivities,
+        format_compression_table,
+    ) = ctx
+
+    # ── Roda análise ────────────────────────────────────────────────────────
+    try:
+        results = compute_compression_sensitivities(
+            sched_output=sched_output,
+            dag=dag,
+            pool=pool,
+            contratos=contratos_dict,
+            custo_semana=custo_semana,
+            k_values=(2, 3),
+            scheduler_timeout=30.0,
+        )
+    except Exception:
+        return None
+
+    if not results:
+        return None
+
+    # ── Serializa para o dict do relatório ───────────────────────────────────
+    return _rcc_serialize_relatorio(results, makespan, custo_semana, format_compression_table)
 
 
 def _rra_build_decomposicao_pool(canonical_in: CanonicalModel) -> dict | None:

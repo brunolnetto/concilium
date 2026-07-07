@@ -21,6 +21,49 @@ from ..styles import (
 )
 
 
+def _calendario_clima_totais_por_semana(canonical: CanonicalModel) -> tuple[dict[str, float], dict[str, float]]:
+    """Extrai fator_clima e fator_total por semana ISO a partir do cronograma."""
+    clima_por_semana: dict[str, float] = {}
+    total_por_semana: dict[str, float] = {}
+    cron = getattr(canonical, "cronograma", None)
+    if cron:
+        for sa in cron.scheduled_activities:
+            for semana_iso, dist in sa.distribuicao_semanal.items():
+                if semana_iso not in clima_por_semana:
+                    clima_por_semana[semana_iso] = float(getattr(dist, "fator_clima", getattr(dist, "eficiencia", 1.0)))
+                    total_por_semana[semana_iso] = float(getattr(dist, "fator_total", getattr(dist, "eficiencia", 1.0)))
+    return clima_por_semana, total_por_semana
+
+
+def _calendario_row_data(item) -> dict:
+    """Normaliza um item do calendário operacional (model ou dict) em um dict simples."""
+    if hasattr(item, "model_dump"):
+        return item.model_dump()
+    if isinstance(item, dict):
+        return item
+    return {}
+
+
+def _render_calendario_row(
+    ws, row: int, idx: int, item, clima_por_semana: dict[str, float], total_por_semana: dict[str, float]
+) -> None:
+    """Renderiza uma linha da tabela CALENDARIO.OP."""
+    fill = _fill(_C["row_alt"]) if idx % 2 else _fill(_C["white"])
+    row_data = _calendario_row_data(item)
+
+    semana = str(row_data.get("semana_iso", ""))
+    _label(ws, row, 1, semana, fill)
+    _label(ws, row, 2, float(row_data.get("dias_uteis_base", 0.0) or 0.0), fill, align="right")
+    _label(ws, row, 3, float(row_data.get("dias_uteis_efetivos", 0.0) or 0.0), fill, align="right")
+    _fc_cal = row_data.get("fator_calendario")
+    _label(ws, row, 4, float(_fc_cal if _fc_cal is not None else 1.0), fill, align="right")
+    _label(ws, row, 5, round(clima_por_semana.get(semana, 1.0), 4), fill, align="right")
+    _label(ws, row, 6, round(total_por_semana.get(semana, clima_por_semana.get(semana, 1.0)), 4), fill, align="right")
+    eventos = row_data.get("eventos_aplicados", [])
+    eventos_txt = ", ".join(eventos) if isinstance(eventos, (list, tuple)) else str(eventos or "")
+    _label(ws, row, 7, eventos_txt, fill)
+
+
 def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> None:
     """ADR-068: renderiza visão semanal de clima x calendário x fator total."""
     ws = wb.create_sheet("CALENDARIO.OP")
@@ -57,38 +100,10 @@ def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> No
         _freeze(ws, "A5")
         return
 
-    clima_por_semana: dict[str, float] = {}
-    total_por_semana: dict[str, float] = {}
-    cron = getattr(canonical, "cronograma", None)
-    if cron:
-        for sa in cron.scheduled_activities:
-            for semana_iso, dist in sa.distribuicao_semanal.items():
-                if semana_iso not in clima_por_semana:
-                    clima_por_semana[semana_iso] = float(getattr(dist, "fator_clima", getattr(dist, "eficiencia", 1.0)))
-                    total_por_semana[semana_iso] = float(getattr(dist, "fator_total", getattr(dist, "eficiencia", 1.0)))
+    clima_por_semana, total_por_semana = _calendario_clima_totais_por_semana(canonical)
 
     for idx, item in enumerate(calendario_rows):
-        fill = _fill(_C["row_alt"]) if idx % 2 else _fill(_C["white"])
-        if hasattr(item, "model_dump"):
-            row_data = item.model_dump()
-        elif isinstance(item, dict):
-            row_data = item
-        else:
-            row_data = {}
-
-        semana = str(row_data.get("semana_iso", ""))
-        _label(ws, row, 1, semana, fill)
-        _label(ws, row, 2, float(row_data.get("dias_uteis_base", 0.0) or 0.0), fill, align="right")
-        _label(ws, row, 3, float(row_data.get("dias_uteis_efetivos", 0.0) or 0.0), fill, align="right")
-        _fc_cal = row_data.get("fator_calendario")
-        _label(ws, row, 4, float(_fc_cal if _fc_cal is not None else 1.0), fill, align="right")
-        _label(ws, row, 5, round(clima_por_semana.get(semana, 1.0), 4), fill, align="right")
-        _label(
-            ws, row, 6, round(total_por_semana.get(semana, clima_por_semana.get(semana, 1.0)), 4), fill, align="right"
-        )
-        eventos = row_data.get("eventos_aplicados", [])
-        eventos_txt = ", ".join(eventos) if isinstance(eventos, (list, tuple)) else str(eventos or "")
-        _label(ws, row, 7, eventos_txt, fill)
+        _render_calendario_row(ws, row, idx, item, clima_por_semana, total_por_semana)
         row += 1
 
     _freeze(ws, "A5")
@@ -202,26 +217,19 @@ def render_equipe(wb: Workbook, canonical: CanonicalModel) -> None:
     _money(ws, row, NCOLS, f_tot, fill_tot, bold=True, color=_C["white"])
 
 
-def render_equipe_indireto(wb: Workbook, canonical: CanonicalModel, categoria: str) -> None:
-    """EQUIPE.INDIRETO.<CAT> — detalhamento de recursos indiretos por categoria."""
-    cat = str(categoria or "").upper()
-    ws = wb.create_sheet(f"EQUIPE.INDIRETO.{cat}")
-    NCOLS = 8
-    _set_col_widths(ws, [18, 18, 30, 8, 10, 16, 16, 28])
-    row = 1
-    _title_row(ws, row, f"EQUIPE.INDIRETO.{cat} — RECURSOS INDIRETOS", NCOLS)
-    row += 1
+def _find_indireto_entry(canonical: CanonicalModel, cat: str):
+    """Localiza a entrada de indiretos cuja categoria (uppercased) bate com `cat`."""
+    return next((ind for ind in (canonical.indiretos or []) if str(getattr(ind, "categoria", "")).upper() == cat), None)
 
-    entry = next(
-        (ind for ind in (canonical.indiretos or []) if str(getattr(ind, "categoria", "")).upper() == cat), None
-    )
-    if entry is None:
-        ws.cell(row=row, column=1, value=f"Categoria {cat} não encontrada em indiretos.").font = _font(
-            italic=True, size=9
-        )
-        _auto_fit_columns(ws)
-        return
 
+def _render_indireto_categoria_ausente(ws, row: int, cat: str) -> None:
+    """Renderiza o aviso de categoria não encontrada e finaliza a planilha."""
+    ws.cell(row=row, column=1, value=f"Categoria {cat} não encontrada em indiretos.").font = _font(italic=True, size=9)
+    _auto_fit_columns(ws)
+
+
+def _render_indireto_resumo_custos(ws, row: int, entry) -> None:
+    """Renderiza a linha de resumo de custos (total/MO/EQ/Comb) da categoria."""
     ws.cell(
         row=row,
         column=1,
@@ -232,68 +240,114 @@ def render_equipe_indireto(wb: Workbook, canonical: CanonicalModel, categoria: s
             f"Comb: R$ {float(getattr(entry, 'custo_combustivel', 0.0) or 0.0):,.2f}"
         ),
     ).font = _font(italic=True, size=9)
+
+
+def _write_indireto_detail_row(ws, row: int, fill, vals: list) -> None:
+    """Escreve uma linha de detalhe (natureza/id/descrição/qtd/un/custos/observação)."""
+    for col, val in enumerate(vals, 1):
+        cell = ws.cell(row=row, column=col, value=val)
+        cell.fill = fill
+        cell.border = _border()
+        if col in (6, 7):
+            cell.number_format = "R$ #,##0.00"
+        if col == 4:
+            cell.number_format = "0.00"
+            cell.alignment = _align("right")
+
+
+def _first_field(d: dict, *keys: str, default: object = 0):
+    """Retorna o valor da primeira chave presente e truthy em ``d``, ou ``default``."""
+    for k in keys:
+        v = d.get(k)
+        if v:
+            return v
+    return default
+
+
+def _build_indireto_funcao_vals(f: dict) -> list:
+    """Monta os valores da linha de detalhe para uma função de mão de obra indireta."""
+    qtd = float(_first_field(f, "num_pessoas", "quantidade"))
+    unit = float(_first_field(f, "custo_mensal_unitario", "custo_unitario"))
+    total = float(_first_field(f, "custo_total", default=qtd * unit))
+    return [
+        "MÃO DE OBRA",
+        _first_field(f, "funcao_id", "id", default="-"),
+        _first_field(f, "descricao", default="-"),
+        qtd,
+        "pax",
+        unit,
+        total,
+        _first_field(f, "origem", default=""),
+    ]
+
+
+def _build_indireto_equipamento_vals(e: dict) -> list:
+    """Monta os valores da linha de detalhe para um equipamento indireto."""
+    qtd = float(_first_field(e, "num_unidades", "quantidade"))
+    unit = float(_first_field(e, "custo_mensal", "custo_unitario"))
+    total = float(_first_field(e, "custo_total", default=qtd * unit))
+    return [
+        "EQUIPAMENTO",
+        _first_field(e, "equip_id", "id", default="-"),
+        _first_field(e, "descricao", default="-"),
+        qtd,
+        "un",
+        unit,
+        total,
+        _first_field(e, "origem", default=""),
+    ]
+
+
+def _render_indireto_funcoes(ws, row: int, entry, fills: list) -> tuple[int, bool]:
+    """Renderiza as linhas de mão de obra indireta. Retorna (próxima linha, teve linhas)."""
+    has_rows = False
+    for idx, f in enumerate(getattr(entry, "funcoes", []) or []):
+        fill = fills[idx % 2]
+        _write_indireto_detail_row(ws, row, fill, _build_indireto_funcao_vals(f))
+        row += 1
+        has_rows = True
+    return row, has_rows
+
+
+def _render_indireto_equipamentos(ws, row: int, entry, fills: list, start_idx: int) -> tuple[int, bool]:
+    """Renderiza as linhas de equipamento indireto. Retorna (próxima linha, teve linhas)."""
+    has_rows = False
+    for off, e in enumerate(getattr(entry, "equipamentos", []) or []):
+        fill = fills[(start_idx + off) % 2]
+        _write_indireto_detail_row(ws, row, fill, _build_indireto_equipamento_vals(e))
+        row += 1
+        has_rows = True
+    return row, has_rows
+
+
+def render_equipe_indireto(wb: Workbook, canonical: CanonicalModel, categoria: str) -> None:
+    """EQUIPE.INDIRETO.<CAT> — detalhamento de recursos indiretos por categoria."""
+    cat = str(categoria or "").upper()
+    ws = wb.create_sheet(f"EQUIPE.INDIRETO.{cat}")
+    NCOLS = 8
+    _set_col_widths(ws, [18, 18, 30, 8, 10, 16, 16, 28])
+    row = 1
+    _title_row(ws, row, f"EQUIPE.INDIRETO.{cat} — RECURSOS INDIRETOS", NCOLS)
+    row += 1
+
+    entry = _find_indireto_entry(canonical, cat)
+    if entry is None:
+        _render_indireto_categoria_ausente(ws, row, cat)
+        return
+
+    _render_indireto_resumo_custos(ws, row, entry)
     row += 2
 
     _header_row(ws, row, ["Natureza", "ID", "Descrição", "Qtd", "Un.", "Custo Unit.", "Custo Total", "Observação"])
     row += 1
 
     fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
-    has_rows = False
-    for idx, f in enumerate(getattr(entry, "funcoes", []) or []):
-        fill = fills[idx % 2]
-        qtd = float((f.get("num_pessoas") or f.get("quantidade") or 0) or 0)
-        unit = float((f.get("custo_mensal_unitario") or f.get("custo_unitario") or 0) or 0)
-        total = float((f.get("custo_total") or (qtd * unit)) or 0)
-        vals = [
-            "MÃO DE OBRA",
-            f.get("funcao_id") or f.get("id") or "-",
-            f.get("descricao") or "-",
-            qtd,
-            "pax",
-            unit,
-            total,
-            f.get("origem") or "",
-        ]
-        for col, val in enumerate(vals, 1):
-            cell = ws.cell(row=row, column=col, value=val)
-            cell.fill = fill
-            cell.border = _border()
-            if col in (6, 7):
-                cell.number_format = "R$ #,##0.00"
-            if col == 4:
-                cell.number_format = "0.00"
-                cell.alignment = _align("right")
-        row += 1
-        has_rows = True
+    row, has_rows_funcoes = _render_indireto_funcoes(ws, row, entry, fills)
 
     start_idx = len(getattr(entry, "funcoes", []) or [])
-    for off, e in enumerate(getattr(entry, "equipamentos", []) or []):
-        fill = fills[(start_idx + off) % 2]
-        qtd = float((e.get("num_unidades") or e.get("quantidade") or 0) or 0)
-        unit = float((e.get("custo_mensal") or e.get("custo_unitario") or 0) or 0)
-        total = float((e.get("custo_total") or (qtd * unit)) or 0)
-        vals = [
-            "EQUIPAMENTO",
-            e.get("equip_id") or e.get("id") or "-",
-            e.get("descricao") or "-",
-            qtd,
-            "un",
-            unit,
-            total,
-            e.get("origem") or "",
-        ]
-        for col, val in enumerate(vals, 1):
-            cell = ws.cell(row=row, column=col, value=val)
-            cell.fill = fill
-            cell.border = _border()
-            if col in (6, 7):
-                cell.number_format = "R$ #,##0.00"
-            if col == 4:
-                cell.number_format = "0.00"
-                cell.alignment = _align("right")
-        row += 1
-        has_rows = True
+    row, has_rows_equipamentos = _render_indireto_equipamentos(ws, row, entry, fills, start_idx)
 
+    has_rows = has_rows_funcoes or has_rows_equipamentos
     if not has_rows:
         ws.cell(
             row=row, column=1, value=f"Sem equipes explícitas para {cat}; apenas total agregado em INDIRETOS.DET/RES."

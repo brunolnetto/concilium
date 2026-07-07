@@ -60,6 +60,29 @@ def _cmb_load_produtividades_index(catalog_id: str) -> dict[str, dict]:
     return index
 
 
+def _cmb_parse_insumo_file(insumo_file: Path) -> list:
+    """Parse one insumo JSON file into a list of item dicts (empty on any mismatch)."""
+    try:
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        return [data]
+    return []
+
+
+def _cmb_merge_insumo_items(index: dict[str, dict], items: list) -> None:
+    """Merge parsed insumo items into ``index`` keyed by their ``codigo``."""
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        codigo = str(item.get("codigo") or "").strip()
+        if codigo:
+            index[codigo] = item
+
+
 def _cmb_load_insumos_index(catalog_id: str) -> dict[str, dict]:
     cache_key = f"master-insumos-index-{catalog_id}"
     cached = st.session_state.get(cache_key)
@@ -70,22 +93,7 @@ def _cmb_load_insumos_index(catalog_id: str) -> dict[str, dict]:
     insumos_root = _cmb_catalog_root(catalog_id) / "insumos"
     if insumos_root.exists():
         for insumo_file in sorted(insumos_root.rglob("*.json")):
-            try:
-                data = json.loads(insumo_file.read_text(encoding="utf-8"))
-            except Exception:
-                continue
-            if isinstance(data, list):
-                items = data
-            elif isinstance(data, dict):
-                items = [data]
-            else:
-                continue
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                codigo = str(item.get("codigo") or "").strip()
-                if codigo:
-                    index[codigo] = item
+            _cmb_merge_insumo_items(index, _cmb_parse_insumo_file(insumo_file))
 
     st.session_state[cache_key] = index
     return index
@@ -128,6 +136,27 @@ def _cmb_equipment_monthly_cost(insumo: dict) -> object:
     return None
 
 
+def _cmb_first_truthy(*values: object, default: object = "") -> object:
+    """Return the first truthy value in ``values``, or ``default``.
+
+    Colapsa cadeias `a or b or c or default` em uma única chamada.
+    """
+    for value in values:
+        if value:
+            return value
+    return default
+
+
+def _cmb_enrich_funcao_item(funcao: dict, insumo: dict, funcao_id: str) -> dict:
+    descricao = _cmb_first_truthy(funcao.get("descricao"), insumo.get("descricao"), funcao.get("funcao"), funcao_id)
+    return {
+        **funcao,
+        "descricao": descricao,
+        "regime": funcao.get("regime") or _cmb_regime_label(insumo),
+        "salario_base": funcao.get("salario_base") or insumo.get("preco_unitario"),
+    }
+
+
 def _cmb_enrich_funcoes(funcoes: list, catalog_id: str) -> list[dict]:
     insumos_index = _cmb_load_insumos_index(catalog_id)
     enriched: list[dict] = []
@@ -136,16 +165,18 @@ def _cmb_enrich_funcoes(funcoes: list, catalog_id: str) -> list[dict]:
             continue
         funcao_id = str(funcao.get("funcao_id") or "").strip()
         insumo = insumos_index.get(funcao_id) or {}
-        descricao = funcao.get("descricao") or insumo.get("descricao") or funcao.get("funcao") or funcao_id or ""
-        enriched.append(
-            {
-                **funcao,
-                "descricao": descricao,
-                "regime": funcao.get("regime") or _cmb_regime_label(insumo),
-                "salario_base": funcao.get("salario_base") or insumo.get("preco_unitario"),
-            }
-        )
+        enriched.append(_cmb_enrich_funcao_item(funcao, insumo, funcao_id))
     return enriched
+
+
+def _cmb_enrich_composicao_item(item: dict, insumo: dict) -> dict:
+    attrs = insumo.get("atributos_especificos") or {}
+    return {
+        **item,
+        "descricao": _cmb_first_truthy(item.get("descricao"), insumo.get("descricao")),
+        "unidade": _cmb_first_truthy(item.get("unidade"), insumo.get("unidade")),
+        "custo_mensal": item.get("custo_mensal") or attrs.get("valor_locacao_mensal") or insumo.get("custo_mensal"),
+    }
 
 
 def _cmb_enrich_composicao_itens(composicao: list, catalog_id: str) -> list[dict]:
@@ -156,17 +187,7 @@ def _cmb_enrich_composicao_itens(composicao: list, catalog_id: str) -> list[dict
             continue
         insumo_id = str(item.get("insumo_id") or "").strip()
         insumo = insumos_index.get(insumo_id) or {}
-        attrs = insumo.get("atributos_especificos") or {}
-        enriched.append(
-            {
-                **item,
-                "descricao": item.get("descricao") or insumo.get("descricao") or "",
-                "unidade": item.get("unidade") or insumo.get("unidade") or "",
-                "custo_mensal": item.get("custo_mensal")
-                or attrs.get("valor_locacao_mensal")
-                or insumo.get("custo_mensal"),
-            }
-        )
+        enriched.append(_cmb_enrich_composicao_item(item, insumo))
     return enriched
 
 

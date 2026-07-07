@@ -61,7 +61,7 @@ def _cab_compute_diesel_consumo(equipe: EquipeDireta, horas_semana: float) -> fl
 
 
 def _cab_campo_custo(
-    cat_insumo: str,
+    cat_insumo: _CategoriaInsumo,
     propriedade: str,
     custo_mensal: float,
     fator_semanal: float,
@@ -74,6 +74,40 @@ def _cab_campo_custo(
         # ADR-090: diesel = material.combustivel, modulado por eficiência (sem consumo parado)
         return custo_mensal * fator_semanal * eficiencia, consumo_L_100pct * eficiencia * n_equipes
     return custo_mensal * fator_semanal, 0.0
+
+
+def _cab_celulas_for_propriedade(
+    atividade_id: str,
+    semana_iso: str,
+    cat_insumo: _CategoriaInsumo,
+    propriedade: str,
+    unidade: str,
+    pv_semana: float,
+    valor_fisico: float,
+    decomp: dict[tuple[str, str], dict[str, float]],
+    min_val: float,
+) -> list:
+    """Distribui pv_semana pelos componentes BDI, retornando CelulaAnalitica acima do mínimo."""
+    bdi_key = (cat_insumo, propriedade)
+    result = []
+    for comp, pct in (decomp.get(bdi_key) or {}).items():
+        valor = pv_semana * pct
+        if valor >= min_val:
+            cel_vf = round(valor_fisico, 3) if (unidade == "L" and comp == "custo_direto") else 0.0
+            result.append(
+                CelulaAnalitica(
+                    natureza="direto",
+                    atividade_id=atividade_id,
+                    categoria_insumo=cat_insumo,
+                    propriedade=propriedade,
+                    semana_iso=semana_iso,
+                    componente_bdi=comp,
+                    valor_rs=round(valor, 2),
+                    valor_fisico=cel_vf,
+                    unidade_fisica=unidade if (unidade and comp == "custo_direto") else "",
+                )
+            )
+    return result
 
 
 def _cab_collect_celulas_semana(
@@ -108,23 +142,19 @@ def _cab_collect_celulas_semana(
         )
         bdi_key = (cat_insumo, propriedade)
         pv_semana = custo_semana_base * (1.0 + bdi.get(bdi_key, 0.0))
-        for comp, pct in (decomp.get(bdi_key) or {}).items():
-            valor = pv_semana * pct
-            if valor >= min_val:
-                cel_vf = round(valor_fisico, 3) if (unidade == "L" and comp == "custo_direto") else 0.0
-                result.append(
-                    CelulaAnalitica(
-                        natureza="direto",
-                        atividade_id=atividade_id,
-                        categoria_insumo=cat_insumo,
-                        propriedade=propriedade,
-                        semana_iso=semana_iso,
-                        componente_bdi=comp,
-                        valor_rs=round(valor, 2),
-                        valor_fisico=cel_vf,
-                        unidade_fisica=unidade if (unidade and comp == "custo_direto") else "",
-                    )
-                )
+        result.extend(
+            _cab_celulas_for_propriedade(
+                atividade_id,
+                semana_iso,
+                cat_insumo,
+                propriedade,
+                unidade,
+                pv_semana,
+                valor_fisico,
+                decomp,
+                min_val,
+            )
+        )
     return result
 
 
@@ -196,17 +226,9 @@ class CuboAnaliticoBuilder:
             return self._build_from_pool(canonical_in)
         return self._build_autonomous(canonical_in)
 
-    def _build_from_pool(self, canonical_in: Any) -> CuboAnalitico:
-        """Deriva CuboAnalitico do CuboPoolInstancial — invariância construtiva ADR-086."""
-        from concilium.domain.services.analytics.cubo_pool_builder import CuboPoolInstancialBuilder
-
-        projeto_id = str(getattr(getattr(canonical_in, "projeto", None), "nome", "?"))
-        cubo_pool = CuboPoolInstancialBuilder().build(canonical_in)
-
-        if not cubo_pool.celulas:
-            return self._build_autonomous(canonical_in)
-
-        # Agrega custos produtivos por (atividade, semana) usando _POOL_TO_PROP
+    @staticmethod
+    def _aggregate_pool_costs(cubo_pool: Any) -> dict[tuple[str, str], dict[str, float]]:
+        """Agrega custos produtivos por (atividade, semana) usando _POOL_TO_PROP."""
         cost_map: dict[tuple[str, str], dict[str, float]] = {}
         for cell in cubo_pool.celulas:
             if cell.estado != "prod" or not cell.atividade_id:
@@ -217,35 +239,61 @@ class CuboAnaliticoBuilder:
             d["eq"] += cell.custo_eq
             d["comb"] += cell.custo_comb
             d["mat"] += cell.custo_mat
+        return cost_map
 
-        diesel_L_map = self._build_diesel_L_map(canonical_in)
+    def _celulas_for_atividade_semana(
+        self,
+        atividade_id: str,
+        semana_iso: str,
+        costs: dict[str, float],
+        diesel_L_map: dict[tuple[str, str], float],
+    ) -> list[CelulaAnalitica]:
+        celulas: list[CelulaAnalitica] = []
+        for pool_key, (cat_insumo, propriedade, unidade) in _POOL_TO_PROP.items():
+            custo_sem = costs.get(pool_key, 0.0)
+            if custo_sem <= 0:
+                continue
+            bdi_key = (cat_insumo, propriedade)
+            pv_sem = custo_sem * (1.0 + self._bdi.get(bdi_key, 0.0))
+            consumo_L = diesel_L_map.get((atividade_id, semana_iso), 0.0)
+            celulas.extend(
+                _cab_celulas_for_propriedade(
+                    atividade_id,
+                    semana_iso,
+                    cat_insumo,
+                    propriedade,
+                    unidade,
+                    pv_sem,
+                    consumo_L,
+                    self._decomp,
+                    self._min,
+                )
+            )
+        return celulas
 
+    def _pool_costs_to_celulas(
+        self,
+        cost_map: dict[tuple[str, str], dict[str, float]],
+        diesel_L_map: dict[tuple[str, str], float],
+    ) -> list[CelulaAnalitica]:
         celulas: list[CelulaAnalitica] = []
         for (atividade_id, semana_iso), costs in cost_map.items():
-            for pool_key, (cat_insumo, propriedade, unidade) in _POOL_TO_PROP.items():
-                custo_sem = costs.get(pool_key, 0.0)
-                if custo_sem <= 0:
-                    continue
-                bdi_key = (cat_insumo, propriedade)
-                pv_sem = custo_sem * (1.0 + self._bdi.get(bdi_key, 0.0))
-                consumo_L = diesel_L_map.get((atividade_id, semana_iso), 0.0)
-                for comp, pct in (self._decomp.get(bdi_key) or {}).items():
-                    valor = pv_sem * pct
-                    if valor >= self._min:
-                        cel_vf = round(consumo_L, 3) if (unidade == "L" and comp == "custo_direto") else 0.0
-                        celulas.append(
-                            CelulaAnalitica(
-                                natureza="direto",
-                                atividade_id=atividade_id,
-                                categoria_insumo=cat_insumo,
-                                propriedade=propriedade,
-                                semana_iso=semana_iso,
-                                componente_bdi=comp,
-                                valor_rs=round(valor, 2),
-                                valor_fisico=cel_vf,
-                                unidade_fisica=unidade if (unidade and comp == "custo_direto") else "",
-                            )
-                        )
+            celulas.extend(self._celulas_for_atividade_semana(atividade_id, semana_iso, costs, diesel_L_map))
+        return celulas
+
+    def _build_from_pool(self, canonical_in: Any) -> CuboAnalitico:
+        """Deriva CuboAnalitico do CuboPoolInstancial — invariância construtiva ADR-086."""
+        from concilium.domain.services.analytics.cubo_pool_builder import CuboPoolInstancialBuilder
+
+        projeto_id = str(getattr(getattr(canonical_in, "projeto", None), "nome", "?"))
+        cubo_pool = CuboPoolInstancialBuilder().build(canonical_in)
+
+        if not cubo_pool.celulas:
+            return self._build_autonomous(canonical_in)
+
+        cost_map = self._aggregate_pool_costs(cubo_pool)
+        diesel_L_map = self._build_diesel_L_map(canonical_in)
+        celulas = self._pool_costs_to_celulas(cost_map, diesel_L_map)
 
         # Enriquecimento financeiro: escalar ao PUxQ e adicionar indireto
         celulas = self._enrich_with_financial_data(canonical_in, celulas)
@@ -259,14 +307,8 @@ class CuboAnaliticoBuilder:
             celulas=tuple(celulas),
         )
 
-    def _enrich_with_financial_data(self, canonical_in: Any, celulas: list[CelulaAnalitica]) -> list[CelulaAnalitica]:
-        """Escala células diretas ao custo PUxQ e adiciona células de indireto.
-
-        O pool captura apenas a fatia rastreável (estado=prod); o planejamento contém
-        o custo completo (overhead de quantização, praticabilidade, etc.).
-        Escalamos por atividade para preservar a distribuição temporal do pool.
-        """
-        # 1. Escalar células diretas ao custo PUxQ por atividade
+    def _plan_total_por_item(self, canonical_in: Any) -> dict[str, float]:
+        """Extrai subtotal.sem_bdi.total por item_id do planejamento canônico."""
         plan_total_by_item: dict[str, float] = {}
         for item in getattr(canonical_in, "planejamento", None) or []:
             item_id = str(getattr(item, "item_id", "") or "")
@@ -275,67 +317,92 @@ class CuboAnaliticoBuilder:
             total_rs = float(getattr(sem_bdi, "total", 0.0) or 0.0) if sem_bdi else 0.0
             if item_id and total_rs > 0:
                 plan_total_by_item[item_id] = total_rs
+        return plan_total_by_item
 
-        if plan_total_by_item and celulas:
-            pool_total_by_item: dict[str, float] = {}
-            for c in celulas:
-                if c.natureza == "direto" and c.componente_bdi == "custo_direto":
-                    pool_total_by_item[c.atividade_id] = pool_total_by_item.get(c.atividade_id, 0.0) + c.valor_rs
-            scale_factors: dict[str, float] = {
-                item_id: plan_val / pool_total_by_item[item_id]
-                for item_id, plan_val in plan_total_by_item.items()
-                if pool_total_by_item.get(item_id, 0.0) > 0
-            }
-            celulas = [
-                CelulaAnalitica(
-                    natureza=c.natureza,
-                    atividade_id=c.atividade_id,
-                    categoria_insumo=c.categoria_insumo,
-                    propriedade=c.propriedade,
-                    semana_iso=c.semana_iso,
-                    componente_bdi=c.componente_bdi,
-                    valor_rs=round(c.valor_rs * scale_factors.get(c.atividade_id, 1.0), 2),
-                    valor_fisico=c.valor_fisico,
-                    unidade_fisica=c.unidade_fisica,
-                )
-                for c in celulas
-            ]
+    def _scale_celulas_diretas_ao_planejamento(
+        self, celulas: list[CelulaAnalitica], plan_total_by_item: dict[str, float]
+    ) -> list[CelulaAnalitica]:
+        """Escala células diretas ao custo PUxQ do planejamento, preservando a
+        distribuição temporal do pool (que captura só a fatia rastreável, estado=prod)."""
+        if not (plan_total_by_item and celulas):
+            return celulas
+        pool_total_by_item: dict[str, float] = {}
+        for c in celulas:
+            if c.natureza == "direto" and c.componente_bdi == "custo_direto":
+                pool_total_by_item[c.atividade_id] = pool_total_by_item.get(c.atividade_id, 0.0) + c.valor_rs
+        scale_factors: dict[str, float] = {
+            item_id: plan_val / pool_total_by_item[item_id]
+            for item_id, plan_val in plan_total_by_item.items()
+            if pool_total_by_item.get(item_id, 0.0) > 0
+        }
+        return [
+            CelulaAnalitica(
+                natureza=c.natureza,
+                atividade_id=c.atividade_id,
+                categoria_insumo=c.categoria_insumo,
+                propriedade=c.propriedade,
+                semana_iso=c.semana_iso,
+                componente_bdi=c.componente_bdi,
+                valor_rs=round(c.valor_rs * scale_factors.get(c.atividade_id, 1.0), 2),
+                valor_fisico=c.valor_fisico,
+                unidade_fisica=c.unidade_fisica,
+            )
+            for c in celulas
+        ]
 
-        # 2. Adicionar células de indireto de indiretos_semanal
+    def _celula_indireto_da_semana(self, item: Any, data_inicio: Any) -> CelulaAnalitica | None:
+        """Constrói a CelulaAnalitica de indireto de uma semana, ou None se abaixo do mínimo."""
+        from datetime import timedelta
+
+        semana_offset = getattr(item, "semana", None)
+        if semana_offset is None:
+            return None
+        custo_sem = float(getattr(item, "custo_semanal", 0.0) or 0.0)
+        if custo_sem <= self._min:
+            return None
+        cat = str(getattr(item, "categoria", "ADM") or "ADM")
+        dt = data_inicio + timedelta(weeks=int(semana_offset))
+        iso = f"{dt.isocalendar()[0]}-W{dt.isocalendar()[1]:02d}"
+        return CelulaAnalitica(
+            natureza="indireto",
+            atividade_id=f"IND-{cat}",
+            categoria_insumo="verba",  # Literal válido; natureza='indireto' diferencia
+            propriedade=cat.lower(),
+            semana_iso=iso,
+            componente_bdi="custo_direto",
+            valor_rs=round(custo_sem, 2),
+            valor_fisico=0.0,
+            unidade_fisica="",
+        )
+
+    def _add_celulas_indiretas(self, canonical_in: Any, celulas: list[CelulaAnalitica]) -> None:
+        """Adiciona células de indireto de indiretos_semanal (mutação in-place, best-effort)."""
         projeto = getattr(canonical_in, "projeto", None)
         data_inicio_str = str(getattr(projeto, "data_inicio", "") or "") if projeto else ""
         ind_sem = getattr(canonical_in, "indiretos_semanal", None) or []
-        if ind_sem and data_inicio_str:
-            try:
-                from datetime import date, timedelta
+        if not (ind_sem and data_inicio_str):
+            return
+        try:
+            from datetime import date
 
-                data_inicio = date.fromisoformat(data_inicio_str)
-                for item in ind_sem:
-                    semana_offset = getattr(item, "semana", None)
-                    if semana_offset is None:
-                        continue
-                    custo_sem = float(getattr(item, "custo_semanal", 0.0) or 0.0)
-                    if custo_sem <= self._min:
-                        continue
-                    cat = str(getattr(item, "categoria", "ADM") or "ADM")
-                    dt = data_inicio + timedelta(weeks=int(semana_offset))
-                    iso = f"{dt.isocalendar()[0]}-W{dt.isocalendar()[1]:02d}"
-                    celulas.append(
-                        CelulaAnalitica(
-                            natureza="indireto",
-                            atividade_id=f"IND-{cat}",
-                            categoria_insumo="verba",  # Literal válido; natureza='indireto' diferencia
-                            propriedade=cat.lower(),
-                            semana_iso=iso,
-                            componente_bdi="custo_direto",
-                            valor_rs=round(custo_sem, 2),
-                            valor_fisico=0.0,
-                            unidade_fisica="",
-                        )
-                    )
-            except Exception:  # pragma: no cover
-                pass  # enriquecimento de indireto é best-effort
+            data_inicio = date.fromisoformat(data_inicio_str)
+            for item in ind_sem:
+                celula = self._celula_indireto_da_semana(item, data_inicio)
+                if celula is not None:
+                    celulas.append(celula)
+        except Exception:  # pragma: no cover
+            pass  # enriquecimento de indireto é best-effort
 
+    def _enrich_with_financial_data(self, canonical_in: Any, celulas: list[CelulaAnalitica]) -> list[CelulaAnalitica]:
+        """Escala células diretas ao custo PUxQ e adiciona células de indireto.
+
+        O pool captura apenas a fatia rastreável (estado=prod); o planejamento contém
+        o custo completo (overhead de quantização, praticabilidade, etc.).
+        Escalamos por atividade para preservar a distribuição temporal do pool.
+        """
+        plan_total_by_item = self._plan_total_por_item(canonical_in)
+        celulas = self._scale_celulas_diretas_ao_planejamento(celulas, plan_total_by_item)
+        self._add_celulas_indiretas(canonical_in, celulas)
         return celulas
 
     def _build_autonomous(self, canonical_in: Any) -> CuboAnalitico:
@@ -377,6 +444,21 @@ class CuboAnaliticoBuilder:
             celulas=tuple(celulas),
         )
 
+    @staticmethod
+    def _diesel_L_map_for_equipe(
+        equipe: EquipeDireta,
+        sa: Any,
+        consumo_base: float,
+        result: dict[tuple[str, str], float],
+    ) -> None:
+        for semana_iso, dist in sa.distribuicao_semanal.items():
+            n = getattr(dist, "num_equipes", 0) or 0
+            if n <= 0:
+                continue
+            efic = float(getattr(dist, "eficiencia", 1.0) or 1.0)
+            k = (equipe.item_id, semana_iso)
+            result[k] = result.get(k, 0.0) + consumo_base * efic * n
+
     def _build_diesel_L_map(self, canonical_in: Any) -> dict[tuple[str, str], float]:
         """Litros de diesel por (atividade, semana) — grandeza física do ativo."""
         cronograma = canonical_in.cronograma
@@ -391,13 +473,7 @@ class CuboAnaliticoBuilder:
             consumo_base = _cab_compute_diesel_consumo(equipe, self._horas_semana)
             if consumo_base <= 0:
                 continue
-            for semana_iso, dist in sa.distribuicao_semanal.items():
-                n = getattr(dist, "num_equipes", 0) or 0
-                if n <= 0:
-                    continue
-                efic = float(getattr(dist, "eficiencia", 1.0) or 1.0)
-                k = (equipe.item_id, semana_iso)
-                result[k] = result.get(k, 0.0) + consumo_base * efic * n
+            self._diesel_L_map_for_equipe(equipe, sa, consumo_base, result)
         return result
 
     @staticmethod

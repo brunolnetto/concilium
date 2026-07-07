@@ -124,6 +124,28 @@ def _pp_filter_projects(projects: list, tipo_filter: str, search: str) -> list:
     return filtered
 
 
+def _pp_delete_project_confirmed(pid: str) -> None:
+    try:
+        api_call("DELETE", f"/api/projects/{pid}", base_url=DEFAULT_BASE_URL, actor=DEFAULT_ACTOR)
+        if (StateManager.get().selected_project or {}).get("project_id") == pid:
+            StateManager.set_project(None)
+        st.session_state.pop("proj-delete-confirm", None)
+        st.success("Projeto excluído com sucesso.")
+        st.rerun()
+    except Exception as exc:
+        st.error(f"Erro ao excluir projeto: {exc}")
+
+
+def _pp_render_delete_confirmation(pid: str, nome: str) -> None:
+    st.warning(f"Excluir projeto '{nome}'? Esta ação remove todas as versões e artefatos.")
+    c_yes, c_no = st.columns([1, 1])
+    if c_yes.button("Confirmar exclusão", key=f"delete-proj-confirm-{pid}", type="primary"):
+        _pp_delete_project_confirmed(pid)
+    if c_no.button("Cancelar", key=f"delete-proj-cancel-{pid}", type="secondary"):
+        st.session_state.pop("proj-delete-confirm", None)
+        st.rerun()
+
+
 def _pp_render_project_card(p: dict) -> None:
     """Render a single clickable project card + delete action."""
     pid = p.get("project_id", "")
@@ -146,21 +168,7 @@ def _pp_render_project_card(p: dict) -> None:
         st.session_state["proj-delete-confirm"] = pid
 
     if st.session_state.get("proj-delete-confirm") == pid:
-        st.warning(f"Excluir projeto '{nome}'? Esta ação remove todas as versões e artefatos.")
-        c_yes, c_no = st.columns([1, 1])
-        if c_yes.button("Confirmar exclusão", key=f"delete-proj-confirm-{pid}", type="primary"):
-            try:
-                api_call("DELETE", f"/api/projects/{pid}", base_url=DEFAULT_BASE_URL, actor=DEFAULT_ACTOR)
-                if (StateManager.get().selected_project or {}).get("project_id") == pid:
-                    StateManager.set_project(None)
-                st.session_state.pop("proj-delete-confirm", None)
-                st.success("Projeto excluído com sucesso.")
-                st.rerun()
-            except Exception as exc:
-                st.error(f"Erro ao excluir projeto: {exc}")
-        if c_no.button("Cancelar", key=f"delete-proj-cancel-{pid}", type="secondary"):
-            st.session_state.pop("proj-delete-confirm", None)
-            st.rerun()
+        _pp_render_delete_confirmation(pid, nome)
 
     if tipo == "project" and status_eap in ("RASCUNHO", "RASCUNHO_PRONTO"):
         with st.expander(f"✏️ Editar EAP — {nome}", expanded=False):

@@ -22,6 +22,37 @@ EstadoSlot = Literal["prod", "idle", "off"]
 _COMPONENTES = ("mo", "eq", "comb", "mat")
 
 
+def _bucket_iso(s: str, granularidade: str) -> str:
+    """Bucket de chave ISO (``2026-Www``)."""
+    try:
+        from datetime import date
+
+        year_str, week_str = s.split("-W")
+        anchor = date.fromisocalendar(int(year_str), int(week_str), 1)
+        if granularidade == "mes":
+            return f"{anchor.year}-{anchor.month:02d}"
+        if granularidade == "trimestre":
+            return f"{anchor.year}-T{(anchor.month - 1) // 3 + 1}"
+        if granularidade == "ano":
+            return f"{anchor.year}"
+    except Exception:
+        return s
+    return s
+
+
+def _bucket_sequencial(s: str, granularidade: str) -> str:
+    """Bucket de chave sequencial (``Snnn``) — aproxima por blocos de 4,33/13/52 semanas."""
+    if s.startswith("S") and s[1:].isdigit():
+        n = int(s[1:])
+        if granularidade == "mes":
+            return f"M{(n - 1) // 4 + 1:02d}"
+        if granularidade == "trimestre":
+            return f"T{(n - 1) // 13 + 1}"
+        if granularidade == "ano":
+            return f"A{(n - 1) // 52 + 1}"
+    return s
+
+
 def bucket_periodo(semana_iso: str, granularidade: str) -> str:
     """Bucket temporal de uma chave de semana. Suporta ISO (``2026-W23``) e seq (``S001``).
 
@@ -33,30 +64,9 @@ def bucket_periodo(semana_iso: str, granularidade: str) -> str:
         return s
     # ISO: 2026-Www
     if "-W" in s:
-        try:
-            from datetime import date
-
-            year_str, week_str = s.split("-W")
-            anchor = date.fromisocalendar(int(year_str), int(week_str), 1)
-            if granularidade == "mes":
-                return f"{anchor.year}-{anchor.month:02d}"
-            if granularidade == "trimestre":
-                return f"{anchor.year}-T{(anchor.month - 1) // 3 + 1}"
-            if granularidade == "ano":
-                return f"{anchor.year}"
-        except Exception:
-            return s
-        return s
+        return _bucket_iso(s, granularidade)
     # Sequencial Snnn
-    if s.startswith("S") and s[1:].isdigit():
-        n = int(s[1:])
-        if granularidade == "mes":
-            return f"M{(n - 1) // 4 + 1:02d}"
-        if granularidade == "trimestre":
-            return f"T{(n - 1) // 13 + 1}"
-        if granularidade == "ano":
-            return f"A{(n - 1) // 52 + 1}"
-    return s
+    return _bucket_sequencial(s, granularidade)
 
 
 @dataclass(frozen=True)

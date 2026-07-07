@@ -42,24 +42,23 @@ def build(canonical, cubo) -> bytes | None:
         return None
 
 
-def _render(plt, rows: list):
-    import warnings
-
-    import matplotlib.patches as mpatches
-
-    # ── Agregar por atividade e componente ────────────────────────────────────
+def _aggregate_by_atividade_componente(rows: list) -> tuple[dict[str, dict[str, float]], dict[str, float], list[str]]:
+    """Agrega valores por atividade/componente e ordena atividades por total decrescente."""
     by_atv: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for r in rows:
         atv = str(r.get("atividade_id", "?"))
         comp = str(r.get("componente_bdi", "?"))
         by_atv[atv][comp] += float(r.get("valor_rs", 0.0) or 0.0)
 
-    # Ordenar por total decrescente
     totals = {a: sum(v.values()) for a, v in by_atv.items()}
     atividades = sorted(totals, key=lambda a: -totals[a])
-    grand_total = sum(totals.values())
+    return by_atv, totals, atividades
 
-    # ── Calcular regiões ABC ──────────────────────────────────────────────────
+
+def _compute_abc_classes(
+    atividades: list[str], totals: dict[str, float], grand_total: float
+) -> tuple[dict[str, str], int, int]:
+    """Classifica cada atividade em A/B/C pelo acumulado do total e retorna os índices de corte."""
     acum = 0.0
     abc_class: dict[str, str] = {}
     for a in atividades:
@@ -72,39 +71,33 @@ def _render(plt, rows: list):
         else:
             abc_class[a] = "C"
 
-    # Índices de corte A→B e B→C (posição na lista ordenada)
     cut_ab = next((i for i, a in enumerate(atividades) if abc_class[a] == "B"), len(atividades))
     cut_bc = next((i for i, a in enumerate(atividades) if abc_class[a] == "C"), len(atividades))
+    return abc_class, cut_ab, cut_bc
 
-    scale = 1e6
-    n = len(atividades)
-    y_pos = list(range(n))
 
-    fig_h = max(5.0, n * 0.52 + 1.5)
-    fig, ax = plt.subplots(figsize=(13, fig_h))
-
-    # ── Barras empilhadas horizontais ─────────────────────────────────────────
-    lefts = [0.0] * n
+def _draw_stacked_bars(
+    ax, by_atv: dict[str, dict[str, float]], atividades: list[str], y_pos: list[int], scale: float
+) -> list[float]:
+    """Desenha as barras horizontais empilhadas por componente e retorna os limites direitos."""
+    lefts = [0.0] * len(atividades)
     for comp in _COMPS:
         vals = [by_atv[a].get(comp, 0.0) / scale for a in atividades]
         ax.barh(y_pos, vals, left=lefts, color=_COLORS[comp], label=comp, height=0.65, alpha=0.88)
         lefts = [ln + v for ln, v in zip(lefts, vals, strict=False)]
+    return lefts
 
-    # ── Regiões ABC com linhas tracejadas e labels ────────────────────────────
-    # Desenhar as barras primeiro, depois ajustar xlim para labels
-    max_val = max(max(lefts), 1e-9) if lefts else 1.0
-    ax.set_xlim(0, max_val * 1.12)
 
+def _draw_abc_regions(ax, cut_ab: int, cut_bc: int, n: int, max_val: float) -> None:
+    """Desenha as faixas de fundo, linhas de corte e labels das regiões ABC."""
     ax.axhspan(-0.5, cut_ab - 0.5, color="#1a3a5c", alpha=0.06, zorder=0)
     ax.axhspan(cut_ab - 0.5, cut_bc - 0.5, color="#e8a030", alpha=0.06, zorder=0)
     ax.axhspan(cut_bc - 0.5, n - 0.5, color="#c05c18", alpha=0.04, zorder=0)
 
-    # Linhas de separação A→B e B→C
     for cut in (cut_ab, cut_bc):
         if 0 < cut < n:
             ax.axhline(cut - 0.5, color="#555", linewidth=1.2, linestyle="--", alpha=0.6, zorder=4)
 
-    # Labels de região (fora das barras, lado direito)
     for start, end, label, color in [
         (0, cut_ab, "A", "#1a3a5c"),
         (cut_ab, cut_bc, "B", "#e8a030"),
@@ -124,17 +117,70 @@ def _render(plt, rows: list):
                 alpha=0.75,
             )
 
-    # ── Anotações de custo total por barra ────────────────────────────────────
+
+def _annotate_bar_totals(
+    ax, atividades: list[str], totals: dict[str, float], lefts: list[float], max_val: float, scale: float
+) -> None:
+    """Anota o custo total (em milhões) ao final de cada barra."""
     for i, a in enumerate(atividades):
         tot = totals[a] / scale
         ax.text(lefts[i] + max_val * 0.005, i, f"{tot:.2f} Mi", va="center", ha="left", fontsize=7.5, color="#333")
 
-    # ── Eixo Y: labels de atividade ───────────────────────────────────────────
+
+def _build_atividade_yaxis_labels(atividades: list[str], abc_class: dict[str, str]) -> list[str]:
+    """Constrói os labels do eixo Y combinando a classe ABC e o nome curto da atividade."""
     labels = []
     for a in atividades:
         cls = abc_class[a]
         short = a.replace("direto.", "").replace("indireto.", "ind.")
         labels.append(f"[{cls}] {short}")
+    return labels
+
+
+def _build_legend_patches(mpatches):
+    """Monta os patches de legenda para componentes de custo e classes ABC."""
+    comp_patches = [mpatches.Patch(color=_COLORS[c], label=c) for c in _COMPS]
+    abc_patches = [
+        mpatches.Patch(color="#1a3a5c", alpha=0.25, label=f"Classe A (≤{_ABC_A * 100:.0f}% acum.)"),
+        mpatches.Patch(color="#e8a030", alpha=0.25, label=f"Classe B ({_ABC_A * 100:.0f}–{_ABC_B * 100:.0f}%)"),
+        mpatches.Patch(color="#c05c18", alpha=0.20, label=f"Classe C (>{_ABC_B * 100:.0f}%)"),
+    ]
+    return comp_patches + abc_patches
+
+
+def _render(plt, rows: list):
+    import warnings
+
+    import matplotlib.patches as mpatches
+
+    # ── Agregar por atividade e componente ────────────────────────────────────
+    by_atv, totals, atividades = _aggregate_by_atividade_componente(rows)
+    grand_total = sum(totals.values())
+
+    # ── Calcular regiões ABC ──────────────────────────────────────────────────
+    abc_class, cut_ab, cut_bc = _compute_abc_classes(atividades, totals, grand_total)
+
+    scale = 1e6
+    n = len(atividades)
+    y_pos = list(range(n))
+
+    fig_h = max(5.0, n * 0.52 + 1.5)
+    fig, ax = plt.subplots(figsize=(13, fig_h))
+
+    # ── Barras empilhadas horizontais ─────────────────────────────────────────
+    lefts = _draw_stacked_bars(ax, by_atv, atividades, y_pos, scale)
+
+    # ── Regiões ABC com linhas tracejadas e labels ────────────────────────────
+    # Desenhar as barras primeiro, depois ajustar xlim para labels
+    max_val = max(max(lefts), 1e-9) if lefts else 1.0
+    ax.set_xlim(0, max_val * 1.12)
+    _draw_abc_regions(ax, cut_ab, cut_bc, n, max_val)
+
+    # ── Anotações de custo total por barra ────────────────────────────────────
+    _annotate_bar_totals(ax, atividades, totals, lefts, max_val, scale)
+
+    # ── Eixo Y: labels de atividade ───────────────────────────────────────────
+    labels = _build_atividade_yaxis_labels(atividades, abc_class)
 
     ax.set_yticks(y_pos)
     ax.set_yticklabels(labels, fontsize=8.5)
@@ -145,13 +191,7 @@ def _render(plt, rows: list):
     ax.grid(axis="x", alpha=0.25)
 
     # Legenda componentes + ABC
-    comp_patches = [mpatches.Patch(color=_COLORS[c], label=c) for c in _COMPS]
-    abc_patches = [
-        mpatches.Patch(color="#1a3a5c", alpha=0.25, label=f"Classe A (≤{_ABC_A * 100:.0f}% acum.)"),
-        mpatches.Patch(color="#e8a030", alpha=0.25, label=f"Classe B ({_ABC_A * 100:.0f}–{_ABC_B * 100:.0f}%)"),
-        mpatches.Patch(color="#c05c18", alpha=0.20, label=f"Classe C (>{_ABC_B * 100:.0f}%)"),
-    ]
-    ax.legend(handles=comp_patches + abc_patches, fontsize=7.5, loc="lower right", ncol=2)
+    ax.legend(handles=_build_legend_patches(mpatches), fontsize=7.5, loc="lower right", ncol=2)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)

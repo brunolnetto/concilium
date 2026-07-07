@@ -141,96 +141,105 @@ def _build_summary_line(total: int, erros: int, avisos: int, outliers: int) -> s
     )
 
 
-def build_catalog_reasonability_artifact(
-    catalog_id: str,
-    cpus: list[dict[str, Any]],
-    producoes: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
-    prod_lookup = _build_prod_lookup(producoes or [])
-    rows: list[dict[str, Any]] = []
-    for cpu in cpus:
-        codigo = str(cpu.get("codigo") or "")
-        producao_id_ref = str(cpu.get("producao_id_ref") or "")
-        producao = prod_lookup.get(producao_id_ref)
-        producao_horaria = _safe_float((producao or {}).get("valor_horario"))
-        funcoes, equipamentos = _resolve_team_from_producao(producao)
+def _build_row_for_cpu(cpu: dict[str, Any], prod_lookup: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    codigo = str(cpu.get("codigo") or "")
+    producao_id_ref = str(cpu.get("producao_id_ref") or "")
+    producao = prod_lookup.get(producao_id_ref)
+    producao_horaria = _safe_float((producao or {}).get("valor_horario"))
+    funcoes, equipamentos = _resolve_team_from_producao(producao)
 
-        total_pessoas = _sum_people(funcoes)
-        total_equip = _sum_equips(equipamentos)
-        prod_por_pessoa = (producao_horaria / total_pessoas) if (producao_horaria and total_pessoas > 0) else None
+    total_pessoas = _sum_people(funcoes)
+    total_equip = _sum_equips(equipamentos)
+    prod_por_pessoa = (producao_horaria / total_pessoas) if (producao_horaria and total_pessoas > 0) else None
 
-        rows.append(
-            {
-                "cpu_id": codigo,
-                "descricao": cpu.get("descricao") or "",
-                "categoria": cpu.get("categoria") or "",
-                "unidade": cpu.get("unidade") or "",
-                "producao_id_ref": producao_id_ref,
-                "producao_horaria": producao_horaria,
-                "team_people": total_pessoas,
-                "team_equipments": total_equip,
-                "producao_por_pessoa": prod_por_pessoa,
-                "issues": [],
-                "severity": "OK",
-            }
-        )
+    return {
+        "cpu_id": codigo,
+        "descricao": cpu.get("descricao") or "",
+        "categoria": cpu.get("categoria") or "",
+        "unidade": cpu.get("unidade") or "",
+        "producao_id_ref": producao_id_ref,
+        "producao_horaria": producao_horaria,
+        "team_people": total_pessoas,
+        "team_equipments": total_equip,
+        "producao_por_pessoa": prod_por_pessoa,
+        "issues": [],
+        "severity": "OK",
+    }
 
-    # Regras de consistência diretas (erro/aviso)
-    for row in rows:
-        issues: list[str] = row["issues"]
-        if not row["producao_id_ref"]:
-            issues.append("CPU sem producao_id_ref")
-        if row["producao_horaria"] is None or row["producao_horaria"] <= 0:
-            issues.append("Produtividade horária ausente ou não positiva")
-        if row["producao_id_ref"] and row["producao_id_ref"] not in prod_lookup:
-            issues.append("producao_id_ref sem registro correspondente em produções/produtividades")
-        if row["team_people"] <= 0:
-            issues.append("Equipe sem mão de obra definida")
 
-        row["severity"] = _classify_direct_severity(issues)
+def _apply_direct_consistency_rules(row: dict[str, Any], prod_lookup: dict[str, dict[str, Any]]) -> None:
+    """Regras de consistência diretas (erro/aviso) para uma linha de CPU."""
+    issues: list[str] = row["issues"]
+    if not row["producao_id_ref"]:
+        issues.append("CPU sem producao_id_ref")
+    if row["producao_horaria"] is None or row["producao_horaria"] <= 0:
+        issues.append("Produtividade horária ausente ou não positiva")
+    if row["producao_id_ref"] and row["producao_id_ref"] not in prod_lookup:
+        issues.append("producao_id_ref sem registro correspondente em produções/produtividades")
+    if row["team_people"] <= 0:
+        issues.append("Equipe sem mão de obra definida")
 
-    # Regras estatísticas por categoria+unidade
-    grouped = _build_groups(rows)
-    for key, items in grouped.items():
-        prod_vals = [float(r["producao_horaria"]) for r in items if r["producao_horaria"] and r["producao_horaria"] > 0]
-        ppp_vals = [
-            float(r["producao_por_pessoa"]) for r in items if r["producao_por_pessoa"] and r["producao_por_pessoa"] > 0
-        ]
+    row["severity"] = _classify_direct_severity(issues)
 
-        # Produtividade e produtividade por pessoa são domínios não negativos.
-        prod_bounds = _robust_bounds(prod_vals, non_negative=True)
-        ppp_bounds = _robust_bounds(ppp_vals, non_negative=True)
 
-        for r in items:
-            v = r["producao_horaria"]
-            if prod_bounds and v is not None and (v < prod_bounds[0] or v > prod_bounds[1]):
-                r["issues"].append(
-                    f"Produtividade fora da faixa IQR do grupo {key[0]}/{key[1]} "
-                    f"({prod_bounds[0]:.2f}..{prod_bounds[1]:.2f})"
-                )
-                if r["severity"] == "OK":
-                    r["severity"] = "AVISO"
+def _flag_outlier_bound(
+    r: dict[str, Any], field: str, bounds: tuple[float, float] | None, key: tuple[str, str], label: str
+) -> None:
+    v = r[field]
+    if bounds and v is not None and (v < bounds[0] or v > bounds[1]):
+        r["issues"].append(f"{label} fora da faixa IQR do grupo {key[0]}/{key[1]} ({bounds[0]:.2f}..{bounds[1]:.2f})")
+        if r["severity"] == "OK":
+            r["severity"] = "AVISO"
 
-            vp = r["producao_por_pessoa"]
-            if ppp_bounds and vp is not None and (vp < ppp_bounds[0] or vp > ppp_bounds[1]):
-                r["issues"].append(
-                    "Produtividade por pessoa fora da faixa IQR do grupo "
-                    f"{key[0]}/{key[1]} ({ppp_bounds[0]:.2f}..{ppp_bounds[1]:.2f})"
-                )
-                if r["severity"] == "OK":
-                    r["severity"] = "AVISO"
 
-    erros = sum(1 for r in rows if r["severity"] == "ERRO")
-    avisos = sum(1 for r in rows if r["severity"] == "AVISO")
-    outliers = sum(1 for r in rows if any("IQR" in msg for msg in r["issues"]))
+def _apply_statistical_group_rules(key: tuple[str, str], items: list[dict[str, Any]]) -> None:
+    """Regras estatísticas de outlier por categoria+unidade sobre um grupo de linhas."""
+    prod_vals = [float(r["producao_horaria"]) for r in items if r["producao_horaria"] and r["producao_horaria"] > 0]
+    ppp_vals = [
+        float(r["producao_por_pessoa"]) for r in items if r["producao_por_pessoa"] and r["producao_por_pessoa"] > 0
+    ]
 
+    # Produtividade e produtividade por pessoa são domínios não negativos.
+    prod_bounds = _robust_bounds(prod_vals, non_negative=True)
+    ppp_bounds = _robust_bounds(ppp_vals, non_negative=True)
+
+    for r in items:
+        _flag_outlier_bound(r, "producao_horaria", prod_bounds, key, "Produtividade")
+        _flag_outlier_bound(r, "producao_por_pessoa", ppp_bounds, key, "Produtividade por pessoa")
+
+
+def _count_by_severity(rows: list[dict[str, Any]], severity: str) -> int:
+    return sum(1 for r in rows if r["severity"] == severity)
+
+
+def _count_outliers(rows: list[dict[str, Any]]) -> int:
+    return sum(1 for r in rows if any("IQR" in msg for msg in r["issues"]))
+
+
+def _mediana_producao_horaria(rows: list[dict[str, Any]]) -> float:
     prod_vals_all = [float(r["producao_horaria"]) for r in rows if isinstance(r["producao_horaria"], (int, float))]
-    mediana_prod = median(prod_vals_all) if prod_vals_all else 0.0
+    return median(prod_vals_all) if prod_vals_all else 0.0
 
-    findings_sorted = sorted(
+
+def _sort_findings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
         [r for r in rows if r["issues"]],
         key=lambda x: (0 if x["severity"] == "ERRO" else 1, len(x["issues"]) * -1, x["cpu_id"]),
     )
+
+
+def _has_team(row: dict[str, Any]) -> bool:
+    return row["team_people"] > 0 or row["team_equipments"] > 0
+
+
+def _count_cpus_com_time(rows: list[dict[str, Any]]) -> int:
+    return sum(1 for r in rows if _has_team(r))
+
+
+def _build_reasonability_summary_and_findings(catalog_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    erros = _count_by_severity(rows, "ERRO")
+    avisos = _count_by_severity(rows, "AVISO")
+    outliers = _count_outliers(rows)
 
     return {
         "catalog_id": catalog_id,
@@ -240,8 +249,8 @@ def build_catalog_reasonability_artifact(
             "erros": erros,
             "avisos": avisos,
             "outliers": outliers,
-            "mediana_producao_horaria": mediana_prod,
-            "n_cpus_com_time": sum(1 for r in rows if r["team_people"] > 0 or r["team_equipments"] > 0),
+            "mediana_producao_horaria": _mediana_producao_horaria(rows),
+            "n_cpus_com_time": _count_cpus_com_time(rows),
         },
         "narrative": {
             "headline": _build_summary_line(len(rows), erros, avisos, outliers),
@@ -250,6 +259,24 @@ def build_catalog_reasonability_artifact(
                 "em seguida revise AVISOS de outlier por categoria/unidade."
             ),
         },
-        "findings": findings_sorted,
+        "findings": _sort_findings(rows),
         "rows": rows,
     }
+
+
+def build_catalog_reasonability_artifact(
+    catalog_id: str,
+    cpus: list[dict[str, Any]],
+    producoes: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    prod_lookup = _build_prod_lookup(producoes or [])
+    rows = [_build_row_for_cpu(cpu, prod_lookup) for cpu in cpus]
+
+    for row in rows:
+        _apply_direct_consistency_rules(row, prod_lookup)
+
+    grouped = _build_groups(rows)
+    for key, items in grouped.items():
+        _apply_statistical_group_rules(key, items)
+
+    return _build_reasonability_summary_and_findings(catalog_id, rows)

@@ -176,6 +176,68 @@ def run_benchmarks_batch(
         rprint(f"\n✓ Resumo salvo em: {summary_file}")
 
 
+def _rb_print_summary_table(summary: list, title: str) -> None:
+    if not summary:
+        return
+    table = Table(title=title)
+    table.add_column("Projeto", style="cyan")
+    table.add_column("Status")
+    table.add_column("Delta Direto %", justify="right")
+    table.add_column("Delta Indireto %", justify="right")
+    table.add_column("Delta Total %", justify="right")
+    table.add_column("Delta Venda %", justify="right")
+    for row in summary:
+        table.add_row(
+            row["Projeto"],
+            row["Status"],
+            row["Delta Direto %"],
+            row["Delta Indireto %"],
+            row["Delta Total %"],
+            row["Delta Venda %"],
+        )
+    rprint(table)
+
+
+def _rb_run_all(batch_runner: BenchmarkBatchRunner, reset: bool) -> None:
+    reports = batch_runner.run_all(reset=reset)
+    summary = batch_runner.build_summary(reports)
+    _rb_print_summary_table(summary, "Benchmark — Resumo")
+
+
+def _rb_resolve_target(batch_runner: BenchmarkBatchRunner, slug: str) -> tuple[str, Path]:
+    target_slug = slug.upper()
+    target_ref = find_benchmark_reference(batch_runner.benchmarks_root, target_slug)
+    if target_ref is None:
+        available = ", ".join(discover_benchmark_slugs(batch_runner.benchmarks_root)) or "(nenhum benchmark encontrado)"
+        rprint(f"[red]Benchmark '{target_slug}' não encontrado.[/red] Disponíveis: {available}")
+        raise typer.Exit(1) from None
+    return target_slug, target_ref
+
+
+def _rb_run_single(
+    target_slug: str, target_spec, reset: bool, intent: str, root: Path, pack: bool, charts: bool
+) -> None:
+    runner = BenchmarkRunner(
+        config_root=config_root(),
+        projects_root=benchmark_projects_root(),
+        report_builder=BenchmarkReportBuilder(),
+        report_printer=BenchmarkReportPrinter(),
+    )
+    _intent = intent.strip().lower() or None
+    if _intent:
+        rprint(f"[dim](intent RFX: {_intent})[/dim]")
+    rprint(f"[cyan]-> {target_slug}[/cyan]", end=" ")
+    try:
+        runner.run(target_spec, reset=reset, procurement_intent=_intent)
+        rprint("[green]OK[/green]")
+    except Exception as e:
+        rprint(f"[red]ERRO: {e}[/red]")
+        raise typer.Exit(1) from None
+
+    if pack or charts:
+        _empacotar_benchmark_cli(target_slug, root, gerar_charts=charts or pack)
+
+
 @app.command("run")
 def run_benchmarks(
     slug: str = typer.Option("", help="Slug do benchmark (ex: CTC). Omita para todos (use run-batch para batch mode)."),
@@ -198,56 +260,12 @@ def run_benchmarks(
     )
 
     if not slug:
-        reports = batch_runner.run_all(reset=reset)
-        summary = batch_runner.build_summary(reports)
-        if summary:
-            table = Table(title="Benchmark — Resumo")
-            table.add_column("Projeto", style="cyan")
-            table.add_column("Status")
-            table.add_column("Delta Direto %", justify="right")
-            table.add_column("Delta Indireto %", justify="right")
-            table.add_column("Delta Total %", justify="right")
-            table.add_column("Delta Venda %", justify="right")
-            for row in summary:
-                table.add_row(
-                    row["Projeto"],
-                    row["Status"],
-                    row["Delta Direto %"],
-                    row["Delta Indireto %"],
-                    row["Delta Total %"],
-                    row["Delta Venda %"],
-                )
-            rprint(table)
+        _rb_run_all(batch_runner, reset)
         return
 
-    target_slug = slug.upper()
-    target_ref = find_benchmark_reference(batch_runner.benchmarks_root, target_slug)
-    if target_ref is None:
-        available = ", ".join(discover_benchmark_slugs(batch_runner.benchmarks_root)) or "(nenhum benchmark encontrado)"
-        rprint(f"[red]Benchmark '{target_slug}' não encontrado.[/red] Disponíveis: {available}")
-        raise typer.Exit(1) from None
-
+    target_slug, target_ref = _rb_resolve_target(batch_runner, slug)
     target_spec = BenchmarkSpecLoader(config_root()).load(target_ref)
-
-    runner = BenchmarkRunner(
-        config_root=config_root(),
-        projects_root=benchmark_projects_root(),
-        report_builder=BenchmarkReportBuilder(),
-        report_printer=BenchmarkReportPrinter(),
-    )
-    _intent = intent.strip().lower() or None
-    if _intent:
-        rprint(f"[dim](intent RFX: {_intent})[/dim]")
-    rprint(f"[cyan]-> {target_slug}[/cyan]", end=" ")
-    try:
-        runner.run(target_spec, reset=reset, procurement_intent=_intent)
-        rprint("[green]OK[/green]")
-    except Exception as e:
-        rprint(f"[red]ERRO: {e}[/red]")
-        raise typer.Exit(1) from None
-
-    if pack or charts:
-        _empacotar_benchmark_cli(target_slug, root, gerar_charts=charts or pack)
+    _rb_run_single(target_slug, target_spec, reset, intent, root, pack, charts)
 
 
 @app.command("pack")
@@ -424,6 +442,22 @@ def iterate_correction(
     )
 
 
+def _ps_resolve_ref_path(bench_dir: Path) -> Path | None:
+    ref_path = bench_dir / "referencia.json"
+    if not ref_path.exists():
+        ref_path = bench_dir / "artifacts" / "inputs" / "referencia.json"
+    if not ref_path.exists():
+        return None
+    return ref_path
+
+
+def _ps_sort_key(r: dict) -> tuple:
+    return (
+        r["makespan_semanas"] or 9999,
+        abs(float(r["delta_preco_venda_pct"])) if r["delta_preco_venda_pct"] is not None else 999999,
+    )
+
+
 @app.command("plan-space")
 def plan_space(
     slug: str = typer.Option(..., "--slug", help="Slug do benchmark (ex: AGIS)."),
@@ -435,10 +469,8 @@ def plan_space(
     root = _tools_root()
     slug_upper = slug.upper()
     bench_dir = root / "benchmarks" / "data" / slug_upper
-    ref_path = bench_dir / "referencia.json"
-    if not ref_path.exists():
-        ref_path = bench_dir / "artifacts" / "inputs" / "referencia.json"
-    if not ref_path.exists():
+    ref_path = _ps_resolve_ref_path(bench_dir)
+    if ref_path is None:
         rprint(f"[red]referencia.json não encontrado para slug {slug_upper}.[/red]")
         raise typer.Exit(1) from None
 
@@ -469,13 +501,7 @@ def plan_space(
         rprint(f"[red]{len(failed)} alternativa(s) falharam: {', '.join(failed)}[/red]")
         raise typer.Exit(1) from None
 
-    rows_sorted = sorted(
-        rows,
-        key=lambda r: (
-            r["makespan_semanas"] or 9999,
-            abs(float(r["delta_preco_venda_pct"])) if r["delta_preco_venda_pct"] is not None else 999999,
-        ),
-    )
+    rows_sorted = sorted(rows, key=_ps_sort_key)
 
     _save_plan_space_results(rows_sorted, slug_upper, root, outputs_dir, bench_dir)
 

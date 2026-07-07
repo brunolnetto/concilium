@@ -815,6 +815,14 @@ class TestValidateFieldMethods:
                     with pytest.raises(ValueError, match="perfil_id"):
                         svc._validate_contexto_fields({"perfil_id": "invalid"})
 
+    def test_validate_contexto_fields_valid_perfil_id_does_not_raise(self):
+        """perfil_id presente e válido não levanta (branch False de `if value not in valid_ids_fn()`)."""
+        svc = self._make_svc()
+        with patch.object(svc, "list_perfis", return_value=[{"id": "valid"}]):
+            with patch.object(svc, "list_jurisdicoes", return_value=[]):
+                with patch.object(svc, "list_temas", return_value=[]):
+                    svc._validate_contexto_fields({"perfil_id": "valid"})
+
     def test_validate_contexto_fields_invalid_jurisdicao_raises(self):
         """Line 693: invalid jurisdicao_id → ValueError."""
         svc = self._make_svc()

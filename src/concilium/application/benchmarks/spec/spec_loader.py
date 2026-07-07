@@ -77,6 +77,126 @@ _EBR_KEY_MAP: dict[str, str] = {
 }
 
 
+def _v2_build_root_fields(ref: dict[str, Any], meta: dict[str, Any]) -> dict[str, Any]:
+    """1. meta → campos raiz (+ id/slug/contexto_id preservados do nível raiz).
+
+    Preservar "id" e "slug" do nível raiz para que spec_loader derive o slug correto
+    (slug = ref.get("id") or _infer_slug_from_path). Sem isso, _infer_slug_from_path
+    lê o nome do diretório temporário e cria projetos com nomes errados.
+    """
+    out: dict[str, Any] = {}
+    if ref.get("id"):
+        out["id"] = ref["id"]
+    if ref.get("slug"):
+        out["slug"] = ref["slug"]
+    # Propaga contexto_id do topo ou de meta — permite override do contexto por benchmark
+    ctx = ref.get("contexto_id") or meta.get("contexto_id")
+    if ctx:
+        out["contexto_id"] = ctx
+
+    out["projeto"] = meta.get("projeto", "")
+    out["data_inicio"] = meta.get("data_inicio", "")
+    out["data_termino"] = meta.get("data_termino", "")
+    # localizacao aceita string ("Brasil") ou {lat, lng} — ambos propagados downstream
+    out["localizacao"] = meta.get("localizacao", "")
+    out["regime_trabalho"] = meta.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6})
+    out["mode"] = meta.get("mode", "benchmark_config")
+    return out
+
+
+def _v2_build_cronograma(spec: dict[str, Any], eap_by_id: dict[str, Any]) -> tuple[list, list]:
+    """4. cronograma: propaga formato compacto E constrói atividades v1 (retrocompat).
+
+    Formato compacto: {item_id, equipes: {n_inicial, n_max, taxa_mob, taxa_demob}}
+    duration_weeks é calculado em skill-04 a partir de Q/P — não armazenado na spec.
+    """
+    atividades = []
+    cron_compacto = []
+    for item in spec.get("cronograma") or []:
+        item_id = item["item_id"]
+        eap_item = eap_by_id.get(item_id, {})
+        compact: dict[str, Any] = {"item_id": item_id}
+        if "equipes" in item:
+            compact["equipes"] = item["equipes"]
+        if "producao_diaria" in item:
+            compact["producao_diaria"] = item["producao_diaria"]
+        cron_compacto.append(compact)
+        atividades.append(
+            {
+                "item_id": item_id,
+                "producao_diaria": item.get("producao_diaria", 0.0),
+                "quantitativo": eap_item.get("quantitativo", 0.0),
+                "semanas": item.get("semanas") or {},
+                "equipes": item.get("equipes"),
+            }
+        )
+    return atividades, cron_compacto
+
+
+def _v2_build_planejamento(spec: dict[str, Any], eap_by_id: dict[str, Any]) -> list:
+    """5. planejamento: flat v2 → subtotal aninhado v1."""
+    planejamento_detalhado = []
+    for item in spec.get("planejamento") or []:
+        item_id = item["item_id"]
+        eap_item = eap_by_id.get(item_id, {})
+        planejamento_detalhado.append(
+            {
+                "item_id": item_id,
+                "cpu_id": eap_item.get("cpu_id", ""),
+                "quantitativo": eap_item.get("quantitativo", 0.0),
+                "subtotal": {
+                    "sem_bdi": {"total": item.get("custo_sem_bdi", 0.0)},
+                    "com_bdi": {"total": item.get("custo_com_bdi", 0.0)},
+                },
+            }
+        )
+    return planejamento_detalhado
+
+
+def _v2_build_indiretos(spec: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """7. indiretos[] → indiretos_detalhamento (dict) + equipes_indiretas (lista).
+
+    driver "mensal"  → custo_fixo_mensal_total  (multiplicado por duração no pipeline)
+    driver "projeto" → custo_fixo_total          (custo único, ex: mobilização)
+    """
+    indiretos_detalhamento: dict[str, Any] = {}
+    equipes_indiretas: list[dict[str, Any]] = []
+    for ind in spec.get("indiretos") or []:
+        cat = ind["categoria"]
+        driver = ind.get("driver", "mensal")
+        if driver == "projeto":
+            indiretos_detalhamento[cat] = {"custo_fixo_total": ind.get("custo_fixo_total", 0.0)}
+        else:
+            indiretos_detalhamento[cat] = {"custo_fixo_mensal_total": ind.get("custo_fixo_mensal_total", 0.0)}
+        mao_obra = ind.get("mao_obra") or []
+        if mao_obra:
+            eq_ind: dict[str, Any] = {"id": f"INDIR-{cat}", "categoria": cat, "mao_obra": mao_obra}
+            # Auditoria AGIS 2026-06-11: a planilha decompõe indiretos em MO+EQUIP+VERBAS
+            # (indiretos.adm.txt). Propagar os totais mensais para BDI fiel por sub-categoria.
+            for campo in ("equipamentos_mensal_total", "verbas_mensal_total"):
+                if isinstance(ind.get(campo), (int, float)):
+                    eq_ind[campo] = float(ind[campo])
+            equipes_indiretas.append(eq_ind)
+    return indiretos_detalhamento, equipes_indiretas
+
+
+def _v2_build_eap_and_rcpsp(spec: dict[str, Any]) -> tuple[list, dict[str, Any], dict]:
+    """2. eap direto + 3. rcpsp_spec (inalterado)."""
+    eap = spec.get("eap") or []
+    eap_by_id: dict[str, Any] = {item["item_id"]: item for item in eap if "item_id" in item}
+    rcpsp_spec = spec.get("rcpsp_spec") or {}
+    return eap, eap_by_id, rcpsp_spec
+
+
+def _v2_build_tail_fields(ref: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
+    """8. diretos → equipes_detalhadas, 9. cenarios, 10. resultado (já no topo em v2)."""
+    return {
+        "equipes_detalhadas": spec.get("diretos") or [],
+        "cenarios": spec.get("cenarios") or [],
+        "resultado": ref.get("resultado") or {},
+    }
+
+
 def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     """Converte schema v2 (meta+spec+resultado) para formato v1-compatível com o pipeline.
 
@@ -99,116 +219,27 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     meta = ref.get("meta") or {}
     spec = ref.get("spec") or {}
 
-    out: dict[str, Any] = {}
+    out = _v2_build_root_fields(ref, meta)
 
-    # Preservar "id" e "slug" do nível raiz para que spec_loader derive o slug correto
-    # (slug = ref.get("id") or _infer_slug_from_path). Sem isso, _infer_slug_from_path
-    # lê o nome do diretório temporário e cria projetos com nomes errados.
-    if ref.get("id"):
-        out["id"] = ref["id"]
-    if ref.get("slug"):
-        out["slug"] = ref["slug"]
-    # Propaga contexto_id do topo ou de meta — permite override do contexto por benchmark
-    ctx = ref.get("contexto_id") or meta.get("contexto_id")
-    if ctx:
-        out["contexto_id"] = ctx
+    eap, eap_by_id, rcpsp_spec = _v2_build_eap_and_rcpsp(spec)
+    out["eap"] = eap
+    out["rcpsp_spec"] = rcpsp_spec
 
-    # 1. meta → campos raiz
-    out["projeto"] = meta.get("projeto", "")
-    out["data_inicio"] = meta.get("data_inicio", "")
-    out["data_termino"] = meta.get("data_termino", "")
-    # localizacao aceita string ("Brasil") ou {lat, lng} — ambos propagados downstream
-    out["localizacao"] = meta.get("localizacao", "")
-    out["regime_trabalho"] = meta.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6})
-    out["mode"] = meta.get("mode", "benchmark_config")
-
-    # 2. eap direto
-    out["eap"] = spec.get("eap") or []
-    eap_by_id: dict[str, Any] = {item["item_id"]: item for item in out["eap"] if "item_id" in item}
-
-    # 3. rcpsp_spec (inalterado)
-    out["rcpsp_spec"] = spec.get("rcpsp_spec") or {}
-
-    # 4. cronograma: propaga formato compacto E constrói atividades v1 (retrocompat)
-    # Formato compacto: {item_id, equipes: {n_inicial, n_max, taxa_mob, taxa_demob}}
-    # duration_weeks é calculado em skill-04 a partir de Q/P — não armazenado na spec.
-    atividades = []
-    cron_compacto = []
-    for item in spec.get("cronograma") or []:
-        item_id = item["item_id"]
-        eap_item = eap_by_id.get(item_id, {})
-        compact: dict[str, Any] = {"item_id": item_id}
-        if "equipes" in item:
-            compact["equipes"] = item["equipes"]
-        if "producao_diaria" in item:
-            compact["producao_diaria"] = item["producao_diaria"]
-        cron_compacto.append(compact)
-        atividades.append(
-            {
-                "item_id": item_id,
-                "producao_diaria": item.get("producao_diaria", 0.0),
-                "quantitativo": eap_item.get("quantitativo", 0.0),
-                "semanas": item.get("semanas") or {},
-                "equipes": item.get("equipes"),
-            }
-        )
+    atividades, cron_compacto = _v2_build_cronograma(spec, eap_by_id)
     out["cronograma"] = {"atividades": atividades}
     # Expõe a lista compacta direta para _norm_ref_build_rcpsp_activities
     out["cronograma_compacto"] = cron_compacto
 
-    # 5. planejamento: flat v2 → subtotal aninhado v1
-    planejamento_detalhado = []
-    for item in spec.get("planejamento") or []:
-        item_id = item["item_id"]
-        eap_item = eap_by_id.get(item_id, {})
-        planejamento_detalhado.append(
-            {
-                "item_id": item_id,
-                "cpu_id": eap_item.get("cpu_id", ""),
-                "quantitativo": eap_item.get("quantitativo", 0.0),
-                "subtotal": {
-                    "sem_bdi": {"total": item.get("custo_sem_bdi", 0.0)},
-                    "com_bdi": {"total": item.get("custo_com_bdi", 0.0)},
-                },
-            }
-        )
-    out["planejamento_detalhado"] = planejamento_detalhado
+    out["planejamento_detalhado"] = _v2_build_planejamento(spec, eap_by_id)
 
     # 6. bdi
     out["bdi"] = spec.get("bdi") or {}
 
-    # 7. indiretos[] → indiretos_detalhamento (dict) + equipes_indiretas (lista)
-    #    driver "mensal"  → custo_fixo_mensal_total  (multiplicado por duração no pipeline)
-    #    driver "projeto" → custo_fixo_total          (custo único, ex: mobilização)
-    indiretos_detalhamento: dict[str, Any] = {}
-    equipes_indiretas: list[dict[str, Any]] = []
-    for ind in spec.get("indiretos") or []:
-        cat = ind["categoria"]
-        driver = ind.get("driver", "mensal")
-        if driver == "projeto":
-            indiretos_detalhamento[cat] = {"custo_fixo_total": ind.get("custo_fixo_total", 0.0)}
-        else:
-            indiretos_detalhamento[cat] = {"custo_fixo_mensal_total": ind.get("custo_fixo_mensal_total", 0.0)}
-        mao_obra = ind.get("mao_obra") or []
-        if mao_obra:
-            eq_ind: dict[str, Any] = {"id": f"INDIR-{cat}", "categoria": cat, "mao_obra": mao_obra}
-            # Auditoria AGIS 2026-06-11: a planilha decompõe indiretos em MO+EQUIP+VERBAS
-            # (indiretos.adm.txt). Propagar os totais mensais para BDI fiel por sub-categoria.
-            for campo in ("equipamentos_mensal_total", "verbas_mensal_total"):
-                if isinstance(ind.get(campo), (int, float)):
-                    eq_ind[campo] = float(ind[campo])
-            equipes_indiretas.append(eq_ind)
+    indiretos_detalhamento, equipes_indiretas = _v2_build_indiretos(spec)
     out["indiretos_detalhamento"] = indiretos_detalhamento
     out["equipes_indiretas"] = equipes_indiretas
 
-    # 8. diretos → equipes_detalhadas
-    out["equipes_detalhadas"] = spec.get("diretos") or []
-
-    # 9. cenarios
-    out["cenarios"] = spec.get("cenarios") or []
-
-    # 10. resultado (já está no topo em v2)
-    out["resultado"] = ref.get("resultado") or {}
+    out.update(_v2_build_tail_fields(ref, spec))
 
     return out
 
@@ -295,28 +326,118 @@ class BenchmarkSpecLoader:
                 converted[cat] = {"custo_fixo_mensal_total": round(custo_total / permanencia, 2)}
         return converted
 
-    def load_from_dict(self, ref: dict[str, Any], path: Path | str) -> ProjectSpec:
-        """Carrega ProjectSpec a partir de um dict ja parseado (sem re-ler o disco)."""
-        path = Path(path).resolve()
-        ref = self._normalize_reference_schema(ref)
-
-        projeto_block = ref.get("projeto") if isinstance(ref.get("projeto"), dict) else {}
+    def _lfd_resolve_projeto_nome(self, ref: dict[str, Any], projeto_block: dict, path: Path) -> str:
         projeto_nome = ref.get("projeto") if isinstance(ref.get("projeto"), str) else None
         if not projeto_nome and projeto_block:
             projeto_nome = projeto_block.get("nome") or projeto_block.get("projeto")
         if not isinstance(projeto_nome, str) or not projeto_nome.strip():
             projeto_nome = self._infer_slug_from_path(path)
+        return projeto_nome
 
-        meta_block = ref.get("meta") if isinstance(ref.get("meta"), dict) else {}
-        contexto_id = ref.get("contexto_id") or (meta_block.get("contexto_id") if meta_block else None) or "mendeslobo"
-        _ctx_version, _perfil_id, _perfil_version = self._lfd_resolve_context(ref, contexto_id)
+    @staticmethod
+    def _lfd_resolve_contexto_id(ref: dict[str, Any], meta_block: dict) -> str:
+        return ref.get("contexto_id") or (meta_block.get("contexto_id") if meta_block else None) or "mendeslobo"
 
+    @staticmethod
+    def _lfd_resolve_datas(ref: dict[str, Any], projeto_block: dict) -> tuple[str, str]:
         data_ini = (
             ref.get("data_inicio") or (projeto_block.get("data_inicio") if projeto_block else None) or "2025-01-01"
         )
         data_fim = (
             ref.get("data_termino") or (projeto_block.get("data_termino") if projeto_block else None) or "2025-06-30"
         )
+        return data_ini, data_fim
+
+    @staticmethod
+    def _lfd_resolve_localizacao_regime(ref: dict[str, Any], projeto_block: dict) -> tuple[Any, dict]:
+        localizacao = ref.get("localizacao")
+        if localizacao is None and projeto_block:
+            localizacao = projeto_block.get("localizacao")
+
+        regime_trabalho = ref.get("regime_trabalho")
+        if not isinstance(regime_trabalho, dict) and projeto_block:
+            regime_trabalho = projeto_block.get("regime_trabalho")
+        if not isinstance(regime_trabalho, dict):
+            regime_trabalho = {"horas_dia": 8, "dias_semana": 6}
+        return localizacao, regime_trabalho
+
+    @staticmethod
+    def _lfd_build_inputs_escopo(
+        projeto_nome: str,
+        localizacao: Any,
+        regime_trabalho: dict,
+        data_ini: str,
+        data_fim: str,
+        eap: list[dict[str, Any]],
+        ref: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "nome": projeto_nome,
+            "tipo_obra": "terraplenagem",
+            # localizacao: string legada OU {lat, lng} normalizado. coordenadas é
+            # alias retrocompat — se localizacao já é {lat,lng}, reusa o mesmo dict.
+            "localizacao": localizacao or "Brasil",
+            "coordenadas": (
+                localizacao if isinstance(localizacao, dict) else ref.get("coordenadas", {"lat": 0.0, "lng": 0.0})
+            ),
+            "regime_trabalho": regime_trabalho,
+            "data_inicio": data_ini,
+            "data_termino": data_fim,
+            "eap": [item for item in eap if item.get("cpu_id")],
+        }
+
+    @staticmethod
+    def _lfd_static_extra_inputs() -> dict[str, Any]:
+        """Blocos de inputs fixos (baseline automática) para skills 08 e 09."""
+        return {
+            "08-avaliacao-intervencoes": {
+                "intervencoes_propostas": [
+                    {
+                        "nome": "Baseline Automatica",
+                        "custo_estimado": 0,
+                        "impacto_prazo_semanas": 0,
+                        "justificativa": "Ponto de partida para benchmark de engenharia.",
+                    }
+                ]
+            },
+            "09-registro-decisoes": {
+                "objective": "Aprovacao de Baseline para Auditoria Financeira",
+                "considered_interventions": [
+                    {
+                        "nome": "Baseline Automatica",
+                        "variavel": "baseline",
+                        "custo_estimado": 0,
+                        "impacto_prazo_semanas": 0,
+                        "justificativa": "Ponto de partida para benchmark de engenharia.",
+                    }
+                ],
+                "selected_intervention": "baseline",
+                "justification": {
+                    "main_reason": "Alinhamento com dados de referencia historicos.",
+                    "rejected_reasons": {},
+                },
+                "decided_by": {
+                    "type": "system",
+                    "id": "benchmark_runner",
+                },
+            },
+        }
+
+    def load_from_dict(self, ref: dict[str, Any], path: Path | str) -> ProjectSpec:
+        """Carrega ProjectSpec a partir de um dict ja parseado (sem re-ler o disco)."""
+        path = Path(path).resolve()
+        ref = self._normalize_reference_schema(ref)
+
+        raw_projeto = ref.get("projeto")
+        projeto_block: dict[str, Any] = raw_projeto if isinstance(raw_projeto, dict) else {}
+        projeto_nome = self._lfd_resolve_projeto_nome(ref, projeto_block, path)
+
+        raw_meta = ref.get("meta")
+        meta_block: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
+        contexto_id = self._lfd_resolve_contexto_id(ref, meta_block)
+        _ctx_version, _perfil_id, _perfil_version = self._lfd_resolve_context(ref, contexto_id)
+
+        data_ini, data_fim = self._lfd_resolve_datas(ref, projeto_block)
         weeks = iso_weeks(data_ini, data_fim)
         eap = self._extract_eap(ref)
         eap = self._enrich_eap_with_cpu_ids(eap, contexto_id)
@@ -350,52 +471,14 @@ class BenchmarkSpecLoader:
             equipes_indiretas=ref.get("equipes_indiretas") or [],
         )
 
-        extra_inputs["08-avaliacao-intervencoes"] = {
-            "intervencoes_propostas": [
-                {
-                    "nome": "Baseline Automatica",
-                    "custo_estimado": 0,
-                    "impacto_prazo_semanas": 0,
-                    "justificativa": "Ponto de partida para benchmark de engenharia.",
-                }
-            ]
-        }
-        extra_inputs["09-registro-decisoes"] = {
-            "objective": "Aprovacao de Baseline para Auditoria Financeira",
-            "considered_interventions": [
-                {
-                    "nome": "Baseline Automatica",
-                    "variavel": "baseline",
-                    "custo_estimado": 0,
-                    "impacto_prazo_semanas": 0,
-                    "justificativa": "Ponto de partida para benchmark de engenharia.",
-                }
-            ],
-            "selected_intervention": "baseline",
-            "justification": {
-                "main_reason": "Alinhamento com dados de referencia historicos.",
-                "rejected_reasons": {},
-            },
-            "decided_by": {
-                "type": "system",
-                "id": "benchmark_runner",
-            },
-        }
+        extra_inputs.update(self._lfd_static_extra_inputs())
 
         # ADR-071: repassa rcpsp_spec para skill-05 para que possa calcular
         # contratos de pool e atribuir custos proporcionalmente ao uso.
         if ref.get("rcpsp_spec"):
             extra_inputs["05-equipes-e-alocacao"] = {"rcpsp_spec": ref["rcpsp_spec"]}
 
-        localizacao = ref.get("localizacao")
-        if localizacao is None and projeto_block:
-            localizacao = projeto_block.get("localizacao")
-
-        regime_trabalho = ref.get("regime_trabalho")
-        if not isinstance(regime_trabalho, dict) and projeto_block:
-            regime_trabalho = projeto_block.get("regime_trabalho")
-        if not isinstance(regime_trabalho, dict):
-            regime_trabalho = {"horas_dia": 8, "dias_semana": 6}
+        localizacao, regime_trabalho = self._lfd_resolve_localizacao_regime(ref, projeto_block)
 
         return ProjectSpec(
             nome=projeto_nome,
@@ -405,20 +488,9 @@ class BenchmarkSpecLoader:
             perfil_id=_perfil_id,
             perfil_version=_perfil_version,
             referencia_path=path,
-            inputs_escopo={
-                "nome": projeto_nome,
-                "tipo_obra": "terraplenagem",
-                # localizacao: string legada OU {lat, lng} normalizado. coordenadas é
-                # alias retrocompat — se localizacao já é {lat,lng}, reusa o mesmo dict.
-                "localizacao": localizacao or "Brasil",
-                "coordenadas": (
-                    localizacao if isinstance(localizacao, dict) else ref.get("coordenadas", {"lat": 0.0, "lng": 0.0})
-                ),
-                "regime_trabalho": regime_trabalho,
-                "data_inicio": data_ini,
-                "data_termino": data_fim,
-                "eap": [item for item in eap if item.get("cpu_id")],
-            },
+            inputs_escopo=self._lfd_build_inputs_escopo(
+                projeto_nome, localizacao, regime_trabalho, data_ini, data_fim, eap, ref
+            ),
             inputs_cronograma={
                 "num_equipes_por_item": num_equipes_por_item,
                 **({"rcpsp_spec": ref["rcpsp_spec"]} if ref.get("rcpsp_spec") else {}),

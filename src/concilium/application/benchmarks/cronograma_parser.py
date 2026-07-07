@@ -108,6 +108,56 @@ def _find_cpu_for_item(descricao: str, cpus_map: dict[str, str]) -> str | None:
     return None
 
 
+def _make_predecessor_entry(item_id: str) -> dict[str, Any]:
+    """Monta um dict de predecessor FS com threshold de conclusão total."""
+    return {
+        "item_id": item_id,
+        "tipo": "FS",
+        "lag": 0,
+        "completion_threshold_pct": 1.0,  # Must finish before this can start
+    }
+
+
+def _last_item_of_previous_section(items: list[CronogramaItem], section: int) -> str | None:
+    """Encontra o item_id de maior número na seção imediatamente anterior."""
+    if section <= 1:
+        return None
+    prev_section_str = str(section - 1)
+    last_prev_item = None
+    max_prev_num = 0
+    for i in items:
+        if i.item_id.startswith(prev_section_str + "."):
+            try:
+                prev_num = int(i.item_id.split(".")[1])
+                if prev_num > max_prev_num:
+                    max_prev_num = prev_num
+                    last_prev_item = i.item_id
+            except (ValueError, IndexError):
+                pass
+    return last_prev_item
+
+
+def _collect_item_nums_in_section(items: list[CronogramaItem], section: int) -> set[int]:
+    """Coleta os números de item que existem de fato numa seção."""
+    item_ids_in_section: set[int] = set()
+    for i in items:
+        i_parts = i.item_id.split(".")
+        if len(i_parts) == 2 and int(i_parts[0]) == section:
+            try:
+                item_ids_in_section.add(int(i_parts[1]))
+            except ValueError:
+                pass
+    return item_ids_in_section
+
+
+def _find_previous_item_in_section(item_ids_in_section: set[int], section: int, item_num: int) -> str | None:
+    """Encontra o item anterior existente na mesma seção (lida com lacunas na numeração)."""
+    for num in range(item_num - 1, 0, -1):
+        if num in item_ids_in_section:
+            return f"{section}.{num}"
+    return None
+
+
 def _infer_predecessores(items: list[CronogramaItem], item_id: str, secao_map: dict[str, str]) -> list[dict[str, Any]]:
     """Infer predecessores from item structure and order.
 
@@ -131,83 +181,68 @@ def _infer_predecessores(items: list[CronogramaItem], item_id: str, secao_map: d
     item_num = int(parts[1]) if len(parts) > 1 else 1
 
     predecessores = []
-    item_ids_in_section = set()
-
-    # Build set of all item_ids that actually exist in this section
-    for i in items:
-        i_parts = i.item_id.split(".")
-        if len(i_parts) == 2 and int(i_parts[0]) == section:
-            try:
-                item_ids_in_section.add(int(i_parts[1]))
-            except ValueError:
-                pass
 
     # If first item in section, depend on last item of previous section (if exists)
     if item_num == 1:
-        if section > 1:
-            # Previous section exists - find its last item
-            prev_section_str = str(section - 1)
-            last_prev_item = None
-            max_prev_num = 0
-            for i in items:
-                if i.item_id.startswith(prev_section_str + "."):
-                    try:
-                        prev_num = int(i.item_id.split(".")[1])
-                        if prev_num > max_prev_num:
-                            max_prev_num = prev_num
-                            last_prev_item = i.item_id
-                    except (ValueError, IndexError):
-                        pass
-
-            if last_prev_item:
-                predecessores.append(
-                    {
-                        "item_id": last_prev_item,
-                        "tipo": "FS",
-                        "lag": 0,
-                        "completion_threshold_pct": 1.0,  # Must finish before this can start
-                    }
-                )
+        last_prev_item = _last_item_of_previous_section(items, section)
+        if last_prev_item:
+            predecessores.append(_make_predecessor_entry(last_prev_item))
         # else: section == 1, first item overall, no predecessors
+        return predecessores
+
+    # Find previous existing item in same section (may not be item_num - 1 due to gaps)
+    item_ids_in_section = _collect_item_nums_in_section(items, section)
+    prev_found = _find_previous_item_in_section(item_ids_in_section, section, item_num)
+
+    if prev_found:
+        predecessores.append(_make_predecessor_entry(prev_found))
     else:
-        # Find previous existing item in same section (may not be item_num - 1 due to gaps)
-        prev_found = None
-        for num in range(item_num - 1, 0, -1):
-            if num in item_ids_in_section:
-                prev_found = f"{section}.{num}"
-                break
-
-        if prev_found:
-            predecessores.append(
-                {
-                    "item_id": prev_found,
-                    "tipo": "FS",
-                    "lag": 0,
-                    "completion_threshold_pct": 1.0,  # Must finish before this can start
-                }
-            )
-        else:
-            # No previous item in section, depend on last item of previous section
-            if section > 1:
-                prev_section_str = str(section - 1)
-                last_prev_item = None
-                max_prev_num = 0
-                for i in items:
-                    if i.item_id.startswith(prev_section_str + "."):
-                        try:
-                            prev_num = int(i.item_id.split(".")[1])
-                            if prev_num > max_prev_num:
-                                max_prev_num = prev_num
-                                last_prev_item = i.item_id
-                        except (ValueError, IndexError):
-                            pass
-
-                if last_prev_item:
-                    predecessores.append(
-                        {"item_id": last_prev_item, "tipo": "FS", "lag": 0, "completion_threshold_pct": 1.0}
-                    )
+        # No previous item in section, depend on last item of previous section
+        last_prev_item = _last_item_of_previous_section(items, section)
+        if last_prev_item:
+            predecessores.append(_make_predecessor_entry(last_prev_item))
 
     return predecessores
+
+
+def _build_cronograma_item(item_id: str, descricao: str, parts: list[str]) -> CronogramaItem | None:
+    """Constrói um CronogramaItem a partir das colunas de uma linha de sub-item; None se quantidade <= 0."""
+    unidade = parts[2].strip() if len(parts) > 2 else ""
+
+    # Quantity is in column 3 (4th column)
+    quantitativo_str = parts[3].strip() if len(parts) > 3 else "0"
+    quantitativo = _parse_valor(quantitativo_str)
+
+    # Produção horária is in column 4 (5th column)
+    producao_horaria_str = parts[4].strip() if len(parts) > 4 else "0"
+    producao_horaria = _parse_valor(producao_horaria_str)
+
+    # Produção diária is in column 5 (6th column)
+    producao_str = parts[5].strip() if len(parts) > 5 else "0"
+    producao_diaria = _parse_valor(producao_str)
+
+    if quantitativo <= 0:
+        return None
+
+    return CronogramaItem(
+        item_id=item_id,
+        descricao=descricao,
+        unidade=unidade,
+        quantitativo=quantitativo,
+        producao_diaria=producao_diaria,
+        producao_horaria=producao_horaria,
+    )
+
+
+def _dedupe_by_item_id(items: list[CronogramaItem]) -> list[CronogramaItem]:
+    """Deduplica itens por item_id, mantendo a primeira ocorrência."""
+    seen_ids: set[str] = set()
+    unique_items = []
+    for item in items:
+        if item.item_id not in seen_ids:
+            unique_items.append(item)
+            seen_ids.add(item.item_id)
+    return unique_items
 
 
 class CronogramaParser:
@@ -230,6 +265,12 @@ class CronogramaParser:
 
     def parse_lines(self, lines: list[str]) -> list[dict[str, Any]]:
         """Parse cronograma.txt lines and return list of EAP items."""
+        items, secao_map = self._parse_item_lines(lines)
+        unique_items = _dedupe_by_item_id(items)
+        return self._build_eap_items(items, unique_items, secao_map)
+
+    def _parse_item_lines(self, lines: list[str]) -> tuple[list[CronogramaItem], dict[str, str]]:
+        """Percorre as linhas do cronograma, extraindo itens e cabeçalhos de seção."""
         items: list[CronogramaItem] = []
         secao_map: dict[str, str] = {}  # section_id → description
 
@@ -258,41 +299,19 @@ class CronogramaParser:
 
             # Sub-item (e.g., "2.1", "2.2")
             if len(id_parts) == 2 and item_id[0].isdigit():
-                unidade = parts[2].strip() if len(parts) > 2 else ""
+                item = _build_cronograma_item(item_id, descricao, parts)
+                if item is not None:
+                    items.append(item)
 
-                # Quantity is in column 3 (4th column)
-                quantitativo_str = parts[3].strip() if len(parts) > 3 else "0"
-                quantitativo = _parse_valor(quantitativo_str)
+        return items, secao_map
 
-                # Produção horária is in column 4 (5th column)
-                producao_horaria_str = parts[4].strip() if len(parts) > 4 else "0"
-                producao_horaria = _parse_valor(producao_horaria_str)
-
-                # Produção diária is in column 5 (6th column)
-                producao_str = parts[5].strip() if len(parts) > 5 else "0"
-                producao_diaria = _parse_valor(producao_str)
-
-                if quantitativo > 0:
-                    items.append(
-                        CronogramaItem(
-                            item_id=item_id,
-                            descricao=descricao,
-                            unidade=unidade,
-                            quantitativo=quantitativo,
-                            producao_diaria=producao_diaria,
-                            producao_horaria=producao_horaria,
-                        )
-                    )
-
-        # Deduplicate items by item_id (keep first occurrence)
-        seen_ids: set[str] = set()
-        unique_items = []
-        for item in items:
-            if item.item_id not in seen_ids:
-                unique_items.append(item)
-                seen_ids.add(item.item_id)
-
-        # Convert to EAP format with inferred predecessores
+    def _build_eap_items(
+        self,
+        items: list[CronogramaItem],
+        unique_items: list[CronogramaItem],
+        secao_map: dict[str, str],
+    ) -> list[dict[str, Any]]:
+        """Converte os itens únicos para o formato EAP, com predecessores inferidos."""
         eap_items = []
         ordem = 1
 

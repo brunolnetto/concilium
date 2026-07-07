@@ -34,13 +34,7 @@ def campaign(
     """
     import json
 
-    from concilium.application.services.campaign.campaign_report import (
-        render_campaign_report_md,
-        render_campaign_report_pdf,
-        serialize_campaign_report,
-    )
     from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
-    from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
 
     # Resolver paths
     _cfg = config_root or _default_config_root()
@@ -48,19 +42,7 @@ def campaign(
 
     slug = project_id.upper()
 
-    # Resolver campaign file
-    if campaign_file is None:
-        # 1. projetos/{slug}/campaigns/ (runtime, pode ser deletado em reset)
-        # 2. data/{slug}/campaigns/    (tracked, sobrevive ao reset — preferido)
-        _candidates = [
-            _proj / slug / "campaigns" / "campaign_v1.json",
-            _proj.parent / "data" / slug / "campaigns" / "campaign_v1.json",
-        ]
-        campaign_file = next((p for p in _candidates if p.exists()), _candidates[0])
-
-    if not campaign_file.exists():
-        typer.echo(f"[ERRO] Arquivo de campanha não encontrado: {campaign_file}", err=True)
-        raise typer.Exit(1)
+    campaign_file = _resolve_campaign_file(campaign_file, _proj, slug)
 
     # Carregar campaign config
     cfg = json.loads(campaign_file.read_text(encoding="utf-8"))
@@ -73,21 +55,7 @@ def campaign(
         typer.echo(f"[ERRO] Projeto '{slug}' não encontrado ou sem canonical.", err=True)
         raise typer.Exit(1)
 
-    # Montar bundle
-    perf_raw = cfg.get("perfil_expectativas") or {}
-    perfil = PerfilExpectativas(
-        meta_margem_pct=perf_raw.get("meta_margem_pct", META_MARGEM_PADRAO),
-        tolerancia_margem=perf_raw.get("tolerancia_margem", TOLERANCIA_MARGEM_PADRAO),
-        prazo_contratual_semanas=perf_raw.get("prazo_contratual_semanas"),
-    )
-    sweep = [ParametroSweep(campo=s["campo"], valores=s["valores"]) for s in (cfg.get("sweep") or [])]
-    bundle = GoResearchCampaignBundle(
-        base_spec=base_spec,
-        sweep=sweep,
-        perfil_expectativas=perfil,
-        top_k=cfg.get("top_k", 5),
-        campaign_version=cfg.get("campaign_version", "v1"),
-    )
+    bundle = _build_campaign_bundle(cfg, base_spec)
 
     n_cenarios = 1
     for s in bundle.sweep:
@@ -99,17 +67,69 @@ def campaign(
     cube = construir_cubo(bundle, result)
 
     typer.echo(f"\n[RESULTADO] {result.status} — {result.n_cenarios_viaveis}/{result.n_cenarios_avaliados} viáveis")
-    if result.shortlist:
-        for r in result.shortlist:
-            j = r.justificativa
-            destaques = " · ".join((j.destaques_EF + j.destaques_O)[:3])
-            typer.echo(f"  #{r.rank} {r.cenario.cenario_id} ({j.motivo_inclusao}): {destaques}")
+    _echo_campaign_shortlist(result.shortlist)
 
     # Persistir como artefato de projeto versionado
+    _persist_campaign_run(_proj, slug, cfg, result, cube)
 
+
+def _resolve_campaign_file(campaign_file: Path | None, projects_root: Path, slug: str) -> Path:
+    """Resolve o path do arquivo de campanha, aplicando o default quando omitido."""
+    if campaign_file is None:
+        # 1. projetos/{slug}/campaigns/ (runtime, pode ser deletado em reset)
+        # 2. data/{slug}/campaigns/    (tracked, sobrevive ao reset — preferido)
+        _candidates = [
+            projects_root / slug / "campaigns" / "campaign_v1.json",
+            projects_root.parent / "data" / slug / "campaigns" / "campaign_v1.json",
+        ]
+        campaign_file = next((p for p in _candidates if p.exists()), _candidates[0])
+
+    if not campaign_file.exists():
+        typer.echo(f"[ERRO] Arquivo de campanha não encontrado: {campaign_file}", err=True)
+        raise typer.Exit(1)
+    return campaign_file
+
+
+def _build_campaign_bundle(cfg: dict, base_spec: dict):
+    """Monta o GoResearchCampaignBundle a partir da config de campanha e do base_spec."""
+    from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
+
+    perf_raw = cfg.get("perfil_expectativas") or {}
+    perfil = PerfilExpectativas(
+        meta_margem_pct=perf_raw.get("meta_margem_pct", META_MARGEM_PADRAO),
+        tolerancia_margem=perf_raw.get("tolerancia_margem", TOLERANCIA_MARGEM_PADRAO),
+        prazo_contratual_semanas=perf_raw.get("prazo_contratual_semanas"),
+    )
+    sweep = [ParametroSweep(campo=s["campo"], valores=s["valores"]) for s in (cfg.get("sweep") or [])]
+    return GoResearchCampaignBundle(
+        base_spec=base_spec,
+        sweep=sweep,
+        perfil_expectativas=perfil,
+        top_k=cfg.get("top_k", 5),
+        campaign_version=cfg.get("campaign_version", "v1"),
+    )
+
+
+def _echo_campaign_shortlist(shortlist) -> None:
+    """Imprime as linhas de shortlist do resultado da campanha, se houver."""
+    if not shortlist:
+        return
+    for r in shortlist:
+        j = r.justificativa
+        destaques = " · ".join((j.destaques_EF + j.destaques_O)[:3])
+        typer.echo(f"  #{r.rank} {r.cenario.cenario_id} ({j.motivo_inclusao}): {destaques}")
+
+
+def _persist_campaign_run(projects_root: Path, slug: str, cfg: dict, result, cube) -> None:
+    """Persiste o resultado da campanha como artefato de projeto versionado."""
+    from concilium.application.services.campaign.campaign_report import (
+        render_campaign_report_md,
+        render_campaign_report_pdf,
+        serialize_campaign_report,
+    )
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
 
-    store = CampaignRunStore(_proj / slug)
+    store = CampaignRunStore(projects_root / slug)
     run = store.new_run()
     typer.echo(f"\n[STORE] Novo run: {run}")
 

@@ -147,25 +147,13 @@ class CatalogQueryEngine:
     def _build_cpus(self, conn: Any) -> None:
         cpus_dir = self._dir / "cpus"
         cpus_file = self._dir / "cpus.json"
-        rows: list[tuple[str, str, str, str, str]] = []
 
         if cpus_dir.exists():
-            for f in sorted(cpus_dir.glob("*.json")):
-                try:
-                    raw = json.loads(f.read_text(encoding="utf-8"))
-                    if isinstance(raw, dict):
-                        rows.append(_cpu_row(raw))
-                except Exception:
-                    continue
+            rows = _load_cpu_rows_from_dir(cpus_dir)
         elif cpus_file.exists():
-            try:
-                payload = json.loads(cpus_file.read_text(encoding="utf-8"))
-                cpus = payload.get("cpus", payload) if isinstance(payload, dict) else payload
-                for raw in cpus or []:
-                    if isinstance(raw, dict):
-                        rows.append(_cpu_row(raw))
-            except Exception:
-                pass
+            rows = _load_cpu_rows_from_file(cpus_file)
+        else:
+            rows = []
 
         conn.execute("""
             CREATE TABLE cpus (
@@ -183,35 +171,7 @@ class CatalogQueryEngine:
 
     def _build_insumos(self, conn: Any) -> None:
         ins_dir = self._dir / "insumos"
-        rows: list[tuple[str, str, str, str]] = []
-
-        if ins_dir.exists():
-            # Layout A: insumos/<tipo>/<ID>.json — cada arquivo é um insumo individual
-            has_subdirs = any(d.is_dir() for d in ins_dir.iterdir()) if ins_dir.exists() else False
-            if has_subdirs:
-                for tipo_dir in sorted(ins_dir.iterdir()):
-                    if not tipo_dir.is_dir():
-                        continue
-                    tipo = tipo_dir.name
-                    for f in sorted(tipo_dir.glob("*.json")):
-                        try:
-                            raw = json.loads(f.read_text(encoding="utf-8"))
-                            if isinstance(raw, dict):
-                                rows.append(_insumo_row(raw, tipo))
-                        except Exception:
-                            continue
-            else:
-                # Layout B: insumos/<tipo>.json — cada arquivo é uma lista por tipo
-                for f in sorted(ins_dir.glob("*.json")):
-                    tipo = f.stem
-                    try:
-                        payload = json.loads(f.read_text(encoding="utf-8"))
-                        items = payload.get("insumos", payload) if isinstance(payload, dict) else payload
-                        for raw in items or []:
-                            if isinstance(raw, dict):
-                                rows.append(_insumo_row(raw, tipo))
-                    except Exception:
-                        continue
+        rows = _load_insumo_rows(ins_dir)
 
         conn.execute("""
             CREATE TABLE insumos (
@@ -226,30 +186,10 @@ class CatalogQueryEngine:
         conn.execute("CREATE INDEX idx_insumos_id ON insumos(id)")
 
     def _build_produtividades(self, conn: Any) -> None:
-        rows: list[tuple[str, str, str]] = []
-        for dir_name in ("produtividades", "producoes"):
-            prod_dir = self._dir / dir_name
-            if prod_dir.exists():
-                for f in sorted(prod_dir.glob("*.json")):
-                    try:
-                        raw = json.loads(f.read_text(encoding="utf-8"))
-                        if isinstance(raw, dict):
-                            rows.append(_prod_row(raw))
-                    except Exception:
-                        continue
-                break
+        rows = _load_prod_rows_from_dirs(self._dir)
         # fallback: arquivo único
         if not rows:
-            p = self._dir / "produtividades.json"
-            if p.exists():
-                try:
-                    payload = json.loads(p.read_text(encoding="utf-8"))
-                    items = payload.get("produtividades", payload) if isinstance(payload, dict) else payload
-                    for raw in items or []:
-                        if isinstance(raw, dict):
-                            rows.append(_prod_row(raw))
-                except Exception:
-                    pass
+            rows = _load_prod_rows_fallback_file(self._dir / "produtividades.json")
 
         conn.execute("""
             CREATE TABLE produtividades (
@@ -362,6 +302,279 @@ def _funcao_row(raw: dict) -> tuple[str, str, str]:
     )
 
 
+# ── CatalogQueryEngine row loaders (extraídos de _build_cpus/_build_insumos/_build_produtividades) ──
+
+
+def _load_cpu_rows_from_dir(cpus_dir: Path) -> list[tuple[str, str, str, str, str]]:
+    """Layout de diretório: cpus/<ID>.json — cada arquivo é uma CPU individual."""
+    rows: list[tuple[str, str, str, str, str]] = []
+    for f in sorted(cpus_dir.glob("*.json")):
+        try:
+            raw = json.loads(f.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                rows.append(_cpu_row(raw))
+        except Exception:
+            continue
+    return rows
+
+
+def _load_cpu_rows_from_file(cpus_file: Path) -> list[tuple[str, str, str, str, str]]:
+    """Layout de arquivo único: cpus.json contendo uma lista de CPUs."""
+    rows: list[tuple[str, str, str, str, str]] = []
+    try:
+        payload = json.loads(cpus_file.read_text(encoding="utf-8"))
+        cpus = payload.get("cpus", payload) if isinstance(payload, dict) else payload
+        for raw in cpus or []:
+            if isinstance(raw, dict):
+                rows.append(_cpu_row(raw))
+    except Exception:
+        pass
+    return rows
+
+
+def _load_insumo_rows_layout_a(ins_dir: Path) -> list[tuple[str, str, str, str]]:
+    """Layout A: insumos/<tipo>/<ID>.json — cada arquivo é um insumo individual."""
+    rows: list[tuple[str, str, str, str]] = []
+    for tipo_dir in sorted(ins_dir.iterdir()):
+        if not tipo_dir.is_dir():
+            continue
+        tipo = tipo_dir.name
+        for f in sorted(tipo_dir.glob("*.json")):
+            try:
+                raw = json.loads(f.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    rows.append(_insumo_row(raw, tipo))
+            except Exception:
+                continue
+    return rows
+
+
+def _load_insumo_rows_layout_b(ins_dir: Path) -> list[tuple[str, str, str, str]]:
+    """Layout B: insumos/<tipo>.json — cada arquivo é uma lista por tipo."""
+    rows: list[tuple[str, str, str, str]] = []
+    for f in sorted(ins_dir.glob("*.json")):
+        tipo = f.stem
+        try:
+            payload = json.loads(f.read_text(encoding="utf-8"))
+            items = payload.get("insumos", payload) if isinstance(payload, dict) else payload
+            for raw in items or []:
+                if isinstance(raw, dict):
+                    rows.append(_insumo_row(raw, tipo))
+        except Exception:
+            continue
+    return rows
+
+
+def _load_insumo_rows(ins_dir: Path) -> list[tuple[str, str, str, str]]:
+    """Detecta o layout A ou B do diretório de insumos e carrega as rows."""
+    if not ins_dir.exists():
+        return []
+    has_subdirs = any(d.is_dir() for d in ins_dir.iterdir())
+    if has_subdirs:
+        return _load_insumo_rows_layout_a(ins_dir)
+    return _load_insumo_rows_layout_b(ins_dir)
+
+
+def _load_prod_rows_from_dir(prod_dir: Path) -> list[tuple[str, str, str]]:
+    rows: list[tuple[str, str, str]] = []
+    for f in sorted(prod_dir.glob("*.json")):
+        try:
+            raw = json.loads(f.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                rows.append(_prod_row(raw))
+        except Exception:
+            continue
+    return rows
+
+
+def _load_prod_rows_from_dirs(base_dir: Path) -> list[tuple[str, str, str]]:
+    """Tenta 'produtividades/' e depois 'producoes/'; usa o primeiro que existir."""
+    for dir_name in ("produtividades", "producoes"):
+        prod_dir = base_dir / dir_name
+        if prod_dir.exists():
+            return _load_prod_rows_from_dir(prod_dir)
+    return []
+
+
+def _load_prod_rows_fallback_file(prod_file: Path) -> list[tuple[str, str, str]]:
+    """Fallback: arquivo único produtividades.json contendo uma lista."""
+    rows: list[tuple[str, str, str]] = []
+    if not prod_file.exists():
+        return rows
+    try:
+        payload = json.loads(prod_file.read_text(encoding="utf-8"))
+        items = payload.get("produtividades", payload) if isinstance(payload, dict) else payload
+        for raw in items or []:
+            if isinstance(raw, dict):
+                rows.append(_prod_row(raw))
+    except Exception:
+        pass
+    return rows
+
+
+def _first_field(d: dict, *keys: str, default: object = 0):
+    """Retorna o valor da primeira chave presente e truthy em ``d``, ou ``default``.
+
+    Colapsa cadeias `d.get(k1) or d.get(k2) or default` em uma única chamada.
+    """
+    for k in keys:
+        v = d.get(k)
+        if v:
+            return v
+    return default
+
+
+# ── CatalogSession._load helpers (extraídos por seção da tabela) ───────────────
+
+
+def _load_session_cpus(conn: Any, catalogo: dict[str, Any]) -> list[tuple]:
+    """Cria a tabela `cpus` a partir do catálogo resolvido; retorna as rows inseridas."""
+    cpu_rows = [_cpu_row(c) for c in catalogo.get("cpus", []) if isinstance(c, dict)]
+    conn.execute("CREATE TABLE cpus (codigo TEXT, descricao TEXT, categoria TEXT, unidade TEXT, raw_json TEXT)")
+    if cpu_rows:
+        conn.executemany("INSERT INTO cpus VALUES (?,?,?,?,?)", cpu_rows)
+    conn.execute("CREATE INDEX idx_cpus_codigo    ON cpus(codigo)")
+    conn.execute("CREATE INDEX idx_cpus_categoria ON cpus(categoria)")
+    return cpu_rows
+
+
+def _load_session_insumos(conn: Any, catalogo: dict[str, Any]) -> list[tuple]:
+    """Cria as tabelas `insumos` + `insumos_precos` (flatten dict[tipo, list] → tabela flat)."""
+    ins_rows: list[tuple] = []
+    raw_insumos = catalogo.get("insumos", {})
+    if isinstance(raw_insumos, dict):
+        for tipo, items in raw_insumos.items():
+            for i in items or []:
+                if isinstance(i, dict):
+                    ins_rows.append(_insumo_row(i, tipo))
+    elif isinstance(raw_insumos, list):
+        for i in raw_insumos:
+            if isinstance(i, dict):
+                ins_rows.append(_insumo_row(i, str(_first_field(i, "tipo", default="outros"))))
+
+    conn.execute("CREATE TABLE insumos (id TEXT, descricao TEXT, tipo TEXT, raw_json TEXT)")
+    if ins_rows:
+        conn.executemany("INSERT INTO insumos VALUES (?,?,?,?)", ins_rows)
+    conn.execute("CREATE INDEX idx_ins_id   ON insumos(id)")
+    conn.execute("CREATE INDEX idx_ins_tipo ON insumos(tipo)")
+
+    # preco_unitario denormalizado — hot path sem json_extract
+    conn.execute("""
+        CREATE TABLE insumos_precos AS
+        SELECT
+            id,
+            tipo,
+            TRY_CAST(json_extract_string(raw_json, '$.preco_unitario') AS FLOAT)    AS preco_unitario,
+            TRY_CAST(json_extract_string(raw_json, '$.atributos_especificos.consumo_litros_hora') AS FLOAT)
+                AS consumo_litros_hora
+        FROM insumos
+    """)
+    conn.execute("CREATE INDEX idx_ip_id ON insumos_precos(id)")
+    return ins_rows
+
+
+def _load_session_produtividades(conn: Any, catalogo: dict[str, Any]) -> list[tuple]:
+    """Cria a tabela `produtividades` a partir do catálogo resolvido; retorna as rows inseridas."""
+    prod_rows = [_prod_row(p) for p in catalogo.get("produtividades", []) if isinstance(p, dict)]
+    conn.execute("CREATE TABLE produtividades (id TEXT, cpu_id TEXT, raw_json TEXT)")
+    if prod_rows:
+        conn.executemany("INSERT INTO produtividades VALUES (?,?,?)", prod_rows)
+    conn.execute("CREATE INDEX idx_prod_id  ON produtividades(id)")
+    conn.execute("CREATE INDEX idx_prod_cpu ON produtividades(cpu_id)")
+    return prod_rows
+
+
+def _build_composicao_rows(cpu_rows: list[tuple]) -> list[tuple]:
+    """Expande `composicao_itens` de cada CPU (raw_json) em rows da junction table."""
+    comp_rows: list[tuple] = []
+    for cpu_row in cpu_rows:
+        codigo = cpu_row[0]
+        cpu = json.loads(cpu_row[4])
+        for seq, item in enumerate(cpu.get("composicao_itens") or []):
+            comp_rows.append(
+                (
+                    codigo,
+                    seq,
+                    str(_first_field(item, "insumo_id", default="")),
+                    float(_first_field(item, "coeficiente", default=0)),
+                    str(_first_field(item, "categoria_custo", default="")),
+                    str(_first_field(item, "unidade", default="")),
+                )
+            )
+    return comp_rows
+
+
+def _build_equipe_rows(prod_rows: list[tuple]) -> tuple[list[tuple], list[tuple], list[tuple]]:
+    """Expande `composicao_padrao_equipe` de cada produtividade (raw_json) nas 3 junction tables."""
+    fn_rows: list[tuple] = []
+    eq_rows: list[tuple] = []
+    mat_rows: list[tuple] = []
+    for prod_row in prod_rows:
+        pid = prod_row[0]
+        prod = json.loads(prod_row[2])
+        equipe = prod.get("composicao_padrao_equipe") or {}
+        for fn in equipe.get("funcoes") or []:
+            fn_rows.append(
+                (
+                    pid,
+                    str(_first_field(fn, "funcao_id", default="")),
+                    float(_first_field(fn, "num_pessoas", default=1)),
+                    str(_first_field(fn, "papel", default="direto")),
+                )
+            )
+        for eq in equipe.get("equipamentos") or []:
+            eq_rows.append(
+                (
+                    pid,
+                    str(_first_field(eq, "equip_id", "equipamento_id", default="")),
+                    float(_first_field(eq, "num_unidades", default=1)),
+                    float(_first_field(eq, "consumo_litros_hora", "consumo_litros_hora_estimado", default=0)),
+                )
+            )
+        for mat in equipe.get("materiais") or []:
+            mat_rows.append(
+                (
+                    pid,
+                    str(_first_field(mat, "insumo_id", "material_id", default="")),
+                    float(_first_field(mat, "consumo_por_hora", default=0)),
+                    str(_first_field(mat, "unidade", default="")),
+                )
+            )
+    return fn_rows, eq_rows, mat_rows
+
+
+def _create_junction_tables(
+    conn: Any,
+    comp_rows: list[tuple],
+    fn_rows: list[tuple],
+    eq_rows: list[tuple],
+    mat_rows: list[tuple],
+) -> None:
+    """Cria `composicao_itens` + as 3 tabelas `equipe_*` e insere as rows fornecidas."""
+    conn.execute("""CREATE TABLE composicao_itens
+        (cpu_codigo TEXT, seq INT, insumo_id TEXT, coeficiente FLOAT, categoria_custo TEXT, unidade TEXT)""")
+    if comp_rows:
+        conn.executemany("INSERT INTO composicao_itens VALUES (?,?,?,?,?,?)", comp_rows)
+    conn.execute("CREATE INDEX idx_ci_cpu ON composicao_itens(cpu_codigo)")
+    conn.execute("CREATE INDEX idx_ci_ins ON composicao_itens(insumo_id)")
+
+    for tbl, cols, rows in [
+        ("equipe_funcoes", "prod_id TEXT, funcao_id TEXT, num_pessoas FLOAT, papel TEXT", fn_rows),
+        (
+            "equipe_equipamentos",
+            "prod_id TEXT, equip_id TEXT, num_unidades FLOAT, consumo_litros_hora FLOAT",
+            eq_rows,
+        ),
+        ("equipe_materiais", "prod_id TEXT, insumo_id TEXT, consumo_por_hora FLOAT, unidade TEXT", mat_rows),
+    ]:
+        conn.execute(f"CREATE TABLE {tbl} ({cols})")
+        if rows:
+            ph = ",".join(["?"] * len(rows[0]))
+            conn.executemany(f"INSERT INTO {tbl} VALUES ({ph})", rows)
+        _abbrev = "".join(w[0] for w in tbl.split("_"))  # ef, ee, em — único
+        conn.execute(f"CREATE INDEX idx_{_abbrev}_p ON {tbl}(prod_id)")
+
+
 # ── CatalogSession ────────────────────────────────────────────────────────────
 
 
@@ -413,129 +626,14 @@ class CatalogSession:
         t0 = time.perf_counter()
         conn = self._conn
 
-        # ── CPUs ──────────────────────────────────────────────────────────────
-        cpu_rows = [_cpu_row(c) for c in catalogo.get("cpus", []) if isinstance(c, dict)]
-        conn.execute("CREATE TABLE cpus (codigo TEXT, descricao TEXT, categoria TEXT, unidade TEXT, raw_json TEXT)")
-        if cpu_rows:
-            conn.executemany("INSERT INTO cpus VALUES (?,?,?,?,?)", cpu_rows)
-        conn.execute("CREATE INDEX idx_cpus_codigo    ON cpus(codigo)")
-        conn.execute("CREATE INDEX idx_cpus_categoria ON cpus(categoria)")
-
-        # ── Insumos (flatten dict[tipo, list] → tabela flat) ──────────────────
-        ins_rows: list[tuple] = []
-        raw_insumos = catalogo.get("insumos", {})
-        if isinstance(raw_insumos, dict):
-            for tipo, items in raw_insumos.items():
-                for i in items or []:
-                    if isinstance(i, dict):
-                        ins_rows.append(_insumo_row(i, tipo))
-        elif isinstance(raw_insumos, list):
-            for i in raw_insumos:
-                if isinstance(i, dict):
-                    ins_rows.append(_insumo_row(i, str(i.get("tipo") or "outros")))
-
-        conn.execute("CREATE TABLE insumos (id TEXT, descricao TEXT, tipo TEXT, raw_json TEXT)")
-        if ins_rows:
-            conn.executemany("INSERT INTO insumos VALUES (?,?,?,?)", ins_rows)
-        conn.execute("CREATE INDEX idx_ins_id   ON insumos(id)")
-        conn.execute("CREATE INDEX idx_ins_tipo ON insumos(tipo)")
-
-        # preco_unitario denormalizado — hot path sem json_extract
-        conn.execute("""
-            CREATE TABLE insumos_precos AS
-            SELECT
-                id,
-                tipo,
-                TRY_CAST(json_extract_string(raw_json, '$.preco_unitario') AS FLOAT)    AS preco_unitario,
-                TRY_CAST(json_extract_string(raw_json, '$.atributos_especificos.consumo_litros_hora') AS FLOAT)
-                    AS consumo_litros_hora
-            FROM insumos
-        """)
-        conn.execute("CREATE INDEX idx_ip_id ON insumos_precos(id)")
-
-        # ── Produtividades ────────────────────────────────────────────────────
-        prod_rows = [_prod_row(p) for p in catalogo.get("produtividades", []) if isinstance(p, dict)]
-        conn.execute("CREATE TABLE produtividades (id TEXT, cpu_id TEXT, raw_json TEXT)")
-        if prod_rows:
-            conn.executemany("INSERT INTO produtividades VALUES (?,?,?)", prod_rows)
-        conn.execute("CREATE INDEX idx_prod_id  ON produtividades(id)")
-        conn.execute("CREATE INDEX idx_prod_cpu ON produtividades(cpu_id)")
+        cpu_rows = _load_session_cpus(conn, catalogo)
+        ins_rows = _load_session_insumos(conn, catalogo)
+        prod_rows = _load_session_produtividades(conn, catalogo)
 
         # ── Junction tables ───────────────────────────────────────────────────
-        comp_rows: list[tuple] = []
-        fn_rows: list[tuple] = []
-        eq_rows: list[tuple] = []
-        mat_rows: list[tuple] = []
-
-        for cpu_row in cpu_rows:
-            codigo = cpu_row[0]
-            cpu = json.loads(cpu_row[4])
-            for seq, item in enumerate(cpu.get("composicao_itens") or []):
-                comp_rows.append(
-                    (
-                        codigo,
-                        seq,
-                        str(item.get("insumo_id") or ""),
-                        float(item.get("coeficiente") or 0),
-                        str(item.get("categoria_custo") or ""),
-                        str(item.get("unidade") or ""),
-                    )
-                )
-
-        for prod_row in prod_rows:
-            pid = prod_row[0]
-            prod = json.loads(prod_row[2])
-            equipe = prod.get("composicao_padrao_equipe") or {}
-            for fn in equipe.get("funcoes") or []:
-                fn_rows.append(
-                    (
-                        pid,
-                        str(fn.get("funcao_id") or ""),
-                        float(fn.get("num_pessoas") or 1),
-                        str(fn.get("papel") or "direto"),
-                    )
-                )
-            for eq in equipe.get("equipamentos") or []:
-                eq_rows.append(
-                    (
-                        pid,
-                        str(eq.get("equip_id") or eq.get("equipamento_id") or ""),
-                        float(eq.get("num_unidades") or 1),
-                        float(eq.get("consumo_litros_hora") or eq.get("consumo_litros_hora_estimado") or 0),
-                    )
-                )
-            for mat in equipe.get("materiais") or []:
-                mat_rows.append(
-                    (
-                        pid,
-                        str(mat.get("insumo_id") or mat.get("material_id") or ""),
-                        float(mat.get("consumo_por_hora") or 0),
-                        str(mat.get("unidade") or ""),
-                    )
-                )
-
-        conn.execute("""CREATE TABLE composicao_itens
-            (cpu_codigo TEXT, seq INT, insumo_id TEXT, coeficiente FLOAT, categoria_custo TEXT, unidade TEXT)""")
-        if comp_rows:
-            conn.executemany("INSERT INTO composicao_itens VALUES (?,?,?,?,?,?)", comp_rows)
-        conn.execute("CREATE INDEX idx_ci_cpu ON composicao_itens(cpu_codigo)")
-        conn.execute("CREATE INDEX idx_ci_ins ON composicao_itens(insumo_id)")
-
-        for tbl, cols, rows in [
-            ("equipe_funcoes", "prod_id TEXT, funcao_id TEXT, num_pessoas FLOAT, papel TEXT", fn_rows),
-            (
-                "equipe_equipamentos",
-                "prod_id TEXT, equip_id TEXT, num_unidades FLOAT, consumo_litros_hora FLOAT",
-                eq_rows,
-            ),
-            ("equipe_materiais", "prod_id TEXT, insumo_id TEXT, consumo_por_hora FLOAT, unidade TEXT", mat_rows),
-        ]:
-            conn.execute(f"CREATE TABLE {tbl} ({cols})")
-            if rows:
-                ph = ",".join(["?"] * len(rows[0]))
-                conn.executemany(f"INSERT INTO {tbl} VALUES ({ph})", rows)
-            _abbrev = "".join(w[0] for w in tbl.split("_"))  # ef, ee, em — único
-            conn.execute(f"CREATE INDEX idx_{_abbrev}_p ON {tbl}(prod_id)")
+        comp_rows = _build_composicao_rows(cpu_rows)
+        fn_rows, eq_rows, mat_rows = _build_equipe_rows(prod_rows)
+        _create_junction_tables(conn, comp_rows, fn_rows, eq_rows, mat_rows)
 
         self._loaded = True
         elapsed = round((time.perf_counter() - t0) * 1000)

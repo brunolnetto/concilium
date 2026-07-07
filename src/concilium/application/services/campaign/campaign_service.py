@@ -161,6 +161,9 @@ def _apply_cpu_alt_override(spec: dict, key_path: str, value: str) -> None:
             break
 
 
+_NO_RESULT = object()
+
+
 def _apply_scalar(existing: Any, value: Any) -> Any:
     """Aplica valor ou transformação escalar a um campo existente.
 
@@ -172,28 +175,40 @@ def _apply_scalar(existing: Any, value: Any) -> Any:
 
     Qualquer outro dict faz merge; qualquer outro valor substitui.
     """
-    import math as _math
-
     if isinstance(value, dict):
         if "__scale__" in value and existing is not None:
-            try:
-                raw = float(existing) * float(value["__scale__"])
-                # Preserva tipo int quando o campo original era int
-                if isinstance(existing, int):
-                    return max(1, int(_math.ceil(raw)))
-                return round(raw, 4)
-            except (TypeError, ValueError):
-                pass
+            scaled = _apply_scale(existing, value["__scale__"])
+            if scaled is not _NO_RESULT:
+                return scaled
         if "__add__" in value and existing is not None:
-            try:
-                raw = float(existing) + float(value["__add__"])
-                return type(existing)(raw) if isinstance(existing, int) else round(raw, 4)
-            except (TypeError, ValueError):
-                pass
+            added = _apply_add(existing, value["__add__"])
+            if added is not _NO_RESULT:
+                return added
         # merge dict
         if isinstance(existing, dict):
             return {**existing, **value}
     return value
+
+
+def _apply_scale(existing: Any, factor: Any) -> Any:
+    import math as _math
+
+    try:
+        raw = float(existing) * float(factor)
+        # Preserva tipo int quando o campo original era int
+        if isinstance(existing, int):
+            return max(1, int(_math.ceil(raw)))
+        return round(raw, 4)
+    except (TypeError, ValueError):
+        return _NO_RESULT
+
+
+def _apply_add(existing: Any, delta: Any) -> Any:
+    try:
+        raw = float(existing) + float(delta)
+        return type(existing)(raw) if isinstance(existing, int) else round(raw, 4)
+    except (TypeError, ValueError):
+        return _NO_RESULT
 
 
 def _set_path(d: Any, parts: list[str], value: Any) -> None:
@@ -278,6 +293,22 @@ def _apply_per_item_post_load(spec_obj: object, key_path: str, value: Any) -> No
     _set_path_per_item(d, parts[1:], value, item_id)
 
 
+def _set_path_per_item_wildcard(d: Any, rest: list[str], value: Any, item_id: str) -> None:
+    """Aplica _set_path apenas ao item de uma lista cujo item_id corresponde."""
+    if isinstance(d, list):
+        for item in d:
+            if isinstance(item, dict) and item.get("item_id") == item_id:
+                _set_path(item, rest, value)
+
+
+def _set_path_per_item_intermediate(d: Any, part: str, rest: list[str], value: Any, item_id: str) -> None:
+    """Navega para o próximo nó intermediário, criando-o se necessário."""
+    if isinstance(d, dict):
+        if part not in d:
+            d[part] = {} if rest[0] != "[*]" else []
+        _set_path_per_item(d[part], rest, value, item_id)
+
+
 def _set_path_per_item(d: Any, parts: list[str], value: Any, item_id: str) -> None:
     """Como _set_path, mas quando encontra '[*]' filtra apenas o item com item_id."""
     if not parts:
@@ -286,10 +317,7 @@ def _set_path_per_item(d: Any, parts: list[str], value: Any, item_id: str) -> No
     rest = parts[1:]
 
     if part == "[*]":
-        if isinstance(d, list):
-            for item in d:
-                if isinstance(item, dict) and item.get("item_id") == item_id:
-                    _set_path(item, rest, value)
+        _set_path_per_item_wildcard(d, rest, value, item_id)
         return
 
     if not rest:
@@ -297,10 +325,7 @@ def _set_path_per_item(d: Any, parts: list[str], value: Any, item_id: str) -> No
             d[part] = _apply_scalar(d.get(part), value)
         return
 
-    if isinstance(d, dict):
-        if part not in d:
-            d[part] = {} if rest[0] != "[*]" else []
-        _set_path_per_item(d[part], rest, value, item_id)
+    _set_path_per_item_intermediate(d, part, rest, value, item_id)
 
 
 def cenario_id(variados: dict) -> str:
@@ -312,7 +337,7 @@ def cenario_id(variados: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
-def extrair_vetor_O(canonical: dict, prazo_contratual: int | None) -> VetorEspacoO:
+def _prazo_semanas_vetor_O(canonical: dict) -> int | None:
     cron = canonical.get("cronograma") or {}
     prazo = cron.get("makespan_semanas")
     # Fallback: max end_week from scheduled_activities
@@ -320,9 +345,11 @@ def extrair_vetor_O(canonical: dict, prazo_contratual: int | None) -> VetorEspac
         acts = cron.get("scheduled_activities") or []
         if acts:
             prazo = max((a.get("end_week") or 0) for a in acts)
+    return prazo
 
-    folga = (prazo_contratual - prazo) if (prazo is not None and prazo_contratual) else None
 
+def _fe_metrics_vetor_O(canonical: dict) -> tuple[float | None, float | None]:
+    """Retorna (fe_nec_medio, itens_criticos_pct) a partir de ponto_equilibrio."""
     pes = canonical.get("ponto_equilibrio") or []
     fe_list = [
         pe.get("frentes_equivalentes_necessarias")
@@ -332,14 +359,18 @@ def extrair_vetor_O(canonical: dict, prazo_contratual: int | None) -> VetorEspac
     fe_med = sum(fe_list) / len(fe_list) if fe_list else None
     n_crit = sum(1 for fe in fe_list if fe > 1.25) if fe_list else 0
     itens_crit_pct = n_crit / len(fe_list) if fe_list else None
-    gap_pool = round(sum(pe.get("gap_pool_overhead") or 0 for pe in pes), 2)
+    return fe_med, itens_crit_pct
 
-    eqs = canonical.get("equipes_diretas") or []
-    mob_window = round(sum(e.get("custo_inst_mob_demob") or 0 for e in eqs), 2)
 
-    # ADR-108: métricas de utilização e paralelismo do cronograma
-    util = _cronograma_utilizacao(canonical)
-
+def _montar_vetor_O(
+    prazo: int | None,
+    folga: float | None,
+    fe_med: float | None,
+    itens_crit_pct: float | None,
+    gap_pool: float,
+    mob_window: float,
+    util: dict[str, Any],
+) -> VetorEspacoO:
     return VetorEspacoO(
         prazo_semanas=prazo,
         folga_semanas=round(folga, 1) if folga is not None else None,
@@ -353,6 +384,24 @@ def extrair_vetor_O(canonical: dict, prazo_contratual: int | None) -> VetorEspac
     )
 
 
+def extrair_vetor_O(canonical: dict, prazo_contratual: int | None) -> VetorEspacoO:
+    prazo = _prazo_semanas_vetor_O(canonical)
+    folga = (prazo_contratual - prazo) if (prazo is not None and prazo_contratual) else None
+
+    fe_med, itens_crit_pct = _fe_metrics_vetor_O(canonical)
+
+    pes = canonical.get("ponto_equilibrio") or []
+    gap_pool = round(sum(pe.get("gap_pool_overhead") or 0 for pe in pes), 2)
+
+    eqs = canonical.get("equipes_diretas") or []
+    mob_window = round(sum(e.get("custo_inst_mob_demob") or 0 for e in eqs), 2)
+
+    # ADR-108: métricas de utilização e paralelismo do cronograma
+    util = _cronograma_utilizacao(canonical)
+
+    return _montar_vetor_O(prazo, folga, fe_med, itens_crit_pct, gap_pool, mob_window, util)
+
+
 def _cubo_analitico_agregado(canonical: dict) -> dict[str, Any]:
     """Agrega cubo_analitico.celulas por categoria/propriedade (ADR-108).
 
@@ -364,28 +413,7 @@ def _cubo_analitico_agregado(canonical: dict) -> dict[str, Any]:
     if not celulas:
         return {}
 
-    total = 0.0
-    mo = 0.0
-    eq = 0.0
-    comb = 0.0
-    por_atividade: dict[str, float] = {}
-
-    for c in celulas:
-        if c.get("componente_bdi") != "custo_direto":
-            continue
-        v = float(c.get("valor_rs") or 0.0)
-        total += v
-        cat = (c.get("categoria_insumo") or "").lower()
-        prop = (c.get("propriedade") or "").lower()
-        aid = c.get("atividade_id") or ""
-        if cat == "mao_obra":
-            mo += v
-        elif cat == "equipamento":
-            eq += v
-        if prop == "combustivel":
-            comb += v
-        if aid:
-            por_atividade[aid] = por_atividade.get(aid, 0.0) + v
+    total, mo, eq, comb, por_atividade = _acumular_custos_por_categoria(celulas)
 
     if total <= 0:
         return {}
@@ -399,6 +427,41 @@ def _cubo_analitico_agregado(canonical: dict) -> dict[str, Any]:
     }
 
 
+def _acumular_uma_celula_custo(
+    c: dict,
+    acc: tuple[float, float, float, float, dict[str, float]],
+) -> tuple[float, float, float, float, dict[str, float]]:
+    total, mo, eq, comb, por_atividade = acc
+    v = float(c.get("valor_rs") or 0.0)
+    total += v
+    cat = (c.get("categoria_insumo") or "").lower()
+    prop = (c.get("propriedade") or "").lower()
+    aid = c.get("atividade_id") or ""
+    if cat == "mao_obra":
+        mo += v
+    elif cat == "equipamento":
+        eq += v
+    if prop == "combustivel":
+        comb += v
+    if aid:
+        por_atividade[aid] = por_atividade.get(aid, 0.0) + v
+    return total, mo, eq, comb, por_atividade
+
+
+def _acumular_custos_por_categoria(
+    celulas: list[dict],
+) -> tuple[float, float, float, float, dict[str, float]]:
+    """Acumula total/mao_obra/equipamento/combustivel e custo por atividade_id."""
+    acc: tuple[float, float, float, float, dict[str, float]] = (0.0, 0.0, 0.0, 0.0, {})
+
+    for c in celulas:
+        if c.get("componente_bdi") != "custo_direto":
+            continue
+        acc = _acumular_uma_celula_custo(c, acc)
+
+    return acc
+
+
 def _cronograma_utilizacao(canonical: dict) -> dict[str, Any]:
     """Extrai métricas de utilização e paralelismo do cronograma (ADR-108)."""
     cron = canonical.get("cronograma") or {}
@@ -406,22 +469,34 @@ def _cronograma_utilizacao(canonical: dict) -> dict[str, Any]:
     if not acts:
         return {}
 
+    utilizacao = _utilizacao_recursos(acts)
+    paralelismo = _paralelismo_medio(acts)
+    idle_pct = _idle_pool_pct(canonical)
+
+    return {"utilizacao": utilizacao, "paralelismo": paralelismo, "idle_pct": idle_pct}
+
+
+def _utilizacao_recursos(acts: list[dict]) -> float | None:
     total_mob = 0
     total_prod = 0
     for a in acts:
         dist = a.get("distribuicao_semanal") or {}
         total_mob += len(dist)
         total_prod += sum(1 for d in dist.values() if (d.get("num_equipes") or 0) > 0)
-    utilizacao = round(total_prod / total_mob, 4) if total_mob > 0 else None
+    return round(total_prod / total_mob, 4) if total_mob > 0 else None
 
+
+def _paralelismo_medio(acts: list[dict]) -> float | None:
     semanas: dict[str, int] = {}
     for a in acts:
         for semana, d in (a.get("distribuicao_semanal") or {}).items():
             if (d.get("num_equipes") or 0) > 0:
                 semanas[semana] = semanas.get(semana, 0) + 1
-    paralelismo = round(sum(semanas.values()) / len(semanas), 3) if semanas else None
+    return round(sum(semanas.values()) / len(semanas), 3) if semanas else None
 
-    # CuboPoolFace quando disponível (ADR-106 F8)
+
+def _idle_pool_pct(canonical: dict) -> float | None:
+    """CuboPoolFace quando disponível (ADR-106 F8)."""
     pool_face = canonical.get("cubo_pool_face")
     idle_pct: float | None = None
     if pool_face and isinstance(pool_face, dict):
@@ -429,32 +504,35 @@ def _cronograma_utilizacao(canonical: dict) -> dict[str, Any]:
         total_pf = len(celulas_pf)
         idle_sem = sum(1 for c in celulas_pf if (c.get("estado") or "") == "idle")
         idle_pct = round(idle_sem / total_pf, 4) if total_pf > 0 else None
+    return idle_pct
 
-    return {"utilizacao": utilizacao, "paralelismo": paralelismo, "idle_pct": idle_pct}
 
-
-def extrair_vetor_EF(canonical: dict, report: dict) -> VetorEspacoEF:
-    resultado = canonical.get("resultado") or {}
-    custo = resultado.get("custo") or {}
-    venda = resultado.get("venda") or {}
-
-    margem = resultado.get("margem_pct")
-    custo_pool = custo.get("direto_equipes")
-    custo_ind = round(
+def _custo_indireto_total(custo: dict) -> float:
+    return round(
         sum(v for k, v in custo.items() if "indireto" in k and isinstance(v, (int, float))),
         2,
     )
-    preco_venda = venda.get("total_com_bdi")
-    pu_q = venda.get("total_sem_bdi")
-    ratio = round(custo_pool / pu_q, 4) if (custo_pool and pu_q and pu_q > 0) else None
 
+
+def _ratio_pool_vs_cat(custo_pool: float | None, pu_q: float | None) -> float | None:
+    return round(custo_pool / pu_q, 4) if (custo_pool and pu_q and pu_q > 0) else None
+
+
+def _fidelidade_gates(report: dict) -> bool | None:
     gates = (report.get("quality_gates") or {}) if report else {}
     decision = gates.get("decision")
-    fidelidade = decision in {"APROVADO", "APROVADO_COM_RESSALVAS"} if decision else None
+    return decision in {"APROVADO", "APROVADO_COM_RESSALVAS"} if decision else None
 
-    # ADR-108: composição de custo do cubo_analitico
-    comp = _cubo_analitico_agregado(canonical)
 
+def _montar_vetor_EF(
+    margem: float | None,
+    custo_pool: float | None,
+    custo_ind: float,
+    preco_venda: float | None,
+    ratio: float | None,
+    comp: dict[str, Any],
+    fidelidade: bool | None,
+) -> VetorEspacoEF:
     return VetorEspacoEF(
         margem_pct=round(margem, 4) if margem is not None else None,
         custo_execucao_pool=custo_pool,
@@ -469,12 +547,32 @@ def extrair_vetor_EF(canonical: dict, report: dict) -> VetorEspacoEF:
     )
 
 
+def extrair_vetor_EF(canonical: dict, report: dict) -> VetorEspacoEF:
+    resultado = canonical.get("resultado") or {}
+    custo = resultado.get("custo") or {}
+    venda = resultado.get("venda") or {}
+
+    margem = resultado.get("margem_pct")
+    custo_pool = custo.get("direto_equipes")
+    custo_ind = _custo_indireto_total(custo)
+    preco_venda = venda.get("total_com_bdi")
+    pu_q = venda.get("total_sem_bdi")
+    ratio = _ratio_pool_vs_cat(custo_pool, pu_q)
+
+    fidelidade = _fidelidade_gates(report)
+
+    # ADR-108: composição de custo do cubo_analitico
+    comp = _cubo_analitico_agregado(canonical)
+
+    return _montar_vetor_EF(margem, custo_pool, custo_ind, preco_venda, ratio, comp, fidelidade)
+
+
 # ---------------------------------------------------------------------------
 # F2 — Classification
 # ---------------------------------------------------------------------------
 
 
-def classificar_O(v: VetorEspacoO, perfil: PerfilExpectativas) -> ClassificacaoO:
+def _scores_vetor_O(v: VetorEspacoO) -> list[str]:
     scores = []
     if v.folga_semanas is not None:
         scores.append("IDEAL" if v.folga_semanas >= 0 else ("ATENCAO" if v.folga_semanas >= -2 else "CRITICO"))
@@ -484,6 +582,11 @@ def classificar_O(v: VetorEspacoO, perfil: PerfilExpectativas) -> ClassificacaoO
         scores.append(
             "IDEAL" if v.itens_criticos_pct == 0 else ("ATENCAO" if v.itens_criticos_pct <= 0.20 else "CRITICO")
         )
+    return scores
+
+
+def classificar_O(v: VetorEspacoO, perfil: PerfilExpectativas) -> ClassificacaoO:
+    scores = _scores_vetor_O(v)
     if not scores:
         return "ATENCAO"
     if "CRITICO" in scores:
@@ -493,7 +596,7 @@ def classificar_O(v: VetorEspacoO, perfil: PerfilExpectativas) -> ClassificacaoO
     return "IDEAL"
 
 
-def classificar_EF(v: VetorEspacoEF, perfil: PerfilExpectativas) -> ClassificacaoEF:
+def _scores_vetor_EF(v: VetorEspacoEF, perfil: PerfilExpectativas) -> list[str]:
     scores = []
     if v.margem_pct is not None:
         meta = perfil.meta_margem_pct
@@ -511,6 +614,11 @@ def classificar_EF(v: VetorEspacoEF, perfil: PerfilExpectativas) -> Classificaca
         )
     if v.fidelidade_gates is not None:
         scores.append("DENTRO_EXPECTATIVA" if v.fidelidade_gates else "FORA_EXPECTATIVA")
+    return scores
+
+
+def classificar_EF(v: VetorEspacoEF, perfil: PerfilExpectativas) -> ClassificacaoEF:
+    scores = _scores_vetor_EF(v, perfil)
     if not scores:
         return "ATENCAO"
     if "FORA_EXPECTATIVA" in scores:
@@ -572,8 +680,7 @@ def calcular_pareto(cenarios: list[CenarioAvaliado], espaco: str) -> set[str]:
 # ---------------------------------------------------------------------------
 
 
-def _build_justificativa(c: CenarioAvaliado, motivo: str) -> JustificativaCenario:
-    v_O, v_EF = c.vetor_O, c.vetor_EF
+def _destaques_O_justificativa(v_O: VetorEspacoO) -> list[str]:
     destaques_O = []
     if v_O.folga_semanas is not None:
         tag = "OK" if v_O.folga_semanas >= 0 else "WARN"
@@ -584,7 +691,10 @@ def _build_justificativa(c: CenarioAvaliado, motivo: str) -> JustificativaCenari
         destaques_O.append("0 itens criticos")
     elif v_O.itens_criticos_pct is not None:
         destaques_O.append(f"{v_O.itens_criticos_pct * 100:.0f}% itens criticos")
+    return destaques_O
 
+
+def _destaques_EF_justificativa(v_EF: VetorEspacoEF) -> list[str]:
     destaques_EF = []
     if v_EF.margem_pct is not None:
         destaques_EF.append(f"Margem {v_EF.margem_pct * 100:.1f}%")
@@ -593,12 +703,23 @@ def _build_justificativa(c: CenarioAvaliado, motivo: str) -> JustificativaCenari
             destaques_EF.append(f"Pool {(1 - v_EF.ratio_pool_vs_cat) * 100:.1f}% abaixo mercado")
         else:
             destaques_EF.append(f"Pool {(v_EF.ratio_pool_vs_cat - 1) * 100:.1f}% acima mercado")
+    return destaques_EF
 
+
+def _alertas_justificativa(c: CenarioAvaliado) -> list[str]:
     alertas = []
     if c.classificacao_O == "ATENCAO":
         alertas.append("O-space: atencao em alguma dimensao")
     if c.classificacao_EF == "ATENCAO":
         alertas.append("EF-space: margem proxima da meta")
+    return alertas
+
+
+def _build_justificativa(c: CenarioAvaliado, motivo: str) -> JustificativaCenario:
+    v_O, v_EF = c.vetor_O, c.vetor_EF
+    destaques_O = _destaques_O_justificativa(v_O)
+    destaques_EF = _destaques_EF_justificativa(v_EF)
+    alertas = _alertas_justificativa(c)
 
     return JustificativaCenario(
         motivo_inclusao=motivo,
@@ -609,38 +730,32 @@ def _build_justificativa(c: CenarioAvaliado, motivo: str) -> JustificativaCenari
     )
 
 
-def curar_shortlist(
-    cenarios: list[CenarioAvaliado],
-    top_k: int,
-    perfil: PerfilExpectativas,
-) -> list[CenarioRankeado]:
-    viaveis = [c for c in cenarios if c.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"}]
-    if not viaveis:
-        return []
-
+def _marcar_flags_pareto(viaveis: list[CenarioAvaliado]) -> None:
     pareto_O_ids = calcular_pareto(viaveis, "O")
     pareto_EF_ids = calcular_pareto(viaveis, "EF")
-
     for c in viaveis:
         c.pareto_O = c.cenario_id in pareto_O_ids
         c.pareto_EF = c.cenario_id in pareto_EF_ids
         c.pareto_intersecao = c.pareto_O and c.pareto_EF
 
-    intersecao = [c for c in viaveis if c.pareto_intersecao]
-    pool = intersecao if intersecao else ([c for c in viaveis if c.pareto_EF] or viaveis)
 
-    ranked = sorted(
-        pool,
-        key=lambda c: (
-            c.classificacao_O != "IDEAL",
-            c.classificacao_EF != "DENTRO_EXPECTATIVA",
-            -(c.vetor_EF.margem_pct or 0),
-            (c.vetor_O.prazo_semanas or 9999),
-            (c.vetor_O.fe_nec_medio or 9999),
-            c.cenario_id,
-        ),
+def _selecionar_pool_shortlist(viaveis: list[CenarioAvaliado]) -> list[CenarioAvaliado]:
+    intersecao = [c for c in viaveis if c.pareto_intersecao]
+    return intersecao if intersecao else ([c for c in viaveis if c.pareto_EF] or viaveis)
+
+
+def _rank_key_shortlist(c: CenarioAvaliado) -> tuple:
+    return (
+        c.classificacao_O != "IDEAL",
+        c.classificacao_EF != "DENTRO_EXPECTATIVA",
+        -(c.vetor_EF.margem_pct or 0),
+        (c.vetor_O.prazo_semanas or 9999),
+        (c.vetor_O.fe_nec_medio or 9999),
+        c.cenario_id,
     )
 
+
+def _montar_shortlist(ranked: list[CenarioAvaliado], top_k: int) -> list[CenarioRankeado]:
     shortlist = []
     for i, c in enumerate(ranked[:top_k]):
         c.rank_final = i + 1
@@ -655,19 +770,46 @@ def curar_shortlist(
     return shortlist
 
 
-def classificar_bundle(cenarios: list[CenarioAvaliado]) -> CampaignStatus:
+def curar_shortlist(
+    cenarios: list[CenarioAvaliado],
+    top_k: int,
+    perfil: PerfilExpectativas,
+) -> list[CenarioRankeado]:
     viaveis = [c for c in cenarios if c.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"}]
-    falhas = [c for c in cenarios if c.erro]
     if not viaveis:
-        return "ABORTADO" if len(falhas) == len(cenarios) else "INFEASIBLE"
+        return []
+
+    _marcar_flags_pareto(viaveis)
+    pool = _selecionar_pool_shortlist(viaveis)
+    ranked = sorted(pool, key=_rank_key_shortlist)
+    return _montar_shortlist(ranked, top_k)
+
+
+def _status_bundle_sem_viaveis(cenarios: list[CenarioAvaliado], falhas: list[CenarioAvaliado]) -> CampaignStatus:
+    return "ABORTADO" if len(falhas) == len(cenarios) else "INFEASIBLE"
+
+
+def _tem_fronteira_unica(viaveis: list[CenarioAvaliado]) -> bool:
+    pareto_O = [c for c in viaveis if c.pareto_O]
+    pareto_EF = [c for c in viaveis if c.pareto_EF]
+    return bool(pareto_O and pareto_EF)
+
+
+def _status_bundle_com_viaveis(viaveis: list[CenarioAvaliado]) -> CampaignStatus:
     intersecao = [c for c in viaveis if c.pareto_intersecao]
     if intersecao:
         return "SUCESSO"
-    pareto_O = [c for c in viaveis if c.pareto_O]
-    pareto_EF = [c for c in viaveis if c.pareto_EF]
-    if pareto_O and pareto_EF and not intersecao:
+    if _tem_fronteira_unica(viaveis):
         return "FRONTEIRA_UNICA"
     return "SUCESSO_PARCIAL"
+
+
+def classificar_bundle(cenarios: list[CenarioAvaliado]) -> CampaignStatus:
+    viaveis = [c for c in cenarios if c.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"}]
+    if not viaveis:
+        falhas = [c for c in cenarios if c.erro]
+        return _status_bundle_sem_viaveis(cenarios, falhas)
+    return _status_bundle_com_viaveis(viaveis)
 
 
 # ---------------------------------------------------------------------------
@@ -689,21 +831,8 @@ class _CampaignTask:
     do_reset: bool
 
 
-def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
-    """Avalia um cenário da campanha — module-level para ser picklável."""
-    from concilium.application.benchmarks.execution.runner import BenchmarkRunner
-    from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
-    from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
-    from concilium.application.benchmarks.spec.spec_loader import load_spec_from_dict
-
-    class _Silent(BenchmarkReportPrinter):
-        def print(self, report: dict) -> None:  # noqa: A003
-            pass
-
-    import shutil
-    import tempfile
-
-    cid = cenario_id(task.variados)
+def _prepare_scenario_spec(task: _CampaignTask, cid: str) -> tuple[dict, str]:
+    """Monta o spec com slug/id/meta únicos para o cenário. Retorna (spec_with_id, scenario_slug)."""
     spec_with_id = dict(task.spec_v)
     base_slug = spec_with_id.get("slug") or spec_with_id.get("id") or "UNKNOWN"
     scenario_slug = f"{base_slug}-{cid[:6]}"
@@ -716,6 +845,63 @@ def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
     base_nome = meta.get("projeto", base_slug)
     meta["projeto"] = f"{base_nome} [{cid[:6]}]"
     spec_with_id["meta"] = meta
+    return spec_with_id, scenario_slug
+
+
+def _load_canonical_do_cenario(scenario_projects_root: Path, actual_project_slug: str) -> dict:
+    canonical: dict = {}
+    for _try in (actual_project_slug, actual_project_slug.upper(), actual_project_slug.lower()):
+        _can = scenario_projects_root / _try / "v1" / "canonical.json"
+        if _can.exists():
+            canonical = json.loads(_can.read_text())
+            break
+    return canonical
+
+
+def _map_viabilidade_decision(decision: str) -> ViabilidadeStatus:
+    via_map: dict[str, ViabilidadeStatus] = {
+        "APROVADO": "APROVADO",
+        "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
+        "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
+        "BLOQUEADO": "BLOQUEADO",
+    }
+    return via_map.get(decision, "ERRO")
+
+
+def _cleanup_scenario_projects(
+    scenario_projects_root: Path,
+    scenario_slug: str,
+    actual_project_slug: str | None,
+) -> None:
+    import shutil
+
+    # Limpar projeto de cenário em projetos/ usando o slug REAL (não o esperado).
+    # O spec_loader pode ter derivado um slug diferente do scenario_slug se "id"
+    # não estava definido — agora está, mas o finally usa actual_project_slug
+    # como defesa contra futuras inconsistências.
+    slugs_to_clean = {scenario_slug, actual_project_slug} if actual_project_slug else {scenario_slug}
+    for _slug_clean in slugs_to_clean:
+        for _try in (_slug_clean, _slug_clean.upper(), _slug_clean.lower()):
+            _proj = scenario_projects_root / _try
+            if _proj.exists():
+                shutil.rmtree(_proj, ignore_errors=True)
+
+
+def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
+    """Avalia um cenário da campanha — module-level para ser picklável."""
+    from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+    from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
+    from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
+    from concilium.application.benchmarks.spec.spec_loader import load_spec_from_dict
+
+    class _Silent(BenchmarkReportPrinter):
+        def print(self, report: dict) -> None:  # noqa: A003
+            pass
+
+    import tempfile
+
+    cid = cenario_id(task.variados)
+    spec_with_id, scenario_slug = _prepare_scenario_spec(task, cid)
 
     scenario_projects_root = Path(task.projects_root)
     actual_project_slug: str | None = None  # rastreado para cleanup preciso
@@ -740,23 +926,12 @@ def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
                 skip_artifacts=True,
                 procurement_intent=task.procurement_intent,
             )
-            canonical: dict = {}
-            for _try in (actual_project_slug, actual_project_slug.upper(), actual_project_slug.lower()):
-                _can = scenario_projects_root / _try / "v1" / "canonical.json"
-                if _can.exists():
-                    canonical = json.loads(_can.read_text())
-                    break
+            canonical = _load_canonical_do_cenario(scenario_projects_root, actual_project_slug)
 
             v_O = extrair_vetor_O(canonical, task.prazo_contratual)
             v_EF = extrair_vetor_EF(canonical, report)
             decision = (report.get("quality_gates") or {}).get("decision") or "BLOQUEADO"
-            via_map: dict[str, ViabilidadeStatus] = {
-                "APROVADO": "APROVADO",
-                "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
-                "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
-                "BLOQUEADO": "BLOQUEADO",
-            }
-            viabilidade: ViabilidadeStatus = via_map.get(decision, "ERRO")
+            viabilidade = _map_viabilidade_decision(decision)
             result = CenarioAvaliado(
                 cenario_id=cid,
                 parametros_variados=task.variados,
@@ -778,16 +953,7 @@ def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
                 erro=str(exc),
             )
         finally:
-            # Limpar projeto de cenário em projetos/ usando o slug REAL (não o esperado).
-            # O spec_loader pode ter derivado um slug diferente do scenario_slug se "id"
-            # não estava definido — agora está, mas o finally usa actual_project_slug
-            # como defesa contra futuras inconsistências.
-            slugs_to_clean = {scenario_slug, actual_project_slug} if actual_project_slug else {scenario_slug}
-            for _slug_clean in slugs_to_clean:
-                for _try in (_slug_clean, _slug_clean.upper(), _slug_clean.lower()):
-                    _proj = scenario_projects_root / _try
-                    if _proj.exists():
-                        shutil.rmtree(_proj, ignore_errors=True)
+            _cleanup_scenario_projects(scenario_projects_root, scenario_slug, actual_project_slug)
 
     return result
 
@@ -928,16 +1094,8 @@ def _tendencia(valores_ord: list, medias: list[float | None]) -> TendenciaMargin
     return "nao_monotona"
 
 
-def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundle) -> CampaignBundleCube:
-    """Constrói o CampaignBundleCube a partir do bundle e do output da campanha.
-
-    Dimensões = parâmetros do sweep.
-    Células = todas as combinações avaliadas (com cenário) ou ausentes (sem cenário).
-    Faces = projeções 2D para cada par de dimensões (se sweep ≥ 2 dimensões).
-    Resumos marginais = efeito de cada dimensão em cada métrica.
-    """
-    # --- 1. Dimensões ---
-    dims = [
+def _construir_dimensoes_cubo(bundle: GoResearchCampaignBundle) -> list[CuboDimensao]:
+    return [
         CuboDimensao(
             nome=s.campo.split(".")[-1],
             campo=s.campo,
@@ -946,95 +1104,141 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
         for s in bundle.sweep
     ]
 
-    # Índice de cenários por variados-hash
-    cenario_por_id = {c.cenario_id: c for c in output.cenarios}
-    grid, _ = zip(*gerar_grid(bundle), strict=False) if bundle.sweep else ([], [])
-    grid_list = list(gerar_grid(bundle))
 
-    # --- 2. Células ---
-    celulas: list[CelulaAnalitica] = []
-    for _sv, variados in grid_list:
-        cid = cenario_id(variados)
-        c = cenario_por_id.get(cid)
-        celulas.append(
-            CelulaAnalitica(
-                dimensoes={d.nome: variados.get(d.campo) for d in dims},
-                cenario_id=cid if c else None,
-                vetor_O=c.vetor_O if c else None,
-                vetor_EF=c.vetor_EF if c else None,
-                classificacao_O=c.classificacao_O if c else None,
-                classificacao_EF=c.classificacao_EF if c else None,
-                viabilidade=c.viabilidade if c else None,
-                pareto_O=c.pareto_O if c else False,
-                pareto_EF=c.pareto_EF if c else False,
-                pareto_intersecao=c.pareto_intersecao if c else False,
-            )
+def _montar_celula_cubo(
+    variados: dict,
+    dims: list[CuboDimensao],
+    cenario_por_id: dict[str, CenarioAvaliado],
+) -> CelulaAnalitica:
+    cid = cenario_id(variados)
+    c = cenario_por_id.get(cid)
+    dimensoes = {d.nome: variados.get(d.campo) for d in dims}
+    if c:
+        return CelulaAnalitica(
+            dimensoes=dimensoes,
+            cenario_id=cid,
+            vetor_O=c.vetor_O,
+            vetor_EF=c.vetor_EF,
+            classificacao_O=c.classificacao_O,
+            classificacao_EF=c.classificacao_EF,
+            viabilidade=c.viabilidade,
+            pareto_O=c.pareto_O,
+            pareto_EF=c.pareto_EF,
+            pareto_intersecao=c.pareto_intersecao,
         )
+    return CelulaAnalitica(
+        dimensoes=dimensoes,
+        cenario_id=None,
+        vetor_O=None,
+        vetor_EF=None,
+        classificacao_O=None,
+        classificacao_EF=None,
+        viabilidade=None,
+        pareto_O=False,
+        pareto_EF=False,
+        pareto_intersecao=False,
+    )
 
-    n_total = len(celulas)
-    n_aval = sum(1 for ce in celulas if ce.cenario_id)
-    n_viaveis = sum(1 for ce in celulas if ce.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"})
-    n_pareto = sum(1 for ce in celulas if ce.pareto_intersecao)
 
-    # --- 3. Faces (pares de dimensões) ---
+def _construir_celulas_cubo(
+    bundle: GoResearchCampaignBundle,
+    dims: list[CuboDimensao],
+    cenario_por_id: dict[str, CenarioAvaliado],
+) -> list[CelulaAnalitica]:
+    grid_list = list(gerar_grid(bundle))
+    return [_montar_celula_cubo(variados, dims, cenario_por_id) for _sv, variados in grid_list]
+
+
+def _grade_face_cubo(
+    celulas: list[CelulaAnalitica],
+    cenario_por_id: dict[str, CenarioAvaliado],
+    dx: CuboDimensao,
+    dy: CuboDimensao,
+    metrica: str,
+) -> list[list[float | None]]:
+    grade: list[list[float | None]] = []
+    for vy in dy.valores:
+        row = []
+        for vx in dx.valores:
+            matching = [
+                ce
+                for ce in celulas
+                if ce.dimensoes.get(dx.nome) == vx and ce.dimensoes.get(dy.nome) == vy and ce.cenario_id
+            ]
+            if matching:
+                # matching[0].cenario_id só é truthy quando a célula foi
+                # construída a partir de um `c` presente em cenario_por_id
+                # (ver loop de --- 2. Células --- acima); logo o lookup
+                # abaixo sempre resolve — sem fallback necessário.
+                cid = matching[0].cenario_id
+                assert cid is not None, "cenario_id deve ser não-None após filtro"
+                c_match = cenario_por_id[cid]
+                row.append(_get_metrica(c_match, metrica))
+            else:
+                row.append(None)
+        grade.append(row)
+    return grade
+
+
+def _construir_faces_cubo(
+    dims: list[CuboDimensao],
+    celulas: list[CelulaAnalitica],
+    cenario_por_id: dict[str, CenarioAvaliado],
+) -> list[FaceAnalitica]:
     faces: list[FaceAnalitica] = []
-    if len(dims) >= 2:
-        for i, dx in enumerate(dims):
-            for dy in dims[i + 1 :]:
-                for metrica in _METRICAS_O + _METRICAS_EF:
-                    grade: list[list[float | None]] = []
-                    for vy in dy.valores:
-                        row = []
-                        for vx in dx.valores:
-                            matching = [
-                                ce
-                                for ce in celulas
-                                if ce.dimensoes.get(dx.nome) == vx and ce.dimensoes.get(dy.nome) == vy and ce.cenario_id
-                            ]
-                            if matching:
-                                # matching[0].cenario_id só é truthy quando a célula foi
-                                # construída a partir de um `c` presente em cenario_por_id
-                                # (ver loop de --- 2. Células --- acima); logo o lookup
-                                # abaixo sempre resolve — sem fallback necessário.
-                                cid = matching[0].cenario_id
-                                assert cid is not None, "cenario_id deve ser não-None após filtro"
-                                c_match = cenario_por_id[cid]
-                                row.append(_get_metrica(c_match, metrica))
-                            else:
-                                row.append(None)
-                        grade.append(row)
-                    # Only include face if at least some values are non-None
-                    if any(v is not None for row in grade for v in row):
-                        faces.append(
-                            FaceAnalitica(
-                                dim_x=dx.nome,
-                                dim_y=dy.nome,
-                                metrica=metrica,
-                                valores_x=dx.valores,
-                                valores_y=dy.valores,
-                                grade=grade,
-                            )
+    if len(dims) < 2:
+        return faces
+    for i, dx in enumerate(dims):
+        for dy in dims[i + 1 :]:
+            for metrica in _METRICAS_O + _METRICAS_EF:
+                grade = _grade_face_cubo(celulas, cenario_por_id, dx, dy, metrica)
+                # Only include face if at least some values are non-None
+                if any(v is not None for row in grade for v in row):
+                    faces.append(
+                        FaceAnalitica(
+                            dim_x=dx.nome,
+                            dim_y=dy.nome,
+                            metrica=metrica,
+                            valores_x=dx.valores,
+                            valores_y=dy.valores,
+                            grade=grade,
                         )
+                    )
+    return faces
 
-    # --- 4. Resumos marginais ---
+
+def _medias_resumo_dimensao(
+    d: CuboDimensao,
+    metrica: str,
+    celulas: list[CelulaAnalitica],
+    cenario_por_id: dict[str, CenarioAvaliado],
+) -> list[float | None]:
+    medias: list[float | None] = []
+    for val in d.valores:
+        celulas_val = [ce for ce in celulas if ce.dimensoes.get(d.nome) == val and ce.cenario_id]
+        vals_m = []
+        for ce in celulas_val:
+            # Mesmo invariante do bloco de faces acima: ce.cenario_id truthy
+            # garante presença em cenario_por_id.
+            cid_m = ce.cenario_id
+            assert cid_m is not None, "cenario_id deve ser não-None após filtro"
+            c_m = cenario_por_id[cid_m]
+            v = _get_metrica(c_m, metrica)
+            if v is not None:
+                vals_m.append(v)
+        medias.append(round(sum(vals_m) / len(vals_m), 4) if vals_m else None)
+    return medias
+
+
+def _construir_resumos_marginais_cubo(
+    dims: list[CuboDimensao],
+    celulas: list[CelulaAnalitica],
+    cenario_por_id: dict[str, CenarioAvaliado],
+) -> list[ResumoMarginal]:
     resumos: list[ResumoMarginal] = []
     for d in dims:
         for metrica in _METRICAS_O + _METRICAS_EF:
-            medias: list[float | None] = []
-            for val in d.valores:
-                celulas_val = [ce for ce in celulas if ce.dimensoes.get(d.nome) == val and ce.cenario_id]
-                vals_m = []
-                for ce in celulas_val:
-                    # Mesmo invariante do bloco de faces acima: ce.cenario_id truthy
-                    # garante presença em cenario_por_id.
-                    cid_m = ce.cenario_id
-                    assert cid_m is not None, "cenario_id deve ser não-None após filtro"
-                    c_m = cenario_por_id[cid_m]
-                    v = _get_metrica(c_m, metrica)
-                    if v is not None:
-                        vals_m.append(v)
-                medias.append(round(sum(vals_m) / len(vals_m), 4) if vals_m else None)
-
+            medias = _medias_resumo_dimensao(d, metrica, celulas, cenario_por_id)
             if any(m is not None for m in medias):
                 resumos.append(
                     ResumoMarginal(
@@ -1045,6 +1249,36 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
                         tendencia=_tendencia(d.valores, medias),
                     )
                 )
+    return resumos
+
+
+def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundle) -> CampaignBundleCube:
+    """Constrói o CampaignBundleCube a partir do bundle e do output da campanha.
+
+    Dimensões = parâmetros do sweep.
+    Células = todas as combinações avaliadas (com cenário) ou ausentes (sem cenário).
+    Faces = projeções 2D para cada par de dimensões (se sweep ≥ 2 dimensões).
+    Resumos marginais = efeito de cada dimensão em cada métrica.
+    """
+    # --- 1. Dimensões ---
+    dims = _construir_dimensoes_cubo(bundle)
+
+    # Índice de cenários por variados-hash
+    cenario_por_id = {c.cenario_id: c for c in output.cenarios}
+
+    # --- 2. Células ---
+    celulas = _construir_celulas_cubo(bundle, dims, cenario_por_id)
+
+    n_total = len(celulas)
+    n_aval = sum(1 for ce in celulas if ce.cenario_id)
+    n_viaveis = sum(1 for ce in celulas if ce.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"})
+    n_pareto = sum(1 for ce in celulas if ce.pareto_intersecao)
+
+    # --- 3. Faces (pares de dimensões) ---
+    faces = _construir_faces_cubo(dims, celulas, cenario_por_id)
+
+    # --- 4. Resumos marginais ---
+    resumos = _construir_resumos_marginais_cubo(dims, celulas, cenario_por_id)
 
     return CampaignBundleCube(
         campaign_id=output.campaign_id,

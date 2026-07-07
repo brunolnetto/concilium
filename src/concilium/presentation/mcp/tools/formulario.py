@@ -31,19 +31,8 @@ from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def _suggest_cpu(descricao: str) -> tuple[str | None, int]:
-    """Retorna (cpu_id, score) para a descrição.
-
-    Score: 2=match por regra (keyword_rules.json), 1=match por similaridade de
-    descrição no catálogo, 0=não mapeado.
-
-    Prioridade:
-      1. cpu_mapping_rules.json (keyword matching explícito)
-      2. Busca por sobreposição de palavras nas descrições do catálogo
-    """
-    desc_upper = descricao.upper()
-
-    # ── 1. Keyword rules (explícito) ─────────────────────────────────────────
+def _suggest_cpu_por_regra(desc_upper: str) -> tuple[str, int] | None:
+    """Tenta mapear via cpu_mapping_rules.json (keyword matching explícito). None se não mapeado."""
     try:
         from concilium.infrastructure.catalog.mapping.cpu_mapper import _load_mapping_keywords
 
@@ -57,41 +46,76 @@ def _suggest_cpu(descricao: str) -> tuple[str | None, int]:
                     return cpu_id, 1
     except Exception:
         pass
+    return None
 
-    # ── 2. Fallback: sobreposição de palavras com descrições do catálogo ─────
+
+def _find_catalog_cpus_dir() -> Any:
+    """Busca o primeiro diretório de catálogo (`<catalogo>/cpus`) disponível, ou None."""
+    from concilium.presentation.mcp._context import _config_root
+
+    cpus_dir = _config_root() / "catalogos"
+    for cat in sorted(cpus_dir.iterdir()):
+        cpus_path = cat / "cpus"
+        if cpus_path.is_dir():
+            return cpus_path
+    return None
+
+
+def _best_overlap_cpu(catalog_cpus: Any, words: set[str]) -> tuple[str | None, int]:
+    """Percorre os CPU-*.json do catálogo e retorna (cpu_id, overlap) com maior sobreposição de palavras."""
+    import json as _json
+
+    best_cpu, best_score = None, 0
+    for f in catalog_cpus.glob("CPU-*.json"):
+        try:
+            data = _json.loads(f.read_text(encoding="utf-8"))
+            cat_desc = (data.get("descricao") or "").upper()
+            cat_words = {w for w in cat_desc.split() if len(w) > 3}
+            overlap = len(words & cat_words)
+            if overlap > best_score:
+                best_score = overlap
+                cpu_id = data.get("codigo") or data.get("cpu_id") or f.stem
+                best_cpu = cpu_id
+        except Exception:
+            continue
+    return best_cpu, best_score
+
+
+def _suggest_cpu_por_catalogo(desc_upper: str) -> tuple[str, int] | None:
+    """Fallback: sobreposição de palavras com descrições do catálogo. None se não mapeado."""
     try:
-        import json as _json
+        catalog_cpus = _find_catalog_cpus_dir()
+        if not catalog_cpus:
+            return None
 
-        from concilium.presentation.mcp._context import _config_root
-
-        cpus_dir = _config_root() / "catalogos"
-        # Busca o primeiro diretório de catálogo disponível
-        catalog_cpus = None
-        for cat in sorted(cpus_dir.iterdir()):
-            cpus_path = cat / "cpus"
-            if cpus_path.is_dir():
-                catalog_cpus = cpus_path
-                break
-
-        if catalog_cpus:
-            words = {w for w in desc_upper.split() if len(w) > 3}
-            best_cpu, best_score = None, 0
-            for f in catalog_cpus.glob("CPU-*.json"):
-                try:
-                    data = _json.loads(f.read_text(encoding="utf-8"))
-                    cat_desc = (data.get("descricao") or "").upper()
-                    cat_words = {w for w in cat_desc.split() if len(w) > 3}
-                    overlap = len(words & cat_words)
-                    if overlap > best_score:
-                        best_score = overlap
-                        cpu_id = data.get("codigo") or data.get("cpu_id") or f.stem
-                        best_cpu = cpu_id
-                except Exception:
-                    continue
-            if best_cpu and best_score >= 2:
-                return best_cpu, 1
+        words = {w for w in desc_upper.split() if len(w) > 3}
+        best_cpu, best_score = _best_overlap_cpu(catalog_cpus, words)
+        if best_cpu and best_score >= 2:
+            return best_cpu, 1
     except Exception:
         pass
+    return None
+
+
+def _suggest_cpu(descricao: str) -> tuple[str | None, int]:
+    """Retorna (cpu_id, score) para a descrição.
+
+    Score: 2=match por regra (keyword_rules.json), 1=match por similaridade de
+    descrição no catálogo, 0=não mapeado.
+
+    Prioridade:
+      1. cpu_mapping_rules.json (keyword matching explícito)
+      2. Busca por sobreposição de palavras nas descrições do catálogo
+    """
+    desc_upper = descricao.upper()
+
+    resultado = _suggest_cpu_por_regra(desc_upper)
+    if resultado is not None:
+        return resultado
+
+    resultado = _suggest_cpu_por_catalogo(desc_upper)
+    if resultado is not None:
+        return resultado
 
     return None, 0
 

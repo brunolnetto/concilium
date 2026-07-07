@@ -299,24 +299,8 @@ class JobService:
             progresso_percentual=job.get("progresso_percentual"),
         )
 
-    def listar_jobs(self, project_id: str | None = None) -> JobListDTO:
-        """Lista todos os jobs (opcionalmente filtrados por projeto).
-
-        Args:
-            project_id: Opcional. Se fornecido, retorna apenas jobs deste projeto.
-
-        Returns:
-            JobListDTO com lista de jobs e estatísticas
-        """
-        jobs = self._repo.list_all()
-
-        if project_id:
-            jobs = [j for j in jobs if j["project_id"] == project_id]
-
-        # Ordena por data de disparo (mais recente primeiro)
-        jobs.sort(key=lambda j: j["disparado_em"], reverse=True)
-
-        # Estatísticas
+    @staticmethod
+    def _compute_job_stats(jobs: list) -> JobStatsDTO:
         stats = JobStatsDTO()
         for j in jobs:
             sm: PipelineJobStateMachine | None = j.get("state_machine")
@@ -332,8 +316,10 @@ class JobService:
                 stats.erro += 1
             elif status == "CANCELADO":
                 stats.cancelado += 1
+        return stats
 
-        # Converte para DTOs
+    @staticmethod
+    def _jobs_to_dtos(jobs: list) -> list[JobDTO]:
         job_dtos = []
         for j in jobs:
             j_sm: PipelineJobStateMachine | None = j.get("state_machine")
@@ -355,6 +341,27 @@ class JobService:
                     progresso_percentual=j.get("progresso_percentual"),
                 )
             )
+        return job_dtos
+
+    def listar_jobs(self, project_id: str | None = None) -> JobListDTO:
+        """Lista todos os jobs (opcionalmente filtrados por projeto).
+
+        Args:
+            project_id: Opcional. Se fornecido, retorna apenas jobs deste projeto.
+
+        Returns:
+            JobListDTO com lista de jobs e estatísticas
+        """
+        jobs = self._repo.list_all()
+
+        if project_id:
+            jobs = [j for j in jobs if j["project_id"] == project_id]
+
+        # Ordena por data de disparo (mais recente primeiro)
+        jobs.sort(key=lambda j: j["disparado_em"], reverse=True)
+
+        stats = self._compute_job_stats(jobs)
+        job_dtos = self._jobs_to_dtos(jobs)
 
         return JobListDTO(
             jobs=job_dtos,

@@ -117,6 +117,33 @@ class ObservabilityWorker:
 
     # ── Pipeline principal ──────────────────────────────────────────────────
 
+    def _resolve_new_blobs(self, signal_type: str, checkpoint: Checkpoint | None, since: str | None) -> list[str]:
+        last_path = checkpoint.last_processed_path if checkpoint else None
+        all_blobs = sorted(self._storage.listar_blobs(f"{_BRONZE_PREFIX}/{signal_type}/"))
+        if last_path:
+            return [b for b in all_blobs if b > last_path]
+        if since:
+            return [b for b in all_blobs if since in b]
+        return all_blobs
+
+    def _process_new_blobs(self, signal_type: str, new_blobs: list[str], normalizer: Any, current_total: int) -> int:
+        records_processed = 0
+        for blob_path in new_blobs:
+            raw_records = self._read_ndjson(blob_path)
+            normalized = [normalizer(r) for r in raw_records]
+            self._upsert_silver(signal_type, normalized)
+            records_processed += len(raw_records)
+            current_total += len(raw_records)
+            self._checkpoints.save(
+                Checkpoint(
+                    signal_type=signal_type,
+                    last_processed_path=blob_path,
+                    last_processed_ts=datetime.datetime.now(datetime.UTC).isoformat(),
+                    records_processed=current_total,
+                )
+            )
+        return records_processed
+
     def run(
         self,
         signal_type: str = "logs",
@@ -137,35 +164,11 @@ class ObservabilityWorker:
             self._checkpoints.delete(signal_type)
 
         checkpoint = self._checkpoints.load(signal_type)
-        last_path = checkpoint.last_processed_path if checkpoint else None
-
-        all_blobs = sorted(self._storage.listar_blobs(f"{_BRONZE_PREFIX}/{signal_type}/"))
-
-        if last_path:
-            new_blobs = [b for b in all_blobs if b > last_path]
-        elif since:
-            new_blobs = [b for b in all_blobs if since in b]
-        else:
-            new_blobs = all_blobs
+        new_blobs = self._resolve_new_blobs(signal_type, checkpoint, since)
 
         normalizer = _NORMALIZERS.get(signal_type, normalize_log_record)
-        records_processed = 0
         current_total = checkpoint.records_processed if checkpoint else 0
-
-        for blob_path in new_blobs:
-            raw_records = self._read_ndjson(blob_path)
-            normalized = [normalizer(r) for r in raw_records]
-            self._upsert_silver(signal_type, normalized)
-            records_processed += len(raw_records)
-            current_total += len(raw_records)
-            self._checkpoints.save(
-                Checkpoint(
-                    signal_type=signal_type,
-                    last_processed_path=blob_path,
-                    last_processed_ts=datetime.datetime.now(datetime.UTC).isoformat(),
-                    records_processed=current_total,
-                )
-            )
+        records_processed = self._process_new_blobs(signal_type, new_blobs, normalizer, current_total)
 
         logger.info(
             "Observability pipeline: %d blobs, %d records (%s)",
@@ -232,6 +235,53 @@ class ObservabilityScheduler:
             return float("inf")
         return (now - last).total_seconds() / 60.0
 
+    def _run_silver_stage(self, now: datetime.datetime) -> tuple[bool, int]:
+        """Bronze → Silver (cadência rápida)."""
+        worker = ObservabilityWorker(self._storage)
+        total = 0
+        for sig in _SIGNAL_TYPES:
+            try:
+                total += worker.run(signal_type=sig).get("records_processed", 0)
+            except Exception as e:
+                logger.warning("Scheduler: falha em Silver(%s): %s", sig, e, exc_info=True)
+        self._mark_run(_SCHED_SILVER, now, total)
+        return True, total
+
+    def _run_gold_stage(self, now: datetime.datetime) -> bool:
+        try:
+            from .gold_aggregator import GoldAggregator
+
+            GoldAggregator(self._storage).write_gold()
+            self._mark_run(_SCHED_GOLD, now)
+            return True
+        except Exception as e:
+            logger.warning("Scheduler: falha em Gold: %s", e, exc_info=True)
+            return False
+
+    def _run_cross_domain_stage(self) -> bool | None:
+        """Cross-domain Gold (ADR-112 F8): junta fallback_rate com resultado financeiro.
+
+        Retorna None quando projects_root não está configurado (etapa não aplicável —
+        não deve aparecer no resultado do ciclo).
+        """
+        try:
+            from concilium.infrastructure.settings import get_storage as _get_storage_cfg
+
+            from .cross_domain import CrossDomainBuilder, default_canonical_provider
+
+            cfg = _get_storage_cfg()
+            projects_root = getattr(cfg, "projects_root", None) or (
+                getattr(cfg, "root", None) and cfg.root / "projetos"
+            )
+            if not projects_root:
+                return None
+            provider = default_canonical_provider(projects_root)
+            CrossDomainBuilder(self._storage, provider).write()
+            return True
+        except Exception as e:
+            logger.warning("Scheduler: falha em CrossDomain Gold: %s", e, exc_info=True)
+            return False
+
     def run_cycle(self, now: datetime.datetime | None = None) -> dict[str, Any]:
         """Executa um ciclo. Roda Silver e/ou Gold conforme intervalos decorridos.
 
@@ -243,46 +293,15 @@ class ObservabilityScheduler:
 
         result: dict[str, Any] = {"silver_ran": False, "gold_ran": False, "silver_records": 0}
 
-        # Bronze → Silver (cadência rápida)
         if self._elapsed_min(self._last_run(_SCHED_SILVER), now) >= self.silver_interval_min:
-            worker = ObservabilityWorker(self._storage)
-            total = 0
-            for sig in _SIGNAL_TYPES:
-                try:
-                    total += worker.run(signal_type=sig).get("records_processed", 0)
-                except Exception as e:
-                    logger.warning("Scheduler: falha em Silver(%s): %s", sig, e, exc_info=True)
-            self._mark_run(_SCHED_SILVER, now, total)
-            result["silver_ran"] = True
+            silver_ran, total = self._run_silver_stage(now)
+            result["silver_ran"] = silver_ran
             result["silver_records"] = total
 
-        # Silver → Gold (cadência lenta)
         if self._elapsed_min(self._last_run(_SCHED_GOLD), now) >= self.gold_interval_min:
-            try:
-                from .gold_aggregator import GoldAggregator
-
-                GoldAggregator(self._storage).write_gold()
-                self._mark_run(_SCHED_GOLD, now)
-                result["gold_ran"] = True
-            except Exception as e:
-                logger.warning("Scheduler: falha em Gold: %s", e, exc_info=True)
-
-            # Cross-domain Gold (ADR-112 F8): junta fallback_rate com resultado financeiro
-            try:
-                from concilium.infrastructure.settings import get_storage as _get_storage_cfg
-
-                from .cross_domain import CrossDomainBuilder, default_canonical_provider
-
-                cfg = _get_storage_cfg()
-                projects_root = getattr(cfg, "projects_root", None) or (
-                    getattr(cfg, "root", None) and cfg.root / "projetos"
-                )
-                if projects_root:
-                    provider = default_canonical_provider(projects_root)
-                    CrossDomainBuilder(self._storage, provider).write()
-                    result["cross_domain_ran"] = True
-            except Exception as e:
-                logger.warning("Scheduler: falha em CrossDomain Gold: %s", e, exc_info=True)
-                result["cross_domain_ran"] = False
+            result["gold_ran"] = self._run_gold_stage(now)
+            cross_domain_ran = self._run_cross_domain_stage()
+            if cross_domain_ran is not None:
+                result["cross_domain_ran"] = cross_domain_ran
 
         return result

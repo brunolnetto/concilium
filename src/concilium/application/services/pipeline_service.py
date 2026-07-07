@@ -233,6 +233,67 @@ class PipelineService:
                     skill04["mobilizacao_policies"] = policies
         return skill_inputs
 
+    @staticmethod
+    def _resolve_actor_context(run: dict[str, Any]) -> tuple[str, str | None, Any]:
+        """Captura identidade do ator via contextvars (ADR-118) para a execução do run."""
+        # ADR-119 D3: captura identidade do ator via contextvars (ADR-118)
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            get_current_user_id,
+        )
+
+        actor_user_id = get_current_user_id() or run.get("actor") or "system"
+        actor_roles = list(_current_roles.get())
+        actor_role = actor_roles[0] if actor_roles else None
+        intent = run.get("procurement_intent")
+        return actor_user_id, actor_role, intent
+
+    def _ensure_run_version(
+        self,
+        project: ProjectHandle,
+        run: dict[str, Any],
+        actor_user_id: str,
+        actor_role: str | None,
+        intent: Any,
+    ) -> str:
+        """Garante que o projeto tenha uma versão corrente (criando/forkando se necessário)."""
+        if project.current_version() is None:
+            project.new_version(
+                criado_por=actor_user_id,
+                role_criador=actor_role,
+                procurement_intent=intent,
+            )
+
+        base_version = run.get("base_version")
+        if run.get("fork_version"):
+            project.new_version(
+                base=base_version or project.current_version(),
+                criado_por=actor_user_id,
+                role_criador=actor_role,
+                procurement_intent=intent,
+                forked_from=base_version or project.current_version(),
+            )
+
+        version = project.current_version()
+        if version is None:
+            raise RuntimeError("Falha ao resolver versao para execucao.")
+        return version
+
+    @staticmethod
+    def _resolve_catalog_baseline_origin(project: ProjectHandle, run: dict[str, Any]) -> str:
+        """Resolve a origem do baseline de catálogo, validando o modo estrito quando aplicável.
+
+        Deve ocorrer antes do pipeline para que falhas de strict_baseline reprovem o run,
+        não o passo de persistência pós-run (que engoliria o erro silenciosamente).
+        """
+        use_strict_catalog_baseline = bool(run.get("use_strict_catalog_baseline", False))
+        benchmark_ref = project.read_json("benchmark_reference.json", {})
+        project_catalog = benchmark_ref.get("catalog") if isinstance(benchmark_ref, dict) else None
+        has_project_catalog = isinstance(project_catalog, dict) and bool(project_catalog)
+        if use_strict_catalog_baseline and not has_project_catalog:
+            raise RuntimeError("Baseline de catalogo do projeto nao encontrado")
+        return "project_reference" if has_project_catalog else "master"
+
     def _execute_run(self, project: ProjectHandle, run_id: str) -> None:
         run = self._find_run(project, run_id)
         if run is None:
@@ -247,51 +308,13 @@ class PipelineService:
             },
         )
         try:
-            # ADR-119 D3: captura identidade do ator via contextvars (ADR-118)
-            from concilium.infrastructure.auth.permission_guard import (
-                _current_roles,
-                get_current_user_id,
-            )
-
-            _actor_user_id = get_current_user_id() or run.get("actor") or "system"
-            _actor_roles = list(_current_roles.get())
-            _actor_role = _actor_roles[0] if _actor_roles else None
-            _intent = run.get("procurement_intent")
-
-            if project.current_version() is None:
-                project.new_version(
-                    criado_por=_actor_user_id,
-                    role_criador=_actor_role,
-                    procurement_intent=_intent,
-                )
-
-            base_version = run.get("base_version")
-            if run.get("fork_version"):
-                project.new_version(
-                    base=base_version or project.current_version(),
-                    criado_por=_actor_user_id,
-                    role_criador=_actor_role,
-                    procurement_intent=_intent,
-                    forked_from=base_version or project.current_version(),
-                )
-
-            version = project.current_version()
-            if version is None:
-                raise RuntimeError("Falha ao resolver versao para execucao.")
+            _actor_user_id, _actor_role, _intent = self._resolve_actor_context(run)
+            version = self._ensure_run_version(project, run, _actor_user_id, _actor_role, _intent)
 
             line_offset = len(project.read_lines(f"{version}/invocations.log"))
             self._update_run(project, run_id, {"version": version, "invocation_line_offset": line_offset})
 
-            # Resolve catalog baseline origin directly from project (no runtime needed).
-            # This must happen before the pipeline so strict_baseline failures fail the run,
-            # not the post-run persistence step (which would silently swallow the error).
-            use_strict_catalog_baseline = bool(run.get("use_strict_catalog_baseline", False))
-            benchmark_ref = project.read_json("benchmark_reference.json", {})
-            _project_catalog = benchmark_ref.get("catalog") if isinstance(benchmark_ref, dict) else None
-            _has_project_catalog = isinstance(_project_catalog, dict) and bool(_project_catalog)
-            if use_strict_catalog_baseline and not _has_project_catalog:
-                raise RuntimeError("Baseline de catalogo do projeto nao encontrado")
-            catalogo_base_origem = "project_reference" if _has_project_catalog else "master"
+            catalogo_base_origem = self._resolve_catalog_baseline_origin(project, run)
             self._update_run(project, run_id, {"catalogo_base_origem": catalogo_base_origem})
 
             skill_inputs = self._prepare_skill_inputs(project, run)
@@ -392,6 +415,75 @@ class PipelineService:
                 project.write_json(self._files.runs, runs)
                 return
 
+    def _resolve_catalog_via_runtime(
+        self,
+        project: ProjectHandle,
+        version: str,
+        run_id: str,
+        run: dict[str, Any],
+        runtime: Any,
+    ) -> dict[str, Any]:
+        """Resolve o catálogo compacto via runtime (caminho de produção)."""
+        contexto = runtime.load_contexto(project.meta["contexto_id"])
+        use_strict_catalog_baseline = bool(run.get("use_strict_catalog_baseline", False))
+        canonical = project.load_canonical(version)
+        eap_cpu_ids: set[str] | None = None
+        if canonical and canonical.eap:
+            eap_cpu_ids = {item.cpu_id for item in canonical.eap if item.cpu_id}
+
+        resolved, provenance = runtime._load_resolved_catalog_with_provenance(
+            contexto.catalogo_id,
+            contexto.jurisdicao_id,
+            project,
+            version,
+            strict_baseline=use_strict_catalog_baseline,
+        )
+        if eap_cpu_ids is not None:
+            resolved["cpus"] = [c for c in resolved.get("cpus", []) if c.get("codigo") in eap_cpu_ids]
+
+        return {
+            "run_id": run_id,
+            "version": version,
+            "catalogo_id": contexto.catalogo_id,
+            "jurisdicao_id": contexto.jurisdicao_id,
+            "resolved_at": self._now_iso(),
+            "catalogo_base_origem": provenance.get("catalogo_base_origem"),
+            "catalogo_base_hash": provenance.get("catalogo_base_hash"),
+            "use_strict_catalog_baseline": use_strict_catalog_baseline,
+            "resolution_trace": provenance.get("resolution_trace", {}),
+            "items": {
+                "cpus": resolved.get("cpus", []),
+                "insumos": resolved.get("insumos", []),
+                "producoes": resolved.get("producoes", []),
+            },
+        }
+
+    def _resolve_catalog_fallback(
+        self,
+        version: str,
+        run_id: str,
+        project_catalog: Any,
+        catalogo_base_origem_local: str,
+    ) -> dict[str, Any]:
+        """Fallback: usa o catálogo local do projeto (ex.: ambientes de teste sem runtime)."""
+        catalog = (
+            project_catalog
+            if isinstance(project_catalog, dict) and project_catalog
+            else {"cpus": [], "insumos": [], "producoes": []}
+        )
+        return {
+            "run_id": run_id,
+            "version": version,
+            "resolved_at": self._now_iso(),
+            "catalogo_base_origem": catalogo_base_origem_local,
+            "catalogo_base_hash": None,
+            "items": {
+                "cpus": catalog.get("cpus", []),
+                "insumos": catalog.get("insumos", []),
+                "producoes": catalog.get("producoes", []),
+            },
+        }
+
     def _persist_resolved_catalog(
         self,
         project: ProjectHandle,
@@ -416,62 +508,12 @@ class PipelineService:
             _has_project_catalog = isinstance(_project_catalog, dict) and bool(_project_catalog)
             catalogo_base_origem_local = "project_reference" if _has_project_catalog else "master"
 
-            payload: dict[str, Any]
             try:
-                # Full resolution via runtime (production path)
-                contexto = runtime.load_contexto(project.meta["contexto_id"])
-                use_strict_catalog_baseline = bool(run.get("use_strict_catalog_baseline", False))
-                canonical = project.load_canonical(version)
-                eap_cpu_ids: set[str] | None = None
-                if canonical and canonical.eap:
-                    eap_cpu_ids = {item.cpu_id for item in canonical.eap if item.cpu_id}
-
-                resolved, provenance = runtime._load_resolved_catalog_with_provenance(
-                    contexto.catalogo_id,
-                    contexto.jurisdicao_id,
-                    project,
-                    version,
-                    strict_baseline=use_strict_catalog_baseline,
-                )
-                if eap_cpu_ids is not None:
-                    resolved["cpus"] = [c for c in resolved.get("cpus", []) if c.get("codigo") in eap_cpu_ids]
-
-                payload = {
-                    "run_id": run_id,
-                    "version": version,
-                    "catalogo_id": contexto.catalogo_id,
-                    "jurisdicao_id": contexto.jurisdicao_id,
-                    "resolved_at": self._now_iso(),
-                    "catalogo_base_origem": provenance.get("catalogo_base_origem"),
-                    "catalogo_base_hash": provenance.get("catalogo_base_hash"),
-                    "use_strict_catalog_baseline": use_strict_catalog_baseline,
-                    "resolution_trace": provenance.get("resolution_trace", {}),
-                    "items": {
-                        "cpus": resolved.get("cpus", []),
-                        "insumos": resolved.get("insumos", []),
-                        "producoes": resolved.get("producoes", []),
-                    },
-                }
+                payload = self._resolve_catalog_via_runtime(project, version, run_id, run, runtime)
             except Exception:
                 # Fallback: use project-local catalog (e.g. test environments without
                 # runtime catalog support, or contexts where contexto is unavailable)
-                catalog = (
-                    _project_catalog
-                    if isinstance(_project_catalog, dict) and _project_catalog
-                    else {"cpus": [], "insumos": [], "producoes": []}
-                )
-                payload = {
-                    "run_id": run_id,
-                    "version": version,
-                    "resolved_at": self._now_iso(),
-                    "catalogo_base_origem": catalogo_base_origem_local,
-                    "catalogo_base_hash": None,
-                    "items": {
-                        "cpus": catalog.get("cpus", []),
-                        "insumos": catalog.get("insumos", []),
-                        "producoes": catalog.get("producoes", []),
-                    },
-                }
+                payload = self._resolve_catalog_fallback(version, run_id, _project_catalog, catalogo_base_origem_local)
 
             out_path = project.root / version / "resolved_catalog.json"
             out_path.write_text(

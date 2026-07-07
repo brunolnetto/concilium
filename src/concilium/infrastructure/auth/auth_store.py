@@ -79,6 +79,27 @@ def _client_record(raw: dict) -> ClientRecord:
     return ClientRecord(**raw)
 
 
+def _resolve_effective_roles(roles: list[str], scopes: list[str] | None) -> list[str]:
+    """Mapeia scopes legados para roles se necessário; default para 'operator'."""
+    from concilium.infrastructure.auth.permission_guard import LEGACY_SCOPE_TO_ROLE
+
+    effective_roles = list(roles)
+    if not effective_roles and scopes:
+        effective_roles = list({LEGACY_SCOPE_TO_ROLE.get(s, "operator") for s in scopes})
+    if not effective_roles:
+        effective_roles = ["operator"]
+    return effective_roles
+
+
+def _validate_roles(effective_roles: list[str]) -> None:
+    """Raises ValueError se algum role não estiver em VALID_ROLES."""
+    from concilium.infrastructure.auth.permission_guard import VALID_ROLES
+
+    invalid = [r for r in effective_roles if r not in VALID_ROLES]
+    if invalid:
+        raise ValueError(f"Roles inválidos: {invalid}. Válidos: {sorted(VALID_ROLES)}")
+
+
 @dataclass
 class RevokePendingRecord:
     """Solicitação de revogação de dispositivo aguardando confirmação (ADR-123 F3)."""
@@ -103,6 +124,24 @@ class RefreshTokenRecord:
     revoked: bool = False
     last_used_at: str = ""
     scopes: list[str] = field(default_factory=list)  # legado
+
+
+def _client_code_matches(r: ClientRecord, client_code: str) -> bool:
+    return bool(r.active and r.client_code_hash and _verify(client_code, r.client_code_hash))
+
+
+def _build_refresh_token_record(client: ClientRecord, device_name: str, ttl: timedelta) -> RefreshTokenRecord:
+    device_id = device_name or client.client_id
+    token_id = "RT-" + secrets.token_hex(32)
+    return RefreshTokenRecord(
+        token_id=token_id,
+        client_id=client.client_id,
+        device_id=device_id,
+        device_name=device_name or device_id,
+        roles=client.roles,
+        issued_at=_iso(_now()),
+        expires_at=_iso(_now() + ttl),
+    )
 
 
 # ── Store ─────────────────────────────────────────────────────────────────────
@@ -199,21 +238,8 @@ class AuthStore:
         client_code: str = "",  # código de bootstrap reutilizável (ver activate_device_code)
     ) -> ClientRecord:
         """Register a new client. Raises ValueError if client_id already exists."""
-        from concilium.infrastructure.auth.permission_guard import (
-            LEGACY_SCOPE_TO_ROLE,
-            VALID_ROLES,
-        )
-
-        # Mapeia scopes legados para roles se necessário
-        effective_roles = list(roles)
-        if not effective_roles and scopes:
-            effective_roles = list({LEGACY_SCOPE_TO_ROLE.get(s, "operator") for s in scopes})
-        if not effective_roles:
-            effective_roles = ["operator"]
-        # Valida roles
-        invalid = [r for r in effective_roles if r not in VALID_ROLES]
-        if invalid:
-            raise ValueError(f"Roles inválidos: {invalid}. Válidos: {sorted(VALID_ROLES)}")
+        effective_roles = _resolve_effective_roles(roles, scopes)
+        _validate_roles(effective_roles)
 
         with self._lock:
             existing = [ClientRecord(**r) for r in self._read_clients()]
@@ -333,24 +359,11 @@ class AuthStore:
         """
         with self._lock:
             records = [ClientRecord(**r) for r in self._read_clients()]
-            client = next(
-                (r for r in records if r.active and r.client_code_hash and _verify(client_code, r.client_code_hash)),
-                None,
-            )
+            client = next((r for r in records if _client_code_matches(r, client_code)), None)
             if client is None:
                 return None
 
-            device_id = device_name or client.client_id
-            token_id = "RT-" + secrets.token_hex(32)
-            rt = RefreshTokenRecord(
-                token_id=token_id,
-                client_id=client.client_id,
-                device_id=device_id,
-                device_name=device_name or device_id,
-                roles=client.roles,
-                issued_at=_iso(_now()),
-                expires_at=_iso(_now() + self.REFRESH_TOKEN_TTL),
-            )
+            rt = _build_refresh_token_record(client, device_name, self.REFRESH_TOKEN_TTL)
             tokens = [RefreshTokenRecord(**r) for r in self._read("refresh_tokens.json")]
             tokens.append(rt)
             self._write("refresh_tokens.json", [asdict(t) for t in tokens])

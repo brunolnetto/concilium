@@ -183,6 +183,25 @@ def _latest_project_by_name(project_name: str, projects_root: Path) -> Path | No
     return best[1] if best else None
 
 
+def _find_canonical_for_project(project_name: str, root: Path) -> Path | None:
+    """Procura canonical.json do projeto mais recente com o nome dado, sob as raízes de projetos conhecidas."""
+    for projects_root in (root / "benchmarks" / "projetos", root / "projetos"):
+        if not projects_root.exists() or not projects_root.is_dir():
+            continue
+        proj = _latest_project_by_name(project_name, projects_root)
+        if not proj:
+            continue
+        try:
+            meta = _load_json(proj / "meta.json")
+        except Exception:
+            meta = {}
+        current_version = str(meta.get("current_version") or "v1")
+        for can in (proj / current_version / "canonical.json", proj / "v1" / "canonical.json"):
+            if can.exists():
+                return can
+    return None
+
+
 def _resolve_canonical_path(extr: dict[str, Any], ref: dict[str, Any], root: Path) -> Path:
     candidate_raw = str(extr.get("paths", {}).get("canonical", "")).strip()
     candidate = Path(candidate_raw) if candidate_raw else None
@@ -191,19 +210,8 @@ def _resolve_canonical_path(extr: dict[str, Any], ref: dict[str, Any], root: Pat
 
     project_name = str(ref.get("projeto") or (ref.get("meta") or {}).get("projeto") or "")
     if project_name:
-        for projects_root in (root / "benchmarks" / "projetos", root / "projetos"):
-            if not projects_root.exists() or not projects_root.is_dir():
-                continue
-            proj = _latest_project_by_name(project_name, projects_root)
-            if not proj:
-                continue
-            try:
-                meta = _load_json(proj / "meta.json")
-            except Exception:
-                meta = {}
-            current_version = str(meta.get("current_version") or "v1")
-            for can in (proj / current_version / "canonical.json", proj / "v1" / "canonical.json"):
-                if can.exists():
-                    return can
+        found = _find_canonical_for_project(project_name, root)
+        if found:
+            return found
 
     raise FileNotFoundError("canonical.json nÃ£o encontrado para auditoria")

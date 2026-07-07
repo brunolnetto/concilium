@@ -230,14 +230,23 @@ def _pcat_is_price_reference_stale(ref: str, max_age_months: int = 6) -> bool:
     return age > max_age_months
 
 
-def _pcat_cpu_parts(cpu: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def _pcat_resolve_equipe(cpu: dict[str, Any]) -> dict[str, Any]:
     equipe = cpu.get("equipe")
-    if not isinstance(equipe, dict):
-        raw_equipe = cpu.get("composicao_padrao_equipe")
-        equipe = raw_equipe if isinstance(raw_equipe, dict) else {}
-    funcoes = [f for f in (equipe.get("funcoes") or []) if isinstance(f, dict)]
-    equips = [e for e in (equipe.get("equipamentos") or []) if isinstance(e, dict)]
-    comp = [c for c in (cpu.get("composicao_itens") or cpu.get("composicao_completa") or []) if isinstance(c, dict)]
+    if isinstance(equipe, dict):
+        return equipe
+    raw_equipe = cpu.get("composicao_padrao_equipe")
+    return raw_equipe if isinstance(raw_equipe, dict) else {}
+
+
+def _pcat_dict_items(raw: Any) -> list[dict[str, Any]]:
+    return [item for item in (raw or []) if isinstance(item, dict)]
+
+
+def _pcat_cpu_parts(cpu: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    equipe = _pcat_resolve_equipe(cpu)
+    funcoes = _pcat_dict_items(equipe.get("funcoes"))
+    equips = _pcat_dict_items(equipe.get("equipamentos"))
+    comp = _pcat_dict_items(cpu.get("composicao_itens") or cpu.get("composicao_completa"))
     return funcoes, equips, comp
 
 
@@ -308,8 +317,7 @@ def _pcat_equipment_monthly_cost(insumo: dict[str, Any]) -> float:
     return 0.0
 
 
-def _pcat_estimate_cpu_monthly_cost(cpu: dict[str, Any], insumos_idx: dict[str, dict[str, Any]]) -> float:
-    funcoes, equips, comp = _pcat_cpu_parts(cpu)
+def _pcat_funcoes_cost(funcoes: list[dict[str, Any]], insumos_idx: dict[str, dict[str, Any]]) -> float:
     total = 0.0
     for f in funcoes:
         fid = str(f.get("funcao_id") or "")
@@ -318,6 +326,11 @@ def _pcat_estimate_cpu_monthly_cost(cpu: dict[str, Any], insumos_idx: dict[str, 
         if unit <= 0.0:
             unit = _pcat_insumo_price(insumos_idx.get(fid) or {})
         total += qty * unit
+    return total
+
+
+def _pcat_equips_cost(equips: list[dict[str, Any]], insumos_idx: dict[str, dict[str, Any]]) -> float:
+    total = 0.0
     for e in equips:
         eid = str(e.get("equip_id") or "")
         qty = float(e.get("num_unidades") or 0.0)
@@ -325,12 +338,70 @@ def _pcat_estimate_cpu_monthly_cost(cpu: dict[str, Any], insumos_idx: dict[str, 
         if unit <= 0.0:
             unit = _pcat_equipment_monthly_cost(insumos_idx.get(eid) or {})
         total += qty * unit
+    return total
+
+
+def _pcat_comp_cost(comp: list[dict[str, Any]], insumos_idx: dict[str, dict[str, Any]]) -> float:
+    total = 0.0
     for c in comp:
         iid = str(c.get("insumo_id") or "")
         coef = float(c.get("coeficiente") or 0.0)
         unit = _pcat_insumo_price(insumos_idx.get(iid) or {})
         total += coef * unit
+    return total
+
+
+def _pcat_estimate_cpu_monthly_cost(cpu: dict[str, Any], insumos_idx: dict[str, dict[str, Any]]) -> float:
+    funcoes, equips, comp = _pcat_cpu_parts(cpu)
+    total = (
+        _pcat_funcoes_cost(funcoes, insumos_idx)
+        + _pcat_equips_cost(equips, insumos_idx)
+        + _pcat_comp_cost(comp, insumos_idx)
+    )
     return round(total, 2)
+
+
+def _pcat_delta_monthly_cost(
+    base_index: dict[str, dict[str, Any]],
+    new_index: dict[str, dict[str, Any]],
+    insumos_idx: dict[str, dict[str, Any]],
+) -> float:
+    delta_monthly = 0.0
+    for cpu_id, new_cpu in new_index.items():
+        base_cpu = base_index.get(cpu_id) or {}
+        delta_monthly += _pcat_estimate_cpu_monthly_cost(new_cpu, insumos_idx) - _pcat_estimate_cpu_monthly_cost(
+            base_cpu, insumos_idx
+        )
+    return delta_monthly
+
+
+def _pcat_hours_for_row(
+    row: dict[str, Any], base_index: dict[str, dict[str, Any]], new_index: dict[str, dict[str, Any]]
+) -> tuple[float, float]:
+    cpu_id = str(row.get("cpu_id") or "")
+    qtd = float(row.get("quantitativo") or 0.0)
+    b_prod = float((base_index.get(cpu_id) or {}).get("producao_horaria") or 0.0)
+    n_prod = float((new_index.get(cpu_id) or {}).get("producao_horaria") or b_prod)
+    base_hours = qtd / b_prod if b_prod > 0 else 0.0
+    new_hours = qtd / n_prod if n_prod > 0 else 0.0
+    return base_hours, new_hours
+
+
+def _pcat_hours_delta(
+    base_index: dict[str, dict[str, Any]],
+    new_index: dict[str, dict[str, Any]],
+    eap_rows: list[dict[str, Any]],
+) -> tuple[float, float]:
+    base_hours = 0.0
+    new_hours = 0.0
+    for row in eap_rows:
+        cpu_id = str(row.get("cpu_id") or "")
+        if cpu_id not in new_index:
+            continue
+        row_base_hours, row_new_hours = _pcat_hours_for_row(row, base_index, new_index)
+        base_hours += row_base_hours
+        new_hours += row_new_hours
+    return base_hours, new_hours
 
 
 def _pcat_estimate_batch_impact(
@@ -339,57 +410,55 @@ def _pcat_estimate_batch_impact(
     eap_rows: list[dict[str, Any]],
     insumos_idx: dict[str, dict[str, Any]],
 ) -> tuple[float, float]:
-    delta_monthly = 0.0
-    for cpu_id, new_cpu in new_index.items():
-        base_cpu = base_index.get(cpu_id) or {}
-        delta_monthly += _pcat_estimate_cpu_monthly_cost(new_cpu, insumos_idx) - _pcat_estimate_cpu_monthly_cost(
-            base_cpu, insumos_idx
-        )
-
-    base_hours = 0.0
-    new_hours = 0.0
-    for row in eap_rows:
-        cpu_id = str(row.get("cpu_id") or "")
-        if cpu_id not in new_index:
-            continue
-        qtd = float(row.get("quantitativo") or 0.0)
-        b_prod = float((base_index.get(cpu_id) or {}).get("producao_horaria") or 0.0)
-        n_prod = float((new_index.get(cpu_id) or {}).get("producao_horaria") or b_prod)
-        if b_prod > 0:
-            base_hours += qtd / b_prod
-        if n_prod > 0:
-            new_hours += qtd / n_prod
+    delta_monthly = _pcat_delta_monthly_cost(base_index, new_index, insumos_idx)
+    base_hours, new_hours = _pcat_hours_delta(base_index, new_index, eap_rows)
     if base_hours <= 0:
         return round(delta_monthly, 2), 0.0
     prazo_pct = ((new_hours / base_hours) - 1.0) * 100.0
     return round(delta_monthly, 2), round(prazo_pct, 2)
 
 
-def _pcat_health_checks(cpu: dict[str, Any], insumos_idx: dict[str, dict[str, Any]]) -> list[str]:
-    alerts: list[str] = []
-    funcoes, _, comp = _pcat_cpu_parts(cpu)
-
+def _pcat_missing_desc_alert(funcoes: list[dict[str, Any]]) -> str | None:
     missing_desc = [str(f.get("funcao_id") or "?") for f in funcoes if not str(f.get("descricao") or "").strip()]
     if missing_desc:
-        alerts.append(f"função sem descrição: {', '.join(missing_desc[:3])}")
+        return f"função sem descrição: {', '.join(missing_desc[:3])}"
+    return None
 
+
+def _pcat_missing_insumos_alert(comp: list[dict[str, Any]], insumos_idx: dict[str, dict[str, Any]]) -> str | None:
     missing_insumos = [str(c.get("insumo_id") or "?") for c in comp if str(c.get("insumo_id") or "") not in insumos_idx]
     if missing_insumos:
-        alerts.append(f"insumo inexistente: {', '.join(missing_insumos[:3])}")
+        return f"insumo inexistente: {', '.join(missing_insumos[:3])}"
+    return None
 
+
+def _pcat_invalid_cats_alert(comp: list[dict[str, Any]]) -> str | None:
     invalid_cats = [
         str(c.get("categoria_custo") or "")
         for c in comp
         if str(c.get("categoria_custo") or "").upper() not in _VALID_COST_CATS
     ]
     if invalid_cats:
-        alerts.append(f"categoria_custo inválida: {', '.join(invalid_cats[:3])}")
+        return f"categoria_custo inválida: {', '.join(invalid_cats[:3])}"
+    return None
 
+
+def _pcat_stale_price_alert(cpu: dict[str, Any]) -> str | None:
     ref = str(cpu.get("data_referencia_preco") or "").strip()
     if _pcat_is_price_reference_stale(ref):
-        alerts.append("referência de preço defasada")
+        return "referência de preço defasada"
+    return None
 
-    return alerts
+
+def _pcat_health_checks(cpu: dict[str, Any], insumos_idx: dict[str, dict[str, Any]]) -> list[str]:
+    funcoes, _, comp = _pcat_cpu_parts(cpu)
+    checks = [
+        _pcat_missing_desc_alert(funcoes),
+        _pcat_missing_insumos_alert(comp, insumos_idx),
+        _pcat_invalid_cats_alert(comp),
+        _pcat_stale_price_alert(cpu),
+    ]
+    return [alert for alert in checks if alert is not None]
 
 
 def _pcat_resolve_catalog_id(project_id: str, base_url: str, actor: str) -> str:
@@ -400,33 +469,76 @@ def _pcat_resolve_catalog_id(project_id: str, base_url: str, actor: str) -> str:
         return "mendeslobo"
 
 
-def _pcat_load_panel_data(
-    project_id: str, base_url: str, actor: str
-) -> tuple[str, dict[str, dict], dict[str, dict], dict[str, Any]]:
-    catalog_id = _pcat_resolve_catalog_id(project_id, base_url, actor)
+def _pcat_fetch_base_index(catalog_id: str, base_url: str, actor: str) -> dict[str, dict[str, Any]]:
     try:
         cpus = api_call(
             "GET", f"/api/catalogs/{catalog_id}/cpus", params={"limit": 1200}, base_url=base_url, actor=actor
         ).get("items", [])
     except Exception:
         cpus = []
-    base_index = {str(c.get("codigo") or ""): c for c in cpus if isinstance(c, dict) and c.get("codigo")}
+    return {str(c.get("codigo") or ""): c for c in cpus if isinstance(c, dict) and c.get("codigo")}
 
+
+def _pcat_fetch_override_index(project_id: str, base_url: str, actor: str) -> dict[str, dict[str, Any]]:
     try:
         overrides = api_call("GET", f"/api/projects/{project_id}/catalog/overrides", base_url=base_url, actor=actor)
     except Exception:
         overrides = {}
-    override_index = {str(k): v for k, v in (overrides or {}).items() if isinstance(v, dict)}
+    return {str(k): v for k, v in (overrides or {}).items() if isinstance(v, dict)}
 
+
+def _pcat_fetch_reference(project_id: str, base_url: str, actor: str) -> dict[str, Any]:
     try:
-        reference = api_call("GET", f"/api/projects/{project_id}/benchmark-reference", base_url=base_url, actor=actor)
+        return api_call("GET", f"/api/projects/{project_id}/benchmark-reference", base_url=base_url, actor=actor)
     except Exception:
-        reference = {}
+        return {}
+
+
+def _pcat_load_panel_data(
+    project_id: str, base_url: str, actor: str
+) -> tuple[str, dict[str, dict], dict[str, dict], dict[str, Any]]:
+    catalog_id = _pcat_resolve_catalog_id(project_id, base_url, actor)
+    base_index = _pcat_fetch_base_index(catalog_id, base_url, actor)
+    override_index = _pcat_fetch_override_index(project_id, base_url, actor)
+    reference = _pcat_fetch_reference(project_id, base_url, actor)
 
     if not base_index:
         base_index = _pcat_catalog_cpus_index(reference)
 
     return catalog_id, base_index, override_index, reference
+
+
+def _pcat_row_matches_search(row: dict[str, Any], ql: str, cat_filters: list[str]) -> bool:
+    if ql and ql not in row["search_text"]:
+        return False
+    if cat_filters and row["categoria"] not in cat_filters:
+        return False
+    return True
+
+
+def _pcat_row_matches_toggles(
+    row: dict[str, Any], only_used: bool, only_incomplete: bool, only_stale_price: bool
+) -> bool:
+    if only_used and not row["used_in_eap"]:
+        return False
+    if only_incomplete and not row["composicao_incompleta"]:
+        return False
+    if only_stale_price and not row["preco_defasado"]:
+        return False
+    return True
+
+
+def _pcat_row_matches_filters(
+    row: dict[str, Any],
+    ql: str,
+    cat_filters: list[str],
+    only_used: bool,
+    only_incomplete: bool,
+    only_stale_price: bool,
+) -> bool:
+    return _pcat_row_matches_search(row, ql, cat_filters) and _pcat_row_matches_toggles(
+        row, only_used, only_incomplete, only_stale_price
+    )
 
 
 def _pcat_apply_filters(
@@ -438,20 +550,54 @@ def _pcat_apply_filters(
     only_stale_price: bool,
 ) -> list[dict[str, Any]]:
     ql = q.lower().strip()
-    out: list[dict[str, Any]] = []
-    for row in rows:
-        if ql and ql not in row["search_text"]:
-            continue
-        if cat_filters and row["categoria"] not in cat_filters:
-            continue
-        if only_used and not row["used_in_eap"]:
-            continue
-        if only_incomplete and not row["composicao_incompleta"]:
-            continue
-        if only_stale_price and not row["preco_defasado"]:
-            continue
-        out.append(row)
-    return out
+    return [
+        row
+        for row in rows
+        if _pcat_row_matches_filters(row, ql, cat_filters, only_used, only_incomplete, only_stale_price)
+    ]
+
+
+def _pcat_scale_producao(new_cpu: dict[str, Any], base_cpu: dict[str, Any], prod_k: float) -> None:
+    if base_cpu.get("producao_horaria") is not None:
+        new_cpu["producao_horaria"] = round(float(base_cpu.get("producao_horaria") or 0.0) * prod_k, 6)
+
+
+def _pcat_scale_equipe(
+    new_cpu: dict[str, Any], funcoes: list[dict[str, Any]], equips: list[dict[str, Any]], team_k: float
+) -> None:
+    if not (funcoes or equips):
+        return
+    new_fun = []
+    for f in funcoes:
+        entry = dict(f)
+        entry["num_pessoas"] = round(float(f.get("num_pessoas") or 0.0) * team_k, 3)
+        new_fun.append(entry)
+    new_eq = []
+    for e in equips:
+        entry = dict(e)
+        entry["num_unidades"] = round(float(e.get("num_unidades") or 0.0) * team_k, 3)
+        new_eq.append(entry)
+    new_cpu["equipe"] = {"funcoes": new_fun, "equipamentos": new_eq}
+
+
+def _pcat_scale_composicao(new_cpu: dict[str, Any], comp: list[dict[str, Any]], comp_k: float) -> None:
+    if not comp:
+        return
+    new_comp = []
+    for c in comp:
+        entry = dict(c)
+        entry["coeficiente"] = round(float(c.get("coeficiente") or 0.0) * comp_k, 6)
+        new_comp.append(entry)
+    new_cpu["composicao_itens"] = new_comp
+
+
+def _pcat_build_preview_cpu(base_cpu: dict[str, Any], prod_k: float, team_k: float, comp_k: float) -> dict[str, Any]:
+    new_cpu = dict(base_cpu)
+    _pcat_scale_producao(new_cpu, base_cpu, prod_k)
+    funcoes, equips, comp = _pcat_cpu_parts(base_cpu)
+    _pcat_scale_equipe(new_cpu, funcoes, equips, team_k)
+    _pcat_scale_composicao(new_cpu, comp, comp_k)
+    return new_cpu
 
 
 def _pcat_build_batch_preview(
@@ -470,33 +616,7 @@ def _pcat_build_batch_preview(
         base_cpu = dict(base_index.get(cpu_id) or {})
         if not base_cpu:
             continue
-        new_cpu = dict(base_cpu)
-        if base_cpu.get("producao_horaria") is not None:
-            new_cpu["producao_horaria"] = round(float(base_cpu.get("producao_horaria") or 0.0) * prod_k, 6)
-
-        funcoes, equips, comp = _pcat_cpu_parts(base_cpu)
-        if funcoes or equips:
-            new_fun = []
-            for f in funcoes:
-                entry = dict(f)
-                entry["num_pessoas"] = round(float(f.get("num_pessoas") or 0.0) * team_k, 3)
-                new_fun.append(entry)
-            new_eq = []
-            for e in equips:
-                entry = dict(e)
-                entry["num_unidades"] = round(float(e.get("num_unidades") or 0.0) * team_k, 3)
-                new_eq.append(entry)
-            new_cpu["equipe"] = {"funcoes": new_fun, "equipamentos": new_eq}
-
-        if comp:
-            new_comp = []
-            for c in comp:
-                entry = dict(c)
-                entry["coeficiente"] = round(float(c.get("coeficiente") or 0.0) * comp_k, 6)
-                new_comp.append(entry)
-            new_cpu["composicao_itens"] = new_comp
-
-        out[cpu_id] = new_cpu
+        out[cpu_id] = _pcat_build_preview_cpu(base_cpu, prod_k, team_k, comp_k)
     return out
 
 
@@ -590,6 +710,57 @@ def _pcat_render_step_edit(project_id: str, selected_cpu_ids: list[str], base_in
     st.dataframe(table, hide_index=True, use_container_width=True)
 
 
+def _pcat_render_diff_table(
+    selected_cpu_ids: list[str], base_index: dict[str, dict[str, Any]], preview: dict[str, dict[str, Any]]
+) -> None:
+    diff_rows = []
+    for cpu_id in selected_cpu_ids:
+        base_cpu = base_index.get(cpu_id) or {}
+        new_cpu = preview.get(cpu_id) or base_cpu
+        diff_rows.append(
+            {
+                "CPU": cpu_id,
+                "Badge": _pcat_override_badge(base_cpu, new_cpu),
+                "Mini diff": _pcat_mini_diff_text(base_cpu, new_cpu),
+            }
+        )
+    st.dataframe(diff_rows, hide_index=True, use_container_width=True)
+
+
+def _pcat_apply_batch(
+    project_id: str,
+    selected_cpu_ids: list[str],
+    preview: dict[str, dict[str, Any]],
+    motivo: str,
+    base_url: str,
+    actor: str,
+) -> None:
+    if not motivo.strip():
+        st.error("Informe o motivo único para registrar auditoria padronizada.")
+        return
+    done = 0
+    reason = f"[lote-catalogo] {motivo.strip()}"
+    for cpu_id in selected_cpu_ids:
+        payload = preview.get(cpu_id)
+        if not isinstance(payload, dict):
+            continue
+        try:
+            api_call(
+                "POST",
+                f"/api/projects/{project_id}/catalog/cpus/{cpu_id}",
+                base_url=base_url,
+                actor=actor,
+                payload=payload,
+                params={"motivo": reason},
+            )
+            done += 1
+        except Exception as exc:
+            st.error(f"Falha ao aplicar em {cpu_id}: {exc}")
+    if done:
+        st.success(f"{done} CPU(s) atualizada(s) com auditoria única ({reason}).")
+        st.session_state.pop(f"pcat-preview-{project_id}", None)
+
+
 def _pcat_render_step_review(
     project_id: str,
     selected_cpu_ids: list[str],
@@ -610,19 +781,7 @@ def _pcat_render_step_review(
     k1.metric("Impacto mensal estimado", f"R$ {delta_monthly:,.2f}")
     k2.metric("Impacto estimado no prazo (EAP)", f"{prazo_pct:+.2f}%")
 
-    diff_rows = []
-    for cpu_id in selected_cpu_ids:
-        base_cpu = base_index.get(cpu_id) or {}
-        new_cpu = preview.get(cpu_id) or base_cpu
-        diff_rows.append(
-            {
-                "CPU": cpu_id,
-                "Badge": _pcat_override_badge(base_cpu, new_cpu),
-                "Mini diff": _pcat_mini_diff_text(base_cpu, new_cpu),
-            }
-        )
-    st.dataframe(diff_rows, hide_index=True, use_container_width=True)
-
+    _pcat_render_diff_table(selected_cpu_ids, base_index, preview)
     _pcat_render_health_panel(selected_cpu_ids, preview, insumos_idx)
 
     motivo = st.text_input(
@@ -631,30 +790,7 @@ def _pcat_render_step_review(
         key=f"pcat-motivo-{project_id}",
     )
     if st.button("Aplicar em lote", type="primary", key=f"pcat-apply-{project_id}"):
-        if not motivo.strip():
-            st.error("Informe o motivo único para registrar auditoria padronizada.")
-            return
-        done = 0
-        reason = f"[lote-catalogo] {motivo.strip()}"
-        for cpu_id in selected_cpu_ids:
-            payload = preview.get(cpu_id)
-            if not isinstance(payload, dict):
-                continue
-            try:
-                api_call(
-                    "POST",
-                    f"/api/projects/{project_id}/catalog/cpus/{cpu_id}",
-                    base_url=base_url,
-                    actor=actor,
-                    payload=payload,
-                    params={"motivo": reason},
-                )
-                done += 1
-            except Exception as exc:
-                st.error(f"Falha ao aplicar em {cpu_id}: {exc}")
-        if done:
-            st.success(f"{done} CPU(s) atualizada(s) com auditoria única ({reason}).")
-            st.session_state.pop(f"pcat-preview-{project_id}", None)
+        _pcat_apply_batch(project_id, selected_cpu_ids, preview, motivo, base_url, actor)
 
 
 def _pcat_build_catalog_rows(
@@ -690,6 +826,41 @@ def _pcat_build_catalog_rows(
     return rows
 
 
+def _pcat_render_summary_header(catalog_id: str, rows: list[dict[str, Any]]) -> None:
+    total = len(rows)
+    sem = sum(1 for r in rows if r["override_status"] == "Sem override")
+    parcial = sum(1 for r in rows if r["override_status"] == "Override parcial")
+    total_ov = sum(1 for r in rows if r["override_status"] == "Override total")
+    h1, h2, h3, h4 = st.columns(4)
+    h1.metric("CPUs", total)
+    h2.metric("Sem override", sem)
+    h3.metric("Override parcial", parcial)
+    h4.metric("Override total", total_ov)
+    st.caption(f"Catálogo ativo (contexto): {catalog_id}")
+
+
+def _pcat_dispatch_step(
+    step: str,
+    project_id: str,
+    selected_cpu_ids: list[str],
+    base_index: dict[str, dict[str, Any]],
+    reference: dict[str, Any],
+    insumos_idx: dict[str, dict[str, Any]],
+    base_url: str,
+    actor: str,
+) -> None:
+    eap_rows = _pcat_extract_eap_rows(reference)
+    if step == "Selecionar CPU":
+        st.info("Selecione uma ou mais CPUs na tabela acima para avançar ao passo de edição.")
+        _pcat_render_health_panel(
+            selected_cpu_ids, {cid: base_index.get(cid) or {} for cid in selected_cpu_ids}, insumos_idx
+        )
+    elif step == "Editar":
+        _pcat_render_step_edit(project_id, selected_cpu_ids, base_index)
+    else:
+        _pcat_render_step_review(project_id, selected_cpu_ids, base_index, eap_rows, insumos_idx, base_url, actor)
+
+
 def _render_project_catalog_section(base_url: str, project_id: str, actor: str) -> None:
     """Painel de catálogo por projeto com delta visual, pipeline de edição e saúde de dados."""
     st.caption(
@@ -705,16 +876,7 @@ def _render_project_catalog_section(base_url: str, project_id: str, actor: str) 
     insumos_idx = _pcat_insumo_index(reference)
     rows = _pcat_build_catalog_rows(base_index, override_index, used_in_eap, insumos_idx)
 
-    total = len(rows)
-    sem = sum(1 for r in rows if r["override_status"] == "Sem override")
-    parcial = sum(1 for r in rows if r["override_status"] == "Override parcial")
-    total_ov = sum(1 for r in rows if r["override_status"] == "Override total")
-    h1, h2, h3, h4 = st.columns(4)
-    h1.metric("CPUs", total)
-    h2.metric("Sem override", sem)
-    h3.metric("Override parcial", parcial)
-    h4.metric("Override total", total_ov)
-    st.caption(f"Catálogo ativo (contexto): {catalog_id}")
+    _pcat_render_summary_header(catalog_id, rows)
 
     q, cat_filters, only_used, only_incomplete, only_stale_price = _pcat_render_catalog_filters(project_id, rows)
     filtered = _pcat_apply_filters(rows, q, cat_filters, only_used, only_incomplete, only_stale_price)
@@ -729,13 +891,4 @@ def _render_project_catalog_section(base_url: str, project_id: str, actor: str) 
         key=f"pcat-step-{project_id}",
     )
 
-    eap_rows = _pcat_extract_eap_rows(reference)
-    if step == "Selecionar CPU":
-        st.info("Selecione uma ou mais CPUs na tabela acima para avançar ao passo de edição.")
-        _pcat_render_health_panel(
-            selected_cpu_ids, {cid: base_index.get(cid) or {} for cid in selected_cpu_ids}, insumos_idx
-        )
-    elif step == "Editar":
-        _pcat_render_step_edit(project_id, selected_cpu_ids, base_index)
-    else:
-        _pcat_render_step_review(project_id, selected_cpu_ids, base_index, eap_rows, insumos_idx, base_url, actor)
+    _pcat_dispatch_step(step, project_id, selected_cpu_ids, base_index, reference, insumos_idx, base_url, actor)

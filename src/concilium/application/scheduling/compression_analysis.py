@@ -126,6 +126,20 @@ def _cpm_forward_backward(
     return es, tf
 
 
+def _rcpsp_backward_ls_for_activity(
+    aid: str,
+    dag: ActivityDAG,
+    sa_map: dict,
+    ls: dict[str, float],
+    c_max: int,
+) -> float:
+    d = sa_map[aid].duration_weeks
+    succs = [s for s in dag.successors(aid) if s in sa_map]
+    if not succs:
+        return float(c_max - d)
+    return min(ls[s] for s in succs if s in ls) - d
+
+
 def _rcpsp_backward(
     sched_output: ScheduleOutput,
     dag: ActivityDAG,
@@ -138,12 +152,7 @@ def _rcpsp_backward(
     for aid in reversed(dag.topological_order()):
         if aid not in sa_map:
             continue
-        d = sa_map[aid].duration_weeks
-        succs = [s for s in dag.successors(aid) if s in sa_map]
-        if not succs:
-            ls[aid] = float(c_max - d)
-        else:
-            ls[aid] = min(ls[s] for s in succs if s in ls) - d
+        ls[aid] = _rcpsp_backward_ls_for_activity(aid, dag, sa_map, ls, c_max)
 
     return {aid: ls.get(aid, 0.0) - sa_map[aid].start_week for aid in sa_map if aid in ls}
 
@@ -200,6 +209,165 @@ def _classify(
     return "Livre"
 
 
+def _resolve_contrato_custos(ct: dict) -> tuple[float, float, float]:
+    """Resolve (mob, demob, idle_w) a partir do contrato do tipo de recurso."""
+    mob = float(ct.get("custo_mob_unit", 0))
+    demob = float(ct.get("custo_demob_unit", 0))
+    idle_w = float(ct.get("custo_idle_semanal_unit", ct.get("custo_standby_unit", 0)))
+    return mob, demob, idle_w
+
+
+def _schedule_k_makespan(
+    scheduler,
+    dag_k: ActivityDAG,
+    pool_k: ResourcePool,
+    k: int,
+    activity_id: str,
+) -> int | None:
+    """Agenda o cenário escalado por k e retorna o makespan, ou None se infeasible/falhou."""
+    try:
+        out_k = scheduler.schedule(dag=dag_k, pool=pool_k)
+        return out_k.makespan if out_k.feasible else None
+    except Exception:
+        # Infeasibility (out_k.feasible=False) já é tratada acima sem exceção —
+        # chegar aqui é uma falha inesperada do scheduler para este k, não um
+        # candidato simplesmente ruim. Loga pra não mascarar bug real no solver.
+        _log.warning(
+            "Falha ao agendar k=%d para atividade '%s' — candidato descartado",
+            k,
+            activity_id,
+            exc_info=True,
+        )
+        return None
+
+
+def _compute_kscale_result(
+    dag: ActivityDAG,
+    act: Activity,
+    k: int,
+    pool: ResourcePool,
+    scheduler,
+    makespan_base: int,
+    custo_semana: float,
+    n_base: int,
+    mob: float,
+    demob: float,
+    idle_w: float,
+    idle_fraction: float,
+) -> KScaleResult | None:
+    """Calcula o KScaleResult para um único fator k, ou None se não aplicável."""
+    d_new = max(1, math.ceil(act.duration_weeks / k))
+    delta_d = act.duration_weeks - d_new
+    if delta_d <= 0:
+        return None
+
+    scaled_acts = _build_scaled_activities(dag, act.activity_id, k)
+    pool_k = _pool_for_activities(scaled_acts, pool)
+    dag_k = ActivityDAG(
+        activities=scaled_acts,
+        precedence=dag.precedence,
+        thresholds=dag.thresholds,
+    )
+
+    mksp_new = _schedule_k_makespan(scheduler, dag_k, pool_k, k, act.activity_id)
+    if mksp_new is None:
+        return None
+
+    delta_ms = makespan_base - mksp_new
+    gamma = delta_ms / delta_d if delta_d else 0.0
+
+    n_extra = n_base * (k - 1)
+    cost_extra = n_extra * (mob + demob + idle_w * d_new * idle_fraction)
+    poupanca = delta_ms * custo_semana
+    if cost_extra > 0:
+        roi = poupanca / cost_extra if delta_ms > 0 else 0.0
+    else:
+        roi = math.inf if delta_ms > 0 else 0.0
+
+    return KScaleResult(
+        k=k,
+        duration_new=d_new,
+        makespan_new=mksp_new,
+        delta_makespan=delta_ms,
+        delta_duration=delta_d,
+        gamma=gamma,
+        cost_extra=cost_extra,
+        poupanca=poupanca,
+        roi=roi,
+    )
+
+
+def _build_by_k(
+    dag: ActivityDAG,
+    act: Activity,
+    k_values: tuple[int, ...],
+    pool: ResourcePool,
+    scheduler,
+    makespan_base: int,
+    custo_semana: float,
+    n_base: int,
+    mob: float,
+    demob: float,
+    idle_w: float,
+    idle_fraction: float,
+) -> dict[int, KScaleResult]:
+    by_k: dict[int, KScaleResult] = {}
+    for k in k_values:
+        r = _compute_kscale_result(
+            dag, act, k, pool, scheduler, makespan_base, custo_semana, n_base, mob, demob, idle_w, idle_fraction
+        )
+        if r is not None:
+            by_k[k] = r
+    return by_k
+
+
+def _build_compression_result_for_activity(
+    act: Activity,
+    sa,
+    dag: ActivityDAG,
+    pool: ResourcePool,
+    contratos: dict[str, dict],
+    custo_semana: float,
+    k_values: tuple[int, ...],
+    idle_fraction: float,
+    scheduler,
+    makespan_base: int,
+    cpm_es: dict[str, float],
+    cpm_tf: dict[str, float],
+    rcpsp_tf: dict[str, float],
+) -> CompressionResult:
+    """Monta o CompressionResult de uma atividade, testando todos os k_values."""
+    tipo_bot = max(act.required_resources, key=lambda t: act.required_resources[t])
+    n_base = act.required_resources[tipo_bot]
+    ct = contratos.get(tipo_bot, {})
+    mob, demob, idle_w = _resolve_contrato_custos(ct)
+
+    tf_cpm = float(cpm_tf.get(act.activity_id, 99.0))
+    tf_rcpsp = float(rcpsp_tf.get(act.activity_id, 99.0))
+    rd = max(0.0, sa.start_week - cpm_es.get(act.activity_id, 0.0))
+
+    by_k = _build_by_k(
+        dag, act, k_values, pool, scheduler, makespan_base, custo_semana, n_base, mob, demob, idle_w, idle_fraction
+    )
+
+    max_gamma = max((r.gamma for r in by_k.values()), default=0.0)
+    cls = _classify(tf_cpm, tf_rcpsp, max_gamma)
+
+    return CompressionResult(
+        activity_id=act.activity_id,
+        tipo_recurso_bottleneck=tipo_bot,
+        n_base=n_base,
+        duration_base=act.duration_weeks,
+        start_base=sa.start_week,
+        makespan_base=makespan_base,
+        float_rcpsp=tf_rcpsp,
+        float_cpm=tf_cpm,
+        resource_delay=rd,
+        criticality_class=cls,
+        by_k=by_k,
+    )
+
+
 # ── API pública ───────────────────────────────────────────────────────────────
 
 
@@ -250,89 +418,21 @@ def compute_compression_sensitivities(
         if sa is None or not act.required_resources:
             continue
 
-        tipo_bot = max(act.required_resources, key=lambda t: act.required_resources[t])
-        n_base = act.required_resources[tipo_bot]
-        ct = contratos.get(tipo_bot, {})
-        mob = float(ct.get("custo_mob_unit", 0))
-        demob = float(ct.get("custo_demob_unit", 0))
-        idle_w = float(ct.get("custo_idle_semanal_unit", ct.get("custo_standby_unit", 0)))
-
-        tf_cpm = float(cpm_tf.get(act.activity_id, 99.0))
-        tf_rcpsp = float(rcpsp_tf.get(act.activity_id, 99.0))
-        rd = max(0.0, sa.start_week - cpm_es.get(act.activity_id, 0.0))
-
-        by_k: dict[int, KScaleResult] = {}
-        for k in k_values:
-            d_new = max(1, math.ceil(act.duration_weeks / k))
-            delta_d = act.duration_weeks - d_new
-            if delta_d <= 0:
-                continue
-
-            scaled_acts = _build_scaled_activities(dag, act.activity_id, k)
-            pool_k = _pool_for_activities(scaled_acts, pool)
-            dag_k = ActivityDAG(
-                activities=scaled_acts,
-                precedence=dag.precedence,
-                thresholds=dag.thresholds,
-            )
-
-            try:
-                out_k = scheduler.schedule(dag=dag_k, pool=pool_k)
-                mksp_new = out_k.makespan if out_k.feasible else None
-            except Exception:
-                # Infeasibility (out_k.feasible=False) já é tratada acima sem exceção —
-                # chegar aqui é uma falha inesperada do scheduler para este k, não um
-                # candidato simplesmente ruim. Loga pra não mascarar bug real no solver.
-                _log.warning(
-                    "Falha ao agendar k=%d para atividade '%s' — candidato descartado",
-                    k,
-                    act.activity_id,
-                    exc_info=True,
-                )
-                mksp_new = None
-
-            if mksp_new is None:
-                continue
-
-            delta_ms = makespan_base - mksp_new
-            gamma = delta_ms / delta_d if delta_d else 0.0
-
-            n_extra = n_base * (k - 1)
-            cost_extra = n_extra * (mob + demob + idle_w * d_new * idle_fraction)
-            poupanca = delta_ms * custo_semana
-            if cost_extra > 0:
-                roi = poupanca / cost_extra if delta_ms > 0 else 0.0
-            else:
-                roi = math.inf if delta_ms > 0 else 0.0
-
-            by_k[k] = KScaleResult(
-                k=k,
-                duration_new=d_new,
-                makespan_new=mksp_new,
-                delta_makespan=delta_ms,
-                delta_duration=delta_d,
-                gamma=gamma,
-                cost_extra=cost_extra,
-                poupanca=poupanca,
-                roi=roi,
-            )
-
-        max_gamma = max((r.gamma for r in by_k.values()), default=0.0)
-        cls = _classify(tf_cpm, tf_rcpsp, max_gamma)
-
         results.append(
-            CompressionResult(
-                activity_id=act.activity_id,
-                tipo_recurso_bottleneck=tipo_bot,
-                n_base=n_base,
-                duration_base=act.duration_weeks,
-                start_base=sa.start_week,
-                makespan_base=makespan_base,
-                float_rcpsp=tf_rcpsp,
-                float_cpm=tf_cpm,
-                resource_delay=rd,
-                criticality_class=cls,
-                by_k=by_k,
+            _build_compression_result_for_activity(
+                act,
+                sa,
+                dag,
+                pool,
+                contratos,
+                custo_semana,
+                k_values,
+                idle_fraction,
+                scheduler,
+                makespan_base,
+                cpm_es,
+                cpm_tf,
+                rcpsp_tf,
             )
         )
 

@@ -131,6 +131,71 @@ def _emit_result(data: dict, output: Path | None) -> None:
         rprint(payload)
 
 
+def _sched_prepare_compare_inputs(spec_path: Path, deadline_weeks: int | None, algorithms: str):
+    """Load referencia.json, build scheduling inputs and parse the algorithms filter."""
+    ref_raw = json.loads(spec_path.read_text(encoding="utf-8"))
+    # v2: rcpsp_spec fica em spec; v1: fica no topo
+    rcpsp_spec = (ref_raw.get("spec") or ref_raw).get("rcpsp_spec")
+    if not rcpsp_spec:
+        rprint("[red]rcpsp_spec nao encontrado em referencia.json[/red]")
+        raise typer.Exit(1)
+
+    activities = _activities_from_spec(rcpsp_spec)
+    pool = _pool_from_spec(rcpsp_spec)
+    dag = _dag_from_spec(rcpsp_spec, activities)
+    weeks = _resolve_deadline_weeks(deadline_weeks, ref_raw)
+    algos = [a.strip() for a in algorithms.split(",") if a.strip()] or None
+    return activities, pool, dag, weeks, algos
+
+
+def _sched_pick_best(results: list):
+    return next((r for r in results if not r.error and r.schedule.feasible), None)
+
+
+def _sched_compare_row(r, best) -> tuple:
+    if r.error:
+        return (r.heuristic, "—", "—", "✗", f"[red]{r.error[:60]}[/red]")
+    marker = " ◀" if r is best else ""
+    return (
+        r.heuristic,
+        f"{r.schedule.makespan}w",
+        f"{r.quality_score:.4f}",
+        "[green]✓[/green]" if r.schedule.feasible else "[red]✗[/red]",
+        f"[green]OK{marker}[/green]" if r.schedule.feasible else "[yellow]infeasible[/yellow]",
+    )
+
+
+def _sched_render_compare_table(results: list):
+    from rich.table import Table
+
+    table = Table(title="Comparação de Algoritmos — RCPSP")
+    table.add_column("Algoritmo", style="cyan")
+    table.add_column("Makespan", justify="right")
+    table.add_column("Quality", justify="right")
+    table.add_column("Feasible")
+    table.add_column("Status / Erro")
+
+    best = _sched_pick_best(results)
+    for r in results:
+        table.add_row(*_sched_compare_row(r, best))
+    return table
+
+
+def _sched_write_compare_output(results: list, output: Path) -> None:
+    data = [
+        {
+            "algorithm": r.heuristic,
+            "makespan": r.schedule.makespan,
+            "quality_score": round(r.quality_score, 6),
+            "feasible": r.schedule.feasible,
+            "error": r.error,
+        }
+        for r in results
+    ]
+    output.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    rprint(f"[green]Salvo em:[/green] {output}")
+
+
 @app.command("compare")
 def schedule_compare(
     spec_path: Path = typer.Argument(
@@ -158,22 +223,9 @@ def schedule_compare(
         concilium benchmark schedule compare referencia.json --algorithms MINSLK,LPT,MAXRES
         concilium benchmark schedule compare referencia.json -d 52 -o result.json
     """
-    from rich.table import Table
-
     from concilium.application.scheduling import compare_all_algorithms
 
-    ref_raw = json.loads(spec_path.read_text(encoding="utf-8"))
-    # v2: rcpsp_spec fica em spec; v1: fica no topo
-    rcpsp_spec = (ref_raw.get("spec") or ref_raw).get("rcpsp_spec")
-    if not rcpsp_spec:
-        rprint("[red]rcpsp_spec nao encontrado em referencia.json[/red]")
-        raise typer.Exit(1)
-
-    activities = _activities_from_spec(rcpsp_spec)
-    pool = _pool_from_spec(rcpsp_spec)
-    dag = _dag_from_spec(rcpsp_spec, activities)
-    weeks = _resolve_deadline_weeks(deadline_weeks, ref_raw)
-    algos = [a.strip() for a in algorithms.split(",") if a.strip()] or None
+    activities, pool, dag, weeks, algos = _sched_prepare_compare_inputs(spec_path, deadline_weeks, algorithms)
 
     rprint(
         f"[cyan]Comparando algoritmos:[/cyan] {len(activities)} atividades, "
@@ -186,40 +238,7 @@ def schedule_compare(
         rprint("[red]Nenhum resultado obtido.[/red]")
         raise typer.Exit(1)
 
-    # ── Rich table ────────────────────────────────────────────────────────────
-    table = Table(title="Comparação de Algoritmos — RCPSP")
-    table.add_column("Algoritmo", style="cyan")
-    table.add_column("Makespan", justify="right")
-    table.add_column("Quality", justify="right")
-    table.add_column("Feasible")
-    table.add_column("Status / Erro")
-
-    best = next((r for r in results if not r.error and r.schedule.feasible), None)
-    for r in results:
-        if r.error:
-            table.add_row(r.heuristic, "—", "—", "✗", f"[red]{r.error[:60]}[/red]")
-        else:
-            marker = " ◀" if r is best else ""
-            table.add_row(
-                r.heuristic,
-                f"{r.schedule.makespan}w",
-                f"{r.quality_score:.4f}",
-                "[green]✓[/green]" if r.schedule.feasible else "[red]✗[/red]",
-                f"[green]OK{marker}[/green]" if r.schedule.feasible else "[yellow]infeasible[/yellow]",
-            )
-
-    rprint(table)
+    rprint(_sched_render_compare_table(results))
 
     if output:
-        data = [
-            {
-                "algorithm": r.heuristic,
-                "makespan": r.schedule.makespan,
-                "quality_score": round(r.quality_score, 6),
-                "feasible": r.schedule.feasible,
-                "error": r.error,
-            }
-            for r in results
-        ]
-        output.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        rprint(f"[green]Salvo em:[/green] {output}")
+        _sched_write_compare_output(results, output)

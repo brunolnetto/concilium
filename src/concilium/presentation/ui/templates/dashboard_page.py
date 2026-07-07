@@ -78,8 +78,7 @@ def _rdt_run_rows(runs: list) -> list[dict]:
     ]
 
 
-def render_dashboard_page_template(compact: bool = False) -> None:
-    """Render portfolio dashboard with project-level KPIs."""
+def _rdt_render_heading(compact: bool) -> None:
     if compact:
         st.caption("Métricas consolidadas do portfólio e histórico de execuções por projeto.")
     else:
@@ -88,10 +87,8 @@ def render_dashboard_page_template(compact: bool = False) -> None:
             "Visão consolidada do portfólio com status, versões ativas e histórico de execução.",
         )
 
-    projects = _rdt_load_projects()
-    if projects is None:
-        return
 
+def _rdt_render_projects_section(projects: list, compact: bool) -> str | None:
     total_hot, total_normal, contextos = _rdt_project_kpi(projects)
     render_kpi_cards(
         [
@@ -104,7 +101,7 @@ def render_dashboard_page_template(compact: bool = False) -> None:
 
     if not projects:
         st.info("Nenhum projeto cadastrado até o momento.")
-        return
+        return None
 
     render_standard_table(
         "Projetos ativos",
@@ -113,7 +110,7 @@ def render_dashboard_page_template(compact: bool = False) -> None:
         height=260 if compact else 330,
     )
 
-    selected_id = st.selectbox(
+    return st.selectbox(
         "Projeto para resumo de runs",
         options=[str(p.get("project_id")) for p in projects if p.get("project_id")],
         label_visibility="collapsed" if compact else "visible",
@@ -121,9 +118,8 @@ def render_dashboard_page_template(compact: bool = False) -> None:
         key="dashboard-project-select",
     )
 
-    if not selected_id:
-        return
 
+def _rdt_render_runs_section(selected_id: str, compact: bool) -> None:
     runs = _rdt_load_runs(selected_id)
     if runs is None:
         return
@@ -152,3 +148,18 @@ def render_dashboard_page_template(compact: bool = False) -> None:
         empty_message="Sem runs para o projeto selecionado.",
         height=260 if compact else 330,
     )
+
+
+def render_dashboard_page_template(compact: bool = False) -> None:
+    """Render portfolio dashboard with project-level KPIs."""
+    _rdt_render_heading(compact)
+
+    projects = _rdt_load_projects()
+    if projects is None:
+        return
+
+    selected_id = _rdt_render_projects_section(projects, compact)
+    if not selected_id:
+        return
+
+    _rdt_render_runs_section(selected_id, compact)

@@ -106,30 +106,31 @@ def _barycenter_order(layer: list[str], prev_pos: dict[str, float], pred_adj: di
     return sorted(layer, key=lambda n: (scores[n] == float("inf"), -scores[n], n))
 
 
-def _assign_positions(tasks: list) -> tuple[dict, dict]:
-    """Retorna {item_id: (x, y)} para layout hierárquico esquerda-direita.
-
-    Usa o algoritmo de barycenter (Sugiyama) para ordenar nós dentro de cada nível
-    de forma a minimizar cruzamentos de arestas. Faz uma passagem para frente
-    (predecessor → successor) e uma para trás para convergir.
-    """
-    adj = _build_adj(tasks)
-    # adj reverso: sucessor → predecessores (necessário para barycenter)
+def _build_pred_adj(adj: dict[str, set[str]]) -> dict[str, set[str]]:
+    """adj reverso: sucessor → predecessores (necessário para barycenter)."""
     pred_adj: dict[str, set[str]] = {n: set() for n in adj}
     for p, succs in adj.items():
         for s in succs:
             pred_adj.setdefault(s, set()).add(p)
+    return pred_adj
 
-    levels = _topological_levels(tasks, adj)
+
+def _group_by_level(levels: dict[str, int]) -> dict[int, list[str]]:
     by_level: dict[int, list[str]] = {}
     for node, lv in levels.items():
         by_level.setdefault(lv, []).append(node)
+    return by_level
 
-    # Passagem inicial: ordenação alfabética no nível 0 (sem predecessores)
-    max_lv = max(by_level.keys(), default=0)
+
+def _forward_pass(
+    by_level: dict[int, list[str]], max_lv: int, pred_adj: dict[str, set[str]]
+) -> tuple[dict[int, list[str]], dict[str, float]]:
+    """Cada nível é ordenado pelo baricentro do nível anterior.
+
+    Passagem inicial: ordenação alfabética no nível 0 (sem predecessores).
+    """
     ordered: dict[int, list[str]] = {0: sorted(by_level.get(0, []))}
 
-    # Passagem para frente: cada nível é ordenado pelo baricentro do nível anterior
     prev_y: dict[str, float] = {}
     for n in ordered[0]:
         i = ordered[0].index(n)
@@ -141,13 +142,19 @@ def _assign_positions(tasks: list) -> tuple[dict, dict]:
         for n in ordered[lv]:
             i = ordered[lv].index(n)
             prev_y[n] = -(i - (len(ordered[lv]) - 1) / 2.0)
+    return ordered, prev_y
 
-    # Passagem para trás: refinar com baricentro dos sucessores
-    succ_adj = adj  # adj já é pred → {succs}
+
+def _backward_pass(
+    ordered: dict[int, list[str]],
+    prev_y: dict[str, float],
+    max_lv: int,
+    succ_adj: dict[str, set[str]],
+) -> dict[int, list[str]]:
+    """Refina a ordenação com baricentro dos sucessores (posição média)."""
     next_y: dict[str, float] = dict(prev_y)
     for lv in range(max_lv - 1, -1, -1):
         layer = ordered[lv]
-        # Baricentro reverso: posição média dos sucessores
         scores: dict[str, float] = {}
         for n in layer:
             succs = [s for s in succ_adj.get(n, set()) if s in next_y]
@@ -156,14 +163,38 @@ def _assign_positions(tasks: list) -> tuple[dict, dict]:
         for n in ordered[lv]:
             i = ordered[lv].index(n)
             next_y[n] = -(i - (len(ordered[lv]) - 1) / 2.0)
+    return ordered
 
-    # Construir posições finais
+
+def _final_positions(ordered: dict[int, list[str]]) -> dict[str, tuple[float, float]]:
     pos: dict[str, tuple[float, float]] = {}
     for lv, nodes in ordered.items():
         for i, n in enumerate(nodes):
             x = lv * _H_SPACING
             y = -(i - (len(nodes) - 1) / 2.0) * _V_SPACING
             pos[n] = (x, y)
+    return pos
+
+
+def _assign_positions(tasks: list) -> tuple[dict, dict]:
+    """Retorna {item_id: (x, y)} para layout hierárquico esquerda-direita.
+
+    Usa o algoritmo de barycenter (Sugiyama) para ordenar nós dentro de cada nível
+    de forma a minimizar cruzamentos de arestas. Faz uma passagem para frente
+    (predecessor → successor) e uma para trás para convergir.
+    """
+    adj = _build_adj(tasks)
+    pred_adj = _build_pred_adj(adj)
+
+    levels = _topological_levels(tasks, adj)
+    by_level = _group_by_level(levels)
+    max_lv = max(by_level.keys(), default=0)
+
+    ordered, prev_y = _forward_pass(by_level, max_lv, pred_adj)
+    # adj já é pred → {succs}, reutilizado como succ_adj na passagem para trás
+    ordered = _backward_pass(ordered, prev_y, max_lv, adj)
+
+    pos = _final_positions(ordered)
     return pos, adj
 
 

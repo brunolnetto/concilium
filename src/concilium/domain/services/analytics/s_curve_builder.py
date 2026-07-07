@@ -135,6 +135,28 @@ def _scb_build_curves(custo_semanal_list: list, total_proj: float) -> tuple:
     return custo_acum_list, pct_acum_list
 
 
+def _scb_merge_pool_costs(semanas_sorted: list, custo_por_semana: dict, canonical_in: Any) -> tuple[list, dict]:
+    """Substitui custo direto pela agregação instancial do pool quando disponível."""
+    custo_por_semana_pool = _scb_collect_direct_costs_pool(canonical_in)
+    if not custo_por_semana_pool:
+        return semanas_sorted, custo_por_semana
+    merged = defaultdict(float, custo_por_semana_pool)
+    merged_semanas = sorted(set(semanas_sorted) | set(custo_por_semana_pool.keys()))
+    return merged_semanas, merged
+
+
+def _scb_resolve_indirect_series(semanas_sorted: list, indireto_semanal_lookup: dict) -> tuple[list, dict, dict]:
+    """Extende a série de semanas para cobrir offsets indiretos e soma o custo indireto por semana."""
+    max_ind_offset = max(indireto_semanal_lookup.keys(), default=-1)
+    semanas_sorted = _scb_extend_weeks_for_offsets(semanas_sorted, max_ind_offset)
+    semana_to_offset = {s: i for i, s in enumerate(semanas_sorted)}
+    custo_indireto_por_semana: dict = defaultdict(float)
+    for semana_iso in semanas_sorted:
+        offset = semana_to_offset[semana_iso]
+        custo_indireto_por_semana[semana_iso] += indireto_semanal_lookup.get(offset, 0.0)
+    return semanas_sorted, semana_to_offset, custo_indireto_por_semana
+
+
 class SCurveBuilder:
     """Constrói SCurve e AgregacaoSemanalEquipamentos a partir de um CanonicalModel."""
 
@@ -157,20 +179,13 @@ class SCurveBuilder:
         custo_por_semana, equip_por_semana, n_equipes_por_semana = _scb_collect_direct_costs(
             cronograma.scheduled_activities, equipe_lookup
         )
-        custo_por_semana_pool = _scb_collect_direct_costs_pool(canonical_in)
-        if custo_por_semana_pool:
-            custo_por_semana = defaultdict(float, custo_por_semana_pool)
-            semanas_sorted = sorted(set(semanas_sorted) | set(custo_por_semana_pool.keys()))
-            semana_to_offset = {s: i for i, s in enumerate(semanas_sorted)}
+        semanas_sorted, custo_por_semana = _scb_merge_pool_costs(semanas_sorted, custo_por_semana, canonical_in)
+        semana_to_offset = {s: i for i, s in enumerate(semanas_sorted)}
 
         # Indirect costs — map offset → semana_iso; cobre cauda de offsets fora da malha de atividades.
-        max_ind_offset = max(indireto_semanal_lookup.keys(), default=-1)
-        semanas_sorted = _scb_extend_weeks_for_offsets(semanas_sorted, max_ind_offset)
-        semana_to_offset = {s: i for i, s in enumerate(semanas_sorted)}
-        custo_indireto_por_semana: dict = defaultdict(float)
-        for semana_iso in semanas_sorted:
-            offset = semana_to_offset[semana_iso]
-            custo_indireto_por_semana[semana_iso] += indireto_semanal_lookup.get(offset, 0.0)
+        semanas_sorted, semana_to_offset, custo_indireto_por_semana = _scb_resolve_indirect_series(
+            semanas_sorted, indireto_semanal_lookup
+        )
 
         agregacoes, custo_semanal_list = _scb_build_agregacoes(
             semanas_sorted,

@@ -218,6 +218,16 @@ def calcular_pu(
 
     equipe, funcoes, equipamentos, materiais = _cpu_get_equipe(producao)
 
+    _acumular_custo_mo(bd, funcoes, insumo_index, params)
+    _acumular_custo_equipamentos(bd, equipamentos, insumo_index, params)
+    _acumular_custo_materiais(bd, materiais, insumo_index)
+
+    return bd
+
+
+def _acumular_custo_mo(
+    bd: BreakdownPU, funcoes: list, insumo_index: dict[str, dict], params: ParametrosCalculo
+) -> None:
     for fn in funcoes:
         fid = fn.get("funcao_id", "")
         num_pessoas = float(fn.get("num_pessoas") or 1)
@@ -236,6 +246,34 @@ def calcular_pu(
             hm = _horas_mes(ins, params)
             bd.custo_mo_h += (salario / hm) * _alpha(ins, params) * num_pessoas
 
+
+def _preco_h_equipamento(eq: dict, ins: dict) -> float:
+    # ADR-108: preco_h_unitario na entry de composição sobrepõe preco_unitario do
+    # insumo do catálogo, permitindo preços por-atividade sem duplicar insumos no catálogo.
+    # Já armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
+    preco_h_override = eq.get("preco_h_unitario")
+    if preco_h_override is not None and float(preco_h_override) > 0:
+        return float(preco_h_override)
+    preco_raw = float(ins.get("preco_unitario") or 0)
+    rental_unit = ins.get("rental_unit")
+    producao_h = float(eq.get("producao_horaria") or 1.0)
+    return _converter_rental_unit(preco_raw, rental_unit, producao_h)
+
+
+def _consumo_diesel_equipamento(bd: BreakdownPU, eq: dict, eid: str, ins: dict | None) -> float:
+    # Precedência de consumo: entry da produção → atributos_especificos do insumo
+    consumo = float(eq.get("consumo_litros_hora") or 0)
+    if not consumo:
+        atrib_eq = (ins or {}).get("atributos_especificos") or {}
+        consumo = float(atrib_eq.get("consumo_litros_hora") or 0)
+        if consumo:
+            bd.alertas.append(f"Equipamento '{eid}': consumo_litros_hora lido de atributos_especificos do insumo.")
+    return consumo
+
+
+def _acumular_custo_equipamentos(
+    bd: BreakdownPU, equipamentos: list, insumo_index: dict[str, dict], params: ParametrosCalculo
+) -> None:
     for eq in equipamentos:
         eid = eq.get("equip_id", "")
         num_un = float(eq.get("num_unidades") or 1)
@@ -243,30 +281,21 @@ def calcular_pu(
         if ins is None:
             bd.referencias_faltantes.append(eid)
             continue
-        # ADR-108: preco_h_unitario na entry de composição sobrepõe preco_unitario do
-        # insumo do catálogo, permitindo preços por-atividade sem duplicar insumos no catálogo.
-        # Já armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
-        preco_h_override = eq.get("preco_h_unitario")
-        if preco_h_override is not None and float(preco_h_override) > 0:
-            preco_h = float(preco_h_override)
-        else:
-            preco_raw = float(ins.get("preco_unitario") or 0)
-            rental_unit = ins.get("rental_unit")
-            producao_h = float(eq.get("producao_horaria") or 1.0)
-            preco_h = _converter_rental_unit(preco_raw, rental_unit, producao_h)
+        preco_h = _preco_h_equipamento(eq, ins)
         bd.custo_equip_h += preco_h * num_un
-        # Precedência de consumo: entry da produção → atributos_especificos do insumo
-        consumo = float(eq.get("consumo_litros_hora") or 0)
-        if not consumo:
-            atrib_eq = (ins or {}).get("atributos_especificos") or {}
-            consumo = float(atrib_eq.get("consumo_litros_hora") or 0)
-            if consumo:
-                bd.alertas.append(f"Equipamento '{eid}': consumo_litros_hora lido de atributos_especificos do insumo.")
+        consumo = _consumo_diesel_equipamento(bd, eq, eid, ins)
         bd.custo_diesel_h += consumo * params.preco_diesel * num_un
 
+
+def _material_id_e_consumo(mat: dict) -> tuple[str, float]:
+    mid = mat.get("insumo_id") or mat.get("material_id") or mat.get("codigo") or ""
+    consumo_h = float(mat.get("consumo_por_hora") or mat.get("quantidade_h") or 0)
+    return mid, consumo_h
+
+
+def _acumular_custo_materiais(bd: BreakdownPU, materiais: list, insumo_index: dict[str, dict]) -> None:
     for mat in materiais:
-        mid = mat.get("insumo_id") or mat.get("material_id") or mat.get("codigo") or ""
-        consumo_h = float(mat.get("consumo_por_hora") or mat.get("quantidade_h") or 0)
+        mid, consumo_h = _material_id_e_consumo(mat)
         ins = insumo_index.get(mid)
         if ins is None and mid:
             bd.referencias_faltantes.append(mid)
@@ -274,8 +303,6 @@ def calcular_pu(
         if ins:
             preco = float(ins.get("preco_unitario") or 0)
             bd.custo_material_h += consumo_h * preco
-
-    return bd
 
 
 def _cpu_get_equipe(producao: dict) -> tuple:

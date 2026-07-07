@@ -403,8 +403,7 @@ def render_cubo_comp(wb, canonical) -> None:
     _auto_fit_columns(ws)
 
 
-def render_campanha_frota(wb, canonical) -> None:
-    """CAMPANHA.FROTA — Plano de campanhas de permanência de equipamentos (ADR-059)."""
+def _rcf_build_analise(canonical):
     from concilium.domain.services.campaign.campanha_equipamento_builder import CampanhaEquipamentoBuilder
 
     analise = getattr(canonical, "analise_campanhas", None)
@@ -413,6 +412,140 @@ def render_campanha_frota(wb, canonical) -> None:
             analise = CampanhaEquipamentoBuilder().build(canonical)
         except Exception:
             analise = None
+    return analise
+
+
+def _rcf_render_unavailable_message(ws, row: int) -> int:
+    ws.cell(row=row, column=1, value="Campanhas de permanencia nao disponiveis para este projeto.").font = _font(
+        italic=True, size=9
+    )
+    return row + 2
+
+
+def _rcf_render_summary_line(ws, row: int, analise) -> int:
+    ws.cell(
+        row=row,
+        column=1,
+        value=f"Campanhas: {analise.n_campanhas}  |  "
+        f"Economia vs. dismissal: R$ {analise.economia_total:,.2f}  |  "
+        f"Standby total: R$ {analise.custo_standby_total:,.2f}  |  "
+        f"Economia liquida: R$ {analise.economia_liquida:,.2f}",
+    ).font = _font(italic=True, size=9)
+    return row + 2
+
+
+def _rcf_equip_coverage_counts(canonical) -> tuple[int, int]:
+    n_equip_tipos = len(
+        {
+            str(e.equip_id)
+            for eq in (canonical.equipes_diretas or [])
+            for e in (eq.equipamentos or [])
+            if getattr(e, "equip_id", "")
+        }
+    )
+    n_ativ_com_equip = sum(1 for eq in (canonical.equipes_diretas or []) if (eq.equipamentos or []))
+    return n_equip_tipos, n_ativ_com_equip
+
+
+def _rcf_render_zero_campanhas_message(ws, row: int, canonical, analise) -> int:
+    if analise.n_campanhas != 0:
+        return row
+    n_equip_tipos, n_ativ_com_equip = _rcf_equip_coverage_counts(canonical)
+    ws.cell(
+        row=row,
+        column=1,
+        value=(
+            "Nenhuma campanha detectada. Interpretação: cronograma sem gaps elegíveis para compartilhamento "
+            f"(tipos equip.: {n_equip_tipos}; atividades com equipamento: {n_ativ_com_equip})."
+        ),
+    ).font = _font(italic=True, size=9)
+    return row + 2
+
+
+def _rcf_render_table_header(ws, row: int) -> int:
+    _header_row(
+        ws,
+        row,
+        [
+            "Instancia",
+            "Tipo Equip.",
+            "Sem. Entrada",
+            "Sem. Saida",
+            "Sem. Ativas",
+            "Sem. Standby",
+            "Mob (R$)",
+            "Demob (R$)",
+            "Standby Total",
+            "Custo Camp.",
+            "Economia",
+            "Atividades",
+        ],
+    )
+    row += 1
+    ws.freeze_panes = f"A{row}"
+    return row
+
+
+def _rcf_render_campaign_row(ws, row: int, camp, fill) -> None:
+    economia_color = _C["verde"] if camp.economia_vs_dismissal > 0 else _C["preto"]
+    for j, v in enumerate(
+        [
+            camp.instancia_id,
+            camp.tipo_id,
+            camp.semana_entrada,
+            camp.semana_saida,
+            camp.semanas_ativas,
+            camp.semanas_standby,
+            camp.custo_mob,
+            camp.custo_demob,
+            camp.custo_standby_total,
+            camp.custo_campanha,
+            camp.economia_vs_dismissal,
+            " | ".join(camp.atividades),
+        ],
+        1,
+    ):
+        cell = ws.cell(row=row, column=j, value=v)
+        cell.fill = fill
+        cell.border = _border()
+        if j in (7, 8, 9, 10):
+            cell.number_format = "R$ #,##0.00"
+        if j == 11:
+            cell.number_format = "R$ #,##0.00"
+            cell.font = _font(bold=True, color=economia_color)
+
+
+def _rcf_render_campaign_rows(ws, row: int, analise) -> int:
+    fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
+    for i, camp in enumerate(analise.campanhas):
+        _rcf_render_campaign_row(ws, row, camp, fills[i % 2])
+        row += 1
+    return row
+
+
+def _rcf_render_alertas(ws, row: int, analise, ncols: int) -> int:
+    if not analise.alertas_custo_duplicado:
+        return row
+    row += 1
+    _section_row(ws, row, "ALERTAS VAL-CAMP-01 — Dismissals potencialmente mais caros que standby", ncols)
+    row += 1
+    for alert in analise.alertas_custo_duplicado:
+        ws.cell(row=row, column=1, value=alert).font = _font(color=_C["amarelo"], size=9)
+        row += 1
+    return row
+
+
+def _rcf_render_analise(ws, row: int, canonical, analise, ncols: int) -> int:
+    row = _rcf_render_summary_line(ws, row, analise)
+    row = _rcf_render_zero_campanhas_message(ws, row, canonical, analise)
+    row = _rcf_render_table_header(ws, row)
+    row = _rcf_render_campaign_rows(ws, row, analise)
+    return _rcf_render_alertas(ws, row, analise, ncols)
+
+
+def render_campanha_frota(wb, canonical) -> None:
+    """CAMPANHA.FROTA — Plano de campanhas de permanência de equipamentos (ADR-059)."""
+    analise = _rcf_build_analise(canonical)
 
     ws = wb.create_sheet("CAMPANHA.FROTA")
     NCOLS = 12
@@ -421,99 +554,8 @@ def render_campanha_frota(wb, canonical) -> None:
     _title_row(ws, row, "CAMPANHAS DE PERMANENCIA DE EQUIPAMENTOS (ADR-059)", NCOLS)
     row += 1
     if analise is None:
-        ws.cell(row=row, column=1, value="Campanhas de permanencia nao disponiveis para este projeto.").font = _font(
-            italic=True, size=9
-        )
-        row += 2
+        row = _rcf_render_unavailable_message(ws, row)
     else:
-        ws.cell(
-            row=row,
-            column=1,
-            value=f"Campanhas: {analise.n_campanhas}  |  "
-            f"Economia vs. dismissal: R$ {analise.economia_total:,.2f}  |  "
-            f"Standby total: R$ {analise.custo_standby_total:,.2f}  |  "
-            f"Economia liquida: R$ {analise.economia_liquida:,.2f}",
-        ).font = _font(italic=True, size=9)
-        row += 2
-
-        if analise.n_campanhas == 0:
-            n_equip_tipos = len(
-                {
-                    str(e.equip_id)
-                    for eq in (canonical.equipes_diretas or [])
-                    for e in (eq.equipamentos or [])
-                    if getattr(e, "equip_id", "")
-                }
-            )
-            n_ativ_com_equip = sum(1 for eq in (canonical.equipes_diretas or []) if (eq.equipamentos or []))
-            ws.cell(
-                row=row,
-                column=1,
-                value=(
-                    "Nenhuma campanha detectada. Interpretação: cronograma sem gaps elegíveis para compartilhamento "
-                    f"(tipos equip.: {n_equip_tipos}; atividades com equipamento: {n_ativ_com_equip})."
-                ),
-            ).font = _font(italic=True, size=9)
-            row += 2
-
-        _header_row(
-            ws,
-            row,
-            [
-                "Instancia",
-                "Tipo Equip.",
-                "Sem. Entrada",
-                "Sem. Saida",
-                "Sem. Ativas",
-                "Sem. Standby",
-                "Mob (R$)",
-                "Demob (R$)",
-                "Standby Total",
-                "Custo Camp.",
-                "Economia",
-                "Atividades",
-            ],
-        )
-        row += 1
-        ws.freeze_panes = f"A{row}"
-
-        fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
-        for i, camp in enumerate(analise.campanhas):
-            fill = fills[i % 2]
-            economia_color = _C["verde"] if camp.economia_vs_dismissal > 0 else _C["preto"]
-            for j, v in enumerate(
-                [
-                    camp.instancia_id,
-                    camp.tipo_id,
-                    camp.semana_entrada,
-                    camp.semana_saida,
-                    camp.semanas_ativas,
-                    camp.semanas_standby,
-                    camp.custo_mob,
-                    camp.custo_demob,
-                    camp.custo_standby_total,
-                    camp.custo_campanha,
-                    camp.economia_vs_dismissal,
-                    " | ".join(camp.atividades),
-                ],
-                1,
-            ):
-                cell = ws.cell(row=row, column=j, value=v)
-                cell.fill = fill
-                cell.border = _border()
-                if j in (7, 8, 9, 10):
-                    cell.number_format = "R$ #,##0.00"
-                if j == 11:
-                    cell.number_format = "R$ #,##0.00"
-                    cell.font = _font(bold=True, color=economia_color)
-            row += 1
-
-        if analise.alertas_custo_duplicado:
-            row += 1
-            _section_row(ws, row, "ALERTAS VAL-CAMP-01 — Dismissals potencialmente mais caros que standby", NCOLS)
-            row += 1
-            for alert in analise.alertas_custo_duplicado:
-                ws.cell(row=row, column=1, value=alert).font = _font(color=_C["amarelo"], size=9)
-                row += 1
+        row = _rcf_render_analise(ws, row, canonical, analise, NCOLS)
 
     _auto_fit_columns(ws)

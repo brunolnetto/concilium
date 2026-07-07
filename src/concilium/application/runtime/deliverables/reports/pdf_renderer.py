@@ -57,6 +57,139 @@ def _render_table_row(pdf: FPDF, line: str, col_w: float, row_h: float = 4.5) ->
             pass
 
 
+def _try_render_image_line(
+    pdf: FPDF,
+    stripped: str,
+    image_provider: Callable[[str], bytes | None] | None,
+    temp_paths: list[str],
+    state: dict,
+) -> bool:
+    """Renderiza a linha como imagem se ela referenciar uma; retorna True se tratada."""
+    img_match = _MD_IMAGE_RE.search(stripped)
+    if not (img_match and image_provider is not None):
+        return False
+    ref = img_match.group(1).strip().strip('"').strip("'")
+    name = os.path.basename(ref)
+    img_bytes = image_provider(name)
+    if not img_bytes:
+        return False
+    sfx = os.path.splitext(name)[1] or ".png"
+    with tempfile.NamedTemporaryFile(suffix=sfx, delete=False) as tmp:
+        tmp.write(img_bytes)
+        temp_paths.append(tmp.name)
+    try:
+        state["in_table"] = False
+        pdf.set_x(pdf.l_margin)
+        pdf.image(tmp.name, x=pdf.l_margin, w=pdf.epw)
+        pdf.ln(2)
+        return True
+    except Exception:
+        return False
+
+
+def _try_render_heading_line(pdf: FPDF, stripped: str, state: dict) -> bool:
+    """Renderiza a linha como título (###/##/#) se aplicável; retorna True se tratada."""
+    if stripped.startswith("### "):
+        state["in_table"] = False
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.ln(1)
+        pdf.multi_cell(pdf.epw, 6, _strip_inline(stripped[4:]))
+        pdf.set_font("Helvetica", "", 9)
+        return True
+    if stripped.startswith("## "):
+        state["in_table"] = False
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.ln(3)
+        pdf.multi_cell(pdf.epw, 7, _strip_inline(stripped[3:]))
+        pdf.set_font("Helvetica", "", 9)
+        pdf.ln(1)
+        return True
+    if stripped.startswith("# "):
+        state["in_table"] = False
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.multi_cell(pdf.epw, 9, _strip_inline(stripped[2:]))
+        pdf.set_font("Helvetica", "", 10)
+        pdf.ln(3)
+        return True
+    return False
+
+
+def _render_table_line(pdf: FPDF, stripped: str, state: dict) -> None:
+    """Renderiza uma linha de tabela Markdown, iniciando a tabela se necessário."""
+    if not state["in_table"]:
+        state["in_table"] = True
+        state["table_cols"] = stripped.count("|") - 1
+        pdf.set_font("Helvetica", "", 8)
+    col_w = pdf.epw / max(state["table_cols"], 1)
+    _render_table_row(pdf, stripped, col_w)
+
+
+def _process_pdf_line(
+    pdf: FPDF,
+    stripped: str,
+    image_provider: Callable[[str], bytes | None] | None,
+    temp_paths: list[str],
+    state: dict,
+) -> None:
+    """Processa uma única linha de Markdown, atualizando o PDF e o estado do parser."""
+    # ---- Bloco de codigo: ignora conteudo ----
+    if stripped.startswith("```"):
+        state["in_code_block"] = not state["in_code_block"]
+        state["in_table"] = False
+        return
+    if state["in_code_block"]:
+        return
+
+    # ---- Imagem ----
+    if _try_render_image_line(pdf, stripped, image_provider, temp_paths, state):
+        return
+
+    # ---- Titulos ----
+    if _try_render_heading_line(pdf, stripped, state):
+        return
+
+    # ---- Separador de tabela |---|---| ----
+    if _is_table_sep(stripped):
+        return
+
+    # ---- Linha de tabela ----
+    if stripped.startswith("|"):
+        _render_table_line(pdf, stripped, state)
+        return
+
+    # ---- Linha horizontal --- ----
+    if stripped == "---":
+        state["in_table"] = False
+        pdf.ln(2)
+        return
+
+    # ---- Linha vazia ----
+    if not stripped:
+        state["in_table"] = False
+        pdf.ln(2)
+        return
+
+    # ---- Texto normal ----
+    state["in_table"] = False
+    pdf.set_font("Helvetica", "", 9)
+    try:
+        pdf.multi_cell(pdf.epw, 5, _strip_inline(stripped))
+    except Exception:
+        pass
+
+
+def _render_fpdf_body(
+    pdf: FPDF,
+    md_text: str,
+    image_provider: Callable[[str], bytes | None] | None,
+    temp_paths: list[str],
+) -> None:
+    """Percorre as linhas do Markdown, delegando a cada uma o processamento apropriado."""
+    state: dict = {"in_code_block": False, "in_table": False, "table_cols": 0}
+    for line in md_text.splitlines():
+        _process_pdf_line(pdf, line.strip(), image_provider, temp_paths, state)
+
+
 def render_markdown_pdf(
     md_text: str,
     title: str = "",
@@ -88,98 +221,7 @@ def render_markdown_pdf(
             pdf.multi_cell(pdf.epw, 9, title, new_x="LMARGIN", new_y="NEXT")
             pdf.ln(3)
 
-        in_code_block = False
-        in_table = False
-        table_cols: int = 0
-
-        for line in md_text.splitlines():
-            stripped = line.strip()
-
-            # ---- Bloco de codigo: ignora conteudo ----
-            if stripped.startswith("```"):
-                in_code_block = not in_code_block
-                in_table = False
-                continue
-            if in_code_block:
-                continue
-
-            # ---- Imagem ----
-            img_match = _MD_IMAGE_RE.search(stripped)
-            if img_match and image_provider is not None:
-                ref = img_match.group(1).strip().strip('"').strip("'")
-                name = os.path.basename(ref)
-                img_bytes = image_provider(name)
-                if img_bytes:
-                    sfx = os.path.splitext(name)[1] or ".png"
-                    with tempfile.NamedTemporaryFile(suffix=sfx, delete=False) as tmp:
-                        tmp.write(img_bytes)
-                        temp_paths.append(tmp.name)
-                    try:
-                        in_table = False
-                        pdf.set_x(pdf.l_margin)
-                        pdf.image(tmp.name, x=pdf.l_margin, w=pdf.epw)
-                        pdf.ln(2)
-                        continue
-                    except Exception:
-                        pass
-
-            # ---- Titulos ----
-            if stripped.startswith("### "):
-                in_table = False
-                pdf.set_font("Helvetica", "B", 10)
-                pdf.ln(1)
-                pdf.multi_cell(pdf.epw, 6, _strip_inline(stripped[4:]))
-                pdf.set_font("Helvetica", "", 9)
-                continue
-            if stripped.startswith("## "):
-                in_table = False
-                pdf.set_font("Helvetica", "B", 12)
-                pdf.ln(3)
-                pdf.multi_cell(pdf.epw, 7, _strip_inline(stripped[3:]))
-                pdf.set_font("Helvetica", "", 9)
-                pdf.ln(1)
-                continue
-            if stripped.startswith("# "):
-                in_table = False
-                pdf.set_font("Helvetica", "B", 14)
-                pdf.multi_cell(pdf.epw, 9, _strip_inline(stripped[2:]))
-                pdf.set_font("Helvetica", "", 10)
-                pdf.ln(3)
-                continue
-
-            # ---- Separador de tabela |---|---| ----
-            if _is_table_sep(stripped):
-                continue
-
-            # ---- Linha de tabela ----
-            if stripped.startswith("|"):
-                if not in_table:
-                    in_table = True
-                    table_cols = stripped.count("|") - 1
-                    pdf.set_font("Helvetica", "", 8)
-                col_w = pdf.epw / max(table_cols, 1)
-                _render_table_row(pdf, stripped, col_w)
-                continue
-
-            # ---- Linha horizontal --- ----
-            if stripped == "---":
-                in_table = False
-                pdf.ln(2)
-                continue
-
-            # ---- Linha vazia ----
-            if not stripped:
-                in_table = False
-                pdf.ln(2)
-                continue
-
-            # ---- Texto normal ----
-            in_table = False
-            pdf.set_font("Helvetica", "", 9)
-            try:
-                pdf.multi_cell(pdf.epw, 5, _strip_inline(stripped))
-            except Exception:
-                pass
+        _render_fpdf_body(pdf, md_text, image_provider, temp_paths)
 
         return bytes(pdf.output())
     except Exception:

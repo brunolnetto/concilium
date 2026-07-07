@@ -101,23 +101,36 @@ def _is_valid_canonical_eap(payload: dict[str, Any]) -> bool:
 _REF_YYYY_MM_RE = re.compile(r"^\d{4}-\d{2}$")
 
 
-def _extract_historical_eap_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """Extract historical EAP rows from known payload locations."""
-    src = payload.get("eap")
+def _as_dict_rows(src: Any) -> list[dict[str, Any]] | None:
+    """Retorna as linhas dict de `src` se for uma lista, senão None."""
     if isinstance(src, list):
         return [row for row in src if isinstance(row, dict)]
+    return None
+
+
+def _extract_historical_eap_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract historical EAP rows from known payload locations."""
+    rows = _as_dict_rows(payload.get("eap"))
+    if rows is not None:
+        return rows
+
     skill_inputs = payload.get("skill_inputs")
-    if isinstance(skill_inputs, dict):
-        escopo = skill_inputs.get("01-escopo-e-eap")
-        if isinstance(escopo, dict):
-            src = escopo.get("eap")
-            if isinstance(src, list):
-                return [row for row in src if isinstance(row, dict)]
-            nested = escopo.get("inputs_escopo")
-            if isinstance(nested, dict):
-                src = nested.get("eap")
-                if isinstance(src, list):
-                    return [row for row in src if isinstance(row, dict)]
+    if not isinstance(skill_inputs, dict):
+        return []
+    escopo = skill_inputs.get("01-escopo-e-eap")
+    if not isinstance(escopo, dict):
+        return []
+
+    rows = _as_dict_rows(escopo.get("eap"))
+    if rows is not None:
+        return rows
+
+    nested = escopo.get("inputs_escopo")
+    if isinstance(nested, dict):
+        rows = _as_dict_rows(nested.get("eap"))
+        if rows is not None:
+            return rows
+
     return []
 
 
@@ -132,6 +145,16 @@ def _extract_canonical_eap_rows(payload: dict[str, Any]) -> list[dict[str, Any]]
     return [row for row in rows if isinstance(row, dict)]
 
 
+def _cpu_has_equipe_composicao(cpu: Any) -> bool:
+    """Verifica se um CPU tem composição de equipe (funções ou equipamentos)."""
+    if not isinstance(cpu, dict):
+        return False
+    equipe = cpu.get("equipe")
+    if not isinstance(equipe, dict):
+        return False
+    return bool((equipe.get("funcoes") or []) or (equipe.get("equipamentos") or []))
+
+
 def _catalog_is_deficit(catalog: Any) -> bool:
     """Heuristic: catalog is deficit when CPUs exist but none carries team composition."""
     if not isinstance(catalog, dict):
@@ -139,13 +162,7 @@ def _catalog_is_deficit(catalog: Any) -> bool:
     cpus = catalog.get("cpus")
     if not isinstance(cpus, list) or not cpus:
         return True
-    for cpu in cpus:
-        if not isinstance(cpu, dict):
-            continue
-        equipe = cpu.get("equipe")
-        if isinstance(equipe, dict) and ((equipe.get("funcoes") or []) or (equipe.get("equipamentos") or [])):
-            return False
-    return True
+    return not any(_cpu_has_equipe_composicao(cpu) for cpu in cpus)
 
 
 def _latest_version_with_eap(project: Any) -> tuple[list[dict[str, Any]], str | None]:
@@ -230,6 +247,55 @@ class ProjectService:
 
     # ── ADR-063: EAP management for "project" type ───────────────────────────
 
+    def _normalize_eap_rows(self, raw_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Normaliza linhas cruas de EAP, atribuindo ordem padrão e descartando duplicados."""
+        normalized_rows: list[dict[str, Any]] = []
+        seen_item_ids: set[str] = set()
+        for idx, row in enumerate(raw_rows, start=1):
+            normalized = self._normalize_eap_item(row, ordem_padrao=idx)
+            if normalized is None:
+                continue
+            item_id = normalized["item_id"]
+            if item_id in seen_item_ids:
+                continue
+            seen_item_ids.add(item_id)
+            normalized_rows.append(normalized)
+        return normalized_rows
+
+    def _try_eap_from_benchmark_reference(self, project: Any) -> tuple[list[dict[str, Any]], str] | None:
+        """Tenta resolver a EAP a partir do benchmark_reference.json do projeto."""
+        ref_payload = project.read_json(self._files.benchmark_reference, {})
+        if not isinstance(ref_payload, dict):
+            return None
+        source = self._resolve_eap_source(ref_payload)
+        if source == "canonical.cpus.itens_eap":
+            raw_rows = _extract_canonical_eap_rows(ref_payload)
+        else:
+            raw_rows = _extract_historical_eap_rows(ref_payload)
+        normalized_rows = self._normalize_eap_rows(raw_rows)
+        if not normalized_rows:
+            return None
+        return normalized_rows, f"benchmark_reference:{source or 'historical'}"
+
+    @staticmethod
+    def _try_eap_from_canonical(project: Any) -> tuple[list[dict[str, Any]], str] | None:
+        """Tenta resolver a EAP a partir do canonical.eap da versão atual."""
+        canonical = project.load_canonical()
+        if canonical is None:
+            return None
+        eap = _canonical_eap_to_rows(canonical)
+        if not eap:
+            return None
+        return eap, "canonical.eap"
+
+    @staticmethod
+    def _try_eap_from_historical(project: Any) -> tuple[list[dict[str, Any]], str] | None:
+        """Tenta resolver a EAP a partir da versão histórica mais recente que a possui."""
+        historical_rows, historical_version = _latest_version_with_eap(project)
+        if not historical_rows:
+            return None
+        return historical_rows, f"historical_canonical.eap:{historical_version or 'unknown'}"
+
     def get_eap(self, project_id: str) -> dict[str, Any]:
         project = self._repository.get_project(project_id)
         eap = project.read_json(self._files.eap_items, [])
@@ -238,40 +304,19 @@ class ProjectService:
             eap = []
 
         if not eap:
-            ref_payload = project.read_json(self._files.benchmark_reference, {})
-            if isinstance(ref_payload, dict):
-                source = self._resolve_eap_source(ref_payload)
-                if source == "canonical.cpus.itens_eap":
-                    raw_rows = _extract_canonical_eap_rows(ref_payload)
-                else:
-                    raw_rows = _extract_historical_eap_rows(ref_payload)
-                normalized_rows: list[dict[str, Any]] = []
-                seen_item_ids: set[str] = set()
-                for idx, row in enumerate(raw_rows, start=1):
-                    normalized = self._normalize_eap_item(row, ordem_padrao=idx)
-                    if normalized is None:
-                        continue
-                    item_id = normalized["item_id"]
-                    if item_id in seen_item_ids:
-                        continue
-                    seen_item_ids.add(item_id)
-                    normalized_rows.append(normalized)
-                if normalized_rows:
-                    eap = normalized_rows
-                    eap_source = f"benchmark_reference:{source or 'historical'}"
+            result = self._try_eap_from_benchmark_reference(project)
+            if result is not None:
+                eap, eap_source = result
 
         if not eap:
-            canonical = project.load_canonical()
-            if canonical is not None:
-                eap = _canonical_eap_to_rows(canonical)
-                if eap:
-                    eap_source = "canonical.eap"
+            result = self._try_eap_from_canonical(project)
+            if result is not None:
+                eap, eap_source = result
 
         if not eap:
-            historical_rows, historical_version = _latest_version_with_eap(project)
-            if historical_rows:
-                eap = historical_rows
-                eap_source = f"historical_canonical.eap:{historical_version or 'unknown'}"
+            result = self._try_eap_from_historical(project)
+            if result is not None:
+                eap, eap_source = result
 
         tipo = _resolve_project_type(project.meta)
         default_status = "ATIVO" if tipo == "hot_project" else "RASCUNHO"
@@ -690,24 +735,35 @@ class ProjectService:
         self._validate_range_field(fields, "faixa_margem_aceitavel", lower=0.0, upper=1.0)
         self._validate_range_field(fields, "razao_indireto_direto_alvo", lower=0.0, upper=2.0)
 
-    def _validate_contexto_fields(self, fields: dict[str, Any]) -> None:
-        perfil_id = fields.get("perfil_id")
-        if perfil_id is not None and perfil_id not in {p.get("id") for p in self.list_perfis()}:
-            raise ValueError(f"perfil_id inválido: '{perfil_id}'")
+    @staticmethod
+    def _validate_field_in_registry(value: Any, valid_ids_fn: Any, field_name: str) -> None:
+        """Valida que `value` (se presente) pertence ao conjunto de ids retornado por `valid_ids_fn()`.
 
-        jurisdicao_id = fields.get("jurisdicao_id")
-        if jurisdicao_id is not None and jurisdicao_id not in {j.get("id") for j in self.list_jurisdicoes()}:
-            raise ValueError(f"jurisdicao_id inválido: '{jurisdicao_id}'")
+        `valid_ids_fn` só é chamado quando `value` não é None, preservando o
+        curto-circuito (evita I/O de listagem quando o campo não foi informado).
+        """
+        if value is None:
+            return
+        if value not in valid_ids_fn():
+            raise ValueError(f"{field_name} inválido: '{value}'")
 
-        tema_id = fields.get("tema_id")
-        if tema_id is not None and tema_id not in {t.get("id") for t in self.list_temas()}:
-            raise ValueError(f"tema_id inválido: '{tema_id}'")
-
-        catalogo_id = fields.get("catalogo_id")
+    def _validate_catalogo_field(self, catalogo_id: Any) -> None:
         if catalogo_id is not None:
             cfg = self._resolve_config_root()
             if cfg is None or not (cfg / "catalogos" / str(catalogo_id)).exists():
                 raise ValueError(f"catalogo_id inválido: '{catalogo_id}'")
+
+    def _validate_contexto_fields(self, fields: dict[str, Any]) -> None:
+        self._validate_field_in_registry(
+            fields.get("perfil_id"), lambda: {p.get("id") for p in self.list_perfis()}, "perfil_id"
+        )
+        self._validate_field_in_registry(
+            fields.get("jurisdicao_id"), lambda: {j.get("id") for j in self.list_jurisdicoes()}, "jurisdicao_id"
+        )
+        self._validate_field_in_registry(
+            fields.get("tema_id"), lambda: {t.get("id") for t in self.list_temas()}, "tema_id"
+        )
+        self._validate_catalogo_field(fields.get("catalogo_id"))
 
     def _validate_tema_fields(self, svc: Any, tema_id: str, fields: dict[str, Any]) -> None:
         from concilium.domain.models.catalog.tema import TemaVisual
@@ -832,6 +888,76 @@ class ProjectService:
         cpus_block["itens_eap"] = canonical_items
         payload["cpus"] = cpus_block
 
+    @staticmethod
+    def _merge_into_cpus_block(payload: dict[str, Any], items: list[dict[str, Any]]) -> None:
+        """Funde `items` em payload['cpus']['itens_eap'], preservando o restante do bloco cpus."""
+        cpus_block_raw = payload.get("cpus")
+        cpus_block: dict[str, Any] = cpus_block_raw if isinstance(cpus_block_raw, dict) else {}
+        cpus_block["itens_eap"] = items
+        payload["cpus"] = cpus_block
+
+    def _normalize_and_merge_eap_rows(
+        self, payload: dict[str, Any], raw_rows: list[dict[str, Any]]
+    ) -> list[dict[str, Any]] | None:
+        """Normaliza raw_rows e, se não vazio, funde em payload['cpus']['itens_eap']."""
+        canonical_items = self._normalize_eap_rows(raw_rows)
+        if not canonical_items:
+            return None
+        self._merge_into_cpus_block(payload, canonical_items)
+        return canonical_items
+
+    def _hydrate_eap_from_eap_items(self, payload: dict[str, Any], project: Any) -> str | None:
+        """Estágio 1: hidrata cpus.itens_eap a partir de project.eap_items quando o catálogo é inválido."""
+        if _is_valid_canonical_eap(payload):
+            return None
+        eap_items = project.read_json(self._files.eap_items, [])
+        eap_rows = [row for row in eap_items if isinstance(row, dict)] if isinstance(eap_items, list) else []
+        if not eap_rows:
+            return None
+        canonical_items = self._normalize_and_merge_eap_rows(payload, eap_rows)
+        if not canonical_items:
+            return None
+        return "eap_items->cpus.itens_eap"
+
+    def _hydrate_eap_from_historical_payload(self, payload: dict[str, Any]) -> str | None:
+        """Estágio 2: hidrata cpus.itens_eap a partir de fontes históricas embutidas no próprio payload.
+
+        Roda incondicionalmente (sem checar validade do catálogo) — pode
+        sobrescrever o resultado do estágio 1, replicando o comportamento
+        original.
+        """
+        source = self._resolve_eap_source(payload)
+        if not source or source == "canonical.cpus.itens_eap":
+            return None
+        historical_rows = _extract_historical_eap_rows(payload)
+        canonical_items = self._normalize_and_merge_eap_rows(payload, historical_rows)
+        if not canonical_items:
+            return None
+        return f"{source}->cpus.itens_eap"
+
+    def _hydrate_eap_from_canonical_payload(self, payload: dict[str, Any], project: Any) -> str | None:
+        """Estágio 3: hidrata cpus.itens_eap a partir do canonical.eap da versão atual."""
+        if _is_valid_canonical_eap(payload):
+            return None
+        canonical = project.load_canonical()
+        if canonical is None:
+            return None
+        eap_rows = _canonical_eap_to_rows(canonical)
+        if not eap_rows:
+            return None
+        self._merge_into_cpus_block(payload, eap_rows)
+        return "canonical.eap->cpus.itens_eap"
+
+    def _hydrate_eap_from_historical_version(self, payload: dict[str, Any], project: Any) -> str | None:
+        """Estágio 4: hidrata cpus.itens_eap a partir da versão histórica mais recente que a possui."""
+        if _is_valid_canonical_eap(payload):
+            return None
+        historical_rows, historical_version = _latest_version_with_eap(project)
+        if not historical_rows:
+            return None
+        self._merge_into_cpus_block(payload, historical_rows)
+        return f"historical_canonical.eap:{historical_version or 'unknown'}->cpus.itens_eap"
+
     def get_benchmark_reference(self, project_id: str) -> dict[str, Any]:
         project = self._repository.get_project(project_id)
         ref_file = self._files.benchmark_reference
@@ -846,64 +972,16 @@ class ProjectService:
             if isinstance(skill_inputs, dict):
                 payload["skill_inputs"] = skill_inputs
 
-        if not _is_valid_canonical_eap(payload):
-            eap_items = project.read_json(self._files.eap_items, [])
-            eap_rows = [row for row in eap_items if isinstance(row, dict)] if isinstance(eap_items, list) else []
-            if eap_rows:
-                canonical_items: list[dict[str, Any]] = []
-                seen_item_ids: set[str] = set()
-                for idx, row in enumerate(eap_rows, start=1):
-                    normalized = self._normalize_eap_item(row, ordem_padrao=idx)
-                    if normalized is None:
-                        continue
-                    item_id = normalized["item_id"]
-                    if item_id in seen_item_ids:
-                        continue
-                    seen_item_ids.add(item_id)
-                    canonical_items.append(normalized)
-                if canonical_items:
-                    cpus_block = payload.get("cpus") if isinstance(payload.get("cpus"), dict) else {}
-                    cpus_block["itens_eap"] = canonical_items
-                    payload["cpus"] = cpus_block
-                    benchmark_source = "eap_items->cpus.itens_eap"
-
-        source = self._resolve_eap_source(payload)
-        if source and source != "canonical.cpus.itens_eap":
-            historical_rows = _extract_historical_eap_rows(payload)
-            canonical_items: list[dict[str, Any]] = []
-            seen_item_ids: set[str] = set()
-            for idx, row in enumerate(historical_rows, start=1):
-                normalized = self._normalize_eap_item(row, ordem_padrao=idx)
-                if normalized is None:
-                    continue
-                item_id = normalized["item_id"]
-                if item_id in seen_item_ids:
-                    continue
-                seen_item_ids.add(item_id)
-                canonical_items.append(normalized)
-            if canonical_items:
-                cpus_block = payload.get("cpus") if isinstance(payload.get("cpus"), dict) else {}
-                cpus_block["itens_eap"] = canonical_items
-                payload["cpus"] = cpus_block
-                benchmark_source = f"{source}->cpus.itens_eap"
-
-        if not _is_valid_canonical_eap(payload):
-            canonical = project.load_canonical()
-            if canonical is not None:
-                eap_rows = _canonical_eap_to_rows(canonical)
-                if eap_rows:
-                    cpus_block = payload.get("cpus") if isinstance(payload.get("cpus"), dict) else {}
-                    cpus_block["itens_eap"] = eap_rows
-                    payload["cpus"] = cpus_block
-                    benchmark_source = "canonical.eap->cpus.itens_eap"
-
-        if not _is_valid_canonical_eap(payload):
-            historical_rows, historical_version = _latest_version_with_eap(project)
-            if historical_rows:
-                cpus_block = payload.get("cpus") if isinstance(payload.get("cpus"), dict) else {}
-                cpus_block["itens_eap"] = historical_rows
-                payload["cpus"] = cpus_block
-                benchmark_source = f"historical_canonical.eap:{historical_version or 'unknown'}->cpus.itens_eap"
+        eap_hydration_stages = (
+            lambda: self._hydrate_eap_from_eap_items(payload, project),
+            lambda: self._hydrate_eap_from_historical_payload(payload),
+            lambda: self._hydrate_eap_from_canonical_payload(payload, project),
+            lambda: self._hydrate_eap_from_historical_version(payload, project),
+        )
+        for stage in eap_hydration_stages:
+            new_source = stage()
+            if new_source is not None:
+                benchmark_source = new_source
 
         if _catalog_is_deficit(payload.get("catalog")):
             _enrich_payload_catalog(payload, project)

@@ -33,179 +33,247 @@ from ._perfis_helpers_c import _render_tema_editor
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+def _pct(faixa: dict, key: str, default: float) -> float:
+    return float((faixa or {}).get(key, default)) * 100
+
+
+def _render_perfil_summary_metrics(current_data: dict, margem_alvo: dict, margem_ac: dict, razao: dict) -> None:
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Jurisdição", current_data.get("jurisdicao_id") or "—")
+    col_b.metric(
+        "Margem alvo",
+        f"{margem_alvo.get('min', 0) * 100:.0f}% – {margem_alvo.get('max', 0) * 100:.0f}%" if margem_alvo else "—",
+    )
+    col_c.metric(
+        "Margem aceitável",
+        f"{margem_ac.get('min', 0) * 100:.0f}% – {margem_ac.get('max', 0) * 100:.0f}%" if margem_ac else "—",
+    )
+    col_d.metric(
+        "Razão ind./direto",
+        f"{razao.get('min', 0) * 100:.0f}% – {razao.get('max', 0) * 100:.0f}%" if razao else "—",
+    )
+
+
+def _build_perfil_categorias_seed(cats_raw: list) -> list[dict]:
+    return [
+        {
+            "Código": c.get("codigo", ""),
+            "Descrição": c.get("descricao", ""),
+            "Driver": c.get("driver") or (c.get("regra_dimensionamento") or {}).get("tipo") or "permanencia",
+        }
+        for c in cats_raw
+        if isinstance(c, dict)
+    ]
+
+
+def _render_perfil_financeiro_form_fields(
+    perfil_id: str, margem_alvo: dict, margem_ac: dict, razao: dict, current_data: dict
+) -> tuple:
+    st.markdown("**Margem alvo**")
+    c1, c2 = st.columns(2)
+    ma_min = c1.number_input(
+        "Mínimo (%)",
+        min_value=0.0,
+        max_value=100.0,
+        step=0.5,
+        value=_pct(margem_alvo, "min", 0.15),
+        key=f"pfin-ma-min-{perfil_id}",
+    )
+    ma_max = c2.number_input(
+        "Máximo (%)",
+        min_value=0.0,
+        max_value=100.0,
+        step=0.5,
+        value=_pct(margem_alvo, "max", 0.25),
+        key=f"pfin-ma-max-{perfil_id}",
+    )
+
+    st.markdown("**Margem aceitável**")
+    c3, c4 = st.columns(2)
+    mac_min = c3.number_input(
+        "Mínimo (%)",
+        min_value=0.0,
+        max_value=100.0,
+        step=0.5,
+        value=_pct(margem_ac, "min", 0.08),
+        key=f"pfin-mac-min-{perfil_id}",
+    )
+    mac_max = c4.number_input(
+        "Máximo (%)",
+        min_value=0.0,
+        max_value=100.0,
+        step=0.5,
+        value=_pct(margem_ac, "max", 0.30),
+        key=f"pfin-mac-max-{perfil_id}",
+    )
+
+    st.markdown("**Razão indireto / direto alvo**")
+    c5, c6 = st.columns(2)
+    raz_min = c5.number_input(
+        "Mínimo (%)",
+        min_value=0.0,
+        max_value=200.0,
+        step=0.5,
+        value=_pct(razao, "min", 0.20),
+        key=f"pfin-raz-min-{perfil_id}",
+    )
+    raz_max = c6.number_input(
+        "Máximo (%)",
+        min_value=0.0,
+        max_value=200.0,
+        step=0.5,
+        value=_pct(razao, "max", 0.40),
+        key=f"pfin-raz-max-{perfil_id}",
+    )
+
+    st.markdown("**Categorias de custo indireto**")
+    cats_raw = current_data.get("categorias_indireto") or []
+    cats_seed = _build_perfil_categorias_seed(cats_raw)
+    edited_cats = st.data_editor(
+        cats_seed,
+        column_config={
+            "Código": st.column_config.TextColumn(width="small"),
+            "Descrição": st.column_config.TextColumn(width="large"),
+            "Driver": st.column_config.SelectboxColumn(
+                options=["permanencia", "one_time", "por_medicao"],
+                width="medium",
+            ),
+        },
+        num_rows="dynamic",
+        hide_index=True,
+        use_container_width=True,
+        key=f"pfin-cats-{perfil_id}",
+    )
+
+    motivo = st.text_input(
+        "Motivo da alteração *", placeholder="Ex: Ajuste de targets Q2/2026", key=f"pfin-motivo-{perfil_id}"
+    )
+    submitted = st.form_submit_button("💾 Salvar como nova versão", type="primary", use_container_width=True)
+    return ma_min, ma_max, mac_min, mac_max, raz_min, raz_max, edited_cats, motivo, submitted
+
+
+def _build_perfil_categorias_payload(edited_cats) -> list[dict]:
+    cats_list = (
+        edited_cats
+        if isinstance(edited_cats, list)
+        else (edited_cats.to_dict("records") if hasattr(edited_cats, "to_dict") else [])
+    )
+    return [
+        {
+            "codigo": r.get("Código", ""),
+            "descricao": r.get("Descrição", ""),
+            "driver": r.get("Driver", "permanencia"),
+        }
+        for r in cats_list
+        if str(r.get("Código", "")).strip()
+    ]
+
+
+def _submit_perfil_financeiro_form(
+    versions_path: str,
+    base_url: str,
+    actor: str,
+    motivo: str,
+    edited_cats,
+    ma_min: float,
+    ma_max: float,
+    mac_min: float,
+    mac_max: float,
+    raz_min: float,
+    raz_max: float,
+) -> None:
+    if not motivo.strip():
+        st.warning("Informe o motivo antes de salvar.")
+        return
+    new_cats = _build_perfil_categorias_payload(edited_cats)
+    payload = {
+        "motivo": motivo.strip(),
+        "faixa_margem_alvo": {"min": ma_min / 100, "max": ma_max / 100},
+        "faixa_margem_aceitavel": {"min": mac_min / 100, "max": mac_max / 100},
+        "razao_indireto_direto_alvo": {"min": raz_min / 100, "max": raz_max / 100},
+        "categorias_indireto": new_cats,
+    }
+    try:
+        result = api_call(method="POST", path=versions_path, payload=payload, base_url=base_url, actor=actor)
+        st.success(f"Versão **{result.get('version', '?')}** criada com sucesso.")
+        st.rerun()
+    except Exception as exc:
+        st.error(f"Erro ao salvar: {exc}")
+
+
+def _render_perfil_financeiro_editor(
+    entity_id: str, current_data: dict, margem_alvo: dict, margem_ac: dict, razao: dict, base_url: str, actor: str
+) -> None:
+    with st.expander("✏️ Editar parâmetros financeiros", expanded=False):
+        st.caption("Altere os targets financeiros do perfil. Cada save cria uma nova versão auditável.")
+        perfil_id = entity_id
+        versions_path = f"/api/perfis/{perfil_id}/versions"
+
+        with st.form(f"perfil-fin-form-{perfil_id}"):
+            (
+                ma_min,
+                ma_max,
+                mac_min,
+                mac_max,
+                raz_min,
+                raz_max,
+                edited_cats,
+                motivo,
+                submitted,
+            ) = _render_perfil_financeiro_form_fields(perfil_id, margem_alvo, margem_ac, razao, current_data)
+
+        if submitted and base_url:
+            _submit_perfil_financeiro_form(
+                versions_path,
+                base_url,
+                actor,
+                motivo,
+                edited_cats,
+                ma_min,
+                ma_max,
+                mac_min,
+                mac_max,
+                raz_min,
+                raz_max,
+            )
+
+
+def _render_perfil_categorias_resumo(cats: list) -> None:
+    if not cats:
+        return
+    with st.expander("Categorias de custo indireto (resumo)", expanded=False):
+        rows = [
+            {
+                "Código": c.get("codigo") or "—",
+                "Descrição": c.get("descricao") or "—",
+                "Driver": c.get("driver") or (c.get("regra_dimensionamento") or {}).get("tipo") or "—",
+            }
+            for c in cats
+            if isinstance(c, dict)
+        ]
+        if rows:
+            st.dataframe(rows, hide_index=True, use_container_width=True)
+
+
 def _render_perfil_detail(entity: dict, versions: list[dict], base_url: str = "", actor: str = "") -> None:
     """Detalhe do perfil: metas financeiras, editor tipado, categorias de indireto."""
     current_v = entity.get("current_version", "v1")
     entity_id = entity.get("id", "")
     current_data = next((v for v in versions if v.get("version") == current_v), entity)
 
-    # ── Resumo rápido ──────────────────────────────────────────────────────
-    col_a, col_b, col_c, col_d = st.columns(4)
-    col_a.metric("Jurisdição", current_data.get("jurisdicao_id") or "—")
     margem_alvo = current_data.get("faixa_margem_alvo") or {}
-    col_b.metric(
-        "Margem alvo",
-        f"{margem_alvo.get('min', 0) * 100:.0f}% – {margem_alvo.get('max', 0) * 100:.0f}%" if margem_alvo else "—",
-    )
     margem_ac = current_data.get("faixa_margem_aceitavel") or {}
-    col_c.metric(
-        "Margem aceitável",
-        f"{margem_ac.get('min', 0) * 100:.0f}% – {margem_ac.get('max', 0) * 100:.0f}%" if margem_ac else "—",
-    )
     razao = current_data.get("razao_indireto_direto_alvo") or {}
-    col_d.metric(
-        "Razão ind./direto",
-        f"{razao.get('min', 0) * 100:.0f}% – {razao.get('max', 0) * 100:.0f}%" if razao else "—",
-    )
+
+    # ── Resumo rápido ──────────────────────────────────────────────────────
+    _render_perfil_summary_metrics(current_data, margem_alvo, margem_ac, razao)
 
     # ── Editor de parâmetros financeiros ───────────────────────────────────
-    with st.expander("✏️ Editar parâmetros financeiros", expanded=False):
-        st.caption("Altere os targets financeiros do perfil. Cada save cria uma nova versão auditável.")
-        perfil_id = entity_id
-        versions_path = f"/api/perfis/{perfil_id}/versions"
-
-        def _pct(faixa: dict, key: str, default: float) -> float:
-            return float((faixa or {}).get(key, default)) * 100
-
-        with st.form(f"perfil-fin-form-{perfil_id}"):
-            st.markdown("**Margem alvo**")
-            c1, c2 = st.columns(2)
-            ma_min = c1.number_input(
-                "Mínimo (%)",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.5,
-                value=_pct(margem_alvo, "min", 0.15),
-                key=f"pfin-ma-min-{perfil_id}",
-            )
-            ma_max = c2.number_input(
-                "Máximo (%)",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.5,
-                value=_pct(margem_alvo, "max", 0.25),
-                key=f"pfin-ma-max-{perfil_id}",
-            )
-
-            st.markdown("**Margem aceitável**")
-            c3, c4 = st.columns(2)
-            mac_min = c3.number_input(
-                "Mínimo (%)",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.5,
-                value=_pct(margem_ac, "min", 0.08),
-                key=f"pfin-mac-min-{perfil_id}",
-            )
-            mac_max = c4.number_input(
-                "Máximo (%)",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.5,
-                value=_pct(margem_ac, "max", 0.30),
-                key=f"pfin-mac-max-{perfil_id}",
-            )
-
-            st.markdown("**Razão indireto / direto alvo**")
-            c5, c6 = st.columns(2)
-            raz_min = c5.number_input(
-                "Mínimo (%)",
-                min_value=0.0,
-                max_value=200.0,
-                step=0.5,
-                value=_pct(razao, "min", 0.20),
-                key=f"pfin-raz-min-{perfil_id}",
-            )
-            raz_max = c6.number_input(
-                "Máximo (%)",
-                min_value=0.0,
-                max_value=200.0,
-                step=0.5,
-                value=_pct(razao, "max", 0.40),
-                key=f"pfin-raz-max-{perfil_id}",
-            )
-
-            st.markdown("**Categorias de custo indireto**")
-            cats_raw = current_data.get("categorias_indireto") or []
-            cats_seed = [
-                {
-                    "Código": c.get("codigo", ""),
-                    "Descrição": c.get("descricao", ""),
-                    "Driver": c.get("driver") or (c.get("regra_dimensionamento") or {}).get("tipo") or "permanencia",
-                }
-                for c in cats_raw
-                if isinstance(c, dict)
-            ]
-            edited_cats = st.data_editor(
-                cats_seed,
-                column_config={
-                    "Código": st.column_config.TextColumn(width="small"),
-                    "Descrição": st.column_config.TextColumn(width="large"),
-                    "Driver": st.column_config.SelectboxColumn(
-                        options=["permanencia", "one_time", "por_medicao"],
-                        width="medium",
-                    ),
-                },
-                num_rows="dynamic",
-                hide_index=True,
-                use_container_width=True,
-                key=f"pfin-cats-{perfil_id}",
-            )
-
-            motivo = st.text_input(
-                "Motivo da alteração *", placeholder="Ex: Ajuste de targets Q2/2026", key=f"pfin-motivo-{perfil_id}"
-            )
-            submitted = st.form_submit_button("💾 Salvar como nova versão", type="primary", use_container_width=True)
-
-        if submitted and base_url:
-            if not motivo.strip():
-                st.warning("Informe o motivo antes de salvar.")
-            else:
-                cats_list = (
-                    edited_cats
-                    if isinstance(edited_cats, list)
-                    else (edited_cats.to_dict("records") if hasattr(edited_cats, "to_dict") else [])
-                )
-                new_cats = [
-                    {
-                        "codigo": r.get("Código", ""),
-                        "descricao": r.get("Descrição", ""),
-                        "driver": r.get("Driver", "permanencia"),
-                    }
-                    for r in cats_list
-                    if str(r.get("Código", "")).strip()
-                ]
-                payload = {
-                    "motivo": motivo.strip(),
-                    "faixa_margem_alvo": {"min": ma_min / 100, "max": ma_max / 100},
-                    "faixa_margem_aceitavel": {"min": mac_min / 100, "max": mac_max / 100},
-                    "razao_indireto_direto_alvo": {"min": raz_min / 100, "max": raz_max / 100},
-                    "categorias_indireto": new_cats,
-                }
-                try:
-                    result = api_call(
-                        method="POST", path=versions_path, payload=payload, base_url=base_url, actor=actor
-                    )
-                    st.success(f"Versão **{result.get('version', '?')}** criada com sucesso.")
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"Erro ao salvar: {exc}")
+    _render_perfil_financeiro_editor(entity_id, current_data, margem_alvo, margem_ac, razao, base_url, actor)
 
     # ── Categorias resumo (somente leitura quando editor está fechado) ─────
     cats = current_data.get("categorias_indireto") or []
-    if cats:
-        with st.expander("Categorias de custo indireto (resumo)", expanded=False):
-            rows = [
-                {
-                    "Código": c.get("codigo") or "—",
-                    "Descrição": c.get("descricao") or "—",
-                    "Driver": c.get("driver") or (c.get("regra_dimensionamento") or {}).get("tipo") or "—",
-                }
-                for c in cats
-                if isinstance(c, dict)
-            ]
-            if rows:
-                st.dataframe(rows, hide_index=True, use_container_width=True)
+    _render_perfil_categorias_resumo(cats)
 
 
 def _render_temas_section(base_url: str, actor: str) -> None:
@@ -255,17 +323,18 @@ def _render_temas_section(base_url: str, actor: str) -> None:
         _render_tema_editor(base_url, actor, selected, tema_data)
 
 
-def _render_tema_detail(tema_data: dict, versions: list[dict]) -> None:
-    current_v = tema_data.get("current_version", "v1")
-    current_data = next((v for v in versions if v.get("version") == current_v), tema_data)
+def _render_versao_origem_caption(current_data: dict, current_v: str) -> None:
+    st.caption(
+        "Origem da versão ativa: "
+        f"{current_data.get('version') or current_v} · "
+        f"{str(current_data.get('created_at') or '—')[:19].replace('T', ' ')} · "
+        f"{current_data.get('created_by') or '—'}"
+    )
+    if current_data.get("motivo"):
+        st.caption(f"Motivo: {current_data.get('motivo')}")
 
-    col_a, col_b, col_c = st.columns(3)
-    col_a.metric("Empresa", current_data.get("empresa") or "—")
-    col_b.metric("Perfil de exibição", current_data.get("perfil_exibicao") or "—")
-    col_c.metric("Versão ativa", current_data.get("version") or current_v)
 
-    cores = current_data.get("cores") or {}
-    fontes = current_data.get("fontes") or {}
+def _render_tema_cores_fontes(cores: dict, fontes: dict) -> None:
     if cores:
         st.caption("Cores ativas")
         st.dataframe(
@@ -281,14 +350,21 @@ def _render_tema_detail(tema_data: dict, versions: list[dict]) -> None:
             use_container_width=True,
         )
 
-    st.caption(
-        "Origem da versão ativa: "
-        f"{current_data.get('version') or current_v} · "
-        f"{str(current_data.get('created_at') or '—')[:19].replace('T', ' ')} · "
-        f"{current_data.get('created_by') or '—'}"
-    )
-    if current_data.get("motivo"):
-        st.caption(f"Motivo: {current_data.get('motivo')}")
+
+def _render_tema_detail(tema_data: dict, versions: list[dict]) -> None:
+    current_v = tema_data.get("current_version", "v1")
+    current_data = next((v for v in versions if v.get("version") == current_v), tema_data)
+
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Empresa", current_data.get("empresa") or "—")
+    col_b.metric("Perfil de exibição", current_data.get("perfil_exibicao") or "—")
+    col_c.metric("Versão ativa", current_data.get("version") or current_v)
+
+    cores = current_data.get("cores") or {}
+    fontes = current_data.get("fontes") or {}
+    _render_tema_cores_fontes(cores, fontes)
+
+    _render_versao_origem_caption(current_data, current_v)
 
 
 def _render_contexto_detail(entity: dict, versions: list[dict], base_url: str = "", actor: str = "") -> None:
@@ -311,54 +387,55 @@ def _render_contexto_detail(entity: dict, versions: list[dict], base_url: str = 
     statuses = _resolve_context_reference_statuses(base_url=base_url, actor=actor, refs=refs)
     st.dataframe(statuses, hide_index=True, use_container_width=True)
 
-    st.caption(
-        "Origem da versão ativa: "
-        f"{current_data.get('version') or current_v} · "
-        f"{str(current_data.get('created_at') or '—')[:19].replace('T', ' ')} · "
-        f"{current_data.get('created_by') or '—'}"
-    )
-    if current_data.get("motivo"):
-        st.caption(f"Motivo: {current_data.get('motivo')}")
+    _render_versao_origem_caption(current_data, current_v)
+
+
+def _id_extractor_plain(x: object) -> str:
+    return str(x)
+
+
+def _id_extractor_dict(x: object) -> str | None:
+    return str(x.get("id")) if isinstance(x, dict) and x.get("id") else None
+
+
+def _fetch_ids_set(base_url: str, actor: str, path: str, extractor) -> set[str]:
+    try:
+        items = api_call(method="GET", path=path, base_url=base_url, actor=actor).get("items") or []
+    except Exception:
+        return set()
+    result: set[str] = set()
+    for item in items:
+        value = extractor(item)
+        if value is not None:
+            result.add(value)
+    return result
+
+
+def _classify_ref_status(val: str, available: set[str] | None) -> str:
+    if not val:
+        return "vazio"
+    elif not available:
+        return "nao verificado"
+    elif val in available:
+        return "ok"
+    else:
+        return "nao encontrado"
 
 
 def _resolve_context_reference_statuses(base_url: str, actor: str, refs: dict[str, str | None]) -> list[dict[str, str]]:
-    available: dict[str, set[str]] = {
-        "catalogo_id": set(),
-        "perfil_id": set(),
-        "jurisdicao_id": set(),
-        "tema_id": set(),
+    fetchers = {
+        "catalogo_id": ("/api/catalogs", _id_extractor_plain),
+        "perfil_id": ("/api/perfis", _id_extractor_dict),
+        "jurisdicao_id": ("/api/jurisdicoes", _id_extractor_dict),
+        "tema_id": ("/api/temas", _id_extractor_dict),
     }
-    try:
-        cats = api_call(method="GET", path="/api/catalogs", base_url=base_url, actor=actor).get("items") or []
-        available["catalogo_id"] = {str(x) for x in cats}
-    except Exception:
-        pass
-    try:
-        per = api_call(method="GET", path="/api/perfis", base_url=base_url, actor=actor).get("items") or []
-        available["perfil_id"] = {str(x.get("id")) for x in per if isinstance(x, dict) and x.get("id")}
-    except Exception:
-        pass
-    try:
-        jur = api_call(method="GET", path="/api/jurisdicoes", base_url=base_url, actor=actor).get("items") or []
-        available["jurisdicao_id"] = {str(x.get("id")) for x in jur if isinstance(x, dict) and x.get("id")}
-    except Exception:
-        pass
-    try:
-        tem = api_call(method="GET", path="/api/temas", base_url=base_url, actor=actor).get("items") or []
-        available["tema_id"] = {str(x.get("id")) for x in tem if isinstance(x, dict) and x.get("id")}
-    except Exception:
-        pass
+    available = {
+        field: _fetch_ids_set(base_url, actor, path, extractor) for field, (path, extractor) in fetchers.items()
+    }
 
     rows: list[dict[str, str]] = []
     for field, value in refs.items():
         val = str(value or "").strip()
-        if not val:
-            status = "vazio"
-        elif not available.get(field):
-            status = "nao verificado"
-        elif val in available[field]:
-            status = "ok"
-        else:
-            status = "nao encontrado"
+        status = _classify_ref_status(val, available.get(field))
         rows.append({"Campo": field, "Valor": val or "—", "Status": status})
     return rows

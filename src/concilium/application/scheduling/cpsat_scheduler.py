@@ -104,6 +104,111 @@ class CpSatScheduler:
     num_workers: int = 1
     horizon_weeks: int = _DEFAULT_HORIZON
 
+    def _add_activity_variables(
+        self, model: cp_model.CpModel, dag: ActivityDAG, horizon: int
+    ) -> tuple[dict[str, cp_model.IntVar], dict[str, cp_model.IntVar], dict[str, cp_model.IntervalVar]]:
+        """Cria as variáveis de decisão (start/end/interval) por atividade, com janela de deadline."""
+        starts: dict[str, cp_model.IntVar] = {}
+        ends: dict[str, cp_model.IntVar] = {}
+        intervals: dict[str, cp_model.IntervalVar] = {}
+
+        for a in dag.activities:
+            dur = a.duration_weeks
+            # Enforce window constraint: start + duration <= window_weeks
+            max_start = (a.window_weeks - dur) if a.window_weeks else horizon - dur
+            max_start = max(0, min(max_start, horizon - dur))
+            start = model.new_int_var(0, max_start, f"start_{a.activity_id}")
+            end = model.new_int_var(dur, horizon, f"end_{a.activity_id}")
+            interval = model.new_interval_var(start, dur, end, f"iv_{a.activity_id}")
+            starts[a.activity_id] = start
+            ends[a.activity_id] = end
+            intervals[a.activity_id] = interval
+        return starts, ends, intervals
+
+    def _add_fs_precedence_constraints(
+        self,
+        model: cp_model.CpModel,
+        dag: ActivityDAG,
+        acts: dict[str, Activity],
+        starts: dict[str, cp_model.IntVar],
+        ends: dict[str, cp_model.IntVar],
+    ) -> None:
+        """Adiciona as precedências FS do ActivityDAG (ADR-081: completion_threshold_pct)."""
+        for pred_id, succ_id in dag.precedence:
+            theta = dag.get_threshold(pred_id, succ_id)
+            if pred_id not in acts or succ_id not in acts:
+                continue
+            if theta >= 1.0:
+                model.add(starts[succ_id] >= ends[pred_id])
+            else:
+                lag = math.ceil(theta * acts[pred_id].duration_weeks)
+                model.add(starts[succ_id] >= starts[pred_id] + lag)
+
+    def _add_extended_precedence_constraints(
+        self,
+        model: cp_model.CpModel,
+        dag: ActivityDAG,
+        extended_precedences: list[ExtendedPrecedence] | None,
+        starts: dict[str, cp_model.IntVar],
+        ends: dict[str, cp_model.IntVar],
+    ) -> None:
+        """Adiciona precedências estendidas SS/FF/FS+lag (NEP-031 L4)."""
+        # NEP-031 L4: inclui extended_precedences do DAG (SS/FF da EAP) e
+        # quaisquer precedências extra passadas diretamente pelo chamador.
+        all_extended = list(getattr(dag, "extended_precedences", None) or [])
+        all_extended.extend(extended_precedences or [])
+        for ep in all_extended:
+            pred_id, succ_id = ep.pred, ep.succ
+            lag = ep.lag
+            if ep.tipo == "FS":
+                model.add(starts[succ_id] >= ends[pred_id] + lag)
+            elif ep.tipo == "SS":
+                model.add(starts[succ_id] >= starts[pred_id] + lag)
+            elif ep.tipo == "FF":
+                model.add(ends[succ_id] >= ends[pred_id] + lag)
+            else:
+                _log.warning("Unknown precedence type %s; skipping", ep.tipo)
+
+    def _add_resource_constraints(
+        self,
+        model: cp_model.CpModel,
+        dag: ActivityDAG,
+        pool: ResourcePool,
+        intervals: dict[str, cp_model.IntervalVar],
+    ) -> None:
+        """Adiciona restrições cumulativas de capacidade por recurso."""
+        for res, cap in pool.resources.items():
+            res_intervals: list[cp_model.IntervalVar] = []
+            res_demands: list[int] = []
+            for a in dag.activities:
+                demand = a.required_resources.get(res, 0)
+                if demand > 0:
+                    res_intervals.append(intervals[a.activity_id])
+                    res_demands.append(demand)
+            if res_intervals:
+                model.add_cumulative(res_intervals, res_demands, cap)
+
+    @staticmethod
+    def _build_scheduled_activities(
+        dag: ActivityDAG, solver: cp_model.CpSolver, starts: dict[str, cp_model.IntVar]
+    ) -> list[ScheduledActivity]:
+        """Converte os valores resolvidos de start em uma lista de ScheduledActivity."""
+        scheduled: list[ScheduledActivity] = []
+        for a in dag.activities:
+            s = solver.value(starts[a.activity_id])
+            e = s + a.duration_weeks
+            scheduled.append(
+                ScheduledActivity(
+                    activity_id=a.activity_id,
+                    start_week=s,
+                    end_week=e,
+                    duration_weeks=a.duration_weeks,
+                    assigned_resources=dict(a.required_resources),
+                    ramp_profile=a.ramp_profile,
+                )
+            )
+        return scheduled
+
     def schedule(
         self,
         dag: ActivityDAG,
@@ -127,61 +232,16 @@ class CpSatScheduler:
         H = self.horizon_weeks
 
         # ── decision variables ────────────────────────────────────────────
-        starts: dict[str, cp_model.IntVar] = {}
-        ends: dict[str, cp_model.IntVar] = {}
-        intervals: dict[str, cp_model.IntervalVar] = {}
-
-        for a in dag.activities:
-            dur = a.duration_weeks
-            # Enforce window constraint: start + duration <= window_weeks
-            max_start = (a.window_weeks - dur) if a.window_weeks else H - dur
-            max_start = max(0, min(max_start, H - dur))
-            start = model.new_int_var(0, max_start, f"start_{a.activity_id}")
-            end = model.new_int_var(dur, H, f"end_{a.activity_id}")
-            interval = model.new_interval_var(start, dur, end, f"iv_{a.activity_id}")
-            starts[a.activity_id] = start
-            ends[a.activity_id] = end
-            intervals[a.activity_id] = interval
+        starts, ends, intervals = self._add_activity_variables(model, dag, H)
 
         # ── FS precedences from ActivityDAG (ADR-081: completion_threshold_pct) ──
-        for pred_id, succ_id in dag.precedence:
-            theta = dag.get_threshold(pred_id, succ_id)
-            if pred_id not in acts or succ_id not in acts:
-                continue
-            if theta >= 1.0:
-                model.add(starts[succ_id] >= ends[pred_id])
-            else:
-                lag = math.ceil(theta * acts[pred_id].duration_weeks)
-                model.add(starts[succ_id] >= starts[pred_id] + lag)
+        self._add_fs_precedence_constraints(model, dag, acts, starts, ends)
 
         # ── extended precedences (SS, FF, FS+lag) ────────────────────────
-        # NEP-031 L4: inclui extended_precedences do DAG (SS/FF da EAP) e
-        # quaisquer precedências extra passadas diretamente pelo chamador.
-        all_extended = list(getattr(dag, "extended_precedences", None) or [])
-        all_extended.extend(extended_precedences or [])
-        for ep in all_extended:
-            pred_id, succ_id = ep.pred, ep.succ
-            lag = ep.lag
-            if ep.tipo == "FS":
-                model.add(starts[succ_id] >= ends[pred_id] + lag)
-            elif ep.tipo == "SS":
-                model.add(starts[succ_id] >= starts[pred_id] + lag)
-            elif ep.tipo == "FF":
-                model.add(ends[succ_id] >= ends[pred_id] + lag)
-            else:
-                _log.warning("Unknown precedence type %s; skipping", ep.tipo)
+        self._add_extended_precedence_constraints(model, dag, extended_precedences, starts, ends)
 
         # ── resource constraints ─────────────────────────────────────────
-        for res, cap in pool.resources.items():
-            res_intervals: list[cp_model.IntervalVar] = []
-            res_demands: list[int] = []
-            for a in dag.activities:
-                demand = a.required_resources.get(res, 0)
-                if demand > 0:
-                    res_intervals.append(intervals[a.activity_id])
-                    res_demands.append(demand)
-            if res_intervals:
-                model.add_cumulative(res_intervals, res_demands, cap)
+        self._add_resource_constraints(model, dag, pool, intervals)
 
         # ── objective: minimise makespan ─────────────────────────────────
         makespan = model.new_int_var(0, H, "makespan")
@@ -209,20 +269,7 @@ class CpSatScheduler:
             return self._empty_output(dag)
 
         # ── build output ─────────────────────────────────────────────────
-        scheduled: list[ScheduledActivity] = []
-        for a in dag.activities:
-            s = solver.value(starts[a.activity_id])
-            e = s + a.duration_weeks
-            scheduled.append(
-                ScheduledActivity(
-                    activity_id=a.activity_id,
-                    start_week=s,
-                    end_week=e,
-                    duration_weeks=a.duration_weeks,
-                    assigned_resources=dict(a.required_resources),
-                    ramp_profile=a.ramp_profile,
-                )
-            )
+        scheduled = self._build_scheduled_activities(dag, solver, starts)
 
         ms_val = solver.value(makespan)
         metrics = self._compute_metrics(scheduled, pool, ms_val)
@@ -238,7 +285,34 @@ class CpSatScheduler:
     # ── helpers ───────────────────────────────────────────────────────────────
 
     @staticmethod
+    def _compute_weekly_resource_usage(scheduled: list[ScheduledActivity]) -> dict[int, dict[str, int]]:
+        """Agrega a demanda de recursos por semana ao longo do horizonte agendado."""
+        weekly: dict[int, dict[str, int]] = {}
+        for sa in scheduled:
+            for t in range(sa.start_week, sa.end_week):
+                for res, qty in sa.assigned_resources.items():
+                    weekly.setdefault(t, {}).setdefault(res, 0)
+                    weekly[t][res] += qty
+        return weekly
+
+    @staticmethod
+    def _compute_resource_leveling_score(pool: ResourcePool, weekly: dict[int, dict[str, int]], makespan: int) -> float:
+        """Calcula o score de nivelamento (1 - variância relativa à capacidade) por recurso."""
+        usages_per_res: dict[str, list[int]] = {}
+        for res, _cap in pool.resources.items():
+            usages_per_res[res] = [weekly.get(t, {}).get(res, 0) for t in range(makespan)]
+        leveling_scores = []
+        for res, vals in usages_per_res.items():
+            cap = pool.resources[res]
+            if cap > 0 and vals:
+                mean = sum(vals) / len(vals)
+                variance = sum((v - mean) ** 2 for v in vals) / len(vals)
+                leveling_scores.append(max(0.0, 1.0 - math.sqrt(variance) / cap))
+        return sum(leveling_scores) / len(leveling_scores) if leveling_scores else 1.0
+
+    @classmethod
     def _compute_metrics(
+        cls,
         scheduled: list[ScheduledActivity],
         pool: ResourcePool,
         makespan: int,
@@ -254,12 +328,7 @@ class CpSatScheduler:
             )
 
         # Weekly resource usage
-        weekly: dict[int, dict[str, int]] = {}
-        for sa in scheduled:
-            for t in range(sa.start_week, sa.end_week):
-                for res, qty in sa.assigned_resources.items():
-                    weekly.setdefault(t, {}).setdefault(res, 0)
-                    weekly[t][res] += qty
+        weekly = cls._compute_weekly_resource_usage(scheduled)
 
         # Resource utilisation avg
         total_capacity = sum(pool.resources.values()) * makespan
@@ -267,17 +336,7 @@ class CpSatScheduler:
         util_avg = total_used / total_capacity if total_capacity > 0 else 0.0
 
         # Leveling score: 1 - variance_ratio
-        usages_per_res: dict[str, list[int]] = {}
-        for res, _cap in pool.resources.items():
-            usages_per_res[res] = [weekly.get(t, {}).get(res, 0) for t in range(makespan)]
-        leveling_scores = []
-        for res, vals in usages_per_res.items():
-            cap = pool.resources[res]
-            if cap > 0 and vals:
-                mean = sum(vals) / len(vals)
-                variance = sum((v - mean) ** 2 for v in vals) / len(vals)
-                leveling_scores.append(max(0.0, 1.0 - math.sqrt(variance) / cap))
-        leveling = sum(leveling_scores) / len(leveling_scores) if leveling_scores else 1.0
+        leveling = cls._compute_resource_leveling_score(pool, weekly, makespan)
 
         return ScheduleMetrics(
             makespan=makespan,

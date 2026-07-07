@@ -22,6 +22,28 @@ class ExcelIngestionPipeline:
         self.storage = storage
 
     @staticmethod
+    def _find_header_row(rows: list[tuple]) -> tuple[tuple | None, int]:
+        """Localiza a primeira linha não-vazia (header) e o índice da linha seguinte."""
+        for idx, row in enumerate(rows):
+            if any(cell not in (None, "") for cell in row):
+                return row, idx + 1
+        return None, 0
+
+    @staticmethod
+    def _row_to_item(row: tuple, headers: list[str]) -> dict | None:
+        """Converte uma linha em dict {header: valor}, ou None se a linha estiver vazia."""
+        if not any(cell not in (None, "") for cell in row):
+            return None
+        item: dict = {}
+        for i, header in enumerate(headers):
+            if not header:
+                continue
+            item[header] = row[i] if i < len(row) else None
+        # `headers` is guaranteed to have at least one truthy entry (checked by the caller),
+        # so `item` always gains at least one key here — no need to guard the append.
+        return item
+
+    @staticmethod
     def _extract_rows_from_sheet(workbook, sheet_name: str) -> list[dict]:
         if sheet_name not in workbook.sheetnames:
             return []
@@ -31,13 +53,7 @@ class ExcelIngestionPipeline:
         if not rows:
             return []
 
-        header_row: tuple | None = None
-        start_idx = 0
-        for idx, row in enumerate(rows):
-            if any(cell not in (None, "") for cell in row):
-                header_row = row
-                start_idx = idx + 1
-                break
+        header_row, start_idx = ExcelIngestionPipeline._find_header_row(rows)
         if header_row is None:
             return []
 
@@ -47,16 +63,9 @@ class ExcelIngestionPipeline:
 
         parsed: list[dict] = []
         for row in rows[start_idx:]:
-            if not any(cell not in (None, "") for cell in row):
-                continue
-            item: dict = {}
-            for i, header in enumerate(headers):
-                if not header:
-                    continue
-                item[header] = row[i] if i < len(row) else None
-            # `headers` is guaranteed to have at least one truthy entry (checked above),
-            # so `item` always gains at least one key here — no need to guard the append.
-            parsed.append(item)
+            item = ExcelIngestionPipeline._row_to_item(row, headers)
+            if item is not None:
+                parsed.append(item)
         return parsed
 
     def parse_planilha(self, excel_bytes: bytes) -> dict[str, list[dict]]:

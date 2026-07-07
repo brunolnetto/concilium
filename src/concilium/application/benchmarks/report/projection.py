@@ -185,6 +185,41 @@ def _accumulate_planejamento(planejamento: list) -> tuple[bool, dict[str, float]
     return has_catalog, totals
 
 
+def _accumulate_equipe_via_custo_instancial(equipe: Any, totals: TotaisDiretosEquipes) -> None:
+    """PATH 1: com decomposição instancial (Estágio 4), usa dados oficiais (ADR-104)."""
+    totals.mao_obra += equipe.custo_inst_mo
+    totals.equipamentos += equipe.custo_inst_eq
+    totals.diesel += equipe.custo_inst_comb
+    totals.materiais += equipe.custo_inst_mat
+    # custo_inst_mob_demob já está em custo_total, não somar separado
+
+
+def _accumulate_equipe_via_fallback(equipe: Any, totals: TotaisDiretosEquipes) -> None:
+    """PATH 2: sem decomposição (Estágio 1/3, sem pool contracts) — fallback heurístico."""
+    if equipe.custo_fixo_mensal <= 0:
+        return
+    fator = equipe.custo_total / equipe.custo_fixo_mensal
+    totals.mao_obra += equipe.custo_mao_obra_mensal * fator
+    totals.equipamentos += equipe.custo_equipamentos_mensal * fator
+    totals.diesel += equipe.custo_combustivel_total_mensal * fator
+    totals.materiais += getattr(equipe, "custo_material_mensal", 0.0) * fator
+
+
+def _accumulate_combustivel_por_tipo(equipe: Any, totals: TotaisDiretosEquipes) -> None:
+    """ADR-107 D5: breakdown de combustível por TipoCombustivel via equipamentos da equipe."""
+    from concilium.domain.models.catalog.catalogo import _infer_tipo_combustivel
+
+    for equip in getattr(equipe, "equipamentos", []) or []:
+        comb_val = float(getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0)
+        if comb_val <= 0:
+            continue
+        perm = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
+        tc = getattr(equip, "tipo_combustivel", None) or _infer_tipo_combustivel(getattr(equip, "equip_id", "") or "")
+        tc_key = str(tc)
+        cpt = totals.combustivel_por_tipo
+        cpt[tc_key] = round(cpt.get(tc_key, 0.0) + comb_val * perm, 2)
+
+
 def _accumulate_equipes(equipes_diretas: list) -> TotaisDiretosEquipes:
     """Acumula custos por categoria a partir de custo_inst_* quando disponível.
 
@@ -194,39 +229,14 @@ def _accumulate_equipes(equipes_diretas: list) -> TotaisDiretosEquipes:
 
     ADR-107 D5: popula também combustivel_por_tipo com breakdown por TipoCombustivel.
     """
-    from concilium.domain.models.catalog.catalogo import _infer_tipo_combustivel
-
     totals = TotaisDiretosEquipes()
 
     for equipe in equipes_diretas:
-        # PATH 1: Se tem decomposição instancial (Estágio 4), usar dados oficiais (ADR-104)
         if equipe.custo_inst_mo is not None:
-            totals.mao_obra += equipe.custo_inst_mo
-            totals.equipamentos += equipe.custo_inst_eq
-            totals.diesel += equipe.custo_inst_comb
-            totals.materiais += equipe.custo_inst_mat
-            # custo_inst_mob_demob já está em custo_total, não somar separado
-        # PATH 2: Sem decomposição, fallback (Estágio 1/3, sem pool contracts)
+            _accumulate_equipe_via_custo_instancial(equipe, totals)
         else:
-            if equipe.custo_fixo_mensal > 0:
-                fator = equipe.custo_total / equipe.custo_fixo_mensal
-                totals.mao_obra += equipe.custo_mao_obra_mensal * fator
-                totals.equipamentos += equipe.custo_equipamentos_mensal * fator
-                totals.diesel += equipe.custo_combustivel_total_mensal * fator
-                totals.materiais += getattr(equipe, "custo_material_mensal", 0.0) * fator
-
-        # ADR-107 D5: breakdown por tipo de combustível via equipamentos da equipe
-        for equip in getattr(equipe, "equipamentos", []) or []:
-            comb_val = float(getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0)
-            if comb_val <= 0:
-                continue
-            perm = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
-            tc = getattr(equip, "tipo_combustivel", None) or _infer_tipo_combustivel(
-                getattr(equip, "equip_id", "") or ""
-            )
-            tc_key = str(tc)
-            cpt = totals.combustivel_por_tipo
-            cpt[tc_key] = round(cpt.get(tc_key, 0.0) + comb_val * perm, 2)
+            _accumulate_equipe_via_fallback(equipe, totals)
+        _accumulate_combustivel_por_tipo(equipe, totals)
 
     # NEP-043 original: "custo_total = custo de 1 frente → multiplicar por num_equipes_base".
     # ADR-091: a normalização de custo_total em skill-05 já divide pelo número de frentes

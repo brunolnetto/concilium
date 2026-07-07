@@ -245,6 +245,37 @@ def _normalize_text_key(txt: str) -> str:
     return " ".join("".join(ch if ch.isalnum() else " " for ch in base).lower().split())
 
 
+def _score_desc_overlap(desc_key: str, desc_i: str) -> float:
+    """Pontua a sobreposição textual entre a descrição buscada e a do insumo candidato."""
+    if not (desc_key and desc_i):
+        return 0.0
+    if desc_i == desc_key:
+        return 40.0
+    a = set(desc_key.split())
+    b = set(desc_i.split())
+    inter = len(a & b)
+    union = len(a | b) or 1
+    return 25.0 * (inter / union)
+
+
+def _score_alias_candidate(ins: dict, equip_id: str, desc_key: str) -> tuple[float, dict] | None:
+    """Pontua um insumo candidato a alias; retorna None se não elegível (não-equipamento ou sem consumo)."""
+    if str(ins.get("tipo") or "").upper() != "EQUIPAMENTO":
+        return None
+    attrs = ins.get("atributos_especificos") or {}
+    consumo = _to_positive_float_or_none(attrs.get("consumo_litros_hora"))
+    if consumo is None:
+        return None
+
+    score = 0.0
+    cod_plan = str(attrs.get("codigo_planilha") or "").upper().strip()
+    if cod_plan and cod_plan == str(equip_id or "").upper().strip():
+        score += 50.0
+    desc_i = _normalize_text_key(ins.get("descricao") or "")
+    score += _score_desc_overlap(desc_key, desc_i)
+    return score, attrs
+
+
 def _best_alias_equip_attrs(ctx: _RepoCtx, equip_id: str, descricao: str) -> dict:
     """Busca atributos de consumo em aliases quando o código principal está incompleto."""
     try:
@@ -256,26 +287,10 @@ def _best_alias_equip_attrs(ctx: _RepoCtx, equip_id: str, descricao: str) -> dic
     best_score = -1.0
     best_attrs: dict = {}
     for ins in insumos_all:
-        if str(ins.get("tipo") or "").upper() != "EQUIPAMENTO":
+        result = _score_alias_candidate(ins, equip_id, desc_key)
+        if result is None:
             continue
-        attrs = ins.get("atributos_especificos") or {}
-        consumo = _to_positive_float_or_none(attrs.get("consumo_litros_hora"))
-        if consumo is None:
-            continue
-        score = 0.0
-        cod_plan = str(attrs.get("codigo_planilha") or "").upper().strip()
-        if cod_plan and cod_plan == str(equip_id or "").upper().strip():
-            score += 50.0
-        desc_i = _normalize_text_key(ins.get("descricao") or "")
-        if desc_key and desc_i:
-            if desc_i == desc_key:
-                score += 40.0
-            else:
-                a = set(desc_key.split())
-                b = set(desc_i.split())
-                inter = len(a & b)
-                union = len(a | b) or 1
-                score += 25.0 * (inter / union)
+        score, attrs = result
         if score > best_score:
             best_score = score
             best_attrs = attrs
@@ -297,6 +312,24 @@ def _resolve_consumo_equip(atrib: dict, consumo_override_proj, consumo_override_
     if consumo_decomposicao > 0:
         return consumo_decomposicao, "VAL-EQUIP-COMB-04"
     return 0.0, "VAL-EQUIP-COMB-03"
+
+
+def _resolve_tipo_combustivel(atrib: dict, tipo_combustivel_override, consumo: float) -> str:
+    """Resolve o rótulo do tipo de combustível, com fallback 'Diesel S10' quando há consumo."""
+    tipo_comb = str(
+        tipo_combustivel_override or atrib.get("tipo_combustivel") or atrib.get("combustivel") or ""
+    ).strip()
+    if not tipo_comb and (consumo and consumo > 0):
+        tipo_comb = "Diesel S10"
+    return tipo_comb
+
+
+def _resolve_manutencao_locacao(atrib: dict, custo_base: float, horas_mes: float) -> tuple[float, float, float]:
+    """ADR-088: sub-decompõe custo_base em manutenção (horária × horas_mes) e locação (resto)."""
+    custo_manut_hora = float(atrib.get("custo_manutencao_hora", 0.0) or 0.0)
+    custo_manut = round(custo_manut_hora * horas_mes, 2)
+    custo_locacao = round(max(0.0, custo_base - custo_manut), 2)
+    return custo_manut_hora, custo_manut, custo_locacao
 
 
 def _calcular_custo_equipamento(
@@ -321,20 +354,13 @@ def _calcular_custo_equipamento(
         float(custo_comb_override) if custo_comb_override is not None else consumo * horas_mes_calculadas * preco_diesel
     )
     _atrib = insumo.get("atributos_especificos") or {}
-    _tipo_comb = str(
-        tipo_combustivel_override or _atrib.get("tipo_combustivel") or _atrib.get("combustivel") or ""
-    ).strip()
-    if not _tipo_comb and (consumo and consumo > 0):
-        _tipo_comb = "Diesel S10"
+    _tipo_comb = _resolve_tipo_combustivel(_atrib, tipo_combustivel_override, consumo)
     _rental_unit = (_atrib.get("rental_unit") or "hora_produtiva").strip().lower()
     _num_un_int = max(1, round(float(num_unidades)))
 
-    # ADR-088: sub-decomposição aluguel | manutencao por equipamento.
-    # custo_manutencao = custo_manutencao_hora × horas_mes (NEP-031 L5, já disponível).
-    # custo_locacao = custo_base − custo_manutencao (aluguel puro do ativo).
-    _custo_manut_hora = float(_atrib.get("custo_manutencao_hora", 0.0) or 0.0)
-    _custo_manut = round(_custo_manut_hora * horas_mes_calculadas, 2)
-    _custo_locacao = round(max(0.0, custo_base - _custo_manut), 2)
+    _custo_manut_hora, _custo_manut, _custo_locacao = _resolve_manutencao_locacao(
+        _atrib, custo_base, horas_mes_calculadas
+    )
 
     return (
         EquipamentoEquipeDireta(
@@ -413,6 +439,93 @@ def _build_comp_para_item(cpu: dict, prod_lookup: dict, validacoes: list) -> dic
     return comp
 
 
+def _build_funcao_missing_validacao(funcao_id: str, item_id: str) -> ValidacaoItem:
+    return ValidacaoItem(
+        codigo="VAL-EQUIP-FUNCAO",
+        status="AVISO",
+        mensagem=f"Função '{funcao_id}' não encontrada no catálogo (item {item_id}).",
+    )
+
+
+def _finalize_funcao(
+    insumo: dict,
+    insumo_f: dict,
+    sal: float,
+    he: float,
+    unit: float,
+    enc_override: Any,
+    perc_horista: float,
+    num_p_raw: float,
+) -> tuple[FuncaoEquipeDireta, float, float]:
+    """Monta o FuncaoEquipeDireta final e calcula deltas de custo base/encargos.
+
+    NEP-037 / NEP-043: custo base (sem encargos) e encargos separados por função.
+    Quando a taxa já é all-in (nota do insumo), enc_unit = 0 — evitar dupla contagem.
+    """
+    enc_field = float(enc_override) if enc_override is not None else perc_horista
+    # Taxa horária all-in (preco_unitario já inclui encargos — convenção planilha AGIS e similares).
+    # Checar tanto "nota" quanto "nota_encargos" para robustez de naming.
+    _atrib_f = insumo_f.get("atributos_especificos") or {}
+    _nota = " ".join(str(_atrib_f.get(k) or "") for k in ("nota", "nota_encargos")).lower()
+    _taxa_allin = "inclui encargos" in _nota
+    sal_base_unit = round(sal * (1.0 + float(he or 0.0)), 2)
+    enc_unit = 0.0 if _taxa_allin else round(sal * enc_field * (1.0 + float(he or 0.0)), 2)
+    # Canônico representa equipe física → int (ex: 0.5 encarregado compartilhado = 1).
+    # Custo calculado usa o coeficiente original (float) para precisão financeira.
+    funcao = FuncaoEquipeDireta(
+        funcao_id=insumo["codigo"],
+        descricao=insumo["descricao"],
+        num_pessoas=max(1, round(num_p_raw)),
+        salario_base=sal,
+        percentual_encargos=enc_field,
+        horas_extras_pct=he,
+        custo_mensal_unitario=unit,
+        custo_encargos_mensal_unitario=enc_unit,
+    )
+    return funcao, sal_base_unit * num_p_raw, enc_unit * num_p_raw
+
+
+def _process_one_funcao(
+    f: dict,
+    item_id: str,
+    item_custom: dict,
+    ctx: _RepoCtx,
+    perc_horista: float,
+    perc_mensalista: float,
+) -> tuple[FuncaoEquipeDireta | None, float, float, ValidacaoItem | None]:
+    """Processa uma função da composição.
+
+    Retorna (funcao|None, delta_custo_mo_base, delta_custo_encargos, validacao|None).
+    Quando o insumo não é encontrado, retorna (None, 0.0, 0.0, validacao).
+    """
+    insumo = ctx.repo.obter_insumo(f["funcao_id"])
+    if not insumo:
+        return None, 0.0, 0.0, _build_funcao_missing_validacao(f["funcao_id"], item_id)
+
+    func_custom = (item_custom.get("funcoes", {}) or {}).get(f["funcao_id"], {})
+    he_override = func_custom.get("horas_extras_pct", f.get("horas_extras_pct"))
+    enc_override = func_custom.get("percentual_encargos")
+    sal_override = func_custom.get("salario_base")
+    unit_override = func_custom.get("custo_mensal_unitario")
+    insumo_f: dict[str, Any] = dict(insumo)
+    insumo_f["preco_unitario"] = _resolve_preco(ctx, f["funcao_id"], float(insumo.get("preco_unitario", 0.0) or 0.0))
+    sal, he, unit = _calcular_custo_funcao(
+        insumo_f,
+        f["num_pessoas"],
+        perc_horista,
+        he_override,
+        perc_mensalista,
+        salario_override=sal_override,
+        encargo_override=enc_override,
+        custo_unitario_override=unit_override,
+    )
+    num_p_raw = float(f.get("num_pessoas", 1) or 1)
+    funcao, delta_mo_base, delta_encargos = _finalize_funcao(
+        insumo, insumo_f, sal, he, unit, enc_override, perc_horista, num_p_raw
+    )
+    return funcao, delta_mo_base, delta_encargos, None
+
+
 def _processar_funcoes_item(
     comp: dict,
     item_id: str,
@@ -433,62 +546,17 @@ def _processar_funcoes_item(
     custo_mo_base = 0.0
     custo_encargos = 0.0
     for f in comp.get("funcoes", []):
-        insumo = ctx.repo.obter_insumo(f["funcao_id"])
-        if not insumo:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-EQUIP-FUNCAO",
-                    status="AVISO",
-                    mensagem=f"Função '{f['funcao_id']}' não encontrada no catálogo (item {item_id}).",
-                )
-            )
+        funcao, delta_mo_base, delta_encargos, validacao = _process_one_funcao(
+            f, item_id, item_custom, ctx, perc_horista, perc_mensalista
+        )
+        if validacao is not None:
+            validacoes.append(validacao)
             continue
-        func_custom = (item_custom.get("funcoes", {}) or {}).get(f["funcao_id"], {})
-        he_override = func_custom.get("horas_extras_pct", f.get("horas_extras_pct"))
-        enc_override = func_custom.get("percentual_encargos")
-        sal_override = func_custom.get("salario_base")
-        unit_override = func_custom.get("custo_mensal_unitario")
-        insumo_f: dict[str, Any] = dict(insumo)
-        insumo_f["preco_unitario"] = _resolve_preco(
-            ctx, f["funcao_id"], float(insumo.get("preco_unitario", 0.0) or 0.0)
-        )
-        sal, he, unit = _calcular_custo_funcao(
-            insumo_f,
-            f["num_pessoas"],
-            perc_horista,
-            he_override,
-            perc_mensalista,
-            salario_override=sal_override,
-            encargo_override=enc_override,
-            custo_unitario_override=unit_override,
-        )
-        enc_field = float(enc_override) if enc_override is not None else perc_horista
-        num_p_raw = float(f.get("num_pessoas", 1) or 1)
-        # Taxa horária all-in (preco_unitario já inclui encargos — convenção planilha AGIS e similares).
-        # Checar tanto "nota" quanto "nota_encargos" para robustez de naming.
-        _atrib_f = insumo_f.get("atributos_especificos") or {}
-        _nota = " ".join(str(_atrib_f.get(k) or "") for k in ("nota", "nota_encargos")).lower()
-        _taxa_allin = "inclui encargos" in _nota
-        # NEP-037 / NEP-043: custo base (sem encargos) e encargos separados por função.
-        # Quando taxa já é all-in, enc_unit = 0 — evitar dupla contagem.
-        sal_base_unit = round(sal * (1.0 + float(he or 0.0)), 2)
-        enc_unit = 0.0 if _taxa_allin else round(sal * enc_field * (1.0 + float(he or 0.0)), 2)
-        # Canônico representa equipe física → int (ex: 0.5 encarregado compartilhado = 1).
-        # Custo calculado usa o coeficiente original (float) para precisão financeira.
-        funcoes_mod.append(
-            FuncaoEquipeDireta(
-                funcao_id=insumo["codigo"],
-                descricao=insumo["descricao"],
-                num_pessoas=max(1, round(num_p_raw)),
-                salario_base=sal,
-                percentual_encargos=enc_field,
-                horas_extras_pct=he,
-                custo_mensal_unitario=unit,
-                custo_encargos_mensal_unitario=enc_unit,
-            )
-        )
-        custo_mo_base += sal_base_unit * num_p_raw
-        custo_encargos += enc_unit * num_p_raw
+        # _process_one_funcao garante funcao não-None exatamente quando validacao é None.
+        assert funcao is not None
+        funcoes_mod.append(funcao)
+        custo_mo_base += delta_mo_base
+        custo_encargos += delta_encargos
     return funcoes_mod, custo_mo_base, custo_encargos
 
 
@@ -510,6 +578,102 @@ def _build_comb_validacao(equip_id: str, val_comb_code: str) -> ValidacaoItem:
     return ValidacaoItem(codigo=val_comb_code, status="OK", mensagem=None)
 
 
+def _build_equip_missing_validacao(equip_id: str, item_id: str) -> ValidacaoItem:
+    return ValidacaoItem(
+        codigo="VAL-EQUIP-EQUIP",
+        status="AVISO",
+        mensagem=f"Equipamento '{equip_id}' não encontrado no catálogo (item {item_id}).",
+    )
+
+
+def _resolve_equip_attrs_and_tipo(ctx: _RepoCtx, e: dict, equip_custom: dict, insumo: dict) -> tuple[dict, Any]:
+    """Enriquece atributos via alias (catálogos híbridos) e resolve o tipo de combustível."""
+    # Enriquecimento robusto: quando o insumo principal não traz consumo/tipo,
+    # tenta alias por codigo_planilha/descrição (catálogos híbridos AGIS/EQ-*).
+    _attrs = insumo.get("atributos_especificos") or {}
+    if _to_positive_float_or_none(_attrs.get("consumo_litros_hora")) is None:
+        alias_attrs = _best_alias_equip_attrs(ctx, e.get("equip_id", ""), insumo.get("descricao", ""))
+        if alias_attrs:
+            _attrs = {**alias_attrs, **_attrs}
+    tipo_combustivel = (
+        equip_custom.get("tipo_combustivel")
+        or e.get("tipo_combustivel")
+        or _attrs.get("tipo_combustivel")
+        or _attrs.get("combustivel")
+    )
+    return _attrs, tipo_combustivel
+
+
+def _resolve_equip_custo_mensal_override(
+    e: dict, equip_custom: dict, horas_dia: float, dias_uteis: float
+) -> float | None:
+    # ADR-108: preco_h_unitario na composição sobrepõe preco_unitario do catálogo.
+    # Armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
+    # Convertemos para custo_mensal usando as horas efetivas do regime do projeto.
+    _preco_h_comp = e.get("preco_h_unitario")
+    _custo_mensal_comp = (
+        float(_preco_h_comp) * horas_dia * dias_uteis
+        if _preco_h_comp is not None and float(_preco_h_comp) > 0
+        else None
+    )
+    return equip_custom.get("custo_mensal") or _custo_mensal_comp
+
+
+def _process_one_equipamento(
+    e: dict,
+    item_id: str,
+    item_custom: dict,
+    horas_dia: float,
+    dias_uteis: float,
+    preco_diesel: float,
+    ctx: _RepoCtx,
+) -> tuple[EquipamentoEquipeDireta | None, float, float, bool, list[ValidacaoItem]]:
+    """Processa um equipamento da composição.
+
+    Retorna (eq_mod|None, delta_custo_eq, delta_custo_comb, refinado, validacoes_a_adicionar).
+    Quando o insumo não é encontrado, eq_mod é None (chamador deve `continue`).
+    """
+    insumo = ctx.repo.obter_insumo(e["equip_id"])
+    if not insumo:
+        return None, 0.0, 0.0, False, [_build_equip_missing_validacao(e["equip_id"], item_id)]
+
+    equip_custom = item_custom.get("equipamentos", {}).get(e["equip_id"], {})
+    # Ignora overrides zerados: zero explícito não deve bloquear fallback de catálogo.
+    consumo_proj = _to_positive_float_or_none(equip_custom.get("consumo_litros_hora"))
+    if consumo_proj is None:
+        consumo_proj = _to_positive_float_or_none(e.get("consumo_litros_hora"))
+    consumo_cpu = _to_positive_float_or_none(e.get("consumo_litros_hora_estimado"))
+
+    _attrs, tipo_combustivel = _resolve_equip_attrs_and_tipo(ctx, e, equip_custom, insumo)
+
+    custo_mensal_override = _resolve_equip_custo_mensal_override(e, equip_custom, horas_dia, dias_uteis)
+    custo_comb_override = equip_custom.get("custo_combustivel_mensal")
+    refinado = consumo_proj is not None
+    num_un_raw = float(e.get("num_unidades", 1) or 1)
+    insumo_e = {
+        **insumo,
+        "atributos_especificos": _attrs,
+        "preco_unitario": _resolve_preco(ctx, e["equip_id"], float(insumo.get("preco_unitario", 0.0) or 0.0)),
+    }
+    # _calcular_custo_equipamento usa num_un_raw (float) para custo preciso.
+    # EquipamentoEquipeDireta.num_unidades arredonda para int (equipe física).
+    eq_mod, val_comb_code = _calcular_custo_equipamento(
+        insumo_e,
+        num_un_raw,
+        horas_dia,
+        dias_uteis,
+        preco_diesel,
+        consumo_proj,
+        consumo_cpu,
+        custo_mensal_override=custo_mensal_override,
+        custo_comb_override=custo_comb_override,
+        tipo_combustivel_override=tipo_combustivel,
+    )
+    delta_custo_eq = eq_mod.custo_mensal * num_un_raw  # float para custo preciso
+    delta_custo_comb = eq_mod.custo_combustivel_mensal * num_un_raw
+    return eq_mod, delta_custo_eq, delta_custo_comb, refinado, [_build_comb_validacao(e["equip_id"], val_comb_code)]
+
+
 def _processar_equipamentos_item(
     comp: dict,
     item_id: str,
@@ -527,73 +691,17 @@ def _processar_equipamentos_item(
     custo_comb = 0.0
     modo_est = "inicial"
     for e in comp.get("equipamentos", []):
-        insumo = ctx.repo.obter_insumo(e["equip_id"])
-        if not insumo:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-EQUIP-EQUIP",
-                    status="AVISO",
-                    mensagem=f"Equipamento '{e['equip_id']}' não encontrado no catálogo (item {item_id}).",
-                )
-            )
+        eq_mod, delta_custo_eq, delta_custo_comb, refinado, novas_validacoes = _process_one_equipamento(
+            e, item_id, item_custom, horas_dia, dias_uteis, preco_diesel, ctx
+        )
+        validacoes.extend(novas_validacoes)
+        if eq_mod is None:
             continue
-        equip_custom = item_custom.get("equipamentos", {}).get(e["equip_id"], {})
-        # Ignora overrides zerados: zero explícito não deve bloquear fallback de catálogo.
-        consumo_proj = _to_positive_float_or_none(equip_custom.get("consumo_litros_hora"))
-        if consumo_proj is None:
-            consumo_proj = _to_positive_float_or_none(e.get("consumo_litros_hora"))
-        consumo_cpu = _to_positive_float_or_none(e.get("consumo_litros_hora_estimado"))
-
-        # Enriquecimento robusto: quando o insumo principal não traz consumo/tipo,
-        # tenta alias por codigo_planilha/descrição (catálogos híbridos AGIS/EQ-*).
-        _attrs = insumo.get("atributos_especificos") or {}
-        if _to_positive_float_or_none(_attrs.get("consumo_litros_hora")) is None:
-            alias_attrs = _best_alias_equip_attrs(ctx, e.get("equip_id", ""), insumo.get("descricao", ""))
-            if alias_attrs:
-                _attrs = {**alias_attrs, **_attrs}
-        tipo_combustivel = (
-            equip_custom.get("tipo_combustivel")
-            or e.get("tipo_combustivel")
-            or _attrs.get("tipo_combustivel")
-            or _attrs.get("combustivel")
-        )
-        # ADR-108: preco_h_unitario na composição sobrepõe preco_unitario do catálogo.
-        # Armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
-        # Convertemos para custo_mensal usando as horas efetivas do regime do projeto.
-        _preco_h_comp = e.get("preco_h_unitario")
-        _custo_mensal_comp = (
-            float(_preco_h_comp) * horas_dia * dias_uteis
-            if _preco_h_comp is not None and float(_preco_h_comp) > 0
-            else None
-        )
-        custo_mensal_override = equip_custom.get("custo_mensal") or _custo_mensal_comp
-        custo_comb_override = equip_custom.get("custo_combustivel_mensal")
-        if consumo_proj is not None:
-            modo_est = "refinado"
-        num_un_raw = float(e.get("num_unidades", 1) or 1)
-        insumo_e = {
-            **insumo,
-            "atributos_especificos": _attrs,
-            "preco_unitario": _resolve_preco(ctx, e["equip_id"], float(insumo.get("preco_unitario", 0.0) or 0.0)),
-        }
-        # _calcular_custo_equipamento usa num_un_raw (float) para custo preciso.
-        # EquipamentoEquipeDireta.num_unidades arredonda para int (equipe física).
-        eq_mod, val_comb_code = _calcular_custo_equipamento(
-            insumo_e,
-            num_un_raw,
-            horas_dia,
-            dias_uteis,
-            preco_diesel,
-            consumo_proj,
-            consumo_cpu,
-            custo_mensal_override=custo_mensal_override,
-            custo_comb_override=custo_comb_override,
-            tipo_combustivel_override=tipo_combustivel,
-        )
         equips_mod.append(eq_mod)
-        custo_eq += eq_mod.custo_mensal * num_un_raw  # float para custo preciso
-        custo_comb += eq_mod.custo_combustivel_mensal * num_un_raw
-        validacoes.append(_build_comb_validacao(e["equip_id"], val_comb_code))
+        custo_eq += delta_custo_eq
+        custo_comb += delta_custo_comb
+        if refinado:
+            modo_est = "refinado"
     return equips_mod, custo_eq, custo_comb, modo_est
 
 
@@ -779,6 +887,26 @@ def _resolve_prod_lookup(catalogo: dict) -> dict:
     return {p.get("id"): p for p in fonte if p.get("id")}
 
 
+def _resolve_calibration_fractions(cpu: dict, prod_lookup: dict) -> tuple[float, float, float, float] | None:
+    """Resolve (C_ref, frac_mo, frac_eq, frac_diesel) a partir do PU_sbdi; None se não calibrável."""
+    prod_id = cpu.get("producao_id_ref") or ""
+    prod = prod_lookup.get(prod_id) or {}
+    C_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
+    if C_ref <= 0.0:
+        return None
+
+    sbdi = cpu.get("precos_unitarios_sbdi") or {}
+    pu_mo = float(sbdi.get("mo", 0.0) or 0.0)
+    pu_eq = float(sbdi.get("equipamentos", 0.0) or 0.0)
+    pu_diesel = float(sbdi.get("diesel", 0.0) or 0.0)
+    pu_total = pu_mo + pu_eq + pu_diesel
+    if pu_total <= 0.0:
+        return None
+
+    # Decompor pelas frações do PU_sbdi
+    return C_ref, pu_mo / pu_total, pu_eq / pu_total, pu_diesel / pu_total
+
+
 def _calibrar_custos_por_cref(
     cpu: dict,
     prod_lookup: dict,
@@ -799,28 +927,14 @@ def _calibrar_custos_por_cref(
     Retorna (custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb) calibrados.
     Sem alteração quando C_ref ausente ou insumos zerados (fallback silencioso).
     """
-    prod_id = cpu.get("producao_id_ref") or ""
-    prod = prod_lookup.get(prod_id) or {}
-    C_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
-    if C_ref <= 0.0:
+    fracs = _resolve_calibration_fractions(cpu, prod_lookup)
+    if fracs is None:
         return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
-
-    sbdi = cpu.get("precos_unitarios_sbdi") or {}
-    pu_mo = float(sbdi.get("mo", 0.0) or 0.0)
-    pu_eq = float(sbdi.get("equipamentos", 0.0) or 0.0)
-    pu_diesel = float(sbdi.get("diesel", 0.0) or 0.0)
-    pu_total = pu_mo + pu_eq + pu_diesel
-    if pu_total <= 0.0:
-        return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+    C_ref, frac_mo, frac_eq, frac_diesel = fracs
 
     # Custo total por mês calibrado = C_ref × horas_semana × SEMANAS_POR_MES
     horas_semana = horas_dia * 6  # dias_semana fixo via regime
     custo_mes_ref = C_ref * horas_semana * SEMANAS_POR_MES
-
-    # Decompor pelas frações do PU_sbdi
-    frac_mo = pu_mo / pu_total
-    frac_eq = pu_eq / pu_total
-    frac_diesel = pu_diesel / pu_total
 
     # O PU_sbdi de MO já inclui encargos (B_base × (1+enc)) — manter enc proporcional
     custo_mo_cal = custo_mes_ref * frac_mo  # inclui encargos
@@ -861,6 +975,126 @@ def _setup_dimensionamento_context(
     return perc_horista, perc_mensalista, preco_diesel, horas_dia, dias_uteis, cpu_lookup, prod_lookup, cron_lookup
 
 
+def _resolve_num_equipes_paralelas(cron: Any) -> int:
+    """ADR-091: infere o número de equipes paralelas alocadas para evitar duplicação de custos.
+
+    assigned_resources é propagado por skill-04 em modo AUTO; em MANUAL_ALLOCATION fica vazio,
+    caso em que deduzimos do max(num_equipes) na distribuição semanal do cronograma.
+    """
+    assigned_resources = getattr(cron, "assigned_resources", None) or {}
+    num_equipes_paralelas = sum(assigned_resources.values()) if assigned_resources else 1
+
+    if not num_equipes_paralelas or num_equipes_paralelas == 1:
+        dist_semanal = getattr(cron, "distribuicao_semanal", {}) or {}
+        if dist_semanal and isinstance(dist_semanal, dict):
+            values_list = list(dist_semanal.values())
+            max_num_eq = max((getattr(d, "num_equipes", 0) for d in values_list), default=1)
+            if max_num_eq > 1:
+                num_equipes_paralelas = max_num_eq
+
+    return num_equipes_paralelas
+
+
+def _resolve_permanencia_e_custo_total_ajustados(
+    team_weeks: float,
+    num_equipes_paralelas: int,
+    custo_total: float,
+    custo_mat: float,
+    custo_ocioso: float,
+    custo_mob_desmob: float,
+) -> tuple[float, float]:
+    """ADR-091: divide permanência e custo total pelo número de equipes paralelas (n_frentes).
+
+    CRÍTICO: team_weeks já vem do cronograma SOMANDO o num_equipes para cada semana
+    (ex: 3 equipes × 32 semanas vem como 96 weeks) — dividir por num_equipes obtém a
+    permanência de UMA equipe.
+    """
+    team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
+    permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
+    # custo_total_ajustado = custo total / n_frentes = custo de 1 frente (ADR-091)
+    custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
+    custo_total_final = round(
+        custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2
+    )
+    return permanencia_efetiva, custo_total_final
+
+
+def _dimensionar_item_equipe(
+    item: Any,
+    cpu: dict,
+    cron: Any,
+    comp: dict,
+    item_custom: dict,
+    ctx: _RepoCtx,
+    perc_horista: float,
+    perc_mensalista: float,
+    horas_dia: float,
+    dias_uteis: float,
+    preco_diesel: float,
+    prod_lookup: dict,
+    validacoes: list,
+) -> EquipeDireta:
+    """Dimensiona a equipe direta de um item de EAP, agregando MO/encargos/equipamentos/custos."""
+    funcoes_mod, custo_mo_base, custo_encargos = _processar_funcoes_item(
+        comp, item.item_id, item_custom, ctx, perc_horista, perc_mensalista, validacoes
+    )
+    # NEP-037: custo_mo para cron = base + encargos (custo_total inalterado)
+    custo_mo = custo_mo_base + custo_encargos
+    equips_mod, custo_eq, custo_comb, modo_est = _processar_equipamentos_item(
+        comp, item.item_id, item_custom, cpu, horas_dia, dias_uteis, preco_diesel, ctx, validacoes
+    )
+    _validar_materiais_item(comp, cpu, validacoes)
+    # custo_material_mensal é responsabilidade de etapas posteriores (skill-06+).
+    # Skill-05 apenas valida cobertura via VAL-EQUIP-MAT-01/02.
+    custo_mat = 0.0
+
+    # NEP-029/S1: calibrar custos mensais pelo custo_hora_total_referencia do catálogo.
+    # precos_unitarios_sbdi fornece as frações mo/eq/diesel já calculadas pela planilha.
+    # Sem esta calibração, os insumos individuais divergem do C_ref e o custo autônomo
+    # fica ~2.5× menor que o pool, gerando "economia negativa" espúria no painel.
+    custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb = _calibrar_custos_por_cref(
+        cpu, prod_lookup, horas_dia, custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+    )
+
+    # NEP-031 L3: custo de mob/desmob por evento de transição de recursos
+    custo_mob_desmob = _calc_custo_mob_desmob(comp, cron)
+    custo_total, ativos, custo_comb_efetivo, _fixo_mensal, team_weeks, custo_ocioso = _calc_custo_cron(
+        cron, custo_mo, custo_eq, custo_comb
+    )
+    num_equipes_paralelas = _resolve_num_equipes_paralelas(cron)
+
+    permanencia_efetiva, custo_total_final = _resolve_permanencia_e_custo_total_ajustados(
+        team_weeks, num_equipes_paralelas, custo_total, custo_mat, custo_ocioso, custo_mob_desmob
+    )
+    # NEP-037: custo_fixo_mensal usa custo_mo_base (sem encargos) — encargos ficam em custo_encargos_mensal.
+    fixo_mensal_total = round(custo_mo_base + custo_eq + custo_comb_efetivo + custo_mat, 2)
+
+    return EquipeDireta(
+        equipe_id=f"eq-{item.item_id}",
+        item_id=item.item_id,
+        cpu_id=item.cpu_id,
+        nome=f"Equipe {cpu['descricao'][:30]}",
+        num_equipes_base=num_equipes_paralelas,
+        funcoes=funcoes_mod,
+        equipamentos=equips_mod,
+        custo_mao_obra_mensal=round(custo_mo_base, 2),
+        custo_encargos_mensal=round(custo_encargos, 2),
+        custo_equipamentos_mensal=round(custo_eq, 2),
+        custo_combustivel_total_mensal=round(custo_comb_efetivo, 2),
+        custo_material_mensal=round(custo_mat, 2),
+        custo_fixo_mensal=fixo_mensal_total,
+        permanencia_meses=round(ativos / SEMANAS_POR_MES, 2),
+        permanencia_efetiva_meses=permanencia_efetiva,
+        custo_total=custo_total_final,
+        modo_estimativa=modo_est,
+        custo_ocioso_equipamentos=custo_ocioso,
+        custo_mob_desmob=custo_mob_desmob,
+        # ADR-088: sub-campos de equipamento agregados da equipe
+        custo_locacao_mensal=round(sum(e.custo_locacao_mensal * e.num_unidades for e in equips_mod), 2),
+        custo_manutencao_mensal=round(sum(e.custo_manutencao_mensal * e.num_unidades for e in equips_mod), 2),
+    )
+
+
 def _build_dimensionamento(
     canonical_in: CanonicalModel,
     inputs: dict,
@@ -882,85 +1116,21 @@ def _build_dimensionamento(
             continue
         comp = _build_comp_para_item(cpu, prod_lookup, validacoes)
         item_custom = composicao_customizada.get(item.item_id, {})
-        funcoes_mod, custo_mo_base, custo_encargos = _processar_funcoes_item(
-            comp, item.item_id, item_custom, ctx, perc_horista, perc_mensalista, validacoes
-        )
-        # NEP-037: custo_mo para cron = base + encargos (custo_total inalterado)
-        custo_mo = custo_mo_base + custo_encargos
-        equips_mod, custo_eq, custo_comb, modo_est = _processar_equipamentos_item(
-            comp, item.item_id, item_custom, cpu, horas_dia, dias_uteis, preco_diesel, ctx, validacoes
-        )
-        _validar_materiais_item(comp, cpu, validacoes)
-        # custo_material_mensal é responsabilidade de etapas posteriores (skill-06+).
-        # Skill-05 apenas valida cobertura via VAL-EQUIP-MAT-01/02.
-        custo_mat = 0.0
-
-        # NEP-029/S1: calibrar custos mensais pelo custo_hora_total_referencia do catálogo.
-        # precos_unitarios_sbdi fornece as frações mo/eq/diesel já calculadas pela planilha.
-        # Sem esta calibração, os insumos individuais divergem do C_ref e o custo autônomo
-        # fica ~2.5× menor que o pool, gerando "economia negativa" espúria no painel.
-        custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb = _calibrar_custos_por_cref(
-            cpu, prod_lookup, horas_dia, custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
-        )
-
-        # NEP-031 L3: custo de mob/desmob por evento de transição de recursos
-        custo_mob_desmob = _calc_custo_mob_desmob(comp, cron)
-        custo_total, ativos, custo_comb_efetivo, fixo_mensal, team_weeks, custo_ocioso = _calc_custo_cron(
-            cron, custo_mo, custo_eq, custo_comb
-        )
-        # ADR-091: Dividir permanência pelo número de equipes paralelas alocadas para evitar duplicação de custos
-        # assigned_resources é propagado por skill-04 em modo AUTO; em MANUAL_ALLOCATION fica vazio.
-        # Para ambos os casos, inferimos o número de equipes paralelas do cronograma:
-        # max(num_equipes) na distribuição semanal
-        assigned_resources = getattr(cron, "assigned_resources", None) or {}
-        num_equipes_paralelas = sum(assigned_resources.values()) if assigned_resources else 1
-
-        # Se assigned_resources está vazio, deduzir do cronograma (MANUAL_ALLOCATION case)
-        if not num_equipes_paralelas or num_equipes_paralelas == 1:
-            dist_semanal = getattr(cron, "distribuicao_semanal", {}) or {}
-            if dist_semanal and isinstance(dist_semanal, dict):
-                values_list = list(dist_semanal.values())
-                max_num_eq = max((getattr(d, "num_equipes", 0) for d in values_list), default=1)
-                if max_num_eq > 1:
-                    num_equipes_paralelas = max_num_eq
-
-        # CRÍTICO: team_weeks já vem do cronograma SOMANDO o num_equipes para cada semana
-        # Então se há 3 equipes × 32 semanas, vem como 96 weeks
-        # Precisamos dividir por num_equipes para obter a permanência de UMA equipe
-
-        team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
-        permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
-        # custo_total_ajustado = custo total / n_frentes = custo de 1 frente (ADR-091)
-        custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
-        custo_total_final = round(
-            custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2
-        )
-        # NEP-037: custo_fixo_mensal usa custo_mo_base (sem encargos) — encargos ficam em custo_encargos_mensal.
-        fixo_mensal_total = round(custo_mo_base + custo_eq + custo_comb_efetivo + custo_mat, 2)
         equipes.append(
-            EquipeDireta(
-                equipe_id=f"eq-{item.item_id}",
-                item_id=item.item_id,
-                cpu_id=item.cpu_id,
-                nome=f"Equipe {cpu['descricao'][:30]}",
-                num_equipes_base=num_equipes_paralelas,
-                funcoes=funcoes_mod,
-                equipamentos=equips_mod,
-                custo_mao_obra_mensal=round(custo_mo_base, 2),
-                custo_encargos_mensal=round(custo_encargos, 2),
-                custo_equipamentos_mensal=round(custo_eq, 2),
-                custo_combustivel_total_mensal=round(custo_comb_efetivo, 2),
-                custo_material_mensal=round(custo_mat, 2),
-                custo_fixo_mensal=fixo_mensal_total,
-                permanencia_meses=round(ativos / SEMANAS_POR_MES, 2),
-                permanencia_efetiva_meses=permanencia_efetiva,
-                custo_total=custo_total_final,
-                modo_estimativa=modo_est,
-                custo_ocioso_equipamentos=custo_ocioso,
-                custo_mob_desmob=custo_mob_desmob,
-                # ADR-088: sub-campos de equipamento agregados da equipe
-                custo_locacao_mensal=round(sum(e.custo_locacao_mensal * e.num_unidades for e in equips_mod), 2),
-                custo_manutencao_mensal=round(sum(e.custo_manutencao_mensal * e.num_unidades for e in equips_mod), 2),
+            _dimensionar_item_equipe(
+                item,
+                cpu,
+                cron,
+                comp,
+                item_custom,
+                ctx,
+                perc_horista,
+                perc_mensalista,
+                horas_dia,
+                dias_uteis,
+                preco_diesel,
+                prod_lookup,
+                validacoes,
             )
         )
     if not equipes:
@@ -1248,6 +1418,29 @@ def _fill_atribuicao(atribuicao: dict, mw_list: list, custo_total_contrato: floa
         atribuicao[iid] = (round(custo_total_contrato * frac, 2), tipo, frac)
 
 
+def _resolve_gap_max_e_idle_efetivo(
+    c_mob: float,
+    c_demob: float,
+    c_idle: float,
+    resource_costs_absent: bool,
+    cus_mo: float,
+    cus_locacao: float,
+) -> tuple[float, int]:
+    """Resolve o custo idle efetivo (com fallback ADR-085) e o gap_max econômico.
+
+    ADR-085: quando resource_costs não fornece taxa ociosa explícita, deriva do custo
+    fixo da própria composição — mas SOMENTE se a chave resource_costs estava ausente
+    no spec (catálogo sem custos explícitos). Se resource_costs={} foi passado
+    explicitamente, preserva o comportamento monolítico ADR-071.
+    """
+    if c_idle <= 0.0 and resource_costs_absent:
+        _c_idle_fallback = round(cus_mo + cus_locacao, 4)
+        if _c_idle_fallback > 0.0:
+            c_idle = _c_idle_fallback
+    gap_max = int(math.ceil((c_mob + c_demob) / c_idle) - 1) if c_idle > 0 else 9999
+    return c_idle, gap_max
+
+
 def _build_contrato_entry(
     tipo: str,
     items: list,
@@ -1271,8 +1464,6 @@ def _build_contrato_entry(
     resource_costs_absent: bool = False,
 ) -> RecursoContrato:
     """Constrói um RecursoContrato completo para o tipo dado."""
-    import math as _math
-
     all_weeks_sorted = sorted(week_demand.keys(), key=_week_idx)
     semana_inicio = all_weeks_sorted[0]
     semana_fim = all_weeks_sorted[-1]
@@ -1284,15 +1475,9 @@ def _build_contrato_entry(
     c_mob = float(tipo_costs.get("custo_mob_unit", 0.0))
     c_demob = float(tipo_costs.get("custo_demob_unit", 0.0))
     c_idle = float(tipo_costs.get("custo_idle_semanal_unit", 0.0))
-    # ADR-085: quando resource_costs não fornece taxa ociosa explícita, deriva do custo
-    # fixo da própria composição — mas SOMENTE se a chave resource_costs estava ausente
-    # no spec (catálogo sem custos explícitos). Se resource_costs={} foi passado
-    # explicitamente, preserva o comportamento monolítico ADR-071.
-    if c_idle <= 0.0 and resource_costs_absent:
-        _c_idle_fallback = round(cus_mo + cus_locacao, 4)
-        if _c_idle_fallback > 0.0:
-            c_idle = _c_idle_fallback
-    gap_max = int(_math.ceil((c_mob + c_demob) / c_idle) - 1) if c_idle > 0 else 9999
+    c_idle, gap_max = _resolve_gap_max_e_idle_efetivo(
+        c_mob, c_demob, c_idle, resource_costs_absent, cus_mo, cus_locacao
+    )
     cadeias = _build_perpetuation_chains(
         tipo_id=tipo,
         items=items,
@@ -1405,6 +1590,100 @@ def _build_item_tipo_map(activities: list) -> dict:
     return item_tipo_map
 
 
+def _safe_str_val(v: Any) -> str:
+    """Converte um valor potencialmente None/vazio em string limpa (sem espaços nas pontas)."""
+    return str(v or "").strip()
+
+
+def _safe_str_field(d: dict | None, key: str) -> str:
+    """Lê `d[key]` com segurança contra `d`/valor None, retornando string limpa."""
+    return _safe_str_val((d or {}).get(key))
+
+
+def _positive_qty(d: dict | None, key: str, default: float = 1.0) -> float:
+    """Lê uma quantidade numérica de `d[key]`, com fallback para `default` quando ausente/zero."""
+    return round(float((d or {}).get(key, default) or default), 4)
+
+
+def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
+    """Deriva o tipo_id fungível de uma equipe a partir da assinatura da sua composição.
+
+    CPUs iguais ou com mesma composição (funções + equipamentos + quantidades)
+    compartilham recurso sem depender de regex sobre cpu_id.
+    """
+    equip = composicao.get("equipamentos") or []
+    funcs = composicao.get("funcoes") or []
+    # Invariante do único call site: composicao sempre tem ao menos um de
+    # equipamentos/funcoes não-vazio antes de chegar aqui — guard "equip or funcs"
+    # removido por ser sempre verdadeiro nesse ponto.
+    tokens: list[str] = []
+    for f in sorted(funcs, key=lambda x: _safe_str_field(x, "funcao_id")):
+        fid = _safe_str_field(f, "funcao_id").upper()
+        qtd = _positive_qty(f, "num_pessoas")
+        if fid:
+            tokens.append(f"F:{fid}:{qtd}")
+    for e in sorted(equip, key=lambda x: _safe_str_field(x, "equip_id")):
+        eid = _safe_str_field(e, "equip_id").upper()
+        qtd = _positive_qty(e, "num_unidades")
+        if eid:
+            tokens.append(f"E:{eid}:{qtd}")
+    if tokens:
+        signature = "|".join(tokens)
+        digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
+        return f"EQUIPE-COMP-{digest}"
+    raw = _safe_str_val(cpu_id).upper()
+    return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
+
+
+def _build_cpu_prod_lookups_rcpsp(catalogo: dict) -> tuple[dict, dict]:
+    """Constrói os lookups de CPU e produção/produtividade a partir do catálogo."""
+    cpu_lookup: dict = {c["codigo"]: c for c in catalogo.get("cpus", []) if c.get("codigo")}
+    prod_lookup: dict = {
+        p.get("id") or p.get("codigo", ""): p
+        for p in (catalogo.get("producoes") or catalogo.get("produtividades") or [])
+    }
+    return cpu_lookup, prod_lookup
+
+
+def _derive_item_tipo_requerido(item: Any, sa: Any, cpu_lookup: dict, prod_lookup: dict) -> tuple[str, int] | None:
+    """Deriva (tipo_fungivel, required) para um item de EAP; None se sem composição válida."""
+    cpu = cpu_lookup.get(item.cpu_id, {})
+    prod_id = cpu.get("producao_id_ref")
+    prod = prod_lookup.get(prod_id or "", {})
+    equipe = prod.get("composicao_padrao_equipe", {}) if prod else {}
+    if not (equipe.get("equipamentos") or equipe.get("funcoes")):
+        return None
+    dist = getattr(sa, "distribuicao_semanal", None) or {}
+    required = max((int(math.ceil(float(getattr(d, "num_equipes", 0) or 0.0))) for d in dist.values()), default=1)
+    required = max(1, required)
+    tipo = _tipo_recurso_fungivel(str(item.cpu_id or ""), equipe)
+    return tipo, required
+
+
+def _collect_item_tipo_ids_and_pool_caps(
+    eap_items: Any, sched_lookup: dict, cpu_lookup: dict, prod_lookup: dict
+) -> tuple[dict[str, tuple[str, int]], dict[str, int]]:
+    """Percorre a EAP e coleta (tipo, required) por item e a capacidade de pool por tipo."""
+    sched_ids = set(sched_lookup)
+    item_tipo_ids: dict[str, tuple[str, int]] = {}
+    pool_caps: dict[str, int] = {}
+
+    for item in eap_items:
+        if item.item_id not in sched_ids:
+            continue
+        # sched_ids == set(sched_lookup) (definido acima), logo a checagem de
+        # pertinência já garante que a chave existe — sem necessidade de guard.
+        sa = sched_lookup[item.item_id]
+        resultado = _derive_item_tipo_requerido(item, sa, cpu_lookup, prod_lookup)
+        if resultado is None:
+            continue
+        tipo, required = resultado
+        item_tipo_ids[item.item_id] = (tipo, required)
+        pool_caps[tipo] = max(pool_caps.get(tipo, 0), required)
+
+    return item_tipo_ids, pool_caps
+
+
 def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -> dict | None:
     """Deriva rcpsp_spec a partir do canônico quando não fornecido nos inputs.
 
@@ -1429,61 +1708,9 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
         return None
 
     sched_lookup = {sa.activity_id: sa for sa in sched_acts}
-    sched_ids = set(sched_lookup)
+    cpu_lookup, prod_lookup = _build_cpu_prod_lookups_rcpsp(catalogo)
 
-    cpu_lookup: dict = {c["codigo"]: c for c in catalogo.get("cpus", []) if c.get("codigo")}
-    prod_lookup: dict = {
-        p.get("id") or p.get("codigo", ""): p
-        for p in (catalogo.get("producoes") or catalogo.get("produtividades") or [])
-    }
-
-    item_tipo_ids: dict[str, tuple[str, int]] = {}
-    pool_caps: dict[str, int] = {}
-
-    def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
-        equip = composicao.get("equipamentos") or []
-        funcs = composicao.get("funcoes") or []
-        # Invariante do único call site (abaixo): composicao sempre tem ao menos um de
-        # equipamentos/funcoes não-vazio antes de chegar aqui — guard "equip or funcs"
-        # removido por ser sempre verdadeiro nesse ponto.
-        tokens: list[str] = []
-        for f in sorted(funcs, key=lambda x: str((x or {}).get("funcao_id") or "")):
-            f_safe = f or {}
-            fid = str(f_safe.get("funcao_id") or "").strip().upper()
-            qtd = round(float(f_safe.get("num_pessoas", 1) or 1), 4)
-            if fid:
-                tokens.append(f"F:{fid}:{qtd}")
-        for e in sorted(equip, key=lambda x: str((x or {}).get("equip_id") or "")):
-            e_safe = e or {}
-            eid = str(e_safe.get("equip_id") or "").strip().upper()
-            qtd = round(float(e_safe.get("num_unidades", 1) or 1), 4)
-            if eid:
-                tokens.append(f"E:{eid}:{qtd}")
-        if tokens:
-            signature = "|".join(tokens)
-            digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
-            return f"EQUIPE-COMP-{digest}"
-        raw = str(cpu_id or "").strip().upper()
-        return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
-
-    for item in eap_items:
-        if item.item_id not in sched_ids:
-            continue
-        # sched_ids == set(sched_lookup) (definido acima), logo a checagem de
-        # pertinência já garante que a chave existe — sem necessidade de guard.
-        sa = sched_lookup[item.item_id]
-        cpu = cpu_lookup.get(item.cpu_id, {})
-        prod_id = cpu.get("producao_id_ref")
-        prod = prod_lookup.get(prod_id or "", {})
-        equipe = prod.get("composicao_padrao_equipe", {}) if prod else {}
-        if not (equipe.get("equipamentos") or equipe.get("funcoes")):
-            continue
-        dist = getattr(sa, "distribuicao_semanal", None) or {}
-        required = max((int(math.ceil(float(getattr(d, "num_equipes", 0) or 0.0))) for d in dist.values()), default=1)
-        required = max(1, required)
-        tipo = _tipo_recurso_fungivel(str(item.cpu_id or ""), equipe)
-        item_tipo_ids[item.item_id] = (tipo, required)
-        pool_caps[tipo] = max(pool_caps.get(tipo, 0), required)
+    item_tipo_ids, pool_caps = _collect_item_tipo_ids_and_pool_caps(eap_items, sched_lookup, cpu_lookup, prod_lookup)
 
     if not pool_caps:
         return None
@@ -1521,6 +1748,72 @@ def _setup_contratos_context(equipes: list, rcpsp_spec: dict) -> tuple:
     # False quando resource_costs={} foi passado explicitamente (retrocompatibilidade ADR-071).
     resource_costs_absent = "resource_costs" not in rcpsp_spec
     return pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs, resource_costs_absent
+
+
+def _build_contratos_por_tipo(
+    tipo_items: dict,
+    tipo_week_demand: dict,
+    pool: dict,
+    resource_costs: dict,
+    equipe_map: dict,
+    atribuicao: dict,
+    delta_max: int,
+    todas_cadeias: list,
+    resource_costs_absent: bool,
+) -> list[RecursoContrato]:
+    """Constrói um RecursoContrato por tipo de pool com machine-weeks > 0."""
+    contratos: list[RecursoContrato] = []
+    for tipo, items in tipo_items.items():
+        # tipo_items[tipo] e tipo_week_demand[tipo] são sempre populados juntos
+        # em _add_tipo_item_demand (mesmo active_weeks não-vazio), logo um tipo
+        # presente em tipo_items nunca tem week_demand vazio aqui.
+        week_demand = tipo_week_demand[tipo]
+        mw_list: list[tuple[str, int, dict]] = [(it["item_id"], it["machine_weeks"], it) for it in items]
+        total_mw = sum(mw for _, mw, _ in mw_list)
+        if total_mw == 0:
+            continue
+        tipo_costs = resource_costs.get(tipo, {})
+        if not isinstance(tipo_costs, dict):
+            tipo_costs = {}
+        contratos.append(
+            _build_tipo_contrato(
+                tipo,
+                items,
+                week_demand,
+                pool,
+                mw_list,
+                total_mw,
+                tipo_costs,
+                resource_costs,
+                equipe_map,
+                atribuicao,
+                delta_max,
+                todas_cadeias,
+                resource_costs_absent=resource_costs_absent,
+            )
+        )
+    return contratos
+
+
+def _accumulate_atribuicao_total(contratos: list[RecursoContrato]) -> dict[str, tuple[float, str, float]]:
+    """TD-1: acumula atribuição total por item sobre todos os contratos.
+
+    _fill_atribuicao sobrescreve por contrato (correto para particao_por_item).
+    Aqui somamos as contribuições de cada contrato para cada item.
+    """
+    atribuicao_total: dict[str, tuple[float, str, float]] = {}
+    for contrato in contratos:
+        for part in contrato.particao_por_item:
+            iid = part.item_id
+            custo_part = float(getattr(part, "custo_total_particionado", 0.0) or 0.0)
+            prev_custo, prev_tipo, prev_frac = atribuicao_total.get(iid, (0.0, contrato.tipo_id, 0.0))
+            novo_tipo = contrato.tipo_id if custo_part >= prev_custo else prev_tipo
+            atribuicao_total[iid] = (
+                round(prev_custo + custo_part, 2),
+                novo_tipo,
+                round(prev_frac, 6),
+            )
+    return atribuicao_total
 
 
 def _build_contratos_recurso(
@@ -1575,55 +1868,22 @@ def _build_contratos_recurso(
         horas_semana=horas_semana,
     )
 
-    contratos: list[RecursoContrato] = []
     atribuicao: dict[str, tuple[float, str, float]] = {}
     todas_cadeias: list[CadeiaPerpetuacao] = []
 
-    for tipo, items in tipo_items.items():
-        # tipo_items[tipo] e tipo_week_demand[tipo] são sempre populados juntos
-        # em _add_tipo_item_demand (mesmo active_weeks não-vazio), logo um tipo
-        # presente em tipo_items nunca tem week_demand vazio aqui.
-        week_demand = tipo_week_demand[tipo]
-        mw_list: list[tuple[str, int, dict]] = [(it["item_id"], it["machine_weeks"], it) for it in items]
-        total_mw = sum(mw for _, mw, _ in mw_list)
-        if total_mw == 0:
-            continue
-        tipo_costs = resource_costs.get(tipo, {})
-        if not isinstance(tipo_costs, dict):
-            tipo_costs = {}
-        contratos.append(
-            _build_tipo_contrato(
-                tipo,
-                items,
-                week_demand,
-                pool,
-                mw_list,
-                total_mw,
-                tipo_costs,
-                resource_costs,
-                equipe_map,
-                atribuicao,
-                delta_max,
-                todas_cadeias,
-                resource_costs_absent=resource_costs_absent,
-            )
-        )
+    contratos = _build_contratos_por_tipo(
+        tipo_items,
+        tipo_week_demand,
+        pool,
+        resource_costs,
+        equipe_map,
+        atribuicao,
+        delta_max,
+        todas_cadeias,
+        resource_costs_absent,
+    )
 
-    # TD-1: acumular atribuição total por item sobre todos os contratos.
-    # _fill_atribuicao sobrescreve por contrato (correto para particao_por_item).
-    # Aqui somamos as contribuições de cada contrato para cada item.
-    atribuicao_total: dict[str, tuple[float, str, float]] = {}
-    for contrato in contratos:
-        for part in contrato.particao_por_item:
-            iid = part.item_id
-            custo_part = float(getattr(part, "custo_total_particionado", 0.0) or 0.0)
-            prev_custo, prev_tipo, prev_frac = atribuicao_total.get(iid, (0.0, contrato.tipo_id, 0.0))
-            novo_tipo = contrato.tipo_id if custo_part >= prev_custo else prev_tipo
-            atribuicao_total[iid] = (
-                round(prev_custo + custo_part, 2),
-                novo_tipo,
-                round(prev_frac, 6),
-            )
+    atribuicao_total = _accumulate_atribuicao_total(contratos)
 
     return contratos, atribuicao_total, todas_cadeias
 
@@ -2861,6 +3121,94 @@ def _aplicar_custo_instancial(
 # ---------------------------------------------------------------------------
 
 
+def _reset_custo_inst_para_items(eq_by_id: dict, items_em_contratos: set) -> None:
+    """TD-1: reset custo_inst_* para items em contratos antes de acumular."""
+    for item_id in items_em_contratos:
+        eq = eq_by_id.get(item_id)
+        if eq is not None:
+            eq.custo_inst_mo = 0.0
+            eq.custo_inst_eq = 0.0
+            eq.custo_inst_comb = 0.0
+            eq.custo_inst_mat = 0.0
+            eq.custo_inst_mob_demob = 0.0
+
+
+def _accumulate_custo_inst_para_part(eq: EquipeDireta, part: CustoParticionadoItem) -> None:
+    """TD-1: acumula custo_inst_* sobre todos os contratos (não sobrescreve)."""
+    eq.custo_inst_mo = round((eq.custo_inst_mo or 0.0) + (part.custo_inst_mo or 0.0), 2)
+    eq.custo_inst_eq = round((eq.custo_inst_eq or 0.0) + (part.custo_inst_eq or 0.0), 2)
+    eq.custo_inst_comb = round((eq.custo_inst_comb or 0.0) + (part.custo_inst_comb or 0.0), 2)
+    eq.custo_inst_mat = round((eq.custo_inst_mat or 0.0) + (part.custo_inst_mat or 0.0), 2)
+    eq.custo_inst_mob_demob = round(
+        (eq.custo_inst_mob_demob or 0.0) + part.custo_mob_imputado + part.custo_demob_imputado,
+        2,
+    )
+
+
+def _append_reescala_validacao(
+    validacoes: list[ValidacaoItem], part: CustoParticionadoItem, desvio: float, fator_reescala: float
+) -> None:
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-DECOMP-REESCALA",
+            status="AVISO",
+            mensagem=(
+                f"Item {part.item_id}: breakdown reescalado proporcionalmente "
+                f"(desvio R$ {desvio:.2f}). Fator: {fator_reescala:.4f}"
+            ),
+        )
+    )
+
+
+def _append_invariante_falha_validacao(
+    validacoes: list[ValidacaoItem], part: CustoParticionadoItem, eq: EquipeDireta, soma: float, desvio: float
+) -> None:
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-DECOMP-INVARIANTE",
+            status="AVISO",
+            mensagem=(
+                f"Item {part.item_id}: soma decomposição (R$ {soma:,.2f}) "
+                f"≠ custo_total (R$ {eq.custo_total:,.2f}). "
+                f"Desvio: R$ {desvio:.2f} — Não foi possível reescalar (soma = 0)"
+            ),
+        )
+    )
+
+
+def _reescalar_custo_inst_se_necessario(
+    eq: EquipeDireta, part: CustoParticionadoItem, validacoes: list[ValidacaoItem]
+) -> None:
+    """ADR-106: se há desvio significativo do invariante custo_total == soma(custo_inst_*), reescala.
+
+    ADR-085: custo_total_particionado = custo_inst_mo + eq + comb + mat
+    (mob_demob já está incluído em custo_inst_mo como resíduo).
+    """
+    # _accumulate_custo_inst_para_part (chamado antes desta função) sempre
+    # atribui um float (round(...)) a estes 4 campos — nunca None aqui.
+    assert eq.custo_inst_mo is not None
+    assert eq.custo_inst_eq is not None
+    assert eq.custo_inst_comb is not None
+    assert eq.custo_inst_mat is not None
+    assert eq.custo_inst_mob_demob is not None
+    soma = eq.custo_inst_mo + eq.custo_inst_eq + eq.custo_inst_comb + eq.custo_inst_mat
+    desvio = abs(soma - eq.custo_total)
+    if desvio <= 1.0:
+        return
+
+    if soma <= 0:
+        _append_invariante_falha_validacao(validacoes, part, eq, soma, desvio)
+        return
+
+    fator_reescala = eq.custo_total / soma
+    eq.custo_inst_mo = round(eq.custo_inst_mo * fator_reescala, 2)
+    eq.custo_inst_eq = round(eq.custo_inst_eq * fator_reescala, 2)
+    eq.custo_inst_comb = round(eq.custo_inst_comb * fator_reescala, 2)
+    eq.custo_inst_mat = round(eq.custo_inst_mat * fator_reescala, 2)
+    eq.custo_inst_mob_demob = round(eq.custo_inst_mob_demob * fator_reescala, 2)
+    _append_reescala_validacao(validacoes, part, desvio, fator_reescala)
+
+
 def _enrich_equipes_com_decomposicao_instancial(
     equipes: list[EquipeDireta],
     contratos: list[RecursoContrato],
@@ -2874,16 +3222,8 @@ def _enrich_equipes_com_decomposicao_instancial(
     Mutação in-place de `equipes`. Apenas items em contratos receberão decomposição.
     """
     eq_by_id = {eq.item_id: eq for eq in equipes}
-    # TD-1: reset custo_inst_* para items em contratos antes de acumular
     items_em_contratos = {part.item_id for c in contratos for part in c.particao_por_item}
-    for item_id in items_em_contratos:
-        eq = eq_by_id.get(item_id)
-        if eq is not None:
-            eq.custo_inst_mo = 0.0
-            eq.custo_inst_eq = 0.0
-            eq.custo_inst_comb = 0.0
-            eq.custo_inst_mat = 0.0
-            eq.custo_inst_mob_demob = 0.0
+    _reset_custo_inst_para_items(eq_by_id, items_em_contratos)
 
     for contrato in contratos:
         for part in contrato.particao_por_item:
@@ -2891,54 +3231,9 @@ def _enrich_equipes_com_decomposicao_instancial(
             if eq is None:
                 continue
 
-            # TD-1: acumular custo_inst_* sobre todos os contratos (não sobrescrever)
-            eq.custo_inst_mo = round((eq.custo_inst_mo or 0.0) + (part.custo_inst_mo or 0.0), 2)
-            eq.custo_inst_eq = round((eq.custo_inst_eq or 0.0) + (part.custo_inst_eq or 0.0), 2)
-            eq.custo_inst_comb = round((eq.custo_inst_comb or 0.0) + (part.custo_inst_comb or 0.0), 2)
-            eq.custo_inst_mat = round((eq.custo_inst_mat or 0.0) + (part.custo_inst_mat or 0.0), 2)
-            eq.custo_inst_mob_demob = round(
-                (eq.custo_inst_mob_demob or 0.0) + part.custo_mob_imputado + part.custo_demob_imputado,
-                2,
-            )
-
+            _accumulate_custo_inst_para_part(eq, part)
             # Validar invariante (detecção precoce de bugs)
-            # ADR-085: custo_total_particionado = custo_inst_mo + eq + comb + mat
-            # (mob_demob já está incluído em custo_inst_mo como resíduo)
-            soma = eq.custo_inst_mo + eq.custo_inst_eq + eq.custo_inst_comb + eq.custo_inst_mat
-            desvio = abs(soma - eq.custo_total)
-
-            # ADR-106: Se há desvio significativo, reescalar proporcionalmente para garantir invariante
-            if desvio > 1.0:
-                if soma > 0:
-                    fator_reescala = eq.custo_total / soma
-                    eq.custo_inst_mo = round(eq.custo_inst_mo * fator_reescala, 2)
-                    eq.custo_inst_eq = round(eq.custo_inst_eq * fator_reescala, 2)
-                    eq.custo_inst_comb = round(eq.custo_inst_comb * fator_reescala, 2)
-                    eq.custo_inst_mat = round(eq.custo_inst_mat * fator_reescala, 2)
-                    eq.custo_inst_mob_demob = round(eq.custo_inst_mob_demob * fator_reescala, 2)
-
-                    validacoes.append(
-                        ValidacaoItem(
-                            codigo="VAL-DECOMP-REESCALA",
-                            status="AVISO",
-                            mensagem=(
-                                f"Item {part.item_id}: breakdown reescalado proporcionalmente "
-                                f"(desvio R$ {desvio:.2f}). Fator: {fator_reescala:.4f}"
-                            ),
-                        )
-                    )
-                else:
-                    validacoes.append(
-                        ValidacaoItem(
-                            codigo="VAL-DECOMP-INVARIANTE",
-                            status="AVISO",
-                            mensagem=(
-                                f"Item {part.item_id}: soma decomposição (R$ {soma:,.2f}) "
-                                f"≠ custo_total (R$ {eq.custo_total:,.2f}). "
-                                f"Desvio: R$ {desvio:.2f} — Não foi possível reescalar (soma = 0)"
-                            ),
-                        )
-                    )
+            _reescalar_custo_inst_se_necessario(eq, part, validacoes)
 
 
 # ---------------------------------------------------------------------------

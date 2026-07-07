@@ -30,12 +30,13 @@ _EBR_KEY_MAP: dict[str, str] = {
 }
 
 
-def _norm_ref_projeto_block(out: dict[str, Any], projeto_block: dict[str, Any]) -> None:
-    if not projeto_block:
-        return
+def _norm_ref_apply_nome(out: dict[str, Any], projeto_block: dict[str, Any]) -> None:
     nome = projeto_block.get("nome") or projeto_block.get("projeto")
     if nome and not isinstance(out.get("projeto"), str):
         out["projeto"] = nome
+
+
+def _norm_ref_apply_localizacao(out: dict[str, Any], projeto_block: dict[str, Any]) -> None:
     loc = projeto_block.get("localizacao")
     if loc and not out.get("localizacao"):
         out["localizacao"] = loc
@@ -44,6 +45,13 @@ def _norm_ref_projeto_block(out: dict[str, Any], projeto_block: dict[str, Any]) 
         out["coordenadas"] = loc
     elif projeto_block.get("coordenadas") and not out.get("coordenadas"):
         out["coordenadas"] = projeto_block.get("coordenadas")
+
+
+def _norm_ref_projeto_block(out: dict[str, Any], projeto_block: dict[str, Any]) -> None:
+    if not projeto_block:
+        return
+    _norm_ref_apply_nome(out, projeto_block)
+    _norm_ref_apply_localizacao(out, projeto_block)
 
 
 def _norm_ref_datas_block(out: dict[str, Any], datas_block: dict[str, Any]) -> None:
@@ -108,81 +116,110 @@ def _norm_ref_parse_atividade_duration(atividade: dict[str, Any], weeks: list[st
         return max(1, len(weeks))
 
 
+def _norm_ref_add_to_cron_index(cron_index: dict[str, dict], items: Any) -> None:
+    for c in items or []:
+        if isinstance(c, dict) and c.get("item_id"):
+            cron_index[str(c["item_id"])] = c
+
+
+def _norm_ref_build_cron_index(out: dict[str, Any]) -> dict[str, dict]:
+    """Índice spec.cronograma compacto → {item_id: {equipes}}.
+
+    duration_weeks é derivado de Q/P em skill-04 (_enrich_spec_resources_from_catalog)
+    e não deve ser armazenado na spec (seria redundante e poderia divergir).
+    """
+    cron_index: dict[str, dict] = {}
+    _norm_ref_add_to_cron_index(cron_index, out.get("cronograma_compacto"))
+    # fallback: atividades legadas
+    if not cron_index:
+        cron_legacy = out.get("cronograma") or {}
+        legacy_items = cron_legacy.get("atividades") if isinstance(cron_legacy, dict) else []
+        _norm_ref_add_to_cron_index(cron_index, legacy_items)
+    return cron_index
+
+
+def _norm_ref_build_activity_from_eap_item(item: Any, cron_index: dict[str, dict]) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    item_id = item.get("item_id")
+    if not item_id:
+        return None
+
+    cron_item = cron_index.get(str(item_id), {})
+
+    act: dict[str, Any] = {
+        "item_id": str(item_id),
+        "descricao": str(item.get("descricao") or item_id),
+        # duration_weeks=1 é placeholder; _enrich_spec_resources_from_catalog
+        # substitui pelo valor real ceil(Q / (P × n_frentes × h_sem))
+        "duration_weeks": 1,
+        "required_resources": {},
+    }
+
+    # Injetar ramp_params quando spec.cronograma tem equipes compacto
+    eq = cron_item.get("equipes")
+    if isinstance(eq, dict) and eq.get("n_max", 0) > 0:
+        act["ramp_params"] = {
+            "n_inicial": eq.get("n_inicial", 1),
+            "n_max": eq["n_max"],  # necessário para _compute_ramp_profile
+            "taxa_mobilizacao": eq.get("taxa_mobilizacao", float(eq["n_max"])),
+            "taxa_desmobilizacao": eq.get("taxa_desmobilizacao", float(eq["n_max"])),
+        }
+
+    return act
+
+
+def _norm_ref_build_activities_from_eap(out: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build activities from EAP using spec.cronograma when available."""
+    raw_eap = out.get("eap")
+    eap = raw_eap if isinstance(raw_eap, list) else []
+    cron_index = _norm_ref_build_cron_index(out)
+
+    activities: list[dict[str, Any]] = []
+    for item in eap:
+        act = _norm_ref_build_activity_from_eap_item(item, cron_index)
+        if act is not None:
+            activities.append(act)
+    return activities
+
+
+def _norm_ref_build_activity_from_atividade(atividade: Any, weeks: list[str]) -> dict[str, Any] | None:
+    if not isinstance(atividade, dict):
+        return None
+    item_id = atividade.get("item_id")
+    if not item_id:
+        return None
+    required_resources = atividade.get("required_resources")
+    if not isinstance(required_resources, dict):
+        required_resources = atividade.get("recursos") if isinstance(atividade.get("recursos"), dict) else {}
+    return {
+        "item_id": str(item_id),
+        "descricao": str(atividade.get("descricao") or item_id),
+        "duration_weeks": max(1, _norm_ref_parse_atividade_duration(atividade, weeks)),
+        "required_resources": required_resources,
+    }
+
+
+def _norm_ref_build_activities_from_atividades(atividades: list[Any], weeks: list[str]) -> list[dict[str, Any]]:
+    """Build activities from explicit atividades."""
+    activities: list[dict[str, Any]] = []
+    for atividade in atividades:
+        act = _norm_ref_build_activity_from_atividade(atividade, weeks)
+        if act is not None:
+            activities.append(act)
+    return activities
+
+
 def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> list[dict[str, Any]]:
     raw_atividades = out.get("atividades")
     atividades = raw_atividades if isinstance(raw_atividades, list) else []
 
     # If no atividades but EAP exists, build from EAP using spec.cronograma when available
     if not atividades:
-        raw_eap = out.get("eap")
-        eap = raw_eap if isinstance(raw_eap, list) else []
-
-        # Índice spec.cronograma compacto → {item_id: {equipes}}
-        # duration_weeks é derivado de Q/P em skill-04 (_enrich_spec_resources_from_catalog)
-        # e não deve ser armazenado na spec (seria redundante e poderia divergir).
-        cron_index: dict[str, dict] = {}
-        for c in out.get("cronograma_compacto") or []:
-            if isinstance(c, dict) and c.get("item_id"):
-                cron_index[str(c["item_id"])] = c
-        # fallback: atividades legadas
-        if not cron_index:
-            cron_legacy = out.get("cronograma") or {}
-            for c in (cron_legacy.get("atividades") if isinstance(cron_legacy, dict) else []) or []:
-                if isinstance(c, dict) and c.get("item_id"):
-                    cron_index[str(c["item_id"])] = c
-
-        activities: list[dict[str, Any]] = []
-        for item in eap:
-            if not isinstance(item, dict):
-                continue
-            item_id = item.get("item_id")
-            if not item_id:
-                continue
-
-            cron_item = cron_index.get(str(item_id), {})
-
-            act: dict[str, Any] = {
-                "item_id": str(item_id),
-                "descricao": str(item.get("descricao") or item_id),
-                # duration_weeks=1 é placeholder; _enrich_spec_resources_from_catalog
-                # substitui pelo valor real ceil(Q / (P × n_frentes × h_sem))
-                "duration_weeks": 1,
-                "required_resources": {},
-            }
-
-            # Injetar ramp_params quando spec.cronograma tem equipes compacto
-            eq = cron_item.get("equipes")
-            if isinstance(eq, dict) and eq.get("n_max", 0) > 0:
-                act["ramp_params"] = {
-                    "n_inicial": eq.get("n_inicial", 1),
-                    "n_max": eq["n_max"],  # necessário para _compute_ramp_profile
-                    "taxa_mobilizacao": eq.get("taxa_mobilizacao", float(eq["n_max"])),
-                    "taxa_desmobilizacao": eq.get("taxa_desmobilizacao", float(eq["n_max"])),
-                }
-
-            activities.append(act)
-        return activities
+        return _norm_ref_build_activities_from_eap(out)
 
     # Otherwise build from explicit atividades
-    activities: list[dict[str, Any]] = []
-    for atividade in atividades:  # type: ignore[union-attr]
-        if not isinstance(atividade, dict):
-            continue
-        item_id = atividade.get("item_id")
-        if not item_id:
-            continue
-        required_resources = atividade.get("required_resources")
-        if not isinstance(required_resources, dict):
-            required_resources = atividade.get("recursos") if isinstance(atividade.get("recursos"), dict) else {}
-        activities.append(
-            {
-                "item_id": str(item_id),
-                "descricao": str(atividade.get("descricao") or item_id),
-                "duration_weeks": max(1, _norm_ref_parse_atividade_duration(atividade, weeks)),
-                "required_resources": required_resources,
-            }
-        )
-    return activities
+    return _norm_ref_build_activities_from_atividades(atividades, weeks)
 
 
 def _norm_ref_build_default_rcpsp_spec(out: dict[str, Any], rcpsp_block: dict[str, Any]) -> dict[str, Any]:

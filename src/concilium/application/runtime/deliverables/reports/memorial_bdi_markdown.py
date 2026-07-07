@@ -11,14 +11,10 @@ def _brl(v: float) -> str:
     return f"R$ {v:,.2f}"
 
 
-def render_memorial_bdi_markdown(memorial: dict) -> str:
-    """Renderiza memorial BDI como Markdown estruturado com secoes e tabelas."""
-    lines: list[str] = []
-
-    # ---- Cabecalho / Meta ------------------------------------------------
+def _render_memorial_header(memorial: dict) -> list[str]:
     meta = memorial.get("meta") or {}
     gerado_em = str(meta.get("gerado_em", ""))[:19].replace("T", " ")
-    lines += [
+    return [
         "# Memorial de Cálculo — BDI e Encargos Sociais",
         "",
         f"**Projeto:** {meta.get('projeto_id', '')}",
@@ -32,10 +28,11 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
         "",
     ]
 
-    # ---- Encargos Sociais ------------------------------------------------
+
+def _render_memorial_encargos(memorial: dict) -> list[str]:
     enc_h = memorial.get("encargos_horista") or {}
     enc_m = memorial.get("encargos_mensalista") or {}
-    lines += [
+    lines = [
         "## Encargos Sociais (CLT)",
         "",
         "| Grupo | Horista CLT | Mensalista CLT |",
@@ -52,10 +49,12 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
         "---",
         "",
     ]
+    return lines
 
-    # ---- BDI por Categoria -----------------------------------------------
+
+def _render_memorial_bdi_por_categoria(memorial: dict) -> list[str]:
     bdi_cat = memorial.get("bdi_por_categoria") or {}
-    lines += [
+    lines = [
         "## BDI por Categoria de Custo",
         "",
         "| Categoria | AC | DF | R | Lucro | Overhead | Tributos | BDI Total |",
@@ -76,48 +75,56 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
         "---",
         "",
     ]
+    return lines
 
-    # ---- Decomposicao Percentual por Categoria ---------------------------
+
+def _render_memorial_decomposicao(memorial: dict) -> list[str]:
     decomp = memorial.get("decomposicao_por_categoria") or {}
-    if decomp:
-        lines += [
-            "## Decomposição do Preço de Venda",
-            "",
-            "| Categoria | Custo Direto | AC | DF | R | Lucro | ISS | CSSL | IR |",
-            "|-----------|-------------:|---:|---:|---:|------:|----:|-----:|---:|",
-        ]
-        for cat, d in decomp.items():
-            lines.append(
-                f"| {cat} | {_pct(d.get('custo_direto_pct', 0))} | "
-                f"{_pct(d.get('overhead_ac_pct', 0))} | {_pct(d.get('overhead_df_pct', 0))} | "
-                f"{_pct(d.get('overhead_r_pct', 0))} | {_pct(d.get('margem_l_pct', 0))} | "
-                f"{_pct(d.get('tributo_iss_pct', 0))} | {_pct(d.get('tributo_cssl_pct', 0))} | "
-                f"{_pct(d.get('tributo_ir_pct', 0))} |"
-            )
-        lines += ["", "---", ""]
+    if not decomp:
+        return []
+    lines = [
+        "## Decomposição do Preço de Venda",
+        "",
+        "| Categoria | Custo Direto | AC | DF | R | Lucro | ISS | CSSL | IR |",
+        "|-----------|-------------:|---:|---:|---:|------:|----:|-----:|---:|",
+    ]
+    for cat, d in decomp.items():
+        lines.append(
+            f"| {cat} | {_pct(d.get('custo_direto_pct', 0))} | "
+            f"{_pct(d.get('overhead_ac_pct', 0))} | {_pct(d.get('overhead_df_pct', 0))} | "
+            f"{_pct(d.get('overhead_r_pct', 0))} | {_pct(d.get('margem_l_pct', 0))} | "
+            f"{_pct(d.get('tributo_iss_pct', 0))} | {_pct(d.get('tributo_cssl_pct', 0))} | "
+            f"{_pct(d.get('tributo_ir_pct', 0))} |"
+        )
+    lines += ["", "---", ""]
+    return lines
 
-    # ---- Aplicacao por Item ---------------------------------------------
+
+def _render_memorial_aplicacao_por_item(memorial: dict) -> list[str]:
     aplicacao = memorial.get("aplicacao_por_item") or []
-    if aplicacao:
-        lines += [
-            "## Aplicação por Item da EAP",
-            "",
-            "| Item | Descricao | Qtd | Un | PU s/BDI | BDI | PU c/BDI | Subtotal c/BDI |",
-            "|------|-----------|----:|----|----------:|----:|----------:|---------------:|",
-        ]
-        for item in aplicacao:
-            qty = item.get("quantitativo", 0)
-            qty_str = f"{qty:,.0f}" if qty >= 1 else f"{qty:.4f}"
-            lines.append(
-                f"| {item.get('item_id', '')} | {item.get('descricao', '')} | "
-                f"{qty_str} | {item.get('unidade', '')} | "
-                f"R$ {item.get('preco_unit_sem_bdi', 0):,.4f} | {_pct(item.get('bdi_aplicado', 0))} | "
-                f"R$ {item.get('preco_unit_com_bdi', 0):,.4f} | {_brl(item.get('subtotal_com_bdi', 0))} |"
-            )
-        lines += ["", "---", ""]
+    if not aplicacao:
+        return []
+    lines = [
+        "## Aplicação por Item da EAP",
+        "",
+        "| Item | Descricao | Qtd | Un | PU s/BDI | BDI | PU c/BDI | Subtotal c/BDI |",
+        "|------|-----------|----:|----|----------:|----:|----------:|---------------:|",
+    ]
+    for item in aplicacao:
+        qty = item.get("quantitativo", 0)
+        qty_str = f"{qty:,.0f}" if qty >= 1 else f"{qty:.4f}"
+        lines.append(
+            f"| {item.get('item_id', '')} | {item.get('descricao', '')} | "
+            f"{qty_str} | {item.get('unidade', '')} | "
+            f"R$ {item.get('preco_unit_sem_bdi', 0):,.4f} | {_pct(item.get('bdi_aplicado', 0))} | "
+            f"R$ {item.get('preco_unit_com_bdi', 0):,.4f} | {_brl(item.get('subtotal_com_bdi', 0))} |"
+        )
+    lines += ["", "---", ""]
+    return lines
 
-    # ---- Resumo Financeiro ----------------------------------------------
-    lines += [
+
+def _render_memorial_resumo(memorial: dict) -> list[str]:
+    return [
         "## Síntese do Orçamento",
         "",
         "| Componente | Valor |",
@@ -131,6 +138,16 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
         "",
     ]
 
+
+def render_memorial_bdi_markdown(memorial: dict) -> str:
+    """Renderiza memorial BDI como Markdown estruturado com secoes e tabelas."""
+    lines: list[str] = []
+    lines += _render_memorial_header(memorial)
+    lines += _render_memorial_encargos(memorial)
+    lines += _render_memorial_bdi_por_categoria(memorial)
+    lines += _render_memorial_decomposicao(memorial)
+    lines += _render_memorial_aplicacao_por_item(memorial)
+    lines += _render_memorial_resumo(memorial)
     return "\n".join(lines)
 
 

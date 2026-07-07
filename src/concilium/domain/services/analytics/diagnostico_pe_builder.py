@@ -23,6 +23,41 @@ from concilium.domain.models.analytics.diagnostico_pe import (
 _CROSS_TERM_THRESHOLD = 0.05
 
 
+# ADR-082: fator efetivo η_j = fator_total = η_s · η_p · η_w
+def _eta(d: Any) -> float:
+    ft = getattr(d, "fator_total", None)
+    return float(ft) if ft is not None else float(d.eficiencia)
+
+
+# NEP-035: pesos = q_max_celula (capacidade teórica); fallback = n_j (retrocompat)
+def _weight(d: Any) -> float:
+    qmax = getattr(d, "q_max_celula", None)
+    if qmax is not None and float(qmax) > 0:
+        return float(qmax)
+    return float(d.num_equipes)
+
+
+def _compute_medias_semanais(active: list, T_weeks: int) -> dict[str, float]:
+    """Calcula as médias por semana (clima, η_s, η_p, η_w, calendário) das semanas ativas."""
+    return {
+        "clima_medio": sum(float(getattr(d, "fator_clima", _eta(d))) for d in active) / T_weeks,
+        "eta_s_medio": sum(float(getattr(d, "eta_s", 1.0)) for d in active) / T_weeks,
+        "eta_p_medio": sum(float(getattr(d, "eta_p", float(getattr(d, "fator_clima", 1.0)))) for d in active) / T_weeks,
+        "eta_w_medio": sum(float(getattr(d, "eta_w", float(d.eficiencia))) for d in active) / T_weeks,
+        "calendario_medio": sum(float(getattr(d, "fator_calendario", 1.0)) for d in active) / T_weeks,
+    }
+
+
+def _compute_cross_term(
+    p_medio: float, eta_real: float, prod_weighted: float, Q_max_total: float, T_weeks: int
+) -> tuple[float, float]:
+    """Calcula o termo cruzado (cov_np) e eps_cross (Seção 5 do modelo)."""
+    p_medio_cap = prod_weighted / T_weeks if T_weeks > 0 else p_medio
+    cov_np = p_medio_cap - p_medio * (Q_max_total / T_weeks)
+    eps_cross = eta_real - p_medio + cov_np / max(Q_max_total / T_weeks, 1e-9)
+    return cov_np, eps_cross
+
+
 def _compute_item_metrics(active: list) -> tuple[dict[str, float], bool]:
     """Calcula η_real, p_medio, cov_np, eps_cross, validade a partir das semanas ativas.
 
@@ -41,29 +76,13 @@ def _compute_item_metrics(active: list) -> tuple[dict[str, float], bool]:
     """
     N_total = sum(d.num_equipes for d in active)
 
-    # ADR-082: fator efetivo η_j = fator_total = η_s · η_p · η_w
-    def _eta(d: Any) -> float:
-        ft = getattr(d, "fator_total", None)
-        return float(ft) if ft is not None else float(d.eficiencia)
-
-    # NEP-035: pesos = q_max_celula (capacidade teórica); fallback = n_j (retrocompat)
-    def _weight(d: Any) -> float:
-        qmax = getattr(d, "q_max_celula", None)
-        if qmax is not None and float(qmax) > 0:
-            return float(qmax)
-        return float(d.num_equipes)
-
     Q_max_total = sum(_weight(d) for d in active)
     prod_weighted = sum(_eta(d) * _weight(d) for d in active)
     eta_real = prod_weighted / Q_max_total if Q_max_total > 0 else 1.0
     T_weeks = len(active)
     p_medio = sum(_eta(d) for d in active) / T_weeks
-    clima_medio = sum(float(getattr(d, "fator_clima", _eta(d))) for d in active) / T_weeks
-    # η_s e η_p médios (NEP-035) — disponíveis quando campos foram populados
-    eta_s_medio = sum(float(getattr(d, "eta_s", 1.0)) for d in active) / T_weeks
-    eta_p_medio = sum(float(getattr(d, "eta_p", float(getattr(d, "fator_clima", 1.0)))) for d in active) / T_weeks
-    eta_w_medio = sum(float(getattr(d, "eta_w", float(d.eficiencia))) for d in active) / T_weeks
-    calendario_medio = sum(float(getattr(d, "fator_calendario", 1.0)) for d in active) / T_weeks
+    medias = _compute_medias_semanais(active, T_weeks)
+    calendario_medio = medias["calendario_medio"]
     calendario_ponderado_n = (
         sum(float(getattr(d, "fator_calendario", 1.0)) * _weight(d) for d in active) / Q_max_total
         if Q_max_total > 0
@@ -71,9 +90,7 @@ def _compute_item_metrics(active: list) -> tuple[dict[str, float], bool]:
     )
     n_medio = N_total / T_weeks
     # Termo cruzado calculado a partir dos pesos de capacidade (Seção 5 do modelo)
-    p_medio_cap = prod_weighted / T_weeks if T_weeks > 0 else p_medio
-    cov_np = p_medio_cap - p_medio * (Q_max_total / T_weeks)
-    eps_cross = eta_real - p_medio + cov_np / max(Q_max_total / T_weeks, 1e-9)
+    cov_np, eps_cross = _compute_cross_term(p_medio, eta_real, prod_weighted, Q_max_total, T_weeks)
     validade = abs(cov_np / (n_medio * p_medio)) < _CROSS_TERM_THRESHOLD if n_medio * p_medio > 0 else True
     return {
         "N_total": N_total,
@@ -82,10 +99,10 @@ def _compute_item_metrics(active: list) -> tuple[dict[str, float], bool]:
         "eta_real": eta_real,
         "T_weeks": T_weeks,
         "p_medio": p_medio,
-        "clima_medio": clima_medio,
-        "eta_s_medio": eta_s_medio,
-        "eta_p_medio": eta_p_medio,
-        "eta_w_medio": eta_w_medio,
+        "clima_medio": medias["clima_medio"],
+        "eta_s_medio": medias["eta_s_medio"],
+        "eta_p_medio": medias["eta_p_medio"],
+        "eta_w_medio": medias["eta_w_medio"],
         "calendario_medio": calendario_medio,
         "calendario_ponderado_n": calendario_ponderado_n,
         "n_medio": n_medio,
@@ -287,6 +304,58 @@ def _build_explicacao_natureza_periodo(
     }
 
 
+def _resolve_active_distribuicao(equipe: Any, sa: Any) -> list | None:
+    """Retorna as semanas com equipes ativas, ou None se equipe/sa/distribuição ausentes."""
+    if not equipe or not sa or not sa.distribuicao_semanal:
+        return None
+    active = [d for d in sa.distribuicao_semanal.values() if d.num_equipes > 0]
+    return active or None
+
+
+def _build_pe_item(
+    item_id: str,
+    eap: Any,
+    metrics: dict[str, float],
+    fatores: tuple,
+    preco_venda: float,
+    custo_real: float,
+    gap_total: float,
+    validade_aprox: bool,
+    L_aplicado: float,
+    delta_l: float,
+    item_cubo_hint: dict[str, Any] | None,
+) -> DiagnosticoPEItem:
+    """Monta o DiagnosticoPEItem a partir das métricas e fatores já calculados."""
+    descricao = str(eap.descricao if eap and hasattr(eap, "descricao") else item_id)
+    cpu_id = str(eap.cpu_id if eap else "?")
+    hint = item_cubo_hint or {}
+
+    return DiagnosticoPEItem(
+        atividade_id=item_id,
+        cpu_id=cpu_id,
+        descricao=descricao[:80],
+        preco_venda=round(preco_venda, 2),
+        custo_realizado=round(custo_real, 2),
+        gap_rs=round(gap_total, 2),
+        pct_gap_sobre_venda=round(gap_total / max(preco_venda, 1.0), 4),
+        eta_real=round(metrics["eta_real"], 4),
+        p_medio_uniforme=round(metrics["p_medio"], 4),
+        cov_n_p=round(metrics["cov_np"], 6),
+        eps_cross=round(metrics["eps_cross"], 6),
+        validez_aproximacao=validade_aprox,
+        n_total=round(metrics["N_total"], 2),
+        fatores=fatores,
+        l_aplicado=round(L_aplicado, 4),
+        l_requerido=round(L_aplicado + delta_l, 4),
+        delta_l=round(delta_l, 4),
+        janela_critica_iso=hint.get("janela_critica_iso"),
+        natureza_dominante=hint.get("natureza_dominante"),
+        custo_direto_cubo_rs=float(hint.get("custo_direto_cubo_rs", 0.0) or 0.0),
+        custo_indireto_cubo_rs=float(hint.get("custo_indireto_cubo_rs", 0.0) or 0.0),
+        explicacao_janela=hint.get("explicacao_janela"),
+    )
+
+
 def _process_pe_item(
     pe: Any,
     equipe_lookup: dict,
@@ -311,44 +380,31 @@ def _process_pe_item(
     preco_venda, custo_real = _resolve_pe_prices(pe, plan, ca)
     gap_total = preco_venda - custo_real
 
-    if not equipe or not sa or not sa.distribuicao_semanal:
+    active = _resolve_active_distribuicao(equipe, sa)
+    if active is None:
         return None, False
-    active = [d for d in sa.distribuicao_semanal.values() if d.num_equipes > 0]
-    if not active:
-        return None, False
+    assert equipe is not None  # narrowed: _resolve_active_distribuicao só retorna não-None se equipe é truthy
 
     metrics, validade_aprox = _compute_item_metrics(active)
     c_fixo_semanal = (equipe.custo_mao_obra_mensal + equipe.custo_equipamentos_mensal) / SEMANAS_POR_MES
     fatores, _ = _build_gap_fatores(c_fixo_semanal, metrics, ca, canonical_in, gap_total, resultado)
 
     delta_l = _compute_recalibracao_l(gap_total, plan, T_efetivo)
-    descricao = str(eap.descricao if eap and hasattr(eap, "descricao") else item_id)
-    cpu_id = str(eap.cpu_id if eap else "?")
 
-    return DiagnosticoPEItem(
-        atividade_id=item_id,
-        cpu_id=cpu_id,
-        descricao=descricao[:80],
-        preco_venda=round(preco_venda, 2),
-        custo_realizado=round(custo_real, 2),
-        gap_rs=round(gap_total, 2),
-        pct_gap_sobre_venda=round(gap_total / max(preco_venda, 1.0), 4),
-        eta_real=round(metrics["eta_real"], 4),
-        p_medio_uniforme=round(metrics["p_medio"], 4),
-        cov_n_p=round(metrics["cov_np"], 6),
-        eps_cross=round(metrics["eps_cross"], 6),
-        validez_aproximacao=validade_aprox,
-        n_total=round(metrics["N_total"], 2),
-        fatores=fatores,
-        l_aplicado=round(L_aplicado, 4),
-        l_requerido=round(L_aplicado + delta_l, 4),
-        delta_l=round(delta_l, 4),
-        janela_critica_iso=(item_cubo_hint or {}).get("janela_critica_iso"),
-        natureza_dominante=(item_cubo_hint or {}).get("natureza_dominante"),
-        custo_direto_cubo_rs=float((item_cubo_hint or {}).get("custo_direto_cubo_rs", 0.0) or 0.0),
-        custo_indireto_cubo_rs=float((item_cubo_hint or {}).get("custo_indireto_cubo_rs", 0.0) or 0.0),
-        explicacao_janela=(item_cubo_hint or {}).get("explicacao_janela"),
-    ), not validade_aprox
+    item = _build_pe_item(
+        item_id,
+        eap,
+        metrics,
+        fatores,
+        preco_venda,
+        custo_real,
+        gap_total,
+        validade_aprox,
+        L_aplicado,
+        delta_l,
+        item_cubo_hint,
+    )
+    return item, not validade_aprox
 
 
 def _dpb_empty_relatorio(projeto_id: str) -> DiagnosticoPERelatorio:

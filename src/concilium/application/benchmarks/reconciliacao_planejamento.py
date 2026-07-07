@@ -68,6 +68,59 @@ class DisparityAnalysis:
     disparidades: list[dict[str, Any]] = field(default_factory=list)
 
 
+def _sniff_dialect(f) -> type[csv.Dialect]:
+    """Detecta o delimiter do arquivo (tab/virgula/ponto-e-virgula)."""
+    sample = f.read(4096)
+    f.seek(0)
+    return csv.Sniffer().sniff(sample, delimiters="\t,;")
+
+
+def _parse_quantidade(row: list[str]) -> float:
+    """Extrai a quantidade (coluna 3) da linha, tolerando formato pt-BR."""
+    try:
+        return float(row[3].replace(",", ".")) if len(row) > 3 else 0.0
+    except (ValueError, IndexError):
+        return 0.0
+
+
+def _parse_linha_planejamento(row: list[str], current_section: str) -> CustoPlanejamento | None:
+    """Parse de uma linha de dados de planejamento.txt, ou None se vazia/descartável.
+
+    Sem try/except aqui: todos os acessos a `row` são guardados por `len(row)`,
+    o parse de quantidade tem seu próprio try/except e `_parse_valor` nunca
+    levanta — não há exceção a capturar.
+    """
+    item_id = row[0].strip()
+    if not item_id or item_id in ("ITEM", ""):
+        return None
+
+    descricao = row[1].strip() if len(row) > 1 else ""
+    unidade = row[2].strip() if len(row) > 2 else ""
+    quantidade = _parse_quantidade(row)
+
+    # Custos estão em colunas variáveis dependendo do layout
+    # Para DIRETO: procurar padrão de valores numéricos após quantidade
+    # Para INDIRETO: o total está normalmente em uma coluna específica
+    custo = CustoPlanejamento(
+        item_id=item_id,
+        descricao=descricao,
+        quantidade=quantidade,
+        unidade=unidade,
+        tipo=current_section,
+    )
+
+    # Extrair valores do final da linha (último valor é geralmente total)
+    if len(row) >= 10:
+        # Últimas colunas geralmente têm valores numéricos
+        # Esta é uma heurística que pode precisar ajuste
+        custo.total_com_bdi = _parse_valor(row[-2])
+        custo.total_sem_bdi = _parse_valor(row[-3]) if len(row) > 3 else custo.total_com_bdi
+
+    if custo.total_com_bdi > 0 or custo.total_sem_bdi > 0:
+        return custo
+    return None
+
+
 class PlanejamentoParser:
     """Faz parse de planejamento.txt (formato TSV Excel)."""
 
@@ -77,11 +130,7 @@ class PlanejamentoParser:
         dados = {}
 
         with open(path, encoding="utf-8") as f:
-            # Detectar delimiter
-            sample = f.read(4096)
-            f.seek(0)
-            dialect = csv.Sniffer().sniff(sample, delimiters="\t,;")
-
+            dialect = _sniff_dialect(f)
             reader = csv.reader(f, dialect=dialect)
 
             # Skip cabeçalhos (linhas 1-3)
@@ -99,44 +148,9 @@ class PlanejamentoParser:
                     current_section = "INDIRETO"
                     continue
 
-                # Parse linha de dados. Sem try/except aqui: todos os acessos a `row`
-                # são guardados por `len(row)`, o parse de quantidade tem seu próprio
-                # try/except e `_parse_valor` nunca levanta — não há exceção a capturar.
-                item_id = row[0].strip()
-                if not item_id or item_id in ("ITEM", ""):
-                    continue
-
-                descricao = row[1].strip() if len(row) > 1 else ""
-                unidade = row[2].strip() if len(row) > 2 else ""
-
-                # Quantidade é complexa — pode estar em várias colunas
-                # Por enquanto, usar coluna 3
-                try:
-                    quantidade = float(row[3].replace(",", ".")) if len(row) > 3 else 0.0
-                except (ValueError, IndexError):
-                    quantidade = 0.0
-
-                # Custos estão em colunas variáveis dependendo do layout
-                # Para DIRETO: procurar padrão de valores numéricos após quantidade
-                # Para INDIRETO: o total está normalmente em uma coluna específica
-
-                custo = CustoPlanejamento(
-                    item_id=item_id,
-                    descricao=descricao,
-                    quantidade=quantidade,
-                    unidade=unidade,
-                    tipo=current_section,
-                )
-
-                # Extrair valores do final da linha (último valor é geralmente total)
-                if len(row) >= 10:
-                    # Últimas colunas geralmente têm valores numéricos
-                    # Esta é uma heurística que pode precisar ajuste
-                    custo.total_com_bdi = _parse_valor(row[-2])
-                    custo.total_sem_bdi = _parse_valor(row[-3]) if len(row) > 3 else custo.total_com_bdi
-
-                if custo.total_com_bdi > 0 or custo.total_sem_bdi > 0:
-                    dados[item_id] = custo
+                custo = _parse_linha_planejamento(row, current_section)
+                if custo is not None:
+                    dados[custo.item_id] = custo
 
         return dados
 
@@ -202,60 +216,69 @@ class ReconciliadorPlanejamento:
                     + (custo.indireto_mob or 0.0)
                 )
 
-    def _identificar_disparidades(self, analise: DisparityAnalysis) -> None:
-        """Identifica e registra disparidades."""
-        # Disparidades por item
-        todos_items = set(analise.planejamento.keys()) | set(analise.canonical_direto.keys())
+    @staticmethod
+    def _disparidade_ambos(item_id: str, planej: CustoPlanejamento, canon: float) -> dict[str, Any] | None:
+        """Disparidade para item presente em ambos planejamento e canonical, se acima do limiar."""
+        delta = canon - planej.total_sem_bdi
+        delta_pct = (delta / planej.total_sem_bdi * 100) if planej.total_sem_bdi > 0 else 0
 
-        for item_id in todos_items:
-            planej = analise.planejamento.get(item_id)
-            canon = analise.canonical_direto.get(item_id, 0.0)
+        if abs(delta) <= 1.0:  # Desvios acima de R$ 1
+            return None
+        return {
+            "item_id": item_id,
+            "descricao": planej.descricao,
+            "planejamento_sem_bdi": planej.total_sem_bdi,
+            "planejamento_com_bdi": planej.total_com_bdi,
+            "canonical": canon,
+            "delta": delta,
+            "delta_pct": delta_pct,
+            "tipo": "FALTA_PLANEJ" if canon > planej.total_sem_bdi else "SOBRA_PLANEJ",
+        }
 
-            if planej and canon:
-                delta = canon - planej.total_sem_bdi
-                delta_pct = (delta / planej.total_sem_bdi * 100) if planej.total_sem_bdi > 0 else 0
+    @staticmethod
+    def _disparidade_nao_executado(item_id: str, planej: CustoPlanejamento) -> dict[str, Any]:
+        """Disparidade para item planejado sem execução registrada no canonical."""
+        return {
+            "item_id": item_id,
+            "descricao": planej.descricao,
+            "planejamento_sem_bdi": planej.total_sem_bdi,
+            "planejamento_com_bdi": planej.total_com_bdi,
+            "canonical": 0.0,
+            "delta": -planej.total_sem_bdi,
+            "delta_pct": -100,
+            "tipo": "NAO_EXECUTADO",
+        }
 
-                if abs(delta) > 1.0:  # Desvios acima de R$ 1
-                    analise.disparidades.append(
-                        {
-                            "item_id": item_id,
-                            "descricao": planej.descricao,
-                            "planejamento_sem_bdi": planej.total_sem_bdi,
-                            "planejamento_com_bdi": planej.total_com_bdi,
-                            "canonical": canon,
-                            "delta": delta,
-                            "delta_pct": delta_pct,
-                            "tipo": "FALTA_PLANEJ" if canon > planej.total_sem_bdi else "SOBRA_PLANEJ",
-                        }
-                    )
-            elif planej and not canon:
-                analise.disparidades.append(
-                    {
-                        "item_id": item_id,
-                        "descricao": planej.descricao,
-                        "planejamento_sem_bdi": planej.total_sem_bdi,
-                        "planejamento_com_bdi": planej.total_com_bdi,
-                        "canonical": 0.0,
-                        "delta": -planej.total_sem_bdi,
-                        "delta_pct": -100,
-                        "tipo": "NAO_EXECUTADO",
-                    }
-                )
-            elif canon and not planej:
-                analise.disparidades.append(
-                    {
-                        "item_id": item_id,
-                        "descricao": "Não planejado",
-                        "planejamento_sem_bdi": 0.0,
-                        "planejamento_com_bdi": 0.0,
-                        "canonical": canon,
-                        "delta": canon,
-                        "delta_pct": float("inf"),
-                        "tipo": "NAO_PLANEJADO",
-                    }
-                )
+    @staticmethod
+    def _disparidade_nao_planejado(item_id: str, canon: float) -> dict[str, Any]:
+        """Disparidade para item executado no canonical sem planejamento correspondente."""
+        return {
+            "item_id": item_id,
+            "descricao": "Não planejado",
+            "planejamento_sem_bdi": 0.0,
+            "planejamento_com_bdi": 0.0,
+            "canonical": canon,
+            "delta": canon,
+            "delta_pct": float("inf"),
+            "tipo": "NAO_PLANEJADO",
+        }
 
-        # Totais
+    def _disparidade_para_item(self, item_id: str, analise: DisparityAnalysis) -> dict[str, Any] | None:
+        """Resolve a disparidade (se houver) para um único item_id."""
+        planej = analise.planejamento.get(item_id)
+        canon = analise.canonical_direto.get(item_id, 0.0)
+
+        if planej and canon:
+            return self._disparidade_ambos(item_id, planej, canon)
+        if planej and not canon:
+            return self._disparidade_nao_executado(item_id, planej)
+        if canon and not planej:
+            return self._disparidade_nao_planejado(item_id, canon)
+        return None
+
+    @staticmethod
+    def _calcular_totais_planejamento(analise: DisparityAnalysis) -> None:
+        """Calcula os totais agregados de planejamento por tipo (DIRETO/INDIRETO)."""
         analise.total_planej_direto_sem_bdi = sum(
             p.total_sem_bdi for p in analise.planejamento.values() if p.tipo == "DIRETO"
         )
@@ -265,6 +288,18 @@ class ReconciliadorPlanejamento:
         analise.total_planej_indireto = sum(
             p.total_com_bdi for p in analise.planejamento.values() if p.tipo == "INDIRETO"
         )
+
+    def _identificar_disparidades(self, analise: DisparityAnalysis) -> None:
+        """Identifica e registra disparidades."""
+        # Disparidades por item
+        todos_items = set(analise.planejamento.keys()) | set(analise.canonical_direto.keys())
+
+        for item_id in todos_items:
+            disparidade = self._disparidade_para_item(item_id, analise)
+            if disparidade is not None:
+                analise.disparidades.append(disparidade)
+
+        self._calcular_totais_planejamento(analise)
 
 
 def gerar_relatorio_reconciliacao(analise: DisparityAnalysis) -> str:

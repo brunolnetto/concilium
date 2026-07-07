@@ -113,6 +113,26 @@ def get_sli_diario(
     return _paginate(rows, page, page_size)
 
 
+def _filter_eq(rows: list[dict[str, Any]], field: str, value: Any) -> list[dict[str, Any]]:
+    if not value:
+        return rows
+    return [r for r in rows if r.get(field) == value]
+
+
+def _filter_min(rows: list[dict[str, Any]], field: str, min_value: float | None) -> list[dict[str, Any]]:
+    if min_value is None:
+        return rows
+    return [r for r in rows if (r.get(field) or 0.0) >= min_value]
+
+
+def _filter_fallback_rows(
+    rows: list[dict[str, Any]], skill_id: str | None, date: str | None, min_rate: float | None
+) -> list[dict[str, Any]]:
+    rows = _filter_eq(rows, "skill_id", skill_id)
+    rows = _filter_eq(rows, "date", date)
+    return _filter_min(rows, "fallback_rate", min_rate)
+
+
 @router.get(
     "/gold/fallback-rate",
     summary="Taxa de fallbacks por skill (ADR-110 patterns)",
@@ -130,12 +150,7 @@ def get_fallback_rate(
 
     agg = GoldAggregator(storage)
     rows = agg.build_fallback_rate_por_skill()
-    if skill_id:
-        rows = [r for r in rows if r.get("skill_id") == skill_id]
-    if date:
-        rows = [r for r in rows if r.get("date") == date]
-    if min_rate is not None:
-        rows = [r for r in rows if (r.get("fallback_rate") or 0.0) >= min_rate]
+    rows = _filter_fallback_rows(rows, skill_id, date, min_rate)
     return _paginate(rows, page, page_size)
 
 
@@ -160,6 +175,18 @@ def get_alertas_ativos(
 # ── Silver endpoints ──────────────────────────────────────────────────────────
 
 
+def _filter_silver_records(
+    records: list[dict[str, Any]],
+    severity: str | None,
+    fallback_type: str | None,
+    skill_id: str | None,
+) -> list[dict[str, Any]]:
+    if severity:
+        records = [r for r in records if r.get("severity") == severity.upper()]
+    records = _filter_eq(records, "fallback_type", fallback_type)
+    return _filter_eq(records, "skill_id", skill_id)
+
+
 @router.get(
     "/silver/{signal_type}",
     summary="Records Silver normalizados (com fallback_type para logs)",
@@ -177,12 +204,7 @@ def get_silver(
     if signal_type not in _SIGNAL_TYPES:
         raise HTTPException(400, detail=f"signal_type inválido: '{signal_type}'. Use: {sorted(_SIGNAL_TYPES)}")
     records = _read_silver_records(storage, signal_type)
-    if severity:
-        records = [r for r in records if r.get("severity") == severity.upper()]
-    if fallback_type:
-        records = [r for r in records if r.get("fallback_type") == fallback_type]
-    if skill_id:
-        records = [r for r in records if r.get("skill_id") == skill_id]
+    records = _filter_silver_records(records, severity, fallback_type, skill_id)
     return _paginate(records, page, page_size)
 
 

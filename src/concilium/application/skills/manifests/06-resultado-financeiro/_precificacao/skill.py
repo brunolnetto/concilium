@@ -212,41 +212,18 @@ def _as_bool(value: Any) -> bool:
     return False
 
 
-def run_precificacao_unitaria(
-    canonical_in: CanonicalModel,
-    inputs: dict[str, Any],
-    catalogo: dict[str, Any],
-    perfil: dict[str, Any],
-    catalog_session: object | None = None,  # ADR-100
-) -> SkillResult:
-    """Popula seção 'planejamento' do canônico."""
-    validacoes: list[ValidacaoItem] = []
-
-    if not canonical_in.eap:
-        validacoes.append(ValidacaoItem(codigo="VAL-PLAN-PRECONDICAO", status="ERRO", mensagem="EAP vazia"))
-        return SkillResult(canonical_in, validacoes)
-
-    cpu_lookup, insumo_lookup, prod_lookup = _build_lookups(catalogo)
-    repo = RepositorioInsumo(catalogo)
-    data_base = canonical_in.projeto.data_base_orcamento
-    overrides = _extract_overrides(inputs)
-    jurisdicao_id = inputs.get("jurisdicao_id")
-
-    # NEP-032: parâmetros para precificação bottom-up (diesel + encargos)
-    from concilium.domain.constants import ENCARGOS_CLT, ENCARGOS_MENSALISTA, PRECO_DIESEL_REFERENCIA
+def _resolve_preco_diesel_catalogo(inputs: dict[str, Any], catalogo: dict[str, Any]) -> float:
+    from concilium.domain.constants import PRECO_DIESEL_REFERENCIA
 
     preco_diesel = float(inputs.get("preco_diesel", PRECO_DIESEL_REFERENCIA))
     for _ins in catalogo.get("insumos", []):
         if _ins.get("codigo") in ("MA-DIESEL-S10", "DIESEL-S10"):
             preco_diesel = float(_ins.get("preco_unitario", preco_diesel) or preco_diesel)
             break
-    alpha_clt = float(inputs.get("percentual_encargos", ENCARGOS_CLT))
-    alpha_mensalista = float(inputs.get("percentual_encargos_mensalista", ENCARGOS_MENSALISTA))
+    return preco_diesel
 
-    bdi_aplicado = _resolve_bdi(inputs, validacoes, frac_locacao=_frac_locacao_equipamentos(canonical_in))
-    planejamento_item_overrides = inputs.get("planejamento_item_overrides", {})
-    benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
 
+def _validar_bdi_e_registrar(bdi_aplicado: dict, validacoes: list[ValidacaoItem]) -> None:
     violacoes_bdi = _validar_bdi_dentro_da_faixa(bdi_aplicado)
     if violacoes_bdi:
         validacoes.append(
@@ -259,11 +236,29 @@ def run_precificacao_unitaria(
     else:
         validacoes.append(ValidacaoItem(codigo="VAL-POL-BDI", status="OK"))
 
+
+def _process_eap_items(
+    canonical_in: CanonicalModel,
+    lookups: tuple[dict, dict, dict],
+    equipe_lookup: dict,
+    planejamento_item_overrides: Any,
+    bdi_aplicado: dict,
+    repo: RepositorioInsumo,
+    jurisdicao_id: str | None,
+    overrides: dict | None,
+    data_base: Any,
+    validacoes: list[ValidacaoItem],
+    benchmark_mode: bool,
+    preco_diesel: float,
+    alpha_clt: float,
+    alpha_mensalista: float,
+    catalog_session: object | None,
+) -> tuple[list[Planejamento], list[str], set[str], set[str]]:
+    cpu_lookup, insumo_lookup, prod_lookup = lookups
     plan_out: list[Planejamento] = []
     erros_eap: list[str] = []
     erros_insumo: set[str] = set()
     equip_sem_decomp: set[str] = set()
-    equipe_lookup = _build_equipe_lookup(canonical_in)
 
     for item in canonical_in.eap:
         _process_eap_item(
@@ -290,6 +285,16 @@ def run_precificacao_unitaria(
             catalog_session=catalog_session,  # ADR-100
         )
 
+    return plan_out, erros_eap, erros_insumo, equip_sem_decomp
+
+
+def _registrar_validacoes_pos_processamento(
+    benchmark_mode: bool,
+    erros_eap: list[str],
+    erros_insumo: set[str],
+    equip_sem_decomp: set[str],
+    validacoes: list[ValidacaoItem],
+) -> None:
     if benchmark_mode:
         validacoes.append(
             ValidacaoItem(
@@ -324,6 +329,13 @@ def run_precificacao_unitaria(
             )
         )
 
+
+def _validar_cobertura_ou_pular(
+    benchmark_mode: bool,
+    canonical_in: CanonicalModel,
+    plan_out: list[Planejamento],
+    validacoes: list[ValidacaoItem],
+) -> None:
     if benchmark_mode:
         validacoes.append(
             ValidacaoItem(
@@ -337,5 +349,63 @@ def run_precificacao_unitaria(
         )
     else:
         _validate_coverage(canonical_in, plan_out, validacoes)
+
+
+def run_precificacao_unitaria(
+    canonical_in: CanonicalModel,
+    inputs: dict[str, Any],
+    catalogo: dict[str, Any],
+    perfil: dict[str, Any],
+    catalog_session: object | None = None,  # ADR-100
+) -> SkillResult:
+    """Popula seção 'planejamento' do canônico."""
+    validacoes: list[ValidacaoItem] = []
+
+    if not canonical_in.eap:
+        validacoes.append(ValidacaoItem(codigo="VAL-PLAN-PRECONDICAO", status="ERRO", mensagem="EAP vazia"))
+        return SkillResult(canonical_in, validacoes)
+
+    lookups = _build_lookups(catalogo)
+    repo = RepositorioInsumo(catalogo)
+    data_base = canonical_in.projeto.data_base_orcamento
+    overrides = _extract_overrides(inputs)
+    jurisdicao_id = inputs.get("jurisdicao_id")
+
+    # NEP-032: parâmetros para precificação bottom-up (diesel + encargos)
+    from concilium.domain.constants import ENCARGOS_CLT, ENCARGOS_MENSALISTA
+
+    preco_diesel = _resolve_preco_diesel_catalogo(inputs, catalogo)
+    alpha_clt = float(inputs.get("percentual_encargos", ENCARGOS_CLT))
+    alpha_mensalista = float(inputs.get("percentual_encargos_mensalista", ENCARGOS_MENSALISTA))
+
+    bdi_aplicado = _resolve_bdi(inputs, validacoes, frac_locacao=_frac_locacao_equipamentos(canonical_in))
+    planejamento_item_overrides = inputs.get("planejamento_item_overrides", {})
+    benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
+
+    _validar_bdi_e_registrar(bdi_aplicado, validacoes)
+
+    equipe_lookup = _build_equipe_lookup(canonical_in)
+
+    plan_out, erros_eap, erros_insumo, equip_sem_decomp = _process_eap_items(
+        canonical_in,
+        lookups,
+        equipe_lookup,
+        planejamento_item_overrides,
+        bdi_aplicado,
+        repo,
+        jurisdicao_id,
+        overrides,
+        data_base,
+        validacoes,
+        benchmark_mode,
+        preco_diesel,
+        alpha_clt,
+        alpha_mensalista,
+        catalog_session,
+    )
+
+    _registrar_validacoes_pos_processamento(benchmark_mode, erros_eap, erros_insumo, equip_sem_decomp, validacoes)
+    _validar_cobertura_ou_pular(benchmark_mode, canonical_in, plan_out, validacoes)
+
     novo = canonical_in.model_copy(update={"planejamento": plan_out})
     return SkillResult(novo, validacoes)

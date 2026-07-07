@@ -15,6 +15,34 @@ from concilium.domain.models.analytics.cubo_pool import CelulaCombustivel, CuboC
 from concilium.domain.models.catalog.catalogo import _infer_tipo_combustivel
 
 
+def _ccb_celulas_from_equipe(equipe: Any) -> list[CelulaCombustivel]:
+    """Constrói as células de combustível de uma equipe_diretas (um equipamento por célula)."""
+    item_id = str(getattr(equipe, "item_id", "?") or "?")
+    perm = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
+    if perm <= 0:
+        return []
+
+    celulas: list[CelulaCombustivel] = []
+    for equip in getattr(equipe, "equipamentos", []) or []:
+        custo_mensal = float(getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0)
+        if custo_mensal <= 0:
+            continue
+
+        tc = getattr(equip, "tipo_combustivel", None) or _infer_tipo_combustivel(getattr(equip, "equip_id", "") or "")
+        custo_total = round(custo_mensal * perm, 2)
+
+        celulas.append(
+            CelulaCombustivel(
+                item_id=item_id,
+                semana=f"perm_{perm:.1f}m",  # granularidade: período de permanência
+                tipo_combustivel=str(tc),
+                custo=custo_total,
+                volume_litros=0.0,  # volume disponível somente quando catálogo fornece L/h
+            )
+        )
+    return celulas
+
+
 def build_cubo_combustivel_face(canonical_in: Any) -> CuboCombustivelFace:
     """Constrói CuboCombustivelFace a partir de equipes_diretas do canonical.
 
@@ -28,32 +56,8 @@ def build_cubo_combustivel_face(canonical_in: Any) -> CuboCombustivelFace:
     gerado_em = datetime.now(UTC).isoformat()
 
     celulas: list[CelulaCombustivel] = []
-
     for equipe in getattr(canonical_in, "equipes_diretas", []) or []:
-        item_id = str(getattr(equipe, "item_id", "?") or "?")
-        perm = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
-        if perm <= 0:
-            continue
-
-        for equip in getattr(equipe, "equipamentos", []) or []:
-            custo_mensal = float(getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0)
-            if custo_mensal <= 0:
-                continue
-
-            tc = getattr(equip, "tipo_combustivel", None) or _infer_tipo_combustivel(
-                getattr(equip, "equip_id", "") or ""
-            )
-            custo_total = round(custo_mensal * perm, 2)
-
-            celulas.append(
-                CelulaCombustivel(
-                    item_id=item_id,
-                    semana=f"perm_{perm:.1f}m",  # granularidade: período de permanência
-                    tipo_combustivel=str(tc),
-                    custo=custo_total,
-                    volume_litros=0.0,  # volume disponível somente quando catálogo fornece L/h
-                )
-            )
+        celulas.extend(_ccb_celulas_from_equipe(equipe))
 
     return CuboCombustivelFace(
         projeto_id=projeto_id,

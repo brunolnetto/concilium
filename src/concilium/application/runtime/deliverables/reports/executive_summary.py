@@ -60,15 +60,25 @@ def _top_levers(canonical: Any, n: int = 3) -> list[dict[str, Any]]:
     return levers[:n]
 
 
-def render_resumo_executivo(relatorio: dict[str, Any], canonical: Any | None = None) -> str:
-    """Gera o ``resumo_executivo.md`` (1 página) a partir do relatório + canônico."""
-    meta = relatorio.get("meta", {}) if isinstance(relatorio, dict) else {}
-    resumo = relatorio.get("resumo", {}) if isinstance(relatorio, dict) else {}
-    resultado = relatorio.get("RESULTADO", {}) if isinstance(relatorio, dict) else {}
+def _res_sub_dict(relatorio: dict[str, Any], key: str) -> dict:
+    """Extrai relatorio[key] com segurança (relatorio pode não ser dict)."""
+    return relatorio.get(key, {}) if isinstance(relatorio, dict) else {}
 
+
+def _res_projeto_header(meta: dict, resumo: dict) -> tuple[str, str, str]:
+    """Resolve (nome, status, periodo) do cabeçalho a partir de resumo/meta."""
     nome = resumo.get("projeto") or meta.get("projeto") or "Projeto"
     status = resumo.get("status") or "—"
     periodo = resumo.get("periodo") or ""
+    return nome, status, periodo
+
+
+def _res_header_lines(relatorio: dict[str, Any]) -> list[str]:
+    """Monta o cabeçalho + tabela de dimensionamento financeiro do resumo executivo."""
+    meta = _res_sub_dict(relatorio, "meta")
+    resumo = _res_sub_dict(relatorio, "resumo")
+    resultado = _res_sub_dict(relatorio, "RESULTADO")
+    nome, status, periodo = _res_projeto_header(meta, resumo)
 
     preco = float(resultado.get("preco_venda_total") or 0)
     custo_total = float(resultado.get("custo_total") or 0)
@@ -78,7 +88,7 @@ def render_resumo_executivo(relatorio: dict[str, Any], canonical: Any | None = N
 
     semaforo = {"VERDE": "🟢", "AMARELO": "🟡", "VERMELHO": "🔴"}.get(status_margem, "⚪")
 
-    lines: list[str] = [
+    return [
         f"# Sumário Executivo — {nome}",
         "",
         f"**Status do plano:** {status}" + (f" · **Período:** {periodo}" if periodo else ""),
@@ -94,27 +104,43 @@ def render_resumo_executivo(relatorio: dict[str, Any], canonical: Any | None = N
         "",
     ]
 
+
+def _res_criticas_lines(canonical: Any | None) -> list[str]:
+    """Monta a seção de atividades críticas do cronograma, ou [] se não houver."""
     criticas = _top_criticas(canonical, 3)
-    if criticas:
-        lines += ["## Atividades Críticas do Cronograma", ""]
-        for c in criticas:
-            interp = c["interpretacao"][:90]
-            lines.append(f"- **{c['atividade_id']}** (classe {c['classe']}) — {interp}")
-        lines.append("")
+    if not criticas:
+        return []
+    lines = ["## Atividades Críticas do Cronograma", ""]
+    for c in criticas:
+        interp = c["interpretacao"][:90]
+        lines.append(f"- **{c['atividade_id']}** (classe {c['classe']}) — {interp}")
+    lines.append("")
+    return lines
 
+
+def _res_levers_lines(canonical: Any | None) -> list[str]:
+    """Monta a seção de alavancas de viabilidade (ponto de equilíbrio), ou [] se não houver."""
     levers = _top_levers(canonical, 3)
-    if levers:
-        lines += [
-            "## Alavancas de Viabilidade (Ponto de Equilíbrio)",
-            "",
-            "| Item | Alavanca | Ganho potencial de margem |",
-            "|------|----------|--------------------------:|",
-        ]
-        for lv in levers:
-            desc = (lv["descricao"] or lv["id"])[:60]
-            lines.append(f"| {lv['item_id']} | {desc} | {_brl(lv['delta_margin'])} |")
-        lines.append("")
+    if not levers:
+        return []
+    lines = [
+        "## Alavancas de Viabilidade (Ponto de Equilíbrio)",
+        "",
+        "| Item | Alavanca | Ganho potencial de margem |",
+        "|------|----------|--------------------------:|",
+    ]
+    for lv in levers:
+        desc = (lv["descricao"] or lv["id"])[:60]
+        lines.append(f"| {lv['item_id']} | {desc} | {_brl(lv['delta_margin'])} |")
+    lines.append("")
+    return lines
 
+
+def render_resumo_executivo(relatorio: dict[str, Any], canonical: Any | None = None) -> str:
+    """Gera o ``resumo_executivo.md`` (1 página) a partir do relatório + canônico."""
+    lines = _res_header_lines(relatorio)
+    lines += _res_criticas_lines(canonical)
+    lines += _res_levers_lines(canonical)
     lines += ["---", "", "_Documento gerado automaticamente para decisores (ADR-093)._"]
     return "\n".join(lines)
 

@@ -215,6 +215,17 @@ class ConciliumService:
                 dedup.append(cid)
         return dedup
 
+    def _apply_producao_fields(self, cpu: dict[str, Any], prod: dict[str, Any]) -> None:
+        """Applies producao_horaria/equipe fields from a producao catalog entry into cpu (in-place)."""
+        if cpu.get("producao_horaria") is None and prod.get("valor_horario") is not None:
+            cpu["producao_horaria"] = prod.get("valor_horario")
+        if not cpu.get("equipe"):
+            equipe = prod.get("equipe")
+            if not isinstance(equipe, dict):
+                equipe = prod.get("composicao_padrao_equipe")
+            if isinstance(equipe, dict):
+                cpu["equipe"] = equipe
+
     def _enrich_cpu_from_producao(self, project: Any, cpu: dict[str, Any]) -> dict[str, Any]:
         """Inject producao_horaria/equipe from catalog produtividade when CPU is sparse."""
         if cpu.get("equipe") and cpu.get("producao_horaria") is not None:
@@ -228,14 +239,7 @@ class ConciliumService:
             prod = self._get_catalog_producao(catalog_id, prod_id)
             if not prod:
                 continue
-            if cpu.get("producao_horaria") is None and prod.get("valor_horario") is not None:
-                cpu["producao_horaria"] = prod.get("valor_horario")
-            if not cpu.get("equipe"):
-                equipe = prod.get("equipe")
-                if not isinstance(equipe, dict):
-                    equipe = prod.get("composicao_padrao_equipe")
-                if isinstance(equipe, dict):
-                    cpu["equipe"] = equipe
+            self._apply_producao_fields(cpu, prod)
             if cpu.get("equipe") and cpu.get("producao_horaria") is not None:
                 break
 
@@ -254,6 +258,23 @@ class ConciliumService:
                     return row
         return None
 
+    def _fetch_contexto_versions(self, contexto_id: str) -> list[Any]:
+        """Lista as versões do contexto, retornando [] em caso de falha (com log de erro)."""
+        try:
+            return self._dependencies.project_service.list_contexto_versions(contexto_id)
+        except Exception as e:
+            logger.error("Falha ao listar versões do contexto %s: %s", contexto_id, e, exc_info=True)
+            return []
+
+    def _select_contexto_version(self, versions: list[Any], contexto_version: str) -> Any:
+        """Seleciona a versão de contexto solicitada, ou a mais recente como fallback."""
+        selected = None
+        if contexto_version:
+            selected = next((v for v in versions if str(v.get("version") or "") == contexto_version), None)
+        if selected is None:
+            selected = versions[-1]
+        return selected
+
     def _resolve_project_catalog_id(self, project: Any) -> str | None:
         """Resolve current catalog id for a project via contexto version metadata."""
         meta = project.meta if isinstance(project.meta, dict) else {}
@@ -261,20 +282,12 @@ class ConciliumService:
         if not contexto_id:
             return None
 
-        try:
-            versions = self._dependencies.project_service.list_contexto_versions(contexto_id)
-        except Exception as e:
-            logger.error("Falha ao listar versões do contexto %s: %s", contexto_id, e, exc_info=True)
-            versions = []
+        versions = self._fetch_contexto_versions(contexto_id)
         if not versions:
             return contexto_id
 
         contexto_version = str(meta.get("contexto_version") or "").strip()
-        selected = None
-        if contexto_version:
-            selected = next((v for v in versions if str(v.get("version") or "") == contexto_version), None)
-        if selected is None:
-            selected = versions[-1]
+        selected = self._select_contexto_version(versions, contexto_version)
 
         catalog_id = str((selected or {}).get("catalogo_id") or "").strip()
         return catalog_id or contexto_id
@@ -786,25 +799,17 @@ class ConciliumService:
 
         return resolve_recursos_ativos_rows(canonical, granularidade, top_n)
 
-    def get_cubo_analitico_projection(
+    def _validate_cube_projection_params(
         self,
-        project_id: str,
-        *,
-        version: str | None = None,
-        face: str = "tempo_natureza",
-        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"] = "mes",
-        categoria: str | None = None,
-        componente_bdi: str | None = None,
-        atividade_id: str | None = None,
-        top_n: int = 300,
-        measure_profile: str | None = None,
-        aggregation_mode: str | None = None,
-        abc_threshold_a: float = 0.80,
-        abc_threshold_b: float = 0.95,
-    ) -> dict[str, Any]:
-        """ADR-069: Projeções navegáveis do cubo para UX iterativa de filtros."""
-        # Validate parameters early — before loading canonical, so callers get
-        # immediate errors on invalid face/granularidade regardless of project state.
+        contract: dict[str, Any],
+        face: str,
+        granularidade: str,
+        categoria: str | None,
+        componente_bdi: str | None,
+        abc_threshold_a: float,
+        abc_threshold_b: float,
+    ) -> None:
+        """Valida os parâmetros básicos de uma projeção do cubo analítico (levanta ValueError se inválidos)."""
         allowed_faces = {
             "tempo_natureza",
             "tempo_componente",
@@ -815,8 +820,6 @@ class ConciliumService:
             "s_curve_custo",
             "recursos_ativos_tempo",
         }
-        contract = self.get_cubo_projection_contract()
-        face_specs = contract["faces"]
         allowed_granularidade = set(contract["granularidades"])
         allowed_categoria = {"mao_obra", "equipamento", "diesel", "material"}
         allowed_componentes = {
@@ -832,8 +835,6 @@ class ConciliumService:
             "tributo_cssl",
             "tributo_ir",
         }
-        allowed_measure_profile = set(contract["measure_profiles"])
-        allowed_aggregation_mode = set(contract["aggregation_modes"])
         if face not in allowed_faces:
             raise ValueError(f"Face de projeção não suportada: {face}")
         if granularidade not in allowed_granularidade:
@@ -845,6 +846,17 @@ class ConciliumService:
         if not (0.0 < abc_threshold_a < abc_threshold_b < 1.0):
             raise ValueError("Thresholds ABC inválidos: use 0 < a < b < 1")
 
+    def _resolve_measure_and_aggregation(
+        self,
+        contract: dict[str, Any],
+        face_specs: dict[str, Any],
+        face: str,
+        measure_profile: str | None,
+        aggregation_mode: str | None,
+    ) -> tuple[str, str]:
+        """Resolve e valida measure_profile/aggregation_mode contra o contrato global e o da face."""
+        allowed_measure_profile = set(contract["measure_profiles"])
+        allowed_aggregation_mode = set(contract["aggregation_modes"])
         face_measure_profiles_list = list(face_specs[face]["measure_profiles"])
         face_aggregation_modes_list = list(face_specs[face]["aggregation_modes"])
         face_measure_profiles = set(face_measure_profiles_list)
@@ -859,22 +871,37 @@ class ConciliumService:
             raise ValueError(f"Measure profile inválido para a face: {resolved_measure_profile} em {face}")
         if resolved_aggregation_mode not in face_aggregation_modes:
             raise ValueError(f"Aggregation mode inválido para a face: {resolved_aggregation_mode} em {face}")
+        return resolved_measure_profile, resolved_aggregation_mode
 
+    def _load_canonical_and_cubo(self, project_id: str, version: str | None) -> tuple[Any, str | None, Any]:
+        """Carrega o canônico da versão e retorna (canonical, resolved_version, cubo_analitico)."""
         canonical, resolved_version = self._load_canonical_for_version(project_id, version)
         if canonical is None:
-            return {
-                "version": resolved_version,
-                "face": face,
-                "granularidade": granularidade,
-                "rows": [],
-                "filtros_aplicados": {},
-            }
+            return None, resolved_version, None
         cubo = getattr(canonical, "cubo_analitico", None)
         if cubo is None:
             from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
 
             cubo = CuboAnaliticoBuilder().build(canonical)
+        return canonical, resolved_version, cubo
 
+    def _build_cube_projection_result(
+        self,
+        canonical: Any,
+        cubo: Any,
+        face: str,
+        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
+        categoria: str | None,
+        componente_bdi: str | None,
+        atividade_id: str | None,
+        top_n: int,
+        abc_threshold_a: float,
+        abc_threshold_b: float,
+        resolved_version: str | None,
+        resolved_measure_profile: str,
+        resolved_aggregation_mode: str,
+    ) -> dict[str, Any]:
+        """Filtra o cubo, monta o payload de projeção e monta o resultado final da API."""
         bounded_top_n = max(1, min(int(top_n), 2000))
         cubo_filtrado = cubo.slice(categoria=categoria, atividade_id=atividade_id, componente_bdi=componente_bdi)
 
@@ -921,6 +948,60 @@ class ConciliumService:
             },
             "rows": rows,
         }
+
+    def get_cubo_analitico_projection(
+        self,
+        project_id: str,
+        *,
+        version: str | None = None,
+        face: str = "tempo_natureza",
+        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"] = "mes",
+        categoria: str | None = None,
+        componente_bdi: str | None = None,
+        atividade_id: str | None = None,
+        top_n: int = 300,
+        measure_profile: str | None = None,
+        aggregation_mode: str | None = None,
+        abc_threshold_a: float = 0.80,
+        abc_threshold_b: float = 0.95,
+    ) -> dict[str, Any]:
+        """ADR-069: Projeções navegáveis do cubo para UX iterativa de filtros."""
+        # Validate parameters early — before loading canonical, so callers get
+        # immediate errors on invalid face/granularidade regardless of project state.
+        contract = self.get_cubo_projection_contract()
+        face_specs = contract["faces"]
+        self._validate_cube_projection_params(
+            contract, face, granularidade, categoria, componente_bdi, abc_threshold_a, abc_threshold_b
+        )
+        resolved_measure_profile, resolved_aggregation_mode = self._resolve_measure_and_aggregation(
+            contract, face_specs, face, measure_profile, aggregation_mode
+        )
+
+        canonical, resolved_version, cubo = self._load_canonical_and_cubo(project_id, version)
+        if canonical is None:
+            return {
+                "version": resolved_version,
+                "face": face,
+                "granularidade": granularidade,
+                "rows": [],
+                "filtros_aplicados": {},
+            }
+
+        return self._build_cube_projection_result(
+            canonical,
+            cubo,
+            face,
+            granularidade,
+            categoria,
+            componente_bdi,
+            atividade_id,
+            top_n,
+            abc_threshold_a,
+            abc_threshold_b,
+            resolved_version,
+            resolved_measure_profile,
+            resolved_aggregation_mode,
+        )
 
     # ADR-054: Workforce Mobilization Policy methods
 

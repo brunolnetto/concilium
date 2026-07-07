@@ -96,6 +96,129 @@ class ExploreResult:
     error: str | None = None
 
 
+def _explore_cpsat(
+    dag: ActivityDAG,
+    pool: ResourcePool,
+    deadline_weeks: int,
+    score_deadline: int,
+    strategy: SchedulingStrategy | None,
+) -> list[ExploreResult]:
+    try:
+        from .cpsat_scheduler import CpSatScheduler  # lazy — avoids import cost
+
+        timeout = float(strategy.timeout_seconds) if strategy and strategy.timeout_seconds else 60.0
+        # Horizonte generoso: deadline é META (avaliada via quality_score), não
+        # restrição rígida. Σ durações garante viabilidade para qualquer DAG;
+        # caminho crítico que excede o deadline é reportado, não causa INFEASIBLE.
+        _sum_dur = sum(int(getattr(a, "duration_weeks", 0) or 0) for a in dag.activities)
+        horizon = max(deadline_weeks, _sum_dur + deadline_weeks)
+        cpsat = CpSatScheduler(timeout_seconds=timeout, horizon_weeks=horizon)
+        sched = cpsat.schedule(dag=dag, pool=pool)
+        if sched.feasible:
+            score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+            _log.info(
+                "explore_schedules: CP-SAT feasible makespan=%dw quality=%.4f",
+                sched.makespan,
+                score,
+            )
+            _span_event(
+                "scheduling.solution.found",
+                {
+                    "algorithm": "CP-SAT",
+                    "makespan_weeks": sched.makespan,
+                    "quality_score": round(score, 4),
+                },
+            )
+            return [ExploreResult("CP-SAT", sched, score)]
+        _span_event("scheduling.solution.failed", {"algorithm": "CP-SAT", "reason": "infeasible"})
+        raise ScheduleError(
+            "CP-SAT solver não encontrou solução viável dentro do horizonte configurado. "
+            f"Verifique restrições de precedência e disponibilidade do pool "
+            f"(deadline={deadline_weeks}w, horizon={horizon}w)."
+        )
+    except ScheduleError:
+        raise
+    except Exception as exc:
+        _log.warning("CP-SAT solver falhou com erro inesperado", exc_info=True)
+        raise ScheduleError(f"CP-SAT solver falhou com erro inesperado: {exc}") from exc
+
+
+def _explore_lns(
+    dag: ActivityDAG,
+    pool: ResourcePool,
+    score_deadline: int,
+    initial_lambdas: dict | None,
+) -> list[ExploreResult]:
+    try:
+        from concilium.domain.services.planning.matching_oracle import MatchingOracle
+
+        from .lns_scheduler import LnsScheduler  # lazy import
+
+        oracle = MatchingOracle(mob_costs={})
+        lns = LnsScheduler(oracle=oracle, initial_lambdas=initial_lambdas or None)
+        sched = lns.schedule(dag=dag, pool=pool)
+        if sched.feasible:
+            score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+            _log.info(
+                "explore_schedules: LNS feasible makespan=%dw quality=%.4f",
+                sched.makespan,
+                score,
+            )
+            _span_event(
+                "scheduling.solution.found",
+                {
+                    "algorithm": "LNS",
+                    "makespan_weeks": sched.makespan,
+                    "quality_score": round(score, 4),
+                },
+            )
+            return [ExploreResult("LNS", sched, score)]
+        raise ScheduleError(
+            "LNS solver não encontrou solução viável. Verifique restrições de precedência e disponibilidade do pool."
+        )
+    except ScheduleError:
+        raise
+    except Exception as exc:
+        raise ScheduleError(f"LNS solver falhou com erro inesperado: {exc}") from exc
+
+
+def _explore_serial(
+    activities: list[Activity],
+    dag: ActivityDAG,
+    pool: ResourcePool,
+    deadline_weeks: int,
+    score_deadline: int,
+    heuristics: list[str] | None,
+    top_n: int,
+) -> list[ExploreResult]:
+    if heuristics is None:
+        heuristics = ["MINSLK", "LPT", "MAXRES", "ES", "GR"]
+
+    results: list[ExploreResult] = []
+    for heuristic in heuristics:
+        try:
+            scheduler = SerialScheduler(priority_rule=heuristic)
+            sched = scheduler.schedule(
+                activities=activities,
+                dag=dag,
+                pool=pool,
+                deadline_weeks=deadline_weeks,
+            )
+            score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+            results.append(
+                ExploreResult(
+                    heuristic=heuristic,
+                    schedule=sched,
+                    quality_score=score,
+                )
+            )
+        except Exception as e:
+            _log.warning("Heurística %s falhou (infeasible ou erro): %s", heuristic, e, exc_info=True)
+
+    results.sort(key=lambda r: (-r.quality_score, r.schedule.makespan))
+    return results[:top_n]
+
+
 def explore_schedules(
     activities: list[Activity],
     dag: ActivityDAG,
@@ -149,79 +272,11 @@ def explore_schedules(
 
     # ── CP-SAT exact solver (ADR-075 Mode A) ─────────────────────────────────
     if algorithm == "CP-SAT":
-        try:
-            from .cpsat_scheduler import CpSatScheduler  # lazy — avoids import cost
-
-            timeout = float(strategy.timeout_seconds) if strategy and strategy.timeout_seconds else 60.0
-            # Horizonte generoso: deadline é META (avaliada via quality_score), não
-            # restrição rígida. Σ durações garante viabilidade para qualquer DAG;
-            # caminho crítico que excede o deadline é reportado, não causa INFEASIBLE.
-            _sum_dur = sum(int(getattr(a, "duration_weeks", 0) or 0) for a in dag.activities)
-            horizon = max(deadline_weeks, _sum_dur + deadline_weeks)
-            cpsat = CpSatScheduler(timeout_seconds=timeout, horizon_weeks=horizon)
-            sched = cpsat.schedule(dag=dag, pool=pool)
-            if sched.feasible:
-                score = sched.metrics.quality_score(deadline_weeks=score_deadline)
-                _log.info(
-                    "explore_schedules: CP-SAT feasible makespan=%dw quality=%.4f",
-                    sched.makespan,
-                    score,
-                )
-                _span_event(
-                    "scheduling.solution.found",
-                    {
-                        "algorithm": "CP-SAT",
-                        "makespan_weeks": sched.makespan,
-                        "quality_score": round(score, 4),
-                    },
-                )
-                return [ExploreResult("CP-SAT", sched, score)]
-            _span_event("scheduling.solution.failed", {"algorithm": "CP-SAT", "reason": "infeasible"})
-            raise ScheduleError(
-                "CP-SAT solver não encontrou solução viável dentro do horizonte configurado. "
-                f"Verifique restrições de precedência e disponibilidade do pool "
-                f"(deadline={deadline_weeks}w, horizon={horizon}w)."
-            )
-        except ScheduleError:
-            raise
-        except Exception as exc:
-            _log.warning("CP-SAT solver falhou com erro inesperado", exc_info=True)
-            raise ScheduleError(f"CP-SAT solver falhou com erro inesperado: {exc}") from exc
+        return _explore_cpsat(dag, pool, deadline_weeks, score_deadline, strategy)
 
     # ── LNS Lagrangian + SSGS (ADR-075 Mode B) ───────────────────────────────
     elif algorithm == "LNS":
-        try:
-            from concilium.domain.services.planning.matching_oracle import MatchingOracle
-
-            from .lns_scheduler import LnsScheduler  # lazy import
-
-            oracle = MatchingOracle(mob_costs={})
-            lns = LnsScheduler(oracle=oracle, initial_lambdas=initial_lambdas or None)
-            sched = lns.schedule(dag=dag, pool=pool)
-            if sched.feasible:
-                score = sched.metrics.quality_score(deadline_weeks=score_deadline)
-                _log.info(
-                    "explore_schedules: LNS feasible makespan=%dw quality=%.4f",
-                    sched.makespan,
-                    score,
-                )
-                _span_event(
-                    "scheduling.solution.found",
-                    {
-                        "algorithm": "LNS",
-                        "makespan_weeks": sched.makespan,
-                        "quality_score": round(score, 4),
-                    },
-                )
-                return [ExploreResult("LNS", sched, score)]
-            raise ScheduleError(
-                "LNS solver não encontrou solução viável. "
-                "Verifique restrições de precedência e disponibilidade do pool."
-            )
-        except ScheduleError:
-            raise
-        except Exception as exc:
-            raise ScheduleError(f"LNS solver falhou com erro inesperado: {exc}") from exc
+        return _explore_lns(dag, pool, score_deadline, initial_lambdas)
 
     # ── SerialScheduler SGS ───────────────────────────────────────────────────
     # Reached only when algorithm is neither CP-SAT nor LNS (direct SerialScheduler
@@ -230,32 +285,7 @@ def explore_schedules(
     if algorithm not in ("CP-SAT", "LNS", "SerialScheduler"):
         # Explicit non-standard algorithm name — treat as priority rule
         _log.debug("explore_schedules: SerialScheduler path (algorithm=%s)", algorithm)
-    if heuristics is None:
-        heuristics = ["MINSLK", "LPT", "MAXRES", "ES", "GR"]
-
-    results: list[ExploreResult] = []
-    for heuristic in heuristics:
-        try:
-            scheduler = SerialScheduler(priority_rule=heuristic)
-            sched = scheduler.schedule(
-                activities=activities,
-                dag=dag,
-                pool=pool,
-                deadline_weeks=deadline_weeks,
-            )
-            score = sched.metrics.quality_score(deadline_weeks=score_deadline)
-            results.append(
-                ExploreResult(
-                    heuristic=heuristic,
-                    schedule=sched,
-                    quality_score=score,
-                )
-            )
-        except Exception as e:
-            _log.warning("Heurística %s falhou (infeasible ou erro): %s", heuristic, e, exc_info=True)
-
-    results.sort(key=lambda r: (-r.quality_score, r.schedule.makespan))
-    return results[:top_n]
+    return _explore_serial(activities, dag, pool, deadline_weeks, score_deadline, heuristics, top_n)
 
 
 # Default algorithms exposed by compare_all_algorithms().
@@ -301,58 +331,73 @@ def compare_all_algorithms(
 
     for algorithm in algos:
         if algorithm == "CP-SAT":
-            try:
-                from .cpsat_scheduler import CpSatScheduler  # lazy
-
-                cpsat = CpSatScheduler(timeout_seconds=60.0, horizon_weeks=deadline_weeks)
-                sched = cpsat.schedule(dag=dag, pool=pool)
-                if sched.feasible:
-                    score = sched.metrics.quality_score(deadline_weeks=score_deadline)
-                    results.append(ExploreResult("CP-SAT", sched, score))
-                else:
-                    results.append(ExploreResult("CP-SAT", sched, 0.0, error="infeasible"))
-            except Exception as exc:
-                _log.warning("CP-SAT falhou em compare_all_algorithms", exc_info=True)
-                results.append(ExploreResult("CP-SAT", _empty_output("CP-SAT"), 0.0, error=str(exc)))
-
+            results.append(_compare_cpsat(dag, pool, deadline_weeks, score_deadline))
         elif algorithm == "LNS":
-            try:
-                from concilium.domain.services.planning.matching_oracle import MatchingOracle
-
-                from .lns_scheduler import LnsScheduler  # lazy
-
-                oracle = MatchingOracle(mob_costs={})
-                lns = LnsScheduler(oracle=oracle)
-                sched = lns.schedule(dag=dag, pool=pool)
-                if sched.feasible:
-                    score = sched.metrics.quality_score(deadline_weeks=score_deadline)
-                    results.append(ExploreResult("LNS", sched, score))
-                else:
-                    results.append(ExploreResult("LNS", sched, 0.0, error="infeasible"))
-            except Exception as exc:
-                _log.warning("LNS falhou em compare_all_algorithms", exc_info=True)
-                results.append(ExploreResult("LNS", _empty_output("LNS"), 0.0, error=str(exc)))
-
+            results.append(_compare_lns(dag, pool, score_deadline))
         else:
-            # SerialScheduler SGS — any valid priority rule name.
-            try:
-                from .scheduler import SerialScheduler
-
-                scheduler = SerialScheduler(priority_rule=algorithm)
-                sched = scheduler.schedule(
-                    activities=activities,
-                    dag=dag,
-                    pool=pool,
-                    deadline_weeks=deadline_weeks,
-                )
-                score = sched.metrics.quality_score(deadline_weeks=score_deadline)
-                results.append(ExploreResult(algorithm, sched, score))
-            except Exception as exc:
-                results.append(ExploreResult(algorithm, _empty_output(algorithm), 0.0, error=str(exc)))
+            results.append(_compare_serial(activities, dag, pool, deadline_weeks, score_deadline, algorithm))
 
     # Feasible results first, then by quality_score desc, then makespan asc.
     results.sort(key=lambda r: (r.error is not None, -r.quality_score, r.schedule.makespan))
     return results
+
+
+def _compare_cpsat(dag: ActivityDAG, pool: ResourcePool, deadline_weeks: int, score_deadline: int) -> ExploreResult:
+    try:
+        from .cpsat_scheduler import CpSatScheduler  # lazy
+
+        cpsat = CpSatScheduler(timeout_seconds=60.0, horizon_weeks=deadline_weeks)
+        sched = cpsat.schedule(dag=dag, pool=pool)
+        if sched.feasible:
+            score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+            return ExploreResult("CP-SAT", sched, score)
+        return ExploreResult("CP-SAT", sched, 0.0, error="infeasible")
+    except Exception as exc:
+        _log.warning("CP-SAT falhou em compare_all_algorithms", exc_info=True)
+        return ExploreResult("CP-SAT", _empty_output("CP-SAT"), 0.0, error=str(exc))
+
+
+def _compare_lns(dag: ActivityDAG, pool: ResourcePool, score_deadline: int) -> ExploreResult:
+    try:
+        from concilium.domain.services.planning.matching_oracle import MatchingOracle
+
+        from .lns_scheduler import LnsScheduler  # lazy
+
+        oracle = MatchingOracle(mob_costs={})
+        lns = LnsScheduler(oracle=oracle)
+        sched = lns.schedule(dag=dag, pool=pool)
+        if sched.feasible:
+            score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+            return ExploreResult("LNS", sched, score)
+        return ExploreResult("LNS", sched, 0.0, error="infeasible")
+    except Exception as exc:
+        _log.warning("LNS falhou em compare_all_algorithms", exc_info=True)
+        return ExploreResult("LNS", _empty_output("LNS"), 0.0, error=str(exc))
+
+
+def _compare_serial(
+    activities: list[Activity],
+    dag: ActivityDAG,
+    pool: ResourcePool,
+    deadline_weeks: int,
+    score_deadline: int,
+    algorithm: str,
+) -> ExploreResult:
+    # SerialScheduler SGS — any valid priority rule name.
+    try:
+        from .scheduler import SerialScheduler
+
+        scheduler = SerialScheduler(priority_rule=algorithm)
+        sched = scheduler.schedule(
+            activities=activities,
+            dag=dag,
+            pool=pool,
+            deadline_weeks=deadline_weeks,
+        )
+        score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+        return ExploreResult(algorithm, sched, score)
+    except Exception as exc:
+        return ExploreResult(algorithm, _empty_output(algorithm), 0.0, error=str(exc))
 
 
 def _empty_output(heuristic: str) -> ScheduleOutput:

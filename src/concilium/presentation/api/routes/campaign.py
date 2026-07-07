@@ -84,6 +84,106 @@ def list_campaign_runs(
     return items
 
 
+def _rc_resolve_campaign_file(req: CampaignRunRequest, projects_root: Any, slug: str) -> Any:
+    """Resolve the campaign config file path, raising 404 if it cannot be found."""
+    from pathlib import Path
+
+    if req.campaign_file:
+        campaign_file = Path(req.campaign_file)
+    else:
+        _candidates = [
+            projects_root / slug / "campaigns" / "campaign_v1.json",
+            projects_root.parent / "data" / slug / "campaigns" / "campaign_v1.json",
+        ]
+        campaign_file = next((p for p in _candidates if p.exists()), _candidates[0])
+
+    if not campaign_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Campaign file not found: {campaign_file}",
+        )
+    return campaign_file
+
+
+def _rc_build_bundle(cfg: dict, base_spec: Any) -> Any:
+    """Build the GoResearchCampaignBundle from the campaign config and base spec."""
+    from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
+
+    perf_raw = cfg.get("perfil_expectativas") or {}
+    perfil = PerfilExpectativas(
+        meta_margem_pct=perf_raw.get("meta_margem_pct", META_MARGEM_PADRAO),
+        tolerancia_margem=perf_raw.get("tolerancia_margem", TOLERANCIA_MARGEM_PADRAO),
+        prazo_contratual_semanas=perf_raw.get("prazo_contratual_semanas"),
+    )
+    sweep = [ParametroSweep(campo=s["campo"], valores=s["valores"]) for s in (cfg.get("sweep") or [])]
+    return GoResearchCampaignBundle(
+        base_spec=base_spec,
+        sweep=sweep,
+        perfil_expectativas=perfil,
+        top_k=cfg.get("top_k", 5),
+        campaign_version=cfg.get("campaign_version", "v1"),
+    )
+
+
+def _rc_run_campaign_background(
+    bundle: Any,
+    run_id: str,
+    store: Any,
+    config_root: Any,
+    projects_root: Any,
+    intent: Any,
+    workers: int,
+    reset: bool,
+) -> None:
+    """Execute the campaign sweep and persist its result (runs as a background task)."""
+    from concilium.application.services.campaign.campaign_report import (
+        render_campaign_report_md,
+        render_campaign_report_pdf,
+        serialize_campaign_report,
+    )
+    from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
+
+    try:
+        result = executar_campanha(
+            bundle,
+            config_root=config_root,
+            projects_root=projects_root,
+            procurement_intent=intent.value,
+            num_workers=workers,
+            reset=reset,
+        )
+        cube = construir_cubo(bundle, result)
+        report = serialize_campaign_report(result, cube)
+        md = render_campaign_report_md(report)
+        pdf = render_campaign_report_pdf(report, md)
+
+        store.save_bundle(run_id, report)
+        store.save_cube(run_id, report.get("cubo") or {})
+        store.save_report(run_id, report, md, pdf)
+        store.save_meta(
+            run_id,
+            {
+                "campaign_version": result.campaign_version,
+                "status": result.status,
+                "n_avaliados": result.n_cenarios_avaliados,
+                "n_viaveis": result.n_cenarios_viaveis,
+                "n_falhas": result.n_falhas,
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        store.save_meta(
+            run_id,
+            {
+                "campaign_version": bundle.campaign_version,
+                "status": "ABORTADO",
+                "n_avaliados": 0,
+                "n_viaveis": 0,
+                "n_falhas": 0,
+                "erro": str(exc),
+            },
+        )
+
+
 @router.post(
     "/{project_id}/campaign/run",
     summary="Execute a campaign sweep (ADR-070)",
@@ -104,17 +204,10 @@ def run_campaign(
     import json
     from pathlib import Path
 
-    from concilium.application.services.campaign.campaign_report import (
-        render_campaign_report_md,
-        render_campaign_report_pdf,
-        serialize_campaign_report,
-    )
-    from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
     from concilium.application.skills.phase_classifier import (
         is_campaign_allowed_for_intent,
         normalize_procurement_intent,
     )
-    from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
     from concilium.infrastructure.settings import get_storage
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
     from concilium.presentation.cli.commands_campaign import _load_project_base_spec
@@ -143,22 +236,7 @@ def run_campaign(
             detail=("Campanha GO é permitida apenas para RFP. RFI é fase exploratória de catálogo (PU x Q)."),
         )
 
-    # Resolve campaign file
-    if req.campaign_file:
-        campaign_file = Path(req.campaign_file)
-    else:
-        _candidates = [
-            projects_root / slug / "campaigns" / "campaign_v1.json",
-            projects_root.parent / "data" / slug / "campaigns" / "campaign_v1.json",
-        ]
-        campaign_file = next((p for p in _candidates if p.exists()), _candidates[0])
-
-    if not campaign_file.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Campaign file not found: {campaign_file}",
-        )
-
+    campaign_file = _rc_resolve_campaign_file(req, projects_root, slug)
     cfg = json.loads(campaign_file.read_text(encoding="utf-8"))
 
     base_spec = _load_project_base_spec(projects_root, slug)
@@ -168,21 +246,7 @@ def run_campaign(
             detail=f"Project '{slug}' has no canonical spec for campaign.",
         )
 
-    # Build bundle
-    perf_raw = cfg.get("perfil_expectativas") or {}
-    perfil = PerfilExpectativas(
-        meta_margem_pct=perf_raw.get("meta_margem_pct", META_MARGEM_PADRAO),
-        tolerancia_margem=perf_raw.get("tolerancia_margem", TOLERANCIA_MARGEM_PADRAO),
-        prazo_contratual_semanas=perf_raw.get("prazo_contratual_semanas"),
-    )
-    sweep = [ParametroSweep(campo=s["campo"], valores=s["valores"]) for s in (cfg.get("sweep") or [])]
-    bundle = GoResearchCampaignBundle(
-        base_spec=base_spec,
-        sweep=sweep,
-        perfil_expectativas=perfil,
-        top_k=cfg.get("top_k", 5),
-        campaign_version=cfg.get("campaign_version", "v1"),
-    )
+    bundle = _rc_build_bundle(cfg, base_spec)
 
     # Create run slot immediately so we can return the run_id
     store = CampaignRunStore(projects_root / slug)
@@ -203,45 +267,7 @@ def run_campaign(
     reset = req.reset
 
     def _run_in_background() -> None:
-        try:
-            result = executar_campanha(
-                bundle,
-                config_root=config_root,
-                projects_root=projects_root,
-                procurement_intent=intent.value,
-                num_workers=workers,
-                reset=reset,
-            )
-            cube = construir_cubo(bundle, result)
-            report = serialize_campaign_report(result, cube)
-            md = render_campaign_report_md(report)
-            pdf = render_campaign_report_pdf(report, md)
-
-            store.save_bundle(run_id, report)
-            store.save_cube(run_id, report.get("cubo") or {})
-            store.save_report(run_id, report, md, pdf)
-            store.save_meta(
-                run_id,
-                {
-                    "campaign_version": result.campaign_version,
-                    "status": result.status,
-                    "n_avaliados": result.n_cenarios_avaliados,
-                    "n_viaveis": result.n_cenarios_viaveis,
-                    "n_falhas": result.n_falhas,
-                },
-            )
-        except Exception as exc:  # noqa: BLE001
-            store.save_meta(
-                run_id,
-                {
-                    "campaign_version": bundle.campaign_version,
-                    "status": "ABORTADO",
-                    "n_avaliados": 0,
-                    "n_viaveis": 0,
-                    "n_falhas": 0,
-                    "erro": str(exc),
-                },
-            )
+        _rc_run_campaign_background(bundle, run_id, store, config_root, projects_root, intent, workers, reset)
 
     background_tasks.add_task(_run_in_background)
 

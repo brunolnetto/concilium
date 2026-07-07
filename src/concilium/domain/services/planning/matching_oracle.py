@@ -94,18 +94,12 @@ class MatchingOracle:
 
     # ── per-resource solver ───────────────────────────────────────────────────
 
-    def _solve_resource(
-        self,
-        res: str,
-        plans: list[ActivityPlan],
-        profiles: dict[str, RampProfile],
-        c_mob: float,
-        c_demob: float,
-    ) -> tuple[list[tuple[str, str, str, int]], int, int, list[tuple[str, str, str]]]:
-        """Solve perpetuation for a single resource type using W-node formulation."""
+    @staticmethod
+    def _boundary_supply_demand(
+        res: str, plans: list[ActivityPlan], profiles: dict[str, RampProfile]
+    ) -> tuple[dict[str, int], dict[str, int]]:
         supply: dict[str, int] = {}
         demand: dict[str, int] = {}
-
         for plan in plans:
             rp = profiles.get(plan.activity_id)
             if rp is None:
@@ -116,13 +110,12 @@ class MatchingOracle:
                 supply[plan.activity_id] = s_val
             if d_val > 0:
                 demand[plan.activity_id] = d_val
+        return supply, demand
 
-        if not supply and not demand:
-            return [], 0, 0, []
-
-        window: dict[str, tuple[int, int]] = {p.activity_id: p.window for p in plans}
-
-        # Eligible perpetuation pairs: f_i <= s_j AND gap <= delta_max
+    def _eligible_pairs(
+        self, supply: dict[str, int], demand: dict[str, int], window: dict[str, tuple[int, int]]
+    ) -> list[tuple[str, str]]:
+        """Eligible perpetuation pairs: f_i <= s_j AND gap <= delta_max."""
         eligible: list[tuple[str, str]] = []
         for aid_i in supply:
             f_i = window[aid_i][1]
@@ -132,8 +125,16 @@ class MatchingOracle:
                 s_j = window[aid_j][0]
                 if f_i <= s_j and s_j - f_i <= self.delta_max:
                     eligible.append((aid_i, aid_j))
+        return eligible
 
-        # Concurrent pairs: f_i > s_j (overlap) AND overlap <= delta_max
+    def _concurrent_lost_pairs(
+        self,
+        res: str,
+        supply: dict[str, int],
+        demand: dict[str, int],
+        window: dict[str, tuple[int, int]],
+    ) -> list[tuple[str, str, str]]:
+        """Concurrent pairs: f_i > s_j (overlap) AND overlap <= delta_max."""
         concurrent_lost: list[tuple[str, str, str]] = []
         for aid_i in supply:
             f_i = window[aid_i][1]
@@ -143,12 +144,28 @@ class MatchingOracle:
                 s_j = window[aid_j][0]
                 if f_i > s_j and f_i - s_j <= self.delta_max:
                     concurrent_lost.append((aid_i, aid_j, res))
+        return concurrent_lost
 
-        # ── W-node min-cost flow formulation ─────────────────────────────
-        # Node layout:
-        #   supply_i → node index 0..n_s-1
-        #   demand_j → node index n_s..n_s+n_d-1
-        #   W (waste/exchange) → node index n_s+n_d
+    @staticmethod
+    def _build_flow_network(
+        supply: dict[str, int],
+        demand: dict[str, int],
+        eligible: list[tuple[str, str]],
+        c_mob_int: int,
+        c_demob_int: int,
+    ) -> tuple[
+        min_cost_flow.SimpleMinCostFlow,
+        dict[str, int],
+        dict[str, int],
+        dict[tuple[str, str], int],
+    ]:
+        """Build the W-node min-cost flow network.
+
+        Node layout:
+          supply_i → node index 0..n_s-1
+          demand_j → node index n_s..n_s+n_d-1
+          W (waste/exchange) → node index n_s+n_d
+        """
         supply_ids = list(supply.keys())
         demand_ids = list(demand.keys())
         n_s = len(supply_ids)
@@ -162,9 +179,6 @@ class MatchingOracle:
         sum_demand = sum(demand.values())
         # W net supply: absorbs excess supply, provides deficit demand
         W_net = sum_demand - sum_supply
-
-        c_mob_int = round(c_mob * _COST_SCALE)
-        c_demob_int = round(c_demob * _COST_SCALE)
 
         smcf = min_cost_flow.SimpleMinCostFlow()
 
@@ -194,17 +208,18 @@ class MatchingOracle:
             arc_idx = smcf.add_arc_with_capacity_and_unit_cost(node_supply_idx[aid_i], node_demand_idx[aid_j], cap, 0)
             arc_perp[(aid_i, aid_j)] = arc_idx
 
-        # Solve
-        status = smcf.solve()
-        if status != smcf.OPTIMAL:  # pragma: no cover
-            _log.warning(
-                "MatchingOracle: min-cost flow not OPTIMAL for resource %s (status=%s)",
-                res,
-                status,
-            )
-            naive_cost = sum_demand * c_mob_int + sum_supply * c_demob_int
-            return [], naive_cost, sum_demand, concurrent_lost
+        return smcf, arc_dismiss, arc_hire, arc_perp
 
+    @staticmethod
+    def _extract_flow_solution(
+        smcf: min_cost_flow.SimpleMinCostFlow,
+        res: str,
+        supply: dict[str, int],
+        demand: dict[str, int],
+        arc_dismiss: dict[str, int],
+        arc_hire: dict[str, int],
+        arc_perp: dict[tuple[str, str], int],
+    ) -> tuple[list[tuple[str, str, str, int]], int, int]:
         # Extract perpetuation edges
         edges: list[tuple[str, str, str, int]] = []
         for (aid_i, aid_j), arc_idx in arc_perp.items():
@@ -217,4 +232,49 @@ class MatchingOracle:
         fresh_hires = sum(smcf.flow(arc_hire[aid_j]) for aid_j in demand)
         mob_event_count = dismissals + fresh_hires
 
-        return edges, smcf.optimal_cost(), mob_event_count, concurrent_lost
+        return edges, smcf.optimal_cost(), mob_event_count
+
+    def _solve_resource(
+        self,
+        res: str,
+        plans: list[ActivityPlan],
+        profiles: dict[str, RampProfile],
+        c_mob: float,
+        c_demob: float,
+    ) -> tuple[list[tuple[str, str, str, int]], int, int, list[tuple[str, str, str]]]:
+        """Solve perpetuation for a single resource type using W-node formulation."""
+        supply, demand = self._boundary_supply_demand(res, plans, profiles)
+
+        if not supply and not demand:
+            return [], 0, 0, []
+
+        window: dict[str, tuple[int, int]] = {p.activity_id: p.window for p in plans}
+
+        eligible = self._eligible_pairs(supply, demand, window)
+        concurrent_lost = self._concurrent_lost_pairs(res, supply, demand, window)
+
+        sum_supply = sum(supply.values())
+        sum_demand = sum(demand.values())
+        c_mob_int = round(c_mob * _COST_SCALE)
+        c_demob_int = round(c_demob * _COST_SCALE)
+
+        smcf, arc_dismiss, arc_hire, arc_perp = self._build_flow_network(
+            supply, demand, eligible, c_mob_int, c_demob_int
+        )
+
+        # Solve
+        status = smcf.solve()
+        if status != smcf.OPTIMAL:  # pragma: no cover
+            _log.warning(
+                "MatchingOracle: min-cost flow not OPTIMAL for resource %s (status=%s)",
+                res,
+                status,
+            )
+            naive_cost = sum_demand * c_mob_int + sum_supply * c_demob_int
+            return [], naive_cost, sum_demand, concurrent_lost
+
+        edges, optimal_cost, mob_event_count = self._extract_flow_solution(
+            smcf, res, supply, demand, arc_dismiss, arc_hire, arc_perp
+        )
+
+        return edges, optimal_cost, mob_event_count, concurrent_lost

@@ -78,6 +78,41 @@ def patch_project_config(
 # ── Versioning ────────────────────────────────────────────────────────────────
 
 
+def _build_version_tree_items(versions: list[str], version_history: dict[str, Any]) -> list[dict[str, Any]]:
+    """Anexa metadados de autoria a cada versão para a resposta em árvore."""
+    items = []
+    for v in versions:
+        meta = version_history.get(v) or {}
+        items.append(
+            {
+                "version": v,
+                "criado_em": meta.get("criado_em"),
+                "criado_por": meta.get("criado_por"),
+                "role_criador": meta.get("role_criador"),
+                "procurement_intent": meta.get("procurement_intent"),
+                "forked_from": meta.get("forked_from"),
+                "motivo": meta.get("motivo"),
+            }
+        )
+    return items
+
+
+def _build_version_tree_adjacency(items: list[dict[str, Any]]) -> tuple[dict[str, list[str]], list[str]]:
+    """Constrói a adjacência parent→children e a lista de raízes para a árvore de versões."""
+    children: dict[str, list[str]] = {}
+    roots: list[str] = []
+    for item in items:
+        item_version = item["version"]
+        assert isinstance(item_version, str)
+        parent = item.get("forked_from")
+        if parent and parent in [i["version"] for i in items]:
+            assert isinstance(parent, str)
+            children.setdefault(parent, []).append(item_version)
+        else:
+            roots.append(item_version)
+    return children, roots
+
+
 @router.get("/{project_id}/versions", summary="List all versions")
 def list_versions(
     project_id: str,
@@ -94,32 +129,9 @@ def list_versions(
             return {"items": versions}
         # Build tree with authorship metadata
         version_history = service.get_version_history(project_id)
-        items = []
-        for v in versions:
-            meta = version_history.get(v) or {}
-            items.append(
-                {
-                    "version": v,
-                    "criado_em": meta.get("criado_em"),
-                    "criado_por": meta.get("criado_por"),
-                    "role_criador": meta.get("role_criador"),
-                    "procurement_intent": meta.get("procurement_intent"),
-                    "forked_from": meta.get("forked_from"),
-                    "motivo": meta.get("motivo"),
-                }
-            )
+        items = _build_version_tree_items(versions, version_history)
         # Build parent→children adjacency for tree structure
-        children: dict[str, list[str]] = {}
-        roots: list[str] = []
-        for item in items:
-            item_version = item["version"]
-            assert isinstance(item_version, str)
-            parent = item.get("forked_from")
-            if parent and parent in [i["version"] for i in items]:
-                assert isinstance(parent, str)
-                children.setdefault(parent, []).append(item_version)
-            else:
-                roots.append(item_version)
+        children, roots = _build_version_tree_adjacency(items)
         return {"items": items, "roots": roots, "children": children}
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -129,6 +129,59 @@ def _bisect_pool(
     return _pool_at(serial, peak, hi)
 
 
+def _peak_demand_and_makespan_min(
+    activities: list[Activity],
+    dag: ActivityDAG,
+    resources: list[str],
+    serial: dict[str, int],
+    horizon: int,
+) -> tuple[dict[str, int], int]:
+    """Pico de demanda concorrente (pool sem restrição) e o makespan mínimo correspondente."""
+    if not resources:
+        return dict(serial), horizon
+    try:
+        sched_unl = SerialScheduler(priority_rule=_PRIORITY_RULE).schedule(
+            activities=activities,
+            dag=dag,
+            pool=_unlimited_pool(activities),
+            deadline_weeks=horizon,
+        )
+        return _peak_demand(sched_unl, resources), sched_unl.makespan
+    except ScheduleError:
+        return dict(serial), horizon
+
+
+def _pool_por_objetivo(
+    objetivo: str,
+    activities: list[Activity],
+    dag: ActivityDAG,
+    serial: dict[str, int],
+    peak: dict[str, int],
+    prazo_max: int | None,
+    horizon: int,
+) -> dict[str, int]:
+    if objetivo == "minimizar_prazo":
+        return dict(peak)
+    if objetivo == "minimizar_custo":
+        return dict(serial)
+    return _bisect_pool(activities, dag, serial, peak, prazo_max, horizon)  # balanceado (default)
+
+
+def _aplicar_restricoes_mercado(pool: dict[str, int], serial: dict[str, int], restricoes: dict[str, int]) -> list[str]:
+    """Aplica tetos de mercado ao ``pool`` (in-place) e retorna as notas geradas."""
+    notas: list[str] = []
+    for r, cap in restricoes.items():
+        if r in pool and pool[r] > int(cap):
+            pool[r] = int(cap)
+            notas.append(f"{r}: limitado a {int(cap)} unidades por restrição de mercado")
+        if r in serial and int(cap) < serial[r]:
+            notas.append(
+                f"{r}: ATENÇÃO — teto de mercado {int(cap)} < mínimo viável {serial[r]} "
+                "(projeto inviável sob essa restrição)"
+            )
+    return notas
+
+
 def inferir_pool_minimo(
     activities: list[Activity],
     dag: ActivityDAG,
@@ -151,38 +204,11 @@ def inferir_pool_minimo(
     resources = list(serial.keys())
     horizon = _safe_horizon(activities)
 
-    makespan_min = horizon
-    peak = dict(serial)
-    if resources:
-        try:
-            sched_unl = SerialScheduler(priority_rule=_PRIORITY_RULE).schedule(
-                activities=activities,
-                dag=dag,
-                pool=_unlimited_pool(activities),
-                deadline_weeks=horizon,
-            )
-            peak = _peak_demand(sched_unl, resources)
-            makespan_min = sched_unl.makespan
-        except ScheduleError:
-            peak = dict(serial)
+    peak, makespan_min = _peak_demand_and_makespan_min(activities, dag, resources, serial, horizon)
 
-    if objetivo == "minimizar_prazo":
-        pool = dict(peak)
-    elif objetivo == "minimizar_custo":
-        pool = dict(serial)
-    else:  # balanceado (default)
-        pool = _bisect_pool(activities, dag, serial, peak, prazo_max, horizon)
+    pool = _pool_por_objetivo(objetivo, activities, dag, serial, peak, prazo_max, horizon)
 
-    notas: list[str] = []
-    for r, cap in restricoes.items():
-        if r in pool and pool[r] > int(cap):
-            pool[r] = int(cap)
-            notas.append(f"{r}: limitado a {int(cap)} unidades por restrição de mercado")
-        if r in serial and int(cap) < serial[r]:
-            notas.append(
-                f"{r}: ATENÇÃO — teto de mercado {int(cap)} < mínimo viável {serial[r]} "
-                "(projeto inviável sob essa restrição)"
-            )
+    notas = _aplicar_restricoes_mercado(pool, serial, restricoes)
 
     pool = {r: max(1, int(q)) for r, q in pool.items()}
 
@@ -200,6 +226,22 @@ def inferir_pool_minimo(
     return pool, diagnostico
 
 
+def _activity_from_spec_item(a: dict[str, Any], derived_req: dict[str, dict[str, int]]) -> Activity | None:
+    item_id = a.get("item_id")
+    if not item_id:
+        return None
+    dur = max(1, int(a.get("duration_weeks") or 1))
+    req = a.get("required_resources")
+    if not isinstance(req, dict) or not req:
+        req = derived_req.get(str(item_id), {})
+    return Activity(
+        activity_id=str(item_id),
+        description=str(a.get("descricao") or item_id),
+        duration_weeks=dur,
+        required_resources={str(k): int(v) for k, v in req.items()},
+    )
+
+
 def _activities_from_spec(spec: dict[str, Any], derived_req: dict[str, dict[str, int]] | None = None) -> list[Activity]:
     """Constrói ``Activity`` a partir de ``rcpsp_spec['activities']`` (dimensão de pool).
 
@@ -211,21 +253,9 @@ def _activities_from_spec(spec: dict[str, Any], derived_req: dict[str, dict[str,
     for a in spec.get("activities", []) or []:
         if not isinstance(a, dict):
             continue
-        item_id = a.get("item_id")
-        if not item_id:
-            continue
-        dur = max(1, int(a.get("duration_weeks") or 1))
-        req = a.get("required_resources")
-        if not isinstance(req, dict) or not req:
-            req = derived_req.get(str(item_id), {})
-        acts.append(
-            Activity(
-                activity_id=str(item_id),
-                description=str(a.get("descricao") or item_id),
-                duration_weeks=dur,
-                required_resources={str(k): int(v) for k, v in req.items()},
-            )
-        )
+        act = _activity_from_spec_item(a, derived_req)
+        if act is not None:
+            acts.append(act)
     return acts
 
 
@@ -282,6 +312,24 @@ def validar_equipamentos_mapeaveis(equipes: list[Any], equip_tipo_map: dict[str,
     return sorted(faltantes)
 
 
+def _acumular_required_de_equipe(
+    eq: Any,
+    bucket: dict[str, int],
+    n_equipes: int,
+    equip_tipo_map: dict[str, str] | None,
+    avisos: list[str],
+) -> None:
+    for equip in getattr(eq, "equipamentos", []) or []:
+        eid = getattr(equip, "equip_id", "") or ""
+        n_unid = int(getattr(equip, "num_unidades", 0) or 0)
+        if not eid or n_unid <= 0:
+            continue
+        tipo = tipo_recurso_de_equip(eid, equip_tipo_map)
+        if equip_tipo_map is not None and eid not in equip_tipo_map:
+            avisos.append(f"equip_id '{eid}' sem mapeamento explícito; convenção '{tipo}'")
+        bucket[tipo] = bucket.get(tipo, 0) + n_unid * n_equipes
+
+
 def derivar_required_resources(
     equipes: list[Any], equip_tipo_map: dict[str, str] | None = None
 ) -> tuple[dict[str, dict[str, int]], list[str]]:
@@ -300,15 +348,7 @@ def derivar_required_resources(
             continue
         n_equipes = max(1, int(getattr(eq, "num_equipes_base", 1) or 1))
         bucket = required.setdefault(item_id, {})
-        for equip in getattr(eq, "equipamentos", []) or []:
-            eid = getattr(equip, "equip_id", "") or ""
-            n_unid = int(getattr(equip, "num_unidades", 0) or 0)
-            if not eid or n_unid <= 0:
-                continue
-            tipo = tipo_recurso_de_equip(eid, equip_tipo_map)
-            if equip_tipo_map is not None and eid not in equip_tipo_map:
-                avisos.append(f"equip_id '{eid}' sem mapeamento explícito; convenção '{tipo}'")
-            bucket[tipo] = bucket.get(tipo, 0) + n_unid * n_equipes
+        _acumular_required_de_equipe(eq, bucket, n_equipes, equip_tipo_map, avisos)
     return required, avisos
 
 
