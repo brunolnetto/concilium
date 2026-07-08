@@ -1,6 +1,6 @@
 # ADR-128 — Disponibilidade de Recursos Consumíveis: Estoque, Taxa de Consumo e Reabastecimento (Diesel, Combustível, Material)
 
-**Status:** ✅ Decidido
+**Status:** ⚠️ Parcialmente Implementado _(2026-07-08: F1/F3 completos; F2 implementado como reparo pós-processamento — ver nota; F4 implementado como capacidade pura, não conectado a uma fonte de dado real de projeto/escopo)_
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-107 (generalização tipo_combustivel), ADR-090 (BDI sistemático diesel/material), ADR-046 (motor RCPSP)
@@ -97,24 +97,51 @@ O cálculo hoje em `src/concilium/presentation/ui/organisms/layout.py` (bloco qu
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `DisponibilidadeConsumivel` no domínio; opcional em `Insumo`/`Escopo` | ⬜ Não iniciado |
-| F2 | `ReplenishableResource` no motor de agendamento; projeção de estoque semana a semana | ⬜ Não iniciado (escopo amplo — requer validação de design com o time antes de comprometer no engine RCPSP) |
-| F3 | Parsing/normalização de `prazo_entrega` (hoje `str \| None`, texto livre) para dias numéricos; reaproveitamento como lead time de reabastecimento de material | ⬜ Não iniciado |
-| F4 | `tanque_sugerido` (UI) lendo `DisponibilidadeConsumivel` com fallback heurístico atual | ⬜ Não iniciado |
+| F1 | `DisponibilidadeConsumivel` no domínio; opcional em `Insumo`/`Escopo` | ✅ Implementado |
+| F2 | `ReplenishableResource` no motor de agendamento; projeção de estoque semana a semana | ⚠️ Implementado como reparo pós-CP-SAT (ver nota de implementação) |
+| F3 | Parsing/normalização de `prazo_entrega` (hoje `str \| None`, texto livre) para dias numéricos; reaproveitamento como lead time de reabastecimento de material | ✅ Implementado |
+| F4 | `tanque_sugerido` (UI) lendo `DisponibilidadeConsumivel` com fallback heurístico atual | ⚠️ Implementado como capacidade pura (ver nota de implementação) |
+
+### Nota de implementação (2026-07-08)
+
+**F2 — estratégia escolhida:** em vez de embutir a contabilidade de estoque diretamente
+no modelo CP-SAT (ex.: `reservoir constraint` do OR-Tools, que exigiria modelar eventos de
+consumo/reabastecimento como variáveis de tempo do solver — escopo maior do que cabia nesta
+entrega), a Fase 2 foi implementada como um **passo de reparo pós-processamento**:
+`concilium.application.scheduling.replenishable.apply_replenishable_delay` projeta o
+estoque semanal (`project_estoque_semanal`) sobre a solução já produzida pelo CP-SAT e, se
+inviável, atrasa iterativamente a atividade consumidora até o reabastecimento acumulado
+tornar o consumo viável. `CpSatScheduler.schedule()` aceita `replenishable_resources`
+opcional (default `None` → comportamento idêntico ao pré-ADR-128, testado como regressão
+zero). **Limitação conhecida e documentada no código:** o atraso não é repropagado para
+sucessores no DAG de precedências — um cronograma onde a atividade atrasada tem sucessores
+dependentes pode gerar uma violação de precedência que esta fase não resolve. Repropagação
+completa (2ª passada de resolução de precedências, ou reservoir constraint nativo no
+CP-SAT) fica para uma Fase 2b futura.
+
+**F4 — estado da conexão UI↔dado real:** `calcular_tanque_sugerido()` (função pura,
+testada) já prioriza `DisponibilidadeConsumivel.capacidade_armazenamento` sobre a
+heurística quando presente, e `_render_cube_diesel_metrics` aceita esse dado como
+parâmetro opcional. O que **não** foi feito nesta entrega: plugar uma fonte real de
+`DisponibilidadeConsumivel` em nível de projeto/escopo (D3) ao call site do dashboard —
+esse modelo de dado de projeto/canteiro ainda não existe no sistema; a UI hoje sempre
+chama com `disponibilidade=None`, preservando o comportamento heurístico atual.
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `DisponibilidadeConsumivel` definido, validado (capacidade/estoque ≥ 0), campos opcionais
+- [x] `DisponibilidadeConsumivel` definido, validado (capacidade/estoque ≥ 0), campos opcionais
 
 ### Fase 2
-- [ ] Projeção de estoque semanal implementada e testada com cenário de estoque negativo → atraso
-- [ ] Cenário sem `DisponibilidadeConsumivel` preenchida reproduz exatamente o comportamento atual (regressão zero)
+- [x] Projeção de estoque semanal implementada e testada com cenário de estoque negativo → atraso
+- [x] Cenário sem `DisponibilidadeConsumivel` preenchida reproduz exatamente o comportamento atual (regressão zero)
+- [ ] Atraso repropagado para sucessores no DAG de precedências (limitação conhecida — Fase 2b)
 
 ### Fase 3-4
-- [ ] Estratégia de parsing de `prazo_entrega` (texto livre → dias) definida e testada com os valores reais hoje presentes no catálogo (ex.: "Imediato")
-- [ ] `prazo_entrega` de material alimentando lead time sem novo campo duplicado
-- [ ] `tanque_sugerido` consistente entre UI e modelo quando dado real está presente
+- [x] Estratégia de parsing de `prazo_entrega` (texto livre → dias) definida e testada com os valores reais hoje presentes no catálogo (ex.: "Imediato")
+- [x] `prazo_entrega` de material alimentando lead time sem novo campo duplicado (`DisponibilidadeConsumivel.from_prazo_entrega`)
+- [x] `tanque_sugerido` consistente entre UI e modelo quando dado real está presente (capacidade pura implementada e testada)
+- [ ] Fonte real de `DisponibilidadeConsumivel` em nível de projeto/escopo conectada ao dashboard (pendente — depende de modelo de dado de projeto ainda não existente)
 
 ---
 

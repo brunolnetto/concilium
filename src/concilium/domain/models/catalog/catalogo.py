@@ -8,6 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
 from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
 from concilium.domain.units import normalize_unidade
 
@@ -123,6 +124,11 @@ class AtributosInsumo(BaseModel):
     --------
     fornecedor_referencia   : fornecedor de referência para cotação
     prazo_entrega           : prazo de entrega típico (texto livre, ex: "Imediato")
+
+    MATERIAL / EQUIPAMENTO (COMBUSTIVEL)
+    -------------------------------------
+    disponibilidade         : estoque/capacidade/reabastecimento (ADR-128), opcional —
+                               None = disponibilidade irrestrita (comportamento atual)
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -150,6 +156,9 @@ class AtributosInsumo(BaseModel):
     # ── MATERIAL ──────────────────────────────────────────────────────
     fornecedor_referencia: str | None = None
     prazo_entrega: str | None = None
+
+    # ── MATERIAL / EQUIPAMENTO (COMBUSTIVEL) — ADR-128 ─────────────────
+    disponibilidade: DisponibilidadeConsumivel | None = None
 
 
 class Insumo(BaseModel):

@@ -33,11 +33,13 @@ from ortools.sat.python import cp_model
 from concilium.application.scheduling.models import (
     Activity,
     ActivityDAG,
+    ReplenishableResource,
     ResourcePool,
     ScheduledActivity,
     ScheduleMetrics,
     ScheduleOutput,
 )
+from concilium.application.scheduling.replenishable import apply_replenishable_delay
 from concilium.domain.models.analytics.optimization import RampProfile
 
 _log = logging.getLogger(__name__)
@@ -188,6 +190,66 @@ class CpSatScheduler:
             if res_intervals:
                 model.add_cumulative(res_intervals, res_demands, cap)
 
+    def _validate_repaired_schedule(
+        self,
+        scheduled: list[ScheduledActivity],
+        dag: ActivityDAG,
+        extended_precedences: list[ExtendedPrecedence] | None,
+        pool: ResourcePool,
+        horizon: int,
+    ) -> bool:
+        """Revalida hard constraints após o reparo de disponibilidade (ADR-128).
+
+        O CP-SAT garante precedência, capacidade de pool e horizonte na solução
+        original — `apply_replenishable_delay` desloca atividades fora do solver e
+        pode quebrar qualquer uma dessas garantias. Retorna False (infeasible) se
+        alguma violação for detectada.
+        """
+        by_id = {sa.activity_id: sa for sa in scheduled}
+        acts = {a.activity_id: a for a in dag.activities}
+
+        # Horizonte
+        if any(sa.end_week > horizon for sa in scheduled):
+            return False
+
+        # Precedências FS (ActivityDAG.precedence + thresholds, ADR-081)
+        for pred_id, succ_id in dag.precedence:
+            if pred_id not in by_id or succ_id not in by_id:
+                continue
+            theta = dag.get_threshold(pred_id, succ_id)
+            pred, succ = by_id[pred_id], by_id[succ_id]
+            if theta >= 1.0:
+                if succ.start_week < pred.end_week:
+                    return False
+            else:
+                lag = math.ceil(theta * acts[pred_id].duration_weeks)
+                if succ.start_week < pred.start_week + lag:
+                    return False
+
+        # Precedências estendidas SS/FF/FS+lag (NEP-031 L4)
+        all_extended = list(getattr(dag, "extended_precedences", None) or [])
+        all_extended.extend(extended_precedences or [])
+        for ep in all_extended:
+            if ep.pred not in by_id or ep.succ not in by_id:
+                continue
+            pred, succ = by_id[ep.pred], by_id[ep.succ]
+            if ep.tipo == "FS" and succ.start_week < pred.end_week + ep.lag:
+                return False
+            if ep.tipo == "SS" and succ.start_week < pred.start_week + ep.lag:
+                return False
+            if ep.tipo == "FF" and succ.end_week < pred.end_week + ep.lag:
+                return False
+
+        # Capacidade de ResourcePool (recursos reutilizáveis, não-consumíveis)
+        weekly = self._compute_weekly_resource_usage(scheduled)
+        for usages in weekly.values():
+            for res, qty in usages.items():
+                cap = pool.resources.get(res)
+                if cap is not None and qty > cap:
+                    return False
+
+        return True
+
     @staticmethod
     def _build_scheduled_activities(
         dag: ActivityDAG, solver: cp_model.CpSolver, starts: dict[str, cp_model.IntVar]
@@ -215,6 +277,7 @@ class CpSatScheduler:
         pool: ResourcePool,
         ramp_profiles: dict[str, RampProfile] | None = None,
         extended_precedences: list[ExtendedPrecedence] | None = None,
+        replenishable_resources: list[ReplenishableResource] | None = None,
     ) -> ScheduleOutput:
         """Solve RCPSP and return a ScheduleOutput.
 
@@ -226,6 +289,13 @@ class CpSatScheduler:
                                    resource demand shaping in this version).
             extended_precedences:  Optional SS/FF/FS+lag constraints beyond the
                                    basic FS pairs in dag.precedence.
+            replenishable_resources: Optional ADR-128 consumable resources (diesel/
+                                   material) with stock/replenishment. When omitted
+                                   (default), behaviour is unchanged from pre-ADR-128
+                                   (unrestricted consumable availability). When
+                                   present, activities whose consumption would drive
+                                   the projected stock negative are delayed as a
+                                   post-processing pass over the CP-SAT solution.
         """
         model = cp_model.CpModel()
         acts: dict[str, Activity] = {a.activity_id: a for a in dag.activities}
@@ -271,13 +341,32 @@ class CpSatScheduler:
         # ── build output ─────────────────────────────────────────────────
         scheduled = self._build_scheduled_activities(dag, solver, starts)
 
-        ms_val = solver.value(makespan)
+        # ── ADR-128: post-process consumable-resource delays (opt-in) ─────
+        repaired = bool(replenishable_resources)
+        for resource in replenishable_resources or []:
+            scheduled = apply_replenishable_delay(scheduled, resource)
+
+        # O reparo por atraso (replenishable.py) desloca só a atividade consumidora,
+        # sem repropagar para sucessores (limitação documentada, ADR-128 Fase 2) — pode
+        # violar precedência, capacidade de ResourcePool ou o horizonte que o CP-SAT
+        # garantiu na solução original. Revalida e marca infeasible em vez de devolver
+        # um cronograma potencialmente inválido como feasible=True.
+        feasible = True
+        if repaired and not self._validate_repaired_schedule(scheduled, dag, extended_precedences, pool, H):
+            _log.warning(
+                "CpSatScheduler: reparo de disponibilidade de consumíveis (ADR-128) "
+                "violou precedência, capacidade de pool ou horizonte — output marcado "
+                "como infeasible."
+            )
+            feasible = False
+
+        ms_val = max((sa.end_week for sa in scheduled), default=solver.value(makespan))
         metrics = self._compute_metrics(scheduled, pool, ms_val)
 
         return ScheduleOutput(
             scheduled_activities=scheduled,
             makespan=ms_val,
-            feasible=True,
+            feasible=feasible,
             metrics=metrics,
             heuristic="CP-SAT",
         )

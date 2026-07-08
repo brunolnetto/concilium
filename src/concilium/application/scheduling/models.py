@@ -6,7 +6,10 @@ ScheduleMetrics, ScheduleOutput, SchedulingStrategy and ScheduleError.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
+
+from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
 
 
 class ScheduleError(Exception):
@@ -117,6 +120,31 @@ class ResourcePool:
     """Available resources and their capacities."""
 
     resources: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
+class ReplenishableResource:
+    """ADR-128 D2: recurso consumível opcional com estoque/reabastecimento.
+
+    Paralelo a ``ResourcePool``, mas com semântica de fluxo/estoque em vez de contagem
+    de unidades reutilizáveis: o recurso se esgota com o uso e é reabastecido ao longo
+    do tempo (ver ``concilium.application.scheduling.replenishable``). Opt-in — quando
+    não passado ao scheduler, o comportamento é idêntico ao anterior à ADR-128.
+    """
+
+    resource_id: str
+    disponibilidade: DisponibilidadeConsumivel
+    # activity_id -> taxa de consumo projetada por semana ativa da atividade
+    consumo_por_semana: dict[str, float] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for activity_id, taxa in self.consumo_por_semana.items():
+            if not math.isfinite(taxa) or taxa < 0:
+                raise ValueError(
+                    f"consumo_por_semana['{activity_id}'] must be finite and >= 0, got {taxa!r} "
+                    f"(valores negativos/NaN/infinitos podem 'aumentar' estoque no motor de "
+                    f"reabastecimento e mascarar inviabilidades — ADR-128)"
+                )
 
 
 @dataclass

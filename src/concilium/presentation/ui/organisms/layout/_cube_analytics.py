@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
+
 from ...infra.api import api_call
 from ...molecules.common import render_paginated_table
 from ._charts import _render_cube_projection_chart
@@ -262,7 +264,22 @@ def _build_cube_projection_params(
     return {k: v for k, v in params.items() if v is not None and v != ""}
 
 
-def _render_cube_diesel_metrics(rows: list, granularidade: str) -> None:
+def calcular_tanque_sugerido(pico_l: float, disponibilidade: DisponibilidadeConsumivel | None) -> float:
+    """Calcula o tanque sugerido (ADR-128 D4).
+
+    Quando ``disponibilidade.capacidade_armazenamento`` está preenchida, essa é a fonte da
+    verdade (dado operacional real de projeto) — o dashboard passa a ser consistente com o
+    motor de agendamento (single source of truth). Sem esse dado, mantém a heurística
+    histórica: pico × 1.5 (fator de segurança) × 2 (ciclo de reabastecimento estimado).
+    """
+    if disponibilidade is not None and disponibilidade.capacidade_armazenamento is not None:
+        return disponibilidade.capacidade_armazenamento
+    return pico_l * 1.5 * 2
+
+
+def _render_cube_diesel_metrics(
+    rows: list, granularidade: str, disponibilidade: DisponibilidadeConsumivel | None = None
+) -> None:
     """Renderiza métricas de dimensionamento de tanque para a face diesel_temporal."""
     # Métricas de dimensionamento de tanque — consumo em VOLUME (litros)
     consumos = [float(r.get("consumo_diesel_l") or 0.0) for r in rows if isinstance(r, dict)]
@@ -274,13 +291,14 @@ def _render_cube_diesel_metrics(rows: list, granularidade: str) -> None:
     d1.metric("Total consumo", f"{total_l:,.0f} L")
     d2.metric(f"Pico/{granularidade}", f"{pico_l:,.0f} L")
     d3.metric(f"Média/{granularidade}", f"{media_l:,.0f} L")
-    # Sugestão de tanque: pico × fator de segurança (1.5 × ciclo de reabastecimento estimado em 2 períodos)
-    tanque_sugerido = pico_l * 1.5 * 2
+    # ADR-128 D4: usa capacidade real declarada (DisponibilidadeConsumivel) quando presente;
+    # fallback heurístico: pico × 1.5 (fator segurança) × 2 (ciclo de reabastecimento).
+    tanque_sugerido = calcular_tanque_sugerido(pico_l, disponibilidade)
     d4.metric(
         "Tanque sugerido ×3",
         f"{tanque_sugerido:,.0f} L",
         help="Estimativa conservadora: pico × 1,5 (fator segurança) × 2 (ciclo de reabastecimento). "
-        "Ajuste conforme frequência de entrega.",
+        "Ajuste conforme frequência de entrega. Usa capacidade real do projeto quando declarada (ADR-128).",
     )
 
 
