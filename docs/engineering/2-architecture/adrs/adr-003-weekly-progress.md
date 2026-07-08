@@ -1,6 +1,6 @@
 # ADR-003: Weekly Progress Tracking & Efficiency Model
 
-**Status:** IMPLEMENTED  
+**Status:** Implementado  
 **Date Decided:** 2026-04-29  
 **Date Implemented:** 2026-04-29  
 **Implementers:** progress/models.py, progress/tracker.py, SkillResult  

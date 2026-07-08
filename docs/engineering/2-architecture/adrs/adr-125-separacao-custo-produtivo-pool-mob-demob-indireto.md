@@ -1,6 +1,6 @@
 # ADR-125 — Hierarquia de Custo: C_prod / C_pool / Contrato; Mob/Demob como Custo Indireto
 
-**Status:** 💡 Proposta  
+**Status:** ✅ Decidido  
 **Data:** 2026-06-28  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-085, ADR-106, ADR-124, NEP-028

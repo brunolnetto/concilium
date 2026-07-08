@@ -1,6 +1,6 @@
 # ADR-124 — Reformulação do Modelo de Eficiência: Separação entre Fase de Planejamento e Controle
 
-**Status:** 💡 Proposta  
+**Status:** ✅ Decidido  
 **Data:** 2026-06-28  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** NEP-035, NEP-036, ADR-068, ADR-046

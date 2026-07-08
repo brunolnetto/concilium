@@ -1,6 +1,6 @@
 # ADR-126 — Project Ownership: Responsável por Projeto e Autorização por Ownership
 
-**Status:** 💡 Proposta
+**Status:** ✅ Decidido
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-099 (RBAC role↔tool), ADR-117 (decorator tags), ADR-118 (tool invocation audit), ADR-119 (multi-actor project management), ADR-094 (padrão de convite/revoke pendente reaproveitado no handover)

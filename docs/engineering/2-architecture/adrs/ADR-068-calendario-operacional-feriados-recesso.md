@@ -1,6 +1,6 @@
 # ADR-068: Calendario Operacional de Producao (Feriados e Recesso)
 
-**Status:** Implementada
+**Status:** Implementado
 **Data:** 2026-05-22
 **Autor:** Engenheiro Senior
 **Relacionado:** ADR-007, ADR-038, ADR-046, ADR-058, ADR-060, ADR-061

@@ -1,6 +1,6 @@
 # ADR-095 — Observabilidade Agnóstica de Sink: OpenTelemetry para API e MCP
 
-**Status:** APROVADO
+**Status:** ✅ Implementado
 **Data:** 2026-05-30
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-096 (Deploy Azure), ADR-094 (JWT Auth)

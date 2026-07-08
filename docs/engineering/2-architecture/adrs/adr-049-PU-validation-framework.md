@@ -1,6 +1,6 @@
 # ADR-049: Validação Convergente de Preço Unitário (Catálogo + Projeto)
 
-**Status**: IMPLEMENTADO  
+**Status:** Implementado  
 **Data**: 2026-05-14  
 **Contexto**: Concilium v0.2 (skills 05-06-08)  
 **Decidor**: Engenheiro Sênior  

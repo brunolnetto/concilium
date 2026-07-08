@@ -1,6 +1,6 @@
 # ADR-098 — Rate Limiting com SlowAPI: Proteção contra DDoS e Uso Abusivo
 
-**Status:** APROVADO
+**Status:** ✅ Implementado
 **Data:** 2026-06-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-094 (JWT Auth), ADR-096 (Deploy Azure)

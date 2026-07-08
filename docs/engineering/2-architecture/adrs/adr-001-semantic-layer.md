@@ -1,6 +1,6 @@
 # ADR-001: Semantic Layer for Client Scope Interpretation
 
-**Status:** IMPLEMENTED  
+**Status:** Implementado  
 **Date Decided:** 2026-04-29  
 **Date Implemented:** 2026-04-29  
 **Implementers:** models/semantic_layer.py, skills/00-escopo  

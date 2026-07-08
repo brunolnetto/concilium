@@ -1,6 +1,6 @@
 # ADR-002: Resolution & Matching Strategy
 
-**Status:** IMPLEMENTED  
+**Status:** Implementado  
 **Date Decided:** 2026-04-29  
 **Date Implemented:** 2026-04-29  
 **Implementers:** skills/02-resolver-cpus, models/resolution_decision.py  

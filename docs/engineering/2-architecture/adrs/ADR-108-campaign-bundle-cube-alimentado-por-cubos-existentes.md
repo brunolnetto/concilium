@@ -1,6 +1,6 @@
 # ADR-108: CampaignBundleCube Alimentado pelos Cubos de Custo e Cronograma
 
-**Status:** Proposto → Implementado 2026-06-12  
+**Status:** ✅ Implementado 2026-06-12  
 **Relacionado:** ADR-069 (Cubo Analítico), ADR-070 (Campanha de Exploração), ADR-086 (Cubo Pool), ADR-087 (Modelo Dimensional)
 
 ---

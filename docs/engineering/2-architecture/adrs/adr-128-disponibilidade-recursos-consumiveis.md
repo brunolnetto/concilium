@@ -1,6 +1,6 @@
 # ADR-128 — Disponibilidade de Recursos Consumíveis: Estoque, Taxa de Consumo e Reabastecimento (Diesel, Combustível, Material)
 
-**Status:** 💡 Proposta
+**Status:** ✅ Decidido
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-107 (generalização tipo_combustivel), ADR-090 (BDI sistemático diesel/material), ADR-046 (motor RCPSP)

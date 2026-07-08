@@ -1,6 +1,6 @@
 # ADR-129 — Cotação por Proximidade Geográfica: Municípios de Referência, Distância e População
 
-**Status:** 💡 Proposta
+**Status:** ✅ Decidido
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-032 (CPU/Insumo/Jurisdição v2), ADR-066 (CatalogResolver — camadas Master/Jurisdição/Projeto), ADR-107 (tipo_combustivel)

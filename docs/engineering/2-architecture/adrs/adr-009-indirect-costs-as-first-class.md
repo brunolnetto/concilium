@@ -1,6 +1,6 @@
 # ADR-009: Indirect Costs: Cost Matrix Model (Scaling × Components)
 
-**Status:** IMPLEMENTED  
+**Status:** Implementado  
 **Date Decided:** 2026-04-30  
 **Date Implemented:** 2026-04-30  
 **Implementers:** canonical.py (IndirectoCategoria, IndiretoSemanal), skills/05-indiretos  

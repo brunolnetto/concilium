@@ -1,6 +1,6 @@
 # ADR-083 — Partição de Custo em Pool Compartilhado: Atribuição Temporal Causal (Muitos-para-Muitos)
 
-**Status:** � Implementado  
+**Status:** ✅ Implementado  
 **Data:** 2026-05-28  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-071 (Resource Contract Model), ADR-073 (Perpetuação de Instâncias), ADR-082 (Levers de Ponto de Equilíbrio)

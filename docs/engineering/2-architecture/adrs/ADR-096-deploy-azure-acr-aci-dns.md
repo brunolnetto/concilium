@@ -1,6 +1,6 @@
 # ADR-096 — Deploy Azure: ACR → ACI → Application Gateway → DNS → Domínio Mendes Lobo
 
-**Status:** APROVADO
+**Status:** ✅ Implementado
 **Data:** 2026-05-30
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-094 (JWT Auth), ADR-095 (Observabilidade)

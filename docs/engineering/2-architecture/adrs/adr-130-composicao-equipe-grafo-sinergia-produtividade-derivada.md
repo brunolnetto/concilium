@@ -1,6 +1,6 @@
 # ADR-130 — Composição de Equipe como Grafo de Sinergia: Produtividade Derivada do Gargalo
 
-**Status:** 💡 Proposta
+**Status:** ✅ Decidido
 **Data:** 2026-07-06
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-011 (produtividade computável), ADR-030 (composição tipada de equipes), ADR-053 (separação CPU × Produtividade), ADR-076 (calibração de PU), ADR-128 (disponibilidade de consumíveis)

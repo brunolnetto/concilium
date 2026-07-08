@@ -1,6 +1,6 @@
 # ADR-042: Integration of Outsourced Services into Financial Model
 
-**Status:** Proposto 
+**Status:** Proposta
 **Implementation Priority:** Medium (Not required for MARA_ROSA baseline; activated for mixed in-house/outsourced projects)
 **Date:** 2026-05-09  
 **Author(s):** Engineering Team  
