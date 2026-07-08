@@ -16,6 +16,16 @@ permissions:
   id-token: write
   contents: read
 
+# Serializa deploys: pushes/merges em sequência rápida em `main` disparavam runs
+# paralelas contra o mesmo Container App, causando
+# ContainerAppOperationInProgress (Azure só permite uma operação de
+# provisionamento por vez). cancel-in-progress=false pois um deploy em
+# andamento nunca deve ser cancelado no meio (revision/tráfego inconsistente) —
+# runs subsequentes esperam na fila e fazem deploy do commit que as disparou.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
 # ── Job 1: Build & Push ───────────────────────────────────────────────────────
   build:
