@@ -3,7 +3,7 @@
 **Status:** ✅ Implementado (consolidação de decisão já implementada, sem código novo)
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
-**Dependências:** ADR-080 (custo diferenciado de permanência/taxa ociosa), ADR-108 (rental_unit, regime de revezamento), ADR-125 (hierarquia C_prod/C_pool), NEP-031 (L1 — rental_unit)
+**Dependências:** ADR-080 (custo diferenciado de permanência/taxa ociosa), ADR-132 (rental_unit, regime de revezamento), ADR-125 (hierarquia C_prod/C_pool), NEP-031 (L1 — rental_unit)
 
 ---
 
@@ -17,7 +17,7 @@ P1. **O PU final de todo recurso/atividade é sempre expresso em R$/hora produti
    - `tipo_contrato: Literal["CLT", "PJ"]` para mão de obra em `AtributosInsumo` (`catalogo.py`).
    - Conversão de PU para R$/hora em `pu_calculator._converter_rental_unit()` (usa `rental_unit`).
    - Formalização matemática do impacto no custo idle em `docs/product/4-research/recursos.md` (não é ADR).
-   - Menções incidentais em ADR-078, ADR-080, ADR-088, ADR-108 — nenhuma delas é a decisão canônica, e nenhuma esclarece a relação entre os dois campos.
+   - Menções incidentais em ADR-078, ADR-080, ADR-088, ADR-132 — nenhuma delas é a decisão canônica, e nenhuma esclarece a relação entre os dois campos.
 
 P2. **Os dois campos (`rental_unit` e `unidade_faturamento`) usam vocabulários de valores diferentes para a mesma taxonomia conceitual** (`"hora_produtiva"` vs. `"hora_prod"`, `"dia_calendario"` vs. `"dia_cal"`), sem nenhum ponto do código ou documentação que explicite que são o mesmo conceito em dois domínios (catálogo vs. contrato de pool). Isso é uma fonte real de confusão para quem lê o código pela primeira vez.
 
@@ -117,6 +117,6 @@ Um recurso faturado por hora produtiva não gera custo de ociosidade direto (só
 ## Relacionados
 
 - ADR-080: Custo diferenciado de permanência / taxa ociosa — base do cálculo de custo idle por `rental_unit`
-- ADR-108: Regime de revezamento e `rental_unit` — primeira implementação da taxonomia de faturamento
+- ADR-132: Regime de revezamento e `rental_unit` — primeira implementação da taxonomia de faturamento
 - ADR-125: Hierarquia C_prod/C_pool/Contrato — camada de custo onde `rental_unit` se insere
 - `docs/product/4-research/recursos.md` — formalização matemática de custo idle por unidade de faturamento

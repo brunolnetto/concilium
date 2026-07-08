@@ -1,4 +1,4 @@
-"""ADR-110 — TDD: detector de oportunidades de compartilhamento paralelo.
+"""ADR-133 — TDD: detector de oportunidades de compartilhamento paralelo.
 
 Todos os testes escritos ANTES da implementação (fase red).
 
@@ -197,7 +197,7 @@ class TestCpmLateFinish:
 
 
 class TestCriteriosCandidatura:
-    """Testa os quatro critérios de §D1 do ADR-110."""
+    """Testa os quatro critérios de §D1 do ADR-133."""
 
     def test_par_serializado_por_escassez_detectado(self, helpers):
         """Pool=1, sem precedência lógica, adjacentes → candidato."""

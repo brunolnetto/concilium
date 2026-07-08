@@ -1,6 +1,6 @@
 # ADR-122 — Migração de ACI para Azure Container Apps (ACA)
 
-**Status:** Decidido ✅  
+**Status:** ✅ Implementado  
 **Data:** 2026-06-23  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-096 (deploy Azure), ADR-099 (RBAC/JWT)

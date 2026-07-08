@@ -1,6 +1,6 @@
 """Skill 03 — Equipes e Alocação (parte extraída de skill.py).
 
-Detecção de oportunidades de compartilhamento paralelo (ADR-110).
+Detecção de oportunidades de compartilhamento paralelo (ADR-133).
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ def _deve_processar_compartilhamento(contratos_recurso: list[RecursoContrato], r
 
 
 def _deve_detectar_oportunidades_paralelo(relatorio_oportunidades: Any, canonical_in: CanonicalModel) -> bool:
-    """ADR-110: só detecta oportunidades paralelas com schedule, resource_costs e pool disponíveis."""
+    """ADR-133: só detecta oportunidades paralelas com schedule, resource_costs e pool disponíveis."""
     return bool(
         relatorio_oportunidades is not None
         and canonical_in.cronograma is not None
@@ -35,7 +35,7 @@ def _build_scheduled_activities_110(canonical_in: CanonicalModel, contratos_recu
     """Reconstrói a lista de ScheduledActivity do scheduler a partir do cronograma canônico."""
     from concilium.application.scheduling.models import ScheduledActivity
 
-    assert canonical_in.cronograma is not None  # noqa: S101 - garantido pelo chamador (guard de ADR-110)
+    assert canonical_in.cronograma is not None  # noqa: S101 - garantido pelo chamador (guard de ADR-133)
     sched_acts = []
     for sa in canonical_in.cronograma.scheduled_activities:
         rr: dict = {}
@@ -115,7 +115,7 @@ def _aplicar_oportunidades_paralelo(
             codigo="VAL-OPP-PARALELO-OK",
             status="OK",
             mensagem=(
-                f"ADR-110: {len(opps_paralelo)} oportunidade(s) paralela(s) detectada(s) "
+                f"ADR-133: {len(opps_paralelo)} oportunidade(s) paralela(s) detectada(s) "
                 f"— {n_viaveis_par} economicamente viável(is)."
             ),
         )
@@ -130,7 +130,7 @@ def _processar_oportunidades_paralelo(
     rcpsp_spec: dict | None,
     validacoes: list[ValidacaoItem],
 ) -> Any:
-    """ADR-110: detecção automática de oportunidades de compartilhamento paralelo (best-effort)."""
+    """ADR-133: detecção automática de oportunidades de compartilhamento paralelo (best-effort)."""
     if not _deve_detectar_oportunidades_paralelo(relatorio_oportunidades, canonical_in):
         return relatorio_oportunidades
     # relatorio_oportunidades só é not-None quando _deve_processar_compartilhamento

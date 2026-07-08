@@ -227,7 +227,7 @@ def _resolve_equip_attrs_and_tipo(ctx: _RepoCtx, e: dict, equip_custom: dict, in
 def _resolve_equip_custo_mensal_override(
     e: dict, equip_custom: dict, horas_dia: float, dias_uteis: float
 ) -> float | None:
-    # ADR-108: preco_h_unitario na composição sobrepõe preco_unitario do catálogo.
+    # ADR-132: preco_h_unitario na composição sobrepõe preco_unitario do catálogo.
     # Armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
     # Convertemos para custo_mensal usando as horas efetivas do regime do projeto.
     _preco_h_comp = e.get("preco_h_unitario")

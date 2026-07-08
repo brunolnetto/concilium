@@ -1,4 +1,4 @@
-"""ADR-078/ADR-110 — pré-processamento e detecção de oportunidades de compartilhamento.
+"""ADR-078/ADR-133 — pré-processamento e detecção de oportunidades de compartilhamento.
 
 Critical path method (early start / late finish).
 """

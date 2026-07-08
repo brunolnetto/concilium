@@ -1,4 +1,4 @@
-"""ADR-078/ADR-110 — pré-processamento e detecção de oportunidades de compartilhamento.
+"""ADR-078/ADR-133 — pré-processamento e detecção de oportunidades de compartilhamento.
 
 Métricas econômicas puras (gap máximo, eta de perpetuação, sobreposição, delta de custo).
 """

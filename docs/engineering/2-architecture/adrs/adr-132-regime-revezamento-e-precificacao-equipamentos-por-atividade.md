@@ -1,4 +1,4 @@
-# ADR-108 — Regime de Revezamento, Turnos Noturnos e Precificação de Equipamentos por Atividade
+# ADR-132 — Regime de Revezamento, Turnos Noturnos e Precificação de Equipamentos por Atividade
 
 **Status:** Implementado ✅ _(2026-06-18)_  
 **Data:** 2026-06-18  

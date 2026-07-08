@@ -1,4 +1,4 @@
-# ADR-110 — Oportunidade de Compartilhamento Paralelo de Recursos
+# ADR-133 — Oportunidade de Compartilhamento Paralelo de Recursos
 
 **Status:** 💡 Proposta  
 **Data:** 2026-06-16  
@@ -164,7 +164,7 @@ uma classe análoga no canonical:
 
 ```python
 class OportunidadeCompartilhamentoParalelo(BaseModel):
-    """Par de atividades paralelizáveis via compartilhamento de recurso — ADR-110.
+    """Par de atividades paralelizáveis via compartilhamento de recurso — ADR-133.
 
     Detectado automaticamente pós-RCPSP. Nenhuma entrada do usuário necessária.
     """

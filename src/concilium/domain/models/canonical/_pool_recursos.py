@@ -308,7 +308,7 @@ class OportunidadeCompartilhamento(BaseModel):
 
 
 class OportunidadeCompartilhamentoParalelo(BaseModel):
-    """Par de atividades paralelizáveis via compartilhamento de recurso — ADR-110.
+    """Par de atividades paralelizáveis via compartilhamento de recurso — ADR-133.
 
     Detectado automaticamente pós-RCPSP. O solver serializou (i, j) exclusivamente
     por escassez de pool (pool == 1, demanda == 2). Ambas têm folga CPM positiva,
@@ -339,7 +339,7 @@ class RelatorioOportunidades(BaseModel):
     `rcpsp_spec.resource_costs` está presente. Contém o grafo de oportunidades H
     completo (incluindo arestas inviáveis para auditoria).
 
-    ADR-110: `oportunidades_paralelo` agrega os candidatos a compartilhamento
+    ADR-133: `oportunidades_paralelo` agrega os candidatos a compartilhamento
     paralelo detectados automaticamente pós-RCPSP.
     """
 
@@ -351,7 +351,7 @@ class RelatorioOportunidades(BaseModel):
     lambda0_total: float  # Σ lambda0 (apenas viáveis)
     oportunidades: list[OportunidadeCompartilhamento] = Field(default_factory=list)
     gap_max_por_tipo: dict[str, int] = Field(default_factory=dict)  # {tipo_id: gap_max}
-    # ADR-110: candidatos a paralelo-com-alternância (detecção pós-RCPSP)
+    # ADR-133: candidatos a paralelo-com-alternância (detecção pós-RCPSP)
     oportunidades_paralelo: list[OportunidadeCompartilhamentoParalelo] = Field(default_factory=list)
 
 

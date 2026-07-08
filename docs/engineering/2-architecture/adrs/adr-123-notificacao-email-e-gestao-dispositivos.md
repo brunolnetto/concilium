@@ -1,6 +1,6 @@
 # ADR-123 — Serviço de Notificação por Email e Gestão de Dispositivos
 
-**Status:** Decidido ✅  
+**Status:** ⚠️ Parcialmente Implementado _(F1, F2, F4, F5 ✅; F3 — detecção de dispositivo desconhecido — não implementada; ver ADR-131)_  
 **Data:** 2026-06-23  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-094 (JWT/auth), ADR-099 (RBAC), ADR-116 (MCP surface)

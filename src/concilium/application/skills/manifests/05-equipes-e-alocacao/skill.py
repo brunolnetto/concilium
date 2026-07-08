@@ -206,7 +206,7 @@ def run_equipes_e_alocacao(
             contratos_recurso, rcpsp_spec, cron_lookup, validacoes
         )
 
-    # ADR-110: detecção automática de oportunidades de compartilhamento paralelo
+    # ADR-133: detecção automática de oportunidades de compartilhamento paralelo
     # Executado quando há schedule, resource_costs e pool contracts disponíveis.
     relatorio_oportunidades = _processar_oportunidades_paralelo(
         relatorio_oportunidades, canonical_in, contratos_recurso, rcpsp_spec, validacoes

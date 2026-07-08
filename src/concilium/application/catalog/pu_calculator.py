@@ -248,7 +248,7 @@ def _acumular_custo_mo(
 
 
 def _preco_h_equipamento(eq: dict, ins: dict) -> float:
-    # ADR-108: preco_h_unitario na entry de composição sobrepõe preco_unitario do
+    # ADR-132: preco_h_unitario na entry de composição sobrepõe preco_unitario do
     # insumo do catálogo, permitindo preços por-atividade sem duplicar insumos no catálogo.
     # Já armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
     preco_h_override = eq.get("preco_h_unitario")

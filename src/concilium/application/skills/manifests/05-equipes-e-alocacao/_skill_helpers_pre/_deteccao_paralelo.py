@@ -1,6 +1,6 @@
-"""ADR-078/ADR-110 — pré-processamento e detecção de oportunidades de compartilhamento.
+"""ADR-078/ADR-133 — pré-processamento e detecção de oportunidades de compartilhamento.
 
-Detecção de oportunidades de compartilhamento paralelo (ADR-110).
+Detecção de oportunidades de compartilhamento paralelo (ADR-133).
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ def _dop_avaliar_par(
     custo_semana: float,
     custo_indireto_semana: float,
 ) -> OportunidadeCompartilhamentoParalelo | None:
-    """Avalia um par (id_x, id_y) contra os critérios 3-5 do ADR-110 §D1 e retorna a oportunidade, se viável."""
+    """Avalia um par (id_x, id_y) contra os critérios 3-5 do ADR-133 §D1 e retorna a oportunidade, se viável."""
     if frozenset([id_x, id_y]) in precedencias:
         return None
 
@@ -185,7 +185,7 @@ def _detectar_oportunidades_paralelo(
     custo_indireto_semana: float,
     limite_producao_por_tipo: dict[str, str] | None = None,
 ) -> list[OportunidadeCompartilhamentoParalelo]:
-    """Detecta candidatos a compartilhamento paralelo pós-RCPSP (ADR-110 §D1).
+    """Detecta candidatos a compartilhamento paralelo pós-RCPSP (ADR-133 §D1).
 
     Critérios:
       1. Tipo r presente em resource_costs (custo de frota conhecido)

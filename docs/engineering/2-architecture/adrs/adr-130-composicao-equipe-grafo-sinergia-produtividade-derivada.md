@@ -21,7 +21,7 @@ P4. **O risco de um modelo de processo completo é staleness.** Um simulador de 
 
 ### Escopo e altitude
 
-Esta ADR trata da sinergia **intra-equipe** (dentro de uma `ComposicaoPadraoEquipe`/CPU). Dependências **entre atividades** já são cobertas por ADR-016 (taxonomia de compartilhamento de recursos) e ADR-110 (compartilhamento em atividades paralelas) — altitudes distintas, sem sobreposição.
+Esta ADR trata da sinergia **intra-equipe** (dentro de uma `ComposicaoPadraoEquipe`/CPU). Dependências **entre atividades** já são cobertas por ADR-016 (taxonomia de compartilhamento de recursos) e ADR-133 (compartilhamento em atividades paralelas) — altitudes distintas, sem sobreposição.
 
 ---
 
@@ -125,7 +125,7 @@ Quando (2) e (3) coexistem, a divergência é reportada (D4), mas o valor calibr
 | A1 | Simulador de processo construtivo completo (ciclo, fila, DMT, empolamento por família de serviço) | Volume de parâmetros por família tende a estagnar (o problema do SINAPI reproduzido internamente); custo de modelagem por família de processo é alto e o valor incremental sobre gargalo+acoplamento não se sustenta sem dado de campo que hoje não existe |
 | A2 | Enriquecer apenas os coeficientes (mais campos numéricos em `ComposicaoPadraoEquipe`) | Não expressa relação entre elementos — não responde P3 (troca de equipamento) nem P1 (justificar ajuste ao contexto); mais parâmetros sem estrutura agrava staleness |
 | A3 | Produtividade derivada sobrescreve a declarada quando grafo presente | Sobrescrita silenciosa quebraria benchmarks calibrados (mesma lição do ADR-106/F5); divergência deve ser exposta (`VAL-SINERGIA-02`), decisão é do engenheiro |
-| A4 | Modelar sinergia no nível de atividade/cronograma (estender ADR-110) | Altitude errada — ADR-110 trata compartilhamento *entre* atividades; a sinergia aqui é interna à equipe da CPU, dado de catálogo/produtividade (ADR-053), não de schedule |
+| A4 | Modelar sinergia no nível de atividade/cronograma (estender ADR-133) | Altitude errada — ADR-133 trata compartilhamento *entre* atividades; a sinergia aqui é interna à equipe da CPU, dado de catálogo/produtividade (ADR-053), não de schedule |
 | A5 | Grafo obrigatório para toda CPU nova | A maioria das CPUs não terá esse dado no curto prazo; obrigatoriedade travaria curadoria do catálogo (mesma razão do ADR-128/A2) |
 
 ---
@@ -191,6 +191,6 @@ F1–F2 são o caminho crítico. F4 é pré-requisito para F3/F5 produzirem valo
 - ADR-030 — Composição tipada de equipes (elementos referenciados pelo grafo)
 - ADR-053 — Separação CPU × Produtividade (o grafo vive no domínio de Produtividade)
 - ADR-076 — Calibração de PU (F5: alvo estruturado da calibração)
-- ADR-016 / ADR-110 — Compartilhamento de recursos *entre* atividades (altitude complementar)
+- ADR-016 / ADR-133 — Compartilhamento de recursos *entre* atividades (altitude complementar)
 - ADR-128 — Disponibilidade de consumíveis (relação `precondicao` de material)
 - ADR-106 — EquipeCustoEngine (lição F5: não ativar read-path sem dado de catálogo)

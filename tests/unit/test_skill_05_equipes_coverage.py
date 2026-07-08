@@ -544,9 +544,9 @@ class TestAdr078PreProcessamento:
         mock_build_pre.assert_not_called()
 
 
-class TestAdr110Oportunidades:
-    def test_adr110_trigger_with_cronograma_and_pool(self):
-        """Lines 443-444: ADR-110 block triggered when relatorio_oportunidades is not None
+class TestAdr133Oportunidades:
+    def test_adr133_trigger_with_cronograma_and_pool(self):
+        """Lines 443-444: ADR-133 block triggered when relatorio_oportunidades is not None
         AND canonical.cronograma.scheduled_activities AND canonical.recurso_pool non-empty."""
         eq = _eq("E1")
         sa = MagicMock()
@@ -569,7 +569,7 @@ class TestAdr110Oportunidades:
         mock_relatorio = MagicMock()
         mock_relatorio.model_copy.return_value = mock_relatorio
         mock_build_pre = MagicMock(return_value=mock_relatorio)
-        # Let the ADR-110 block run naturally (it uses try/except internally)
+        # Let the ADR-133 block run naturally (it uses try/except internally)
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
             patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
@@ -583,7 +583,7 @@ class TestAdr110Oportunidades:
         # The block should run (covered) even if it fails internally — best-effort try/except
         assert isinstance(r, SkillResult)
 
-    def test_adr110_second_contrato_does_not_cover_activity(self):
+    def test_adr133_second_contrato_does_not_cover_activity(self):
         """Line 370 false branch: a contrato in the list that does NOT cover the
         activity — loop must continue to the next contrato (line 369)."""
         eq = _eq("E1")
@@ -625,8 +625,8 @@ class TestAdr110Oportunidades:
         assert isinstance(r, SkillResult)
 
 
-class TestAdr110IndiretosCoverage:
-    def test_adr110_with_indiretos_and_oportunidades(self):
+class TestAdr133IndiretosCoverage:
+    def test_adr133_with_indiretos_and_oportunidades(self):
         """Lines 417-419 (indiretos branch) + 429-444 (oportunidades truthy)."""
         eq = _eq("E1")
         sa = MagicMock()
@@ -674,9 +674,9 @@ class TestAdr110IndiretosCoverage:
         assert any(v.codigo == "VAL-OPP-PARALELO-OK" for v in r.validacoes)
 
 
-class TestAdr110ExceptionCoverage:
-    def test_adr110_exception_path_covered(self):
-        """Lines 443-444: except Exception: pass when ADR-110 try block fails."""
+class TestAdr133ExceptionCoverage:
+    def test_adr133_exception_path_covered(self):
+        """Lines 443-444: except Exception: pass when ADR-133 try block fails."""
         eq = _eq("E1")
         sa = MagicMock()
         sa.activity_id = "E1"
