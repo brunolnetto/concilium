@@ -1,0 +1,33 @@
+{
+  "_fonte": "IBGE — Censo 2022 (população) e coordenadas de centróide urbano (capitais estaduais). Snapshot estático curado para o piloto da ADR-129; ver docstring de MunicipioReferenceClient para escopo e limitações.",
+  "_atualizado_em": "2026-07-02",
+  "municipios": [
+    {"codigo_ibge": "1200401", "nome": "Rio Branco", "uf": "AC", "latitude": -9.9754, "longitude": -67.8249, "populacao": 419452},
+    {"codigo_ibge": "2704302", "nome": "Maceio", "uf": "AL", "latitude": -9.6498, "longitude": -35.7089, "populacao": 1025360},
+    {"codigo_ibge": "1600303", "nome": "Macapa", "uf": "AP", "latitude": 0.0349, "longitude": -51.0694, "populacao": 512902},
+    {"codigo_ibge": "1302603", "nome": "Manaus", "uf": "AM", "latitude": -3.1190, "longitude": -60.0217, "populacao": 2063689},
+    {"codigo_ibge": "2927408", "nome": "Salvador", "uf": "BA", "latitude": -12.9777, "longitude": -38.5016, "populacao": 2418616},
+    {"codigo_ibge": "2304400", "nome": "Fortaleza", "uf": "CE", "latitude": -3.7172, "longitude": -38.5433, "populacao": 2428708},
+    {"codigo_ibge": "5300108", "nome": "Brasilia", "uf": "DF", "latitude": -15.7939, "longitude": -47.8828, "populacao": 2817381},
+    {"codigo_ibge": "3205309", "nome": "Vitoria", "uf": "ES", "latitude": -20.3155, "longitude": -40.3128, "populacao": 365855},
+    {"codigo_ibge": "5208707", "nome": "Goiania", "uf": "GO", "latitude": -16.6864, "longitude": -49.2643, "populacao": 1555626},
+    {"codigo_ibge": "2111300", "nome": "Sao Luis", "uf": "MA", "latitude": -2.5307, "longitude": -44.3068, "populacao": 1108975},
+    {"codigo_ibge": "5103403", "nome": "Cuiaba", "uf": "MT", "latitude": -15.6014, "longitude": -56.0979, "populacao": 650912},
+    {"codigo_ibge": "5002704", "nome": "Campo Grande", "uf": "MS", "latitude": -20.4697, "longitude": -54.6201, "populacao": 916001},
+    {"codigo_ibge": "3106200", "nome": "Belo Horizonte", "uf": "MG", "latitude": -19.9167, "longitude": -43.9345, "populacao": 2315560},
+    {"codigo_ibge": "1501402", "nome": "Belem", "uf": "PA", "latitude": -1.4558, "longitude": -48.5044, "populacao": 1303403},
+    {"codigo_ibge": "2507507", "nome": "Joao Pessoa", "uf": "PB", "latitude": -7.1195, "longitude": -34.8450, "populacao": 833932},
+    {"codigo_ibge": "4106902", "nome": "Curitiba", "uf": "PR", "latitude": -25.4284, "longitude": -49.2733, "populacao": 1773718},
+    {"codigo_ibge": "2611606", "nome": "Recife", "uf": "PE", "latitude": -8.0476, "longitude": -34.8770, "populacao": 1488920},
+    {"codigo_ibge": "2211001", "nome": "Teresina", "uf": "PI", "latitude": -5.0892, "longitude": -42.8019, "populacao": 866300},
+    {"codigo_ibge": "3304557", "nome": "Rio de Janeiro", "uf": "RJ", "latitude": -22.9068, "longitude": -43.1729, "populacao": 6211423},
+    {"codigo_ibge": "2408102", "nome": "Natal", "uf": "RN", "latitude": -5.7945, "longitude": -35.2110, "populacao": 751300},
+    {"codigo_ibge": "4314902", "nome": "Porto Alegre", "uf": "RS", "latitude": -30.0346, "longitude": -51.2177, "populacao": 1332570},
+    {"codigo_ibge": "1100205", "nome": "Porto Velho", "uf": "RO", "latitude": -8.7619, "longitude": -63.9039, "populacao": 460434},
+    {"codigo_ibge": "1400100", "nome": "Boa Vista", "uf": "RR", "latitude": 2.8235, "longitude": -60.6758, "populacao": 419652},
+    {"codigo_ibge": "4205407", "nome": "Florianopolis", "uf": "SC", "latitude": -27.5954, "longitude": -48.5480, "populacao": 537213},
+    {"codigo_ibge": "3550308", "nome": "Sao Paulo", "uf": "SP", "latitude": -23.5505, "longitude": -46.6333, "populacao": 11451999},
+    {"codigo_ibge": "2800308", "nome": "Aracaju", "uf": "SE", "latitude": -10.9472, "longitude": -37.0731, "populacao": 664908},
+    {"codigo_ibge": "1721000", "nome": "Palmas", "uf": "TO", "latitude": -10.1844, "longitude": -48.3336, "populacao": 313349}
+  ]
+}

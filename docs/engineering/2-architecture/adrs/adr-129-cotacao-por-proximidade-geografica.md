@@ -1,6 +1,6 @@
 # ADR-129 — Cotação por Proximidade Geográfica: Municípios de Referência, Distância e População
 
-**Status:** ✅ Decidido
+**Status:** ✅ Implementado (2026-07-08) — ver nota de implementação abaixo
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-032 (CPU/Insumo/Jurisdição v2), ADR-066 (CatalogResolver — camadas Master/Jurisdição/Projeto), ADR-107 (tipo_combustivel)
@@ -85,21 +85,93 @@ Quando múltiplos municípios de referência estão a distância comparável, us
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `MunicipioReferenceClient` (IBGE) com cache em disco | ⬜ Não iniciado |
-| F2 | Reconexão do `FuelPriceClient` ao `pu_calculator` (preço por UF, sem proximidade ainda) | ⬜ Não iniciado |
-| F3 | Camada de resolução por município mais próximo no `CatalogResolver`, com `raio_cotacao_km` | ⬜ Não iniciado |
-| F4 | Critério de desempate por população | ⬜ Não iniciado |
+| F1 | `MunicipioReferenceClient` (IBGE) com cache em disco | ✅ Implementado (cache em memória sobre dataset estático — ver nota) |
+| F2 | Reconexão do `FuelPriceClient` ao `pu_calculator` (preço por UF, sem proximidade ainda) | ✅ Implementado (`resolver_preco_diesel_uf`) |
+| F3 | Camada de resolução por município mais próximo, com `raio_cotacao_km`, integrada ao call site real de precificação de diesel | ✅ Implementado — `geo_diesel_resolver.py` integrado a `06-resultado-financeiro/_precificacao/skill.py::_resolve_preco_diesel_catalogo`, opt-in via `inputs["raio_cotacao_km"]` (ver nota) |
+| F4 | Critério de desempate por população | ✅ Implementado |
 
 ## Definition of Done
 
 ### Fase 1-2
-- [ ] `MunicipioReferenceClient` retorna coordenadas/população por município com cache válido
-- [ ] `pu_calculator` usa `FuelPriceClient` por UF, com fallback para `PRECO_DIESEL_REFERENCIA` documentado e testado
+- [x] `MunicipioReferenceClient` retorna coordenadas/população por município com cache válido
+- [x] `pu_calculator` usa `FuelPriceClient` por UF, com fallback para `PRECO_DIESEL_REFERENCIA` documentado e testado
 
 ### Fase 3-4
-- [ ] `raio_cotacao_km` em `Escopo`, com default de sistema configurável
-- [ ] Resolução por proximidade testada com cenário de sítio de obra remoto (sem município dentro do raio → fallback UF)
-- [ ] Desempate por população coberto por teste com dois municípios equidistantes
+- [x] `raio_cotacao_km` em `Escopo`, com default de sistema configurável
+- [x] Resolução por proximidade testada com cenário de sítio de obra remoto (sem município dentro do raio → fallback UF)
+- [x] Desempate por população coberto por teste com dois municípios equidistantes
+
+### Fase 5 — Integração ao call site real
+- [x] `_resolve_preco_diesel_catalogo` (skill de precificação) usa `geo_diesel_resolver` quando `raio_cotacao_km` está em `inputs`, opt-in
+- [x] Precedência testada: `preco_diesel` explícito > catálogo > resolução regional > `PRECO_DIESEL_REFERENCIA`
+- [x] Regressão zero testada: sem `raio_cotacao_km`, comportamento idêntico ao pré-ADR-129
+- [x] Falha da API externa durante a resolução regional não propaga exceção para o pipeline (testado)
+
+## Nota de Implementação (2026-07-08)
+
+Implementado ponta a ponta em nível de **serviço/domínio**, com TDD e cobertura completa:
+
+- `infrastructure/clients/municipios.py` (`MunicipioReferenceClient`, `MunicipioReferencia`,
+  `haversine_km`) — D1. **Diferença em relação ao texto original da decisão:** em vez de um
+  client HTTP para a API de localidades do IBGE, o dataset de referência (coordenadas de
+  centróide + população das capitais estaduais) é estático e embutido
+  (`infrastructure/clients/data/municipios_referencia.json`), com cache em memória por
+  instância. A API pública de localidades do IBGE não expõe coordenadas nem população num
+  único endpoint simples (exigiria compor localidades + malhas geográficas + agregados do
+  Censo) — fora do escopo do piloto. A interface isola a fonte via `dataset_path`,
+  permitindo trocar por uma integração ao vivo depois sem alterar consumidores.
+- `application/catalog/pu_calculator.resolver_preco_diesel_uf` — D3. Reconecta o
+  `FuelPriceClient` por UF, com fallback documentado e testado para
+  `PRECO_DIESEL_REFERENCIA` quando `uf`/`fuel_client` são `None` ou a API externa falha.
+- `Escopo.raio_cotacao_km: float | None` (default `None`) — D5. Constante
+  `RAIO_COTACAO_KM_PADRAO_SISTEMA = 100.0` em `domain/constants.py` documenta o valor
+  sugerido para novos escopos, sem forçar ativação automática (mantém o opt-in explícito
+  descrito em §Riscos).
+- `application/services/catalog/geo_diesel_resolver.py` (`resolver_uf_por_proximidade`,
+  `resolver_preco_diesel_escopo`) — D2+D4. Resolve o município mais próximo dentro do raio
+  (desempate por população quando as distâncias são comparáveis), decidindo qual **UF** de
+  referência usar — não um preço município-específico, conforme a ressalva já registrada em
+  D2 (o `FuelPriceClient` só expõe preço por UF). Fallback em cascata: proximidade →
+  `Escopo.jurisdicao_id` → `PRECO_DIESEL_REFERENCIA`. Trata coordenadas placeholder
+  `(0.0, 0.0)` como "sem localização real", mesmo com `raio_cotacao_km` preenchido.
+
+### Integração ao call site real de precificação (2026-07-08, fecha o gap acima)
+
+`06-resultado-financeiro/_precificacao/skill.py::_resolve_preco_diesel_catalogo` — usado por
+`run_precificacao_unitaria`, o único ponto de cálculo de PU de diesel em produção — passa a
+chamar `geo_diesel_resolver.resolver_preco_diesel` quando `inputs["raio_cotacao_km"]` está
+presente. Precedência final (do mais específico ao mais genérico):
+
+```
+1. inputs["preco_diesel"]                — override manual explícito (vence sempre)
+2. catálogo (MA-DIESEL-S10 / DIESEL-S10) — preço de insumo do catálogo (vence sobre 3-4)
+3. geo_diesel_resolver (proximidade → UF → FuelPriceClient)  — só se raio_cotacao_km presente
+4. PRECO_DIESEL_REFERENCIA               — comportamento anterior à ADR-129 (default)
+```
+
+Decisões de escopo desta integração final:
+
+- **Opt-in explícito via `raio_cotacao_km`**, não automático: reaproveita o mesmo campo de
+  opt-in já desenhado em D5, em vez de introduzir uma flag nova. Pipelines/projetos
+  existentes que não passam `raio_cotacao_km` em `inputs` continuam com comportamento
+  idêntico ao pré-ADR-129 (regressão zero, testada explicitamente) — endereça o risco
+  registrado em §Riscos sobre chamadas de rede automáticas sem decisão de produto.
+- **Não integrado ao `CatalogResolver` (ADR-066) como camada formal**: o preço de diesel não
+  passa hoje pelas camadas Master/Jurisdição/Projeto do `CatalogResolver` — é resolvido
+  diretamente na skill de precificação via `PRECO_DIESEL_REFERENCIA`/catálogo. Integrar no
+  ponto de cálculo real (skill) é mais direto e testável do que introduzir uma camada nova no
+  `CatalogResolver` para um único insumo; a estrutura de `geo_diesel_resolver.py` (função pura,
+  sem estado) não impede uma integração futura ao `CatalogResolver` caso o escopo de
+  "cotação regional" cresça além de diesel.
+- `EscopoGeoLike` (novo `Protocol` estrutural em `geo_diesel_resolver.py`) desacopla
+  `resolver_uf_por_proximidade`/`resolver_preco_diesel_escopo` de um `Escopo` completo — a
+  skill não tem acesso a um `Escopo` inteiro (só a `inputs`/`canonical_in`), e construir um
+  `Escopo` só para isso exigiria preencher campos irrelevantes (`escopo_id`, `data_inicio`,
+  etc.). Nova função `resolver_preco_diesel(...)` aceita os 4 valores primitivos relevantes
+  diretamente.
+- Nenhuma exceção da resolução regional (API externa indisponível, timeout, UF sem preço
+  publicado) propaga para o pipeline — já garantido por `resolver_preco_diesel_uf` (D3),
+  testado também no novo caminho de integração.
 
 ---
 

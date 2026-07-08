@@ -214,10 +214,47 @@ def _as_bool(value: Any) -> bool:
     return False
 
 
-def _resolve_preco_diesel_catalogo(inputs: dict[str, Any], catalogo: dict[str, Any]) -> float:
+def _resolve_preco_diesel_regional_ou_constante(inputs: dict[str, Any]) -> float:
+    """ADR-129 D2/D3: preço de diesel por proximidade geográfica/UF, opt-in.
+
+    Ativa a resolução regional (município mais próximo -> UF -> `FuelPriceClient`)
+    **somente** quando `inputs["raio_cotacao_km"]` é explicitamente informado —
+    mesmo campo de opt-in de `Escopo.raio_cotacao_km` (D5). Sem ele, o
+    comportamento é idêntico ao anterior à ADR-129 (constante nacional), sem
+    nenhuma chamada de rede automática em pipelines existentes (ADR-129 §Riscos:
+    "não introduzir chamadas de rede automáticas... sem decisão explícita").
+
+    Qualquer falha na resolução regional (API externa indisponível, timeout,
+    dataset de município sem cobertura) já cai para `PRECO_DIESEL_REFERENCIA`
+    dentro de `resolver_preco_diesel_uf` — nunca propaga exceção para o pipeline.
+    """
     from concilium.domain.constants import PRECO_DIESEL_REFERENCIA
 
-    preco_diesel = float(inputs.get("preco_diesel", PRECO_DIESEL_REFERENCIA))
+    raio_cotacao_km = inputs.get("raio_cotacao_km")
+    if raio_cotacao_km is None:
+        return PRECO_DIESEL_REFERENCIA
+
+    from concilium.application.services.catalog.geo_diesel_resolver import resolver_preco_diesel
+    from concilium.infrastructure.clients.fuel import FuelPriceClient
+    from concilium.infrastructure.clients.municipios import MunicipioReferenceClient
+
+    preco, _fonte = resolver_preco_diesel(
+        raio_cotacao_km=float(raio_cotacao_km),
+        coordenadas_lat=float(inputs.get("coordenadas_lat", 0.0)),
+        coordenadas_lng=float(inputs.get("coordenadas_lng", 0.0)),
+        jurisdicao_id=inputs.get("jurisdicao_id"),
+        municipio_client=MunicipioReferenceClient(),
+        fuel_client=FuelPriceClient(),
+    )
+    return preco
+
+
+def _resolve_preco_diesel_catalogo(inputs: dict[str, Any], catalogo: dict[str, Any]) -> float:
+    if "preco_diesel" in inputs:
+        preco_diesel = float(inputs["preco_diesel"])
+    else:
+        preco_diesel = _resolve_preco_diesel_regional_ou_constante(inputs)
+
     for _ins in catalogo.get("insumos", []):
         if _ins.get("codigo") in ("MA-DIESEL-S10", "DIESEL-S10"):
             preco_diesel = float(_ins.get("preco_unitario", preco_diesel) or preco_diesel)

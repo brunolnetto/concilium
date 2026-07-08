@@ -275,6 +275,17 @@ class TestFuelPriceClient:
         with pytest.raises(ValueError, match="Unknown state"):
             parse_state("xyz_invalid")
 
+    def test_parse_state_accepts_any_enum_uf(self):
+        """ADR-129 (Copilot, PR #69): antes só go/sp/br eram reconhecidos via alias
+        manual, fazendo resolver_preco_diesel_uf cair sempre no fallback para as
+        demais 15 UFs cobertas pelo enum State. parse_state() deve aceitar
+        qualquer sigla do enum, não só as 3 curadas manualmente."""
+        from concilium.infrastructure.clients.fuel import State, parse_state
+
+        for state in State:
+            assert parse_state(state.value) == state
+            assert parse_state(state.value.upper()) == state
+
     def test_parse_fuel_valid(self):
         """parse_fuel() resolves known aliases."""
         from concilium.infrastructure.clients.fuel import FuelType, parse_fuel

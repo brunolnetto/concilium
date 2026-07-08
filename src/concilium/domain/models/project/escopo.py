@@ -51,6 +51,16 @@ class Escopo(BaseModel):
         default=None,
         description="Código da jurisdição (ex.: 'BR-CE'). Usado para resolver preços regionais e alíquotas BDI.",
     )
+    # ADR-129 D5: raio de busca por proximidade geográfica (cotação de preços regionais)
+    raio_cotacao_km: float | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Raio (km) para resolução de preço por município mais próximo às coordenadas do "
+            "escopo (ADR-129 D2). None (default) preserva o comportamento atual por UF — a "
+            "camada de proximidade é opt-in por este campo, não pela mera presença de coordenadas."
+        ),
+    )
     # Snapshots de catálogo e perfil BDI (podem diferir entre escopos do mesmo projeto)
     snapshot_catalogo_id: str = ""
     snapshot_perfil_id: str = ""

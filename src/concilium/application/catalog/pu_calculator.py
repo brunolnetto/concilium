@@ -19,7 +19,9 @@ Parâmetros configuráveis:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Literal
 
 from concilium.domain.constants import (
     ENCARGOS_CLT,
@@ -27,6 +29,13 @@ from concilium.domain.constants import (
     PRECO_DIESEL_REFERENCIA,
     HORAS_MES_REGIME_6x1,
 )
+
+if TYPE_CHECKING:
+    from concilium.infrastructure.clients.fuel import FuelPriceClient
+
+logger = logging.getLogger(__name__)
+
+FontePrecoDiesel = Literal["fuel_api", "fallback_constante"]
 
 # ── Parâmetros default (ADR-056 §T3 — fonte: domain/constants.py) ────────────
 DEFAULT_ALPHA_CLT = ENCARGOS_CLT
@@ -41,6 +50,44 @@ class ParametrosCalculo:
     alpha_pj: float = DEFAULT_ALPHA_PJ
     preco_diesel: float = DEFAULT_PRECO_DIESEL
     horas_mes: float = DEFAULT_HORAS_MES  # fallback se insumo não tiver horas_mes
+
+
+def resolver_preco_diesel_uf(
+    uf: str | None,
+    fuel_client: FuelPriceClient | None,
+) -> tuple[float, FontePrecoDiesel]:
+    """ADR-129 D3: resolve preço de diesel via `FuelPriceClient`, por UF.
+
+    Reconecta o `FuelPriceClient` (`infrastructure/clients/fuel.py`) — antes
+    desconectado — como fonte real de preço regional de diesel, no lugar da
+    constante nacional única `PRECO_DIESEL_REFERENCIA`.
+
+    Fallback (rede de segurança, preserva o comportamento anterior):
+        - `uf` ausente (None) — não há UF para consultar;
+        - `fuel_client` ausente (None) — chamador optou por não usar a API externa;
+        - qualquer exceção na consulta (API fora do ar, timeout, UF sem preço
+          publicado) — indisponibilidade da fonte externa não deve quebrar o
+          cálculo de PU.
+
+    Args:
+        uf: sigla da UF (ex.: "CE", "SP"). Aceita qualquer caixa.
+        fuel_client: instância de `FuelPriceClient` (injetável para testes) ou
+            `None` para pular a consulta e usar direto a constante nacional.
+
+    Returns:
+        Tupla `(preco, fonte)` onde `fonte` é `"fuel_api"` quando o preço veio
+        da API externa, ou `"fallback_constante"` quando caiu para
+        `PRECO_DIESEL_REFERENCIA`.
+    """
+    if uf and fuel_client is not None:
+        try:
+            preco = fuel_client.get_price_str(uf.strip().lower(), "diesel")
+            return preco, "fuel_api"
+        except Exception:
+            logger.warning(
+                "FuelPriceClient indisponível para UF=%s; usando fallback PRECO_DIESEL_REFERENCIA.", uf
+            )
+    return PRECO_DIESEL_REFERENCIA, "fallback_constante"
 
 
 @dataclass

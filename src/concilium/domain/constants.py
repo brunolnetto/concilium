@@ -203,6 +203,12 @@ BDI_TRIBUTOS_MATERIAL: float = 0.0
 # Fonte: ANP (diesel) — média nacional, vigência maio/2026.
 PRECO_DIESEL_REFERENCIA: float = 6.50  # R$/litro — referência ANP maio/2026
 
+# ADR-129 D5: raio (km) sugerido como default de sistema para engenheiros que optarem
+# por ativar a camada de resolução de preço por proximidade geográfica. `Escopo.raio_cotacao_km`
+# permanece `None` por padrão no modelo (opt-in explícito, ver ADR-129 §Riscos) — esta constante
+# é apenas o valor de referência recomendado ao configurar um novo escopo (zona urbana densa).
+RAIO_COTACAO_KM_PADRAO_SISTEMA: float = 100.0  # km
+
 
 # ── Limites de plausibilidade — equipamentos e consumo de diesel ──────────────
 #

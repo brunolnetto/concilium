@@ -40,21 +40,27 @@ class FuelType(StrEnum):
 
 
 def parse_state(value: str) -> State:
+    """Resolve um valor de UF para `State`.
+
+    Aceita a sigla de qualquer membro do enum (ex.: "ce", "df", "sp" — todas as
+    18 UFs cobertas por `State`), além de nomes completos como conveniência
+    (ADR-129: antes só "go"/"sp"/"br" eram reconhecidos, fazendo
+    `resolver_preco_diesel_uf` cair sempre no fallback para a maioria das UFs).
+    """
     value = value.strip().lower()
 
     aliases = {
-        "go": State.GO,
         "goias": State.GO,
-        "sp": State.SP,
         "sao paulo": State.SP,
-        "br": State.BR,
         "brasil": State.BR,
     }
+    if value in aliases:
+        return aliases[value]
 
-    if value not in aliases:
-        raise ValueError(f"Unknown state: {value}")
-
-    return aliases[value]
+    try:
+        return State(value)
+    except ValueError:
+        raise ValueError(f"Unknown state: {value}") from None
 
 
 def parse_fuel(value: str) -> FuelType:
