@@ -1,6 +1,6 @@
 # ADR-133 — Oportunidade de Compartilhamento Paralelo de Recursos
 
-**Status:** 💡 Proposta  
+**Status:** ✅ Implementado _(confirmado 2026-07-08 na renumeração de ADR-110 órfão: `_deteccao_paralelo.py`, `_skill_helpers_compartilhamento.py`, wired em `skill.py`, 26 testes)_  
 **Data:** 2026-06-16  
 **Revisão:** 2026-06-16 — reformulação de "declaração pelo usuário" para "detecção automática pós-RCPSP"  
 **Contexto:** MendesLobo Construtora — Concilium
