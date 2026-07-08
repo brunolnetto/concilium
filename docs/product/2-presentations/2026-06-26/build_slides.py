@@ -1391,15 +1391,22 @@ def s_regras_custo(c):
     ])
     y -= 6
 
-    y = math_box(c, CX, y, lw, "Custo por ciclo de vida da equipe", [
+    y = math_box(c, CX, y, lw, "Custo por ciclo de vida da equipe (ADR-125)", [
         {"type": "math",
-         "latex": r"\tilde{C}_i = (c_{mo} + c_{eq}) n_p + (c_{mo} + \kappa c_{eq}) n_s + c_{mob} + c_{dem}",
-         "size": 10, "align": "center"},
+         "latex": r"C_{prod,i} = \gamma_i \, n_p",
+         "size": 11, "align": "center"},
+        {"type": "math",
+         "latex": r"C_{pool,i} = C_{prod,i} + (\gamma_i^{mo} + \kappa \gamma_i^{eq}) n_s",
+         "size": 11, "align": "center"},
+        {"type": "math",
+         "latex": r"\tilde{C}_i = C_{pool,i} + c_{mob} + c_{dem}",
+         "size": 11, "align": "center"},
         {"type": "gap", "height": 3},
         {"type": "text", "content": "n_p: semanas produtivas  |  n_s: semanas standby"},
-        {"type": "text", "content": "MO standby: c_mo integral (CLT, irredutivel)"},
-        {"type": "text", "content": "EQ standby: kappa x c_eq  (kappa <= 1, estacionado)"},
-        {"type": "text", "content": "c_mob + c_dem: uma vez por cadeia, não por atividade"},
+        {"type": "text", "content": "MO standby: γ_i^mo integral (CLT, irredutível)"},
+        {"type": "text", "content": "EQ standby: κ·γ_i^eq  (κ ≤ 1, estacionado)"},
+        {"type": "text", "content": "c_mob + c_dem: custo indireto de canteiro (BDI/DI), uma vez por cadeia"},
+        {"type": "text", "content": "C_prod ≤ C_pool ≤ custo total (contratual)", "bold": True},
     ])
 
     # ── RIGHT COLUMN ──────────────────────────────────────────────────────────
@@ -1418,11 +1425,11 @@ def s_regras_custo(c):
     ], title_bg=ORANGE)
     y_op = math_box(c, rx + half_w + 6, y_r, half_w, "Operacional", [
         {"type": "math",
-         "latex": r"p_i^o = \frac{\tilde{C}_i^D}{Q_i}",
+         "latex": r"p_i^o = \frac{C_{pool,i}}{Q_i}",
          "size": 14, "align": "center"},
         {"type": "gap", "height": 2},
         {"type": "math",
-         "latex": r"\tilde{C}_i^D\text{: custo direto real da atividade}",
+         "latex": r"C_{pool,i}\text{: custo direto (ativo+ocioso), exclui mob/dem (ADR-125)}",
          "size": 9, "align": "left"},
     ], title_bg=GREEN)
     y_r = min(y_cat, y_op) - 8

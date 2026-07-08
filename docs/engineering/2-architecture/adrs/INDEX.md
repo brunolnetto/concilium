@@ -234,7 +234,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [122](adr-122-aci-para-azure-container-apps.md) | Migração de ACI para Azure Container Apps (ACA) | ✅ Implementado 2026-06-23 | ADR-096, ADR-099 |
 | [123](adr-123-notificacao-email-e-gestao-dispositivos.md) | Serviço de Notificação por Email e Gestão de Dispositivos | ⚠️ Parcialmente Implementado _(F3 pendente — ver ADR-131)_ | ADR-094, ADR-099, ADR-116 |
 | [124](adr-124-reformulacao-modelo-eficiencia-planejamento-vs-controle.md) | Reformulação do Modelo de Eficiência: Separação entre Fase de Planejamento e Controle | ✅ Implementado | NEP-035, NEP-036, ADR-068, ADR-046 |
-| [125](adr-125-separacao-custo-produtivo-pool-mob-demob-indireto.md) | Hierarquia de Custo: C_prod / C_pool / Contrato; Mob/Demob como Custo Indireto | ✅ Decidido 2026-06-28 | ADR-085, ADR-106, ADR-124, NEP-028 |
+| [125](adr-125-separacao-custo-produtivo-pool-mob-demob-indireto.md) | Hierarquia de Custo: C_prod / C_pool / Contrato; Mob/Demob como Custo Indireto | ✅ Implementado 2026-06-28 _(D2/D3 são contrato conceitual — sem call site de precificação em produção ainda; slide `s_regras_custo` corrigido)_ | ADR-085, ADR-106, ADR-124, NEP-028 |
 | [126](adr-126-project-ownership.md) | Project Ownership: `owner_id` em `ProjectMeta`, distinto de autoria por versão (ADR-119); autorização combinada (role + ownership) para ações destrutivas; handover híbrido; propagação de remove-user | ✅ Decidido 2026-07-02 | ADR-099, ADR-117, ADR-118, ADR-119, ADR-094 |
 | [127](adr-127-regime-contrato-vs-precificacao-horaria.md) | Regime de Contrato (Contínuo/Mensal) vs. Precificação Horária: consolida `rental_unit`/`unidade_faturamento`/custo idle já implementados (só documentação, sem código novo); multa de rescisão avaliada e descartada de escopo | ✅ Implementado 2026-07-02 | ADR-080, ADR-132, ADR-125 |
 | [128](adr-128-disponibilidade-recursos-consumiveis.md) | Disponibilidade de Recursos Consumíveis: `DisponibilidadeConsumivel` (estoque/capacidade/reabastecimento) e `ReplenishableResource` no motor RCPSP para diesel/material; reaproveita `prazo_entrega` hoje não utilizado | ✅ Decidido 2026-07-02 | ADR-107, ADR-090, ADR-046 |
@@ -532,4 +532,3 @@ graph TD
 | `ADR-080-custo-diferenciado-permanencia-mob-tardia-taxa-ociosa.md` | Mob tardia / idle escalar / desmob efetiva — generalizado para taxa ociosa por componente e base bottom-up de BDI | ADR-085 |
 
 ---
-
