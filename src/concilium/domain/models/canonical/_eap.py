@@ -120,6 +120,12 @@ class DistribuicaoSemanal(BaseModel):
       η_w  = m_ij / M_max = eficiencia      (gestão; M_max=1.0 até calibração histórica)
       η    = fator_total = η_s · η_p · η_w  (eficiência total observada)
 
+    ADR-124 — Separação planejamento vs. controle:
+      Planejamento (aplicável agora):  η_plan = η_clima · δ = fator_clima · fator_calendario (= η_p)
+      Controle (fase futura):          η_control = η_s · η_plan · η_w
+      η_s e η_w são fatores de CONTROLE (None em CampoEficiencia no planejamento);
+      mantidos aqui apenas por retrocompatibilidade da NEP-035.
+
     q_max_celula = P_i · h · n_max · M_max  (capacidade teórica da semana)
     perda_fisica = q_max_celula · η_s - q_executada  (produção perdida na semana, unidades físicas)
 
@@ -140,9 +146,15 @@ class DistribuicaoSemanal(BaseModel):
     fator_clima: float = Field(default=1.0, ge=0.0, le=1.0)
     fator_calendario: float = Field(default=1.0, ge=0.0, le=1.0)
     fator_total: float = Field(default=1.0, ge=0.0, le=1.0)
-    # NEP-035: decomposição causal η_s · η_p · η_w
+    # NEP-035 / ADR-124: decomposição causal η_s · η_p · η_w.
+    # ADR-124 reinterpreta a decomposição separando planejamento de controle.
+    # Retrocompatibilidade: default 1.0 preservado (não 0.0) para não introduzir
+    # regressão silenciosa em cronogramas já materializados.
+    # CONTROLE: n_j/n_max — determinado pelo RCPSP; sem significado diagnóstico no planejamento.
     eta_s: float = Field(default=1.0, ge=0.0, le=1.0)
+    # PLANEJAMENTO: η_p = fator_clima · fator_calendario = η_clima · δ = η_plan (ADR-124).
     eta_p: float = Field(default=1.0, ge=0.0, le=1.0)
+    # CONTROLE: produção real / capacidade — requer dados de execução (fase de controle).
     eta_w: float = Field(default=1.0, ge=0.0, le=1.0)
     q_max_celula: float = Field(default=0.0, ge=0.0)
     perda_fisica: float = Field(default=0.0, ge=0.0)

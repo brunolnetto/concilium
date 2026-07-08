@@ -1,6 +1,6 @@
 # ADR-124 — Reformulação do Modelo de Eficiência: Separação entre Fase de Planejamento e Controle
 
-**Status:** ✅ Decidido  
+**Status:** ✅ Implementado  
 **Data:** 2026-06-28  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** NEP-035, NEP-036, ADR-068, ADR-046
@@ -187,31 +187,63 @@ fase de controle seja implementada.
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 — Modelo | Renomear `P_r → Eta_plan`; adicionar `Eta_clima` e `Delta` em `CampoEficiencia`; `S=None`, `W=None`, `E=None` no builder | ⬜ Pendente |
-| F2 — Visualizações | Atualizar `waterfall_causal.py` para mostrar η_clima / δ em vez de η_s / η_p / η_w; atualizar `heatmap_top_n.py` para aceitar `"Eta_clima"` e `"Delta"` como fatores | ⬜ Pendente |
-| F3 — Testes | Corrigir `test_nep036_campo_eficiencia.py`; adicionar cenário planning-mode vs. control-mode | ⬜ Pendente |
-| F4 — Documentação | Atualizar NEP-035, NEP-036, `formalizacao_teorica.md` e glossário do relatório executivo | ⬜ Pendente |
+| F1 — Modelo | Renomear `P_r → Eta_plan`; adicionar `Eta_clima` e `Delta` em `CampoEficiencia`; `S=None`, `W=None`, `E=None` no builder | ✅ Concluído |
+| F2 — Visualizações | Atualizar `waterfall_causal.py` para mostrar η_clima / δ em vez de η_s / η_p / η_w; atualizar `heatmap_top_n.py` para aceitar `"Eta_clima"` e `"Delta"` como fatores | ✅ Concluído |
+| F3 — Testes | Corrigir `test_nep036_campo_eficiencia.py`; adicionar cenário planning-mode vs. control-mode | ✅ Concluído |
+| F4 — Documentação | Atualizar NEP-035, NEP-036, `formalizacao_teorica.md` e glossário do relatório executivo | ✅ Concluído |
 
 ---
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `CampoEficiencia` tem `Eta_clima`, `Delta`, `Eta_plan` como superfícies separadas
-- [ ] `S`, `W`, `E` são `None` no modo planejamento (builder não os popula)
-- [ ] `eta_obra()` retorna `η_plan = η_clima · δ` agregado por capacidade
+- [x] `CampoEficiencia` tem `Eta_clima`, `Delta`, `Eta_plan` como superfícies separadas
+- [x] `S`, `W`, `E` são `None` no modo planejamento (builder não os popula)
+- [x] `eta_obra()` retorna `η_plan = η_clima · δ` agregado por capacidade
 
 ### Fase 2
-- [ ] Waterfall nível 2 mostra duas barras: η_clima e δ (sem η_s, η_w, ε_cross)
-- [ ] Heatmap aceita `fator="Eta_clima"` e `fator="Delta"` como opções válidas
+- [x] Waterfall nível 2 mostra duas barras: η_clima e δ (sem η_s, η_w, ε_cross)
+- [x] Heatmap aceita `fator="Eta_clima"` e `fator="Delta"` como opções válidas
 
 ### Fase 3
-- [ ] Todos os testes da NEP-036 passam com nova estrutura
-- [ ] Teste explícito documenta: "η_s e η_w são None no planejamento"
+- [x] Todos os testes da NEP-036 passam com nova estrutura
+- [x] Teste explícito documenta: "η_s e η_w são None no planejamento"
 
 ### Fase 4
-- [ ] `formalizacao_teorica.md` seção 1 atualizada: `H_j = h · d_j · η_clima_j · δ_j`
-- [ ] Glossário do relatório executivo menciona fase de planejamento vs. controle
+- [x] `formalizacao_teorica.md` seção 1 atualizada: `H_j = h · d_j · η_clima_j · δ_j`
+- [x] Glossário do relatório executivo menciona fase de planejamento vs. controle
+
+---
+
+## Nota de Implementação (2026-07-08)
+
+Implementado no branch `feat/adr-124-modelo-eficiencia`.
+
+- O modelo (`CampoEficiencia`, `EficienciaFieldBuilder`) e as visualizações
+  (`eta_obra.py`, `waterfall_causal.py`, `heatmap_top_n.py`) já expunham as
+  superfícies `Eta_clima` / `Delta` / `Eta_plan` e mantinham `S`/`W`/`E = None`
+  no planejamento. Esta entrega completou os itens remanescentes:
+  - **D2/heatmap:** removido o alias legado `"P_r"` do mapa de fatores
+    (`Eta_plan` é o nome canônico; η_plan = η_clima · δ). Nenhum chamador usava
+    `fator="P_r"`.
+  - **D5:** `DistribuicaoSemanal.eta_s` / `eta_w` marcados explicitamente como
+    CONTROLE via docstring e comentários. **Decisão de retrocompatibilidade:**
+    o `default` foi mantido em `1.0` (e não `0.0` como no exemplo ilustrativo da
+    D5) para não introduzir regressão silenciosa em cronogramas já materializados
+    — a decisão-chave da D5 é a *marcação* dos campos como controle, não o valor
+    default.
+  - **Testes:** `tests/unit/test_adr124_planejamento_vs_controle.py` trava
+    η_plan = η_clima · δ, a equivalência de regressão `η_plan == P_r/η_p legado`
+    e `S`/`W`/`E = None` no planejamento; heatmap ganhou casos para
+    `fator="Eta_clima"` e `fator="Delta"`.
+  - **Docs:** `formalizacao_teorica.md` §1, NEP-035, NEP-036 e o glossário
+    metodológico do relatório executivo atualizados.
+
+> **Pré-requisito do ADR-125** (Hierarquia de Custo C_prod/C_pool/Contrato):
+> os nomes canônicos para consumo do próximo agente são `CampoEficiencia.Eta_plan`
+> (η_plan de planejamento), `CampoEficiencia.Eta_clima`, `CampoEficiencia.Delta`,
+> e `CampoEficiencia.S`/`W`/`E` (= None até a fase de controle). `eta_obra()`
+> retorna η_plan agregado por capacidade.
 
 ---
 

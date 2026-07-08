@@ -21,6 +21,16 @@ $$H_j := h \cdot d_j \cdot p_j \qquad \text{(horas produtivas efetivas da semana
 > $$p_j = p_j^{\text{clima}} \cdot p_j^{\text{cal}}$$
 > onde $p_j^{\text{clima}} \in (0,1]$ é o fator de praticabilidade climática (chuvas) e $p_j^{\text{cal}} \in (0,1]$ captura eventos de calendário (feriados, recessos). O campo `fator_chuva` da `Praticabilidade` alimenta $p_j^{\text{clima}}$; `fator_calendario` do `CalendarioOperacionalSemanal` alimenta $p_j^{\text{cal}}$. No modelo de simulação (`WorkforcePolicySimulator`), o produto $p_j^{\text{clima}} \cdot p_j^{\text{cal}}$ é passado como `eficiencia` em cada `CurvaForcaSemanal`.
 
+> **Reformulação (ADR-124):** o modelo de planejamento renomeia os dois fatores para
+> $\eta_j^{\text{clima}} := p_j^{\text{clima}}$ (praticabilidade climática, estocástica, não controlável)
+> e $\delta_j := p_j^{\text{cal}}$ (coeficiente de calendário, determinístico, controlável pelo gestor).
+> As horas produtivas efetivas passam a ser expressas de forma explícita como:
+> $$H_j = h \cdot d_j \cdot \eta_j^{\text{clima}} \cdot \delta_j$$
+> A eficiência de planejamento agregada é $\eta_j^{\text{plan}} = \eta_j^{\text{clima}} \cdot \delta_j$
+> (antigo $\eta_p$ / `P_r`). Os fatores $\eta_s$ (alocação $n_j/n_{\max}$) e $\eta_w$
+> (gestão residual) são reclassificados como fatores de **controle** — sem conteúdo
+> diagnóstico no planejamento e nulos (`None`) no `CampoEficiencia` até haver execução real.
+
 ---
 
 ## 2. Atividades e Modelo de Produção

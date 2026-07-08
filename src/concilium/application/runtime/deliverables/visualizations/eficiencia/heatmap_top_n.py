@@ -16,7 +16,13 @@ if TYPE_CHECKING:
 
 
 def _resolve_field_map(campo: CampoEficiencia) -> dict[str, Any]:
-    """Monta o mapa fator -> campo semanal, com fallbacks para controle sem planejamento."""
+    """Monta o mapa fator -> campo semanal, com fallbacks para controle sem planejamento.
+
+    ADR-124: os fatores de planejamento são ``Eta_plan``, ``Eta_clima`` e ``Delta``.
+    O antigo alias ``P_r`` (praticabilidade) foi renomeado para ``Eta_plan`` — o
+    conteúdo semântico é idêntico (η_plan = η_clima · δ). Os fatores de controle
+    (E/S/W) permanecem no mapa e caem para ``Eta_plan`` enquanto forem None.
+    """
     return {
         "Eta_plan": campo.Eta_plan,
         "Eta_clima": campo.Eta_clima,
@@ -25,7 +31,6 @@ def _resolve_field_map(campo: CampoEficiencia) -> dict[str, Any]:
         "E": campo.E or campo.Eta_plan,
         "S": campo.S or campo.Eta_plan,
         "W": campo.W or campo.Eta_plan,
-        "P_r": campo.Eta_clima,  # alias legado — praticabilidade ≈ eficiência climática
     }
 
 
@@ -43,6 +48,21 @@ def _build_top_n_matrix(field: dict, top_ids: list, semanas_ativas: list[str]) -
     return [[(field.get(iid) or {}).get(sem, float("nan")) for sem in semanas_ativas] for iid in top_ids]
 
 
+_FATOR_SIMBOLO = {
+    "Eta_plan": "η_plan",
+    "Eta_clima": "η_clima",
+    "Delta": "δ",
+    "E": "η",
+    "S": "η_s",
+    "W": "η_w",
+}
+
+
+def _fator_simbolo(fator: str) -> str:
+    """Rótulo de exibição do fator — Delta é δ, não η_Delta (ADR-124)."""
+    return _FATOR_SIMBOLO.get(fator, f"η_{fator}")
+
+
 def _render_top_n_heatmap(
     plt: Any,
     mcolors: Any,
@@ -54,6 +74,7 @@ def _render_top_n_heatmap(
     n_atividades_total: int,
 ) -> Any:
     """Renderiza a figura matplotlib do heatmap Top-N."""
+    simbolo = _fator_simbolo(fator)
     fig, ax = plt.subplots(figsize=(max(6, len(semanas_ativas) * 0.25), max(3, len(top_ids) * 0.45)))
     cmap = plt.get_cmap("RdYlGn")  # vermelho (ineficiente) → verde (eficiente)
     norm = mcolors.Normalize(vmin=0, vmax=1)
@@ -67,8 +88,8 @@ def _render_top_n_heatmap(
         ha="right",
         fontsize=7,
     )
-    plt.colorbar(im, ax=ax, label=f"η_{fator} (0=ineficiente, 1=pleno)")
-    _title = title or f"Campo η_{fator} — Top {len(top_ids)} atividades por perda"
+    plt.colorbar(im, ax=ax, label=f"{simbolo} (0=ineficiente, 1=pleno)")
+    _title = title or f"Campo {simbolo} — Top {len(top_ids)} atividades por perda"
     ax.set_title(f"{_title}\n(restrito: {len(top_ids)} de {n_atividades_total} atividades)")
     fig.tight_layout()
     return fig
@@ -83,8 +104,9 @@ def plot_heatmap_top_n(
 ) -> Any:
     """Heatmap de eficiência restrito ao Top-N atividades por perda.
 
-    `fator` pode ser "E" (total), "S" (alocação), "W" (gestão),
-    "P_r" (praticabilidade — alias legado para Eta_clima) ou "Eta_plan" / "Eta_clima".
+    ADR-124 (planejamento): `fator` pode ser "Eta_plan" (η_plan = η_clima · δ),
+    "Eta_clima" (praticabilidade climática) ou "Delta" (δ, calendário).
+    Fatores de controle "E"/"S"/"W" caem para Eta_plan enquanto None (sem execução real).
     Título inclui aviso explícito de restrição.
     Retorna figura matplotlib ou None.
     """

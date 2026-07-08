@@ -12,6 +12,14 @@
 > implementado em `src/concilium/domain/services/`. Visualizações `eta_obra.py`,
 > `waterfall_causal.py`, `pareto_perdas.py`, `heatmap_top_n.py` presentes.
 
+> **Reinterpretação (ADR-124, 2026-06-28):** o `CampoEficiencia` foi reformulado para
+> separar **planejamento** de **controle**. As superfícies de planejamento passam a ser
+> `Eta_clima` (η_clima), `Delta` (δ) e `Eta_plan` (η_plan = η_clima · δ, antigo `P_r`).
+> As superfícies de controle `S` (η_s), `W` (η_w) e `E` (η_total) são `None` no modo
+> planejamento — populadas apenas quando houver dados de execução real. O waterfall de
+> nível 2 mostra η_clima e δ (sem η_s/η_w/ε_cross) e o heatmap de nível 4 aceita
+> `fator="Eta_clima"` e `fator="Delta"`.
+
 ---
 
 ## Contexto

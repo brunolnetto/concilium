@@ -11,6 +11,12 @@
 > `eta_s`, `eta_p`, `eta_w`, `q_max_celula`, `perda_fisica` em `canonical.py`. Documentação
 > desatualizada em relação ao código.
 
+> **Reinterpretação (ADR-124, 2026-06-28):** a decomposição η = η_s · η_p · η_w é
+> reinterpretada, não quebrada. `η_p` = η_clima · δ passa a ser o **modelo de planejamento**
+> (`η_plan`). `η_s` (alocação n_j/n_max) e `η_w` (gestão residual) são reclassificados como
+> fatores de **controle** — sem conteúdo diagnóstico no planejamento. Os campos `eta_s`/`eta_w`
+> de `DistribuicaoSemanal` permanecem por retrocompatibilidade, marcados como CONTROLE.
+
 ---
 
 ## Contexto

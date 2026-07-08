@@ -227,7 +227,11 @@ def _rre_build_bridge(bridge_analysis, proj, now) -> tuple:
             "N3=normalizado por praticabilidade climática (parada forçada por chuva) | "
             "N4=custo operacional real medido. "
             "O delta real (N4−N3) isola a ineficiência gestional genuína, "
-            "separada de causas estruturais não controláveis pelo orçamentista."
+            "separada de causas estruturais não controláveis pelo orçamentista. "
+            "Glossário de eficiência (ADR-124): a fase de PLANEJAMENTO usa "
+            "η_plan = η_clima · δ (praticabilidade climática × calendário); os fatores "
+            "η_s (alocação) e η_w (gestão) pertencem à fase de CONTROLE e só têm conteúdo "
+            "diagnóstico com dados de execução real."
         ),
         "niveis": {
             "N1_catalogo_base": round(n1, 2),
