@@ -41,6 +41,12 @@ class CreateProjectResponse(BaseModel):
     benchmark_reference_file: str | None = None
 
 
+class TransferOwnershipRequest(BaseModel):
+    """ADR-126 D4: body de POST /api/projects/{id}/transfer-ownership."""
+
+    owner_novo: str
+
+
 class RunProjectRequest(BaseModel):
     base_version: str | None = None
     fork_version: bool = False

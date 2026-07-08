@@ -212,13 +212,94 @@ def list_users() -> None:
     rprint(table)
 
 
+def _check_owned_projects(client_id: str, reassign_to: str | None, force: bool, force_yes: bool) -> None:
+    """ADR-126 D7/F7: bloqueia remove-user se o client é dono de projetos.
+
+    - Sem projetos possuídos: no-op, comportamento idêntico ao anterior ao ADR-126.
+    - Com projetos e sem --reassign-to/--force: bloqueia, listando os projetos.
+    - --reassign-to <owner_id>: transfere ownership (forçado, D4.1) para cada
+      projeto e só então permite a remoção.
+    - --force: permite a remoção mesmo assim, deixando owner_id órfão — exige
+      confirmação explícita adicional (--force-yes ou prompt interativo).
+    """
+    if reassign_to is not None and reassign_to == client_id:
+        rprint(
+            f"[red]✗ --reassign-to não pode ser o mesmo client sendo removido ('{client_id}'). "
+            "Isso deixaria owner_id inalterado e os projetos órfãos após a remoção — "
+            "equivalente a --force, mas silenciosamente. Use --force explicitamente se essa "
+            "é a intenção, ou informe um owner_id diferente.[/red]"
+        )
+        raise typer.Exit(code=1)
+
+    from concilium.application.services.project._ownership_helpers import (
+        find_projects_by_owner,
+        transfer_ownership_forced,
+    )
+    from concilium.application.services.project.audit_service import AuditService
+    from concilium.presentation.cli.shared import project_repository
+
+    repo = project_repository()
+    owned = find_projects_by_owner(repo, client_id)
+    if not owned:
+        return
+
+    project_ids = ", ".join(p.meta.get("id", "?") for p in owned)
+
+    if reassign_to:
+        audit = AuditService()
+        for project in owned:
+            transfer_ownership_forced(project, reassign_to, actor=f"cli:remove-user:{client_id}", audit=audit)
+        rprint(f"[green]✓ {len(owned)} projeto(s) transferido(s) para '{reassign_to}': {project_ids}.[/green]")
+        return
+
+    if force:
+        if not force_yes:
+            typer.confirm(
+                f"'{client_id}' é owner de {len(owned)} projeto(s) ({project_ids}). "
+                "Remover mesmo assim deixará owner_id órfão. Confirma?",
+                abort=True,
+            )
+        rprint(
+            f"[yellow]⚠ Removendo '{client_id}' com projetos órfãos "
+            f"(owner_id não reatribuído): {project_ids}.[/yellow]"
+        )
+        return
+
+    rprint(f"[red]✗ '{client_id}' é owner de {len(owned)} projeto(s): {project_ids}.[/red]")
+    rprint(
+        "  Use --reassign-to <owner_id> para transferir antes de remover, ou --force para remover mesmo assim\n"
+        "  (projetos ficarão com owner_id órfão até reatribuição manual)."
+    )
+    raise typer.Exit(1)
+
+
 @app.command("remove-user")
 def remove_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente a remover."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Confirmar sem prompt."),
+    reassign_to: str | None = typer.Option(
+        None,
+        "--reassign-to",
+        help="ADR-126 D7: transfere ownership dos projetos possuídos para este owner_id antes de remover.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="ADR-126 D7: remove mesmo sendo owner de projetos (ficam órfãos). Exige confirmação extra.",
+    ),
+    force_yes: bool = typer.Option(
+        False, "--force-yes", help="Confirma automaticamente o --force (sem prompt), para uso não-interativo."
+    ),
 ) -> None:
-    """Remove um usuário do auth store (e revoga todos os seus dispositivos)."""
+    """Remove um usuário do auth store (e revoga todos os seus dispositivos).
+
+    ADR-126 D7/F7: se o usuário é owner de projetos, a remoção é bloqueada por
+    padrão — use --reassign-to para transferir ownership antes, ou --force para
+    remover mesmo assim (deixa owner_id órfão).
+    """
     from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    _check_owned_projects(client_id, reassign_to, force, force_yes)
 
     if not yes:
         typer.confirm(f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?", abort=True)

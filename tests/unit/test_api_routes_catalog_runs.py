@@ -256,7 +256,9 @@ class TestProjectsRoutes:
 
         svc = _svc()
         svc.list_projects.return_value = [{"id": "proj-1"}]
-        result = list_projects(service=svc)
+        req = MagicMock()
+        req.state = MagicMock(spec=[])
+        result = list_projects(req, service=svc)
         assert result["items"][0]["id"] == "proj-1"
 
     def test_create_project_ok(self):
@@ -305,7 +307,9 @@ class TestProjectsRoutes:
 
         svc = _svc()
         svc.delete_project.return_value = {"status": "deleted"}
-        result = delete_project("proj-1", x_user="eng", service=svc)
+        # ADR-126 D3: delete_project agora recebe `request` (extração de roles/ownership
+        # via @permission/require_owner_or_admin) — no-op aqui pois AUTH_ENABLED=0 (default).
+        result = delete_project(request=_svc(), project_id="proj-1", x_user="eng", service=svc)
         assert result["status"] == "deleted"
 
     def test_delete_project_not_found(self):
@@ -314,7 +318,7 @@ class TestProjectsRoutes:
         svc = _svc()
         svc.delete_project.side_effect = FileNotFoundError("not found")
         with pytest.raises(HTTPException) as exc:
-            delete_project("proj-1", service=svc)
+            delete_project(request=_svc(), project_id="proj-1", service=svc)
         assert exc.value.status_code == 404
 
     def test_list_versions(self):

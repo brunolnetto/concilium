@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
 from .project_files import ProjectFiles
@@ -268,6 +269,10 @@ def _ps_create_project(
         tipo_projeto=tipo_projeto,
         status_eap=status_eap,
         benchmark_slug=benchmark_slug,
+        # ADR-126 D1: owner_id inicializado a partir do actor atual — campo do
+        # projeto (não da versão), distinto de criado_por/role_criador (ADR-119).
+        owner_id=actor,
+        owner_assigned_at=datetime.now(UTC).isoformat(),
     )
     version = project.new_version()
     project.write_json(svc._files.skill_inputs, skill_inputs)

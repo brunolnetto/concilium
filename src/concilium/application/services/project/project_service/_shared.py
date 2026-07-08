@@ -50,6 +50,9 @@ def _ps_build_list_item(project: Any) -> dict[str, Any]:
         "current_version": meta.get("current_version"),
         "versions": project.list_versions(),
         "benchmark_slug": meta.get("benchmark_slug"),
+        # ADR-126 D1/D5: owner_id é campo do projeto, distinto de criado_por de versão (ADR-119).
+        "owner_id": meta.get("owner_id"),
+        "owner_assigned_at": meta.get("owner_assigned_at"),
     }
 
 

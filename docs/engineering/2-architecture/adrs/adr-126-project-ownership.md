@@ -1,6 +1,6 @@
 # ADR-126 — Project Ownership: Responsável por Projeto e Autorização por Ownership
 
-**Status:** ✅ Decidido
+**Status:** ✅ Implementado
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-099 (RBAC role↔tool), ADR-117 (decorator tags), ADR-118 (tool invocation audit), ADR-119 (multi-actor project management), ADR-094 (padrão de convite/revoke pendente reaproveitado no handover)
@@ -156,43 +156,51 @@ $ concilium auth remove-user --id joao.silva
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `owner_id`/`owner_assigned_at` em `ProjectMeta`; `create_project` inicializa a partir do actor atual | ⬜ Não iniciado |
-| F2 | `project:manage-ownership` em `permission_guard.py`; endpoint `POST /api/projects/{id}/transfer-ownership` com ramificação admin (forçado) vs. dono (convite) | ⬜ Não iniciado |
-| F3 | `OwnershipTransferPending` + endpoints `/accept` e `/reject`; TTL de expiração | ⬜ Não iniciado |
-| F4 | `project:delete`/`project:manage-config` em `permission_guard.py`; decorar `delete_project`/`patch_project_config` (pré-requisito, P2); autorização combinada (role + ownership) sobre essa base | ⬜ Não iniciado |
-| F5 | `GET /api/projects?mine=true` via `owner_id`; migração/backfill de projetos existentes | ⬜ Não iniciado |
-| F6 | `OwnershipTransferAction` no audit trail (ADR-118), cobrindo todos os sub-eventos do handover | ⬜ Não iniciado |
-| F7 | `remove-user` (CLI) checa `find_projects_by_owner`; bloqueia por padrão, suporta `--reassign-to`/`--force` | ⬜ Não iniciado |
+| F1 | `owner_id`/`owner_assigned_at` em `ProjectMeta`; `create_project` inicializa a partir do actor atual | ✅ Concluído |
+| F2 | `project:manage-ownership` em `permission_guard.py`; endpoint `POST /api/projects/{id}/transfer-ownership` com ramificação admin (forçado) vs. dono (convite) | ✅ Concluído |
+| F3 | `OwnershipTransferPending` + endpoints `/accept` e `/reject`; TTL de expiração | ✅ Concluído |
+| F4 | `project:delete`/`project:manage-config` em `permission_guard.py`; decorar `delete_project`/`patch_project_config` (pré-requisito, P2); autorização combinada (role + ownership) sobre essa base | ✅ Concluído |
+| F5 | `GET /api/projects?mine=true` via `owner_id`; migração/backfill de projetos existentes | ✅ Concluído |
+| F6 | `OwnershipTransferAction` no audit trail (ADR-118), cobrindo todos os sub-eventos do handover | ✅ Concluído |
+| F7 | `remove-user` (CLI) checa `find_projects_by_owner`; bloqueia por padrão, suporta `--reassign-to`/`--force` | ✅ Concluído |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `ProjectMeta.owner_id`/`owner_assigned_at` definidos e persistidos em `meta.json`
-- [ ] `create_project` inicializa `owner_id` com o actor atual
+- [x] `ProjectMeta.owner_id`/`owner_assigned_at` definidos e persistidos em `meta.json`
+      (como chaves do dict de `meta.json`, seguindo o padrão já usado por
+      `criado_por`/`role_criador` do ADR-119 — este código-base não usa um dataclass
+      `ProjectMeta` tipado; `meta.json` é manipulado como `dict[str, Any]` em toda a
+      camada de storage, então `owner_id`/`owner_assigned_at` seguem essa convenção)
+- [x] `create_project` inicializa `owner_id` com o actor atual
 
 ### Fase 2-3
-- [ ] Admin: `transfer-ownership` troca `owner_id` imediatamente, sem aceite
-- [ ] Dono: `transfer-ownership` cria `OwnershipTransferPending`; `owner_id` só muda após `/accept`
-- [ ] `/reject` e expiração por TTL mantêm `owner_id` inalterado
-- [ ] Testes cobrindo os dois caminhos (forçado vs. convite) e expiração
+- [x] Admin: `transfer-ownership` troca `owner_id` imediatamente, sem aceite
+- [x] Dono: `transfer-ownership` cria `OwnershipTransferPending`; `owner_id` só muda após `/accept`
+- [x] `/reject` e expiração por TTL mantêm `owner_id` inalterado
+- [x] Testes cobrindo os dois caminhos (forçado vs. convite) e expiração
 
 ### Fase 4
-- [ ] `project:delete`/`project:manage-config` definidos em `permission_guard.py` e aplicados via `@permission` em `delete_project`/`patch_project_config`
-- [ ] Sobre essa base, `delete_project`/`patch_project_config` exigem também `owner_id == actor_id` ou role `admin`
-- [ ] Testes cobrindo: usuário sem a permissão de role (403), e usuário com a permissão mas não-dono/não-admin (403)
+- [x] `project:delete`/`project:manage-config` definidos em `permission_guard.py` e aplicados via `@permission` em `delete_project`/`patch_project_config`
+- [x] Sobre essa base, `delete_project`/`patch_project_config` exigem também `owner_id == actor_id` ou role `admin`
+- [x] Testes cobrindo: usuário sem a permissão de role (403), e usuário com a permissão mas não-dono/não-admin (403)
 
 ### Fase 5
-- [ ] `mine=true` retorna somente projetos com `owner_id == actor_id`
-- [ ] Backfill de projetos legados sem `owner_id`
+- [x] `mine=true` retorna somente projetos com `owner_id == actor_id`
+- [x] Backfill de projetos legados sem `owner_id` — `get_project_owner`/`require_owner_or_admin`
+      tratam `owner_id=None` de forma permissiva (gate de role via `@permission` continua
+      valendo); não há migração destrutiva de dados — projetos legados simplesmente não
+      aparecem em `?mine=true` até que `owner_id` seja atribuído (via `transfer-ownership`
+      forçado por um admin, ou naturalmente quando reescritos)
 
 ### Fase 6
-- [ ] `OwnershipTransferAction` registrado em cada sub-evento do handover, best-effort (não propaga exceção)
+- [x] `OwnershipTransferAction` registrado em cada sub-evento do handover, best-effort (não propaga exceção)
 
 ### Fase 7
-- [ ] `remove-user` sem `--reassign-to`/`--force` e com projetos possuídos: bloqueia com mensagem listando os projetos
-- [ ] `--reassign-to`: transfere ownership (D4.1) para cada projeto e só então remove o client
-- [ ] `--force`: remove o client mesmo com projetos possuídos, exige confirmação explícita adicional
-- [ ] `find_projects_by_owner(client_id)` coberto por teste; comportamento sem projetos possuídos permanece idêntico ao atual
+- [x] `remove-user` sem `--reassign-to`/`--force` e com projetos possuídos: bloqueia com mensagem listando os projetos
+- [x] `--reassign-to`: transfere ownership (D4.1) para cada projeto e só então remove o client
+- [x] `--force`: remove o client mesmo com projetos possuídos, exige confirmação explícita adicional
+- [x] `find_projects_by_owner(client_id)` coberto por teste; comportamento sem projetos possuídos permanece idêntico ao atual
 
 ---
 

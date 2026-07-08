@@ -34,6 +34,9 @@ PROJECT_READ = "project:read"
 PROJECT_CREATE = "project:create"
 PROJECT_RUN = "project:run"
 PROJECT_APPROVE = "project:approve"
+PROJECT_DELETE = "project:delete"  # ADR-126 D3: fecha lacuna — delete_project não tinha @permission
+PROJECT_MANAGE_CONFIG = "project:manage-config"  # ADR-126 D3: idem para patch_project_config
+PROJECT_MANAGE_OWNERSHIP = "project:manage-ownership"  # ADR-126 D3: iniciar transferência de ownership
 ARTIFACTS_READ = "artifacts:read"
 ARTIFACTS_DOWNLOAD = "artifacts:download"
 CATALOG_READ = "catalog:read"
@@ -55,6 +58,9 @@ _OPERATOR = frozenset(
         PROJECT_READ,
         PROJECT_CREATE,
         PROJECT_RUN,
+        PROJECT_DELETE,  # ADR-126 D3: gate de role; ownership (require_owner_or_admin) restringe ao próprio projeto
+        PROJECT_MANAGE_CONFIG,  # ADR-126 D3: idem
+        PROJECT_MANAGE_OWNERSHIP,  # ADR-126 D3: quem pode criar projetos pode gerir ownership dos que possui
         ARTIFACTS_READ,
         ARTIFACTS_DOWNLOAD,
         CATALOG_READ,
@@ -185,6 +191,30 @@ def require_permission(perm: str, token_roles: list[str]) -> None:
             f"Permissão '{perm}' necessária. "
             f"Roles do token: {token_roles}. "
             "Solicite ao admin o role adequado (ex: 'operator' para executar pipelines)."
+        )
+
+
+def require_owner_or_admin(actor_id: str, owner_id: str | None, roles: list[str]) -> None:
+    """ADR-126 D3: 2ª camada de autorização — ownership, sobre a base de @permission (role).
+
+    Ações destrutivas/estruturais (delete_project, patch_project_config,
+    transfer-ownership) exigem role compatível (checado por @permission antes
+    desta chamada) **E** (owner_id == actor_id **OU** role admin).
+
+    No-op quando AUTH_ENABLED=0 (dev local) — mesma convenção de require_permission.
+    owner_id=None (projeto legado sem migração/backfill, ADR-126 F5) é permissivo:
+    o gate de role via @permission já é a única barreira nesse caso.
+    """
+    if not _auth_enabled():
+        return
+    if "admin" in roles:
+        return
+    if owner_id is None:
+        return
+    if actor_id != owner_id:
+        raise PermissionError(
+            f"Ação restrita ao dono do projeto (owner_id={owner_id!r}) ou a um admin. "
+            f"Actor atual: {actor_id!r}, roles: {roles!r}."
         )
 
 

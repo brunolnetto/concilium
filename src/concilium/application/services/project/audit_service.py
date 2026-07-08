@@ -43,6 +43,23 @@ class VersionAction:
         return asdict(self)
 
 
+@dataclass
+class OwnershipTransferAction:
+    """ADR-126 D6: entrada de auditoria para o handover de responsável pelo projeto."""
+
+    action: Literal["transfer_forced", "invite_created", "invite_accepted", "invite_rejected", "invite_expired"]
+    project_id: str
+    ts: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    actor_id: str = "system"
+    actor_role: str | None = None
+    owner_anterior: str | None = None
+    owner_proposto_ou_novo: str | None = None
+    detalhes: dict = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 class AuditService:
     def __init__(self, files: ProjectFiles = DEFAULT_PROJECT_FILES):
         self._files = files
@@ -56,6 +73,7 @@ class AuditService:
         result: dict[str, Any] | None = None,
         error: str | None = None,
         version_action: VersionAction | None = None,
+        ownership_action: OwnershipTransferAction | None = None,
     ) -> None:
         entry: dict[str, Any] = {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -69,11 +87,27 @@ class AuditService:
         # ADR-119 D5: inclui VersionAction quando presente
         if version_action is not None:
             entry["version_action"] = version_action.to_dict()
+        # ADR-126 D6: inclui OwnershipTransferAction quando presente
+        if ownership_action is not None:
+            entry["ownership_action"] = ownership_action.to_dict()
         project.append_jsonl(self._files.audit_log, entry)
 
     def log_version_action(self, project: ProjectHandle, va: VersionAction) -> None:
         """ADR-119 D5: registra VersionAction diretamente no audit trail."""
         self.log(project, action=va.action, actor=va.actor_id, version_action=va)
+
+    def log_ownership_transfer_action(self, project: ProjectHandle, oa: OwnershipTransferAction) -> None:
+        """ADR-126 D6: registra OwnershipTransferAction — best-effort.
+
+        Falha ao gravar auditoria (ex.: I/O indisponível) não deve bloquear o
+        handover de ownership em si — a transferência já foi persistida em
+        meta.json antes desta chamada; perder só a entrada de auditoria é
+        preferível a reverter/bloquear a operação de negócio.
+        """
+        try:
+            self.log(project, action=oa.action, actor=oa.actor_id, ownership_action=oa)
+        except Exception:
+            pass
 
     def list(self, project: ProjectHandle, limit: int = 200) -> builtins.list[dict[str, Any]]:
         # NOTE: usa `builtins.list` explicitamente na anotação de retorno porque este

@@ -4,14 +4,53 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 
 from concilium.application.services.concilium_service import ConciliumService
+from concilium.infrastructure.auth.permission_guard import (
+    PROJECT_DELETE,
+    PROJECT_MANAGE_CONFIG,
+    PROJECT_MANAGE_OWNERSHIP,
+    permission,
+    require_owner_or_admin,
+    roles_from_token,
+)
+from concilium.infrastructure.settings import get_auth
 from concilium.presentation.api.container import get_concilium_service
+from concilium.presentation.api.deps import get_current_subject
 
-from ..schemas import CreateProjectRequest, CreateProjectResponse
+from ..schemas import CreateProjectRequest, CreateProjectResponse, TransferOwnershipRequest
 
 router = APIRouter(prefix="/api/projects", tags=["projects - core"])
+
+
+def _actor_roles(request: Request) -> list[str]:
+    """ADR-126 D3: extrai roles do JWT do request atual (mesma fonte de @permission)."""
+    claims = getattr(request.state, "jwt_claims", {})
+    return roles_from_token(claims)
+
+
+def _actor_id(request: Request, x_user: str) -> str:
+    """ADR-126: deriva o actor do `sub` do JWT quando disponível — nunca confia em
+    `X-User` sozinho para decisões de autorização/identidade quando AUTH está
+    habilitado, pois é um header controlável pelo cliente (spoofável). `X-User`
+    só é usado como fallback em dev mode (AUTH_ENABLED=0), onde não há claims.
+    """
+    subject = get_current_subject(request)
+    return subject if subject is not None else x_user
+
+
+def _enforce_ownership(request: Request, project_id: str, actor: str, service: ConciliumService) -> None:
+    """ADR-126 D3: 2ª camada — role já validada por @permission; aqui checa ownership.
+
+    No-op quando AUTH_ENABLED=0 (dev/test local) — evita a chamada extra a
+    `service.get_project_owner` nesse modo, mantendo compatibilidade com
+    dependências fake mais antigas (pré-ADR-126) que não implementam esse método.
+    """
+    if not get_auth().enabled:
+        return
+    owner_id = service.get_project_owner(project_id)
+    require_owner_or_admin(actor_id=actor, owner_id=owner_id, roles=_actor_roles(request))
 
 
 # ── Project CRUD ──────────────────────────────────────────────────────────────
@@ -19,7 +58,15 @@ router = APIRouter(prefix="/api/projects", tags=["projects - core"])
 
 @router.get("", include_in_schema=False)
 @router.get("/", summary="List all projects")
-def list_projects(service: ConciliumService = Depends(get_concilium_service)) -> dict[str, Any]:
+def list_projects(
+    request: Request,
+    mine: bool = False,
+    x_user: str = Header(default="anonymous", alias="X-User"),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    """ADR-126 D5: `?mine=true` filtra por owner_id == actor atual (sub do JWT)."""
+    if mine:
+        return {"items": service.list_projects(owner_id=_actor_id(request, x_user))}
     return {"items": service.list_projects()}
 
 
@@ -49,13 +96,19 @@ def get_project(
 
 
 @router.delete("/{project_id}", summary="Delete project and all version folders")
+@permission(PROJECT_DELETE)
 def delete_project(
+    request: Request,
     project_id: str,
     x_user: str = Header(default="anonymous", alias="X-User"),
     service: ConciliumService = Depends(get_concilium_service),
 ) -> dict[str, Any]:
     try:
-        return service.delete_project(project_id, actor=x_user)
+        actor = _actor_id(request, x_user)
+        _enforce_ownership(request, project_id, actor, service)
+        return service.delete_project(project_id, actor=actor)
+    except PermissionError:
+        raise
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
@@ -63,14 +116,97 @@ def delete_project(
 
 
 @router.patch("/{project_id}/config", summary="Update mutable project metadata (nome, contexto_id)")
+@permission(PROJECT_MANAGE_CONFIG)
 def patch_project_config(
+    request: Request,
     project_id: str,
     req: dict[str, Any],
     x_user: str = Header(default="anonymous", alias="X-User"),
     service: ConciliumService = Depends(get_concilium_service),
 ) -> dict[str, Any]:
     try:
-        return service.patch_project_config(project_id, req, actor=x_user)
+        actor = _actor_id(request, x_user)
+        _enforce_ownership(request, project_id, actor, service)
+        return service.patch_project_config(project_id, req, actor=actor)
+    except PermissionError:
+        raise
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+# ── Ownership (ADR-126) ──────────────────────────────────────────────────────
+
+
+@router.post(
+    "/{project_id}/transfer-ownership",
+    summary="Transfer project ownership (forced by admin, or pending invite by owner)",
+)
+@permission(PROJECT_MANAGE_OWNERSHIP)
+def transfer_ownership(
+    request: Request,
+    project_id: str,
+    req: TransferOwnershipRequest,
+    x_user: str = Header(default="anonymous", alias="X-User"),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    """ADR-126 D4: handover híbrido.
+
+    - admin: troca owner_id imediatamente (forçado, sem aceite).
+    - dono atual: cria convite pendente (owner_id só muda após /accept).
+    - qualquer outro actor (nem dono, nem admin): 403.
+    """
+    try:
+        actor = _actor_id(request, x_user)
+        owner_id = service.get_project_owner(project_id)
+        roles = _actor_roles(request)
+        if "admin" in roles:
+            return service.transfer_ownership_forced(project_id, req.owner_novo, actor=actor)
+        if owner_id is not None and actor == owner_id:
+            return service.create_ownership_transfer_pending(project_id, req.owner_novo, actor=actor)
+        raise PermissionError(
+            f"Apenas o dono do projeto (owner_id={owner_id!r}) ou um admin podem iniciar a transferência de "
+            f"ownership. Actor atual: {actor!r}, roles: {roles!r}."
+        )
+    except PermissionError:
+        raise
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/{project_id}/transfer-ownership/{token}/accept", summary="Accept a pending ownership transfer invite")
+@permission(PROJECT_MANAGE_OWNERSHIP)
+def accept_ownership_transfer_route(
+    request: Request,
+    project_id: str,
+    token: str,
+    x_user: str = Header(default="anonymous", alias="X-User"),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.accept_ownership_transfer(project_id, token, actor=_actor_id(request, x_user))
+    except PermissionError:
+        raise
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/{project_id}/transfer-ownership/{token}/reject", summary="Reject a pending ownership transfer invite")
+@permission(PROJECT_MANAGE_OWNERSHIP)
+def reject_ownership_transfer_route(
+    request: Request,
+    project_id: str,
+    token: str,
+    x_user: str = Header(default="anonymous", alias="X-User"),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.reject_ownership_transfer(project_id, token, actor=_actor_id(request, x_user))
+    except PermissionError:
+        raise
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
