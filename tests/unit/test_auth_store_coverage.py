@@ -179,6 +179,28 @@ class TestAuthStore:
         devices = store.list_devices("ld")
         assert any(d.device_id == "dev-ld" for d in devices)
 
+    def test_find_device_client_id_ignores_expiration(self, tmp_path):
+        """find_device_client_id() usa o mesmo critério de revoke_device() (not
+        revoked, ignora expiração) — diferente de list_devices(), que filtra por
+        expiração e "perderia" o dono de um token expirado-mas-não-revogado que
+        revoke_device() ainda revoga normalmente (Copilot, PR #66)."""
+        from datetime import UTC, datetime, timedelta
+        from unittest.mock import patch
+
+        store = self._make_store(tmp_path)
+        store.add_client("fdc", "s", ["operator"], client_code="RCODE-fdc")
+        store.activate_device_code("RCODE-fdc", device_name="dev-fdc")
+
+        future = datetime.now(UTC) + timedelta(days=400)
+        with patch("concilium.infrastructure.auth.auth_store._now", return_value=future):
+            assert store.list_devices("fdc") == []  # expirado: list_devices não lista
+            assert store.find_device_client_id("dev-fdc") == "fdc"  # mas ainda encontrável
+            assert store.revoke_device("dev-fdc") == 1  # e ainda revogável
+
+    def test_find_device_client_id_unknown_device_returns_none(self, tmp_path):
+        store = self._make_store(tmp_path)
+        assert store.find_device_client_id("no-such-device") is None
+
 
 class TestAuthStoreMissingLines:
     """Covers lines not reached by TestAuthStore: storage injection, scopes, revoke flow."""

@@ -298,6 +298,7 @@ def remove_user(
     remover mesmo assim (deixa owner_id órfão).
     """
     from concilium.infrastructure.auth.auth_store import get_auth_store
+    from concilium.infrastructure.services.notification_service import get_notification_service
 
     _check_owned_projects(client_id, reassign_to, force, force_yes)
 
@@ -305,8 +306,12 @@ def remove_user(
         typer.confirm(f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?", abort=True)
 
     store = get_auth_store()
-    store.revoke_device(client_id)  # revoga por client_id via list_devices
-    # Revoke all devices for this client
+    # Captura o email antes da remoção — depois de remove_client() o registro some do store.
+    existing = next((r for r in store.list_clients() if r.client_id == client_id), None)
+
+    # Revoke all devices for this client (revoke_device() espera device_id, não client_id —
+    # chamar com client_id revogaria por coincidência qualquer dispositivo de QUALQUER
+    # usuário cujo device_id colida com este client_id).
     devices = store.list_devices(client_id=client_id)
     for d in devices:
         store.revoke_device(d.device_id)
@@ -316,6 +321,8 @@ def remove_user(
         rprint(f"[yellow]Usuário '{client_id}' não encontrado no store local.[/yellow]")
     else:
         rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
+        if existing and existing.email:
+            get_notification_service().notify_user_removed(client_id, existing.email)
 
 
 # ── Dispositivos ──────────────────────────────────────────────────────────────
@@ -335,12 +342,17 @@ def regenerate_code(
     se o usuário perdeu o código original ou se ele vazou e precisa ser trocado.
     """
     from concilium.infrastructure.auth.auth_store import get_auth_store
+    from concilium.infrastructure.services.notification_service import get_notification_service
 
     store = get_auth_store()
     client_code = store.regenerate_client_code(user)
     if client_code is None:
         rprint(f"[red]Erro:[/red] usuário '{user}' não encontrado.")
         raise typer.Exit(1)
+
+    existing = next((r for r in store.list_clients() if r.client_id == user), None)
+    if existing and existing.email:
+        get_notification_service().notify_user_edited(user, existing.email, {"client_code": "regenerado"})
 
     if show_config:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
@@ -441,12 +453,24 @@ def revoke_device(
 ) -> None:
     """Revoga todos os refresh tokens de um dispositivo."""
     from concilium.infrastructure.auth.auth_store import get_auth_store
+    from concilium.infrastructure.services.notification_service import get_notification_service
 
     if not yes:
         typer.confirm(f"Revogar acesso do dispositivo '{device}'?", abort=True)
 
-    count = get_auth_store().revoke_device(device)
+    store = get_auth_store()
+    # Captura o client_id do dispositivo antes de revogar, com o MESMO critério
+    # de revoke_device() (not revoked, ignora expiração) — list_devices() filtra
+    # também por expiração e podia "perder" o dono de um token expirado-mas-não-
+    # revogado que revoke_device() ainda revoga normalmente.
+    owner_client_id = store.find_device_client_id(device)
+
+    count = store.revoke_device(device)
     if count:
         rprint(f"[green]✓ {count} token(s) revogado(s) para '{device}'.[/green]")
+        if owner_client_id:
+            client = next((r for r in store.list_clients() if r.client_id == owner_client_id), None)
+            if client and client.email:
+                get_notification_service().notify_device_revoked_admin(client.client_id, device, client.email)
     else:
         rprint(f"[yellow]Nenhum token ativo encontrado para '{device}'.[/yellow]")

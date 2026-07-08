@@ -405,6 +405,21 @@ class AuthStore:
                 self._write("refresh_tokens.json", [asdict(t) for t in tokens])
         return count
 
+    def find_device_client_id(self, device_id: str) -> str | None:
+        """Retorna o client_id do dispositivo, usando o MESMO critério de filtro
+        de `revoke_device()` (apenas `not revoked`, sem checar expiração).
+
+        `list_devices()` filtra também por expiração, o que pode fazer o owner
+        "sumir" (retornar None) para um token expirado-mas-não-revogado que
+        `revoke_device()` ainda revoga normalmente — usar `list_devices()` para
+        achar o dono antes de revogar pode então perder a notificação mesmo
+        quando a revogação teve efeito (ADR-131 D3).
+        """
+        with self._lock:
+            tokens = [RefreshTokenRecord(**r) for r in self._read("refresh_tokens.json")]
+        match = next((t for t in tokens if t.device_id == device_id and not t.revoked), None)
+        return match.client_id if match else None
+
     # ── Revoke pending (ADR-123 F3) ───────────────────────────────────────────
 
     REVOKE_PENDING_TTL = timedelta(hours=24)

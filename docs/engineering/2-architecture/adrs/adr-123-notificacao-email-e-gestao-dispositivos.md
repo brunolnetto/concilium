@@ -141,6 +141,14 @@ A permissão `auth:self` é adicionada a todos os roles (viewer, operator, engin
 | `presentation/cli/commands_ops.py` | Acionar `NotificationService` em create/edit/remove |
 | `infrastructure/settings.py` | Adicionar `SMTP_*` e `NOTIFICATIONS_ENABLED` |
 
+> **Nota retroativa (ADR-131, 2026-07-08):** a implementação real divergiu desta tabela —
+> `notify_user_edited` não foi implementado junto com este ADR e `notify_user_removed`
+> ficou implementado mas sem call site (`remove-user` nunca o chamava). O comando que
+> acionou `NotificationService` foi `commands_auth.py` (não `commands_ops.py`, que não
+> existe). O ADR-131 fecha essas lacunas: liga `notify_user_removed` a `remove-user`,
+> implementa `notify_user_edited` e o liga a `regenerate-code`, e adiciona
+> `notify_device_revoked_admin` para a revogação administrativa direta em `revoke-device`.
+
 ## Consequências
 
 **Positivas:**

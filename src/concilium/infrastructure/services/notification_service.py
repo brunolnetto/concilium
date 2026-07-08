@@ -195,6 +195,61 @@ class NotificationService:
                 exc_info=True,
             )
 
+    def notify_user_edited(self, client_id: str, email: str, changes: dict[str, str]) -> None:
+        """Envia email informando alteração nos dados do usuário (ADR-131 D2).
+
+        `changes` é um dict descritivo (chave → descrição da mudança), ex.:
+        {"client_code": "regenerado"} — não expõe segredos/hashes no corpo do email.
+        """
+        try:
+            changes_str = "\n".join(f"  {key}: {value}" for key, value in changes.items())
+            subject = f"[Concilium] Dados da conta '{client_id}' foram alterados."
+            body = (
+                f"Olá,\n\n"
+                f"Os seguintes dados da sua conta '{client_id}' no Concilium foram "
+                f"alterados por um administrador:\n\n"
+                f"{changes_str}\n\n"
+                f"Se isso foi feito por engano, entre em contato com o administrador.\n\n"
+                f"Atenciosamente,\nEquipe Concilium"
+            )
+            self._send(to=email, subject=subject, body=body)
+        except Exception as exc:
+            logger.error(
+                "notify_user_edited: falha ao notificar '%s' <%s>: %s",
+                client_id,
+                email,
+                exc,
+                exc_info=True,
+            )
+
+    def notify_device_revoked_admin(self, client_id: str, device_id: str, email: str) -> None:
+        """Envia email informando revogação administrativa direta de um dispositivo (ADR-131 D3).
+
+        Distinto de `notify_revoke_pending`: aqui não há opt-in/confirmação do usuário
+        — a ação já foi tomada unilateralmente pelo admin. O corpo deixa isso explícito
+        para reduzir o risco de o usuário interpretar o email como phishing.
+        """
+        try:
+            subject = f"[Concilium] Dispositivo '{device_id}' revogado por um administrador."
+            body = (
+                f"Olá, {client_id}!\n\n"
+                f"O acesso do dispositivo '{device_id}' à sua conta no Concilium foi "
+                f"revogado por um administrador — esta ação não foi solicitada por você "
+                f"e não exige nenhuma confirmação de sua parte.\n\n"
+                f"Se você não esperava esta revogação, entre em contato com o administrador.\n\n"
+                f"Atenciosamente,\nEquipe Concilium"
+            )
+            self._send(to=email, subject=subject, body=body)
+        except Exception as exc:
+            logger.error(
+                "notify_device_revoked_admin: falha ao notificar '%s' <%s> device='%s': %s",
+                client_id,
+                email,
+                device_id,
+                exc,
+                exc_info=True,
+            )
+
     def notify_new_device(
         self,
         client_id: str,

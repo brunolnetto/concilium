@@ -23,6 +23,7 @@ runner = CliRunner()
 
 PATCH_GET_AUTH_STORE = "concilium.infrastructure.auth.auth_store.get_auth_store"
 PATCH_GET_PROXY_DOWNLOAD_URLS = "concilium.presentation.cli.commands_auth._get_proxy_exe_download_urls"
+PATCH_GET_NOTIFICATION_SERVICE = "concilium.infrastructure.services.notification_service.get_notification_service"
 
 
 # ---------------------------------------------------------------------------
@@ -36,6 +37,7 @@ def _make_client_record(
     active=True,
     created_at="2026-01-01T00:00:00+00:00",
     notes="",
+    email="",
 ):
     rec = SimpleNamespace(
         client_id=client_id,
@@ -43,6 +45,7 @@ def _make_client_record(
         active=active,
         created_at=created_at,
         notes=notes,
+        email=email,
     )
     return rec
 
@@ -72,8 +75,14 @@ def _make_store(**kwargs) -> MagicMock:
     store.add_client.return_value = kwargs.get("add_client_return", _make_client_record())
     store.list_clients.return_value = kwargs.get("list_clients_return", [])
     store.remove_client.return_value = kwargs.get("remove_client_return", True)
-    store.list_devices.return_value = kwargs.get("list_devices_return", [])
+    devices = kwargs.get("list_devices_return", [])
+    store.list_devices.return_value = devices
     store.revoke_device.return_value = kwargs.get("revoke_device_return", 0)
+    # find_device_client_id() é o lookup usado por revoke-device para achar o dono
+    # (mesmo critério de filtro de revoke_device(): not revoked, ignora expiração).
+    # Default: deriva do primeiro device de list_devices_return, se houver.
+    default_owner = devices[0].client_id if devices else None
+    store.find_device_client_id.return_value = kwargs.get("find_device_client_id_return", default_owner)
     store.regenerate_client_code.return_value = kwargs.get("regenerate_client_code_return", "RCODE-DEFAULT")
     store.migrate_legacy_client_codes.return_value = kwargs.get("migrate_legacy_client_codes_return", [])
     return store
@@ -338,8 +347,69 @@ class TestRemoveUser:
             )
 
         assert result.exit_code == 0, result.output
-        # revoke_device was called at least for each device
-        assert store.revoke_device.call_count >= 2
+        # revoke_device was called exactly once per device (by device_id)
+        assert store.revoke_device.call_count == 2
+
+    def test_remove_user_never_revokes_by_client_id(self):
+        """revoke_device() espera device_id — nunca deve ser chamado com o client_id
+        diretamente (bug: revogaria por coincidência um device_id de outro usuário)."""
+        devices = [_make_device_record("dev1", client_id="alice"), _make_device_record("dev2", client_id="alice")]
+        store = _make_store(list_devices_return=devices, remove_client_return=True)
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(
+                app,
+                ["remove-user", "--id", "alice", "--yes"],
+            )
+
+        assert result.exit_code == 0, result.output
+        called_with = {call.args[0] for call in store.revoke_device.call_args_list}
+        assert "alice" not in called_with
+        assert called_with == {"dev1", "dev2"}
+
+    def test_remove_user_with_email_notifies_user_removed(self):
+        """ADR-131 D1 — remove-user chama notify_user_removed quando há email cadastrado."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["remove-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_user_removed.assert_called_once_with("alice", "alice@example.com")
+
+    def test_remove_user_without_email_does_not_notify(self):
+        """Sem email cadastrado, remove-user não chama notify_user_removed nem lança exceção."""
+        client = _make_client_record("alice", email="")
+        store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["remove-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_user_removed.assert_not_called()
+
+    def test_remove_user_unknown_client_does_not_notify(self):
+        """Cliente inexistente (não achado em list_clients) não deve notificar nem lançar."""
+        store = _make_store(list_clients_return=[], list_devices_return=[], remove_client_return=False)
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["remove-user", "--id", "ghost", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_user_removed.assert_not_called()
 
     def test_add_user_no_email_prints_both_platform_configs(self):
         """Sem --email, o console mostra os dois blocos (macOS/Linux e Windows) —
@@ -464,13 +534,59 @@ class TestRegenerateCode:
         assert "$HOME/.concilium/bin/concilium-mcp-proxy" in result.output
         assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in result.output
 
+    def test_with_email_notifies_user_edited(self):
+        """ADR-131 D2 — regenerate-code chama notify_user_edited quando há email cadastrado."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        store.regenerate_client_code.return_value = "RCODE-NEW"
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_user_edited.assert_called_once_with(
+            "alice", "alice@example.com", {"client_code": "regenerado"}
+        )
+
+    def test_without_email_does_not_notify(self):
+        """Sem email cadastrado, regenerate-code não chama notify_user_edited nem lança exceção."""
+        client = _make_client_record("alice", email="")
+        store = _make_store(list_clients_return=[client])
+        store.regenerate_client_code.return_value = "RCODE-NEW"
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_user_edited.assert_not_called()
+
+    def test_unknown_user_after_regenerate_does_not_notify(self):
+        """Cliente que sumiu do store (edge case) entre regenerate e lookup não deve notificar nem lançar."""
+        store = _make_store(list_clients_return=[])
+        store.regenerate_client_code.return_value = "RCODE-NEW"
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_user_edited.assert_not_called()
+
 
 # ===========================================================================
 # migrate-legacy-codes
 # ===========================================================================
-
-PATCH_GET_NOTIFICATION_SERVICE = "concilium.infrastructure.services.notification_service.get_notification_service"
-
 
 class TestMigrateLegacyCodes:
     def test_no_pending_prints_nothing_to_migrate(self):
@@ -692,6 +808,78 @@ class TestRevokeDevice:
 
         assert result.exit_code == 0, result.output
         store.revoke_device.assert_called_once_with("my-device")
+
+    def test_revoke_device_with_email_notifies_device_revoked_admin(self):
+        """ADR-131 D3 — revoke-device (admin) chama notify_device_revoked_admin quando há email."""
+        device = _make_device_record("macbook-alice", client_id="alice")
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_devices_return=[device], list_clients_return=[client], revoke_device_return=1)
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["revoke-device", "--device", "macbook-alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_device_revoked_admin.assert_called_once_with(
+            "alice", "macbook-alice", "alice@example.com"
+        )
+
+    def test_revoke_device_without_email_does_not_notify(self):
+        """Sem email cadastrado, revoke-device não chama notify_device_revoked_admin nem lança."""
+        device = _make_device_record("macbook-alice", client_id="alice")
+        client = _make_client_record("alice", email="")
+        store = _make_store(list_devices_return=[device], list_clients_return=[client], revoke_device_return=1)
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["revoke-device", "--device", "macbook-alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_device_revoked_admin.assert_not_called()
+
+    def test_revoke_device_unknown_device_does_not_notify(self):
+        """Device não encontrado (count==0) não deve notificar nem lançar exceção."""
+        store = _make_store(list_devices_return=[], list_clients_return=[], revoke_device_return=0)
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["revoke-device", "--device", "ghost-device", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_device_revoked_admin.assert_not_called()
+
+    def test_revoke_device_expired_but_not_revoked_still_notifies(self):
+        """Token expirado-mas-não-revogado: list_devices() não o listaria (filtra
+        expiração), mas revoke_device() ainda o revoga (count>0) — a notificação
+        não pode depender de list_devices() para achar o dono (Copilot #66)."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(
+            list_devices_return=[],  # token expirado não aparece aqui
+            find_device_client_id_return="alice",  # mas revoke_device() ainda o revoga
+            list_clients_return=[client],
+            revoke_device_return=1,
+        )
+        notif = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+        ):
+            result = runner.invoke(app, ["revoke-device", "--device", "old-expired-device", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        notif.notify_device_revoked_admin.assert_called_once_with(
+            "alice", "old-expired-device", "alice@example.com"
+        )
 
 
 # ===========================================================================

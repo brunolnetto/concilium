@@ -1,6 +1,6 @@
 # ADR-131 — Notificação do Usuário em Operações sobre Seus Próprios Dados: Fechamento das Lacunas do ADR-123
 
-**Status:** ✅ Decidido
+**Status:** ⚠️ Parcialmente Implementado _(F1-F3 completas; F4 parcial — ver Definition of Done)_
 **Data:** 2026-07-08
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-123 (serviço de notificação original), ADR-094 (JWT/auth), ADR-099 (RBAC)
@@ -120,32 +120,42 @@ Não introduzir `application/jobs/` (ADR-102/103) nem `BackgroundTasks` do FastA
 
 | Fase | Entregas | Status |
 |---|---|---|
-| **F1 — `remove-user`** | `notify_user_removed` chamado em `commands_auth.py:remove-user` | 💡 |
-| **F2 — `notify_user_edited`** | Implementar método em `NotificationService`; chamar em `regenerate-code` | 💡 |
-| **F3 — `notify_device_revoked_admin`** | Novo método; chamar em `revoke-device` (admin) | 💡 |
-| **F4 — Documentação** | Atualizar seção "Arquivos a criar/modificar" do ADR-123 (retroativo) para refletir a implementação real; checklist de PR (D4) documentado em `CONTRIBUTING`/guia de skill relevante | 💡 |
+| **F1 — `remove-user`** | `notify_user_removed` chamado em `commands_auth.py:remove-user` | ✅ |
+| **F2 — `notify_user_edited`** | Implementar método em `NotificationService`; chamar em `regenerate-code` | ✅ |
+| **F3 — `notify_device_revoked_admin`** | Novo método; chamar em `revoke-device` (admin) | ✅ |
+| **F4 — Documentação** | Atualizar seção "Arquivos a criar/modificar" do ADR-123 (retroativo) para refletir a implementação real; checklist de PR (D4) documentado em `CONTRIBUTING`/guia de skill relevante | ⚠️ parcial — ver nota abaixo |
 
 F1–F3 são independentes entre si e podem ser implementadas em qualquer ordem ou em paralelo.
 
 ## Definition of Done
 
+> **Nota de implementação sobre assinaturas:** os métodos existentes de `NotificationService`
+> (`notify_user_created`, `notify_user_removed`, `notify_client_code_migrated`,
+> `notify_new_device`, `notify_revoke_pending`) recebem `client_id`/`email` como strings
+> soltas, não um objeto `UserRecord`/`DeviceRecord` (esses tipos não existem no código —
+> o registro real é `ClientRecord`/`RefreshTokenRecord` em `auth_store.py`). Os dois métodos
+> novos (`notify_user_edited`, `notify_device_revoked_admin`) seguem a convenção real já
+> estabelecida no arquivo em vez do pseudocódigo genérico de D2/D3, por consistência:
+> `notify_user_edited(client_id: str, email: str, changes: dict[str, str])` e
+> `notify_device_revoked_admin(client_id: str, device_id: str, email: str)`.
+
 ### Fase 1
-- [ ] `remove-user` chama `notify_user_removed(user)` quando `user.email` presente
-- [ ] Teste cobrindo o call site (mock de `NotificationService`)
+- [x] `remove-user` chama `notify_user_removed(client_id, email)` quando `email` presente
+- [x] Teste cobrindo o call site (mock de `NotificationService`), incluindo os casos sem email e de cliente inexistente
 
 ### Fase 2
-- [ ] `notify_user_edited(user, changes)` implementado em `NotificationService`, seguindo o padrão síncrono e resiliente a falha dos demais métodos (captura exceção, loga, não propaga)
-- [ ] `regenerate-code` chama `notify_user_edited` com `changes={"client_code": "regenerado"}`
-- [ ] Teste cobrindo o call site
+- [x] `notify_user_edited(client_id, email, changes)` implementado em `NotificationService`, seguindo o padrão síncrono e resiliente a falha dos demais métodos (captura exceção, loga, não propaga)
+- [x] `regenerate-code` chama `notify_user_edited` com `changes={"client_code": "regenerado"}`
+- [x] Teste cobrindo o call site, incluindo os casos sem email e de cliente não encontrado após a regeneração
 
 ### Fase 3
-- [ ] `notify_device_revoked_admin(user, device)` implementado
-- [ ] `revoke-device` (admin, CLI) chama o método quando `user.email` presente
-- [ ] Teste cobrindo o call site, incluindo o caso sem email (não deve lançar)
+- [x] `notify_device_revoked_admin(client_id, device_id, email)` implementado
+- [x] `revoke-device` (admin, CLI) chama o método quando `email` presente
+- [x] Teste cobrindo o call site, incluindo o caso sem email (não deve lançar) e o caso de device desconhecido
 
 ### Fase 4
-- [ ] Tabela "Arquivos a criar/modificar" do ADR-123 atualizada com nota apontando para este ADR
-- [ ] Regra D4 documentada no guia de contribuição/checklist de PR
+- [x] Tabela "Arquivos a criar/modificar" do ADR-123 atualizada com nota apontando para este ADR
+- [ ] Regra D4 documentada no guia de contribuição/checklist de PR — **não feito**: o repositório não tem hoje um arquivo `CONTRIBUTING`/checklist de PR centralizado (busca confirmou que não existe); a regra D4 permanece documentada apenas nesta ADR. Criar esse arquivo é decisão de processo maior que o escopo desta ADR — abrir um item de acompanhamento separado se o time quiser um checklist formal.
 
 ---
 

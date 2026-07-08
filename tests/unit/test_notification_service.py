@@ -310,6 +310,74 @@ class TestNotifyUserRemoved:
         assert any("notify_user_removed" in r.message for r in caplog.records)
 
 
+class TestNotifyUserEdited:
+    """ADR-131 D2 — notify_user_edited(client_id, email, changes)."""
+
+    def test_happy_path_fallback(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        svc.notify_user_edited("client1", "client1@test.com", {"client_code": "regenerado"})
+
+    def test_body_includes_changes(self, caplog):
+        import logging
+
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
+            svc.notify_user_edited("client1", "client1@test.com", {"client_code": "regenerado"})
+        assert any("client_code" in r.message and "regenerado" in r.message for r in caplog.records)
+
+    def test_exception_captured(self, caplog):
+        import logging
+
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send", side_effect=OSError("net err")):
+            with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
+                svc.notify_user_edited("c1", "c1@x.com", {"client_code": "regenerado"})
+        assert any("notify_user_edited" in r.message for r in caplog.records)
+
+
+class TestNotifyDeviceRevokedAdmin:
+    """ADR-131 D3 — notify_device_revoked_admin(client_id, device_id, email)."""
+
+    def test_happy_path_fallback(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        svc.notify_device_revoked_admin("client1", "macbook-01", "client1@test.com")
+
+    def test_body_mentions_admin_action(self, caplog):
+        import logging
+
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
+            svc.notify_device_revoked_admin("client1", "macbook-01", "client1@test.com")
+        assert any("administrador" in r.message.lower() for r in caplog.records)
+
+    def test_exception_captured(self, caplog):
+        import logging
+
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send", side_effect=OSError("net err")):
+            with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
+                svc.notify_device_revoked_admin("c1", "dev-01", "c1@x.com")
+        assert any("notify_device_revoked_admin" in r.message for r in caplog.records)
+
+
 class TestNotifyNewDevice:
     def _mock_api(self, base_url="https://app.test.com"):
         api = MagicMock()
