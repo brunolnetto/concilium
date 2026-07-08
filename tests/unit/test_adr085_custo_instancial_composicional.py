@@ -177,6 +177,7 @@ class TestHelperComposicional:
 def _load_helpers_a():
     """Carrega o módulo _skill_helpers_a (dir com hífen → importlib)."""
     import importlib.util
+    import sys
     from pathlib import Path
 
     here = Path(__file__).resolve().parents[2]
@@ -188,10 +189,12 @@ def _load_helpers_a():
         / "skills"
         / "manifests"
         / "05-equipes-e-alocacao"
-        / "_skill_helpers_a.py"
+        / "_skill_helpers_a"
+        / "__init__.py"
     )
     spec = importlib.util.spec_from_file_location("skill05_helpers_a_test", path)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules["skill05_helpers_a_test"] = mod
     spec.loader.exec_module(mod)
     return mod
 

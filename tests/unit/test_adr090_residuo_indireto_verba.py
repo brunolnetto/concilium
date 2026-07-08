@@ -18,6 +18,7 @@ Regra corrigida:
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -29,10 +30,13 @@ def _load_helpers_b():
     path = (
         Path(__file__).resolve().parents[2]
         / "src/concilium/application/skills/manifests"
-        / "06-resultado-financeiro/_indiretos/_skill_helpers_b.py"
+        / "06-resultado-financeiro/_indiretos/_skill_helpers_b/__init__.py"
     )
-    spec = importlib.util.spec_from_file_location("ind_helpers_b_test", path)
+    spec = importlib.util.spec_from_file_location(
+        "ind_helpers_b_test", path, submodule_search_locations=[str(path.parent)]
+    )
     mod = importlib.util.module_from_spec(spec)
+    sys.modules["ind_helpers_b_test"] = mod
     spec.loader.exec_module(mod)
     return mod
 

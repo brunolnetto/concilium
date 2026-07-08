@@ -359,7 +359,7 @@ def test_compare_versions_left_none_raises():
     repo.get_project.return_value = project
     project.meta = {"version_history": {}}
     with patch(
-        "concilium.application.services.project.project_service.resolve_compare_version",
+        "concilium.application.services.project.project_service._versions_artifacts.resolve_compare_version",
         side_effect=lambda p, v: v,
     ):
         with pytest.raises(ValueError):
@@ -376,15 +376,15 @@ def test_compare_versions_both_present():
     repo.get_project.return_value = project
     with (
         patch(
-            "concilium.application.services.project.project_service.resolve_compare_version",
+            "concilium.application.services.project.project_service._versions_artifacts.resolve_compare_version",
             side_effect=lambda p, v: v,
         ),
         patch(
-            "concilium.application.services.project.project_service.build_summary",
+            "concilium.application.services.project.project_service._versions_artifacts.build_summary",
             return_value={"custo_total": 100.0},
         ),
         patch(
-            "concilium.application.services.project.project_service.calculate_deltas",
+            "concilium.application.services.project.project_service._versions_artifacts.calculate_deltas",
             return_value={"custo_total": 0.0},
         ),
     ):
@@ -916,11 +916,11 @@ def _make_project_mock(payload=None, skill_inputs=None, eap_items=None):
 
 
 _ENRICH_PATCHES = [
-    "concilium.application.services.project.project_service._catalog_is_deficit",
-    "concilium.application.services.project.project_service._enrich_payload_catalog",
-    "concilium.application.services.project.project_service._enrich_payload_encargos",
-    "concilium.application.services.project.project_service._enrich_payload_bdi",
-    "concilium.application.services.project.project_service._debug_storage_info",
+    "concilium.application.services.project.project_service._benchmark_eap._catalog_is_deficit",
+    "concilium.application.services.project.project_service._benchmark_eap._enrich_payload_catalog",
+    "concilium.application.services.project.project_service._benchmark_eap._enrich_payload_encargos",
+    "concilium.application.services.project.project_service._benchmark_eap._enrich_payload_bdi",
+    "concilium.application.services.project.project_service._benchmark_eap._debug_storage_info",
 ]
 
 

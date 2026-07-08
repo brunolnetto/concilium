@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,8 +16,11 @@ _BASE = Path("src/concilium/application/skills/manifests/06-resultado-financeiro
 
 def _load(rel: str, name: str):
     p = (_BASE / rel).resolve()
-    spec = importlib.util.spec_from_file_location(name, p)
+    if not p.exists():
+        p = (_BASE / rel.removesuffix(".py") / "__init__.py").resolve()
+    spec = importlib.util.spec_from_file_location(name, p, submodule_search_locations=[str(p.parent)])
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -592,12 +596,15 @@ class TestIndirBLoadLocalSpecNone:
 
         import pytest
 
-        p = (_BASE / "_indiretos/_skill_helpers_b.py").resolve()
+        p = (_BASE / "_indiretos/_skill_helpers_b/__init__.py").resolve()
         # Build the real spec/module *before* patching, so only the inner
         # spec_from_file_location call (for _skill_helpers_a.py, made during
         # exec_module) is affected by the patch below.
-        real_spec = importlib.util.spec_from_file_location("indir_b38_spec_none", p)
+        real_spec = importlib.util.spec_from_file_location(
+            "indir_b38_spec_none", p, submodule_search_locations=[str(p.parent)]
+        )
         mod = importlib.util.module_from_spec(real_spec)
+        sys.modules["indir_b38_spec_none"] = mod
 
         with patch("importlib.util.spec_from_file_location", return_value=None):
             with pytest.raises(ImportError, match="Não foi possível carregar spec"):

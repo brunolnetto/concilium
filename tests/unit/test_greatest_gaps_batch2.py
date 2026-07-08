@@ -165,7 +165,7 @@ def test_query_engine_is_ready_returns_false_when_cache_file_missing(tmp_path, m
 
     engine = CatalogQueryEngine(tmp_path)
     monkeypatch.setattr(engine, "_is_stale", lambda: False)
-    monkeypatch.setattr(query_engine, "_AVAILABLE", True)
+    monkeypatch.setattr(query_engine._engine, "_AVAILABLE", True)
     assert engine.is_ready() is False
 
 

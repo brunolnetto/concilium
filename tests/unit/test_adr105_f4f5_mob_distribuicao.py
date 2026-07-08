@@ -18,6 +18,7 @@ import pytest
 def _import():
     """Importa _distribuir_mob_fases do helper de indiretos."""
     import importlib.util
+    import sys
     from pathlib import Path
 
     here = Path(__file__).resolve().parent.parent.parent
@@ -30,10 +31,12 @@ def _import():
         / "manifests"
         / "06-resultado-financeiro"
         / "_indiretos"
-        / "_skill_helpers_b.py"
+        / "_skill_helpers_b"
+        / "__init__.py"
     )
-    spec = importlib.util.spec_from_file_location("skill_helpers_b", p)
+    spec = importlib.util.spec_from_file_location("skill_helpers_b", p, submodule_search_locations=[str(p.parent)])
     mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    sys.modules["skill_helpers_b"] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod._distribuir_mob_fases
 

@@ -803,7 +803,7 @@ class TestExecutarCampanha:
         prebuilt = _make_cenario("c1", margem=0.12, prazo=40)
 
         with patch(
-            "concilium.application.services.campaign.campaign_service._run_campaign_task", return_value=prebuilt
+            "concilium.application.services.campaign.campaign_service._runner._run_campaign_task", return_value=prebuilt
         ):
             output = executar_campanha(bundle, config_root="/tmp", projects_root="/tmp", num_workers=1)
 
@@ -836,7 +836,10 @@ class TestExecutarCampanha:
         prebuilt = _make_cenario("c1")
 
         with (
-            patch("concilium.application.services.campaign.campaign_service._run_campaign_task", return_value=prebuilt),
+            patch(
+                "concilium.application.services.campaign.campaign_service._runner._run_campaign_task",
+                return_value=prebuilt,
+            ),
             patch("concilium.infrastructure.settings.get_campaign", return_value=cfg_mock),
         ):
             with warnings.catch_warnings(record=True) as w:
@@ -894,7 +897,7 @@ class TestRunCampaignTask:
                 return_value=runner_instance,
             ),
             patch(
-                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+                "concilium.application.services.campaign.campaign_service._task._apply_post_load_overrides",
             ),
         ):
             result = _run_campaign_task(task)
@@ -942,7 +945,7 @@ class TestRunCampaignTask:
                 _FakeRunner,
             ),
             patch(
-                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+                "concilium.application.services.campaign.campaign_service._task._apply_post_load_overrides",
             ),
         ):
             result = _run_campaign_task(task)
@@ -977,7 +980,7 @@ class TestRunCampaignTask:
                 return_value=runner_instance,
             ),
             patch(
-                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+                "concilium.application.services.campaign.campaign_service._task._apply_post_load_overrides",
             ),
         ):
             result = _run_campaign_task(task)
@@ -1009,7 +1012,7 @@ class TestRunCampaignTask:
                 return_value=runner_instance,
             ),
             patch(
-                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+                "concilium.application.services.campaign.campaign_service._task._apply_post_load_overrides",
             ),
         ):
             result = _run_campaign_task(task)

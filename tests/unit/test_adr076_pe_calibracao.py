@@ -13,6 +13,7 @@ from __future__ import annotations
 
 # Importação direta do helper — sem carregar a skill completa.
 import importlib.util
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -28,10 +29,12 @@ _helpers_path = (
     / "manifests"
     / "06-resultado-financeiro"
     / "_consolidacao"
-    / "_skill_helpers_a.py"
+    / "_skill_helpers_a"
+    / "__init__.py"
 )
 _spec = importlib.util.spec_from_file_location("skill08_helpers_a", _helpers_path)
 _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+sys.modules["skill08_helpers_a"] = _mod
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
 _build_pe_for_equipe = _mod._build_pe_for_equipe

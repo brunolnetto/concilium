@@ -286,6 +286,7 @@ class TestCuboCombustivelFace:
 class TestBuildCuboPoolFaceStub:
     def _import_builder(self):
         import importlib.util
+        import sys
         from pathlib import Path
 
         here = Path(__file__).resolve().parent.parent.parent
@@ -298,10 +299,12 @@ class TestBuildCuboPoolFaceStub:
             / "manifests"
             / "06-resultado-financeiro"
             / "_consolidacao"
-            / "_skill_helpers_a.py"
+            / "_skill_helpers_a"
+            / "__init__.py"
         )
         spec = importlib.util.spec_from_file_location("skill_helpers_a_consolidacao", p)
         mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        sys.modules["skill_helpers_a_consolidacao"] = mod
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
         return mod._build_cubo_pool_face
 

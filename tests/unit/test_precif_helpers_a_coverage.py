@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -13,9 +14,13 @@ import pytest
 
 
 def _load_precif():
-    p = Path("src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/_skill_helpers_a.py")
+    p = (
+        Path("src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/_skill_helpers_a")
+        / "__init__.py"
+    )
     spec = importlib.util.spec_from_file_location("_precif_helpers_a", p)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules["_precif_helpers_a"] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -591,7 +596,7 @@ class TestProcessEapItem:
     def test_synthetic_cpu_creation_fails_records_erro(self):
         item = SimpleNamespace(cpu_id="CPU-999", item_id="I1")
         erros_eap: list = []
-        with patch.object(MOD, "_create_synthetic_cpu", return_value=None):
+        with patch.object(MOD._cpu_fallback, "_create_synthetic_cpu", return_value=None):
             self._call(item, {}, {}, [], erros_eap, [])
         assert erros_eap == ["CPU-999"]
 
@@ -602,7 +607,7 @@ class TestProcessEapItem:
         prod_lookup = {"PR1": {"id": "PR1"}}
         plan_out: list = []
         early_entry = {"item_id": "I2"}
-        with patch.object(MOD, "_try_early_override", return_value=early_entry):
+        with patch.object(MOD._process_item, "_try_early_override", return_value=early_entry):
             self._call(item, cpu_lookup, prod_lookup, plan_out, [], [])
         assert plan_out == [early_entry]
 
@@ -613,9 +618,9 @@ class TestProcessEapItem:
         prod_lookup = {"PR2": {"id": "PR2"}}
         plan_out: list = []
         with (
-            patch.object(MOD, "_try_early_override", return_value=None),
-            patch.object(MOD, "_compute_preco_cat_from_production", return_value=None),
-            patch.object(MOD, "_compute_preco_cat_from_cpu", return_value=(None, set())),
+            patch.object(MOD._process_item, "_try_early_override", return_value=None),
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(MOD._cpu_fallback, "_compute_preco_cat_from_cpu", return_value=(None, set())),
             patch(
                 "concilium.domain.models.catalog.catalogo.CPU.model_validate",
                 return_value=MagicMock(),

@@ -207,7 +207,7 @@ def test_02_auto_relaxacao_explicita():
 
     canonical = _make_canonical(num_activities=2, deadline_days=20)
 
-    target = "concilium.application.skills.cronograma.explore_schedules"
+    target = "concilium.application.skills.cronograma._mod_validacao.explore_schedules"
     with patch(target, side_effect=fake_explore):
         result = run_cronograma(canonical, {"deadline_weeks": 20})
 
@@ -224,7 +224,7 @@ def test_02_auto_infeasivel_quando_tudo_falha():
 
     canonical = _make_canonical(num_activities=2, deadline_days=20)
 
-    target = "concilium.application.skills.cronograma.explore_schedules"
+    target = "concilium.application.skills.cronograma._mod_validacao.explore_schedules"
     with patch(target, side_effect=always_empty):
         result = run_cronograma(canonical, {"deadline_weeks": 20})
 

@@ -1,0 +1,540 @@
+"""Skill 04 — Cronograma (parte extraída de skill.py)."""
+
+from __future__ import annotations
+
+import math
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any
+
+from concilium.domain.models.canonical import (
+    CanonicalModel,
+    DistribuicaoSemanal,
+    RegimeTrabalho,
+    ScheduleCandidateCanonical,
+    ValidacaoItem,
+)
+
+from ._skill_helpers_calendario import _mean_praticabilidade, _resolve_productivity  # ty: ignore[unresolved-import]
+from ._skill_helpers_custos import _build_dist_cell, _iso_week_key, _lookup_eficiencia  # ty: ignore[unresolved-import]
+from ._skill_helpers_validacao import (  # ty: ignore[unresolved-import]
+    _build_activity_item_map,
+    _find_item_by_id,
+    _infer_teams_from_resources,
+    _rasfc_extract_inputs,
+    _rasfc_run_heuristics,
+)
+
+if TYPE_CHECKING:
+    from concilium.domain.models.planning.mobilizacao import CurvaForca, MobilizacaoPolicy
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
+
+
+def _run_auto_schedule_fallback_chain(
+    canonical_in: CanonicalModel,
+    inputs: dict[str, Any],
+    validacoes: list[ValidacaoItem],
+    cpu_lookup: dict | None = None,
+    producao_lookup: dict | None = None,
+) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None]:
+    """Executa fallback chain (heurísticas -> relax).
+
+    ADR-046: se inputs contiver 'rcpsp_spec', usa extratores baseados na spec
+    em vez de tentar derivar do canônico (que pode estar incompleto).
+    ADR-072: cpu_lookup/producao_lookup usados para derivar duração produtiva.
+    """
+    extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
+    if extracted is None:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-SCHED-EXTRACT-FAIL",
+                status="ERRO",
+                mensagem="Falha ao extrair inputs de cronograma (atividades, DAG, pool ou deadline inválidos).",
+            )
+        )
+        return [], None
+    activities, dag, pool, deadline_weeks = extracted
+
+    candidates_canonical, _relaxed = _rasfc_run_heuristics(activities, dag, pool, deadline_weeks, inputs, validacoes)
+
+    if not candidates_canonical:
+        validacoes.append(ValidacaoItem(codigo="VAL-SCHED-05", status="ERRO", mensagem="Cronograma inviável."))
+        return [], None
+
+    best_candidate = candidates_canonical[0]
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-SCHED-OK",
+            status="OK",
+            mensagem=f"{best_candidate.heuristic} (qualidade {best_candidate.quality_score:.4f})",
+        )
+    )
+    return candidates_canonical, best_candidate
+
+
+def _resolve_item_for_scheduled_activity(
+    sa: Any,
+    activity_to_item: dict[str, str],
+    canonical_in: CanonicalModel,
+    validacoes: list[ValidacaoItem],
+) -> tuple[str, Any] | None:
+    """Resolve (item_id, item) para a scheduled activity; retorna None se deve ser pulada."""
+    item_id = activity_to_item.get(sa.activity_id)
+    if not item_id:
+        validacoes.append(
+            ValidacaoItem(codigo="VAL-CRON-CONVERT", status="AVISO", mensagem=f"{sa.activity_id} não mapeada.")
+        )
+        return None
+
+    item = _find_item_by_id(canonical_in.eap, item_id)
+    if not item:
+        return None
+
+    return item_id, item
+
+
+def _resolve_cpu_for_item(item: Any, cpu_lookup: dict[str, dict], validacoes: list[ValidacaoItem]) -> dict:
+    """Resolve a CPU do item, criando uma CPU sintética (com AVISO) se não encontrada no catálogo."""
+    cpu = cpu_lookup.get(item.cpu_id)
+    if not cpu:
+        # CPU not found - create synthetic CPU for scheduling to proceed
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-EAP-01",
+                status="AVISO",
+                mensagem=f"CPU {item.cpu_id} não encontrada no catálogo; usando CPU sintética.",
+            )
+        )
+        # Create synthetic CPU with reasonable defaults
+        cpu = {
+            "codigo": item.cpu_id,
+            "descricao": f"CPU sintética para {item.item_id}",
+            "producao_id_ref": None,
+        }
+    return cpu
+
+
+def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
+    """Pré-computa n_max (pico de alocação da atividade) para η_s = n_j/n_max (NEP-035)."""
+    # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
+    return (
+        max(
+            (
+                _infer_teams_from_resources(sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp)
+                for off in range(sa.duration_weeks)
+            ),
+            default=1,
+        )
+        or 1
+    )
+
+
+def _build_activity_distribuicao(
+    sa: Any,
+    item: Any,
+    cpu: dict,
+    ramp: Any,
+    n_max: int,
+    producao_semanal_base: float,
+    semanas_obra: list[str],
+    canonical_in: CanonicalModel,
+    prat_semanal: dict[str, float],
+    prat_mensal: dict[str, float],
+    fator_calendario_semanal: dict[str, float],
+) -> tuple[dict[str, DistribuicaoSemanal], float]:
+    """Constrói a distribuição semanal (célula a célula) de uma scheduled activity."""
+    distribuicao: dict[str, DistribuicaoSemanal] = {}
+    qtd_acumulada = 0.0
+
+    for week_offset in range(sa.duration_weeks):
+        week_num = sa.start_week + week_offset
+        semana_key = (
+            semanas_obra[week_num]
+            if week_num < len(semanas_obra)
+            else _iso_week_key(canonical_in.projeto.data_inicio + timedelta(weeks=week_num))
+        )
+
+        inferred_num_equipes = _infer_teams_from_resources(
+            sa.assigned_resources,
+            cpu,
+            week_offset,
+            sa.duration_weeks,
+            ramp_profile=ramp,
+        )
+        fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
+        fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
+        cell = _build_dist_cell(
+            producao_semanal_base,
+            inferred_num_equipes,
+            n_max,
+            fator_clima,
+            fator_calendario,
+            item.quantitativo,
+            qtd_acumulada,
+        )
+        qtd_acumulada = cell.qtd_acumulada
+        distribuicao[semana_key] = cell
+
+    return distribuicao, qtd_acumulada
+
+
+def _warn_if_activity_underdelivers(
+    item: Any,
+    item_id: str,
+    sa: Any,
+    qtd_acumulada: float,
+    canonical_in: CanonicalModel,
+    validacoes: list[ValidacaoItem],
+) -> None:
+    """ADR-082-cons: emite AVISO quando Σ q_ij < Q na janela agendada (não bloqueia)."""
+    # ADR-082-cons: checagem de completude também no caminho AUTO_SCHEDULE
+    # (antes só existia no modo manual) — torna VISÍVEL a sub-entrega Σ q_ij < Q
+    # antes silenciosa. Não bloqueia (AVISO): entregar Q sob clima é decisão de
+    # prazo/pool (estender janela ou +equipes — ADR-091), não um default.
+    if item.quantitativo <= 0:
+        return
+    pct_completude = qtd_acumulada / item.quantitativo
+    if pct_completude < 0.999:
+        p_bar = _mean_praticabilidade(canonical_in)
+        semanas_nec = math.ceil(sa.duration_weeks / p_bar) if p_bar > 0 else sa.duration_weeks
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-01",
+                status="AVISO",
+                mensagem=(
+                    f"Item '{item_id}' sub-entrega: Σ q_ij = {pct_completude * 100:.1f}% de Q na "
+                    f"janela agendada ({sa.duration_weeks}sem). Clima reduz a produção semanal além "
+                    f"da capacidade da janela. Para entregar Q (p̄={p_bar:.2f}): ~{semanas_nec}sem "
+                    "OU +equipes (decisão de prazo/pool — ADR-091)."
+                ),
+            )
+        )
+
+
+def _convert_schedule_to_distribuicao(
+    schedule_selected: ScheduleCandidateCanonical,
+    canonical_in: CanonicalModel,
+    semanas_obra: list[str],
+    cpu_lookup: dict[str, dict],
+    producao_lookup: dict[str, dict],
+    regime: Any,
+    prat_semanal: dict[str, float],
+    prat_mensal: dict[str, float],
+    fator_calendario_semanal: dict[str, float],
+    validacoes: list[ValidacaoItem],
+) -> dict[str, dict[str, DistribuicaoSemanal]]:
+    """Converte scheduled activities para distribuicao_semanal."""
+
+    distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]] = {}
+    activity_to_item = _build_activity_item_map(canonical_in)
+
+    for sa in schedule_selected.scheduled_activities:
+        resolved = _resolve_item_for_scheduled_activity(sa, activity_to_item, canonical_in, validacoes)
+        if resolved is None:
+            continue
+        item_id, item = resolved
+
+        cpu = _resolve_cpu_for_item(item, cpu_lookup, validacoes)
+
+        P = _resolve_productivity(cpu, producao_lookup, validacoes)
+        producao_semanal_base = P * regime.horas_dia * regime.dias_semana
+        # NEP-035: pré-cômputo de n_max (pico de alocação da atividade) para η_s = n_j/n_max.
+        ramp = getattr(sa, "ramp_profile", None)
+        n_max = _compute_activity_n_max(sa, cpu, ramp)
+
+        distribuicao, qtd_acumulada = _build_activity_distribuicao(
+            sa,
+            item,
+            cpu,
+            ramp,
+            n_max,
+            producao_semanal_base,
+            semanas_obra,
+            canonical_in,
+            prat_semanal,
+            prat_mensal,
+            fator_calendario_semanal,
+        )
+
+        _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, canonical_in, validacoes)
+
+        distribuicao_por_item[item_id] = distribuicao
+
+    return distribuicao_por_item
+
+
+def _cpv_get_equip_needed(cpu: dict) -> dict[str, int]:
+    """Returns {equip_id: num_unidades} from CPU config."""
+    team = cpu.get("equipe") or cpu.get("composicao_padrao_equipe") or {}
+    return {e["equip_id"]: e["num_unidades"] for e in team.get("equipamentos", [])}
+
+
+def _cpv_build_usage(
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict[str, dict],
+    distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]],
+) -> dict[str, dict[str, int]]:
+    usage: dict[str, dict[str, int]] = {}
+    for item in canonical_in.eap or []:
+        cpu = cpu_lookup.get(item.cpu_id)
+        if not cpu:
+            continue
+        equip_needed = _cpv_get_equip_needed(cpu)
+        if not equip_needed:
+            continue
+        dist = distribuicao_por_item.get(item.item_id, {})
+        for semana, d in dist.items():
+            if d.num_equipes <= 0:
+                continue
+            week_usage = usage.setdefault(semana, {})
+            for tipo_id, units_per_team in equip_needed.items():
+                week_usage[tipo_id] = week_usage.get(tipo_id, 0) + d.num_equipes * units_per_team
+    return usage
+
+
+def _cpv_process_violations(
+    usage: dict[str, dict[str, int]],
+    pool: dict[str, int],
+    validacoes: list[ValidacaoItem],
+) -> list:
+    from concilium.domain.models.project.constraint_violation import ConstraintViolation
+
+    violations = []
+    for semana, week_usage in sorted(usage.items()):
+        for tipo_id, total_used in week_usage.items():
+            available = pool.get(tipo_id)
+            if available is None or total_used <= available:
+                continue
+            magnitude = float(total_used - available)
+            violations.append(
+                ConstraintViolation(
+                    code="VAL-POOL-01",
+                    status="ERRO",
+                    magnitude=magnitude,
+                    affected_items=[semana],
+                    remediation_hint=f"Reduzir equipes de {tipo_id} em {semana} em {int(magnitude)}",
+                )
+            )
+            # key=f"{tipo_id}@{semana}" é único por iteração (semana/tipo_id não repetem
+            # dentro deste loop), então o dedup por `reported` nunca disparava — removido.
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-POOL-01",
+                    status="ERRO",
+                    mensagem=f"Pool excedido: {tipo_id} requer {total_used}, disponível {available} em {semana}",
+                )
+            )
+    return violations
+
+
+def _check_pool_violations(
+    canonical_in: CanonicalModel,
+    distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]],
+    cpu_lookup: dict[str, dict],
+    validacoes: list[ValidacaoItem],
+):
+    """Verifica violações de pool de recursos. Retorna lista de ConstraintViolation."""
+    pool = {r.tipo_id: r.quantidade_total for r in (canonical_in.recurso_pool or [])}
+    if not pool:
+        return []
+    usage = _cpv_build_usage(canonical_in, cpu_lookup, distribuicao_por_item)
+    return _cpv_process_violations(usage, pool, validacoes)
+
+
+def _check_wmp_pool(
+    item_id: str,
+    cpu: dict,
+    policy: MobilizacaoPolicy,
+    pool: dict,
+    validacoes: list,
+) -> None:
+    if not pool:
+        return
+    for e in (cpu.get("equipe") or {}).get("equipamentos", []):
+        eid = e.get("equip_id") or e.get("tipo_id")
+        if not eid or eid not in pool:
+            continue
+        units = int(e.get("num_unidades", 1))
+        peak_demand = policy.n_maximo * units
+        if peak_demand > pool[eid]:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-WMP-POOL",
+                    status="AVISO",
+                    mensagem=(
+                        f"WMP '{item_id}': n_maximo={policy.n_maximo} x "
+                        f"{eid}({units}/equipe) -> demanda_pico={peak_demand} "
+                        f"excede pool={pool[eid]}. Reduza n_maximo ou amplie o pool."
+                    ),
+                )
+            )
+
+
+def _check_wmp_desmob(
+    item_id: str,
+    curva: CurvaForca,
+    policy: MobilizacaoPolicy,
+    Q: float,
+    P: float,
+    validacoes: list,
+) -> None:
+    if not curva.incompleta:
+        return
+    if policy.semanas_plateau is not None and policy.taxa_desmobilizacao > 0:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-WMP-DESMOB",
+                status="AVISO",
+                mensagem=(
+                    f"WMP '{item_id}': desmobilizacao forcada pelo plateau={policy.semanas_plateau} sem."
+                    f" antes de entregar Q={Q:.0f}. Aumente n_maximo ou semanas_plateau."
+                ),
+            )
+        )
+    else:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-WMP-05",
+                status="AVISO",
+                mensagem=(
+                    f"WMP '{item_id}': simulacao nao completou Q={Q:.0f} (P={P:.2f} un/h)."
+                    " Verifique produtividade e politica."
+                ),
+            )
+        )
+
+
+def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> MobilizacaoPolicy | None:
+    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+
+    try:
+        return MobilizacaoPolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
+    except Exception as exc:
+        validacoes.append(
+            ValidacaoItem(codigo="VAL-WMP-03", status="AVISO", mensagem=f"WMP '{item_id}': politica invalida ({exc}).")
+        )
+        return None
+
+
+def _run_wmp_simulation(
+    sim: WorkforcePolicySimulator,
+    policy: MobilizacaoPolicy,
+    item_id: str,
+    Q: float,
+    P: float,
+    regime: RegimeTrabalho,
+    prat_semanal: dict,
+    semanas_obra: list,
+    guard: int,
+) -> CurvaForca:
+    semanas_iso = {t: semanas_obra[t] for t in range(min(guard, len(semanas_obra)))}
+    return sim.simulate(
+        policy=policy,
+        atividade_id=item_id,
+        quantitativo=Q,
+        producao_horaria=P,
+        dias_semana=regime.dias_semana,
+        horas_dia=regime.horas_dia,
+        prat_semanal=prat_semanal or None,
+        semanas_iso_por_offset=semanas_iso,
+    )
+
+
+def _process_single_wmp_policy(
+    item_id: str,
+    policy_dict: dict,
+    eap_lookup: dict,
+    cpu_lookup: dict,
+    producao_lookup: dict,
+    pool: dict,
+    sim: WorkforcePolicySimulator,
+    regime: RegimeTrabalho,
+    prat_semanal: dict,
+    semanas_obra: list,
+    semanas_set: set,
+    result: dict,
+    curves: list,
+    validacoes: list,
+) -> None:
+    if item_id in result:
+        return
+
+    eap_item = eap_lookup.get(item_id)
+    if not eap_item:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-WMP-01",
+                status="AVISO",
+                mensagem=f"Politica WMP '{item_id}' ignorada - item nao encontrado na EAP.",
+            )
+        )
+        return
+
+    cpu_id = getattr(eap_item, "cpu_id", "") or ""
+    cpu = cpu_lookup.get(cpu_id)
+    if not cpu:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-WMP-02",
+                status="AVISO",
+                mensagem=f"WMP '{item_id}': CPU '{cpu_id}' nao encontrada no catalogo.",
+            )
+        )
+        return
+
+    policy = _build_wmp_policy(item_id, policy_dict, validacoes)
+    if policy is None:
+        return
+
+    _check_wmp_pool(item_id, cpu, policy, pool, validacoes)
+
+    P = _resolve_productivity(cpu, producao_lookup, validacoes)
+    Q = float(getattr(eap_item, "quantitativo", 0))
+    if Q <= 0:
+        validacoes.append(
+            ValidacaoItem(codigo="VAL-WMP-04", status="AVISO", mensagem=f"WMP '{item_id}': quantitativo={Q} invalido.")
+        )
+        return
+
+    prod_base = P * regime.dias_semana * regime.horas_dia * policy.n_maximo
+    nominal = math.ceil(Q / prod_base) if prod_base > 0 else 1
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
+
+    guard = WorkforcePolicySimulator.MAX_MULTIPLIER * max(1, nominal)
+
+    curva = _run_wmp_simulation(sim, policy, item_id, Q, P, regime, prat_semanal, semanas_obra, guard)
+    _check_wmp_desmob(item_id, curva, policy, Q, P, validacoes)
+
+    curves.append(curva)
+    week_map = {k: v for k, v in curva.to_num_equipes_por_semana().items() if k in semanas_set}
+    result[item_id] = week_map
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-WMP-OK",
+            status="OK",
+            mensagem=(
+                f"WMP '{item_id}': {curva.duration_weeks} sem.,"
+                f" pico={curva.peak_teams} equipes, completa={curva.is_complete}."
+            ),
+        )
+    )
+
+
+
+__all__ = [
+    "_build_activity_distribuicao",
+    "_build_wmp_policy",
+    "_check_pool_violations",
+    "_check_wmp_desmob",
+    "_check_wmp_pool",
+    "_compute_activity_n_max",
+    "_convert_schedule_to_distribuicao",
+    "_cpv_build_usage",
+    "_cpv_get_equip_needed",
+    "_cpv_process_violations",
+    "_process_single_wmp_policy",
+    "_resolve_cpu_for_item",
+    "_resolve_item_for_scheduled_activity",
+    "_run_auto_schedule_fallback_chain",
+    "_run_wmp_simulation",
+    "_warn_if_activity_underdelivers",
+]

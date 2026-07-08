@@ -192,8 +192,8 @@ def test_reset_all_invalidates_singletons(monkeypatch):
     monkeypatch.delenv("CONCILIUM__API_HOST", raising=False)
     get_api()
     _reset_all()
-    assert _mod._api is None
-    assert _mod._campaign is None
+    assert _mod._api._api is None
+    assert _mod._campaign._campaign is None
 
 
 def test_reset_all_fresh_instances(monkeypatch):

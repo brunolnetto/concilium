@@ -34,7 +34,7 @@ class TestLoadSchema:
 
 class TestSchemaStore:
     def test_schema_store_populates_and_caches(self, monkeypatch):
-        monkeypatch.setattr(cs, "_SCHEMA_STORE", None)
+        monkeypatch.setattr(cs._core, "_SCHEMA_STORE", None)
         store = cs._schema_store()
         assert isinstance(store, dict)
         assert len(store) > 0
@@ -47,8 +47,8 @@ class TestSchemaStore:
         false branch: the `if "$id" in s` guard skips the dict assignment)."""
         (tmp_path / "no_id.schema.json").write_text('{"type": "object"}', encoding="utf-8")
         (tmp_path / "with_id.schema.json").write_text('{"$id": "with-id", "type": "object"}', encoding="utf-8")
-        monkeypatch.setattr(cs, "_SCHEMA_STORE", None)
-        monkeypatch.setattr(cs, "SCHEMA_ROOT", tmp_path)
+        monkeypatch.setattr(cs._core, "_SCHEMA_STORE", None)
+        monkeypatch.setattr(cs._core, "SCHEMA_ROOT", tmp_path)
         store = cs._schema_store()
         assert store == {"with-id": {"$id": "with-id", "type": "object"}}
 
@@ -1104,14 +1104,17 @@ class TestJsonschemaImportGuard:
                 raise ImportError("No module named 'jsonschema'")
             return real_import(name, *args, **kwargs)
 
-        modules_backup = {k: v for k, v in sys.modules.items() if k == "concilium.application.catalog.cure_schema"}
-        sys.modules.pop("concilium.application.catalog.cure_schema", None)
+        pkg_prefix = "concilium.application.catalog.cure_schema"
+        modules_backup = {k: v for k, v in sys.modules.items() if k == pkg_prefix or k.startswith(pkg_prefix + ".")}
+        for key in modules_backup:
+            sys.modules.pop(key, None)
         try:
             with pytest.MonkeyPatch.context() as mp:
                 mp.setattr(builtins, "__import__", _fake_import)
                 with pytest.raises(ImportError, match="Instale jsonschema"):
-                    importlib.import_module("concilium.application.catalog.cure_schema")
+                    importlib.import_module(pkg_prefix)
         finally:
-            sys.modules.pop("concilium.application.catalog.cure_schema", None)
+            for key in modules_backup:
+                sys.modules.pop(key, None)
             sys.modules.update(modules_backup)
-            importlib.import_module("concilium.application.catalog.cure_schema")
+            importlib.import_module(pkg_prefix)

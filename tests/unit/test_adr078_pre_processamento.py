@@ -25,7 +25,7 @@ import pytest
 
 _HELPERS_B = (
     Path(__file__).parent.parent.parent
-    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre.py"
+    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre/__init__.py"
 )
 
 
@@ -40,7 +40,9 @@ def _render_oportunidades(relatorio):
 
 
 def _load_helpers_b() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("_skill_helpers_pre", _HELPERS_B)
+    spec = importlib.util.spec_from_file_location(
+        "_skill_helpers_pre", _HELPERS_B, submodule_search_locations=[str(_HELPERS_B.parent)]
+    )
     assert spec and spec.loader, f"Não encontrou {_HELPERS_B}"
     mod = importlib.util.module_from_spec(spec)
     sys.modules["_skill_helpers_pre"] = mod
@@ -812,9 +814,11 @@ class TestDetectarOportunidadesParaleloMissingBranches:
 
         path = (
             Path(__file__).parent.parent.parent
-            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre.py"
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre/__init__.py"
         )
-        spec = importlib.util.spec_from_file_location("_skill_helpers_pre", path)
+        spec = importlib.util.spec_from_file_location(
+            "_skill_helpers_pre", path, submodule_search_locations=[str(path.parent)]
+        )
         mod = importlib.util.module_from_spec(spec)
         sys.modules["_skill_helpers_pre"] = mod
         spec.loader.exec_module(mod)

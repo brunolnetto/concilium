@@ -524,11 +524,17 @@ class TestCompareVersions:
 
         with (
             patch(
-                "concilium.application.services.project.project_service.resolve_compare_version",
+                "concilium.application.services.project.project_service._versions_artifacts.resolve_compare_version",
                 side_effect=["v1", "v2"],
             ),
-            patch("concilium.application.services.project.project_service.build_summary", return_value={"total": 0}),
-            patch("concilium.application.services.project.project_service.calculate_deltas", return_value={}),
+            patch(
+                "concilium.application.services.project.project_service._versions_artifacts.build_summary",
+                return_value={"total": 0},
+            ),
+            patch(
+                "concilium.application.services.project.project_service._versions_artifacts.calculate_deltas",
+                return_value={},
+            ),
         ):
             repo.get_project.return_value = p
             result = svc.compare_versions("p1", "v1", "v2")
@@ -542,7 +548,7 @@ class TestCompareVersions:
         p.load_canonical.return_value = None
         with (
             patch(
-                "concilium.application.services.project.project_service.resolve_compare_version",
+                "concilium.application.services.project.project_service._versions_artifacts.resolve_compare_version",
                 side_effect=["v1", "v2"],
             ),
         ):

@@ -261,12 +261,15 @@ class TestBuildInstanciasRecurso:
         """Executa _build_instancias_recurso para o cenário ESC-3CAT."""
         # Importa a função diretamente (sem pacote — via path)
         import importlib.util
+        import sys
 
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
-            _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
+            _ROOT
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
+        sys.modules["helpers_a"] = mod
         spec.loader.exec_module(mod)
         fn = mod._build_instancias_recurso
 
@@ -387,12 +390,15 @@ class TestAtribuicaoGulosa:
     def _run_two_activities(self, mw_a: int, mw_b: int, req_a: int, req_b: int, pool: int):
         """Cenário simples: atividade A e B competem pelo mesmo pool em semanas disjuntas."""
         import importlib.util
+        import sys
 
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
-            _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
+            _ROOT
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
+        sys.modules["helpers_a"] = mod
         spec.loader.exec_module(mod)
         fn = mod._build_instancias_recurso
 
@@ -423,12 +429,15 @@ class TestAtribuicaoGulosa:
         # Para este teste, usamos atividades de spans claramente distintos:
         # act-longue: 20w de duração; act-curta: 5w de duração
         import importlib.util
+        import sys
 
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
-            _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
+            _ROOT
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
+        sys.modules["helpers_a"] = mod
         spec.loader.exec_module(mod)
         fn = mod._build_instancias_recurso
 
@@ -467,12 +476,15 @@ class TestZeroDemandWeeks:
     def test_contrato_mais_longo_que_atividades(self):
         """Contrato de 10 semanas, atividade ativa em W1-W5 apenas."""
         import importlib.util
+        import sys
 
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
-            _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
+            _ROOT
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
+        sys.modules["helpers_a"] = mod
         spec.loader.exec_module(mod)
         fn = mod._build_instancias_recurso
 
@@ -567,12 +579,15 @@ class TestValidatorStandbyAlto:
     def _run_with_standby(self, standby_pct: float):
         """Cenário com taxa = (1 - standby_pct/100)."""
         import importlib.util
+        import sys
 
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
-            _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
+            _ROOT
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
+        sys.modules["helpers_a"] = mod
         spec.loader.exec_module(mod)
         fn = mod._build_instancias_recurso
 

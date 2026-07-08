@@ -1,0 +1,73 @@
+"""Excel adapter — aba OPERACIONAL."""
+
+from ._cronograma import (
+    _build_act_lookup_and_totals,
+    _compute_accum_prop,
+    _compute_cell_metric,
+    _compute_pct,
+    _cronograma_qtd_val,
+    _get_pratic_map,
+    _render_item_metrics_rows,
+    _render_praticabilidade_row,
+    _wk_label,
+    render_cronograma,
+)
+from ._diretos import (
+    _xl_diretos_equip,
+    _xl_diretos_labor,
+    _xl_diretos_material,
+    _xl_diretos_subtotal,
+    render_diretos,
+)
+from ._indiretos import (
+    _xl_indirect_fallback_row,
+    _xl_indirect_fallback_totals,
+    _xl_indirect_funcoes_rows,
+    _xl_indirect_mob_rows,
+    _xl_indirect_monthly_section,
+    _xl_indirect_subtotal_row,
+    _xl_indirect_verbas_fixas_rows,
+    _xl_indirect_verbas_mensais_rows,
+    render_indiretos_ml,
+)
+from ._planejamento import (
+    _xl_plan_data_rows,
+    _xl_plan_row_fill,
+    _xl_plan_row_vals,
+    _xl_plan_sem_vals,
+    _xl_plan_write_data_row,
+    render_planejamento_ml,
+)
+
+__all__ = [
+    "_build_act_lookup_and_totals",
+    "_compute_accum_prop",
+    "_compute_cell_metric",
+    "_compute_pct",
+    "_cronograma_qtd_val",
+    "_get_pratic_map",
+    "_render_item_metrics_rows",
+    "_render_praticabilidade_row",
+    "_wk_label",
+    "_xl_diretos_equip",
+    "_xl_diretos_labor",
+    "_xl_diretos_material",
+    "_xl_diretos_subtotal",
+    "_xl_indirect_fallback_row",
+    "_xl_indirect_fallback_totals",
+    "_xl_indirect_funcoes_rows",
+    "_xl_indirect_mob_rows",
+    "_xl_indirect_monthly_section",
+    "_xl_indirect_subtotal_row",
+    "_xl_indirect_verbas_fixas_rows",
+    "_xl_indirect_verbas_mensais_rows",
+    "_xl_plan_data_rows",
+    "_xl_plan_row_fill",
+    "_xl_plan_row_vals",
+    "_xl_plan_sem_vals",
+    "_xl_plan_write_data_row",
+    "render_cronograma",
+    "render_diretos",
+    "render_indiretos_ml",
+    "render_planejamento_ml",
+]

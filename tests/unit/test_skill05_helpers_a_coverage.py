@@ -2033,7 +2033,9 @@ class TestEuleImportErrorFallback:
             return real_import(name, *args, **kwargs)
 
         mod_name = _MOD.__name__
+        submod_name = f"{mod_name}._causal_cost_partition"
         saved = _sys.modules.pop(mod_name, None)
+        saved_submod = _sys.modules.pop(submod_name, None)
         try:
             import builtins
 
@@ -2042,12 +2044,16 @@ class TestEuleImportErrorFallback:
                 reloaded = importlib.import_module(mod_name)
             finally:
                 builtins.__import__ = real_import
-            assert reloaded._EULE_AVAILABLE is False
+            assert reloaded._causal_cost_partition._EULE_AVAILABLE is False
         finally:
             if saved is not None:
                 _sys.modules[mod_name] = saved
             else:
                 _sys.modules.pop(mod_name, None)
+            if saved_submod is not None:
+                _sys.modules[submod_name] = saved_submod
+            else:
+                _sys.modules.pop(submod_name, None)
             importlib.import_module(mod_name)
 
 
@@ -2542,7 +2548,7 @@ class TestAplicarCustoInstancialPoolTotalPorItem:
         contrato = SimpleNamespace(particao_por_item=[part_sem_equipe, part_com_equipe])
         eq_ok = SimpleNamespace(item_id="ITEM-OK", custo_total=0.0)
 
-        with patch.object(_MOD, "_apply_instancial_to_contrato", lambda *a, **k: None):
+        with patch.object(_MOD._custo_instancial_composicional, "_apply_instancial_to_contrato", lambda *a, **k: None):
             _MOD._aplicar_custo_instancial([contrato], instancias=[], equipes=[eq_ok], validacoes=[])
 
         assert eq_ok.custo_total == pytest.approx(200.0)

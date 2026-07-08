@@ -18,15 +18,17 @@ from __future__ import annotations
 def _build_cat_bottom_up_direct():
     """Importa a função de decomposição categorial de skill-08."""
     import importlib.util
+    import sys
     from pathlib import Path
 
     path = (
         Path(__file__).resolve().parents[2]
         / "src/concilium/application/skills/manifests"
-        / "06-resultado-financeiro/_consolidacao/_skill_helpers_a.py"
+        / "06-resultado-financeiro/_consolidacao/_skill_helpers_a/__init__.py"
     )
     spec = importlib.util.spec_from_file_location("sk08_helpers", path)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules["sk08_helpers"] = mod
     spec.loader.exec_module(mod)
     return mod._build_custo_categorial_bottom_up
 

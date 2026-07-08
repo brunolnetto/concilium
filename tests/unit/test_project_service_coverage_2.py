@@ -156,7 +156,7 @@ class TestCompareVersions:
         svc._repository.get_project.return_value = proj
 
         with patch(
-            "concilium.application.services.project.project_service.resolve_compare_version",
+            "concilium.application.services.project.project_service._versions_artifacts.resolve_compare_version",
             side_effect=lambda p, v: v,
         ):
             with pytest.raises(ValueError, match="sem canônico"):
@@ -171,7 +171,7 @@ class TestCompareVersions:
         svc._repository.get_project.return_value = proj
 
         with patch(
-            "concilium.application.services.project.project_service.resolve_compare_version",
+            "concilium.application.services.project.project_service._versions_artifacts.resolve_compare_version",
             side_effect=lambda p, v: v,
         ):
             with pytest.raises(ValueError, match="sem canônico"):
@@ -203,15 +203,15 @@ class TestCompareVersions:
 
         with (
             patch(
-                "concilium.application.services.project.project_service.resolve_compare_version",
+                "concilium.application.services.project.project_service._versions_artifacts.resolve_compare_version",
                 side_effect=lambda p, v: v,
             ),
             patch(
-                "concilium.application.services.project.project_service.build_summary",
+                "concilium.application.services.project.project_service._versions_artifacts.build_summary",
                 side_effect=lambda c: {"summary": str(c)},
             ),
             patch(
-                "concilium.application.services.project.project_service.calculate_deltas",
+                "concilium.application.services.project.project_service._versions_artifacts.calculate_deltas",
                 return_value={"delta": 0},
             ),
         ):
@@ -580,9 +580,12 @@ class TestGetBenchmarkReference:
         from unittest.mock import patch as _patch
 
         return (
-            _patch("concilium.application.services.project.project_service._catalog_is_deficit", return_value=False),
-            _patch("concilium.application.services.project.project_service._enrich_payload_encargos"),
-            _patch("concilium.application.services.project.project_service._enrich_payload_bdi"),
+            _patch(
+                "concilium.application.services.project.project_service._benchmark_eap._catalog_is_deficit",
+                return_value=False,
+            ),
+            _patch("concilium.application.services.project.project_service._benchmark_eap._enrich_payload_encargos"),
+            _patch("concilium.application.services.project.project_service._benchmark_eap._enrich_payload_bdi"),
         )
 
     def test_missing_skill_inputs_reads_from_project(self):
@@ -626,7 +629,7 @@ class TestGetBenchmarkReference:
 
         historical_rows = [{"item_id": "H1", "cpu_id": "CPU-H1"}]
         with patch(
-            "concilium.application.services.project.project_service._latest_version_with_eap",
+            "concilium.application.services.project.project_service._benchmark_eap._latest_version_with_eap",
             return_value=(historical_rows, "v3"),
         ):
             p1, p2, p3 = self._patch_enrichers()
@@ -704,11 +707,11 @@ class TestGetBenchmarkReference:
 
         with (
             patch(
-                "concilium.application.services.project.project_service._canonical_eap_to_rows",
+                "concilium.application.services.project.project_service._benchmark_eap._canonical_eap_to_rows",
                 return_value=[],
             ),
             patch(
-                "concilium.application.services.project.project_service._latest_version_with_eap",
+                "concilium.application.services.project.project_service._benchmark_eap._latest_version_with_eap",
                 return_value=([], None),
             ),
         ):
@@ -747,13 +750,13 @@ class TestGetBenchmarkReference:
 
         with (
             patch(
-                "concilium.application.services.project.project_service._enrich_payload_encargos",
+                "concilium.application.services.project.project_service._benchmark_eap._enrich_payload_encargos",
             ),
             patch(
-                "concilium.application.services.project.project_service._enrich_payload_bdi",
+                "concilium.application.services.project.project_service._benchmark_eap._enrich_payload_bdi",
             ),
             patch(
-                "concilium.application.services.project.project_service._enrich_payload_catalog",
+                "concilium.application.services.project.project_service._benchmark_eap._enrich_payload_catalog",
             ) as mock_enrich_catalog,
         ):
             svc.get_benchmark_reference("proj-1")
@@ -852,7 +855,7 @@ class TestGetVersionHistory:
         """Line 297: delete_project calls _ps_delete_project."""
         svc = _make_svc()
         with patch(
-            "concilium.application.services.project.project_service._ps_delete_project",
+            "concilium.application.services.project.project_service._crud._ps_delete_project",
             return_value={"deleted": True},
         ) as mock_del:
             result = svc.delete_project("proj-1", actor="admin")

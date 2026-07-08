@@ -1,0 +1,36 @@
+"""Protocol descrevendo a superfície cruzada entre mixins de ProjectService.
+
+ProjectService é composto por múltiplos mixins (_CrudMixin, _EapMixin,
+_VersionsArtifactsMixin, _VersionedEntitiesMixin, _ValidationMixin,
+_BenchmarkEapMixin) que se chamam entre si via `self`. Cada mixin isolado
+não enxerga os atributos/métodos dos outros — este Protocol existe só
+para checagem de tipos (TYPE_CHECKING), permitindo que cada mixin declare
+`self` com essa forma sem introduzir uma dependência real em tempo de
+execução.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Protocol
+
+
+class ProjectServiceHost(Protocol):
+    """Superfície do ProjectService composto, do ponto de vista de um mixin individual."""
+
+    _repository: Any
+    _audit_service: Any
+    _files: Any
+
+    def _normalize_eap_rows(self, raw_rows: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
+    @staticmethod
+    def _normalize_eap_item(item: dict[str, Any], ordem_padrao: int) -> dict[str, Any] | None: ...
+    @staticmethod
+    def _resolve_eap_source(payload: dict[str, Any]) -> str | None: ...
+    def list_perfis(self) -> list[dict[str, Any]]: ...
+    def list_temas(self) -> list[dict[str, Any]]: ...
+    def list_jurisdicoes(self) -> list[dict[str, Any]]: ...
+    def list_contexto_versions(self, contexto_id: str) -> list[dict[str, Any]]: ...
+    def _validate_perfil_fields(self, fields: dict[str, Any]) -> None: ...
+    def _validate_contexto_fields(self, fields: dict[str, Any]) -> None: ...
+    def _validate_tema_fields(self, svc: Any, tema_id: str, fields: dict[str, Any]) -> None: ...
+    def _validate_jurisdicao_fields(self, fields: dict[str, Any]) -> None: ...

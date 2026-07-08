@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from concilium.application.services.concilium_service import ConciliumService
+    from concilium.application.services.concilium_service._host_protocol import ConciliumServiceHost
 
 
 def _validate_cpu_data(cpu_data: dict, cpu_id: str, motivo: str) -> None:
@@ -71,7 +71,7 @@ def _enrich_cpus_with_producao(cat: dict) -> list[dict]:
 
 
 def _cs_upsert_catalog_cpu(
-    svc: ConciliumService,
+    svc: ConciliumServiceHost,
     catalog_id: str,
     cpu_id: str,
     cpu_data: dict[str, Any],
@@ -138,7 +138,7 @@ def _cs_upsert_catalog_cpu(
     }
 
 
-def _cs_get_enriched_cpus(svc: ConciliumService, catalog_id: str) -> list[dict[str, Any]]:
+def _cs_get_enriched_cpus(svc: ConciliumServiceHost, catalog_id: str) -> list[dict[str, Any]]:
     """Return enriched CPUs for a catalog, using mtime-keyed cache.
 
     Cache key: bundle file mtime (nanoseconds).  When ADR-067 writes a CPU
@@ -301,7 +301,7 @@ def _process_wmp_policy(
     )
 
 
-def _cs_validate_mobilizacao_policies(svc: ConciliumService, project_id: str) -> list[dict[str, Any]]:
+def _cs_validate_mobilizacao_policies(svc: ConciliumServiceHost, project_id: str) -> list[dict[str, Any]]:
     """Validate all saved WMP policies without running the full pipeline."""
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 

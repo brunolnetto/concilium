@@ -247,9 +247,11 @@ class TestSemResiduosLegados:
     def test_consolidacao_load_estagio_raises_when_spec_a_is_none(self):
         """load_skill_stage carrega _consolidacao/skill.py sem pacote sintético,
         então o import relativo inicial falha (ImportError) e cai no fallback
-        via importlib; se spec_from_file_location falhar para _skill_helpers_a.py
-        especificamente, o ImportError explícito da linha 47 é levantado."""
+        via importlib; se spec_from_file_location falhar para
+        _skill_helpers_a/__init__.py especificamente, o ImportError explícito
+        da linha 47 é levantado."""
         import importlib.util
+        from pathlib import Path
         from unittest.mock import patch
 
         from concilium.application.skills import load_skill_stage
@@ -257,7 +259,7 @@ class TestSemResiduosLegados:
         orig_spec = importlib.util.spec_from_file_location
 
         def fake_spec(name, path, *args, **kwargs):
-            if str(path).endswith("_skill_helpers_a.py"):
+            if str(path).endswith(str(Path("_skill_helpers_a") / "__init__.py")):
                 return None
             return orig_spec(name, path, *args, **kwargs)
 
@@ -314,8 +316,9 @@ class TestSemResiduosLegados:
                 load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
 
     def test_indiretos_load_estagio_raises_when_spec_b_is_none(self):
-        """Linha 71: mesmo cenário, para _skill_helpers_b.py."""
+        """Linha 71: mesmo cenário, para _skill_helpers_b/__init__.py."""
         import importlib.util
+        from pathlib import Path
         from unittest.mock import patch
 
         from concilium.application.skills import load_skill_stage
@@ -323,7 +326,7 @@ class TestSemResiduosLegados:
         orig_spec = importlib.util.spec_from_file_location
 
         def fake_spec(name, path, *args, **kwargs):
-            if "_indiretos" in str(path) and str(path).endswith("_skill_helpers_b.py"):
+            if "_indiretos" in str(path) and str(path).endswith(str(Path("_skill_helpers_b") / "__init__.py")):
                 return None
             return orig_spec(name, path, *args, **kwargs)
 

@@ -26,7 +26,7 @@ def _load(mod_name: str, rel_path: str):
     return mod
 
 
-_cons = _load("_cons_helpers_sw12", "06-resultado-financeiro/_consolidacao/_skill_helpers_a.py")
+_cons = _load("_cons_helpers_sw12", "06-resultado-financeiro/_consolidacao/_skill_helpers_a/__init__.py")
 
 
 # ── _consolidacao/_skill_helpers_a.py ─────────────────────────────────────────

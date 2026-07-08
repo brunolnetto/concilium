@@ -470,12 +470,12 @@ class TestCureContextualNoOp:
 
 class TestContextBase:
     def test_raises_when_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(cure_schema, "ROOT", tmp_path)
+        monkeypatch.setattr(cure_schema._io, "ROOT", tmp_path)
         with pytest.raises(FileNotFoundError, match="Contexto não encontrado"):
             _context_base("nope")
 
     def test_returns_path_when_exists(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(cure_schema, "ROOT", tmp_path)
+        monkeypatch.setattr(cure_schema._io, "ROOT", tmp_path)
         (tmp_path / "config" / "catalogos" / "ctx1").mkdir(parents=True)
         result = _context_base("ctx1")
         assert result == tmp_path / "config" / "catalogos" / "ctx1"
@@ -569,14 +569,14 @@ def _write_entity(path, payload):
 
 class TestRun:
     def test_dry_run_happy_path_no_entities(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr(cure_schema, "_context_base", lambda cid: tmp_path)
+        monkeypatch.setattr(cure_schema._run, "_context_base", lambda cid: tmp_path)
         run("ctx", apply=False)
         out = capsys.readouterr().out
         assert "DRY-RUN" in out
         assert "Nenhum erro residual" in out
 
     def test_apply_happy_path_persists_valid_entities(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr(cure_schema, "_context_base", lambda cid: tmp_path)
+        monkeypatch.setattr(cure_schema._run, "_context_base", lambda cid: tmp_path)
         _write_entity(
             tmp_path / "insumos" / "ins1.json",
             {
@@ -616,7 +616,7 @@ class TestRun:
         assert "Nenhum erro residual" in out
 
     def test_raises_runtime_error_on_residual_schema_errors(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr(cure_schema, "_context_base", lambda cid: tmp_path)
+        monkeypatch.setattr(cure_schema._run, "_context_base", lambda cid: tmp_path)
         # Insumo inválido: falta campo obrigatório 'fonte_preco'
         _write_entity(
             tmp_path / "insumos" / "bad.json",
@@ -631,7 +631,7 @@ class TestRun:
     def test_raises_runtime_error_on_residual_schema_errors_apply_true_no_dry_run_hint(
         self, tmp_path, monkeypatch, capsys
     ):
-        monkeypatch.setattr(cure_schema, "_context_base", lambda cid: tmp_path)
+        monkeypatch.setattr(cure_schema._run, "_context_base", lambda cid: tmp_path)
         # Falta 'codigo' — nenhuma regra de cura_insumo inventa um código ausente,
         # então o erro residual persiste mesmo com apply=True.
         _write_entity(
@@ -645,7 +645,7 @@ class TestRun:
         assert "DRY-RUN" not in out
 
     def test_reports_auto_fixes_and_manual_and_skipped(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr(cure_schema, "_context_base", lambda cid: tmp_path)
+        monkeypatch.setattr(cure_schema._run, "_context_base", lambda cid: tmp_path)
         # Producao com campo legado 'equipe' -> gera correção automática (fixed)
         _write_entity(
             tmp_path / "producoes" / "p1.json",
@@ -677,7 +677,7 @@ class TestRun:
         assert "[INFO]" in out
 
     def test_erros_truncated_after_50(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setattr(cure_schema, "_context_base", lambda cid: tmp_path)
+        monkeypatch.setattr(cure_schema._run, "_context_base", lambda cid: tmp_path)
         for i in range(60):
             _write_entity(
                 tmp_path / "insumos" / f"bad{i}.json",
@@ -700,7 +700,7 @@ class TestMain:
             calls["contexto_id"] = contexto_id
             calls["apply"] = apply
 
-        monkeypatch.setattr(cure_schema, "run", fake_run)
+        monkeypatch.setattr(cure_schema._run, "run", fake_run)
         monkeypatch.setattr(sys, "argv", ["prog", "--contexto", "mendeslobo", "--apply"])
         main()
         assert calls == {"contexto_id": "mendeslobo", "apply": True}
@@ -712,7 +712,7 @@ class TestMain:
             calls["contexto_id"] = contexto_id
             calls["apply"] = apply
 
-        monkeypatch.setattr(cure_schema, "run", fake_run)
+        monkeypatch.setattr(cure_schema._run, "run", fake_run)
         monkeypatch.setattr(sys, "argv", ["prog", "--contexto", "ctx"])
         main()
         assert calls == {"contexto_id": "ctx", "apply": False}
@@ -721,7 +721,7 @@ class TestMain:
         def fake_run(contexto_id, apply):
             raise FileNotFoundError("Contexto não encontrado: ctx")
 
-        monkeypatch.setattr(cure_schema, "run", fake_run)
+        monkeypatch.setattr(cure_schema._run, "run", fake_run)
         monkeypatch.setattr(sys, "argv", ["prog", "--contexto", "ctx"])
         with pytest.raises(SystemExit) as exc_info:
             main()
@@ -733,7 +733,7 @@ class TestMain:
         def fake_run(contexto_id, apply):
             raise RuntimeError("erros residuais")
 
-        monkeypatch.setattr(cure_schema, "run", fake_run)
+        monkeypatch.setattr(cure_schema._run, "run", fake_run)
         monkeypatch.setattr(sys, "argv", ["prog", "--contexto", "ctx", "--apply"])
         with pytest.raises(SystemExit) as exc_info:
             main()

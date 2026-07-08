@@ -28,6 +28,8 @@ def _load_mod(skill_dir: str, mod_name: str):
     if key in sys.modules:
         return sys.modules[key]
     path = _MANIFESTS / skill_dir / f"{mod_name}.py"
+    if not path.exists():
+        path = _MANIFESTS / skill_dir / mod_name / "__init__.py"
     spec = importlib.util.spec_from_file_location(key, path)
     mod = importlib.util.module_from_spec(spec)
     sys.modules[key] = mod

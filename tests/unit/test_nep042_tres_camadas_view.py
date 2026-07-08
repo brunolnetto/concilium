@@ -10,6 +10,7 @@ A view apresenta, por item, as três camadas lado a lado:
 from __future__ import annotations
 
 import importlib.util
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -20,10 +21,13 @@ def _load_helpers():
     path = (
         Path(__file__).resolve().parents[2]
         / "src/concilium/application/skills/manifests"
-        / "10-relatorio-e-artefatos/_skill_helpers_a.py"
+        / "10-relatorio-e-artefatos/_skill_helpers_a/__init__.py"
     )
-    spec = importlib.util.spec_from_file_location("sk09_helpers_nep042", path)
+    spec = importlib.util.spec_from_file_location(
+        "sk09_helpers_nep042", path, submodule_search_locations=[str(path.parent)]
+    )
     mod = importlib.util.module_from_spec(spec)
+    sys.modules["sk09_helpers_nep042"] = mod
     spec.loader.exec_module(mod)
     return mod
 

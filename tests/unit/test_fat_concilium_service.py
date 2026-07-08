@@ -77,7 +77,7 @@ class TestGetCatalog:
             "insumos": [1],
             "producoes": [1, 2],
         }
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc.get_catalog("test-cat")
 
@@ -91,7 +91,7 @@ class TestGetCatalog:
 
     def test_empty_catalog(self, tmp_path):
         svc, _ = _make_svc(tmp_path)
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = {}
             result = svc.get_catalog("empty")
 
@@ -191,7 +191,7 @@ class TestListCatalogInsumos:
             {"codigo": "INS-B", "descricao": "Areia"},
         ]
         svc, fake_cat = self._svc_with_insumos(insumos, tmp_path)
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc.list_catalog_insumos("cat1")
         assert result["total"] == 2
@@ -203,7 +203,7 @@ class TestListCatalogInsumos:
             {"codigo": "INS-ARC", "descricao": "Areia grossa"},
         ]
         svc, fake_cat = self._svc_with_insumos(insumos, tmp_path)
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc.list_catalog_insumos("cat1", q="cimento")
         assert result["total"] == 1
@@ -212,7 +212,7 @@ class TestListCatalogInsumos:
     def test_limit_applied_to_insumos(self, tmp_path):
         insumos = [{"codigo": f"INS-{i}", "descricao": f"desc {i}"} for i in range(10)]
         svc, fake_cat = self._svc_with_insumos(insumos, tmp_path)
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc.list_catalog_insumos("cat1", limit=4)
         assert len(result["items"]) == 4
@@ -220,7 +220,7 @@ class TestListCatalogInsumos:
 
     def test_empty_catalog_insumos(self, tmp_path):
         svc, fake_cat = self._svc_with_insumos([], tmp_path)
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc.list_catalog_insumos("cat1")
         assert result["total"] == 0
@@ -296,9 +296,9 @@ class TestAuditCatalogReasonability:
             "producoes": [],
         }
         with (
-            patch("concilium.application.services.concilium_service.Runtime") as MockRT,
+            patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT,
             patch(
-                "concilium.application.services.concilium_service.build_catalog_reasonability_artifact"
+                "concilium.application.services.concilium_service._catalog.build_catalog_reasonability_artifact"
             ) as mock_build,
         ):
             MockRT.return_value.load_catalogo.return_value = fake_cat
@@ -320,9 +320,9 @@ class TestAuditCatalogReasonability:
             "producoes": [{"id": "PROD-2", "valor_horario": 20}],
         }
         with (
-            patch("concilium.application.services.concilium_service.Runtime") as MockRT,
+            patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT,
             patch(
-                "concilium.application.services.concilium_service.build_catalog_reasonability_artifact"
+                "concilium.application.services.concilium_service._catalog.build_catalog_reasonability_artifact"
             ) as mock_build,
         ):
             MockRT.return_value.load_catalogo.return_value = fake_cat
@@ -618,7 +618,7 @@ class TestGetCatalogProducao:
             "produtividades": [{"id": "PROD-1", "valor_horario": 10}],
             "producoes": [],
         }
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._cpu_resolution.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc._get_catalog_producao("cat1", "PROD-1")
         assert result["id"] == "PROD-1"
@@ -629,7 +629,7 @@ class TestGetCatalogProducao:
             "produtividades": [],
             "producoes": [{"id": "PROD-2", "valor_horario": 20}],
         }
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._cpu_resolution.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc._get_catalog_producao("cat1", "PROD-2")
         assert result["id"] == "PROD-2"
@@ -637,7 +637,7 @@ class TestGetCatalogProducao:
     def test_returns_none_when_not_found(self, tmp_path):
         svc, _ = _make_svc(tmp_path)
         fake_cat = {"produtividades": [], "producoes": []}
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._cpu_resolution.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc._get_catalog_producao("cat1", "PROD-MISSING")
         assert result is None
@@ -654,7 +654,7 @@ class TestGetCatalogProducao:
                 {"id": "PROD-3", "valor_horario": 30},
             ],
         }
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+        with patch("concilium.application.services.concilium_service._cpu_resolution.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc._get_catalog_producao("cat1", "PROD-3")
         assert result["id"] == "PROD-3"
@@ -1457,7 +1457,7 @@ class TestMobilizacaoPolicyDelegates:
 
         svc, _ = _make_svc()
         with patch(
-            "concilium.application.services.concilium_service._cs_simulate_mobilizacao_policy",
+            "concilium.application.services.concilium_service._mobilizacao_deliverables._cs_simulate_mobilizacao_policy",
             return_value={"ok": True},
         ) as mock_fn:
             result = svc.simulate_mobilizacao_policy("p1", {"items": []})
@@ -1470,7 +1470,7 @@ class TestMobilizacaoPolicyDelegates:
 
         svc, _ = _make_svc()
         with patch(
-            "concilium.application.services.concilium_service._cs_validate_mobilizacao_policies",
+            "concilium.application.services.concilium_service._mobilizacao_deliverables._cs_validate_mobilizacao_policies",
             return_value=[],
         ) as mock_fn:
             result = svc.validate_mobilizacao_policies("p1")

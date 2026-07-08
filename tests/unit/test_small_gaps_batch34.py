@@ -90,7 +90,7 @@ class TestPrecificacaoSkillFallbackSpecNone:
         real_spec_from_file_location = importlib.util.spec_from_file_location
 
         def _fake_spec(name, path, *args, **kwargs):
-            if str(path).endswith("_skill_helpers_a.py"):
+            if str(path).endswith(str(Path("_skill_helpers_a") / "__init__.py")):
                 return None
             return real_spec_from_file_location(name, path, *args, **kwargs)
 

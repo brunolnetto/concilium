@@ -33,13 +33,33 @@ try:
     )
 except ImportError:
     import importlib.util
+    import sys
+    import types
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
-    _spec = importlib.util.spec_from_file_location("skill09_helpers_a", _here / "_skill_helpers_a.py")
+
+    # _skill_helpers_a é um pacote cujo submódulo _graficos.py faz
+    # `from .._skill_helpers_b import ...` (dois níveis: sobe do próprio
+    # pacote até o diretório da skill, onde _skill_helpers_b.py vive como
+    # sibling). Para que isso resolva quando skill.py é carregado standalone,
+    # registramos um pacote sintético para skill09 (mesma técnica de
+    # `_ensure_skill_package`) e carregamos _skill_helpers_a como submódulo
+    # dele — replicando a hierarquia real usada em produção.
+    _synth_pkg_name = "_skill09_relatorio_synth"
+    if _synth_pkg_name not in sys.modules:
+        _synth_pkg = types.ModuleType(_synth_pkg_name)
+        _synth_pkg.__path__ = [str(_here)]
+        _synth_pkg.__package__ = _synth_pkg_name
+        sys.modules[_synth_pkg_name] = _synth_pkg
+
+    _spec = importlib.util.spec_from_file_location(
+        f"{_synth_pkg_name}._skill_helpers_a", _here / "_skill_helpers_a" / "__init__.py"
+    )
     if _spec is None or _spec.loader is None:
-        raise ImportError("Cannot load _skill_helpers_a.py via importlib") from None
+        raise ImportError("Cannot load _skill_helpers_a via importlib") from None
     _mod = importlib.util.module_from_spec(_spec)
+    sys.modules[f"{_synth_pkg_name}._skill_helpers_a"] = _mod
     _spec.loader.exec_module(_mod)
 
     _add_criticidade_validacoes = _mod._add_criticidade_validacoes

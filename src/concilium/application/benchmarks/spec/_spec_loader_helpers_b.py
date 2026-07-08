@@ -7,7 +7,7 @@ import unicodedata
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+    from concilium.application.benchmarks.spec.spec_loader._host_protocol import BenchmarkSpecLoaderHost
 
 
 def _lfd_to_bdi_comp(
@@ -250,7 +250,9 @@ def _ea_normalize_itens_eap(itens_eap: list) -> list[dict]:
     return normalized
 
 
-def _bs_lfd_build_bdi_section(svc: BenchmarkSpecLoader, extra_inputs: dict, ref: dict[str, Any], bdi_ref: dict) -> dict:
+def _bs_lfd_build_bdi_section(
+    svc: BenchmarkSpecLoaderHost, extra_inputs: dict, ref: dict[str, Any], bdi_ref: dict
+) -> dict:
     """Builds and injects BDI tabela into pricing/consolidation benchmark inputs."""
     ref_bdi_rates = svc._extract_bdi_rates(ref)
     default_vals = {

@@ -119,7 +119,7 @@ class TestCatalogQueryEngineNoDuckDB:
         """Quando duckdb não disponível → is_ready() == False."""
         from concilium.infrastructure.catalog import query_engine
 
-        with patch.object(query_engine, "_AVAILABLE", False):
+        with patch.object(query_engine._engine, "_AVAILABLE", False):
             engine = query_engine.CatalogQueryEngine(tmp_path)
             assert engine.is_ready() is False
 
@@ -186,7 +186,7 @@ class TestCatalogQueryEngineNoDuckDB:
         """Rebuild falha → is_ready() == False sem crash."""
         from concilium.infrastructure.catalog import query_engine
 
-        with patch.object(query_engine, "_AVAILABLE", True):
+        with patch.object(query_engine._engine, "_AVAILABLE", True):
             engine = query_engine.CatalogQueryEngine(tmp_path)
             with patch.object(engine, "_rebuild", side_effect=RuntimeError("falha de disco")):
                 # _is_stale() == True (sem db) → chama _rebuild → falha → False
@@ -244,7 +244,7 @@ class TestCatalogSessionNoDuckDB:
         """CatalogSession.__init__ levanta ImportError quando duckdb ausente."""
         from concilium.infrastructure.catalog import query_engine
 
-        with patch.object(query_engine, "_AVAILABLE", False):
+        with patch.object(query_engine._engine, "_AVAILABLE", False):
             with pytest.raises(ImportError, match="duckdb"):
                 query_engine.CatalogSession()
 

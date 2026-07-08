@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 from concilium.application.skills import run_equipes_e_alocacao
 
 _MOD_NAME = "_concilium_skillpkg_05_equipes_e_alocacao.skill"
+_MOD_POOL = "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers_pool"
+_MOD_INSTANCIAS = "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers_instancias"
 
 from concilium.application.skills.base import SkillResult  # noqa: E402
 from concilium.domain.models.canonical import RecursoContrato  # noqa: E402
@@ -64,7 +66,7 @@ def _run_simple(equipes, inputs=None, planejamento=None):
         patch(f"{_MOD_NAME}._build_dimensionamento", return_value=equipes),
         patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
         patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-        patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+        patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
     ):
         return run_equipes_e_alocacao(can, inputs or {}, {"cpus": [], "insumos": []})
 
@@ -141,7 +143,7 @@ class TestBenchmarkMode:
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             r = run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
         assert any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
@@ -154,7 +156,7 @@ class TestBenchmarkMode:
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             r = run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
         assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
@@ -171,7 +173,7 @@ class TestBenchmarkMode:
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             r = run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
         assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
@@ -233,11 +235,11 @@ class TestPoolContractPath:
         ct = _contrato("R1", ["E1"])
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {"E1": (1500.0, "R1", 1.0)}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {"E1": (1500.0, "R1", 1.0)}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             r = run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         assert any(v.codigo == "VAL-POOL-CONTRATO-OK" for v in r.validacoes)
@@ -251,9 +253,9 @@ class TestPoolContractPath:
         derived = {"activities": [], "resource_pool": {}}
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=derived),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=derived),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -268,9 +270,9 @@ class TestPoolContractPath:
         cadeia = MagicMock()
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [cadeia])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [cadeia])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -284,9 +286,9 @@ class TestPoolContractPath:
         ct = _contrato("R1", ["E1"])
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {"E1": (9999.0, "R1", 1.0)}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {"E1": (9999.0, "R1", 1.0)}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -300,9 +302,9 @@ class TestPoolContractPath:
         ct = _contrato("R1", ["E1"])
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {"E1": (2000.0, "R1", 0.5)}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {"E1": (2000.0, "R1", 0.5)}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -318,9 +320,9 @@ class TestPoolContractPath:
         ct = _contrato("R1", ["E1"])
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {"E1": (1000.0, "R1", 1.0)}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {"E1": (1000.0, "R1", 1.0)}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -337,12 +339,12 @@ class TestPoolContractPath:
         resumo.taxa_utilizacao_pct = 80.0
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([MagicMock()], [], [resumo])),
-            patch(f"{_MOD_NAME}._aplicar_custo_instancial"),
-            patch(f"{_MOD_NAME}._enrich_equipes_com_decomposicao_instancial"),
-            patch(f"{_MOD_NAME}._enrich_particao_overhead"),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([MagicMock()], [], [resumo])),
+            patch(f"{_MOD_INSTANCIAS}._aplicar_custo_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_equipes_com_decomposicao_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_particao_overhead"),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -356,12 +358,12 @@ class TestPoolContractPath:
         ct = _contrato("R1", ["E1"])
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
-            patch(f"{_MOD_NAME}._aplicar_custo_instancial"),
-            patch(f"{_MOD_NAME}._enrich_equipes_com_decomposicao_instancial"),
-            patch(f"{_MOD_NAME}._enrich_particao_overhead"),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
+            patch(f"{_MOD_INSTANCIAS}._aplicar_custo_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_equipes_com_decomposicao_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_particao_overhead"),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -381,12 +383,12 @@ class TestPoolContractPath:
         mock_enrich_particao = MagicMock()
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [cadeia])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([inst], [], [resumo])),
-            patch(f"{_MOD_NAME}._aplicar_custo_instancial"),
-            patch(f"{_MOD_NAME}._enrich_equipes_com_decomposicao_instancial"),
-            patch(f"{_MOD_NAME}._enrich_particao_overhead", mock_enrich_particao),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [cadeia])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([inst], [], [resumo])),
+            patch(f"{_MOD_INSTANCIAS}._aplicar_custo_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_equipes_com_decomposicao_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_particao_overhead", mock_enrich_particao),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -409,12 +411,12 @@ class TestPoolContractPath:
 
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
-            patch(f"{_MOD_NAME}._aplicar_custo_instancial", side_effect=fake_aplicar),
-            patch(f"{_MOD_NAME}._enrich_equipes_com_decomposicao_instancial"),
-            patch(f"{_MOD_NAME}._enrich_particao_overhead"),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
+            patch(f"{_MOD_INSTANCIAS}._aplicar_custo_instancial", side_effect=fake_aplicar),
+            patch(f"{_MOD_INSTANCIAS}._enrich_equipes_com_decomposicao_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_particao_overhead"),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -438,12 +440,12 @@ class TestPoolContractPath:
         }
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
-            patch(f"{_MOD_NAME}._aplicar_custo_instancial", side_effect=fake_aplicar),
-            patch(f"{_MOD_NAME}._enrich_equipes_com_decomposicao_instancial"),
-            patch(f"{_MOD_NAME}._enrich_particao_overhead"),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
+            patch(f"{_MOD_INSTANCIAS}._aplicar_custo_instancial", side_effect=fake_aplicar),
+            patch(f"{_MOD_INSTANCIAS}._enrich_equipes_com_decomposicao_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_particao_overhead"),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -466,12 +468,12 @@ class TestPoolContractPath:
 
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
-            patch(f"{_MOD_NAME}._aplicar_custo_instancial", side_effect=fake_aplicar),
-            patch(f"{_MOD_NAME}._enrich_equipes_com_decomposicao_instancial"),
-            patch(f"{_MOD_NAME}._enrich_particao_overhead"),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
+            patch(f"{_MOD_INSTANCIAS}._aplicar_custo_instancial", side_effect=fake_aplicar),
+            patch(f"{_MOD_INSTANCIAS}._enrich_equipes_com_decomposicao_instancial"),
+            patch(f"{_MOD_INSTANCIAS}._enrich_particao_overhead"),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -486,8 +488,8 @@ class TestPoolContractPath:
         can = _canonical()
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([], {}, [])),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([], {}, [])),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
@@ -511,12 +513,12 @@ class TestAdr078PreProcessamento:
         mock_build_pre = MagicMock(return_value=mock_relatorio)
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_pre_processamento_compartilhamento", mock_build_pre),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             r = run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         mock_build_pre.assert_called_once()
@@ -531,12 +533,12 @@ class TestAdr078PreProcessamento:
         mock_build_pre = MagicMock()
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_pre_processamento_compartilhamento", mock_build_pre),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         mock_build_pre.assert_not_called()
@@ -570,12 +572,12 @@ class TestAdr110Oportunidades:
         # Let the ADR-110 block run naturally (it uses try/except internally)
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_pre_processamento_compartilhamento", mock_build_pre),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             r = run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         # The block should run (covered) even if it fails internally — best-effort try/except
@@ -610,14 +612,14 @@ class TestAdr110Oportunidades:
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
             patch(
-                f"{_MOD_NAME}._build_contratos_recurso",
+                f"{_MOD_POOL}._build_contratos_recurso",
                 return_value=([ct_no_match, ct_match], {}, []),
             ),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_pre_processamento_compartilhamento", mock_build_pre),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
         ):
             r = run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         assert isinstance(r, SkillResult)
@@ -655,12 +657,12 @@ class TestAdr110IndiretosCoverage:
         mock_detect = MagicMock(return_value=[mock_opp])
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_pre_processamento_compartilhamento", mock_build_pre),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
             patch(
                 "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers_pre._detectar_oportunidades_paralelo",
                 mock_detect,
@@ -701,12 +703,12 @@ class TestAdr110ExceptionCoverage:
 
         with (
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
-            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
-            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_POOL}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_INSTANCIAS}._build_instancias_recurso", return_value=([], [], [])),
             patch(f"{_MOD_NAME}._build_pre_processamento_compartilhamento", mock_build_pre),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
             # Make ScheduledActivity constructor raise to trigger the except block
             patch.object(_sched_models, "ScheduledActivity", side_effect=RuntimeError("boom")),
         ):
@@ -724,7 +726,7 @@ class TestFillCustoInstSemPool:
             patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
-            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+            patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
             # Patch the already-imported _fill_custo_inst_sem_pool in the engine module
             patch(
                 "concilium.domain.services.financial.equipe_custo_engine._fill_custo_inst_sem_pool",

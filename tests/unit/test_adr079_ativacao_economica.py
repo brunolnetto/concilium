@@ -25,7 +25,9 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
 
-_HELPERS_A = _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py"
+_HELPERS_A = (
+    _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py"
+)
 _SELECTOR = _ROOT / "src/concilium/application/scheduling/selector.py"
 _LNS = _ROOT / "src/concilium/application/scheduling/lns_scheduler.py"
 

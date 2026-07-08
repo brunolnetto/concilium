@@ -8,7 +8,7 @@ from .project_files import ProjectFiles
 from .project_repository import ProjectHandle
 
 if TYPE_CHECKING:
-    from concilium.application.services.project.project_service import ProjectService
+    from concilium.application.services.project.project_service._host_protocol import ProjectServiceHost
 
 
 class _CreateProjectRequestLike(Protocol):
@@ -185,7 +185,7 @@ def _cp_embed_catalog_if_needed(
     project.write_json(files.benchmark_reference, ref_to_save)
 
 
-def _resolve_catalogo_base_from_context(svc: ProjectService, contexto_id: str) -> str | None:
+def _resolve_catalogo_base_from_context(svc: ProjectServiceHost, contexto_id: str) -> str | None:
     """Resolve canonical catalog id from current context version metadata."""
     try:
         versions = svc.list_contexto_versions(contexto_id)
@@ -239,7 +239,7 @@ def _count_orphaned_runs(runs: list, version: str) -> int:
 
 
 def _ps_create_project(
-    svc: ProjectService,
+    svc: ProjectServiceHost,
     req: _CreateProjectRequestLike,
     inputs_escopo: dict[str, Any],
     skill_inputs: dict[str, dict[str, Any]],
@@ -290,7 +290,7 @@ def _ps_create_project(
 
 
 def _ps_upsert_eap(
-    svc: ProjectService, project_id: str, eap_items: list[dict[str, Any]], actor: str = "system"
+    svc: ProjectServiceHost, project_id: str, eap_items: list[dict[str, Any]], actor: str = "system"
 ) -> dict[str, Any]:
     from concilium.domain.models.canonical import EapItem
     from concilium.domain.services.eap_dag_validator import validar_dag_predecessores
@@ -325,7 +325,7 @@ def _ps_upsert_eap(
     return {"project_id": project_id, "status_eap": new_status, "count": len(parsed)}
 
 
-def _ps_delete_version(svc: ProjectService, project_id: str, version: str, actor: str = "system") -> dict[str, Any]:
+def _ps_delete_version(svc: ProjectServiceHost, project_id: str, version: str, actor: str = "system") -> dict[str, Any]:
     from concilium.domain.services.versioning import validate_delete_version
 
     project = svc._repository.get_project(project_id)
@@ -357,7 +357,7 @@ def _ps_delete_version(svc: ProjectService, project_id: str, version: str, actor
     return payload
 
 
-def _ps_delete_project(svc: ProjectService, project_id: str, actor: str = "system") -> dict[str, Any]:
+def _ps_delete_project(svc: ProjectServiceHost, project_id: str, actor: str = "system") -> dict[str, Any]:
     import shutil
 
     project = svc._repository.get_project(project_id)

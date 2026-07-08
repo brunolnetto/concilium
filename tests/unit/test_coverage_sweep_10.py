@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 from unittest.mock import MagicMock
 
 
@@ -14,12 +15,18 @@ def _load_skill_module(skill_dir: str, module_name: str):
     base = str(_Path(__file__).resolve().parents[2] / "src/concilium/application/skills/manifests")
     target = os.path.join(base, skill_dir, f"{module_name}.py")
     if not os.path.exists(target):
+        target = os.path.join(base, skill_dir, module_name, "__init__.py")
+    if not os.path.exists(target):
         return None
-    spec = importlib.util.spec_from_file_location(module_name, target)
+    spec = importlib.util.spec_from_file_location(
+        module_name, target, submodule_search_locations=[os.path.dirname(target)]
+    )
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = mod
     try:
         spec.loader.exec_module(mod)
     except Exception:
+        sys.modules.pop(module_name, None)
         return None
     return mod
 

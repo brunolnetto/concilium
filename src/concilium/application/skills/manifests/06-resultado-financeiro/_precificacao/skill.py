@@ -52,14 +52,16 @@ except ImportError:
     # pacote pai corretamente (mesmo padrão em _consolidacao/skill.py e
     # _indiretos/skill.py, que não têm pragma por serem igualmente cobertos).
     import importlib.util
+    import sys
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
-    _path = _here / "_skill_helpers_a.py"
+    _path = _here / "_skill_helpers_a" / "__init__.py"
     _spec = importlib.util.spec_from_file_location("skill06_helpers_a", _path)
     if _spec is None or _spec.loader is None:
         raise ImportError(f"Não foi possível carregar spec para: {_path}") from None
     _mod = importlib.util.module_from_spec(_spec)
+    sys.modules["skill06_helpers_a"] = _mod  # necessário p/ imports relativos entre seus submódulos
     _spec.loader.exec_module(_mod)
     _build_equipe_lookup = _mod._build_equipe_lookup
     _build_lookups = _mod._build_lookups

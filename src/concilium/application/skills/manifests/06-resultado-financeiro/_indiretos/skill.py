@@ -55,6 +55,7 @@ try:
     )
 except ImportError:
     import importlib.util
+    import sys
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
@@ -65,11 +66,12 @@ except ImportError:
     _mod_a = importlib.util.module_from_spec(_spec_a)
     _spec_a.loader.exec_module(_mod_a)
 
-    _path_b = _here / "_skill_helpers_b.py"
+    _path_b = _here / "_skill_helpers_b" / "__init__.py"
     _spec_b = importlib.util.spec_from_file_location("skill07_helpers_b", _path_b)
     if _spec_b is None or _spec_b.loader is None:
         raise ImportError(f"Não foi possível carregar spec para: {_path_b}") from None
     _mod_b = importlib.util.module_from_spec(_spec_b)
+    sys.modules["skill07_helpers_b"] = _mod_b  # necessário p/ imports relativos entre seus submódulos
     _spec_b.loader.exec_module(_mod_b)
 
     _composicao_default_por_categoria = _mod_a._composicao_default_por_categoria

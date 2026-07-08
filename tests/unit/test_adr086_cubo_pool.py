@@ -26,12 +26,17 @@ from concilium.domain.services.analytics.cubo_pool_builder import (
 )
 
 _ROOT = Path(__file__).resolve().parents[2]
-_HELPERS_A = _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py"
+_HELPERS_A = (
+    _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py"
+)
 
 
 def _load_helpers_a():
+    import sys
+
     spec = importlib.util.spec_from_file_location("_skill_helpers_a_086", _HELPERS_A)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules["_skill_helpers_a_086"] = mod
     spec.loader.exec_module(mod)
     return mod
 

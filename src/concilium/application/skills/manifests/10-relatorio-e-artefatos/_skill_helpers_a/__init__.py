@@ -1,0 +1,168 @@
+"""Skill 07 — Adapter de Saída (gera JSON + Excel .xlsm).
+
+Skill 07 produz o output principal:
+1. JSON estruturado (para validação, logs, API)
+2. Excel .xlsm auditável (para stakeholders, relatórios)
+
+Estrutura Excel gerada:
+  - RESUMO: metadados do projeto + indicadores financeiros
+  - PLANEJAMENTO: itens da EAP com preços, BDI, subtotais
+  - EQUIPES: composição, custos e ponto de equilíbrio
+  - INDIRETOS: custos indiretos por categoria
+  - RESULTADO: resultado financeiro consolidado
+"""
+
+from ._artefatos_bytes import (  # ty: ignore[unresolved-import]
+    _gerar_excel_bytes,
+    _gerar_live_model,
+    _gerar_memorial_json_bytes,
+)
+from ._cash_flow import _cash_flow_rows, _fmt_mes, _next_month, _week_to_month  # ty: ignore[unresolved-import]
+from ._compressao_cronograma import (  # ty: ignore[unresolved-import]
+    _rcc_add_predecessor,
+    _rcc_build_contratos_dict,
+    _rcc_build_dag,
+    _rcc_build_pool,
+    _rcc_build_precedencias,
+    _rcc_build_schedule_output,
+    _rcc_build_scheduled_activities,
+    _rcc_compute_preco_venda,
+    _rcc_prepare_context,
+    _rcc_serialize_itens,
+    _rcc_serialize_relatorio,
+    _rra_build_compressao_cronograma,
+    _rra_build_decomposicao_pool,
+)
+from ._equipes_indiretos import (  # ty: ignore[unresolved-import]
+    _ber_acao_sugerida,
+    _ber_build_rows,
+    _ber_componente_dominante,
+    _ber_componentes_operacionais,
+    _ber_componentes_referencia,
+    _build_equipe_rows,
+    _build_indireto_rows,
+)
+from ._graficos import (  # ty: ignore[unresolved-import]
+    _bgs_accumulate_equip_by_id,
+    _bgs_accumulate_mo_by_funcao,
+    _bgs_accumulate_week,
+    _bgs_add_financeiro,
+    _bgs_add_painel_equilibrio,
+    _bgs_aggregate_levers,
+    _bgs_build_graficos_dict,
+    _bgs_frentes_nec_media,
+    _bgs_gantt_task,
+    _bgs_get_equipe,
+    _bgs_mark_combinacoes,
+    _bgs_min_units,
+    _bgs_normalize_funcao_label,
+    _bgs_series_section,
+    _build_graficos_section,
+    _mbec_combo_entry,
+    _mbec_is_minimal,
+    _minimal_break_even_combinations,
+)
+from ._planejamento import (  # ty: ignore[unresolved-import]
+    _MESES_PT,
+    _add_criticidade_validacoes,
+    _build_planejamento_row,
+    _build_planejamento_rows,
+    _build_tres_camadas_row,
+    _build_tres_camadas_rows,
+    _pe_field,
+)
+from ._relatorio_pe import (  # ty: ignore[unresolved-import]
+    _rra_build_criticidade_lookup,
+    _rra_build_pe_row,
+    _rra_build_pe_rows,
+    _rra_gap_particionado,
+    _rra_particao_by_item,
+    _rra_safe_float,
+    _rra_totais_globais,
+)
+from ._relatorio_resultado import (  # ty: ignore[unresolved-import]
+    _rra_build_actionable_insights,
+    _rra_build_relatorio,
+    _rra_build_resultado_section,
+    _rrs_build_referencia,
+    _rrs_compute_core,
+    _rrs_compute_custos,
+    _rrs_compute_razao_margem,
+    _rrs_custo_indireto_calc,
+    _rrs_delta_pct,
+    _rrs_num,
+    _rrs_preco_venda_e_custo_total,
+)
+
+__all__ = [
+    "_MESES_PT",
+    "_add_criticidade_validacoes",
+    "_ber_acao_sugerida",
+    "_ber_build_rows",
+    "_ber_componente_dominante",
+    "_ber_componentes_operacionais",
+    "_ber_componentes_referencia",
+    "_bgs_accumulate_equip_by_id",
+    "_bgs_accumulate_mo_by_funcao",
+    "_bgs_accumulate_week",
+    "_bgs_add_financeiro",
+    "_bgs_add_painel_equilibrio",
+    "_bgs_aggregate_levers",
+    "_bgs_build_graficos_dict",
+    "_bgs_frentes_nec_media",
+    "_bgs_gantt_task",
+    "_bgs_get_equipe",
+    "_bgs_mark_combinacoes",
+    "_bgs_min_units",
+    "_bgs_normalize_funcao_label",
+    "_bgs_series_section",
+    "_build_equipe_rows",
+    "_build_graficos_section",
+    "_build_indireto_rows",
+    "_build_planejamento_row",
+    "_build_planejamento_rows",
+    "_build_tres_camadas_row",
+    "_build_tres_camadas_rows",
+    "_cash_flow_rows",
+    "_fmt_mes",
+    "_gerar_excel_bytes",
+    "_gerar_live_model",
+    "_gerar_memorial_json_bytes",
+    "_mbec_combo_entry",
+    "_mbec_is_minimal",
+    "_minimal_break_even_combinations",
+    "_next_month",
+    "_pe_field",
+    "_rcc_add_predecessor",
+    "_rcc_build_contratos_dict",
+    "_rcc_build_dag",
+    "_rcc_build_pool",
+    "_rcc_build_precedencias",
+    "_rcc_build_schedule_output",
+    "_rcc_build_scheduled_activities",
+    "_rcc_compute_preco_venda",
+    "_rcc_prepare_context",
+    "_rcc_serialize_itens",
+    "_rcc_serialize_relatorio",
+    "_rra_build_actionable_insights",
+    "_rra_build_compressao_cronograma",
+    "_rra_build_criticidade_lookup",
+    "_rra_build_decomposicao_pool",
+    "_rra_build_pe_row",
+    "_rra_build_pe_rows",
+    "_rra_build_relatorio",
+    "_rra_build_resultado_section",
+    "_rra_gap_particionado",
+    "_rra_particao_by_item",
+    "_rra_safe_float",
+    "_rra_totais_globais",
+    "_rrs_build_referencia",
+    "_rrs_compute_core",
+    "_rrs_compute_custos",
+    "_rrs_compute_razao_margem",
+    "_rrs_custo_indireto_calc",
+    "_rrs_delta_pct",
+    "_rrs_num",
+    "_rrs_preco_venda_e_custo_total",
+    "_week_to_month",
+]

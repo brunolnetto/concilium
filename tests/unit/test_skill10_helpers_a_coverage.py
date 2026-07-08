@@ -339,7 +339,7 @@ class TestGerarExcelBytes:
         canonical = _make_canonical()
         validacoes = []
         fake_bytes = b"PK fake excel"
-        with patch(f"{_PATCH_PREFIX}.ExcelRenderer") as MockRenderer:
+        with patch(f"{_PATCH_PREFIX}._artefatos_bytes.ExcelRenderer") as MockRenderer:
             MockRenderer.return_value.to_bytes.return_value = fake_bytes
             result = _gerar_excel_bytes(canonical, validacoes, True)
         assert result == fake_bytes
@@ -348,7 +348,7 @@ class TestGerarExcelBytes:
     def test_gerar_excel_true_renderer_raises(self):
         canonical = _make_canonical()
         validacoes = []
-        with patch(f"{_PATCH_PREFIX}.ExcelRenderer") as MockRenderer:
+        with patch(f"{_PATCH_PREFIX}._artefatos_bytes.ExcelRenderer") as MockRenderer:
             MockRenderer.return_value.to_bytes.side_effect = RuntimeError("boom")
             result = _gerar_excel_bytes(canonical, validacoes, True)
         assert result is None
@@ -1021,7 +1021,7 @@ class TestBgsAddFinanceiro:
         # Patch so _skill_helpers_b import fails and falls back to local _cash_flow_rows
         graficos = {}
         with patch(
-            f"{_PATCH_PREFIX}._cash_flow_rows",
+            f"{_PATCH_PREFIX}._graficos._cash_flow_rows",
             return_value=[
                 {
                     "mes": (2025, 1),
@@ -1568,16 +1568,16 @@ class TestSkillModuleImportErrorFallback:
         assert callable(mod.build_relatorio_executivo)
 
     def test_spec_none_for_skill_helpers_a_raises_import_error(self):
-        """Linha 41: spec_from_file_location retorna None para _skill_helpers_a.py."""
+        """Linha 41: spec_from_file_location retorna None para _skill_helpers_a/__init__.py."""
         orig_spec = importlib.util.spec_from_file_location
 
         def fake_spec(name, path, *args, **kwargs):
-            if str(path).endswith("_skill_helpers_a.py"):
+            if str(path).endswith(str(Path("_skill_helpers_a") / "__init__.py")):
                 return None
             return orig_spec(name, path, *args, **kwargs)
 
         with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
-            with pytest.raises(ImportError, match="Cannot load _skill_helpers_a.py"):
+            with pytest.raises(ImportError, match="Cannot load _skill_helpers_a via importlib"):
                 self._load_standalone()
 
     def test_spec_none_for_skill_helpers_executivo_raises_import_error(self):

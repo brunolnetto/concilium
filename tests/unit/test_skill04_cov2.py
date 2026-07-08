@@ -783,7 +783,7 @@ class TestRunCronogramaMobScheduleException:
     def test_mob_schedule_exception_emits_val_mob_schedule_erro(self):
         """Lines 2216-2217: infer_mob_windows raises → VAL-MOB-SCHEDULE-ERRO."""
         canonical = _make_canonical()
-        with patch(f"{_MOD_NAME}.infer_mob_windows", side_effect=RuntimeError("fail")):
+        with patch(f"{_MOD_NAME}._mod_assembly.infer_mob_windows", side_effect=RuntimeError("fail")):
             result = run_cronograma(
                 canonical,
                 inputs={
@@ -803,7 +803,7 @@ class TestRunCronogramaMobScheduleNone:
     def test_mob_schedule_none_not_in_update_dict(self):
         """Line 2234->2237: mob_schedule=None → update_dict has no 'mob_schedule' key."""
         canonical = _make_canonical()
-        with patch(f"{_MOD_NAME}.infer_mob_windows", return_value=None):
+        with patch(f"{_MOD_NAME}._mod_assembly.infer_mob_windows", return_value=None):
             result = run_cronograma(
                 canonical,
                 inputs={"num_equipes_por_item": {"IT-01": {"2025-W02": 1}}},
@@ -833,7 +833,7 @@ class TestRunAutoScheduleFallbackChainNullExtract:
             )
 
         validacoes = []
-        with patch(f"{_MOD_NAME}._rasfc_extract_inputs", return_value=None):
+        with patch(f"{_MOD_NAME}._mod_scheduling._rasfc_extract_inputs", return_value=None):
             candidates, best = _rasfc(FakeCanonical(), {}, validacoes)
         assert candidates == []
         assert best is None
@@ -1293,9 +1293,9 @@ class TestRasfcRunHeuristicsOverride:
         fake_candidate = SimpleNamespace(heuristic="LPT")
 
         with (
-            patch(f"{_MOD_NAME}.select_scheduling_algorithm", return_value=strategy),
-            patch(f"{_MOD_NAME}.explore_schedules", return_value=[fake_result]),
-            patch(f"{_MOD_NAME}._to_canonical_candidate", return_value=fake_candidate),
+            patch(f"{_MOD_NAME}._mod_validacao.select_scheduling_algorithm", return_value=strategy),
+            patch(f"{_MOD_NAME}._mod_validacao.explore_schedules", return_value=[fake_result]),
+            patch(f"{_MOD_NAME}._mod_validacao._to_canonical_candidate", return_value=fake_candidate),
         ):
             candidates, relaxed = _rasfc_run_heuristics(activities, dag, pool, 4, {"heuristics": ["LPT"]}, [])
         assert strategy.heuristics == ["LPT"]
@@ -1435,8 +1435,8 @@ class TestDetermineModeRcpspSpecSuccess:
         canonical = _make_canonical()
         sched_sel = SimpleNamespace(scheduled_activities=[])
         with (
-            patch(f"{_MOD_NAME}._run_auto_schedule_fallback_chain", return_value=([], sched_sel)),
-            patch(f"{_MOD_NAME}._convert_schedule_to_distribuicao", return_value={"IT-01": {}}),
+            patch(f"{_MOD_NAME}._mod_assembly._run_auto_schedule_fallback_chain", return_value=([], sched_sel)),
+            patch(f"{_MOD_NAME}._mod_assembly._convert_schedule_to_distribuicao", return_value={"IT-01": {}}),
         ):
             mode, distr, candidates, selected, failed = _determine_mode_and_distribuicao(
                 canonical_in=canonical,
@@ -1461,7 +1461,10 @@ class TestDetermineModeRcpspSpecSuccess:
         """Line 1857: fallback chain exhausted (schedule_selected falsy) -> early
         return with failed=True and empty distribuicao."""
         canonical = _make_canonical()
-        with patch(f"{_MOD_NAME}._run_auto_schedule_fallback_chain", return_value=([{"heuristic": "MINSLK"}], None)):
+        with patch(
+            f"{_MOD_NAME}._mod_assembly._run_auto_schedule_fallback_chain",
+            return_value=([{"heuristic": "MINSLK"}], None),
+        ):
             mode, distr, candidates, selected, failed = _determine_mode_and_distribuicao(
                 canonical_in=canonical,
                 inputs={"rcpsp_spec": {"activities": []}},

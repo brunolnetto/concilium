@@ -20,12 +20,15 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-_HELPERS_PATH = _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py"
+_HELPERS_PATH = (
+    _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py"
+)
 
 sys.path.insert(0, str(_ROOT / "src"))
 
 _spec = importlib.util.spec_from_file_location("_skill_helpers_a", _HELPERS_PATH)
 _mod = importlib.util.module_from_spec(_spec)
+sys.modules["_skill_helpers_a"] = _mod
 _spec.loader.exec_module(_mod)
 
 particionar_contrato = _mod.particionar_contrato
@@ -231,7 +234,7 @@ class TestIterIntervalsPolimorfismo:
     def test_eule_unavailable_returns_empty(self, monkeypatch):
         """Quando _EULE_AVAILABLE é False (dependência opcional ausente em
         produção), _iter_intervals deve retornar [] sem tentar usar Interval."""
-        monkeypatch.setattr(_mod, "_EULE_AVAILABLE", False)
+        monkeypatch.setattr(_mod._causal_cost_partition, "_EULE_AVAILABLE", False)
         from interval_sets import Interval
 
         ivs = _iter_intervals(Interval(0.0, 3.0))

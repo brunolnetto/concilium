@@ -27,12 +27,14 @@ from concilium.application.scheduling.models import (
 
 _HELPERS_PRE = (
     Path(__file__).parent.parent.parent
-    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre.py"
+    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre/__init__.py"
 )
 
 
 def _load_helpers_pre() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("_skill_helpers_pre", _HELPERS_PRE)
+    spec = importlib.util.spec_from_file_location(
+        "_skill_helpers_pre", _HELPERS_PRE, submodule_search_locations=[str(_HELPERS_PRE.parent)]
+    )
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     sys.modules["_skill_helpers_pre"] = mod
