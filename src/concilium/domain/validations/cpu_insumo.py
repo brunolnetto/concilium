@@ -57,6 +57,7 @@ class ValidadorCPUInsumo:
         "SANEAMENTO",
         "FERROVIA",
         "INFRAESTRUTURA",
+        "MINERACAO",
     }
     UNIDADES_NORM_MAP = {
         "M2": "m2",

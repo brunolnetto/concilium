@@ -19,7 +19,13 @@
         "DRENAGEM",
         "SANEAMENTO",
         "OBRAS_ARTE",
-        "DIVERSOS"
+        "DIVERSOS",
+        "CANTEIRO",
+        "MEIO_AMBIENTE",
+        "DESMATAMENTO",
+        "FERROVIA",
+        "INFRAESTRUTURA",
+        "MINERACAO"
       ]
     },
     "categoriaCusto": {
