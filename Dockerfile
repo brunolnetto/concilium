@@ -47,6 +47,11 @@ RUN wheel=$(ls /tmp/*.whl) \
  && pip install --no-cache-dir "${wheel}[azure]" \
  && rm -rf /tmp/*.whl
 
+# Dados de referência estáticos (contextos, catálogos, perfis, jurisdições,
+# schemas, templates) — CONCILIUM__CONFIG_ROOT=/app espera isso em
+# /app/{contextos,catalogos,...}. O wheel não empacota config/ (fora de src/).
+COPY --from=builder --chown=nonroot:nonroot /workspace/concilium/config /app
+
 USER nonroot
 
 EXPOSE 8000 8080
