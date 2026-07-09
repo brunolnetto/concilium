@@ -163,11 +163,14 @@ class TestEnsureStorageRoot:
         from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
 
         mock_storage = MagicMock(spec=SharePointBlobStorage)
+        system_mock_storage = MagicMock(spec=SharePointBlobStorage)
         monkeypatch.setattr(_sf, "resolve_store_backend", lambda: "sharepoint")
         monkeypatch.setattr(_sf, "build_blob_storage", lambda: mock_storage)
+        monkeypatch.setattr(_sf, "build_system_blob_storage", lambda: system_mock_storage)
 
         _sf.ensure_storage_root()
         mock_storage.ensure_root_path.assert_called_once()
+        system_mock_storage.ensure_root_path.assert_called_once()
 
     def test_noop_when_sharepoint_backend_but_storage_is_not_sharepoint_instance(self, monkeypatch):
         """Guarda defensiva: resolve_store_backend() diz sharepoint mas build_blob_storage()
@@ -177,6 +180,7 @@ class TestEnsureStorageRoot:
         other_storage = MagicMock(spec=LocalBlobStorage)
         monkeypatch.setattr(_sf, "resolve_store_backend", lambda: "sharepoint")
         monkeypatch.setattr(_sf, "build_blob_storage", lambda: other_storage)
+        monkeypatch.setattr(_sf, "build_system_blob_storage", lambda: other_storage)
 
         # Não deve levantar AttributeError nem tentar chamar ensure_root_path,
         # que nem existe em LocalBlobStorage.

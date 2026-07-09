@@ -56,10 +56,11 @@ class TestNotifyUserCreated:
         assert kwargs["template"] == "user_created"
         assert kwargs["context"]["heading"] == "Bem-vindo ao Concilium, bruno!"
         assert ("Perfil", "operator") in kwargs["context"]["details"]
-        assert len(kwargs["attachments"]) == 2
+        assert len(kwargs["attachments"]) == 3
         names = [a[0] for a in kwargs["attachments"]]
         assert "claude_desktop_config-macos-linux.json" in names
         assert "claude_desktop_config-windows.json" in names
+        assert "concilium_usage_tutorial.skill" in names
         # attachments carry bytes content (ADR-134 D1 contract)
         assert all(isinstance(a[1], bytes) for a in kwargs["attachments"])
 

@@ -345,7 +345,7 @@ class TestAuthStoreMissingLines:
                 "concilium.infrastructure.auth.auth_store.resolve_store_backend", return_value="sharepoint", create=True
             ):
                 with patch(
-                    "concilium.infrastructure.auth.auth_store.build_blob_storage",
+                    "concilium.infrastructure.auth.auth_store.build_system_blob_storage",
                     return_value=mock_storage,
                     create=True,
                 ):
@@ -354,7 +354,7 @@ class TestAuthStoreMissingLines:
                         return_value="sharepoint",
                     ):
                         with patch(
-                            "concilium.infrastructure.storage.store_factory.build_blob_storage",
+                            "concilium.infrastructure.storage.store_factory.build_system_blob_storage",
                             return_value=mock_storage,
                         ):
                             store = mod.get_auth_store()

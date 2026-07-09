@@ -54,6 +54,11 @@ jobs:
         run: |
           pyinstaller --onefile --name concilium-mcp-proxy src/concilium/presentation/mcp/proxy.py
 
+      # Publica só o executável cru. O zip por usuário (executável + config
+      # já preenchido com o client_code, um por SO) é montado sob demanda em
+      # commands_auth.py::_build_distribution_zip() no momento do envio do
+      # email de boas-vindas — nunca persistido aqui, porque dependeria de um
+      # client_code específico.
       - name: Publish to blob storage
         env:
           # Console legado do Windows (codepage cp1252) não decodifica os símbolos
@@ -73,5 +78,10 @@ jobs:
           CONCILIUM__SP_CLIENT_SECRET: ${{ secrets.CONCILIUM__SP_CLIENT_SECRET }}
           CONCILIUM__SP_DRIVE_ID: ${{ secrets.CONCILIUM__SP_DRIVE_ID }}
           CONCILIUM__SP_ROOT_PATH: ${{ vars.CONCILIUM__SP_ROOT_PATH }}
+          # distribuicao/ é dado de sistema, isolado do Drive de projetos (ver
+          # SharePointSettings.system_drive_id) — vazio até o site dedicado ser
+          # provisionado, caindo para o mesmo Drive/root_path de hoje.
+          CONCILIUM__SP_SYSTEM_DRIVE_ID: ${{ secrets.CONCILIUM__SP_SYSTEM_DRIVE_ID }}
+          CONCILIUM__SP_SYSTEM_ROOT_PATH: ${{ vars.CONCILIUM__SP_SYSTEM_ROOT_PATH }}
         run: |
-          concilium ops blob put ${{ matrix.dist_file }} ${{ matrix.blob_path }}
+          concilium ops blob put --system ${{ matrix.dist_file }} ${{ matrix.blob_path }}

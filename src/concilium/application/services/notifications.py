@@ -12,9 +12,24 @@ Call sites: `presentation/cli/commands_auth.py`, `presentation/api/routes/auth.p
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from concilium.infrastructure.services.notification_service import get_notification_service
 
 # ── Helpers de conteúdo ──────────────────────────────────────────────────────────
+
+_SKILL_TUTORIAL_PATH = (
+    Path(__file__).resolve().parents[2] / "infrastructure" / "services" / "templates" / "concilium_usage_tutorial.skill"
+)
+
+
+def _read_skill_tutorial() -> bytes:
+    """Lê o tutorial de instalação/uso enviado como anexo — agnóstico de SO,
+
+    não depende do build do proxy (build-proxy.yml), por isso vive junto com os
+    demais templates de notificação em vez de ser publicado por CI.
+    """
+    return _SKILL_TUTORIAL_PATH.read_bytes()
 
 
 def _build_proxy_download_note(proxy_download_urls: dict[str, str | None] | None) -> str:
@@ -57,6 +72,26 @@ def _base_url() -> str:
 # ── ADR-123/ADR-131: os 7 casos de uso originais (ADR-134 D5) ───────────────────
 
 
+def _distribution_attachments(
+    config_json_unix: str, config_json_windows: str, distribution_zip: bytes | None
+) -> list[tuple[str, bytes, str]]:
+    """Anexos comuns a notify_user_created/notify_client_code_migrated.
+
+    O zip (quando disponível — ver `_build_distribution_zip`) já contém, por SO,
+    o executável do proxy e o claude_desktop_config.json preenchido; os JSONs
+    crus continuam anexados como fallback caso o zip não tenha sido montado
+    (ex.: nenhum executável publicado ainda em distribuicao/).
+    """
+    attachments = [
+        ("claude_desktop_config-macos-linux.json", config_json_unix.encode("utf-8"), "application/json"),
+        ("claude_desktop_config-windows.json", config_json_windows.encode("utf-8"), "application/json"),
+        ("concilium_usage_tutorial.skill", _read_skill_tutorial(), "text/plain"),
+    ]
+    if distribution_zip:
+        attachments.append(("concilium-mcp-proxy-bundle.zip", distribution_zip, "application/zip"))
+    return attachments
+
+
 def notify_user_created(
     client_id: str,
     role: str,
@@ -64,6 +99,7 @@ def notify_user_created(
     config_json_unix: str,
     config_json_windows: str,
     proxy_download_urls: dict[str, str | None] | None = None,
+    distribution_zip: bytes | None = None,
 ) -> None:
     """Email de boas-vindas com os dois configs (macOS/Linux e Windows) em anexo.
 
@@ -82,11 +118,9 @@ def notify_user_created(
             "download_note": _build_proxy_download_note(proxy_download_urls),
             "config_json_unix": config_json_unix,
             "config_json_windows": config_json_windows,
+            "has_distribution_zip": distribution_zip is not None,
         },
-        attachments=[
-            ("claude_desktop_config-macos-linux.json", config_json_unix.encode("utf-8"), "application/json"),
-            ("claude_desktop_config-windows.json", config_json_windows.encode("utf-8"), "application/json"),
-        ],
+        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zip),
     )
 
 
@@ -96,6 +130,7 @@ def notify_client_code_migrated(
     config_json_unix: str,
     config_json_windows: str,
     proxy_download_urls: dict[str, str | None] | None = None,
+    distribution_zip: bytes | None = None,
 ) -> None:
     """Notifica um client migrado (client_code gerado retroativamente) com os dois configs."""
     get_notification_service().send(
@@ -112,11 +147,9 @@ def notify_client_code_migrated(
             "download_note": _build_proxy_download_note(proxy_download_urls),
             "config_json_unix": config_json_unix,
             "config_json_windows": config_json_windows,
+            "has_distribution_zip": distribution_zip is not None,
         },
-        attachments=[
-            ("claude_desktop_config-macos-linux.json", config_json_unix.encode("utf-8"), "application/json"),
-            ("claude_desktop_config-windows.json", config_json_windows.encode("utf-8"), "application/json"),
-        ],
+        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zip),
     )
 
 

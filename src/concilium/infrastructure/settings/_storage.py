@@ -109,16 +109,36 @@ class SharePointSettings:
     cache_dir: str
     """CONCILIUM__SP_CACHE_DIR — cache local de metadados SharePoint."""
 
+    system_drive_id: str = ""
+    """CONCILIUM__SP_SYSTEM_DRIVE_ID — Drive ID do site "sistema" (auth/distribuição).
+
+    Isola auth/config/distribuição de projetos (quem só tem acesso a projetos não
+    deve alcançar essa árvore). Cai para `drive_id` (mesmo Drive de hoje) se não
+    configurado — sem isso, provisionar o site/drive dedicado no SharePoint é um
+    passo manual fora do alcance do código; até lá o comportamento é idêntico ao
+    atual.
+    """
+
+    system_root_path: str = ""
+    """CONCILIUM__SP_SYSTEM_ROOT_PATH — caminho raiz do site "sistema".
+
+    Cai para `root_path` se não configurado (ver `system_drive_id`).
+    """
+
     @classmethod
     def from_env(cls) -> SharePointSettings:
+        drive_id = _str("CONCILIUM__SP_DRIVE_ID", "")
+        root_path = _str("CONCILIUM__SP_ROOT_PATH", "Concilium/producao")
         return cls(
             tenant_id=_str("CONCILIUM__SP_TENANT_ID", ""),
             client_id=_str("CONCILIUM__SP_CLIENT_ID", ""),
             client_secret=_str("CONCILIUM__SP_CLIENT_SECRET", ""),
             cert_path=_str("CONCILIUM__SP_CERT_PATH", ""),
-            drive_id=_str("CONCILIUM__SP_DRIVE_ID", ""),
-            root_path=_str("CONCILIUM__SP_ROOT_PATH", "Concilium/producao"),
+            drive_id=drive_id,
+            root_path=root_path,
             cache_dir=_str("CONCILIUM__SP_CACHE_DIR", ""),
+            system_drive_id=_str("CONCILIUM__SP_SYSTEM_DRIVE_ID", "") or drive_id,
+            system_root_path=_str("CONCILIUM__SP_SYSTEM_ROOT_PATH", "") or root_path,
         )
 
 

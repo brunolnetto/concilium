@@ -121,6 +121,22 @@ def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
     raise ValueError(f"Backend não suportado: {backend}")
 
 
+def build_system_blob_storage() -> BlobStoragePort:
+    """Constrói BlobStoragePort para dados de sistema (auth, distribuição).
+
+    Isola auth/distribuição de projetos: no backend sharepoint, aponta para o
+    Drive "sistema" (CONCILIUM__SP_SYSTEM_DRIVE_ID), que por padrão cai para o
+    mesmo Drive de projetos até um site dedicado ser provisionado. Nos demais
+    backends (sem conceito de Drive separado hoje) delega para build_blob_storage().
+    """
+    backend = resolve_store_backend()
+    if backend == "sharepoint":
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
+
+        return SharePointBlobStorage.from_env(system=True)
+    return build_blob_storage()
+
+
 def get_tool_invocation_store() -> BlobToolInvocationRepository:
     """Retorna BlobToolInvocationRepository usando o backend configurado (ADR-118 F7)."""
     from concilium.infrastructure.storage.tool_invocation_store import BlobToolInvocationRepository
@@ -142,7 +158,9 @@ def ensure_storage_root() -> None:
     """Garante que o root_path do backend de storage existe no startup da aplicação.
 
     No-op para filesystem, S3, Azure e GDrive. Para SharePoint, cria os segmentos
-    do CONCILIUM__SP_ROOT_PATH via Graph API se não existirem.
+    do CONCILIUM__SP_ROOT_PATH (projetos) e CONCILIUM__SP_SYSTEM_ROOT_PATH
+    (auth/distribuição) via Graph API se não existirem — os dois coincidem até um
+    Drive de sistema dedicado ser provisionado.
     """
     if resolve_store_backend() != "sharepoint":
         return
@@ -151,6 +169,10 @@ def ensure_storage_root() -> None:
     storage = build_blob_storage()
     if isinstance(storage, SharePointBlobStorage):
         storage.ensure_root_path()
+
+    system_storage = build_system_blob_storage()
+    if isinstance(system_storage, SharePointBlobStorage):
+        system_storage.ensure_root_path()
 
 
 def build_project_repository(projects_root: Path) -> ProjectRepository:

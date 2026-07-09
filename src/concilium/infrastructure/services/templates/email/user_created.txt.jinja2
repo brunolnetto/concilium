@@ -10,22 +10,26 @@
 {% endfor %}
 
 {% endif -%}
-Em anexo, dois arquivos claude_desktop_config.json — use o que corresponde
-ao seu sistema operacional:
+Em anexo:
 
-  claude_desktop_config-macos-linux.json → macOS/Linux
-  claude_desktop_config-windows.json     → Windows
+  concilium_usage_tutorial.skill      → tutorial de instalação e uso
+{% if has_distribution_zip -%}
+  concilium-mcp-proxy-bundle.zip      → pastas windows/macos/linux, cada uma já
+                                         com o executável do proxy e o
+                                         claude_desktop_config.json preenchido
+                                         com seu código
+{% endif -%}
+  claude_desktop_config-macos-linux.json → cópia solta do config (macOS/Linux)
+  claude_desktop_config-windows.json     → cópia solta do config (Windows)
+
+Siga o tutorial anexo (concilium_usage_tutorial.skill) para os passos de
+instalação.
 
 {% if download_note -%}
 {{ download_note }}
 
 {% endif -%}
-Adicione o conteúdo do arquivo escolhido ao seu arquivo de configuração:
-
-  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
-  Win  : %APPDATA%\Claude\claude_desktop_config.json
-
-Se não conseguir abrir os anexos, o conteúdo é:
+Se não conseguir abrir os anexos, o conteúdo dos configs é:
 
 [macOS/Linux]
 {{ config_json_unix }}

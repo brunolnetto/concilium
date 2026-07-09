@@ -492,14 +492,15 @@ def get_auth_store() -> AuthStore:
 
     Usa o mesmo CONCILIUM__STORE_BACKEND da aplicação. Para filesystem
     (dev/CI), grava em CONCILIUM__AUTH_DATA_PATH ou ~/.concilium/auth/.
-    Para SharePoint/S3/Azure, grava em {root_path}/auth/.
+    Para SharePoint/S3/Azure, grava em {system_root_path}/auth/ — Drive de
+    sistema, isolado do Drive de projetos (ver build_system_blob_storage).
     """
     global _store
     if _store is None:
         with _store_lock:
             if _store is None:  # pragma: no cover
                 from concilium.infrastructure.storage.store_factory import (
-                    build_blob_storage,
+                    build_system_blob_storage,
                     resolve_store_backend,
                 )
 
@@ -507,6 +508,6 @@ def get_auth_store() -> AuthStore:
                 if backend == "filesystem":
                     _store = AuthStore()  # usa data_dir local (CONCILIUM__AUTH_DATA_PATH)
                 else:
-                    _store = AuthStore(storage=build_blob_storage(), prefix="auth")
+                    _store = AuthStore(storage=build_system_blob_storage(), prefix="auth")
     assert _store is not None  # double-checked locking sempre atribui antes daqui
     return _store

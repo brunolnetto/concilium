@@ -59,13 +59,18 @@ class SharePointBlobStorage(BlobStoragePort):
         self._root_ensured = False
 
     @classmethod
-    def from_env(cls, *, cache_dir: Path | None = None) -> SharePointBlobStorage:
-        """Instancia a partir das variáveis de ambiente CONCILIUM__SP_*."""
+    def from_env(cls, *, cache_dir: Path | None = None, system: bool = False) -> SharePointBlobStorage:
+        """Instancia a partir das variáveis de ambiente CONCILIUM__SP_*.
+
+        system=True aponta para o Drive "sistema" (auth/config/distribuição),
+        isolado do Drive de projetos — ver CONCILIUM__SP_SYSTEM_DRIVE_ID.
+        """
         sp = get_storage().sharepoint
-        drive_id = sp.drive_id
-        root_path = sp.root_path
+        drive_id = sp.system_drive_id if system else sp.drive_id
+        root_path = sp.system_root_path if system else sp.root_path
         if not drive_id:
-            raise OSError("CONCILIUM__SP_DRIVE_ID é obrigatório.")
+            env_var = "CONCILIUM__SP_SYSTEM_DRIVE_ID ou CONCILIUM__SP_DRIVE_ID" if system else "CONCILIUM__SP_DRIVE_ID"
+            raise OSError(f"{env_var} é obrigatório.")
         return cls(
             drive_id=drive_id,
             root_path=root_path,

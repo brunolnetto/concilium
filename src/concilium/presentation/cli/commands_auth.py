@@ -57,9 +57,9 @@ def _get_proxy_exe_download_urls(ttl_segundos: int = 7 * 24 * 3600) -> dict[str,
     backend não suportar URL assinada (ex.: filesystem local em dev), tratado pelo
     chamador (cai no texto de fallback assumindo instalação via pip).
     """
-    from concilium.infrastructure.storage.store_factory import build_blob_storage
+    from concilium.infrastructure.storage.store_factory import build_system_blob_storage
 
-    storage = build_blob_storage()
+    storage = build_system_blob_storage()
     return {
         platform: storage.gerar_url_temporaria(blob_path, ttl_segundos=ttl_segundos)
         for platform, blob_path in _PROXY_EXE_BLOB_PATHS.items()
@@ -109,6 +109,57 @@ def _print_both_configs(config_json_unix: str, config_json_windows: str) -> None
     typer.echo(config_json_unix)
     rprint("\n[bold]Windows:[/bold]")
     typer.echo(config_json_windows)
+
+
+_ZIP_EXE_NAMES = {
+    "windows": "concilium-mcp-proxy.exe",
+    "linux": "concilium-mcp-proxy",
+    "macos": "concilium-mcp-proxy",
+}
+_ZIP_CONFIG_PLATFORM = {"windows": "windows", "linux": "unix", "macos": "unix"}
+
+
+def _build_distribution_zip(client_code: str) -> bytes | None:
+    """Monta o zip enviado por email: uma pasta por SO (windows/macos/linux),
+
+    cada uma com o executável do proxy (lido do Drive de sistema, publicado por
+    build-proxy.yml) e o claude_desktop_config.json já preenchido com o
+    client_code do usuário — nada de template genérico, cada zip é montado na
+    hora para o usuário específico.
+
+    Retorna None se nenhum executável estiver disponível (ex.: build-proxy.yml
+    nunca rodou, ou backend de storage sem esses blobs em dev/CI) — o chamador
+    cai no fallback de configs JSON crus já existente.
+    """
+    import io
+    import json as _json
+    import zipfile
+
+    from concilium.domain.repositories.blob_storage_port import StorageUnavailableError
+    from concilium.infrastructure.storage.store_factory import build_system_blob_storage
+
+    storage = build_system_blob_storage()
+
+    buf = io.BytesIO()
+    included = 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for os_key, blob_path in _PROXY_EXE_BLOB_PATHS.items():
+            try:
+                exe_bytes = storage.ler_blob(blob_path)
+            except (FileNotFoundError, StorageUnavailableError):
+                continue
+            config = _json.dumps(
+                _build_mcp_config_block(client_code, _ZIP_CONFIG_PLATFORM[os_key]),
+                indent=2,
+                ensure_ascii=False,
+            )
+            zf.writestr(f"{os_key}/{_ZIP_EXE_NAMES[os_key]}", exe_bytes)
+            zf.writestr(f"{os_key}/claude_desktop_config.json", config)
+            included += 1
+
+    if included == 0:
+        return None
+    return buf.getvalue()
 
 
 # ── Usuários ──────────────────────────────────────────────────────────────────
@@ -173,6 +224,7 @@ def add_user(
             config_json_unix=config_json_unix,
             config_json_windows=config_json_windows,
             proxy_download_urls=_get_proxy_exe_download_urls(),
+            distribution_zip=_build_distribution_zip(client_code),
         )
         rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
     else:
@@ -396,7 +448,14 @@ def migrate_legacy_codes() -> None:
     for client_id, client_code, email in migrated:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
         if email:
-            notify_client_code_migrated(client_id, email, config_json_unix, config_json_windows, proxy_download_urls)
+            notify_client_code_migrated(
+                client_id,
+                email,
+                config_json_unix,
+                config_json_windows,
+                proxy_download_urls,
+                distribution_zip=_build_distribution_zip(client_code),
+            )
             rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
         else:
             manual.append((client_id, client_code))

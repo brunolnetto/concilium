@@ -26,16 +26,25 @@ blob_app = typer.Typer(
 _BACKEND_HELP = "Backend: filesystem | azure_blob | sharepoint | s3 | gdrive. Padrão: CONCILIUM__STORE_BACKEND."
 
 
-def _make_storage(backend: str, root: str = "") -> BlobStoragePort:
+def _make_storage(backend: str, root: str = "", *, system: bool = False) -> BlobStoragePort:
     """Instancia um BlobStoragePort a partir do tipo de backend explícito.
 
     Se *backend* for vazio, cai no comportamento padrão (CONCILIUM__STORE_BACKEND).
     Credenciais são sempre lidas das env vars padrão do lado correspondente
     (CONCILIUM__SP_*, CONCILIUM__AZURE_*, CONCILIUM__S3_* …).
+
+    system=True usa o Drive de sistema (auth/distribuição) em vez do Drive de
+    projetos — só tem efeito com backend vazio (padrão) ou "sharepoint".
     """
-    from concilium.infrastructure.storage.store_factory import _BACKEND_ALIASES, build_blob_storage
+    from concilium.infrastructure.storage.store_factory import (
+        _BACKEND_ALIASES,
+        build_blob_storage,
+        build_system_blob_storage,
+    )
 
     if not backend:
+        if system:
+            return build_system_blob_storage()
         return build_blob_storage(root_override=Path(root) if root else None)
 
     canonical = _BACKEND_ALIASES.get(backend.strip().lower(), backend.strip().lower())
@@ -47,7 +56,7 @@ def _make_storage(backend: str, root: str = "") -> BlobStoragePort:
     if canonical == "sharepoint":
         from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
 
-        return SharePointBlobStorage.from_env()
+        return SharePointBlobStorage.from_env(system=system)
     if canonical in ("azure", "azure_blob"):
         from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
 
@@ -147,9 +156,13 @@ def put(
     blob_path: Annotated[str, typer.Argument(help="Caminho/chave de destino no blob storage.")],
     backend: Annotated[str, typer.Option("--backend", "-b", help=_BACKEND_HELP)] = "",
     root: Annotated[str, typer.Option("--root", help="Diretório raiz (apenas backend filesystem).")] = "",
+    system: Annotated[
+        bool,
+        typer.Option("--system", help="Usa o Drive de sistema (auth/distribuição) em vez do Drive de projetos."),
+    ] = False,
 ) -> None:
     """Envia um arquivo local para o blob storage (ex.: publicar o proxy .exe)."""
-    storage = _make_storage(backend, root)
+    storage = _make_storage(backend, root, system=system)
     storage.gravar_blob(blob_path, local_path.read_bytes())
     rprint(f"[bold green]✓[/bold green] {local_path} → {blob_path}")
 
