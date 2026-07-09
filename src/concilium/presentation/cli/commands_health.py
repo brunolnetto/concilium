@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 if TYPE_CHECKING:
@@ -151,10 +152,11 @@ def health() -> None:
     all_ok = True
     for name, ok, detail in rows:
         icon = "✅" if ok else "❌"
-        detail_markup = f"[red]{detail}[/red]" if not ok else detail
+        detail_escaped = escape(detail)
+        detail_markup = f"[red]{detail_escaped}[/red]" if not ok else detail_escaped
         if not ok:
             all_ok = False
-        table.add_row(name, icon, detail_markup)
+        table.add_row(escape(name), icon, detail_markup)
 
     console.print()
     console.print(table)
