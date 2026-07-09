@@ -14,6 +14,9 @@ from concilium.infrastructure.settings import get_storage
 
 logger = __import__("logging").getLogger(__name__)
 _GRAPH_SCOPE = "https://graph.microsoft.com/.default"
+# MSAL usa timeout=None (sem timeout, espera indefinidamente) se não for passado
+# explicitamente — um AAD lento/inacessível trava acquire_token_for_client() para sempre.
+_MSAL_HTTP_TIMEOUT_S = 15
 
 
 @dataclass
@@ -75,12 +78,14 @@ class SharePointCredential:
                     self.client_id,
                     authority=authority,
                     client_credential={"private_key": cert_pem, "thumbprint": ""},
+                    timeout=_MSAL_HTTP_TIMEOUT_S,
                 )
             else:
                 self._app = msal.ConfidentialClientApplication(
                     self.client_id,
                     authority=authority,
                     client_credential=self.client_secret,
+                    timeout=_MSAL_HTTP_TIMEOUT_S,
                 )
 
         result = self._app.acquire_token_for_client(scopes=[_GRAPH_SCOPE])
