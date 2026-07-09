@@ -71,7 +71,8 @@ _az_retry() {
 # -- ACA Revisions: helpers ------------------------------------------------------
 
 _aca_app_exists() {
-    az containerapp show --name "$1" --resource-group "$RESOURCE_GROUP" --output none >/dev/null 2>&1
+    az resource show --resource-type Microsoft.App/containerApps \
+        --name "$1" --resource-group "$RESOURCE_GROUP" --output none >/dev/null 2>&1
 }
 
 _aca_latest_revision() {
