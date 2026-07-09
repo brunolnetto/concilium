@@ -127,27 +127,28 @@ def _build_distribution_zip(client_code: str) -> bytes | None:
     client_code do usuário — nada de template genérico, cada zip é montado na
     hora para o usuário específico.
 
-    Retorna None se nenhum executável estiver disponível (ex.: build-proxy.yml
-    nunca rodou, ou backend de storage sem esses blobs em dev/CI) — o chamador
-    cai no fallback de configs JSON crus já existente.
+    Retorna None se QUALQUER um dos 3 executáveis não puder ser lido (ex.:
+    build-proxy.yml nunca rodou para algum SO, backend sem esses blobs em
+    dev/CI, ou falha inesperada de rede) — melhor cair no fallback de configs
+    JSON crus do que mandar um zip parcial que não corresponde ao texto do
+    email (que descreve as três pastas). Best-effort: nenhuma falha de leitura
+    aqui deve impedir o envio do email.
     """
     import io
     import json as _json
     import zipfile
 
-    from concilium.domain.repositories.blob_storage_port import StorageUnavailableError
     from concilium.infrastructure.storage.store_factory import build_system_blob_storage
 
-    storage = build_system_blob_storage()
+    try:
+        storage = build_system_blob_storage()
+        exe_bytes_by_os = {os_key: storage.ler_blob(blob_path) for os_key, blob_path in _PROXY_EXE_BLOB_PATHS.items()}
+    except Exception:
+        return None
 
     buf = io.BytesIO()
-    included = 0
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for os_key, blob_path in _PROXY_EXE_BLOB_PATHS.items():
-            try:
-                exe_bytes = storage.ler_blob(blob_path)
-            except (FileNotFoundError, StorageUnavailableError):
-                continue
+        for os_key, exe_bytes in exe_bytes_by_os.items():
             config = _json.dumps(
                 _build_mcp_config_block(client_code, _ZIP_CONFIG_PLATFORM[os_key]),
                 indent=2,
@@ -155,10 +156,7 @@ def _build_distribution_zip(client_code: str) -> bytes | None:
             )
             zf.writestr(f"{os_key}/{_ZIP_EXE_NAMES[os_key]}", exe_bytes)
             zf.writestr(f"{os_key}/claude_desktop_config.json", config)
-            included += 1
 
-    if included == 0:
-        return None
     return buf.getvalue()
 
 

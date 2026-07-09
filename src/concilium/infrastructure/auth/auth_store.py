@@ -492,8 +492,10 @@ def get_auth_store() -> AuthStore:
 
     Usa o mesmo CONCILIUM__STORE_BACKEND da aplicação. Para filesystem
     (dev/CI), grava em CONCILIUM__AUTH_DATA_PATH ou ~/.concilium/auth/.
-    Para SharePoint/S3/Azure, grava em {system_root_path}/auth/ — Drive de
-    sistema, isolado do Drive de projetos (ver build_system_blob_storage).
+    Para SharePoint, grava em {system_root_path}/auth/ — Drive de sistema,
+    isolado do Drive de projetos (ver build_system_blob_storage). Em S3/Azure/
+    GDrive não há isolamento de Drive/bucket ainda — build_system_blob_storage()
+    delega para o mesmo storage de projetos nesses backends.
     """
     global _store
     if _store is None:

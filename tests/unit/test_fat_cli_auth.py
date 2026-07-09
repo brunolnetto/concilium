@@ -164,6 +164,61 @@ class TestGetProxyExeDownloadUrls:
 
 
 # ===========================================================================
+# _build_distribution_zip — bundle pessoal (proxy+config) por SO
+# ===========================================================================
+
+
+class TestBuildDistributionZip:
+    def test_returns_none_when_any_executable_missing(self):
+        from concilium.presentation.cli.commands_auth import _build_distribution_zip
+
+        storage = MagicMock()
+        storage.ler_blob.side_effect = [b"windows-exe", FileNotFoundError("missing"), b"macos-exe"]
+
+        with patch(BUILD_BLOB_STORAGE, return_value=storage):
+            result = _build_distribution_zip("RCODE-X")
+
+        assert result is None
+
+    def test_returns_none_on_unexpected_storage_error(self):
+        from concilium.presentation.cli.commands_auth import _build_distribution_zip
+
+        storage = MagicMock()
+        storage.ler_blob.side_effect = RuntimeError("boom")
+
+        with patch(BUILD_BLOB_STORAGE, return_value=storage):
+            result = _build_distribution_zip("RCODE-X")
+
+        assert result is None
+
+    def test_returns_zip_with_all_three_os_folders_when_all_executables_present(self):
+        import zipfile
+        from io import BytesIO
+
+        from concilium.presentation.cli.commands_auth import _build_distribution_zip
+
+        storage = MagicMock()
+        storage.ler_blob.side_effect = [b"windows-exe", b"linux-exe", b"macos-exe"]
+
+        with patch(BUILD_BLOB_STORAGE, return_value=storage):
+            result = _build_distribution_zip("RCODE-X")
+
+        assert result is not None
+        with zipfile.ZipFile(BytesIO(result)) as zf:
+            names = set(zf.namelist())
+            assert names == {
+                "windows/concilium-mcp-proxy.exe",
+                "windows/claude_desktop_config.json",
+                "linux/concilium-mcp-proxy",
+                "linux/claude_desktop_config.json",
+                "macos/concilium-mcp-proxy",
+                "macos/claude_desktop_config.json",
+            }
+            assert zf.read("windows/concilium-mcp-proxy.exe") == b"windows-exe"
+            assert "RCODE-X" in zf.read("linux/claude_desktop_config.json").decode("utf-8")
+
+
+# ===========================================================================
 # add-user
 # ===========================================================================
 

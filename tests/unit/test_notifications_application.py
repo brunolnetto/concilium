@@ -42,6 +42,27 @@ class TestBuildProxyDownloadNote:
         assert "https://x/macos" in note
 
 
+class TestReadSkillTutorial:
+    def test_falls_back_to_placeholder_when_file_missing(self, tmp_path):
+        import concilium.application.services.notifications as mod
+
+        with patch.object(mod, "_SKILL_TUTORIAL_PATH", tmp_path / "nao-existe.skill"):
+            content = mod._read_skill_tutorial()
+
+        assert content == mod._SKILL_TUTORIAL_FALLBACK
+
+    def test_reads_real_file_when_present(self, tmp_path):
+        import concilium.application.services.notifications as mod
+
+        skill_path = tmp_path / "concilium_usage_tutorial.skill"
+        skill_path.write_bytes(b"conteudo real do tutorial")
+
+        with patch.object(mod, "_SKILL_TUTORIAL_PATH", skill_path):
+            content = mod._read_skill_tutorial()
+
+        assert content == b"conteudo real do tutorial"
+
+
 class TestNotifyUserCreated:
     def test_sends_with_user_created_template_and_attachments(self):
         from concilium.application.services.notifications import notify_user_created
@@ -63,6 +84,29 @@ class TestNotifyUserCreated:
         assert "concilium_usage_tutorial.skill" in names
         # attachments carry bytes content (ADR-134 D1 contract)
         assert all(isinstance(a[1], bytes) for a in kwargs["attachments"])
+
+    def test_sends_with_distribution_zip_attachment_and_flags_context(self):
+        from concilium.application.services.notifications import notify_user_created
+
+        patcher, mock_service = _patched_service()
+        with patcher:
+            notify_user_created(
+                "bruno",
+                "operator",
+                "bruno@x.com",
+                '{"unix":true}',
+                '{"windows":true}',
+                distribution_zip=b"PK\x03\x04fake-zip-bytes",
+            )
+
+        kwargs = mock_service.send.call_args.kwargs
+        assert kwargs["context"]["has_distribution_zip"] is True
+        assert len(kwargs["attachments"]) == 4
+        names = [a[0] for a in kwargs["attachments"]]
+        assert "concilium-mcp-proxy-bundle.zip" in names
+        bundle = next(a for a in kwargs["attachments"] if a[0] == "concilium-mcp-proxy-bundle.zip")
+        assert bundle[1] == b"PK\x03\x04fake-zip-bytes"
+        assert bundle[2] == "application/zip"
 
     def test_download_note_included_when_urls_present(self):
         from concilium.application.services.notifications import notify_user_created

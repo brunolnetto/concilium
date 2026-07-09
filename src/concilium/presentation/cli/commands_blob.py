@@ -44,7 +44,7 @@ def _make_storage(backend: str, root: str = "", *, system: bool = False) -> Blob
 
     if not backend:
         if system:
-            return build_system_blob_storage()
+            return build_system_blob_storage(root_override=Path(root) if root else None)
         return build_blob_storage(root_override=Path(root) if root else None)
 
     canonical = _BACKEND_ALIASES.get(backend.strip().lower(), backend.strip().lower())

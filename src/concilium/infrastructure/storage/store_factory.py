@@ -121,20 +121,21 @@ def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
     raise ValueError(f"Backend não suportado: {backend}")
 
 
-def build_system_blob_storage() -> BlobStoragePort:
+def build_system_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
     """Constrói BlobStoragePort para dados de sistema (auth, distribuição).
 
     Isola auth/distribuição de projetos: no backend sharepoint, aponta para o
     Drive "sistema" (CONCILIUM__SP_SYSTEM_DRIVE_ID), que por padrão cai para o
     mesmo Drive de projetos até um site dedicado ser provisionado. Nos demais
-    backends (sem conceito de Drive separado hoje) delega para build_blob_storage().
+    backends (sem conceito de Drive separado hoje) delega para build_blob_storage()
+    — inclusive `root_override`, que só se aplica ao backend filesystem.
     """
     backend = resolve_store_backend()
     if backend == "sharepoint":
         from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
 
         return SharePointBlobStorage.from_env(system=True)
-    return build_blob_storage()
+    return build_blob_storage(root_override=root_override)
 
 
 def get_tool_invocation_store() -> BlobToolInvocationRepository:
