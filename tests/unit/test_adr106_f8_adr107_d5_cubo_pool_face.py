@@ -299,7 +299,7 @@ class TestBuildCuboPoolFaceStub:
             / "manifests"
             / "06-resultado-financeiro"
             / "_consolidacao"
-            / "_skill_helpers_a"
+            / "_skill_helpers"
             / "__init__.py"
         )
         spec = importlib.util.spec_from_file_location("skill_helpers_a_consolidacao", p)

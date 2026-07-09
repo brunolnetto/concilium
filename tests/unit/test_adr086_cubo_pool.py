@@ -27,7 +27,7 @@ from concilium.domain.services.analytics.cubo_pool_builder import (
 
 _ROOT = Path(__file__).resolve().parents[2]
 _HELPERS_A = (
-    _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py"
+    _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
 )
 
 

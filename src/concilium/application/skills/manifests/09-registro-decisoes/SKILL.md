@@ -3,7 +3,7 @@ name: 09-registro-decisoes
 description: Use when recording the justification for a human decision about which interventions to apply (or not apply) to a project version.
 ---
 
-# Skill 11 — Decision Log
+# Skill 09 — Decision Log
 
 Registra justificativa de uma decisão tomada pelo humano sobre quais intervenções aplicar (ou não aplicar) em uma versão do projeto. Não computa nada — apenas estrutura e persiste o raciocínio.
 

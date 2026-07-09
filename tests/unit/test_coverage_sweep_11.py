@@ -20,7 +20,9 @@ _ROOT = Path(__file__).resolve().parents[2]
 
 def _load_ind_helpers_a():
     path = (
-        _ROOT / "src/concilium/application/skills/manifests" / "06-resultado-financeiro/_indiretos/_skill_helpers_a.py"
+        _ROOT
+        / "src/concilium/application/skills/manifests"
+        / "06-resultado-financeiro/_indiretos/_skill_helpers/_dimensionamento.py"
     )
     spec = importlib.util.spec_from_file_location("ind_helpers_a_sw11", path)
     mod = importlib.util.module_from_spec(spec)

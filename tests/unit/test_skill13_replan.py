@@ -1,9 +1,10 @@
 """Tests for skill 13 — run_replanejamento_e_cenarios (consolidated pipeline).
 
 Strategy: mock ``run_explorador_cenarios`` and ``run_assessor_replanejamento``
-directly in the function's globals dict (the module namespace loaded by
-``load_skill_stage``).  This avoids any import-path gymnastics and exercises
-the thin orchestration layer in ``skill.py`` without invoking the real stages.
+directly in the function's globals dict (the module namespace loaded via the
+real production loader, ``_load_skill_module``/synthetic package).  This
+avoids any import-path gymnastics and exercises the thin orchestration layer
+in ``skill.py`` without invoking the real stages.
 
 Covers:
 - explorador is called first with the original canonical_in
@@ -21,10 +22,11 @@ Covers:
 
 from __future__ import annotations
 
+import sys
 from datetime import UTC, date, datetime
 from unittest.mock import MagicMock
 
-from concilium.application.skills import load_skill_stage
+from concilium.application.skills import run_replanejamento_e_cenarios as _trigger
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     CanonicalModel,
@@ -39,9 +41,12 @@ from concilium.domain.models.canonical import (
 # Load the function under test
 # ---------------------------------------------------------------------------
 
-run_replanejamento_e_cenarios = load_skill_stage(
-    "11-replanejamento-e-cenarios", "skill", "run_replanejamento_e_cenarios"
-)
+# Importing `run_replanejamento_e_cenarios` from the package triggers the real
+# production loader (`_load_skill_module`), which registers a synthetic
+# package so skill.py's relative imports (`from ._skill_helpers._assessor import ...`) work.
+assert _trigger
+_skill_mod = sys.modules["_concilium_skillpkg_11_replanejamento_e_cenarios.skill"]
+run_replanejamento_e_cenarios = _skill_mod.run_replanejamento_e_cenarios
 
 # The module namespace where we can inject mocks
 _SKILL_GLOBALS = run_replanejamento_e_cenarios.__globals__
@@ -512,23 +517,3 @@ class TestReturnType:
         assert isinstance(result.validacoes, list)
 
 
-def test_load_local_raises_importerror_when_spec_is_none():
-    """Covers skill.py's `_load_local` ImportError branch: when the top-level
-    relative import fails (as it always does under load_skill_stage, which
-    doesn't register a synthetic parent package) and spec_from_file_location
-    also fails for the fallback file, an explicit ImportError is raised."""
-    import importlib.util
-    from unittest.mock import patch
-
-    orig_spec = importlib.util.spec_from_file_location
-
-    def fake_spec(mod_name, path, *args, **kwargs):
-        if str(path).endswith("_assessor.py"):
-            return None
-        return orig_spec(mod_name, path, *args, **kwargs)
-
-    import pytest
-
-    with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
-        with pytest.raises(ImportError, match="Não foi possível carregar spec"):
-            load_skill_stage("11-replanejamento-e-cenarios", "skill", "run_replanejamento_e_cenarios")

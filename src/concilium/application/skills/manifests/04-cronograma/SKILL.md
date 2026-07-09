@@ -3,7 +3,7 @@ name: 04-cronograma
 description: Use when distributing EAP service execution across project months, considering hourly output, team count, and monthly productive percentage.
 ---
 
-# Skill 02 — Cronograma
+# Skill 04 — Cronograma
 
 Distribui a execução de cada serviço da EAP ao longo dos meses do prazo, considerando produção horária, número de equipes alocadas e percentual produtivo mensal. Produz a quantidade executada e acumulada por mês para cada item da EAP.
 
@@ -106,4 +106,4 @@ para cada item_eap:
 
 ## Próxima skill no pipeline
 
--> [`03-equipes-diretas`](../03-equipes-diretas/SKILL.md)
+-> [`05-equipes-e-alocacao`](../05-equipes-e-alocacao/SKILL.md)

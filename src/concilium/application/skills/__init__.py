@@ -204,16 +204,46 @@ def load_skill_stage(skill_id: str, stage: str, func_name: str) -> Any:
         skill_id: ID da skill consolidada (diretório em manifests/).
         stage: nome do sub-pacote ("_indiretos") ou módulo sem .py ("_assessor").
         func_name: nome da função a retornar.
-    """
-    import importlib.util
 
+    Registra um pacote sintético apontando para o diretório do estágio (quando
+    ``stage`` é um sub-pacote) para que imports relativos dentro do seu
+    ``skill.py`` (``from ._skill_helpers_x import ...``) resolvam normalmente —
+    mesma técnica de ``_ensure_skill_package`` usada para manifests top-level.
+    """
     stage_dir = _MANIFESTS / skill_id / stage
-    path = stage_dir / "skill.py" if stage_dir.is_dir() else _MANIFESTS / skill_id / f"{stage}.py"
-    spec = importlib.util.spec_from_file_location(f"stage_{skill_id}_{stage}".replace("-", "_"), path)
+    is_pkg = stage_dir.is_dir()
+    if is_pkg:
+        path = stage_dir / "skill.py"
+    else:
+        path = _MANIFESTS / skill_id / f"{stage}.py"
+        if not path.is_file():
+            # Skills consolidadas em _skill_helpers/ (ex: 11-replanejamento-e-cenarios)
+            # movem seus módulos de estágio "bare" (ex: _assessor.py) para dentro de
+            # _skill_helpers/. Cai para esse caminho quando o direto não existir.
+            helpers_path = _MANIFESTS / skill_id / "_skill_helpers" / f"{stage}.py"
+            if helpers_path.is_file():
+                path = helpers_path
+
+    mod_name = f"stage_{skill_id}_{stage}".replace("-", "_")
+    if is_pkg:
+        pkg_name = f"_concilium_stagepkg_{skill_id.replace('-', '_')}_{stage.lstrip('_')}"
+        mod_name = f"{pkg_name}.skill"
+        if pkg_name not in sys.modules:
+            pkg = types.ModuleType(pkg_name)
+            pkg.__path__ = [str(stage_dir)]  # type: ignore[attr-defined]
+            pkg.__package__ = pkg_name
+            sys.modules[pkg_name] = pkg
+
+    spec = importlib.util.spec_from_file_location(mod_name, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Não foi possível carregar spec para estágio: {path}")
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    sys.modules[mod_name] = mod
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        sys.modules.pop(mod_name, None)
+        raise
     return getattr(mod, func_name)
 
 

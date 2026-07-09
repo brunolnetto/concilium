@@ -3,7 +3,7 @@ name: 10-relatorio-e-artefatos
 description: Use when rendering the final canonical model into the auditable .xlsm output format with formulas, formatting, and macros per profile template.
 ---
 
-# Skill 07 — Adapter de Saída
+# Skill 10 — Adapter de Saída
 
 Renderiza o canônico final no formato `.xlsm` — planilha de referência auditável com fórmulas, formatação e macros pré-estruturadas segundo o template de cada perfil. É o estágio terminal do pipeline.
 
@@ -27,7 +27,7 @@ Após `consolidar-resultado`. Esta skill assume que o canônico está completo e
 ## Depende de
 
 **Skills predecessoras**:
-- [`06-consolidar`](../06-consolidar/SKILL.md) — fornece canônico completo
+- [`06-resultado-financeiro/_consolidacao`](../06-resultado-financeiro/_consolidacao/SKILL.md) — fornece canônico completo
 
 **Recursos consumidos**:
 - `config/templates/planilha_planejamento.json` — especificação genérica de mapeamento canônico -> células
@@ -89,7 +89,7 @@ Após `consolidar-resultado`. Esta skill assume que o canônico está completo e
 
 - **Template como código-vivo**: `planilha_planejamento.json` é a fonte de verdade para estrutura. Se Excel mudar (nova aba, linha realocada), atualizar apenas o JSON, não a skill Python.
 
-- **Agnóstico a perfil**: a skill 07 não conhece AGIS, MendesLobo, ou qualquer construtora específica. Todos os detalhes vêm via `template_spec` (genérico) + `template_xlsm` (fornecido pelo perfil).
+- **Agnóstico a perfil**: a skill 10 não conhece AGIS, MendesLobo, ou qualquer construtora específica. Todos os detalhes vêm via `template_spec` (genérico) + `template_xlsm` (fornecido pelo perfil).
 
 - **Macros (.xlsm vs .xlsx)**: `openpyxl` preserva macros (`keep_vba=True`) mas não as executa. Se o template contém macro para inicialização ao abrir, isso "funciona" — Excel executa quando o usuário abre.
 
@@ -99,7 +99,7 @@ Após `consolidar-resultado`. Esta skill assume que o canônico está completo e
 
 - **DEC-12** (canônico inline): o adapter NÃO acessa `catalogo/` ou `perfis/`. Tudo que precisa está no canônico. Se algo faltar, é bug no canônico ou no schema, não no adapter.
 
-- **Múltiplos perfis no futuro**: quando uma segunda construtora entrar, ela ganha seu próprio `perfis/{construtora_id}/template_planejamento.json` (configuração) + `perfis/{construtora_id}/template_planejamento.xlsm` (binário). A skill 07 continua idêntica.
+- **Múltiplos perfis no futuro**: quando uma segunda construtora entrar, ela ganha seu próprio `perfis/{construtora_id}/template_planejamento.json` (configuração) + `perfis/{construtora_id}/template_planejamento.xlsm` (binário). A skill 10 continua idêntica.
 
 ## Saída esperada
 

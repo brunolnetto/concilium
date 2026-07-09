@@ -1,4 +1,4 @@
-"""Skill 11 — Decision Log.
+"""Skill 09 — Decision Log.
 
 Registra justificativa de uma decisão técnica tomada pelo humano.
 Persiste em decision_log.json. Não computa nada — apenas estrutura e valida.

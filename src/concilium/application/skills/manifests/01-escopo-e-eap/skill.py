@@ -1,4 +1,4 @@
-"""Skill 00 — Escopo Consolidado.
+"""Skill 01 — Escopo Consolidado.
 
 Inicializa o projeto, define a EAP, decompõe em atividades e define o sequenciamento (DAG).
 Consolida as antigas skills 00, 00A e 00B.
@@ -307,7 +307,7 @@ def run_escopo_e_eap(
             ValidacaoItem(
                 codigo="VAL-ESCOPO-01",
                 status="ERRO",
-                mensagem="Skill 00 não pode ser invocada com canônico pré-existente",
+                mensagem="Skill 01 não pode ser invocada com canônico pré-existente",
             )
         )
         return SkillResult(canonical_in, validacoes)

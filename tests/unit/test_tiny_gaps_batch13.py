@@ -1,5 +1,5 @@
 """Tests for artifact_transport, pdf_renderer, settings, project storage, catalog mixin,
-telemetry, and _04_cronograma_skill_helpers."""
+telemetry, and 04-cronograma/_skill_helpers/_dag."""
 
 from __future__ import annotations
 
@@ -69,14 +69,29 @@ class TestBlobPortFromEnv:
             _blob_port_from_env("unknown-backend")
 
 
-# ─── application/skills/manifests/_04_cronograma_skill_helpers.py (4 missing) ──
+# ─── application/skills/manifests/04-cronograma/_skill_helpers/_dag.py (4 missing) ──
+
+
+def _load_skill04_dag_helpers():
+    import importlib.util
+    import sys
+
+    path = (
+        Path(__file__).resolve().parents[2]
+        / "src/concilium/application/skills/manifests/04-cronograma/_skill_helpers/_dag.py"
+    )
+    spec = importlib.util.spec_from_file_location("skill04_dag_helpers_b13", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["skill04_dag_helpers_b13"] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
 
 class TestCronogramaSkillHelpers:
     """Cover lines 53, 56-57, 62 — SS/FF precedence types + short-precedence skip."""
 
     def test_extract_dag_with_fs_threshold(self, tmp_path):
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+        extract_dag_from_spec_or_eap = _load_skill04_dag_helpers().extract_dag_from_spec_or_eap
 
         # Build a minimal spec with FS precedence with threshold
         spec = {"precedence": [["A1", "A2", 0.5]]}
@@ -88,7 +103,7 @@ class TestCronogramaSkillHelpers:
         assert dag is not None
 
     def test_extract_dag_short_precedence_skipped(self, tmp_path):
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+        extract_dag_from_spec_or_eap = _load_skill04_dag_helpers().extract_dag_from_spec_or_eap
 
         # precedence entry with len < 2 → skipped (line 62)
         spec = {"precedence": [["A1"], ["A1", "A2"]]}

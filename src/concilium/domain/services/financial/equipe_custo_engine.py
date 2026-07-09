@@ -264,7 +264,7 @@ class LifecycleEngine:
     """Engine stateless de custo instancial composicional (ADR-106 F1).
 
     Implementa a mesma lógica de ``calcular_custo_instancia_composicional``
-    (ADR-085 D3, atualmente em ``_05_equipes_custo_helpers.py``) mas retorna
+    (ADR-085 D3, atualmente em ``05-equipes-e-alocacao/_skill_helpers/_custo_diferenciado_permanencia.py``) mas retorna
     ``CustoEquipeDecomposicao`` em vez de dict, e aceita mob/demob explícitos.
 
     Stateless (IC-5): nenhum estado interno — mesmo input → mesmo output.

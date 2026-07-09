@@ -266,7 +266,7 @@ class TestBuildInstanciasRecurso:
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT
-            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
         sys.modules["helpers_a"] = mod
@@ -395,7 +395,7 @@ class TestAtribuicaoGulosa:
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT
-            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
         sys.modules["helpers_a"] = mod
@@ -434,7 +434,7 @@ class TestAtribuicaoGulosa:
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT
-            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
         sys.modules["helpers_a"] = mod
@@ -481,7 +481,7 @@ class TestZeroDemandWeeks:
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT
-            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
         sys.modules["helpers_a"] = mod
@@ -584,7 +584,7 @@ class TestValidatorStandbyAlto:
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT
-            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py",
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py",
         )
         mod = importlib.util.module_from_spec(spec)
         sys.modules["helpers_a"] = mod

@@ -3,13 +3,13 @@ name: 08-avaliacao-intervencoes
 description: Use when evaluating possible budget interventions through ROI, Effort, and Risk dimensions, presented as a decision matrix.
 ---
 
-# Skill 10 — Intervention ROI Matrix
+# Skill 08 — Intervention ROI Matrix
 
 Avalia intervenções possíveis (mudanças em variáveis do orçamento) através de três dimensões independentes: ROI, Effort e Risk. Apresenta como matriz de decisão, não como score combinado.
 
 ## Quando ativar
 
-Após `09-cost-criticality`. Skill analítica opcional.
+Após `07-diagnostico-criticidade`. Skill analítica opcional.
 
 ## Princípio fundamental: classificar, não combinar
 
@@ -21,7 +21,7 @@ A matriz mantém as três dimensões separadas. A combinação é trabalho do hu
 
 | Nome | Tipo | Origem | Obrigatório |
 |------|------|--------|-------------|
-| `cost_criticality_report` | object | Canônico (skill 09) | sim |
+| `cost_criticality_report` | object | Canônico (skill 07) | sim |
 | `intervencoes_propostas` | array | Usuário | sim |
 | `effort_catalog` | object | `perfis/agis.json` ou catálogo dedicado | sim |
 
@@ -41,7 +41,7 @@ A matriz mantém as três dimensões separadas. A combinação é trabalho do hu
 
 ## Depende de
 
-**Skills predecessoras**: pelo menos até `09-cost-criticality`. Idealmente também simulações OFAT já executadas.
+**Skills predecessoras**: pelo menos até `07-diagnostico-criticidade`. Idealmente também simulações OFAT já executadas.
 
 **Recursos consumidos**:
 - `perfis/agis.json` — catálogo de effort por tipo de intervenção
@@ -85,7 +85,7 @@ para cada intervencao:
         roi_margem_pp = (margem_cenario - margem_baseline) em pontos percentuais
         delta_prazo_dias = (prazo_cenario - prazo_baseline) em dias
     senão:
-        roi_estimado_via_sensibilidade  # heurística da skill 09
+        roi_estimado_via_sensibilidade  # heurística da skill 07
 
     # Effort — vem do catálogo, NÃO derivado
     effort = effort_catalog[intervencao.tipo_perturbacao]

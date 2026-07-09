@@ -25,7 +25,7 @@ import pytest
 
 _HELPERS_B = (
     Path(__file__).parent.parent.parent
-    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre/__init__.py"
+    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
 )
 
 
@@ -814,7 +814,7 @@ class TestDetectarOportunidadesParaleloMissingBranches:
 
         path = (
             Path(__file__).parent.parent.parent
-            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre/__init__.py"
+            / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
         )
         spec = importlib.util.spec_from_file_location(
             "_skill_helpers_pre", path, submodule_search_locations=[str(path.parent)]

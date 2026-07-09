@@ -1,9 +1,9 @@
 ﻿---
-name: 06-precificacao-unitaria
+name: 06-resultado-financeiro-precificacao
 description: Use when calculating unit prices with and without BDI per EAP item, broken into 4 cost categories (material, diesel, labor, equipment).
 ---
 
-# Skill 04 — Planejamento e BDI
+# Skill 06 — Planejamento e BDI
 
 Calcula preço unitário (sem e com BDI) por item da EAP, decompondo em 4 categorias (material, diesel, mão de obra, equipamentos) conforme DEC-14. Multiplica pelo quantitativo para obter subtotais. Esta skill é o coração do "preço de venda" do orçamento.
 
@@ -25,7 +25,7 @@ Após `equipes-diretas`. Pode rodar em paralelo com `indiretos` se necessário (
 ## Depende de
 
 **Skills predecessoras**:
-- [`04-cronograma`](../04-cronograma/SKILL.md) — usa para validar consistência (delta do ponto de equilíbrio é checado em skill posterior; aqui só prepara dados)
+- [`04-cronograma`](../../04-cronograma/SKILL.md) — usa para validar consistência (delta do ponto de equilíbrio é checado em skill posterior; aqui só prepara dados)
 
 **Recursos consumidos**:
 - `catalogo/cpus.json` — composições completas de cada CPU
@@ -48,7 +48,7 @@ Campos populados por item:
 **Validações executadas**:
 - `VAL-EAP-01` (ERRO): toda EAP_ITEM referencia uma CPU existente no snapshot
 - `VAL-POL-BDI` (Configurável): BDI aplicado dentro da faixa do perfil por categoria
-- (Reconciliação de ponto de equilíbrio é feita na skill `06-consolidar-resultado`, não aqui)
+- (Reconciliação de ponto de equilíbrio é feita na skill `_consolidacao`, não aqui)
 
 ## Lógica de cálculo
 
@@ -87,7 +87,7 @@ para cada item_eap:
 - **DEC-14**: BDI por 4 categorias é fundamental aqui. Note que a categoria `material` frequentemente tem BDI=0 (porque já vem com margem do fornecedor) e as demais têm BDI próprio. As 4 categorias precisam estar todas presentes mesmo que o valor seja zero.
 - A categoria `categoria_custo` em cada `composicao_item` deve ser populada já no catálogo. Se vier vazia, defina regra: tipo do insumo (MATERIAL->material, EQUIPAMENTO->equipamentos, etc.) com fallback explícito.
 - Atenção aos números — a planilha original tem subtotais com casas decimais variando. Sugiro fixar arredondamento em 2 casas em outputs e mais casas em cálculo intermediário, com nota explícita no canônico.
-- A reconciliação de ponto de equilíbrio (delta entre custo da equipe direta — skill 03 — e custo de venda da CPU — esta skill) é feita pela skill 06. Aqui só preparamos os dados.
+- A reconciliação de ponto de equilíbrio (delta entre custo da equipe direta — `05-equipes-e-alocacao` — e custo de venda da CPU — esta skill) é feita pela skill `_consolidacao`. Aqui só preparamos os dados.
 
 ## Sobre a fórmula do BDI no perfil
 
@@ -126,4 +126,4 @@ Cada construtora pode usar fórmula diferente para chegar ao percentual de BDI p
 
 ## Próxima skill no pipeline
 
--> [`07-custos-indiretos`](../07-custos-indiretos/SKILL.md)
+-> [`_indiretos`](../_indiretos/SKILL.md)

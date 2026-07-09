@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
+import sys
 from types import SimpleNamespace
 
 
 def _load_skill04():
-    root = Path(__file__).resolve().parents[2]
-    mod_path = root / "src/concilium/application/skills/manifests/04-cronograma/skill.py"
-    spec = importlib.util.spec_from_file_location("skill04_fungibilidade", mod_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    from concilium.application.skills import run_cronograma as _run_cronograma
+
+    assert _run_cronograma
+    return sys.modules["_concilium_skillpkg_04_cronograma.skill"]
 
 
 def test_enrich_spec_resources_agrega_fases_em_tipo_fungivel():

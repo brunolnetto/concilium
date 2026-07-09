@@ -15,7 +15,7 @@ import pytest
 
 def _load_precif():
     p = (
-        Path("src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/_skill_helpers_a")
+        Path("src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/_skill_helpers")
         / "__init__.py"
     )
     spec = importlib.util.spec_from_file_location("_precif_helpers_a", p)

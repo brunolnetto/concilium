@@ -12,7 +12,14 @@ Testa:
 
 from __future__ import annotations
 
+import sys
+
 import pytest
+
+from concilium.application.skills import run_equipes_e_alocacao as _trigger_skill05_load
+
+assert _trigger_skill05_load
+_skill05_helpers = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Novos campos de modelo
@@ -106,9 +113,7 @@ class TestIdleRateDiferenciado:
 
     def test_custo_sem_standby_usa_taxa_plena(self):
         """Quando não há standby, custo = c_unit × active_weeks × n_units."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         # Instância com 10 semanas ativas, 0 standby
         custo = calcular_custo_contrato_por_instancia(
@@ -124,9 +129,7 @@ class TestIdleRateDiferenciado:
 
     def test_custo_com_standby_usa_idle_quando_disponivel(self):
         """Standby cobrado a c_idle (menor) quando disponível."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         custo = calcular_custo_contrato_por_instancia(
             active_weeks=10,
@@ -141,9 +144,7 @@ class TestIdleRateDiferenciado:
 
     def test_custo_standby_sem_idle_usa_taxa_plena(self):
         """Fallback: quando c_idle=0, standby usa c_unit (comportamento legado)."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         custo_idle = calcular_custo_contrato_por_instancia(
             active_weeks=10,
@@ -166,9 +167,7 @@ class TestIdleRateDiferenciado:
 
     def test_c_idle_menor_que_c_unit_reduz_custo_total(self):
         """Usar c_idle < c_unit reduz o custo comparado ao modelo legado (c_unit para tudo)."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         custo_novo = calcular_custo_contrato_por_instancia(
             active_weeks=35,
@@ -197,9 +196,7 @@ class TestIdleRateDiferenciado:
 class TestDesmobEfetivaReduzCusto:
     def test_desmob_elimina_trailing_standby(self):
         """Com early demob, trailing standby é substituído por custo de desmob."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         # Sem early demob: 35 ativas + 43 trailing standby
         custo_sem_desmob = calcular_custo_contrato_por_instancia(
@@ -249,9 +246,7 @@ class TestDesmobEfetivaReduzCusto:
 class TestMobilizacaoTardia:
     def test_instancia_tardia_tem_menos_semanas_de_contrato(self):
         """Uma instância mobilizada na semana 36 (não na 1) tem contrato menor."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         # ATERRO-04 no AGIS iter-3: mobilizada semana 36, dura até semana 41 (6 semanas)
         custo_tardio = calcular_custo_contrato_por_instancia(
@@ -275,9 +270,7 @@ class TestMobilizacaoTardia:
 
     def test_reducao_custo_mob_tardia_agis_aterro04(self):
         """Economia estimada com mob tardia de ATERRO-04: ~R$297k (43 semanas × R$7500 - R$25k demob)."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         custo_baseline = calcular_custo_contrato_por_instancia(
             active_weeks=6,
@@ -308,9 +301,7 @@ class TestMobilizacaoTardia:
 class TestCompatibilidadeRetroativa080:
     def test_sem_c_idle_comportamento_identico_ao_anterior(self):
         """Sem c_idle, custo = c_unit × (active + standby) + mob + demob."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_contrato_por_instancia,
-        )  # noqa
+        calcular_custo_contrato_por_instancia = _skill05_helpers.calcular_custo_contrato_por_instancia
 
         custo = calcular_custo_contrato_por_instancia(
             active_weeks=10,

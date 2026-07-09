@@ -11,7 +11,7 @@ def _load_assessor():
     """Load _assessor.py from hyphenated directory via importlib."""
     path = (
         Path(__file__).parents[2]
-        / "src/concilium/application/skills/manifests/11-replanejamento-e-cenarios/_assessor.py"
+        / "src/concilium/application/skills/manifests/11-replanejamento-e-cenarios/_skill_helpers/_assessor.py"
     )
     spec = importlib.util.spec_from_file_location("skill11._assessor", path)
     mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]

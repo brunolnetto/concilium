@@ -257,7 +257,7 @@ class TestMiddlewareTraceparentExtraction:
 
         with patch("concilium.presentation.mcp.middleware.propagate") as mock_prop:
             mock_prop.extract.return_value = {}
-            asyncio.get_event_loop().run_until_complete(middleware(scope, _make_receive(), AsyncMock()))
+            asyncio.run(middleware(scope, _make_receive(), AsyncMock()))
             mock_prop.extract.assert_called_once()
             carrier_arg = mock_prop.extract.call_args[0][0]
             assert (
@@ -279,7 +279,7 @@ class TestMiddlewareTraceparentExtraction:
         with patch("concilium.presentation.mcp.middleware.propagate", create=True) as mock_prop:
             mock_prop.extract.return_value = {}
             # Deve executar sem exceção
-            asyncio.get_event_loop().run_until_complete(middleware(scope, _make_receive(), AsyncMock()))
+            asyncio.run(middleware(scope, _make_receive(), AsyncMock()))
 
     def test_traceparent_context_detached_after_request(self):
         """O contexto OTel anexado é desanexado no finally mesmo se o app interno levanta."""
@@ -305,7 +305,7 @@ class TestMiddlewareTraceparentExtraction:
             import contextlib
 
             with contextlib.suppress(RuntimeError):
-                asyncio.get_event_loop().run_until_complete(middleware(scope, _make_receive(), AsyncMock()))
+                asyncio.run(middleware(scope, _make_receive(), AsyncMock()))
             # detach deve ter sido chamado mesmo com exceção
             mock_detach.assert_called()
 
@@ -461,7 +461,7 @@ class TestMiddlewareBaggageInjection:
             mock_decode.return_value = {"sub": "usr-42", "tid": "tenant-abc", "roles": ["operator"]}
             mock_prop.extract.return_value = {}
 
-            asyncio.get_event_loop().run_until_complete(middleware(scope, _make_receive(), AsyncMock()))
+            asyncio.run(middleware(scope, _make_receive(), AsyncMock()))
 
         keys_set = [k for k, _ in baggage_set_calls]
         assert "tenant.id" in keys_set, f"tenant.id não injetado como baggage. Calls: {baggage_set_calls}"
@@ -491,7 +491,7 @@ class TestMiddlewareBaggageInjection:
             mock_decode.return_value = {"sub": "usr-007", "tid": "mendeslobo", "roles": ["operator"]}
             mock_prop.extract.return_value = {}
 
-            asyncio.get_event_loop().run_until_complete(middleware(scope, _make_receive(), AsyncMock()))
+            asyncio.run(middleware(scope, _make_receive(), AsyncMock()))
 
         assert captured.get("tenant.id") == "mendeslobo"
         assert captured.get("user.id") == "usr-007"
@@ -521,7 +521,7 @@ class TestMiddlewareBaggageInjection:
             mock_decode.return_value = {"roles": ["operator"]}  # sem sub nem tid
             mock_prop.extract.return_value = {}
 
-            asyncio.get_event_loop().run_until_complete(middleware(scope, _make_receive(), AsyncMock()))
+            asyncio.run(middleware(scope, _make_receive(), AsyncMock()))
 
         # None não deve ser injetado como valor de baggage
         none_values = [(k, v) for k, v in baggage_calls if v is None]
@@ -550,5 +550,5 @@ class TestMiddlewareBaggageInjection:
             import contextlib
 
             with contextlib.suppress(RuntimeError):
-                asyncio.get_event_loop().run_until_complete(middleware(scope, _make_receive(), AsyncMock()))
+                asyncio.run(middleware(scope, _make_receive(), AsyncMock()))
             mock_detach.assert_called()

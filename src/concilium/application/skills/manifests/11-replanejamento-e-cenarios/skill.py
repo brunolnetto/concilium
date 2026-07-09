@@ -1,4 +1,4 @@
-"""Skill 13 — Replanejamento e Cenários (Consolidado, NEP-041 Fase 2).
+"""Skill 11 — Replanejamento e Cenários (Consolidado, NEP-041 Fase 2).
 
 Unifica o antigo 13-assessor-replanejamento (sugestões de reparo) e o
 14-explorador-cenarios (exploração do espaço de planos) em uma única skill.
@@ -18,27 +18,10 @@ from typing import Any
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel
 
-try:
-    # Hyphenated manifest dir: ty cannot resolve these relative imports statically
-    # (only work at runtime via the synthetic package set up in skills/__init__.py).
-    from ._assessor import run_assessor_replanejamento  # ty: ignore[unresolved-import]
-    from ._explorador import run_explorador_cenarios  # ty: ignore[unresolved-import]
-except ImportError:
-    import importlib.util
-    from pathlib import Path
-
-    _here = Path(__file__).resolve().parent
-
-    def _load_local(mod_name: str, attr: str):
-        spec = importlib.util.spec_from_file_location(mod_name, _here / f"{mod_name}.py")
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Não foi possível carregar spec para {mod_name}.py em {_here}")
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return getattr(mod, attr)
-
-    run_assessor_replanejamento = _load_local("_assessor", "run_assessor_replanejamento")
-    run_explorador_cenarios = _load_local("_explorador", "run_explorador_cenarios")
+# Hyphenated manifest dir: ty cannot resolve these relative imports statically
+# (only work at runtime via the synthetic package set up in skills/__init__.py).
+from ._skill_helpers._assessor import run_assessor_replanejamento  # ty: ignore[unresolved-import]
+from ._skill_helpers._explorador import run_explorador_cenarios  # ty: ignore[unresolved-import]
 
 
 def run_replanejamento_e_cenarios(

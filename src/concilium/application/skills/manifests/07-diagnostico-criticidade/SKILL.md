@@ -3,13 +3,13 @@ name: 07-diagnostico-criticidade
 description: Use when producing a 360° health diagnosis of the project — ranks activities by schedule criticality, cost exposure, resource conflicts and margin sensitivity using Pareto classification.
 ---
 
-# Skill 10 — Diagnóstico de Criticidade
+# Skill 07 — Diagnóstico de Criticidade
 
 Produz o diagnóstico de saúde 360° do projeto em quatro dimensões: Prazo, Custo, Recurso e Sensibilidade. Classifica atividades em A+/A/B/C usando ranking Pareto lexicográfico e identifica quais atividades concentram maior risco. Consolida as antigas skills 08 e 09.
 
 ## Quando ativar
 
-Após `06-precificacao-unitaria` ter calculado os preços e `05-equipes-e-alocacao` ter calculado equipes e alocações. Não requer `08-consolidacao-financeira` — pode rodar em paralelo com ela.
+Após `06-resultado-financeiro/_precificacao` ter calculado os preços e `05-equipes-e-alocacao` ter calculado equipes e alocações. Não requer `06-resultado-financeiro/_consolidacao` — pode rodar em paralelo com ela.
 
 ## Inputs
 
@@ -20,7 +20,7 @@ Nenhum input do usuário — opera exclusivamente sobre o canônico já constru�
 **Skills predecessoras**:
 - [`04-cronograma`](../04-cronograma/SKILL.md) — `cronograma.scheduled_activities` com `distribuicao_semanal`
 - [`05-equipes-e-alocacao`](../05-equipes-e-alocacao/SKILL.md) — `equipes_diretas` com custos e `alocacoes`
-- [`06-precificacao-unitaria`](../06-precificacao-unitaria/SKILL.md) — `planejamento` com PU e subtotais
+- [`06-resultado-financeiro/_precificacao`](../06-resultado-financeiro/_precificacao/SKILL.md) — `planejamento` com PU e subtotais
 
 ## Produz
 
@@ -98,13 +98,11 @@ Limites:
 
 ## Notas de implementação
 
-- O `cost_criticality_report` é consumido por `08-avaliacao-intervencoes`, `13-assessor-replanejamento`, `14-explorador-cenarios` e `15-relatorio-executivo`. Skills que dependem desta devem verificar `canonical.cost_criticality_report is not None` antes de operar.
+- O `cost_criticality_report` é consumido por `08-avaliacao-intervencoes`, `11-replanejamento-e-cenarios` (assessor e explorador) e `10-relatorio-e-artefatos`. Skills que dependem desta devem verificar `canonical.cost_criticality_report is not None` antes de operar.
 - A fronteira de Pareto (`frontier_ids`) é o conjunto de atividades que não são dominadas em todas as dimensões por nenhuma outra — representa o conjunto irredutível de riscos do projeto.
 - O score de prazo usa `_periodo_to_ordinal()` para normalizar chaves de semanas ISO e períodos mensais para uma escala comparável.
 
 ## Próximas skills no pipeline
 
 - [`08-avaliacao-intervencoes`](../08-avaliacao-intervencoes/SKILL.md)
-- [`13-assessor-replanejamento`](../13-assessor-replanejamento/SKILL.md)
-- [`14-explorador-cenarios`](../14-explorador-cenarios/SKILL.md)
-- [`15-relatorio-executivo`](../15-relatorio-executivo/SKILL.md)
+- [`11-replanejamento-e-cenarios`](../11-replanejamento-e-cenarios) (assessor de replanejamento e explorador de cenários — sem SKILL.md próprio)

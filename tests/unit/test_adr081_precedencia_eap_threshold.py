@@ -19,6 +19,23 @@ from concilium.application.scheduling.models import Activity, ActivityDAG, Resou
 from concilium.application.scheduling.scheduler import SerialScheduler, _compute_earliest_starts
 from concilium.domain.models.canonical import ArestaActivityDag, PrecedenciaItem
 
+
+def _load_extract_dag_from_spec_or_eap():
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parents[2]
+        / "src/concilium/application/skills/manifests/04-cronograma/_skill_helpers/_dag.py"
+    )
+    spec = importlib.util.spec_from_file_location("skill04_dag_helpers_adr081", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["skill04_dag_helpers_adr081"] = mod
+    spec.loader.exec_module(mod)
+    return mod.extract_dag_from_spec_or_eap
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Modelo PrecedenciaItem e ArestaActivityDag
 # ─────────────────────────────────────────────────────────────────────────────
@@ -289,7 +306,7 @@ class TestDerivacaoDAGdaEAP:
         ]
 
     def test_dag_derivado_tem_arestas_corretas(self):
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap  # noqa
+        extract_dag_from_spec_or_eap = _load_extract_dag_from_spec_or_eap()
 
         # Se a função não existir ainda, o teste falha com ImportError — esperado no TDD
         spec = self._make_spec_sem_precedencia()
@@ -304,7 +321,7 @@ class TestDerivacaoDAGdaEAP:
         assert ("eap-1_1", "eap-1_7") in dag.precedence
 
     def test_dag_derivado_preserva_thresholds(self):
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap  # noqa
+        extract_dag_from_spec_or_eap = _load_extract_dag_from_spec_or_eap()
 
         spec = self._make_spec_sem_precedencia()
         eap_items = self._make_eap_items()
@@ -319,7 +336,7 @@ class TestDerivacaoDAGdaEAP:
 
     def test_rcpsp_spec_precedence_prevalece_como_override(self):
         """Se rcpsp_spec.precedence tiver um par, ele substitui o valor da EAP."""
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap  # noqa
+        extract_dag_from_spec_or_eap = _load_extract_dag_from_spec_or_eap()
 
         spec = self._make_spec_sem_precedencia()
         # Override: par eap-1_0 → eap-1_1 com theta=1.0 (conservador)
@@ -533,7 +550,7 @@ class TestSSFFPrecedenceTypes:
 
     def test_ss_type_goes_into_extended_precedences(self):
         """Lines 53-57: SS tipo creates entry in extended_precedences."""
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+        extract_dag_from_spec_or_eap = _load_extract_dag_from_spec_or_eap()
 
         acts = [
             Activity(activity_id="ACT-A", description="A", duration_weeks=10),
@@ -555,7 +572,7 @@ class TestSSFFPrecedenceTypes:
 
     def test_ff_type_lag_preserved(self):
         """FF typed predecessor with lag=0 ends up in extended_precedences with lag=0."""
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+        extract_dag_from_spec_or_eap = _load_extract_dag_from_spec_or_eap()
         from concilium.domain.models.canonical import EapItem, PrecedenciaItem
 
         eap_items = [
@@ -581,7 +598,7 @@ class TestSSFFPrecedenceTypes:
 
     def test_short_precedence_entry_is_skipped(self):
         """Line 62: precedence entries with len < 2 are ignored without error."""
-        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+        extract_dag_from_spec_or_eap = _load_extract_dag_from_spec_or_eap()
 
         acts = [
             Activity(activity_id="X", description="X", duration_weeks=5),

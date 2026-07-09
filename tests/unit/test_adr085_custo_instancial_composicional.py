@@ -11,11 +11,35 @@ Testa:
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+from pathlib import Path
+
 import pytest
 
-from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-    calcular_custo_instancia_composicional,
-)
+
+def _load_helpers_a():
+    """Carrega o módulo _skill_helpers (dir com hífen → importlib)."""
+    here = Path(__file__).resolve().parents[2]
+    path = (
+        here
+        / "src"
+        / "concilium"
+        / "application"
+        / "skills"
+        / "manifests"
+        / "05-equipes-e-alocacao"
+        / "_skill_helpers"
+        / "__init__.py"
+    )
+    spec = importlib.util.spec_from_file_location("skill05_helpers_a_test", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["skill05_helpers_a_test"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+calcular_custo_instancia_composicional = _load_helpers_a().calcular_custo_instancia_composicional
 
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Novos campos de modelo
@@ -172,31 +196,6 @@ class TestHelperComposicional:
 # ─────────────────────────────────────────────────────────────────────────────
 # C/D/E/F. Pipeline integrado: _build_contratos_recurso + _build_instancias + reconciliação
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def _load_helpers_a():
-    """Carrega o módulo _skill_helpers_a (dir com hífen → importlib)."""
-    import importlib.util
-    import sys
-    from pathlib import Path
-
-    here = Path(__file__).resolve().parents[2]
-    path = (
-        here
-        / "src"
-        / "concilium"
-        / "application"
-        / "skills"
-        / "manifests"
-        / "05-equipes-e-alocacao"
-        / "_skill_helpers_a"
-        / "__init__.py"
-    )
-    spec = importlib.util.spec_from_file_location("skill05_helpers_a_test", path)
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["skill05_helpers_a_test"] = mod
-    spec.loader.exec_module(mod)
-    return mod
 
 
 def _mk_sched(item_id, weeks):

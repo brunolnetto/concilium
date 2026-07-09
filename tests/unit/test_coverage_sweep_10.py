@@ -36,7 +36,7 @@ def _load_skill_module(skill_dir: str, module_name: str):
 
 class TestSkill09HelpersA:
     def _load(self):
-        return _load_skill_module("10-relatorio-e-artefatos", "_skill_helpers_a")
+        return _load_skill_module("10-relatorio-e-artefatos", "_skill_helpers")
 
     def test_module_loads(self):
         mod = self._load()
@@ -126,7 +126,7 @@ class TestSkill09:
 
 class TestSkill06ConsolidacaoHelpersB:
     def _load(self):
-        return _load_skill_module("06-resultado-financeiro/_consolidacao", "_skill_helpers_b")
+        return _load_skill_module("06-resultado-financeiro/_consolidacao", "_skill_helpers/_bdi_resolucao")
 
     def test_module_loads(self):
         mod = self._load()
@@ -145,7 +145,7 @@ class TestSkill06ConsolidacaoHelpersB:
 
 class TestSkill05HelpersB:
     def _load(self):
-        return _load_skill_module("05-equipes-e-alocacao", "_skill_helpers_b")
+        return _load_skill_module("05-equipes-e-alocacao", "_skill_helpers/b")
 
     def test_module_loads(self):
         mod = self._load()

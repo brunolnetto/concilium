@@ -344,13 +344,13 @@ class TestReplan002Equipes:
         assert "REPLAN-002" not in ids
 
     def test_replan002_checkpoint(self):
-        """REPLAN-002 must have checkpoint_skill='03-equipes-diretas'."""
+        """REPLAN-002 must have checkpoint_skill='05-equipes-e-alocacao'."""
         ccr = _cost_criticality_result(classes=["A+"])
         canonical = _canonical(resultado=_resultado(0.04, "VERMELHO"), cost_criticality_report=ccr)
         result = run_assessor_replanejamento(canonical, {}, _perfil())
 
         sugestao = next(s for s in result.canonical.replan_suggestions.sugestoes if s.id == "REPLAN-002")
-        assert sugestao.checkpoint_skill == "03-equipes-diretas"
+        assert sugestao.checkpoint_skill == "05-equipes-e-alocacao"
         assert sugestao.confianca == "BAIXA"
 
     def test_replan002_confianca_baixa_score_lower_than_media(self):
@@ -460,12 +460,12 @@ class TestReplan005BdiFallback:
         assert "REPLAN-005" in ids
 
     def test_replan005_checkpoint_custos_indiretos(self):
-        """REPLAN-005 checkpoint_skill must be '07-custos-indiretos'."""
+        """REPLAN-005 checkpoint_skill must be '06-resultado-financeiro'."""
         canonical = _canonical(resultado=_resultado(0.07, "AMARELO"))
         result = run_assessor_replanejamento(canonical, {}, _perfil())
 
         sugestao = next(s for s in result.canonical.replan_suggestions.sugestoes if s.id == "REPLAN-005")
-        assert sugestao.checkpoint_skill == "07-custos-indiretos"
+        assert sugestao.checkpoint_skill == "06-resultado-financeiro"
         assert sugestao.tipo == "BDI"
         assert sugestao.confianca == "BAIXA"
 
@@ -790,8 +790,8 @@ class TestCombinedScenarios:
         _VALID = {
             "03-catalogo-de-recursos",
             "04-cronograma",
-            "03-equipes-diretas",
-            "07-custos-indiretos",
+            "05-equipes-e-alocacao",
+            "06-resultado-financeiro",
         }
         resultado = _resultado(0.04, "VERMELHO")
         custo_total = resultado.custo.total

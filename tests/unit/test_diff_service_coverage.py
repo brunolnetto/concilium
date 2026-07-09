@@ -164,7 +164,7 @@ class TestExploradorInternals:
 
         from concilium.application.skills import run_replanejamento_e_cenarios  # noqa: F401
 
-        return sys.modules["_concilium_skillpkg_11_replanejamento_e_cenarios._explorador"]
+        return sys.modules["_concilium_skillpkg_11_replanejamento_e_cenarios._skill_helpers._explorador"]
 
     def test_classify_status_amarelo(self):
         """Lines 58-59: AMARELO."""

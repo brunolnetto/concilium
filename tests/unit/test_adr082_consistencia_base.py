@@ -25,8 +25,11 @@ def _load(mod_name: str, rel_path: str) -> ModuleType:
     return mod
 
 
-_cron = _load("_cron_skill_082", "04-cronograma/skill.py")
-_cons = _load("_cons_helpers_082", "06-resultado-financeiro/_consolidacao/_skill_helpers_a/__init__.py")
+from concilium.application.skills import run_cronograma as _run_cronograma  # noqa: E402
+
+assert _run_cronograma
+_cron = sys.modules["_concilium_skillpkg_04_cronograma.skill"]
+_cons = _load("_cons_helpers_082", "06-resultado-financeiro/_consolidacao/_skill_helpers/__init__.py")
 
 
 # ── _build_dist_cell: eficiencia = utilização; fator_total = p_j × m_ij ──────

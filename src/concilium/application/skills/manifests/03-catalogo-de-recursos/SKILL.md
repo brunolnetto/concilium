@@ -3,7 +3,7 @@ name: 03-catalogo-de-recursos
 description: Use when declaring the project resource type catalog and initial available pool, making capacity constraints explicit early in the pipeline.
 ---
 
-# Skill 01A — Declarar Recursos
+# Skill 03 — Declarar Recursos
 
 Declara o catálogo de tipos de recurso do projeto e o pool inicial disponível. Esta skill roda cedo no pipeline para explicitar restrições de capacidade antes das etapas de cálculo detalhado.
 

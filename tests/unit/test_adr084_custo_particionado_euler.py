@@ -21,7 +21,7 @@ import pytest
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
 _HELPERS_PATH = (
-    _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py"
+    _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
 )
 
 sys.path.insert(0, str(_ROOT / "src"))

@@ -12,8 +12,8 @@ from unittest.mock import MagicMock, patch
 from concilium.application.skills import run_equipes_e_alocacao
 
 _MOD_NAME = "_concilium_skillpkg_05_equipes_e_alocacao.skill"
-_MOD_POOL = "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers_pool"
-_MOD_INSTANCIAS = "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers_instancias"
+_MOD_POOL = "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers.pool"
+_MOD_INSTANCIAS = "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers.instancias"
 
 from concilium.application.skills.base import SkillResult  # noqa: E402
 from concilium.domain.models.canonical import RecursoContrato  # noqa: E402
@@ -664,7 +664,7 @@ class TestAdr133IndiretosCoverage:
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
             patch(f"{_MOD_POOL}._derive_rcpsp_from_canonical", return_value=None),
             patch(
-                "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers_pre._detectar_oportunidades_paralelo",
+                "_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers.pre_deteccao_paralelo._detectar_oportunidades_paralelo",
                 mock_detect,
             ),
         ):
@@ -761,61 +761,3 @@ class TestPlanCustoSemBdiHelperPaths:
         r = _run_simple([eq], planejamento=[plan])
         assert isinstance(r, SkillResult)
         assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
-
-
-# ---------------------------------------------------------------------------
-# importlib fallback in the module header (lines 47-82): triggered only when
-# `from ._skill_helpers_x import ...` fails (e.g. skill.py loaded standalone,
-# with no parent package registered).  Lines 54/60/66 guard against
-# spec_from_file_location returning a broken spec for each helper module.
-# ---------------------------------------------------------------------------
-
-
-class TestSkillHeaderImportlibFallback:
-    """Force skill.py's `except ImportError:` header block to run standalone."""
-
-    def _skill_path(self):
-        import concilium.application.skills as skills_pkg
-
-        return skills_pkg._MANIFESTS / "05-equipes-e-alocacao" / "skill.py"
-
-    def _exec_standalone(self, monkeypatch, blocked_name, module_alias):
-        """Load skill.py with no dotted package context, so the relative
-        imports in its `try:` block fail with ImportError and execution
-        falls into the `except ImportError:` importlib-based fallback.
-        Then intercept spec_from_file_location for `blocked_name` to
-        return None, exercising the `raise ImportError(...) from None` guard.
-        """
-        import importlib.util
-
-        real_spec_from_file_location = importlib.util.spec_from_file_location
-
-        def fake_spec_from_file_location(name, path, *a, **kw):
-            if name == blocked_name:
-                return None
-            return real_spec_from_file_location(name, path, *a, **kw)
-
-        monkeypatch.setattr(importlib.util, "spec_from_file_location", fake_spec_from_file_location)
-
-        # No dot in the name => __package__ becomes "" => relative imports fail.
-        spec = real_spec_from_file_location(module_alias, self._skill_path())
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-
-    def test_raises_when_spec_a_is_none(self, monkeypatch):
-        import pytest
-
-        with pytest.raises(ImportError, match="_skill_helpers_a.py"):
-            self._exec_standalone(monkeypatch, "skill05_helpers_a", "standalone_skill05_test_a")
-
-    def test_raises_when_spec_b_is_none(self, monkeypatch):
-        import pytest
-
-        with pytest.raises(ImportError, match="_skill_helpers_b.py"):
-            self._exec_standalone(monkeypatch, "skill05_helpers_b", "standalone_skill05_test_b")
-
-    def test_raises_when_spec_pre_is_none(self, monkeypatch):
-        import pytest
-
-        with pytest.raises(ImportError, match="_skill_helpers_pre.py"):
-            self._exec_standalone(monkeypatch, "skill05_helpers_pre", "standalone_skill05_test_pre")

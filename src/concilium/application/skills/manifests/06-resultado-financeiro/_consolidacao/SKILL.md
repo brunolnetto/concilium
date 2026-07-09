@@ -1,15 +1,15 @@
 ---
-name: 08-consolidacao-financeira
+name: 06-resultado-financeiro-consolidacao
 description: Use when computing the final financial result — aggregates direct costs, BDI, indirect costs and produces margin, selling price, break-even and the Bridge Analysis (ADR-039).
 ---
 
-# Skill 08 — Consolidação Financeira
+# Skill 06 — Consolidação Financeira
 
 Produz o balanço financeiro final do projeto: agrega custos diretos (equipes × BDI por categoria), custos indiretos (BDI-INDIRETO), calcula a margem e o preço de venda, reconcilia custos reais vs. catálogo (The Bridge, ADR-039) e gera os artefatos analíticos do espaço ontológico — Curva ABC, S-Curve, Cubo Analítico 4D e Memorial de Cálculo BDI (ADR-057/058).
 
 ## Quando ativar
 
-Após `06-precificacao-unitaria` ter calculado os preços unitários com BDI e `07-custos-indiretos` ter calculado os custos indiretos por categoria.
+Após `06-resultado-financeiro/_precificacao` ter calculado os preços unitários com BDI e `06-resultado-financeiro/_indiretos` ter calculado os custos indiretos por categoria.
 
 ## Inputs
 
@@ -31,9 +31,9 @@ Após `06-precificacao-unitaria` ter calculado os preços unitários com BDI e `
 ## Depende de
 
 **Skills predecessoras**:
-- [`05-equipes-e-alocacao`](../05-equipes-e-alocacao/SKILL.md) — `equipes_diretas` com custo breakdown
-- [`06-precificacao-unitaria`](../06-precificacao-unitaria/SKILL.md) — `planejamento` com PU × BDI por item
-- [`07-custos-indiretos`](../07-custos-indiretos/SKILL.md) — `indiretos`, `indiretos_semanal`, `indiretos_com_bdi`
+- [`05-equipes-e-alocacao`](../../05-equipes-e-alocacao/SKILL.md) — `equipes_diretas` com custo breakdown
+- [`_precificacao`](../_precificacao/SKILL.md) — `planejamento` com PU × BDI por item
+- [`_indiretos`](../_indiretos/SKILL.md) — `indiretos`, `indiretos_semanal`, `indiretos_com_bdi`
 
 ## Produz
 
@@ -62,8 +62,8 @@ Após `06-precificacao-unitaria` ter calculado os preços unitários com BDI e `
 ## Fórmula de resultado
 
 ```
-venda_total = Σ_items { PU_com_BDI × quantitativo }          # de planejamento (skill 06)
-            + Σ_indiretos { custo_indireto × (1 + BDI_INDIRETO) }  # de skill 07
+venda_total = Σ_items { PU_com_BDI × quantitativo }          # de planejamento (_precificacao)
+            + Σ_indiretos { custo_indireto × (1 + BDI_INDIRETO) }  # de _indiretos
 
 custo_total = Σ_items { PU_sem_BDI × quantitativo }
             + Σ_indiretos { custo_sem_bdi }
@@ -95,6 +95,6 @@ delta_operacional = N4 - N3        (ineficiência de gestão)
 
 ## Próximas skills no pipeline
 
-- [`10-relatorio-e-artefatos`](../10-relatorio-e-artefatos/SKILL.md)
-- [`07-diagnostico-criticidade`](../07-diagnostico-criticidade/SKILL.md)
-- [`13-assessor-replanejamento`](../13-assessor-replanejamento/SKILL.md)
+- [`10-relatorio-e-artefatos`](../../10-relatorio-e-artefatos/SKILL.md)
+- [`07-diagnostico-criticidade`](../../07-diagnostico-criticidade/SKILL.md)
+- [`11-replanejamento-e-cenarios`](../../11-replanejamento-e-cenarios) (assessor de replanejamento — sem SKILL.md próprio)

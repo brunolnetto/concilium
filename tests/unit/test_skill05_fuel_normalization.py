@@ -9,7 +9,7 @@ from types import SimpleNamespace
 def _load_skill05_helpers_a():
     root = Path(__file__).resolve().parents[2]
     mod_path = (
-        root / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a/__init__.py"
+        root / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
     )
     spec = importlib.util.spec_from_file_location("skill05_helpers_a_fuel", mod_path)
     mod = importlib.util.module_from_spec(spec)

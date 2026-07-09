@@ -1,4 +1,4 @@
-"""Coverage batch 38 — _consolidacao/_skill_helpers_a, _indiretos/_skill_helpers_b, _precificacao/_skill_helpers_a."""
+"""Coverage batch 38 — _consolidacao/_skill_helpers, _indiretos/_skill_helpers, _precificacao/_skill_helpers."""
 
 from __future__ import annotations
 
@@ -25,9 +25,9 @@ def _load(rel: str, name: str):
     return mod
 
 
-CONSOL = _load("_consolidacao/_skill_helpers_a.py", "consol_b38")
-INDIR = _load("_indiretos/_skill_helpers_b.py", "indir_b38")
-PREC = _load("_precificacao/_skill_helpers_a.py", "prec_b38")
+CONSOL = _load("_consolidacao/_skill_helpers/__init__.py", "consol_b38")
+INDIR = _load("_indiretos/_skill_helpers/__init__.py", "indir_b38")
+PREC = _load("_precificacao/_skill_helpers/__init__.py", "prec_b38")
 
 
 # ===========================================================================
@@ -585,47 +585,4 @@ class TestAsCategoriaIndireto:
             INDIR._as_categoria_indireto("BOGUS")
 
 
-class TestIndirBLoadLocalSpecNone:
-    """Line 59: explicit ImportError when spec_from_file_location fails for
-    _skill_helpers_a.py in the ImportError fallback path (module loaded
-    without a registered synthetic parent package, as done by `_load` above,
-    so the top-level relative import always fails and hits the fallback)."""
 
-    def test_raises_importerror_when_spec_a_is_none(self):
-        from unittest.mock import patch
-
-        import pytest
-
-        p = (_BASE / "_indiretos/_skill_helpers_b/__init__.py").resolve()
-        # Build the real spec/module *before* patching, so only the inner
-        # spec_from_file_location call (for _skill_helpers_a.py, made during
-        # exec_module) is affected by the patch below.
-        real_spec = importlib.util.spec_from_file_location(
-            "indir_b38_spec_none", p, submodule_search_locations=[str(p.parent)]
-        )
-        mod = importlib.util.module_from_spec(real_spec)
-        sys.modules["indir_b38_spec_none"] = mod
-
-        with patch("importlib.util.spec_from_file_location", return_value=None):
-            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
-                real_spec.loader.exec_module(mod)
-
-
-class TestConsolidacaoSkillLoadLocalSpecNone:
-    """_consolidacao/skill.py: when the relative import of `._skill_helpers_a`
-    fails (module loaded standalone, no synthetic parent package registered),
-    it falls back to spec_from_file_location — this covers the explicit
-    ImportError raised when that call returns None."""
-
-    def test_raises_importerror_when_spec_a_is_none(self):
-        from unittest.mock import patch
-
-        import pytest
-
-        p = (_BASE / "_consolidacao/skill.py").resolve()
-        real_spec = importlib.util.spec_from_file_location("consol_skill_b38_spec_none", p)
-        mod = importlib.util.module_from_spec(real_spec)
-
-        with patch("importlib.util.spec_from_file_location", return_value=None):
-            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
-                real_spec.loader.exec_module(mod)

@@ -18,6 +18,8 @@ nomes de helper).
 from __future__ import annotations
 
 import importlib.util
+import sys
+import types
 from pathlib import Path
 from typing import Any
 
@@ -28,13 +30,34 @@ _HERE = Path(__file__).resolve().parent
 
 
 def _load_estagio(subdir: str, func_name: str):
-    """Carrega a run function de um sub-pacote de estágio via importlib."""
-    path = _HERE / subdir / "skill.py"
-    spec = importlib.util.spec_from_file_location(f"resultado_financeiro_{subdir}", path)
+    """Carrega a run function de um sub-pacote de estágio via importlib.
+
+    Registra um pacote sintético apontando para o diretório do estágio (mesma
+    técnica de ``_ensure_skill_package`` em concilium/application/skills/__init__.py)
+    para que os imports relativos dentro de ``{subdir}/skill.py``
+    (``from ._skill_helpers_x import ...``) resolvam normalmente.
+    """
+    stage_dir = _HERE / subdir
+    path = stage_dir / "skill.py"
+    pkg_name = f"_concilium_resultado_financeiro_stage_{subdir.lstrip('_')}"
+    mod_name = f"{pkg_name}.skill"
+
+    if pkg_name not in sys.modules:
+        pkg = types.ModuleType(pkg_name)
+        pkg.__path__ = [str(stage_dir)]
+        pkg.__package__ = pkg_name
+        sys.modules[pkg_name] = pkg
+
+    spec = importlib.util.spec_from_file_location(mod_name, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Não foi possível carregar spec para estágio: {path}")
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    sys.modules[mod_name] = mod
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        sys.modules.pop(mod_name, None)
+        raise
     return getattr(mod, func_name)
 
 

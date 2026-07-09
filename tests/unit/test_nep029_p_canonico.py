@@ -7,23 +7,12 @@ Garante que P_engine = P_catalog por construção:
 
 from __future__ import annotations
 
-import importlib.util
 import sys
-from pathlib import Path
 
-_SKILL = Path(__file__).parent.parent.parent / "src/concilium/application/skills/manifests/04-cronograma/skill.py"
+from concilium.application.skills import run_cronograma as _run_cronograma
 
-
-def _load_skill() -> object:
-    spec = importlib.util.spec_from_file_location("_cron_nep029", _SKILL)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["_cron_nep029"] = mod
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
-
-
-_s = _load_skill()
+assert _run_cronograma
+_s = sys.modules["_concilium_skillpkg_04_cronograma.skill"]
 
 
 # ── _custo_hora_equipe ────────────────────────────────────────────────────────

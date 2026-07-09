@@ -1,4 +1,4 @@
-"""Skill 05 — Indiretos (ADR-009, ADR-023 §D4).
+"""Skill 06 (_indiretos) — Indiretos (ADR-009, ADR-023 §D4).
 
 Dimensiona custos indiretos com granularidade semanal.
 ADR-023 §D4: também emite IndiretoComBdi com BDI-INDIRETO aplicado sobre cada categoria.
@@ -30,65 +30,27 @@ from concilium.domain.models.canonical import (
 )
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-try:
-    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
-    # (see concilium/application/skills/__init__.py); ty cannot resolve this
-    # statically.
-    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]
-        _composicao_default_por_categoria,
-        _meses_entre,
-        _semanas_projeto,
-    )
-    from ._skill_helpers_b import (  # ty: ignore[unresolved-import]
-        _apply_bdi_to_indiretos,
-        _apply_dv4_scale_to_categoria,
-        _build_indireto_from_cat_obj,
-        _build_semanal_breakdown,
-        _count_pessoas_diretas,
-        _extract_dv4_policy,
-        _extract_overrides,
-        _get_pipeline_blocked,
-        _process_mob_categoria,
-        _resolve_categoria_comp,
-        _validate_dv4_policy,
-        _validate_razao_indireto_direto,
-    )
-except ImportError:
-    import importlib.util
-    import sys
-    from pathlib import Path
+from ._skill_helpers import (  # ty: ignore[unresolved-import]
+    _apply_bdi_to_indiretos,
+    _apply_dv4_scale_to_categoria,
+    _build_indireto_from_cat_obj,
+    _build_semanal_breakdown,
+    _count_pessoas_diretas,
+    _extract_dv4_policy,
+    _extract_overrides,
+    _get_pipeline_blocked,
+    _process_mob_categoria,
+    _resolve_categoria_comp,
+    _semanas_projeto,
+    _validate_dv4_policy,
+    _validate_razao_indireto_direto,
+)
+from ._skill_helpers import _dimensionamento as _mod_a  # ty: ignore[unresolved-import]
 
-    _here = Path(__file__).resolve().parent
-    _path_a = _here / "_skill_helpers_a.py"
-    _spec_a = importlib.util.spec_from_file_location("skill07_helpers_a", _path_a)
-    if _spec_a is None or _spec_a.loader is None:
-        raise ImportError(f"Não foi possível carregar spec para: {_path_a}") from None
-    _mod_a = importlib.util.module_from_spec(_spec_a)
-    _spec_a.loader.exec_module(_mod_a)
-
-    _path_b = _here / "_skill_helpers_b" / "__init__.py"
-    _spec_b = importlib.util.spec_from_file_location("skill07_helpers_b", _path_b)
-    if _spec_b is None or _spec_b.loader is None:
-        raise ImportError(f"Não foi possível carregar spec para: {_path_b}") from None
-    _mod_b = importlib.util.module_from_spec(_spec_b)
-    sys.modules["skill07_helpers_b"] = _mod_b  # necessário p/ imports relativos entre seus submódulos
-    _spec_b.loader.exec_module(_mod_b)
-
-    _composicao_default_por_categoria = _mod_a._composicao_default_por_categoria
-    _meses_entre = _mod_a._meses_entre
-    _semanas_projeto = _mod_a._semanas_projeto
-    _apply_bdi_to_indiretos = _mod_b._apply_bdi_to_indiretos
-    _apply_dv4_scale_to_categoria = _mod_b._apply_dv4_scale_to_categoria
-    _build_indireto_from_cat_obj = _mod_b._build_indireto_from_cat_obj
-    _build_semanal_breakdown = _mod_b._build_semanal_breakdown
-    _count_pessoas_diretas = _mod_b._count_pessoas_diretas
-    _extract_dv4_policy = _mod_b._extract_dv4_policy
-    _extract_overrides = _mod_b._extract_overrides
-    _get_pipeline_blocked = _mod_b._get_pipeline_blocked
-    _process_mob_categoria = _mod_b._process_mob_categoria
-    _resolve_categoria_comp = _mod_b._resolve_categoria_comp
-    _validate_dv4_policy = _mod_b._validate_dv4_policy
-    _validate_razao_indireto_direto = _mod_b._validate_razao_indireto_direto
+# Re-exports abaixo são consumidos apenas por testes de cobertura que acessam
+# funções internas dos helpers via este módulo (não usadas por run_custos_indiretos).
+_composicao_default_por_categoria = _mod_a._composicao_default_por_categoria
+_meses_entre = _mod_a._meses_entre
 
 # Fator padrão: 1 mês = 4.33 semanas
 # _SEMANAS_POR_MES agora importada de domain/constants.py (era 4.33, corrigido para 4.3482)

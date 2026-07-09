@@ -1,10 +1,10 @@
-"""Skill 03 — Equipes e Alocação (Consolidado).
+"""Skill 05 — Equipes e Alocação (Consolidado).
 
 Consolida:
-1. Dimensionamento de Equipes (antiga 03)
-2. Derivação de Requisitos (antiga 03A)
-3. Alocação de Recursos (antiga 03B)
-4. Validação de Compartilhamento (antiga 03C)
+1. Dimensionamento de Equipes
+2. Derivação de Requisitos
+3. Alocação de Recursos
+4. Validação de Compartilhamento
 
 Objetivo: Reduzir fragmentação e garantir consistência atômica entre dimensionamento e alocação.
 """
@@ -22,123 +22,38 @@ from concilium.domain.models.canonical import (
 )
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-# --- Utils de Dimensionamento (da Skill 03) ---
+# --- Utils de Dimensionamento (da Skill 05) ---
+# Import helper modules for test compatibility
+from . import _skill_helpers  # ty: ignore[unresolved-import]
+from ._skill_helpers import (  # ty: ignore[unresolved-import]
+    _aplicar_reconciliacao_planejamento,
+    _build_alocacoes_pool,
+    _build_dimensionamento,
+    _build_pool_setup,
+    _build_pre_processamento_compartilhamento,
+    _build_requisitos_e_tipos,
+    _deve_processar_compartilhamento,
+    _preencher_custo_inst_estagio_f3,
+    _processar_instancias_recurso,
+    _processar_oportunidades_paralelo,
+    _processar_pool_contratos,
+    _RepoCtx,
+    _resolve_planejamento_maps,
+    _resolve_rcpsp_spec,
+    _validar_estagio1_inst_none,
+)
 
-try:
-    from . import _skill_helpers_compartilhamento as _mod_compartilhamento  # ty: ignore[unresolved-import]
-    from . import _skill_helpers_instancias as _mod_instancias  # ty: ignore[unresolved-import]
-    from . import _skill_helpers_planejamento as _mod_planejamento  # ty: ignore[unresolved-import]
-    from . import _skill_helpers_pool as _mod_pool  # ty: ignore[unresolved-import]
-    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _build_dimensionamento,
-        _calcular_permanencia_e_custo_total,
-        _RepoCtx,
-        particionar_contrato,
-    )
-    from ._skill_helpers_b import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _build_alocacoes_pool,
-        _build_requisitos_e_tipos,
-    )
-    from ._skill_helpers_compartilhamento import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _deve_processar_compartilhamento,
-        _processar_oportunidades_paralelo,
-    )
-    from ._skill_helpers_instancias import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _preencher_custo_inst_estagio_f3,
-        _processar_instancias_recurso,
-    )
-    from ._skill_helpers_planejamento import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _aplicar_reconciliacao_planejamento,
-        _resolve_planejamento_maps,
-    )
-    from ._skill_helpers_pool import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _build_pool_setup,
-        _processar_pool_contratos,
-        _resolve_rcpsp_spec,
-        _validar_estagio1_inst_none,
-    )
-    from ._skill_helpers_pre import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _build_pre_processamento_compartilhamento,
-    )
-except ImportError:
-    import importlib.util
-    import sys
-    import types
-    from pathlib import Path
+_mod_compartilhamento = _skill_helpers.compartilhamento
+_mod_instancias = _skill_helpers.instancias
+_mod_planejamento = _skill_helpers.planejamento
+_mod_pool = _skill_helpers.pool
 
-    _here = Path(__file__).resolve().parent
-    _spec_a = importlib.util.spec_from_file_location(
-        "skill05_helpers_a", _here / "_skill_helpers_a" / "__init__.py"
-    )
-    if _spec_a is None or _spec_a.loader is None:
-        raise ImportError("Cannot load _skill_helpers_a.py via importlib") from None
-    _mod_a = importlib.util.module_from_spec(_spec_a)
-    sys.modules["skill05_helpers_a"] = _mod_a  # necessário p/ imports relativos entre seus submódulos
-    _spec_a.loader.exec_module(_mod_a)
-
-    _spec_b = importlib.util.spec_from_file_location("skill05_helpers_b", _here / "_skill_helpers_b.py")
-    if _spec_b is None or _spec_b.loader is None:
-        raise ImportError("Cannot load _skill_helpers_b.py via importlib") from None
-    _mod_b = importlib.util.module_from_spec(_spec_b)
-    _spec_b.loader.exec_module(_mod_b)
-
-    _spec_pre = importlib.util.spec_from_file_location(
-        "skill05_helpers_pre", _here / "_skill_helpers_pre" / "__init__.py"
-    )
-    if _spec_pre is None or _spec_pre.loader is None:
-        raise ImportError("Cannot load _skill_helpers_pre.py via importlib") from None
-    _mod_pre = importlib.util.module_from_spec(_spec_pre)
-    sys.modules["skill05_helpers_pre"] = _mod_pre  # necessário p/ imports relativos entre seus submódulos
-    _spec_pre.loader.exec_module(_mod_pre)
-
-    # Os submódulos extraídos de skill.py (_skill_helpers_planejamento/pool/
-    # instancias/compartilhamento) fazem imports relativos entre si e para
-    # _skill_helpers_a/_skill_helpers_pre (ex.: _skill_helpers_instancias importa
-    # de _skill_helpers_planejamento e de _skill_helpers_a). Para que essas
-    # referências resolvam quando skill.py é carregado standalone, registramos
-    # aqui um pacote sintético mínimo — mesma técnica de `_ensure_skill_package`.
-    _pkg_name = "_skill05_equipes_helpers"
-    if _pkg_name not in sys.modules:
-        _pkg = types.ModuleType(_pkg_name)
-        _pkg.__path__ = [str(_here)]
-        _pkg.__package__ = _pkg_name
-        sys.modules[_pkg_name] = _pkg
-
-    def _load_sibling(short_name: str, filename: str):
-        mod_name = f"{_pkg_name}.{short_name}"
-        if mod_name in sys.modules:
-            return sys.modules[mod_name]
-        spec = importlib.util.spec_from_file_location(mod_name, _here / filename)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Cannot load {filename} via importlib") from None
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[mod_name] = mod
-        spec.loader.exec_module(mod)
-        return mod
-
-    _mod_planejamento = _load_sibling("_skill_helpers_planejamento", "_skill_helpers_planejamento.py")
-    _mod_pool = _load_sibling("_skill_helpers_pool", "_skill_helpers_pool.py")
-    _mod_instancias = _load_sibling("_skill_helpers_instancias", "_skill_helpers_instancias.py")
-    _mod_compartilhamento = _load_sibling("_skill_helpers_compartilhamento", "_skill_helpers_compartilhamento.py")
-
-    _RepoCtx = _mod_a._RepoCtx
-    _build_dimensionamento = _mod_a._build_dimensionamento
-    _calcular_permanencia_e_custo_total = _mod_a._calcular_permanencia_e_custo_total
-    particionar_contrato = _mod_a.particionar_contrato
-    _build_alocacoes_pool = _mod_b._build_alocacoes_pool
-    _build_requisitos_e_tipos = _mod_b._build_requisitos_e_tipos
-    _build_pre_processamento_compartilhamento = _mod_pre._build_pre_processamento_compartilhamento
-    _resolve_planejamento_maps = _mod_planejamento._resolve_planejamento_maps
-    _aplicar_reconciliacao_planejamento = _mod_planejamento._aplicar_reconciliacao_planejamento
-    _validar_estagio1_inst_none = _mod_pool._validar_estagio1_inst_none
-    _build_pool_setup = _mod_pool._build_pool_setup
-    _resolve_rcpsp_spec = _mod_pool._resolve_rcpsp_spec
-    _processar_pool_contratos = _mod_pool._processar_pool_contratos
-    _processar_instancias_recurso = _mod_instancias._processar_instancias_recurso
-    _preencher_custo_inst_estagio_f3 = _mod_instancias._preencher_custo_inst_estagio_f3
-    _deve_processar_compartilhamento = _mod_compartilhamento._deve_processar_compartilhamento
-    _processar_oportunidades_paralelo = _mod_compartilhamento._processar_oportunidades_paralelo
-
+# Re-export abaixo é consumido apenas por testes de cobertura que acessam a
+# função interna do helper via este módulo (não usada por run_equipes_e_alocacao).
+_calcular_permanencia_e_custo_total = _skill_helpers._calcular_permanencia_e_custo_total
+_mod_a = None  # No longer used in new structure, kept for compatibility
+_mod_b = None  # No longer used in new structure, kept for compatibility
+_mod_pre = None  # No longer used in new structure, kept for compatibility
 
 def run_equipes_e_alocacao(
     canonical_in: CanonicalModel,

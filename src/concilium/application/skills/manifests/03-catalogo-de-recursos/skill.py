@@ -1,4 +1,4 @@
-"""Skill 01A — Declarar Recursos.
+"""Skill 03 — Declarar Recursos.
 
 Declara catálogo de tipos de recurso e pool inicial do projeto.
 Esta skill roda antes do cronograma e não cria requisitos por atividade.

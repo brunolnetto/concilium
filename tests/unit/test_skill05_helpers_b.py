@@ -39,7 +39,8 @@ _HELPERS_PATH = str(
     / "skills"
     / "manifests"
     / "05-equipes-e-alocacao"
-    / "_skill_helpers_b.py"
+    / "_skill_helpers"
+    / "b.py"
 )
 
 

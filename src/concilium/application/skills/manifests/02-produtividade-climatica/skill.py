@@ -1,4 +1,4 @@
-"""Skill 01 — Praticabilidade.
+"""Skill 02 — Praticabilidade.
 
 Calcula o percentual produtivo semanal (e mensal, retrocompat) a partir de:
 - Coordenadas geográficas do projeto

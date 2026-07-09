@@ -1,4 +1,4 @@
-"""Skill 06 — Consolidação Financeira (Consolidada).
+"""Skill 06 (_consolidacao) — Consolidação Financeira (Consolidada).
 
 Consolida:
 1. Consolidação de Resultado (antiga 06)
@@ -20,72 +20,20 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-try:
-    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
-    # (see concilium/application/skills/__init__.py); ty cannot resolve this
-    # statically.
-    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]
-        _build_bridge_from_pe,
-        _build_custos_atividades,
-        _build_diagnostico_pe,
-        _build_ponto_equilibrio,
-        _build_resultado,
-    )
-    from ._skill_helpers_b import (  # ty: ignore[unresolved-import]
-        _build_abc_analytics,
-        _build_memorial_bdi,
-        _classificar_margem,
-    )
-except ImportError:
-    import importlib.util
-    import sys
-    import types
-    from pathlib import Path
+from ._skill_helpers import _bdi_resolucao as _mod_b  # ty: ignore[unresolved-import]
+from ._skill_helpers import (  # ty: ignore[unresolved-import]
+    _build_abc_analytics,
+    _build_bridge_from_pe,
+    _build_custos_atividades,
+    _build_diagnostico_pe,
+    _build_memorial_bdi,
+    _build_ponto_equilibrio,
+    _build_resultado,
+)
 
-    _here = Path(__file__).resolve().parent
-
-    # _skill_helpers_a é um pacote cujo submódulo _resultado.py faz
-    # `from .._skill_helpers_b import ...` (dois níveis: sobe do próprio
-    # pacote até o diretório da skill, onde _skill_helpers_b.py vive como
-    # sibling). Para que isso resolva quando skill.py é carregado standalone,
-    # registramos um pacote sintético para _consolicao (mesma técnica de
-    # `_ensure_skill_package`) e carregamos _skill_helpers_a como submódulo
-    # dele — replicando a hierarquia real usada em produção.
-    _synth_pkg_name = "_skill08_consolidacao_synth"
-    if _synth_pkg_name not in sys.modules:
-        _synth_pkg = types.ModuleType(_synth_pkg_name)
-        _synth_pkg.__path__ = [str(_here)]
-        _synth_pkg.__package__ = _synth_pkg_name
-        sys.modules[_synth_pkg_name] = _synth_pkg
-
-    # _skill_helpers_b é carregado ANTES de _skill_helpers_a (registrado no
-    # pacote sintético) para que o import relativo `from .._skill_helpers_b`
-    # dentro de _skill_helpers_a/_resultado.py encontre o módulo já em
-    # sys.modules em vez de tentar (e potencialmente duplicar) o carregamento.
-    _path_b = _here / "_skill_helpers_b.py"
-    _spec_b = importlib.util.spec_from_file_location(f"{_synth_pkg_name}._skill_helpers_b", _path_b)
-    if _spec_b is None or _spec_b.loader is None:
-        raise ImportError(f"Não foi possível carregar spec para: {_path_b}") from None
-    _mod_b = importlib.util.module_from_spec(_spec_b)
-    sys.modules[f"{_synth_pkg_name}._skill_helpers_b"] = _mod_b
-    _spec_b.loader.exec_module(_mod_b)
-
-    _path_a = _here / "_skill_helpers_a" / "__init__.py"
-    _spec_a = importlib.util.spec_from_file_location(f"{_synth_pkg_name}._skill_helpers_a", _path_a)
-    if _spec_a is None or _spec_a.loader is None:
-        raise ImportError(f"Não foi possível carregar spec para: {_path_a}") from None
-    _mod_a = importlib.util.module_from_spec(_spec_a)
-    sys.modules[f"{_synth_pkg_name}._skill_helpers_a"] = _mod_a
-    _spec_a.loader.exec_module(_mod_a)
-
-    _build_bridge_from_pe = _mod_a._build_bridge_from_pe
-    _build_custos_atividades = _mod_a._build_custos_atividades
-    _build_diagnostico_pe = _mod_a._build_diagnostico_pe
-    _build_ponto_equilibrio = _mod_a._build_ponto_equilibrio
-    _build_resultado = _mod_a._build_resultado
-    _build_abc_analytics = _mod_b._build_abc_analytics
-    _build_memorial_bdi = _mod_b._build_memorial_bdi
-    _classificar_margem = _mod_b._classificar_margem
+# Re-export abaixo é consumido apenas por testes de cobertura que acessam a
+# função interna do helper via este módulo (não usada por run_consolidacao_financeira).
+_classificar_margem = _mod_b._classificar_margem
 
 
 def run_consolidacao_financeira(

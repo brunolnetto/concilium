@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import importlib.util
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,11 +12,11 @@ from concilium.application.skills import run_relatorio_e_artefatos
 # ---------------------------------------------------------------------------
 
 _ = run_relatorio_e_artefatos
-_MOD = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_a"]
+_MOD = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers"]
 _MOD_SKILL = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos.skill"]
 
 # Extract names used in patch() calls (need the dotted module path)
-_PATCH_PREFIX = "_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_a"
+_PATCH_PREFIX = "_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers"
 
 # Extract functions for direct use
 _bgs_normalize_funcao_label = _MOD._bgs_normalize_funcao_label
@@ -1530,68 +1528,6 @@ def _make_equipe_direta(
     eq.custo_material_mensal = custo_material_mensal
     eq.custo_combustivel_total_mensal = custo_combustivel_total_mensal
     return eq
-
-
-class TestSkillModuleImportErrorFallback:
-    """Cobre o try/except ImportError de skill.py (linhas 20-56 e 58-73):
-    quando carregado sem contexto de pacote (import relativo falha), o
-    fallback via importlib.util.spec_from_file_location assume — e se esse
-    spec falhar especificamente para um dos dois helpers, o ImportError
-    explícito (linha 41 / linha 70) é levantado."""
-
-    _SKILL_PATH = (
-        Path(__file__).resolve().parent.parent.parent
-        / "src"
-        / "concilium"
-        / "application"
-        / "skills"
-        / "manifests"
-        / "10-relatorio-e-artefatos"
-        / "skill.py"
-    )
-
-    def _load_standalone(self):
-        """Carrega skill.py como módulo solto (sem pacote pai) — força
-        `from ._skill_helpers_a import ...` a levantar ImportError, entrando
-        no bloco except (fallback via importlib)."""
-        spec = importlib.util.spec_from_file_location("skill10_standalone_test", self._SKILL_PATH)
-        assert spec and spec.loader
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
-
-    def test_fallback_happy_path_loads_helpers(self):
-        """Sem mocks: o fallback via importlib carrega _skill_helpers_a e
-        _skill_helpers_executivo com sucesso (branches 40->41 e 69->70 falsos)."""
-        mod = self._load_standalone()
-        assert callable(mod.run_relatorio_e_artefatos)
-        assert callable(mod.build_relatorio_executivo)
-
-    def test_spec_none_for_skill_helpers_a_raises_import_error(self):
-        """Linha 41: spec_from_file_location retorna None para _skill_helpers_a/__init__.py."""
-        orig_spec = importlib.util.spec_from_file_location
-
-        def fake_spec(name, path, *args, **kwargs):
-            if str(path).endswith(str(Path("_skill_helpers_a") / "__init__.py")):
-                return None
-            return orig_spec(name, path, *args, **kwargs)
-
-        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
-            with pytest.raises(ImportError, match="Cannot load _skill_helpers_a via importlib"):
-                self._load_standalone()
-
-    def test_spec_none_for_skill_helpers_executivo_raises_import_error(self):
-        """Linha 70: spec_from_file_location retorna None para _skill_helpers_executivo.py."""
-        orig_spec = importlib.util.spec_from_file_location
-
-        def fake_spec(name, path, *args, **kwargs):
-            if str(path).endswith("_skill_helpers_executivo.py"):
-                return None
-            return orig_spec(name, path, *args, **kwargs)
-
-        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
-            with pytest.raises(ImportError, match="Cannot load _skill_helpers_executivo.py"):
-                self._load_standalone()
 
 
 class TestAsBoolStringUnrecognized:

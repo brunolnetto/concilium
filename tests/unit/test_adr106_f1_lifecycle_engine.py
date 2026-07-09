@@ -11,7 +11,8 @@ F1 cobre:
   - CustoEquipeDecomposicao dataclass com campos corretos e default=0.0
   - LifecycleEngine.calcular() → CustoEquipeDecomposicao
   - calcular_custo_instancia_composicional movida para o engine (compatibilidade)
-  - Paridade numérica com a implementação atual em _05_equipes_custo_helpers.py
+  - Paridade numérica com a implementação atual em
+    05-equipes-e-alocacao/_skill_helpers/_custo_diferenciado_permanencia.py
 """
 
 from __future__ import annotations
@@ -226,9 +227,13 @@ class TestParidadeComHelperExistente:
     """Engine deve produzir mesmos números que calcular_custo_instancia_composicional atual."""
 
     def test_paridade_numerica(self):
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-            calcular_custo_instancia_composicional as calc_atual,
-        )
+        import sys
+
+        from concilium.application.skills import run_equipes_e_alocacao as _trigger
+
+        assert _trigger
+        _skill05_helpers = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
+        calc_atual = _skill05_helpers.calcular_custo_instancia_composicional
 
         _, Engine = _import()
         engine = Engine()

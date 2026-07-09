@@ -1,9 +1,9 @@
 ﻿---
-name: 07-custos-indiretos
+name: 06-resultado-financeiro-indiretos
 description: Use when sizing the indirect project structure (administration, topography, lab, quality, mobilization) based on project duration and direct operation size.
 ---
 
-# Skill 05 — Indiretos
+# Skill 06 — Indiretos
 
 Dimensiona a estrutura indireta da obra (administração, topografia, laboratório, qualidade, mobilização) com base no prazo total e no tamanho da operação direta. Categorias específicas vêm do perfil de construtora.
 
@@ -28,8 +28,8 @@ Após `equipes-diretas` (precisa do tamanho da equipe direta para dimensionar mo
 ## Depende de
 
 **Skills predecessoras**:
-- [`04-cronograma`](../04-cronograma/SKILL.md) — para prazo total da obra
-- [`03-equipes-diretas`](../03-equipes-diretas/SKILL.md) — para tamanho da equipe direta (input para baixadas, alimentação, plano de saúde)
+- [`04-cronograma`](../../04-cronograma/SKILL.md) — para prazo total da obra
+- [`05-equipes-e-alocacao`](../../05-equipes-e-alocacao/SKILL.md) — para tamanho da equipe direta (input para baixadas, alimentação, plano de saúde)
 
 **Recursos consumidos**:
 - `perfis/agis.json` — quais categorias de indireto a construtora dimensiona (ADM, TOP, LAB, QSMS, MOB)
@@ -131,4 +131,4 @@ para cada categoria em perfil.categorias_indireto:
 
 ## Próxima skill no pipeline
 
--> [`06-consolidar`](../06-consolidar/SKILL.md)
+-> [`_consolidacao`](../_consolidacao/SKILL.md)

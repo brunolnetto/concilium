@@ -5,6 +5,9 @@ Targets remaining missing lines identified from .coverage data:
 1020->1031, 1031->1034, 1401-1408, 1448-1451, 1455, 1607->1592,
 1689, 1770-1777, 1788-1791, 1905-1912, 1946->1943, 2001, 2032-2037,
 2137-2148, 2216-2217, 2234->2237
+
+Import strategy: Load skill via concilium.application.skills so that sys.modules
+is properly populated with the module loaded via importlib.
 """
 
 from __future__ import annotations
@@ -15,6 +18,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from concilium.application.skills import run_cronograma  # Trigger module loading via importlib
 
 _MOD_NAME = "_concilium_skillpkg_04_cronograma.skill"
 _MOD = sys.modules[_MOD_NAME]
@@ -32,7 +37,6 @@ _determine_mode_and_distribuicao = _MOD._determine_mode_and_distribuicao
 _process_single_wmp_policy = _MOD._process_single_wmp_policy
 _build_scheduled_activities = _MOD._build_scheduled_activities
 _build_intervalos_and_campanhas = _MOD._build_intervalos_and_campanhas
-run_cronograma = _MOD.run_cronograma
 _compute_productive_weeks = _MOD._compute_productive_weeks
 _enrich_spec_resources_from_catalog = _MOD._enrich_spec_resources_from_catalog
 _rasfc_extract_inputs = _MOD._rasfc_extract_inputs

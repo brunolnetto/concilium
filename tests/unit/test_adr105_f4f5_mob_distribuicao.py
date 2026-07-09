@@ -31,7 +31,7 @@ def _import():
         / "manifests"
         / "06-resultado-financeiro"
         / "_indiretos"
-        / "_skill_helpers_b"
+        / "_skill_helpers"
         / "__init__.py"
     )
     spec = importlib.util.spec_from_file_location("skill_helpers_b", p, submodule_search_locations=[str(p.parent)])

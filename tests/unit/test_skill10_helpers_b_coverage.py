@@ -16,10 +16,10 @@ import pytest
 from concilium.application.skills import run_relatorio_e_artefatos  # noqa: F401  triggers registration
 
 # Ensure the helpers_b sub-module is loaded (it's lazily imported inside helpers_a)
-if "_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_b" not in sys.modules:
-    importlib.import_module("_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_b")
+if "_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers._b" not in sys.modules:
+    importlib.import_module("_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers._b")
 
-_MOD = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_b"]
+_MOD = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers._b"]
 
 _add_part_cost = _MOD._add_part_cost
 _build_particao_by_item = _MOD._build_particao_by_item
@@ -131,7 +131,7 @@ class TestBuildPesosSemana:
         assert result == {}
 
     def test_valid_peso_and_ym_accumulated(self):
-        _week_to_month = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_a"]._week_to_month
+        _week_to_month = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers"]._week_to_month
         ym = _week_to_month("2024-W01")
         dist = {"2024-W01": SimpleNamespace(num_equipes=3.0)}
         result_dict = {ym: 0.0}

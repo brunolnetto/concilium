@@ -1,4 +1,4 @@
-"""Skill 10 — Intervention ROI Matrix.
+"""Skill 08 — Intervention ROI Matrix.
 
 Avalia intervenções propostas em três dimensões independentes:
 ROI, Effort e Risk. Apresenta como matriz de decisão — sem score combinado.

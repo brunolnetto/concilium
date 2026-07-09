@@ -1,4 +1,4 @@
-"""Skill 04 — Planejamento e BDI.
+"""Skill 06 (_precificacao) — Planejamento e BDI.
 
 Calcula preço unitário (sem e com BDI) por item da EAP, decomposto em 4 categorias:
 material, diesel, mão de obra, equipamentos (ADR-023: BDI auditável via TabelaBdi).
@@ -32,41 +32,12 @@ from concilium.domain.models.canonical import (
 from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-try:
-    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
-    # (see concilium/application/skills/__init__.py); ty cannot resolve this
-    # statically.
-    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]
-        _build_equipe_lookup,
-        _build_lookups,
-        _process_eap_item,
-        _validate_coverage,
-    )
-except ImportError:
-    # Sempre o caminho tomado em produção: o loader do skill pai (06-resultado-
-    # financeiro/skill.py::_load_estagio, e também load_skill_stage() do
-    # otimizador) carrega este módulo via spec_from_file_location com um nome
-    # sintético sem pacote pai registrado — __package__ fica "" e o import
-    # relativo acima sempre falha. Mantido como try/except (em vez de ir direto
-    # pro importlib) só como defesa caso o loader um dia passe a registrar o
-    # pacote pai corretamente (mesmo padrão em _consolidacao/skill.py e
-    # _indiretos/skill.py, que não têm pragma por serem igualmente cobertos).
-    import importlib.util
-    import sys
-    from pathlib import Path
-
-    _here = Path(__file__).resolve().parent
-    _path = _here / "_skill_helpers_a" / "__init__.py"
-    _spec = importlib.util.spec_from_file_location("skill06_helpers_a", _path)
-    if _spec is None or _spec.loader is None:
-        raise ImportError(f"Não foi possível carregar spec para: {_path}") from None
-    _mod = importlib.util.module_from_spec(_spec)
-    sys.modules["skill06_helpers_a"] = _mod  # necessário p/ imports relativos entre seus submódulos
-    _spec.loader.exec_module(_mod)
-    _build_equipe_lookup = _mod._build_equipe_lookup
-    _build_lookups = _mod._build_lookups
-    _process_eap_item = _mod._process_eap_item
-    _validate_coverage = _mod._validate_coverage
+from ._skill_helpers import (  # ty: ignore[unresolved-import]
+    _build_equipe_lookup,
+    _build_lookups,
+    _process_eap_item,
+    _validate_coverage,
+)
 
 _CATEGORIA_MAP = {
     "material": "material",

@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
 
-import pytest
 from openpyxl import Workbook
 
 # ---------------------------------------------------------------------------
@@ -77,37 +73,6 @@ class TestAsBool:
 
 
 # ---------------------------------------------------------------------------
-# _precificacao/skill.py line 61: raise ImportError when the fallback
-# spec_from_file_location for _skill_helpers_a.py comes back without a loader.
-# ---------------------------------------------------------------------------
-
-
-class TestPrecificacaoSkillFallbackSpecNone:
-    def test_raises_import_error_when_helpers_spec_is_none(self):
-        skill_path = Path(
-            "src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/skill.py"
-        ).resolve()
-        real_spec_from_file_location = importlib.util.spec_from_file_location
-
-        def _fake_spec(name, path, *args, **kwargs):
-            if str(path).endswith(str(Path("_skill_helpers_a") / "__init__.py")):
-                return None
-            return real_spec_from_file_location(name, path, *args, **kwargs)
-
-        # Synthetic module name with no dot -> __package__ ends up falsy, so the
-        # relative `from ._skill_helpers_a import ...` fails just like in
-        # production (see module docstring), forcing the except-ImportError
-        # fallback path that this test targets.
-        spec = real_spec_from_file_location("skill06_precificacao_fallback_test", skill_path)
-        assert spec is not None and spec.loader is not None
-        mod = importlib.util.module_from_spec(spec)
-
-        with patch("importlib.util.spec_from_file_location", side_effect=_fake_spec):
-            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
-                spec.loader.exec_module(mod)
-
-
-# ---------------------------------------------------------------------------
 # _precificacao/skill.py lines 290, 294: run_precificacao_unitaria
 # erros_eap and erros_insumo blocks triggered
 # ---------------------------------------------------------------------------
@@ -172,17 +137,14 @@ class TestRunPrecificacaoErros:
 
     def test_erros_insumo_triggers_val_plan_insumo(self):
         """Line 294: erros_insumo non-empty → VAL-PLAN-INSUMO appended."""
-        import importlib
-        import importlib.util
-        from pathlib import Path
+        import sys
 
-        # Load the skill module directly so we can monkeypatch _process_eap_item
-        skill_path = Path(
-            "src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/skill.py"
-        ).resolve()
-        spec = importlib.util.spec_from_file_location("_precif_skill_b34", skill_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        from concilium.application.skills import load_skill_stage
+
+        # Load the skill module via o loader real de estágios para poder
+        # monkeypatch _process_eap_item.
+        fn = load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
+        mod = sys.modules[fn.__module__]
 
         # Replace _process_eap_item to inject erros_insumo
         def _fake_process(

@@ -24,6 +24,7 @@ Linhas alvo:
 
 from __future__ import annotations
 
+import warnings
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -178,7 +179,12 @@ class TestSetupLoggingHandlerFallbackImport:
             patch("opentelemetry._logs.set_logger_provider"),
             patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
             patch.object(builtins, "__import__", side_effect=_fake_import),
+            # The fallback path instantiates the deprecated sdk._logs._internal.LoggingHandler
+            # on purpose (that's exactly what this test exercises) — its DeprecationWarning
+            # is expected here, not a signal to fix.
+            warnings.catch_warnings(),
         ):
+            warnings.simplefilter("ignore", DeprecationWarning)
             tel._setup_logging()
 
 

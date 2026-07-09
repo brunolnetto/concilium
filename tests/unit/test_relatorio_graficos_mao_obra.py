@@ -9,7 +9,7 @@ from types import SimpleNamespace
 def _load_helpers_a():
     root = Path(__file__).resolve().parents[2]
     helper = (
-        root / "src/concilium/application/skills/manifests/10-relatorio-e-artefatos/_skill_helpers_a/__init__.py"
+        root / "src/concilium/application/skills/manifests/10-relatorio-e-artefatos/_skill_helpers/__init__.py"
     )
     spec = importlib.util.spec_from_file_location(
         "_skill_helpers_a_09_graficos", helper, submodule_search_locations=[str(helper.parent)]

@@ -215,25 +215,10 @@ class TestResolveBdiPriority:
         return _resolve_bdi(inputs, validacoes_out), validacoes_out
 
     def _import_resolve_bdi(self):
-        """Import _resolve_bdi; skip test if skill module not importable."""
-        try:
-            import importlib
+        """Import _resolve_bdi via o loader real de estágios (NEP-041)."""
+        from concilium.application.skills import load_skill_stage
 
-            mod = importlib.import_module("concilium.application.skills.manifests.04_planejamento_bdi.skill")
-            return mod._resolve_bdi
-        except Exception:
-            # Try alternate import path
-            import importlib.util
-            from pathlib import Path
-
-            skill_path = (
-                Path(__file__).parent.parent.parent
-                / "src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/skill.py"
-            )
-            spec = importlib.util.spec_from_file_location("skill_04", skill_path)
-            mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-            spec.loader.exec_module(mod)  # type: ignore[union-attr]
-            return mod._resolve_bdi
+        return load_skill_stage("06-resultado-financeiro", "_precificacao", "_resolve_bdi")
 
     def test_override_manual_wins_over_default(self):
         """bdi_aplicado in inputs overrides DEFAULT_BDI_TABELA."""
@@ -358,17 +343,9 @@ class TestSkill05IndiretosBdiEmission:
     """Integration: skill 05 produces indiretos_com_bdi."""
 
     def _load_skill05(self):
-        import importlib.util
-        from pathlib import Path
+        from concilium.application.skills import load_skill_stage
 
-        skill_path = (
-            Path(__file__).parent.parent.parent
-            / "src/concilium/application/skills/manifests/06-resultado-financeiro/_indiretos/skill.py"
-        )
-        spec = importlib.util.spec_from_file_location("skill_05", skill_path)
-        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
-        return mod.run_custos_indiretos
+        return load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
 
     def _minimal_perfil(self) -> dict:
         return {
@@ -528,24 +505,9 @@ class TestSkill04EquipamentoDecomp:
     """ADR-023 §D3: skill 04 uses decomposicao_equip when available."""
 
     def _load_skill04(self):
-        import importlib.util
-        import pathlib
+        from concilium.application.skills import load_skill_stage
 
-        path = (
-            pathlib.Path(__file__).parent.parent.parent
-            / "src"
-            / "concilium"
-            / "application"
-            / "skills"
-            / "manifests"
-            / "06-resultado-financeiro"
-            / "_precificacao"
-            / "skill.py"
-        )
-        spec = importlib.util.spec_from_file_location("skill_04", path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod.run_precificacao_unitaria
+        return load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
 
     def _make_canonical_with_eap(self):
         from concilium.domain.models.canonical import EapItem

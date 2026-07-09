@@ -22,8 +22,11 @@ import pytest
 # ---------------------------------------------------------------------------
 # Module loading via proper import (enables coverage tracking)
 # ---------------------------------------------------------------------------
+import concilium.application.skills as _skills_pkg
 
-_MOD = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers_a"]
+_ = _skills_pkg.run_equipes_e_alocacao  # trigger lazy load so _skill_helpers lands in sys.modules
+
+_MOD = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
 
 # Pull names we want to test
 _getfloat_d = _MOD._getfloat_d

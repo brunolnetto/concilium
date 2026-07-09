@@ -87,17 +87,16 @@ def _make_criticidade_result(n: int = 3):
 
 
 def _load_skill(number_dash_name: str):
-    """Load a skill.py module by skill-id string."""
-    import importlib.util
-    from pathlib import Path
+    """Load a skill.py module by skill-id string, via the production loader.
 
-    skill_path = (
-        Path(__file__).parent.parent.parent / f"src/concilium/application/skills/manifests/{number_dash_name}/skill.py"
-    )
-    spec = importlib.util.spec_from_file_location(f"skill_{number_dash_name}", skill_path)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
+    skill.py uses relative imports (`from ._skill_helpers_x import ...`) that
+    require a real parent package, so it must be loaded through
+    `concilium.application.skills._load_skill_module` rather than standalone
+    via `importlib.util.spec_from_file_location`.
+    """
+    from concilium.application.skills import _load_skill_module
+
+    return _load_skill_module(number_dash_name)
 
 
 # ── Relatório Executivo (NEP-041 Fase 1: absorvido em skill-09) ─────────────
@@ -117,7 +116,7 @@ class TestSkill15RelatorioCriticidade:
         path = (
             Path(__file__).resolve().parents[2]
             / "src/concilium/application/skills/manifests"
-            / "10-relatorio-e-artefatos/_skill_helpers_executivo.py"
+            / "10-relatorio-e-artefatos/_skill_helpers/_executivo.py"
         )
         spec = importlib.util.spec_from_file_location("sk09_exec", path)
         mod = importlib.util.module_from_spec(spec)

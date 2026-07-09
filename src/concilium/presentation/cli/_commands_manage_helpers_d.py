@@ -19,7 +19,9 @@ from concilium.presentation.mcp._context import _config_root, _runtime
 
 def _build_schema_validators(schema_root: Path) -> tuple:
     """Loads JSON schemas and builds Draft 2020-12 validators. Raises typer.Exit(2) on missing files."""
-    from jsonschema import Draft202012Validator, RefResolver
+    from jsonschema import Draft202012Validator
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT202012
 
     cpu_schema_path = schema_root / "cpu.schema.json"
     prod_schema_path = schema_root / "producao.schema.json"
@@ -33,17 +35,15 @@ def _build_schema_validators(schema_root: Path) -> tuple:
     insumo_schema = json.loads(insumo_schema_path.read_text(encoding="utf-8"))
     common_path = schema_root / "common.schema.json"
     extra = [json.loads(common_path.read_text(encoding="utf-8"))] if common_path.exists() else []
-    base_uri = schema_root.resolve().as_uri() + "/"
-    schema_store = {s["$id"]: s for s in [cpu_schema, prod_schema, insumo_schema, *extra] if "$id" in s}
-    cpu_v = Draft202012Validator(
-        cpu_schema, resolver=RefResolver(base_uri=base_uri, referrer=cpu_schema, store=schema_store)
-    )
-    prod_v = Draft202012Validator(
-        prod_schema, resolver=RefResolver(base_uri=base_uri, referrer=prod_schema, store=schema_store)
-    )
-    ins_v = Draft202012Validator(
-        insumo_schema, resolver=RefResolver(base_uri=base_uri, referrer=insumo_schema, store=schema_store)
-    )
+    resources = [
+        Resource.from_contents(s, default_specification=DRAFT202012)
+        for s in [cpu_schema, prod_schema, insumo_schema, *extra]
+        if "$id" in s
+    ]
+    registry = Registry().with_resources((r.id(), r) for r in resources)  # type: ignore[arg-type]
+    cpu_v = Draft202012Validator(cpu_schema, registry=registry)
+    prod_v = Draft202012Validator(prod_schema, registry=registry)
+    ins_v = Draft202012Validator(insumo_schema, registry=registry)
     return cpu_v, prod_v, ins_v
 
 

@@ -3,7 +3,7 @@ name: 02-produtividade-climatica
 description: Use when calculating the monthly productive percentage of the project from geographic coordinates, work schedule, and historical climate data.
 ---
 
-# Skill 01 — Praticabilidade
+# Skill 02 — Praticabilidade
 
 Calcula o percentual produtivo mensal da obra a partir de coordenadas geográficas, regime de trabalho e dados climáticos históricos. Primeira skill do pipeline, consumida pela `cronograma`.
 

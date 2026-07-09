@@ -15,7 +15,8 @@ import pytest
 # ---------------------------------------------------------------------------
 _MOD_PATH = (
     Path(__file__).parent.parent.parent
-    / "src/concilium/application/skills/manifests/06-resultado-financeiro/_consolidacao/_skill_helpers_b.py"
+    / "src/concilium/application/skills/manifests/06-resultado-financeiro"
+    / "_consolidacao/_skill_helpers/_bdi_resolucao.py"
 )
 
 

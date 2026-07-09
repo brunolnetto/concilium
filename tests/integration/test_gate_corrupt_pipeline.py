@@ -210,44 +210,22 @@ class TestGateCorruptPipeline:
 
 
 def _import_05_indiretos():
-    """Import run_custos_indiretos from the skill module, working around dashes in path."""
-    import importlib.util
-    from pathlib import Path
+    """Import run_custos_indiretos from the skill module (dashes in path require the
+    production stage loader so relative imports inside skill.py resolve correctly)."""
+    import sys
 
-    skill_path = (
-        Path(__file__).parent.parent.parent
-        / "src"
-        / "concilium"
-        / "application"
-        / "skills"
-        / "manifests"
-        / "06-resultado-financeiro"
-        / "_indiretos"
-        / "skill.py"
-    )
-    spec = importlib.util.spec_from_file_location("skill_05_indiretos", skill_path)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
+    from concilium.application.skills import load_skill_stage
+
+    load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
+    return sys.modules["_concilium_stagepkg_06_resultado_financeiro_indiretos.skill"]
 
 
 def _import_06_consolidar():
-    """Import run_consolidacao_financeira from the skill module, working around dashes in path."""
-    import importlib.util
-    from pathlib import Path
+    """Import run_consolidacao_financeira from the skill module (dashes in path require the
+    production stage loader so relative imports inside skill.py resolve correctly)."""
+    import sys
 
-    skill_path = (
-        Path(__file__).parent.parent.parent
-        / "src"
-        / "concilium"
-        / "application"
-        / "skills"
-        / "manifests"
-        / "06-resultado-financeiro"
-        / "_consolidacao"
-        / "skill.py"
-    )
-    spec = importlib.util.spec_from_file_location("skill_06_consolidar", skill_path)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
+    from concilium.application.skills import load_skill_stage
+
+    load_skill_stage("06-resultado-financeiro", "_consolidacao", "run_consolidacao_financeira")
+    return sys.modules["_concilium_stagepkg_06_resultado_financeiro_consolidacao.skill"]

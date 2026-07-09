@@ -1035,6 +1035,10 @@ class TestMain:
         assert len(started_threads) == 1
         assert started_threads[0].daemon is True
         mock_run.assert_called_once()
+        # asyncio.run is mocked, so the real `_bridge(...)` coroutine it received
+        # is never awaited — close it explicitly to avoid a RuntimeWarning leaking
+        # into whichever test happens to run when it's garbage-collected.
+        mock_run.call_args.args[0].close()
 
 
 class TestLogDie:

@@ -310,22 +310,12 @@ class TestSkillConsolidar:
         assert pe_items[0].status_validacao == "ERRO"
 
     def test_classificacao_margem_verde_amarelo_vermelho(self):
-        import importlib.util
+        import sys
 
-        skill_path = (
-            Path(__file__).parent.parent.parent
-            / "src"
-            / "concilium"
-            / "application"
-            / "skills"
-            / "manifests"
-            / "06-resultado-financeiro"
-            / "_consolidacao"
-            / "skill.py"
-        )
-        spec = importlib.util.spec_from_file_location("_skill_consolidacao", skill_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        from concilium.application.skills import load_skill_stage
+
+        fn = load_skill_stage("06-resultado-financeiro", "_consolidacao", "run_consolidacao_financeira")
+        mod = sys.modules[fn.__module__]
         _classificar_margem = mod._classificar_margem
 
         perfil_alvo = {"min": 0.08, "max": 0.10}
@@ -1784,23 +1774,12 @@ class TestIndiretosBranches:
 
     def test_categorias_top_lab_qsms_individuais(self, inputs_escopo_terraplenagem, config_root):
         """Cobre branches dos if categoria == 'TOP', 'LAB', 'QSMS' em _composicao_default."""
-        import importlib.util
-        from pathlib import Path
+        import sys
 
-        skill_path = (
-            Path(__file__).parent.parent.parent
-            / "src"
-            / "concilium"
-            / "application"
-            / "skills"
-            / "manifests"
-            / "06-resultado-financeiro"
-            / "_indiretos"
-            / "skill.py"
-        )
-        spec = importlib.util.spec_from_file_location("_skill_indiretos", skill_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        from concilium.application.skills import load_skill_stage
+
+        fn = load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
+        mod = sys.modules[fn.__module__]
         _composicao_default = mod._composicao_default_por_categoria
 
         comp_top = _composicao_default("TOP")

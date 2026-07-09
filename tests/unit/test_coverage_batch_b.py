@@ -1,10 +1,9 @@
-"""Coverage batch B — targets runtime.py, 04-cronograma, 03-equipes-diretas,
-06-precificacao-unitaria, 09-cost-criticality, and semantic/normalizer edge cases.
+"""Coverage batch B — targets runtime.py, 04-cronograma, 05-equipes-e-alocacao,
+06-resultado-financeiro/_precificacao, 07-diagnostico-criticidade, and semantic/normalizer edge cases.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from datetime import UTC, date, datetime
@@ -54,24 +53,12 @@ def _minimal_canonical(**kw):
     return CanonicalModel(meta=_make_meta(), projeto=_make_proj(), **kw)
 
 
-# Load private helpers from skill modules (dash in directory name)
-_MANIFESTS = Path(__file__).parents[2] / "src" / "concilium" / "application" / "skills" / "manifests"
-
-
+# Load private helpers from skill modules (dash in directory name) — routes through
+# the production lazy-loader so relative imports inside skill.py resolve correctly.
 def _load_skill_module(skill_id: str) -> object:
-    mod_name = f"_concilium_skill_{skill_id.replace('-', '_')}"
-    sys.modules.pop(mod_name, None)
-    path = _MANIFESTS / skill_id / "skill.py"
-    spec = importlib.util.spec_from_file_location(mod_name, path)
-    mod = importlib.util.module_from_spec(spec)
-    try:
-        source = path.read_text(encoding="utf-8")
-        exec(compile(source, str(path), "exec"), mod.__dict__)
-    except Exception:
-        sys.modules.pop(mod_name, None)
-        raise
-    sys.modules[mod_name] = mod
-    return mod
+    import concilium.application.skills as _skills_pkg
+
+    return _skills_pkg._load_skill_module(skill_id)
 
 
 # ══ runtime.py ════════════════════════════════════════════════════════════════
@@ -285,7 +272,7 @@ class TestCronogramaEdgeCases:
         assert result.canonical is not None
 
 
-# ══ 03-equipes-diretas/skill.py ═══════════════════════════════════════════════
+# ══ 05-equipes-e-alocacao/skill.py ══════════════════════════════════════════
 
 
 class TestEquipesDiretasEdgeCases:
@@ -595,7 +582,7 @@ class TestPlanejamentoBdiEdgeCases:
             assert plan[0].preco_unitario.total == 0.0  # nothing was added to preco_cat
 
 
-# ══ 09-cost-criticality/skill.py ══════════════════════════════════════════════
+# ══ 07-diagnostico-criticidade/skill.py ═══════════════════════════════════════
 
 
 class TestCostCriticalityEdgeCases:

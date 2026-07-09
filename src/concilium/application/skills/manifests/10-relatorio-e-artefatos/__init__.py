@@ -1,1 +1,1 @@
-# Skill 07 - Adapter de Saída
+# Skill 10 - Adapter de Saída

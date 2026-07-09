@@ -15,29 +15,19 @@ orçamentação chamava `geo_diesel_resolver`. Este teste garante que:
 
 from __future__ import annotations
 
-import importlib.util
-import pathlib
+import sys
 from unittest.mock import MagicMock, patch
 
 from concilium.domain.constants import PRECO_DIESEL_REFERENCIA
 
 
 def _load_skill_module():
-    path = (
-        pathlib.Path(__file__).parent.parent.parent
-        / "src"
-        / "concilium"
-        / "application"
-        / "skills"
-        / "manifests"
-        / "06-resultado-financeiro"
-        / "_precificacao"
-        / "skill.py"
-    )
-    spec = importlib.util.spec_from_file_location("skill_precificacao_adr129", path)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
+    """Carrega o skill.py de _precificacao via o loader de produção (dashes no
+    caminho exigem contexto de pacote para os imports relativos resolverem)."""
+    from concilium.application.skills import load_skill_stage
+
+    load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
+    return sys.modules["_concilium_stagepkg_06_resultado_financeiro_precificacao.skill"]
 
 
 class TestResolvePrecoDieselRegressaoZero:

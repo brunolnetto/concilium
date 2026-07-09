@@ -30,7 +30,7 @@ def _load_helpers_b():
     path = (
         Path(__file__).resolve().parents[2]
         / "src/concilium/application/skills/manifests"
-        / "06-resultado-financeiro/_indiretos/_skill_helpers_b/__init__.py"
+        / "06-resultado-financeiro/_indiretos/_skill_helpers/__init__.py"
     )
     spec = importlib.util.spec_from_file_location(
         "ind_helpers_b_test", path, submodule_search_locations=[str(path.parent)]

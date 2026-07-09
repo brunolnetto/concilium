@@ -1,4 +1,4 @@
-"""Skill 09 — Diagnóstico de Criticidade (Consolidado).
+"""Skill 07 — Diagnóstico de Criticidade (Consolidado).
 
 Consolida:
 1. Criticidade de Prazo (antiga 08)

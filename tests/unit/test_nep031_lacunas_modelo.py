@@ -38,12 +38,12 @@ def _load_mod(skill_dir: str, mod_name: str):
 
 
 def _h05():
-    return _load_mod("05-equipes-e-alocacao", "_skill_helpers_a")
+    return _load_mod("05-equipes-e-alocacao", "_skill_helpers")
 
 
 def _h06():
     # NEP-041 F4: precificação agora vive no sub-pacote da skill unificada
-    return _load_mod("06-resultado-financeiro/_precificacao", "_skill_helpers_a")
+    return _load_mod("06-resultado-financeiro/_precificacao", "_skill_helpers")
 
 
 def _s01():

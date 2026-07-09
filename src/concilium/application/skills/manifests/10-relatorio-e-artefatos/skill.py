@@ -1,6 +1,6 @@
-"""Skill 07 — Adapter de Saída (gera JSON + Excel .xlsm).
+"""Skill 10 — Adapter de Saída (gera JSON + Excel .xlsm).
 
-Skill 07 produz o output principal:
+Skill 10 produz o output principal:
 1. JSON estruturado (para validação, logs, API)
 2. Excel .xlsm auditável (para stakeholders, relatórios)
 
@@ -17,80 +17,20 @@ from typing import Any
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
-try:
-    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        _add_criticidade_validacoes,
-        _build_equipe_rows,
-        _build_graficos_section,
-        _build_indireto_rows,
-        _build_planejamento_rows,
-        _gerar_excel_bytes,
-        _gerar_live_model,
-        _gerar_memorial_json_bytes,
-        _rra_build_criticidade_lookup,
-        _rra_build_relatorio,
-        _week_to_month,
-    )
-except ImportError:
-    import importlib.util
-    import sys
-    import types
-    from pathlib import Path
-
-    _here = Path(__file__).resolve().parent
-
-    # _skill_helpers_a é um pacote cujo submódulo _graficos.py faz
-    # `from .._skill_helpers_b import ...` (dois níveis: sobe do próprio
-    # pacote até o diretório da skill, onde _skill_helpers_b.py vive como
-    # sibling). Para que isso resolva quando skill.py é carregado standalone,
-    # registramos um pacote sintético para skill09 (mesma técnica de
-    # `_ensure_skill_package`) e carregamos _skill_helpers_a como submódulo
-    # dele — replicando a hierarquia real usada em produção.
-    _synth_pkg_name = "_skill09_relatorio_synth"
-    if _synth_pkg_name not in sys.modules:
-        _synth_pkg = types.ModuleType(_synth_pkg_name)
-        _synth_pkg.__path__ = [str(_here)]
-        _synth_pkg.__package__ = _synth_pkg_name
-        sys.modules[_synth_pkg_name] = _synth_pkg
-
-    _spec = importlib.util.spec_from_file_location(
-        f"{_synth_pkg_name}._skill_helpers_a", _here / "_skill_helpers_a" / "__init__.py"
-    )
-    if _spec is None or _spec.loader is None:
-        raise ImportError("Cannot load _skill_helpers_a via importlib") from None
-    _mod = importlib.util.module_from_spec(_spec)
-    sys.modules[f"{_synth_pkg_name}._skill_helpers_a"] = _mod
-    _spec.loader.exec_module(_mod)
-
-    _add_criticidade_validacoes = _mod._add_criticidade_validacoes
-    _build_equipe_rows = _mod._build_equipe_rows
-    _build_graficos_section = _mod._build_graficos_section
-    _build_indireto_rows = _mod._build_indireto_rows
-    _build_planejamento_rows = _mod._build_planejamento_rows
-    _gerar_excel_bytes = _mod._gerar_excel_bytes
-    _gerar_live_model = _mod._gerar_live_model
-    _gerar_memorial_json_bytes = _mod._gerar_memorial_json_bytes
-    _rra_build_criticidade_lookup = _mod._rra_build_criticidade_lookup
-    _rra_build_relatorio = _mod._rra_build_relatorio
-    _week_to_month = _mod._week_to_month
-
-# NEP-041 Fase 1: relatório executivo absorvido de skill-15
-try:
-    from ._skill_helpers_executivo import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
-        build_relatorio_executivo,
-    )
-except ImportError:
-    import importlib.util as _ilu
-    from pathlib import Path as _Path
-
-    _spec_ex = _ilu.spec_from_file_location(
-        "skill09_helpers_executivo", _Path(__file__).resolve().parent / "_skill_helpers_executivo.py"
-    )
-    if _spec_ex is None or _spec_ex.loader is None:
-        raise ImportError("Cannot load _skill_helpers_executivo.py via importlib") from None
-    _mod_ex = _ilu.module_from_spec(_spec_ex)
-    _spec_ex.loader.exec_module(_mod_ex)
-    build_relatorio_executivo = _mod_ex.build_relatorio_executivo
+from ._skill_helpers import (  # ty: ignore[unresolved-import]
+    _add_criticidade_validacoes,
+    _build_equipe_rows,
+    _build_graficos_section,
+    _build_indireto_rows,
+    _build_planejamento_rows,
+    _gerar_excel_bytes,
+    _gerar_live_model,
+    _gerar_memorial_json_bytes,
+    _rra_build_criticidade_lookup,
+    _rra_build_relatorio,
+    _week_to_month,
+    build_relatorio_executivo,  # NEP-041 Fase 1: relatório executivo absorvido de skill-15
+)
 
 _MESES_PT = {
     1: "Jan",

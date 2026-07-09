@@ -541,6 +541,45 @@ class TestLoadSkillStage:
         finally:
             skills_pkg._MANIFESTS = original
 
+    def test_load_bare_stage_module_falls_back_to_skill_helpers_dir(self, tmp_path):
+        """Quando `{stage}.py` não existe diretamente no skill_id, mas existe dentro de
+        `_skill_helpers/` (skills consolidadas em pacote, ex: 11-replanejamento-e-cenarios
+        movendo `_assessor.py` para `_skill_helpers/_assessor.py`), o loader deve cair
+        para esse caminho em vez de falhar."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import load_skill_stage
+
+        fake_manifests = tmp_path / "manifests"
+        helpers_dir = fake_manifests / "sk-consolidated" / "_skill_helpers"
+        helpers_dir.mkdir(parents=True)
+        (helpers_dir / "_stage.py").write_text("def run_stage(): return 'from_skill_helpers'", encoding="utf-8")
+
+        original = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = fake_manifests
+        try:
+            fn = load_skill_stage("sk-consolidated", "_stage", "run_stage")
+            assert callable(fn)
+            assert fn() == "from_skill_helpers"
+        finally:
+            skills_pkg._MANIFESTS = original
+
+    def test_load_bare_stage_module_missing_everywhere_raises_file_not_found(self, tmp_path):
+        """Nem `{stage}.py` direto nem `_skill_helpers/{stage}.py` existem: o loader
+        mantém o caminho direto (inexistente) e o erro real surge no exec_module."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import load_skill_stage
+
+        fake_manifests = tmp_path / "manifests"
+        (fake_manifests / "sk-missing").mkdir(parents=True)
+
+        original = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = fake_manifests
+        try:
+            with pytest.raises(FileNotFoundError):
+                load_skill_stage("sk-missing", "_stage", "run_stage")
+        finally:
+            skills_pkg._MANIFESTS = original
+
 
 # ---------------------------------------------------------------------------
 # list_compat_aliases

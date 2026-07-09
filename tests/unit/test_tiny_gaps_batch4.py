@@ -1,6 +1,6 @@
 """Tests for tiny-gap files: validador_cobertura_item, scope_guard, inputs mixin,
 conversor_unidades, report_calibration_sections, domain/models/__init__,
-analitica, cube __init__, artifact_transport, _04_cronograma_skill_helpers."""
+analitica, cube __init__, artifact_transport, 04-cronograma/_skill_helpers/_dag."""
 
 from __future__ import annotations
 

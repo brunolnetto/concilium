@@ -95,5 +95,5 @@ Isso é o coração do ADR-030 D3 — separar custo fixo de custo variável.
 
 ## Próximas skills no pipeline
 
-- [`06-precificacao-unitaria`](../06-precificacao-unitaria/SKILL.md)
-- [`07-custos-indiretos`](../07-custos-indiretos/SKILL.md)
+- [`06-resultado-financeiro/_precificacao`](../06-resultado-financeiro/_precificacao/SKILL.md)
+- [`06-resultado-financeiro/_indiretos`](../06-resultado-financeiro/_indiretos/SKILL.md)

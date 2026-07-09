@@ -20,22 +20,16 @@ Regra nova:
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
+import sys
 
 import pytest
 
 
 def _load_precificacao():
-    path = (
-        Path(__file__).resolve().parents[2]
-        / "src/concilium/application/skills/manifests"
-        / "06-resultado-financeiro/_precificacao/skill.py"
-    )
-    spec = importlib.util.spec_from_file_location("prec_bdi_test", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    from concilium.application.skills import load_skill_stage
+
+    fn = load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
+    return sys.modules[fn.__module__]
 
 
 class TestBdiEquipamentosDerivado:
@@ -88,14 +82,11 @@ class TestBdiEquipamentosDerivado:
     def test_consistencia_com_consolidacao(self):
         """Precificação (default) e consolidação usam a mesma taxa para equipamentos."""
         mod = _load_precificacao()
-        cons_path = (
-            Path(__file__).resolve().parents[2]
-            / "src/concilium/application/skills/manifests"
-            / "06-resultado-financeiro/_consolidacao/_skill_helpers_b.py"
+        import importlib
+
+        cons = importlib.import_module(
+            "concilium.application.skills.manifests.06-resultado-financeiro._consolidacao._skill_helpers._bdi_resolucao"
         )
-        spec = importlib.util.spec_from_file_location("cons_bdi_test", cons_path)
-        cons = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(cons)
 
         v1, v2 = [], []
         prec_rates = mod._resolve_bdi({}, v1)

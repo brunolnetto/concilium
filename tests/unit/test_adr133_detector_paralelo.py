@@ -27,7 +27,7 @@ from concilium.application.scheduling.models import (
 
 _HELPERS_PRE = (
     Path(__file__).parent.parent.parent
-    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre/__init__.py"
+    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
 )
 
 

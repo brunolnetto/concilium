@@ -1,23 +1,15 @@
 """Coverage batch 35 — 04-cronograma skill helper functions."""
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
+import sys
 from types import SimpleNamespace
 
 import pytest
 
+from concilium.application.skills import run_cronograma as _run_cronograma
 
-def _load_skill04():
-    """Load the 04-cronograma skill module via importlib (path has dashes)."""
-    p = Path("src/concilium/application/skills/manifests/04-cronograma/skill.py").resolve()
-    spec = importlib.util.spec_from_file_location("skill04_b35", p)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-MOD = _load_skill04()
+assert _run_cronograma
+MOD = sys.modules["_concilium_skillpkg_04_cronograma.skill"]
 
 
 # ---------------------------------------------------------------------------
