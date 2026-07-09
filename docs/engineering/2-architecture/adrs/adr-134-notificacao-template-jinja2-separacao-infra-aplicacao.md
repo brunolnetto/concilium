@@ -1,6 +1,6 @@
 # ADR-134 — Notificação por Email: Template Jinja2 Compartilhado e Separação Infraestrutura/Aplicação
 
-**Status:** 💡 Proposta
+**Status:** ✅ Implementado
 **Data:** 2026-07-08
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-123 (serviço de notificação original), ADR-126 (Project Ownership — motiva as 5 notificações novas), ADR-131 (últimos métodos adicionados ao padrão atual)
@@ -144,28 +144,37 @@ Adicionar `jinja2` ao `pyproject.toml`. Escolhido sobre `string.Template` (stdli
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 — Infraestrutura | `jinja2` no `pyproject.toml`; `NotificationService.send()` (D1); templates `_base.html.jinja2` + `notification.{txt,html}.jinja2` (D2/D3) | 💡 |
-| F2 — Migração dos 7 existentes | `application/services/notifications.py` com as 7 funções (D4/D5); atualização de todos os call sites; remoção dos métodos de negócio da infra | 💡 |
-| F3 — Ownership (ADR-126) | 5 funções novas (D6); wiring em `_ownership_helpers.py` (accept/reject/expired/forced) e nas rotas de `transfer-ownership` | 💡 |
-| F4 — Documentação | Nota em ADR-123/ADR-131 apontando para esta ADR como evolução do padrão de notificação | 💡 |
+| F1 — Infraestrutura | `jinja2` no `pyproject.toml`; `NotificationService.send()` (D1); templates `_base.html.jinja2` + `notification.{txt,html}.jinja2` (D2/D3) | ✅ |
+| F2 — Migração dos 7 existentes | `application/services/notifications.py` com as 7 funções (D4/D5); atualização de todos os call sites; remoção dos métodos de negócio da infra | ✅ |
+| F3 — Ownership (ADR-126) | 5 funções novas (D6); wiring em `_ownership_helpers.py` (accept/reject/expired/forced) e nas rotas de `transfer-ownership` | ✅ |
+| F4 — Documentação | Nota em ADR-123/ADR-131 apontando para esta ADR como evolução do padrão de notificação | ✅ |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `jinja2` adicionado como dependência
-- [ ] `NotificationService.send()` implementado, com teste cobrindo: renderização texto+HTML, multipart/alternative, exceção nunca propaga
-- [ ] `_base.html.jinja2` + `notification.{txt,html}.jinja2` renderizam corretamente com um `context` de exemplo
+- [x] `jinja2` adicionado como dependência
+- [x] `NotificationService.send()` implementado, com teste cobrindo: renderização texto+HTML, multipart/alternative, exceção nunca propaga
+- [x] `_base.html.jinja2` + `notification.{txt,html}.jinja2` renderizam corretamente com um `context` de exemplo
 
 ### Fase 2
-- [ ] As 7 funções de aplicação implementadas e testadas (mock do `NotificationService.send`)
-- [ ] Todos os call sites atualizados (`commands_auth.py`, `routes/auth.py`, `mcp/tools/auth_self.py`)
-- [ ] Nenhum método de negócio (`notify_user_created`, etc.) remanescente em `infrastructure/services/notification_service.py`
-- [ ] Suíte completa sem regressão
+- [x] As 7 funções de aplicação implementadas e testadas (mock do `NotificationService.send`)
+- [x] Todos os call sites atualizados (`commands_auth.py`, `routes/auth.py`, `mcp/tools/auth_self.py`)
+- [x] Nenhum método de negócio (`notify_user_created`, etc.) remanescente em `infrastructure/services/notification_service.py`
+- [x] Suíte completa sem regressão
 
 ### Fase 3
-- [ ] 5 funções de ownership implementadas e testadas
-- [ ] `_ownership_helpers.py` (accept/reject/expired/forced) chama a notificação correspondente
-- [ ] Teste de regressão: `remove-user --reassign-to` dispara `notify_ownership_transfer_forced` (D7, reaproveitamento de D4.1)
+- [x] 5 funções de ownership implementadas e testadas
+- [x] `_ownership_helpers.py` (accept/reject/expired/forced) chama a notificação correspondente
+- [x] Teste de regressão: `remove-user --reassign-to` dispara `notify_ownership_transfer_forced` (D7, reaproveitamento de D4.1)
+
+### Fase 4
+- [x] Nota de evolução adicionada em ADR-123 e ADR-131 apontando para esta ADR
+
+### Nota de implementação
+`presentation/api/routes/projects.py` (rotas de `transfer-ownership`) **não** foi alterada diretamente —
+a notificação foi conectada no ponto único `application/services/project/_ownership_helpers.py` (D4/D6),
+que é a camada por trás de todos os call sites de ownership (CLI `remove-user --reassign-to`, rotas HTTP
+de `transfer-ownership`, `accept`, `reject`). Isso evita duplicar o wiring em cada rota/call site.
 
 ---
 

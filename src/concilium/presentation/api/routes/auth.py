@@ -248,8 +248,8 @@ def revoke_pending(request: Request, response: Response, revoke_token: str) -> R
     """
     import logging as _logging
 
+    from concilium.application.services.notifications import notify_revoke_pending
     from concilium.infrastructure.auth.auth_store import get_auth_store
-    from concilium.infrastructure.services.notification_service import get_notification_service
 
     _log = _logging.getLogger(__name__)
 
@@ -267,7 +267,7 @@ def revoke_pending(request: Request, response: Response, revoke_token: str) -> R
     client_email = client.email if client else ""
 
     if client_email:
-        get_notification_service().notify_revoke_pending(
+        notify_revoke_pending(
             client_id=record.client_id,
             device_id=record.device_id,
             email=client_email,

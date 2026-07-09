@@ -1,0 +1,37 @@
+{{ heading }}
+
+{% if intro -%}
+{{ intro }}
+
+{% endif -%}
+{% if details -%}
+{% for key, value in details -%}
+  {{ key }}: {{ value }}
+{% endfor %}
+
+{% endif -%}
+Em anexo, dois arquivos claude_desktop_config.json — use o que corresponde
+ao seu sistema operacional:
+
+  claude_desktop_config-macos-linux.json → macOS/Linux
+  claude_desktop_config-windows.json     → Windows
+
+{% if download_note -%}
+{{ download_note }}
+
+{% endif -%}
+Adicione o conteúdo do arquivo escolhido ao seu arquivo de configuração:
+
+  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+  Win  : %APPDATA%\Claude\claude_desktop_config.json
+
+Se não conseguir abrir os anexos, o conteúdo é:
+
+[macOS/Linux]
+{{ config_json_unix }}
+
+[Windows]
+{{ config_json_windows }}
+
+Atenciosamente,
+Equipe Concilium

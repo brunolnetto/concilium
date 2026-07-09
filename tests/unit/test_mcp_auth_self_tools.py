@@ -152,7 +152,6 @@ class TestRevogarMeuDispositivo:
         store.list_devices.return_value = [device]
         store.create_revoke_pending.return_value = pending
         store.list_clients.return_value = [client]
-        notification_service = MagicMock()
         with (
             patch(
                 "concilium.infrastructure.auth.permission_guard.get_current_user_id",
@@ -160,16 +159,15 @@ class TestRevogarMeuDispositivo:
             ),
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
             patch(
-                "concilium.infrastructure.services.notification_service.get_notification_service",
-                return_value=notification_service,
-            ),
+                "concilium.application.services.notifications.notify_revoke_pending",
+            ) as notify_mock,
         ):
             result = tools["revogar_meu_dispositivo"]("dev-1")
 
         assert result["status"] == "pending"
         assert result["revoke_token"] == "REVOKE-1"
         assert "user@example.com" in result["message"]
-        notification_service.notify_revoke_pending.assert_called_once_with(
+        notify_mock.assert_called_once_with(
             client_id="client-1",
             device_id="dev-1",
             email="user@example.com",
@@ -184,7 +182,6 @@ class TestRevogarMeuDispositivo:
         store.list_devices.return_value = [device]
         store.create_revoke_pending.return_value = pending
         store.list_clients.return_value = [client]
-        notification_service = MagicMock()
         with (
             patch(
                 "concilium.infrastructure.auth.permission_guard.get_current_user_id",
@@ -192,15 +189,14 @@ class TestRevogarMeuDispositivo:
             ),
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
             patch(
-                "concilium.infrastructure.services.notification_service.get_notification_service",
-                return_value=notification_service,
-            ),
+                "concilium.application.services.notifications.notify_revoke_pending",
+            ) as notify_mock,
         ):
             result = tools["revogar_meu_dispositivo"]("dev-1")
 
         assert result["status"] == "pending"
         assert "Nenhum email cadastrado" in result["message"]
-        notification_service.notify_revoke_pending.assert_not_called()
+        notify_mock.assert_not_called()
 
     def test_success_client_not_in_list(self, tools):
         """client_id não encontrado em list_clients() -> client_email vazio."""
@@ -210,7 +206,6 @@ class TestRevogarMeuDispositivo:
         store.list_devices.return_value = [device]
         store.create_revoke_pending.return_value = pending
         store.list_clients.return_value = []
-        notification_service = MagicMock()
         with (
             patch(
                 "concilium.infrastructure.auth.permission_guard.get_current_user_id",
@@ -218,11 +213,10 @@ class TestRevogarMeuDispositivo:
             ),
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
             patch(
-                "concilium.infrastructure.services.notification_service.get_notification_service",
-                return_value=notification_service,
-            ),
+                "concilium.application.services.notifications.notify_revoke_pending",
+            ) as notify_mock,
         ):
             result = tools["revogar_meu_dispositivo"]("dev-1")
 
         assert result["status"] == "pending"
-        notification_service.notify_revoke_pending.assert_not_called()
+        notify_mock.assert_not_called()

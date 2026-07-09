@@ -3,7 +3,10 @@
 **Status:** ⚠️ Parcialmente Implementado _(F1, F2, F4, F5 ✅; F3 — detecção de dispositivo desconhecido — não implementada; ver ADR-131)_  
 **Data:** 2026-06-23  
 **Contexto:** MendesLobo Construtora — Concilium  
-**Dependências:** ADR-094 (JWT/auth), ADR-099 (RBAC), ADR-116 (MCP surface)
+**Dependências:** ADR-094 (JWT/auth), ADR-099 (RBAC), ADR-116 (MCP surface)  
+**Evolução:** ADR-134 substitui os métodos `notify_*` de `NotificationService` (contrato original desta ADR) por
+`send(template, context)` genérico com templates Jinja2 — os casos de uso de negócio migraram para
+`application/services/notifications.py`.
 
 ---
 

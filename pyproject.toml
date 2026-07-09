@@ -36,6 +36,8 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.48b0",
     "opentelemetry-exporter-otlp-proto-http>=1.27.0",
     "opentelemetry-instrumentation-logging>=0.48b0",
+    # ADR-134: templates de email (herança + autoescape HTML)
+    "jinja2>=3.1.6",
 ]
 
 [project.scripts]

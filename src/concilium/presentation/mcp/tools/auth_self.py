@@ -149,9 +149,9 @@ def register(server: FastMCP) -> None:
         Retorna o revoke_token e instruções. A revogação só é efetivada após
         confirmação via email (link válido por 24h).
         """
+        from concilium.application.services.notifications import notify_revoke_pending
         from concilium.infrastructure.auth.auth_store import get_auth_store
         from concilium.infrastructure.auth.permission_guard import get_current_user_id
-        from concilium.infrastructure.services.notification_service import get_notification_service
 
         client_id = get_current_user_id()
         if client_id is None:
@@ -183,7 +183,7 @@ def register(server: FastMCP) -> None:
         client_email = client.email if client else ""
 
         if client_email:
-            get_notification_service().notify_revoke_pending(
+            notify_revoke_pending(
                 client_id=client_id,
                 device_id=device_id,
                 email=client_email,

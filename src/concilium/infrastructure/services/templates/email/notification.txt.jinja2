@@ -1,0 +1,20 @@
+{{ heading }}
+{{ "=" * (heading|length) }}
+
+{% if intro -%}
+{{ intro }}
+
+{% endif -%}
+{% if details -%}
+{% for key, value in details -%}
+  {{ key }}: {{ value }}
+{% endfor %}
+
+{% endif -%}
+{% if cta -%}
+{{ cta.label }}: {{ cta.url }}
+
+{% endif -%}
+{% if footer_note -%}
+{{ footer_note }}
+{% endif -%}

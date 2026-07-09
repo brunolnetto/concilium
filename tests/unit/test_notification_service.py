@@ -1,4 +1,9 @@
-"""Tests for infrastructure/services/notification_service.py (ADR-123)."""
+"""Tests for infrastructure/services/notification_service.py (ADR-123, ADR-134 F1).
+
+ADR-134 D1/D5: a infraestrutura só expõe `send()` (renderiza template Jinja2 +
+monta multipart/alternative + envia via SMTP/fallback). Os antigos métodos
+`notify_*` foram removidos — migrados para `application/services/notifications.py`.
+"""
 
 from __future__ import annotations
 
@@ -46,18 +51,103 @@ class TestNotificationServiceInit:
         assert svc._settings is cfg
 
 
+class TestRenderTemplate:
+    """ADR-134 D2/D3 — o template `notification` consome heading/intro/details/cta/footer_note."""
+
+    def _example_context(self):
+        return {
+            "heading": "Bem-vindo ao Concilium",
+            "intro": "Sua conta foi criada com sucesso.",
+            "details": [("Usuário", "bruno"), ("Perfil", "operator")],
+            "cta": {"label": "Acessar Concilium", "url": "https://concilium.example.com"},
+            "footer_note": "Este link expira em 24h.",
+        }
+
+    def test_txt_template_renders_all_fields(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        svc = NotificationService(settings=_make_smtp_settings())
+        body = svc._render("notification.txt.jinja2", self._example_context())
+        assert "Bem-vindo ao Concilium" in body
+        assert "Sua conta foi criada com sucesso." in body
+        assert "Usuário: bruno" in body
+        assert "Perfil: operator" in body
+        assert "Acessar Concilium: https://concilium.example.com" in body
+        assert "Este link expira em 24h." in body
+
+    def test_html_template_renders_all_fields_and_extends_base(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        svc = NotificationService(settings=_make_smtp_settings())
+        body = svc._render("notification.html.jinja2", self._example_context())
+        assert "Concilium" in body  # cabeçalho da _base
+        assert "Bem-vindo ao Concilium" in body
+        assert "Usuário" in body and "bruno" in body
+        assert 'href="https://concilium.example.com"' in body
+        assert "Este link expira em 24h." in body
+
+    def test_html_template_autoescapes_user_data(self):
+        """ADR-134 D7 — autoescape protege contra dado de usuário quebrando markup."""
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        svc = NotificationService(settings=_make_smtp_settings())
+        ctx = {
+            "heading": "<script>alert(1)</script>",
+            "intro": None,
+            "details": None,
+            "cta": None,
+            "footer_note": None,
+        }
+        body = svc._render("notification.html.jinja2", ctx)
+        assert "<script>alert(1)</script>" not in body
+        assert "&lt;script&gt;" in body
+
+    def test_txt_template_omits_optional_blocks_when_absent(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        svc = NotificationService(settings=_make_smtp_settings())
+        ctx = {"heading": "Só o essencial", "intro": None, "details": None, "cta": None, "footer_note": None}
+        body = svc._render("notification.txt.jinja2", ctx)
+        assert "Só o essencial" in body
+        assert ":" not in body.replace("Só o essencial", "")
+
+
+class TestBuildMessage:
+    def test_alternative_without_attachments(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        msg = NotificationService._build_message("texto puro", "<b>html</b>", None)
+        assert msg.get_content_type() == "multipart/alternative"
+        parts = msg.get_payload()
+        assert parts[0].get_payload(decode=True).decode("utf-8") == "texto puro"
+        assert parts[1].get_payload(decode=True).decode("utf-8") == "<b>html</b>"
+
+    def test_mixed_with_attachments(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        msg = NotificationService._build_message(
+            "texto",
+            "<p>html</p>",
+            [("config.json", b'{"a":1}', "application/json")],
+        )
+        assert msg.get_content_type() == "multipart/mixed"
+        parts = msg.get_payload()
+        assert parts[0].get_content_type() == "multipart/alternative"
+        assert "config.json" in msg.as_string()
+
+
 class TestSendFallback:
-    """When SMTP not enabled or host empty, _send logs instead of sending."""
+    """Quando SMTP não habilitado ou sem host, send() loga em vez de enviar."""
 
     def test_disabled_logs_to_info(self, caplog):
         import logging
 
         from concilium.infrastructure.services.notification_service import NotificationService
 
-        cfg = _make_smtp_settings(enabled=False, host="")
+        cfg = _make_smtp_settings(enabled=False)
         svc = NotificationService(settings=cfg)
         with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
-            svc._send("to@x.com", "Subj", "Body")
+            svc.send(to="to@x.com", subject="Subj", template="notification", context={"heading": "Oi"})
         assert any("NOTIFICATION LOG FALLBACK" in r.message for r in caplog.records)
 
     def test_enabled_but_no_host_logs_to_info(self, caplog):
@@ -68,7 +158,7 @@ class TestSendFallback:
         cfg = _make_smtp_settings(enabled=True, host="")
         svc = NotificationService(settings=cfg)
         with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
-            svc._send("to@x.com", "Subj", "Body")
+            svc.send(to="to@x.com", subject="Subj", template="notification", context={"heading": "Oi"})
         assert any("NOTIFICATION LOG FALLBACK" in r.message for r in caplog.records)
 
     def test_fallback_includes_attachment_name_in_log(self, caplog):
@@ -79,12 +169,18 @@ class TestSendFallback:
         cfg = _make_smtp_settings(enabled=False)
         svc = NotificationService(settings=cfg)
         with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
-            svc._send("to@x.com", "Subj", "Body", attachment_name="file.json", attachment_content='{"x":1}')
+            svc.send(
+                to="to@x.com",
+                subject="Subj",
+                template="notification",
+                context={"heading": "Oi"},
+                attachments=[("file.json", b'{"x":1}', "application/json")],
+            )
         assert any("file.json" in r.message for r in caplog.records)
 
 
 class TestSendSmtp:
-    """When SMTP is configured, _send constructs and sends the email."""
+    """Quando SMTP configurado, send() constrói e envia o email multipart."""
 
     def _make_smtp_mock(self):
         mock_server = MagicMock()
@@ -93,14 +189,14 @@ class TestSendSmtp:
         mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
         return mock_smtp_cls, mock_server
 
-    def test_send_plain_text_no_auth(self):
+    def test_send_no_auth(self):
         from concilium.infrastructure.services.notification_service import NotificationService
 
         cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
         svc = NotificationService(settings=cfg)
         mock_smtp_cls, mock_server = self._make_smtp_mock()
         with patch("smtplib.SMTP", mock_smtp_cls):
-            svc._send("dest@x.com", "Hello", "World")
+            svc.send(to="dest@x.com", subject="Hello", template="notification", context={"heading": "World"})
         mock_server.sendmail.assert_called_once()
 
     def test_send_with_auth(self):
@@ -110,7 +206,7 @@ class TestSendSmtp:
         svc = NotificationService(settings=cfg)
         mock_smtp_cls, mock_server = self._make_smtp_mock()
         with patch("smtplib.SMTP", mock_smtp_cls):
-            svc._send("dest@x.com", "Hello", "World")
+            svc.send(to="dest@x.com", subject="Hello", template="notification", context={"heading": "World"})
         mock_server.login.assert_called_once_with("u", "p")
 
     def test_send_with_attachment(self):
@@ -120,29 +216,15 @@ class TestSendSmtp:
         svc = NotificationService(settings=cfg)
         mock_smtp_cls, mock_server = self._make_smtp_mock()
         with patch("smtplib.SMTP", mock_smtp_cls):
-            svc._send("dest@x.com", "Hello", "Body", attachment_name="conf.json", attachment_content='{"a":1}')
-        args = mock_server.sendmail.call_args[0]
-        assert "conf.json" in args[2]  # the message string contains the filename
-
-    def test_send_with_multiple_attachments(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
-        svc = NotificationService(settings=cfg)
-        mock_smtp_cls, mock_server = self._make_smtp_mock()
-        with patch("smtplib.SMTP", mock_smtp_cls):
-            svc._send(
-                "dest@x.com",
-                "Hello",
-                "Body",
-                attachments=[
-                    ("unix.json", '{"unix":true}'),
-                    ("windows.json", '{"windows":true}'),
-                ],
+            svc.send(
+                to="dest@x.com",
+                subject="Hello",
+                template="notification",
+                context={"heading": "World"},
+                attachments=[("conf.json", b'{"a":1}', "application/json")],
             )
         args = mock_server.sendmail.call_args[0]
-        assert "unix.json" in args[2]
-        assert "windows.json" in args[2]
+        assert "conf.json" in args[2]
 
     def test_send_logs_success(self, caplog):
         import logging
@@ -154,311 +236,33 @@ class TestSendSmtp:
         mock_smtp_cls, _ = self._make_smtp_mock()
         with patch("smtplib.SMTP", mock_smtp_cls):
             with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
-                svc._send("dest@x.com", "Hi", "Body")
+                svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "World"})
         assert any("Email enviado" in r.message for r in caplog.records)
 
 
-class TestNotifyUserCreated:
-    def test_happy_path_fallback(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        # Should not raise
-        svc.notify_user_created("client1", "operator", "client1@test.com", '{"unix":true}', '{"windows":true}')
-
-    def test_exception_captured_as_error(self, caplog):
+class TestSendNeverRaises:
+    def test_smtp_failure_is_captured_and_logged(self, caplog):
         import logging
 
         from concilium.infrastructure.services.notification_service import NotificationService
 
-        cfg = _make_smtp_settings(enabled=False)
+        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
         svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send", side_effect=RuntimeError("smtp down")):
+        with patch("smtplib.SMTP", side_effect=OSError("conexão recusada")):
             with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                svc.notify_user_created("c1", "op", "c1@x.com", "{}", "{}")
-        assert any("notify_user_created" in r.message for r in caplog.records)
+                svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "World"})
+        assert any("send: falha ao notificar" in r.message for r in caplog.records)
 
-    def test_download_urls_included_in_body_when_present(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send") as mock_send:
-            svc.notify_user_created(
-                "client1",
-                "operator",
-                "client1@test.com",
-                '{"unix":true}',
-                '{"windows":true}',
-                proxy_download_urls={
-                    "windows": "https://example.com/concilium-mcp-proxy.exe",
-                    "linux": "https://example.com/concilium-mcp-proxy-linux",
-                    "macos": "https://example.com/concilium-mcp-proxy-macos",
-                },
-            )
-        body = mock_send.call_args.kwargs["body"]
-        assert "https://example.com/concilium-mcp-proxy.exe" in body
-        assert "https://example.com/concilium-mcp-proxy-linux" in body
-        assert "https://example.com/concilium-mcp-proxy-macos" in body
-        assert r"C:\Concilium\concilium-mcp-proxy.exe" in body
-        assert "~/.concilium/bin/concilium-mcp-proxy" in body
-
-    def test_download_urls_absent_when_none(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send") as mock_send:
-            svc.notify_user_created("client1", "operator", "client1@test.com", '{"unix":true}', '{"windows":true}')
-        body = mock_send.call_args.kwargs["body"]
-        assert "C:\\Concilium" not in body
-
-    def test_download_urls_only_linux_present_skips_windows_line(self):
-        """windows_url ausente (branch False) não impede a linha do Linux de ser incluída."""
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send") as mock_send:
-            svc.notify_user_created(
-                "client1",
-                "operator",
-                "client1@test.com",
-                '{"unix":true}',
-                '{"windows":true}',
-                proxy_download_urls={"windows": None, "linux": "https://example.com/concilium-mcp-proxy-linux"},
-            )
-        body = mock_send.call_args.kwargs["body"]
-        assert "C:\\Concilium" not in body
-        assert "https://example.com/concilium-mcp-proxy-linux" in body
-
-    def test_download_urls_absent_when_all_none(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send") as mock_send:
-            svc.notify_user_created(
-                "client1",
-                "operator",
-                "client1@test.com",
-                '{"unix":true}',
-                '{"windows":true}',
-                proxy_download_urls={"windows": None, "linux": None, "macos": None},
-            )
-        body = mock_send.call_args.kwargs["body"]
-        assert "C:\\Concilium" not in body
-
-
-class TestNotifyClientCodeMigrated:
-    def test_happy_path_fallback(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        # Should not raise
-        svc.notify_client_code_migrated("legacy1", "legacy1@test.com", '{"unix":true}', '{"windows":true}')
-
-    def test_exception_captured_as_error(self, caplog):
+    def test_unknown_template_is_captured_and_logged(self, caplog):
         import logging
 
         from concilium.infrastructure.services.notification_service import NotificationService
 
         cfg = _make_smtp_settings(enabled=False)
         svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send", side_effect=RuntimeError("smtp down")):
-            with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                svc.notify_client_code_migrated("c1", "c1@x.com", "{}", "{}")
-        assert any("notify_client_code_migrated" in r.message for r in caplog.records)
-
-    def test_download_url_included_in_body_when_present(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send") as mock_send:
-            svc.notify_client_code_migrated(
-                "legacy1",
-                "legacy1@test.com",
-                '{"unix":true}',
-                '{"windows":true}',
-                {"windows": "https://example.com/concilium-mcp-proxy.exe", "linux": None, "macos": None},
-            )
-        body = mock_send.call_args.kwargs["body"]
-        assert "https://example.com/concilium-mcp-proxy.exe" in body
-
-
-class TestNotifyUserRemoved:
-    def test_happy_path_fallback(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        svc.notify_user_removed("client1", "client1@test.com")
-
-    def test_exception_captured(self, caplog):
-        import logging
-
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send", side_effect=OSError("net err")):
-            with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                svc.notify_user_removed("c1", "c1@x.com")
-        assert any("notify_user_removed" in r.message for r in caplog.records)
-
-
-class TestNotifyUserEdited:
-    """ADR-131 D2 — notify_user_edited(client_id, email, changes)."""
-
-    def test_happy_path_fallback(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        svc.notify_user_edited("client1", "client1@test.com", {"client_code": "regenerado"})
-
-    def test_body_includes_changes(self, caplog):
-        import logging
-
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
-            svc.notify_user_edited("client1", "client1@test.com", {"client_code": "regenerado"})
-        assert any("client_code" in r.message and "regenerado" in r.message for r in caplog.records)
-
-    def test_exception_captured(self, caplog):
-        import logging
-
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send", side_effect=OSError("net err")):
-            with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                svc.notify_user_edited("c1", "c1@x.com", {"client_code": "regenerado"})
-        assert any("notify_user_edited" in r.message for r in caplog.records)
-
-
-class TestNotifyDeviceRevokedAdmin:
-    """ADR-131 D3 — notify_device_revoked_admin(client_id, device_id, email)."""
-
-    def test_happy_path_fallback(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        svc.notify_device_revoked_admin("client1", "macbook-01", "client1@test.com")
-
-    def test_body_mentions_admin_action(self, caplog):
-        import logging
-
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with caplog.at_level(logging.INFO, logger="concilium.infrastructure.services.notification_service"):
-            svc.notify_device_revoked_admin("client1", "macbook-01", "client1@test.com")
-        assert any("administrador" in r.message.lower() for r in caplog.records)
-
-    def test_exception_captured(self, caplog):
-        import logging
-
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send", side_effect=OSError("net err")):
-            with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                svc.notify_device_revoked_admin("c1", "dev-01", "c1@x.com")
-        assert any("notify_device_revoked_admin" in r.message for r in caplog.records)
-
-
-class TestNotifyNewDevice:
-    def _mock_api(self, base_url="https://app.test.com"):
-        api = MagicMock()
-        api.base_url = base_url
-        api.host = "localhost"
-        api.port = 8000
-        return api
-
-    def test_happy_path_fallback(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch("concilium.infrastructure.services.notification_service.get_smtp_settings", return_value=cfg):
-            with patch("concilium.infrastructure.settings.get_api", return_value=self._mock_api()):
-                svc.notify_new_device("c1", "dev-01", "MacBook", "c1@x.com", "revoke-tok-123")
-
-    def test_uses_host_port_when_no_base_url(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        api = self._mock_api(base_url="")
-        api.host = "myhost"
-        api.port = 9000
-        with patch("concilium.infrastructure.settings.get_api", return_value=api):
-            svc.notify_new_device("c1", "dev-01", "Win", "c1@x.com", "tok")
-
-    def test_exception_captured(self, caplog):
-        import logging
-
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send", side_effect=ValueError("bad")):
-            with patch("concilium.infrastructure.settings.get_api", return_value=self._mock_api()):
-                with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                    svc.notify_new_device("c1", "dev-01", "Dev", "c1@x.com", "tok")
-        assert any("notify_new_device" in r.message for r in caplog.records)
-
-
-class TestNotifyRevokePending:
-    def _mock_api(self, base_url="https://app.test.com"):
-        api = MagicMock()
-        api.base_url = base_url
-        api.host = "localhost"
-        api.port = 8000
-        return api
-
-    def test_happy_path_fallback(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch("concilium.infrastructure.settings.get_api", return_value=self._mock_api()):
-            svc.notify_revoke_pending("c1", "dev-01", "c1@x.com", "confirm-tok")
-
-    def test_uses_host_port_when_no_base_url(self):
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        api = self._mock_api(base_url="")
-        api.host = "myhost"
-        api.port = 9000
-        with patch("concilium.infrastructure.settings.get_api", return_value=api):
-            svc.notify_revoke_pending("c1", "dev-01", "c1@x.com", "tok")
-
-    def test_exception_captured(self, caplog):
-        import logging
-
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        cfg = _make_smtp_settings(enabled=False)
-        svc = NotificationService(settings=cfg)
-        with patch.object(svc, "_send", side_effect=ConnectionError("refused")):
-            with patch("concilium.infrastructure.settings.get_api", return_value=self._mock_api()):
-                with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                    svc.notify_revoke_pending("c1", "dev-01", "c1@x.com", "tok")
-        assert any("notify_revoke_pending" in r.message for r in caplog.records)
+        with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
+            svc.send(to="dest@x.com", subject="Hi", template="nao_existe", context={})
+        assert any("send: falha ao notificar" in r.message for r in caplog.records)
 
 
 class TestGetNotificationServiceSingleton:

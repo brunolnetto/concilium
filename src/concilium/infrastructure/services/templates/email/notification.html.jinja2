@@ -1,0 +1,26 @@
+{% extends "_base.html.jinja2" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<h1 style="font-size:18px;margin:0 0 16px;">{{ heading }}</h1>
+{% if intro %}
+<p style="font-size:14px;line-height:1.5;margin:0 0 16px;">{{ intro }}</p>
+{% endif %}
+{% if details %}
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;margin:0 0 16px;">
+{% for key, value in details %}
+<tr>
+<td style="padding:4px 0;color:#6b7280;">{{ key }}</td>
+<td style="padding:4px 0;font-weight:bold;">{{ value }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+{% if cta %}
+<p style="margin:24px 0;">
+<a href="{{ cta.url }}" style="background-color:#2563eb;color:#ffffff;padding:12px 20px;border-radius:6px;text-decoration:none;font-size:14px;display:inline-block;">{{ cta.label }}</a>
+</p>
+{% endif %}
+{% if footer_note %}
+<p style="font-size:12px;color:#6b7280;margin:16px 0 0;">{{ footer_note }}</p>
+{% endif %}
+{% endblock %}

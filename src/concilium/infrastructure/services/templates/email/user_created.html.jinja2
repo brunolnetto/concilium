@@ -1,0 +1,36 @@
+{% extends "_base.html.jinja2" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<h1 style="font-size:18px;margin:0 0 16px;">{{ heading }}</h1>
+{% if intro %}
+<p style="font-size:14px;line-height:1.5;margin:0 0 16px;">{{ intro }}</p>
+{% endif %}
+{% if details %}
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;margin:0 0 16px;">
+{% for key, value in details %}
+<tr>
+<td style="padding:4px 0;color:#6b7280;">{{ key }}</td>
+<td style="padding:4px 0;font-weight:bold;">{{ value }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+<p style="font-size:14px;line-height:1.5;margin:0 0 8px;">
+Em anexo, dois arquivos <code>claude_desktop_config.json</code> — use o que corresponde
+ao seu sistema operacional:
+</p>
+<ol style="font-size:14px;line-height:1.6;">
+<li><code>claude_desktop_config-macos-linux.json</code> → macOS/Linux</li>
+<li><code>claude_desktop_config-windows.json</code> → Windows</li>
+</ol>
+{% if download_note %}
+<p style="font-size:13px;line-height:1.5;color:#374151;white-space:pre-wrap;">{{ download_note }}</p>
+{% endif %}
+<ol start="3" style="font-size:14px;line-height:1.6;">
+<li>Adicione o conteúdo do arquivo escolhido ao seu arquivo de configuração:
+<br>macOS: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>
+<br>Windows: <code>%APPDATA%\Claude\claude_desktop_config.json</code>
+</li>
+</ol>
+<p style="font-size:12px;color:#6b7280;margin:16px 0 0;">Se não conseguir abrir os anexos, o conteúdo também está incluído na versão em texto deste email.</p>
+{% endblock %}

@@ -171,18 +171,16 @@ class TestRevokePending:
         record = MagicMock(client_id="svc", device_id="dev-1")
         store_mock.get_revoke_pending.return_value = record
         store_mock.list_clients.return_value = [MagicMock(client_id="svc", email="user@example.com")]
-        notif_mock = MagicMock()
         with (
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
             patch(
-                "concilium.infrastructure.services.notification_service.get_notification_service",
-                return_value=notif_mock,
-            ),
+                "concilium.application.services.notifications.notify_revoke_pending",
+            ) as notify_mock,
         ):
             resp = c.post("/auth/revoke-pending/good-token")
         assert resp.status_code == 200
         assert resp.json()["status"] == "confirmation_sent"
-        notif_mock.notify_revoke_pending.assert_called_once()
+        notify_mock.assert_called_once()
 
     def test_client_without_email_skips_notification(self):
         from unittest.mock import MagicMock, patch

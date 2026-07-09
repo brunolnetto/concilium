@@ -4,6 +4,9 @@
 **Data:** 2026-07-08
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-123 (serviço de notificação original), ADR-094 (JWT/auth), ADR-099 (RBAC)
+**Evolução:** ADR-134 migra os métodos `notify_*` adicionados por esta ADR (`notify_user_edited`,
+`notify_device_revoked_admin`) de `NotificationService` para `application/services/notifications.py`,
+sobre o `send(template, context)` genérico.
 
 ---
 

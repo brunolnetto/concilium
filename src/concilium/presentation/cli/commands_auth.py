@@ -140,8 +140,8 @@ def add_user(
     Se --email for fornecido, o claude_desktop_config.json pronto é enviado por
     email automaticamente (ADR-123 F2).
     """
+    from concilium.application.services.notifications import notify_user_created
     from concilium.infrastructure.auth.auth_store import get_auth_store
-    from concilium.infrastructure.services.notification_service import get_notification_service
 
     store = get_auth_store()
     generated = secret is None
@@ -166,7 +166,7 @@ def add_user(
     config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
 
     if email:
-        get_notification_service().notify_user_created(
+        notify_user_created(
             client_id=client_id,
             role=role,
             email=email,
@@ -260,8 +260,7 @@ def _check_owned_projects(client_id: str, reassign_to: str | None, force: bool, 
                 abort=True,
             )
         rprint(
-            f"[yellow]⚠ Removendo '{client_id}' com projetos órfãos "
-            f"(owner_id não reatribuído): {project_ids}.[/yellow]"
+            f"[yellow]⚠ Removendo '{client_id}' com projetos órfãos (owner_id não reatribuído): {project_ids}.[/yellow]"
         )
         return
 
@@ -297,8 +296,8 @@ def remove_user(
     padrão — use --reassign-to para transferir ownership antes, ou --force para
     remover mesmo assim (deixa owner_id órfão).
     """
+    from concilium.application.services.notifications import notify_user_removed
     from concilium.infrastructure.auth.auth_store import get_auth_store
-    from concilium.infrastructure.services.notification_service import get_notification_service
 
     _check_owned_projects(client_id, reassign_to, force, force_yes)
 
@@ -322,7 +321,7 @@ def remove_user(
     else:
         rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
         if existing and existing.email:
-            get_notification_service().notify_user_removed(client_id, existing.email)
+            notify_user_removed(client_id, existing.email)
 
 
 # ── Dispositivos ──────────────────────────────────────────────────────────────
@@ -341,8 +340,8 @@ def regenerate_code(
     não é necessário gerar um código por dispositivo. Use este comando apenas
     se o usuário perdeu o código original ou se ele vazou e precisa ser trocado.
     """
+    from concilium.application.services.notifications import notify_user_edited
     from concilium.infrastructure.auth.auth_store import get_auth_store
-    from concilium.infrastructure.services.notification_service import get_notification_service
 
     store = get_auth_store()
     client_code = store.regenerate_client_code(user)
@@ -352,7 +351,7 @@ def regenerate_code(
 
     existing = next((r for r in store.list_clients() if r.client_id == user), None)
     if existing and existing.email:
-        get_notification_service().notify_user_edited(user, existing.email, {"client_code": "regenerado"})
+        notify_user_edited(user, existing.email, {"client_code": "regenerado"})
 
     if show_config:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
@@ -380,8 +379,8 @@ def migrate_legacy_codes() -> None:
     Usuários sem email ficam listados no terminal (também os dois formatos) para
     envio manual.
     """
+    from concilium.application.services.notifications import notify_client_code_migrated
     from concilium.infrastructure.auth.auth_store import get_auth_store
-    from concilium.infrastructure.services.notification_service import get_notification_service
 
     store = get_auth_store()
     migrated = store.migrate_legacy_client_codes()
@@ -397,9 +396,7 @@ def migrate_legacy_codes() -> None:
     for client_id, client_code, email in migrated:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
         if email:
-            get_notification_service().notify_client_code_migrated(
-                client_id, email, config_json_unix, config_json_windows, proxy_download_urls
-            )
+            notify_client_code_migrated(client_id, email, config_json_unix, config_json_windows, proxy_download_urls)
             rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
         else:
             manual.append((client_id, client_code))
@@ -452,8 +449,8 @@ def revoke_device(
     yes: bool = typer.Option(False, "--yes", "-y", help="Confirmar sem prompt."),
 ) -> None:
     """Revoga todos os refresh tokens de um dispositivo."""
+    from concilium.application.services.notifications import notify_device_revoked_admin
     from concilium.infrastructure.auth.auth_store import get_auth_store
-    from concilium.infrastructure.services.notification_service import get_notification_service
 
     if not yes:
         typer.confirm(f"Revogar acesso do dispositivo '{device}'?", abort=True)
@@ -471,6 +468,6 @@ def revoke_device(
         if owner_client_id:
             client = next((r for r in store.list_clients() if r.client_id == owner_client_id), None)
             if client and client.email:
-                get_notification_service().notify_device_revoked_admin(client.client_id, device, client.email)
+                notify_device_revoked_admin(client.client_id, device, client.email)
     else:
         rprint(f"[yellow]Nenhum token ativo encontrado para '{device}'.[/yellow]")

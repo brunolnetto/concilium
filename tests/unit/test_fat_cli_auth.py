@@ -23,7 +23,14 @@ runner = CliRunner()
 
 PATCH_GET_AUTH_STORE = "concilium.infrastructure.auth.auth_store.get_auth_store"
 PATCH_GET_PROXY_DOWNLOAD_URLS = "concilium.presentation.cli.commands_auth._get_proxy_exe_download_urls"
-PATCH_GET_NOTIFICATION_SERVICE = "concilium.infrastructure.services.notification_service.get_notification_service"
+
+# ADR-134 F2: os antigos métodos notify_* de NotificationService viraram funções
+# em application/services/notifications.py — patch aponta para lá.
+PATCH_NOTIFY_USER_REMOVED = "concilium.application.services.notifications.notify_user_removed"
+PATCH_NOTIFY_USER_CREATED = "concilium.application.services.notifications.notify_user_created"
+PATCH_NOTIFY_USER_EDITED = "concilium.application.services.notifications.notify_user_edited"
+PATCH_NOTIFY_CLIENT_CODE_MIGRATED = "concilium.application.services.notifications.notify_client_code_migrated"
+PATCH_NOTIFY_DEVICE_REVOKED_ADMIN = "concilium.application.services.notifications.notify_device_revoked_admin"
 
 
 # ---------------------------------------------------------------------------
@@ -134,9 +141,7 @@ class TestGetProxyExeDownloadUrls:
             "macos": "https://example.com/distribuicao/concilium-mcp-proxy-macos",
         }
         assert storage.gerar_url_temporaria.call_count == 3
-        storage.gerar_url_temporaria.assert_any_call(
-            "distribuicao/concilium-mcp-proxy.exe", ttl_segundos=7 * 24 * 3600
-        )
+        storage.gerar_url_temporaria.assert_any_call("distribuicao/concilium-mcp-proxy.exe", ttl_segundos=7 * 24 * 3600)
 
     def test_returns_none_when_backend_unsupported(self):
         """Backend sem suporte a URL assinada (ex.: filesystem local) -> None por SO."""
@@ -371,45 +376,42 @@ class TestRemoveUser:
         """ADR-131 D1 — remove-user chama notify_user_removed quando há email cadastrado."""
         client = _make_client_record("alice", email="alice@example.com")
         store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_USER_REMOVED) as notify_mock,
         ):
             result = runner.invoke(app, ["remove-user", "--id", "alice", "--yes"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_user_removed.assert_called_once_with("alice", "alice@example.com")
+        notify_mock.assert_called_once_with("alice", "alice@example.com")
 
     def test_remove_user_without_email_does_not_notify(self):
         """Sem email cadastrado, remove-user não chama notify_user_removed nem lança exceção."""
         client = _make_client_record("alice", email="")
         store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_USER_REMOVED) as notify_mock,
         ):
             result = runner.invoke(app, ["remove-user", "--id", "alice", "--yes"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_user_removed.assert_not_called()
+        notify_mock.assert_not_called()
 
     def test_remove_user_unknown_client_does_not_notify(self):
         """Cliente inexistente (não achado em list_clients) não deve notificar nem lançar."""
         store = _make_store(list_clients_return=[], list_devices_return=[], remove_client_return=False)
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_USER_REMOVED) as notify_mock,
         ):
             result = runner.invoke(app, ["remove-user", "--id", "ghost", "--yes"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_user_removed.assert_not_called()
+        notify_mock.assert_not_called()
 
     def test_add_user_no_email_prints_both_platform_configs(self):
         """Sem --email, o console mostra os dois blocos (macOS/Linux e Windows) —
@@ -428,7 +430,6 @@ class TestRemoveUser:
 
     def test_add_user_with_email_sends_both_platform_configs(self):
         store = _make_store(add_client_return=_make_client_record())
-        notif = MagicMock()
         fake_urls = {
             "windows": "https://example.com/concilium-mcp-proxy.exe",
             "linux": "https://example.com/concilium-mcp-proxy-linux",
@@ -437,7 +438,7 @@ class TestRemoveUser:
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_USER_CREATED) as notify_mock,
             patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value=fake_urls),
         ):
             result = runner.invoke(
@@ -446,8 +447,8 @@ class TestRemoveUser:
             )
 
         assert result.exit_code == 0, result.output
-        notif.notify_user_created.assert_called_once()
-        kwargs = notif.notify_user_created.call_args.kwargs
+        notify_mock.assert_called_once()
+        kwargs = notify_mock.call_args.kwargs
         assert "$HOME/.concilium/bin/concilium-mcp-proxy" in kwargs["config_json_unix"]
         assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in kwargs["config_json_windows"]
         assert kwargs["proxy_download_urls"] == fake_urls
@@ -539,54 +540,50 @@ class TestRegenerateCode:
         client = _make_client_record("alice", email="alice@example.com")
         store = _make_store(list_clients_return=[client])
         store.regenerate_client_code.return_value = "RCODE-NEW"
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_USER_EDITED) as notify_mock,
         ):
             result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_user_edited.assert_called_once_with(
-            "alice", "alice@example.com", {"client_code": "regenerado"}
-        )
+        notify_mock.assert_called_once_with("alice", "alice@example.com", {"client_code": "regenerado"})
 
     def test_without_email_does_not_notify(self):
         """Sem email cadastrado, regenerate-code não chama notify_user_edited nem lança exceção."""
         client = _make_client_record("alice", email="")
         store = _make_store(list_clients_return=[client])
         store.regenerate_client_code.return_value = "RCODE-NEW"
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_USER_EDITED) as notify_mock,
         ):
             result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_user_edited.assert_not_called()
+        notify_mock.assert_not_called()
 
     def test_unknown_user_after_regenerate_does_not_notify(self):
         """Cliente que sumiu do store (edge case) entre regenerate e lookup não deve notificar nem lançar."""
         store = _make_store(list_clients_return=[])
         store.regenerate_client_code.return_value = "RCODE-NEW"
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_USER_EDITED) as notify_mock,
         ):
             result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_user_edited.assert_not_called()
+        notify_mock.assert_not_called()
 
 
 # ===========================================================================
 # migrate-legacy-codes
 # ===========================================================================
+
 
 class TestMigrateLegacyCodes:
     def test_no_pending_prints_nothing_to_migrate(self):
@@ -604,12 +601,11 @@ class TestMigrateLegacyCodes:
         store.migrate_legacy_client_codes.return_value = [
             ("legacy1", "RCODE-AAA", "legacy1@example.com"),
         ]
-        notif = MagicMock()
         fake_urls = {"windows": "https://example.com/concilium-mcp-proxy.exe", "linux": None, "macos": None}
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
             patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value=fake_urls),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
@@ -617,8 +613,8 @@ class TestMigrateLegacyCodes:
         assert result.exit_code == 0, result.output
         assert "legacy1" in result.output
         assert "email enviado" in result.output
-        notif.notify_client_code_migrated.assert_called_once()
-        args = notif.notify_client_code_migrated.call_args[0]
+        notify_mock.assert_called_once()
+        args = notify_mock.call_args[0]
         assert args[0] == "legacy1"
         assert args[1] == "legacy1@example.com"
         assert "RCODE-AAA" in args[2]  # config_json_unix
@@ -630,11 +626,10 @@ class TestMigrateLegacyCodes:
         store.migrate_legacy_client_codes.return_value = [
             ("legacy_no_email", "RCODE-BBB", ""),
         ]
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
             patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
@@ -643,25 +638,24 @@ class TestMigrateLegacyCodes:
         assert "sem email cadastrado" in result.output
         assert "Entrega manual" in result.output
         assert "RCODE-BBB" in result.output
-        notif.notify_client_code_migrated.assert_not_called()
+        notify_mock.assert_not_called()
 
     def test_email_path_sends_both_platforms(self):
         store = _make_store()
         store.migrate_legacy_client_codes.return_value = [
             ("legacy1", "RCODE-AAA", "legacy1@example.com"),
         ]
-        notif = MagicMock()
         fake_urls = {"windows": "https://example.com/concilium-mcp-proxy.exe", "linux": None, "macos": None}
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
             patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value=fake_urls),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
         assert result.exit_code == 0, result.output
-        args = notif.notify_client_code_migrated.call_args[0]
+        args = notify_mock.call_args[0]
         config_json_unix, config_json_windows = args[2], args[3]
         assert "$HOME/.concilium/bin/concilium-mcp-proxy" in config_json_unix
         assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in config_json_windows
@@ -814,48 +808,43 @@ class TestRevokeDevice:
         device = _make_device_record("macbook-alice", client_id="alice")
         client = _make_client_record("alice", email="alice@example.com")
         store = _make_store(list_devices_return=[device], list_clients_return=[client], revoke_device_return=1)
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_DEVICE_REVOKED_ADMIN) as notify_mock,
         ):
             result = runner.invoke(app, ["revoke-device", "--device", "macbook-alice", "--yes"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_device_revoked_admin.assert_called_once_with(
-            "alice", "macbook-alice", "alice@example.com"
-        )
+        notify_mock.assert_called_once_with("alice", "macbook-alice", "alice@example.com")
 
     def test_revoke_device_without_email_does_not_notify(self):
         """Sem email cadastrado, revoke-device não chama notify_device_revoked_admin nem lança."""
         device = _make_device_record("macbook-alice", client_id="alice")
         client = _make_client_record("alice", email="")
         store = _make_store(list_devices_return=[device], list_clients_return=[client], revoke_device_return=1)
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_DEVICE_REVOKED_ADMIN) as notify_mock,
         ):
             result = runner.invoke(app, ["revoke-device", "--device", "macbook-alice", "--yes"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_device_revoked_admin.assert_not_called()
+        notify_mock.assert_not_called()
 
     def test_revoke_device_unknown_device_does_not_notify(self):
         """Device não encontrado (count==0) não deve notificar nem lançar exceção."""
         store = _make_store(list_devices_return=[], list_clients_return=[], revoke_device_return=0)
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_DEVICE_REVOKED_ADMIN) as notify_mock,
         ):
             result = runner.invoke(app, ["revoke-device", "--device", "ghost-device", "--yes"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_device_revoked_admin.assert_not_called()
+        notify_mock.assert_not_called()
 
     def test_revoke_device_expired_but_not_revoked_still_notifies(self):
         """Token expirado-mas-não-revogado: list_devices() não o listaria (filtra
@@ -868,18 +857,15 @@ class TestRevokeDevice:
             list_clients_return=[client],
             revoke_device_return=1,
         )
-        notif = MagicMock()
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif),
+            patch(PATCH_NOTIFY_DEVICE_REVOKED_ADMIN) as notify_mock,
         ):
             result = runner.invoke(app, ["revoke-device", "--device", "old-expired-device", "--yes"])
 
         assert result.exit_code == 0, result.output
-        notif.notify_device_revoked_admin.assert_called_once_with(
-            "alice", "old-expired-device", "alice@example.com"
-        )
+        notify_mock.assert_called_once_with("alice", "old-expired-device", "alice@example.com")
 
 
 # ===========================================================================
@@ -904,6 +890,5 @@ class TestAuthCliWiredIntoMain:
         actual = {c.name for c in auth_app.registered_commands}
         missing = expected - actual
         assert not missing, (
-            f"Comando(s) definidos em commands_auth.py mas não registrados em "
-            f"main.py::_load_auth(): {sorted(missing)}"
+            f"Comando(s) definidos em commands_auth.py mas não registrados em main.py::_load_auth(): {sorted(missing)}"
         )

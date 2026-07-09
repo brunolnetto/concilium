@@ -30,6 +30,38 @@ from .project_repository import ProjectHandle, ProjectRepository
 OWNERSHIP_TRANSFER_TTL = timedelta(hours=24)
 
 
+def _email_for(client_id: str | None) -> str | None:
+    """ADR-134 D6: resolve o email de um client_id via auth_store, best-effort.
+
+    Nunca lança — se o lookup falhar (store indisponível, client não encontrado,
+    sem email cadastrado), retorna None e o chamador simplesmente não notifica
+    (mesmo padrão condicional das notificações ADR-123/ADR-131: "se há email").
+    """
+    if not client_id:
+        return None
+    try:
+        from concilium.infrastructure.auth.auth_store import get_auth_store
+
+        store = get_auth_store()
+        record = next((r for r in store.list_clients() if r.client_id == client_id), None)
+        return record.email if record and record.email else None
+    except Exception:
+        return None
+
+
+def _notify_ownership_event(notify_fn: Any, *args: Any) -> None:
+    """ADR-134 D6: dispara a notificação de ownership correspondente, best-effort.
+
+    Nunca propaga exceção — a transferência de ownership em si já foi persistida
+    em meta.json antes desta chamada; falhar só a notificação não deve reverter
+    ou bloquear a operação de negócio (mesmo racional de `log_ownership_transfer_action`).
+    """
+    try:
+        notify_fn(*args)
+    except Exception:
+        pass
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -119,6 +151,11 @@ def transfer_ownership_forced(
         owner_proposto_ou_novo=owner_novo,
     )
     audit.log_ownership_transfer_action(project, action)
+    email_novo = _email_for(owner_novo)
+    if email_novo:
+        from concilium.application.services.notifications import notify_ownership_transfer_forced
+
+        _notify_ownership_event(notify_ownership_transfer_forced, email_novo, project_id, owner_anterior, owner_novo)
     return {"project_id": project_id, "owner_id": owner_novo, "owner_anterior": owner_anterior}
 
 
@@ -156,6 +193,18 @@ def create_ownership_transfer_pending(
         owner_proposto_ou_novo=owner_proposto,
     )
     audit.log_ownership_transfer_action(project, action)
+    email_proposto = _email_for(owner_proposto)
+    if email_proposto:
+        from concilium.application.services.notifications import notify_ownership_invite_created
+
+        _notify_ownership_event(
+            notify_ownership_invite_created,
+            email_proposto,
+            project_id,
+            owner_atual or "",
+            owner_proposto,
+            pending.token,
+        )
     return pending
 
 
@@ -198,6 +247,11 @@ def accept_ownership_transfer(
         owner_proposto_ou_novo=owner_novo,
     )
     audit.log_ownership_transfer_action(project, action)
+    email_anterior = _email_for(owner_anterior)
+    if email_anterior:
+        from concilium.application.services.notifications import notify_ownership_invite_accepted
+
+        _notify_ownership_event(notify_ownership_invite_accepted, email_anterior, project_id, owner_novo)
     return {"project_id": project_id, "owner_id": owner_novo}
 
 
@@ -234,6 +288,13 @@ def reject_ownership_transfer(
         owner_proposto_ou_novo=pending.get("owner_proposto"),
     )
     audit.log_ownership_transfer_action(project, action)
+    email_atual = _email_for(owner_atual)
+    if email_atual:
+        from concilium.application.services.notifications import notify_ownership_invite_rejected
+
+        _notify_ownership_event(
+            notify_ownership_invite_rejected, email_atual, project_id, pending["owner_proposto"]
+        )
     return {"project_id": project_id, "owner_id": owner_atual}
 
 
@@ -247,3 +308,8 @@ def _log_expired(project: ProjectHandle, pending: dict[str, Any], project_id: st
         owner_proposto_ou_novo=pending.get("owner_proposto"),
     )
     audit.log_ownership_transfer_action(project, action)
+    email_atual = _email_for(pending.get("owner_atual"))
+    if email_atual:
+        from concilium.application.services.notifications import notify_ownership_invite_expired
+
+        _notify_ownership_event(notify_ownership_invite_expired, email_atual, project_id, pending["owner_proposto"])
