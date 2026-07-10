@@ -74,6 +74,18 @@
       return ICONS[ext] || ICONS.default;
     }
 
+    // Copilot (PR #76): art.name vem do filesystem (pode conter ", <, &, etc.) —
+    // nunca interpolar direto em innerHTML/atributos sem escapar.
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str == null ? '' : String(str);
+      return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+      return escapeHtml(str).replace(/"/g, '&quot;');
+    }
+
     function renderArtList(arts, hasGantt) {
       const list = document.getElementById('art-list');
       let html = '';
@@ -111,8 +123,26 @@
         content.innerHTML = `<pre class="text-viewer">${JSON.stringify(art.data, null, 2)}</pre>`;
       } else if (ext === 'png' && art.data_base64) {
         content.innerHTML = `<div style="padding:12px;text-align:center"><img src="data:image/png;base64,${art.data_base64}" style="max-width:100%;border-radius:6px"></div>`;
+      } else if (ext === 'xlsx' && art.data_base64) {
+        // Sem parser de xlsx embutido (zip+XML exigiria bundle externo — fora do
+        // orçamento de <500KB/sem-CDN do app). Entrega honesta: download/abrir
+        // em vez de "não suportado". Ver ADR-101 nota F5.
+        const mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        const url = `data:${mime};base64,${art.data_base64}`;
+        content.innerHTML = `<div class="empty-viewer">
+          <div class="icon">📊</div>
+          <span>${escapeHtml(art.name)}</span>
+          <span style="font-size:11px;color:#94a3b8;max-width:280px;text-align:center">
+            Preview de abas não disponível no app (exigiria parser xlsx embutido).
+            Baixe o arquivo para abrir no Excel/LibreOffice.
+          </span>
+          <a download="${escapeAttr(art.name)}" href="${url}"
+             style="margin-top:8px;padding:6px 14px;background:#0f766e;color:white;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600">
+            ⬇ Baixar planilha
+          </a>
+        </div>`;
       } else {
-        content.innerHTML = `<div class="empty-viewer"><div class="icon">${iconFor(art.name)}</div><span>${art.name}</span><span style="font-size:11px;color:#94a3b8">Visualização não disponível para este formato</span></div>`;
+        content.innerHTML = `<div class="empty-viewer"><div class="icon">${iconFor(art.name)}</div><span>${escapeHtml(art.name)}</span><span style="font-size:11px;color:#94a3b8">Visualização não disponível para este formato</span></div>`;
       }
     }
 

@@ -139,9 +139,18 @@
       </div>
 
       <div style="margin-top:12px">
-        <button class="btn-apply" id="btn-apply" onclick="aplicarSimulacao()" disabled>Aplicar via Pipeline</button>
+        <button class="btn-apply" id="btn-apply" onclick="aplicarSimulacao()" disabled>Simular via Servidor</button>
         <button class="btn-reset" onclick="resetLevers()">Resetar</button>
+        <button class="btn-reset" id="btn-copy-comando" onclick="copiarComandoAplicacao()" disabled>📋 Copiar comando p/ aplicar</button>
         <span id="sim-msg" style="font-size:11px;color:#64748b;margin-left:8px"></span>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:#94a3b8;line-height:1.5">
+        ⚠️ Limitação conhecida (ADR-101 F4): o app fala com o servidor MCP só via
+        <code>ui/callTool</code> (postMessage) — não existe tool de "aplicar" que
+        persista os levers direto no projeto. "Simular via Servidor" reconsulta
+        <code>simular_cenario_replan</code> para conferir a estimativa; para
+        aplicar de fato, use "Copiar comando" e cole no chat para o agente ajustar
+        o regime de trabalho e disparar <code>disparar_pipeline</code>.
       </div>
     </div>
   </div>
@@ -192,6 +201,7 @@
           return `<tr><td><strong>${p.item_id}</strong></td><td>${fmt(p.custo_operacional_real)}</td><td>${fmt(p.custo_venda_cpu)}</td><td><span class="badge ${cls}">${num(fn)}</span></td><td>${p.status_frentes??'—'}</td><td>${fmt(p.gap_escala_abs)}</td></tr>`;
         }).join('');
         document.getElementById('btn-apply').disabled = false;
+        document.getElementById('btn-copy-comando').disabled = false;
         BASE.horas = data?.projeto?.regime_trabalho?.horas_dia ?? 8;
         BASE.dias  = data?.projeto?.regime_trabalho?.dias_semana ?? 6;
         document.getElementById('l-horas').value = BASE.horas;
@@ -203,9 +213,9 @@
 
     function updateLevers() {
       const eq  = parseFloat(document.getElementById('l-equipes').value);
-      const hor = parseInt(document.getElementById('l-horas').value);
-      const dia = parseInt(document.getElementById('l-dias').value);
-      const mar = parseInt(document.getElementById('l-margem').value);
+      const hor = parseInt(document.getElementById('l-horas').value, 10);
+      const dia = parseInt(document.getElementById('l-dias').value, 10);
+      const mar = parseInt(document.getElementById('l-margem').value, 10);
 
       document.getElementById('lv-equipes').textContent = eq.toFixed(1)+'×';
       document.getElementById('lv-horas').textContent   = hor+' h';
@@ -266,9 +276,9 @@
     function aplicarSimulacao() {
       if (!_projectId) { document.getElementById('sim-msg').textContent='❌ project_id não disponível'; return; }
       const eq  = parseFloat(document.getElementById('l-equipes').value);
-      const hor = parseInt(document.getElementById('l-horas').value);
-      const dia = parseInt(document.getElementById('l-dias').value);
-      const mar = parseInt(document.getElementById('l-margem').value);
+      const hor = parseInt(document.getElementById('l-horas').value, 10);
+      const dia = parseInt(document.getElementById('l-dias').value, 10);
+      const mar = parseInt(document.getElementById('l-margem').value, 10);
       document.getElementById('sim-msg').textContent = '⏳ Enviando para pipeline...';
       document.getElementById('btn-apply').disabled = true;
       window.parent.postMessage({
@@ -285,6 +295,31 @@
         }
       },'*');
       setTimeout(()=>{ document.getElementById('btn-apply').disabled=false; document.getElementById('sim-msg').textContent=''; },3000);
+    }
+
+    function comandoAplicacaoTexto() {
+      const eq  = parseFloat(document.getElementById('l-equipes').value);
+      const hor = parseInt(document.getElementById('l-horas').value, 10);
+      const dia = parseInt(document.getElementById('l-dias').value, 10);
+      const mar = parseInt(document.getElementById('l-margem').value, 10);
+      const pid = _projectId ?? '<project_id>';
+      return `Ajuste o regime de trabalho do projeto ${pid} para horas_dia=${hor}, `
+        + `dias_semana=${dia} (fator de equipes ${eq.toFixed(1)}×, meta de margem ${mar}%) `
+        + `e dispare disparar_pipeline(project_id="${pid}", skill_id="04-cronograma") `
+        + `para recalcular o cronograma e a análise financeira com os novos parâmetros.`;
+    }
+
+    function copiarComandoAplicacao() {
+      const texto = comandoAplicacaoTexto();
+      const msgEl = document.getElementById('sim-msg');
+      const marcarSucesso = () => { msgEl.textContent = '✅ Comando copiado — cole no chat'; };
+      const marcarFalha = () => { msgEl.textContent = '⚠️ Não foi possível copiar — copie manualmente: ' + texto; };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(marcarSucesso, marcarFalha);
+      } else {
+        marcarFalha();
+      }
+      setTimeout(() => { msgEl.textContent=''; }, 5000);
     }
 
     window.addEventListener('message', e => {

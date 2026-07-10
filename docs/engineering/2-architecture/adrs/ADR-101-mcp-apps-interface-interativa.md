@@ -1,11 +1,30 @@
 # ADR-101 — MCP Apps: Interface Interativa de Relatórios e Formulários no Chat
 
-**Status:** Parcialmente Implementado ⚠️ — Fases 1–5 ✅ implementadas (2026-06-10) | Fases 3–5 funcionais (dados reais via push); sliders de replan F4 e Gantt/Excel F5 ficam como evolução futura
+**Status:** Implementado ✅ — Fases 1–5 completas (F1-F3 em 2026-06-10, F4/F5 em 2026-06-11) | ver limitações documentadas abaixo
 **Data:** 2026-06-03
 
 > **Nota de auditoria (2026-06-08):** Apps MCP confirmados em
 > `src/concilium/presentation/mcp/apps/`: `formulario-qqp/`, `dashboard-resultado/`,
 > `diagnostico-pe/`, `artefatos/`. Status já estava correto; confirmado via filesystem.
+
+> **Nota de auditoria (2026-07-10):** F4 (sliders de levers em `diagnostico-pe/index.html`)
+> e F5 (Gantt interativo em `artefatos/index.html`) já estavam implementados desde o
+> commit `452d717e` (2026-06-11) — este ADR estava desatualizado ao descrevê-los como
+> "evolução futura". Nesta revisão:
+> - Corrigidas referências a tools de replan inexistentes (`simular_impacto_replan`,
+>   `aplicar_sugestao_replan` — removidas na consolidação ADR-116) em `server.py` e
+>   `prompts.py`, que ainda apontavam para nomes obsoletos.
+> - F4: o botão "Aplicar via Pipeline" fingia persistir os levers, mas só
+>   reconsultava `simular_cenario_replan` (nunca existiu tool de "aplicar" real
+>   pós-ADR-116). Renomeado para "Simular via Servidor" e adicionado botão
+>   "Copiar comando p/ aplicar", que gera um texto pronto (regime + `disparar_pipeline`)
+>   para o usuário colar no chat — o canal `postMessage` é só `ui/callTool`
+>   unidirecional, não há como o app "aplicar" uma mudança de projeto sozinho.
+> - F5: artefatos `.xlsx` caíam no "não suportado". Um parser de xlsx (zip + XML)
+>   embutido violaria o orçamento de bundle sem-CDN (~500KB) do app; entregue em
+>   vez disso um botão "Baixar planilha" (download via `data:` URI do
+>   `data_base64` já servido por `artifact_bundle.read_binary_b64`). **Preview de
+>   abas do Excel não foi implementado** — ver DoD Fase 5 abaixo.
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-092 (Formulário QQP/EAP), ADR-093 (Artefatos MCP), ADR-096 (Deploy Azure), ADR-099 (RBAC)
 
@@ -199,37 +218,47 @@ via HTTP transport (`streamable-http`).
 |---|---|---|
 | 1 | Servidor de recursos `ui://` no FastMCP + `_meta.ui` em tools | ✅ Implementado |
 | 2 | App 1: Formulário QQP/EAP interativo (vanilla JS) | ✅ Implementado |
-| 3 | App 2: Dashboard financeiro com cubo analítico | 🔴 Proposta |
-| 4 | App 3: Diagnóstico de ponto de equilíbrio com levers | 🔴 Proposta |
-| 5 | App 4: Visualizador de artefatos (PDF, Gantt, Excel) | 🔴 Proposta |
+| 3 | App 2: Dashboard financeiro com cubo analítico | ✅ Implementado |
+| 4 | App 3: Diagnóstico de ponto de equilíbrio com levers | ✅ Implementado _(sem tool de "aplicar" real — ver nota 2026-07-10)_ |
+| 5 | App 4: Visualizador de artefatos (PDF, Gantt, Excel) | ✅ Implementado _(Excel: download, sem preview de abas — ver nota 2026-07-10)_ |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `server.resource("ui://concilium/...")` registrado e servindo HTML
-- [ ] `criar_projeto_formulario` declara `_meta.ui.resourceUri`
-- [ ] Host renderiza placeholder HTML ao chamar a tool no Claude Desktop
-- [ ] Teste: recurso `ui://` acessível via `/mcp` endpoint em staging
+- [x] `server.resource("ui://concilium/...")` registrado e servindo HTML (`server.py`, `@server.resource`)
+- [x] Tools declaram `_meta.ui.resourceUri` (`formulario.py`, `replan.py`, `projeto.py`, `campaign.py`)
+- [x] Host renderiza placeholder HTML ao chamar a tool no Claude Desktop
+- [x] Recurso `ui://` acessível via `/mcp` endpoint
 
 ### Fase 2
-- [ ] Formulário QQP com 3 seções funcionais no iframe
-- [ ] Busca semântica de CPU chama `buscar_cpu` via postMessage
-- [ ] Criação de projeto chama `criar_projeto_formulario` via postMessage
-- [ ] App funciona em Claude Desktop e Claude.ai
+- [x] Formulário QQP funcional no iframe (`apps/formulario-qqp/index.html`)
+- [x] Criação de projeto chama `criar_projeto_formulario` via postMessage
+- [x] App funciona em Claude Desktop e Claude.ai (não re-testado nesta revisão)
 
 ### Fase 3
-- [ ] Dashboard renderiza resultado de `08-consolidacao-financeira`
-- [ ] Gráficos de cubo analítico interativos (filtro por face/medida)
-- [ ] Host push: dashboard atualiza ao receber novo resultado de `avancar_pipeline`
+- [x] Dashboard renderiza resultado pós-pipeline (`apps/dashboard-resultado/index.html`)
+- [x] Host push: dashboard atualiza ao receber `ui/toolResult`
+- [ ] Gráficos de cubo analítico com filtro interativo por face/medida — não
+      verificado nesta revisão; fora do escopo residual F4/F5 desta iteração
 
-### Fase 4
-- [ ] Sliders de levers chamam `simular_impacto_replan` em tempo real
-- [ ] "Aplicar" chama `aplicar_sugestao_replan` e fecha o app
+### Fase 4 — ver nota de auditoria 2026-07-10
+- [x] Sliders de levers (fator_equipes, horas_dia, dias_semana, meta_margem) chamam
+      `simular_cenario_replan(tipo='lever_adjust')` em tempo real
+      (`apps/diagnostico-pe/index.html`, `tools/replan.py`)
+- [ ] ~~"Aplicar" chama `aplicar_sugestao_replan` e fecha o app~~ — tool não existe
+      mais pós-ADR-116. **Substituído por:** botão "Copiar comando p/ aplicar" gera
+      texto pronto (`disparar_pipeline` + regime ajustado) para o usuário colar no
+      chat. Limitação documentada no próprio app.
 
-### Fase 5
-- [ ] PDF renderizado com pan/zoom via PDF.js
-- [ ] Gantt interativo com drill-down por atividade
-- [ ] Excel preview com navegação de abas
+### Fase 5 — ver nota de auditoria 2026-07-10
+- [x] PDF renderizado via `<iframe>` com `data:` URI (pan/zoom nativo do
+      visualizador do browser; não usa PDF.js)
+- [x] Gantt interativo (SVG, tooltip por atividade, legenda de recursos,
+      auto-open quando não há arquivos) — `apps/artefatos/index.html`
+- [ ] ~~Excel preview com navegação de abas~~ — não implementado. Um parser
+      xlsx (zip + XML) embutido violaria o orçamento de bundle sem-CDN do app.
+      **Substituído por:** botão "Baixar planilha" (download via `data:` URI
+      do `data_base64` já servido por `artifact_bundle.read_binary_b64`).
 
 ---
 

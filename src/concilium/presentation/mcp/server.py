@@ -1,9 +1,9 @@
-"""MCP Server do Concilium â€” orquestrador modular.
+"""MCP Server do Concilium — orquestrador modular.
 
-Usa FastMCP do SDK oficial mcp. ExpÃµe operaÃ§Ãµes de negÃ³cio que o Claude Desktop
-pode invocar via configuraÃ§Ã£o de MCP server stdio.
+Usa FastMCP do SDK oficial mcp. Expõe operações de negócio que o Claude Desktop
+pode invocar via configuração de MCP server stdio.
 
-ConfiguraÃ§Ã£o no Claude Desktop (claude_desktop_config.json):
+Configuração no Claude Desktop (claude_desktop_config.json):
 
     {
       "mcpServers": {
@@ -18,25 +18,25 @@ ConfiguraÃ§Ã£o no Claude Desktop (claude_desktop_config.json):
       }
     }
 
-PrincÃ­pio de design:
-    - OperaÃ§Ãµes expostas sÃ£o de NEGÃ“CIO (iniciar orÃ§amento, avanÃ§ar pipeline),
-      nÃ£o de IMPLEMENTAÃ‡ÃƒO (skill 02, skill 03, etc.).
-    - OperaÃ§Ãµes irreversÃ­veis (aprovar) requerem confirmaÃ§Ã£o humana antes
-      de serem invocadas â€” Claude Desktop deve apresentar para o usuÃ¡rio.
-    - Erros de prÃ©-condiÃ§Ã£o (ex.: skill anterior nÃ£o rodou) retornam mensagem
-      legÃ­vel pelo Claude para que ele possa pedir o input necessÃ¡rio ao usuÃ¡rio.
+Princípio de design:
+    - Operações expostas são de NEGÓCIO (iniciar orçamento, avançar pipeline),
+      não de IMPLEMENTAÇÃO (skill 02, skill 03, etc.).
+    - Operações irreversíveis (aprovar) requerem confirmação humana antes
+      de serem invocadas — Claude Desktop deve apresentar para o usuário.
+    - Erros de pré-condição (ex.: skill anterior não rodou) retornam mensagem
+      legível pelo Claude para que ele possa pedir o input necessário ao usuário.
 
-Estrutura de mÃ³dulos:
-    tools/catalogo.py  â€” listar_contextos, sugerir_eap, listar_cpus, buscar_cpu,
+Estrutura de módulos:
+    tools/catalogo.py  — listar_contextos, sugerir_eap, listar_cpus, buscar_cpu,
                          derivar_recursos_do_catalogo
-    tools/projeto.py   â€” listar_projetos, iniciar_orcamento, consultar_status,
+    tools/projeto.py   — listar_projetos, iniciar_orcamento, consultar_status,
                          aprovar_versao
-    tools/pipeline.py  â€” avancar_pipeline
-    tools/analise.py   â€” consultar_viabilidade_prazo, identificar_gargalos_recurso,
+    tools/pipeline.py  — avancar_pipeline
+    tools/analise.py   — consultar_viabilidade_prazo, identificar_gargalos_recurso,
                          consultar_alternativas_replan
-    tools/replan.py    â€” simular_impacto_replan, aplicar_sugestao_replan,
-                         simular_impacto_indiretos
-    tools/cenarios.py  â€” explorar_alternativas
+    tools/replan.py    — simular_cenario_replan (ADR-101 F4: tipo='lever_adjust',
+                         consumido pelos sliders do app ui://concilium/diagnostico-pe)
+    tools/cenarios.py  — explorar_alternativas
 """
 
 from __future__ import annotations

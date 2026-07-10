@@ -9,7 +9,8 @@ NOTAS_VIABILIDADE = {
     "VIAVEL": "Cronograma dentro do prazo contratual.",
     "INVIAVEL": (
         "Cronograma excede prazo contratual em {semanas} semanas. "
-        "Opções: (1) extend_deadline via simular_impacto_replan, "
+        "Opções: (1) ajustar levers (fator_equipes, horas_dia, dias_semana) via "
+        "simular_cenario_replan(project_id=<id>, tipo='lever_adjust', parametros={...}), "
         "(2) add_resource para acelerar atividades críticas, "
         "(3) reduce_scope para adiar atividades não-críticas."
     ),

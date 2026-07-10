@@ -20,6 +20,7 @@ def _load_replan():
 
     path = Path(__file__).resolve().parents[2] / "src/concilium/presentation/mcp/tools/replan.py"
     spec = importlib.util.spec_from_file_location("replan_tools", path)
+    assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -210,6 +211,19 @@ class TestDiagnosticoPeApp:
     def test_tem_botao_reset(self):
         assert "resetLevers" in self._html()
 
+    def test_tem_botao_copiar_comando_aplicacao(self):
+        """ADR-101 nota F4: sem tool de 'aplicar' após consolidação ADR-116 —
+        o app oferece um comando pronto para o usuário colar no chat em vez de
+        fingir que persiste os levers direto no projeto."""
+        html = self._html()
+        assert "copiarComandoAplicacao" in html
+        assert "btn-copy-comando" in html
+        assert "disparar_pipeline" in html
+
+    def test_documenta_limitacao_canal_unidirecional(self):
+        html = self._html()
+        assert "Limitação conhecida" in html
+
 
 class TestArtefatosApp:
     """Verifica que o HTML do app de artefatos tem o Gantt."""
@@ -256,6 +270,15 @@ class TestArtefatosApp:
 
     def test_auto_open_gantt_quando_sem_artefatos(self):
         assert "openGantt()" in self._html()
+
+    def test_xlsx_tem_acesso_ao_artefato(self):
+        """ADR-101 nota F5: sem parser xlsx embutido (zip+XML infringiria o
+        orçamento sem-CDN/<500KB) — o app oferece download/abrir em vez de
+        'não suportado', honrando a leitura honesta do escopo residual."""
+        html = self._html()
+        assert "xlsx" in html
+        assert "Baixar planilha" in html
+        assert "spreadsheetml.sheet" in html
 
 
 class TestSimularCenarioReplanToolWrapper:
