@@ -1,9 +1,20 @@
 # ADR-085 — Custo Instancial Composicional Temporal: Linha do Tempo por Instância, Taxa Ociosa por Componente e Base Bottom-Up de Precificação
 
-**Status:** Implementado
+**Status:** Implementado _(D3 parcialmente reconciliada por ADR-125/ADR-136 — ver nota abaixo)_
 **Data:** 2026-05-29
 **Autores:** Bruno Peixoto / Concilium
 **Dependências:** ADR-071, ADR-077, ADR-079, ADR-080 (supersede), ADR-083, ADR-084, ADR-023, ADR-039, ADR-076
+
+> **Nota de reconciliação (2026-07-10, ver ADR-136):** a posição de mob/demob na
+> hierarquia de custo, tal como formulada em D3 abaixo (dentro de `custo(I_k)`,
+> sem distinguir de `C_pool`), foi substituída pela decisão do **ADR-125 D1/D4**:
+> mob/demob são custo indireto de campo (BDI/DI), tratados fora de `C_pool` mas
+> ainda somados em `total`/`custo_total_contrato` — que é, na prática, a mesma
+> variável agregada referenciada aqui como `custo_total_contrato_r`. A fórmula
+> abaixo permanece como registro histórico da formulação original; ADR-125 é a
+> decisão vigente sobre onde mob/demob se encaixam. ADR-136 documenta e corrige
+> o gap de implementação (campos de mob/demob por instância nunca calculados
+> no pipeline real do pool).
 
 ---
 

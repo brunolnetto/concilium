@@ -1,9 +1,19 @@
 # ADR-136 — Custo de Mobilização/Desmobilização: Campos Mortos no Pool e Cálculo Desconectado (Skill-06)
 
-**Status:** 💡 Proposta
+**Status:** ⚠️ Parcialmente Implementado _(F1/F2/F3/F6 ✅; F4/F5 deferidas — ver nota)_
 **Data:** 2026-07-10
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-085 (Custo Instancial Composicional Temporal), ADR-125 (Hierarquia de Custo C_prod/C_pool/Contrato), ADR-105 (Mobilização e Desmobilização — Política Integrada), ADR-106 (LifecycleEngine), ADR-104 (Centralização do Cálculo de Custos), NEP-043 (Reconciliação C_r)
+
+> **Nota de escopo desta PR (2026-07-10):** implementadas F1 (levantamento —
+> consolidado no Contexto/P1-P5), F2 (reconciliação ADR-085/ADR-125), F3
+> (popular `custo_mob_instancia`/`custo_demob_instancia` reais no pool) e F6
+> parcial (regressão confirmando que `C_pool < total` deixou de ser uma
+> tautologia). F4 (conectar skill-06/`_mob.py` ao ciclo de vida real do pool) e
+> F5 (decisão sobre `equipe_custo_engine.py`) são deferidas para PR(s)
+> subsequentes — ambas exigem desenho de interface entre skill-05 e skill-06
+> (F4) ou um levantamento de call sites mais amplo (F5) que não é seguro
+> encaixar na mesma mudança que corrige os campos mortos do pool.
 
 ---
 
@@ -101,35 +111,41 @@ Se D2/D3 tornam o cálculo baseado em pool a fonte real de mob/demob para projet
 
 | Fase | Entregas | Status |
 |---|---|---|
-| **F1 — Levantamento** | Mapear quais skills/projetos formam pool RCPSP real vs. dependem de equipes diretas fora de pool; confirmar call sites (ou ausência deles) de `equipe_custo_engine.py`; confirmar quais benchmarks exercitam `_mob.py` legado vs. config pré-agregada | ⬜ |
-| **F2 — Reconciliação documental (D1)** | Nota de superseding parcial em ADR-085, referenciando esta ADR e ADR-125 | ⬜ |
-| **F3 — Popular custo do pool (D2)** | `calcular_custo_instancia_composicional` ganha parâmetro de mobilização; `_compute_instancia_lifecycle` computa valores reais em vez de `0.0` hardcoded; `total` do contrato passa a refletir mob/demob | ⬜ |
-| **F4 — Conectar skill-06 ao pool (D3)** | `_mob.py`/`mob_scheduling.py` derivam janelas de mob/demob de `InstanciaRecurso` em vez de `infer_mob_windows` sobre datas agregadas | ⬜ |
-| **F5 — Decisão sobre `equipe_custo_engine.py` (D4)** | Com base em F1, decidir manter como caminho paralelo ou reconciliar com F3 | ⬜ |
-| **F6 — Regressão** | Teste que confirma `C_pool ≤ total` como validação real (não vácua) após F3; teste de regressão no AGIS reproduzindo a granularidade por equipe via F4 | ⬜ |
+| **F1 — Levantamento** | Mapear quais skills/projetos formam pool RCPSP real vs. dependem de equipes diretas fora de pool; confirmar call sites (ou ausência deles) de `equipe_custo_engine.py`; confirmar quais benchmarks exercitam `_mob.py` legado vs. config pré-agregada | ✅ |
+| **F2 — Reconciliação documental (D1)** | Nota de superseding parcial em ADR-085, referenciando esta ADR e ADR-125 | ✅ |
+| **F3 — Popular custo do pool (D2)** | `calcular_custo_instancia_composicional` ganha parâmetro de mobilização; `_compute_instancia_lifecycle` computa valores reais em vez de `0.0` hardcoded; `total` do contrato passa a refletir mob/demob | ✅ |
+| **F4 — Conectar skill-06 ao pool (D3)** | `_mob.py`/`mob_scheduling.py` derivam janelas de mob/demob de `InstanciaRecurso` em vez de `infer_mob_windows` sobre datas agregadas | ⬜ _(deferida — ver nota de escopo)_ |
+| **F5 — Decisão sobre `equipe_custo_engine.py` (D4)** | Com base em F1, decidir manter como caminho paralelo ou reconciliar com F3 | ⬜ _(deferida — ver nota de escopo)_ |
+| **F6 — Regressão** | Teste que confirma `C_pool ≤ total` como validação real (não vácua) após F3; teste de regressão no AGIS reproduzindo a granularidade por equipe via F4 | ⚠️ _(parcial — C_pool ≤ total ✅; granularidade AGIS depende de F4)_ |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] Levantamento documentado: projetos/skills com pool RCPSP real vs. equipes fora de pool; call sites de `equipe_custo_engine.py`; benchmarks que exercitam `_mob.py` legado
+- [x] Levantamento documentado: confirmado que `equipe_custo_engine.py`/`LifecycleEngine` já implementa corretamente a hierarquia do ADR-125 (mob/demob somados só em `total`, nunca em `custo_pool`), mas nenhum call site de produção o consome — é código duplicado e desconectado do pipeline real do pool (skill-05). `_mob.py` (skill-06) não referencia `InstanciaRecurso`/pool em nenhum ponto — cego à granularidade por equipe. Detalhado no Contexto (P1-P5) desta ADR.
 
 ### Fase 2
-- [ ] ADR-085 atualizado com nota de superseding parcial (D3, quanto à posição de mob/demob), apontando para ADR-125 e esta ADR
+- [x] ADR-085 atualizado com nota de superseding parcial (D3, quanto à posição de mob/demob), apontando para ADR-125 e esta ADR
 
 ### Fase 3
-- [ ] `calcular_custo_instancia_composicional` aceita custo de mobilização como parâmetro
-- [ ] `_compute_instancia_lifecycle` computa `custo_mob_instancia`/`custo_demob_instancia` reais, não `0.0` hardcoded
-- [ ] Teste cobrindo o cálculo real e confirmando que `total` (não `C_pool`) reflete os valores
+- [x] `calcular_custo_instancia_composicional` aceita `c_mob_efetivo` como parâmetro (retrocompatível, default `0.0`)
+- [x] `_compute_instancia_lifecycle` computa `custo_mob_instancia`/`custo_demob_instancia` reais — mob sempre que a instância é utilizada; demob apenas quando a desmob antecipada é efetivamente aplicada — em vez de `0.0` hardcoded
+- [x] `_build_instancia_slot` popula `InstanciaRecurso.custo_mob_instancia` (antes nunca atribuído em lugar nenhum do código)
+- [x] `_sum_inst_categories` inclui `custo_mob_instancia` na categoria EQ (mantendo o invariante categorial `Σ custo_inst_cat == custo_total_particionado`)
+- [x] Cubo de pool (ADR-086, `cubo_pool_builder.py`): H1 (`Σ células == custo_total_contrato`) reconciliado para `Σ células == custo_total_contrato − (mob+demob)` — mob/demob são custo de evento, sem célula própria por semana; `validar_invariantes_cubo_pool`/`_check_h1` ganham parâmetro `instancias` (opcional, retrocompatível) para calcular o desconto
+- [x] Testes cobrindo o cálculo real (unitário em `calcular_custo_instancia_composicional`, em `_compute_instancia_lifecycle`, e pipeline-level confirmando que `custo_instancia_total`/`custo_total_contrato` refletem os valores)
 
-### Fase 4
+### Fase 4 — Deferida
 - [ ] `_mob.py`/`mob_scheduling.py` consomem `InstanciaRecurso.semana_mobilizacao`/`.semana_desmobilizacao` em vez de `infer_mob_windows`
 - [ ] Teste de regressão no AGIS reproduzindo a tabela de 7 equipes com permanências distintas (1,3–12,0 meses) via dados do pool, não via input manual
+- **Motivo do adiamento:** exige desenhar a interface entre skill-05 (produtor de `InstanciaRecurso`) e skill-06 (consumidor em `_mob.py`), que hoje não existe — arriscado encaixar na mesma mudança que corrigiu os campos mortos do pool (F3). Também não pode ser validado contra o AGIS diretamente, pois o benchmark AGIS contorna `_mob.py` via config pré-agregada (P4) — exigiria uma fixture sintética nova.
 
-### Fase 5
+### Fase 5 — Deferida
 - [ ] Decisão documentada sobre `equipe_custo_engine.py` (manter/reconciliar), com justificativa baseada em F1
+- **Motivo do adiamento:** F1 já confirmou que o engine está correto porém desconectado (não é código morto por engano — foi escrito para eventualmente unificar skill-05/07, ADR-106). Decidir seu destino definitivo é mais seguro após F4 estar implementada, já que F4 pode mudar o que faz sentido consolidar.
 
 ### Fase 6
-- [ ] Teste validando `C_pool ≤ total` com mob/demob real (não sempre zero) em pelo menos um projeto de benchmark
+- [x] Teste validando `C_pool ≤ total` com mob/demob real (não sempre zero) em pelo menos um projeto de benchmark (`test_c_pool_menor_que_total_quando_ha_mobilizacao`)
+- [ ] Teste de regressão no AGIS reproduzindo a granularidade por equipe — depende de F4
 
 ---
 

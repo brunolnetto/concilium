@@ -152,12 +152,18 @@ def test_cubo_slice_group_by():
 
 
 def test_builder_h1_soma_reconcilia():
-    """H1: Σ custo das células == Σ custo_total_contrato."""
-    canonical, contratos, _ = _build_pool([f"S{n:03d}" for n in range(13, 19)])
+    """H1: Σ custo das células (prod/idle/off) == custo_total_contrato − (mob + demob).
+
+    ADR-136 F3: mob/demob são custo de evento (entrada/saída do pool), sem célula
+    própria no cubo — cada célula representa uma semana física do ciclo de vida.
+    """
+    canonical, contratos, instancias = _build_pool([f"S{n:03d}" for n in range(13, 19)])
     cubo = CuboPoolInstancialBuilder().build(canonical)
     soma_contratos = sum(c.custo_total_contrato for c in contratos)
-    assert cubo.custo_total == pytest.approx(soma_contratos, abs=1.0)
-    assert validar_invariantes_cubo_pool(cubo, contratos) == []
+    mob_demob_total = sum(i.custo_mob_instancia + i.custo_demob_instancia for i in instancias)
+    assert mob_demob_total > 0  # fixture usa resource_costs com custo_mob_unit/custo_demob_unit
+    assert cubo.custo_total == pytest.approx(soma_contratos - mob_demob_total, abs=1.0)
+    assert validar_invariantes_cubo_pool(cubo, contratos, instancias) == []
 
 
 def test_builder_h3_off_zero():

@@ -169,6 +169,54 @@ class TestHelperComposicional:
         assert cc["total"] == pytest.approx(10900.0)
         assert cc["demob"] == pytest.approx(2500.0)
 
+    def test_mob_efetivo_somado(self):
+        """ADR-136 F3: mobilização é custo de evento de entrada, somado ao total."""
+        cc = calcular_custo_instancia_composicional(
+            prod_weeks=6,
+            idle_weeks=0,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=0.0,
+            c_mat=0.0,
+            c_idle_eq=80.0,
+            c_mob_efetivo=1800.0,
+        )
+        # 6×1400 + 1800 = 10200
+        assert cc["total"] == pytest.approx(10200.0)
+        assert cc["mob"] == pytest.approx(1800.0)
+
+    def test_mob_e_demob_efetivos_somados_juntos(self):
+        """ADR-136 F3: mob e demob são termos independentes, ambos somados ao total."""
+        cc = calcular_custo_instancia_composicional(
+            prod_weeks=6,
+            idle_weeks=0,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=0.0,
+            c_mat=0.0,
+            c_idle_eq=80.0,
+            c_mob_efetivo=1800.0,
+            c_demob_efetivo=2500.0,
+        )
+        # 6×1400 + 1800 + 2500 = 12700
+        assert cc["total"] == pytest.approx(12700.0)
+        assert cc["mob"] == pytest.approx(1800.0)
+        assert cc["demob"] == pytest.approx(2500.0)
+
+    def test_mob_default_zero_retrocompat(self):
+        """Sem c_mob_efetivo (retrocompat), total permanece sem termo de mobilização."""
+        cc = calcular_custo_instancia_composicional(
+            prod_weeks=6,
+            idle_weeks=0,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=0.0,
+            c_mat=0.0,
+            c_idle_eq=80.0,
+        )
+        assert cc["mob"] == 0.0
+        assert cc["total"] == pytest.approx(6 * 1400.0)
+
     def test_idle_mais_barato_que_ativo_quando_eq_reduzida(self):
         ativo = calcular_custo_instancia_composicional(
             prod_weeks=1,
@@ -196,6 +244,119 @@ class TestHelperComposicional:
 # ─────────────────────────────────────────────────────────────────────────────
 # C/D/E/F. Pipeline integrado: _build_contratos_recurso + _build_instancias + reconciliação
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestComputeInstanciaLifecycleMobDemob:
+    """ADR-136 F3: _compute_instancia_lifecycle deixa de hardcodar custo de mob/demob em 0.0.
+
+    Reproduz diretamente o bug documentado no ADR-136: o campo `custo_mob_instancia`
+    nunca era populado, e `custo_demob_instancia` era sempre gravado como 0.0 mesmo
+    quando a desmobilização antecipada era efetivamente aplicada.
+    """
+
+    def _contrato(self, semana_fim="S010"):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(semana_fim=semana_fim)
+
+    def test_mobilizacao_sempre_computada_para_instancia_usada(self):
+        mod = _load_helpers_a()
+        instance_week_map = {1: {"S003": "eap-A", "S004": "eap-A"}}
+        mobilizacao_por_instancia: dict = {}
+        result = mod._compute_instancia_lifecycle(
+            i=1,
+            instance_week_map=instance_week_map,
+            contrato=self._contrato(),
+            contract_start_idx=1,
+            contract_end_idx=10,
+            apply_idle_gaps=True,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
+            c_idle_unit=80.0,
+            c_mob_unit=1800.0,
+            c_demob_unit=2500.0,
+            prod_w=2,
+            mobilizacao_por_instancia=mobilizacao_por_instancia,
+        )
+        (
+            sm_mob,
+            sm_demob,
+            _semanas_off,
+            _ca_mo,
+            _ca_eq,
+            _ca_comb,
+            _ca_mat,
+            _ci_mo,
+            _ci_eq,
+            c_mob_i,
+            c_demob_i,
+            desmob_aplicada,
+            custo_inst_total,
+            _idle_segs,
+        ) = result
+        # Instância foi de fato usada (mobilizada) — custo de mobilização é sempre incorrido.
+        assert c_mob_i == pytest.approx(1800.0)
+        # Trailing standby (S005..S010) supera o custo de demob → desmob antecipada efetiva.
+        assert desmob_aplicada is True
+        assert c_demob_i == pytest.approx(2500.0)
+        assert sm_mob == "S003"
+        assert sm_demob == "S004"
+        # 2 semanas ativas × (1000+400+200+100) + mob + demob = 3400 + 1800 + 2500
+        assert custo_inst_total == pytest.approx(3400.0 + 1800.0 + 2500.0)
+
+    def test_demob_zero_quando_nao_ha_desmob_antecipada(self):
+        """Instância ativa até o fim do contrato: sem trailing standby, sem desmob efetiva."""
+        mod = _load_helpers_a()
+        instance_week_map = {1: {f"S{n:03d}": "eap-A" for n in range(1, 11)}}
+        result = mod._compute_instancia_lifecycle(
+            i=1,
+            instance_week_map=instance_week_map,
+            contrato=self._contrato(semana_fim="S010"),
+            contract_start_idx=1,
+            contract_end_idx=10,
+            apply_idle_gaps=True,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
+            c_idle_unit=80.0,
+            c_mob_unit=1800.0,
+            c_demob_unit=2500.0,
+            prod_w=10,
+            mobilizacao_por_instancia={},
+        )
+        c_mob_i, c_demob_i, desmob_aplicada = result[9], result[10], result[11]
+        # Mobilização ainda ocorre (instância foi usada)...
+        assert c_mob_i == pytest.approx(1800.0)
+        # ...mas sem trailing standby não há desmob antecipada — custo embutido no contrato.
+        assert desmob_aplicada is False
+        assert c_demob_i == 0.0
+
+    def test_instancia_nao_utilizada_sem_mob_nem_demob(self):
+        """Slot nunca ativado (apply_idle_gaps=False ou sem atividades) permanece zerado."""
+        mod = _load_helpers_a()
+        result = mod._compute_instancia_lifecycle(
+            i=1,
+            instance_week_map={1: {}},
+            contrato=self._contrato(),
+            contract_start_idx=1,
+            contract_end_idx=10,
+            apply_idle_gaps=True,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
+            c_idle_unit=80.0,
+            c_mob_unit=1800.0,
+            c_demob_unit=2500.0,
+            prod_w=0,
+            mobilizacao_por_instancia={},
+        )
+        c_mob_i, c_demob_i = result[9], result[10]
+        assert c_mob_i == 0.0
+        assert c_demob_i == 0.0
 
 
 def _mk_sched(item_id, weeks):
@@ -337,19 +498,47 @@ class TestPipelineComposicional:
         # instâncias não recebem custo composicional
         assert all(i.custo_instancia_total == 0.0 for i in instancias)
 
+    def test_c_pool_menor_que_total_quando_ha_mobilizacao(self):
+        """ADR-136 F6: C_pool ≤ total deixa de ser uma tautologia (mob/demob=0 sempre).
+
+        Antes da correção, custo_mob_instancia/custo_demob_instancia eram sempre
+        0.0 no pipeline real do pool — a validação C_pool ≤ total (ADR-125 D4)
+        era sempre trivialmente verdadeira. Com valores reais, C_pool (produtivo +
+        ocioso, sem mob/demob) é estritamente menor que o total (que os inclui)
+        sempre que há mobilização/desmobilização efetiva.
+        """
+        _mod, _contratos, _eq, instancias, _val = self._run(with_idle=True)
+        inst = instancias[0]
+        c_pool_instancia = (
+            inst.custo_ativo_mo
+            + inst.custo_ativo_eq
+            + inst.custo_ativo_comb
+            + inst.custo_ativo_mat
+            + inst.custo_idle_mo
+            + inst.custo_idle_eq
+        )
+        assert inst.custo_mob_instancia > 0.0  # instância foi mobilizada — não é vácuo
+        assert c_pool_instancia < inst.custo_instancia_total
+        assert c_pool_instancia == pytest.approx(
+            inst.custo_instancia_total - inst.custo_mob_instancia - inst.custo_demob_instancia
+        )
+
     def test_gap_longo_vira_off_nao_faturado(self):
         """Gap (9 sem) > gap_max → recurso desmobilizado: semanas OFF, não faturadas.
 
         Sem ociosidade faturada, o custo instancial = soma das semanas produtivas
-        (= custo autônomo das equipes), pois o recurso é liberado no gap.
+        + o custo de mobilização (ADR-136 F3: sempre incorrido para uma instância
+        de fato utilizada) — o baseline "autônomo" do fixture não modela
+        mobilização, então a diferença é exatamente 1 mobilização (remob[0]).
         """
         _mod, contratos, equipes, instancias, _val = self._run(with_idle=True)
         inst = instancias[0]
         assert inst.semanas_off > 0  # gap longo classificado como off
         assert inst.custo_idle_mo == 0.0 and inst.custo_idle_eq == 0.0
+        assert inst.custo_mob_instancia == pytest.approx(5000.0)  # remob[0] default
         n4 = sum(eq.custo_total for eq in equipes)
         n4_autonomo = sum(eq.custo_total_autonomo for eq in equipes)
-        assert n4 == pytest.approx(n4_autonomo, abs=1.0)
+        assert n4 == pytest.approx(n4_autonomo + inst.custo_mob_instancia, abs=1.0)
 
     def test_gap_curto_economico_vira_idle_faturado(self):
         """Gap curto + MO barata + remob caro → ponte ociosa econômica: idle faturado.
@@ -379,6 +568,7 @@ class TestPipelineComposicional:
         inst = instancias[0]
         assert inst.custo_idle_mo == 0.0  # MO-pesada → recurso liberado, não ocioso
         assert inst.semanas_off > 0
+        assert inst.custo_mob_instancia == pytest.approx(5000.0)  # remob[0] (ADR-136 F3)
         n4 = sum(eq.custo_total for eq in equipes)
         n4_autonomo = sum(eq.custo_total_autonomo for eq in equipes)
-        assert n4 == pytest.approx(n4_autonomo, abs=1.0)
+        assert n4 == pytest.approx(n4_autonomo + inst.custo_mob_instancia, abs=1.0)

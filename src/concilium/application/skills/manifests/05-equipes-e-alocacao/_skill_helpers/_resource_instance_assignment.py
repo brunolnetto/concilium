@@ -107,10 +107,10 @@ def _compute_instancia_lifecycle(
     prod_w: int,
     mobilizacao_por_instancia: dict,
 ) -> tuple:
-    """Compute ADR-085 lifecycle fields for one slot. Returns lifecycle tuple."""
+    """Compute ADR-085/ADR-136 lifecycle fields for one slot. Returns lifecycle tuple."""
     sm_mob = sm_demob = ""
     semanas_off = 0
-    ca_mo = ca_eq = ca_comb = ca_mat = ci_mo = ci_eq = c_demob_i = custo_inst_total = 0.0
+    ca_mo = ca_eq = ca_comb = ca_mat = ci_mo = ci_eq = c_mob_i = c_demob_i = custo_inst_total = 0.0
     desmob_aplicada = False
     idle_segs: list[SegmentoAtividade] = []
     if not (apply_idle_gaps and instance_week_map[i]):
@@ -124,6 +124,7 @@ def _compute_instancia_lifecycle(
             ca_mat,
             ci_mo,
             ci_eq,
+            c_mob_i,
             c_demob_i,
             desmob_aplicada,
             custo_inst_total,
@@ -133,6 +134,12 @@ def _compute_instancia_lifecycle(
     idle_w, semanas_off, desmob_aplicada, idle_segs = _compute_instancia_idle_gaps(
         aw, contract_start_idx, contract_end_idx, c_mo, c_idle_unit, c_mob_unit, c_demob_unit
     )
+    # ADR-136 F3: mobilização é evento de entrada — sempre incorrida para uma instância
+    # de fato utilizada (chegamos aqui só quando instance_week_map[i] é não-vazio).
+    # Demobilização é "efetiva" (custo à parte) apenas quando a desmob antecipada foi
+    # aplicada (ADR-085 D3 / ADR-080 §C); caso contrário, fica embutida no contrato.
+    c_mob_efetivo = c_mob_unit
+    c_demob_efetivo = c_demob_unit if desmob_aplicada else 0.0
     cc = calcular_custo_instancia_composicional(
         prod_weeks=prod_w,
         idle_weeks=idle_w,
@@ -141,10 +148,12 @@ def _compute_instancia_lifecycle(
         c_comb=c_comb,
         c_mat=c_mat,
         c_idle_eq=c_idle_unit,
-        c_demob_efetivo=0.0,
+        c_mob_efetivo=c_mob_efetivo,
+        c_demob_efetivo=c_demob_efetivo,
     )
     ca_mo, ca_eq, ca_comb, ca_mat = cc["ativo_mo"], cc["ativo_eq"], cc["ativo_comb"], cc["ativo_mat"]
     ci_mo, ci_eq = cc["idle_mo"], cc["idle_eq"]
+    c_mob_i, c_demob_i = cc["mob"], cc["demob"]
     custo_inst_total = cc["total"]
     sm_mob = aw[0]
     sm_demob = aw[-1] if desmob_aplicada else contrato.semana_fim
@@ -159,6 +168,7 @@ def _compute_instancia_lifecycle(
         ca_mat,
         ci_mo,
         ci_eq,
+        c_mob_i,
         c_demob_i,
         desmob_aplicada,
         custo_inst_total,

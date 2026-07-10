@@ -43,9 +43,19 @@ def _scale_part_entry(
 
 
 def _sum_inst_categories(insts_contrato: list) -> tuple:
-    """Returns (tot_mo, tot_eq, tot_comb, tot_mat) sums from instancias list."""
+    """Returns (tot_mo, tot_eq, tot_comb, tot_mat) sums from instancias list.
+
+    ADR-136 F3: custo_mob_instancia entra na mesma categoria (EQ) que
+    custo_demob_instancia já ocupava — mob/demob são custo indireto de campo
+    tipicamente associado a transporte/logística de equipamento (ADR-125 D1),
+    não a mão-de-obra, combustível ou material. Mantém o invariante
+    tot_mo + tot_eq + tot_comb + tot_mat == Σ custo_instancia_total
+    (VAL-INST-CAT-SOMA / test_invariante_categorial_soma).
+    """
     tot_mo = sum(i.custo_ativo_mo + i.custo_idle_mo for i in insts_contrato)
-    tot_eq = sum(i.custo_ativo_eq + i.custo_idle_eq + i.custo_demob_instancia for i in insts_contrato)
+    tot_eq = sum(
+        i.custo_ativo_eq + i.custo_idle_eq + i.custo_mob_instancia + i.custo_demob_instancia for i in insts_contrato
+    )
     tot_comb = sum(i.custo_ativo_comb for i in insts_contrato)
     tot_mat = sum(i.custo_ativo_mat for i in insts_contrato)
     return tot_mo, tot_eq, tot_comb, tot_mat
