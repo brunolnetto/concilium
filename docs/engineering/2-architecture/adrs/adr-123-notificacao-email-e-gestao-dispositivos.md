@@ -1,6 +1,6 @@
 # ADR-123 — Serviço de Notificação por Email e Gestão de Dispositivos
 
-**Status:** ⚠️ Parcialmente Implementado _(F1, F2, F4, F5 ✅; F3 — detecção de dispositivo desconhecido — não implementada; ver ADR-131)_  
+**Status:** ✅ Implementado _(F1-F5 completas; F3 — detecção de dispositivo desconhecido — implementada em `application/services/device_detection.py`, ligada a `activate_device_code()`/`use_refresh_token()` em `presentation/api/routes/auth.py` e `presentation/mcp/tools/auth_self.py`)_  
 **Data:** 2026-06-23  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-094 (JWT/auth), ADR-099 (RBAC), ADR-116 (MCP surface)  
@@ -89,6 +89,18 @@ Ao detectar um device_id desconhecido em `activate_device_code()` ou `use_refres
 - Link de revoke com token de 24h.
 
 **Lógica de detecção:** se `device_id` não está em `list_devices(client_id)` do usuário no momento do acesso.
+
+> **Nota de implementação (2026-07-10):** implementado em
+> `application/services/device_detection.py` (`notify_if_unknown_device`), chamado a partir de
+> `presentation/api/routes/auth.py` (`activate_device` e `refresh_token`) e
+> `presentation/mcp/tools/auth_self.py` (`activate_device`/`refresh_token` MCP). Dois refinamentos
+> em relação à spec original: (1) a lista de dispositivos conhecidos é capturada via
+> `store.list_devices()` **antes** da chamada a `activate_device_code()`/`use_refresh_token()` —
+> capturá-la depois faria o dispositivo recém-ativado já aparecer na lista e nunca ser detectado
+> como desconhecido; (2) o primeiro dispositivo de um usuário novo nunca gera notificação (onboarding,
+> não anomalia) — notificação só a partir do 2º dispositivo em diante. A função é best-effort: nunca
+> propaga exceção (falha de storage/SMTP não pode derrubar login/ativação), e é condicionada a
+> `email` cadastrado no `ClientRecord`.
 
 ### F4 — Revoke self-service com timeout de 24h
 

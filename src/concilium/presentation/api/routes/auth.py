@@ -102,14 +102,24 @@ def activate_device(request: Request, response: Response, body: DeviceActivateRe
     O refresh token retornado tem validade de 90 dias e deve ser armazenado
     localmente pelo proxy em `~/.concilium/tokens/` (chmod 600).
     """
+    from concilium.application.services.device_detection import list_devices_before, notify_if_unknown_device
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
-    rt = get_auth_store().activate_device_code(body.device_code, device_name=body.device_name)
+    store = get_auth_store()
+    # ADR-123 F3: captura a lista de dispositivos ANTES da ativação — depois disso
+    # o dispositivo recém-criado já estaria na lista e nunca seria "desconhecido".
+    # client_id só é conhecido DEPOIS de activate_device_code() ter sucesso, por
+    # isso a captura é irrestrita (sem filtro) e o filtro por client_id acontece
+    # depois, com o rt.client_id retornado.
+    devices_before = list_devices_before(store)
+    rt = store.activate_device_code(body.device_code, device_name=body.device_name)
     if rt is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="client_code inválido ou usuário inativo.",
         )
+    known_before = {d.device_id for d in devices_before if d.client_id == rt.client_id}
+    notify_if_unknown_device(store, rt, known_before)
     return DeviceActivateResponse(
         refresh_token=rt.token_id,
         device_id=rt.device_id,
@@ -138,10 +148,12 @@ def refresh_token(request: Request, response: Response, body: TokenRefreshReques
 
     O proxy chama este endpoint automaticamente antes de cada expiração.
     """
+    from concilium.application.services.device_detection import list_devices_before, notify_if_unknown_device
     from concilium.infrastructure.auth.auth_store import get_auth_store
     from concilium.infrastructure.auth.token_service import issue_token as _issue
 
     store = get_auth_store()
+    devices_before = list_devices_before(store)
     record = store.use_refresh_token(body.refresh_token)
     if record is None:
         raise HTTPException(
@@ -149,6 +161,8 @@ def refresh_token(request: Request, response: Response, body: TokenRefreshReques
             detail="Refresh token inválido, expirado ou revogado.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    known_before = {d.device_id for d in devices_before if d.client_id == record.client_id}
+    notify_if_unknown_device(store, record, known_before)
 
     ttl = timedelta(hours=8)
     token = _issue(subject=record.client_id, roles=record.roles, ttl=ttl)

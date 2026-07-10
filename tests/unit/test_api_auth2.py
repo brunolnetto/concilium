@@ -93,6 +93,47 @@ class TestActivateDevice:
         assert resp.status_code == 200
         assert resp.json()["refresh_token"] == "RT-abc"
 
+    def test_unknown_device_with_prior_devices_triggers_notification(self):
+        """ADR-123 F3: device_id novo + client já tinha outros dispositivos -> notifica."""
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        old_device = MagicMock(device_id="dev-old", client_id="svc")
+        rt = MagicMock(token_id="RT-abc", device_id="dev-new", client_id="svc", roles=["operator"])
+        rt.expires_at = "2026-12-31T00:00:00Z"
+        store_mock.list_devices.return_value = [old_device]
+        store_mock.activate_device_code.return_value = rt
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
+            patch(
+                "concilium.application.services.device_detection.notify_if_unknown_device"
+            ) as notify_mock,
+        ):
+            resp = c.post("/auth/device/activate", json={"device_code": "RCODE-valid"})
+        assert resp.status_code == 200
+        notify_mock.assert_called_once_with(store_mock, rt, {"dev-old"})
+
+    def test_first_device_of_client_does_not_notify(self):
+        """ADR-123 F3: primeiro dispositivo do client (nenhum outro em list_devices) -> não notifica."""
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        rt = MagicMock(token_id="RT-abc", device_id="dev-1", client_id="svc", roles=["operator"])
+        rt.expires_at = "2026-12-31T00:00:00Z"
+        store_mock.list_devices.return_value = []
+        store_mock.activate_device_code.return_value = rt
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
+            patch(
+                "concilium.application.services.notifications.notify_new_device"
+            ) as notify_new_device_mock,
+        ):
+            resp = c.post("/auth/device/activate", json={"device_code": "RCODE-valid"})
+        assert resp.status_code == 200
+        notify_new_device_mock.assert_not_called()
+
 
 class TestRefreshToken:
     def test_invalid_refresh_token_returns_401(self):
@@ -121,6 +162,27 @@ class TestRefreshToken:
             resp = c.post("/auth/token/refresh", json={"refresh_token": "RT-valid"})
         assert resp.status_code == 200
         assert resp.json()["access_token"] == "new-jwt"
+
+    def test_unknown_device_with_prior_devices_triggers_notification(self):
+        """ADR-123 F3: use_refresh_token também aciona a detecção (mesmo padrão de activate_device)."""
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        old_device = MagicMock(device_id="dev-old", client_id="svc")
+        record = MagicMock(client_id="svc", device_id="dev-new", roles=["operator"])
+        store_mock.list_devices.return_value = [old_device]
+        store_mock.use_refresh_token.return_value = record
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
+            patch("concilium.infrastructure.auth.token_service.issue_token", return_value="new-jwt"),
+            patch(
+                "concilium.application.services.device_detection.notify_if_unknown_device"
+            ) as notify_mock,
+        ):
+            resp = c.post("/auth/token/refresh", json={"refresh_token": "RT-valid"})
+        assert resp.status_code == 200
+        notify_mock.assert_called_once_with(store_mock, record, {"dev-old"})
 
 
 class TestIssueUserToken:

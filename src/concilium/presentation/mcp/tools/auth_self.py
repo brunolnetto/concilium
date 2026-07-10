@@ -33,10 +33,13 @@ def register(server: FastMCP) -> None:
 
         Nota: Este tool é público (não requer autenticação) pois é usado no bootstrap.
         """
+        from concilium.application.services.device_detection import list_devices_before, notify_if_unknown_device
         from concilium.infrastructure.auth.auth_store import get_auth_store
 
         store = get_auth_store()
 
+        # ADR-123 F3: captura ANTES de ativar — ver nota em presentation/api/routes/auth.py.
+        devices_before = list_devices_before(store)
         rt_record = store.activate_device_code(client_code, device_name=device_name)
 
         if rt_record is None:
@@ -44,6 +47,9 @@ def register(server: FastMCP) -> None:
                 "status": "error",
                 "message": "Código de cliente inválido ou usuário inativo.",
             }
+
+        known_before = {d.device_id for d in devices_before if d.client_id == rt_record.client_id}
+        notify_if_unknown_device(store, rt_record, known_before)
 
         return {
             "status": "ok",
@@ -72,17 +78,22 @@ def register(server: FastMCP) -> None:
 
         Nota: Este tool é público (não requer autenticação) pois é usado para obter auth.
         """
+        from concilium.application.services.device_detection import list_devices_before, notify_if_unknown_device
         from concilium.infrastructure.auth.auth_store import get_auth_store
         from concilium.infrastructure.auth.token_service import TTL_INTERACTIVE
         from concilium.infrastructure.auth.token_service import issue_token as _issue
 
         store = get_auth_store()
+        devices_before = list_devices_before(store)
         record = store.use_refresh_token(refresh_token)
         if record is None:
             return {
                 "status": "error",
                 "message": "Refresh token inválido, expirado ou revogado.",
             }
+
+        known_before = {d.device_id for d in devices_before if d.client_id == record.client_id}
+        notify_if_unknown_device(store, record, known_before)
 
         jwt_token = _issue(subject=record.client_id, roles=record.roles, ttl=TTL_INTERACTIVE)
         return {

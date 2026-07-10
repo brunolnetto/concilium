@@ -52,6 +52,52 @@ class TestAtivarDispositivo:
         assert result["status"] == "error"
         assert "inválido" in result["message"]
 
+    def test_unknown_device_with_prior_devices_triggers_notification(self, tools):
+        """ADR-123 F3: device_id novo + client já tinha outros dispositivos -> notifica."""
+        old_device = MagicMock(device_id="dev-old", client_id="client-1")
+        rt_record = MagicMock(
+            token_id="RT-123",
+            device_id="dev-new",
+            device_name="meu-pc",
+            client_id="client-1",
+            expires_at="2099-01-01",
+        )
+        store = MagicMock()
+        store.list_devices.return_value = [old_device]
+        store.activate_device_code.return_value = rt_record
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
+            patch(
+                "concilium.application.services.device_detection.notify_if_unknown_device"
+            ) as notify_mock,
+        ):
+            result = tools["ativar_dispositivo"]("RCODE-abc", "meu-pc")
+
+        assert result["status"] == "ok"
+        notify_mock.assert_called_once_with(store, rt_record, {"dev-old"})
+
+    def test_first_device_of_client_does_not_notify(self, tools):
+        rt_record = MagicMock(
+            token_id="RT-123",
+            device_id="dev-1",
+            device_name="meu-pc",
+            client_id="client-1",
+            expires_at="2099-01-01",
+        )
+        store = MagicMock()
+        store.list_devices.return_value = []
+        store.activate_device_code.return_value = rt_record
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
+            patch(
+                "concilium.application.services.notifications.notify_new_device"
+            ) as notify_new_device_mock,
+        ):
+            result = tools["ativar_dispositivo"]("RCODE-abc", "meu-pc")
+
+        assert result["status"] == "ok"
+        notify_new_device_mock.assert_not_called()
+
 
 class TestRenovarToken:
     def test_success(self, tools):
@@ -81,6 +127,28 @@ class TestRenovarToken:
 
         assert result["status"] == "error"
         assert "inválido" in result["message"]
+
+    def test_unknown_device_with_prior_devices_triggers_notification(self, tools):
+        """ADR-123 F3: renovar_token também aciona a detecção (use_refresh_token)."""
+        old_device = MagicMock(device_id="dev-old", client_id="client-1")
+        record = MagicMock(client_id="client-1", device_id="dev-new", roles=["self"])
+        store = MagicMock()
+        store.list_devices.return_value = [old_device]
+        store.use_refresh_token.return_value = record
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
+            patch(
+                "concilium.infrastructure.auth.token_service.issue_token",
+                return_value="jwt-token",
+            ),
+            patch(
+                "concilium.application.services.device_detection.notify_if_unknown_device"
+            ) as notify_mock,
+        ):
+            result = tools["renovar_token"]("RT-123")
+
+        assert result["status"] == "ok"
+        notify_mock.assert_called_once_with(store, record, {"dev-old"})
 
 
 class TestListarMeusDispositivos:

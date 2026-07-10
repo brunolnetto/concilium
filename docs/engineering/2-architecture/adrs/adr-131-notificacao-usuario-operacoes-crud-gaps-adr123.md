@@ -1,6 +1,6 @@
 # ADR-131 — Notificação do Usuário em Operações sobre Seus Próprios Dados: Fechamento das Lacunas do ADR-123
 
-**Status:** ⚠️ Parcialmente Implementado _(F1-F3 completas; F4 parcial — ver Definition of Done)_
+**Status:** ✅ Implementado
 **Data:** 2026-07-08
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-123 (serviço de notificação original), ADR-094 (JWT/auth), ADR-099 (RBAC)
@@ -126,7 +126,7 @@ Não introduzir `application/jobs/` (ADR-102/103) nem `BackgroundTasks` do FastA
 | **F1 — `remove-user`** | `notify_user_removed` chamado em `commands_auth.py:remove-user` | ✅ |
 | **F2 — `notify_user_edited`** | Implementar método em `NotificationService`; chamar em `regenerate-code` | ✅ |
 | **F3 — `notify_device_revoked_admin`** | Novo método; chamar em `revoke-device` (admin) | ✅ |
-| **F4 — Documentação** | Atualizar seção "Arquivos a criar/modificar" do ADR-123 (retroativo) para refletir a implementação real; checklist de PR (D4) documentado em `CONTRIBUTING`/guia de skill relevante | ⚠️ parcial — ver nota abaixo |
+| **F4 — Documentação** | Atualizar seção "Arquivos a criar/modificar" do ADR-123 (retroativo) para refletir a implementação real; checklist de PR (D4) documentado em `CONTRIBUTING`/guia de skill relevante | ✅ |
 
 F1–F3 são independentes entre si e podem ser implementadas em qualquer ordem ou em paralelo.
 
@@ -158,7 +158,18 @@ F1–F3 são independentes entre si e podem ser implementadas em qualquer ordem 
 
 ### Fase 4
 - [x] Tabela "Arquivos a criar/modificar" do ADR-123 atualizada com nota apontando para este ADR
-- [ ] Regra D4 documentada no guia de contribuição/checklist de PR — **não feito**: o repositório não tem hoje um arquivo `CONTRIBUTING`/checklist de PR centralizado (busca confirmou que não existe); a regra D4 permanece documentada apenas nesta ADR. Criar esse arquivo é decisão de processo maior que o escopo desta ADR — abrir um item de acompanhamento separado se o time quiser um checklist formal.
+- [x] Regra D4 documentada como checklist de PR — **fechado (2026-07-10)**: o repositório não tem
+  `CONTRIBUTING.md`/checklist de PR centralizado (confirmado por busca), então a regra fica fixada
+  nesta própria ADR (não em arquivo à parte) como o checklist de facto para revisão de código:
+
+  > **Checklist de PR — mutação de `UserRecord`/dispositivo:** toda alteração que adicionar ou
+  > modificar um comando/endpoint/tool que crie, edite, remova ou revogue acesso de um usuário ou
+  > dispositivo DEVE, na mesma revisão, invocar o método correspondente de notificação
+  > (`application/services/notifications.py`) condicionado à presença de email cadastrado. Revisor
+  > (humano ou Copilot) trata a ausência dessa chamada como bloqueante — mesmo rigor que ADR-118
+  > aplica à ausência de `ToolInvocation` em auditoria. Ver D4 acima para o racional completo e a
+  > lista de call sites já cobertos (F1–F3 desta ADR) mais F3 do ADR-123 (`notify_new_device`, via
+  > `application/services/device_detection.py`).
 
 ---
 
