@@ -1,6 +1,6 @@
 # ADR-136 — Custo de Mobilização/Desmobilização: Campos Mortos no Pool e Cálculo Desconectado (Skill-06)
 
-**Status:** ⚠️ Parcialmente Implementado _(F1/F2/F3/F4/F6 ✅; F5 deferida — ver nota)_
+**Status:** ✅ Implementado _(F1-F6 completas)_
 **Data:** 2026-07-10
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-085 (Custo Instancial Composicional Temporal), ADR-125 (Hierarquia de Custo C_prod/C_pool/Contrato), ADR-105 (Mobilização e Desmobilização — Política Integrada), ADR-106 (LifecycleEngine), ADR-104 (Centralização do Cálculo de Custos), NEP-043 (Reconciliação C_r)
@@ -11,10 +11,9 @@
 > (skill-06/`_mob.py` deriva o termo de alimentação/seguro/cesta básica por
 > equipe a partir de `EquipeDireta.permanencia_efetiva_meses`, já calculada
 > pela skill-05 — em vez de agregar todas as equipes num único par
-> headcount×prazo) e F6 (regressão confirmando que `C_pool < total` deixou de
-> ser uma tautologia). F5 (decisão sobre `equipe_custo_engine.py`) permanece
-> deferida — depende de um levantamento de call sites mais amplo que não é
-> seguro encaixar nesta mudança.
+> headcount×prazo), F5 (skill-05 passa a usar `LifecycleEngine` — ver nota
+> abaixo) e F6 (regressão confirmando que `C_pool < total` deixou de ser uma
+> tautologia).
 >
 > **Nota de implementação sobre F4:** a conexão não foi feita via
 > `InstanciaRecurso` (pool de recursos compartilhados/equipamentos) como o
@@ -26,6 +25,27 @@
 > calculada pela skill-05 a partir do cronograma real) — usar essa fonte é
 > mais direto, evita inventar uma nova interface skill-05↔skill-06, e resolve
 > exatamente o gap que a planilha da Camila expõe.
+>
+> **Nota de implementação sobre F5 (correção de uma estimativa anterior):** uma
+> estimativa de esforço prévia (documentada fora desta ADR, em discussão de
+> engenharia) apontava 2-3 semanas para consolidar `_custo_diferenciado_permanencia.py`
+> com `equipe_custo_engine.py`, presumindo que seria necessário reconciliar duas
+> regras de negócio divergentes de desmobilização antecipada (skill-05: decisão
+> gap-a-gap combinando MO+EQ contra custo de remobilização; `LifecycleEngine`
+> F6: janela única EQ-only contra custo de demob simples). **Essa premissa
+> estava errada** — as duas regras não são a mesma coisa porque resolvem
+> problemas diferentes (skill-05 decide *quais semanas* são idle/off dentro do
+> ciclo de vida da instância; o F6 do engine decide, para o caso sem pool, se
+> vale a pena devolver o equipamento antes do fim do contrato). A real
+> duplicação era só a **fórmula de custo** (produtivo + ocioso + mob + demob),
+> que já produzia números idênticos nos dois lados — confirmado por teste
+> antes de qualquer mudança de código. A consolidação foi, então, trocar a
+> chamada em `_compute_instancia_lifecycle` de
+> `calcular_custo_instancia_composicional` (dict) para
+> `LifecycleEngine.calcular()` (dataclass), sem tocar no loop de decisão
+> gap-a-gap (que continua em `_compute_instancia_idle_gaps`, inalterado — ele
+> não era duplicado em lugar nenhum). Esforço real: uma sessão de trabalho, não
+> semanas.
 
 ---
 
@@ -90,9 +110,13 @@ Adicionar nota de superseding parcial em ADR-085: sua fórmula D3 (mob/demob den
 
 `infer_mob_windows`/`mob_schedule` (`mob_scheduling.py`) não foram alterados — eles resolvem um problema ortogonal (**quando**, no calendário, o custo de MOB é contabilizado nas séries semanais), não **quanto** custa — e continuam operando sobre datas agregadas do projeto para esse fim, o que é adequado (o evento de mobilização de canteiro é mesmo um evento único do projeto, diferente da permanência de cada equipe).
 
-### D4 — Avaliar o papel de `equipe_custo_engine.py` após D2/D3
+### D4 — Consolidar: skill-05 passa a usar `LifecycleEngine` diretamente
 
-Se D2/D3 tornam o cálculo baseado em pool a fonte real de mob/demob para projetos com pool RCPSP formado, é preciso decidir se `LifecycleEngine`/`CustoEquipeDecomposicao` continua útil como caminho paralelo (para equipes diretas/indiretas fora de qualquer pool — ex. skill-05/07 sem pool formado) ou se deve ser reconciliado com D2. **Não decidir isso nesta ADR** — depende do levantamento de F1 (Plano de Implementação) sobre quais projetos/skills realmente não formam pool.
+**Decisão tomada e implementada** (opção "consolidar", entre as três avaliadas: manter como está, consolidar, deletar). `_compute_instancia_lifecycle` (`_resource_instance_assignment.py`) chama `LifecycleEngine().calcular()` em vez da função dict `calcular_custo_instancia_composicional`, que foi removida de `_custo_diferenciado_permanencia.py`. Mapeamento de parâmetros: `c_mob_efetivo` (skill-05) → `c_mob` (engine, sempre incondicional quando a instância é usada); `c_demob_efetivo` (skill-05, condicional a desmob antecipada aplicada) → `c_demob_efetivo` (engine), deixando `c_demob=0` (o engine reserva esse parâmetro para um evento de demob incondicional que o skill-05 não tem).
+
+O loop de decisão gap-a-gap (`_compute_instancia_idle_gaps` — decide, para cada gap interno entre atividades da mesma instância, se compensa manter idle ou liberar, comparando `(c_mo+c_idle_eq)×gap` contra `c_mob_unit+c_demob_unit`) **permanece em `_resource_instance_assignment.py`, inalterado**. Ele não é duplicado em `equipe_custo_engine.py` — o F6 do `LifecycleEngine` (`trailing_weeks_eq`) resolve um problema diferente (decisão de devolução antecipada de equipamento numa janela final única, para o caminho sem pool via `DirectTeamCostStrategy`), não a decisão multi-gap do pool. Os dois continuam coexistindo porque modelam cenários genuinamente diferentes, não porque a consolidação ficou incompleta.
+
+`DirectTeamCostStrategy`/`IndirectTeamCostStrategy`/`_fill_custo_inst_sem_pool` (call site já em produção, equipes sem pool) não foram alterados — usam `LifecycleEngine.calcular()` com a mesma assinatura de sempre, validados sem regressão após a mudança.
 
 ## Alternativas Rejeitadas
 
@@ -121,7 +145,7 @@ Se D2/D3 tornam o cálculo baseado em pool a fonte real de mob/demob para projet
 | Projetos com dados históricos calculados com mob/demob sempre zero terão `total` diferente após D2 | Esperado e correto — o valor anterior estava sistematicamente subestimado; comunicar como correção de bug, não mudança de comportamento neutra |
 | D3 acopla `_mob.py` (skill-06) a um campo de `EquipeDireta` (skill-05) | Baixo risco: `EquipeDireta`/`permanencia_efetiva_meses` já é consumido por outros pontos de skill-06/skill-07 (ex. `equipe_custo_engine.py`); não é uma interface nova, só um novo consumidor de um campo já estável |
 | Nenhum projeto de benchmark além do AGIS foi auditado para confirmar se depende do caminho `_mob.py` legado ou de config pré-agregada (ver ADR/revisão anterior) | Mantido como item do levantamento em F1 — não resolvido por esta ADR isoladamente |
-| D4 pode revelar que `equipe_custo_engine.py` tem um propósito real não documentado, exigindo retrabalho do plano | F1 inclui levantamento desse ponto antes de qualquer decisão de descontinuação |
+| Uma estimativa de esforço anterior à decisão apontava 2-3 semanas para a consolidação de D4, presumindo reconciliação de regras de negócio divergentes | Premissa incorreta, corrigida antes da implementação (ver nota de escopo) — a duplicação real era só a fórmula de custo, já numericamente idêntica; esforço real foi uma sessão de trabalho |
 
 ## Plano de Implementação
 
@@ -131,7 +155,7 @@ Se D2/D3 tornam o cálculo baseado em pool a fonte real de mob/demob para projet
 | **F2 — Reconciliação documental (D1)** | Nota de superseding parcial em ADR-085, referenciando esta ADR e ADR-125 | ✅ |
 | **F3 — Popular custo do pool (D2)** | `calcular_custo_instancia_composicional` ganha parâmetro de mobilização; `_compute_instancia_lifecycle` computa valores reais em vez de `0.0` hardcoded; `total` do contrato passa a refletir mob/demob | ✅ |
 | **F4 — Granularidade por equipe em skill-06 (D3)** | `_custo_mob_legado`/`_process_mob_categoria` derivam o termo de alimentação/seguro/cesta básica de `EquipeDireta.permanencia_efetiva_meses` por equipe, em vez de agregado por projeto | ✅ |
-| **F5 — Decisão sobre `equipe_custo_engine.py` (D4)** | Com base em F1, decidir manter como caminho paralelo ou reconciliar com F3 | ⬜ _(deferida — ver nota de escopo)_ |
+| **F5 — Consolidar skill-05 com `equipe_custo_engine.py` (D4)** | `_compute_instancia_lifecycle` passa a chamar `LifecycleEngine.calcular()`; `calcular_custo_instancia_composicional` removida | ✅ |
 | **F6 — Regressão** | Teste que confirma `C_pool ≤ total` como validação real (não vácua) após F3; teste de regressão reproduzindo a granularidade por equipe (headcount/permanência distintos) via F4 | ✅ |
 
 ## Definition of Done
@@ -157,9 +181,13 @@ Se D2/D3 tornam o cálculo baseado em pool a fonte real de mob/demob para projet
 - [x] Teste de integração em `_process_mob_categoria` confirmando a propagação ponta a ponta
 - **Nota:** não validado contra o benchmark AGIS diretamente — o projeto AGIS contorna `_custo_mob_legado` via config MOB pré-agregada (P4), então não exercita este código. A regressão usa fixtures sintéticas equivalentes em estrutura (headcount/permanência variáveis por equipe).
 
-### Fase 5 — Deferida
-- [ ] Decisão documentada sobre `equipe_custo_engine.py` (manter/reconciliar), com justificativa baseada em F1
-- **Motivo do adiamento:** F1 já confirmou que o engine está correto porém desconectado (não é código morto por engano — foi escrito para eventualmente unificar skill-05/07, ADR-106). Com F4 concluída sem depender do engine, esta decisão é agora independente e pode ser tratada isoladamente — mas segue sem levantamento suficiente de todos os call sites potenciais para decidir com segurança nesta ADR.
+### Fase 5
+- [x] Confirmada paridade numérica exata entre `calcular_custo_instancia_composicional` e `LifecycleEngine.calcular()`, incluindo mob/demob efetivos (não só o caso produtivo/idle trivial já coberto antes) — teste escrito antes de qualquer mudança de código
+- [x] `_compute_instancia_lifecycle` (`_resource_instance_assignment.py`) migrado para chamar `LifecycleEngine().calcular()` diretamente
+- [x] `calcular_custo_instancia_composicional` removida de `_custo_diferenciado_permanencia.py` (e do `__init__.py` de `_skill_helpers`); testes diretos migrados para exercitar o engine (regressão numérica fixada, já que não há mais uma segunda implementação para comparar ao vivo)
+- [x] `_compute_instancia_idle_gaps` (loop gap-a-gap) mantido inalterado — não era duplicado; ver D4 para o porquê
+- [x] `DirectTeamCostStrategy`/`IndirectTeamCostStrategy`/`_fill_custo_inst_sem_pool` validados sem regressão após a mudança
+- [x] Suite completa (12942 testes) + ruff + ty sem novos erros
 
 ### Fase 6
 - [x] Teste validando `C_pool ≤ total` com mob/demob real (não sempre zero) em pelo menos um projeto de benchmark (`test_c_pool_menor_que_total_quando_ha_mobilizacao`)

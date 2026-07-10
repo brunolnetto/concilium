@@ -39,7 +39,29 @@ def _load_helpers_a():
     return mod
 
 
-calcular_custo_instancia_composicional = _load_helpers_a().calcular_custo_instancia_composicional
+def _calcular(**kwargs):
+    """ADR-136 F5: calcular_custo_instancia_composicional foi consolidada em
+    LifecycleEngine.calcular() — este wrapper adapta os testes desta classe
+    (histórico dict-based) para o retorno em dataclass, sem reescrever cada
+    assert um a um. `c_mob_efetivo` (nome usado nestes testes desde ADR-136 F3)
+    mapeia para o parâmetro `c_mob` do engine.
+    """
+    from concilium.domain.services.financial.equipe_custo_engine import LifecycleEngine
+
+    if "c_mob_efetivo" in kwargs:
+        kwargs["c_mob"] = kwargs.pop("c_mob_efetivo")
+    dec = LifecycleEngine().calcular(**kwargs)
+    return {
+        "ativo_mo": dec.ativo_mo,
+        "ativo_eq": dec.ativo_eq,
+        "ativo_comb": dec.ativo_comb,
+        "ativo_mat": dec.ativo_mat,
+        "idle_mo": dec.idle_mo,
+        "idle_eq": dec.idle_eq,
+        "mob": dec.mob,
+        "demob": dec.demob,
+        "total": dec.total,
+    }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Novos campos de modelo
@@ -113,7 +135,7 @@ class TestNovosCamposModelo085:
 
 class TestHelperComposicional:
     def test_ativo_cobra_todos_componentes(self):
-        cc = calcular_custo_instancia_composicional(
+        cc = _calcular(
             prod_weeks=10,
             idle_weeks=0,
             c_mo=1000.0,
@@ -128,7 +150,7 @@ class TestHelperComposicional:
         assert cc["idle_mo"] == 0.0
 
     def test_idle_mantem_mo_integral_e_reduz_eq(self):
-        cc = calcular_custo_instancia_composicional(
+        cc = _calcular(
             prod_weeks=0,
             idle_weeks=5,
             c_mo=1000.0,
@@ -143,7 +165,7 @@ class TestHelperComposicional:
         assert cc["total"] == pytest.approx(5400.0)
 
     def test_combustivel_e_material_zerados_no_idle(self):
-        cc = calcular_custo_instancia_composicional(
+        cc = _calcular(
             prod_weeks=0,
             idle_weeks=8,
             c_mo=0.0,
@@ -155,7 +177,7 @@ class TestHelperComposicional:
         assert cc["total"] == 0.0  # sem operação → comb/mat não incorrem
 
     def test_demob_efetivo_somado(self):
-        cc = calcular_custo_instancia_composicional(
+        cc = _calcular(
             prod_weeks=6,
             idle_weeks=0,
             c_mo=1000.0,
@@ -171,7 +193,7 @@ class TestHelperComposicional:
 
     def test_mob_efetivo_somado(self):
         """ADR-136 F3: mobilização é custo de evento de entrada, somado ao total."""
-        cc = calcular_custo_instancia_composicional(
+        cc = _calcular(
             prod_weeks=6,
             idle_weeks=0,
             c_mo=1000.0,
@@ -187,7 +209,7 @@ class TestHelperComposicional:
 
     def test_mob_e_demob_efetivos_somados_juntos(self):
         """ADR-136 F3: mob e demob são termos independentes, ambos somados ao total."""
-        cc = calcular_custo_instancia_composicional(
+        cc = _calcular(
             prod_weeks=6,
             idle_weeks=0,
             c_mo=1000.0,
@@ -205,7 +227,7 @@ class TestHelperComposicional:
 
     def test_mob_default_zero_retrocompat(self):
         """Sem c_mob_efetivo (retrocompat), total permanece sem termo de mobilização."""
-        cc = calcular_custo_instancia_composicional(
+        cc = _calcular(
             prod_weeks=6,
             idle_weeks=0,
             c_mo=1000.0,
@@ -218,7 +240,7 @@ class TestHelperComposicional:
         assert cc["total"] == pytest.approx(6 * 1400.0)
 
     def test_idle_mais_barato_que_ativo_quando_eq_reduzida(self):
-        ativo = calcular_custo_instancia_composicional(
+        ativo = _calcular(
             prod_weeks=1,
             idle_weeks=0,
             c_mo=1000.0,
@@ -227,7 +249,7 @@ class TestHelperComposicional:
             c_mat=100.0,
             c_idle_eq=80.0,
         )
-        idle = calcular_custo_instancia_composicional(
+        idle = _calcular(
             prod_weeks=0,
             idle_weeks=1,
             c_mo=1000.0,

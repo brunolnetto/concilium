@@ -6,9 +6,9 @@ from concilium.domain.models.canonical import (
     SegmentoAtividade,
     ValidacaoItem,
 )
+from concilium.domain.services.financial.equipe_custo_engine import LifecycleEngine
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
-from ._custo_diferenciado_permanencia import calcular_custo_instancia_composicional  # ty: ignore[unresolved-import]
 from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
 
 _STANDBY_THRESHOLD_PCT = 35.0
@@ -138,9 +138,13 @@ def _compute_instancia_lifecycle(
     # de fato utilizada (chegamos aqui só quando instance_week_map[i] é não-vazio).
     # Demobilização é "efetiva" (custo à parte) apenas quando a desmob antecipada foi
     # aplicada (ADR-085 D3 / ADR-080 §C); caso contrário, fica embutida no contrato.
+    # ADR-136 F5: fórmula de custo delegada ao LifecycleEngine (ADR-106), consolidando
+    # com o mesmo motor usado por DirectTeamCostStrategy/IndirectTeamCostStrategy —
+    # c_demob_efetivo do skill-05 mapeia para o parâmetro homônimo do engine (é sempre
+    # condicional, nunca o "c_demob normal" que o engine trata como evento incondicional).
     c_mob_efetivo = c_mob_unit
     c_demob_efetivo = c_demob_unit if desmob_aplicada else 0.0
-    cc = calcular_custo_instancia_composicional(
+    dec = LifecycleEngine().calcular(
         prod_weeks=prod_w,
         idle_weeks=idle_w,
         c_mo=c_mo,
@@ -148,13 +152,13 @@ def _compute_instancia_lifecycle(
         c_comb=c_comb,
         c_mat=c_mat,
         c_idle_eq=c_idle_unit,
-        c_mob_efetivo=c_mob_efetivo,
+        c_mob=c_mob_efetivo,
         c_demob_efetivo=c_demob_efetivo,
     )
-    ca_mo, ca_eq, ca_comb, ca_mat = cc["ativo_mo"], cc["ativo_eq"], cc["ativo_comb"], cc["ativo_mat"]
-    ci_mo, ci_eq = cc["idle_mo"], cc["idle_eq"]
-    c_mob_i, c_demob_i = cc["mob"], cc["demob"]
-    custo_inst_total = cc["total"]
+    ca_mo, ca_eq, ca_comb, ca_mat = dec.ativo_mo, dec.ativo_eq, dec.ativo_comb, dec.ativo_mat
+    ci_mo, ci_eq = dec.idle_mo, dec.idle_eq
+    c_mob_i, c_demob_i = dec.mob, dec.demob
+    custo_inst_total = dec.total
     sm_mob = aw[0]
     sm_demob = aw[-1] if desmob_aplicada else contrato.semana_fim
     mobilizacao_por_instancia[i] = sm_mob
