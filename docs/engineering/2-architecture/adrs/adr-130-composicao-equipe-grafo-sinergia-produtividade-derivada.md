@@ -1,6 +1,6 @@
 # ADR-130 — Composição de Equipe como Grafo de Sinergia: Produtividade Derivada do Gargalo
 
-**Status:** ✅ Decidido
+**Status:** ⚠️ Parcialmente Implementado — F1-F3 e D5 completos como motor de domínio puro (`src/concilium/domain/services/sinergia_equipe.py`) com cobertura de teste (36 testes); F4 (dados reais do benchmark AGIS) e integração de F5 com o fluxo de calibração ADR-076 pendentes — o catálogo atual não tem `capacidade_horaria` (m³/h por equipamento) medida em campo, só custo (R$/h); ver Definition of Done por fase
 **Data:** 2026-07-06
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-011 (produtividade computável), ADR-030 (composição tipada de equipes), ADR-053 (separação CPU × Produtividade), ADR-076 (calibração de PU), ADR-128 (disponibilidade de consumíveis)
@@ -157,31 +157,36 @@ Quando (2) e (3) coexistem, a divergência é reportada (D4), mas o valor calibr
 
 | Fase | Entregas | Status |
 |---|---|---|
-| **F1 — Modelos** | `RelacaoSinergia`, `CapacidadeElemento`, `GrafoSinergiaEquipe` no domínio de Produtividade (ADR-053); `VAL-SINERGIA-01` | 💡 |
-| **F2 — Derivação** | Motor de derivação (D2) + precedência (D3) em skill-03/05; `VAL-SINERGIA-02/03` | 💡 |
-| **F3 — Reatividade** | Re-derivação em mudança de composição; `VAL-SINERGIA-04/05` | 💡 |
-| **F4 — Dados** | Grafos para as famílias de terraplenagem/escavação do benchmark AGIS (planilha já discrimina ciclo/frota) | 💡 |
-| **F5 — Calibração** | ADR-076 atualiza `CapacidadeElemento` do gargalo (`fonte="medicao_obra"`) em vez do escalar `valor_horario` | 💡 |
+| **F1 — Modelos** | `RelacaoSinergia`, `CapacidadeElemento`, `GrafoSinergiaEquipe` no domínio de Produtividade (ADR-053); `VAL-SINERGIA-01` | ✅ |
+| **F2 — Derivação** | Motor de derivação (D2) + precedência (D3) como serviço de domínio puro (`resolver_producao_efetiva`); `VAL-SINERGIA-02/03` | ✅ |
+| **F3 — Reatividade** | Re-derivação em mudança de composição (`revalidar_apos_mudanca_composicao`); `VAL-SINERGIA-04/05` | ✅ (como serviço puro; não conectado ao read-path de skill-03/05 — ver nota abaixo) |
+| **F4 — Dados** | Grafos para as famílias de terraplenagem/escavação do benchmark AGIS (planilha já discrimina ciclo/frota) | ❌ Não implementado |
+| **F5 — Calibração** | ADR-076 atualiza `CapacidadeElemento` do gargalo (`fonte="medicao_obra"`) em vez do escalar `valor_horario` | ⚠️ Função `atualizar_capacidade_gargalo` implementada e testada; integração real com o fluxo de calibração ADR-076 pendente |
 
-F1–F2 são o caminho crítico. F4 é pré-requisito para F3/F5 produzirem valor (lição do ADR-106/F5: não conectar read-path com dado vazio).
+F1–F2 são o caminho crítico e estão completos. F4 é pré-requisito para F3/F5 produzirem valor (lição do ADR-106/F5: não conectar read-path com dado vazio) — **por isso o motor de F2/F3/F5 foi implementado como serviço de domínio puro, consultivo, e deliberadamente ainda não foi ligado à skill-03/05**: o catálogo (`config/catalogos/mendeslobo`) hoje tem 0 CPUs com `GrafoSinergiaEquipe` populado, e os insumos de equipamento (ex. `EQ-ESCAV-HID-38T`, `EQ-CAM-BASC-14M3`) só carregam `preco_unitario` (R$/h); não existe `capacidade_horaria` (m³/h, ciclo real de campo) no catálogo para nenhuma família — ligar o read-path agora repetiria o erro do ADR-106/F5 (conectar a um dado vazio). F4 fica para quando essa medição de campo existir; inventar números para "fechar" a fase violaria a própria justificativa da ADR (D5 — capacidades são o alvo real da calibração, não um preenchimento sintético).
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `GrafoSinergiaEquipe` opcional no modelo de Produtividade, `extra="forbid"`, serialização retrocompatível
-- [ ] `VAL-SINERGIA-01` com teste de referência órfã
+- [x] `GrafoSinergiaEquipe` opcional no modelo de Produtividade, `extra="forbid"`, serialização retrocompatível
+- [x] `VAL-SINERGIA-01` com teste de referência órfã
 
 ### Fase 2
-- [ ] `producao_horaria_derivada` = min de capacidades efetivas (acoplamento, dimensionamento, saturação)
-- [ ] Precedência D3 testada: calibrado > derivado > declarado
-- [ ] `VAL-SINERGIA-02` emitido em divergência > 15%; valor declarado preservado
+- [x] `producao_horaria_derivada` = min de capacidades efetivas (acoplamento, dimensionamento, saturação)
+- [x] Precedência D3 testada: calibrado > derivado > declarado
+- [x] `VAL-SINERGIA-02` emitido em divergência > 15%; valor declarado preservado
 
 ### Fase 3
-- [ ] Troca de equipamento em `composicao_customizada` re-deriva e emite `VAL-SINERGIA-04`
-- [ ] `VAL-SINERGIA-05` para razão de dimensionamento violada
+- [x] Re-derivação em mudança de composição (`revalidar_apos_mudanca_composicao`) emite `VAL-SINERGIA-04`, testado com troca de composição
+- [x] `VAL-SINERGIA-05` para razão de dimensionamento violada
+- [ ] Ligação ao fluxo real de `composicao_customizada` em skill-05 (`_dimensionamento_orquestracao.py`) — não feita (ver nota F4 acima); hoje é chamada explícita a serviço de domínio, não automática no pipeline
 
 ### Fase 4
-- [ ] ≥ 1 família do benchmark AGIS com grafo populado e `producao_horaria_derivada` reconciliando com `valor_horario` declarado (delta < 15%)
+- [ ] ≥ 1 família do benchmark AGIS com grafo populado e `producao_horaria_derivada` reconciliando com `valor_horario` declarado (delta < 15%) — **não feito**: catálogo não tem capacidade horária real por equipamento (só custo R$/h); sem esse dado, popular o grafo exigiria inventar números, o que a ADR e a política do projeto proíbem
+
+### Fase 5
+- [x] `atualizar_capacidade_gargalo` (D5) implementado e testado: identifica o gargalo derivado, atualiza sua `CapacidadeElemento.capacidade_horaria`/`fonte`, preserva `relacoes` e nunca toca `valor_horario` diretamente
+- [ ] Integração com o fluxo real de calibração do ADR-076 (hoje ADR-076 atualiza `valor_horario` diretamente; chamar `atualizar_capacidade_gargalo` a partir desse fluxo não foi feito) — depende de F4
 
 ---
 

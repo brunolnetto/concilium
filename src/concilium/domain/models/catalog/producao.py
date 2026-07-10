@@ -88,6 +88,45 @@ def _fator_by_equipamento(equips_calib: list, equips_nova: list) -> float:
     return round(qtd_nova / qtd_calib, 6)
 
 
+# ── ADR-130: Composição de Equipe como Grafo de Sinergia ──────────────────────
+
+TipoRelacaoSinergia = Literal["acoplamento", "dimensionamento", "precondicao"]
+FonteCapacidade = Literal["catalogo", "fabricante", "medicao_obra"]
+
+
+class RelacaoSinergia(BaseModel):
+    """Aresta do grafo de sinergia intra-equipe (ADR-130 D1)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tipo: TipoRelacaoSinergia
+    origem: str  # ref a FuncaoEquipe.funcao_id | EquipamentoEquipe.equip_id | MaterialEquipe.insumo_id
+    destino: str
+    razao: float | None = None  # dimensionamento: unidades de destino por unidade de capacidade de origem
+    descricao: str | None = None
+
+
+class CapacidadeElemento(BaseModel):
+    """Parâmetro de capacidade de um elemento da composição — os poucos números que mudam (ADR-130 D1)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    elemento_id: str
+    capacidade_horaria: float = Field(gt=0)  # na unidade de produção da CPU (ex.: m³/h)
+    unidade: str
+    fonte: FonteCapacidade = "catalogo"
+
+
+class GrafoSinergiaEquipe(BaseModel):
+    """Estrutura de sinergia da equipe: relações + capacidades. Opcional por CPU (ADR-130 D1)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    relacoes: list[RelacaoSinergia] = Field(default_factory=list)
+    capacidades: list[CapacidadeElemento] = Field(default_factory=list)
+    gargalo_declarado: str | None = None  # elemento_id; se None, derivado (ADR-130 D2)
+
+
 def _fator_by_mao_obra(funcoes_calib: list, funcoes_nova: list) -> float:
     total_calib = sum(f.num_pessoas for f in funcoes_calib)
     total_nova = sum(f.num_pessoas for f in funcoes_nova)
@@ -119,6 +158,10 @@ class Producao(BaseModel):
 
     historico_observacoes: list[ObservacaoProducao] = Field(default_factory=list)
     auditoria: AuditoriaProducao
+
+    # ADR-130 D1: grafo de sinergia intra-equipe — opcional, retrocompatível.
+    # None (padrão) preserva o comportamento atual integralmente (D3 fallback).
+    grafo_sinergia: GrafoSinergiaEquipe | None = None
 
     def fator_producao(self, nova_composicao: ComposicaoPadraoEquipe) -> float:
         """Razão de produtividade entre nova composição e composição de calibração.
