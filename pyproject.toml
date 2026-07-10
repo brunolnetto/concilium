@@ -45,7 +45,8 @@ concilium = "concilium.presentation.main:main"
 concilium-mcp = "concilium.presentation.mcp.server:main"
 concilium-api = "concilium.presentation.api.app:main"
 concilium-ui = "concilium.presentation.ui.launcher:main"
-concilium-mcp-proxy = "concilium.presentation.mcp.proxy:main"
+# concilium-mcp-proxy vive em tools/mcp-proxy/ (pacote standalone, isolado das
+# dependências pesadas do concilium) — ver tools/mcp-proxy/pyproject.toml.
 
 [project.optional-dependencies]
 # ADR-047: SharePoint backend (instalar com: pip install 'concilium[sharepoint]')

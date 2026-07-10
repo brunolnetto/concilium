@@ -51,6 +51,16 @@ Pendente de execução por um administrador do Microsoft 365/SharePoint da Mende
 
 Até o passo 4 ser feito, o sistema continua funcionando exatamente como hoje (fallback para o Drive único) — este ADR não bloqueia nem exige uma janela de manutenção para o código já mergeado.
 
+### D3.1 — Achado: compartilhamento externo desabilitado no site atual (bloqueia links assinados)
+
+Confirmado em produção (2026-07-09) via chamada direta ao Graph API: `SharePointBlobStorage.gerar_url_temporaria()` (usada para gerar links de download do proxy em `distribuicao/`, anexados ao email de boas-vindas) sempre retorna `None` porque a Graph API responde **403 `sharingDisabled`** — *"The operation failed because sharing has been disabled on this site."* Isso é uma configuração do próprio site do SharePoint (SharePoint Admin Center → Sites → configurações de compartilhamento), não um bug de código nem de escopo do App Registration.
+
+Efeito prático original: com `scope="anonymous"` (o único testado até então), o proxy só podia ser distribuído por anexo de email (bytes, sujeito ao cap de `_MAX_DISTRIBUTION_ZIP_BYTES`/`_MAX_TOTAL_ZIPS_BYTES` em `commands_auth.py`/`notifications.py`), nunca por link — mesmo depois de `proxy.py` ter sido desinchado (~9-12MB por SO, ainda ~25-27MB somando os 3, acima do que um email aceita com segurança).
+
+**Resolvido sem depender de ação do admin**: como os destinatários (funcionários da MendesLobo) já têm conta no tenant, `gerar_url_temporaria(..., scope="organization")` funciona — confirmado em produção (`status_code: 201`, retorna `webUrl` válido). Esse scope exige login com uma conta do mesmo tenant (sem expor o arquivo publicamente) e não depende da política de compartilhamento externo do site, que é especificamente sobre `scope="anonymous"`. `_get_proxy_exe_download_urls()` (`commands_auth.py`) já usa `scope="organization"` — o mecanismo de link (`download_note`) funciona em produção desde então, sem precisar de anexo nem de zip.
+
+Ação para o administrador do M365/SharePoint: **nenhuma necessária** para o caso de uso do proxy (resolvido via `scope="organization"`). Habilitar compartilhamento externo/anônimo no site continua sendo relevante apenas se algum caso futuro precisar entregar um link para alguém **fora** do tenant MendesLobo (ex.: cliente externo via `artifact_transport.py`, que ainda usa `scope="anonymous"` por padrão).
+
 ## Consequências
 
 ### Positivas

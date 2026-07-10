@@ -340,12 +340,21 @@ class SharePointBlobStorage(BlobStoragePort):
             raise FileNotFoundError(f"Arquivo não encontrado para aprovar: {path}")
         r.raise_for_status()
 
-    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
-        """Cria um sharing link anônimo de leitura com expiração (ADR-093 D4).
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900, *, scope: str = "anonymous") -> str | None:
+        """Cria um sharing link de leitura com expiração (ADR-093 D4).
 
-        Usa Graph ``createLink`` (type=view, scope=anonymous). Quando a política do
-        tenant proíbe links anônimos, a chamada falha e retornamos ``None`` (o
-        chamador recai no transporte base64).
+        Usa Graph ``createLink`` (type=view). `scope="anonymous"` (default) exige
+        que o site permita compartilhamento externo — confirmado em produção que
+        o site atual NÃO permite (Graph retorna 403 "sharingDisabled", ver
+        ADR-135 §D3.1). `scope="organization"` exige apenas login com uma conta do
+        mesmo tenant (sem expor o link publicamente) e funciona mesmo com
+        compartilhamento externo desabilitado — use esse valor quando o
+        destinatário já tem conta no tenant (ex.: link do proxy para funcionários).
+
+        Se a chamada falhar (qualquer scope), retorna ``None`` (o chamador recai
+        no transporte base64/anexo). A falha é logada (não mais engolida
+        silenciosamente) para que a causa fique visível nos logs em vez de
+        aparecer só como "None" sem explicação.
         """
         from datetime import datetime, timedelta
 
@@ -355,11 +364,18 @@ class SharePointBlobStorage(BlobStoragePort):
             r = httpx.post(
                 f"{self._item_url(path)}:/createLink",
                 headers=self._headers({"Content-Type": "application/json"}),
-                json={"type": "view", "scope": "anonymous", "expirationDateTime": exp},
+                json={"type": "view", "scope": scope, "expirationDateTime": exp},
             )
             if r.status_code in (200, 201):
                 return (r.json().get("link") or {}).get("webUrl")
-        except Exception:  # noqa: BLE001
+            logger.warning(
+                "gerar_url_temporaria('%s'): Graph createLink retornou %d: %s",
+                path,
+                r.status_code,
+                r.text[:500],
+            )
+        except Exception:
+            logger.warning("gerar_url_temporaria('%s'): falha ao chamar Graph createLink.", path, exc_info=True)
             return None
         return None
 

@@ -130,7 +130,7 @@ BUILD_BLOB_STORAGE = "concilium.infrastructure.storage.store_factory.build_blob_
 class TestGetProxyExeDownloadUrls:
     def test_returns_signed_url_per_platform(self):
         storage = MagicMock()
-        storage.gerar_url_temporaria.side_effect = lambda path, ttl_segundos: f"https://example.com/{path}"
+        storage.gerar_url_temporaria.side_effect = lambda path, ttl_segundos, scope: f"https://example.com/{path}"
 
         with patch(BUILD_BLOB_STORAGE, return_value=storage):
             urls = _get_proxy_exe_download_urls()
@@ -141,7 +141,9 @@ class TestGetProxyExeDownloadUrls:
             "macos": "https://example.com/distribuicao/concilium-mcp-proxy-macos",
         }
         assert storage.gerar_url_temporaria.call_count == 3
-        storage.gerar_url_temporaria.assert_any_call("distribuicao/concilium-mcp-proxy.exe", ttl_segundos=7 * 24 * 3600)
+        storage.gerar_url_temporaria.assert_any_call(
+            "distribuicao/concilium-mcp-proxy.exe", ttl_segundos=7 * 24 * 3600, scope="organization"
+        )
 
     def test_returns_none_when_backend_unsupported(self):
         """Backend sem suporte a URL assinada (ex.: filesystem local) -> None por SO."""
@@ -160,62 +162,80 @@ class TestGetProxyExeDownloadUrls:
         with patch(BUILD_BLOB_STORAGE, return_value=storage):
             _get_proxy_exe_download_urls(ttl_segundos=3600)
 
-        storage.gerar_url_temporaria.assert_any_call("distribuicao/concilium-mcp-proxy.exe", ttl_segundos=3600)
+        storage.gerar_url_temporaria.assert_any_call(
+            "distribuicao/concilium-mcp-proxy.exe", ttl_segundos=3600, scope="organization"
+        )
 
 
 # ===========================================================================
-# _build_distribution_zip — bundle pessoal (proxy+config) por SO
+# _build_distribution_zips — bundle pessoal (proxy+config) por SO
 # ===========================================================================
 
 
-class TestBuildDistributionZip:
-    def test_returns_none_when_any_executable_missing(self):
-        from concilium.presentation.cli.commands_auth import _build_distribution_zip
+class TestBuildDistributionZips:
+    def test_skips_os_whose_executable_is_missing_keeps_the_rest(self):
+        """Best-effort por SO: um FileNotFoundError num SO não deve derrubar os outros
+
+        (diferente do desenho anterior de zip único, que descartava tudo se
+        qualquer executável faltasse)."""
+        from concilium.presentation.cli.commands_auth import _build_distribution_zips
 
         storage = MagicMock()
         storage.ler_blob.side_effect = [b"windows-exe", FileNotFoundError("missing"), b"macos-exe"]
 
         with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            result = _build_distribution_zip("RCODE-X")
+            result = _build_distribution_zips("RCODE-X")
 
-        assert result is None
+        assert set(result.keys()) == {"windows", "macos"}
 
-    def test_returns_none_on_unexpected_storage_error(self):
-        from concilium.presentation.cli.commands_auth import _build_distribution_zip
+    def test_returns_empty_dict_when_storage_unavailable(self):
+        import concilium.presentation.cli.commands_auth as mod
 
-        storage = MagicMock()
-        storage.ler_blob.side_effect = RuntimeError("boom")
+        with patch(BUILD_BLOB_STORAGE, side_effect=RuntimeError("boom")):
+            result = mod._build_distribution_zips("RCODE-X")
 
-        with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            result = _build_distribution_zip("RCODE-X")
+        assert result == {}
 
-        assert result is None
-
-    def test_returns_zip_with_all_three_os_folders_when_all_executables_present(self):
+    def test_returns_one_flat_zip_per_os_with_exe_and_config(self):
         import zipfile
         from io import BytesIO
 
-        from concilium.presentation.cli.commands_auth import _build_distribution_zip
+        from concilium.presentation.cli.commands_auth import _build_distribution_zips
 
         storage = MagicMock()
         storage.ler_blob.side_effect = [b"windows-exe", b"linux-exe", b"macos-exe"]
 
         with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            result = _build_distribution_zip("RCODE-X")
+            result = _build_distribution_zips("RCODE-X")
 
-        assert result is not None
-        with zipfile.ZipFile(BytesIO(result)) as zf:
-            names = set(zf.namelist())
-            assert names == {
-                "windows/concilium-mcp-proxy.exe",
-                "windows/claude_desktop_config.json",
-                "linux/concilium-mcp-proxy",
-                "linux/claude_desktop_config.json",
-                "macos/concilium-mcp-proxy",
-                "macos/claude_desktop_config.json",
-            }
-            assert zf.read("windows/concilium-mcp-proxy.exe") == b"windows-exe"
-            assert "RCODE-X" in zf.read("linux/claude_desktop_config.json").decode("utf-8")
+        assert set(result.keys()) == {"windows", "linux", "macos"}
+        with zipfile.ZipFile(BytesIO(result["windows"])) as zf:
+            assert set(zf.namelist()) == {"concilium-mcp-proxy.exe", "claude_desktop_config.json"}
+            assert zf.read("concilium-mcp-proxy.exe") == b"windows-exe"
+            assert "RCODE-X" in zf.read("claude_desktop_config.json").decode("utf-8")
+        with zipfile.ZipFile(BytesIO(result["linux"])) as zf:
+            assert set(zf.namelist()) == {"concilium-mcp-proxy", "claude_desktop_config.json"}
+
+    def test_omits_os_whose_zip_exceeds_the_per_item_size_cap(self):
+        """Bug real de produção: um zip único com os 3 executáveis somou ~100MB,
+
+        SMTP (Gmail, cap ~25MB) rejeitou o envio, e como send() engolia a exceção
+        a CLI imprimia "✓ enviado" mesmo sem ter enviado nada. O cap por SO evita
+        tentar incluir um zip que nunca vai caber, mantendo os demais SOs."""
+        import os
+
+        import concilium.presentation.cli.commands_auth as mod
+
+        # Bytes aleatórios — incompressíveis, garante que o zip final também
+        # exceda o cap (dados repetitivos como b"x"*N comprimiriam para quase nada).
+        oversized_exe = os.urandom(1024 + 1)
+        storage = MagicMock()
+        storage.ler_blob.side_effect = [oversized_exe, b"linux-exe", b"macos-exe"]
+
+        with patch(BUILD_BLOB_STORAGE, return_value=storage), patch.object(mod, "_MAX_DISTRIBUTION_ZIP_BYTES", 1024):
+            result = mod._build_distribution_zips("RCODE-X")
+
+        assert set(result.keys()) == {"linux", "macos"}
 
 
 # ===========================================================================
@@ -442,7 +462,10 @@ class TestRemoveUser:
         notify_mock.assert_called_once_with("alice", "alice@example.com")
 
     def test_remove_user_without_email_does_not_notify(self):
-        """Sem email cadastrado, remove-user não chama notify_user_removed nem lança exceção."""
+        """Sem email cadastrado, remove-user não chama notify_user_removed nem lança exceção.
+
+        Antes, a ausência silenciosa de notificação era indistinguível de uma falha de
+        envio — a CLI agora avisa explicitamente que não há email cadastrado."""
         client = _make_client_record("alice", email="")
         store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
 
@@ -454,6 +477,21 @@ class TestRemoveUser:
 
         assert result.exit_code == 0, result.output
         notify_mock.assert_not_called()
+        assert "sem email cadastrado" in result.output.lower()
+
+    def test_remove_user_reports_failure_when_email_send_fails(self):
+        """notify_user_removed() retornando False deve ser reportado, não silenciado."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_REMOVED, return_value=False),
+        ):
+            result = runner.invoke(app, ["remove-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        assert "Falha ao enviar" in result.output
 
     def test_remove_user_unknown_client_does_not_notify(self):
         """Cliente inexistente (não achado em list_clients) não deve notificar nem lançar."""
@@ -507,6 +545,29 @@ class TestRemoveUser:
         assert "$HOME/.concilium/bin/concilium-mcp-proxy" in kwargs["config_json_unix"]
         assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in kwargs["config_json_windows"]
         assert kwargs["proxy_download_urls"] == fake_urls
+
+    def test_add_user_reports_failure_and_prints_fallback_when_email_send_fails(self):
+        """notify_user_created() retornando False (ex.: SMTP rejeitou por anexo grande
+
+        demais) não deve ser reportado como sucesso — a CLI precisa avisar o admin e
+        imprimir os configs para entrega manual, em vez do "✓ enviado" silenciosamente
+        errado que causava o bug real em produção."""
+        store = _make_store(add_client_return=_make_client_record())
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_CREATED, return_value=False),
+            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+        ):
+            result = runner.invoke(
+                app,
+                ["add-user", "--id", "alice", "--secret", "s", "--email", "alice@example.com"],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Falha ao enviar" in result.output
+        assert "Email de boas-vindas enviado" not in result.output
+        assert "CONCILIUM_CLIENT_CODE" in result.output
 
 
 # ===========================================================================

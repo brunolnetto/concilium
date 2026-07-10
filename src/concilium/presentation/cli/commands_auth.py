@@ -53,6 +53,13 @@ _PROXY_EXE_BLOB_PATHS = {
 def _get_proxy_exe_download_urls(ttl_segundos: int = 7 * 24 * 3600) -> dict[str, str | None]:
     """Gera links de download temporário dos executáveis do proxy (um por SO).
 
+    scope="organization": o destinatário (funcionário com conta no tenant
+    MendesLobo) só precisa estar logado no M365 para abrir o link — não expõe o
+    arquivo publicamente. Diferente de scope="anonymous" (default do backend),
+    que depende de compartilhamento externo estar habilitado no site do
+    SharePoint — confirmado em produção que está desabilitado (ADR-135 §D3.1).
+    "organization" funciona hoje sem nenhuma mudança de configuração do site.
+
     Retorna {"windows": url, "linux": url, "macos": url} — cada valor é None se o
     backend não suportar URL assinada (ex.: filesystem local em dev), tratado pelo
     chamador (cai no texto de fallback assumindo instalação via pip).
@@ -61,7 +68,7 @@ def _get_proxy_exe_download_urls(ttl_segundos: int = 7 * 24 * 3600) -> dict[str,
 
     storage = build_system_blob_storage()
     return {
-        platform: storage.gerar_url_temporaria(blob_path, ttl_segundos=ttl_segundos)
+        platform: storage.gerar_url_temporaria(blob_path, ttl_segundos=ttl_segundos, scope="organization")
         for platform, blob_path in _PROXY_EXE_BLOB_PATHS.items()
     }
 
@@ -118,21 +125,29 @@ _ZIP_EXE_NAMES = {
 }
 _ZIP_CONFIG_PLATFORM = {"windows": "windows", "linux": "unix", "macos": "unix"}
 
+# Gmail (usado em produção — CONCILIUM__SMTP_HOST=smtp.gmail.com) rejeita mensagens
+# acima de ~25MB, e o encoding base64 do anexo infla o payload em ~37% — um zip
+# de 18MB já vira ~25MB de anexo. Na prática, os 3 executáveis (PyInstaller +
+# extras sharepoint/httpx/msal) somam ~100MB, MUITO acima disso — o cap abaixo
+# existe para nunca tentar mandar o bundle por email quando ele não caberia,
+# evitando exatamente o bug observado em produção: send() engolia o erro do
+# SMTP (mensagem grande demais) e a CLI imprimia "✓ enviado" sem ter enviado.
+_MAX_DISTRIBUTION_ZIP_BYTES = 15 * 1024 * 1024
 
-def _build_distribution_zip(client_code: str) -> bytes | None:
-    """Monta o zip enviado por email: uma pasta por SO (windows/macos/linux),
 
-    cada uma com o executável do proxy (lido do Drive de sistema, publicado por
-    build-proxy.yml) e o claude_desktop_config.json já preenchido com o
-    client_code do usuário — nada de template genérico, cada zip é montado na
-    hora para o usuário específico.
+def _build_distribution_zips(client_code: str) -> dict[str, bytes]:
+    """Monta um zip POR SO (windows/macos/linux) — não um único zip com os três.
 
-    Retorna None se QUALQUER um dos 3 executáveis não puder ser lido (ex.:
-    build-proxy.yml nunca rodou para algum SO, backend sem esses blobs em
-    dev/CI, ou falha inesperada de rede) — melhor cair no fallback de configs
-    JSON crus do que mandar um zip parcial que não corresponde ao texto do
-    email (que descreve as três pastas). Best-effort: nenhuma falha de leitura
-    aqui deve impedir o envio do email.
+    Cada zip é pequeno (um executável + o claude_desktop_config.json já
+    preenchido com o client_code do usuário, sem pasta/prefixo — plano, pronto
+    pra extrair) e cabe sozinho em _MAX_DISTRIBUTION_ZIP_BYTES. Um zip
+    combinando os 3 SOs somaria ~30MB mesmo após o proxy.py ter sido
+    desinchado (ver proxy.py) — nada que caiba num anexo de email de qualquer
+    forma, daí o desenho por SO.
+
+    Retorna apenas os SOs cujo executável pôde ser lido (best-effort: falha em
+    ler um SO não deve impedir os outros) e cujo zip resultante não excede o
+    cap. Dict vazio se nenhum SO ficar disponível.
     """
     import io
     import json as _json
@@ -142,22 +157,42 @@ def _build_distribution_zip(client_code: str) -> bytes | None:
 
     try:
         storage = build_system_blob_storage()
-        exe_bytes_by_os = {os_key: storage.ler_blob(blob_path) for os_key, blob_path in _PROXY_EXE_BLOB_PATHS.items()}
     except Exception:
-        return None
+        return {}
 
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for os_key, exe_bytes in exe_bytes_by_os.items():
-            config = _json.dumps(
-                _build_mcp_config_block(client_code, _ZIP_CONFIG_PLATFORM[os_key]),
-                indent=2,
-                ensure_ascii=False,
+    zips: dict[str, bytes] = {}
+    for os_key, blob_path in _PROXY_EXE_BLOB_PATHS.items():
+        try:
+            exe_bytes = storage.ler_blob(blob_path)
+        except Exception:
+            continue
+
+        config = _json.dumps(
+            _build_mcp_config_block(client_code, _ZIP_CONFIG_PLATFORM[os_key]),
+            indent=2,
+            ensure_ascii=False,
+        )
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(_ZIP_EXE_NAMES[os_key], exe_bytes)
+            zf.writestr("claude_desktop_config.json", config)
+
+        zip_bytes = buf.getvalue()
+        if len(zip_bytes) > _MAX_DISTRIBUTION_ZIP_BYTES:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Zip de distribuição para '%s' (%d bytes) excede o limite de %d bytes para "
+                "anexo de email — omitido para esse SO.",
+                os_key,
+                len(zip_bytes),
+                _MAX_DISTRIBUTION_ZIP_BYTES,
             )
-            zf.writestr(f"{os_key}/{_ZIP_EXE_NAMES[os_key]}", exe_bytes)
-            zf.writestr(f"{os_key}/claude_desktop_config.json", config)
+            continue
 
-    return buf.getvalue()
+        zips[os_key] = zip_bytes
+
+    return zips
 
 
 # ── Usuários ──────────────────────────────────────────────────────────────────
@@ -215,16 +250,23 @@ def add_user(
     config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
 
     if email:
-        notify_user_created(
+        sent = notify_user_created(
             client_id=client_id,
             role=role,
             email=email,
             config_json_unix=config_json_unix,
             config_json_windows=config_json_windows,
             proxy_download_urls=_get_proxy_exe_download_urls(),
-            distribution_zip=_build_distribution_zip(client_code),
+            distribution_zips=_build_distribution_zips(client_code),
         )
-        rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
+        if sent:
+            rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
+        else:
+            rprint(
+                f"\n[red]✗ Falha ao enviar o email de boas-vindas para {email}[/red] "
+                "[yellow](veja os logs do servidor para o motivo) — entregue o client_code manualmente:[/yellow]"
+            )
+            _print_both_configs(config_json_unix, config_json_windows)
     else:
         rprint("\n[bold]Cole em claude_desktop_config.json (use o bloco do seu sistema):[/bold]")
         rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
@@ -371,7 +413,10 @@ def remove_user(
     else:
         rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
         if existing and existing.email:
-            notify_user_removed(client_id, existing.email)
+            if not notify_user_removed(client_id, existing.email):
+                rprint(f"[red]✗ Falha ao enviar email de confirmação para {existing.email}[/red]")
+        else:
+            rprint("[dim]Usuário sem email cadastrado — nenhuma notificação enviada.[/dim]")
 
 
 # ── Dispositivos ──────────────────────────────────────────────────────────────
@@ -401,7 +446,8 @@ def regenerate_code(
 
     existing = next((r for r in store.list_clients() if r.client_id == user), None)
     if existing and existing.email:
-        notify_user_edited(user, existing.email, {"client_code": "regenerado"})
+        if not notify_user_edited(user, existing.email, {"client_code": "regenerado"}):
+            rprint(f"[red]✗ Falha ao enviar email de aviso para {existing.email}[/red]")
 
     if show_config:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
@@ -446,21 +492,25 @@ def migrate_legacy_codes() -> None:
     for client_id, client_code, email in migrated:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
         if email:
-            notify_client_code_migrated(
+            sent = notify_client_code_migrated(
                 client_id,
                 email,
                 config_json_unix,
                 config_json_windows,
                 proxy_download_urls,
-                distribution_zip=_build_distribution_zip(client_code),
+                distribution_zips=_build_distribution_zips(client_code),
             )
-            rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
+            if sent:
+                rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
+            else:
+                manual.append((client_id, client_code))
+                rprint(f"  [red]{client_id}[/red] — falha ao enviar email para {email}, entregar manualmente")
         else:
             manual.append((client_id, client_code))
             rprint(f"  [yellow]{client_id}[/yellow] — sem email cadastrado, entregar manualmente")
 
     if manual:
-        rprint("\n[bold]Entrega manual (sem email cadastrado):[/bold]")
+        rprint("\n[bold]Entrega manual (sem email cadastrado ou falha no envio):[/bold]")
         for client_id, client_code in manual:
             config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
             rprint(f"\n  [cyan]{client_id}[/cyan]:")

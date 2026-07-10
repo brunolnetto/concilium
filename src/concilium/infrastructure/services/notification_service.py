@@ -60,8 +60,11 @@ class NotificationService:
     Quando SMTP não configurado ou CONCILIUM__NOTIFICATIONS_ENABLED=0:
     registra o conteúdo via logger.info (fallback de dev/CI).
 
-    `send()` nunca propaga exceções para o chamador — captura e loga como error
-    (mesmo padrão dos antigos métodos `notify_*`, removidos por esta ADR).
+    `send()` nunca propaga exceções para o chamador — captura, loga como error e
+    retorna False (mesmo padrão dos antigos métodos `notify_*`, removidos por
+    esta ADR, mas agora com sinalização de sucesso/falha para o chamador
+    decidir se avisa o usuário — antes, uma falha de SMTP/anexo grande demais
+    era só logada e o comando de origem imprimia "✓ enviado" mesmo assim).
     """
 
     def __init__(self, settings: SmtpSettings | None = None, jinja_env: jinja2.Environment | None = None) -> None:
@@ -78,17 +81,22 @@ class NotificationService:
         template: str,
         context: dict[str, Any],
         attachments: list[tuple[str, bytes, str]] | None = None,
-    ) -> None:
+    ) -> bool:
         """Renderiza `{template}.txt.jinja2`/`{template}.html.jinja2` e envia.
 
         `context` é passado como-está para ambos os templates. `attachments` é uma
         lista de `(filename, content_bytes, mime_type)` — ex.:
         `("config.json", b"{}", "application/json")`.
+
+        Retorna True se o email foi despachado (enviado via SMTP ou registrado
+        no fallback de log dev/CI) e False se algo falhou — o chamador decide o
+        que fazer com isso (ex.: avisar o admin que o email pode não ter chegado).
         """
         try:
             text_body = self._render(f"{template}.txt.jinja2", context)
             html_body = self._render(f"{template}.html.jinja2", context)
             self._dispatch(to=to, subject=subject, text_body=text_body, html_body=html_body, attachments=attachments)
+            return True
         except Exception as exc:
             logger.error(
                 "send: falha ao notificar <%s> subject='%s' template='%s': %s",
@@ -98,6 +106,7 @@ class NotificationService:
                 exc,
                 exc_info=True,
             )
+            return False
 
     # ── Internos ───────────────────────────────────────────────────────────────
 

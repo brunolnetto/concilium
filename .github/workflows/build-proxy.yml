@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/concilium/presentation/mcp/proxy.py"
+      - "tools/mcp-proxy/**"
   workflow_dispatch:
 
 concurrency:
@@ -44,19 +44,46 @@ jobs:
           cache-dependency-path: |
             pyproject.toml
 
-      - name: Install dependencies
+      # tools/mcp-proxy/ é um pacote standalone (pyproject.toml próprio,
+      # dependência única declarada: httpx) — empacotado num venv ISOLADO,
+      # sem o pacote `concilium` (nem seus extras). Instalar
+      # `concilium[sharepoint]` no mesmo venv usado pelo PyInstaller inflava o
+      # executável de ~9MB para ~35MB: rich/typer (deps obrigatórias do
+      # concilium) já instalados fazem o `try: from ._main import main`
+      # opcional do httpx (extra "httpx[cli]") ter sucesso "por acidente",
+      # arrastando rich → pygments → PIL/numpy para dentro do bundle sem o
+      # proxy nunca os usar. A extração física para tools/mcp-proxy/ torna
+      # esse isolamento estrutural, não só uma convenção de venv de build.
+      - name: Install proxy build dependencies (isolated venv)
+        shell: bash
+        run: |
+          python -m venv .proxy-build-venv
+          # venv do Python cria Scripts/ no Windows e bin/ em Linux/macOS,
+          # independente do shell usado para invocar — resolve o caminho certo.
+          if [ -f .proxy-build-venv/bin/pip ]; then
+            VENV_BIN=.proxy-build-venv/bin
+          else
+            VENV_BIN=.proxy-build-venv/Scripts
+          fi
+          echo "VENV_BIN=$VENV_BIN" >> "$GITHUB_ENV"
+          "$VENV_BIN/pip" install --upgrade pip
+          "$VENV_BIN/pip" install ./tools/mcp-proxy pyinstaller
+
+      - name: Build standalone executable
+        shell: bash
+        run: |
+          "$VENV_BIN/pyinstaller" --onefile --name concilium-mcp-proxy tools/mcp-proxy/proxy.py
+
+      # Instalação separada — só para o `concilium ops blob put` do step de
+      # publish abaixo, não entra no executável empacotado.
+      - name: Install publish dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ".[sharepoint]"
-          pip install pyinstaller
 
-      - name: Build standalone executable
-        run: |
-          pyinstaller --onefile --name concilium-mcp-proxy src/concilium/presentation/mcp/proxy.py
-
-      # Publica só o executável cru. O zip por usuário (executável + config
-      # já preenchido com o client_code, um por SO) é montado sob demanda em
-      # commands_auth.py::_build_distribution_zip() no momento do envio do
+      # Publica só o executável cru. O zip por usuário e por SO (executável +
+      # config já preenchido com o client_code) é montado sob demanda em
+      # commands_auth.py::_build_distribution_zips() no momento do envio do
       # email de boas-vindas — nunca persistido aqui, porque dependeria de um
       # client_code específico.
       - name: Publish to blob storage

@@ -1,4 +1,4 @@
-"""Unit tests for concilium.presentation.mcp.proxy (ADR-094 / refactor MCP-protocol auth).
+"""Unit tests for proxy.py (ADR-094 / refactor MCP-protocol auth).
 
 Covers:
   - _load_cache / _save_cache round-trip
@@ -78,7 +78,7 @@ def _tool_result(status: str = "ok", **fields) -> dict:
 # Module-level patch context: redirect _TOKEN_DIR to tmp_path
 # ---------------------------------------------------------------------------
 
-import concilium.presentation.mcp.proxy as proxy_mod  # noqa: E402
+import proxy as proxy_mod  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # _load_cache / _save_cache

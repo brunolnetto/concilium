@@ -212,8 +212,12 @@ class GoogleDriveBlobStorage(BlobStoragePort):
         except Exception:  # noqa: BLE001
             return False
 
-    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
-        """Cria permissão anyone/reader e devolve webContentLink (ADR-093 D4)."""
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900, *, scope: str = "anonymous") -> str | None:
+        """Cria permissão anyone/reader e devolve webContentLink (ADR-093 D4).
+
+        `scope` é ignorado — a permissão "anyone" do Drive não tem essa
+        distinção (ver BlobStoragePort.gerar_url_temporaria).
+        """
         try:
             fid = self._file_id(path)
             if fid is None:

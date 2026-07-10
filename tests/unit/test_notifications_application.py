@@ -85,7 +85,7 @@ class TestNotifyUserCreated:
         # attachments carry bytes content (ADR-134 D1 contract)
         assert all(isinstance(a[1], bytes) for a in kwargs["attachments"])
 
-    def test_sends_with_distribution_zip_attachment_and_flags_context(self):
+    def test_sends_with_distribution_zips_attachments_and_flags_context(self):
         from concilium.application.services.notifications import notify_user_created
 
         patcher, mock_service = _patched_service()
@@ -96,17 +96,38 @@ class TestNotifyUserCreated:
                 "bruno@x.com",
                 '{"unix":true}',
                 '{"windows":true}',
-                distribution_zip=b"PK\x03\x04fake-zip-bytes",
+                distribution_zips={"windows": b"PK\x03\x04fake-windows-zip", "linux": b"PK\x03\x04fake-linux-zip"},
             )
 
         kwargs = mock_service.send.call_args.kwargs
         assert kwargs["context"]["has_distribution_zip"] is True
-        assert len(kwargs["attachments"]) == 4
+        assert len(kwargs["attachments"]) == 5
         names = [a[0] for a in kwargs["attachments"]]
-        assert "concilium-mcp-proxy-bundle.zip" in names
-        bundle = next(a for a in kwargs["attachments"] if a[0] == "concilium-mcp-proxy-bundle.zip")
-        assert bundle[1] == b"PK\x03\x04fake-zip-bytes"
-        assert bundle[2] == "application/zip"
+        assert "concilium-mcp-proxy-windows.zip" in names
+        assert "concilium-mcp-proxy-linux.zip" in names
+        windows_zip = next(a for a in kwargs["attachments"] if a[0] == "concilium-mcp-proxy-windows.zip")
+        assert windows_zip[1] == b"PK\x03\x04fake-windows-zip"
+        assert windows_zip[2] == "application/zip"
+
+    def test_omits_zips_when_total_size_exceeds_email_budget(self):
+        from concilium.application.services.notifications import notify_user_created
+
+        patcher, mock_service = _patched_service()
+        with patcher, patch("concilium.application.services.notifications._MAX_TOTAL_ZIPS_BYTES", 10):
+            notify_user_created(
+                "bruno",
+                "operator",
+                "bruno@x.com",
+                '{"unix":true}',
+                '{"windows":true}',
+                distribution_zips={"windows": b"x" * 20, "linux": b"x" * 20},
+            )
+
+        kwargs = mock_service.send.call_args.kwargs
+        assert kwargs["context"]["has_distribution_zip"] is False
+        names = [a[0] for a in kwargs["attachments"]]
+        assert "concilium-mcp-proxy-windows.zip" not in names
+        assert "concilium-mcp-proxy-linux.zip" not in names
 
     def test_download_note_included_when_urls_present(self):
         from concilium.application.services.notifications import notify_user_created

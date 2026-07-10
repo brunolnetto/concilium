@@ -197,8 +197,12 @@ class S3BlobStorage(BlobStoragePort):
                 ExpiresIn=max(60, ttl_segundos),
             )
 
-    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
-        """URL pré-assinada S3 (get_object) com expiração (ADR-093 D4)."""
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900, *, scope: str = "anonymous") -> str | None:
+        """URL pré-assinada S3 (get_object) com expiração (ADR-093 D4).
+
+        `scope` é ignorado — URLs pré-assinadas S3 não têm essa distinção (ver
+        BlobStoragePort.gerar_url_temporaria).
+        """
         try:
             return self._run(self._presign(self._full_key(path), ttl_segundos))
         except Exception:  # noqa: BLE001

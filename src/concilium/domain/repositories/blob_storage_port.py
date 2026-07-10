@@ -68,11 +68,15 @@ class BlobStoragePort(ABC):
         """
         return
 
-    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900, *, scope: str = "anonymous") -> str | None:
         """Gera uma URL de acesso temporário ao blob (ADR-093 D4).
 
         Usada para entregar artefatos a agentes/stakeholders remotos sem tráfego
         base64 (Azure SAS, S3 presigned, link de compartilhamento SharePoint/Drive).
+
+        `scope` só tem efeito no backend SharePoint ("anonymous" | "organization" |
+        "users" — ver Graph API `createLink`); demais backends ignoram o parâmetro,
+        pois seus mecanismos de URL assinada (SAS/presigned) não têm essa distinção.
 
         Implementação padrão retorna ``None`` — backends sem suporte a URL assinada
         (ex.: local) sinalizam ausência, e o chamador recai no transporte base64.

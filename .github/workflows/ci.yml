@@ -132,3 +132,42 @@ jobs:
           name: pytest-report
           path: .pytest-report.json
           if-no-files-found: ignore
+
+  mcp-proxy:
+    name: MCP Proxy (standalone)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            tools/mcp-proxy/pyproject.toml
+
+      # tools/mcp-proxy/ é um pacote standalone, isolado do resto do monorepo
+      # (nunca importa `concilium`) — este job instala SÓ as dependências
+      # declaradas em tools/mcp-proxy/pyproject.toml (httpx + dev tooling),
+      # nunca `pip install -e .` da raiz. Se alguém reintroduzir um import de
+      # `concilium` em proxy.py, este job falha (ImportError), não o CI da raiz.
+      - name: Install dependencies (isolated from concilium)
+        working-directory: tools/mcp-proxy
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . pytest pytest-asyncio ruff 'ty==0.0.56'
+
+      - name: Ruff check
+        working-directory: tools/mcp-proxy
+        run: ruff check .
+
+      - name: ty
+        working-directory: tools/mcp-proxy
+        run: ty check proxy.py
+
+      - name: Run tests
+        working-directory: tools/mcp-proxy
+        run: python -m pytest tests -q

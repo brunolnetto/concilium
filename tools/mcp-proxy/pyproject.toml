@@ -1,0 +1,34 @@
+[project]
+name = "concilium-mcp-proxy"
+version = "0.1.0"
+description = "Ponte stdio <-> HTTP MCP com auth automática, para uso com Claude Desktop."
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.1",
+]
+
+[project.scripts]
+concilium-mcp-proxy = "proxy:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.2",
+    "ty==0.0.56",
+]
+
+[tool.hatch.build.targets.wheel]
+include = ["proxy.py"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]

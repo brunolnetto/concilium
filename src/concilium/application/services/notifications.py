@@ -53,6 +53,11 @@ def _build_proxy_download_note(proxy_download_urls: dict[str, str | None] | None
     Um link por SO (Windows/Linux/macOS) — não há PyPI/wheel publicado para o
     usuário final instalar via pip. Retorna string vazia se nenhum link estiver
     disponível (ex.: backend de storage sem suporte a URL assinada em dev).
+
+    Os links são gerados com scope="organization" (ver
+    _get_proxy_exe_download_urls) — abrem sem confirmação extra para quem já
+    está logado com a conta Microsoft/M365 da MendesLobo; se pedir login, é
+    só entrar com a conta da empresa (o arquivo não é público).
     """
     urls = proxy_download_urls or {}
     windows_url = urls.get("windows")
@@ -63,7 +68,8 @@ def _build_proxy_download_note(proxy_download_urls: dict[str, str | None] | None
 
     lines = [
         "Antes de colar a configuração, baixe o executável do proxy correspondente ao\n"
-        "seu sistema operacional e salve no caminho indicado:\n",
+        "seu sistema operacional e salve no caminho indicado (o link abre com a sua\n"
+        "conta Microsoft/M365 da empresa — não precisa de senha adicional):\n",
     ]
     if windows_url:
         lines.append(f"  Windows : {windows_url}")
@@ -87,23 +93,38 @@ def _base_url() -> str:
 # ── ADR-123/ADR-131: os 7 casos de uso originais (ADR-134 D5) ───────────────────
 
 
+# Gmail rejeita a mensagem inteira acima de ~25MB (base64 já incluso na conta).
+# Cada zip por SO (ver commands_auth.py::_build_distribution_zips) já fica sob
+# seu próprio cap individual, mas 2-3 deles somados ainda podem passar do
+# limite da mensagem — por isso o corte aqui é pelo TOTAL, não por item.
+_MAX_TOTAL_ZIPS_BYTES = 18 * 1024 * 1024
+
+
+def _zips_fit_in_email(distribution_zips: dict[str, bytes] | None) -> bool:
+    """True se os zips por SO existirem e a soma couber no orçamento da mensagem."""
+    zips = distribution_zips or {}
+    return bool(zips) and sum(len(z) for z in zips.values()) <= _MAX_TOTAL_ZIPS_BYTES
+
+
 def _distribution_attachments(
-    config_json_unix: str, config_json_windows: str, distribution_zip: bytes | None
+    config_json_unix: str, config_json_windows: str, distribution_zips: dict[str, bytes] | None
 ) -> list[tuple[str, bytes, str]]:
     """Anexos comuns a notify_user_created/notify_client_code_migrated.
 
-    O zip (quando disponível — ver `_build_distribution_zip`) já contém, por SO,
-    o executável do proxy e o claude_desktop_config.json preenchido; os JSONs
-    crus continuam anexados como fallback caso o zip não tenha sido montado
-    (ex.: nenhum executável publicado ainda em distribuicao/).
+    Os zips por SO (quando disponíveis — ver `_build_distribution_zips`) já
+    contêm o executável do proxy e o claude_desktop_config.json preenchido
+    para aquele SO; os JSONs crus continuam anexados como fallback caso nenhum
+    zip caiba na mensagem (ex.: nenhum executável publicado em distribuicao/,
+    ou a soma dos zips passar de _MAX_TOTAL_ZIPS_BYTES).
     """
     attachments = [
         ("claude_desktop_config-macos-linux.json", config_json_unix.encode("utf-8"), "application/json"),
         ("claude_desktop_config-windows.json", config_json_windows.encode("utf-8"), "application/json"),
         ("concilium_usage_tutorial.skill", _read_skill_tutorial(), "text/plain"),
     ]
-    if distribution_zip:
-        attachments.append(("concilium-mcp-proxy-bundle.zip", distribution_zip, "application/zip"))
+    if _zips_fit_in_email(distribution_zips):
+        for os_key, zip_bytes in (distribution_zips or {}).items():
+            attachments.append((f"concilium-mcp-proxy-{os_key}.zip", zip_bytes, "application/zip"))
     return attachments
 
 
@@ -114,15 +135,15 @@ def notify_user_created(
     config_json_unix: str,
     config_json_windows: str,
     proxy_download_urls: dict[str, str | None] | None = None,
-    distribution_zip: bytes | None = None,
-) -> None:
+    distribution_zips: dict[str, bytes] | None = None,
+) -> bool:
     """Email de boas-vindas com os dois configs (macOS/Linux e Windows) em anexo.
 
     O admin não sabe necessariamente o SO do dispositivo do usuário no momento do
     cadastro — manda os dois e deixa o próprio usuário escolher o que corresponde
     ao seu sistema, em vez de arriscar mandar o formato errado.
     """
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Bem-vindo, {client_id}! Sua conta foi criada.",
         template="user_created",  # layout próprio — anexo com passos (ADR-134 D2, exceção justificada)
@@ -133,9 +154,9 @@ def notify_user_created(
             "download_note": _build_proxy_download_note(proxy_download_urls),
             "config_json_unix": config_json_unix,
             "config_json_windows": config_json_windows,
-            "has_distribution_zip": distribution_zip is not None,
+            "has_distribution_zip": _zips_fit_in_email(distribution_zips),
         },
-        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zip),
+        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zips),
     )
 
 
@@ -145,10 +166,10 @@ def notify_client_code_migrated(
     config_json_unix: str,
     config_json_windows: str,
     proxy_download_urls: dict[str, str | None] | None = None,
-    distribution_zip: bytes | None = None,
-) -> None:
+    distribution_zips: dict[str, bytes] | None = None,
+) -> bool:
     """Notifica um client migrado (client_code gerado retroativamente) com os dois configs."""
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Novo código de ativação para '{client_id}'",
         template="user_created",
@@ -162,15 +183,15 @@ def notify_client_code_migrated(
             "download_note": _build_proxy_download_note(proxy_download_urls),
             "config_json_unix": config_json_unix,
             "config_json_windows": config_json_windows,
-            "has_distribution_zip": distribution_zip is not None,
+            "has_distribution_zip": _zips_fit_in_email(distribution_zips),
         },
-        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zip),
+        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zips),
     )
 
 
-def notify_user_removed(client_id: str, email: str) -> None:
+def notify_user_removed(client_id: str, email: str) -> bool:
     """Informa a remoção do usuário e a revogação de todos os seus dispositivos."""
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Acesso de '{client_id}' removido.",
         template="notification",
@@ -187,13 +208,13 @@ def notify_user_removed(client_id: str, email: str) -> None:
     )
 
 
-def notify_user_edited(client_id: str, email: str, changes: dict[str, str]) -> None:
+def notify_user_edited(client_id: str, email: str, changes: dict[str, str]) -> bool:
     """Informa alteração nos dados do usuário (ADR-131 D2).
 
     `changes` é um dict descritivo (chave → descrição da mudança), ex.:
     {"client_code": "regenerado"} — não expõe segredos/hashes no corpo do email.
     """
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Dados da conta '{client_id}' foram alterados.",
         template="notification",
@@ -209,14 +230,14 @@ def notify_user_edited(client_id: str, email: str, changes: dict[str, str]) -> N
     )
 
 
-def notify_device_revoked_admin(client_id: str, device_id: str, email: str) -> None:
+def notify_device_revoked_admin(client_id: str, device_id: str, email: str) -> bool:
     """Informa revogação administrativa direta de um dispositivo (ADR-131 D3).
 
     Distinto de `notify_revoke_pending`: aqui não há opt-in/confirmação do usuário
     — a ação já foi tomada unilateralmente pelo admin. O corpo deixa isso explícito
     para reduzir o risco de o usuário interpretar o email como phishing.
     """
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Dispositivo '{device_id}' revogado por um administrador.",
         template="notification",
@@ -240,10 +261,10 @@ def notify_new_device(
     device_name: str,
     email: str,
     revoke_token: str,
-) -> None:
+) -> bool:
     """Alerta de novo dispositivo com link de revogação."""
     revoke_link = f"{_base_url()}/auth/revoke-pending/{revoke_token}"
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Novo dispositivo conectado: {device_name}",
         template="notification",
@@ -262,10 +283,10 @@ def notify_revoke_pending(
     device_id: str,
     email: str,
     revoke_token: str,
-) -> None:
+) -> bool:
     """Confirmação de revogação solicitada via MCP self-service."""
     confirm_link = f"{_base_url()}/auth/revoke-confirm/{revoke_token}"
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Confirme a revogação do dispositivo '{device_id}'",
         template="notification",
@@ -287,9 +308,9 @@ def notify_revoke_pending(
 # exceção (mesmo padrão condicional das notificações ADR-123/ADR-131).
 
 
-def notify_ownership_transfer_forced(email: str, project_id: str, owner_anterior: str | None, owner_novo: str) -> None:
+def notify_ownership_transfer_forced(email: str, project_id: str, owner_anterior: str | None, owner_novo: str) -> bool:
     """D4.1/D7: admin (ou `remove-user --reassign-to`) transferiu o projeto sem aceite."""
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Você é o novo responsável pelo projeto '{project_id}'",
         template="notification",
@@ -309,12 +330,12 @@ def notify_ownership_transfer_forced(email: str, project_id: str, owner_anterior
 
 def notify_ownership_invite_created(
     email: str, project_id: str, owner_atual: str, owner_proposto: str, token: str
-) -> None:
+) -> bool:
     """D4.2: dono atual iniciou um handover voluntário — destinatário decide aceitar/rejeitar."""
     base = _base_url()
     accept_link = f"{base}/api/projects/{project_id}/transfer-ownership/{token}/accept"
     reject_link = f"{base}/api/projects/{project_id}/transfer-ownership/{token}/reject"
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Convite para assumir o projeto '{project_id}'",
         template="notification",
@@ -328,9 +349,9 @@ def notify_ownership_invite_created(
     )
 
 
-def notify_ownership_invite_accepted(email: str, project_id: str, owner_novo: str) -> None:
+def notify_ownership_invite_accepted(email: str, project_id: str, owner_novo: str) -> bool:
     """F3: destinatário aceitou — notifica o dono anterior."""
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] '{owner_novo}' aceitou a transferência do projeto '{project_id}'",
         template="notification",
@@ -344,9 +365,9 @@ def notify_ownership_invite_accepted(email: str, project_id: str, owner_novo: st
     )
 
 
-def notify_ownership_invite_rejected(email: str, project_id: str, owner_proposto: str) -> None:
+def notify_ownership_invite_rejected(email: str, project_id: str, owner_proposto: str) -> bool:
     """F3: destinatário rejeitou — notifica o dono anterior (que permanece dono)."""
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] '{owner_proposto}' rejeitou a transferência do projeto '{project_id}'",
         template="notification",
@@ -363,9 +384,9 @@ def notify_ownership_invite_rejected(email: str, project_id: str, owner_proposto
     )
 
 
-def notify_ownership_invite_expired(email: str, project_id: str, owner_proposto: str) -> None:
+def notify_ownership_invite_expired(email: str, project_id: str, owner_proposto: str) -> bool:
     """D6: convite venceu sem resposta (TTL) — notifica o dono anterior (que permanece dono)."""
-    get_notification_service().send(
+    return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Convite de transferência do projeto '{project_id}' expirou",
         template="notification",

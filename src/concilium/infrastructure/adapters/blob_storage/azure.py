@@ -127,8 +127,12 @@ class AzureBlobStorage(BlobStoragePort):
     def blob_existe(self, path: str) -> bool:
         return bool(self._blob_client(path).exists())
 
-    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
-        """SAS URL de leitura com expiração (ADR-093 D4)."""
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900, *, scope: str = "anonymous") -> str | None:
+        """SAS URL de leitura com expiração (ADR-093 D4).
+
+        `scope` é ignorado — SAS URLs não têm essa distinção (ver
+        BlobStoragePort.gerar_url_temporaria).
+        """
         try:
             from azure.storage.blob import BlobSasPermissions, generate_blob_sas  # ty: ignore[unresolved-import]
         except ImportError:

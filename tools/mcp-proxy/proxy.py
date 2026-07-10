@@ -33,20 +33,42 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import platform
+import socket
 import sys
 import threading
 import time
 from pathlib import Path
 from typing import NoReturn
 
-from concilium.infrastructure.settings import get_mcp_proxy
-
 # ── Config from env ───────────────────────────────────────────────────────────
+#
+# Lido diretamente via os.environ em vez de `concilium.infrastructure.settings`
+# de propósito: este script é empacotado standalone (PyInstaller, build-proxy.yml)
+# e importar o pacote `concilium` arrasta suas dependências obrigatórias (rich,
+# typer, matplotlib, streamlit, ortools...) — inflava o executável de ~9MB para
+# ~35MB porque o `httpx` tem um `try: from ._main import main` (CLI opcional,
+# extra "httpx[cli]") que passa a importar rich/pygments/PIL/numpy quando esses
+# pacotes já estão instalados no mesmo venv por coincidência.
 
-_MCP_PROXY_SETTINGS = get_mcp_proxy()
-_SERVER_URL = _MCP_PROXY_SETTINGS.server_url
-_CLIENT_CODE = _MCP_PROXY_SETTINGS.client_code
-_DEVICE_ID = _MCP_PROXY_SETTINGS.device_id
+
+def _env_str(name: str, default: str = "") -> str:
+    return (os.environ.get(name) or default).strip() or default
+
+
+_SERVER_URL = _env_str("CONCILIUM_SERVER_URL", "https://mcp.mendesloboconstrucao.com.br").rstrip("/")
+# CONCILIUM_DEVICE_CODE é o nome legado (pré-#17) — mantido como fallback pois
+# configs sincronizadas externamente (ex.: perfil de conta do Claude Desktop)
+# podem reverter para o nome antigo fora do nosso controle.
+_CLIENT_CODE = _env_str("CONCILIUM_CLIENT_CODE", "") or _env_str("CONCILIUM_DEVICE_CODE", "")
+
+try:
+    _hostname = socket.gethostname()
+    _username = platform.node() or ""
+    _DEVICE_ID = f"{_username}-{_hostname}" if _username else _hostname
+except Exception:
+    _DEVICE_ID = "unknown-device"
 
 _TOKEN_DIR = Path.home() / ".concilium" / "tokens"
 _TOKEN_DIR.mkdir(parents=True, exist_ok=True)
