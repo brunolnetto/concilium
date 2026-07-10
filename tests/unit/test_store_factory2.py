@@ -352,3 +352,136 @@ class TestBuildBlobStorageCloudBackends:
         ):
             result = store_factory.build_blob_storage()
         assert result is sentinel
+
+
+class TestBuildSystemBlobStorageCloudBackends:
+    """Covers build_system_blob_storage() branches for sharepoint, s3, azure, gdrive.
+
+    Cada backend cloud deve delegar para o respectivo adapter com
+    `from_env(system=True)` — não para o storage de projetos — e filesystem
+    deve continuar delegando para build_blob_storage() com root_override.
+    """
+
+    def test_sharepoint_backend_calls_from_env_with_system_true(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+        calls = {}
+
+        class DummySP:
+            @classmethod
+            def from_env(cls, *, system=False):
+                calls["system"] = system
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.sharepoint",
+            types.SimpleNamespace(SharePointBlobStorage=DummySP),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="sharepoint",
+        ):
+            result = store_factory.build_system_blob_storage()
+        assert result is sentinel
+        assert calls["system"] is True
+
+    def test_s3_backend_calls_from_env_with_system_true(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+        calls = {}
+
+        class DummyS3:
+            @classmethod
+            def from_env(cls, *, system=False):
+                calls["system"] = system
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.s3",
+            types.SimpleNamespace(S3BlobStorage=DummyS3),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="s3",
+        ):
+            result = store_factory.build_system_blob_storage()
+        assert result is sentinel
+        assert calls["system"] is True
+
+    def test_azure_backend_calls_from_env_with_system_true(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+        calls = {}
+
+        class DummyAzure:
+            @classmethod
+            def from_env(cls, *, system=False):
+                calls["system"] = system
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.azure",
+            types.SimpleNamespace(AzureBlobStorage=DummyAzure),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="azure",
+        ):
+            result = store_factory.build_system_blob_storage()
+        assert result is sentinel
+        assert calls["system"] is True
+
+    def test_gdrive_backend_calls_from_env_with_system_true(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+        calls = {}
+
+        class DummyGDrive:
+            @classmethod
+            def from_env(cls, *, system=False):
+                calls["system"] = system
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.gdrive",
+            types.SimpleNamespace(GoogleDriveBlobStorage=DummyGDrive),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="gdrive",
+        ):
+            result = store_factory.build_system_blob_storage()
+        assert result is sentinel
+        assert calls["system"] is True
+
+    def test_filesystem_backend_delegates_to_build_blob_storage(self, tmp_path):
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+        from concilium.infrastructure.storage import store_factory
+
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="filesystem",
+        ):
+            result = store_factory.build_system_blob_storage(root_override=tmp_path)
+        assert isinstance(result, LocalBlobStorage)
+        assert result.root_dir == tmp_path

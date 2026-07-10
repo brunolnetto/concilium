@@ -36,7 +36,10 @@ def _make_storage() -> BlobStoragePort:
     Observabilidade é dado de sistema (não de projeto), então usa o mesmo
     container/bucket/Drive "sistema" de auth/distribuição (ver
     build_system_blob_storage). No backend filesystem, preserva o default
-    histórico de gravar em {root}/observability.
+    histórico de gravar em {root}/observability/... — os paths internos
+    (_BRONZE_PREFIX/_SILVER_PREFIX) já incluem o prefixo "observability/", daí
+    o root do storage ser {root} puro, e não {root}/observability (o que
+    duplicaria o segmento).
     """
     from concilium.infrastructure.settings import get_storage
     from concilium.infrastructure.storage.store_factory import build_system_blob_storage, resolve_store_backend
@@ -44,8 +47,7 @@ def _make_storage() -> BlobStoragePort:
     root_override: Path | None = None
     if resolve_store_backend() == "filesystem":
         cfg = get_storage()
-        root = getattr(cfg, "root", None) or getattr(cfg, "config_root", None)
-        root_override = (root / "observability") if root else Path("observability")
+        root_override = getattr(cfg, "root", None) or getattr(cfg, "config_root", None) or Path.cwd()
     return build_system_blob_storage(root_override=root_override)
 
 
