@@ -39,11 +39,21 @@ class GoogleDriveBlobStorage(BlobStoragePort):
         self._folder_cache: dict[str, str] = {"": root_folder_id}
 
     @classmethod
-    def from_env(cls) -> GoogleDriveBlobStorage:
+    def from_env(cls, *, system: bool = False) -> GoogleDriveBlobStorage:
+        """Instancia a partir das variáveis de ambiente CONCILIUM__GDRIVE_*.
+
+        system=True aponta para o folder "sistema" (auth/config/distribuição),
+        isolado do folder de projetos — ver CONCILIUM__GDRIVE_SYSTEM_ROOT_FOLDER_ID.
+        """
         gdrive = get_storage().gdrive
-        root = gdrive.root_folder_id.strip()
+        root = (gdrive.system_root_folder_id if system else gdrive.root_folder_id).strip()
         if not root:
-            raise OSError("CONCILIUM__GDRIVE_ROOT_FOLDER_ID é obrigatório para o backend Google Drive.")
+            env_var = (
+                "CONCILIUM__GDRIVE_SYSTEM_ROOT_FOLDER_ID ou CONCILIUM__GDRIVE_ROOT_FOLDER_ID"
+                if system
+                else "CONCILIUM__GDRIVE_ROOT_FOLDER_ID"
+            )
+            raise OSError(f"{env_var} é obrigatório para o backend Google Drive.")
         return cls(
             root_folder_id=root,
             service_account_json=gdrive.service_account_json.strip() or None,

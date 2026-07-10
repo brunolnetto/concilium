@@ -122,19 +122,33 @@ def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
 
 
 def build_system_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
-    """Constrói BlobStoragePort para dados de sistema (auth, distribuição).
+    """Constrói BlobStoragePort para dados de sistema (auth, distribuição, observabilidade).
 
-    Isola auth/distribuição de projetos: no backend sharepoint, aponta para o
-    Drive "sistema" (CONCILIUM__SP_SYSTEM_DRIVE_ID), que por padrão cai para o
-    mesmo Drive de projetos até um site dedicado ser provisionado. Nos demais
-    backends (sem conceito de Drive separado hoje) delega para build_blob_storage()
-    — inclusive `root_override`, que só se aplica ao backend filesystem.
+    Isola auth/distribuição/observabilidade de projetos: cada backend com
+    suporte a um container/bucket/Drive "sistema" separado aponta para ele
+    (CONCILIUM__SP_SYSTEM_DRIVE_ID, CONCILIUM__AZURE_SYSTEM_CONTAINER,
+    CONCILIUM__S3_SYSTEM_BUCKET, CONCILIUM__GDRIVE_SYSTEM_ROOT_FOLDER_ID) — cada
+    um cai para o equivalente de projetos até um recurso dedicado ser
+    provisionado. `root_override` só se aplica ao backend filesystem, que não
+    tem conceito de container separado e delega para build_blob_storage().
     """
     backend = resolve_store_backend()
     if backend == "sharepoint":
         from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
 
         return SharePointBlobStorage.from_env(system=True)
+    if backend == "azure":
+        from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
+
+        return AzureBlobStorage.from_env(system=True)
+    if backend == "s3":
+        from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
+
+        return S3BlobStorage.from_env(system=True)
+    if backend == "gdrive":
+        from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
+
+        return GoogleDriveBlobStorage.from_env(system=True)
     return build_blob_storage(root_override=root_override)
 
 

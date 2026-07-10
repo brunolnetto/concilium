@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
@@ -30,14 +31,42 @@ _NORMALIZERS = {
 
 
 def _make_storage() -> BlobStoragePort:
-    """Cria storage padrão a partir das configurações do ambiente."""
-    from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
-    from concilium.infrastructure.settings import get_storage
+    """Cria o storage de observabilidade a partir de CONCILIUM__STORE_BACKEND.
 
-    cfg = get_storage()
-    root = getattr(cfg, "root", None) or getattr(cfg, "config_root", None)
-    base = (root / "observability") if root else "observability"
-    return LocalBlobStorage(base)
+    Observabilidade é dado de sistema (não de projeto), então usa o mesmo
+    container/bucket/Drive "sistema" de auth/distribuição (ver
+    build_system_blob_storage). No backend filesystem, preserva o default
+    histórico de gravar em {root}/observability.
+    """
+    from concilium.infrastructure.settings import get_storage
+    from concilium.infrastructure.storage.store_factory import build_system_blob_storage, resolve_store_backend
+
+    root_override: Path | None = None
+    if resolve_store_backend() == "filesystem":
+        cfg = get_storage()
+        root = getattr(cfg, "root", None) or getattr(cfg, "config_root", None)
+        root_override = (root / "observability") if root else Path("observability")
+    return build_system_blob_storage(root_override=root_override)
+
+
+def bronze_storage_for_bootstrap() -> BlobStoragePort | None:
+    """Storage do Bronze para conectar ao BronzeLogHandler no bootstrap (ADR-121 D3).
+
+    Retorna None quando OTel está desabilitado (TEST_ENV/CI) ou quando o
+    backend configurado falha ao inicializar — nesses casos o logging segue
+    sem o handler Bronze em vez de derrubar a aplicação.
+    """
+    from concilium.infrastructure.settings import get_telemetry
+
+    if get_telemetry().otel_sdk_disabled:
+        return None
+    try:
+        return _make_storage()
+    except Exception:
+        logger.warning(
+            "Bronze storage indisponível no bootstrap; logging seguirá sem BronzeLogHandler.", exc_info=True
+        )
+        return None
 
 
 class ObservabilityWorker:

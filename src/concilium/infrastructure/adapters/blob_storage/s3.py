@@ -43,16 +43,22 @@ class S3BlobStorage(BlobStoragePort):
         self._session = self._build_session()
 
     @classmethod
-    def from_env(cls) -> S3BlobStorage:
+    def from_env(cls, *, system: bool = False) -> S3BlobStorage:
+        """Instancia a partir das variáveis de ambiente CONCILIUM__S3_*.
+
+        system=True aponta para o bucket "sistema" (auth/config/distribuição),
+        isolado do bucket de projetos — ver CONCILIUM__S3_SYSTEM_BUCKET.
+        """
         s3 = get_storage().s3
-        bucket = s3.bucket.strip()
+        bucket = (s3.system_bucket if system else s3.bucket).strip()
         if not bucket:
-            raise OSError("CONCILIUM__S3_BUCKET é obrigatório para CONCILIUM__STORE_BACKEND=s3.")
+            env_var = "CONCILIUM__S3_SYSTEM_BUCKET ou CONCILIUM__S3_BUCKET" if system else "CONCILIUM__S3_BUCKET"
+            raise OSError(f"{env_var} é obrigatório para CONCILIUM__STORE_BACKEND=s3.")
 
         return cls(
             bucket=bucket,
             region=s3.region.strip() or None,
-            root_prefix=s3.root_prefix.strip(),
+            root_prefix=(s3.system_root_prefix if system else s3.root_prefix).strip(),
             endpoint_url=s3.endpoint_url.strip() or None,
             addressing_style=s3.addressing_style.strip() or None,
             aws_access_key_id=s3.access_key_id.strip() or None,

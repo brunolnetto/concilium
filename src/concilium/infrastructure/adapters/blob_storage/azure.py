@@ -40,17 +40,27 @@ class AzureBlobStorage(BlobStoragePort):
         self._service: Any = None  # lazy
 
     @classmethod
-    def from_env(cls) -> AzureBlobStorage:
+    def from_env(cls, *, system: bool = False) -> AzureBlobStorage:
+        """Instancia a partir das variáveis de ambiente CONCILIUM__AZURE_*.
+
+        system=True aponta para o container "sistema" (auth/config/distribuição),
+        isolado do container de projetos — ver CONCILIUM__AZURE_SYSTEM_CONTAINER.
+        """
         azure = get_storage().azure
-        container = azure.container.strip()
+        container = (azure.system_container if system else azure.container).strip()
         if not container:
-            raise OSError("CONCILIUM__AZURE_CONTAINER é obrigatório para o backend Azure Blob.")
+            env_var = (
+                "CONCILIUM__AZURE_SYSTEM_CONTAINER ou CONCILIUM__AZURE_CONTAINER"
+                if system
+                else "CONCILIUM__AZURE_CONTAINER"
+            )
+            raise OSError(f"{env_var} é obrigatório para o backend Azure Blob.")
         return cls(
             container=container,
             account=azure.account.strip() or None,
             account_key=azure.key.strip() or None,
             connection_string=azure.connection_string.strip() or None,
-            root_prefix=azure.root_prefix.strip(),
+            root_prefix=(azure.system_root_prefix if system else azure.root_prefix).strip(),
         )
 
     # ── SDK / cliente ───────────────────────────────────────────────────────

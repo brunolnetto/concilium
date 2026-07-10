@@ -27,14 +27,32 @@ class AzureSettings:
     root_prefix: str
     """CONCILIUM__AZURE_ROOT_PREFIX — prefixo raiz dentro do container."""
 
+    system_container: str = ""
+    """CONCILIUM__AZURE_SYSTEM_CONTAINER — container de sistema (auth/distribuição).
+
+    Isola auth/config/distribuição de projetos, análogo ao Drive de sistema do
+    SharePoint (ver SharePointSettings.system_drive_id). Cai para `container`
+    (mesmo container de hoje) se não configurado.
+    """
+
+    system_root_prefix: str = ""
+    """CONCILIUM__AZURE_SYSTEM_ROOT_PREFIX — prefixo raiz do container de sistema.
+
+    Cai para `root_prefix` se não configurado (ver `system_container`).
+    """
+
     @classmethod
     def from_env(cls) -> AzureSettings:
+        container = _str("CONCILIUM__AZURE_CONTAINER", "")
+        root_prefix = _str("CONCILIUM__AZURE_ROOT_PREFIX", "")
         return cls(
             account=_str("CONCILIUM__AZURE_ACCOUNT", ""),
-            container=_str("CONCILIUM__AZURE_CONTAINER", ""),
+            container=container,
             key=_str("CONCILIUM__AZURE_KEY", ""),
             connection_string=_str("CONCILIUM__AZURE_CONNECTION_STRING", ""),
-            root_prefix=_str("CONCILIUM__AZURE_ROOT_PREFIX", ""),
+            root_prefix=root_prefix,
+            system_container=_str("CONCILIUM__AZURE_SYSTEM_CONTAINER", "") or container,
+            system_root_prefix=_str("CONCILIUM__AZURE_SYSTEM_ROOT_PREFIX", "") or root_prefix,
         )
 
 
@@ -69,18 +87,36 @@ class S3Settings:
     server_side_encryption: str
     """CONCILIUM__S3_SERVER_SIDE_ENCRYPTION — "AES256" ou "aws:kms"."""
 
+    system_bucket: str = ""
+    """CONCILIUM__S3_SYSTEM_BUCKET — bucket de sistema (auth/distribuição).
+
+    Isola auth/config/distribuição de projetos, análogo ao Drive de sistema do
+    SharePoint (ver SharePointSettings.system_drive_id). Cai para `bucket`
+    (mesmo bucket de hoje) se não configurado.
+    """
+
+    system_root_prefix: str = ""
+    """CONCILIUM__S3_SYSTEM_ROOT_PREFIX — prefixo raiz do bucket de sistema.
+
+    Cai para `root_prefix` se não configurado (ver `system_bucket`).
+    """
+
     @classmethod
     def from_env(cls) -> S3Settings:
+        bucket = _str("CONCILIUM__S3_BUCKET", "")
+        root_prefix = _str("CONCILIUM__S3_ROOT_PREFIX", "")
         return cls(
-            bucket=_str("CONCILIUM__S3_BUCKET", ""),
+            bucket=bucket,
             region=_str("CONCILIUM__S3_REGION", "us-east-1"),
-            root_prefix=_str("CONCILIUM__S3_ROOT_PREFIX", ""),
+            root_prefix=root_prefix,
             endpoint_url=_str("CONCILIUM__S3_ENDPOINT_URL", ""),
             addressing_style=_str("CONCILIUM__S3_ADDRESSING_STYLE", "virtual"),
             access_key_id=_str("CONCILIUM__S3_ACCESS_KEY_ID", ""),
             secret_access_key=_str("CONCILIUM__S3_SECRET_ACCESS_KEY", ""),
             session_token=_str("CONCILIUM__S3_SESSION_TOKEN", ""),
             server_side_encryption=_str("CONCILIUM__S3_SERVER_SIDE_ENCRYPTION", ""),
+            system_bucket=_str("CONCILIUM__S3_SYSTEM_BUCKET", "") or bucket,
+            system_root_prefix=_str("CONCILIUM__S3_SYSTEM_ROOT_PREFIX", "") or root_prefix,
         )
 
 
@@ -155,12 +191,22 @@ class GDriveSettings:
     google_credentials_path: str
     """CONCILIUM__GOOGLE_CREDENTIALS — caminho para credenciais Google (catalog loader legado)."""
 
+    system_root_folder_id: str = ""
+    """CONCILIUM__GDRIVE_SYSTEM_ROOT_FOLDER_ID — folder de sistema (auth/distribuição).
+
+    Isola auth/config/distribuição de projetos, análogo ao Drive de sistema do
+    SharePoint (ver SharePointSettings.system_drive_id). Cai para
+    `root_folder_id` (mesmo folder de hoje) se não configurado.
+    """
+
     @classmethod
     def from_env(cls) -> GDriveSettings:
+        root_folder_id = _str("CONCILIUM__GDRIVE_ROOT_FOLDER_ID", "")
         return cls(
-            root_folder_id=_str("CONCILIUM__GDRIVE_ROOT_FOLDER_ID", ""),
+            root_folder_id=root_folder_id,
             service_account_json=_str("CONCILIUM__GDRIVE_SA_JSON", ""),
             google_credentials_path=_str("CONCILIUM__GOOGLE_CREDENTIALS", ""),
+            system_root_folder_id=_str("CONCILIUM__GDRIVE_SYSTEM_ROOT_FOLDER_ID", "") or root_folder_id,
         )
 
 

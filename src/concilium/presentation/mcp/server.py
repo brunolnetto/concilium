@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 from concilium.application.tool_invocations.repository import reset_tool_invocation_repository
 from concilium.infrastructure.auth.permission_guard import patch_mcp_auth_permissions, validate_tool_coverage
 from concilium.infrastructure.observability.logging_config import configure_logging
+from concilium.infrastructure.observability.pipeline import bronze_storage_for_bootstrap
 from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
 from concilium.infrastructure.telemetry import patch_fastmcp_server, setup_telemetry
 from concilium.presentation.mcp._context import _config_root
@@ -103,7 +104,7 @@ class _AuthenticatedFastMCP(FastMCP):
 def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     """Monta o servidor MCP registrando todas as ferramentas dos sub-módulos."""
     setup_telemetry()
-    configure_logging(json_format=True)
+    configure_logging(json_format=True, bronze_storage=bronze_storage_for_bootstrap())
     reset_tool_invocation_repository(get_tool_invocation_store())  # ADR-118: blob-backed audit
     server = _AuthenticatedFastMCP("concilium", host=host, port=port)
     system.register(server)  # ping / health — sempre primeiro
