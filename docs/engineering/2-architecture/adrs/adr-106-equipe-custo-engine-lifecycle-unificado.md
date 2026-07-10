@@ -1,12 +1,12 @@
 # ADR-106: EquipeCustoEngine — Lifecycle Unificado para Equipes Diretas e Indiretas
 
-**Status:** Implementado ✅ _(F1-F4, F6, F7 entregues; F5 bloqueado por dado de catálogo; F8 → ADR-086. Reconciliado 2026-06-20)_  
+**Status:** Implementado ✅ _(F1-F4, F6, F7 entregues; F4-bis corrige bug de unidade de F4; F5 bloqueado por dado de catálogo; F8 → ADR-086. Reconciliado 2026-06-20, F4-bis 2026-07-10)_  
 **Data:** 2026-06-08  
 **Autores:** Engenharia de Plataforma  
 
 > **Reconciliação de status (2026-06-20):** a nota de 2026-06-09 ficou defasada. Estado real verificado no código:
 > - ✅ `equipe_custo_engine.py` (F1): `LifecycleEngine` + `CustoEquipeDecomposicao` implementados e testados (`test_adr106_f1_lifecycle_engine.py`).
-> - ✅ `DirectTeamCostStrategy` (F2) e `IndirectTeamCostStrategy` (F4): implementados e testados.
+> - ✅ `DirectTeamCostStrategy` (F2) e `IndirectTeamCostStrategy` (F4): implementados e testados — **F4 tinha um bug de unidade não detectado por fixtures artificiais, corrigido em F4-bis (2026-07-10), ver nota abaixo.**
 > - ✅ `_fill_custo_inst_sem_pool` (F3): integrado em skill-05 (skill.py:322); invariante IC-3 (Σ custo_inst_* ≈ custo_total) garantido por rescaling.
 > - ✅ **F6 (early dismissal EQ)**: funcional no pipeline — `economia_desmobilizacao_antecipada` computado em `_skill_helpers_a.py:2539`; 21 testes passando (`test_adr106_f6_early_dismissal.py`). **Antes marcado deferred; rótulo corrigido.**
 > - ✅ F7: skill-08 usa `custo_inst_*` diretamente.
@@ -20,6 +20,28 @@
 > (16,5M) e (b) **duplicaria o custo MOB**, que já é contabilizado nos indiretos (categoria MOB,
 > ADR-105). F5 deve ser ativado quando o catálogo for populado com `mob_policy` por CPU, junto de
 > uma análise de não-dupla-contagem MOB-direto × MOB-indireto. Engine e constantes ficam prontos.
+
+> **F4-bis — correção de bug de unidade (2026-07-10):** a reconciliação de 2026-06-20 marcou F4
+> como "implementado e testado", mas os testes usavam apenas fixtures artificiais
+> (`test_adr106_f4_indirect_strategy.py`) que nunca expuseram um bug real: `IndirectTeamCostStrategy`
+> tratava `Indireto.custo_mao_obra`/`custo_equipamentos` como **taxas mensais** (dividindo por
+> `SEMANAS_POR_MES`), quando na verdade são **totais já escalados para a permanência inteira** — ver
+> o invariante documentado no próprio modelo `Indireto`
+> (`custo_total ≈ custo_mao_obra + custo_equipamentos + custo_combustivel + custo_verba + custo_mobilizacao`,
+> `domain/models/canonical/_financeiro_resultado.py`). Com um `Indireto` de formato real, o bug
+> inflava o custo em ~5-6× (ex.: R$ 120.000 → R$ 607.946 para um projeto de 26 semanas). Corrigido:
+> a taxa semanal agora é derivada dividindo por `semanas_projeto` (não por `SEMANAS_POR_MES`), e
+> `custo_verba` (componente que faltava) foi adicionado a `CustoEquipeDecomposicao`/`LifecycleEngine`.
+>
+> **Ainda não conectado à produção** — skill-06 continua calculando indiretos via
+> `_process_mob_categoria`/`_resolucao.py`/`_sub_custos_indireto`, um modelo de **alocação
+> proporcional** de um custo total já calculado entre MO/EQ/verba (com regra de resíduo para
+> composição parcial), estruturalmente diferente do modelo **taxa × semanas** do
+> `LifecycleEngine`. Unificar os dois exigiria reescrever o modelo de cálculo de ADM/TOP/LAB/QSMS,
+> não só corrigir `IndirectTeamCostStrategy` — avaliado e descartado por ora (ver Alternativas
+> Rejeitadas). Esta correção deixa a estratégia **correta e segura de usar** caso um consumidor real
+> apareça no futuro (ex.: quando/se o split de fase MOB do ADR-105 §6.6 for retomado), em vez de um
+> bug latente esperando alguém confiar nela.
 
 ---
 
@@ -250,6 +272,10 @@ Rejeitado porque: a parameterização de custo é genuinamente diferente (unit p
 Absorver skill-07 em skill-05.
 
 Rejeitado porque: indiretos são configurados por categoria de projeto, não por CPU de catálogo. O modelo de responsabilidade de skill-07 (receber configuração de indiretos e distribuir temporalmente) é distinto do de skill-05 (calcular equipes a partir de composição de CPU). Mesclar aumentaria acoplamento sem ganho.
+
+### A4 (F4-bis, 2026-07-10): substituir `_resolucao.py`/`_sub_custos_indireto` por `IndirectTeamCostStrategy` na produção
+
+Rejeitado por ora: `_sub_custos_indireto` implementa **alocação proporcional** de um custo total já calculado entre MO/EQ/verba, com regra de resíduo para composição parcial (quando a config só decompõe parte do custo mensal, o resíduo vira verba — correção histórica documentada no próprio código, ADR-090). O `LifecycleEngine` calcula **taxa × semanas**, um modelo bottom-up sem noção de "resíduo de composição parcial". Portar essa regra para o engine é reescrever o modelo de cálculo de ADM/TOP/LAB/QSMS, não uma troca mecânica de chamada — diferente do que aconteceu com o pool de recursos diretos (ADR-136 F5), onde as duas implementações já batiam numericamente antes de qualquer mudança. Reavaliar se/quando houver necessidade de negócio clara de unificar (ex.: split de fase MOB do ADR-105 §6.6, que usa só o subconjunto MOB — mob/demob — onde os dois modelos são comparáveis).
 
 ---
 
