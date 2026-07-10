@@ -53,8 +53,9 @@ def calcular_custo_instancia_composicional(
     c_mat: float,
     c_idle_eq: float,
     c_demob_efetivo: float = 0.0,
+    c_mob_efetivo: float = 0.0,
 ) -> dict[str, float]:
-    """ADR-085 D3: custo instancial composicional por componente.
+    """ADR-085 D3 / ADR-136 F3: custo instancial composicional por componente.
 
     Generaliza ``calcular_custo_contrato_por_instancia`` (ADR-080, escalar) para tratar
     cada componente com sua dinâmica de ociosidade própria, consistente com a operação:
@@ -67,11 +68,20 @@ def calcular_custo_instancia_composicional(
       (sem operação → sem consumo).
     - **Semanas off** (fora do ciclo de vida — mobilização tardia / desmob antecipada):
       custo zero; o chamador simplesmente não as inclui em prod nem idle.
+    - ``c_mob_efetivo``: custo de mobilização — evento de entrada da instância no pool.
+      Incorrido sempre que a instância é de fato utilizada (ADR-085 D3); ao contrário de
+      ``c_demob_efetivo``, não há variante "embutida no contrato" — mobilizar sempre tem
+      custo quando ocorre.
     - ``c_demob_efetivo``: custo de desmobilização incorrido apenas quando a desmob
       antecipada é aplicada à instância (ADR-085 D3 / ADR-080 §C).
 
-    Retrocompatível: quando ``c_idle_eq`` reflete a taxa cheia de EQ, o resultado recai no
-    comportamento sem desconto de ociosidade.
+    ADR-125 D1/D4 (via ADR-136): mob/demob são custo indireto de campo (BDI/DI), não
+    custo produtivo — mas continuam somados neste ``total``, que corresponde ao custo
+    contratual completo (``custo_total_contrato`` em ``RecursoContrato``), não a
+    ``C_pool`` isoladamente.
+
+    Retrocompatível: quando ``c_idle_eq`` reflete a taxa cheia de EQ e ``c_mob_efetivo``
+    é omitido, o resultado recai no comportamento anterior (sem mobilização).
 
     Retorna um dict com os componentes e o total, para popular ``InstanciaRecurso``.
     """
@@ -81,7 +91,9 @@ def calcular_custo_instancia_composicional(
     ativo_mat = c_mat * prod_weeks
     idle_mo = c_mo * idle_weeks  # MO integral durante ociosidade (CLT)
     idle_eq = c_idle_eq * idle_weeks  # EQ à taxa de locação reduzida
-    total = ativo_mo + ativo_eq + ativo_comb + ativo_mat + idle_mo + idle_eq + c_demob_efetivo
+    total = (
+        ativo_mo + ativo_eq + ativo_comb + ativo_mat + idle_mo + idle_eq + c_mob_efetivo + c_demob_efetivo
+    )
     return {
         "ativo_mo": round(ativo_mo, 2),
         "ativo_eq": round(ativo_eq, 2),
@@ -89,6 +101,7 @@ def calcular_custo_instancia_composicional(
         "ativo_mat": round(ativo_mat, 2),
         "idle_mo": round(idle_mo, 2),
         "idle_eq": round(idle_eq, 2),
+        "mob": round(c_mob_efetivo, 2),
         "demob": round(c_demob_efetivo, 2),
         "total": round(total, 2),
     }

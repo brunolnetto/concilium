@@ -1746,7 +1746,7 @@ class TestComputeGapForInst:
 
 
 class TestSumInstCategories:
-    def _make_inst(self, mo=0.0, eq=0.0, comb=0.0, mat=0.0, idle_mo=0.0, idle_eq=0.0, demob=0.0):
+    def _make_inst(self, mo=0.0, eq=0.0, comb=0.0, mat=0.0, idle_mo=0.0, idle_eq=0.0, mob=0.0, demob=0.0):
         return SimpleNamespace(
             custo_ativo_mo=mo,
             custo_ativo_eq=eq,
@@ -1754,14 +1754,17 @@ class TestSumInstCategories:
             custo_ativo_mat=mat,
             custo_idle_mo=idle_mo,
             custo_idle_eq=idle_eq,
+            custo_mob_instancia=mob,
             custo_demob_instancia=demob,
         )
 
     def test_single_instance(self):
-        inst = self._make_inst(mo=100.0, eq=200.0, comb=50.0, mat=10.0, idle_mo=20.0, idle_eq=30.0, demob=5.0)
+        inst = self._make_inst(
+            mo=100.0, eq=200.0, comb=50.0, mat=10.0, idle_mo=20.0, idle_eq=30.0, mob=8.0, demob=5.0
+        )
         tot_mo, tot_eq, tot_comb, tot_mat = _sum_inst_categories([inst])
         assert tot_mo == pytest.approx(120.0)  # 100 + 20
-        assert tot_eq == pytest.approx(235.0)  # 200 + 30 + 5
+        assert tot_eq == pytest.approx(243.0)  # 200 + 30 + 8 + 5 (ADR-136 F3: mob também entra em EQ)
         assert tot_comb == pytest.approx(50.0)
         assert tot_mat == pytest.approx(10.0)
 

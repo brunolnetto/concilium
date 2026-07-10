@@ -137,10 +137,37 @@ def _contract_custo(contrato) -> float:
     return float(getattr(contrato, "custo_total_contrato", 0.0) or 0.0)
 
 
-def _check_h1(soma_por_contrato, contratos) -> list[dict]:
+def _sum_mob_demob_por_contrato(instancias) -> dict[str, float]:
+    """ADR-136 F3: soma custo_mob_instancia + custo_demob_instancia por contrato.
+
+    Mob/demob são custos de evento (entrada/saída do pool), não custo de semana
+    física — não têm célula própria no cubo (H1 é escopado a prod/idle/off).
+    """
+    out: dict[str, float] = {}
+    for inst in instancias or []:
+        contrato_id = getattr(inst, "contrato_id", None)
+        if not contrato_id:
+            continue
+        mob = float(getattr(inst, "custo_mob_instancia", 0.0) or 0.0)
+        demob = float(getattr(inst, "custo_demob_instancia", 0.0) or 0.0)
+        out[contrato_id] = out.get(contrato_id, 0.0) + mob + demob
+    return out
+
+
+def _check_h1(soma_por_contrato, contratos, instancias=()) -> list[dict]:
+    """H1: Σ células (prod/idle/off) == custo_total_contrato − (mob + demob).
+
+    ADR-136 F3: mob/demob são custo de evento (entrada/saída do pool), sem
+    célula própria — cada célula representa uma semana física do ciclo de vida
+    (prod/idle/off), enquanto mob/demob são eventos pontuais fora dessa grade.
+    `custo_total_contrato` inclui mob/demob (ADR-125 D1/D4: total = C_pool +
+    mob + demob); H1 reconcilia apenas a parte física (C_pool).
+    """
+    mob_demob_por_contrato = _sum_mob_demob_por_contrato(instancias)
     violacoes: list[dict] = []
     for contrato in contratos or []:
-        esperado = _contract_custo(contrato)
+        mob_demob = mob_demob_por_contrato.get(contrato.contrato_id, 0.0)
+        esperado = _contract_custo(contrato) - mob_demob
         obtido = round(soma_por_contrato.get(contrato.contrato_id, 0.0), 2)
         if abs(obtido - esperado) > max(1.0, esperado * 0.001):
             violacoes.append(
@@ -189,11 +216,18 @@ class CuboPoolInstancialBuilder:
         return out
 
 
-def validar_invariantes_cubo_pool(cubo: CuboPoolInstancial, contratos: Any) -> list[dict]:
-    """Verifica H1 (soma), H3 (off zero). Retorna lista de violações (vazia = OK)."""
+def validar_invariantes_cubo_pool(cubo: CuboPoolInstancial, contratos: Any, instancias: Any = ()) -> list[dict]:
+    """Verifica H1 (soma física == custo_total_contrato − mob/demob), H3 (off zero).
+
+    ``instancias`` (ADR-136 F3) é opcional para retrocompatibilidade — sem ela,
+    H1 compara contra o `custo_total_contrato` cheio (correto apenas quando
+    mob/demob são zero para todos os contratos, ex.: contratos sem resource_costs).
+
+    Retorna lista de violações (vazia = OK).
+    """
     violacoes: list[dict] = []
     h3 = _check_off_zero(cubo)
     if h3 is not None:
         violacoes.append(h3)
-    violacoes.extend(_check_h1(_sum_by_contrato(cubo), contratos))
+    violacoes.extend(_check_h1(_sum_by_contrato(cubo), contratos, instancias))
     return violacoes

@@ -90,6 +90,7 @@ def resolve_cubo_pool_projection(
     cubo = CuboPoolInstancialBuilder().build(canonical_in, gerado_em=gerado_em)
     contratos = list(getattr(canonical_in, "contratos_recurso", None) or [])
     cadeias = list(getattr(canonical_in, "cadeias_perpetuacao", None) or [])
+    instancias_recurso = list(getattr(canonical_in, "instancias_recurso", None) or [])
 
     cubo = _slice_cubo_por_filtros(cubo, face, atividade_id, instancia_id)
 
@@ -120,7 +121,7 @@ def resolve_cubo_pool_projection(
     rows, narrativa, operator_meta = _truncar_rows_projection(rows, narrativa, operator_meta, top_n)
 
     # Invariantes de honestidade (H1/H3)
-    violacoes = validar_invariantes_cubo_pool(cubo, contratos)
+    violacoes = validar_invariantes_cubo_pool(cubo, contratos, instancias_recurso)
 
     return {
         "version": "adr086-v1",
