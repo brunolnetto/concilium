@@ -66,8 +66,12 @@ jobs:
             VENV_BIN=.proxy-build-venv/Scripts
           fi
           echo "VENV_BIN=$VENV_BIN" >> "$GITHUB_ENV"
-          "$VENV_BIN/pip" install --upgrade pip
-          "$VENV_BIN/pip" install ./tools/mcp-proxy pyinstaller
+          # `pip install --upgrade pip` invocado como pip.exe falha no Windows
+          # ("To modify pip, please run ... python.exe -m pip") porque não
+          # consegue sobrescrever o próprio executável em uso — `python -m pip`
+          # não tem esse problema em nenhum SO.
+          "$VENV_BIN/python" -m pip install --upgrade pip
+          "$VENV_BIN/python" -m pip install ./tools/mcp-proxy pyinstaller
 
       - name: Build standalone executable
         shell: bash
