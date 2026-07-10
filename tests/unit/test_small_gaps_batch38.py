@@ -270,6 +270,64 @@ class TestCustoMobLegado:
         assert total == 5 * 2000 * 3
 
 
+class TestCustoMobLegadoGranularidadePorEquipe:
+    """ADR-136 F4: _custo_mob_legado deriva permanência por equipe de equipes_diretas
+    (EquipeDireta.permanencia_efetiva_meses, já calculada pela skill-05) em vez de
+    colapsar todas as equipes num único par (headcount agregado, prazo_meses do
+    projeto) — bug documentado no ADR-136 a partir da planilha real do AGIS, que
+    modela 7 equipes com permanências distintas (1,3 a 12,0 meses).
+    """
+
+    @staticmethod
+    def _mk_equipe(num_pessoas: int, permanencia_efetiva_meses: float):
+        return SimpleNamespace(
+            funcoes=[SimpleNamespace(num_pessoas=num_pessoas)],
+            permanencia_efetiva_meses=permanencia_efetiva_meses,
+        )
+
+    def test_equipes_diretas_usa_permanencia_propria_por_equipe(self):
+        """Duas equipes com headcount e permanência bem diferentes entre si.
+
+        A soma correta (por equipe) diverge da fórmula agregada antiga sempre que
+        as permanências não são uniformes — exatamente o bug do ADR-136.
+        """
+        equipes = [
+            self._mk_equipe(num_pessoas=10, permanencia_efetiva_meses=3.0),
+            self._mk_equipe(num_pessoas=5, permanencia_efetiva_meses=6.0),
+        ]
+        dados_mob = {"custo_pessoa_mes": 1000.0}
+        total, _mobs = INDIR._custo_mob_legado(
+            dados_mob, num_pessoas_direta=15, prazo_meses=4, equipes_diretas=equipes
+        )
+        # 10×1000×3 + 5×1000×6 = 30000 + 30000 = 60000 — não 15×1000×4=60000 por coincidência
+        # (ajustado abaixo para deixar a divergência explícita com prazo_meses diferente)
+        assert total == 60000.0
+
+    def test_diverge_do_agregado_quando_permanencias_sao_desiguais(self):
+        """Prova que o resultado por-equipe diverge do agregado quando o prazo
+        agregado não é a média ponderada exata das permanências individuais."""
+        equipes = [
+            self._mk_equipe(num_pessoas=20, permanencia_efetiva_meses=1.0),
+            self._mk_equipe(num_pessoas=5, permanencia_efetiva_meses=12.0),
+        ]
+        dados_mob = {"custo_pessoa_mes": 1000.0}
+        # Por equipe (correto): 20×1000×1 + 5×1000×12 = 20000 + 60000 = 80000
+        total_por_equipe, _ = INDIR._custo_mob_legado(
+            dados_mob, num_pessoas_direta=25, prazo_meses=6, equipes_diretas=equipes
+        )
+        # Agregado (bug antigo, ainda acessível via equipes_diretas=None): 25×1000×6 = 150000
+        total_agregado, _ = INDIR._custo_mob_legado(dados_mob, num_pessoas_direta=25, prazo_meses=6)
+        assert total_por_equipe == 80000.0
+        assert total_agregado == 150000.0
+        assert total_por_equipe != total_agregado
+
+    def test_equipes_diretas_vazia_mantem_retrocompat_agregado(self):
+        """Lista vazia (ou None) preserva o comportamento agregado — retrocompat."""
+        dados_mob = {"custo_pessoa_mes": 2000}
+        total, _ = INDIR._custo_mob_legado(dados_mob, num_pessoas_direta=5, prazo_meses=3, equipes_diretas=[])
+        assert total == 5 * 2000 * 3
+
+
 class TestApplyDv4ScaleToCategoria:
     """Line 351: permanencia driver → custo = custo_fixo_mensal × prazo_meses."""
 
@@ -416,6 +474,36 @@ class TestProcessMobCategoriaCatCfgRaw:
             mob_schedule={"mobilizacao": {"inicio": date(2026, 1, 1), "fim": date(2026, 1, 7)}},
         )
         assert indir.custo_total == 7500.0
+
+
+class TestProcessMobCategoriaEquipesDiretas:
+    """ADR-136 F4: _process_mob_categoria propaga equipes_diretas para _custo_mob_legado."""
+
+    def test_equipes_diretas_propagadas_ao_legado(self):
+        equipes = [
+            SimpleNamespace(
+                funcoes=[SimpleNamespace(num_pessoas=20)],
+                permanencia_efetiva_meses=1.0,
+            ),
+            SimpleNamespace(
+                funcoes=[SimpleNamespace(num_pessoas=5)],
+                permanencia_efetiva_meses=12.0,
+            ),
+        ]
+        indir, _semanal = INDIR._process_mob_categoria(
+            cat={"descricao": "Mobilização"},
+            categorias_config_raw=[],  # sem cat_cfg_raw → exercita o caminho legado
+            dados_mob={"custo_pessoa_mes": 1000.0},
+            num_pessoas_direta=25,
+            prazo_meses=6,
+            n_semanas=12,
+            dv4_policy=None,
+            policy_scale={},
+            equipes_diretas=equipes,
+        )
+        # Por equipe (correto, via equipes_diretas): 20×1000×1 + 5×1000×12 = 80000
+        # Agregado seria 25×1000×6 = 150000 — a propagação evita esse valor errado.
+        assert indir.custo_total == 80000.0
 
 
 class TestResolveCategoriaCatCfgRaw:

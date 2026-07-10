@@ -167,6 +167,7 @@ def _process_categorias_indiretas(
                 dv4_policy,
                 policy_scale,
                 mob_schedule=mob_schedule,
+                equipes_diretas=canonical_in.equipes_diretas,
             )
         else:
             indir, semanal = _process_regular_categoria(

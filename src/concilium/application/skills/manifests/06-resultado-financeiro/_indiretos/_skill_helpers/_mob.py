@@ -23,8 +23,39 @@ from ._breakdown import _build_semanal_breakdown  # ty: ignore[unresolved-import
 logger = logging.getLogger(__name__)
 
 
-def _custo_mob_legado(dados_mob: dict, num_pessoas_direta: int, prazo_meses: int) -> tuple[float, list[Mobilizacao]]:
-    """Calcula custo MOB legado (retrocompatível com formato anterior)."""
+def _custo_alimentacao_por_equipe(equipes_diretas: list, custo_pessoa_mes: float) -> float:
+    """ADR-136 F4: custo de alimentação/seguro de vida/cesta básica por equipe.
+
+    Cada `EquipeDireta` carrega sua própria `permanencia_efetiva_meses` (calculada
+    pela skill-05 a partir do cronograma real — ver `_dimensionamento_orquestracao.py`),
+    refletindo o fato de que equipes diferentes entram/saem da obra em momentos
+    diferentes. Somar por equipe, em vez de usar um headcount e um prazo agregados
+    para o projeto inteiro, é o que a planilha de referência do AGIS modela (7
+    equipes com permanências de 1,3 a 12,0 meses) e que a fórmula legada abaixo
+    (``num_pessoas_direta * custo_pessoa_mes * prazo_meses``) não reproduz.
+    """
+    total = 0.0
+    for eq in equipes_diretas:
+        num_pessoas = sum(f.num_pessoas for f in getattr(eq, "funcoes", None) or [])
+        permanencia = float(getattr(eq, "permanencia_efetiva_meses", 0.0) or 0.0)
+        total += num_pessoas * custo_pessoa_mes * permanencia
+    return total
+
+
+def _custo_mob_legado(
+    dados_mob: dict,
+    num_pessoas_direta: int,
+    prazo_meses: int,
+    equipes_diretas: list | None = None,
+) -> tuple[float, list[Mobilizacao]]:
+    """Calcula custo MOB legado (retrocompatível com formato anterior).
+
+    ``equipes_diretas`` (ADR-136 F4, opcional): quando fornecida e não-vazia, o
+    termo de alimentação/seguro/cesta básica é calculado por equipe (headcount ×
+    permanência própria de cada uma), em vez do agregado
+    ``num_pessoas_direta * prazo_meses``. Retrocompatível — sem ela (ou vazia),
+    o comportamento é idêntico ao anterior.
+    """
     custo_total = 0.0
     mobilizacoes: list[Mobilizacao] = []
     for m in dados_mob.get("mobilizacoes", []):
@@ -42,7 +73,10 @@ def _custo_mob_legado(dados_mob: dict, num_pessoas_direta: int, prazo_meses: int
     custo_pessoa_mes = dados_mob.get(
         "custo_pessoa_mes", 1850
     )  # B3-known: R$1.850 legado; idealmente derivar do catálogo
-    custo_total += num_pessoas_direta * custo_pessoa_mes * prazo_meses
+    if equipes_diretas:
+        custo_total += _custo_alimentacao_por_equipe(equipes_diretas, custo_pessoa_mes)
+    else:
+        custo_total += num_pessoas_direta * custo_pessoa_mes * prazo_meses
     for b in dados_mob.get("baixadas", []):
         n_ocorrencias = len(b.get("meses_ocorrencia", []))
         custo_total += b.get("num_pessoas", 0) * b.get("valor_por_pessoa", 0) * n_ocorrencias
@@ -85,6 +119,7 @@ def _process_mob_categoria(
     dv4_policy: str | None,
     policy_scale: dict,
     mob_schedule: dict | None = None,
+    equipes_diretas: list | None = None,
 ) -> tuple[Indireto, list[IndiretoSemanal]]:
     descricao: str = cat["descricao"]
     cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == "MOB"), None)
@@ -93,7 +128,7 @@ def _process_mob_categoria(
         custo = cat_obj.custo_fixo_total
         mobs: list[Mobilizacao] = []
     else:
-        custo, mobs = _custo_mob_legado(dados_mob, num_pessoas_direta, prazo_meses)
+        custo, mobs = _custo_mob_legado(dados_mob, num_pessoas_direta, prazo_meses, equipes_diretas)
         cat_obj = IndirectoCategoria(
             categoria="MOB",
             driver="one_time",
