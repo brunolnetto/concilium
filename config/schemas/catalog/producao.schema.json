@@ -99,6 +99,13 @@
     "composicao_padrao_equipe": {
       "$ref": "common.schema.json#/$defs/composicaoPadraoEquipe"
     },
+    "grafo_sinergia": {
+      "description": "Grafo de sinergia intra-equipe — opcional, retrocompatível (ADR-130 D1).",
+      "anyOf": [
+        {"type": "null"},
+        {"$ref": "common.schema.json#/$defs/grafoSinergiaEquipe"}
+      ]
+    },
     "limite_producao": {
       "type": "string",
       "enum": ["equipamento", "mao_obra"],

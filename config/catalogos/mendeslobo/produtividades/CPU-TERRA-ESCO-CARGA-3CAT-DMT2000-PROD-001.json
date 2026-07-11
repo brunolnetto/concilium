@@ -36,5 +36,25 @@
         "consumo_litros_hora_estimado": 3.0
       }
     ]
+  },
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "AGIS-E0016",
+        "capacidade_horaria": 142.1,
+        "unidade": "m3/h",
+        "fonte": "medicao_obra",
+        "justificativa": "Calibração reversa: escavadeira 48T (AGIS-E0016) é o elemento gargalo em ambas as variantes de DMT desta categoria (frota de caminhões-rocha tem folga de ~54 m³/h acima do valor_horario real) — capacidade = média dos valor_horario reais das CPUs 3CAT-DMT2000 (142.02) e 3CAT-DMT3000 (142.16). Estimativa inicial de especificação de fabricante (Komatsu PC490, caçamba de rocha, ~135 m³/h) ficou próxima do valor calibrado (142.1), maior confiança que a estimativa de 38T/1CAT-2CAT."
+      },
+      {
+        "elemento_id": "AGIS-E0004",
+        "capacidade_horaria": 32.7,
+        "unidade": "m3/h",
+        "fonte": "fabricante",
+        "justificativa": "Estimativa de especificação de fabricante: caminhão basculante 14m³ reforçado para rocha (caçamba efetiva ~11.5m³ por densidade do material), metodologia PEM/SICRO-DNIT com velocidades reduzidas (carregado 17km/h / vazio 27km/h) e tempo de carga maior (3.5min) por dificuldade de escavação em rocha. Nunca é o elemento gargalo nesta composição (folga de ~54 m³/h acima do valor_horario real)."
+      }
+    ],
+    "gargalo_declarado": null
   }
 }

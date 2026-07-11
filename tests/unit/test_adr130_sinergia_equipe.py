@@ -150,6 +150,33 @@ class TestModelosF1:
         c = CapacidadeElemento(elemento_id="X", capacidade_horaria=10.0, unidade="m3/h")
         assert c.fonte == "catalogo"
 
+    def test_capacidade_elemento_justificativa_opcional_default_none(self):
+        """Retrocompat: justificativa é opcional, capacidades já existentes continuam válidas."""
+        c = CapacidadeElemento(elemento_id="X", capacidade_horaria=10.0, unidade="m3/h")
+        assert c.justificativa is None
+
+    def test_capacidade_elemento_justificativa_aceita_memoria_de_calculo(self):
+        """Memória de cálculo/rationale para capacidades derivadas de fonte=fabricante —
+        rastreia fórmula/premissas usadas (ex.: capacidade de caçamba × ciclos/hora ×
+        fator de enchimento), não só o valor final."""
+        c = CapacidadeElemento(
+            elemento_id="ESCAV-38T",
+            capacidade_horaria=120.0,
+            unidade="m3/h",
+            fonte="fabricante",
+            justificativa=(
+                "Caçamba 1.8m³ x fator enchimento 0.85 x 45 ciclos/h x eficiência 0.87 "
+                "(especificação Cat 336, ciclo estimado — não medido em campo)."
+            ),
+        )
+        assert "Cat 336" in c.justificativa
+
+    def test_capacidade_elemento_extra_forbid_ainda_rejeita_campo_desconhecido(self):
+        with pytest.raises(ValidationError):
+            CapacidadeElemento(
+                elemento_id="X", capacidade_horaria=10.0, unidade="m3/h", campo_totalmente_novo=1
+            )  # type: ignore[call-arg]
+
     def test_serializacao_retrocompativel_sem_grafo(self):
         p = _producao(grafo=None)
         dump = p.model_dump(by_alias=True)
@@ -401,6 +428,25 @@ class TestCalibracaoF5:
 
         d2 = derivar_producao_horaria(p2.grafo_sinergia, p2.composicao_padrao_equipe)
         assert d2.producao_horaria_derivada == 110.0
+
+    def test_atualiza_justificativa_do_gargalo_quando_fornecida(self):
+        grafo = _grafo_escavacao(capacidade_escavadeira=100.0, capacidade_caminhao_unitario=30.0)
+        p = _producao(grafo=grafo)
+        p2 = atualizar_capacidade_gargalo(
+            p,
+            nova_capacidade_horaria=110.0,
+            fonte="medicao_obra",
+            justificativa="12 ciclos cronometrados em campo, campanha 2026-07.",
+        )
+        cap_escav = next(c for c in p2.grafo_sinergia.capacidades if c.elemento_id == "ESCAV-38T")
+        assert cap_escav.justificativa == "12 ciclos cronometrados em campo, campanha 2026-07."
+
+    def test_justificativa_opcional_preserva_none_quando_omitida(self):
+        grafo = _grafo_escavacao(capacidade_escavadeira=100.0, capacidade_caminhao_unitario=30.0)
+        p = _producao(grafo=grafo)
+        p2 = atualizar_capacidade_gargalo(p, nova_capacidade_horaria=110.0)
+        cap_escav = next(c for c in p2.grafo_sinergia.capacidades if c.elemento_id == "ESCAV-38T")
+        assert cap_escav.justificativa is None
 
     def test_nao_altera_capacidade_de_elementos_que_nao_sao_gargalo(self):
         grafo = _grafo_escavacao(capacidade_escavadeira=100.0, capacidade_caminhao_unitario=30.0)
