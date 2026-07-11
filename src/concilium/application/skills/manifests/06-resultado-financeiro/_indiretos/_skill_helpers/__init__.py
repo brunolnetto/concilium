@@ -11,7 +11,8 @@ Drivers:
 
 Inputs (no dict 'inputs'):
     composicoes_indireto: dict[categoria, dict] — opcional, override por categoria
-    dados_mobilizacao:    dict — para categoria MOB (legado)
+    dados_mobilizacao:    dict — formato item a item (mobilizações/baixadas) para categoria
+                          MOB, anterior ao schema categorias_config (ver _custo_mob_composicional)
     perc_encargos:        float — default 0.92
     categorias_config:    list[dict] — lista de IndirectoCategoria serializadas (ADR-009 novo)
     tabela_bdi:           TabelaBdi serializada — para bdi_indireto (ADR-023 §D4); opcional
@@ -37,7 +38,7 @@ from ._mob import (  # ty: ignore[unresolved-import]
     _accrue_mobilizacao_fase,
     _accrue_operacao_fase,
     _count_pessoas_diretas,
-    _custo_mob_legado,
+    _custo_mob_composicional,
     _distribuir_mob_fases,
     _extract_dv4_policy,
     _extract_overrides,
@@ -74,7 +75,7 @@ __all__ = [
     "_build_indireto_from_cat_obj",
     "_build_semanal_breakdown",
     "_count_pessoas_diretas",
-    "_custo_mob_legado",
+    "_custo_mob_composicional",
     "_distribuir_mob_fases",
     "_extract_dv4_policy",
     "_extract_overrides",

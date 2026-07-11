@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concilium.domain.models.canonical import CadeiaPerpetuacao
+from concilium.domain.models.canonical import CadeiaPerpetuacao, ValidacaoItem
 
 
 def _build_perpetuation_chains(
@@ -13,6 +13,7 @@ def _build_perpetuation_chains(
     custo_standby_unit: float = 0.0,
     delta_max: int = 2,
     gap_max: int = 9999,
+    validacoes: list | None = None,
 ) -> list[CadeiaPerpetuacao]:
     """Build perpetuation chains for a resource type (ADR-073).
 
@@ -32,6 +33,11 @@ def _build_perpetuation_chains(
     gap_max         : ADR-079 G_r^viável — hard upper bound on gap; perpetuation
                       is NEVER allowed when gap > gap_max, regardless of cost
                       threshold. Default 9999 preserves pre-ADR-079 behaviour.
+    validacoes      : ADR-137 D1 — lista opcional de ValidacaoItem; recebe um aviso
+                      VAL-POOL-MOB-ZERO quando a decisão de perpetuação cai para o
+                      heurístico baseado em tempo por custo_mob_unit+custo_demob_unit
+                      serem 0 (ex.: rcpsp_spec derivado automaticamente nunca popula
+                      esses campos — ver ADR-137 P1).
 
     Returns
     -------
@@ -44,6 +50,19 @@ def _build_perpetuation_chains(
     sorted_items = sorted(items, key=lambda x: (x["start_idx"], x["end_idx"]))
 
     use_cost_threshold = (custo_mob_unit + custo_demob_unit) > 0
+
+    if not use_cost_threshold and len(sorted_items) > 1 and validacoes is not None:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-POOL-MOB-ZERO",
+                status="AVISO",
+                mensagem=(
+                    f"Tipo {tipo_id}: custo_mob_unit e custo_demob_unit ambos 0 — decisão de "
+                    "perpetuação (ADR-073) usando heurístico baseado em tempo (gap ≤ "
+                    f"{delta_max} semanas), não em custo real (ADR-137 P1)."
+                ),
+            )
+        )
 
     chains: list[CadeiaPerpetuacao] = []
     chain_items = [sorted_items[0]]

@@ -252,6 +252,50 @@ def test_l3_proporcional_num_pessoas():
     assert custo == pytest.approx(300.0 * 7 + 150.0 * 7, rel=1e-4)  # 3150
 
 
+# ── L3-bis (ADR-106 F2-bis): split mob vs. demob para diretos sem pool ────────
+
+
+def test_l3bis_split_um_ciclo():
+    """Um ciclo: mob e demob retornados separadamente, somando ao agregado."""
+    h = _h05()
+    comp = {
+        "funcoes": [
+            {"funcao_id": "P0001", "num_pessoas": 1, "custo_mobilizacao": 1000.0, "custo_desmobilizacao": 500.0}
+        ],
+        "equipamentos": [],
+    }
+    cron = _make_cron([0, 1, 1])
+    custo_mob, custo_demob = h._calc_custo_mob_desmob_split(comp, cron)
+    assert custo_mob == pytest.approx(1000.0, rel=1e-4)
+    assert custo_demob == pytest.approx(500.0, rel=1e-4)
+    assert custo_mob + custo_demob == pytest.approx(h._calc_custo_mob_desmob(comp, cron), rel=1e-4)
+
+
+def test_l3bis_dois_ciclos_dobra_ambos():
+    """Dois ciclos (gap interno): mob e demob dobram igualmente."""
+    h = _h05()
+    comp = {
+        "funcoes": [],
+        "equipamentos": [
+            {"equip_id": "EQ-01", "num_unidades": 1, "custo_mobilizacao": 2000.0, "custo_desmobilizacao": 2000.0}
+        ],
+    }
+    custo_mob, custo_demob = h._calc_custo_mob_desmob_split(comp, _make_cron([1, 0, 1]))
+    assert custo_mob == pytest.approx(4000.0, rel=1e-4)  # 2× mob
+    assert custo_demob == pytest.approx(4000.0, rel=1e-4)  # 2× demob
+
+
+def test_l3bis_sem_custo_retorna_zero_zero():
+    h = _h05()
+    comp = {"funcoes": [{"funcao_id": "P0001", "num_pessoas": 2}], "equipamentos": []}
+    assert h._calc_custo_mob_desmob_split(comp, _make_cron([0, 1, 1, 0])) == (0.0, 0.0)
+
+
+def test_l3bis_cron_none_retorna_zero_zero():
+    h = _h05()
+    assert h._calc_custo_mob_desmob_split({}, None) == (0.0, 0.0)
+
+
 # ── L4: precedências SS/FF ───────────────────────────────────────────────────
 
 

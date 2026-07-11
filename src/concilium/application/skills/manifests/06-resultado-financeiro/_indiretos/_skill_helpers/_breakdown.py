@@ -9,6 +9,7 @@ from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # AD
 from concilium.domain.models.canonical import (
     IndirectoCategoria,
     IndiretoSemanal,
+    Mobilizacao,
 )
 
 
@@ -80,13 +81,57 @@ def _breakdown_permanencia_default(
     return result
 
 
-def _breakdown_mob(categoria: IndirectoCategoria, n_semanas: int) -> list[IndiretoSemanal]:
-    # MOB: split entre semana 0 e semana final
+def _split_mob_demob_valores(mobs: list[Mobilizacao] | None) -> tuple[float, float]:
+    """ADR-137 item 1: soma bruta de `Mobilizacao.custo_total` por grupo mob/demob.
+
+    Classifica cada item pela presença de "desmob" em `descricao` (case-insensitive).
+    Retorna (0.0, 0.0) quando `mobs` é None/vazia — sinaliza ao chamador que não há
+    dado real de proporção disponível (fallback 50/50 em `_breakdown_mob`).
+    """
+    if not mobs:
+        return 0.0, 0.0
+    custo_mob = 0.0
+    custo_demob = 0.0
+    for m in mobs:
+        if "desmob" in (m.descricao or "").lower():
+            custo_demob += m.custo_total
+        else:
+            custo_mob += m.custo_total
+    return custo_mob, custo_demob
+
+
+def _breakdown_mob(
+    categoria: IndirectoCategoria,
+    n_semanas: int,
+    mobs: list[Mobilizacao] | None = None,
+) -> list[IndiretoSemanal]:
+    """MOB: split entre semana 0 (mobilização) e semana final (desmobilização).
+
+    ADR-137 item 1: quando `mobs` traz itens de `Mobilizacao` reais e distinguíveis
+    (via descrição), usa a proporção real mob/demob entre eles, reescalada para
+    fechar exatamente com `categoria.custo_fixo_total` (que pode ter sido alterado
+    por dv4_policy/mob_schedule após os itens serem construídos — ver `_mob.py`).
+    Sem itens distinguíveis (ex.: custo pré-agregado via `categorias_config`,
+    caminho usado por todos os benchmarks reais atuais), mantém o fallback 50/50
+    pré-existente.
+    """
+    custo_mob_raw, custo_demob_raw = _split_mob_demob_valores(mobs)
+    bruto_total = custo_mob_raw + custo_demob_raw
+    if bruto_total > 0:
+        custo_mob = round(categoria.custo_fixo_total * (custo_mob_raw / bruto_total), 2)
+    else:
+        custo_mob = round(categoria.custo_fixo_total / 2, 2)
+    custo_demob = round(categoria.custo_fixo_total - custo_mob, 2)
+
     result: list[IndiretoSemanal] = []
-    metade = round(categoria.custo_fixo_total / 2, 2)
     for w in range(n_semanas):
         ativa = w == 0 or w == (n_semanas - 1)
-        custo_w = metade if ativa else 0.0
+        if w == 0:
+            custo_w = custo_mob
+        elif w == (n_semanas - 1):
+            custo_w = custo_demob
+        else:
+            custo_w = 0.0
         result.append(
             IndiretoSemanal(
                 semana=w,
@@ -105,6 +150,7 @@ def _build_semanal_breakdown(
     categoria: IndirectoCategoria,
     n_semanas: int,
     custo_total_override: float | None = None,
+    mobs: list[Mobilizacao] | None = None,
 ) -> list[IndiretoSemanal]:
     """Gera breakdown semanal para uma categoria (ADR-009 §D2)."""
     if categoria.driver == "permanencia":
@@ -120,6 +166,6 @@ def _build_semanal_breakdown(
 
         return _breakdown_permanencia_default(categoria, n_semanas, mo_mensal, eq_mensal, vb_mensal)
 
-    return _breakdown_mob(categoria, n_semanas)
+    return _breakdown_mob(categoria, n_semanas, mobs=mobs)
 
 
