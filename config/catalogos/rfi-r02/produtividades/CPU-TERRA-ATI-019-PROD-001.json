@@ -21,10 +21,6 @@
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0046",
-        "num_pessoas": 1
-      },
-      {
         "funcao_id": "P0022",
         "num_pessoas": 1
       }
@@ -43,12 +39,6 @@
         "num_unidades": 1
       }
     ]
-  },
-  "custos_equipe_planilha": {
-    "custo_mo_h": 133.4,
-    "custo_equip_h": 429.8,
-    "total_h": 563.2,
-    "pu_calculado": 2.2528
   },
   "categoria": "TERRAPLENAGEM"
 }

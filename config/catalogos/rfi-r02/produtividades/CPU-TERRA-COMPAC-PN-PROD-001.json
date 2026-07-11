@@ -63,12 +63,6 @@
       }
     ]
   },
-  "custos_equipe_rfi": {
-    "custo_mo_h": 187.58,
-    "custo_equip_h": 717.94,
-    "total_h": 905.52,
-    "pu_calculado": 5.2339
-  },
   "_nota_calibracao": "Frota ferrovia: 2 rolos PC + trator pneu c/ grade + motoniveladora + pipa. Sem trator de pneu o PN não atinge adensamento ferroviário.",
   "categoria": "TERRAPLENAGEM"
 }

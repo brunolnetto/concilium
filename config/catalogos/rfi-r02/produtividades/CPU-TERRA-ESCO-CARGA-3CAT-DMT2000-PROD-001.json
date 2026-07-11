@@ -37,12 +37,6 @@
       }
     ]
   },
-  "custos_equipe_rfi": {
-    "custo_mo_h": 166.97,
-    "custo_equip_h": 1659.28,
-    "total_h": 1826.25,
-    "pu_calculado": 12.8591
-  },
   "_nota_calibracao": "3ªcat: escav 38t (rocha) + 6 cam 16m³.",
   "categoria": "TERRAPLENAGEM"
 }

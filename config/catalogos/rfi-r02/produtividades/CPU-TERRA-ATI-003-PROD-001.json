@@ -58,12 +58,6 @@
       }
     ]
   },
-  "custos_equipe_rfi": {
-    "custo_mo_h": 158.92,
-    "custo_equip_h": 519.62,
-    "total_h": 678.53,
-    "pu_calculado": 0.9194
-  },
   "_nota_calibracao": "Produtividade/composição da planilha AGIS 2026-05 (mendeslobo). Correto para área de caatinga/cerrado do Nordeste. RFI (250 m²/h) é para mata fechada DAP≥30cm — não aplicável ao AGIS.",
   "categoria": "TERRAPLENAGEM"
 }
