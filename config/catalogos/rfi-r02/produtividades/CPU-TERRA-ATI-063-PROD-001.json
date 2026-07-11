@@ -36,11 +36,5 @@
       }
     ]
   },
-  "custos_equipe_planilha": {
-    "custo_mo_h": 234.87,
-    "custo_equip_h": 84.5,
-    "total_h": 319.37,
-    "pu_calculado": 12.7748
-  },
   "categoria": "TERRAPLENAGEM"
 }

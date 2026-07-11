@@ -5,6 +5,7 @@
   "description": "Registro de produtividade. Dois subtipos: (1) gerado automaticamente por CPU — origem string, sem calibração; (2) calibrado manualmente — origem objeto rico com condicoes_calibracao e qualidade.",
   "type": "object",
   "additionalProperties": false,
+  "patternProperties": {"^_": {"type": ["string", "number", "null"]}},
   "required": [
     "id",
     "codigo",
@@ -47,7 +48,7 @@
         {
           "type": "object",
           "additionalProperties": true,
-          "required": ["tipo", "fonte_id", "data_calibracao", "referencia"],
+          "required": ["tipo", "data_calibracao", "referencia"],
           "properties": {
             "tipo": {
               "type": "string",
@@ -56,7 +57,9 @@
                 "tabela_referencia",
                 "estimado",
                 "regressao",
-                "adotado_sicro"
+                "adotado_sicro",
+                "planilha_rfi_r02",
+                "calibrado_agis_rfi"
               ]
             },
             "fonte_id": {"type": "string"},
