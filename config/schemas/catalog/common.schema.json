@@ -84,6 +84,16 @@
           "type": "string",
           "enum": ["direto", "indireto", "gestao"],
           "default": "direto"
+        },
+        "custo_mobilizacao": {
+          "description": "Custo de mobilização por pessoa desta função (ADR-106 F2-bis / ADR-137 P2).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_desmobilizacao": {
+          "description": "Custo de desmobilização por pessoa desta função (ADR-106 F2-bis / ADR-137 P2).",
+          "type": ["number", "null"],
+          "minimum": 0
         }
       }
     },
@@ -100,6 +110,16 @@
           "minimum": 1
         },
         "consumo_litros_hora_estimado": {
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_mobilizacao": {
+          "description": "Custo de mobilização por unidade deste equipamento (ADR-106 F2-bis / ADR-137 P2).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_desmobilizacao": {
+          "description": "Custo de desmobilização por unidade deste equipamento (ADR-106 F2-bis / ADR-137 P2).",
           "type": ["number", "null"],
           "minimum": 0
         }
