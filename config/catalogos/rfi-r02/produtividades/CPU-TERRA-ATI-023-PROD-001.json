@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0028",
+        "capacidade_horaria": 138.0,
+        "unidade": "m³",
+        "fonte": "medicao_obra",
+        "justificativa": "Espalhamento e compactação de BGTC (Brita Graduada Tratada com Cimento). Achado normativo relevante: especificações técnicas DER-SP (ET-DE-P00-009_A) proíbem explicitamente motoniveladora para espalhamento de BGTC (exigem vibro-acabadora, para evitar segregação), e a norma DNIT 056/2013-ES impõe janela de até 2h entre a adição de água (pega do cimento) e o fim da compactação — uma restrição de tempo rígida, não uma capacidade mecânica isolada. Sem fonte numérica de produtividade compatível com o equipamento real do catálogo (motoniveladora, não vibro-acabadora) — aceito o valor real como capacidade calibrada. Divergência entre catálogo e prática normativa registrada para investigação futura (possível uso de 'motoniveladora' como proxy de custo/equipe para vibro-acabadora não catalogada)."
+      },
+      {
+        "elemento_id": "E0036",
+        "capacidade_horaria": 200.0,
+        "unidade": "m³",
+        "fonte": "fabricante",
+        "justificativa": "Estimativa aproximada não-vinculante — sem fonte de produtividade específica para rolo liso compactando BGTC; valor alto o suficiente para não ser o elemento limitante no modelo de reconciliação."
+      }
+    ],
+    "gargalo_declarado": null
+  }
 }

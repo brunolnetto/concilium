@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0028",
+        "capacidade_horaria": 223.63,
+        "unidade": "m³",
+        "fonte": "fabricante",
+        "justificativa": "Espalhamento mecânico de rachão/lastro de brita comercial — composição SICRO 903845 (motoniveladora 93kW, espalhamento mecânico) dá ≈223,63 m³/h. Bem acima do valor real da operação (82,03 m³/h), confirmando que a motoniveladora tem folga e não é o elemento crítico — a compactação de material graúdo (múltiplas passadas) é o gargalo real."
+      },
+      {
+        "elemento_id": "E0036",
+        "capacidade_horaria": 82.03,
+        "unidade": "m³",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem fonte primária direta de produtividade para rolo liso 10t compactando rachão — aceito o valor real como capacidade calibrada do rolo, já que a motoniveladora está confirmada com folga (fonte SICRO 903845, ~2,7x mais rápida que o valor real)."
+      }
+    ],
+    "gargalo_declarado": null
+  }
 }
