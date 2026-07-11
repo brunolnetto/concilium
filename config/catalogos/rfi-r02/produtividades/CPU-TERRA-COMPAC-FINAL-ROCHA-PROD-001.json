@@ -51,12 +51,6 @@
       }
     ]
   },
-  "custos_equipe_rfi": {
-    "custo_mo_h": 139.09,
-    "custo_equip_h": 715.92,
-    "total_h": 855.01,
-    "pu_calculado": 8.5501
-  },
   "_nota_calibracao": "Compactação de camada final de aterro de rocha. Composição calibrada AGIS.",
   "categoria": "TERRAPLENAGEM"
 }
