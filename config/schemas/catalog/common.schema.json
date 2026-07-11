@@ -102,6 +102,16 @@
         "consumo_litros_hora_estimado": {
           "type": ["number", "null"],
           "minimum": 0
+        },
+        "consumo_litros_hora": {
+          "description": "Consumo de diesel por hora para este item da composição — sobrepõe Insumo.atributos_especificos.consumo_litros_hora (ver pu_calculator._consumo_diesel_equipamento).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "preco_h_unitario": {
+          "description": "Preço por hora deste equipamento nesta composição — sobrepõe Insumo.preco_unitario, permitindo preço por-atividade sem duplicar insumos no catálogo (ADR-132).",
+          "type": ["number", "null"],
+          "minimum": 0
         }
       }
     },
