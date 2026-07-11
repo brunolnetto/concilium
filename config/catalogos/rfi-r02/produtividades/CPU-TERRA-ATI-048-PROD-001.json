@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 12.53,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Capacidade de escavação de 15,7 m³/h (caçamba 0,26m³, fator enchimento 0,85, ciclo 20s, eficiência 0,39 — validado por convergência com composição SINAPI 102299, escavação mecanizada de vala com retroescavadeira 0,26m³/88HP), convertida para m/h via seção transversal da vala desta classe (0.94 m²/m). Vala estreita (largura 0.75m < 0,8m, fora da faixa calibrada da SINAPI 102299) — aplicado fator de penalização de 0,75x por trabalho confinado (estimativa de engenharia por analogia com swing/depth factors de manuais de produtividade de equipamento; capacidade nominal ajustada para 11.775 m³/h)."
+      },
+      {
+        "elemento_id": "E0027",
+        "capacidade_horaria": 11.3,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Interpolado entre SINAPI 97126 (DN100, 14,1 m/h) e SINAPI 97137 (DN300, 7,1 m/h) — sem composição direta publicada para DN150."
+      }
+    ],
+    "gargalo_declarado": null
+  }
 }
