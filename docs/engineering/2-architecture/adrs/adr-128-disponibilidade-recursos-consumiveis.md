@@ -1,6 +1,6 @@
 # ADR-128 — Disponibilidade de Recursos Consumíveis: Estoque, Taxa de Consumo e Reabastecimento (Diesel, Combustível, Material)
 
-**Status:** ⚠️ Parcialmente Implementado _(2026-07-08: F1/F3 completos; F2 implementado como reparo pós-processamento — ver nota; F4 implementado como capacidade pura, não conectado a uma fonte de dado real de projeto/escopo)_
+**Status:** ⚠️ Parcialmente Implementado _(2026-07-12: F1/F2/F3 completos — F2 inclui repropagação de precedência (Fase 2b), ver nota; F4 implementado como capacidade pura, não conectado a uma fonte de dado real de projeto/escopo)_
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-107 (generalização tipo_combustivel), ADR-090 (BDI sistemático diesel/material), ADR-046 (motor RCPSP)
@@ -98,7 +98,7 @@ O cálculo hoje em `src/concilium/presentation/ui/organisms/layout.py` (bloco qu
 | Fase | Entregas | Status |
 |---|---|---|
 | F1 | `DisponibilidadeConsumivel` no domínio; opcional em `Insumo`/`Escopo` | ✅ Implementado |
-| F2 | `ReplenishableResource` no motor de agendamento; projeção de estoque semana a semana | ⚠️ Implementado como reparo pós-CP-SAT (ver nota de implementação) |
+| F2 | `ReplenishableResource` no motor de agendamento; projeção de estoque semana a semana; repropagação de atraso para sucessores no DAG (Fase 2b) | ✅ Implementado como duas passadas de reparo pós-CP-SAT em laço de ponto fixo (ver nota de implementação) |
 | F3 | Parsing/normalização de `prazo_entrega` (hoje `str \| None`, texto livre) para dias numéricos; reaproveitamento como lead time de reabastecimento de material | ✅ Implementado |
 | F4 | `tanque_sugerido` (UI) lendo `DisponibilidadeConsumivel` com fallback heurístico atual | ⚠️ Implementado como capacidade pura (ver nota de implementação) |
 
@@ -113,11 +113,45 @@ estoque semanal (`project_estoque_semanal`) sobre a solução já produzida pelo
 inviável, atrasa iterativamente a atividade consumidora até o reabastecimento acumulado
 tornar o consumo viável. `CpSatScheduler.schedule()` aceita `replenishable_resources`
 opcional (default `None` → comportamento idêntico ao pré-ADR-128, testado como regressão
-zero). **Limitação conhecida e documentada no código:** o atraso não é repropagado para
-sucessores no DAG de precedências — um cronograma onde a atividade atrasada tem sucessores
-dependentes pode gerar uma violação de precedência que esta fase não resolve. Repropagação
-completa (2ª passada de resolução de precedências, ou reservoir constraint nativo no
-CP-SAT) fica para uma Fase 2b futura.
+zero). **Limitação conhecida à época (fechada em Fase 2b, ver abaixo):** o atraso não era
+repropagado para sucessores no DAG de precedências — um cronograma onde a atividade
+atrasada tem sucessores dependentes podia gerar uma violação de precedência que essa
+primeira fase não resolvia.
+
+**F2b — repropagação de atraso para sucessores (2026-07-12):** fecha a limitação acima com
+uma **segunda passada determinística de reparo**, não com um reservoir constraint nativo
+no CP-SAT — a mesma razão de escopo já registrada acima para a Fase 2 original se aplica
+igualmente aqui (embutir a contabilidade de estoque diretamente no solver continua sendo um
+rewrite maior e mais arriscado do que o reparo pós-processamento).
+`concilium.application.scheduling.precedence_repropagation.repropagate_precedence_delays`
+percorre o `ActivityDAG` em ordem topológica (considerando `dag.precedence` e as
+precedências estendidas SS/FF/FS+lag, tanto `dag.extended_precedences` quanto as passadas
+explicitamente ao scheduler) e empurra — nunca antecipa — qualquer sucessor cuja posição
+atual viole a precedência contra seu predecessor (possivelmente já deslocado por esta mesma
+função ou pelo reparo de estoque), cascateando transitivamente ao longo da cadeia. Essa
+função só conhece precedência — nada sabe sobre recursos/estoque.
+
+`CpSatScheduler.schedule()` orquestra as duas passadas (reparo de estoque +
+repropagação de precedência) em um **laço de ponto fixo** limitado a
+`_MAX_REPAIR_ROUNDS = 10` rodadas: repropagar um atraso pode empurrar uma atividade que
+consome um *outro* recurso consumível, reabrindo uma violação de estoque já resolvida
+para esse recurso (e vice-versa) — daí a necessidade de iterar em vez de uma única
+passada. Em cada rodada: aplica-se `apply_replenishable_delay` para cada
+`ReplenishableResource`, depois `repropagate_precedence_delays` uma vez; o laço para
+assim que uma rodada não produz nenhuma mudança de posição (ponto fixo), ou ao atingir a
+cota. **10 é um limite heurístico, não uma prova formal de convergência** — não há uma
+demonstração de que o processo sempre converge nesse número de rodadas para qualquer DAG
+arbitrário (em teoria, alternâncias adversariais entre múltiplos recursos consumíveis
+poderiam, em tese, exigir mais rodadas); na prática, cronogramas reais estabilizam em 1-3
+rodadas, e o valor foi escolhido generoso o suficiente para cobrir isso com folga sem
+custo de desempenho perceptível. **`_validate_repaired_schedule` permanece inalterado como
+rede de segurança final:** nem o reparo de estoque nem a repropagação de precedência sabem
+avaliar capacidade de `ResourcePool` (recursos reutilizáveis) ou o horizonte — se o laço de
+ponto fixo esgotar a cota sem estabilizar, ou se o cronograma final ainda violar
+capacidade de pool/horizonte (por exemplo, uma repropagação que empurra duas atividades a
+colidirem sobre um recurso reutilizável compartilhado — cenário coberto em teste), o
+scheduler continua marcando o `ScheduleOutput` como `feasible=False` em vez de devolver um
+cronograma inválido como viável.
 
 **F4 — estado da conexão UI↔dado real:** `calcular_tanque_sugerido()` (função pura,
 testada) já prioriza `DisponibilidadeConsumivel.capacidade_armazenamento` sobre a
@@ -135,7 +169,7 @@ chama com `disponibilidade=None`, preservando o comportamento heurístico atual.
 ### Fase 2
 - [x] Projeção de estoque semanal implementada e testada com cenário de estoque negativo → atraso
 - [x] Cenário sem `DisponibilidadeConsumivel` preenchida reproduz exatamente o comportamento atual (regressão zero)
-- [ ] Atraso repropagado para sucessores no DAG de precedências (limitação conhecida — Fase 2b)
+- [x] Atraso repropagado para sucessores no DAG de precedências (Fase 2b — `repropagate_precedence_delays` + laço de ponto fixo em `CpSatScheduler.schedule()`; `_validate_repaired_schedule` permanece como rede de segurança para capacidade de pool/horizonte)
 
 ### Fase 3-4
 - [x] Estratégia de parsing de `prazo_entrega` (texto livre → dias) definida e testada com os valores reais hoje presentes no catálogo (ex.: "Imediato")
