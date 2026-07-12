@@ -39,6 +39,7 @@ from concilium.application.scheduling.models import (
     ScheduleMetrics,
     ScheduleOutput,
 )
+from concilium.application.scheduling.precedence_repropagation import repropagate_precedence_delays
 from concilium.application.scheduling.replenishable import apply_replenishable_delay
 from concilium.domain.models.analytics.optimization import RampProfile
 
@@ -46,6 +47,16 @@ _log = logging.getLogger(__name__)
 
 # Horizon: max possible week index. CP-SAT needs a finite upper bound.
 _DEFAULT_HORIZON = 1000
+
+# ADR-128 Fase 2b: cota de rodadas do laço de ponto fixo entre reparo de estoque
+# (apply_replenishable_delay) e repropagação de precedência (repropagate_precedence_delays).
+# Repropagar um atraso pode empurrar uma atividade que consome um OUTRO recurso consumível,
+# reabrindo uma violação de estoque já resolvida para esse recurso — daí o laço em vez de
+# uma única passada. 10 é uma cota generosa e heurística (não uma prova formal de
+# convergência): cronogramas reais estabilizam em 1-3 rodadas; se não convergir dentro da
+# cota, `_validate_repaired_schedule` ainda pega qualquer violação residual e marca
+# infeasible — nunca retorna um cronograma quebrado como viável.
+_MAX_REPAIR_ROUNDS = 10
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -342,15 +353,27 @@ class CpSatScheduler:
         scheduled = self._build_scheduled_activities(dag, solver, starts)
 
         # ── ADR-128: post-process consumable-resource delays (opt-in) ─────
+        # Fase 2b: reparo de estoque e repropagação de precedência rodam em laço de
+        # ponto fixo — repropagar um atraso pode empurrar uma atividade que consome um
+        # OUTRO recurso consumível, reabrindo uma violação de estoque já resolvida para
+        # esse recurso (ver _MAX_REPAIR_ROUNDS acima).
         repaired = bool(replenishable_resources)
-        for resource in replenishable_resources or []:
-            scheduled = apply_replenishable_delay(scheduled, resource)
+        if repaired:
+            for _round in range(_MAX_REPAIR_ROUNDS):
+                before = [(sa.start_week, sa.end_week) for sa in scheduled]
+                for resource in replenishable_resources or []:
+                    scheduled = apply_replenishable_delay(scheduled, resource)
+                scheduled = repropagate_precedence_delays(scheduled, dag, extended_precedences)
+                after = [(sa.start_week, sa.end_week) for sa in scheduled]
+                if before == after:
+                    break
 
-        # O reparo por atraso (replenishable.py) desloca só a atividade consumidora,
-        # sem repropagar para sucessores (limitação documentada, ADR-128 Fase 2) — pode
-        # violar precedência, capacidade de ResourcePool ou o horizonte que o CP-SAT
-        # garantiu na solução original. Revalida e marca infeasible em vez de devolver
-        # um cronograma potencialmente inválido como feasible=True.
+        # O reparo de estoque desloca a atividade consumidora e a repropagação de
+        # precedência (ADR-128 Fase 2b) empurra seus sucessores no DAG para preservar
+        # FS/SS/FF/FS+lag — mas o laço de ponto fixo tem cota (`_MAX_REPAIR_ROUNDS`) e
+        # nenhuma das duas passadas sabe sobre capacidade de `ResourcePool` ou o
+        # horizonte. Revalida e marca infeasible em vez de devolver um cronograma
+        # potencialmente inválido como feasible=True — rede de segurança final.
         feasible = True
         if repaired and not self._validate_repaired_schedule(scheduled, dag, extended_precedences, pool, H):
             _log.warning(
