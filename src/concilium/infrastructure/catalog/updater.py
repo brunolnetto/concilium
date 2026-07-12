@@ -17,8 +17,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from concilium.domain.models.catalog.producao import AuditoriaProducao, OrigemProducao, QualidadeProducao
+from concilium.domain.models.catalog.producao import AuditoriaProducao, OrigemProducao, Producao, QualidadeProducao
 from concilium.domain.models.project.observacao import PropostaAtualizacao
+from concilium.domain.services.sinergia_equipe import atualizar_capacidade_gargalo
 from concilium.infrastructure.repositories.producao import RepositorioProducao
 
 
@@ -70,9 +71,29 @@ class CatalogUpdater:
         num_versao = int(partes[1]) + 1 if len(partes) == 2 else 2
         novo_id = f"{codigo_base}-PROD-{num_versao:03d}"
 
-        novo_valor = {proposta.campo: proposta.valor_proposto}
+        # ADR-130 D5/F5: `capacidade_horaria` não é campo escalar de `Producao` — vive
+        # aninhada em `grafo_sinergia.capacidades[elemento_gargalo].capacidade_horaria`.
+        # `atualizar_capacidade_gargalo` resolve o elemento gargalo (via
+        # `derivar_producao_horaria`) e substitui só a capacidade dele, preservando
+        # `relacoes` intacta; nunca toca `valor_horario` (D3 — a produtividade derivada
+        # é consultiva, o engenheiro decide se/quando promovê-la). Se `producao_atual`
+        # não tiver grafo/gargalo determinável, propaga o `ValueError` — uma proposta
+        # ruim não deve corromper o catálogo silenciosamente.
+        producao_base: Producao
+        novo_valor: dict[str, Any]
+        if proposta.campo == "capacidade_horaria":
+            producao_base = atualizar_capacidade_gargalo(
+                producao_atual,
+                proposta.valor_proposto,
+                fonte="medicao_obra",
+                justificativa=proposta.justificativa,
+            )
+            novo_valor = {}
+        else:
+            producao_base = producao_atual
+            novo_valor = {proposta.campo: proposta.valor_proposto}
 
-        nova_producao = producao_atual.model_copy(
+        nova_producao = producao_base.model_copy(
             update={
                 "id": novo_id,
                 **novo_valor,

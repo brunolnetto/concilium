@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
+
+from pydantic import ValidationError
 
 from concilium.domain.constants import SEMANAS_POR_MES
 from concilium.domain.models.canonical import (
@@ -10,6 +13,16 @@ from concilium.domain.models.canonical import (
     FuncaoEquipeDireta,
     ValidacaoItem,
 )
+from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe
+from concilium.domain.models.catalog.producao import (
+    AuditoriaProducao,
+    CondicoesCalibração,
+    GrafoSinergiaEquipe,
+    OrigemProducao,
+    Producao,
+    QualidadeProducao,
+)
+from concilium.domain.services.sinergia_equipe import resolver_producao_efetiva
 
 from ._dimensionamento_custos import (  # ty: ignore[unresolved-import]
     _best_alias_equip_attrs,
@@ -23,6 +36,92 @@ from ._dimensionamento_custos import (  # ty: ignore[unresolved-import]
     _to_positive_float_or_none,
     _validar_comp_vazia,
 )
+
+# ADR-130 F3: chaves reconhecidas pelos modelos tipados de composição (extra="forbid").
+# O catálogo bruto (dict) carrega chaves adicionais legadas por elemento (ex.:
+# "consumo_litros_hora" em vez de "consumo_litros_hora_estimado") que não pertencem
+# ao contrato de `EquipamentoEquipe`/`FuncaoEquipe` — descartadas aqui para permitir
+# a reconstrução tipada usada apenas pela derivação de sinergia (não afeta o pipeline
+# de custo, que continua dict-based e usa `comp` diretamente).
+_FUNCAO_KEYS_SINERGIA = {"funcao_id", "num_pessoas", "horas_extras_pct", "papel"}
+_EQUIP_KEYS_SINERGIA = {"equip_id", "num_unidades", "consumo_litros_hora_estimado"}
+_MATERIAL_KEYS_SINERGIA = {"insumo_id", "consumo_por_hora", "unidade", "descricao"}
+
+
+def _sanitize_comp_para_sinergia(comp_raw: dict) -> dict:
+    """Filtra `comp_raw` para as chaves aceitas pelos modelos tipados (ADR-130 F3)."""
+    return {
+        "funcoes": [
+            {k: v for k, v in f.items() if k in _FUNCAO_KEYS_SINERGIA} for f in comp_raw.get("funcoes", []) or []
+        ],
+        "equipamentos": [
+            {k: v for k, v in e.items() if k in _EQUIP_KEYS_SINERGIA} for e in comp_raw.get("equipamentos", []) or []
+        ],
+        "materiais": [
+            {k: v for k, v in m.items() if k in _MATERIAL_KEYS_SINERGIA} for m in comp_raw.get("materiais", []) or []
+        ],
+    }
+
+
+def _build_producao_para_sinergia(prod: dict) -> Producao | None:
+    """ADR-130 F3: constrói um `Producao` mínimo só para acionar `resolver_producao_efetiva`.
+
+    O pipeline de skill-05 é inteiramente dict-based e nunca instancia `Producao` Pydantic
+    hoje; campos de rastreabilidade (`qualidade`, `auditoria`, `condicoes_calibracao`) não
+    existem no catálogo bruto e não são lidos por `resolver_producao_efetiva` — preenchidos
+    com placeholders válidos apenas para satisfazer a validação do modelo. `origem.tipo`
+    também é sintético (o valor real do catálogo, ex. "calibrado_agis_rfi", não pertence ao
+    Literal do modelo) — isso não afeta VAL-SINERGIA-02/03, calculadas antes do branch de
+    precedência D3 que olha `origem.tipo`.
+
+    Retorna None quando `prod` não tem `grafo_sinergia` populado (a vasta maioria do
+    catálogo hoje) ou quando os dados não validam — garante no-op silencioso.
+    """
+    grafo_raw = prod.get("grafo_sinergia")
+    if not grafo_raw:
+        return None
+    comp_raw = _sanitize_comp_para_sinergia(prod.get("composicao_padrao_equipe") or {})
+    agora = datetime.now(UTC)
+    try:
+        return Producao(
+            id=prod.get("id", ""),
+            codigo=prod.get("codigo", ""),
+            descricao=prod.get("descricao", ""),
+            valor_horario=float(prod.get("valor_horario") or 0.0),
+            unidade=prod.get("unidade", ""),
+            origem=OrigemProducao(
+                tipo="tabela_referencia",
+                fonte_id=prod.get("id", ""),
+                data_calibracao=agora,
+                referencia=(prod.get("origem") or {}).get("referencia", ""),
+            ),
+            condicoes_calibracao=CondicoesCalibração(),
+            qualidade=QualidadeProducao(
+                confianca_pct=0, intervalo_confianca=(0.0, 0.0), quantidade_amostras=1, desvio_padrao=0.0
+            ),
+            equipe=ComposicaoPadraoEquipe(**comp_raw),
+            auditoria=AuditoriaProducao(
+                criado_por="", data_criacao=agora, ultima_modificacao=agora, modificado_por="", versao=""
+            ),
+            grafo_sinergia=GrafoSinergiaEquipe(**grafo_raw),
+        )
+    except (ValidationError, TypeError, ValueError):
+        return None
+
+
+def _validar_sinergia_producao(prod: dict, validacoes: list) -> None:
+    """ADR-130 F3: expõe VAL-SINERGIA-02/03 quando a Producao tem GrafoSinergiaEquipe.
+
+    Nunca altera o `valor_horario`/custo usado no dimensionamento (D3/A3 — sobrescrita
+    silenciosa rejeitada); apenas acrescenta validações informativas/avisos à lista já
+    surfaced pelo skill-05. No-op (comportamento idêntico ao anterior) quando a Producao
+    não tem `grafo_sinergia` — o caso da vasta maioria do catálogo hoje.
+    """
+    producao = _build_producao_para_sinergia(prod)
+    if producao is None:
+        return
+    resolucao = resolver_producao_efetiva(producao)
+    validacoes.extend(resolucao.validacoes)
 
 
 def _promote_materiais_from_cpu(comp: dict, cpu: dict) -> dict:
@@ -49,6 +148,7 @@ def _build_comp_para_item(cpu: dict, prod_lookup: dict, validacoes: list) -> dic
     """Retorna composição (funcoes/equipamentos) para o CPU, com fallback legado ADR-053."""
     comp: dict = {}
     prod_id_ref = cpu.get("producao_id_ref")
+    prod: dict = {}
     if prod_id_ref:
         prod = prod_lookup.get(prod_id_ref) or {}
         comp = prod.get("composicao_padrao_equipe") or {}
@@ -56,6 +156,9 @@ def _build_comp_para_item(cpu: dict, prod_lookup: dict, validacoes: list) -> dic
     if not comp.get("materiais"):
         comp = _promote_materiais_from_cpu(comp, cpu)
     _validar_comp_vazia(comp, cpu, prod_id_ref, validacoes)
+    # ADR-130 F3: expõe VAL-SINERGIA-02/03 quando a Producao referenciada tem
+    # GrafoSinergiaEquipe — no-op quando ausente (retrocompatibilidade total).
+    _validar_sinergia_producao(prod, validacoes)
     return comp
 
 
