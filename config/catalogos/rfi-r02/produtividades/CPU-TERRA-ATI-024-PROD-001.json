@@ -32,5 +32,18 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0028",
+        "capacidade_horaria": 19.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Espalhamento de pó de pedra em camada muito fina de acabamento/selante (não camada estrutural nova) — sem composição SICRO com produtividade documentada especificamente para este processo (famílias próximas de espalhamento de lastro/brita em volume têm produtividade uma ordem de grandeza maior, mas representam operação fisicamente diferente: volume vs. camada de acabamento fina). Mesmo padrão já confirmado nesta sessão para ATI-020 (espalhamento pó de pedra/areia, cluster 3) — aceito o valor real como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "E0028"
+  }
 }

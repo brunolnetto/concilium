@@ -42,5 +42,25 @@
     ]
   },
   "_nota_calibracao": "2ªcat: mesma escav 22t, mas 6 cam (solo mais duro → menor produção).",
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0016",
+        "capacidade_horaria": 157.4,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Escavadeira hidráulica classe 22t (caçamba GP ~1,2 m³, meio da faixa de equipamentos comparáveis — XCMG XE225BR 1,2 m³, JCB 220NXT 0,95-1,50 m³, Komatsu PC210 0,85-1,70 m³). capacidade_horaria = caçamba × fator_enchimento × (3600/ciclo_s) × eficiência, com parâmetros de dimensionamento SICRO/DNIT (Caderno Técnico de Parâmetros de Equipamentos): fator de enchimento 0,82, ciclo 18s, eficiência 0,80 (2ª categoria — solo mais duro). Resultado bate com o valor real do CPU dentro de <1% de divergência."
+      },
+      {
+        "elemento_id": "E0007",
+        "capacidade_horaria": 38.7,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão basculante 14m³ (Mercedes-Benz Axor/Atego 6x4, caçamba Rossetti). Ciclo total = carga (capacidade/produção da escavadeira parceira) + ida (DMT/vel. carregado 20km/h) + descarga (1,2min) + volta (DMT/vel. vazio 30km/h) + manobra (1,5min), eficiência 0,80. Capacidade unitária (38.7 m³/h) é bem menor que a produção da escavadeira parceira — frota dimensionada no CPU (N unidades) tem folga estrutural, confirmando a escavadeira como elemento limitante."
+      }
+    ],
+    "gargalo_declarado": "E0016"
+  }
 }

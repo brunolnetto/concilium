@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0031",
+        "capacidade_horaria": 625.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Supressão de densidade intermediária — mesma lógica já confirmada nesta sessão para desmatamento (baixa densidade: roçadeira domina; alta densidade: motosserra domina por corte serial de mais árvores/área). Aqui, sem trator (só escavadeira+motosserra), a motosserra permanece o elemento limitante (processo serial de corte por árvore), com a escavadeira (empurrar/amontoar troncos já cortados) subordinada a esse ritmo. 625 m²/h situa-se corretamente entre baixa densidade (1428,57, roçadeira) e alta densidade (375, motosserra) — sem fonte SICRO com coeficiente exato para este ponto intermediário, aceito o valor real como capacidade calibrada."
+      },
+      {
+        "elemento_id": "E0016",
+        "capacidade_horaria": 2000.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Escavadeira (empurrar/amontoar troncos já cortados) tem ciclo por área mais rápido que o corte unitário da motosserra — folga, não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0031"
+  }
 }

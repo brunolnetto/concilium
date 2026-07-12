@@ -32,5 +32,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0048",
+        "capacidade_horaria": 1428.57,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Roçadeira costal é o elemento de corte contínuo e raso em vegetação rasteira/arbustiva de baixa densidade — dado de campo (Stihl FR220) aponta rendimento ~1600 m²/h, mesma ordem de grandeza do valor real (1428,57 m²/h, ~11% abaixo, plausível por fator de eficiência operacional: deslocamento, sobreposição de passadas, fadiga). Motosserra entra apenas eventualmente (árvores/arbustos esparsos de maior diâmetro), sem papel de corte contínuo."
+      },
+      {
+        "elemento_id": "E0031",
+        "capacidade_horaria": 14285.699999999999,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Motosserra entra apenas eventualmente para indivíduos de maior diâmetro que a roçadeira não corta — sem papel de corte contínuo/limitante nesta operação de baixa densidade. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0048"
+  }
 }

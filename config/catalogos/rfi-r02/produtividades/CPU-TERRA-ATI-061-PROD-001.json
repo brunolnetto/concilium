@@ -52,5 +52,39 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0041",
+        "capacidade_horaria": 74.07,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Recomposição de pavimento asfáltico — processo estruturalmente diferente do CBUQ contínuo: corte de borda, remoção/limpeza manual, aplicação e compactação pontual em 'caixas' isoladas (normas DNIT-ES 154/2010, DER/PR ES-P 12/05, DAER-RS ES-CON 010/013), sem aproveitamento de largura de faixa contínua — explica a queda de ~11x frente ao CBUQ (816,67→74,07 m²/h). A vibroacabadora provavelmente não é o elemento realmente ativo neste processo manual/pontual (o gargalo real é mão de obra de corte/limpeza/preenchimento), mas é o único elemento de equipamento na composição capaz de carregar o gargalo declarado — aceito o valor real como capacidade calibrada, análogo ao 'trem sincronizado' de cluster 3 (mecanismo de processo não capturado por um único equipamento isolado)."
+      },
+      {
+        "elemento_id": "E0036",
+        "capacidade_horaria": 222.21,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Rolo liso tem throughput de compactação normalmente superior ao de aplicação da vibroacabadora — folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0037",
+        "capacidade_horaria": 222.21,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Rolo de pneus tem throughput de compactação normalmente superior ao de aplicação da vibroacabadora — folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0008",
+        "capacidade_horaria": 222.21,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão basculante (suprimento de massa asfáltica) tem ciclo de abastecimento com folga frente à vibroacabadora — não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0041"
+  }
 }

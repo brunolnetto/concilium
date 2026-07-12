@@ -36,5 +36,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "P0037",
+        "capacidade_horaria": 0.021,
+        "unidade": "unid",
+        "fonte": "medicao_obra",
+        "justificativa": "Boca de bueiro (tubular/celular) é estrutura de concreto armado moldada in loco (alas+testa+muro) construída em etapas seriadas — escavação, lastro de concreto magro, fôrma, armação, concretagem, cura — não uma operação mecânica contínua. Composições SINAPI análogas (102753 boca tubular D=120cm, ~5,5m³ concreto/18,6m² fôrma; 102764 boca celular 300x300cm, ~17,8m³ concreto/87,4m² fôrma) confirmam essa estrutura de processo civil de pequeno porte, onde o ciclo de fôrma+armação+concretagem domina o tempo total (23,8h/boca tubular, 55,6h/boca celular), com equipamento de escavação ocioso na maior parte do tempo. Mesmo padrão já confirmado no corpo do bueiro celular desta sessão: gargalo é a mão de obra de montagem/armação (Montador), não o equipamento. capacidade_horaria = valor_horario / num_montadores."
+      },
+      {
+        "elemento_id": "E0016",
+        "capacidade_horaria": 0.84,
+        "unidade": "unid",
+        "fonte": "fabricante",
+        "justificativa": "Escavação da cava para boca é rápida frente ao ciclo de fôrma/armação/concretagem que domina o processo — equipamento com folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 0.84,
+        "unidade": "unid",
+        "fonte": "fabricante",
+        "justificativa": "Escavação da cava para boca é rápida frente ao ciclo de fôrma/armação/concretagem que domina o processo — equipamento com folga, não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "P0037"
+  }
 }

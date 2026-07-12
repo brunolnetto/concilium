@@ -28,5 +28,18 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 6.67,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Dreno de pavimento (seção estreita e profunda, ~0,50×1,50m conforme composições SINAPI 102670/102680 — dreno com tubo PEAD corrugado perfurado + material filtrante/geotêxtil, DNIT 015/2006). O valor baixo (6,67 m/h) não é limitado pela capacidade de escavação da retroescavadeira, mas pelo processo integrado de instalação — a documentação de composição confirma tempo produtivo (CHP) da máquina convivendo com tempo improdutivo (CHI) de espera para assentamento de tubo, conexões e manta geotêxtil. Gargalo real é o processo de instalação do dreno (mão de obra/logística em série com a escavação), não a retroescavadeira isolada — aceito o valor real como capacidade calibrada do elemento no grafo."
+      }
+    ],
+    "gargalo_declarado": "E0026"
+  }
 }

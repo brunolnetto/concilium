@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0016",
+        "capacidade_horaria": 6.25,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Destocamento (unidade m³ = volume de toco/raiz removido, não área varrida) — a escavadeira efetivamente escava, secciona raízes e arranca o toco (tarefa lenta e não-contínua, cada toco grande exige escavação em profundidade + corte de raízes laterais), enquanto o trator de esteiras atua como apoio (empurrar/organizar tocos já soltos, abrir acesso). 6,25 m³/h é baixo frente à produtividade de escavação geral de solo solto com equipamento de mesmo porte (dezenas de m³/h), coerente com destocamento ser operação especializada muito mais lenta. Sem tabela SICRO específica de destocamento em m³/h confirmada — aceito o valor real como capacidade calibrada da escavadeira (elemento gargalo)."
+      },
+      {
+        "elemento_id": "E0024",
+        "capacidade_horaria": 20.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Trator de esteiras atua como apoio (empurrar/organizar tocos já soltos pela escavadeira) — folga frente ao ritmo de arrancamento da escavadeira. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0016"
+  }
 }

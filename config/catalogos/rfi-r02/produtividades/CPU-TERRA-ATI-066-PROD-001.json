@@ -28,5 +28,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "P0064",
+        "capacidade_horaria": 16.666667,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Calibração reversa direta — trabalho de mão de obra especializada, sem etapa mecanizada relevante; capacidade_horaria = valor_horario / num_pessoas do papel primário da operação. Sem necessidade de pesquisa de especificação de equipamento (não há gargalo mecânico nesta composição)."
+      },
+      {
+        "elemento_id": "E0001",
+        "capacidade_horaria": 500.0,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Veículo leve de apoio/transporte da equipe — não participa da produção em si, não é o elemento limitante. Valor não-vinculante, alto o suficiente para nunca ser o gargalo derivado."
+      }
+    ],
+    "gargalo_declarado": "P0064"
+  }
 }

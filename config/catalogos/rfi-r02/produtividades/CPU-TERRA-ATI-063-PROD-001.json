@@ -36,5 +36,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "P0037",
+        "capacidade_horaria": 6.25,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Assentamento de piso intertravado é processo manual (lançamento/nivelamento do colchão de areia, assentamento peça a peça, arremate, rejuntamento) — composição SINAPI 92393 (calceteiro+servente) dá 8,07 m²/h, enquanto a placa vibratória (SINAPI 92394/97084) tem produtividade de 17,3-243,9 m²/h (CHI/CHP), sempre folgada frente à mão de obra. 25,0 m²/h real é superior ao SINAPI (plausível por bloco/espessura diferente ou equipe mais experiente), mas mantém a mesma ordem de grandeza de processo manual. Montador (P0037, já presente na composição) é o papel natural do gargalo — capacidade_horaria = valor_horario/num_montadores."
+      },
+      {
+        "elemento_id": "E0033",
+        "capacidade_horaria": 200.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Placa vibratória (compactação do piso já assentado) tem produtividade largamente superior ao ritmo de assentamento manual (SINAPI: 17,3-243,9 m²/h) — folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 200.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Retroescavadeira (apoio de transporte/espalhamento de base) tem folga clara — valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "P0037"
+  }
 }

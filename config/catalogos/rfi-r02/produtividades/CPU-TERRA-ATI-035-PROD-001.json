@@ -40,5 +40,39 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "P0037",
+        "capacidade_horaria": 0.075,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Calibração reversa: processo real (DNIT 025/2025-ES) é construção de bueiro celular de concreto armado moldado in loco em 3 sub-etapas em série (armação+forma → concretagem, repetido para fundo/paredes/laje superior). Pesquisa em 2 rodadas confirmou que armação+forma (mão de obra, não equipamento) é o estágio provavelmente dominante — SICRO 0705308 (corpo BDCC 3,00x3,00m) dá volumes de concreto/fôrma/escoramento por metro, mas NÃO inclui taxa de armadura (aço é medido à parte, por projeto estrutural específico, prática documentada do SICRO/DNIT). Pesquisa adicional por taxas de armadura padrão de bueiro celular (kg de aço/m³) não encontrou fonte específica e validada — apenas analogias fracas (22 kg/m³ muro de contenção simples, ~100 kg/m³ superestrutura genérica), resultando numa faixa (60-100 kg/m³) explicitamente marcada pela própria pesquisa como \"premissa a validar com calculista estrutural real\", não dado firme. Aplicar essa faixa seria estimar sem base sólida o suficiente — aceito o valor real (valor_horario) como capacidade calibrada da equipe de montagem/armação por montador, em vez de forçar uma derivação com esse grau de incerteza."
+      },
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 3.0,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Estimativa aproximada, não derivada com o mesmo rigor do elemento crítico — a escavação/posicionamento tem folga confirmada pela pesquisa de processo (armação/forma domina, não escavação); valor usado só para confirmar que este elemento não é o gargalo, não como capacidade de precisão."
+      },
+      {
+        "elemento_id": "E0027",
+        "capacidade_horaria": 3.0,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Estimativa aproximada, não derivada com o mesmo rigor do elemento crítico — a escavação/posicionamento tem folga confirmada pela pesquisa de processo (armação/forma domina, não escavação); valor usado só para confirmar que este elemento não é o gargalo, não como capacidade de precisão."
+      },
+      {
+        "elemento_id": "E0002",
+        "capacidade_horaria": 1.5,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Estimativa aproximada (rendimento efetivo de betoneira 400L, ~1,5-2 m³/h por lote, SICRO 1107891 apenas para tempo de mão de obra de concretagem) — concretagem tem folga confirmada pela pesquisa de processo (armação/forma domina, não concretagem); valor usado só para confirmar que este elemento não é o gargalo, não como capacidade de precisão."
+      }
+    ],
+    "gargalo_declarado": "P0037"
+  }
 }

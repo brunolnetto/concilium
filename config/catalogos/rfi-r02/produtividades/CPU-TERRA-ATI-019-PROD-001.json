@@ -40,5 +40,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0035",
+        "capacidade_horaria": 250.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "CCR (Concreto Compactado a Rolo) é tecnicamente adensado por rolo LISO vibratório (mecanismo de vibração de superfície em mistura granular semirrígida de baixa plasticidade), não por rolo pé-de-carneiro (mecanismo de amassamento/kneading, próprio de solos coesivos plásticos — fontes: relatório SICRO/DNIT de ocorrências CCR jul/2024, literatura de engenharia RCC/USACE-ACI). Possível inconsistência na composição real do catálogo (E0035 pé-de-carneiro presente em vez de rolo liso) — registrado para revisão futura, fora do escopo desta mudança (não altera a composição de equipamentos cadastrada). Dentro da composição como está, o rolo pé-de-carneiro é o único equipamento de compactação disponível — aceito o valor real como capacidade calibrada do elemento presente."
+      },
+      {
+        "elemento_id": "E0029",
+        "capacidade_horaria": 750.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Motoniveladora (espalhamento do CCR) tem folga frente à compactação — valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 750.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa (apoio de cura/umedecimento) tem folga — valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0035"
+  }
 }

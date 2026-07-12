@@ -32,5 +32,18 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0025",
+        "capacidade_horaria": 9.0,
+        "unidade": "und",
+        "fonte": "medicao_obra",
+        "justificativa": "Trator de esteiras 30t/440HP realizando corte+destocamento+enleiramento ('romaneio') em fluxo único por unidade processada. Composição SICRO análoga (destocamento >0,30m, trator 259kW/350HP, DNIT-ES 104/09) dá 6,00 und/h (10min/unidade); nosso trator é ~25-30% mais potente e combina 3 operações na mesma passada (corte já enfraquece resistência ao arranque, tornando destocamento+enleiramento mais rápidos que destocamento isolado). 9,0 und/h (6,7min/unidade, ganho de ~1,5x) é plausível por ordem de grandeza frente à referência SICRO, mas sem composição-fonte idêntica — aceito o valor real como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "E0025"
+  }
 }

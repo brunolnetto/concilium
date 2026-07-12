@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 2.36,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Capacidade de escavação de 15,7 m³/h (caçamba 0,26m³, fator enchimento 0,85, ciclo 20s, eficiência 0,39 — validado por convergência com composição SINAPI 102299, escavação mecanizada de vala com retroescavadeira 0,26m³/88HP), convertida para m/h via seção transversal da vala desta classe (6.65 m²/m)."
+      },
+      {
+        "elemento_id": "E0027",
+        "capacidade_horaria": 0.33,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Assentamento com caminhão guindauto (6,2t) — peça pesada de 2 linhas D=1,20m exige içamento dedicado. Composição SICRO 0819899 (Corpo de BDTC D=1,00m/1,20m, 3h servente/m = 0,33 m/h), padrão institucional independente do peso exato do tubo."
+      }
+    ],
+    "gargalo_declarado": null
+  }
 }

@@ -44,5 +44,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0031",
+        "capacidade_horaria": 375.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Supressão alta densidade — mais árvores por área exige mais cortes seriais de motosserra antes do trator poder avançar, tornando a motosserra (processo serial, uma árvore de cada vez) o elemento limitante em vez do trator (processo contínuo de arraste). A queda de produtividade frente ao desmatamento geral (738→375 m²/h, quase metade) é consistente com dobrar a densidade populacional de árvores por hectare. Produtividade de motosserra na literatura (5-9 m³/h floresta nativa/eucalipto) não tem conversão direta para m²/h por densidade de povoamento documentada — aceito o valor real como capacidade calibrada."
+      },
+      {
+        "elemento_id": "E0024",
+        "capacidade_horaria": 2000.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Trator de esteiras tem folga nesta operação — o gargalo é o corte serial de motosserra em alta densidade de árvores, não o arraste/empurre do trator. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0016",
+        "capacidade_horaria": 2000.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Escavadeira atua na etapa posterior (carregamento do material já cortado/empilhado para bota-fora) — capacidade superior ao elemento gargalo desta operação. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0031"
+  }
 }

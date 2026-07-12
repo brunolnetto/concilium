@@ -64,5 +64,39 @@
     ]
   },
   "_nota_calibracao": "PI exige mais passadas que PN → mesma frota, menor produtividade. Frota calibrada campo AGIS.",
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0035",
+        "capacidade_horaria": 66.16,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Aterro compactado 100% PI (Proctor Intermediário) — energia de compactação quase dobra frente ao PN (12,6 vs 6 kgf/cm³ de referência; 26 vs 12 golpes de soquete no ensaio de laboratório), exigindo mais passadas de rolo em campo — consistente com PI ser mais lento que PN (132,32 vs 173,01 m³/h, razão 1,31x, menor que a razão de energia de laboratório 2,17x porque passadas de campo não escalam linearmente com golpes de laboratório). Mesmo padrão já confirmado nesta sessão para reforço de subleito/sub-base/base (rolo pé-de-carneiro como elemento com menor produção horária, fonte SICRO 4011219) — sem tabela pública de capacidade m³/h do rolo pé-de-carneiro por energia de compactação — aceito o valor real como capacidade calibrada (por unidade de rolo, 2 unidades na composição: capacidade_horaria = valor_horario / 2)."
+      },
+      {
+        "elemento_id": "E0029",
+        "capacidade_horaria": 396.96,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Motoniveladora opera em um único passe de espalhamento/nivelamento — produtividade muito superior ao rolo pé-de-carneiro (múltiplos ciclos por camada). Folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0039",
+        "capacidade_horaria": 396.96,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Trator agrícola com grade (homogeneização) opera em poucas passadas de alta velocidade relativa — folga frente ao rolo. Não-vinculante."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 396.96,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa (umedecimento) tem vazão alta, não limitante no ciclo de compactação — folga, não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0035"
+  }
 }

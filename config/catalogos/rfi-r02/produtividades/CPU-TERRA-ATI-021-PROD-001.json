@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0028",
+        "capacidade_horaria": 157.25,
+        "unidade": "m²",
+        "fonte": "medicao_obra",
+        "justificativa": "Regularização e compactação de subleito argiloso — composição SINAPI 100576 (motoniveladora 125HP, 0,008313 CHI/m² ≈ 120 m²/h) é a referência mais próxima, mas o valor real (157,25 m²/h) fica ACIMA dessa referência isolada — indício de que motoniveladora e rolo trabalham em 'trem' sincronizado (avançando juntos, cada coeficiente SICRO já embutindo tempo de espera mútuo), não uma fila estrita onde o mais lento trava o mais rápido. Um modelo de mínimo entre as 2 capacidades isoladas subestimaria a produção real da equipe. Aceito o valor real como capacidade calibrada em vez de forçar uma referência (120 m²/h) que já se mostrou incompatível com o dado observado."
+      },
+      {
+        "elemento_id": "E0036",
+        "capacidade_horaria": 200.0,
+        "unidade": "m²",
+        "fonte": "fabricante",
+        "justificativa": "Estimativa aproximada não-vinculante — a referência SINAPI 100576 usa rolo pé-de-carneiro (não liso, equipamento diferente do catálogo real), então não é diretamente aplicável; valor alto o suficiente para não ser o elemento limitante no modelo de reconciliação."
+      }
+    ],
+    "gargalo_declarado": null
+  }
 }

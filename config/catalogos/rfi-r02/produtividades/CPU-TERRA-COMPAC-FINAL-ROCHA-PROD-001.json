@@ -52,5 +52,39 @@
     ]
   },
   "_nota_calibracao": "Compactação de camada final de aterro de rocha. Composição calibrada AGIS.",
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0036",
+        "capacidade_horaria": 50.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Camada final de aterro de rocha (DNIT 108/2009-ES: últimos ~2m, camadas finas ~40cm, conformação mecânica) é compactada por rolo LISO vibratório — material granular grosso (brita/rachão) não responde bem ao amassamento do pé-de-carneiro (mecanismo próprio de solo coesivo fino). Rolo liso vibratório (E0036, 2 unidades na composição) é o elemento tecnicamente correto e limitante desta etapa — capacidade_horaria = valor_horario/2 (2 rolos na composição)."
+      },
+      {
+        "elemento_id": "E0035",
+        "capacidade_horaria": 300.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Rolo pé-de-carneiro provavelmente presente por arraste de composição-padrão de aterro (camadas internas de solo coesivo) — redundante/apoio nesta etapa de acabamento em material rochoso, não o elemento crítico. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0024",
+        "capacidade_horaria": 400.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Trator de esteiras (espalhamento prévio) tem folga frente à compactação — valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 400.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa (umedecimento) tem folga — valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0036"
+  }
 }

@@ -32,5 +32,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "P0057",
+        "capacidade_horaria": 0.143,
+        "unidade": "km",
+        "fonte": "medicao_obra",
+        "justificativa": "Implantação de eixo é trabalho de topografia (locação/nivelamento de eixo rodoviário) — sem gargalo mecânico a pesquisar, análogo às operações terceirizadas/mão de obra pura já resolvidas nesta sessão. Topógrafo (P0057, líder da equipe) é o papel natural do gargalo — capacidade_horaria = valor_horario/num_topografos. Caminhonete e van/micro-ônibus são apoio de deslocamento da equipe, não codeterminantes do ritmo de locação topográfica."
+      },
+      {
+        "elemento_id": "E0013",
+        "capacidade_horaria": 1.43,
+        "unidade": "km",
+        "fonte": "fabricante",
+        "justificativa": "Caminhonete de apoio/deslocamento — não-vinculante, nunca é o gargalo."
+      },
+      {
+        "elemento_id": "E0042",
+        "capacidade_horaria": 1.43,
+        "unidade": "km",
+        "fonte": "fabricante",
+        "justificativa": "Van/microônibus de apoio/deslocamento da equipe — não-vinculante, nunca é o gargalo."
+      }
+    ],
+    "gargalo_declarado": "P0057"
+  }
 }

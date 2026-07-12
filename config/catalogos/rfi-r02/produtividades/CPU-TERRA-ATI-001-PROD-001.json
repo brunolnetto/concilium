@@ -28,5 +28,18 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0031",
+        "capacidade_horaria": 0.3125,
+        "unidade": "und",
+        "fonte": "medicao_obra",
+        "justificativa": "Corte de árvore/arbusto de grande porte (DAP>=30cm) isolada, sem alinhamento regular — exige deslocamento entre árvores, avaliação de direção de queda, corte de cunha+abate, desgalhe/traçamento parcial e área de segurança por unidade. Estudos de corte semimecanizado em eucalipto (m³/h) confirmam qualitativamente que diâmetro maior aumenta tempo de corte e que deslocamento+preparação dominam o tempo (22-40%), mas não há tabela SICRO com coeficiente direto em horas/árvore por classe de DAP para vegetação nativa isolada. 1,6h/unidade (0,625 und/h) é plausível como ordem de grandeza — aceito o valor real como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "E0031"
+  }
 }

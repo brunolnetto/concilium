@@ -32,5 +32,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0048",
+        "capacidade_horaria": 142.86,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Aceiro (faixa contínua de segurança contra incêndio) — conversão aritmética confirma a mesma capacidade produtiva do binômio motosserra+roçadeira usada em ATI-006: 1428,57 m²/h ÷ 142,86 m/h = 10,0 m exatos, ou seja, o valor real desta CPU é a mesma capacidade de roçada aplicada a uma faixa de 10m de largura. Largura de 10m não documentada explicitamente nas normas estaduais pesquisadas (mínimo legal 3m, uso comum 3-6m), mas a consistência aritmética exata com ATI-006 é forte evidência de que é a mesma capacidade subjacente."
+      },
+      {
+        "elemento_id": "E0031",
+        "capacidade_horaria": 1428.6000000000001,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Motosserra entra apenas eventualmente para indivíduos de maior diâmetro que a roçadeira não corta — sem papel de corte contínuo/limitante nesta operação de baixa densidade. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0048"
+  }
 }
