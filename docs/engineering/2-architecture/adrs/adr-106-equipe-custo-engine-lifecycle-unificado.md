@@ -1,6 +1,6 @@
 # ADR-106: EquipeCustoEngine — Lifecycle Unificado para Equipes Diretas e Indiretas
 
-**Status:** Implementado ✅ _(F1-F4, F6, F7 entregues; F4-bis corrige bug de unidade de F4; F5 bloqueado por dado de catálogo; F8 → ADR-086. Reconciliado 2026-06-20, F4-bis 2026-07-10)_  
+**Status:** Implementado ✅ _(F1-F4, F6, F7 entregues; F2-bis fecha gap de mob/demob real de F2; F4-bis corrige bug de unidade de F4; F5 bloqueado por dado de catálogo; F8 → ADR-086. Reconciliado 2026-06-20, F2-bis/F4-bis 2026-07-10)_  
 **Data:** 2026-06-08  
 **Autores:** Engenharia de Plataforma  
 
@@ -42,6 +42,18 @@
 > Rejeitadas). Esta correção deixa a estratégia **correta e segura de usar** caso um consumidor real
 > apareça no futuro (ex.: quando/se o split de fase MOB do ADR-105 §6.6 for retomado), em vez de um
 > bug latente esperando alguém confiar nela.
+
+> **F2-bis — mob/demob real para equipes diretas sem pool (2026-07-10):** `DirectTeamCostStrategy`/
+> `_fill_custo_inst_sem_pool` (F2/F3) sempre chamavam `LifecycleEngine.calcular()` com `c_mob=c_demob=0.0`
+> — os campos `EquipeDireta.custo_mobilizacao_mensal`/`.custo_desmobilizacao_mensal` estavam declarados
+> no modelo mas nunca eram atribuídos em produção, então `custo_inst_mob_demob` vinha inteiramente do
+> resíduo de arredondamento do fechamento IC-3, não de um custo de mob/demob real. Corrigido: nova
+> `_calc_custo_mob_desmob_split` (skill-05, `_dimensionamento_itens.py`) separa o cálculo existente de
+> custo por evento de transição de recurso em `(custo_mob, custo_demob)`, populando os dois campos;
+> `_fill_custo_inst_sem_pool` agora lê esses valores reais em vez do default 0.0. Retrocompatível —
+> equipes sem esses campos (default 0.0) mantêm o comportamento anterior. Testes: `test_l3bis_*` em
+> `test_nep031_lacunas_modelo.py`, `TestFillCustoInstSemPoolMobDemobReal` em
+> `test_adr106_f3_custo_inst_sem_pool.py`.
 
 ---
 
@@ -285,6 +297,7 @@ Rejeitado por ora: `_sub_custos_indireto` implementa **alocação proporcional**
 |---|---|---|
 | **F1** | Criar `equipe_custo_engine.py` com `LifecycleEngine` e `CustoEquipeDecomposicao` | ✅ 2026-06-10 |
 | **F2** | `DirectTeamCostStrategy`: converte campos mensais de EquipeDireta para taxa semanal e delega para engine | ✅ 2026-06-10 |
+| **F2-bis** | Mob/demob real (não 0.0) para equipes diretas sem pool: `_calc_custo_mob_desmob_split` popula `custo_mobilizacao_mensal`/`.custo_desmobilizacao_mensal` | ✅ 2026-07-10 |
 | **F3** | `_fill_custo_inst_sem_pool`: preenche `custo_inst_*` para equipes sem pool; integrado em skill-05 | ✅ 2026-06-10 |
 | **F4** | `IndirectTeamCostStrategy`: parameteriza indiretos para engine (custo_mobilizacao como mob/demob) | ✅ 2026-06-10 |
 | **F5** | Mob window: `leadtime_mob_semanas`/`lag_demob_semanas` no catálogo e CPU | ⏳ Bloqueado por dado — engine+constantes prontos; 0 CPUs com `mob_policy`. Não ativar sem análise de dupla-contagem MOB direto×indireto |

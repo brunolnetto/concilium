@@ -61,7 +61,7 @@ justificativa. O correto é passar o custo total da categoria MOB.
 
 ### B3 — Limitação Conhecida: `custo_pessoa_mes = 1850` hardcoded no legado
 
-**Localização:** `_custo_mob_legado()`, linha `custo_pessoa_mes = dados_mob.get("custo_pessoa_mes", 1850)`
+**Localização:** `_custo_mob_composicional()`, linha `custo_pessoa_mes = dados_mob.get("custo_pessoa_mes", 1850)`
 
 R$ 1.850/pessoa/mês é um valor de 2024 não atualizado. Idealmente derivar do catálogo
 (custo de diária de campo ou similar). Documentado com comentário `# B3-known`.

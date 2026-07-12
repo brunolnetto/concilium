@@ -142,7 +142,13 @@ def _fill_custo_inst_sem_pool(equipes: list) -> None:
             continue
 
         semanas = round(perm_efetiva * SEMANAS_POR_MES)
-        decomp = strategy.calcular_para_equipe(eq, semanas_ativas=semanas, semanas_idle=0)
+        # ADR-106 F2-bis: c_mob/c_demob reais (de EquipeDireta.custo_mobilizacao_mensal/
+        # .custo_desmobilizacao_mensal, populados pela skill-05 via
+        # _calc_custo_mob_desmob_split) em vez do default 0.0 — antes, todo o custo de
+        # mob/demob vinha apenas do resíduo de arredondamento do fechamento IC-3 abaixo.
+        c_mob = float(getattr(eq, "custo_mobilizacao_mensal", 0.0) or 0.0)
+        c_demob = float(getattr(eq, "custo_desmobilizacao_mensal", 0.0) or 0.0)
+        decomp = strategy.calcular_para_equipe(eq, semanas_ativas=semanas, semanas_idle=0, c_mob=c_mob, c_demob=c_demob)
 
         # Reescalar a decomposição para alinhar com custo_total real da equipe
         # (pode divergir se permanencia_efetiva difere da permanencia contratual)

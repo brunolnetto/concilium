@@ -19,7 +19,7 @@ from ._dimensionamento_custos import _RepoCtx, _resolve_preco  # ty: ignore[unre
 from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
     _build_comp_para_item,
     _calc_custo_cron,
-    _calc_custo_mob_desmob,
+    _calc_custo_mob_desmob_split,
     _processar_equipamentos_item,
     _processar_funcoes_item,
     _validar_materiais_item,
@@ -210,8 +210,12 @@ def _dimensionar_item_equipe(
         cpu, prod_lookup, horas_dia, custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
     )
 
-    # NEP-031 L3: custo de mob/desmob por evento de transição de recursos
-    custo_mob_desmob = _calc_custo_mob_desmob(comp, cron)
+    # NEP-031 L3 / ADR-106 F2-bis: custo de mob/desmob por evento de transição de
+    # recursos, separado em mob/demob — antes só o agregado era calculado, e os
+    # campos custo_mobilizacao_mensal/custo_desmobilizacao_mensal ficavam mortos
+    # (nunca atribuídos), apesar do invariante documentado no modelo.
+    custo_mob_mensal, custo_demob_mensal = _calc_custo_mob_desmob_split(comp, cron)
+    custo_mob_desmob = round(custo_mob_mensal + custo_demob_mensal, 2)
     custo_total, ativos, custo_comb_efetivo, _fixo_mensal, team_weeks, custo_ocioso = _calc_custo_cron(
         cron, custo_mo, custo_eq, custo_comb
     )
@@ -243,6 +247,8 @@ def _dimensionar_item_equipe(
         modo_estimativa=modo_est,
         custo_ocioso_equipamentos=custo_ocioso,
         custo_mob_desmob=custo_mob_desmob,
+        custo_mobilizacao_mensal=custo_mob_mensal,
+        custo_desmobilizacao_mensal=custo_demob_mensal,
         # ADR-088: sub-campos de equipamento agregados da equipe
         custo_locacao_mensal=round(sum(e.custo_locacao_mensal * e.num_unidades for e in equips_mod), 2),
         custo_manutencao_mensal=round(sum(e.custo_manutencao_mensal * e.num_unidades for e in equips_mod), 2),

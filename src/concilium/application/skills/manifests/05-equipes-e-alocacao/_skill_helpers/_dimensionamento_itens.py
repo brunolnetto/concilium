@@ -389,20 +389,33 @@ def _accum_mob_costs_list(items_list: list, num_key: str) -> tuple:
     return custo_mob, custo_desmob
 
 
-def _calc_custo_mob_desmob(comp: dict, cron: object) -> float:
-    """NEP-031 L3: custo de mobilização/desmobilização por evento de transição de recurso (§8)."""
+def _calc_custo_mob_desmob_split(comp: dict, cron: object) -> tuple[float, float]:
+    """NEP-031 L3 / ADR-106 F2-bis: custo de mobilização e desmobilização, separados.
+
+    Mesma lógica de `_calc_custo_mob_desmob` (contagem de transições 0→N e N→0 em
+    `cron.distribuicao_semanal`), mas retorna (custo_mob, custo_demob) em vez do
+    agregado — permite alimentar `EquipeDireta.custo_mobilizacao_mensal`/
+    `.custo_desmobilizacao_mensal` (ADR-106 F2-bis) com valores reais em vez de
+    deixá-los mortos (nunca atribuídos), que era o caso antes desta ADR.
+    """
     if cron is None:
-        return 0.0
+        return 0.0, 0.0
     periodos = getattr(cron, "distribuicao_semanal", None)
     if not periodos:
-        return 0.0
+        return 0.0, 0.0
     seq = [int(d.num_equipes) for d in periodos.values()]
     if not seq:
-        return 0.0
+        return 0.0, 0.0
     n_mob, n_desmob = _count_transitions(seq)
     c_mob_fn, c_desmob_fn = _accum_mob_costs_list(_getlist_d(comp, "funcoes"), "num_pessoas")
     c_mob_eq, c_desmob_eq = _accum_mob_costs_list(_getlist_d(comp, "equipamentos"), "num_unidades")
-    return round(n_mob * (c_mob_fn + c_mob_eq) + n_desmob * (c_desmob_fn + c_desmob_eq), 2)
+    return round(n_mob * (c_mob_fn + c_mob_eq), 2), round(n_desmob * (c_desmob_fn + c_desmob_eq), 2)
+
+
+def _calc_custo_mob_desmob(comp: dict, cron: object) -> float:
+    """NEP-031 L3: custo de mobilização/desmobilização por evento de transição de recurso (§8)."""
+    custo_mob, custo_demob = _calc_custo_mob_desmob_split(comp, cron)
+    return round(custo_mob + custo_demob, 2)
 
 
 def _validar_materiais_item(comp: dict, cpu: dict, validacoes: list) -> None:

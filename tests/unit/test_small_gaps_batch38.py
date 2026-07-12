@@ -249,7 +249,7 @@ class TestExtractDv4Policy:
 
 
 class TestCustoMobLegado:
-    """Lines 200-201: _custo_mob_legado with baixadas entries."""
+    """Lines 200-201: _custo_mob_composicional with baixadas entries."""
 
     def test_baixadas_adds_to_total(self):
         """Lines 200-201: for b in baixadas → n_ocorrencias * num_pessoas * valor."""
@@ -260,18 +260,18 @@ class TestCustoMobLegado:
                 {"num_pessoas": 2, "valor_por_pessoa": 300.0, "meses_ocorrencia": ["mar"]},
             ],
         }
-        total, mobs = INDIR._custo_mob_legado(dados_mob, num_pessoas_direta=0, prazo_meses=0)
+        total, mobs = INDIR._custo_mob_composicional(dados_mob, num_pessoas_direta=0, prazo_meses=0)
         # 3*500*2 + 2*300*1 = 3000 + 600 = 3600
         assert total == 3600.0
 
     def test_no_baixadas_uses_custo_pessoa_mes(self):
         dados_mob = {"custo_pessoa_mes": 2000}
-        total, _ = INDIR._custo_mob_legado(dados_mob, num_pessoas_direta=5, prazo_meses=3)
+        total, _ = INDIR._custo_mob_composicional(dados_mob, num_pessoas_direta=5, prazo_meses=3)
         assert total == 5 * 2000 * 3
 
 
 class TestCustoMobLegadoGranularidadePorEquipe:
-    """ADR-136 F4: _custo_mob_legado deriva permanência por equipe de equipes_diretas
+    """ADR-136 F4: _custo_mob_composicional deriva permanência por equipe de equipes_diretas
     (EquipeDireta.permanencia_efetiva_meses, já calculada pela skill-05) em vez de
     colapsar todas as equipes num único par (headcount agregado, prazo_meses do
     projeto) — bug documentado no ADR-136 a partir da planilha real do AGIS, que
@@ -296,7 +296,7 @@ class TestCustoMobLegadoGranularidadePorEquipe:
             self._mk_equipe(num_pessoas=5, permanencia_efetiva_meses=6.0),
         ]
         dados_mob = {"custo_pessoa_mes": 1000.0}
-        total, _mobs = INDIR._custo_mob_legado(
+        total, _mobs = INDIR._custo_mob_composicional(
             dados_mob, num_pessoas_direta=15, prazo_meses=4, equipes_diretas=equipes
         )
         # 10×1000×3 + 5×1000×6 = 30000 + 30000 = 60000 — não 15×1000×4=60000 por coincidência
@@ -312,11 +312,11 @@ class TestCustoMobLegadoGranularidadePorEquipe:
         ]
         dados_mob = {"custo_pessoa_mes": 1000.0}
         # Por equipe (correto): 20×1000×1 + 5×1000×12 = 20000 + 60000 = 80000
-        total_por_equipe, _ = INDIR._custo_mob_legado(
+        total_por_equipe, _ = INDIR._custo_mob_composicional(
             dados_mob, num_pessoas_direta=25, prazo_meses=6, equipes_diretas=equipes
         )
         # Agregado (bug antigo, ainda acessível via equipes_diretas=None): 25×1000×6 = 150000
-        total_agregado, _ = INDIR._custo_mob_legado(dados_mob, num_pessoas_direta=25, prazo_meses=6)
+        total_agregado, _ = INDIR._custo_mob_composicional(dados_mob, num_pessoas_direta=25, prazo_meses=6)
         assert total_por_equipe == 80000.0
         assert total_agregado == 150000.0
         assert total_por_equipe != total_agregado
@@ -324,7 +324,7 @@ class TestCustoMobLegadoGranularidadePorEquipe:
     def test_equipes_diretas_vazia_mantem_retrocompat_agregado(self):
         """Lista vazia (ou None) preserva o comportamento agregado — retrocompat."""
         dados_mob = {"custo_pessoa_mes": 2000}
-        total, _ = INDIR._custo_mob_legado(dados_mob, num_pessoas_direta=5, prazo_meses=3, equipes_diretas=[])
+        total, _ = INDIR._custo_mob_composicional(dados_mob, num_pessoas_direta=5, prazo_meses=3, equipes_diretas=[])
         assert total == 5 * 2000 * 3
 
 
@@ -477,7 +477,7 @@ class TestProcessMobCategoriaCatCfgRaw:
 
 
 class TestProcessMobCategoriaEquipesDiretas:
-    """ADR-136 F4: _process_mob_categoria propaga equipes_diretas para _custo_mob_legado."""
+    """ADR-136 F4: _process_mob_categoria propaga equipes_diretas para _custo_mob_composicional."""
 
     def test_equipes_diretas_propagadas_ao_legado(self):
         equipes = [
