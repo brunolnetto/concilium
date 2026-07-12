@@ -1,6 +1,7 @@
 """Skill 06 (_indiretos) — Indiretos (ADR-009, ADR-023 §D4).
 
-Custo MOB legado, fases explícitas de mobilização/operação/desmobilização.
+Custo MOB composicional (item a item: mobilizações, baixadas, alimentação por
+equipe) e fases explícitas de mobilização/operação/desmobilização.
 """
 
 from __future__ import annotations
@@ -42,13 +43,27 @@ def _custo_alimentacao_por_equipe(equipes_diretas: list, custo_pessoa_mes: float
     return total
 
 
-def _custo_mob_legado(
+def _custo_mob_composicional(
     dados_mob: dict,
     num_pessoas_direta: int,
     prazo_meses: int,
     equipes_diretas: list | None = None,
 ) -> tuple[float, list[Mobilizacao]]:
-    """Calcula custo MOB legado (retrocompatível com formato anterior).
+    """Calcula custo MOB a partir da composição item a item (não de um total pré-agregado).
+
+    Soma três componentes de negócio, cada um com sua própria regra:
+    mobilizações (``num_unidades × distancia_km × custo_km`` por item),
+    alimentação/seguro de vida/cesta básica (por pessoa × mês, ver
+    ``_custo_alimentacao_por_equipe``) e baixadas recorrentes (por
+    ``meses_ocorrencia``). É o caminho usado quando a categoria MOB não vem
+    com ``custo_fixo_total`` já pré-agregado via ``categorias_config``
+    (ver ``_process_mob_categoria``) — não é código morto nem um modelo
+    substituído: é o único dos dois caminhos que deriva o custo de dados
+    granulares em vez de aceitar um número já fechado.
+
+    Aceita o formato de entrada anterior ao ADR-009 (dict cru
+    ``dados_mobilizacao``, sem o schema ``IndirectoCategoria``) — é isso que é
+    retrocompatível aqui, não a lógica de negócio em si.
 
     ``equipes_diretas`` (ADR-136 F4, opcional): quando fornecida e não-vazia, o
     termo de alimentação/seguro/cesta básica é calculado por equipe (headcount ×
@@ -128,7 +143,7 @@ def _process_mob_categoria(
         custo = cat_obj.custo_fixo_total
         mobs: list[Mobilizacao] = []
     else:
-        custo, mobs = _custo_mob_legado(dados_mob, num_pessoas_direta, prazo_meses, equipes_diretas)
+        custo, mobs = _custo_mob_composicional(dados_mob, num_pessoas_direta, prazo_meses, equipes_diretas)
         cat_obj = IndirectoCategoria(
             categoria="MOB",
             driver="one_time",
@@ -165,7 +180,7 @@ def _process_mob_categoria(
                 )
         except Exception as e:  # pragma: no cover
             logger.warning(
-                "Falha ao calcular custo MOB com mob_schedule — usando custo legado R$%.2f: %s",
+                "Falha ao calcular custo MOB com mob_schedule — usando custo já calculado R$%.2f: %s",
                 custo,
                 e,
                 exc_info=True,
@@ -180,7 +195,7 @@ def _process_mob_categoria(
         # ADR-090: MOB é overhead administrativo → BDI_indireto
         custo_mobilizacao=round(custo, 2),
     )
-    return indir, _build_semanal_breakdown(cat_obj, n_semanas)
+    return indir, _build_semanal_breakdown(cat_obj, n_semanas, mobs=mobs)
 
 
 def _accrue_mobilizacao_fase(item: dict, semanal: dict[int, float], duracao_semanas: int) -> float:

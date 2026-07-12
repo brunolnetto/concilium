@@ -19,11 +19,5 @@
     ],
     "equipamentos": []
   },
-  "custos_equipe_planilha": {
-    "custo_mo_h": 1.05,
-    "custo_equip_h": 0.0,
-    "total_h": 1.05,
-    "pu_calculado": 0.042
-  },
   "categoria": "TERRAPLENAGEM"
 }

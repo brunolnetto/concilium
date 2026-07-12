@@ -41,12 +41,6 @@
       }
     ]
   },
-  "custos_equipe_rfi": {
-    "custo_mo_h": 236.53,
-    "custo_equip_h": 1344.9,
-    "total_h": 1581.43,
-    "pu_calculado": 6.8487
-  },
   "_nota_calibracao": "Comboio ferrovia AGIS: 1 escav 22t + 8 cam 14m³ (DMT maior = mais caminhões).",
   "categoria": "TERRAPLENAGEM"
 }

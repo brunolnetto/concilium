@@ -1,6 +1,6 @@
 # ADR-136 — Custo de Mobilização/Desmobilização: Campos Mortos no Pool e Cálculo Desconectado (Skill-06)
 
-**Status:** ✅ Implementado _(F1-F6 completas)_
+**Status:** ✅ Implementado _(F1-F6 + F4-bis completas)_
 **Data:** 2026-07-10
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-085 (Custo Instancial Composicional Temporal), ADR-125 (Hierarquia de Custo C_prod/C_pool/Contrato), ADR-105 (Mobilização e Desmobilização — Política Integrada), ADR-106 (LifecycleEngine), ADR-104 (Centralização do Cálculo de Custos), NEP-043 (Reconciliação C_r)
@@ -12,8 +12,9 @@
 > equipe a partir de `EquipeDireta.permanencia_efetiva_meses`, já calculada
 > pela skill-05 — em vez de agregar todas as equipes num único par
 > headcount×prazo), F5 (skill-05 passa a usar `LifecycleEngine` — ver nota
-> abaixo) e F6 (regressão confirmando que `C_pool < total` deixou de ser uma
-> tautologia).
+> abaixo), F6 (regressão confirmando que `C_pool < total` deixou de ser uma
+> tautologia) e F4-bis (proporção real de mob/demob no breakdown semanal —
+> ver nota abaixo).
 >
 > **Nota de implementação sobre F4:** a conexão não foi feita via
 > `InstanciaRecurso` (pool de recursos compartilhados/equipamentos) como o
@@ -46,6 +47,18 @@
 > gap-a-gap (que continua em `_compute_instancia_idle_gaps`, inalterado — ele
 > não era duplicado em lugar nenhum). Esforço real: uma sessão de trabalho, não
 > semanas.
+>
+> **F4-bis — proporção real mob/demob no breakdown semanal (2026-07-10):**
+> `_breakdown_mob` (categoria MOB, driver `one_time`) sempre dividia
+> `categoria.custo_fixo_total` 50/50 entre a semana 0 e a última semana, mesmo
+> quando `_custo_mob_composicional` constrói itens `Mobilizacao` reais (com
+> `descricao`/`custo_total` individuais). Corrigido: quando há itens de
+> `mobilizacoes` distinguíveis (classificados por "desmob" na `descricao`),
+> `_breakdown_mob` usa a proporção real entre eles, reescalada para fechar
+> exatamente com `custo_fixo_total`. Sem itens distinguíveis — caso de **todos**
+> os benchmarks reais hoje, que usam custo pré-agregado via `categorias_config`
+> (ver ADR-137 P3) — mantém o fallback 50/50 pré-existente, sem mudança de
+> comportamento. Testes: `test_adr137_split_mob_demob_real.py`.
 
 ---
 
@@ -106,7 +119,7 @@ Adicionar nota de superseding parcial em ADR-085: sua fórmula D3 (mob/demob den
 
 **Implementado com uma correção de rota em relação à formulação original desta ADR.** A ideia original (derivar de `InstanciaRecurso.semana_mobilizacao`/`.semana_desmobilizacao`, o pool de equipamentos compartilhados) partia de uma premissa errada: a granularidade que a planilha da Camila expõe ("EQUIPE 0 - LIMPEZA", "EQUIPE 1 - ESCAVAÇÃO...") é por **equipe direta de mão-de-obra** (uma por atividade), não por instância de equipamento do pool — são conceitos diferentes no modelo canônico. A fonte de verdade certa já existia: `EquipeDireta.permanencia_efetiva_meses`, calculada pela skill-05 a partir do cronograma real (`_dimensionamento_orquestracao.py`) para toda equipe direta, com ou sem pool RCPSP formado.
 
-`_custo_mob_legado()` ganha o parâmetro opcional `equipes_diretas` — quando fornecido (não-vazio), o termo de alimentação/seguro/cesta básica passa a ser `Σ (num_pessoas_equipe × custo_pessoa_mes × permanencia_efetiva_meses_equipe)` por `EquipeDireta`, em vez de `num_pessoas_direta × custo_pessoa_mes × prazo_meses` (agregado). `_process_mob_categoria()` e `run_custos_indiretos()` propagam `canonical_in.equipes_diretas` através da cadeia existente — sem exigir nenhuma interface nova entre skill-05 e skill-06, já que `canonical_in` já estava disponível em todos os pontos da cadeia. Retrocompatível: sem `equipes_diretas` (ou lista vazia), o comportamento é idêntico ao anterior.
+`_custo_mob_composicional()` ganha o parâmetro opcional `equipes_diretas` — quando fornecido (não-vazio), o termo de alimentação/seguro/cesta básica passa a ser `Σ (num_pessoas_equipe × custo_pessoa_mes × permanencia_efetiva_meses_equipe)` por `EquipeDireta`, em vez de `num_pessoas_direta × custo_pessoa_mes × prazo_meses` (agregado). `_process_mob_categoria()` e `run_custos_indiretos()` propagam `canonical_in.equipes_diretas` através da cadeia existente — sem exigir nenhuma interface nova entre skill-05 e skill-06, já que `canonical_in` já estava disponível em todos os pontos da cadeia. Retrocompatível: sem `equipes_diretas` (ou lista vazia), o comportamento é idêntico ao anterior.
 
 `infer_mob_windows`/`mob_schedule` (`mob_scheduling.py`) não foram alterados — eles resolvem um problema ortogonal (**quando**, no calendário, o custo de MOB é contabilizado nas séries semanais), não **quanto** custa — e continuam operando sobre datas agregadas do projeto para esse fim, o que é adequado (o evento de mobilização de canteiro é mesmo um evento único do projeto, diferente da permanência de cada equipe).
 
@@ -154,7 +167,8 @@ O loop de decisão gap-a-gap (`_compute_instancia_idle_gaps` — decide, para ca
 | **F1 — Levantamento** | Mapear quais skills/projetos formam pool RCPSP real vs. dependem de equipes diretas fora de pool; confirmar call sites (ou ausência deles) de `equipe_custo_engine.py`; confirmar quais benchmarks exercitam `_mob.py` legado vs. config pré-agregada | ✅ |
 | **F2 — Reconciliação documental (D1)** | Nota de superseding parcial em ADR-085, referenciando esta ADR e ADR-125 | ✅ |
 | **F3 — Popular custo do pool (D2)** | `calcular_custo_instancia_composicional` ganha parâmetro de mobilização; `_compute_instancia_lifecycle` computa valores reais em vez de `0.0` hardcoded; `total` do contrato passa a refletir mob/demob | ✅ |
-| **F4 — Granularidade por equipe em skill-06 (D3)** | `_custo_mob_legado`/`_process_mob_categoria` derivam o termo de alimentação/seguro/cesta básica de `EquipeDireta.permanencia_efetiva_meses` por equipe, em vez de agregado por projeto | ✅ |
+| **F4 — Granularidade por equipe em skill-06 (D3)** | `_custo_mob_composicional`/`_process_mob_categoria` derivam o termo de alimentação/seguro/cesta básica de `EquipeDireta.permanencia_efetiva_meses` por equipe, em vez de agregado por projeto | ✅ |
+| **F4-bis — Proporção real mob/demob no breakdown semanal** | `_breakdown_mob` usa a proporção real entre itens de `mobilizacoes` (quando distinguíveis por descrição) em vez do 50/50 hardcoded; fallback 50/50 preservado quando não há itens distinguíveis | ✅ |
 | **F5 — Consolidar skill-05 com `equipe_custo_engine.py` (D4)** | `_compute_instancia_lifecycle` passa a chamar `LifecycleEngine.calcular()`; `calcular_custo_instancia_composicional` removida | ✅ |
 | **F6 — Regressão** | Teste que confirma `C_pool ≤ total` como validação real (não vácua) após F3; teste de regressão reproduzindo a granularidade por equipe (headcount/permanência distintos) via F4 | ✅ |
 
@@ -175,11 +189,15 @@ O loop de decisão gap-a-gap (`_compute_instancia_idle_gaps` — decide, para ca
 - [x] Testes cobrindo o cálculo real (unitário em `calcular_custo_instancia_composicional`, em `_compute_instancia_lifecycle`, e pipeline-level confirmando que `custo_instancia_total`/`custo_total_contrato` refletem os valores)
 
 ### Fase 4
-- [x] `_custo_mob_legado` aceita `equipes_diretas` (opcional, retrocompatível) e soma `num_pessoas × custo_pessoa_mes × permanencia_efetiva_meses` por `EquipeDireta`, em vez de `num_pessoas_direta × custo_pessoa_mes × prazo_meses` agregado
+- [x] `_custo_mob_composicional` aceita `equipes_diretas` (opcional, retrocompatível) e soma `num_pessoas × custo_pessoa_mes × permanencia_efetiva_meses` por `EquipeDireta`, em vez de `num_pessoas_direta × custo_pessoa_mes × prazo_meses` agregado
 - [x] `_process_mob_categoria`/`_process_categorias_indiretas`/`run_custos_indiretos` propagam `canonical_in.equipes_diretas` — sem interface nova, `canonical_in` já estava disponível em toda a cadeia
 - [x] Teste de regressão reproduzindo divergência entre a soma por equipe (correta) e o agregado (bug antigo) com headcounts/permanências desiguais (`test_diverge_do_agregado_quando_permanencias_sao_desiguais`)
 - [x] Teste de integração em `_process_mob_categoria` confirmando a propagação ponta a ponta
-- **Nota:** não validado contra o benchmark AGIS diretamente — o projeto AGIS contorna `_custo_mob_legado` via config MOB pré-agregada (P4), então não exercita este código. A regressão usa fixtures sintéticas equivalentes em estrutura (headcount/permanência variáveis por equipe).
+- **Nota:** não validado contra o benchmark AGIS diretamente — o projeto AGIS contorna `_custo_mob_composicional` via config MOB pré-agregada (P4), então não exercita este código. A regressão usa fixtures sintéticas equivalentes em estrutura (headcount/permanência variáveis por equipe).
+
+### Fase 4-bis
+- [x] `_breakdown_mob` usa a proporção real entre itens de `mobilizacoes` distinguíveis (por "desmob" na `descricao`), reescalada para fechar exatamente com `custo_fixo_total`; fallback 50/50 preservado quando não há itens distinguíveis (caso de todos os benchmarks reais hoje, via `categorias_config`)
+- [x] Testes em `test_adr137_split_mob_demob_real.py`
 
 ### Fase 5
 - [x] Confirmada paridade numérica exata entre `calcular_custo_instancia_composicional` e `LifecycleEngine.calcular()`, incluindo mob/demob efetivos (não só o caso produtivo/idle trivial já coberto antes) — teste escrito antes de qualquer mudança de código
@@ -187,7 +205,7 @@ O loop de decisão gap-a-gap (`_compute_instancia_idle_gaps` — decide, para ca
 - [x] `calcular_custo_instancia_composicional` removida de `_custo_diferenciado_permanencia.py` (e do `__init__.py` de `_skill_helpers`); testes diretos migrados para exercitar o engine (regressão numérica fixada, já que não há mais uma segunda implementação para comparar ao vivo)
 - [x] `_compute_instancia_idle_gaps` (loop gap-a-gap) mantido inalterado — não era duplicado; ver D4 para o porquê
 - [x] `DirectTeamCostStrategy`/`IndirectTeamCostStrategy`/`_fill_custo_inst_sem_pool` validados sem regressão após a mudança
-- [x] Suite completa (12942 testes) + ruff + ty sem novos erros
+- [x] Suite completa + ruff + ty sem novos erros
 
 ### Fase 6
 - [x] Teste validando `C_pool ≤ total` com mob/demob real (não sempre zero) em pelo menos um projeto de benchmark (`test_c_pool_menor_que_total_quando_ha_mobilizacao`)

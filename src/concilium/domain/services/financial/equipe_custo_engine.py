@@ -47,6 +47,11 @@ class CustoEquipeDecomposicao:
     mob_window: float = 0.0  # (c_mo + c_eq_locacao) × leadtime_mob_semanas
     demob_window: float = 0.0  # (c_mo + c_eq_locacao) × lag_demob_semanas
 
+    # ADR-106 F4-bis: verbas (mensais + fixas) de equipes indiretas — BDI_indireto.
+    # Já é um valor total (não uma taxa semanal): soma direto no total, sem
+    # multiplicar por semanas. Zero para equipes diretas (IC-6).
+    verba: float = 0.0
+
     # Semanas off (custo zero — antes do mob ou após demob)
     semanas_off: int = 0
 
@@ -67,6 +72,7 @@ class CustoEquipeDecomposicao:
             + self.demob
             + self.mob_window
             + self.demob_window
+            + self.verba
         )
         if self.total == 0.0 and computed > 0:
             self.total = round(computed, 2)
@@ -75,10 +81,12 @@ class CustoEquipeDecomposicao:
     def custo_produtivo(self) -> float:
         """C_prod_i — custo das semanas ativas (contrato lockado do pool para a atividade).
 
-        Exclui ociosidade (idle) e mob/demob. Base de cálculo de γ_i (ADR-125).
+        Exclui ociosidade (idle) e mob/demob. Inclui verba — é componente direto de
+        operação da equipe indireta (BDI_indireto), não um evento de entrada/saída
+        como mob/demob. Base de cálculo de γ_i (ADR-125).
         """
         return round(
-            self.ativo_mo + self.ativo_eq + self.ativo_comb + self.ativo_mat,
+            self.ativo_mo + self.ativo_eq + self.ativo_comb + self.ativo_mat + self.verba,
             2,
         )
 
@@ -86,13 +94,20 @@ class CustoEquipeDecomposicao:
     def custo_pool(self) -> float:
         """C_pool_i — custo direto agregado do contrato, do início ao fim da cadeia.
 
-        Inclui ociosidade (κ aplica-se ao equipamento em standby), exclui mob/demob.
-        Custo direto usado para precificação operacional: p_i^o = C_pool_i / Q_i (ADR-125).
+        Inclui ociosidade (κ aplica-se ao equipamento em standby) e verba, exclui
+        mob/demob. Custo direto usado para precificação operacional:
+        p_i^o = C_pool_i / Q_i (ADR-125).
 
         total = custo_pool + mob + demob + mob_window + demob_window
         """
         return round(
-            self.ativo_mo + self.ativo_eq + self.ativo_comb + self.ativo_mat + self.idle_mo + self.idle_eq,
+            self.ativo_mo
+            + self.ativo_eq
+            + self.ativo_comb
+            + self.ativo_mat
+            + self.idle_mo
+            + self.idle_eq
+            + self.verba,
             2,
         )
 
@@ -127,7 +142,13 @@ def _fill_custo_inst_sem_pool(equipes: list) -> None:
             continue
 
         semanas = round(perm_efetiva * SEMANAS_POR_MES)
-        decomp = strategy.calcular_para_equipe(eq, semanas_ativas=semanas, semanas_idle=0)
+        # ADR-106 F2-bis: c_mob/c_demob reais (de EquipeDireta.custo_mobilizacao_mensal/
+        # .custo_desmobilizacao_mensal, populados pela skill-05 via
+        # _calc_custo_mob_desmob_split) em vez do default 0.0 — antes, todo o custo de
+        # mob/demob vinha apenas do resíduo de arredondamento do fechamento IC-3 abaixo.
+        c_mob = float(getattr(eq, "custo_mobilizacao_mensal", 0.0) or 0.0)
+        c_demob = float(getattr(eq, "custo_desmobilizacao_mensal", 0.0) or 0.0)
+        decomp = strategy.calcular_para_equipe(eq, semanas_ativas=semanas, semanas_idle=0, c_mob=c_mob, c_demob=c_demob)
 
         # Reescalar a decomposição para alinhar com custo_total real da equipe
         # (pode divergir se permanencia_efetiva difere da permanencia contratual)
@@ -208,16 +229,32 @@ class DirectTeamCostStrategy:
 
 
 class IndirectTeamCostStrategy:
-    """ADR-106 F4 — Estratégia de custo para equipes indiretas (skill-07).
+    """ADR-106 F4 — Estratégia de custo para equipes indiretas (skill-06).
 
-    Parameterização:
-      c_mo = custo_total / SEMANAS_POR_MES (custo fixo mensal dividido em semanas)
-      c_eq = custo_equipamentos / SEMANAS_POR_MES
-      Combustível e material = zero (indiretos não têm estas categorias)
+    Parameterização (ADR-106 F4-bis — correção de unidade):
+      Indireto.custo_mao_obra/custo_equipamentos/custo_verba são TOTAIS já
+      escalados para a permanência inteira, não taxas mensais — ver invariante
+      documentado em Indireto (domain/models/canonical/_financeiro_resultado.py):
+      custo_total ≈ custo_mao_obra + custo_equipamentos + custo_combustivel
+                   + custo_verba + custo_mobilizacao.
+      c_mo/c_eq são derivados dividindo por semanas_projeto (não por
+      SEMANAS_POR_MES) para que LifecycleEngine.calcular(), que multiplica de
+      volta por prod_weeks=semanas_projeto, reproduza o total original — não o
+      infle por semanas_projeto/SEMANAS_POR_MES.
+      Combustível e material = zero (indiretos não têm estas categorias — IC-6).
 
-    Escopo: project-scoped (permanência = duração do projeto).
-    MOB: driver "one_time" — custo_mob_desmob distribuído entre mob e demob.
+    Escopo: project-scoped (permanência = duração do projeto; recursos indiretos
+    são tratados como sempre disponíveis — sem pool de recursos compartilhados).
+    MOB: driver "one_time" — custo_mobilizacao distribuído 50/50 entre mob e
+    demob (convenção de placeholder — não há dado de trajeto ida/volta em
+    Mobilizacao para uma atribuição mais precisa; ver ADR-105 §6.6).
     IC-6: opera exclusivamente sobre Indireto, nunca sobre EquipeDireta.
+
+    Nota: esta estratégia ainda não é consumida por nenhum caminho de produção
+    (skill-06 calcula indiretos via _resolucao.py/_mob.py, com um modelo de
+    alocação proporcional estruturalmente diferente do rate×weeks do
+    LifecycleEngine) — ver ADR-106 para o racional de manter os dois modelos
+    separados em vez de unificar o cálculo de ADM/TOP/LAB/QSMS.
     """
 
     def calcular_para_indireto(
@@ -228,19 +265,20 @@ class IndirectTeamCostStrategy:
         """Calcula decomposição de custo para uma equipe indireta.
 
         Args:
-            indireto: Indireto com custo_mao_obra, custo_equipamentos, custo_mob_desmob.
+            indireto: Indireto com custo_mao_obra, custo_equipamentos, custo_verba,
+                custo_mobilizacao (todos totais para a permanência inteira).
             semanas_projeto: duração total do projeto em semanas (para semanas produtivas).
         """
-        from concilium.domain.constants import SEMANAS_POR_MES
 
-        def _semanal(custo_mensal: float) -> float:
-            return custo_mensal / SEMANAS_POR_MES
+        def _taxa_semanal(custo_total_permanencia: float) -> float:
+            return custo_total_permanencia / semanas_projeto if semanas_projeto > 0 else 0.0
 
-        c_mo = _semanal(
+        c_mo = _taxa_semanal(
             float(getattr(indireto, "custo_mao_obra", 0.0) or 0.0)
             + float(getattr(indireto, "custo_encargos", 0.0) or 0.0)
         )
-        c_eq = _semanal(float(getattr(indireto, "custo_equipamentos", 0.0) or 0.0))
+        c_eq = _taxa_semanal(float(getattr(indireto, "custo_equipamentos", 0.0) or 0.0))
+        c_verba = float(getattr(indireto, "custo_verba", 0.0) or 0.0)  # já total, sem taxa
 
         mob_total = float(getattr(indireto, "custo_mobilizacao", 0.0) or 0.0)
         c_mob = round(mob_total / 2.0, 2)
@@ -249,7 +287,7 @@ class IndirectTeamCostStrategy:
         engine = LifecycleEngine()
         return engine.calcular(
             prod_weeks=semanas_projeto,
-            idle_weeks=0,  # indiretos não têm idle (project-scoped)
+            idle_weeks=0,  # indiretos não têm idle (project-scoped, sempre disponíveis)
             c_mo=c_mo,
             c_eq=c_eq,
             c_comb=0.0,  # IC-6: sem combustível para indiretos
@@ -257,6 +295,7 @@ class IndirectTeamCostStrategy:
             c_idle_eq=c_eq,
             c_mob=c_mob,
             c_demob=c_demob,
+            c_verba=c_verba,
         )
 
 
@@ -288,6 +327,7 @@ class LifecycleEngine:
         leadtime_mob_semanas: int = 0,
         lag_demob_semanas: int = 0,
         trailing_weeks_eq: int = 0,
+        c_verba: float = 0.0,
     ) -> CustoEquipeDecomposicao:
         """Calcula decomposição de custo para um ciclo de vida de equipe.
 
@@ -316,6 +356,8 @@ class LifecycleEngine:
             trailing_weeks_eq: semanas de EQ trailing (ADR-106 F6 — early dismissal EQ).
                 Se economia_eq = c_idle_eq × trailing_weeks_eq - c_demob > 0, EQ é
                 devolvida antecipadamente. MO não é afetada (CLT).
+            c_verba: custo de verbas (mensais + fixas) de equipes indiretas — já é
+                total, não taxa semanal (ADR-106 F4-bis). Zero para equipes diretas.
 
         Returns:
             CustoEquipeDecomposicao com decomposição completa e total auditável.
@@ -348,9 +390,20 @@ class LifecycleEngine:
 
         mob = round(c_mob, 2)
         demob = round(c_demob + c_demob_efetivo, 2)
+        verba = round(c_verba, 2)
 
         total = round(
-            ativo_mo + ativo_eq + ativo_comb + ativo_mat + idle_mo + idle_eq + mob + demob + mob_window + demob_window,
+            ativo_mo
+            + ativo_eq
+            + ativo_comb
+            + ativo_mat
+            + idle_mo
+            + idle_eq
+            + mob
+            + demob
+            + mob_window
+            + demob_window
+            + verba,
             2,
         )
 
@@ -365,6 +418,7 @@ class LifecycleEngine:
             demob=demob,
             mob_window=round(mob_window, 2),
             demob_window=round(demob_window, 2),
+            verba=verba,
             semanas_off=semanas_off,
             total=total,
         )

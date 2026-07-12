@@ -21,6 +21,20 @@
         "taxa_encargos_pct": {"type": ["number", "null"], "minimum": 0},
         "nota_encargos": {"type": ["string", "null"]},
         "metodo_custo_total": {"type": ["string", "null"]},
+        "salario_base_hora": {
+          "description": "Salário-base por hora, referência da planilha de origem (RFI R02). Somente leitura.",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_hora_com_encargos_planilha": {
+          "description": "Custo-hora com encargos calculado na planilha de origem (RFI R02), para auditoria/comparação. Não usado no cálculo bottom-up. Somente leitura.",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "codigo_planilha": {
+          "description": "Código na planilha de origem (ex.: RFI R02).",
+          "type": ["string", "null"]
+        },
         "_audit_encargos": {
           "description": "Nota de auditoria sobre remoção de custo_com_encargos (ADR-009). Somente leitura.",
           "type": ["string", "null"]
@@ -49,6 +63,20 @@
         "nota_revisao": {"type": ["string", "null"]},
         "nota": {"type": ["string", "null"]},
         "referencia_sicro_custo_horario": {"type": ["string", "null"]},
+        "custo_mensal": {
+          "description": "Custo mensal do equipamento (ex.: locação), referência da planilha de origem (RFI R02).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_produtivo_h": {
+          "description": "Custo produtivo por hora, referência da planilha de origem (RFI R02). Não usado no cálculo bottom-up. Somente leitura.",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "tipo_locacao": {
+          "description": "Descrição livre do tipo de locação, referência da planilha de origem (RFI R02) — ver também tipo_propriedade (enum).",
+          "type": ["string", "null"]
+        },
         "decomposicao_equip": {
           "anyOf": [
             {"type": "null"},
@@ -62,7 +90,13 @@
       "additionalProperties": false,
       "properties": {
         "fornecedor_referencia": {"type": ["string", "null"]},
-        "prazo_entrega": {"type": ["string", "null"]}
+        "prazo_entrega": {"type": ["string", "null"]},
+        "especificacao": {"type": ["string", "null"]},
+        "uso": {"type": ["string", "null"]},
+        "codigo_planilha": {
+          "description": "Código na planilha de origem (ex.: RFI R02).",
+          "type": ["string", "null"]
+        }
       }
     },
     "atributosTerceirizado": {

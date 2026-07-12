@@ -11,7 +11,8 @@ Drivers:
 
 Inputs (no dict 'inputs'):
     composicoes_indireto: dict[categoria, dict] — opcional, override por categoria
-    dados_mobilizacao:    dict — para categoria MOB (legado)
+    dados_mobilizacao:    dict — formato item a item (mobilizações/baixadas) para categoria
+                          MOB, anterior ao schema categorias_config (ver _custo_mob_composicional)
     perc_encargos:        float — default 0.92
     categorias_config:    list[dict] — lista de IndirectoCategoria serializadas (ADR-009 novo)
     tabela_bdi:           TabelaBdi serializada — para bdi_indireto (ADR-023 §D4); opcional

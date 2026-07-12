@@ -73,9 +73,7 @@ def _num_unidades_elemento(elemento_id: str, composicao: ComposicaoPadraoEquipe)
     return 1.0
 
 
-def validar_referencias_grafo(
-    grafo: GrafoSinergiaEquipe, composicao: ComposicaoPadraoEquipe
-) -> list[ValidacaoItem]:
+def validar_referencias_grafo(grafo: GrafoSinergiaEquipe, composicao: ComposicaoPadraoEquipe) -> list[ValidacaoItem]:
     """VAL-SINERGIA-01 (ERRO): referência a elemento inexistente na composição."""
     validos = elementos_validos(composicao)
     out: list[ValidacaoItem] = []
@@ -110,8 +108,7 @@ def validar_referencias_grafo(
                 codigo="VAL-SINERGIA-01",
                 status="ERRO",
                 mensagem=(
-                    f"gargalo_declarado={grafo.gargalo_declarado!r} não referencia elemento existente "
-                    "na composição."
+                    f"gargalo_declarado={grafo.gargalo_declarado!r} não referencia elemento existente na composição."
                 ),
             )
         )
@@ -134,9 +131,7 @@ class _UnionFind:
             self._parent[ra] = rb
 
 
-def derivar_producao_horaria(
-    grafo: GrafoSinergiaEquipe, composicao: ComposicaoPadraoEquipe
-) -> DerivacaoSinergia:
+def derivar_producao_horaria(grafo: GrafoSinergiaEquipe, composicao: ComposicaoPadraoEquipe) -> DerivacaoSinergia:
     """ADR-130 D2 — produtividade derivada do gargalo (min de capacidades efetivas).
 
     capacidade_efetiva(e) = capacidade_horaria(e) × num_unidades(e, composicao)
@@ -313,6 +308,7 @@ def atualizar_capacidade_gargalo(
     producao: Producao,
     nova_capacidade_horaria: float,
     fonte: FonteCapacidade = "medicao_obra",
+    justificativa: str | None = None,
 ) -> Producao:
     """ADR-130 D5/F5 — calibração de campo atualiza a capacidade do elemento gargalo.
 
@@ -345,7 +341,9 @@ def atualizar_capacidade_gargalo(
 
     gargalo_id = derivacao.gargalo_derivado
     novas_capacidades = [
-        c.model_copy(update={"capacidade_horaria": nova_capacidade_horaria, "fonte": fonte})
+        c.model_copy(
+            update={"capacidade_horaria": nova_capacidade_horaria, "fonte": fonte, "justificativa": justificativa}
+        )
         if c.elemento_id == gargalo_id
         else c
         for c in grafo.capacidades

@@ -115,6 +115,14 @@ class CapacidadeElemento(BaseModel):
     capacidade_horaria: float = Field(gt=0)  # na unidade de produção da CPU (ex.: m³/h)
     unidade: str
     fonte: FonteCapacidade = "catalogo"
+    # Memória de cálculo/rationale por trás de capacidade_horaria — fórmula e premissas
+    # usadas (ex.: capacidade de caçamba × ciclos/hora × fator de enchimento ×
+    # eficiência, especificação de fabricante consultada), não apenas o valor final.
+    # Especialmente relevante quando fonte="fabricante" (estimativa a partir de
+    # especificação técnica, não medição de obra) — permite auditar a estimativa em
+    # vez de tratá-la como número dado, alinhado à política do projeto de nunca
+    # inventar capacidade_horaria sem rastro (ADR-130 F4).
+    justificativa: str | None = None
 
 
 class GrafoSinergiaEquipe(BaseModel):

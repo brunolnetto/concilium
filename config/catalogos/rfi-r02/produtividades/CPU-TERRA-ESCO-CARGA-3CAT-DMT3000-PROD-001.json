@@ -37,12 +37,6 @@
       }
     ]
   },
-  "custos_equipe_rfi": {
-    "custo_mo_h": 208.3,
-    "custo_equip_h": 2114.78,
-    "total_h": 2323.08,
-    "pu_calculado": 16.3413
-  },
   "_nota_calibracao": "3ªcat DMT3000: escav 38t + 8 cam 16m³.",
   "categoria": "TERRAPLENAGEM"
 }

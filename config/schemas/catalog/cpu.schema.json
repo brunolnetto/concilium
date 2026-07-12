@@ -53,6 +53,15 @@
         "dmt_referencia_m": {"type": ["number", "null"], "minimum": 0}
       }
     },
+    "cpus_alternativos": {
+      "description": "Lista de codigo de CPUs alternativos usados em análise de campanha (application/services/campaign/campaign_service).",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "grupo_servico": {
+      "description": "Categoria de agrupamento de serviço para relatórios/organização (ex.: 'TERRA-ESCO-CARGA-1CAT').",
+      "type": ["string", "null"]
+    },
     "custo_direto_unitario_planilha": {
       "description": "Custo direto unitário extraído da planilha de referência (modo planilha-first, ADR-050). Somente leitura.",
       "type": ["number", "null"],

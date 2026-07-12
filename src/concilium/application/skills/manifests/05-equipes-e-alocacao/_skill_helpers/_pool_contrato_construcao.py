@@ -46,6 +46,7 @@ def _build_contrato_entry(
     todas_cadeias: list,
     equipe_map: dict,
     resource_costs_absent: bool = False,
+    validacoes: list | None = None,
 ) -> RecursoContrato:
     """Constrói um RecursoContrato completo para o tipo dado."""
     all_weeks_sorted = sorted(week_demand.keys(), key=_week_idx)
@@ -70,6 +71,7 @@ def _build_contrato_entry(
         custo_standby_unit=c_idle,
         delta_max=delta_max,
         gap_max=gap_max,
+        validacoes=validacoes,
     )
     todas_cadeias.extend(cadeias)
     _fill_atribuicao(atribuicao, mw_list, custo_total_contrato, tipo)
@@ -131,6 +133,7 @@ def _build_tipo_contrato(
     delta_max: int,
     todas_cadeias: list,
     resource_costs_absent: bool = False,
+    validacoes: list | None = None,
 ) -> RecursoContrato:
     """Builds one RecursoContrato entry from tipo/items data."""
     custo_unit_semanal, fmo, feq, fcomb, fmat = _compute_custo_unit_fracs(mw_list)
@@ -160,6 +163,7 @@ def _build_tipo_contrato(
         todas_cadeias,
         equipe_map,
         resource_costs_absent=resource_costs_absent,
+        validacoes=validacoes,
     )
 
 
@@ -344,6 +348,7 @@ def _build_contratos_por_tipo(
     delta_max: int,
     todas_cadeias: list,
     resource_costs_absent: bool,
+    validacoes: list | None = None,
 ) -> list[RecursoContrato]:
     """Constrói um RecursoContrato por tipo de pool com machine-weeks > 0."""
     contratos: list[RecursoContrato] = []
@@ -374,6 +379,7 @@ def _build_contratos_por_tipo(
                 delta_max,
                 todas_cadeias,
                 resource_costs_absent=resource_costs_absent,
+                validacoes=validacoes,
             )
         )
     return contratos
@@ -465,6 +471,7 @@ def _build_contratos_recurso(
         delta_max,
         todas_cadeias,
         resource_costs_absent,
+        validacoes=validacoes,
     )
 
     atribuicao_total = _accumulate_atribuicao_total(contratos)

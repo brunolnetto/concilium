@@ -26,6 +26,8 @@ def _make_equipe(
     custo_combustivel_total_mensal: float = 5_000.0,
     permanencia_efetiva_meses: float = 6.0,
     custo_inst_mo=None,  # None = sem pool; valor = com pool
+    custo_mobilizacao_mensal: float = 0.0,
+    custo_desmobilizacao_mensal: float = 0.0,
 ):
     from concilium.domain.models.canonical import EquipeDireta, FuncaoEquipeDireta
 
@@ -48,6 +50,8 @@ def _make_equipe(
         custo_inst_comb=0.0 if custo_inst_mo is not None else None,
         custo_inst_mat=0.0 if custo_inst_mo is not None else None,
         custo_inst_mob_demob=0.0 if custo_inst_mo is not None else None,
+        custo_mobilizacao_mensal=custo_mobilizacao_mensal,
+        custo_desmobilizacao_mensal=custo_desmobilizacao_mensal,
     )
 
 
@@ -119,3 +123,40 @@ class TestFillCustoInstSemPool:
         eq = _make_equipe("i1", permanencia_efetiva_meses=0.0, custo_total=0.0)
         fill([eq])  # não deve levantar ZeroDivisionError
         assert eq.custo_inst_mo is not None
+
+
+class TestFillCustoInstSemPoolMobDemobReal:
+    """ADR-106 F2-bis/F3-bis: custo_inst_mob_demob reflete custo_mobilizacao_mensal/
+    custo_desmobilizacao_mensal reais (quando a equipe tem esses campos populados
+    pela skill-05, ver _calc_custo_mob_desmob_split), em vez de vir inteiramente do
+    resíduo de arredondamento do fechamento IC-3 (comportamento anterior, já que
+    esses campos eram sempre 0.0 — nunca atribuídos em produção)."""
+
+    def test_mob_demob_reflete_valores_reais_da_equipe(self):
+        fill = _import()
+        custo_mob, custo_demob = 3_000.0, 2_000.0
+        eq = _make_equipe(
+            "i1",
+            custo_total=100_000.0,
+            custo_mao_obra_mensal=10_000.0,
+            custo_encargos_mensal=0.0,
+            custo_equipamentos_mensal=5_000.0,
+            custo_combustivel_total_mensal=0.0,
+            permanencia_efetiva_meses=6.0,
+            custo_mobilizacao_mensal=custo_mob,
+            custo_desmobilizacao_mensal=custo_demob,
+        )
+        fill([eq])
+        # custo_inst_mob_demob deve refletir a ordem de grandeza real de mob+demob
+        # (5000, sujeito ao fator de reescala proporcional para fechar custo_total),
+        # não ficar preso a um resíduo de arredondamento próximo de zero como
+        # acontecia quando os campos de origem eram sempre 0.0.
+        assert eq.custo_inst_mob_demob == pytest.approx(custo_mob + custo_demob, rel=0.15)
+
+    def test_sem_mob_demob_definido_mob_demob_e_so_residuo(self):
+        """Retrocompat: equipes sem custo_mobilizacao_mensal/desmobilizacao_mensal
+        (campos default 0.0) continuam com custo_inst_mob_demob próximo de zero."""
+        fill = _import()
+        eq = _make_equipe("i1", custo_total=100_000.0)
+        fill([eq])
+        assert eq.custo_inst_mob_demob == pytest.approx(0.0, abs=50.0)

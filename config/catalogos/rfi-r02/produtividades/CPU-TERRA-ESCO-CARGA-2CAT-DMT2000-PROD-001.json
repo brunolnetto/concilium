@@ -41,12 +41,6 @@
       }
     ]
   },
-  "custos_equipe_rfi": {
-    "custo_mo_h": 195.2,
-    "custo_equip_h": 1059.3,
-    "total_h": 1254.5,
-    "pu_calculado": 7.9258
-  },
   "_nota_calibracao": "2ªcat: mesma escav 22t, mas 6 cam (solo mais duro → menor produção).",
   "categoria": "TERRAPLENAGEM"
 }

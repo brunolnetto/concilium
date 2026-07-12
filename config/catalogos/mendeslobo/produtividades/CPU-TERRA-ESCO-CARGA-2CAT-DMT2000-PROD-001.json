@@ -40,5 +40,25 @@
         "consumo_litros_hora_estimado": 2.5
       }
     ]
+  },
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "AGIS-E0015",
+        "capacidade_horaria": 158.5,
+        "unidade": "m3/h",
+        "fonte": "medicao_obra",
+        "justificativa": "Calibração reversa: escavadeira 38T (AGIS-E0015) é o elemento gargalo em ambas as variantes de DMT desta categoria (frota de caminhões tem folga de 91-130 m³/h acima do valor_horario real) — capacidade = média dos valor_horario reais das CPUs 2CAT-DMT2000 (158.28) e 2CAT-DMT3000 (158.78). Mesmo item de catálogo que 1CAT (AGIS-E0015), mas produtividade ~32% menor — solo de 2ª categoria reduz a produtividade real da mesma máquina."
+      },
+      {
+        "elemento_id": "AGIS-E0002",
+        "capacidade_horaria": 48.1,
+        "unidade": "m3/h",
+        "fonte": "fabricante",
+        "justificativa": "Estimativa de especificação de fabricante: caminhão basculante 14m³ (classe Mercedes-Benz Axor/Actros ou Volvo VM 6x4), metodologia PEM/SICRO-DNIT de tempo de ciclo (carga + ida/DMT + descarga + volta/DMT + manobra), velocidade média carregado 20km/h / vazio 30km/h, eficiência operacional 0.83. Nunca é o elemento gargalo nesta composição (folga de 55-130 m³/h acima do valor_horario real) — valor não precisa de calibração fina, só confirma que a frota tem capacidade suficiente."
+      }
+    ],
+    "gargalo_declarado": null
   }
 }

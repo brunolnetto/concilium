@@ -84,6 +84,16 @@
           "type": "string",
           "enum": ["direto", "indireto", "gestao"],
           "default": "direto"
+        },
+        "custo_mobilizacao": {
+          "description": "Custo de mobilização por pessoa desta função (ADR-106 F2-bis / ADR-137 P2).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_desmobilizacao": {
+          "description": "Custo de desmobilização por pessoa desta função (ADR-106 F2-bis / ADR-137 P2).",
+          "type": ["number", "null"],
+          "minimum": 0
         }
       }
     },
@@ -100,6 +110,26 @@
           "minimum": 1
         },
         "consumo_litros_hora_estimado": {
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "consumo_litros_hora": {
+          "description": "Consumo de diesel por hora para este item da composição — sobrepõe Insumo.atributos_especificos.consumo_litros_hora (ver pu_calculator._consumo_diesel_equipamento).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "preco_h_unitario": {
+          "description": "Preço por hora deste equipamento nesta composição — sobrepõe Insumo.preco_unitario, permitindo preço por-atividade sem duplicar insumos no catálogo (ADR-132).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_mobilizacao": {
+          "description": "Custo de mobilização por unidade deste equipamento (ADR-106 F2-bis / ADR-137 P2).",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "custo_desmobilizacao": {
+          "description": "Custo de desmobilização por unidade deste equipamento (ADR-106 F2-bis / ADR-137 P2).",
           "type": ["number", "null"],
           "minimum": 0
         }
@@ -163,6 +193,67 @@
         "custo_diesel_h": {"type": "number", "minimum": 0},
         "custo_material_h": {"type": "number", "minimum": 0},
         "custo_capital_h": {"type": "number", "minimum": 0}
+      }
+    },
+    "relacaoSinergia": {
+      "description": "Aresta do grafo de sinergia intra-equipe (ADR-130 D1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tipo", "origem", "destino"],
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "enum": ["acoplamento", "dimensionamento", "precondicao"]
+        },
+        "origem": {"type": "string"},
+        "destino": {"type": "string"},
+        "razao": {"type": ["number", "null"]},
+        "descricao": {"type": ["string", "null"]}
+      }
+    },
+    "capacidadeElemento": {
+      "description": "Parâmetro de capacidade de um elemento da composição (ADR-130 D1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["elemento_id", "capacidade_horaria", "unidade"],
+      "properties": {
+        "elemento_id": {"type": "string"},
+        "capacidade_horaria": {
+          "description": "Capacidade produtiva do elemento na unidade de produção da CPU (ex.: m³/h).",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unidade": {"type": "string"},
+        "fonte": {
+          "type": "string",
+          "enum": ["catalogo", "fabricante", "medicao_obra"],
+          "default": "catalogo"
+        },
+        "justificativa": {
+          "description": "Memória de cálculo/rationale por trás de capacidade_horaria (fórmula, premissas, especificação consultada) — ver ADR-130 F4.",
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "grafoSinergiaEquipe": {
+      "description": "Estrutura de sinergia da equipe: relações + capacidades. Opcional por CPU (ADR-130 D1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relacoes", "capacidades"],
+      "properties": {
+        "relacoes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/relacaoSinergia"},
+          "uniqueItems": true,
+          "default": []
+        },
+        "capacidades": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/capacidadeElemento"},
+          "uniqueItems": true,
+          "default": []
+        },
+        "gargalo_declarado": {"type": ["string", "null"]}
       }
     }
   }
