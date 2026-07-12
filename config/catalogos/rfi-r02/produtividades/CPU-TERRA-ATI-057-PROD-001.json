@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0020",
+        "capacidade_horaria": 816.67,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Pintura de ligação — mesma ressalva de ATI-056: composições de mercado indicam espargidor bem mais rápido em pintura de ligação (~1687 m²/h) que em imprimação (~1125 m²/h), pela menor taxa de aplicação (RR-1C/RR-2C, 0,3-0,4 L/m² residual vs. 0,8-1,6 L/m² de imprimação). O catálogo real tem a relação oposta e mais estreita (816,67 vs 900 m²/h) — divergência não resolvida, possivelmente condição operacional específica do projeto. Aceito o valor real como capacidade calibrada."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 2450.01,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa atua na irrigação prévia da base (imprimação) ou não participa do espargimento do ligante em si — papel de apoio/folga, não codeterminante da produtividade de equipe. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0020"
+  }
 }

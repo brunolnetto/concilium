@@ -59,5 +59,32 @@
     ]
   },
   "_nota_calibracao": "Produtividade/composição da planilha AGIS 2026-05 (mendeslobo). Correto para área de caatinga/cerrado do Nordeste. RFI (250 m²/h) é para mata fechada DAP≥30cm — não aplicável ao AGIS.",
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0024",
+        "capacidade_horaria": 738.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Desmatamento/destocamento geral — trator de esteiras 20t/300HP empurra/arrasta vegetação de forma quase contínua. Referência SICRO2 (memória de cálculo de produção de trator em limpeza de terreno 'livre') dá ~1444,20 m²/h; o valor real (738 m²/h) é cerca de metade dessa referência, coerente com interrupções pontuais para corte seletivo de árvores maiores (motosserra) intercaladas ao avanço do trator. Aceito o valor real como capacidade calibrada do trator (elemento dominante), por falta de composição SICRO com produtividade explícita por elemento para este processo específico."
+      },
+      {
+        "elemento_id": "E0016",
+        "capacidade_horaria": 2000.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Escavadeira atua na etapa posterior (carregamento do material já cortado/empilhado para bota-fora) — capacidade superior ao elemento gargalo desta operação. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0031",
+        "capacidade_horaria": 2000.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Motosserra tem folga nesta operação de desmatamento geral (baixa densidade de árvores de grande porte) — o gargalo é o trator de esteiras. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0024"
+  }
 }

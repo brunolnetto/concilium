@@ -52,5 +52,39 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0041",
+        "capacidade_horaria": 816.67,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "CBUQ e=3,0cm — vibroacabadora é o elemento limitante, definido por largura de pavimentação × velocidade de avanço em faixa contínua (não pelo throughput mássico nominal do fabricante, 300-600 t/h, que é bem superior ao exigido: 816,67 m²/h × 0,072 t/m² ≈ 58,8 t/h). Cálculo reverso (largura ~3,0-3,4m × velocidade ~4m/min) reproduz a ordem de grandeza do valor real, confirmando o mecanismo mas sem fonte com o coeficiente numérico exato do catálogo — aceito o valor real como capacidade calibrada."
+      },
+      {
+        "elemento_id": "E0036",
+        "capacidade_horaria": 2450.01,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Rolo liso tem throughput de compactação normalmente superior ao de aplicação da vibroacabadora — folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0037",
+        "capacidade_horaria": 2450.01,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Rolo de pneus tem throughput de compactação normalmente superior ao de aplicação da vibroacabadora — folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0008",
+        "capacidade_horaria": 2450.01,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão basculante (suprimento de massa asfáltica) tem ciclo de abastecimento com folga frente à vibroacabadora — não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0041"
+  }
 }

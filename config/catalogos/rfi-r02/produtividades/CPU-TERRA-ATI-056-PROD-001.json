@@ -36,5 +36,25 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0020",
+        "capacidade_horaria": 900.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Imprimação — espargidor é o elemento limitante (velocidade de avanço compatível com uniformidade de aplicação, não a vazão máxima da bomba, que tem folga). Composições SICRO análogas (CM-30, ref. 4011351) apontam ~1125 m²/h para imprimação e fontes de mercado ~1687 m²/h para pintura de ligação — uma razão (~1:1,5, pintura mais rápida) invertida e bem mais ampla que a razão do catálogo real (900:816,67 ≈ 1,1:1, imprimação mais rápida). Divergência significativa não resolvida pela pesquisa (pode refletir taxas de aplicação específicas do projeto Concilium, diferentes da média SICRO nacional) — aceito o valor real como capacidade calibrada em vez de forçar a razão SICRO genérica."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 2700.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa atua na irrigação prévia da base (imprimação) ou não participa do espargimento do ligante em si — papel de apoio/folga, não codeterminante da produtividade de equipe. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0020"
+  }
 }

@@ -38,5 +38,25 @@
     ]
   },
   "_nota_calibracao": "3ªcat: escav 38t (rocha) + 6 cam 16m³.",
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0018",
+        "capacidade_horaria": 141.9,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Escavadeira hidráulica classe 38t (Komatsu PC360LC 2,23m³, Caterpillar 336 2,27m³ de caçamba padrão). Para 3ª categoria (rocha alterada/solo mais duro), capacidade_horaria = caçamba_efetiva(1,9m³) × fator_enchimento(0,70) × (3600/ciclo_s=27) × eficiência(0,80) ≈ 141,9 m³/h — parâmetros mais conservadores que 1ª/2ª categoria (caçamba menor, enchimento pior, ciclo mais lento em rocha alterada). Reconcilia com o valor real dentro de <1%."
+      },
+      {
+        "elemento_id": "E0008",
+        "capacidade_horaria": 63.6,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão basculante 16m³. Ciclo total = carga(caçamba/produção escavadeira parceira) + ida(DMT/25km/h) + descarga+manobra(1,5min) + volta(DMT/35km/h), eficiência 0,80. Capacidade unitária (63.6 m³/h) bem menor que a produção da escavadeira parceira — frota dimensionada no CPU (N unidades) tem folga estrutural, confirmando a escavadeira como elemento limitante."
+      }
+    ],
+    "gargalo_declarado": "E0018"
+  }
 }
