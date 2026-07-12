@@ -44,5 +44,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0028",
+        "capacidade_horaria": 300.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Regularização de subleito é nivelamento geométrico fino da superfície já conformada (não formação de nova camada), tipicamente com controle topográfico de precisão — a motoniveladora opera em passadas lentas e controladas para atingir cota de projeto, mesmo padrão de limitação por precisão de ATI-024. 300 m²/h é muito abaixo dos milhares de m²/h típicos de regularização 'de volume' (nivelamento grosseiro) em composições SICRO, confirmando operação de precisão. Rolo LISO (não pé-de-carneiro) é empregado em passadas de acabamento rápidas (alta velocidade, ampla cobertura), não em compactação pesada — tem folga, ao contrário do padrão de aterro pesado já confirmado nesta sessão. Aceito o valor real como capacidade calibrada da motoniveladora."
+      },
+      {
+        "elemento_id": "E0036",
+        "capacidade_horaria": 1000.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Rolo liso em passadas de acabamento/regularização (não aterro pesado de solo coesivo, papel do pé-de-carneiro) — cobertura ampla e rápida, folga frente à motoniveladora. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 1000.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa (umedecimento) tem folga clara — valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0028"
+  }
 }

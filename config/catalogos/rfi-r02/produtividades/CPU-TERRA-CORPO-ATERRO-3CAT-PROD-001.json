@@ -46,5 +46,25 @@
     ]
   },
   "_nota_calibracao": "Corpo de aterro 3ªcat. Trator esteiras grande + 2 rolos. Calibrado AGIS.",
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0035",
+        "capacidade_horaria": 107.46,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Mesmo padrão já confirmado nesta sessão (fonte SICRO 4011219, reforço subleito/sub-base/base): rolo pé-de-carneiro é o elemento com menor produção horária, limitando a produtividade da equipe. Trator de esteiras classe D155 (mesma classe do E0025) tem capacidade de espalhamento de até 400 m³/h em aterro argiloso — quase o dobro dos 214,92 m³/h reais, confirmando folga do trator. Material de 3ª categoria (rocha alterada) reforça o padrão (mais passadas de compactação exigidas), não o inverte. capacidade_horaria = valor_horario/2 (2 rolos na composição)."
+      },
+      {
+        "elemento_id": "E0025",
+        "capacidade_horaria": 400.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Trator de esteiras 30t/440HP (espalhamento de material de 3ª categoria, dimensionado com ripper/escarificador para rocha alterada) tem capacidade de espalhamento ~400 m³/h — quase o dobro do valor real da equipe, folga confirmada. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0035"
+  }
 }

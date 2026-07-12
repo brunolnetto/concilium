@@ -44,5 +44,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0020",
+        "capacidade_horaria": 277.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "TSD é comboio de 2 aplicações completas (ligante+brita+compactação por camada) — composição SICRO 4011370 confirma o trio de equipamentos com utilização operativa do caminhão-tanque/espargidor em 1,00 (ritmo pleno, 'puxa' o comboio) vs. ~0,28 do distribuidor de brita e ~0,31 do rolo (trabalho intermitente atrás do espargidor) — o espargidor rege o ritmo. Proporção 816,67(pintura de ligação)/277,0 ≈ 2,95x é consistente com duplicação de camadas + tempo de compactação intermediária. Sem fonte pública com m²/h isolado do espargidor especificamente em TSD — aceito o valor real como capacidade calibrada."
+      },
+      {
+        "elemento_id": "E0015",
+        "capacidade_horaria": 900.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Distribuidor de brita trabalha de forma intermitente atrás do espargidor (utilização operativa ~0,28 no SICRO 4011370) — capacidade instalada maior que a demanda, sincronizado ao espargidor, não o elemento limitante. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 900.0,
+        "unidade": "m2",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa (água para limpeza/resfriamento) não está no caminho crítico do comboio de TSD — folga, não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0020"
+  }
 }

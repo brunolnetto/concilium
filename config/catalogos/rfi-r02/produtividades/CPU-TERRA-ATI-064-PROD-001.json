@@ -36,5 +36,32 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "P0039",
+        "capacidade_horaria": 7.5,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Instalação de guia pré-moldada é processo essencialmente artesanal — composição SINAPI 94279 (pedreiro+servente, sem equipamento listado) dá 5,22 m/h. 15,0 m/h real (~3x SINAPI) é plausível para equipe mais produtiva, mas mantém ordem de grandeza de processo manual. Montador de Meio Fio (P0039, já presente na composição) é o papel natural do gargalo — capacidade_horaria = valor_horario/num_montadores."
+      },
+      {
+        "elemento_id": "E0002",
+        "capacidade_horaria": 45.0,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Betoneira (argamassa de assentamento/rejunte em batelada) produz muito acima do consumo peça-a-peça — folga, não-vinculante."
+      },
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 45.0,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Retroescavadeira (escavação de valeta rasa e estreita de apoio à guia) tem produtividade de dezenas de m/h em escavação — folga clara. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "P0039"
+  }
 }
