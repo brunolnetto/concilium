@@ -10,9 +10,12 @@ Invariantes cobertos (NEP-028 IC-1 a IC-6):
 F1 cobre:
   - CustoEquipeDecomposicao dataclass com campos corretos e default=0.0
   - LifecycleEngine.calcular() → CustoEquipeDecomposicao
-  - calcular_custo_instancia_composicional movida para o engine (compatibilidade)
-  - Paridade numérica com a implementação atual em
-    05-equipes-e-alocacao/_skill_helpers/_custo_diferenciado_permanencia.py
+
+ADR-136 F5: calcular_custo_instancia_composicional (05-equipes-e-alocacao/
+_skill_helpers/_custo_diferenciado_permanencia.py) foi consolidada neste engine —
+_compute_instancia_lifecycle (skill-05) chama LifecycleEngine.calcular() diretamente.
+Testes de regressão numérica fixam os valores que antes eram comparados ao vivo
+contra a implementação duplicada, agora removida.
 """
 
 from __future__ import annotations
@@ -223,29 +226,41 @@ class TestLifecycleEngine:
 # ── Paridade com implementação atual ─────────────────────────────────────────
 
 
-class TestParidadeComHelperExistente:
-    """Engine deve produzir mesmos números que calcular_custo_instancia_composicional atual."""
+class TestRegressaoNumericaConsolidacao:
+    """ADR-136 F5: LifecycleEngine consolidou calcular_custo_instancia_composicional
+    (05-equipes-e-alocacao/_skill_helpers/_custo_diferenciado_permanencia.py), removida
+    após confirmação de paridade numérica exata (inclusive com mob/demob efetivos) —
+    ver commit de consolidação. Estes testes fixam os valores esperados como regressão,
+    já que não há mais uma segunda implementação para comparar ao vivo.
+    """
 
-    def test_paridade_numerica(self):
-        import sys
-
-        from concilium.application.skills import run_equipes_e_alocacao as _trigger
-
-        assert _trigger
-        _skill05_helpers = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
-        calc_atual = _skill05_helpers.calcular_custo_instancia_composicional
-
+    def test_regressao_numerica_produtivo_e_idle(self):
         _, Engine = _import()
-        engine = Engine()
+        dec = Engine().calcular(prod_weeks=10, idle_weeks=3, c_mo=1000, c_eq=400, c_comb=200, c_mat=100, c_idle_eq=80)
 
-        kwargs = dict(prod_weeks=10, idle_weeks=3, c_mo=1000, c_eq=400, c_comb=200, c_mat=100, c_idle_eq=80)
-        atual = calc_atual(**kwargs)
-        novo = engine.calcular(**kwargs)
+        assert dec.ativo_mo == pytest.approx(10000.0)
+        assert dec.ativo_eq == pytest.approx(4000.0)
+        assert dec.idle_mo == pytest.approx(3000.0)
+        assert dec.total == pytest.approx(20240.0)
 
-        assert novo.ativo_mo == pytest.approx(atual["ativo_mo"], abs=0.01)
-        assert novo.ativo_eq == pytest.approx(atual["ativo_eq"], abs=0.01)
-        assert novo.idle_mo == pytest.approx(atual["idle_mo"], abs=0.01)
-        assert novo.total == pytest.approx(atual["total"], abs=0.01)
+    def test_regressao_numerica_com_mob_demob(self):
+        """Caso com mob/demob efetivos (não só o produtivo/idle trivial)."""
+        _, Engine = _import()
+        dec = Engine().calcular(
+            prod_weeks=6,
+            idle_weeks=2,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
+            c_idle_eq=80.0,
+            c_mob=1800.0,
+            c_demob_efetivo=2500.0,
+        )
+
+        assert dec.mob == pytest.approx(1800.0)
+        assert dec.demob == pytest.approx(2500.0)
+        assert dec.total == pytest.approx(16660.0)
 
 
 # ── ADR-125: hierarquia C_prod / C_pool / total ──────────────────────────────

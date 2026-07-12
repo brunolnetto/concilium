@@ -44,64 +44,9 @@ def calcular_custo_contrato_por_instancia(
     return custo_unit_semanal * active_weeks + rate_standby * standby_weeks + custo_mob + custo_demob
 
 
-def calcular_custo_instancia_composicional(
-    prod_weeks: int,
-    idle_weeks: int,
-    c_mo: float,
-    c_eq: float,
-    c_comb: float,
-    c_mat: float,
-    c_idle_eq: float,
-    c_demob_efetivo: float = 0.0,
-    c_mob_efetivo: float = 0.0,
-) -> dict[str, float]:
-    """ADR-085 D3 / ADR-136 F3: custo instancial composicional por componente.
-
-    Generaliza ``calcular_custo_contrato_por_instancia`` (ADR-080, escalar) para tratar
-    cada componente com sua dinâmica de ociosidade própria, consistente com a operação:
-
-    - **Semanas produtivas** (``prod_weeks``): todos os componentes à taxa plena
-      (MO + EQ + combustível + material).
-    - **Semanas ociosas** (``idle_weeks``, dentro do ciclo de vida [mob, demob] sem
-      atividade): mão-de-obra **integral** (CLT não permite taxa reduzida), equipamento à
-      **taxa de locação reduzida** ``c_idle_eq``, combustível e material **zerados**
-      (sem operação → sem consumo).
-    - **Semanas off** (fora do ciclo de vida — mobilização tardia / desmob antecipada):
-      custo zero; o chamador simplesmente não as inclui em prod nem idle.
-    - ``c_mob_efetivo``: custo de mobilização — evento de entrada da instância no pool.
-      Incorrido sempre que a instância é de fato utilizada (ADR-085 D3); ao contrário de
-      ``c_demob_efetivo``, não há variante "embutida no contrato" — mobilizar sempre tem
-      custo quando ocorre.
-    - ``c_demob_efetivo``: custo de desmobilização incorrido apenas quando a desmob
-      antecipada é aplicada à instância (ADR-085 D3 / ADR-080 §C).
-
-    ADR-125 D1/D4 (via ADR-136): mob/demob são custo indireto de campo (BDI/DI), não
-    custo produtivo — mas continuam somados neste ``total``, que corresponde ao custo
-    contratual completo (``custo_total_contrato`` em ``RecursoContrato``), não a
-    ``C_pool`` isoladamente.
-
-    Retrocompatível: quando ``c_idle_eq`` reflete a taxa cheia de EQ e ``c_mob_efetivo``
-    é omitido, o resultado recai no comportamento anterior (sem mobilização).
-
-    Retorna um dict com os componentes e o total, para popular ``InstanciaRecurso``.
-    """
-    ativo_mo = c_mo * prod_weeks
-    ativo_eq = c_eq * prod_weeks
-    ativo_comb = c_comb * prod_weeks
-    ativo_mat = c_mat * prod_weeks
-    idle_mo = c_mo * idle_weeks  # MO integral durante ociosidade (CLT)
-    idle_eq = c_idle_eq * idle_weeks  # EQ à taxa de locação reduzida
-    total = (
-        ativo_mo + ativo_eq + ativo_comb + ativo_mat + idle_mo + idle_eq + c_mob_efetivo + c_demob_efetivo
-    )
-    return {
-        "ativo_mo": round(ativo_mo, 2),
-        "ativo_eq": round(ativo_eq, 2),
-        "ativo_comb": round(ativo_comb, 2),
-        "ativo_mat": round(ativo_mat, 2),
-        "idle_mo": round(idle_mo, 2),
-        "idle_eq": round(idle_eq, 2),
-        "mob": round(c_mob_efetivo, 2),
-        "demob": round(c_demob_efetivo, 2),
-        "total": round(total, 2),
-    }
+# ADR-136 F5: calcular_custo_instancia_composicional() foi consolidada em
+# concilium.domain.services.financial.equipe_custo_engine.LifecycleEngine.calcular()
+# — paridade numérica confirmada (inclusive com mob/demob efetivos) em
+# tests/unit/test_adr106_f1_lifecycle_engine.py::TestParidadeComHelperExistente antes
+# da remoção. _compute_instancia_lifecycle (_resource_instance_assignment.py) chama o
+# engine diretamente; esta função não tem mais chamadores em produção.
