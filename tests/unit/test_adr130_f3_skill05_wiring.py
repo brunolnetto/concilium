@@ -1,0 +1,347 @@
+"""ADR-130 F3 — Ligação de `resolver_producao_efetiva` ao read-path real de skill-05.
+
+Cobre:
+- `_build_producao_para_sinergia`: constrói `Producao` mínimo a partir do dict bruto do
+  catálogo apenas quando `grafo_sinergia` está presente; None quando ausente/inválido.
+- `_validar_sinergia_producao`: no-op (zero validações) quando não há grafo; surfaced
+  VAL-SINERGIA-02/03 quando há divergência/gargalo inconsistente.
+- `_build_comp_para_item`/`_build_dimensionamento` end-to-end com um CPU real do
+  catálogo rfi-r02 (CPU-TERRA-ESCO-CARGA-1CAT-DMT2000, populado no PR #91): a
+  produtividade/custo usados no dimensionamento NUNCA mudam por causa do grafo —
+  apenas validações informativas são adicionadas.
+"""
+
+from __future__ import annotations
+
+import sys
+from datetime import UTC, datetime
+
+import concilium.application.skills as _skills_pkg
+from concilium.application.skills import run_cronograma
+from concilium.application.skills import run_equipes_e_alocacao as run_equipes_diretas
+from concilium.domain.models.canonical import (
+    CanonicalModel,
+    Coordenadas,
+    EapItem,
+    Meta,
+    Praticabilidade,
+    Projeto,
+    RegimeTrabalho,
+)
+
+_ = _skills_pkg.run_equipes_e_alocacao  # trigger lazy load so _skill_helpers lands in sys.modules
+_MOD = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
+
+_build_comp_para_item = _MOD._build_comp_para_item
+_build_producao_para_sinergia = _MOD._build_producao_para_sinergia
+_validar_sinergia_producao = _MOD._validar_sinergia_producao
+
+# ── fixtures: CPU real do catálogo rfi-r02 (PR #91) ─────────────────────────
+# CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001 —
+# config/catalogos/rfi-r02/produtividades/CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001.json
+_PROD_ID = "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001"
+_CPU_ID = "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
+_VALOR_HORARIO_REAL = 231.87
+_CAP_ESCAVADEIRA_REAL = 230.4
+_CAP_CAMINHAO_REAL = 42.7
+
+
+def _composicao_padrao_equipe_real() -> dict:
+    return {
+        "funcoes": [
+            {"funcao_id": "P0040", "num_pessoas": 1},
+            {"funcao_id": "P0001", "num_pessoas": 1},
+            {"funcao_id": "P0022", "num_pessoas": 1},
+            {"funcao_id": "P0032", "num_pessoas": 7},
+        ],
+        "equipamentos": [
+            {"equip_id": "E0016", "num_unidades": 1, "consumo_litros_hora": 28.58},
+            {"equip_id": "E0007", "num_unidades": 7, "consumo_litros_hora": 2.76},
+        ],
+    }
+
+
+def _grafo_sinergia_real(
+    capacidade_escavadeira: float = _CAP_ESCAVADEIRA_REAL,
+    capacidade_caminhao: float = _CAP_CAMINHAO_REAL,
+    gargalo_declarado: str | None = "E0016",
+) -> dict:
+    return {
+        "relacoes": [],
+        "capacidades": [
+            {
+                "elemento_id": "E0016",
+                "capacidade_horaria": capacidade_escavadeira,
+                "unidade": "m3",
+                "fonte": "fabricante",
+            },
+            {
+                "elemento_id": "E0007",
+                "capacidade_horaria": capacidade_caminhao,
+                "unidade": "m3",
+                "fonte": "fabricante",
+            },
+        ],
+        "gargalo_declarado": gargalo_declarado,
+    }
+
+
+def _prod_dict(
+    grafo_sinergia: dict | None = None,
+    valor_horario: float = _VALOR_HORARIO_REAL,
+) -> dict:
+    d = {
+        "id": _PROD_ID,
+        "codigo": _CPU_ID,
+        "descricao": "Esc/carg/transp 1a cat DMT<=2000m",
+        "valor_horario": valor_horario,
+        "unidade": "m3",
+        "origem": {
+            "tipo": "calibrado_agis_rfi",
+            "data_calibracao": "2026-05-08",
+            "referencia": "Híbrido: composição/produtividade mendeslobo + precos RFI-R02.",
+        },
+        "composicao_padrao_equipe": _composicao_padrao_equipe_real(),
+        "categoria": "TERRAPLENAGEM",
+    }
+    if grafo_sinergia is not None:
+        d["grafo_sinergia"] = grafo_sinergia
+    return d
+
+
+def _cpu_dict() -> dict:
+    return {
+        "codigo": _CPU_ID,
+        "descricao": "Esc/carg/transp 1a cat DMT<=2000m",
+        "unidade": "m3",
+        "origem": "PROPRIA",
+        "categoria": "TERRAPLENAGEM",
+        "producao_id_ref": _PROD_ID,
+        "composicao_itens": [],
+    }
+
+
+def _insumos_reais() -> list[dict]:
+    def _mo(codigo: str, desc: str) -> dict:
+        return {
+            "codigo": codigo,
+            "tipo": "MAO_OBRA",
+            "descricao": desc,
+            "unidade": "mes",
+            "preco_unitario": 2000.0,
+            "fonte_preco": "catalogo",
+            "atributos_especificos": {},
+        }
+
+    def _eq(codigo: str, desc: str) -> dict:
+        return {
+            "codigo": codigo,
+            "tipo": "EQUIPAMENTO",
+            "descricao": desc,
+            "unidade": "h",
+            "preco_unitario": 150.0,
+            "fonte_preco": "catalogo",
+            "atributos_especificos": {"consumo_litros_hora": 20.0},
+        }
+
+    return [
+        _mo("P0040", "Encarregado"),
+        _mo("P0001", "Operador escavadeira"),
+        _mo("P0022", "Motorista caminhão basculante"),
+        _mo("P0032", "Ajudante"),
+        _eq("E0016", "Escavadeira hidráulica 22t"),
+        _eq("E0007", "Caminhão basculante 14m3"),
+    ]
+
+
+def _catalogo(prod: dict) -> dict:
+    return {
+        "cpus": [_cpu_dict()],
+        "insumos": _insumos_reais(),
+        "producoes": [prod],
+    }
+
+
+def _make_canonical(item_id: str = "EAP-01") -> CanonicalModel:
+    meta = Meta(gerado_em=datetime.now(UTC), contexto_id="test")
+    proj = Projeto(
+        id="p1",
+        nome="proj",
+        tipo_obra="terraplenagem",
+        localizacao="x",
+        coordenadas=Coordenadas(lat=0.0, lng=0.0),
+        regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+        data_inicio="2026-06-01",
+        data_termino="2026-07-31",
+        snapshot_catalogo_id="s",
+        snapshot_perfil_id="s",
+    )
+    prat = Praticabilidade(
+        fonte="test",
+        limiar_inviabilidade_mm=0,
+        calculada_em=datetime.now(UTC),
+        percentual_produtivo_mensal={"06": 1.0, "07": 1.0},
+    )
+    eap = [
+        EapItem(
+            item_id=item_id,
+            ordem=1,
+            cpu_id=_CPU_ID,
+            descricao="Escavação teste",
+            unidade="m3",
+            quantitativo=1000.0,
+        )
+    ]
+    return CanonicalModel(meta=meta, projeto=proj, eap=eap, praticabilidade=prat)
+
+
+def _run_skill05(prod: dict, item_id: str = "EAP-01") -> tuple:
+    """Roda cronograma + skill-05 end-to-end; retorna (EquipeDireta, validacoes)."""
+    can = _make_canonical(item_id=item_id)
+    cat = _catalogo(prod)
+    cron_inputs = {"num_equipes_por_item": {item_id: {"2026-W23": 1}}}
+    can_cron = run_cronograma(can, cron_inputs, cat).canonical
+    result = run_equipes_diretas(can_cron, {"preco_diesel": 6.20}, cat)
+    equipe = result.canonical.equipes_diretas[0]
+    return equipe, result.validacoes
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _build_producao_para_sinergia
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestBuildProducaoParaSinergia:
+    def test_none_quando_sem_grafo_sinergia(self):
+        assert _build_producao_para_sinergia(_prod_dict(grafo_sinergia=None)) is None
+
+    def test_none_quando_grafo_sinergia_vazio(self):
+        assert _build_producao_para_sinergia(_prod_dict(grafo_sinergia={})) is None
+
+    def test_none_quando_prod_vazio(self):
+        assert _build_producao_para_sinergia({}) is None
+
+    def test_producao_construida_quando_grafo_presente(self):
+        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real())
+        producao = _build_producao_para_sinergia(prod)
+        assert producao is not None
+        assert producao.valor_horario == _VALOR_HORARIO_REAL
+        assert producao.grafo_sinergia is not None
+        assert {c.elemento_id for c in producao.grafo_sinergia.capacidades} == {"E0016", "E0007"}
+
+    def test_ignora_chaves_extras_do_catalogo_bruto(self):
+        """`consumo_litros_hora` (chave legada, não `consumo_litros_hora_estimado`) não
+        deve quebrar a reconstrução tipada (ADR-130 F3 — sanitização)."""
+        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real())
+        producao = _build_producao_para_sinergia(prod)
+        assert producao is not None
+        equips = producao.composicao_padrao_equipe.equipamentos
+        assert {e.equip_id: e.num_unidades for e in equips} == {"E0016": 1, "E0007": 7}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _validar_sinergia_producao — no-op e emissão de VAL-SINERGIA-02/03
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestValidarSinergiaProducao:
+    def test_no_op_sem_grafo_sinergia(self):
+        """ADR-130 F3: retrocompatibilidade total — a vasta maioria do catálogo hoje
+        não tem grafo_sinergia; nenhuma validação deve ser adicionada."""
+        validacoes: list = []
+        _validar_sinergia_producao(_prod_dict(grafo_sinergia=None), validacoes)
+        assert validacoes == []
+
+    def test_sem_divergencia_quando_dados_calibrados_reais(self):
+        """Os dados reais do PR #91 foram calibrados para <1% de divergência —
+        nenhum VAL-SINERGIA-02/03 deve aparecer para o CPU real."""
+        validacoes: list = []
+        _validar_sinergia_producao(_prod_dict(grafo_sinergia=_grafo_sinergia_real()), validacoes)
+        codigos = [v.codigo for v in validacoes]
+        assert "VAL-SINERGIA-02" not in codigos
+        assert "VAL-SINERGIA-03" not in codigos
+
+    def test_val_sinergia_02_emitido_em_divergencia(self):
+        """Capacidade da escavadeira reduzida à metade → produção derivada diverge
+        > 15% do valor_horario declarado → VAL-SINERGIA-02 (AVISO)."""
+        validacoes: list = []
+        grafo = _grafo_sinergia_real(capacidade_escavadeira=_CAP_ESCAVADEIRA_REAL / 2)
+        _validar_sinergia_producao(_prod_dict(grafo_sinergia=grafo), validacoes)
+        val02 = [v for v in validacoes if v.codigo == "VAL-SINERGIA-02"]
+        assert len(val02) == 1
+        assert val02[0].status == "AVISO"
+
+    def test_val_sinergia_03_emitido_quando_gargalo_declarado_diverge(self):
+        """gargalo_declarado="E0007" não bate com o gargalo real (E0016, capacidade
+        efetiva menor) → VAL-SINERGIA-03 (AVISO)."""
+        validacoes: list = []
+        grafo = _grafo_sinergia_real(gargalo_declarado="E0007")
+        _validar_sinergia_producao(_prod_dict(grafo_sinergia=grafo), validacoes)
+        val03 = [v for v in validacoes if v.codigo == "VAL-SINERGIA-03"]
+        assert len(val03) == 1
+        assert val03[0].status == "AVISO"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _build_comp_para_item — composição retornada nunca muda por causa do grafo
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestBuildCompParaItemComGrafo:
+    def test_comp_identica_com_ou_sem_grafo(self):
+        """O grafo de sinergia é puramente informativo — a composição usada para
+        custear a equipe não muda (D3/A3: nenhuma sobrescrita silenciosa)."""
+        cpu = _cpu_dict()
+
+        validacoes_sem: list = []
+        prod_lookup_sem = {_PROD_ID: _prod_dict(grafo_sinergia=None)}
+        comp_sem = _build_comp_para_item(cpu, prod_lookup_sem, validacoes_sem)
+
+        validacoes_com: list = []
+        prod_lookup_com = {_PROD_ID: _prod_dict(grafo_sinergia=_grafo_sinergia_real())}
+        comp_com = _build_comp_para_item(cpu, prod_lookup_com, validacoes_com)
+
+        assert comp_sem == comp_com
+        # A única diferença é a ausência/presença de validações VAL-SINERGIA-*
+        assert [v.codigo for v in validacoes_sem if v.codigo.startswith("VAL-SINERGIA")] == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# End-to-end via _build_dimensionamento / _dimensionar_item_equipe (skill-05 real)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestDimensionamentoEndToEndComGrafoSinergia:
+    def test_custo_equipe_identico_com_e_sem_grafo_sinergia(self):
+        """Wiring do ADR-130 F3 nunca altera o custo/produtividade da equipe usados
+        no dimensionamento — só acrescenta validações informativas."""
+        equipe_sem, validacoes_sem = _run_skill05(_prod_dict(grafo_sinergia=None))
+        equipe_com, validacoes_com = _run_skill05(_prod_dict(grafo_sinergia=_grafo_sinergia_real()))
+
+        assert equipe_com.custo_total == equipe_sem.custo_total
+        assert equipe_com.custo_fixo_mensal == equipe_sem.custo_fixo_mensal
+        assert equipe_com.custo_mao_obra_mensal == equipe_sem.custo_mao_obra_mensal
+        assert equipe_com.custo_equipamentos_mensal == equipe_sem.custo_equipamentos_mensal
+
+        sinergia_sem = [v for v in validacoes_sem if v.codigo.startswith("VAL-SINERGIA")]
+        sinergia_com = [v for v in validacoes_com if v.codigo.startswith("VAL-SINERGIA")]
+        assert sinergia_sem == []
+        assert sinergia_com == []  # dados reais calibrados: sem divergência/gargalo inconsistente
+
+    def test_val_sinergia_02_e_03_surfaced_end_to_end_sem_alterar_custo(self):
+        """Com um grafo divergente (escavadeira sub-dimensionada + gargalo_declarado
+        errado), VAL-SINERGIA-02/03 aparecem na lista de validações da skill-05 real,
+        mas o custo da equipe permanece IDÊNTICO ao caso sem grafo (D3/A3)."""
+        equipe_base, _ = _run_skill05(_prod_dict(grafo_sinergia=None))
+        grafo_divergente = _grafo_sinergia_real(
+            capacidade_escavadeira=_CAP_ESCAVADEIRA_REAL / 2,
+            gargalo_declarado="E0007",
+        )
+        equipe_div, validacoes_div = _run_skill05(_prod_dict(grafo_sinergia=grafo_divergente))
+
+        assert equipe_div.custo_total == equipe_base.custo_total
+        assert equipe_div.custo_fixo_mensal == equipe_base.custo_fixo_mensal
+
+        codigos = {v.codigo for v in validacoes_div}
+        assert "VAL-SINERGIA-02" in codigos
+        assert "VAL-SINERGIA-03" in codigos
