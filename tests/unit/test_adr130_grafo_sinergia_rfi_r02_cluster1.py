@@ -42,19 +42,21 @@ _PRODUTIVIDADES = _ROOT / "config" / "catalogos" / "rfi-r02" / "produtividades"
 
 _CLUSTER1_FILES = [
     "CPU-TERRA-ATI-025-PROD-001.json",
-    "CPU-TERRA-ATI-026-PROD-001.json",
+    # ATI-026 removida — Producao duplicata de ATI-025 (mesma composição/valor_horario/
+    # grafo_sinergia), consolidada via CPU.producao_id_ref (ver
+    # test_adr130_producao_consolidacao_duplicatas.py)
     "CPU-TERRA-ATI-027-PROD-001.json",
-    "CPU-TERRA-ATI-028-PROD-001.json",
+    # ATI-028 removida — Producao duplicata de ATI-027
     "CPU-TERRA-ATI-029-PROD-001.json",
-    "CPU-TERRA-ATI-030-PROD-001.json",
+    # ATI-030 removida — Producao duplicata de ATI-029
     "CPU-TERRA-ATI-031-PROD-001.json",
     "CPU-TERRA-ATI-032-PROD-001.json",
     "CPU-TERRA-ATI-043-PROD-001.json",
     "CPU-TERRA-ATI-044-PROD-001.json",
     "CPU-TERRA-ATI-045-PROD-001.json",
-    "CPU-TERRA-ATI-046-PROD-001.json",
+    # ATI-046 removida — Producao duplicata de ATI-045
     "CPU-TERRA-ATI-047-PROD-001.json",
-    "CPU-TERRA-ATI-048-PROD-001.json",
+    # ATI-048 removida — Producao duplicata de ATI-047
     "CPU-TERRA-ATI-049-PROD-001.json",
     "CPU-TERRA-ATI-050-PROD-001.json",
     "CPU-TERRA-ATI-051-PROD-001.json",

@@ -39,12 +39,15 @@ _ESCO_CARGA_FILES = [
     "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000-PROD-001.json",
     "CPU-TERRA-ESCO-CARGA-2CAT-DMT3000-PROD-001.json",
 ]
-_LIMPEZA_VEGETAL_FILES = ["CPU-TERRA-ATI-002-PROD-001.json", "CPU-TERRA-ATI-004-PROD-001.json"]
+# ATI-004 removida — Producao duplicata de ATI-002 (mesma composição/valor_horario/
+# grafo_sinergia), consolidada via CPU.producao_id_ref (ver
+# test_adr130_producao_consolidacao_duplicatas.py)
+_LIMPEZA_VEGETAL_FILES = ["CPU-TERRA-ATI-002-PROD-001.json"]
 _E0026_SOLO_FILES = ["CPU-TERRA-ATI-010-PROD-001.json", "CPU-TERRA-ATI-059-PROD-001.json"]
+# ATI-055 removida — Producao duplicata de ATI-054
 _SUBLEITO_FILES = [
     "CPU-TERRA-ATI-053-PROD-001.json",
     "CPU-TERRA-ATI-054-PROD-001.json",
-    "CPU-TERRA-ATI-055-PROD-001.json",
 ]
 _ALL_FILES = _ESCO_CARGA_FILES + _LIMPEZA_VEGETAL_FILES + _E0026_SOLO_FILES + _SUBLEITO_FILES
 
