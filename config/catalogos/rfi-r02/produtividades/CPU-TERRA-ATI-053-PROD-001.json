@@ -52,5 +52,39 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0035",
+        "capacidade_horaria": 220.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Reforço do subleito — composição SICRO análoga 4011219 (aterro/reforço com material de jazida, mesma família de equipamentos: caminhão-tanque 10.000L, motoniveladora 93kW, rolo pé-de-carneiro vibratório 11,6t/82kW) afirma textualmente que 'o rolo é o equipamento com menor produção horária, limitando a produtividade da equipe mecânica' (PHE=168,20 m³/h na composição de referência, ditada unicamente pelo rolo) — confirmação direta do modelo de gargalo entre capacidades independentes. Reforço de subleito exige apenas ~95% da energia normal de compactação (menos passadas), o que é consistente com o valor real mais alto (220 m³/h) desta operação frente a sub-base/base (100% Proctor modificado, mais passadas). Sem correspondência numérica exata confirmada para o rolo específico do catálogo — aceito o valor real como capacidade calibrada."
+      },
+      {
+        "elemento_id": "E0028",
+        "capacidade_horaria": 660.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Motoniveladora 120HP tem folga confirmada — nas composições de referência pesquisadas (SICRO 4011219/4011320), o rolo é sempre citado como elemento limitante, nunca a motoniveladora. Valor não-vinculante, alto o suficiente para nunca ser o gargalo derivado."
+      },
+      {
+        "elemento_id": "E0010",
+        "capacidade_horaria": 880.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão-pipa 10.000L (umedecimento) tem folga — atua em ciclos intermitentes de aspersão, não em fluxo contínuo limitante. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "E0008",
+        "capacidade_horaria": 880.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Caminhão basculante 16m³ (suprimento de material) — insumo de fluxo de entrada, não codeterminante da produtividade de equipe (compactação domina, cf. composições SICRO 4011219/4011320). Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "E0035"
+  }
 }

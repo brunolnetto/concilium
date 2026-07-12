@@ -32,5 +32,18 @@
       }
     ]
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "E0026",
+        "capacidade_horaria": 37.5,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Escavação de canaleta de drenagem superficial com retroescavadeira 75HP. Seção trapezoidal rasa e aberta (sem necessidade de paredes verticais precisas nem espaço para assentar tubo) permite ciclo de escavação mais rápido que vala de tubo/bueiro (mesma máquina, ~15,7 m³/h nessa aplicação, cf. cluster 1 rfi-r02) — menos giro de precisão, descarga direta nas laterais, profundidade menor. Fontes gerais (Orçamentor/SINAPI, DER-ES) reportam faixa de 15-30 m³/h para retroescavadeiras em valas comuns; o valor real (37,5 m³/h) fica no limite superior/levemente acima dessa faixa genérica — plausível pela geometria mais rasa, mas sem confirmação numérica direta na fonte pesquisada. Aceito o valor real como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "E0026"
+  }
 }

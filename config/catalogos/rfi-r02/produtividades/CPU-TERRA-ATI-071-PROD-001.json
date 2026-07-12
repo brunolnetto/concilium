@@ -27,5 +27,18 @@
     ],
     "equipamentos": []
   },
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "P0037",
+        "capacidade_horaria": 6.25,
+        "unidade": "m²",
+        "fonte": "medicao_obra",
+        "justificativa": "Calibração reversa direta — serviço terceirizado/sem equipamento na composição, capacidade_horaria = valor_horario / num_pessoas do papel primário (trade especializado da operação). Sem etapa mecanizada a pesquisar."
+      }
+    ],
+    "gargalo_declarado": "P0037"
+  }
 }
