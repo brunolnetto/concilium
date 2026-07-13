@@ -77,11 +77,31 @@ def _catalogo_minimo() -> dict:
                         "categoria_custo": "MATERIAL",
                         "coeficiente": 1.0,
                         "unidade": "m3",
-                    }
+                    },
+                    # ADR-138: fallback (Fonte 2) falha alto se MAO_OBRA/EQUIPAMENTO estiverem
+                    # totalmente ausentes de composicao_itens. Este fixture testa paridade entre
+                    # a skill unificada e a sequência separada, não o gap de MO/EQ — mantém as
+                    # duas categorias presentes com preço zero para não afetar os totais testados.
+                    {
+                        "insumo_id": "INS-MO",
+                        "categoria_custo": "MAO_OBRA",
+                        "coeficiente": 1.0,
+                        "unidade": "un",
+                    },
+                    {
+                        "insumo_id": "INS-EQ",
+                        "categoria_custo": "EQUIPAMENTO",
+                        "coeficiente": 1.0,
+                        "unidade": "un",
+                    },
                 ],
             }
         ],
-        "insumos": [{"codigo": "INS-1", "unidade": "m3", "preco_unitario": 10.0}],
+        "insumos": [
+            {"codigo": "INS-1", "unidade": "m3", "preco_unitario": 10.0},
+            {"codigo": "INS-MO", "unidade": "un", "preco_unitario": 0.0},
+            {"codigo": "INS-EQ", "unidade": "un", "preco_unitario": 0.0},
+        ],
         "produtividades": [{"id": "P-1", "valor_horario": 1.0}],
     }
 
