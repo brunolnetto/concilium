@@ -35,6 +35,7 @@ import asyncio
 import json
 import os
 import platform
+import re
 import socket
 import sys
 import threading
@@ -114,19 +115,45 @@ def _build_mcp_request_headers(access_token: str | None, session_id: str) -> dic
     return headers
 
 
+# SSE (RFC 8895) só reconhece CRLF/CR/LF como terminador de linha — o mesmo
+# conjunto usado por `ServerSentEvent._LINE_SEP_EXPR` no sse_starlette (servidor)
+# para codificar o evento. NÃO usar `str.splitlines()` (nem `httpx.Response.
+# iter_lines()`, cuja doc diz textualmente "has the same behaviour as the
+# stdlib splitlines"): ambos também quebram em U+2028/U+2029 (LINE/PARAGRAPH
+# SEPARATOR) e em \v, \f, \x1c-\x1e, \x85 — caracteres VÁLIDOS e NÃO-ESCAPADOS
+# dentro de uma string JSON (nem `json.dumps` nem o `model_dump_json` do
+# pydantic os escapam). Uma description de tool ou campo de schema contendo um
+# desses caracteres — muito mais provável num payload grande de tools/list do
+# que nos payloads quase vazios de prompts/list e resources/list — fragmenta o
+# evento `data:` no meio: só o prefixo (que ainda começa com "data:") é
+# capturado, e o resto da mensagem — inclusive as chaves de fechamento — é
+# descartado silenciosamente, corrompendo a resposta JSON-RPC.
+_SSE_LINE_SEP = re.compile(r"\r\n|\r|\n")
+
+
+def _split_sse_lines(text: str) -> list[str]:
+    """Divide texto SSE em linhas lógicas — apenas por CRLF/CR/LF (ver nota acima)."""
+    return _SSE_LINE_SEP.split(text)
+
+
 def _parse_sse_stream_response(resp) -> dict:
-    # Resposta SSE - extrai linha "data: {...}"
-    result_json = None
+    # Resposta SSE - extrai linha "data: {...}". Lê os bytes brutos em vez de
+    # usar resp.iter_lines() (que fragmenta em U+2028/U+2029, ver _split_sse_lines).
+    body_bytes = b""
     try:
-        for line in resp.iter_lines():
-            if line.startswith("data:"):
-                data = line[5:].strip()
-                if data and data != "[DONE]":
-                    result_json = data
-                    break
+        for chunk in resp.iter_bytes():
+            body_bytes += chunk
     except Exception:
         # Servidor pode fechar conexão prematuramente - isso é OK se já temos dados
         pass
+
+    result_json = None
+    for line in _split_sse_lines(body_bytes.decode("utf-8", errors="replace")):
+        if line.startswith("data:"):
+            data = line[5:].strip()
+            if data and data != "[DONE]":
+                result_json = data
+                break
 
     if not result_json:
         raise RuntimeError("Nenhum dado recebido no SSE stream")
@@ -445,8 +472,9 @@ def _post_bridge_message(http_client, mcp_url: str, line: str, token: str, sessi
 def _write_bridge_response(resp) -> None:
     content_type = resp.headers.get("content-type", "")
     if "text/event-stream" in content_type:
-        # SSE: emit each data event as a separate line
-        for event_line in resp.text.splitlines():
+        # SSE: emit each data event as a separate line. Usa _split_sse_lines
+        # (não resp.text.splitlines()) — ver nota em _parse_sse_stream_response.
+        for event_line in _split_sse_lines(resp.text):
             if event_line.startswith("data:"):
                 data = event_line[5:].strip()
                 if data and data != "[DONE]":

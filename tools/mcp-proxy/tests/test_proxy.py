@@ -131,6 +131,53 @@ class TestLoadSaveCache:
 
 
 # ---------------------------------------------------------------------------
+# _split_sse_lines
+# ---------------------------------------------------------------------------
+
+
+class TestSplitSseLines:
+    """_split_sse_lines must only break on CRLF/CR/LF — never on the wider
+    set of "line separators" that str.splitlines() (and httpx's iter_lines())
+    recognize, since some of those (U+2028, U+2029 in particular) are valid,
+    unescaped content inside a JSON string value.
+    """
+
+    def test_splits_on_lf(self):
+        assert proxy_mod._split_sse_lines("a\nb\nc") == ["a", "b", "c"]
+
+    def test_splits_on_crlf(self):
+        assert proxy_mod._split_sse_lines("a\r\nb\r\nc") == ["a", "b", "c"]
+
+    def test_splits_on_bare_cr(self):
+        assert proxy_mod._split_sse_lines("a\rb\rc") == ["a", "b", "c"]
+
+    def test_does_not_split_on_unicode_line_separator(self):
+        """U+2028 (LINE SEPARATOR) must be preserved as ordinary content."""
+        text = "a b"
+        assert proxy_mod._split_sse_lines(text) == ["a b"]
+
+    def test_does_not_split_on_unicode_paragraph_separator(self):
+        """U+2029 (PARAGRAPH SEPARATOR) must be preserved as ordinary content."""
+        text = "a b"
+        assert proxy_mod._split_sse_lines(text) == ["a b"]
+
+    def test_does_not_split_on_other_splitlines_specials(self):
+        """\\v, \\f, \\x1c-\\x1e, \\x85 are all recognized by str.splitlines()
+        but are NOT SSE line terminators and must be preserved as content."""
+        for ch in ("\v", "\f", "\x1c", "\x1d", "\x1e", "\x85"):
+            text = f"a{ch}b"
+            assert proxy_mod._split_sse_lines(text) == [text], f"char {ch!r} was incorrectly split"
+
+    def test_a_json_data_event_containing_unicode_line_separator_stays_intact(self):
+        """The regression scenario: a full `data: {...}` SSE event whose JSON
+        payload embeds a raw U+2028 must come back as ONE logical line."""
+        payload = json.dumps({"description": "linha1 linha2"}, ensure_ascii=False)
+        event = f"data: {payload}\n"
+        lines = proxy_mod._split_sse_lines(event)
+        assert lines == [f"data: {payload}", ""]
+
+
+# ---------------------------------------------------------------------------
 # _mcp_call
 # ---------------------------------------------------------------------------
 
@@ -152,10 +199,11 @@ class TestMcpCall:
 
     def test_sse_response_parses_data_line(self):
         """SSE response: first 'data: {...}' line (that isn't [DONE]) is parsed."""
+        sse_text = 'data: {"jsonrpc":"2.0","id":1,"result":{"x":1}}\n\ndata: [DONE]\n'
         resp = _FakeStreamResponse(
             status_code=200,
             headers={"content-type": "text/event-stream"},
-            lines=['data: {"jsonrpc":"2.0","id":1,"result":{"x":1}}', "", "data: [DONE]"],
+            chunks=[sse_text.encode()],
         )
         http = _stream_client(resp)
 
@@ -199,7 +247,7 @@ class TestMcpCall:
             proxy_mod._mcp_call(http, "foo", {})
 
     def test_sse_no_data_raises(self):
-        resp = _FakeStreamResponse(status_code=200, headers={"content-type": "text/event-stream"}, lines=[])
+        resp = _FakeStreamResponse(status_code=200, headers={"content-type": "text/event-stream"}, chunks=[])
         http = _stream_client(resp)
 
         with (
@@ -226,10 +274,11 @@ class TestMcpCall:
 
     def test_sse_skips_non_data_and_done_lines_before_match(self):
         """Non-'data:' lines and 'data: [DONE]' are skipped until a real data line is found."""
+        sse_text = 'event: ping\ndata: [DONE]\ndata: {"jsonrpc":"2.0","id":1,"result":{"z":9}}\n'
         resp = _FakeStreamResponse(
             status_code=200,
             headers={"content-type": "text/event-stream"},
-            lines=["event: ping", "data: [DONE]", 'data: {"jsonrpc":"2.0","id":1,"result":{"z":9}}'],
+            chunks=[sse_text.encode()],
         )
         http = _stream_client(resp)
 
@@ -241,13 +290,13 @@ class TestMcpCall:
     def test_sse_exception_during_iteration_before_any_data_raises(self):
         """If the server closes the stream before any usable data line, 'Nenhum dado' is raised."""
 
-        class _RaisingLines:
+        class _RaisingBytes:
             def __iter__(self):
-                yield "event: ping"
+                yield b"event: ping\n"
                 raise ConnectionError("closed early")
 
         resp = _FakeStreamResponse(status_code=200, headers={"content-type": "text/event-stream"})
-        resp.iter_lines = lambda: _RaisingLines()
+        resp.iter_bytes = lambda chunk_size=None: _RaisingBytes()
         http = _stream_client(resp)
 
         with (
@@ -255,6 +304,27 @@ class TestMcpCall:
             pytest.raises(RuntimeError, match="SSE"),
         ):
             proxy_mod._mcp_call(http, "foo", {})
+
+    def test_sse_data_with_unicode_line_separator_is_not_truncated(self):
+        """A U+2028/U+2029 embedded in the JSON string value must not truncate the message.
+
+        Both characters are valid, UNESCAPED JSON string content (json.dumps and
+        pydantic's model_dump_json don't escape them), but str.splitlines() /
+        httpx's iter_lines() treat them as line breaks — see _split_sse_lines.
+        """
+        payload = {"jsonrpc": "2.0", "id": 1, "result": {"description": "linha1 linha2 linha3"}}
+        sse_text = "data: " + json.dumps(payload, ensure_ascii=False) + "\n"
+        resp = _FakeStreamResponse(
+            status_code=200,
+            headers={"content-type": "text/event-stream"},
+            chunks=[sse_text.encode("utf-8")],
+        )
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            result = proxy_mod._mcp_call(http, "foo", {})
+
+        assert result == {"description": "linha1 linha2 linha3"}
 
     def test_json_exception_during_iteration_with_bytes_already_captured(self):
         """If the server closes the connection after sending bytes, the partial body is parsed."""
@@ -817,6 +887,67 @@ class TestBridge:
         assert len(out_lines) == 2  # [DONE] is skipped
         assert json.loads(out_lines[0])["event"] == "a"
         assert json.loads(out_lines[1])["event"] == "b"
+
+    @pytest.mark.asyncio
+    async def test_sse_data_with_unicode_line_separator_is_not_truncated(self, tmp_path, capsys):
+        """A tools/list-sized response whose JSON contains a raw U+2028/U+2029
+        character must not be corrupted.
+
+        U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR) are valid,
+        UNESCAPED content inside a JSON string per the JSON spec — neither
+        `json.dumps` nor pydantic's `model_dump_json` escape them. But
+        `str.splitlines()` (unlike a plain '\\n'/'\\r' split) treats both as
+        line breaks. A `tools/list` response — carrying many tool
+        descriptions and JSON schemas — is far more likely to contain one of
+        these characters than the near-empty `prompts/list`/`resources/list`
+        payloads, which is exactly the size-dependent failure pattern
+        observed in production: a naive `resp.text.splitlines()` fragments
+        the single logical SSE `data:` event at that character, writes only
+        the truncated prefix (which still starts with 'data:') to stdout,
+        and silently drops the remainder — corrupting the JSON-RPC message.
+        """
+        state = proxy_mod._State(access_token="tok", expire_at=time.time() + 3600)
+        http = MagicMock()
+
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "result": {
+                "tools": [
+                    {"name": "t1", "description": "linha1 linha2 linha3"},
+                ]
+            },
+        }
+        sse_body = "data: " + json.dumps(payload, ensure_ascii=False) + "\n"
+        server_resp = _make_response(200, "", headers={"content-type": "text/event-stream"})
+        server_resp.text = sse_body
+        server_resp.json.side_effect = Exception("not json")
+        http.post.return_value = server_resp
+
+        lines_iter = iter(['{"id":9,"method":"tools/list"}\n', ""])
+
+        loop = asyncio.get_event_loop()
+        original_run_in_executor = loop.run_in_executor
+
+        async def patched_run_in_executor(executor, func, *args):
+            return next(lines_iter)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            loop.run_in_executor = patched_run_in_executor
+            try:
+                await proxy_mod._bridge(state, http)
+            finally:
+                loop.run_in_executor = original_run_in_executor
+
+        out = capsys.readouterr().out
+        # Exactly one physical write (one trailing '\n') — the JSON-RPC
+        # message itself may legitimately still contain a raw U+2028/U+2029
+        # inside a string value, so we must not use str.splitlines() here
+        # either to count "lines".
+        assert out.count("\n") == 1, f"expected exactly one stdout write, got: {out!r}"
+        data = json.loads(out.rstrip("\n"))
+        assert data["id"] == 9
+        assert data["result"]["tools"][0]["description"] == "linha1 linha2 linha3"
 
     @pytest.mark.asyncio
     async def test_401_triggers_retry_with_fresh_token(self, tmp_path, capsys):
