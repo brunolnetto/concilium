@@ -28,6 +28,13 @@
         "equip_id": "EQ-E0002",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-GUIA-CONCRETO-PADRAO",
+        "consumo_por_hora": 15.0,
+        "unidade": "m"
+      }
     ]
   },
   "historico_observacoes": []

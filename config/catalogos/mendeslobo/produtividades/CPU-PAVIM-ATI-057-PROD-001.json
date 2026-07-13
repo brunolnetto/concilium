@@ -28,6 +28,13 @@
         "equip_id": "EQ-E0010",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-CONCRETO-FCP-25MPA",
+        "consumo_por_hora": 0.318501,
+        "unidade": "t"
+      }
     ]
   },
   "historico_observacoes": []

@@ -28,6 +28,13 @@
         "equip_id": "EQ-E0036",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-BDTC-CORPO-DN1200-PA2",
+        "consumo_por_hora": 149.51,
+        "unidade": "m3"
+      }
     ]
   },
   "historico_observacoes": []

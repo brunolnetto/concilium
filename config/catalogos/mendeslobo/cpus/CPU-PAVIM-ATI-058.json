@@ -4,12 +4,6 @@
   "unidade": "m2",
   "origem": "PROPRIA",
   "categoria": "PAVIMENTACAO",
-  "composicao_itens": [
-    {
-      "insumo_id": "MA-EMULSAO-RR-2C",
-      "coeficiente": 0.072,
-      "categoria_custo": "MATERIAL"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-PAVIM-ATI-058-PROD-001"
 }

@@ -27,6 +27,18 @@
         "equip_id": "EQ-RETRO-ESCAV",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-MANILHA-CERAM-300",
+        "consumo_por_hora": 12.119625,
+        "unidade": "m"
+      },
+      {
+        "insumo_id": "MA-AREIA-MEDIA",
+        "consumo_por_hora": 4.84785,
+        "unidade": "m3"
+      }
     ]
   },
   "historico_observacoes": [],

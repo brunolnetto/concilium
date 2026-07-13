@@ -14,7 +14,24 @@
         "num_pessoas": 2
       }
     ],
-    "equipamentos": []
+    "equipamentos": [],
+    "materiais": [
+      {
+        "insumo_id": "MA-CIMENTO-CPII-50KG",
+        "consumo_por_hora": 7.0,
+        "unidade": "saco"
+      },
+      {
+        "insumo_id": "MA-AREIA-MEDIA",
+        "consumo_por_hora": 0.45,
+        "unidade": "m3"
+      },
+      {
+        "insumo_id": "MA-BRITA-1",
+        "consumo_por_hora": 0.6,
+        "unidade": "m3"
+      }
+    ]
   },
   "historico_observacoes": [],
   "valor_horario": 0.25

@@ -19,7 +19,14 @@
         "num_pessoas": 2
       }
     ],
-    "equipamentos": []
+    "equipamentos": [],
+    "materiais": [
+      {
+        "insumo_id": "MA-GUIA-CONCRETO-PADRAO",
+        "consumo_por_hora": 15.0,
+        "unidade": "m"
+      }
+    ]
   },
   "historico_observacoes": []
 }

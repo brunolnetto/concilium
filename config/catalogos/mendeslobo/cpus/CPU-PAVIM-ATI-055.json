@@ -4,12 +4,6 @@
   "unidade": "m3",
   "origem": "PROPRIA",
   "categoria": "PAVIMENTACAO",
-  "composicao_itens": [
-    {
-      "insumo_id": "MA-BDTC-CORPO-DN1000-PA2",
-      "coeficiente": 0.607143,
-      "categoria_custo": "MATERIAL"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-PAVIM-ATI-055-PROD-001"
 }
