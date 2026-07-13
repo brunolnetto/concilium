@@ -4,12 +4,6 @@
   "unidade": "m",
   "origem": "PROPRIA",
   "categoria": "OBRAS_ARTE",
-  "composicao_itens": [
-    {
-      "insumo_id": "MA-BDTC-TUBO-DN1200-PA2",
-      "coeficiente": 1.0,
-      "categoria_custo": "MATERIAL"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-OBRAS-ATI-031-PROD-001"
 }

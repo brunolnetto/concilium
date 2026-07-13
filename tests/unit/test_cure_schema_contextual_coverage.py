@@ -233,7 +233,12 @@ class TestCureContextualComposicaoItensVazia:
         assert cpus[0]["composicao_itens"] == []
         assert report.fixed
 
-    def test_synthesizes_from_producao_equipe_apply(self):
+    def test_does_not_synthesize_mao_obra_equipamento_from_equipe_apply(self):
+        """ADR-138: MAO_OBRA/EQUIPAMENTO não são mais sintetizados em composicao_itens
+
+        a partir de Producao.composicao_padrao_equipe — mesmo com apply=True e dados de
+        equipe presentes, o resultado é manual+skipped (revisão econômica), não síntese.
+        """
         cpus = [{"codigo": "X2", "composicao_itens": [], "producao_id_ref": "P2"}]
         prods = [
             {
@@ -250,46 +255,13 @@ class TestCureContextualComposicaoItensVazia:
         ]
         report = _report()
         cure_contextual(cpus, prods, insumos, report, apply=True)
-        itens = cpus[0]["composicao_itens"]
-        assert {"insumo_id": "MO-1", "coeficiente": 2.0, "categoria_custo": "MAO_OBRA"} in itens
-        assert {"insumo_id": "EQ-1", "coeficiente": 1.0, "categoria_custo": "EQUIPAMENTO"} in itens
-        assert any("sintetizada a partir da equipe" in m for m in report.fixed)
-
-    def test_synthesizes_skips_non_positive_and_unknown(self):
-        cpus = [{"codigo": "X3", "composicao_itens": [], "producao_id_ref": "P3"}]
-        prods = [
-            {
-                "id": "P3",
-                "composicao_padrao_equipe": {
-                    "funcoes": [
-                        {"funcao_id": "MO-UNKNOWN", "num_pessoas": 2},
-                        {"funcao_id": "MO-1", "num_pessoas": 0},
-                        {"funcao_id": "MO-2", "num_pessoas": "not-a-number"},
-                        "not-a-dict",
-                    ],
-                    "equipamentos": [
-                        {"equip_id": "EQ-UNKNOWN", "num_unidades": 1},
-                        {"equip_id": "EQ-1", "num_unidades": 0},
-                        {"equip_id": "EQ-2", "num_unidades": "not-a-number"},
-                        "not-a-dict",
-                    ],
-                },
-            }
-        ]
-        insumos = [
-            {"codigo": "MO-1", "tipo": "MAO_OBRA"},
-            {"codigo": "MO-2", "tipo": "MAO_OBRA"},
-            {"codigo": "EQ-1", "tipo": "EQUIPAMENTO"},
-            {"codigo": "EQ-2", "tipo": "EQUIPAMENTO"},
-        ]
-        report = _report()
-        cure_contextual(cpus, prods, insumos, report, apply=True)
-        # nenhum item sobrevive aos filtros -> nada sintetizado -> manual+skipped
-        assert "composicao_itens" not in cpus[0] or cpus[0].get("composicao_itens") == []
+        assert cpus[0]["composicao_itens"] == []
         assert any("sem candidato único de insumo" in m for m in report.manual)
         assert any("permitido no schema" in m for m in report.skipped)
+        assert report.fixed == []
 
-    def test_synthesizes_dry_run_does_not_mutate(self):
+    def test_does_not_synthesize_regardless_of_apply_flag(self):
+        """Mesmo comportamento (nenhuma síntese) independente de apply=True/False."""
         cpus = [{"codigo": "X2B", "composicao_itens": [], "producao_id_ref": "P2B"}]
         prods = [
             {
@@ -304,7 +276,8 @@ class TestCureContextualComposicaoItensVazia:
         report = _report()
         cure_contextual(cpus, prods, insumos, report, apply=False)
         assert cpus[0]["composicao_itens"] == []
-        assert any("sintetizada a partir da equipe" in m for m in report.fixed)
+        assert any("sem candidato único de insumo" in m for m in report.manual)
+        assert report.fixed == []
 
     def test_no_candidate_and_no_producao_ref(self):
         cpus = [{"codigo": "X4", "composicao_itens": []}]

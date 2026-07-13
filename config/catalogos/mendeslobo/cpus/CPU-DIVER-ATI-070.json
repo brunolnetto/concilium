@@ -4,27 +4,6 @@
   "unidade": "km",
   "origem": "PROPRIA",
   "categoria": "DIVERSOS",
-  "composicao_itens": [
-    {
-      "insumo_id": "MO-TOPOGRAFO",
-      "coeficiente": 1.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-AUX-TOPO",
-      "coeficiente": 2.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "EQ-E0013",
-      "coeficiente": 1.0,
-      "categoria_custo": "EQUIPAMENTO"
-    },
-    {
-      "insumo_id": "EQ-E0042",
-      "coeficiente": 1.0,
-      "categoria_custo": "EQUIPAMENTO"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-DIVER-ATI-070-PROD-001"
 }

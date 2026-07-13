@@ -20,6 +20,13 @@
         "equip_id": "EQ-E0026",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-DRENO-PVC-BRITA-KIT",
+        "consumo_por_hora": 6.67,
+        "unidade": "m"
+      }
     ]
   },
   "historico_observacoes": []

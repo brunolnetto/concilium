@@ -187,7 +187,21 @@ class Insumo(BaseModel):
 
 
 class ComposicaoItem(BaseModel):
-    """Linha da composição de uma CPU: insumo × coeficiente × categoria de custo."""
+    """Linha da composição de uma CPU: insumo × coeficiente × categoria de custo.
+
+    ADR-138 (Fase 1): escopo reduzido a `categoria_custo` MATERIAL/DIESEL.
+    MAO_OBRA/EQUIPAMENTO foram removidos dos catálogos de produção
+    (`mendeslobo`/`rfi-r02`/`samples`) — essas categorias eram redundantes com
+    `Producao.composicao_padrao_equipe` (via `producao_id_ref`), que é a única
+    fonte confiável de MAO_OBRA/EQUIPAMENTO na precificação bottom-up canônica
+    (NEP-032 D1). O tipo `CategoriaCusto` ainda aceita MAO_OBRA/EQUIPAMENTO por
+    retrocompatibilidade com catálogos legados/fixtures de teste, e o fallback
+    de precificação (`_preco_cat_fallback_composicao`) falha alto
+    (`VAL-PLAN-MO-EQ-SEM-FONTE`) se for acionado sem nenhuma linha dessas
+    categorias — não deve ser usado para popular dado novo. MATERIAL/DIESEL
+    permanecem aqui porque não têm hoje outra fonte no modelo (ADR-138 Fase 2
+    pendente — ver docs/engineering/2-architecture/adrs/adr-138-*.md).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -312,6 +326,16 @@ class CPU(BaseModel):
     Esses campos eram redundantes e geravam assincronia com o catálogo de Produtividades.
     Catálogos legados que ainda enviam esses campos têm-nos silenciosamente ignorados
     via extra='ignore' e devem ser migrados com scripts/refactor_cpu_producao_adr053.py.
+
+    ADR-138 (Fase 1): composicao_itens NÃO contém mais linhas MAO_OBRA/EQUIPAMENTO
+    em mendeslobo/rfi-r02 — essas categorias são sourced exclusivamente de
+    Produtividade.composicao_padrao_equipe (via producao_id_ref), a mesma entidade
+    referenciada acima. composicao_itens agora é escopo de MATERIAL/DIESEL nesses
+    catálogos, que ainda não têm outra fonte no modelo (Fase 2 pendente). Migração
+    feita com scripts/catalog/strip_composicao_itens_mo_eq.py. O catálogo `samples`
+    é deliberadamente EXCLUÍDO dessa migração — sua Produtividade não tem
+    composicao_padrao_equipe (dado incompleto), então ali composicao_itens
+    MAO_OBRA/EQUIPAMENTO ainda é a fonte de preço ativa (ver ADR-138 §P5).
     """
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)

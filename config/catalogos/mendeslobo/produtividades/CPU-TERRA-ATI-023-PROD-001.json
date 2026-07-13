@@ -28,6 +28,13 @@
         "equip_id": "EQ-E0036",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-BRITA-GRADUADA",
+        "consumo_por_hora": 138.0,
+        "unidade": "m3"
+      }
     ]
   },
   "historico_observacoes": []

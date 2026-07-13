@@ -4,22 +4,6 @@
   "unidade": "m2",
   "origem": "PROPRIA",
   "categoria": "TERRAPLENAGEM",
-  "composicao_itens": [
-    {
-      "insumo_id": "MO-OPER-ESCAV",
-      "coeficiente": 1.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-AJUDANTE",
-      "coeficiente": 2.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "EQ-E0016",
-      "coeficiente": 1.0,
-      "categoria_custo": "EQUIPAMENTO"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-TERRA-ATI-002-PROD-001"
 }

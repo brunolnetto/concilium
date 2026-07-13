@@ -19,7 +19,14 @@
         "num_pessoas": 4
       }
     ],
-    "equipamentos": []
+    "equipamentos": [],
+    "materiais": [
+      {
+        "insumo_id": "MA-PISO-INTERTR-10CM",
+        "consumo_por_hora": 25.0,
+        "unidade": "m2"
+      }
+    ]
   },
   "historico_observacoes": []
 }

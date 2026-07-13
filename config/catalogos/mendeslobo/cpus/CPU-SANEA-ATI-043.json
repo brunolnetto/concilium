@@ -4,32 +4,6 @@
   "unidade": "m",
   "origem": "PROPRIA",
   "categoria": "SANEAMENTO",
-  "composicao_itens": [
-    {
-      "insumo_id": "MO-ENCARREG-AGUA",
-      "coeficiente": 1.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-MONTADOR-AGUA",
-      "coeficiente": 2.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-AJUDANTE",
-      "coeficiente": 2.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "EQ-E0026",
-      "coeficiente": 1.0,
-      "categoria_custo": "EQUIPAMENTO"
-    },
-    {
-      "insumo_id": "EQ-E0027",
-      "coeficiente": 1.0,
-      "categoria_custo": "EQUIPAMENTO"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-SANEA-ATI-043-PROD-001"
 }

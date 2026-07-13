@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from statistics import median
-from typing import Any, cast
 
 from ._core import (
     CurationReport,
@@ -111,47 +110,6 @@ def _cure_contextual_normalize_insumo_codes(
     _apply_insumo_code_remap(cpus, prods, remap)
 
 
-def _cure_contextual_synthesized_item(
-    raw: object, id_key: str, qty_key: str, insumo_by_code: dict[str, dict]
-) -> dict | None:
-    if not isinstance(raw, dict):
-        return None
-    item = cast("dict[str, Any]", raw)
-    insumo_id = item.get(id_key)
-    if not isinstance(insumo_id, str) or insumo_id not in insumo_by_code:
-        return None
-    qtd: Any = item.get(qty_key)
-    try:
-        coef = float(qtd)
-    except Exception:
-        coef = 0.0
-    if coef <= 0:
-        return None
-    tipo = (insumo_by_code.get(insumo_id) or {}).get("tipo")
-    return {
-        "insumo_id": insumo_id,
-        "coeficiente": coef,
-        "categoria_custo": _categoria_custo_from_tipo(tipo if isinstance(tipo, str) else None),
-    }
-
-
-def _cure_contextual_synthesize_composicao_from_equipe(equipe: dict, insumo_by_code: dict[str, dict]) -> list[dict]:
-    synthesized: list[dict] = []
-    raw_funcoes = equipe.get("funcoes")
-    funcoes = raw_funcoes if isinstance(raw_funcoes, list) else []
-    for f in funcoes:
-        item = _cure_contextual_synthesized_item(f, "funcao_id", "num_pessoas", insumo_by_code)
-        if item is not None:
-            synthesized.append(item)
-    raw_equipamentos = equipe.get("equipamentos")
-    equipamentos = raw_equipamentos if isinstance(raw_equipamentos, list) else []
-    for e in equipamentos:
-        item = _cure_contextual_synthesized_item(e, "equip_id", "num_unidades", insumo_by_code)
-        if item is not None:
-            synthesized.append(item)
-    return synthesized
-
-
 def _cure_contextual_sintetiza_composicao_via_equipe(
     cpu: dict,
     codigo: str,
@@ -160,20 +118,19 @@ def _cure_contextual_sintetiza_composicao_via_equipe(
     report: CurationReport,
     apply: bool,
 ) -> None:
-    # fallback de negócio: sintetiza composição a partir da equipe da produção referenciada
-    prod_ref = cpu.get("producao_id_ref")
-    prod = prod_by_id.get(prod_ref) if isinstance(prod_ref, str) else None
-    equipe = (prod or {}).get("composicao_padrao_equipe") if isinstance(prod, dict) else None
-    synthesized: list[dict] = []
-    if isinstance(equipe, dict):
-        synthesized = _cure_contextual_synthesize_composicao_from_equipe(equipe, insumo_by_code)
-    if synthesized:
-        if apply:
-            cpu["composicao_itens"] = synthesized
-        report.add_fixed(f"CPU {codigo}: composicao_itens sintetizada a partir da equipe da produção {prod_ref}")
-    else:
-        report.add_manual(f"CPU {codigo}: composicao_itens vazia sem candidato único de insumo")
-        report.add_skipped(f"CPU {codigo}: composicao_itens vazia (permitido no schema; revisar economicamente depois)")
+    """ADR-138: composicao_itens agora é escopo exclusivo de MATERIAL/DIESEL.
+
+    Antes desta ADR, quando não havia candidato MATERIAL único (`MA-{codigo}`),
+    esta função sintetizava linhas MAO_OBRA/EQUIPAMENTO em `composicao_itens` a
+    partir de `Producao.composicao_padrao_equipe` — exatamente a redundância que
+    ADR-138 remove (MAO_OBRA/EQUIPAMENTO agora só têm fonte confiável ali, nunca
+    em `composicao_itens`). Não há, hoje, um caminho equivalente de síntese para
+    MATERIAL/DIESEL a partir da equipe (`MaterialEquipe` é consumo horário
+    operacional, não BOM por unidade de produto — ADR-138 Fase 2 pendente), então
+    esta função apenas registra a lacuna para revisão manual/econômica.
+    """
+    report.add_manual(f"CPU {codigo}: composicao_itens vazia sem candidato único de insumo")
+    report.add_skipped(f"CPU {codigo}: composicao_itens vazia (permitido no schema; revisar economicamente depois)")
 
 
 def _cure_contextual_fill_composicao_itens_vazia(

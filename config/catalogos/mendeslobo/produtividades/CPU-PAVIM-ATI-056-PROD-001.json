@@ -28,6 +28,13 @@
         "equip_id": "EQ-E0010",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-EMULSAO-RR-2C-IMPRIMACAO",
+        "consumo_por_hora": 900.0,
+        "unidade": "m2"
+      }
     ]
   },
   "historico_observacoes": []

@@ -43,8 +43,6 @@ from ._cure_contextual import (
     _cure_contextual_inherit_cap_templates,
     _cure_contextual_normalize_insumo_codes,
     _cure_contextual_sintetiza_composicao_via_equipe,
-    _cure_contextual_synthesize_composicao_from_equipe,
-    _cure_contextual_synthesized_item,
     _cure_contextual_valor_horario_row,
     cure_contextual,
 )
@@ -115,8 +113,6 @@ __all__ = [
     "_cure_contextual_inherit_cap_templates",
     "_cure_contextual_normalize_insumo_codes",
     "_cure_contextual_sintetiza_composicao_via_equipe",
-    "_cure_contextual_synthesize_composicao_from_equipe",
-    "_cure_contextual_synthesized_item",
     "_cure_contextual_valor_horario_row",
     "_cure_cpu_dmt_fields",
     "_cure_insumo_cpu_contamination",

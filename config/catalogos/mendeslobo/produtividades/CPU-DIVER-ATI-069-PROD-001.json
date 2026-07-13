@@ -20,6 +20,13 @@
         "equip_id": "EQ-E0001",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-GEOTEXTIL-BIDIM-OP30",
+        "consumo_por_hora": 327.5,
+        "unidade": "m2"
+      }
     ]
   },
   "historico_observacoes": []

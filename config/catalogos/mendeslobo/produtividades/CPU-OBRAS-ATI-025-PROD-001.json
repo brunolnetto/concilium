@@ -28,6 +28,13 @@
         "equip_id": "EQ-E0026",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-BSTC-TUBO-DN1000-PA1",
+        "consumo_por_hora": 1.0,
+        "unidade": "m"
+      }
     ]
   },
   "historico_observacoes": []

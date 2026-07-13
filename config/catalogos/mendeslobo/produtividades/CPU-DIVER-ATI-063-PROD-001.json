@@ -28,6 +28,13 @@
         "equip_id": "EQ-E0026",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-PISO-INTERTR-10CM",
+        "consumo_por_hora": 25.0,
+        "unidade": "m2"
+      }
     ]
   },
   "historico_observacoes": []

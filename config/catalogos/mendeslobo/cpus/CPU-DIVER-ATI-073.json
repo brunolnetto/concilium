@@ -4,12 +4,6 @@
   "unidade": "m2",
   "origem": "PROPRIA",
   "categoria": "DIVERSOS",
-  "composicao_itens": [
-    {
-      "insumo_id": "MO-AJUDANTE",
-      "coeficiente": 2.0,
-      "categoria_custo": "MAO_OBRA"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-DIVER-ATI-073-PROD-001"
 }

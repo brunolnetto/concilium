@@ -9,16 +9,6 @@
       "insumo_id": "MA-DIESEL-S10",
       "coeficiente": 0.12203368,
       "categoria_custo": "DIESEL"
-    },
-    {
-      "insumo_id": "MO-OPER-ESCAV",
-      "coeficiente": 0.005,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "EQ-ESCAV-HID-22T",
-      "coeficiente": 0.005,
-      "categoria_custo": "EQUIPAMENTO"
     }
   ],
   "_nota_integridade": "NEP-029 D5c: composicao_itens incompleta — contém apenas diesel (gap 11.6× vs precos_unitarios_sbdi). MO e equipamentos ausentes. Fonte primária de preço: precos_unitarios_sbdi. Completar composicao_itens com funcoes (P0040/P0001/P0065/P0032) e EQ-E0016 quando produtividade-hora estiver calibrada.",

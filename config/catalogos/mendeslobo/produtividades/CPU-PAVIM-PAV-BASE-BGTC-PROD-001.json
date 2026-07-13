@@ -35,6 +35,13 @@
         "equip_id": "EQ-CAM-BASC-14M3",
         "num_unidades": 2
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-BGTC-MIX",
+        "consumo_por_hora": 23.1,
+        "unidade": "m3"
+      }
     ]
   },
   "historico_observacoes": [],

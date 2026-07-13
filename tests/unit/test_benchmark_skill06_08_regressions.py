@@ -81,7 +81,24 @@ def _catalogo_minimo() -> dict:
                         "categoria_custo": "MATERIAL",
                         "coeficiente": 1.0,
                         "unidade": "m3",
-                    }
+                    },
+                    # ADR-138: fallback (Fonte 2) agora falha alto se MAO_OBRA/EQUIPAMENTO
+                    # estiverem totalmente ausentes de composicao_itens. Este teste exercita
+                    # a hierarquia Fonte 1 × Fonte 2, não o gap de MO/EQ (ver
+                    # test_adr138_composicao_itens_mo_eq_fallback.py) — mantém as duas
+                    # categorias presentes com preço zero para preservar o total=1000 esperado.
+                    {
+                        "insumo_id": "INS-MO",
+                        "categoria_custo": "MAO_OBRA",
+                        "coeficiente": 1.0,
+                        "unidade": "un",
+                    },
+                    {
+                        "insumo_id": "INS-EQ",
+                        "categoria_custo": "EQUIPAMENTO",
+                        "coeficiente": 1.0,
+                        "unidade": "un",
+                    },
                 ],
             }
         ],
@@ -90,7 +107,17 @@ def _catalogo_minimo() -> dict:
                 "codigo": "INS-1",
                 "unidade": "m3",
                 "preco_unitario": 10.0,
-            }
+            },
+            {
+                "codigo": "INS-MO",
+                "unidade": "un",
+                "preco_unitario": 0.0,
+            },
+            {
+                "codigo": "INS-EQ",
+                "unidade": "un",
+                "preco_unitario": 0.0,
+            },
         ],
         "produtividades": [{"id": "P-1", "valor_horario": 1.0}],
     }

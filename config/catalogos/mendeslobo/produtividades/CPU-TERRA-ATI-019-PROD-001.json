@@ -32,6 +32,13 @@
         "equip_id": "EQ-E0010",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-EMULSAO-RR-1C",
+        "consumo_por_hora": 149.51,
+        "unidade": "m3"
+      }
     ]
   },
   "historico_observacoes": []

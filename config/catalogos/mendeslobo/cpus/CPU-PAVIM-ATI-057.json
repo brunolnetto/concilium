@@ -4,12 +4,6 @@
   "unidade": "m2",
   "origem": "PROPRIA",
   "categoria": "PAVIMENTACAO",
-  "composicao_itens": [
-    {
-      "insumo_id": "MA-CONCRETO-FCP-25MPA",
-      "coeficiente": 0.00039,
-      "categoria_custo": "MATERIAL"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-PAVIM-ATI-057-PROD-001"
 }

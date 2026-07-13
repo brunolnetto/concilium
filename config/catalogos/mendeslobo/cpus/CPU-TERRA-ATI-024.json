@@ -4,12 +4,6 @@
   "unidade": "m3",
   "origem": "PROPRIA",
   "categoria": "TERRAPLENAGEM",
-  "composicao_itens": [
-    {
-      "insumo_id": "MA-BTTC-CORPO-DN1200-PA2",
-      "coeficiente": 1.0,
-      "categoria_custo": "MATERIAL"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-TERRA-ATI-024-PROD-001"
 }
