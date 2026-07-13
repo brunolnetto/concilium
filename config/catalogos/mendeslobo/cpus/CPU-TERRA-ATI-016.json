@@ -4,32 +4,6 @@
   "unidade": "m3",
   "origem": "PROPRIA",
   "categoria": "TERRAPLENAGEM",
-  "composicao_itens": [
-    {
-      "insumo_id": "MO-OPER-ESCAV",
-      "coeficiente": 1.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-MOTOR-CAM-BASC",
-      "coeficiente": 5.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-ENCARREG-TERRA",
-      "coeficiente": 1.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "EQ-E0019",
-      "coeficiente": 1.0,
-      "categoria_custo": "EQUIPAMENTO"
-    },
-    {
-      "insumo_id": "EQ-E0007",
-      "coeficiente": 4.0,
-      "categoria_custo": "EQUIPAMENTO"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-TERRA-ATI-016-PROD-001"
 }

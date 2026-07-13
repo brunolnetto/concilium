@@ -4,27 +4,6 @@
   "unidade": "un",
   "origem": "PROPRIA",
   "categoria": "DIVERSOS",
-  "composicao_itens": [
-    {
-      "insumo_id": "MO-OPER-TRATOR-EST",
-      "coeficiente": 1.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-AJUDANTE",
-      "coeficiente": 3.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "MO-ENCARREG-TERRA",
-      "coeficiente": 1.0,
-      "categoria_custo": "MAO_OBRA"
-    },
-    {
-      "insumo_id": "EQ-E0025",
-      "coeficiente": 1.0,
-      "categoria_custo": "EQUIPAMENTO"
-    }
-  ],
+  "composicao_itens": [],
   "producao_id_ref": "CPU-DIVER-ATI-009-PROD-001"
 }
