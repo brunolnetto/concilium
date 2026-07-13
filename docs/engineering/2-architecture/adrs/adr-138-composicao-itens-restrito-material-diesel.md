@@ -1,6 +1,6 @@
 # ADR-138 — Composição de Custo: `composicao_itens` Restrito a MATERIAL/DIESEL
 
-**Status:** ⚠️ Parcialmente Implementado _(Fase 1 — MAO_OBRA/EQUIPAMENTO — ✅ concluída para `mendeslobo`/`rfi-r02`; Fase 2 — MATERIAL/DIESEL — pendente, ver Plano de Implementação)_
+**Status:** ⚠️ Parcialmente Implementado _(Fase 1 — MAO_OBRA/EQUIPAMENTO — ✅ concluída para `mendeslobo`/`rfi-r02`; Fase 2 — MATERIAL — ✅ concluída para as 30 CPUs de `mendeslobo` com BOM genuíno, ver §D7; DIESEL — ⏳ pendente, ver Plano de Implementação)_
 **Data:** 2026-07-13
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-030 (composição tipada de equipes — `ComposicaoPadraoEquipe`/`FuncaoEquipe`/`EquipamentoEquipe`/`MaterialEquipe`), ADR-053 (separação CPU × Produtividade), NEP-032 D1 (hierarquia de fontes de precificação bottom-up)
@@ -34,13 +34,13 @@ Isso tem duas consequências diretas para esta ADR:
 1. **`samples` não pode ser migrado nesta Fase 1** — remover as linhas EQUIPAMENTO de `samples/cpus.json` destruiria a única fonte de preço de equipamento que essas 11 CPUs têm hoje, quebrando o argumento de "byte-idêntico" que sustenta a Fase 1.
 2. **O fail-loud da Fonte 2 (D2) só afeta 1 das 11 CPUs de `samples` independentemente da migração de dado** — dado o gate "E" de D2 (ver D2), 10 das 11 CPUs de `samples` têm ao menos uma linha EQUIPAMENTO em `composicao_itens` e continuam sendo precificadas exatamente como antes (mesmo `VAL-EQUIP-DECOMP` AVISO pré-existente, mão de obra assumida embutida no rate do equipamento — comportamento já estabelecido pelo ADR-023, não alterado por este ADR). Apenas `POCO-VISITA-PADRAO` — cujo `composicao_itens` é 100% MATERIAL (sem nenhuma linha EQUIPAMENTO nem MAO_OBRA; é um poço de visita construído em alvenaria manual, sem máquina) — passa a disparar `VAL-PLAN-MO-EQ-SEM-FONTE` e deixa de ser precificável. Isso é **intencional e aceito** (ver D6) — é a correção de um bug real de dado incompleto (mão de obra de alvenaria nunca contabilizada) nessa CPU específica, não uma regressão introduzida por esta ADR. Verificação: nenhum teste do repositório carrega `config/catalogos/samples` por `catalogo_id` para asserção de preço (`grep` não encontrou `load_catalogo("samples")`/`ProjectStore.init(..., "samples")` em `tests/`) — o impacto é isolado a essa única CPU de um catálogo de exemplo, sem regressão de teste.
 
-### Fora de escopo desta ADR (Fase 2)
+### Fora de escopo desta ADR (Fase 2 original — MATERIAL migrado desde então, ver §D7)
 
-MATERIAL e DIESEL **não** têm hoje outra fonte no modelo:
-- **MATERIAL**: `MaterialEquipe` (ADR-030 D2) modela consumo direto **por hora de operação da equipe** (`consumo_por_hora`), não uma lista de materiais por unidade de produto (BOM) como `composicao_itens` MATERIAL representa. Migrar exigiria decidir se/como normalizar entre as duas bases (hora de operação × unidade de produto), o que é uma decisão de dado/produto, não uma refatoração mecânica.
-- **DIESEL**: `EquipamentoEquipe` (ADR-030 D1) tem apenas `consumo_litros_hora_estimado` agregado por equipamento — não há campo para o insumo de combustível específico (ex.: tipo de diesel, fornecedor) que `composicao_itens` DIESEL carrega.
+Na formulação original desta ADR, MATERIAL e DIESEL não tinham outra fonte no modelo:
+- **MATERIAL**: `MaterialEquipe` (ADR-030 D2) modela consumo direto **por hora de operação da equipe** (`consumo_por_hora`), não uma lista de materiais por unidade de produto (BOM) como `composicao_itens` MATERIAL representa. Migrar exigiria decidir se/como normalizar entre as duas bases (hora de operação × unidade de produto), o que foi tratado como decisão de dado/produto — resolvida e implementada em §D7 (Fase 2 MATERIAL): a normalização usa `consumo_por_hora = coeficiente × valor_horario`.
+- **DIESEL**: `EquipamentoEquipe` (ADR-030 D1) tem apenas `consumo_litros_hora_estimado` agregado por equipamento — não há campo para o insumo de combustível específico (ex.: tipo de diesel, fornecedor) que `composicao_itens` DIESEL carrega. Isso **permanece** fora de escopo (ver §D7 nota final) — nenhum código ou dado de DIESEL foi tocado.
 
-Essas linhas (MATERIAL + DIESEL, em todos os catálogos, incluindo `samples`) permanecem em `composicao_itens` como a fonte primária dessas categorias. Ver Plano de Implementação. A correção do dado incompleto de `samples/produtividades/*.json` (adicionar `composicao_padrao_equipe`) também é deixada fora de escopo — é um problema de dado de exemplo, não de arquitetura.
+Essas linhas (MATERIAL + DIESEL, em todos os catálogos, incluindo `samples`) permaneciam em `composicao_itens` como a fonte primária dessas categorias. A partir de §D7, isso deixou de valer para MATERIAL em `mendeslobo` (30 CPUs migradas) — DIESEL e os demais catálogos/CPUs continuam como antes. Ver Plano de Implementação. A correção do dado incompleto de `samples/produtividades/*.json` (adicionar `composicao_padrao_equipe`) também é deixada fora de escopo — é um problema de dado de exemplo, não de arquitetura.
 
 ---
 
@@ -67,6 +67,36 @@ O gate é deliberadamente uma condição "E", não "OU" — a primeira versão i
 **D5 — `cure_schema/_cure_contextual.py` para de sintetizar MAO_OBRA/EQUIPAMENTO em `composicao_itens`.** `_cure_contextual_sintetiza_composicao_via_equipe` sintetizava linhas MAO_OBRA/EQUIPAMENTO em `composicao_itens` vazio a partir de `Producao.composicao_padrao_equipe` quando não havia candidato MATERIAL único (`MA-{codigo}`). Sob D1, isso reintroduziria exatamente as linhas redundantes que esta ADR remove. A função passa a não sintetizar essas categorias — apenas registra `manual`/`skipped` (revisão econômica de MATERIAL/DIESEL, se aplicável) — e as funções de baixo nível dedicadas a essa síntese (`_cure_contextual_synthesize_composicao_from_equipe`, `_cure_contextual_synthesized_item`) foram removidas por ficarem sem chamador.
 
 **D6 — `config/catalogos/samples/` não é migrado, e o fail-loud de D2 é aceito como correção de bug pré-existente em `POCO-VISITA-PADRAO`.** Ver P5. Não migrar preserva as linhas EQUIPAMENTO que hoje são a única fonte de preço de equipamento em 10 das 11 CPUs (a Fonte 2 continua funcionando ali exatamente como antes, incluindo o `VAL-EQUIP-DECOMP` AVISO já existente). O gate "E" de D2 significa que só `POCO-VISITA-PADRAO` (MATERIAL puro, sem EQUIPAMENTO nem MAO_OBRA) deixa de ser precificável via `run_precificacao_unitaria`, até que `samples/produtividades/POCO-VISITA-PADRAO-PROD-001.json` ganhe `composicao_padrao_equipe` (conserta a Fonte 1) ou `samples/cpus.json` ganhe uma linha MAO_OBRA em `composicao_itens` para essa CPU (Fonte 2 completa). Nenhum teste do repositório depende do preço computado de `samples` (verificado por busca textual) — o risco é isolado a uma única CPU de um catálogo de exemplo, não de produção.
+
+**D7 — Fase 2 (MATERIAL): 30 CPUs de `mendeslobo` com BOM genuíno migradas para `MaterialEquipe`; 40 CPUs com placeholder AGIS deliberadamente excluídas; DIESEL permanece pendente.**
+
+Censo re-executado sobre `composicao_itens` MATERIAL de `mendeslobo` (70 CPUs com ao menos uma linha MATERIAL) mostrou duas populações distintas:
+
+| Grupo | CPUs | Padrão do `insumo_id` | Natureza |
+|---|---|---|---|
+| Placeholder AGIS | 40 | `MA-AGIS-CPU-<codigo>` | Artefato de modelagem de dado: preço = preço unitário legado da própria CPU (não é material real). Migrar duplicaria custo — contaria a CPU inteira como "material" dela mesma. |
+| BOM genuíno | 30 | cimento, areia, brita, tubos de concreto/PVC, emulsão asfáltica, brita graduada/BGTC, geotêxtil, pavers, guias | Lista real de insumos por unidade de produto (BOM), com `coeficiente` correspondendo a quantidade real por unidade de CPU. |
+
+Apenas o segundo grupo (30 CPUs, lista completa no PR/commit de dado) foi migrado. O grupo AGIS (40 CPUs) foi deliberadamente deixado intocado — suas linhas `composicao_itens` MATERIAL continuam exatamente como antes (mesmo comportamento de preço: `material=0.0` no cálculo bottom-up, já que a Fonte 1 nunca as usa, e a Fonte 2 nunca é acionada porque a Fonte 1 sempre resolve primeiro nesses catálogos — ver §P3). Migrar esse grupo exigiria antes resolver o problema de modelagem de dado (o placeholder é um substituto ad-hoc para "custo de material não detalhado", não um BOM real) — fora do escopo mecânico desta migração.
+
+**Fórmula de conversão (price-preserving por construção):**
+
+```
+consumo_por_hora = coeficiente × Producao.valor_horario
+```
+
+`coeficiente` é quantidade por unidade de produto da CPU; `valor_horario` (ρ) é unidades de produto por hora; o produto é quantidade por hora — exatamente a definição de `MaterialEquipe.consumo_por_hora` (ADR-030 D2). Prova algébrica: a Fonte 1 calcula o preço de MATERIAL como `Σ(consumo_por_hora × preco_insumo) / valor_horario`; substituindo a fórmula acima, isso se reduz a `Σ(coeficiente × preco_insumo)` — exatamente o que a Fonte 2 (`_compute_preco_cat_from_cpu`) já calculava direto de `composicao_itens`, antes da migração. Verificação concreta: `CPU-SANEA-POCO-VISITA-PADRAO` tem `coeficiente=28.0` (sacos de cimento por poço) e `valor_horario=0.25` (poços/h) → `consumo_por_hora=7.0` sacos/h (28 sacos ÷ 4h para produzir 1 poço a 0,25 poço/h).
+
+**Execução e verificação empírica (script `scripts/catalog/migrate_composicao_itens_material.py`, dry-run por padrão, `--apply` para aplicar, idempotente):**
+
+- 30 CPUs migradas, 33 entradas `MaterialEquipe` adicionadas (28 CPUs com 1 material; `CPU-SANEA-DREN-MAN-DN300` com 2; `CPU-SANEA-POCO-VISITA-PADRAO` com 3), 33 linhas `composicao_itens` MATERIAL removidas (mesmo padrão de consolidação de fonte única da Fase 1 — evita a divergência silenciosa entre as duas representações que a Fase 1 já eliminou para MAO_OBRA/EQUIPAMENTO).
+- Verificação price-preserving: para as 30 CPUs, o preço de MATERIAL pós-migração (Fonte 1, `VAL-PLAN-BOTTOM-UP`) bate com o preço pré-migração calculado pela Fonte 2 direto de `composicao_itens`, com tolerância 1e-4 relativa — confirmado, sem nenhuma divergência (a maior diferença observada foi de ordem 1e-7, ruído de ponto flutuante do `round(consumo_por_hora, 6)`).
+- Gap de preço unitário fechado: soma das 30 CPUs, R$ 6.678,6265 (~R$ 6.678,63) — valor que antes da migração era silenciosamente `0.0` em cada uma dessas CPUs individualmente, apesar de haver BOM real e completo no catálogo.
+- Blast radius: os outros 108 CPUs de `mendeslobo` (incluindo as 40 placeholder AGIS) permanecem byte-idênticos ao snapshot pré-migração — confirmado por comparação campo a campo (`material`, `diesel`, `mao_obra`, `equipamentos`, `total`, `validacoes`) sobre os 138 CPUs do catálogo.
+
+**Nota de design (não bloqueante) — reaproveitamento de `MaterialEquipe.consumo_por_hora`:** esta migração reaproveita um campo cuja semântica original (ADR-030 D2) é *consumo operacional por hora da equipe* (ex.: água de umectação, aditivo de combustível) para representar algo conceitualmente diferente — uma quantidade de BOM por unidade de produto, convertida via `coeficiente × valor_horario`. A conversão é numericamente correta e price-preserving (provado acima e verificado empiricamente), mas é um esticamento semântico do campo: um leitor futuro de `Producao.composicao_padrao_equipe.materiais` não tem, hoje, nenhum sinal no próprio dado de que uma entrada é "consumo operacional direto" vs. "BOM convertido". Se o padrão de migrar BOM por este caminho se tornar comum, vale uma ADR própria para dar a essas entradas um campo/flag dedicado (ex.: `origem: "bom_convertido"` ou um tipo `MaterialBOM` separado de `MaterialEquipe`) em vez de continuar sobrecarregando a mesma estrutura para dois conceitos distintos.
+
+**DIESEL permanece fora de escopo** — nenhum código ou dado de DIESEL foi tocado nesta Fase 2. `EquipamentoEquipe` ainda não tem campo para o insumo de combustível específico que `composicao_itens` DIESEL carrega (ver §Fora de escopo). Fica como próxima fase, se/quando decidida.
 
 ---
 
@@ -112,7 +142,8 @@ O gate é deliberadamente uma condição "E", não "OU" — a primeira versão i
 |---|---|---|
 | Fase 1 | Script de migração idempotente; remoção de MAO_OBRA/EQUIPAMENTO de `mendeslobo`/`rfi-r02` (NÃO `samples`, NÃO `test`); fail-loud na Fonte 2 (`VAL-PLAN-MO-EQ-SEM-FONTE`); `_cure_contextual.py` atualizado; docstrings de `ComposicaoItem`/`CPU` atualizadas; verificação byte-idêntica de preços pré/pós migração para `mendeslobo`/`rfi-r02` | ✅ Implementado |
 | Fase 1-bis (débito registrado) | Corrigir `samples/produtividades/*.json` (adicionar `composicao_padrao_equipe` faltante) para que a Fonte 1 volte a funcionar; então migrar `samples/cpus.json` como as demais | ⏳ Pendente — não bloqueia esta ADR, catálogo de exemplo sem consumidor identificado |
-| Fase 2 | Decidir modelo de dado para MATERIAL (BOM por unidade de produto vs. consumo horário de `MaterialEquipe`) e para DIESEL (insumo específico em `EquipamentoEquipe`); migrar as linhas restantes ou formalizar `composicao_itens` como fonte permanente dessas duas categorias | ⏳ Pendente — decisão de dado/produto, não de código |
+| Fase 2 — MATERIAL | Converter BOM genuíno de `composicao_itens` para `MaterialEquipe` via `consumo_por_hora = coeficiente × valor_horario` (price-preserving); script `migrate_composicao_itens_material.py`; 30 CPUs de `mendeslobo` migradas, 40 CPUs placeholder AGIS explicitamente excluídas (ver §D7) | ✅ Implementado (`mendeslobo`) |
+| Fase 2 — DIESEL | Decidir modelo de dado para DIESEL (insumo específico em `EquipamentoEquipe`, hoje só há `consumo_litros_hora_estimado` agregado); migrar ou formalizar `composicao_itens` como fonte permanente | ⏳ Pendente — decisão de dado/produto, não de código |
 
 ## Definition of Done
 
@@ -126,8 +157,17 @@ O gate é deliberadamente uma condição "E", não "OU" — a primeira versão i
 - [x] Achado de `samples` (Fonte 2 ativa, não dead code) investigado, documentado e excluído do escopo da Fase 1 com justificativa
 - [x] Suíte de testes completa sem regressões; `ruff check`/`ty check src` limpos
 
-### Fase 2
-- [ ] Decisão de modelo de dado para MATERIAL (BOM vs. consumo horário)
+### Fase 2 — MATERIAL
+- [x] Censo re-executado sobre `composicao_itens` MATERIAL de `mendeslobo`: 70 CPUs, separadas em 40 placeholder AGIS (excluídas) e 30 BOM genuíno (migradas) — ver §D7
+- [x] `scripts/catalog/migrate_composicao_itens_material.py` criado (dry-run padrão, `--apply`), idempotente
+- [x] Teste TDD demonstrando o bug (`material == 0.0` para as 30 CPUs, apesar de BOM completo no catálogo) antes da migração, e comportamento correto (`VAL-PLAN-BOTTOM-UP`, preço não-zero) depois — `tests/unit/test_adr138_fase2_material_migration.py`
+- [x] Migração aplicada: 30 CPUs, 33 `MaterialEquipe` adicionadas, 33 linhas `composicao_itens` MATERIAL removidas
+- [x] Verificação price-preserving: preço de MATERIAL pós-migração bate com o cálculo direto de `composicao_itens` pré-migração (tolerância 1e-4 relativa) para as 30 CPUs
+- [x] Verificação de blast radius: os outros 108 CPUs de `mendeslobo` (incluindo as 40 placeholder AGIS) permanecem byte-idênticos antes/depois
+- [x] Suíte de testes completa sem regressões; `ruff check`/`ty check src` limpos
+- [x] Nota de design registrada sobre reaproveitamento semântico de `MaterialEquipe.consumo_por_hora` (ver §D7, não bloqueante)
+
+### Fase 2 — DIESEL (ainda pendente)
 - [ ] Decisão de modelo de dado para DIESEL (insumo específico em `EquipamentoEquipe`)
-- [ ] Migração das linhas restantes ou decisão formal de manter `composicao_itens` como fonte permanente para essas categorias
+- [ ] Migração das linhas restantes ou decisão formal de manter `composicao_itens` como fonte permanente para essa categoria
 - [ ] (Fase 1-bis) Corrigir dado incompleto de `samples/produtividades/*.json` e migrar `samples/cpus.json`
