@@ -1185,3 +1185,55 @@ class TestLogDie:
         assert exc_info.value.code == 1
         err = capsys.readouterr().err
         assert "fatal error" in err
+
+
+class TestEnsureUtf8Io:
+    """Regressão: stdout/stdin redirecionados no Windows caem no codepage
+    legado (ex.: cp1252) em vez de UTF-8 — corrompe descrições de tool
+    acentuadas (tools/list) sem afetar prompts/list/resources/list (vazios)."""
+
+    def _fake_stream(self, encoding: str | None):
+        s = MagicMock()
+        s.encoding = encoding
+        return s
+
+    def test_reconfigures_non_utf8_stdout_strict(self):
+        out = self._fake_stream("cp1252")
+        in_ = self._fake_stream("utf-8")
+        err = self._fake_stream("utf-8")
+        proxy_mod._ensure_utf8_io(out=out, in_=in_, err=err)
+        out.reconfigure.assert_called_once_with(encoding="utf-8", errors="strict")
+        in_.reconfigure.assert_not_called()
+        err.reconfigure.assert_not_called()
+
+    def test_reconfigures_non_utf8_stdin_strict(self):
+        out = self._fake_stream("utf-8")
+        in_ = self._fake_stream("cp1252")
+        err = self._fake_stream("utf-8")
+        proxy_mod._ensure_utf8_io(out=out, in_=in_, err=err)
+        in_.reconfigure.assert_called_once_with(encoding="utf-8", errors="strict")
+        out.reconfigure.assert_not_called()
+
+    def test_reconfigures_non_utf8_stderr_replace(self):
+        out = self._fake_stream("utf-8")
+        in_ = self._fake_stream("utf-8")
+        err = self._fake_stream("cp1252")
+        proxy_mod._ensure_utf8_io(out=out, in_=in_, err=err)
+        err.reconfigure.assert_called_once_with(encoding="utf-8", errors="replace")
+
+    def test_handles_none_encoding(self):
+        """Alguns streams (ex.: redirecionados de forma incomum) têm encoding=None."""
+        out = self._fake_stream(None)
+        in_ = self._fake_stream("utf-8")
+        err = self._fake_stream("utf-8")
+        proxy_mod._ensure_utf8_io(out=out, in_=in_, err=err)
+        out.reconfigure.assert_called_once_with(encoding="utf-8", errors="strict")
+
+    def test_noop_when_already_utf8(self):
+        out = self._fake_stream("utf-8")
+        in_ = self._fake_stream("UTF-8")  # case-insensitive
+        err = self._fake_stream("utf8")  # note: "utf8" != "utf-8" — must still reconfigure
+        proxy_mod._ensure_utf8_io(out=out, in_=in_, err=err)
+        out.reconfigure.assert_not_called()
+        in_.reconfigure.assert_not_called()
+        err.reconfigure.assert_called_once_with(encoding="utf-8", errors="replace")
