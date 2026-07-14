@@ -444,8 +444,8 @@ class TestCanonicalSkillOrder:
 
         # NEP-041 Fase 1: 15 absorvido em 09 (ativo no pipeline)
         assert "10-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
-        # NEP-041 Fase 3: 09-registro-decisoes dormante — invocável mas fora do pipeline auto
-        assert "09-registro-decisoes" in SKILLS
+        # NEP-049: 09-registro-decisoes aposentada — fora de SKILLS e do pipeline
+        assert "09-registro-decisoes" not in SKILLS
         assert "09-registro-decisoes" not in CANONICAL_SKILL_ORDER
 
     def test_07_comes_after_09(self):

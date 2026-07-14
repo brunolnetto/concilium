@@ -12,7 +12,7 @@ Not responsible for (injected as callbacks):
 - What state model to use (CanonicalModel or anything else)
 - How to load domain config (catalogo, perfil, contexto...)
 - When and how to persist state
-- Domain side effects (Excel, relatorio, decision_log...)
+- Domain side effects (Excel, relatorio...)
 - Domain-specific error semantics (CORROMPIDO, gate taint...)
 
 Skill result duck-typing contract (all attributes are optional):

@@ -38,45 +38,6 @@ class _InputsMixin(_Base):
             "eap": [item for item in eap if item.get("cpu_id")],
         }
 
-
-    @staticmethod
-    def _lfd_static_extra_inputs() -> dict[str, Any]:
-        """Blocos de inputs fixos (baseline automática) para skills 08 e 09."""
-        return {
-            "08-avaliacao-intervencoes": {
-                "intervencoes_propostas": [
-                    {
-                        "nome": "Baseline Automatica",
-                        "custo_estimado": 0,
-                        "impacto_prazo_semanas": 0,
-                        "justificativa": "Ponto de partida para benchmark de engenharia.",
-                    }
-                ]
-            },
-            "09-registro-decisoes": {
-                "objective": "Aprovacao de Baseline para Auditoria Financeira",
-                "considered_interventions": [
-                    {
-                        "nome": "Baseline Automatica",
-                        "variavel": "baseline",
-                        "custo_estimado": 0,
-                        "impacto_prazo_semanas": 0,
-                        "justificativa": "Ponto de partida para benchmark de engenharia.",
-                    }
-                ],
-                "selected_intervention": "baseline",
-                "justification": {
-                    "main_reason": "Alinhamento com dados de referencia historicos.",
-                    "rejected_reasons": {},
-                },
-                "decided_by": {
-                    "type": "system",
-                    "id": "benchmark_runner",
-                },
-            },
-        }
-
-
     @staticmethod
     def _build_inputs_indiretos(
         ind_ref: dict[str, Any],
@@ -93,5 +54,3 @@ class _InputsMixin(_Base):
             return {}
         _bii_scale_categories(categorias_config, referencia_indireto_total, permanencia_meses)
         return {"categorias_config": categorias_config}
-
-

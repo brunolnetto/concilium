@@ -57,8 +57,6 @@ class TestSkillRenumbering:
 
         expected_new_ids = [
             "07-diagnostico-criticidade",
-            "08-avaliacao-intervencoes",
-            "09-registro-decisoes",
             "10-relatorio-e-artefatos",
             "11-replanejamento-e-cenarios",
         ]

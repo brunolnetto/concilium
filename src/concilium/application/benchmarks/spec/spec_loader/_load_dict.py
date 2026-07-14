@@ -62,8 +62,6 @@ class _LoadDictMixin(_Base):
             equipes_indiretas=ref.get("equipes_indiretas") or [],
         )
 
-        extra_inputs.update(self._lfd_static_extra_inputs())
-
         # ADR-071: repassa rcpsp_spec para skill-05 para que possa calcular
         # contratos de pool e atribuir custos proporcionalmente ao uso.
         if ref.get("rcpsp_spec"):
@@ -90,7 +88,6 @@ class _LoadDictMixin(_Base):
             extra_inputs=extra_inputs,
         )
 
-
     @staticmethod
     def _infer_slug_from_path(path: Path) -> str:
         """Infere slug do benchmark a partir do caminho da referência.
@@ -105,5 +102,3 @@ class _LoadDictMixin(_Base):
             if candidate:
                 return candidate
         return parent.name
-
-

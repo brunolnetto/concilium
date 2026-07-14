@@ -85,7 +85,6 @@ class CanonicalModel(BaseModel):
     # Fase 1B — reports analíticos
     criticality_report: dict | None = None
     cost_criticality_report: "CostCriticalityResult | None" = None
-    intervention_assessments: list[dict] | None = None
 
     # Fase 2 — resource binding
     tipos_recurso: list[TipoRecurso] = Field(default_factory=list)
@@ -154,7 +153,7 @@ class CanonicalModel(BaseModel):
     curva_abc_insumo: "CurvaABCInsumo | None" = None
     s_curve: "SCurve | None" = None
     cubo_analitico: "CuboAnalitico | None" = None  # cubo 4D: categoria×atividade×tempo×BDI
-    # Tabela BDI efetiva usada para construir cubo_analitico e calcular preços (Skill-08).
+    # Tabela BDI efetiva usada para construir cubo_analitico e calcular preços (skill-06).
     # Persistida para garantir que o lazy-build do serviço e o _build_from_pool (ADR-086)
     # usem exatamente a mesma formulação BDI — elimina divergência entre pipeline e on-demand.
     # Usa forward ref para evitar import circular com o módulo bdi.
@@ -164,7 +163,7 @@ class CanonicalModel(BaseModel):
     analise_campanhas: "AnaliseFrequenciaCampanhas | None" = None
 
     # ADR-057: Memorial de cálculo BDI — artefato de auditoria ponta a ponta.
-    # Gerado por Skill 08. Exportado como JSON e aba Excel MEMORIAL.BDI.
+    # Gerado pela skill-06. Exportado como JSON e aba Excel MEMORIAL.BDI.
     # Re-derivável de (bdi_tabela, planejamento, resultado) — persistência é cache auditável.
     memorial_calculo_bdi: "MemorialCalculoBDI | None" = None
 
@@ -185,5 +184,3 @@ class CanonicalModel(BaseModel):
 
 
 # ── ADR-019: Modelos de reconciliação e re-planejamento ──────────────────────
-
-

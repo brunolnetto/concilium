@@ -53,7 +53,7 @@ class RelatorioCriticidade(BaseModel):
     total_C: int = 0
     custo_A_mais_pct: float = Field(default=0.0, ge=0, le=1)  # soma custo_share dos A+
 
-    notas_engenheiro: str | None = None  # do 09-registro-decisoes geral
+    notas_engenheiro: str | None = None  # nota manual do engenheiro (opcional)
 
     def calcular_estatisticas(self) -> RelatorioCriticidade:
         """Recalcula contadores a partir dos itens. Retorna nova instância."""

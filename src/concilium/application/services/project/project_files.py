@@ -22,7 +22,6 @@ class ProjectFiles:
     intermediate_relatorio: str = "intermediate/relatorio.json"
     intermediate_memorial_bdi: str = "intermediate/memorial_bdi.json"
     intermediate_schedules_weekly: str = "intermediate/schedules_weekly.json"
-    intermediate_decision_log: str = "intermediate/decision_log.json"
 
 
 DEFAULT_DELIVERABLES: dict = {

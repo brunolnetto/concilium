@@ -742,25 +742,6 @@ def test_process_decision_variables_no_change_returns_should_save_unchanged(conf
     assert should_save is False
 
 
-def test_process_side_effects_skill_09_no_decision_log(config_root, projeto_terraplenagem):
-    """Branch 235->-222: decision_log ausente/vazio → não escreve decision_log.json."""
-    from unittest.mock import patch as _patch
-
-    from concilium.application.skills.base import SkillResult
-
-    r = Runtime(config_root)
-    p = projeto_terraplenagem
-    v = p.new_version()
-    canonical = _make_minimal_canonical_for_execution()
-    result = SkillResult(canonical, [])
-    result.decision_log = None
-
-    with _patch("concilium.application.runtime.mixins.execution._persist_typed_artifacts"):
-        r._process_side_effects("09-registro-decisoes", result, p, v)
-    decision_log_path = p.version_path(v) / "decision_log.json"
-    assert not decision_log_path.exists()
-
-
 def test_process_side_effects_skill_04(config_root, projeto_terraplenagem):
     from unittest.mock import patch as _patch
 
@@ -778,25 +759,6 @@ def test_process_side_effects_skill_04(config_root, projeto_terraplenagem):
         r._process_side_effects("04-cronograma", result, p, v)
     mock_04.assert_called_once()
     mock_persist.assert_called_once()
-
-
-def test_process_side_effects_skill_09(config_root, projeto_terraplenagem):
-    from unittest.mock import patch as _patch
-
-    from concilium.application.skills.base import SkillResult
-
-    r = Runtime(config_root)
-    p = projeto_terraplenagem
-    v = p.new_version()
-    canonical = _make_minimal_canonical_for_execution()
-    result = SkillResult(canonical, [])
-    result.decision_log = [{"decision": "D1"}]
-
-    with _patch("concilium.application.runtime.mixins.execution._persist_typed_artifacts"):
-        r._process_side_effects("09-registro-decisoes", result, p, v)
-    # decision_log.json should be written if decision_log is non-empty
-    decision_log_path = p.version_path(v) / "decision_log.json"
-    assert decision_log_path.exists()
 
 
 def test_process_side_effects_skill_10(config_root, projeto_terraplenagem):

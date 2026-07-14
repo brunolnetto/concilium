@@ -346,59 +346,11 @@ class TestPipelineAnalitico:
         assert can.cost_criticality_report is not None
         assert len(can.cost_criticality_report.atividades) > 0
 
-    def test_10_intervention_roi_popula_canonical(self, runtime, projeto_analitico):
-        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
-        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
-        intervencoes = [
-            {
-                "intervencao_id": "iv-01",
-                "descricao": "+10% equipes pico Dezembro",
-                "tipo_perturbacao": "+10%",
-                "custo_adicional_estimado": 50_000,
-                "ganho_margem_esperado": 0.02,
-                "item_ids_afetados": ["eap-01"],
-            }
-        ]
-        r = runtime.run_skill(
-            "08-avaliacao-intervencoes",
-            projeto_analitico,
-            inputs={"intervencoes_propostas": intervencoes},
-        )
-        assert not r.has_errors
+    def test_pipeline_diagnostico_gera_invocacoes_no_log(self, tmp_path, runtime, _session_pipeline_sk09):
+        """Pipeline base + diagnósticos extras ≥ 6 entradas no invocations.log.
 
-        can = projeto_analitico.load_canonical()
-        assert can.intervention_assessments is not None
-        assert len(can.intervention_assessments) == 1
-
-    def test_11_decision_log_persiste_json(self, runtime, projeto_analitico):
-        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
-        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
-        decision_inputs = {
-            "objective": "Aumentar margem para faixa verde (≥10%)",
-            "considered_interventions": [
-                {"id": "iv-01", "descricao": "+10% equipes pico"},
-                {"id": "iv-null", "descricao": "Manter planejamento"},
-            ],
-            "selected_intervention": "iv-01",
-            "justification": {
-                "rationale": "Melhor custo-benefício na análise ROI",
-                "risks": ["Disponibilidade de equipamentos"],
-            },
-            "decided_by": {"type": "ENGENHEIRO", "id": "eng-bruno"},
-            "expected_outcome": {"margem": 0.10, "prazo_dias": 214},
-        }
-        r = runtime.run_skill("09-registro-decisoes", projeto_analitico, inputs=decision_inputs)
-        assert not r.has_errors
-
-        v = projeto_analitico.current_version()
-        dl_path = projeto_analitico.version_path(v) / "decision_log.json"
-        assert dl_path.exists(), "decision_log.json não foi persistido"
-        dl = json.loads(dl_path.read_text())
-        assert "decision_id" in dl
-        assert dl["selected_intervention"] == "iv-01"
-
-    def test_pipeline_07_a_11_gera_12_invocacoes_no_log(self, tmp_path, runtime, _session_pipeline_sk09):
-        """Pipeline completo: 01-09 (base) + 10-12 (este teste) ≥ 8 entradas no log.
+        NEP-049: skills 08/09 aposentadas — o teste antes exercitava as duas após o
+        diagnóstico; hoje valida o log de invocações com re-execuções da skill 07.
 
         PERFORMANCE: Usa shutil.copytree do projeto base. Poderia usar hardlinks
         mas a complexidade não vale para um único teste.
@@ -412,36 +364,9 @@ class TestPipelineAnalitico:
         runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
         runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
 
-        intervencoes = [
-            {
-                "intervencao_id": "iv-sub",
-                "descricao": "Subcontratação parcial pico",
-                "tipo_perturbacao": "subcontratacao",
-                "custo_adicional_estimado": 80_000,
-                "ganho_margem_esperado": 0.025,
-                "item_ids_afetados": ["eap-01"],
-            }
-        ]
-        runtime.run_skill(
-            "08-avaliacao-intervencoes",
-            proj,
-            inputs={"intervencoes_propostas": intervencoes},
-        )
-        decision_inputs = {
-            "objective": "Aceitar planejamento atual sem intervenções",
-            "considered_interventions": [
-                {"id": "iv-sub", "descricao": "Subcontratação parcial pico"},
-                {"id": "iv-null", "descricao": "Não fazer nada"},
-            ],
-            "selected_intervention": None,
-            "justification": {"rationale": "Custo adicional de subcontratação não se paga na margem atual"},
-            "decided_by": {"type": "GESTOR", "id": "gest-01"},
-        }
-        runtime.run_skill("09-registro-decisoes", proj, inputs=decision_inputs)
-
         log_text = (proj.root / "v1" / "invocations.log").read_text()
         n_inv = len([line for line in log_text.strip().splitlines() if line])
-        assert n_inv >= 8, f"Esperadas >= 8 invocações, encontradas {n_inv}"
+        assert n_inv >= 6, f"Esperadas >= 6 invocações, encontradas {n_inv}"
 
 
 # ── Validação AGIS com dados seed calibrados ──────────────────────────────────
@@ -552,62 +477,3 @@ class TestValidacaoAgisComSeedData:
         assert items[0].atividade_id == "eap-01"
         assert items[0].classe in ("A+", "A", "B", "C")
 
-    def test_10_intervencao_roi_regime_9h_e_subcontratacao(self, amostra_terraplenagem_path: Path):
-        """Duas intervenções: regime_9h (LOW effort) e subcontratação (MED effort)."""
-        from concilium.application.skills import run_avaliacao_intervencoes
-
-        can = _carregar_amostra_canonical(amostra_terraplenagem_path)
-        intervencoes = [
-            {
-                "intervencao_id": "iv-sub",
-                "descricao": "Subcontratar escavação no pico de Dezembro",
-                "tipo_perturbacao": "subcontratacao",
-                "custo_adicional_estimado": 80_000,
-                "ganho_margem_esperado": 0.03,
-                "item_ids_afetados": ["eap-01"],
-            },
-            {
-                "intervencao_id": "iv-regime",
-                "descricao": "Ampliar jornada para 9 h/dia em Nov-Dez",
-                "tipo_perturbacao": "regime_9h",
-                "custo_adicional_estimado": 15_000,
-                "ganho_margem_esperado": 0.008,
-                "item_ids_afetados": ["eap-01"],
-            },
-        ]
-        result = run_avaliacao_intervencoes(can, {"intervencoes_propostas": intervencoes})
-        assert not result.has_errors
-
-        assessments = result.canonical.intervention_assessments
-        assert len(assessments) == 2
-        iv_regime = next(a for a in assessments if a["intervencao_id"] == "iv-regime")
-        assert iv_regime["effort"]["nivel"] == "LOW"
-
-    def test_11_ciclo_decisao_com_contexto_seed(self, amostra_terraplenagem_path: Path):
-        """Skill 11 — decisão de aceitar margem AMARELA registrada e persistida."""
-        from concilium.application.skills import run_registro_decisoes
-
-        can = _carregar_amostra_canonical(amostra_terraplenagem_path)
-
-        dl_inputs = {
-            "objective": "Aprovar execução com margem AMARELA (7.85 %) como obra estratégica",
-            "considered_interventions": [
-                {"id": "manter", "descricao": "Executar conforme planejado"},
-                {"id": "renegociar", "descricao": "Renegociar preços com cliente"},
-            ],
-            "selected_intervention": "manter",
-            "justification": {
-                "rationale": "Margem dentro da faixa aceitável; obra estratégica para a região",
-                "risks": ["Custo real pode superar estimado por regime de chuvas"],
-                "rejected_reasons": {"renegociar": "Cliente não aceita alteração contratual"},
-            },
-            "decided_by": {"type": "DIRETOR", "id": "dir-ml"},
-            "constraints": ["Contrato assinado", "Mobilização em Junho/2026"],
-            "expected_outcome": {"margem": 0.0785, "prazo_dias": 214},
-        }
-        r11 = run_registro_decisoes(can, dl_inputs)
-        assert not r11.has_errors
-        dl = r11.decision_log
-        assert dl["selected_intervention"] == "manter"
-        assert "decision_id" in dl
-        assert dl["decided_by"]["type"] == "DIRETOR"

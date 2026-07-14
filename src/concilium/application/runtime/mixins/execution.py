@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -14,7 +13,6 @@ from concilium.application.skills.base import SkillResult
 from ..deliverables.side_effects import (
     _handle_skill_04_side_effects,
     _handle_skill_09_side_effects,
-    _json_default,
     _persist_typed_artifacts,
 )
 from ..exceptions import RuntimeDomainError
@@ -229,13 +227,6 @@ class ExecutionMixin(_Base):
             except Exception:  # pragma: no cover
                 _outputs_cfg = {}
             _handle_skill_09_side_effects(result, project, v, _outputs_cfg)
-
-        elif skill_id == "09-registro-decisoes":
-            decision_log = getattr(result, "decision_log", None)
-            if decision_log:
-                payload = json.dumps(decision_log, indent=2, ensure_ascii=False, default=_json_default)
-                project.save_intermediate_file("decision_log.json", payload, v)
-                (project.version_path(v) / "decision_log.json").write_text(payload, encoding="utf-8")
 
         elif skill_id == "04-cronograma":
             _handle_skill_04_side_effects(result, project, v)

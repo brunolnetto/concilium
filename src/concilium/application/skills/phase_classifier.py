@@ -150,8 +150,6 @@ SKILL_ID_ALIASES: dict[str, str] = {
     # legado → novo (após renumeração F4)
     "10-relatorio-e-artefatos": "10-relatorio-e-artefatos",
     "07-diagnostico-criticidade": "07-diagnostico-criticidade",
-    "08-avaliacao-intervencoes": "08-avaliacao-intervencoes",
-    "09-registro-decisoes": "09-registro-decisoes",
     "11-replanejamento-e-cenarios": "11-replanejamento-e-cenarios",
 }
 
