@@ -353,4 +353,233 @@ class TestPatchMcpAuthPermissions:
                 _current_roles.reset(tok)
 
 
+class _FakeMcpRequest:
+    """Request-like stub exposing só o que _mcp_message_claims() lê: .headers.get(...)."""
+
+    def __init__(self, authorization: str | None):
+        self._authorization = authorization
+
+    @property
+    def headers(self):
+        return {"authorization": self._authorization} if self._authorization else {}
+
+
+class TestStatefulSessionRoleResolution:
+    """Regressão: roles de tool call MCP devem vir da mensagem atual (request_ctx do
+    SDK), não do contextvar _current_roles — que fica congelado no contexto da
+    sessão em transporte streamable-http *stateful* (padrão do SDK MCP), já que o
+    SDK despacha tools/call de requisições subsequentes numa task persistente
+    criada na abertura da sessão. Sintoma real reportado: 'Roles do token:
+    [(nenhum)]' para um token com roles corretos, porque o contextvar setado pelo
+    McpAuthMiddleware na requisição HTTP da tool call nunca chegava à task que
+    de fato invoca a tool."""
+
+    def _patch_request_ctx(self, fake_ctx):
+        # contextvars.ContextVar.get é read-only em nível de C — não dá para
+        # patchear o atributo diretamente; substitui-se o objeto inteiro.
+        return patch(
+            "mcp.server.lowlevel.server.request_ctx",
+            MagicMock(get=MagicMock(return_value=fake_ctx)),
+        )
+
+    def test_uses_per_message_roles_over_stale_contextvar(self):
+        """_current_roles vazio/sem permissão (simula sessão congelada) mas o
+        request_ctx da mensagem atual carrega um Bearer válido com roles
+        corretos → a tool executa usando os roles da mensagem, não o contextvar."""
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
+        )
+
+        def fn():
+            return "executou"
+
+        fn.__name__ = "disparar_pipeline"
+        server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
+        patch_mcp_auth_permissions(server)
+
+        fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer real-jwt"))
+        tok = set_roles([])  # contextvar deliberadamente sem nenhum role (congelado/vazio)
+        try:
+            with (
+                patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True),
+                self._patch_request_ctx(fake_ctx),
+                patch(
+                    "concilium.infrastructure.auth.token_service.decode_token",
+                    return_value={"sub": "bruno", "roles": ["operator"]},
+                ),
+            ):
+                result = server._tool_manager._tools["disparar_pipeline"].fn()
+        finally:
+            _current_roles.reset(tok)
+        assert result == "executou"
+
+    def test_falls_back_to_contextvar_when_no_request_ctx(self):
+        """Sem request_ctx ativo (ex.: stdio, ou teste que só chama set_roles direto)
+        continua caindo no contextvar legado — comportamento pré-existente preservado."""
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
+        )
+
+        def fn():
+            return "executou"
+
+        fn.__name__ = "disparar_pipeline"
+        server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
+        patch_mcp_auth_permissions(server)
+
+        tok = set_roles(["operator"])
+        try:
+            with (
+                patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True),
+                self._patch_request_ctx(None),
+            ):
+                result = server._tool_manager._tools["disparar_pipeline"].fn()
+        finally:
+            _current_roles.reset(tok)
+        assert result == "executou"
+
+    def test_falls_back_to_contextvar_when_no_bearer_header(self):
+        """request_ctx presente mas sem Authorization Bearer → cai no contextvar."""
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
+        )
+
+        def fn():
+            return "executou"
+
+        fn.__name__ = "disparar_pipeline"
+        server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
+        patch_mcp_auth_permissions(server)
+
+        fake_ctx = MagicMock(request=_FakeMcpRequest(None))
+        tok = set_roles(["operator"])
+        try:
+            with (
+                patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True),
+                self._patch_request_ctx(fake_ctx),
+            ):
+                result = server._tool_manager._tools["disparar_pipeline"].fn()
+        finally:
+            _current_roles.reset(tok)
+        assert result == "executou"
+
+    def test_stale_contextvar_roles_do_not_leak_into_a_different_message(self):
+        """Regressão inversa: _current_roles com role INSUFICIENTE (simulando o
+        snapshot congelado de outra sessão/chamada) não deve vazar autorização —
+        os roles corretos da mensagem atual (via request_ctx) é que decidem."""
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
+        )
+
+        def fn():
+            return "executou"
+
+        fn.__name__ = "disparar_pipeline"
+        server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
+        patch_mcp_auth_permissions(server)
+
+        fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer real-jwt"))
+        # contextvar deliberadamente com role AMPLO (admin) — se ele vazasse para
+        # esta mensagem, a chamada passaria indevidamente. Só deve valer o que
+        # vem do request_ctx (roles=["auditor"], sem project:run).
+        tok = set_roles(["admin"])
+        try:
+            with (
+                patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True),
+                self._patch_request_ctx(fake_ctx),
+                patch(
+                    "concilium.infrastructure.auth.token_service.decode_token",
+                    return_value={"sub": "bruno", "roles": ["auditor"]},  # sem project:run
+                ),
+            ):
+                with pytest.raises(PermissionError):
+                    server._tool_manager._tools["disparar_pipeline"].fn()
+        finally:
+            _current_roles.reset(tok)
+
+    def _make_server_with_tool(self, tool_name: str, tool_fn, perm: str):
+        server = MagicMock()
+        tool_fn._required_permission = perm  # ADR-117: tag posta por @permission
+        tool = MagicMock()
+        tool.fn = tool_fn
+        server._tool_manager._tools = {tool_name: tool}
+        return server
+
+
+class TestCurrentUserTenantIdPreferPerMessageClaims:
+    """get_current_user_id/get_current_tenant_id têm o mesmo bug de contextvar
+    congelado (usados para audit log e ownership check) — mesma correção."""
+
+    def test_user_id_prefers_message_claims_over_contextvar(self):
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id, set_auth_context
+
+        tokens = set_auth_context("stale-user-from-frozen-session", "stale-tenant")
+        try:
+            fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer real-jwt"))
+            with (
+                patch(
+                    "mcp.server.lowlevel.server.request_ctx",
+                    MagicMock(get=MagicMock(return_value=fake_ctx)),
+                ),
+                patch(
+                    "concilium.infrastructure.auth.token_service.decode_token",
+                    return_value={"sub": "bruno", "tid": "mendeslobo", "roles": ["operator"]},
+                ),
+            ):
+                assert get_current_user_id() == "bruno"
+        finally:
+            from concilium.infrastructure.auth.permission_guard import reset_auth_context
+
+            reset_auth_context(tokens)
+
+    def test_tenant_id_prefers_message_claims_over_contextvar(self):
+        from concilium.infrastructure.auth.permission_guard import get_current_tenant_id, set_auth_context
+
+        tokens = set_auth_context("stale-user", "stale-tenant-from-frozen-session")
+        try:
+            fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer real-jwt"))
+            with (
+                patch(
+                    "mcp.server.lowlevel.server.request_ctx",
+                    MagicMock(get=MagicMock(return_value=fake_ctx)),
+                ),
+                patch(
+                    "concilium.infrastructure.auth.token_service.decode_token",
+                    return_value={"sub": "bruno", "tid": "mendeslobo", "roles": ["operator"]},
+                ),
+            ):
+                assert get_current_tenant_id() == "mendeslobo"
+        finally:
+            from concilium.infrastructure.auth.permission_guard import reset_auth_context
+
+            reset_auth_context(tokens)
+
+    def test_falls_back_to_contextvar_without_request_ctx(self):
+        from concilium.infrastructure.auth.permission_guard import (
+            get_current_tenant_id,
+            get_current_user_id,
+            reset_auth_context,
+            set_auth_context,
+        )
+
+        tokens = set_auth_context("bruno", "mendeslobo")
+        try:
+            with patch(
+                "mcp.server.lowlevel.server.request_ctx",
+                MagicMock(get=MagicMock(return_value=None)),
+            ):
+                assert get_current_user_id() == "bruno"
+                assert get_current_tenant_id() == "mendeslobo"
+        finally:
+            reset_auth_context(tokens)
+
+
 # ADR-120: 5 novas tools de ciclo de vida de catálogo (appended after original list close)

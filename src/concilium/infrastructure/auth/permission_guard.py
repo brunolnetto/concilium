@@ -179,6 +179,56 @@ def roles_from_token(claims: dict) -> list[str]:
     return roles  # fail-closed: JWT sem roles = sem acesso (viewer removido)
 
 
+def _mcp_message_claims() -> dict | None:
+    """Decodifica claims do JWT da mensagem MCP *atual*, via request_ctx do SDK.
+
+    Por que não usar _current_roles/_current_user_id/_current_tenant_id direto:
+    em sessões streamable-http *stateful* (padrão do SDK — Concilium nunca passa
+    stateless_http=True), o McpAuthMiddleware seta esses contextvars por
+    requisição HTTP, mas o SDK MCP despacha tools/call de requisições após a
+    primeira usando uma task persistente criada na ABERTURA da sessão (ver
+    mcp.server.lowlevel.server.Server.run: `tg.start_soon(self._handle_message,
+    ...)` dentro de um task group aberto uma única vez). Essa task captura o
+    contexto de quando a sessão foi criada (chamada 'initialize', pública, sem
+    roles) — os contextvars setados pela requisição HTTP de uma tool call
+    posterior nunca chegam a essa task. Sintoma: "Roles do token: ['(nenhum)']"
+    mesmo com um Bearer token válido e roles corretos.
+
+    O próprio SDK, porém, re-seta corretamente `request_ctx` a cada MENSAGEM
+    (não a cada sessão) em Server._handle_request, com o Request HTTP real
+    (headers inclusos) em `.request` — daí extraímos o Bearer token aqui, por
+    chamada, contornando o problema. Ver docstring de patch_mcp_auth_permissions.
+
+    Retorna None se não há request_ctx ativo, sem Authorization Bearer, ou
+    token inválido — o chamador deve cair para o contextvar legado nesses casos
+    (transporte stdio, testes que chamam set_roles()/set_auth_context() direto).
+    """
+    from mcp.server.lowlevel.server import request_ctx
+
+    ctx = request_ctx.get(None)
+    request = getattr(ctx, "request", None) if ctx is not None else None
+    if request is None:
+        return None
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+
+    from concilium.infrastructure.auth.token_service import decode_token
+
+    try:
+        return decode_token(auth[7:].strip())
+    except Exception:
+        return None
+
+
+def _effective_mcp_roles() -> list[str]:
+    """Roles efetivos para a chamada de tool MCP atual (ver _mcp_message_claims)."""
+    claims = _mcp_message_claims()
+    if claims is not None:
+        return roles_from_token(claims)
+    return list(_current_roles.get())
+
+
 def require_permission(perm: str, token_roles: list[str]) -> None:
     """Levanta PermissionError se os roles não conferem a permissão necessária.
 
@@ -264,12 +314,26 @@ def reset_auth_context(tokens: tuple[contextvars.Token, contextvars.Token]) -> N
 
 
 def get_current_user_id() -> str | None:
-    """Retorna user_id do contexto MCP atual (JWT sub). None fora de request."""
+    """Retorna user_id do contexto MCP atual (JWT sub). None fora de request.
+
+    Prioriza claims resolvidos por-mensagem (_mcp_message_claims) sobre o
+    contextvar _current_user_id — ver _mcp_message_claims para o porquê.
+    """
+    claims = _mcp_message_claims()
+    if claims is not None:
+        return claims.get("sub")
     return _current_user_id.get()
 
 
 def get_current_tenant_id() -> str | None:
-    """Retorna tenant_id do contexto MCP atual (JWT tid). None fora de request."""
+    """Retorna tenant_id do contexto MCP atual (JWT tid). None fora de request.
+
+    Prioriza claims resolvidos por-mensagem (_mcp_message_claims) sobre o
+    contextvar _current_tenant_id — ver _mcp_message_claims para o porquê.
+    """
+    claims = _mcp_message_claims()
+    if claims is not None:
+        return claims.get("tid") or claims.get("tenant_id")
     return _current_tenant_id.get()
 
 
@@ -277,13 +341,13 @@ def _get_roles_from_context(kwargs: dict[str, Any]) -> list[str]:
     """Extrai roles do contexto atual.
 
     FastAPI route: lê request.state.jwt_claims (injetado pelo JWTAuthMiddleware)
-    MCP tool:      lê contextvar _current_roles (setado pelo adaptador HTTP)
+    MCP tool:      ver _effective_mcp_roles
     """
     request = kwargs.get("request")
     if request is not None:
         claims = getattr(request.state, "jwt_claims", {})
         return roles_from_token(claims)
-    return list(_current_roles.get())
+    return _effective_mcp_roles()
 
 
 # ── Decorators ────────────────────────────────────────────────────────────────
@@ -446,7 +510,7 @@ def patch_mcp_auth_permissions(server: Any) -> None:
             def _auth_wrapper(*args: Any, **kwargs: Any) -> Any:
                 # AUTH_PUBLIC: bootstrap sem token — ver permission() acima.
                 if perm != AUTH_PUBLIC and _auth_enabled():
-                    token_roles = list(_current_roles.get())
+                    token_roles = _effective_mcp_roles()
                     if perm not in get_permissions(token_roles):
                         raise PermissionError(
                             f"MCP tool '{fn.__name__}' requer '{perm}'. "
