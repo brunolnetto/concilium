@@ -56,29 +56,52 @@ CONCILIUM__NOTIFICATIONS_ENABLED=1            # default: 0 em dev
 
 ### F2 — Email de criação: claude_desktop_config.json gerado automaticamente
 
-Ao criar um usuário, o sistema gera o arquivo `claude_desktop_config.json` pré-preenchido com:
+> **Nota de implementação (2026-07-13):** o bloco original abaixo era a especificação
+> inicial desta ADR e nunca foi atualizado após a implementação real divergir dele —
+> ver a versão corrigida logo depois, que reflete `commands_auth.py::_build_mcp_config_block`
+> e `application/services/notifications.py` tal como existem hoje.
+
+Ao criar um usuário, o sistema gera dois arquivos `claude_desktop_config.json` (um por SO — o admin não escolhe a plataforma do usuário final na hora do cadastro) pré-preenchidos. Não há pacote `concilium` publicado no PyPI para instalação via `npx`/`pip` na máquina do usuário final — em vez disso, o usuário baixa um executável standalone (PyInstaller, publicado pela workflow `build-proxy.yml`, um build nativo por SO) e salva num caminho fixo local:
 
 ```json
+// macOS/Linux — salvar o executável em $HOME/.concilium/bin/concilium-mcp-proxy (chmod +x)
 {
   "mcpServers": {
     "concilium": {
-      "command": "npx",
-      "args": ["-y", "@anthropic-ai/mcp-client"],
+      "command": "sh",
+      "args": ["-c", "$HOME/.concilium/bin/concilium-mcp-proxy"],
       "env": {
-        "MCP_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br/mcp",
-        "MCP_AUTH_CLIENT_ID": "<client_id>",
-        "MCP_AUTH_DEVICE_CODE": "<device_code>"
+        "CONCILIUM_CLIENT_CODE": "<client_code>",
+        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br"
       }
     }
   }
 }
 ```
 
-O arquivo é enviado como anexo no email de boas-vindas, com instruções de:
-1. Salvar o arquivo em `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) ou `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
-2. Reinicializar o Claude Desktop.
+```json
+// Windows — salvar o executável em C:\Concilium\concilium-mcp-proxy.exe
+{
+  "mcpServers": {
+    "concilium": {
+      "command": "C:\\Concilium\\concilium-mcp-proxy.exe",
+      "env": {
+        "CONCILIUM_CLIENT_CODE": "<client_code>",
+        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br"
+      }
+    }
+  }
+}
+```
 
-O device code tem TTL de 1 hora (`DeviceCodeRecord.expires_at`). Se o usuário não ativar nesse prazo, o admin precisa regenerar via `concilium ops auth device regenerate <user_id>`.
+`CONCILIUM_DEVICE_CODE` é o nome legado dessa mesma variável (pré-#17) — o proxy ainda a aceita como fallback (`_mcp.py::McpProxySettings.from_env`), porque configs já distribuídos antes do rename continuam em uso em máquinas de usuários reais e não estão sob nosso controle para migrar retroativamente.
+
+O email de boas-vindas anexa: os dois JSONs crus (fallback), o executável do proxy zipado junto com o JSON já preenchido para aquele SO (quando os zips cabem no limite de 18MB da mensagem — `notifications.py::_zips_fit_in_email`), e o tutorial de uso. Instruções para o usuário:
+1. Baixar o executável do proxy do link enviado (válido por 7 dias, `scope="organization"` — abre só com login M365 da empresa) e salvar no caminho indicado acima.
+2. Colar o JSON do seu SO em `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) ou `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
+3. Reinicializar o Claude Desktop.
+
+O `client_code` (`ClientRecord.client_code_hash`) **não tem TTL** e é reutilizável em quantos dispositivos o usuário precisar — não é um código de uso único por dispositivo. Se vazar ou o usuário perder o código original, o admin invalida o anterior e gera um novo via `concilium ops auth regenerate-code --user <client_id>`.
 
 ### F3 — Notificação de novo dispositivo
 
