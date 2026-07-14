@@ -455,6 +455,50 @@ def _die(msg: str) -> NoReturn:
     sys.exit(1)
 
 
+def _e_erro_de_dns(erro: Exception) -> bool:
+    """True quando a causa é resolução de nome (getaddrinfo/11001), não conectividade."""
+    texto = str(erro)
+    return any(t in texto for t in ("getaddrinfo", "11001", "Name or service not known", "nodename nor servname"))
+
+
+def _initialize_session_com_retries(http_client, tentativas: int = 3):
+    """Inicializa a sessão MCP com retries e mensagem de erro acionável.
+
+    Falha de DNS (errno 11001 no Windows) ou de conexão não deve virar traceback
+    cru do PyInstaller ("Failed to execute script") — o usuário final do .exe
+    precisa saber O QUE checar. Retries cobrem blips transitórios (VPN
+    reconectando, resolver lento)."""
+    import httpx
+
+    for tentativa in range(1, tentativas + 1):
+        try:
+            return _initialize_session(http_client)
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if tentativa < tentativas:
+                espera = 2**tentativa
+                _log(
+                    f"Falha ao conectar em {_SERVER_URL} ({e}) — "
+                    f"tentativa {tentativa}/{tentativas}, novo teste em {espera}s…"
+                )
+                time.sleep(espera)
+                continue
+            if _e_erro_de_dns(e):
+                _die(
+                    f"Não foi possível RESOLVER o endereço do servidor: {_SERVER_URL}\n"
+                    "  Isso é um problema de DNS/rede DESTA máquina (o servidor não chegou a ser contatado):\n"
+                    "    1. Teste:  nslookup mcp.mendesloboconstrucao.com.br  (e com 8.8.8.8 ao final)\n"
+                    "    2. Windows: ipconfig /flushdns  e verifique VPN/proxy corporativo\n"
+                    "    3. Alternativa: defina a variável CONCILIUM_SERVER_URL com o FQDN direto do\n"
+                    "       Container App (az containerapp show -n concilium-mcp -g concilium-rg\n"
+                    "       --query properties.configuration.ingress.fqdn)"
+                )
+            _die(
+                f"Não foi possível CONECTAR ao servidor {_SERVER_URL}: {e}\n"
+                "  O nome resolveu, mas a conexão falhou — verifique firewall/proxy corporativo e\n"
+                "  se a porta 443 de saída está liberada."
+            )
+
+
 # ── MCP stdio ↔ HTTP bridge ───────────────────────────────────────────────────
 
 
@@ -595,8 +639,9 @@ def main() -> None:
     _log(f"Iniciando proxy → {_SERVER_URL} (device: {_DEVICE_ID})")
 
     with httpx.Client() as http:
-        # Inicializa sessão MCP (streamable-http protocol)
-        session_id = _initialize_session(http)
+        # Inicializa sessão MCP (streamable-http protocol) — com retries e erro
+        # acionável em falha de DNS/conexão (nada de traceback cru no .exe)
+        session_id = _initialize_session_com_retries(http)
         _log(f"Sessão MCP iniciada (ID: {session_id[:12]}...)")
 
         # Obtém access token via tools públicos (ativar_dispositivo + renovar_token)
