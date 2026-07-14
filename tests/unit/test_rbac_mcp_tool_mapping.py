@@ -354,14 +354,21 @@ class TestPatchMcpAuthPermissions:
 
 
 class _FakeMcpRequest:
-    """Request-like stub exposing só o que _mcp_message_claims() lê: .headers.get(...)."""
+    """Request-like stub exposing só o que _mcp_message_claims()/get_current_mcp_session_id()
+    leem: .headers.get(...)."""
 
-    def __init__(self, authorization: str | None):
+    def __init__(self, authorization: str | None, mcp_session_id: str | None = None):
         self._authorization = authorization
+        self._mcp_session_id = mcp_session_id
 
     @property
     def headers(self):
-        return {"authorization": self._authorization} if self._authorization else {}
+        headers = {}
+        if self._authorization:
+            headers["authorization"] = self._authorization
+        if self._mcp_session_id:
+            headers["mcp-session-id"] = self._mcp_session_id
+        return headers
 
 
 class TestStatefulSessionRoleResolution:
@@ -580,6 +587,96 @@ class TestCurrentUserTenantIdPreferPerMessageClaims:
                 assert get_current_tenant_id() == "mendeslobo"
         finally:
             reset_auth_context(tokens)
+
+
+class TestCurrentDeviceIdAndMcpSessionId:
+    """ADR-138 (sessões por dispositivo): device_id (claim JWT do fluxo de
+    refresh) e mcp_session_id (header de protocolo, não é claim) seguem o
+    mesmo padrão per-message-primeiro dos demais getters de identidade."""
+
+    def test_device_id_prefers_message_claims_over_contextvar(self):
+        from concilium.infrastructure.auth.permission_guard import get_current_device_id, set_auth_context
+
+        tokens = set_auth_context("bruno", "mendeslobo", device_id="stale-device-from-frozen-session")
+        try:
+            fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer real-jwt"))
+            with (
+                patch(
+                    "mcp.server.lowlevel.server.request_ctx",
+                    MagicMock(get=MagicMock(return_value=fake_ctx)),
+                ),
+                patch(
+                    "concilium.infrastructure.auth.token_service.decode_token",
+                    return_value={"sub": "bruno", "roles": ["operator"], "device_id": "falcon-falcon"},
+                ),
+            ):
+                assert get_current_device_id() == "falcon-falcon"
+        finally:
+            from concilium.infrastructure.auth.permission_guard import reset_auth_context
+
+            reset_auth_context(tokens)
+
+    def test_device_id_none_when_claim_absent(self):
+        """Fluxos sem device (client_id/secret direto) não têm claim device_id."""
+        from concilium.infrastructure.auth.permission_guard import get_current_device_id, set_auth_context
+
+        tokens = set_auth_context("bruno", "mendeslobo")
+        try:
+            fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer real-jwt"))
+            with (
+                patch(
+                    "mcp.server.lowlevel.server.request_ctx",
+                    MagicMock(get=MagicMock(return_value=fake_ctx)),
+                ),
+                patch(
+                    "concilium.infrastructure.auth.token_service.decode_token",
+                    return_value={"sub": "bruno", "roles": ["operator"]},
+                ),
+            ):
+                assert get_current_device_id() is None
+        finally:
+            from concilium.infrastructure.auth.permission_guard import reset_auth_context
+
+            reset_auth_context(tokens)
+
+    def test_device_id_falls_back_to_contextvar_without_request_ctx(self):
+        from concilium.infrastructure.auth.permission_guard import (
+            get_current_device_id,
+            reset_auth_context,
+            set_auth_context,
+        )
+
+        tokens = set_auth_context("bruno", "mendeslobo", device_id="falcon-falcon")
+        try:
+            with patch(
+                "mcp.server.lowlevel.server.request_ctx",
+                MagicMock(get=MagicMock(return_value=None)),
+            ):
+                assert get_current_device_id() == "falcon-falcon"
+        finally:
+            reset_auth_context(tokens)
+
+    def test_mcp_session_id_reads_header_from_request_ctx(self):
+        """mcp_session_id não é claim JWT — vem do header mcp-session-id da
+        própria mensagem (nunca de contextvar: não há staleness a proteger
+        contra, e não há sentido em 'sessão anterior' como fallback)."""
+        from concilium.infrastructure.auth.permission_guard import get_current_mcp_session_id
+
+        fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer real-jwt", mcp_session_id="sess-abc123"))
+        with patch(
+            "mcp.server.lowlevel.server.request_ctx",
+            MagicMock(get=MagicMock(return_value=fake_ctx)),
+        ):
+            assert get_current_mcp_session_id() == "sess-abc123"
+
+    def test_mcp_session_id_none_without_request_ctx(self):
+        from concilium.infrastructure.auth.permission_guard import get_current_mcp_session_id
+
+        with patch(
+            "mcp.server.lowlevel.server.request_ctx",
+            MagicMock(get=MagicMock(return_value=None)),
+        ):
+            assert get_current_mcp_session_id() is None
 
 
 # ADR-120: 5 novas tools de ciclo de vida de catálogo (appended after original list close)

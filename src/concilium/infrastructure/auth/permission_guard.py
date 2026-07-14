@@ -293,24 +293,33 @@ _current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar[
     "_auth_current_tenant_id", default=None
 )
 
+_current_device_id: contextvars.ContextVar[str | None] = contextvars.ContextVar[str | None](
+    "_auth_current_device_id", default=None
+)
+
 
 def set_roles(token_roles: list[str]) -> contextvars.Token:
     """Define os roles do request MCP atual. Chamar antes de invocar a tool."""
     return _current_roles.set(frozenset(token_roles))
 
 
-def set_auth_context(user_id: str | None, tenant_id: str | None) -> tuple[contextvars.Token, contextvars.Token]:
-    """Define user_id e tenant_id extraídos do JWT no contexto de execução atual.
+def set_auth_context(
+    user_id: str | None, tenant_id: str | None, device_id: str | None = None
+) -> tuple[contextvars.Token, contextvars.Token, contextvars.Token]:
+    """Define user_id, tenant_id e device_id extraídos do JWT no contexto de execução atual.
+
+    device_id (ADR-138 sessões): ausente nos fluxos sem device (ver token_service.issue_token).
 
     Retorna tokens para reset no finally do middleware (ADR-118).
     """
-    return (_current_user_id.set(user_id), _current_tenant_id.set(tenant_id))
+    return (_current_user_id.set(user_id), _current_tenant_id.set(tenant_id), _current_device_id.set(device_id))
 
 
-def reset_auth_context(tokens: tuple[contextvars.Token, contextvars.Token]) -> None:
+def reset_auth_context(tokens: tuple[contextvars.Token, contextvars.Token, contextvars.Token]) -> None:
     """Restaura contextvars de identidade ao estado anterior."""
     _current_user_id.reset(tokens[0])
     _current_tenant_id.reset(tokens[1])
+    _current_device_id.reset(tokens[2])
 
 
 def get_current_user_id() -> str | None:
@@ -335,6 +344,37 @@ def get_current_tenant_id() -> str | None:
     if claims is not None:
         return claims.get("tid") or claims.get("tenant_id")
     return _current_tenant_id.get()
+
+
+def get_current_device_id() -> str | None:
+    """Retorna device_id do contexto MCP atual (JWT device_id, ADR-138 sessões).
+
+    None se o token não veio do fluxo de refresh de dispositivo (ex.: client_id/
+    secret direto), ou fora de request. Prioriza claims por-mensagem sobre o
+    contextvar _current_device_id — ver _mcp_message_claims para o porquê.
+    """
+    claims = _mcp_message_claims()
+    if claims is not None:
+        return claims.get("device_id")
+    return _current_device_id.get()
+
+
+def get_current_mcp_session_id() -> str | None:
+    """Retorna o Mcp-Session-Id da mensagem MCP atual (ADR-138 sessões).
+
+    Não é claim do JWT — é um header de protocolo (streamable-http), correlato
+    à conexão, não à identidade. Por isso não tem fallback de contextvar: só
+    faz sentido o valor da mensagem atual (via request_ctx do SDK, correto
+    por-mensagem mesmo em sessões stateful reusadas — ver _mcp_message_claims).
+    None fora de request HTTP (ex.: stdio) ou se o header não foi enviado.
+    """
+    from mcp.server.lowlevel.server import request_ctx
+
+    ctx = request_ctx.get(None)
+    request = getattr(ctx, "request", None) if ctx is not None else None
+    if request is None:
+        return None
+    return request.headers.get("mcp-session-id")
 
 
 def _get_roles_from_context(kwargs: dict[str, Any]) -> list[str]:

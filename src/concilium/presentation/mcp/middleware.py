@@ -100,6 +100,7 @@ def _decode_bearer_token(raw_token: str) -> tuple[Any, Any, dict]:
     auth_ctx_tokens = set_auth_context(
         claims.get("sub"),
         claims.get("tid") or claims.get("tenant_id"),
+        claims.get("device_id"),
     )
     return token_var, auth_ctx_tokens, claims
 

@@ -30,6 +30,8 @@ def _make_invocation(
     id: str,
     tool_name: str = "ping",
     user_id: str | None = "u1",
+    device_id: str | None = None,
+    mcp_session_id: str | None = None,
 ) -> ToolInvocation:
     return ToolInvocation(
         id=id,
@@ -41,7 +43,58 @@ def _make_invocation(
         started_at="2026-06-23T10:00:00Z",
         finished_at="2026-06-23T10:00:01Z",
         error_type=None,
+        device_id=device_id,
+        mcp_session_id=mcp_session_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# ToolInvocation model — device_id/mcp_session_id (ADR-138 sessões)
+# ---------------------------------------------------------------------------
+
+
+class TestToolInvocationDeviceFields:
+    def test_to_dict_includes_device_fields(self):
+        inv = _make_invocation("id-1", device_id="falcon-falcon", mcp_session_id="sess-abc")
+        d = inv.to_dict()
+        assert d["device_id"] == "falcon-falcon"
+        assert d["mcp_session_id"] == "sess-abc"
+
+    def test_from_dict_round_trip(self):
+        inv = _make_invocation("id-1", device_id="falcon-falcon", mcp_session_id="sess-abc")
+        restored = ToolInvocation.from_dict(inv.to_dict())
+        assert restored == inv
+
+    def test_from_dict_defaults_to_none_when_absent(self):
+        """Backward-compat: registros NDJSON gravados antes do ADR-138 não têm
+        essas chaves — from_dict não deve levantar KeyError."""
+        old_dict = {
+            "id": "id-old",
+            "tool_name": "ping",
+            "input_keys": [],
+            "user_id": "u1",
+            "tenant_id": "tenant-x",
+            "status": "success",
+            "started_at": "2026-01-01T00:00:00Z",
+            "finished_at": "2026-01-01T00:00:01Z",
+        }
+        restored = ToolInvocation.from_dict(old_dict)
+        assert restored.device_id is None
+        assert restored.mcp_session_id is None
+
+    def test_defaults_to_none_when_not_passed_to_constructor(self):
+        inv = ToolInvocation(
+            id="id-1",
+            tool_name="ping",
+            input_keys=[],
+            user_id="u1",
+            tenant_id="tenant-x",
+            status="success",
+            started_at="2026-01-01T00:00:00Z",
+            finished_at="2026-01-01T00:00:01Z",
+        )
+        assert inv.device_id is None
+        assert inv.mcp_session_id is None
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +234,37 @@ class TestBlobListByUser:
         assert result[0].id == "id-3"
 
 
+class TestBlobListByDevice:
+    """list_by_device (ADR-138 sessões por dispositivo)."""
+
+    def test_list_by_device_filters_correctly(self, blob_repo):
+        blob_repo.append(_make_invocation("id-1", device_id="falcon-falcon"))
+        blob_repo.append(_make_invocation("id-2", device_id="other-device"))
+        blob_repo.append(_make_invocation("id-3", device_id="falcon-falcon"))
+
+        result = blob_repo.list_by_device("falcon-falcon")
+        assert len(result) == 2
+        assert all(r.device_id == "falcon-falcon" for r in result)
+        assert result[0].id == "id-3"
+
+    def test_list_by_device_no_match(self, blob_repo):
+        blob_repo.append(_make_invocation("id-1", device_id="falcon-falcon"))
+        assert blob_repo.list_by_device("nonexistent") == []
+
+    def test_list_by_device_with_limit(self, blob_repo):
+        for i in range(4):
+            blob_repo.append(_make_invocation(f"id-{i}", device_id="falcon-falcon"))
+        result = blob_repo.list_by_device("falcon-falcon", limit=2)
+        assert len(result) == 2
+        assert result[0].id == "id-3"
+
+    def test_list_by_device_ignores_invocations_without_device(self, blob_repo):
+        """Invocações de fluxos sem device (client_id/secret direto) têm device_id=None
+        e nunca devem aparecer em list_by_device (nem por engano casando None==None)."""
+        blob_repo.append(_make_invocation("id-1", device_id=None))
+        assert blob_repo.list_by_device("falcon-falcon") == []
+
+
 class TestBlobCount:
     """count (line 77)."""
 
@@ -275,6 +359,31 @@ class TestInMemoryListByUser:
         result = mem_repo.list_by_user("alice", limit=2)
         assert len(result) == 2
         assert result[0].id == "id-3"
+
+
+class TestInMemoryListByDevice:
+    """list_by_device (ADR-138 sessões por dispositivo)."""
+
+    def test_filters_by_device_id(self, mem_repo):
+        mem_repo.append(_make_invocation("id-1", device_id="falcon-falcon"))
+        mem_repo.append(_make_invocation("id-2", device_id="other-device"))
+        mem_repo.append(_make_invocation("id-3", device_id="falcon-falcon"))
+
+        result = mem_repo.list_by_device("falcon-falcon")
+        assert len(result) == 2
+        assert all(r.device_id == "falcon-falcon" for r in result)
+        assert result[0].id == "id-3"
+
+    def test_no_match_returns_empty(self, mem_repo):
+        mem_repo.append(_make_invocation("id-1", device_id="falcon-falcon"))
+        assert mem_repo.list_by_device("missing") == []
+
+    def test_limit_applied_to_filtered_results(self, mem_repo):
+        for i in range(5):
+            mem_repo.append(_make_invocation(f"id-{i}", device_id="falcon-falcon"))
+        result = mem_repo.list_by_device("falcon-falcon", limit=2)
+        assert len(result) == 2
+        assert result[0].id == "id-4"
 
 
 class TestInMemoryCount:

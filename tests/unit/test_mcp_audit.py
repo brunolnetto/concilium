@@ -106,6 +106,49 @@ class TestWithAudit:
 
         assert result == "ok"
 
+    def test_captures_device_id_and_mcp_session_id(self):
+        """ADR-138: wrapper captura device_id/mcp_session_id do contexto atual e
+        repassa para _record, junto de user_id/tenant_id."""
+
+        def fn() -> str:
+            return "ok"
+
+        fn.__name__ = "fn"
+        wrapped = _with_audit(fn)
+
+        with (
+            patch("concilium.presentation.mcp.audit._record") as mock_record,
+            patch(
+                "concilium.infrastructure.auth.permission_guard.get_current_device_id",
+                return_value="falcon-falcon",
+            ),
+            patch(
+                "concilium.infrastructure.auth.permission_guard.get_current_mcp_session_id",
+                return_value="sess-abc123",
+            ),
+        ):
+            wrapped()
+
+        _, kwargs = mock_record.call_args
+        assert kwargs["device_id"] == "falcon-falcon"
+        assert kwargs["mcp_session_id"] == "sess-abc123"
+
+    def test_device_id_and_mcp_session_id_default_to_none(self):
+        """Fora de request MCP (ex.: chamada direta em teste), ambos são None."""
+
+        def fn() -> str:
+            return "ok"
+
+        fn.__name__ = "fn"
+        wrapped = _with_audit(fn)
+
+        with patch("concilium.presentation.mcp.audit._record") as mock_record:
+            wrapped()
+
+        _, kwargs = mock_record.call_args
+        assert kwargs["device_id"] is None
+        assert kwargs["mcp_session_id"] is None
+
 
 class TestRecord:
     def test_record_success_appends_to_repository(self):
@@ -124,8 +167,13 @@ class TestRecord:
                 started_at="2026-01-01T00:00:00+00:00",
                 finished_at="2026-01-01T00:00:01+00:00",
                 error_type=None,
+                device_id="falcon-falcon",
+                mcp_session_id="sess-abc123",
             )
         mock_repo.append.assert_called_once()
+        inv = mock_repo.append.call_args[0][0]
+        assert inv.device_id == "falcon-falcon"
+        assert inv.mcp_session_id == "sess-abc123"
 
     def test_record_swallows_repository_errors(self):
         """Lines 114-115: any exception while persisting is swallowed."""
@@ -144,4 +192,6 @@ class TestRecord:
                 started_at="2026-01-01T00:00:00+00:00",
                 finished_at="2026-01-01T00:00:01+00:00",
                 error_type="ValueError",
+                device_id=None,
+                mcp_session_id=None,
             )

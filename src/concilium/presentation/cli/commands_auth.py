@@ -18,6 +18,9 @@ Uso típico:
   # Listar dispositivos ativos
   concilium auth list-devices
 
+  # Listar sessões MCP recentes de um dispositivo
+  concilium auth list-sessions --device macbook-bruno
+
   # Revogar acesso de um dispositivo
   concilium auth revoke-device --device macbook-bruno
 """
@@ -551,6 +554,42 @@ def list_devices(
             d.issued_at[:10],
             d.expires_at[:10],
             d.last_used_at[:10] if d.last_used_at else "—",
+        )
+
+    rprint(table)
+
+
+@app.command("list-sessions")
+def list_sessions(
+    device: str = typer.Option(..., "--device", "-d", help="Device ID."),
+) -> None:
+    """Lista sessões MCP recentes de um dispositivo (ADR-138).
+
+    Uma sessão é uma conexão streamable-http/SSE — derivada do audit log de
+    invocações de tool (não é um registro à parte). Requer que o audit log
+    ainda contenha as invocações da sessão (ver limites do backend de audit).
+    """
+    from concilium.application.tool_invocations.sessions import sessions_for_device
+
+    sessions = sessions_for_device(device)
+    if not sessions:
+        rprint("[dim]Nenhuma sessão encontrada para este dispositivo.[/dim]")
+        return
+
+    table = Table(title=f"Sessões MCP — {device}", show_header=True)
+    table.add_column("Session ID", style="cyan")
+    table.add_column("Usuário")
+    table.add_column("Iniciada em")
+    table.add_column("Última atividade")
+    table.add_column("Chamadas", justify="right")
+
+    for s in sessions:
+        table.add_row(
+            s.session_id,
+            s.user_id or "—",
+            s.started_at[:19],
+            s.last_activity_at[:19],
+            str(s.call_count),
         )
 
     rprint(table)

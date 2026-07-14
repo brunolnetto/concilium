@@ -42,6 +42,11 @@ class ToolInvocationRepository(ABC):
         ...
 
     @abstractmethod
+    def list_by_device(self, device_id: str, limit: int = 100) -> list[ToolInvocation]:
+        """Retorna as últimas `limit` invocações de um dispositivo específico (ADR-138)."""
+        ...
+
+    @abstractmethod
     def count(self) -> int:
         """Total de registros no buffer."""
         ...
@@ -75,6 +80,11 @@ class InMemoryToolInvocationRepository(ToolInvocationRepository):
     def list_by_user(self, user_id: str, limit: int = 100) -> list[ToolInvocation]:
         with self._lock:
             items = [i for i in self._buffer if i.user_id == user_id]
+        return list(reversed(items[-limit:]))
+
+    def list_by_device(self, device_id: str, limit: int = 100) -> list[ToolInvocation]:
+        with self._lock:
+            items = [i for i in self._buffer if i.device_id == device_id]
         return list(reversed(items[-limit:]))
 
     def count(self) -> int:

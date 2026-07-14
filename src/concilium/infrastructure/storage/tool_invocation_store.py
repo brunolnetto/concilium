@@ -72,6 +72,11 @@ class BlobToolInvocationRepository(ToolInvocationRepository):
         records = [r for r in self._read_all() if r.user_id == user_id]
         return list(reversed(records[-limit:]))
 
+    def list_by_device(self, device_id: str, limit: int = 100) -> list[ToolInvocation]:
+        """Últimas `limit` invocações de um dispositivo específico (ADR-138)."""
+        records = [r for r in self._read_all() if r.device_id == device_id]
+        return list(reversed(records[-limit:]))
+
     def count(self) -> int:
         """Total de registros no arquivo."""
         return len(self._read_all())

@@ -45,13 +45,20 @@ def _with_audit(tool_fn: Any) -> Any:
         import uuid
         from datetime import datetime
 
-        from concilium.infrastructure.auth.permission_guard import get_current_tenant_id, get_current_user_id
+        from concilium.infrastructure.auth.permission_guard import (
+            get_current_device_id,
+            get_current_mcp_session_id,
+            get_current_tenant_id,
+            get_current_user_id,
+        )
 
         invocation_id = f"ti-{uuid.uuid4().hex[:12]}"
         started_at = datetime.now(UTC).isoformat()
         input_keys = list(kwargs.keys())
         user_id = get_current_user_id()
         tenant_id = get_current_tenant_id()
+        device_id = get_current_device_id()
+        mcp_session_id = get_current_mcp_session_id()
 
         status = "success"
         error_type: str | None = None
@@ -75,6 +82,8 @@ def _with_audit(tool_fn: Any) -> Any:
                     started_at=started_at,
                     finished_at=finished_at,
                     error_type=error_type,
+                    device_id=device_id,
+                    mcp_session_id=mcp_session_id,
                 )
             except Exception:
                 pass
@@ -93,6 +102,8 @@ def _record(
     started_at: str,
     finished_at: str,
     error_type: str | None,
+    device_id: str | None = None,
+    mcp_session_id: str | None = None,
 ) -> None:
     """Persiste o registro no repositório (best-effort — nunca levanta)."""
     try:
@@ -109,6 +120,8 @@ def _record(
             started_at=started_at,
             finished_at=finished_at,
             error_type=error_type,
+            device_id=device_id,
+            mcp_session_id=mcp_session_id,
         )
         get_tool_invocation_repository().append(inv)
     except Exception:

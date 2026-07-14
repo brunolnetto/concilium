@@ -225,6 +225,30 @@ class TestTokenService:
         assert claims["iss"] == "concilium-auth"
         assert claims["org"] == "mendesloboconstrucao"
 
+    def test_round_trip_with_device_id(self, mock_jwt_env):
+        """Fluxo de device (ADR-138 sessions): device_id opcional vira claim do JWT."""
+        from concilium.infrastructure.auth.jwt_config import load_key_pair
+        from concilium.infrastructure.auth.token_service import decode_token, issue_token
+
+        with patch.dict(os.environ, mock_jwt_env):
+            load_key_pair.cache_clear()
+            token = issue_token("eng-01", ["operator"], ttl=timedelta(hours=1), device_id="falcon-falcon")
+            claims = decode_token(token)
+
+        assert claims["device_id"] == "falcon-falcon"
+
+    def test_round_trip_without_device_id_omits_claim(self, mock_jwt_env):
+        """Fluxos sem device (client_id/secret direto, token/issue) não ganham claim."""
+        from concilium.infrastructure.auth.jwt_config import load_key_pair
+        from concilium.infrastructure.auth.token_service import decode_token, issue_token
+
+        with patch.dict(os.environ, mock_jwt_env):
+            load_key_pair.cache_clear()
+            token = issue_token("eng-01", ["operator"], ttl=timedelta(hours=1))
+            claims = decode_token(token)
+
+        assert "device_id" not in claims
+
     def test_expired_token_raises(self, mock_jwt_env):
         import jwt as _jwt
 

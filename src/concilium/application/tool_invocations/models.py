@@ -28,6 +28,8 @@ class ToolInvocation:
     started_at: str
     finished_at: str
     error_type: str | None = field(default=None)
+    device_id: str | None = field(default=None)  # ADR-138: dispositivo que fez a chamada
+    mcp_session_id: str | None = field(default=None)  # ADR-138: sessão MCP (Mcp-Session-Id)
 
     def to_dict(self) -> dict:
         return {
@@ -40,6 +42,8 @@ class ToolInvocation:
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "error_type": self.error_type,
+            "device_id": self.device_id,
+            "mcp_session_id": self.mcp_session_id,
         }
 
     @staticmethod
@@ -54,4 +58,6 @@ class ToolInvocation:
             started_at=d["started_at"],
             finished_at=d["finished_at"],
             error_type=d.get("error_type"),
+            device_id=d.get("device_id"),
+            mcp_session_id=d.get("mcp_session_id"),
         )

@@ -177,7 +177,7 @@ def refresh_token(request: Request, response: Response, body: TokenRefreshReques
     notify_if_unknown_device(store, record, known_before)
 
     ttl = timedelta(hours=8)
-    token = _issue(subject=record.client_id, roles=client.roles, ttl=ttl)
+    token = _issue(subject=record.client_id, roles=client.roles, ttl=ttl, device_id=record.device_id)
     return TokenResponse(access_token=token, expires_in=int(ttl.total_seconds()))
 
 

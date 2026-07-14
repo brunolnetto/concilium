@@ -25,8 +25,16 @@ def issue_token(
     subject: str,
     roles: list[str],
     ttl: timedelta = TTL_INTERACTIVE,
+    device_id: str | None = None,
 ) -> str:
-    """Sign and return a JWT RS256 with 'roles' claim (ADR-099)."""
+    """Sign and return a JWT RS256 with 'roles' claim (ADR-099).
+
+    device_id (ADR-138 sessions): presente apenas no fluxo de refresh de
+    dispositivo (/auth/token/refresh) — permite rastrear qual dispositivo fez
+    cada chamada de tool MCP (audit log, sessões por dispositivo) sem precisar
+    de um lookup adicional. Ausente nos fluxos sem device (client_id/secret
+    direto, token/issue de longa duração).
+    """
     keys = load_key_pair()
     now = datetime.now(UTC)
     payload: dict = {
@@ -37,6 +45,8 @@ def issue_token(
         "iat": now,
         "exp": now + ttl,
     }
+    if device_id is not None:
+        payload["device_id"] = device_id
     return jwt.encode(payload, keys.private_pem, algorithm=_ALGORITHM)
 
 

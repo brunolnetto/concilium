@@ -859,6 +859,49 @@ class TestListDevices:
 
 
 # ===========================================================================
+# list-sessions (ADR-138: sessões MCP por dispositivo)
+# ===========================================================================
+
+
+PATCH_SESSIONS_FOR_DEVICE = "concilium.application.tool_invocations.sessions.sessions_for_device"
+
+
+class TestListSessions:
+    def test_list_sessions_with_sessions_renders_table(self):
+        from concilium.application.tool_invocations.sessions import DeviceSession
+
+        sessions = [
+            DeviceSession(
+                session_id="sess-abc123",
+                device_id="falcon-falcon",
+                user_id="bruno",
+                tenant_id="mendeslobo",
+                started_at="2026-07-14T10:00:00+00:00",
+                last_activity_at="2026-07-14T10:05:00+00:00",
+                call_count=7,
+            )
+        ]
+        with patch(PATCH_SESSIONS_FOR_DEVICE, return_value=sessions) as mock_sessions:
+            result = runner.invoke(app, ["list-sessions", "--device", "falcon-falcon"])
+
+        assert result.exit_code == 0, result.output
+        assert "sess-abc123" in result.output
+        assert "7" in result.output
+        mock_sessions.assert_called_once_with("falcon-falcon")
+
+    def test_list_sessions_empty_prints_dim_message(self):
+        with patch(PATCH_SESSIONS_FOR_DEVICE, return_value=[]):
+            result = runner.invoke(app, ["list-sessions", "--device", "falcon-falcon"])
+
+        assert result.exit_code == 0, result.output
+        assert "Nenhuma" in result.output
+
+    def test_list_sessions_requires_device_option(self):
+        result = runner.invoke(app, ["list-sessions"])
+        assert result.exit_code != 0
+
+
+# ===========================================================================
 # revoke-device
 # ===========================================================================
 
