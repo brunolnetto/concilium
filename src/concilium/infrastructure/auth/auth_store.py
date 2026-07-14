@@ -265,6 +265,15 @@ class AuthStore:
             # Backward-compat: JSON files sem campo 'email' recebem default ""
             return [_client_record(r) for r in records]
 
+    def get_client(self, client_id: str) -> ClientRecord | None:
+        """Retorna o ClientRecord atual (roles ao vivo), ou None se não existir."""
+        with self._lock:
+            raw = self._read_clients()
+        for r in raw:
+            if r["client_id"] == client_id:
+                return _client_record(r)
+        return None
+
     def remove_client(self, client_id: str) -> bool:
         """Deactivates a client. Returns True if found."""
         with self._lock:

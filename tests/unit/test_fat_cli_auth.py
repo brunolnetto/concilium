@@ -60,7 +60,7 @@ def _make_client_record(
 def _make_device_record(
     device_id="macbook-alice",
     client_id="alice",
-    scopes=None,
+    roles=None,
     issued_at="2026-01-01T00:00:00+00:00",
     expires_at="2026-04-01T00:00:00+00:00",
     last_used_at=None,
@@ -68,7 +68,7 @@ def _make_device_record(
     rec = SimpleNamespace(
         device_id=device_id,
         client_id=client_id,
-        scopes=scopes if scopes is not None else ["mcp:read"],
+        roles=roles if roles is not None else ["operator"],
         issued_at=issued_at,
         expires_at=expires_at,
         last_used_at=last_used_at,

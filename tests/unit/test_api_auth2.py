@@ -155,6 +155,7 @@ class TestRefreshToken:
         record.client_id = "svc"
         record.roles = ["operator"]
         store_mock.use_refresh_token.return_value = record
+        store_mock.get_client.return_value = MagicMock(roles=["operator"], active=True)
         with (
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
             patch("concilium.infrastructure.auth.token_service.issue_token", return_value="new-jwt"),
@@ -162,6 +163,49 @@ class TestRefreshToken:
             resp = c.post("/auth/token/refresh", json={"refresh_token": "RT-valid"})
         assert resp.status_code == 200
         assert resp.json()["access_token"] == "new-jwt"
+
+    def test_refresh_resolves_roles_from_live_client_not_stale_snapshot(self):
+        """Regressão: roles devem vir do ClientRecord atual, não do snapshot congelado
+        no refresh token na ativação do dispositivo (bug: device ficava preso ao
+        role de quando foi ativado, mesmo após promoção/demoção do usuário)."""
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        record = MagicMock(client_id="svc", roles=["operator"])  # snapshot antigo/desatualizado
+        store_mock.use_refresh_token.return_value = record
+        store_mock.get_client.return_value = MagicMock(roles=["admin"], active=True)  # role atual
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
+            patch("concilium.infrastructure.auth.token_service.issue_token", return_value="new-jwt") as issue_mock,
+        ):
+            resp = c.post("/auth/token/refresh", json={"refresh_token": "RT-valid"})
+        assert resp.status_code == 200
+        assert issue_mock.call_args.kwargs["roles"] == ["admin"]
+
+    def test_refresh_rejects_deactivated_client(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        record = MagicMock(client_id="svc", roles=["operator"])
+        store_mock.use_refresh_token.return_value = record
+        store_mock.get_client.return_value = MagicMock(roles=["operator"], active=False)
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/token/refresh", json={"refresh_token": "RT-valid"})
+        assert resp.status_code == 401
+
+    def test_refresh_rejects_removed_client(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        record = MagicMock(client_id="svc", roles=["operator"])
+        store_mock.use_refresh_token.return_value = record
+        store_mock.get_client.return_value = None
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/token/refresh", json={"refresh_token": "RT-valid"})
+        assert resp.status_code == 401
 
     def test_unknown_device_with_prior_devices_triggers_notification(self):
         """ADR-123 F3: use_refresh_token também aciona a detecção (mesmo padrão de activate_device)."""
@@ -173,6 +217,7 @@ class TestRefreshToken:
         record = MagicMock(client_id="svc", device_id="dev-new", roles=["operator"])
         store_mock.list_devices.return_value = [old_device]
         store_mock.use_refresh_token.return_value = record
+        store_mock.get_client.return_value = MagicMock(roles=["operator"], active=True)
         with (
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
             patch("concilium.infrastructure.auth.token_service.issue_token", return_value="new-jwt"),

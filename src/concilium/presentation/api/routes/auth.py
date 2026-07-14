@@ -147,6 +147,11 @@ def refresh_token(request: Request, response: Response, body: TokenRefreshReques
     """Troca um refresh token por um access token JWT de 8 horas.
 
     O proxy chama este endpoint automaticamente antes de cada expiração.
+
+    As roles são resolvidas a partir do ClientRecord *atual* (não do snapshot
+    congelado no refresh token na ativação do dispositivo) — assim uma mudança
+    de role (ou desativação) do usuário se propaga no próximo refresh, sem
+    exigir revogar e reativar o dispositivo manualmente.
     """
     from concilium.application.services.device_detection import list_devices_before, notify_if_unknown_device
     from concilium.infrastructure.auth.auth_store import get_auth_store
@@ -161,11 +166,18 @@ def refresh_token(request: Request, response: Response, body: TokenRefreshReques
             detail="Refresh token inválido, expirado ou revogado.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    client = store.get_client(record.client_id)
+    if client is None or not client.active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário do dispositivo não existe mais ou foi desativado.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     known_before = {d.device_id for d in devices_before if d.client_id == record.client_id}
     notify_if_unknown_device(store, record, known_before)
 
     ttl = timedelta(hours=8)
-    token = _issue(subject=record.client_id, roles=record.roles, ttl=ttl)
+    token = _issue(subject=record.client_id, roles=client.roles, ttl=ttl)
     return TokenResponse(access_token=token, expires_in=int(ttl.total_seconds()))
 
 

@@ -521,7 +521,13 @@ def migrate_legacy_codes() -> None:
 def list_devices(
     user: str | None = typer.Option(None, "--user", "-u", help="Filtrar por client_id."),
 ) -> None:
-    """Lista dispositivos ativos (refresh tokens não revogados e não expirados)."""
+    """Lista dispositivos ativos (refresh tokens não revogados e não expirados).
+
+    A coluna "Roles" reflete o snapshot gravado na ativação do dispositivo —
+    pode ficar desatualizada em relação ao role atual do usuário até o próximo
+    refresh automático do proxy (que sempre resolve a partir do ClientRecord
+    atual, ver POST /auth/token/refresh).
+    """
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     devices = get_auth_store().list_devices(client_id=user)
@@ -532,7 +538,7 @@ def list_devices(
     table = Table(title="Dispositivos ativos", show_header=True)
     table.add_column("Device ID", style="cyan")
     table.add_column("Usuário")
-    table.add_column("Escopos")
+    table.add_column("Roles")
     table.add_column("Emitido em")
     table.add_column("Expira em")
     table.add_column("Último uso")
@@ -541,7 +547,7 @@ def list_devices(
         table.add_row(
             d.device_id,
             d.client_id,
-            ", ".join(d.scopes),
+            ", ".join(d.roles),
             d.issued_at[:10],
             d.expires_at[:10],
             d.last_used_at[:10] if d.last_used_at else "—",
