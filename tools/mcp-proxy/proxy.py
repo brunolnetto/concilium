@@ -43,6 +43,37 @@ import time
 from pathlib import Path
 from typing import NoReturn
 
+
+def _ensure_utf8_io(out=None, in_=None, err=None) -> None:
+    """Força UTF-8 em stdout/stdin/stderr — no-op se já forem UTF-8.
+
+    No Windows, quando stdin/stdout são redirecionados (pipes — sempre o caso
+    quando o Claude Desktop spawna este processo), Python NÃO usa UTF-8 por
+    padrão: cai no codepage legado do console (ex.: cp1252), diferente do
+    console interativo real (PEP 528/529 só cobre esse caso). Toda descrição de
+    tool em português tem acentuação (ex.: "saúde", "código", "configuração") —
+    sem forçar UTF-8 aqui, tools/list (grande, cheio de texto acentuado)
+    corrompe ao ser escrito/lido, enquanto prompts/list e resources/list
+    (praticamente vazios) nunca acionam o bug.
+
+    `errors="strict"` em stdout/stdin é intencional: preferimos falhar alto a
+    mascarar corrupção silenciosa do protocolo JSON-RPC com "replace"/"ignore".
+    stderr usa "replace" pois é só log/diagnóstico, não deve derrubar o
+    processo por causa de um caractere num log.
+    """
+    out = out if out is not None else sys.stdout
+    in_ = in_ if in_ is not None else sys.stdin
+    err = err if err is not None else sys.stderr
+    if out.encoding is None or out.encoding.lower() != "utf-8":
+        out.reconfigure(encoding="utf-8", errors="strict")
+    if in_.encoding is None or in_.encoding.lower() != "utf-8":
+        in_.reconfigure(encoding="utf-8", errors="strict")
+    if err.encoding is None or err.encoding.lower() != "utf-8":
+        err.reconfigure(encoding="utf-8", errors="replace")
+
+
+_ensure_utf8_io()
+
 # ── Config from env ───────────────────────────────────────────────────────────
 #
 # Lido diretamente via os.environ em vez de `concilium.infrastructure.settings`
