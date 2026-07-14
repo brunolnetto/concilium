@@ -38,6 +38,15 @@
         "equip_id": "E0010",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0011",
+        "consumo_por_hora": 250.0,
+        "unidade": "m3",
+        "descricao": "aterro em CCR consome CCR usinado 1 m³/m³ (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

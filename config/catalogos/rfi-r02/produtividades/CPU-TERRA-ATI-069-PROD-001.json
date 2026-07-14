@@ -26,6 +26,15 @@
         "equip_id": "E0001",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0033",
+        "consumo_por_hora": 327.5,
+        "unidade": "m2",
+        "descricao": "manta geotêxtil 1 m²/m² (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

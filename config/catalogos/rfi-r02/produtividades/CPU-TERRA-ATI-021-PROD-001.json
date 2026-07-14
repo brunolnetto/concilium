@@ -56,5 +56,13 @@
       }
     ],
     "gargalo_declarado": null
-  }
+  },
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-SOLO-ESCAVADO-1CAT",
+      "geracao_por_hora": 31.45,
+      "unidade": "m3",
+      "descricao": "descrição: rebaixo terreno argiloso 20 cm — 157,25 m²/h × 0,20 m = 31,45 m³/h (ADR-139 F4)"
+    }
+  ]
 }

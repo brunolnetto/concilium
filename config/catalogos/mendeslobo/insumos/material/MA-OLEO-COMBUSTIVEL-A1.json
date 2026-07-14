@@ -1,0 +1,13 @@
+{
+  "codigo": "MA-OLEO-COMBUSTIVEL-A1",
+  "tipo": "MATERIAL",
+  "descricao": "Óleo combustível tipo A1 (queima na usina)",
+  "unidade": "l",
+  "preco_unitario": 6.5,
+  "fonte_preco": "tabela_referencia",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO",
+  "_referencia": "SICRO 202604-SP (4ª ed. v1.1)",
+  "codigo_referencia_externa": "M1941",
+  "origem_material": "AQUISICAO_EXTERNA"
+}

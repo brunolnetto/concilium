@@ -1,0 +1,133 @@
+{
+  "id": "PROD-USINAGEM-BGTC-001",
+  "codigo": "USINAGEM-BGTC",
+  "descricao": "Usinagem de BGTC (brita comercial) em usina de solos 300 t/h — composição SICRO 6416042",
+  "valor_horario": 113.18,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "tabela_referencia",
+    "fonte_id": "SICRO-6416042",
+    "data_calibracao": "2026-07-14T00:00:00+00:00",
+    "referencia": "SICRO 202604-SP (4ª ed. v1.1) — produção derivada pelo grafo de sinergia (ADR-130)"
+  },
+  "condicoes_calibracao": {
+    "notas": "Coeficientes físicos SICRO 4ª ed. v1.1; preços de insumo substituíveis por cotação"
+  },
+  "qualidade": {
+    "confianca_pct": 85,
+    "intervalo_confianca": [
+      101.86200000000001,
+      118.83900000000001
+    ],
+    "quantidade_amostras": 1,
+    "desvio_padrao": 0.0
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-SERVENTE-USINA-H",
+        "num_pessoas": 3
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-USINA-SOLOS-300TH",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-CARREG-PNEUS-340M3",
+        "num_unidades": 2
+      },
+      {
+        "equip_id": "EQ-GERADOR-113KVA",
+        "num_unidades": 1
+      }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-BRITA-0-PEDRISCO",
+        "consumo_por_hora": 28.219169,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.24933 × 113.18 = consumo/h — brita 0 por m³ compactado (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-BRITA-1",
+        "consumo_por_hora": 50.628809,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.44733 × 113.18 = consumo/h — brita 1 por m³ compactado (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-BRITA-2",
+        "consumo_por_hora": 16.600111,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.14667 × 113.18 = consumo/h — brita 2 por m³ compactado (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-BRITA-3",
+        "consumo_por_hora": 8.299489,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.07333 × 113.18 = consumo/h — brita 3 por m³ compactado (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-PO-DE-PEDRA",
+        "consumo_por_hora": 55.609861,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.49134 × 113.18 = consumo/h — pó de pedra por m³ compactado (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-CIMENTO-GRANEL-CPII",
+        "consumo_por_hora": 9959.84,
+        "unidade": "kg",
+        "descricao": "coef. SICRO 88.0 × 113.18 = consumo/h — cimento 88 kg/m³ = 4,0% em massa (2,20 t/m³) (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      }
+    ]
+  },
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-BGTC-MIX",
+      "geracao_por_hora": 113.18,
+      "unidade": "m3",
+      "descricao": "BGTC usinada — produção da usina de solos, derivada pelo grafo de sinergia (ADR-139 F4)"
+    }
+  ],
+  "grafo_sinergia": {
+    "relacoes": [
+      {
+        "tipo": "dimensionamento",
+        "origem": "EQ-USINA-SOLOS-300TH",
+        "destino": "EQ-CARREG-PNEUS-340M3",
+        "razao": 2.0,
+        "descricao": "2 carregadeiras 3,40 m³ a 55% de utilização por usina (SICRO 6416042)"
+      },
+      {
+        "tipo": "precondicao",
+        "origem": "MA-CIMENTO-GRANEL-CPII",
+        "destino": "EQ-USINA-SOLOS-300TH",
+        "descricao": "cimento a granel disponível é precondição de usinagem (ADR-128/ADR-139)"
+      }
+    ],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-USINA-SOLOS-300TH",
+        "capacidade_horaria": 113.18,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "300 t/h nominal ÷ 2,20 t/m³ (densidade compactada SICRO, verificada pela soma das massas por m³) × 0,83 (fator de eficiência SICRO) = 113,18 m³/h — SICRO 6416042"
+      }
+    ],
+    "gargalo_declarado": "EQ-USINA-SOLOS-300TH"
+  },
+  "auditoria": {
+    "criado_por": "ADR-139 F4 (build_usinagem_bgtc_cbuq.py)",
+    "data_criacao": "2026-07-14T00:00:00+00:00",
+    "ultima_modificacao": "2026-07-14T00:00:00+00:00",
+    "modificado_por": "ADR-139 F4",
+    "versao": "1.0"
+  }
+}

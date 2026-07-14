@@ -1,0 +1,12 @@
+{
+  "codigo": "MA-CAL-HIDRATADA-GRANEL",
+  "tipo": "MATERIAL",
+  "descricao": "Cal hidratada a granel (fíler)",
+  "unidade": "kg",
+  "preco_unitario": 0.46,
+  "fonte_preco": "tabela_referencia",
+  "codigo_referencia_externa": "M0344",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO"
+}

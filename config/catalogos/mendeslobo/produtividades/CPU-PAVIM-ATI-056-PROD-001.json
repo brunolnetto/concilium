@@ -33,7 +33,8 @@
       {
         "insumo_id": "MA-EMULSAO-RR-2C-IMPRIMACAO",
         "consumo_por_hora": 900.0,
-        "unidade": "m2"
+        "unidade": "m2",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

@@ -21,5 +21,15 @@
       "sicro_descricao": "Brita 1",
       "url_fonte": "https://www.gov.br/dnit/pt-br/assuntos/planejamento-e-pesquisa/custos-referenciais/sistemas-de-custos/sicro/relatorios/relatorios-sicro/nordeste/ceara/2026/janeiro/ce-01-2026.7z"
     }
-  ]
+  ],
+  "origem_material": "AQUISICAO_EXTERNA",
+  "historico_precos": [
+    {
+      "preco_unitario": 172.79,
+      "data_inicio_vigencia": "2026-04-01",
+      "data_fim_vigencia": "2026-07-14",
+      "fonte": "SICRO 202604-SP (referência de sanidade — consolidação ADR-139 F4-ter)"
+    }
+  ],
+  "_alerta_preco": "cotação única de 2025-05 (R$ 78) diverge −55% da referência SICRO 202604-SP (R$ 172,79) — recotar antes da próxima proposta"
 }

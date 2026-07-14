@@ -25,7 +25,8 @@
       {
         "insumo_id": "MA-DRENO-PVC-BRITA-KIT",
         "consumo_por_hora": 6.67,
-        "unidade": "m"
+        "unidade": "m",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

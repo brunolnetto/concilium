@@ -33,7 +33,8 @@
       {
         "insumo_id": "MA-CONCRETO-FCP-25MPA",
         "consumo_por_hora": 0.318501,
-        "unidade": "t"
+        "unidade": "t",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

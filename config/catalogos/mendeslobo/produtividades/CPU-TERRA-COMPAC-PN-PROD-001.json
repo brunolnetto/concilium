@@ -61,6 +61,15 @@
         "num_unidades": 1,
         "consumo_litros_hora_estimado": 7.0
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-SOLO-ESCAVADO-1CAT",
+        "consumo_por_hora": 173.01,
+        "unidade": "m3",
+        "descricao": "BOM 1 m³/m³ convertido via coeficiente × valor_horario — DNIT 108/2009-ES §5.1: aterro com solo de corte/empréstimo (1ª/2ª categoria; ensaio Proctor aplica-se a solos, 3ª cat só por exceção); composição usa rolo pé-de-carneiro; 2ª categoria também admissível — pareamento de projeto decide (D5) (ADR-139 F4)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   }
 }

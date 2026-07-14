@@ -34,6 +34,15 @@
         "equip_id": "E0002",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0032",
+        "consumo_por_hora": 15.0,
+        "unidade": "m",
+        "descricao": "guia de concreto 1 m/m (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

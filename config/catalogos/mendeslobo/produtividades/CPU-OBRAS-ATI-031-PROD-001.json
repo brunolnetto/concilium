@@ -33,7 +33,8 @@
       {
         "insumo_id": "MA-BDTC-TUBO-DN1200-PA2",
         "consumo_por_hora": 0.375,
-        "unidade": "m"
+        "unidade": "m",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

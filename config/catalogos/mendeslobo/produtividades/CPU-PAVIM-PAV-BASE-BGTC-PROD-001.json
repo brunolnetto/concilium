@@ -40,7 +40,8 @@
       {
         "insumo_id": "MA-BGTC-MIX",
         "consumo_por_hora": 23.1,
-        "unidade": "m3"
+        "unidade": "m3",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

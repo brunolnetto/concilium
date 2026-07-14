@@ -10,5 +10,8 @@
     "capacidade_cobertura": 1
   },
   "data_referencia_preco": "2025-05-01",
-  "categoria": "OBRAS_ARTE"
+  "categoria": "OBRAS_ARTE",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "_superseded_por": "MA-BRITA-4-RACHAO",
+  "_nota_superseded": "consolidação de agregados em canônicos (ADR-139 F4-ter, 2026-07-14); sem consumidores — manter apenas como histórico"
 }

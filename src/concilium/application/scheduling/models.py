@@ -136,15 +136,23 @@ class ReplenishableResource:
     disponibilidade: DisponibilidadeConsumivel
     # activity_id -> taxa de consumo projetada por semana ativa da atividade
     consumo_por_semana: dict[str, float] = field(default_factory=dict)
+    # ADR-139 D4: activity_id -> taxa gerada por semana ativa da atividade produtora
+    # (padrão produtor-consumidor entre atividades — ex.: corte gera solo que o
+    # aterro consome). Dict vazio = sem produção interna (comportamento ADR-128).
+    producao_por_semana: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        for activity_id, taxa in self.consumo_por_semana.items():
-            if not math.isfinite(taxa) or taxa < 0:
-                raise ValueError(
-                    f"consumo_por_semana['{activity_id}'] must be finite and >= 0, got {taxa!r} "
-                    f"(valores negativos/NaN/infinitos podem 'aumentar' estoque no motor de "
-                    f"reabastecimento e mascarar inviabilidades — ADR-128)"
-                )
+        for campo, taxas in (
+            ("consumo_por_semana", self.consumo_por_semana),
+            ("producao_por_semana", self.producao_por_semana),
+        ):
+            for activity_id, taxa in taxas.items():
+                if not math.isfinite(taxa) or taxa < 0:
+                    raise ValueError(
+                        f"{campo}['{activity_id}'] must be finite and >= 0, got {taxa!r} "
+                        f"(valores negativos/NaN/infinitos podem 'aumentar' estoque no motor de "
+                        f"reabastecimento e mascarar inviabilidades — ADR-128/ADR-139)"
+                    )
 
 
 @dataclass

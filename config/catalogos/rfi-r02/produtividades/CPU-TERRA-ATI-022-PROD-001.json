@@ -34,6 +34,15 @@
         "equip_id": "E0036",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0009",
+        "consumo_por_hora": 82.03,
+        "unidade": "m3",
+        "descricao": "rachão compactado dedicado, 1 m³/m³ (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

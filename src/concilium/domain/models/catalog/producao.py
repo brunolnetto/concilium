@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe
+from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe, MaterialGerado
 
 # Recurso que limita (gargaleia) a taxa de produção desta atividade.
 # equipamento — produção proporcional ao número de unidades do equipamento principal
@@ -170,6 +170,11 @@ class Producao(BaseModel):
     # ADR-130 D1: grafo de sinergia intra-equipe — opcional, retrocompatível.
     # None (padrão) preserva o comportamento atual integralmente (D3 fallback).
     grafo_sinergia: GrafoSinergiaEquipe | None = None
+
+    # ADR-139 D3: materiais gerados pela atividade por hora de operação (lado
+    # produtor do padrão produtor-consumidor). Lista vazia = atividade não gera
+    # material aproveitável (comportamento pré-ADR-139, retrocompatível).
+    materiais_gerados: list[MaterialGerado] = Field(default_factory=list)
 
     def fator_producao(self, nova_composicao: ComposicaoPadraoEquipe) -> float:
         """Razão de produtividade entre nova composição e composição de calibração.

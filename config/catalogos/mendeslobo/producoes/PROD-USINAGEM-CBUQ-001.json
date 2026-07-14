@@ -1,0 +1,148 @@
+{
+  "id": "PROD-USINAGEM-CBUQ-001",
+  "codigo": "USINAGEM-CBUQ-FAIXA-C",
+  "descricao": "Usinagem de CBUQ faixa C (agregados comerciais) em usina gravimétrica 100/140 t/h — composição SICRO 6416078",
+  "valor_horario": 99.6,
+  "unidade": "t",
+  "origem": {
+    "tipo": "tabela_referencia",
+    "fonte_id": "SICRO-6416078",
+    "data_calibracao": "2026-07-14T00:00:00+00:00",
+    "referencia": "SICRO 202604-SP (4ª ed. v1.1) — produção derivada pelo grafo de sinergia (ADR-130); CAP cotado à parte (ANP)"
+  },
+  "condicoes_calibracao": {
+    "notas": "Coeficientes físicos SICRO 4ª ed. v1.1; CAP 5,545% em massa; preços substituíveis por cotação"
+  },
+  "qualidade": {
+    "confianca_pct": 85,
+    "intervalo_confianca": [
+      89.64,
+      104.58
+    ],
+    "quantidade_amostras": 1,
+    "desvio_padrao": 0.0
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-SERVENTE-USINA-H",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-USINA-ASFALTO-GRAV-120TH",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-GERADOR-456KVA",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-CARREG-PNEUS-172M3",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-TANQUE-ASFALTO-30000L",
+        "num_unidades": 2
+      },
+      {
+        "equip_id": "EQ-AQUECEDOR-FLUIDO-12KW",
+        "num_unidades": 1
+      }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-AREIA-MEDIA",
+        "consumo_por_hora": 2.690196,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.02701 × 99.6 = consumo/h — areia média por t de massa (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-BRITA-0-PEDRISCO",
+        "consumo_por_hora": 14.73084,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.1479 × 99.6 = consumo/h — brita 0 por t de massa (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-BRITA-1",
+        "consumo_por_hora": 12.169128,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.12218 × 99.6 = consumo/h — brita 1 por t de massa (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-PO-DE-PEDRA",
+        "consumo_por_hora": 33.496476,
+        "unidade": "m3",
+        "descricao": "coef. SICRO 0.33631 × 99.6 = consumo/h — pó de pedra por t de massa (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-CAL-HIDRATADA-GRANEL",
+        "consumo_por_hora": 1440.57456,
+        "unidade": "kg",
+        "descricao": "coef. SICRO 14.4636 × 99.6 = consumo/h — cal hidratada (fíler) por t de massa (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-CAP-50-70",
+        "consumo_por_hora": 5.52282,
+        "unidade": "t",
+        "descricao": "coef. SICRO 0.05545 × 99.6 = consumo/h — CAP 50/70 — teor faixa C 5,545% em massa (SICRO) (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-OLEO-COMBUSTIVEL-A1",
+        "consumo_por_hora": 796.8,
+        "unidade": "l",
+        "descricao": "coef. SICRO 8.0 × 99.6 = consumo/h — óleo A1 de queima na usina por t de massa (ADR-139 F4 usinagem)",
+        "origem_entrada": "bom_convertido"
+      }
+    ]
+  },
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-CBUQ-FAIXA-C",
+      "geracao_por_hora": 99.6,
+      "unidade": "t",
+      "descricao": "CBUQ faixa C usinado — produção da usina gravimétrica, derivada pelo grafo de sinergia (ADR-139 F4)"
+    }
+  ],
+  "grafo_sinergia": {
+    "relacoes": [
+      {
+        "tipo": "dimensionamento",
+        "origem": "EQ-USINA-ASFALTO-GRAV-120TH",
+        "destino": "EQ-TANQUE-ASFALTO-30000L",
+        "razao": 2.0,
+        "descricao": "2 tanques de 30.000 L por usina gravimétrica (SICRO 6416078)"
+      },
+      {
+        "tipo": "precondicao",
+        "origem": "MA-CAP-50-70",
+        "destino": "EQ-USINA-ASFALTO-GRAV-120TH",
+        "descricao": "CAP disponível nos tanques é precondição de usinagem (ADR-128/ADR-139)"
+      }
+    ],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-USINA-ASFALTO-GRAV-120TH",
+        "capacidade_horaria": 99.6,
+        "unidade": "t",
+        "fonte": "fabricante",
+        "justificativa": "usina gravimétrica 100/140 t/h → nominal médio 120 t/h × 0,83 (fator de eficiência SICRO) = 99,60 t/h — SICRO 6416078"
+      }
+    ],
+    "gargalo_declarado": "EQ-USINA-ASFALTO-GRAV-120TH"
+  },
+  "auditoria": {
+    "criado_por": "ADR-139 F4 (build_usinagem_bgtc_cbuq.py)",
+    "data_criacao": "2026-07-14T00:00:00+00:00",
+    "ultima_modificacao": "2026-07-14T00:00:00+00:00",
+    "modificado_por": "ADR-139 F4",
+    "versao": "1.0"
+  }
+}

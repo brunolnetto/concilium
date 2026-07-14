@@ -30,6 +30,15 @@
         "equip_id": "E0028",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0008",
+        "consumo_por_hora": 19.0,
+        "unidade": "m3",
+        "descricao": "espalhamento de pó de pedra 1 m³/m³ (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

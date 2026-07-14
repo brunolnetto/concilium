@@ -10,5 +10,8 @@
     "capacidade_cobertura": 1
   },
   "data_referencia_preco": "2025-05-01",
-  "categoria": "DIVERSOS"
+  "categoria": "DIVERSOS",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "_superseded_por": "MA-CAP-50-70",
+  "_nota_superseded": "código trocado na importação AGIS (dossiê PR #104); consumidores repontados em 2026-07-14 — manter apenas como histórico"
 }

@@ -42,6 +42,15 @@
         "equip_id": "E0010",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0013",
+        "consumo_por_hora": 0.277,
+        "unidade": "t",
+        "descricao": "TSD: emulsão RR-2C 1,0 kg/m² × 277 m²/h (coef. da gêmea mendeslobo) (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

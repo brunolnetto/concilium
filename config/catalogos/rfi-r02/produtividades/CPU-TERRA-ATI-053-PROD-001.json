@@ -50,6 +50,15 @@
         "equip_id": "E0008",
         "num_unidades": 2
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-SOLO-ESCAVADO-1CAT",
+        "consumo_por_hora": 220.0,
+        "unidade": "m3",
+        "descricao": "BOM 1 m³/m³ convertido via coeficiente × valor_horario — DNIT 138/2010-ES §5.1: reforço com solos de qualidade superior à do subleito (ISC de projeto, expansão ≤ 1%), de corte selecionado ou jazida (ADR-139 F4)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

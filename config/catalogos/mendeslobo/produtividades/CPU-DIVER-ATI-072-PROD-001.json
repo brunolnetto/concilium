@@ -24,7 +24,8 @@
       {
         "insumo_id": "MA-GUIA-CONCRETO-PADRAO",
         "consumo_por_hora": 15.0,
-        "unidade": "m"
+        "unidade": "m",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

@@ -33,7 +33,8 @@
       {
         "insumo_id": "MA-BSTC-TUBO-DN1000-PA1",
         "consumo_por_hora": 1.0,
-        "unidade": "m"
+        "unidade": "m",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

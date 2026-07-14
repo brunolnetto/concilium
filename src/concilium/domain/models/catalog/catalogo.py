@@ -14,6 +14,15 @@ from concilium.domain.units import normalize_unidade
 
 TipoInsumo = Literal["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO"]
 
+# ADR-139 D1: origem de material consumível — atributo ortogonal a TipoInsumo.
+# AQUISICAO_EXTERNA — comprado de fornecedor (tinta, areia comprada, aço).
+# GERACAO_INTERNA  — produzido pela própria obra (terra escavada de corte,
+#                    brita de usina própria); preco_unitario passa a representar
+#                    custo interno de produção (ou 0.0 quando já capturado na
+#                    CPU produtora), e análises de cotação devem excluí-lo.
+# None             — não classificado (retrocompatível).
+OrigemMaterial = Literal["AQUISICAO_EXTERNA", "GERACAO_INTERNA"]
+
 # ADR-107 D1: "DIESEL" mantido como alias legado; "COMBUSTIVEL" é o termo canônico.
 # Novos dados devem usar "COMBUSTIVEL"; leitura de dados legados aceita "DIESEL".
 CategoriaCusto = Literal["MATERIAL", "COMBUSTIVEL", "DIESEL", "MAO_OBRA", "EQUIPAMENTO"]
@@ -184,6 +193,17 @@ class Insumo(BaseModel):
     atributos_especificos: AtributosInsumo = Field(default_factory=AtributosInsumo)
     # ADR-016: classe de compartilhamento (None = não anotado ainda -> VAL-INS-CLASS-01)
     classe_compartilhamento: ClasseCompartilhamento | None = None
+    # ADR-139 D1: origem do material (None = não classificado). Restrito a tipo MATERIAL.
+    origem_material: OrigemMaterial | None = None
+
+    @model_validator(mode="after")
+    def _validar_origem_material(self) -> Insumo:
+        if self.origem_material is not None and self.tipo != "MATERIAL":
+            raise ValueError(
+                f"VAL-INSUMO-ORIGEM-01: origem_material ('{self.origem_material}') só é válido "
+                f"para insumo tipo MATERIAL, recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
+            )
+        return self
 
 
 class ComposicaoItem(BaseModel):
@@ -253,6 +273,33 @@ class MaterialEquipe(BaseModel):
     consumo_por_hora: float = Field(
         gt=0,
         description="Quantidade consumida por hora de operação (ex: m³/h, kg/h, t/h)",
+    )
+    unidade: str
+    descricao: str | None = None
+    # ADR-139 D2 (resolve nota de design da ADR-138 §D7): proveniência da entrada.
+    # consumo_operacional — semântica original ADR-030 D2 (água de umectação, aditivo).
+    # bom_convertido      — BOM por unidade de produto convertido via
+    #                       consumo_por_hora = coeficiente × valor_horario (ADR-138 F2).
+    # None                — não classificado (retrocompatível).
+    origem_entrada: Literal["consumo_operacional", "bom_convertido"] | None = None
+
+
+class MaterialGerado(BaseModel):
+    """ADR-139 D3: Material gerado por hora de operação da equipe — o lado produtor.
+
+    Simétrico a `MaterialEquipe` (consumo_por_hora), na mesma base horária:
+    quem tem o dado por unidade de produto converte com a mesma fórmula
+    price-preserving `geracao_por_hora = geracao_por_unidade × valor_horario`.
+    `insumo_id` deve referenciar Insumo com origem_material == "GERACAO_INTERNA"
+    (VAL-PROD-GERACAO-01).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    insumo_id: str
+    geracao_por_hora: float = Field(
+        gt=0,
+        description="Quantidade gerada por hora de operação (ex: m³/h de solo de corte)",
     )
     unidade: str
     descricao: str | None = None

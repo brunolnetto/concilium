@@ -104,6 +104,10 @@ class ValidationCode(StrEnum):
     VAL_SCOPE_REVIEW = "VAL-SCOPE-REVIEW"  # Confiança MEDIUM/LOW (requer revisão humana)
     VAL_SCOPE_LLM = "VAL-SCOPE-LLM"  # Item resolvido via LLM fallback (auditável)
 
+    # ── Estoque de consumíveis / produtor-consumidor (ADR-139) ────────
+    VAL_ESTOQUE_PROD_01 = "VAL-ESTOQUE-PROD-01"  # producao_por_semana referencia atividade fora do DAG
+    VAL_ESTOQUE_CAP_01 = "VAL-ESTOQUE-CAP-01"  # produção projetada excede capacidade_armazenamento
+
 
 def make_violation(
     code: ValidationCode | str,

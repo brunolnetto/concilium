@@ -34,6 +34,15 @@
         "equip_id": "E0026",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0023",
+        "consumo_por_hora": 1.0,
+        "unidade": "m",
+        "descricao": "corpo BSTC D=1,00 PA1 — tubo 1 m/m (berço/reaterro fora) (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

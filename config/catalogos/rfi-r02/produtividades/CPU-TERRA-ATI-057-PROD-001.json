@@ -34,6 +34,15 @@
         "equip_id": "E0010",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0014",
+        "consumo_por_hora": 0.3185,
+        "unidade": "t",
+        "descricao": "pintura de ligação 0,39 kg/m² × 816,67 m²/h (coef. da gêmea mendeslobo, ADR-138) (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

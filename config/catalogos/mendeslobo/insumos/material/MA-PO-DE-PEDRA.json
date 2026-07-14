@@ -1,0 +1,21 @@
+{
+  "codigo": "MA-PO-DE-PEDRA",
+  "tipo": "MATERIAL",
+  "descricao": "Pó de pedra",
+  "unidade": "m³",
+  "preco_unitario": 165.0,
+  "fonte_preco": "cotacao_mercado",
+  "data_referencia_preco": "2026-03-01",
+  "categoria": "PAVIMENTACAO",
+  "_referencia": "SICRO 202604-SP (4ª ed. v1.1)",
+  "codigo_referencia_externa": "M1135",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "historico_precos": [
+    {
+      "preco_unitario": 160.63,
+      "data_inicio_vigencia": "2026-07-14",
+      "data_fim_vigencia": "2026-07-14",
+      "fonte": "SICRO 202604-SP (referência de sanidade — consolidação ADR-139 F4-ter)"
+    }
+  ]
+}

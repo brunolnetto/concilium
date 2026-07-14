@@ -34,6 +34,15 @@
         "equip_id": "E0036",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0008",
+        "consumo_por_hora": 20.0,
+        "unidade": "m3",
+        "descricao": "espalhamento 1 m³/m³ (pó de pedra — gêmea mendeslobo) (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

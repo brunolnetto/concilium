@@ -34,6 +34,15 @@
         "equip_id": "E0026",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0031",
+        "consumo_por_hora": 25.0,
+        "unidade": "m2",
+        "descricao": "piso intertravado 1 m²/m² (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

@@ -34,6 +34,15 @@
         "equip_id": "E0027",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0022",
+        "consumo_por_hora": 9.89625,
+        "unidade": "m",
+        "descricao": "tubo PVC DEFOFO 300 mm — 1 m/m (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

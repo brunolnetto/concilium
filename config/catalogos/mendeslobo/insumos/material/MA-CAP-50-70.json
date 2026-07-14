@@ -1,0 +1,13 @@
+{
+  "codigo": "MA-CAP-50-70",
+  "tipo": "MATERIAL",
+  "descricao": "CAP 50/70 (cimento asfáltico de petróleo) — ANP 2025/2026 com impostos, faixa R$ 5.000–5.415/t",
+  "unidade": "t",
+  "preco_unitario": 5200.0,
+  "fonte_preco": "cotacao_mercado",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO",
+  "_referencia": "SICRO 202604-SP (4ª ed. v1.1)",
+  "codigo_referencia_externa": "M1943",
+  "origem_material": "AQUISICAO_EXTERNA"
+}

@@ -47,9 +47,11 @@
     ],
     "materiais": [
       {
-        "insumo_id": "MA-EMULSAO-RR-2C",
+        "insumo_id": "MA-CBUQ-FAIXA-C",
         "consumo_por_hora": 5.33304,
-        "unidade": "t"
+        "unidade": "t",
+        "origem_entrada": "bom_convertido",
+        "descricao": "repoint AGIS: era MA-EMULSAO-RR-2C — recomposição consome massa asfáltica usinada (72 kg/m²), não CAP puro (ADR-139 F4 cura)"
       }
     ]
   },

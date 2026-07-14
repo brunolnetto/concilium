@@ -1,0 +1,11 @@
+{
+  "codigo": "MO-SERVENTE-USINA-H",
+  "tipo": "MAO_OBRA",
+  "descricao": "Servente (taxa horária com encargos — apoio de usina)",
+  "unidade": "h",
+  "preco_unitario": 30.62,
+  "fonte_preco": "tabela_referencia",
+  "codigo_referencia_externa": "P9824",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO"
+}

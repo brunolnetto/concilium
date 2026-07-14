@@ -31,9 +31,11 @@
     ],
     "materiais": [
       {
-        "insumo_id": "MA-BRITA-GRADUADA",
+        "insumo_id": "MA-BGTC-MIX",
         "consumo_por_hora": 138.0,
-        "unidade": "m3"
+        "unidade": "m3",
+        "origem_entrada": "bom_convertido",
+        "descricao": "repoint AGIS: era MA-BRITA-GRADUADA — consolida duplicata de BGTC no material gerado pela usinagem (PROD-USINAGEM-BGTC-001) (ADR-139 F4 cura)"
       }
     ]
   },

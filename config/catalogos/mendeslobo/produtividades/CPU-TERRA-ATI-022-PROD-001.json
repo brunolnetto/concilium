@@ -31,9 +31,10 @@
     ],
     "materiais": [
       {
-        "insumo_id": "MA-BDTC-CORPO-DN1200-PA2",
+        "insumo_id": "MA-BRITA-4-RACHAO",
         "consumo_por_hora": 149.51,
-        "unidade": "m3"
+        "unidade": "m3",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

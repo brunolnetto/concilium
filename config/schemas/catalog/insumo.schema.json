@@ -4,6 +4,7 @@
   "title": "Insumo",
   "type": "object",
   "additionalProperties": false,
+  "patternProperties": {"^_": {"type": ["string", "number", "null"]}},
   "$defs": {
     "atributosMaoObra": {
       "description": "Atributos específicos de MAO_OBRA. custo_com_encargos é derivado: preco_unitario × fator_encargos(tipo_contrato) — CLT=1.77, PJ=1.06. Não armazenar.",
@@ -96,6 +97,13 @@
         "codigo_planilha": {
           "description": "Código na planilha de origem (ex.: RFI R02).",
           "type": ["string", "null"]
+        },
+        "disponibilidade": {
+          "description": "Estoque/capacidade/reabastecimento (ADR-128; ADR-139 D4 — pilha de material gerado). Ausência = irrestrito.",
+          "anyOf": [
+            {"type": "null"},
+            {"$ref": "common.schema.json#/$defs/disponibilidadeConsumivel"}
+          ]
         }
       }
     },
@@ -194,6 +202,11 @@
     "codigo_sicro": {
       "description": "Código de referência no SICRO/DNIT para este insumo.",
       "type": ["string", "null"]
+    },
+    "origem_material": {
+      "description": "Origem do material consumível (ADR-139 D1, ortogonal a tipo): AQUISICAO_EXTERNA = comprado de fornecedor; GERACAO_INTERNA = produzido pela própria obra (preco_unitario = custo interno ou 0.0). Só válido para tipo=MATERIAL (VAL-INSUMO-ORIGEM-01). null = não classificado.",
+      "type": ["string", "null"],
+      "enum": ["AQUISICAO_EXTERNA", "GERACAO_INTERNA", null]
     },
     "metodo_custo_total": {
       "description": "Método de apuração do custo total (ex: locacao_mais_operacao, custo_horario_composto).",

@@ -245,6 +245,36 @@ class ValidadorCPUInsumo:
             )
         return ValidacaoItem(codigo="VAL-CPU-INS-07", status="OK")
 
+    def validar_materiais_gerados(self, cpu: dict[str, Any]) -> ValidacaoItem:
+        """VAL-PROD-GERACAO-01 (ADR-139 D3): cada `Producao.materiais_gerados[].insumo_id`
+        deve referenciar insumo existente com `origem_material == "GERACAO_INTERNA"`.
+        """
+        pid = cpu.get("producao_id_ref")
+        ficha = self.repo.obter_producao(pid) if pid else None
+        materiais_gerados = (ficha or {}).get("materiais_gerados") or []
+
+        erros: list[str] = []
+        for mg in materiais_gerados:
+            insumo_id = mg.get("insumo_id")
+            if not self.repo.insumo_existe(insumo_id):
+                erros.append(f"'{insumo_id}' não encontrado no catálogo")
+                continue
+            insumo = self.repo.obter_insumo(insumo_id) or {}
+            origem = insumo.get("origem_material")
+            if origem != "GERACAO_INTERNA":
+                erros.append(
+                    f"'{insumo_id}' tem origem_material={origem!r}, esperado 'GERACAO_INTERNA' "
+                    "(classifique o insumo antes de declará-lo como material gerado)"
+                )
+
+        if erros:
+            return ValidacaoItem(
+                codigo="VAL-PROD-GERACAO-01",
+                status="ERRO",
+                mensagem=f"materiais_gerados inválidos: {'; '.join(erros)}",
+            )
+        return ValidacaoItem(codigo="VAL-PROD-GERACAO-01", status="OK")
+
     def validar_producao_existe(self, cpu: dict[str, Any]) -> ValidacaoItem:
         pid = cpu.get("producao_id_ref")
         if pid and not self.repo.producao_existe(pid):
@@ -320,7 +350,10 @@ class ValidadorCPUInsumo:
         erros = []
         if entidade.get("tipo"):  # É um insumo
             preco = entidade.get("preco_unitario")
-            if preco is None or preco <= 0:
+            # ADR-139 D1: material de geração interna tem preço 0.0 por convenção
+            # (custo já capturado na CPU produtora) — não é dado faltante.
+            geracao_interna = entidade.get("origem_material") == "GERACAO_INTERNA"
+            if (preco is None or preco <= 0) and not geracao_interna:
                 erros.append(
                     ValidacaoItem(
                         codigo="VAL-INS-VAL-01",
@@ -413,6 +446,7 @@ class ValidadorCPUInsumo:
 
         resultados.append(self.validar_funcoes_existem(cpu))
         resultados.append(self.validar_equipamentos_existem(cpu))
+        resultados.append(self.validar_materiais_gerados(cpu))
         resultados.append(self.validar_producao_existe(cpu))
         resultados.append(self.validar_encoding(cpu))
         resultados.append(self.validar_unidade_normalizada(cpu))

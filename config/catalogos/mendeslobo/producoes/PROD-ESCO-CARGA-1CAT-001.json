@@ -175,5 +175,13 @@
         "num_unidades": 7
       }
     ]
-  }
+  },
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-SOLO-ESCAVADO-1CAT",
+      "geracao_por_hora": 233.54208,
+      "unidade": "m3",
+      "descricao": "descrição: escavação 1ª categoria (inclui espalhamento — material entregue no destino fica disponível para compactação) (ADR-139 F4)"
+    }
+  ]
 }

@@ -34,6 +34,15 @@
         "equip_id": "E0026",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0030",
+        "consumo_por_hora": 0.25,
+        "unidade": "m",
+        "descricao": "corpo BTTC D=1,20 PA2 — tubo 1 m/m (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

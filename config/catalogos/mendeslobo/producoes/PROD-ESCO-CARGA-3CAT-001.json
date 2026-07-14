@@ -80,5 +80,13 @@
         "num_unidades": 6
       }
     ]
-  }
+  },
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-SOLO-ESCAVADO-3CAT",
+      "geracao_por_hora": 144.541473391304,
+      "unidade": "m3",
+      "descricao": "descrição: escavação 3ª categoria/rocha (inclui espalhamento — material entregue no destino fica disponível para compactação) (ADR-139 F4)"
+    }
+  ]
 }

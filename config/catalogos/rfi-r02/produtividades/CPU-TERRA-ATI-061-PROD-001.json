@@ -50,6 +50,15 @@
         "equip_id": "E0008",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-CBUQ-FAIXA-C",
+        "consumo_por_hora": 5.33304,
+        "unidade": "t",
+        "descricao": "recomposição: 0,072 t/m² × 74,07 m²/h — massa usinada (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

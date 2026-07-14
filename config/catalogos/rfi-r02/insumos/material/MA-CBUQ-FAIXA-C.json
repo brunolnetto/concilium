@@ -1,0 +1,12 @@
+{
+  "codigo": "MA-CBUQ-FAIXA-C",
+  "tipo": "MATERIAL",
+  "descricao": "CBUQ faixa C usinado — gerado internamente pela usina de asfalto E0043 (ADR-139 F4-quater)",
+  "unidade": "t",
+  "preco_unitario": 506.92,
+  "fonte_preco": "catalogo_proprio",
+  "origem_material": "GERACAO_INTERNA",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO",
+  "_conclusao_preco": "custo interno concluído por PROD-USINAGEM-CBUQ-RFI-001 (bottom-up ÷ produção derivada pelo grafo de sinergia — ADR-130/ADR-139; equipamentos da casa + física SICRO 6416078)"
+}

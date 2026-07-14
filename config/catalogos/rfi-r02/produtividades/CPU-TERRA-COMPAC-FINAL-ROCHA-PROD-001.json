@@ -49,6 +49,15 @@
         "num_unidades": 1,
         "consumo_litros_hora": 25.98
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-SOLO-ESCAVADO-3CAT",
+        "consumo_por_hora": 100.0,
+        "unidade": "m3",
+        "descricao": "BOM 1 m³/m³ convertido via coeficiente × valor_horario — descrição: camada final de aterro de rocha (rocha = 3ª categoria) (ADR-139 F4)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "_nota_calibracao": "Compactação de camada final de aterro de rocha. Composição calibrada AGIS.",

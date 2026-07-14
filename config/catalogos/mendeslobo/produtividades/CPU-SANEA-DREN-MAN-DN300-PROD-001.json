@@ -32,12 +32,14 @@
       {
         "insumo_id": "MA-MANILHA-CERAM-300",
         "consumo_por_hora": 12.119625,
-        "unidade": "m"
+        "unidade": "m",
+        "origem_entrada": "bom_convertido"
       },
       {
         "insumo_id": "MA-AREIA-MEDIA",
         "consumo_por_hora": 4.84785,
-        "unidade": "m3"
+        "unidade": "m3",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

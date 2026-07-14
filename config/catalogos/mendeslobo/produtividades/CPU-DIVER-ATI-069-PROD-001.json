@@ -25,7 +25,8 @@
       {
         "insumo_id": "MA-GEOTEXTIL-BIDIM-OP30",
         "consumo_por_hora": 327.5,
-        "unidade": "m2"
+        "unidade": "m2",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

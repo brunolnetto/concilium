@@ -1,0 +1,12 @@
+{
+  "codigo": "MA-CCR",
+  "tipo": "MATERIAL",
+  "descricao": "CCR (Concreto Compactado com Rolo) — usinado, compra externa",
+  "unidade": "m³",
+  "preco_unitario": 360.05,
+  "fonte_preco": "tabela_referencia",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "TERRAPLENAGEM",
+  "_migrado_de": "MA-EMULSAO-RR-1C (código trocado na importação AGIS — ver PR #104)"
+}

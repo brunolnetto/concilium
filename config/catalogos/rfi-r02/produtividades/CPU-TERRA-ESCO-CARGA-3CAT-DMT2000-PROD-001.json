@@ -58,5 +58,13 @@
       }
     ],
     "gargalo_declarado": "E0018"
-  }
+  },
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-SOLO-ESCAVADO-3CAT",
+      "geracao_por_hora": 142.02,
+      "unidade": "m3",
+      "descricao": "1 m³ escavado → 1 m³ de material, sem fator de empolamento — descrição: escavação 3ª categoria (ADR-139 F4)"
+    }
+  ]
 }

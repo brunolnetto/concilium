@@ -10,5 +10,6 @@
     "capacidade_cobertura": 1
   },
   "data_referencia_preco": "2025-05-01",
-  "categoria": "PAVIMENTACAO"
+  "categoria": "PAVIMENTACAO",
+  "origem_material": "AQUISICAO_EXTERNA"
 }

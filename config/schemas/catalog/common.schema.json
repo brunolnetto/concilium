@@ -152,7 +152,44 @@
         },
         "descricao": {
           "type": ["string", "null"]
+        },
+        "origem_entrada": {
+          "description": "Proveniência da entrada (ADR-139 D2, resolve ADR-138 §D7): consumo_operacional = consumo por hora de operação (ADR-030 D2); bom_convertido = BOM por unidade de produto convertido via coeficiente × valor_horario (ADR-138 F2). null = não classificado.",
+          "type": ["string", "null"],
+          "enum": ["consumo_operacional", "bom_convertido", null]
         }
+      }
+    },
+    "materialGerado": {
+      "description": "Material gerado por hora de operação da equipe — lado produtor do padrão produtor-consumidor (ADR-139 D3). insumo_id deve referenciar Insumo com origem_material=GERACAO_INTERNA (VAL-PROD-GERACAO-01).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["insumo_id", "geracao_por_hora", "unidade"],
+      "properties": {
+        "insumo_id": {
+          "$ref": "#/$defs/codigoInsumo"
+        },
+        "geracao_por_hora": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unidade": {
+          "type": "string"
+        },
+        "descricao": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "disponibilidadeConsumivel": {
+      "description": "Estoque/capacidade/reabastecimento de recurso consumível (ADR-128 D1; ADR-139 D4 usa capacidade_armazenamento como pilha/bota-espera de material gerado). Ausência do objeto = disponibilidade irrestrita.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capacidade_armazenamento": {"type": ["number", "null"], "minimum": 0},
+        "estoque_inicial": {"type": "number", "minimum": 0, "default": 0.0},
+        "taxa_reabastecimento_max": {"type": ["number", "null"], "minimum": 0},
+        "lead_time_reabastecimento_dias": {"type": ["number", "null"], "minimum": 0}
       }
     },
     "composicaoPadraoEquipe": {

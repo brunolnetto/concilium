@@ -213,6 +213,10 @@ def calcular_tendencia(
     data_base_str = data_base.isoformat() if data_base else now_str
     por_tipo: dict = {}
     for ins in insumos:
+        if ins.get("tipo") == "MATERIAL" and ins.get("origem_material") == "GERACAO_INTERNA":
+            # ADR-139 D1: material gerado internamente (ex.: solo de corte) não tem
+            # preço de mercado nem fornecedor — tendência de preço não se aplica.
+            continue
         tendencia = _ct_make_tendencia(ins, jurisdicao_id)
         if tendencia is not None:
             por_tipo.setdefault(tendencia.tipo, []).append(tendencia)

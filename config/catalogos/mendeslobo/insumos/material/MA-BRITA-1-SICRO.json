@@ -1,0 +1,15 @@
+{
+  "codigo": "MA-BRITA-1-SICRO",
+  "tipo": "MATERIAL",
+  "descricao": "Brita 1 (referência SICRO p/ usinagem)",
+  "unidade": "m³",
+  "preco_unitario": 172.79,
+  "fonte_preco": "tabela_referencia",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO",
+  "_referencia": "SICRO 202604-SP (4ª ed. v1.1)",
+  "codigo_referencia_externa": "M0191",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "_superseded_por": "MA-BRITA-1",
+  "_nota_superseded": "consolidação de agregados em canônicos (ADR-139 F4-ter, 2026-07-14); sem consumidores — manter apenas como histórico"
+}

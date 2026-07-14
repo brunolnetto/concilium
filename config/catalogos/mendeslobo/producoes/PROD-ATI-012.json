@@ -47,5 +47,13 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-SOLO-ESCAVADO-1CAT",
+      "geracao_por_hora": 120.0,
+      "unidade": "m3",
+      "descricao": "descrição: escavação, carga e transporte — 1ª categoria (ADR-139 F4)"
+    }
+  ]
 }

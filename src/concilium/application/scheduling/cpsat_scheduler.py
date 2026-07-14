@@ -312,6 +312,18 @@ class CpSatScheduler:
         acts: dict[str, Activity] = {a.activity_id: a for a in dag.activities}
         H = self.horizon_weeks
 
+        # ── ADR-139 D4: valida referência de atividade produtora (fail loud) ──
+        # producao_por_semana é campo novo (sem legado): referência a atividade fora
+        # do DAG é sempre erro de montagem do projeto, nunca dado histórico tolerável.
+        for resource in replenishable_resources or []:
+            desconhecidas = sorted(set(resource.producao_por_semana) - set(acts))
+            if desconhecidas:
+                raise ValueError(
+                    f"VAL-ESTOQUE-PROD-01: producao_por_semana do recurso "
+                    f"'{resource.resource_id}' referencia atividade(s) fora do DAG: "
+                    f"{', '.join(desconhecidas)}"
+                )
+
         # ── decision variables ────────────────────────────────────────────
         starts, ends, intervals = self._add_activity_variables(model, dag, H)
 

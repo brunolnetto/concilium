@@ -9,5 +9,6 @@
     "codigo_planilha": "M0010"
   },
   "data_referencia_preco": "2026-05-08",
-  "categoria": "TERRAPLENAGEM"
+  "categoria": "TERRAPLENAGEM",
+  "origem_material": "AQUISICAO_EXTERNA"
 }

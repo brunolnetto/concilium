@@ -47,9 +47,11 @@
     ],
     "materiais": [
       {
-        "insumo_id": "MA-EMULSAO-RR-2C",
+        "insumo_id": "MA-CBUQ-FAIXA-C",
         "consumo_por_hora": 58.80024,
-        "unidade": "t"
+        "unidade": "t",
+        "origem_entrada": "bom_convertido",
+        "descricao": "repoint AGIS: era MA-EMULSAO-RR-2C — consumo é MASSA asfáltica (72 kg/m² = 3 cm × 2,4 t/m³), não CAP puro — corrige preço 10× inflado (381,60 → ~34,87 R$/m² de material) e fecha usinagem→aplicação (ADR-139 F4 cura)"
       }
     ]
   },

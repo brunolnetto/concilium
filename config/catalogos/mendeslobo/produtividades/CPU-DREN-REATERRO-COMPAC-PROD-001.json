@@ -40,6 +40,15 @@
         "equip_id": "EQ-E0029",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-SOLO-ESCAVADO-1CAT",
+        "consumo_por_hora": 12.0,
+        "unidade": "m3",
+        "descricao": "BOM 1 m³/m³ convertido via coeficiente × valor_horario — reaterro de vala usa o solo da própria escavação da vala (par com CPU-DREN-ESCAV-VALA-1CAT) (ADR-139 F4)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "historico_observacoes": []

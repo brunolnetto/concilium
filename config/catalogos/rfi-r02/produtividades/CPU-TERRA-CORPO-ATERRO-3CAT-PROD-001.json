@@ -43,6 +43,15 @@
         "num_unidades": 1,
         "consumo_litros_hora": 18.5
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "MA-SOLO-ESCAVADO-3CAT",
+        "consumo_por_hora": 214.92,
+        "unidade": "m3",
+        "descricao": "Solo/rocha 3ª cat oriundo de corte — BOM 1 m³/m³ convertido via coeficiente × valor_horario (ADR-138 F2 / ADR-139 F4 piloto)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "_nota_calibracao": "Corpo de aterro 3ªcat. Trator esteiras grande + 2 rolos. Calibrado AGIS.",

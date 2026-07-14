@@ -106,6 +106,13 @@
         {"$ref": "common.schema.json#/$defs/grafoSinergiaEquipe"}
       ]
     },
+    "materiais_gerados": {
+      "description": "Materiais gerados pela atividade por hora de operação — lado produtor do padrão produtor-consumidor (ADR-139 D3). Lista vazia/ausente = atividade não gera material aproveitável.",
+      "type": "array",
+      "default": [],
+      "items": {"$ref": "common.schema.json#/$defs/materialGerado"},
+      "uniqueItems": true
+    },
     "limite_producao": {
       "type": "string",
       "enum": ["equipamento", "mao_obra"],

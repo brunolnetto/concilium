@@ -34,6 +34,15 @@
         "equip_id": "E0036",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0010",
+        "consumo_por_hora": 138.0,
+        "unidade": "m3",
+        "descricao": "BGTC comprada 1 m³/m³ (sem usina de solos no rfi — critério do recorte) (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

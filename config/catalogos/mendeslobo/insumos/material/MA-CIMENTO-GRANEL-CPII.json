@@ -1,0 +1,13 @@
+{
+  "codigo": "MA-CIMENTO-GRANEL-CPII",
+  "tipo": "MATERIAL",
+  "descricao": "Cimento Portland CP II-32 a granel",
+  "unidade": "kg",
+  "preco_unitario": 0.56,
+  "fonte_preco": "tabela_referencia",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO",
+  "_referencia": "SICRO 202604-SP (4ª ed. v1.1)",
+  "codigo_referencia_externa": "M1954",
+  "origem_material": "AQUISICAO_EXTERNA"
+}

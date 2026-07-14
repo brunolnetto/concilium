@@ -3,12 +3,28 @@
   "tipo": "MATERIAL",
   "descricao": "CBUQ Faixa C",
   "unidade": "t",
-  "preco_unitario": 385.0,
+  "preco_unitario": 466.3,
   "fonte_preco": "catalogo_proprio",
   "classe_compartilhamento": {
     "classe": "exclusivo_dedicado",
     "capacidade_cobertura": 1
   },
-  "data_referencia_preco": "2025-05-01",
-  "categoria": "DIVERSOS"
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "DIVERSOS",
+  "origem_material": "GERACAO_INTERNA",
+  "historico_precos": [
+    {
+      "preco_unitario": 385.0,
+      "data_inicio_vigencia": "2026-03-01",
+      "data_fim_vigencia": "2026-07-14",
+      "fonte": "legado catalogo_proprio (pré-ADR-139; abaixo da faixa SICRO — ver PR #104)"
+    },
+    {
+      "preco_unitario": 484.26,
+      "data_inicio_vigencia": "2026-07-14",
+      "data_fim_vigencia": "2026-07-14",
+      "fonte": "conclusão anterior (insumos da composição reprecificados — re-conclusão ADR-139)"
+    }
+  ],
+  "_conclusao_preco": "custo interno de produção concluído por PROD-USINAGEM-CBUQ-001 (bottom-up ÷ produção derivada pelo grafo de sinergia — ADR-130/ADR-139; ref. física SICRO 202604-SP (4ª ed. v1.1))"
 }

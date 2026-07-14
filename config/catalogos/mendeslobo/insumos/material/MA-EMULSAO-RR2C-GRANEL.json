@@ -1,0 +1,12 @@
+{
+  "codigo": "MA-EMULSAO-RR2C-GRANEL",
+  "tipo": "MATERIAL",
+  "descricao": "Emulsão asfáltica catiônica RR-2C a granel (banho de TSD)",
+  "unidade": "t",
+  "preco_unitario": 3850.0,
+  "fonte_preco": "tabela_referencia",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO",
+  "_migrado_de": "MA-CONCRETO-FCP-20MPA (código trocado na importação AGIS — ver PR #104)"
+}

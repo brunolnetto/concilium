@@ -47,9 +47,10 @@
     ],
     "materiais": [
       {
-        "insumo_id": "MA-BSTC-CORPO-DN1200-PA3",
+        "insumo_id": "MA-BRITA-0-PEDRISCO",
         "consumo_por_hora": 128.96554,
-        "unidade": "m3"
+        "unidade": "m3",
+        "origem_entrada": "bom_convertido"
       }
     ]
   },

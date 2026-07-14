@@ -39,9 +39,11 @@
     ],
     "materiais": [
       {
-        "insumo_id": "MA-CONCRETO-FCP-20MPA",
+        "insumo_id": "MA-EMULSAO-RR2C-GRANEL",
         "consumo_por_hora": 0.277,
-        "unidade": "t"
+        "unidade": "t",
+        "origem_entrada": "bom_convertido",
+        "descricao": "repoint AGIS: era MA-CONCRETO-FCP-20MPA — código trocado: o conteúdo real do insumo é emulsão RR-2C (desc+preço; TSD ~1 kg/m²) (ADR-139 F4 cura)"
       }
     ]
   },

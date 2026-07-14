@@ -1,0 +1,17 @@
+{
+  "codigo": "MA-SOLO-ESCAVADO-1CAT",
+  "tipo": "MATERIAL",
+  "descricao": "Solo de 1ª categoria oriundo de corte — gerado internamente pela escavação (ADR-139 F4)",
+  "unidade": "m³",
+  "preco_unitario": 0.0,
+  "fonte_preco": "catalogo_proprio",
+  "origem_material": "GERACAO_INTERNA",
+  "atributos_especificos": {
+    "disponibilidade": {
+      "estoque_inicial": 0.0,
+      "capacidade_armazenamento": 50000.0
+    }
+  },
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "TERRAPLENAGEM"
+}

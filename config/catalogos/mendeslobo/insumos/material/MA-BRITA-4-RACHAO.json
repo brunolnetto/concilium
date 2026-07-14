@@ -1,0 +1,12 @@
+{
+  "codigo": "MA-BRITA-4-RACHAO",
+  "tipo": "MATERIAL",
+  "descricao": "Brita 4 (rachão)",
+  "unidade": "m³",
+  "preco_unitario": 147.0,
+  "fonte_preco": "cotacao_mercado",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "data_referencia_preco": "2026-03-01",
+  "categoria": "TERRAPLENAGEM",
+  "_migrado_de": "MA-BDTC-CORPO-DN1200-PA2 (código de bueiro, conteúdo de agregado — ADR-139 F4-ter)"
+}

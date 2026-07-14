@@ -35,9 +35,11 @@
     ],
     "materiais": [
       {
-        "insumo_id": "MA-EMULSAO-RR-1C",
+        "insumo_id": "MA-CCR",
         "consumo_por_hora": 149.51,
-        "unidade": "m3"
+        "unidade": "m3",
+        "origem_entrada": "bom_convertido",
+        "descricao": "repoint AGIS: era MA-EMULSAO-RR-1C — código trocado: o conteúdo real do insumo é CCR (desc+preço) (ADR-139 F4 cura)"
       }
     ]
   },

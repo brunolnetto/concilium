@@ -1,0 +1,12 @@
+{
+  "codigo": "EQ-CARREG-PNEUS-172M3",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Carregadeira de pneus 1,72 m³ - 113 kW (custo horário efetivo a 86% de utilização — SICRO)",
+  "unidade": "h",
+  "preco_unitario": 199.69,
+  "fonte_preco": "tabela_referencia",
+  "data_referencia_preco": "2026-07-14",
+  "categoria": "PAVIMENTACAO",
+  "_referencia": "SICRO 202604-SP (4ª ed. v1.1)",
+  "codigo_referencia_externa": "E9584"
+}

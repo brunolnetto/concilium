@@ -34,6 +34,15 @@
         "equip_id": "E0010",
         "num_unidades": 1
       }
+    ],
+    "materiais": [
+      {
+        "insumo_id": "M0037",
+        "consumo_por_hora": 900.0,
+        "unidade": "m2",
+        "descricao": "imprimação — insumo já expresso por m² (0,8 kg/m²) (ADR-139 F4-quater — restauração de BOM)",
+        "origem_entrada": "bom_convertido"
+      }
     ]
   },
   "categoria": "TERRAPLENAGEM",

@@ -1,0 +1,12 @@
+{
+  "codigo": "MA-AREIA-GROSSA-LAVADA",
+  "tipo": "MATERIAL",
+  "descricao": "Areia grossa lavada",
+  "unidade": "m³",
+  "preco_unitario": 120.0,
+  "fonte_preco": "cotacao_mercado",
+  "origem_material": "AQUISICAO_EXTERNA",
+  "data_referencia_preco": "2026-03-01",
+  "categoria": "DIVERSOS",
+  "_migrado_de": "MA-BSTC-CORPO-DN1000-PA1 (órfão consolidado — ADR-139 F4-ter)"
+}
