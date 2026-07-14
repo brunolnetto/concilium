@@ -8,6 +8,7 @@ Covers missing lines:
 
 from __future__ import annotations
 
+import json
 import threading
 
 import pytest
@@ -274,6 +275,168 @@ class TestBlobCount:
         assert blob_repo.count() == 1
         blob_repo.append(_make_invocation("id-2"))
         assert blob_repo.count() == 2
+
+
+class TestBlobRotation:
+    """Rotação do audit.jsonl por idade OU tamanho (conjunção — o que vier primeiro).
+
+    Limites configuráveis via CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_AGE_DAYS
+    (default 30 — "1 mês") e CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_SIZE_MB
+    (default 1024 — "1 GB")."""
+
+    def test_no_rotation_under_both_thresholds(self, blob_repo, tmp_path):
+        blob_repo.append(_make_invocation("id-1"))
+        blob_repo.append(_make_invocation("id-2"))
+
+        archives = [p for p in (tmp_path / ".tool_invocations").glob("audit-*.jsonl")]
+        assert archives == []
+        assert blob_repo.count() == 2
+
+    def test_rotates_when_size_threshold_exceeded(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_SIZE_MB", "0.0001")  # ~104 bytes
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+
+        repo.append(_make_invocation("id-1"))
+        repo.append(_make_invocation("id-2"))  # deve estourar o limite minúsculo e rotacionar
+
+        archives = list((tmp_path / ".tool_invocations").glob("audit-*.jsonl"))
+        assert len(archives) == 1
+        # arquivo ativo só tem a invocação mais recente (pós-rotação)
+        assert repo.count() == 1
+        assert repo.list_recent()[0].id == "id-2"
+
+    def test_rotates_when_age_threshold_exceeded(self, tmp_path):
+        import json
+
+        blob_path = tmp_path / ".tool_invocations" / "audit.jsonl"
+        blob_path.parent.mkdir(parents=True, exist_ok=True)
+        old_inv = _make_invocation("id-old")
+        old_dict = old_inv.to_dict()
+        old_dict["started_at"] = "2020-01-01T00:00:00+00:00"
+        old_dict["finished_at"] = "2020-01-01T00:00:01+00:00"
+        blob_path.write_text(json.dumps(old_dict) + "\n")
+
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        repo.append(_make_invocation("id-new"))
+
+        archives = list((tmp_path / ".tool_invocations").glob("audit-*.jsonl"))
+        assert len(archives) == 1
+        assert repo.count() == 1
+        assert repo.list_recent()[0].id == "id-new"
+
+    def test_does_not_rotate_when_oldest_record_within_max_age(self, tmp_path):
+        import json
+        from datetime import UTC, datetime
+
+        blob_path = tmp_path / ".tool_invocations" / "audit.jsonl"
+        blob_path.parent.mkdir(parents=True, exist_ok=True)
+        recent_inv = _make_invocation("id-recent")
+        recent_dict = recent_inv.to_dict()
+        recent_dict["started_at"] = datetime.now(UTC).isoformat()
+        recent_dict["finished_at"] = datetime.now(UTC).isoformat()
+        blob_path.write_text(json.dumps(recent_dict) + "\n")
+
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        repo.append(_make_invocation("id-new"))
+
+        archives = list((tmp_path / ".tool_invocations").glob("audit-*.jsonl"))
+        assert archives == []
+        assert repo.count() == 2
+
+    def test_env_vars_configure_age_threshold(self, tmp_path, monkeypatch):
+        """CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_AGE_DAYS reduz o limite —
+        um registro de 2 dias atrás, que sobreviveria ao default de 30 dias,
+        força rotação com um limite de 1 dia."""
+        import json
+        from datetime import UTC, datetime, timedelta
+
+        monkeypatch.setenv("CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_AGE_DAYS", "1")
+        blob_path = tmp_path / ".tool_invocations" / "audit.jsonl"
+        blob_path.parent.mkdir(parents=True, exist_ok=True)
+        two_days_ago = (datetime.now(UTC) - timedelta(days=2)).isoformat()
+        old_dict = _make_invocation("id-old").to_dict()
+        old_dict["started_at"] = two_days_ago
+        old_dict["finished_at"] = two_days_ago
+        blob_path.write_text(json.dumps(old_dict) + "\n")
+
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        repo.append(_make_invocation("id-new"))
+
+        archives = list((tmp_path / ".tool_invocations").glob("audit-*.jsonl"))
+        assert len(archives) == 1
+
+    def test_malformed_first_line_does_not_crash_or_force_age_rotation(self, tmp_path):
+        """Primeira linha ilegível: não levanta, e não força rotação por idade
+        (só o tamanho ainda pode disparar rotação, independentemente)."""
+        blob_path = tmp_path / ".tool_invocations" / "audit.jsonl"
+        blob_path.parent.mkdir(parents=True, exist_ok=True)
+        blob_path.write_text("NOT_JSON\n")
+
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        repo.append(_make_invocation("id-new"))  # não deve levantar
+
+        archives = list((tmp_path / ".tool_invocations").glob("audit-*.jsonl"))
+        assert archives == []
+
+    def test_archived_content_is_preserved_but_not_queryable(self, tmp_path):
+        """Conteúdo arquivado continua no storage (não é perdido), mas as
+        queries (list_recent etc.) só enxergam o arquivo ativo pós-rotação —
+        trade-off deliberado para manter as queries rápidas."""
+        import json
+
+        blob_path = tmp_path / ".tool_invocations" / "audit.jsonl"
+        blob_path.parent.mkdir(parents=True, exist_ok=True)
+        old_dict = _make_invocation("id-old").to_dict()
+        old_dict["started_at"] = "2020-01-01T00:00:00+00:00"
+        old_dict["finished_at"] = "2020-01-01T00:00:01+00:00"
+        blob_path.write_text(json.dumps(old_dict) + "\n")
+
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        repo.append(_make_invocation("id-new"))
+
+        archives = list((tmp_path / ".tool_invocations").glob("audit-*.jsonl"))
+        assert len(archives) == 1
+        archived_content = archives[0].read_text()
+        assert "id-old" in archived_content
+
+        ids_visible = {inv.id for inv in repo.list_recent(limit=100)}
+        assert ids_visible == {"id-new"}
+
+    def test_malformed_max_age_env_var_falls_back_to_default(self, monkeypatch):
+        from concilium.infrastructure.storage.tool_invocation_store import _rotate_max_age_seconds
+
+        monkeypatch.setenv("CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_AGE_DAYS", "not-a-number")
+        assert _rotate_max_age_seconds() == 30.0 * 86400
+
+    def test_malformed_max_size_env_var_falls_back_to_default(self, monkeypatch):
+        from concilium.infrastructure.storage.tool_invocation_store import _rotate_max_size_bytes
+
+        monkeypatch.setenv("CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_SIZE_MB", "not-a-number")
+        assert _rotate_max_size_bytes() == 1024.0 * 1024 * 1024
+
+    def test_oldest_started_at_skips_leading_blank_lines(self, blob_repo):
+        inv = _make_invocation("id-1")
+        raw = ("\n\n" + json.dumps(inv.to_dict()) + "\n").encode("utf-8")
+        result = blob_repo._oldest_started_at(raw)
+        assert result is not None
+        assert result.isoformat() == "2026-06-23T10:00:00+00:00"
+
+    def test_oldest_started_at_assumes_utc_for_naive_timestamp(self, blob_repo):
+        inv_dict = _make_invocation("id-1").to_dict()
+        inv_dict["started_at"] = "2026-06-23T10:00:00"  # sem timezone
+        raw = (json.dumps(inv_dict) + "\n").encode("utf-8")
+        result = blob_repo._oldest_started_at(raw)
+        assert result is not None
+        assert result.tzinfo is not None
+
+    def test_oldest_started_at_all_blank_returns_none(self, blob_repo):
+        assert blob_repo._oldest_started_at(b"\n\n   \n") is None
 
 
 # ---------------------------------------------------------------------------
