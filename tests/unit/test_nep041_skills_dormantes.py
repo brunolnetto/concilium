@@ -50,7 +50,7 @@ class TestMecanismoDormenciaPreservado:
         for sid in (
             "01-escopo-e-eap",
             "06-resultado-financeiro",
-            "10-relatorio-e-artefatos",
-            "11-replanejamento-e-cenarios",
+            "09-relatorio-e-artefatos",
+            "08-replanejamento-e-cenarios",
         ):
             assert sid in CANONICAL_SKILL_ORDER

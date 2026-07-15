@@ -45,7 +45,7 @@ from concilium.domain.models.canonical import (
 # production loader (`_load_skill_module`), which registers a synthetic
 # package so skill.py's relative imports (`from ._skill_helpers._assessor import ...`) work.
 assert _trigger
-_skill_mod = sys.modules["_concilium_skillpkg_11_replanejamento_e_cenarios.skill"]
+_skill_mod = sys.modules["_concilium_skillpkg_08_replanejamento_e_cenarios.skill"]
 run_replanejamento_e_cenarios = _skill_mod.run_replanejamento_e_cenarios
 
 # The module namespace where we can inject mocks

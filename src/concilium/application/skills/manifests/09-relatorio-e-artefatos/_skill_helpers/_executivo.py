@@ -21,7 +21,7 @@ from concilium.domain.models.reports import (
     RelatorioSensibilidade,
 )
 
-_CREATED_BY = "10-relatorio-e-artefatos"
+_CREATED_BY = "09-relatorio-e-artefatos"
 
 
 _STATUS_MARGEM_VALIDOS: tuple[StatusMargem, ...] = ("VERDE", "AMARELO", "VERMELHO")

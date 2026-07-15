@@ -124,7 +124,10 @@ def is_campaign_allowed_for_intent(intent: ProcurementIntent | str | None) -> bo
 
 
 # Preserve canonical display order
-_PHASE_ORDER = ["Definição", "Planejamento", "Consolidação", "Análise", "Decisão", "Saída"]
+# NEP-049 (renumeração): "Inicialização" entra explicitamente na frente — antes, a fase
+# da skill 01 não constava e caía no apêndice do PHASE_MAP, jogando 01 para o FIM de
+# CANONICAL_SKILL_ORDER (inócuo só porque o runtime filtra 01 do auto-avanço).
+_PHASE_ORDER = ["Inicialização", "Definição", "Planejamento", "Consolidação", "Análise", "Decisão", "Saída"]
 
 # Build PHASE_MAP dynamically from TOML manifests
 _phase_index: dict[str, list[str]] = defaultdict(list)
@@ -143,14 +146,14 @@ _MANIFEST_META_BY_PHASE: dict[str, str] = {
     sid: meta.get("phase", "Sem Classificação") for sid, meta in MANIFEST_META.items()
 }
 
-# ── Alias map ADR-113 F3: IDs legados → novos após renumeração ─────────────────
-# Permite que callers com IDs antigos continuem funcionando durante F4 (renaming).
-# Remover após todos os callers atualizados.
+# ── Alias map ADR-113 F3 / NEP-049: IDs legados → novos após renumeração ───────
+# Permite que callers e dados persistidos com IDs antigos continuem resolvendo.
+# NEP-049: com 08/09 aposentadas, 11-replanejamento→08 e 10-relatorio→09 fecham a
+# numeração contígua 01–09 na ordem real de execução.
 SKILL_ID_ALIASES: dict[str, str] = {
-    # legado → novo (após renumeração F4)
-    "10-relatorio-e-artefatos": "10-relatorio-e-artefatos",
-    "07-diagnostico-criticidade": "07-diagnostico-criticidade",
-    "11-replanejamento-e-cenarios": "11-replanejamento-e-cenarios",
+    # legado → novo (renumeração NEP-049)
+    "10-relatorio-e-artefatos": "09-relatorio-e-artefatos",
+    "11-replanejamento-e-cenarios": "08-replanejamento-e-cenarios",
 }
 
 # Mapeamento inverso (novo → legado), para referência

@@ -19,7 +19,7 @@ from pathlib import Path as _Path  # noqa: E402
 
 _MODULE_PATH = str(
     _Path(__file__).resolve().parents[2]
-    / "src/concilium/application/skills/manifests/10-relatorio-e-artefatos/_skill_helpers/_executivo.py"
+    / "src/concilium/application/skills/manifests/09-relatorio-e-artefatos/_skill_helpers/_executivo.py"
 )
 
 

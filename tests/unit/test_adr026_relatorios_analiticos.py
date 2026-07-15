@@ -116,7 +116,7 @@ class TestSkill15RelatorioCriticidade:
         path = (
             Path(__file__).resolve().parents[2]
             / "src/concilium/application/skills/manifests"
-            / "10-relatorio-e-artefatos/_skill_helpers/_executivo.py"
+            / "09-relatorio-e-artefatos/_skill_helpers/_executivo.py"
         )
         spec = importlib.util.spec_from_file_location("sk09_exec", path)
         mod = importlib.util.module_from_spec(spec)
@@ -182,14 +182,14 @@ class TestSkill07CriticidadeEnrichment:
     def _result_crit(self):
         """Roda skill 10 com criticidade uma vez para toda a classe."""
         can = TestSkill07CriticidadeEnrichment._make_canonical(with_criticidade=True)
-        mod = _load_skill("10-relatorio-e-artefatos")
+        mod = _load_skill("09-relatorio-e-artefatos")
         return mod.run_relatorio_e_artefatos(canonical_in=can, inputs={}, perfil={})
 
     @pytest.fixture(scope="class")
     def _result_no_crit(self):
         """Roda skill 10 sem criticidade uma vez para toda a classe."""
         can = TestSkill07CriticidadeEnrichment._make_canonical(with_criticidade=False)
-        mod = _load_skill("10-relatorio-e-artefatos")
+        mod = _load_skill("09-relatorio-e-artefatos")
         return mod.run_relatorio_e_artefatos(canonical_in=can, inputs={}, perfil={})
 
     @staticmethod
@@ -238,7 +238,7 @@ class TestSkill07CriticidadeEnrichment:
         )
 
     def _run(self, canonical_in: CanonicalModel) -> SkillResult:
-        mod = _load_skill("10-relatorio-e-artefatos")
+        mod = _load_skill("09-relatorio-e-artefatos")
         return mod.run_relatorio_e_artefatos(
             canonical_in=canonical_in,
             inputs={},
@@ -325,7 +325,7 @@ class TestSkill07CriticidadeEnrichment:
         """Relatório financeiro deve usar custo direto operacional como fonte única."""
         from concilium.domain.models.canonical import CustoTotal, Resultado, Venda
 
-        mod = _load_skill("10-relatorio-e-artefatos")
+        mod = _load_skill("09-relatorio-e-artefatos")
         canonical_in = self._canonical_with_resultado(with_criticidade=False)
         resultado = Resultado(
             venda=Venda(total_sem_bdi=5_000.0, total_com_bdi=7_000.0),
@@ -443,25 +443,25 @@ class TestCanonicalSkillOrder:
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         # NEP-041 Fase 1: 15 absorvido em 09 (ativo no pipeline)
-        assert "10-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
+        assert "09-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
         # NEP-049: 09-registro-decisoes aposentada — fora de SKILLS e do pipeline
         assert "09-registro-decisoes" not in SKILLS
         assert "09-registro-decisoes" not in CANONICAL_SKILL_ORDER
 
     def test_07_comes_after_09(self):
-        """ADR-026 §D: 10-relatorio-e-artefatos (Saída) must come after 07-diagnostico-criticidade (Análise)."""
+        """ADR-026 §D: 09-relatorio-e-artefatos (Saída) must come after 07-diagnostico-criticidade (Análise)."""
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         # Skill 09 (Saída) deve vir depois de skill 10 (Análise) na ordem canônica
-        assert CANONICAL_SKILL_ORDER.index("10-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
+        assert CANONICAL_SKILL_ORDER.index("09-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
             "07-diagnostico-criticidade"
-        ), "10-relatorio-e-artefatos must come after 09-cost-criticality"
+        ), "09-relatorio-e-artefatos must come after 09-cost-criticality"
 
     def test_09_relatorio_absorve_executivo(self):
         """NEP-041 Fase 1: 15 foi absorvido em 09 — 09 vem depois de 10 (Análise)."""
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         assert "15-relatorio-executivo" not in CANONICAL_SKILL_ORDER
-        assert CANONICAL_SKILL_ORDER.index("10-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
+        assert CANONICAL_SKILL_ORDER.index("09-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
             "07-diagnostico-criticidade"
         )

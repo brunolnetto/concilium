@@ -21,7 +21,7 @@ def _load_helpers():
     path = (
         Path(__file__).resolve().parents[2]
         / "src/concilium/application/skills/manifests"
-        / "10-relatorio-e-artefatos/_skill_helpers/__init__.py"
+        / "09-relatorio-e-artefatos/_skill_helpers/__init__.py"
     )
     spec = importlib.util.spec_from_file_location(
         "sk09_helpers_nep042", path, submodule_search_locations=[str(path.parent)]

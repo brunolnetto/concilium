@@ -12,11 +12,11 @@ from concilium.application.skills import run_relatorio_e_artefatos
 # ---------------------------------------------------------------------------
 
 _ = run_relatorio_e_artefatos
-_MOD = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers"]
-_MOD_SKILL = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos.skill"]
+_MOD = sys.modules["_concilium_skillpkg_09_relatorio_e_artefatos._skill_helpers"]
+_MOD_SKILL = sys.modules["_concilium_skillpkg_09_relatorio_e_artefatos.skill"]
 
 # Extract names used in patch() calls (need the dotted module path)
-_PATCH_PREFIX = "_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers"
+_PATCH_PREFIX = "_concilium_skillpkg_09_relatorio_e_artefatos._skill_helpers"
 
 # Extract functions for direct use
 _bgs_normalize_funcao_label = _MOD._bgs_normalize_funcao_label

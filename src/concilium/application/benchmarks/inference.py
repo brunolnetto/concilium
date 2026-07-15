@@ -37,7 +37,7 @@ class BenchmarkInferenceService:
         pack = BenchmarkInferencePack(
             benchmark_mode=True,
             skill_inputs={
-                "10-relatorio-e-artefatos": {"benchmark_mode": True},
+                "09-relatorio-e-artefatos": {"benchmark_mode": True},
             },
             reference_projection=None,
             trace=[
@@ -72,7 +72,7 @@ class BenchmarkInferenceService:
         if isinstance(ref_proj, dict):
             # reference_projection: apenas para comparação final em skill-09.
             # Nenhum campo é usado em cálculos de skills 06/08.
-            pack.skill_inputs.setdefault("10-relatorio-e-artefatos", {})["benchmark_reference_projection"] = ref_proj
+            pack.skill_inputs.setdefault("09-relatorio-e-artefatos", {})["benchmark_reference_projection"] = ref_proj
 
         return pack
 

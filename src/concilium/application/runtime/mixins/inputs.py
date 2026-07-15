@@ -94,7 +94,7 @@ class InputsMixin(_Base):
         if skill_id == "04-cronograma" and "calendario_operacional" not in normalized:
             self._apply_defaults_cronograma(project, contexto, normalized)
 
-        if skill_id == "10-relatorio-e-artefatos":
+        if skill_id == "09-relatorio-e-artefatos":
             self._apply_defaults_relatorio(project, normalized)
 
         return normalized

@@ -98,11 +98,11 @@ Limites:
 
 ## Notas de implementação
 
-- O `cost_criticality_report` é consumido por `08-avaliacao-intervencoes`, `11-replanejamento-e-cenarios` (assessor e explorador) e `10-relatorio-e-artefatos`. Skills que dependem desta devem verificar `canonical.cost_criticality_report is not None` antes de operar.
+- O `cost_criticality_report` é consumido por `08-avaliacao-intervencoes`, `08-replanejamento-e-cenarios` (assessor e explorador) e `09-relatorio-e-artefatos`. Skills que dependem desta devem verificar `canonical.cost_criticality_report is not None` antes de operar.
 - A fronteira de Pareto (`frontier_ids`) é o conjunto de atividades que não são dominadas em todas as dimensões por nenhuma outra — representa o conjunto irredutível de riscos do projeto.
 - O score de prazo usa `_periodo_to_ordinal()` para normalizar chaves de semanas ISO e períodos mensais para uma escala comparável.
 
 ## Próximas skills no pipeline
 
 - [`08-avaliacao-intervencoes`](../08-avaliacao-intervencoes/SKILL.md)
-- [`11-replanejamento-e-cenarios`](../11-replanejamento-e-cenarios) (assessor de replanejamento e explorador de cenários — sem SKILL.md próprio)
+- [`08-replanejamento-e-cenarios`](../08-replanejamento-e-cenarios) (assessor de replanejamento e explorador de cenários — sem SKILL.md próprio)

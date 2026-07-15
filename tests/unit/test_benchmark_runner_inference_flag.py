@@ -66,8 +66,8 @@ def test_prepare_inputs_nep030_minimal_injection() -> None:
     assert "bdi_indireto_efetivo" not in skill_inputs.get("06-resultado-financeiro", {})
 
     # skill-09 COM benchmark_mode para relatório de comparação
-    assert skill_inputs["10-relatorio-e-artefatos"]["benchmark_mode"] is True
-    assert "benchmark_reference_projection" in skill_inputs["10-relatorio-e-artefatos"]
+    assert skill_inputs["09-relatorio-e-artefatos"]["benchmark_mode"] is True
+    assert "benchmark_reference_projection" in skill_inputs["09-relatorio-e-artefatos"]
 
 
 def test_prepare_inputs_uses_provided_pack_without_derive(monkeypatch) -> None:

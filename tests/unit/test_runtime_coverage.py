@@ -776,5 +776,5 @@ def test_process_side_effects_skill_10(config_root, projeto_terraplenagem):
         _patch("concilium.application.runtime.mixins.execution._handle_skill_09_side_effects") as mock_09,
         _patch("concilium.application.runtime.mixins.execution._persist_typed_artifacts"),
     ):
-        r._process_side_effects("10-relatorio-e-artefatos", result, p, v)
+        r._process_side_effects("09-relatorio-e-artefatos", result, p, v)
     mock_09.assert_called_once()

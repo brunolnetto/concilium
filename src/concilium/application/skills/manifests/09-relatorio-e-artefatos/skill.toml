@@ -1,5 +1,5 @@
 [skill]
-id = "10-relatorio-e-artefatos"
+id = "09-relatorio-e-artefatos"
 tier = "olap"
 phase = "Saída"
 version = "1.0.0"

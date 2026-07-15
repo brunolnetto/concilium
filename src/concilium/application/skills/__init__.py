@@ -217,7 +217,7 @@ def load_skill_stage(skill_id: str, stage: str, func_name: str) -> Any:
     else:
         path = _MANIFESTS / skill_id / f"{stage}.py"
         if not path.is_file():
-            # Skills consolidadas em _skill_helpers/ (ex: 11-replanejamento-e-cenarios)
+            # Skills consolidadas em _skill_helpers/ (ex: 08-replanejamento-e-cenarios)
             # movem seus módulos de estágio "bare" (ex: _assessor.py) para dentro de
             # _skill_helpers/. Cai para esse caminho quando o direto não existir.
             helpers_path = _MANIFESTS / skill_id / "_skill_helpers" / f"{stage}.py"

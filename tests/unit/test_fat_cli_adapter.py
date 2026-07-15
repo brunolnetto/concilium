@@ -149,7 +149,7 @@ class TestAdapterRunHappyPath:
         with patch_parse, patch_resolve, patch_rt, patch_re, _patch_config_root(tmp_path):
             runner.invoke(app, ["proj"])
 
-        rt_instance.run_skill.assert_called_once_with("10-relatorio-e-artefatos", project, version="v2", inputs={})
+        rt_instance.run_skill.assert_called_once_with("09-relatorio-e-artefatos", project, version="v2", inputs={})
 
     def test_explicit_version_in_arg(self, tmp_path):
         """When arg contains @vN the explicit version is passed to run_skill."""
@@ -167,7 +167,7 @@ class TestAdapterRunHappyPath:
             result = runner.invoke(app, ["proj@v3"])
 
         assert result.exit_code == 0
-        rt_instance.run_skill.assert_called_once_with("10-relatorio-e-artefatos", project, version="v3", inputs={})
+        rt_instance.run_skill.assert_called_once_with("09-relatorio-e-artefatos", project, version="v3", inputs={})
 
 
 class TestAdapterRunNoActiveVersion:

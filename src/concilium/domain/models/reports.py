@@ -1,8 +1,8 @@
 """ADR-026 — Payloads dos relatórios analíticos de Saída (skills 15, 16, 17).
 
 RelatorioCriticidade  (Skill 15): ranking Pareto de atividades + decisões do 11.
-RelatorioSensibilidade (Skill 16): levers de margem do 11-replanejamento-e-cenarios.
-RelatorioIntervencao   (Skill 17): eixos combinados de intervenção do 11-replanejamento-e-cenarios.
+RelatorioSensibilidade (Skill 16): levers de margem do 08-replanejamento-e-cenarios.
+RelatorioIntervencao   (Skill 17): eixos combinados de intervenção do 08-replanejamento-e-cenarios.
 """
 
 from __future__ import annotations

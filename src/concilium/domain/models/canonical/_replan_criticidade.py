@@ -45,7 +45,7 @@ class ResultadoReconciliado(BaseModel):
 
 
 class ReplanSugestao(BaseModel):
-    """Sugestão concreta de re-planejamento com checkpoint e parâmetros (11-replanejamento-e-cenarios)."""
+    """Sugestão concreta de re-planejamento com checkpoint e parâmetros (08-replanejamento-e-cenarios)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -61,7 +61,7 @@ class ReplanSugestao(BaseModel):
 
 
 class ReplanSuggestions(BaseModel):
-    """Seção canônica produzida por 11-replanejamento-e-cenarios."""
+    """Seção canônica produzida por 08-replanejamento-e-cenarios."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -226,7 +226,7 @@ class OportunidadeVerde(BaseModel):
 
 
 class PlanSpaceResult(BaseModel):
-    """Resultado do 11-replanejamento-e-cenarios (estágio explorador): repair_path e/ou oportunidades."""
+    """Resultado do 08-replanejamento-e-cenarios (estágio explorador): repair_path e/ou oportunidades."""
 
     model_config = ConfigDict(extra="ignore")
 

@@ -191,7 +191,7 @@ class TestUntaintOnSuccess:
         """Advisory skills do not modify pipeline_blocked_from on success."""
         from concilium.application.runtime import _GATE_SKILLS
 
-        non_gate = "10-relatorio-e-artefatos"  # NEP-041 F4: 07 absorvido; 09 é não-gate
+        non_gate = "09-relatorio-e-artefatos"  # NEP-041 F4: 07 absorvido; 09 é não-gate
         assert non_gate not in _GATE_SKILLS
 
         canonical = _make_canonical(
@@ -245,7 +245,7 @@ class TestCanonicalOrderIncludes11And15To17:
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         # NEP-041 Fase 1: 15 absorvido em 09. NEP-049: 08/09 aposentadas.
-        assert "10-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
+        assert "09-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
         # NEP-049: 09-registro-decisoes aposentada — fora de SKILLS e do pipeline
         assert "09-registro-decisoes" not in SKILLS
         assert "09-registro-decisoes" not in CANONICAL_SKILL_ORDER

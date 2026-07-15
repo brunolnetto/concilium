@@ -74,5 +74,24 @@ estrutural do resto do sistema**:
   históricos continuam carregáveis; os campos simplesmente deixam de ser interpretados.
 - **Artefatos `decision_log.json` já persistidos** em projetos: permanecem nos storages como
   arquivos históricos inertes — nada os remove nem os reinterpreta.
-- **IDs 08/09 ficam vagos**: numeração de skills não é reutilizada (mesma política da
-  NEP-041, que deixou lacunas ao consolidar 15→11).
+- ~~**IDs 08/09 ficam vagos**: numeração de skills não é reutilizada~~ — **superado pelo
+  Addendum abaixo (decisão do usuário, 2026-07-14)**.
+
+## Addendum (2026-07-14) — Renumeração para ordem contígua
+
+Decisão do usuário: renumerar para refletir a ordem real de execução, fechando 01–09
+contíguo:
+
+| ID antigo | ID novo |
+|---|---|
+| `11-replanejamento-e-cenarios` | `08-replanejamento-e-cenarios` |
+| `10-relatorio-e-artefatos` | `09-relatorio-e-artefatos` |
+
+- `SKILL_ID_ALIASES` (phase_classifier) carrega os mapeamentos legado→novo, então
+  callers e dados persistidos com IDs antigos continuam resolvendo via
+  `resolve_skill_id`.
+- Corrigido de carona o quirk da fase **"Inicialização"** (não constava em
+  `_PHASE_ORDER`, jogando a skill 01 para o fim de `CANONICAL_SKILL_ORDER` — inócuo
+  apenas porque o runtime filtra 01 do auto-avanço). Ordem canônica agora: 01→…→09.
+- Curiosidade de arqueologia: o helper `_handle_skill_09_side_effects` do runtime,
+  que servia a `10-relatorio-e-artefatos` com nome defasado, volta a bater com o ID.

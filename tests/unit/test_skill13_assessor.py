@@ -22,7 +22,7 @@ import pytest
 from concilium.application.skills import load_skill_stage
 
 run_assessor_replanejamento = load_skill_stage(
-    "11-replanejamento-e-cenarios", "_assessor", "run_assessor_replanejamento"
+    "08-replanejamento-e-cenarios", "_assessor", "run_assessor_replanejamento"
 )
 
 from concilium.domain.models.canonical import (  # noqa: E402

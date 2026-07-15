@@ -543,7 +543,7 @@ class TestLoadSkillStage:
 
     def test_load_bare_stage_module_falls_back_to_skill_helpers_dir(self, tmp_path):
         """Quando `{stage}.py` não existe diretamente no skill_id, mas existe dentro de
-        `_skill_helpers/` (skills consolidadas em pacote, ex: 11-replanejamento-e-cenarios
+        `_skill_helpers/` (skills consolidadas em pacote, ex: 08-replanejamento-e-cenarios
         movendo `_assessor.py` para `_skill_helpers/_assessor.py`), o loader deve cair
         para esse caminho em vez de falhar."""
         import concilium.application.skills as skills_pkg

@@ -57,8 +57,8 @@ class TestSkillRenumbering:
 
         expected_new_ids = [
             "07-diagnostico-criticidade",
-            "10-relatorio-e-artefatos",
-            "11-replanejamento-e-cenarios",
+            "09-relatorio-e-artefatos",
+            "08-replanejamento-e-cenarios",
         ]
         for sid in expected_new_ids:
             assert sid in MANIFEST_META, f"Skill renumerada '{sid}' ausente em MANIFEST_META"
@@ -66,8 +66,13 @@ class TestSkillRenumbering:
     def test_old_ids_absent_from_manifest_meta(self):
         from concilium.application.skills import MANIFEST_META
 
+        # Gerações anteriores de IDs (pré-ADR-113 e pré-NEP-049).
+        # Nota histórica: relatório JÁ FOI 09 antes da ADR-113, virou 10, e a
+        # renumeração da NEP-049 o trouxe de volta a 09 — por isso ele não
+        # aparece aqui como legado.
         old_ids = [
-            "09-relatorio-e-artefatos",
+            "10-relatorio-e-artefatos",
+            "11-replanejamento-e-cenarios",
             "10-diagnostico-criticidade",
             "11-avaliacao-intervencoes",
             "12-registro-decisoes",
@@ -76,11 +81,11 @@ class TestSkillRenumbering:
         for sid in old_ids:
             assert sid not in MANIFEST_META, f"ID legado '{sid}' ainda presente em MANIFEST_META após renumeração"
 
-    def test_relatorio_is_number_10(self):
+    def test_relatorio_is_number_09(self):
         from concilium.application.skills import MANIFEST_META
 
-        assert "10-relatorio-e-artefatos" in MANIFEST_META
-        assert MANIFEST_META["10-relatorio-e-artefatos"]["tier"] == "olap"
+        assert "09-relatorio-e-artefatos" in MANIFEST_META
+        assert MANIFEST_META["09-relatorio-e-artefatos"]["tier"] == "olap"
 
     def test_diagnostico_is_number_07(self):
         from concilium.application.skills import MANIFEST_META
@@ -104,7 +109,7 @@ class TestSkillRenumbering:
     def test_all_olap_skills_have_tier_olap(self):
         from concilium.application.skills import MANIFEST_META
 
-        olap_ids = ["07-diagnostico-criticidade", "10-relatorio-e-artefatos", "11-replanejamento-e-cenarios"]
+        olap_ids = ["07-diagnostico-criticidade", "09-relatorio-e-artefatos", "08-replanejamento-e-cenarios"]
         for sid in olap_ids:
             assert MANIFEST_META[sid]["tier"] == "olap", f"'{sid}' deveria ter tier='olap'"
 
@@ -164,7 +169,7 @@ class TestRfxPipelineProfiles:
         profile = get_pipeline_profile_for_intent("rfp")
         assert profile.mode == PipelineMode.OLAP
         assert profile.path_name == "RFP_TECNICO_ECONOMICO"
-        assert any("10-relatorio" in s for s in profile.skill_sequence)
+        assert any("09-relatorio" in s for s in profile.skill_sequence)
 
     def test_unknown_intent_falls_back_to_rfi(self):
         from concilium.application.skills.phase_classifier import ProcurementIntent, get_pipeline_profile_for_intent
