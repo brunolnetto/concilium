@@ -244,6 +244,56 @@ class TestBuildReplenishableResources:
                 horas_semana={"outra-atividade": 40.0},
             )
 
+    def test_override_de_projeto_sem_declaracao_de_catalogo_vira_recurso(self):
+        """ADR-128 F5: override de logistica_consumiveis do Escopo/projeto é uma
+        terceira fonte de restrição — mesmo sem disponibilidade de catálogo e sem
+        produção interna, o insumo passa a virar ReplenishableResource restrito."""
+        from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
+
+        aterro = _producao(
+            "aterro-prod", 200.0, materiais=[{"insumo_id": "MA-DIESEL", "consumo_por_hora": 1.0, "unidade": "l"}]
+        )
+        override = DisponibilidadeConsumivel(estoque_inicial=100.0, taxa_reabastecimento_max=50.0)
+        resources = build_replenishable_resources(
+            producoes_por_atividade={"aterro": aterro},
+            insumos_por_id={"MA-DIESEL": _insumo_comprado(codigo="MA-DIESEL")},
+            horas_semana=40.0,
+            disponibilidade_overrides={"MA-DIESEL": override},
+        )
+        assert len(resources) == 1
+        assert resources[0].resource_id == "MA-DIESEL"
+        assert resources[0].disponibilidade is override
+
+    def test_sem_override_e_sem_declaracao_continua_irrestrito(self):
+        """Regressão zero: ausência de override (default None) preserva o
+        comportamento existente — não emitir recurso sem nenhuma restrição."""
+        aterro = _producao(
+            "aterro-prod", 200.0, materiais=[{"insumo_id": "MA-AREIA", "consumo_por_hora": 1.0, "unidade": "m3"}]
+        )
+        resources = build_replenishable_resources(
+            producoes_por_atividade={"aterro": aterro},
+            insumos_por_id={"MA-AREIA": _insumo_comprado()},
+            horas_semana=40.0,
+            disponibilidade_overrides=None,
+        )
+        assert resources == []
+
+    def test_override_tem_prioridade_sobre_declaracao_de_catalogo(self):
+        from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
+
+        aterro = _producao(
+            "aterro-prod", 200.0, materiais=[{"insumo_id": "MA-AREIA", "consumo_por_hora": 1.0, "unidade": "m3"}]
+        )
+        disp_catalogo = {"estoque_inicial": 1.0}
+        override = DisponibilidadeConsumivel(estoque_inicial=999.0)
+        resources = build_replenishable_resources(
+            producoes_por_atividade={"aterro": aterro},
+            insumos_por_id={"MA-AREIA": _insumo_comprado(disponibilidade=disp_catalogo)},
+            horas_semana=40.0,
+            disponibilidade_overrides={"MA-AREIA": override},
+        )
+        assert resources[0].disponibilidade is override
+
     def test_geracao_com_insumo_inexistente_falha_alto(self):
         corte = _producao(
             "corte-prod",

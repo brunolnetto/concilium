@@ -18,6 +18,7 @@ from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler
 from concilium.application.scheduling.models import (
     Activity,
     ActivityDAG,
+    EstoqueDelayCause,
     ReplenishableResource,
     ResourcePool,
     ScheduledActivity,
@@ -131,6 +132,33 @@ class TestApplyReplenishableDelay:
         assert act2.start_week == 0
         assert act2.end_week == 1
 
+    def test_delay_causes_accumulates_weeks_per_resource_and_activity(self):
+        """ADR-128 F5: parâmetro opcional que reporta causalmente qual recurso
+        atrasou qual atividade, e quantas semanas — sem quebrar o call site antigo
+        (2 args posicionais, sem delay_causes)."""
+        resource = ReplenishableResource(
+            resource_id="DIESEL",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, taxa_reabastecimento_max=10.0),
+            consumo_por_semana={"A1": 30.0},
+        )
+        scheduled = [ScheduledActivity("A1", start_week=0, end_week=1, duration_weeks=1)]
+        delay_causes: dict[tuple[str, str], int] = {}
+        result = apply_replenishable_delay(scheduled, resource, delay_causes)
+        act = next(sa for sa in result if sa.activity_id == "A1")
+        assert act.start_week == 2  # mesmo delay de test_delays_activity_until_stock_accumulates
+        assert delay_causes == {("DIESEL", "A1"): 2}
+
+    def test_delay_causes_none_default_matches_legacy_call(self):
+        resource = ReplenishableResource(
+            resource_id="DIESEL",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, taxa_reabastecimento_max=10.0),
+            consumo_por_semana={"A1": 30.0},
+        )
+        scheduled = [ScheduledActivity("A1", start_week=0, end_week=1, duration_weeks=1)]
+        legacy = apply_replenishable_delay(scheduled, resource)
+        explicit_none = apply_replenishable_delay(scheduled, resource, None)
+        assert [sa.start_week for sa in legacy] == [sa.start_week for sa in explicit_none]
+
 
 # ── Regressão zero: CpSatScheduler sem replenishable_resources ───────────────
 
@@ -166,6 +194,30 @@ class TestCpSatSchedulerReplenishableRegressionZero:
         act = next(sa for sa in result.scheduled_activities if sa.activity_id == "A")
         assert act.start_week >= 2
         assert result.makespan >= act.end_week
+
+    def test_estoque_delays_reports_resource_and_activity_cause(self):
+        """ADR-128 F5: ScheduleOutput.estoque_delays nomeia causalmente o recurso e a
+        atividade atrasados, em vez de só um booleano feasible."""
+        acts = [Activity(activity_id="A", description="", duration_weeks=1, required_resources={})]
+        dag = ActivityDAG(activities=acts, precedence=[])
+        pool = ResourcePool(resources={})
+        scheduler = CpSatScheduler(timeout_seconds=10.0)
+
+        resource = ReplenishableResource(
+            resource_id="DIESEL",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, taxa_reabastecimento_max=10.0),
+            consumo_por_semana={"A": 30.0},
+        )
+        result = scheduler.schedule(dag, pool, replenishable_resources=[resource])
+        assert result.estoque_delays == [EstoqueDelayCause(resource_id="DIESEL", activity_id="A", delay_weeks=2)]
+
+    def test_estoque_delays_empty_without_replenishable_resources(self):
+        acts = [Activity(activity_id="A", description="", duration_weeks=4, required_resources={"E": 2})]
+        dag = ActivityDAG(activities=acts, precedence=[])
+        pool = ResourcePool(resources={"E": 10})
+        scheduler = CpSatScheduler(timeout_seconds=10.0)
+        result = scheduler.schedule(dag, pool)
+        assert result.estoque_delays == []
 
 
 class TestCpSatSchedulerReplenishableRevalidation:
@@ -311,6 +363,32 @@ class TestCpSatSchedulerReplenishableRevalidation:
         assert result.feasible is True
         niveis_final = project_estoque_semanal(cimento, result.scheduled_activities)
         assert not has_estoque_negativo(niveis_final)
+
+    def test_stock_permanently_negative_after_repair_rounds_exhausted_marks_infeasible(self):
+        """ADR-128 F5: correção de uma lacuna encontrada durante a pesquisa —
+        `_validate_repaired_schedule` só checava precedência/pool/horizonte, nunca
+        estoque negativo residual. Quando `capacidade_armazenamento` é menor que o
+        consumo de uma única semana, nenhum atraso jamais resolve o déficit (o
+        estoque é sempre limitado ao teto antes de consumir) — o laço de ponto fixo
+        esgota `_MAX_REPAIR_ROUNDS` sem convergir e sem violar horizonte/pool/
+        precedência, então sem a checagem nova o resultado seria incorretamente
+        `feasible=True` com estoque ainda negativo."""
+        acts = [Activity(activity_id="A", description="", duration_weeks=1, required_resources={})]
+        dag = ActivityDAG(activities=acts, precedence=[])
+        pool = ResourcePool(resources={})
+        scheduler = CpSatScheduler(timeout_seconds=10.0, horizon_weeks=6000)
+
+        resource = ReplenishableResource(
+            resource_id="DIESEL",
+            disponibilidade=DisponibilidadeConsumivel(
+                capacidade_armazenamento=5.0, estoque_inicial=0.0, taxa_reabastecimento_max=10.0
+            ),
+            consumo_por_semana={"A": 30.0},  # > capacidade_armazenamento: nunca satisfazível
+        )
+        result = scheduler.schedule(dag, pool, replenishable_resources=[resource])
+
+        assert result.feasible is False
+        assert has_estoque_negativo(project_estoque_semanal(resource, result.scheduled_activities))
 
     def test_irreconcilable_cascade_still_marks_infeasible_pool_capacity(self):
         """Rede de segurança final: quando o atraso repropagado faz duas atividades

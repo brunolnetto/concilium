@@ -33,6 +33,7 @@ from ortools.sat.python import cp_model
 from concilium.application.scheduling.models import (
     Activity,
     ActivityDAG,
+    EstoqueDelayCause,
     ReplenishableResource,
     ResourcePool,
     ScheduledActivity,
@@ -40,7 +41,11 @@ from concilium.application.scheduling.models import (
     ScheduleOutput,
 )
 from concilium.application.scheduling.precedence_repropagation import repropagate_precedence_delays
-from concilium.application.scheduling.replenishable import apply_replenishable_delay
+from concilium.application.scheduling.replenishable import (
+    apply_replenishable_delay,
+    has_estoque_negativo,
+    project_estoque_semanal,
+)
 from concilium.domain.models.analytics.optimization import RampProfile
 
 _log = logging.getLogger(__name__)
@@ -370,11 +375,12 @@ class CpSatScheduler:
         # OUTRO recurso consumível, reabrindo uma violação de estoque já resolvida para
         # esse recurso (ver _MAX_REPAIR_ROUNDS acima).
         repaired = bool(replenishable_resources)
+        delay_causes: dict[tuple[str, str], int] = {}
         if repaired:
             for _round in range(_MAX_REPAIR_ROUNDS):
                 before = [(sa.start_week, sa.end_week) for sa in scheduled]
                 for resource in replenishable_resources or []:
-                    scheduled = apply_replenishable_delay(scheduled, resource)
+                    scheduled = apply_replenishable_delay(scheduled, resource, delay_causes)
                 scheduled = repropagate_precedence_delays(scheduled, dag, extended_precedences)
                 after = [(sa.start_week, sa.end_week) for sa in scheduled]
                 if before == after:
@@ -394,9 +400,26 @@ class CpSatScheduler:
                 "como infeasible."
             )
             feasible = False
+        elif repaired and any(
+            has_estoque_negativo(project_estoque_semanal(resource, scheduled))
+            for resource in replenishable_resources or []
+        ):
+            # ADR-128 F5: o laço de ponto fixo pode esgotar _MAX_REPAIR_ROUNDS sem
+            # convergir — sem esta checagem, o estoque final poderia seguir negativo
+            # para algum recurso e o cronograma ainda ser reportado feasible=True.
+            _log.warning(
+                "CpSatScheduler: reparo de disponibilidade de consumíveis (ADR-128) "
+                "esgotou _MAX_REPAIR_ROUNDS sem eliminar estoque negativo — output "
+                "marcado como infeasible."
+            )
+            feasible = False
 
         ms_val = max((sa.end_week for sa in scheduled), default=solver.value(makespan))
         metrics = self._compute_metrics(scheduled, pool, ms_val)
+        estoque_delays = [
+            EstoqueDelayCause(resource_id=rid, activity_id=aid, delay_weeks=weeks)
+            for (rid, aid), weeks in sorted(delay_causes.items())
+        ]
 
         return ScheduleOutput(
             scheduled_activities=scheduled,
@@ -404,6 +427,7 @@ class CpSatScheduler:
             feasible=feasible,
             metrics=metrics,
             heuristic="CP-SAT",
+            estoque_delays=estoque_delays,
         )
 
     # ── helpers ───────────────────────────────────────────────────────────────

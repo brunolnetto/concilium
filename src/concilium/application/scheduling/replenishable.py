@@ -127,7 +127,9 @@ def has_estoque_negativo(niveis: dict[int, float]) -> bool:
 
 
 def apply_replenishable_delay(
-    scheduled_activities: Sequence[ScheduledActivity], resource: ReplenishableResource
+    scheduled_activities: Sequence[ScheduledActivity],
+    resource: ReplenishableResource,
+    delay_causes: dict[tuple[str, str], int] | None = None,
 ) -> list[ScheduledActivity]:
     """Atrasa, iterativamente, a atividade consumidora que gera o primeiro estoque negativo.
 
@@ -139,6 +141,10 @@ def apply_replenishable_delay(
 
     ADR-139 D4/A6: atividades produtoras (``producao_por_semana``) nunca são candidatas
     a delay — atrasar a produtora só reduz o estoque futuro, nunca o aumenta.
+
+    ``delay_causes`` (ADR-128 F5), quando fornecido, acumula
+    ``{(resource_id, activity_id): semanas_de_atraso}`` — permite ao chamador reportar
+    causalmente qual recurso atrasou qual atividade, em vez de só um booleano "reparado".
 
     Não modifica as instâncias originais — retorna uma nova lista de ``ScheduledActivity``.
     """
@@ -172,4 +178,7 @@ def apply_replenishable_delay(
         target = max(candidates, key=lambda sa: sa.start_week)
         target.start_week += 1
         target.end_week += 1
+        if delay_causes is not None:
+            key = (resource.resource_id, target.activity_id)
+            delay_causes[key] = delay_causes.get(key, 0) + 1
     return list(activities.values())

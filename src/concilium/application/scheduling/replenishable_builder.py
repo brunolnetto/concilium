@@ -79,6 +79,7 @@ def build_replenishable_resources(
     producoes_por_atividade: dict[str, Producao | dict[str, Any]],
     insumos_por_id: dict[str, Insumo | dict[str, Any]],
     horas_semana: float | dict[str, float] = 40.0,
+    disponibilidade_overrides: dict[str, DisponibilidadeConsumivel] | None = None,
 ) -> list[ReplenishableResource]:
     """Deriva os ``ReplenishableResource`` de um pareamento atividade→``Producao``.
 
@@ -89,6 +90,13 @@ def build_replenishable_resources(
         insumos_por_id: catálogo de insumos (modelos ou dicts) referenciáveis pelos fluxos.
         horas_semana: horas de operação por semana ativa — valor único ou por atividade
             (default 40.0 = 8 h/dia × 5 dias, o padrão de ``ProdutividadeDetalhada``).
+        disponibilidade_overrides: capacidade logística real de projeto/escopo (ADR-128 F5,
+            ``Escopo.logistica_consumiveis``), chaveada por ``insumo_id``. Tem prioridade
+            sobre a declaração de catálogo quando ambas existem para o mesmo insumo, e
+            permite que um insumo sem NENHUMA restrição de catálogo (ex.: diesel,
+            raramente ``GERACAO_INTERNA`` e raramente com ``disponibilidade`` declarada)
+            ainda assim vire um recurso restrito — fecha a lacuna registrada em ADR-128 F4
+            ("sem fonte real de projeto/escopo").
 
     Raises:
         ValueError: VAL-PROD-GERACAO-01 — ``materiais_gerados`` referenciando insumo
@@ -122,11 +130,13 @@ def build_replenishable_resources(
     resources: list[ReplenishableResource] = []
     for insumo_id in sorted(set(producao_flows) | set(consumo_flows)):
         declarada = _disponibilidade_declarada(insumos.get(insumo_id))
+        override = (disponibilidade_overrides or {}).get(insumo_id)
         produzido_internamente = insumo_id in producao_flows
-        if declarada is None and not produzido_internamente:
-            # ADR-128 D1: consumo sem restrição declarada é irrestrito — não vira recurso.
+        if declarada is None and override is None and not produzido_internamente:
+            # ADR-128 D1 / F5: sem restrição de catálogo, sem override de projeto e sem
+            # produção interna — irrestrito, não vira recurso (contrato de regressão zero).
             continue
-        disponibilidade = declarada or DisponibilidadeConsumivel(estoque_inicial=0.0)
+        disponibilidade = override or declarada or DisponibilidadeConsumivel(estoque_inicial=0.0)
         resources.append(
             ReplenishableResource(
                 resource_id=insumo_id,

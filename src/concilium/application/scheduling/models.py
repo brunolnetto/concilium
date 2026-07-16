@@ -216,6 +216,15 @@ class ScheduleMetrics:
 
 
 @dataclass
+class EstoqueDelayCause:
+    """ADR-128 F5: registra qual recurso consumível atrasou qual atividade, e quantas semanas."""
+
+    resource_id: str
+    activity_id: str
+    delay_weeks: int
+
+
+@dataclass
 class ScheduleOutput:
     """Result of a scheduling run."""
 
@@ -224,6 +233,9 @@ class ScheduleOutput:
     feasible: bool
     metrics: ScheduleMetrics
     heuristic: str = ""
+    # ADR-128 F5: causas de atraso por recurso consumível (vazio quando nenhum
+    # ReplenishableResource foi passado ao scheduler, ou nenhum atraso foi aplicado).
+    estoque_delays: list[EstoqueDelayCause] = field(default_factory=list)
 
     def get_weekly_resource_usage(self, week: int) -> dict[str, int]:
         """Return total resource usage in a given week."""
