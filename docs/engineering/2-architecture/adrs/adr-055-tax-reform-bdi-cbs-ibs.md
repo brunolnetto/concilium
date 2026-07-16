@@ -376,7 +376,7 @@ De 2026 a 2032, obra que inicia sob regime antigo pode terminar sob regime CBS/I
 | **2** | Integração em Skill 08: `df_efetivo` com custo de carregamento | Média |
 | **3** | UI: dropdown de regime + campos de credit_ratio por categoria | Média |
 | **3** | Cenário de comparação pré-reforma vs. CBS/IBS no tab Comparação | Média |
-| **Futuro** | Alíquotas por jurisdição (IBS municipal/estadual) | Baixa |
+| **Futuro** | ~~Alíquotas por jurisdição~~ — UF corrigido em 2026-07-16 (ver nota de implementação); granularidade municipal segue pendente | Baixa |
 | **Futuro** | Fluxo de caixa com split payment | Baixa |
 
 ## Definition of Done
@@ -389,11 +389,20 @@ De 2026 a 2032, obra que inicia sob regime antigo pode terminar sob regime CBS/I
 - [x] `PerfilBdiProjeto.regime_version: TaxRegimeVersion = PRE_REFORMA`
 - [x] 24 testes unitários cobrindo: imutabilidade, round-trip, fórmula T_efetivo, zero/full/partial credit, custo carregamento, backward compat
 
-### Fase 2 ✅
-- [x] Skill 06: path `inputs["tax_scenario"]` com `VAL-BDI-REGIME`
-- [x] Skill 08: path `inputs["tax_scenario"]` com `VAL-CONSOL-BDI-REGIME`
+### Fase 2 ✅ (corrigido — ver nota de implementação abaixo)
+- [x] Skill 06 (precificação): path `inputs["tax_scenario"]` com `VAL-BDI-REGIME`
+- [x] Skill 08 (consolidação): path `inputs["tax_scenario"]` com `VAL-CONSOL-BDI-REGIME`
 - [x] Ambos com fallback gracioso para path legado quando `tax_scenario` inválido
 - [x] Pipeline passes 100% dos testes sem alteração (backward compat)
+
+> **Correção (2026-07-16):** o checkbox de Skill 06 acima estava marcado como feito desde a
+> entrega original da Fase 2, mas era **falso** — `_bdi_regime.py` (com `_rb_try_tax_scenario`)
+> foi escrito e testado isoladamente, porém nunca importado/chamado por
+> `_precificacao/skill.py::_resolve_bdi`. Só o estágio de consolidação (Skill 08) honrava
+> `inputs["tax_scenario"]` de fato. Nenhum teste de integração exercitava
+> `run_resultado_financeiro`/`run_precificacao_unitaria` com `tax_scenario` — os 24 testes de
+> `test_adr055_tax_reform_bdi.py` cobriam só a lógica de domínio isolada, por isso o gap não
+> foi pego antes. Ver seção "Nota de implementação — correção de wiring" no fim deste documento.
 
 ### Fase 3 ✅ (UI)
 - [x] `render_bdi_editor` com dropdown de regime tributário
@@ -402,3 +411,48 @@ De 2026 a 2032, obra que inicia sob regime antigo pode terminar sob regime CBS/I
 - [x] Preview de BDI derivado calculado localmente (sem API call)
 - [x] Salva `tax_scenario` nos overrides dos skills 06 e 08
 - [x] Aviso de split_payment quando ativo
+
+## Nota de implementação — correção de wiring (2026-07-16)
+
+Durante a investigação de um item "em aberto" do deck técnico (IBS varia por jurisdição —
+hoje resolvemos só por UF), duas lacunas reais foram encontradas e corrigidas nesta mesma
+entrega, além do achado descrito na correção da Fase 2 acima:
+
+1. **Path CBS/IBS órfão em Skill 06 (precificação).** `_bdi_regime.py::_rb_try_tax_scenario`
+   existia, com testes unitários próprios, mas não tinha nenhum call site fora do próprio
+   arquivo. Corrigido conectando-o a `_precificacao/skill.py::_resolve_bdi`, na mesma posição
+   de precedência já usada pela consolidação (`bdi_aplicado` > `tax_scenario` > `tabela_bdi` >
+   ... > `DEFAULT_BDI_TABELA`).
+
+2. **Jurisdição resolvida (UF) nunca influenciava o BDI calculado.** `Escopo.jurisdicao_id`
+   já resolvia `AliquotasBdi` (ISS/PIS/COFINS/CPRB) desde antes desta entrega, mas o único
+   consumidor (`_resolve_tributario`, `presentation/mcp/tools/spec.py`) só populava um dict
+   de metadado (`regime_tributario`) — nunca lido de volta pela fórmula TCU de BDI. Corrigido
+   com um novo passo de precedência (`resolver_bdi_jurisdicao`, `domain/models/financial/bdi/
+   _profiles.py`), inserido em ambos os estágios (precificação e consolidação) logo antes do
+   fallback final em `DEFAULT_BDI_TABELA`, e um novo input `inputs["aliquotas_bdi_jurisdicao"]`
+   resolvido automaticamente pelo runtime (`InputsMixin._apply_defaults_tributos_bdi`) a partir
+   da jurisdição do escopo — sem plumbing nova, reaproveitando o mesmo espalhamento de
+   `escopo_meta` já usado pelo estoque de consumíveis (ADR-128 F5).
+
+   `resolver_bdi_jurisdicao` só sobrescreve ISS/PIS/COFINS numa categoria quando a `TabelaBdi`
+   base já declara esse tributo > 0 — a jurisdição muda a *alíquota*, nunca decide *se* o
+   tributo se aplica à categoria (material/diesel continuam sem ISS, por serem mercadoria e
+   não serviço — distinção categórica do ADR-023, preservada). `AliquotasBdi.CPRB`
+   deliberadamente não entra neste passo: não é campo de `ComponentesBdi`; CPRB é desoneração
+   de encargos sociais sobre folha de pagamento, já wired separadamente via
+   `InputsMixin._apply_defaults_encargos` (mesma família de `motor_encargos_sociais`).
+
+3. **Regex de código de jurisdição desatualizado.** `Jurisdicao.codigo` e
+   `JurisdicaoVersionada.id` não aceitavam o formato hifenizado (`BR-CE`, `BR-SP`) realmente
+   usado pelos 27 arquivos de `config/jurisdicoes/`. Corrigido para aceitar exatamente esse
+   formato (UF de 2 letras, com prefixo `BR-` opcional).
+
+**O que isto não é:** granularidade municipal de IBS/ISS (destino por município, não só por
+UF) e modelagem de fluxo de caixa de split payment seguem **fora de escopo**, deliberadamente
+— seriam mudanças de modelo de dados mais profundas (nova entidade de jurisdição municipal,
+herdando de `BR-{UF}`) e não bugs de wiring como os três itens acima. `ConfigMixin.
+load_jurisdicao` já suporta cadeias de herança arbitrárias via `parent_id` (mecanismo
+genérico, sem lógica específica de UF), então uma extensão futura para município não exigiria
+mudança nesse mecanismo — apenas nos dados de configuração e, possivelmente, em como o
+`Escopo` referencia a jurisdição mais granular.
