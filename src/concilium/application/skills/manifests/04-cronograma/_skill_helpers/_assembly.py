@@ -56,6 +56,7 @@ def _determine_mode_and_distribuicao(
     fator_calendario_semanal: dict[str, float],
     catalogo: dict,
     validacoes: list,
+    insumos_lookup: dict | None = None,
 ) -> tuple[str | None, dict, list, ScheduleCandidateCanonical | None, bool]:
     """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed)."""
     rcpsp_spec = inputs.get("rcpsp_spec")
@@ -64,7 +65,7 @@ def _determine_mode_and_distribuicao(
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO (rcpsp_spec)."))
         # ADR-072: pass lookups for productive-duration derivation
         schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
-            canonical_in, inputs, validacoes, cpu_lookup, producao_lookup
+            canonical_in, inputs, validacoes, cpu_lookup, producao_lookup, insumos_lookup
         )
         if not schedule_selected:
             return mode, {}, schedule_candidates, None, True
@@ -105,7 +106,7 @@ def _determine_mode_and_distribuicao(
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO."))
         # ADR-072: pass lookups for productive-duration derivation
         schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
-            canonical_in, inputs, validacoes, cpu_lookup, producao_lookup
+            canonical_in, inputs, validacoes, cpu_lookup, producao_lookup, insumos_lookup
         )
         if not schedule_selected:
             return mode, {}, schedule_candidates, None, True
@@ -280,6 +281,7 @@ def _build_cronograma_out(
         scheduled_activities=scheduled_activities_out,
         distribuicao_mensal=distribuicao_mensal,
         pct_completude=1.0,
+        estoque_delays=getattr(schedule_selected, "estoque_delays", None) or [],
     )
 
 
@@ -359,10 +361,14 @@ def _expand_mobilizacao_policies(
 
 def _run_cronograma_build_context(
     canonical_in: CanonicalModel, inputs: dict[str, Any], catalogo: dict[str, Any], validacoes: list[ValidacaoItem]
-) -> tuple[Any, list, dict, dict, dict, list]:
+) -> tuple[Any, list, dict, dict, dict, dict, list]:
     """Monta lookups/regime/calendário e enriquece producao_lookup com P_canonico
     (NEP-029 D2). Retorna (regime, semanas_obra, cpu_lookup, producao_lookup,
-    fator_calendario_semanal, calendario_operacional)."""
+    insumos_lookup, fator_calendario_semanal, calendario_operacional).
+
+    ADR-128 F5: insumos_lookup (já construído aqui para _enrich_producao_canonico)
+    passa a ser retornado também para uso em _build_replenishable_resources_if_any.
+    """
     regime = canonical_in.projeto.regime_trabalho
     semanas_obra = _semanas_entre(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
     cpu_lookup = _build_cpu_lookup(catalogo)
@@ -392,7 +398,15 @@ def _run_cronograma_build_context(
         regime.dias_semana,
         calendario_config,
     )
-    return regime, semanas_obra, cpu_lookup, producao_lookup, fator_calendario_semanal, calendario_operacional
+    return (
+        regime,
+        semanas_obra,
+        cpu_lookup,
+        producao_lookup,
+        insumos_lookup,
+        fator_calendario_semanal,
+        calendario_operacional,
+    )
 
 
 def _run_cronograma_validate_num_equipes_formato(num_equipes_por_item: Any, validacoes: list[ValidacaoItem]) -> bool:
@@ -450,7 +464,6 @@ def _run_cronograma_infer_mob_schedule(canonical_in: CanonicalModel, validacoes:
             )
         )
         return None
-
 
 
 __all__ = [

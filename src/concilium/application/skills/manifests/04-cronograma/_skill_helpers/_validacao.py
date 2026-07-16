@@ -8,11 +8,17 @@ from concilium.application.scheduling import (
     explore_schedules,
     select_scheduling_algorithm,
 )
+from concilium.application.scheduling.models import ReplenishableResource
+from concilium.application.scheduling.replenishable_builder import (
+    _CAMPOS_DISPONIBILIDADE,
+    build_replenishable_resources,
+)
 from concilium.domain.models.canonical import (
     CanonicalModel,
     DistribuicaoSemanal,
     ValidacaoItem,
 )
+from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
 
 from ._calendario import (  # ty: ignore[unresolved-import]
     _extract_activities,
@@ -25,6 +31,7 @@ from ._calendario import (  # ty: ignore[unresolved-import]
 )
 from ._custos import _build_dist_cell, _lookup_eficiencia  # ty: ignore[unresolved-import]
 from ._spec import (  # ty: ignore[unresolved-import]
+    _build_producoes_por_atividade,
     _enrich_spec_resources_from_catalog,
     _extract_activities_from_spec,
     _extract_dag_from_spec,
@@ -364,8 +371,16 @@ def _rasfc_extract_inputs(
     validacoes: list,
     cpu_lookup: dict | None = None,
     producao_lookup: dict | None = None,
-) -> tuple[list, Any, Any, int] | None:
-    """Extracts (activities, dag, pool, deadline_weeks) from spec or canonical. Returns None on error."""
+) -> tuple[list, Any, Any, int, dict[str, Any]] | None:
+    """Extracts (activities, dag, pool, deadline_weeks, producoes_por_atividade) from spec
+    or canonical. Returns None on error.
+
+    ADR-128 F5: ``producoes_por_atividade`` (pareamento atividade→Producao, ADR-139 D5)
+    é construído aqui — reaproveitando o mesmo pareamento CPU→Producao já resolvido
+    internamente para dimensionar n_frentes — e passado adiante para que
+    ``_rasfc_run_heuristics`` possa montar ``ReplenishableResource`` sem refazer a
+    resolução. Vazio quando ``cpu_lookup``/``producao_lookup`` não foram fornecidos.
+    """
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
         result = _rasfc_extract_from_spec(rcpsp_spec, canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
@@ -388,11 +403,103 @@ def _rasfc_extract_inputs(
         or (rcpsp_spec.get("deadline_weeks") if isinstance(rcpsp_spec, dict) else None)
         or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
     )
-    return activities, dag, pool, deadline_weeks
+    producoes_por_atividade = (
+        _build_producoes_por_atividade(canonical_in.eap or [], cpu_lookup, producao_lookup)
+        if cpu_lookup and producao_lookup
+        else {}
+    )
+    return activities, dag, pool, deadline_weeks, producoes_por_atividade
+
+
+def _parse_logistica_consumiveis_overrides(
+    logistica_consumiveis: dict[str, Any] | None,
+) -> dict[str, DisponibilidadeConsumivel] | None:
+    """Converte ``Escopo.logistica_consumiveis`` (dict cru vindo de ``inputs``) em
+    ``dict[insumo_id, DisponibilidadeConsumivel]`` (ADR-128 F5). ``None``/vazio/não-dict
+    retorna ``None`` — ausência de configuração de projeto preserva o comportamento atual."""
+    if not logistica_consumiveis or not isinstance(logistica_consumiveis, dict):
+        return None
+    overrides: dict[str, DisponibilidadeConsumivel] = {}
+    for insumo_id, campos in logistica_consumiveis.items():
+        if not isinstance(campos, dict):
+            continue
+        overrides[insumo_id] = DisponibilidadeConsumivel(
+            **{k: campos[k] for k in _CAMPOS_DISPONIBILIDADE if k in campos}
+        )
+    return overrides or None
+
+
+def _build_replenishable_resources_if_any(
+    producoes_por_atividade: dict[str, Any] | None,
+    insumos_lookup: dict | None,
+    logistica_consumiveis: dict[str, Any] | None,
+    validacoes: list,
+) -> list[ReplenishableResource] | None:
+    """ADR-128/139 F5: monta os ``ReplenishableResource`` do projeto, se houver
+    algum sinal de restrição (produção/consumo de material + catálogo/config de
+    projeto). Retorna ``None`` rápido quando não há nenhum pareamento
+    atividade→Producao — preserva o comportamento pré-F5 sem custo adicional."""
+    if not producoes_por_atividade or insumos_lookup is None:
+        return None
+    overrides = _parse_logistica_consumiveis_overrides(logistica_consumiveis)
+    try:
+        resources = build_replenishable_resources(
+            producoes_por_atividade,
+            insumos_lookup,
+            disponibilidade_overrides=overrides,
+        )
+    except ValueError as exc:
+        validacoes.append(ValidacaoItem(codigo="VAL-ESTOQUE-BUILD-01", status="ERRO", mensagem=str(exc)))
+        return None
+    return resources or None
+
+
+def _rasfc_report_estoque_delays(explored: list, validacoes: list) -> list:
+    """ADR-128 F5: reporta causalmente atrasos por consumível e filtra resultados
+    infeasible-por-estoque (``error == "estoque_insuficiente"``, ver
+    ``selector._explore_cpsat``) para fora do fallback chain — só resultados sem
+    erro seguem como candidatos. Feasible com atraso reparado vira AVISO
+    (``VAL-ESTOQUE-DELAY-01``); infeasible por estoque vira ERRO
+    (``VAL-ESTOQUE-DELAY-02``, bloqueia por ``gate=true``)."""
+    kept = []
+    for r in explored:
+        delays = getattr(r.schedule, "estoque_delays", None)
+        if not isinstance(delays, list):
+            delays = []
+        error = getattr(r, "error", None)
+        if error == "estoque_insuficiente":
+            causas = "; ".join(f"{d.resource_id}→{d.activity_id} (+{d.delay_weeks}sem)" for d in delays)
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-ESTOQUE-DELAY-02",
+                    status="ERRO",
+                    mensagem=f"Cronograma inviável após reparo de disponibilidade de consumíveis: {causas}.",
+                )
+            )
+            continue
+        if error is None and delays:
+            causas = "; ".join(f"{d.resource_id}→{d.activity_id} (+{d.delay_weeks}sem)" for d in delays)
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-ESTOQUE-DELAY-01",
+                    status="AVISO",
+                    mensagem=f"Cronograma ajustado por disponibilidade de consumíveis: {causas}.",
+                )
+            )
+        kept.append(r)
+    return kept
 
 
 def _rasfc_run_heuristics(
-    activities: list, dag: Any, pool: Any, deadline_weeks: int, inputs: dict, validacoes: list
+    activities: list,
+    dag: Any,
+    pool: Any,
+    deadline_weeks: int,
+    inputs: dict,
+    validacoes: list,
+    producoes_por_atividade: dict[str, Any] | None = None,
+    insumos_lookup: dict | None = None,
+    logistica_consumiveis: dict[str, Any] | None = None,
 ) -> tuple[list, bool]:
     """Runs heuristic scheduling with optional pool relaxation. Returns (candidates_canonical, relaxed_flag)."""
     strategy = select_scheduling_algorithm(
@@ -407,6 +514,26 @@ def _rasfc_run_heuristics(
     if inputs.get("heuristics"):
         strategy.heuristics = list(inputs["heuristics"])
 
+    replenishable_resources = _build_replenishable_resources_if_any(
+        producoes_por_atividade, insumos_lookup, logistica_consumiveis, validacoes
+    )
+    if replenishable_resources and strategy.algorithm != "CP-SAT":
+        # ADR-128 F5: torna visível o caso "restrição declarada mas ignorada" em vez
+        # de um no-op silencioso — só o path CP-SAT (selector._explore_cpsat) aplica
+        # ReplenishableResource.
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-ESTOQUE-ALGO-01",
+                status="AVISO",
+                mensagem=(
+                    f"Restrição de estoque consumível não aplicada — algoritmo selecionado "
+                    f"('{strategy.algorithm}') não suporta ADR-128. Force algorithm='CP-SAT' "
+                    "para aplicar a restrição."
+                ),
+            )
+        )
+        replenishable_resources = None
+
     heuristics = strategy.heuristics or ["MINSLK"]
     explored = explore_schedules(
         activities=activities,
@@ -416,7 +543,9 @@ def _rasfc_run_heuristics(
         heuristics=heuristics,
         top_n=int(inputs.get("top_n", 3)),
         strategy=strategy,
+        replenishable_resources=replenishable_resources,
     )
+    explored = _rasfc_report_estoque_delays(explored, validacoes)
     relaxed_flag = False
 
     if not explored:
@@ -429,31 +558,46 @@ def _rasfc_run_heuristics(
             heuristics=heuristics,
             top_n=3,
             strategy=strategy,
+            replenishable_resources=replenishable_resources,
         )
+        explored = _rasfc_report_estoque_delays(explored, validacoes)
         if explored:
             relaxed_flag = True
             validacoes.append(ValidacaoItem(codigo="VAL-SCHED-03", status="AVISO", mensagem="Pool relaxado 110%."))
+
+    if explored and replenishable_resources:
+        # ADR-139/128: violation_estoque_acima_capacidade já existia mas nunca era
+        # chamada em produção — fecha essa lacuna junto (mesmo gatilho opt-in).
+        from concilium.application.scheduling.replenishable import violation_estoque_acima_capacidade
+
+        top_schedule = explored[0].schedule
+        for resource in replenishable_resources:
+            v = violation_estoque_acima_capacidade(resource, top_schedule.scheduled_activities)
+            if v is not None:
+                validacoes.append(ValidacaoItem(codigo=v.code, status=v.status, mensagem=v.remediation_hint or ""))
 
     return [
         _to_canonical_candidate(r.heuristic, r.schedule, r.quality_score, relaxed_flag) for r in explored
     ], relaxed_flag
 
 
-
 __all__ = [
     "_aggregate_to_monthly",
     "_build_activity_item_map",
+    "_build_replenishable_resources_if_any",
     "_can_extract_dag",
     "_emm_find_vazios",
     "_emm_process_item",
     "_execute_manual_mode",
     "_find_item_by_id",
     "_infer_teams_from_resources",
+    "_parse_logistica_consumiveis_overrides",
     "_rasfc_enrich_from_catalog_if_available",
     "_rasfc_extract_from_canonical",
     "_rasfc_extract_from_spec",
     "_rasfc_extract_inputs",
     "_rasfc_propagate_pool_config",
+    "_rasfc_report_estoque_delays",
     "_rasfc_report_pool_inferido_diag",
     "_rasfc_run_heuristics",
     "_validate_preconditions",

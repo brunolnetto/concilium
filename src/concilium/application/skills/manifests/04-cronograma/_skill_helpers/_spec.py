@@ -13,6 +13,7 @@ from concilium.application.scheduling import (
 )
 from concilium.domain.models.canonical import (
     CanonicalModel,
+    EstoqueDelayCanonical,
     ScheduleCandidateCanonical,
     ScheduledActivityCanonical,
     ValidacaoItem,
@@ -87,6 +88,22 @@ def _resolve_producao_do_item(item: Any, cpu_lookup: dict, producao_lookup: dict
     if not prod:
         return None
     return Q, prod
+
+
+def _build_producoes_por_atividade(eap_items: list, cpu_lookup: dict, producao_lookup: dict) -> dict[str, Any]:
+    """Pareamento atividade→Producao (ADR-139 D5) para build_replenishable_resources.
+
+    Reaproveita ``_resolve_producao_do_item`` — o mesmo pareamento CPU→Producao já
+    usado para dimensionar n_frentes/duration, aqui reexposto por atividade em vez
+    de descartado após o cálculo (ADR-128 F5)."""
+    result: dict[str, Any] = {}
+    for item in eap_items:
+        resolved = _resolve_producao_do_item(item, cpu_lookup, producao_lookup)
+        if resolved is None:
+            continue
+        _q, prod = resolved
+        result[item.item_id] = prod
+    return result
 
 
 def _composicao_tem_recursos(comp: dict) -> bool:
@@ -389,13 +406,17 @@ def _to_canonical_candidate(
             "resource_utilization_avg": schedule_output.metrics.resource_utilization_avg,
         },
         relaxed=relaxed,
+        estoque_delays=[
+            EstoqueDelayCanonical(resource_id=d.resource_id, activity_id=d.activity_id, delay_weeks=d.delay_weeks)
+            for d in getattr(schedule_output, "estoque_delays", None) or []
+        ],
     )
-
 
 
 __all__ = [
     "_apply_activity_resource_enrichment",
     "_build_activity_from_spec_entry",
+    "_build_producoes_por_atividade",
     "_composicao_tem_recursos",
     "_dimensionar_frentes_atividade",
     "_enrich_activity_resources_from_catalog",

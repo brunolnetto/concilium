@@ -12,11 +12,11 @@ canonical_sections = ["eap", "atividades", "activity_dag", "praticabilidade", "r
 
 [produces]
 canonical_section = "cronograma"
-validations = ["VAL-CRON-01", "VAL-CRON-02", "VAL-SCHED-01", "VAL-SCHED-02", "VAL-SCHED-03", "VAL-SCHED-04", "VAL-SCHED-05"]
+validations = ["VAL-CRON-01", "VAL-CRON-02", "VAL-SCHED-01", "VAL-SCHED-02", "VAL-SCHED-03", "VAL-SCHED-04", "VAL-SCHED-05", "VAL-ESTOQUE-CAP-01", "VAL-ESTOQUE-DELAY-01", "VAL-ESTOQUE-DELAY-02", "VAL-ESTOQUE-ALGO-01", "VAL-ESTOQUE-BUILD-01"]
 
 [inputs]
 required = []
-optional = ["num_equipes_por_item", "algorithm", "heuristics", "top_n", "deadline_weeks", "criticality", "deadline_margin_pct"]
+optional = ["num_equipes_por_item", "algorithm", "heuristics", "top_n", "deadline_weeks", "criticality", "deadline_margin_pct", "logistica_consumiveis"]
 
 [snapshots]
 consumed = ["catalogo"]

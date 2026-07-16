@@ -35,12 +35,16 @@ def _run_auto_schedule_fallback_chain(
     validacoes: list[ValidacaoItem],
     cpu_lookup: dict | None = None,
     producao_lookup: dict | None = None,
+    insumos_lookup: dict | None = None,
 ) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None]:
     """Executa fallback chain (heurísticas -> relax).
 
     ADR-046: se inputs contiver 'rcpsp_spec', usa extratores baseados na spec
     em vez de tentar derivar do canônico (que pode estar incompleto).
     ADR-072: cpu_lookup/producao_lookup usados para derivar duração produtiva.
+    ADR-128 F5: insumos_lookup usado (com o pareamento atividade→Producao extraído
+    junto de cpu_lookup/producao_lookup) para montar ReplenishableResource, quando
+    aplicável — opt-in, ver _build_replenishable_resources_if_any.
     """
     extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
     if extracted is None:
@@ -52,9 +56,19 @@ def _run_auto_schedule_fallback_chain(
             )
         )
         return [], None
-    activities, dag, pool, deadline_weeks = extracted
+    activities, dag, pool, deadline_weeks, producoes_por_atividade = extracted
 
-    candidates_canonical, _relaxed = _rasfc_run_heuristics(activities, dag, pool, deadline_weeks, inputs, validacoes)
+    candidates_canonical, _relaxed = _rasfc_run_heuristics(
+        activities,
+        dag,
+        pool,
+        deadline_weeks,
+        inputs,
+        validacoes,
+        producoes_por_atividade,
+        insumos_lookup,
+        inputs.get("logistica_consumiveis"),
+    )
 
     if not candidates_canonical:
         validacoes.append(ValidacaoItem(codigo="VAL-SCHED-05", status="ERRO", mensagem="Cronograma inviável."))
@@ -517,7 +531,6 @@ def _process_single_wmp_policy(
             ),
         )
     )
-
 
 
 __all__ = [

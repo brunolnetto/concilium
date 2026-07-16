@@ -237,6 +237,17 @@ class ScheduledActivityCanonical(BaseModel):
     distribuicao_semanal: dict[str, DistribuicaoSemanal] = Field(default_factory=dict)
 
 
+class EstoqueDelayCanonical(BaseModel):
+    """ADR-128 F5: causa de atraso por recurso consumível (diesel/material) — espelho
+    canônico de ``EstoqueDelayCause`` (application/scheduling/models.py)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    resource_id: str
+    activity_id: str
+    delay_weeks: int
+
+
 class ScheduleCandidateCanonical(BaseModel):
     """Candidato de cronograma semanal gerado por uma heurística (v1 — deprecated)."""
 
@@ -248,6 +259,8 @@ class ScheduleCandidateCanonical(BaseModel):
     quality_score: float
     metrics: dict[str, float] = Field(default_factory=dict)
     relaxed: bool = False
+    # ADR-128 F5: vazio quando nenhum ReplenishableResource foi passado ao scheduler.
+    estoque_delays: list[EstoqueDelayCanonical] = Field(default_factory=list)
 
 
 class Cronograma(BaseModel):
@@ -276,6 +289,10 @@ class Cronograma(BaseModel):
 
     # Legacy field (retrocompat if needed)
     pct_completude: float = Field(default=1.0, ge=0.0, le=1.0)
+
+    # ADR-128 F5: causas de atraso por recurso consumível (diesel/material) do candidato
+    # selecionado. Vazio quando nenhum ReplenishableResource foi construído para o projeto.
+    estoque_delays: list[EstoqueDelayCanonical] = Field(default_factory=list)
 
 
 def _migrate_cron_item_to_dict(item) -> dict | None:
@@ -320,5 +337,3 @@ def _migrate_cron_list_to_cronograma(cron: list) -> dict:
             }
         )
     return {"algorithm": "manual_allocation", "scheduled_activities": scheduled}
-
-

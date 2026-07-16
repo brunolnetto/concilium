@@ -98,9 +98,15 @@ def run_cronograma(
     if not _validate_preconditions(canonical_in, validacoes):
         return SkillResult(canonical_in, validacoes)
 
-    regime, semanas_obra, cpu_lookup, producao_lookup, fator_calendario_semanal, calendario_operacional = (
-        _run_cronograma_build_context(canonical_in, inputs, catalogo, validacoes)
-    )
+    (
+        regime,
+        semanas_obra,
+        cpu_lookup,
+        producao_lookup,
+        insumos_lookup,
+        fator_calendario_semanal,
+        calendario_operacional,
+    ) = _run_cronograma_build_context(canonical_in, inputs, catalogo, validacoes)
     prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
@@ -135,6 +141,7 @@ def run_cronograma(
         fator_calendario_semanal,
         catalogo,
         validacoes,
+        insumos_lookup,
     )
     if failed:
         return SkillResult(canonical_in, validacoes)
@@ -178,5 +185,3 @@ def run_cronograma(
     )
 
     return SkillResult(updated_canonical, validacoes)
-
-
