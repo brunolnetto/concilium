@@ -34,6 +34,7 @@ from __future__ import annotations
 from ._api import ApiSettings, get_api
 from ._auth import AuthSettings, get_auth
 from ._campaign import CampaignSettings, get_campaign
+from ._catalog_digest import CatalogDigestSettings, get_catalog_digest
 from ._core import _flag, _int, _path, _str
 from ._jobs import JobsSettings, get_jobs
 from ._lifecycle import (
@@ -63,6 +64,7 @@ __all__ = [
     "AuthSettings",
     "AzureSettings",
     "CampaignSettings",
+    "CatalogDigestSettings",
     "ConfigurationError",
     "GDriveSettings",
     "JobsSettings",
@@ -87,6 +89,7 @@ __all__ = [
     "get_api",
     "get_auth",
     "get_campaign",
+    "get_catalog_digest",
     "get_jobs",
     "get_mcp",
     "get_mcp_proxy",

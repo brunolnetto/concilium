@@ -150,11 +150,19 @@ app = create_app()
 def main() -> None:
     import uvicorn
 
-    from concilium.infrastructure.settings import get_api, startup_check
+    from concilium.infrastructure.settings import get_api, get_catalog_digest, startup_check
     from concilium.infrastructure.storage.store_factory import ensure_storage_root
 
     startup_check()
     ensure_storage_root()
+
+    # ADR-141 D6: só inicia aqui (processo real do servidor), nunca em
+    # create_app() — que é importado por testes (TestClient) e não deve
+    # nascer um thread real a cada import.
+    if get_catalog_digest().enabled:
+        from concilium.application.services.catalog.draft_digest_scheduler import get_draft_digest_scheduler
+
+        get_draft_digest_scheduler().start()
 
     host, port = resolve_api_bind()
     reload = get_api().reload

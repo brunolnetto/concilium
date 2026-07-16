@@ -309,6 +309,11 @@ class ConfigVersionService:
                 for k in ("catalogo_id", "jurisdicao_id", "perfil_id", "nome"):
                     if k in data:
                         entry[k] = data[k]
+                # ADR-141 D2: flags de rascunho/rejeição (ADR-120) — aditivo, só
+                # aparece quando o dado existe no arquivo de versão.
+                for k in ("_rascunho", "_rascunho_descricao", "_rejeitado", "_motivo_rejeicao", "_rejeitado_por"):
+                    if k in data:
+                        entry[k] = data[k]
                 result.append(entry)
             except Exception:
                 pass

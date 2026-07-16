@@ -5,6 +5,7 @@ from __future__ import annotations
 from ._api import _reset_api, get_api
 from ._auth import AuthSettings, _reset_auth, get_auth
 from ._campaign import _reset_campaign, get_campaign
+from ._catalog_digest import _reset_catalog_digest
 from ._core import _reset_env_fingerprint
 from ._mcp import _reset_mcp, get_mcp
 from ._runtime import _reset_runtime, get_runtime
@@ -125,6 +126,7 @@ def _reset_all() -> None:
     _reset_runtime()
     _reset_campaign()
     _reset_smtp()
+    _reset_catalog_digest()
     _reset_env_fingerprint()
 
 
@@ -159,5 +161,3 @@ def env_summary() -> str:
         "────────────────────────────────────────────────────",
     ]
     return "\n".join(lines)
-
-
