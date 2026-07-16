@@ -23,6 +23,7 @@ from concilium.domain.models.financial.bdi import (
     TabelaBdi,
     TaxSimulationScenario,
     resolver_bdi_cbs_ibs,
+    resolver_bdi_jurisdicao,
     resolver_componentes_bdi,
 )
 
@@ -127,6 +128,26 @@ def _rbf_resolve_tabela_perfil(
                     mensagem=f"Falha ao aplicar perfil_bdi: {e}. Mantendo tabela base.",
                 )
             )
+
+    # ADR-038: sem tabela_bdi/perfil_bdi explícitos, aplica a alíquota da jurisdição
+    # do escopo (ISS/PIS/COFINS) sobre o default — fecha o gap onde a jurisdição
+    # resolvida nunca chegava a influenciar o BDI calculado (era só metadado).
+    if not override:
+        aliquotas_jurisdicao = inputs.get("aliquotas_bdi_jurisdicao")
+        if aliquotas_jurisdicao:
+            tabela = resolver_bdi_jurisdicao(tabela, aliquotas_jurisdicao)
+            fonte += " + jurisdicao (ADR-038)"
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-CONSOL-BDI-JURISDICAO",
+                    status="OK",
+                    mensagem=(
+                        f"BDI ajustado pela jurisdição do escopo "
+                        f"(ISS={aliquotas_jurisdicao.get('ISS', 0) * 100:.2f}%)."
+                    ),
+                )
+            )
+
     return tabela, fonte, override, regime_str
 
 

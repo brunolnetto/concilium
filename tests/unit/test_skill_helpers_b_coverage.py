@@ -355,6 +355,40 @@ class TestRbfResolveTabelaPerfil:
         _, _, _, regime_str = _rbf_resolve_tabela_perfil({}, validacoes)
         assert regime_str == "pre_reforma"
 
+    def test_aliquotas_bdi_jurisdicao_aplicada_sem_override_explicito(self):
+        """ADR-038: sem tabela_bdi/perfil_bdi, a jurisdição resolvida deve mudar o
+        BDI — antes desta correção, era sempre ignorada em favor do DEFAULT puro."""
+        validacoes: list = []
+        aliquotas = {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03}
+        tabela, fonte, override, _ = _rbf_resolve_tabela_perfil(
+            {"aliquotas_bdi_jurisdicao": aliquotas}, validacoes
+        )
+        assert tabela is not DEFAULT_BDI_TABELA
+        assert tabela.mao_obra.iss == 0.02
+        assert "jurisdicao" in fonte
+        assert override is False  # jurisdição não conta como "override explícito"
+        jur_val = next((v for v in validacoes if v.codigo == "VAL-CONSOL-BDI-JURISDICAO"), None)
+        assert jur_val is not None
+        assert jur_val.status == "OK"
+
+    def test_tabela_bdi_explicita_tem_prioridade_sobre_jurisdicao(self):
+        validacoes: list = []
+        valid_raw = DEFAULT_BDI_TABELA.model_dump()
+        tabela, _, _, _ = _rbf_resolve_tabela_perfil(
+            {"tabela_bdi": valid_raw, "aliquotas_bdi_jurisdicao": {"ISS": 0.02}}, validacoes
+        )
+        # tabela_bdi explícita vence — ISS permanece o do DEFAULT (5%), não 2%.
+        assert tabela.mao_obra.iss == DEFAULT_BDI_TABELA.mao_obra.iss
+        assert not any(v.codigo == "VAL-CONSOL-BDI-JURISDICAO" for v in validacoes)
+
+    def test_sem_aliquotas_bdi_jurisdicao_nao_muda_nada(self):
+        """Regressão zero: sem o novo input, tabela permanece DEFAULT_BDI_TABELA (identidade)."""
+        validacoes: list = []
+        tabela, fonte, _, _ = _rbf_resolve_tabela_perfil({}, validacoes)
+        assert tabela is DEFAULT_BDI_TABELA
+        assert fonte == "DEFAULT_BDI_TABELA"
+        assert not any(v.codigo == "VAL-CONSOL-BDI-JURISDICAO" for v in validacoes)
+
 
 # ---------------------------------------------------------------------------
 # _rbf_try_tax_scenario
