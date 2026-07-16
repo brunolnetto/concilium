@@ -1024,6 +1024,57 @@
   \end{columns}
 \end{frame}
 
+\lvlB
+\begin{frame}
+  \mtitle{Reforma Tributária (EC 132/2023): O Que Muda no BDI}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{block}{Extinção $\to$ substituição}
+      \scriptsize
+      PIS+COFINS (federal) e ISS+ICMS (municipal/estadual)
+      $\to$ \textbf{CBS} (federal) e \textbf{IBS}
+      (estadual/municipal); CSLL e IR são mantidos; novo
+      \textbf{Imposto Seletivo} sobre itens específicos
+      (ex.\ combustíveis fósseis).
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Cronograma de transição}
+      \scriptsize
+      \textbf{2026}: teste (CBS 0,9\% + IBS 0,1\%, sem cobrança
+      real)\\
+      \textbf{2027}: CBS vigente (substitui PIS/COFINS) + Seletivo
+      cobrado\\
+      \textbf{2029--2032}: IBS substitui ICMS/ISS gradualmente
+      (10\%$\to$100\%)\\
+      \textbf{2033}: extinção total do sistema antigo
+    \end{block}
+    \column{0.44\textwidth}
+    \begin{block}{Impacto na fórmula do BDI}
+      \scriptsize
+      $T$ (bruto) $\to$
+      $T_{\text{efetivo}} = (\text{CBS+IBS})(1-\text{crédito}) + CSLL + IR$\\[2pt]
+      Não-cumulatividade ampla: crédito sobre toda a cadeia, não só
+      o insumo físico da produção.
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{\small Já modelado (ADR-055)}
+      \scriptsize \texttt{TaxRegimeVersion}: pré-reforma / transição
+      / pleno CBS-IBS --- cenários canônicos por categoria de custo
+      (MO 0\% crédito $\cdot$ material $\sim$75--85\% $\cdot$ diesel
+      $\sim$70\%); custo de carregamento do crédito (atraso de 4--6
+      sem.) entra em $DF$.
+    \end{exampleblock}
+    \vspace{4pt}
+    \begin{block}{\small Em aberto}
+      \tiny IBS varia por jurisdição de destino (estado
+      \emph{e} município) --- hoje resolvemos só por UF
+      (\texttt{Escopo.jurisdicao\_id}); ISS já é municipal hoje (LC
+      116/2003), mesma lacuna, não nova. \emph{Split payment}: já
+      modelado como sinalizador, sem impacto em fluxo de caixa ainda.
+    \end{block}
+  \end{columns}
+\end{frame}
+
 \subsection{Cenários e cubo analítico}
 \begin{frame}
   \mtitle{Cenários e Cubo Analítico}
