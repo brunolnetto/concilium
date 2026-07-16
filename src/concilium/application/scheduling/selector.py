@@ -14,6 +14,7 @@ from types import ModuleType
 from .models import (
     Activity,
     ActivityDAG,
+    ReplenishableResource,
     ResourcePool,
     ScheduleError,
     ScheduleOutput,
@@ -102,6 +103,7 @@ def _explore_cpsat(
     deadline_weeks: int,
     score_deadline: int,
     strategy: SchedulingStrategy | None,
+    replenishable_resources: list[ReplenishableResource] | None = None,
 ) -> list[ExploreResult]:
     try:
         from .cpsat_scheduler import CpSatScheduler  # lazy — avoids import cost
@@ -113,7 +115,7 @@ def _explore_cpsat(
         _sum_dur = sum(int(getattr(a, "duration_weeks", 0) or 0) for a in dag.activities)
         horizon = max(deadline_weeks, _sum_dur + deadline_weeks)
         cpsat = CpSatScheduler(timeout_seconds=timeout, horizon_weeks=horizon)
-        sched = cpsat.schedule(dag=dag, pool=pool)
+        sched = cpsat.schedule(dag=dag, pool=pool, replenishable_resources=replenishable_resources)
         if sched.feasible:
             score = sched.metrics.quality_score(deadline_weeks=score_deadline)
             _log.info(
@@ -130,6 +132,13 @@ def _explore_cpsat(
                 },
             )
             return [ExploreResult("CP-SAT", sched, score)]
+        if replenishable_resources and sched.estoque_delays:
+            # ADR-128 F5: infeasibilidade causada por estoque de consumível insuficiente
+            # é um resultado de negócio (falta de insumo), não falha genérica do
+            # solver — não deve interromper o pipeline com ScheduleError. O chamador
+            # (skill-04) reporta a causa via VAL-ESTOQUE-DELAY-02.
+            _span_event("scheduling.solution.failed", {"algorithm": "CP-SAT", "reason": "estoque_insuficiente"})
+            return [ExploreResult("CP-SAT", sched, 0.0, error="estoque_insuficiente")]
         _span_event("scheduling.solution.failed", {"algorithm": "CP-SAT", "reason": "infeasible"})
         raise ScheduleError(
             "CP-SAT solver não encontrou solução viável dentro do horizonte configurado. "
@@ -229,6 +238,7 @@ def explore_schedules(
     deadline_for_score: int | None = None,
     strategy: SchedulingStrategy | None = None,
     initial_lambdas: dict | None = None,
+    replenishable_resources: list[ReplenishableResource] | None = None,
 ) -> list[ExploreResult]:
     """Run scheduling and return top-N ranked results.
 
@@ -250,6 +260,12 @@ def explore_schedules(
         initial_lambdas:    ADR-079 — pre-warming dict from RelatorioOportunidades (ADR-078).
                             Keys: (atividade_i, atividade_j, tipo_id); values: λ₀.
                             Passed to LnsScheduler when algorithm=="LNS".
+        replenishable_resources: ADR-128/139 F5 — recursos consumíveis (diesel/material)
+                            com estoque/reabastecimento. Só aplicado no path CP-SAT;
+                            ignorado (silenciosamente, aqui) nos demais algoritmos — o
+                            chamador (skill-04) é responsável por emitir um aviso
+                            (VAL-ESTOQUE-ALGO-01) quando a restrição foi declarada mas o
+                            algoritmo selecionado não a suporta.
     """
     score_deadline = deadline_for_score or deadline_weeks
     algorithm = (strategy.algorithm if strategy else None) or "SerialScheduler"
@@ -272,7 +288,7 @@ def explore_schedules(
 
     # ── CP-SAT exact solver (ADR-075 Mode A) ─────────────────────────────────
     if algorithm == "CP-SAT":
-        return _explore_cpsat(dag, pool, deadline_weeks, score_deadline, strategy)
+        return _explore_cpsat(dag, pool, deadline_weeks, score_deadline, strategy, replenishable_resources)
 
     # ── LNS Lagrangian + SSGS (ADR-075 Mode B) ───────────────────────────────
     elif algorithm == "LNS":
@@ -300,6 +316,7 @@ def compare_all_algorithms(
     deadline_weeks: int,
     algorithms: list[str] | None = None,
     deadline_for_score: int | None = None,
+    replenishable_resources: list[ReplenishableResource] | None = None,
 ) -> list[ExploreResult]:
     """Run multiple scheduling algorithms on the same instance and return all results.
 
@@ -331,7 +348,7 @@ def compare_all_algorithms(
 
     for algorithm in algos:
         if algorithm == "CP-SAT":
-            results.append(_compare_cpsat(dag, pool, deadline_weeks, score_deadline))
+            results.append(_compare_cpsat(dag, pool, deadline_weeks, score_deadline, replenishable_resources))
         elif algorithm == "LNS":
             results.append(_compare_lns(dag, pool, score_deadline))
         else:
@@ -342,12 +359,18 @@ def compare_all_algorithms(
     return results
 
 
-def _compare_cpsat(dag: ActivityDAG, pool: ResourcePool, deadline_weeks: int, score_deadline: int) -> ExploreResult:
+def _compare_cpsat(
+    dag: ActivityDAG,
+    pool: ResourcePool,
+    deadline_weeks: int,
+    score_deadline: int,
+    replenishable_resources: list[ReplenishableResource] | None = None,
+) -> ExploreResult:
     try:
         from .cpsat_scheduler import CpSatScheduler  # lazy
 
         cpsat = CpSatScheduler(timeout_seconds=60.0, horizon_weeks=deadline_weeks)
-        sched = cpsat.schedule(dag=dag, pool=pool)
+        sched = cpsat.schedule(dag=dag, pool=pool, replenishable_resources=replenishable_resources)
         if sched.feasible:
             score = sched.metrics.quality_score(deadline_weeks=score_deadline)
             return ExploreResult("CP-SAT", sched, score)

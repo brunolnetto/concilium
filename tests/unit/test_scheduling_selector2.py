@@ -115,6 +115,62 @@ class TestExploreSchedules:
                 activities=[], dag=dag, pool=pool, deadline_weeks=10, strategy=self._make_strategy("CP-SAT")
             )
 
+    def test_cpsat_infeasible_by_estoque_returns_error_result_without_raising(self):
+        """ADR-128 F5: infeasibilidade causada por estoque de consumível insuficiente é
+        um resultado de negócio — não deve levantar ScheduleError, ao contrário de
+        qualquer outra causa de infeasibilidade (test_cpsat_infeasible_raises_schedule_error)."""
+        from concilium.application.scheduling.models import EstoqueDelayCause
+        from concilium.application.scheduling.selector import explore_schedules
+
+        dag = self._make_dag()
+        pool = self._make_pool()
+
+        sched_mock = MagicMock()
+        sched_mock.feasible = False
+        sched_mock.estoque_delays = [EstoqueDelayCause(resource_id="DIESEL", activity_id="A1", delay_weeks=3)]
+
+        cpsat_mock = MagicMock()
+        cpsat_mock.schedule.return_value = sched_mock
+
+        with patch("concilium.application.scheduling.cpsat_scheduler.CpSatScheduler", return_value=cpsat_mock):
+            results = explore_schedules(
+                activities=[],
+                dag=dag,
+                pool=pool,
+                deadline_weeks=10,
+                strategy=self._make_strategy("CP-SAT"),
+                replenishable_resources=[MagicMock()],
+            )
+        assert len(results) == 1
+        assert results[0].error == "estoque_insuficiente"
+        assert results[0].quality_score == 0.0
+        assert results[0].schedule is sched_mock
+
+    def test_cpsat_infeasible_without_replenishable_resources_still_raises(self):
+        """Sem replenishable_resources, infeasibilidade continua levantando ScheduleError
+        mesmo que sched.estoque_delays (um MagicMock) seja truthy — a checagem exige
+        replenishable_resources ter sido passado."""
+        from concilium.application.scheduling.models import EstoqueDelayCause
+        from concilium.application.scheduling.selector import ScheduleError, explore_schedules
+
+        dag = self._make_dag()
+        pool = self._make_pool()
+
+        sched_mock = MagicMock()
+        sched_mock.feasible = False
+        sched_mock.estoque_delays = [EstoqueDelayCause(resource_id="DIESEL", activity_id="A1", delay_weeks=3)]
+
+        cpsat_mock = MagicMock()
+        cpsat_mock.schedule.return_value = sched_mock
+
+        with (
+            patch("concilium.application.scheduling.cpsat_scheduler.CpSatScheduler", return_value=cpsat_mock),
+            pytest.raises(ScheduleError),
+        ):
+            explore_schedules(
+                activities=[], dag=dag, pool=pool, deadline_weeks=10, strategy=self._make_strategy("CP-SAT")
+            )
+
     def test_serial_scheduler_heuristic(self):
         from concilium.application.scheduling.selector import explore_schedules
 
