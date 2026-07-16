@@ -430,9 +430,11 @@ class TestAppCreateAppGaps:
             patch("concilium.infrastructure.storage.store_factory.ensure_storage_root") as mock_ensure,
             patch("concilium.presentation.api.app.resolve_api_bind", return_value=("0.0.0.0", 8000)),
             patch("concilium.infrastructure.settings.get_api") as mock_get_api,
+            patch("concilium.infrastructure.settings.get_catalog_digest") as mock_get_digest,
             patch("uvicorn.run") as mock_run,
         ):
             mock_get_api.return_value.reload = False
+            mock_get_digest.return_value.enabled = False
 
             from concilium.presentation.api.app import main
 
@@ -441,3 +443,47 @@ class TestAppCreateAppGaps:
         mock_startup.assert_called_once()
         mock_ensure.assert_called_once()
         mock_run.assert_called_once_with("concilium.presentation.api.app:app", host="0.0.0.0", port=8000, reload=False)
+
+    def test_main_starts_draft_digest_scheduler_when_enabled(self):
+        """ADR-141 D6: CATALOG_DIGEST_ENABLED=True → scheduler.start() é chamado em main()."""
+        with (
+            patch("concilium.infrastructure.settings.startup_check"),
+            patch("concilium.infrastructure.storage.store_factory.ensure_storage_root"),
+            patch("concilium.presentation.api.app.resolve_api_bind", return_value=("0.0.0.0", 8000)),
+            patch("concilium.infrastructure.settings.get_api") as mock_get_api,
+            patch("concilium.infrastructure.settings.get_catalog_digest") as mock_get_digest,
+            patch(
+                "concilium.application.services.catalog.draft_digest_scheduler.get_draft_digest_scheduler"
+            ) as mock_get_scheduler,
+            patch("uvicorn.run"),
+        ):
+            mock_get_api.return_value.reload = False
+            mock_get_digest.return_value.enabled = True
+
+            from concilium.presentation.api.app import main
+
+            main()
+
+        mock_get_scheduler.return_value.start.assert_called_once()
+
+    def test_main_does_not_start_draft_digest_scheduler_when_disabled(self):
+        """ADR-141 D6: CATALOG_DIGEST_ENABLED=False (default) → scheduler nunca é sequer importado/iniciado."""
+        with (
+            patch("concilium.infrastructure.settings.startup_check"),
+            patch("concilium.infrastructure.storage.store_factory.ensure_storage_root"),
+            patch("concilium.presentation.api.app.resolve_api_bind", return_value=("0.0.0.0", 8000)),
+            patch("concilium.infrastructure.settings.get_api") as mock_get_api,
+            patch("concilium.infrastructure.settings.get_catalog_digest") as mock_get_digest,
+            patch(
+                "concilium.application.services.catalog.draft_digest_scheduler.get_draft_digest_scheduler"
+            ) as mock_get_scheduler,
+            patch("uvicorn.run"),
+        ):
+            mock_get_api.return_value.reload = False
+            mock_get_digest.return_value.enabled = False
+
+            from concilium.presentation.api.app import main
+
+            main()
+
+        mock_get_scheduler.assert_not_called()
