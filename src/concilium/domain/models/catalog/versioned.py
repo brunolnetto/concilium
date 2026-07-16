@@ -216,8 +216,10 @@ class JurisdicaoVersionada(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    # O pattern anterior (^[A-Z]{2,10}$) rejeitava hífen — incompatível com o próprio
+    # exemplo da descrição ("BR-CE") e com id_atu (ex.: "BR-CE@2026-04").
     id: str = Field(
-        pattern=r"^[A-Z]{2,10}$",
+        pattern=r"^[A-Z]{2,15}(-[A-Z]{2,15})?$",
         description="Código da jurisdição. Ex.: 'BR-CE', 'GOIANIA'",
     )
     nome: str

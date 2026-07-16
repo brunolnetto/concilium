@@ -206,6 +206,18 @@ class TestJurisdicao:
         with pytest.raises(ValidationError):
             self._make(codigo="brasil")
 
+    def test_aceita_codigo_uf_real(self):
+        """Bug fix: o pattern anterior (^[A-Z]{2,5}$) rejeitava qualquer código com
+        hífen — incompatível com os 27 arquivos reais de config/jurisdicoes/BR-*.json."""
+        assert self._make(codigo="BR-CE").codigo == "BR-CE"
+        assert self._make(codigo="BR-SP").codigo == "BR-SP"
+
+    def test_rejeita_codigo_uf_mal_formado(self):
+        with pytest.raises(ValidationError):
+            self._make(codigo="BR-CEA")  # UF com 3 letras — inválido
+        with pytest.raises(ValidationError):
+            self._make(codigo="BR-")
+
     def test_rejeita_moeda_invalida(self):
         with pytest.raises(ValidationError):
             self._make(moeda="brl")

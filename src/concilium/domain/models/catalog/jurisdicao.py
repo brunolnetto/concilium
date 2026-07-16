@@ -85,7 +85,10 @@ class Jurisdicao(BaseModel):
 
     model_config = ConfigDict(extra="ignore")  # ignora $comment, $schema, parent_id
 
-    codigo: str = Field(pattern=r"^[A-Z]{2,5}$")
+    # Aceita "BR" e "BR-UF" (ex.: "BR-CE", "BR-SP") — o formato realmente usado em
+    # config/jurisdicoes/*.json. O pattern anterior (^[A-Z]{2,5}$) rejeitava qualquer
+    # código com hífen, incompatível com todos os 27 arquivos de UF já existentes.
+    codigo: str = Field(pattern=r"^[A-Z]{2}(-[A-Z]{2})?$")
     nome: str
     moeda: str = Field(pattern=r"^[A-Z]{3}$")
     regime_trabalhista: Literal["CLT", "OUTRO"]

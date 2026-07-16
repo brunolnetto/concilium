@@ -177,6 +177,29 @@ class TestJurisdicaoVersionada:
         j = self._make()
         assert j.encargos_em(date(2026, 5, 1), "CLT") == 1.777
 
+    def test_aceita_id_com_hifen_e_id_atu_formato(self):
+        """Bug fix: o pattern anterior (^[A-Z]{2,10}$) rejeitava hífen, incompatível
+        com o próprio exemplo da descrição do campo ("BR-CE") e com id_atu (que produz
+        "BR-CE@2026-04")."""
+        j = JurisdicaoVersionada(
+            id="BR-CE",
+            nome="Brasil — Ceará",
+            regime_trabalhista="CLT",
+            versoes=[
+                VersaoJurisdicao(
+                    versao="2026-04",
+                    validade=DateRange(inicio=date(2026, 4, 1), fim=None),
+                    percentual_encargos_clt=1.777,
+                    percentual_encargos_pj=0.0,
+                    moeda="BRL",
+                    auditado_por="tester",
+                    auditado_em=datetime(2026, 5, 1),
+                )
+            ],
+        )
+        assert j.id == "BR-CE"
+        assert j.id_atu == "BR-CE@2026-04"
+
     def test_encargos_pj(self):
         j = self._make()
         assert j.encargos_em(date(2026, 5, 1), "PJ") == 0.0
