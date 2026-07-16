@@ -6,6 +6,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Literal
 
 from concilium.application.scheduling.mob_scheduling import infer_mob_windows
+from concilium.application.scheduling.models import ReplenishableResource
 from concilium.domain.models.canonical import (
     AtividadeIntervalo,
     CanonicalModel,
@@ -57,18 +58,21 @@ def _determine_mode_and_distribuicao(
     catalogo: dict,
     validacoes: list,
     insumos_lookup: dict | None = None,
-) -> tuple[str | None, dict, list, ScheduleCandidateCanonical | None, bool]:
-    """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed)."""
+) -> tuple[str | None, dict, list, ScheduleCandidateCanonical | None, bool, list[ReplenishableResource]]:
+    """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed,
+    replenishable_resources) — o 6º elemento (ADR-128 F6) é vazio em MANUAL_ALLOCATION e no
+    caso "nenhum modo detectado", já que só o path AUTO_SCHEDULE constrói ReplenishableResource.
+    """
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
         mode = "AUTO_SCHEDULE (rcpsp_spec)"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO (rcpsp_spec)."))
         # ADR-072: pass lookups for productive-duration derivation
-        schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
+        schedule_candidates, schedule_selected, replenishable_resources = _run_auto_schedule_fallback_chain(
             canonical_in, inputs, validacoes, cpu_lookup, producao_lookup, insumos_lookup
         )
         if not schedule_selected:
-            return mode, {}, schedule_candidates, None, True
+            return mode, {}, schedule_candidates, None, True, []
         distribuicao_por_item = _convert_schedule_to_distribuicao(
             schedule_selected,
             canonical_in,
@@ -81,7 +85,7 @@ def _determine_mode_and_distribuicao(
             fator_calendario_semanal,
             validacoes,
         )
-        return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False
+        return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False, replenishable_resources
 
     elif num_equipes_por_item is not None and isinstance(num_equipes_por_item, dict):
         mode = "MANUAL_ALLOCATION"
@@ -99,17 +103,17 @@ def _determine_mode_and_distribuicao(
             catalogo,
             validacoes,
         )
-        return mode, distribuicao_por_item, [], None, False
+        return mode, distribuicao_por_item, [], None, False, []
 
     elif _can_extract_dag(canonical_in):
         mode = "AUTO_SCHEDULE"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO."))
         # ADR-072: pass lookups for productive-duration derivation
-        schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
+        schedule_candidates, schedule_selected, replenishable_resources = _run_auto_schedule_fallback_chain(
             canonical_in, inputs, validacoes, cpu_lookup, producao_lookup, insumos_lookup
         )
         if not schedule_selected:
-            return mode, {}, schedule_candidates, None, True
+            return mode, {}, schedule_candidates, None, True, []
         distribuicao_por_item = _convert_schedule_to_distribuicao(
             schedule_selected,
             canonical_in,
@@ -122,7 +126,7 @@ def _determine_mode_and_distribuicao(
             fator_calendario_semanal,
             validacoes,
         )
-        return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False
+        return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False, replenishable_resources
 
     else:
         validacoes.append(
@@ -132,7 +136,7 @@ def _determine_mode_and_distribuicao(
                 mensagem="Nenhum modo detectado: forneca 'num_equipes_por_item' ou DAG + recursos.",
             )
         )
-        return None, {}, [], None, True
+        return None, {}, [], None, True, []
 
 
 def _build_assigned_resources_lookup(schedule_selected: ScheduleCandidateCanonical | None) -> dict[str, dict]:

@@ -552,7 +552,7 @@ class TestDetermineModeNoMode:
                 return self
 
         validacoes = []
-        mode, distr, candidates, selected, failed = _determine_mode_and_distribuicao(
+        mode, distr, candidates, selected, failed, replenishable_resources = _determine_mode_and_distribuicao(
             canonical_in=FakeCanonical(),
             inputs={},
             num_equipes_por_item=None,
@@ -567,6 +567,7 @@ class TestDetermineModeNoMode:
             validacoes=validacoes,
         )
         assert failed is True
+        assert replenishable_resources == []
         assert mode is None
         assert any(v.codigo == "VAL-CRON-MODE" and v.status == "ERRO" for v in validacoes)
 
@@ -838,9 +839,10 @@ class TestRunAutoScheduleFallbackChainNullExtract:
 
         validacoes = []
         with patch(f"{_MOD_NAME}._mod_scheduling._rasfc_extract_inputs", return_value=None):
-            candidates, best = _rasfc(FakeCanonical(), {}, validacoes)
+            candidates, best, replenishable_resources = _rasfc(FakeCanonical(), {}, validacoes)
         assert candidates == []
         assert best is None
+        assert replenishable_resources == []
         assert any(v.codigo == "VAL-SCHED-EXTRACT-FAIL" for v in validacoes)
 
 
@@ -1301,7 +1303,10 @@ class TestRasfcRunHeuristicsOverride:
             patch(f"{_MOD_NAME}._mod_validacao.explore_schedules", return_value=[fake_result]),
             patch(f"{_MOD_NAME}._mod_validacao._to_canonical_candidate", return_value=fake_candidate),
         ):
-            candidates, relaxed = _rasfc_run_heuristics(activities, dag, pool, 4, {"heuristics": ["LPT"]}, [])
+            candidates, relaxed, replenishable_resources = _rasfc_run_heuristics(
+                activities, dag, pool, 4, {"heuristics": ["LPT"]}, []
+            )
+        assert replenishable_resources == []
         assert strategy.heuristics == ["LPT"]
         assert relaxed is False
         assert candidates == [fake_candidate]
@@ -1439,10 +1444,10 @@ class TestDetermineModeRcpspSpecSuccess:
         canonical = _make_canonical()
         sched_sel = SimpleNamespace(scheduled_activities=[])
         with (
-            patch(f"{_MOD_NAME}._mod_assembly._run_auto_schedule_fallback_chain", return_value=([], sched_sel)),
+            patch(f"{_MOD_NAME}._mod_assembly._run_auto_schedule_fallback_chain", return_value=([], sched_sel, [])),
             patch(f"{_MOD_NAME}._mod_assembly._convert_schedule_to_distribuicao", return_value={"IT-01": {}}),
         ):
-            mode, distr, candidates, selected, failed = _determine_mode_and_distribuicao(
+            mode, distr, candidates, selected, failed, replenishable_resources = _determine_mode_and_distribuicao(
                 canonical_in=canonical,
                 inputs={"rcpsp_spec": {"activities": []}},
                 num_equipes_por_item=None,
@@ -1460,6 +1465,7 @@ class TestDetermineModeRcpspSpecSuccess:
         assert failed is False
         assert distr == {"IT-01": {}}
         assert selected is sched_sel
+        assert replenishable_resources == []
 
     def test_rcpsp_spec_no_schedule_selected_returns_failed(self):
         """Line 1857: fallback chain exhausted (schedule_selected falsy) -> early
@@ -1467,9 +1473,9 @@ class TestDetermineModeRcpspSpecSuccess:
         canonical = _make_canonical()
         with patch(
             f"{_MOD_NAME}._mod_assembly._run_auto_schedule_fallback_chain",
-            return_value=([{"heuristic": "MINSLK"}], None),
+            return_value=([{"heuristic": "MINSLK"}], None, []),
         ):
-            mode, distr, candidates, selected, failed = _determine_mode_and_distribuicao(
+            mode, distr, candidates, selected, failed, replenishable_resources = _determine_mode_and_distribuicao(
                 canonical_in=canonical,
                 inputs={"rcpsp_spec": {"activities": []}},
                 num_equipes_por_item=None,
@@ -1487,6 +1493,7 @@ class TestDetermineModeRcpspSpecSuccess:
         assert failed is True
         assert distr == {}
         assert selected is None
+        assert replenishable_resources == []
 
 
 # ---------------------------------------------------------------------------

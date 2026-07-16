@@ -32,6 +32,11 @@ from ._equipes_diretas import (
     EquipeDireta,
     FuncaoEquipeDireta,
 )
+from ._estoque_consumiveis import (
+    DisponibilidadeConsumivelCanonical,
+    RecursoConsumivelCanonical,
+    ResumoEstoqueConsumivel,
+)
 from ._financeiro_resultado import (
     BalancoControle,
     BalancoPontoEquilibrio,
@@ -139,6 +144,7 @@ __all__ = [
     "CustoParticionadoItem",
     "CustoTotal",
     "DimensaoCriticidade",
+    "DisponibilidadeConsumivelCanonical",
     "DistribuicaoMensal",
     "DistribuicaoSemanal",
     "Eap",
@@ -173,6 +179,7 @@ __all__ = [
     "PrecoUnitarioCategoria",
     "Projeto",
     "ProjetoStatusMachine",
+    "RecursoConsumivelCanonical",
     "RecursoContrato",
     "RecursoPool",
     "RegimeTrabalho",
@@ -184,6 +191,7 @@ __all__ = [
     "RequisitoRecurso",
     "ResultadoReconciliado",
     "Resultado",
+    "ResumoEstoqueConsumivel",
     "ResumoUtilizacaoContrato",
     "ScheduleCandidateCanonical",
     "ScheduledActivityCanonical",

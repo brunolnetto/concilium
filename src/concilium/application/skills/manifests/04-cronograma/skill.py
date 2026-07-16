@@ -39,6 +39,9 @@ from ._skill_helpers._assembly import (  # ty: ignore[unresolved-import]
     _run_cronograma_infer_mob_schedule,
     _run_cronograma_validate_num_equipes_formato,
 )
+from ._skill_helpers._estoque_consumivel import (  # ty: ignore[unresolved-import]
+    build_estoque_consumivel_canonical,
+)
 from ._skill_helpers._scheduling import (  # ty: ignore[unresolved-import]
     _check_pool_violations,
 )
@@ -128,20 +131,22 @@ def run_cronograma(
             validacoes,
         )
 
-    mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed = _determine_mode_and_distribuicao(
-        canonical_in,
-        inputs,
-        num_equipes_por_item,
-        semanas_obra,
-        cpu_lookup,
-        producao_lookup,
-        regime,
-        prat_semanal,
-        prat_mensal,
-        fator_calendario_semanal,
-        catalogo,
-        validacoes,
-        insumos_lookup,
+    mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed, replenishable_resources = (
+        _determine_mode_and_distribuicao(
+            canonical_in,
+            inputs,
+            num_equipes_por_item,
+            semanas_obra,
+            cpu_lookup,
+            producao_lookup,
+            regime,
+            prat_semanal,
+            prat_mensal,
+            fator_calendario_semanal,
+            catalogo,
+            validacoes,
+            insumos_lookup,
+        )
     )
     if failed:
         return SkillResult(canonical_in, validacoes)
@@ -160,6 +165,12 @@ def run_cronograma(
 
     mob_schedule = _run_cronograma_infer_mob_schedule(canonical_in, validacoes)
 
+    # ADR-128 F6: contabilização canônica de consumíveis (paridade com pool) — opt-in,
+    # vazio quando nenhum ReplenishableResource foi construído/aplicado.
+    recursos_consumiveis_out, resumo_estoque_out = build_estoque_consumivel_canonical(
+        replenishable_resources, cronograma_out.scheduled_activities, cronograma_out.estoque_delays
+    )
+
     update_dict = {
         "cronograma": cronograma_out,
         "intervalos_atividade": intervalos,
@@ -168,6 +179,8 @@ def run_cronograma(
         "constraint_violations": pool_violations if pool_violations else canonical_in.constraint_violations,
         "curvas_forca": wmp_curves if wmp_curves else canonical_in.curvas_forca,
         "analise_campanhas": analise_campanhas,
+        "recursos_consumiveis": recursos_consumiveis_out,
+        "resumo_estoque_consumiveis": resumo_estoque_out,
     }
     if mob_schedule:
         update_dict["mob_schedule"] = mob_schedule

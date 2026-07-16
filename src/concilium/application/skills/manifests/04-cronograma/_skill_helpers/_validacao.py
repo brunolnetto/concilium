@@ -500,8 +500,14 @@ def _rasfc_run_heuristics(
     producoes_por_atividade: dict[str, Any] | None = None,
     insumos_lookup: dict | None = None,
     logistica_consumiveis: dict[str, Any] | None = None,
-) -> tuple[list, bool]:
-    """Runs heuristic scheduling with optional pool relaxation. Returns (candidates_canonical, relaxed_flag)."""
+) -> tuple[list, bool, list[ReplenishableResource]]:
+    """Runs heuristic scheduling with optional pool relaxation.
+
+    Returns (candidates_canonical, relaxed_flag, replenishable_resources) — o 3º elemento
+    (ADR-128 F6) é a lista de ReplenishableResource efetivamente aplicada (vazia quando
+    nenhuma foi construída, ou quando VAL-ESTOQUE-ALGO-01 a descartou por incompatibilidade
+    de algoritmo), usada por skill.py para persistir a contabilização canônica.
+    """
     strategy = select_scheduling_algorithm(
         num_activities=len(activities),
         num_resource_types=max(1, len(pool.resources)),
@@ -576,9 +582,11 @@ def _rasfc_run_heuristics(
             if v is not None:
                 validacoes.append(ValidacaoItem(codigo=v.code, status=v.status, mensagem=v.remediation_hint or ""))
 
-    return [
-        _to_canonical_candidate(r.heuristic, r.schedule, r.quality_score, relaxed_flag) for r in explored
-    ], relaxed_flag
+    return (
+        [_to_canonical_candidate(r.heuristic, r.schedule, r.quality_score, relaxed_flag) for r in explored],
+        relaxed_flag,
+        replenishable_resources or [],
+    )
 
 
 __all__ = [

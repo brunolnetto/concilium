@@ -19,6 +19,7 @@ from concilium.domain.models.project.decision_variables import DecisionVariables
 from ._base import Meta, Praticabilidade, Projeto
 from ._eap import ActivityDag, Atividade, AtividadeIntervalo, EapItem
 from ._equipes_diretas import EquipeDireta
+from ._estoque_consumiveis import RecursoConsumivelCanonical, ResumoEstoqueConsumivel
 from ._financeiro_resultado import Indireto, Planejamento, PontoEquilibrio, Resultado
 from ._indiretos_insumos import AtividadeCustoCompleto, Cronograma, IndiretoSemanal, _migrate_cron_list_to_cronograma
 from ._pool_recursos import (
@@ -97,6 +98,10 @@ class CanonicalModel(BaseModel):
     instancias_recurso: list[InstanciaRecurso] = Field(default_factory=list)
     composicao_equipes_atividade: list[ComposicaoEquipeAtividade] = Field(default_factory=list)
     resumo_utilizacao_contratos: list[ResumoUtilizacaoContrato] = Field(default_factory=list)
+    # ADR-128 F6: contabilização de consumíveis (paridade com pool) — produzidos por skill-04
+    # quando ao menos um ReplenishableResource é construído (opt-in, ver ADR-128 F5).
+    recursos_consumiveis: list[RecursoConsumivelCanonical] = Field(default_factory=list)
+    resumo_estoque_consumiveis: list[ResumoEstoqueConsumivel] = Field(default_factory=list)
     # ADR-078: pré-processamento estrutural de compartilhamento
     relatorio_oportunidades: RelatorioOportunidades | None = None
     requisitos: list[RequisitoRecurso] = Field(default_factory=list)

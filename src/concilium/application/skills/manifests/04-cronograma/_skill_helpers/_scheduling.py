@@ -6,6 +6,7 @@ import math
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
+from concilium.application.scheduling.models import ReplenishableResource
 from concilium.domain.models.canonical import (
     CanonicalModel,
     DistribuicaoSemanal,
@@ -36,7 +37,7 @@ def _run_auto_schedule_fallback_chain(
     cpu_lookup: dict | None = None,
     producao_lookup: dict | None = None,
     insumos_lookup: dict | None = None,
-) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None]:
+) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None, list[ReplenishableResource]]:
     """Executa fallback chain (heurísticas -> relax).
 
     ADR-046: se inputs contiver 'rcpsp_spec', usa extratores baseados na spec
@@ -45,6 +46,8 @@ def _run_auto_schedule_fallback_chain(
     ADR-128 F5: insumos_lookup usado (com o pareamento atividade→Producao extraído
     junto de cpu_lookup/producao_lookup) para montar ReplenishableResource, quando
     aplicável — opt-in, ver _build_replenishable_resources_if_any.
+    ADR-128 F6: o 3º elemento do retorno propaga a lista de ReplenishableResource
+    efetivamente aplicada, para skill.py persistir a contabilização canônica.
     """
     extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
     if extracted is None:
@@ -55,10 +58,10 @@ def _run_auto_schedule_fallback_chain(
                 mensagem="Falha ao extrair inputs de cronograma (atividades, DAG, pool ou deadline inválidos).",
             )
         )
-        return [], None
+        return [], None, []
     activities, dag, pool, deadline_weeks, producoes_por_atividade = extracted
 
-    candidates_canonical, _relaxed = _rasfc_run_heuristics(
+    candidates_canonical, _relaxed, replenishable_resources = _rasfc_run_heuristics(
         activities,
         dag,
         pool,
@@ -72,7 +75,7 @@ def _run_auto_schedule_fallback_chain(
 
     if not candidates_canonical:
         validacoes.append(ValidacaoItem(codigo="VAL-SCHED-05", status="ERRO", mensagem="Cronograma inviável."))
-        return [], None
+        return [], None, []
 
     best_candidate = candidates_canonical[0]
     validacoes.append(
@@ -82,7 +85,7 @@ def _run_auto_schedule_fallback_chain(
             mensagem=f"{best_candidate.heuristic} (qualidade {best_candidate.quality_score:.4f})",
         )
     )
-    return candidates_canonical, best_candidate
+    return candidates_canonical, best_candidate, replenishable_resources
 
 
 def _resolve_item_for_scheduled_activity(
