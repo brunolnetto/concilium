@@ -206,6 +206,70 @@ class TestParidadeComPipelineSeparado:
         assert "VAL-GAP-CATALOGO-OPERACIONAL" not in codigos
 
 
+class TestWiringJurisdicaoETaxScenario:
+    """ADR-038/ADR-055: jurisdição resolvida e tax_scenario agora influenciam
+    o BDI efetivamente calculado ponta a ponta (antes eram ignorados/órfãos)."""
+
+    def test_regressao_zero_sem_jurisdicao_nem_tax_scenario(self):
+        """Sem os novos inputs, o resultado é idêntico ao comportamento pré-existente
+        (DEFAULT_BDI_TABELA puro, sem VAL-*-JURISDICAO/REGIME emitidos)."""
+        from concilium.application.skills import run_resultado_financeiro
+
+        ru = run_resultado_financeiro(_base_canonical(), {}, _catalogo_minimo(), _PERFIL)
+        assert ru.canonical.resultado is not None
+        codigos = {v.codigo for v in ru.validacoes}
+        assert "VAL-BDI-JURISDICAO" not in codigos
+        assert "VAL-CONSOL-BDI-JURISDICAO" not in codigos
+        assert "VAL-BDI-REGIME" not in codigos
+
+    def test_aliquotas_bdi_jurisdicao_muda_bdi_de_mao_obra_nao_muda_material(self):
+        """ISS diferente do default (2% vs 5%) deve mudar o BDI calculado de
+        mao_obra/servicos/indireto (categorias que têm ISS na base) e NÃO mudar
+        material/diesel (categorias sem ISS aplicável)."""
+        from concilium.application.skills import run_resultado_financeiro
+        from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA
+
+        aliquotas = {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03}
+        ru_default = run_resultado_financeiro(_base_canonical(), {}, _catalogo_minimo(), _PERFIL)
+        ru_jurisdicao = run_resultado_financeiro(
+            _base_canonical(), {"aliquotas_bdi_jurisdicao": aliquotas}, _catalogo_minimo(), _PERFIL
+        )
+
+        assert ru_default.canonical.resultado is not None
+        assert ru_jurisdicao.canonical.resultado is not None
+        assert DEFAULT_BDI_TABELA.mao_obra.iss == 0.05  # confirma que 0.02 é de fato diferente
+
+        # tabela_bdi_efetiva (persistida pela skill-06) reflete o ISS da jurisdição
+        # nas categorias que já tinham ISS na base (mao_obra/servicos/indireto)...
+        tabela = ru_jurisdicao.canonical.tabela_bdi_efetiva
+        assert tabela is not None
+        assert tabela.mao_obra.iss == 0.02
+        assert tabela.servicos.iss == 0.02
+        assert tabela.indireto.iss == 0.02
+        # ...e NÃO nas categorias sem ISS aplicável (material/diesel são mercadoria).
+        assert tabela.material.iss == 0.0
+        assert tabela.diesel.iss == 0.0
+        # default (sem jurisdição) preserva o ISS de fábrica.
+        assert ru_default.canonical.tabela_bdi_efetiva.mao_obra.iss == 0.05
+
+        codigos = {v.codigo for v in ru_jurisdicao.validacoes}
+        assert "VAL-BDI-JURISDICAO" in codigos  # estágio de precificação aplicou o passo
+
+    def test_tax_scenario_agora_funciona_tambem_na_precificacao(self):
+        """ADR-055: tax_scenario era órfão no estágio de precificação (só funcionava
+        em consolidação) — agora produz VAL-BDI-REGIME também via run_resultado_financeiro."""
+        from concilium.application.skills import run_resultado_financeiro
+
+        tax_scenario = {"regime_version": "pleno_cbs_ibs", "cbs_ibs_combined_rate": 0.265}
+        ru = run_resultado_financeiro(
+            _base_canonical(), {"tax_scenario": tax_scenario}, _catalogo_minimo(), _PERFIL
+        )
+        assert ru.canonical.resultado is not None
+        codigos = {v.codigo for v in ru.validacoes}
+        assert "VAL-BDI-REGIME" in codigos  # precificação (antes órfão)
+        assert "VAL-CONSOL-BDI-REGIME" in codigos  # consolidação (já funcionava)
+
+
 class TestSemResiduosLegados:
     """Pós-limpeza: shims e aliasing de inputs legados foram removidos."""
 
