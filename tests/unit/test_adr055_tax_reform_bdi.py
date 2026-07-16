@@ -28,6 +28,7 @@ from concilium.domain.models.financial.bdi import (
     TaxRegimeVersion,
     TaxSimulationScenario,
     resolver_bdi_cbs_ibs,
+    resolver_bdi_jurisdicao,
 )
 
 # ---------------------------------------------------------------------------
@@ -281,6 +282,58 @@ class TestResolverBdiCbsIbs:
         assert result.mao_obra.pis == 0.0
         assert result.material.iss == 0.0
         assert result.material.pis == 0.0
+
+
+# ---------------------------------------------------------------------------
+# resolver_bdi_jurisdicao (ADR-038 — fecha o gap "UF não influencia o BDI real")
+# ---------------------------------------------------------------------------
+
+
+class TestResolverBdiJurisdicao:
+    def test_iss_sobrescrito_em_categorias_com_iss(self):
+        """mao_obra/servicos/indireto têm ISS > 0 na base — devem receber a alíquota
+        da jurisdição (ex.: BR-CE, 2%, diferente do default 5%)."""
+        aliquotas = {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03, "CPRB": 0.045}
+        result = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, aliquotas)
+        assert result.mao_obra.iss == 0.02
+        assert result.servicos.iss == 0.02
+        assert result.indireto.iss == 0.02
+
+    def test_material_diesel_nao_ganham_iss_por_nao_terem_na_base(self):
+        """material/diesel têm ISS=0 na base (fornecimento de mercadoria, ADR-090) —
+        jurisdição NUNCA deve fazer ISS passar a incidir sobre eles."""
+        aliquotas = {"ISS": 0.05, "PIS": 0.0065, "COFINS": 0.03, "CPRB": 0.045}
+        result = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, aliquotas)
+        assert result.material.iss == 0.0
+        assert result.diesel.iss == 0.0
+
+    def test_muda_bdi_total_quando_iss_diferente_do_default(self):
+        aliquotas_ce = {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03, "CPRB": 0.045}
+        result = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, aliquotas_ce)
+        assert result.mao_obra.bdi_total != DEFAULT_BDI_TABELA.mao_obra.bdi_total
+        # ISS menor -> T menor -> BDI menor (fórmula TCU: overhead/(1-T)-1, T no denominador)
+        assert result.mao_obra.bdi_total < DEFAULT_BDI_TABELA.mao_obra.bdi_total
+
+    def test_overhead_e_cssl_ir_preservados(self):
+        aliquotas = {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03, "CPRB": 0.045}
+        result = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, aliquotas)
+        for cat in ("mao_obra", "material", "diesel", "servicos", "indireto"):
+            base_comp: ComponentesBdi = getattr(DEFAULT_BDI_TABELA, cat)
+            res_comp: ComponentesBdi = getattr(result, cat)
+            assert res_comp.ac == base_comp.ac
+            assert res_comp.df == base_comp.df
+            assert res_comp.r == base_comp.r
+            assert res_comp.cr == base_comp.cr
+            assert res_comp.l == base_comp.l
+            assert res_comp.cssl == base_comp.cssl
+            assert res_comp.ir == base_comp.ir
+
+    def test_aliquota_ausente_no_dict_preserva_base(self):
+        """Dict só com ISS (sem PIS/COFINS) não zera os demais — mantém os da base."""
+        result = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, {"ISS": 0.02})
+        assert result.mao_obra.iss == 0.02
+        assert result.mao_obra.pis == DEFAULT_BDI_TABELA.mao_obra.pis
+        assert result.mao_obra.cofins == DEFAULT_BDI_TABELA.mao_obra.cofins
 
 
 # ---------------------------------------------------------------------------

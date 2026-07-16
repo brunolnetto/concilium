@@ -25,6 +25,7 @@ from ._profiles import (
     PerfilTributarioProjeto,
     resolve_bdi_tabela,
     resolver_bdi_cbs_ibs,
+    resolver_bdi_jurisdicao,
     resolver_componentes_bdi,
 )
 
@@ -48,5 +49,6 @@ __all__ = [
     "TaxRegimeVersion",
     "TaxSimulationScenario",
     "resolver_bdi_cbs_ibs",
+    "resolver_bdi_jurisdicao",
     "resolver_componentes_bdi",
 ]

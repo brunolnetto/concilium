@@ -278,6 +278,56 @@ def resolver_bdi_cbs_ibs(
     )
 
 
+def resolver_bdi_jurisdicao(base: TabelaBdi, aliquotas: dict[str, float]) -> TabelaBdi:
+    """ADR-038: sobrepõe ISS/PIS/COFINS de `base` pelas alíquotas resolvidas da
+    jurisdição do escopo (`AliquotasBdi`, via `Escopo.jurisdicao_id`). Preserva
+    overhead (AC/DF/R/CR/L) e CSSL/IR.
+
+    Fecha uma lacuna real: antes desta função, a jurisdição resolvida (ex.: ISS 2% em
+    BR-CE vs. 5% em BR-SP) nunca chegava a influenciar o BDI efetivamente calculado —
+    só alimentava um dict de metadado (`regime_tributario`, `_resolve_tributario` em
+    `presentation/mcp/tools/spec.py`) nunca lido de volta pela fórmula TCU.
+
+    Só sobrescreve um tributo numa categoria quando `base` já o declara > 0 —
+    jurisdição muda a ALÍQUOTA de um tributo já aplicável à categoria (ex.: ISS de
+    mao_obra/servicos/indireto), nunca decide SE ele se aplica: essa é uma distinção
+    categórica do ADR-023 (material/diesel não têm ISS por serem mercadoria, não
+    serviço) que não deve mudar por jurisdição.
+
+    `AliquotasBdi.CPRB` (desoneração da folha) deliberadamente NÃO entra aqui —
+    `ComponentesBdi` não tem campo CPRB; CPRB é dedução de encargos sociais sobre
+    folha de pagamento (mesma família de `motor_encargos_sociais`, já wired via
+    `InputsMixin._apply_defaults_encargos`), não um tributo do denominador T da
+    fórmula BDI.
+    """
+    iss = aliquotas.get("ISS")
+    pis = aliquotas.get("PIS")
+    cofins = aliquotas.get("COFINS")
+
+    def _sobrepor(comp: ComponentesBdi) -> ComponentesBdi:
+        return ComponentesBdi(
+            ac=comp.ac,
+            df=comp.df,
+            r=comp.r,
+            cr=comp.cr,
+            l=comp.l,
+            iss=iss if (iss is not None and comp.iss > 0) else comp.iss,
+            pis=pis if (pis is not None and comp.pis > 0) else comp.pis,
+            cofins=cofins if (cofins is not None and comp.cofins > 0) else comp.cofins,
+            cssl=comp.cssl,
+            ir=comp.ir,
+        )
+
+    return TabelaBdi(
+        mao_obra=_sobrepor(base.mao_obra),
+        material=_sobrepor(base.material),
+        servicos=_sobrepor(base.servicos),
+        indireto=_sobrepor(base.indireto),
+        diesel=_sobrepor(base.diesel),
+        data_vigencia=base.data_vigencia,
+    )
+
+
 # ── Resolução centralizada de TabelaBdi a partir de inputs ───────────────────
 
 
