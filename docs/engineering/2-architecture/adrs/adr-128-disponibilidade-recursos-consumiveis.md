@@ -1,6 +1,6 @@
 # ADR-128 — Disponibilidade de Recursos Consumíveis: Estoque, Taxa de Consumo e Reabastecimento (Diesel, Combustível, Material)
 
-**Status:** ⚠️ Parcialmente Implementado _(2026-07-15: F1/F2/F3/F5 completos — F2 inclui repropagação de precedência (Fase 2b), ver nota; F5 conecta o motor ao pipeline real de skill-04 e a `Escopo.logistica_consumiveis` como fonte de dado real de projeto; F4 permanece com o dashboard/UI ainda não conectado a essa fonte, ver nota)_
+**Status:** ⚠️ Parcialmente Implementado _(2026-07-16: F1/F2/F3/F5/F6 completos — F2 inclui repropagação de precedência (Fase 2b), ver nota; F5 conecta o motor ao pipeline real de skill-04 e a `Escopo.logistica_consumiveis` como fonte de dado real de projeto; F6 contabiliza consumíveis em paridade com pool (resumo canônico + cubo OLAP + MCP/REST); F4 permanece com o dashboard/UI ainda não conectado a essa fonte, ver nota)_
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-107 (generalização tipo_combustivel), ADR-090 (BDI sistemático diesel/material), ADR-046 (motor RCPSP)
@@ -102,6 +102,7 @@ O cálculo hoje em `src/concilium/presentation/ui/organisms/layout.py` (bloco qu
 | F3 | Parsing/normalização de `prazo_entrega` (hoje `str \| None`, texto livre) para dias numéricos; reaproveitamento como lead time de reabastecimento de material | ✅ Implementado |
 | F4 | `tanque_sugerido` (UI) lendo `DisponibilidadeConsumivel` com fallback heurístico atual | ⚠️ Implementado como capacidade pura (ver nota de implementação) |
 | F5 | Integração no pipeline real de skill-04 (`CpSatScheduler` + `build_replenishable_resources`, antes chamados só em teste); `Escopo.logistica_consumiveis` como fonte real de dado de projeto (fecha a lacuna registrada em F4 — ver nota); relatório causal de atraso por recurso/atividade (`VAL-ESTOQUE-DELAY-01/02`) | ✅ Implementado |
+| F6 | Contabilização canônica de consumíveis em paridade com pool (`ResumoUtilizacaoContrato`/`CuboPoolInstancial`/`explorar_pool_recursos`): `RecursoConsumivelCanonical`/`ResumoEstoqueConsumivel` persistidos por skill-04; `CuboEstoqueConsumivel` (cubo físico derivado, grão `resource_id × semana_iso × estado`); `explorar_estoque_consumiveis` (MCP) + `/cubo-estoque-consumivel/projecao` (REST) | ✅ Implementado |
 
 ### Nota de implementação (2026-07-08)
 
@@ -235,6 +236,62 @@ coberto por teste dedicado (`test_stock_permanently_negative_after_repair_rounds
 `_render_cube_diesel_metrics` continuam recebendo `disponibilidade=None` sempre; ligar a UI
 à mesma fonte de projeto (`Escopo.logistica_consumiveis`) é trabalho futuro, não coberto aqui.
 
+### Nota de implementação (2026-07-16) — F6
+
+F5 conectou o motor ao pipeline, mas só persistiu o mínimo causal
+(`Cronograma.estoque_delays`: resource_id/activity_id/semanas). O usuário pediu, em
+seguida, "contabilizar os consumíveis como fazemos com pool" — F6 espelha, na
+granularidade que consumíveis permitem (`resource_id`, sem instância/contrato numerado),
+as 3 camadas que pool já tinha: resumo canônico (`ResumoUtilizacaoContrato`), cubo OLAP
+físico dedicado (`CuboPoolInstancial`), e exposição MCP/REST (`explorar_pool_recursos`).
+
+**Por que `replenishable_resources` precisou ser propagado por 4 assinaturas em vez de
+reconstruído depois:** `_build_replenishable_resources_if_any` (dentro de
+`_rasfc_run_heuristics`, `_skill_helpers/_validacao.py`) já construía a lista de
+`ReplenishableResource` para alimentar o scheduler, mas a descartava depois de usá-la —
+nunca chegava a `skill.py`, onde `canonical_in.model_copy(update={...})` acontece. Em vez
+de reconstruir a partir do catálogo uma segunda vez em `skill.py` (duplicando a resolução
+CPU→Producao→disponibilidade já feita), o valor passou a ser o 3º/6º elemento do retorno
+de `_rasfc_run_heuristics` → `_run_auto_schedule_fallback_chain` →
+`_determine_mode_and_distribuicao`, chegando intacto a `skill.py`. Mesmo princípio de
+`Cronograma.estoque_delays` no F5: reaproveitar dado já computado, não recomputar.
+
+**Por que o `estado` do cubo é `normal/deficit/overflow` (saúde de estoque), não
+`prod/idle/off` (ocupação, como em pool):** pool tem ocupação física real de um slot
+numerado; consumíveis não têm — e o F5 já move as atividades para sua posição FINAL
+pós-reparo, sem persistir "quais semanas eram a posição original vs. atrasada" (só a
+contagem agregada `delay_weeks` sobrevive em `EstoqueDelayCanonical`). Um estado do tipo
+"semana atrasada" não seria reconstruível honestamente a partir só do canônico. A causa
+(qual atividade, quantas semanas) permanece exclusivamente em
+`Cronograma.estoque_delays` — nunca duplicada no cubo, preservando a mesma separação
+física/causal que a ADR-086 já estabelece para pool (`CuboPoolInstancial` é física;
+`CustoParticionadoItem` é causal).
+
+**Divergência de camada deliberada:** `CuboEstoqueConsumivelBuilder`
+(`application/services/analytics/cubo_estoque_consumivel_builder.py`) vive em
+`application/services/analytics/`, não em `domain/services/analytics/` como
+`CuboPoolInstancialBuilder` — porque precisa reaproveitar `project_estoque_semanal`/
+`project_overflow_semanal` de `application/scheduling/replenishable.py`, em vez de
+reimplementar a projeção de estoque, e `domain` não depende de `application` em nenhum
+outro lugar do código. Os modelos de dado (`CuboEstoqueConsumivel`/
+`CelulaEstoqueConsumivel`) continuam em `domain/models/analytics/`, sem essa dependência.
+
+**Sem painel Streamlit novo, de propósito:** `CuboPoolInstancial` (pool) também não tem
+um painel dedicado — só o `CuboAnalitico` genérico (mais antigo) é renderizado na UI hoje.
+Construir um painel novo aqui seria ir além da paridade pedida, não alcançá-la.
+
+**Regra de status (`OK`/`AVISO`/`CRITICO`) é existence-based, não banda percentual como
+pool (65%/35%):** não há métrica contínua natural aqui — saúde de estoque é mais binária.
+`CRITICO` só é alcançável via teste unitário direto do helper
+(`_build_resumo_estoque`/`build_estoque_consumivel_canonical`,
+`tests/unit/test_adr128_f6_estoque_consumivel_helper.py`), nunca através do pipeline
+completo: um cronograma com estoque irreparável já é marcado `failed=True` por skill-04
+(mesmo contrato pré-existente de "`cronograma` inviável não persiste nada no canônico",
+já coberto por `test_02_auto_infeasivel_quando_tudo_falha`) — a contabilização nunca chega
+a ser calculada nesse caso. Não é uma lacuna nova do F6, é a mesma limitação estrutural que
+já existia para `cronograma` em qualquer schedule inviável, documentada explicitamente em
+`tests/integration/test_adr128_f6_skill04_consumiveis_persistencia.py`.
+
 ## Definition of Done
 
 ### Fase 1
@@ -256,6 +313,12 @@ coberto por teste dedicado (`test_stock_permanently_negative_after_repair_rounds
 - [x] `Escopo.logistica_consumiveis` exposto via `gerir_escopo` → `create_escopo` (repositório/store) → propagado a `inputs` de toda skill sem mudança em `execution.py`
 - [x] Cenário diesel-restrito (config de projeto, sem declaração de catálogo) delatando atraso real, causal, através de `run_cronograma`
 - [x] `VAL-ESTOQUE-DELAY-01` (AVISO, reparado) / `VAL-ESTOQUE-DELAY-02` (ERRO, irreparável) / `VAL-ESTOQUE-ALGO-01` (AVISO, algoritmo não suporta) disparando corretamente, sem crash no caso ERRO (`selector._explore_cpsat` não-raising)
+
+### Fase 6
+- [x] `RecursoConsumivelCanonical`/`ResumoEstoqueConsumivel` persistidos por skill-04, opt-in (vazios quando nenhum `ReplenishableResource` construído/aplicado — regressão zero)
+- [x] `CuboEstoqueConsumivel`/`CelulaEstoqueConsumivel` + `CuboEstoqueConsumivelBuilder` testados isoladamente (modelo, `test_cubo_estoque_consumivel_models.py`) e via builder (fixture real de skill-04, `test_adr128_f6_cubo_estoque_consumivel_builder.py`)
+- [x] `explorar_estoque_consumiveis` (MCP) e `/cubo-estoque-consumivel/projecao(/contrato)` (REST) expostos, com paridade de convenção de erro com o par de pool
+- [x] Cenários de status `OK`/`AVISO` cobertos por teste de integração fim a fim; `CRITICO` coberto por teste unitário direto do helper (não alcançável end-to-end — ver nota de implementação)
 
 ---
 
