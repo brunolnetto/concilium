@@ -84,6 +84,7 @@ def register(server: FastMCP) -> None:
         horas_dia: int = 8,
         plano_id: str | None = None,
         hipotese: str | None = None,
+        logistica_consumiveis: dict[str, dict[str, float]] | None = None,
     ) -> dict[str, Any]:
         """Cria ou gerencia escopos e planos do projeto.
 
@@ -92,6 +93,10 @@ def register(server: FastMCP) -> None:
         Para entidade="escopo":
           - acao="criar": cria/atualiza um escopo. Requer nome, tipo_obra, localizacao,
             data_inicio, data_termino.
+          - logistica_consumiveis (ADR-128 F5, opcional): capacidade logística real por
+            insumo_id para o cronograma automático considerar estoque de consumíveis
+            (diesel/material) — ex.: {"MA-DIESEL-S10": {"capacidade_armazenamento": 15000,
+            "estoque_inicial": 5000, "taxa_reabastecimento_max": 3000}}.
 
         Para entidade="plano":
           - acao="criar": cria plano no escopo. Requer nome.
@@ -113,6 +118,7 @@ def register(server: FastMCP) -> None:
                     data_termino=data_termino or "",
                     dias_semana=dias_semana,
                     horas_dia=horas_dia,
+                    logistica_consumiveis=logistica_consumiveis,
                 )
             except Exception as e:
                 return {"erro": str(e)}

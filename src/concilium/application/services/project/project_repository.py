@@ -122,6 +122,7 @@ class ProjectHandle(Protocol):
         snapshot_catalogo_id: str = "",
         snapshot_perfil_id: str = "",
         bdi_perfil_id: str | None = None,
+        logistica_consumiveis: dict[str, dict[str, float]] | None = None,
     ) -> Any: ...
 
 

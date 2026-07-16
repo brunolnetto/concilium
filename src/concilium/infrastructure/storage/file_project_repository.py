@@ -310,6 +310,7 @@ class FileProjectHandle(ProjectHandle):
         snapshot_catalogo_id: str = "",
         snapshot_perfil_id: str = "",
         bdi_perfil_id: str | None = None,
+        logistica_consumiveis: dict[str, dict[str, float]] | None = None,
     ) -> Any:
         return self._store.create_escopo(
             escopo_id=escopo_id,
@@ -325,6 +326,7 @@ class FileProjectHandle(ProjectHandle):
             snapshot_catalogo_id=snapshot_catalogo_id,
             snapshot_perfil_id=snapshot_perfil_id,
             bdi_perfil_id=bdi_perfil_id,
+            logistica_consumiveis=logistica_consumiveis,
         )
 
 

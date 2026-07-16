@@ -474,6 +474,7 @@ class ProjectStore:
         snapshot_catalogo_id: str = "",
         snapshot_perfil_id: str = "",
         bdi_perfil_id: str | None = None,
+        logistica_consumiveis: dict[str, dict[str, float]] | None = None,
     ) -> EscopoStore:
         """Cria novo escopo no projeto. Falha se escopo_id já existir."""
         escopo_dir = self.root / "escopos" / escopo_id
@@ -498,6 +499,8 @@ class ProjectStore:
             "snapshot_catalogo_id": snapshot_catalogo_id or pm.get("snapshot_catalogo_id", ""),
             "snapshot_perfil_id": snapshot_perfil_id or pm.get("snapshot_perfil_id", ""),
             "bdi_perfil_id": bdi_perfil_id,
+            # ADR-128 F5: sempre um dict (mesmo vazio) — JSON-serializável de forma estável.
+            "logistica_consumiveis": logistica_consumiveis or {},
             "revisao": 1,
             "criado_em": datetime.now(UTC).isoformat(),
         }

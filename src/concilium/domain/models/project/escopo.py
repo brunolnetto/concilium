@@ -18,6 +18,22 @@ if TYPE_CHECKING:
 StatusPlano = Literal["RASCUNHO", "EM_ANALISE", "APROVADO", "ARQUIVADO"]
 
 
+class LogisticaConsumivelConfig(BaseModel):
+    """Capacidade logística real de UM recurso consumível para este escopo (ADR-128 F5).
+
+    Espelha os campos de ``DisponibilidadeConsumivel`` (dataclass do motor de
+    scheduling) — ``Escopo`` é Pydantic/JSON-serializável (MCP), a conversão para o
+    dataclass do motor acontece no builder (``replenishable_builder.py``), não aqui.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    capacidade_armazenamento: float | None = Field(default=None, ge=0)
+    estoque_inicial: float = Field(default=0.0, ge=0)
+    taxa_reabastecimento_max: float | None = Field(default=None, ge=0)
+    lead_time_reabastecimento_dias: float | None = Field(default=None, ge=0)
+
+
 class Escopo(BaseModel):
     """Unidade de pipeline dentro de um projeto (ADR-031 §D1).
 
@@ -66,6 +82,10 @@ class Escopo(BaseModel):
     snapshot_perfil_id: str = ""
     bdi_perfil_id: str | None = None
     revisao: int = Field(default=1, ge=1)
+    # ADR-128 F5: capacidade logística real por insumo_id (ex.: "MA-DIESEL-S10" → comboio).
+    # None (default) preserva o comportamento anterior — nenhum ReplenishableResource é
+    # construído a partir de dado de projeto quando ausente (zero regressão, ADR-128 D1).
+    logistica_consumiveis: dict[str, LogisticaConsumivelConfig] | None = None
 
 
 class PlanoTrabalho(BaseModel):

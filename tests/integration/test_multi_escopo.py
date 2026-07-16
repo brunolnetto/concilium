@@ -92,6 +92,62 @@ class TestEscopos:
         assert m["tipo_obra"] == "pavimentacao"
         assert m["status"] == "RASCUNHO"
 
+    def test_criar_escopo_com_logistica_consumiveis_e_persistido_e_recarregado(self, projeto_novo):
+        """ADR-128 F5: logistica_consumiveis passado em create_escopo é persistido no
+        meta.json e reconstituído por EscopoStore.to_escopo() como
+        LogisticaConsumivelConfig — prova a plumbing de ponta a ponta, independente
+        do scheduler."""
+        projeto_novo.create_escopo(
+            escopo_id="lote-diesel",
+            nome="Lote Diesel",
+            tipo_obra="terraplenagem",
+            localizacao="Aracoiaba, CE",
+            coordenadas_lat=-4.36,
+            coordenadas_lng=-38.81,
+            data_inicio="2026-06-01",
+            data_termino="2026-12-31",
+            logistica_consumiveis={
+                "MA-DIESEL-S10": {
+                    "capacidade_armazenamento": 15000.0,
+                    "estoque_inicial": 5000.0,
+                    "taxa_reabastecimento_max": 3000.0,
+                }
+            },
+        )
+        es = projeto_novo.escopo("lote-diesel")
+        assert es.meta["logistica_consumiveis"] == {
+            "MA-DIESEL-S10": {
+                "capacidade_armazenamento": 15000.0,
+                "estoque_inicial": 5000.0,
+                "taxa_reabastecimento_max": 3000.0,
+            }
+        }
+        escopo = es.to_escopo()
+        assert escopo is not None
+        cfg = escopo.logistica_consumiveis["MA-DIESEL-S10"]
+        assert cfg.capacidade_armazenamento == 15000.0
+        assert cfg.estoque_inicial == 5000.0
+        assert cfg.taxa_reabastecimento_max == 3000.0
+
+    def test_criar_escopo_sem_logistica_consumiveis_e_regressao_zero(self, projeto_novo):
+        """Sem logistica_consumiveis, o meta persiste dict vazio e to_escopo() retorna
+        None (regressão zero — mesmo comportamento anterior a este campo)."""
+        projeto_novo.create_escopo(
+            escopo_id="lote-sem-diesel",
+            nome="Lote sem diesel",
+            tipo_obra="terraplenagem",
+            localizacao="Aracoiaba, CE",
+            coordenadas_lat=-4.36,
+            coordenadas_lng=-38.81,
+            data_inicio="2026-06-01",
+            data_termino="2026-12-31",
+        )
+        es = projeto_novo.escopo("lote-sem-diesel")
+        assert es.meta["logistica_consumiveis"] == {}
+        escopo = es.to_escopo()
+        assert escopo is not None
+        assert escopo.logistica_consumiveis == {}
+
     def test_criar_escopo_duplicado_lanca_excecao(self, projeto_novo):
         projeto_novo.create_escopo(
             escopo_id="lote-a",

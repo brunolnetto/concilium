@@ -382,6 +382,7 @@ class StorageProjectHandle:
         snapshot_catalogo_id: str = "",
         snapshot_perfil_id: str = "",
         bdi_perfil_id: str | None = None,
+        logistica_consumiveis: dict[str, dict[str, float]] | None = None,
     ) -> Any:
         """ADR-056 §A3 — cria escopo via BlobStoragePort (ADR-031 via cloud storage).
 
@@ -399,6 +400,8 @@ class StorageProjectHandle:
             "snapshot_catalogo_id": snapshot_catalogo_id,
             "snapshot_perfil_id": snapshot_perfil_id,
             "bdi_perfil_id": bdi_perfil_id,
+            # ADR-128 F5: sempre um dict (mesmo vazio) — JSON-serializável de forma estável.
+            "logistica_consumiveis": logistica_consumiveis or {},
             "criado_em": datetime.now(UTC).isoformat(),
         }
         self.write_json(f"escopos/{escopo_id}/meta.json", escopo_meta)
