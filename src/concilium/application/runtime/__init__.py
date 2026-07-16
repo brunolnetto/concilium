@@ -87,12 +87,22 @@ class Runtime(ConfigMixin, CatalogMixin, InputsMixin, ExecutionMixin):
         return [dep for dep in dep_skills if dep not in executed_ok]
 
     def create_snapshots(self, project: ProjectStore) -> dict[str, str]:
+        """Cria snapshots imutáveis de jurisdição e perfil.
+
+        ADR-066 Fase 8: o catálogo NÃO é mais copiado integralmente aqui — CPUs são
+        resolvidas sob demanda via `resolve_cpu()` (catalogo_base) e o catálogo por
+        skill via `_load_resolved_catalogo()`/`resolved_catalog.json` (Fase 4).
+        Retorna o `catalogo_id` real (não mais um hash de conteúdo) para preencher
+        `snapshot_catalogo_id` como referência de proveniência. Projetos antigos com
+        `snapshots/catalogo-*.json` em disco continuam sendo lidos normalmente
+        (fallback de `resolve_cpu`) — só a escrita foi removida.
+        """
         snaps = project.snapshots
         contexto = self.load_contexto(project.meta["contexto_id"])
         result: dict[str, str] = {}
         result["jurisdicao"] = snaps.store("jurisdicao", self.load_jurisdicao(contexto.jurisdicao_id))
         result["perfil"] = snaps.store("perfil", self.load_perfil(contexto.perfil_id))
-        result["catalogo"] = snaps.store("catalogo", self.load_catalogo(contexto.catalogo_id))
+        result["catalogo"] = contexto.catalogo_id
         return result
 
     def run_pipeline(

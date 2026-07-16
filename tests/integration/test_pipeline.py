@@ -61,15 +61,21 @@ class TestPipelineEndToEnd:
         runtime: Runtime,
         projeto_terraplenagem: ProjectStore,
     ):
-        """Init cria projeto, snapshots dedupedam por hash."""
+        """Init cria projeto; snapshots de jurisdicao/perfil dedupedam por hash.
+
+        ADR-066 Fase 8: catálogo não é mais copiado integralmente — `snaps["catalogo"]`
+        é o catalogo_id real (referência), não mais um arquivo de conteúdo gravado.
+        """
         snaps = runtime.create_snapshots(projeto_terraplenagem)
         assert "jurisdicao" in snaps
         assert "perfil" in snaps
-        assert "catalogo" in snaps
-        # Snapshots gravados em disco
+        assert snaps["catalogo"]  # id de referência, não um hash de conteúdo gravado em disco
+
+        # Snapshots de jurisdicao/perfil continuam gravados em disco
         snap_dir = projeto_terraplenagem.root / "snapshots"
         assert any(snap_dir.glob("perfil-*.json"))
-        assert any(snap_dir.glob("catalogo-*.json"))
+        # Catálogo integral NÃO é mais copiado (o pedido original: sob demanda, não bulk copy)
+        assert not any(snap_dir.glob("catalogo-*.json"))
 
         # Re-criar = deduplicação (mesmo número de arquivos)
         before = len(list(snap_dir.glob("*.json")))

@@ -74,15 +74,90 @@ def _build_catalog_from_snapshot(cat: dict[str, Any]) -> dict[str, Any]:
     return catalog
 
 
-def _enrich_payload_catalog(payload: dict[str, Any], project: Any) -> None:
+def _load_resolved_catalog_items(project: Any) -> dict[str, Any] | None:
+    """ADR-066 Fase 8: catálogo 'sob demanda', filtrado por CPU usada na EAP, persistido por versão."""
+    load_resolved = getattr(project, "load_resolved_catalog", None)
+    if not callable(load_resolved):
+        return None
+    try:
+        resolved = load_resolved()
+    except Exception:
+        return None
+    items = resolved.get("items") if isinstance(resolved, dict) else None
+    if isinstance(items, dict) and (items.get("cpus") or items.get("insumos")):
+        return items
+    return None
+
+
+def _load_snapshot_catalog(project: Any) -> dict[str, Any] | None:
+    """Retrocompat: projetos antigos que ainda têm o snapshot integral em disco."""
     try:
         import json as _json2
         from pathlib import Path
 
         snaps_dir: Path = Path(project.root).resolve() / "snapshots"
         cat_files = sorted(snaps_dir.glob("catalogo-*.json"))
-        if cat_files:
-            cat = _json2.loads(cat_files[-1].read_text(encoding="utf-8"))
+        if not cat_files:
+            return None
+        return _json2.loads(cat_files[-1].read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _load_live_catalog(project: Any) -> dict[str, Any] | None:
+    """ADR-066 Fase 8: sem snapshot integral nem resolved_catalog.json, monta o catálogo a
+    partir do master ao vivo (config/catalogos/{catalogo_base}/) — a mesma fonte que
+    resolve_cpu() já usa para resolução sob demanda por CPU."""
+    try:
+        import json as _json3
+        from pathlib import Path
+
+        catalogo_base = (project.meta or {}).get("catalogo_base")
+        if not catalogo_base:
+            return None
+        concilium_root = Path(project.root).resolve().parents[1]
+        cat_dir = concilium_root / "config" / "catalogos" / catalogo_base
+
+        cpus: list[Any] = []
+        cpu_dir = cat_dir / "cpus"
+        if cpu_dir.exists():
+            cpus = [_json3.loads(f.read_text(encoding="utf-8")) for f in cpu_dir.glob("*.json")]
+        else:
+            aggregate = cat_dir / "cpus.json"
+            if aggregate.exists():
+                data = _json3.loads(aggregate.read_text(encoding="utf-8"))
+                cpus = list(data.get("cpus", data)) if isinstance(data, dict) else list(data)
+
+        insumos: list[Any] = []
+        insumos_dir = cat_dir / "insumos"
+        if insumos_dir.exists():
+            for f in insumos_dir.glob("*.json"):
+                data = _json3.loads(f.read_text(encoding="utf-8"))
+                insumos.extend(data if isinstance(data, list) else [data])
+
+        producoes: list[Any] = []
+        for dname in ("producoes", "produtividades"):
+            p_dir = cat_dir / dname
+            if p_dir.exists():
+                producoes.extend(_json3.loads(f.read_text(encoding="utf-8")) for f in p_dir.glob("*.json"))
+
+        if not cpus and not insumos:
+            return None
+        return {"cpus": cpus, "insumos": insumos, "produtividades": producoes}
+    except Exception:
+        return None
+
+
+def _resolve_benchmark_catalog_source(project: Any) -> dict[str, Any] | None:
+    """Ordem de preferência (ADR-066 Fase 8): resolved_catalog.json (sob demanda, por
+    versão) → snapshot integral legado (retrocompat) → catálogo master ao vivo."""
+    return _load_resolved_catalog_items(project) or _load_snapshot_catalog(project) or _load_live_catalog(project)
+
+
+def _enrich_payload_catalog(payload: dict[str, Any], project: Any) -> None:
+    try:
+        cat = _resolve_benchmark_catalog_source(project)
+        if cat:
             catalog = _build_catalog_from_snapshot(cat)
             if catalog:
                 payload["catalog"] = catalog
@@ -171,13 +246,8 @@ def _cp_embed_catalog_if_needed(
     ref_to_save = dict(benchmark_reference)
     if not ref_to_save.get("catalog"):
         try:
-            import json as _jcat
-            from pathlib import Path
-
-            snaps_dir = Path(project.root).resolve() / "snapshots"
-            cat_files = sorted(snaps_dir.glob("catalogo-*.json"))
-            if cat_files:
-                cat = _jcat.loads(cat_files[-1].read_text(encoding="utf-8"))
+            cat = _resolve_benchmark_catalog_source(project)
+            if cat:
                 catalog = _build_catalog_from_snapshot(cat)
                 if catalog:
                     ref_to_save["catalog"] = catalog

@@ -292,3 +292,22 @@ Um overlay pode marcar um item como `op: "disable"` — o item existe no master 
 - [x] Script `scripts/migrate_overlays.py`: converte `cpus_override.json` → `cpus_overlay.json`
 - [x] Teste de integração com 3 camadas: item no master, override na jurisdição, override no projeto
 - [x] 0 regressões na suite existente
+
+### Fase 8 — Fechamento: remoção da escrita do snapshot integral (2026-07-15)
+
+A Alternativa A1 ("manter snapshot integral por projeto") foi rejeitada desde a redação
+original deste ADR, e a Fase 4 já entregou o substituto (`resolved_catalog.json`, compacto
+e filtrado por CPU usada na EAP). Apesar disso, `Runtime.create_snapshots()` continuava
+gravando incondicionalmente uma cópia integral do catálogo mestre a cada criação de
+projeto — um resíduo de implementação nunca removido.
+
+- [x] `create_snapshots()` não grava mais o conteúdo do catálogo em disco; retorna
+  `contexto.catalogo_id` (referência real) em vez de um hash de conteúdo órfão
+- [x] `resolve_cpu()` (ambas implementações) **não foi alterado** — o fallback de leitura
+  do snapshot integral permanece intacto para projetos existentes com
+  `snapshots/catalogo-*.json` em disco (retrocompatibilidade exigida pela rejeição da
+  Alternativa A4)
+- [x] `_enrich_payload_catalog`/`_cp_embed_catalog_if_needed` (uso de catálogo em
+  `benchmark_reference.json`) passam a preferir `resolved_catalog.json`, com fallback
+  para snapshot legado e, por fim, para o catálogo master ao vivo — preservando a
+  funcionalidade de `get_benchmark_reference()` sem depender do snapshot removido
