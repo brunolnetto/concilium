@@ -757,14 +757,6 @@
       (equipamento parado, não desmobilizado).
     \end{block}
     \column{0.4\textwidth}
-    \begin{exampleblock}{Com pool}
-      \begin{itemize}\scriptsize
-        \item 1$\times$ mob/demob por cadeia
-        \item $\kappa c_{\text{eq}} n_{\text{standby}}$
-        \item MO retido/dispensado
-      \end{itemize}
-    \end{exampleblock}
-    \vspace{4pt}
     \begin{alertblock}{Sem pool}
       \begin{itemize}\scriptsize
         \item $n_{\text{ativ}}\times$ mob/demob
@@ -772,6 +764,14 @@
         \item perda de aprendizado
       \end{itemize}
     \end{alertblock}
+    \vspace{4pt}
+    \begin{exampleblock}{Com pool}
+      \begin{itemize}\scriptsize
+        \item 1$\times$ mob/demob por cadeia
+        \item $\kappa c_{\text{eq}} n_{\text{standby}}$
+        \item MO retido/dispensado
+      \end{itemize}
+    \end{exampleblock}
   \end{columns}
 \end{frame}
 
@@ -824,7 +824,9 @@
       1. Atrasa a atividade consumidora até $E_t \geq 0$.\\
       2. Repropaga precedências: empurra sucessores no DAG
       (nunca antecipa).\\
-      Os dois passos alternam até ponto fixo (máx.\ 10 rounds).
+      Os dois passos alternam até ponto fixo (máx.\ 10 rounds).\\
+      \textbf{Contabilização} (resumo por recurso $+$ cubo semanal $+$
+      MCP/REST) em paridade com pool.
     \end{exampleblock}
   \end{columns}
 \end{frame}
@@ -959,9 +961,9 @@
     \end{block}
     \column{0.46\textwidth}
     \begin{block}{Métricas gerenciais}
-      \scriptsize Razão indireto/direto: $\tilde{C}^I/\tilde{C}^D$\\
-      Participação do indireto: $\tilde{C}^I/(\tilde{C}^D+\tilde{C}^I)$\\
-      Margem de operacionalização: $(V-\tilde{C})/\tilde{C}$
+      \scriptsize Razão indireto/direto: $\frac{\tilde{C}^I}{\tilde{C}^D}$\\
+      Participação do indireto: $\frac{\tilde{C}^I}{\tilde{C}^D+\tilde{C}^I}$\\
+      Margem de operacionalização: $\frac{V-\tilde{C}}{\tilde{C}}$
     \end{block}
     \vspace{4pt}
     \begin{exampleblock}{\small Memorial de cálculo}
@@ -1249,12 +1251,11 @@
     % H1
     \node[rolebox] (ti1) {TI};
     \node[act,right=0.35cm of ti1]  (a1) {Cria usuário + envia\\config.\ de acesso};
-    \node[rolebox,right=0.35cm of a1]  (op1) {Comercial};
+    \node[rolebox,right=0.35cm of a1]  (op1) {Usuário};
     \node[act,right=0.35cm of op1]  (b1) {Conecta Claude Desktop\\inicia sessão};
     \draw[arr2] (ti1) -- (a1);
     \draw[hoff] (a1) -- node[above,font=\tiny\itshape,mlorange]{H1} (op1);
     \draw[arr2] (op1) -- (b1);
-
     % H2
     \node[rolebox,below=0.6cm of ti1] (op2) {Comercial};
     \node[act,right=0.35cm of op2]  (a2) {Roda a estimativa\\de preço (RFI)};
@@ -1306,8 +1307,7 @@
         \item \textbf{Trilha auditável} do salário ao preço de venda ---
           e preços \emph{concluídos} por composição, não digitados
         \item \textbf{Tempo e recursos otimizados juntos}: RCPSP + pool
-          de equipes + estoque de materiais (corte\arr aterro,
-          usina\arr pista)
+          de equipes + estoque de materiais
         \item \textbf{Governança por construção}: quatro olhos,
           versionamento e papéis --- não por procedimento em papel
       \end{enumerate}
@@ -1318,9 +1318,7 @@
         \item Recotações sinalizadas no próprio catálogo
           (alertas de preço defasado já gravados no dado)
         \item Piloto produtor-consumidor com dados de campo
-          (confirmar capacidade real da usina)
-        \item Estoque de consumíveis também no dashboard
-          (mesma config de projeto do cronograma, sem heurística)
+          (confirmar capacidade real da obra)
       \end{itemize}
     \end{block}
     \vspace{6pt}
