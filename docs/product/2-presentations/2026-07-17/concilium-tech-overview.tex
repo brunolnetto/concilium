@@ -1066,11 +1066,11 @@
     \end{exampleblock}
     \vspace{4pt}
     \begin{block}{\small Em aberto}
-      \tiny IBS varia por jurisdição de destino (estado
-      \emph{e} município) --- hoje resolvemos só por UF
-      (\texttt{Escopo.jurisdicao\_id}); ISS já é municipal hoje (LC
-      116/2003), mesma lacuna, não nova. \emph{Split payment}: já
-      modelado como sinalizador, sem impacto em fluxo de caixa ainda.
+      \tiny UF (\texttt{Escopo.jurisdicao\_id}) já influencia o BDI
+      calculado --- corrigido nesta entrega (era gap de wiring, não do
+      modelo). Granularidade municipal (IBS/ISS por município, LC
+      116/2003) segue fora de escopo. \emph{Split payment}:
+      sinalizador, sem impacto no fluxo de caixa ainda.
     \end{block}
   \end{columns}
 \end{frame}
