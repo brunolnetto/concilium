@@ -153,3 +153,67 @@ def register(server: FastMCP) -> None:
                 "invariantes_ok": proj["invariantes_ok"],
             }
         )
+
+    @server.tool()
+    @permission("project:read")
+    def explorar_estoque_consumiveis(
+        project_id: str,
+        face: str = "resumo_por_recurso",
+        escopo_id: str | None = None,
+        plano_id: str | None = None,
+        granularidade: str = "mes",
+        resource_id: str | None = None,
+    ) -> dict[str, Any]:
+        """ADR-128 F6: Explora a contabilização de estoque de recursos consumíveis
+        (diesel/material), em paridade com `explorar_pool_recursos` para pool.
+
+        Faces: resumo_por_recurso | estoque_temporal | fluxo_componente | causa_atraso.
+        """
+        from concilium.application.services.analytics.cubo_estoque_consumivel_projection import (
+            resolve_cubo_estoque_consumivel_projection,
+        )
+        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
+
+        store = _project(project_id)
+        try:
+            eid = _resolve_escopo_id(store, escopo_id)
+            es = store.escopo(eid)
+            active = es.active_plan()
+            if plano_id is not None:
+                pid = plano_id
+            elif active is not None:
+                pid = active.plano_id
+            else:
+                return {"erro": "Escopo sem plano ativo. Execute disparar_pipeline primeiro."}
+            canonical = es.plan(pid).load_canonical()
+        except Exception as e:
+            return {"erro": str(e)}
+
+        if not canonical:
+            return {"erro": "Plano sem dados canônicos. Execute disparar_pipeline primeiro."}
+        if not (
+            getattr(canonical, "recursos_consumiveis", None) or getattr(canonical, "resumo_estoque_consumiveis", None)
+        ):
+            return {
+                "erro": "Sem estoque de consumíveis neste plano (nenhum ReplenishableResource construído em skill-04)."
+            }
+
+        proj = resolve_cubo_estoque_consumivel_projection(
+            canonical,
+            face=face,
+            granularidade=granularidade,
+            resource_id=resource_id,
+        )
+        return _wrap_response(
+            {
+                "project_id": project_id,
+                "escopo_id": eid,
+                "plano_id": pid,
+                "face": proj["face"],
+                "natureza": proj["natureza"],
+                "narrativa": proj["narrativa"],
+                "rows": proj["rows"],
+                "totais": proj["totais"],
+                "invariantes_ok": proj["invariantes_ok"],
+            }
+        )

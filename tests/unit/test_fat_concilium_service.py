@@ -1447,6 +1447,49 @@ class TestGetCuboPoolProjectionWithCanonical:
         assert result["face"] == "instancia_ciclo_vida"
 
 
+# ─── get_cubo_estoque_consumivel_projection with real canonical (ADR-128 F6) ──
+
+
+class TestGetCuboEstoqueConsumivelProjectionWithCanonical:
+    def test_returns_projection_when_canonical_exists(self):
+        from unittest.mock import patch
+
+        svc, deps = _make_svc()
+        canonical = MagicMock()
+        project = _make_project_mock()
+        project.load_canonical.return_value = canonical
+        deps.repository.get_project.return_value = project
+
+        mock_proj = {"face": "resumo_por_recurso", "rows": [], "version": "v1"}
+        with patch(
+            "concilium.application.services.analytics.cubo_estoque_consumivel_projection."
+            "resolve_cubo_estoque_consumivel_projection",
+            return_value=mock_proj,
+        ):
+            result = svc.get_cubo_estoque_consumivel_projection("p1", face="resumo_por_recurso")
+        assert result["face"] == "resumo_por_recurso"
+
+    def test_returns_empty_projection_when_canonical_none(self):
+        svc, deps = _make_svc()
+        project = _make_project_mock()
+        project.load_canonical.return_value = None
+        deps.repository.get_project.return_value = project
+
+        result = svc.get_cubo_estoque_consumivel_projection("p1")
+        assert result["rows"] == []
+        assert result["invariantes_ok"] is True
+
+
+# ─── get_cubo_estoque_consumivel_projection_contract (static, ADR-128 F6) ─────
+
+
+class TestGetCuboEstoqueConsumivelProjectionContract:
+    def test_returns_dict(self):
+        result = ConciliumService.get_cubo_estoque_consumivel_projection_contract()
+        assert isinstance(result, dict)
+        assert "faces" in result
+
+
 # ─── simulate/validate mobilizacao_policy (lines 936, 939) ───────────────────
 
 

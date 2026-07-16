@@ -60,6 +60,12 @@ class _FakeService:
     def get_cubo_pool_projection_contract(self, **kw):
         return {"pool_contratos": []}
 
+    def get_cubo_estoque_consumivel_projection(self, project_id, version=None, **kw):
+        return {"estoque_consumivel": []}
+
+    def get_cubo_estoque_consumivel_projection_contract(self, **kw):
+        return {"estoque_consumivel_contratos": []}
+
 
 class _ErrorService(_FakeService):
     def compare_versions(self, *a, **kw):
@@ -192,6 +198,10 @@ class TestCuboRoutes:
         resp = _fake_client.get("/api/projects/proj-1/cubo-pool/projecao")
         assert resp.status_code == 200
 
+    def test_cubo_estoque_consumivel_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/cubo-estoque-consumivel/projecao")
+        assert resp.status_code == 200
+
 
 class TestAnalysisErrorPaths:
     """Cover remaining uncovered lines: compare_query, download_artifact, cubo projecao contrato,
@@ -230,3 +240,25 @@ class TestAnalysisErrorPaths:
     def test_cubo_pool_projecao_contrato_happy(self, _fake_client):
         resp = _fake_client.get("/api/projects/proj-1/cubo-pool/projecao/contrato")
         assert resp.status_code == 200
+
+    def test_cubo_estoque_consumivel_projecao_contrato_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/cubo-estoque-consumivel/projecao/contrato")
+        assert resp.status_code == 200
+
+    def test_cubo_estoque_consumivel_not_found(self):
+        class FNFSvc(_FakeService):
+            def get_cubo_estoque_consumivel_projection(self, *a, **kw):
+                raise FileNotFoundError("no")
+
+        c = _client(FNFSvc())
+        resp = c.get("/api/projects/proj-1/cubo-estoque-consumivel/projecao")
+        assert resp.status_code == 404
+
+    def test_cubo_estoque_consumivel_bad_request(self):
+        class ValueErrSvc(_FakeService):
+            def get_cubo_estoque_consumivel_projection(self, *a, **kw):
+                raise ValueError("face inválida")
+
+        c = _client(ValueErrSvc())
+        resp = c.get("/api/projects/proj-1/cubo-estoque-consumivel/projecao")
+        assert resp.status_code == 400

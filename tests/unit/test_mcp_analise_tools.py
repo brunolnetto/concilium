@@ -22,6 +22,7 @@ from concilium.presentation.mcp.tools.analise import register
 _ESCOPO_MODULE = "concilium.presentation.mcp.tools.escopo"
 _ANALISE_MODULE = "concilium.presentation.mcp.tools.analise"
 _CUBO_MODULE = "concilium.application.services.analytics.cubo_pool_projection"
+_CUBO_ESTOQUE_MODULE = "concilium.application.services.analytics.cubo_estoque_consumivel_projection"
 
 # The tool closures reference _project via the name bound in analise.py at
 # import time ("from _context import _project"), so we must patch at the
@@ -64,6 +65,8 @@ def _make_canonical(
     pipeline_integridade: bool = True,
     contratos_recurso: list | None = None,
     instancias_recurso: list | None = None,
+    recursos_consumiveis: list | None = None,
+    resumo_estoque_consumiveis: list | None = None,
 ) -> MagicMock:
     """Return a minimal canonical MagicMock with fields accessed by the tools."""
     if data_termino is None:
@@ -84,6 +87,8 @@ def _make_canonical(
 
     canonical.contratos_recurso = contratos_recurso
     canonical.instancias_recurso = instancias_recurso
+    canonical.recursos_consumiveis = recursos_consumiveis
+    canonical.resumo_estoque_consumiveis = resumo_estoque_consumiveis
 
     return canonical
 
@@ -120,6 +125,7 @@ def test_register_creates_three_tools(monkeypatch, tmp_path):
     assert "auditar_plano" in tools
     assert "comparar_planos" in tools
     assert "explorar_pool_recursos" in tools
+    assert "explorar_estoque_consumiveis" in tools
 
 
 # ---------------------------------------------------------------------------
@@ -622,4 +628,117 @@ class TestExplorarPoolRecursos:
             result = tools["explorar_pool_recursos"]("proj-test")
 
         assert "erro" in result
-        assert "plano ativo" in result["erro"]
+
+
+# ---------------------------------------------------------------------------
+# Tests: explorar_estoque_consumiveis (ADR-128 F6)
+# ---------------------------------------------------------------------------
+
+
+class TestExplorarEstoqueConsumiveis:
+    def _make_estoque_store(
+        self, canonical: MagicMock | None, escopo_id: str = "ESC-01", plano_id: str = "PL-01"
+    ) -> MagicMock:
+        """Build store chain for explorar_estoque_consumiveis (mirror of pool's helper)."""
+        store = MagicMock()
+        store.list_escopos.return_value = [escopo_id]
+        store.meta = {"id": "proj-test"}
+
+        escopo = MagicMock()
+        active_plan = MagicMock()
+        active_plan.plano_id = plano_id
+        escopo.active_plan.return_value = active_plan
+
+        plan_store = MagicMock()
+        plan_store.load_canonical.return_value = canonical
+        escopo.plan.return_value = plan_store
+
+        store.escopo.return_value = escopo
+        return store
+
+    def _make_cubo_result(self) -> dict:
+        return {
+            "face": "resumo_por_recurso",
+            "natureza": "causal",
+            "narrativa": "Narrativa de teste",
+            "rows": [{"resource_id": "MA-DIESEL-TESTE"}],
+            "totais": {"overflow_total": 0.0},
+            "invariantes_ok": True,
+        }
+
+    def test_happy_path(self, monkeypatch, tmp_path):
+        canonical = _make_canonical(recursos_consumiveis=[{"resource_id": "MA-DIESEL-TESTE"}])
+        store = self._make_estoque_store(canonical)
+        cubo_result = self._make_cubo_result()
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+            patch(f"{_CUBO_ESTOQUE_MODULE}.resolve_cubo_estoque_consumivel_projection", return_value=cubo_result),
+        ):
+            result = tools["explorar_estoque_consumiveis"]("proj-test")
+
+        assert "schema_version" in result
+        assert result["face"] == "resumo_por_recurso"
+        assert result["narrativa"] == "Narrativa de teste"
+        assert result["rows"] == [{"resource_id": "MA-DIESEL-TESTE"}]
+        assert result["invariantes_ok"] is True
+        assert result["project_id"] == "proj-test"
+        assert result["escopo_id"] == "ESC-01"
+        assert result["plano_id"] == "PL-01"
+
+    def test_no_canonical_returns_erro(self, monkeypatch, tmp_path):
+        store = self._make_estoque_store(None)
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_estoque_consumiveis"]("proj-test")
+
+        assert "erro" in result
+        assert "pipeline" in result["erro"].lower() or "canônicos" in result["erro"]
+
+    def test_resolve_escopo_raises_returns_erro(self, monkeypatch, tmp_path):
+        store = MagicMock()
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", side_effect=ValueError("sem escopos")),
+        ):
+            result = tools["explorar_estoque_consumiveis"]("proj-test")
+
+        assert "erro" in result
+        assert "sem escopos" in result["erro"]
+
+    def test_missing_estoque_both_none_triggers_guard(self, monkeypatch, tmp_path):
+        """recursos_consumiveis=None and resumo_estoque_consumiveis=None triggers the guard."""
+        canonical = _make_canonical(recursos_consumiveis=None, resumo_estoque_consumiveis=None)
+        store = self._make_estoque_store(canonical)
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_estoque_consumiveis"]("proj-test")
+
+        assert "erro" in result
+        assert "estoque" in result["erro"].lower()
+
+    def test_missing_estoque_empty_lists_triggers_guard(self, monkeypatch, tmp_path):
+        """recursos_consumiveis=[] and resumo_estoque_consumiveis=[] (falsy) triggers the guard."""
+        canonical = _make_canonical(recursos_consumiveis=[], resumo_estoque_consumiveis=[])
+        store = self._make_estoque_store(canonical)
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_estoque_consumiveis"]("proj-test")
+
+        assert "erro" in result

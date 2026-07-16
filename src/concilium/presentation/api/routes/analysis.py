@@ -302,3 +302,48 @@ def get_cubo_pool_projecao_contrato(
 ) -> dict[str, Any]:
     _ = project_id
     return service.get_cubo_pool_projection_contract()
+
+
+@router.get(
+    "/{project_id}/cubo-estoque-consumivel/projecao",
+    summary="ADR-128 F6: Explore consumable-resource stock accounting (resumo/temporal/fluxo/causa faces)",
+)
+def get_cubo_estoque_consumivel_projecao(
+    project_id: str,
+    version: str | None = Query(None),
+    face: Literal[
+        "resumo_por_recurso",
+        "estoque_temporal",
+        "fluxo_componente",
+        "causa_atraso",
+    ] = Query("resumo_por_recurso"),
+    granularidade: Literal["semana", "mes", "trimestre", "ano"] = Query("mes"),
+    resource_id: str | None = Query(None),
+    top_n: int = Query(300, ge=1, le=2000),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.get_cubo_estoque_consumivel_projection(
+            project_id,
+            version=version,
+            face=face,
+            granularidade=granularidade,
+            resource_id=resource_id,
+            top_n=top_n,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/{project_id}/cubo-estoque-consumivel/projecao/contrato",
+    summary="ADR-128 F6: Get consumable-resource stock projection contract (faces x natureza x granularidade)",
+)
+def get_cubo_estoque_consumivel_projecao_contrato(
+    project_id: str,
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    _ = project_id
+    return service.get_cubo_estoque_consumivel_projection_contract()
