@@ -79,6 +79,18 @@ class TestSchedulerStartStop:
         assert len(calls) >= 2
 
 
+class TestGetDraftDigestSchedulerSingleton:
+    def test_returns_same_instance(self):
+        import concilium.application.services.catalog.draft_digest_scheduler as mod
+
+        try:
+            a = mod.get_draft_digest_scheduler()
+            b = mod.get_draft_digest_scheduler()
+            assert a is b
+        finally:
+            mod._scheduler = None
+
+
 class TestSchedulerDefaultInterval:
     def test_default_interval_derives_from_settings(self, monkeypatch):
         monkeypatch.setenv("CONCILIUM__CATALOG_DIGEST_INTERVAL_HOURS", "6")
