@@ -1,6 +1,6 @@
 # ADR-139 — Origem de Materiais Consumíveis (Aquisição Externa × Geração Interna) e Padrão Produtor-Consumidor entre Atividades
 
-**Status:** ⚠️ Parcialmente Implementado _(F1–F4 ✅, incl. backfill, classificação de origem completa — 45 externos com 2 decisões revisadas por dossiê, 3 gerados, 49 placeholders AGIS —, enriquecimento produtor-consumidor dos dois catálogos com justificativas normativas DNIT; pende apenas F5 — integração do pipeline skill-04 + UI, ver Plano de Implementação)_
+**Status:** ⚠️ Parcialmente Implementado _(F1–F4 ✅, incl. backfill, classificação de origem completa — 45 externos com 2 decisões revisadas por dossiê, 3 gerados, 49 placeholders AGIS —, enriquecimento produtor-consumidor dos dois catálogos com justificativas normativas DNIT; F5 ✅ pipeline (integração real no skill-04, ver ADR-128 F5) — pende apenas F5 (UI: `tanque_sugerido`/dashboard), ver Plano de Implementação)_
 **Data:** 2026-07-14
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-128 (disponibilidade de recursos consumíveis — `DisponibilidadeConsumivel`/`ReplenishableResource`), ADR-138 §D7 (nota de design que antecipou esta ADR), ADR-030 (`MaterialEquipe`), ADR-053 (separação CPU × Produtividade), ADR-130 (grafo de sinergia — `precondicao` de material), ADR-129 (cotação por proximidade geográfica)
@@ -151,7 +151,8 @@ estoque[t] = estoque[t-1] + reabastecimento_externo[t] + producao_interna[t] −
 | F3 — Scheduler | `ReplenishableResource.producao_por_semana`; termo de produção em `project_estoque_semanal`; VAL-ESTOQUE-PROD-01 (fail-loud em `CpSatScheduler.schedule`); VAL-ESTOQUE-CAP-01 (AVISO — `project_overflow_semanal`/`violation_estoque_acima_capacidade`); integração no laço de ponto fixo com teste de convergência | ✅ Implementado |
 | F4 — Builder + piloto + filtros de preço | `build_replenishable_resources` (`application/scheduling/replenishable_builder.py`, aceita modelos e dicts de bundle) — **fecha também a lacuna da ADR-128 F4** ("sem fonte real de projeto/escopo": nenhum código de produção construía `ReplenishableResource`); piloto corte→aterro em `rfi-r02` com dado real (`MA-SOLO-ESCAVADO-3CAT` GERACAO_INTERNA + `materiais_gerados` na escavação 3ª cat 142,16 m³/h + consumo `bom_convertido` no corpo de aterro 214,92 m³/h — consumidora mais rápida que produtora, delay verificado no CP-SAT de ponta a ponta); `price_trend.py` exclui `GERACAO_INTERNA`; VAL-INS-VAL-01 isenta material gerado de "preço zerado" (preço 0.0 é a convenção D1, não dado faltante) | ✅ Implementado |
 | F4 — Reescopo cubo/cotação (nota) | **Cubo**: propagar `origem_material` até `CelulaAnalitica` criaria campo morto — o builder do cubo agrega custo mensal por categoria sem `insumo_id` nas células, e material gerado tem custo de aquisição 0 (não gera célula de custo); adiar até existir fonte de dado real, em vez de repetir o anti-padrão "campo morto" que a ADR-128 diagnosticou. **Cotação ADR-129**: verificado que é exclusiva de diesel (`geo_diesel_resolver.py`) — o filtro de origem não se aplica lá; o ponto real de análise de preço de MATERIAL é o `price_trend`, já filtrado | ✅ Decidido (reescopo) |
-| F5 — Pipeline skill-04 + UI | Skill-04 hoje agenda via `SerialScheduler` sem consumíveis; adotar `CpSatScheduler` + `build_replenishable_resources` no pipeline real (rcpsp_spec não referencia consumíveis) e, então, projeção de estoque de material gerado na UI a partir de `project_estoque_semanal` (não do cubo — estoque é grandeza física do schedule, não custo); inclui fechar o gap pré-existente do `tanque_sugerido` (call-site nunca passa `disponibilidade`) | ⏳ Pendente — depende de decisão de pipeline (ADR-128 F2/F4 herdada) |
+| F5 — Pipeline skill-04 | `selector.py`/skill-04 agora constroem `ReplenishableResource` (via `build_replenishable_resources`, incl. o pareamento produtor-consumidor desta ADR) e passam para `CpSatScheduler.schedule()` no pipeline real — ver ADR-128 F5 para o detalhe completo (config de projeto, relatório causal, testes) | ✅ Implementado (2026-07-15, ver ADR-128 F5) |
+| F5 — UI (dashboard) | Projeção de estoque de material gerado na UI a partir de `project_estoque_semanal` (não do cubo — estoque é grandeza física do schedule, não custo); inclui fechar o gap pré-existente do `tanque_sugerido` (call-site nunca passa `disponibilidade`) | ⏳ Pendente |
 
 ## Definition of Done
 
@@ -200,8 +201,11 @@ estoque[t] = estoque[t-1] + reabastecimento_externo[t] + producao_interna[t] −
 - [x] Restauração de BOM (24 entradas, `restore_bom_usinagem_rfi_r02.py`): identidades físicas 1 m³/m³ e 1 m/m (CCR, BGTC comprada — sem usina de solos no rfi —, pó de pedra, rachão compactado, tubos PVC/concreto, piso, guia, manta), espessura×densidade (CBUQ 0,072 t/m²) e coeficientes das CPUs gêmeas mendeslobo (pintura de ligação 0,39 kg/m², TSD 1,0 kg/m²); numeração comercial da planilha lida com âncoras (Brita 01=pedrisco … Brita 04=rachão); QA em `test_adr139_f4quater_rfi_bom_usinagem.py`
 - [ ] Fora, documentado no script: ATI-047 (tubo PBA 150 mm sem insumo), corpos celulares BSCC/BDCC/BTCC (moldados in loco — BOM de concreto/aço/forma sem coeficiente de evidência), ATI-054 sub-base estabilizada; e confirmação da classe da usina E0043 pelo campo
 
-### F5 (pendente — pipeline)
-- [ ] Skill-04 adota `CpSatScheduler` + `build_replenishable_resources` no pipeline real (rcpsp_spec com consumíveis)
+### F5 — pipeline (implementado 2026-07-15, ver ADR-128 F5 para o detalhe completo)
+- [x] Skill-04 adota `CpSatScheduler` + `build_replenishable_resources` no pipeline real (incl. pareamento produtor-consumidor desta ADR via `producoes_por_atividade`)
+- [x] Regressão zero provada por integração fim a fim; relatório causal de atraso (`VAL-ESTOQUE-DELAY-01/02`)
+
+### F5 — UI (pendente)
 - [ ] Projeção de estoque de material gerado na UI a partir de `project_estoque_semanal`; `tanque_sugerido` recebendo `disponibilidade` real no call-site
 
 ---

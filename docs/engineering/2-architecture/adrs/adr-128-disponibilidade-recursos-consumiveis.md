@@ -1,6 +1,6 @@
 # ADR-128 — Disponibilidade de Recursos Consumíveis: Estoque, Taxa de Consumo e Reabastecimento (Diesel, Combustível, Material)
 
-**Status:** ⚠️ Parcialmente Implementado _(2026-07-12: F1/F2/F3 completos — F2 inclui repropagação de precedência (Fase 2b), ver nota; F4 implementado como capacidade pura, não conectado a uma fonte de dado real de projeto/escopo)_
+**Status:** ⚠️ Parcialmente Implementado _(2026-07-15: F1/F2/F3/F5 completos — F2 inclui repropagação de precedência (Fase 2b), ver nota; F5 conecta o motor ao pipeline real de skill-04 e a `Escopo.logistica_consumiveis` como fonte de dado real de projeto; F4 permanece com o dashboard/UI ainda não conectado a essa fonte, ver nota)_
 **Data:** 2026-07-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-107 (generalização tipo_combustivel), ADR-090 (BDI sistemático diesel/material), ADR-046 (motor RCPSP)
@@ -101,6 +101,7 @@ O cálculo hoje em `src/concilium/presentation/ui/organisms/layout.py` (bloco qu
 | F2 | `ReplenishableResource` no motor de agendamento; projeção de estoque semana a semana; repropagação de atraso para sucessores no DAG (Fase 2b) | ✅ Implementado como duas passadas de reparo pós-CP-SAT em laço de ponto fixo (ver nota de implementação) |
 | F3 | Parsing/normalização de `prazo_entrega` (hoje `str \| None`, texto livre) para dias numéricos; reaproveitamento como lead time de reabastecimento de material | ✅ Implementado |
 | F4 | `tanque_sugerido` (UI) lendo `DisponibilidadeConsumivel` com fallback heurístico atual | ⚠️ Implementado como capacidade pura (ver nota de implementação) |
+| F5 | Integração no pipeline real de skill-04 (`CpSatScheduler` + `build_replenishable_resources`, antes chamados só em teste); `Escopo.logistica_consumiveis` como fonte real de dado de projeto (fecha a lacuna registrada em F4 — ver nota); relatório causal de atraso por recurso/atividade (`VAL-ESTOQUE-DELAY-01/02`) | ✅ Implementado |
 
 ### Nota de implementação (2026-07-08)
 
@@ -161,6 +162,79 @@ parâmetro opcional. O que **não** foi feito nesta entrega: plugar uma fonte re
 esse modelo de dado de projeto/canteiro ainda não existe no sistema; a UI hoje sempre
 chama com `disponibilidade=None`, preservando o comportamento heurístico atual.
 
+### Nota de implementação (2026-07-15) — F5
+
+Até esta entrega, `CpSatScheduler.schedule()` aceitava `replenishable_resources` desde a
+Fase 2 e `build_replenishable_resources` (ADR-139 F4) já sabia montar os recursos a
+partir do catálogo — mas **nenhum código de produção os chamava**; ambos só eram
+exercitados por teste. F5 fecha essa lacuna, com escopo completo (motor + config de
+usuário + relatório de causa), e fecha também o `D3`/`F4` acima registrado como pendente
+("modelo de dado de projeto/canteiro ainda não existe no sistema") — agora existe, para
+o *scheduler* (não para o dashboard, ver ressalva abaixo).
+
+**Terceira fonte de restrição — `Escopo.logistica_consumiveis`:** `build_replenishable_resources`
+ganhou um parâmetro `disponibilidade_overrides: dict[str, DisponibilidadeConsumivel] | None`
+(`replenishable_builder.py`). Antes, um insumo só virava `ReplenishableResource` se tivesse
+`atributos_especificos.disponibilidade` no catálogo OU fosse produzido internamente
+(`GERACAO_INTERNA`, ADR-139). Diesel raramente cai em qualquer dos dois casos — é comprado
+externamente e o catálogo hoje quase nunca declara `disponibilidade` para ele. O novo
+campo opcional `Escopo.logistica_consumiveis: dict[insumo_id, LogisticaConsumivelConfig] | None`
+(`domain/models/project/escopo.py`), exposto via `gerir_escopo` (MCP) → `create_escopo`
+(repositório/store) → propagado automaticamente para `inputs["logistica_consumiveis"]` de
+toda skill via `escopo_meta` (nenhuma mudança necessária em `runtime/mixins/execution.py`,
+que já espalha todo o meta do escopo nos inputs) — dá ao *projeto* o poder de restringir um
+insumo mesmo sem nenhuma declaração de catálogo. Overrides de projeto têm prioridade sobre
+declaração de catálogo quando ambos existem para o mesmo insumo (dado real de canteiro >
+default de catálogo).
+
+**Relatório causal de atraso:** antes, o laço de reparo só produzia um booleano
+implícito (`feasible`) — nenhum registro de *qual* recurso atrasou *qual* atividade
+sobrevivia. `apply_replenishable_delay` (`replenishable.py`) ganhou um parâmetro opcional
+`delay_causes: dict[tuple[str, str], int] | None` (default `None` — compatível com todo
+call site/teste existente) que acumula `{(resource_id, activity_id): semanas_de_atraso}`;
+`CpSatScheduler.schedule()` popula um novo campo aditivo `ScheduleOutput.estoque_delays:
+list[EstoqueDelayCause]`, propagado até o `cronograma` canônico
+(`ScheduleCandidateCanonical`/`Cronograma.estoque_delays`, ambos aditivos). Skill-04 traduz
+isso em dois códigos novos (prefixo `VAL-ESTOQUE-*`, já estabelecido por
+`VAL-ESTOQUE-PROD-01`/`VAL-ESTOQUE-CAP-01`, não `VAL-SCHED-*`): `VAL-ESTOQUE-DELAY-01`
+(AVISO, atraso reparado, cronograma segue viável) e `VAL-ESTOQUE-DELAY-02` (ERRO, atraso
+não reparável — bloqueia downstream por `gate=true`). Um terceiro código,
+`VAL-ESTOQUE-ALGO-01` (AVISO), cobre o caso em que a restrição foi declarada mas o
+algoritmo de scheduling selecionado não é CP-SAT (única implementação que aplica
+`ReplenishableResource` hoje) — torna visível a restrição silenciosamente ignorada em vez
+de um no-op mudo.
+
+**Por que um parâmetro mutável em vez de mudar o tipo de retorno:** `apply_replenishable_delay`
+já tinha múltiplos call sites/testes assumindo `list[ScheduledActivity]` como retorno; um
+terceiro parâmetro opcional com default `None` preserva 100% de compatibilidade, seguindo o
+mesmo idioma já usado em todo o skill-04 (`validacoes: list` acumulado por referência).
+
+**`selector._explore_cpsat` precisou de um branch não-raising:** antes, qualquer
+infeasibilidade do CP-SAT levantava `ScheduleError` (tratada como falha técnica de
+pipeline). Estoque de consumível insuficiente é um resultado de **negócio** (faltou
+diesel), não uma falha de solver — levantar exceção interromperia o pipeline de forma
+incorreta. Quando `sched.feasible is False` e `sched.estoque_delays` não é vazio,
+`_explore_cpsat` agora retorna `ExploreResult(..., error="estoque_insuficiente")` sem
+lançar, espelhando o padrão já usado por `_compare_cpsat` (utilitário de comparação,
+nunca levanta). Toda outra causa de infeasibilidade continua levantando `ScheduleError`
+inalterada.
+
+**Correção de um gap encontrado durante a implementação:** `_validate_repaired_schedule`
+(rede de segurança final do laço de ponto fixo) nunca reverificava estoque negativo —
+só checava precedência/capacidade de pool/horizonte. Quando o laço esgota
+`_MAX_REPAIR_ROUNDS` sem convergir (ex.: `capacidade_armazenamento` menor que o consumo de
+uma única semana — nenhum atraso jamais resolve isso, pois o teto sempre limita o estoque
+antes do consumo), o cronograma podia ficar com estoque ainda negativo e mesmo assim ser
+reportado `feasible=True`. `CpSatScheduler.schedule()` ganhou uma checagem explícita
+(`has_estoque_negativo(project_estoque_semanal(...))`) após o laço, fechando esse caso —
+coberto por teste dedicado (`test_stock_permanently_negative_after_repair_rounds_exhausted_marks_infeasible`).
+
+**Ressalva importante — o que F5 NÃO fecha:** esta entrega conecta o *scheduler*
+(skill-04), não o *dashboard*. A linha de DoD da F4 sobre "fonte real de
+`DisponibilidadeConsumivel` conectada ao dashboard" permanece pendente — `tanque_sugerido`/
+`_render_cube_diesel_metrics` continuam recebendo `disponibilidade=None` sempre; ligar a UI
+à mesma fonte de projeto (`Escopo.logistica_consumiveis`) é trabalho futuro, não coberto aqui.
+
 ## Definition of Done
 
 ### Fase 1
@@ -175,7 +249,13 @@ chama com `disponibilidade=None`, preservando o comportamento heurístico atual.
 - [x] Estratégia de parsing de `prazo_entrega` (texto livre → dias) definida e testada com os valores reais hoje presentes no catálogo (ex.: "Imediato")
 - [x] `prazo_entrega` de material alimentando lead time sem novo campo duplicado (`DisponibilidadeConsumivel.from_prazo_entrega`)
 - [x] `tanque_sugerido` consistente entre UI e modelo quando dado real está presente (capacidade pura implementada e testada)
-- [ ] Fonte real de `DisponibilidadeConsumivel` em nível de projeto/escopo conectada ao dashboard (pendente — depende de modelo de dado de projeto ainda não existente)
+- [ ] Fonte real de `DisponibilidadeConsumivel` em nível de projeto/escopo conectada **ao dashboard** (pendente — F5 conecta o *scheduler*, não a UI; ver nota de implementação F5)
+
+### Fase 5
+- [x] `build_replenishable_resources` chamado a partir do pipeline real de skill-04 (não só de teste), com regressão zero provada por integração fim a fim
+- [x] `Escopo.logistica_consumiveis` exposto via `gerir_escopo` → `create_escopo` (repositório/store) → propagado a `inputs` de toda skill sem mudança em `execution.py`
+- [x] Cenário diesel-restrito (config de projeto, sem declaração de catálogo) delatando atraso real, causal, através de `run_cronograma`
+- [x] `VAL-ESTOQUE-DELAY-01` (AVISO, reparado) / `VAL-ESTOQUE-DELAY-02` (ERRO, irreparável) / `VAL-ESTOQUE-ALGO-01` (AVISO, algoritmo não suporta) disparando corretamente, sem crash no caso ERRO (`selector._explore_cpsat` não-raising)
 
 ---
 
