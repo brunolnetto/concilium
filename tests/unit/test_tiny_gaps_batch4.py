@@ -198,6 +198,47 @@ class TestInputsMixin:
         result = mixin._apply_runtime_defaults("05-equipes-e-alocacao", proj, ctx, {})
         assert result["percentual_encargos_pj"] == 1.11
 
+    def test_apply_runtime_defaults_skill06_aliquotas_bdi_jurisdicao(self):
+        """ADR-038: jurisdição resolvida deve alimentar aliquotas_bdi_jurisdicao."""
+        mixin = self._make_mixin()
+        mixin.load_jurisdicao = MagicMock(
+            return_value={"motor_tributario_bdi": {"aliquotas": {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03}}}
+        )
+        proj = self._make_project()
+        ctx = self._make_contexto()
+        result = mixin._apply_runtime_defaults("06-resultado-financeiro", proj, ctx, {})
+        assert result["aliquotas_bdi_jurisdicao"] == {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03}
+
+    def test_apply_runtime_defaults_skill06_prioriza_jurisdicao_do_escopo(self):
+        """Escopo.jurisdicao_id (já presente em `normalized` via escopo_meta) tem
+        prioridade sobre o default de Contexto."""
+        mixin = self._make_mixin()
+        mixin.load_jurisdicao = MagicMock(return_value={"motor_tributario_bdi": {"aliquotas": {"ISS": 0.05}}})
+        proj = self._make_project()
+        ctx = self._make_contexto()
+        mixin._apply_runtime_defaults("06-resultado-financeiro", proj, ctx, {"jurisdicao_id": "BR-SP"})
+        mixin.load_jurisdicao.assert_called_once_with("BR-SP")
+
+    def test_apply_runtime_defaults_skill06_sem_motor_tributario_nao_seta_campo(self):
+        """Jurisdição sem motor_tributario_bdi (ex.: config antiga) não injeta o campo
+        — regressão zero, cai para DEFAULT_BDI_TABELA como hoje."""
+        mixin = self._make_mixin()
+        mixin.load_jurisdicao = MagicMock(return_value={})
+        proj = self._make_project()
+        ctx = self._make_contexto()
+        result = mixin._apply_runtime_defaults("06-resultado-financeiro", proj, ctx, {})
+        assert "aliquotas_bdi_jurisdicao" not in result
+
+    def test_apply_runtime_defaults_skill06_nao_sobrescreve_valor_ja_presente(self):
+        mixin = self._make_mixin()
+        mixin.load_jurisdicao = MagicMock(side_effect=AssertionError("não deveria ser chamado"))
+        proj = self._make_project()
+        ctx = self._make_contexto()
+        result = mixin._apply_runtime_defaults(
+            "06-resultado-financeiro", proj, ctx, {"aliquotas_bdi_jurisdicao": {"ISS": 0.99}}
+        )
+        assert result["aliquotas_bdi_jurisdicao"] == {"ISS": 0.99}
+
     def test_apply_runtime_defaults_skill04_calendario(self):
         mixin = self._make_mixin()
         mixin.load_calendario_operacional = MagicMock(return_value={"eventos": []})

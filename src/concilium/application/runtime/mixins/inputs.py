@@ -61,6 +61,20 @@ class InputsMixin(_Base):
         if motor.get("percentual_pj") is not None:  # pragma: no branch
             normalized["percentual_encargos_pj"] = motor["percentual_pj"]
 
+    def _apply_defaults_tributos_bdi(self, contexto: Any, normalized: dict[str, Any]) -> None:
+        """Aplica default de alíquotas BDI (ISS/PIS/COFINS) por jurisdição (ADR-038),
+        priorizando Escopo.jurisdicao_id (já presente em `normalized` via escopo_meta,
+        ver ExecutionMixin) sobre o default de Contexto.
+
+        Fecha o gap: antes desta chamada, a jurisdição resolvida nunca alcançava o
+        motor de cálculo de BDI (skill 06) — ver resolver_bdi_jurisdicao.
+        """
+        jurisdicao_id = normalized.get("jurisdicao_id") or contexto.jurisdicao_id
+        jurisd = self.load_jurisdicao(jurisdicao_id)
+        aliquotas = (jurisd.get("motor_tributario_bdi") or {}).get("aliquotas")
+        if aliquotas:
+            normalized["aliquotas_bdi_jurisdicao"] = aliquotas
+
     def _apply_defaults_cronograma(self, project: Any, contexto: Any, normalized: dict[str, Any]) -> None:
         """Aplica default de calendário operacional para a skill de cronograma in-place."""
         proj_id = str(getattr(project, "id", "") or "")
@@ -90,6 +104,9 @@ class InputsMixin(_Base):
 
         if skill_id in ("03-equipes-diretas", "05-equipes-e-alocacao") and "percentual_encargos" not in normalized:
             self._apply_defaults_encargos(contexto, normalized)
+
+        if skill_id == "06-resultado-financeiro" and "aliquotas_bdi_jurisdicao" not in normalized:
+            self._apply_defaults_tributos_bdi(contexto, normalized)
 
         if skill_id == "04-cronograma" and "calendario_operacional" not in normalized:
             self._apply_defaults_cronograma(project, contexto, normalized)
