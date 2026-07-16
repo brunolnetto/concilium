@@ -3,10 +3,14 @@
 Calcula preço unitário (sem e com BDI) por item da EAP, decomposto em 4 categorias:
 material, diesel, mão de obra, equipamentos (ADR-023: BDI auditável via TabelaBdi).
 
-Ordem de precedência para BDI:
-    1. inputs["bdi_aplicado"]  — override manual (4 categorias flat)
-    2. inputs["tabela_bdi"]    — TabelaBdi serializada (ADR-023)
-    3. DEFAULT_BDI_TABELA       — valores padrão da planilha rfi_catalog.xlsm (abril/2026)
+Ordem de precedência para BDI (mesma ordem de _consolidacao/_bdi_resolucao.py):
+    1. inputs["bdi_aplicado"]            — override manual (4 categorias flat)
+    2. inputs["tax_scenario"]            — TaxSimulationScenario CBS/IBS (ADR-055)
+    3. inputs["tabela_bdi"]              — TabelaBdi serializada (ADR-023)
+    4. inputs["aliquotas_bdi_jurisdicao"] sobre DEFAULT_BDI_TABELA — ISS/PIS/COFINS
+       resolvidos da jurisdição do escopo (ADR-038), quando 2/3 não se aplicam
+    5. DEFAULT_BDI_TABELA                — valores padrão da planilha rfi_catalog.xlsm
+       (abril/2026), fallback final sem nenhum dado de projeto/jurisdição
 
 Mapeamento de categorias ADR-023 -> modelo flat Planejamento.bdi:
     MAO_OBRA  -> mao_obra
@@ -122,6 +126,15 @@ def _resolve_bdi(
         )
         return resolved
 
+    # ADR-055: path CBS/IBS. Estava implementado em _bdi_regime.py mas nunca
+    # importado/chamado aqui — o estágio de precificação nunca honrava
+    # inputs["tax_scenario"], só o de consolidação (_bdi_resolucao.py) o fazia.
+    from ._skill_helpers._bdi_regime import _rb_try_tax_scenario  # ty: ignore[unresolved-import]
+
+    tax_scenario_result = _rb_try_tax_scenario(inputs, validacoes)
+    if tax_scenario_result is not None:
+        return tax_scenario_result
+
     tabela_raw = inputs.get("tabela_bdi")
     tabela = None
     if tabela_raw is not None:
@@ -139,10 +152,29 @@ def _resolve_bdi(
             )
 
     if tabela is None:
-        if DEFAULT_BDI_TABELA is not None:
-            tabela = DEFAULT_BDI_TABELA
-        else:
+        if DEFAULT_BDI_TABELA is None:
             return {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}  # pragma: no cover
+        # ADR-038: sem tabela_bdi explícita, aplica a alíquota da jurisdição do
+        # escopo (ISS/PIS/COFINS) sobre o default antes de cair puro no
+        # DEFAULT_BDI_TABELA — fecha o gap onde a jurisdição resolvida nunca
+        # chegava a influenciar o BDI calculado.
+        aliquotas_jurisdicao = inputs.get("aliquotas_bdi_jurisdicao")
+        if aliquotas_jurisdicao:
+            from concilium.domain.models.financial.bdi import resolver_bdi_jurisdicao
+
+            tabela = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, aliquotas_jurisdicao)
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-BDI-JURISDICAO",
+                    status="OK",
+                    mensagem=(
+                        f"BDI ajustado pela jurisdição do escopo "
+                        f"(ISS={aliquotas_jurisdicao.get('ISS', 0) * 100:.2f}%)."
+                    ),
+                )
+            )
+        else:
+            tabela = DEFAULT_BDI_TABELA
 
     result = _to_flat_bdi(
         {

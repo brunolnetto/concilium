@@ -295,6 +295,85 @@ class TestResolveBdiPriority:
         assert parse_val is not None
         assert parse_val.status == "AVISO"
 
+    def test_tax_scenario_agora_funciona_na_precificacao(self):
+        """ADR-055: inputs["tax_scenario"] estava implementado (_bdi_regime.py) mas
+        nunca conectado ao estágio de precificação — este teste prova a conexão."""
+        _resolve_bdi = self._import_resolve_bdi()
+        tax_scenario = {
+            "regime_version": "pleno_cbs_ibs",
+            "cbs_ibs_combined_rate": 0.265,
+            "credit_ratio_material": 0.80,
+            "credit_ratio_servicos": 0.70,
+            "credit_ratio_diesel": 0.72,
+        }
+        validacoes: list[ValidacaoItem] = []
+        result = _resolve_bdi({"tax_scenario": tax_scenario}, validacoes)
+
+        assert result["mao_obra"] != DEFAULT_BDI_TABELA.mao_obra.bdi_total
+        regime_val = next((v for v in validacoes if v.codigo == "VAL-BDI-REGIME"), None)
+        assert regime_val is not None
+        assert regime_val.status == "OK"
+
+    def test_tax_scenario_tem_prioridade_sobre_tabela_bdi(self):
+        _resolve_bdi = self._import_resolve_bdi()
+        tax_scenario = {"regime_version": "pleno_cbs_ibs", "cbs_ibs_combined_rate": 0.265}
+        custom_tabela = TabelaBdi(
+            mao_obra=_comp_bdi_from_total(0.20),
+            material=_comp_bdi_from_total(0.08),
+            diesel=_comp_bdi_from_total(0.15),
+            indireto=_comp_bdi_from_total(0.10),
+            servicos=_comp_bdi_from_total(0.20),
+            data_vigencia="2026-01-01",
+        )
+        validacoes: list[ValidacaoItem] = []
+        result = _resolve_bdi(
+            {"tax_scenario": tax_scenario, "tabela_bdi": custom_tabela.model_dump()}, validacoes
+        )
+        # tax_scenario vence — resultado não deve bater com a tabela custom (0.20)
+        assert abs(result["mao_obra"] - 0.20) > 1e-6
+
+    def test_aliquotas_bdi_jurisdicao_aplicada_sem_tabela_explicita(self):
+        """ADR-038: sem tabela_bdi/tax_scenario explícitos, a jurisdição resolvida
+        (ISS) deve mudar o BDI calculado — antes, era sempre ignorada."""
+        _resolve_bdi = self._import_resolve_bdi()
+        validacoes: list[ValidacaoItem] = []
+        result = _resolve_bdi(
+            {"aliquotas_bdi_jurisdicao": {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03}}, validacoes
+        )
+        assert result["mao_obra"] != DEFAULT_BDI_TABELA.mao_obra.bdi_total
+        jur_val = next((v for v in validacoes if v.codigo == "VAL-BDI-JURISDICAO"), None)
+        assert jur_val is not None
+        assert jur_val.status == "OK"
+
+    def test_tabela_bdi_explicita_tem_prioridade_sobre_jurisdicao(self):
+        _resolve_bdi = self._import_resolve_bdi()
+        custom_tabela = TabelaBdi(
+            mao_obra=_comp_bdi_from_total(0.20),
+            material=_comp_bdi_from_total(0.08),
+            diesel=_comp_bdi_from_total(0.15),
+            indireto=_comp_bdi_from_total(0.10),
+            servicos=_comp_bdi_from_total(0.20),
+            data_vigencia="2026-01-01",
+        )
+        validacoes: list[ValidacaoItem] = []
+        result = _resolve_bdi(
+            {
+                "tabela_bdi": custom_tabela.model_dump(),
+                "aliquotas_bdi_jurisdicao": {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03},
+            },
+            validacoes,
+        )
+        assert abs(result["mao_obra"] - 0.20) < 1e-6
+        assert not any(v.codigo == "VAL-BDI-JURISDICAO" for v in validacoes)
+
+    def test_sem_aliquotas_bdi_jurisdicao_comportamento_identico_ao_atual(self):
+        """Regressão zero: sem o novo input, resultado idêntico ao default puro."""
+        _resolve_bdi = self._import_resolve_bdi()
+        validacoes: list[ValidacaoItem] = []
+        result = _resolve_bdi({}, validacoes)
+        assert abs(result["mao_obra"] - DEFAULT_BDI_TABELA.mao_obra.bdi_total) < 1e-6
+        assert not any(v.codigo == "VAL-BDI-JURISDICAO" for v in validacoes)
+
 
 # ── Skill 05 IndiretoComBdi ──────────────────────────────────────────────────
 

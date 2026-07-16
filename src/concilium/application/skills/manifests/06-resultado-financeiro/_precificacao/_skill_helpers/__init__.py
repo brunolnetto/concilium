@@ -3,10 +3,12 @@
 Calcula preço unitário (sem e com BDI) por item da EAP, decomposto em 4 categorias:
 material, diesel, mão de obra, equipamentos (ADR-023: BDI auditável via TabelaBdi).
 
-Ordem de precedência para BDI:
-    1. inputs["bdi_aplicado"]  — override manual (4 categorias flat)
-    2. inputs["tabela_bdi"]    — TabelaBdi serializada (ADR-023)
-    3. DEFAULT_BDI_TABELA       — valores padrão da planilha rfi_catalog.xlsm (abril/2026)
+Ordem de precedência para BDI (ver skill.py::_resolve_bdi):
+    1. inputs["bdi_aplicado"]            — override manual (4 categorias flat)
+    2. inputs["tax_scenario"]            — TaxSimulationScenario CBS/IBS (ADR-055)
+    3. inputs["tabela_bdi"]              — TabelaBdi serializada (ADR-023)
+    4. inputs["aliquotas_bdi_jurisdicao"] sobre DEFAULT_BDI_TABELA (ADR-038)
+    5. DEFAULT_BDI_TABELA                — valores padrão da planilha rfi_catalog.xlsm (abril/2026)
 
 Mapeamento de categorias ADR-023 -> modelo flat Planejamento.bdi:
     MAO_OBRA  -> mao_obra
