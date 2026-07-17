@@ -34,6 +34,8 @@ A credencial (tenant/client id/secret ou certificado) continua única — a app 
 - `auth_store.py::get_auth_store()` — auth de usuários/devices.
 - `commands_auth.py::_get_proxy_exe_download_urls()` — links assinados dos executáveis do proxy.
 - `commands_blob.py::blob put --system` — usado por `build-proxy.yml` para publicar `distribuicao/`.
+- `observability/pipeline.py::_make_storage()` (ADR-121 D3/D6) — pipeline Bronze/Silver/Gold; adicionado depois desta ADR, também cai no mesmo fallback até o D3 ser executado.
+- `commands_blob.py::blob migrate --source-system/--target-system` — flags adicionadas para permitir de fato executar a migração descrita em D3 (antes só existia no `put`; `migrate` chamava `_make_storage` sem repassar `system=`).
 
 `projetos/` (via `build_project_repository`/`_build_sharepoint_repository`) e dados por-projeto (`campaign_store`, `tool_invocation_store`, via `build_blob_storage()` genérico) **não mudam** — continuam no Drive de projetos.
 
@@ -45,7 +47,7 @@ Pendente de execução por um administrador do Microsoft 365/SharePoint da Mende
 
 1. Criar um novo site do SharePoint dedicado a dados de sistema do Concilium (ex.: `Concilium-Sistema`), com seu próprio Drive.
 2. Conceder ao App Registration existente (mesmo `CONCILIUM__SP_CLIENT_ID`) acesso `Sites.Selected` a esse novo site — **não** `Sites.Read/ReadWrite.All` tenant-wide, para não recriar o mesmo problema (ver ADR-047 R4, mitigação nunca implementada; esta ADR complementa aquela).
-3. Migrar `auth/` e `distribuicao/` do Drive atual para o novo Drive (`concilium ops blob migrate --source-backend sharepoint --target-backend sharepoint --prefix auth/`, análogo para `distribuicao/` — origem lê do Drive atual via `CONCILIUM__SP_*`, destino escreve no novo via `CONCILIUM__SP_SYSTEM_*` setados no ambiente do comando).
+3. Migrar `auth/`, `distribuicao/` e `observability/` do Drive atual para o novo Drive: `concilium ops blob migrate --source-backend sharepoint --target-backend sharepoint --target-system --prefix auth/` (idem para os outros dois prefixos) — ambos os lados usam as mesmas credenciais (`CONCILIUM__SP_*`), a flag `--target-system` é que direciona o lado target para `CONCILIUM__SP_SYSTEM_DRIVE_ID`/`SYSTEM_ROOT_PATH`. `auth/` tem risco de write órfão durante a janela de migração (sem lock/CAS em `auth_store.py`) — preferir horário de baixo tráfego e rodar a migração duas vezes, a segunda logo antes do cutover do passo 4.
 4. Configurar `CONCILIUM__SP_SYSTEM_DRIVE_ID`/`CONCILIUM__SP_SYSTEM_ROOT_PATH` (App Settings do Container App em produção; `secrets.CONCILIUM__SP_SYSTEM_DRIVE_ID`/`vars.CONCILIUM__SP_SYSTEM_ROOT_PATH` no GitHub Actions para `build-proxy.yml`).
 5. Opcional (defesa em profundidade complementar): revisar se o App Registration pode ser restrito a `Sites.Selected` também no Drive de projetos existente, eliminando o escopo tenant-wide de `Files.ReadWrite.All` documentado como risco aceito em ADR-047 R4.
 

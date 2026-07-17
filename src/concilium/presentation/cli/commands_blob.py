@@ -79,8 +79,14 @@ def _make_storage(backend: str, root: str = "", *, system: bool = False) -> Blob
 def migrate(
     source_backend: Annotated[str, typer.Option("--source-backend", "-s", help=_BACKEND_HELP)] = "",
     source_root: Annotated[str, typer.Option("--source-root", help="Diretório raiz (apenas backend filesystem).")] = "",
+    source_system: Annotated[
+        bool, typer.Option("--source-system", help="Lado source usa o Drive de sistema (auth/distribuição).")
+    ] = False,
     target_backend: Annotated[str, typer.Option("--target-backend", "-t", help=_BACKEND_HELP)] = "",
     target_root: Annotated[str, typer.Option("--target-root", help="Diretório raiz (apenas backend filesystem).")] = "",
+    target_system: Annotated[
+        bool, typer.Option("--target-system", help="Lado target usa o Drive de sistema (auth/distribuição).")
+    ] = False,
     prefix: Annotated[str, typer.Option(help="Prefixo de blobs a migrar. Vazio = todos.")] = "",
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Lista blobs sem copiar.")] = False,
     no_overwrite: Annotated[bool, typer.Option("--no-overwrite", help="Pula blobs já existentes no target.")] = False,
@@ -111,11 +117,17 @@ def migrate(
             --source-backend filesystem --source-root ./data \\
             --target-backend sharepoint \\
             --prefix projetos/ --dry-run
+
+        # Drive de projetos → Drive de sistema, mesmo backend (ADR-135 D3):
+        concilium ops blob migrate \\
+            --source-backend sharepoint \\
+            --target-backend sharepoint --target-system \\
+            --prefix auth/
     """
     from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
 
-    source = _make_storage(source_backend, source_root)
-    target = _make_storage(target_backend, target_root)
+    source = _make_storage(source_backend, source_root, system=source_system)
+    target = _make_storage(target_backend, target_root, system=target_system)
 
     if dry_run:
         rprint("[bold yellow]▶ Modo dry-run — nenhum blob será copiado[/bold yellow]")

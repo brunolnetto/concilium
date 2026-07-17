@@ -255,6 +255,24 @@ class TestMigrateNormalRun:
 
         assert mock_build.call_count == 2
 
+    def test_target_system_routes_to_system_storage(self):
+        """--target-system usa build_system_blob_storage só no lado target (ADR-135 D3)."""
+        mock_storage = MagicMock()
+        mock_migrator_instance = MagicMock()
+        mock_migrator_instance.migrate.return_value = _make_result()
+        mock_migrator_cls = MagicMock(return_value=mock_migrator_instance)
+
+        with (
+            patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage) as mock_build,
+            patch(f"{STORE_FACTORY}.build_system_blob_storage", return_value=mock_storage) as mock_build_system,
+            patch(f"{MIGRATOR_MODULE}.BlobMigrator", mock_migrator_cls),
+        ):
+            result = runner.invoke(blob_app, ["migrate", "--target-system"])
+
+        assert result.exit_code == 0
+        assert mock_build.call_count == 1
+        assert mock_build_system.call_count == 1
+
 
 class TestMigrateDryRun:
     """dry_run=True: prints dry-run message, no Copiados/Pulados/Falhas lines."""
