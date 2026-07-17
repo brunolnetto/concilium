@@ -68,9 +68,15 @@ class InputsMixin(_Base):
 
         Fecha o gap: antes desta chamada, a jurisdição resolvida nunca alcançava o
         motor de cálculo de BDI (skill 06) — ver resolver_bdi_jurisdicao.
+
+        Suporta jurisdicao_id de município (ADR-142, ex. "BR-CE-FORTALEZA"), com
+        fallback gracioso para o nível de UF quando não há config própria de
+        município — nunca lança por município desconhecido/não curado.
         """
         jurisdicao_id = normalized.get("jurisdicao_id") or contexto.jurisdicao_id
-        jurisd = self.load_jurisdicao(jurisdicao_id)
+        jurisd, alertas = self.load_jurisdicao_com_fallback(jurisdicao_id)
+        if alertas:
+            normalized.setdefault("avisos_runtime", []).extend(alertas)
         aliquotas = (jurisd.get("motor_tributario_bdi") or {}).get("aliquotas")
         if aliquotas:
             normalized["aliquotas_bdi_jurisdicao"] = aliquotas

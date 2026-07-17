@@ -60,11 +60,15 @@ _COORDENADAS_PLACEHOLDER = (0.0, 0.0)
 
 
 def _uf_de_jurisdicao(jurisdicao_id: str | None) -> str | None:
-    """Extrai a UF de um jurisdicao_id no formato 'BR-CE' (ADR-038). None se ausente/inválido."""
+    """Extrai a UF de um jurisdicao_id 'BR-CE' ou 'BR-CE-MUNICIPIO' (ADR-038/140).
+
+    None se ausente/inválido. Usa split completo (não partition) para não
+    absorver um 3º segmento de município na UF quando presente.
+    """
     if not jurisdicao_id or "-" not in jurisdicao_id:
         return None
-    _pais, _, uf = jurisdicao_id.partition("-")
-    return uf or None
+    partes = jurisdicao_id.split("-")
+    return partes[1] if len(partes) >= 2 and partes[1] else None
 
 
 def resolver_uf_por_proximidade(

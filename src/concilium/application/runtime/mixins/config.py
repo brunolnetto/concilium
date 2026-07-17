@@ -63,6 +63,29 @@ class ConfigMixin:
             return self._deep_merge(parent_data, data)
         return data
 
+    def load_jurisdicao_com_fallback(self, codigo: str) -> tuple[dict[str, Any], list[str]]:
+        """Resolve jurisdição com fallback município→UF (ADR-142).
+
+        Se `codigo` tiver 3 segmentos (BR-UF-MUNICIPIO, ex. "BR-CE-FORTALEZA")
+        e não houver config própria de município, degrada para BR-UF (2
+        segmentos) e emite um alerta — nunca lança por município desconhecido.
+        Códigos de 1-2 segmentos (comportamento atual) são idênticos a
+        `load_jurisdicao`, sem alerta.
+        """
+        alertas: list[str] = []
+        try:
+            return self.load_jurisdicao(codigo), alertas
+        except RuntimeDomainError:
+            partes = codigo.split("-")
+            if len(partes) < 3:
+                raise
+            fallback_codigo = "-".join(partes[:2])
+            alertas.append(
+                f"VAL-JURISDICAO-MUNICIPIO-01: '{codigo}' sem config própria, "
+                f"usando '{fallback_codigo}' (nível UF)"
+            )
+            return self.load_jurisdicao(fallback_codigo), alertas
+
     def _deep_merge(self, base: dict, overlay: dict) -> dict:
         result = dict(base)
         for key, value in overlay.items():
