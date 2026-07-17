@@ -25,20 +25,24 @@
     "concilium-prod": {
       "_profile": "prod",
       "_instructions": [
-        "1. O admin gera e envia este bloco já preenchido via:",
-        "   concilium auth new-device --user <SEU_ID> --device <NOME_MAQUINA>",
-        "2. Cole o bloco exatamente como recebido — não altere o device code.",
-        "3. Caminho do arquivo:",
+        "1. O admin cadastra o usuário com:",
+        "   concilium ops auth add-user --id <SEU_ID> --role <ROLE> --email <SEU_EMAIL>",
+        "   O client_code é reutilizável — ativa quantos dispositivos você precisar, sem",
+        "   um comando por dispositivo.",
+        "2. Com --email, você recebe por email o link de download do executável (por SO) e",
+        "   este bloco já preenchido com seu client_code — cole-o exatamente como recebido.",
+        "3. Baixe o executável do proxy do link recebido e salve em:",
+        "   Windows: C:\\Concilium\\concilium-mcp-proxy.exe",
+        "   macOS/Linux: ~/.concilium/bin/concilium-mcp-proxy (depois chmod +x)",
+        "4. Caminho do claude_desktop_config.json:",
         "   macOS:   ~/Library/Application Support/Claude/claude_desktop_config.json",
         "   Windows: %APPDATA%\\Claude\\claude_desktop_config.json",
-        "4. Reinicie o Claude Desktop.",
-        "Após a primeira conexão o device code é consumido — não é necessário atualizá-lo."
+        "5. Reinicie o Claude Desktop."
       ],
-      "command": "concilium-mcp-proxy",
+      "command": "C:\\Concilium\\concilium-mcp-proxy.exe",
       "env": {
         "CONCILIUM_SERVER_URL":  "https://mcp.mendesloboconstrucao.com.br",
-        "CONCILIUM_DEVICE_CODE": "RCODE-SUBSTITUIR",
-        "CONCILIUM_DEVICE_ID":   "NOME-DA-SUA-MAQUINA"
+        "CONCILIUM_CLIENT_CODE": "RCODE-SUBSTITUIR"
       }
     }
 

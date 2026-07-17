@@ -5,24 +5,24 @@ client_code reutilizável no cadastro (add-user) — o mesmo código ativa quant
 dispositivos ele precisar no Claude Desktop, sem exigir um cadastro por TI a cada
 dispositivo novo.
 
-Uso típico:
+Uso típico (nested sob "ops" — ver ops_app.add_typer(auth_app) em presentation/main.py):
   # Criar usuário (gera client_code reutilizável)
-  concilium auth add-user --id bruno --role operator
+  concilium ops auth add-user --id bruno --role operator
 
   # Regenerar o client_code do usuário (ex: vazamento do código original)
-  concilium auth regenerate-code --user bruno
+  concilium ops auth regenerate-code --user bruno
 
   # Migrar em lote usuários cadastrados antes do client_code existir
-  concilium auth migrate-legacy-codes
+  concilium ops auth migrate-legacy-codes
 
   # Listar dispositivos ativos
-  concilium auth list-devices
+  concilium ops auth list-devices
 
   # Listar sessões MCP recentes de um dispositivo
-  concilium auth list-sessions --device macbook-bruno
+  concilium ops auth list-sessions --device macbook-bruno
 
   # Revogar acesso de um dispositivo
-  concilium auth revoke-device --device macbook-bruno
+  concilium ops auth revoke-device --device macbook-bruno
 """
 
 from __future__ import annotations
@@ -76,6 +76,25 @@ def _get_proxy_exe_download_urls(ttl_segundos: int = 7 * 24 * 3600) -> dict[str,
     }
 
 
+def _warn_if_no_download_urls(proxy_download_urls: dict[str, str | None]) -> None:
+    """Avisa o admin no terminal quando nenhum link de download pôde ser gerado.
+
+    O executável do proxy só chega ao usuário pelo link assinado (não há mais
+    fallback de anexo — ver `notifications._distribution_attachments`); se os
+    3 SOs vierem None (backend sem suporte, ou Graph createLink falhando —
+    já aconteceu em produção, ADR-135), o email de boas-vindas ainda é enviado
+    com sucesso, mas sem nenhuma instrução de onde obter o executável. Sem
+    este aviso, isso passa desapercebido (o comando só reporta "✓ enviado").
+    """
+    if not any(proxy_download_urls.values()):
+        rprint(
+            "\n[yellow]⚠ Nenhum link de download do executável do proxy foi gerado "
+            "(backend de storage sem suporte a URL assinada, ou falha ao gerar — veja os "
+            "logs do servidor). O email de boas-vindas será enviado sem o link de download; "
+            "entregue o executável ao usuário por outro meio.[/yellow]"
+        )
+
+
 def _build_mcp_config_block(client_code: str, platform: str) -> dict:
     """Monta o bloco claude_desktop_config.json — "command" varia por plataforma.
 
@@ -119,83 +138,6 @@ def _print_both_configs(config_json_unix: str, config_json_windows: str) -> None
     typer.echo(config_json_unix)
     rprint("\n[bold]Windows:[/bold]")
     typer.echo(config_json_windows)
-
-
-_ZIP_EXE_NAMES = {
-    "windows": "concilium-mcp-proxy.exe",
-    "linux": "concilium-mcp-proxy",
-    "macos": "concilium-mcp-proxy",
-}
-_ZIP_CONFIG_PLATFORM = {"windows": "windows", "linux": "unix", "macos": "unix"}
-
-# Gmail (usado em produção — CONCILIUM__SMTP_HOST=smtp.gmail.com) rejeita mensagens
-# acima de ~25MB, e o encoding base64 do anexo infla o payload em ~37% — um zip
-# de 18MB já vira ~25MB de anexo. Na prática, os 3 executáveis (PyInstaller +
-# extras sharepoint/httpx/msal) somam ~100MB, MUITO acima disso — o cap abaixo
-# existe para nunca tentar mandar o bundle por email quando ele não caberia,
-# evitando exatamente o bug observado em produção: send() engolia o erro do
-# SMTP (mensagem grande demais) e a CLI imprimia "✓ enviado" sem ter enviado.
-_MAX_DISTRIBUTION_ZIP_BYTES = 15 * 1024 * 1024
-
-
-def _build_distribution_zips(client_code: str) -> dict[str, bytes]:
-    """Monta um zip POR SO (windows/macos/linux) — não um único zip com os três.
-
-    Cada zip é pequeno (um executável + o claude_desktop_config.json já
-    preenchido com o client_code do usuário, sem pasta/prefixo — plano, pronto
-    pra extrair) e cabe sozinho em _MAX_DISTRIBUTION_ZIP_BYTES. Um zip
-    combinando os 3 SOs somaria ~30MB mesmo após o proxy.py ter sido
-    desinchado (ver proxy.py) — nada que caiba num anexo de email de qualquer
-    forma, daí o desenho por SO.
-
-    Retorna apenas os SOs cujo executável pôde ser lido (best-effort: falha em
-    ler um SO não deve impedir os outros) e cujo zip resultante não excede o
-    cap. Dict vazio se nenhum SO ficar disponível.
-    """
-    import io
-    import json as _json
-    import zipfile
-
-    from concilium.infrastructure.storage.store_factory import build_system_blob_storage
-
-    try:
-        storage = build_system_blob_storage()
-    except Exception:
-        return {}
-
-    zips: dict[str, bytes] = {}
-    for os_key, blob_path in _PROXY_EXE_BLOB_PATHS.items():
-        try:
-            exe_bytes = storage.ler_blob(blob_path)
-        except Exception:
-            continue
-
-        config = _json.dumps(
-            _build_mcp_config_block(client_code, _ZIP_CONFIG_PLATFORM[os_key]),
-            indent=2,
-            ensure_ascii=False,
-        )
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(_ZIP_EXE_NAMES[os_key], exe_bytes)
-            zf.writestr("claude_desktop_config.json", config)
-
-        zip_bytes = buf.getvalue()
-        if len(zip_bytes) > _MAX_DISTRIBUTION_ZIP_BYTES:
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "Zip de distribuição para '%s' (%d bytes) excede o limite de %d bytes para "
-                "anexo de email — omitido para esse SO.",
-                os_key,
-                len(zip_bytes),
-                _MAX_DISTRIBUTION_ZIP_BYTES,
-            )
-            continue
-
-        zips[os_key] = zip_bytes
-
-    return zips
 
 
 # ── Usuários ──────────────────────────────────────────────────────────────────
@@ -253,14 +195,15 @@ def add_user(
     config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
 
     if email:
+        proxy_download_urls = _get_proxy_exe_download_urls()
+        _warn_if_no_download_urls(proxy_download_urls)
         sent = notify_user_created(
             client_id=client_id,
             role=role,
             email=email,
             config_json_unix=config_json_unix,
             config_json_windows=config_json_windows,
-            proxy_download_urls=_get_proxy_exe_download_urls(),
-            distribution_zips=_build_distribution_zips(client_code),
+            proxy_download_urls=proxy_download_urls,
         )
         if sent:
             rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
@@ -491,6 +434,7 @@ def migrate_legacy_codes() -> None:
     rprint(f"[green]✓ {len(migrated)} usuário(s) migrado(s):[/green]\n")
 
     proxy_download_urls = _get_proxy_exe_download_urls()
+    _warn_if_no_download_urls(proxy_download_urls)
     manual: list[tuple[str, str]] = []
     for client_id, client_code, email in migrated:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
@@ -501,7 +445,6 @@ def migrate_legacy_codes() -> None:
                 config_json_unix,
                 config_json_windows,
                 proxy_download_urls,
-                distribution_zips=_build_distribution_zips(client_code),
             )
             if sent:
                 rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")

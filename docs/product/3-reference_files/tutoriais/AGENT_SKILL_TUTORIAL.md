@@ -112,9 +112,18 @@ Agende via `cron` a cada 7 horas:
 
 Para ambientes com autenticação JWT (Azure deploy — ADR-096):
 
-1. `concilium-mcp-proxy` instalado e configurado no `claude_desktop_config.json`
-   → Ver `cd/development/claude_desktop_config.json.template` (perfil `concilium-prod`)
-2. Device code fornecido pelo admin via `concilium auth new-device`
+1. O admin cadastra o usuário com `concilium ops auth add-user --id <id> --role <role> --email <email>`
+   (ver `commands_auth.py`) — o mesmo `client_code` reutilizável ativa quantos dispositivos o
+   usuário precisar, sem um comando por dispositivo.
+2. Se `--email` foi informado, o usuário recebe automaticamente por email: o executável do
+   proxy (link de download por SO — Windows/Linux/macOS) e os dois `claude_desktop_config.json`
+   já preenchidos (`claude_desktop_config-windows.json` / `claude_desktop_config-macos-linux.json`).
+   Sem `--email`, o admin entrega esses dois arquivos manualmente (impressos no terminal).
+3. Baixe o executável do proxy e salve exatamente no caminho indicado no email:
+   `C:\Concilium\concilium-mcp-proxy.exe` (Windows) ou `~/.concilium/bin/concilium-mcp-proxy`
+   com `chmod +x` (Linux/macOS).
+4. Cole o conteúdo do JSON correspondente ao seu sistema em `claude_desktop_config.json` e
+   reinicie o Claude Desktop.
 
 **Windows (Claude Desktop):**
 Arquivo: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -122,15 +131,30 @@ Arquivo: `%APPDATA%\Claude\claude_desktop_config.json`
 ```json
 {
   "mcpServers": {
-    "concilium-local": {
-      "command": "wsl",
-      "args": [
-        "-e", "bash", "-c",
-        "cd /home/pingu/github/agente_engenheiro_senior/concilium && source .venv/bin/activate && python -m concilium.presentation.mcp.server"
-      ],
+    "concilium": {
+      "command": "C:\\Concilium\\concilium-mcp-proxy.exe",
       "env": {
-        "CONCILIUM__CONFIG_ROOT": "/home/pingu/github/agente_engenheiro_senior/concilium/config",
-        "CONCILIUM__PROJECTS_ROOT": "/home/pingu/github/agente_engenheiro_senior/concilium/projetos"
+        "CONCILIUM_CLIENT_CODE": "RCODE-...",
+        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br"
+      }
+    }
+  }
+}
+```
+
+**macOS/Linux:**
+Arquivo: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) ou
+equivalente do seu cliente MCP (Linux).
+
+```json
+{
+  "mcpServers": {
+    "concilium": {
+      "command": "sh",
+      "args": ["-c", "$HOME/.concilium/bin/concilium-mcp-proxy"],
+      "env": {
+        "CONCILIUM_CLIENT_CODE": "RCODE-...",
+        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br"
       }
     }
   }

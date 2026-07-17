@@ -93,39 +93,20 @@ def _base_url() -> str:
 # ── ADR-123/ADR-131: os 7 casos de uso originais (ADR-134 D5) ───────────────────
 
 
-# Gmail rejeita a mensagem inteira acima de ~25MB (base64 já incluso na conta).
-# Cada zip por SO (ver commands_auth.py::_build_distribution_zips) já fica sob
-# seu próprio cap individual, mas 2-3 deles somados ainda podem passar do
-# limite da mensagem — por isso o corte aqui é pelo TOTAL, não por item.
-_MAX_TOTAL_ZIPS_BYTES = 18 * 1024 * 1024
-
-
-def _zips_fit_in_email(distribution_zips: dict[str, bytes] | None) -> bool:
-    """True se os zips por SO existirem e a soma couber no orçamento da mensagem."""
-    zips = distribution_zips or {}
-    return bool(zips) and sum(len(z) for z in zips.values()) <= _MAX_TOTAL_ZIPS_BYTES
-
-
-def _distribution_attachments(
-    config_json_unix: str, config_json_windows: str, distribution_zips: dict[str, bytes] | None
-) -> list[tuple[str, bytes, str]]:
+def _distribution_attachments(config_json_unix: str, config_json_windows: str) -> list[tuple[str, bytes, str]]:
     """Anexos comuns a notify_user_created/notify_client_code_migrated.
 
-    Os zips por SO (quando disponíveis — ver `_build_distribution_zips`) já
-    contêm o executável do proxy e o claude_desktop_config.json preenchido
-    para aquele SO; os JSONs crus continuam anexados como fallback caso nenhum
-    zip caiba na mensagem (ex.: nenhum executável publicado em distribuicao/,
-    ou a soma dos zips passar de _MAX_TOTAL_ZIPS_BYTES).
+    O executável do proxy NUNCA vai em anexo (nem solto, nem em zip) — provedores
+    de email (Gmail incluso, confirmado em produção: SMTP 552 5.7.0 "potential
+    security issue") bloqueiam mensagens com payload executável, zipado ou não.
+    A entrega do executável é só pelo link assinado (`download_note`, ver
+    `_build_proxy_download_note`); aqui só vão os configs (texto) e o tutorial.
     """
-    attachments = [
+    return [
         ("claude_desktop_config-macos-linux.json", config_json_unix.encode("utf-8"), "application/json"),
         ("claude_desktop_config-windows.json", config_json_windows.encode("utf-8"), "application/json"),
         ("concilium_usage_tutorial.skill", _read_skill_tutorial(), "text/plain"),
     ]
-    if _zips_fit_in_email(distribution_zips):
-        for os_key, zip_bytes in (distribution_zips or {}).items():
-            attachments.append((f"concilium-mcp-proxy-{os_key}.zip", zip_bytes, "application/zip"))
-    return attachments
 
 
 def notify_user_created(
@@ -135,7 +116,6 @@ def notify_user_created(
     config_json_unix: str,
     config_json_windows: str,
     proxy_download_urls: dict[str, str | None] | None = None,
-    distribution_zips: dict[str, bytes] | None = None,
 ) -> bool:
     """Email de boas-vindas com os dois configs (macOS/Linux e Windows) em anexo.
 
@@ -154,9 +134,8 @@ def notify_user_created(
             "download_note": _build_proxy_download_note(proxy_download_urls),
             "config_json_unix": config_json_unix,
             "config_json_windows": config_json_windows,
-            "has_distribution_zip": _zips_fit_in_email(distribution_zips),
         },
-        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zips),
+        attachments=_distribution_attachments(config_json_unix, config_json_windows),
     )
 
 
@@ -166,7 +145,6 @@ def notify_client_code_migrated(
     config_json_unix: str,
     config_json_windows: str,
     proxy_download_urls: dict[str, str | None] | None = None,
-    distribution_zips: dict[str, bytes] | None = None,
 ) -> bool:
     """Notifica um client migrado (client_code gerado retroativamente) com os dois configs."""
     return get_notification_service().send(
@@ -183,9 +161,8 @@ def notify_client_code_migrated(
             "download_note": _build_proxy_download_note(proxy_download_urls),
             "config_json_unix": config_json_unix,
             "config_json_windows": config_json_windows,
-            "has_distribution_zip": _zips_fit_in_email(distribution_zips),
         },
-        attachments=_distribution_attachments(config_json_unix, config_json_windows, distribution_zips),
+        attachments=_distribution_attachments(config_json_unix, config_json_windows),
     )
 
 

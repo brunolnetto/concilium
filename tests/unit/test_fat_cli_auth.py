@@ -168,77 +168,6 @@ class TestGetProxyExeDownloadUrls:
 
 
 # ===========================================================================
-# _build_distribution_zips — bundle pessoal (proxy+config) por SO
-# ===========================================================================
-
-
-class TestBuildDistributionZips:
-    def test_skips_os_whose_executable_is_missing_keeps_the_rest(self):
-        """Best-effort por SO: um FileNotFoundError num SO não deve derrubar os outros
-
-        (diferente do desenho anterior de zip único, que descartava tudo se
-        qualquer executável faltasse)."""
-        from concilium.presentation.cli.commands_auth import _build_distribution_zips
-
-        storage = MagicMock()
-        storage.ler_blob.side_effect = [b"windows-exe", FileNotFoundError("missing"), b"macos-exe"]
-
-        with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            result = _build_distribution_zips("RCODE-X")
-
-        assert set(result.keys()) == {"windows", "macos"}
-
-    def test_returns_empty_dict_when_storage_unavailable(self):
-        import concilium.presentation.cli.commands_auth as mod
-
-        with patch(BUILD_BLOB_STORAGE, side_effect=RuntimeError("boom")):
-            result = mod._build_distribution_zips("RCODE-X")
-
-        assert result == {}
-
-    def test_returns_one_flat_zip_per_os_with_exe_and_config(self):
-        import zipfile
-        from io import BytesIO
-
-        from concilium.presentation.cli.commands_auth import _build_distribution_zips
-
-        storage = MagicMock()
-        storage.ler_blob.side_effect = [b"windows-exe", b"linux-exe", b"macos-exe"]
-
-        with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            result = _build_distribution_zips("RCODE-X")
-
-        assert set(result.keys()) == {"windows", "linux", "macos"}
-        with zipfile.ZipFile(BytesIO(result["windows"])) as zf:
-            assert set(zf.namelist()) == {"concilium-mcp-proxy.exe", "claude_desktop_config.json"}
-            assert zf.read("concilium-mcp-proxy.exe") == b"windows-exe"
-            assert "RCODE-X" in zf.read("claude_desktop_config.json").decode("utf-8")
-        with zipfile.ZipFile(BytesIO(result["linux"])) as zf:
-            assert set(zf.namelist()) == {"concilium-mcp-proxy", "claude_desktop_config.json"}
-
-    def test_omits_os_whose_zip_exceeds_the_per_item_size_cap(self):
-        """Bug real de produção: um zip único com os 3 executáveis somou ~100MB,
-
-        SMTP (Gmail, cap ~25MB) rejeitou o envio, e como send() engolia a exceção
-        a CLI imprimia "✓ enviado" mesmo sem ter enviado nada. O cap por SO evita
-        tentar incluir um zip que nunca vai caber, mantendo os demais SOs."""
-        import os
-
-        import concilium.presentation.cli.commands_auth as mod
-
-        # Bytes aleatórios — incompressíveis, garante que o zip final também
-        # exceda o cap (dados repetitivos como b"x"*N comprimiriam para quase nada).
-        oversized_exe = os.urandom(1024 + 1)
-        storage = MagicMock()
-        storage.ler_blob.side_effect = [oversized_exe, b"linux-exe", b"macos-exe"]
-
-        with patch(BUILD_BLOB_STORAGE, return_value=storage), patch.object(mod, "_MAX_DISTRIBUTION_ZIP_BYTES", 1024):
-            result = mod._build_distribution_zips("RCODE-X")
-
-        assert set(result.keys()) == {"linux", "macos"}
-
-
-# ===========================================================================
 # add-user
 # ===========================================================================
 
@@ -546,6 +475,48 @@ class TestRemoveUser:
         assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in kwargs["config_json_windows"]
         assert kwargs["proxy_download_urls"] == fake_urls
 
+    def test_add_user_warns_admin_when_no_download_urls_generated(self):
+        """Sem link de download (backend sem suporte, ou Graph createLink falhando —
+
+        ADR-135), o email ainda é enviado com sucesso mas sem instrução de onde obter o
+        executável. Sem este aviso, isso passa desapercebido: a CLI só reportaria
+        "✓ enviado" (ver test_add_user_reports_failure_and_prints_fallback_when_email_send_fails
+        para o caso, diferente, de o próprio ENVIO do email falhar)."""
+        store = _make_store(add_client_return=_make_client_record())
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_CREATED, return_value=True),
+            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+        ):
+            result = runner.invoke(
+                app,
+                ["add-user", "--id", "alice", "--secret", "s", "--email", "alice@example.com"],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Nenhum link de download" in result.output
+        assert "Email de boas-vindas enviado" in result.output
+
+    def test_add_user_no_warning_when_at_least_one_download_url_generated(self):
+        store = _make_store(add_client_return=_make_client_record())
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_CREATED, return_value=True),
+            patch(
+                PATCH_GET_PROXY_DOWNLOAD_URLS,
+                return_value={"windows": "https://example.com/win.exe", "linux": None, "macos": None},
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["add-user", "--id", "alice", "--secret", "s", "--email", "alice@example.com"],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Nenhum link de download" not in result.output
+
     def test_add_user_reports_failure_and_prints_fallback_when_email_send_fails(self):
         """notify_user_created() retornando False (ex.: SMTP rejeitou por anexo grande
 
@@ -736,6 +707,22 @@ class TestMigrateLegacyCodes:
         assert "RCODE-AAA" in args[2]  # config_json_unix
         assert "RCODE-AAA" in args[3]  # config_json_windows
         assert args[4] == fake_urls
+
+    def test_migrate_warns_admin_when_no_download_urls_generated(self):
+        store = _make_store()
+        store.migrate_legacy_client_codes.return_value = [
+            ("legacy1", "RCODE-AAA", "legacy1@example.com"),
+        ]
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=True),
+            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+        ):
+            result = runner.invoke(app, ["migrate-legacy-codes"])
+
+        assert result.exit_code == 0, result.output
+        assert "Nenhum link de download" in result.output
 
     def test_migrates_without_email_lists_for_manual_delivery(self):
         store = _make_store()
