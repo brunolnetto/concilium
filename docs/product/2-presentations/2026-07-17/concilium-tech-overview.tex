@@ -130,7 +130,8 @@
     {\footnotesize
     4.1. Síntese e próximos passos\\[12pt]}
     {\footnotesize\itshape\textcolor{mlgray!40!black}{Apêndice (backup):\\
-    A.1. Fluxo de entrega}}
+    A.1. Fluxo de entrega\\
+    A.2. Ferramentas MCP por grupo}}
   \end{columns}
 \end{frame}
 
@@ -284,17 +285,18 @@
         $\rho^{\text{sin}}$ & derivada pelo grafo de sinergia \\
         $\gamma_i,\gamma_r$ & custo horário (equipe, recurso) \\
         $p_i^c$ & preço unitário de catálogo \\
-        $p_i^o$ & preço unitário operacional; razão op./cat. \\
+        $p_i^o$ & preço unitário operacional; \\
         $\tau_i$ & razão op./cat. \\
-        $q_{ij}$ & quantitativo; qtde executada no mês \\
-        $Q_i$ & quantitativo \\
+        $q_{ij}$ & quantitade quantitativa da atividade i executada na semana j \\
+        $Q_i$ & quantidade quantitativa da atividade i \\
       \end{tabular}
     \end{block}
     \begin{block}{\small Cronograma (RCPSP)}
       \begin{tabular}{@{}p{1.5cm}p{4.6cm}@{}}
         $\theta_i$ & completion threshold da precedência \\
         $S_r(t)$ & slots do pool disponíveis \\
-        $m_{ij},\ h_j$ & alocação de equipes; horas do mês \\
+        $m_{ij}$ & alocação de equipes \\
+        $h_j$ & horas do mês \\
         $d_j$ & dias produtivos (físico) \\
         $\delta_j$ & eficiência de dias \\
         $\lambda_j$ & praticabilidade \\
@@ -438,10 +440,15 @@
     \node[box,below=0.45cm of ctx,xshift=4.2cm,fill=mlblue,text=white] (cat) {\textbf{Catálogo}\\detalhado abaixo};
     \foreach \n in {bdi,jur,ref,cat} \draw[arr2] (ctx) -- (\n);
   \end{tikzpicture}}\\[4pt]
-  % ── Banda 2: hierarquia CPU → Producao → equipe {MO,EQ,MAT} → Insumo ──────
+  % ── Banda 2: espinha real de catálogo CPU → Producao → Insumo → {MO,EQ,MAT}
+  % (4 níveis, lidos de cima para baixo). CPU/Producao/Insumo são as 3
+  % entidades/pastas reais de catálogo (cpus, produtividades, insumos);
+  % MO/EQ/MAT fecham a cadeia como composicao_padrao_equipe, estrutura
+  % interna de Producao que referencia Insumo (fan-in) --- por isso a seta
+  % "contém" contorna Insumo por fora em vez de atravessá-lo.
   \begin{columns}[T]
-    \column{0.52\textwidth}
-    \resizebox{\linewidth}{!}{%
+    \column{0.48\textwidth}
+    \resizebox{!}{4.3cm}{%
     \begin{tikzpicture}[
         ent/.style={draw,fill=mlgray,rounded corners=2pt,font=\tiny,
                     align=left,inner sep=4pt,text width=6.4cm},
@@ -449,41 +456,50 @@
                      align=center,inner sep=3pt,text width=1.95cm},
         rel/.style={-{Stealth[length=4pt]},thick},
         lbl/.style={font=\tiny\itshape},
+        zona2/.style={rounded corners=4pt,inner sep=6pt},
       ]
       \node[ent,draw=mlblue] (cpu)
         {\textbf{\textcolor{mlblue}{CPU --- composição de preço unitário}}\\[1pt]
          \textbf{PK} codigo · unidade · categoria · origem: REF $|$ PROPRIA\\
          \textcolor{mlblue}{\textbf{FK} producao\_id\_ref (obrigatória)}\\
          \textcolor{mlorange}{sem $\rho$ nem equipe própria}};
-      \node[ent,draw=mlgreen,below=0.55cm of cpu] (pro)
+      \node[ent,draw=mlgreen,below=1.3cm of cpu] (pro)
         {\textbf{\textcolor{mlgreen}{Producao --- produtividade $\rho$}}\\[1pt]
          \textbf{PK} id · valor\_horario $\rho$ [un/h] · origem: obra $|$ tabela $|$ estim.\\
          qualidade: n\textsuperscript{o} amostras · IC · materiais\_gerados{[]}\\
          grafo\_sinergia (opcional)};
-      \node[chip,draw=mlblue,below=0.55cm of pro,xshift=-2.35cm] (mo)
-        {\textbf{MO} FuncaoEquipe\\funcao\_id $\times$ num\_pessoas};
-      \node[chip,draw=mlorange,below=0.55cm of pro] (eq)
-        {\textbf{EQ} EquipamentoEquipe\\equip\_id $\times$ num\_unidades};
-      \node[chip,draw=mlgreen,below=0.55cm of pro,xshift=2.35cm] (mat)
-        {\textbf{MAT} MaterialEquipe\\consumo/h · origem\_entrada};
-      \node[ent,draw=mlteal,below=0.5cm of eq] (ins)
+      \node[ent,draw=mlteal,below=1.3cm of pro] (ins)
         {\textbf{\textcolor{mlteal}{Insumo --- preço}}\\[1pt]
-         \textbf{PK} codigo · tipo: MO $|$ EQ $|$ MAT $|$ TERC · origem\_material\\
+         \textbf{PK} codigo · origem\_material\\
+         \textbf{tipo}: MATERIAL $|$ MAO\_OBRA $|$ EQUIPAMENTO $|$ \mbox{TERCEIRIZADO}\\
          preco\_unitario · fonte\_preco · historico{[]} · encargos CLT/PJ\\
          disponibilidade consumível};
+      % ── MO/EQ/MAT: última camada da cadeia, estrutura interna de Producao ─
+      \node[chip,draw=mlblue,below=1.6cm of ins,xshift=-2.35cm] (mo)
+        {\textbf{MO} FuncaoEquipe\\funcao\_id $\times$ num\_pessoas};
+      \node[chip,draw=mlorange,below=1.6cm of ins] (eq)
+        {\textbf{EQ} EquipamentoEquipe\\equip\_id $\times$ num\_unidades};
+      \node[chip,draw=mlgreen,below=1.6cm of ins,xshift=2.35cm] (mat)
+        {\textbf{MAT} MaterialEquipe\\consumo/h · origem\_entrada};
+      \begin{scope}[on background layer]
+        \node[zona2,fill=mlgreen!8,draw=mlgreen!40,dashed,fit=(mo)(eq)(mat),
+              label={[font=\tiny\bfseries,text=mlgreen!70,anchor=south west,
+              yshift=-1pt]north west:composicao\_padrao\_equipe (dentro de Producao)}]
+              (zona2) {};
+      \end{scope}
+      % ── espinha vertical: CPU → Producao → Insumo → {MO,EQ,MAT} ──────────
       \draw[rel,mlblue] (cpu) -- node[lbl,right]{producao\_id\_ref --- N CPUs : 1 Producao} (pro);
-      \draw[rel,mlgreen] (pro.south) -- node[lbl,right,pos=0.4]{composicao\_padrao\_equipe} (eq.north);
-      \draw[rel,mlgreen] (pro.south) -- (mo.north);
-      \draw[rel,mlgreen] (pro.south) -- (mat.north);
-      \draw[rel,mlteal] (mo.south) -- node[lbl,left]{via Funcao} (mo.south |- ins.north);
-      \draw[rel,mlteal] (eq.south) -- (ins.north);
-      \draw[rel,mlteal] (mat.south) -- (mat.south |- ins.north);
-      \draw[rel,mlteal,dashed] (cpu.east) -- ++(0.85,0) |-
-        node[lbl,right,pos=0.22,align=left]
-        {composicao\_itens\\só MAT/diesel\\$PU_{\text{fixo}} = \Sigma$ coef $\times$ preço}
-        (ins.east);
+      \draw[rel,mlgreen] (pro.east) to[out=-20,in=90] node[lbl,right,pos=0.15]{contém (embutido, sem FK)}
+        ($(zona2.east)+(1.2,0)$) to[out=-90,in=0] (zona2.east);
+      \draw[rel,mlteal] (mo.north) -- node[lbl,left,align=right]{FK: funcao\_id \arr\ Funcao\\\arr\ insumo\_id} (mo.north |- ins.south);
+      \draw[rel,mlteal] (eq.north) -- node[lbl,right]{FK: equip\_id} (ins.south);
+      \draw[rel,mlteal] (mat.north) -- node[lbl,right,align=left]{FK: insumo\_id} (mat.north |- ins.south);
+      \draw[rel,mlteal] (cpu.west) -- ++(-0.9,0) |-
+        node[lbl,left,pos=0.15,align=right]
+        {FK: composicao\_itens.insumo\_id\\só MAT/diesel (ADR-138)\\$PU_{\text{fixo}} = \Sigma$ coef $\times$ preço}
+        (ins.west);
     \end{tikzpicture}}
-    \column{0.44\textwidth}
+    \column{0.48\textwidth}
     \begin{block}{\small Como o PU nasce (pu\_calculator)}
       \scriptsize
       \centerline{$p_i^c = \frac{\gamma_i}{\rho_i} \;+\; PU_{\text{fixo}}$}
@@ -527,9 +543,13 @@
         \gamma_i = \sum_{r \in R_i} n_r \cdot \gamma_r
         \;+\; \underbrace{\sum_{e \in R_i^{EQ}} n_e \cdot f_e \cdot c_{\text{dsl}}}_{\gamma_i^{\text{comb}}}
       \]
-      \scriptsize $n_r$: qtd/equipe \quad $\gamma_r$: custo/hora de $r$ \quad
-      $f_e$: consumo de diesel [L/h] \quad
-      $c_{\text{dsl}}$: preço do litro --- API ANP por UF; offline \arr\ R\$~6,50/l
+      \vspace{-6pt}
+      \begin{itemize}\scriptsize\setlength{\itemsep}{0pt}\setlength{\topsep}{0pt}\setlength{\parskip}{0pt}
+        \item $n_r$: qtd/equipe
+        \item $\gamma_r$: custo/hora de $r$
+        \item $f_e$: consumo de diesel [L/h]
+        \item $c_{\text{dsl}}$: preço do litro --- API ANP por UF; offline \arr\ R\$~6,50/l
+      \end{itemize}
     \end{block}
     \column{0.4\textwidth}
     \begin{block}{Composição formal}
@@ -586,15 +606,6 @@
       Gargalo = argmin --- não é soma, é o elo mais fraco.
     \end{block}
     \vspace{4pt}
-    \begin{block}{Precedência de fontes}
-      \scriptsize calibrado $>$ derivado $>$ declarado\\
-      divergência $>$15\% $\to$ alerta \texttt{VAL-SINERGIA-02}
-    \end{block}
-    \vspace{4pt}
-    \begin{exampleblock}{\small Status}
-      \scriptsize Implementado ponta a ponta; hoje só populado no
-      catálogo \texttt{rfi-r02} (75 CPUs).
-    \end{exampleblock}
   \end{columns}
 \end{frame}
 
@@ -604,8 +615,12 @@
   \begin{columns}[T]
     \column{0.5\textwidth}
     \begin{block}{Fontes}
-      \scriptsize SINAPI \quad Pesquisa de mercado \quad Calibração por obra
-      \quad Mudança tributária
+      \begin{itemize}\scriptsize
+        \item SINAPI
+        \item Pesquisa de mercado
+        \item Calibração por obra
+        \item Mudança tributária
+      \end{itemize}
     \end{block}
     \begin{tikzpicture}[
         box/.style={draw=mlblue,fill=mlgray,rounded corners=2pt,
@@ -743,7 +758,7 @@
   \mtitle{Pool: Ciclo de Vida dos Slots ao Longo das Atividades}
   \begin{columns}[T]
     \column{0.55\textwidth}
-    \begin{block}{Cadeia 1 --- tipo ESC (Proj.\ Alfa)}
+    \begin{block}{Cadeia 1 --- tipo ESC (exemplo)}
       \scriptsize Pavim.\ A (S1--4) \arr\ \textit{standby}
       \arr\ Pavim.\ B (S6--8) \arr\ \textit{standby} \arr\
       Pavim.\ C (S10--12)\\[4pt]
@@ -802,11 +817,12 @@
     \end{block}
     \vspace{6pt}
     \begin{block}{Disponibilidade consumível}
-      \scriptsize
-      $K$: capacidade de armazenamento (tanque/pilha) \quad
-      $E_0$: estoque inicial\\
-      $a_{\max}$: taxa máx.\ de abastecimento externo \quad
-      lead time de reabastecimento [dias]
+      \begin{itemize}\scriptsize
+        \item $K$: capacidade de armazenamento (tanque/pilha)
+        \item $E_0$: estoque inicial
+        \item $a_{\max}$: taxa máx.\ de abastecimento externo
+        \item lead time de reabastecimento [dias]
+      \end{itemize}
     \end{block}
     \column{0.44\textwidth}
     \begin{block}{Projeção semanal de estoque}
@@ -857,11 +873,11 @@
     \column{0.44\textwidth}
     \begin{block}{Preço concluído, não cotado}
       \[
-        p^c = \frac{\gamma_{\text{usinagem}}}{\rho^{\text{sin}}}
+        p^c = \frac{\gamma_i}{\rho^{\text{sin}}}
       \]
-      \scriptsize mesma fórmula do catálogo — mas $\rho^{\text{sin}}$ vem
-      \emph{derivada} do grafo de sinergia (gargalo da usina), não
-      declarada à mão.
+      \scriptsize mesma fórmula do catálogo (Producao da usina) — mas
+      $\rho^{\text{sin}}$ vem \emph{derivada} do grafo de sinergia
+      (gargalo da usina), não declarada à mão.
     \end{block}
     \vspace{4pt}
     \begin{block}{Efeito real (mendeslobo)}
@@ -887,7 +903,7 @@
     \column{0.48\textwidth}
     \begin{block}{Custo horário e eficiência de planejamento}
       \footnotesize
-      $\displaystyle\gamma_i = \sum_{r \in R_i} n_r \gamma_r = \frac{\tilde{C}_i^{\text{sem}}}{h_{\text{sem}}}
+      $\displaystyle\gamma_i = \sum_{r \in R_i} n_r \gamma_r
       \quad \eta_{\text{plan},j} = \lambda_j \cdot \delta_j$
       \vspace{1pt}
 
@@ -956,16 +972,10 @@
     \begin{block}{Valor de venda}
       \scriptsize
       Direto: $V_i^D = \sum_{j}\sum_{r \in A_i} \beta_r \gamma_r h\, d\, m_{ij}$\\[2pt]
-      Indireto (topografia, laboratório, QSMS, adm):
+      Indireto:
       $V_i^I = \sum_{j}\sum_{q \in B_i} \beta_q \gamma_q h\, d$
     \end{block}
     \column{0.46\textwidth}
-    \begin{block}{Métricas gerenciais}
-      \scriptsize Razão indireto/direto: $\frac{\tilde{C}^I}{\tilde{C}^D}$\\
-      Participação do indireto: $\frac{\tilde{C}^I}{\tilde{C}^D+\tilde{C}^I}$\\
-      Margem de operacionalização: $\frac{V-\tilde{C}}{\tilde{C}}$
-    \end{block}
-    \vspace{4pt}
     \begin{exampleblock}{\small Memorial de cálculo}
       \scriptsize Trilha auditável: salário $\to$ encargos $\to$ custo
       $\to$ BDI $\to$ preço de venda. Assinatura de integridade
@@ -973,8 +983,11 @@
     \end{exampleblock}
     \vspace{4pt}
     \begin{block}{Três níveis de custo}
-      \scriptsize 1. Equipes isoladas \quad 2.\ Com pool partilhado \quad
-      3.\ Custo final por ciclo de vida --- cada nível rastreável.
+      \begin{enumerate}\scriptsize
+        \item Equipes isoladas
+        \item Com pool partilhado
+        \item Custo final por ciclo de vida --- cada nível rastreável
+      \end{enumerate}
     \end{block}
   \end{columns}
 \end{frame}
@@ -1005,21 +1018,20 @@
       isso já move o BDI final.
     \end{block}
     \column{0.46\textwidth}
-    \begin{block}{Tributo varia por categoria de custo}
-      \scriptsize
-      \textcolor{mlorange}{Serviço} (MO, aluguel, manutenção): BDI
-      $\approx$29.97\% (ISS 5\%+CSLL+IR+AC/DF/R+L)\\[3pt]
-      \textcolor{mlgreen}{Material/diesel} (mercadoria): BDI = 4\%
-      (só lucro --- sem ISS/CSLL/IR)\\[3pt]
-      \textcolor{mlblue}{Indireto/overhead}: BDI $\approx$25.21\%
-      (AC+DF+R+L, sem ISS)
-    \end{block}
-    \vspace{4pt}
-    \begin{exampleblock}{\small Por que isso importa}
+    \begin{exampleblock}{\small Tributo varia por categoria --- por que importa}
+      \begin{itemize}\scriptsize
+        \item \textcolor{mlorange}{Serviço} (MO, aluguel, manutenção):
+          BDI $\approx$29.97\% (ISS 5\%+CSLL+IR+AC/DF/R+L)
+        \item \textcolor{mlgreen}{Material/diesel} (mercadoria): BDI
+          = 4\% (só lucro --- sem ISS/CSLL/IR)
+        \item \textcolor{mlblue}{Indireto/overhead}: BDI
+          $\approx$25.21\% (AC+DF+R+L, sem ISS)
+      \end{itemize}
       \scriptsize Um BDI único por projeto erra em dois sentidos:
-      praça de ISS alto fica sub-precificada; de ISS baixo fica
-      cara sem necessidade. Memorial mostra a alíquota real aplicada
-      --- auditável por jurisdição (BR-\{UF\}) e por categoria.
+      praça de ISS alto fica sub-precificada; de ISS baixo fica cara
+      sem necessidade --- memorial audita a alíquota real por
+      jurisdição \emph{e} categoria. \textbf{Esse $T$ (ISS+PIS+COFINS+CPRB)
+      é justamente o que a Reforma Tributária substitui} (a seguir).
     \end{exampleblock}
   \end{columns}
 \end{frame}
@@ -1029,9 +1041,10 @@
   \mtitle{Reforma Tributária (EC 132/2023): O Que Muda no BDI}
   \begin{columns}[T]
     \column{0.5\textwidth}
-    \begin{block}{Extinção $\to$ substituição}
-      \scriptsize
-      PIS+COFINS (federal) e ISS+ICMS (municipal/estadual)
+    \begin{block}{Extinção $\to$ substituição do $T$}
+      \scriptsize O $T$ da fórmula do BDI (slide anterior:
+      ISS+PIS+COFINS+CPRB) muda de base:
+      PIS+COFINS (federal) + ISS+ICMS (municipal/estadual)
       $\to$ \textbf{CBS} (federal) e \textbf{IBS}
       (estadual/municipal); CSLL e IR são mantidos; novo
       \textbf{Imposto Seletivo} sobre itens específicos
@@ -1057,20 +1070,17 @@
       o insumo físico da produção.
     \end{block}
     \vspace{4pt}
-    \begin{exampleblock}{\small Já modelado (ADR-055)}
-      \scriptsize \texttt{TaxRegimeVersion}: pré-reforma / transição
-      / pleno CBS-IBS --- cenários canônicos por categoria de custo
-      (MO 0\% crédito $\cdot$ material $\sim$75--85\% $\cdot$ diesel
-      $\sim$70\%); custo de carregamento do crédito (atraso de 4--6
-      sem.) entra em $DF$.
-    \end{exampleblock}
-    \vspace{4pt}
-    \begin{block}{\small Em aberto}
-      \tiny UF (\texttt{Escopo.jurisdicao\_id}) já influencia o BDI
-      calculado --- corrigido nesta entrega (era gap de wiring, não do
-      modelo). Granularidade municipal (IBS/ISS por município, LC
-      116/2003) segue fora de escopo. \emph{Split payment}:
-      sinalizador, sem impacto no fluxo de caixa ainda.
+    \begin{block}{\small Status de implementação}
+      \scriptsize \textbf{Modelado}: \texttt{TaxRegimeVersion}
+      (pré-reforma / transição / pleno CBS-IBS) --- cenários
+      canônicos por categoria de custo (MO 0\% crédito $\cdot$
+      material $\sim$75--85\% $\cdot$ diesel $\sim$70\%); custo de
+      carregamento do crédito (atraso de 4--6 sem.) entra em
+      $DF$.\\[4pt]
+      \textbf{Em aberto}: IBS varia por jurisdição de destino (estado
+      \emph{e} município) --- hoje resolvemos só por UF (mesma
+      lacuna do ISS hoje, não nova). \emph{Split payment}: já
+      modelado como sinalizador, sem impacto em fluxo de caixa ainda.
     \end{block}
   \end{columns}
 \end{frame}
@@ -1102,6 +1112,14 @@
       \end{itemize}
       BDI, produtividade e pool são fixos por cenário; seleciona o
       cenário de maior margem (custo e prazo comparados lado a lado).
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Métricas gerenciais (por cenário)}
+      \begin{itemize}\scriptsize
+        \item Razão indireto/direto: $\frac{\tilde{C}^I}{\tilde{C}^D}$
+        \item Participação do indireto: $\frac{\tilde{C}^I}{\tilde{C}^D+\tilde{C}^I}$
+        \item Margem de operacionalização: $\frac{V-\tilde{C}}{\tilde{C}}$
+      \end{itemize}
     \end{block}
   \end{columns}
 \end{frame}
@@ -1154,54 +1172,60 @@
   \renewcommand{\arraystretch}{1.2}
   \begin{tabularx}{\textwidth}{@{}l X c c c c c c@{}}
     \hline
-    \textbf{Papel} & \textbf{Responsabilidade} & \textbf{RFI} & \textbf{RFP} & \textbf{Aprov.} & \textbf{Edita} & \textbf{Publica} & \textbf{Consulta} \\
+    \textbf{Papel} & \textbf{Responsabilidade} & \textbf{RFI} & \textbf{RFP} & \textbf{Aprov.} & \textbf{Edita} & \textbf{Publica} & \textbf{Cons.\ Proj.} \\
     \hline
+    TI          & Administração, aprovações e usuários  & \yes & \yes & \yes & \yes & \yes & \yes \\
     Comercial   & Estimativa de preço ao cliente        & \yes & \no  & \no  & \no  & \no  & \yes \\
     Engenharia  & Planejamento técnico completo         & \yes & \yes & \yes & \yes & \no  & \yes \\
-    TI          & Administração, aprovações e usuários  & \yes & \yes & \yes & \yes & \yes & \yes \\
-    Auditoria   & Somente consulta                      & \no  & \no  & \no  & \no  & \no  & \yes \\
     Suprimentos & Gestão do catálogo (sem projetos)     & \no  & \no  & \no  & \yes & \yes & \no  \\
+    Auditoria   & Somente consulta                      & \no  & \no  & \no  & \no  & \no  & \yes \\
     \hline
   \end{tabularx}
   \vspace{6pt}
-  \begin{alertblock}{\small RFI $\times$ RFP}
-    \scriptsize Comercial faz apenas a estimativa de preço (RFI);
-    Engenharia e TI fazem o planejamento completo (RFP).
-  \end{alertblock}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{alertblock}{\small RFI $\times$ RFP}
+      \scriptsize Comercial faz apenas a estimativa de preço (RFI);
+      Engenharia e TI fazem o planejamento completo (RFP).
+    \end{alertblock}
+    \column{0.48\textwidth}
+    \begin{exampleblock}{\small Cons.\ Proj.\ $\neq$ leitura de catálogo}
+      \scriptsize \textbf{Cons.\ Proj.} = consultar/ver projetos de cliente.
+      Suprimentos lê o catálogo normalmente (ver slide 3.2, Catálogo ---
+      Leitura) mas não tem acesso a projeto nenhum.
+    \end{exampleblock}
+  \end{columns}
 \end{frame}
 
 \subsection{Matriz de responsabilidades}
 \begin{frame}
-  \mtitle{Matriz Papel $\times$ Ferramenta}
-  \footnotesize
-  \setlength{\tabcolsep}{4pt}
-  \renewcommand{\arraystretch}{0.92}
-  \begin{tabularx}{\textwidth}{@{}X c c c c c@{}}
+  \mtitle{Matriz Papel $\times$ Grupo de Ferramentas}
+  \vspace{4pt}
+  \setlength{\tabcolsep}{8pt}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabularx}{\textwidth}{@{}l X c c c c c@{}}
     \hline
-    \textbf{Grupo / Ferramenta} & \role{Com} & \role{Eng} & \role{TI} & \role{Aud} & \role{Sup} \\
+    \textbf{Grupo} & \textbf{Ação} & \role{TI} & \role{Com} & \role{Eng} & \role{Sup} & \role{Aud} \\
     \hline
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Sistema}} \\
-    \tool{ping} & \yes & \yes & \yes & \yes & \yes \\
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Projetos --- leitura}} \\
-    \tool{listar\_projetos}, \tool{comparar\_planos}\ldots & \yes & \yes & \yes & \yes & \no \\
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Projetos --- criação e execução}} \\
-    \tool{iniciar\_orcamento}, \tool{disparar\_pipeline}\ldots & \yes & \yes & \yes & \no & \no \\
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Projetos --- aprovação}} \\
-    \tool{aprovar\_versao} & \no & \yes & \yes & \no & \no \\
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Artefatos}} \\
-    \tool{listar\_artefatos\_projeto}, \tool{obter\_artefato}\ldots & \yes & \yes & \yes & \yes & \no \\
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Catálogo --- leitura}} \\
-    \tool{pesquisar\_catalogo}, \tool{calcular\_pu\_producao}\ldots & \yes & \yes & \yes & \no & \yes \\
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Catálogo --- escrita e merge}} \\
-    \tool{atualizar\_preco\_insumo} & \no & \yes & \yes & \no & \yes \\
-    \tool{aprovar\_merge\_catalogo} \textit{\tiny(4 olhos)} & \no & \no & \yes & \no & \yes \\
-    \multicolumn{6}{@{}l}{\scriptsize\textit{Financeiro}} \\
-    \tool{obter\_resultado\_campanha}, \tool{comparar\_rfi\_catalogo} & \yes & \yes & \yes & \yes & \yes \\
+    Sistema & Geral & \yes & \yes & \yes & \yes & \yes \\
+    \cline{1-7}
+    \textcolor{mlblue}{Projetos} & Leitura & \yes & \yes & \yes & \no & \yes \\
+      & Criação e execução & \yes & \yes & \yes & \no & \no \\
+      & Aprovação & \yes & \no & \yes & \no & \no \\
+      & Artefatos & \yes & \yes & \yes & \no & \yes \\
+    \cline{1-7}
+    \textcolor{mlteal}{Catálogo} & Leitura & \yes & \yes & \yes & \yes & \no \\
+      & Escrita e merge & \yes & \no & \half & \yes & \no \\
+    \cline{1-7}
+    Financeiro & Geral & \yes & \yes & \yes & \yes & \yes \\
     \hline
   \end{tabularx}
-  \vspace{2pt}
-  {\scriptsize \yes\ acesso pleno \quad \no\ sem permissão \quad
-  Com Comercial $\cdot$ Eng Engenharia $\cdot$ Aud Auditoria $\cdot$ Sup Suprimentos}
+  \vspace{6pt}
+  {\small \yes\ acesso pleno \quad \half\ acesso parcial (edita, mas não
+  aprova merge --- regra dos quatro olhos) \quad \no\ sem permissão \\[2pt]
+  Com Comercial $\cdot$ Eng Engenharia $\cdot$ Sup Suprimentos $\cdot$ Aud
+  Auditoria \quad --- \quad 47 ferramentas MCP agrupadas por Grupo.Ação;
+  lista completa no apêndice A.2}
 \end{frame}
 
 \subsection{Workflows}
@@ -1289,52 +1313,42 @@
 \subsection{Hand-offs}
 \begin{frame}
   \mtitle{Handoffs entre Papéis}
+  \centering
   \begin{tikzpicture}[
-      rolebox/.style={draw=mlblue,fill=mlblue!10,rounded corners=3pt,
-                   minimum width=1.9cm,minimum height=0.6cm,
-                   font=\small\bfseries,align=center},
-      act/.style={draw=mlblue!50,fill=mlgray,rounded corners=2pt,
-                  minimum width=3.2cm,font=\scriptsize,align=center,
-                  inner sep=3pt},
-      arr2/.style={-{Stealth[length=4pt]},mlblue,thick},
-      hoff/.style={-{Stealth[length=4pt]},mlorange,thick,dashed},
+      handoff/.style={draw=mlblue,fill=mlgray,rounded corners=3pt,
+                   minimum width=5.4cm,minimum height=0.85cm,
+                   font=\scriptsize,align=center,inner sep=4pt},
+      hoff/.style={-{Stealth[length=5pt]},mlorange,thick,dashed},
     ]
     % H1
-    \node[rolebox] (ti1) {TI};
-    \node[act,right=0.35cm of ti1]  (a1) {Cria usuário + envia\\config.\ de acesso};
-    \node[rolebox,right=0.35cm of a1]  (op1) {Usuário};
-    \node[act,right=0.35cm of op1]  (b1) {Conecta Claude Desktop\\inicia sessão};
-    \draw[arr2] (ti1) -- (a1);
-    \draw[hoff] (a1) -- node[above,font=\tiny\itshape,mlorange]{H1} (op1);
-    \draw[arr2] (op1) -- (b1);
+    \node[handoff] (ti1)
+      {\textbf{\textcolor{mlblue}{TI}}\\Cria usuário + envia\\config.\ de acesso};
+    \node[handoff,right=3.2cm of ti1] (op1)
+      {\textbf{\textcolor{mlblue}{Usuário}}\\Conecta Claude Desktop\\inicia sessão};
+    \draw[hoff] (ti1) -- node[above,font=\tiny\itshape,mlorange]{H1} (op1);
+
     % H2
-    \node[rolebox,below=0.6cm of ti1] (op2) {Comercial};
-    \node[act,right=0.35cm of op2]  (a2) {Roda a estimativa\\de preço (RFI)};
-    \node[rolebox,right=0.35cm of a2]  (en2) {Eng./TI};
-    \node[act,right=0.35cm of en2]  (b2) {Revisa e aprova\\a versão};
-    \draw[arr2] (op2) -- (a2);
-    \draw[hoff] (a2) -- node[above,font=\tiny\itshape,mlorange]{H2} (en2);
-    \draw[arr2] (en2) -- (b2);
+    \node[handoff,below=0.5cm of ti1] (op2)
+      {\textbf{\textcolor{mlblue}{Comercial}}\\Roda a estimativa\\de preço (RFI)};
+    \node[handoff,right=3.2cm of op2] (en2)
+      {\textbf{\textcolor{mlblue}{Eng./TI}}\\Revisa e aprova\\a versão};
+    \draw[hoff] (op2) -- node[above,font=\tiny\itshape,mlorange]{H2} (en2);
 
     % H3
-    \node[rolebox,below=0.6cm of op2] (op3) {Comercial};
-    \node[act,right=0.35cm of op3]  (a3) {Explora cenários\\iniciais de preço};
-    \node[rolebox,right=0.35cm of a3]  (en3) {Engenharia};
-    \node[act,right=0.35cm of en3]  (b3) {Aprofunda no\\planejamento (RFP)};
-    \draw[arr2] (op3) -- (a3);
-    \draw[hoff] (a3) -- node[above,font=\tiny\itshape,mlorange]{H3} (en3);
-    \draw[arr2] (en3) -- (b3);
+    \node[handoff,below=0.5cm of op2] (op3)
+      {\textbf{\textcolor{mlblue}{Comercial}}\\Explora cenários\\iniciais de preço};
+    \node[handoff,right=3.2cm of op3] (en3)
+      {\textbf{\textcolor{mlblue}{Engenharia}}\\Aprofunda no\\planejamento (RFP)};
+    \draw[hoff] (op3) -- node[above,font=\tiny\itshape,mlorange]{H3} (en3);
 
     % H4
-    \node[rolebox,below=0.6cm of op3] (en4) {Engenharia};
-    \node[act,right=0.35cm of en4]  (a4) {Edita rascunho\\do catálogo};
-    \node[rolebox,right=0.35cm of a4]  (su4) {Suprimentos/TI};
-    \node[act,right=0.35cm of su4]  (b4) {Aprova publicação\\(quatro olhos)};
-    \draw[arr2] (en4) -- (a4);
-    \draw[hoff] (a4) -- node[above,font=\tiny\itshape,mlorange]{H4} (su4);
-    \draw[arr2] (su4) -- (b4);
+    \node[handoff,below=0.5cm of op3] (en4)
+      {\textbf{\textcolor{mlblue}{Engenharia}}\\Edita rascunho\\do catálogo};
+    \node[handoff,right=3.2cm of en4] (su4)
+      {\textbf{\textcolor{mlblue}{Suprimentos/TI}}\\Aprova publicação\\(quatro olhos)};
+    \draw[hoff] (en4) -- node[above,font=\tiny\itshape,mlorange]{H4} (su4);
   \end{tikzpicture}
-  \vspace{6pt}
+  \vspace{2pt}
 
   {\scriptsize
     \textbf{H1} Onboarding de usuário \quad
@@ -1407,9 +1421,14 @@
       \draw[arr2] (b4) -- (b5);
     \end{tikzpicture}}
   \end{block}
-  \vspace{4pt}
+  \vspace{-4pt}
+  \begin{center}
+    \tikz{\draw[-{Stealth[length=5pt]},mlblue,thick] (0,0.22) -- (0,-0.02);}
+    {\tiny\itshape roda contra a revisão de staging (0\% tráfego)}
+  \end{center}
+  \vspace{-6pt}
   \begin{block}{Smoke test --- 15 verificações automáticas}
-    \scriptsize
+    \tiny
     \begin{columns}[T]
       \column{0.5\textwidth}
       \yes\ Saúde do sistema \\
@@ -1428,10 +1447,19 @@
       \yes\ MCP rejeita sem token (401) \\
       \yes\ Certificado TLS válido \quad \yes\ HTTPS redirect \\
     \end{columns}
-    \vspace{2pt}
-    {\scriptsize\itshape 9 dessas verificações exigem credencial de smoke test configurada.}
+    \vspace{1pt}
+    {\tiny\itshape 9 dessas verificações exigem credencial de smoke test configurada.}
   \end{block}
-  \vspace{4pt}
+  \vspace{-4pt}
+  \centering{\tiny\itshape resultado do smoke test}\par
+  \vspace{-3pt}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \centering\tikz{\draw[-{Stealth[length=5pt]},mlred,thick] (0,0.2) -- (0,-0.02);}
+    \column{0.48\textwidth}
+    \centering\tikz{\draw[-{Stealth[length=5pt]},mlgreen,thick] (0,0.2) -- (0,-0.02);}
+  \end{columns}
+  \vspace{-8pt}
   \begin{columns}[T]
     \column{0.48\textwidth}
     \begin{alertblock}{\small Falhou}
@@ -1444,6 +1472,63 @@
       anterior desmobilizada.
     \end{exampleblock}
   \end{columns}
+\end{frame}
+
+\subsection{Ferramentas MCP por grupo}
+\begin{frame}
+  \frametitle{\textcolor{mlorange}{A.2}\quad Referência: Ferramentas MCP por Grupo.Ação (47 no total)}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{block}{\tiny Sistema (1)}
+      \tiny\texttt{ping}
+    \end{block}
+    \vspace{1pt}
+    \begin{block}{\tiny Projetos (25)}
+      \tiny
+      \textbf{Leitura (11)}:
+      \texttt{listar\_projetos, consultar\_status,
+      consultar\_estrutura\_projeto, consultar\_job\_pipeline,
+      listar\_jobs\_pipeline, comparar\_planos, explorar\_pool\_recursos,
+      explorar\_estoque\_consumiveis, auditar\_plano, consultar\_benchmark,
+      listar\_runs\_campanha}\\[3pt]
+      \textbf{Criação e execução (10)}:
+      \texttt{criar\_projeto, iniciar\_orcamento, nova\_versao,
+      gerir\_escopo, disparar\_pipeline, cancelar\_job\_pipeline,
+      salvar\_perfil\_bdi, simular\_cenario\_replan, empacotar\_benchmark,
+      explorar\_configuracoes\_go}\\[3pt]
+      \textbf{Aprovação (1)}: \texttt{aprovar\_versao}\\[3pt]
+      \textbf{Artefatos (3)}:
+      \texttt{listar\_artefatos\_projeto, obter\_artefato,
+      download\_benchmark\_zip}
+    \end{block}
+    \column{0.5\textwidth}
+    \begin{block}{\tiny\textcolor{mlteal}{Catálogo} (15)}
+      \tiny
+      \textbf{Leitura (10)}:
+      \texttt{listar\_contextos, pesquisar\_catalogo,
+      auditar\_catalogo, historico\_preco\_insumo, calcular\_pu\_producao,
+      versoes\_catalogo, listar\_divergencias\_rascunho,
+      consultar\_impacto\_reajuste, exportar\_pesquisa\_mercado,
+      calcular\_tributos}\\[3pt]
+      \textbf{Escrita e merge (5)}:
+      \texttt{atualizar\_preco\_insumo, adicionar\_variante\_producao,
+      criar\_rascunho\_catalogo, aprovar\_merge\_catalogo (4 olhos),
+      rejeitar\_rascunho\_catalogo}
+    \end{block}
+    \vspace{1pt}
+    \begin{block}{\tiny\textcolor{mlgreen}{Financeiro} (2)}
+      \tiny\texttt{comparar\_rfi\_catalogo, obter\_resultado\_campanha}
+    \end{block}
+    \vspace{1pt}
+    \begin{block}{\tiny\textcolor{mlpurple}{Autenticação / dispositivos} (4)}
+      \tiny\texttt{ativar\_dispositivo, renovar\_token,
+      listar\_meus\_dispositivos, revogar\_meu\_dispositivo}
+    \end{block}
+  \end{columns}
+  \vspace{1pt}
+  {\tiny\itshape Fonte: introspecção de \texttt{build\_server()} + tags
+  \texttt{@permission} --- Autenticação/dispositivos é auto-serviço de token,
+  fora das 8 categorias do slide 3.2.}
 \end{frame}
 
 
