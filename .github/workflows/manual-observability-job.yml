@@ -1,0 +1,42 @@
+name: Manual - Provision Observability Job
+
+# Dispatch manual único para criar/atualizar o Container Apps Job de
+# observabilidade (concilium-observability). provision.sh não roda em CI
+# rotineiro — este workflow existe só para expor os secrets SP_* já
+# armazenados no GitHub (nunca legíveis de volta fora de um run) à chamada
+# de `provision.sh observability-job`, sem precisar do operador ter o
+# client secret do SharePoint no shell local.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  provision-observability-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: provision.sh observability-job
+        env:
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP || 'concilium-rg' }}
+          ACR_NAME: ${{ vars.ACR_NAME || 'conciliumacr' }}
+          IMAGE_NAME: ${{ vars.IMAGE_NAME || 'concilium' }}
+          SP_TENANT_ID: ${{ secrets.CONCILIUM__SP_TENANT_ID }}
+          SP_CLIENT_ID: ${{ secrets.CONCILIUM__SP_CLIENT_ID }}
+          SP_CLIENT_SECRET: ${{ secrets.CONCILIUM__SP_CLIENT_SECRET }}
+          SP_DRIVE_ID: ${{ secrets.CONCILIUM__SP_DRIVE_ID }}
+          SP_ROOT_PATH: ${{ vars.CONCILIUM__SP_ROOT_PATH || 'Concilium/prod' }}
+        run: |
+          chmod +x cd/scripts/provision.sh cd/scripts/deploy.sh cd/scripts/domain.sh
+          cd/scripts/provision.sh observability-job
