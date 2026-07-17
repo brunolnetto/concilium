@@ -201,8 +201,8 @@ class TestInputsMixin:
     def test_apply_runtime_defaults_skill06_aliquotas_bdi_jurisdicao(self):
         """ADR-038: jurisdição resolvida deve alimentar aliquotas_bdi_jurisdicao."""
         mixin = self._make_mixin()
-        mixin.load_jurisdicao = MagicMock(
-            return_value={"motor_tributario_bdi": {"aliquotas": {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03}}}
+        mixin.load_jurisdicao_com_fallback = MagicMock(
+            return_value=({"motor_tributario_bdi": {"aliquotas": {"ISS": 0.02, "PIS": 0.0065, "COFINS": 0.03}}}, [])
         )
         proj = self._make_project()
         ctx = self._make_contexto()
@@ -213,25 +213,46 @@ class TestInputsMixin:
         """Escopo.jurisdicao_id (já presente em `normalized` via escopo_meta) tem
         prioridade sobre o default de Contexto."""
         mixin = self._make_mixin()
-        mixin.load_jurisdicao = MagicMock(return_value={"motor_tributario_bdi": {"aliquotas": {"ISS": 0.05}}})
+        mixin.load_jurisdicao_com_fallback = MagicMock(
+            return_value=({"motor_tributario_bdi": {"aliquotas": {"ISS": 0.05}}}, [])
+        )
         proj = self._make_project()
         ctx = self._make_contexto()
         mixin._apply_runtime_defaults("06-resultado-financeiro", proj, ctx, {"jurisdicao_id": "BR-SP"})
-        mixin.load_jurisdicao.assert_called_once_with("BR-SP")
+        mixin.load_jurisdicao_com_fallback.assert_called_once_with("BR-SP")
 
     def test_apply_runtime_defaults_skill06_sem_motor_tributario_nao_seta_campo(self):
         """Jurisdição sem motor_tributario_bdi (ex.: config antiga) não injeta o campo
         — regressão zero, cai para DEFAULT_BDI_TABELA como hoje."""
         mixin = self._make_mixin()
-        mixin.load_jurisdicao = MagicMock(return_value={})
+        mixin.load_jurisdicao_com_fallback = MagicMock(return_value=({}, []))
         proj = self._make_project()
         ctx = self._make_contexto()
         result = mixin._apply_runtime_defaults("06-resultado-financeiro", proj, ctx, {})
         assert "aliquotas_bdi_jurisdicao" not in result
 
+    def test_apply_runtime_defaults_skill06_propaga_alerta_de_fallback_municipio(self):
+        """ADR-142: alertas do fallback município->UF são propagados para
+        normalized['avisos_runtime']."""
+        mixin = self._make_mixin()
+        mixin.load_jurisdicao_com_fallback = MagicMock(
+            return_value=(
+                {"motor_tributario_bdi": {"aliquotas": {"ISS": 0.02}}},
+                ["VAL-JURISDICAO-MUNICIPIO-01: 'BR-CE-SOBRAL' sem config própria, usando 'BR-CE' (nível UF)"],
+            )
+        )
+        proj = self._make_project()
+        ctx = self._make_contexto()
+        result = mixin._apply_runtime_defaults(
+            "06-resultado-financeiro", proj, ctx, {"jurisdicao_id": "BR-CE-SOBRAL"}
+        )
+        assert result["avisos_runtime"] == [
+            "VAL-JURISDICAO-MUNICIPIO-01: 'BR-CE-SOBRAL' sem config própria, usando 'BR-CE' (nível UF)"
+        ]
+
     def test_apply_runtime_defaults_skill06_nao_sobrescreve_valor_ja_presente(self):
         mixin = self._make_mixin()
-        mixin.load_jurisdicao = MagicMock(side_effect=AssertionError("não deveria ser chamado"))
+        mixin.load_jurisdicao_com_fallback = MagicMock(side_effect=AssertionError("não deveria ser chamado"))
         proj = self._make_project()
         ctx = self._make_contexto()
         result = mixin._apply_runtime_defaults(

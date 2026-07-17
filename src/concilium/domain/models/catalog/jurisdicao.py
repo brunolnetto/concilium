@@ -85,10 +85,15 @@ class Jurisdicao(BaseModel):
 
     model_config = ConfigDict(extra="ignore")  # ignora $comment, $schema, parent_id
 
-    # Aceita "BR" e "BR-UF" (ex.: "BR-CE", "BR-SP") — o formato realmente usado em
-    # config/jurisdicoes/*.json. O pattern anterior (^[A-Z]{2,5}$) rejeitava qualquer
-    # código com hífen, incompatível com todos os 27 arquivos de UF já existentes.
-    codigo: str = Field(pattern=r"^[A-Z]{2}(-[A-Z]{2})?$")
+    # Aceita "BR", "BR-UF" (ex.: "BR-CE", "BR-SP") e, opcionalmente, um 3º segmento
+    # de município (ADR-142, ex.: "BR-CE-FORTALEZA") — slug legível em maiúsculas,
+    # "_" como separador de palavras. O grupo de município fica aninhado DENTRO do
+    # grupo de UF (não como grupo irmão independente) para que "BR-CEA" não possa
+    # casar pulando a UF e reinterpretando "CEA" como se fosse o próprio município
+    # — o 3º segmento só é aceito quando a UF de 2 letras também está presente. O
+    # pattern anterior (^[A-Z]{2,5}$) rejeitava qualquer código com hífen,
+    # incompatível com todos os 27 arquivos de UF já existentes.
+    codigo: str = Field(pattern=r"^[A-Z]{2}(-[A-Z]{2}(-[A-Z0-9_]{2,40})?)?$")
     nome: str
     moeda: str = Field(pattern=r"^[A-Z]{3}$")
     regime_trabalhista: Literal["CLT", "OUTRO"]

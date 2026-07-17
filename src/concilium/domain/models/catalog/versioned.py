@@ -217,10 +217,13 @@ class JurisdicaoVersionada(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     # O pattern anterior (^[A-Z]{2,10}$) rejeitava hífen — incompatível com o próprio
-    # exemplo da descrição ("BR-CE") e com id_atu (ex.: "BR-CE@2026-04").
+    # exemplo da descrição ("BR-CE") e com id_atu (ex.: "BR-CE@2026-04"). O 3º
+    # segmento opcional é o município (ADR-142, ex.: "BR-CE-FORTALEZA"), aninhado
+    # dentro do grupo de UF (não irmão independente) para não aceitar um "UF"
+    # mal formada reinterpretada como município sem UF — ver jurisdicao.py.
     id: str = Field(
-        pattern=r"^[A-Z]{2,15}(-[A-Z]{2,15})?$",
-        description="Código da jurisdição. Ex.: 'BR-CE', 'GOIANIA'",
+        pattern=r"^[A-Z]{2,15}(-[A-Z]{2,15}(-[A-Z0-9_]{2,40})?)?$",
+        description="Código da jurisdição. Ex.: 'BR-CE', 'GOIANIA', 'BR-CE-FORTALEZA'",
     )
     nome: str
     regime_trabalhista: Literal["CLT", "OUTRO"]
