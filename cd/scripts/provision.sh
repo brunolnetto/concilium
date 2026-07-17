@@ -284,14 +284,6 @@ cmd_observability_job() {
     [[ -n "$SP_CLIENT_SECRET" ]] || die "SP_CLIENT_SECRET nao definido."
     [[ -n "$SP_DRIVE_ID" ]]      || die "SP_DRIVE_ID nao definido."
 
-    local mi_id
-    mi_id=$(az identity show --name concilium-identity --resource-group "$RESOURCE_GROUP" \
-        --query 'id' -o tsv 2>/dev/null || echo "")
-    [[ -n "$mi_id" ]] || die "Managed identity 'concilium-identity' nao encontrada. Rode bootstrap primeiro."
-    local mi_client_id
-    mi_client_id=$(az identity show --name concilium-identity --resource-group "$RESOURCE_GROUP" \
-        --query 'clientId' -o tsv 2>/dev/null || echo "")
-
     # Isolamento sistema vs. projetos (ver sessao "sistema/" no SharePoint) —
     # mesmo default usado na configuracao manual e em cmd_configure.
     local sp_system_root="${SP_SYSTEM_ROOT_PATH:-${SP_ROOT_PATH}/sistema}"
@@ -305,7 +297,6 @@ cmd_observability_job() {
         "CONCILIUM__SP_DRIVE_ID=${SP_DRIVE_ID}"
         "CONCILIUM__SP_ROOT_PATH=${SP_ROOT_PATH}"
         "CONCILIUM__SP_SYSTEM_ROOT_PATH=${sp_system_root}"
-        "AZURE_CLIENT_ID=${mi_client_id}"
         "OTEL_SERVICE_NAME=concilium-observability"
     )
 
@@ -321,6 +312,15 @@ cmd_observability_job() {
             --set-env-vars "${env_vars[@]}" \
             --output none
     else
+        # Identidade system-assigned PROPRIA do job (nao concilium-identity) —
+        # reusar uma identidade ja anexada a outro recurso (concilium-api) num
+        # --mi-user-assigned + --registry-identity combinado no mesmo `create`
+        # dispara um bug de ordering na extensao containerapp (beta): o passo
+        # de registry-identity consulta as identidades do job antes do
+        # mi-user-assigned commitar, e falha com IdentityDoesNotExist. Uma
+        # identidade system-assigned nova nao tem esse problema. O job nao
+        # precisa de Key Vault/AZURE_CLIENT_ID — so usa SP_CLIENT_ID/SECRET
+        # (MSAL, nao managed identity) para autenticar no SharePoint.
         log "Job nao existe — criando (trigger Schedule, cron a cada 5min)."
         az containerapp job create \
             --name "$ACA_OBSERVABILITY_JOB" \
@@ -337,9 +337,21 @@ cmd_observability_job() {
             --command "concilium" "ops" "observability" "cycle" \
             --env-vars "${env_vars[@]}" \
             --registry-server "${ACR_NAME}.azurecr.io" \
-            --registry-identity "$mi_id" \
-            --mi-user-assigned "$mi_id" \
+            --registry-identity system \
+            --mi-system-assigned \
             --output none
+
+        local acr_id principal_id
+        acr_id=$(az acr show --name "$ACR_NAME" --query 'id' -o tsv)
+        principal_id=$(az containerapp job show --name "$ACA_OBSERVABILITY_JOB" --resource-group "$RESOURCE_GROUP" \
+            --query 'identity.principalId' -o tsv)
+        step "AcrPull -> identidade system-assigned do job"
+        az role assignment create \
+            --assignee "$principal_id" \
+            --role AcrPull \
+            --scope "$acr_id" \
+            --output none
+        ok "AcrPull concedido."
     fi
 
     ok "Container Apps Job '$ACA_OBSERVABILITY_JOB' configurado."
