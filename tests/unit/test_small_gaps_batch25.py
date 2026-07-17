@@ -40,7 +40,7 @@ class TestObservabilityWorkerBlankLines:
         mock_storage.ler_blob.return_value = existing_content.encode("utf-8")
 
         new_records = [{"event_id": "NEW-1", "ts": 2}]
-        worker._upsert_silver("logs", new_records)
+        worker._upsert_silver("logs", new_records, "2026-06-18")
 
         # gravar_blob should have been called once with merged content
         mock_storage.gravar_blob.assert_called_once()

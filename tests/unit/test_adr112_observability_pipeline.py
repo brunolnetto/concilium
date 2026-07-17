@@ -662,6 +662,30 @@ class TestObservabilityWorker:
         assert result["blobs_processed"] == 0
         assert result["records_processed"] == 0
 
+    def test_backfill_partitions_silver_by_bronze_blob_date_not_today(self, storage):
+        """Backfill de datas antigas deve gravar cada dia no seu próprio arquivo Silver,
+        não colapsar tudo no arquivo de hoje — senão memória cresce sem limite durante
+        um backfill grande (um único arquivo sempre maior, reescrito por inteiro a cada blob)."""
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-05-01",
+            [{"ts": "2026-05-01T10:00:00Z", "severity": "W", "logger": "l", "message": "m1", "span_id": "b1"}],
+        )
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-05-02",
+            [{"ts": "2026-05-02T10:00:00Z", "severity": "W", "logger": "l", "message": "m2", "span_id": "b2"}],
+        )
+        worker = ObservabilityWorker(storage)
+        worker.run(signal_type="logs")
+
+        assert storage.blob_existe("observability/silver/logs/2026-05-01/records.ndjson")
+        assert storage.blob_existe("observability/silver/logs/2026-05-02/records.ndjson")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F5: GoldAggregator
@@ -673,7 +697,7 @@ def _seed_silver_traces(worker, records: list[dict]) -> None:
     from concilium.infrastructure.observability.silver_normalizer import normalize_span_record
 
     normalized = [normalize_span_record(r) for r in records]
-    worker._upsert_silver("traces", normalized)
+    worker._upsert_silver("traces", normalized, "2026-06-18")
 
 
 def _seed_silver_logs(worker, records: list[dict]) -> None:
@@ -681,7 +705,7 @@ def _seed_silver_logs(worker, records: list[dict]) -> None:
     from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
 
     normalized = [normalize_log_record(r) for r in records]
-    worker._upsert_silver("logs", normalized)
+    worker._upsert_silver("logs", normalized, "2026-06-18")
 
 
 class TestGoldAggregator:

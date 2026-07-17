@@ -99,13 +99,23 @@ class ObservabilityWorker:
 
     # ── Silver persistido em BlobStorage ───────────────────────────────────
 
-    def _silver_path(self, signal_type: str) -> str:
-        date = datetime.date.today().isoformat()
+    def _silver_path(self, signal_type: str, date: str) -> str:
         return f"{_SILVER_PREFIX}/{signal_type}/{date}/records.ndjson"
 
-    def _upsert_silver(self, signal_type: str, records: list[dict[str, Any]]) -> None:
-        """Upsert records no Silver NDJSON. Deduplicação por event_id/span_id."""
-        path = self._silver_path(signal_type)
+    @staticmethod
+    def _blob_date(blob_path: str) -> str:
+        """Extrai a data do path do blob Bronze: `.../{signal_type}/{date}/{batch_id}.ndjson`."""
+        return blob_path.rsplit("/", 2)[-2]
+
+    def _upsert_silver(self, signal_type: str, records: list[dict[str, Any]], date: str) -> None:
+        """Upsert records no Silver NDJSON do dia `date`. Deduplicação por event_id/span_id.
+
+        `date` vem do path do blob Bronze de origem, não de `date.today()` — durante um
+        backfill de dias/semanas, cada dia fica em seu próprio arquivo (memória limitada
+        ao tamanho de um dia por vez), em vez de tudo colapsar num único arquivo "hoje"
+        cada vez maior.
+        """
+        path = self._silver_path(signal_type, date)
         existing: dict[str, dict[str, Any]] = {}
         try:
             raw = self._storage.ler_blob(path)
@@ -162,7 +172,7 @@ class ObservabilityWorker:
         for blob_path in new_blobs:
             raw_records = self._read_ndjson(blob_path)
             normalized = [normalizer(r) for r in raw_records]
-            self._upsert_silver(signal_type, normalized)
+            self._upsert_silver(signal_type, normalized, self._blob_date(blob_path))
             records_processed += len(raw_records)
             current_total += len(raw_records)
             self._checkpoints.save(

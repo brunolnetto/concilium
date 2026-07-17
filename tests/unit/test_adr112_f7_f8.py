@@ -19,7 +19,7 @@ def _seed_silver_logs(storage, records):
     from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
 
     worker = ObservabilityWorker(storage)
-    worker._upsert_silver("logs", [normalize_log_record(r) for r in records])
+    worker._upsert_silver("logs", [normalize_log_record(r) for r in records], "2026-06-19")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

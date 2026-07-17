@@ -50,7 +50,7 @@ def _seed_silver_logs(storage, records):
     from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
 
     worker = ObservabilityWorker(storage)
-    worker._upsert_silver("logs", [normalize_log_record(r) for r in records])
+    worker._upsert_silver("logs", [normalize_log_record(r) for r in records], "2026-06-19")
 
 
 def _seed_silver_traces(storage, records):
@@ -58,7 +58,7 @@ def _seed_silver_traces(storage, records):
     from concilium.infrastructure.observability.silver_normalizer import normalize_span_record
 
     worker = ObservabilityWorker(storage)
-    worker._upsert_silver("traces", [normalize_span_record(r) for r in records])
+    worker._upsert_silver("traces", [normalize_span_record(r) for r in records], "2026-06-19")
 
 
 def _seed_bronze(storage, signal_type, records):
