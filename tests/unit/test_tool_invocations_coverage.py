@@ -277,6 +277,68 @@ class TestBlobCount:
         assert blob_repo.count() == 2
 
 
+class TestBlobDeleteByUser:
+    """delete_by_user — direito de ser esquecido (LGPD Art. 18): anonimiza user_id."""
+
+    def test_anonymizes_matching_records_in_active_file(self, blob_repo):
+        blob_repo.append(_make_invocation("id-1", user_id="carla"))
+        blob_repo.append(_make_invocation("id-2", user_id="carla"))
+        blob_repo.append(_make_invocation("id-3", user_id="outro"))
+
+        affected = blob_repo.delete_by_user("carla")
+
+        assert affected == 2
+        records = {r.id: r.user_id for r in blob_repo._read_all()}
+        assert records == {"id-1": None, "id-2": None, "id-3": "outro"}
+
+    def test_preserves_record_count_does_not_delete_lines(self, blob_repo):
+        """Anonimiza, não apaga — preserva estatísticas agregadas (contagem/tools usadas)."""
+        blob_repo.append(_make_invocation("id-1", user_id="carla"))
+        blob_repo.append(_make_invocation("id-2", user_id="carla"))
+
+        blob_repo.delete_by_user("carla")
+
+        assert blob_repo.count() == 2
+
+    def test_no_match_returns_zero_and_leaves_file_untouched(self, blob_repo):
+        blob_repo.append(_make_invocation("id-1", user_id="outro"))
+
+        affected = blob_repo.delete_by_user("carla")
+
+        assert affected == 0
+        assert blob_repo._read_all()[0].user_id == "outro"
+
+    def test_anonymizes_archived_blobs_too(self, tmp_path):
+        """Registros já rotacionados (audit-<timestamp>.jsonl) também precisam ser
+
+        varridos — sem isso, user_id sobreviveria indefinidamente fora do alcance
+        de list_by_user/list_recent (que só leem o arquivo ativo)."""
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        archived_line = json.dumps(_make_invocation("id-old", user_id="carla").to_dict()) + "\n"
+        storage.gravar_blob(".tool_invocations/audit-20260101T000000000000Z.jsonl", archived_line.encode())
+        repo.append(_make_invocation("id-new", user_id="carla"))
+
+        affected = repo.delete_by_user("carla")
+
+        assert affected == 2
+        archived_raw = storage.ler_blob(".tool_invocations/audit-20260101T000000000000Z.jsonl")
+        assert json.loads(archived_raw.decode().strip())["user_id"] is None
+
+    def test_malformed_line_in_archive_preserved_as_is(self, tmp_path):
+        """Best-effort: uma linha ilegível não deve travar o esquecimento das demais."""
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        good_line = json.dumps(_make_invocation("id-1", user_id="carla").to_dict())
+        storage.gravar_blob(".tool_invocations/audit-20260101T000000000000Z.jsonl", f"{good_line}\nNOT_JSON\n".encode())
+
+        affected = repo.delete_by_user("carla")
+
+        assert affected == 1
+        raw = storage.ler_blob(".tool_invocations/audit-20260101T000000000000Z.jsonl").decode()
+        assert "NOT_JSON" in raw
+
+
 class TestBlobRotation:
     """Rotação do audit.jsonl por idade OU tamanho (conjunção — o que vier primeiro).
 
@@ -559,6 +621,26 @@ class TestInMemoryCount:
         mem_repo.append(_make_invocation("id-1"))
         mem_repo.append(_make_invocation("id-2"))
         assert mem_repo.count() == 2
+
+
+class TestInMemoryDeleteByUser:
+    """delete_by_user — direito de ser esquecido (LGPD Art. 18): anonimiza user_id."""
+
+    def test_anonymizes_matching_and_preserves_others(self, mem_repo):
+        mem_repo.append(_make_invocation("id-1", user_id="carla"))
+        mem_repo.append(_make_invocation("id-2", user_id="outro"))
+        mem_repo.append(_make_invocation("id-3", user_id="carla"))
+
+        affected = mem_repo.delete_by_user("carla")
+
+        assert affected == 2
+        assert mem_repo.count() == 3  # anonimiza, não apaga
+        by_id = {r.id: r.user_id for r in mem_repo.list_recent(limit=10)}
+        assert by_id == {"id-1": None, "id-2": "outro", "id-3": None}
+
+    def test_no_match_returns_zero(self, mem_repo):
+        mem_repo.append(_make_invocation("id-1", user_id="outro"))
+        assert mem_repo.delete_by_user("carla") == 0
 
 
 class TestInMemoryClear:

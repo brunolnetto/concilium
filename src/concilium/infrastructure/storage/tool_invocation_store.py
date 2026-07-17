@@ -51,6 +51,34 @@ def _rotate_max_age_seconds() -> float:
     return days * 86400
 
 
+def _anonymize_user(raw: bytes, user_id: str) -> tuple[bytes, int]:
+    """Zera `user_id` nas linhas NDJSON que casam com `user_id`. Retorna (novo_raw, n_afetadas).
+
+    Linhas ilegíveis (JSON corrompido) são preservadas como estão — best-effort,
+    não deve travar a operação de esquecimento por causa de uma linha ruim.
+    """
+    if not raw:
+        return raw, 0
+    lines = raw.decode("utf-8").splitlines()
+    affected = 0
+    out: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        if record.get("user_id") == user_id:
+            record["user_id"] = None
+            affected += 1
+        out.append(json.dumps(record, default=str))
+    new_raw = ("\n".join(out) + "\n").encode("utf-8") if out else b""
+    return new_raw, affected
+
+
 def _rotate_max_size_bytes() -> float:
     raw = os.getenv("CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_SIZE_MB", "")
     try:
@@ -155,6 +183,37 @@ class BlobToolInvocationRepository(ToolInvocationRepository):
     def count(self) -> int:
         """Total de registros no arquivo."""
         return len(self._read_all())
+
+    def delete_by_user(self, user_id: str) -> int:
+        """Direito de ser esquecido (LGPD Art. 18): anonimiza `user_id` no arquivo
+
+        ativo E em todo blob arquivado por rotação (`audit-<timestamp>.jsonl`, ver
+        módulo) — sem isso, o vínculo pessoal sobreviveria indefinidamente nos
+        arquivos já rotacionados, fora do alcance de list_by_user/list_recent (que
+        só leem o arquivo ativo). Não remove linhas, só zera `user_id` (preserva
+        contagens/estatísticas agregadas). Retorna o total de registros afetados
+        em todos os blobs.
+        """
+        with self._lock:
+            affected = 0
+            new_raw, n = _anonymize_user(self._read_raw(), user_id)
+            if n:
+                self._storage.gravar_blob(self._blob, new_raw)
+                affected += n
+            for archive_blob in self._archived_blobs():
+                try:
+                    raw = self._storage.ler_blob(archive_blob)
+                except FileNotFoundError:
+                    continue
+                new_raw, n = _anonymize_user(raw, user_id)
+                if n:
+                    self._storage.gravar_blob(archive_blob, new_raw)
+                    affected += n
+            return affected
+
+    def _archived_blobs(self) -> list[str]:
+        prefix = f"{self._prefix}/audit-"
+        return [b for b in self._storage.listar_blobs(self._prefix) if b.startswith(prefix) and b.endswith(".jsonl")]
 
     # ── Helpers internos ──────────────────────────────────────────────────────
 
