@@ -23,6 +23,13 @@ Uso típico (nested sob "ops" — ver ops_app.add_typer(auth_app) em presentatio
 
   # Revogar acesso de um dispositivo
   concilium ops auth revoke-device --device macbook-bruno
+
+  # Remover usuário (soft-delete — client_id continua resolvível em owner_id/audit trails)
+  concilium ops auth remove-user --id bruno
+
+  # Remover E apagar PII (direito de ser esquecido, LGPD Art. 18)
+  concilium ops auth remove-user --id bruno --forget
+  concilium ops auth forget-user --id bruno  # para um usuário já removido antes
 """
 
 from __future__ import annotations
@@ -310,10 +317,81 @@ def _check_owned_projects(client_id: str, reassign_to: str | None, force: bool, 
     raise typer.Exit(1)
 
 
+def _revoke_all_devices(store, client_id: str) -> int:
+    """Revoga todos os dispositivos do client. revoke_device() espera device_id, não
+
+    client_id — chamar com client_id revogaria por coincidência qualquer dispositivo
+    de QUALQUER usuário cujo device_id colida com este client_id. Retorna a
+    quantidade de dispositivos revogados.
+    """
+    devices = store.list_devices(client_id=client_id)
+    for d in devices:
+        store.revoke_device(d.device_id)
+    return len(devices)
+
+
+def _forget_pii(store, client_id: str) -> None:
+    """Direito de ser esquecido: redige PII do ClientRecord, anonimiza o audit log
+
+    de invocações MCP, E varre audit trails de projeto/catálogo trocando
+    `client_id` por um alias opaco e estável (gerado uma vez aqui — não é
+    persistido em lugar nenhum do sistema, para não recriar o vínculo que
+    acabamos de apagar). `client_id` do ClientRecord em si é preservado (é a
+    chave primária do registro, já inativo e sem PII) — o que muda é toda
+    REFERÊNCIA a ele em owner_id/criado_por/actor/aprovado_por.
+
+    O alias é impresso uma única vez no terminal — se precisar correlacionar
+    entradas anonimizadas a este esquecimento no futuro (ex.: investigação),
+    guarde-o fora do sistema (ex.: ticket de compliance) no momento em que
+    este comando roda.
+    """
+    import secrets
+
+    from concilium.application.services.project._pii_sweep import sweep_all_projects, sweep_catalog_version_files
+    from concilium.infrastructure.settings import get_storage
+    from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
+    from concilium.presentation.cli.shared import project_repository
+
+    store.forget_client(client_id)
+    # get_tool_invocation_repository() (singleton em memória de processo) não serve aqui:
+    # a CLI roda num processo separado do servidor MCP, que é quem chama
+    # reset_tool_invocation_repository(get_tool_invocation_store()) no startup (server.py).
+    # Sem ir direto ao store_factory, a CLI apagaria de um buffer InMemory vazio e
+    # nunca tocaria os dados reais persistidos pelo servidor.
+    n_invocations = get_tool_invocation_store().delete_by_user(client_id)
+
+    alias = f"forgotten-{secrets.token_hex(8)}"
+    project_stats = sweep_all_projects(project_repository(), client_id, alias)
+    n_catalog_files = sweep_catalog_version_files(get_storage().config_root, client_id, alias)
+
+    rprint(
+        f"[green]✓ PII de '{client_id}' apagada (email, notas, credenciais) e "
+        f"{n_invocations} registro(s) de invocação MCP anonimizado(s).[/green]"
+    )
+    rprint(
+        f"[green]✓ Audit trails anonimizados (alias '{alias}'): "
+        f"{project_stats['audit_log_entries']} entrada(s) de audit_log em "
+        f"{project_stats['projects_affected']}/{project_stats['projects_scanned']} projeto(s), "
+        f"{project_stats['meta_fields']} campo(s) de meta.json, "
+        f"{n_catalog_files} arquivo(s) de versão de catálogo.[/green]"
+    )
+    rprint(
+        "[dim]Guarde o alias acima fora do sistema se precisar correlacionar "
+        "estas entradas a este esquecimento no futuro — não fica registrado em nenhum lugar.[/dim]"
+    )
+
+
 @app.command("remove-user")
 def remove_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente a remover."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Confirmar sem prompt."),
+    forget: bool = typer.Option(
+        False,
+        "--forget",
+        help="Direito de ser esquecido (LGPD Art. 18): além de desativar, apaga PII "
+        "(email, notas, credenciais) e anonimiza o audit log de invocações MCP. "
+        "Irreversível — para um usuário já removido antes, use 'forget-user'.",
+    ),
     reassign_to: str | None = typer.Option(
         None,
         "--reassign-to",
@@ -328,41 +406,92 @@ def remove_user(
         False, "--force-yes", help="Confirma automaticamente o --force (sem prompt), para uso não-interativo."
     ),
 ) -> None:
-    """Remove um usuário do auth store (e revoga todos os seus dispositivos).
+    """Desativa um usuário no auth store (soft-delete) e revoga todos os seus dispositivos.
 
     ADR-126 D7/F7: se o usuário é owner de projetos, a remoção é bloqueada por
     padrão — use --reassign-to para transferir ownership antes, ou --force para
     remover mesmo assim (deixa owner_id órfão).
+
+    O usuário permanece no store (inativo) — client_id continua resolvível para
+    quem já o referencia (ownership, audit trails). Use --forget para também
+    apagar a PII (direito de ser esquecido, LGPD Art. 18).
     """
     from concilium.application.services.notifications import notify_user_removed
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     _check_owned_projects(client_id, reassign_to, force, force_yes)
 
+    confirm_msg = f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?"
+    if forget:
+        confirm_msg = (
+            f"Remover usuário '{client_id}', revogar todos os seus dispositivos E apagar "
+            "permanentemente sua PII (email, notas, credenciais, histórico de invocações)? "
+            "Esta ação NÃO PODE ser desfeita."
+        )
     if not yes:
-        typer.confirm(f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?", abort=True)
+        typer.confirm(confirm_msg, abort=True)
 
     store = get_auth_store()
-    # Captura o email antes da remoção — depois de remove_client() o registro some do store.
+    # Captura o email antes da remoção/esquecimento — --forget apaga o campo email do registro.
     existing = next((r for r in store.list_clients() if r.client_id == client_id), None)
 
-    # Revoke all devices for this client (revoke_device() espera device_id, não client_id —
-    # chamar com client_id revogaria por coincidência qualquer dispositivo de QUALQUER
-    # usuário cujo device_id colida com este client_id).
-    devices = store.list_devices(client_id=client_id)
-    for d in devices:
-        store.revoke_device(d.device_id)
+    _revoke_all_devices(store, client_id)
 
     removed = store.remove_client(client_id)
     if not removed:
-        rprint(f"[yellow]Usuário '{client_id}' não encontrado no store local.[/yellow]")
+        rprint(f"[yellow]Usuário '{client_id}' não encontrado (ou já inativo) no store local.[/yellow]")
+        if forget:
+            rprint("[dim]Para apagar a PII de um usuário já removido, use 'forget-user'.[/dim]")
+        return
+
+    rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
+    if existing and existing.email:
+        if not notify_user_removed(client_id, existing.email):
+            rprint(f"[red]✗ Falha ao enviar email de confirmação para {existing.email}[/red]")
     else:
-        rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
-        if existing and existing.email:
-            if not notify_user_removed(client_id, existing.email):
-                rprint(f"[red]✗ Falha ao enviar email de confirmação para {existing.email}[/red]")
-        else:
-            rprint("[dim]Usuário sem email cadastrado — nenhuma notificação enviada.[/dim]")
+        rprint("[dim]Usuário sem email cadastrado — nenhuma notificação enviada.[/dim]")
+
+    if forget:
+        _forget_pii(store, client_id)
+
+
+@app.command("forget-user")
+def forget_user(
+    client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente a esquecer."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Confirmar sem prompt."),
+) -> None:
+    """Direito de ser esquecido (LGPD Art. 18) para um usuário já removido (ou ainda ativo).
+
+    Complementar a 'remove-user --forget': existe separado para o caso comum de o
+    pedido de esquecimento chegar depois da desativação (ex.: usuário já foi
+    removido semanas atrás, jurídico só agora formalizou o pedido de exclusão de
+    dados) — não é preciso reprocessar reassign-to/força de ownership de novo, só
+    apagar a PII que ainda resta. Se o usuário ainda estiver ativo, desativa e
+    revoga dispositivos como parte da mesma operação, antes de apagar a PII.
+
+    NÃO apaga client_id nem referências a ele em owner_id/audit trails de projeto e
+    catálogo — essas permanecem como identificador pseudonimizado (LGPD Art. 16).
+    """
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    store = get_auth_store()
+    existing = next((r for r in store.list_clients() if r.client_id == client_id), None)
+    if existing is None:
+        rprint(f"[red]Erro:[/red] usuário '{client_id}' não encontrado.")
+        raise typer.Exit(1)
+
+    if not yes:
+        typer.confirm(
+            f"Apagar permanentemente a PII de '{client_id}' (email, notas, credenciais, "
+            "histórico de invocações)? Esta ação NÃO PODE ser desfeita.",
+            abort=True,
+        )
+
+    if existing.active:
+        _revoke_all_devices(store, client_id)
+        store.remove_client(client_id)
+
+    _forget_pii(store, client_id)
 
 
 # ── Dispositivos ──────────────────────────────────────────────────────────────

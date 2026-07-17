@@ -31,6 +31,17 @@ PATCH_NOTIFY_USER_CREATED = "concilium.application.services.notifications.notify
 PATCH_NOTIFY_USER_EDITED = "concilium.application.services.notifications.notify_user_edited"
 PATCH_NOTIFY_CLIENT_CODE_MIGRATED = "concilium.application.services.notifications.notify_client_code_migrated"
 PATCH_NOTIFY_DEVICE_REVOKED_ADMIN = "concilium.application.services.notifications.notify_device_revoked_admin"
+PATCH_GET_TOOL_INVOCATION_STORE = "concilium.infrastructure.storage.store_factory.get_tool_invocation_store"
+PATCH_SWEEP_ALL_PROJECTS = "concilium.application.services.project._pii_sweep.sweep_all_projects"
+PATCH_SWEEP_CATALOG_VERSION_FILES = "concilium.application.services.project._pii_sweep.sweep_catalog_version_files"
+PATCH_PROJECT_REPOSITORY = "concilium.presentation.cli.shared.project_repository"
+PATCH_GET_STORAGE = "concilium.infrastructure.settings.get_storage"
+
+# _forget_pii() varre projetos/catálogo de verdade (_pii_sweep, já testado em
+# test_pii_sweep.py) — os 4 patches abaixo isolam os testes de forget-user/--forget
+# dessa varredura, para não tocar o repositório de projetos e o config/ reais do
+# processo de teste. ZERO_SWEEP_TOTALS é o retorno-padrão de sweep_all_projects.
+ZERO_SWEEP_TOTALS = {"projects_scanned": 0, "projects_affected": 0, "audit_log_entries": 0, "meta_fields": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -435,6 +446,63 @@ class TestRemoveUser:
         assert result.exit_code == 0, result.output
         notify_mock.assert_not_called()
 
+    def test_remove_user_forget_flag_redacts_pii_and_purges_invocations(self):
+        """--forget: além do soft-delete, apaga PII do ClientRecord e anonimiza
+
+        o audit log de invocações MCP (direito de ser esquecido, LGPD Art. 18)."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
+        invocation_store = MagicMock()
+        invocation_store.delete_by_user.return_value = 3
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_REMOVED, return_value=True),
+            patch(PATCH_GET_TOOL_INVOCATION_STORE, return_value=invocation_store),
+            patch(PATCH_SWEEP_ALL_PROJECTS, return_value=ZERO_SWEEP_TOTALS),
+            patch(PATCH_SWEEP_CATALOG_VERSION_FILES, return_value=0),
+            patch(PATCH_PROJECT_REPOSITORY, return_value=MagicMock()),
+            patch(PATCH_GET_STORAGE, return_value=MagicMock()),
+        ):
+            result = runner.invoke(app, ["remove-user", "--id", "alice", "--yes", "--forget"])
+
+        assert result.exit_code == 0, result.output
+        store.forget_client.assert_called_once_with("alice")
+        invocation_store.delete_by_user.assert_called_once_with("alice")
+        assert "PII de 'alice' apagada" in result.output
+        assert "3 registro" in result.output
+
+    def test_remove_user_without_forget_flag_does_not_touch_pii(self):
+        """Sem --forget, remove-user é só soft-delete — não chama forget_client nem toca invocations."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client], list_devices_return=[], remove_client_return=True)
+        invocation_store = MagicMock()
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_REMOVED, return_value=True),
+            patch(PATCH_GET_TOOL_INVOCATION_STORE, return_value=invocation_store),
+        ):
+            result = runner.invoke(app, ["remove-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        store.forget_client.assert_not_called()
+        invocation_store.delete_by_user.assert_not_called()
+
+    def test_remove_user_forget_flag_when_already_inactive_points_to_forget_user(self):
+        """--forget num client já removido antes (remove_client retorna False) não
+
+        tenta esquecer sozinho — orienta a usar 'forget-user' (comando idempotente
+        que funciona independente do estado atual)."""
+        store = _make_store(list_devices_return=[], remove_client_return=False)
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["remove-user", "--id", "ghost", "--yes", "--forget"])
+
+        assert result.exit_code == 0, result.output
+        store.forget_client.assert_not_called()
+        assert "forget-user" in result.output
+
     def test_add_user_no_email_prints_both_platform_configs(self):
         """Sem --email, o console mostra os dois blocos (macOS/Linux e Windows) —
         não há --platform: o admin não escolhe, o usuário final decide."""
@@ -539,6 +607,139 @@ class TestRemoveUser:
         assert "Falha ao enviar" in result.output
         assert "Email de boas-vindas enviado" not in result.output
         assert "CONCILIUM_CLIENT_CODE" in result.output
+
+
+# ===========================================================================
+# forget-user — direito de ser esquecido (LGPD Art. 18)
+# ===========================================================================
+
+
+class TestForgetUser:
+    def test_unknown_client_exits_1(self):
+        store = _make_store(list_clients_return=[])
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["forget-user", "--id", "ghost", "--yes"])
+
+        assert result.exit_code == 1
+        store.forget_client.assert_not_called()
+
+    def test_already_inactive_client_only_forgets_does_not_revoke_again(self):
+        """Cliente já soft-deleted antes (remove-user rodou semanas atrás): forget-user
+
+        não tenta revogar dispositivos/desativar de novo, só apaga a PII restante."""
+        client = _make_client_record("alice", active=False, email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        invocation_store = MagicMock()
+        invocation_store.delete_by_user.return_value = 0
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_TOOL_INVOCATION_STORE, return_value=invocation_store),
+            patch(PATCH_SWEEP_ALL_PROJECTS, return_value=ZERO_SWEEP_TOTALS),
+            patch(PATCH_SWEEP_CATALOG_VERSION_FILES, return_value=0),
+            patch(PATCH_PROJECT_REPOSITORY, return_value=MagicMock()),
+            patch(PATCH_GET_STORAGE, return_value=MagicMock()),
+        ):
+            result = runner.invoke(app, ["forget-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        store.list_devices.assert_not_called()
+        store.remove_client.assert_not_called()
+        store.forget_client.assert_called_once_with("alice")
+
+    def test_still_active_client_revokes_devices_then_forgets(self):
+        """Cliente ainda ativo: forget-user desativa e revoga dispositivos como parte
+
+        da mesma operação, antes de apagar a PII."""
+        devices = [_make_device_record("dev1", client_id="alice")]
+        client = _make_client_record("alice", active=True, email="alice@example.com")
+        store = _make_store(list_clients_return=[client], list_devices_return=devices, remove_client_return=True)
+        invocation_store = MagicMock()
+        invocation_store.delete_by_user.return_value = 0
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_TOOL_INVOCATION_STORE, return_value=invocation_store),
+            patch(PATCH_SWEEP_ALL_PROJECTS, return_value=ZERO_SWEEP_TOTALS),
+            patch(PATCH_SWEEP_CATALOG_VERSION_FILES, return_value=0),
+            patch(PATCH_PROJECT_REPOSITORY, return_value=MagicMock()),
+            patch(PATCH_GET_STORAGE, return_value=MagicMock()),
+        ):
+            result = runner.invoke(app, ["forget-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        store.revoke_device.assert_called_once_with("dev1")
+        store.remove_client.assert_called_once_with("alice")
+        store.forget_client.assert_called_once_with("alice")
+
+    def test_without_yes_aborts(self):
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch("typer.confirm", side_effect=typer.Abort()),
+        ):
+            result = runner.invoke(app, ["forget-user", "--id", "alice"])
+
+        assert result.exit_code != 0
+        store.forget_client.assert_not_called()
+
+    def test_purges_tool_invocations_and_reports_count(self):
+        client = _make_client_record("alice", active=False, email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        invocation_store = MagicMock()
+        invocation_store.delete_by_user.return_value = 7
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_TOOL_INVOCATION_STORE, return_value=invocation_store),
+            patch(PATCH_SWEEP_ALL_PROJECTS, return_value=ZERO_SWEEP_TOTALS),
+            patch(PATCH_SWEEP_CATALOG_VERSION_FILES, return_value=0),
+            patch(PATCH_PROJECT_REPOSITORY, return_value=MagicMock()),
+            patch(PATCH_GET_STORAGE, return_value=MagicMock()),
+        ):
+            result = runner.invoke(app, ["forget-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        invocation_store.delete_by_user.assert_called_once_with("alice")
+        assert "7 registro" in result.output
+
+    def test_sweeps_project_and_catalog_audit_trails_with_same_alias(self):
+        """Fase 3: forget-user também varre audit_log.jsonl/meta.json de projetos e
+
+        arquivos de versão de catálogo, trocando client_id por um alias — e usa o
+        MESMO alias nos dois lugares (ver _forget_pii: alias é gerado uma vez)."""
+        client = _make_client_record("alice", active=False, email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        invocation_store = MagicMock()
+        invocation_store.delete_by_user.return_value = 0
+        project_stats = {"projects_scanned": 5, "projects_affected": 2, "audit_log_entries": 4, "meta_fields": 3}
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_TOOL_INVOCATION_STORE, return_value=invocation_store),
+            patch(PATCH_SWEEP_ALL_PROJECTS, return_value=project_stats) as sweep_projects_mock,
+            patch(PATCH_SWEEP_CATALOG_VERSION_FILES, return_value=6) as sweep_catalog_mock,
+            patch(PATCH_PROJECT_REPOSITORY, return_value=MagicMock()),
+            patch(PATCH_GET_STORAGE, return_value=MagicMock()),
+        ):
+            result = runner.invoke(app, ["forget-user", "--id", "alice", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        sweep_projects_mock.assert_called_once()
+        sweep_catalog_mock.assert_called_once()
+        projects_call_client_id, projects_call_alias = sweep_projects_mock.call_args.args[1:]
+        catalog_call_alias = sweep_catalog_mock.call_args.args[2]
+        assert projects_call_client_id == "alice"
+        assert projects_call_alias == catalog_call_alias  # mesmo alias nos dois sweeps
+        # normaliza quebras de linha inseridas pelo wrap do rich console no terminal de teste
+        flat_output = " ".join(result.output.split())
+        assert "4 entrada(s) de audit_log em 2/5 projeto(s)" in flat_output
+        assert "3 campo(s) de meta.json" in flat_output
+        assert "6 arquivo(s) de versão de catálogo" in flat_output
+        assert projects_call_alias in flat_output  # alias impresso p/ o admin guardar
 
 
 # ===========================================================================
