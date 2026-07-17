@@ -129,6 +129,50 @@ class TestBronzeLogHandler:
         record = json.loads(content.strip().splitlines()[0])
         assert "preco_unitario" in record["message"]
 
+    def test_handler_captures_user_id_from_auth_context(self, storage):
+        """BronzeLogHandler deve propagar user_id/request_id da contextvar de auth (ADR-121 D6)."""
+        from concilium.infrastructure.middleware.auth_context import current_request_id, current_user_id
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+
+        writer = BronzeWriter(storage, signal_type="logs")
+        handler = BronzeLogHandler(writer)
+        logger = logging.getLogger("test.bronze.user")
+        logger.addHandler(handler)
+        logger.setLevel(logging.WARNING)
+
+        t_user = current_user_id.set("user-42")
+        t_req = current_request_id.set("req-abc-123")
+        try:
+            logger.warning("BDI sem taxa para 'mao_obra'")
+        finally:
+            current_user_id.reset(t_user)
+            current_request_id.reset(t_req)
+        handler.flush()
+
+        blobs = sorted(storage.listar_blobs("observability/bronze/logs/"))
+        content = storage.ler_blob(blobs[-1]).decode("utf-8")
+        record = json.loads(content.strip().splitlines()[0])
+        assert record["user_id"] == "user-42"
+        assert record["request_id"] == "req-abc-123"
+
+    def test_handler_user_id_empty_outside_request_context(self, storage):
+        """Fora de uma request (CLI, testes), user_id/request_id ficam vazios, não ausentes."""
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+
+        writer = BronzeWriter(storage, signal_type="logs")
+        handler = BronzeLogHandler(writer)
+        logger = logging.getLogger("test.bronze.no_context")
+        logger.addHandler(handler)
+        logger.setLevel(logging.WARNING)
+        logger.warning("log sem request associada")
+        handler.flush()
+
+        blobs = sorted(storage.listar_blobs("observability/bronze/logs/"))
+        content = storage.ler_blob(blobs[-1]).decode("utf-8")
+        record = json.loads(content.strip().splitlines()[0])
+        assert record["user_id"] == ""
+        assert record["request_id"] == ""
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F2: CheckpointStore
@@ -388,6 +432,42 @@ class TestSilverNormalizer:
         n1 = normalize_log_record(raw)
         n2 = normalize_log_record(raw)
         assert n1["event_id"] == n2["event_id"]
+
+    def test_normalize_log_record_propagates_user_id(self):
+        """user_id/request_id capturados no Bronze devem sobreviver à normalização Silver (ADR-121 D6)."""
+        from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
+
+        raw = {
+            "ts": "2026-06-18T10:00:00Z",
+            "severity": "WARNING",
+            "logger": "x",
+            "message": "y",
+            "trace_id": "",
+            "span_id": "",
+            "service": "concilium",
+            "user_id": "user-42",
+            "request_id": "req-abc-123",
+        }
+        norm = normalize_log_record(raw)
+        assert norm["user_id"] == "user-42"
+        assert norm["request_id"] == "req-abc-123"
+
+    def test_normalize_log_record_user_id_none_when_absent(self):
+        """Records Bronze antigos (sem user_id) não devem quebrar a normalização."""
+        from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
+
+        raw = {
+            "ts": "",
+            "severity": "",
+            "logger": "x",
+            "message": "y",
+            "trace_id": "",
+            "span_id": "",
+            "service": "",
+        }
+        norm = normalize_log_record(raw)
+        assert norm["user_id"] is None
+        assert norm["request_id"] is None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

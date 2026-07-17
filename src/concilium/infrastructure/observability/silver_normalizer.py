@@ -89,6 +89,8 @@ def normalize_log_record(record: dict[str, Any]) -> dict[str, Any]:
         "project_id": record.get("project_id"),
         "skill_id": _extract_skill_id(logger_name),
         "fallback_type": classify_fallback_type(message, logger_name),
+        "user_id": record.get("user_id") or None,
+        "request_id": record.get("request_id") or None,
     }
 
 
