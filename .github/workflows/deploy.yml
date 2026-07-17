@@ -52,6 +52,16 @@ jobs:
       command: |
         cd/scripts/deploy.sh deploy "${{ needs.build.outputs.image_tag }}"
 
+# ── Job 2b: Atualiza o Container Apps Job de observabilidade (sem trafego/revision) ──
+  update-observability-job:
+    name: Update -> Job Observabilidade
+    uses: ./.github/workflows/_run-deploy-command.yml
+    needs: build
+    secrets: inherit
+    with:
+      command: |
+        cd/scripts/deploy.sh update-job "${{ needs.build.outputs.image_tag }}"
+
 # ── Job 3: Smoke tests contra a nova revision ────────────────────────────────
   smoke:
     name: Smoke Tests -> Revision '${{ needs.deploy-revision.outputs.deployed_revision }}'

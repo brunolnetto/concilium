@@ -16,7 +16,7 @@
 # sem executar o dispatcher (guard BASH_SOURCE no final do arquivo).
 set -euo pipefail
 
-_CI_SAFE_CMDS="image deploy smoke promote rollback status help"
+_CI_SAFE_CMDS="image deploy smoke promote rollback status update-job help"
 
 _check_ci_safe() {
     [[ "${CI:-}" != "true" ]] && return 0
@@ -33,6 +33,8 @@ ACR_NAME="${ACR_NAME:-conciliumacr}"
 IMAGE_NAME="${IMAGE_NAME:-concilium}"
 ACA_API_APP="${ACA_API_APP:-concilium-api}"
 ACA_MCP_APP="${ACA_MCP_APP:-concilium-mcp}"
+ACA_ENV_NAME="${ACA_ENV_NAME:-concilium-env}"
+ACA_OBSERVABILITY_JOB="${ACA_OBSERVABILITY_JOB:-concilium-observability}"
 GITHUB_REPO="${GITHUB_REPO:-mendes-lobo-construcao/agente-gerente-de-engenharia}"
 SMOKE_CLIENT_ID="${SMOKE_CLIENT_ID:-smoke-test}"
 SMOKE_CLIENT_SECRET="${SMOKE_CLIENT_SECRET:-}"
@@ -72,6 +74,11 @@ _az_retry() {
 
 _aca_app_exists() {
     az resource show --resource-type Microsoft.App/containerApps \
+        --name "$1" --resource-group "$RESOURCE_GROUP" --output none >/dev/null 2>&1
+}
+
+_aca_job_exists() {
+    az resource show --resource-type Microsoft.App/jobs \
         --name "$1" --resource-group "$RESOURCE_GROUP" --output none >/dev/null 2>&1
 }
 
@@ -250,6 +257,24 @@ cmd_deploy() {
     local next_step="cd/scripts/deploy.sh smoke --revision $new_revision"
     [[ -n "$mcp_revision" ]] && next_step+=" --mcp-revision $mcp_revision"
     echo "  Proximo passo: $next_step"
+}
+
+cmd_update_job() {
+    local image_tag="${1:-latest}"
+    need az
+    require_login
+
+    _aca_job_exists "$ACA_OBSERVABILITY_JOB" || die "Container Apps Job '$ACA_OBSERVABILITY_JOB' nao encontrado. Rode 'provision.sh observability-job' primeiro."
+
+    step "ACA Job Update — '$ACA_OBSERVABILITY_JOB' com imagem '$image_tag'"
+
+    az containerapp job update \
+        --name "$ACA_OBSERVABILITY_JOB" \
+        --resource-group "$RESOURCE_GROUP" \
+        --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${image_tag}" \
+        --output none
+
+    ok "Job '$ACA_OBSERVABILITY_JOB' atualizado para a imagem '$image_tag'."
 }
 
 cmd_smoke() {
@@ -723,11 +748,13 @@ Uso: deploy.sh [comando] [opcoes]
   rollback [--revision REV]     Volta para revision anterior da API (ou especificada)
            [--mcp-revision REV] Idem para o MCP
   status                        Mostra revisions e pesos de trafego
+  update-job IMAGE_TAG          Atualiza a imagem do Container Apps Job de observabilidade
+                                 (sem revision/trafego — nao precisa de smoke/promote)
 
 Para provisionamento de plataforma use: cd/scripts/provision.sh help
 
 Variaveis de ambiente (CI/CD):
-  RESOURCE_GROUP ACA_API_APP ACA_MCP_APP ACR_NAME IMAGE_NAME
+  RESOURCE_GROUP ACA_API_APP ACA_MCP_APP ACA_OBSERVABILITY_JOB ACR_NAME IMAGE_NAME
   SMOKE_CLIENT_ID SMOKE_CLIENT_SECRET
 EOF
 }
@@ -745,6 +772,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         promote)        cmd_promote "$@" ;;
         rollback)       cmd_rollback "$@" ;;
         status)         cmd_status "$@" ;;
+        update-job)     cmd_update_job "$@" ;;
         help|--help|-h) cmd_help ;;
         *)
             die "Comando desconhecido: '$CMD'. Use '$0 help' ou 'provision.sh help' para operacoes de plataforma."

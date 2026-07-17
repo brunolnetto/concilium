@@ -179,6 +179,8 @@ properties:
             value: "${SP_DRIVE_ID}"
           - name: CONCILIUM__SP_ROOT_PATH
             value: ${SP_ROOT_PATH}
+          - name: CONCILIUM__SP_SYSTEM_ROOT_PATH
+            value: ${SP_SYSTEM_ROOT_PATH:-${SP_ROOT_PATH}/sistema}
           - name: CONCILIUM__AUTH_ENABLED
             value: "1"
           - name: CONCILIUM__AUTH_CLIENTS
@@ -237,6 +239,8 @@ properties:
             value: "${SP_DRIVE_ID}"
           - name: CONCILIUM__SP_ROOT_PATH
             value: ${SP_ROOT_PATH}
+          - name: CONCILIUM__SP_SYSTEM_ROOT_PATH
+            value: ${SP_SYSTEM_ROOT_PATH:-${SP_ROOT_PATH}/sistema}
           - name: CONCILIUM__AUTH_ENABLED
             value: "1"
           - name: CONCILIUM__AUTH_CLIENTS
@@ -269,6 +273,77 @@ EOF
 
     ok "Configuracao aplicada em ambos os containers."
     echo "  Proximos passos: $0 github"
+}
+
+cmd_observability_job() {
+    need az
+    require_login
+
+    [[ -n "$SP_TENANT_ID" ]]     || die "SP_TENANT_ID nao definido."
+    [[ -n "$SP_CLIENT_ID" ]]     || die "SP_CLIENT_ID nao definido."
+    [[ -n "$SP_CLIENT_SECRET" ]] || die "SP_CLIENT_SECRET nao definido."
+    [[ -n "$SP_DRIVE_ID" ]]      || die "SP_DRIVE_ID nao definido."
+
+    local mi_id
+    mi_id=$(az identity show --name concilium-identity --resource-group "$RESOURCE_GROUP" \
+        --query 'id' -o tsv 2>/dev/null || echo "")
+    [[ -n "$mi_id" ]] || die "Managed identity 'concilium-identity' nao encontrada. Rode bootstrap primeiro."
+    local mi_client_id
+    mi_client_id=$(az identity show --name concilium-identity --resource-group "$RESOURCE_GROUP" \
+        --query 'clientId' -o tsv 2>/dev/null || echo "")
+
+    # Isolamento sistema vs. projetos (ver sessao "sistema/" no SharePoint) —
+    # mesmo default usado na configuracao manual e em cmd_configure.
+    local sp_system_root="${SP_SYSTEM_ROOT_PATH:-${SP_ROOT_PATH}/sistema}"
+
+    local env_vars=(
+        "CONCILIUM__CONFIG_ROOT=/app"
+        "CONCILIUM__STORE_BACKEND=sharepoint"
+        "CONCILIUM__SP_TENANT_ID=${SP_TENANT_ID}"
+        "CONCILIUM__SP_CLIENT_ID=${SP_CLIENT_ID}"
+        "CONCILIUM__SP_CLIENT_SECRET=${SP_CLIENT_SECRET}"
+        "CONCILIUM__SP_DRIVE_ID=${SP_DRIVE_ID}"
+        "CONCILIUM__SP_ROOT_PATH=${SP_ROOT_PATH}"
+        "CONCILIUM__SP_SYSTEM_ROOT_PATH=${sp_system_root}"
+        "AZURE_CLIENT_ID=${mi_client_id}"
+        "OTEL_SERVICE_NAME=concilium-observability"
+    )
+
+    step "Container Apps Job — '$ACA_OBSERVABILITY_JOB'"
+
+    if _aca_job_exists "$ACA_OBSERVABILITY_JOB"; then
+        log "Job ja existe — atualizando imagem/comando/env vars."
+        az containerapp job update \
+            --name "$ACA_OBSERVABILITY_JOB" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest" \
+            --command "concilium" "ops" "observability" "cycle" \
+            --set-env-vars "${env_vars[@]}" \
+            --output none
+    else
+        log "Job nao existe — criando (trigger Schedule, cron a cada 5min)."
+        az containerapp job create \
+            --name "$ACA_OBSERVABILITY_JOB" \
+            --resource-group "$RESOURCE_GROUP" \
+            --environment "$ACA_ENV_NAME" \
+            --trigger-type Schedule \
+            --cron-expression "*/5 * * * *" \
+            --replica-timeout 300 \
+            --replica-retry-limit 1 \
+            --replica-completion-count 1 \
+            --parallelism 1 \
+            --cpu 0.5 --memory 1.0Gi \
+            --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest" \
+            --command "concilium" "ops" "observability" "cycle" \
+            --env-vars "${env_vars[@]}" \
+            --registry-server "${ACR_NAME}.azurecr.io" \
+            --registry-identity "$mi_id" \
+            --mi-user-assigned "$mi_id" \
+            --output none
+    fi
+
+    ok "Container Apps Job '$ACA_OBSERVABILITY_JOB' configurado."
+    echo "  Proximo passo: az containerapp job start --name $ACA_OBSERVABILITY_JOB --resource-group $RESOURCE_GROUP (disparo manual opcional)"
 }
 
 cmd_github() {
@@ -352,6 +427,8 @@ Uso: provision.sh [comando] [opcoes]
   keys [--rotate]         Gera JWT keys RS256 e grava no Key Vault
   github                  Configura GitHub Secrets/Vars via gh CLI
   configure               Aplica env vars em ambos os containers ACA (idempotente)
+  observability-job       Cria/atualiza o Container Apps Job de observabilidade
+                          (Bronze->Silver->Gold, trigger Schedule a cada 5min)
   all                     Executa bootstrap -> keys -> github
 
 -- Custom Domain (Human-in-the-Loop) ------------------------------------------
@@ -366,8 +443,8 @@ Uso: provision.sh [comando] [opcoes]
 
 Variaveis de ambiente:
   RESOURCE_GROUP LOCATION KV_NAME ACR_NAME IMAGE_NAME
-  ACA_API_APP ACA_MCP_APP GITHUB_REPO
-  SP_TENANT_ID SP_CLIENT_ID SP_CLIENT_SECRET SP_DRIVE_ID SP_ROOT_PATH
+  ACA_API_APP ACA_MCP_APP ACA_ENV_NAME ACA_OBSERVABILITY_JOB GITHUB_REPO
+  SP_TENANT_ID SP_CLIENT_ID SP_CLIENT_SECRET SP_DRIVE_ID SP_ROOT_PATH SP_SYSTEM_ROOT_PATH
   SMOKE_CLIENT_ID SMOKE_CLIENT_SECRET SMTP_PASSWORD
   OTEL_EXPORTER_OTLP_ENDPOINT
 EOF
@@ -379,6 +456,7 @@ CMD="${1:-help}"; shift 2>/dev/null || true
 
 case "$CMD" in
     configure)      cmd_configure "$@" ;;
+    observability-job) cmd_observability_job "$@" ;;
     keys)           cmd_keys "$@" ;;
     bootstrap)      cmd_bootstrap "$@" ;;
     github)         cmd_github "$@" ;;
