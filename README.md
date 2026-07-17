@@ -181,7 +181,7 @@ que resolve a variável em tempo de execução independente do usuário/máquina
 }
 ```
 
-`concilium auth add-user`, `regenerate-code` e `migrate-legacy-codes` não pedem pra escolher a
+`concilium ops auth add-user`, `regenerate-code` e `migrate-legacy-codes` não pedem pra escolher a
 plataforma — o admin não sabe necessariamente o SO do dispositivo final no momento do cadastro.
 Os dois blocos (macOS/Linux e Windows) são sempre gerados/enviados juntos (por email, em anexos
 separados; no console, um após o outro), e o próprio usuário usa o que corresponde ao seu sistema.

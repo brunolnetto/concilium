@@ -351,8 +351,11 @@ class SharePointBlobStorage(BlobStoragePort):
         compartilhamento externo desabilitado — use esse valor quando o
         destinatário já tem conta no tenant (ex.: link do proxy para funcionários).
 
-        Se a chamada falhar (qualquer scope), retorna ``None`` (o chamador recai
-        no transporte base64/anexo). A falha é logada (não mais engolida
+        Se a chamada falhar (qualquer scope), retorna ``None`` — não há mais
+        fallback de anexo (executáveis são bloqueados por provedores de email,
+        ver `notifications._distribution_attachments`), então o chamador
+        (`commands_auth.py::_warn_if_no_download_urls`) avisa o admin no
+        terminal para entrega manual. A falha é logada (não mais engolida
         silenciosamente) para que a causa fique visível nos logs em vez de
         aparecer só como "None" sem explicação.
         """

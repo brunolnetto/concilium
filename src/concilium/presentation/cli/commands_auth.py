@@ -5,24 +5,31 @@ client_code reutilizável no cadastro (add-user) — o mesmo código ativa quant
 dispositivos ele precisar no Claude Desktop, sem exigir um cadastro por TI a cada
 dispositivo novo.
 
-Uso típico:
+Uso típico (nested sob "ops" — ver ops_app.add_typer(auth_app) em presentation/main.py):
   # Criar usuário (gera client_code reutilizável)
-  concilium auth add-user --id bruno --role operator
+  concilium ops auth add-user --id bruno --role operator
 
   # Regenerar o client_code do usuário (ex: vazamento do código original)
-  concilium auth regenerate-code --user bruno
+  concilium ops auth regenerate-code --user bruno
 
   # Migrar em lote usuários cadastrados antes do client_code existir
-  concilium auth migrate-legacy-codes
+  concilium ops auth migrate-legacy-codes
 
   # Listar dispositivos ativos
-  concilium auth list-devices
+  concilium ops auth list-devices
 
   # Listar sessões MCP recentes de um dispositivo
-  concilium auth list-sessions --device macbook-bruno
+  concilium ops auth list-sessions --device macbook-bruno
 
   # Revogar acesso de um dispositivo
-  concilium auth revoke-device --device macbook-bruno
+  concilium ops auth revoke-device --device macbook-bruno
+
+  # Remover usuário (soft-delete — client_id continua resolvível em owner_id/audit trails)
+  concilium ops auth remove-user --id bruno
+
+  # Remover E apagar PII (direito de ser esquecido, LGPD Art. 18)
+  concilium ops auth remove-user --id bruno --forget
+  concilium ops auth forget-user --id bruno  # para um usuário já removido antes
 """
 
 from __future__ import annotations
@@ -76,6 +83,25 @@ def _get_proxy_exe_download_urls(ttl_segundos: int = 7 * 24 * 3600) -> dict[str,
     }
 
 
+def _warn_if_no_download_urls(proxy_download_urls: dict[str, str | None]) -> None:
+    """Avisa o admin no terminal quando nenhum link de download pôde ser gerado.
+
+    O executável do proxy só chega ao usuário pelo link assinado (não há mais
+    fallback de anexo — ver `notifications._distribution_attachments`); se os
+    3 SOs vierem None (backend sem suporte, ou Graph createLink falhando —
+    já aconteceu em produção, ADR-135), o email de boas-vindas ainda é enviado
+    com sucesso, mas sem nenhuma instrução de onde obter o executável. Sem
+    este aviso, isso passa desapercebido (o comando só reporta "✓ enviado").
+    """
+    if not any(proxy_download_urls.values()):
+        rprint(
+            "\n[yellow]⚠ Nenhum link de download do executável do proxy foi gerado "
+            "(backend de storage sem suporte a URL assinada, ou falha ao gerar — veja os "
+            "logs do servidor). O email de boas-vindas será enviado sem o link de download; "
+            "entregue o executável ao usuário por outro meio.[/yellow]"
+        )
+
+
 def _build_mcp_config_block(client_code: str, platform: str) -> dict:
     """Monta o bloco claude_desktop_config.json — "command" varia por plataforma.
 
@@ -119,83 +145,6 @@ def _print_both_configs(config_json_unix: str, config_json_windows: str) -> None
     typer.echo(config_json_unix)
     rprint("\n[bold]Windows:[/bold]")
     typer.echo(config_json_windows)
-
-
-_ZIP_EXE_NAMES = {
-    "windows": "concilium-mcp-proxy.exe",
-    "linux": "concilium-mcp-proxy",
-    "macos": "concilium-mcp-proxy",
-}
-_ZIP_CONFIG_PLATFORM = {"windows": "windows", "linux": "unix", "macos": "unix"}
-
-# Gmail (usado em produção — CONCILIUM__SMTP_HOST=smtp.gmail.com) rejeita mensagens
-# acima de ~25MB, e o encoding base64 do anexo infla o payload em ~37% — um zip
-# de 18MB já vira ~25MB de anexo. Na prática, os 3 executáveis (PyInstaller +
-# extras sharepoint/httpx/msal) somam ~100MB, MUITO acima disso — o cap abaixo
-# existe para nunca tentar mandar o bundle por email quando ele não caberia,
-# evitando exatamente o bug observado em produção: send() engolia o erro do
-# SMTP (mensagem grande demais) e a CLI imprimia "✓ enviado" sem ter enviado.
-_MAX_DISTRIBUTION_ZIP_BYTES = 15 * 1024 * 1024
-
-
-def _build_distribution_zips(client_code: str) -> dict[str, bytes]:
-    """Monta um zip POR SO (windows/macos/linux) — não um único zip com os três.
-
-    Cada zip é pequeno (um executável + o claude_desktop_config.json já
-    preenchido com o client_code do usuário, sem pasta/prefixo — plano, pronto
-    pra extrair) e cabe sozinho em _MAX_DISTRIBUTION_ZIP_BYTES. Um zip
-    combinando os 3 SOs somaria ~30MB mesmo após o proxy.py ter sido
-    desinchado (ver proxy.py) — nada que caiba num anexo de email de qualquer
-    forma, daí o desenho por SO.
-
-    Retorna apenas os SOs cujo executável pôde ser lido (best-effort: falha em
-    ler um SO não deve impedir os outros) e cujo zip resultante não excede o
-    cap. Dict vazio se nenhum SO ficar disponível.
-    """
-    import io
-    import json as _json
-    import zipfile
-
-    from concilium.infrastructure.storage.store_factory import build_system_blob_storage
-
-    try:
-        storage = build_system_blob_storage()
-    except Exception:
-        return {}
-
-    zips: dict[str, bytes] = {}
-    for os_key, blob_path in _PROXY_EXE_BLOB_PATHS.items():
-        try:
-            exe_bytes = storage.ler_blob(blob_path)
-        except Exception:
-            continue
-
-        config = _json.dumps(
-            _build_mcp_config_block(client_code, _ZIP_CONFIG_PLATFORM[os_key]),
-            indent=2,
-            ensure_ascii=False,
-        )
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(_ZIP_EXE_NAMES[os_key], exe_bytes)
-            zf.writestr("claude_desktop_config.json", config)
-
-        zip_bytes = buf.getvalue()
-        if len(zip_bytes) > _MAX_DISTRIBUTION_ZIP_BYTES:
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "Zip de distribuição para '%s' (%d bytes) excede o limite de %d bytes para "
-                "anexo de email — omitido para esse SO.",
-                os_key,
-                len(zip_bytes),
-                _MAX_DISTRIBUTION_ZIP_BYTES,
-            )
-            continue
-
-        zips[os_key] = zip_bytes
-
-    return zips
 
 
 # ── Usuários ──────────────────────────────────────────────────────────────────
@@ -253,14 +202,15 @@ def add_user(
     config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
 
     if email:
+        proxy_download_urls = _get_proxy_exe_download_urls()
+        _warn_if_no_download_urls(proxy_download_urls)
         sent = notify_user_created(
             client_id=client_id,
             role=role,
             email=email,
             config_json_unix=config_json_unix,
             config_json_windows=config_json_windows,
-            proxy_download_urls=_get_proxy_exe_download_urls(),
-            distribution_zips=_build_distribution_zips(client_code),
+            proxy_download_urls=proxy_download_urls,
         )
         if sent:
             rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
@@ -367,10 +317,81 @@ def _check_owned_projects(client_id: str, reassign_to: str | None, force: bool, 
     raise typer.Exit(1)
 
 
+def _revoke_all_devices(store, client_id: str) -> int:
+    """Revoga todos os dispositivos do client. revoke_device() espera device_id, não
+
+    client_id — chamar com client_id revogaria por coincidência qualquer dispositivo
+    de QUALQUER usuário cujo device_id colida com este client_id. Retorna a
+    quantidade de dispositivos revogados.
+    """
+    devices = store.list_devices(client_id=client_id)
+    for d in devices:
+        store.revoke_device(d.device_id)
+    return len(devices)
+
+
+def _forget_pii(store, client_id: str) -> None:
+    """Direito de ser esquecido: redige PII do ClientRecord, anonimiza o audit log
+
+    de invocações MCP, E varre audit trails de projeto/catálogo trocando
+    `client_id` por um alias opaco e estável (gerado uma vez aqui — não é
+    persistido em lugar nenhum do sistema, para não recriar o vínculo que
+    acabamos de apagar). `client_id` do ClientRecord em si é preservado (é a
+    chave primária do registro, já inativo e sem PII) — o que muda é toda
+    REFERÊNCIA a ele em owner_id/criado_por/actor/aprovado_por.
+
+    O alias é impresso uma única vez no terminal — se precisar correlacionar
+    entradas anonimizadas a este esquecimento no futuro (ex.: investigação),
+    guarde-o fora do sistema (ex.: ticket de compliance) no momento em que
+    este comando roda.
+    """
+    import secrets
+
+    from concilium.application.services.project._pii_sweep import sweep_all_projects, sweep_catalog_version_files
+    from concilium.infrastructure.settings import get_storage
+    from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
+    from concilium.presentation.cli.shared import project_repository
+
+    store.forget_client(client_id)
+    # get_tool_invocation_repository() (singleton em memória de processo) não serve aqui:
+    # a CLI roda num processo separado do servidor MCP, que é quem chama
+    # reset_tool_invocation_repository(get_tool_invocation_store()) no startup (server.py).
+    # Sem ir direto ao store_factory, a CLI apagaria de um buffer InMemory vazio e
+    # nunca tocaria os dados reais persistidos pelo servidor.
+    n_invocations = get_tool_invocation_store().delete_by_user(client_id)
+
+    alias = f"forgotten-{secrets.token_hex(8)}"
+    project_stats = sweep_all_projects(project_repository(), client_id, alias)
+    n_catalog_files = sweep_catalog_version_files(get_storage().config_root, client_id, alias)
+
+    rprint(
+        f"[green]✓ PII de '{client_id}' apagada (email, notas, credenciais) e "
+        f"{n_invocations} registro(s) de invocação MCP anonimizado(s).[/green]"
+    )
+    rprint(
+        f"[green]✓ Audit trails anonimizados (alias '{alias}'): "
+        f"{project_stats['audit_log_entries']} entrada(s) de audit_log em "
+        f"{project_stats['projects_affected']}/{project_stats['projects_scanned']} projeto(s), "
+        f"{project_stats['meta_fields']} campo(s) de meta.json, "
+        f"{n_catalog_files} arquivo(s) de versão de catálogo.[/green]"
+    )
+    rprint(
+        "[dim]Guarde o alias acima fora do sistema se precisar correlacionar "
+        "estas entradas a este esquecimento no futuro — não fica registrado em nenhum lugar.[/dim]"
+    )
+
+
 @app.command("remove-user")
 def remove_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente a remover."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Confirmar sem prompt."),
+    forget: bool = typer.Option(
+        False,
+        "--forget",
+        help="Direito de ser esquecido (LGPD Art. 18): além de desativar, apaga PII "
+        "(email, notas, credenciais) e anonimiza o audit log de invocações MCP. "
+        "Irreversível — para um usuário já removido antes, use 'forget-user'.",
+    ),
     reassign_to: str | None = typer.Option(
         None,
         "--reassign-to",
@@ -385,41 +406,92 @@ def remove_user(
         False, "--force-yes", help="Confirma automaticamente o --force (sem prompt), para uso não-interativo."
     ),
 ) -> None:
-    """Remove um usuário do auth store (e revoga todos os seus dispositivos).
+    """Desativa um usuário no auth store (soft-delete) e revoga todos os seus dispositivos.
 
     ADR-126 D7/F7: se o usuário é owner de projetos, a remoção é bloqueada por
     padrão — use --reassign-to para transferir ownership antes, ou --force para
     remover mesmo assim (deixa owner_id órfão).
+
+    O usuário permanece no store (inativo) — client_id continua resolvível para
+    quem já o referencia (ownership, audit trails). Use --forget para também
+    apagar a PII (direito de ser esquecido, LGPD Art. 18).
     """
     from concilium.application.services.notifications import notify_user_removed
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     _check_owned_projects(client_id, reassign_to, force, force_yes)
 
+    confirm_msg = f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?"
+    if forget:
+        confirm_msg = (
+            f"Remover usuário '{client_id}', revogar todos os seus dispositivos E apagar "
+            "permanentemente sua PII (email, notas, credenciais, histórico de invocações)? "
+            "Esta ação NÃO PODE ser desfeita."
+        )
     if not yes:
-        typer.confirm(f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?", abort=True)
+        typer.confirm(confirm_msg, abort=True)
 
     store = get_auth_store()
-    # Captura o email antes da remoção — depois de remove_client() o registro some do store.
+    # Captura o email antes da remoção/esquecimento — --forget apaga o campo email do registro.
     existing = next((r for r in store.list_clients() if r.client_id == client_id), None)
 
-    # Revoke all devices for this client (revoke_device() espera device_id, não client_id —
-    # chamar com client_id revogaria por coincidência qualquer dispositivo de QUALQUER
-    # usuário cujo device_id colida com este client_id).
-    devices = store.list_devices(client_id=client_id)
-    for d in devices:
-        store.revoke_device(d.device_id)
+    _revoke_all_devices(store, client_id)
 
     removed = store.remove_client(client_id)
     if not removed:
-        rprint(f"[yellow]Usuário '{client_id}' não encontrado no store local.[/yellow]")
+        rprint(f"[yellow]Usuário '{client_id}' não encontrado (ou já inativo) no store local.[/yellow]")
+        if forget:
+            rprint("[dim]Para apagar a PII de um usuário já removido, use 'forget-user'.[/dim]")
+        return
+
+    rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
+    if existing and existing.email:
+        if not notify_user_removed(client_id, existing.email):
+            rprint(f"[red]✗ Falha ao enviar email de confirmação para {existing.email}[/red]")
     else:
-        rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
-        if existing and existing.email:
-            if not notify_user_removed(client_id, existing.email):
-                rprint(f"[red]✗ Falha ao enviar email de confirmação para {existing.email}[/red]")
-        else:
-            rprint("[dim]Usuário sem email cadastrado — nenhuma notificação enviada.[/dim]")
+        rprint("[dim]Usuário sem email cadastrado — nenhuma notificação enviada.[/dim]")
+
+    if forget:
+        _forget_pii(store, client_id)
+
+
+@app.command("forget-user")
+def forget_user(
+    client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente a esquecer."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Confirmar sem prompt."),
+) -> None:
+    """Direito de ser esquecido (LGPD Art. 18) para um usuário já removido (ou ainda ativo).
+
+    Complementar a 'remove-user --forget': existe separado para o caso comum de o
+    pedido de esquecimento chegar depois da desativação (ex.: usuário já foi
+    removido semanas atrás, jurídico só agora formalizou o pedido de exclusão de
+    dados) — não é preciso reprocessar reassign-to/força de ownership de novo, só
+    apagar a PII que ainda resta. Se o usuário ainda estiver ativo, desativa e
+    revoga dispositivos como parte da mesma operação, antes de apagar a PII.
+
+    NÃO apaga client_id nem referências a ele em owner_id/audit trails de projeto e
+    catálogo — essas permanecem como identificador pseudonimizado (LGPD Art. 16).
+    """
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    store = get_auth_store()
+    existing = next((r for r in store.list_clients() if r.client_id == client_id), None)
+    if existing is None:
+        rprint(f"[red]Erro:[/red] usuário '{client_id}' não encontrado.")
+        raise typer.Exit(1)
+
+    if not yes:
+        typer.confirm(
+            f"Apagar permanentemente a PII de '{client_id}' (email, notas, credenciais, "
+            "histórico de invocações)? Esta ação NÃO PODE ser desfeita.",
+            abort=True,
+        )
+
+    if existing.active:
+        _revoke_all_devices(store, client_id)
+        store.remove_client(client_id)
+
+    _forget_pii(store, client_id)
 
 
 # ── Dispositivos ──────────────────────────────────────────────────────────────
@@ -491,6 +563,7 @@ def migrate_legacy_codes() -> None:
     rprint(f"[green]✓ {len(migrated)} usuário(s) migrado(s):[/green]\n")
 
     proxy_download_urls = _get_proxy_exe_download_urls()
+    _warn_if_no_download_urls(proxy_download_urls)
     manual: list[tuple[str, str]] = []
     for client_id, client_code, email in migrated:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
@@ -501,7 +574,6 @@ def migrate_legacy_codes() -> None:
                 config_json_unix,
                 config_json_windows,
                 proxy_download_urls,
-                distribution_zips=_build_distribution_zips(client_code),
             )
             if sent:
                 rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")

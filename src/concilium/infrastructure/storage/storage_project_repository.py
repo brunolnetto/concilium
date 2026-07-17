@@ -216,6 +216,13 @@ class StorageProjectHandle:
         except FileNotFoundError:
             return []
 
+    def write_lines(self, relative_path: str, lines: list[str]) -> None:
+        """Reescreve o blob por completo (diferente de append_jsonl) — usado para
+
+        varreduras de anonimização de PII (LGPD Art. 18) sobre um .jsonl append-only."""
+        content = ("\n".join(lines) + "\n") if lines else ""
+        self._storage.gravar_blob(self._path(relative_path), content.encode("utf-8"))
+
     def read_bytes(self, relative_path: str) -> bytes | None:
         try:
             return self._storage.ler_blob(self._path(relative_path))

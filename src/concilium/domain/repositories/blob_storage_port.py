@@ -79,7 +79,7 @@ class BlobStoragePort(ABC):
         pois seus mecanismos de URL assinada (SAS/presigned) não têm essa distinção.
 
         Implementação padrão retorna ``None`` — backends sem suporte a URL assinada
-        (ex.: local) sinalizam ausência, e o chamador recai no transporte base64.
+        (ex.: local) sinalizam ausência para o chamador decidir (ex.: entrega manual).
         """
         return None
 

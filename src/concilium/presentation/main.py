@@ -211,6 +211,7 @@ def _load_schedule() -> None:
 def _load_auth() -> None:
     from concilium.presentation.cli.commands_auth import (
         add_user,
+        forget_user,
         list_devices,
         list_sessions,
         list_users,
@@ -223,6 +224,7 @@ def _load_auth() -> None:
     auth_app.command("add-user")(add_user)
     auth_app.command("list-users")(list_users)
     auth_app.command("remove-user")(remove_user)
+    auth_app.command("forget-user")(forget_user)
     auth_app.command("regenerate-code")(regenerate_code)
     auth_app.command("migrate-legacy-codes")(migrate_legacy_codes)
     auth_app.command("list-devices")(list_devices)

@@ -257,6 +257,14 @@ class FileProjectHandle(ProjectHandle):
             return []
         return path.read_text(encoding="utf-8").splitlines()
 
+    def write_lines(self, relative_path: str, lines: list[str]) -> None:
+        """Reescreve o arquivo por completo (diferente de append_jsonl) — usado para
+
+        varreduras de anonimização de PII (LGPD Art. 18) sobre um .jsonl append-only."""
+        path = self._store.root / relative_path
+        content = ("\n".join(lines) + "\n") if lines else ""
+        path.write_text(content, encoding="utf-8")
+
     def read_bytes(self, relative_path: str) -> bytes | None:
         path = self._store.root / relative_path
         if not path.exists():

@@ -63,6 +63,7 @@ class ClientRecord:
     scopes: list[str] = field(default_factory=list)  # legado ADR-094, ignorado se roles presente
     email: str = ""  # ADR-123: endereço de email do usuário para notificações
     client_code_hash: str = ""  # "sha256:<hex>" — código reutilizável de bootstrap (1 por usuário, N dispositivos)
+    deleted_at: str = ""  # ISO-8601, setado por remove_client() (soft-delete) — "" enquanto ativo
 
 
 def _client_record(raw: dict) -> ClientRecord:
@@ -275,14 +276,54 @@ class AuthStore:
         return None
 
     def remove_client(self, client_id: str) -> bool:
-        """Deactivates a client. Returns True if found."""
+        """Soft-delete: marca o client como inativo (active=False, deleted_at=now).
+
+        O registro NUNCA é removido de clients.json — client_id continua resolvível
+        para quem já o referencia (owner_id de projeto, audit trails, version_history),
+        evitando o problema de referência órfã descrito no ADR-126 (P5). Idempotente:
+        chamar de novo num client já inativo retorna False (nada mudou), mesmo
+        comportamento observável do hard-delete anterior ("já removido").
+
+        Right-to-be-forgotten (PII completa) é `forget_client()`, uma operação
+        distinta e explícita — remove_client() por si só não apaga email/notes.
+        """
         with self._lock:
             raw = self._read_clients()
             records = [_client_record(r) for r in raw]
-            before = len(records)
-            records = [r for r in records if r.client_id != client_id]
-            if len(records) == before:
+            target = next((r for r in records if r.client_id == client_id and r.active), None)
+            if target is None:
                 return False
+            target.active = False
+            target.deleted_at = _iso(_now())
+            self._write("clients.json", [asdict(r) for r in records])
+            self._invalidate_clients_cache()
+            return True
+
+    def forget_client(self, client_id: str) -> bool:
+        """Direito de ser esquecido (LGPD Art. 18): redige a PII do client.
+
+        Garante primeiro que o client está inativo (mesmo efeito de `remove_client()`,
+        idempotente) e então limpa `email`/`notes`/`secret_hash`/`client_code_hash`.
+        `client_id` e `roles` são preservados de propósito — continuam sendo
+        referenciados como identificador pseudonimizado em audit trails de projeto/
+        catálogo (owner_id, criado_por, aprovado_por), que têm finalidade legal/
+        auditável própria (LGPD Art. 16) e não são varridos por esta operação.
+
+        Retorna False se client_id nunca existiu (nada a esquecer).
+        """
+        with self._lock:
+            raw = self._read_clients()
+            records = [_client_record(r) for r in raw]
+            target = next((r for r in records if r.client_id == client_id), None)
+            if target is None:
+                return False
+            target.active = False
+            if not target.deleted_at:
+                target.deleted_at = _iso(_now())
+            target.email = ""
+            target.notes = ""
+            target.secret_hash = ""
+            target.client_code_hash = ""
             self._write("clients.json", [asdict(r) for r in records])
             self._invalidate_clients_cache()
             return True

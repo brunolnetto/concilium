@@ -45,6 +45,74 @@ class TestAuthStore:
         result = store.remove_client("nonexistent")
         assert result is False
 
+    def test_remove_client_is_soft_delete_not_hard_delete(self, tmp_path):
+        """client_id permanece em list_clients() após remove_client() — soft-delete,
+
+        não hard delete. Referências existentes (owner_id, audit trails) continuam
+        resolvíveis; só `active` vira False e `deleted_at` é gravado."""
+        store = self._make_store(tmp_path)
+        store.add_client("carla", "s", ["operator"], email="carla@example.com", notes="obra X")
+        assert store.remove_client("carla") is True
+
+        record = store.get_client("carla")
+        assert record is not None
+        assert record.active is False
+        assert record.deleted_at != ""
+        # PII permanece intacta — remove_client() por si só não é o direito ao esquecimento.
+        assert record.email == "carla@example.com"
+        assert record.notes == "obra X"
+
+    def test_remove_client_twice_returns_false_second_time(self, tmp_path):
+        """Idempotência: chamar de novo num client já inativo é 'não encontrado' (nada mudou),
+
+        mesmo comportamento observável do hard-delete anterior."""
+        store = self._make_store(tmp_path)
+        store.add_client("carla", "s", ["operator"])
+        assert store.remove_client("carla") is True
+        assert store.remove_client("carla") is False
+
+    def test_forget_client_redacts_pii_but_keeps_client_id(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("carla", "s", ["operator"], email="carla@example.com", notes="obra X", client_code="RCODE-X")
+
+        assert store.forget_client("carla") is True
+
+        record = store.get_client("carla")
+        assert record is not None
+        assert record.client_id == "carla"  # preservado — referência pseudonimizada em audit trails
+        assert record.roles == ["operator"]
+        assert record.active is False
+        assert record.deleted_at != ""
+        assert record.email == ""
+        assert record.notes == ""
+        assert record.secret_hash == ""
+        assert record.client_code_hash == ""
+
+    def test_forget_client_unknown_returns_false(self, tmp_path):
+        store = self._make_store(tmp_path)
+        assert store.forget_client("ghost") is False
+
+    def test_forget_client_works_on_still_active_client(self, tmp_path):
+        """forget_client() não exige remove_client() prévio — desativa e redige na mesma chamada."""
+        store = self._make_store(tmp_path)
+        store.add_client("carla", "s", ["operator"], email="carla@example.com")
+
+        assert store.forget_client("carla") is True
+
+        record = store.get_client("carla")
+        assert record.active is False
+        assert record.email == ""
+
+    def test_forget_client_after_remove_client_preserves_original_deleted_at(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("carla", "s", ["operator"], email="carla@example.com")
+        store.remove_client("carla")
+        first_deleted_at = store.get_client("carla").deleted_at
+
+        store.forget_client("carla")
+
+        assert store.get_client("carla").deleted_at == first_deleted_at
+
     def test_get_client_roles_valid_credentials(self, tmp_path):
         store = self._make_store(tmp_path)
         store.add_client("user1", "password", ["admin"])

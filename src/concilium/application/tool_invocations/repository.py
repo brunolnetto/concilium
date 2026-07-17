@@ -51,6 +51,16 @@ class ToolInvocationRepository(ABC):
         """Total de registros no buffer."""
         ...
 
+    @abstractmethod
+    def delete_by_user(self, user_id: str) -> int:
+        """Direito de ser esquecido (LGPD Art. 18): anonimiza `user_id` nos registros.
+
+        Não remove as linhas (preserva estatísticas operacionais agregadas —
+        contagem de chamadas, tools usadas, tempos), apenas zera o vínculo
+        pessoal (`user_id -> None`). Retorna a quantidade de registros afetados.
+        """
+        ...
+
 
 class InMemoryToolInvocationRepository(ToolInvocationRepository):
     """Buffer circular thread-safe em memória.
@@ -90,6 +100,17 @@ class InMemoryToolInvocationRepository(ToolInvocationRepository):
     def count(self) -> int:
         with self._lock:
             return len(self._buffer)
+
+    def delete_by_user(self, user_id: str) -> int:
+        import dataclasses
+
+        with self._lock:
+            affected = 0
+            for i, item in enumerate(self._buffer):
+                if item.user_id == user_id:
+                    self._buffer[i] = dataclasses.replace(item, user_id=None)
+                    affected += 1
+            return affected
 
     def clear(self) -> None:
         """Limpa o buffer (apenas para testes)."""
