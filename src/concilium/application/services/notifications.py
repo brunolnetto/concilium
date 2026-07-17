@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from concilium.infrastructure.services.notification_service import get_notification_service
 
@@ -399,5 +400,40 @@ def notify_ownership_invite_expired(email: str, project_id: str, owner_proposto:
             "details": [("Projeto", project_id), ("Destinatário", owner_proposto)],
             "cta": None,
             "footer_note": "Você pode criar um novo convite quando quiser.",
+        },
+    )
+
+
+# ── ADR-141: digest de rascunhos de catálogo pendentes (ADR-140 D1 condição e) ──
+
+
+def notify_catalog_drafts_pending(email: str, rascunhos_por_contexto: dict[str, list[dict[str, Any]]]) -> bool:
+    """Digest consolidado de rascunhos de catálogo aguardando aprovação/rejeição.
+
+    Um email por catalog-manager (não um email por rascunho — ver ADR-141) com
+    todos os contextos/rascunhos pendentes no momento da execução do digest.
+    """
+    total = sum(len(versoes) for versoes in rascunhos_por_contexto.values())
+    details = [
+        (
+            versao["version"],
+            f"{contexto_id} — {versao.get('motivo', '')} (criado por {versao.get('created_by', '—')})",
+        )
+        for contexto_id, versoes in rascunhos_por_contexto.items()
+        for versao in versoes
+    ]
+    return get_notification_service().send(
+        to=email,
+        subject=f"[Concilium] {total} rascunho(s) de catálogo aguardando aprovação",
+        template="notification",
+        context={
+            "heading": f"{total} rascunho(s) de catálogo aguardando aprovação",
+            "intro": (
+                "Os seguintes rascunhos de contexto de catálogo estão pendentes de revisão "
+                "(use aprovar_merge_catalogo ou rejeitar_rascunho_catalogo):"
+            ),
+            "details": details,
+            "cta": None,
+            "footer_note": "Este é um resumo periódico — novos rascunhos aparecem no próximo envio.",
         },
     )
