@@ -4,6 +4,7 @@ Comandos:
     concilium ops blob migrate   — copia blobs de source para target
     concilium ops blob status    — lista blobs e estatísticas do backend atual
     concilium ops blob put       — envia um arquivo local para o blob storage
+    concilium ops blob delete    — remove um blob/pasta (recursivo, irreversível na prática)
 """
 
 from __future__ import annotations
@@ -177,6 +178,32 @@ def put(
     storage = _make_storage(backend, root, system=system)
     storage.gravar_blob(blob_path, local_path.read_bytes())
     rprint(f"[bold green]✓[/bold green] {local_path} → {blob_path}")
+
+
+@blob_app.command("delete")
+def delete(
+    path: Annotated[str, typer.Argument(help="Caminho/prefixo (pasta) a remover, recursivo.")],
+    backend: Annotated[str, typer.Option("--backend", "-b", help=_BACKEND_HELP)] = "",
+    root: Annotated[str, typer.Option("--root", help="Diretório raiz (apenas backend filesystem).")] = "",
+    system: Annotated[
+        bool, typer.Option("--system", help="Usa o Drive de sistema em vez do Drive de projetos.")
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Confirmar sem prompt interativo.")] = False,
+) -> None:
+    """Remove um blob ou pasta (recursivo) do blob storage.
+
+    Irreversível na prática: no backend SharePoint cai na lixeira do site
+    (retenção padrão ~93 dias), mas não trate isso como plano de recuperação.
+    """
+    storage = _make_storage(backend, root, system=system)
+    if not yes:
+        typer.confirm(f"Remover '{path}' permanentemente do storage?", abort=True)
+    try:
+        storage.deletar_blob(path)
+    except FileNotFoundError as e:
+        rprint(f"[red]Erro:[/red] {e}")
+        raise typer.Exit(1) from e
+    rprint(f"[bold green]✓[/bold green] Removido: {path}")
 
 
 @blob_app.command("status")

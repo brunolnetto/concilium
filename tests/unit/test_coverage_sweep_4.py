@@ -169,3 +169,18 @@ class TestStoreFactoryAdditional:
             mock_bs.return_value = MagicMock()
             store = get_campaign_store("test-slug")
         assert store is not None
+
+    def test_get_tool_invocation_store_uses_system_storage(self):
+        """ADR-135: .tool_invocations é audit trail global, não dado por-projeto."""
+        from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
+
+        with (
+            patch("concilium.infrastructure.storage.store_factory.build_system_blob_storage") as mock_system,
+            patch("concilium.infrastructure.storage.store_factory.build_blob_storage") as mock_project,
+        ):
+            mock_system.return_value = MagicMock()
+            store = get_tool_invocation_store()
+
+        assert store is not None
+        mock_system.assert_called_once()
+        mock_project.assert_not_called()

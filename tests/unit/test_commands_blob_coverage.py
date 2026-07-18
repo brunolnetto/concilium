@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from concilium.presentation.cli.commands_blob import _make_storage, blob_app
@@ -445,6 +446,55 @@ class TestPut:
 
         assert result.exit_code == 0, result.output
         mock_instance.gravar_blob.assert_called_once_with("destino/arquivo.bin", b"conteudo")
+
+
+# ---------------------------------------------------------------------------
+# delete
+# ---------------------------------------------------------------------------
+
+
+class TestDelete:
+    def test_yes_flag_skips_prompt_and_deletes(self):
+        mock_storage = MagicMock()
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(blob_app, ["delete", "auth/", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        mock_storage.deletar_blob.assert_called_once_with("auth/")
+        assert "Removido" in result.output
+
+    def test_without_yes_prompts_and_aborts_on_decline(self):
+        mock_storage = MagicMock()
+
+        with (
+            patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage),
+            patch("typer.confirm", side_effect=typer.Abort()),
+        ):
+            result = runner.invoke(blob_app, ["delete", "auth/"])
+
+        assert result.exit_code != 0
+        mock_storage.deletar_blob.assert_not_called()
+
+    def test_file_not_found_exits_1(self):
+        mock_storage = MagicMock()
+        mock_storage.deletar_blob.side_effect = FileNotFoundError("Blob não encontrado para deletar: ghost/")
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(blob_app, ["delete", "ghost/", "--yes"])
+
+        assert result.exit_code == 1
+        assert "não encontrado" in result.output
+
+    def test_system_flag_uses_system_storage(self):
+        mock_storage = MagicMock()
+
+        with patch(f"{STORE_FACTORY}.build_system_blob_storage", return_value=mock_storage) as mock_build:
+            result = runner.invoke(blob_app, ["delete", "sistema/auth/", "--system", "--yes"])
+
+        assert result.exit_code == 0, result.output
+        mock_build.assert_called_once()
+        mock_storage.deletar_blob.assert_called_once_with("sistema/auth/")
 
 
 # ---------------------------------------------------------------------------

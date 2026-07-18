@@ -153,10 +153,14 @@ def build_system_blob_storage(root_override: Path | None = None) -> BlobStorageP
 
 
 def get_tool_invocation_store() -> BlobToolInvocationRepository:
-    """Retorna BlobToolInvocationRepository usando o backend configurado (ADR-118 F7)."""
+    """Retorna BlobToolInvocationRepository usando o backend configurado (ADR-118 F7).
+
+    Usa o Drive de sistema (ADR-135) — é um audit trail global de chamadas de
+    tools do MCP, não um dado por-projeto.
+    """
     from concilium.infrastructure.storage.tool_invocation_store import BlobToolInvocationRepository
 
-    storage = build_blob_storage()
+    storage = build_system_blob_storage()
     return BlobToolInvocationRepository(storage=storage)
 
 

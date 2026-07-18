@@ -36,8 +36,9 @@ A credencial (tenant/client id/secret ou certificado) continua única — a app 
 - `commands_blob.py::blob put --system` — usado por `build-proxy.yml` para publicar `distribuicao/`.
 - `observability/pipeline.py::_make_storage()` (ADR-121 D3/D6) — pipeline Bronze/Silver/Gold; adicionado depois desta ADR, também cai no mesmo fallback até o D3 ser executado.
 - `commands_blob.py::blob migrate --source-system/--target-system` — flags adicionadas para permitir de fato executar a migração descrita em D3 (antes só existia no `put`; `migrate` chamava `_make_storage` sem repassar `system=`).
+- `store_factory.py::get_tool_invocation_store()` — `.tool_invocations/` (audit trail global de chamadas de tools do MCP, não dado por-projeto). Reclassificado depois desta ADR: inicialmente ficou junto de `projetos/` por usar `build_blob_storage()` genérico, mas conceitualmente pertence a `sistema/` junto de `observability/`.
 
-`projetos/` (via `build_project_repository`/`_build_sharepoint_repository`) e dados por-projeto (`campaign_store`, `tool_invocation_store`, via `build_blob_storage()` genérico) **não mudam** — continuam no Drive de projetos.
+`projetos/` (via `build_project_repository`/`_build_sharepoint_repository`) e dados por-projeto (`campaign_store`, via `build_blob_storage()` genérico) **não mudam** — continuam no Drive de projetos.
 
 Catálogos (`config/catalogos/`) hoje são carregados via `CatalogBackend.LOCAL_JSON` (arquivos versionados em git, copiados para a imagem Docker) — não há wiring de produção usando `CatalogBackend.SHAREPOINT`. Se esse backend for ativado no futuro, deve injetar `SharePointBlobStorage.from_env(system=True)`.
 
