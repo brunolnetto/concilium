@@ -312,16 +312,26 @@ cmd_observability_job() {
             --set-env-vars "${env_vars[@]}" \
             --output none
     else
-        # Identidade system-assigned PROPRIA do job (nao concilium-identity) —
-        # reusar uma identidade ja anexada a outro recurso (concilium-api) num
-        # --mi-user-assigned + --registry-identity combinado no mesmo `create`
-        # dispara um bug de ordering na extensao containerapp (beta): o passo
-        # de registry-identity consulta as identidades do job antes do
-        # mi-user-assigned commitar, e falha com IdentityDoesNotExist. Uma
-        # identidade system-assigned nova nao tem esse problema. O job nao
-        # precisa de Key Vault/AZURE_CLIENT_ID — so usa SP_CLIENT_ID/SECRET
-        # (MSAL, nao managed identity) para autenticar no SharePoint.
-        log "Job nao existe — criando (trigger Schedule, cron a cada 5min)."
+        # Bootstrap em 2 fases. A ARM valida sincronamente (na propria chamada
+        # de create/update) se a imagem consegue ser puxada com a identidade
+        # informada — uma identidade system-assigned so ganha principalId
+        # depois que o recurso existe, entao "criar ja com a imagem privada +
+        # identidade" sempre falha (chicken-and-egg: AcrPull ainda nao existe
+        # no momento da validacao). Fase 1: cria com imagem publica (nao
+        # precisa de credencial nenhuma) so pra materializar a identidade.
+        # Fase 2: concede AcrPull, espera propagar, e so entao troca pra
+        # imagem real + registries — isso via --yaml, pois `job update` nao
+        # expõe --registry-identity/--registry-server como flags (so
+        # `job create` tem essas Configuration Arguments).
+        #
+        # (Reusar concilium-identity via --mi-user-assigned + --registry-identity
+        # no mesmo `create` foi tentado antes e falhou com IdentityDoesNotExist —
+        # bug de ordering na extensao containerapp beta 1.3.0b4 quando a mesma
+        # identidade ja esta anexada a outro recurso no resource group. Uma
+        # identidade system-assigned nova evita esse bug. O job nao precisa de
+        # Key Vault/AZURE_CLIENT_ID — so usa SP_CLIENT_ID/SECRET, MSAL, nao
+        # managed identity, pra autenticar no SharePoint.)
+        log "Job nao existe — bootstrap fase 1: imagem publica so pra criar a identidade."
         az containerapp job create \
             --name "$ACA_OBSERVABILITY_JOB" \
             --resource-group "$RESOURCE_GROUP" \
@@ -333,11 +343,8 @@ cmd_observability_job() {
             --replica-completion-count 1 \
             --parallelism 1 \
             --cpu 0.5 --memory 1.0Gi \
-            --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest" \
-            --command "concilium" "ops" "observability" "cycle" \
-            --env-vars "${env_vars[@]}" \
-            --registry-server "${ACR_NAME}.azurecr.io" \
-            --registry-identity system \
+            --image "mcr.microsoft.com/k8se/quickstart:latest" \
+            --container-name "$ACA_OBSERVABILITY_JOB" \
             --mi-system-assigned \
             --output none
 
@@ -345,13 +352,41 @@ cmd_observability_job() {
         acr_id=$(az acr show --name "$ACR_NAME" --query 'id' -o tsv)
         principal_id=$(az containerapp job show --name "$ACA_OBSERVABILITY_JOB" --resource-group "$RESOURCE_GROUP" \
             --query 'identity.principalId' -o tsv)
+
         step "AcrPull -> identidade system-assigned do job"
         az role assignment create \
             --assignee "$principal_id" \
             --role AcrPull \
             --scope "$acr_id" \
             --output none
-        ok "AcrPull concedido."
+        ok "AcrPull concedido. Aguardando propagacao RBAC..."
+        sleep 45
+
+        log "Bootstrap fase 2: imagem real + registries via --yaml."
+        local job_yaml; job_yaml=$(mktemp /tmp/observability-job-XXXXXX.yaml)
+        {
+            echo "properties:"
+            echo "  configuration:"
+            echo "    registries:"
+            echo "      - server: ${ACR_NAME}.azurecr.io"
+            echo "        identity: system"
+            echo "  template:"
+            echo "    containers:"
+            echo "      - name: ${ACA_OBSERVABILITY_JOB}"
+            echo "        image: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest"
+            echo "        command: [\"concilium\", \"ops\", \"observability\", \"cycle\"]"
+            echo "        env:"
+            for kv in "${env_vars[@]}"; do
+                echo "          - name: ${kv%%=*}"
+                echo "            value: \"${kv#*=}\""
+            done
+        } > "$job_yaml"
+        az containerapp job update \
+            --name "$ACA_OBSERVABILITY_JOB" \
+            --resource-group "$RESOURCE_GROUP" \
+            --yaml "$job_yaml" \
+            --output none
+        rm -f "$job_yaml"
     fi
 
     ok "Container Apps Job '$ACA_OBSERVABILITY_JOB' configurado."
