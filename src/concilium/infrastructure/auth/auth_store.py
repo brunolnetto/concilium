@@ -372,6 +372,38 @@ class AuthStore:
                     return code
         return None
 
+    def update_client(
+        self,
+        client_id: str,
+        roles: list[str] | None = None,
+        email: str | None = None,
+        notes: str | None = None,
+    ) -> ClientRecord:
+        """Atualiza role(s)/email/notes de um client existente. Campos None não mudam.
+
+        Raises ValueError se client_id não existir, ou se roles for inválido.
+        Não filtra por `active` — mesmo precedente de regenerate_client_code().
+        """
+        effective_roles = _resolve_effective_roles(roles, None) if roles is not None else None
+        if effective_roles is not None:
+            _validate_roles(effective_roles)
+
+        with self._lock:
+            raw = self._read_clients()
+            records = [ClientRecord(**r) for r in raw]
+            for r in records:
+                if r.client_id == client_id:
+                    if effective_roles is not None:
+                        r.roles = effective_roles
+                    if email is not None:
+                        r.email = email
+                    if notes is not None:
+                        r.notes = notes
+                    self._write("clients.json", [asdict(x) for x in records])
+                    self._invalidate_clients_cache()
+                    return r
+        raise ValueError(f"Client '{client_id}' not found.")
+
     def migrate_legacy_client_codes(self) -> list[tuple[str, str, str]]:
         """Gera client_code para todo client ativo criado antes do bootstrap por código (ADR-099 F...).
 

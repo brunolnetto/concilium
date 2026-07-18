@@ -9,6 +9,13 @@ Uso típico (nested sob "ops" — ver ops_app.add_typer(auth_app) em presentatio
   # Criar usuário (gera client_code reutilizável)
   concilium ops auth add-user --id bruno --role operator
 
+  # Atualizar role/email/notes de um usuário existente
+  concilium ops auth update-user --id bruno --role admin
+
+  # Criar/atualizar em lote a partir de um CSV (colunas: action,id,role,email,notes,secret)
+  concilium ops auth batch --file usuarios.csv --dry-run
+  concilium ops auth batch --file usuarios.csv
+
   # Regenerar o client_code do usuário (ex: vazamento do código original)
   concilium ops auth regenerate-code --user bruno
 
@@ -34,11 +41,16 @@ Uso típico (nested sob "ops" — ver ops_app.add_typer(auth_app) em presentatio
 
 from __future__ import annotations
 
+import csv
 import secrets
+from typing import TYPE_CHECKING
 
 import typer
 from rich import print as rprint
 from rich.table import Table
+
+if TYPE_CHECKING:
+    from concilium.infrastructure.auth.auth_store import ClientRecord
 
 app = typer.Typer(
     name="auth",
@@ -150,6 +162,31 @@ def _print_both_configs(config_json_unix: str, config_json_windows: str) -> None
 # ── Usuários ──────────────────────────────────────────────────────────────────
 
 
+def _do_add_user(client_id: str, secret: str, role: str, notes: str, email: str) -> tuple[ClientRecord, str]:
+    """Cria 1 usuário. Retorna (record, client_code). Raises ValueError se já existir.
+
+    Núcleo compartilhado por add-user (singular) e batch — mantém a geração de
+    client_code e a chamada ao store num único lugar.
+    """
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    store = get_auth_store()
+    client_code = "RCODE-" + secrets.token_hex(16).upper()
+    record = store.add_client(client_id, secret, [role], notes, email=email or "", client_code=client_code)
+    return record, client_code
+
+
+def _do_update_user(client_id: str, role: str | None, email: str | None, notes: str | None) -> ClientRecord:
+    """Atualiza 1 usuário. Raises ValueError se não existir ou role for inválido.
+
+    Núcleo compartilhado por update-user (singular) e batch.
+    """
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    store = get_auth_store()
+    return store.update_client(client_id, roles=[role] if role is not None else None, email=email, notes=notes)
+
+
 @app.command("add-user")
 def add_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente/usuário."),
@@ -177,16 +214,13 @@ def add_user(
     email automaticamente (ADR-123 F2).
     """
     from concilium.application.services.notifications import notify_user_created
-    from concilium.infrastructure.auth.auth_store import get_auth_store
 
-    store = get_auth_store()
     generated = secret is None
     if secret is None:
         secret = secrets.token_urlsafe(32)
-    client_code = "RCODE-" + secrets.token_hex(16).upper()
 
     try:
-        record = store.add_client(client_id, secret, [role], notes, email=email or "", client_code=client_code)
+        record, client_code = _do_add_user(client_id, secret, role, notes, email or "")
     except ValueError as e:
         rprint(f"[red]Erro:[/red] {e}")
         raise typer.Exit(1) from e
@@ -225,6 +259,159 @@ def add_user(
         rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
         rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]")
         _print_both_configs(config_json_unix, config_json_windows)
+
+
+@app.command("update-user")
+def update_user(
+    client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente/usuário a atualizar."),
+    role: str | None = typer.Option(
+        None, "--role", "-r", help="Nova role: operator | engineer | admin | auditor | catalog-manager"
+    ),
+    email: str | None = typer.Option(None, "--email", "-e", help="Novo email."),
+    notes: str | None = typer.Option(None, "--notes", help="Novas observações."),
+) -> None:
+    """Atualiza role/email/notes de um usuário existente (para criar, use add-user)."""
+    from concilium.application.services.notifications import notify_user_edited
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    if role is None and email is None and notes is None:
+        rprint("[red]Erro:[/red] informe ao menos --role, --email ou --notes.")
+        raise typer.Exit(1)
+
+    store = get_auth_store()
+    existing = store.get_client(client_id)
+    if existing is None:
+        rprint(f"[red]Erro:[/red] usuário '{client_id}' não encontrado. Use add-user para criar.")
+        raise typer.Exit(1)
+    if not existing.active:
+        rprint(f"[yellow]Aviso:[/yellow] '{client_id}' está inativo/removido — atualizando mesmo assim.")
+
+    changes: dict[str, str] = {}
+    if role is not None and [role] != existing.roles:
+        changes["role"] = f"{'/'.join(existing.roles)} → {role}"
+    if email is not None and email != existing.email:
+        changes["email"] = "atualizado"
+    if notes is not None and notes != existing.notes:
+        changes["notes"] = "atualizado"
+
+    try:
+        record = _do_update_user(client_id, role, email, notes)
+    except ValueError as e:
+        rprint(f"[red]Erro:[/red] {e}")
+        raise typer.Exit(1) from e
+
+    rprint(f"[green]✓ Usuário '{record.client_id}' atualizado.[/green]")
+    rprint(f"  Role    : {', '.join(record.roles)}")
+    if record.email:
+        rprint(f"  Email   : {record.email}")
+    if record.notes:
+        rprint(f"  Notas   : {record.notes}")
+
+    if changes and record.email:
+        if not notify_user_edited(client_id, record.email, changes):
+            rprint(f"[red]✗ Falha ao enviar email de aviso para {record.email}[/red]")
+
+
+@app.command("batch")
+def batch(
+    file: str = typer.Option(..., "--file", "-f", help="CSV com colunas: action,id,role,email,notes,secret."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Valida e mostra o que seria feito, sem escrever nada."),
+) -> None:
+    """Cria/atualiza usuários em lote a partir de um CSV.
+
+    Colunas: action (add|update), id, role, email, notes, secret (opcional, só
+    para action=add — gerado automaticamente se vazio).
+
+    Cada linha é processada de forma independente — um erro numa linha não
+    aborta as demais. Ao final, uma tabela resume o resultado por linha e o
+    comando sai com código 1 se alguma linha falhou.
+    """
+    from concilium.infrastructure.auth.permission_guard import VALID_ROLES
+
+    try:
+        with open(file, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+    except OSError as e:
+        rprint(f"[red]Erro:[/red] não foi possível ler '{file}': {e}")
+        raise typer.Exit(1) from e
+
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    store = get_auth_store()
+    table = Table(title="Batch — usuários" + (" (dry-run)" if dry_run else ""), show_header=True)
+    table.add_column("Linha", justify="right")
+    table.add_column("Ação")
+    table.add_column("ID", style="cyan")
+    table.add_column("Status")
+    table.add_column("Detalhe", style="dim")
+
+    n_ok = 0
+    n_failed = 0
+    for i, row in enumerate(rows, start=2):  # linha 1 = header
+        action = (row.get("action") or "").strip().lower()
+        client_id = (row.get("id") or "").strip()
+        role_cell = (row.get("role") or "").strip()  # "" = nao informado (relevante so pra update)
+        email_cell = (row.get("email") or "").strip()
+        notes_cell = (row.get("notes") or "").strip()
+        secret_cell = (row.get("secret") or "").strip()
+        role_for_add = role_cell or "operator"  # add sempre tem role (default operator, como add-user)
+
+        if action not in ("add", "update"):
+            table.add_row(str(i), action or "(vazio)", client_id or "(vazio)", "[red]✗[/red]", "action inválida")
+            n_failed += 1
+            continue
+        if not client_id:
+            table.add_row(str(i), action, "(vazio)", "[red]✗[/red]", "id obrigatório")
+            n_failed += 1
+            continue
+
+        role_to_validate = role_for_add if action == "add" else role_cell
+        if role_to_validate and role_to_validate not in VALID_ROLES:
+            table.add_row(str(i), action, client_id, "[red]✗[/red]", f"role inválida: {role_to_validate}")
+            n_failed += 1
+            continue
+
+        if action == "update" and not (role_cell or email_cell or notes_cell):
+            table.add_row(str(i), action, client_id, "[red]✗[/red]", "nenhum campo pra atualizar")
+            n_failed += 1
+            continue
+
+        if dry_run:
+            exists = store.get_client(client_id) is not None
+            if action == "add":
+                detalhe = "já existe (falharia)" if exists else f"criaria com role={role_for_add}"
+                status = "[red]✗[/red]" if exists else "[green]✓[/green]"
+            else:
+                detalhe = f"atualizaria role={role_cell or '—'}" if exists else "não existe (falharia)"
+                status = "[green]✓[/green]" if exists else "[red]✗[/red]"
+            ok_row = (action == "add" and not exists) or (action == "update" and exists)
+            n_ok += 1 if ok_row else 0
+            n_failed += 0 if ok_row else 1
+            table.add_row(str(i), action, client_id, status, detalhe)
+            continue
+
+        try:
+            if action == "add":
+                used_secret = secret_cell or secrets.token_urlsafe(32)
+                _record, client_code = _do_add_user(client_id, used_secret, role_for_add, notes_cell, email_cell)
+                detalhe = f"code={client_code}"
+                if not secret_cell:
+                    detalhe += f", secret gerado={used_secret}"
+            else:
+                _do_update_user(client_id, role_cell or None, email_cell or None, notes_cell or None)
+                detalhe = "atualizado"
+        except ValueError as e:
+            table.add_row(str(i), action, client_id, "[red]✗[/red]", str(e))
+            n_failed += 1
+            continue
+
+        table.add_row(str(i), action, client_id, "[green]✓[/green]", detalhe)
+        n_ok += 1
+
+    rprint(table)
+    rprint(f"\n{n_ok} ok, {n_failed} falharam.")
+    if n_failed:
+        raise typer.Exit(1)
 
 
 @app.command("list-users")

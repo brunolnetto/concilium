@@ -869,6 +869,207 @@ class TestRegenerateCode:
 
 
 # ===========================================================================
+# update-user
+# ===========================================================================
+
+
+class TestUpdateUser:
+    def test_no_fields_given_errors(self):
+        result = runner.invoke(app, ["update-user", "--id", "alice"])
+        assert result.exit_code == 1
+        assert "ao menos" in result.output
+
+    def test_unknown_user_errors(self):
+        store = _make_store()
+        store.get_client.return_value = None
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["update-user", "--id", "ghost", "--role", "admin"])
+
+        assert result.exit_code == 1
+        assert "não encontrado" in result.output
+        store.update_client.assert_not_called()
+
+    def test_role_change_calls_store_with_new_role(self):
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice", roles=["operator"])
+        store.update_client.return_value = _make_client_record("alice", roles=["admin"])
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--role", "admin"])
+
+        assert result.exit_code == 0, result.output
+        store.update_client.assert_called_once_with("alice", roles=["admin"], email=None, notes=None)
+        assert "atualizado" in result.output
+
+    def test_email_only_leaves_role_untouched(self):
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice", roles=["operator"])
+        store.update_client.return_value = _make_client_record("alice", roles=["operator"], email="a@b.com")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--email", "a@b.com"])
+
+        assert result.exit_code == 0, result.output
+        store.update_client.assert_called_once_with("alice", roles=None, email="a@b.com", notes=None)
+
+    def test_value_error_from_store_exits_1(self):
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice")
+        store.update_client.side_effect = ValueError("Roles inválidos: ['bogus']")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--role", "bogus"])
+
+        assert result.exit_code == 1
+        assert "Roles inválidos" in result.output
+
+    def test_inactive_user_shows_warning_but_still_updates(self):
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice", active=False)
+        store.update_client.return_value = _make_client_record("alice", roles=["admin"], active=False)
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--role", "admin"])
+
+        assert result.exit_code == 0, result.output
+        assert "inativo" in result.output
+        store.update_client.assert_called_once()
+
+    def test_notifies_on_change_with_email(self):
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice", roles=["operator"], email="alice@example.com")
+        store.update_client.return_value = _make_client_record(
+            "alice", roles=["admin"], email="alice@example.com"
+        )
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_EDITED) as notify_mock,
+        ):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--role", "admin"])
+
+        assert result.exit_code == 0, result.output
+        notify_mock.assert_called_once()
+        args = notify_mock.call_args[0]
+        assert args[0] == "alice"
+        assert args[1] == "alice@example.com"
+        assert "role" in args[2]
+
+    def test_no_email_does_not_notify(self):
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice", roles=["operator"], email="")
+        store.update_client.return_value = _make_client_record("alice", roles=["admin"], email="")
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_EDITED) as notify_mock,
+        ):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--role", "admin"])
+
+        assert result.exit_code == 0, result.output
+        notify_mock.assert_not_called()
+
+
+# ===========================================================================
+# batch
+# ===========================================================================
+
+
+class TestBatch:
+    def _write_csv(self, tmp_path, rows, header="action,id,role,email,notes,secret"):
+        path = tmp_path / "usuarios.csv"
+        content = "\n".join([header, *rows]) + "\n"
+        path.write_text(content, encoding="utf-8")
+        return str(path)
+
+    def test_file_not_found_exits_1(self):
+        result = runner.invoke(app, ["batch", "--file", "/nonexistent/path.csv"])
+        assert result.exit_code == 1
+        assert "não foi possível ler" in result.output
+
+    def test_add_and_update_mixed_rows(self, tmp_path):
+        csv_path = self._write_csv(
+            tmp_path,
+            [
+                "add,newbie,operator,,,",
+                "update,alice,admin,,,",
+            ],
+        )
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice")
+        store.add_client.return_value = _make_client_record("newbie")
+        store.update_client.return_value = _make_client_record("alice", roles=["admin"])
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 0, result.output
+        assert "2 ok, 0 falharam" in result.output
+        store.add_client.assert_called_once()
+        store.update_client.assert_called_once_with("alice", roles=["admin"], email=None, notes=None)
+
+    def test_invalid_action_row_does_not_abort_others(self, tmp_path):
+        csv_path = self._write_csv(
+            tmp_path,
+            [
+                "bogus,someone,operator,,,",
+                "add,newbie,operator,,,",
+            ],
+        )
+        store = _make_store()
+        store.add_client.return_value = _make_client_record("newbie")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 1, result.output  # 1 linha falhou
+        assert "1 ok, 1 falharam" in result.output
+        store.add_client.assert_called_once()
+
+    def test_dry_run_does_not_call_store_mutations(self, tmp_path):
+        csv_path = self._write_csv(
+            tmp_path,
+            [
+                "add,newbie,operator,,,",
+                "update,alice,admin,,,",
+            ],
+        )
+        store = _make_store()
+        store.get_client.side_effect = lambda cid: _make_client_record("alice") if cid == "alice" else None
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path, "--dry-run"])
+
+        assert result.exit_code == 0, result.output
+        assert "2 ok, 0 falharam" in result.output
+        store.add_client.assert_not_called()
+        store.update_client.assert_not_called()
+
+    def test_missing_required_id_marked_failed(self, tmp_path):
+        csv_path = self._write_csv(tmp_path, ["add,,operator,,,"])
+        store = _make_store()
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 1
+        assert "0 ok, 1 falharam" in result.output
+        store.add_client.assert_not_called()
+
+    def test_invalid_role_marked_failed(self, tmp_path):
+        csv_path = self._write_csv(tmp_path, ["add,someone,bogus-role,,,"])
+        store = _make_store()
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 1
+        assert "role inválida" in result.output
+        store.add_client.assert_not_called()
+
+
+# ===========================================================================
 # migrate-legacy-codes
 # ===========================================================================
 

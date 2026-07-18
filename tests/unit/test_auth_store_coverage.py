@@ -34,6 +34,47 @@ class TestAuthStore:
         rec = store.add_client("c2", "s", [])
         assert "operator" in rec.roles
 
+    def test_update_client_not_found_raises(self, tmp_path):
+        store = self._make_store(tmp_path)
+        with pytest.raises(ValueError, match="not found"):
+            store.update_client("ghost", roles=["admin"])
+
+    def test_update_client_invalid_role_raises(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("u1", "s", ["operator"])
+        with pytest.raises(ValueError, match="Roles inválidos"):
+            store.update_client("u1", roles=["invalid_role"])
+
+    def test_update_client_role_changes(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("u2", "s", ["operator"])
+        rec = store.update_client("u2", roles=["admin"])
+        assert rec.roles == ["admin"]
+        assert store.get_client("u2").roles == ["admin"]
+
+    def test_update_client_email_and_notes(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("u3", "s", ["operator"], notes="old")
+        rec = store.update_client("u3", email="new@example.com", notes="new")
+        assert rec.email == "new@example.com"
+        assert rec.notes == "new"
+        assert rec.roles == ["operator"]  # não passado, não muda
+
+    def test_update_client_none_fields_leave_unchanged(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("u4", "s", ["operator"], notes="keep", email="keep@example.com")
+        rec = store.update_client("u4", roles=["admin"])
+        assert rec.notes == "keep"
+        assert rec.email == "keep@example.com"
+
+    def test_update_client_on_inactive_client_still_applies(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("u5", "s", ["operator"])
+        store.remove_client("u5")
+        rec = store.update_client("u5", roles=["admin"])
+        assert rec.roles == ["admin"]
+        assert rec.active is False
+
     def test_remove_client_returns_true(self, tmp_path):
         store = self._make_store(tmp_path)
         store.add_client("to_remove", "s", ["operator"])
