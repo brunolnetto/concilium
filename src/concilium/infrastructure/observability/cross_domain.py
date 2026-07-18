@@ -14,6 +14,8 @@ from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
+from .silver_normalizer import dedupe_records
+
 logger = logging.getLogger(__name__)
 
 _SILVER_PREFIX = "observability/silver"
@@ -42,6 +44,12 @@ class CrossDomainBuilder:
         self._canonical_provider = canonical_provider
 
     def _read_silver_logs(self) -> list[dict[str, Any]]:
+        """Lê todos os records Silver de logs, deduplicados entre arquivos.
+
+        Mesmo motivo de ObservabilityWorker.read_silver()/GoldAggregator._read_silver():
+        um dia reprocessado com particionamento diferente do original pode deixar o
+        mesmo event_id em mais de um arquivo — sem dedup, conta em dobro por projeto.
+        """
         blobs = sorted(self._storage.listar_blobs(f"{_SILVER_PREFIX}/logs/"))
         records: list[dict[str, Any]] = []
         for path in blobs:
@@ -52,7 +60,7 @@ class CrossDomainBuilder:
                         records.append(json.loads(line))
             except Exception:
                 pass
-        return records
+        return dedupe_records(records)
 
     def _build_cross_domain_row(self, pid: str, agg: dict[str, int]) -> dict[str, Any]:
         n_total = agg["n_total"]

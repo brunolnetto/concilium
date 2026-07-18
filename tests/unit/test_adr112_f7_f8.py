@@ -36,6 +36,35 @@ class TestCrossDomainBuilder:
         builder = CrossDomainBuilder(storage, canonical_provider=lambda pid: None)
         assert builder.build() == []
 
+    def test_dedupes_same_event_id_across_silver_files(self, storage):
+        """Mesmo event_id em dois arquivos Silver (dias diferentes) não deve
+        inflar n_total por projeto — regressão: cross_domain.py tinha sua própria
+        leitura de Silver sem dedup, separada de pipeline.py/gold_aggregator.py."""
+        from concilium.infrastructure.observability.cross_domain import CrossDomainBuilder
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+        from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
+
+        worker = ObservabilityWorker(storage)
+        rec = normalize_log_record(
+            {
+                "ts": "2026-06-19T10:00:00Z",
+                "severity": "WARNING",
+                "logger": "concilium.skills.06",
+                "message": "BDI sem taxa",
+                "trace_id": "",
+                "span_id": "dup-span",
+                "service": "c",
+                "project_id": "AGIS",
+            }
+        )
+        worker._upsert_silver("logs", [rec], "2026-06-18")
+        worker._upsert_silver("logs", [rec], "2026-06-19")  # mesmo event_id, arquivo diferente
+
+        builder = CrossDomainBuilder(storage, canonical_provider=lambda pid: None)
+        rows = builder.build()
+        assert len(rows) == 1
+        assert rows[0]["n_total"] == 1
+
     def test_joins_fallback_rate_with_canonical(self, storage):
         from concilium.infrastructure.observability.cross_domain import CrossDomainBuilder
 
