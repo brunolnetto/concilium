@@ -122,6 +122,19 @@ class TestJsonFormatter:
         for field in ("ts", "severity", "logger", "message", "trace_id", "span_id", "service"):
             assert field in payload, f"Campo obrigatório ausente: '{field}'"
 
+    def test_ts_has_no_literal_percent_f(self):
+        """formatTime()/time.strftime() não suporta '%f' — regressão do bug onde
+        o literal "%f" era gravado sem substituição em vez das microssegundos."""
+        payload = json.loads(self.fmt.format(self._record()))
+        assert "%f" not in payload["ts"]
+
+    def test_ts_is_valid_iso8601_with_microseconds(self):
+        import datetime
+
+        payload = json.loads(self.fmt.format(self._record()))
+        parsed = datetime.datetime.fromisoformat(payload["ts"].removesuffix("Z"))
+        assert parsed.microsecond >= 0  # so precisa parsear sem lançar exceção
+
     def test_severity_maps_to_levelname(self):
         for level, expected in [(logging.DEBUG, "DEBUG"), (logging.WARNING, "WARNING"), (logging.ERROR, "ERROR")]:
             payload = json.loads(self.fmt.format(self._record(level=level)))
@@ -264,6 +277,50 @@ class TestConfigureLogging:
         configure_logging(level="INFO", json_format=True)
         json_handlers = [h for h in logging.getLogger().handlers if isinstance(h.formatter, _JsonFormatter)]
         assert len(json_handlers) == 1, f"Esperado 1 handler JSON, encontrado {len(json_handlers)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# F1-B2: _get_auth_context() — fallback para o contexto de auth do MCP
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestGetAuthContextMcpFallback:
+    """user_id cai para permission_guard (McpAuthMiddleware) quando auth_context (API) está vazio."""
+
+    def test_api_context_takes_precedence(self):
+        from concilium.infrastructure.middleware.auth_context import current_request_id, current_user_id
+        from concilium.infrastructure.observability.logging_config import _get_auth_context
+
+        t_user = current_user_id.set("api-user")
+        t_req = current_request_id.set("req-1")
+        try:
+            user_id, request_id = _get_auth_context()
+        finally:
+            current_user_id.reset(t_user)
+            current_request_id.reset(t_req)
+
+        assert user_id == "api-user"
+        assert request_id == "req-1"
+
+    def test_falls_back_to_mcp_context_when_api_context_empty(self):
+        from concilium.infrastructure.auth.permission_guard import reset_auth_context, set_auth_context
+        from concilium.infrastructure.observability.logging_config import _get_auth_context
+
+        tokens = set_auth_context("mcp-user", "tenant-x", "device-y")
+        try:
+            user_id, request_id = _get_auth_context()
+        finally:
+            reset_auth_context(tokens)
+
+        assert user_id == "mcp-user"
+        assert request_id == ""  # MCP não tem equivalente a request_id
+
+    def test_empty_when_neither_context_set(self):
+        from concilium.infrastructure.observability.logging_config import _get_auth_context
+
+        user_id, request_id = _get_auth_context()
+        assert user_id == ""
+        assert request_id == ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────

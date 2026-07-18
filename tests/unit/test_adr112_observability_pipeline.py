@@ -173,6 +173,49 @@ class TestBronzeLogHandler:
         assert record["user_id"] == ""
         assert record["request_id"] == ""
 
+    def test_handler_ts_has_no_literal_percent_f(self, storage):
+        """Regressão: formatTime()/time.strftime() não suporta '%f' — o handler
+        agora usa _format_ts_utc(), que grava microssegundos de verdade."""
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+        from concilium.infrastructure.observability.logging_config import _JsonFormatter
+
+        writer = BronzeWriter(storage, signal_type="logs")
+        handler = BronzeLogHandler(writer)
+        handler.setFormatter(_JsonFormatter())
+        logger = logging.getLogger("test.bronze.ts")
+        logger.addHandler(handler)
+        logger.setLevel(logging.WARNING)
+        logger.warning("teste de timestamp")
+        handler.flush()
+
+        blobs = sorted(storage.listar_blobs("observability/bronze/logs/"))
+        content = storage.ler_blob(blobs[-1]).decode("utf-8")
+        record = json.loads(content.strip().splitlines()[0])
+        assert "%f" not in record["ts"]
+
+    def test_handler_falls_back_to_mcp_auth_context(self, storage):
+        """Regressão: logs do MCP (McpAuthMiddleware/permission_guard) agora propagam user_id."""
+        from concilium.infrastructure.auth.permission_guard import reset_auth_context, set_auth_context
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+
+        writer = BronzeWriter(storage, signal_type="logs")
+        handler = BronzeLogHandler(writer)
+        logger = logging.getLogger("test.bronze.mcp_user")
+        logger.addHandler(handler)
+        logger.setLevel(logging.WARNING)
+
+        tokens = set_auth_context("mcp-user-42", "tenant-x", "device-y")
+        try:
+            logger.warning("chamada de tool via MCP")
+        finally:
+            reset_auth_context(tokens)
+        handler.flush()
+
+        blobs = sorted(storage.listar_blobs("observability/bronze/logs/"))
+        content = storage.ler_blob(blobs[-1]).decode("utf-8")
+        record = json.loads(content.strip().splitlines()[0])
+        assert record["user_id"] == "mcp-user-42"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F2: CheckpointStore
@@ -469,6 +512,33 @@ class TestSilverNormalizer:
         assert norm["user_id"] is None
         assert norm["request_id"] is None
 
+    def test_record_key_prefers_event_id(self):
+        from concilium.infrastructure.observability.silver_normalizer import record_key
+
+        assert record_key({"event_id": "e1", "span_id": "s1"}) == "e1"
+
+    def test_record_key_falls_back_to_span_id(self):
+        from concilium.infrastructure.observability.silver_normalizer import record_key
+
+        assert record_key({"span_id": "s1"}) == "s1"
+
+    def test_record_key_falls_back_to_ts_metric_name(self):
+        from concilium.infrastructure.observability.silver_normalizer import record_key
+
+        assert record_key({"ts": "2026-01-01", "metric_name": "foo"}) == "2026-01-01foo"
+
+    def test_dedupe_records_keeps_last_occurrence(self):
+        from concilium.infrastructure.observability.silver_normalizer import dedupe_records
+
+        records = [
+            {"event_id": "e1", "message": "primeira"},
+            {"event_id": "e2", "message": "unica"},
+            {"event_id": "e1", "message": "segunda"},
+        ]
+        deduped = dedupe_records(records)
+        assert len(deduped) == 2
+        assert next(r for r in deduped if r["event_id"] == "e1")["message"] == "segunda"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F4: ObservabilityWorker
@@ -686,6 +756,20 @@ class TestObservabilityWorker:
         assert storage.blob_existe("observability/silver/logs/2026-05-01/records.ndjson")
         assert storage.blob_existe("observability/silver/logs/2026-05-02/records.ndjson")
 
+    def test_read_silver_dedupes_same_event_id_across_files(self, storage):
+        """Se o mesmo event_id existir em dois arquivos Silver (ex.: um dia
+        reprocessado após o fix de particionamento por data, deixando o registro
+        também no arquivo antigo), read_silver() não deve contar o record 2x."""
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
+        worker = ObservabilityWorker(storage)
+        rec = {"event_id": "dup-1", "ts": "2026-05-01T10:00:00Z", "message": "m"}
+        worker._upsert_silver("logs", [rec], "2026-05-01")
+        worker._upsert_silver("logs", [rec], "2026-05-02")  # mesmo event_id, arquivo diferente
+
+        records = worker.read_silver("logs")
+        assert len(records) == 1
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F5: GoldAggregator
@@ -893,6 +977,33 @@ class TestGoldAggregator:
         alertas = agg.build_alertas_ativos()
         tipos = {a["tipo"] for a in alertas}
         assert "fallback_alto" in tipos
+
+    def test_read_silver_dedupes_across_files(self, storage):
+        """Mesmo event_id em dois arquivos Silver (dias diferentes) não deve
+        inflar n_total no Gold — regressão do risco de reprocessamento pós-fix
+        de particionamento por data deixar o mesmo registro em dois arquivos."""
+        from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+        from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
+
+        worker = ObservabilityWorker(storage)
+        rec = normalize_log_record(
+            {
+                "ts": "2026-06-18T10:00:00Z",
+                "severity": "INFO",
+                "logger": "concilium.skills.manifests.06-resultado-financeiro.skill",
+                "message": "concluído",
+                "trace_id": "",
+                "span_id": "dup-span",
+                "service": "c",
+            }
+        )
+        worker._upsert_silver("logs", [rec], "2026-06-18")
+        worker._upsert_silver("logs", [rec], "2026-06-19")  # mesmo event_id, arquivo diferente
+
+        agg = GoldAggregator(storage)
+        rates = agg.build_fallback_rate_por_skill()
+        assert sum(r["n_total"] for r in rates) == 1
 
 
 # ─────────────────────────────────────────────────────────────────────────────

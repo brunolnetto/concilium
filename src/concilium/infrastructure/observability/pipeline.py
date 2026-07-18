@@ -16,7 +16,13 @@ from typing import Any
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
 from .checkpoint_store import Checkpoint, CheckpointStore
-from .silver_normalizer import normalize_log_record, normalize_metric_record, normalize_span_record
+from .silver_normalizer import (
+    dedupe_records,
+    normalize_log_record,
+    normalize_metric_record,
+    normalize_span_record,
+    record_key,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -122,28 +128,24 @@ class ObservabilityWorker:
             for line in raw.decode("utf-8").splitlines():
                 if line.strip():
                     rec = json.loads(line)
-                    key = self._record_key(rec)
-                    existing[key] = rec
+                    existing[record_key(rec)] = rec
         except FileNotFoundError:
             pass
 
         for rec in records:
-            existing[self._record_key(rec)] = rec
+            existing[record_key(rec)] = rec
 
         content = "\n".join(json.dumps(r, ensure_ascii=False) for r in existing.values()) + "\n"
         self._storage.gravar_blob(path, content.encode("utf-8"))
 
-    @staticmethod
-    def _record_key(rec: dict[str, Any]) -> str:
-        return (
-            rec.get("event_id")
-            or rec.get("span_id")
-            or f"{rec.get('ts', '')}{rec.get('metric_name', '')}"
-            or str(id(rec))
-        )
-
     def read_silver(self, signal_type: str) -> list[dict[str, Any]]:
-        """Retorna todos os records Silver persistidos para o tipo de sinal."""
+        """Retorna todos os records Silver persistidos para o tipo de sinal, deduplicados.
+
+        Dedup entre arquivos (um por dia) é necessário porque um dia pode ter sido
+        reprocessado com particionamento diferente do original (ex.: antes do fix
+        de particionamento por data do blob Bronze) — sem isso, o mesmo event_id
+        apareceria duas vezes.
+        """
         blobs = sorted(self._storage.listar_blobs(f"{_SILVER_PREFIX}/{signal_type}/"))
         records: list[dict[str, Any]] = []
         for path in blobs:
@@ -154,7 +156,7 @@ class ObservabilityWorker:
                         records.append(json.loads(line))
             except Exception:
                 pass
-        return records
+        return dedupe_records(records)
 
     # ── Pipeline principal ──────────────────────────────────────────────────
 

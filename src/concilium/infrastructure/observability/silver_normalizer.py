@@ -69,6 +69,36 @@ def _make_event_id(record: dict[str, Any]) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Dedup entre arquivos Silver
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def record_key(rec: dict[str, Any]) -> str:
+    """Chave de dedup de um record Silver — mesmo critério do upsert dentro de um
+    arquivo (event_id > span_id > ts+metric_name > id do objeto)."""
+    return (
+        rec.get("event_id")
+        or rec.get("span_id")
+        or f"{rec.get('ts', '')}{rec.get('metric_name', '')}"
+        or str(id(rec))
+    )
+
+
+def dedupe_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Deduplica records por record_key(), mantendo a última ocorrência.
+
+    Necessário ao ler MÚLTIPLOS arquivos Silver (um por dia): se um dia for
+    reprocessado depois de já existir um arquivo com o particionamento antigo
+    (ex.: antes do fix de particionamento por data do blob Bronze), o mesmo
+    event_id pode aparecer em dois arquivos — sem isso, Gold conta em dobro.
+    """
+    deduped: dict[str, dict[str, Any]] = {}
+    for rec in records:
+        deduped[record_key(rec)] = rec
+    return list(deduped.values())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Normalização
 # ─────────────────────────────────────────────────────────────────────────────
 

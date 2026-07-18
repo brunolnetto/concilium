@@ -12,6 +12,8 @@ from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
+from .silver_normalizer import dedupe_records
+
 logger = logging.getLogger(__name__)
 
 _SILVER_PREFIX = "observability/silver"
@@ -28,6 +30,12 @@ class GoldAggregator:
     # ── Leitura Silver ──────────────────────────────────────────────────────
 
     def _read_silver(self, signal_type: str) -> list[dict[str, Any]]:
+        """Lê todos os records Silver do tipo de sinal, deduplicados entre arquivos.
+
+        Dedup é necessário pelo mesmo motivo de ObservabilityWorker.read_silver():
+        um dia pode ter sido reprocessado com particionamento diferente do original,
+        deixando o mesmo event_id em mais de um arquivo — sem dedup, Gold conta em dobro.
+        """
         blobs = sorted(self._storage.listar_blobs(f"{_SILVER_PREFIX}/{signal_type}/"))
         records: list[dict[str, Any]] = []
         for path in blobs:
@@ -38,7 +46,7 @@ class GoldAggregator:
                         records.append(json.loads(line))
             except Exception:
                 pass
-        return records
+        return dedupe_records(records)
 
     # ── Tabelas Gold ────────────────────────────────────────────────────────
 

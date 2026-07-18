@@ -12,11 +12,27 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 # ─────────────────────────────────────────────────────────────────────────────
 # _JsonFormatter: JSON-lines com campos OTel obrigatórios (ADR-111 D4)
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+def _format_ts_utc(record: logging.LogRecord) -> str:
+    """Timestamp ISO-8601 UTC com microssegundos reais.
+
+    Formatter.formatTime() delega para time.strftime() sobre um time.struct_time,
+    que NÃO suporta '%f' (extensão exclusiva de datetime.strftime) — o literal
+    "%f" era gravado sem substituição em todo log de Bronze/Silver, quebrando o
+    parsing ISO-8601 e degradando o fallback de event_id (ts+logger+message) em
+    _make_event_id, já que "%f" não diferencia records no mesmo segundo.
+    datetime.fromtimestamp(..., tz=UTC) também torna o UTC explícito — antes
+    dependia implicitamente do timezone do container (Formatter.converter usa
+    time.localtime por padrão) para o sufixo "Z" ser correto.
+    """
+    return datetime.fromtimestamp(record.created, tz=UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def _get_trace_context() -> tuple[str, str]:
@@ -34,16 +50,33 @@ def _get_trace_context() -> tuple[str, str]:
 
 
 def _get_auth_context() -> tuple[str, str]:
-    """Retorna (user_id, request_id) do contexto de request atual, ou ('', '') se ausente."""
+    """Retorna (user_id, request_id) do contexto de request atual, ou ('', '') se ausente.
+
+    Dois mecanismos de auth-context coexistem e não se conhecem: AuthContextMiddleware
+    (API, contextvars em auth_context.py) e McpAuthMiddleware (MCP, contextvars
+    separadas em permission_guard.py, ADR-118) — praticamente todo o tráfego real
+    de tools é via MCP, então sem esse fallback user_id fica sempre vazio.
+    """
+    user_id, request_id = "", ""
     try:
         from concilium.infrastructure.middleware.auth_context import (
             current_request_id,
             current_user_id,
         )
 
-        return current_user_id.get(), current_request_id.get()
+        user_id, request_id = current_user_id.get(), current_request_id.get()
     except Exception:
-        return "", ""
+        pass
+
+    if not user_id:
+        try:
+            from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+            user_id = get_current_user_id() or ""
+        except Exception:
+            pass
+
+    return user_id, request_id
 
 
 class _JsonFormatter(logging.Formatter):
@@ -53,7 +86,7 @@ class _JsonFormatter(logging.Formatter):
         trace_id, span_id = _get_trace_context()
         user_id, request_id = _get_auth_context()
         payload: dict[str, Any] = {
-            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%fZ"),
+            "ts": _format_ts_utc(record),
             "severity": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

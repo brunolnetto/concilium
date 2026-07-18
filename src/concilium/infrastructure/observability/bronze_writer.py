@@ -56,11 +56,11 @@ class BronzeLogHandler(logging.Handler):
         self._buffer: list[dict[str, Any]] = []
 
     def emit(self, record: logging.LogRecord) -> None:
-        from concilium.infrastructure.observability.logging_config import _get_auth_context
+        from concilium.infrastructure.observability.logging_config import _format_ts_utc, _get_auth_context
 
         user_id, request_id = _get_auth_context()
         entry = {
-            "ts": self.formatter.formatTime(record, "%Y-%m-%dT%H:%M:%S.%fZ") if self.formatter else "",
+            "ts": _format_ts_utc(record) if self.formatter else "",
             "severity": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
