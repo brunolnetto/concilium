@@ -47,6 +47,7 @@ FINANCIALS_READ = "financials:read"
 AUTH_MANAGE = "auth:manage"
 AUTH_SELF = "auth:self"  # ADR-123 F5: gestão de dispositivos próprios (self-service)
 AUTH_PUBLIC = "auth:public"  # bootstrap sem token (ativar_dispositivo, renovar_token) — sempre permitido
+AUTH_LIST_VISIBLE = "auth:list-visible"  # ADR-143: visibilidade de outros usuários escopada por role
 SYSTEM_READ = "system:read"
 HEALTH_READ = "health:read"  # health check do servidor — qualquer usuário autenticado com acesso operacional
 
@@ -67,6 +68,7 @@ _OPERATOR = frozenset(
         CATALOG_VALIDATE,  # ADR-120 D3: operator pode rodar health checks de catálogo
         FINANCIALS_READ,
         AUTH_SELF,  # ADR-123 F5: todos os roles têm self-service de dispositivos
+        AUTH_LIST_VISIBLE,  # ADR-143: todos os roles podem consultar visibilidade (matriz filtra o quê)
     }
 )
 
@@ -85,6 +87,7 @@ _CATALOG_MANAGER = frozenset(
         CATALOG_MERGE,
         FINANCIALS_READ,  # para avaliar impacto de reajuste em projetos
         AUTH_SELF,  # ADR-123 F5
+        AUTH_LIST_VISIBLE,  # ADR-143
     }
 )
 
@@ -96,6 +99,7 @@ _AUDITOR = frozenset(
         ARTIFACTS_DOWNLOAD,
         FINANCIALS_READ,
         AUTH_SELF,  # ADR-123 F5
+        AUTH_LIST_VISIBLE,  # ADR-143
     }
 )
 
@@ -108,6 +112,30 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
 }
 
 VALID_ROLES: frozenset[str] = frozenset(ROLE_PERMISSIONS.keys())
+
+# ── ADR-143 D2: visibilidade de usuários — role do observador → roles visíveis ─
+# Distinto de ROLE_PERMISSIONS (ação sobre recursos): aqui é visibilidade de
+# identidade (quem um role pode ver na listagem de listar_usuarios_visiveis).
+# Não é simétrico: engineer vê admin, mas admin não precisa ser "visto de volta"
+# para a matriz fazer sentido (admin já vê todos).
+ROLE_VISIBILITY: dict[str, frozenset[str]] = {
+    "admin": frozenset({"operator", "engineer", "admin", "auditor", "catalog-manager"}),
+    "auditor": frozenset({"operator", "engineer", "admin", "auditor", "catalog-manager"}),
+    "engineer": frozenset({"engineer", "admin"}),
+    "operator": frozenset({"operator", "engineer", "admin"}),
+    "catalog-manager": frozenset({"catalog-manager", "admin"}),
+}
+
+
+def visible_roles_for(roles: list[str]) -> frozenset[str]:
+    """Une os roles visíveis (ADR-143 D2) para todos os roles do observador.
+
+    Um token com múltiplos roles vê a união do que cada role individualmente vê.
+    """
+    result: set[str] = set()
+    for role in roles:
+        result |= ROLE_VISIBILITY.get(role, frozenset())
+    return frozenset(result)
 
 # ── ADR-119 D1: Superfície de manipulação por role — Pipeline Intent Binding ──
 # Cada role tem um conjunto permitido de ProcurementIntent para acionar pipeline.

@@ -61,6 +61,7 @@ from concilium.presentation.mcp.middleware import McpAuthMiddleware
 from concilium.presentation.mcp.tools import (
     analise,
     artifacts,
+    auth_directory,
     auth_self,
     benchmark,
     benchmark_nep039,
@@ -109,6 +110,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     server = _AuthenticatedFastMCP("concilium", host=host, port=port)
     system.register(server)  # ping / health — sempre primeiro
     auth_self.register(server)  # ADR-123 F5: self-service de dispositivos
+    auth_directory.register(server)  # ADR-143: visibilidade de usuários entre roles
     catalogo.register(server)
     projeto.register(server)
     pipeline.register(server)

@@ -5,16 +5,19 @@ POST /auth/device/activate — troca device code por refresh token (Fase 1 proxy
 POST /auth/token/refresh   — troca refresh token por access token (Fase 1 proxy)
 POST /auth/revoke-pending/{revoke_token}  — inicia revogação self-service (ADR-123 F4)
 POST /auth/revoke-confirm/{revoke_token}  — confirma revogação self-service (ADR-123 F4)
+GET  /auth/users/visible   — visibilidade de usuários entre roles (ADR-143)
 """
 
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from slowapi.util import get_remote_address
 
+from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.api.rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -350,3 +353,38 @@ def revoke_confirm(request: Request, response: Response, revoke_token: str) -> R
         )
 
     return RevokeConfirmResponse(status="revoked", device_id=device_id)
+
+
+# ── Visibilidade de usuários entre roles (ADR-143) ───────────────────────────
+
+
+class VisibleUsersResponse(BaseModel):
+    status: str = "ok"
+    total: int
+    usuarios: list[dict[str, Any]]
+
+
+@router.get(
+    "/users/visible",
+    response_model=VisibleUsersResponse,
+    summary="Listar usuários visíveis para os roles do chamador (ADR-143)",
+    status_code=status.HTTP_200_OK,
+)
+@permission("auth:list-visible")
+def list_visible_users_route(request: Request) -> VisibleUsersResponse:
+    """Lista outros usuários visíveis, escopado pela matriz `ROLE_VISIBILITY` (D2).
+
+    Nunca inclui dispositivos, senha/hash ou notas administrativas (D3) — apenas
+    client_id, email, roles e active. Nunca inclui o próprio chamador. Cada
+    consulta é registrada para o digest opcional do usuário consultado (D7/D8).
+    """
+    from concilium.application.services.visibility_service import list_visible_users
+    from concilium.infrastructure.auth.permission_guard import roles_from_token
+    from concilium.presentation.api.deps import get_current_subject
+
+    claims = getattr(request.state, "jwt_claims", {})
+    caller_roles = roles_from_token(claims)
+    caller_id = get_current_subject(request)
+
+    usuarios = list_visible_users(caller_id, caller_roles)
+    return VisibleUsersResponse(total=len(usuarios), usuarios=usuarios)

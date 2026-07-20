@@ -127,6 +127,21 @@ class RefreshTokenRecord:
     scopes: list[str] = field(default_factory=list)  # legado
 
 
+@dataclass
+class VisibilityQueryRecord:
+    """Um usuário visto na resposta de `listar_usuarios_visiveis` (ADR-143 D7).
+
+    Uma linha por (observador, alvo) a cada chamada — não por chamada — para que
+    a contagem do digest ("consultou seu contato N vezes") reflita quantas
+    vezes cada alvo especificamente apareceu, não quantas chamadas ocorreram.
+    """
+
+    target_client_id: str
+    observer_client_id: str
+    observer_roles: list[str]
+    queried_at: str  # ISO-8601
+
+
 def _client_code_matches(r: ClientRecord, client_code: str) -> bool:
     return bool(r.active and r.client_code_hash and _verify(client_code, r.client_code_hash))
 
@@ -561,6 +576,47 @@ class AuthStore:
         if device_id_to_revoke:
             self.revoke_device(device_id_to_revoke)
         return True
+
+    # ── Visibilidade de usuários (ADR-143) ────────────────────────────────────
+
+    def record_visibility_queries(
+        self, observer_client_id: str, observer_roles: list[str], target_client_ids: list[str]
+    ) -> None:
+        """Registra um evento de visibilidade por alvo retornado (ADR-143 D7).
+
+        Self-queries (target == observer) nunca são registradas — ninguém
+        precisa saber que se consultou. Persistido em visibility_queries.json
+        até o próximo digest esvaziar (pop_pending_visibility_queries).
+        """
+        now = _iso(_now())
+        new_records = [
+            VisibilityQueryRecord(
+                target_client_id=target_id,
+                observer_client_id=observer_client_id,
+                observer_roles=list(observer_roles),
+                queried_at=now,
+            )
+            for target_id in target_client_ids
+            if target_id != observer_client_id
+        ]
+        if not new_records:
+            return
+        with self._lock:
+            existing = self._read("visibility_queries.json")
+            existing.extend(asdict(r) for r in new_records)
+            self._write("visibility_queries.json", existing)
+
+    def pop_pending_visibility_queries(self) -> list[VisibilityQueryRecord]:
+        """Drena todos os eventos de visibilidade pendentes (ADR-143 D8).
+
+        Lê e esvazia visibility_queries.json atomicamente sob o lock — o
+        chamador (digest) é responsável por agrupar por target_client_id.
+        """
+        with self._lock:
+            raw = self._read("visibility_queries.json")
+            if raw:
+                self._write("visibility_queries.json", [])
+        return [VisibilityQueryRecord(**r) for r in raw]
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────

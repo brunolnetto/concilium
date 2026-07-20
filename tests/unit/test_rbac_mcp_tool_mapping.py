@@ -75,6 +75,8 @@ ALL_TOOL_NAMES = [
     "consultar_impacto_reajuste",
     "aprovar_merge_catalogo",
     "rejeitar_rascunho_catalogo",
+    # auth_directory (ADR-143: visibilidade de usuários entre roles)
+    "listar_usuarios_visiveis",
 ]
 
 
@@ -135,6 +137,7 @@ class TestToolPermissionsCoverage:
             "artifacts:download",
             "financials:read",
             "auth:manage",
+            "auth:list-visible",  # ADR-143
             "system:read",
             "health:read",
         }

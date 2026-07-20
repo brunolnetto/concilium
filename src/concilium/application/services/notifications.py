@@ -414,3 +414,30 @@ def notify_catalog_drafts_pending(email: str, rascunhos_por_contexto: dict[str, 
             "footer_note": "Este é um resumo periódico — novos rascunhos aparecem no próximo envio.",
         },
     )
+
+
+# ── ADR-143 D7/D8: digest de visibilidade — "você foi consultado" ──────────────
+
+
+def notify_visibility_queried(email: str, resumo: list[tuple[str, str, int]]) -> bool:
+    """Digest consolidado de quem consultou a visibilidade deste usuário.
+
+    Um email por destinatário (não um email por consulta — ADR-140 D1
+    condições d/e: ser consultado é subproduto da leitura de terceiro, pode
+    se repetir várias vezes em pouco tempo). `resumo`: lista de
+    (observer_client_id, roles_do_observador_formatado, contagem).
+    """
+    total = sum(count for _, _, count in resumo)
+    details = [(observer_id, f"{roles} — {count}x") for observer_id, roles, count in resumo]
+    return get_notification_service().send(
+        to=email,
+        subject=f"[Concilium] Seu contato foi consultado {total}x desde o último aviso",
+        template="notification",
+        context={
+            "heading": f"Seu contato foi consultado {total}x desde o último aviso",
+            "intro": "Os seguintes usuários consultaram sua visibilidade (role/email) via listar_usuarios_visiveis:",
+            "details": details,
+            "cta": None,
+            "footer_note": "Este é um resumo periódico — nenhuma ação é necessária.",
+        },
+    )

@@ -150,7 +150,7 @@ app = create_app()
 def main() -> None:
     import uvicorn
 
-    from concilium.infrastructure.settings import get_api, get_catalog_digest, startup_check
+    from concilium.infrastructure.settings import get_api, get_catalog_digest, get_visibility_digest, startup_check
     from concilium.infrastructure.storage.store_factory import ensure_storage_root
 
     startup_check()
@@ -163,6 +163,12 @@ def main() -> None:
         from concilium.application.services.catalog.draft_digest_scheduler import get_draft_digest_scheduler
 
         get_draft_digest_scheduler().start()
+
+    # ADR-143 D8: mesma convenção — desligado por padrão, só liga em processo real.
+    if get_visibility_digest().enabled:
+        from concilium.application.services.visibility_digest_scheduler import get_visibility_digest_scheduler
+
+        get_visibility_digest_scheduler().start()
 
     host, port = resolve_api_bind()
     reload = get_api().reload

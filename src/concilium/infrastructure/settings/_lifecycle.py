@@ -13,6 +13,7 @@ from ._smtp import _reset_smtp
 from ._storage import StorageSettings, _reset_storage, get_storage
 from ._telemetry import _reset_telemetry, get_telemetry
 from ._ui import _reset_ui, get_ui
+from ._visibility_digest import _reset_visibility_digest
 
 
 class ConfigurationError(RuntimeError):
@@ -127,6 +128,7 @@ def _reset_all() -> None:
     _reset_campaign()
     _reset_smtp()
     _reset_catalog_digest()
+    _reset_visibility_digest()
     _reset_env_fingerprint()
 
 

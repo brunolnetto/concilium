@@ -58,6 +58,7 @@ from ._storage import (
 )
 from ._telemetry import TelemetrySettings, get_telemetry
 from ._ui import UiSettings, get_ui
+from ._visibility_digest import VisibilityDigestSettings, get_visibility_digest
 
 __all__ = [
     "ApiSettings",
@@ -77,6 +78,7 @@ __all__ = [
     "StorageSettings",
     "TelemetrySettings",
     "UiSettings",
+    "VisibilityDigestSettings",
     "_check_auth",
     "_check_storage",
     "_flag",
@@ -98,5 +100,6 @@ __all__ = [
     "get_storage",
     "get_telemetry",
     "get_ui",
+    "get_visibility_digest",
     "startup_check",
 ]

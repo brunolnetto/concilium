@@ -1,6 +1,6 @@
 # ADR-143 — Visibilidade de Usuários entre Roles
 
-**Status:** Proposta
+**Status:** Implementado
 **Data:** 2026-07-20
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-099 (RBAC — Roles e Permissões), ADR-117 (RBAC por Decorator), ADR-120 (RBAC de Catálogo — precedente de permissão granular por ação), ADR-123/131/134 (sistema de notificação — usa os mesmos registros de `ClientRecord`), ADR-118 (Auditoria de Invocações MCP — trilha passiva de quem consultou quem), ADR-140/141 (critério atômico vs. digest — aplicado à notificação do usuário consultado)
@@ -25,7 +25,9 @@ P6. **Ver o registro de outro usuário levanta uma questão de reciprocidade: o 
 
 ### Escopo
 
-Esta ADR define **se e como** um usuário autenticado pode listar/ver outros usuários do sistema via MCP/API, com visibilidade escopada por role — não a listagem administrativa irrestrita que já existe na CLI (fora de escopo, P1, ver D6). É uma ADR de discussão: os pontos marcados **[A DECIDIR]** são propostas de partida a validar/ajustar em conjunto antes de fechar o status como Aceito.
+Esta ADR define **se e como** um usuário autenticado pode listar/ver outros usuários do sistema via MCP/API, com visibilidade escopada por role — não a listagem administrativa irrestrita que já existe na CLI (fora de escopo, P1, ver D6).
+
+**Nota de implementação (2026-07-20):** todos os pontos antes marcados [A DECIDIR] foram validados em conversa direta com o usuário e implementados nesta mesma entrada — não houve uma fase F2 separada de validação. Ver arquivos por decisão nas notas de cada seção abaixo.
 
 ---
 
@@ -33,11 +35,11 @@ Esta ADR define **se e como** um usuário autenticado pode listar/ver outros usu
 
 ### D1 — Nova permissão dedicada, não reaproveitar `AUTH_MANAGE`/`AUTH_SELF`
 
-Introduzir uma permissão granular nova, `AUTH_LIST_VISIBLE` (nome provisório — **[A DECIDIR]**), distinta de `AUTH_MANAGE` (gestão administrativa plena de usuários, hoje só `admin`) e de `AUTH_SELF` (self-service sobre o próprio registro, todos os roles). Reaproveitar `AUTH_MANAGE` forçaria dar acesso administrativo completo só para habilitar visibilidade parcial; reaproveitar `AUTH_SELF` misturaria "ver a si mesmo" com "ver outros", que são operações de risco diferentes.
+Introduzida a permissão granular `AUTH_LIST_VISIBLE = "auth:list-visible"` (`permission_guard.py`), distinta de `AUTH_MANAGE` (gestão administrativa plena de usuários, hoje só `admin`) e de `AUTH_SELF` (self-service sobre o próprio registro, todos os roles). Concedida a todos os 5 roles (`_OPERATOR`, herdada por `engineer`/`admin`; `_CATALOG_MANAGER`; `_AUDITOR`) — a matriz de D2 é quem filtra o quê cada um vê, não esta permissão (que só decide se pode chamar a tool).
 
 ### D2 — Matriz de visibilidade por role, análoga a `ROLE_PERMISSIONS`
 
-Introduzir `ROLE_VISIBILITY: dict[str, frozenset[str]]` em `permission_guard.py`, mapeando role do observador → conjunto de roles que ele pode ver (não necessariamente simétrico). Proposta inicial **[A DECIDIR]**:
+Implementada `ROLE_VISIBILITY: dict[str, frozenset[str]]` em `permission_guard.py` + helper `visible_roles_for(roles)` (união para tokens multi-role), mapeando role do observador → conjunto de roles que ele pode ver:
 
 | Observador | Vê os roles |
 |---|---|
@@ -47,15 +49,15 @@ Introduzir `ROLE_VISIBILITY: dict[str, frozenset[str]]` em `permission_guard.py`
 | `operator` | `operator`, `engineer`, `admin` (fluxo RFI→RFP: precisa saber para quem encaminhar) |
 | `catalog-manager` | `catalog-manager`, `admin` (fluxo de 4 olhos: colegas + quem administra) |
 
-Esta tabela é o ponto central de discussão desta ADR — os pares exatos devem ser revisados com o usuário antes de aceitar.
+Validada com o usuário sem alterações nesta entrada.
 
 ### D3 — Campos expostos: subconjunto seguro, nunca o `ClientRecord` completo, nunca dispositivos
 
-A resposta de qualquer tool/endpoint de visibilidade nunca inclui `secret_hash`, `client_code_hash` nem `notes` (podem conter informação administrativa sensível) e **nunca inclui dispositivos** — `RefreshTokenRecord`/`list_devices()` (`auth_store.py:110-141,467`) permanece estritamente self-service (`AUTH_SELF`), fora do alcance de qualquer outro usuário, mesmo `admin` via esta tool (gestão de dispositivo de terceiro já é coberta por fluxo administrativo separado, ADR-123/131). Campos propostos: `client_id`, `email` (ou mascarado — **[A DECIDIR]**), `roles`, `active`. Sem `created_at`/`deleted_at` salvo decisão em contrário.
+A resposta de qualquer tool/endpoint de visibilidade nunca inclui `secret_hash`, `client_code_hash` nem `notes` (podem conter informação administrativa sensível) e **nunca inclui dispositivos** — `RefreshTokenRecord`/`list_devices()` (`auth_store.py:110-141,467`) permanece estritamente self-service (`AUTH_SELF`), fora do alcance de qualquer outro usuário, mesmo `admin` via esta tool (gestão de dispositivo de terceiro já é coberta por fluxo administrativo separado, ADR-123/131). Campos implementados (`application/services/visibility_service.py::list_visible_users`): `client_id`, `email`, `roles`, `active`. **Email exposto sem mascaramento** — decisão explícita do usuário ("apenas sobre seus roles ou mesmo e-mail para acesso"): o propósito da tool é justamente permitir contato entre roles, mascarar o email anularia essa finalidade. Sem `created_at`/`deleted_at`. Exclui sempre o próprio chamador e clients soft-deleted (`deleted_at`).
 
 ### D4 — Implementação como nova MCP tool + endpoint REST espelhado
 
-Seguindo o padrão de `auth_self.py` (ADR-123/117): nova tool `listar_usuarios_visiveis`, gated por `@permission(AUTH_LIST_VISIBLE)`, que resolve o(s) role(s) do JWT do chamador, expande via `ROLE_VISIBILITY` o conjunto de roles visíveis, filtra `get_auth_store().list_clients()` por esse conjunto e projeta os campos de D3. Endpoint REST equivalente em `presentation/api/routes/auth.py` para paridade com o padrão MCP/API dual já estabelecido no resto do sistema.
+Seguindo o padrão de `auth_self.py` (ADR-123/117): tool `listar_usuarios_visiveis` (`presentation/mcp/tools/auth_directory.py`), gated por `@permission("auth:list-visible")`, que resolve o(s) role(s) do JWT do chamador, expande via `ROLE_VISIBILITY` o conjunto de roles visíveis, filtra `get_auth_store().list_clients()` por esse conjunto e projeta os campos de D3. Endpoint REST equivalente `GET /auth/users/visible` (`presentation/api/routes/auth.py::list_visible_users_route`) para paridade com o padrão MCP/API dual já estabelecido no resto do sistema. Lógica de filtragem/projeção compartilhada em `application/services/visibility_service.py` — nenhuma das duas camadas de apresentação duplica a regra.
 
 ### D5 — Fonte única de verdade: `permission_guard.py`
 
@@ -67,20 +69,22 @@ O comando `concilium ops auth list-users` continua fora do RBAC de token — é 
 
 ### D7 — Notificação do usuário consultado: critério do ADR-140 aplica-se, exige agregação
 
-Ser consultado por outro usuário se enquadra em D1(d)/(e) do ADR-140: é subproduto da ação de leitura de terceiro (não uma ação humana distinta do próprio destinatário), e o mesmo destinatário pode acumular várias consultas de observadores diferentes em pouco tempo. **Não haverá notificação atômica por consulta individual** — reproduziria exatamente a fadiga que o critério do ADR-140 existe para prevenir. Duas vias, não excludentes, ficam disponíveis:
+Ser consultado por outro usuário se enquadra em D1(d)/(e) do ADR-140: é subproduto da ação de leitura de terceiro (não uma ação humana distinta do próprio destinatário), e o mesmo destinatário pode acumular várias consultas de observadores diferentes em pouco tempo. **Não há notificação atômica por consulta individual** — reproduziria exatamente a fadiga que o critério do ADR-140 existe para prevenir. Duas vias, ambas implementadas, não excludentes:
 
-a. **Trilha passiva via auditoria (ADR-118):** toda chamada à tool `listar_usuarios_visiveis` já fica registrada em `ToolInvocation` (ator, alvo implícito no resultado, timestamp), sem nenhum código novo de notificação — suficiente para reconstruir "quem me consultou" sob demanda (self-service ou auditoria), sem incomodar ninguém.
-b. **Digest periódico opcional:** para o destinatário que quer ser avisado sem esperar consultar o audit trail, um resumo agregado ("Fulano (role X) consultou seu contato N vezes desde o último aviso") — nunca por consulta.
+a. **Trilha passiva via auditoria (ADR-118):** toda chamada à tool `listar_usuarios_visiveis` já fica registrada em `ToolInvocation` (ator, timestamp), sem nenhum código novo de notificação — suficiente para reconstruir "quem me consultou" sob demanda, sem incomodar ninguém.
+b. **Digest periódico (opt-in):** `enviar_digest_visibilidade()` (`application/services/visibility_digest_service.py`) drena `AuthStore.pop_pending_visibility_queries()`, agrupa por alvo e envia um resumo agregado ("observer_id (roles) — Nx") por destinatário ativo com email cadastrado — nunca por consulta individual. Eventos são gravados por `AuthStore.record_visibility_queries()` a cada chamada de `list_visible_users` (`application/services/visibility_service.py`), um registro por (observador, alvo) — self-queries nunca são registradas.
 
 ### D8 — Mecanismo do digest: intervalo curto com time-gating por conteúdo novo, não o job de observability
 
-Reaproveita o *padrão* já decidido no ADR-140 D3 (thread com `Event.wait(intervalo)`, precedente `JobService._garbage_collector_loop`/`DraftDigestScheduler`), não um componente novo — mas com intervalo bem menor que o digest de catálogo (ADR-141, 24h): **[A DECIDIR]** um default na casa de 5-15 minutos. O gatilho de envio não é o tick do timer, é **time-gating por conteúdo**: a cada tick, verifica se houve consulta nova ao destinatário desde o último digest enviado a ele; só chama `NotificationService.send()` quando há algo novo — o mesmo princípio já empregado no job `concilium-observability` (ADR-112), cujo trigger externo dispara a cada 5 min (`cd/scripts/provision.sh:340`, `--cron-expression "*/5 * * * *"`) mas o processamento real é time-gated internamente (`pipeline.py:227`: Bronze→Silver a cada 15min, Silver→Gold a cada 1h) — só age quando há trabalho de fato pendente.
+Reaproveita o *padrão* já decidido no ADR-140 D3 (thread com `Event.wait(intervalo)`, precedente `JobService._garbage_collector_loop`/`DraftDigestScheduler`), não um componente novo: `VisibilityDigestScheduler` (`application/services/visibility_digest_scheduler.py`) — intervalo padrão **300s (5min)**, configurável via `CONCILIUM__VISIBILITY_DIGEST_INTERVAL_SECONDS` (`infrastructure/settings/_visibility_digest.py`), bem menor que o digest de catálogo (ADR-141, 24h) — cadência sugerida pelo usuário por analogia ao job `concilium-observability`, que roda a cada 5min. O gatilho de envio não é o tick do timer, é **time-gating por conteúdo**: `pop_pending_visibility_queries()` drena o store e só envia (`enviar_digest_visibilidade`) quando há eventos pendentes — sem pendências, não consulta `list_clients()` nem chama `NotificationService.send()` (mesmo silêncio do ADR-141 D4). Desligado por padrão (`CONCILIUM__VISIBILITY_DIGEST_ENABLED=False`), iniciado apenas em `app.py::main()` (nunca em `create_app()`, mesma convenção do ADR-141 D6).
 
-**Não reaproveitar o job `concilium-observability` em si**: ele tem responsabilidade única e já testada (ciclo Bronze/Silver/Gold do pipeline de dados), rodando como Azure Container Apps Job com trigger de `Schedule` — misturar "enviar digest de visibilidade de usuários" nesse mesmo job/comando acoplaria dois domínios sem relação (dados de observabilidade vs. notificação de identidade). O componente de digest de visibilidade é um novo scheduler in-process, seguindo o mesmo padrão de thread já estabelecido (ADR-140/141), só que com intervalo mais curto e o mesmo princípio de time-gating por conteúdo do job de observability.
+**Não reaproveita o job `concilium-observability` em si**: ele tem responsabilidade única e já testada (ciclo Bronze/Silver/Gold do pipeline de dados), rodando como Azure Container Apps Job com trigger de `Schedule` (`cd/scripts/provision.sh:340`, `--cron-expression "*/5 * * * *"`, processamento internamente time-gated em `pipeline.py:227`) — misturar "enviar digest de visibilidade de usuários" nesse mesmo job/comando acoplaria dois domínios sem relação. `VisibilityDigestScheduler` é um scheduler in-process próprio, seguindo o mesmo padrão de thread já estabelecido (ADR-140/141), só que reaproveitando a mesma *ideia* de time-gating por conteúdo do job de observability, não o job.
+
+**Simplificação assumida**: se o envio do email falhar para um alvo (SMTP indisponível), os eventos daquele lote já foram drenados do store e são perdidos — não há retry nem persistência do que falhou. Aceitável dado que o digest é um "aviso sem ação necessária" (D7b), não um alerta crítico; ver risco correspondente em Consequências.
 
 ### D9 — Regra de referência: quando notificar terceiro sobre visibilidade
 
-Como D1/D4, a decisão de habilitar ou não o digest de D7(b) — e o intervalo exato de D8 — ficam marcados **[A DECIDIR]** com o usuário antes de fechar o status como Aceito; a via (a) (auditoria passiva via ADR-118) é considerada baseline mínimo, sem necessidade de decisão adicional, pois já decorre de infraestrutura existente sem código novo.
+Resolvido nesta mesma entrada: o digest (D7b) foi habilitado como funcionalidade opt-in (desligada por padrão, D8), não deferida para ADR futura — a via (a) (auditoria passiva via ADR-118) continua como baseline mínimo sem nenhuma configuração adicional.
 
 ---
 
@@ -116,11 +120,12 @@ Como D1/D4, a decisão de habilitar ou não o digest de D7(b) — e o intervalo 
 
 | Risco | Mitigação |
 |---|---|
-| A matriz de D2 é uma proposta inicial não validada — pode não refletir a necessidade real de cada role | Marcado explicitamente como [A DECIDIR]; é o objeto central de discussão desta ADR antes de mudar o status para Aceito |
-| Nova permissão + nova tool aumenta a superfície de RBAC a manter (governança AST do ADR-117) | Consistente com o crescimento já existente da superfície (ADR-116/117/120); segue o mesmo processo de decorator + teto de tools já estabelecido |
-| Exposição de `email` para outros usuários pode ser sensível dependendo da política de privacidade interna | [A DECIDIR] — considerar mascarar (ex. mostrar só domínio) se a discussão concluir que o endereço completo não deveria circular entre roles |
-| Digest de D8 introduz mais um scheduler in-process a operar (além de `_garbage_collector_loop` e `DraftDigestScheduler`) | Aceitável por seguir padrão já validado; se o digest (D7b) não for aprovado, a via (a) — auditoria passiva — cobre a necessidade mínima sem nenhum scheduler novo |
-| Intervalo curto (5-15min) para o digest gera mais execuções de verificação do que o digest diário de catálogo (ADR-141) | Mitigado pelo time-gating por conteúdo (D8): só envia email quando há consulta nova, o tick do timer sozinho não gera custo de envio |
+| A matriz de D2 poderia não refletir a necessidade real de cada role | Validada diretamente com o usuário nesta entrada antes da implementação; se algum par se mostrar errado em uso real, é um ajuste isolado em `ROLE_VISIBILITY` (dict simples), sem migração de dado |
+| Nova permissão + nova tool aumenta a superfície de RBAC a manter (governança AST do ADR-117) | Consistente com o crescimento já existente da superfície (ADR-116/117/120); segue o mesmo processo de decorator + teto de tools já estabelecido; `test_rbac_mcp_tool_mapping.py` atualizado com a nova permissão |
+| Exposição de `email` sem mascaramento entre roles | Decisão explícita do usuário — a finalidade da tool é permitir contato, mascarar anularia o propósito; escopo de quem vê quem já é limitado por D2 |
+| Digest de D8 introduz mais um scheduler in-process a operar (além de `_garbage_collector_loop` e `DraftDigestScheduler`) | Aceitável por seguir padrão já validado; desligado por padrão (opt-in), mesmo padrão de risco aceito para o digest de catálogo (ADR-141) |
+| Intervalo curto (5min) para o digest gera mais execuções de verificação do que o digest diário de catálogo (ADR-141) | Mitigado pelo time-gating por conteúdo (D8): sem consulta pendente, o tick nem chama `list_clients()` — custo de um tick vazio é uma leitura de um blob JSON pequeno |
+| Falha de envio (SMTP indisponível) descarta os eventos já drenados do lote, sem retry | Aceitável para um digest informativo "sem ação necessária" (D7b); eventos futuros continuam sendo registrados normalmente, só o lote da falha específica é perdido |
 
 ---
 
@@ -128,29 +133,29 @@ Como D1/D4, a decisão de habilitar ou não o digest de D7(b) — e o intervalo 
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 — Este ADR | Problema documentado, matriz `ROLE_VISIBILITY` proposta para discussão, decisão de escopo de campos (D3), critério de notificação ao consultado (D7-D9) | 💡 Proposta |
-| F2 — Validação da matriz e da política de notificação | Revisar/ajustar D2 com o usuário; decidir nome final da permissão (D1); decidir política de exposição de email (D3); decidir se o digest (D7b) entra no escopo inicial ou só a via (a) auditoria; se sim, decidir intervalo (D8) | ⬜ Não iniciado |
-| F3 — Implementação da visibilidade | `ROLE_VISIBILITY` em `permission_guard.py`; tool MCP `listar_usuarios_visiveis`; endpoint REST espelhado; testes | ⬜ Não iniciado |
-| F4 — Implementação do digest (se aprovado em F2) | Novo scheduler in-process (padrão `DraftDigestScheduler`) com time-gating por conteúdo; testes | ⬜ Não iniciado |
+| F1 — Este ADR | Problema documentado, matriz `ROLE_VISIBILITY`, escopo de campos (D3), critério de notificação ao consultado (D7-D9) | ✅ Implementado |
+| F2 — Validação da matriz e da política de notificação | Matriz (D2), permissão `AUTH_LIST_VISIBLE` (D1), política de email sem mascaramento (D3), e habilitação do digest (D7b) com intervalo 300s (D8) — todos validados diretamente com o usuário nesta mesma entrada | ✅ Implementado |
+| F3 — Implementação da visibilidade | `ROLE_VISIBILITY`/`AUTH_LIST_VISIBLE` em `permission_guard.py`; `visibility_service.py`; tool MCP `listar_usuarios_visiveis`; endpoint REST `GET /auth/users/visible`; testes | ✅ Implementado |
+| F4 — Implementação do digest | `VisibilityDigestScheduler`/`visibility_digest_service.py`; `VisibilityDigestSettings`; `notify_visibility_queried`; wiring em `app.py::main()`; testes | ✅ Implementado |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] Matriz de visibilidade (D2) revisada e ajustada com o usuário
-- [ ] Nome definitivo da permissão (D1) decidido
-- [ ] Política de exposição de campos, especialmente `email` (D3), decidida
-- [ ] Decisão sobre habilitar ou não o digest de D7(b) e, se sim, o intervalo de D8
-- [ ] Status atualizado para Aceito/Decidido
+- [x] Matriz de visibilidade (D2) revisada e ajustada com o usuário
+- [x] Nome definitivo da permissão (D1) decidido: `AUTH_LIST_VISIBLE = "auth:list-visible"`
+- [x] Política de exposição de campos, especialmente `email` (D3), decidida: sem mascaramento
+- [x] Decisão sobre habilitar ou não o digest de D7(b): habilitado (opt-in), intervalo 300s (D8)
+- [x] Status atualizado para Implementado
 
 ### Fase 3
-- [ ] `ROLE_VISIBILITY` implementado em `permission_guard.py` com teste de cobertura por par (observador, alvo)
-- [ ] Tool MCP + endpoint REST implementados e gated por `@permission(AUTH_LIST_VISIBLE)`
-- [ ] Teste confirmando que `secret_hash`/`client_code_hash`/`notes`/dispositivos nunca aparecem na resposta
+- [x] `ROLE_VISIBILITY` implementado em `permission_guard.py` com teste de cobertura por par (observador, alvo) — `tests/unit/test_permission_guard_visibility.py`
+- [x] Tool MCP + endpoint REST implementados e gated por `@permission("auth:list-visible")` — `tests/unit/test_mcp_auth_directory_tool.py`, `tests/unit/test_api_auth_visible_users.py`
+- [x] Teste confirmando que `secret_hash`/`client_code_hash`/`notes`/dispositivos nunca aparecem na resposta — `tests/unit/test_visibility_service.py::test_response_fields_never_include_secrets_or_devices`
 
-### Fase 4 (condicional a F2 aprovar o digest)
-- [ ] Scheduler de digest implementado com time-gating por consulta nova desde o último envio
-- [ ] Teste confirmando que o tick do timer sozinho, sem consulta nova, nunca chama `NotificationService.send()`
-- [ ] Confirmado que o job `concilium-observability` (ADR-112) permanece sem nenhuma mudança
+### Fase 4
+- [x] Scheduler de digest implementado com time-gating por consulta nova desde o último envio — `tests/unit/test_visibility_digest_service.py`, `tests/unit/test_visibility_digest_scheduler.py`
+- [x] Teste confirmando que sem consulta pendente o digest não consulta `list_clients()` nem envia — `test_sem_pendencias_nao_consulta_clientes_nem_envia`
+- [x] Confirmado que o job `concilium-observability` (ADR-112) permanece sem nenhuma mudança — nenhum arquivo de `cd/`/observability tocado por esta ADR
 
 ---
 
