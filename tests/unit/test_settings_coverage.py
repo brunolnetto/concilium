@@ -547,6 +547,20 @@ def test_smtp_password_skips_kv_lookup_when_env_password_set(monkeypatch):
     assert settings.password == "from-env-password"
 
 
+def test_smtp_timeout_seconds_default(monkeypatch):
+    from concilium.infrastructure.settings import SmtpSettings
+
+    monkeypatch.delenv("CONCILIUM__SMTP_TIMEOUT_SECONDS", raising=False)
+    assert SmtpSettings.from_env().timeout_seconds == 15
+
+
+def test_smtp_timeout_seconds_override(monkeypatch):
+    from concilium.infrastructure.settings import SmtpSettings
+
+    monkeypatch.setenv("CONCILIUM__SMTP_TIMEOUT_SECONDS", "30")
+    assert SmtpSettings.from_env().timeout_seconds == 30
+
+
 def test_read_smtp_password_from_kv_no_url_returns_none(monkeypatch):
     """Covers the true branch of `if not kv_url` in _read_smtp_password_from_kv()."""
     from concilium.infrastructure.settings import _read_smtp_password_from_kv

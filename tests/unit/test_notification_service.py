@@ -7,10 +7,13 @@ monta multipart/alternative + envia via SMTP/fallback). Os antigos métodos
 
 from __future__ import annotations
 
+import smtplib
 from unittest.mock import MagicMock, patch
 
 
-def _make_smtp_settings(*, enabled: bool = False, host: str = "", user: str = "", password: str = ""):
+def _make_smtp_settings(
+    *, enabled: bool = False, host: str = "", user: str = "", password: str = "", timeout_seconds: int = 15
+):
     from concilium.infrastructure.settings import SmtpSettings
 
     return SmtpSettings(
@@ -20,6 +23,7 @@ def _make_smtp_settings(*, enabled: bool = False, host: str = "", user: str = ""
         password=password,
         from_addr="concilium@test.com",
         enabled=enabled,
+        timeout_seconds=timeout_seconds,
     )
 
 
@@ -239,6 +243,86 @@ class TestSendSmtp:
                 svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "World"})
         assert any("Email enviado" in r.message for r in caplog.records)
 
+    def test_send_passes_timeout_to_smtp(self):
+        """Sem timeout, uma conexão travada bloqueia o chamador indefinidamente."""
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com", timeout_seconds=42)
+        svc = NotificationService(settings=cfg)
+        mock_smtp_cls, _ = self._make_smtp_mock()
+        with patch("smtplib.SMTP", mock_smtp_cls):
+            svc.send(to="dest@x.com", subject="Hello", template="notification", context={"heading": "World"})
+        mock_smtp_cls.assert_called_once_with("smtp.test.com", 587, timeout=42)
+
+
+class TestSendRetry:
+    """Falhas transitórias de conexão são retentadas com backoff antes de desistir."""
+
+    def _make_success_ctx(self):
+        mock_server = MagicMock()
+        ctx = MagicMock()
+        ctx.__enter__ = lambda s, *a: mock_server
+        ctx.__exit__ = MagicMock(return_value=False)
+        return ctx, mock_server
+
+    def test_retries_on_transient_error_then_succeeds(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
+        svc = NotificationService(settings=cfg)
+        success_ctx, mock_server = self._make_success_ctx()
+        mock_smtp_cls = MagicMock(side_effect=[OSError("conexão recusada"), success_ctx])
+
+        with (
+            patch("smtplib.SMTP", mock_smtp_cls),
+            patch("concilium.infrastructure.services.notification_service.time.sleep") as mock_sleep,
+        ):
+            result = svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "W"})
+
+        assert result is True
+        assert mock_smtp_cls.call_count == 2
+        mock_server.sendmail.assert_called_once()
+        mock_sleep.assert_called_once_with(1.0)
+
+    def test_gives_up_after_exhausting_retries(self, caplog):
+        import logging
+
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
+        svc = NotificationService(settings=cfg)
+        mock_smtp_cls = MagicMock(side_effect=OSError("conexão recusada"))
+
+        with (
+            patch("smtplib.SMTP", mock_smtp_cls),
+            patch("concilium.infrastructure.services.notification_service.time.sleep") as mock_sleep,
+            caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"),
+        ):
+            result = svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "W"})
+
+        assert result is False
+        assert mock_smtp_cls.call_count == 3  # 1 tentativa inicial + 2 retries (_RETRY_DELAYS_S)
+        assert mock_sleep.call_count == 2
+        assert any("send: falha ao notificar" in r.message for r in caplog.records)
+
+    def test_non_retriable_error_does_not_retry(self):
+        """Erro de aplicação (ex.: auth inválida) não é transitório — retry não ajudaria."""
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com", user="u", password="p")
+        svc = NotificationService(settings=cfg)
+        mock_smtp_cls = MagicMock(side_effect=smtplib.SMTPAuthenticationError(535, b"bad credentials"))
+
+        with (
+            patch("smtplib.SMTP", mock_smtp_cls),
+            patch("concilium.infrastructure.services.notification_service.time.sleep") as mock_sleep,
+        ):
+            result = svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "W"})
+
+        assert result is False
+        assert mock_smtp_cls.call_count == 1
+        mock_sleep.assert_not_called()
+
 
 class TestSendNeverRaises:
     def test_smtp_failure_is_captured_and_logged(self, caplog):
@@ -248,7 +332,10 @@ class TestSendNeverRaises:
 
         cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
         svc = NotificationService(settings=cfg)
-        with patch("smtplib.SMTP", side_effect=OSError("conexão recusada")):
+        with (
+            patch("smtplib.SMTP", side_effect=OSError("conexão recusada")),
+            patch("concilium.infrastructure.services.notification_service.time.sleep"),
+        ):
             with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
                 svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "World"})
         assert any("send: falha ao notificar" in r.message for r in caplog.records)

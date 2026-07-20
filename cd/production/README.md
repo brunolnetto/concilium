@@ -345,8 +345,14 @@ Use esta tabela para saber onde configurar cada variável.
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | GH Secret | Recomendado |
 | `CONCILIUM__NOTIFICATIONS_ENABLED` | ACA (não-secret) | Se usar email |
 | `CONCILIUM__SMTP_HOST` | ACA (não-secret) | Se usar email |
+| `CONCILIUM__SMTP_USER` | ACA (não-secret) | Se usar email |
 | `CONCILIUM__SMTP_FROM` | ACA (não-secret) | Se usar email |
 | `CONCILIUM__SMTP_PASSWORD` | ACA secret (`smtp-password`) | Se usar email |
+| `CONCILIUM__SMTP_TIMEOUT_SECONDS` | ACA (não-secret) | Opcional — default 15s; timeout de conexão/comando SMTP |
+| `CONCILIUM__CATALOG_DIGEST_ENABLED` | ACA (não-secret) | Opcional — default `0`; liga o digest periódico de rascunhos de catálogo pendentes (ADR-141) |
+| `CONCILIUM__CATALOG_DIGEST_INTERVAL_HOURS` | ACA (não-secret) | Opcional — default `24`; só tem efeito com `CATALOG_DIGEST_ENABLED=1` |
+| `CONCILIUM__VISIBILITY_DIGEST_ENABLED` | ACA (não-secret) | Opcional — default `0`; liga o digest de "quem me consultou" na visibilidade de usuários (ADR-143) |
+| `CONCILIUM__VISIBILITY_DIGEST_INTERVAL_SECONDS` | ACA (não-secret) | Opcional — default `300` (5min); só tem efeito com `VISIBILITY_DIGEST_ENABLED=1` |
 
 **Backend alternativo (Azure Blob):** se precisar usar Azure Blob em vez de SharePoint,
 substitua as variáveis `SP_*` por `CONCILIUM__AZURE_ACCOUNT`, `CONCILIUM__AZURE_CONTAINER`

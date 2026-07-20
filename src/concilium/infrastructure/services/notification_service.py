@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import smtplib
 import threading
+import time
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -27,6 +28,32 @@ from concilium.infrastructure.settings import SmtpSettings, get_smtp
 logger = logging.getLogger(__name__)
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates" / "email"
+
+# Retry/backoff em falha transitória de conexão (mesmo padrão de
+# `SharePointBlobStorage._get_with_retry`, `infrastructure/adapters/blob_storage/
+# sharepoint.py:24`) — 2 retries, 3 tentativas no total. Erros de aplicação
+# (auth inválida, destinatário recusado) não são retentados: retry não resolve
+# esses casos e pode mascarar o erro real por mais tempo.
+#
+# Cuidado: `smtplib.SMTPException` é subclasse de `OSError` nesta versão do
+# Python — um `except OSError` sozinho pegaria também `SMTPAuthenticationError`/
+# `SMTPRecipientsRefused` (erros de aplicação, não de conexão). Por isso os
+# tipos não-retentáveis são checados primeiro, em except clause própria, antes
+# do catch-all de `OSError`.
+_RETRY_DELAYS_S: tuple[float, ...] = (1.0, 3.0)
+_NON_RETRIABLE_SMTP_ERRORS: tuple[type[Exception], ...] = (
+    smtplib.SMTPAuthenticationError,
+    smtplib.SMTPRecipientsRefused,
+    smtplib.SMTPSenderRefused,
+    smtplib.SMTPDataError,
+    smtplib.SMTPNotSupportedError,
+)
+_RETRIABLE_SMTP_ERRORS: tuple[type[Exception], ...] = (
+    smtplib.SMTPConnectError,
+    smtplib.SMTPServerDisconnected,
+    smtplib.SMTPHeloError,
+    OSError,  # timeout, conexão recusada, DNS — TimeoutError/ConnectionError são subclasses
+)
 
 
 def get_smtp_settings() -> SmtpSettings:
@@ -65,6 +92,10 @@ class NotificationService:
     esta ADR, mas agora com sinalização de sucesso/falha para o chamador
     decidir se avisa o usuário — antes, uma falha de SMTP/anexo grande demais
     era só logada e o comando de origem imprimia "✓ enviado" mesmo assim).
+
+    A conexão SMTP tem timeout (`CONCILIUM__SMTP_TIMEOUT_SECONDS`, default 15s)
+    e falhas transitórias de conexão são retentadas com backoff (`_RETRY_DELAYS_S`)
+    antes de `send()` desistir e retornar False.
     """
 
     def __init__(self, settings: SmtpSettings | None = None, jinja_env: jinja2.Environment | None = None) -> None:
@@ -168,14 +199,35 @@ class NotificationService:
         msg["From"] = cfg.from_addr
         msg["To"] = to
 
-        with smtplib.SMTP(cfg.host, cfg.port) as server:
-            server.ehlo()
-            server.starttls()
-            if cfg.user and cfg.password:
-                server.login(cfg.user, cfg.password)
-            server.sendmail(cfg.from_addr, [to], msg.as_string())
+        last_exc: Exception | None = None
+        for attempt, delay in enumerate((*_RETRY_DELAYS_S, None)):
+            try:
+                with smtplib.SMTP(cfg.host, cfg.port, timeout=cfg.timeout_seconds) as server:
+                    server.ehlo()
+                    server.starttls()
+                    if cfg.user and cfg.password:
+                        server.login(cfg.user, cfg.password)
+                    server.sendmail(cfg.from_addr, [to], msg.as_string())
+                logger.info("Email enviado para <%s>: %s", to, subject)
+                return
+            except _NON_RETRIABLE_SMTP_ERRORS:
+                raise
+            except _RETRIABLE_SMTP_ERRORS as exc:
+                last_exc = exc
+                if delay is None:
+                    break
+                logger.warning(
+                    "SMTP: falha transitória ao enviar para <%s> (tentativa %d/%d) — retry em %.1fs: %s",
+                    to,
+                    attempt + 1,
+                    len(_RETRY_DELAYS_S) + 1,
+                    delay,
+                    exc,
+                )
+                time.sleep(delay)
 
-        logger.info("Email enviado para <%s>: %s", to, subject)
+        assert last_exc is not None  # loop só termina sem `return` se alguma tentativa levantou
+        raise last_exc
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────

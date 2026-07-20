@@ -29,6 +29,14 @@ class SmtpSettings:
     enabled: bool
     """CONCILIUM__NOTIFICATIONS_ENABLED — habilita envio real de email (default: False)."""
 
+    timeout_seconds: int
+    """CONCILIUM__SMTP_TIMEOUT_SECONDS — timeout de conexão/comando SMTP (default: 15s).
+
+    Sem isso, `smtplib.SMTP(host, port)` bloqueia indefinidamente se o servidor
+    não responder — a chamada de origem (comando CLI, rota HTTP) fica travada
+    junto, sem nenhum limite de tempo.
+    """
+
     @classmethod
     def from_env(cls) -> SmtpSettings:
         password = _str("CONCILIUM__SMTP_PASSWORD", "")
@@ -41,6 +49,7 @@ class SmtpSettings:
             password=password,
             from_addr=_str("CONCILIUM__SMTP_FROM", "concilium@mendesloboconstrucao.com.br"),
             enabled=_flag("CONCILIUM__NOTIFICATIONS_ENABLED"),
+            timeout_seconds=_int("CONCILIUM__SMTP_TIMEOUT_SECONDS", 15),
         )
 
 
