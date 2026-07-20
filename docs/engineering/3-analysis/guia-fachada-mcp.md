@@ -66,8 +66,8 @@ Retorna status do job: `AGUARDANDO_FILA` → `EM_EXECUCAO` → `CONCLUIDO` / `ER
 ### `cancelar_job_pipeline(job_id, motivo)`
 Cancela job em fila ou em execução. Jobs em estado final (CONCLUIDO, ERRO) não podem ser cancelados.
 
-### `listar_jobs_pipeline(project_id)` / `obter_estatisticas_jobs()`
-Visão operacional: todos os jobs de um projeto, ou estatísticas globais do worker pool.
+### `listar_jobs_pipeline(project_id, incluir_estatisticas)`
+Visão operacional: todos os jobs de um projeto; `incluir_estatisticas=True` inclui estatísticas globais do worker pool (config, contadores, health). *(`obter_estatisticas_jobs()` foi removida — ADR-116 F5 — absorvida nesta tool.)*
 
 ### `avancar_pipeline(...)` *(síncrono — legado)*
 Executa uma skill de forma síncrona. Risco de timeout para skills pesadas (>30s). Preferir `disparar_pipeline` + polling.

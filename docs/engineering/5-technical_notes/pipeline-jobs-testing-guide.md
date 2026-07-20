@@ -22,8 +22,9 @@ job4 = disparar_pipeline(project_id="proj-D", skill_id="02-produtividade-climati
 # - job1, job2, job3: status="EM_EXECUCAO" (workers ocupados)
 # - job4: status="AGUARDANDO_FILA", posicao_fila=1
 
-# Verificar estatísticas
-stats = obter_estatisticas_jobs()
+# Verificar estatísticas (obter_estatisticas_jobs() foi removida — ADR-116 F5;
+# absorvida em listar_jobs_pipeline(incluir_estatisticas=True))
+stats = listar_jobs_pipeline(incluir_estatisticas=True)["estatisticas"]
 # → contadores: {jobs_por_status: {EM_EXECUCAO: 3, AGUARDANDO_FILA: 1}}
 ```
 
@@ -63,7 +64,7 @@ consultar_job_pipeline(job_id=job["job_id"])
 # → {status: "CONCLUIDO", ...}
 
 # Verificar configuração de TTL
-stats = obter_estatisticas_jobs()
+stats = listar_jobs_pipeline(incluir_estatisticas=True)["estatisticas"]
 # → configuracao: {job_ttl_hours: 24, gc_interval_minutes: 60}
 
 # GC roda a cada 60 min e remove jobs finalizados > 24h atrás
@@ -106,21 +107,26 @@ listar_jobs_pipeline()
 
 ### Health check do sistema
 
+**Nota:** `obter_estatisticas_jobs()` foi removida (ADR-116 F5) — as mesmas informações agora vêm no campo `estatisticas` de `listar_jobs_pipeline(incluir_estatisticas=True)`.
+
 ```python
-obter_estatisticas_jobs()
+listar_jobs_pipeline(incluir_estatisticas=True)
 # → {
-#     configuracao: {
-#         max_concurrent_jobs: 3,
-#         job_ttl_hours: 24,
-#         gc_interval_minutes: 60
-#     },
-#     contadores: {
-#         total_jobs_ativos: 21,
-#         jobs_por_status: {CONCLUIDO: 15, EM_EXECUCAO: 3, ...}
-#     },
-#     sistema: {
-#         worker_pool_ativo: true,
-#         gc_ativo: true
+#     jobs: [...],
+#     estatisticas: {
+#         configuracao: {
+#             max_concurrent_jobs: 3,
+#             job_ttl_hours: 24,
+#             gc_interval_minutes: 60
+#         },
+#         contadores: {
+#             total_jobs_ativos: 21,
+#             jobs_por_status: {CONCLUIDO: 15, EM_EXECUCAO: 3, ...}
+#         },
+#         sistema: {
+#             worker_pool_ativo: true,
+#             gc_ativo: true
+#         }
 #     }
 # }
 ```
@@ -144,7 +150,7 @@ obter_estatisticas_jobs()
 ### Jobs não expiram
 
 **Verificar:**
-1. TTL configurado: `obter_estatisticas_jobs().configuracao.job_ttl_hours`
+1. TTL configurado: `listar_jobs_pipeline(incluir_estatisticas=True)["estatisticas"]["configuracao"]["job_ttl_hours"]`
 2. Jobs finalizados: `listar_jobs_pipeline()` — verificar `finalizado_em`
 3. Logs stderr: procurar por `[pipeline-gc] Removidos N jobs expirados`
 
