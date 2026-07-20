@@ -155,14 +155,17 @@ def configure_logging(
             root.setLevel(level)
 
     # ADR-121 D3: BronzeLogHandler — alimenta Medallion Bronze com logs ao vivo
-    # Remove instâncias prévias antes de adicionar para garantir idempotência
+    # Remove instâncias prévias antes de adicionar para garantir idempotência —
+    # close() para a thread de flush periódico da instância antiga antes de descartá-la.
     for h in root.handlers[:]:
         if isinstance(h, BronzeLogHandler):
+            h.close()
             root.removeHandler(h)
     if bronze_storage is not None:
         writer = BronzeWriter(bronze_storage, "logs")
         bronze_handler = BronzeLogHandler(writer, buffer_size=50)
         bronze_handler.setFormatter(_JsonFormatter())
+        bronze_handler.start_periodic_flush()
         root.addHandler(bronze_handler)
 
     # Silenciar bibliotecas ruidosas (ADR-111 D3)

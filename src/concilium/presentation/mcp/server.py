@@ -104,8 +104,9 @@ class _AuthenticatedFastMCP(FastMCP):
 
 def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     """Monta o servidor MCP registrando todas as ferramentas dos sub-módulos."""
-    setup_telemetry()
-    configure_logging(json_format=True, bronze_storage=bronze_storage_for_bootstrap())
+    bronze_storage = bronze_storage_for_bootstrap()
+    setup_telemetry(bronze_storage=bronze_storage)
+    configure_logging(json_format=True, bronze_storage=bronze_storage)
     reset_tool_invocation_repository(get_tool_invocation_store())  # ADR-118: blob-backed audit
     server = _AuthenticatedFastMCP("concilium", host=host, port=port)
     system.register(server)  # ping / health — sempre primeiro

@@ -162,8 +162,9 @@ class TestBronzeLogHandlerWiring:
         after = [h for h in root.handlers if isinstance(h, BronzeLogHandler)]
         assert len(after) >= 1, "BronzeLogHandler não adicionado ao root logger (ADR-121 D3)"
 
-        # Cleanup
+        # Cleanup — close() para a thread de flush periódico antes de remover
         for h in after:
+            h.close()
             root.removeHandler(h)
         for h in before:
             if h not in root.handlers:
@@ -196,6 +197,7 @@ class TestBronzeLogHandlerWiring:
 
         # Cleanup
         for h in bronze_handlers:
+            h.close()
             root.removeHandler(h)
 
     def test_bronze_handler_emits_to_storage(self):

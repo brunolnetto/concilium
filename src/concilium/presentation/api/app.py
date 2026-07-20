@@ -61,8 +61,9 @@ _TAGS_METADATA = [
 
 
 def create_app() -> FastAPI:
-    setup_telemetry()
-    configure_logging(json_format=True, bronze_storage=bronze_storage_for_bootstrap())
+    bronze_storage = bronze_storage_for_bootstrap()
+    setup_telemetry(bronze_storage=bronze_storage)
+    configure_logging(json_format=True, bronze_storage=bronze_storage)
 
     app = FastAPI(
         title="Concilium API",

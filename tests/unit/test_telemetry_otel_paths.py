@@ -278,6 +278,91 @@ class TestSetupTracingNeitherOtlpNorConsole:
         mock_provider.add_span_processor.assert_not_called()
 
 
+class TestSetupTracingBronzeExporter:
+    def test_bronze_span_processor_added_when_storage_provided(self):
+        """Bronze roda em paralelo ao OTLP/console — sempre que há storage, mesmo sem endpoint."""
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider = MagicMock()
+        bronze_storage = MagicMock()
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk.trace.TracerProvider", return_value=mock_provider),
+            patch("opentelemetry.trace.set_tracer_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_tracing(bronze_storage=bronze_storage)
+
+        mock_provider.add_span_processor.assert_called_once()
+
+    def test_bronze_and_otlp_both_added(self):
+        """Bronze não substitui o exporter OTLP — os dois coexistem."""
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider = MagicMock()
+        bronze_storage = MagicMock()
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(endpoint="http://otel-collector:4318"),
+            ),
+            patch("opentelemetry.sdk.trace.TracerProvider", return_value=mock_provider),
+            patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter"),
+            patch("opentelemetry.sdk.trace.export.BatchSpanProcessor"),
+            patch("opentelemetry.trace.set_tracer_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_tracing(bronze_storage=bronze_storage)
+
+        assert mock_provider.add_span_processor.call_count == 2
+
+    def test_no_bronze_processor_when_storage_absent(self):
+        """Sem bronze_storage (padrão), nenhum processor Bronze é adicionado."""
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider = MagicMock()
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk.trace.TracerProvider", return_value=mock_provider),
+            patch("opentelemetry.trace.set_tracer_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_tracing()
+
+        mock_provider.add_span_processor.assert_not_called()
+
+    def test_tracer_provider_tracked_for_shutdown(self):
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider = MagicMock()
+        original = list(tel._active_tracer_providers)
+        try:
+            tel._active_tracer_providers.clear()
+            with (
+                patch(
+                    "concilium.infrastructure.telemetry.get_telemetry",
+                    return_value=_telemetry_settings(console=False, endpoint=None),
+                ),
+                patch("opentelemetry.sdk.trace.TracerProvider", return_value=mock_provider),
+                patch("opentelemetry.trace.set_tracer_provider"),
+                patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+            ):
+                tel._setup_tracing()
+            assert mock_provider in tel._active_tracer_providers
+        finally:
+            tel._active_tracer_providers.clear()
+            tel._active_tracer_providers.extend(original)
+
+
 class TestSetupTracingOtlpEndpoint:
     def test_otlp_exporter_added(self):
         import concilium.infrastructure.telemetry as tel
@@ -343,6 +428,66 @@ class TestSetupMetricsOtlpEndpoint:
             patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
         ):
             tel._setup_metrics()
+
+
+class TestSetupMetricsBronzeReader:
+    def test_bronze_reader_added_when_storage_provided(self):
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider_cls = MagicMock()
+        bronze_storage = MagicMock()
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk.metrics.MeterProvider", mock_provider_cls),
+            patch("opentelemetry.metrics.set_meter_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_metrics(bronze_storage=bronze_storage)
+
+        _, kwargs = mock_provider_cls.call_args
+        assert len(kwargs["metric_readers"]) == 1
+
+    def test_bronze_and_otlp_readers_coexist(self):
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider_cls = MagicMock()
+        bronze_storage = MagicMock()
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(endpoint="http://otel-collector:4318"),
+            ),
+            patch("opentelemetry.sdk.metrics.MeterProvider", mock_provider_cls),
+            patch("opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter"),
+            patch("opentelemetry.metrics.set_meter_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_metrics(bronze_storage=bronze_storage)
+
+        _, kwargs = mock_provider_cls.call_args
+        assert len(kwargs["metric_readers"]) == 2
+
+    def test_no_bronze_reader_when_storage_absent(self):
+        import concilium.infrastructure.telemetry as tel
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk.metrics.MeterProvider") as mock_provider_cls,
+            patch("opentelemetry.metrics.set_meter_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_metrics()
+
+        _, kwargs = mock_provider_cls.call_args
+        assert kwargs["metric_readers"] == []
 
 
 class TestSetupMetricsNeitherOtlpNorConsole:
@@ -992,3 +1137,99 @@ class TestLogBusinessMetric:
         assert any("business_metric" in r.message for r in caplog.records)
         assert any("proj-5" in r.message for r in caplog.records)
         assert any("custo_direto" in r.message for r in caplog.records)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# setup_telemetry(bronze_storage=...) — forwarding + shutdown_telemetry()
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestSetupTelemetryForwardsBronzeStorage:
+    def test_forwards_bronze_storage_to_tracing_and_metrics(self):
+        import concilium.infrastructure.telemetry as tel
+
+        bronze_storage = MagicMock()
+        original = tel._initialized
+        try:
+            tel._initialized = False
+            with (
+                patch.object(tel, "_OTEL_AVAILABLE", True),
+                patch(
+                    "concilium.infrastructure.telemetry.get_telemetry",
+                    return_value=_telemetry_settings(disabled=False),
+                ),
+                patch.object(tel, "_setup_tracing") as mock_tracing,
+                patch.object(tel, "_setup_metrics") as mock_metrics,
+                patch.object(tel, "_setup_logging"),
+                patch("atexit.register"),
+            ):
+                tel.setup_telemetry(bronze_storage=bronze_storage)
+                mock_tracing.assert_called_once_with(bronze_storage=bronze_storage)
+                mock_metrics.assert_called_once_with(bronze_storage=bronze_storage)
+        finally:
+            tel._initialized = original
+
+    def test_registers_shutdown_atexit(self):
+        import concilium.infrastructure.telemetry as tel
+
+        original = tel._initialized
+        try:
+            tel._initialized = False
+            with (
+                patch.object(tel, "_OTEL_AVAILABLE", True),
+                patch(
+                    "concilium.infrastructure.telemetry.get_telemetry",
+                    return_value=_telemetry_settings(disabled=False),
+                ),
+                patch.object(tel, "_setup_tracing"),
+                patch.object(tel, "_setup_metrics"),
+                patch.object(tel, "_setup_logging"),
+                patch("atexit.register") as mock_register,
+            ):
+                tel.setup_telemetry()
+                mock_register.assert_called_once_with(tel.shutdown_telemetry)
+        finally:
+            tel._initialized = original
+
+
+class TestShutdownTelemetry:
+    def test_shuts_down_all_active_providers(self):
+        import concilium.infrastructure.telemetry as tel
+
+        tracer_provider = MagicMock()
+        meter_provider = MagicMock()
+        log_provider = MagicMock()
+
+        original_tracer = list(tel._active_tracer_providers)
+        original_meter = list(tel._active_meter_providers)
+        original_log = list(tel._active_log_providers)
+        try:
+            tel._active_tracer_providers[:] = [tracer_provider]
+            tel._active_meter_providers[:] = [meter_provider]
+            tel._active_log_providers[:] = [log_provider]
+
+            tel.shutdown_telemetry()
+
+            tracer_provider.shutdown.assert_called_once()
+            meter_provider.shutdown.assert_called_once()
+            log_provider.shutdown.assert_called_once()
+        finally:
+            tel._active_tracer_providers[:] = original_tracer
+            tel._active_meter_providers[:] = original_meter
+            tel._active_log_providers[:] = original_log
+
+    def test_silences_exceptions_from_individual_providers(self):
+        """Um provider que falha ao desligar não deve impedir os demais de desligar."""
+        import concilium.infrastructure.telemetry as tel
+
+        broken = MagicMock()
+        broken.shutdown.side_effect = RuntimeError("boom")
+        healthy = MagicMock()
+
+        original_tracer = list(tel._active_tracer_providers)
+        try:
+            tel._active_tracer_providers[:] = [broken, healthy]
+            tel.shutdown_telemetry()  # não deve lançar
+            healthy.shutdown.assert_called_once()
+        finally:
+            tel._active_tracer_providers[:] = original_tracer

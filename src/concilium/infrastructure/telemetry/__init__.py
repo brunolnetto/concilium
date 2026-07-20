@@ -13,11 +13,15 @@ entra em traces. Apenas metadados operacionais: IDs, durações, status, contage
 
 from __future__ import annotations
 
+import atexit
 from contextlib import nullcontext
 from functools import wraps
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from concilium.infrastructure.settings import get_telemetry
+
+if TYPE_CHECKING:
+    from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
 # ── OTEL availability guard ───────────────────────────────────────────────────
 
@@ -38,16 +42,25 @@ _tool_calls_counter = None
 _rate_limit_exceeded_counter = None
 _project_margin_gauge = None
 
-# ── Provider references (para shutdown em testes) ─────────────────────────────
+# ── Provider references (para shutdown em testes e em shutdown_telemetry) ─────
 _active_meter_providers: list = []
 _active_log_providers: list = []
+_active_tracer_providers: list = []
 
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
 
-def setup_telemetry() -> None:
-    """Inicializa os providers OTEL. Idempotente — seguro chamar múltiplas vezes."""
+def setup_telemetry(bronze_storage: BlobStoragePort | None = None) -> None:
+    """Inicializa os providers OTEL. Idempotente — seguro chamar múltiplas vezes.
+
+    Args:
+        bronze_storage: BlobStoragePort opcional. Quando fornecido, spans e
+            métricas passam a ser gravados também em Bronze (observability/bronze/
+            traces|metrics/), em paralelo a qualquer exporter OTLP/console
+            configurado — sem isso, traces/metrics nunca alimentavam o pipeline
+            Medallion (só logs, via BronzeLogHandler em configure_logging).
+    """
     global _initialized
     if _initialized:
         return
@@ -59,9 +72,29 @@ def setup_telemetry() -> None:
     if telemetry.otel_sdk_disabled:
         return
 
-    _setup_tracing()
-    _setup_metrics()
+    _setup_tracing(bronze_storage=bronze_storage)
+    _setup_metrics(bronze_storage=bronze_storage)
     _setup_logging()
+
+    # Drena o último lote de spans/métricas/logs OTel pendente no encerramento
+    # do processo — sem isso, BatchSpanProcessor/PeriodicExportingMetricReader
+    # só exportam no próximo ciclo periódico, que pode nunca chegar a rodar em
+    # Container Apps com scale-to-zero.
+    atexit.register(shutdown_telemetry)
+
+
+def shutdown_telemetry() -> None:
+    """Desliga todos os providers OTEL ativos, drenando buffers pendentes (best-effort).
+
+    Chamado automaticamente no encerramento normal do processo (ver
+    `setup_telemetry`). Cada provider é desligado independentemente — uma
+    falha em um não deve impedir os demais.
+    """
+    for provider in (*_active_tracer_providers, *_active_meter_providers, *_active_log_providers):
+        try:
+            provider.shutdown()
+        except Exception:
+            pass
 
 
 def _setup_logging() -> None:
@@ -109,15 +142,18 @@ def _setup_logging() -> None:
     logging.getLogger().addHandler(handler)
 
 
-def _setup_tracing() -> None:
+def _setup_tracing(bronze_storage: BlobStoragePort | None = None) -> None:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+    global _active_tracer_providers
+
     telemetry = get_telemetry()
     resource = Resource({SERVICE_NAME: telemetry.otel_service_name})
     provider = TracerProvider(resource=resource)
+    _active_tracer_providers.append(provider)
 
     otlp_endpoint = telemetry.otlp_endpoint
     if otlp_endpoint:
@@ -129,6 +165,15 @@ def _setup_tracing() -> None:
 
         provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
+    # Bronze roda em paralelo ao exporter acima (ou sozinho, se nenhum estiver
+    # configurado) — sem isso, spans nunca alimentavam Bronze/Silver/Gold.
+    if bronze_storage is not None:
+        from concilium.infrastructure.observability.bronze_span_exporter import BronzeSpanExporter
+        from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
+        writer = BronzeWriter(bronze_storage, "traces")
+        provider.add_span_processor(BatchSpanProcessor(BronzeSpanExporter(writer)))
+
     trace.set_tracer_provider(provider)
 
 
@@ -138,9 +183,10 @@ def _otel_console() -> bool:
     return get_telemetry().otel_console
 
 
-def _setup_metrics() -> None:
+def _setup_metrics(bronze_storage: BlobStoragePort | None = None) -> None:
     from opentelemetry import metrics
     from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
     global _active_meter_providers
@@ -152,13 +198,21 @@ def _setup_metrics() -> None:
     otlp_endpoint = telemetry.otlp_endpoint
     if otlp_endpoint:
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
         readers.append(PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{otlp_endpoint}/v1/metrics")))
     elif _otel_console():
-        from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
+        from opentelemetry.sdk.metrics.export import ConsoleMetricExporter
 
         readers.append(PeriodicExportingMetricReader(ConsoleMetricExporter()))
+
+    # Bronze roda em paralelo ao reader acima (ou sozinho) — sem isso, métricas
+    # nunca alimentavam Bronze/Silver/Gold.
+    if bronze_storage is not None:
+        from concilium.infrastructure.observability.bronze_metric_exporter import BronzeMetricExporter
+        from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
+        writer = BronzeWriter(bronze_storage, "metrics")
+        readers.append(PeriodicExportingMetricReader(BronzeMetricExporter(writer), export_interval_millis=30000))
 
     provider = MeterProvider(resource=resource, metric_readers=readers)
     _active_meter_providers.append(provider)
