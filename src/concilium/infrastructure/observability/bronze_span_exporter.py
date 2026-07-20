@@ -69,6 +69,9 @@ class BronzeSpanExporter(SpanExporter):
             "duration_ms": max(0, (end_ns - start_ns) // 1_000_000),
             "status": status,
             "project_id": attrs.get("project.id"),
+            "tool_name": attrs.get("tool.name"),  # gravado por _with_tracing em toda tool MCP
+            "user_id": attrs.get("user.id"),  # gravado por AuthContextMiddleware em todo request de API
+            "request_id": attrs.get("request.id"),  # idem
             "skill_id": None,  # normalize_span_record extrai de `operation` quando ausente
         }
 

@@ -138,6 +138,9 @@ def normalize_span_record(record: dict[str, Any]) -> dict[str, Any]:
         "status": record.get("status", ""),
         "project_id": record.get("project_id"),
         "skill_id": record.get("skill_id") or _extract_skill_id(record.get("operation", "")),
+        "tool_name": record.get("tool_name"),
+        "user_id": record.get("user_id"),
+        "request_id": record.get("request_id"),
     }
 
 

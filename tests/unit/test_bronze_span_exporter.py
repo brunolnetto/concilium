@@ -32,7 +32,7 @@ def _otel_sdk_enabled():
             os.environ["OTEL_SDK_DISABLED"] = previous
 
 
-def _make_span(name="concilium.skill.05", project_id=None):
+def _make_span(name="concilium.skill.05", project_id=None, extra_attrs=None):
     """Gera um ReadableSpan real via um TracerProvider descartável, para exercitar o schema completo."""
     captured = []
 
@@ -54,6 +54,8 @@ def _make_span(name="concilium.skill.05", project_id=None):
         with tracer.start_as_current_span(name) as span:
             if project_id:
                 span.set_attribute("project.id", project_id)
+            for key, value in (extra_attrs or {}).items():
+                span.set_attribute(key, value)
         provider.shutdown()
     return captured[0]
 
@@ -128,6 +130,50 @@ class TestBronzeSpanExporterSchema:
 
         exporter.shutdown()
         assert exporter.force_flush() is True
+
+
+class TestBronzeSpanExporterEnrichedAttributes:
+    """tool.name (_with_tracing) e user.id/request.id (AuthContextMiddleware) já são
+    gravados no span pelo resto do código — o exporter precisa parar de descartá-los."""
+
+    def test_captures_tool_name_user_id_and_request_id_from_attrs(self):
+        storage = MagicMock()
+        writer = BronzeWriter(storage, "traces")
+        exporter = BronzeSpanExporter(writer)
+
+        span = _make_span(
+            name="mcp.tool.listar_projetos",
+            extra_attrs={
+                "tool.name": "listar_projetos",
+                "user.id": "AGIS-user-1",
+                "request.id": "req-abc123",
+            },
+        )
+        exporter.export([span])
+
+        import json
+
+        path, content = storage.gravar_blob.call_args[0]
+        record = json.loads(content.decode("utf-8").strip())
+        assert record["tool_name"] == "listar_projetos"
+        assert record["user_id"] == "AGIS-user-1"
+        assert record["request_id"] == "req-abc123"
+
+    def test_fields_are_none_when_attributes_absent(self):
+        storage = MagicMock()
+        writer = BronzeWriter(storage, "traces")
+        exporter = BronzeSpanExporter(writer)
+
+        span = _make_span()
+        exporter.export([span])
+
+        import json
+
+        path, content = storage.gravar_blob.call_args[0]
+        record = json.loads(content.decode("utf-8").strip())
+        assert record["tool_name"] is None
+        assert record["user_id"] is None
+        assert record["request_id"] is None
 
 
 class TestBronzeSpanExporterParent:
