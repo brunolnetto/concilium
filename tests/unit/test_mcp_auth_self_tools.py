@@ -288,3 +288,63 @@ class TestRevogarMeuDispositivo:
 
         assert result["status"] == "pending"
         notify_mock.assert_not_called()
+
+
+class TestObterInstrucoesAtualizadas:
+    """ADR-144 D6: sempre lê o arquivo do disco (nunca congela no boot, ao
+    contrário do padrão ui:// do ADR-101), e marca last_skill_version_seen
+    do client_id atual — só aqui, nunca em ping() (D3/A7)."""
+
+    def test_no_identity(self, tools):
+        with patch(
+            "concilium.infrastructure.auth.permission_guard.get_current_user_id",
+            return_value=None,
+        ):
+            result = tools["obter_instrucoes_atualizadas"]()
+
+        assert result["status"] == "error"
+
+    def test_success_returns_content_and_version_and_marks_cursor(self, tools):
+        store = MagicMock()
+        with (
+            patch(
+                "concilium.infrastructure.auth.permission_guard.get_current_user_id",
+                return_value="client-1",
+            ),
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
+            patch(
+                "concilium.application.services.skill_content.read_skill_content",
+                return_value=b"# Versao: 5 - 2026-07-20\nconteudo do skill",
+            ),
+        ):
+            result = tools["obter_instrucoes_atualizadas"]()
+
+        assert result["status"] == "ok"
+        assert result["versao"] == 5
+        assert "conteudo do skill" in result["conteudo"]
+        store.mark_skill_version_seen.assert_called_once_with("client-1", 5)
+
+    def test_reads_fresh_content_every_call_not_cached(self, tools):
+        """Achado do ADR-144 D6: nunca deve congelar no import/boot."""
+        store = MagicMock()
+        with (
+            patch(
+                "concilium.infrastructure.auth.permission_guard.get_current_user_id",
+                return_value="client-1",
+            ),
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
+        ):
+            with patch(
+                "concilium.application.services.skill_content.read_skill_content",
+                return_value=b"# Versao: 1 - 2026-01-01\nprimeira",
+            ):
+                first = tools["obter_instrucoes_atualizadas"]()
+            with patch(
+                "concilium.application.services.skill_content.read_skill_content",
+                return_value=b"# Versao: 2 - 2026-07-20\nsegunda",
+            ):
+                second = tools["obter_instrucoes_atualizadas"]()
+
+        assert first["versao"] == 1
+        assert second["versao"] == 2
+        assert first["conteudo"] != second["conteudo"]

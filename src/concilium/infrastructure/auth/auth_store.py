@@ -64,6 +64,8 @@ class ClientRecord:
     email: str = ""  # ADR-123: endereço de email do usuário para notificações
     client_code_hash: str = ""  # "sha256:<hex>" — código reutilizável de bootstrap (1 por usuário, N dispositivos)
     deleted_at: str = ""  # ISO-8601, setado por remove_client() (soft-delete) — "" enquanto ativo
+    last_deploy_seen: str = ""  # ISO-8601 (ADR-144 D3): última promoção já entregue via ping()
+    last_skill_version_seen: int = 0  # ADR-144 D3: só avança quando obter_instrucoes_atualizadas() é chamada
 
 
 def _client_record(raw: dict) -> ClientRecord:
@@ -77,6 +79,8 @@ def _client_record(raw: dict) -> ClientRecord:
     """
     raw = dict(raw)
     raw.setdefault("email", "")
+    raw.setdefault("last_deploy_seen", "")
+    raw.setdefault("last_skill_version_seen", 0)
     return ClientRecord(**raw)
 
 
@@ -617,6 +621,41 @@ class AuthStore:
             if raw:
                 self._write("visibility_queries.json", [])
         return [VisibilityQueryRecord(**r) for r in raw]
+
+    # ── Cursores de deploy/skill (ADR-144 D3) ─────────────────────────────────
+
+    def mark_deploy_seen(self, client_id: str, promoted_at: str) -> None:
+        """Atualiza `last_deploy_seen` — chamado por `ping()` ao entregar o aviso.
+
+        Noop silencioso se `client_id` não existir (mesmo precedente de
+        `regenerate_client_code`) — não há nada de destrutivo a proteger aqui.
+        """
+        with self._lock:
+            raw = self._read_clients()
+            records = [ClientRecord(**r) for r in raw]
+            for r in records:
+                if r.client_id == client_id:
+                    r.last_deploy_seen = promoted_at
+                    self._write("clients.json", [asdict(x) for x in records])
+                    self._invalidate_clients_cache()
+                    return
+
+    def mark_skill_version_seen(self, client_id: str, version: int) -> None:
+        """Atualiza `last_skill_version_seen` — chamado por `obter_instrucoes_atualizadas()`.
+
+        Deliberadamente separado de `mark_deploy_seen` (ADR-144 D3/A7): o cursor
+        de skill só avança quando o conteúdo é de fato buscado, não quando
+        `ping()` apenas menciona que há versão nova.
+        """
+        with self._lock:
+            raw = self._read_clients()
+            records = [ClientRecord(**r) for r in raw]
+            for r in records:
+                if r.client_id == client_id:
+                    r.last_skill_version_seen = version
+                    self._write("clients.json", [asdict(x) for x in records])
+                    self._invalidate_clients_cache()
+                    return
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────

@@ -216,3 +216,37 @@ def register(server: FastMCP) -> None:
                 )
             ),
         }
+
+    @server.tool()
+    @permission(AUTH_SELF)
+    def obter_instrucoes_atualizadas() -> dict[str, Any]:
+        """Retorna a versão mais atual das instruções de uso do Concilium (ADR-144 D6).
+
+        Sempre lê o conteúdo do disco nesta chamada — nunca uma cópia
+        congelada em memória — então reflete qualquer atualização publicada
+        desde o anexo de onboarding original. Marca a versão retornada como
+        "vista" pelo usuário atual (`last_skill_version_seen`), o que faz o
+        aviso de `ping()` sobre skill desatualizado parar de aparecer até a
+        próxima mudança de versão.
+        """
+        from concilium.application.services import skill_content
+        from concilium.infrastructure.auth.auth_store import get_auth_store
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+        client_id = get_current_user_id()
+        if client_id is None:
+            return {
+                "status": "error",
+                "message": "Identidade do usuário não disponível no contexto atual.",
+            }
+
+        content = skill_content.read_skill_content()
+        versao = skill_content.get_skill_version(content)
+
+        get_auth_store().mark_skill_version_seen(client_id, versao)
+
+        return {
+            "status": "ok",
+            "versao": versao,
+            "conteudo": content.decode("utf-8", errors="replace"),
+        }

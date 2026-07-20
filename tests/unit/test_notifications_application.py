@@ -42,25 +42,16 @@ class TestBuildProxyDownloadNote:
         assert "https://x/macos" in note
 
 
-class TestReadSkillTutorial:
-    def test_falls_back_to_placeholder_when_file_missing(self, tmp_path):
-        import concilium.application.services.notifications as mod
+class TestReadSkillTutorialDelegation:
+    """ADR-144 D6: a leitura real do skill vive em skill_content.py — aqui só
+    confere que notifications.py delega para lá, sem duplicar a lógica
+    (coberta em detalhe por tests/unit/test_skill_content.py)."""
 
-        with patch.object(mod, "_SKILL_TUTORIAL_PATH", tmp_path / "nao-existe.skill"):
-            content = mod._read_skill_tutorial()
+    def test_delegates_to_shared_skill_content_module(self):
+        from concilium.application.services import notifications
+        from concilium.application.services.skill_content import read_skill_content
 
-        assert content == mod._SKILL_TUTORIAL_FALLBACK
-
-    def test_reads_real_file_when_present(self, tmp_path):
-        import concilium.application.services.notifications as mod
-
-        skill_path = tmp_path / "concilium_usage_tutorial.skill"
-        skill_path.write_bytes(b"conteudo real do tutorial")
-
-        with patch.object(mod, "_SKILL_TUTORIAL_PATH", skill_path):
-            content = mod._read_skill_tutorial()
-
-        assert content == b"conteudo real do tutorial"
+        assert notifications._read_skill_tutorial is read_skill_content
 
 
 class TestNotifyUserCreated:

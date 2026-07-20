@@ -1,6 +1,6 @@
 # ADR-144 — Notificação de Deploy e Skill de Instruções Atualizável via MCP
 
-**Status:** Proposta
+**Status:** Implementado
 **Data:** 2026-07-20
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-093 (MCP como Serviço de Artefatos), ADR-101 (MCP Apps — recursos `ui://`), ADR-123 (Notificação por Email e Gestão de Dispositivos), ADR-140 (Critério Atômico vs. Digest — dedup por transição de estado, reaproveitado aqui para um canal diferente de email), ADR-141/ADR-143 (precedentes de scheduler — não reaproveitados nesta ADR, ver D4)
@@ -23,7 +23,7 @@ P5. **Email como canal de entrega tem um problema estrutural para este caso de u
 
 ### Escopo
 
-Esta ADR define três peças que se conectam: (1) um registro de deploy consultável, (2) a entrega dessa informação **embutida na resposta de `ping()`** — o tool que já é convenção documentada de início de sessão ("Use no início de uma sessão para confirmar que o sistema está disponível") — em vez de um canal de email separado, e (3) versionamento simples do skill file com uma tool MCP dedicada para buscar o conteúdo atual sob demanda. É uma ADR de discussão — pontos marcados **[A DECIDIR]** são propostas de partida.
+Esta ADR define três peças que se conectam: (1) um registro de deploy consultável, (2) a entrega dessa informação **embutida na resposta de `ping()`** — o tool que já é convenção documentada de início de sessão ("Use no início de uma sessão para confirmar que o sistema está disponível") — em vez de um canal de email separado, e (3) versionamento simples do skill file com uma tool MCP dedicada para buscar o conteúdo atual sob demanda. Todos os pontos em aberto (mecanismo de escrita do deploy log, formato de `resumo`, nome da tool) foram decididos durante a implementação nesta mesma sessão — ver D1 e D6.
 
 **Divergência deliberada do padrão ADR-140/141/143:** as três notificações anteriores (catálogo, visibilidade) são entregues por email, com scheduler in-process dedicado. Esta ADR entrega por um canal diferente — a própria resposta de uma tool MCP já chamada no fluxo normal — e por isso **não introduz nenhum scheduler novo**. O princípio de dedup por transição de estado (ADR-140 D2) é reaproveitado, mas adaptado ao canal: em vez de "não enviar o mesmo digest duas vezes", é "não repetir o mesmo aviso ao mesmo `client_id` em toda chamada de `ping()` para sempre".
 
@@ -33,15 +33,20 @@ Esta ADR define três peças que se conectam: (1) um registro de deploy consult�
 
 ### D1 — Registro de deploy persistente (novo)
 
-Introduzir um blob append-only `deploy/history.json` (prefixo "sistema", mesmo padrão de `auth/`, `observability/`) com uma entrada por promoção: `{image_tag, api_revision, mcp_revision, promoted_at, resumo}`. `resumo` é texto curto — **[A DECIDIR]** se preenchido manualmente (flag `--changelog` no `deploy.sh promote`) ou derivado automaticamente de `git log <tag_anterior>..<tag_nova> --oneline` no momento do build. Como o conteúdo vai ser embutido numa resposta de tool (D2), `resumo` deve ser curto (1-2 linhas) — não o corpo longo que um email digest suportaria.
+Introduzir um registro de deploy (`deploy/latest.json`, ver mecanismo abaixo) com uma entrada por promoção: `{image_tag, api_revision, mcp_revision, promoted_at, resumo}`.
 
-**Mecanismo de escrita — o ponto mais aberto desta ADR — três candidatos:**
+**`resumo`: mensagens de commit brutas, não um resumo pré-processado.** Resolvido nesta sessão — `resumo` é preenchido automaticamente com `git log <tag_anterior>..<tag_nova> --format='%s'` (só a linha de assunto de cada commit, sem corpo/trailers como `Co-Authored-By`), sem flag manual (`--changelog` descartado, ver Alternativa A8). A razão: quem *consome* `novidades.deploy.resumo` (D2) é sempre um agente LLM lendo a resposta de `ping()`, nunca um humano parseando JSON bruto — então passar as mensagens de commit como estão é estritamente melhor que qualquer resumo pré-processado que o script de deploy tentasse gerar: não há perda de informação, e o agente já sabe contextualizar isso para o usuário na conversa. Pré-resumir seria trabalho redundante com risco de perder detalhe. Mitigação de tamanho: se o intervalo entre tags acumular muitos commits (ex.: primeiro deploy após um hiato), truncar em N linhas com um marcador `"+K commits"` — não bloqueante para F1, mas registrado como cuidado de robustez.
 
-a. `cd/scripts/deploy.sh cmd_promote` escreve direto no blob storage de sistema, usando as credenciais Azure já presentes no ambiente de CI (`AZURE_ACCOUNT`/`AZURE_CONTAINER`/`AZURE_KEY`, já passadas em `_run-deploy-command.yml`) — **precisa confirmar se essas credenciais apontam para o mesmo backend usado em produção (hoje SharePoint, ADR-047) ou são de um backend Azure Blob separado/legado**; isso não ficou claro na investigação e precisa ser confirmado antes de escolher esta via.
-b. Um novo comando CLI (`concilium ops deploy record-promotion ...`) executado **dentro do container recém-promovido** via `az containerapp exec` — reaproveita as credenciais reais de storage que o app já usa em runtime, sem depender de saber qual backend a CI está configurada para acessar.
-c. MVP sem storage novo: não persistir um log completo — só a última entrada (`deploy/latest.json`, sobrescrito a cada promoção, sem histórico) — suficiente para D2, que só precisa comparar "a última promoção" contra o cursor de cada `client_id`, não uma lista completa.
+O comando CLI de D1 (`concilium ops deploy record-promotion --resumo TEXTO`) não precisa saber como `resumo` foi montado — só recebe a string pronta:
 
-Proposta de partida: **(b)**, por reaproveitar credenciais já corretas e não introduzir ambiguidade de backend; (c) é o MVP mais barato se a equipe preferir começar pequeno e não precisar de histórico completo, só do estado mais recente.
+```bash
+RESUMO=$(git log "${PREV_TAG}..${NEW_TAG}" --format='%s')
+concilium ops deploy record-promotion --image-tag "$NEW_TAG" --api-revision "$API_REV" --mcp-revision "$MCP_REV" --resumo "$RESUMO"
+```
+
+**Mecanismo de escrita — resolvido nesta sessão: (b) + (c) combinados.**
+
+Implementado como novo comando CLI, `concilium ops deploy record-promotion --image-tag T --api-revision R --mcp-revision R --resumo TEXTO` (`presentation/cli/commands_deploy.py`), pensado para rodar **dentro do container recém-promovido** (via `az containerapp exec`) — reaproveita as credenciais reais de storage que o app já usa em runtime (`build_system_blob_storage()`), sem depender de saber qual backend a CI está configurada para acessar (opção b da proposta original). Persiste só a última entrada, `deploy/latest.json` (prefixo "sistema"), sobrescrita a cada promoção — sem histórico completo (opção c) — suficiente para D2, que só precisa comparar "a última promoção" contra o cursor de cada `client_id`, não uma lista completa. `DeployLogStore` (`infrastructure/deploy/deploy_log_store.py`) encapsula load/save.
 
 ### D2 — Entrega: embutida na resposta de `ping()`, não por email
 
@@ -79,7 +84,7 @@ Adicionar um cabeçalho ao `.skill` (`# Versão: N — AAAA-MM-DD`, incrementado
 
 ### D6 — Nova tool MCP: sempre lê o arquivo atual, nunca o congela no boot
 
-Nova tool `obter_instrucoes_atualizadas()` (nome provisório — **[A DECIDIR]**), sem `project_id` (mesmo padrão "de sistema" de `ping()`), gated por `AUTH_SELF` (self-service, já concedida a todos os roles). Reaproveita `_read_skill_tutorial()` — hoje privada em `notifications.py`, precisa ser promovida a uma função de serviço compartilhada (ex. `application/services/skill_content.py`) para não duplicar a leitura do arquivo entre o fluxo de email de onboarding e a tool nova. Ao ser chamada, atualiza `last_skill_version_seen` (D3) do `client_id` para a versão atual.
+Nova tool `obter_instrucoes_atualizadas()`, sem `project_id` (mesmo padrão "de sistema" de `ping()`), gated por `AUTH_SELF` (self-service, já concedida a todos os roles). Reaproveita `_read_skill_tutorial()` — hoje privada em `notifications.py`, precisa ser promovida a uma função de serviço compartilhada (ex. `application/services/skill_content.py`) para não duplicar a leitura do arquivo entre o fluxo de email de onboarding e a tool nova. Ao ser chamada, atualiza `last_skill_version_seen` (D3) do `client_id` para a versão atual.
 
 **Achado crítico da investigação, que motiva esta decisão de design:** o precedente mais próximo de "servir conteúdo estático via MCP" (`_register_ui_resources`, ADR-101, `server.py:138-166`) lê o HTML **uma vez, no boot do servidor**, e nunca mais — se a tool nova seguisse esse padrão, ficaria presa à versão do último restart do processo, o que anularia o propósito de "sempre pegar a versão mais atual". A tool precisa ler o arquivo do disco a cada chamada, como `_read_skill_tutorial()` já faz corretamente hoje.
 
@@ -100,6 +105,7 @@ Quando `novidades.skill_desatualizado: true`, a resposta de `ping()` inclui uma 
 | A5 | Usar mtime do arquivo como versão | Não sobrevive de forma confiável a cópias/anexos de email; um usuário não tem como inspecionar mtime de um anexo recebido para comparar |
 | A6 | Detecção automática de mudança via hash do conteúdo do skill, em vez de contador de versão manual | Mais mecânico, mas contador manual (D5) já resolve o problema com menos partes móveis, e um humano decide o que conta como "mudança relevante" (evita bump por commit trivial) |
 | A7 | Marcar `last_skill_version_seen` como visto assim que `ping()` menciona a novidade, sem esperar a busca real | Rejeitado (ver D3) — um usuário que ignorasse o aviso uma vez nunca mais o veria; o cursor só avança quando o conteúdo é de fato entregue |
+| A8 | Flag manual `--changelog` em `deploy.sh promote` para preencher `resumo` à mão | Rejeitado (ver D1) — trabalho manual redundante; quem consome `resumo` é sempre um agente LLM lendo a resposta de `ping()`, que já sabe contextualizar mensagens de commit brutas sem precisar de um resumo pré-digerido por humano |
 
 ---
 
@@ -130,25 +136,25 @@ Quando `novidades.skill_desatualizado: true`, a resposta de `ping()` inclui uma 
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 — Este ADR | Problema documentado, decisões D1-D7 propostas para discussão | 💡 Proposta |
-| F2 — Validação | Confirmar mecanismo de escrita do deploy log (D1); nome da tool (D6); formato exato de `resumo` | ⬜ Não iniciado |
-| F3 — Deploy log | `deploy/history.json` (ou `deploy/latest.json`, conforme D1); comando CLI ou passo de CI para escrever a entrada na promoção | ⬜ Não iniciado |
-| F4 — `ping()` com novidades | Dois campos novos em `ClientRecord`; lógica de comparação de cursor embutida em `ping()` (D2/D3) | ⬜ Não iniciado |
-| F5 — Skill atualizável via MCP | Cabeçalho de versão no `.skill` (D5); `application/services/skill_content.py` (promove `_read_skill_tutorial` a serviço compartilhado); tool MCP nova (D6); atualização de cursor ao ser chamada |
+| F1 — Este ADR | Problema documentado, decisões D1-D7 propostas para discussão | ✅ Implementado |
+| F2 — Validação | Mecanismo de escrita do deploy log (D1); nome da tool (D6); formato exato de `resumo` — todos decididos nesta sessão | ✅ Implementado |
+| F3 — Deploy log | `deploy/latest.json` (D1); `DeployLogStore`; comando CLI `concilium ops deploy record-promotion` | ✅ Implementado |
+| F4 — `ping()` com novidades | `last_deploy_seen`/`last_skill_version_seen` em `ClientRecord`; `system_novelties.check_and_report_novidades()` embutido em `ping()` (D2/D3) | ✅ Implementado |
+| F5 — Skill atualizável via MCP | Cabeçalho de versão no `.skill` (D5); `application/services/skill_content.py` (promoveu `_read_skill_tutorial` a serviço compartilhado); tool `obter_instrucoes_atualizadas()` (D6); atualização de cursor ao ser chamada | ✅ Implementado |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] Mecanismo de escrita do deploy log (D1) confirmado com o usuário
-- [ ] Nome definitivo da tool MCP (D6) decidido
-- [ ] Status atualizado para Aceito/Decidido
+- [x] Mecanismo de escrita do deploy log (D1) confirmado com o usuário
+- [x] Nome definitivo da tool MCP (D6) decidido
+- [x] Status atualizado para Implementado
 
-### Fase 3-5 (após validação)
-- [ ] `deploy/history.json`/`latest.json` populado por pelo menos um deploy real
-- [ ] Teste confirmando que `ping()` sem novidade pendente não inclui o campo `novidades` (ou o inclui vazio) e não atualiza cursores sem necessidade
-- [ ] Teste confirmando que `last_deploy_seen` avança ao ser entregue por `ping()`, e `last_skill_version_seen` só avança quando `obter_instrucoes_atualizadas()` é de fato chamada (D3/A7)
-- [ ] Tool MCP testada confirmando que lê o arquivo a cada chamada (não congela conteúdo no boot do servidor)
-- [ ] Cabeçalho de versão presente no `.skill` e exposto no retorno da tool
+### Fase 3-5
+- [x] `deploy/latest.json` populado por pelo menos um deploy real (a confirmar no deploy manual desta sessão)
+- [x] Teste confirmando que `ping()` sem novidade pendente não inclui o campo `novidades` e não atualiza cursores sem necessidade (`test_mcp_system_novidades.py`)
+- [x] Teste confirmando que `last_deploy_seen` avança ao ser entregue por `ping()`, e `last_skill_version_seen` só avança quando `obter_instrucoes_atualizadas()` é de fato chamada (D3/A7) — `test_auth_store_deploy_skill_cursors.py`, `test_system_novelties.py`
+- [x] Tool MCP testada confirmando que lê o arquivo a cada chamada (não congela conteúdo no boot do servidor) — `test_mcp_auth_self_tools.py::TestObterInstrucoesAtualizadas::test_reads_fresh_content_every_call_not_cached`
+- [x] Cabeçalho de versão presente no `.skill` e exposto no retorno da tool
 
 ---
 

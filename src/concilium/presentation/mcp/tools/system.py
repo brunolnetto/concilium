@@ -6,7 +6,8 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from concilium.infrastructure.auth.permission_guard import permission
+from concilium.application.services.system_novelties import check_and_report_novidades
+from concilium.infrastructure.auth.permission_guard import get_current_user_id, permission
 from concilium.presentation.mcp._context import (
     _config_root,
     _projetos_root,
@@ -97,16 +98,24 @@ def register(server: FastMCP) -> None:
         else:
             status_geral = "SAUDAVEL"
 
-        return _wrap_response(
-            {
-                "status": status_geral,
-                "config_root": str(config_dir),
-                "config_root_exists": config_dir.exists(),
-                "projetos_root": str(proj_root),
-                "projetos_root_exists": proj_root.exists(),
-                "contextos": contexto_ids,
-                "total_projetos": n_projetos,
-                "catalogos": catalogos,
-                "storage": storage_health,
-            }
-        )
+        result: dict[str, Any] = {
+            "status": status_geral,
+            "config_root": str(config_dir),
+            "config_root_exists": config_dir.exists(),
+            "projetos_root": str(proj_root),
+            "projetos_root_exists": proj_root.exists(),
+            "contextos": contexto_ids,
+            "total_projetos": n_projetos,
+            "catalogos": catalogos,
+            "storage": storage_health,
+        }
+
+        # ADR-144 D2: novidades de deploy/skill embutidas na resposta — sem
+        # identidade resolvível não há cursor de client_id a comparar.
+        client_id = get_current_user_id()
+        if client_id is not None:
+            novidades = check_and_report_novidades(client_id)
+            if novidades is not None:
+                result["novidades"] = novidades
+
+        return _wrap_response(result)

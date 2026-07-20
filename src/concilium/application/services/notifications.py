@@ -13,39 +13,17 @@ Call sites: `presentation/cli/commands_auth.py`, `presentation/api/routes/auth.p
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
+from concilium.application.services.skill_content import read_skill_content as _read_skill_tutorial
 from concilium.infrastructure.services.notification_service import get_notification_service
 
 logger = logging.getLogger(__name__)
 
 # ── Helpers de conteúdo ──────────────────────────────────────────────────────────
-
-_SKILL_TUTORIAL_PATH = (
-    Path(__file__).resolve().parents[2] / "infrastructure" / "services" / "templates" / "concilium_usage_tutorial.skill"
-)
-
-_SKILL_TUTORIAL_FALLBACK = (
-    b"O tutorial de instalacao nao pode ser carregado neste envio. "
-    b"Contate o administrador do Concilium para receber os passos de instalacao."
-)
-
-
-def _read_skill_tutorial() -> bytes:
-    """Lê o tutorial de instalação/uso enviado como anexo — agnóstico de SO,
-
-    não depende do build do proxy (build-proxy.yml), por isso vive junto com os
-    demais templates de notificação em vez de ser publicado por CI.
-
-    Best-effort: um erro de leitura (ex.: instalação empacotada sem o arquivo)
-    não deve abortar o email de boas-vindas/migração — cai num placeholder.
-    """
-    try:
-        return _SKILL_TUTORIAL_PATH.read_bytes()
-    except OSError:
-        logger.warning("Falha ao ler %s — usando tutorial fallback no anexo.", _SKILL_TUTORIAL_PATH)
-        return _SKILL_TUTORIAL_FALLBACK
+# `_read_skill_tutorial` (leitura do anexo de onboarding) foi promovida para
+# `application/services/skill_content.py` (ADR-144 D6) — reaproveitada também
+# pela tool MCP `obter_instrucoes_atualizadas`, sem duplicar path/fallback.
 
 
 def _build_proxy_download_note(proxy_download_urls: dict[str, str | None] | None) -> str:

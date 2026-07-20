@@ -82,11 +82,13 @@ configuration_app.add_typer(app_temas)
 configuration_app.add_typer(app_jurisdicao)
 
 from concilium.presentation.cli.commands_blob import blob_app  # noqa: E402
+from concilium.presentation.cli.commands_deploy import deploy_app  # noqa: E402
 from concilium.presentation.cli.commands_observability import observability_app  # noqa: E402
 
 ops_app.add_typer(auth_app)
 ops_app.add_typer(observability_app)
 ops_app.add_typer(blob_app)
+ops_app.add_typer(deploy_app)
 
 app.add_typer(catalog_app)
 app.add_typer(project_app)
