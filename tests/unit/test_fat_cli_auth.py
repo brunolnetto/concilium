@@ -243,6 +243,21 @@ class TestAddUser:
         # roles arg is the third positional arg
         assert "admin" in call_args[0][2] or "admin" in str(call_args)
 
+    def test_add_user_multiplas_roles_passadas_ao_store(self):
+        """--role repetido acumula múltiplas roles (ex.: engineer + catalog-manager)."""
+        store = _make_store(add_client_return=_make_client_record(roles=["engineer", "catalog-manager"]))
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(
+                app,
+                ["add-user", "--id", "lais", "--secret", "s", "--role", "engineer", "--role", "catalog-manager"],
+            )
+
+        assert result.exit_code == 0, result.output
+        call_args = store.add_client.call_args
+        roles_arg = call_args[0][2]
+        assert roles_arg == ["engineer", "catalog-manager"]
+
     def test_add_user_notes_passed_to_store(self):
         """Notes are passed through to store.add_client."""
         store = _make_store(add_client_return=_make_client_record(notes="CI service"))

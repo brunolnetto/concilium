@@ -162,17 +162,21 @@ def _print_both_configs(config_json_unix: str, config_json_windows: str) -> None
 # ── Usuários ──────────────────────────────────────────────────────────────────
 
 
-def _do_add_user(client_id: str, secret: str, role: str, notes: str, email: str) -> tuple[ClientRecord, str]:
+def _do_add_user(
+    client_id: str, secret: str, role: str | list[str], notes: str, email: str
+) -> tuple[ClientRecord, str]:
     """Cria 1 usuário. Retorna (record, client_code). Raises ValueError se já existir.
 
     Núcleo compartilhado por add-user (singular) e batch — mantém a geração de
-    client_code e a chamada ao store num único lugar.
+    client_code e a chamada ao store num único lugar. `role` aceita uma string
+    (uso do batch, 1 role por linha de CSV) ou uma lista (add-user, --role repetível).
     """
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     store = get_auth_store()
+    roles = [role] if isinstance(role, str) else list(role)
     client_code = "RCODE-" + secrets.token_hex(16).upper()
-    record = store.add_client(client_id, secret, [role], notes, email=email or "", client_code=client_code)
+    record = store.add_client(client_id, secret, roles, notes, email=email or "", client_code=client_code)
     return record, client_code
 
 
@@ -191,8 +195,11 @@ def _do_update_user(client_id: str, role: str | None, email: str | None, notes: 
 def add_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente/usuário."),
     secret: str | None = typer.Option(None, "--secret", "-s", help="Secret. Gerado automaticamente se omitido."),
-    role: str = typer.Option(
-        "operator", "--role", "-r", help="Role RBAC: operator | engineer | admin | auditor | catalog-manager"
+    role: list[str] = typer.Option(
+        ["operator"],
+        "--role",
+        "-r",
+        help="Role RBAC: operator | engineer | admin | auditor | catalog-manager (repita --role para múltiplas)",
     ),
     notes: str = typer.Option("", "--notes", help="Observações opcionais."),
     email: str | None = typer.Option(None, "--email", "-e", help="Email do usuário para notificações (ADR-123)."),
@@ -205,6 +212,9 @@ def add_user(
       admin          — acesso completo incluindo gestão de usuários
       auditor        — leitura + dados financeiros (sem executar)
       catalog-manager — especialista em catálogo (sem acesso a projetos de clientes)
+
+    Um usuário pode ter mais de uma role — repita --role (ex.: --role engineer
+    --role catalog-manager).
 
     Sempre gera um client_code reutilizável de bootstrap — o mesmo código serve
     para ativar quantos dispositivos o usuário precisar (Claude Desktop em casa,
@@ -240,7 +250,7 @@ def add_user(
         _warn_if_no_download_urls(proxy_download_urls)
         sent = notify_user_created(
             client_id=client_id,
-            role=role,
+            role=", ".join(role),
             email=email,
             config_json_unix=config_json_unix,
             config_json_windows=config_json_windows,
