@@ -78,10 +78,10 @@
   \framesubtitle{\pathnum\;·\; #1}}
 
 % ── Metadados ─────────────────────────────────────────────────────────────────
-\title[Concilium — Visão Técnica]{Concilium\\[4pt]\large Pipeline, Catálogo, Roles \& Workflows}
+\title{Agente Engenheiro de Planejamento Sênior\\[4pt]\large Esteira, Catálogo, Papéis \& Fluxos de trabalho}
 \subtitle{Mendes Lobo Construção}
 \author{Bruno Peixoto}
-\date{17 de julho de 2026}
+\date{\today}
 \institute{Uso interno --- confidencial}
 
 % ── Início ────────────────────────────────────────────────────────────────────
@@ -98,7 +98,7 @@
   % ficam só no agenda.md (referência completa). Ao mudar seções/frames,
   % atualizar este frame, o agenda.md e as \section/\subsection.
   \begin{columns}[T]
-    \column{0.30\textwidth}
+    \column{0.23\textwidth}
     {\small\textbf{\textcolor{mlblue}{1. Preâmbulo}}}\\[4pt]
     {\footnotesize
     1.1. Motivação\\
@@ -106,7 +106,7 @@
     1.3. Modelo de interação e\\
     \hspace*{10pt}arquitetura\\
     1.4. Notação simbólica\\}
-    \column{0.36\textwidth}
+    \column{0.23\textwidth}
     {\small\textbf{\textcolor{mlorange}{2. Esteira de planejamento}}}\\[4pt]
     {\footnotesize
     2.1. Etapas e entregáveis\\
@@ -118,7 +118,7 @@
     2.6. Cenários e cubo analítico\\
     2.7. Ciclos de vida e\\
     \hspace*{10pt}rastreabilidade\\}
-    \column{0.30\textwidth}
+    \column{0.23\textwidth}
     {\small\textbf{\textcolor{mlpurple}{3. Dinâmica de interação}}}\\[4pt]
     {\footnotesize
     3.1. Papéis de acesso e\\
@@ -126,10 +126,11 @@
     3.2. Matriz de responsabilidades\\
     3.3. Workflows por papel\\
     3.4. Hand-offs\\[12pt]}
+    \column{0.2\textwidth}
     {\small\textbf{\textcolor{mlgreen}{4. Encerramento}}}\\[4pt]
     {\footnotesize
     4.1. Síntese e próximos passos\\[12pt]}
-    {\footnotesize\itshape\textcolor{mlgray!40!black}{Apêndice (backup):\\
+    {\footnotesize\itshape\textcolor{mlgray!40!black}{Apêndice:\\
     A.1. Fluxo de entrega\\
     A.2. Ferramentas MCP por grupo}}
   \end{columns}
@@ -146,14 +147,14 @@
   \begin{minipage}{0.72\textwidth}
     \begin{alertblock}{Hoje --- onde dói}
       \begin{itemize}
-        \item Preço unitário \textbf{digitado à mão}: sem trilha do
-          salário ao preço de venda quando o cliente questiona
+        \item Cronograma, equipes e custo em \textbf{silos}: \emph{pool} de
+          recursos sistematicamente inexistnte, mob/demob com risco de duplicação
+        \item Catálogo atualizado \textbf{sem governança}: quem mudou,
+          quando e por quê não ficam registrados
+        \item Cenários de decisão \textbf{não auditáveis}: o que mudou entre
+          o que-if e a decisão final?
         \item Proposta reaberta meses depois \textbf{não reproduz} o
           número --- preços mudaram por baixo
-        \item Cronograma, equipes e custo em \textbf{silos}: pool de
-          recursos invisível, mob/demob pagos em duplicidade
-        \item Preço atualizado \textbf{sem governança}: quem mudou,
-          quando e por quê não ficam registrados
         \item Decisão comercial com \textbf{uma única configuração}:
           sem what-if de frentes, jornada ou pool
       \end{itemize}
@@ -181,9 +182,9 @@
     \begin{block}{Garantias do sistema}
       \begin{itemize}\small
         \item \textbf{Reprodutibilidade}: cada execução é fotografada
-        \item \textbf{Auditabilidade}: trilha completa salário $\to$ preço de venda
+        \item \textbf{Auditabilidade}: trilha completa do catálogo ao preço de venda
         \item \textbf{Isolamento}: catálogo novo não quebra projetos existentes
-        \item \textbf{Otimização}: cronograma minimiza o prazo (RCPSP)
+        \item \textbf{Otimização}: cronograma minimiza o prazo por algoritmo de agendamento
         \item \textbf{Rastreabilidade}: quem mudou o quê, quando e por quê
         \item \textbf{Resiliência}: retorno automático e seguro em falhas
       \end{itemize}
@@ -267,9 +268,6 @@
       MCP e API REST compartilham a mesma imagem e a mesma pipeline.
     \end{block}
     \vspace{4pt}
-    \begin{block}{Entrega contínua (GitHub Actions)}
-      \textit{Detalhe no apêndice A.1}
-    \end{block}
   \end{columns}
 \end{frame}
 
@@ -281,24 +279,23 @@
     \column{0.48\textwidth}
     \begin{block}{\small Catálogo · produção · preço}
       \begin{tabular}{@{}p{1.5cm}p{4.6cm}@{}}
-        $\rho_i$ & produtividade horária [un/h] \\
-        $\rho^{\text{sin}}$ & derivada pelo grafo de sinergia \\
+        $\rho_i$ & produtividade horária de atividade $i$ [un/h] \\
+        $\rho^{\text{sin}}_i$ & derivada pelo grafo de sinergia \\
         $\gamma_i,\gamma_r$ & custo horário (equipe, recurso) \\
-        $p_i^c$ & preço unitário de catálogo \\
-        $p_i^o$ & preço unitário operacional; \\
-        $\tau_i$ & razão op./cat. \\
-        $q_{ij}$ & quantitade quantitativa da atividade i executada na semana j \\
-        $Q_i$ & quantidade quantitativa da atividade i \\
+        $p_i^c, p_i^o$ & preço unitário (catálogo, operacional) \\
+        $\tau_i$ & razão $p_i^o$/$p_i^c$ \\
+        $q_{ij}$ & quantitativo da atividade $i$ executada na semana j \\
+        $Q_i$ & quantidade quantitativa da atividade $i$ \\
       \end{tabular}
     \end{block}
-    \begin{block}{\small Cronograma (RCPSP)}
+    \begin{block}{\small Cronograma}
       \begin{tabular}{@{}p{1.5cm}p{4.6cm}@{}}
-        $\theta_i$ & completion threshold da precedência \\
-        $S_r(t)$ & slots do pool disponíveis \\
+        $\theta_i$ & limiar de completude da precedência \\
+        $S_r$ & slots do pool disponíveis para recurso $r$ \\
         $m_{ij}$ & alocação de equipes \\
-        $h_j$ & horas do mês \\
-        $d_j$ & dias produtivos (físico) \\
-        $\delta_j$ & eficiência de dias \\
+        $h_j$ & regime de trabalho diário [h/dia] \\
+        $d_j, d$ & dias úteis na semana $j$ e regime de trabalho semanal \\
+        $\delta_j$ & eficiência de dias $:= \frac{d_j}{d}$ \\
         $\lambda_j$ & praticabilidade \\
       \end{tabular}
     \end{block}
@@ -312,12 +309,13 @@
       \end{tabular}
     \end{block}
     \begin{block}{\small Ciclo de vida · venda}
-      \begin{tabular}{@{}p{1.5cm}p{4.6cm}@{}}
+      \begin{tabular}{@{}p{2.5cm}p{4.6cm}@{}}
         $c_{\text{mob}},c_{\text{dem}}$ & custos de mob/demob \\
         $\kappa \leq 1$ & fator standby de equipamento \\
         $n_p,\ n_s$ & semanas produtivas; standby \\
-        $C_{\text{prod}} \!\leq\! C_{\text{pool}} \!\leq\! \tilde{C}$ & custos produtivo/pool/total \\
-        $V,\ \beta_q$ & valor de venda; fator BDI \\
+        $C_{\text{prod}} \,\leq\, C_{\text{pool}} \,\leq\, \tilde{C}$ & custos produtivo/pool/total \\
+        $V$ & valor de venda \\
+        $\beta_q$ & fator BDI \\
       \end{tabular}
     \end{block}
     \vspace{2pt}
@@ -444,8 +442,38 @@
   % (4 níveis, lidos de cima para baixo). CPU/Producao/Insumo são as 3
   % entidades/pastas reais de catálogo (cpus, produtividades, insumos);
   % MO/EQ/MAT fecham a cadeia como composicao_padrao_equipe, estrutura
-  % interna de Producao que referencia Insumo (fan-in) --- por isso a seta
-  % "contém" contorna Insumo por fora em vez de atravessá-lo.
+  % interna de Producao que referencia Insumo (fan-in).
+  %
+  % Atualizado 2026-07-21: MO/EQ/MAT são ids soltos (sem FK de banco) --- a
+  % integridade é 100% de aplicação. As 3 referências (funcao_id/equip_id/
+  % insumo_id) hoje derivam de um registro único (catalog_refs.py) e são
+  % checadas por VAL-CPU-INS-06/07/08 dentro do gate obrigatório ADR-035
+  % (assert_catalog_healthy, bloqueia avancar_plano). Antes desta data,
+  % materiais.insumo_id (MAT) não tinha checagem nenhuma nos dois
+  % validadores existentes --- o mesmo buraco em ambos, por falta de fonte
+  % única. Removida também a menção a uma entidade "Funcao" intermediária
+  % entre funcao_id e Insumo: esse modelo existe em código (catalogo.py)
+  % mas é órfão --- nenhum repositório/config o usa; funcao_existe() resolve
+  % funcao_id direto contra Insumo(tipo=MAO_OBRA), sem esse hop.
+  %
+  % Adicionada seta Producao -> Insumo direta para materiais_gerados[]
+  % (ADR-139, lado produtor: MaterialGerado.insumo_id, VAL-PROD-GERACAO-01).
+  % Essa é a ÚNICA referência direta de Producao a Insumo --- diferente de
+  % MO/EQ/MAT, que são fan-in via itens embutidos, não uma referência única.
+  % O campo já aparecia no texto do node Producao mas faltava a seta.
+  %
+  % Removida a seta curva "contém (embutido, sem FK de banco)" de Producao
+  % até a zona MO/EQ/MAT: decisão de simplificação de apresentação (não de
+  % precisão) --- o fato de containment já está dito em texto no label da
+  % zona2 ("dentro de Producao") e reforçado pelas 3 setas FK app convergindo
+  % em Insumo. Era a linha mais complexa do diagrama (contornava Insumo) só
+  % para repetir algo já expresso em palavras.
+  %
+  % Bloco "Como o PU nasce" simplificado para citar só Fonte 1 (bottom-up via
+  % equipe de Producao) --- decisão de apresentação, Fonte 2 (fallback via
+  % composicao_itens, só quando F1 falha) continua real no código
+  % (_resolve_preco_cat_item, NEP-032 D1) e ainda aparece no diagrama via a
+  % seta "FK: composicao_itens.insumo_id (fallback)" perto de CPU.
   \begin{columns}[T]
     \column{0.48\textwidth}
     \resizebox{!}{4.3cm}{%
@@ -489,34 +517,33 @@
       \end{scope}
       % ── espinha vertical: CPU → Producao → Insumo → {MO,EQ,MAT} ──────────
       \draw[rel,mlblue] (cpu) -- node[lbl,right]{producao\_id\_ref --- N CPUs : 1 Producao} (pro);
-      \draw[rel,mlgreen] (pro.east) to[out=-20,in=90] node[lbl,right,pos=0.15]{contém (embutido, sem FK)}
-        ($(zona2.east)+(1.2,0)$) to[out=-90,in=0] (zona2.east);
-      \draw[rel,mlteal] (mo.north) -- node[lbl,left,align=right]{FK: funcao\_id \arr\ Funcao\\\arr\ insumo\_id} (mo.north |- ins.south);
-      \draw[rel,mlteal] (eq.north) -- node[lbl,right]{FK: equip\_id} (ins.south);
-      \draw[rel,mlteal] (mat.north) -- node[lbl,right,align=left]{FK: insumo\_id} (mat.north |- ins.south);
+      \draw[rel,mlteal] (pro.south) -- node[lbl,right,align=left]{FK app: materiais\_gerados[].insumo\_id\\VAL-PROD-GERACAO-01} (ins.north);
+      \draw[rel,mlteal] (mo.north) -- node[lbl,left,align=right]{FK app: funcao\_id \arr\ Insumo(MAO\_OBRA)\\VAL-CPU-INS-06} (mo.north |- ins.south);
+      \draw[rel,mlteal] (eq.north) -- node[lbl,right,align=left]{FK app: equip\_id\\VAL-CPU-INS-07} (ins.south);
+      \draw[rel,mlteal] (mat.north) -- node[lbl,right,align=left]{FK app: insumo\_id\\VAL-CPU-INS-08} (mat.north |- ins.south);
       \draw[rel,mlteal] (cpu.west) -- ++(-0.9,0) |-
         node[lbl,left,pos=0.15,align=right]
-        {FK: composicao\_itens.insumo\_id\\só MAT/diesel (ADR-138)\\$PU_{\text{fixo}} = \Sigma$ coef $\times$ preço}
+        {FK: composicao\_itens.insumo\_id (fallback)\\só MAT/diesel confiável\\$PU_{\text{fixo}} = \Sigma$ coef $\times$ preço}
         (ins.west);
     \end{tikzpicture}}
     \column{0.48\textwidth}
-    \begin{block}{\small Como o PU nasce (pu\_calculator)}
+    \begin{block}{\small Como o PU nasce}
       \scriptsize
-      \centerline{$p_i^c = \frac{\gamma_i}{\rho_i} \;+\; PU_{\text{fixo}}$}
+      \centerline{$p_i^c = \frac{\gamma_i}{\rho_i}$}
       \smallskip
 
-      $\gamma_i$: custo horário da equipe (MO + EQ + diesel + MAT)\\
-      $\rho_i$: valor\_horario da Producao\\
-      $PU_{\text{fixo}}$: $\Sigma$ coef $\times$ preço (insumos volumétricos)
+      $\gamma_i$: custo horário da equipe (MO + EQ + diesel + MAT), bottom-up
+      via composição de Producao\\
+      $\rho_i$: valor horário da produção
     \end{block}
     \vspace{1pt}
     \begin{block}{\small Integridade e resolução de preço}
       \scriptsize
-      \textbf{Funcao (perna MO): funcao\_id \arr\ insumo\_id} --- fonte
-      única de preço; códigos SICRO / SINAPI\\[2pt]
-      \textbf{N CPUs : 1 Producao} --- nunca duplicar\\[2pt]
-      \textbf{Snapshot}: hash(insumos, cpus, produtividades, funcoes)
-      congela a versão exata usada por cada projeto
+      \textbf{funcao\_id / equip\_id / insumo\_id} --- sem FK de banco;
+      checados por VAL-CPU-INS-06/07/08\\[2pt]
+      \textbf{N CPUs : 1 Producao} --- nunca duplica \\[2pt]
+      \textbf{Snapshot}: sem cópia integral --- guarda
+      \texttt{catalogo\_id}; CPUs resolvidas sob demanda
     \end{block}
   \end{columns}
 \end{frame}
@@ -547,8 +574,8 @@
       \begin{itemize}\scriptsize\setlength{\itemsep}{0pt}\setlength{\topsep}{0pt}\setlength{\parskip}{0pt}
         \item $n_r$: qtd/equipe
         \item $\gamma_r$: custo/hora de $r$
-        \item $f_e$: consumo de diesel [L/h]
-        \item $c_{\text{dsl}}$: preço do litro --- API ANP por UF; offline \arr\ R\$~6,50/l
+        \item $f_e$: consumo de combustível [un${}^{\text{comb}}$/h]
+        \item $c_{e}^{\text{comb}}$: preço do litro --- API ANP por UF; offline \arr\ R\$~6,50/l
       \end{itemize}
     \end{block}
     \column{0.4\textwidth}
@@ -574,6 +601,21 @@
   \mtitle{Equipe-Padrão: Grafo de Sinergia e Produtividade Derivada}
   \begin{columns}[T]
     \column{0.55\textwidth}
+    \begin{block}{Capacidade efetiva e gargalo}
+      \[
+        \rho^{\text{sin}} = \min_e\,(k_e \cdot n_e)
+      \]
+      \scriptsize $k_e n_e$: capacidade efetiva do elemento $e$.\\
+      Gargalo = argmin --- não é soma, é o elo mais fraco.
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Tipos de relação}
+      \scriptsize
+      \textbf{acoplamento}: grupo opera no mín.\ dos $k_e n_e$\\
+      \textbf{dimensionamento}: destino satura no $k_e n_e$ da origem\\
+      \textbf{precondição}: só habilita, não define taxa
+    \end{block}
+    \column{0.4\textwidth}
     \begin{block}{Exemplo real (catálogo)}
       \resizebox{\linewidth}{!}{%
       \begin{tikzpicture}[
@@ -590,22 +632,6 @@
       {\scriptsize $\rho^{\text{sin}} = \min(230.4,\, 298.9) = 230.4$
       m\textsuperscript{3}/h --- bate com o declarado (231.87, $<$1\%).}
     \end{block}
-    \vspace{4pt}
-    \begin{block}{Tipos de relação}
-      \scriptsize
-      \textbf{acoplamento}: grupo opera no mín.\ dos $k_e n_e$\\
-      \textbf{dimensionamento}: destino satura no $k_e n_e$ da origem\\
-      \textbf{precondição}: só habilita, não define taxa
-    \end{block}
-    \column{0.4\textwidth}
-    \begin{block}{Capacidade efetiva e gargalo}
-      \[
-        \rho^{\text{sin}} = \min_e\,(k_e \cdot n_e)
-      \]
-      \scriptsize $k_e n_e$: capacidade efetiva do elemento $e$.\\
-      Gargalo = argmin --- não é soma, é o elo mais fraco.
-    \end{block}
-    \vspace{4pt}
   \end{columns}
 \end{frame}
 
@@ -626,23 +652,32 @@
         box/.style={draw=mlblue,fill=mlgray,rounded corners=2pt,
                     minimum width=3.6cm,font=\tiny,align=center,
                     inner sep=3pt},
+        boxr/.style={draw=mlred,fill=mlred!10,rounded corners=2pt,
+                     minimum width=1.9cm,font=\tiny,align=center,
+                     inner sep=2pt},
         arr2/.style={-{Stealth[length=3pt]},mlblue},
       ]
       \node[box] (c1) {Comparar com catálogo atual};
-      \node[box,below=0.15cm of c1] (c2) {Registrar: quem, quando, por quê};
-      \node[box,below=0.15cm of c2] (c3) {Abrir rascunho de catálogo};
-      \node[box,below=0.15cm of c3] (c4) {Revisar divergências e impacto};
-      \node[box,below=0.15cm of c4,fill=mlgreen!15] (c5) {Aprovar publicação (quatro olhos)};
+      \node[box,below=0.15cm of c1] (c2) {Abrir rascunho\\(registra quem/quando/por quê)};
+      \node[box,below=0.15cm of c2] (c3) {Revisar divergências e impacto};
+      \node[box,below=0.15cm of c3,fill=mlgreen!15] (c4) {Aprovar publicação (quatro olhos)};
+      \node[boxr,right=0.3cm of c3,yshift=-0.3cm] (c3b) {Rejeitar rascunho};
       \draw[arr2] (c1) -- (c2);
       \draw[arr2] (c2) -- (c3);
       \draw[arr2] (c3) -- (c4);
-      \draw[arr2] (c4) -- (c5);
+      \draw[arr2,mlred] (c3.east) -- (c3b.west);
     \end{tikzpicture}
+    \begin{minipage}{0.9\linewidth}
+      \raggedright\tiny\itshape Aprovar exige
+      revisão prévia; rejeitado, já aprovado, ou mesmo ator
+      criando/aprovando são bloqueados.
+    \end{minipage}
     \column{0.44\textwidth}
     \begin{alertblock}{\small Regra dos quatro olhos}
-      \scriptsize Quem edita \textbf{não} é quem aprova:\\
-      Engenharia cria e edita o rascunho.\\
-      Suprimentos/TI aprovam a publicação.
+      \scriptsize Quem cria \textbf{não} pode aprovar o próprio rascunho ---
+      checado por ator (\texttt{created\_by} vs.\ aprovador), não só por
+      role.\\
+      Rascunho rejeitado fica bloqueado (não pode ser reaprovado).
     \end{alertblock}
     \vspace{4pt}
     \begin{exampleblock}{\small Isolamento de projetos}
@@ -656,27 +691,31 @@
 
 \subsection{Cronograma: Precedências e quantitativos}
 \begin{frame}
-  \mtitle{Modelagem do Cronograma: Envelope e Precedências}
+  \mtitle{Modelagem do Cronograma: Duração e Precedências}
   \begin{columns}[T]
     \column{0.5\textwidth}
-    \begin{block}{Envelope e duração produtiva}
+    \begin{exampleblock}{\small Cronograma: Otimização}
+      \scriptsize
       \[
-        \text{duration}_i = \left\lceil \frac{Q_i}{\rho_i} \right\rceil
+        \min\,\text{prazo} \;\;\text{s.a.}\;\; \theta,\, S_r(t),\, \lambda_j
       \]
-      \[
-        \text{window}_i \geq \text{duration}_i
-      \]
-      \scriptsize fim$_i \leq$ início$_i$ + window$_i$ --- envelope por atividade
-    \end{block}
+      \emph{Resource-Constrained Project Scheduling Problem (RCPSP)} --- NP-hard
+    \end{exampleblock}
     \vspace{4pt}
-    \begin{block}{Precedência --- completion threshold}
+    \begin{block}{Precedência: limiar de completude}
       \[
-        \text{start}_j \geq \text{start}_i + \lceil \theta_i \cdot \text{duration}_i \rceil
+        \text{start}_j \geq \text{start}_i + \lceil \theta_i \cdot \Delta t_i \rceil
       \]
       \scriptsize $\theta_i \in [0,1]$: fração da duração de $i$ (não do
       acumulado \% de equipes). $\theta=1$: precedência completa.
     \end{block}
     \column{0.44\textwidth}
+    \begin{block}{Envelope e duração produtiva}
+      \[
+        \Delta t_i = \left\lceil \frac{Q_i}{\rho_i} \right\rceil
+      \]
+    \end{block}
+    \vspace{4pt}
     \begin{block}{Ramp semanal e mob/demob}
       \[
         m_{ij} = \text{round}(m_i^{\text{pico}} \cdot \text{ramp}_{ij})
@@ -691,14 +730,6 @@
         \item {[M]/[D]}: início/fim de cadeia de slots
       \end{itemize}
     \end{block}
-    \vspace{4pt}
-    \begin{exampleblock}{\small Otimização: RCPSP}
-      \scriptsize
-      \[
-        \min\,\text{prazo} \;\;\text{s.a.}\;\; \theta,\, S_r(t),\, \lambda_j
-      \]
-      Resource-Constrained Project Scheduling Problem (RCPSP) --- NP-hard
-    \end{exampleblock}
   \end{columns}
 \end{frame}
 
@@ -727,14 +758,7 @@
     \end{tikzpicture}}\\[6pt]
     {\scriptsize\itshape Pool perpétuo --- persiste entre atividades da
     cadeia, no escopo do projeto. Slots só entram via desmobilização.}
-    \vspace{4pt}
-    \begin{block}{$S_r(t)$: slots do tipo $r$ disponíveis}
-      \[
-        S_r \mathrel{+}= n_r \cdot m_i \;\text{[D]} \qquad
-        S_r \mathrel{-}= n_r \cdot m_j \;\text{[M]}
-      \]
-    \end{block}
-    \column{0.4\textwidth}
+      \column{0.4\textwidth}
     \begin{alertblock}{Sem pool}
       \begin{itemize}\scriptsize
         \item 1 mob+demob por atividade
@@ -865,22 +889,8 @@
       hora, simétrico ao que consome ($g$ $\times$ $u$); a física fica
       no catálogo, o pareamento frente\,\arr\,estoque é dado de projeto.
     \end{block}
-    \vspace{4pt}
-    \begin{exampleblock}{\small Cadeias fechadas nos 2 catálogos}
-      \scriptsize corte \arr\ pilha \arr\ aterro (solo 1ª/2ª/3ª cat.)\\
-      usina \arr\ estoque \arr\ pavimentação (BGTC, CBUQ)
-    \end{exampleblock}
     \column{0.44\textwidth}
-    \begin{block}{Preço concluído, não cotado}
-      \[
-        p^c = \frac{\gamma_i}{\rho^{\text{sin}}}
-      \]
-      \scriptsize mesma fórmula do catálogo (Producao da usina) — mas
-      $\rho^{\text{sin}}$ vem \emph{derivada} do grafo de sinergia
-      (gargalo da usina), não declarada à mão.
-    \end{block}
-    \vspace{4pt}
-    \begin{block}{Efeito real (mendeslobo)}
+    \begin{block}{Efeito real}
       \scriptsize BGTC: 92{,}50 \arr\ \textbf{245{,}63 R\$/m³}\\
       CBUQ: 385 \arr\ \textbf{466{,}30 R\$/t}\\
       \tiny cotações da empresa; referência SICRO 202604 registrada na
@@ -904,7 +914,7 @@
     \begin{block}{Custo horário e eficiência de planejamento}
       \footnotesize
       $\displaystyle\gamma_i = \sum_{r \in R_i} n_r \gamma_r
-      \quad \eta_{\text{plan},j} = \lambda_j \cdot \delta_j$
+      \quad \eta_j = \lambda_j \cdot \delta_j$
       \vspace{1pt}
 
       \scriptsize Decomposto: MO, EQ, combustível, material.
