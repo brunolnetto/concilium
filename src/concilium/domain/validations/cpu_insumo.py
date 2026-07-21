@@ -3,6 +3,7 @@
 from typing import Any
 
 from concilium.domain.models.canonical import ValidacaoItem
+from concilium.domain.validations.catalog_refs import REF_EQUIPAMENTOS, REF_FUNCOES, REF_MATERIAIS, ids_faltantes
 
 CATEGORIA_TIPO_MAPA: dict[str, list[str]] = {
     "EQUIPAMENTO": ["EQUIPAMENTO"],
@@ -214,12 +215,8 @@ class ValidadorCPUInsumo:
         return equipe or {}
 
     def validar_funcoes_existem(self, cpu: dict[str, Any]) -> ValidacaoItem:
-        erros: list[str] = []
         equipe = self._obter_equipe(cpu)
-        for funcao in equipe.get("funcoes", []):
-            funcao_id = funcao.get("funcao_id")
-            if not self.repo.funcao_existe(funcao_id):
-                erros.append(funcao_id)
+        erros = ids_faltantes(equipe, REF_FUNCOES, self.repo.funcao_existe)
 
         if erros:
             return ValidacaoItem(
@@ -230,12 +227,8 @@ class ValidadorCPUInsumo:
         return ValidacaoItem(codigo="VAL-CPU-INS-06", status="OK")
 
     def validar_equipamentos_existem(self, cpu: dict[str, Any]) -> ValidacaoItem:
-        erros: list[str] = []
         equipe = self._obter_equipe(cpu)
-        for equipamento in equipe.get("equipamentos", []):
-            equip_id = equipamento.get("equip_id")
-            if not self.repo.equipamento_existe(equip_id):
-                erros.append(equip_id)
+        erros = ids_faltantes(equipe, REF_EQUIPAMENTOS, self.repo.equipamento_existe)
 
         if erros:
             return ValidacaoItem(
@@ -244,6 +237,23 @@ class ValidadorCPUInsumo:
                 mensagem=(f"Equipamentos não encontrados no catálogo: {', '.join(sorted(set(erros)))}"),
             )
         return ValidacaoItem(codigo="VAL-CPU-INS-07", status="OK")
+
+    def validar_materiais_existem(self, cpu: dict[str, Any]) -> ValidacaoItem:
+        """VAL-CPU-INS-08: composicao_padrao_equipe.materiais[].insumo_id (ADR-030 D2,
+        consumo) deve existir no catálogo. Simétrico a VAL-PROD-GERACAO-01
+        (materiais_gerados, ADR-139) — antes deste registro, o lado consumido não
+        tinha checagem em nenhum dos dois validadores de referência do catálogo.
+        """
+        equipe = self._obter_equipe(cpu)
+        erros = ids_faltantes(equipe, REF_MATERIAIS, self.repo.insumo_existe)
+
+        if erros:
+            return ValidacaoItem(
+                codigo="VAL-CPU-INS-08",
+                status="ERRO",
+                mensagem=(f"Materiais não encontrados no catálogo: {', '.join(sorted(set(erros)))}"),
+            )
+        return ValidacaoItem(codigo="VAL-CPU-INS-08", status="OK")
 
     def validar_materiais_gerados(self, cpu: dict[str, Any]) -> ValidacaoItem:
         """VAL-PROD-GERACAO-01 (ADR-139 D3): cada `Producao.materiais_gerados[].insumo_id`
@@ -446,6 +456,7 @@ class ValidadorCPUInsumo:
 
         resultados.append(self.validar_funcoes_existem(cpu))
         resultados.append(self.validar_equipamentos_existem(cpu))
+        resultados.append(self.validar_materiais_existem(cpu))
         resultados.append(self.validar_materiais_gerados(cpu))
         resultados.append(self.validar_producao_existe(cpu))
         resultados.append(self.validar_encoding(cpu))

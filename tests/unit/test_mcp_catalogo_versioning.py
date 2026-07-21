@@ -336,6 +336,31 @@ class TestCatalogLifecycleADR120:
         assert result["rascunho_id"] == "v2"
         assert "divergencias" in result
 
+    def test_listar_divergencias_rascunho_marca_revisado(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_root = tmp_path / "config"
+        versions_dir = config_root / "contextos" / "ctx-1" / "versions"
+        versions_dir.mkdir(parents=True)
+        rascunho_file = versions_dir / "v2.json"
+        rascunho_file.write_text('{"foo": "bar"}', encoding="utf-8")
+        version_svc = MagicMock()
+        version_svc.current_version.return_value = "v1"
+        version_svc.compare.return_value = {"modificados": {}}
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch("concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=config_root)),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="eng-1"),
+        ):
+            tools["listar_divergencias_rascunho"](contexto_id="ctx-1", rascunho_id="v2")
+        import json as _json
+
+        data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
+        assert data["_revisado"] is True
+        assert data["_revisado_por"] == "eng-1"
+
     def test_listar_divergencias_rascunho_excecao_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
@@ -369,6 +394,30 @@ class TestCatalogLifecycleADR120:
             result = tools["consultar_impacto_reajuste"](contexto_id="ctx-1", rascunho_id="v2")
         assert result["n_insumos_afetados"] == 2
         assert set(result["insumos_modificados"]) == {"INS-1", "INS-2"}
+
+    def test_consultar_impacto_reajuste_marca_revisado(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_root = tmp_path / "config"
+        versions_dir = config_root / "contextos" / "ctx-1" / "versions"
+        versions_dir.mkdir(parents=True)
+        rascunho_file = versions_dir / "v2.json"
+        rascunho_file.write_text('{"foo": "bar"}', encoding="utf-8")
+        version_svc = MagicMock()
+        version_svc.current_version.return_value = "v1"
+        version_svc.compare.return_value = {"modificados": {}}
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch("concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=config_root)),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="eng-1"),
+        ):
+            tools["consultar_impacto_reajuste"](contexto_id="ctx-1", rascunho_id="v2")
+        import json as _json
+
+        data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
+        assert data["_revisado"] is True
 
     def test_consultar_impacto_reajuste_excecao_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
@@ -406,7 +455,7 @@ class TestCatalogLifecycleADR120:
     def test_aprovar_merge_catalogo_entity_dir_inexistente_ainda_retorna_sucesso(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
-        version_svc.resolve.return_value = {"version": "v2"}
+        version_svc.resolve.return_value = {"version": "v2", "_revisado": True}
         version_svc.current_version.return_value = "v1"
         with (
             patch(
@@ -427,7 +476,7 @@ class TestCatalogLifecycleADR120:
         entity_dir = config_root / "contextos" / "ctx-1"
         entity_dir.mkdir(parents=True)
         version_svc = MagicMock()
-        version_svc.resolve.return_value = {"version": "v2"}
+        version_svc.resolve.return_value = {"version": "v2", "_revisado": True}
         version_svc.current_version.return_value = "v1"
         with (
             patch(
@@ -449,7 +498,7 @@ class TestCatalogLifecycleADR120:
         meta_file = entity_dir / "ctx-1.json"
         meta_file.write_text('{"current_version": "v1"}', encoding="utf-8")
         version_svc = MagicMock()
-        version_svc.resolve.return_value = {"version": "v2"}
+        version_svc.resolve.return_value = {"version": "v2", "_revisado": True}
         version_svc.current_version.return_value = "v1"
         with (
             patch(
@@ -467,6 +516,110 @@ class TestCatalogLifecycleADR120:
         import json as _json
 
         assert _json.loads(meta_file.read_text(encoding="utf-8"))["current_version"] == "v2"
+
+    def test_aprovar_merge_catalogo_marca_aprovado_no_arquivo(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_root = tmp_path / "config"
+        entity_dir = config_root / "contextos" / "ctx-1"
+        versions_dir = entity_dir / "versions"
+        versions_dir.mkdir(parents=True)
+        rascunho_file = versions_dir / "v2.json"
+        rascunho_file.write_text('{"foo": "bar"}', encoding="utf-8")
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = {"version": "v2", "_revisado": True}
+        version_svc.current_version.return_value = "v1"
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch("concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=config_root)),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+        assert result["status"] == "APROVADO"
+        import json as _json
+
+        data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
+        assert data["_aprovado"] is True
+        assert data["_aprovado_por"] == "mgr-1"
+
+    def test_aprovar_merge_catalogo_ainda_nao_revisado_bloqueia(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = {"version": "v2"}
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+        assert "erro" in result
+        assert "revisado" in result["erro"]
+
+    def test_aprovar_merge_catalogo_rascunho_rejeitado_nao_pode_ser_promovido(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = {
+            "version": "v2",
+            "created_by": "eng-1",
+            "_rejeitado": True,
+            "_motivo_rejeicao": "preço fora do range sensato",
+        }
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+        assert "erro" in result
+        assert "rejeitado" in result["erro"]
+
+    def test_aprovar_merge_catalogo_mesmo_ator_viola_quatro_olhos(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = {"version": "v2", "created_by": "mgr-1", "_revisado": True}
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+        assert "erro" in result
+        assert "quatro olhos" in result["erro"]
+
+    def test_aprovar_merge_catalogo_atores_diferentes_permite_aprovacao(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = {"version": "v2", "created_by": "eng-1", "_revisado": True}
+        version_svc.current_version.return_value = "v1"
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+        assert result["status"] == "APROVADO"
 
     def test_aprovar_merge_catalogo_excecao_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
@@ -546,6 +699,42 @@ class TestCatalogLifecycleADR120:
         data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
         assert data["_rejeitado"] is True
         assert data["_motivo_rejeicao"] == "ruim"
+
+    def test_rejeitar_rascunho_catalogo_ja_aprovado_bloqueia(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = {"version": "v2", "_aprovado": True, "_aprovado_por": "mgr-1"}
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-2"),
+        ):
+            result = tools["rejeitar_rascunho_catalogo"](contexto_id="ctx-1", rascunho_id="v2", motivo="tarde demais")
+        assert "erro" in result
+        assert "aprovado" in result["erro"]
+
+    def test_rejeitar_rascunho_catalogo_ja_rejeitado_bloqueia(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = {"version": "v2", "_rejeitado": True, "_motivo_rejeicao": "primeira vez"}
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+        ):
+            result = tools["rejeitar_rascunho_catalogo"](contexto_id="ctx-1", rascunho_id="v2", motivo="de novo")
+        assert "erro" in result
+        assert "rejeitado" in result["erro"]
 
     def test_rejeitar_rascunho_catalogo_excecao_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)

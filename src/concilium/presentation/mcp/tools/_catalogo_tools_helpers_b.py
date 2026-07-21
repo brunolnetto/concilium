@@ -37,6 +37,22 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
 
 
+def _resolve_catalogo_id(config_dir: Path, contexto_id: str) -> str:
+    """Resolve contexto_id -> catalogo_id (podem divergir, ex.: mendeslobo-rfi -> rfi-r02).
+
+    Fallback: contexto_id, quando o contexto não existe ou não tem catalogo_id
+    (contextos antigos onde catalogo_id == id continuam funcionando).
+    """
+    contexto_file = config_dir / "contextos" / f"{contexto_id}.json"
+    if not contexto_file.exists():
+        return contexto_id
+    try:
+        data = json.loads(contexto_file.read_text(encoding="utf-8"))
+    except Exception:
+        return contexto_id
+    return str(data.get("catalogo_id") or contexto_id)
+
+
 # _catalog_root defined below (avoids circular import)
 
 
@@ -59,7 +75,7 @@ def _impl_tendencia_precos_catalogo(
     from concilium.application.catalog.price_trend import calcular_tendencia
 
     config_dir = _config_root()
-    bundle_path = config_dir / "catalogos" / contexto_id / ".catalog_bundle.json"
+    bundle_path = _catalog_root(config_dir, _resolve_catalogo_id(config_dir, contexto_id)) / ".catalog_bundle.json"
     if not bundle_path.exists():
         return {"erro": f"Bundle não encontrado: {bundle_path}"}
 
@@ -210,7 +226,7 @@ def _impl_comparar_rfi_catalogo(
     spec.loader.exec_module(raw_mod)
     mod = cast("_MergeRfiModule", raw_mod)
 
-    bundle_path = config_dir / "catalogos" / contexto_id / ".catalog_bundle.json"
+    bundle_path = _catalog_root(config_dir, _resolve_catalogo_id(config_dir, contexto_id)) / ".catalog_bundle.json"
     if not bundle_path.exists():
         return {"erro": f"Bundle não encontrado: {bundle_path}"}
 
@@ -260,7 +276,7 @@ def _impl_calcular_pu_producao(
     from concilium.application.catalog.pu_calculator import ParametrosCalculo, calcular_pu
 
     config_dir = _config_root()
-    bundle_path = config_dir / "catalogos" / contexto_id / ".catalog_bundle.json"
+    bundle_path = _catalog_root(config_dir, _resolve_catalogo_id(config_dir, contexto_id)) / ".catalog_bundle.json"
     if not bundle_path.exists():
         return {"erro": f"Bundle não encontrado: {bundle_path}"}
 
@@ -298,7 +314,7 @@ def _impl_avaliar_plausibilidade_catalogo(
     from concilium.application.catalog.plausibility_checker import verificar_plausibilidade
 
     config_dir = _config_root()
-    bundle_path = config_dir / "catalogos" / contexto_id / ".catalog_bundle.json"
+    bundle_path = _catalog_root(config_dir, _resolve_catalogo_id(config_dir, contexto_id)) / ".catalog_bundle.json"
     if not bundle_path.exists():
         return {"erro": f"Bundle não encontrado: {bundle_path}"}
 
@@ -415,7 +431,7 @@ def _impl_verificar_integridade_catalogo(
     from concilium.application.catalog.pu_calculator import ParametrosCalculo, calcular_catalogo
 
     config_dir = _config_root()
-    bundle_path = config_dir / "catalogos" / contexto_id / ".catalog_bundle.json"
+    bundle_path = _catalog_root(config_dir, _resolve_catalogo_id(config_dir, contexto_id)) / ".catalog_bundle.json"
     if not bundle_path.exists():
         return {"erro": f"Bundle não encontrado: {bundle_path}"}
 

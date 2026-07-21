@@ -32,6 +32,20 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
 
 
+def _marcar_rascunho_revisado(config_root: Path, contexto_id: str, rascunho_id: str, revisor: str) -> None:
+    """RASCUNHO -> REVISADO (ADR-120 D5): no-op se o arquivo do rascunho não existir."""
+    import json
+
+    from concilium.application.orchestrators.catalog_draft_lifecycle import marcar_revisado
+
+    rascunho_file = config_root / "contextos" / contexto_id / "versions" / f"{rascunho_id}.json"
+    if not rascunho_file.exists():
+        return
+    data = json.loads(rascunho_file.read_text(encoding="utf-8"))
+    data = marcar_revisado(data, revisor)
+    rascunho_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de catálogo."""
 
@@ -327,11 +341,15 @@ def register(server: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Diff entre rascunho e catálogo ativo (ADR-120 D5).
 
+        Marca o rascunho como revisado (RASCUNHO -> REVISADO) — pré-requisito
+        para aprovar_merge_catalogo.
+
         Args:
             contexto_id: ID do contexto de catálogo.
             rascunho_id: Versão do rascunho (ex: "v3").
         """
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
         from concilium.infrastructure.settings import get_storage
 
         config_root = get_storage().config_root
@@ -339,6 +357,7 @@ def register(server: FastMCP) -> None:
         try:
             current_v = svc.current_version(contexto_id)
             diff = svc.compare(contexto_id, current_v, rascunho_id)
+            _marcar_rascunho_revisado(config_root, contexto_id, rascunho_id, get_current_user_id() or "system")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
         return _wrap_response(
@@ -364,11 +383,15 @@ def register(server: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Impacto financeiro estimado do rascunho em projetos ativos (ADR-120 D5).
 
+        Marca o rascunho como revisado (RASCUNHO -> REVISADO) — pré-requisito
+        para aprovar_merge_catalogo.
+
         Args:
             contexto_id: ID do contexto de catálogo.
             rascunho_id: Versão do rascunho a avaliar.
         """
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
         from concilium.infrastructure.settings import get_storage
 
         config_root = get_storage().config_root
@@ -376,6 +399,7 @@ def register(server: FastMCP) -> None:
         try:
             current_v = svc.current_version(contexto_id)
             diff = svc.compare(contexto_id, current_v, rascunho_id)
+            _marcar_rascunho_revisado(config_root, contexto_id, rascunho_id, get_current_user_id() or "system")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
         # Estimativa de impacto: conta insumos modificados e projetos que os usam
@@ -397,8 +421,10 @@ def register(server: FastMCP) -> None:
         description=(
             "Promove um rascunho de catálogo para a versão ativa (merge). "
             "Operação irreversível — o rascunho passa a ser o catálogo ativo. "
-            "Requer catalog:merge. Princípio dos 4 olhos: quem criou o rascunho "
-            "não deveria aprovar (use roles engineer=criar, catalog-manager=aprovar)."
+            "Requer catalog:merge e que o rascunho já tenha sido revisado (via "
+            "listar_divergencias_rascunho ou consultar_impacto_reajuste). "
+            "Princípio dos 4 olhos: quem criou o rascunho não pode aprová-lo "
+            "(enforced por ator, não só por role)."
         )
     )
     @permission("catalog:merge")
@@ -415,6 +441,9 @@ def register(server: FastMCP) -> None:
             rascunho_id: Versão do rascunho a promover (ex: "v3").
             justificativa: Motivo da aprovação para o audit trail.
         """
+        import json as _json
+
+        from concilium.application.orchestrators.catalog_draft_lifecycle import assert_pode_aprovar
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.auth.permission_guard import (
             _current_roles,
@@ -431,6 +460,7 @@ def register(server: FastMCP) -> None:
             rascunho_data = svc.resolve(contexto_id, rascunho_id)
             if rascunho_data is None:
                 return _wrap_response({"erro": f"Rascunho '{rascunho_id}' não encontrado."})
+            assert_pode_aprovar(rascunho_data, actor)
             versao_anterior = svc.current_version(contexto_id)
             # Promove: atualiza ponteiro "current" para o rascunho
             entity_dir = config_root / "contextos" / contexto_id
@@ -439,11 +469,17 @@ def register(server: FastMCP) -> None:
                 current_file.write_text(rascunho_id, encoding="utf-8")
                 meta_file = entity_dir / f"{contexto_id}.json"
                 if meta_file.exists():
-                    import json as _json
-
                     meta = _json.loads(meta_file.read_text(encoding="utf-8"))
                     meta["current_version"] = rascunho_id
                     meta_file.write_text(_json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+            # Marca o rascunho como aprovado (estado terminal) para que
+            # rejeitar_rascunho_catalogo não possa mais descartá-lo depois.
+            rascunho_file = entity_dir / "versions" / f"{rascunho_id}.json"
+            if rascunho_file.exists():
+                data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
+                data["_aprovado"] = True
+                data["_aprovado_por"] = actor
+                rascunho_file.write_text(_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
         return _wrap_response(
@@ -479,6 +515,7 @@ def register(server: FastMCP) -> None:
             rascunho_id: Versão do rascunho a rejeitar.
             motivo: Justificativa da rejeição para o audit trail.
         """
+        from concilium.application.orchestrators.catalog_draft_lifecycle import assert_pode_rejeitar
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.auth.permission_guard import (
             get_current_user_id,
@@ -492,6 +529,7 @@ def register(server: FastMCP) -> None:
             rascunho_data = svc.resolve(contexto_id, rascunho_id)
             if rascunho_data is None:
                 return _wrap_response({"erro": f"Rascunho '{rascunho_id}' não encontrado."})
+            assert_pode_rejeitar(rascunho_data)
             # Marca como rejeitado via nova versão do rascunho com flag _rejeitado
             versao_ativa = svc.current_version(contexto_id)
             # Sinaliza rejeição no arquivo do rascunho

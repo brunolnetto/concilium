@@ -13,6 +13,7 @@ from concilium.presentation.mcp.tools._catalogo_tools_helpers_b import (
     _impl_comparar_rfi_catalogo,
     _impl_tendencia_precos_catalogo,
     _impl_verificar_integridade_catalogo,
+    _resolve_catalogo_id,
 )
 
 MODULE = "concilium.presentation.mcp.tools._catalogo_tools_helpers_b"
@@ -65,6 +66,39 @@ class TestCatalogRoot:
     def test_different_catalog_id(self, tmp_path):
         result = _catalog_root(tmp_path, "outro-contexto")
         assert result == tmp_path / "catalogos" / "outro-contexto"
+
+
+class TestResolveCatalogoId:
+    def test_resolve_quando_catalogo_id_diverge(self, tmp_path):
+        contexto_file = tmp_path / "contextos" / "mendeslobo-rfi.json"
+        contexto_file.parent.mkdir(parents=True)
+        contexto_file.write_text(json.dumps({"id": "mendeslobo-rfi", "catalogo_id": "rfi-r02"}), encoding="utf-8")
+
+        assert _resolve_catalogo_id(tmp_path, "mendeslobo-rfi") == "rfi-r02"
+
+    def test_fallback_quando_contexto_id_igual_catalogo_id(self, tmp_path):
+        contexto_file = tmp_path / "contextos" / "mendeslobo.json"
+        contexto_file.parent.mkdir(parents=True)
+        contexto_file.write_text(json.dumps({"id": "mendeslobo", "catalogo_id": "mendeslobo"}), encoding="utf-8")
+
+        assert _resolve_catalogo_id(tmp_path, "mendeslobo") == "mendeslobo"
+
+    def test_fallback_quando_contexto_nao_existe(self, tmp_path):
+        assert _resolve_catalogo_id(tmp_path, "contexto-fantasma") == "contexto-fantasma"
+
+    def test_fallback_quando_json_corrompido(self, tmp_path):
+        contexto_file = tmp_path / "contextos" / "quebrado.json"
+        contexto_file.parent.mkdir(parents=True)
+        contexto_file.write_text("{ nao é json válido", encoding="utf-8")
+
+        assert _resolve_catalogo_id(tmp_path, "quebrado") == "quebrado"
+
+    def test_fallback_quando_contexto_sem_catalogo_id(self, tmp_path):
+        contexto_file = tmp_path / "contextos" / "sem-campo.json"
+        contexto_file.parent.mkdir(parents=True)
+        contexto_file.write_text(json.dumps({"id": "sem-campo"}), encoding="utf-8")
+
+        assert _resolve_catalogo_id(tmp_path, "sem-campo") == "sem-campo"
 
 
 # ---------------------------------------------------------------------------
@@ -634,6 +668,32 @@ class TestImplAvaliarPlausibilidadeCatalogo:
         call_args = mock_vp.call_args
         insumos_arg, producoes_arg, cpus_arg = call_args[0]
         assert producoes_arg == [{"id": "PROD-001"}]
+
+    def test_contexto_id_diferente_de_catalogo_id_resolve_bundle_correto(self, tmp_path):
+        """Regressão: contexto 'mendeslobo-rfi' aponta pra catalogo_id 'rfi-r02' —
+        o bundle vive em catalogos/rfi-r02/, não em catalogos/mendeslobo-rfi/.
+        """
+        config_dir = self._config_path(tmp_path)
+        contexto_file = config_dir / "contextos" / "mendeslobo-rfi.json"
+        contexto_file.parent.mkdir(parents=True)
+        contexto_file.write_text(json.dumps({"id": "mendeslobo-rfi", "catalogo_id": "rfi-r02"}), encoding="utf-8")
+
+        bundle_path = config_dir / "catalogos" / "rfi-r02" / ".catalog_bundle.json"
+        bundle = _make_bundle(insumos=[{"codigo": "INS-001"}], producoes=[{"id": "PROD-001"}], cpus=[])
+        _write_bundle(bundle_path, bundle)
+
+        fake_resultado = {"ok": True, "alertas": []}
+
+        with patch(f"{MODULE}._config_root", return_value=config_dir):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                with patch(
+                    "concilium.application.catalog.plausibility_checker.verificar_plausibilidade",
+                    return_value=fake_resultado,
+                ) as mock_vp:
+                    result = _impl_avaliar_plausibilidade_catalogo("mendeslobo-rfi")
+
+        mock_vp.assert_called_once()
+        assert result == fake_resultado
 
 
 # ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ from concilium.domain.constants import (
 )
 from concilium.domain.constants import HORAS_MES_CLT as HORAS_MES_PADRAO
 from concilium.domain.constants import VALIDADE_PRECO_DIAS as VALIDADE_DIAS
+from concilium.domain.validations.catalog_refs import REFERENCIAS_EQUIPE, ids_faltantes
 
 
 @dataclass
@@ -270,29 +271,23 @@ def _pc_eq_locacao(eq: list[dict]) -> list[Anomalia]:
 
 
 def _pc_check_equipe_refs(pid: str, equipe: dict, insumo_index: dict) -> list[Anomalia]:
+    """Referências soltas (sem FK) de composicao_padrao_equipe para o catálogo.
+
+    Deriva de REFERENCIAS_EQUIPE (fonte única compartilhada com
+    ValidadorCPUInsumo — ver catalog_refs.py) para que uma referência nova
+    (ou hoje esquecida, como materiais[].insumo_id) seja coberta nos dois
+    validadores ao mesmo tempo, em vez de exigir edição duplicada.
+    """
     result = []
-    for func in equipe.get("funcoes", []) or []:
-        fid = func.get("funcao_id", "")
-        if fid and fid not in insumo_index:
+    for ref in REFERENCIAS_EQUIPE:
+        for valor in ids_faltantes(equipe, ref, lambda cod: cod in insumo_index):
             result.append(
                 Anomalia(
                     codigo=pid,
                     tipo="INCOMPLETO",
                     severidade="ERRO",
-                    mensagem=f"funcao_id '{fid}' não existe no catálogo",
-                    detalhe={"funcao_id": fid},
-                )
-            )
-    for equip in equipe.get("equipamentos", []) or []:
-        eid = equip.get("equip_id", "")
-        if eid and eid not in insumo_index:
-            result.append(
-                Anomalia(
-                    codigo=pid,
-                    tipo="INCOMPLETO",
-                    severidade="ERRO",
-                    mensagem=f"equip_id '{eid}' não existe no catálogo",
-                    detalhe={"equip_id": eid},
+                    mensagem=f"{ref.campo_id} '{valor}' não existe no catálogo",
+                    detalhe={ref.campo_id: valor},
                 )
             )
     return result
