@@ -129,11 +129,12 @@ class TestShowStatus:
 
 
 class TestShowReport:
-    def _make_agg(self, sli=None, rates=None, alertas=None):
+    def _make_agg(self, sli=None, rates=None, alertas=None, tool_usage=None):
         agg = MagicMock()
         agg.build_sli_diario.return_value = sli if sli is not None else []
         agg.build_fallback_rate_por_skill.return_value = rates if rates is not None else []
         agg.build_alertas_ativos.return_value = alertas if alertas is not None else []
+        agg.build_tool_usage_diario.return_value = tool_usage if tool_usage is not None else []
         return agg
 
     def test_empty_data_else_branches(self):
@@ -152,6 +153,25 @@ class TestShowReport:
         assert "SLI: sem dados de traces" in result.output
         assert "Fallback rate: sem dados de logs" in result.output
         assert "Nenhum alerta ativo" in result.output
+        assert "Uso de tools: sem dados de metrics" in result.output
+
+    def test_non_empty_tool_usage(self):
+        """Non-empty tool_usage → table is printed with expected columns."""
+        storage = MagicMock()
+        usage_row = {"date": "2026-07-21", "tool_name": "listar_projetos", "status": "OK", "n": 5.0}
+        agg = self._make_agg(tool_usage=[usage_row])
+        with (
+            patch(_STORAGE_PATH, return_value=storage),
+            patch(
+                "concilium.infrastructure.observability.gold_aggregator.GoldAggregator",
+                return_value=agg,
+            ),
+        ):
+            result = runner.invoke(observability_app, ["report"])
+        assert result.exit_code == 0
+        assert "listar_projetos" in result.output
+        assert "Uso de Tools MCP" in result.output
+        assert "Uso de tools: sem dados" not in result.output
 
     def test_non_empty_sli_and_rates(self):
         """Non-empty sli/rates → tables are printed."""

@@ -1,9 +1,12 @@
 """Testes da projeção dimensional em normalize_metric_record (ADR-146, gap 2 do ERD Gold).
 
-As chaves canônicas ("skill", "tool", "project.id") são promovidas a colunas de
-primeira classe (skill_id/tool_name/project_id) — o que torna DIM_SKILL/DIM_TOOL/
-DIM_PROJECT alcançáveis a partir de FACT_METRIC_DATAPOINT sem parsear `labels`.
-Funciona retroativamente: essas chaves são o que a instrumentação sempre emitiu.
+As chaves canônicas ("skill", "tool", "project.id", "status") são promovidas a
+colunas de primeira classe (skill_id/tool_name/project_id/status) — o que torna
+DIM_SKILL/DIM_TOOL/DIM_PROJECT/DIM_STATUS alcançáveis a partir de
+FACT_METRIC_DATAPOINT sem parsear `labels`. Funciona retroativamente: essas
+chaves são o que a instrumentação sempre emitiu. "status" foi promovida junto
+com o relatório build_tool_usage_diario (ADR-147) — METRIC_LABEL_STATUS já
+existia desde a ADR-146, mas ficava sem projeção correspondente até então.
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ def _bronze_metric(labels=None):
 
 
 class TestMetricDimensionalProjection:
-    def test_promotes_skill_tool_and_project_from_canonical_keys(self):
+    def test_promotes_skill_tool_project_and_status_from_canonical_keys(self):
         result = normalize_metric_record(
             _bronze_metric(labels={"skill": "05", "tool": "executar_pipeline", "project.id": "AGIS", "status": "OK"})
         )
@@ -30,6 +33,7 @@ class TestMetricDimensionalProjection:
         assert result["skill_id"] == "05"
         assert result["tool_name"] == "executar_pipeline"
         assert result["project_id"] == "AGIS"
+        assert result["status"] == "OK"
 
     def test_absent_labels_project_to_none(self):
         result = normalize_metric_record(_bronze_metric(labels={"route": "/auth/token"}))
@@ -37,6 +41,7 @@ class TestMetricDimensionalProjection:
         assert result["skill_id"] is None
         assert result["tool_name"] is None
         assert result["project_id"] is None
+        assert result["status"] is None
 
     def test_labels_dict_preserved_intact_with_promoted_and_extra_keys(self):
         """A promoção é aditiva — `labels` continua íntegro para fidelidade/debug."""
@@ -56,3 +61,4 @@ class TestMetricDimensionalProjection:
         assert result["skill_id"] is None
         assert result["tool_name"] is None
         assert result["project_id"] is None
+        assert result["status"] is None

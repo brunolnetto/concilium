@@ -88,3 +88,28 @@ def test_adr041_scd2_update_closes_previous_period() -> None:
     assert historico[-1]["data_inicio_vigencia"] == "2026-05-01"
     assert historico[-1]["data_fim_vigencia"] is None
     assert insumo["preco_unitario"] == pytest.approx(25.0)
+
+
+def test_adr145_atualizar_preco_records_nota_append_only() -> None:
+    """ADR-145 D4: `nota` fica no próprio registro histórico (append-only por
+    construção), sem sobrescrever um campo único a cada chamada."""
+    catalogo = {
+        "insumos": [
+            {
+                "codigo": "INS-003",
+                "preco_unitario": 10.0,
+                "historico_precos": [
+                    {"preco_unitario": 10.0, "data_inicio_vigencia": "2026-01-01", "data_fim_vigencia": None}
+                ],
+            }
+        ]
+    }
+    repo = RepositorioInsumo(catalogo)
+
+    repo.atualizar_preco("INS-003", 12.0, date(2026, 3, 1), fonte="eng@co.com", nota="reajuste INCC")
+    repo.atualizar_preco("INS-003", 14.0, date(2026, 6, 1), fonte="eng@co.com", nota="reajuste cambial")
+
+    historico = repo.obter_insumo("INS-003")["historico_precos"]
+    assert historico[0].get("nota") is None  # registro original, anterior à mudança
+    assert historico[1]["nota"] == "reajuste INCC"
+    assert historico[2]["nota"] == "reajuste cambial"

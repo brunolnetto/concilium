@@ -378,10 +378,19 @@ class TestCatalogLifecycleADR120:
         assert "erro" in result
 
     def test_consultar_impacto_reajuste_sucesso(self, monkeypatch, tmp_path):
+        # ADR-145 P11: n_insumos_afetados vem dos deltas do rascunho (_deltas),
+        # não mais de uma chave "modificados" que ContextoVersionService.compare()
+        # nunca produziu.
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
         version_svc.current_version.return_value = "v1"
-        version_svc.compare.return_value = {"modificados": {"INS-1": {}, "INS-2": {}}}
+        version_svc.resolve.return_value = {
+            "_deltas": [
+                {"tipo": "preco_insumo", "insumo_id": "INS-1"},
+                {"tipo": "preco_insumo", "insumo_id": "INS-2"},
+                {"tipo": "variante_producao", "producao_id": "PROD-1"},  # não conta como insumo
+            ]
+        }
         with (
             patch(
                 "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
@@ -422,7 +431,7 @@ class TestCatalogLifecycleADR120:
     def test_consultar_impacto_reajuste_excecao_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
-        version_svc.compare.side_effect = ValueError("versão inexistente")
+        version_svc.resolve.side_effect = ValueError("versão inexistente")
         with (
             patch(
                 "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",

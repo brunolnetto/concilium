@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
+from concilium.application.orchestrators.catalog_draft_lifecycle import (
+    ESTADO_APROVADO,
+    ESTADO_REJEITADO,
+    estado_rascunho,
+)
 from concilium.application.orchestrators.catalog_governance import (
     CatalogGovernanceError,
     collect_catalog_critical_errors,
@@ -44,9 +49,7 @@ def _impl_listar_contextos() -> dict[str, Any]:
     return _wrap_response({"contextos": contextos})
 
 
-def _find_eap_sugerida(
-    catalogo: dict[str, Any], tipo_obra: str, cpus_lookup: dict[Any, dict[str, Any]]
-) -> list | None:
+def _find_eap_sugerida(catalogo: dict[str, Any], tipo_obra: str, cpus_lookup: dict[Any, dict[str, Any]]) -> list | None:
     """Encontra a EAP sugerida (servicos_sugeridos) do template cujo tipo_obra corresponde (ADR-014).
 
     Retorna None (não []) quando nenhum template corresponde — distingue "sem
@@ -188,35 +191,90 @@ def _save_preco_insumo_override_projeto(
         return {"erro": f"Erro ao salvar override de projeto: {e}"}
 
 
-def _save_preco_insumo_master(
-    insumo_file: Path,
+def _rascunho_file_path(config_root: Path, contexto_id: str, rascunho_id: str) -> Path:
+    return config_root / "contextos" / contexto_id / "versions" / f"{rascunho_id}.json"
+
+
+def _append_delta_to_rascunho(
+    config_root: Path,
+    contexto_id: str,
+    rascunho_id: str,
+    delta: dict[str, Any],
+) -> str | None:
+    """Acrescenta um delta ao rascunho (ADR-145 D1). Retorna mensagem de erro, ou None em sucesso.
+
+    O catálogo mestre só é tocado no commit (aprovar_merge_catalogo, D2) — esta
+    função nunca escreve em `config/catalogos/`, apenas na versão do rascunho.
+    """
+    rascunho_file = _rascunho_file_path(config_root, contexto_id, rascunho_id)
+    if not rascunho_file.exists():
+        return f"Rascunho '{rascunho_id}' não encontrado. Use criar_rascunho_catalogo primeiro."
+
+    try:
+        data = json.loads(rascunho_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        return f"Falha ao ler rascunho '{rascunho_id}': {e}"
+
+    estado = estado_rascunho(data)
+    if estado in (ESTADO_APROVADO, ESTADO_REJEITADO):
+        return f"Rascunho '{rascunho_id}' está em estado terminal ({estado}) e não aceita novas edições."
+
+    deltas: list[dict[str, Any]] = data.setdefault("_deltas", [])
+    deltas.append(delta)
+
+    try:
+        rascunho_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        return f"Falha ao gravar delta no rascunho: {e}"
+    return None
+
+
+def _apply_preco_insumo_delta(
+    catalog_root: Path,
     insumo_id: str,
     novo_preco: float,
     jurisdicao_id: str | None,
     nota: str | None,
-) -> dict[str, Any]:
-    """Persiste o novo preço direto no catálogo mestre (Master Layer)."""
-    try:
-        data = json.loads(insumo_file.read_text(encoding="utf-8"))
-        if jurisdicao_id:
-            if "regionalizacao" not in data:
-                data["regionalizacao"] = {}
-            data["regionalizacao"][jurisdicao_id] = {"preco": novo_preco, "nota": nota}
-        else:
-            data["preco_unitario"] = novo_preco
-            if nota:
-                data["nota_calibracao"] = nota
+    autor: str,
+    data_vigencia: date,
+) -> None:
+    """Aplica um delta de preço ao catálogo mestre no momento do merge (ADR-145 D2/D4).
 
-        insumo_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        return _wrap_response({"status": "SUCESSO", "layer": "MASTER", "insumo_id": insumo_id})
-    except Exception as e:
-        return {"erro": f"Falha ao persistir no mestre: {e}"}
+    Preço base: via RepositorioInsumo.atualizar_preco() — SCD Type 2 real (ADR-041),
+    com `nota` gravada no próprio registro histórico (append-only).
+    Preço regional: `regionalizacao[jurisdicao_id]` ganha um histórico append-only
+    próprio, análogo ao SCD2 do preço base (ADR-145 D4).
+    """
+    from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+    insumo_file = validate_and_resolve_insumo_file(catalog_root, insumo_id, novo_preco)
+    insumo_data = json.loads(insumo_file.read_text(encoding="utf-8"))
+
+    if jurisdicao_id:
+        regionalizacao = insumo_data.setdefault("regionalizacao", {})
+        bloco = regionalizacao.setdefault(jurisdicao_id, {})
+        historico = bloco.setdefault("historico", [])
+        historico.append(
+            {
+                "preco": novo_preco,
+                "data_inicio_vigencia": data_vigencia.isoformat(),
+                "nota": nota,
+                "autor": autor,
+            }
+        )
+        bloco["preco"] = novo_preco
+    else:
+        repo = RepositorioInsumo({"insumos": [insumo_data]})
+        repo.atualizar_preco(insumo_id, novo_preco, data_vigencia, fonte=autor, nota=nota)
+
+    insumo_file.write_text(json.dumps(insumo_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _impl_atualizar_preco_insumo(
     contexto_id: str,
     insumo_id: str,
     novo_preco: float,
+    rascunho_id: str | None = None,
     projeto_id: str | None = None,
     jurisdicao_id: str | None = None,
     nota: str | None = None,
@@ -226,10 +284,16 @@ def _impl_atualizar_preco_insumo(
     Se projeto_id for informado, a alteração é salva como um 'override' local do projeto,
     sem afetar o catálogo mestre corporativo (ADR-038).
 
+    Caso contrário (edição do catálogo mestre), a alteração é gravada como um delta
+    dentro do rascunho `rascunho_id` (ADR-145 D1) — o catálogo mestre só é tocado
+    quando o rascunho é promovido via aprovar_merge_catalogo.
+
     Args:
         contexto_id: ID do contexto (mendeslobo).
         insumo_id: Código do insumo.
         novo_preco: O valor atualizado.
+        rascunho_id: Obrigatório para editar o catálogo mestre. Ignorado se projeto_id
+            for informado. Crie um rascunho com criar_rascunho_catalogo antes.
         projeto_id: Opcional. Se informado, salva apenas para este projeto.
         jurisdicao_id: Opcional. Região específica.
         nota: Opcional. Justificativa.
@@ -239,8 +303,18 @@ def _impl_atualizar_preco_insumo(
     projects_dir = _projetos_root()
 
     ctx = rt.load_contexto(contexto_id)
+
+    if projeto_id:
+        return _save_preco_insumo_override_projeto(projects_dir, projeto_id, insumo_id, novo_preco, jurisdicao_id, nota)
+
+    if not rascunho_id:
+        return {
+            "erro": "rascunho_id é obrigatório para editar o catálogo mestre (ADR-145). "
+            "Use criar_rascunho_catalogo para abrir um rascunho e informe o rascunho_id retornado."
+        }
+
     try:
-        insumo_file = validate_and_resolve_insumo_file(
+        validate_and_resolve_insumo_file(
             _catalog_root(config_dir, ctx.catalogo_id),
             insumo_id,
             novo_preco,
@@ -248,10 +322,32 @@ def _impl_atualizar_preco_insumo(
     except CatalogGovernanceError as exc:
         return {"erro": str(exc)}
 
-    if projeto_id:
-        return _save_preco_insumo_override_projeto(projects_dir, projeto_id, insumo_id, novo_preco, jurisdicao_id, nota)
+    from concilium.infrastructure.auth.permission_guard import get_current_user_id
 
-    return _save_preco_insumo_master(insumo_file, insumo_id, novo_preco, jurisdicao_id, nota)
+    delta = {
+        "tipo": "preco_insumo",
+        "insumo_id": insumo_id,
+        "novo_preco": novo_preco,
+        "jurisdicao_id": jurisdicao_id,
+        "nota": nota,
+        "autor": get_current_user_id() or "system",
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
+    if erro:
+        return {"erro": erro}
+
+    return _wrap_response(
+        {
+            "status": "RASCUNHO",
+            "layer": "MASTER",
+            "rascunho_id": rascunho_id,
+            "insumo_id": insumo_id,
+            "novo_preco": novo_preco,
+            "nota": "Alteração registrada no rascunho — ainda não aplicada ao catálogo mestre. "
+            "Use aprovar_merge_catalogo para promover.",
+        }
+    )
 
 
 def _impl_consultar_preco_insumo_temporal(
@@ -324,6 +420,26 @@ def _impl_consultar_preco_insumo_temporal(
     )
 
 
+def _apply_variante_producao_delta(
+    catalog_root: Path,
+    producao_id: str,
+    variante_id: str,
+    nome_variante: str,
+    valor_horario: float,
+    equipe_data: Any,
+) -> None:
+    """Aplica um delta de variante de produção ao catálogo mestre no momento do merge (ADR-145 D2)."""
+    prod_file = validate_and_resolve_producao_file(catalog_root, producao_id, valor_horario)
+    data = json.loads(prod_file.read_text(encoding="utf-8"))
+    if "variantes" not in data:
+        data["variantes"] = []
+    data["variantes"] = [v for v in data["variantes"] if v["id"] != variante_id]
+    data["variantes"].append(
+        {"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
+    )
+    prod_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def _impl_adicionar_variante_producao(
     contexto_id: str,
     producao_id: str,
@@ -331,9 +447,14 @@ def _impl_adicionar_variante_producao(
     nome_variante: str,
     valor_horario: float,
     equipe_json: str,
+    rascunho_id: str | None = None,
     projeto_id: str | None = None,
 ) -> dict[str, Any]:
     """Adiciona ou atualiza uma variante de produtividade (Master ou Projeto).
+
+    Alterações no catálogo mestre são gravadas como delta dentro do rascunho
+    `rascunho_id` (ADR-145 D1) — o arquivo de produção só é tocado quando o
+    rascunho é promovido via aprovar_merge_catalogo.
 
     Args:
         contexto_id: ID do contexto.
@@ -342,6 +463,8 @@ def _impl_adicionar_variante_producao(
         nome_variante: Nome legível.
         valor_horario: Produtividade benchmark.
         equipe_json: String JSON com a composição.
+        rascunho_id: Obrigatório para editar o catálogo mestre. Ignorado se projeto_id
+            for informado. Crie um rascunho com criar_rascunho_catalogo antes.
         projeto_id: Opcional. Se informado, salva como override local do projeto.
     """
     rt = _runtime()
@@ -371,10 +494,16 @@ def _impl_adicionar_variante_producao(
                 {"status": "SUCESSO", "layer": "PROJETO", "projeto_id": projeto_id, "producao": producao_id}
             )
 
-        # Camada Master
+        if not rascunho_id:
+            return {
+                "erro": "rascunho_id é obrigatório para editar o catálogo mestre (ADR-145). "
+                "Use criar_rascunho_catalogo para abrir um rascunho e informe o rascunho_id retornado."
+            }
+
+        # Camada Master — valida e registra delta no rascunho (D1)
         ctx = rt.load_contexto(contexto_id)
         try:
-            prod_file = validate_and_resolve_producao_file(
+            validate_and_resolve_producao_file(
                 _catalog_root(config_dir, ctx.catalogo_id),
                 producao_id,
                 valor_horario,
@@ -382,14 +511,32 @@ def _impl_adicionar_variante_producao(
         except CatalogGovernanceError as exc:
             return {"erro": str(exc)}
 
-        data = json.loads(prod_file.read_text(encoding="utf-8"))
-        if "variantes" not in data:
-            data["variantes"] = []
-        data["variantes"] = [v for v in data["variantes"] if v["id"] != variante_id]
-        data["variantes"].append(
-            {"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+        delta = {
+            "tipo": "variante_producao",
+            "producao_id": producao_id,
+            "variante_id": variante_id,
+            "nome_variante": nome_variante,
+            "valor_horario": valor_horario,
+            "equipe": equipe_data,
+            "autor": get_current_user_id() or "system",
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+        erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
+        if erro:
+            return {"erro": erro}
+
+        return _wrap_response(
+            {
+                "status": "RASCUNHO",
+                "layer": "MASTER",
+                "rascunho_id": rascunho_id,
+                "producao_id": producao_id,
+                "variante_id": variante_id,
+                "nota": "Alteração registrada no rascunho — ainda não aplicada ao catálogo mestre. "
+                "Use aprovar_merge_catalogo para promover.",
+            }
         )
-        prod_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        return _wrap_response({"status": "SUCESSO", "layer": "MASTER", "producao_id": producao_id})
     except Exception as e:
         return {"erro": f"Erro ao adicionar variante: {e}"}

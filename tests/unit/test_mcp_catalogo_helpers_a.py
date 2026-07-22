@@ -39,6 +39,15 @@ def _passthrough(d: dict) -> dict:
     return d
 
 
+def _make_rascunho(config_dir: Path, contexto_id: str, rascunho_id: str, data: dict | None = None) -> Path:
+    """Cria o arquivo de versão de um rascunho (ADR-120) para os testes de delta (ADR-145)."""
+    versions_dir = config_dir / "contextos" / contexto_id / "versions"
+    versions_dir.mkdir(parents=True, exist_ok=True)
+    rascunho_file = versions_dir / f"{rascunho_id}.json"
+    rascunho_file.write_text(json.dumps(data or {"version": rascunho_id}), encoding="utf-8")
+    return rascunho_file
+
+
 # ---------------------------------------------------------------------------
 # _catalog_root
 # ---------------------------------------------------------------------------
@@ -325,9 +334,20 @@ class TestImplAtualizarPrecoInsumo:
             lambda _cr, _iid, _np: (_ for _ in ()).throw(CatalogGovernanceError("bad insumo")),
         )
 
-        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 100.0)
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 100.0, rascunho_id="v1")
         assert "erro" in result
         assert "bad insumo" in result["erro"]
+
+    def test_no_rascunho_id_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ADR-145 D1 — sem rascunho_id (e sem projeto_id) não pode editar o master
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        self._setup(monkeypatch, rt, tmp_path, projects_dir)
+
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 100.0)
+        assert "erro" in result
+        assert "rascunho_id" in result["erro"]
 
     def test_projeto_path_not_found(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # lines 175-179 — proj_path does not exist
@@ -403,90 +423,102 @@ class TestImplAtualizarPrecoInsumo:
         assert "erro" in result
         assert "Erro ao salvar override de projeto" in result["erro"]
 
-    def test_master_no_jurisdicao_writes_preco_unitario(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # lines 204-216 — master layer, no jurisdicao_id
+    def test_master_no_jurisdicao_records_delta_in_rascunho(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # ADR-145 D1 — master layer, no jurisdicao_id: grava delta, não escreve no insumo
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         projects_dir.mkdir(parents=True)
         insumo_file = tmp_path / "ins.json"
         insumo_file.write_text(json.dumps({"preco_unitario": 5.0}), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
 
-        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 42.0)
-        assert result["status"] == "SUCESSO"
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 42.0, rascunho_id="v1")
+        assert result["status"] == "RASCUNHO"
         assert result["layer"] == "MASTER"
-        data = json.loads(insumo_file.read_text(encoding="utf-8"))
-        assert data["preco_unitario"] == 42.0
 
-    def test_master_with_jurisdicao_writes_regionalizacao(
+        # o insumo do catálogo mestre permanece intocado até o merge
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["preco_unitario"] == 5.0
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert len(rascunho_data["_deltas"]) == 1
+        delta = rascunho_data["_deltas"][0]
+        assert delta == {
+            "tipo": "preco_insumo",
+            "insumo_id": "INS-001",
+            "novo_preco": 42.0,
+            "jurisdicao_id": None,
+            "nota": None,
+            "autor": "system",
+            "timestamp": delta["timestamp"],
+        }
+
+    def test_master_with_jurisdicao_records_delta_with_jurisdicao(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        # lines 206-209 — master layer with jurisdicao_id
+        # ADR-145 D1 — master layer with jurisdicao_id também vira delta
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         projects_dir.mkdir(parents=True)
         insumo_file = tmp_path / "ins.json"
         insumo_file.write_text(json.dumps({"preco_unitario": 5.0}), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
 
-        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 77.0, jurisdicao_id="SP")
-        assert result["status"] == "SUCESSO"
-        data = json.loads(insumo_file.read_text(encoding="utf-8"))
-        assert "SP" in data.get("regionalizacao", {})
-        assert data["regionalizacao"]["SP"]["preco"] == 77.0
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 77.0, rascunho_id="v1", jurisdicao_id="SP")
+        assert result["status"] == "RASCUNHO"
 
-    def test_master_with_jurisdicao_reuses_existing_regionalizacao(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        # line 207 false branch — "regionalizacao" já existe em data, não é recriado
-        rt = _make_rt("ctx1", "cat1")
-        projects_dir = tmp_path / "projetos"
-        projects_dir.mkdir(parents=True)
-        insumo_file = tmp_path / "ins.json"
-        insumo_file.write_text(
-            json.dumps({"preco_unitario": 5.0, "regionalizacao": {"RJ": {"preco": 50.0, "nota": "old"}}}),
-            encoding="utf-8",
-        )
-        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["jurisdicao_id"] == "SP"
+        assert delta["novo_preco"] == 77.0
 
-        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 88.0, jurisdicao_id="SP")
-        assert result["status"] == "SUCESSO"
-        data = json.loads(insumo_file.read_text(encoding="utf-8"))
-        assert data["regionalizacao"]["RJ"]["preco"] == 50.0  # preservado
-        assert data["regionalizacao"]["SP"]["preco"] == 88.0
-
-    def test_master_with_nota_writes_nota_calibracao(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # line 212-213 — nota present
+    def test_master_with_nota_records_nota_in_delta(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ADR-145 D1/D4 — nota vai para o delta, não sobrescreve um campo único no insumo
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         projects_dir.mkdir(parents=True)
         insumo_file = tmp_path / "ins.json"
         insumo_file.write_text(json.dumps({"preco_unitario": 1.0}), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
 
-        _impl_atualizar_preco_insumo("ctx1", "INS-001", 99.0, nota="revisao 2025")
+        _impl_atualizar_preco_insumo("ctx1", "INS-001", 99.0, rascunho_id="v1", nota="revisao 2025")
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert rascunho_data["_deltas"][0]["nota"] == "revisao 2025"
+        # insumo mestre não deve ganhar nenhum campo "nota_calibracao" legado
         data = json.loads(insumo_file.read_text(encoding="utf-8"))
-        assert data.get("nota_calibracao") == "revisao 2025"
+        assert "nota_calibracao" not in data
 
-    def test_master_write_exception_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # lines 217-218 — exception → {"erro": "Falha ao persistir no mestre: ..."}
+    def test_rascunho_inexistente_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ADR-145 D1 — rascunho_id que não existe em disco
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 5.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
 
-        # insumo_file points to a non-readable/writable place
-        bad_insumo = MagicMock()
-        bad_insumo.read_text.side_effect = OSError("cannot read")
-
-        monkeypatch.setattr(mod, "_runtime", lambda: rt)
-        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
-        monkeypatch.setattr(mod, "_projetos_root", lambda: projects_dir)
-        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
-        monkeypatch.setattr(mod, "validate_and_resolve_insumo_file", lambda _cr, _iid, _np: bad_insumo)
-
-        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 10.0)
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 10.0, rascunho_id="v-nao-existe")
         assert "erro" in result
-        assert "Falha ao persistir no mestre" in result["erro"]
+        assert "não encontrado" in result["erro"]
+
+    def test_rascunho_em_estado_terminal_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ADR-145 D1 — rascunho já aprovado/rejeitado não aceita novos deltas
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 5.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1", {"version": "v1", "_aprovado": True})
+
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 10.0, rascunho_id="v1")
+        assert "erro" in result
+        assert "terminal" in result["erro"]
 
 
 # ---------------------------------------------------------------------------
@@ -711,8 +743,20 @@ class TestImplAdicionarVarianteProducao:
         assert "OTHER::V0" in saved
         assert "PROD-001::V2" in saved
 
+    def test_no_rascunho_id_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ADR-145 D1 — sem rascunho_id (e sem projeto_id) não pode editar o master
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        self._setup(monkeypatch, rt, tmp_path, projects_dir)
+
+        equipe = json.dumps({"funcoes": []})
+        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V1", "V1", 100.0, equipe)
+        assert "erro" in result
+        assert "rascunho_id" in result["erro"]
+
     def test_master_governance_error_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # lines 340-347 — CatalogGovernanceError on master branch
+        # CatalogGovernanceError on master branch
         from concilium.application.orchestrators.catalog_governance import CatalogGovernanceError
 
         rt = _make_rt("ctx1", "cat1")
@@ -729,12 +773,12 @@ class TestImplAdicionarVarianteProducao:
         )
 
         equipe = json.dumps({"funcoes": []})
-        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V1", "V1", 100.0, equipe)
+        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V1", "V1", 100.0, equipe, rascunho_id="v1")
         assert "erro" in result
         assert "invalid producao" in result["erro"]
 
-    def test_master_adds_variante_when_variantes_absent(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # lines 349-357 — "variantes" key absent → list created and appended
+    def test_master_records_delta_when_variantes_absent(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ADR-145 D1 — grava delta no rascunho; arquivo de producao permanece intocado
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         projects_dir.mkdir(parents=True)
@@ -743,59 +787,35 @@ class TestImplAdicionarVarianteProducao:
         prod_data = {"id": "PROD-001"}  # no "variantes" key
         prod_file.write_text(json.dumps(prod_data), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir, prod_file=prod_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
 
         equipe = json.dumps({"funcoes": [{"funcao_id": "MO-001"}]})
-        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V-NEW", "Nova", 88.0, equipe)
-        assert result["status"] == "SUCESSO"
+        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V-NEW", "Nova", 88.0, equipe, rascunho_id="v1")
+        assert result["status"] == "RASCUNHO"
         assert result["layer"] == "MASTER"
-        data = json.loads(prod_file.read_text(encoding="utf-8"))
-        assert len(data["variantes"]) == 1
-        assert data["variantes"][0]["id"] == "V-NEW"
 
-    def test_master_replaces_existing_variante_id(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # line 352 — existing variante_id filtered out and new appended
+        data = json.loads(prod_file.read_text(encoding="utf-8"))
+        assert "variantes" not in data  # intocado até o merge
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["tipo"] == "variante_producao"
+        assert delta["producao_id"] == "PROD-001"
+        assert delta["variante_id"] == "V-NEW"
+        assert delta["valor_horario"] == 88.0
+        assert delta["equipe"] == {"funcoes": [{"funcao_id": "MO-001"}]}
+
+    def test_rascunho_inexistente_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         projects_dir.mkdir(parents=True)
-
         prod_file = tmp_path / "prod.json"
-        prod_data = {
-            "id": "PROD-001",
-            "variantes": [
-                {"id": "V1", "nome": "old", "valor_horario": 50.0, "equipe": {}},
-                {"id": "V2", "nome": "keep", "valor_horario": 70.0, "equipe": {}},
-            ],
-        }
-        prod_file.write_text(json.dumps(prod_data), encoding="utf-8")
+        prod_file.write_text(json.dumps({"id": "PROD-001"}), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir, prod_file=prod_file)
 
         equipe = json.dumps({"funcoes": []})
-        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V1", "updated", 999.0, equipe)
-        assert result["status"] == "SUCESSO"
-        data = json.loads(prod_file.read_text(encoding="utf-8"))
-        ids = [v["id"] for v in data["variantes"]]
-        assert ids.count("V1") == 1  # old removed, new appended
-        assert "V2" in ids
-        updated = next(v for v in data["variantes"] if v["id"] == "V1")
-        assert updated["valor_horario"] == 999.0
-
-    def test_master_write_failure_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # lines 356+359 — write_text fails → outer except → {"erro": ...}
-        rt = _make_rt("ctx1", "cat1")
-        projects_dir = tmp_path / "projetos"
-        projects_dir.mkdir(parents=True)
-
-        bad_prod = MagicMock()
-        bad_prod.read_text.return_value = json.dumps({"id": "PROD-001", "variantes": []})
-        bad_prod.write_text.side_effect = OSError("no space")
-
-        monkeypatch.setattr(mod, "_runtime", lambda: rt)
-        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
-        monkeypatch.setattr(mod, "_projetos_root", lambda: projects_dir)
-        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
-        monkeypatch.setattr(mod, "validate_and_resolve_producao_file", lambda _cr, _pid, _vh: bad_prod)
-
-        equipe = json.dumps({"funcoes": []})
-        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V1", "V1", 100.0, equipe)
+        result = _impl_adicionar_variante_producao(
+            "ctx1", "PROD-001", "V1", "V1", 100.0, equipe, rascunho_id="v-nao-existe"
+        )
         assert "erro" in result
-        assert "Erro ao adicionar variante" in result["erro"]
+        assert "não encontrado" in result["erro"]
