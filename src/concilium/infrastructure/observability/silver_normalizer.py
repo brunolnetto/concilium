@@ -160,14 +160,27 @@ def normalize_span_record(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def normalize_metric_record(record: dict[str, Any]) -> dict[str, Any]:
-    """Normaliza um metric record Bronze → schema Silver metrics."""
+    """Normaliza um metric record Bronze → schema Silver metrics.
+
+    Projeção dimensional (ADR-146): as chaves canônicas de label ("skill",
+    "tool", "project.id" — ver METRIC_LABEL_* em infrastructure/telemetry, o
+    dono do contrato; este módulo permanece puro e usa os literais) são
+    promovidas a colunas de primeira classe, tornando DIM_SKILL/DIM_TOOL/
+    DIM_PROJECT alcançáveis sem parsear `labels`. A promoção é aditiva —
+    `labels` segue íntegro para fidelidade — e retroativa, pois essas chaves
+    são o que a instrumentação sempre emitiu.
+    """
+    labels = record.get("labels") or {}
     return {
         "event_id": _make_metric_event_id(record),
         "metric_name": record.get("metric_name", ""),
         "ts": record.get("ts", ""),
         "value": float(record.get("value", 0.0)),
-        "labels": record.get("labels", {}),
+        "labels": labels,
         "service": record.get("service", ""),
+        "skill_id": labels.get("skill"),
+        "tool_name": labels.get("tool"),
+        "project_id": labels.get("project.id"),
     }
 
 
