@@ -33,7 +33,20 @@ def _otel_sdk_enabled():
 
 def _collect_metrics_data(instrument_fn):
     """Cria um MeterProvider real com um único reader manual, aplica instrument_fn(meter) e
-    retorna o MetricsData coletado — usado para gerar Sum/Gauge/Histogram reais do SDK."""
+    retorna o MetricsData coletado — usado para gerar Sum/Gauge/Histogram reais do SDK.
+
+    Desde opentelemetry-sdk 1.41, todo MetricReader instrumenta a si mesmo com uma
+    métrica de auto-diagnóstico (`otel.sdk.metric_reader.collection.duration`,
+    escopo "opentelemetry-sdk") — mas essa duração só pode ser reportada no ciclo
+    de export *seguinte* ao `collect()` que ela mede, então só aparece no flush
+    final de `provider.shutdown()`. Esse mesmo flush final também **reexporta**
+    instrumentos cumulativos (Counter/Histogram) que já tinham saído em
+    `reader.collect()`, então usar o último `export()` capturado (`captured[-1]`)
+    tanto duplicava dados reais quanto, no caso do Gauge (sem novo valor entre os
+    dois ciclos), retornava só a métrica interna do SDK. O primeiro `export()`
+    (o de `reader.collect()`) é o único que reflete exatamente a chamada de
+    `instrument_fn`, sem a métrica interna do SDK nem duplicação.
+    """
     captured = []
 
     class _Capture(MetricExporter):
@@ -54,7 +67,7 @@ def _collect_metrics_data(instrument_fn):
         instrument_fn(meter)
         reader.collect()
         provider.shutdown()
-    return captured[-1]
+    return captured[0]
 
 
 class TestBronzeMetricExporterCounter:

@@ -55,6 +55,13 @@ class BronzeMetricExporter(MetricExporter):
                 service = resource_metrics.resource.attributes.get("service.name", "")
             for scope_metrics in resource_metrics.scope_metrics:
                 for metric in scope_metrics.metrics:
+                    if metric.name.startswith("otel.sdk."):
+                        # Métrica de auto-diagnóstico do próprio SDK (ex.:
+                        # otel.sdk.metric_reader.collection.duration, emitida
+                        # incondicionalmente por todo MetricReader desde
+                        # opentelemetry-sdk 1.41) — não é dado da aplicação,
+                        # não deve poluir o Bronze.
+                        continue
                     yield from BronzeMetricExporter._points_for_metric(metric, service)
 
     @staticmethod
