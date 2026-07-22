@@ -3,7 +3,7 @@
 **Status:** Proposta
 **Data:** 2026-07-22
 **Contexto:** MendesLobo Construtora — Concilium
-**Dependências:** ADR-017 (Catalog Lifecycle Management), ADR-024 (Snapshot Auditável), ADR-025 (MCP Catalog Policy), ADR-040 (Master vs. Project Layer), ADR-041 (SCD Type 2), ADR-066 (Catalog Overlay Model), ADR-067 (Master Catalog Write API), ADR-120 (Catalog RBAC Lifecycle)
+**Dependências:** ADR-017 (Catalog Lifecycle Management), ADR-024 (Snapshot Auditável), ADR-025 (MCP Catalog Policy), ADR-040 (Master vs. Project Layer), ADR-041 (SCD Type 2), ADR-066 (Catalog Overlay Model), ADR-067 (Master Catalog Write API), ADR-120 (Catalog RBAC Lifecycle), ADR-130 (Grafo de Sinergia — achado correlato, ver seção dedicada)
 
 ---
 
@@ -98,6 +98,24 @@ D5. `CatalogUpdater` (`infrastructure/catalog/updater.py`) é removido do códig
 
 ---
 
+## Achado Correlato: Grafo de Sinergia (ADR-130) sob Overlay de Projeto
+
+Este achado **não faz parte da Decisão** desta ADR (D1-D5, que trata exclusivamente do write path de preço de insumo no catálogo mestre). É documentado aqui por ter surgido na mesma investigação sobre fidelidade referencial temporal do catálogo, e por ser outra manifestação do mesmo padrão de fundo: camadas de resolução do catálogo (master → overlay de projeto → resolved snapshot) sem validação cruzada entre si.
+
+P7. O grafo de sinergia (ADR-130, `domain/models/catalog/producao.py:97-135` — `GrafoSinergiaEquipe`/`RelacaoSinergia`/`CapacidadeElemento`) vive como campo sibling de `composicao_padrao_equipe` dentro do próprio JSON de `Producao`/CPU no catálogo. Seus nós (`elemento_id`) referenciam `funcao_id`/`equip_id`/`insumo_id` daquela composição. O motor de derivação (`domain/services/sinergia_equipe.py`) sempre recebe o **catálogo já resolvido** (master + overlay de projeto aplicado via `CatalogResolver.apply_overlays`), nunca o master cru — não há isolamento entre a camada de override (ADR-040, opt-in por projeto) e o grafo.
+
+P8. Como `_deep_merge` (`catalog_resolver.py:290-298`) substitui listas por inteiro (não mescla item a item), um overlay de projeto que altera `composicao_padrao_equipe.equipamentos`/`funcoes` pode deixar `grafo_sinergia.capacidades`/`relacoes` daquela CPU referenciando um `elemento_id` que não existe mais na composição vigente do projeto — um nó órfão.
+
+P9. Existe uma rede de segurança genérica: `validar_referencias_grafo`/VAL-SINERGIA-01 detecta a referência órfã, e `resolver_producao_efetiva` marca `grafo_invalido=True` e cai para o valor `declarado`/`calibrado` em vez de propagar um cálculo incorreto (`sinergia_equipe.py:205-251`). Não é uma falha silenciosa de cálculo. Mas esse fallback usa um valor calibrado para a composição **anterior** ao overlay, sem re-derivação para o novo contexto do projeto — e a função desenhada especificamente para esse cenário, `revalidar_apos_mudanca_composicao` (`sinergia_equipe.py:254-304`), só é exercitada em teste unitário (`test_adr130_sinergia_equipe.py`); não está conectada a `set_overlay`/`extend_cpu`.
+
+P10. Nenhum ADR ou teste cruza os dois temas hoje — ADR-130 nunca menciona overlay; os testes de overlay (`test_adr066_catalog_overlay.py`, `test_catalog_resolver2.py`) nunca mencionam grafo/sinergia/composição. É uma lacuna de design não analisada, não uma decisão consciente.
+
+**Superfície de risco atual:** o risco só se materializa na interseção de dois opcionais independentes — overlay de projeto (por projeto) **e** CPU com grafo definido (por CPU). Hoje só o catálogo `rfi-r02` tem grafos populados; `mendeslobo` (catálogo primário) não tem nenhuma CPU com grafo, o que limita a exposição prática no curto prazo, mas não a elimina como dívida de arquitetura.
+
+**Encaminhamento:** este achado requer sua própria decisão (conectar `revalidar_apos_mudanca_composicao` ao caminho de overlay, ou validar overlays contra `grafo_sinergia` no momento do `set_overlay`) — não está coberto pelo Plano de Implementação/Definition of Done acima. Recomenda-se abrir um item de backlog ou uma ADR dedicada quando o catálogo `mendeslobo` começar a ganhar CPUs com grafo, ou antes disso, se algum projeto já combinar overlay com CPUs de `rfi-r02`.
+
+---
+
 ## Relacionados
 
 - ADR-017 — Catalog Lifecycle Management (Definition of Done ainda lista "audit trail: every catalog change traceable to obra + aprovador" como item aberto; esta ADR fecha essa lacuna especificamente para preço de insumo)
@@ -105,3 +123,4 @@ D5. `CatalogUpdater` (`infrastructure/catalog/updater.py`) é removido do códig
 - ADR-041 — SCD Type 2 para Rastreabilidade Histórica do Catálogo Master (mecanismo de `atualizar_preco()` reaproveitado em D2)
 - ADR-066 — Catalog Overlay Model (garante fidelidade temporal por-run via `resolved_catalog.json`; esta ADR garante fidelidade temporal do catálogo mestre em si, pré-requisito para que o overlay tenha algo confiável para congelar)
 - ADR-120 — Catalog RBAC Lifecycle (o gate de quatro olhos que esta ADR passa a proteger de fato)
+- ADR-130 — Composição de Equipe: Grafo de Sinergia / Produtividade Derivada (achado correlato — overlay de projeto pode orfanizar nós do grafo; ver seção dedicada acima)
