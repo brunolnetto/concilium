@@ -122,6 +122,8 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description="Atualiza o preço de um insumo (ex: novo preço de diesel após cotação). "
+        "Para editar o catálogo mestre, informe rascunho_id (criado via criar_rascunho_catalogo) — "
+        "a mudança fica pendente até aprovar_merge_catalogo (ADR-145). "
         "Use projeto_id para override de projeto em vez de alterar o master."
     )
     @permission("catalog:write")
@@ -130,15 +132,20 @@ def register(server: FastMCP) -> None:
         contexto_id: str,
         insumo_id: str,
         novo_preco: float,
+        rascunho_id: str | None = None,
         projeto_id: str | None = None,
         jurisdicao_id: str | None = None,
         nota: str | None = None,
     ) -> dict[str, Any]:
-        return _impl_atualizar_preco_insumo(contexto_id, insumo_id, novo_preco, projeto_id, jurisdicao_id, nota)
+        return _impl_atualizar_preco_insumo(
+            contexto_id, insumo_id, novo_preco, rascunho_id, projeto_id, jurisdicao_id, nota
+        )
 
     @server.tool(
         description="Adiciona uma variante de produtividade a uma producao existente "
-        "(ex: equipe alternativa com custo/hora diferente)."
+        "(ex: equipe alternativa com custo/hora diferente). "
+        "Para editar o catálogo mestre, informe rascunho_id (criado via criar_rascunho_catalogo) — "
+        "a mudança fica pendente até aprovar_merge_catalogo (ADR-145)."
     )
     @permission("catalog:write")
     @mcp_rate_limit()
@@ -149,10 +156,11 @@ def register(server: FastMCP) -> None:
         nome_variante: str,
         valor_horario: float,
         equipe_json: str,
+        rascunho_id: str | None = None,
         projeto_id: str | None = None,
     ) -> dict[str, Any]:
         return _impl_adicionar_variante_producao(
-            contexto_id, producao_id, variante_id, nome_variante, valor_horario, equipe_json, projeto_id
+            contexto_id, producao_id, variante_id, nome_variante, valor_horario, equipe_json, rascunho_id, projeto_id
         )
 
     # ── Análise temporal / RFI ───────────────────────────────────────────────
@@ -322,7 +330,8 @@ def register(server: FastMCP) -> None:
                 "descricao": descricao,
                 "criado_por": actor,
                 "status": "RASCUNHO",
-                "nota": "Use atualizar_preco_insumo/adicionar_variante_producao para editar. "
+                "nota": "Use atualizar_preco_insumo/adicionar_variante_producao (informando rascunho_id="
+                f"'{new_v['version']}') para editar — as mudanças ficam só no rascunho até o merge. "
                 "Use aprovar_merge_catalogo para promover (requer catalog:merge).",
             }
         )
@@ -357,6 +366,7 @@ def register(server: FastMCP) -> None:
         try:
             current_v = svc.current_version(contexto_id)
             diff = svc.compare(contexto_id, current_v, rascunho_id)
+            rascunho_data = svc.resolve(contexto_id, rascunho_id) or {}
             _marcar_rascunho_revisado(config_root, contexto_id, rascunho_id, get_current_user_id() or "system")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
@@ -366,6 +376,8 @@ def register(server: FastMCP) -> None:
                 "versao_ativa": current_v,
                 "rascunho_id": rascunho_id,
                 "divergencias": diff,
+                # ADR-145 D1: os deltas acumulados (preço/variante) ainda não aplicados ao master
+                "deltas": rascunho_data.get("_deltas", []),
             }
         )
 
@@ -398,20 +410,23 @@ def register(server: FastMCP) -> None:
         svc = ContextoVersionService(config_root)
         try:
             current_v = svc.current_version(contexto_id)
-            diff = svc.compare(contexto_id, current_v, rascunho_id)
+            rascunho_data = svc.resolve(contexto_id, rascunho_id) or {}
             _marcar_rascunho_revisado(config_root, contexto_id, rascunho_id, get_current_user_id() or "system")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
-        # Estimativa de impacto: conta insumos modificados e projetos que os usam
-        modificados = diff.get("modificados", {})
-        n_insumos = len(modificados)
+        # ADR-145 P11: os deltas do rascunho (D1) são a fonte real de "o que mudou" —
+        # ContextoVersionService.compare() nunca produziu uma chave "modificados"
+        # (retorna "changed"/"unchanged"), então n_insumos_afetados sempre voltava 0.
+        insumos_afetados = sorted(
+            {d["insumo_id"] for d in rascunho_data.get("_deltas", []) if d.get("tipo") == "preco_insumo"}
+        )
         return _wrap_response(
             {
                 "contexto_id": contexto_id,
                 "versao_ativa": current_v,
                 "rascunho_id": rascunho_id,
-                "n_insumos_afetados": n_insumos,
-                "insumos_modificados": list(modificados.keys())[:20],
+                "n_insumos_afetados": len(insumos_afetados),
+                "insumos_modificados": insumos_afetados[:20],
                 "impacto_estimado": "indisponível — requer recálculo full de projetos ativos",
                 "nota": "Para impacto preciso, execute disparar_pipeline nos projetos após o merge.",
             }
@@ -434,7 +449,12 @@ def register(server: FastMCP) -> None:
         rascunho_id: str,
         justificativa: str,
     ) -> dict[str, Any]:
-        """Promove rascunho para versão ativa do catálogo (ADR-120 D5).
+        """Promove rascunho para versão ativa do catálogo (ADR-120 D5, ADR-145 D2/D3).
+
+        Único ponto de escrita efetiva no catálogo mestre: aplica os deltas de
+        preço/variante acumulados no rascunho (via RepositorioInsumo.atualizar_preco,
+        SCD2/ADR-041), gera um CatalogSnapshot/CatalogDiff (ADR-024) e persiste a
+        justificativa junto ao diff — não apenas na resposta desta chamada.
 
         Args:
             contexto_id: ID do contexto de catálogo.
@@ -442,19 +462,35 @@ def register(server: FastMCP) -> None:
             justificativa: Motivo da aprovação para o audit trail.
         """
         import json as _json
+        from datetime import date as _date
 
-        from concilium.application.orchestrators.catalog_draft_lifecycle import assert_pode_aprovar
+        from concilium.application.orchestrators.catalog_draft_lifecycle import (
+            assert_pode_aprovar,
+            build_and_persist_snapshot,
+        )
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.auth.permission_guard import (
             _current_roles,
             get_current_user_id,
         )
         from concilium.infrastructure.settings import get_storage
+        from concilium.presentation.mcp._context import _runtime
+
+        from ._catalogo_tools_helpers_a import (
+            _apply_preco_insumo_delta,
+            _apply_variante_producao_delta,
+        )
+        from ._catalogo_tools_helpers_a import (
+            _catalog_root as _resolve_catalog_root,
+        )
 
         config_root = get_storage().config_root
         svc = ContextoVersionService(config_root)
         actor = get_current_user_id() or "system"
         roles = list(_current_roles.get())
+        deltas_aplicados = 0
+        snapshot_id: str | None = None
+        diff_summary: str | None = None
         try:
             # Verifica que o rascunho existe
             rascunho_data = svc.resolve(contexto_id, rascunho_id)
@@ -462,6 +498,42 @@ def register(server: FastMCP) -> None:
                 return _wrap_response({"erro": f"Rascunho '{rascunho_id}' não encontrado."})
             assert_pode_aprovar(rascunho_data, actor)
             versao_anterior = svc.current_version(contexto_id)
+
+            deltas = rascunho_data.get("_deltas", [])
+            ctx = None
+            if deltas:
+                # Só resolve contexto/catálogo se houver algo a aplicar — rascunhos
+                # sem deltas (ex.: só reordenam metadados) não precisam de um
+                # contexto real configurado.
+                rt = _runtime()
+                ctx = rt.load_contexto(contexto_id)
+                catalog_root = _resolve_catalog_root(config_root, ctx.catalogo_id)
+                hoje = _date.today()
+
+                for delta in deltas:
+                    tipo = delta.get("tipo")
+                    if tipo == "preco_insumo":
+                        _apply_preco_insumo_delta(
+                            catalog_root,
+                            delta["insumo_id"],
+                            delta["novo_preco"],
+                            delta.get("jurisdicao_id"),
+                            delta.get("nota"),
+                            delta.get("autor") or actor,
+                            hoje,
+                        )
+                        deltas_aplicados += 1
+                    elif tipo == "variante_producao":
+                        _apply_variante_producao_delta(
+                            catalog_root,
+                            delta["producao_id"],
+                            delta["variante_id"],
+                            delta["nome_variante"],
+                            delta["valor_horario"],
+                            delta["equipe"],
+                        )
+                        deltas_aplicados += 1
+
             # Promove: atualiza ponteiro "current" para o rascunho
             entity_dir = config_root / "contextos" / contexto_id
             current_file = entity_dir / "current"
@@ -480,6 +552,23 @@ def register(server: FastMCP) -> None:
                 data["_aprovado"] = True
                 data["_aprovado_por"] = actor
                 rascunho_file.write_text(_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            if deltas_aplicados:
+                # deltas_aplicados só é incrementado dentro do `if deltas:` acima,
+                # onde `ctx` é sempre atribuído primeiro.
+                assert ctx is not None
+                # Runtime novo: bypassa o cache em memória do `rt` acima, que já
+                # tem o catálogo pré-merge cacheado nesta mesma chamada.
+                catalogo_depois = _runtime().load_catalogo(ctx.catalogo_id)
+                snapshot_id, diff_summary = build_and_persist_snapshot(
+                    config_root,
+                    ctx.catalogo_id,
+                    catalogo_depois,
+                    actor=actor,
+                    contexto_id=contexto_id,
+                    rascunho_id=rascunho_id,
+                    justificativa=justificativa,
+                )
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
         return _wrap_response(
@@ -490,6 +579,9 @@ def register(server: FastMCP) -> None:
                 "aprovado_por": actor,
                 "role_aprovador": roles[0] if roles else None,
                 "justificativa": justificativa,
+                "deltas_aplicados": deltas_aplicados,
+                "snapshot_id": snapshot_id,
+                "diff_summary": diff_summary,
                 "status": "APROVADO",
             }
         )

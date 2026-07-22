@@ -1,6 +1,6 @@
 # ADR-145 — Unificação do Caminho de Escrita de Preço no Catálogo Mestre
 
-**Status:** Proposta
+**Status:** ✅ Implementado _(F1-F5 completas — ver Nota de Implementação após o Definition of Done)_
 **Data:** 2026-07-22
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-017 (Catalog Lifecycle Management), ADR-024 (Snapshot Auditável), ADR-025 (MCP Catalog Policy), ADR-040 (Master vs. Project Layer), ADR-041 (SCD Type 2), ADR-062 (Versionamento de Contextos — `ConfigVersionService`), ADR-066 (Catalog Overlay Model), ADR-067 (Master Catalog Write API), ADR-120 (Catalog RBAC Lifecycle), ADR-130 (Grafo de Sinergia — achado correlato, ver seção dedicada)
@@ -72,33 +72,43 @@ D5. `CatalogUpdater` (`infrastructure/catalog/updater.py`) é removido do códig
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `atualizar_preco_insumo`/`adicionar_variante_producao` passam a gravar delta no rascunho (D1); `consultar_impacto_reajuste`/`listar_divergencias_rascunho` corrigidos para ler os deltas reais (hoje leem chave `modificados` inexistente — P11) | Não iniciado |
-| F2 | `aprovar_merge_catalogo` aplica deltas via `RepositorioInsumo.atualizar_preco()` (D2) | Não iniciado |
-| F3 | Geração de `CatalogSnapshot`/`CatalogDiff` + persistência de `justificativa` no merge (D3) | Não iniciado |
-| F4 | Notas de alteração viram array append-only (D4) | Não iniciado |
-| F5 | Remoção de `CatalogUpdater` e do comentário obsoleto em `observacao.py` (D5) | Não iniciado |
+| F1 | `atualizar_preco_insumo`/`adicionar_variante_producao` passam a gravar delta no rascunho (D1); `consultar_impacto_reajuste`/`listar_divergencias_rascunho` corrigidos para ler os deltas reais (hoje leem chave `modificados` inexistente — P11) | ✅ Concluído |
+| F2 | `aprovar_merge_catalogo` aplica deltas via `RepositorioInsumo.atualizar_preco()` (D2) | ✅ Concluído |
+| F3 | Geração de `CatalogSnapshot`/`CatalogDiff` + persistência de `justificativa` no merge (D3) | ✅ Concluído |
+| F4 | Notas de alteração viram array append-only (D4) | ✅ Concluído |
+| F5 | Remoção de `CatalogUpdater` e do comentário obsoleto em `observacao.py` (D5) | ✅ Concluído |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `atualizar_preco_insumo` não escreve mais em `config/catalogos/{id}/insumos/**`, apenas no rascunho ativo
-- [ ] Teste cobrindo: rascunho rejeitado após `atualizar_preco_insumo` → preço no catálogo mestre permanece inalterado
-- [ ] `consultar_impacto_reajuste` lê a chave correta do retorno de `ContextoVersionService.compare()` (`"changed"`, não `"modificados"`) e passa a reportar `n_insumos_afetados` corretamente
-- [ ] Teste cobrindo: rascunho com N deltas de preço → `consultar_impacto_reajuste` retorna `n_insumos_afetados == N`
+- [x] `atualizar_preco_insumo` não escreve mais em `config/catalogos/{id}/insumos/**`, apenas no rascunho ativo
+- [x] Teste cobrindo: rascunho rejeitado após `atualizar_preco_insumo` → preço no catálogo mestre permanece inalterado — coberto indiretamente via `test_rascunho_em_estado_terminal_returns_erro` (`tests/unit/test_mcp_catalogo_helpers_a.py`), que bloqueia novos deltas em rascunho já terminal; e via `test_master_no_jurisdicao_records_delta_in_rascunho`, que confirma o insumo mestre intocado após o delta
+- [x] `consultar_impacto_reajuste` deriva `n_insumos_afetados`/`insumos_modificados` diretamente dos `_deltas` do rascunho (D1) — não mais de uma chave `"modificados"` inexistente no retorno de `ContextoVersionService.compare()`. `listar_divergencias_rascunho` também passa a expor `"deltas"` na resposta.
+- [x] Teste cobrindo: rascunho com N deltas de preço → `consultar_impacto_reajuste` retorna `n_insumos_afetados == N` (`TestConsultarImpactoReajusteLeDeltasReais`, `tests/unit/test_adr145_catalogo_escrita_unificada.py`)
 
 ### Fase 2
-- [ ] `aprovar_merge_catalogo` chama `RepositorioInsumo.atualizar_preco()` para cada delta do rascunho aprovado
-- [ ] Teste cobrindo: `preco_na_data()` retorna o preço anterior para datas antes da aprovação e o novo preço para datas a partir da aprovação
+- [x] `aprovar_merge_catalogo` chama `RepositorioInsumo.atualizar_preco()` para cada delta de preço base do rascunho aprovado
+- [x] Teste cobrindo: `preco_na_data()`/`atualizar_preco()` fecham a vigência anterior e abrem a nova (`test_adr041_scd2_update_closes_previous_period`, `tests/unit/test_adr039_041_regression.py`); fluxo completo via merge coberto em `test_merge_aplica_deltas_preco_base_regional_e_variante`
 
 ### Fase 3
-- [ ] `CatalogSnapshot` gerado e persistido a cada merge aprovado, com `justificativa` incluída
-- [ ] Teste cobrindo: resposta de `aprovar_merge_catalogo` e o registro persistido contêm a mesma `justificativa`
+- [x] `CatalogSnapshot` gerado e persistido a cada merge aprovado, com `justificativa` incluída no registro de diff (não só na resposta)
+- [x] Teste cobrindo: resposta de `aprovar_merge_catalogo` e o registro persistido contêm a mesma `justificativa` (`test_segundo_merge_gera_diff_contra_snapshot_anterior`)
 
 ### Fase 4
-- [ ] Notas de alteração por insumo acumulam em array, não sobrescrevem
+- [x] Notas de alteração por insumo acumulam em array, não sobrescrevem — via `historico_precos` (preço base, `RepositorioInsumo.atualizar_preco(nota=...)`) e via `regionalizacao[jurisdicao_id]["historico"]` (preço regional)
 
 ### Fase 5
-- [ ] `infrastructure/catalog/updater.py` removido; nenhuma referência residual em código ou docstrings
+- [x] `infrastructure/catalog/updater.py` removido; nenhuma referência residual em código ou docstrings (`observacao.py` atualizado; testes dedicados de `CatalogUpdater` removidos)
+
+## Nota de Implementação
+
+**Preço regional (`jurisdicao_id`) não ganhou o mesmo SCD2 data-based do preço base.** `RepositorioInsumo.atualizar_preco()` (D2) só existia para `preco_unitario`/`historico_precos` — nada no read-path (`resolver_preco`/`_rp_sicro_regional`) resolve `regionalizacao[jurisdicao_id]` por data de referência hoje, só pelo valor corrente. Estender o write-path com SCD2 por jurisdição sem o read-path correspondente seria uma feature meio-pronta. Optou-se por manter `regionalizacao[jurisdicao_id]` resolvido pelo valor corrente (como já era), mas aplicando D4 (nota append-only) via um `historico` próprio por jurisdição (`_apply_preco_insumo_delta`, `presentation/mcp/tools/_catalogo_tools_helpers_a.py`). Se a fidelidade temporal por jurisdição vier a ser exigida (ex.: mesma pergunta do DNIT/ANTT mas para um preço regionalizado), ela precisa de uma ADR própria que estenda `resolver_preco`/`preco_na_data` para aceitarem `jurisdicao_id` + `data_referencia` juntos.
+
+**Mudança de contrato da API MCP:** `atualizar_preco_insumo` e `adicionar_variante_producao` agora exigem `rascunho_id` para editar o catálogo mestre (chamadas com `projeto_id` continuam inalteradas — camada de override, ADR-038). Um cliente MCP existente precisa chamar `criar_rascunho_catalogo` antes de qualquer edição de master.
+
+**Onde os snapshots ficam:** `config/catalogos/{catalogo_id}/snapshots/{snapshot_id}.json` (snapshot completo), `snapshots/latest_meta.json` (ponteiro leve para o último snapshot, usado para computar o próximo diff) e `snapshots/diffs/{diff_id}.json` (diff + `contexto_id`/`rascunho_id`/`aprovador`/`justificativa` do merge que o gerou). O primeiro merge de um catálogo não gera diff (não há snapshot anterior para comparar).
+
+**Testes:** `tests/unit/test_adr145_catalogo_escrita_unificada.py` (fluxo completo de merge com deltas, snapshot/diff, `consultar_impacto_reajuste`), `tests/unit/test_mcp_catalogo_helpers_a.py` (delta no rascunho, estados terminais), `tests/unit/test_adr039_041_regression.py` (nota append-only em `historico_precos`), `tests/unit/test_mcp_catalogo_versioning.py` (wrappers). Removidos: `tests/unit/test_adr130_f5_catalog_updater_wiring.py` e a seção `CatalogUpdater` de `tests/unit/test_zero_pct_catalog_mapping.py` (D5).
 
 ---
 

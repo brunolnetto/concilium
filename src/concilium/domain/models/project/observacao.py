@@ -8,7 +8,8 @@ Fluxo:
     -> fila de revisão (PENDENTE | ANOMALIA)
     -> CONFIRMADA pelo engenheiro sênior
     -> PropostaAtualizacao gerada se thresholds atingidos
-    -> APROVADA -> CatalogUpdater aplica mudança com versioning
+    -> APROVADA -> aplicada via o caminho unificado de escrita do catálogo
+       mestre (ADR-145): rascunho -> aprovar_merge_catalogo
 """
 
 from __future__ import annotations

@@ -179,8 +179,14 @@ class RepositorioInsumo:
         novo_preco: float,
         data_vigencia: date,
         fonte: str | None = None,
+        nota: str | None = None,
     ) -> bool:
         """Aplica SCD Type 2: fecha registro anterior e abre novo (ADR-041 §D2).
+
+        `nota` (ADR-145 §D4) é gravada no próprio registro histórico — como
+        cada chamada abre um novo registro em `historico_precos` (nunca
+        sobrescreve), a trilha de justificativas por alteração é append-only
+        por construção, sem precisar de um array paralelo.
 
         Modifica o dict em memória. A persistência fica a cargo do chamador
         (tipicamente um service ou script de migração de catálogo).
@@ -209,6 +215,7 @@ class RepositorioInsumo:
                 "data_inicio_vigencia": hoje_iso,
                 "data_fim_vigencia": None,
                 "fonte": fonte,
+                "nota": nota,
             }
         )
 
