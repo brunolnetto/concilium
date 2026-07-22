@@ -533,7 +533,7 @@ class TestCatalogLifecycleADR120:
         versions_dir = entity_dir / "versions"
         versions_dir.mkdir(parents=True)
         rascunho_file = versions_dir / "v2.json"
-        rascunho_file.write_text('{"foo": "bar"}', encoding="utf-8")
+        rascunho_file.write_text('{"foo": "bar", "_revisado": true}', encoding="utf-8")
         version_svc = MagicMock()
         version_svc.resolve.return_value = {"version": "v2", "_revisado": True}
         version_svc.current_version.return_value = "v1"

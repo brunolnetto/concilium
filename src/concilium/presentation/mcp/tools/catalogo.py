@@ -467,6 +467,7 @@ def register(server: FastMCP) -> None:
         from concilium.application.orchestrators.catalog_draft_lifecycle import (
             assert_pode_aprovar,
             build_and_persist_snapshot,
+            criar_state_machine,
         )
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.auth.permission_guard import (
@@ -549,9 +550,9 @@ def register(server: FastMCP) -> None:
             rascunho_file = entity_dir / "versions" / f"{rascunho_id}.json"
             if rascunho_file.exists():
                 data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
-                data["_aprovado"] = True
-                data["_aprovado_por"] = actor
-                rascunho_file.write_text(_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                sm = criar_state_machine(data)
+                sm.aprovar(aprovador=actor)
+                rascunho_file.write_text(_json.dumps(sm.rascunho_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
             if deltas_aplicados:
                 # deltas_aplicados só é incrementado dentro do `if deltas:` acima,
@@ -607,7 +608,10 @@ def register(server: FastMCP) -> None:
             rascunho_id: Versão do rascunho a rejeitar.
             motivo: Justificativa da rejeição para o audit trail.
         """
-        from concilium.application.orchestrators.catalog_draft_lifecycle import assert_pode_rejeitar
+        from concilium.application.orchestrators.catalog_draft_lifecycle import (
+            assert_pode_rejeitar,
+            criar_state_machine,
+        )
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.auth.permission_guard import (
             get_current_user_id,
@@ -622,7 +626,6 @@ def register(server: FastMCP) -> None:
             if rascunho_data is None:
                 return _wrap_response({"erro": f"Rascunho '{rascunho_id}' não encontrado."})
             assert_pode_rejeitar(rascunho_data)
-            # Marca como rejeitado via nova versão do rascunho com flag _rejeitado
             versao_ativa = svc.current_version(contexto_id)
             # Sinaliza rejeição no arquivo do rascunho
             import json as _json
@@ -630,10 +633,9 @@ def register(server: FastMCP) -> None:
             rascunho_file = config_root / "contextos" / contexto_id / "versions" / f"{rascunho_id}.json"
             if rascunho_file.exists():
                 data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
-                data["_rejeitado"] = True
-                data["_motivo_rejeicao"] = motivo
-                data["_rejeitado_por"] = actor
-                rascunho_file.write_text(_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                sm = criar_state_machine(data)
+                sm.rejeitar(motivo=motivo, rejeitado_por=actor)
+                rascunho_file.write_text(_json.dumps(sm.rascunho_data, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
         return _wrap_response(
