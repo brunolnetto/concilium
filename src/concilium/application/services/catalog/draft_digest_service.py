@@ -11,6 +11,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from concilium.application.orchestrators.catalog_draft_lifecycle import (
+    ESTADO_RASCUNHO,
+    ESTADO_REVISADO,
+    estado_rascunho,
+)
 from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
 from concilium.application.services.notifications import notify_catalog_drafts_pending
 from concilium.infrastructure.auth.auth_store import get_auth_store
@@ -19,15 +24,20 @@ from concilium.infrastructure.auth.auth_store import get_auth_store
 def rascunhos_pendentes(config_root: Path) -> dict[str, list[dict[str, Any]]]:
     """Retorna {contexto_id: [versão, ...]} para toda versão de rascunho ainda não decidida.
 
-    Pendente (ADR-141 D1) = `_rascunho` True, `_rejeitado` não True, e ainda não
-    promovida (version != current_version do contexto).
+    Pendente (ADR-141 D1) = `_rascunho` True, estado RASCUNHO/REVISADO (não
+    rejeitado nem aprovado — ver `catalog_draft_lifecycle.estado_rascunho`,
+    ADR-120 D5), e ainda não promovida (version != current_version do contexto).
     """
     svc = ContextoVersionService(config_root)
     pendentes: dict[str, list[dict[str, Any]]] = {}
     for contexto in svc.list_contexts():
         current = contexto.get("current_version")
         for versao in contexto.get("versions", []):
-            if versao.get("_rascunho") and not versao.get("_rejeitado") and versao.get("version") != current:
+            if (
+                versao.get("_rascunho")
+                and estado_rascunho(versao) in (ESTADO_RASCUNHO, ESTADO_REVISADO)
+                and versao.get("version") != current
+            ):
                 pendentes.setdefault(str(contexto["id"]), []).append(versao)
     return pendentes
 
