@@ -7,6 +7,7 @@ Classifica fallback_type baseado nos padrões da ADR-110.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from typing import Any
 
@@ -65,6 +66,20 @@ def _make_event_id(record: dict[str, Any]) -> str:
     if span_id and span_id != "0" * 16:
         return span_id
     raw = f"{record.get('ts', '')}{record.get('logger', '')}{record.get('message', '')}"
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _make_metric_event_id(record: dict[str, Any]) -> str:
+    """Gera event_id determinístico para dedup de metric data points na Silver.
+
+    ts + metric_name sozinhos colidem quando duas séries do mesmo metric (labels
+    diferentes) caem na mesma coleta periódica — ex.: concilium.mcp.tool.calls
+    com dois tools distintos no mesmo ciclo. Inclui um hash das labels
+    (ordenadas, para não depender da ordem de inserção do dict) para
+    diferenciá-las sem perder idempotência entre reprocessamentos/backfill.
+    """
+    labels = record.get("labels") or {}
+    raw = f"{record.get('ts', '')}{record.get('metric_name', '')}{json.dumps(labels, sort_keys=True, default=str)}"
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -145,11 +160,46 @@ def normalize_span_record(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def normalize_metric_record(record: dict[str, Any]) -> dict[str, Any]:
-    """Normaliza um metric record Bronze → schema Silver metrics."""
+    """Normaliza um metric record Bronze → schema Silver metrics.
+
+    Projeção dimensional (ADR-146): as chaves canônicas de label ("skill",
+    "tool", "project.id" — ver METRIC_LABEL_* em infrastructure/telemetry, o
+    dono do contrato; este módulo permanece puro e usa os literais) são
+    promovidas a colunas de primeira classe, tornando DIM_SKILL/DIM_TOOL/
+    DIM_PROJECT alcançáveis sem parsear `labels`. A promoção é aditiva —
+    `labels` segue íntegro para fidelidade — e retroativa, pois essas chaves
+    são o que a instrumentação sempre emitiu.
+    """
+    labels = record.get("labels") or {}
     return {
+        "event_id": _make_metric_event_id(record),
         "metric_name": record.get("metric_name", ""),
         "ts": record.get("ts", ""),
         "value": float(record.get("value", 0.0)),
-        "labels": record.get("labels", {}),
+        "labels": labels,
         "service": record.get("service", ""),
+        "skill_id": labels.get("skill"),
+        "tool_name": labels.get("tool"),
+        "project_id": labels.get("project.id"),
+    }
+
+
+def normalize_tool_invocation_record(record: dict[str, Any]) -> dict[str, Any]:
+    """Normaliza um tool_invocation record Bronze → schema Silver tool_invocations.
+
+    "event_id" (não "id") é deliberado: reaproveita o fallback de dedup já
+    existente em record_key()/dedupe_records(), que prioriza event_id — sem
+    isso, este sinal cairia no fallback genérico str(id(rec)), que nunca dedupa.
+    """
+    return {
+        "event_id": record.get("id", ""),
+        "tool_name": record.get("tool_name", ""),
+        "user_id": record.get("user_id"),
+        "tenant_id": record.get("tenant_id"),
+        "status": record.get("status", ""),
+        "started_at": record.get("started_at", ""),
+        "finished_at": record.get("finished_at", ""),
+        "error_type": record.get("error_type"),
+        "device_id": record.get("device_id"),
+        "mcp_session_id": record.get("mcp_session_id"),
     }

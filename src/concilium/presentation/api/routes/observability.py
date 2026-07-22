@@ -23,7 +23,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 router = APIRouter(prefix="/observability", tags=["observability"])
 
-_SIGNAL_TYPES = {"logs", "traces", "metrics"}
+_SIGNAL_TYPES = {"logs", "traces", "metrics", "tool_invocations"}
 
 
 # ── Dependency: storage ───────────────────────────────────────────────────────

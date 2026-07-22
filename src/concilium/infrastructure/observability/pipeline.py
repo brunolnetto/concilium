@@ -21,6 +21,7 @@ from .silver_normalizer import (
     normalize_log_record,
     normalize_metric_record,
     normalize_span_record,
+    normalize_tool_invocation_record,
     record_key,
 )
 
@@ -33,7 +34,34 @@ _NORMALIZERS = {
     "logs": normalize_log_record,
     "traces": normalize_span_record,
     "metrics": normalize_metric_record,
+    "tool_invocations": normalize_tool_invocation_record,
 }
+
+
+def read_silver_records(storage: BlobStoragePort, signal_type: str) -> list[dict[str, Any]]:
+    """Retorna todos os records Silver persistidos para o tipo de sinal, deduplicados.
+
+    Extraído de três cópias idênticas (ObservabilityWorker.read_silver,
+    GoldAggregator._read_silver, CrossDomainBuilder._read_silver_logs) — cada
+    consumidor de Silver (incluindo os cubos Gold) delega para esta função em
+    vez de reimplementar a leitura+dedup.
+
+    Dedup entre arquivos (um por dia) é necessário porque um dia pode ter sido
+    reprocessado com particionamento diferente do original (ex.: antes do fix
+    de particionamento por data do blob Bronze) — sem isso, o mesmo event_id
+    apareceria duas vezes.
+    """
+    blobs = sorted(storage.listar_blobs(f"{_SILVER_PREFIX}/{signal_type}/"))
+    records: list[dict[str, Any]] = []
+    for path in blobs:
+        try:
+            raw = storage.ler_blob(path)
+            for line in raw.decode("utf-8").splitlines():
+                if line.strip():
+                    records.append(json.loads(line))
+        except Exception:
+            pass
+    return dedupe_records(records)
 
 
 def _make_storage() -> BlobStoragePort:
@@ -139,24 +167,8 @@ class ObservabilityWorker:
         self._storage.gravar_blob(path, content.encode("utf-8"))
 
     def read_silver(self, signal_type: str) -> list[dict[str, Any]]:
-        """Retorna todos os records Silver persistidos para o tipo de sinal, deduplicados.
-
-        Dedup entre arquivos (um por dia) é necessário porque um dia pode ter sido
-        reprocessado com particionamento diferente do original (ex.: antes do fix
-        de particionamento por data do blob Bronze) — sem isso, o mesmo event_id
-        apareceria duas vezes.
-        """
-        blobs = sorted(self._storage.listar_blobs(f"{_SILVER_PREFIX}/{signal_type}/"))
-        records: list[dict[str, Any]] = []
-        for path in blobs:
-            try:
-                raw = self._storage.ler_blob(path)
-                for line in raw.decode("utf-8").splitlines():
-                    if line.strip():
-                        records.append(json.loads(line))
-            except Exception:
-                pass
-        return dedupe_records(records)
+        """Retorna todos os records Silver persistidos para o tipo de sinal, deduplicados."""
+        return read_silver_records(self._storage, signal_type)
 
     # ── Pipeline principal ──────────────────────────────────────────────────
 
@@ -196,7 +208,7 @@ class ObservabilityWorker:
         """Processa Bronze → Silver incrementalmente.
 
         Args:
-            signal_type:  "logs" | "traces" | "metrics"
+            signal_type:  "logs" | "traces" | "metrics" | "tool_invocations"
             full_reload:  True → apaga checkpoint e reprocessa tudo
             since:        ISO date string — processa apenas blobs desta data em diante
 
@@ -231,7 +243,7 @@ class ObservabilityWorker:
 
 _SCHED_SILVER = "_scheduler_silver"
 _SCHED_GOLD = "_scheduler_gold"
-_SIGNAL_TYPES = ("logs", "traces", "metrics")
+_SIGNAL_TYPES = ("logs", "traces", "metrics", "tool_invocations")
 
 
 class ObservabilityScheduler:

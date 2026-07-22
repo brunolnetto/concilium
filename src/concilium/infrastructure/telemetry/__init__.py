@@ -35,6 +35,20 @@ except ImportError:  # pragma: no cover
 
 _initialized = False
 
+# ── Contrato de labels de métricas (ADR-146) ─────────────────────────────────
+# Chaves canônicas: são as ÚNICAS que a Silver promove a colunas de primeira
+# classe (normalize_metric_record → skill_id/tool_name/project_id). Os valores
+# são os já emitidos historicamente — mudá-los quebraria séries existentes e a
+# projeção retroativa sobre Bronze antigo. Instrumentos novos devem usá-las,
+# nunca variantes ("skill_id", "toolName") que a projeção não reconhece.
+# Labels fora do contrato (ex.: "route", "pipeline.mode") continuam válidas —
+# ficam acessíveis só via o dict `labels` na Silver, sem coluna própria.
+
+METRIC_LABEL_SKILL = "skill"
+METRIC_LABEL_TOOL = "tool"
+METRIC_LABEL_PROJECT = "project.id"
+METRIC_LABEL_STATUS = "status"
+
 # ── Metric instruments (singletons, criados na primeira emissão) ──────────────
 
 _skill_duration_histogram = None
@@ -283,7 +297,9 @@ def record_skill_duration(skill_id: str, status: str, duration_ms: int) -> None:
                 unit="ms",
                 description="Duration of individual skill executions",
             )
-        _skill_duration_histogram.record(duration_ms, {"skill": skill_id, "status": status})
+        _skill_duration_histogram.record(
+            duration_ms, {METRIC_LABEL_SKILL: skill_id, METRIC_LABEL_STATUS: status}
+        )
     except Exception:
         pass
 
@@ -304,8 +320,14 @@ def record_rate_limit_exceeded(route: str) -> None:
         pass
 
 
-def record_tool_call(tool_name: str, status: str) -> None:
-    """Incrementa contador concilium.mcp.tool.calls."""
+def record_tool_call(tool_name: str, status: str, project_id: Any | None = None) -> None:
+    """Incrementa contador concilium.mcp.tool.calls.
+
+    project_id (ADR-146): quando presente, a série ganha o label canônico
+    "project.id" — chamadas de tool ficam fatiáveis por projeto na Silver/Gold.
+    Ausente, o label dict é idêntico ao histórico (sem chave com valor vazio,
+    que criaria uma série 'project.id=None' espúria).
+    """
     global _tool_calls_counter
     if not _OTEL_AVAILABLE:
         return
@@ -315,7 +337,10 @@ def record_tool_call(tool_name: str, status: str) -> None:
                 "concilium.mcp.tool.calls",
                 description="Number of MCP tool invocations",
             )
-        _tool_calls_counter.add(1, {"tool": tool_name, "status": status})
+        labels = {METRIC_LABEL_TOOL: tool_name, METRIC_LABEL_STATUS: status}
+        if project_id:
+            labels[METRIC_LABEL_PROJECT] = str(project_id)
+        _tool_calls_counter.add(1, labels)
     except Exception:
         pass
 
@@ -341,7 +366,7 @@ def record_project_margin(
                 description="Margem percentual do projeto após pipeline completo",
                 unit="%",
             )
-        attrs = {"project.id": project_id, "pipeline.mode": pipeline_mode}
+        attrs = {METRIC_LABEL_PROJECT: project_id, "pipeline.mode": pipeline_mode}
         _project_margin_gauge.set(round(margem_pct * 100, 4), attrs)
         if custo_direto is not None:
             _log_business_metric(project_id, "custo_direto", custo_direto, pipeline_mode)
@@ -383,12 +408,12 @@ def _with_tracing(tool_fn: Any) -> Any:
             try:
                 result = tool_fn(*args, **kwargs)
                 span.set_status(StatusCode.OK)
-                record_tool_call(tool_fn.__name__, "OK")
+                record_tool_call(tool_fn.__name__, "OK", project_id=project_id)
                 return result
             except Exception as exc:
                 span.record_exception(exc)
                 span.set_status(StatusCode.ERROR, str(exc))
-                record_tool_call(tool_fn.__name__, "ERROR")
+                record_tool_call(tool_fn.__name__, "ERROR", project_id=project_id)
                 raise
 
     return wrapper
