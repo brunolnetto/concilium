@@ -8,6 +8,9 @@ Endpoints:
   GET  /observability/gold/fallback-rate        — taxa de fallbacks por skill
   GET  /observability/gold/alertas              — alertas ativos
   GET  /observability/gold/cross-domain         — fallback rate × resultado financeiro por projeto
+  GET  /observability/gold/tool-usage           — uso diário de tools MCP por status
+  GET  /observability/gold/cubo/contrato        — dimensões/medidas disponíveis por cubo (ADR-147)
+  GET  /observability/gold/cubo/{cubo}/projecao — projeção ad-hoc de um cubo Gold (ADR-147)
   GET  /observability/silver/{signal_type}      — records Silver normalizados (paginados)
   GET  /observability/bronze/{signal_type}      — records Bronze raw (paginados)
   GET  /observability/status                    — checkpoints por tipo de sinal
@@ -17,13 +20,75 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 router = APIRouter(prefix="/observability", tags=["observability"])
 
 _SIGNAL_TYPES = {"logs", "traces", "metrics", "tool_invocations"}
+
+# ── Cubos Gold (ADR-147) — contrato navegável, mesmo padrão de cubo-analitico ──
+# group_by/medidas do cliente são validados contra estes whitelists por cubo —
+# nenhuma expressão SQL chega do cliente, só nomes de dimensão/medida do contrato.
+
+_CUBO_NOME = Literal["spans", "logs", "metricas", "tool_invocations"]
+
+_CUBO_DIMENSOES: dict[str, tuple[str, ...]] = {
+    "spans": ("date", "skill_id", "project_id", "tool_name", "user_id", "status"),
+    "logs": ("date", "skill_id", "project_id", "user_id", "severity", "fallback_type"),
+    "metricas": ("date", "metric_name", "skill_id", "project_id", "tool_name", "status"),
+    "tool_invocations": ("date", "tool_name", "user_id", "device_id", "status"),
+}
+
+_CUBO_MEDIDAS: dict[str, dict[str, str]] = {
+    "spans": {
+        "n": "COUNT(*)",
+        "avg_ms": "AVG(duration_ms)",
+        "p50_ms": "PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration_ms)",
+        "p95_ms": "PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms)",
+        "p99_ms": "PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration_ms)",
+    },
+    "logs": {
+        "n_total": "COUNT(*)",
+        "n_fallbacks": "COUNT(*) FILTER (WHERE fallback_type IS NOT NULL)",
+        "fallback_rate": (
+            "ROUND(CAST(COUNT(*) FILTER (WHERE fallback_type IS NOT NULL) AS DOUBLE)"
+            " / NULLIF(COUNT(*), 0), 4)"
+        ),
+    },
+    "metricas": {
+        "n": "COUNT(*)",
+        "sum_value": "SUM(value)",
+        "avg_value": "AVG(value)",
+        "min_value": "MIN(value)",
+        "max_value": "MAX(value)",
+    },
+    "tool_invocations": {
+        "n": "COUNT(*)",
+        "avg_ms": "AVG(duration_ms)",
+        "p95_ms": "PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms)",
+        "n_errors": "COUNT(*) FILTER (WHERE status != 'success')",
+    },
+}
+
+
+def _build_cubo(cubo: str, storage: Any) -> Any:
+    from concilium.infrastructure.observability.cubo_logs import CuboLogs
+    from concilium.infrastructure.observability.cubo_metricas import CuboMetricas
+    from concilium.infrastructure.observability.cubo_spans import CuboSpans
+    from concilium.infrastructure.observability.cubo_tool_invocations import CuboToolInvocations
+    from concilium.infrastructure.observability.pipeline import read_silver_records
+
+    signal_por_cubo = {"spans": "traces", "logs": "logs", "metricas": "metrics", "tool_invocations": "tool_invocations"}
+    classe_por_cubo = {
+        "spans": CuboSpans,
+        "logs": CuboLogs,
+        "metricas": CuboMetricas,
+        "tool_invocations": CuboToolInvocations,
+    }
+    records = read_silver_records(storage, signal_por_cubo[cubo])
+    return classe_por_cubo[cubo].from_silver(records)
 
 
 # ── Dependency: storage ───────────────────────────────────────────────────────
@@ -170,6 +235,108 @@ def get_alertas_ativos(
     if tipo:
         alertas = [a for a in alertas if a.get("tipo") == tipo]
     return {"alertas": alertas, "total": len(alertas)}
+
+
+@router.get(
+    "/gold/tool-usage",
+    summary="Uso diário de tools MCP por status (ADR-147 D7)",
+    response_model=None,
+)
+def get_tool_usage(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+    tool_name: str | None = Query(None),
+    status: str | None = Query(None),
+    date: str | None = Query(None),
+    storage=Depends(_get_storage),
+) -> dict[str, Any]:
+    from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+
+    agg = GoldAggregator(storage)
+    rows = agg.build_tool_usage_diario()
+    rows = _filter_eq(rows, "tool_name", tool_name)
+    rows = _filter_eq(rows, "status", status)
+    rows = _filter_eq(rows, "date", date)
+    return _paginate(rows, page, page_size)
+
+
+# ── Cubos Gold — projeção ad-hoc (ADR-147) ────────────────────────────────────
+
+
+@router.get(
+    "/gold/cubo/contrato",
+    summary="Contrato navegável dos cubos Gold — dimensões e medidas por cubo",
+    response_model=None,
+)
+def get_cubo_contrato() -> dict[str, Any]:
+    return {
+        "cubos": {
+            nome: {"dimensoes": list(_CUBO_DIMENSOES[nome]), "medidas": list(_CUBO_MEDIDAS[nome].keys())}
+            for nome in _CUBO_DIMENSOES
+        }
+    }
+
+
+@router.get(
+    "/gold/cubo/{cubo}/projecao",
+    summary="Projeção ad-hoc de um cubo Gold — qualquer combinação de dimensões/medidas do contrato",
+    response_model=None,
+)
+def get_cubo_projecao(
+    cubo: _CUBO_NOME,
+    group_by: str = Query(..., description="Dimensões separadas por vírgula — ver /gold/cubo/contrato"),
+    medidas: str = Query(..., description="Medidas separadas por vírgula — ver /gold/cubo/contrato"),
+    date: str | None = Query(None),
+    skill_id: str | None = Query(None),
+    project_id: str | None = Query(None),
+    tool_name: str | None = Query(None),
+    user_id: str | None = Query(None),
+    status: str | None = Query(None),
+    device_id: str | None = Query(None),
+    severity: str | None = Query(None),
+    fallback_type: str | None = Query(None),
+    metric_name: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=1000),
+    storage=Depends(_get_storage),
+) -> dict[str, Any]:
+    dims_validas = _CUBO_DIMENSOES[cubo]
+    medidas_validas = _CUBO_MEDIDAS[cubo]
+
+    dims = [d.strip() for d in group_by.split(",") if d.strip()]
+    med_names = [m.strip() for m in medidas.split(",") if m.strip()]
+
+    invalid_dims = [d for d in dims if d not in dims_validas]
+    if invalid_dims:
+        raise HTTPException(
+            400, detail=f"Dimensões inválidas para '{cubo}': {invalid_dims}. Válidas: {list(dims_validas)}"
+        )
+    invalid_medidas = [m for m in med_names if m not in medidas_validas]
+    if invalid_medidas:
+        raise HTTPException(
+            400, detail=f"Medidas inválidas para '{cubo}': {invalid_medidas}. Válidas: {list(medidas_validas)}"
+        )
+
+    filtros_brutos = {
+        "date": date,
+        "skill_id": skill_id,
+        "project_id": project_id,
+        "tool_name": tool_name,
+        "user_id": user_id,
+        "status": status,
+        "device_id": device_id,
+        "severity": severity,
+        "fallback_type": fallback_type,
+        "metric_name": metric_name,
+    }
+    filtros = {k: v for k, v in filtros_brutos.items() if v is not None and k in dims_validas}
+
+    cubo_obj = _build_cubo(cubo, storage)
+    if filtros:
+        cubo_obj = cubo_obj.slice(**filtros)
+    aggs = {m: medidas_validas[m] for m in med_names}
+    rows = cubo_obj.query(group_by=dims, aggs=aggs)
+    return _paginate(rows, page, page_size)
 
 
 # ── Silver endpoints ──────────────────────────────────────────────────────────

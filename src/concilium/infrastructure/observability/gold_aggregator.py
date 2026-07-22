@@ -13,8 +13,11 @@ from typing import Any
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
 from .cubo_logs import CuboLogs
+from .cubo_metricas import CuboMetricas
 from .cubo_spans import CuboSpans
 from .pipeline import read_silver_records
+
+_TOOL_CALLS_METRIC = "concilium.mcp.tool.calls"
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +73,25 @@ class GoldAggregator:
             r["fallback_rate"] = float(r["fallback_rate"] or 0.0)
         return rows
 
+    def build_tool_usage_diario(self) -> list[dict[str, Any]]:
+        """Uso diário de tools MCP por status, a partir de concilium.mcp.tool.calls (Silver metrics).
+
+        ADR-147 D7: primeiro relatório Gold consumindo CuboMetricas — decidido como
+        uso/erro de tools por ser o caso de uso mais direto habilitado pela projeção
+        skill_id/tool_name/project_id/status de ADR-146/147.
+
+        `n` soma `value`, não conta linhas: concilium.mcp.tool.calls é um Counter —
+        cada data point já é a soma acumulada de um intervalo de coleta (pode
+        cobrir várias chamadas com os mesmos labels), não uma chamada individual.
+        """
+        cubo = CuboMetricas.from_silver(self._read_silver("metrics"))
+        return cubo.query(
+            group_by=["date", "tool_name", "status"],
+            aggs={"n": "SUM(value)"},
+            where=f"metric_name = '{_TOOL_CALLS_METRIC}'",
+            order_by="date, tool_name, status",
+        )
+
     def build_alertas_ativos(self) -> list[dict[str, Any]]:
         """Alertas quando p99 > 30 s ou fallback_rate > 5 %."""
         alertas: list[dict[str, Any]] = []
@@ -107,6 +129,7 @@ class GoldAggregator:
             ("sli_diario", self.build_sli_diario()),
             ("fallback_rate_por_skill", self.build_fallback_rate_por_skill()),
             ("alertas_ativos", self.build_alertas_ativos()),
+            ("tool_usage_diario", self.build_tool_usage_diario()),
         ]:
             path = f"observability/gold/{name}.json"
             self._storage.gravar_blob(path, json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))

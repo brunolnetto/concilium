@@ -122,9 +122,21 @@ def _render_alertas_ativos(alertas: list) -> None:
         rprint(f"  [red]• {a['tipo']}[/red] skill={a.get('skill_id')} date={a.get('date')}")
 
 
+def _render_tool_usage_table(usage: list) -> None:
+    if not usage:
+        rprint("[dim]Uso de tools: sem dados de metrics no Silver.[/dim]")
+        return
+    t = Table(title="Uso de Tools MCP (diário)", show_header=True)
+    for col in ("date", "tool_name", "status", "n"):
+        t.add_column(col)
+    for row in usage:
+        t.add_row(*[str(row.get(c, "")) for c in ("date", "tool_name", "status", "n")])
+    rprint(t)
+
+
 @observability_app.command("report")
 def show_report() -> None:
-    """Exibe tabelas Gold no terminal (SLIs, fallback rates, alertas)."""
+    """Exibe tabelas Gold no terminal (SLIs, fallback rates, alertas, uso de tools)."""
     from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
 
     storage = _get_storage()
@@ -133,6 +145,7 @@ def show_report() -> None:
     _render_sli_diario_table(agg.build_sli_diario())
     _render_fallback_rate_table(agg.build_fallback_rate_por_skill())
     _render_alertas_ativos(agg.build_alertas_ativos())
+    _render_tool_usage_table(agg.build_tool_usage_diario())
 
 
 @observability_app.command("cycle")

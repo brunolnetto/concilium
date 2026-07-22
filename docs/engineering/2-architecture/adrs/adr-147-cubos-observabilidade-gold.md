@@ -37,7 +37,11 @@ D5. **`GoldAggregator` e `CrossDomainBuilder` migrados, comportamento preservado
 
 D6. **`_aggregate_fallback_by_project` removida.** Virou código morto assim que `CrossDomainBuilder.build()` passou a usar `CuboLogs.query()` diretamente — sem teste direto dependendo dela, foi removida em vez de mantida ao lado do caminho novo.
 
-D7. **CuboMetricas ainda não tem um `GoldAggregator.build_*` que o consuma.** É o primeiro cubo cujo sinal de origem (metrics) nunca teve um relatório Gold — implementado e testado, mas nenhuma tabela Gold nova foi adicionada nesta ADR (fora de escopo: qual relatório de metrics vale a pena é uma decisão de produto, não de arquitetura).
+D7. **Decidido: `build_tool_usage_diario`** — uso diário de tools MCP por status (`date`, `tool_name`, `status` → `n`), a partir de `concilium.mcp.tool.calls` em Silver metrics, filtrado por `metric_name` (não por `tool_name IS NOT NULL`, para não depender de convenção implícita). `n` soma `value`, não conta linhas: `concilium.mcp.tool.calls` é um Counter — cada data point Bronze/Silver já é a soma acumulada de um intervalo de coleta (pode cobrir várias chamadas com os mesmos labels), não uma chamada individual. Esse é o caso de uso mais direto habilitado pela projeção `skill_id`/`tool_name`/`project_id`/`status` de ADR-146/147 (`status` foi promovida junto — faltava desde a ADR-146, que já definia `METRIC_LABEL_STATUS` mas não a usava na projeção). Exposto em `write_gold()`, no `report` da CLI e em `GET /observability/gold/tool-usage`.
+
+D8. **Exposto via API — `GET /observability/gold/cubo/contrato` + `GET /observability/gold/cubo/{cubo}/projecao`**, mesmo padrão de `/cubo-analitico/projecao` + `/projecao/contrato` (ADR-087/093). Diferença deliberada de segurança: o `.query()` interno usado por `GoldAggregator`/`CrossDomainBuilder` aceita `group_by`/`aggs` como expressões SQL livres porque todos os call-sites são literais internos (nunca input de cliente) — a API NÃO expõe essa liberdade. `group_by`/`medidas` do cliente são nomes puros (sem expressões, sem `COALESCE`/alias), validados contra um whitelist por cubo (`_CUBO_DIMENSOES`/`_CUBO_MEDIDAS`); medidas são presets nomeados mapeados para expressões SQL fixas no servidor — nenhuma SQL chega do cliente. Filtros usam `.slice(**kwargs)` (igualdade exata, parametrizado), não interpolação de string.
+
+D9. **Contrato único, não um por cubo.** Mesmo padrão de `get_cubo_projection_contract()` (retorna todas as faces em uma chamada): `GET /gold/cubo/contrato` lista os 4 cubos com suas dimensões/medidas de uma vez, em vez de 4 endpoints de contrato separados.
 
 ## Alternativas Rejeitadas
 
@@ -63,9 +67,8 @@ D7. **CuboMetricas ainda não tem um `GoldAggregator.build_*` que o consuma.** �
 
 | Risco | Mitigação |
 |---|---|
-| `query()` monta SQL por f-string a partir de `group_by`/`aggs`/`where`/`order_by` | Todos os call-sites são código interno (literais no próprio repositório), nunca input de usuário — mesmo risco que a SQL manual anterior já tinha |
-| Extração de alias em `group_by` exige exatamente `" AS "` maiúsculo | Documentado na docstring de `query()`; único formato usado pelos call-sites internos |
-| `CuboMetricas` sem consumidor Gold ainda | Aceitável como F1 — implementar um relatório sem um caso de uso definido seria escopo especulativo; a decisão de qual relatório fica para quando houver necessidade de produto |
+| `query()` monta SQL por f-string a partir de `group_by`/`aggs`/`where`/`order_by` | Todos os call-sites internos são literais no próprio repositório, nunca input de usuário — mesmo risco que a SQL manual anterior já tinha. A API (D8) não herda esse risco: valida `group_by`/`medidas` do cliente contra whitelist antes de montar a query |
+| Extração de alias em `group_by` exige exatamente `" AS "` maiúsculo | Documentado na docstring de `query()`; único formato usado pelos call-sites internos (a API nunca gera expressões com alias a partir de input do cliente) |
 
 ## Plano de Implementação
 
@@ -75,6 +78,8 @@ D7. **CuboMetricas ainda não tem um `GoldAggregator.build_*` que o consuma.** �
 | F2 | `CuboSpans`/`CuboLogs`/`CuboMetricas`/`CuboToolInvocations` + células | ✅ Implementado |
 | F3 | `GoldAggregator.build_sli_diario`/`build_fallback_rate_por_skill` migrados | ✅ Implementado |
 | F4 | `CrossDomainBuilder.build()` migrado; `_aggregate_fallback_by_project` removida | ✅ Implementado |
+| F5 | `status` promovida em `CelulaMetrica`/`normalize_metric_record`; `build_tool_usage_diario` + `write_gold`/CLI `report` | ✅ Implementado |
+| F6 | API: `GET /gold/cubo/contrato` + `GET /gold/cubo/{cubo}/projecao` (whitelist de dimensões/medidas) + `GET /gold/tool-usage` | ✅ Implementado |
 
 ## Definition of Done
 
@@ -83,6 +88,8 @@ D7. **CuboMetricas ainda não tem um `GoldAggregator.build_*` que o consuma.** �
 - [x] Os 4 cubos com teste de `from_silver` (mapeamento completo + campos ausentes) e ao menos uma `query()` de integração
 - [x] Suíte pré-existente de `GoldAggregator`/`CrossDomainBuilder` passa sem alteração
 - [x] Nenhum código morto deixado ao lado do caminho novo (`_aggregate_fallback_by_project` removida)
+- [x] `build_tool_usage_diario` testado (soma de `value`, não conta linhas; filtra por `metric_name`; persistido em `write_gold`; renderizado na CLI)
+- [x] API de projeção testada: contrato lista os 4 cubos; dimensão/medida inválida → 400; cubo inválido → 422 (validação `Literal`); filtros aplicados via `.slice()`; paginação
 
 ---
 
