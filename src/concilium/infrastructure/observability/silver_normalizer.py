@@ -7,6 +7,7 @@ Classifica fallback_type baseado nos padrões da ADR-110.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from typing import Any
 
@@ -65,6 +66,20 @@ def _make_event_id(record: dict[str, Any]) -> str:
     if span_id and span_id != "0" * 16:
         return span_id
     raw = f"{record.get('ts', '')}{record.get('logger', '')}{record.get('message', '')}"
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _make_metric_event_id(record: dict[str, Any]) -> str:
+    """Gera event_id determinístico para dedup de metric data points na Silver.
+
+    ts + metric_name sozinhos colidem quando duas séries do mesmo metric (labels
+    diferentes) caem na mesma coleta periódica — ex.: concilium.mcp.tool.calls
+    com dois tools distintos no mesmo ciclo. Inclui um hash das labels
+    (ordenadas, para não depender da ordem de inserção do dict) para
+    diferenciá-las sem perder idempotência entre reprocessamentos/backfill.
+    """
+    labels = record.get("labels") or {}
+    raw = f"{record.get('ts', '')}{record.get('metric_name', '')}{json.dumps(labels, sort_keys=True, default=str)}"
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -147,6 +162,7 @@ def normalize_span_record(record: dict[str, Any]) -> dict[str, Any]:
 def normalize_metric_record(record: dict[str, Any]) -> dict[str, Any]:
     """Normaliza um metric record Bronze → schema Silver metrics."""
     return {
+        "event_id": _make_metric_event_id(record),
         "metric_name": record.get("metric_name", ""),
         "ts": record.get("ts", ""),
         "value": float(record.get("value", 0.0)),
