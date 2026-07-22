@@ -3,7 +3,7 @@
 **Status:** Proposta
 **Data:** 2026-07-22
 **Contexto:** MendesLobo Construtora — Concilium
-**Dependências:** ADR-017 (Catalog Lifecycle Management), ADR-024 (Snapshot Auditável), ADR-025 (MCP Catalog Policy), ADR-040 (Master vs. Project Layer), ADR-041 (SCD Type 2), ADR-066 (Catalog Overlay Model), ADR-067 (Master Catalog Write API), ADR-120 (Catalog RBAC Lifecycle), ADR-130 (Grafo de Sinergia — achado correlato, ver seção dedicada)
+**Dependências:** ADR-017 (Catalog Lifecycle Management), ADR-024 (Snapshot Auditável), ADR-025 (MCP Catalog Policy), ADR-040 (Master vs. Project Layer), ADR-041 (SCD Type 2), ADR-062 (Versionamento de Contextos — `ConfigVersionService`), ADR-066 (Catalog Overlay Model), ADR-067 (Master Catalog Write API), ADR-120 (Catalog RBAC Lifecycle), ADR-130 (Grafo de Sinergia — achado correlato, ver seção dedicada)
 
 ---
 
@@ -22,6 +22,8 @@ P4. Não é gerado nenhum `CatalogSnapshot`/`CatalogDiff` (ADR-024) no momento d
 P5. O parâmetro `justificativa` de `aprovar_merge_catalogo` — descrito na própria docstring da ferramenta como "Motivo da aprovação para o audit trail" — **nunca é persistido**; é apenas ecoado na resposta da chamada MCP (`presentation/mcp/tools/catalogo.py:432-493`). Se o cliente MCP não registrar essa resposta de forma durável, a justificativa de uma aprovação de catálogo se perde permanentemente. Da mesma forma, `nota`/`nota_calibracao` em `_save_preco_insumo_master` é um campo único sobrescrito a cada chamada (não é array append-only) — a justificativa da alteração anterior é perdida na próxima.
 
 P6. Existe uma **terceira implementação**, `CatalogUpdater` (`infrastructure/catalog/updater.py`), que trata `Insumo` com mutação in-place + array de auditoria `auditoria_custo`, e `Producao` como append-only imutável. Nenhum destes dois comportamentos é usado por P1-P5: uma busca em todo `src/` mostra que `CatalogUpdater` não é importado por nenhum orquestrador ou ferramenta MCP viva — é referenciado apenas em um comentário de docstring (`domain/models/project/observacao.py:11`) descrevendo um fluxo pretendido que nunca foi conectado. Ter três implementações divergentes do "como uma mudança de catálogo é persistida" (`CatalogUpdater`, `RepositorioInsumo.atualizar_preco`, `_save_preco_insumo_master`) torna o sistema difícil de raciocinar e já produziu a lacuna de P1-P5 sem que nenhum ADR a tivesse decidido conscientemente.
+
+P11. A aprovação hoje é **monolítica por rascunho** (`aprovar_merge_catalogo`/`rejeitar_rascunho_catalogo` recebem só `contexto_id`+`rascunho_id`, sem seleção por modificação individual) — mas mesmo essa granularidade grosseira está desconectada do dado real, agravando P1/P2. O passo de revisão que deveria mostrar quais insumos mudaram está quebrado: `consultar_impacto_reajuste` lê `diff.get("modificados", {})` (`presentation/mcp/tools/catalogo.py:406-407`), porém `ContextoVersionService.compare()` (`application/services/catalog/contexto_version_service.py:245-262`) nunca produz uma chave `"modificados"` — retorna `"changed"`/`"unchanged"`. Logo `n_insumos_afetados` sempre retorna 0 e `insumos_modificados` sempre retorna lista vazia, independentemente de quantos preços tenham sido alterados. Não é só falta de granularidade por design — o próprio relatório de impacto que subsidiaria uma revisão (ainda que monolítica) é código morto que nunca reporta nada.
 
 ### Por que isso quebra "composição referencial temporal fidedigna"
 
@@ -70,7 +72,7 @@ D5. `CatalogUpdater` (`infrastructure/catalog/updater.py`) é removido do códig
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `atualizar_preco_insumo`/`adicionar_variante_producao` passam a gravar delta no rascunho (D1) | Não iniciado |
+| F1 | `atualizar_preco_insumo`/`adicionar_variante_producao` passam a gravar delta no rascunho (D1); `consultar_impacto_reajuste`/`listar_divergencias_rascunho` corrigidos para ler os deltas reais (hoje leem chave `modificados` inexistente — P11) | Não iniciado |
 | F2 | `aprovar_merge_catalogo` aplica deltas via `RepositorioInsumo.atualizar_preco()` (D2) | Não iniciado |
 | F3 | Geração de `CatalogSnapshot`/`CatalogDiff` + persistência de `justificativa` no merge (D3) | Não iniciado |
 | F4 | Notas de alteração viram array append-only (D4) | Não iniciado |
@@ -81,6 +83,8 @@ D5. `CatalogUpdater` (`infrastructure/catalog/updater.py`) é removido do códig
 ### Fase 1
 - [ ] `atualizar_preco_insumo` não escreve mais em `config/catalogos/{id}/insumos/**`, apenas no rascunho ativo
 - [ ] Teste cobrindo: rascunho rejeitado após `atualizar_preco_insumo` → preço no catálogo mestre permanece inalterado
+- [ ] `consultar_impacto_reajuste` lê a chave correta do retorno de `ContextoVersionService.compare()` (`"changed"`, não `"modificados"`) e passa a reportar `n_insumos_afetados` corretamente
+- [ ] Teste cobrindo: rascunho com N deltas de preço → `consultar_impacto_reajuste` retorna `n_insumos_afetados == N`
 
 ### Fase 2
 - [ ] `aprovar_merge_catalogo` chama `RepositorioInsumo.atualizar_preco()` para cada delta do rascunho aprovado
@@ -121,6 +125,7 @@ P10. Nenhum ADR ou teste cruza os dois temas hoje — ADR-130 nunca menciona ove
 - ADR-017 — Catalog Lifecycle Management (Definition of Done ainda lista "audit trail: every catalog change traceable to obra + aprovador" como item aberto; esta ADR fecha essa lacuna especificamente para preço de insumo)
 - ADR-024 — Referências em Planilha Editável com Snapshot Auditável (mecanismo de `CatalogSnapshot`/`CatalogDiff` reaproveitado em D3)
 - ADR-041 — SCD Type 2 para Rastreabilidade Histórica do Catálogo Master (mecanismo de `atualizar_preco()` reaproveitado em D2)
+- ADR-062 — Versionamento Explícito de Contextos e Perfis (`ConfigVersionService.compare()` é onde vive o bug de P11 — chave `"modificados"` inexistente)
 - ADR-066 — Catalog Overlay Model (garante fidelidade temporal por-run via `resolved_catalog.json`; esta ADR garante fidelidade temporal do catálogo mestre em si, pré-requisito para que o overlay tenha algo confiável para congelar)
 - ADR-120 — Catalog RBAC Lifecycle (o gate de quatro olhos que esta ADR passa a proteger de fato)
 - ADR-130 — Composição de Equipe: Grafo de Sinergia / Produtividade Derivada (achado correlato — overlay de projeto pode orfanizar nós do grafo; ver seção dedicada acima)
