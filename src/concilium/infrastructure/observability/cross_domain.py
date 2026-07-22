@@ -14,26 +14,13 @@ from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
-from .silver_normalizer import dedupe_records
+from .cubo_logs import CuboLogs
+from .pipeline import read_silver_records
 
 logger = logging.getLogger(__name__)
 
-_SILVER_PREFIX = "observability/silver"
-
 # canonical_provider: project_id -> {"custo_direto": float, "margem_pct": float} | None
 CanonicalProvider = Callable[[str], dict[str, Any] | None]
-
-
-def _aggregate_fallback_by_project(logs: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
-    """Agrega n_total/n_fallbacks por project_id a partir dos logs Silver."""
-    by_project: dict[str, dict[str, int]] = {}
-    for rec in logs:
-        pid = rec.get("project_id") or "unknown"
-        agg = by_project.setdefault(pid, {"n_total": 0, "n_fallbacks": 0})
-        agg["n_total"] += 1
-        if rec.get("fallback_type"):
-            agg["n_fallbacks"] += 1
-    return by_project
 
 
 class CrossDomainBuilder:
@@ -44,23 +31,8 @@ class CrossDomainBuilder:
         self._canonical_provider = canonical_provider
 
     def _read_silver_logs(self) -> list[dict[str, Any]]:
-        """Lê todos os records Silver de logs, deduplicados entre arquivos.
-
-        Mesmo motivo de ObservabilityWorker.read_silver()/GoldAggregator._read_silver():
-        um dia reprocessado com particionamento diferente do original pode deixar o
-        mesmo event_id em mais de um arquivo — sem dedup, conta em dobro por projeto.
-        """
-        blobs = sorted(self._storage.listar_blobs(f"{_SILVER_PREFIX}/logs/"))
-        records: list[dict[str, Any]] = []
-        for path in blobs:
-            try:
-                raw = self._storage.ler_blob(path)
-                for line in raw.decode("utf-8").splitlines():
-                    if line.strip():
-                        records.append(json.loads(line))
-            except Exception:
-                pass
-        return dedupe_records(records)
+        """Lê todos os records Silver de logs, deduplicados entre arquivos."""
+        return read_silver_records(self._storage, "logs")
 
     def _build_cross_domain_row(self, pid: str, agg: dict[str, int]) -> dict[str, Any]:
         n_total = agg["n_total"]
@@ -84,14 +56,19 @@ class CrossDomainBuilder:
 
     def build(self) -> list[dict[str, Any]]:
         """Agrega fallback_rate por project_id e junta com o canonical resultado."""
-        logs = self._read_silver_logs()
-        if not logs:
-            return []
-
-        # Agrega por project_id (sem DuckDB — volume por projeto é pequeno)
-        by_project = _aggregate_fallback_by_project(logs)
-
-        return [self._build_cross_domain_row(pid, agg) for pid, agg in sorted(by_project.items())]
+        cubo = CuboLogs.from_silver(self._read_silver_logs())
+        rows = cubo.query(
+            group_by=["COALESCE(project_id, 'unknown') AS project_id"],
+            aggs={
+                "n_total": "COUNT(*)",
+                "n_fallbacks": "COUNT(*) FILTER (WHERE fallback_type IS NOT NULL)",
+            },
+            order_by="project_id",
+        )
+        return [
+            self._build_cross_domain_row(r["project_id"], {"n_total": r["n_total"], "n_fallbacks": r["n_fallbacks"]})
+            for r in rows
+        ]
 
     def write(self) -> str:
         """Persiste a tabela cross-domain em Gold como JSON. Retorna o path."""
