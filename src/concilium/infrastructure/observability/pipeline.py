@@ -21,6 +21,7 @@ from .silver_normalizer import (
     normalize_log_record,
     normalize_metric_record,
     normalize_span_record,
+    normalize_tool_invocation_record,
     record_key,
 )
 
@@ -33,6 +34,7 @@ _NORMALIZERS = {
     "logs": normalize_log_record,
     "traces": normalize_span_record,
     "metrics": normalize_metric_record,
+    "tool_invocations": normalize_tool_invocation_record,
 }
 
 
@@ -196,7 +198,7 @@ class ObservabilityWorker:
         """Processa Bronze → Silver incrementalmente.
 
         Args:
-            signal_type:  "logs" | "traces" | "metrics"
+            signal_type:  "logs" | "traces" | "metrics" | "tool_invocations"
             full_reload:  True → apaga checkpoint e reprocessa tudo
             since:        ISO date string — processa apenas blobs desta data em diante
 
@@ -231,7 +233,7 @@ class ObservabilityWorker:
 
 _SCHED_SILVER = "_scheduler_silver"
 _SCHED_GOLD = "_scheduler_gold"
-_SIGNAL_TYPES = ("logs", "traces", "metrics")
+_SIGNAL_TYPES = ("logs", "traces", "metrics", "tool_invocations")
 
 
 class ObservabilityScheduler:

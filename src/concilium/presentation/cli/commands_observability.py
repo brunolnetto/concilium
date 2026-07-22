@@ -3,7 +3,7 @@
 Comandos:
     concilium pipeline observability run      — incremental desde último checkpoint
     concilium pipeline observability run --full-reload
-    concilium pipeline observability run --signal logs|traces|metrics
+    concilium pipeline observability run --signal logs|traces|metrics|tool_invocations
     concilium pipeline observability status   — mostra checkpoints por sinal
     concilium pipeline observability report   — exibe tabelas Gold no terminal
 """
@@ -22,7 +22,7 @@ observability_app = typer.Typer(
     no_args_is_help=True,
 )
 
-_SIGNAL_TYPES = ["logs", "traces", "metrics"]
+_SIGNAL_TYPES = ["logs", "traces", "metrics", "tool_invocations"]
 
 
 def _get_storage():
@@ -33,7 +33,7 @@ def _get_storage():
 
 @observability_app.command("run")
 def run_pipeline(
-    signal: Annotated[str, typer.Option(help="Tipo de sinal: logs | traces | metrics")] = "logs",
+    signal: Annotated[str, typer.Option(help="Tipo de sinal: logs | traces | metrics | tool_invocations")] = "logs",
     full_reload: Annotated[bool, typer.Option("--full-reload", help="Apaga checkpoints e reprocessa tudo")] = False,
     since: Annotated[str | None, typer.Option(help="ISO date (YYYY-MM-DD) — fast-forward desde esta data")] = None,
     all_signals: Annotated[bool, typer.Option("--all", help="Processa todos os tipos de sinal")] = False,

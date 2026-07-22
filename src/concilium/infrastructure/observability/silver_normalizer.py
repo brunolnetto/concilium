@@ -153,3 +153,24 @@ def normalize_metric_record(record: dict[str, Any]) -> dict[str, Any]:
         "labels": record.get("labels", {}),
         "service": record.get("service", ""),
     }
+
+
+def normalize_tool_invocation_record(record: dict[str, Any]) -> dict[str, Any]:
+    """Normaliza um tool_invocation record Bronze → schema Silver tool_invocations.
+
+    "event_id" (não "id") é deliberado: reaproveita o fallback de dedup já
+    existente em record_key()/dedupe_records(), que prioriza event_id — sem
+    isso, este sinal cairia no fallback genérico str(id(rec)), que nunca dedupa.
+    """
+    return {
+        "event_id": record.get("id", ""),
+        "tool_name": record.get("tool_name", ""),
+        "user_id": record.get("user_id"),
+        "tenant_id": record.get("tenant_id"),
+        "status": record.get("status", ""),
+        "started_at": record.get("started_at", ""),
+        "finished_at": record.get("finished_at", ""),
+        "error_type": record.get("error_type"),
+        "device_id": record.get("device_id"),
+        "mcp_session_id": record.get("mcp_session_id"),
+    }

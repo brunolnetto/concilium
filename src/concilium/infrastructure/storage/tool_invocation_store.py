@@ -24,6 +24,7 @@ Lock de instância garante serialização em ambiente multi-thread.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 from datetime import UTC, datetime
@@ -31,9 +32,12 @@ from typing import TYPE_CHECKING
 
 from concilium.application.tool_invocations.models import ToolInvocation
 from concilium.application.tool_invocations.repository import ToolInvocationRepository
+from concilium.infrastructure.observability.bronze_writer import BronzeWriter
 
 if TYPE_CHECKING:
     from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+
+logger = logging.getLogger(__name__)
 
 _AUDIT_PREFIX = ".tool_invocations"
 _AUDIT_FILE = "audit.jsonl"
@@ -109,6 +113,7 @@ class BlobToolInvocationRepository(ToolInvocationRepository):
         self._prefix = prefix.strip("/")
         self._blob = f"{self._prefix}/{_AUDIT_FILE}"
         self._lock = threading.Lock()
+        self._bronze_writer = BronzeWriter(storage, "tool_invocations")
 
     # ── ToolInvocationRepository ──────────────────────────────────────────────
 
@@ -125,6 +130,18 @@ class BlobToolInvocationRepository(ToolInvocationRepository):
                 self._rotate(existing)
                 existing = b""
             self._storage.gravar_blob(self._blob, existing + line.encode("utf-8"))
+        self._write_bronze(invocation)
+
+    def _write_bronze(self, invocation: ToolInvocation) -> None:
+        """Dual-write para o medalhão (observability/bronze/tool_invocations/).
+
+        Best-effort: uma falha aqui nunca deve comprometer o audit log
+        principal, já gravado com sucesso na linha acima.
+        """
+        try:
+            self._bronze_writer.write_batch([invocation.to_dict()])
+        except Exception:
+            logger.warning("Falha ao gravar tool_invocation no Bronze.", exc_info=True)
 
     def _should_rotate(self, raw: bytes) -> bool:
         if not raw:

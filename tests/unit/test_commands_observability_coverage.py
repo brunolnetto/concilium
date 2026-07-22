@@ -57,7 +57,7 @@ class TestRunPipeline:
         assert "42 records" in result.output
 
     def test_run_all_signals(self):
-        """--all flag iterates over all three signal types."""
+        """--all flag iterates over all four signal types (ADR-112 extensão: tool_invocations)."""
         storage = MagicMock()
         worker = self._make_worker(blobs=1, records=5)
         with (
@@ -70,8 +70,8 @@ class TestRunPipeline:
             result = runner.invoke(observability_app, ["run", "--all"])
         assert result.exit_code == 0
         # worker.run should be called once per signal type
-        assert worker.run.call_count == 3
-        for sig in ("logs", "traces", "metrics"):
+        assert worker.run.call_count == 4
+        for sig in ("logs", "traces", "metrics", "tool_invocations"):
             assert sig in result.output
 
 
