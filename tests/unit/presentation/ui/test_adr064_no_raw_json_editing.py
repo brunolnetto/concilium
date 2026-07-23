@@ -19,7 +19,7 @@ import pytest
 
 
 class TestCatalogoPageNoRawJson:
-    CATALOGO_PAGE = Path(__file__).resolve().parents[2] / "src/concilium/presentation/ui/templates/catalogo_page.py"
+    CATALOGO_PAGE = Path(__file__).resolve().parents[4] / "src/concilium/presentation/ui/templates/catalogo_page.py"
 
     def test_no_text_area_with_json_dumps(self):
         """catalogo_page.py must not pass json.dumps output to st.text_area."""
@@ -135,7 +135,7 @@ class TestLintRawJsonScanner:
         """The actual UI directory has zero UI-JSON-RAW violations."""
         from scripts.dev.lint_report import _scan_raw_json_ui
 
-        ui_root = Path(__file__).resolve().parents[2] / "src/concilium/presentation/ui"
+        ui_root = Path(__file__).resolve().parents[4] / "src/concilium/presentation/ui"
         hits = _scan_raw_json_ui(ui_root)
         assert hits == [], "UI-JSON-RAW violations found (ADR-064):\n" + "\n".join(
             f"  {h['file']}:{h['line']} — {h['function']}" for h in hits

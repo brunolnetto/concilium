@@ -48,7 +48,7 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 _SCHEMA_ROOT = _ROOT / "config" / "schemas" / "catalog"
 _RFI_PRODUTIVIDADES = _ROOT / "config" / "catalogos" / "rfi-r02" / "produtividades"
 _RFI_INSUMOS = _ROOT / "config" / "catalogos" / "rfi-r02" / "insumos"

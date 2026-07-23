@@ -36,7 +36,7 @@ def _new_version(projects_root: Path, project_name: str) -> None:
 
 
 def _config_root() -> Path:
-    return Path(__file__).resolve().parents[2] / "config"
+    return Path(__file__).resolve().parents[4] / "config"
 
 
 # ── _startup_validation / callback ────────────────────────────────────────────

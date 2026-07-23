@@ -29,7 +29,7 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 _SCHEMA_ROOT = _ROOT / "config" / "schemas" / "catalog"
 _PROD_REJEITO_FILES = [
     _ROOT / "config" / "catalogos" / "mendeslobo" / "producoes" / f"PROD-REJEITO-COMP-EQ{n}-001.json"

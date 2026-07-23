@@ -18,7 +18,7 @@ import pytest
 def _load_replan():
     import importlib.util
 
-    path = Path(__file__).resolve().parents[2] / "src/concilium/presentation/mcp/tools/replan.py"
+    path = Path(__file__).resolve().parents[4] / "src/concilium/presentation/mcp/tools/replan.py"
     spec = importlib.util.spec_from_file_location("replan_tools", path)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
@@ -167,11 +167,11 @@ class TestDiagnosticoPeApp:
     """Verifica que o HTML do app de diagnóstico tem os elementos de sliders."""
 
     def _html(self):
-        p = Path(__file__).resolve().parents[2] / "src/concilium/presentation/mcp/apps/diagnostico-pe/index.html"
+        p = Path(__file__).resolve().parents[4] / "src/concilium/presentation/mcp/apps/diagnostico-pe/index.html"
         return p.read_text(encoding="utf-8")
 
     def test_arquivo_existe(self):
-        p = Path(__file__).resolve().parents[2] / "src/concilium/presentation/mcp/apps/diagnostico-pe/index.html"
+        p = Path(__file__).resolve().parents[4] / "src/concilium/presentation/mcp/apps/diagnostico-pe/index.html"
         assert p.exists()
 
     def test_tem_tab_levers(self):
@@ -229,11 +229,11 @@ class TestArtefatosApp:
     """Verifica que o HTML do app de artefatos tem o Gantt."""
 
     def _html(self):
-        p = Path(__file__).resolve().parents[2] / "src/concilium/presentation/mcp/apps/artefatos/index.html"
+        p = Path(__file__).resolve().parents[4] / "src/concilium/presentation/mcp/apps/artefatos/index.html"
         return p.read_text(encoding="utf-8")
 
     def test_arquivo_existe(self):
-        p = Path(__file__).resolve().parents[2] / "src/concilium/presentation/mcp/apps/artefatos/index.html"
+        p = Path(__file__).resolve().parents[4] / "src/concilium/presentation/mcp/apps/artefatos/index.html"
         assert p.exists()
 
     def test_tem_entrada_cronograma_na_sidebar(self):

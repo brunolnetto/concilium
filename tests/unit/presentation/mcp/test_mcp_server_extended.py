@@ -25,7 +25,7 @@ from concilium.presentation.mcp.server import build_server
 
 pytestmark = [pytest.mark.slow]
 
-CONFIG_ROOT = Path(__file__).resolve().parents[2] / "config"
+CONFIG_ROOT = Path(__file__).resolve().parents[4] / "config"
 
 
 @pytest.fixture(scope="module")

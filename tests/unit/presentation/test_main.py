@@ -19,7 +19,7 @@ from concilium.presentation.main import app
 
 runner = CliRunner()
 
-CONFIG_ROOT = Path(__file__).resolve().parents[2] / "config"
+CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
 
 
 @pytest.fixture

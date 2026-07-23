@@ -25,7 +25,7 @@ def _adr040_shared_config(tmp_path_factory: pytest.TempPathFactory) -> Path:
     dirs_exist_ok para evitar falhas em reruns. Leva ~1-2s na primeira execução.
     """
     global _SHARED_CONFIG
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[4]
     src_config = repo_root / "config"
     cfg = tmp_path_factory.mktemp("adr040_config", numbered=False)
     # Ignora pastas e arquivos pesados que não são necessários para testes unitários
