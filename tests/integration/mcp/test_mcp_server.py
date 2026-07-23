@@ -60,7 +60,7 @@ def server_with_config(tmp_path_factory):
 
     from concilium.infrastructure.settings import _reset_all
 
-    config_root = str(Path(__file__).parents[2] / "config")
+    config_root = str(Path(__file__).parents[3] / "config")
     proj_root = str(tmp_path_factory.mktemp("mcp_projetos"))
 
     prev = {k: os.environ.get(k) for k in ("CONCILIUM__CONFIG_ROOT", "CONCILIUM__PROJECTS_ROOT")}

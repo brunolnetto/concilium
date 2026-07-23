@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-_GOLDEN_REF = Path(__file__).parents[2] / "benchmarks/data/GOLDEN/referencia.json"
+_GOLDEN_REF = Path(__file__).parents[3] / "benchmarks/data/GOLDEN/referencia.json"
 _ABS_TOL = 0.0001  # 0.01% — invariantes algébricos
 _REG_TOL = 0.005  # 0.5%  — invariantes de regressão
 

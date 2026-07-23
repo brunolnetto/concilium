@@ -395,7 +395,7 @@ class TestValidacaoAgisComSeedData:
         """
         from concilium.application.skills import run_relatorio_e_artefatos
 
-        path = Path(__file__).parent.parent / "samples" / "01-terraplenagem-feliz.json"
+        path = Path(__file__).parent.parent.parent / "samples" / "01-terraplenagem-feliz.json"
         can = _carregar_amostra_canonical(path)
         return run_relatorio_e_artefatos(can, {})
 

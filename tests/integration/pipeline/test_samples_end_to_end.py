@@ -18,7 +18,7 @@ class TestPipelineComSamples:
     @pytest.fixture
     def sample_01_path(self) -> Path:
         """Retorna caminho para sample 01-terraplenagem-feliz.json."""
-        return Path(__file__).parent.parent / "samples" / "01-terraplenagem-feliz.json"
+        return Path(__file__).parent.parent.parent / "samples" / "01-terraplenagem-feliz.json"
 
     def load_sample(self, sample_path: Path) -> dict[str, Any]:
         """Carrega sample JSON."""
