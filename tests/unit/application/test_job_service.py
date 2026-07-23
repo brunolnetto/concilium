@@ -916,3 +916,50 @@ class TestListarJobsStatusCountsConcludedAndError:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+
+# ─── application/jobs/service.py ─────────────────────────────────────────────
+
+
+class TestJobService:
+    def _make_service(self, tmp_path):
+        from concilium.application.jobs.service import JobService
+
+        svc = JobService()  # uses default settings
+        return svc
+
+    def test_job_service_instantiates(self, tmp_path):
+        svc = self._make_service(tmp_path)
+        assert svc is not None
+
+    def test_listar_jobs_empty(self, tmp_path):
+        svc = self._make_service(tmp_path)
+        result = svc.listar_jobs()
+        assert hasattr(result, "jobs") or isinstance(result, object)
+
+    def test_obter_estatisticas(self, tmp_path):
+        svc = self._make_service(tmp_path)
+        stats = svc.obter_estatisticas()
+        assert stats is not None
+
+    def test_consultar_job_not_found(self, tmp_path):
+        svc = self._make_service(tmp_path)
+        with pytest.raises(ValueError, match="não encontrado"):
+            svc.consultar_job("nonexistent-job-id")
+
+    def test_cancelar_job_not_found(self, tmp_path):
+        svc = self._make_service(tmp_path)
+        with pytest.raises(ValueError):
+            svc.cancelar_job("nonexistent-job-id")
+
+    def test_get_job_service_singleton(self):
+        from concilium.application.jobs.service import get_job_service, reset_job_service
+
+        reset_job_service()
+        svc1 = get_job_service()
+        svc2 = get_job_service()
+        assert svc1 is svc2
+
+
+

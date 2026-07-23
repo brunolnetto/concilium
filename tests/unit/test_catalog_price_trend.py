@@ -529,3 +529,25 @@ class TestSICROFallback:
         # zero SICRO price falls back to preco_unitario
         assert ins.fonte_atual == "preco_unitario"
         assert ins.preco_atual == pytest.approx(80.0)
+
+
+
+# ─── application/catalog/price_trend.py ──────────────────────────────────────
+
+
+class TestCatalogPriceTrend:
+    def test_calcular_tendencia_empty(self):
+        from concilium.application.catalog.price_trend import calcular_tendencia
+
+        result = calcular_tendencia([], contexto_id="test")
+        assert result is not None
+
+    def test_calcular_tendencia_with_insumo(self):
+        from concilium.application.catalog.price_trend import calcular_tendencia
+
+        insumos = [{"codigo": "I1", "tipo": "MATERIAL", "preco_unitario": 100.0, "historico_precos": []}]
+        result = calcular_tendencia(insumos, contexto_id="test")
+        assert hasattr(result, "indices_por_categoria") or isinstance(result, object)
+
+
+

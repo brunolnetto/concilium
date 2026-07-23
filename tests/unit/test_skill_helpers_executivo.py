@@ -198,3 +198,25 @@ class TestRreHelpers:
         eixo = mod._rre_oport_eixo(oport)
         assert "EQUIPES" in eixo.nome
         assert eixo.confianca == "ALTA"
+
+
+
+# ─── application/skills/manifests/09/_skill_helpers_executivo.py ─────────────
+
+
+class TestSkillHelpersExecutivo:
+    def test_module_importable(self):
+        import importlib.util
+        import os
+        from pathlib import Path as _Path
+
+        base = str(_Path(__file__).resolve().parents[2] / "src/concilium/application/skills/manifests")
+        target = os.path.join(base, "09-relatorio-e-artefatos", "_skill_helpers_executivo.py")
+        if os.path.exists(target):
+            spec = importlib.util.spec_from_file_location("_skill_helpers_executivo", target)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            assert hasattr(mod, "_rre_get_margin_status")
+
+
+

@@ -160,6 +160,19 @@ def apply_replenishable_delay(
         for sa in scheduled_activities
     }
 
+    # ADR-128 F5 (achado de performance): sem reabastecimento suficiente (taxa máxima
+    # zerada ou capacidade de armazenamento menor que o consumo semanal), a mesma
+    # atividade é escolhida rodada após rodada e o déficit projetado no ponto de
+    # violação — medido no MESMO deslocamento relativo ao novo início da atividade —
+    # se repete indefinidamente: um ponto fixo que `_MAX_DELAY_ITERATIONS` (500) só
+    # alcançaria depois de recomputar `_project` (custo O(semanas)) centenas de vezes.
+    # Rastreia (atividade, deslocamento, déficit) da rodada anterior e interrompe assim
+    # que o mesmo estado se repete sem melhora — nunca interrompe enquanto o
+    # deslocamento ou o déficit ainda estiverem progredindo (ex.: reabastecimento
+    # gradual acumulando estoque a cada semana adiada).
+    activity_anterior: str | None = None
+    offset_anterior: int | None = None
+    deficit_anterior: float | None = None
     for _ in range(_MAX_DELAY_ITERATIONS):
         niveis = project_estoque_semanal(resource, activities.values())
         if not has_estoque_negativo(niveis):
@@ -176,6 +189,13 @@ def apply_replenishable_delay(
             # nesta estratégia; interrompe sem lançar exceção, preservando o cronograma.
             break
         target = max(candidates, key=lambda sa: sa.start_week)
+        deficit = niveis[t0]
+        offset = t0 - target.start_week
+        if target.activity_id == activity_anterior and offset == offset_anterior and deficit <= deficit_anterior:  # type: ignore[operator]
+            break
+        activity_anterior = target.activity_id
+        offset_anterior = offset
+        deficit_anterior = deficit
         target.start_week += 1
         target.end_week += 1
         if delay_causes is not None:

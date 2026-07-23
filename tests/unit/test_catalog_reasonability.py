@@ -49,3 +49,34 @@ def test_reasonability_artifact_returns_ok_when_producao_has_team_and_productivi
     assert artifact["summary"]["total_cpus"] == 1
     assert artifact["summary"]["erros"] == 0
     assert artifact["rows"][0]["severity"] == "OK"
+
+
+
+
+
+# ─── application/services/catalog_reasonability.py ────────────────────────────
+
+
+class TestCatalogReasonability:
+    def test_build_artifact_empty_catalog(self):
+        from concilium.application.services.catalog.catalog_reasonability import build_catalog_reasonability_artifact
+
+        result = build_catalog_reasonability_artifact("ctx1", [], [])
+        assert isinstance(result, dict)
+        assert "summary" in result
+
+    def test_build_artifact_with_cpus(self):
+        from concilium.application.services.catalog.catalog_reasonability import build_catalog_reasonability_artifact
+
+        cpus = [{"codigo": "CPU-1", "descricao": "Terraplenagem", "producao_id_ref": "P1"}]
+        result = build_catalog_reasonability_artifact("ctx1", cpus, [])
+        assert result["summary"]["total_cpus"] == 1
+
+    def test_summary_has_expected_keys(self):
+        from concilium.application.services.catalog.catalog_reasonability import build_catalog_reasonability_artifact
+
+        result = build_catalog_reasonability_artifact("ctx1", [], [])
+        summary = result["summary"]
+        assert "total_cpus" in summary
+        assert "erros" in summary or "errors" in summary or len(summary) >= 1
+

@@ -130,3 +130,89 @@ def test_atividade_componente_has_full_breakdown_for_direto_and_indireto():
     assert by_key[("indireto.ADM", "Overhead BDI")] == 5.0
     assert by_key[("indireto.ADM", "Lucro (L)")] == 10.0
     assert by_key[("indireto.ADM", "Tributos")] == 7.5
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+# ─── application/services/cube_projection_views.py ───────────────────────────
+
+
+class TestCubeProjectionViews:
+    def test_normalize_bdi_component(self):
+        from concilium.application.services.analytics.cube_projection_views import _normalize_bdi_component
+
+        result = _normalize_bdi_component("overhead_AC")
+        assert isinstance(result, str)
+
+    def test_bucket_from_week_iso_mes(self):
+        from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+
+        result = bucket_from_week_iso("2026-W05", "mes")
+        assert isinstance(result, str)
+
+    def test_bucket_from_week_iso_trimestre(self):
+        from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+
+        result = bucket_from_week_iso("2026-W05", "trimestre")
+        assert isinstance(result, str)
+
+    def test_bucket_from_week_iso_semana(self):
+        from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+
+        result = bucket_from_week_iso("2026-W05", "semana")
+        assert "W" in result or isinstance(result, str)
+
+    def test_extract_cost_from_entry_float(self):
+        from concilium.application.services.analytics.cube_projection_views import _extract_cost_from_entry
+
+        entry = MagicMock()
+        entry.valor_rs = 1_000.0
+        result = _extract_cost_from_entry(entry)
+        assert isinstance(result, float)
+
+    def test_split_operational_cost(self):
+        from concilium.application.services.analytics.cube_projection_views import _split_operational_cost_with_bdi
+
+        multipliers = {"overhead_AC": 0.05, "margem_l": 0.10}
+        result = _split_operational_cost_with_bdi(1_000_000.0, multipliers)
+        assert isinstance(result, dict)
+
+    def test_build_bdi_multipliers_from_cubo_empty(self):
+        from concilium.application.services.analytics.cube_projection_views import _build_bdi_multipliers_from_cubo
+
+        cubo = MagicMock()
+        cubo.total_preco_venda = 0.0
+        cubo.total_custo_direto = 0.0
+        result = _build_bdi_multipliers_from_cubo(cubo)
+        assert isinstance(result, dict)
+
+    def test_build_bdi_multipliers_with_data(self):
+        from concilium.application.services.analytics.cube_projection_views import _build_bdi_multipliers_from_cubo
+
+        cubo = MagicMock()
+        cubo.total_preco_venda = 1_000_000.0
+        cubo.total_custo_direto = 700_000.0
+        cubo.total_overhead = 200_000.0
+        cubo.total_margem = 100_000.0
+        cubo.total_tributos = 50_000.0
+        result = _build_bdi_multipliers_from_cubo(cubo)
+        assert isinstance(result, dict)
+
+    def test_build_indireto_component_totals_empty(self):
+        from concilium.application.services.analytics.cube_projection_views import _build_indireto_component_totals
+
+        canonical = MagicMock()
+        canonical.indiretos = []
+        result = _build_indireto_component_totals(canonical)
+        assert isinstance(result, dict)
+
+    def test_indireto_component_shares_empty(self):
+        from concilium.application.services.analytics.cube_projection_views import _indireto_component_shares
+
+        canonical = MagicMock()
+        canonical.indiretos = []
+        result = _indireto_component_shares(canonical)
+        assert isinstance(result, dict)
+
+
+

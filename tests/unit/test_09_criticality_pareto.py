@@ -160,3 +160,82 @@ def test_dimensoes_independentes_expostas():
         for dim in (p.custo, p.duracao, p.recurso, p.sensibilidade):
             assert 0.0 <= dim.percentil <= 1.0
             assert dim.rank >= 1
+
+
+
+
+
+
+
+
+# ══ 07-diagnostico-criticidade/skill.py ═══════════════════════════════════════
+
+
+def _minimal_canonical(**kw):
+    return CanonicalModel(meta=_meta(), projeto=_projeto(), **kw)
+
+
+def _load_skill_module(skill_id: str) -> object:
+    import concilium.application.skills as _skills_pkg
+
+    return _skills_pkg._load_skill_module(skill_id)
+
+
+class TestCostCriticalityEdgeCases:
+    def _classify(self):
+        mod = _load_skill_module("07-diagnostico-criticidade")
+        return mod._classify
+
+    def test_classify_score_tier_a(self):
+        """rank in top-40% without frontier → 'A'; top-20% on frontier → 'A+'."""
+        fn = self._classify()
+        assert fn(2, 5, False) == "A"  # rank 2/5, top_40=ceil(5*0.4)=2 → A
+        assert fn(1, 5, True) == "A+"  # rank 1/5, on_frontier, top_20=ceil(5*0.2)=1 → A+
+
+    def test_classify_score_tier_b(self):
+        """rank in top-70% but not top-40% → 'B'."""
+        fn = self._classify()
+        assert fn(3, 5, False) == "B"  # rank 3/5, top_40=2, top_70=ceil(5*0.7)=4 → B
+        assert fn(4, 5, False) == "B"  # rank 4/5, top_70=4 → B
+
+    def test_run_diagnostico_criticidade_custo_total_zero_returns_early(self):
+        """custo_total_obra == 0 → ERRO VAL-CC-01 and early return."""
+        from concilium.application.skills import run_diagnostico_criticidade
+        from concilium.domain.models.canonical import (
+            BdiCategorias,
+            PrecoUnitarioCategoria,
+            SubtotalCategorias,
+            SubtotalSemBdiComBdi,
+        )
+
+        # equipe with custo_total=0 → custo_total_obra=0 → early return with ERRO
+        equipe = EquipeDireta(
+            equipe_id="eq-i1",
+            item_id="i1",
+            cpu_id="CPU-X",
+            nome="Equipe Test",
+            custo_total=0.0,  # zero → triggers early return
+            custo_mao_obra_mensal=0.0,
+            permanencia_meses=0.0,
+        )
+        plan = Planejamento(
+            item_id="i1",
+            cpu_id="CPU-X",
+            quantitativo=100.0,
+            preco_unitario=PrecoUnitarioCategoria(material=0.0, diesel=0.0, mao_obra=0.0, equipamentos=0.0, total=0.0),
+            bdi=BdiCategorias(material=0.0, diesel=0.0, mao_obra=0.0, equipamentos=0.0),
+            preco_unitario_com_bdi=PrecoUnitarioCategoria(
+                material=0.0, diesel=0.0, mao_obra=0.0, equipamentos=0.0, total=0.0
+            ),
+            subtotal=SubtotalSemBdiComBdi(
+                sem_bdi=SubtotalCategorias(material=0.0, diesel=0.0, mao_obra=0.0, equipamentos=0.0, total=0.0),
+                com_bdi=SubtotalCategorias(material=0.0, diesel=0.0, mao_obra=0.0, equipamentos=0.0, total=0.0),
+            ),
+        )
+        canonical = _minimal_canonical(equipes_diretas=[equipe], planejamento=[plan])
+        result = run_diagnostico_criticidade(canonical, {})
+        errors = [v for v in result.validacoes if v.codigo == "VAL-CC-01" and v.status == "ERRO"]
+        assert len(errors) >= 1
+
+
+

@@ -520,3 +520,59 @@ class TestBsLfdBuildBdiSection:
         result = _bs_lfd_build_bdi_section(svc, extra_inputs, {}, {})
         assert result["06-resultado-financeiro"]["existing_key"] == "keep_me"
         assert "tabela_bdi" in result["06-resultado-financeiro"]
+
+
+# ─── application/benchmarks/_spec_loader_helpers_b.py ────────────────────────
+
+
+class TestSpecLoaderHelpersB:
+    def test_eei_normalize_text(self):
+        from concilium.application.benchmarks.spec._spec_loader_helpers_b import _eei_normalize_text
+
+        result = _eei_normalize_text("Terraplenagem 1ª CAT")
+        assert isinstance(result, str)
+        assert result == result.lower()
+
+    def test_eei_normalize_unit(self):
+        from concilium.application.benchmarks.spec._spec_loader_helpers_b import _eei_normalize_unit
+
+        result = _eei_normalize_unit("m³")
+        assert isinstance(result, str)
+
+    def test_eei_unit_score_delta_same(self):
+        from concilium.application.benchmarks.spec._spec_loader_helpers_b import _eei_unit_score_delta
+
+        result = _eei_unit_score_delta("m3", "m3")
+        assert result >= 0.0
+
+    def test_eei_unit_score_delta_different(self):
+        from concilium.application.benchmarks.spec._spec_loader_helpers_b import _eei_unit_score_delta
+
+        result = _eei_unit_score_delta("m3", "h")
+        assert isinstance(result, float)
+
+    def test_eei_keyword_boost(self):
+        from concilium.application.benchmarks.spec._spec_loader_helpers_b import _eei_keyword_boost
+
+        result = _eei_keyword_boost("escavação terraplenagem", "escavação carga")
+        assert isinstance(result, float)
+
+    def test_eei_score_cpu_match(self):
+        import inspect
+
+        from concilium.application.benchmarks.spec._spec_loader_helpers_b import _eei_score_cpu_match
+
+        sig = inspect.signature(_eei_score_cpu_match)
+        # Just verify the function exists and is callable
+        assert callable(_eei_score_cpu_match)
+        assert len(sig.parameters) >= 2
+
+    def test_lfd_parse_raw_row(self):
+        from concilium.application.benchmarks.spec._spec_loader_helpers_b import _lfd_parse_raw_row
+
+        row = {"valor": 1000.0, "meses": 6.0}
+        result = _lfd_parse_raw_row(row, fallback_meses=12.0)
+        assert isinstance(result, (dict, tuple, type(None)))
+
+
+

@@ -101,3 +101,87 @@ def test_validar_cpu_completa_retorna_7_validacoes_incluindo_funcoes_e_equipamen
     assert "VAL-CPU-INS-05" in codigos
     assert "VAL-CPU-INS-06" in codigos
     assert "VAL-CPU-INS-07" in codigos
+
+
+
+
+
+
+# ══ validations/cpu_insumo.py ════════════════════════════════════════════════
+
+
+class TestCpuInsumoValidacoes:
+    def _make_validator(self, insumos_list=None):
+        from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalogo = {"insumos": insumos_list or []}
+        repo = RepositorioInsumo(catalogo)
+        return ValidadorCPUInsumo(repo)
+
+    def test_validar_coeficiente_sensato_unidade_desconhecida_ok(self):
+        """Unidade not in RANGE_SENSATO → OK (line 88)."""
+        validator = self._make_validator()
+        comp_item = {"insumo_id": "X", "coeficiente": 99999}
+        insumo = {"unidade": "unidade_estranha"}
+        result = validator.validar_coeficiente_sensato(comp_item, insumo)
+        assert result.status == "OK"
+
+    def test_validar_coeficiente_sensato_fora_range_aviso(self):
+        """Coeficiente outside range → AVISO (lines 92-99)."""
+        from concilium.domain.validations.cpu_insumo import RANGE_SENSATO_POR_UNIDADE
+
+        validator = self._make_validator()
+        unit = next(iter(RANGE_SENSATO_POR_UNIDADE))
+        _minimo, maximo = RANGE_SENSATO_POR_UNIDADE[unit]
+        comp_item = {"insumo_id": "X", "coeficiente": maximo * 1000}
+        insumo = {"unidade": unit}
+        result = validator.validar_coeficiente_sensato(comp_item, insumo)
+        assert result.status == "AVISO"
+        assert result.codigo == "VAL-CPU-INS-04"
+
+    def test_validar_unidade_compativel_coeficiente_none(self):
+        """coeficiente is None → ERRO (lines 116-120)."""
+        from concilium.domain.validations.cpu_insumo import RANGE_OBRIGATORIO_POR_UNIDADE
+
+        validator = self._make_validator()
+        unit = next(iter(RANGE_OBRIGATORIO_POR_UNIDADE))
+        comp_item = {"insumo_id": "X", "coeficiente": None}
+        insumo = {"unidade": unit}
+        result = validator.validar_unidade_compativel(comp_item, insumo)
+        assert result.status == "ERRO"
+        assert result.codigo == "VAL-CPU-INS-05"
+
+    def test_validar_unidade_compativel_coeficiente_fora_range(self):
+        """Coeficiente outside mandatory range → ERRO (lines 123-129)."""
+        from concilium.domain.validations.cpu_insumo import RANGE_OBRIGATORIO_POR_UNIDADE
+
+        validator = self._make_validator()
+        unit = next(iter(RANGE_OBRIGATORIO_POR_UNIDADE))
+        _minimo, maximo = RANGE_OBRIGATORIO_POR_UNIDADE[unit]
+        comp_item = {"insumo_id": "X", "coeficiente": maximo * 999999}
+        insumo = {"unidade": unit}
+        result = validator.validar_unidade_compativel(comp_item, insumo)
+        assert result.status == "ERRO"
+        assert result.codigo == "VAL-CPU-INS-05"
+
+    def test_validar_cpu_completa_insumo_none_skip(self):
+        """When insumo is found in repo index but obter_insumo returns None → continue (line 179)."""
+        from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalogo = {"insumos": [{"codigo": "X", "tipo": "MAO_OBRA", "unidade": "h"}]}
+        repo = RepositorioInsumo(catalogo)
+        # Monkey-patch obter_insumo to return None even though the item exists
+        repo.obter_insumo = lambda codigo: None  # type: ignore[method-assign]
+        validator = ValidadorCPUInsumo(repo)
+        cpu = {
+            "composicao_itens": [{"insumo_id": "X", "coeficiente": 1.0, "categoria_custo": "MAO_OBRA"}],
+            "composicao_padrao_equipe": {"funcoes": [], "equipamentos": []},
+        }
+        results = validator.validar_cpu_completa(cpu)
+        # VAL-CPU-INS-01 OK (item exists via insumo_existe), then None → continue
+        assert any(r.codigo == "VAL-CPU-INS-01" and r.status == "OK" for r in results)
+
+
+

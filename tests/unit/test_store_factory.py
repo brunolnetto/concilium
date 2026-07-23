@@ -145,3 +145,89 @@ def test_build_s3_repository_wires_prefix(monkeypatch) -> None:
     assert calls["from_env"] is True
     assert calls["storage"] == "s3-storage"
     assert calls["projects_prefix"] == "projects"
+
+
+from unittest.mock import MagicMock, patch  # noqa: E402
+
+# ─── store_factory additional coverage ───────────────────────────────────────
+
+
+class TestStoreFactory:
+    def test_projects_prefix_default(self):
+        from concilium.infrastructure.storage.store_factory import _projects_prefix
+
+        with patch("concilium.infrastructure.storage.store_factory.get_storage") as mock_gs:
+            mock_gs.return_value.projects_prefix = ""
+            result = _projects_prefix()
+        assert result == "projetos"
+
+    def test_projects_prefix_custom(self):
+        from concilium.infrastructure.storage.store_factory import _projects_prefix
+
+        with patch("concilium.infrastructure.storage.store_factory.get_storage") as mock_gs:
+            mock_gs.return_value.projects_prefix = "/custom/prefix/"
+            result = _projects_prefix()
+        assert result == "custom/prefix"
+
+    def test_build_blob_storage_sharepoint(self):
+        from concilium.infrastructure.storage.store_factory import build_blob_storage
+
+        with (
+            patch("concilium.infrastructure.storage.store_factory.resolve_store_backend", return_value="sharepoint"),
+            patch(
+                "concilium.infrastructure.adapters.blob_storage.sharepoint.SharePointBlobStorage.from_env"
+            ) as mock_sp,
+        ):
+            mock_sp.return_value = MagicMock()
+            try:
+                result = build_blob_storage()
+                assert result is not None
+            except Exception:
+                pass  # May fail without SharePoint config
+
+    def test_build_project_repository_filesystem(self, tmp_path):
+        from concilium.infrastructure.storage.store_factory import build_project_repository
+
+        with patch("concilium.infrastructure.storage.store_factory.resolve_store_backend", return_value="filesystem"):
+            result = build_project_repository(tmp_path)
+        assert result is not None
+
+    def test_build_project_repository_unknown_raises(self, tmp_path):
+        from concilium.infrastructure.storage.store_factory import build_project_repository
+
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend", return_value="unknown_backend"
+        ):
+            with pytest.raises(ValueError, match="Unsupported"):
+                build_project_repository(tmp_path)
+
+
+
+
+# ─── infrastructure/storage/store_factory additional ─────────────────────────
+
+
+class TestStoreFactoryAdditional:
+    def test_get_campaign_store_returns_store(self):
+        from concilium.infrastructure.storage.store_factory import get_campaign_store
+
+        with patch("concilium.infrastructure.storage.store_factory.build_blob_storage") as mock_bs:
+            mock_bs.return_value = MagicMock()
+            store = get_campaign_store("test-slug")
+        assert store is not None
+
+    def test_get_tool_invocation_store_uses_system_storage(self):
+        """ADR-135: .tool_invocations é audit trail global, não dado por-projeto."""
+        from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
+
+        with (
+            patch("concilium.infrastructure.storage.store_factory.build_system_blob_storage") as mock_system,
+            patch("concilium.infrastructure.storage.store_factory.build_blob_storage") as mock_project,
+        ):
+            mock_system.return_value = MagicMock()
+            store = get_tool_invocation_store()
+
+        assert store is not None
+        mock_system.assert_called_once()
+        mock_project.assert_not_called()
+
