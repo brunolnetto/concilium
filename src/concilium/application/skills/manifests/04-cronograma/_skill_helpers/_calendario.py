@@ -162,6 +162,26 @@ def _extract_activities(
     return activities
 
 
+def _build_item_to_activity_map(canonical: CanonicalModel) -> dict[str, str]:
+    """Mapeia item_id (EAP) -> primeira activity_id correspondente (ADR-072/081).
+
+    Quando `canonical.atividades` está populado (auto-derivado por
+    `run_escopo_e_eap`, uma `Atividade` por item via `_build_atividades_for_item`),
+    `_extract_activities` usa `atividade_id` (sufixo "-atv-N") como activity_id em
+    vez do `item_id` puro — sem este mapeamento, as arestas de precedência
+    extraídas da EAP (chaveadas por item_id) não batem com os ids usados pelo
+    CP-SAT, deixando FS silenciosamente sem efeito (guarda em
+    `_add_fs_precedence_constraints`) e lançando `KeyError` para SS/FF (sem
+    guarda equivalente em `_add_extended_precedence_constraints`). Mantém "uma
+    atividade por item para scheduling" — mesma simplificação já assumida por
+    `_build_item_to_first_activity` na skill 01.
+    """
+    mapping: dict[str, str] = {}
+    for act in getattr(canonical, "atividades", None) or []:
+        mapping.setdefault(act.eap_item_id, act.atividade_id)
+    return mapping
+
+
 def _extract_edge_thresholds_from_eap(canonical: CanonicalModel) -> tuple[dict[tuple[str, str], float], list]:
     """Extrai edge_thresholds e precedências estendidas (SS/FF) a partir dos predecessores da EAP.
 
@@ -171,21 +191,24 @@ def _extract_edge_thresholds_from_eap(canonical: CanonicalModel) -> tuple[dict[t
 
     edge_thresholds: dict[tuple[str, str], float] = {}
     extended: list[_EP] = []
+    item_to_activity = _build_item_to_activity_map(canonical)
 
     if canonical.eap:
         for item in canonical.eap:
+            succ_id = item_to_activity.get(item.item_id, item.item_id)
             for pred in item.predecessores_tipados():
-                key = (pred.item_id, item.item_id)
+                pred_id = item_to_activity.get(pred.item_id, pred.item_id)
+                key = (pred_id, succ_id)
                 tipo = str(getattr(pred, "tipo", "FS") or "FS").upper()
                 lag = int(getattr(pred, "lag", 0) or 0)
                 if tipo == "FS":
                     edge_thresholds[key] = float(pred.completion_threshold_pct)
                 elif tipo == "SS":
                     edge_thresholds[key] = 1.0  # sentinela topológico
-                    extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo="SS", lag=lag))
+                    extended.append(_EP(pred=pred_id, succ=succ_id, tipo="SS", lag=lag))
                 elif tipo == "FF":
                     edge_thresholds[key] = 1.0  # sentinela topológico
-                    extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo="FF", lag=lag))
+                    extended.append(_EP(pred=pred_id, succ=succ_id, tipo="FF", lag=lag))
 
     return edge_thresholds, extended
 

@@ -235,3 +235,184 @@ def test_f7_excel_renderiza_aba_calendario_operacional():
     )
     wb = ExcelRenderer(canonical).render()
     assert "CALENDARIO.OP" in wb.sheetnames
+
+
+def test_extract_edge_thresholds_com_multiplos_predecessores_tipados_mistos():
+    """ADR-081/NEP-031: um item com 2+ predecessores tipados na mesma lista
+    (FF seguido de FS) exercita o laço interno de `_extract_edge_thresholds_from_eap`
+    continuando para o próximo predecessor após tratar um tipo FF — cobre o caminho
+    AUTO_SCHEDULE via canônico (sem rcpsp_spec), que deriva o DAG diretamente da EAP
+    (fallback ``_extract_activities`` de item_id — por isso o canônico é construído
+    diretamente, sem ``atividades`` explícitas, que tomariam precedência)."""
+    from datetime import UTC, datetime
+
+    from concilium.domain.models.canonical import (
+        CanonicalModel,
+        Coordenadas,
+        EapItem,
+        Meta,
+        PrecedenciaItem,
+        Projeto,
+        RegimeTrabalho,
+    )
+
+    meta = Meta(gerado_em=datetime.now(UTC), contexto_id="test")
+    projeto = Projeto(
+        id="proj-multi-pred",
+        nome="ADR068-multi-pred",
+        tipo_obra="terraplenagem",
+        localizacao="Fortaleza",
+        coordenadas=Coordenadas(lat=-3.73, lng=-38.52),
+        regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+        data_inicio="2026-06-01",
+        data_termino="2026-09-30",
+        snapshot_catalogo_id="s-cat",
+        snapshot_perfil_id="s-perf",
+    )
+    eap = [
+        EapItem(item_id="eap-01", ordem=1, cpu_id="CPU-01", descricao="Desmatamento", unidade="m2", quantitativo=100.0),
+        EapItem(item_id="eap-02", ordem=2, cpu_id="CPU-02", descricao="Escavacao", unidade="m3", quantitativo=100.0),
+        EapItem(
+            item_id="eap-03",
+            ordem=3,
+            cpu_id="CPU-03",
+            descricao="Compactacao",
+            unidade="m3",
+            quantitativo=100.0,
+            predecessores=[
+                PrecedenciaItem(item_id="eap-01", tipo="FF", lag=0),
+                PrecedenciaItem(item_id="eap-02", tipo="FS", lag=0),
+            ],
+        ),
+    ]
+    canonical = CanonicalModel(meta=meta, projeto=projeto, eap=eap)
+
+    # AUTO_SCHEDULE via canônico puro (sem rcpsp_spec, sem num_equipes_por_item) —
+    # exercita _rasfc_extract_from_canonical -> _extract_dag -> _extract_edge_thresholds_from_eap.
+    result = run_cronograma(canonical, {})
+
+    assert not any(v.status == "ERRO" for v in result.validacoes)
+    assert result.canonical.cronograma is not None
+    scheduled_ids = {sa.activity_id for sa in result.canonical.cronograma.scheduled_activities}
+    assert scheduled_ids == {"eap-01", "eap-02", "eap-03"}
+
+
+def test_extract_edge_thresholds_com_atividades_auto_derivadas_ff_ss_nao_lanca_keyerror():
+    """Regressão: quando `canonical.atividades` está populado (caminho normal
+    `run_escopo_e_eap` -> `run_cronograma`, sem `rcpsp_spec`), `_extract_activities`
+    usa `atividade_id` (sufixo "-atv-1") como activity_id em vez do `item_id` puro.
+    Antes do mapeamento item_id -> activity_id em `_extract_edge_thresholds_from_eap`,
+    uma precedência FF/SS na EAP gerava uma `ExtendedPrecedence` chaveada por item_id,
+    que `_add_extended_precedence_constraints` indexava direto em `starts`/`ends`
+    (chaveados por activity_id) sem guarda — `KeyError` no meio do solve do CP-SAT.
+    FS clássico não lançava, mas era descartado em silêncio pela guarda equivalente
+    em `_add_fs_precedence_constraints` — precedência nunca era realmente aplicada."""
+    inputs = {
+        "nome": "ADR068-atividades-ff-ss",
+        "tipo_obra": "terraplenagem",
+        "localizacao": "Fortaleza",
+        "coordenadas": {"lat": -3.73, "lng": -38.52},
+        "regime_trabalho": {"dias_semana": 5, "horas_dia": 8},
+        "data_inicio": "2026-06-01",
+        "data_termino": "2026-09-30",
+        "eap": [
+            {
+                "item_id": "eap-01",
+                "ordem": 1,
+                "cpu_id": "CPU-01",
+                "descricao": "Item 1",
+                "unidade": "m3",
+                "quantitativo": 100.0,
+            },
+            {
+                "item_id": "eap-02",
+                "ordem": 2,
+                "cpu_id": "CPU-01",
+                "descricao": "Item 2",
+                "unidade": "m3",
+                "quantitativo": 100.0,
+                "predecessores": [{"item_id": "eap-01", "tipo": "FF", "lag": 0}],
+            },
+        ],
+        "contexto_id": "test",
+        "snapshot_catalogo_id": "snap-cat",
+        "snapshot_perfil_id": "snap-perfil",
+    }
+    catalogo = {
+        "cpus": [{"codigo": "CPU-01", "descricao": "CPU teste", "producao_id_ref": "PROD-01"}],
+        "produtividades": [
+            {
+                "id": "PROD-01",
+                "codigo": "PROD-01",
+                "descricao": "Prod",
+                "valor_horario": 50.0,
+                "unidade": "m3",
+                "composicao_padrao_equipe": {},
+            }
+        ],
+        "insumos": [],
+    }
+    canonical = run_escopo_e_eap(None, inputs, catalogo=catalogo).canonical
+    assert canonical.atividades, "pré-condição: run_escopo_e_eap deve auto-derivar atividades"
+
+    result = run_cronograma(canonical, {}, catalogo=catalogo)
+
+    assert not any(v.status == "ERRO" for v in result.validacoes)
+    assert result.canonical.cronograma is not None
+    assert result.canonical.cronograma.is_feasible is True
+    sched = {sa.activity_id: sa for sa in result.canonical.cronograma.scheduled_activities}
+    # FF: eap-02 só pode TERMINAR depois que eap-01 termina — com CPU-01 livre para
+    # ambos (sem disputa de pool), sem a constraint eap-02 rodaria em paralelo (semana 0).
+    assert sched["eap-02"].end_week >= sched["eap-01"].end_week
+    assert sched["eap-02"].start_week > sched["eap-01"].start_week
+
+
+def test_extract_edge_thresholds_ignora_tipo_desconhecido_no_meio_do_laco():
+    """`_extract_edge_thresholds_from_eap` normaliza tipo via `PrecedenciaItem`
+    (Literal["FS","SS","FF"]) — nenhum dado tipado real chega com outro valor.
+    O fallthrough silencioso do laço (`if`/`elif`/`elif` sem `else`, caindo direto
+    de volta ao topo do laço quando nenhum tipo bate) é, portanto, apenas
+    defensivo e inalcançável via a API pública tipada — exercitado aqui via
+    duck-typing direto sobre o helper interno, sem passar pela validação
+    Pydantic de `PrecedenciaItem`."""
+    import sys
+
+    from concilium.application.skills import run_cronograma as _rc  # noqa: F401 — garante o load lazy
+
+    cron_mod = sys.modules["_concilium_skillpkg_04_cronograma.skill"]
+
+    class _FakePred:
+        def __init__(self, item_id, tipo, lag=0, completion_threshold_pct=1.0):
+            self.item_id = item_id
+            self.tipo = tipo
+            self.lag = lag
+            self.completion_threshold_pct = completion_threshold_pct
+
+    class _FakeItem:
+        def __init__(self, item_id, preds):
+            self.item_id = item_id
+            self._preds = preds
+
+        def predecessores_tipados(self):
+            return self._preds
+
+    class _FakeCanonical:
+        def __init__(self, eap):
+            self.eap = eap
+
+    # Predecessor com tipo desconhecido no MEIO da lista (não o último) — garante
+    # que o laço continua para o próximo predecessor após o fallthrough (186->177).
+    item = _FakeItem(
+        "eap-03",
+        [
+            _FakePred("eap-01", "TIPO-INVALIDO"),
+            _FakePred("eap-02", "FS"),
+        ],
+    )
+    canonical = _FakeCanonical(eap=[item])
+
+    edge_thresholds, extended = cron_mod._extract_edge_thresholds_from_eap(canonical)
+
+    assert ("eap-01", "eap-03") not in edge_thresholds
+    assert ("eap-02", "eap-03") in edge_thresholds
+    assert extended == []
