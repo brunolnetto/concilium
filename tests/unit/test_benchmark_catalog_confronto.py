@@ -323,3 +323,58 @@ class TestConsolidateAllSkipsEmptyIssues:
             assert result["total_cpus_nao_encontradas"] == 0
             assert result["benchmarks"] == []
 
+
+
+
+# catalog_confronto.py line 65->64: item.engine_zerado is False → back to for loop
+# catalog_confronto.py line 78: bench_data has a non-dir file → continue
+# ---------------------------------------------------------------------------
+
+
+class TestAnalyzeCatalogConfrontoEdgeCases:
+    def test_item_with_engine_zerado_false_not_added(self):
+        """Line 65->64: engine_zerado=False → if False → back to loop → planejamento_zerados stays []."""
+        from concilium.application.benchmarks.comparison.catalog_confronto import (
+            analyze_catalog_confronto,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            slug = "BENCH-CONF"
+            data_dir = root / "benchmarks" / "data" / slug
+            data_dir.mkdir(parents=True)
+            confronto = {
+                "planejamento_confronto": {
+                    "confronto": [
+                        {"item_id": "EAP-01", "engine_zerado": False},  # False → skip
+                        {"item_id": "EAP-02", "engine_zerado": None},  # None → falsy → skip
+                    ]
+                }
+            }
+            (data_dir / "confronto_catalogo.json").write_text(json.dumps(confronto), encoding="utf-8")
+
+            result = analyze_catalog_confronto(slug, root=root)
+
+        assert result.get("planejamento_zerados") == []
+
+    def test_consolidate_all_skips_non_dir_entries(self):
+        """Line 78: bench_data contains a regular file → not d.is_dir() → continue."""
+        from concilium.application.benchmarks.comparison.catalog_confronto import (
+            consolidate_all,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bench_data = root / "benchmarks" / "data"
+            bench_data.mkdir(parents=True)
+            # Add a regular file (not a dir) inside bench_data
+            (bench_data / "README.txt").write_text("not a benchmark", encoding="utf-8")
+
+            result = consolidate_all(root=root)
+
+        # File was skipped, no benchmarks processed
+        assert result["total_benchmarks"] == 0
+
+
+# ---------------------------------------------------------------------------
+

@@ -212,3 +212,35 @@ class TestRuntimeErrorHandling:
 
 # ────────────────────────────────────────────────────────────────
 
+
+
+# runtime/__init__.py line 178:
+# Runtime._meta_is_gate returns gate flag from MANIFEST_META
+# ---------------------------------------------------------------------------
+
+
+class TestRuntimeMetaIsGate:
+    def _make_runtime(self, tmp_path):
+        from concilium.application.runtime import Runtime
+
+        return Runtime(config_root=tmp_path)
+
+    def test_meta_is_gate_returns_false_for_unknown_skill(self, tmp_path):
+        """Line 178: MANIFEST_META.get unknown → {} → .get("gate", False) → False."""
+        rt = self._make_runtime(tmp_path)
+        result = rt._meta_is_gate("99-nonexistent-skill")
+        assert result is False
+
+    def test_meta_is_gate_returns_false_for_non_gate_skill(self, tmp_path):
+        """Line 178: known skill with gate=False → False."""
+        rt = self._make_runtime(tmp_path)
+        # "05-equipes-e-alocacao" has gate=False in MANIFEST_META
+        result = rt._meta_is_gate("05-equipes-e-alocacao")
+        assert result is False
+
+    def test_meta_is_gate_returns_true_for_gate_skill(self, tmp_path):
+        """Line 178: known skill with gate=True → True."""
+        rt = self._make_runtime(tmp_path)
+        result = rt._meta_is_gate("01-escopo-e-eap")
+        assert result is True
+

@@ -42,3 +42,26 @@ class TestRepositorioProducaoObterOuErro:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+# producao.py line 33:
+# obter_ou_erro("NONEXISTENT") → raises FileNotFoundError
+# ---------------------------------------------------------------------------
+
+
+class TestRepositorioProducaoObterOuErro2:
+    def test_obter_ou_erro_raises_when_not_found(self, tmp_path):
+        """Line 33: producao not found → obter returns None → raises FileNotFoundError."""
+        from concilium.infrastructure.repositories.producao import RepositorioProducao
+
+        repo = RepositorioProducao(producoes_dir=tmp_path)
+        try:
+            repo.obter_ou_erro("NONEXISTENT-ID")
+            raise AssertionError("Expected FileNotFoundError")
+        except FileNotFoundError as exc:
+            assert "NONEXISTENT-ID" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+

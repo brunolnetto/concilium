@@ -448,3 +448,39 @@ class TestInsumoVersionadoValidateFails:
 
 # ---------------------------------------------------------------------------
 
+
+
+# insumo.py lines 68-69:
+# _rp_historico_scd2 with missing data_inicio_vigencia key → KeyError → pass
+# ---------------------------------------------------------------------------
+
+
+class TestRpHistoricoScd2KeyError:
+    def test_record_missing_data_inicio_raises_and_is_caught(self):
+        """Lines 68-69: historico entry without data_inicio_vigencia → KeyError → pass → None."""
+        from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
+
+        insumo = {
+            "historico_precos": [
+                # Missing 'data_inicio_vigencia' → KeyError when accessing registro["data_inicio_vigencia"]
+                {"preco_unitario": 100.0},
+            ]
+        }
+        result = _rp_historico_scd2(insumo, data_referencia="2026-01-15")
+        assert result is None
+
+    def test_invalid_date_string_raises_value_error_and_is_caught(self):
+        """Lines 68-69: invalid date string → ValueError → pass → None."""
+        from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
+
+        insumo = {
+            "historico_precos": [
+                {"data_inicio_vigencia": "not-a-date", "preco_unitario": 100.0},
+            ]
+        }
+        result = _rp_historico_scd2(insumo, data_referencia="2026-01-15")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+

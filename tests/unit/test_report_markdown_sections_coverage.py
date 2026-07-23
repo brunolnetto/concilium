@@ -662,3 +662,39 @@ class TestRenderPlanejamentoTableEmptyInput:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+# report_markdown_sections.py line 418->438:
+# top_neg empty (no rows with economia < 0) → if top_neg: False → line 438
+# ---------------------------------------------------------------------------
+
+
+class TestRenderPoolEconomiaOrigemNoNegRows:
+    def test_top_neg_empty_skips_sobrecusto_section(self):
+        """Line 418->438: no negative economia rows → if top_neg: False → skip to ---."""
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_pool_economia_origem,
+        )
+
+        # Return eco rows with economia > 0 only (no negatives for top_neg)
+        eco_rows = [{"atividade_id": "ACT-01", "custo_autonomo": 1000.0, "economia": 500.0}]
+        eco_proj = {"rows": eco_rows, "operator_meta": {}}
+        causa_proj = {"rows": []}
+
+        with patch(
+            "concilium.application.services.analytics.cubo_pool_projection.resolve_cubo_pool_projection",
+            return_value=eco_proj,
+        ) as mock_fn:
+            # First call → eco_proj, second call → causa_proj
+            mock_fn.side_effect = [eco_proj, causa_proj]
+
+            canonical = object()  # just needs to be non-None
+            result = render_pool_economia_origem(canonical)
+
+        # Section header present (eco_rows non-empty), "---" present, but no "Sobrecusto"
+        full_text = "\n".join(result)
+        assert "Economia por Compartilhamento" in full_text
+        assert "---" in full_text
+        assert "Sobrecusto" not in full_text
+

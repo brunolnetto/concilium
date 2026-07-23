@@ -56,3 +56,62 @@ class TestReadSilverRecords:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+# pipeline.py line 62->60: _read_ndjson with blank lines → if line: False
+# pipeline.py line 82->81: _upsert_silver existing blob has blank lines
+# pipeline.py line 112->111: read_silver blob has blank lines
+# ---------------------------------------------------------------------------
+
+
+def _make_worker():
+    """ObservabilityWorker backed by a MagicMock storage."""
+    from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
+    mock_storage = MagicMock()
+    return ObservabilityWorker(mock_storage), mock_storage
+
+
+class TestObservabilityWorkerBlankLines:
+    def test_read_ndjson_skips_blank_lines(self):
+        """Line 62->60: blank line in NDJSON → if line: False → back to loop."""
+        worker, mock_storage = _make_worker()
+
+        content = '\n{"event_id": "E1", "ts": 1}\n\n{"event_id": "E2", "ts": 2}\n'
+        mock_storage.ler_blob.return_value = content.encode("utf-8")
+
+        result = worker._read_ndjson("some/path.ndjson")
+        assert len(result) == 2  # blank lines skipped, 2 valid records
+
+    def test_upsert_silver_skips_blank_lines_in_existing(self):
+        """Line 82->81: blank line in existing silver blob → if line.strip(): False → skip."""
+        worker, mock_storage = _make_worker()
+
+        existing_content = '\n{"event_id": "EX-1", "ts": 1}\n\n'
+        mock_storage.ler_blob.return_value = existing_content.encode("utf-8")
+
+        new_records = [{"event_id": "NEW-1", "ts": 2}]
+        worker._upsert_silver("logs", new_records, "2026-06-18")
+
+        # gravar_blob should have been called once with merged content
+        mock_storage.gravar_blob.assert_called_once()
+        written = mock_storage.gravar_blob.call_args[0][1].decode("utf-8")
+        assert "EX-1" in written
+        assert "NEW-1" in written
+
+    def test_read_silver_skips_blank_lines(self):
+        """Line 112->111: blank line in silver blob → if line.strip(): False → skip."""
+        worker, mock_storage = _make_worker()
+
+        blob_content = '\n{"event_id": "S1"}\n\n{"event_id": "S2"}\n'
+        mock_storage.listar_blobs.return_value = ["silver/logs/today/records.ndjson"]
+        mock_storage.ler_blob.return_value = blob_content.encode("utf-8")
+
+        result = worker.read_silver("logs")
+        assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+

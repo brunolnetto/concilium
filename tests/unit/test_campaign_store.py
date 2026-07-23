@@ -220,3 +220,26 @@ class TestCampaignRunStoreMockBackend:
         result = store.load_config()
         assert result is None
 
+
+
+
+# campaign_store.py line 207->212: new_run with non-LocalBlobStorage skips mkdir
+# ---------------------------------------------------------------------------
+
+
+class TestNewRunWithMockStorage:
+    def test_new_run_skips_mkdir_for_non_local_backend(self):
+        """Line 207->212: MagicMock is not LocalBlobStorage → if False → returns run_name."""
+        from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
+        mock_storage = MagicMock()
+        mock_storage.listar_blobs.return_value = []
+        store = CampaignRunStore(storage=mock_storage, prefix="PROJ-01/campaigns")
+
+        run_name = store.new_run()
+
+        # Should return a run name string without touching the filesystem
+        assert run_name.startswith("run-")
+        # gravar_blob called for sentinel + current pointer (mkdir NOT called on storage)
+        assert mock_storage.gravar_blob.call_count == 2
+

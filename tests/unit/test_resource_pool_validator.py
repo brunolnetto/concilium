@@ -405,3 +405,38 @@ class TestAtribuirCustoInsumo:
         assert cost == pytest.approx(0.0)
 
 
+
+
+
+
+
+
+# resource_pool_validator.py line 69->57:
+# elif classe == "concorrente_compartilhavel" is False → back to for loop
+# ---------------------------------------------------------------------------
+
+
+class TestRpvAccumulateDemandsUnknownClass:
+    def test_unknown_class_skips_all_elif_branches(self):
+        """Line 69->57: insumo classe='other' → none of the three elif match → continue."""
+        from concilium.infrastructure.catalog.resource_pool_validator import (
+            _rpv_accumulate_demands,
+        )
+
+        insumos = {
+            "EQ-CUSTOM": {
+                "classe_compartilhamento": {"classe": "not_a_known_class"},
+            }
+        }
+        alocacoes = {"act-1": {"EQ-CUSTOM": 2.0}}
+        atividades_ativas = ["act-1"]
+
+        demand_a, demand_b, demand_c = _rpv_accumulate_demands(atividades_ativas, alocacoes, insumos)
+        # Unknown class → none of A/B/C accumulated
+        assert dict(demand_a) == {}
+        assert dict(demand_b) == {}
+        assert dict(demand_c) == {}
+
+
+# ---------------------------------------------------------------------------
+

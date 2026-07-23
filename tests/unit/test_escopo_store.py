@@ -503,3 +503,30 @@ from concilium.infrastructure.storage.escopo_store import PlanoStore  # noqa: E4
 
 
 
+
+
+# escopo_store.py lines 154-155:
+# PlanoStore.read_invocations with malformed JSON line → JSONDecodeError → pass
+# ---------------------------------------------------------------------------
+
+
+class TestPlanoStoreReadInvocationsInvalidJson:
+    def test_malformed_json_line_is_skipped(self, tmp_path):
+        """Lines 154-155: invalid JSON line in invocations.log → JSONDecodeError → pass."""
+        from concilium.infrastructure.storage.escopo_store import PlanoStore
+
+        plan_dir = tmp_path / "plan-001"
+        plan_dir.mkdir()
+        log_file = plan_dir / PlanoStore.INVOCATIONS_LOG
+        # Write one valid and one invalid JSON line
+        log_file.write_text('{"skill_id": "01"}\nNOT-VALID-JSON\n', encoding="utf-8")
+
+        store = PlanoStore(root=plan_dir)
+        result = store.read_invocations()
+        # Only the valid line is returned; invalid is skipped
+        assert len(result) == 1
+        assert result[0]["skill_id"] == "01"
+
+
+# ---------------------------------------------------------------------------
+

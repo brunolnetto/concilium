@@ -48,3 +48,30 @@ class TestSemanticExtraction:
 
 # ────────────────────────────────────────────────────────────────
 
+
+
+# semantic/extractor.py line 102:
+# _strip_soil_qualifiers: qualifier not starting with "solo_class:" → appended
+# ---------------------------------------------------------------------------
+
+
+class TestStripSoilQualifiers:
+    def test_non_soil_qualifier_is_kept(self):
+        """Line 102: qualifier without 'solo_class:' prefix → result.append(q)."""
+        from concilium.application.semantic.extractor import _strip_soil_qualifiers
+
+        result = _strip_soil_qualifiers(["texture:loose", "solo_class:argila", "method:ripping"])
+        assert "texture:loose" in result
+        assert "method:ripping" in result
+        assert "solo_class:argila" not in result
+
+    def test_only_soil_qualifiers_gives_empty(self):
+        """All qualifiers are solo_class → result is empty."""
+        from concilium.application.semantic.extractor import _strip_soil_qualifiers
+
+        result = _strip_soil_qualifiers(["solo_class:1A", "solo_class:2"])
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+

@@ -504,3 +504,32 @@ def test_build_chart_markdown_docs_all_sections():
     assert "grafico_mao_obra.md" in result
     assert "grafico_cronograma.md" in result
     assert "grafico_financeiro.md" in result
+
+
+
+
+
+
+# chart_markdown_support.py line 146->148:
+# _xychart_bar_line returns None (empty labels) → if chart: False → go to exposicao check
+# ---------------------------------------------------------------------------
+
+
+class TestRenderFinancialMarkdownEmptyLabels:
+    def test_chart_is_none_when_labels_empty(self):
+        """Line 146->148: labels=[] → _xychart_bar_line returns None → if chart: False."""
+        from concilium.application.runtime.deliverables.visualizations.chart_markdown_support import (
+            _render_financial_markdown,
+        )
+
+        graficos = {
+            "financeiro": {
+                "labels": [],  # empty → xychart returns None
+                "saldo": [100.0],  # non-empty → saldo and receita is True
+                "receita": [200.0],
+            }
+        }
+        result = _render_financial_markdown(graficos)
+        # chart was None → the "### Fluxo de Caixa" block was not added
+        assert not any("Fluxo de Caixa" in line for line in result)
+

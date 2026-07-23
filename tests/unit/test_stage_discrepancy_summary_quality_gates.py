@@ -320,3 +320,35 @@ def test_build_summary_skips_non_dirs(tmp_path: Path):
     (data_dir / "some_file.txt").write_text("x")
     summary = build_summary(tmp_path)
     assert summary["meta"]["total_benchmarks_com_extracao"] == 0
+
+
+import tempfile  # noqa: E402
+
+# stage_discrepancy_summary.py line 208:
+# bench_data subdir exists but no extracao_intermediarios.json → continue
+# ---------------------------------------------------------------------------
+
+
+class TestBuildSummarySkipsSubdirWithoutTrace:
+    def test_dir_without_trace_file_is_skipped(self):
+        """Line 208: continue when trace file doesn't exist."""
+        from concilium.application.benchmarks.analysis.stage_discrepancy_summary import (
+            build_summary,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bench_data = root / "benchmarks" / "data"
+            bench_data.mkdir(parents=True)
+            # Subdir without trace file
+            (bench_data / "BENCH-NO-TRACE").mkdir()
+
+            result = build_summary(root=root)
+
+        # The subdir was skipped → no rows collected
+        assert result["meta"]["total_benchmarks_com_extracao"] == 0
+        assert result["top_discrepancias"] == []
+
+
+# ---------------------------------------------------------------------------
+

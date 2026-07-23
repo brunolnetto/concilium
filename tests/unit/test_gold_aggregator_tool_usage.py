@@ -135,3 +135,27 @@ class TestGoldAggregatorReadSilverException:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+# gold_aggregator.py line 37->36: blank line in blob → if line.strip(): False
+# ---------------------------------------------------------------------------
+
+
+class TestGoldAggregatorBlankLines:
+    def test_read_silver_skips_blank_lines(self):
+        """Line 37->36: blank line in blob → if line.strip(): False → back to loop."""
+        from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+
+        mock_storage = MagicMock()
+        blob_content = '\n{"event_id": "G1"}\n\n{"event_id": "G2"}\n'
+        mock_storage.listar_blobs.return_value = ["silver/logs/2026-06-30/records.ndjson"]
+        mock_storage.ler_blob.return_value = blob_content.encode("utf-8")
+
+        agg = GoldAggregator(mock_storage)
+        result = agg._read_silver("logs")
+        assert len(result) == 2  # blank lines skipped
+
+
+# ---------------------------------------------------------------------------
+

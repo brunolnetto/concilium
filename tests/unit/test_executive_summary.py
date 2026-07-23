@@ -20,3 +20,29 @@ class TestExecutiveSummaryGetHelper:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+# executive_summary.py line 20:
+# _get(dict, key) → isinstance(obj, dict) True → return obj.get(key, default)
+# ---------------------------------------------------------------------------
+
+
+class TestExecutiveSummaryGetDict:
+    def test_get_with_dict_returns_value(self):
+        """Line 20: obj is dict → return obj.get(key, default)."""
+        from concilium.application.runtime.deliverables.reports.executive_summary import _get
+
+        result = _get({"foo": "bar"}, "foo", "default")
+        assert result == "bar"
+
+    def test_get_with_dict_missing_key_returns_default(self):
+        """Line 20: obj is dict, key missing → return default."""
+        from concilium.application.runtime.deliverables.reports.executive_summary import _get
+
+        result = _get({"other": 1}, "foo", "fallback")
+        assert result == "fallback"
+
+
+# ---------------------------------------------------------------------------
+

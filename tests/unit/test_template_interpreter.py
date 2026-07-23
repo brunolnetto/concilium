@@ -262,3 +262,60 @@ def test_describe_sheet_includes_category_for_indirect_sheets():
         desc = interp.describe_sheet(name)
         assert "Categoria" in desc
         break  # Only need one example
+
+
+import json  # noqa: E402
+import tempfile  # noqa: E402
+
+# template_interpreter.py line 82->85: linhas is not a list or is empty → skip
+# template_interpreter.py line 87->90: template_linhas empty → return None
+# ---------------------------------------------------------------------------
+
+
+def _make_template_interpreter(spec: dict):
+    """Write spec to a temp file and return TemplateInterpreter instance."""
+    from concilium.infrastructure.adapters.template_interpreter import TemplateInterpreter
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(spec, f)
+        tmp = Path(f.name)
+
+    return TemplateInterpreter(template_path=tmp)
+
+
+class TestTemplateInterpreterGetSectionLineRange:
+    def test_returns_none_when_linhas_is_empty_list(self):
+        """Line 82->85: 'linhas': [] → len == 0 → if False → check template_linhas."""
+        ti = _make_template_interpreter({"abas": {}})
+        # "linhas" key present but empty list → first if fails → falls to template_linhas check
+        # "template_linhas" absent → returns None
+        result = ti.get_section_line_range({"linhas": []})
+        assert result is None
+
+    def test_returns_none_when_linhas_is_string(self):
+        """Line 82->85: 'linhas': 'not-a-list' → isinstance False → skip."""
+        ti = _make_template_interpreter({"abas": {}})
+        result = ti.get_section_line_range({"linhas": "not-a-list"})
+        assert result is None
+
+    def test_returns_none_when_template_linhas_is_empty(self):
+        """Line 87->90: 'template_linhas': [] → len==0 → if False → return None."""
+        ti = _make_template_interpreter({"abas": {}})
+        result = ti.get_section_line_range({"template_linhas": []})
+        assert result is None
+
+    def test_returns_range_when_linhas_has_items(self):
+        """Normal path: 'linhas': [3, 1, 2] → return (1, 3)."""
+        ti = _make_template_interpreter({"abas": {}})
+        result = ti.get_section_line_range({"linhas": [3, 1, 2]})
+        assert result == (1, 3)
+
+    def test_returns_range_when_template_linhas_has_items(self):
+        """Normal path for template_linhas: return (min, max)."""
+        ti = _make_template_interpreter({"abas": {}})
+        result = ti.get_section_line_range({"template_linhas": [10, 20, 15]})
+        assert result == (10, 20)
+
+
+# ---------------------------------------------------------------------------
+

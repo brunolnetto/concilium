@@ -233,3 +233,40 @@ class TestCpuValidatorPrintValidationReport:
         captured = capsys.readouterr()
         assert "Detalhes" not in captured.out
 
+
+
+
+# cpu_validator.py lines 25-26: check if these are coverable
+# (they appear to be in a NameError-guarded block or similar)
+# ---------------------------------------------------------------------------
+
+
+class TestCpuValidatorSmallGaps:
+    def test_import_validates_ok(self):
+        """Smoke test — just importing should not raise."""
+        from concilium.application.benchmarks.validation import cpu_validator
+
+        assert cpu_validator is not None
+
+    def test_constructor_builds_mapper_and_exposes_catalogo(self):
+        """Lines 25-26: CpuValidator.__init__ constructs a CpuMapper for the given
+        contexto_id and exposes its .catalogo attribute. CpuMapper's own catalog
+        loading is patched out since we only care about CpuValidator's wiring."""
+        from unittest.mock import patch
+
+        from concilium.application.benchmarks.validation.cpu_mapper import CpuMapper
+        from concilium.application.benchmarks.validation.cpu_validator import CpuValidator
+
+        fake_catalogo = {"cpus": [], "producoes": []}
+
+        def _fake_load_catalog(self):
+            self.catalogo = fake_catalogo
+            self.contexto = None
+
+        with patch.object(CpuMapper, "_load_catalog", _fake_load_catalog):
+            validator = CpuValidator(contexto_id="mendeslobo")
+
+        assert isinstance(validator.mapper, CpuMapper)
+        assert validator.mapper.contexto_id == "mendeslobo"
+        assert validator.catalogo is validator.mapper.catalogo
+

@@ -155,3 +155,88 @@ class TestResourceScheduling:
 
 # ────────────────────────────────────────────────────────────────
 
+
+
+# scheduler.py line 79:
+# _demand_at_offset with ramp_profile set → scaled demand
+# ---------------------------------------------------------------------------
+
+
+class TestDemandAtOffsetRampProfile:
+    def _make_activity(self, ramp_profile):
+        from concilium.application.scheduling.models import Activity
+
+        return Activity(
+            activity_id="ACT-TEST",
+            description="Test activity with ramp",
+            duration_weeks=len(ramp_profile),
+            required_resources={"worker": 4},
+            ramp_profile=ramp_profile,
+        )
+
+    def test_ramp_profile_scales_demand(self):
+        """Line 79: ramp_profile[0]=0.5, qty=4 → max(0, round(4*0.5))=2."""
+        from concilium.application.scheduling.scheduler import _demand_at_offset
+
+        activity = self._make_activity([0.5, 1.0, 0.75])
+        result = _demand_at_offset(activity, 0, "worker", 4)
+        assert result == 2  # round(4 * 0.5) = 2
+
+    def test_ramp_profile_offset_out_of_range_returns_qty(self):
+        """Line 78 (no branch): offset >= len(ramp_profile) → return qty unchanged."""
+        from concilium.application.scheduling.scheduler import _demand_at_offset
+
+        activity = self._make_activity([0.5, 1.0])
+        # offset=5 >= len([0.5, 1.0])=2 → return qty=4
+        result = _demand_at_offset(activity, 5, "worker", 4)
+        assert result == 4
+
+
+# ---------------------------------------------------------------------------
+
+
+# scheduler.py line 243:
+# SerialScheduler._find_start with activity.window_weeks set → uses min constraint
+# ---------------------------------------------------------------------------
+
+
+class TestFindStartWithWindowWeeks:
+    def test_window_weeks_constrains_max_start(self):
+        """Line 243: window_weeks not None → max_start = min(deadline, window) - duration."""
+        from concilium.application.scheduling.models import Activity, ResourcePool
+        from concilium.application.scheduling.scheduler import SerialScheduler
+
+        activity = Activity(
+            activity_id="ACT-W",
+            description="Windowed activity",
+            duration_weeks=2,
+            required_resources={},
+            window_weeks=8,  # must finish within 8 weeks of project start
+        )
+        pool = ResourcePool(resources={})
+        scheduler = SerialScheduler()
+
+        # deadline=20, window_weeks=8 → max_start = min(20, 8) - 2 = 6
+        start = scheduler._find_start(activity, 0, {}, pool, deadline_weeks=20)
+        assert start == 0  # no resource conflicts, starts at earliest=0
+
+    def test_without_window_weeks_uses_deadline(self):
+        """Line 245 (else branch): window_weeks None → max_start = deadline - duration."""
+        from concilium.application.scheduling.models import Activity, ResourcePool
+        from concilium.application.scheduling.scheduler import SerialScheduler
+
+        activity = Activity(
+            activity_id="ACT-NW",
+            description="No-window activity",
+            duration_weeks=2,
+            required_resources={},
+        )
+        pool = ResourcePool(resources={})
+        scheduler = SerialScheduler()
+
+        start = scheduler._find_start(activity, 0, {}, pool, deadline_weeks=20)
+        assert start == 0
+
+
+# ---------------------------------------------------------------------------
+

@@ -531,3 +531,41 @@ class TestMobilizacaoSimulatorEdgeCases:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+# mobilizacao_simulator.py line 228:
+# taxa_desmobilizacao=0 with semanas_plateau set → return n_maximo (line 228)
+# (line 206 is unreachable because MobilizacaoPolicy.taxa_mobilizacao has gt=0)
+# ---------------------------------------------------------------------------
+
+
+class TestMobilizacaoSimulatorDesmobZero:
+    def _make_policy(self, **kwargs):
+        from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+
+        return MobilizacaoPolicy(**kwargs)
+
+    def test_taxa_desmobilizacao_zero_returns_n_maximo_after_plateau(self):
+        """Line 228: taxa_desmobilizacao=0, semanas_plateau set, t past plateau → n_maximo."""
+        from concilium.domain.services.planning.mobilizacao_simulator import (
+            WorkforcePolicySimulator,
+        )
+
+        # taxa_mobilizacao=2 (gt=0 ✓), semanas_plateau=5, taxa_desmobilizacao=0 (default)
+        policy = self._make_policy(
+            n_inicial=1,
+            n_maximo=3,
+            taxa_mobilizacao=2.0,
+            semanas_plateau=5,
+            taxa_desmobilizacao=0.0,
+        )
+        sim = WorkforcePolicySimulator()
+        # t=20 > t_plateau_end=(ceil((3-1)/2)=1)+5=6 → demob phase; taxa_desmob=0 → line 228
+        result = sim._compute_n(policy, t=20)
+        assert result == 3  # n_maximo returned
+
+
+# ---------------------------------------------------------------------------
+

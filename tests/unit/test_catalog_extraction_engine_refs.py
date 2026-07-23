@@ -52,3 +52,58 @@ class TestEngineRefs:
 
 
 
+
+
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+# engine_refs.py line 114->112: cat is falsy → skip → back to for loop
+# ---------------------------------------------------------------------------
+
+
+class TestExtractEngineIterationReferencesNoCat:
+    def test_indireto_with_no_categoria_is_skipped(self):
+        """Line 114->112: cat = ind.get('categoria') is None → if cat: False → continue."""
+        from concilium.infrastructure.catalog.extraction.engine_refs import (
+            extract_engine_iteration_references,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            # Minimal canonical with one indireto that has no 'categoria'
+            canonical = {
+                "equipes_diretas": [],
+                "planejamento": [],
+                "indiretos": [{"valor": 100.0}],  # no 'categoria' key
+                "resultado": {},
+            }
+
+            # Minimal project dir so _find_latest_project_by_name can match
+            proj_dir = root / "projetos" / "PROJ-ENGINE"
+            (proj_dir / "v1").mkdir(parents=True)
+            meta = {"nome": "ENGINE-PROJ"}
+            (proj_dir / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+            (proj_dir / "v1" / "canonical.json").write_text(json.dumps(canonical), encoding="utf-8")
+
+            # Benchmark report
+            out_dir = root / "benchmarks" / "extracted_references"
+            out_dir.mkdir(parents=True)
+            report_path = root / "benchmark_engine.json"
+            report_path.write_text(
+                json.dumps({"slug": "ENGINE", "projeto": "ENGINE-PROJ"}),
+                encoding="utf-8",
+            )
+
+            result = extract_engine_iteration_references(report_path=report_path, root=root, out_dir=out_dir)
+
+        # indiretos stays as initialised (no cat was populated)
+        assert result["slug"] == "ENGINE"
+        # The indireto with no categoria was skipped → "indiretos" only has preset cats
+        for cat in ("ADM", "TOP", "LAB", "QSMS", "MOB"):
+            assert cat in result["indiretos"]
+            assert result["indiretos"][cat] == {}
+
+
+# ---------------------------------------------------------------------------
+

@@ -30,3 +30,34 @@ class TestApplyCustoDeltaEquipNoCustoMensal:
         # EQ-02 has custo_mensal → updated by delta
         assert equips[1]["custo_mensal"] == round(8000.0 * 1.1, 2)
 
+
+
+
+
+
+# runner_utils.py line 68->67: funcao without 'salario_base' key → if False → skip
+# ---------------------------------------------------------------------------
+
+
+class TestApplyCustoDeltaFuncaoNoSalarioBase:
+    def test_funcao_without_salario_base_is_skipped(self):
+        """Line 68->67: funcao dict has no 'salario_base' → if False → back to loop."""
+        from concilium.application.scenarios.runner_utils import apply_custo_delta
+
+        inputs = {
+            "composicao_customizada": {
+                "CPU-01": {
+                    "funcoes": [
+                        {"funcao_id": "FNC-01"},  # no 'salario_base' key → skipped
+                    ],
+                    "equipamentos": [],
+                }
+            }
+        }
+        result = apply_custo_delta(inputs, delta=1.1)
+        # funcao untouched — no salario_base to modify
+        assert result["composicao_customizada"]["CPU-01"]["funcoes"][0] == {"funcao_id": "FNC-01"}
+
+
+# ---------------------------------------------------------------------------
+

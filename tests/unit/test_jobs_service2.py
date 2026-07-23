@@ -701,3 +701,75 @@ class TestInitDependencyInjection:
             project_factory=pf,
         )
         assert svc._project_factory is pf
+
+
+
+
+
+
+# jobs/state.py line 158->161: status_atual is not any known enum → fall through
+# ---------------------------------------------------------------------------
+
+
+class TestCriarStateMachineUnknownStatus:
+    def test_unknown_status_returns_sm_unchanged(self):
+        """Line 158->161: status='UNKNOWN' → no elif matches → return sm at line 161."""
+        from concilium.application.jobs.state import criar_state_machine
+
+        sm = criar_state_machine({"job_id": "AABBCCDD", "status": "UNKNOWN"})
+        assert sm is not None
+
+    def test_default_status_aguardando_fila(self):
+        """No status key → defaults to AGUARDANDO_FILA → all elif False → return sm."""
+        from concilium.application.jobs.state import criar_state_machine
+
+        sm = criar_state_machine({"job_id": "AABBCCDD"})
+        assert sm is not None
+
+
+# ---------------------------------------------------------------------------
+
+
+# jobs/repository.py line 156:
+# _build_repository() with backend != "inmemory" → raises ValueError
+# ---------------------------------------------------------------------------
+
+
+class TestJobsRepositoryUnsupportedBackend:
+    def test_unsupported_backend_raises_value_error(self):
+        """Line 156: backend='redis' → ValueError."""
+        from concilium.application.jobs.repository import _build_repository
+
+        with patch.dict("os.environ", {"CONCILIUM__JOBS_REPOSITORY": "redis"}):
+            try:
+                _build_repository()
+                raise AssertionError("Expected ValueError")
+            except ValueError as exc:
+                assert "redis" in str(exc)
+
+    def test_inner_double_check_skips_reinit_on_race(self):
+        """Line 169->172: deterministically exercises the inner
+        `if _repository is None:` False branch by simulating another thread
+        having already initialized `_repository` while this one waited to
+        acquire `_repository_lock`."""
+        import concilium.application.jobs.repository as jobs_repo_mod
+
+        jobs_repo_mod.reset_repository()
+        sentinel = object()
+
+        class _FakeLock:
+            def __enter__(self):
+                jobs_repo_mod._repository = sentinel
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        with patch.object(jobs_repo_mod, "_repository_lock", _FakeLock()):
+            result = jobs_repo_mod.get_job_repository()
+        assert result is sentinel
+        jobs_repo_mod.reset_repository()
+
+
+# ---------------------------------------------------------------------------
+

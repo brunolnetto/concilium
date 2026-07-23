@@ -286,3 +286,55 @@ class TestPermissionGuard3:
 
 
 
+
+
+from types import SimpleNamespace  # noqa: E402
+
+# permission_guard.py lines 350-351: validate_tool_coverage with no _tool_manager
+# permission_guard.py lines 371-372: build_tool_permission_map with no _tool_manager
+# permission_guard.py lines 391-393: patch_mcp_auth_permissions with no _tool_manager
+# permission_guard.py line 400: tool without fn → continue
+# ---------------------------------------------------------------------------
+
+
+class TestPermissionGuardAttributeErrorPaths:
+    def _server_no_tool_manager(self):
+        """Server object that raises AttributeError on ._tool_manager._tools."""
+        return SimpleNamespace()  # no _tool_manager attribute at all
+
+    def test_validate_tool_coverage_no_tool_manager_returns_empty(self):
+        """Lines 350-351: AttributeError → return []."""
+        from concilium.infrastructure.auth.permission_guard import validate_tool_coverage
+
+        result = validate_tool_coverage(self._server_no_tool_manager())
+        assert result == []
+
+    def test_build_tool_permission_map_no_tool_manager_returns_empty(self):
+        """Lines 371-372: AttributeError → return {}."""
+        from concilium.infrastructure.auth.permission_guard import build_tool_permission_map
+
+        result = build_tool_permission_map(self._server_no_tool_manager())
+        assert result == {}
+
+    def test_patch_mcp_auth_permissions_no_tool_manager_returns_early(self):
+        """Lines 391-393: AttributeError → log warning → return."""
+        from concilium.infrastructure.auth.permission_guard import patch_mcp_auth_permissions
+
+        # Should not raise
+        patch_mcp_auth_permissions(self._server_no_tool_manager())
+
+    def test_patch_mcp_auth_permissions_tool_without_fn_is_skipped(self):
+        """Line 400: tool has no 'fn' attribute → continue."""
+        from concilium.infrastructure.auth.permission_guard import patch_mcp_auth_permissions
+
+        tool_no_fn = SimpleNamespace()  # no fn
+        server = SimpleNamespace()
+        server._tool_manager = SimpleNamespace()
+        server._tool_manager._tools = {"tool_a": tool_no_fn}
+
+        # Should not raise; tool_no_fn is skipped via continue
+        patch_mcp_auth_permissions(server)
+
+
+# ---------------------------------------------------------------------------
+

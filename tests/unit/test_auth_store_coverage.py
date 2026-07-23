@@ -496,3 +496,68 @@ class TestAuthHelpers:
         assert isinstance(s, str)
         back = _parse(s)
         assert back.year == dt.year
+
+
+# auth_store.py line 349->348: use_refresh_token loop → token_id not found
+# auth_store.py line 372->371: revoke_device loop → device_id mismatch on some tokens
+# auth_store.py line 406->405: get_revoke_pending loop → token not found
+# auth_store.py line 423->422: confirm_revoke loop → token not found
+# ---------------------------------------------------------------------------
+
+
+def _setup_store_with_token(tmp_path, client_id="cli-1", device_id="dev-1"):
+    """Create AuthStore, register a client, and issue one refresh token."""
+    from concilium.infrastructure.auth.auth_store import AuthStore
+
+    store = AuthStore(data_dir=tmp_path)
+    client_code = f"RCODE-{client_id}"
+    store.add_client(client_id, "secret", ["operator"], client_code=client_code)
+    rt = store.activate_device_code(client_code, device_name=device_id)
+    return store, rt
+
+
+class TestAuthStoreRefreshTokenLoopMisses:
+    def test_use_refresh_token_returns_none_when_no_match(self, tmp_path):
+        """Line 349->348: token_id loop False branch → no match → returns None."""
+        store, rt = _setup_store_with_token(tmp_path)
+        # Real token exists but we query a different id → loop iterates, no match
+        result = store.use_refresh_token("RT-NONEXISTENT-TOKEN-ID")
+        assert result is None
+
+    def test_revoke_device_covers_mismatch_branch(self, tmp_path):
+        """Line 372->371: two tokens with different device_ids → loop hits False for non-target."""
+        from concilium.infrastructure.auth.auth_store import AuthStore
+
+        store = AuthStore(data_dir=tmp_path)
+        store.add_client("c1", "s1", ["operator"], client_code="RCODE-c1")
+
+        # Issue token for device-A and device-B via the same reusable client_code
+        store.activate_device_code("RCODE-c1", device_name="dev-A")
+        store.activate_device_code("RCODE-c1", device_name="dev-B")
+
+        # Revoking device-A: the loop hits dev-B's token → if device_id==dev-A: False
+        count = store.revoke_device("dev-A")
+        assert count >= 1  # at least one token was revoked
+
+
+class TestAuthStoreRevokePendingLoopMisses:
+    def test_get_revoke_pending_returns_none_when_token_not_found(self, tmp_path):
+        """Line 406->405: loop iterates existing records, none match → return None."""
+        store, _ = _setup_store_with_token(tmp_path)
+        # Create a real revoke pending record
+        store.create_revoke_pending("cli-1", "dev-1")
+        # Query with a different token
+        result = store.get_revoke_pending("NONEXISTENT-REVOKE-TOKEN")
+        assert result is None
+
+    def test_confirm_revoke_returns_false_when_token_not_found(self, tmp_path):
+        """Line 423->422: loop iterates, none match → found=False → return False."""
+        store, _ = _setup_store_with_token(tmp_path)
+        store.create_revoke_pending("cli-1", "dev-1")
+        # Confirm with wrong token → loop finds no match → return False
+        result = store.confirm_revoke("WRONG-TOKEN")
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+

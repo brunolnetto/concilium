@@ -373,3 +373,32 @@ class TestNormalizeReferenciaWeeks:
         result = normalize_referencia_weeks(ref)
         assert result["data_inicio"] == "2026-01-05"
         assert result["data_termino"] == "2026-01-11"
+
+
+
+
+# week_mapper.py line 109:
+# num_to_iso empty (numeric keys but no data_inicio) → return ref
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeReferenciaWeeksEmptyMap:
+    def test_numeric_scheme_but_no_data_inicio_returns_ref_unchanged(self):
+        """Line 109: build_numeric_to_iso_map returns {} → not num_to_iso → return ref."""
+        from concilium.application.benchmarks.input_derivation.week_mapper import (
+            normalize_referencia_weeks,
+        )
+
+        ref = {
+            "cronograma": {
+                "semanas": {"1": {}, "2": {}},  # numeric keys, but no data_inicio
+                "atividades": [],
+            }
+        }
+        result = normalize_referencia_weeks(ref)
+        # Returned unchanged (same object)
+        assert result is ref
+
+
+# ---------------------------------------------------------------------------
+

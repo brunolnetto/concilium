@@ -809,3 +809,42 @@ def test_pc_mo_staleness_with_patch():
     assert len(result) == 1
     assert result[0].tipo == "STALE"
     assert result[0].detalhe["dias_atraso"] > VALIDADE_PRECO_DIAS
+
+
+# _plausibility_checks.py line 210: p <= 0 → continue in _pc_eq_diesel
+# ---------------------------------------------------------------------------
+
+
+class TestPcEqDieselZeroPotencia:
+    def test_continues_when_potencia_cv_is_zero(self):
+        """Line 210: p=0 → p <= 0 → continue (skipped, no anomalia added)."""
+        from concilium.application.catalog._plausibility_checks import _pc_eq_diesel
+
+        equipamentos = [
+            {
+                "codigo": "EQ-TRATOR-01",
+                "atributos_especificos": {
+                    "consumo_litros_hora": 5.0,
+                    "potencia_cv": 0.0,  # p=0 → continue
+                },
+            }
+        ]
+        result = _pc_eq_diesel(equipamentos)
+        assert result == []  # no anomalia, skipped
+
+    def test_continues_when_potencia_cv_is_negative(self):
+        """Line 210: p < 0 → p <= 0 → continue."""
+        from concilium.application.catalog._plausibility_checks import _pc_eq_diesel
+
+        equipamentos = [
+            {
+                "codigo": "EQ-INVALID",
+                "atributos_especificos": {
+                    "consumo_litros_hora": 5.0,
+                    "potencia_cv": -10.0,  # negative → continue
+                },
+            }
+        ]
+        result = _pc_eq_diesel(equipamentos)
+        assert result == []
+

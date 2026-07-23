@@ -503,3 +503,71 @@ class TestAmScoreAttrValueMixedTypes:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+
+from types import SimpleNamespace  # noqa: E402
+
+# scoring.py line 52->51: duplicate attribute → if a not in seen: False → continue
+# ---------------------------------------------------------------------------
+
+
+class TestAmCollectUniqueAttrsDuplicate:
+    def test_duplicate_attr_is_deduped(self):
+        """Line 52->51: 'a' appears twice → second occurrence seen → if False → skip."""
+        from concilium.application.resolution.scoring import _am_collect_unique_attrs
+
+        result = _am_collect_unique_attrs(["a", "b", "a"], [])
+        assert result == ["a", "b"]  # 'a' deduplicated
+
+    def test_overlap_between_required_and_optional(self):
+        """Line 52->51: 'x' in required and optional → second occurrence skipped."""
+        from concilium.application.resolution.scoring import _am_collect_unique_attrs
+
+        result = _am_collect_unique_attrs(["x", "y"], ["x", "z"])
+        assert result == ["x", "y", "z"]
+
+
+# ---------------------------------------------------------------------------
+# scoring.py lines 163->167 and 164->167: context_fit branch misses
+# ---------------------------------------------------------------------------
+
+
+class TestContextFitBranchMisses:
+    def _make_scorer(self):
+        from concilium.application.resolution.scoring import FeatureExtractor
+
+        return FeatureExtractor()
+
+    def test_unknown_method_skips_all_branches(self):
+        """Line 163->167: method not 'manual' or 'mechanized' → elif False → return 0.5."""
+        scorer = self._make_scorer()
+        intent = SimpleNamespace(context={"method": "mixed"}, method="mixed")
+        cpu = SimpleNamespace(activity_type="grading")
+
+        result = scorer.context_fit(intent, cpu)
+        assert result == 0.5  # score unchanged
+
+    def test_mechanized_with_unknown_activity_type(self):
+        """Line 164->167: method=='mechanized', activity_type not in tuple → if False → return 0.5."""
+        scorer = self._make_scorer()
+        intent = SimpleNamespace(context={"method": "mechanized"}, method="mechanized")
+        cpu = SimpleNamespace(activity_type="paving")  # not in ("cut_fill", "embankment_compaction")
+
+        result = scorer.context_fit(intent, cpu)
+        assert result == 0.5  # score unchanged
+
+    def test_mechanized_with_cut_fill_returns_high_score(self):
+        """Normal path: method=='mechanized', activity_type=='cut_fill' → score=0.8."""
+        scorer = self._make_scorer()
+        intent = SimpleNamespace(context={"method": "mechanized"}, method="mechanized")
+        cpu = SimpleNamespace(activity_type="cut_fill")
+
+        result = scorer.context_fit(intent, cpu)
+        assert result == 0.8
+
+
+# ---------------------------------------------------------------------------
+

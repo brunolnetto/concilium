@@ -72,3 +72,38 @@ class TestReportCalibrationSections:
 
 
 
+
+
+
+
+
+
+# report_calibration_sections.py line 119->121:
+# isinstance(insights, list) False → skip to lines += [..., "---", ...]
+# ---------------------------------------------------------------------------
+
+
+class TestRenderInsightsSectionNonListNonDict:
+    def test_string_insights_skips_both_branches(self):
+        """Line 119->121: insights is a string → not dict, not list → skip both → add footer."""
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import (
+            render_insights_section,
+        )
+
+        result = render_insights_section("plain string insight")
+        # Neither dict nor list → no content added, just footer
+        assert "## Recomendações Técnicas" in result
+        assert "---" in result
+
+    def test_integer_insights_skips_both_branches(self):
+        """Line 119->121: insights is an int → not dict, not list → skip."""
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import (
+            render_insights_section,
+        )
+
+        result = render_insights_section(42)
+        assert "---" in result
+
+
+# ---------------------------------------------------------------------------
+

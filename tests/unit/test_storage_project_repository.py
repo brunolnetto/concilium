@@ -40,3 +40,48 @@ class TestStorageProjectRepository:
 
 
 
+
+
+import json  # noqa: E402
+
+# storage_project_repository.py line 169-170: pragma added (try: pass never raises)
+# storage_project_repository.py line 391->393: project_id already in index → if False
+# ---------------------------------------------------------------------------
+
+
+class TestStorageProjectRepositoryUpdateIndex:
+    def test_update_index_skips_append_when_id_already_present(self):
+        """Line 391->393: project_id already in index → if False → just write."""
+        from concilium.infrastructure.storage.storage_project_repository import (
+            StorageProjectRepository,
+        )
+
+        mock_storage = MagicMock()
+        existing_index = {"project_ids": ["PROJ-EXISTING"]}
+        mock_storage.ler_blob.return_value = json.dumps(existing_index).encode("utf-8")
+
+        repo = StorageProjectRepository(mock_storage)
+        repo._update_index("PROJ-EXISTING")
+
+        # gravar_blob called once — the list was NOT extended
+        mock_storage.gravar_blob.assert_called_once()
+        written = json.loads(mock_storage.gravar_blob.call_args[0][1].decode("utf-8"))
+        assert written["project_ids"] == ["PROJ-EXISTING"]  # no duplicate
+
+    def test_update_index_appends_new_id(self):
+        """Normal path: project_id not in index → append → write."""
+        from concilium.infrastructure.storage.storage_project_repository import (
+            StorageProjectRepository,
+        )
+
+        mock_storage = MagicMock()
+        existing_index = {"project_ids": ["PROJ-OLD"]}
+        mock_storage.ler_blob.return_value = json.dumps(existing_index).encode("utf-8")
+
+        repo = StorageProjectRepository(mock_storage)
+        repo._update_index("PROJ-NEW")
+
+        written = json.loads(mock_storage.gravar_blob.call_args[0][1].decode("utf-8"))
+        assert "PROJ-NEW" in written["project_ids"]
+        assert "PROJ-OLD" in written["project_ids"]
+

@@ -575,3 +575,57 @@ class TestPuCalculator:
 
 
 
+
+
+# pu_calculator.py line 300:
+# _check_pu_divergencia with bd.pu_calculado is None (valor_horario=0) → return
+# ---------------------------------------------------------------------------
+
+
+class TestCheckPuDivergenciaNull:
+    def test_pu_calculado_none_returns_early(self):
+        """Line 300: bd.pu_calculado is None (valor_horario=0) → early return."""
+        from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
+
+        bd = BreakdownPU(producao_id="P-01", valor_horario=0.0)  # pu_calculado → None
+        pu_divergentes: list = []
+        _check_pu_divergencia(
+            bd, prod={"_cu_planilha_referencia": "100.0"}, tolerancia_pct=5.0, pu_divergentes=pu_divergentes
+        )
+        assert pu_divergentes == []
+
+
+# ---------------------------------------------------------------------------
+# pu_calculator.py lines 317-318:
+# _check_pu_divergencia with non-numeric cpu_hint → ValueError → pass
+# ---------------------------------------------------------------------------
+
+
+class TestCheckPuDivergenciaInvalidHint:
+    def test_non_numeric_cpu_hint_is_caught(self):
+        """Lines 317-318: float('N/A') → ValueError → except → pass."""
+        from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
+
+        bd = BreakdownPU(producao_id="P-01", valor_horario=10.0, custo_mo_h=5.0)
+        pu_divergentes: list = []
+        _check_pu_divergencia(
+            bd,
+            prod={"_cu_planilha_referencia": "N/A"},  # not a float
+            tolerancia_pct=5.0,
+            pu_divergentes=pu_divergentes,
+        )
+        # Exception was caught, divergentes unchanged
+        assert pu_divergentes == []
+
+    def test_cpu_hint_none_returns_early_before_float(self):
+        """Lines 302-303: cpu_hint is None → return early (no conversion attempted)."""
+        from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
+
+        bd = BreakdownPU(producao_id="P-01", valor_horario=10.0, custo_mo_h=5.0)
+        pu_divergentes: list = []
+        _check_pu_divergencia(bd, prod={}, tolerancia_pct=5.0, pu_divergentes=pu_divergentes)
+        assert pu_divergentes == []
+
+
+# ---------------------------------------------------------------------------
+
