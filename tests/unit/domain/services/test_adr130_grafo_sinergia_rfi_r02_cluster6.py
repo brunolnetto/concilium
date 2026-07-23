@@ -38,7 +38,7 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 _PRODUTIVIDADES = _ROOT / "config" / "catalogos" / "rfi-r02" / "produtividades"
 
 _DESMATAMENTO_FILES = ["CPU-TERRA-ATI-003-PROD-001.json", "CPU-TERRA-ATI-008-PROD-001.json"]

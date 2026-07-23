@@ -29,7 +29,7 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 _SCHEMA_ROOT = _ROOT / "config" / "schemas" / "catalog"
 _PRODUTIVIDADES = _ROOT / "config" / "catalogos" / "mendeslobo" / "produtividades"
 

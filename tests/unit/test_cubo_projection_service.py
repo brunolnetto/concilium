@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from concilium.application.services.concilium_service import ConciliumDependencies, ConciliumService
-from tests.unit.test_cubo_analitico import _make_canonical
+from tests.unit.domain.models.test_cubo_analitico import _make_canonical
 
 
 class _ProjectServiceStub:

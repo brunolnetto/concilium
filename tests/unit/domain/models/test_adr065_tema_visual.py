@@ -189,7 +189,7 @@ class TestContextoObra:
 
     def test_mendeslobo_contexto_loads_with_tema_id(self):
         """The actual mendeslobo context file has tema_id after migration."""
-        ctx_file = Path(__file__).resolve().parents[2] / "config/contextos/mendeslobo/versions/v1.json"
+        ctx_file = Path(__file__).resolve().parents[4] / "config/contextos/mendeslobo/versions/v1.json"
         if not ctx_file.exists():
             pytest.skip("mendeslobo context not found")
         data = json.loads(ctx_file.read_text(encoding="utf-8"))
@@ -218,7 +218,7 @@ class TestBackwardCompat:
 
     def test_mendeslobo_tema_matches_old_identidade_visual(self):
         """Config temas/mendeslobo-corporativo has the same values as the old context."""
-        tema_file = Path(__file__).resolve().parents[2] / "config/temas/mendeslobo-corporativo/tema.json"
+        tema_file = Path(__file__).resolve().parents[4] / "config/temas/mendeslobo-corporativo/tema.json"
         if not tema_file.exists():
             pytest.skip("mendeslobo-corporativo tema not found")
         tema = TemaVisual.model_validate_json(tema_file.read_text(encoding="utf-8"))

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 _PRODUTIVIDADES = _ROOT / "config" / "catalogos" / "rfi-r02" / "produtividades"
 
 _E0001_FILES = {
