@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
+from concilium.application.runtime import Runtime
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,
@@ -180,4 +181,34 @@ class TestRuntimeEdgeCases:
         mock_adj.assert_called_once()
 
 
+
+
+
+
+# runtime.py: RuntimeError re-raise (line 278)
+# ────────────────────────────────────────────────────────────────
+
+
+class TestRuntimeErrorHandling:
+    """Test RuntimeError re-raising in runtime."""
+
+    def test_runtime_error_reraise(self, tmp_path):
+        """RuntimeError should be re-raised, not wrapped."""
+        from concilium.application.runtime import RuntimeError as ConciliumRuntimeError
+
+        runtime = Runtime(tmp_path)
+
+        # Create required directories
+        (tmp_path / "contextos").mkdir()
+        (tmp_path / "jurisdicoes").mkdir()
+        (tmp_path / "perfis").mkdir()
+        (tmp_path / "referencias").mkdir()
+        (tmp_path / "catalogos").mkdir()
+
+        # Try to load non-existent items to trigger RuntimeError path
+        with pytest.raises(ConciliumRuntimeError):
+            runtime.load_contexto("nonexistent")
+
+
+# ────────────────────────────────────────────────────────────────
 

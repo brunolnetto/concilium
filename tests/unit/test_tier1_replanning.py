@@ -314,3 +314,73 @@ class TestReplannModels:
         assert t.activity_id is None
         assert t.delay_weeks is None
         assert t.escalate_to is None
+
+
+
+
+
+
+# ─── ReplannGenerator ───────────────────────────────────────────────────────
+
+
+class TestReplannGenerator:
+    def _make_trigger(self, tier, code, **kwargs):
+        from concilium.application.replanning.models import ReplannTrigger
+
+        return ReplannTrigger(tier=tier, code=code, **kwargs)
+
+    def test_generate_t1_early(self):
+        from concilium.application.replanning.generator import ReplannGenerator
+
+        gen = ReplannGenerator()
+        trigger = self._make_trigger(1, "T1-EARLY", activity_id="act-1", weeks_early=2.0)
+        candidates = gen.generate_candidates(MagicMock(), trigger)
+        assert len(candidates) == 1
+        assert candidates[0].schedule_delta_weeks == -2.0
+        assert "act-1" in candidates[0].name
+
+    def test_generate_t1_slack_returns_empty(self):
+        from concilium.application.replanning.generator import ReplannGenerator
+
+        gen = ReplannGenerator()
+        trigger = self._make_trigger(1, "T1-SLACK")  # Valid code but no handler in _generate_t1
+        candidates = gen.generate_candidates(MagicMock(), trigger)
+        assert isinstance(candidates, list)
+
+    def test_generate_t2_delay(self):
+        from concilium.application.replanning.generator import ReplannGenerator
+
+        gen = ReplannGenerator()
+        trigger = self._make_trigger(2, "T2-DELAY", activity_id="act-2", delay_weeks=3.0)
+        candidates = gen.generate_candidates(MagicMock(), trigger)
+        assert len(candidates) == 3
+        assert candidates[0].team_count_delta == 1
+
+    def test_generate_t2_productivity_drift(self):
+        from concilium.application.replanning.generator import ReplannGenerator
+
+        gen = ReplannGenerator()
+        trigger = self._make_trigger(2, "T2-PRODUCTIVITY-DRIFT", usage_pct=0.7)
+        candidates = gen.generate_candidates(MagicMock(), trigger)
+        assert len(candidates) == 1
+        assert candidates[0].team_count_delta == 2
+
+    def test_generate_t2_blocker(self):
+        from concilium.application.replanning.generator import ReplannGenerator
+
+        gen = ReplannGenerator()
+        trigger = self._make_trigger(2, "T2-BLOCKER-1W")
+        candidates = gen.generate_candidates(MagicMock(), trigger)
+        assert isinstance(candidates, list)
+
+    def test_generate_t3_deadline(self):
+        from concilium.application.replanning.generator import ReplannGenerator
+
+        gen = ReplannGenerator()
+        trigger = self._make_trigger(3, "T3-DEADLINE", days_late=14)
+        candidates = gen.generate_candidates(MagicMock(), trigger)
+        assert len(candidates) == 4
+        assert any(c.cost_delta < 0 for c in candidates)
+
+
+

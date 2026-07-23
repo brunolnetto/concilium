@@ -588,3 +588,488 @@ class TestCatalogSessionWithDuckDB:
         with CatalogSession.from_resolved(catalogo) as session:
             stats = session.get_price_stats(tipo="mao_obra")
         assert len(stats) == 1
+
+
+
+# ─── catalog query engine (partial) ──────────────────────────────────────────
+
+
+class TestCatalogQueryEngine:
+    def test_query_engine_initializes(self, tmp_path):
+        from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine
+
+        engine = CatalogQueryEngine(catalog_dir=tmp_path)
+        assert engine is not None
+
+    def test_query_engine_with_bundle(self, tmp_path):
+        from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine
+
+        bundle = {"cpus": [{"codigo": "CPU-1", "descricao": "Terraplenagem"}], "insumos": [], "producoes": []}
+        (tmp_path / ".catalog_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
+        engine = CatalogQueryEngine(catalog_dir=tmp_path)
+        # Test that engine initializes without error; search may need DuckDB
+        assert engine is not None
+
+
+
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine, CatalogSession  # noqa: E402
+
+# ─── query engine internals (greatest_gaps_batch1) ──────────────────────────
+
+# ---------------------------------------------------------------------------
+# Query engine internals
+# ---------------------------------------------------------------------------
+
+
+class _FakeResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def fetchall(self):
+        return self._rows
+
+
+class _FakeConn:
+    def __init__(self):
+        self.executed = []
+        self.executed_many = []
+
+    def execute(self, sql, *args):
+        self.executed.append((sql, args))
+        if "SELECT raw_json FROM cpus" in sql:
+            cpu = {
+                "codigo": "CPU-1",
+                "composicao_itens": [
+                    {"insumo_id": "I1", "coeficiente": 2.0, "categoria_custo": "mat", "unidade": "kg"}
+                ],
+            }
+            return _FakeResult([(json.dumps(cpu),)])
+        if "SELECT raw_json FROM produtividades" in sql:
+            prod = {
+                "id": "P1",
+                "composicao_padrao_equipe": {
+                    "funcoes": [{"funcao_id": "MO-1", "num_pessoas": 2, "papel": "direto"}],
+                    "equipamentos": [{"equip_id": "EQ-1", "num_unidades": 1, "consumo_litros_hora": 3.0}],
+                    "materiais": [{"insumo_id": "MAT-1", "consumo_por_hora": 4.0, "unidade": "kg"}],
+                },
+            }
+            return _FakeResult([(json.dumps(prod),)])
+        return _FakeResult([])
+
+    def executemany(self, sql, rows):
+        self.executed_many.append((sql, list(rows)))
+
+
+class _DuckConn:
+    def __init__(self, rows):
+        self.rows = rows
+        self.closed = False
+
+    def execute(self, _sql):
+        return _FakeResult(self.rows)
+
+    def close(self):
+        self.closed = True
+
+
+def test_query_engine_build_methods_tolerate_invalid_json(tmp_path):
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+
+    cpus_dir = tmp_path / "cpus"
+    cpus_dir.mkdir(parents=True)
+    (cpus_dir / "bad.json").write_text("{invalid")
+    (cpus_dir / "list.json").write_text("[]")
+    engine._build_cpus(conn)  # exception + non-dict branches
+
+    ins_dir = tmp_path / "insumos"
+    ins_dir.mkdir(exist_ok=True)
+    (ins_dir / "materiais.json").write_text("{invalid")
+    engine._build_insumos(conn)
+
+    (tmp_path / "produtividades.json").write_text("{invalid")
+    engine._build_produtividades(conn)
+
+    (tmp_path / "funcoes.json").write_text("{invalid")
+    engine._build_funcoes(conn)
+
+    assert any("CREATE TABLE cpus" in sql for sql, _ in conn.executed)
+    assert any("CREATE TABLE insumos" in sql for sql, _ in conn.executed)
+    assert any("CREATE TABLE produtividades" in sql for sql, _ in conn.executed)
+    assert any("CREATE TABLE funcoes" in sql for sql, _ in conn.executed)
+
+
+def test_query_engine_build_methods_skip_non_dict_list_entries(tmp_path):
+    """Layouts de arquivo único (cpus.json, insumos/<tipo>.json, produtividades.json,
+    funcoes.json) toleram listas com elementos que não são dict — cobre o ramo
+    falso de `if isinstance(raw, dict)` em cada _build_* (só percorrido quando
+    NÃO existe o diretório correspondente, i.e. layout de arquivo único)."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+
+    (tmp_path / "cpus.json").write_text(json.dumps(["not-a-dict", {"codigo": "CPU-1"}]))
+    engine._build_cpus(conn)
+
+    ins_dir = tmp_path / "insumos"
+    ins_dir.mkdir(parents=True)
+    (ins_dir / "material.json").write_text(json.dumps(["not-a-dict", {"id": "INS-1"}]))
+    engine._build_insumos(conn)
+
+    (tmp_path / "produtividades.json").write_text(json.dumps(["not-a-dict", {"id": "PROD-1"}]))
+    engine._build_produtividades(conn)
+
+    (tmp_path / "funcoes.json").write_text(json.dumps(["not-a-dict", {"id": "FN-1"}]))
+    engine._build_funcoes(conn)
+
+    assert any("INSERT INTO cpus" in sql for sql, _ in conn.executed_many)
+    assert any("INSERT INTO insumos" in sql for sql, _ in conn.executed_many)
+    assert any("INSERT INTO produtividades" in sql for sql, _ in conn.executed_many)
+    assert any("INSERT INTO funcoes" in sql for sql, _ in conn.executed_many)
+
+
+def test_query_engine_load_table_branches(monkeypatch, tmp_path):
+    engine = CatalogQueryEngine(tmp_path)
+
+    # extra_col branch
+    dc1 = _DuckConn(rows=[("tipo-a", json.dumps({"id": "x"}))])
+
+    class _Duck1:
+        @staticmethod
+        def connect(_path, read_only=True):
+            return dc1
+
+    monkeypatch.setitem(__import__("sys").modules, "duckdb", _Duck1)
+    rows = engine._load_table("insumos", extra_col="tipo")
+    assert rows[0]["tipo"] == "tipo-a"
+    assert dc1.closed is True
+
+    # non-extra_col branch
+    dc2 = _DuckConn(rows=[(json.dumps({"codigo": "CPU-1"}),)])
+
+    class _Duck2:
+        @staticmethod
+        def connect(_path, read_only=True):
+            return dc2
+
+    monkeypatch.setitem(__import__("sys").modules, "duckdb", _Duck2)
+    rows2 = engine._load_table("cpus")
+    assert rows2[0]["codigo"] == "CPU-1"
+    assert dc2.closed is True
+
+# ─── query engine internals (greatest_gaps_batch2) ──────────────────────────
+
+class _FakeResult2:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def fetchall(self):
+        return self._rows
+
+
+class _FakeConn2:
+    def __init__(self):
+        self.executed: list[str] = []
+        self.executed_many: list[tuple[str, list[tuple]]] = []
+        self.closed = False
+        self.checkpoint_called = False
+
+    def execute(self, sql, *args):
+        self.executed.append(str(sql))
+        return _FakeResult2([])
+
+    def executemany(self, sql, rows):
+        self.executed_many.append((str(sql), list(rows)))
+
+    def checkpoint(self):
+        self.checkpoint_called = True
+
+    def close(self):
+        self.closed = True
+
+def test_query_engine_rebuild_handles_stale_db_and_writes_timestamp(tmp_path, monkeypatch):
+    engine = CatalogQueryEngine(tmp_path)
+    # Create directory at DB path so unlink raises OSError and exercises the safe fallback.
+    engine._db_path.mkdir(parents=True, exist_ok=True)
+
+    conn = _FakeConn2()
+
+    class _Duckdb:
+        @staticmethod
+        def connect(_path):
+            return conn
+
+    monkeypatch.setitem(sys.modules, "duckdb", _Duckdb)
+    monkeypatch.setattr(engine, "_build_cpus", lambda c: c.execute("CREATE CPUS"))
+    monkeypatch.setattr(engine, "_build_insumos", lambda c: c.execute("CREATE INSUMOS"))
+    monkeypatch.setattr(engine, "_build_produtividades", lambda c: c.execute("CREATE PRODS"))
+    monkeypatch.setattr(engine, "_build_funcoes", lambda c: c.execute("CREATE FUNCOES"))
+
+    engine._rebuild()
+
+    assert conn.checkpoint_called is True
+    assert conn.closed is True
+    assert engine._ts_path.exists()
+    payload = json.loads(engine._ts_path.read_text(encoding="utf-8"))
+    assert payload["schema_ver"] == CatalogQueryEngine.SCHEMA_VER
+    assert "rebuild_ms" in payload
+
+
+def test_query_engine_build_methods_cover_layout_variants(tmp_path):
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+
+    # cpus.json fallback layout
+    (tmp_path / "cpus.json").write_text(
+        json.dumps({"cpus": [{"codigo": "CPU-1", "descricao": "d", "categoria": "c", "unidade": "u"}]}),
+        encoding="utf-8",
+    )
+
+    # insumos/<tipo>/<ID>.json layout with subdirectory
+    tipo_dir = tmp_path / "insumos" / "equipamento"
+    tipo_dir.mkdir(parents=True)
+    (tipo_dir / "EQ-1.json").write_text(json.dumps({"id": "EQ-1", "descricao": "Escavadeira"}), encoding="utf-8")
+
+    # produtividades from alternate folder name "producoes"
+    prods_dir = tmp_path / "producoes"
+    prods_dir.mkdir(parents=True)
+    (prods_dir / "PROD-1.json").write_text(json.dumps({"id": "PROD-1", "cpu_id": "CPU-1"}), encoding="utf-8")
+
+    # funcoes from funcoes.json
+    (tmp_path / "funcoes.json").write_text(
+        json.dumps({"funcoes": [{"id": "FN-1", "descricao": "Op"}]}), encoding="utf-8"
+    )
+
+    engine._build_cpus(conn)
+    engine._build_insumos(conn)
+    engine._build_produtividades(conn)
+    engine._build_funcoes(conn)
+
+    inserts = "\n".join(sql for sql, _ in conn.executed_many)
+    assert "INSERT INTO cpus" in inserts
+    assert "INSERT INTO insumos" in inserts
+    assert "INSERT INTO produtividades" in inserts
+    assert "INSERT INTO funcoes" in inserts
+
+
+def test_query_engine_wrapper_load_methods(tmp_path, monkeypatch):
+    engine = CatalogQueryEngine(tmp_path)
+
+    def _fake_load(table, extra_col=None):
+        if table == "cpus":
+            return [{"codigo": "CPU-1"}]
+        if table == "insumos":
+            return [{"tipo": "equipamento", "id": "EQ-1"}, {"id": "GEN-1"}]
+        if table == "produtividades":
+            return [{"id": "PROD-1"}]
+        return [{"id": "FN-1"}]
+
+    monkeypatch.setattr(engine, "_load_table", _fake_load)
+
+    assert engine.load_cpus()[0]["codigo"] == "CPU-1"
+    grouped = engine.load_insumos()
+    assert grouped["equipamento"][0]["id"] == "EQ-1"
+    assert grouped["outros"][0]["id"] == "GEN-1"
+    assert engine.load_produtividades()[0]["id"] == "PROD-1"
+    assert engine.load_funcoes()[0]["id"] == "FN-1"
+
+
+def test_query_engine_is_ready_returns_false_when_cache_file_missing(tmp_path, monkeypatch):
+    from concilium.infrastructure.catalog import query_engine
+
+    engine = CatalogQueryEngine(tmp_path)
+    monkeypatch.setattr(engine, "_is_stale", lambda: False)
+    monkeypatch.setattr(query_engine._engine, "_AVAILABLE", True)
+    assert engine.is_ready() is False
+
+
+def test_query_engine_is_stale_ignores_oserror_in_json_stat(tmp_path, monkeypatch):
+    engine = CatalogQueryEngine(tmp_path)
+    engine._db_path.touch()
+    engine._ts_path.write_text(
+        json.dumps({"schema_ver": CatalogQueryEngine.SCHEMA_VER, "mtime": 1e20}),
+        encoding="utf-8",
+    )
+    noisy_json = tmp_path / "broken.json"
+    noisy_json.write_text("{}", encoding="utf-8")
+
+    original_stat = Path.stat
+
+    def _stat(self, *args, **kwargs):
+        if self == noisy_json:
+            raise OSError("stat fail")
+        return original_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", _stat)
+    assert engine._is_stale() is False
+
+
+def test_query_engine_build_cpus_invalid_entries_and_bad_payload(tmp_path):
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+
+    cpus_dir = tmp_path / "cpus"
+    cpus_dir.mkdir(parents=True)
+    # Valid JSON but not dict -> no append branch.
+    (cpus_dir / "arr.json").write_text("[]", encoding="utf-8")
+    # Invalid JSON -> exception branch.
+    (cpus_dir / "bad.json").write_text("{", encoding="utf-8")
+
+    engine._build_cpus(conn)
+    assert any("CREATE TABLE cpus" in sql for sql in conn.executed)
+
+    # Remove dir to exercise cpus.json fallback exception path.
+    for f in cpus_dir.glob("*.json"):
+        f.unlink()
+    cpus_dir.rmdir()
+    (tmp_path / "cpus.json").write_text("{", encoding="utf-8")
+    engine._build_cpus(conn)
+    assert any("CREATE INDEX idx_cpus_codigo" in sql for sql in conn.executed)
+
+
+def test_query_engine_build_insumos_edge_paths(tmp_path):
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+
+    # Layout A with one non-directory entry and one bad json file.
+    ins = tmp_path / "insumos"
+    ins.mkdir(parents=True)
+    (ins / "README.txt").write_text("x", encoding="utf-8")
+    tipo = ins / "equipamento"
+    tipo.mkdir()
+    (tipo / "bad.json").write_text("{", encoding="utf-8")
+    engine._build_insumos(conn)
+
+    # Layout B with mixed list entries (non-dict + dict).
+    for f in tipo.glob("*.json"):
+        f.unlink()
+    tipo.rmdir()
+    (ins / "equipamento.json").write_text(json.dumps({"insumos": ["bad", {"id": "EQ-1"}]}), encoding="utf-8")
+    engine._build_insumos(conn)
+
+    assert any("CREATE TABLE insumos" in sql for sql in conn.executed)
+
+
+def test_query_engine_build_produtividades_edge_paths(tmp_path):
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+
+    prod_dir = tmp_path / "produtividades"
+    prod_dir.mkdir(parents=True)
+    (prod_dir / "bad.json").write_text("{", encoding="utf-8")
+    engine._build_produtividades(conn)
+
+    # Fallback single-file path with mixed entries.
+    (tmp_path / "produtividades.json").write_text(
+        json.dumps({"produtividades": ["bad", {"id": "P1", "cpu_id": "CPU-1"}]}),
+        encoding="utf-8",
+    )
+    # No rows from directory branch after removing the folder.
+    for f in prod_dir.glob("*.json"):
+        f.unlink()
+    prod_dir.rmdir()
+    engine._build_produtividades(conn)
+
+    assert any("CREATE TABLE produtividades" in sql for sql in conn.executed)
+
+
+def test_query_engine_build_cpus_neither_dir_nor_file_exists(tmp_path):
+    """Neither cpus/ nor cpus.json present: rows stays empty, both branches of
+    the if/elif are skipped entirely (line 257->267 arc)."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+    engine._build_cpus(conn)
+    assert not any("INSERT INTO cpus" in sql for sql, _ in conn.executed_many)
+    assert any("CREATE TABLE cpus" in sql for sql in conn.executed)
+
+
+def test_query_engine_build_cpus_file_fallback_multiple_entries(tmp_path):
+    """cpus.json fallback list with 2+ entries exercises the for-loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+    (tmp_path / "cpus.json").write_text(
+        json.dumps(
+            {
+                "cpus": [
+                    {"codigo": "CPU-1", "descricao": "d1", "categoria": "c1", "unidade": "u1"},
+                    {"codigo": "CPU-2", "descricao": "d2", "categoria": "c2", "unidade": "u2"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    engine._build_cpus(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO cpus" in pair[0]]
+    assert len(rows) == 2
+
+
+def test_query_engine_build_insumos_multiple_files_in_same_tipo_dir(tmp_path):
+    """Two JSON files in the same insumos/<tipo>/ dir exercise the glob loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+    tipo_dir = tmp_path / "insumos" / "equipamento"
+    tipo_dir.mkdir(parents=True)
+    (tipo_dir / "EQ-1.json").write_text(json.dumps({"id": "EQ-1", "descricao": "A"}), encoding="utf-8")
+    (tipo_dir / "EQ-2.json").write_text(json.dumps({"id": "EQ-2", "descricao": "B"}), encoding="utf-8")
+    engine._build_insumos(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO insumos" in pair[0]]
+    assert len(rows) == 2
+
+
+def test_query_engine_build_produtividades_multiple_files_in_dir(tmp_path):
+    """Two JSON files in produtividades/ exercise the glob loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+    prod_dir = tmp_path / "produtividades"
+    prod_dir.mkdir(parents=True)
+    (prod_dir / "P1.json").write_text(json.dumps({"id": "P1", "cpu_id": "CPU-1"}), encoding="utf-8")
+    (prod_dir / "P2.json").write_text(json.dumps({"id": "P2", "cpu_id": "CPU-2"}), encoding="utf-8")
+    engine._build_produtividades(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO produtividades" in pair[0]]
+    assert len(rows) == 2
+
+
+def test_query_engine_build_funcoes_file_multiple_entries(tmp_path):
+    """funcoes.json list with 2+ entries exercises the for-loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn2()
+    (tmp_path / "funcoes.json").write_text(
+        json.dumps({"funcoes": [{"id": "FN-1", "descricao": "A"}, {"id": "FN-2", "descricao": "B"}]}),
+        encoding="utf-8",
+    )
+    engine._build_funcoes(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO funcoes" in pair[0]]
+    assert len(rows) == 2
+
+
+def test_catalog_session_load_material_id_fallback_branch():
+    catalogo = {
+        "cpus": [
+            {
+                "codigo": "CPU-1",
+                "descricao": "Esc",
+                "categoria": "terraplenagem",
+                "unidade": "m3",
+                "composicao_itens": [],
+            }
+        ],
+        "insumos": {"material": [{"id": "MAT-1", "preco_unitario": 5.0}]},
+        "produtividades": [
+            {
+                "id": "PROD-1",
+                "cpu_id": "CPU-1",
+                "composicao_padrao_equipe": {
+                    "funcoes": [],
+                    "equipamentos": [],
+                    "materiais": [{"material_id": "MAT-1", "consumo_por_hora": 2.0, "unidade": "kg"}],
+                },
+            }
+        ],
+    }
+    with CatalogSession.from_resolved(catalogo) as session:
+        equipe = session.get_equipe_com_precos("PROD-1")
+    assert equipe["materiais"][0]["insumo_id"] == "MAT-1"
+
+

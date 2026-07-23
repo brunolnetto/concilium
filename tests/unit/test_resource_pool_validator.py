@@ -403,3 +403,5 @@ class TestAtribuirCustoInsumo:
         insumo = _make_insumo_a(preco=999.0)
         cost = atribuir_custo_insumo(insumo, n_atividades_simultaneas=1, semanas_ativo=0)
         assert cost == pytest.approx(0.0)
+
+

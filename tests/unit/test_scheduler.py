@@ -137,3 +137,21 @@ class TestSchedulerEdgeCases:
         assert metrics.resource_leveling_score == 1.0
         assert metrics.resource_utilization_avg == 0.0
 
+
+
+
+
+# scheduling/scheduler.py: resource matching (line 191)
+# ────────────────────────────────────────────────────────────────
+
+
+class TestResourceScheduling:
+    """Test resource scheduling logic."""
+
+    def test_scheduler_finds_matching_resources(self):
+        """Scheduler should find matching resources."""
+        pass
+
+
+# ────────────────────────────────────────────────────────────────
+

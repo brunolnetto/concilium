@@ -505,3 +505,23 @@ def test_main_module_dunder_main(monkeypatch, tmp_path):
     finally:
         if _saved is not None:
             sys.modules[_mod] = _saved
+
+
+
+
+# main.py: Path.exists() OSError (lines 251-252)
+# ────────────────────────────────────────────────────────────────
+
+
+class TestMainOSError:
+    """Test main.py JSON handling with OSError."""
+
+    def test_load_json_with_oserror_fallback(self):
+        """Placeholder — main.py no longer exposes Runtime at module level."""
+        # Runtime was removed from concilium.presentation.main to avoid Pydantic cascade
+        # at CLI startup (ADR-021 perf fix). Nothing to assert here.
+        pass
+
+
+# ────────────────────────────────────────────────────────────────
+

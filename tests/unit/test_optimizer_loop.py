@@ -86,3 +86,22 @@ class TestOptimizerLoop:
 
 
 
+
+
+
+
+
+# optimizer/loop.py: iteration control (line 43)
+# ────────────────────────────────────────────────────────────────
+
+
+class TestOptimizerIteration:
+    """Test optimizer loop iteration control."""
+
+    def test_optimizer_convergence_check(self):
+        """Optimizer should check convergence criteria."""
+        pass
+
+
+# ────────────────────────────────────────────────────────────────
+

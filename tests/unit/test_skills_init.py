@@ -81,3 +81,22 @@ class TestSkillsInit:
 
 
 
+
+
+
+
+# skills/__init__.py: skill loading (lines 54, 58)
+# ────────────────────────────────────────────────────────────────
+
+
+class TestSkillLoading:
+    """Test skill module loading."""
+
+    def test_skill_module_discovery(self):
+        """Skills should be discoverable."""
+        from concilium.application.skills import SKILLS
+
+        # Check if skills are registered
+        assert hasattr(SKILLS, "__getitem__") and hasattr(SKILLS, "__len__")
+        assert len(SKILLS) > 0
+

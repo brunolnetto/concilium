@@ -27,3 +27,44 @@ class TestVizCubeInit:
 
         assert hasattr(cube, "build_all")
 
+
+
+
+
+from unittest.mock import patch  # noqa: E402
+
+# ─── application/runtime/deliverables/visualizations/cube/__init__.py ─────────
+
+
+class TestCubeInit:
+    def test_build_graficos_dict_non_dict_returns_empty(self):
+        """Line 61: _build_graficos_dict with non-dict relatorio returns {}."""
+        from concilium.application.runtime.deliverables.visualizations.cube import _build_graficos_dict
+
+        assert _build_graficos_dict("not_a_dict") == {}
+        assert _build_graficos_dict(42) == {}
+        assert _build_graficos_dict(None) == {}
+
+    def test_build_faces_exception_is_swallowed(self):
+        """Lines 75-76: _build_faces catches module.build() exceptions silently."""
+        from concilium.application.runtime.deliverables.visualizations.cube import _build_faces
+
+        def bad_build(*args, **kwargs):
+            raise RuntimeError("chart failed")
+
+        with patch(
+            "concilium.application.runtime.deliverables.visualizations.cube._FACE_BUILDERS",
+            [(bad_build, "face.png", False)],
+        ):
+            result = _build_faces(MagicMock(), MagicMock(), {})
+        assert result == {}
+
+    def test_build_all_canonical_none_returns_empty(self):
+        """Line 90: build_all with canonical=None returns {}."""
+        from concilium.application.runtime.deliverables.visualizations.cube import build_all
+
+        result = build_all(canonical=None)
+        assert result == {}
+
+
+

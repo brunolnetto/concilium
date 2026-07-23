@@ -646,3 +646,73 @@ class TestInit:
         # but "  ".strip("/") == "  " not "" — only "/" chars stripped
         # Actual behavior: root_prefix.strip("/") is called in __init__
         assert s._root_prefix == prefix.strip("/")
+
+
+# ─── azure_blob_storage ──────────────────────────────────────────────────────
+
+
+class TestAzureBlobStorage:
+    def _make_storage(self):
+        from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
+
+        # Create storage with mocked _service
+        storage = AzureBlobStorage.__new__(AzureBlobStorage)
+        storage._container = "test-container"
+        storage._account = "testaccount"
+        storage._account_key = None
+        storage._connection_string = None
+        storage._root_prefix = ""
+        storage._service = MagicMock()  # mock lazy service
+        return storage
+
+    def test_listar_blobs_returns_paths(self):
+        storage = self._make_storage()
+        mock_blob = MagicMock()
+        mock_blob.name = "projetos/proj-1/v1/canonical.json"
+        storage._service.get_container_client.return_value.list_blobs.return_value = [mock_blob]
+        result = storage.listar_blobs("projetos/proj-1")
+        assert isinstance(result, list)
+
+    def test_blob_existe_true(self):
+        storage = self._make_storage()
+        mock_bc = MagicMock()
+        mock_bc.exists.return_value = True
+        storage._service.get_blob_client.return_value = mock_bc
+        assert storage.blob_existe("path/to/blob.json") is True
+
+    def test_blob_existe_false(self):
+        storage = self._make_storage()
+        mock_bc = MagicMock()
+        mock_bc.exists.return_value = False
+        storage._service.get_blob_client.return_value = mock_bc
+        assert storage.blob_existe("path/to/nope.json") is False
+
+    def test_ler_blob_returns_bytes(self):
+        storage = self._make_storage()
+        mock_bc = MagicMock()
+        mock_bc.download_blob.return_value.readall.return_value = b'{"key": "val"}'
+        with (
+            patch.object(storage, "_blob_client", return_value=mock_bc),
+            patch.dict(
+                "sys.modules", {"azure": MagicMock(), "azure.core": MagicMock(), "azure.core.exceptions": MagicMock()}
+            ),
+        ):
+            result = storage.ler_blob("path/to/file.json")
+        assert result == b'{"key": "val"}'
+
+    def test_gravar_blob(self):
+        storage = self._make_storage()
+        mock_bc = MagicMock()
+        storage._service.get_blob_client.return_value = mock_bc
+        storage.gravar_blob("path/to/file.json", b"content")
+        mock_bc.upload_blob.assert_called_once()
+
+    def test_from_env_missing_raises(self):
+        from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
+
+        with patch.dict("os.environ", {}, clear=True):
+            with pytest.raises(Exception):  # noqa: B017
+                AzureBlobStorage.from_env()
+
+
+

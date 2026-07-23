@@ -309,3 +309,91 @@ class TestDispararPipelineProcurementIntent:
 
         mock_check.assert_called_once()
         assert "job_id" in result or "status" in result
+
+
+
+
+# ─── MCP pipeline helpers ────────────────────────────────────────────────────
+
+
+class TestMcpPipelineHelpers:
+    def test_rpl_executadas_ok_filters_ok(self):
+        from concilium.presentation.mcp.tools.pipeline import _rpl_executadas_ok
+
+        # log uses "skill" key not "skill_id"
+        log = [
+            {"skill": "01-escopo-e-eap", "status": "OK"},
+            {"skill": "02-prod", "status": "ERRO"},
+            {"skill": "03-cat", "status": "OK"},
+        ]
+        result = _rpl_executadas_ok(log)
+        assert "01-escopo-e-eap" in result
+        assert "02-prod" not in result
+        assert "03-cat" in result
+
+    def test_rpl_next_pending_returns_first_missing(self):
+        from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+        from concilium.presentation.mcp.tools.pipeline import _rpl_next_pending
+
+        executadas = {CANONICAL_SKILL_ORDER[0]}
+        pending = _rpl_next_pending(executadas)
+        assert isinstance(pending, list)
+        assert CANONICAL_SKILL_ORDER[0] not in pending
+
+    def test_rpl_next_sugerida(self):
+        from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+        from concilium.presentation.mcp.tools.pipeline import _rpl_next_sugerida
+
+        result = _rpl_next_sugerida(set())
+        assert result == CANONICAL_SKILL_ORDER[0]
+
+    def test_rpl_next_sugerida_none_when_all_done(self):
+        from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+        from concilium.presentation.mcp.tools.pipeline import _rpl_next_sugerida
+
+        result = _rpl_next_sugerida(set(CANONICAL_SKILL_ORDER))
+        assert result is None
+
+    def test_rpl_artifacts_out_formats(self):
+        from concilium.presentation.mcp.tools.pipeline import _rpl_artifacts_out
+
+        # Artifacts are objects with .meta attributes
+        mock_art = MagicMock()
+        mock_art.meta.artifact_id = "art-1"
+        mock_art.meta.kind.value = "json"
+        mock_art.meta.schema_name = "relatorio"
+        mock_art.meta.version = "v1"
+        mock_art.meta.skill_id = "09-relatorio"
+        result = _rpl_artifacts_out([mock_art])
+        assert len(result) == 1
+        assert result[0]["artifact_id"] == "art-1"
+
+    def test_rpl_build_result_fields(self):
+        from concilium.presentation.mcp.tools.pipeline import _rpl_build_result
+
+        r = MagicMock()
+        r.has_errors = False
+        r.validacoes = []
+        r.canonical.cronograma = MagicMock()
+        r.canonical.resultado = MagicMock()
+        ps = MagicMock()
+        ps.read_invocations.return_value = [{"skill_id": "01-escopo-e-eap", "status": "OK"}]
+        result = _rpl_build_result(r, "01-escopo-e-eap", "02-prod", ps)
+        assert "skill_executada" in result
+        assert result["skill_executada"] == "01-escopo-e-eap"
+
+    def test_register_adds_tools(self):
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools.pipeline import register
+
+        server = FastMCP("test")
+        register(server)
+        names = list(server._tool_manager._tools.keys())
+        assert "disparar_pipeline" in names
+        assert "consultar_job_pipeline" in names
+        assert "listar_jobs_pipeline" in names
+        assert "cancelar_job_pipeline" in names
+
+
+

@@ -576,3 +576,43 @@ class TestChartGanttRealMatplotlib:
     def test_gantt_dpi_passed_to_savefig(self, _rendered):
         """Verify dpi parameter produces a valid file."""
         assert _rendered["standard"].exists()
+
+
+
+# ─── _chart_generator_helpers_b ─────────────────────────────────────────────
+
+
+class TestChartGeneratorHelpersB:
+    def _inject_load_json(self):
+        """Inject _load_json into helpers_b module namespace (extracted without imports)."""
+        import concilium.application.benchmarks.charts._chart_generator_helpers_b as mod
+        from concilium.application.benchmarks.charts._chart_generator_helpers_a import _load_json
+
+        mod._load_json = _load_json
+
+    def test_build_cenario_record_with_report(self, tmp_path):
+        self._inject_load_json()
+        from concilium.application.benchmarks.charts._chart_generator_helpers_b import _build_cenario_record
+
+        inter_dir = tmp_path / "inter"
+        inter_dir.mkdir()
+        report = {"rcpsp_schedule": {"makespan_weeks": 25, "folga_semanas": 5}, "confronto": {}}
+        (inter_dir / "A1.benchmark_report.json").write_text(json.dumps(report), encoding="utf-8")
+        meta = {"id": "A1"}
+        record = _build_cenario_record("A1", meta, inter_dir)
+        assert record["slug"] == "A1"
+        assert record["makespan"] == 25
+
+    def test_build_cenario_record_no_report(self, tmp_path):
+        self._inject_load_json()
+        from concilium.application.benchmarks.charts._chart_generator_helpers_b import _build_cenario_record
+
+        inter_dir = tmp_path / "inter"
+        inter_dir.mkdir()
+        meta = {"id": "A2"}
+        record = _build_cenario_record("A2", meta, inter_dir)
+        assert record["slug"] == "A2"
+        assert record["makespan"] == 52
+
+
+

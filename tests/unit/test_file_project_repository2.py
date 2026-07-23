@@ -664,10 +664,169 @@ class TestFileProjectHandleSaveCanonical:
         return FileProjectHandle(store)
 
     def test_save_canonical_raises_without_version(self, tmp_path):
-        from unittest.mock import MagicMock
 
         handle = self._make_handle(tmp_path)
         mock_model = MagicMock()
         mock_model.model_dump_json.return_value = '{"meta": {}}'
         with pytest.raises(ValueError, match="Nenhuma versão ativa"):
             handle.save_canonical(mock_model)
+
+
+from pathlib import Path  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
+
+# ─── FileProjectRepository helpers ──────────────────────────────────────────
+
+
+class TestFileProjectRepositoryHelpers:
+    def test_rc_try_file_found(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+
+        data = {"id": "CPU-1"}
+        cpu_file = tmp_path / "CPU-1.json"
+        cpu_file.write_text(json.dumps(data), encoding="utf-8")
+        result = _rc_try_file(cpu_file)
+        assert result == data
+
+    def test_rc_try_file_not_found(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+
+        result = _rc_try_file(tmp_path / "nope.json")
+        assert result is None
+
+    def test_rc_try_override_found(self, tmp_path):
+        import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
+        override = {"CPU-1": {"field": "override_val"}}
+        override_path = tmp_path / "cpus_overlay.json"
+        override_path.write_text(json.dumps(override), encoding="utf-8")
+        result = _rc_try_override(override_path, "CPU-1", json_mod)
+        assert result == {"field": "override_val"}
+
+    def test_rc_try_override_cpu_not_in_file(self, tmp_path):
+        import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
+        override_path = tmp_path / "cpus_overlay.json"
+        override_path.write_text(json.dumps({"OTHER": {}}), encoding="utf-8")
+        result = _rc_try_override(override_path, "CPU-1", json_mod)
+        assert result is None
+
+    def test_rc_try_override_file_missing(self, tmp_path):
+        import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
+        result = _rc_try_override(tmp_path / "nonexistent.json", "CPU-1", json_mod)
+        assert result is None
+
+    def test_rc_try_aggregate_found(self, tmp_path):
+        import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
+        agg = [{"codigo": "CPU-1", "descricao": "Test"}]
+        agg_file = tmp_path / "cpus_aggregate.json"
+        agg_file.write_text(json.dumps(agg), encoding="utf-8")
+        result = _rc_try_aggregate(agg_file, "CPU-1", json_mod)
+        assert result is not None
+        assert result["codigo"] == "CPU-1"
+
+    def test_rc_try_aggregate_not_found(self, tmp_path):
+        import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
+        agg_file = tmp_path / "cpus_aggregate.json"
+        agg_file.write_text(json.dumps([{"codigo": "OTHER"}]), encoding="utf-8")
+        result = _rc_try_aggregate(agg_file, "CPU-1", json_mod)
+        assert result is None
+
+    def test_rc_try_snapshots_found(self, tmp_path):
+        import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        # Snapshots are catalogo-*.json files containing {cpus: [...]}
+        cpu_data = {"codigo": "CPU-1", "descricao": "Test"}
+        snap_content = {"cpus": [cpu_data]}
+        (snaps_dir / "catalogo-20260601.json").write_text(json.dumps(snap_content), encoding="utf-8")
+        result = _rc_try_snapshots(snaps_dir, "CPU-1", json_mod)
+        assert result == cpu_data
+
+    def test_rc_try_snapshots_dir_missing(self, tmp_path):
+        import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
+        result = _rc_try_snapshots(tmp_path / "missing_snaps", "CPU-1", json_mod)
+        assert result is None
+
+
+class TestFileProjectHandle2:
+    def _make_handle(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+        from concilium.infrastructure.storage.project import ProjectStore
+
+        store = ProjectStore.init(tmp_path, "Test Project", "ctx-01")
+        return FileProjectHandle(store), store
+
+    def test_root_property(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        assert isinstance(handle.root, Path)
+
+    def test_meta_property(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        meta = handle.meta
+        assert "nome" in meta
+
+    def test_tipo_projeto(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        result = handle.tipo_projeto
+        assert isinstance(result, str)
+
+    def test_list_versions(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        versions = handle.list_versions()
+        assert isinstance(versions, list)
+
+    def test_current_version_none_initially(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        # No version yet
+        v = handle.current_version()
+        assert v is None or isinstance(v, str)
+
+    def test_new_version_creates_version(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        v = handle.new_version()
+        assert v.startswith("v")
+
+    def test_version_path(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        v = handle.new_version()
+        p = handle.version_path(v)
+        assert isinstance(p, Path)
+
+    def test_load_canonical_none_when_missing(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        result = handle.load_canonical()
+        assert result is None
+
+    def test_update_meta(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        handle.update_meta(nome="Updated Name")
+        assert handle.meta["nome"] == "Updated Name"
+
+    def test_list_output_files_empty(self, tmp_path):
+        handle, store = self._make_handle(tmp_path)
+        v = handle.new_version()
+        files = handle.list_output_files(v)
+        assert isinstance(files, list)
+
+
+

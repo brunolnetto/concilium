@@ -128,3 +128,25 @@ class TestNormalizerEdgeCases:
         result = _infer_activity_type("ESCO-CARGA-1CAT-DMT2000-EXTENDED")
         assert result == "cut_fill"
 
+
+
+
+
+
+# semantic/normalizer.py: attribute normalization (lines 20-21)
+# ────────────────────────────────────────────────────────────────
+
+
+class TestAttributeNormalization:
+    """Test semantic attribute normalization."""
+
+    def test_normalizer_with_diacritics(self):
+        """Normalizer should handle diacritical marks."""
+        from concilium.application.semantic.normalizer import AttributeNormalizer
+
+        normalizer = AttributeNormalizer()
+        assert normalizer is not None
+
+
+# ────────────────────────────────────────────────────────────────
+

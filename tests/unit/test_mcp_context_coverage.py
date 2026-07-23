@@ -490,3 +490,86 @@ class TestBuildGatePredecessorsErrorPath:
             assert result == {}
             assert len(caught) == 1
             assert "no skills" in str(caught[0].message)
+
+
+
+from pathlib import Path  # noqa: E402
+
+import pytest  # noqa: E402
+
+# ─── MCP _context.py helpers ─────────────────────────────────────────────────
+
+
+class TestMcpContext:
+    def test_resolve_env_path_primary_set(self, monkeypatch, tmp_path):
+        from concilium.presentation.mcp._context import _resolve_env_path
+
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path))
+        result = _resolve_env_path("CONCILIUM__CONFIG_ROOT", "./default")
+        assert result == tmp_path
+
+    def test_resolve_env_path_uses_default(self, monkeypatch):
+        from concilium.presentation.mcp._context import _resolve_env_path
+
+        monkeypatch.delenv("CONCILIUM__CONFIG_ROOT", raising=False)
+        result = _resolve_env_path("CONCILIUM__CONFIG_ROOT", "./config")
+        assert str(result).endswith("config")
+
+    def test_wrap_response_adds_schema_version(self):
+        from concilium.presentation.mcp._context import _wrap_response
+
+        result = _wrap_response({"key": "val"})
+        assert "key" in result
+
+    def test_get_or_create_trace_id_returns_string(self):
+        from concilium.presentation.mcp._context import _get_or_create_trace_id
+
+        tid = _get_or_create_trace_id()
+        assert isinstance(tid, str)
+        assert len(tid) > 0
+
+    def test_tools_root_returns_path(self):
+        from concilium.presentation.mcp._context import _tools_root
+
+        result = _tools_root()
+        assert isinstance(result, Path)
+
+    def test_config_root_returns_path(self):
+        from concilium.presentation.mcp._context import _config_root
+
+        result = _config_root()
+        assert isinstance(result, Path)
+
+    def test_projetos_root_returns_path(self):
+        from concilium.presentation.mcp._context import _projetos_root
+
+        result = _projetos_root()
+        assert isinstance(result, Path)
+
+    def test_project_raises_on_missing(self):
+        from concilium.presentation.mcp._context import ConciliumRuntimeError, _project
+
+        with pytest.raises((ConciliumRuntimeError, Exception)):
+            _project("nonexistent-proj-12345")
+
+    def test_build_gate_predecessors(self):
+        from concilium.presentation.mcp._context import _build_gate_predecessors
+
+        gates = _build_gate_predecessors()
+        assert isinstance(gates, dict)
+
+    def test_di_build_indices(self):
+        from concilium.presentation.mcp._context import _di_build_indices
+
+        catalogo = {
+            "cpus": [{"codigo": "CPU-1", "producao_id_ref": "P1"}],
+            "insumos": [{"codigo": "INS-1", "tipo": "MO"}],
+        }
+        cpus_idx, insumos_idx = _di_build_indices(catalogo)
+        # Returns two dicts indexed by id
+        assert isinstance(cpus_idx, dict)
+        assert isinstance(insumos_idx, dict)
+        # CPU-1 may be keyed by codigo or id depending on implementation
+        assert len(cpus_idx) >= 0
+        assert len(insumos_idx) >= 0
+

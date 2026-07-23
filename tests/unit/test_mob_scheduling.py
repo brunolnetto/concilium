@@ -414,3 +414,32 @@ class TestIntegration:
         # Verify structure
         assert len(summary) == 3
         assert mob_costs["custo_mob_total"] > 0
+
+
+
+
+
+import pytest  # noqa: E402
+
+# ─── application/scheduling/mob_scheduling.py ─────────────────────────────────
+
+
+class TestParseDate:
+    def test_parse_date_from_iso_string(self):
+        """Line 27: _parse_date with ISO string returns date."""
+        from datetime import date
+
+        from concilium.application.scheduling.mob_scheduling import _parse_date
+
+        result = _parse_date("2026-06-01")
+        assert result == date(2026, 6, 1)
+
+    def test_parse_date_invalid_type_raises_type_error(self):
+        """Line 30: _parse_date with invalid type raises TypeError."""
+        from concilium.application.scheduling.mob_scheduling import _parse_date
+
+        with pytest.raises(TypeError, match="Expected date or str"):
+            _parse_date(20260601)
+
+
+

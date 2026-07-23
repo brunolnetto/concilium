@@ -890,3 +890,34 @@ class TestCriarProjetoSpec:
         call_kwargs = mocks["mock_store"].create_escopo.call_args[1]
         assert call_kwargs["dias_semana"] == 6
         assert call_kwargs["horas_dia"] == 8
+
+
+
+# ─── MCP spec tool ───────────────────────────────────────────────────────────
+
+
+class TestMcpSpecTool:
+    """ADR-116 F5: criar_projeto_spec absorvida em criar_projeto(spec=...) de formulario.py."""
+
+    def test_register_adds_criar_projeto(self):
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools.formulario import register
+
+        server = FastMCP("test")
+        register(server)
+        names = list(server._tool_manager._tools.keys())
+        assert "criar_projeto" in names  # consolidado de criar_projeto_formulario + criar_projeto_spec
+
+    def test_criar_projeto_spec_mode_registered(self):
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools.formulario import register
+
+        server = FastMCP("test")
+        register(server)
+        tool = server._tool_manager._tools.get("criar_projeto")
+        assert tool is not None
+
+
+

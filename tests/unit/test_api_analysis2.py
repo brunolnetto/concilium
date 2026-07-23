@@ -262,3 +262,280 @@ class TestAnalysisErrorPaths:
         c = _client(ValueErrSvc())
         resp = c.get("/api/projects/proj-1/cubo-estoque-consumivel/projecao")
         assert resp.status_code == 400
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+from fastapi import HTTPException  # noqa: E402
+
+# ─── analysis API routes ─────────────────────────────────────────────────────
+
+
+class TestAnalysisRoutes:
+    def _svc(self):
+        return MagicMock()
+
+    def test_compare_ok(self):
+        from concilium.presentation.api.routes.analysis import compare
+
+        svc = self._svc()
+        svc.compare_versions.return_value = {"delta": 0.05}
+        req = MagicMock()
+        req.left_version = "v1"
+        req.right_version = "v2"
+        result = compare("proj-1", req, service=svc)
+        assert "delta" in result
+
+    def test_compare_not_found(self):
+        from concilium.presentation.api.routes.analysis import compare
+
+        svc = self._svc()
+        svc.compare_versions.side_effect = FileNotFoundError("not found")
+        req = MagicMock()
+        req.left_version = "v1"
+        req.right_version = "v99"
+        with pytest.raises(HTTPException) as exc:
+            compare("proj-1", req, service=svc)
+        assert exc.value.status_code == 404
+
+    def test_list_artifacts_ok(self):
+        from concilium.presentation.api.routes.analysis import list_artifacts
+
+        svc = self._svc()
+        svc.list_artifacts.return_value = {"items": [{"nome": "relatorio.json"}]}
+        result = list_artifacts("proj-1", version=None, service=svc)
+        assert "items" in result
+
+    def test_get_diagnostico_pe_ok(self):
+        from concilium.presentation.api.routes.analysis import get_diagnostico_pe
+
+        svc = self._svc()
+        svc.get_diagnostico_pe.return_value = {"status": "VERDE"}
+        result = get_diagnostico_pe("proj-1", service=svc)
+        assert result["status"] == "VERDE"
+
+    def test_get_diagnostico_pe_not_found(self):
+        from concilium.presentation.api.routes.analysis import get_diagnostico_pe
+
+        svc = self._svc()
+        svc.get_diagnostico_pe.side_effect = FileNotFoundError("not found")
+        with pytest.raises(HTTPException) as exc:
+            get_diagnostico_pe("proj-1", service=svc)
+        assert exc.value.status_code == 404
+
+    def test_get_calendario_operacional(self):
+        from concilium.presentation.api.routes.analysis import get_calendario_operacional
+
+        svc = self._svc()
+        svc.get_calendario_operacional.return_value = {"weeks": []}
+        result = get_calendario_operacional("proj-1", service=svc)
+        assert "weeks" in result
+
+    def test_simulate_calendario_operacional(self):
+        from concilium.presentation.api.routes.analysis import simulate_calendario_operacional
+
+        svc = self._svc()
+        svc.simulate_calendario_operacional.return_value = {"simulated": True}
+        req = MagicMock()
+        result = simulate_calendario_operacional("proj-1", req, service=svc)
+        assert result["simulated"] is True
+
+    def test_get_cubo_analitico_ok(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_analitico
+
+        svc = self._svc()
+        svc.get_cubo_analitico.return_value = {"faces": []}
+        result = get_cubo_analitico("proj-1", version=None, service=svc)
+        assert "faces" in result
+
+    def test_get_cubo_analitico_not_found(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_analitico
+
+        svc = self._svc()
+        svc.get_cubo_analitico.side_effect = FileNotFoundError("not found")
+        with pytest.raises(HTTPException) as exc:
+            get_cubo_analitico("proj-1", version=None, service=svc)
+        assert exc.value.status_code == 404
+
+    def test_get_cubo_pool_projecao(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_pool_projecao
+
+        svc = self._svc()
+        svc.get_cubo_pool_projection.return_value = {"rows": []}
+        result = get_cubo_pool_projecao("proj-1", face="instancia_ciclo_vida", version=None, service=svc)
+        assert "rows" in result
+
+    def test_get_benchmark_reference(self):
+        from concilium.presentation.api.routes.analysis import get_benchmark_reference
+
+        svc = self._svc()
+        svc.get_benchmark_reference.return_value = {"slug": "AGIS"}
+        result = get_benchmark_reference("proj-1", service=svc)
+        assert result["slug"] == "AGIS"
+
+    def test_get_benchmark_reference_not_found(self):
+        from concilium.presentation.api.routes.analysis import get_benchmark_reference
+
+        svc = self._svc()
+        # If returns None, it should raise 404
+        svc.get_benchmark_reference.side_effect = FileNotFoundError("not found")
+        with pytest.raises(HTTPException) as exc:
+            get_benchmark_reference("proj-1", service=svc)
+        assert exc.value.status_code == 404
+
+    def test_list_audit_ok(self):
+        from concilium.presentation.api.routes.analysis import list_audit
+
+        svc = self._svc()
+        svc.list_audit.return_value = [{"action": "run"}]
+        result = list_audit("proj-1", service=svc)
+        assert "items" in result
+
+    def test_compare_query_ok(self):
+        from concilium.presentation.api.routes.analysis import compare_query
+
+        svc = self._svc()
+        svc.compare_versions.return_value = {"diff": []}
+        result = compare_query("proj-1", left="v1", right="v2", service=svc)
+        assert "diff" in result
+
+    def test_compare_value_error(self):
+        from concilium.presentation.api.routes.analysis import compare
+
+        svc = self._svc()
+        svc.compare_versions.side_effect = ValueError("bad version")
+        req = MagicMock()
+        req.left_version = "v1"
+        req.right_version = "v2"
+        with pytest.raises(HTTPException) as exc:
+            compare("proj-1", req, service=svc)
+        assert exc.value.status_code == 400
+
+    def test_compare_query_value_error(self):
+        from concilium.presentation.api.routes.analysis import compare_query
+
+        svc = self._svc()
+        svc.compare_versions.side_effect = ValueError("bad version")
+        with pytest.raises(HTTPException) as exc:
+            compare_query("proj-1", left="v1", right="v2", service=svc)
+        assert exc.value.status_code == 400
+
+    def test_download_artifact_ok(self):
+        from concilium.presentation.api.routes.analysis import download_artifact
+
+        svc = self._svc()
+        svc.get_artifact_bytes.return_value = (b"data", "application/json")
+        result = download_artifact("proj-1", kind="relatorio", filename="r.json", version=None, service=svc)
+        assert result.body == b"data"
+
+    def test_download_artifact_not_found(self):
+        from concilium.presentation.api.routes.analysis import download_artifact
+
+        svc = self._svc()
+        svc.get_artifact_bytes.side_effect = FileNotFoundError("missing")
+        with pytest.raises(HTTPException) as exc:
+            download_artifact("proj-1", kind="relatorio", filename="r.json", version=None, service=svc)
+        assert exc.value.status_code == 404
+
+    def test_download_artifact_value_error(self):
+        from concilium.presentation.api.routes.analysis import download_artifact
+
+        svc = self._svc()
+        svc.get_artifact_bytes.side_effect = ValueError("bad kind")
+        with pytest.raises(HTTPException) as exc:
+            download_artifact("proj-1", kind="bad", filename="r.json", version=None, service=svc)
+        assert exc.value.status_code == 400
+
+    def test_get_benchmark_reference_value_error(self):
+        from concilium.presentation.api.routes.analysis import get_benchmark_reference
+
+        svc = self._svc()
+        svc.get_benchmark_reference.side_effect = ValueError("bad slug")
+        with pytest.raises(HTTPException) as exc:
+            get_benchmark_reference("proj-1", service=svc)
+        assert exc.value.status_code == 400
+
+    def test_get_diagnostico_pe_generic_exception_returns_aviso(self):
+        from concilium.presentation.api.routes.analysis import get_diagnostico_pe
+
+        svc = self._svc()
+        svc.get_diagnostico_pe.side_effect = RuntimeError("cube unavailable")
+        result = get_diagnostico_pe("proj-1", service=svc)
+        assert result["diagnostico_pe"] is None
+        assert result["backtracking_pe"] is None
+        assert "cube unavailable" in result["aviso"]
+
+    def test_get_calendario_operacional_not_found(self):
+        from concilium.presentation.api.routes.analysis import get_calendario_operacional
+
+        svc = self._svc()
+        svc.get_calendario_operacional.side_effect = FileNotFoundError("missing")
+        with pytest.raises(HTTPException) as exc:
+            get_calendario_operacional("proj-1", version=None, service=svc)
+        assert exc.value.status_code == 404
+
+    def test_simulate_calendario_operacional_not_found(self):
+        from concilium.presentation.api.routes.analysis import simulate_calendario_operacional
+
+        svc = self._svc()
+        svc.simulate_calendario_operacional.side_effect = FileNotFoundError("missing")
+        req = MagicMock()
+        req.model_dump.return_value = {}
+        with pytest.raises(HTTPException) as exc:
+            simulate_calendario_operacional("proj-1", req, version=None, service=svc)
+        assert exc.value.status_code == 404
+
+    def test_get_cubo_analitico_projecao_value_error(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_analitico_projecao
+
+        svc = self._svc()
+        svc.get_cubo_analitico_projection.side_effect = ValueError("bad face")
+        with pytest.raises(HTTPException) as exc:
+            get_cubo_analitico_projecao("proj-1", service=svc)
+        assert exc.value.status_code == 400
+
+    def test_get_cubo_analitico_projecao_not_found(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_analitico_projecao
+
+        svc = self._svc()
+        svc.get_cubo_analitico_projection.side_effect = FileNotFoundError("missing")
+        with pytest.raises(HTTPException) as exc:
+            get_cubo_analitico_projecao("proj-1", service=svc)
+        assert exc.value.status_code == 404
+
+    def test_get_cubo_analitico_projecao_contrato(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_analitico_projecao_contrato
+
+        svc = self._svc()
+        svc.get_cubo_projection_contract.return_value = {"faces": []}
+        result = get_cubo_analitico_projecao_contrato("proj-1", service=svc)
+        assert "faces" in result
+
+    def test_get_cubo_pool_projecao_value_error(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_pool_projecao
+
+        svc = self._svc()
+        svc.get_cubo_pool_projection.side_effect = ValueError("bad face")
+        with pytest.raises(HTTPException) as exc:
+            get_cubo_pool_projecao("proj-1", version=None, service=svc)
+        assert exc.value.status_code == 400
+
+    def test_get_cubo_pool_projecao_not_found(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_pool_projecao
+
+        svc = self._svc()
+        svc.get_cubo_pool_projection.side_effect = FileNotFoundError("missing")
+        with pytest.raises(HTTPException) as exc:
+            get_cubo_pool_projecao("proj-1", version=None, service=svc)
+        assert exc.value.status_code == 404
+
+    def test_get_cubo_pool_projecao_contrato(self):
+        from concilium.presentation.api.routes.analysis import get_cubo_pool_projecao_contrato
+
+        svc = self._svc()
+        svc.get_cubo_pool_projection_contract.return_value = {"faces": []}
+        result = get_cubo_pool_projecao_contrato("proj-1", service=svc)
+        assert "faces" in result
+
+
+

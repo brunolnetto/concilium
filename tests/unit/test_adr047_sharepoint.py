@@ -1200,3 +1200,328 @@ class TestSharePointHealthCheckEdgeCases:
         assert result["status"] == "error"
         assert result["code"] == 503
         assert result["backend"] == "sharepoint"
+
+
+from types import SimpleNamespace  # noqa: E402
+
+from concilium.infrastructure.adapters.blob_storage.sharepoint import (  # noqa: E402
+    SharePointBlobStorage,
+    SharePointCredential,
+)
+
+# ─── sharepoint adapter (greatest_gaps_batch1) ───────────────────────────────
+
+# ---------------------------------------------------------------------------
+# SharePoint adapter
+# ---------------------------------------------------------------------------
+
+
+class _Resp:
+    def __init__(self, status_code=200, content=b"", headers=None, data=None):
+        self.status_code = status_code
+        self.content = content
+        self.headers = headers or {}
+        self._data = data or {}
+
+    def json(self):
+        return self._data
+
+    def raise_for_status(self):
+        if self.status_code >= 400 and self.status_code not in (404, 412):
+            raise RuntimeError(f"http {self.status_code}")
+
+
+@pytest.fixture
+def sp_cred() -> SharePointCredential:
+    cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
+    cred._app = MagicMock()
+    cred._app.acquire_token_for_client.return_value = {"access_token": "tok"}
+    return cred
+
+
+def test_sharepoint_from_env_missing_drive_id_raises(monkeypatch):
+    class _SP:
+        drive_id = None
+        root_path = "root"
+
+    class _Storage:
+        sharepoint = _SP()
+
+    monkeypatch.setattr("concilium.infrastructure.adapters.blob_storage.sharepoint.get_storage", lambda: _Storage())
+    with pytest.raises(OSError):
+        SharePointBlobStorage.from_env()
+
+
+def test_sharepoint_cached_etag_refresh_path(tmp_path, monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred, cache_dir=tmp_path)
+    storage._cache.put("a.json", b"old", "etag0", "lm0")
+
+    # First GET (item metadata) returns 200; second GET (content) returns 200 with new payload.
+    httpx = SimpleNamespace(
+        get=MagicMock(
+            side_effect=[
+                _Resp(status_code=200, headers={"ETag": "etag1", "Last-Modified": "lm1"}),
+                _Resp(status_code=200, content=b"new"),
+            ]
+        )
+    )
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    data = storage.ler_blob("a.json")
+    assert data == b"new"
+
+
+def test_sharepoint_cached_exception_offline_returns_stale(tmp_path, monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred, cache_dir=tmp_path, offline=True)
+    storage._cache.put("b.json", b"stale", "etag0", "lm0")
+    httpx = SimpleNamespace(get=MagicMock(side_effect=RuntimeError("network down")))
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    assert storage.ler_blob("b.json") == b"stale"
+
+
+def test_sharepoint_direct_offline_no_cache_raises(tmp_path, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred, cache_dir=tmp_path, offline=True)
+    with pytest.raises(FileNotFoundError, match="offline"):
+        storage._ler_blob_direct("missing.json", httpx=SimpleNamespace())
+
+
+def test_sharepoint_direct_request_exception_wrapped(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+    httpx = SimpleNamespace(get=MagicMock(side_effect=RuntimeError("boom")))
+    with pytest.raises(FileNotFoundError, match="Erro ao acessar SharePoint"):
+        storage._ler_blob_direct("x.json", httpx=httpx)
+
+
+def test_sharepoint_gravar_blob_large_upload_and_cache_invalidate(tmp_path, monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred, cache_dir=tmp_path)
+    storage._cache.put("big.bin", b"old", "e", "lm")
+
+    called = {"upload": False, "invalidated": False}
+
+    def _upload(_httpx, path, content):
+        called["upload"] = path == "big.bin" and len(content) > 0
+
+    def _invalidate(path):
+        called["invalidated"] = path == "big.bin"
+
+    monkeypatch.setattr(storage, "_gravar_upload_session", _upload)
+    monkeypatch.setattr(storage._cache, "invalidate", _invalidate)
+    monkeypatch.setattr(storage, "_client", lambda: SimpleNamespace())
+    storage._root_ensured = True  # skip ensure_root_path — not under test here
+
+    storage.gravar_blob("big.bin", b"x" * (4 * 1024 * 1024))
+    assert called["upload"] is True
+    assert called["invalidated"] is True
+
+
+def test_sharepoint_upload_session_chunk_loop(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+    post_resp = _Resp(status_code=200, data={"uploadUrl": "https://upload"})
+    put_resp = _Resp(status_code=200)
+    httpx = SimpleNamespace(post=MagicMock(return_value=post_resp), put=MagicMock(return_value=put_resp))
+
+    data = b"y" * (5 * 1024 * 1024 + 10)
+    storage._gravar_upload_session(httpx=httpx, path="file.bin", content=data)
+    # 2 chunks expected: one full 5MB + remainder
+    assert httpx.put.call_count == 2
+
+
+def test_sharepoint_listar_blobs_offline_exception_returns_empty(tmp_path, monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred, cache_dir=tmp_path, offline=True)
+    httpx = SimpleNamespace(get=MagicMock(side_effect=RuntimeError("offline")))
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    assert storage.listar_blobs("abc") == []
+
+
+def test_sharepoint_listar_blobs_404_returns_empty(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+    httpx = SimpleNamespace(get=MagicMock(return_value=_Resp(status_code=404)))
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    assert storage.listar_blobs("abc") == []
+
+
+def test_sharepoint_listar_blobs_recurses_into_subfolder(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+    r1 = _Resp(status_code=200, data={"value": [{"name": "sub", "folder": {}}, {"name": "f1.json", "file": {}}]})
+    r2 = _Resp(status_code=200, data={"value": [{"name": "f2.json", "file": {}}]})
+    httpx = SimpleNamespace(get=MagicMock(side_effect=[r1, r2]))
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    blobs = storage.listar_blobs("prefix")
+    assert "prefix/f1.json" in blobs
+    assert "prefix/sub/f2.json" in blobs
+
+
+def test_sharepoint_blob_existe_exception_false(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+    httpx = SimpleNamespace(get=MagicMock(side_effect=RuntimeError("x")))
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    assert storage.blob_existe("any") is False
+
+
+def test_sharepoint_aprovar_versao_404_raises(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+    httpx = SimpleNamespace(post=MagicMock(return_value=_Resp(status_code=404)))
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    with pytest.raises(FileNotFoundError):
+        storage.aprovar_versao("x")
+
+
+def test_sharepoint_gerar_url_temporaria_non_200_and_exception(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+
+    httpx_non200 = SimpleNamespace(post=MagicMock(return_value=_Resp(status_code=403)))
+    monkeypatch.setattr(storage, "_client", lambda: httpx_non200)
+    assert storage.gerar_url_temporaria("x") is None
+
+    httpx_exc = SimpleNamespace(post=MagicMock(side_effect=RuntimeError("blocked")))
+    monkeypatch.setattr(storage, "_client", lambda: httpx_exc)
+    assert storage.gerar_url_temporaria("x") is None
+
+
+def test_sharepoint_health_check_non_200_error_code(monkeypatch, sp_cred):
+    storage = SharePointBlobStorage("d", "root", sp_cred)
+    httpx = SimpleNamespace(get=MagicMock(return_value=_Resp(status_code=503)))
+    monkeypatch.setattr(storage, "_client", lambda: httpx)
+
+    result = storage.health_check()
+    assert result["status"] == "error"
+    assert result["code"] == 503
+
+
+def _sp_cred() -> SharePointCredential:
+    cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
+    cred._app = MagicMock()
+    cred._app.acquire_token_for_client.return_value = {"access_token": "tok"}
+    return cred
+
+
+# ─── sharepoint adapter (greatest_gaps_batch2) ───────────────────────────────
+
+def test_sharepoint_success_and_error_branches(tmp_path, monkeypatch):
+    cred = _sp_cred()
+    # Garantir que variáveis de env de SP não poluem o teste via settings cacheados
+    monkeypatch.delenv("CONCILIUM__SP_DRIVE_ID", raising=False)
+    monkeypatch.delenv("CONCILIUM__SP_CLIENT_SECRET", raising=False)
+
+    class _SP:
+        drive_id = "drv"
+        root_path = "root"
+
+    class _Storage:
+        sharepoint = _SP()
+
+    monkeypatch.setattr("concilium.infrastructure.adapters.blob_storage.sharepoint.get_storage", lambda: _Storage())
+    monkeypatch.setattr(
+        "concilium.infrastructure.adapters.blob_storage.sharepoint.SharePointCredential.from_env",
+        lambda: cred,
+    )
+
+    storage = SharePointBlobStorage.from_env(cache_dir=tmp_path)
+    assert isinstance(storage, SharePointBlobStorage)
+
+    # _ler_blob_direct offline branch using stale cache
+    storage._cache.put("offline.json", b"cached", "e", "lm")
+    storage._offline = True
+    assert storage._ler_blob_direct("offline.json", httpx=SimpleNamespace()) == b"cached"
+    storage._offline = False
+
+    # Small write path and optimistic concurrency 412 branch
+    httpx_put_412 = SimpleNamespace(put=MagicMock(return_value=_Resp(status_code=412)))
+    with pytest.raises(Exception):  # noqa: B017
+        storage._gravar_pequeno(httpx_put_412, "x.bin", b"abc")
+
+    # listar_blobs exception while online should raise wrapped FileNotFoundError
+    httpx_list_err = SimpleNamespace(get=MagicMock(side_effect=RuntimeError("net")))
+    monkeypatch.setattr(storage, "_client", lambda: httpx_list_err)
+    with pytest.raises(FileNotFoundError):
+        storage.listar_blobs("pref")
+
+    # Success branches: approve, temporary URL, health_check=ok
+    httpx_ok = SimpleNamespace(
+        post=MagicMock(side_effect=[_Resp(status_code=200), _Resp(status_code=200, data={"link": {"webUrl": "u"}})]),
+        get=MagicMock(return_value=_Resp(status_code=200, data={"name": "Drive", "driveType": "documentLibrary"})),
+    )
+    monkeypatch.setattr(storage, "_client", lambda: httpx_ok)
+    storage.aprovar_versao("ok.txt")
+    assert storage.gerar_url_temporaria("ok.txt") == "u"
+    health = storage.health_check()
+    assert health["status"] == "ok"
+    assert health["drive_name"] == "Drive"
+
+
+
+
+# ─── infrastructure/adapters/blob_storage/_sharepoint_auth.py ─────────────────
+
+
+class TestSharePointAuthCoverage:
+    def test_blob_cache_ttl_expiry_returns_none(self, tmp_path):
+        """Line 128: BlobCache.get returns None when TTL is expired."""
+        import datetime
+
+        from concilium.infrastructure.adapters.blob_storage._sharepoint_auth import _BlobCache
+
+        cache = _BlobCache(tmp_path, ttl_minutes=60)
+        cache.put("key.json", b"data", "etag", "Mon")
+        cache._ttl = datetime.timedelta(seconds=0)
+        result = cache.get("key.json")
+        assert result is None
+
+    def test_blob_cache_get_corrupt_meta_returns_none(self, tmp_path):
+        """Lines 130-131: BlobCache.get with corrupt meta returns None."""
+        import hashlib
+
+        from concilium.infrastructure.adapters.blob_storage._sharepoint_auth import _BlobCache
+
+        cache = _BlobCache(tmp_path, ttl_minutes=60)
+        cache.put("key.json", b"data", "etag", "Mon")
+        key = hashlib.sha256(b"key.json").hexdigest()[:24]
+        (tmp_path / f"{key}.meta").write_text("CORRUPT_JSON", encoding="utf-8")
+        result = cache.get("key.json")
+        assert result is None
+
+    def test_blob_cache_get_stale_corrupt_meta_returns_none(self, tmp_path):
+        """Lines 141-142: BlobCache.get_stale with corrupt meta returns None."""
+        import hashlib
+
+        from concilium.infrastructure.adapters.blob_storage._sharepoint_auth import _BlobCache
+
+        cache = _BlobCache(tmp_path, ttl_minutes=60)
+        cache.put("key2.json", b"data", "etag", "Mon")
+        key = hashlib.sha256(b"key2.json").hexdigest()[:24]
+        (tmp_path / f"{key}.meta").write_text("CORRUPT", encoding="utf-8")
+        result = cache.get_stale("key2.json")
+        assert result is None
+
+    def test_acquire_token_cert_path(self, tmp_path):
+        """Lines 73-74: acquire_token uses cert credential when cert_path exists."""
+        from concilium.infrastructure.adapters.blob_storage._sharepoint_auth import SharePointCredential
+
+        cert_file = tmp_path / "cert.pem"
+        cert_file.write_text("-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----", encoding="utf-8")
+
+        cred = SharePointCredential(
+            tenant_id="tenant",
+            client_id="client",
+            client_secret=None,
+            cert_path=cert_file,
+        )
+
+        mock_app = MagicMock()
+        mock_app.acquire_token_for_client.return_value = {"access_token": "cert_token"}
+        mock_msal = MagicMock()
+        mock_msal.ConfidentialClientApplication.return_value = mock_app
+
+        with patch.dict("sys.modules", {"msal": mock_msal}):
+            token = cred.acquire_token()
+
+        assert token == "cert_token"
+        call_kwargs = mock_msal.ConfidentialClientApplication.call_args[1]
+        assert "private_key" in call_kwargs.get("client_credential", {})
+

@@ -97,3 +97,192 @@ class TestPermissionGuard2:
 
 
 
+
+
+
+from unittest.mock import MagicMock, patch  # noqa: E402
+
+import pytest  # noqa: E402
+
+# ─── infrastructure/auth/permission_guard.py ──────────────────────────────────
+
+
+class TestPermissionGuard3:
+    def test_get_permissions_operator_has_project_read(self):
+        from concilium.infrastructure.auth.permission_guard import PROJECT_READ, get_permissions
+
+        perms = get_permissions(["operator"])
+        assert PROJECT_READ in perms
+
+    def test_get_permissions_admin_it_focused(self):
+        # admin (TI) tem permissões de infraestrutura e catálogo — não herda de engineer.
+        from concilium.infrastructure.auth.permission_guard import (
+            AUTH_MANAGE,
+            CATALOG_MERGE,
+            CATALOG_READ,
+            CATALOG_VALIDATE,
+            FINANCIALS_READ,
+            HEALTH_READ,
+            PROJECT_APPROVE,
+            PROJECT_READ,
+            PROJECT_RUN,
+            SYSTEM_READ,
+            get_permissions,
+        )
+
+        perms = get_permissions(["admin"])
+        # admin = engineer + auth:manage + system:read + catalog:merge
+        assert all(
+            p in perms
+            for p in [
+                AUTH_MANAGE,
+                SYSTEM_READ,
+                CATALOG_MERGE,
+                CATALOG_READ,
+                CATALOG_VALIDATE,
+                FINANCIALS_READ,
+                HEALTH_READ,
+            ]
+        )
+        # admin herda todas as permissões de engineer/operator também
+        assert PROJECT_READ in perms
+        assert PROJECT_RUN in perms
+        assert PROJECT_APPROVE in perms
+
+    def test_get_permissions_unknown_role(self):
+        from concilium.infrastructure.auth.permission_guard import get_permissions
+
+        perms = get_permissions(["nonexistent"])
+        assert len(perms) == 0
+
+    def test_roles_from_token_roles_claim(self):
+        from concilium.infrastructure.auth.permission_guard import roles_from_token
+
+        claims = {"roles": ["engineer"]}
+        result = roles_from_token(claims)
+        assert result == ["engineer"]
+
+    def test_roles_from_token_legacy_scopes(self):
+        from concilium.infrastructure.auth.permission_guard import roles_from_token
+
+        claims = {"scopes": ["mcp:read", "pipeline:run"]}
+        result = roles_from_token(claims)
+        assert "auditor" in result  # mcp:read → auditor
+        assert "operator" in result
+
+    def test_roles_from_token_empty_returns_empty(self):
+        from concilium.infrastructure.auth.permission_guard import roles_from_token
+
+        result = roles_from_token({})
+        assert result == []  # fail-closed: JWT sem roles = sem acesso
+
+    def test_require_permission_noop_when_auth_disabled(self):
+        from concilium.infrastructure.auth.permission_guard import require_permission
+
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
+            require_permission("project:run", [])  # should not raise
+
+    def test_require_permission_raises_when_unauthorized(self):
+        from concilium.infrastructure.auth.permission_guard import require_permission
+
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+            with pytest.raises(PermissionError):
+                require_permission("project:run", ["auditor"])
+
+    def test_require_permission_passes_with_correct_role(self):
+        from concilium.infrastructure.auth.permission_guard import PROJECT_RUN, require_permission
+
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+            require_permission(PROJECT_RUN, ["operator"])  # should not raise
+
+    def test_set_roles_contextvar(self):
+        from concilium.infrastructure.auth.permission_guard import _get_roles_from_context, set_roles
+
+        set_roles(["engineer"])
+        result = _get_roles_from_context({})
+        assert "engineer" in result
+
+    def test_permission_decorator_disabled(self):
+        from concilium.infrastructure.auth.permission_guard import permission
+
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
+
+            @permission("project:run")
+            def fn():
+                return "ok"
+
+            assert fn() == "ok"
+
+    def test_permission_decorator_raises_when_unauthorized(self):
+        from concilium.infrastructure.auth.permission_guard import permission, set_roles
+
+        set_roles(["auditor"])
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+
+            @permission("project:run")
+            def fn():
+                return "ok"
+
+            with pytest.raises(PermissionError):
+                fn()
+
+    def test_permission_decorator_passes_when_authorized(self):
+        """Covers the false branch of `if perm not in get_permissions(...)`:
+        an authorized role must call through without raising."""
+        from concilium.infrastructure.auth.permission_guard import permission, set_roles
+
+        set_roles(["operator"])
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+
+            @permission("project:run")
+            def fn():
+                return "ok"
+
+            assert fn() == "ok"
+
+    def test_roles_decorator_disabled(self):
+        from concilium.infrastructure.auth.permission_guard import roles
+
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
+
+            @roles("admin")
+            def fn():
+                return "ok"
+
+            assert fn() == "ok"
+
+    def test_roles_decorator_raises_when_missing(self):
+        from concilium.infrastructure.auth.permission_guard import roles, set_roles
+
+        set_roles(["auditor"])
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+
+            @roles("admin", "engineer")
+            def fn():
+                return "ok"
+
+            with pytest.raises(PermissionError):
+                fn()
+
+    def test_roles_decorator_passes_with_matching_role(self):
+        from concilium.infrastructure.auth.permission_guard import roles, set_roles
+
+        set_roles(["engineer"])
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+
+            @roles("admin", "engineer")
+            def fn():
+                return "ok"
+
+            assert fn() == "ok"
+
+    def test_get_roles_from_context_fastapi_request(self):
+        from concilium.infrastructure.auth.permission_guard import _get_roles_from_context
+
+        request_mock = MagicMock()
+        request_mock.state.jwt_claims = {"roles": ["admin"]}
+        result = _get_roles_from_context({"request": request_mock})
+        assert "admin" in result
+
+
+
