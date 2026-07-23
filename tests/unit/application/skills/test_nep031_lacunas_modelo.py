@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 import pytest
 
 # ── loaders de helpers (manifests têm dashes no nome de diretório) ────────────
-_MANIFESTS = Path(__file__).resolve().parents[2] / "src" / "concilium" / "application" / "skills" / "manifests"
+_MANIFESTS = Path(__file__).resolve().parents[4] / "src" / "concilium" / "application" / "skills" / "manifests"
 
 
 def _load_mod(skill_dir: str, mod_name: str):

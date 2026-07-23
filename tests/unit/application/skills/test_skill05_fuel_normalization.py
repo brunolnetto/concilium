@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 
 def _load_skill05_helpers_a():
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[4]
     mod_path = (
         root / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
     )

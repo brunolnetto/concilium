@@ -18,7 +18,7 @@ def _make_proj():
 from pathlib import Path as _Path  # noqa: E402
 
 _MODULE_PATH = str(
-    _Path(__file__).resolve().parents[2]
+    _Path(__file__).resolve().parents[4]
     / "src/concilium/application/skills/manifests/09-relatorio-e-artefatos/_skill_helpers/_executivo.py"
 )
 
@@ -210,7 +210,7 @@ class TestSkillHelpersExecutivo:
         import os
         from pathlib import Path as _Path
 
-        base = str(_Path(__file__).resolve().parents[2] / "src/concilium/application/skills/manifests")
+        base = str(_Path(__file__).resolve().parents[4] / "src/concilium/application/skills/manifests")
         target = os.path.join(base, "09-relatorio-e-artefatos", "_skill_helpers_executivo.py")
         if os.path.exists(target):
             spec = importlib.util.spec_from_file_location("_skill_helpers_executivo", target)

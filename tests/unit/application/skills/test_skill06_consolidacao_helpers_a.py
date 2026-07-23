@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-_ROOT = Path(__file__).resolve().parents[2]
+_ROOT = Path(__file__).resolve().parents[4]
 
 _MANIFESTS = _ROOT / "src/concilium/application/skills/manifests"
 

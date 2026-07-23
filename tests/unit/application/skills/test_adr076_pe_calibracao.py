@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 _helpers_path = (
-    Path(__file__).resolve().parent.parent.parent
+    Path(__file__).resolve().parent.parent.parent.parent.parent
     / "src"
     / "concilium"
     / "application"

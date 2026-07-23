@@ -14,7 +14,7 @@ import pytest
 # Load the module via importlib so hyphens in path are not a problem
 # ---------------------------------------------------------------------------
 _MOD_PATH = (
-    Path(__file__).parent.parent.parent
+    Path(__file__).parent.parent.parent.parent.parent
     / "src/concilium/application/skills/manifests/06-resultado-financeiro"
     / "_consolidacao/_skill_helpers/_bdi_resolucao.py"
 )

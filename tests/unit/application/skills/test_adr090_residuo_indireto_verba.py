@@ -28,7 +28,7 @@ from concilium.domain.models.canonical import IndirectoCategoria, IndirectoCostC
 
 def _load_helpers_b():
     path = (
-        Path(__file__).resolve().parents[2]
+        Path(__file__).resolve().parents[4]
         / "src/concilium/application/skills/manifests"
         / "06-resultado-financeiro/_indiretos/_skill_helpers/__init__.py"
     )

@@ -114,7 +114,7 @@ class TestSkill15RelatorioCriticidade:
         from types import SimpleNamespace
 
         path = (
-            Path(__file__).resolve().parents[2]
+            Path(__file__).resolve().parents[4]
             / "src/concilium/application/skills/manifests"
             / "09-relatorio-e-artefatos/_skill_helpers/_executivo.py"
         )

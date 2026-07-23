@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 
 def _load_helpers_a():
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[4]
     helper = (
         root / "src/concilium/application/skills/manifests/09-relatorio-e-artefatos/_skill_helpers/__init__.py"
     )

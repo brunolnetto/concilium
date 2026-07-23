@@ -9,7 +9,7 @@ from pathlib import Path
 def _load_assessor():
     """Load _assessor.py from hyphenated directory via importlib."""
     path = (
-        Path(__file__).parents[2]
+        Path(__file__).parents[4]
         / "src/concilium/application/skills/manifests/08-replanejamento-e-cenarios/_skill_helpers/_assessor.py"
     )
     spec = importlib.util.spec_from_file_location("skill11._assessor", path)

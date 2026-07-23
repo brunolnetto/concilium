@@ -32,7 +32,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 _HELPERS_PATH = str(
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[4]
     / "src"
     / "concilium"
     / "application"
@@ -761,7 +761,7 @@ def _load_skill_module(skill_dir: str, module_name: str):
     """Load a skill module from a directory with dashes in name."""
     from pathlib import Path as _Path
 
-    base = str(_Path(__file__).resolve().parents[2] / "src/concilium/application/skills/manifests")
+    base = str(_Path(__file__).resolve().parents[4] / "src/concilium/application/skills/manifests")
     target = os.path.join(base, skill_dir, f"{module_name}.py")
     if not os.path.exists(target):
         target = os.path.join(base, skill_dir, module_name, "__init__.py")

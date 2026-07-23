@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 # Garante que o src está no path (mesmo se rodado fora do venv)
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 sys.path.insert(0, str(_ROOT / "src"))
 
 import pytest  # noqa: E402

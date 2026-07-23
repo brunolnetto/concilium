@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-_PROXY_PATH = Path(__file__).resolve().parents[2] / "tools" / "mcp-proxy" / "proxy.py"
+_PROXY_PATH = Path(__file__).resolve().parents[3] / "tools" / "mcp-proxy" / "proxy.py"
 
 
 @pytest.fixture(scope="module")

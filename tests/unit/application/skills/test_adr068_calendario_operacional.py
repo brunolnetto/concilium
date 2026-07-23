@@ -433,7 +433,7 @@ class TestExtractDagUnknownPredecessorType:
         import importlib.util
 
         _path = (
-            Path(__file__).resolve().parents[2]
+            Path(__file__).resolve().parents[4]
             / "src/concilium/application/skills/manifests/04-cronograma/_skill_helpers/_dag.py"
         )
         _spec = importlib.util.spec_from_file_location("skill04_dag_helpers_b16", _path)
@@ -650,7 +650,7 @@ def _load_skill04_dag_helpers():
     import sys
 
     path = (
-        Path(__file__).resolve().parents[2]
+        Path(__file__).resolve().parents[4]
         / "src/concilium/application/skills/manifests/04-cronograma/_skill_helpers/_dag.py"
     )
     spec = importlib.util.spec_from_file_location("skill04_dag_helpers_b13", path)

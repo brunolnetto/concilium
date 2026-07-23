@@ -22,7 +22,7 @@ def _build_cat_bottom_up_direct():
     from pathlib import Path
 
     path = (
-        Path(__file__).resolve().parents[2]
+        Path(__file__).resolve().parents[4]
         / "src/concilium/application/skills/manifests"
         / "06-resultado-financeiro/_consolidacao/_skill_helpers/__init__.py"
     )

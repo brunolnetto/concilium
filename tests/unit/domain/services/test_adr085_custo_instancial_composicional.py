@@ -20,7 +20,7 @@ import pytest
 
 def _load_helpers_a():
     """Carrega o módulo _skill_helpers (dir com hífen → importlib)."""
-    here = Path(__file__).resolve().parents[2]
+    here = Path(__file__).resolve().parents[4]
     path = (
         here
         / "src"

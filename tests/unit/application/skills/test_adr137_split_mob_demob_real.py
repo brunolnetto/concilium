@@ -21,7 +21,7 @@ from types import ModuleType
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
 _HELPERS = (
     _ROOT

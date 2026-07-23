@@ -19,7 +19,7 @@ import pytest
 # Carregamento dinâmico do módulo de helpers (diretório com hifens)
 # ---------------------------------------------------------------------------
 
-_ROOT = pathlib.Path(__file__).resolve().parents[2]
+_ROOT = pathlib.Path(__file__).resolve().parents[4]
 _HELPERS_PATH = (
     _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
 )

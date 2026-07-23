@@ -26,7 +26,7 @@ def _load_extract_dag_from_spec_or_eap():
     from pathlib import Path
 
     path = (
-        Path(__file__).resolve().parents[2]
+        Path(__file__).resolve().parents[4]
         / "src/concilium/application/skills/manifests/04-cronograma/_skill_helpers/_dag.py"
     )
     spec = importlib.util.spec_from_file_location("skill04_dag_helpers_adr081", path)

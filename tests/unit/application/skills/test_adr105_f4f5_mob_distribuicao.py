@@ -21,7 +21,7 @@ def _import():
     import sys
     from pathlib import Path
 
-    here = Path(__file__).resolve().parent.parent.parent
+    here = Path(__file__).resolve().parent.parent.parent.parent.parent
     p = (
         here
         / "src"

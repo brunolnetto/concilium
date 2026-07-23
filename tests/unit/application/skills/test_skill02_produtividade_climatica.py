@@ -74,7 +74,7 @@ class TestPraticabilidadeEdgeCases:
         from pathlib import Path
 
         path = (
-            Path(__file__).parents[2]
+            Path(__file__).parents[4]
             / "src"
             / "concilium"
             / "application"
