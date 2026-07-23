@@ -793,3 +793,33 @@ class TestMaxSizeInvalidEnvVar:
 
 # ---------------------------------------------------------------------------
 
+
+
+import os  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+
+# tool_invocations/repository.py lines 100-101: ValueError path in _max_size
+# ---------------------------------------------------------------------------
+
+
+class TestMaxSizeValueError:
+    def test_returns_default_when_env_var_is_not_integer(self):
+        """Lines 100-101: env var set to non-integer → int(raw) raises ValueError → return 10_000."""
+        with patch.dict(os.environ, {"CONCILIUM__TOOL_INVOCATIONS_MAX_SIZE": "not-a-number"}):
+            # Reload the function to pick up patched env
+            from concilium.application.tool_invocations.repository import _max_size
+
+            result = _max_size()
+            assert result == 10_000
+
+    def test_returns_parsed_int_for_valid_value(self):
+        """Normal path: valid integer env var → return max(0, int(raw))."""
+        with patch.dict(os.environ, {"CONCILIUM__TOOL_INVOCATIONS_MAX_SIZE": "500"}):
+            from concilium.application.tool_invocations.repository import _max_size
+
+            result = _max_size()
+            assert result == 500
+
+
+# ---------------------------------------------------------------------------
+

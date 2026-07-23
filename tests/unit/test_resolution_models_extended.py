@@ -182,3 +182,30 @@ class TestCalibrationAnalyzer:
         ]
         report = self.analyzer.detect_systematic_bias(reviews)
         assert "rare_attr" not in report.frequent_attribute_gaps
+
+
+
+
+
+# resolution/models.py line 325: _compute_frequent_gaps returns [] when total <= 0
+# ---------------------------------------------------------------------------
+
+
+class TestComputeFrequentGapsZeroTotal:
+    def test_returns_empty_list_when_total_zero(self):
+        """Line 325: total <= 0 → return []."""
+        from concilium.application.resolution.models import _compute_frequent_gaps
+
+        result = _compute_frequent_gaps({"gap_a": 5}, total=0)
+        assert result == []
+
+    def test_returns_empty_list_when_total_negative(self):
+        """Line 325: total < 0 → return []."""
+        from concilium.application.resolution.models import _compute_frequent_gaps
+
+        result = _compute_frequent_gaps({"gap_a": 1}, total=-1)
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+

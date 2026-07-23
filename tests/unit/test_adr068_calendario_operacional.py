@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from datetime import UTC, datetime
 
 from concilium.application.runtime import Runtime
@@ -416,3 +417,38 @@ def test_extract_edge_thresholds_ignora_tipo_desconhecido_no_meio_do_laco():
     assert ("eap-01", "eap-03") not in edge_thresholds
     assert ("eap-02", "eap-03") in edge_thresholds
     assert extended == []
+
+
+
+from pathlib import Path  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+
+# 04-cronograma/_skill_helpers/_dag.py line 53->46: tipo unknown → elif False → no-op
+# ---------------------------------------------------------------------------
+
+
+class TestExtractDagUnknownPredecessorType:
+    def test_unknown_tipo_produces_no_edge(self):
+        """Line 53->46 branch: tipo='SF' is not FS and not in (SS,FF) → elif False → skip."""
+        import importlib.util
+
+        _path = (
+            Path(__file__).resolve().parents[2]
+            / "src/concilium/application/skills/manifests/04-cronograma/_skill_helpers/_dag.py"
+        )
+        _spec = importlib.util.spec_from_file_location("skill04_dag_helpers_b16", _path)
+        _mod = importlib.util.module_from_spec(_spec)
+        sys.modules["skill04_dag_helpers_b16"] = _mod
+        _spec.loader.exec_module(_mod)
+        extract_dag_from_spec_or_eap = _mod.extract_dag_from_spec_or_eap
+
+        pred = SimpleNamespace(item_id="A1", tipo="SF", lag=0, completion_threshold_pct=1.0)
+        item = SimpleNamespace(item_id="B1", predecessores_tipados=lambda: [pred])
+
+        dag = extract_dag_from_spec_or_eap(spec={}, activities=[], eap_items=[item])
+
+        # No edge added since tipo "SF" is not handled
+        assert dag.precedence == []
+        assert dag.thresholds == {}
+        assert dag.extended_precedences == []
+

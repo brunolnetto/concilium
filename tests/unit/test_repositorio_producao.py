@@ -20,3 +20,25 @@ class TestProducaoObterOuErro:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+import tempfile  # noqa: E402
+
+# producao.py line 33: obter_ou_erro raises when producao not found
+# ---------------------------------------------------------------------------
+
+
+class TestRepositorioProducaoObterOuErro:
+    def test_raises_when_not_found(self):
+        """Line 33: producao_id not in dir → obter returns None → raises FileNotFoundError."""
+        from concilium.infrastructure.repositories.producao import RepositorioProducao
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = RepositorioProducao(tmp)
+            with pytest.raises(FileNotFoundError, match="NONEXISTENT"):
+                repo.obter_ou_erro("NONEXISTENT")
+
+
+# ---------------------------------------------------------------------------
+

@@ -144,3 +144,28 @@ class TestResolutionStorage:
 
 # ────────────────────────────────────────────────────────────────
 
+
+
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+# resolution/storage.py line 66: continue on empty line in JSONL file
+# ---------------------------------------------------------------------------
+
+
+class TestResolutionDecisionStoreEmptyLines:
+    def test_load_all_skips_empty_lines_in_file(self):
+        """Line 66: empty line in JSONL → if not line: continue → returns []."""
+        from concilium.application.resolution.storage import ResolutionDecisionStore
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            tmppath = Path(f.name)
+            f.write("\n")  # blank line → stripped to "" → continue (line 66)
+            f.write("   \n")  # whitespace-only → stripped to "" → continue (line 66)
+
+        store = ResolutionDecisionStore(store_path=tmppath)
+        decisions = store.load_all()
+        tmppath.unlink()
+
+        assert decisions == []
+

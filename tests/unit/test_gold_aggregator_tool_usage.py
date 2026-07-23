@@ -93,3 +93,45 @@ class TestBuildToolUsageDiario:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+
+
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+# gold_aggregator.py lines 39-40: _read_silver except block when ler_blob raises
+# ---------------------------------------------------------------------------
+
+
+class TestGoldAggregatorReadSilverException:
+    def test_exception_in_ler_blob_is_swallowed(self):
+        """Lines 39-40: ler_blob raises → except Exception: pass → returns []."""
+        from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+
+        storage = MagicMock()
+        storage.listar_blobs.return_value = ["observability/silver/traces/file.jsonl"]
+        storage.ler_blob.side_effect = OSError("Simulated read failure")
+
+        agg = GoldAggregator(storage)
+        records = agg._read_silver("traces")
+
+        assert records == []
+
+    def test_invalid_json_in_line_is_swallowed(self):
+        """Lines 39-40: ler_blob returns invalid JSON → json.loads raises → except: pass."""
+        from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+
+        storage = MagicMock()
+        storage.listar_blobs.return_value = ["observability/silver/traces/file.jsonl"]
+        storage.ler_blob.return_value = b"NOTJSON{{{invalid\n"
+
+        agg = GoldAggregator(storage)
+        records = agg._read_silver("traces")
+
+        assert records == []
+
+
+# ---------------------------------------------------------------------------
+

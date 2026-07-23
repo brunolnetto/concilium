@@ -198,3 +198,49 @@ class TestExploradorInternals:
         canonical = MagicMock()
         canonical.ponto_equilibrio = [pe]
         assert mod._build_levers(canonical, 1_000_000.0) == []
+
+
+
+
+
+# diff_service.py lines 90, 95, 100: _gerar_interpretacao improvement branches
+# ---------------------------------------------------------------------------
+
+
+class TestBenchmarkDiffServiceInterpretacao:
+    def _svc(self):
+        from concilium.application.benchmarks.diff_service import BenchmarkDiffService
+
+        return BenchmarkDiffService()
+
+    def test_melhoria_custo(self):
+        """Line 90: delta_custo < -0.5 → 'Melhoria: custo ... menor'."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=-1.5, delta_cronograma=0, delta_margem=0.0)
+        assert "Melhoria" in text
+        assert "custo" in text
+
+    def test_cronograma_menor(self):
+        """Line 95: delta_cronograma < -1 → 'Cronograma ... menor'."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=0.0, delta_cronograma=-3, delta_margem=0.0)
+        assert "menor" in text
+        assert "Cronograma" in text
+
+    def test_margem_melhorou(self):
+        """Line 100: delta_margem > 0.5 → 'Margem melhorou ...'."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=0.0, delta_cronograma=0, delta_margem=1.2)
+        assert "melhorou" in text
+
+    def test_all_improvements_combined(self):
+        """Lines 90, 95, 100 all in one call."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=-2.0, delta_cronograma=-4, delta_margem=0.8)
+        assert "Melhoria" in text
+        assert "menor" in text
+        assert "melhorou" in text
+
+
+# ---------------------------------------------------------------------------
+

@@ -23,3 +23,25 @@ class TestBuildSummaryResultadoNone:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+# service_support.py line 25: build_summary returns early when result is None
+# ---------------------------------------------------------------------------
+
+
+class TestServiceSupportBuildSummaryNoneResult:
+    def test_returns_partial_dict_when_no_resultado(self):
+        """Line 25: canonical has no resultado → result=None → early return dict."""
+        from concilium.application.services.service_support import build_summary
+
+        canonical = SimpleNamespace(ponto_equilibrio=[])
+        result = build_summary(canonical)
+        assert "pe_deficit_items" in result
+        assert "pe_alerta_items" in result
+        assert "custo_total" not in result  # early return, not full dict
+
+
+# ---------------------------------------------------------------------------
+

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import tempfile
 from pathlib import Path
 
 
@@ -19,87 +18,6 @@ def _load_assessor():
     return mod
 
 
-# ---------------------------------------------------------------------------
-# report_markdown_sections.py lines 122, 142: early returns for empty inputs
-# ---------------------------------------------------------------------------
-
-
-class TestRenderResultadoEmptyInput:
-    def test_render_resultado_empty_dict_returns_empty_list(self):
-        """Line 122: resultado={} → not resultado → return []."""
-        from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_resultado
-
-        assert render_resultado({}) == []
-
-    def test_render_resultado_non_dict_returns_empty_list(self):
-        """Line 122: resultado is not a dict → return []."""
-        from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_resultado
-
-        assert render_resultado("not a dict") == []  # type: ignore[arg-type]
-
-    def test_render_resultado_none_returns_empty_list(self):
-        """Line 122: resultado=None is not a dict → return []."""
-        from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_resultado
-
-        assert render_resultado(None) == []  # type: ignore[arg-type]
-
-
-class TestRenderPlanejamentoTableEmptyInput:
-    def test_render_planejamento_table_empty_list_returns_empty(self):
-        """Line 142: plan=[] → not plan → return []."""
-        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
-            render_planejamento_table,
-        )
-
-        assert render_planejamento_table([]) == []
-
-    def test_render_planejamento_table_non_list_returns_empty(self):
-        """Line 142: plan is not a list → return []."""
-        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
-            render_planejamento_table,
-        )
-
-        assert render_planejamento_table("oops") == []  # type: ignore[arg-type]
-
-
-# ---------------------------------------------------------------------------
-# granular.py lines 20-22: _load_json except block for invalid JSON
-# ---------------------------------------------------------------------------
-
-
-class TestGranularLoadJsonInvalidJson:
-    def test_load_json_returns_empty_dict_on_invalid_json(self):
-        """Lines 20-22: file exists but has invalid JSON → except → return {}."""
-        from concilium.application.benchmarks.comparison.granular import _load_json
-
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".json", delete=False) as f:
-            tmppath = Path(f.name)
-            f.write(b"{not: valid json}")
-
-        try:
-            result = _load_json(tmppath)
-        finally:
-            tmppath.unlink()
-
-        assert result == {}
-
-    def test_load_json_returns_empty_dict_on_unicode_error(self):
-        """Lines 20-22: file with bad bytes → UnicodeDecodeError → return {}."""
-        from concilium.application.benchmarks.comparison.granular import _load_json
-
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".json", delete=False) as f:
-            tmppath = Path(f.name)
-            f.write(b"\xff\xfe invalid utf-8 \xab\xcd")
-
-        try:
-            result = _load_json(tmppath)
-        finally:
-            tmppath.unlink()
-
-        assert result == {}
-
-
-# ---------------------------------------------------------------------------
 # _assessor.py line 84: _get_a_plus_atividades falls through to ccr.get()
 # ---------------------------------------------------------------------------
 
@@ -123,6 +41,8 @@ class TestGetAPlusAtividades:
 
 
 # ---------------------------------------------------------------------------
+
+
 # _assessor.py lines 199-206: VAL-REPLAN-01 AVISO when no sugestoes
 # _assessor.py lines 219-226: VAL-REPLAN-02 ERRO when checkpoints invalid
 # ---------------------------------------------------------------------------
@@ -186,3 +106,4 @@ class TestBuildValidacoesReplan:
         )
         codes = {v.codigo: v.status for v in validacoes}
         assert codes.get("VAL-REPLAN-02") == "OK"
+

@@ -194,3 +194,47 @@ class TestEquipesDetailLoadJsonBadJson:
 
 # ---------------------------------------------------------------------------
 
+
+
+import tempfile  # noqa: E402
+
+# equipes_detail.py lines 17-18: _load_json except block for invalid JSON
+# ---------------------------------------------------------------------------
+
+
+class TestEquipesDetailLoadJsonException:
+    def test_load_json_returns_empty_dict_on_invalid_json(self):
+        """Lines 17-18: file exists but has invalid JSON → except: return {}."""
+        from concilium.application.benchmarks.comparison.equipes_detail import _load_json
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".json", delete=False) as f:
+            tmppath = Path(f.name)
+            f.write(b"not-valid-json{{{invalid")
+
+        try:
+            result = _load_json(tmppath)
+        finally:
+            tmppath.unlink()
+
+        assert result == {}
+
+    def test_load_json_returns_dict_for_valid_json(self):
+        """Normal path: valid JSON file → returns parsed dict."""
+        import json
+
+        from concilium.application.benchmarks.comparison.equipes_detail import _load_json
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            tmppath = Path(f.name)
+            json.dump({"cpu_id": "CPU-01"}, f)
+
+        try:
+            result = _load_json(tmppath)
+        finally:
+            tmppath.unlink()
+
+        assert result == {"cpu_id": "CPU-01"}
+
+
+# ---------------------------------------------------------------------------
+

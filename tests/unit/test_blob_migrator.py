@@ -291,3 +291,31 @@ class TestBlobMigratorException:
         result = migrator.migrate(source, target, overwrite=True)
         assert result.failed == 1
         assert result.copied == 0
+
+
+
+# migrator.py lines 101-103: except block when ler_blob raises
+# ---------------------------------------------------------------------------
+
+
+class TestBlobMigratorExceptPath:
+    def test_failed_count_incremented_on_exception(self):
+        """Lines 101-103: source.ler_blob raises → except block increments result.failed."""
+        from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
+
+        source = MagicMock()
+        source.listar_blobs.return_value = ["projetos/p1/canonical.json"]
+        source.ler_blob.side_effect = OSError("Simulated blob read failure")
+
+        target = MagicMock()
+
+        migrator = BlobMigrator(log_interval=1)
+        result = migrator.migrate(source, target, dry_run=False)
+
+        assert result.failed == 1
+        assert result.copied == 0
+        assert not result.success
+
+
+# ---------------------------------------------------------------------------
+

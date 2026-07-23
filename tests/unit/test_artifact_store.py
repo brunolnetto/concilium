@@ -450,3 +450,41 @@ class TestMalformedIndexLines:
         # Should skip the entry (KeyError on entry["ref"] → caught by except Exception)
         refs = store.list_by_trace("trace-z")
         assert refs == []
+
+
+import tempfile  # noqa: E402
+
+# artifact_store.py line 70: json.dumps path when payload has no model_dump_json
+# ---------------------------------------------------------------------------
+
+
+class TestFileSystemArtifactStoreSavePlainPayload:
+    def test_save_plain_dict_payload_uses_json_dumps(self):
+        """Line 70: payload is a plain dict → hasattr(payload, 'model_dump_json') is False
+        → json.dumps(payload, ...) used instead of model_dump_json."""
+        from concilium.domain.models.artifact import ArtifactEnvelope, ArtifactKind, ArtifactMeta
+        from concilium.infrastructure.storage.artifact_store import FileSystemArtifactStore
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = FileSystemArtifactStore(tmp)
+
+            meta = ArtifactMeta(
+                kind=ArtifactKind.RESULTADO,
+                schema_name="TestSchema",
+                schema_version="1.0.0",
+                created_by="test-batch17",
+                content_hash="abc123fakehash",
+            )
+            # Plain dict payload — no model_dump_json attribute.
+            # model_construct skips Pydantic validation, bypassing coercion to BaseModel.
+            envelope = ArtifactEnvelope.model_construct(meta=meta, payload={"custo_total": 500_000.0})
+            store.save(envelope)
+
+            payload_path = Path(tmp) / f"{meta.artifact_id}.json"
+            assert payload_path.exists()
+            data = json.loads(payload_path.read_text(encoding="utf-8"))
+            assert data["custo_total"] == 500_000.0
+
+
+# ---------------------------------------------------------------------------
+

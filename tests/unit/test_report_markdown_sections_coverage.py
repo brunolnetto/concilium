@@ -613,3 +613,52 @@ class TestRenderPoolEconomiaOrigem:
             lines = render_pool_economia_origem(MagicMock())
 
         assert any("mobilização/desmobilização" in ln for ln in lines)
+
+
+
+
+
+# report_markdown_sections.py lines 122, 142: early returns for empty inputs
+# ---------------------------------------------------------------------------
+
+
+class TestRenderResultadoEmptyInput:
+    def test_render_resultado_empty_dict_returns_empty_list(self):
+        """Line 122: resultado={} → not resultado → return []."""
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_resultado
+
+        assert render_resultado({}) == []
+
+    def test_render_resultado_non_dict_returns_empty_list(self):
+        """Line 122: resultado is not a dict → return []."""
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_resultado
+
+        assert render_resultado("not a dict") == []  # type: ignore[arg-type]
+
+    def test_render_resultado_none_returns_empty_list(self):
+        """Line 122: resultado=None is not a dict → return []."""
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_resultado
+
+        assert render_resultado(None) == []  # type: ignore[arg-type]
+
+
+class TestRenderPlanejamentoTableEmptyInput:
+    def test_render_planejamento_table_empty_list_returns_empty(self):
+        """Line 142: plan=[] → not plan → return []."""
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_planejamento_table,
+        )
+
+        assert render_planejamento_table([]) == []
+
+    def test_render_planejamento_table_non_list_returns_empty(self):
+        """Line 142: plan is not a list → return []."""
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_planejamento_table,
+        )
+
+        assert render_planejamento_table("oops") == []  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+

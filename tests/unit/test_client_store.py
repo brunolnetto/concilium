@@ -17,3 +17,32 @@ class TestVerifySecretNoCredentials:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+
+# client_store.py line 50: _verify_secret returns False when no hash and no plaintext
+# ---------------------------------------------------------------------------
+
+
+class TestVerifySecretReturnsFalse:
+    def test_returns_false_when_no_secret_hash_and_no_plaintext(self):
+        """Line 50: entry has neither secret_hash nor secret → return False."""
+        from concilium.infrastructure.auth.client_store import _verify_secret
+
+        entry = {"client_id": "test-client", "roles": ["read"]}  # no secret_hash, no secret
+        result = _verify_secret("any-provided-secret", entry)
+        assert result is False
+
+    def test_returns_false_when_secret_is_empty_string(self):
+        """Line 50: entry.secret='' → plaintext falsy → return False."""
+        from concilium.infrastructure.auth.client_store import _verify_secret
+
+        entry = {"secret": "", "roles": ["read"]}
+        result = _verify_secret("any-provided-secret", entry)
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+

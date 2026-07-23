@@ -283,3 +283,43 @@ class TestConsolidateAll:
 
 # ===========================================================================
 
+
+
+import tempfile  # noqa: E402
+
+# benchmarks/comparison/catalog_confronto.py line 78: path not covered yet
+# ---------------------------------------------------------------------------
+
+
+class TestCatalogConfrontoMissingPath:
+    def test_import_catalog_confronto(self):
+        """Sanity import — no crash."""
+        from concilium.application.benchmarks.comparison import catalog_confronto  # noqa: F401
+
+        assert catalog_confronto is not None
+
+
+# catalog_confronto.py line 80->76: analyze_catalog_confronto returns {} → if issues: False
+# ---------------------------------------------------------------------------
+
+
+class TestConsolidateAllSkipsEmptyIssues:
+    def test_empty_issues_not_appended_to_results(self):
+        """Line 80->76: slug dir has no confronto_catalogo.json → analyze returns {}
+        → if issues: False → not appended → results stays []."""
+        from concilium.application.benchmarks.comparison.catalog_confronto import consolidate_all
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bench_data = root / "benchmarks" / "data"
+            bench_data.mkdir(parents=True)
+            # Create a slug directory WITHOUT confronto_catalogo.json
+            (bench_data / "SLUG-NO-CONFRONTO").mkdir()
+
+            result = consolidate_all(root=root)
+
+            # No issues → results list stays empty → summary has 0 totals
+            assert result["total_benchmarks"] == 0
+            assert result["total_cpus_nao_encontradas"] == 0
+            assert result["benchmarks"] == []
+

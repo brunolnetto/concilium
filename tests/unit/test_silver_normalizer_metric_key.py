@@ -92,3 +92,41 @@ class TestDedupeRecordsNoLongerCollidesOnLabels:
         deduped = dedupe_records(records)
 
         assert len(deduped) == 1
+
+
+
+
+
+# silver_normalizer.py line 114: normalize_metric_record covers return dict
+# ---------------------------------------------------------------------------
+
+
+class TestSilverNormalizerMetricRecord:
+    def test_normalize_metric_record_returns_schema(self):
+        """Line 114: normalize_metric_record called → returns normalized dict."""
+        from concilium.infrastructure.observability.silver_normalizer import normalize_metric_record
+
+        record = {
+            "metric_name": "api_latency_ms",
+            "ts": "2026-06-30T10:00:00Z",
+            "value": 42.5,
+            "labels": {"endpoint": "/api/v1/health"},
+            "service": "concilium-api",
+        }
+        result = normalize_metric_record(record)
+        assert result["metric_name"] == "api_latency_ms"
+        assert result["value"] == 42.5
+        assert isinstance(result["labels"], dict)
+
+    def test_normalize_metric_record_with_empty_record(self):
+        """Line 114: empty record → defaults applied."""
+        from concilium.infrastructure.observability.silver_normalizer import normalize_metric_record
+
+        result = normalize_metric_record({})
+        assert result["metric_name"] == ""
+        assert result["value"] == 0.0
+        assert result["labels"] == {}
+
+
+# ---------------------------------------------------------------------------
+

@@ -152,3 +152,47 @@ class TestCatalogGovernanceAssertHealthy:
             with pytest.raises(CatalogGovernanceError):
                 assert_catalog_healthy("test-catalog", {})
 
+
+
+
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+# catalog_governance.py line 55: validate_and_resolve_producao_file raises when not found
+# ---------------------------------------------------------------------------
+
+
+class TestCatalogGovernanceProducaoNotFound:
+    def test_raises_when_producao_not_found(self):
+        """Line 55: neither producoes/ nor produtividades/ has the file → raises CatalogGovernanceError."""
+        from concilium.application.orchestrators.catalog_governance import (
+            CatalogGovernanceError,
+            validate_and_resolve_producao_file,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "producoes").mkdir()
+            (root / "produtividades").mkdir()
+
+            with pytest.raises(CatalogGovernanceError, match="não encontrada"):
+                validate_and_resolve_producao_file(root, "PROD-NONEXISTENT", valor_horario=1.0)
+
+    def test_finds_in_producoes_dir(self):
+        """Normal path: file exists under producoes/ → returns path."""
+        from concilium.application.orchestrators.catalog_governance import validate_and_resolve_producao_file
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "producoes").mkdir()
+            (root / "produtividades").mkdir()
+            target = root / "producoes" / "PROD-01.json"
+            target.write_text("{}", encoding="utf-8")
+
+            result = validate_and_resolve_producao_file(root, "PROD-01", valor_horario=1.0)
+            assert result == target
+
+
+
+# ---------------------------------------------------------------------------
+

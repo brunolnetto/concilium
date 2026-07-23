@@ -337,3 +337,67 @@ class TestConfidenceEmbeddingFailures:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+from types import SimpleNamespace  # noqa: E402
+
+# confidence.py line 137: high semantic_similarity + low attribute_match → flag
+# ---------------------------------------------------------------------------
+
+
+class TestConfidenceDetectEmbeddingFailureModes:
+    def test_high_similarity_low_attribute_match_flagged(self):
+        """Line 137: sem_sim >= 0.8 and attr_match <= 0.3 → 'high_similarity_low_attribute_match'."""
+        from concilium.application.resolution.confidence import ConfidenceAssigner
+
+        assigner = ConfidenceAssigner()
+        cand = SimpleNamespace(
+            score=0.85,
+            explanations=[
+                {"feature": "semantic_similarity", "value": 0.9, "weight": 0.3, "contribution": 0.27},
+                {"feature": "attribute_match", "value": 0.2, "weight": 0.4, "contribution": 0.08},
+            ],
+        )
+        failures = assigner._detect_embedding_failure_modes(cand, [cand])
+        assert "high_similarity_low_attribute_match" in failures
+
+
+# ---------------------------------------------------------------------------
+
+
+# confidence.py line 143->146: close < 2 → 'low_discriminative_power' NOT appended
+# ---------------------------------------------------------------------------
+
+
+class TestConfidenceDetectEmbeddingFailureModes2:
+    def test_not_flagged_when_close_less_than_2(self):
+        """Line 143->146 branch: 3+ candidates but only 1 within 0.05 of top → close=1 < 2."""
+        from concilium.application.resolution.confidence import ConfidenceAssigner
+
+        assigner = ConfidenceAssigner()
+        # top_score=0.9, second=0.87 (within 0.05), third=0.5 (not within 0.05) → close=1
+        cand_top = SimpleNamespace(score=0.9, explanations=[])
+        cand_close = SimpleNamespace(score=0.87, explanations=[])
+        cand_far = SimpleNamespace(score=0.5, explanations=[])
+
+        failures = assigner._detect_embedding_failure_modes(cand_top, [cand_top, cand_close, cand_far])
+        assert "low_discriminative_power" not in failures
+
+    def test_flagged_when_close_ge_2(self):
+        """Line 144: close >= 2 → 'low_discriminative_power' appended."""
+        from concilium.application.resolution.confidence import ConfidenceAssigner
+
+        assigner = ConfidenceAssigner()
+        # top=0.9, second=0.87 (close), third=0.86 (close) → close=2 → flagged
+        cand_top = SimpleNamespace(score=0.9, explanations=[])
+        cand_2 = SimpleNamespace(score=0.87, explanations=[])
+        cand_3 = SimpleNamespace(score=0.86, explanations=[])
+
+        failures = assigner._detect_embedding_failure_modes(cand_top, [cand_top, cand_2, cand_3])
+        assert "low_discriminative_power" in failures
+
+
+# ---------------------------------------------------------------------------
+

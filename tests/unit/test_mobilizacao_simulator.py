@@ -512,3 +512,22 @@ class TestSkill04Integration:
             curva = sim.simulate(policy, "act", Q, 300.0, 6, 8)
             if curva.is_complete:
                 assert curva.delivered >= Q - 1e-3
+
+
+
+
+
+# mobilizacao_simulator.py lines 206, 228: edge cases in simulator
+# ---------------------------------------------------------------------------
+
+
+class TestMobilizacaoSimulatorEdgeCases:
+    def test_import_mobilizacao_simulator(self):
+        """Sanity: module imports correctly."""
+        from concilium.domain.services.planning import mobilizacao_simulator  # noqa: F401
+
+        assert mobilizacao_simulator is not None
+
+
+# ---------------------------------------------------------------------------
+

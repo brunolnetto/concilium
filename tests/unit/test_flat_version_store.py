@@ -43,3 +43,47 @@ class TestFlatVersionStore:
         assert "escopo_id" in meta
         assert "contexto_id" in meta
 
+
+
+import json  # noqa: E402
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
+
+# flat_version_store.py line 89->87: empty line in invocations.log → if line: False
+# ---------------------------------------------------------------------------
+
+
+class TestFlatVersionStoreReadInvocationsEmptyLines:
+    def test_empty_lines_skipped_in_read_invocations(self):
+        """Line 89->87 branch: invocations.log has blank lines → stripped line='' → if line: False."""
+        from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "v1"
+            root.mkdir()
+
+            # Write log with blank lines AND a valid JSON line
+            log_path = root / FlatVersionStore.INVOCATIONS_LOG
+            log_path.write_text(
+                "\n"  # blank line (if line: False)
+                + "   \n"  # whitespace-only (if line: False)
+                + json.dumps({"skill_id": "04"})
+                + "\n",  # valid line
+                encoding="utf-8",
+            )
+
+            project_mock = MagicMock()
+            project_mock.version_path.return_value = root
+            project_mock.meta = {}
+
+            store = FlatVersionStore(project_mock, "v1")
+            result = store.read_invocations()
+
+            # Only the valid JSON line returned; blank lines skipped
+            assert len(result) == 1
+            assert result[0]["skill_id"] == "04"
+
+
+# ---------------------------------------------------------------------------
+

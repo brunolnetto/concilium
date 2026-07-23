@@ -33,3 +33,28 @@ class TestCuboCombustivelSkipsZeroCusto:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+# cubo_combustivel_builder.py line 36: continue when permanencia_meses <= 0
+# ---------------------------------------------------------------------------
+
+
+class TestCuboCombustivelBuilderZeroPerm:
+    def test_skips_equipe_with_zero_permanencia(self):
+        """Line 36: equipe.permanencia_meses=0 → if perm <= 0: continue."""
+        from concilium.domain.services.analytics.cubo_combustivel_builder import build_cubo_combustivel_face
+
+        equipe = SimpleNamespace(item_id="A1", permanencia_meses=0.0, equipamentos=[])
+        canonical = SimpleNamespace(
+            equipes_diretas=[equipe],
+            projeto=SimpleNamespace(nome="PROJ-01", id="P-01"),
+        )
+        result = build_cubo_combustivel_face(canonical)
+        assert result is not None
+        assert result.celulas == ()
+
+
+# ---------------------------------------------------------------------------
+

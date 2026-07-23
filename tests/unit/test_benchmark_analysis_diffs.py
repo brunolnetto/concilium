@@ -389,3 +389,57 @@ class TestGenerateDiffsForSlug:
         assert "equipes" in result
         assert "total" in result["equipes"]
         assert "discrepancias" in result["equipes"]
+
+
+import tempfile  # noqa: E402
+
+# diffs.py lines 80, 83: _gdfs_load_canonical continue paths
+# ---------------------------------------------------------------------------
+
+
+class TestGdfsLoadCanonicalContinuePaths:
+    def test_skips_files_in_projetos_dir(self):
+        """Line 80: entry in projetos/ is a file, not a directory → continue."""
+        from concilium.application.benchmarks.analysis.diffs import _gdfs_load_canonical
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            projetos = root / "projetos"
+            projetos.mkdir()
+            # Create a FILE (not a dir) inside projetos/
+            (projetos / "not_a_directory.json").write_text("{}", encoding="utf-8")
+
+            result = _gdfs_load_canonical("ANY-PROJECT", root)
+            assert result == {}  # no dirs → nothing matched → returns {}
+
+    def test_skips_dirs_without_meta_json(self):
+        """Line 83: subdirectory of projetos/ has no meta.json → continue."""
+        from concilium.application.benchmarks.analysis.diffs import _gdfs_load_canonical
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            projetos = root / "projetos"
+            projetos.mkdir()
+            # Create a directory without meta.json
+            proj_dir = projetos / "PROJ-WITHOUT-META"
+            proj_dir.mkdir()
+
+            result = _gdfs_load_canonical("ANY-PROJECT", root)
+            assert result == {}  # no meta.json → continue → returns {}
+
+    def test_returns_empty_when_project_not_found(self):
+        """Normal miss case: meta.json exists but nome doesn't match."""
+        from concilium.application.benchmarks.analysis.diffs import _gdfs_load_canonical
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            projetos = root / "projetos"
+            projetos.mkdir()
+            proj_dir = projetos / "SOME-PROJECT"
+            proj_dir.mkdir()
+            meta = {"nome": "DIFFERENT-PROJECT"}
+            (proj_dir / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+
+            result = _gdfs_load_canonical("SOUGHT-PROJECT", root)
+            assert result == {}
+

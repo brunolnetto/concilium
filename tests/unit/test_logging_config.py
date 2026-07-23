@@ -30,3 +30,32 @@ class TestLoggingConfigExceptionPaths:
             result = _get_auth_context()
         assert result == ("", "")
 
+
+
+
+
+
+
+# logging_config.py lines 45-46: _get_auth_context except branch when import fails
+# ---------------------------------------------------------------------------
+
+
+class TestLoggingConfigGetAuthContext:
+    def test_returns_empty_strings_when_auth_context_import_fails(self):
+        """Lines 45-46: import of auth_context raises → except → return ('', '')."""
+        # Patch the module so the import inside _get_auth_context fails
+        with patch.dict(
+            sys.modules,
+            {
+                "concilium.infrastructure.middleware.auth_context": None,  # type: ignore[dict-item]
+            },
+        ):
+            from concilium.infrastructure.observability.logging_config import _get_auth_context
+
+            user_id, request_id = _get_auth_context()
+            assert user_id == ""
+            assert request_id == ""
+
+
+# ---------------------------------------------------------------------------
+

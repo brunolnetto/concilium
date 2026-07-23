@@ -221,3 +221,45 @@ class TestGranularLoadJsonBadJson:
 
 # ---------------------------------------------------------------------------
 
+
+
+import tempfile  # noqa: E402
+
+# granular.py lines 20-22: _load_json except block for invalid JSON
+# ---------------------------------------------------------------------------
+
+
+class TestGranularLoadJsonInvalidJson:
+    def test_load_json_returns_empty_dict_on_invalid_json(self):
+        """Lines 20-22: file exists but has invalid JSON → except → return {}."""
+        from concilium.application.benchmarks.comparison.granular import _load_json
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".json", delete=False) as f:
+            tmppath = Path(f.name)
+            f.write(b"{not: valid json}")
+
+        try:
+            result = _load_json(tmppath)
+        finally:
+            tmppath.unlink()
+
+        assert result == {}
+
+    def test_load_json_returns_empty_dict_on_unicode_error(self):
+        """Lines 20-22: file with bad bytes → UnicodeDecodeError → return {}."""
+        from concilium.application.benchmarks.comparison.granular import _load_json
+
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".json", delete=False) as f:
+            tmppath = Path(f.name)
+            f.write(b"\xff\xfe invalid utf-8 \xab\xcd")
+
+        try:
+            result = _load_json(tmppath)
+        finally:
+            tmppath.unlink()
+
+        assert result == {}
+
+
+# ---------------------------------------------------------------------------
+

@@ -86,3 +86,56 @@ class TestScheduleValidatorMissingLines:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+from types import SimpleNamespace  # noqa: E402
+
+# scheduling/validator.py line 31: continue when pred_id not in schedule_map
+# scheduling/validator.py line 80: continue when activity not in activities dict
+# ---------------------------------------------------------------------------
+
+
+class TestScheduleValidatorContinuePaths:
+    def _make_validator(self):
+        from concilium.application.scheduling.validator import ScheduleValidator
+
+        return ScheduleValidator()
+
+    def test_validate_precedence_skips_unknown_pred_id(self):
+        """Line 31: precedence references activity IDs not in schedule → continue."""
+        validator = self._make_validator()
+        sa = SimpleNamespace(activity_id="A1", start_week=1, end_week=4)
+        # "B1" and "C1" are not in scheduled
+        result = validator.validate_precedence(
+            scheduled=[sa],
+            precedence=[("B1", "C1")],
+        )
+        assert result is True
+
+    def test_validate_precedence_skips_unknown_succ_id(self):
+        """Line 31: succ_id not in schedule_map → continue."""
+        validator = self._make_validator()
+        sa = SimpleNamespace(activity_id="A1", start_week=1, end_week=4)
+        # A1 is in scheduled but "C1" is not
+        result = validator.validate_precedence(
+            scheduled=[sa],
+            precedence=[("A1", "C1")],
+        )
+        assert result is True
+
+    def test_validate_durations_skips_activity_not_in_lookup(self):
+        """Line 80: activities dict doesn't contain scheduled activity → continue."""
+        validator = self._make_validator()
+        sa = SimpleNamespace(activity_id="A1", start_week=1, end_week=5)
+        # Empty activities dict: A1 not found → a is None → continue
+        result = validator.validate_durations(
+            scheduled=[sa],
+            activities={},
+        )
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+
