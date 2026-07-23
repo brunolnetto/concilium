@@ -26,6 +26,7 @@ def _load_precif():
 
 
 MOD = _load_precif()
+PREC = MOD
 
 
 # ---------------------------------------------------------------------------
@@ -628,3 +629,95 @@ class TestProcessEapItem:
         ):
             self._call(item, cpu_lookup, prod_lookup, plan_out, [], [])
         assert plan_out == []
+
+
+# _precificacao/_skill_helpers_a.py
+# ===========================================================================
+
+
+class TestComputePrecoFromProduction:
+    """_compute_preco_cat_from_production early returns."""
+
+    def test_no_prod_id_returns_none(self):
+        """Line 269: cpu has no producao_id_ref → return None."""
+        result = PREC._compute_preco_cat_from_production(
+            cpu={},  # no producao_id_ref
+            prod_lookup={},
+            insumo_lookup={},
+            preco_diesel=5.0,
+            alpha_clt=1.5,
+            alpha_mensalista=1.2,
+            validacoes=[],
+        )
+        assert result is None
+
+    def test_prod_id_not_in_lookup_returns_none(self):
+        """Line 273: producao not found in prod_lookup → return None."""
+        result = PREC._compute_preco_cat_from_production(
+            cpu={"producao_id_ref": "PROD-999"},
+            prod_lookup={},  # PROD-999 not here
+            insumo_lookup={},
+            preco_diesel=5.0,
+            alpha_clt=1.5,
+            alpha_mensalista=1.2,
+            validacoes=[],
+        )
+        assert result is None
+
+    def test_valor_horario_zero_emits_warning_and_returns_none(self):
+        """Lines 276-287: valor_horario=0 → emit VAL-PLAN-PROD-HORARIO and return None."""
+        validacoes = []
+        result = PREC._compute_preco_cat_from_production(
+            cpu={"producao_id_ref": "PROD-001", "codigo": "CPU-001"},
+            prod_lookup={"PROD-001": {"valor_horario": 0.0}},
+            insumo_lookup={},
+            preco_diesel=5.0,
+            alpha_clt=1.5,
+            alpha_mensalista=1.2,
+            validacoes=validacoes,
+        )
+        assert result is None
+        codes = [v.codigo for v in validacoes]
+        assert "VAL-PLAN-PROD-HORARIO" in codes
+
+    def test_valor_horario_none_treated_as_zero(self):
+        """Line 275: valor_horario = float(None or 0.0) = 0.0 → same path."""
+        validacoes = []
+        result = PREC._compute_preco_cat_from_production(
+            cpu={"producao_id_ref": "PROD-002", "codigo": "CPU-002"},
+            prod_lookup={"PROD-002": {"valor_horario": None}},
+            insumo_lookup={},
+            preco_diesel=5.0,
+            alpha_clt=1.5,
+            alpha_mensalista=1.2,
+            validacoes=validacoes,
+        )
+        assert result is None
+
+    def test_sbdi_legado_field_emits_info(self):
+        """Line 309: cpu has precos_unitarios_sbdi → emit VAL-PLAN-SBDI-LEGADO."""
+        from unittest.mock import patch
+
+        validacoes = []
+        fake_sbdi = {"total": 100.0, "mo": 40.0, "diesel": 20.0, "equipamentos": 30.0, "material": 10.0}
+        with patch("concilium.application.catalog.pu_calculator.derivar_precos_unitarios_sbdi", return_value=fake_sbdi):
+            result = PREC._compute_preco_cat_from_production(
+                cpu={
+                    "producao_id_ref": "PROD-003",
+                    "codigo": "CPU-003",
+                    "precos_unitarios_sbdi": {"mo": 40.0},  # triggers line 308-309
+                },
+                prod_lookup={"PROD-003": {"valor_horario": 50.0}},
+                insumo_lookup={},
+                preco_diesel=5.0,
+                alpha_clt=1.5,
+                alpha_mensalista=1.2,
+                validacoes=validacoes,
+            )
+        assert result is not None
+        codes = [v.codigo for v in validacoes]
+        assert "VAL-PLAN-SBDI-LEGADO" in codes
+
+
+# ===========================================================================
+

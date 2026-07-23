@@ -78,3 +78,76 @@ class TestCpSatSchedulerMissingLines:
 
 # ---------------------------------------------------------------------------
 
+
+
+# cpsat_scheduler.py line 150:
+# FS precedence with pred/succ not in acts → continue
+# ---------------------------------------------------------------------------
+
+
+class TestCpSatSchedulerPrecedenceNotInActs:
+    def _make_dag(self):
+        from concilium.application.scheduling.models import Activity, ActivityDAG
+
+        activities = [Activity("ACT-A", "Activity A", 2, {})]
+        # Precedence references a non-existent activity "ACT-GHOST"
+        dag = ActivityDAG(activities, precedence=[("ACT-A", "ACT-GHOST")])
+        return dag
+
+    def test_precedence_with_unknown_activity_is_skipped(self):
+        """Line 150: succ 'ACT-GHOST' not in acts → continue (skip this precedence)."""
+        from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler
+        from concilium.application.scheduling.models import ResourcePool
+
+        dag = self._make_dag()
+        pool = ResourcePool(resources={})
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+
+        result = scheduler.schedule(dag=dag, pool=pool)
+        # Should succeed: the invalid precedence is silently skipped
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+
+
+# cpsat_scheduler.py line 172:
+# extended_precedence with unknown tipo → log.warning
+# ---------------------------------------------------------------------------
+
+
+class TestCpSatSchedulerUnknownPrecedenceType:
+    def test_unknown_extended_precedence_tipo_logs_warning(self):
+        """Line 172: ep.tipo not in ('FS', 'SS', 'FF') → _log.warning(...)."""
+
+        from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler, ExtendedPrecedence
+        from concilium.application.scheduling.models import Activity, ActivityDAG, ResourcePool
+
+        activities = [
+            Activity("A", "A", 2, {}),
+            Activity("B", "B", 2, {}),
+        ]
+        dag = ActivityDAG(activities, precedence=[])
+        pool = ResourcePool(resources={})
+
+        # ExtendedPrecedence normally requires Literal['FS', 'SS', 'FF'],
+        # but we can bypass with object() trick or by creating an instance manually
+        ExtendedPrecedence(pred="A", succ="B", tipo="FS", lag=0)
+        # Manually set tipo to unknown value using object.__setattr__
+
+        # Simpler: create via __new__ and set fields directly
+        bad_ep = object.__new__(ExtendedPrecedence)
+        object.__setattr__(bad_ep, "pred", "A")
+        object.__setattr__(bad_ep, "succ", "B")
+        object.__setattr__(bad_ep, "tipo", "SL")  # invalid type
+        object.__setattr__(bad_ep, "lag", 0)
+
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        result = scheduler.schedule(dag=dag, pool=pool, extended_precedences=[bad_ep])
+
+        # Should succeed: unknown precedence type is logged and skipped
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+

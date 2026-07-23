@@ -318,3 +318,51 @@ class TestCpuMapper:
 
 
 
+
+
+# cpu_mapper.py lines 12, 16:
+# _tools_root and _rules_file are called when _load_mapping_keywords runs
+# ---------------------------------------------------------------------------
+
+
+class TestCpuMapperLoadKeywords:
+    def test_load_mapping_keywords_returns_dict(self):
+        """Lines 12, 16: _tools_root() and _rules_file() are called; file exists → dict returned."""
+        from concilium.infrastructure.catalog.mapping.cpu_mapper import _load_mapping_keywords
+
+        result = _load_mapping_keywords()
+        # The cpu_mapping_rules.json exists in the project, so we get a non-empty dict
+        assert isinstance(result, dict)
+
+    def test_load_mapping_keywords_non_dict_rules_returns_empty(self, tmp_path):
+        """Line 40: rules is not a dict (list) → return {}."""
+        from unittest.mock import patch
+
+        rules_file = tmp_path / "cpu_mapping_rules.json"
+        rules_file.write_text('{"mapping_keywords": [1, 2, 3]}', encoding="utf-8")
+
+        with patch("concilium.infrastructure.catalog.mapping.cpu_mapper._rules_file", return_value=rules_file):
+            from concilium.infrastructure.catalog.mapping.cpu_mapper import _load_mapping_keywords
+
+            result = _load_mapping_keywords()
+
+        assert result == {}
+
+    def test_map_desc_returns_none_when_no_match(self):
+        """map_desc with a description that matches nothing → None."""
+        from concilium.infrastructure.catalog.mapping.cpu_mapper import map_desc
+
+        result = map_desc("ATIVIDADE SEM MATCH ESPECIFICO ALGUM ZZZXXX")
+        assert result is None
+
+    def test_map_desc_returns_cpu_id_for_known_keyword(self):
+        """map_desc with a description matching known keywords → cpu_id."""
+        from concilium.infrastructure.catalog.mapping.cpu_mapper import map_desc
+
+        # "CORTE" and "DESTOCAMENTO" are in CPU-TERRA-ATI-001 keywords
+        result = map_desc("CORTE E DESTOCAMENTO DE VEGETACAO")
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+

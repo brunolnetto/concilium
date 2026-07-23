@@ -59,3 +59,76 @@ class TestPdfRenderer:
 
 
 
+
+
+from unittest.mock import patch  # noqa: E402
+
+# ─── pdf_renderer.py lines 67-71 (ReportLab dispatch path) ──────────────────
+
+
+class TestPdfRendererRLPath:
+    def test_rl_path_returns_bytes_directly(self):
+        """Lines 67, 69, 70, 71: _USE_REPORTLAB=True + rl render returns bytes."""
+        import concilium.application.runtime.deliverables.reports.pdf_renderer as mod
+
+        orig = mod._USE_REPORTLAB
+        mod._USE_REPORTLAB = True
+        try:
+            with patch(
+                "concilium.application.runtime.deliverables.reports.pdf_renderer_rl.render_markdown_pdf",
+                return_value=b"%PDF-fake",
+            ):
+                result = mod.render_markdown_pdf("# Title\nContent.")
+            assert result == b"%PDF-fake"
+        finally:
+            mod._USE_REPORTLAB = orig
+
+    def test_rl_path_falls_through_when_none(self):
+        """Line 70 False branch: rl render returns None → fpdf2 fallback."""
+        import concilium.application.runtime.deliverables.reports.pdf_renderer as mod
+
+        orig = mod._USE_REPORTLAB
+        mod._USE_REPORTLAB = True
+        try:
+            with patch(
+                "concilium.application.runtime.deliverables.reports.pdf_renderer_rl.render_markdown_pdf",
+                return_value=None,
+            ):
+                result = mod.render_markdown_pdf("Hello fpdf2.")
+            assert result is None or isinstance(result, bytes)
+        finally:
+            mod._USE_REPORTLAB = orig
+
+
+
+
+# ─── pdf_renderer.py lines 117-118 (fpdf2 image embed success) ───────────────
+
+
+class TestPdfRendererImageEmbedSuccess:
+    def test_image_embed_success_path_reached(self):
+        """Lines 117-118: pdf.image() doesn't raise → pdf.ln(2) runs."""
+        from fpdf import FPDF
+
+        import concilium.application.runtime.deliverables.reports.pdf_renderer as mod
+
+        orig = mod._USE_REPORTLAB
+        mod._USE_REPORTLAB = False
+        png_bytes = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
+            b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
+            b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        try:
+            with patch.object(FPDF, "image", return_value=None):
+                result = mod.render_markdown_pdf(
+                    "![chart](chart.png)\nText after.",
+                    image_provider=lambda n: png_bytes,
+                )
+            assert result is None or isinstance(result, bytes)
+        finally:
+            mod._USE_REPORTLAB = orig
+
+
+

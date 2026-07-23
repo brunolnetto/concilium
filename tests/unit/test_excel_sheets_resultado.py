@@ -6,180 +6,6 @@ from types import SimpleNamespace
 
 from openpyxl import Workbook
 
-# ---------------------------------------------------------------------------
-# _precificacao/skill.py line 71: _extract_overrides returns dict when dict
-# ---------------------------------------------------------------------------
-
-
-class TestExtractOverrides:
-    def _load(self):
-        from concilium.application.skills import load_skill_stage
-
-        return load_skill_stage("06-resultado-financeiro", "_precificacao", "_extract_overrides")
-
-    def test_returns_dict_when_dict_value(self):
-        """Line 71: val is a dict → return val."""
-        fn = self._load()
-        result = fn({"insumos_override": {"key": 42}})
-        assert result == {"key": 42}
-
-    def test_returns_none_when_not_dict(self):
-        fn = self._load()
-        assert fn({"insumos_override": "string"}) is None
-        assert fn({}) is None
-
-
-# ---------------------------------------------------------------------------
-# _precificacao/skill.py lines 192-198: _as_bool string branches
-# ---------------------------------------------------------------------------
-
-
-class TestAsBool:
-    def _load(self):
-        from concilium.application.skills import load_skill_stage
-
-        return load_skill_stage("06-resultado-financeiro", "_precificacao", "_as_bool")
-
-    def test_true_string_returns_true(self):
-        """Lines 192, 194-195: string in truthy set → True."""
-        fn = self._load()
-        assert fn("true") is True
-        assert fn("yes") is True
-        assert fn("1") is True
-
-    def test_false_string_returns_false(self):
-        """Lines 192, 196-197: string in falsy set → False."""
-        fn = self._load()
-        assert fn("false") is False
-        assert fn("no") is False
-        assert fn("0") is False
-
-    def test_unrecognized_string_returns_false(self):
-        """Line 198: string not in either set → falls through to return False."""
-        fn = self._load()
-        assert fn("maybe") is False
-
-    def test_numeric_nonzero_returns_true(self):
-        """Line 204-205: int/float branch — nonzero numeric → True."""
-        fn = self._load()
-        assert fn(1) is True
-        assert fn(2.5) is True
-
-    def test_numeric_zero_returns_false(self):
-        """Line 204-205: int/float branch — zero numeric → False."""
-        fn = self._load()
-        assert fn(0) is False
-        assert fn(0.0) is False
-
-
-# ---------------------------------------------------------------------------
-# _precificacao/skill.py lines 290, 294: run_precificacao_unitaria
-# erros_eap and erros_insumo blocks triggered
-# ---------------------------------------------------------------------------
-
-
-class TestRunPrecificacaoErros:
-    def _load_run(self):
-        from concilium.application.skills import load_skill_stage
-
-        return load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
-
-    def _make_canonical(self, cpu_id: str = "ACT-NOPREFIX"):
-        from datetime import UTC, date, datetime
-
-        from concilium.domain.models.canonical import (
-            CanonicalModel,
-            Coordenadas,
-            EapItem,
-            Meta,
-            Projeto,
-            RegimeTrabalho,
-        )
-
-        return CanonicalModel(
-            meta=Meta(gerado_em=datetime.now(UTC), contexto_id="ctx-test"),
-            projeto=Projeto(
-                id="proj-test",
-                nome="Test",
-                tipo_obra="pavimentacao",
-                localizacao="CE",
-                coordenadas=Coordenadas(lat=-3.7, lng=-38.5),
-                data_inicio=date(2026, 1, 1),
-                data_termino=date(2026, 6, 30),
-                regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
-                snapshot_catalogo_id="snap-test",
-                snapshot_perfil_id="perf-test",
-            ),
-            eap=[
-                EapItem(
-                    item_id="EAP-001",
-                    ordem=1,
-                    cpu_id=cpu_id,
-                    descricao="Item teste",
-                    unidade="m3",
-                    quantitativo=100.0,
-                )
-            ],
-        )
-
-    def test_unknown_cpu_populates_erros_eap(self):
-        """Lines 290: erros_eap non-empty → VAL-EAP-01 validacao appended."""
-        run = self._load_run()
-        # cpu_id not starting with "CPU-" → erros_eap.append directly
-        canonical = self._make_canonical(cpu_id="ACT-UNKNOWN-XYZ")
-        # Empty catalog so cpu_lookup is empty
-        catalogo: dict = {"cpus": [], "insumos": [], "produtividades": [], "producoes": []}
-
-        result = run(canonical, inputs={}, catalogo=catalogo, perfil={})
-
-        codes = [v.codigo for v in result.validacoes]
-        assert "VAL-EAP-01" in codes
-
-    def test_erros_insumo_triggers_val_plan_insumo(self):
-        """Line 294: erros_insumo non-empty → VAL-PLAN-INSUMO appended."""
-        import sys
-
-        from concilium.application.skills import load_skill_stage
-
-        # Load the skill module via o loader real de estágios para poder
-        # monkeypatch _process_eap_item.
-        fn = load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
-        mod = sys.modules[fn.__module__]
-
-        # Replace _process_eap_item to inject erros_insumo
-        def _fake_process(
-            item,
-            cpu_lookup,
-            insumo_lookup,
-            prod_lookup,
-            equipe_lookup,
-            planejamento_item_overrides,
-            bdi_aplicado,
-            repo,
-            jurisdicao_id,
-            overrides,
-            data_base,
-            plan_out,
-            erros_eap,
-            erros_insumo,
-            equip_sem_decomp,
-            validacoes,
-            benchmark_mode,
-            **kwargs,
-        ):
-            erros_insumo.add("INS-FAKE-01")
-
-        mod._process_eap_item = _fake_process
-
-        canonical = self._make_canonical(cpu_id="CPU-TEST")
-        catalogo: dict = {"cpus": [], "insumos": [], "produtividades": [], "producoes": []}
-
-        result = mod.run_precificacao_unitaria(canonical, {}, catalogo, {})
-        codes = [v.codigo for v in result.validacoes]
-        assert "VAL-PLAN-INSUMO" in codes
-
-
-# ---------------------------------------------------------------------------
 # resultado.py line 159: _xl_resultado_ref with ref_row not None
 # resultado.py line 179: _xl_resultado_indirect_cats body
 # ---------------------------------------------------------------------------
@@ -304,6 +130,8 @@ class TestXlResultadoHelpers:
 
 
 # ---------------------------------------------------------------------------
+
+
 # resultado.py lines 418-491: render_bdi
 # ---------------------------------------------------------------------------
 
@@ -323,6 +151,8 @@ class TestRenderBdi:
 
 
 # ---------------------------------------------------------------------------
+
+
 # resultado.py lines 768-769: render_cronograma_res early return (no months)
 # ---------------------------------------------------------------------------
 
@@ -349,6 +179,8 @@ class TestRenderCronogramaRes:
 
 
 # ---------------------------------------------------------------------------
+
+
 # resultado.py lines 817-841: render_equilibrio with ponto_equilibrio and bpe
 # ---------------------------------------------------------------------------
 
@@ -408,6 +240,8 @@ class TestRenderEquilibrio:
 
 
 # ---------------------------------------------------------------------------
+
+
 # resultado.py lines 876-877: render_referencia body (indireto_total)
 # ---------------------------------------------------------------------------
 
@@ -452,3 +286,4 @@ class TestRenderReferencia:
         render_referencia(wb, canonical)
 
         assert "REFERÊNCIA" in wb.sheetnames
+

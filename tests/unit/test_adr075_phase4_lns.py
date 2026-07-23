@@ -388,3 +388,32 @@ class TestLnsSchedulerMissingLineCoverage:
         result = scheduler.schedule(dag, _pool(10), ramp_profiles=_ramps(acts))
         assert result is not None
         assert len(scheduler.iteration_log) >= 1
+
+
+# lns_scheduler.py lines 181-185:
+# Convergence check triggers on second iteration when cost delta < tol
+# ---------------------------------------------------------------------------
+
+
+class TestLnsSchedulerBasic2:
+    def test_lns_schedules_simple_dag(self):
+        """LNS schedules a simple sequential DAG and returns a feasible result."""
+        from concilium.application.scheduling.lns_scheduler import LnsScheduler
+        from concilium.application.scheduling.models import Activity, ActivityDAG, ResourcePool
+        from concilium.domain.services.planning.matching_oracle import MatchingOracle
+
+        activities = [
+            Activity("A", "A", 2, {}),
+            Activity("B", "B", 3, {}),
+        ]
+        dag = ActivityDAG(activities, precedence=[("A", "B")])
+        pool = ResourcePool(resources={})
+
+        oracle = MatchingOracle(mob_costs={})
+        lns = LnsScheduler(oracle=oracle, k_max=3)
+
+        result = lns.schedule(dag=dag, pool=pool)
+        assert result is not None
+        assert result.feasible
+        assert result.makespan >= 5  # A(2) + B(3)
+

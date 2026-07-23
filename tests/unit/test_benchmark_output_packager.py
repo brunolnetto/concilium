@@ -375,3 +375,145 @@ class TestTentarGerarGraficos:
 
 # ===========================================================================
 
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+# ─── output_packager.py line 59 (svg in legacy outputs/) ────────────────────
+
+
+class TestOutputPackagerSvgFallback:
+    def test_collects_svg_from_legacy_outputs_dir(self, tmp_path):
+        """Line 59: svg glob in fallback path (no viz_dir, outputs_dir has svgs)."""
+        from concilium.application.benchmarks.charts.output_packager import _cf_collect_graficos
+
+        outputs_dir = tmp_path / "outputs"
+        outputs_dir.mkdir()
+        (outputs_dir / "chart.svg").write_text("<svg/>")
+
+        collected: list = []
+        _cf_collect_graficos(tmp_path, collected)
+
+        arcs = [arc for _, arc in collected]
+        assert "graficos/chart.svg" in arcs
+
+    def test_collects_png_and_svg_from_legacy_outputs(self, tmp_path):
+        from concilium.application.benchmarks.charts.output_packager import _cf_collect_graficos
+
+        outputs_dir = tmp_path / "outputs"
+        outputs_dir.mkdir()
+        (outputs_dir / "a.png").write_bytes(b"\x89PNG")
+        (outputs_dir / "b.svg").write_text("<svg/>")
+
+        collected: list = []
+        _cf_collect_graficos(tmp_path, collected)
+
+        arcs = [arc for _, arc in collected]
+        assert "graficos/a.png" in arcs
+        assert "graficos/b.svg" in arcs
+
+
+
+
+# ─── output_packager.py line 217 (_tentar_gerar_graficos success call) ───────
+
+
+class TestTentarGerarGraficos2:
+    def test_calls_gerar_graficos_when_import_succeeds(self, tmp_path):
+        """Line 217: gerar_graficos_benchmark is called when outputs/ has no pngs."""
+        from concilium.application.benchmarks.charts.output_packager import _tentar_gerar_graficos
+
+        bench_dir = tmp_path / "bench"
+        bench_dir.mkdir()
+
+        mock_fn = MagicMock()
+        fake_module = MagicMock()
+        fake_module.gerar_graficos_benchmark = mock_fn
+
+        with patch.dict(
+            "sys.modules",
+            {"concilium.application.benchmarks.charts.chart_generator": fake_module},
+        ):
+            _tentar_gerar_graficos(bench_dir, "TEST")
+
+        mock_fn.assert_called_once_with(bench_dir=bench_dir, slug="TEST")
+
+    def test_skips_call_when_pngs_already_exist(self, tmp_path):
+        from concilium.application.benchmarks.charts.output_packager import _tentar_gerar_graficos
+
+        bench_dir = tmp_path / "bench"
+        outputs_dir = bench_dir / "outputs"
+        outputs_dir.mkdir(parents=True)
+        (outputs_dir / "existing.png").write_bytes(b"\x89PNG")
+
+        mock_fn = MagicMock()
+        with patch.dict(
+            "sys.modules",
+            {
+                "concilium.application.benchmarks.charts.chart_generator": MagicMock(
+                    gerar_graficos_benchmark=mock_fn
+                )
+            },
+        ):
+            _tentar_gerar_graficos(bench_dir, "TEST")
+
+        mock_fn.assert_not_called()
+
+
+
+
+# ─── output_packager.py lines 175, 187-190 (empacotar_outputs auto path) ─────
+
+
+class TestEmpacotar2:
+    def test_empacotar_auto_output_path_and_gerar_graficos(self, tmp_path):
+        """Lines 175, 187-190: gerar_graficos=True + output_path=None."""
+        from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
+
+        # _find_benchmark_dir candidate 1: config_root.parent / benchmarks/data/TST
+        bench_dir = tmp_path / "benchmarks" / "data" / "TST"
+        reports_dir = bench_dir / "artifacts" / "outputs" / "reports"
+        reports_dir.mkdir(parents=True)
+        (reports_dir / "report.md").write_text("# Report")
+
+        config_root = tmp_path / "config.json"
+
+        with patch(
+            "concilium.application.benchmarks.charts.output_packager._tentar_gerar_graficos"
+        ) as mock_gen:
+            result = empacotar_outputs(
+                "TST",
+                config_root=config_root,
+                output_path=None,
+                gerar_graficos=True,
+            )
+
+        mock_gen.assert_called_once()
+        assert result.exists()
+        assert result.suffix == ".zip"
+
+    def test_empacotar_with_explicit_output_path(self, tmp_path):
+        """Complement: output_path provided → auto-path block skipped."""
+        from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
+
+        bench_dir = tmp_path / "benchmarks" / "data" / "EXP"
+        reports_dir = bench_dir / "artifacts" / "outputs" / "reports"
+        reports_dir.mkdir(parents=True)
+        (reports_dir / "report.md").write_text("# Report")
+
+        explicit_path = tmp_path / "out.zip"
+        config_root = tmp_path / "config.json"
+
+        with patch(
+            "concilium.application.benchmarks.charts.output_packager._tentar_gerar_graficos"
+        ):
+            result = empacotar_outputs(
+                "EXP",
+                config_root=config_root,
+                output_path=explicit_path,
+                gerar_graficos=True,
+            )
+
+        assert result == explicit_path
+        assert result.exists()
+

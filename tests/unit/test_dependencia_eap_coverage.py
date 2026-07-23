@@ -294,3 +294,98 @@ def test_build_networkx_success_returns_bytes():
         tasks = [{"item_id": "A", "predecessores": []}]
         result = _build_networkx(tasks)
     assert result == fake_bytes
+
+
+# ─── dependencia_eap.py lines 197-202, 214-215, 242, 303 ────────────────────
+
+
+class TestDrawSingleEdge:
+    """Lines 197-202, 214-215: _draw_single_edge draws arrow + label."""
+
+    def test_calls_annotate_and_text(self):
+        from concilium.application.runtime.deliverables.visualizations.charts.dependencia_eap import (
+            _draw_single_edge,
+        )
+
+        ax = MagicMock()
+        pe = MagicMock()
+        pos = {"A": (0.0, 0.0), "B": (4.0, 1.0)}
+
+        _draw_single_edge(ax, pos, "A", "B", "FS", pe)
+
+        ax.annotate.assert_called_once()
+        ax.text.assert_called_once()
+
+    def test_same_y_uses_zero_rad(self):
+        from concilium.application.runtime.deliverables.visualizations.charts.dependencia_eap import (
+            _draw_single_edge,
+        )
+
+        ax = MagicMock()
+        pe = MagicMock()
+        pos = {"X": (0.0, 0.0), "Y": (4.0, 0.0)}
+
+        _draw_single_edge(ax, pos, "X", "Y", "FS+2sem", pe)
+
+        ax.annotate.assert_called_once()
+
+
+class TestDrawEdgesCallsSingle:
+    """Line 242: _draw_single_edge called when pred is in pos."""
+
+    def test_pred_in_pos_triggers_draw_single_edge(self):
+        from concilium.application.runtime.deliverables.visualizations.charts.dependencia_eap import (
+            _draw_edges,
+        )
+
+        ax = MagicMock()
+        pe = MagicMock()
+        tasks = [{"item_id": "B", "predecessores": [{"item_id": "A"}]}]
+        pos = {"A": (0.0, 0.0), "B": (4.0, 0.0)}
+
+        _draw_edges(ax, tasks, pos, pe)
+
+        ax.annotate.assert_called_once()
+
+    def test_multiple_predecessors_draws_each(self):
+        from concilium.application.runtime.deliverables.visualizations.charts.dependencia_eap import (
+            _draw_edges,
+        )
+
+        ax = MagicMock()
+        pe = MagicMock()
+        tasks = [
+            {"item_id": "C", "predecessores": [{"item_id": "A"}, {"item_id": "B"}]}
+        ]
+        pos = {"A": (0.0, 0.0), "B": (0.0, 1.0), "C": (4.0, 0.5)}
+
+        _draw_edges(ax, tasks, pos, pe)
+
+        assert ax.annotate.call_count == 2
+
+
+class TestBuildNetworkxPosEmpty:
+    """Line 303: return None when _assign_positions yields empty pos."""
+
+    def test_returns_none_when_pos_empty(self):
+        from concilium.application.runtime.deliverables.visualizations.charts.dependencia_eap import (
+            _build_networkx,
+        )
+
+        mock_plt = MagicMock()
+        mock_fig_to_bytes = MagicMock()
+
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.dependencia_eap.init_mpl",
+                return_value=(mock_plt, mock_fig_to_bytes),
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.dependencia_eap._assign_positions",
+                return_value=({}, {}),
+            ),
+        ):
+            result = _build_networkx([{"item_id": "A", "predecessores": []}])
+
+        assert result is None
+

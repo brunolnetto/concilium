@@ -253,3 +253,72 @@ def test_processar_catalogo_non_erro_status_not_counted():
         )
 
     assert isinstance(blob_path, str)
+
+
+# excel_ingestion.py line 46:
+# _extract_rows_from_sheet with all-empty headers → return []
+# ---------------------------------------------------------------------------
+
+
+class TestExtractRowsEmptyHeaders:
+    def _make_workbook(self, rows_data: list[list]):
+        """Create an openpyxl workbook with given rows."""
+        import openpyxl
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "TestSheet"
+        for row in rows_data:
+            ws.append(row)
+        return wb
+
+    def test_all_empty_header_row_returns_empty(self):
+        """Line 46: header_row found but all cells are empty → not any(headers) → return []."""
+        from concilium.infrastructure.catalog.excel_ingestion import ExcelIngestionPipeline
+
+        # Row with all None/empty cells (all become empty strings)
+        wb = self._make_workbook([[None, None, None]])
+        # Write to BytesIO and read back (to simulate openpyxl read_only behavior)
+        from io import BytesIO
+
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        import openpyxl
+
+        wb_ro = openpyxl.load_workbook(buf, read_only=True, data_only=True)
+        result = ExcelIngestionPipeline._extract_rows_from_sheet(wb_ro, "TestSheet")
+        wb_ro.close()
+        assert result == []
+
+    def test_header_with_empty_cell_skips_column(self):
+        """Line 55: header cell is empty string → skip column in item dict."""
+        from io import BytesIO
+
+        import openpyxl
+
+        from concilium.infrastructure.catalog.excel_ingestion import ExcelIngestionPipeline
+
+        # Header row: ["ID", "", "Name"] → middle column skipped
+        # Data row: ["001", "ignored", "Alice"]
+        wb = self._make_workbook(
+            [
+                ["ID", "", "Name"],  # header row; "" → skip
+                ["001", "ignored", "Alice"],  # data row
+            ]
+        )
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        wb_ro = openpyxl.load_workbook(buf, read_only=True, data_only=True)
+        result = ExcelIngestionPipeline._extract_rows_from_sheet(wb_ro, "TestSheet")
+        wb_ro.close()
+
+        assert len(result) == 1
+        assert result[0]["ID"] == "001"
+        assert result[0]["Name"] == "Alice"
+        assert "" not in result[0]  # empty header was skipped
+
+
+# ---------------------------------------------------------------------------
+

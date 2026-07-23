@@ -239,3 +239,114 @@ class TestCostCriticalityEdgeCases:
 
 
 
+
+
+import importlib.util  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+
+def _load_skill(rel_path: str, name: str):
+    spec = importlib.util.spec_from_file_location(name, Path(rel_path).resolve())
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+MOD_07 = _load_skill("src/concilium/application/skills/manifests/07-diagnostico-criticidade/skill.py", "skill07_b36")
+
+# 07-diagnostico-criticidade lines 29-30: _periodo_to_ordinal with week key
+# ---------------------------------------------------------------------------
+
+
+class TestPeriodoToOrdinal:
+    def test_week_period_returns_year_x53_plus_week(self):
+        """Lines 29-30: '2024-W01' path → int(y)*53 + int(w)."""
+        result = MOD_07._periodo_to_ordinal("2024-W01")
+        assert result == 2024 * 53 + 1
+
+    def test_week_period_w23(self):
+        result = MOD_07._periodo_to_ordinal("2024-W23")
+        assert result == 2024 * 53 + 23
+
+    def test_month_period(self):
+        """Line 32: '2024-06' → int(y)*12 + int(m) (no W in key)."""
+        result = MOD_07._periodo_to_ordinal("2024-06")
+        assert result == 2024 * 12 + 6
+
+
+# ---------------------------------------------------------------------------
+
+
+# 07-diagnostico-criticidade line 36: _percentil_rank with empty list
+# ---------------------------------------------------------------------------
+
+
+class TestPercentilRank:
+    def test_empty_list_returns_empty(self):
+        """Line 36: n == 0 → return []."""
+        result = MOD_07._percentil_rank([])
+        assert result == []
+
+    def test_single_value_returns_list(self):
+        result = MOD_07._percentil_rank([42])
+        assert isinstance(result, list)
+        assert len(result) == 1
+
+
+# ---------------------------------------------------------------------------
+
+
+# 07-diagnostico-criticidade line 251:
+# Graceful degradation when equipes exist but custo_total == 0
+# ---------------------------------------------------------------------------
+
+
+class TestRunDiagnosticoCriticidadeGracefulDegradation:
+    def _make_canonical(self):
+        from concilium.domain.models.canonical import (
+            CanonicalModel,
+            Coordenadas,
+            Cronograma,
+            EquipeDireta,
+            Meta,
+            Projeto,
+            RegimeTrabalho,
+        )
+
+        meta = Meta(gerado_em=datetime.now(UTC), contexto_id="ctx-test")
+        proj = Projeto(
+            id="proj-test",
+            nome="Test",
+            tipo_obra="pavimentacao",
+            localizacao="CE",
+            coordenadas=Coordenadas(lat=-3.7, lng=-38.5),
+            data_inicio=date(2026, 1, 1),
+            data_termino=date(2026, 6, 30),
+            regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+            snapshot_catalogo_id="snap",
+            snapshot_perfil_id="perf",
+        )
+        # custo_total=0.0 by default → triggers graceful degradation
+        equipe = EquipeDireta(equipe_id="EQ-001", item_id="ITEM-A", cpu_id="CPU-A", custo_total=0.0)
+        cronograma = Cronograma()  # minimal, no scheduled_activities
+
+        return CanonicalModel(
+            meta=meta,
+            projeto=proj,
+            equipes_diretas=[equipe],
+            cronograma=cronograma,
+        )
+
+    def test_graceful_degradation_returns_empty_report(self):
+        """Line 251: equipes exist but custo_total=0 → else branch → empty CostCriticalityResult."""
+        canonical = self._make_canonical()
+        result = MOD_07.run_diagnostico_criticidade(canonical, inputs={})
+
+        assert result is not None
+        # VAL-CC-01 warning should be present (custo_total == 0)
+        codes = [v.codigo for v in result.validacoes]
+        assert "VAL-CC-01" in codes
+
+
+# ---------------------------------------------------------------------------
+

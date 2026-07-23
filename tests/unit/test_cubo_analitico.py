@@ -975,3 +975,301 @@ class TestCuboBuildDieselLMap:
 
 # ---------------------------------------------------------------------------
 
+
+
+from unittest.mock import patch  # noqa: E402
+
+# cubo_analitico_builder.py line 209:
+# Cell with estado != "prod" → continue (not counted in cost_map)
+# ---------------------------------------------------------------------------
+
+
+class TestCuboAnaliticoBuilderNonProdCell:
+    def test_non_prod_cell_is_skipped(self):
+        """Line 209: cell.estado != 'prod' → continue, not added to cost_map."""
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        # Create a canonical with 2 cells: one "prod" and one "off"
+        cell_prod = SimpleNamespace(
+            estado="prod",
+            atividade_id="ACT-01",
+            semana_iso="2026-W01",
+            custo_mo=100.0,
+            custo_eq=50.0,
+            custo_comb=10.0,
+            custo_mat=5.0,
+        )
+        cell_off = SimpleNamespace(
+            estado="off",  # should be skipped (line 209 continue)
+            atividade_id="ACT-01",
+            semana_iso="2026-W02",
+            custo_mo=999.0,
+            custo_eq=999.0,
+            custo_comb=999.0,
+            custo_mat=999.0,
+        )
+        cell_no_atv = SimpleNamespace(
+            estado="prod",
+            atividade_id="",  # empty → also skipped (line 209 not cell.atividade_id)
+            semana_iso="2026-W03",
+            custo_mo=999.0,
+            custo_eq=999.0,
+            custo_comb=999.0,
+            custo_mat=999.0,
+        )
+
+        fake_cubo_pool = SimpleNamespace(
+            celulas=[cell_prod, cell_off, cell_no_atv],
+        )
+
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(nome="TEST", data_inicio=""),
+            equipes_diretas=None,
+            indiretos_semanal=None,
+            cronograma=None,
+        )
+
+        builder = CuboAnaliticoBuilder()
+
+        with patch("concilium.domain.services.analytics.cubo_pool_builder.CuboPoolInstancialBuilder") as MockBuilder:
+            mock_instance = MockBuilder.return_value
+            mock_instance.build.return_value = fake_cubo_pool
+
+            with patch.object(builder, "_enrich_with_financial_data", side_effect=lambda c, cells: cells):
+                with patch.object(builder, "_build_diesel_L_map", return_value={}):
+                    result = builder.build(canonical_in)
+
+        # The "off" cell and no-atividade cell should not contribute to the cubo
+        # Result should have cells only from the prod cell (or be empty if no decomp)
+        assert result is not None  # build completed without error
+
+
+# ---------------------------------------------------------------------------
+
+
+# cubo_analitico_builder.py line 312:
+# _enrich_with_financial_data: item with semana_offset=None → continue
+# cubo_analitico_builder.py line 350:
+# _build_autonomous: equipe with sa missing or no distribuicao_semanal → continue
+# ---------------------------------------------------------------------------
+
+
+class TestCuboAnaliticoBuilderContinues:
+    def test_indireto_item_with_none_semana_is_skipped(self):
+        """Line 312: item.semana is None → continue (no cell added)."""
+        from unittest.mock import patch
+
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        # Item with semana=None should be skipped
+        ind_item_no_semana = SimpleNamespace(semana=None, custo_semanal=100.0, categoria="ADM")
+        ind_item_valid = SimpleNamespace(semana=2, custo_semanal=200.0, categoria="ADM")
+
+        fake_cubo_pool = SimpleNamespace(celulas=[])  # empty → _build_from_pool → calls _build_autonomous indirectly
+
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(nome="TEST", data_inicio="2026-01-05"),
+            equipes_diretas=None,
+            indiretos_semanal=[ind_item_no_semana, ind_item_valid],  # one None semana, one valid
+            cronograma=None,
+            tabela_bdi_efetiva=None,
+        )
+
+        builder = CuboAnaliticoBuilder()
+
+        with patch("concilium.domain.services.analytics.cubo_pool_builder.CuboPoolInstancialBuilder") as MockBuilder:
+            mock_instance = MockBuilder.return_value
+            mock_instance.build.return_value = fake_cubo_pool
+
+            result = builder.build(canonical_in)
+
+        # Result exists; the None-semana item was skipped
+        assert result is not None
+
+    def test_autonomous_equipe_without_sa_is_skipped(self):
+        """Line 350: equipe.item_id not in sched_lookup → sa is None → continue."""
+        from unittest.mock import patch
+
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        # An equipe that references a non-existent scheduled activity
+        equipe_orphan = SimpleNamespace(
+            item_id="ACT-ORPHAN",
+            equipamentos=[],
+            custo_mao_obra_mensal=100.0,
+            custo_equipamentos_mensal=50.0,
+            custo_combustivel_total_mensal=10.0,
+            custo_material_mensal=5.0,
+        )
+        sa_for_other = SimpleNamespace(
+            activity_id="ACT-OTHER",
+            distribuicao_semanal={"2026-W01": SimpleNamespace(num_equipes=1)},
+        )
+
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(nome="TEST", data_inicio=""),
+            equipes_diretas=[equipe_orphan],
+            indiretos_semanal=None,
+            cronograma=SimpleNamespace(
+                scheduled_activities=[sa_for_other],  # ACT-ORPHAN not in here
+            ),
+            tabela_bdi_efetiva=None,
+        )
+
+        builder = CuboAnaliticoBuilder()
+
+        fake_cubo_pool = SimpleNamespace(celulas=[])
+        with patch("concilium.domain.services.analytics.cubo_pool_builder.CuboPoolInstancialBuilder") as MockBuilder:
+            mock_instance = MockBuilder.return_value
+            mock_instance.build.return_value = fake_cubo_pool
+
+            result = builder.build(canonical_in)
+
+        # orphan equipe was skipped; result still valid
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+
+
+# cubo_analitico_builder.py line 213:
+# _build_from_pool: cell with estado != "prod" or no atividade_id → continue
+# cubo_analitico_builder.py line 316:
+# _enrich_with_financial_data: item.semana is None → continue (direct call)
+# ---------------------------------------------------------------------------
+
+
+class TestCuboAnaliticoBuilderMoreContinues:
+    def test_build_from_pool_skips_non_prod_and_no_atividade_cells(self):
+        """Line 213: cells with estado != 'prod' or empty atividade_id are skipped,
+        while a valid 'prod' cell with atividade_id still produces output."""
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        cell_not_prod = SimpleNamespace(
+            estado="idle",
+            atividade_id="ACT-1",
+            semana_iso="2026-W01",
+            custo_mo=100.0,
+            custo_eq=0.0,
+            custo_comb=0.0,
+            custo_mat=0.0,
+        )
+        cell_no_atividade = SimpleNamespace(
+            estado="prod",
+            atividade_id="",
+            semana_iso="2026-W01",
+            custo_mo=100.0,
+            custo_eq=0.0,
+            custo_comb=0.0,
+            custo_mat=0.0,
+        )
+        cell_valid = SimpleNamespace(
+            estado="prod",
+            atividade_id="ACT-2",
+            semana_iso="2026-W01",
+            custo_mo=500.0,
+            custo_eq=0.0,
+            custo_comb=0.0,
+            custo_mat=0.0,
+        )
+        fake_cubo_pool = SimpleNamespace(celulas=[cell_not_prod, cell_no_atividade, cell_valid])
+
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(nome="TEST", data_inicio="2026-01-05"),
+            equipes_diretas=None,
+            indiretos_semanal=None,
+            cronograma=None,
+            planejamento=None,
+            tabela_bdi_efetiva=None,
+        )
+
+        builder = CuboAnaliticoBuilder()
+
+        with patch("concilium.domain.services.analytics.cubo_pool_builder.CuboPoolInstancialBuilder") as MockBuilder:
+            MockBuilder.return_value.build.return_value = fake_cubo_pool
+            result = builder._build_from_pool(canonical_in)
+
+        # Only cell_valid (estado="prod" + atividade_id set) contributes cells.
+        assert all(c.atividade_id == "ACT-2" for c in result.celulas)
+
+    def test_enrich_with_financial_data_skips_indireto_item_without_semana(self):
+        """Line 316: an indiretos_semanal item with semana=None is skipped via
+        `continue`, while a sibling item with a valid semana still produces a cell."""
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        builder = CuboAnaliticoBuilder()
+        ind_no_semana = SimpleNamespace(semana=None, custo_semanal=999.0, categoria="ADM")
+        ind_valid = SimpleNamespace(semana=1, custo_semanal=500.0, categoria="ADM")
+
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(data_inicio="2026-01-05"),
+            planejamento=None,
+            indiretos_semanal=[ind_no_semana, ind_valid],
+        )
+
+        result = builder._enrich_with_financial_data(canonical_in, [])
+
+        # Only the valid item (semana=1) should have produced an indireto cell.
+        assert len(result) == 1
+        assert result[0].natureza == "indireto"
+
+    def test_enrich_with_financial_data_skips_planejamento_item_without_id_or_value(self):
+        """Line 276: planejamento items with empty item_id or total<=0 are skipped
+        (the `if item_id and total_rs > 0` false branch just `continue`s), so they
+        never enter plan_total_by_item and therefore never get a scale factor —
+        while a sibling valid item still scales its matching pool cell."""
+        from concilium.domain.models.analytics.cubo_analitico import CelulaAnalitica
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        def _item(item_id, total):
+            return SimpleNamespace(
+                item_id=item_id,
+                subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=total)),
+            )
+
+        planejamento = [
+            _item("ACT-1", 1000.0),  # válido: item_id truthy e total_rs > 0
+            _item("", 500.0),  # inválido: item_id vazio
+            _item("ACT-2", 0.0),  # inválido: total_rs <= 0
+        ]
+
+        canonical_in = SimpleNamespace(
+            projeto=None,
+            planejamento=planejamento,
+            indiretos_semanal=None,
+        )
+
+        celulas = [
+            CelulaAnalitica(
+                natureza="direto",
+                atividade_id="ACT-1",
+                categoria_insumo="mao_obra",
+                propriedade="salario_encargos",
+                semana_iso="2026-W01",
+                componente_bdi="custo_direto",
+                valor_rs=100.0,
+            ),
+            CelulaAnalitica(
+                natureza="direto",
+                atividade_id="ACT-2",
+                categoria_insumo="mao_obra",
+                propriedade="salario_encargos",
+                semana_iso="2026-W01",
+                componente_bdi="custo_direto",
+                valor_rs=200.0,
+            ),
+        ]
+
+        builder = CuboAnaliticoBuilder()
+        result = builder._enrich_with_financial_data(canonical_in, celulas)
+        by_atividade = {c.atividade_id: c.valor_rs for c in result}
+
+        # ACT-1 was in plan_total_by_item -> scaled to match plan total (1000.0 / 100.0 = 10x).
+        assert by_atividade["ACT-1"] == 1000.0
+        # ACT-2's planejamento entry was skipped (total_rs<=0), so it never got a
+        # scale factor and keeps its original pool value.
+        assert by_atividade["ACT-2"] == 200.0
+

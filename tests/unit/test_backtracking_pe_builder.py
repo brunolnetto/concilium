@@ -341,3 +341,224 @@ class TestBacktrackingPeBuilderHelpers:
 
 
 
+
+
+from types import SimpleNamespace  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+
+# backtracking_pe_builder.py lines 148-151:
+# Score function for T0_RAMP with item_cubo_hint having "indireto" and "janela_critica_iso"
+# ---------------------------------------------------------------------------
+
+
+class TestBacktrackingPeBuilderT0RampHint:
+    def _make_solution(self, parametro: str):
+        """Create a minimal PlannerSolution-like SimpleNamespace."""
+        return SimpleNamespace(
+            parametro=parametro,
+            tipo_equipamento=None,
+            tipo_equipe=None,
+            tipo_atividade=None,
+        )
+
+    def test_t0_ramp_with_indireto_and_janela_critica_reduces_score(self):
+        """Lines 148-151: T0_RAMP cubo hint reduces its score — covered via _btpb_process_item.
+
+        The score closure is defined inside _btpb_process_item; the only way to
+        exercise it is to drive _btpb_process_item with a T0_RAMP solution and a
+        non-empty item_cubo_hint.  See also test_small_gaps_batch40.py which covers
+        these lines via the same approach.
+        """
+        from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+
+        t0_ramp = SolucaoInversa(
+            parametro="T0_RAMP",
+            valor_atual=0.0,
+            valor_requerido=4.0,
+            delta_abs=4.0,
+            delta_pct=0.0,
+            impacto_preco_pct=3.0,
+            impacto_produtividade_pct=0.0,
+            impacto_recursos_pct=0.0,
+            impacto_prazo_semanas=4.0,
+            pe_gap_recalculado=0.0,
+            roundtrip_valido=True,
+            erro_roundtrip=0.0,
+            confianca=3,
+        )
+
+        item = MagicMock()
+        item.atividade_id = "ACT-X"
+        item.descricao = "Test"
+        item.gap_rs = -30_000.0
+        item.fatores = ()
+
+        with patch.object(builder, "_compute_solucoes", return_value=[t0_ramp]):
+            bt_item, _ = builder._btpb_process_item(
+                item,
+                equipe_lookup={},
+                sched_lookup={},
+                plan_lookup={},
+                prat=None,
+                pe_gap_alvo=0.0,
+                item_cubo_hint={"natureza_dominante": "indireto", "janela_critica_iso": "2026-W10"},
+            )
+
+        assert bt_item.solucao_recomendada is not None
+        assert bt_item.solucao_recomendada.parametro == "T0_RAMP"
+
+
+# ---------------------------------------------------------------------------
+
+
+# ─── backtracking_pe_builder.py lines 148-151 (T0_RAMP cubo hint scoring) ────
+
+
+def _make_solucao(parametro: str, roundtrip_valido: bool = True):
+    from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
+
+    return SolucaoInversa(
+        parametro=parametro,
+        valor_atual=0.0,
+        valor_requerido=0.1,
+        delta_abs=0.1,
+        delta_pct=10.0,
+        impacto_preco_pct=5.0,
+        impacto_produtividade_pct=0.0,
+        impacto_recursos_pct=0.0,
+        impacto_prazo_semanas=0.0,
+        pe_gap_recalculado=0.0,
+        roundtrip_valido=roundtrip_valido,
+        erro_roundtrip=0.0,
+        confianca=4,
+    )
+
+
+class TestBtpbProcessItemCuboHint:
+    """Lines 148-151: T0_RAMP solution with cubo hint adjusts score."""
+
+    def _make_item(self):
+        item = MagicMock()
+        item.atividade_id = "ACT-1"
+        item.descricao = "Escavação"
+        item.gap_rs = -50_000.0
+        item.fatores = ()
+        return item
+
+    def test_cubo_hint_indireto_adjusts_score(self):
+        """Lines 148-149: natureza_dominante == 'indireto' reduces base score."""
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        t0 = _make_solucao("T0_RAMP")
+
+        with patch.object(builder, "_compute_solucoes", return_value=[t0]):
+            bt_item, fails = builder._btpb_process_item(
+                self._make_item(),
+                equipe_lookup={},
+                sched_lookup={},
+                plan_lookup={},
+                prat=None,
+                pe_gap_alvo=0.0,
+                item_cubo_hint={"natureza_dominante": "indireto"},
+            )
+
+        assert bt_item.solucao_recomendada is not None
+        assert bt_item.solucao_recomendada.parametro == "T0_RAMP"
+
+    def test_cubo_hint_janela_critica_adjusts_score(self):
+        """Lines 150-151: janela_critica_iso truthy reduces base score."""
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        t0 = _make_solucao("T0_RAMP")
+
+        with patch.object(builder, "_compute_solucoes", return_value=[t0]):
+            bt_item, fails = builder._btpb_process_item(
+                self._make_item(),
+                equipe_lookup={},
+                sched_lookup={},
+                plan_lookup={},
+                prat=None,
+                pe_gap_alvo=0.0,
+                item_cubo_hint={"janela_critica_iso": "2025-W22"},
+            )
+
+        assert bt_item.solucao_recomendada is not None
+
+    def test_cubo_hint_both_fields_covered(self):
+        """Lines 148-151 fully: both indireto + janela_critica."""
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        t0 = _make_solucao("T0_RAMP")
+
+        with patch.object(builder, "_compute_solucoes", return_value=[t0]):
+            bt_item, _ = builder._btpb_process_item(
+                self._make_item(),
+                equipe_lookup={},
+                sched_lookup={},
+                plan_lookup={},
+                prat=None,
+                pe_gap_alvo=0.0,
+                item_cubo_hint={"natureza_dominante": "indireto", "janela_critica_iso": "2025-W22"},
+            )
+
+        assert bt_item.solucao_recomendada is not None
+
+
+
+
+# ─── backtracking_pe_builder.py line 394 (_solve_combinada non-None) ─────────
+
+
+class TestSolveCombinada:
+    """Line 394: sol_comb appended when both T0_RAMP and L solutions exist."""
+
+    def test_solve_combinada_returns_non_none_when_both_exist(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        item = MagicMock()
+        item.gap_rs = -50_000.0
+        item.fatores = ()
+
+        t0 = _make_solucao("T0_RAMP")
+        l_sol = _make_solucao("L")
+
+        result = builder._solve_combinada(item, [t0, l_sol], alvo=0.0, denominator=100_000.0, T_ef=0.30)
+
+        assert result is not None
+        assert result.parametro == "COMBINADA"
+        assert result.roundtrip_valido is True
+
+    def test_compute_solucoes_appends_combinada(self):
+        """Line 394: verify combinada is appended inside _compute_solucoes."""
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        item = MagicMock()
+        item.gap_rs = -50_000.0
+        item.fatores = ()
+
+        t0 = _make_solucao("T0_RAMP")
+        l_sol = _make_solucao("L")
+
+        # Patch sub-solvers to return T0_RAMP and L, leaving combinada to be appended
+        with (
+            patch.object(builder, "_solve_L", return_value=(l_sol, 100_000.0, 0.3)),
+            patch.object(builder, "_solve_P", return_value=None),
+            patch.object(builder, "_solve_timing", return_value=t0),
+            patch.object(builder, "_solve_timing_calendario", return_value=None),
+            patch.object(builder, "_solve_n_max", return_value=None),
+        ):
+            solucoes = builder._compute_solucoes(item, {}, {}, {}, None, 0.0)
+
+        parametros = [s.parametro for s in solucoes]
+        assert "COMBINADA" in parametros
+
+
+

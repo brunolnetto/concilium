@@ -244,3 +244,97 @@ class TestRuntimeMetaIsGate:
         result = rt._meta_is_gate("01-escopo-e-eap")
         assert result is True
 
+
+
+# execution.py line 106:
+# run_skill_on_plano when canonical_in is None and skill != "01-escopo-e-eap"
+# → raises RuntimeDomainError
+# ---------------------------------------------------------------------------
+
+
+class TestRunSkillOnPlanoNoCanonical:
+    def test_raises_runtime_domain_error_when_no_canonical(self):
+        """Line 106: canonical_in is None and skill_id != '01-escopo-e-eap' → RuntimeDomainError."""
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        import pytest
+
+        from concilium.application.runtime.exceptions import RuntimeDomainError
+        from concilium.application.runtime.mixins.execution import ExecutionMixin
+
+        class FakeRuntime(ExecutionMixin):
+            def get_skill_contract(self, skill_id):
+                return MagicMock(signature=[])
+
+        runtime = FakeRuntime()
+        plano_store = SimpleNamespace(
+            load_canonical=lambda: None,
+            plano_id="plano-001",
+            escopo_store=SimpleNamespace(meta={}),
+        )
+
+        with pytest.raises(RuntimeDomainError, match="estado inicial"):
+            runtime.run_skill_on_plano(
+                "02-produtividade-climatica",
+                MagicMock(),
+                plano_store,
+            )
+
+
+class TestRunSkillOnPlanoShouldSaveFalse:
+    def test_00_escopo_with_errors_skips_save_canonical(self):
+        """Branch 153->156: skill_id=='00-escopo' com erros e sem gate/dv override
+        → should_save permanece False → save_canonical NÃO é chamado."""
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.runtime.mixins.execution import ExecutionMixin
+        from concilium.application.skills.base import SkillResult
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        canonical = MagicMock()
+        canonical.pipeline_blocked_from = []
+        val_erro = ValidacaoItem(codigo="ERR-001", status="ERRO", campo=None, mensagem="erro")
+        fake_result = SkillResult(canonical, [val_erro])
+
+        class FakeRuntime(ExecutionMixin):
+            def get_skill_contract(self, skill_id):
+                return MagicMock(signature=[])
+
+            def _load_context(self, escopo_meta, project):
+                return MagicMock(), {}, {}
+
+            def _apply_runtime_defaults(self, skill_id, project, contexto, base_inputs):
+                return dict(base_inputs)
+
+            def _build_skill_kwargs(self, contract, **kwargs):
+                return {}
+
+            def _build_log_entry(self, *args, **kwargs):
+                return {}
+
+            def _process_side_effects(self, *args, **kwargs):
+                pass
+
+        runtime = FakeRuntime()
+        plano_store = SimpleNamespace(
+            load_canonical=lambda: canonical,
+            plano_id="plano-001",
+            escopo_store=SimpleNamespace(meta={"escopo_id": "e1", "contexto_id": "ctx"}),
+            save_canonical=MagicMock(),
+            log_invocation=MagicMock(),
+        )
+        project = SimpleNamespace(meta={"id": "proj-1"})
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"00-escopo": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=fake_result,
+            ),
+        ):
+            runtime.run_skill_on_plano("00-escopo", project, plano_store)
+
+        plano_store.save_canonical.assert_not_called()
+

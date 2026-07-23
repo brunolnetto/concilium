@@ -69,3 +69,42 @@ class TestResolveCatalogItemsEmptyId:
         assert len(result) == 1
         assert result[0]["codigo"] == "INS-01"
 
+
+
+# catalog_resolver.py lines 157, 168-174:
+# resolve_insumo with master file present → returns (item, "master")
+# ---------------------------------------------------------------------------
+
+
+class TestCatalogResolverMasterFile:
+    def test_resolve_insumo_from_master_individual_file(self, tmp_path):
+        """Lines 155-157, 168-174: insumo found in master individual file → ('item', 'master')."""
+        from types import SimpleNamespace
+
+        from concilium.application.services.catalog.catalog_resolver import CatalogResolver
+
+        # project.root = tmp_path/projetos/proj-001
+        # concilium_root = tmp_path (parents[1] of projetos/proj-001)
+        proj_root = tmp_path / "projetos" / "proj-001"
+        proj_root.mkdir(parents=True)
+
+        # Create master insumo file
+        cat_dir = tmp_path / "config" / "catalogos" / "cat-001" / "insumos"
+        cat_dir.mkdir(parents=True)
+        (cat_dir / "INS-01.json").write_text('{"codigo": "INS-01", "descricao": "Test Insumo"}', encoding="utf-8")
+
+        project = SimpleNamespace(
+            root=str(proj_root),
+            meta={"id": "proj-001"},
+        )
+
+        resolver = CatalogResolver(config_root=tmp_path / "config")
+        result, source = resolver.resolve_insumo("INS-01", "cat-001", project)
+
+        assert source == "master"
+        assert result is not None
+        assert result["codigo"] == "INS-01"
+
+
+# ---------------------------------------------------------------------------
+
