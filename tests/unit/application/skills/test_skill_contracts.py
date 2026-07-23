@@ -10,7 +10,7 @@ from concilium.application.skills import SKILLS
 
 
 def _manifests_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "src" / "concilium" / "application" / "skills" / "manifests"
+    return Path(__file__).resolve().parents[4] / "src" / "concilium" / "application" / "skills" / "manifests"
 
 
 def _load_manifest(path: Path) -> dict:

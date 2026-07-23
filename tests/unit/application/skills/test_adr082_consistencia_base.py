@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-_ROOT = Path(__file__).parent.parent.parent / "src/concilium/application/skills/manifests"
+_ROOT = Path(__file__).parent.parent.parent.parent.parent / "src/concilium/application/skills/manifests"
 
 
 def _load(mod_name: str, rel_path: str) -> ModuleType:

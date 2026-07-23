@@ -151,7 +151,7 @@ class TestRuntimeEdgeCases:
         from concilium.infrastructure.storage.project import ProjectStore
 
         # Use test config_root from actual config dir
-        config_root = Path(__file__).parents[3] / "config"
+        config_root = Path(__file__).parents[5] / "config"
         r = Runtime(config_root)
         projetos = tmp_path / "projetos"
         projetos.mkdir()
@@ -167,7 +167,7 @@ class TestRuntimeEdgeCases:
         from concilium.application.runtime import Runtime
         from concilium.domain.models.project.decision_variables import DecisionVariables
 
-        config_root = Path(__file__).parents[3] / "config"
+        config_root = Path(__file__).parents[5] / "config"
         r = Runtime(config_root)
         canonical = _minimal_canonical()
         dv = DecisionVariables()

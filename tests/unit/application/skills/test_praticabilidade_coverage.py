@@ -18,7 +18,7 @@ from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais
 
 # Load private helpers from the skill.py using importlib
 _SKILL_PATH = (
-    Path(__file__).parent.parent.parent
+    Path(__file__).parent.parent.parent.parent.parent
     / "src"
     / "concilium"
     / "application"

@@ -25,7 +25,7 @@ from concilium.domain.services.analytics.cubo_pool_builder import (
     validar_invariantes_cubo_pool,
 )
 
-_ROOT = Path(__file__).resolve().parents[2]
+_ROOT = Path(__file__).resolve().parents[4]
 _HELPERS_A = (
     _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
 )

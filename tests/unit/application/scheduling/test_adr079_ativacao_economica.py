@@ -23,7 +23,7 @@ import pytest
 # Paths
 # ──────────────────────────────────────────────────────────────────────────────
 
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
 _HELPERS_A = (
     _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers/__init__.py"
