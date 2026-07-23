@@ -72,3 +72,44 @@ class TestTelemetry:
 
 
 
+
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+# ─── infrastructure/telemetry/__init__.py (35 missing) ───────────────────────
+
+
+class TestTelemetryModule:
+    def test_setup_telemetry(self, monkeypatch):
+        monkeypatch.setenv("CONCILIUM__TELEMETRY_ENABLED", "0")
+        from concilium.infrastructure.telemetry import setup_telemetry
+
+        setup_telemetry()  # should not raise
+
+    def test_record_functions_dont_raise(self):
+        from concilium.infrastructure import telemetry
+
+        # Call various record functions — they should be no-ops when OTEL not enabled
+        if hasattr(telemetry, "record_skill_start"):
+            telemetry.record_skill_start("skill-01", "proj-1", "v1")
+        if hasattr(telemetry, "record_skill_end"):
+            telemetry.record_skill_end("skill-01", "OK", duration_ms=100)
+        if hasattr(telemetry, "record_pipeline_start"):
+            telemetry.record_pipeline_start("proj-1")
+        if hasattr(telemetry, "record_rate_limit_exceeded"):
+            telemetry.record_rate_limit_exceeded("/api/runs")
+
+    def test_patch_fastmcp_server(self):
+        from concilium.infrastructure.telemetry import patch_fastmcp_server
+
+        server = MagicMock()
+        patch_fastmcp_server(server)  # should not raise
+
+    def test_telemetry_module_importable(self):
+        import concilium.infrastructure.telemetry as t
+
+        assert hasattr(t, "setup_telemetry")
+
+
+

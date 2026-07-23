@@ -1073,3 +1073,140 @@ def test_catalog_session_load_material_id_fallback_branch():
     assert equipe["materiais"][0]["insumo_id"] == "MAT-1"
 
 
+
+
+
+# ─── infrastructure/catalog/query_engine.py (88 missing) ─────────────────────
+
+
+class TestQueryEngine:
+    def _catalog(self):
+        return {
+            "cpus": [
+                {"codigo": "CPU-ESC", "descricao": "Escavação de solo", "unidade": "m³", "categoria": "TERRA"},
+                {"codigo": "CPU-PAV", "descricao": "Pavimentação asfáltica", "unidade": "m²", "categoria": "PAVE"},
+            ],
+            "insumos": [
+                {
+                    "codigo": "INS-DIESEL",
+                    "descricao": "Diesel",
+                    "tipo": "COMBUSTIVEL",
+                    "preco_unitario": 6.5,
+                    "unidade": "litro",
+                }
+            ],
+            "producoes": [],
+            "funcoes": [],
+        }
+
+    def test_catalog_session_from_resolved(self):
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        session = CatalogSession.from_resolved(self._catalog())
+        assert session is not None
+
+    def test_catalog_session_find_cpu(self):
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        session = CatalogSession.from_resolved(self._catalog())
+        result = session.find_cpus_by_categoria("TERRA")
+        assert len(result) >= 1
+        assert any(c["codigo"] == "CPU-ESC" for c in result)
+
+    def test_catalog_session_get_composicao_empty(self):
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        session = CatalogSession.from_resolved(self._catalog())
+        result = session.get_composicao_com_precos("CPU-MISSING")
+        assert result == []
+
+    def test_catalog_session_get_equipe_missing(self):
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        session = CatalogSession.from_resolved(self._catalog())
+        result = session.get_equipe_com_precos("PROD-MISSING")
+        assert isinstance(result, dict)
+
+
+
+
+# ─── infrastructure/catalog/query_engine.py — CatalogSession deeper paths ─────
+
+
+class TestCatalogSessionDeeper:
+    def _make_session(self):
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalog = {
+            "cpus": [
+                {
+                    "codigo": "CPU-ESC",
+                    "descricao": "Escavacao hidraulica",
+                    "unidade": "m3",
+                    "categoria": "TERRA",
+                    "producao_id_ref": "PROD-ESC",
+                    "composicao_itens": [{"insumo_id": "DIESEL", "coeficiente": 2.0}],
+                },
+            ],
+            "insumos": [
+                {
+                    "codigo": "DIESEL",
+                    "descricao": "Diesel S10",
+                    "tipo": "COMBUSTIVEL",
+                    "preco_unitario": 6.5,
+                    "unidade": "litro",
+                },
+            ],
+            "producoes": [
+                {
+                    "id": "PROD-ESC",
+                    "valor_horario": 50.0,
+                    "composicao_padrao_equipe": {
+                        "funcoes": [{"funcao_id": "OP", "num_pessoas": 1, "salario_mensal": 3000.0}],
+                        "equipamentos": [{"equip_id": "ESC-HIDRA", "num_unidades": 1}],
+                    },
+                },
+            ],
+            "funcoes": [
+                {"funcao_id": "OP", "descricao": "Operador", "salario_base": 3000.0},
+            ],
+        }
+        return CatalogSession.from_resolved(catalog)
+
+    def test_get_composicao_com_precos(self):
+        session = self._make_session()
+        result = session.get_composicao_com_precos("CPU-ESC")
+        assert isinstance(result, list)
+
+    def test_get_equipe_com_precos(self):
+        session = self._make_session()
+        result = session.get_equipe_com_precos("PROD-ESC")
+        assert isinstance(result, dict)
+
+    def test_find_cpus_by_categoria(self):
+        session = self._make_session()
+        result = session.find_cpus_by_categoria("TERRA")
+        assert len(result) >= 1
+        assert result[0]["codigo"] == "CPU-ESC"
+
+    def test_find_cpus_by_categoria_no_match(self):
+        session = self._make_session()
+        result = session.find_cpus_by_categoria("PAVE")
+        assert result == []
+
+    def test_find_cpus_using_insumo(self):
+        session = self._make_session()
+        result = session.find_cpus_using_insumo("DIESEL")
+        assert isinstance(result, list)
+
+    def test_catalog_session_query(self):
+        session = self._make_session()
+        # query method - check it doesn't raise
+        result = session.query("SELECT codigo FROM cpus LIMIT 1")
+        assert isinstance(result, list)
+
+    def test_catalog_session_get_price_stats(self):
+        session = self._make_session()
+        result = session.get_price_stats()
+        assert isinstance(result, (dict, list))
+

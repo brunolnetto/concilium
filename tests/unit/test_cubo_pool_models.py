@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+from concilium.domain.models.analytics.cubo_pool import (
+    CelulaPoolInstancial,
+    CuboPoolInstancial,
+    _measure_value,
+    bucket_periodo,
+)
+
 
 def _make_celula(
     contrato_id="C1",
@@ -191,3 +198,61 @@ class TestAgruparSemanaIso:
 
 # ---------------------------------------------------------------------------
 
+
+
+def test_cubo_pool_bucket_fallbacks_and_measure_default():
+    # ISO parse ok but unsupported granularity should fall back to raw week.
+    assert bucket_periodo("2026-W10", "quinzena") == "2026-W10"
+    # Non-ISO/non-sequential key should be returned as-is.
+    assert bucket_periodo("custom-key", "mes") == "custom-key"
+
+    c = CelulaPoolInstancial(
+        contrato_id="C1",
+        tipo_id="ESC",
+        instancia_numero=1,
+        semana_iso="2026-W10",
+        estado="off",
+        atividade_id=None,
+        custo_mo=10.0,
+        custo_eq=2.0,
+        custo_comb=3.0,
+        custo_mat=5.0,
+    )
+    assert _measure_value(c, "custo_total") == c.custo_total
+    assert _measure_value(c, "unknown_measure") == c.custo_total
+
+
+def test_cubo_pool_ciclo_vida_branch_edges():
+    c1 = CelulaPoolInstancial(
+        contrato_id="C1",
+        tipo_id="ESC",
+        instancia_numero=1,
+        semana_iso="2026-W10",
+        estado="prod",
+        atividade_id="A1",
+        custo_mo=1.0,
+    )
+    c2 = CelulaPoolInstancial(
+        contrato_id="C1",
+        tipo_id="ESC",
+        instancia_numero=1,
+        semana_iso="2026-W09",
+        estado="prod",
+        atividade_id="A1",
+        custo_mo=1.0,
+    )
+    c3 = CelulaPoolInstancial(
+        contrato_id="C1",
+        tipo_id="ESC",
+        instancia_numero=1,
+        semana_iso="2026-W11",
+        estado="off",
+        atividade_id=None,
+    )
+    cubo = CuboPoolInstancial(projeto_id="p", gerado_em="g", celulas=(c1, c2, c3))
+
+    vida = cubo.ciclo_vida_instancias()["ESC-01"]
+    assert vida["prod_w"] == 2
+    assert vida["off_w"] == 1
+    assert vida["semana_mob"] == "2026-W09"
+    assert vida["semana_demob"] == "2026-W10"

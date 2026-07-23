@@ -45,3 +45,25 @@ class TestServiceSupportBuildSummaryNoneResult:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+# ─── service_support.py (also covered in batch4, adding extra paths here) ─────
+
+
+class TestServiceSupport:
+    def test_deep_merge_nested(self):
+        from concilium.application.services.service_support import deep_merge
+
+        result = deep_merge({"a": {"x": 1, "y": 2}}, {"a": {"y": 99}})
+        assert result["a"]["x"] == 1
+        assert result["a"]["y"] == 99
+
+    def test_build_summary_none_returns_empty(self):
+        from concilium.application.services.service_support import build_summary
+
+        assert build_summary(None) == {}
+
+
+

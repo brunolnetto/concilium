@@ -542,3 +542,85 @@ class TestSCurveBuilderHelpers:
         sa.distribuicao_semanal = {}
         result = _scb_collect_semanas([sa])
         assert result == (None, None)
+
+
+# ─── domain/models/analytics/analitica.py (10 missing: 59-60, 91, 93-98, 100) ─
+
+
+class TestAnaliticaModels:
+    def _make_item_abc(self, classe="A"):
+        from concilium.domain.models.analytics.analitica import ItemCurvaABC
+
+        return ItemCurvaABC(
+            insumo_id="INS-1",
+            descricao="Diesel",
+            categoria="COMBUSTIVEL",
+            custo_total=1000.0,
+            pct_custo=0.8,
+            pct_custo_acumulado=0.8,
+            classe=classe,
+            atividades=("A1", "A2"),
+        )
+
+    def test_item_abc_descricao_classe_A(self):
+        item = self._make_item_abc("A")
+        assert "Crítico" in item.descricao_classe or "80" in item.descricao_classe
+
+    def test_item_abc_descricao_classe_B(self):
+        item = self._make_item_abc("B")
+        assert "B" in item.descricao_classe or "15" in item.descricao_classe
+
+    def test_item_abc_descricao_classe_C(self):
+        item = self._make_item_abc("C")
+        assert "C" in item.descricao_classe or "5" in item.descricao_classe
+
+    def test_curva_abc_insumo_to_dict(self):
+        from concilium.domain.models.analytics.analitica import CurvaABCInsumo
+
+        item = self._make_item_abc("A")
+        curva = CurvaABCInsumo(
+            projeto_id="p1",
+            gerado_em="2026",
+            total_custo_direto=1000.0,
+            itens=(item,),
+            total_a=800.0,
+            total_b=150.0,
+            total_c=50.0,
+            n_itens_a=1,
+            n_itens_b=0,
+            n_itens_c=0,
+        )
+        d = curva.to_dict()
+        assert d["projeto_id"] == "p1"
+        assert isinstance(d["itens"], list)
+
+    def test_scurve_to_dict(self):
+        from concilium.domain.models.analytics.analitica import AgregacaoSemanalEquipamentos, SCurve
+
+        agreg = AgregacaoSemanalEquipamentos(
+            semana_iso="2026-W01",
+            semana_offset=0,
+            equipamentos_ativos={},
+            n_equipamentos_unicos=0,
+            n_equipes_totais=0,
+            custo_direto_semana=8000.0,
+            custo_indireto_semana=2000.0,
+            custo_total_semana=10000.0,
+        )
+        scurve = SCurve(
+            projeto_id="p1",
+            gerado_em="2026",
+            total_custo_direto=100000.0,
+            total_custo_indireto=20000.0,
+            total_projeto=120000.0,
+            semanas_iso=("2026-W01",),
+            custo_semanal=(10000.0,),
+            custo_acumulado=(10000.0,),
+            pct_acumulado=(0.1,),
+            agregacao_semanal=(agreg,),
+        )
+        d = scurve.to_dict()
+        assert d["projeto_id"] == "p1"
+
+
+

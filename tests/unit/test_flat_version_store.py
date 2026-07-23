@@ -87,3 +87,60 @@ class TestFlatVersionStoreReadInvocationsEmptyLines:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+# ─── infrastructure/storage/flat_version_store.py ─────────────────────────────
+
+
+class TestFlatVersionStore2:
+    def _make_store(self, tmp_path):
+        from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
+        proj_mock = MagicMock()
+        proj_mock.meta = {
+            "contexto_id": "ctx-1",
+            "snapshot_catalogo_id": "cat-v2",
+            "snapshot_perfil_id": "perf-1",
+        }
+        ver_path = tmp_path / "v1"
+        ver_path.mkdir()
+        proj_mock.version_path.return_value = ver_path
+        proj_mock.load_canonical.return_value = None
+        return FlatVersionStore(proj_mock, "v1")
+
+    def test_plano_id(self, tmp_path):
+        store = self._make_store(tmp_path)
+        assert store.plano_id == "v1"
+
+    def test_meta(self, tmp_path):
+        store = self._make_store(tmp_path)
+        assert store.meta["plano_id"] == "v1"
+
+    def test_escopo_store_meta_with_snapshots(self, tmp_path):
+        store = self._make_store(tmp_path)
+        meta = store.escopo_store.meta
+        assert meta["snapshot_catalogo_id"] == "cat-v2"
+        assert meta["snapshot_perfil_id"] == "perf-1"
+
+    def test_log_and_read_invocations(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.log_invocation({"skill": "01-escopo-e-eap", "status": "OK"})
+        store.log_invocation({"skill": "02-prod", "status": "ERRO"})
+        entries = store.read_invocations()
+        assert len(entries) == 2
+        assert entries[0]["skill"] == "01-escopo-e-eap"
+
+    def test_read_invocations_empty(self, tmp_path):
+        store = self._make_store(tmp_path)
+        assert store.read_invocations() == []
+
+    def test_read_invocations_skips_invalid_json(self, tmp_path):
+        store = self._make_store(tmp_path)
+        log_file = store.root / store.INVOCATIONS_LOG
+        log_file.write_text('{"ok": true}\nBAD JSON\n{"second": true}\n')
+        entries = store.read_invocations()
+        assert len(entries) == 2
+
+
+

@@ -23,6 +23,7 @@ from concilium.domain.constants import (
 from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA
 from concilium.domain.models.financial.memorial_bdi import (
     MemorialCalculoBDI,
+    MemorialDecomposicao,
 )
 from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
@@ -312,3 +313,22 @@ class TestMemorialCalculoBDI:
             assert memorial.meta.regime_tributario == regime
             for _cat, bdi in memorial.bdi_por_categoria.items():
                 assert bdi.regime_version == regime
+
+
+def test_memorial_decomposicao_properties():
+    mem = MemorialDecomposicao(
+        categoria="mao_obra",
+        custo_direto_pct=0.7,
+        overhead_ac_pct=0.03,
+        overhead_df_pct=0.02,
+        overhead_r_pct=0.01,
+        overhead_cr_pct=0.04,
+        margem_l_pct=0.05,
+        tributo_cofins_pct=0.01,
+        tributo_iss_pct=0.02,
+        tributo_pis_pct=0.0,
+        tributo_cssl_pct=0.03,
+        tributo_ir_pct=0.04,
+        soma=0.95,
+    )
+    assert mem.overhead_total_pct == 0.10

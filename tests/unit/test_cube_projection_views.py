@@ -216,3 +216,76 @@ class TestCubeProjectionViews:
 
 
 
+
+
+
+# ─── application/services/analytics/cube_projection_views.py ──────────────────
+
+
+class TestCubeProjectionViews2:
+    def test_bucket_from_week_iso(self):
+        from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+
+        result = bucket_from_week_iso("2026-W10", "mes")
+        assert isinstance(result, str)
+
+    def test_bucket_from_week_iso_semana(self):
+        from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+
+        result = bucket_from_week_iso("2026-W10", "semana")
+        assert result == "2026-W10"
+
+    def test_resolve_cubo_projection_rows_with_canonical(self):
+        from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+        canonical = MagicMock()
+        canonical.cronograma.scheduled_activities = []
+        canonical.cronograma.makespan_weeks = 0
+        canonical.equipes_diretas = []
+        rows, cols, label = resolve_cubo_projection_rows(
+            None, face="tempo_natureza", granularidade="semana", top_n=10, canonical=canonical
+        )
+        assert isinstance(rows, list)
+
+    def test_resolve_recursos_ativos_rows_mock_canonical(self):
+        from concilium.application.services.analytics.cube_projection_views import resolve_recursos_ativos_rows
+
+        canonical = MagicMock()
+        canonical.cronograma.scheduled_activities = []
+        canonical.cronograma.makespan_weeks = 0
+        canonical.equipes_diretas = []
+        rows, cols, label, meta, extra = resolve_recursos_ativos_rows(canonical, granularidade="semana", top_n=10)
+        assert isinstance(rows, list)
+
+    def test_resolve_s_curve_rows_mock_canonical(self):
+        from concilium.application.services.analytics.cube_projection_views import resolve_s_curve_rows
+
+        canonical = MagicMock()
+        canonical.cronograma.scheduled_activities = []
+        canonical.cronograma.makespan_weeks = 0
+        canonical.equipes_diretas = []
+        canonical.resultado = None
+        rows, cols, label, meta, extra = resolve_s_curve_rows(canonical, granularidade="semana", top_n=10)
+        assert isinstance(rows, list)
+
+    def test_resolve_abc_curva_rows_mock_canonical(self):
+        from concilium.application.services.analytics.cube_projection_views import resolve_abc_curva_rows
+
+        canonical = MagicMock()
+        canonical.equipes_diretas = []
+        rows, cols, label, meta, extra = resolve_abc_curva_rows(canonical, top_n=10, threshold_a=0.8, threshold_b=0.95)
+        assert isinstance(rows, list)
+
+    def test_build_cube_projection_payload_empty(self):
+        from concilium.application.services.analytics.cube_projection_views import build_cube_projection_payload
+
+        canonical = MagicMock()
+        canonical.cronograma.scheduled_activities = []
+        canonical.cronograma.makespan_weeks = 0
+        canonical.equipes_diretas = []
+        canonical.resultado = None
+        result = build_cube_projection_payload(
+            canonical=canonical, cubo=None, face="tempo_natureza", granularidade="semana", top_n=5
+        )
+        assert isinstance(result, dict)
+

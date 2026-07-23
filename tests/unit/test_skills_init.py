@@ -129,3 +129,41 @@ class TestSkillsInitExtended:
 
 
 
+
+
+
+# ─── application/skills/__init__.py (36 missing) ──────────────────────────────
+
+
+class TestSkillsInit2:
+    def test_import_skills_module(self):
+        import concilium.application.skills as skills
+
+        assert skills is not None
+
+    def test_skills_dict_has_entries(self):
+        from concilium.application.skills import SKILLS
+
+        assert len(SKILLS) > 0
+
+    def test_skills_contains_skill01(self):
+        from concilium.application.skills import SKILLS
+
+        assert "01-escopo-e-eap" in SKILLS
+
+    def test_skill_registry_loads(self):
+        from concilium.application.skills.registry import SkillRegistry
+
+        registry = SkillRegistry()
+        assert len(registry.skills) > 0
+
+    def test_get_skill_contract(self):
+        from concilium.application.skills.registry import SkillRegistry
+
+        registry = SkillRegistry()
+        skill = registry.get_skill("01-escopo-e-eap")
+        assert skill is not None
+        assert hasattr(skill, "depends_on_skills")
+
+
+

@@ -267,3 +267,78 @@ class TestLoadInsumos:
 
 
 
+
+
+# ─── application/runtime/mixins/catalog.py (49 missing) ─────────────────────
+
+
+class TestCatalogMixin:
+    def _make_mixin(self, tmp_path):
+        from concilium.application.runtime.mixins.catalog import CatalogMixin
+
+        obj = CatalogMixin.__new__(CatalogMixin)
+        obj.config_root = tmp_path
+        obj._config_cache = {}
+        return obj
+
+    def test_load_catalogo_not_found_raises_a(self, tmp_path):
+        from concilium.application.runtime.exceptions import RuntimeDomainError
+
+        mixin = self._make_mixin(tmp_path)
+        with pytest.raises((RuntimeDomainError, FileNotFoundError)):
+            mixin.load_catalogo("nonexistent-cat")
+
+    def test_load_catalogo_not_found_raises(self, tmp_path):
+        from concilium.application.runtime.exceptions import RuntimeDomainError
+
+        mixin = self._make_mixin(tmp_path)
+        with pytest.raises(RuntimeDomainError):
+            mixin.load_catalogo("missing-cat")
+
+    def test_load_catalogo_basic(self, tmp_path):
+        from concilium.application.runtime.mixins.catalog import CatalogMixin
+
+        # Create a minimal catalog directory
+        cat_dir = tmp_path / "catalogos" / "test-cat"
+        cat_dir.mkdir(parents=True)
+        (cat_dir / "cpus.json").write_text('{"cpus": []}', encoding="utf-8")
+        obj = CatalogMixin.__new__(CatalogMixin)
+        obj.config_root = tmp_path
+        obj._config_cache = {}
+        cat = obj.load_catalogo("test-cat")
+        assert isinstance(cat, dict)
+
+    def test_load_catalogo_with_bundle_cache(self, tmp_path):
+        """Test that bundle cache is used when available."""
+
+        cat_dir = tmp_path / "catalogos" / "test-cat2"
+        cat_dir.mkdir(parents=True)
+        (cat_dir / "cpus.json").write_text('{"cpus": [{"codigo": "CPU-1"}]}', encoding="utf-8")
+        from concilium.application.runtime.mixins.catalog import CatalogMixin
+
+        obj = CatalogMixin.__new__(CatalogMixin)
+        obj.config_root = tmp_path
+        obj._config_cache = {}
+        cat = obj.load_catalogo("test-cat2")
+        # Second load should use cache
+        cat2 = obj.load_catalogo("test-cat2")
+        assert cat == cat2  # same content (may or may not be same object)
+
+    def test_load_resolved_catalogo(self, tmp_path):
+        from concilium.application.runtime.mixins.catalog import CatalogMixin
+
+        cat_dir = tmp_path / "catalogos" / "test-cat"
+        cat_dir.mkdir(parents=True)
+        (cat_dir / "cpus.json").write_text('{"cpus": []}', encoding="utf-8")
+        obj = CatalogMixin.__new__(CatalogMixin)
+        obj.config_root = tmp_path
+        obj._config_cache = {}
+        # Mock the snapshot/project for overlay loading
+        project = MagicMock()
+        project.meta = {"id": "proj-1"}
+        project.read_json.return_value = {}
+        cat = obj._load_resolved_catalogo("test-cat", None, project)
+        assert isinstance(cat, dict)
+
+
+

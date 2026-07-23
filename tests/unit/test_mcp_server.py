@@ -89,3 +89,66 @@ class TestMcpServerMain:
 
 
 
+
+
+
+
+# ─── presentation/mcp/server.py ───────────────────────────────────────────────
+
+
+class TestMcpServer2:
+    def test_build_server_returns_fastmcp(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "config"))
+        (tmp_path / "config").mkdir()
+        from concilium.presentation.mcp.server import build_server
+
+        server = build_server()
+        assert server is not None
+
+    def test_patch_mcp_with_auth(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "config"))
+        (tmp_path / "config").mkdir()
+        from concilium.presentation.mcp.middleware import McpAuthMiddleware
+        from concilium.presentation.mcp.server import _AuthenticatedFastMCP
+
+        server = _AuthenticatedFastMCP("test")
+        result = server.streamable_http_app()
+        assert isinstance(result, McpAuthMiddleware)
+        result_sse = server.sse_app()
+        assert isinstance(result_sse, McpAuthMiddleware)
+
+    def test_main_config_not_found(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "nonexistent"))
+        from concilium.presentation.mcp.server import main
+
+        with pytest.raises(RuntimeError, match="não encontrado"):
+            main()
+
+    def test_main_config_not_dir(self, monkeypatch, tmp_path):
+        config_file = tmp_path / "config.json"
+        config_file.write_text("{}")
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_file))
+        from concilium.presentation.mcp.server import main
+
+        with pytest.raises(RuntimeError, match="não é diretório"):
+            main()
+
+
+
+
+# ─── presentation/mcp/__main__.py (1 missing: line 6) ─────────────────────────
+
+
+class TestMcpMain:
+    def test_module_has_main(self):
+        import concilium.presentation.mcp.__main__ as mod
+
+        assert hasattr(mod, "main")
+
+    def test_main_importable_from_module(self):
+        from concilium.presentation.mcp.__main__ import main
+
+        assert callable(main)
+
+
+

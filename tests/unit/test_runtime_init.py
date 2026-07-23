@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -337,4 +337,115 @@ class TestRunSkillOnPlanoShouldSaveFalse:
             runtime.run_skill_on_plano("00-escopo", project, plano_store)
 
         plano_store.save_canonical.assert_not_called()
+
+
+
+# ─── application/runtime/__init__.py (30 missing) ─────────────────────────────
+
+
+class TestRuntimeInit2:
+    def test_runtime_importable(self):
+        from concilium.application.runtime import Runtime
+
+        assert Runtime is not None
+
+    def test_runtime_init(self, tmp_path):
+        from concilium.application.runtime import Runtime
+
+        rt = Runtime(config_root=tmp_path)
+        assert rt is not None
+
+    def test_runtime_has_run_pipeline(self, tmp_path):
+        from concilium.application.runtime import Runtime
+
+        rt = Runtime(config_root=tmp_path)
+        assert hasattr(rt, "run_pipeline")
+
+
+
+
+# ─── application/runtime/__init__.py extended tests ────────────────────────────
+
+
+class TestRuntimeRunPipeline:
+    """Test run_pipeline which covers lines 112-148."""
+
+    def test_run_pipeline_no_active_version_raises(self, tmp_path):
+        from concilium.application.runtime import Runtime, RuntimeDomainError
+
+        rt = Runtime(config_root=tmp_path)
+        store = MagicMock()
+        store.current_version.return_value = None
+        with pytest.raises(RuntimeDomainError, match="versão"):
+            rt.run_pipeline(store)
+
+    def test_run_pipeline_with_version(self, tmp_path):
+        from concilium.application.runtime import Runtime
+
+        rt = Runtime(config_root=tmp_path)
+        store = MagicMock()
+        store.current_version.return_value = "v1"
+        store.load_canonical.return_value = None
+        store.meta = {"contexto_id": "ctx-1", "id": "proj-1"}
+        store.root = MagicMock()
+        store.root.name = "proj-dir"
+
+        # Mock out _providers_factory to avoid loading real catalogs
+        with patch.object(
+            rt,
+            "_providers_factory",
+            return_value={
+                "canonical_in": None,
+                "inputs": {},
+                "catalogo": {},
+                "catalog_session": None,
+                "perfil": {},
+                "contexto": MagicMock(),
+                "project": store,
+                "version": "v1",
+                "runtime": rt,
+            },
+        ):
+            with patch("concilium.application.runtime.SkillExecutor") as mock_executor_cls:
+                executor = MagicMock()
+                executor.run_pipeline.return_value = (None, [])
+                mock_executor_cls.return_value = executor
+                result = rt.run_pipeline(store, skill_sequence=["01-escopo-e-eap"])
+        assert isinstance(result, list)
+
+    def test_run_pipeline_with_existing_canonical_skips_bootstrap(self, tmp_path):
+        """load_canonical() já não-None -> skip_bootstrap=True -> 01-escopo-e-eap removido."""
+        from concilium.application.runtime import Runtime
+
+        rt = Runtime(config_root=tmp_path)
+        store = MagicMock()
+        store.current_version.return_value = "v1"
+        store.load_canonical.return_value = MagicMock()  # canônico já existe
+        store.meta = {"contexto_id": "ctx-1", "id": "proj-1"}
+        store.root = MagicMock()
+        store.root.name = "proj-dir"
+
+        with patch.object(
+            rt,
+            "_providers_factory",
+            return_value={
+                "canonical_in": None,
+                "inputs": {},
+                "catalogo": {},
+                "catalog_session": None,
+                "perfil": {},
+                "contexto": MagicMock(),
+                "project": store,
+                "version": "v1",
+                "runtime": rt,
+            },
+        ):
+            with patch("concilium.application.runtime.SkillExecutor") as mock_executor_cls:
+                executor = MagicMock()
+                executor.run_pipeline.return_value = (None, [])
+                mock_executor_cls.return_value = executor
+                rt.run_pipeline(store, skill_sequence=["01-escopo-e-eap", "02-cronograma"])
+
+        active_skills_arg = mock_executor_cls.call_args[0][0]
+        assert "01-escopo-e-eap" not in active_skills_arg
 

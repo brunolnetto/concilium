@@ -1177,3 +1177,22 @@ class TestClasse4CpuAlternativo:
         assert len(grid) == 2
         cpu_ids = [sv["spec"]["eap"][0]["cpu_id"] for sv, _ in grid]
         assert set(cpu_ids) == {"CPU-A", "CPU-B"}
+
+
+def test_campaign_bundle_cardinality_breakdown_and_post_init():
+    sweep = [
+        ParametroSweep(campo="a", valores=[1, 2]),
+        ParametroSweep(campo="b", valores=["x", "y"], scope="per_item", item_ids=["i1", "i2"]),
+    ]
+    bundle = GoResearchCampaignBundle(base_spec={"x": 1}, sweep=sweep)
+    rows = bundle.cardinality_breakdown()
+
+    assert rows[0]["scope"] == "global"
+    assert rows[0]["acumulado"] == 2
+    assert rows[1]["scope"] == "per_item"
+    assert rows[1]["n_items"] == 2
+    assert rows[1]["contrib"] == 4
+    assert rows[1]["acumulado"] == 8
+
+    explicit = GoResearchCampaignBundle(base_spec={"x": 1}, sweep=[], campaign_id="campaign-fixed")
+    assert explicit.campaign_id == "campaign-fixed"

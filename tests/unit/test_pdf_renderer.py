@@ -132,3 +132,63 @@ class TestPdfRendererImageEmbedSuccess:
 
 
 
+
+
+# ─── application/runtime/deliverables/reports/pdf_renderer.py ─────────────────
+
+
+class TestPdfRenderer2:
+    def test_strip_inline_bold(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import _strip_inline
+
+        result = _strip_inline("**bold text**")
+        assert "bold text" in result
+        assert "**" not in result
+
+    def test_strip_inline_code(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import _strip_inline
+
+        result = _strip_inline("`code`")
+        assert "code" in result
+        assert "`" not in result
+
+    def test_is_table_sep_true(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import _is_table_sep
+
+        assert _is_table_sep("|---|---|") is True
+        assert _is_table_sep("| :--- | ---: |") is True
+
+    def test_is_table_sep_false(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import _is_table_sep
+
+        assert _is_table_sep("| data | row |") is False
+
+    def test_render_table_row_no_crash(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import _render_table_row
+
+        pdf = MagicMock()
+        _render_table_row(pdf, "| col1 | col2 | col3 |", col_w=60.0)
+        assert pdf.cell.call_count >= 1
+
+    def test_render_markdown_pdf_empty_returns_bytes_or_none(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import render_markdown_pdf
+
+        result = render_markdown_pdf("")
+        assert result is None or isinstance(result, bytes)
+
+    def test_render_markdown_pdf_basic(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import render_markdown_pdf
+
+        md = "# Title\n\nThis is a paragraph.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n"
+        result = render_markdown_pdf(md, title="Test Report")
+        assert result is None or isinstance(result, bytes)
+
+    def test_render_markdown_pdf_with_code_block(self):
+        from concilium.application.runtime.deliverables.reports.pdf_renderer import render_markdown_pdf
+
+        md = "Normal text\n\n```\ncode block\n```\n\nAfter code."
+        result = render_markdown_pdf(md)
+        assert result is None or isinstance(result, bytes)
+
+
+

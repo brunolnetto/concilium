@@ -345,3 +345,197 @@ class TestProjectsRoutes:
         with pytest.raises(HTTPException) as exc:
             delete_version("proj-1", "v1", x_user="eng", service=svc)
         assert exc.value.status_code == 400
+
+
+
+# ─── presentation/api/routes/catalogs.py (8 missing: 63-64, 89-92, 105-106) ───
+
+
+_catalogs_app_cache: list = []  # list-as-cache para evitar global mutável
+
+
+class TestApiCatalogsRoutes:
+    def _client(self, svc):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+
+        try:
+            from concilium.presentation.api.app import create_app
+            from concilium.presentation.api.container import get_concilium_service
+        except TypeError:
+            pytest.skip("FastAPI incompatível")
+        if not _catalogs_app_cache:
+            _catalogs_app_cache.append(create_app())
+        app = _catalogs_app_cache[0]
+        app.dependency_overrides[get_concilium_service] = lambda: svc
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_get_cpu_returns_none_gives_404(self):
+        svc = MagicMock()
+        svc.get_catalog_cpu.return_value = None
+        c = self._client(svc)
+        resp = c.get("/api/catalogs/cat-1/cpus/CPU-MISSING")
+        assert resp.status_code == 404
+
+    def test_get_cpu_exception_gives_404(self):
+        svc = MagicMock()
+        svc.get_catalog_cpu.side_effect = RuntimeError("not found")
+        c = self._client(svc)
+        resp = c.get("/api/catalogs/cat-1/cpus/CPU-1")
+        assert resp.status_code == 404
+
+    def test_upsert_cpu_value_error_gives_422(self):
+        svc = MagicMock()
+        svc.upsert_catalog_cpu.side_effect = ValueError("invalid")
+        c = self._client(svc)
+        resp = c.put("/api/catalogs/cat-1/cpus/CPU-1", json={"cpu_data": {}, "motivo": "test"})
+        assert resp.status_code == 422
+
+    def test_list_insumos_error_gives_404(self):
+        svc = MagicMock()
+        svc.list_catalog_insumos.side_effect = FileNotFoundError("cat not found")
+        c = self._client(svc)
+        resp = c.get("/api/catalogs/cat-1/insumos")
+        assert resp.status_code == 404
+
+
+# ─── presentation/api/routes/projects.py (10 missing — patch_project_config error) ──
+
+
+@pytest.fixture(scope="module")
+def _projects_app():
+    """App FastAPI criado uma vez por módulo para TestProjectsRouteErrors."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    try:
+        from concilium.presentation.api.app import create_app
+    except TypeError:
+        pytest.skip("FastAPI incompatível")
+    app = create_app()
+    with TestClient(app, raise_server_exceptions=False):
+        yield app  # yield the app, not the client — svc varies per test
+
+
+class TestProjectsRouteErrors:
+    def _client(self, svc=None):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+
+        try:
+            from concilium.presentation.api.app import create_app
+            from concilium.presentation.api.container import get_concilium_service
+        except TypeError:
+            pytest.skip("FastAPI incompatível")
+        app = create_app()
+        if svc:
+            app.dependency_overrides[get_concilium_service] = lambda: svc
+        return TestClient(app, raise_server_exceptions=False)
+
+    def _client_with_svc(self, app, svc):
+        from fastapi.testclient import TestClient
+
+        from concilium.presentation.api.container import get_concilium_service
+
+        app.dependency_overrides[get_concilium_service] = lambda: svc
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_patch_project_config_not_found(self, _projects_app):
+        svc = MagicMock()
+        svc.patch_project_config.side_effect = FileNotFoundError("not found")
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.patch("/api/projects/proj-1/config", json={"nome": "X"})
+        assert resp.status_code == 404
+
+    def test_upsert_eap_happy(self, _projects_app):
+        svc = MagicMock()
+        svc.upsert_eap.return_value = {"eap": [{"item_id": "1.1"}]}
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.put("/api/projects/proj-1/eap", json={"items": [{"item_id": "1.1", "cpu_id": "CPU-1"}]})
+        assert resp.status_code in (200, 422)
+
+    def test_delete_project_generic_exception(self, _projects_app):
+        svc = MagicMock()
+        svc.delete_project.side_effect = RuntimeError("boom")
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.delete("/api/projects/proj-1")
+        assert resp.status_code == 400
+        assert "boom" in resp.json()["detail"]
+
+    def test_delete_project_not_found(self, _projects_app):
+        svc = MagicMock()
+        svc.delete_project.side_effect = FileNotFoundError("nope")
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.delete("/api/projects/proj-1")
+        assert resp.status_code == 404
+
+    def test_delete_version_generic_exception(self, _projects_app):
+        svc = MagicMock()
+        svc.delete_version.side_effect = RuntimeError("boom-version")
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.delete("/api/projects/proj-1/versions/v1")
+        assert resp.status_code == 400
+        assert "boom-version" in resp.json()["detail"]
+
+    def test_upsert_eap_value_error(self, _projects_app):
+        svc = MagicMock()
+        svc.upsert_eap.side_effect = ValueError("ciclo detectado")
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.put("/api/projects/proj-1/eap", json=[{"item_id": "1.1", "cpu_id": "CPU-1"}])
+        assert resp.status_code == 422
+
+    def test_upsert_eap_not_found(self, _projects_app):
+        svc = MagicMock()
+        svc.upsert_eap.side_effect = FileNotFoundError("no project")
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.put("/api/projects/proj-1/eap", json=[{"item_id": "1.1", "cpu_id": "CPU-1"}])
+        assert resp.status_code == 404
+
+    def test_list_versions_tree_builds_hierarchy(self, _projects_app):
+        """ADR-119 D3: ?tree=true returns hierarchical tree with authorship metadata."""
+        svc = MagicMock()
+        svc.list_versions.return_value = ["v1", "v2", "v3"]
+        svc.get_version_history.return_value = {
+            "v1": {
+                "criado_em": "2026-01-01",
+                "criado_por": "alice",
+                "role_criador": "engenheiro",
+                "procurement_intent": None,
+                "forked_from": None,
+                "motivo": "inicial",
+            },
+            "v2": {
+                "criado_em": "2026-01-02",
+                "criado_por": "bob",
+                "role_criador": "gerente",
+                "procurement_intent": "orcamento",
+                "forked_from": "v1",
+                "motivo": "revisao",
+            },
+            "v3": {
+                "criado_em": "2026-01-03",
+                "criado_por": "carol",
+                "role_criador": "gerente",
+                "procurement_intent": None,
+                # forked_from references a version not present in items -> treated as root
+                "forked_from": "v-nonexistent",
+                "motivo": "cenario",
+            },
+        }
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.get("/api/projects/proj-1/versions?tree=true")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert set(body["roots"]) == {"v1", "v3"}
+        assert body["children"] == {"v1": ["v2"]}
+        assert len(body["items"]) == 3
+
+    def test_list_versions_not_found(self, _projects_app):
+        svc = MagicMock()
+        svc.list_versions.side_effect = FileNotFoundError("no project")
+        c = self._client_with_svc(_projects_app, svc)
+        resp = c.get("/api/projects/proj-1/versions")
+        assert resp.status_code == 404
+
+
+

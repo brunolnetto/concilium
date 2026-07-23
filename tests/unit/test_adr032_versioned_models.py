@@ -314,3 +314,25 @@ class TestCircularDeps:
         # This branch ensures that self-reference is filtered out (no self-loop in graph)
         erros = verificar_ciclos_cpu(catalogo2)
         assert isinstance(erros, list)
+
+
+def test_cpu_versionada_custo_unitario_none_branch():
+    cpu = CPUVersionada(
+        id="CPU-X",
+        descricao="CPU X",
+        unidade="m3",
+        categoria="TERRAPLENAGEM",
+        versoes=[
+            VersaoCPU(
+                versao="2026-04",
+                validade=DateRange(inicio=date(2026, 4, 1), fim=date(2026, 5, 1)),
+                producao_horaria=10.0,
+                custo_unitario_sem_encargos=20.0,
+                encargos_aplicados_pct=0.5,
+                jurisdicao_id_atu="BR-CE@2026-04",
+                auditado_por="qa",
+                auditado_em=datetime(2026, 4, 2),
+            )
+        ],
+    )
+    assert cpu.custo_unitario_em(date(2025, 1, 1)) is None

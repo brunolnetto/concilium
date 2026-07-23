@@ -484,3 +484,263 @@ class TestRpHistoricoScd2KeyError:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+# ─── infrastructure/repositories/insumo.py ────────────────────────────────────
+
+
+class TestRepositorioInsumo2:
+    def _make_repo(self, insumos=None, producoes=None):
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalog = {
+            "insumos": insumos if insumos is not None else [{"codigo": "DIESEL", "preco_unitario": 6.5}],
+            "producoes": producoes or [],
+        }
+        return RepositorioInsumo(catalog)
+
+    def test_import(self):
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        assert RepositorioInsumo is not None
+
+    def test_obter_insumo_found(self):
+        repo = self._make_repo()
+        result = repo.obter_insumo("DIESEL")
+        assert result is not None
+        assert result["codigo"] == "DIESEL"
+
+    def test_obter_insumo_not_found(self):
+        repo = self._make_repo([])
+        assert repo.obter_insumo("MISSING") is None
+
+    def test_insumo_existe(self):
+        repo = self._make_repo()
+        assert repo.insumo_existe("DIESEL") is True
+        assert repo.insumo_existe("MISSING") is False
+
+    def test_obter_producao_found(self):
+        repo = self._make_repo(producoes=[{"id": "PROD-1", "valor_horario": 50.0}])
+        result = repo.obter_producao("PROD-1")
+        assert result is not None
+
+    def test_producao_existe(self):
+        repo = self._make_repo(producoes=[{"id": "PROD-1"}])
+        assert repo.producao_existe("PROD-1") is True
+        assert repo.producao_existe("MISSING") is False
+
+    def test_preco_na_data_flat(self):
+        repo = self._make_repo()
+        preco = repo.preco_na_data("DIESEL")
+        assert preco == 6.5
+
+    def test_preco_na_data_missing(self):
+        repo = self._make_repo()
+        assert repo.preco_na_data("MISSING") is None
+
+    def test_resolver_preco_master_base(self):
+        repo = self._make_repo()
+        preco, fonte = repo.resolver_preco("DIESEL")
+        assert preco == 6.5
+        assert fonte == "MASTER_BASE"
+
+    def test_resolver_preco_override(self):
+        repo = self._make_repo()
+        preco, fonte = repo.resolver_preco("DIESEL", overrides={"DIESEL": {"preco_calibrado": 7.0}})
+        assert preco == 7.0
+        assert fonte == "PROJECT_OVERRIDE"
+
+    def test_atualizar_preco(self):
+        from datetime import date
+
+        repo = self._make_repo()
+        repo.atualizar_preco("DIESEL", 7.5, data_vigencia=date(2026, 1, 1), fonte="PROJECT_OVERRIDE")
+        assert repo.obter_insumo("DIESEL") is not None  # still exists
+
+    def test_lookup_preco_historico_loops_past_non_matching_record(self):
+        """Branch 80->76: primeiro registro (mais recente) não cobre a data → continua para o próximo."""
+        from concilium.infrastructure.repositories.insumo import _lookup_preco_historico
+
+        historico = [
+            {"data_inicio_vigencia": "2025-01-01", "data_fim_vigencia": "2025-06-30", "preco_unitario": 5.0},
+            {"data_inicio_vigencia": "2025-07-01", "data_fim_vigencia": None, "preco_unitario": 6.0},
+        ]
+        # Data pede o período coberto pelo PRIMEIRO registro (mais antigo); o loop
+        # (reversed) começa pelo mais recente, que não cobre a data → continua.
+        preco = _lookup_preco_historico(historico, "2025-03-15")
+        assert preco == 5.0
+
+    def test_preco_na_data_scd2_no_matching_record_falls_back_to_flat(self):
+        """Branch 132->136: historico_precos presente mas sem registro cobrindo a data → fallback plano."""
+        repo = self._make_repo(
+            insumos=[
+                {
+                    "codigo": "DIESEL",
+                    "preco_unitario": 6.5,
+                    "historico_precos": [
+                        {"data_inicio_vigencia": "2030-01-01", "data_fim_vigencia": None, "preco_unitario": 99.0},
+                    ],
+                }
+            ]
+        )
+        preco = repo.preco_na_data("DIESEL", data_referencia="2020-01-01")
+        assert preco == 6.5
+
+    def test_atualizar_preco_loops_past_already_closed_and_newer_record(self):
+        """Branches 200->199 (registro já fechado) e 202->199 (vigência não é anterior à nova data)."""
+        from datetime import date
+
+        repo = self._make_repo(
+            insumos=[
+                {
+                    "codigo": "DIESEL",
+                    "preco_unitario": 6.5,
+                    "historico_precos": [
+                        # já fechado → não deve ser tocado (branch 200->199)
+                        {
+                            "data_inicio_vigencia": "2025-01-01",
+                            "data_fim_vigencia": "2025-06-30",
+                            "preco_unitario": 5.0,
+                        },
+                        # aberto mas com vigência POSTERIOR à nova data_vigencia → não fecha (branch 202->199)
+                        {"data_inicio_vigencia": "2030-01-01", "data_fim_vigencia": None, "preco_unitario": 7.0},
+                    ],
+                }
+            ]
+        )
+        repo.atualizar_preco("DIESEL", 8.0, data_vigencia=date(2026, 1, 1), fonte="PROJECT_OVERRIDE")
+        insumo = repo.obter_insumo("DIESEL")
+        historico = insumo["historico_precos"]
+        # O registro já fechado permanece inalterado.
+        assert historico[0]["data_fim_vigencia"] == "2025-06-30"
+        # O registro com vigência futura (2030) não é fechado pela nova vigência de 2026.
+        assert historico[1]["data_fim_vigencia"] is None
+
+
+
+
+# ─── rp helper functions ───────────────────────────────────────────────────────
+
+
+class TestRpHelpers:
+    def test_rp_check_override_found(self):
+        from concilium.infrastructure.repositories.insumo import _rp_check_override
+
+        result = _rp_check_override("DIESEL", {"DIESEL": {"preco_calibrado": 7.0}}, None)
+        assert result is not None
+        assert result[0] == 7.0
+
+    def test_rp_check_override_not_found(self):
+        from concilium.infrastructure.repositories.insumo import _rp_check_override
+
+        assert _rp_check_override("MISSING", {"DIESEL": {}}, None) is None
+
+    def test_rp_check_override_empty(self):
+        from concilium.infrastructure.repositories.insumo import _rp_check_override
+
+        assert _rp_check_override("DIESEL", None, None) is None
+
+    def test_rp_sicro_regional_found(self):
+        from concilium.infrastructure.repositories.insumo import _rp_sicro_regional
+
+        insumo = {"regionalizacao": {"JUR-1": {"preco": 8.0}}}
+        result = _rp_sicro_regional(insumo, "JUR-1")
+        assert result is not None
+        assert result[0] == 8.0
+
+    def test_rp_sicro_regional_not_applicable(self):
+        from concilium.infrastructure.repositories.insumo import _rp_sicro_regional
+
+        assert _rp_sicro_regional({"preco_unitario": 5.0}, None) is None
+
+    def test_rp_historico_scd2(self):
+        from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
+
+        insumo = {
+            "historico_precos": [
+                {"data_inicio_vigencia": "2026-01-01", "data_fim_vigencia": "2026-06-30", "preco_unitario": 6.5},
+                {"data_inicio_vigencia": "2026-07-01", "preco_unitario": 7.0},
+            ]
+        }
+        result = _rp_historico_scd2(insumo, date(2026, 3, 1))
+        assert result is not None
+        assert result[0] == 6.5
+        assert result[1] == "HISTORICO_SCD2"
+
+    def test_rp_historico_scd2_none_date(self):
+        from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
+
+        assert _rp_historico_scd2({"historico_precos": []}, None) is None
+
+    def test_repositorio_preco_na_data_with_historico(self):
+        from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalog = {
+            "insumos": [
+                {
+                    "codigo": "DIESEL",
+                    "historico_precos": [{"data_inicio_vigencia": "2026-01-01", "preco_unitario": 6.5}],
+                }
+            ],
+            "producoes": [],
+        }
+        repo = RepositorioInsumo(catalog)
+        preco = repo.preco_na_data("DIESEL", date(2026, 3, 1))
+        assert preco == 6.5
+
+    def test_repositorio_resolver_preco_sicro(self):
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalog = {
+            "insumos": [{"codigo": "DIESEL", "preco_unitario": 5.0, "regionalizacao": {"JUR-1": {"preco": 8.0}}}],
+            "producoes": [],
+        }
+        repo = RepositorioInsumo(catalog)
+        preco, fonte = repo.resolver_preco("DIESEL", jurisdicao_id="JUR-1")
+        assert preco == 8.0
+        assert fonte == "SICRO_REGIONAL"
+
+    def test_repositorio_resolver_preco_historico(self):
+        from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalog = {
+            "insumos": [
+                {
+                    "codigo": "DIESEL",
+                    "historico_precos": [{"data_inicio_vigencia": "2026-01-01", "preco_unitario": 7.5}],
+                }
+            ],
+            "producoes": [],
+        }
+        repo = RepositorioInsumo(catalog)
+        preco, fonte = repo.resolver_preco("DIESEL", data_referencia=date(2026, 4, 1))
+        assert preco == 7.5
+        assert fonte == "HISTORICO_SCD2"
+
+    def test_repositorio_atualizar_preco_scd2(self):
+        from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalog = {"insumos": [{"codigo": "DIESEL", "preco_unitario": 6.5}], "producoes": []}
+        repo = RepositorioInsumo(catalog)
+        result = repo.atualizar_preco("DIESEL", 7.0, date(2026, 7, 1), fonte="PROJECT_OVERRIDE")
+        assert result is True
+
+    def test_repositorio_atualizar_preco_not_found(self):
+        from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        repo = RepositorioInsumo({"insumos": [], "producoes": []})
+        result = repo.atualizar_preco("MISSING", 7.0, date(2026, 1, 1))
+        assert result is False
+

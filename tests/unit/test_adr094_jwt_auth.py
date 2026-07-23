@@ -458,3 +458,32 @@ class TestScopeGuard:
         from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
 
         assert TOOL_PERMISSIONS.get(tool) == required_permission
+
+
+
+# ─── presentation/mcp/guards/scope_guard.py (3 missing: 77, 79-80) ────────────
+
+
+class TestScopeGuard2:
+    def test_set_scopes_converts_to_roles(self):
+        from concilium.presentation.mcp.guards.scope_guard import _current_roles, set_scopes
+
+        set_scopes(["mcp:read", "pipeline:run"])
+        roles = list(_current_roles.get())
+        assert "auditor" in roles or "operator" in roles
+
+    def test_set_scopes_unknown_defaults_to_operator(self):
+        from concilium.presentation.mcp.guards.scope_guard import _current_roles, set_scopes
+
+        set_scopes(["unknown:scope"])
+        roles = list(_current_roles.get())
+        assert "operator" in roles
+
+    def test_check_scope_no_auth(self):
+        from concilium.presentation.mcp.guards.scope_guard import check_scope
+
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
+            check_scope("listar_projetos")  # should not raise (looks up TOOL_PERMISSIONS)
+
+
+

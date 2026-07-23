@@ -86,3 +86,124 @@ class TestBfcBdiLucro:
 
 # ---------------------------------------------------------------------------
 
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+import pytest  # noqa: E402
+
+# ─── application/benchmarks/report/projection.py ─────────────────────────────
+
+
+class TestProjectionHelpers:
+    def test_bfc_custo_indireto(self):
+        from concilium.application.benchmarks.report.projection import _bfc_custo_indireto
+
+        custo = MagicMock()
+        custo.indireto_adm = 10000.0
+        custo.indireto_top = 5000.0
+        custo.indireto_lab = 2000.0
+        custo.indireto_qsms = 1000.0
+        custo.indireto_mob = 500.0
+        result = _bfc_custo_indireto(custo)
+        assert result == pytest.approx(18500.0)
+
+    def test_bfc_custo_indireto_none(self):
+        from concilium.application.benchmarks.report.projection import _bfc_custo_indireto
+
+        custo = MagicMock()
+        custo.indireto_adm = None
+        custo.indireto_top = None
+        custo.indireto_lab = None
+        custo.indireto_qsms = None
+        custo.indireto_mob = None
+        result = _bfc_custo_indireto(custo)
+        assert result == 0.0
+
+    def test_bfc_custo_direto_total(self):
+        from concilium.application.benchmarks.report.projection import _bfc_custo_direto_total
+
+        custo = MagicMock()
+        custo.direto.total = 800000.0
+        result = _bfc_custo_direto_total(custo, 18500.0)
+        assert isinstance(result, tuple)
+
+    def test_bfc_preco_venda(self):
+        from concilium.application.benchmarks.report.projection import _bfc_preco_venda
+
+        venda = MagicMock()
+        venda.total_com_bdi = 1200000.0
+        raw_bdi, pv, fonte = _bfc_preco_venda(venda, 1000000.0)
+        assert pv == 1200000.0
+        assert fonte == "total_com_bdi"
+
+    def test_bfc_bdi_lucro(self):
+        from concilium.application.benchmarks.report.projection import _bfc_bdi_lucro
+
+        result = _bfc_bdi_lucro(1200000.0, 1000000.0, None)
+        assert result > 0
+
+    def test_accumulate_planejamento_empty(self):
+        from concilium.application.benchmarks.report.projection import _accumulate_planejamento
+
+        ok, totals = _accumulate_planejamento([])
+        assert ok is False
+
+    def test_accumulate_planejamento_with_data(self):
+        from concilium.application.benchmarks.report.projection import _accumulate_planejamento
+
+        planej = [{"categoria": "TERRA", "subtotal": {"com_bdi": {"total": 500000.0}}}]
+        ok, totals = _accumulate_planejamento(planej)
+        assert isinstance(totals, dict)
+
+    def test_accumulate_equipes_empty(self):
+        from concilium.application.benchmarks.report.projection import TotaisDiretosEquipes, _accumulate_equipes
+
+        result = _accumulate_equipes([])
+        assert isinstance(result, TotaisDiretosEquipes)
+
+    def test_build_breakdown_indireto(self):
+        from concilium.application.benchmarks.report.projection import _build_breakdown_indireto
+
+        custo = MagicMock()
+        custo.indireto_adm = 10000.0
+        custo.indireto_top = 5000.0
+        custo.indireto_lab = 2000.0
+        custo.indireto_qsms = 1000.0
+        custo.indireto_mob = 500.0
+        result = _build_breakdown_indireto(custo, 18500.0)
+        assert isinstance(result, dict)
+
+    def test_build_breakdown_direto_equipes(self):
+        from concilium.application.benchmarks.report.projection import (
+            TotaisDiretosEquipes,
+            _build_breakdown_direto_equipes,
+        )
+
+        totals = TotaisDiretosEquipes(
+            mao_obra=60000.0,
+            equipamentos=30000.0,
+            diesel=10000.0,
+            materiais=5000.0,
+            total=105000.0,
+        )
+        result = _build_breakdown_direto_equipes(totals)
+        assert isinstance(result, dict)
+
+    def test_build_ferramenta_custo(self):
+        from concilium.application.benchmarks.report.projection import _build_ferramenta_custo
+
+        custo = MagicMock()
+        custo.direto.total = 800000.0
+        custo.indireto_adm = 10000.0
+        custo.indireto_top = 5000.0
+        custo.indireto_lab = 0.0
+        custo.indireto_qsms = 0.0
+        custo.indireto_mob = 0.0
+        venda = MagicMock()
+        venda.total_com_bdi = 1000000.0
+        fd, pv, bdi = _build_ferramenta_custo(custo, venda)
+        assert isinstance(fd, dict)
+
+
+

@@ -19,6 +19,7 @@ from concilium.domain.models.artifact import (
     ArtifactMeta,
     ArtifactRef,
     ArtifactState,
+    ConciliumArtifactRegistry,
 )
 from concilium.infrastructure.storage.artifact_store import (
     ArtifactStore,
@@ -488,3 +489,48 @@ class TestFileSystemArtifactStoreSavePlainPayload:
 
 # ---------------------------------------------------------------------------
 
+
+
+class _Payload(BaseModel):
+    value: str
+
+
+
+def test_artifact_ref_and_registry_helpers():
+    payload = _Payload(value="x")
+    env = ArtifactEnvelope.create(
+        payload=payload,
+        kind=ArtifactKind.RESULTADO,
+        schema_name="_Payload",
+        schema_version="1",
+        created_by="test",
+    )
+    ref = env.ref()
+    assert ref.artifact_id == env.meta.artifact_id
+    assert ref.content_hash == env.meta.content_hash
+
+    with pytest.raises(ValueError, match="Schema desconhecido"):
+        ConciliumArtifactRegistry.validate("SchemaInexistente", {"x": 1})
+
+    known = ConciliumArtifactRegistry.known_schemas()
+    assert "Producao" in known
+
+
+def test_artifact_registry_validate_success_and_create_fallback_json_branch():
+    class _TmpModel(BaseModel):
+        x: int
+
+    ConciliumArtifactRegistry.register("TmpModelBatch15", _TmpModel)
+    validated = ConciliumArtifactRegistry.validate("TmpModelBatch15", {"x": 7})
+    assert isinstance(validated, _TmpModel)
+    assert validated.x == 7
+
+    # Fallback path for payloads without model_dump_json (line 126-128).
+    env = ArtifactEnvelope.create(
+        payload={"k": "v"},
+        kind=ArtifactKind.RESULTADO,
+        schema_name="dict_payload",
+        schema_version="1",
+        created_by="test",
+    )
+    assert env.meta.content_hash

@@ -7,6 +7,7 @@ Written before implementation (red phase).
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from concilium.domain.models.analytics.optimization import ActivityPlan, PerpetuationSolution, RampProfile
 
@@ -183,3 +184,33 @@ class TestPerpetuationSolution:
         )
         assert ps.edges == []
         assert ps.mob_cost_actual == 1000.0
+
+
+def test_ramp_profile_model_validator_lines():
+    with pytest.raises(ValidationError):
+        RampProfile(
+            activity_id="A",
+            K_max=1,
+            n_0=2,
+            r=0,
+            d=0,
+            n_i=1,
+            resources_per_team={},
+            m=(1,),
+            boundary_supply={},
+            boundary_demand={},
+        )
+
+    with pytest.raises(ValidationError):
+        RampProfile(
+            activity_id="A",
+            K_max=3,
+            n_0=1,
+            r=3,
+            d=2,
+            n_i=4,
+            resources_per_team={},
+            m=(1, 2, 3, 3),
+            boundary_supply={},
+            boundary_demand={},
+        )

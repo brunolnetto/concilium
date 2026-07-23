@@ -20,6 +20,7 @@ import pytest
 
 from concilium.domain.models.catalog.snapshot import (
     CatalogSnapshot,
+    _cs_append_batch_summary,
     compute_catalog_diff,
 )
 from concilium.infrastructure.catalog.catalog_loader import CatalogBackend, CatalogLoader
@@ -328,3 +329,9 @@ class TestCatalogLoaderMissingBranches:
         loader.backend = "invalid_backend"  # type: ignore[assignment]
         with pytest.raises((ValueError, AttributeError)):
             loader.load("any")
+
+
+def test_snapshot_append_batch_summary_line():
+    parts: list[str] = []
+    _cs_append_batch_summary(parts, added=["a"], removed=["b"], modified=["c", "d"], label="insumo(s)")
+    assert parts == ["1 insumo(s) +, 1 -, 2 mod."]

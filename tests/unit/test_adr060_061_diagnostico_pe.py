@@ -1178,3 +1178,30 @@ class TestBacktrackingPEBuilderBranches:
         # denominator = 1 / max(1 - T_ef, 0.01) > 0 in all cases
         # So this only tests the case where plan=None means C_cat falls back to 1
         assert result is not None or denom > 0
+
+
+def test_diagnostico_pe_aproveitamento_necessario_branches():
+    fatores = (FatorPE(codigo="F_RESIDUAL", gap_rs=1.0, pct_gap=1.0),)
+    ok_item = DiagnosticoPEItem(
+        atividade_id="a",
+        cpu_id="cpu",
+        descricao="d",
+        preco_venda=100.0,
+        custo_realizado=90.0,
+        gap_rs=10.0,
+        pct_gap_sobre_venda=0.1,
+        eta_real=0.8,
+        p_medio_uniforme=0.8,
+        cov_n_p=0.0,
+        eps_cross=0.0,
+        validez_aproximacao=True,
+        n_total=1.0,
+        fatores=fatores,
+        l_aplicado=0.1,
+        l_requerido=0.1,
+        delta_l=0.0,
+    )
+    assert ok_item.aproveitamento_necessario_pct == ok_item.aproveitamento_pct
+
+    deficit_item = ok_item.__class__(**{**ok_item.__dict__, "gap_rs": -20.0, "custo_realizado": 120.0})
+    assert deficit_item.aproveitamento_necessario_pct > deficit_item.aproveitamento_pct

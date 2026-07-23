@@ -44,3 +44,42 @@ class TestFindProjectDirNoMatch:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+# ─── infrastructure/catalog/extraction/consolidation.py ───────────────────────
+
+
+class TestConsolidation:
+    def test_consolidate_reference_no_project_returns_ref(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.consolidation import consolidate_reference
+
+        bench_dir = tmp_path / "benchmarks" / "data" / "AGIS"
+        bench_dir.mkdir(parents=True)
+        (bench_dir / "referencia.json").write_text('{"slug": "AGIS", "projeto": "Proj Test"}')
+        (tmp_path / "projetos").mkdir()
+        result = consolidate_reference("AGIS", root=tmp_path)
+        assert result["slug"] == "AGIS"
+
+    def test_find_project_dir_not_found(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.consolidation import _find_project_dir
+
+        bench_dir = tmp_path / "benchmarks" / "data" / "AGIS"
+        bench_dir.mkdir(parents=True)
+        (bench_dir / "referencia.json").write_text('{"projeto": "Nonexistent"}')
+        (tmp_path / "projetos").mkdir()
+        result = _find_project_dir("AGIS", tmp_path)
+        assert result is None
+
+    def test_find_project_dir_no_project_name(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.consolidation import _find_project_dir
+
+        bench_dir = tmp_path / "benchmarks" / "data" / "AGIS"
+        bench_dir.mkdir(parents=True)
+        (bench_dir / "referencia.json").write_text("{}")
+        result = _find_project_dir("AGIS", tmp_path)
+        assert result is None
+
+
+

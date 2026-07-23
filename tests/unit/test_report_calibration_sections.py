@@ -107,3 +107,87 @@ class TestRenderInsightsSectionNonListNonDict:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+# ─── application/runtime/deliverables/reports/report_calibration_sections.py ──
+
+
+class TestReportCalibrationSections2:
+    def test_sum_pe_field(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import _sum_pe_field
+
+        rows = [{"custo": 100.0}, {"custo": 200.0}]
+        assert _sum_pe_field(rows, "custo") == 300.0
+
+    def test_format_insight_item_with_titulo(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import _format_insight_item
+
+        result = _format_insight_item({"titulo": "Test", "descricao": "Description"})
+        assert "Test" in result
+
+    def test_format_insight_item_fallback(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import _format_insight_item
+
+        result = _format_insight_item({"other": "value"})
+        assert "Insight" in result
+
+    def test_render_dict_insights(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import _render_dict_insights
+
+        result = _render_dict_insights({"key1": "val1", "key2": "val2"})
+        assert len(result) == 2
+        assert any("key1" in r for r in result)
+
+    def test_render_list_insights_with_dict(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import _render_list_insights
+
+        items = [{"titulo": "T1", "descricao": "D1"}, "plain string"]
+        result = _render_list_insights(items)
+        assert len(result) == 2
+
+    def test_render_insights_section_empty(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import (
+            render_insights_section,
+        )
+
+        assert render_insights_section(None) == []
+        assert render_insights_section([]) == []
+
+    def test_render_insights_section_list(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import (
+            render_insights_section,
+        )
+
+        result = render_insights_section([{"titulo": "T", "descricao": "D"}])
+        assert len(result) > 0
+
+    def test_render_insights_section_dict(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import (
+            render_insights_section,
+        )
+
+        result = render_insights_section({"categoria": "valor"})
+        assert len(result) > 0
+
+    def test_render_equilibrium_section_empty(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import (
+            render_equilibrium_section,
+        )
+
+        result = render_equilibrium_section([])
+        assert result == []
+
+    def test_render_equilibrium_section_basic(self):
+        from concilium.application.runtime.deliverables.reports.report_calibration_sections import (
+            render_equilibrium_section,
+        )
+
+        rows = [{"item_id": "A1", "descricao": "Test", "classificacao": "A", "custo_share": 0.3}]
+        result = render_equilibrium_section(rows)
+        assert isinstance(result, list)
+        assert len(result) > 0
+
+
+

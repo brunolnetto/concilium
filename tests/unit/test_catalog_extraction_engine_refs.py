@@ -107,3 +107,57 @@ class TestExtractEngineIterationReferencesNoCat:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+# ─── infrastructure/catalog/extraction/engine_refs.py ────────────────────────
+
+
+class TestEngineRefs2:
+    def test_normalize_project_token(self):
+        from concilium.infrastructure.catalog.extraction.engine_refs import _normalize_project_token
+
+        assert _normalize_project_token("agis_calibrado") == "AGIS"
+
+    def test_iter_benchmark_reports_empty(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.engine_refs import iter_benchmark_reports
+
+        result = iter_benchmark_reports(root=tmp_path)
+        assert result == []
+
+    def test_find_latest_project_not_found(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.engine_refs import _find_latest_project_by_name
+
+        (tmp_path / "projetos").mkdir()
+        with pytest.raises(FileNotFoundError):
+            _find_latest_project_by_name("Nonexistent", tmp_path / "projetos")
+
+    def test_check_project_dir_non_dir(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.engine_refs import _check_project_dir
+
+        fake_file = tmp_path / "notadir.json"
+        fake_file.write_text("{}")
+        result = _check_project_dir(fake_file, "TARGET", None)
+        assert result is None
+
+    def test_check_project_dir_wrong_name(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.engine_refs import _check_project_dir
+
+        d = tmp_path / "proj"
+        d.mkdir()
+        (d / "meta.json").write_text('{"nome": "Other Project"}')
+        result = _check_project_dir(d, "TARGET", None)
+        assert result is None
+
+    def test_check_project_dir_match(self, tmp_path):
+        from concilium.infrastructure.catalog.extraction.engine_refs import _check_project_dir
+
+        d = tmp_path / "proj"
+        d.mkdir()
+        (d / "meta.json").write_text('{"nome": "Target Project", "criado_em": "2026-01-01"}')
+        result = _check_project_dir(d, "TARGET PROJECT", None)
+        assert result is not None
+        assert result[1] == d
+
+
+

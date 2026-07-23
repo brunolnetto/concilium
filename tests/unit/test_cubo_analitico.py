@@ -1273,3 +1273,62 @@ class TestCuboAnaliticoBuilderMoreContinues:
         # scale factor and keeps its original pool value.
         assert by_atividade["ACT-2"] == 200.0
 
+
+
+def _cell(**overrides) -> CelulaAnalitica:
+    base = dict(
+        natureza="direto",
+        atividade_id="A1",
+        categoria_insumo="material",
+        propriedade="consumivel",
+        semana_iso="2026-W10",
+        componente_bdi="custo_direto",
+        valor_rs=100.0,
+        valor_fisico=0.0,
+        unidade_fisica="",
+    )
+    base.update(overrides)
+    return CelulaAnalitica(**base)
+
+
+def test_cubo_analitico_predicate_skip_and_scalar_bucket():
+    cubo = CuboAnalitico(
+        projeto_id="p1",
+        gerado_em="2026-01-01T00:00:00Z",
+        regime_bdi="pre_reforma",
+        total_preco_venda=300.0,
+        celulas=(
+            _cell(atividade_id="A1", semana_iso="2026-W10", valor_rs=100.0),
+            _cell(atividade_id="A2", semana_iso="2026-W11", valor_rs=200.0),
+        ),
+    )
+
+    filtered = cubo._aggregate_temporal("semana", predicate=lambda c: c.atividade_id == "A1")
+    assert set(filtered.keys()) == {"2026-W10"}
+
+    scalar = cubo._aggregate_temporal_scalar("mes", predicate=lambda c: True)
+    assert scalar
+    assert list(scalar.values())[0] == 300.0
+
+
+def test_cubo_analitico_consumo_diesel_paths():
+    diesel = _cell(
+        categoria_insumo="material",
+        propriedade="combustivel",
+        unidade_fisica="L",
+        valor_fisico=42.5,
+        componente_bdi="custo_direto",
+        atividade_id="ATV-D",
+        semana_iso="2026-W12",
+    )
+    non_diesel = _cell(atividade_id="ATV-X", valor_rs=50.0)
+    cubo = CuboAnalitico(
+        projeto_id="p2",
+        gerado_em="2026-01-01T00:00:00Z",
+        regime_bdi="pre_reforma",
+        total_preco_venda=150.0,
+        celulas=(diesel, non_diesel),
+    )
+
+    assert cubo.consumo_diesel_temporal("semana") == {"2026-W12": 42.5}
+    assert cubo.consumo_diesel_por_atividade() == {"ATV-D": 42.5}

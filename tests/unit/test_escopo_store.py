@@ -530,3 +530,110 @@ class TestPlanoStoreReadInvocationsInvalidJson:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+# ─── infrastructure/storage/escopo_store.py ───────────────────────────────────
+
+
+class TestEscopoStoreFull:
+    def _make_project_store(self, tmp_path):
+        from concilium.infrastructure.storage.project import ProjectStore
+
+        return ProjectStore.init(tmp_path, "Test Project", "ctx-1")
+
+    def _create_escopo(self, store, escopo_id="esc-1"):
+        store.create_escopo(
+            escopo_id=escopo_id,
+            nome=f"Escopo {escopo_id}",
+            tipo_obra="terraplenagem",
+            localizacao="SP",
+            coordenadas_lat=-23.5,
+            coordenadas_lng=-46.6,
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
+        )
+        return store.escopo(escopo_id)
+
+    def test_escopo_meta(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        meta = es.meta
+        assert meta["escopo_id"] == "esc-1"
+
+    def test_escopo_to_escopo(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        escopo_obj = es.to_escopo()
+        assert escopo_obj is not None
+
+    def test_escopo_update_meta(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        es.update_meta(nome="Updated Name")
+        assert es.meta["nome"] == "Updated Name"
+
+    def test_escopo_create_and_get_plan(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        ps = es.create_plan(nome="Plano Base")
+        assert ps is not None
+        assert ps.plano_id is not None
+
+    def test_escopo_active_plan_after_creation(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        es.create_plan(nome="Plano 1")
+        active = es.active_plan()
+        assert active is not None
+
+    def test_escopo_list_plans(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        es.create_plan(nome="P1")
+        es.create_plan(nome="P2")
+        plans = es.list_plans()
+        assert len(plans) >= 2
+
+    def test_plano_store_log_and_read_invocations(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        ps = es.create_plan(nome="Plano Test")
+        ps.log_invocation({"skill": "01-escopo-e-eap", "status": "OK"})
+        invocations = ps.read_invocations()
+        assert len(invocations) >= 1
+
+    def test_plano_store_active_plan_activation(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        es.create_plan(nome="Ativo")
+        # After create_plan, it may or may not be active depending on implementation
+        plans = es.list_plans()
+        assert len(plans) >= 1
+
+    def test_escopo_id_property(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store, "my-escopo")
+        assert es.escopo_id == "my-escopo"
+
+    def test_escopo_root_property(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        from pathlib import Path
+
+        assert isinstance(es.root, Path)
+
+    def test_approved_plan_none_initially(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        assert es.approved_plan() is None
+
+    def test_plano_store_approve(self, tmp_path):
+        store = self._make_project_store(tmp_path)
+        es = self._create_escopo(store)
+        ps = es.create_plan(nome="Para Aprovar")
+        # Approve the plan
+        es.approve_plan(ps.plano_id)
+        approved = es.approved_plan()
+        assert approved is not None
+

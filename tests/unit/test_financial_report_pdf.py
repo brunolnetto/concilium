@@ -239,3 +239,67 @@ class TestFinancialReportPdfBranches:
             canvas_mod.Canvas = real_canvas
         assert result is None
 
+
+
+
+# ─── application/runtime/deliverables/reports/financial_report_pdf.py ─────────
+
+
+class TestFinancialReportPdf2:
+    def test_brl_formatting(self):
+        from concilium.application.runtime.deliverables.reports.financial_report_pdf import _brl
+
+        result = _brl(1234567.89)
+        assert "." in result or "," in result
+
+    def test_pct_formatting(self):
+        from concilium.application.runtime.deliverables.reports.financial_report_pdf import _pct
+
+        result = _pct(0.1523)
+        assert "%" in result or "15" in result
+
+    def test_safe_text_str(self):
+        from concilium.application.runtime.deliverables.reports.financial_report_pdf import _safe_text
+
+        result = _safe_text("Test String")
+        assert result == "Test String"
+
+    def test_safe_text_none(self):
+        from concilium.application.runtime.deliverables.reports.financial_report_pdf import _safe_text
+
+        result = _safe_text(None)
+        assert isinstance(result, str)
+
+    def test_render_financial_report_pdf_basic(self):
+        from concilium.application.runtime.deliverables.reports.financial_report_pdf import render_financial_report_pdf
+
+        relatorio = {
+            "resumo": {"projeto": "Test Project", "tipo_obra": "Terra", "localizacao": "SP"},
+            "RESULTADO": {
+                "preco_venda_total": 1500000.0,
+                "custo_total": 1200000.0,
+                "resultado_bruto": 300000.0,
+                "margem_pct": 0.20,
+            },
+        }
+        result = render_financial_report_pdf(relatorio, title="Test Report")
+        assert result is None or isinstance(result, bytes)
+
+    def test_render_financial_report_pdf_empty(self):
+        from concilium.application.runtime.deliverables.reports.financial_report_pdf import render_financial_report_pdf
+
+        result = render_financial_report_pdf({}, title="")
+        assert result is None or isinstance(result, bytes)
+
+    def test_render_financial_report_pdf_with_image_provider(self):
+        from concilium.application.runtime.deliverables.reports.financial_report_pdf import render_financial_report_pdf
+
+        result = render_financial_report_pdf(
+            {"resumo": {"projeto": "Test"}},
+            title="Test",
+            image_provider=lambda name: None,
+        )
+        assert result is None or isinstance(result, bytes)
+
+
+

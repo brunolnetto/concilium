@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+
 # ─── domain/repositories/blob_storage_port.py ─────────────────────────────────
 
 
@@ -49,3 +51,23 @@ class TestBlobStoragePortDefaults:
 
 
 
+
+
+class _DummyBlobStorage(BlobStoragePort):
+    def ler_blob(self, path: str) -> bytes:
+        return b""
+
+    def gravar_blob(self, path: str, content: bytes) -> None:
+        return None
+
+    def listar_blobs(self, prefix: str) -> list[str]:
+        return []
+
+    def blob_existe(self, path: str) -> bool:
+        return False
+
+
+def test_blob_storage_port_default_methods():
+    storage = _DummyBlobStorage()
+    assert storage.aprovar_versao("x") is None
+    assert storage.gerar_url_temporaria("x") is None

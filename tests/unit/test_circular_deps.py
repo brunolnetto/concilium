@@ -32,3 +32,47 @@ class TestCircularDepsNonTerceirizadoItem:
         result = verificar_ciclos_cpu(catalogo)
         assert isinstance(result, list)
 
+
+
+
+import pytest  # noqa: E402
+
+# ─── domain/validations/circular_deps.py ──────────────────────────────────────
+
+
+class TestCircularDeps:
+    def test_no_cycles_simple(self):
+        from concilium.domain.validations.circular_deps import verificar_ciclos_cpu
+
+        catalog = {
+            "cpus": [
+                {"codigo": "A", "composicao_itens": []},
+                {"codigo": "B", "composicao_itens": [], "cpu_referencia_id": "A"},
+            ]
+        }
+        assert verificar_ciclos_cpu(catalog) == []
+
+    def test_cycle_detected(self):
+        from concilium.domain.validations.circular_deps import verificar_ciclos_cpu
+
+        catalog = {
+            "cpus": [
+                {"codigo": "A", "composicao_itens": [], "cpu_referencia_id": "B"},
+                {"codigo": "B", "composicao_itens": [], "cpu_referencia_id": "A"},
+            ]
+        }
+        errors = verificar_ciclos_cpu(catalog)
+        assert len(errors) > 0
+
+    def test_validar_sem_ciclos_raises(self):
+        from concilium.domain.validations.circular_deps import validar_sem_ciclos
+
+        catalog = {
+            "cpus": [
+                {"codigo": "A", "composicao_itens": [], "cpu_referencia_id": "B"},
+                {"codigo": "B", "composicao_itens": [], "cpu_referencia_id": "A"},
+            ]
+        }
+        with pytest.raises(ValueError):
+            validar_sem_ciclos(catalog)
+
