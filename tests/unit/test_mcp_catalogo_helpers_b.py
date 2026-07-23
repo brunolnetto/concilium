@@ -255,7 +255,10 @@ class TestImplTendenciaPrecosCatalogo:
 
 class TestImplCompararRfiCatalogo:
     def _config_path(self, tmp_path):
-        return tmp_path / "config"
+        # Um nível extra de aninhamento garante que config_dir.parents[1]
+        # (usado por _tools_path) fique contido em tmp_path, sem escapar
+        # para o diretório base compartilhado do pytest.
+        return tmp_path / "fakerepo" / "config"
 
     def _tools_path(self, config_dir: Path) -> Path:
         # In the source: tools_dir = config_dir.parents[1] / "tools"

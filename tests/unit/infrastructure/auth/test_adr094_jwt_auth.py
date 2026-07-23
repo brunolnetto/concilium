@@ -22,7 +22,7 @@ from unittest.mock import patch
 import pytest
 
 # Garante src no path
-_ROOT = Path(__file__).resolve().parent.parent.parent
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 sys.path.insert(0, str(_ROOT / "src"))
 
 
@@ -380,7 +380,7 @@ class TestScopeGuard:
 
         from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
 
-        root = _os.path.join(_os.path.dirname(__file__), "..", "..")
+        root = _os.path.join(_os.path.dirname(__file__), "..", "..", "..", "..")
         mapping: dict[str, str] = {}
         for f in sorted(_glob.glob(_os.path.join(root, "src/concilium/presentation/mcp/tools/*.py"))):
             tree = ast.parse(open(f, encoding="utf-8").read())

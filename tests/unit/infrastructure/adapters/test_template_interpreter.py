@@ -13,7 +13,7 @@ import pytest
 
 from concilium.infrastructure.adapters.template_interpreter import TemplateInterpreter
 
-CONFIG_TEMPLATE = Path(__file__).resolve().parents[2] / "config" / "templates" / "planilha_planejamento.json"
+CONFIG_TEMPLATE = Path(__file__).resolve().parents[4] / "config" / "templates" / "planilha_planejamento.json"
 
 
 # ── __init__ paths ─────────────────────────────────────────────────────────────

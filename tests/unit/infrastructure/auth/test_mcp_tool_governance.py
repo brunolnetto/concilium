@@ -55,7 +55,7 @@ def _discover_registered_tools() -> list[tuple[str, str, bool, bool, str | None]
     tem_rate_limit: se a função tem @mcp_rate_limit (ADR-098).
     permission_value: string passada para @permission("..."), ou None.
     """
-    root = os.path.join(os.path.dirname(__file__), "..", "..")
+    root = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
     rows: list[tuple[str, str, bool, bool, str | None]] = []
     for f in sorted(glob.glob(os.path.join(root, _TOOLS_GLOB))):
         mod = os.path.basename(f).replace(".py", "")

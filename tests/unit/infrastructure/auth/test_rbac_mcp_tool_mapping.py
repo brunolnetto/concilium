@@ -91,7 +91,7 @@ def _ast_tool_permission_map() -> dict[str, str]:
     import glob
     import os
 
-    root = os.path.join(os.path.dirname(__file__), "..", "..")
+    root = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
     mapping: dict[str, str] = {}
     for f in sorted(glob.glob(os.path.join(root, "src/concilium/presentation/mcp/tools/*.py"))):
         tree = ast.parse(open(f, encoding="utf-8").read())

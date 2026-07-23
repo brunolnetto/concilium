@@ -386,7 +386,10 @@ class TestFileProjectHandleExtended:
         returned directly, without falling through to aggregate/snapshot."""
         import shutil
 
-        handle = self._make_handle(tmp_path)
+        # Um nível extra de aninhamento garante que store.root.parents[1]
+        # (usado por resolve_cpu) fique contido em tmp_path, sem escapar
+        # para o diretório base compartilhado do pytest.
+        handle = self._make_handle(tmp_path / "outer")
         catalogo_base = "cat-individual-test"
         handle.update_meta(catalogo_base=catalogo_base)
         concilium_root = handle._store.root.parents[1]
@@ -405,7 +408,10 @@ class TestFileProjectHandleExtended:
         but the aggregate config/catalogos/{base}/cpus.json contains the cpu."""
         import shutil
 
-        handle = self._make_handle(tmp_path)
+        # Um nível extra de aninhamento garante que store.root.parents[1]
+        # (usado por resolve_cpu) fique contido em tmp_path, sem escapar
+        # para o diretório base compartilhado do pytest.
+        handle = self._make_handle(tmp_path / "outer")
         catalogo_base = "cat-aggregate-test"
         handle.update_meta(catalogo_base=catalogo_base)
         concilium_root = handle._store.root.parents[1]
