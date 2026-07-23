@@ -316,3 +316,181 @@ def test_02_auto_assigned_resources_propagated_from_rcpsp_spec():
     assert sched["eap-02"].assigned_resources == {"maq": 1}, (
         "eap-02 should carry assigned_resources={'maq': 1} from rcpsp_spec"
     )
+
+
+from datetime import UTC, datetime  # noqa: E402
+
+from concilium.application.skills import run_escopo_e_eap  # noqa: E402
+from concilium.domain.models.canonical import (  # noqa: E402
+    Coordenadas,
+    EapItem,
+    Meta,
+    Projeto,
+    RegimeTrabalho,
+)
+
+
+def _make_meta():
+    return Meta(gerado_em=datetime.now(UTC), contexto_id="test")
+
+
+def _make_proj():
+    return Projeto(
+        id="p1",
+        nome="proj",
+        tipo_obra="terraplenagem",
+        localizacao="x",
+        coordenadas=Coordenadas(lat=0.0, lng=0.0),
+        regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+        data_inicio="2026-01-01",
+        data_termino="2026-12-31",
+        snapshot_catalogo_id="s",
+        snapshot_perfil_id="s",
+    )
+
+
+def _minimal_canonical(eap=None, atividades=None):
+    return CanonicalModel(meta=_make_meta(), projeto=_make_proj(), eap=eap or [], atividades=atividades or [])
+
+
+def _canonical_to_inputs(canonical, extra_inputs):
+    """Converte um canonical existente + extra_inputs em inputs para run_escopo_e_eap.
+
+    Distinto do run_sequenciamento local (linha ~25 deste arquivo), que espera
+    canonical+inputs crus e não faz essa conversão — usado só por
+    TestSequenciamento, mesclado de test_remaining_coverage.py.
+    """
+    proj = canonical.projeto if canonical else None
+    base = {
+        "contexto_id": canonical.meta.contexto_id if canonical else "test",
+        "snapshot_catalogo_id": proj.snapshot_catalogo_id if proj else "s",
+        "snapshot_perfil_id": proj.snapshot_perfil_id if proj else "s",
+        "nome": proj.nome if proj else "test",
+        "tipo_obra": proj.tipo_obra if proj else "terraplenagem",
+        "localizacao": proj.localizacao if proj else "x",
+        "coordenadas": {"lat": proj.coordenadas.lat if proj else 0.0, "lng": proj.coordenadas.lng if proj else 0.0},
+        "regime_trabalho": {
+            "dias_semana": proj.regime_trabalho.dias_semana if proj else 5,
+            "horas_dia": proj.regime_trabalho.horas_dia if proj else 8,
+        },
+        "data_inicio": str(proj.data_inicio) if proj else "2026-01-01",
+        "data_termino": str(proj.data_termino) if proj else "2026-12-31",
+        "eap": [i.model_dump() for i in canonical.eap] if canonical and canonical.eap else [],
+    }
+    base.update(extra_inputs or {})
+    return base
+
+
+def _run_sequenciamento_rich(canonical, inputs):
+    merged = _canonical_to_inputs(canonical, inputs)
+    if canonical and canonical.atividades:
+        merged["atividades"] = [a.model_dump() for a in canonical.atividades]
+    return run_escopo_e_eap(None, merged)
+
+
+# ══ 00B-sequenciamento ═══════════════════════════════════════════════════════
+
+
+class TestSequenciamento:
+    def _canonical_with_atividades(self):
+        eap = [
+            EapItem(item_id="i1", ordem=1, cpu_id="CPU-X", descricao="T1", unidade="m3", quantitativo=100),
+            EapItem(item_id="i2", ordem=2, cpu_id="CPU-X", descricao="T2", unidade="m3", quantitativo=100),
+            EapItem(item_id="i3", ordem=3, cpu_id="CPU-X", descricao="T3", unidade="m3", quantitativo=100),
+        ]
+        ativs = [
+            Atividade(
+                atividade_id="a1",
+                eap_item_id="i1",
+                descricao="A1",
+                fracao_quantitativo=1.0,
+                quantitativo_atividade=100,
+                cpu_id="CPU-X",
+            ),
+            Atividade(
+                atividade_id="a2",
+                eap_item_id="i2",
+                descricao="A2",
+                fracao_quantitativo=1.0,
+                quantitativo_atividade=100,
+                cpu_id="CPU-X",
+            ),
+            Atividade(
+                atividade_id="a3",
+                eap_item_id="i3",
+                descricao="A3",
+                fracao_quantitativo=1.0,
+                quantitativo_atividade=100,
+                cpu_id="CPU-X",
+            ),
+        ]
+        return CanonicalModel(meta=_make_meta(), projeto=_make_proj(), eap=eap, atividades=ativs)
+
+    def test_sucessora_invalida_emite_dag01(self):
+        """If successora doesn't exist, should emit VAL-DAG-01 ERRO."""
+        can = self._canonical_with_atividades()
+        inputs = {"precedencias": [{"predecessora": "a1", "sucessora": "nonexistent"}]}
+        res = _run_sequenciamento_rich(can, inputs)
+        codigos = {v.codigo: v.status for v in res.validacoes}
+        assert "VAL-DAG-01" in codigos and codigos["VAL-DAG-01"] == "ERRO"
+
+    def test_predecessora_invalida_emite_dag01(self):
+        """If predecessora doesn't exist, should emit VAL-DAG-01 ERRO (lines 82-87)."""
+        can = self._canonical_with_atividades()
+        inputs = {"precedencias": [{"predecessora": "nonexistent", "sucessora": "a1"}]}
+        res = _run_sequenciamento_rich(can, inputs)
+        codigos = {v.codigo: v.status for v in res.validacoes}
+        assert "VAL-DAG-01" in codigos and codigos["VAL-DAG-01"] == "ERRO"
+
+    def test_atividades_vazias_emite_precondicao(self):
+        """Empty EAP/atividades should emit EAP warning."""
+        can = _minimal_canonical()  # no atividades
+        res = _run_sequenciamento_rich(can, {})
+        codigos = {v.codigo: v.status for v in res.validacoes}
+        assert "VAL-EAP-03" in codigos  # EAP vazia emite VAL-EAP-03
+
+    def test_ciclo_emite_dag02_e_seq01(self):
+        """Cycle in precedences should emit VAL-SEQ-01 ERRO."""
+        can = self._canonical_with_atividades()
+        # skill 01 creates atividade IDs as "{item_id}-atv-1"
+        inputs = {
+            "precedencias": [
+                {"predecessora": "i1-atv-1", "sucessora": "i2-atv-1"},
+                {"predecessora": "i2-atv-1", "sucessora": "i3-atv-1"},
+                {"predecessora": "i3-atv-1", "sucessora": "i1-atv-1"},
+            ]
+        }
+        res = _run_sequenciamento_rich(can, inputs)
+        codigos = [v.codigo for v in res.validacoes]
+        assert "VAL-SEQ-01" in codigos  # cycle detected
+
+    def test_prazo_contrato_excedido_emite_seq02(self):
+        """When prazo_contrato is exceeded, should emit VAL-SEQ-02 ERRO."""
+        can = self._canonical_with_atividades()
+        # skill 01 creates atividade IDs as "{item_id}-atv-1"
+        inputs = {
+            "precedencias": [
+                {"predecessora": "i1-atv-1", "sucessora": "i2-atv-1"},
+                {"predecessora": "i2-atv-1", "sucessora": "i3-atv-1"},
+            ],
+            "prazo_contrato": 1,
+        }
+        res = _run_sequenciamento_rich(can, inputs)
+        codigos = {v.codigo: v.status for v in res.validacoes}
+        assert "VAL-SEQ-02" in codigos and codigos["VAL-SEQ-02"] == "ERRO"
+
+    def test_prazo_contrato_ok(self):
+        """When prazo_contrato is sufficient, should emit VAL-SEQ-02 OK."""
+        can = self._canonical_with_atividades()
+        inputs = {
+            "precedencias": [
+                {"predecessora": "i1-atv-1", "sucessora": "i2-atv-1"},
+            ],
+            "prazo_contrato": 10,
+        }
+        res = _run_sequenciamento_rich(can, inputs)
+        codigos = {v.codigo: v.status for v in res.validacoes}
+        assert "VAL-SEQ-02" in codigos and codigos["VAL-SEQ-02"] == "OK"
+
+
+

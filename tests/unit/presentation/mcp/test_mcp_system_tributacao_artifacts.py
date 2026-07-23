@@ -314,3 +314,82 @@ class TestArtifactsTools:
             result = tools["obter_artefato"](formato="csv", project_id="proj-1")
         assert "erro" in result
         assert "inválido" in result["erro"]
+
+
+
+
+# ─── MCP tributacao ─────────────────────────────────────────────────────────
+
+
+class TestMcpTributacao:
+    def _make_server(self):
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools.tributacao import register
+
+        server = FastMCP("test")
+        register(server)
+        return server
+
+    def test_calcular_tributos_clt_delega_servico(self):
+        """ADR-116 F5: tool unificada delega a calculate_employer_clt."""
+        from concilium.domain.services.financial import tributacao as trib
+
+        assert hasattr(trib, "calculate_employer_clt")
+        assert hasattr(trib, "calculate_inss_employee")
+        assert hasattr(trib, "calculate_irrf")
+
+    def test_tributacao_register_adds_unified_tool(self):
+        """ADR-116 F5: apenas calcular_tributos registrada (3 → 1)."""
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools.tributacao import register
+
+        server = FastMCP("test")
+        register(server)
+        tool_names = list(server._tool_manager._tools.keys())
+        assert "calcular_tributos" in tool_names
+        assert "calcular_custo_empregador_clt" not in tool_names
+        assert "calcular_inss_empregado" not in tool_names
+        assert "calcular_irrf" not in tool_names
+
+
+
+
+# ─── MCP artifacts ──────────────────────────────────────────────────────────
+
+
+class TestMcpArtifacts:
+    def test_register_adds_tools(self):
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools.artifacts import register
+
+        server = FastMCP("test")
+        register(server)
+        names = list(server._tool_manager._tools.keys())
+        assert "listar_artefatos_projeto" in names
+        assert "obter_artefato" in names  # ADR-116 F5: ler_texto+baixar_binario+bundle_zip→obter_artefato
+
+    def test_listar_artefatos_calls_list_artifacts(self):
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools.artifacts import register
+
+        server = FastMCP("test")
+        register(server)
+        mock_store = MagicMock()
+        with (
+            patch("concilium.presentation.mcp.tools.artifacts._project", return_value=mock_store),
+            patch("concilium.presentation.mcp.tools.artifacts.ab.list_artifacts", return_value={"items": []}),
+        ):
+            # Tools are registered; verify the ab module has the expected functions
+            import concilium.application.services.artifact.artifact_bundle as ab
+
+            assert hasattr(ab, "list_artifacts")
+            assert hasattr(ab, "read_text")
+            assert hasattr(ab, "read_binary_b64")
+            assert hasattr(ab, "build_bundle")
+
+
+

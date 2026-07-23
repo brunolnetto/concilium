@@ -963,3 +963,154 @@ class TestJobService:
 
 
 
+
+
+
+
+# ─── jobs/state.py ──────────────────────────────────────────────────────────
+
+
+class TestPipelineJobStateMachine:
+    def _make_job_data(self, status="AGUARDANDO_FILA"):
+        return {
+            "job_id": "test-job-id-123",
+            "status": status,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+
+    def test_initial_state_aguardando_fila(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        assert sm.status_str == "AGUARDANDO_FILA"
+
+    def test_iniciar_transition(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        sm.iniciar()
+        assert sm.status_str == "EM_EXECUCAO"
+
+    def test_completar_transition(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        sm.iniciar()
+        sm.completar(resultado={"ok": True})
+        assert sm.status_str == "CONCLUIDO"
+        assert sm.job_data["resultado"] == {"ok": True}
+        assert sm.is_terminal
+
+    def test_falhar_from_execucao(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        sm.iniciar()
+        sm.falhar(erro="something broke")
+        assert sm.status_str == "ERRO"
+        assert sm.job_data["erro"] == "something broke"
+        assert sm.is_terminal
+
+    def test_falhar_from_aguardando(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        sm.falhar(erro="queue error")
+        assert sm.status_str == "ERRO"
+
+    def test_cancelar_from_aguardando(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        assert sm.pode_cancelar
+        sm.cancelar(motivo="User cancelled")
+        assert sm.status_str == "CANCELADO"
+        assert sm.job_data["erro"] == "User cancelled"
+
+    def test_cancelar_from_execucao(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        sm.iniciar()
+        assert sm.pode_cancelar
+        sm.cancelar()
+        assert sm.status_str == "CANCELADO"
+
+    def test_pode_cancelar_false_when_terminal(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        sm.iniciar()
+        sm.completar(resultado={})
+        assert not sm.pode_cancelar
+
+    def test_validar_transicao_valid(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        # All return bool without raising
+        result_completar = sm.validar_transicao("completar")
+        result_nonexistent = sm.validar_transicao("nonexistent_event")
+        assert isinstance(result_completar, bool)
+        assert result_nonexistent is False
+
+    def test_validar_transicao_invalid_name(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        assert sm.validar_transicao("nonexistent") is False
+
+    def test_is_terminal_false_initially(self):
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        sm = PipelineJobStateMachine(self._make_job_data())
+        assert not sm.is_terminal
+
+    def test_criar_state_machine_em_execucao(self):
+        from concilium.application.jobs.state import criar_state_machine
+
+        job_data = self._make_job_data("EM_EXECUCAO")
+        job_data["iniciado_em"] = "2026-01-01T00:00:00+00:00"
+        sm = criar_state_machine(job_data)
+        assert sm.status_str == "EM_EXECUCAO"
+
+    def test_criar_state_machine_concluido(self):
+        from concilium.application.jobs.state import criar_state_machine
+
+        job_data = self._make_job_data("CONCLUIDO")
+        job_data["resultado"] = {"ok": True}
+        sm = criar_state_machine(job_data)
+        assert sm.status_str == "CONCLUIDO"
+
+    def test_criar_state_machine_erro_with_iniciar(self):
+        from concilium.application.jobs.state import criar_state_machine
+
+        job_data = self._make_job_data("ERRO")
+        job_data["iniciado_em"] = "2026-01-01T00:00:00+00:00"
+        job_data["erro"] = "fail"
+        sm = criar_state_machine(job_data)
+        assert sm.status_str == "ERRO"
+
+    def test_criar_state_machine_erro_without_iniciar(self):
+        from concilium.application.jobs.state import criar_state_machine
+
+        job_data = self._make_job_data("ERRO")
+        job_data["erro"] = "queue fail"
+        sm = criar_state_machine(job_data)
+        assert sm.status_str == "ERRO"
+
+    def test_criar_state_machine_cancelado(self):
+        from concilium.application.jobs.state import criar_state_machine
+
+        job_data = self._make_job_data("CANCELADO")
+        job_data["erro"] = "Cancelled"
+        sm = criar_state_machine(job_data)
+        assert sm.status_str == "CANCELADO"
+
+
+

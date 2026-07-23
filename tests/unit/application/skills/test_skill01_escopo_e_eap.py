@@ -250,3 +250,99 @@ class TestBuildDagBranchArcs:
         error_dag01 = [v for v in validacoes if v.codigo == "VAL-DAG-01" and v.status == "ERRO"]
         assert len(error_dag01) == 0
 
+
+
+from datetime import UTC, datetime  # noqa: E402
+
+from concilium.application.skills import run_escopo_e_eap  # noqa: E402
+from concilium.domain.models.canonical import (  # noqa: E402
+    CanonicalModel,
+    Coordenadas,
+    EapItem,
+    Meta,
+    Projeto,
+    RegimeTrabalho,
+)
+
+
+# Shims: skills atividades/sequenciamento foram fundidas em 01-escopo-e-eap.
+def _canonical_to_inputs(canonical, extra_inputs):
+    """Converte um canonical existente + extra_inputs em inputs para run_escopo_e_eap."""
+    proj = canonical.projeto if canonical else None
+    base = {
+        "contexto_id": canonical.meta.contexto_id if canonical else "test",
+        "snapshot_catalogo_id": proj.snapshot_catalogo_id if proj else "s",
+        "snapshot_perfil_id": proj.snapshot_perfil_id if proj else "s",
+        "nome": proj.nome if proj else "test",
+        "tipo_obra": proj.tipo_obra if proj else "terraplenagem",
+        "localizacao": proj.localizacao if proj else "x",
+        "coordenadas": {"lat": proj.coordenadas.lat if proj else 0.0, "lng": proj.coordenadas.lng if proj else 0.0},
+        "regime_trabalho": {
+            "dias_semana": proj.regime_trabalho.dias_semana if proj else 5,
+            "horas_dia": proj.regime_trabalho.horas_dia if proj else 8,
+        },
+        "data_inicio": str(proj.data_inicio) if proj else "2026-01-01",
+        "data_termino": str(proj.data_termino) if proj else "2026-12-31",
+        "eap": [i.model_dump() for i in canonical.eap] if canonical and canonical.eap else [],
+    }
+    base.update(extra_inputs or {})
+    return base
+
+
+def run_atividades(canonical, inputs):
+    return run_escopo_e_eap(None, _canonical_to_inputs(canonical, inputs))
+
+
+def _make_meta():
+    return Meta(gerado_em=datetime.now(UTC), contexto_id="test")
+
+
+def _make_proj():
+    return Projeto(
+        id="p1",
+        nome="proj",
+        tipo_obra="terraplenagem",
+        localizacao="x",
+        coordenadas=Coordenadas(lat=0.0, lng=0.0),
+        regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+        data_inicio="2026-01-01",
+        data_termino="2026-12-31",
+        snapshot_catalogo_id="s",
+        snapshot_perfil_id="s",
+    )
+
+
+def _minimal_canonical(eap=None, atividades=None):
+    return CanonicalModel(meta=_make_meta(), projeto=_make_proj(), eap=eap or [], atividades=atividades or [])
+
+
+# ══ 01-escopo-e-eap ═══════════════════════════════════════════════════════════
+
+
+class TestAtividades:
+    def test_precondition_eap_vazia(self):
+        """EAP vazia deve retornar aviso de EAP vazia."""
+        can = _minimal_canonical()
+        res = run_atividades(can, {})
+        codigos = {v.codigo: v.status for v in res.validacoes}
+        assert "VAL-EAP-03" in codigos  # EAP vazia emite VAL-EAP-03
+
+    def test_soma_fracoes_invalida_emite_val_atv02(self):
+        """Frações que não somam 1.0 devem emitir VAL-ATV-02 ERRO."""
+        eap = [EapItem(item_id="i1", ordem=1, cpu_id="CPU-X", descricao="T", unidade="m3", quantitativo=100)]
+        can = _minimal_canonical(eap=eap)
+        decomposicao = [
+            {
+                "eap_item_id": "i1",
+                "atividades": [
+                    {"atividade_id": "atv-1", "fracao_quantitativo": 0.4, "descricao": "A"},
+                    {"atividade_id": "atv-2", "fracao_quantitativo": 0.3, "descricao": "B"},
+                ],
+            }
+        ]
+        res = run_atividades(can, {"decomposicao": decomposicao})
+        codigos = [v.codigo for v in res.validacoes]
+        assert "VAL-ATV-02" in codigos
+
+
+

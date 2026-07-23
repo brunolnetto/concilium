@@ -690,3 +690,71 @@ class TestIntegration:
         )
 
         assert len(schedule.scheduled_activities) == 3
+
+
+
+
+class TestActivityPostInit:
+    def _make_activity(self, **kwargs):
+        from concilium.application.scheduling.models import Activity
+
+        defaults = {"activity_id": "A1", "description": "Test", "duration_weeks": 3, "required_resources": {"ESC": 2}}
+        defaults.update(kwargs)
+        return Activity(**defaults)
+
+    def test_duration_weeks_zero_raises(self):
+        """Line 41: duration_weeks < 1."""
+        with pytest.raises(ValueError, match="duration_weeks must be >= 1"):
+            self._make_activity(duration_weeks=0)
+
+    def test_window_weeks_too_small_raises(self):
+        """Line 43: window_weeks < duration_weeks."""
+        with pytest.raises(ValueError, match="window_weeks"):
+            self._make_activity(duration_weeks=5, window_weeks=3)
+
+    def test_ramp_profile_wrong_length_raises(self):
+        """Line 46: ramp_profile length != duration_weeks."""
+        with pytest.raises(ValueError, match="ramp_profile length"):
+            self._make_activity(duration_weeks=3, ramp_profile=[0.3, 0.7])
+
+
+
+
+class TestActivityDAGCycle:
+    def test_cycle_raises(self):
+        """Line 111: cycle in DAG."""
+        from concilium.application.scheduling.models import Activity, ActivityDAG
+
+        a1 = Activity("A1", "Act1", 1, {"W": 1})
+        a2 = Activity("A2", "Act2", 1, {"W": 1})
+        dag = ActivityDAG(activities=[a1, a2], precedence=[("A1", "A2"), ("A2", "A1")])
+        with pytest.raises(ValueError, match="cycle"):
+            dag.topological_order()
+
+
+
+
+class TestScheduleMetricsNoDeadline:
+    def _metrics(self):
+        from concilium.application.scheduling.models import ScheduleMetrics
+
+        return ScheduleMetrics(
+            makespan=10,
+            resource_leveling_score=0.8,
+            idle_time=2,
+            activity_fragmentation=0,
+            critical_path_slack_min=1.0,
+            resource_utilization_avg=0.75,
+        )
+
+    def test_quality_score_no_deadline(self):
+        """Line 168: deadline_weeks=0."""
+        assert 0.0 < self._metrics().quality_score(deadline_weeks=0) < 1.0
+
+    def test_quality_score_with_deadline_higher(self):
+        """Lines 165-166 vs 168."""
+        m = self._metrics()
+        assert m.quality_score(deadline_weeks=12) > m.quality_score(deadline_weeks=0)
+
+
+

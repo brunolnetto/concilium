@@ -350,3 +350,113 @@ class TestRunDiagnosticoCriticidadeGracefulDegradation:
 
 # ---------------------------------------------------------------------------
 
+
+
+
+
+from concilium.domain.models.canonical import (  # noqa: E402
+    ActivityDag,
+    ArestaActivityDag,
+    Atividade,
+    DistribuicaoSemanal,
+    EapItem,
+)
+
+# ══ 08-criticality ═══════════════════════════════════════════════════════════
+
+
+class TestCriticality:
+    def _build_canonical_with_dag_and_cron(self, weekly=True):
+        """Build canonical with activity_dag and cronograma using weekly keys."""
+        from concilium.domain.models.canonical import (
+            CronogramaItem,
+        )
+
+        eap = [
+            EapItem(item_id="i1", ordem=1, cpu_id="CPU-X", descricao="T1", unidade="m3", quantitativo=100),
+            EapItem(item_id="i2", ordem=2, cpu_id="CPU-X", descricao="T2", unidade="m3", quantitativo=100),
+        ]
+        ativs = [
+            Atividade(
+                atividade_id="a1",
+                eap_item_id="i1",
+                descricao="A1",
+                fracao_quantitativo=1.0,
+                quantitativo_atividade=100,
+                cpu_id="CPU-X",
+            ),
+            Atividade(
+                atividade_id="a2",
+                eap_item_id="i2",
+                descricao="A2",
+                fracao_quantitativo=1.0,
+                quantitativo_atividade=100,
+                cpu_id="CPU-X",
+            ),
+        ]
+        dag = ActivityDag(
+            nos=["a1", "a2"],
+            arestas=[ArestaActivityDag(de="a1", para="a2")],
+            ordem_topologica=["a1", "a2"],
+            critical_path=["a1", "a2"],
+            start_offset_min={"a1": 0, "a2": 1},
+        )
+        if weekly:
+            dist_i1 = {
+                "2026-W01": DistribuicaoSemanal(num_equipes=1, qtd_executada=50, qtd_acumulada=50, pct=0.5),
+                "2026-W02": DistribuicaoSemanal(num_equipes=1, qtd_executada=50, qtd_acumulada=100, pct=1.0),
+            }
+            dist_i2 = {"2026-W03": DistribuicaoSemanal(num_equipes=1, qtd_executada=100, qtd_acumulada=100, pct=1.0)}
+            cron = [
+                CronogramaItem(
+                    item_id="i1", dias_trabalhados_semana=5, pct_completude=1.0, distribuicao_semanal=dist_i1
+                ),
+                CronogramaItem(
+                    item_id="i2", dias_trabalhados_semana=5, pct_completude=1.0, distribuicao_semanal=dist_i2
+                ),
+            ]
+        else:
+            dist_i1 = {"2026-01": DistribuicaoSemanal(num_equipes=1, qtd_executada=50, qtd_acumulada=50, pct=0.5)}
+            dist_i2 = {"2026-02": DistribuicaoSemanal(num_equipes=1, qtd_executada=100, qtd_acumulada=100, pct=1.0)}
+            cron = [
+                CronogramaItem(
+                    item_id="i1", dias_trabalhados_semana=5, pct_completude=1.0, distribuicao_mensal=dist_i1
+                ),
+                CronogramaItem(
+                    item_id="i2", dias_trabalhados_semana=5, pct_completude=1.0, distribuicao_mensal=dist_i2
+                ),
+            ]
+        from concilium.domain.models.canonical import EquipeDireta
+
+        equipes = [
+            EquipeDireta(item_id="i1", custo_total=100.0, custo_mao_obra_mensal=50.0, permanencia_meses=1.0),
+            EquipeDireta(item_id="i2", custo_total=100.0, custo_mao_obra_mensal=50.0, permanencia_meses=1.0),
+        ]
+        return CanonicalModel(
+            meta=_meta(),
+            projeto=_projeto(),
+            eap=eap,
+            atividades=ativs,
+            activity_dag=dag,
+            cronograma=cron,
+            equipes_diretas=equipes,
+        )
+
+    def test_weekly_keys_trigger_periodo_to_ordinal_weekly_branch(self):
+        """Weekly keys (AAAA-Www) trigger the weekly branch in _periodo_to_ordinal."""
+        can = self._build_canonical_with_dag_and_cron(weekly=True)
+        res = run_diagnostico_criticidade(can, {})
+        assert res.canonical.criticality_report is not None
+
+    def test_backward_tracing_marks_predecessors_critical(self):
+        """Predecessor ending just before successor should be marked critical."""
+        can = self._build_canonical_with_dag_and_cron(weekly=True)
+        res = run_diagnostico_criticidade(can, {})
+        report = res.canonical.criticality_report
+        assert report is not None
+        # Check that critical_path contains activities
+        critical_ids = report.get("critical_path", [])
+        assert len(critical_ids) > 0
+
+
+

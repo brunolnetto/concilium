@@ -546,3 +546,58 @@ class TestSkill13Run:
 
 
 
+
+
+from types import SimpleNamespace  # noqa: E402
+
+
+class TestExploradorInternals:
+    def _mod(self):
+        import sys
+
+        from concilium.application.skills import run_replanejamento_e_cenarios  # noqa: F401
+
+        return sys.modules["_concilium_skillpkg_08_replanejamento_e_cenarios._skill_helpers._explorador"]
+
+    def test_classify_status_amarelo(self):
+        """Lines 58-59: AMARELO."""
+        assert self._mod()._classify_status(0.07, {"min": 0.08}, {"min": 0.06}) == "AMARELO"
+
+    def test_classify_status_vermelho(self):
+        """Lines 58, 60: VERMELHO."""
+        assert self._mod()._classify_status(0.03, {"min": 0.08}, {"min": 0.06}) == "VERMELHO"
+
+    def test_build_levers_zero_venda(self):
+        """Line 77: venda <= 0."""
+        canonical = MagicMock()
+        canonical.ponto_equilibrio = []
+        assert self._mod()._build_levers(canonical, 0.0) == []
+
+    def test_build_levers_unknown_id_skipped(self):
+        """Line 86: lever id not in _LEVER_ID_TO_TIPO."""
+        mod = self._mod()
+        lv = SimpleNamespace(id="UNKNOWN_XYZ", delta_margin=1000.0, restricoes=[])
+        pe = SimpleNamespace(item_id="A1", custo_venda_cpu=100_000.0, levers_equilibrio=[lv])
+        canonical = MagicMock()
+        canonical.ponto_equilibrio = [pe]
+        assert mod._build_levers(canonical, 1_000_000.0) == []
+
+    def test_build_levers_negative_delta_skipped(self):
+        """Line 101: delta_rs <= 0."""
+        mod = self._mod()
+        valid_id = next(iter(mod._LEVER_ID_TO_TIPO))
+        lv = SimpleNamespace(id=valid_id, delta_margin=-500.0, restricoes=[])
+        pe = SimpleNamespace(item_id="A1", custo_venda_cpu=100_000.0, levers_equilibrio=[lv])
+        canonical = MagicMock()
+        canonical.ponto_equilibrio = [pe]
+        assert mod._build_levers(canonical, 1_000_000.0) == []
+
+
+
+
+
+# diff_service.py lines 90, 95, 100: _gerar_interpretacao improvement branches
+# ---------------------------------------------------------------------------
+
+
+

@@ -128,3 +128,36 @@ class TestCatalogNormalizer:
         canonical = self.norm.normalize_cpu(cpu)
         assert canonical.unit == "m2"
         assert canonical.activity_type == "subgrade_regularization"
+
+
+
+
+
+# ══ semantic/normalizer ════════════════════════════════════════════════════════
+
+
+class TestNormalizer:
+    def test_infer_activity_type_unknown_code(self):
+        """CPU code not in map should return 'unknown'."""
+        from concilium.application.semantic.normalizer import _infer_activity_type
+
+        result = _infer_activity_type("TOTALLY-UNKNOWN-CODE-XYZ-999")
+        assert result == "unknown"
+
+    def test_vocabulary_loader_no_yaml(self, tmp_path):
+        """VocabularyLoader with no .yaml file should return empty dict."""
+        from concilium.application.semantic.normalizer import VocabularyLoader
+
+        vl = VocabularyLoader(tmp_path)
+        result = vl.load("nonexistent")
+        assert result == {}
+
+    def test_attribute_normalizer_unknown_name_passthrough(self):
+        """Unknown attribute name should pass through unchanged."""
+        from concilium.application.semantic.normalizer import AttributeNormalizer
+
+        n = AttributeNormalizer()
+        name, val = n.normalize("totally_unknown_attribute", 42.0)
+        assert name == "totally_unknown_attribute"
+        assert val == 42.0
+

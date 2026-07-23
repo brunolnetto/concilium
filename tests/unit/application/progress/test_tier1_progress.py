@@ -379,3 +379,75 @@ class TestProgressTrackerBuildReport:
         report = self.tracker.build_progress_report(canonical, "2026-W01", "p")
         assert report.activities[0].pct_completude == 0.0
         assert report.activities[0].delay_weeks == 0.0
+
+
+from types import SimpleNamespace  # noqa: E402
+
+
+class TestRuValidateWeekly:
+    def _canonical(self, week_key, planned):
+        dist = SimpleNamespace(qtd_executada=planned)
+        sa = SimpleNamespace(activity_id="A1", distribuicao_semanal={week_key: dist})
+        return SimpleNamespace(cronograma=SimpleNamespace(scheduled_activities=[sa]))
+
+    def _update(self, week_key, qty):
+        return SimpleNamespace(activity_id="A1", week_key=week_key, quantidade_realizada=qty)
+
+    def test_over_report_triggers_warning(self):
+        """Lines 74-77."""
+        from concilium.application.progress.tracker import _ru_validate_weekly
+
+        result = _ru_validate_weekly(self._canonical("2024-W01", 10.0), self._update("2024-W01", 20.0))
+        assert result is not None and result.codigo == "VAL-PROG-01"
+
+    def test_within_threshold_returns_none(self):
+        """Line 85."""
+        from concilium.application.progress.tracker import _ru_validate_weekly
+
+        assert _ru_validate_weekly(self._canonical("2024-W01", 10.0), self._update("2024-W01", 12.0)) is None
+
+    def test_weekly_appended_to_validacoes(self):
+        """Line 115."""
+        from concilium.application.progress.tracker import _ru_run_validations
+
+        vs = _ru_run_validations(self._canonical("2024-W01", 10.0), self._update("2024-W01", 20.0), [], 100.0)
+        assert any(v.codigo == "VAL-PROG-01" for v in vs)
+
+
+
+
+class TestFindCronItemNotFound:
+    def test_returns_none(self):
+        """Line 127."""
+        from concilium.application.progress.tracker import _find_cron_item
+
+        sa = SimpleNamespace(activity_id="A2")
+        canonical = SimpleNamespace(cronograma=SimpleNamespace(scheduled_activities=[sa]))
+        assert _find_cron_item(canonical, "A1") is None
+
+
+
+
+class TestDetectDriftSkips:
+    def test_skips_zero_quantitativo(self):
+        """Line 250."""
+        from concilium.application.progress.tracker import ProgressTracker
+
+        canonical = MagicMock()
+        canonical.eap = [SimpleNamespace(item_id="A1", quantitativo=0.0)]
+        canonical.progresso = {}
+        canonical.cronograma = SimpleNamespace(scheduled_activities=[])
+        assert ProgressTracker().detect_drift(canonical, "2024-W10") == []
+
+    def test_skips_no_cron_entry(self):
+        """Line 254."""
+        from concilium.application.progress.tracker import ProgressTracker
+
+        canonical = MagicMock()
+        canonical.eap = [SimpleNamespace(item_id="A1", quantitativo=100.0)]
+        canonical.progresso = {"A1": []}
+        canonical.cronograma = SimpleNamespace(scheduled_activities=[])
+        assert ProgressTracker().detect_drift(canonical, "2024-W10") == []
+
+
+

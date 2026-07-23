@@ -365,3 +365,74 @@ class TestProjectInputBuilder:
         spec.extra_inputs = {}
         result = ProjectInputBuilder._build_skill_inputs_from_spec(spec)
         assert result["01-escopo-e-eap"]["contexto_id"] == "ja-existente"
+
+
+class TestGerарInterpretacaoImprovements:
+    def _interp(self, delta_custo, delta_cronograma, delta_margem):
+        from concilium.application.benchmarks.diff_service import BenchmarkDiffService
+
+        return BenchmarkDiffService._gerar_interpretacao(delta_custo, delta_cronograma, delta_margem)
+
+    def test_improvement_cost_lower(self):
+        """Line 90: delta_custo < -0.5."""
+        result = self._interp(-5.0, 0, 0.0)
+        assert "Melhoria" in result and "custo" in result
+
+    def test_improvement_cronograma_shorter(self):
+        """Line 95: delta_cronograma < -1."""
+        result = self._interp(0.0, -3, 0.0)
+        assert "semanas menor" in result
+
+    def test_improvement_margem_better(self):
+        """Line 100: delta_margem > 0.5."""
+        result = self._interp(0.0, 0, 2.0)
+        assert "Margem melhorou" in result
+
+    def test_all_improvements_combined(self):
+        """Lines 90, 95, 100 all at once."""
+        result = self._interp(-10.0, -5, 3.0)
+        assert "Melhoria" in result
+        assert "semanas menor" in result
+        assert "Margem melhorou" in result
+
+
+
+
+class TestBenchmarkDiffServiceInterpretacao:
+    def _svc(self):
+        from concilium.application.benchmarks.diff_service import BenchmarkDiffService
+
+        return BenchmarkDiffService()
+
+    def test_melhoria_custo(self):
+        """Line 90: delta_custo < -0.5 → 'Melhoria: custo ... menor'."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=-1.5, delta_cronograma=0, delta_margem=0.0)
+        assert "Melhoria" in text
+        assert "custo" in text
+
+    def test_cronograma_menor(self):
+        """Line 95: delta_cronograma < -1 → 'Cronograma ... menor'."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=0.0, delta_cronograma=-3, delta_margem=0.0)
+        assert "menor" in text
+        assert "Cronograma" in text
+
+    def test_margem_melhorou(self):
+        """Line 100: delta_margem > 0.5 → 'Margem melhorou ...'."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=0.0, delta_cronograma=0, delta_margem=1.2)
+        assert "melhorou" in text
+
+    def test_all_improvements_combined(self):
+        """Lines 90, 95, 100 all in one call."""
+        svc = self._svc()
+        text = svc._gerar_interpretacao(delta_custo=-2.0, delta_cronograma=-4, delta_margem=0.8)
+        assert "Melhoria" in text
+        assert "menor" in text
+        assert "melhorou" in text
+
+
+# ---------------------------------------------------------------------------
+
+
