@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import threading
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -34,6 +35,14 @@ def _make_invocation(
     device_id: str | None = None,
     mcp_session_id: str | None = None,
 ) -> ToolInvocation:
+    # started_at/finished_at precisam ficar sempre "recentes": um valor de calendário
+    # fixo eventualmente ultrapassa CONCILIUM__TOOL_INVOCATIONS_ROTATE_MAX_AGE_DAYS
+    # (default 30 dias) conforme o relógio da máquina avança, disparando rotação
+    # (_should_rotate) a cada append subsequente nesta suíte e arquivando tudo — os
+    # testes que fazem múltiplos appends passam a só enxergar o último registro.
+    now = datetime.now(UTC)
+    started = (now - timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    finished = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     return ToolInvocation(
         id=id,
         tool_name=tool_name,
@@ -41,8 +50,8 @@ def _make_invocation(
         user_id=user_id,
         tenant_id="tenant-x",
         status="success",
-        started_at="2026-06-23T10:00:00Z",
-        finished_at="2026-06-23T10:00:01Z",
+        started_at=started,
+        finished_at=finished,
         error_type=None,
         device_id=device_id,
         mcp_session_id=mcp_session_id,
@@ -487,7 +496,7 @@ class TestBlobRotation:
         raw = ("\n\n" + json.dumps(inv.to_dict()) + "\n").encode("utf-8")
         result = blob_repo._oldest_started_at(raw)
         assert result is not None
-        assert result.isoformat() == "2026-06-23T10:00:00+00:00"
+        assert result == datetime.fromisoformat(inv.started_at)
 
     def test_oldest_started_at_assumes_utc_for_naive_timestamp(self, blob_repo):
         inv_dict = _make_invocation("id-1").to_dict()
