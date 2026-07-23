@@ -182,3 +182,32 @@ class TestCatalogHealthReportStatus:
     )
     def test_compute_status(self, cobertura, confianca, expected):
         assert CatalogHealthReport.compute_status(cobertura, confianca) == expected
+
+
+
+# health.py lines 145-149: CatalogHealthReport.compute_status_dados
+# ---------------------------------------------------------------------------
+
+
+class TestCatalogHealthReportComputeStatusDados:
+    def test_atualizado_when_zero_desatualizadas_and_few_pendentes(self):
+        """Line 145: 0 desatualizadas + <5 pendentes → 'ATUALIZADO'."""
+        from concilium.domain.models.catalog.health import CatalogHealthReport
+
+        result = CatalogHealthReport.compute_status_dados(producoes_desatualizadas=0, observacoes_pendentes=3)
+        assert result == "ATUALIZADO"
+
+    def test_critico_when_many_pendentes(self):
+        """Line 147: observacoes_pendentes > 20 → 'CRITICO'."""
+        from concilium.domain.models.catalog.health import CatalogHealthReport
+
+        result = CatalogHealthReport.compute_status_dados(producoes_desatualizadas=0, observacoes_pendentes=25)
+        assert result == "CRITICO"
+
+    def test_defasado_otherwise(self):
+        """Line 149: other combinations → 'DEFASADO'."""
+        from concilium.domain.models.catalog.health import CatalogHealthReport
+
+        result = CatalogHealthReport.compute_status_dados(producoes_desatualizadas=2, observacoes_pendentes=10)
+        assert result == "DEFASADO"
+

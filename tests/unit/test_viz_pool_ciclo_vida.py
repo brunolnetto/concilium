@@ -61,3 +61,23 @@ class TestVizPoolCicloVida:
 
 
 
+
+
+
+# pool_ciclo_vida.py line 49: _draw_row with idle_w > 0
+# ---------------------------------------------------------------------------
+
+
+class TestPoolCicloVidaDrawRowWithIdle:
+    def test_idle_w_gt_zero_draws_idle_bar(self):
+        """Line 49: idle_w > 0 → ax.barh called for idle."""
+        from concilium.application.runtime.deliverables.visualizations.cube.pool_ciclo_vida import _draw_row
+
+        ax = MagicMock()
+        row = {"prod_w": 5, "idle_w": 2, "off_w": 1, "custo_total": 500_000}
+        _draw_row(ax, 0, row)
+        assert ax.barh.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+

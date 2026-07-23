@@ -104,3 +104,51 @@ class TestCollectCatalogErrors:
 
 
 
+
+
+
+
+
+
+# catalog_governance.py line 55: producao not found → CatalogGovernanceError
+# ---------------------------------------------------------------------------
+
+
+class TestCatalogGovernanceMissingProducao:
+    def test_producao_not_found_raises(self, tmp_path):
+        """Line 55: producao file missing → CatalogGovernanceError."""
+        from concilium.application.orchestrators.catalog_governance import (
+            CatalogGovernanceError,
+            validate_and_resolve_producao_file,
+        )
+
+        (tmp_path / "producoes").mkdir()
+        (tmp_path / "produtividades").mkdir()
+        with pytest.raises(CatalogGovernanceError, match="nao_existe"):
+            validate_and_resolve_producao_file(tmp_path, "nao_existe", 100.0)
+
+
+# ---------------------------------------------------------------------------
+
+
+# catalog_governance.py line 22: assert_catalog_healthy raises CatalogGovernanceError
+# ---------------------------------------------------------------------------
+
+
+class TestCatalogGovernanceAssertHealthy:
+    def test_raises_when_errors_found(self):
+        """Line 22: assert_catalog_healthy with errors → raises CatalogGovernanceError."""
+        from unittest.mock import patch
+
+        from concilium.application.orchestrators.catalog_governance import (
+            CatalogGovernanceError,
+            assert_catalog_healthy,
+        )
+
+        with patch(
+            "concilium.application.orchestrators.catalog_governance.collect_catalog_critical_errors",
+            return_value=[{"cpu": "CPU-01", "erro": "field missing"}],
+        ):
+            with pytest.raises(CatalogGovernanceError):
+                assert_catalog_healthy("test-catalog", {})
+

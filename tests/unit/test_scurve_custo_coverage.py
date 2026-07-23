@@ -331,3 +331,38 @@ class TestBuild:
         ):
             result = build(canonical, None)
         assert result is None
+
+
+# s_curve_builder.py lines 59, 67: continue paths in _scb_collect_direct_costs
+# ---------------------------------------------------------------------------
+
+
+class TestSCurveBuilderDirectCosts:
+    def test_equipe_not_found_in_lookup_skipped(self):
+        """Line 59: equipe_lookup.get(sa.activity_id) returns None → continue."""
+        from concilium.domain.services.analytics.s_curve_builder import _scb_collect_direct_costs
+
+        sa = SimpleNamespace(activity_id="B1", distribuicao_semanal={})
+        equipe_lookup = {}  # B1 not in lookup
+        custo, equip, n = _scb_collect_direct_costs([sa], equipe_lookup)
+        assert sum(custo.values()) == 0.0
+
+    def test_n_equipes_zero_skipped(self):
+        """Line 67: n_equipes=0 → continue."""
+        from concilium.domain.services.analytics.s_curve_builder import _scb_collect_direct_costs
+
+        dist = SimpleNamespace(num_equipes=0, eficiencia=1.0, fator_total=None)
+        sa = SimpleNamespace(activity_id="A1", distribuicao_semanal={"2024-W01": dist})
+        equipe = SimpleNamespace(
+            custo_mao_obra_mensal=5000.0,
+            custo_equipamentos_mensal=2000.0,
+            custo_material_mensal=0.0,
+            custo_combustivel_total_mensal=1000.0,
+            equipamentos=[],
+        )
+        custo, equip, n = _scb_collect_direct_costs([sa], {"A1": equipe})
+        assert sum(custo.values()) == 0.0
+
+
+# ---------------------------------------------------------------------------
+

@@ -249,3 +249,95 @@ class TestBacktrackingPEBuilder:
 
 
 
+
+
+class TestBacktrackingPeBuilder:
+    def _make_resultado(self):
+        resultado = MagicMock()
+        resultado.margem_pct = 0.05
+        resultado.status_margem = "VERMELHO"
+        resultado.venda.total_com_bdi = 1_500_000.0
+        resultado.custo.total = 1_425_000.0
+        return resultado
+
+    def test_builder_creates(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        assert builder is not None
+
+    def test_builder_creates_instance(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        assert builder is not None
+
+
+
+
+class TestBacktrackingPeBuilderHelpers:
+    def test_tol(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _tol
+
+        assert _tol(0.0) > 0
+        assert _tol(0.1) > 0
+
+    def test_btpb_build_lookups(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _btpb_build_lookups
+
+        canonical = MagicMock()
+        canonical.equipes_diretas = []
+        canonical.catalogo = {}
+        canonical.cronograma = MagicMock()
+        canonical.cronograma.scheduled_activities = []
+        result = _btpb_build_lookups(canonical)
+        assert isinstance(result, tuple)
+
+    def test_btpb_validacoes_no_fails(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _btpb_validacoes
+
+        result = _btpb_validacoes(0, [], 0.10)
+        assert isinstance(result, list)
+
+    def test_btpb_validacoes_with_fails(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _btpb_validacoes
+
+        result = _btpb_validacoes(2, [MagicMock(), MagicMock()], 0.10)
+        assert isinstance(result, list)
+
+    def test_find_solucao_found(self):
+        from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
+        from concilium.domain.services.analytics.backtracking_pe_builder import _find_solucao
+
+        sol = SolucaoInversa(
+            parametro="L",
+            valor_atual=0.1,
+            valor_requerido=0.15,
+            delta_abs=0.05,
+            delta_pct=50,
+            impacto_preco_pct=5,
+            impacto_produtividade_pct=0,
+            impacto_recursos_pct=0,
+            impacto_prazo_semanas=0,
+            pe_gap_recalculado=0,
+            roundtrip_valido=True,
+            erro_roundtrip=0,
+            confianca=4,
+        )
+        result = _find_solucao([sol], "L")
+        assert result is sol
+
+    def test_find_solucao_not_found(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _find_solucao
+
+        result = _find_solucao([], "L")
+        assert result is None
+
+    def test_backtracking_builder_creates(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+
+        builder = BacktrackingPEBuilder()
+        assert builder is not None
+
+
+

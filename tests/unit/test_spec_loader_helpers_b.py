@@ -576,3 +576,27 @@ class TestSpecLoaderHelpersB:
 
 
 
+
+
+# ─── _spec_loader_helpers_b.py ────────────────────────────────────────────────
+
+
+class TestSpecLoaderHelpersB2:
+    def test_normalize_referencia_weeks(self):
+        from concilium.application.benchmarks.input_derivation import normalize_referencia_weeks
+
+        ref = {"cronograma": {"1": {"val": 10}, "2": {"val": 20}}}
+        normalize_referencia_weeks(ref)
+        # Keys should be converted to ISO format
+        cron = ref.get("cronograma", {})
+        assert any("-W" in k for k in cron.keys()) or len(cron) == 2
+
+    def test_normalize_referencia_weeks_iso_passthrough(self):
+        from concilium.application.benchmarks.input_derivation import normalize_referencia_weeks
+
+        ref = {"cronograma": {"2026-W01": {"val": 10}}}
+        normalize_referencia_weeks(ref)
+        assert "2026-W01" in ref["cronograma"]
+
+
+

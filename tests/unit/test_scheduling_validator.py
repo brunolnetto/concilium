@@ -51,3 +51,38 @@ class TestScheduleValidation:
 
 # ────────────────────────────────────────────────────────────────
 
+
+
+
+
+
+# scheduling/validator.py line 31: continue when pred/succ not in schedule_map
+# scheduling/validator.py line 80: continue when activity not found
+# ---------------------------------------------------------------------------
+
+
+class TestScheduleValidatorMissingLines:
+    def test_validate_precedence_skips_unknown_activities(self):
+        """Line 31: pred/succ not in schedule_map → continue."""
+        from concilium.application.scheduling.models import ScheduledActivity
+        from concilium.application.scheduling.validator import ScheduleValidator
+
+        sa = ScheduledActivity(activity_id="A1", start_week=0, end_week=3, duration_weeks=3)
+        v = ScheduleValidator()
+        # Precedence references "X1" and "X2" which are NOT in scheduled
+        result = v.validate_precedence([sa], [("X1", "X2")])
+        assert result is True
+
+    def test_validate_durations_skips_unknown_activity(self):
+        """Line 80: a is None (activity not in dict) → continue."""
+        from concilium.application.scheduling.models import ScheduledActivity
+        from concilium.application.scheduling.validator import ScheduleValidator
+
+        sa = ScheduledActivity(activity_id="UNKNOWN", start_week=0, end_week=3, duration_weeks=3)
+        v = ScheduleValidator()
+        result = v.validate_durations([sa], {})  # empty activities dict
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+

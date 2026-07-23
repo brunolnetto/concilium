@@ -289,3 +289,51 @@ class TestConfidenceMetrics:
 
 # ────────────────────────────────────────────────────────────────
 
+
+
+
+
+
+
+
+
+# confidence.py line 137: _detect_embedding_failure_modes → low_discriminative_power
+# ---------------------------------------------------------------------------
+
+
+class TestConfidenceEmbeddingFailures:
+    def _make_cand(self, score, sem_sim=0.5, attr_match=0.8):
+        from concilium.application.resolution.models import ScoredCandidate
+
+        explanations = [
+            {"feature": "semantic_similarity", "value": sem_sim, "weight": 1.0, "contribution": sem_sim},
+            {"feature": "attribute_match", "value": attr_match, "weight": 1.0, "contribution": attr_match},
+        ]
+        return ScoredCandidate(cpu_id=f"CPU-{score}", score=score, explanations=explanations)
+
+    def test_low_discriminative_power_appended(self):
+        """Line 137: 3+ close-scored candidates → low_discriminative_power in failures."""
+        from concilium.application.resolution.confidence import ConfidenceAssigner
+
+        estimator = ConfidenceAssigner()
+        cand = self._make_cand(0.90, sem_sim=0.5, attr_match=0.9)
+        all_candidates = [
+            self._make_cand(0.90),
+            self._make_cand(0.87),
+            self._make_cand(0.86),
+        ]
+        failures = estimator._detect_embedding_failure_modes(cand, all_candidates)
+        assert "low_discriminative_power" in failures
+
+    def test_false_positive_detected(self):
+        """Line 137 path: sem_sim >= 0.8 and attr_match <= 0.3 → failure."""
+        from concilium.application.resolution.confidence import ConfidenceAssigner
+
+        estimator = ConfidenceAssigner()
+        cand = self._make_cand(0.9, sem_sim=0.9, attr_match=0.1)
+        failures = estimator._detect_embedding_failure_modes(cand, [cand])
+        assert "high_similarity_low_attribute_match" in failures
+
+
+# ---------------------------------------------------------------------------
+

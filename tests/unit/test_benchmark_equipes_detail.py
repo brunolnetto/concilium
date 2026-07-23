@@ -174,3 +174,23 @@ class TestBuildEquipesDetail:
 
 # ===========================================================================
 
+
+
+
+# equipes_detail.py lines 17-18: _load_json with invalid JSON → return {}
+# ---------------------------------------------------------------------------
+
+
+class TestEquipesDetailLoadJsonBadJson:
+    def test_bad_json_returns_empty_dict(self, tmp_path):
+        """Lines 17-18: invalid JSON → except branch → return {}."""
+        from concilium.application.benchmarks.comparison.equipes_detail import _load_json
+
+        bad_file = tmp_path / "cpu_bad.json"
+        bad_file.write_text("{{invalid", encoding="utf-8")
+        result = _load_json(bad_file)
+        assert result == {}
+
+
+# ---------------------------------------------------------------------------
+

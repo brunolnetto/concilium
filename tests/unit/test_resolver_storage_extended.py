@@ -397,3 +397,104 @@ class TestResolverConstraints:
 
 # ────────────────────────────────────────────────────────────────
 
+
+
+from unittest.mock import MagicMock, patch  # noqa: E402
+
+# resolver.py lines 90-91: NO_VALID_CANDIDATES when confidence assigns nothing
+# ---------------------------------------------------------------------------
+
+
+class TestResolverNoValidCandidates:
+    def _make_resolver(self):
+        from concilium.application.resolution.models import CPUCanonical
+        from concilium.application.resolution.resolver import Resolver
+
+        cpu = CPUCanonical(
+            cpu_id="ESCO-01",
+            domain="earthwork",
+            activity_type="cut_fill",
+            unit="m3",
+            base_productivity=200.0,
+            attributes={"dmt": 2000.0},
+            required_attributes=["dmt"],
+            optional_attributes=[],
+        )
+        return Resolver(catalog=[cpu])
+
+    def _make_intent(self):
+        from concilium.application.semantic.intent import Dimension, ExtractionConfidence, SemanticIntent
+
+        return SemanticIntent(
+            raw_text="Escavação",
+            scope_item_id="item-01",
+            domain="earthwork",
+            activity_type="cut_fill",
+            unit="m3",
+            dimensions=[Dimension(name="dmt", value=2000.0, unit="m")],
+            extraction_confidence=ExtractionConfidence(domain=0.9, activity_type=0.9, unit=0.99, dimensions=0.85),
+        )
+
+    def test_no_valid_candidates_when_confidence_returns_empty(self):
+        """Lines 90-91: eligible candidates exist but confidence assigns none → NO_VALID_CANDIDATES."""
+        resolver = self._make_resolver()
+        intent = self._make_intent()
+
+        with patch.object(resolver._confidence, "assign", return_value=[]):
+            output = resolver.resolve(intent)
+
+        assert output.resolution_status == "NO_VALID_CANDIDATES"
+
+
+# ---------------------------------------------------------------------------
+
+
+# resolver.py line 139: resolve_and_persist calls store.persist when AUTO_SELECTED
+# ---------------------------------------------------------------------------
+
+
+class TestResolverPersistOnAutoSelected:
+    def test_persist_called_when_auto_selected(self):
+        """Line 139: store is configured and status is AUTO_SELECTED → store.persist(decision)."""
+        from concilium.application.resolution.models import CandidateWithConfidence, CPUCanonical
+        from concilium.application.resolution.resolver import Resolver
+        from concilium.application.semantic.intent import Dimension, ExtractionConfidence, SemanticIntent
+
+        cpu = CPUCanonical(
+            cpu_id="ESCO-01",
+            domain="earthwork",
+            activity_type="cut_fill",
+            unit="m3",
+            base_productivity=200.0,
+            attributes={"dmt": 2000.0},
+            required_attributes=["dmt"],
+            optional_attributes=[],
+        )
+        mock_store = MagicMock()
+        resolver = Resolver(catalog=[cpu], decision_store=mock_store)
+
+        high_candidate = CandidateWithConfidence(
+            cpu_id="ESCO-01",
+            score=0.95,
+            confidence="HIGH",
+            explanations=[],
+        )
+        with patch.object(resolver._confidence, "assign", return_value=[high_candidate]):
+            intent = SemanticIntent(
+                raw_text="Escavação",
+                scope_item_id="item-01",
+                domain="earthwork",
+                activity_type="cut_fill",
+                unit="m3",
+                dimensions=[Dimension(name="dmt", value=2000.0, unit="m")],
+                extraction_confidence=ExtractionConfidence(domain=0.9, activity_type=0.9, unit=0.99, dimensions=0.85),
+            )
+            output, decision = resolver.resolve_and_persist(intent)
+
+        assert output.resolution_status == "AUTO_SELECTED"
+        assert mock_store.persist.called
+        assert decision is not None
+
+
+# ---------------------------------------------------------------------------
+

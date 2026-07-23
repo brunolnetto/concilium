@@ -120,3 +120,46 @@ class TestCampaignRunStore:
     def test_run_path_correct(self, store: CampaignRunStore):
         run = store.new_run()
         assert store.run_path(run) == store.root / run
+
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+# campaign_store.py line 89: raise ValueError when _path is None
+# campaign_store.py line 188: non-LocalBlobStorage run_path
+# campaign_store.py line 269: load_config returns None when no current run
+# ---------------------------------------------------------------------------
+
+
+class TestCampaignStoreMissingLines:
+    def test_init_raises_when_no_path_and_no_storage(self):
+        """Line 89: neither storage nor path → ValueError."""
+        from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
+        with pytest.raises(ValueError, match="Forneça"):
+            CampaignRunStore()
+
+    def test_run_path_non_local_storage_returns_logical_path(self):
+        """Line 188: non-LocalBlobStorage backend → return Path(prefix) / runs / run."""
+        from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
+        mock_storage = MagicMock()
+        mock_storage.blob_existe.return_value = False
+        store = CampaignRunStore(storage=mock_storage, prefix="campaigns")
+        path = store.run_path("run-001")
+        assert str(path).endswith("run-001")
+
+    def test_load_config_no_current_run_returns_none(self):
+        """Line 269: no current run → return None."""
+        from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
+        mock_storage = MagicMock()
+        mock_storage.blob_existe.return_value = False  # no current blob
+        mock_storage.listar_blobs.return_value = []  # no runs
+        store = CampaignRunStore(storage=mock_storage, prefix="campaigns")
+        result = store.load_config(run=None)
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+

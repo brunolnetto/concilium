@@ -69,3 +69,27 @@ class TestPlotWaterfallCausal:
         assert len(labels) == 3
         assert any("clima" in lbl.lower() for lbl in labels)
         assert any("calend" in lbl.lower() or "δ" in lbl for lbl in labels)
+
+
+
+import sys  # noqa: E402
+
+# waterfall_causal.py lines 30-31: matplotlib ImportError → return None
+# ---------------------------------------------------------------------------
+
+
+class TestWaterfallCausalMatplotlibImportError:
+    def test_importerror_returns_none(self):
+        """Lines 30-31: matplotlib not available → return None."""
+        from concilium.application.runtime.deliverables.visualizations.eficiencia.waterfall_causal import (
+            plot_waterfall_causal,
+        )
+
+        campo = MagicMock()
+        with patch.dict(sys.modules, {"matplotlib.pyplot": None}):
+            result = plot_waterfall_causal(campo)
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+

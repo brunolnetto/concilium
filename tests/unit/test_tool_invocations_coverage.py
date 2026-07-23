@@ -771,3 +771,25 @@ class TestSingleton:
         custom.append(_make_invocation("id-x"))
         repo = get_tool_invocation_repository()
         assert repo.count() == 1
+
+
+
+
+
+
+# tool_invocations/repository.py lines 100-101: _max_size with non-int env var
+# ---------------------------------------------------------------------------
+
+
+class TestMaxSizeInvalidEnvVar:
+    def test_invalid_env_returns_10000(self, monkeypatch):
+        """Lines 100-101: env var is not a valid int → except ValueError → 10_000."""
+        monkeypatch.setenv("CONCILIUM__TOOL_INVOCATIONS_MAX_SIZE", "not_an_int")
+        from concilium.application.tool_invocations.repository import _max_size
+
+        result = _max_size()
+        assert result == 10_000
+
+
+# ---------------------------------------------------------------------------
+

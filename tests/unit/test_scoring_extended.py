@@ -7,6 +7,8 @@ WeightedScorer with use_historical_priors, weight normalization, score_all.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 from concilium.application.resolution.models import (
     DEFAULT_SCORING_CONFIG,
     CandidateWithConfidence,
@@ -411,7 +413,6 @@ class TestWeightedScorerExtended:
 
     def test_custom_extractor_injected(self):
         """Extractor personalizado injetado via parâmetro é usado."""
-        from unittest.mock import MagicMock
 
         scorer = WeightedScorer()
         intent = _intent()
@@ -468,4 +469,37 @@ class TestScoringAndResolution:
 
 
 # ────────────────────────────────────────────────────────────────
+
+
+
+
+
+# scoring.py line 85: _am_score_attr_value returns 0.0 for mixed types
+# ---------------------------------------------------------------------------
+
+
+class TestAmScoreAttrValueMixedTypes:
+    def test_none_cpu_val_returns_zero(self):
+        """Line 85: cpu_val is None (not numeric, not str) → return 0.0."""
+        from concilium.application.resolution.scoring import _am_score_attr_value
+
+        result = _am_score_attr_value("dmt", None, 2000.0)
+        assert result == 0.0
+
+    def test_list_cpu_val_returns_zero(self):
+        """Line 85: cpu_val is a list → neither numeric nor str → return 0.0."""
+        from concilium.application.resolution.scoring import _am_score_attr_value
+
+        result = _am_score_attr_value("dmt", [1, 2], "value")
+        assert result == 0.0
+
+    def test_none_intent_val_returns_zero(self):
+        """Line 85: intent_val is None → return 0.0."""
+        from concilium.application.resolution.scoring import _am_score_attr_value
+
+        result = _am_score_attr_value("soil_class", "1A", None)
+        assert result == 0.0
+
+
+# ---------------------------------------------------------------------------
 

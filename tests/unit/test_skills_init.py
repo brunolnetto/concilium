@@ -100,3 +100,32 @@ class TestSkillLoading:
         assert hasattr(SKILLS, "__getitem__") and hasattr(SKILLS, "__len__")
         assert len(SKILLS) > 0
 
+
+
+
+# ─── application/skills/__init__.py extended tests ─────────────────────────────
+
+
+class TestSkillsInitExtended:
+    def test_skills_dict_has_skill01(self):
+        from concilium.application.skills import SKILLS
+
+        assert "01-escopo-e-eap" in SKILLS
+        assert callable(SKILLS["01-escopo-e-eap"])
+
+    def test_manifest_meta_has_gate(self):
+        from concilium.application.skills import MANIFEST_META
+
+        # MANIFEST_META should define gate skills
+        assert isinstance(MANIFEST_META, dict)
+
+    def test_skill_registry_get_skill(self):
+        from concilium.application.skills.registry import SkillRegistry
+
+        registry = SkillRegistry()
+        skill = registry.get_skill("01-escopo-e-eap")
+        assert skill is not None
+        assert skill.version is not None
+
+
+

@@ -16,7 +16,6 @@ def _make_svc():
     return ConciliumService(dependencies=deps)
 
 
-# ---------------------------------------------------------------------------
 # Lines 742-744: _resolve_cubo_projection_rows delegates to imported fn
 # Lines 751-753: _bucket_from_week_iso delegates
 # Lines 762-764: _resolve_abc_curva_rows delegates
@@ -85,6 +84,8 @@ class TestConciliumServiceStaticDelegates:
 
 
 # ---------------------------------------------------------------------------
+
+
 # Lines 839, 841, 843, 852, 854, 858: raise ValueError on invalid projection params
 # ---------------------------------------------------------------------------
 
@@ -152,6 +153,8 @@ class TestConciliumProjectionValidationErrors:
 
 
 # ---------------------------------------------------------------------------
+
+
 # Line 481: get_version_history delegation
 # ---------------------------------------------------------------------------
 
@@ -167,6 +170,8 @@ class TestConciliumVersionHistory:
 
 
 # ---------------------------------------------------------------------------
+
+
 # Line 655: get_cubo_pool_projection returns early when canonical is None
 # ---------------------------------------------------------------------------
 
@@ -178,3 +183,4 @@ class TestConciliumCuboPoolProjectionNone:
         with patch.object(svc, "_load_canonical_for_version", return_value=(None, "v1")):
             result = svc.get_cubo_pool_projection("proj-01", version="v1", face="instancial")
         assert result["rows"] == []
+

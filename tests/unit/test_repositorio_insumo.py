@@ -360,3 +360,91 @@ class TestRepositorioInsumo:
 
 
 
+
+
+
+# insumo.py line 45: _rp_sicro_regional with regz not dict nor list → reg = None
+# ---------------------------------------------------------------------------
+
+
+class TestInsumoRpSicroRegionalElse:
+    def test_regz_not_dict_nor_list_returns_none(self):
+        """Line 45: regz is a string (not dict/list) → reg = None → return None."""
+        from concilium.infrastructure.repositories.insumo import _rp_sicro_regional
+
+        insumo = {"regionalizacao": "unexpected_string"}
+        result = _rp_sicro_regional(insumo, "SP")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+
+
+# insumo.py lines 68-69: _rp_historico_scd2 with bad date → except
+# ---------------------------------------------------------------------------
+
+
+class TestInsumoRpHistoricoScd2BadDate:
+    def test_invalid_date_in_historico_passes(self):
+        """Lines 68-69: ValueError from date.fromisoformat → except → return None."""
+        from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
+
+        insumo = {"historico_precos_scd2": [{"data_inicio_vigencia": "NOT_A_DATE", "preco_unitario": 100.0}]}
+        from datetime import date
+
+        result = _rp_historico_scd2(insumo, date(2024, 1, 1))
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+
+
+# insumo.py lines 82-83: _lookup_preco_historico with bad date → except
+# ---------------------------------------------------------------------------
+
+
+class TestInsumoLookupPrecoHistoricoBadDate:
+    def test_invalid_date_raises_and_returns_none(self):
+        """Lines 82-83: ValueError from date.fromisoformat → except → return None."""
+        from concilium.infrastructure.repositories.insumo import _lookup_preco_historico
+
+        historico = [{"data_inicio_vigencia": "INVALID", "preco_unitario": 50.0}]
+        result = _lookup_preco_historico(historico, "2024-01-01")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+
+
+# insumo.py lines 126-127: resolve_preco_referencia with bad InsumoVersionado → except
+# ---------------------------------------------------------------------------
+
+
+class TestInsumoVersionadoValidateFails:
+    def test_bad_versoes_block_falls_through(self):
+        """Lines 126-127: InsumoVersionado.model_validate raises → except Exception → pass."""
+        from unittest.mock import patch
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalogo = {
+            "insumos": [
+                {
+                    "codigo": "MO-01",
+                    "preco_unitario": 50.0,
+                    "versoes": [{"periodo": "2024-01", "preco_unitario": 50.0}],
+                }
+            ]
+        }
+        repo = RepositorioInsumo(catalogo)
+        from datetime import date
+
+        from concilium.domain.models.catalog.versioned import InsumoVersionado
+
+        with patch.object(InsumoVersionado, "model_validate", side_effect=ValueError("bad")):
+            result = repo.preco_na_data("MO-01", date(2024, 1, 1))
+        assert result is not None  # falls through to preco direto
+
+
+# ---------------------------------------------------------------------------
+

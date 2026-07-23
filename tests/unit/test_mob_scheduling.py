@@ -443,3 +443,36 @@ class TestParseDate:
 
 
 
+
+
+
+# mob_scheduling.py line 27: _parse_date with date object → return date_str
+# mob_scheduling.py line 146: fase not in mob_windows → continue
+# ---------------------------------------------------------------------------
+
+
+class TestMobSchedulingMissingLines:
+    def test_parse_date_with_date_object_returns_it(self):
+        """Line 27: isinstance(date_str, date) → return date_str."""
+        from concilium.application.scheduling.mob_scheduling import _parse_date
+
+        d = date(2024, 6, 15)
+        assert _parse_date(d) is d
+
+    def test_calcular_mob_fase_not_in_windows_skipped(self):
+        """Line 146: indireto MOB with fase not in mob_windows → skipped."""
+        from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
+
+        mob_windows = {
+            "mobilizacao": {"inicio": date(2024, 1, 1), "fim": date(2024, 1, 31)},
+        }
+        indiretos = [
+            {"tipo": "MOB", "fase": "UNKNOWN_FASE", "driver": "projeto", "custo_fixo_total": 5000.0},
+        ]
+        result = calcular_custo_indireto_mob(indiretos, mob_windows)
+        assert result["mob"] == {}
+        assert result["custo_mob_total"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+

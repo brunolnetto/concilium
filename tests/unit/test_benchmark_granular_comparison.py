@@ -201,3 +201,23 @@ class TestBuildGranularComparison:
 
 # ===========================================================================
 
+
+
+
+# granular.py lines 20-22: _load_json with invalid JSON → warning + return {}
+# ---------------------------------------------------------------------------
+
+
+class TestGranularLoadJsonBadJson:
+    def test_bad_json_returns_empty_dict(self, tmp_path):
+        """Lines 20-22: invalid JSON file → except branch → return {}."""
+        from concilium.application.benchmarks.comparison.granular import _load_json
+
+        bad_file = tmp_path / "bad.json"
+        bad_file.write_text("not-valid-json", encoding="utf-8")
+        result = _load_json(bad_file)
+        assert result == {}
+
+
+# ---------------------------------------------------------------------------
+

@@ -150,3 +150,47 @@ class TestHealCatalog:
         result = heal_catalog(cat)
         assert "Cura concluída" in result
 
+
+
+
+
+
+
+
+# healer.py lines 70-71: _remap_equipamentos called with equipes having equipamentos
+# ---------------------------------------------------------------------------
+
+
+class TestHealerRemapEquipamentos:
+    def test_remap_equipamentos_runs_on_equipe_with_equipamentos(self, tmp_path):
+        """Lines 70-71: _heal_producoes calls _remap_equipamentos on equipe with equipamentos."""
+        from concilium.infrastructure.catalog.mapping.healer import heal_catalog
+
+        # Set up minimal catalog structure
+        cat_root = tmp_path
+        (cat_root / "insumos" / "equipamento").mkdir(parents=True)
+        (cat_root / "insumos" / "mao_obra").mkdir(parents=True)
+        (cat_root / "insumos" / "material").mkdir(parents=True)
+        (cat_root / "producoes").mkdir()
+        (cat_root / "cpus").mkdir()
+        (cat_root / "produtividades").mkdir()
+
+        # Put an insumo equipamento so id_map gets populated
+        eq_file = cat_root / "insumos" / "equipamento" / "EQ-ESCAV01.json"
+        eq_file.write_text('{"equip_id": "EQ-ESCAV01"}', encoding="utf-8")
+
+        # Create a producao with an equipe that has equipamentos
+        producao_data = {
+            "composicao_padrao_equipe": {
+                "funcoes": [],
+                "equipamentos": [{"equip_id": "ESCAV01"}],
+            }
+        }
+        (cat_root / "producoes" / "prod1.json").write_text(json.dumps(producao_data), encoding="utf-8")
+
+        result = heal_catalog(cat_root)
+        assert "Cura concluída" in result
+
+
+# ---------------------------------------------------------------------------
+

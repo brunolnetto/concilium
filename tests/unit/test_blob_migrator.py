@@ -270,3 +270,24 @@ class TestBlobMigrateCLI:
         assert result.exit_code == 0
         tgt = LocalBlobStorage(tgt_dir)
         assert not tgt.blob_existe("test/file.json")
+
+
+from unittest.mock import MagicMock  # noqa: E402
+
+# ─── migrator.py lines 101-103: exception during migration → failed count +1 ─
+
+
+class TestBlobMigratorException:
+    def test_blob_read_exception_increments_failed(self):
+        """Lines 101-103: exception during ler_blob → failed += 1, logged."""
+        from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
+
+        source = MagicMock()
+        target = MagicMock()
+        source.listar_blobs.return_value = ["path/to/blob.json"]
+        source.ler_blob.side_effect = OSError("read failed")
+
+        migrator = BlobMigrator()
+        result = migrator.migrate(source, target, overwrite=True)
+        assert result.failed == 1
+        assert result.copied == 0

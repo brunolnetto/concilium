@@ -467,3 +467,32 @@ class TestDerivarRequiredResourcesEdgeCases:
         eq = SimpleNamespace(item_id="eap-2", num_equipes_base=1, equipamentos=[equip_no_id])
         req, _ = derivar_required_resources([eq])
         assert req == {"eap-2": {}}
+
+
+# ─── application/scheduling/pool_inference.py ─────────────────────────────────
+
+
+class TestPoolInference:
+    def test_import_and_basic(self):
+        from concilium.application.scheduling import pool_inference
+
+        assert hasattr(pool_inference, "__file__")
+
+    def test_derivar_required_resources_empty(self):
+        from concilium.application.scheduling.pool_inference import derivar_required_resources
+
+        result, missing = derivar_required_resources([])
+        assert isinstance(result, dict)
+        assert isinstance(missing, list)
+
+    def test_tipo_recurso_de_equip(self):
+        from concilium.application.scheduling.pool_inference import tipo_recurso_de_equip
+
+        result = tipo_recurso_de_equip("ESC-HIDRA", {})
+        assert isinstance(result, str)
+
+
+# ─── domain/services/analytics/backtracking_pe_builder.py ─────────────────────
+
+
+

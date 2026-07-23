@@ -903,3 +903,75 @@ class TestTemporalBucketInvalidGranularidade:
 
         with pytest.raises(ValueError, match="Granularidade temporal invalida"):
             _temporal_bucket_from_week_iso("2026-W23", "quinzena")  # type: ignore
+
+
+from types import SimpleNamespace  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
+
+# cubo_analitico_builder.py line 88: n_equipes <= 0 → return []
+# ---------------------------------------------------------------------------
+
+
+class TestCabCollectCelulasSemanaZeroEquipes:
+    def test_n_equipes_zero_returns_empty(self):
+        """Line 88: n_equipes <= 0 → return []."""
+        from concilium.domain.services.analytics.cubo_analitico_builder import _cab_collect_celulas_semana
+
+        dist = SimpleNamespace(num_equipes=0, eficiencia=1.0)
+        equipe = MagicMock()
+        result = _cab_collect_celulas_semana(equipe, "A1", "2024-W01", dist, 0.0, {}, {}, 0.0)
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+
+
+# cubo_analitico_builder.py lines 380, 386, 389: _build_diesel_L_map paths
+# ---------------------------------------------------------------------------
+
+
+class TestCuboBuildDieselLMap:
+    def _builder(self):
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        return CuboAnaliticoBuilder()
+
+    def test_no_cronograma_returns_empty(self):
+        """Line 380: cronograma is None → return {}."""
+        builder = self._builder()
+        canonical = SimpleNamespace(cronograma=None, equipes_diretas=[])
+        result = builder._build_diesel_L_map(canonical)
+        assert result == {}
+
+    def test_sa_not_found_for_equipe_skipped(self):
+        """Line 386: sa not found for equipe.item_id → continue."""
+        builder = self._builder()
+        sa = SimpleNamespace(
+            activity_id="A1", distribuicao_semanal={"2024-W01": SimpleNamespace(num_equipes=2, eficiencia=1.0)}
+        )
+        cron = SimpleNamespace(scheduled_activities=[sa])
+        equipe = SimpleNamespace(item_id="B1", equipamentos=[])
+        canonical = SimpleNamespace(cronograma=cron, equipes_diretas=[equipe])
+        result = builder._build_diesel_L_map(canonical)
+        assert result == {}
+
+    def test_zero_consumo_base_skipped(self):
+        """Line 389: consumo_base <= 0 → continue."""
+        builder = self._builder()
+        sa = SimpleNamespace(
+            activity_id="A1", distribuicao_semanal={"2024-W01": SimpleNamespace(num_equipes=2, eficiencia=1.0)}
+        )
+        cron = SimpleNamespace(scheduled_activities=[sa])
+        equipe = SimpleNamespace(
+            item_id="A1",
+            equipamentos=[
+                SimpleNamespace(consumo_litros_hora=0.0, num_unidades=0, tipo_combustivel=None, equip_id="EQ-X")
+            ],
+        )
+        canonical = SimpleNamespace(cronograma=cron, equipes_diretas=[equipe])
+        result = builder._build_diesel_L_map(canonical)
+        assert result == {}
+
+
+# ---------------------------------------------------------------------------
+
