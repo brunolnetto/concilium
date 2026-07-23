@@ -1,4 +1,4 @@
-# Versão: 1 — 2026-07-20
+# Versão: 2 — 2026-07-23
 
 # Tutorial — Criar e Executar Projetos via MCP
 
@@ -199,6 +199,33 @@ O usuário do Concilium é um engenheiro civil. Nunca exponha parâmetros técni
 | "Qual o `leadtime_mob_semanas`?" | "Quantas semanas para montar o canteiro antes de começar?" |
 | "Quer `restricoes_mercado`?" | "Tem restrição de equipamento na região?" |
 | "Informe `bdi_lucro.mao_obra`" | "Qual o lucro objetivo da obra? (um número, ex: 8%)" |
+
+### Passo prévio — Checar duplicidade antes de criar
+
+**Sempre chame `listar_projetos()` antes de `criar_projeto`/`iniciar_orcamento`.** Não existe
+hoje nenhuma trava de duplicidade no backend — dois projetos com o mesmo nome são aceitos
+silenciosamente na criação (o `project_id` é sempre um UUID novo, então nunca colide, mas o
+nome pode se repetir). A prevenção é responsabilidade do agente nesta etapa.
+
+```python
+existentes = listar_projetos()["projetos"]
+# Normalizar: lowercase, sem acentos/pontuação, comparar "nome" (priorizando mesmo contexto_id)
+```
+
+Se encontrar um `nome` igual ou muito parecido (mesmo `contexto_id`, ou nomes que só diferem
+em grafia/abreviação), **não crie automaticamente** — apresente ao usuário:
+
+> "Já existe um projeto chamado '{nome_existente}' (id: {id}, v{current_version}). É esse
+> mesmo projeto ou é um novo, diferente?"
+
+- **Mesmo projeto** → não chamar `criar_projeto` de novo; usar o `project_id` existente e
+  continuar o fluxo a partir dele (`consultar_status`, `nova_versao`, etc.)
+- **Projeto genuinamente diferente** (ex.: outro lote/etapa da mesma obra) → prosseguir
+  normalmente com a criação, deixando a diferenciação clara no `nome` (ex.: "Lote 09/10" vs
+  "Lote 11/12")
+
+Não bloquear nem recusar por conta própria — a decisão de "é ou não é duplicado" é sempre do
+usuário; o agente só levanta o sinal antes de agir.
 
 ### 1A — Via QQP (forma recomendada para novos projetos)
 
