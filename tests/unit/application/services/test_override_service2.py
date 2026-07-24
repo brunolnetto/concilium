@@ -41,6 +41,61 @@ class TestExtendCpu:
         assert result == {"codigo": "CPU-1"}
 
 
+class TestCpuContexto:
+    """ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
+
+    def test_set_cpu_contexto_writes_and_logs(self):
+        svc, repo, audit = _make_svc()
+        proj = _make_project()
+        repo.get_project.return_value = proj
+        svc.set_cpu_contexto("proj-1", "CPU-1", "Solo argiloso, acesso restrito.", actor="eng-1")
+        proj.write_json.assert_called_once_with(
+            "overrides/cpus_contexto.json", {"CPU-1": "Solo argiloso, acesso restrito."}
+        )
+        audit.log.assert_called_once()
+
+    def test_set_cpu_contexto_preserves_other_entries(self):
+        svc, repo, _ = _make_svc()
+        proj = _make_project({"overrides/cpus_contexto.json": {"CPU-EXISTING": "já anotado"}})
+        repo.get_project.return_value = proj
+        svc.set_cpu_contexto("proj-1", "CPU-1", "novo contexto")
+        written = proj.write_json.call_args.args[1]
+        assert written == {"CPU-EXISTING": "já anotado", "CPU-1": "novo contexto"}
+
+    def test_set_cpu_contexto_empty_string_removes_entry(self):
+        svc, repo, _ = _make_svc()
+        proj = _make_project({"overrides/cpus_contexto.json": {"CPU-1": "antigo"}})
+        repo.get_project.return_value = proj
+        svc.set_cpu_contexto("proj-1", "CPU-1", "")
+        written = proj.write_json.call_args.args[1]
+        assert "CPU-1" not in written
+
+    def test_get_cpu_contexto_returns_stored_value(self):
+        svc, repo, _ = _make_svc()
+        proj = _make_project({"overrides/cpus_contexto.json": {"CPU-1": "contexto salvo"}})
+        repo.get_project.return_value = proj
+        assert svc.get_cpu_contexto("proj-1", "CPU-1") == "contexto salvo"
+
+    def test_get_cpu_contexto_returns_none_when_absent(self):
+        svc, repo, _ = _make_svc()
+        proj = _make_project()
+        repo.get_project.return_value = proj
+        assert svc.get_cpu_contexto("proj-1", "CPU-1") is None
+
+    def test_list_cpu_contextos_returns_full_dict(self):
+        svc, repo, _ = _make_svc()
+        stored = {"CPU-1": "a", "CPU-2": "b"}
+        proj = _make_project({"overrides/cpus_contexto.json": stored})
+        repo.get_project.return_value = proj
+        assert svc.list_cpu_contextos("proj-1") == stored
+
+    def test_list_cpu_contextos_empty_when_missing(self):
+        svc, repo, _ = _make_svc()
+        proj = _make_project()
+        repo.get_project.return_value = proj
+        assert svc.list_cpu_contextos("proj-1") == {}
+
+
 class TestOverrides:
     def test_list_overrides_returns_data(self):
         svc, repo, _ = _make_svc()

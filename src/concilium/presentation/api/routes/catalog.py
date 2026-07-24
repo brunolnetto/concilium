@@ -47,8 +47,39 @@ def resolve_cpu(
     cpu_id: str,
     service: ConciliumService = Depends(get_concilium_service),
 ) -> Any:
-    """Resolve CPU by priority: project override → catalog base → snapshot (ADR-040)."""
+    """Resolve CPU by priority: project override → catalog base → snapshot (ADR-040).
+
+    Inclui `contexto_projeto` (ADR-148) quando presente — sempre complementar à `descricao`.
+    """
     cpu = service.resolve_cpu(project_id, cpu_id)
     if cpu is None:
         raise HTTPException(status_code=404, detail=f"CPU '{cpu_id}' não encontrada no projeto nem no catálogo base.")
     return cpu
+
+
+@router.put(
+    "/{project_id}/catalog/cpus/{cpu_id}/contexto",
+    summary="Set project-specific context for a CPU (ADR-148, complementary to catalog description)",
+)
+def set_cpu_contexto(
+    project_id: str,
+    cpu_id: str,
+    body: dict = Body(...),
+    x_user: str = Header(default="anonymous", alias="X-User"),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, str]:
+    """Free-text context for this CPU in this project — no approval workflow, complementary to catalog descricao."""
+    service.set_cpu_contexto(project_id, cpu_id, str(body.get("contexto") or ""), actor=x_user)
+    return {"status": "ok", "cpu_id": cpu_id}
+
+
+@router.get(
+    "/{project_id}/catalog/cpus-contexto",
+    summary="List all project-specific CPU contexts for this project (ADR-148)",
+)
+def list_cpu_contextos(
+    project_id: str,
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, str]:
+    """Returns the full cpus_contexto.json dict — keys are cpu_ids, values are free-text context."""
+    return service.list_cpu_contextos(project_id)

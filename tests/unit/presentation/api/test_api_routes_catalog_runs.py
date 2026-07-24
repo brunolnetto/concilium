@@ -70,6 +70,29 @@ class TestCatalogRoutes:
             resolve_cpu("proj-1", "cpu-1", service=svc)
         assert exc.value.status_code == 404
 
+    def test_set_cpu_contexto_ok(self):
+        from concilium.presentation.api.routes.catalog import set_cpu_contexto
+
+        svc = _svc()
+        result = set_cpu_contexto("proj-1", "cpu-1", body={"contexto": "Solo argiloso."}, x_user="eng", service=svc)
+        assert result == {"status": "ok", "cpu_id": "cpu-1"}
+        svc.set_cpu_contexto.assert_called_once_with("proj-1", "cpu-1", "Solo argiloso.", actor="eng")
+
+    def test_set_cpu_contexto_defaults_empty_string(self):
+        from concilium.presentation.api.routes.catalog import set_cpu_contexto
+
+        svc = _svc()
+        set_cpu_contexto("proj-1", "cpu-1", body={}, x_user="eng", service=svc)
+        svc.set_cpu_contexto.assert_called_once_with("proj-1", "cpu-1", "", actor="eng")
+
+    def test_list_cpu_contextos(self):
+        from concilium.presentation.api.routes.catalog import list_cpu_contextos
+
+        svc = _svc()
+        svc.list_cpu_contextos.return_value = {"cpu-1": "contexto salvo"}
+        result = list_cpu_contextos("proj-1", service=svc)
+        assert result == {"cpu-1": "contexto salvo"}
+
 
 # ─── catalogs.py routes ─────────────────────────────────────────────────────
 

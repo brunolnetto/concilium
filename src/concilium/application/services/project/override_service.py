@@ -30,6 +30,33 @@ class OverrideService:
     def resolve_cpu(self, project_id: str, cpu_id: str) -> dict | None:
         return self._repository.get_project(project_id).resolve_cpu(cpu_id)
 
+    # ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)
+
+    def set_cpu_contexto(self, project_id: str, cpu_id: str, contexto: str, actor: str = "system") -> None:
+        project = self._repository.get_project(project_id)
+        contexto_map = project.read_json("overrides/cpus_contexto.json", {})
+        if contexto:
+            contexto_map[cpu_id] = contexto
+        else:
+            contexto_map.pop(cpu_id, None)
+        project.write_json("overrides/cpus_contexto.json", contexto_map)
+        self._audit_service.log(
+            project,
+            action="set_cpu_contexto",
+            actor=actor,
+            payload={"cpu_id": cpu_id, "contexto": contexto},
+            result={"status": "ok"},
+        )
+
+    def get_cpu_contexto(self, project_id: str, cpu_id: str) -> str | None:
+        contexto_map = self.list_cpu_contextos(project_id)
+        return contexto_map.get(cpu_id)
+
+    def list_cpu_contextos(self, project_id: str) -> dict[str, str]:
+        project = self._repository.get_project(project_id)
+        contexto_map = project.read_json("overrides/cpus_contexto.json", {})
+        return contexto_map if isinstance(contexto_map, dict) else {}
+
     def list_overrides(self, project_id: str) -> dict[str, Any]:
         project = self._repository.get_project(project_id)
         return project.read_json(self._files.overrides, {})

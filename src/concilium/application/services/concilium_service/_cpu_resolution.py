@@ -29,6 +29,18 @@ class _CpuResolutionMixin(_Base):
         overlay = project.read_json("overrides/cpus_overlay.json", {})
         return overlay if isinstance(overlay, dict) else {}
 
+    def set_cpu_contexto(self, project_id: str, cpu_id: str, contexto: str, actor: str = "system") -> None:
+        """ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
+        self._dependencies.override_service.set_cpu_contexto(project_id, cpu_id, contexto, actor=actor)
+
+    def get_cpu_contexto(self, project_id: str, cpu_id: str) -> str | None:
+        """ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
+        return self._dependencies.override_service.get_cpu_contexto(project_id, cpu_id)
+
+    def list_cpu_contextos(self, project_id: str) -> dict[str, str]:
+        """ADR-148: dict[cpu_id, contexto] completo do projeto — para hidratação em lote na UI."""
+        return self._dependencies.override_service.list_cpu_contextos(project_id)
+
     def resolve_cpu(self, project_id: str, cpu_id: str) -> dict | None:
         candidate = self._dependencies.override_service.resolve_cpu(project_id, cpu_id)
 
@@ -45,13 +57,21 @@ class _CpuResolutionMixin(_Base):
 
         if candidate and master_cpu:
             # Preserve project-level fields while inheriting richer master composition.
-            return {**master_cpu, **candidate}
-        if candidate:
-            enriched_candidate = self._enrich_cpu_from_producao(project, dict(candidate))
-            return enriched_candidate
-        if master_cpu:
-            return master_cpu
-        return candidate
+            result = {**master_cpu, **candidate}
+        elif candidate:
+            result = self._enrich_cpu_from_producao(project, dict(candidate))
+        elif master_cpu:
+            result = master_cpu
+        else:
+            result = candidate
+
+        # ADR-148: contexto de projeto é sempre complementar — anexado independentemente
+        # da fonte que resolveu a CPU (override/catálogo base/snapshot), nunca a substitui.
+        if result is not None:
+            contexto = self.get_cpu_contexto(project_id, cpu_id)
+            if contexto:
+                result = {**result, "contexto_projeto": contexto}
+        return result
 
     def _candidate_catalog_ids(self, project: Any) -> list[str]:
         """Resolve possible catalog IDs for project CPU enrichment."""

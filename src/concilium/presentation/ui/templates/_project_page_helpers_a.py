@@ -228,12 +228,15 @@ def _render_eap_composicao_section(composicao: list, has_equipe: bool) -> None:
         st.caption("Composição não registrada para esta CPU.")
 
 
-def _render_eap_item_descricao(descricao_item: str, descricao_cpu: str) -> None:
+def _render_eap_item_descricao(descricao_item: str, descricao_cpu: str, contexto_projeto: str = "") -> None:
     # Descrição: preferência para o campo da EAP, fallback para CPU
     if descricao_item:
         st.caption(f"**{descricao_item}**")
     elif descricao_cpu:
         st.caption(f"*CPU — {descricao_cpu}*")
+    # ADR-148: contexto de projeto é sempre complementar — nunca substitui a descrição acima.
+    if contexto_projeto:
+        st.caption(f"🏗️ *Contexto do projeto — {contexto_projeto}*")
 
 
 def _render_eap_item_observacao(observacao: str) -> None:
@@ -260,11 +263,11 @@ def _resolve_eap_equipe_flags(cpu_data: dict) -> tuple[dict, bool]:
     return equipe, has_equipe
 
 
-def _render_eap_item_body(item: dict, cpu_data: dict, qtd: object, unidade: str) -> None:
+def _render_eap_item_body(item: dict, cpu_data: dict, qtd: object, unidade: str, contexto_projeto: str = "") -> None:
     cpu_id = item.get("cpu_id", "—")
     descricao_item = item.get("descricao") or ""
     descricao_cpu = cpu_data.get("descricao") or cpu_data.get("nome") or ""
-    _render_eap_item_descricao(descricao_item, descricao_cpu)
+    _render_eap_item_descricao(descricao_item, descricao_cpu, contexto_projeto)
 
     observacao = item.get("observacao") or item.get("nota") or ""
     _render_eap_item_observacao(observacao)
@@ -285,6 +288,7 @@ def _render_eap_item_expander(
     project_id: str,
     base_url: str,
     actor: str,
+    contextos: dict[str, str] | None = None,
 ) -> None:
     cpu_id = item.get("cpu_id", "—")
     qtd = item.get("quantitativo", "—")
@@ -294,7 +298,7 @@ def _render_eap_item_expander(
     label = f"📌 **{item_id}** — {descricao[:60]}  ·  {qtd} {unidade}"
     cpu_data = _resolve_cpu_data(cpu_id, cpu_map, cpu_cache, project_id, base_url, actor)
     with st.expander(label, expanded=False):
-        _render_eap_item_body(item, cpu_data, qtd, unidade)
+        _render_eap_item_body(item, cpu_data, qtd, unidade, (contextos or {}).get(cpu_id, ""))
 
 
 def _render_eap_section(reference: dict, base_url: str, project_id: str, actor: str) -> None:
@@ -306,10 +310,17 @@ def _render_eap_section(reference: dict, base_url: str, project_id: str, actor: 
     eap_items = (reference.get("cpus") or {}).get("itens_eap", [])
     cpu_map = _build_project_cpu_map(reference)
     cpu_cache: dict[str, dict] = {}
+    # ADR-148: busca todos os contextos de projeto de uma vez (evita N+1 chamadas por atividade).
+    try:
+        contextos = api_call(
+            method="GET", path=f"/api/projects/{project_id}/catalog/cpus-contexto", base_url=base_url, actor=actor
+        )
+    except Exception:
+        contextos = {}
     if eap_items:
         st.caption(f"**{len(eap_items)}** atividade(s)")
         for item in eap_items:
-            _render_eap_item_expander(item, cpu_map, cpu_cache, project_id, base_url, actor)
+            _render_eap_item_expander(item, cpu_map, cpu_cache, project_id, base_url, actor, contextos)
     else:
         st.info("Nenhum item de EAP encontrado na referência deste projeto.")
 
