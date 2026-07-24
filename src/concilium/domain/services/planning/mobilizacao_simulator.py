@@ -3,14 +3,15 @@
 All assumptions are explicit; no global state; no I/O.
 
 Production formula (shared with Skill 04, invariant):
-    qtd(t) = P × dias_semana × horas_dia × p(t) × n(t)
+    qtd(t) = P × dias_semana × horas_dia × eta_jornada × p(t) × n(t)
 
 Where:
-    P      = producao_horaria (units/hour, from CPU catalog)
-    m      = dias_semana (working days/week, from regime)
-    h      = horas_dia  (working hours/day, from regime)
-    p(t)   = practicability factor for week t ∈ (0, 1], defaults to 1.0
-    n(t)   = teams active in week t, derived from MobilizacaoPolicy
+    P           = producao_horaria (units/hour, from CPU catalog)
+    m           = dias_semana (working days/week, from regime)
+    h           = horas_dia  (working hours/day, from regime)
+    eta_jornada = ADR-148 fração produtiva do dia (structural, not week-varying), defaults to 1.0
+    p(t)        = practicability factor for week t ∈ (0, 1], defaults to 1.0
+    n(t)        = teams active in week t, derived from MobilizacaoPolicy
 
 Termination:
     SUCCESS  — cumulative production >= quantitativo_alvo
@@ -65,6 +66,7 @@ class WorkforcePolicySimulator:
         horas_dia: int,
         prat_semanal: dict[str, float] | None = None,
         semanas_iso_por_offset: dict[int, str] | None = None,
+        eta_jornada: float = 1.0,
     ) -> CurvaForca:
         """Simulate the execution of one activity under the given policy.
 
@@ -80,6 +82,9 @@ class WorkforcePolicySimulator:
             semanas_iso_por_offset: Optional map {week_offset: ISO_week_key}.
                           Anchors the simulation to calendar weeks so that
                           prat_semanal lookup works correctly.
+            eta_jornada: ADR-148 — fração produtiva do dia, (horas_dia - horas_improdutivas_dia) /
+                          horas_dia. Determinístico/estrutural (não semanal como prat_semanal),
+                          por isso dimensiona producao_semanal_base diretamente.
 
         Returns:
             CurvaForca: complete (or incomplete) simulation result.
@@ -89,7 +94,7 @@ class WorkforcePolicySimulator:
         """
         self._validate_simulate_inputs(quantitativo, producao_horaria)
 
-        producao_semanal_base = producao_horaria * dias_semana * horas_dia
+        producao_semanal_base = producao_horaria * dias_semana * horas_dia * eta_jornada
         max_weeks = self._compute_max_weeks(producao_semanal_base, quantitativo, policy)
 
         semanas, incompleta = self._simulate_weeks(

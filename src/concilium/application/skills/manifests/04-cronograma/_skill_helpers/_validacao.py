@@ -197,6 +197,7 @@ def _emm_process_item(
             fator_calendario,
             item.quantitativo,
             qtd_acumulada,
+            fator_jornada=regime.eta_jornada,
         )
         qtd_acumulada = cell.qtd_acumulada
         distribuicao[semana_key] = cell

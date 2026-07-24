@@ -39,7 +39,13 @@
           "additionalProperties": false,
           "properties": {
             "dias_semana": { "type": "integer", "minimum": 1, "maximum": 7, "default": 6 },
-            "horas_dia":   { "type": "integer", "minimum": 1, "maximum": 24, "default": 8 }
+            "horas_dia":   { "type": "integer", "minimum": 1, "maximum": 24, "default": 8 },
+            "horas_improdutivas_dia": {
+              "description": "ADR-148: tempo fixo por dia perdido por ineficiência estrutural (deslocamento interno, preparação de frente de serviço). Deve ser menor que horas_dia. 0.0 é o valor de specs legados migrados (sem ineficiência modelada); >0 é recomendado para specs novos.",
+              "type": "number",
+              "minimum": 0,
+              "default": 0.5
+            }
           }
         },
         "regime_tributario": {

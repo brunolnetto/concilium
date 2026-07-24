@@ -94,10 +94,11 @@ def _init_state() -> None:
 # ── Render ────────────────────────────────────────────────────────────────────
 
 
-def _render_secao_identificacao() -> tuple[str, str, Any, Any, int, int, str]:
+def _render_secao_identificacao() -> tuple[str, str, Any, Any, int, int, float, str]:
     """Seção 1: Identificação do Projeto.
 
-    Retorna (contexto_id, tipo_obra, data_inicio, data_termino, dias_semana, horas_dia, objetivo_pool).
+    Retorna (contexto_id, tipo_obra, data_inicio, data_termino, dias_semana, horas_dia,
+    horas_improdutivas_dia, objetivo_pool).
     """
     with st.expander("1️⃣  Identificação do Projeto", expanded=True):
         col1, col2 = st.columns(2)
@@ -120,18 +121,38 @@ def _render_secao_identificacao() -> tuple[str, str, Any, Any, int, int, str]:
             data_inicio = st.date_input("Data de início *", key="qqp_data_inicio")
             data_termino = st.date_input("Data de término (opcional)", key="qqp_data_termino", value=None)
 
-        col3, col4, col5 = st.columns(3)
+        col3, col4, col5, col6 = st.columns(4)
         with col3:
             dias_semana = st.number_input("Dias/semana", min_value=1, max_value=7, value=6, key="qqp_dias_semana")
         with col4:
             horas_dia = st.number_input("Horas/dia", min_value=4, max_value=12, value=8, key="qqp_horas_dia")
         with col5:
+            horas_improdutivas_dia = st.number_input(
+                "Horas improdutivas/dia",
+                min_value=0.0,
+                max_value=float(horas_dia) - 0.1,
+                value=0.5,
+                step=0.25,
+                key="qqp_horas_improdutivas_dia",
+                help="ADR-148: tempo fixo por dia perdido por ineficiência estrutural "
+                "(deslocamento interno, preparação de frente de serviço).",
+            )
+        with col6:
             objetivo_pool = st.selectbox(
                 "Objetivo de pool",
                 ["balanceado", "minimizar_prazo", "minimizar_custo"],
                 key="qqp_objetivo_pool",
             )
-    return contexto_id, tipo_obra, data_inicio, data_termino, dias_semana, horas_dia, objetivo_pool
+    return (
+        contexto_id,
+        tipo_obra,
+        data_inicio,
+        data_termino,
+        dias_semana,
+        horas_dia,
+        horas_improdutivas_dia,
+        objetivo_pool,
+    )
 
 
 def _badge_for_confianca(confianca: str) -> str:
@@ -257,6 +278,7 @@ def _build_projeto_payload(
     data_termino: Any,
     dias_semana: int,
     horas_dia: int,
+    horas_improdutivas_dia: float,
     objetivo_pool: str,
 ) -> dict[str, Any]:
     return {
@@ -268,6 +290,7 @@ def _build_projeto_payload(
         "data_termino": str(data_termino) if data_termino else None,
         "dias_semana": int(dias_semana),
         "horas_dia": int(horas_dia),
+        "horas_improdutivas_dia": float(horas_improdutivas_dia),
         "objetivo_pool": objetivo_pool,
         "servicos": [
             {
@@ -323,6 +346,7 @@ def _render_secao_revisao(
     data_termino: Any,
     dias_semana: int,
     horas_dia: int,
+    horas_improdutivas_dia: float,
     objetivo_pool: str,
 ) -> None:
     """Seção 3: Revisão e Criação."""
@@ -351,6 +375,7 @@ def _render_secao_revisao(
                 data_termino,
                 dias_semana,
                 horas_dia,
+                horas_improdutivas_dia,
                 objetivo_pool,
             )
             with st.spinner("Criando projeto e executando skill de escopo..."):
@@ -367,14 +392,29 @@ def render_formulario_qqp_page() -> None:
     st.header("📋 Novo Projeto — Formulário QQP")
     st.caption("Crie um projeto a partir de uma lista de serviços. O sistema mapeia automaticamente os CPUs.")
 
-    contexto_id, tipo_obra, data_inicio, data_termino, dias_semana, horas_dia, objetivo_pool = (
-        _render_secao_identificacao()
-    )
+    (
+        contexto_id,
+        tipo_obra,
+        data_inicio,
+        data_termino,
+        dias_semana,
+        horas_dia,
+        horas_improdutivas_dia,
+        objetivo_pool,
+    ) = _render_secao_identificacao()
 
     servicos: list[dict] = st.session_state.qqp_servicos
     sugestoes: dict = st.session_state.qqp_sugestoes
     _render_secao_qqp(servicos, sugestoes)
 
     _render_secao_revisao(
-        servicos, contexto_id, tipo_obra, data_inicio, data_termino, dias_semana, horas_dia, objetivo_pool
+        servicos,
+        contexto_id,
+        tipo_obra,
+        data_inicio,
+        data_termino,
+        dias_semana,
+        horas_dia,
+        horas_improdutivas_dia,
+        objetivo_pool,
     )

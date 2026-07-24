@@ -70,6 +70,7 @@ def register(server: FastMCP) -> None:
         eap: list[dict[str, Any]],
         dias_semana: int = 6,
         horas_dia: int = 8,
+        horas_improdutivas_dia: float = 0.5,
     ) -> dict[str, Any]:
         """Use quando a EAP já está completamente definida com cpu_ids conhecidos.
 
@@ -108,6 +109,7 @@ def register(server: FastMCP) -> None:
             data_termino=data_termino,
             dias_semana=dias_semana,
             horas_dia=horas_dia,
+            horas_improdutivas_dia=horas_improdutivas_dia,
         )
         ps = es.create_plan(nome="Plano Principal")
 
@@ -116,7 +118,11 @@ def register(server: FastMCP) -> None:
             "tipo_obra": tipo_obra,
             "localizacao": localizacao,
             "coordenadas": {"lat": coordenadas_lat, "lng": coordenadas_lng},
-            "regime_trabalho": {"dias_semana": dias_semana, "horas_dia": horas_dia},
+            "regime_trabalho": {
+                "dias_semana": dias_semana,
+                "horas_dia": horas_dia,
+                "horas_improdutivas_dia": horas_improdutivas_dia,
+            },
             "data_inicio": data_inicio,
             "data_termino": data_termino,
             "versao_referencia_id": rt.load_contexto(contexto_id).referencia_id,

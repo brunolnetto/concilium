@@ -309,23 +309,27 @@ def _build_dist_cell(
     quantitativo: float,
     qtd_acumulada: float,
     M_max: float = 1.0,
+    fator_jornada: float = 1.0,
 ) -> DistribuicaoSemanal:
     """Monta uma célula semanal com decomposição causal completa (NEP-035).
 
     Decomposição η = η_s · η_p · η_w onde:
       η_s  = n_j / n_max                  (alocação — fração da força máxima planejada)
-      η_p  = fator_clima × fator_calendario (praticabilidade)
+      η_p  = fator_clima × fator_calendario × fator_jornada (praticabilidade)
       η_w  = m_ij / M_max                  (gestão; M_max=1.0 até calibração)
       η    = η_s · η_p · η_w = fator_total
 
-    q_max_celula = producao_semanal_base × n_max × M_max  (capacidade teórica semanal)
+    ADR-148: fator_jornada = eta_jornada = (horas_dia - horas_improdutivas_dia) / horas_dia,
+    determinístico e estrutural — não recalibra custo/PU de catálogo, só a produção operacional.
+
+    q_max_celula = producao_semanal_base × n_max × M_max  (capacidade teórica semanal, nominal)
     perda_fisica = q_max_celula × η_s - q_executada        (produção perdida em unidades físicas)
 
     eficiencia = η_w = m_ij/M_max = utilização (≠ praticabilidade; corrige ADR-082-cons)
     """
     n_max_safe = max(1, n_max)
     n_eq_safe = max(0, num_eq)
-    praticabilidade = fator_clima * fator_calendario
+    praticabilidade = fator_clima * fator_calendario * fator_jornada
     eta_s = min(1.0, n_eq_safe / n_max_safe)
     eta_p = praticabilidade
     q_max = producao_semanal_base * n_max_safe * M_max
@@ -346,6 +350,7 @@ def _build_dist_cell(
         eficiencia=round(eta_w, 4),
         fator_clima=round(fator_clima, 4),
         fator_calendario=round(fator_calendario, 4),
+        fator_jornada=round(fator_jornada, 4),
         fator_total=round(eta_total, 4),
         eta_s=round(eta_s, 4),
         eta_p=round(eta_p, 4),
@@ -353,7 +358,6 @@ def _build_dist_cell(
         q_max_celula=round(q_max, 2),
         perda_fisica=round(perda, 2),
     )
-
 
 
 __all__ = [

@@ -514,9 +514,6 @@ class TestSkill04Integration:
                 assert curva.delivered >= Q - 1e-3
 
 
-
-
-
 # mobilizacao_simulator.py lines 206, 228: edge cases in simulator
 # ---------------------------------------------------------------------------
 
@@ -530,9 +527,6 @@ class TestMobilizacaoSimulatorEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-
-
-
 
 
 # mobilizacao_simulator.py line 228:
@@ -567,5 +561,35 @@ class TestMobilizacaoSimulatorDesmobZero:
         assert result == 3  # n_maximo returned
 
 
-# ---------------------------------------------------------------------------
+class TestSimulatorEtaJornada:
+    """ADR-148: eta_jornada dimensiona producao_semanal_base, como m/h já fazem."""
 
+    def test_default_eta_jornada_e_1_sem_regressao(self, sim: WorkforcePolicySimulator):
+        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        curva = sim.simulate(policy, "act-default", 1_000_000.0, 400.0, 5, 8)
+        # 400 × 5 × 8 × 1.0 (eta_jornada) × 3 = 48,000
+        assert math.isclose(curva.semanas[0].qtd_executada, 48_000.0, rel_tol=1e-6)
+
+    def test_eta_jornada_reduz_producao_semanal(self, sim: WorkforcePolicySimulator):
+        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        curva = sim.simulate(policy, "act-eta", 1_000_000.0, 400.0, 5, 8, eta_jornada=0.9375)
+        # 400 × 5 × 8 × 0.9375 × 3 = 45,000
+        assert math.isclose(curva.semanas[0].qtd_executada, 45_000.0, rel_tol=1e-6)
+
+    def test_eta_jornada_e_clima_multiplicam(self, sim: WorkforcePolicySimulator):
+        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        prat = {"2026-W01": 0.8}
+        offsets = {0: "2026-W01"}
+        curva = sim.simulate(policy, "act-eta-clima", 1_000_000.0, 400.0, 5, 8, prat, offsets, eta_jornada=0.9375)
+        # 400 × 5 × 8 × 0.9375 × 0.8 × 3 = 36,000
+        assert math.isclose(curva.semanas[0].qtd_executada, 36_000.0, rel_tol=1e-6)
+
+    def test_eta_jornada_aumenta_duracao_para_mesma_meta(self, sim: WorkforcePolicySimulator):
+        policy = MobilizacaoPolicy.imediato(n_maximo=1)
+        Q = 48_000.0
+        curva_full = sim.simulate(policy, "act-full", Q, 400.0, 5, 8, eta_jornada=1.0)
+        curva_reduzida = sim.simulate(policy, "act-red", Q, 400.0, 5, 8, eta_jornada=0.9375)
+        assert curva_reduzida.duration_weeks >= curva_full.duration_weeks
+
+
+# ---------------------------------------------------------------------------

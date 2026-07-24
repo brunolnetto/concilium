@@ -243,6 +243,7 @@ def _create_project_store_and_plan(
     data_termino: str,
     dias_semana: int,
     horas_dia: int,
+    horas_improdutivas_dia: float = 0.5,
 ) -> tuple[Any, str, Any]:
     """Inicializa o ProjectStore e cria escopo+plano principal (ADR-031)."""
     from concilium.infrastructure.storage.project import ProjectStore
@@ -262,6 +263,7 @@ def _create_project_store_and_plan(
         data_termino=data_termino or "",
         dias_semana=dias_semana,
         horas_dia=horas_dia,
+        horas_improdutivas_dia=horas_improdutivas_dia,
     )
     ps = es.create_plan(nome="Plano Principal")
     return store, escopo_id, ps
@@ -305,6 +307,7 @@ def criar_projeto(
     coordenadas_lng: float = 0.0,
     dias_semana: int = 6,
     horas_dia: int = 8,
+    horas_improdutivas_dia: float = 0.5,
     objetivo_pool: str = "balanceado",
     projetos_root: Path | None = None,
     config_root: Path | None = None,
@@ -346,6 +349,7 @@ def criar_projeto(
         data_termino,
         dias_semana,
         horas_dia,
+        horas_improdutivas_dia,
     )
 
     eap_clean = [{k: val for k, val in it.items() if not k.startswith("_")} for it in mapeados]
@@ -358,7 +362,11 @@ def criar_projeto(
         "tipo_obra": tipo_obra,
         "localizacao": localizacao,
         "coordenadas": {"lat": coordenadas_lat, "lng": coordenadas_lng},
-        "regime_trabalho": {"dias_semana": dias_semana, "horas_dia": horas_dia},
+        "regime_trabalho": {
+            "dias_semana": dias_semana,
+            "horas_dia": horas_dia,
+            "horas_improdutivas_dia": horas_improdutivas_dia,
+        },
         "data_inicio": data_inicio,
         "data_termino": data_termino,
         "versao_referencia_id": rt.load_contexto(contexto_id).referencia_id,

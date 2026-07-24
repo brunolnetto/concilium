@@ -529,7 +529,7 @@ class TestValidatePreconditions:
 
 class TestComputeProductiveWeeks:
     def _make_canonical(self, eap_items):
-        regime = SimpleNamespace(horas_dia=8, dias_semana=5)
+        regime = SimpleNamespace(horas_dia=8, dias_semana=5, eta_jornada=1.0)
         projeto = SimpleNamespace(regime_trabalho=regime)
         return SimpleNamespace(projeto=projeto, eap=eap_items)
 
@@ -562,7 +562,7 @@ class TestComputeProductiveWeeks:
         # Actually _resolve_productivity always returns 1000.0 as default when not found
         # So we need to test prod_per_week <= 0 path (lines 673-674)
         # That requires regime.horas_dia=0 or dias_semana=0
-        regime_zero = SimpleNamespace(horas_dia=0, dias_semana=5)
+        regime_zero = SimpleNamespace(horas_dia=0, dias_semana=5, eta_jornada=1.0)
         projeto_zero = SimpleNamespace(regime_trabalho=regime_zero)
         canonical_zero = SimpleNamespace(projeto=projeto_zero, eap=[eap_item])
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-A"}
