@@ -1,29 +1,43 @@
 # ADR-150 — Rascunho de Catálogo com Escopo de Projeto: Promoção Gated ao Catálogo Master
 
-**Status:** ⚠️ Parcialmente Implementado _(2026-07-24 — F1-F5 do escopo de INSUMO completas; CPU/BDI e levantamento de uso real do CLI antigo pendentes, ver Estado de Implementação)_
+**Status:** ✅ Implementado _(2026-07-24 — F1-F5 completas para INSUMO e CPU; BDI investigado e deliberadamente fora de escopo — arquivo sem leitor no pipeline real, ver Achados; levantamento de uso do CLI antigo concluído via análise estática do repositório, ver Achados)_
 **Data:** 2026-07-24
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-040 (camadas master/project — esta ADR completa a Fase 3/4 pendente), ADR-120 (RBAC e state machine de 4-olhos, reaproveitada), ADR-126 (project ownership, `require_owner_or_admin`), ADR-141 (digest de rascunhos pendentes — estendido para cobrir origem de projeto), ADR-145 (rascunho como único caminho de escrita efetiva no master — este ADR fecha um desvio residual)
 
 ---
 
-## Estado de Implementação (2026-07-24)
+## Estado de Implementação (2026-07-24, atualizado)
 
 | Fase | Item | Status |
 |---|---|---|
 | F1 | Identidade de rascunho de projeto (`abrir_ou_obter_rascunho_projeto`, `_rascunho_estado.json`) | ✅ `catalog_draft_lifecycle.py` |
 | F2 | Gate dual ownership+quatro-olhos (`assert_pode_promover_projeto`) | ✅ `catalog_draft_lifecycle.py` |
 | F3 | Escrita efetiva unificada + tool MCP `promover_override_projeto` | ✅ `_catalogo_tools_helpers_c.py`, `catalogo.py` |
-| F4 | `catalog promote` (CLI) redirecionado ao core gated | ✅ `_commands_manage_helpers_b.py` — **mas sem levantamento real de uso** (ver Achados) |
-| F5 | Digest estendido para `projeto_id` + dono do projeto | ✅ `draft_digest_service.py` |
-| — | Promoção de overrides de **CPU** (`cpus_override.json`) e **BDI** (`bdi_override.json`) | ⬜ Não implementado — apenas insumo de preço está coberto (ver Achados) |
+| F4 | `catalog promote` (CLI) redirecionado ao core gated | ✅ `_commands_manage_helpers_b.py` — levantamento de uso concluído por análise estática (ver Achados) |
+| F5 | Digest estendido para `projeto_id` + dono do projeto | ✅ `draft_digest_service.py` — agora conta pendências de insumo E CPU (`_contar_overrides`), não só insumo |
+| — | Promoção de overrides de **CPU** (`cpus_override.json`) | ✅ `_apply_cpu_override_delta` (`_catalogo_tools_helpers_a.py`), `validate_and_resolve_cpu_file` (`catalog_governance.py`), integrado em `_impl_promover_override_projeto` (mesmo rascunho/gate do insumo) |
+| — | Promoção de overrides de **BDI** (`bdi_override.json`) | ⬜ Deliberadamente não implementado — arquivo sem leitor no pipeline real e sem "master" para promover (ver Achados) |
 
-### Achados adicionais durante a implementação (não previstos no desenho original)
+### Achados adicionais durante a implementação original (não previstos no desenho original)
 
 - **Bug de bypass adicional descoberto no próprio `catalog promote` antigo**: além de escrever sem gate (P2), a função `_cp_validate_override` buscava overrides pela chave plana (`insumo_id`), enquanto `atualizar_preco_insumo(projeto_id=...)` sempre grava com chave composta (`f"{insumo_id}::{jurisdicao_id or 'BASE'}"`) — ou seja, o comando antigo **nunca encontrava** os overrides gravados pelo tool MCP real. Corrigido junto com D4 (o novo core usa o mesmo parser de chave composta do tool MCP).
 - **Bug pré-requisito, fora do desenho original**: `atualizar_preco_insumo(projeto_id=...)` gravava em `overrides/catalog_prices.json` — um arquivo que **nenhum outro ponto do sistema lia** (nem `resolver_preco`, nem o pipeline real via `lifecycle_coordinator._inject_project_catalog_layers`, nem o antigo `catalog promote`). O override "livre" nunca chegava a lugar nenhum. Corrigido para gravar em `insumos_override.json` (o arquivo real).
-- **Escopo reduzido a insumos de preço**: a promoção gated (`promover_override_projeto`/CLI) cobre apenas `insumos_override.json`. `cpus_override.json` (produtividade/composição calibrada) e `bdi_override.json` (alíquotas) continuam sem nenhum caminho de promoção ao master — nem o antigo (removido), nem o novo. Considerar ADR de continuação se/quando a promoção desses dois vier a ser necessária.
-- **Granularidade do CLI mudou**: `catalog promote` deixou de aceitar `--insumo`/`--data-vigencia` (promoção de 1 insumo por chamada) — agora promove todos os overrides de insumo pendentes do projeto de uma vez, mesma semântica do tool MCP. Não foi feito levantamento de uso real em produção antes dessa mudança (DoD F4, item 1, propositalmente deixado em aberto).
+- **Granularidade do CLI mudou**: `catalog promote` deixou de aceitar `--insumo`/`--data-vigencia` (promoção de 1 insumo por chamada) — agora promove todos os overrides pendentes do projeto (insumo e CPU) de uma vez, mesma semântica do tool MCP.
+
+### Achados da extensão CPU/BDI (2026-07-24)
+
+- **CPU (`cpus_override.json`) é um override real, wired ao pipeline de produção**: confirmado via `ConciliumService.resolve_cpu` (`application/services/concilium_service/_cpu_resolution.py:32-54`), que resolve `{**master_cpu, **candidate}` — o override do projeto sobrepõe campo a campo a definição master, sem substituí-la por inteiro. `_apply_cpu_override_delta` reproduz exatamente essa semântica na escrita: mescla os campos do override sobre o arquivo master (`config/catalogos/{id}/cpus/{codigo}.json`), preservando os campos não tocados (`descricao`, `categoria`, `producao_id_ref`, `composicao_itens`, etc.). Chaves de metadado de governança (`motivo`/`aprovado_por`/`aprovado_em`/`observacoes`/`nota`) são filtradas antes do merge — não fazem parte do schema de CPU do master.
+- **`CPUOverride` (pydantic, `domain/models/project/overrides.py`) nunca é instanciado em código de produção** — só em um teste unitário isolado (`test_tier1_domain_models.py`). O caminho real de escrita (`extend_cpu`/API `POST /api/projects/{id}/catalog/cpus/{cpu_id}`) aceita um dict arbitrário sem validação de schema (ex.: a UI `_cpu_productivity_override.py` só envia `{"producao_horaria": valor}`). A promoção reaproveita esse mesmo dict solto, não o schema pydantic não usado.
+- **`BDIOverride`/`bdi_override.json` é código morto de fato**: além do pydantic model nunca ser instanciado fora de teste (mesmo padrão do CPU), o próprio arquivo `overrides/bdi_override.json` **não tem nenhum leitor em lugar nenhum do sistema** — só é criado vazio em `create_project` (`storage_project_repository.py:512`) e nunca mais lido ou escrito. Além disso, **não existe um "BDI master" para promover**: `DEFAULT_BDI_TABELA` é uma constante Python hardcoded (`domain/models/financial/bdi/_components.py`), não um arquivo de catálogo versionável. A governança real de BDI por projeto já existe e é mais rigorosa que uma simples promoção: `PerfilBdiProjeto` (`domain/models/financial/bdi/_profiles.py`) é confirmado via HiL na criação do projeto, versionado por `content_hash`, com diff (`BdiPerfilDiff`) e comando dedicado (`concilium bdi-update`/`_bdi_editor.py`) — um mecanismo de governança próprio, não uma calibração de projeto a ser "promovida" a um benchmark corporativo. Conclusão: implementar promoção para `bdi_override.json` seria construir um caminho de escrita gated para um arquivo que nada lê, sem destino real de escrita — não fecha lacuna nenhuma. Este item é considerado **não aplicável** nesta ADR; se BDI de projeto algum dia precisar influenciar um "BDI de referência corporativo", isso exigiria desenho próprio (provavelmente uma ADR de continuação), não uma extensão mecânica deste mecanismo.
+
+### Levantamento de uso real do `catalog promote` (CLI antigo)
+
+Conforme registrado no DoD (Fase 4), este item nunca teve acesso a logs de produção. Nesta sessão foi feita uma investigação estática do repositório (não substitui logs de produção, mas é o levantamento possível sem acesso a eles):
+
+- `grep` por `"catalog promote"`/`"manage catalog promote"` em `Makefile`, `cd/scripts/deploy.sh`, todo `*.sh`/`*.yml`/`*.yaml` do repositório e `docs/`: **nenhuma ocorrência** fora da própria definição do comando (`commands_manage.py`, `_commands_manage_helpers_b.py`), seus testes, e a documentação das ADRs 040/041/145/150. Nenhum workflow de CI, script de deploy ou Makefile target invoca o comando.
+- `git log --all -S"manage catalog promote"`: o texto só aparece introduzido no commit inicial de infraestrutura (`ff3cbae5`) e no commit desta própria ADR (`c50cac46`) — nenhum commit de "uso"/"correção após uso em produção" foi encontrado no histórico.
+- Conclusão: **não há evidência, na base de código versionada, de que `catalog promote` seja invocado por qualquer automação** (deploy, CI, cron, notebook). O risco residual não coberto por esta análise é uso manual/interativo por operadores fora de qualquer script versionado — inerentemente invisível a uma busca no repositório, só verificável por logs de produção (que continuam indisponíveis nesta sessão). Dado que a mudança de granularidade (D4, remoção de `--insumo`/`--data-vigencia`) já foi commitada, e não há indício de automação dependente da granularidade antiga, o risco documentado no DoD é considerado mitigado na medida do que é observável estaticamente.
 
 ---
 
@@ -93,7 +107,7 @@ D5. **Rascunhos de projeto pendentes entram no digest existente.** Estende `rasc
 |---|---|
 | Dois aprovadores exigidos (owner + catalog:merge) pode atrasar promoções urgentes de projeto | Aceito — é o mesmo trade-off que o 4-olhos já aceita para o rascunho global; urgência não é motivo para reduzir a governança do benchmark corporativo |
 | Overrides já gravados hoje (`overrides/*.json`) não têm `projeto_id`/estado de rascunho | Migração aditiva: overrides existentes sem estado explícito são lidos como RASCUNHO implícito na primeira leitura pós-deploy; nenhum dado é perdido |
-| Remoção do `catalog promote` direto pode quebrar scripts/rotinas operacionais que já dependem dele | Levantamento de uso real antes de remover; se em uso, período de transição com aviso de depreciação antes da remoção definitiva |
+| Remoção do `catalog promote` direto pode quebrar scripts/rotinas operacionais que já dependem dele | Levantamento estático concluído (grep em `Makefile`/deploy/CI/docs + `git log -S`) — nenhuma automação versionada encontrada; risco residual de uso manual não versionado permanece, não observável sem logs de produção (ver Achados) |
 
 ---
 
@@ -103,8 +117,8 @@ D5. **Rascunhos de projeto pendentes entram no digest existente.** Estende `rasc
 |---|---|---|
 | F1 — Identidade de rascunho de projeto | `RascunhoCatalogoStateMachine` ganha `projeto_id` opcional; overrides existentes migram para RASCUNHO implícito | ✅ Implementado |
 | F2 — Gate de promoção | Nova função de promoção que checa `require_owner_or_admin` (D2a) + `_checar_quatro_olhos`/role `catalog:merge` (D2b) antes de aplicar | ✅ Implementado |
-| F3 — Escrita efetiva unificada | Promoção de projeto reaproveita `RepositorioInsumo.atualizar_preco()` + `CatalogSnapshot`/`CatalogDiff` (D3) | ✅ Implementado (só insumos — ver Achados) |
-| F4 — Descontinuação do bypass | `_impl_catalog_promote` (CLI) redirecionado para o novo fluxo gated ou removido, conforme levantamento de uso (D4) | ⚠️ Redirecionado; levantamento de uso real não foi feito |
+| F3 — Escrita efetiva unificada | Promoção de projeto reaproveita `RepositorioInsumo.atualizar_preco()` + `CatalogSnapshot`/`CatalogDiff` (D3) | ✅ Implementado (insumo + CPU; BDI não aplicável — ver Achados) |
+| F4 — Descontinuação do bypass | `_impl_catalog_promote` (CLI) redirecionado para o novo fluxo gated ou removido, conforme levantamento de uso (D4) | ✅ Redirecionado; levantamento de uso feito por análise estática (ver Achados) |
 | F5 — Digest | `rascunhos_pendentes()` estendido para incluir `projeto_id` e notificar donos de projeto (D5) | ✅ Implementado |
 
 ---
@@ -123,9 +137,11 @@ D5. **Rascunhos de projeto pendentes entram no digest existente.** Estende `rasc
 ### Fase 3
 - [x] Promoção aplicada gera `CatalogSnapshot`/`CatalogDiff` idêntico em formato ao gerado por `aprovar_merge_catalogo` hoje — mesma função `build_and_persist_snapshot` reaproveitada
 - [x] Preço promovido é lido corretamente pelo pipeline real (skill que consome `RepositorioInsumo`) — verificado via escrita real em `config/catalogos/.../insumos/*.json` (mesmo arquivo/caminho de `aprovar_merge_catalogo`), sem depender de `ConfigVersionService.versions/`
+- [x] Override de CPU promovido é lido corretamente pelo pipeline real (`ConciliumService.resolve_cpu`) — `_apply_cpu_override_delta` mescla os campos do override em `config/catalogos/.../cpus/{codigo}.json`, mesma semântica de `{**master_cpu, **candidate}` já usada na leitura
+- [x] `bdi_override.json` avaliado e deliberadamente excluído do escopo de promoção — arquivo sem leitor em qualquer ponto do pipeline real e sem "master" de destino (`DEFAULT_BDI_TABELA` é constante Python, não arquivo de catálogo); BDI de projeto já tem governança própria via `PerfilBdiProjeto`/`bdi-update` (ver Achados)
 
 ### Fase 4
-- [ ] Levantamento de uso real de `concilium manage catalog promote` documentado — **não feito** (sem acesso a logs de produção nesta sessão); risco aceito e registrado em Achados
+- [x] Levantamento de uso real de `concilium manage catalog promote` documentado — investigação estática do repositório (grep em `Makefile`/scripts de deploy/CI/docs + `git log -S`): nenhuma automação encontrada invocando o comando; risco residual (uso manual não versionado) permanece não observável sem logs de produção, registrado em Achados
 - [x] `catalog promote` redireciona para o fluxo gated — `_cp_validate_override`/`_cp_update_price_history` (escrita direta) removidos; nenhum caminho de escrita direta em `insumo_file` sobrevive fora de `_impl_promover_override_projeto`
 
 ### Fase 5
