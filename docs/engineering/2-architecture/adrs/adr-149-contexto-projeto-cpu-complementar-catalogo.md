@@ -1,6 +1,6 @@
 # ADR-149 — Contexto de Projeto complementar à descrição de CPU (catálogo)
 
-**Status:** Proposta
+**Status:** ✅ Implementado
 **Data:** 2026-07-24
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-040 (Schemas de Override de Catálogo a nível de Projeto — `CPUOverride`/`InsumoOverride`/`BDIOverride`), ADR-066 (snapshot de catálogo por-run)
