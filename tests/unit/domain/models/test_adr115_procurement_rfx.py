@@ -156,3 +156,49 @@ class TestBenchmarkRunnerIntent:
         # RFP = OLAP = todas
         ctx_rfp = resolve_procurement_context("rfp")
         assert len(get_skills_for_mode(ctx_rfp.pipeline_mode)) > 6
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PHASE_MAP — fases "extra" fora da ordem canônica (_PHASE_ORDER)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestPhaseMapExtraPhases:
+    """Nenhum manifesto real hoje usa uma fase fora de `_PHASE_ORDER`, então o
+    branch que inclui fases extras em `PHASE_MAP` (módulo, construção no import)
+    fica dormente. Simulamos via MANIFEST_META patcheado + reload do módulo."""
+
+    def test_phase_map_inclui_fase_extra_fora_da_ordem_canonica(self):
+        import importlib.util
+        import sys
+
+        import concilium.application.skills as skills_pkg
+
+        # Carrega uma cópia isolada de phase_classifier.py sob um nome de módulo
+        # privado, em vez de `importlib.reload` no módulo real: reload muta o
+        # objeto de módulo compartilhado em `sys.modules`, e qualquer código que
+        # já tenha feito `from ...phase_classifier import PHASE_MAP` (ex.:
+        # graph_exporter.py) mantém uma referência ao dict antigo — o reload (e
+        # o reload de restauração no finally) nunca alcança esses consumidores,
+        # deixando estado divergente para o resto da sessão de testes. Executar
+        # o mesmo arquivo-fonte num módulo à parte cobre a mesma linha sem tocar
+        # no módulo real.
+        real_mod = sys.modules["concilium.application.skills.phase_classifier"]
+        spec = importlib.util.spec_from_file_location("_test_phase_classifier_isolado", real_mod.__file__)
+        isolated = importlib.util.module_from_spec(spec)
+        # dataclasses (com `from __future__ import annotations`) resolve anotações via
+        # `sys.modules[cls.__module__]` — precisa estar registrado antes do exec_module.
+        sys.modules[spec.name] = isolated
+
+        original_meta = skills_pkg.MANIFEST_META
+        patched_meta = dict(original_meta)
+        patched_meta["99-fake-skill-teste"] = {"phase": "Fase-Extra-Teste"}
+        skills_pkg.MANIFEST_META = patched_meta
+        try:
+            spec.loader.exec_module(isolated)
+        finally:
+            skills_pkg.MANIFEST_META = original_meta
+            del sys.modules[spec.name]
+
+        assert "Fase-Extra-Teste" in isolated.PHASE_MAP
+        assert isolated.PHASE_MAP["Fase-Extra-Teste"] == ["99-fake-skill-teste"]

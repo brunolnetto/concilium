@@ -819,3 +819,59 @@ class TestImplAdicionarVarianteProducao:
         )
         assert "erro" in result
         assert "não encontrado" in result["erro"]
+
+
+# ---------------------------------------------------------------------------
+# _append_delta_to_rascunho (direct — error branches not reachable via the
+# public impl functions with valid inputs)
+# ---------------------------------------------------------------------------
+
+
+class TestAppendDeltaToRascunho:
+    def test_read_failure_returns_erro(self, tmp_path: Path) -> None:
+        # lines 215-216 — rascunho file exists but contains malformed JSON
+        versions_dir = tmp_path / "contextos" / "ctx1" / "versions"
+        versions_dir.mkdir(parents=True)
+        (versions_dir / "v1.json").write_text("NOT_VALID_JSON{", encoding="utf-8")
+
+        result = mod._append_delta_to_rascunho(tmp_path, "ctx1", "v1", {"tipo": "preco_insumo"})
+        assert result is not None
+        assert "Falha ao ler rascunho" in result
+        assert "v1" in result
+
+    def test_write_failure_returns_erro(self, tmp_path: Path) -> None:
+        # lines 227-228 — read succeeds, write_text raises
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        with patch.object(Path, "write_text", side_effect=OSError("disk full")):
+            result = mod._append_delta_to_rascunho(tmp_path, "ctx1", "v1", {"tipo": "preco_insumo"})
+        assert result is not None
+        assert "Falha ao gravar delta no rascunho" in result
+
+
+# ---------------------------------------------------------------------------
+# _apply_variante_producao_delta (direct — applied only at merge time from
+# catalogo.py's aprovar_merge_catalogo)
+# ---------------------------------------------------------------------------
+
+
+class TestApplyVarianteProducaoDelta:
+    def test_variantes_key_absent_is_initialized(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # line 435 — "variantes" not in data → initialized to []
+        prod_file = tmp_path / "prod.json"
+        prod_file.write_text(json.dumps({"id": "PROD-001"}), encoding="utf-8")
+        monkeypatch.setattr(mod, "validate_and_resolve_producao_file", lambda _cr, _pid, _vh: prod_file)
+
+        mod._apply_variante_producao_delta(
+            tmp_path,
+            "PROD-001",
+            "V-NEW",
+            "Nova Variante",
+            123.0,
+            {"funcoes": []},
+        )
+
+        data = json.loads(prod_file.read_text(encoding="utf-8"))
+        assert data["variantes"] == [
+            {"id": "V-NEW", "nome": "Nova Variante", "valor_horario": 123.0, "equipe": {"funcoes": []}}
+        ]

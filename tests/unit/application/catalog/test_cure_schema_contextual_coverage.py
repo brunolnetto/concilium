@@ -1,7 +1,8 @@
 """Cobertura da segunda metade de cure_schema.py: cure_contextual, I/O e CLI.
 
 Escopo: cure_contextual (linhas ~497-742), _context_base, _load_entity_files,
-_persist_entity_files, run() e main() (linhas ~742-885).
+_persist_entity_files, run() e main() (linhas ~742-885), e o branch "5->exit"
+de cure_schema/__main__.py (import comum vs. `python -m`).
 
 A primeira metade do módulo (helpers + cure_producao/cure_cpu/cure_insumo) é
 coberta por outro arquivo de teste concorrente — não duplicar aqui.
@@ -728,3 +729,22 @@ class TestMain:
         finally:
             if saved is not None:
                 sys.modules[_mod] = saved
+
+    def test_plain_import_of_dunder_main_module_does_not_invoke_main(self):
+        """Covers the "5->exit" branch of __main__.py: a plain import (where
+        __name__ != "__main__") must skip main() entirely — the counterpart to
+        test_dunder_main_invokes_main above, which only exercises the True side
+        of `if __name__ == "__main__":` via runpy's run_name="__main__" override.
+        """
+        import importlib
+
+        _mod = "concilium.application.catalog.cure_schema.__main__"
+        saved = sys.modules.pop(_mod, None)
+        try:
+            mod = importlib.import_module(_mod)
+            assert mod.__name__ == _mod  # not "__main__" -> guard body never runs
+        finally:
+            if saved is not None:
+                sys.modules[_mod] = saved
+            else:
+                sys.modules.pop(_mod, None)

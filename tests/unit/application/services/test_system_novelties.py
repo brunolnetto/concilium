@@ -40,6 +40,26 @@ def _make_deploy_entry(promoted_at="2026-07-20T14:32:00+00:00", resumo="ADR-144 
 _MOD = "concilium.application.services.system_novelties"
 
 
+class TestGetDeployLogStore:
+    def test_builds_deploy_log_store_from_system_blob_storage(self):
+        """Lines 19-22: _get_deploy_log_store() constructs a real DeployLogStore
+        wired to build_system_blob_storage() — exercised directly since every
+        other test here patches it away."""
+        from concilium.application.services.system_novelties import _get_deploy_log_store
+        from concilium.infrastructure.deploy.deploy_log_store import DeployLogStore
+
+        fake_storage = MagicMock()
+        with patch(
+            "concilium.infrastructure.storage.store_factory.build_system_blob_storage",
+            return_value=fake_storage,
+        ) as mock_build:
+            store = _get_deploy_log_store()
+
+        assert isinstance(store, DeployLogStore)
+        assert store._storage is fake_storage
+        mock_build.assert_called_once()
+
+
 class TestNoIdentity:
     def test_returns_none_when_client_id_is_none(self):
         from concilium.application.services.system_novelties import check_and_report_novidades

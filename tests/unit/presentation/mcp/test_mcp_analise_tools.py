@@ -742,3 +742,38 @@ class TestExplorarEstoqueConsumiveis:
             result = tools["explorar_estoque_consumiveis"]("proj-test")
 
         assert "erro" in result
+
+    def test_no_plano_id_and_no_active_plan_returns_erro(self, monkeypatch, tmp_path):
+        """plano_id=None and escopo.active_plan() returns None — 'sem plano ativo' guard."""
+        store = MagicMock()
+        store.list_escopos.return_value = ["ESC-01"]
+        store.meta = {"id": "proj-test"}
+        escopo = MagicMock()
+        escopo.active_plan.return_value = None
+        store.escopo.return_value = escopo
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_estoque_consumiveis"]("proj-test")
+
+        assert "erro" in result
+        assert "sem plano ativo" in result["erro"].lower()
+
+    def test_plano_id_explicito_ignora_active_plan(self, monkeypatch, tmp_path):
+        """plano_id explícito é usado diretamente, sem consultar active_plan()."""
+        canonical = _make_canonical(recursos_consumiveis=[{"resource_id": "MA-DIESEL-TESTE"}])
+        store = self._make_estoque_store(canonical, plano_id="PL-EXPLICITO")
+        cubo_result = self._make_cubo_result()
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+            patch(f"{_CUBO_ESTOQUE_MODULE}.resolve_cubo_estoque_consumivel_projection", return_value=cubo_result),
+        ):
+            result = tools["explorar_estoque_consumiveis"]("proj-test", plano_id="PL-EXPLICITO")
+
+        assert result["plano_id"] == "PL-EXPLICITO"

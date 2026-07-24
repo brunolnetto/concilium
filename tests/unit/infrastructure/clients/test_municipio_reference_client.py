@@ -173,3 +173,13 @@ class TestMunicipioReferenceClient:
         client = MunicipioReferenceClient(dataset_path=bad)
         with pytest.raises(ValueError, match=re.escape(str(bad))):
             client.listar_por_uf("CE")
+
+    def test_municipio_mais_proximo_dataset_vazio_retorna_none(self, tmp_path):
+        """Dataset sem nenhum município: municipio_mais_proximo não deve falhar, retorna None."""
+        vazio = {"municipios": []}
+        path = tmp_path / "vazio.json"
+        path.write_text(json.dumps(vazio), encoding="utf-8")
+        client = MunicipioReferenceClient(dataset_path=path)
+
+        resultado = client.municipio_mais_proximo(-3.7172, -38.5433, raio_km=100)
+        assert resultado is None

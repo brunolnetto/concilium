@@ -1826,3 +1826,178 @@ class TestPsCreateProjectCatalogoBaseFallback:
         # catalogo_base should have come from inputs_escopo
         call_args = repo.create_project.call_args
         assert call_args[1].get("catalogo_base") == "cat-from-escopo" or call_args[0][2] == "cat-from-escopo" or True
+
+
+class TestLoadResolvedCatalogItems:
+    """Covers _load_resolved_catalog_items (lines 81, 84-85, 88)."""
+
+    def test_not_callable_returns_none(self):
+        """Line 81: project has no callable load_resolved_catalog attribute."""
+        from concilium.application.services.project._project_service_helpers import _load_resolved_catalog_items
+
+        project = SimpleNamespace()  # no load_resolved_catalog attribute at all
+        assert _load_resolved_catalog_items(project) is None
+
+    def test_raises_exception_returns_none(self):
+        """Lines 84-85: load_resolved_catalog() raising is silenced."""
+        from concilium.application.services.project._project_service_helpers import _load_resolved_catalog_items
+
+        def _boom():
+            raise RuntimeError("disk error")
+
+        project = SimpleNamespace(load_resolved_catalog=_boom)
+        assert _load_resolved_catalog_items(project) is None
+
+    def test_items_with_cpus_returned(self):
+        """Line 88: items dict with a truthy 'cpus' key is returned as-is."""
+        from concilium.application.services.project._project_service_helpers import _load_resolved_catalog_items
+
+        items = {"cpus": [{"codigo": "CPU-1"}]}
+        project = SimpleNamespace(load_resolved_catalog=lambda: {"items": items})
+        assert _load_resolved_catalog_items(project) == items
+
+    def test_items_with_insumos_returned(self):
+        """Line 88: items dict with a truthy 'insumos' key (no cpus) is also returned."""
+        from concilium.application.services.project._project_service_helpers import _load_resolved_catalog_items
+
+        items = {"insumos": [{"id": "INS-1"}]}
+        project = SimpleNamespace(load_resolved_catalog=lambda: {"items": items})
+        assert _load_resolved_catalog_items(project) == items
+
+
+class TestLoadLiveCatalog:
+    """Covers _load_live_catalog (lines 124, 128-129, 134-136, 142, 146)."""
+
+    def _make_cat_dir(self, tmp_path):
+        project_root = tmp_path / "projects" / "proj1"
+        project_root.mkdir(parents=True)
+        cat_dir = tmp_path / "config" / "catalogos" / "cat-x"
+        cat_dir.mkdir(parents=True)
+        return project_root, cat_dir
+
+    def test_loads_from_individual_files_insumos_and_producoes(self, tmp_path):
+        """Lines 124, 134-136, 142, 146: cpus/insumos/produtividades all populated
+        from individual per-item files, function returns the assembled dict."""
+        import json
+
+        from concilium.application.services.project._project_service_helpers import _load_live_catalog
+
+        project_root, cat_dir = self._make_cat_dir(tmp_path)
+
+        cpu_dir = cat_dir / "cpus"
+        cpu_dir.mkdir()
+        (cpu_dir / "cpu1.json").write_text(json.dumps({"codigo": "CPU-1"}))
+
+        insumos_dir = cat_dir / "insumos"
+        insumos_dir.mkdir()
+        (insumos_dir / "insumos.json").write_text(json.dumps([{"id": "INS-1"}, {"id": "INS-2"}]))
+
+        prod_dir = cat_dir / "producoes"
+        prod_dir.mkdir()
+        (prod_dir / "prod1.json").write_text(json.dumps({"id": "P1", "valor_horario": 10.0}))
+
+        project = MagicMock()
+        project.meta = {"catalogo_base": "cat-x"}
+        project.root = project_root
+
+        result = _load_live_catalog(project)
+
+        assert result is not None
+        assert result["cpus"] == [{"codigo": "CPU-1"}]
+        assert result["insumos"] == [{"id": "INS-1"}, {"id": "INS-2"}]
+        assert result["produtividades"] == [{"id": "P1", "valor_horario": 10.0}]
+
+    def test_loads_cpus_from_aggregate_file_when_no_individual_dir(self, tmp_path):
+        """Lines 128-129: no cpus/ dir, falls back to a single cpus.json aggregate."""
+        import json
+
+        from concilium.application.services.project._project_service_helpers import _load_live_catalog
+
+        project_root, cat_dir = self._make_cat_dir(tmp_path)
+        (cat_dir / "cpus.json").write_text(json.dumps({"cpus": [{"codigo": "CPU-AGG"}]}))
+
+        project = MagicMock()
+        project.meta = {"catalogo_base": "cat-x"}
+        project.root = project_root
+
+        result = _load_live_catalog(project)
+
+        assert result is not None
+        assert result["cpus"] == [{"codigo": "CPU-AGG"}]
+
+    def test_loads_cpus_from_aggregate_bare_list(self, tmp_path):
+        """Lines 128-129: aggregate cpus.json holding a bare list (not {'cpus': [...]})."""
+        import json
+
+        from concilium.application.services.project._project_service_helpers import _load_live_catalog
+
+        project_root, cat_dir = self._make_cat_dir(tmp_path)
+        (cat_dir / "cpus.json").write_text(json.dumps([{"codigo": "CPU-BARE"}]))
+
+        project = MagicMock()
+        project.meta = {"catalogo_base": "cat-x"}
+        project.root = project_root
+
+        result = _load_live_catalog(project)
+
+        assert result is not None
+        assert result["cpus"] == [{"codigo": "CPU-BARE"}]
+
+
+class TestEnrichPayloadCatalogEmptyBuildBranch:
+    """Covers branch 162->exit: cat resolved truthy but builds an empty catalog."""
+
+    def test_cat_present_but_builds_empty_catalog_skips_write(self):
+        from concilium.application.services.project import _project_service_helpers as helpers
+
+        project = MagicMock()
+        payload: dict = {}
+
+        with patch.object(helpers, "_resolve_benchmark_catalog_source", return_value={"unrelated_key": "x"}):
+            helpers._enrich_payload_catalog(payload, project)
+
+        assert "catalog" not in payload
+        project.write_json.assert_not_called()
+
+
+class TestCpEmbedCatalogEmptyBuildBranch:
+    """Covers branch 252->256: cat resolved truthy but builds an empty catalog,
+    so ref_to_save keeps no 'catalog' key yet write_json still fires."""
+
+    def test_cat_present_but_builds_empty_catalog_saves_ref_unchanged(self):
+        from concilium.application.services.project import _project_service_helpers as helpers
+
+        project = MagicMock()
+        files = MagicMock()
+        files.benchmark_reference = "benchmark_reference.json"
+        ref = {"other": "no-catalog-key"}
+
+        with patch.object(helpers, "_resolve_benchmark_catalog_source", return_value={"unrelated_key": "x"}):
+            helpers._cp_embed_catalog_if_needed(project, ref, files)
+
+        project.write_json.assert_called_once()
+        saved = project.write_json.call_args[0][1]
+        assert "catalog" not in saved
+
+
+class TestCpEmbedCatalogInnerBuildException:
+    """Covers lines 254-255: exception raised while building the catalog
+    (as opposed to resolving its source) is silenced too."""
+
+    def test_build_catalog_from_snapshot_raises_is_silenced(self):
+        from concilium.application.services.project import _project_service_helpers as helpers
+
+        project = MagicMock()
+        files = MagicMock()
+        files.benchmark_reference = "benchmark_reference.json"
+        ref = {"other": "no-catalog-key"}
+
+        with (
+            patch.object(helpers, "_resolve_benchmark_catalog_source", return_value={"cpus": [{"id": "C1"}]}),
+            patch.object(helpers, "_build_catalog_from_snapshot", side_effect=RuntimeError("boom")),
+        ):
+            helpers._cp_embed_catalog_if_needed(project, ref, files)
+
+        project.write_json.assert_called_once()
+        saved = project.write_json.call_args[0][1]
+        assert "catalog" not in saved

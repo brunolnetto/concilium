@@ -1,7 +1,9 @@
 """Coverage tests for BlobToolInvocationRepository and InMemoryToolInvocationRepository.
 
 Covers missing lines:
-- src/concilium/infrastructure/storage/tool_invocation_store.py: 62-63, 67-68, 72-73, 77, 88-100
+- src/concilium/infrastructure/storage/tool_invocation_store.py: 62-63, 67-68, 72-73, 77, 88-100,
+  72 (blank line skip in _anonymize_user), 143-144 (_write_bronze best-effort exception),
+  223-224 and 226->220 (delete_by_user across missing/no-match/match archived blobs)
 - src/concilium/application/tool_invocations/repository.py:
   59-60, 63-64, 67-69, 72-74, 77-79, 82-83, 87-88, 98-102, 112-114
 """
@@ -9,6 +11,7 @@ Covers missing lines:
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from datetime import UTC, datetime, timedelta
 
@@ -346,6 +349,76 @@ class TestBlobDeleteByUser:
         assert affected == 1
         raw = storage.ler_blob(".tool_invocations/audit-20260101T000000000000Z.jsonl").decode()
         assert "NOT_JSON" in raw
+
+
+class TestAnonymizeUserBlankLines:
+    """_anonymize_user skips blank lines (line 72) — exercised via delete_by_user
+    when the active file has blank lines interspersed with real NDJSON records
+    (e.g. left over from a previous write or manual edit)."""
+
+    def test_blank_lines_in_active_file_are_skipped_during_anonymize(self, tmp_path):
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+        good_line = json.dumps(_make_invocation("id-1", user_id="carla").to_dict())
+        storage.gravar_blob(".tool_invocations/audit.jsonl", f"\n{good_line}\n\n".encode())
+
+        affected = repo.delete_by_user("carla")
+
+        assert affected == 1
+        raw = storage.ler_blob(".tool_invocations/audit.jsonl").decode()
+        assert json.loads(raw.strip())["user_id"] is None
+
+
+class TestWriteBronzeBestEffort:
+    """_write_bronze catches exceptions from BronzeWriter (lines 143-144) —
+    best-effort dual-write must never break the primary audit log append,
+    which is already committed by the time this runs."""
+
+    def test_bronze_write_failure_does_not_raise_and_is_logged(self, blob_repo, monkeypatch, caplog):
+        def _boom(records):
+            raise RuntimeError("bronze indisponível")
+
+        monkeypatch.setattr(blob_repo._bronze_writer, "write_batch", _boom)
+
+        with caplog.at_level(logging.WARNING):
+            blob_repo.append(_make_invocation("id-1"))  # não deve levantar
+
+        assert blob_repo.count() == 1  # audit log principal gravado normalmente
+        assert any("Bronze" in record.message for record in caplog.records)
+
+
+class TestDeleteByUserArchivedBlobEdgeCases:
+    """delete_by_user across multiple archived blobs (lines 223-224, 226->220):
+    one archived blob vanishes between listing and reading (race with a
+    concurrent process rotating/cleaning up — should be skipped, not raise),
+    one has no matching records (loop must continue to the next blob), and one
+    has a match — exercising both the FileNotFoundError `continue` and the
+    loop-continuation after a zero-affected blob."""
+
+    def test_missing_and_no_match_archives_do_not_stop_the_scan(self, tmp_path, monkeypatch):
+        storage = LocalBlobStorage(tmp_path)
+        repo = BlobToolInvocationRepository(storage)
+
+        no_match_line = json.dumps(_make_invocation("id-a", user_id="outro").to_dict()) + "\n"
+        match_line = json.dumps(_make_invocation("id-b", user_id="carla").to_dict()) + "\n"
+        storage.gravar_blob(".tool_invocations/audit-1.jsonl", no_match_line.encode())
+        storage.gravar_blob(".tool_invocations/audit-2.jsonl", match_line.encode())
+
+        monkeypatch.setattr(
+            repo,
+            "_archived_blobs",
+            lambda: [
+                ".tool_invocations/audit-missing.jsonl",
+                ".tool_invocations/audit-1.jsonl",
+                ".tool_invocations/audit-2.jsonl",
+            ],
+        )
+
+        affected = repo.delete_by_user("carla")
+
+        assert affected == 1
+        raw2 = storage.ler_blob(".tool_invocations/audit-2.jsonl").decode()
+        assert json.loads(raw2.strip())["user_id"] is None
 
 
 class TestBlobRotation:

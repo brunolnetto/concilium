@@ -1529,3 +1529,25 @@ class TestBuildCronogramaOutHeuristicMapping:
             validacoes=[],
         )
         assert result.algorithm == expected
+
+
+class TestBuildProducoesPorAtividadeSemCpuResolvivel:
+    def test_skips_item_sem_cpu_resolvivel(self):
+        """ADR-139 D5: item cujo cpu_id não resolve (CPU ausente do lookup) é
+        ignorado no pareamento atividade→Producao (`continue`), sem interromper
+        o processamento dos demais itens."""
+        from concilium.domain.models.canonical import EapItem
+
+        build_producoes_por_atividade = _MOD._mod_spec._build_producoes_por_atividade
+
+        items = [
+            EapItem(item_id="eap-01", ordem=1, cpu_id="CPU-01", quantitativo=100.0),
+            EapItem(item_id="eap-02", ordem=2, cpu_id="CPU-INEXISTENTE", quantitativo=50.0),
+        ]
+        cpu_lookup = {"CPU-01": {"producao_id_ref": "PROD-01"}}
+        producao_lookup = {"PROD-01": {"id": "PROD-01", "valor_horario": 10.0}}
+
+        result = build_producoes_por_atividade(items, cpu_lookup, producao_lookup)
+
+        assert "eap-01" in result
+        assert "eap-02" not in result

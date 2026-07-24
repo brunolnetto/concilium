@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 import sys
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -262,12 +263,31 @@ class TestParticionarContratoEdgeCases:
 
     def test_eule_unavailable_delegates_to_fase2(self, monkeypatch):
         """Linha 1878: sem eule[interval], delega para _compute_particao_por_tipo
-        (caminho Fase 2) em vez de construir IntervalSet."""
-        monkeypatch.setattr(_mod, "_EULE_AVAILABLE", False)
+        (caminho Fase 2) em vez de construir IntervalSet.
+
+        Corrige patch: o atributo lido em tempo de execução por `particionar_contrato`
+        é o global do módulo `_causal_cost_partition` (onde a função está definida),
+        não o re-export `_mod._EULE_AVAILABLE` do `__init__.py` — patchar este último
+        não afeta o global lido pela função (cada um é uma cópia do valor de import).
+        """
+        monkeypatch.setattr(_mod._causal_cost_partition, "_EULE_AVAILABLE", False)
         items = [{"item_id": "a1", "T_start": 0.0, "T_end": 5.0, "machine_weeks": 5, "required": 1}]
         result = _run(items)
         assert len(result) == 1
         assert result[0].item_id == "a1"
+
+    def test_eule_unavailable_actually_calls_compute_particao_por_tipo(self, monkeypatch):
+        """Prova positiva da delegação (linha 158): com `_EULE_AVAILABLE=False`,
+        `particionar_contrato` deve chamar `_compute_particao_por_tipo` e retornar
+        exatamente o que ela produzir — sem sequer tentar construir IntervalSet."""
+        sentinel = ["sentinel-result"]
+        mock_compute = MagicMock(return_value=sentinel)
+        monkeypatch.setattr(_mod._causal_cost_partition, "_EULE_AVAILABLE", False)
+        monkeypatch.setattr(_mod._causal_cost_partition, "_compute_particao_por_tipo", mock_compute)
+        items = [{"item_id": "a1", "T_start": 0.0, "T_end": 5.0, "machine_weeks": 5, "required": 1}]
+        result = _run(items)
+        assert result is sentinel
+        mock_compute.assert_called_once()
 
     def test_all_items_zero_width_falls_back_to_fase2(self):
         """Linha 1895: todos os itens têm T_end == T_start (janela degenerada) —

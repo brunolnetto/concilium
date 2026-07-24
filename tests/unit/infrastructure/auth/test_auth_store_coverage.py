@@ -34,6 +34,17 @@ class TestAuthStore:
         rec = store.add_client("c2", "s", [])
         assert "operator" in rec.roles
 
+    def test_get_client_finds_second_client_when_first_does_not_match(self, tmp_path):
+        """2+ clients: o primeiro não bate com client_id, loop precisa continuar
+        para o segundo (branch 293->292 em auth_store.py)."""
+        store = self._make_store(tmp_path)
+        store.add_client("g1", "s", ["operator"])
+        store.add_client("g2", "s", ["admin"])
+        rec = store.get_client("g2")
+        assert rec is not None
+        assert rec.client_id == "g2"
+        assert rec.roles == ["admin"]
+
     def test_update_client_not_found_raises(self, tmp_path):
         store = self._make_store(tmp_path)
         with pytest.raises(ValueError, match="not found"):
@@ -74,6 +85,16 @@ class TestAuthStore:
         rec = store.update_client("u5", roles=["admin"])
         assert rec.roles == ["admin"]
         assert rec.active is False
+
+    def test_update_client_finds_second_client_when_first_does_not_match(self, tmp_path):
+        """2+ clients: o primeiro não bate com client_id, loop precisa continuar
+        para o segundo (branch 414->413 em auth_store.py)."""
+        store = self._make_store(tmp_path)
+        store.add_client("u6a", "s", ["operator"])
+        store.add_client("u6b", "s", ["operator"])
+        rec = store.update_client("u6b", roles=["admin"])
+        assert rec.roles == ["admin"]
+        assert store.get_client("u6a").roles == ["operator"]
 
     def test_remove_client_returns_true(self, tmp_path):
         store = self._make_store(tmp_path)
@@ -309,6 +330,30 @@ class TestAuthStore:
     def test_find_device_client_id_unknown_device_returns_none(self, tmp_path):
         store = self._make_store(tmp_path)
         assert store.find_device_client_id("no-such-device") is None
+
+    def test_mark_deploy_seen_finds_second_client_when_first_does_not_match(self, tmp_path):
+        """2+ clients: o primeiro não bate com client_id, loop precisa continuar
+        para o segundo (branch 637->636 em auth_store.py)."""
+        store = self._make_store(tmp_path)
+        store.add_client("d1", "s", ["operator"])
+        store.add_client("d2", "s", ["operator"])
+
+        store.mark_deploy_seen("d2", "2026-07-20T14:32:00+00:00")
+
+        assert store.get_client("d2").last_deploy_seen == "2026-07-20T14:32:00+00:00"
+        assert store.get_client("d1").last_deploy_seen == ""
+
+    def test_mark_skill_version_seen_finds_second_client_when_first_does_not_match(self, tmp_path):
+        """2+ clients: o primeiro não bate com client_id, loop precisa continuar
+        para o segundo (branch 654->653 em auth_store.py)."""
+        store = self._make_store(tmp_path)
+        store.add_client("s1", "s", ["operator"])
+        store.add_client("s2", "s", ["operator"])
+
+        store.mark_skill_version_seen("s2", 7)
+
+        assert store.get_client("s2").last_skill_version_seen == 7
+        assert store.get_client("s1").last_skill_version_seen == 0
 
 
 class TestAuthStoreMissingLines:

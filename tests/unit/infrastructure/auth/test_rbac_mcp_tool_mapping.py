@@ -479,6 +479,23 @@ class TestStatefulSessionRoleResolution:
             _current_roles.reset(tok)
         assert result == "executou"
 
+    def test_mcp_message_claims_returns_none_when_decode_token_raises(self):
+        """Bearer presente no request_ctx da mensagem MCP, mas decode_token()
+        lança (token malformado/inválido) → _mcp_message_claims() engole a
+        exceção e retorna None, caindo no contextvar legado."""
+        from concilium.infrastructure.auth.permission_guard import _mcp_message_claims
+
+        fake_ctx = MagicMock(request=_FakeMcpRequest("Bearer nao-eh-um-jwt-valido"))
+        with (
+            self._patch_request_ctx(fake_ctx),
+            patch(
+                "concilium.infrastructure.auth.token_service.decode_token",
+                side_effect=ValueError("token inválido"),
+            ),
+        ):
+            result = _mcp_message_claims()
+        assert result is None
+
     def test_stale_contextvar_roles_do_not_leak_into_a_different_message(self):
         """Regressão inversa: _current_roles com role INSUFICIENTE (simulando o
         snapshot congelado de outra sessão/chamada) não deve vazar autorização —

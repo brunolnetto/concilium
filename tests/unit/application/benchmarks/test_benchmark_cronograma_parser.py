@@ -5,6 +5,7 @@ Covers:
   2. src/concilium/application/benchmarks/cronograma_parser.py
   3. src/concilium/application/benchmarks/reconciliacao_planejamento.py
   4. src/concilium/application/benchmarks/analise_llm_reconciliacao.py
+  5. src/concilium/application/benchmarks/spec/spec_loader/_host_protocol.py
 """
 
 from __future__ import annotations
@@ -282,4 +283,3 @@ class TestCronogramaParserLoadCpusMap:
 
 
 # ---------------------------------------------------------------------------
-

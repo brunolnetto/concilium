@@ -135,3 +135,13 @@ class TestCuboEstoqueConsumivel:
         )
         assert cubo.consumo_total() == 80.0
         assert cubo.producao_total() == 20.0
+
+    def test_group_by_measure_desconhecida_cai_no_fallback_estoque_nivel(self):
+        """Measure fora do conjunto reconhecido (estoque_nivel|consumo|producao|
+        reabastecimento_externo|overflow|fluxo_liquido) cai no fallback de
+        `_measure_value`, que usa `estoque_nivel`."""
+        cubo = _make_cubo(
+            [_make_celula(resource_id="A", semana_iso="2026-W01", estoque_nivel=42.0, consumo=999.0)]
+        )
+        grouped = cubo.group_by("resource_id", measure="medida_inexistente")
+        assert grouped[("A",)] == 42.0

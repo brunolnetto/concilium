@@ -395,6 +395,25 @@ class TestDiscoverManifestIndex:
         finally:
             skills_pkg._MANIFESTS = original
 
+    def test_skips_directory_without_skill_toml(self, tmp_path):
+        """Um subdiretório de manifests/ sem skill.toml deve ser ignorado
+        silenciosamente (continue), não gerar erro."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_index
+
+        manifests = tmp_path / "manifests"
+        skill_dir = manifests / "no-toml-skill"
+        skill_dir.mkdir(parents=True)
+        # NO skill.toml
+
+        original = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = manifests
+        try:
+            result = _discover_manifest_index()
+            assert result == {}
+        finally:
+            skills_pkg._MANIFESTS = original
+
 
 class TestDiscoverManifestMeta:
     def test_returns_empty_when_manifests_dir_missing(self, tmp_path):
@@ -474,6 +493,48 @@ class TestDiscoverManifestMeta:
                 _discover_manifest_meta()
         finally:
             skills_pkg._MANIFESTS = original
+
+    def test_skips_non_directory_entry_in_manifests(self, tmp_path):
+        """Uma entrada não-diretório (arquivo solto) em manifests/ deve ser
+        ignorada silenciosamente (continue), não gerar erro."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_meta
+
+        (tmp_path / "README.md").write_text("not a skill dir", encoding="utf-8")
+
+        manifest_dir = tmp_path / "01-escopo-e-eap"
+        manifest_dir.mkdir()
+        (manifest_dir / "skill.toml").write_text('[skill]\nid = "01-escopo-e-eap"\n', encoding="utf-8")
+        (manifest_dir / "skill.py").write_text("", encoding="utf-8")
+
+        original = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = tmp_path
+        try:
+            meta = _discover_manifest_meta()
+        finally:
+            skills_pkg._MANIFESTS = original
+
+        assert "01-escopo-e-eap" in meta
+        assert meta["01-escopo-e-eap"]["func_name"] == "run_escopo_e_eap"
+
+    def test_skips_directory_without_skill_toml(self, tmp_path):
+        """Um subdiretório de manifests/ sem skill.toml deve ser ignorado
+        silenciosamente (continue), não gerar erro."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_meta
+
+        manifest_dir = tmp_path / "no-toml-skill"
+        manifest_dir.mkdir()
+        # NO skill.toml
+
+        original = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = tmp_path
+        try:
+            meta = _discover_manifest_meta()
+        finally:
+            skills_pkg._MANIFESTS = original
+
+        assert meta == {}
 
 
 # ---------------------------------------------------------------------------

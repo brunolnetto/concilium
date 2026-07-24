@@ -187,3 +187,124 @@ class TestValProdVsPU:
         val = []
         _cons._validate_prod_vs_pu(_pe("eap-x", 1.05, 0.95), val)  # 1.05×0.95 = 0.9975
         assert val == []
+
+
+# ── ADR-128/139 F5: estoque de consumíveis — edge cases de _validacao.py ────
+
+
+class TestParseLogisticaConsumiveisOverrides:
+    def test_entrada_nao_dict_e_ignorada(self):
+        # ADR-128 F5: valor não-dict para um insumo (dado malformado de projeto)
+        # deve ser pulado (`continue`), sem interromper o parse dos demais.
+        result = _cron._mod_validacao._parse_logistica_consumiveis_overrides(
+            {"INSUMO-X": "nao-e-dict", "INSUMO-Y": {"estoque_inicial": 10.0}}
+        )
+        assert result is not None
+        assert "INSUMO-X" not in result
+        assert result["INSUMO-Y"].estoque_inicial == 10.0
+
+
+class TestBuildReplenishableResourcesIfAnyErro:
+    def test_value_error_do_builder_vira_val_estoque_build_01(self):
+        # materiais_gerados referenciando insumo inexistente -> build_replenishable_resources
+        # levanta ValueError (VAL-PROD-GERACAO-01) -> _build_replenishable_resources_if_any
+        # deve capturar e converter em ValidacaoItem ERRO, retornando None (sem propagar).
+        validacoes: list = []
+        producoes_por_atividade = {
+            "A1": {
+                "id": "PROD-X",
+                "materiais_gerados": [{"insumo_id": "MAT-INEXISTENTE", "geracao_por_hora": 1.0}],
+            }
+        }
+        result = _cron._mod_validacao._build_replenishable_resources_if_any(
+            producoes_por_atividade,
+            insumos_lookup={},
+            logistica_consumiveis=None,
+            validacoes=validacoes,
+        )
+        assert result is None
+        assert any(v.codigo == "VAL-ESTOQUE-BUILD-01" and v.status == "ERRO" for v in validacoes)
+
+
+class TestRasfcRunHeuristicsEstoque:
+    def _activity_dag_pool(self):
+        from concilium.application.scheduling.models import Activity, ActivityDAG, ResourcePool
+
+        activities = [Activity(activity_id="A1", description="A1", duration_weeks=2, required_resources={})]
+        dag = ActivityDAG(activities=activities, precedence=[])
+        pool = ResourcePool(resources={})
+        return activities, dag, pool
+
+    def test_algoritmo_nao_cpsat_gera_val_estoque_algo_01(self, monkeypatch):
+        # ADR-128 F5: replenishable_resources construído mas algoritmo selecionado
+        # (forçado aqui para não-CP-SAT) não suporta a restrição -> VAL-ESTOQUE-ALGO-01
+        # (AVISO) e a restrição é descartada (replenishable_resources vira None/[]).
+        from concilium.application.scheduling.models import ReplenishableResource
+        from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
+
+        resource = ReplenishableResource(
+            resource_id="MAT-X",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=1000.0),
+            consumo_por_semana={"A1": 5.0},
+        )
+        monkeypatch.setattr(
+            _cron._mod_validacao,
+            "_build_replenishable_resources_if_any",
+            lambda *a, **k: [resource],
+        )
+
+        activities, dag, pool = self._activity_dag_pool()
+        validacoes: list = []
+        candidates, relaxed, repl = _cron._rasfc_run_heuristics(
+            activities,
+            dag,
+            pool,
+            deadline_weeks=4,
+            inputs={"algorithm": "SerialScheduler"},
+            validacoes=validacoes,
+            producoes_por_atividade={"A1": {}},
+            insumos_lookup={"MAT-X": {}},
+        )
+
+        assert any(v.codigo == "VAL-ESTOQUE-ALGO-01" and v.status == "AVISO" for v in validacoes)
+        assert repl == []
+        assert candidates  # SerialScheduler ainda produz um schedule, só sem a restrição
+
+    def test_violation_estoque_acima_capacidade_reportada(self, monkeypatch):
+        # ADR-139/128: capacidade_armazenamento baixa + taxa_reabastecimento_max alta
+        # gera excedente projetado toda semana ativa (sem estoque negativo) ->
+        # violation_estoque_acima_capacidade retorna VAL-ESTOQUE-CAP-01 (AVISO).
+        from concilium.application.scheduling.models import ReplenishableResource
+        from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
+
+        resource = ReplenishableResource(
+            resource_id="MAT-Y",
+            disponibilidade=DisponibilidadeConsumivel(
+                estoque_inicial=0.0, taxa_reabastecimento_max=1000.0, capacidade_armazenamento=10.0
+            ),
+            consumo_por_semana={"A1": 5.0},
+        )
+        monkeypatch.setattr(
+            _cron._mod_validacao,
+            "_build_replenishable_resources_if_any",
+            lambda *a, **k: [resource],
+        )
+
+        activities, dag, pool = self._activity_dag_pool()
+        validacoes: list = []
+        # Sem 'algorithm' explícito -> select_scheduling_algorithm escolhe CP-SAT
+        # (n_activities <= 200), único path que de fato aplica ReplenishableResource.
+        candidates, relaxed, repl = _cron._rasfc_run_heuristics(
+            activities,
+            dag,
+            pool,
+            deadline_weeks=4,
+            inputs={},
+            validacoes=validacoes,
+            producoes_por_atividade={"A1": {}},
+            insumos_lookup={"MAT-Y": {}},
+        )
+
+        assert repl == [resource]
+        assert any(v.codigo == "VAL-ESTOQUE-CAP-01" and v.status == "AVISO" for v in validacoes)
+        assert candidates

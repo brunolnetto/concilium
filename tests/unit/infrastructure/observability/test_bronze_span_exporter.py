@@ -60,6 +60,13 @@ def _make_span(name="concilium.skill.05", project_id=None, extra_attrs=None):
     return captured[0]
 
 
+class TestNsToIso:
+    def test_zero_nanoseconds_returns_empty_string(self):
+        from concilium.infrastructure.observability.bronze_span_exporter import _ns_to_iso
+
+        assert _ns_to_iso(0) == ""
+
+
 class TestBronzeSpanExporterSchema:
     def test_writes_expected_bronze_schema(self):
         storage = MagicMock()

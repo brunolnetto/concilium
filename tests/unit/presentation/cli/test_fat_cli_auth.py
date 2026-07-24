@@ -504,6 +504,43 @@ class TestRemoveUser:
         store.forget_client.assert_not_called()
         invocation_store.delete_by_user.assert_not_called()
 
+    def test_reassign_to_same_as_client_id_errors(self):
+        """ADR-126 D7 — --reassign-to igual ao client removido deixaria owner_id
+
+        inalterado (órfão) silenciosamente, então é rejeitado antes mesmo de
+        consultar projetos possuídos."""
+        result = runner.invoke(
+            app,
+            ["remove-user", "--id", "alice", "--yes", "--reassign-to", "alice"],
+        )
+
+        assert result.exit_code == 1
+        assert "não pode ser o mesmo client sendo removido" in result.output
+
+    def test_force_without_force_yes_prompts_confirm(self):
+        """ADR-126 D7 — --force sem --force-yes exige confirmação extra via prompt
+
+        (typer.confirm) antes de deixar projetos órfãos."""
+        project = SimpleNamespace(meta={"id": "proj-1"})
+        store = _make_store(list_devices_return=[], remove_client_return=True)
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_PROJECT_REPOSITORY, return_value=MagicMock()),
+            patch(
+                "concilium.application.services.project._ownership_helpers.find_projects_by_owner",
+                return_value=[project],
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["remove-user", "--id", "alice", "--force", "--yes"],
+                input="y\n",
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "órfãos" in result.output
+
     def test_remove_user_forget_flag_when_already_inactive_points_to_forget_user(self):
         """--forget num client já removido antes (remove_client retorna False) não
 
@@ -882,6 +919,21 @@ class TestRegenerateCode:
         assert result.exit_code == 0, result.output
         notify_mock.assert_not_called()
 
+    def test_notify_edited_failure_prints_error(self):
+        """notify_user_edited() retornando False deve ser reportado, não silenciado."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        store.regenerate_client_code.return_value = "RCODE-NEW"
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_EDITED, return_value=False),
+        ):
+            result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
+
+        assert result.exit_code == 0, result.output
+        assert "Falha ao enviar email de aviso para alice@example.com" in result.output
+
 
 # ===========================================================================
 # update-user
@@ -985,6 +1037,36 @@ class TestUpdateUser:
         assert result.exit_code == 0, result.output
         notify_mock.assert_not_called()
 
+    def test_notes_change_shown_in_output_and_tracked_in_changes(self):
+        """--notes diferente do existente entra em `changes` e é exibido na saída."""
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice", roles=["operator"], notes="nota antiga")
+        store.update_client.return_value = _make_client_record("alice", roles=["operator"], notes="nota nova")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--notes", "nota nova"])
+
+        assert result.exit_code == 0, result.output
+        assert "Notas   : nota nova" in result.output
+        store.update_client.assert_called_once_with("alice", roles=None, email=None, notes="nota nova")
+
+    def test_notify_edited_failure_prints_error(self):
+        """notify_user_edited() retornando False deve ser reportado, não silenciado."""
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice", roles=["operator"], email="alice@example.com")
+        store.update_client.return_value = _make_client_record(
+            "alice", roles=["admin"], email="alice@example.com"
+        )
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_EDITED, return_value=False),
+        ):
+            result = runner.invoke(app, ["update-user", "--id", "alice", "--role", "admin"])
+
+        assert result.exit_code == 0, result.output
+        assert "Falha ao enviar email de aviso para alice@example.com" in result.output
+
 
 # ===========================================================================
 # batch
@@ -1082,6 +1164,62 @@ class TestBatch:
         assert result.exit_code == 1
         assert "role inválida" in result.output
         store.add_client.assert_not_called()
+
+    def test_update_row_with_no_fields_marked_failed(self, tmp_path):
+        """action=update sem role/email/notes preenchidos não tem o que atualizar."""
+        csv_path = self._write_csv(tmp_path, ["update,alice,,,,"])
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 1
+        assert "nenhum campo pra atualizar" in result.output
+        assert "0 ok, 1 falharam" in result.output
+        store.update_client.assert_not_called()
+
+    def test_add_row_with_explicit_secret_does_not_report_generated(self, tmp_path):
+        """secret informado na linha do CSV é usado como está — sem o aviso de "secret gerado"."""
+        csv_path = self._write_csv(tmp_path, ["add,newbie,operator,,,mysecret123"])
+        store = _make_store()
+        store.add_client.return_value = _make_client_record("newbie")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 0, result.output
+        assert "1 ok, 0 falharam" in result.output
+        assert "secret gerado" not in result.output
+        used_secret = store.add_client.call_args[0][1]
+        assert used_secret == "mysecret123"
+
+    def test_add_row_value_error_marked_failed(self, tmp_path):
+        """ValueError do store (ex.: id já existe) marca a linha como falha, sem abortar o batch."""
+        csv_path = self._write_csv(tmp_path, ["add,newbie,operator,,,"])
+        store = _make_store()
+        store.add_client.side_effect = ValueError("cliente já existe")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 1
+        assert "cliente já existe" in result.output
+        assert "0 ok, 1 falharam" in result.output
+
+    def test_update_row_value_error_marked_failed(self, tmp_path):
+        """ValueError do store no update (ex.: role inválida detectada só no store) marca a linha como falha."""
+        csv_path = self._write_csv(tmp_path, ["update,alice,operator,,,"])
+        store = _make_store()
+        store.get_client.return_value = _make_client_record("alice")
+        store.update_client.side_effect = ValueError("role inválida no store")
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["batch", "--file", csv_path])
+
+        assert result.exit_code == 1
+        assert "role inválida no store" in result.output
+        assert "0 ok, 1 falharam" in result.output
 
 
 # ===========================================================================
@@ -1196,6 +1334,27 @@ class TestMigrateLegacyCodes:
         assert result.exit_code == 0, result.output
         assert "$HOME/.concilium/bin/concilium-mcp-proxy" in result.output
         assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in result.output
+
+    def test_email_send_failure_added_to_manual_delivery(self):
+        """notify_client_code_migrated() retornando False não é silenciado — usuário
+
+        entra na lista de entrega manual mesmo tendo email cadastrado."""
+        store = _make_store()
+        store.migrate_legacy_client_codes.return_value = [
+            ("legacy1", "RCODE-AAA", "legacy1@example.com"),
+        ]
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=False),
+            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+        ):
+            result = runner.invoke(app, ["migrate-legacy-codes"])
+
+        assert result.exit_code == 0, result.output
+        assert "falha ao enviar email para legacy1@example.com" in result.output
+        assert "Entrega manual" in result.output
+        assert "RCODE-AAA" in result.output
 
 
 # ===========================================================================

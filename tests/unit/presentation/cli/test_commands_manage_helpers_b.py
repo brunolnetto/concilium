@@ -657,6 +657,3 @@ class TestManageHelpersBFunctions:
         saved = written[str(tmp_path / "insumo.json")]
         assert isinstance(saved["historico_precos"], list)
         assert len(saved["historico_precos"]) == 1
-
-
-

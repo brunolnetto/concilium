@@ -374,6 +374,117 @@ class TestResolveBdiPriority:
         assert abs(result["mao_obra"] - DEFAULT_BDI_TABELA.mao_obra.bdi_total) < 1e-6
         assert not any(v.codigo == "VAL-BDI-JURISDICAO" for v in validacoes)
 
+    def test_tax_scenario_invalid_regime_version_falls_back_gracefully(self):
+        """_bdi_regime._rb_try_tax_scenario: regime_version inválido faz
+        TaxSimulationScenario.from_dict() levantar ValueError (TaxRegimeVersion(rv)),
+        capturado pelo except da linha 64 — emite VAL-BDI-REGIME AVISO e retorna
+        None, caindo no path legado (tabela_bdi/DEFAULT)."""
+        _resolve_bdi = self._import_resolve_bdi()
+        tax_scenario = {"regime_version": "regime_que_nao_existe"}
+        validacoes: list[ValidacaoItem] = []
+        result = _resolve_bdi({"tax_scenario": tax_scenario}, validacoes)
+
+        # Falha no tax_scenario -> cai no path legado (DEFAULT_BDI_TABELA)
+        assert abs(result["mao_obra"] - DEFAULT_BDI_TABELA.mao_obra.bdi_total) < 1e-6
+        regime_val = next((v for v in validacoes if v.codigo == "VAL-BDI-REGIME"), None)
+        assert regime_val is not None
+        assert regime_val.status == "AVISO"
+        assert "Falha ao aplicar tax_scenario" in regime_val.mensagem
+        assert "Usando path legado" in regime_val.mensagem
+
+
+class TestRbTryManualBdiDirectly:
+    """_bdi_regime._rb_try_manual_bdi (linhas 75-97).
+
+    Nota: esta função não é chamada por nenhum caller atual — o estágio real
+    (``_precificacao/skill.py::_resolve_bdi``, linhas 109-127) implementa sua
+    própria lógica inline para ``inputs["bdi_aplicado"]`` sem importar/usar
+    ``_rb_try_manual_bdi`` nem ``_get_bdi_value`` (confirmado via grep: só
+    ``_rb_try_tax_scenario`` é importado por skill.py). A função permanece
+    exportada e é uma função pura testável isoladamente, por isso os testes
+    abaixo chamam-na diretamente em vez de simular um caller inexistente.
+    """
+
+    def _load_bdi_regime_module(self):
+        """Carrega ``_bdi_regime`` via o pacote sintético registrado por
+        ``load_skill_stage`` (mesma técnica de test_skill10_helpers_b_coverage.py).
+
+        ``_resolve_bdi`` importa ``._skill_helpers._bdi_regime`` incondicionalmente
+        em seu corpo (linha 132 de skill.py), então uma chamada mínima já registra
+        o submódulo em ``sys.modules`` sob o pacote sintético do estágio.
+        """
+        import sys
+
+        from concilium.application.skills import load_skill_stage
+
+        resolve_bdi = load_skill_stage("06-resultado-financeiro", "_precificacao", "_resolve_bdi")
+        resolve_bdi({}, [])
+        return sys.modules[
+            "_concilium_stagepkg_06_resultado_financeiro_precificacao._skill_helpers._bdi_regime"
+        ]
+
+    def test_returns_none_without_bdi_aplicado(self):
+        """Sem inputs["bdi_aplicado"]: retorna None e não emite validação (linha 77-78)."""
+        mod = self._load_bdi_regime_module()
+        validacoes: list[ValidacaoItem] = []
+        result = mod._rb_try_manual_bdi({}, validacoes)
+        assert result is None
+        assert validacoes == []
+
+    def test_full_manual_dict_all_keys_present(self):
+        """Com todas as 5 chaves canônicas presentes, usa os valores diretamente."""
+        mod = self._load_bdi_regime_module()
+        validacoes: list[ValidacaoItem] = []
+        manual = {
+            "mao_obra": 0.30,
+            "material": 0.05,
+            "diesel": 0.04,
+            "servicos": 0.25,
+            "equipamentos": 0.22,
+        }
+        result = mod._rb_try_manual_bdi({"bdi_aplicado": manual}, validacoes)
+        assert result == {
+            "material": 0.05,
+            "diesel": 0.04,
+            "mao_obra": 0.30,
+            "equipamentos": 0.22,
+        }
+        val = next((v for v in validacoes if v.codigo == "VAL-BDI-FONTE"), None)
+        assert val is not None
+        assert val.status == "AVISO"
+        assert "override manual" in val.mensagem
+        assert "MO=30.00%" in val.mensagem
+        assert "EQ=22.00%" in val.mensagem
+
+    def test_servicos_defaults_to_mao_obra_when_missing(self):
+        """servicos ausente -> default=mo; equipamentos ausente -> default=servicos(=mo)."""
+        mod = self._load_bdi_regime_module()
+        validacoes: list[ValidacaoItem] = []
+        manual = {"mao_obra": 0.30, "material": 0.05, "diesel": 0.04}
+        result = mod._rb_try_manual_bdi({"bdi_aplicado": manual}, validacoes)
+        assert result["equipamentos"] == 0.30
+
+    def test_equipamentos_defaults_to_servicos_when_only_servicos_given(self):
+        """servicos presente, equipamentos ausente -> equipamentos usa servicos."""
+        mod = self._load_bdi_regime_module()
+        validacoes: list[ValidacaoItem] = []
+        manual = {"mao_obra": 0.30, "material": 0.05, "diesel": 0.04, "servicos": 0.18}
+        result = mod._rb_try_manual_bdi({"bdi_aplicado": manual}, validacoes)
+        assert result["equipamentos"] == 0.18
+
+    def test_alias_keys_mo_mat_comb_serv_eq(self):
+        """_get_bdi_value cai para as chaves alternativas (mo/mat/comb/serv/eq)."""
+        mod = self._load_bdi_regime_module()
+        validacoes: list[ValidacaoItem] = []
+        manual = {"mo": 0.28, "mat": 0.06, "comb": 0.045, "serv": 0.20, "eq": 0.19}
+        result = mod._rb_try_manual_bdi({"bdi_aplicado": manual}, validacoes)
+        assert result == {
+            "material": 0.06,
+            "diesel": 0.045,
+            "mao_obra": 0.28,
+            "equipamentos": 0.19,
+        }
+
 
 # ── Skill 05 IndiretoComBdi ──────────────────────────────────────────────────
 

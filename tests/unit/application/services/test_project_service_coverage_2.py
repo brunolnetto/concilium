@@ -433,6 +433,51 @@ class TestJurisdicaoMethods:
 
 
 # ---------------------------------------------------------------------------
+# 6b. _get_perfil_svc / _get_tema_svc / _get_contexto_svc / _get_jurisdiction_svc
+#     — real (unmocked) resolution when a candidate config dir exists.
+# ---------------------------------------------------------------------------
+
+
+class TestVersionedEntitiesSvcRealResolution:
+    """Todos os `_get_*_svc()` só são exercitados via mock nos demais testes deste
+    arquivo — o próprio corpo (candidatos de diretório + construção do serviço)
+    nunca roda de verdade. Aqui forçamos `Path.exists()` a achar o primeiro
+    candidato para cobrir o caminho feliz de cada um."""
+
+    def test_get_perfil_svc_returns_instance_when_candidate_exists(self, monkeypatch):
+        from concilium.application.services.catalog.contexto_version_service import PerfilVersionService
+
+        monkeypatch.setattr("pathlib.Path.exists", lambda self: True)
+        svc = _make_svc()
+        result = svc._get_perfil_svc()
+        assert isinstance(result, PerfilVersionService)
+
+    def test_get_tema_svc_returns_instance_when_candidate_exists(self, monkeypatch):
+        from concilium.application.services.catalog.contexto_version_service import TemaVersionService
+
+        monkeypatch.setattr("pathlib.Path.exists", lambda self: True)
+        svc = _make_svc()
+        result = svc._get_tema_svc()
+        assert isinstance(result, TemaVersionService)
+
+    def test_get_contexto_svc_returns_instance_when_candidate_exists(self, monkeypatch):
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+
+        monkeypatch.setattr("pathlib.Path.exists", lambda self: True)
+        svc = _make_svc()
+        result = svc._get_contexto_svc()
+        assert isinstance(result, ContextoVersionService)
+
+    def test_get_jurisdiction_svc_returns_instance_when_candidate_exists(self, monkeypatch):
+        from concilium.application.services.catalog.contexto_version_service import JurisdictionVersionService
+
+        monkeypatch.setattr("pathlib.Path.exists", lambda self: True)
+        svc = _make_svc()
+        result = svc._get_jurisdiction_svc()
+        assert isinstance(result, JurisdictionVersionService)
+
+
+# ---------------------------------------------------------------------------
 # 7. _validate_contexto_fields – catalogo_id branch (lines 694-698, 701, 703-710)
 # ---------------------------------------------------------------------------
 
@@ -861,3 +906,71 @@ class TestGetVersionHistory:
             result = svc.delete_project("proj-1", actor="admin")
         mock_del.assert_called_once_with(svc, "proj-1", "admin")
         assert result == {"deleted": True}
+
+
+# ---------------------------------------------------------------------------
+# 11. _CrudMixin ownership wrapper methods (_crud.py lines 110, 114, 118,
+#     124-127, 131, 137) — thin delegations to _ownership_helpers, only
+#     exercised at the helper-function level elsewhere, never through the
+#     ProjectService method itself.
+# ---------------------------------------------------------------------------
+
+
+class TestCrudOwnershipDelegation:
+    _MOD = "concilium.application.services.project.project_service._crud"
+
+    def test_get_project_owner_delegates(self):
+        svc = _make_svc()
+        proj = MagicMock()
+        svc._repository.get_project.return_value = proj
+        with patch(f"{self._MOD}.get_project_owner", return_value="alice") as mock_fn:
+            result = svc.get_project_owner("proj-1")
+        svc._repository.get_project.assert_called_once_with("proj-1")
+        mock_fn.assert_called_once_with(proj)
+        assert result == "alice"
+
+    def test_find_projects_by_owner_delegates(self):
+        svc = _make_svc()
+        with patch(f"{self._MOD}.find_projects_by_owner", return_value=["p1", "p2"]) as mock_fn:
+            result = svc.find_projects_by_owner("alice")
+        mock_fn.assert_called_once_with(svc._repository, "alice")
+        assert result == ["p1", "p2"]
+
+    def test_transfer_ownership_forced_delegates(self):
+        svc = _make_svc()
+        proj = MagicMock()
+        svc._repository.get_project.return_value = proj
+        with patch(f"{self._MOD}.transfer_ownership_forced", return_value={"owner_id": "bob"}) as mock_fn:
+            result = svc.transfer_ownership_forced("proj-1", "bob", "admin")
+        mock_fn.assert_called_once_with(proj, "bob", actor="admin", audit=svc._audit_service)
+        assert result == {"owner_id": "bob"}
+
+    def test_create_ownership_transfer_pending_delegates(self):
+        svc = _make_svc()
+        proj = MagicMock()
+        svc._repository.get_project.return_value = proj
+        pending = MagicMock()
+        pending.to_dict.return_value = {"token": "tok-1"}
+        with patch(f"{self._MOD}.create_ownership_transfer_pending", return_value=pending) as mock_fn:
+            result = svc.create_ownership_transfer_pending("proj-1", "bob", "alice")
+        mock_fn.assert_called_once_with(proj, "bob", actor="alice", audit=svc._audit_service)
+        pending.to_dict.assert_called_once_with()
+        assert result == {"token": "tok-1"}
+
+    def test_accept_ownership_transfer_delegates(self):
+        svc = _make_svc()
+        proj = MagicMock()
+        svc._repository.get_project.return_value = proj
+        with patch(f"{self._MOD}.accept_ownership_transfer", return_value={"owner_id": "bob"}) as mock_fn:
+            result = svc.accept_ownership_transfer("proj-1", "tok-1", "bob")
+        mock_fn.assert_called_once_with(proj, "tok-1", actor="bob", audit=svc._audit_service)
+        assert result == {"owner_id": "bob"}
+
+    def test_reject_ownership_transfer_delegates(self):
+        svc = _make_svc()
+        proj = MagicMock()
+        svc._repository.get_project.return_value = proj
+        with patch(f"{self._MOD}.reject_ownership_transfer", return_value={"rejected": True}) as mock_fn:
+            result = svc.reject_ownership_transfer("proj-1", "tok-1", "bob")
+        mock_fn.assert_called_once_with(proj, "tok-1", actor="bob", audit=svc._audit_service)
+        assert result == {"rejected": True}

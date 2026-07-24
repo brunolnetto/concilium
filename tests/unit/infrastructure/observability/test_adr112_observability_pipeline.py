@@ -1278,3 +1278,69 @@ class TestSchedulerCrossDomainNoProjectsRoot:
                 result = scheduler.run_cycle(now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC))
 
         assert "cross_domain_ran" not in result
+
+
+class TestMakeStorageNonFilesystemBackend:
+    """Branch 82→85: quando o backend não é 'filesystem', pula a resolução de root_override
+    (getattr root/config_root/cwd) e chama build_system_blob_storage(root_override=None) direto."""
+
+    def test_non_filesystem_backend_skips_root_override(self):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.infrastructure.observability.pipeline import _make_storage
+
+        sentinel = MagicMock()
+        with (
+            patch(
+                "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+                return_value="azure",
+            ),
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_system_blob_storage",
+                return_value=sentinel,
+            ) as mock_build,
+        ):
+            result = _make_storage()
+
+        mock_build.assert_called_once_with(root_override=None)
+        assert result is sentinel
+
+
+class TestBronzeStorageForBootstrap:
+    """Lines 99-105: bronze_storage_for_bootstrap() com OTel habilitado — tenta criar o
+    storage via _make_storage(), retornando o resultado ou None se falhar."""
+
+    def test_returns_storage_when_make_storage_succeeds(self):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.infrastructure.observability import pipeline as pipeline_mod
+
+        sentinel = MagicMock()
+        mock_telemetry = MagicMock()
+        mock_telemetry.otel_sdk_disabled = False
+
+        with (
+            patch("concilium.infrastructure.settings.get_telemetry", return_value=mock_telemetry),
+            patch.object(pipeline_mod, "_make_storage", return_value=sentinel),
+        ):
+            result = pipeline_mod.bronze_storage_for_bootstrap()
+
+        assert result is sentinel
+
+    def test_returns_none_and_logs_warning_when_make_storage_raises(self, caplog):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.infrastructure.observability import pipeline as pipeline_mod
+
+        mock_telemetry = MagicMock()
+        mock_telemetry.otel_sdk_disabled = False
+
+        with (
+            patch("concilium.infrastructure.settings.get_telemetry", return_value=mock_telemetry),
+            patch.object(pipeline_mod, "_make_storage", side_effect=RuntimeError("sem storage")),
+            caplog.at_level("WARNING"),
+        ):
+            result = pipeline_mod.bronze_storage_for_bootstrap()
+
+        assert result is None
+        assert any("Bronze storage indisponível" in r.message for r in caplog.records)

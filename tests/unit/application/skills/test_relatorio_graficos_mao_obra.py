@@ -46,3 +46,27 @@ def test_bgs_accumulate_week_agrega_turnos_na_mesma_funcao_base():
 
     assert list(mo_by_funcao) == ["Serra Verde — Operador de Escavadeira"]
     assert mo_by_funcao["Serra Verde — Operador de Escavadeira"]["2026-W32"] == 3.0
+
+
+def test_bgs_add_financeiro_faz_fallback_quando_versao_proporcional_falha():
+    """Se `_b._cash_flow_rows` (proporcional ao cronograma físico) lançar exceção
+    (ex.: canonical_in sem `contratos_recurso`), `_bgs_add_financeiro` deve capturar
+    e usar a distribuição uniforme local (`_cash_flow.py`) como fallback."""
+    mod = _load_helpers_a()
+    canonical_in = SimpleNamespace(
+        resultado=SimpleNamespace(
+            venda=SimpleNamespace(total_com_bdi=1000.0),
+            custo=SimpleNamespace(total=800.0),
+        )
+        # nota: sem `contratos_recurso` — faz `_b._cash_flow_rows` lançar AttributeError
+    )
+    project_months = [(2026, 7), (2026, 8)]
+    graficos: dict = {}
+
+    mod._bgs_add_financeiro(graficos, canonical_in, project_months)
+
+    assert "financeiro" in graficos
+    assert len(graficos["financeiro"]["labels"]) == 2
+    assert graficos["financeiro"]["receita"] == [500.0, 500.0]
+    assert graficos["financeiro"]["despesa"] == [400.0, 400.0]
+    assert graficos["financeiro"]["saldo"] == [100.0, 100.0]

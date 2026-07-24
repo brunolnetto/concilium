@@ -7,9 +7,11 @@ e de catálogo (arquivos de versão), trocando por um alias opaco.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from unittest.mock import patch
 
 import pytest
 
+from concilium.application.services.project import _pii_sweep as _pii_sweep_module
 from concilium.application.services.project._ownership_helpers import (
     create_ownership_transfer_pending,
 )
@@ -158,6 +160,18 @@ class TestSweepAuditLog:
         raw_lines = project.read_lines(DEFAULT_PROJECT_FILES.audit_log)
         assert "NOT_JSON" in raw_lines
 
+    def test_blank_lines_skipped_without_counting(self, repo, audit):
+        project = _make_project(repo)
+        audit.log(project, action="upsert_override", actor="carla")
+        from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
+        lines = project.read_lines(DEFAULT_PROJECT_FILES.audit_log)
+        project.write_lines(DEFAULT_PROJECT_FILES.audit_log, [*lines, "   ", ""])
+
+        stats = sweep_project(project, "carla", "alias-1")
+
+        assert stats["audit_log_entries"] == 1
+
 
 # ---------------------------------------------------------------------------
 # sweep_project — meta.json
@@ -212,6 +226,29 @@ class TestSweepMeta:
         stats = sweep_project(project, "carla", "alias-1")
         assert stats["meta_fields"] == 0
 
+    def test_version_history_present_but_no_match_untouched(self, repo):
+        project = _make_project(repo, owner_id="maria")
+        project.new_version(criado_por="maria", role_criador="engineer")
+
+        stats = sweep_project(project, "carla", "alias-1")
+
+        assert stats["meta_fields"] == 0
+        reloaded = repo.get_project(project.meta["id"])
+        entry = next(iter(reloaded.meta["version_history"].values()))
+        assert entry["criado_por"] == "maria"
+
+    def test_ownership_transfer_pending_present_but_no_match_untouched(self, repo, audit):
+        project = _make_project(repo, owner_id="maria")
+        create_ownership_transfer_pending(project, owner_proposto="joao", actor="maria", audit=audit)
+
+        stats = sweep_project(project, "carla", "alias-1")
+
+        assert stats["meta_fields"] == 0
+        reloaded = repo.get_project(project.meta["id"])
+        pending = reloaded.meta["ownership_transfer_pending"]
+        assert pending["owner_atual"] == "maria"
+        assert pending["owner_proposto"] == "joao"
+
 
 # ---------------------------------------------------------------------------
 # sweep_all_projects
@@ -246,6 +283,28 @@ class TestSweepAllProjects:
         totals = sweep_all_projects(repo, "carla", "alias-1")
         assert totals["projects_scanned"] == 1
         assert totals["projects_affected"] == 0
+
+    def test_project_raising_exception_is_skipped_without_aborting(self, repo, audit):
+        """Um projeto corrompido não deve abortar a varredura dos demais (best-effort)."""
+        p_broken = _make_project(repo, owner_id="carla")
+        _make_project(repo, owner_id="carla")
+        broken_id = p_broken.meta["id"]
+        original_sweep_project = _pii_sweep_module.sweep_project
+
+        def flaky(project, client_id, alias):
+            if project.meta["id"] == broken_id:
+                raise RuntimeError("projeto corrompido")
+            return original_sweep_project(project, client_id, alias)
+
+        with patch(
+            "concilium.application.services.project._pii_sweep.sweep_project",
+            side_effect=flaky,
+        ):
+            totals = sweep_all_projects(repo, "carla", "alias-1")
+
+        assert totals["projects_scanned"] == 2
+        assert totals["projects_affected"] == 1
+        assert totals["meta_fields"] >= 1
 
 
 # ---------------------------------------------------------------------------

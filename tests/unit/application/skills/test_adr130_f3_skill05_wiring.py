@@ -35,6 +35,7 @@ _MOD = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
 _build_comp_para_item = _MOD._build_comp_para_item
 _build_producao_para_sinergia = _MOD._build_producao_para_sinergia
 _validar_sinergia_producao = _MOD._validar_sinergia_producao
+_calcular_custo_equipamento = _MOD._calcular_custo_equipamento
 
 # ── fixtures: CPU real do catálogo rfi-r02 (PR #91) ─────────────────────────
 # CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001 —
@@ -237,6 +238,38 @@ class TestBuildProducaoParaSinergia:
         assert producao is not None
         equips = producao.composicao_padrao_equipe.equipamentos
         assert {e.equip_id: e.num_unidades for e in equips} == {"E0016": 1, "E0007": 7}
+
+    def test_none_quando_valor_horario_invalido(self):
+        """Quando a construção do `Producao` mínimo falha (aqui, `valor_horario`
+        não-numérico → ValueError em `float(...)`), a função captura a exceção e
+        retorna None em vez de propagar — no-op silencioso (ADR-130 F3)."""
+        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real(), valor_horario="nao-numerico")
+        assert _build_producao_para_sinergia(prod) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _calcular_custo_equipamento — custo_mensal_override
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestCalcularCustoEquipamentoCustoMensalOverride:
+    def test_custo_mensal_override_substitui_custo_base_convertido(self):
+        """custo_mensal_override != None descarta o custo_base derivado de
+        preço/unidade (via _converter_preco_equip) e usa o valor do override
+        (convertido para float)."""
+        insumo = {
+            "codigo": "EQ-01",
+            "descricao": "Escavadeira",
+            "preco_unitario": 100.0,
+            "unidade": "h",
+            "atributos_especificos": {"consumo_litros_hora": 20.0, "rental_unit": "hora_produtiva"},
+        }
+        sem_override, _ = _calcular_custo_equipamento(insumo, 1, 8, 21.4, 6.20)
+        assert sem_override.custo_mensal == round(100.0 * 8 * 21.4, 2)
+
+        com_override, _ = _calcular_custo_equipamento(insumo, 1, 8, 21.4, 6.20, custo_mensal_override="9999.5")
+        assert com_override.custo_mensal == 9999.5
+        assert com_override.custo_mensal != sem_override.custo_mensal
 
 
 # ─────────────────────────────────────────────────────────────────────────────

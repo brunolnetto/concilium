@@ -434,6 +434,44 @@ class TestAppendJsonl:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  StorageProjectHandle — write_lines
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestWriteLines:
+    """write_lines rewrites the blob wholesale (unlike append_jsonl) — used for
+    LGPD Art. 18 anonymization sweeps over an otherwise append-only .jsonl."""
+
+    def test_write_lines_joins_with_newline_and_trailing_newline(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        handle.write_lines("audit.jsonl", ["line1", "line2", "line3"])
+        raw = storage.ler_blob(f"{project_id}/audit.jsonl")
+        assert raw == b"line1\nline2\nline3\n"
+
+    def test_write_lines_empty_list_writes_empty_content(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        handle.write_lines("audit.jsonl", [])
+        raw = storage.ler_blob(f"{project_id}/audit.jsonl")
+        assert raw == b""
+
+    def test_write_lines_fully_overwrites_previous_content(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        """Diferente de append_jsonl: reescreve o blob por completo — é assim que
+        uma varredura de anonimização (LGPD Art. 18) substitui as linhas com
+        `user_id` zerado sem deixar o conteúdo antigo remanescente."""
+        handle.append_jsonl("audit.jsonl", {"user_id": "carla"})
+        handle.append_jsonl("audit.jsonl", {"user_id": "outro"})
+
+        handle.write_lines("audit.jsonl", ['{"user_id": null}', '{"user_id": "outro"}'])
+
+        lines = handle.read_lines("audit.jsonl")
+        assert lines == ['{"user_id": null}', '{"user_id": "outro"}']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  StorageProjectHandle — read_lines, read_bytes, exists
 # ─────────────────────────────────────────────────────────────────────────────
 

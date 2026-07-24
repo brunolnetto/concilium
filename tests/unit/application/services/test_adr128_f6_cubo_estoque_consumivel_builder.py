@@ -132,3 +132,15 @@ class TestCuboEstoqueConsumivelBuilderVazio:
     def test_sem_recursos_consumiveis_retorna_cubo_vazio(self):
         cubo = CuboEstoqueConsumivelBuilder().build(_fake_canonical([], []))
         assert cubo.celulas == ()
+
+    def test_sem_projeto_retorna_projeto_id_vazio(self):
+        """`_get_projeto_id` retorna '' quando `canonical_in.projeto` é None (ex.: canônico
+        parcial/fake sem o bloco de projeto ainda montado)."""
+        canonical = SimpleNamespace(
+            projeto=None,
+            cronograma=SimpleNamespace(scheduled_activities=[]),
+            recursos_consumiveis=[],
+        )
+        cubo = CuboEstoqueConsumivelBuilder().build(canonical)
+        assert cubo.projeto_id == ""
+        assert cubo.celulas == ()

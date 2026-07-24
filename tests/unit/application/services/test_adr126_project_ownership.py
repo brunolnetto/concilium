@@ -22,6 +22,8 @@ import pytest
 
 from concilium.application.services.project._ownership_helpers import (
     OwnershipTransferPending,
+    _email_for,
+    _notify_ownership_event,
     accept_ownership_transfer,
     create_ownership_transfer_pending,
     find_projects_by_owner,
@@ -425,6 +427,18 @@ class TestOwnershipTransferPendingInvite:
         actions = [e.get("ownership_action") for e in entries if e.get("ownership_action")]
         assert any(a["action"] == "invite_expired" for a in actions)
 
+    def test_reject_with_unknown_token_raises_not_found(self, repo, audit):
+        project = _make_project(repo, owner_id="joao.silva")
+        create_ownership_transfer_pending(project, "maria.santos", actor="joao.silva", audit=audit)
+        with pytest.raises(FileNotFoundError):
+            reject_ownership_transfer(project, "token-invalido", actor="maria.santos", audit=audit)
+
+    def test_reject_wrong_actor_denied(self, repo, audit):
+        project = _make_project(repo, owner_id="joao.silva")
+        pending = create_ownership_transfer_pending(project, "maria.santos", actor="joao.silva", audit=audit)
+        with pytest.raises(PermissionError):
+            reject_ownership_transfer(project, pending.token, actor="carlos.eng", audit=audit)
+
 
 # ---------------------------------------------------------------------------
 # D5 — mine=true filtra por owner_id
@@ -490,6 +504,38 @@ class TestOwnershipAuditBestEffort:
         assert d["owner_anterior"] == "joao.silva"
         assert d["owner_proposto_ou_novo"] == "maria.santos"
         assert "ts" in d
+
+
+class TestOwnershipHelpersInternals:
+    """_email_for / _notify_ownership_event / OwnershipTransferPending.from_dict."""
+
+    def test_email_for_returns_none_when_client_id_is_falsy(self):
+        assert _email_for(None) is None
+        assert _email_for("") is None
+
+    def test_notify_ownership_event_swallows_exception(self):
+        def _boom(*args):
+            raise RuntimeError("smtp indisponível")
+
+        # Não deve levantar, mesmo com notify_fn quebrando.
+        _notify_ownership_event(_boom, "arg1", "arg2")
+
+    def test_notify_ownership_event_calls_notify_fn_with_args(self):
+        notify_fn = MagicMock()
+        _notify_ownership_event(notify_fn, "a", "b", "c")
+        notify_fn.assert_called_once_with("a", "b", "c")
+
+    def test_ownership_transfer_pending_from_dict_roundtrip(self):
+        pending = OwnershipTransferPending(
+            token="tok-abc",
+            project_id="proj-x",
+            owner_atual="joao.silva",
+            owner_proposto="maria.santos",
+            criado_em="2026-01-01T00:00:00+00:00",
+            expira_em="2026-01-02T00:00:00+00:00",
+        )
+        rebuilt = OwnershipTransferPending.from_dict(pending.to_dict())
+        assert rebuilt == pending
 
 
 # ---------------------------------------------------------------------------

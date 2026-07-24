@@ -553,6 +553,69 @@ class TestCatalogLifecycleADR120:
         assert data["_aprovado"] is True
         assert data["_aprovado_por"] == "mgr-1"
 
+    def test_aprovar_merge_catalogo_multiplos_deltas_itera_o_loop_inteiro(self, monkeypatch, tmp_path):
+        # branch 527->514 — o ramo `elif tipo == "variante_producao"` precisa
+        # avaliar False (tipo desconhecido) com um próximo item na lista, para
+        # que o loop volte ao topo (514) em vez de sair/entrar em algum ramo.
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_root = tmp_path / "config"
+        entity_dir = config_root / "contextos" / "ctx-1"
+        entity_dir.mkdir(parents=True)
+
+        rascunho_data = {
+            "version": "v2",
+            "_revisado": True,
+            "_deltas": [
+                {"tipo": "tipo_desconhecido_futuro"},
+                {
+                    "tipo": "preco_insumo",
+                    "insumo_id": "INS-1",
+                    "novo_preco": 55.0,
+                    "jurisdicao_id": None,
+                    "nota": None,
+                    "autor": "mgr-1",
+                },
+            ],
+        }
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = rascunho_data
+        version_svc.current_version.return_value = "v1"
+
+        ctx = MagicMock()
+        ctx.catalogo_id = "cat-1"
+        rt = MagicMock()
+        rt.load_contexto.return_value = ctx
+        rt.load_catalogo.return_value = {"cpus": [], "insumos": [], "producoes": []}
+
+        apply_preco_mock = MagicMock()
+        apply_variante_mock = MagicMock()
+
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch("concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=config_root)),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch(
+                "concilium.presentation.mcp.tools._catalogo_tools_helpers_a._apply_preco_insumo_delta",
+                apply_preco_mock,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools._catalogo_tools_helpers_a._apply_variante_producao_delta",
+                apply_variante_mock,
+            ),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+
+        assert result["status"] == "APROVADO"
+        # o delta de tipo desconhecido não bate em nenhum ramo (nem preco_insumo
+        # nem variante_producao) — só o segundo delta (preco_insumo) é aplicado.
+        assert apply_variante_mock.call_count == 0
+        assert apply_preco_mock.call_count == 1
+        assert result["deltas_aplicados"] == 1
+
     def test_aprovar_merge_catalogo_ainda_nao_revisado_bloqueia(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()

@@ -184,4 +184,27 @@ class TestCpuInsumoValidacoes:
         assert any(r.codigo == "VAL-CPU-INS-01" and r.status == "OK" for r in results)
 
 
+def test_validar_materiais_existem_retorna_erro_para_material_nao_encontrado():
+    catalogo = {
+        "insumos": [],
+        "producoes": [
+            {
+                "id": "PROD-01",
+                "composicao_padrao_equipe": {
+                    "materiais": [{"insumo_id": "CIMENTO-NAO-EXISTE", "coeficiente": 1.0}],
+                },
+            }
+        ],
+    }
+    repo = RepositorioInsumo(catalogo)
+    validator = ValidadorCPUInsumo(repo)
+    cpu = {"producao_id_ref": "PROD-01"}
+
+    resultado = validator.validar_materiais_existem(cpu)
+
+    assert resultado.codigo == "VAL-CPU-INS-08"
+    assert resultado.status == "ERRO"
+    assert "CIMENTO-NAO-EXISTE" in resultado.mensagem
+
+
 

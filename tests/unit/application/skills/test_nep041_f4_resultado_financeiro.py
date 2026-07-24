@@ -313,6 +313,22 @@ class TestSemResiduosLegados:
             with pytest.raises(ImportError, match="Não foi possível carregar spec"):
                 mod._load_estagio("_precificacao", "run_precificacao_unitaria")
 
+    def test_load_estagio_exec_failure_pops_module_and_reraises(self):
+        """subdir inexistente -> exec_module() levanta FileNotFoundError (o
+        skill.py do estágio não existe no disco); o except deve popar o
+        mod_name de sys.modules e relançar a exceção original."""
+        import sys
+
+        mod = sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
+        bad_mod_name = "_concilium_resultado_financeiro_stage_estagio_inexistente_xyz.skill"
+        assert bad_mod_name not in sys.modules
+
+        with pytest.raises(FileNotFoundError):
+            mod._load_estagio("_estagio_inexistente_xyz", "alguma_funcao")
+
+        # Não deve deixar módulo parcialmente inicializado registrado em sys.modules
+        assert bad_mod_name not in sys.modules
+
     def test_consolidacao_skill_module_loads_via_real_package_dotted_path(self):
         """A pasta hifenizada '06-resultado-financeiro' possui __init__.py em cada
         nível, então importlib.import_module com o caminho pontuado (string,

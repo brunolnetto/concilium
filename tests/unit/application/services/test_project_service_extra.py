@@ -16,6 +16,23 @@ def _make_service():
 
 
 # ---------------------------------------------------------------------------
+# Lines 97-98: _get_perfil_svc except path
+# ---------------------------------------------------------------------------
+
+
+class TestGetPerfilSvcException:
+    def test_import_error_returns_none(self):
+        """Lines 97-98: ImportError in _get_perfil_svc → except → return None."""
+        svc = _make_service()
+        with patch.dict(
+            sys.modules,
+            {"concilium.application.services.catalog.contexto_version_service": None},
+        ):
+            result = svc._get_perfil_svc()
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
 # Lines 612-614: _get_jurisdiction_svc except path
 # ---------------------------------------------------------------------------
 

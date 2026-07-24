@@ -41,6 +41,14 @@ class TestBuildProxyDownloadNote:
         assert "https://x/linux" in note
         assert "https://x/macos" in note
 
+    def test_omits_windows_block_when_only_linux_present(self):
+        from concilium.application.services.notifications import _build_proxy_download_note
+
+        note = _build_proxy_download_note({"linux": "https://x/linux"})
+        assert "https://x/linux" in note
+        assert "Windows" not in note
+        assert "macOS" not in note
+
 
 class TestReadSkillTutorialDelegation:
     """ADR-144 D6: a leitura real do skill vive em skill_content.py — aqui só
@@ -175,3 +183,20 @@ class TestNotifyRevokePending:
             notify_revoke_pending("c1", "dev-01", "c1@x.com", "confirm-tok")
         kwargs = mock_service.send.call_args.kwargs
         assert kwargs["context"]["cta"]["url"] == "https://app.test.com/auth/revoke-confirm/confirm-tok"
+
+
+class TestNotifyVisibilityQueried:
+    def test_digest_aggregates_counts_and_details(self):
+        from concilium.application.services.notifications import notify_visibility_queried
+
+        patcher, mock_service = _patched_service()
+        resumo = [("cliente-a", "operator", 3), ("cliente-b", "admin", 2)]
+        with patcher:
+            notify_visibility_queried("bruno@x.com", resumo)
+        mock_service.send.assert_called_once()
+        kwargs = mock_service.send.call_args.kwargs
+        assert kwargs["to"] == "bruno@x.com"
+        assert kwargs["template"] == "notification"
+        assert "5x" in kwargs["context"]["heading"]
+        assert ("cliente-a", "operator — 3x") in kwargs["context"]["details"]
+        assert ("cliente-b", "admin — 2x") in kwargs["context"]["details"]

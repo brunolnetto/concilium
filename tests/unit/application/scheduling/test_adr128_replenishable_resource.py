@@ -14,7 +14,8 @@ Escrito antes da implementação (red phase).
 
 from __future__ import annotations
 
-from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler
+import concilium.application.scheduling.replenishable as replenishable_mod
+from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler, ExtendedPrecedence
 from concilium.application.scheduling.models import (
     Activity,
     ActivityDAG,
@@ -158,6 +159,56 @@ class TestApplyReplenishableDelay:
         legacy = apply_replenishable_delay(scheduled, resource)
         explicit_none = apply_replenishable_delay(scheduled, resource, None)
         assert [sa.start_week for sa in legacy] == [sa.start_week for sa in explicit_none]
+
+    def test_no_candidates_break_when_deficit_precedes_any_consumer(self):
+        """Cobre o `break` de "sem candidatas" (linha 190): o déficit já existe ANTES
+        de qualquer atividade consumidora entrar em atividade — só é alcançável com um
+        `estoque_inicial` negativo, valor que `DisponibilidadeConsumivel.__post_init__`
+        proíbe na construção normal (ADR-128 §D1). Constrói a instância via
+        `object.__new__` para contornar a validação e exercitar deliberadamente o
+        estado inválido que o `break` defensivo trata sem lançar exceção."""
+        disp = object.__new__(DisponibilidadeConsumivel)
+        disp.capacidade_armazenamento = None
+        disp.estoque_inicial = -10.0
+        disp.taxa_reabastecimento_max = 0.0
+        disp.lead_time_reabastecimento_dias = None
+
+        resource = ReplenishableResource(resource_id="DIESEL", disponibilidade=disp, consumo_por_semana={"A1": 5.0})
+        # A1 só começa na semana 3 — na semana 0 (primeira com estoque negativo,
+        # herdado do estoque_inicial inválido) nenhuma atividade está ativa/consumindo.
+        scheduled = [ScheduledActivity("A1", start_week=3, end_week=4, duration_weeks=1)]
+
+        result = apply_replenishable_delay(scheduled, resource)
+
+        act = next(sa for sa in result if sa.activity_id == "A1")
+        assert act.start_week == 3  # sem candidata para atrasar -> break imediato, sem reparo
+        assert act.end_week == 4
+
+    def test_exhausts_max_delay_iterations_without_converging(self, monkeypatch):
+        """Cobre o branch "176->204" (loop `for` esgotado sem nunca dar `break`):
+        com reabastecimento pequeno e positivo, o déficit projetado melhora
+        estritamente a cada iteração (nunca repete o mesmo (atividade, offset,
+        déficit) — o novo detector de ponto fixo nunca dispara), mas a convergência
+        real exige mais rodadas do que `_MAX_DELAY_ITERATIONS` permite. Reduz a cota
+        via monkeypatch para forçar o esgotamento dentro de poucas iterações."""
+        monkeypatch.setattr(replenishable_mod, "_MAX_DELAY_ITERATIONS", 3)
+
+        resource = ReplenishableResource(
+            resource_id="DIESEL",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, taxa_reabastecimento_max=1.0),
+            consumo_por_semana={"A1": 10.0},
+        )
+        scheduled = [ScheduledActivity("A1", start_week=0, end_week=1, duration_weeks=1)]
+
+        result = replenishable_mod.apply_replenishable_delay(scheduled, resource)
+
+        # Convergência real precisaria de 10 rodadas (déficit = i - 10); com a cota
+        # reduzida para 3, o laço esgota as iterações sem nunca convergir nem travar
+        # no detector de ponto fixo — o cronograma retornado ainda tem estoque negativo.
+        act = next(sa for sa in result if sa.activity_id == "A1")
+        assert act.start_week == 3  # 3 iterações, cada uma atrasando 1 semana
+        niveis = project_estoque_semanal(resource, result)
+        assert has_estoque_negativo(niveis)
 
 
 # ── Regressão zero: CpSatScheduler sem replenishable_resources ───────────────
@@ -419,6 +470,113 @@ class TestCpSatSchedulerReplenishableRevalidation:
         assert by_id["B"].start_week == by_id["X"].start_week
         assert result.feasible is False
 
+    # ── `_validate_repaired_schedule` unitário direto ────────────────────────
+    #
+    # As checagens abaixo testam `CpSatScheduler._validate_repaired_schedule` chamando-o
+    # diretamente com um `scheduled`/`dag` montados à mão, em vez de tentar reproduzir
+    # cada violação via `schedule()` fim-a-fim: como o laço de reparo sempre roda
+    # `repropagate_precedence_delays` como último passo de cada rodada, ele já corrige
+    # qualquer violação de precedência clássica/estendida que o próprio grafo consiga
+    # resolver em uma passada — só um DAG genuinamente cíclico (ver
+    # `TestRepropagatePrecedenceDelays.test_genuine_cycle_across_combined_edges_falls_back_to_original_order`)
+    # produziria uma violação residual fim-a-fim, e mesmo esse cenário é frágil/indireto
+    # demais para testar contrato específico de cada `return False`. Chamar o validador
+    # diretamente é uma forma direta e legítima de testar cada ramo do seu contrato:
+    # ele é uma função pura de (scheduled, dag, extended_precedences, pool, horizon),
+    # independente de como esses valores foram produzidos.
+
+    def test_validate_skips_precedence_edge_dangling_outside_scheduled(self):
+        """Cobre a linha 234: `dag.precedence` referencia um `succ_id` ausente de
+        `scheduled` — a checagem é pulada (`continue`) e, sem outra violação, o
+        resultado permanece `True`."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(activities=[Activity("A", "", 1)], precedence=[("A", "GHOST")])
+        scheduled = [ScheduledActivity("A", 0, 1, 1)]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, None, pool, 100) is True
+
+    def test_validate_returns_false_when_classic_fs_threshold_1_violated(self):
+        """Cobre a linha 239: precedência FS clássica (theta implícito 1.0) violada
+        após o reparo — `succ.start_week < pred.end_week`."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(
+            activities=[Activity("A", "", 1), Activity("B", "", 1)],
+            precedence=[("B", "A")],
+        )
+        scheduled = [ScheduledActivity("A", 0, 1, 1), ScheduledActivity("B", 0, 1, 1)]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, None, pool, 100) is False
+
+    def test_validate_returns_false_when_partial_threshold_fs_violated(self):
+        """Cobre as linhas 241-243: `completion_threshold_pct` < 1.0 (ADR-081) usa
+        `lag = ceil(theta * duration_predecessora)`; violado quando
+        `succ.start_week < pred.start_week + lag`."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(
+            activities=[Activity("A", "", 1), Activity("B", "", 4)],
+            precedence=[("B", "A")],
+            thresholds={("B", "A"): 0.5},
+        )
+        # required_start = 0 + ceil(0.5 * 4) = 2; A.start_week=1 viola.
+        scheduled = [ScheduledActivity("A", 1, 2, 1), ScheduledActivity("B", 0, 4, 4)]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, None, pool, 100) is False
+
+    def test_validate_returns_true_when_partial_threshold_fs_satisfied(self):
+        """Cobre o branch "242->232" (condição falsa: sem violação, o `for` segue para
+        a próxima precedência em vez de retornar `False`) — contraparte do teste
+        anterior com `A.start_week` satisfazendo o `required_start`."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(
+            activities=[Activity("A", "", 1), Activity("B", "", 4)],
+            precedence=[("B", "A")],
+            thresholds={("B", "A"): 0.5},
+        )
+        # required_start = 0 + ceil(0.5 * 4) = 2; A.start_week=2 satisfaz (sem violação).
+        scheduled = [ScheduledActivity("A", 2, 3, 1), ScheduledActivity("B", 0, 4, 4)]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, None, pool, 100) is True
+
+    def test_validate_skips_extended_precedence_dangling_outside_scheduled(self):
+        """Cobre as linhas 249-250: uma precedência estendida cujo predecessor não
+        está em `scheduled` é pulada; sem outra violação, o resultado é `True`."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(activities=[Activity("A", "", 1), Activity("B", "", 1)], precedence=[])
+        scheduled = [ScheduledActivity("A", 0, 1, 1), ScheduledActivity("B", 1, 2, 1)]
+        ext = [
+            ExtendedPrecedence(pred="GHOST", succ="B", tipo="FS", lag=0),
+            ExtendedPrecedence(pred="A", succ="B", tipo="FS", lag=0),
+        ]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, ext, pool, 100) is True
+
+    def test_validate_returns_false_when_extended_fs_violated(self):
+        """Cobre a linha 252 (`ep.tipo == "FS"` violado)."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(activities=[Activity("A", "", 1), Activity("B", "", 1)], precedence=[])
+        scheduled = [ScheduledActivity("A", 0, 1, 1), ScheduledActivity("B", 0, 1, 1)]
+        ext = [ExtendedPrecedence(pred="A", succ="B", tipo="FS", lag=0)]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, ext, pool, 100) is False
+
+    def test_validate_returns_false_when_extended_ss_violated(self):
+        """Cobre a linha 254 (`ep.tipo == "SS"` violado)."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(activities=[Activity("A", "", 1), Activity("B", "", 1)], precedence=[])
+        scheduled = [ScheduledActivity("A", 0, 1, 1), ScheduledActivity("B", 1, 2, 1)]
+        ext = [ExtendedPrecedence(pred="A", succ="B", tipo="SS", lag=2)]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, ext, pool, 100) is False
+
+    def test_validate_returns_false_when_extended_ff_violated(self):
+        """Cobre a linha 256 (`ep.tipo == "FF"` violado)."""
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        pool = ResourcePool(resources={})
+        dag = ActivityDAG(activities=[Activity("A", "", 2), Activity("B", "", 2)], precedence=[])
+        scheduled = [ScheduledActivity("A", 0, 2, 2), ScheduledActivity("B", 0, 2, 2)]
+        ext = [ExtendedPrecedence(pred="A", succ="B", tipo="FF", lag=1)]
+        assert scheduler._validate_repaired_schedule(scheduled, dag, ext, pool, 100) is False
+
 
 class TestRepropagatePrecedenceDelays:
     """Testes unitários diretos de `repropagate_precedence_delays` (ADR-128 Fase 2b),
@@ -536,3 +694,174 @@ class TestRepropagatePrecedenceDelays:
         repropagate_precedence_delays(scheduled, dag)
         assert original_b.start_week == 1  # instância original não foi mutada
         assert original_b.end_week == 2
+
+    def test_dangling_precedence_edge_referencing_activity_outside_dag_is_skipped(self):
+        """Cobre a linha 52 de `_topological_order_with_extended`: uma aresta de
+        `dag.precedence` referenciando um activity_id fora de `dag.activities` é
+        ignorada na construção da ordem topológica, sem quebrar o cálculo da aresta
+        válida remanescente."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="A", description="", duration_weeks=1),
+                Activity(activity_id="B", description="", duration_weeks=1),
+            ],
+            precedence=[("A", "B"), ("A", "GHOST")],  # GHOST não está em dag.activities
+        )
+        scheduled = [
+            ScheduledActivity("A", start_week=2, end_week=3, duration_weeks=1),
+            ScheduledActivity("B", start_week=1, end_week=2, duration_weeks=1),
+        ]
+        result = repropagate_precedence_delays(scheduled, dag)
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["B"].start_week == 3  # aresta válida (A->B) ainda é respeitada
+        assert by_id["B"].end_week == 4
+
+    def test_genuine_cycle_across_combined_edges_falls_back_to_original_order(self):
+        """Cobre as linhas 72-73: um ciclo formado pela COMBINAÇÃO de `dag.precedence`
+        (B->A) e uma precedência estendida (A->B, SS) impede que o Kahn's algorithm
+        ordene todos os nós — o fallback devolve os nós restantes na ordem original
+        de `dag.activities` em vez de travar."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="A", description="", duration_weeks=1),
+                Activity(activity_id="B", description="", duration_weeks=1),
+            ],
+            precedence=[("B", "A")],
+            thresholds={("B", "A"): 0.0},
+        )
+        ext = [ExtendedPrecedence(pred="A", succ="B", tipo="SS", lag=0)]
+        scheduled = [
+            ScheduledActivity("A", start_week=0, end_week=1, duration_weeks=1),
+            ScheduledActivity("B", start_week=0, end_week=1, duration_weeks=1),
+        ]
+        # Não deve lançar exceção mesmo com o ciclo — devolve os dois IDs, ainda que a
+        # repropagação resultante possa ficar incompleta (rede de segurança final é
+        # `CpSatScheduler._validate_repaired_schedule`, não esta função).
+        result = repropagate_precedence_delays(scheduled, dag, extended_precedences=ext)
+        assert sorted(sa.activity_id for sa in result) == ["A", "B"]
+
+    def test_dag_activity_not_present_in_scheduled_activities_is_skipped(self):
+        """Cobre a linha 120: `dag.activities` inclui uma atividade ("C") que não está
+        na lista `scheduled_activities` passada — `succ` é `None` e a iteração pula
+        para a próxima atividade sem lançar exceção."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="A", description="", duration_weeks=1),
+                Activity(activity_id="C", description="", duration_weeks=1),
+            ],
+            precedence=[],
+        )
+        scheduled = [ScheduledActivity("A", start_week=0, end_week=1, duration_weeks=1)]
+        result = repropagate_precedence_delays(scheduled, dag)
+        assert [sa.activity_id for sa in result] == ["A"]
+
+    def test_classic_fs_predecessor_missing_from_scheduled_is_skipped(self):
+        """Cobre a linha 130: `dag.precedence` referencia um predecessor ("GHOST") que
+        está em `dag.activities` mas não foi agendado (fora de `scheduled_activities`)
+        — `pred` é `None` e essa precedência é ignorada, sem deslocar o sucessor."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="GHOST", description="", duration_weeks=1),
+                Activity(activity_id="B", description="", duration_weeks=1),
+            ],
+            precedence=[("GHOST", "B")],
+        )
+        scheduled = [ScheduledActivity("B", start_week=0, end_week=1, duration_weeks=1)]
+        result = repropagate_precedence_delays(scheduled, dag)
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["B"].start_week == 0  # predecessor ausente -> nenhuma exigência aplicada
+        assert by_id["B"].end_week == 1
+
+    def test_partial_threshold_classic_fs_pushes_by_ceil_theta_times_duration(self):
+        """Cobre as linhas 135-138: `completion_threshold_pct` (ADR-081) < 1.0 usa
+        `required_start = pred.start_week + ceil(theta * pred_duration)` em vez do FS
+        clássico (`pred.end_week`)."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="A", description="", duration_weeks=4),
+                Activity(activity_id="B", description="", duration_weeks=1),
+            ],
+            precedence=[("A", "B")],
+            thresholds={("A", "B"): 0.5},
+        )
+        scheduled = [
+            ScheduledActivity("A", start_week=0, end_week=4, duration_weeks=4),
+            ScheduledActivity("B", start_week=0, end_week=1, duration_weeks=1),
+        ]
+        result = repropagate_precedence_delays(scheduled, dag)
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["B"].start_week == 2  # ceil(0.5 * 4) = 2
+        assert by_id["B"].end_week == 3
+
+    def test_extended_precedence_predecessor_missing_from_scheduled_is_skipped(self):
+        """Cobre a linha 145: uma precedência estendida referencia um predecessor
+        ("GHOST2") ausente de `scheduled_activities` — `pred` é `None` e é ignorada."""
+        dag = ActivityDAG(activities=[Activity(activity_id="B", description="", duration_weeks=1)], precedence=[])
+        scheduled = [ScheduledActivity("B", start_week=0, end_week=1, duration_weeks=1)]
+        ext = [ExtendedPrecedence(pred="GHOST2", succ="B", tipo="FS", lag=0)]
+        result = repropagate_precedence_delays(scheduled, dag, extended_precedences=ext)
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["B"].start_week == 0
+        assert by_id["B"].end_week == 1
+
+    def test_extended_fs_precedence_pushes_start_by_lag_after_predecessor_finish(self):
+        """Cobre a linha 147 (`ep.tipo == "FS"`) diretamente — testes anteriores desta
+        classe só exercitavam FF; este cobre FS estendido (com lag) isoladamente."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="A", description="", duration_weeks=1),
+                Activity(activity_id="B", description="", duration_weeks=1),
+            ],
+            precedence=[],
+        )
+        scheduled = [
+            ScheduledActivity("A", start_week=3, end_week=4, duration_weeks=1),
+            ScheduledActivity("B", start_week=0, end_week=1, duration_weeks=1),
+        ]
+        ext = [ExtendedPrecedence(pred="A", succ="B", tipo="FS", lag=1)]
+        result = repropagate_precedence_delays(scheduled, dag, extended_precedences=ext)
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["B"].start_week == 5  # end(A)=4 + lag=1
+        assert by_id["B"].end_week == 6
+
+    def test_extended_ss_precedence_pushes_start_by_lag_after_predecessor_start(self):
+        """Cobre a linha 149 (`ep.tipo == "SS"`) diretamente."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="A", description="", duration_weeks=1),
+                Activity(activity_id="B", description="", duration_weeks=1),
+            ],
+            precedence=[],
+        )
+        scheduled = [
+            ScheduledActivity("A", start_week=3, end_week=4, duration_weeks=1),
+            ScheduledActivity("B", start_week=0, end_week=1, duration_weeks=1),
+        ]
+        ext = [ExtendedPrecedence(pred="A", succ="B", tipo="SS", lag=2)]
+        result = repropagate_precedence_delays(scheduled, dag, extended_precedences=ext)
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["B"].start_week == 5  # start(A)=3 + lag=2
+        assert by_id["B"].end_week == 6
+
+    def test_unrecognized_extended_precedence_type_is_silently_skipped(self):
+        """Cobre o branch "150->142": um `tipo` não reconhecido (a dataclass
+        `ExtendedPrecedence` não valida `Literal` em runtime) não casa com nenhum dos
+        `if`/`elif` FS/SS/FF — a iteração cai direto de volta ao topo do `for`, sem
+        deslocar a atividade, análogo ao aviso defensivo em
+        `_add_extended_precedence_constraints` do `cpsat_scheduler`."""
+        dag = ActivityDAG(
+            activities=[
+                Activity(activity_id="A", description="", duration_weeks=1),
+                Activity(activity_id="B", description="", duration_weeks=1),
+            ],
+            precedence=[],
+        )
+        scheduled = [
+            ScheduledActivity("A", start_week=3, end_week=4, duration_weeks=1),
+            ScheduledActivity("B", start_week=0, end_week=1, duration_weeks=1),
+        ]
+        ext = [ExtendedPrecedence(pred="A", succ="B", tipo="XX", lag=2)]  # type: ignore[arg-type]
+        result = repropagate_precedence_delays(scheduled, dag, extended_precedences=ext)
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["B"].start_week == 0  # tipo desconhecido -> nenhuma exigência aplicada
+        assert by_id["B"].end_week == 1

@@ -138,6 +138,60 @@ class TestBronzeMetricExporterHistogram:
         assert record["labels"]["_sum"] == pytest.approx(300.0)
 
 
+class TestNsToIso:
+    def test_zero_nanoseconds_returns_empty_string(self):
+        from concilium.infrastructure.observability.bronze_metric_exporter import _ns_to_iso
+
+        assert _ns_to_iso(0) == ""
+
+
+class TestToRecordsEdgeCases:
+    def test_resource_metrics_without_resource_defaults_service_to_empty(self):
+        """Quando resource_metrics.resource é falsy (None), `service` fica '' em vez de propagar erro."""
+        dp = MagicMock()
+        dp.attributes = {}
+        dp.time_unix_nano = 0
+        dp.value = 1.0
+
+        metric = MagicMock()
+        metric.name = "concilium.mcp.tool.calls"
+        metric.data.data_points = [dp]
+
+        scope_metrics = MagicMock()
+        scope_metrics.metrics = [metric]
+
+        resource_metrics = MagicMock()
+        resource_metrics.resource = None
+        resource_metrics.scope_metrics = [scope_metrics]
+
+        metrics_data = MagicMock()
+        metrics_data.resource_metrics = [resource_metrics]
+
+        records = list(BronzeMetricExporter._to_records(metrics_data))
+
+        assert len(records) == 1
+        assert records[0]["service"] == ""
+
+    def test_otel_sdk_self_diagnostic_metric_is_skipped(self):
+        """Métricas com prefixo 'otel.sdk.' (auto-diagnóstico do SDK) não devem virar records."""
+        metric = MagicMock()
+        metric.name = "otel.sdk.metric_reader.collection.duration"
+
+        scope_metrics = MagicMock()
+        scope_metrics.metrics = [metric]
+
+        resource_metrics = MagicMock()
+        resource_metrics.resource.attributes = {"service.name": "concilium"}
+        resource_metrics.scope_metrics = [scope_metrics]
+
+        metrics_data = MagicMock()
+        metrics_data.resource_metrics = [resource_metrics]
+
+        records = list(BronzeMetricExporter._to_records(metrics_data))
+
+        assert records == []
+
+
 class TestBronzeMetricExporterEdgeCases:
     def test_no_data_points_is_noop(self):
         storage = MagicMock()

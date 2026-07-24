@@ -324,6 +324,33 @@ class TestSendRetry:
         mock_sleep.assert_not_called()
 
 
+class TestSendRetryLoopNeverSkippedInPractice:
+    """Branch 203->229 (for loop over retry delays exits with zero iterations):
+    structurally, `(*_RETRY_DELAYS_S, None)` always has >=1 element and the last
+    element (None) always ends the loop via an explicit `return` (success),
+    `raise` (non-retriable) or `break` (retriable, delay is None) — so the loop
+    body is *never* skipped nor falls off naturally into the post-loop assert
+    under real SMTP failures. The only way to exercise that arc is to force the
+    retry-delays iterator itself to be empty, confirming `last_exc` stays None
+    and the defensive `assert last_exc is not None` (line 229) is what fires —
+    caught by `send()`'s catch-all and reported as a failed dispatch."""
+
+    def test_empty_retry_iterator_trips_defensive_assert_and_is_reported_as_failure(self, monkeypatch, caplog):
+        import logging
+
+        import concilium.infrastructure.services.notification_service as mod
+
+        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
+        svc = mod.NotificationService(settings=cfg)
+        monkeypatch.setattr(mod, "enumerate", lambda seq: iter([]), raising=False)
+
+        with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
+            result = svc.send(to="dest@x.com", subject="Hi", template="notification", context={"heading": "W"})
+
+        assert result is False
+        assert any("send: falha ao notificar" in r.message for r in caplog.records)
+
+
 class TestSendNeverRaises:
     def test_smtp_failure_is_captured_and_logged(self, caplog):
         import logging

@@ -468,3 +468,15 @@ def test_utilizacao_temporal_off_weeks_add_honesty_narrative():
     canonical, contratos, _ = _build_pool([f"S{n:03d}" for n in range(20, 26)], mo=8000.0, remob=(5000.0, 2500.0))
     proj = resolve_cubo_pool_projection(canonical, face="utilizacao_temporal", granularidade="semana")
     assert any("Desmobilizado (off)" in n for n in proj["narrativa"])
+
+
+def test_sum_mob_demob_skips_instance_without_contrato_id():
+    """Line 150: instances with falsy contrato_id are skipped (continue) — mob/demob
+    só é imputado a contratos identificáveis; uma instância órfã não deve nem gerar
+    entrada espúria no dict nem quebrar a soma dos demais."""
+    from concilium.domain.services.analytics.cubo_pool_builder import _sum_mob_demob_por_contrato
+
+    inst_sem_contrato = SimpleNamespace(contrato_id=None, custo_mob_instancia=100.0, custo_demob_instancia=50.0)
+    inst_com_contrato = SimpleNamespace(contrato_id="c1", custo_mob_instancia=10.0, custo_demob_instancia=5.0)
+    out = _sum_mob_demob_por_contrato([inst_sem_contrato, inst_com_contrato])
+    assert out == {"c1": 15.0}

@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -322,6 +322,20 @@ class TestGetAuthContextMcpFallback:
         assert user_id == ""
         assert request_id == ""
 
+    def test_permission_guard_exception_is_swallowed(self, monkeypatch):
+        """get_current_user_id() levantando exceção não deve propagar — cai para vazio."""
+        import concilium.infrastructure.auth.permission_guard as permission_guard
+        from concilium.infrastructure.observability.logging_config import _get_auth_context
+
+        def _boom():
+            raise RuntimeError("falha ao resolver contexto MCP")
+
+        monkeypatch.setattr(permission_guard, "get_current_user_id", _boom)
+
+        user_id, request_id = _get_auth_context()
+        assert user_id == ""
+        assert request_id == ""
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F1-C: trace context injetado quando span OTel ativo
@@ -476,3 +490,60 @@ class TestEntryPointsCallConfigureLogging:
         mcp_module.build_server()
 
         mock_configure.assert_called_once()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADR-143 D8: main() inicia o visibility digest scheduler quando habilitado
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestMainStartsVisibilityDigestScheduler:
+    """main() só inicia o visibility digest scheduler em processo real (nunca em create_app())."""
+
+    def test_main_starts_visibility_digest_scheduler_when_enabled(self):
+        """ADR-143 D8: VISIBILITY_DIGEST_ENABLED=True → scheduler.start() é chamado em main()."""
+        with (
+            patch("concilium.infrastructure.settings.startup_check"),
+            patch("concilium.infrastructure.storage.store_factory.ensure_storage_root"),
+            patch("concilium.presentation.api.app.resolve_api_bind", return_value=("0.0.0.0", 8000)),
+            patch("concilium.infrastructure.settings.get_api") as mock_get_api,
+            patch("concilium.infrastructure.settings.get_catalog_digest") as mock_get_catalog_digest,
+            patch("concilium.infrastructure.settings.get_visibility_digest") as mock_get_visibility_digest,
+            patch(
+                "concilium.application.services.visibility_digest_scheduler.get_visibility_digest_scheduler"
+            ) as mock_get_scheduler,
+            patch("uvicorn.run"),
+        ):
+            mock_get_api.return_value.reload = False
+            mock_get_catalog_digest.return_value.enabled = False
+            mock_get_visibility_digest.return_value.enabled = True
+
+            from concilium.presentation.api.app import main
+
+            main()
+
+        mock_get_scheduler.return_value.start.assert_called_once()
+
+    def test_main_does_not_start_visibility_digest_scheduler_when_disabled(self):
+        """VISIBILITY_DIGEST_ENABLED=False (default) → scheduler nunca é sequer importado/iniciado."""
+        with (
+            patch("concilium.infrastructure.settings.startup_check"),
+            patch("concilium.infrastructure.storage.store_factory.ensure_storage_root"),
+            patch("concilium.presentation.api.app.resolve_api_bind", return_value=("0.0.0.0", 8000)),
+            patch("concilium.infrastructure.settings.get_api") as mock_get_api,
+            patch("concilium.infrastructure.settings.get_catalog_digest") as mock_get_catalog_digest,
+            patch("concilium.infrastructure.settings.get_visibility_digest") as mock_get_visibility_digest,
+            patch(
+                "concilium.application.services.visibility_digest_scheduler.get_visibility_digest_scheduler"
+            ) as mock_get_scheduler,
+            patch("uvicorn.run"),
+        ):
+            mock_get_api.return_value.reload = False
+            mock_get_catalog_digest.return_value.enabled = False
+            mock_get_visibility_digest.return_value.enabled = False
+
+            from concilium.presentation.api.app import main
+
+            main()
+
+        mock_get_scheduler.assert_not_called()

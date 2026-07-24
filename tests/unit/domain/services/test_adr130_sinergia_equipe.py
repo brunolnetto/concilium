@@ -195,6 +195,55 @@ class TestModelosF1:
         assert len(p2.grafo_sinergia.capacidades) == 2
 
 
+class TestNumUnidadesElemento:
+    def test_encontra_material_apos_pular_o_primeiro_nao_correspondente(self):
+        """O loop sobre `materiais` deve continuar além do primeiro item que não
+        corresponde antes de achar o que corresponde (branch 71->70)."""
+        from concilium.domain.services.sinergia_equipe import _num_unidades_elemento
+
+        composicao = ComposicaoPadraoEquipe(
+            funcoes=[],
+            equipamentos=[],
+            materiais=[
+                MaterialEquipe(insumo_id="AGUA-UMECT", consumo_por_hora=0.5, unidade="m3/h"),
+                MaterialEquipe(insumo_id="DIESEL-S10", consumo_por_hora=2.0, unidade="l/h"),
+            ],
+        )
+        assert _num_unidades_elemento("DIESEL-S10", composicao) == 1.0
+
+
+class TestUnionFind:
+    def test_union_de_elementos_ja_no_mesmo_grupo_e_no_op(self):
+        """Quando uma cadeia de acoplamentos já uniu dois elementos transitivamente
+        (A-B, B-C), unir A-C novamente (ra == rb) não deve alterar nada (branch
+        130->exit — o corpo do if é pulado)."""
+        grafo = GrafoSinergiaEquipe(
+            relacoes=[
+                RelacaoSinergia(tipo="acoplamento", origem="A", destino="B"),
+                RelacaoSinergia(tipo="acoplamento", origem="B", destino="C"),
+                RelacaoSinergia(tipo="acoplamento", origem="A", destino="C"),
+            ],
+            capacidades=[
+                CapacidadeElemento(elemento_id="A", capacidade_horaria=100.0, unidade="m3/h"),
+                CapacidadeElemento(elemento_id="B", capacidade_horaria=80.0, unidade="m3/h"),
+                CapacidadeElemento(elemento_id="C", capacidade_horaria=90.0, unidade="m3/h"),
+            ],
+        )
+        composicao = ComposicaoPadraoEquipe(
+            funcoes=[],
+            equipamentos=[
+                EquipamentoEquipe(equip_id="A", num_unidades=1),
+                EquipamentoEquipe(equip_id="B", num_unidades=1),
+                EquipamentoEquipe(equip_id="C", num_unidades=1),
+            ],
+        )
+        d = derivar_producao_horaria(grafo, composicao)
+        # Os 3 elementos acoplados operam no mínimo do grupo (80.0), independente
+        # da ordem/redundância das relações de acoplamento.
+        assert d.producao_horaria_derivada == 80.0
+        assert d.capacidades_efetivas == {"A": 80.0, "B": 80.0, "C": 80.0}
+
+
 class TestValSinergia01ReferenciaOrfa:
     def test_sem_orfaos_retorna_vazio(self):
         grafo = _grafo_escavacao()
@@ -282,6 +331,21 @@ class TestDerivacaoD2:
         d = derivar_producao_horaria(grafo, _composicao_escavacao())
         assert d.producao_horaria_derivada == 100.0
         assert d.gargalo_derivado == "ESCAV-38T"
+
+    def test_todas_capacidades_excluidas_por_precondicao_retorna_none(self):
+        """Quando TODAS as capacidades declaradas são origem de uma relação
+        `precondicao`, o domínio do mínimo fica vazio — não há gargalo computável,
+        mas `capacidades_efetivas` ainda é retornado (populado antes do filtro)."""
+        grafo = GrafoSinergiaEquipe(
+            relacoes=[RelacaoSinergia(tipo="precondicao", origem="AGUA-UMECT", destino="ESCAV-38T")],
+            capacidades=[
+                CapacidadeElemento(elemento_id="AGUA-UMECT", capacidade_horaria=1.0, unidade="m3/h"),
+            ],
+        )
+        d = derivar_producao_horaria(grafo, _composicao_escavacao())
+        assert d.producao_horaria_derivada is None
+        assert d.gargalo_derivado is None
+        assert d.capacidades_efetivas == {"AGUA-UMECT": 1.0}
 
 
 class TestPrecedenciaD3:
@@ -410,6 +474,36 @@ class TestReatividadeF3:
         validacoes = revalidar_apos_mudanca_composicao(p, nova)
         assert any(v.codigo == "VAL-SINERGIA-01" for v in validacoes)
 
+    def test_sem_gargalo_derivavel_nao_emite_val_sinergia_04(self):
+        """Quando a re-derivação não consegue computar gargalo (todas as capacidades
+        excluídas por precondicao), VAL-SINERGIA-04 não deve ser emitido."""
+        grafo = GrafoSinergiaEquipe(
+            relacoes=[RelacaoSinergia(tipo="precondicao", origem="AGUA-UMECT", destino="ESCAV-38T")],
+            capacidades=[
+                CapacidadeElemento(elemento_id="AGUA-UMECT", capacidade_horaria=1.0, unidade="m3/h"),
+            ],
+        )
+        p = _producao(grafo=grafo)
+        validacoes = revalidar_apos_mudanca_composicao(p, _composicao_escavacao())
+        assert not any(v.codigo == "VAL-SINERGIA-04" for v in validacoes)
+
+    def test_relacao_dimensionamento_fora_das_capacidades_e_ignorada(self):
+        """Relação `dimensionamento` cujo origem/destino não têm capacidade declarada
+        não participa da checagem VAL-SINERGIA-05 (branch de `continue` em linha 287)."""
+        grafo = GrafoSinergiaEquipe(
+            relacoes=[
+                RelacaoSinergia(tipo="dimensionamento", origem="OPER-ESCAV", destino="ESCAV-38T", razao=5.0),
+            ],
+            capacidades=[
+                CapacidadeElemento(elemento_id="ESCAV-38T", capacidade_horaria=100.0, unidade="m3/h"),
+            ],
+        )
+        p = _producao(grafo=grafo)
+        # OPER-ESCAV não está em `capacidades` -> relação é ignorada, sem VAL-SINERGIA-05
+        # mesmo com razão exigida (5) muito maior que o disponível (1 operador).
+        validacoes = revalidar_apos_mudanca_composicao(p, _composicao_escavacao())
+        assert not any(v.codigo == "VAL-SINERGIA-05" for v in validacoes)
+
 
 # ── F5 — calibração atualiza CapacidadeElemento do gargalo ────────────────────
 
@@ -463,6 +557,19 @@ class TestCalibracaoF5:
     def test_grafo_sem_capacidades_levanta_erro(self):
         p = _producao(grafo=GrafoSinergiaEquipe())
         with pytest.raises(ValueError, match="sem GrafoSinergiaEquipe"):
+            atualizar_capacidade_gargalo(p, nova_capacidade_horaria=50.0)
+
+    def test_gargalo_nao_determinavel_levanta_erro(self):
+        """Grafo tem capacidades, mas todas excluídas por precondicao -> a derivação
+        não consegue apontar um gargalo, e não há o que calibrar."""
+        grafo = GrafoSinergiaEquipe(
+            relacoes=[RelacaoSinergia(tipo="precondicao", origem="AGUA-UMECT", destino="ESCAV-38T")],
+            capacidades=[
+                CapacidadeElemento(elemento_id="AGUA-UMECT", capacidade_horaria=1.0, unidade="m3/h"),
+            ],
+        )
+        p = _producao(grafo=grafo)
+        with pytest.raises(ValueError, match="Não foi possível determinar o elemento gargalo"):
             atualizar_capacidade_gargalo(p, nova_capacidade_horaria=50.0)
 
     def test_capacidade_zero_ou_negativa_levanta_erro(self):

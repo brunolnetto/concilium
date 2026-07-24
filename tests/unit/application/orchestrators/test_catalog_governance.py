@@ -31,6 +31,16 @@ class TestCatalogGovernance:
             with pytest.raises(CatalogGovernanceError, match="Bloqueio"):
                 assert_catalog_healthy("ctx1", {})
 
+    def test_collect_catalog_critical_errors_reports_real_erro(self):
+        # CPU sem unidade/producao_id_ref dispara ERRO real do ValidadorCPUInsumo
+        # (sem mock), exercitando o `if res.status == "ERRO": erros.append(...)`.
+        from concilium.application.orchestrators.catalog_governance import collect_catalog_critical_errors
+
+        catalogo = {"cpus": [{"codigo": "CPU-1"}], "insumos": [], "producoes": []}
+        erros = collect_catalog_critical_errors(catalogo)
+        assert len(erros) > 0
+        assert all(e["cpu"] == "CPU-1" for e in erros)
+
     def test_validate_and_resolve_insumo_file(self, tmp_path):
         from concilium.application.orchestrators.catalog_governance import validate_and_resolve_insumo_file
 

@@ -184,3 +184,70 @@ class TestConciliumCuboPoolProjectionNone:
             result = svc.get_cubo_pool_projection("proj-01", version="v1", face="instancial")
         assert result["rows"] == []
 
+
+# ---------------------------------------------------------------------------
+
+
+# concilium_service/_project_crud.py — ownership passthrough methods
+# (get_project_owner, find_projects_by_owner, transfer_ownership_forced,
+# create_ownership_transfer_pending, accept_ownership_transfer,
+# reject_ownership_transfer) delegate straight to project_service.
+# ---------------------------------------------------------------------------
+
+
+class TestProjectCrudOwnershipDelegation:
+    def test_get_project_owner_delegates_to_project_service(self):
+        svc = _make_svc()
+        svc._dependencies.project_service.get_project_owner.return_value = "user-1"
+        result = svc.get_project_owner("proj-1")
+        assert result == "user-1"
+        svc._dependencies.project_service.get_project_owner.assert_called_once_with("proj-1")
+
+    def test_get_project_owner_returns_none_when_unowned(self):
+        svc = _make_svc()
+        svc._dependencies.project_service.get_project_owner.return_value = None
+        assert svc.get_project_owner("proj-1") is None
+
+    def test_find_projects_by_owner_delegates_to_project_service(self):
+        svc = _make_svc()
+        svc._dependencies.project_service.find_projects_by_owner.return_value = ["proj-1", "proj-2"]
+        result = svc.find_projects_by_owner("owner-1")
+        assert result == ["proj-1", "proj-2"]
+        svc._dependencies.project_service.find_projects_by_owner.assert_called_once_with("owner-1")
+
+    def test_transfer_ownership_forced_delegates_to_project_service(self):
+        svc = _make_svc()
+        svc._dependencies.project_service.transfer_ownership_forced.return_value = {"owner_id": "owner-2"}
+        result = svc.transfer_ownership_forced("proj-1", "owner-2", "admin-actor")
+        assert result == {"owner_id": "owner-2"}
+        svc._dependencies.project_service.transfer_ownership_forced.assert_called_once_with(
+            "proj-1", "owner-2", "admin-actor"
+        )
+
+    def test_create_ownership_transfer_pending_delegates_to_project_service(self):
+        svc = _make_svc()
+        svc._dependencies.project_service.create_ownership_transfer_pending.return_value = {"token": "tok-1"}
+        result = svc.create_ownership_transfer_pending("proj-1", "owner-2", "owner-1")
+        assert result == {"token": "tok-1"}
+        svc._dependencies.project_service.create_ownership_transfer_pending.assert_called_once_with(
+            "proj-1", "owner-2", "owner-1"
+        )
+
+    def test_accept_ownership_transfer_delegates_to_project_service(self):
+        svc = _make_svc()
+        svc._dependencies.project_service.accept_ownership_transfer.return_value = {"owner_id": "owner-2"}
+        result = svc.accept_ownership_transfer("proj-1", "tok-1", "owner-2")
+        assert result == {"owner_id": "owner-2"}
+        svc._dependencies.project_service.accept_ownership_transfer.assert_called_once_with(
+            "proj-1", "tok-1", "owner-2"
+        )
+
+    def test_reject_ownership_transfer_delegates_to_project_service(self):
+        svc = _make_svc()
+        svc._dependencies.project_service.reject_ownership_transfer.return_value = {"owner_id": "owner-1"}
+        result = svc.reject_ownership_transfer("proj-1", "tok-1", "owner-2")
+        assert result == {"owner_id": "owner-1"}
+        svc._dependencies.project_service.reject_ownership_transfer.assert_called_once_with(
+            "proj-1", "tok-1", "owner-2"
+        )
+

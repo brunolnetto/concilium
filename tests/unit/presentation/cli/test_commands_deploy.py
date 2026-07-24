@@ -23,11 +23,13 @@ from unittest.mock import MagicMock, patch
 import typer
 from typer.testing import CliRunner
 
-from concilium.presentation.cli.commands_deploy import deploy_app
+from concilium.presentation.cli.commands_deploy import _get_deploy_log_store, deploy_app
 
 runner = CliRunner()
 
 _STORE_PATH = "concilium.presentation.cli.commands_deploy._get_deploy_log_store"
+_DEPLOY_LOG_STORE_CLASS = "concilium.infrastructure.deploy.deploy_log_store.DeployLogStore"
+_BUILD_SYSTEM_BLOB_STORAGE = "concilium.infrastructure.storage.store_factory.build_system_blob_storage"
 
 
 def _root_app():
@@ -35,6 +37,27 @@ def _root_app():
     root = typer.Typer()
     root.add_typer(deploy_app, name="deploy")
     return root
+
+
+class TestGetDeployLogStore:
+    def test_builds_deploy_log_store_from_system_blob_storage(self):
+        """`_get_deploy_log_store()` de verdade: instancia DeployLogStore em cima
+
+        do storage de sistema (mesmas credenciais reais do container promovido —
+        ADR-144 D1) — os demais testes deste arquivo patcham essa função inteira,
+        deixando o corpo (linhas 36-39) sem cobertura."""
+        fake_storage = MagicMock()
+        fake_store_instance = MagicMock()
+
+        with (
+            patch(_BUILD_SYSTEM_BLOB_STORAGE, return_value=fake_storage) as build_mock,
+            patch(_DEPLOY_LOG_STORE_CLASS, return_value=fake_store_instance) as store_cls_mock,
+        ):
+            result = _get_deploy_log_store()
+
+        build_mock.assert_called_once_with()
+        store_cls_mock.assert_called_once_with(fake_storage)
+        assert result is fake_store_instance
 
 
 class TestRecordPromotion:
