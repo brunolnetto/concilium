@@ -164,13 +164,24 @@ def _save_preco_insumo_override_projeto(
     novo_preco: float,
     jurisdicao_id: str | None,
     nota: str | None,
+    autor: str | None = None,
 ) -> dict[str, Any]:
-    """Salva o novo preço como override de projeto (ADR-038), sem afetar o catálogo mestre."""
+    """Salva o novo preço como override de projeto (ADR-040), sem afetar o catálogo mestre.
+
+    Grava em `insumos_override.json` — o mesmo arquivo lido por
+    `RepositorioInsumo.resolver_preco()` via `_inject_project_catalog_layers`
+    (pipeline real, `lifecycle_coordinator.py`) e por `concilium manage catalog
+    promote`. Antes da correção (ADR-150), esta função gravava em
+    `catalog_prices.json` — um arquivo que nada mais no sistema lia: o override
+    "livre" nunca chegava ao pipeline real nem à promoção.
+    """
+    from concilium.application.orchestrators.catalog_draft_lifecycle import abrir_ou_obter_rascunho_projeto
+
     proj_path = projects_dir / projeto_id
     if not proj_path.exists():
         return {"erro": f"Projeto {projeto_id} não encontrado."}
 
-    overrides_file = proj_path / "overrides" / "catalog_prices.json"
+    overrides_file = proj_path / "overrides" / "insumos_override.json"
     overrides_file.parent.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -186,6 +197,7 @@ def _save_preco_insumo_override_projeto(
         }
 
         overrides_file.write_text(json.dumps(overrides, indent=2, ensure_ascii=False), encoding="utf-8")
+        abrir_ou_obter_rascunho_projeto(projects_dir, projeto_id, autor or "system")
         return _wrap_response({"status": "SUCESSO", "layer": "PROJETO", "projeto_id": projeto_id, "insumo": insumo_id})
     except Exception as e:
         return {"erro": f"Erro ao salvar override de projeto: {e}"}
@@ -305,7 +317,17 @@ def _impl_atualizar_preco_insumo(
     ctx = rt.load_contexto(contexto_id)
 
     if projeto_id:
-        return _save_preco_insumo_override_projeto(projects_dir, projeto_id, insumo_id, novo_preco, jurisdicao_id, nota)
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+        return _save_preco_insumo_override_projeto(
+            projects_dir,
+            projeto_id,
+            insumo_id,
+            novo_preco,
+            jurisdicao_id,
+            nota,
+            autor=get_current_user_id() or "system",
+        )
 
     if not rascunho_id:
         return {

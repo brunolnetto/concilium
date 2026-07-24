@@ -649,6 +649,40 @@ def register(server: FastMCP) -> None:
             }
         )
 
+    # ── ADR-150: Promoção de Override de Projeto ao Catálogo Master ──────────
+
+    @server.tool(
+        description=(
+            "Promove os overrides de insumo pendentes de um projeto (calibrados livremente via "
+            "atualizar_preco_insumo com projeto_id) para o catálogo master. "
+            "Requer catalog:merge E ser o dono do projeto (ou admin) — gate duplo, ADR-150. "
+            "Quem editou o override não pode ser quem promove (quatro olhos)."
+        )
+    )
+    @permission("catalog:merge")
+    @mcp_rate_limit()
+    def promover_override_projeto(
+        projeto_id: str,
+        justificativa: str,
+        contexto_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Promove overrides de insumo de um projeto ao catálogo master (ADR-150 D2/D3).
+
+        Fecha o bypass de governança do `catalog promote` (CLI), que escrevia
+        direto no catálogo mestre sem gate algum (ADR-150 P2). Reaproveita o
+        mesmo caminho de escrita de `aprovar_merge_catalogo` (SCD2/ADR-041,
+        CatalogSnapshot/CatalogDiff ADR-024/145).
+
+        Args:
+            projeto_id: ID do projeto de origem do override.
+            justificativa: Motivo da promoção para o audit trail.
+            contexto_id: Contexto de catálogo a promover. Se omitido, usa o
+                contexto_id gravado no meta do projeto.
+        """
+        from ._catalogo_tools_helpers_c import _impl_promover_override_projeto
+
+        return _impl_promover_override_projeto(projeto_id, contexto_id, justificativa)
+
     # ── Pesquisa de mercado ──────────────────────────────────────────────────
 
     @server.tool(

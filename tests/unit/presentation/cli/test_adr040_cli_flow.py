@@ -112,6 +112,13 @@ def test_survey_project_writes_in_project_layer_with_audit(adr040_env: dict[str,
 
 
 def test_promote_moves_project_override_to_master_with_history(adr040_env: dict[str, Path]) -> None:
+    """ADR-150: promote agora passa pelo core gated (quatro-olhos + SCD2 real +
+    CatalogSnapshot), não mais pela reimplementação manual de histórico via
+    `--insumo`/`_write_json` direto — por isso o override é gravado com a mesma
+    chave composta `codigo::BASE` usada por `atualizar_preco_insumo`, e quem
+    "editou" (rascunho de projeto) precisa ser diferente de `--actor` (regra
+    dos quatro-olhos)."""
+    from concilium.application.orchestrators.catalog_draft_lifecycle import rascunho_projeto_file_path
     from concilium.application.orchestrators.catalog_governance import validate_and_resolve_insumo_file
 
     config_root = adr040_env["config"]
@@ -124,12 +131,20 @@ def test_promote_moves_project_override_to_master_with_history(adr040_env: dict[
 
     override_path = project.root / "overrides" / "insumos_override.json"
     override_payload = {
-        insumo_id: {
+        f"{insumo_id}::BASE": {
             "preco_calibrado": 9.5,
             "motivo": "Calibracao de campo",
         }
     }
     override_path.write_text(json.dumps(override_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    # Simula que o override foi editado por outra pessoa antes da promoção
+    # (regra dos quatro-olhos, ADR-150 D2) — sem isso, a state machine trataria
+    # o próprio --actor da promoção como "criador" (rascunho implícito).
+    estado_path = rascunho_projeto_file_path(projects_root, project_id)
+    estado_path.write_text(
+        json.dumps({"_rascunho": True, "created_by": "engenheiro-campo", "projeto_id": project_id}),
+        encoding="utf-8",
+    )
 
     rt = Runtime(config_root)
     ctx = rt.load_contexto(contexto_id)
@@ -148,10 +163,10 @@ def test_promote_moves_project_override_to_master_with_history(adr040_env: dict[
                 "promote",
                 "--project",
                 project_id,
-                "--insumo",
-                insumo_id,
                 "--justificativa",
                 "Virou preco de mercado",
+                "--actor",
+                "gestor-catalogo",
                 "--force",
             ],
         )
@@ -163,17 +178,22 @@ def test_promote_moves_project_override_to_master_with_history(adr040_env: dict[
         assert isinstance(historico, list) and len(historico) >= 1
         assert float(historico[-1].get("preco_unitario", 0.0)) == pytest.approx(9.5)
 
+        # Overrides aplicados são arquivados e o arquivo live esvaziado (ADR-040 D4)
         override_after = json.loads(override_path.read_text(encoding="utf-8"))
-        assert insumo_id not in override_after
+        assert override_after == {}
+        historico_dir = project.root / "overrides" / "historico"
+        arquivados = list(historico_dir.glob("insumos_override_*.json"))
+        assert arquivados
+        arquivo = json.loads(arquivados[0].read_text(encoding="utf-8"))
+        assert f"{insumo_id}::BASE" in arquivo
 
-        promotions_log = project.root / "overrides" / "historico" / "promotions.jsonl"
-        assert promotions_log.exists()
-        rows = [json.loads(line) for line in promotions_log.read_text(encoding="utf-8").splitlines() if line.strip()]
-        assert any(row.get("insumo_id") == insumo_id for row in rows)
+        # Rascunho de projeto vira estado terminal APROVADO
+        estado_final = json.loads(estado_path.read_text(encoding="utf-8"))
+        assert estado_final.get("_aprovado") is True
+        assert estado_final.get("_aprovado_por") == "gestor-catalogo"
 
-        audit_log = project.root / "audit_log.jsonl"
-        assert audit_log.exists()
-        audit_rows = [json.loads(line) for line in audit_log.read_text(encoding="utf-8").splitlines() if line.strip()]
-        assert any(row.get("action") == "catalog_promote_insumo" for row in audit_rows)
+        # CatalogSnapshot real gerado (ADR-024/145), não mais um promotions.jsonl ad hoc
+        snapshots_dir = catalog_root / "snapshots"
+        assert snapshots_dir.exists() and list(snapshots_dir.glob("*.json"))
     finally:
         insumo_file.write_text(json.dumps(original, indent=2, ensure_ascii=False), encoding="utf-8")

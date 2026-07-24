@@ -372,7 +372,11 @@ class TestImplAtualizarPrecoInsumo:
         result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 55.0, projeto_id="PROJ-001")
         assert result["status"] == "SUCESSO"
         assert result["layer"] == "PROJETO"
-        overrides_file = proj_dir / "overrides" / "catalog_prices.json"
+        # ADR-150: grava em insumos_override.json — o mesmo arquivo lido pelo
+        # pipeline real (lifecycle_coordinator._inject_project_catalog_layers)
+        # e por catalog_promote/promover_override_projeto. Antes desta ADR,
+        # gravava em catalog_prices.json, que nada mais no sistema lia.
+        overrides_file = proj_dir / "overrides" / "insumos_override.json"
         assert overrides_file.exists()
         saved = json.loads(overrides_file.read_text(encoding="utf-8"))
         assert "INS-001::BASE" in saved
@@ -388,12 +392,12 @@ class TestImplAtualizarPrecoInsumo:
         overrides_dir = proj_dir / "overrides"
         overrides_dir.mkdir(parents=True)
         existing = {"OTHER-INS::BASE": {"preco": 10.0, "nota": "old", "jurisdicao": None}}
-        (overrides_dir / "catalog_prices.json").write_text(json.dumps(existing), encoding="utf-8")
+        (overrides_dir / "insumos_override.json").write_text(json.dumps(existing), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir)
 
         result = _impl_atualizar_preco_insumo("ctx1", "INS-002", 99.0, projeto_id="PROJ-001")
         assert result["status"] == "SUCESSO"
-        saved = json.loads((overrides_dir / "catalog_prices.json").read_text(encoding="utf-8"))
+        saved = json.loads((overrides_dir / "insumos_override.json").read_text(encoding="utf-8"))
         assert "OTHER-INS::BASE" in saved
         assert "INS-002::BASE" in saved
 
@@ -406,8 +410,61 @@ class TestImplAtualizarPrecoInsumo:
         self._setup(monkeypatch, rt, tmp_path, projects_dir)
 
         _impl_atualizar_preco_insumo("ctx1", "INS-001", 10.0, projeto_id="PROJ-001", jurisdicao_id="CE")
-        saved = json.loads((proj_dir / "overrides" / "catalog_prices.json").read_text(encoding="utf-8"))
+        saved = json.loads((proj_dir / "overrides" / "insumos_override.json").read_text(encoding="utf-8"))
         assert "INS-001::CE" in saved
+
+    def test_projeto_override_reaches_real_pipeline_read_path(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Regressão (ADR-150): o override gravado via atualizar_preco_insumo(projeto_id=...)
+        precisa ser lido de volta por `RepositorioInsumo.resolver_preco()` — o mesmo
+        arquivo consumido pelo pipeline real (`lifecycle_coordinator._inject_project_catalog_layers`).
+        Antes da correção, o override era gravado em `catalog_prices.json`, um arquivo
+        morto que nada lia — o preço calibrado nunca chegava ao pipeline.
+        """
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        proj_dir = projects_dir / "PROJ-001"
+        proj_dir.mkdir(parents=True)
+        self._setup(monkeypatch, rt, tmp_path, projects_dir)
+
+        _impl_atualizar_preco_insumo("ctx1", "INS-001", 42.5, projeto_id="PROJ-001")
+
+        overrides_file = proj_dir / "overrides" / "insumos_override.json"
+        overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
+        repo = RepositorioInsumo({"insumos": [{"codigo": "INS-001", "preco_unitario": 1.0}]})
+        preco, fonte = repo.resolver_preco("INS-001", overrides=overrides)
+        assert preco == 42.5
+        assert fonte == "PROJECT_OVERRIDE"
+
+    def test_projeto_edicao_abre_rascunho_de_projeto_implicito(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """ADR-150 D1: a primeira edição de override do projeto abre (lazy) o
+        estado de rascunho de projeto, com created_by = quem editou."""
+        from concilium.application.orchestrators.catalog_draft_lifecycle import (
+            ESTADO_RASCUNHO,
+            estado_rascunho,
+            rascunho_projeto_file_path,
+        )
+
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        proj_dir = projects_dir / "PROJ-001"
+        proj_dir.mkdir(parents=True)
+        self._setup(monkeypatch, rt, tmp_path, projects_dir)
+        monkeypatch.setattr("concilium.infrastructure.auth.permission_guard.get_current_user_id", lambda: "engineer1")
+
+        _impl_atualizar_preco_insumo("ctx1", "INS-001", 10.0, projeto_id="PROJ-001")
+
+        estado_file = rascunho_projeto_file_path(projects_dir, "PROJ-001")
+        assert estado_file.exists()
+        data = json.loads(estado_file.read_text(encoding="utf-8"))
+        assert data["created_by"] == "engineer1"
+        assert data["projeto_id"] == "PROJ-001"
+        assert estado_rascunho(data) == ESTADO_RASCUNHO
 
     def test_projeto_write_exception_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # lines 200-201 — write fails → {"erro": "Erro ao salvar override de projeto: ..."}

@@ -278,14 +278,12 @@ class TestCatalogPromote:
                     "promote",
                     "--project",
                     "myprojeto",
-                    "--insumo",
-                    "INS-01",
                     "--justificativa",
                     "atualização de mercado",
                 ],
             )
         assert result.exit_code == 0
-        mock_impl.assert_called_once_with("myprojeto", "INS-01", "atualização de mercado", None, None, "cli", False)
+        mock_impl.assert_called_once_with("myprojeto", "atualização de mercado", None, "cli", False)
 
     def test_optional_args_forwarded(self):
         with patch(f"{_PATCH_BASE}._impl_catalog_promote") as mock_impl:
@@ -295,21 +293,17 @@ class TestCatalogPromote:
                     "promote",
                     "--project",
                     "proj",
-                    "--insumo",
-                    "INS-02",
                     "--justificativa",
                     "ok",
                     "--contexto",
                     "ctx1",
-                    "--data-vigencia",
-                    "2026-01-01",
                     "--actor",
                     "user",
                     "--force",
                 ],
             )
         assert result.exit_code == 0
-        mock_impl.assert_called_once_with("proj", "INS-02", "ok", "ctx1", "2026-01-01", "user", True)
+        mock_impl.assert_called_once_with("proj", "ok", "ctx1", "user", True)
 
 
 class TestCatalogSearch:
