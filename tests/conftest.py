@@ -213,7 +213,10 @@ def inputs_escopo_terraplenagem() -> dict[str, Any]:
         "tipo_obra": "terraplenagem",
         "localizacao": "Aracoiaba, CE",
         "coordenadas": {"lat": -4.3622, "lng": -38.7392},
-        "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
+        # ADR-148: horas_improdutivas_dia=0.0 preserva a capacidade nominal usada
+        # pelas calibrações pré-existentes deste fixture compartilhado (ex.
+        # test_completude_100_com_alocacao_suficiente, calibrado no limite).
+        "regime_trabalho": {"dias_semana": 6, "horas_dia": 8, "horas_improdutivas_dia": 0.0},
         "data_inicio": "2026-06-01",
         "data_termino": "2026-12-31",
         "eap": [

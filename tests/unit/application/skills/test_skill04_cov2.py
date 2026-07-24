@@ -382,6 +382,7 @@ class TestExtractActivitiesWithLookups:
         class FakeRegime:
             horas_dia = 8
             dias_semana = 5
+            eta_jornada = 1.0  # ADR-148: isola o teste do fator de jornada
 
         class FakeProjeto:
             data_inicio = date(2025, 1, 6)
@@ -1360,7 +1361,7 @@ class TestConvertScheduleToDistribuicaoUnmapped:
             ["2025-W02"],
             {},
             {},
-            SimpleNamespace(horas_dia=8, dias_semana=5),
+            SimpleNamespace(horas_dia=8, dias_semana=5, eta_jornada=1.0),
             {},
             {},
             {},

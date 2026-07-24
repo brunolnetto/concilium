@@ -76,7 +76,9 @@ def _make_canonical_with_eap(
         "tipo_obra": "terraplenagem",
         "localizacao": "Test, BR",
         "coordenadas": {"lat": -10.0, "lng": -40.0},
-        "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
+        # ADR-148: horas_improdutivas_dia=0.0 isola os testes de WMP do fator eta_jornada
+        # (mecânica de mobilização/desmobilização é o que estes testes exercitam).
+        "regime_trabalho": {"dias_semana": 6, "horas_dia": 8, "horas_improdutivas_dia": 0.0},
         "data_inicio": "2026-06-01",
         "data_termino": (date(2026, 6, 1) + timedelta(days=deadline_days)).isoformat(),
         "eap": items,
