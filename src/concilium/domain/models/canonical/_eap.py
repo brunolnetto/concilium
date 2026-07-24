@@ -116,15 +116,19 @@ class DistribuicaoSemanal(BaseModel):
 
     NEP-035 — Decomposição causal da eficiência η = η_s · η_p · η_w:
       η_s  = n_j / n_max          (alocação: fração da força máxima fielded)
-      η_p  = fator_clima × fator_calendario  (praticabilidade)
+      η_p  = fator_clima × fator_calendario × fator_jornada  (praticabilidade)
       η_w  = m_ij / M_max = eficiencia      (gestão; M_max=1.0 até calibração histórica)
       η    = fator_total = η_s · η_p · η_w  (eficiência total observada)
 
     ADR-124 — Separação planejamento vs. controle:
-      Planejamento (aplicável agora):  η_plan = η_clima · δ = fator_clima · fator_calendario (= η_p)
+      Planejamento (aplicável agora):  η_plan = η_clima · δ · η_jornada (= η_p)
       Controle (fase futura):          η_control = η_s · η_plan · η_w
       η_s e η_w são fatores de CONTROLE (None em CampoEficiencia no planejamento);
       mantidos aqui apenas por retrocompatibilidade da NEP-035.
+
+    ADR-148 — fator_jornada = eta_jornada = (horas_dia - horas_improdutivas_dia) / horas_dia:
+      determinístico e estrutural (não estocástico como fator_clima; não calendarizado
+      como fator_calendario) — constante por regime de trabalho, não por semana.
 
     q_max_celula = P_i · h · n_max · M_max  (capacidade teórica da semana)
     perda_fisica = q_max_celula · η_s - q_executada  (produção perdida na semana, unidades físicas)
@@ -145,6 +149,9 @@ class DistribuicaoSemanal(BaseModel):
     # ADR-068: separacao explícita entre clima e calendario operacional.
     fator_clima: float = Field(default=1.0, ge=0.0, le=1.0)
     fator_calendario: float = Field(default=1.0, ge=0.0, le=1.0)
+    # ADR-148: eta_jornada = (horas_dia - horas_improdutivas_dia) / horas_dia — determinístico,
+    # estrutural (não estocástico como fator_clima; não calendarizado como fator_calendario).
+    fator_jornada: float = Field(default=1.0, ge=0.0, le=1.0)
     fator_total: float = Field(default=1.0, ge=0.0, le=1.0)
     # NEP-035 / ADR-124: decomposição causal η_s · η_p · η_w.
     # ADR-124 reinterpreta a decomposição separando planejamento de controle.
@@ -217,5 +224,3 @@ class CronogramaItem(BaseModel):
     # Retrocompat: leitura de dados legados com distribuicao_mensal
     distribuicao_mensal: dict[str, DistribuicaoSemanal] = Field(default_factory=dict)
     pct_completude: float = Field(ge=0, le=1)
-
-

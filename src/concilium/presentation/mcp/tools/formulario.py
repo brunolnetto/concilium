@@ -222,6 +222,7 @@ def register(server: FastMCP) -> None:
         coordenadas_lng: float = 0.0,
         dias_semana: int = 6,
         horas_dia: int = 8,
+        horas_improdutivas_dia: float = 0.5,
         objetivo_pool: str = "balanceado",
         spec: dict | None = None,
     ) -> dict[str, Any]:
@@ -258,6 +259,8 @@ def register(server: FastMCP) -> None:
             regime = meta.get("regime_trabalho") or {}
             _dias = int(regime.get("dias_semana", 6))
             _horas = int(regime.get("horas_dia", 8))
+            # ADR-148: preserva horas_improdutivas_dia do spec original em vez de descartar.
+            _horas_improd = float(regime.get("horas_improdutivas_dia", 0.5))
             proj_root = _projetos_root()
             proj_root.mkdir(parents=True, exist_ok=True)
             store = ProjectStore.init(proj_root, meta["nome"], contexto_id=meta["contexto_id"])
@@ -277,6 +280,7 @@ def register(server: FastMCP) -> None:
                         data_termino=meta["data_termino"],
                         dias_semana=_dias,
                         horas_dia=_horas,
+                        horas_improdutivas_dia=_horas_improd,
                     )
                 except Exception as e:
                     return {"erro": f"Falha ao criar escopo '{eid}': {e}"}
@@ -286,7 +290,11 @@ def register(server: FastMCP) -> None:
                     "tipo_obra": meta["tipo_obra"],
                     "localizacao": meta["localizacao"],
                     "coordenadas": meta["coordenadas"],
-                    "regime_trabalho": {"dias_semana": _dias, "horas_dia": _horas},
+                    "regime_trabalho": {
+                        "dias_semana": _dias,
+                        "horas_dia": _horas,
+                        "horas_improdutivas_dia": _horas_improd,
+                    },
                     "data_inicio": meta["data_inicio"],
                     "data_termino": meta["data_termino"],
                     "versao_referencia_id": rt.load_contexto(meta["contexto_id"]).referencia_id,
@@ -350,6 +358,7 @@ def register(server: FastMCP) -> None:
             coordenadas_lat/lng: para consulta climática (opcional, default 0)
             dias_semana:     regime de trabalho (default 6)
             horas_dia:       regime de trabalho (default 8)
+            horas_improdutivas_dia: ADR-148, ineficiência estrutural fixa por dia (default 0.5)
             objetivo_pool:   "minimizar_prazo" | "minimizar_custo" | "balanceado"
 
         Returns:
@@ -426,6 +435,7 @@ def register(server: FastMCP) -> None:
             data_termino=data_termino or "",
             dias_semana=dias_semana,
             horas_dia=horas_dia,
+            horas_improdutivas_dia=horas_improdutivas_dia,
         )
         ps = es.create_plan(nome="Plano Principal")
 
@@ -437,7 +447,11 @@ def register(server: FastMCP) -> None:
             "tipo_obra": tipo_obra,
             "localizacao": localizacao,
             "coordenadas": {"lat": coordenadas_lat, "lng": coordenadas_lng},
-            "regime_trabalho": {"dias_semana": dias_semana, "horas_dia": horas_dia},
+            "regime_trabalho": {
+                "dias_semana": dias_semana,
+                "horas_dia": horas_dia,
+                "horas_improdutivas_dia": horas_improdutivas_dia,
+            },
             "data_inicio": data_inicio,
             "data_termino": data_termino or "",
             "versao_referencia_id": rt.load_contexto(contexto_id).referencia_id,

@@ -361,12 +361,17 @@ def _compute_productive_weeks(
     producao_lookup: dict,
     validacoes: list,
 ) -> int | None:
-    """ADR-072 (Direção A): duração produtiva = ceil(Q / (P × h/dia × d/sem × n_resources)).
+    """ADR-072 (Direção A): duração produtiva = ceil(Q / (P × h/dia × d/sem × η_jornada × n_resources)).
 
-    Nota (ADR-082-cons): a praticabilidade NÃO entra aqui — estender a duração por
-    clima tornaria o RCPSP inviável sob prazos apertados (decisão de prazo/pool,
+    Nota (ADR-082-cons): a praticabilidade (clima/calendário) NÃO entra aqui — estender a
+    duração por clima tornaria o RCPSP inviável sob prazos apertados (decisão de prazo/pool,
     não default silencioso). A sub-entrega resultante (Σ q_ij < Q quando clima < 1)
     é tornada explícita pela checagem de completude (VAL-CRON-01) em ambos os modos.
+
+    Nota (ADR-148): η_jornada (fração produtiva do dia) ENTRA aqui, ao contrário de
+    clima/calendário — é determinístico e estrutural (sempre verdadeiro), não um risco
+    variável. Excluí-lo faria todo item disparar VAL-CRON-01 permanentemente.
+
     Retorna None quando não é possível calcular.
     """
     eap_item = next((e for e in canonical_in.eap if e.item_id == item_id), None)
@@ -383,7 +388,7 @@ def _compute_productive_weeks(
     if not P or P <= 0:
         return None
     regime = canonical_in.projeto.regime_trabalho
-    prod_per_week = P * regime.horas_dia * regime.dias_semana * n_resources
+    prod_per_week = P * regime.horas_dia * regime.dias_semana * regime.eta_jornada * n_resources
     if prod_per_week <= 0:
         return None
     return max(1, math.ceil(Q / prod_per_week))
@@ -479,7 +484,6 @@ def _resolve_productivity(
     # Allows scheduling to proceed; actual productivity should come from catalog
     # This is a graceful degradation allowing benchmarks to execute despite missing data
     return 1000.0
-
 
 
 __all__ = [

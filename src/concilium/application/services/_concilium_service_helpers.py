@@ -182,6 +182,12 @@ def _cs_simulate_mobilizacao_policy(project_id: str, req: dict[str, Any]) -> dic
     semana_inicio = req.get("semana_inicio")
     semanas_iso: dict[int, str] | None = None
 
+    # ADR-148: fração produtiva do dia — determinística/estrutural, dimensiona
+    # o guard nominal e producao_semanal_base junto com dias_semana/horas_dia.
+    horas_dia = int(req.get("horas_dia", 8))
+    horas_improdutivas_dia = float(req.get("horas_improdutivas_dia", 0.5))
+    eta_jornada = (horas_dia - horas_improdutivas_dia) / horas_dia if horas_dia > 0 else 1.0
+
     if semana_inicio and prat_semanal:
         # Derive enough offsets for the guard bound
         import math
@@ -189,8 +195,8 @@ def _cs_simulate_mobilizacao_policy(project_id: str, req: dict[str, Any]) -> dic
         policy.producao_horaria if hasattr(policy, "producao_horaria") else None
         prod = float(req.get("producao_horaria") or 0)
         q = float(req.get("quantitativo") or 0)
-        m, h = int(req.get("dias_semana", 6)), int(req.get("horas_dia", 8))
-        base = prod * m * h * policy.n_maximo
+        m = int(req.get("dias_semana", 6))
+        base = prod * m * horas_dia * eta_jornada * policy.n_maximo
         nominal = math.ceil(q / base) if base > 0 else 1
         n_weeks = WorkforcePolicySimulator.MAX_MULTIPLIER * max(1, nominal)
         semanas_iso = WorkforcePolicySimulator.derive_semanas_iso(semana_inicio, n_weeks)
@@ -201,9 +207,10 @@ def _cs_simulate_mobilizacao_policy(project_id: str, req: dict[str, Any]) -> dic
         quantitativo=float(req["quantitativo"]),
         producao_horaria=float(req["producao_horaria"]),
         dias_semana=int(req.get("dias_semana", 6)),
-        horas_dia=int(req.get("horas_dia", 8)),
+        horas_dia=horas_dia,
         prat_semanal=prat_semanal or None,
         semanas_iso_por_offset=semanas_iso,
+        eta_jornada=eta_jornada,
     )
     return curva.model_dump()
 

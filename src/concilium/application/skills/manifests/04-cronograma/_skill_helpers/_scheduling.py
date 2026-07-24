@@ -157,6 +157,7 @@ def _build_activity_distribuicao(
     prat_semanal: dict[str, float],
     prat_mensal: dict[str, float],
     fator_calendario_semanal: dict[str, float],
+    fator_jornada: float = 1.0,
 ) -> tuple[dict[str, DistribuicaoSemanal], float]:
     """Constrói a distribuição semanal (célula a célula) de uma scheduled activity."""
     distribuicao: dict[str, DistribuicaoSemanal] = {}
@@ -187,6 +188,7 @@ def _build_activity_distribuicao(
             fator_calendario,
             item.quantitativo,
             qtd_acumulada,
+            fator_jornada=fator_jornada,
         )
         qtd_acumulada = cell.qtd_acumulada
         distribuicao[semana_key] = cell
@@ -270,6 +272,7 @@ def _convert_schedule_to_distribuicao(
             prat_semanal,
             prat_mensal,
             fator_calendario_semanal,
+            fator_jornada=regime.eta_jornada,
         )
 
         _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, canonical_in, validacoes)
@@ -453,6 +456,7 @@ def _run_wmp_simulation(
         horas_dia=regime.horas_dia,
         prat_semanal=prat_semanal or None,
         semanas_iso_por_offset=semanas_iso,
+        eta_jornada=regime.eta_jornada,
     )
 
 
@@ -512,7 +516,7 @@ def _process_single_wmp_policy(
         )
         return
 
-    prod_base = P * regime.dias_semana * regime.horas_dia * policy.n_maximo
+    prod_base = P * regime.dias_semana * regime.horas_dia * regime.eta_jornada * policy.n_maximo
     nominal = math.ceil(Q / prod_base) if prod_base > 0 else 1
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 

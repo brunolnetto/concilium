@@ -60,7 +60,11 @@ class ProjectInputBuilder:
             "tipo_obra": req.tipo_obra,
             "localizacao": req.localizacao,
             "coordenadas": {"lat": req.coordenadas_lat, "lng": req.coordenadas_lng},
-            "regime_trabalho": {"dias_semana": req.dias_semana, "horas_dia": req.horas_dia},
+            "regime_trabalho": {
+                "dias_semana": req.dias_semana,
+                "horas_dia": req.horas_dia,
+                "horas_improdutivas_dia": req.horas_improdutivas_dia,
+            },
             "data_inicio": req.data_inicio,
             "data_termino": req.data_termino,
             "eap": [item.model_dump() for item in req.eap],

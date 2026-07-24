@@ -45,6 +45,11 @@ class CriarProjetoFormularioRequest(BaseModel):
     coordenadas_lng: float = 0.0
     dias_semana: int = Field(default=6, ge=1, le=7)
     horas_dia: int = Field(default=8, ge=4, le=12)
+    horas_improdutivas_dia: float = Field(
+        default=0.5,
+        ge=0,
+        description="ADR-148: tempo fixo por dia perdido por ineficiência estrutural (< horas_dia).",
+    )
     objetivo_pool: str = "balanceado"
 
 
@@ -117,6 +122,7 @@ def criar_projeto_formulario(
             coordenadas_lng=body.coordenadas_lng,
             dias_semana=body.dias_semana,
             horas_dia=body.horas_dia,
+            horas_improdutivas_dia=body.horas_improdutivas_dia,
             objetivo_pool=body.objetivo_pool,
         )
     except Exception as exc:

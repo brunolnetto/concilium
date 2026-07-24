@@ -82,6 +82,7 @@ def register(server: FastMCP) -> None:
         coordenadas_lng: float = 0.0,
         dias_semana: int = 6,
         horas_dia: int = 8,
+        horas_improdutivas_dia: float = 0.5,
         plano_id: str | None = None,
         hipotese: str | None = None,
         logistica_consumiveis: dict[str, dict[str, float]] | None = None,
@@ -118,6 +119,7 @@ def register(server: FastMCP) -> None:
                     data_termino=data_termino or "",
                     dias_semana=dias_semana,
                     horas_dia=horas_dia,
+                    horas_improdutivas_dia=horas_improdutivas_dia,
                     logistica_consumiveis=logistica_consumiveis,
                 )
             except Exception as e:

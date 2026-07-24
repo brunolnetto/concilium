@@ -27,6 +27,7 @@ class CreateProjectRequest(BaseModel):
     data_termino: str = "2026-12-31"
     dias_semana: int = 6
     horas_dia: int = 8
+    horas_improdutivas_dia: float = 0.5
     eap: list[EapItemIn] = Field(default_factory=list)
 
 
@@ -160,6 +161,12 @@ class SimulateRequest(BaseModel):
         ge=1,
         le=24,
         description="Horas de trabalho por dia (default 8h). Outros regimes: 9h (5×9), 12h (12×36).",
+    )
+    horas_improdutivas_dia: float = Field(
+        default=0.5,
+        ge=0,
+        description="ADR-148: tempo fixo por dia perdido por ineficiência estrutural. "
+        "Deve ser menor que horas_dia. 0.0 preserva a capacidade nominal (legado).",
     )
     semana_inicio: str | None = Field(
         default=None,

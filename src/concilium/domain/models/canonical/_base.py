@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Literal, cast
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from statemachine import State, StateMachine
 
 StatusValidacao = Literal["OK", "AVISO", "ERRO", "INFO"]
@@ -83,10 +83,35 @@ class Coordenadas(BaseModel):
 
 
 class RegimeTrabalho(BaseModel):
+    """ADR-148: `horas_improdutivas_dia` é tempo fixo por dia (não fração da
+    jornada) perdido por ineficiência estrutural (deslocamento interno,
+    preparação de frente de serviço). Afeta só a produção operacional
+    (`eta_jornada`) — não recalibra custo/PU de catálogo.
+    """
+
     model_config = ConfigDict(extra="ignore")
 
     dias_semana: int = Field(ge=1, le=7)
     horas_dia: int = Field(ge=1, le=24)
+    # ADR-148 D5: ge=0 (não gt=0) para acomodar a migração de specs legados, que
+    # gravam 0.0 explicitamente para preservar comportamento. 0.0 = "sem
+    # ineficiência modelada" (legado); >0 é o padrão recomendado para specs novos
+    # (default abaixo), reforçado na camada de apresentação, não no modelo.
+    horas_improdutivas_dia: float = Field(default=0.5, ge=0)
+
+    @model_validator(mode="after")
+    def _valida_horas_improdutivas(self) -> "RegimeTrabalho":
+        if self.horas_improdutivas_dia >= self.horas_dia:
+            raise ValueError(
+                "horas_improdutivas_dia deve ser menor que horas_dia "
+                f"(recebido {self.horas_improdutivas_dia} >= {self.horas_dia})"
+            )
+        return self
+
+    @property
+    def eta_jornada(self) -> float:
+        """ADR-148: fração produtiva do dia = (horas_dia - horas_improdutivas_dia) / horas_dia."""
+        return (self.horas_dia - self.horas_improdutivas_dia) / self.horas_dia
 
 
 class Projeto(BaseModel):
@@ -133,5 +158,3 @@ class Praticabilidade(BaseModel):
     percentual_produtivo_semanal: dict[str, float] = Field(default_factory=dict)
     # Chave mensal "MM" (ex. "06") — mantido para retrocompatibilidade e fallback
     percentual_produtivo_mensal: dict[str, float] = Field(default_factory=dict)
-
-
