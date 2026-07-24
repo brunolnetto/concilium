@@ -27,7 +27,7 @@ def _make_svc(config_root: Path | None = None):
         deps.input_builder._config_root = config_root
     else:
         deps.input_builder._config_root = Path("/nonexistent_fake_root_abc123")
-    # ADR-148: resolve_cpu chama get_cpu_contexto — default "sem contexto" para não poluir
+    # ADR-149: resolve_cpu chama get_cpu_contexto — default "sem contexto" para não poluir
     # asserts de igualdade exata nos testes que não exercitam esse caminho especificamente.
     deps.override_service.get_cpu_contexto.return_value = None
     svc = ConciliumService(dependencies=deps)
@@ -483,7 +483,7 @@ class TestResolveCpu:
 
 
 class TestResolveCpuContextoProjeto:
-    """ADR-148: contexto_projeto é sempre complementar, anexado independente da fonte resolvida."""
+    """ADR-149: contexto_projeto é sempre complementar, anexado independente da fonte resolvida."""
 
     def test_attaches_contexto_when_present_master_only(self):
         svc, deps = _make_svc()

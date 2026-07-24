@@ -30,15 +30,15 @@ class _CpuResolutionMixin(_Base):
         return overlay if isinstance(overlay, dict) else {}
 
     def set_cpu_contexto(self, project_id: str, cpu_id: str, contexto: str, actor: str = "system") -> None:
-        """ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
+        """ADR-149: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
         self._dependencies.override_service.set_cpu_contexto(project_id, cpu_id, contexto, actor=actor)
 
     def get_cpu_contexto(self, project_id: str, cpu_id: str) -> str | None:
-        """ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
+        """ADR-149: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
         return self._dependencies.override_service.get_cpu_contexto(project_id, cpu_id)
 
     def list_cpu_contextos(self, project_id: str) -> dict[str, str]:
-        """ADR-148: dict[cpu_id, contexto] completo do projeto — para hidratação em lote na UI."""
+        """ADR-149: dict[cpu_id, contexto] completo do projeto — para hidratação em lote na UI."""
         return self._dependencies.override_service.list_cpu_contextos(project_id)
 
     def resolve_cpu(self, project_id: str, cpu_id: str) -> dict | None:
@@ -65,7 +65,7 @@ class _CpuResolutionMixin(_Base):
         else:
             result = candidate
 
-        # ADR-148: contexto de projeto é sempre complementar — anexado independentemente
+        # ADR-149: contexto de projeto é sempre complementar — anexado independentemente
         # da fonte que resolveu a CPU (override/catálogo base/snapshot), nunca a substitui.
         if result is not None:
             contexto = self.get_cpu_contexto(project_id, cpu_id)

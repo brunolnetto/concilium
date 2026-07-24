@@ -30,7 +30,7 @@ class OverrideService:
     def resolve_cpu(self, project_id: str, cpu_id: str) -> dict | None:
         return self._repository.get_project(project_id).resolve_cpu(cpu_id)
 
-    # ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)
+    # ADR-149: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)
 
     def set_cpu_contexto(self, project_id: str, cpu_id: str, contexto: str, actor: str = "system") -> None:
         project = self._repository.get_project(project_id)

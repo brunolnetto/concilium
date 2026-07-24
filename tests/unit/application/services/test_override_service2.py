@@ -42,7 +42,7 @@ class TestExtendCpu:
 
 
 class TestCpuContexto:
-    """ADR-148: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
+    """ADR-149: contexto de projeto complementar à descrição de CPU (texto livre, sem aprovação)."""
 
     def test_set_cpu_contexto_writes_and_logs(self):
         svc, repo, audit = _make_svc()

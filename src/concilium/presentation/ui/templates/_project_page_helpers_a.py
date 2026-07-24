@@ -234,7 +234,7 @@ def _render_eap_item_descricao(descricao_item: str, descricao_cpu: str, contexto
         st.caption(f"**{descricao_item}**")
     elif descricao_cpu:
         st.caption(f"*CPU — {descricao_cpu}*")
-    # ADR-148: contexto de projeto é sempre complementar — nunca substitui a descrição acima.
+    # ADR-149: contexto de projeto é sempre complementar — nunca substitui a descrição acima.
     if contexto_projeto:
         st.caption(f"🏗️ *Contexto do projeto — {contexto_projeto}*")
 
@@ -310,7 +310,7 @@ def _render_eap_section(reference: dict, base_url: str, project_id: str, actor: 
     eap_items = (reference.get("cpus") or {}).get("itens_eap", [])
     cpu_map = _build_project_cpu_map(reference)
     cpu_cache: dict[str, dict] = {}
-    # ADR-148: busca todos os contextos de projeto de uma vez (evita N+1 chamadas por atividade).
+    # ADR-149: busca todos os contextos de projeto de uma vez (evita N+1 chamadas por atividade).
     try:
         contextos = api_call(
             method="GET", path=f"/api/projects/{project_id}/catalog/cpus-contexto", base_url=base_url, actor=actor

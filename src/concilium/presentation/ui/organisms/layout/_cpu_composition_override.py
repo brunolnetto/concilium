@@ -188,7 +188,7 @@ def _cpu_comp_badge(funcoes: list, equipamentos: list, composicao_itens: list, c
 
 
 def _save_cpu_contexto(contexto: str, project_id: str, cpu_id: str, base_url: str, actor: str) -> None:
-    """ADR-148: salva o contexto de projeto (texto livre, complementar à descrição do catálogo)."""
+    """ADR-149: salva o contexto de projeto (texto livre, complementar à descrição do catálogo)."""
     try:
         api_call(
             method="PUT",
@@ -203,7 +203,7 @@ def _save_cpu_contexto(contexto: str, project_id: str, cpu_id: str, base_url: st
 
 
 def _render_cpu_contexto_field(cpu_id: str, contexto_atual: str, project_id: str, base_url: str, actor: str) -> None:
-    """ADR-148: campo de texto livre para contexto de projeto, complementar à descrição do catálogo."""
+    """ADR-149: campo de texto livre para contexto de projeto, complementar à descrição do catálogo."""
     novo_contexto = st.text_area(
         "📝 Contexto do projeto (complementar à descrição do catálogo, sem aprovação)",
         value=contexto_atual,
@@ -335,7 +335,7 @@ def render_cpu_composition_override(base_url: str, project_id: str, actor: str) 
     catalog_cpus = _catalog_cpus_by_codigo(reference.get("catalog") or {})
     catalog_id = _resolve_catalog_id_for_project(project_id, base_url, actor)
     master_cache: dict[str, dict] = {}
-    # ADR-148: busca todos os contextos de projeto de uma vez (evita N+1 chamadas por CPU).
+    # ADR-149: busca todos os contextos de projeto de uma vez (evita N+1 chamadas por CPU).
     try:
         contextos = api_call(
             method="GET", path=f"/api/projects/{project_id}/catalog/cpus-contexto", base_url=base_url, actor=actor

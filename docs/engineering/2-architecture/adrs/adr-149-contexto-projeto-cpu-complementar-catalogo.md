@@ -1,4 +1,4 @@
-# ADR-148 — Contexto de Projeto complementar à descrição de CPU (catálogo)
+# ADR-149 — Contexto de Projeto complementar à descrição de CPU (catálogo)
 
 **Status:** Proposta
 **Data:** 2026-07-24

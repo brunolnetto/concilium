@@ -49,7 +49,7 @@ def resolve_cpu(
 ) -> Any:
     """Resolve CPU by priority: project override → catalog base → snapshot (ADR-040).
 
-    Inclui `contexto_projeto` (ADR-148) quando presente — sempre complementar à `descricao`.
+    Inclui `contexto_projeto` (ADR-149) quando presente — sempre complementar à `descricao`.
     """
     cpu = service.resolve_cpu(project_id, cpu_id)
     if cpu is None:
@@ -59,7 +59,7 @@ def resolve_cpu(
 
 @router.put(
     "/{project_id}/catalog/cpus/{cpu_id}/contexto",
-    summary="Set project-specific context for a CPU (ADR-148, complementary to catalog description)",
+    summary="Set project-specific context for a CPU (ADR-149, complementary to catalog description)",
 )
 def set_cpu_contexto(
     project_id: str,
@@ -75,7 +75,7 @@ def set_cpu_contexto(
 
 @router.get(
     "/{project_id}/catalog/cpus-contexto",
-    summary="List all project-specific CPU contexts for this project (ADR-148)",
+    summary="List all project-specific CPU contexts for this project (ADR-149)",
 )
 def list_cpu_contextos(
     project_id: str,
