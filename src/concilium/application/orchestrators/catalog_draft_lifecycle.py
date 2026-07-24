@@ -171,6 +171,84 @@ def assert_pode_rejeitar(rascunho_data: dict[str, Any]) -> None:
         raise CatalogDraftGovernanceError("Rascunho já havia sido rejeitado.")
 
 
+# ── ADR-150: rascunho de override de projeto (mesmos estados, escopo de projeto) ──
+
+
+def rascunho_projeto_file_path(projects_dir: Path, projeto_id: str) -> Path:
+    """Caminho do arquivo de estado do rascunho de overrides de um projeto (ADR-150 D1)."""
+    return projects_dir / projeto_id / "overrides" / "_rascunho_estado.json"
+
+
+def abrir_ou_obter_rascunho_projeto(projects_dir: Path, projeto_id: str, actor: str) -> dict[str, Any]:
+    """Abre (lazy) ou retorna o estado de rascunho dos overrides de um projeto (ADR-150 D1).
+
+    Reaproveita as mesmas flags/estados de `RascunhoCatalogoStateMachine`
+    (RASCUNHO/REVISADO/APROVADO/REJEITADO) sem duplicar a máquina de estados —
+    só muda o local de armazenamento (por projeto, não por contexto global) e o
+    campo extra `projeto_id` para rastreabilidade.
+
+    Chamado a cada edição de override (`atualizar_preco_insumo(projeto_id=...)`):
+    se o arquivo de estado ainda não existe, cria com `created_by=actor` (o
+    primeiro a editar vira o "criador" para efeito da regra dos quatro olhos,
+    ADR-150 D2); chamadas seguintes apenas retornam o estado existente sem
+    sobrescrever `created_by`. Overrides gravados antes desta ADR (sem arquivo
+    de estado) são tratados como RASCUNHO implícito na primeira leitura —
+    nenhuma migração de dado é necessária.
+    """
+    path = rascunho_projeto_file_path(projects_dir, projeto_id)
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    data: dict[str, Any] = {"_rascunho": True, "created_by": actor, "projeto_id": projeto_id}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return data
+
+
+def assert_pode_promover_projeto(
+    rascunho_data: dict[str, Any],
+    *,
+    projeto_owner_id: str | None,
+    promotor_id: str,
+    promotor_roles: list[str],
+) -> None:
+    """Gate dual de promoção de override de projeto ao catálogo master (ADR-150 D2).
+
+    Exige, cumulativamente:
+      (a) ownership — `promotor_id` é o dono do projeto ou admin (ADR-126,
+          `require_owner_or_admin`); e
+      (b) quatro olhos — `promotor_id` é diferente de quem abriu/editou o
+          rascunho de override (`created_by`), mesma regra do rascunho global
+          (ADR-120 D5). A checagem de role `catalog:merge` em si é feita pelo
+          decorator `@permission` do tool MCP, antes de chegar aqui.
+
+    Não exige estado REVISADO (diferente de `assert_pode_aprovar`) — não há
+    hoje um tool de "revisar divergências" para override de projeto; qualquer
+    estado não-terminal (RASCUNHO ou REVISADO) é promovível.
+    """
+    from concilium.infrastructure.auth.permission_guard import require_owner_or_admin
+
+    estado = estado_rascunho(rascunho_data)
+    if estado == ESTADO_APROVADO:
+        raise CatalogDraftGovernanceError("Override de projeto já foi promovido anteriormente.")
+    if estado == ESTADO_REJEITADO:
+        raise CatalogDraftGovernanceError("Override de projeto foi rejeitado e não pode ser promovido.")
+    require_owner_or_admin(actor_id=promotor_id, owner_id=projeto_owner_id, roles=promotor_roles)
+    _checar_quatro_olhos(rascunho_data.get("created_by"), promotor_id)
+
+
+def marcar_rascunho_projeto_aprovado(projects_dir: Path, projeto_id: str, aprovador: str) -> None:
+    """Marca o rascunho de override do projeto como APROVADO (estado terminal, ADR-150 D2)."""
+    path = rascunho_projeto_file_path(projects_dir, projeto_id)
+    if path.exists():
+        data = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        data = {"_rascunho": True, "projeto_id": projeto_id}
+    data["_aprovado"] = True
+    data["_aprovado_por"] = aprovador
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def _group_insumos_by_tipo(insumos: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for item in insumos:

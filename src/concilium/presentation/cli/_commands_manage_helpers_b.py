@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
@@ -12,10 +12,9 @@ from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
-from concilium.application.services.project.project_repository import ProjectHandle
 from concilium.presentation.cli.shared import resolve_project
 
-from ._commands_manage_helpers_a import _append_jsonl, _load_json, _write_json
+from ._commands_manage_helpers_a import _append_jsonl
 
 
 def _cs_resolve_layer(
@@ -125,77 +124,44 @@ def _impl_catalog_survey(
             raise typer.Exit(1) from None
 
 
-def _cp_validate_override(overrides: dict, insumo_id: str) -> tuple[dict, int | float | str]:
-    """Valida e extrai override_item e novo_preco. Levanta typer.Exit se inválido."""
-    import typer
-
-    if insumo_id not in overrides:
-        from rich import print as rprint
-
-        rprint(f"[red]Insumo {insumo_id} não encontrado em overrides do projeto.[/red]")
-        raise typer.Exit(1)
-    override_item = overrides.get(insumo_id, {})
-    if not isinstance(override_item, dict):
-        from rich import print as rprint
-
-        rprint(f"[red]Override inválido para {insumo_id}. Esperado objeto JSON.[/red]")
-        raise typer.Exit(1)
-    novo_preco = (
-        override_item.get("preco_calibrado") or override_item.get("preco_unitario") or override_item.get("preco")
-    )
-    if novo_preco is None:
-        from rich import print as rprint
-
-        rprint(f"[red]Override de {insumo_id} não possui preço calibrado para promoção.[/red]")
-        raise typer.Exit(1)
-    return override_item, novo_preco
-
-
-def _cp_update_price_history(
-    historico: list,
-    preco_float: float,
-    dt_iso: str,
-    project_store: ProjectHandle,
-    justificativa: str,
-) -> None:
-    open_entry = None
-    for registro in reversed(historico):
-        if isinstance(registro, dict) and registro.get("data_fim_vigencia") is None:
-            open_entry = registro
-            break
-    if not (isinstance(open_entry, dict) and float(open_entry.get("preco_unitario", -1)) == preco_float):
-        for registro in historico:
-            if not isinstance(registro, dict):
-                continue
-            if registro.get("data_fim_vigencia") is None:
-                registro["data_fim_vigencia"] = dt_iso
-        historico.append(
-            {
-                "preco_unitario": preco_float,
-                "data_inicio_vigencia": dt_iso,
-                "data_fim_vigencia": None,
-                "fonte": "PROMOTED_FROM_PROJECT_OVERRIDE",
-                "projeto_origem": str(project_store.meta.get("id", project_store.root.name)),
-                "justificativa": justificativa,
-            }
-        )
-
-
 def _impl_catalog_promote(
     projeto: str = typer.Option(..., "--project", "-p", help="Projeto de origem do override."),
-    insumo_id: str = typer.Option(..., "--insumo", "-i", help="Código do insumo a promover."),
     justificativa: str = typer.Option(..., "--justificativa", "-j", help="Justificativa da promoção para master."),
     contexto_id: str = typer.Option(None, "--contexto", "-c", help="Override do contexto (opcional)."),
-    data_vigencia: str = typer.Option(None, "--data-vigencia", help="Data efetiva da promoção (YYYY-MM-DD)."),
-    actor: str = typer.Option("cli", "--actor", help="Ator para trilha de auditoria."),
+    actor: str = typer.Option("cli", "--actor", help="Ator para trilha de auditoria e regra dos quatro-olhos."),
     force: bool = typer.Option(False, "--force", help="Confirma ação de promoção para camada master."),
 ) -> None:
-    """Promove override de insumo do projeto para o catálogo master (ADR-040 + ADR-041)."""
-    from concilium.application.orchestrators.catalog_governance import (
-        CatalogGovernanceError,
-        validate_and_resolve_insumo_file,
+    """Promove os overrides de insumo e CPU pendentes do projeto para o catálogo master (ADR-150 D4).
+
+    Antes desta ADR, este comando gravava direto em `insumo_file` via
+    `_write_json` — sem rascunho, sem `CatalogSnapshot`, sem quatro-olhos, sem
+    checar sequer a chave composta (`codigo::jurisdicao`) usada por
+    `atualizar_preco_insumo(projeto_id=...)`, o que na prática fazia a
+    promoção nunca encontrar os overrides gravados por aquele tool (ADR-150
+    P2). Substituído pelo mesmo caminho gated do tool MCP
+    `promover_override_projeto` — reaproveita `RepositorioInsumo.atualizar_preco()`
+    (SCD2 real) e `CatalogSnapshot`/`CatalogDiff` em vez de reimplementar
+    histórico de preço manualmente.
+
+    A CLI é um ator de confiança local, sem token JWT real — roda com role
+    `admin` (equivalente a um operador já autorizado a mexer no catálogo
+    mestre localmente), mas ainda respeita a regra dos quatro-olhos
+    (quem editou o override não pode ser `--actor`) e, se
+    `CONCILIUM__AUTH_ENABLED=1`, o gate de ownership do projeto (ADR-126).
+    `--force` continua sendo a confirmação de intenção explícita.
+
+    Promove TODOS os overrides de insumo E de CPU pendentes do projeto de uma
+    vez — a granularidade por `--insumo`/`--data-vigencia` foi descontinuada.
+    `bdi_override.json` não é coberto (ver ADR-150, seção Achados: arquivo sem
+    leitor no pipeline real).
+    """
+    from concilium.infrastructure.auth.permission_guard import (
+        _current_roles,
+        reset_auth_context,
+        set_auth_context,
+        set_roles,
     )
-    from concilium.presentation.mcp._context import _config_root, _runtime
+    from concilium.presentation.mcp.tools._catalogo_tools_helpers_c import _impl_promover_override_projeto
 
     if not force:
         rprint(
@@ -205,79 +171,19 @@ def _impl_catalog_promote(
         raise typer.Exit(1)
 
     project_store = resolve_project(projeto)
-    override_file = project_store.root / "overrides" / "insumos_override.json"
-    overrides = _load_json(override_file, {})
-    override_item, novo_preco = _cp_validate_override(overrides, insumo_id)
-
+    roles_token = set_roles(["admin"])
+    auth_tokens = set_auth_context(user_id=actor, tenant_id=None)
     try:
-        dt_vigencia = date.fromisoformat(data_vigencia) if data_vigencia else date.today()
-    except ValueError:
-        rprint("[red]--data-vigencia inválida. Use formato YYYY-MM-DD.[/red]")
-        raise typer.Exit(1) from None
+        result = _impl_promover_override_projeto(project_store.root.name, contexto_id, justificativa)
+    finally:
+        reset_auth_context(auth_tokens)
+        _current_roles.reset(roles_token)
 
-    contexto_efetivo = contexto_id or project_store.meta.get("contexto_id")
-    if not contexto_efetivo:
-        rprint("[red]Não foi possível determinar contexto do projeto para promoção.[/red]")
+    if "erro" in result:
+        rprint(f"[red]{result['erro']}[/red]")
         raise typer.Exit(1)
 
-    rt = _runtime()
-    ctx = rt.load_contexto(contexto_efetivo)
-    catalog_root = _config_root() / "catalogos" / ctx.catalogo_id
-    try:
-        insumo_file = validate_and_resolve_insumo_file(catalog_root, insumo_id, float(novo_preco))
-    except CatalogGovernanceError as exc:
-        rprint(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from None
-
-    insumo_master = _load_json(insumo_file, {})
-    historico = insumo_master.setdefault("historico_precos", [])
-    if not isinstance(historico, list):
-        historico = []
-        insumo_master["historico_precos"] = historico
-
-    preco_float = float(novo_preco)
-    dt_iso = dt_vigencia.isoformat()
-    _cp_update_price_history(historico, preco_float, dt_iso, project_store, justificativa)
-
-    insumo_master["preco_unitario"] = preco_float
-    _write_json(insumo_file, insumo_master)
-
-    promotion_event = {
-        "timestamp": datetime.now(UTC).isoformat(),
-        "contexto_id": contexto_efetivo,
-        "catalogo_id": ctx.catalogo_id,
-        "insumo_id": insumo_id,
-        "novo_preco": preco_float,
-        "data_vigencia": dt_iso,
-        "justificativa": justificativa,
-        "actor": actor,
-        "source_override": override_item,
-    }
-    _append_jsonl(project_store.root / "overrides" / "historico" / "promotions.jsonl", promotion_event)
-
-    overrides.pop(insumo_id, None)
-    _write_json(override_file, overrides)
-
-    _append_jsonl(
-        project_store.root / "audit_log.jsonl",
-        {
-            "timestamp": datetime.now(UTC).isoformat(),
-            "actor": actor,
-            "action": "catalog_promote_insumo",
-            "payload": {
-                "insumo_id": insumo_id,
-                "novo_preco": preco_float,
-                "data_vigencia": dt_iso,
-                "justificativa": justificativa,
-                "contexto_id": contexto_efetivo,
-            },
-            "result": {"status": "OK", "catalogo_id": ctx.catalogo_id},
-            "status": "OK",
-            "error": None,
-        },
-    )
-
-    rprint(f"[green]Promoção concluída.[/green] {insumo_id} -> master ({ctx.catalogo_id}) com vigência {dt_iso}.")
+    rprint(f"[bold green][OK][/bold green] Promoção concluída: {result}")
 
 
 def _impl_catalog_search(

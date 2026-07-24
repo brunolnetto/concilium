@@ -15,6 +15,7 @@ from concilium.application.orchestrators.catalog_draft_lifecycle import (
 from concilium.application.orchestrators.catalog_governance import (
     CatalogGovernanceError,
     collect_catalog_critical_errors,
+    validate_and_resolve_cpu_file,
     validate_and_resolve_insumo_file,
     validate_and_resolve_producao_file,
 )
@@ -164,13 +165,24 @@ def _save_preco_insumo_override_projeto(
     novo_preco: float,
     jurisdicao_id: str | None,
     nota: str | None,
+    autor: str | None = None,
 ) -> dict[str, Any]:
-    """Salva o novo preço como override de projeto (ADR-038), sem afetar o catálogo mestre."""
+    """Salva o novo preço como override de projeto (ADR-040), sem afetar o catálogo mestre.
+
+    Grava em `insumos_override.json` — o mesmo arquivo lido por
+    `RepositorioInsumo.resolver_preco()` via `_inject_project_catalog_layers`
+    (pipeline real, `lifecycle_coordinator.py`) e por `concilium manage catalog
+    promote`. Antes da correção (ADR-150), esta função gravava em
+    `catalog_prices.json` — um arquivo que nada mais no sistema lia: o override
+    "livre" nunca chegava ao pipeline real nem à promoção.
+    """
+    from concilium.application.orchestrators.catalog_draft_lifecycle import abrir_ou_obter_rascunho_projeto
+
     proj_path = projects_dir / projeto_id
     if not proj_path.exists():
         return {"erro": f"Projeto {projeto_id} não encontrado."}
 
-    overrides_file = proj_path / "overrides" / "catalog_prices.json"
+    overrides_file = proj_path / "overrides" / "insumos_override.json"
     overrides_file.parent.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -186,6 +198,7 @@ def _save_preco_insumo_override_projeto(
         }
 
         overrides_file.write_text(json.dumps(overrides, indent=2, ensure_ascii=False), encoding="utf-8")
+        abrir_ou_obter_rascunho_projeto(projects_dir, projeto_id, autor or "system")
         return _wrap_response({"status": "SUCESSO", "layer": "PROJETO", "projeto_id": projeto_id, "insumo": insumo_id})
     except Exception as e:
         return {"erro": f"Erro ao salvar override de projeto: {e}"}
@@ -270,6 +283,31 @@ def _apply_preco_insumo_delta(
     insumo_file.write_text(json.dumps(insumo_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+# Chaves de governança do override (aprovação/justificativa) que não fazem parte
+# da definição real de uma CPU no catálogo mestre — nunca devem ser mescladas no
+# arquivo master (ADR-150, extensão do escopo de INSUMO para CPU).
+_CPU_OVERRIDE_METADATA_KEYS = frozenset({"motivo", "aprovado_por", "aprovado_em", "observacoes", "nota"})
+
+
+def _apply_cpu_override_delta(catalog_root: Path, cpu_id: str, override_data: dict[str, Any]) -> None:
+    """Aplica um delta de override de CPU ao catálogo mestre no momento da promoção (ADR-150).
+
+    Reproduz em escrita a mesma semântica de leitura já usada pelo pipeline real
+    (`ConciliumService.resolve_cpu`, `{**master_cpu, **candidate}`): os campos do
+    override do projeto sobrepõem os campos correspondentes da CPU master, sem
+    descartar o restante da definição (composição, categoria, etc.). Chaves de
+    metadado de governança (`motivo`/`aprovado_por`/...) não são gravadas no
+    arquivo mestre — não fazem parte do schema de CPU, só do rastro de aprovação.
+    """
+    cpu_file = validate_and_resolve_cpu_file(catalog_root, cpu_id)
+    cpu_data = json.loads(cpu_file.read_text(encoding="utf-8"))
+    for key, value in override_data.items():
+        if key in _CPU_OVERRIDE_METADATA_KEYS:
+            continue
+        cpu_data[key] = value
+    cpu_file.write_text(json.dumps(cpu_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def _impl_atualizar_preco_insumo(
     contexto_id: str,
     insumo_id: str,
@@ -305,7 +343,17 @@ def _impl_atualizar_preco_insumo(
     ctx = rt.load_contexto(contexto_id)
 
     if projeto_id:
-        return _save_preco_insumo_override_projeto(projects_dir, projeto_id, insumo_id, novo_preco, jurisdicao_id, nota)
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+        return _save_preco_insumo_override_projeto(
+            projects_dir,
+            projeto_id,
+            insumo_id,
+            novo_preco,
+            jurisdicao_id,
+            nota,
+            autor=get_current_user_id() or "system",
+        )
 
     if not rascunho_id:
         return {

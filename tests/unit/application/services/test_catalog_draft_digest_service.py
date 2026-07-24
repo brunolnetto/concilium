@@ -168,3 +168,194 @@ class TestEnviarDigestRascunhosPendentes:
 
         mock_store.assert_not_called()
         assert enviados == 0
+
+
+# ---------------------------------------------------------------------------
+# ADR-150 D5: rascunhos de override de projeto no mesmo digest
+# ---------------------------------------------------------------------------
+
+
+def _write_projeto_estado(projects_root: Path, projeto_id: str, **fields) -> None:
+    overrides_dir = projects_root / projeto_id / "overrides"
+    overrides_dir.mkdir(parents=True, exist_ok=True)
+    data = {"_rascunho": True, "created_by": "eng1", "projeto_id": projeto_id, **fields}
+    (overrides_dir / "_rascunho_estado.json").write_text(json.dumps(data), encoding="utf-8")
+
+
+def _write_projeto_overrides(projects_root: Path, projeto_id: str, overrides: dict) -> None:
+    overrides_dir = projects_root / projeto_id / "overrides"
+    overrides_dir.mkdir(parents=True, exist_ok=True)
+    (overrides_dir / "insumos_override.json").write_text(json.dumps(overrides), encoding="utf-8")
+
+
+def _write_projeto_cpu_overrides(projects_root: Path, projeto_id: str, overrides: dict) -> None:
+    overrides_dir = projects_root / projeto_id / "overrides"
+    overrides_dir.mkdir(parents=True, exist_ok=True)
+    (overrides_dir / "cpus_override.json").write_text(json.dumps(overrides), encoding="utf-8")
+
+
+def _write_projeto_meta(projects_root: Path, projeto_id: str, owner_id: str | None) -> None:
+    (projects_root / projeto_id).mkdir(parents=True, exist_ok=True)
+    (projects_root / projeto_id / "meta.json").write_text(json.dumps({"owner_id": owner_id}), encoding="utf-8")
+
+
+class TestRascunhosPendentesProjeto:
+    def test_override_pendente_com_estado_rascunho_incluido(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+
+        result = rascunhos_pendentes(tmp_path, projects_root)
+
+        assert "projeto:PROJ-001" in result
+        assert result["projeto:PROJ-001"][0]["projeto_id"] == "PROJ-001"
+        assert result["projeto:PROJ-001"][0]["created_by"] == "eng1"
+
+    def test_estado_aprovado_excluido(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001", _aprovado=True)
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+
+        assert rascunhos_pendentes(tmp_path, projects_root) == {}
+
+    def test_sem_overrides_pendentes_excluido(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {})
+
+        assert rascunhos_pendentes(tmp_path, projects_root) == {}
+
+    def test_projeto_sem_estado_de_rascunho_excluido(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        (projects_root / "PROJ-001").mkdir(parents=True)
+
+        assert rascunhos_pendentes(tmp_path, projects_root) == {}
+
+    def test_projects_root_omitido_nao_afeta_contextos_globais(self, tmp_path: Path):
+        _write_version(tmp_path, "mendeslobo", "v1", {"motivo": "base"})
+        _write_version(tmp_path, "mendeslobo", "v2", {"_rascunho": True})
+
+        result = rascunhos_pendentes(tmp_path)
+
+        assert set(result.keys()) == {"mendeslobo"}
+
+    def test_override_de_cpu_sem_insumo_tambem_e_pendente(self, tmp_path: Path):
+        """ADR-150, extensão CPU: projeto com só CPU pendente também deve aparecer no digest."""
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_cpu_overrides(projects_root, "PROJ-001", {"CPU-001": {"producao_horaria": 4.0}})
+
+        result = rascunhos_pendentes(tmp_path, projects_root)
+
+        assert "projeto:PROJ-001" in result
+        assert "CPU" in result["projeto:PROJ-001"][0]["motivo"]
+
+    def test_override_de_insumo_e_cpu_combinados_no_mesmo_motivo(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+        _write_projeto_cpu_overrides(projects_root, "PROJ-001", {"CPU-001": {"producao_horaria": 4.0}})
+
+        result = rascunhos_pendentes(tmp_path, projects_root)
+
+        motivo = result["projeto:PROJ-001"][0]["motivo"]
+        assert "insumo" in motivo
+        assert "CPU" in motivo
+
+    def test_sem_overrides_de_insumo_nem_cpu_excluido(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {})
+        _write_projeto_cpu_overrides(projects_root, "PROJ-001", {})
+
+        assert rascunhos_pendentes(tmp_path, projects_root) == {}
+
+
+class TestEnviarDigestNotificaDonoDoProjeto:
+    def test_dono_do_projeto_recebe_mesmo_sem_role_catalog_manager(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+        _write_projeto_meta(projects_root, "PROJ-001", owner_id="owner1")
+
+        clients = [_make_client("owner1", ["engineer"], email="owner1@x.com")]
+        mock_store = MagicMock()
+        mock_store.list_clients.return_value = clients
+        mock_notify = MagicMock(return_value=True)
+
+        with (
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.get_auth_store",
+                return_value=mock_store,
+            ),
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.notify_catalog_drafts_pending",
+                mock_notify,
+            ),
+        ):
+            enviados = enviar_digest_rascunhos_pendentes(tmp_path, projects_root)
+
+        assert enviados == 1
+        mock_notify.assert_called_once()
+        assert mock_notify.call_args.args[0] == "owner1@x.com"
+        assert "projeto:PROJ-001" in mock_notify.call_args.args[1]
+
+    def test_catalog_manager_e_dono_nao_duplicam_envio_se_mesmo_email(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+        _write_projeto_meta(projects_root, "PROJ-001", owner_id="mgr1")
+
+        clients = [_make_client("mgr1", ["catalog-manager"], email="mgr1@x.com")]
+        mock_store = MagicMock()
+        mock_store.list_clients.return_value = clients
+        mock_notify = MagicMock(return_value=True)
+
+        with (
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.get_auth_store",
+                return_value=mock_store,
+            ),
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.notify_catalog_drafts_pending",
+                mock_notify,
+            ),
+        ):
+            enviados = enviar_digest_rascunhos_pendentes(tmp_path, projects_root)
+
+        assert enviados == 1
+        assert mock_notify.call_count == 1
+
+    def test_sem_owner_id_nao_quebra_e_nao_notifica_ninguem_extra(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+        # sem meta.json / owner_id
+
+        mock_store = MagicMock()
+        mock_store.list_clients.return_value = []
+        mock_notify = MagicMock(return_value=True)
+
+        with (
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.get_auth_store",
+                return_value=mock_store,
+            ),
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.notify_catalog_drafts_pending",
+                mock_notify,
+            ),
+        ):
+            enviados = enviar_digest_rascunhos_pendentes(tmp_path, projects_root)
+
+        assert enviados == 0

@@ -189,20 +189,16 @@ def catalog_survey(
 @app_catalog.command("promote")
 def catalog_promote(
     projeto: str = typer.Option(..., "--project", "-p", help="Projeto de origem do override."),
-    insumo_id: str = typer.Option(..., "--insumo", "-i", help="Código do insumo a promover."),
     justificativa: str = typer.Option(..., "--justificativa", "-j", help="Justificativa da promoção para master."),
     contexto_id: str = typer.Option(None, "--contexto", "-c", help="Override do contexto (opcional)."),
-    data_vigencia: str = typer.Option(None, "--data-vigencia", help="Data efetiva da promoção (YYYY-MM-DD)."),
-    actor: str = typer.Option("cli", "--actor", help="Ator para trilha de auditoria."),
+    actor: str = typer.Option("cli", "--actor", help="Ator para trilha de auditoria e regra dos quatro-olhos."),
     force: bool = typer.Option(False, "--force", help="Confirma ação de promoção para camada master."),
 ) -> None:
-    """Promove override de preço de projeto para a camada master."""
+    """Promove os overrides de insumo pendentes do projeto para a camada master (ADR-150)."""
     return _impl_catalog_promote(
         projeto,
-        insumo_id,
         justificativa,
         contexto_id,
-        data_vigencia,
         actor,
         force,
     )
