@@ -187,6 +187,33 @@ def _cpu_comp_badge(funcoes: list, equipamentos: list, composicao_itens: list, c
     return " · ".join(parts) if parts else "sem composição"
 
 
+def _save_cpu_contexto(contexto: str, project_id: str, cpu_id: str, base_url: str, actor: str) -> None:
+    """ADR-149: salva o contexto de projeto (texto livre, complementar à descrição do catálogo)."""
+    try:
+        api_call(
+            method="PUT",
+            path=f"/api/projects/{project_id}/catalog/cpus/{cpu_id}/contexto",
+            base_url=base_url,
+            payload={"contexto": contexto},
+            actor=actor,
+        )
+        st.success(f"Contexto do projeto salvo para {cpu_id}.")
+    except Exception as exc:
+        st.error(f"Erro ao salvar contexto de {cpu_id}: {exc}")
+
+
+def _render_cpu_contexto_field(cpu_id: str, contexto_atual: str, project_id: str, base_url: str, actor: str) -> None:
+    """ADR-149: campo de texto livre para contexto de projeto, complementar à descrição do catálogo."""
+    novo_contexto = st.text_area(
+        "📝 Contexto do projeto (complementar à descrição do catálogo, sem aprovação)",
+        value=contexto_atual,
+        key=f"cpu-contexto-{project_id}-{cpu_id}",
+        height=80,
+    )
+    if st.button(f"Salvar contexto — {cpu_id}", key=f"save-contexto-{project_id}-{cpu_id}"):
+        _save_cpu_contexto(novo_contexto, project_id, cpu_id, base_url, actor)
+
+
 def _render_cpu_comp_expander(
     cpu_id: str,
     cpu: dict,
@@ -194,6 +221,7 @@ def _render_cpu_comp_expander(
     project_id: str,
     base_url: str,
     actor: str,
+    contexto_atual: str = "",
 ) -> None:
     """Renders the composition editor expander for one CPU."""
     descricao = cpu.get("descricao", "")
@@ -201,6 +229,7 @@ def _render_cpu_comp_expander(
     _comp_cats = sorted({it.get("categoria_custo", "?") for it in composicao_itens})
     _badge = _cpu_comp_badge(funcoes, equipamentos, composicao_itens, _comp_cats)
     with st.expander(f"{cpu_id} — {descricao[:60]}  `{_badge}`", expanded=False):
+        _render_cpu_contexto_field(cpu_id, contexto_atual, project_id, base_url, actor)
         rows = _build_cpu_comp_rows(cpu, insumos_cat)
         if not rows:
             st.caption(
@@ -306,12 +335,21 @@ def render_cpu_composition_override(base_url: str, project_id: str, actor: str) 
     catalog_cpus = _catalog_cpus_by_codigo(reference.get("catalog") or {})
     catalog_id = _resolve_catalog_id_for_project(project_id, base_url, actor)
     master_cache: dict[str, dict] = {}
+    # ADR-149: busca todos os contextos de projeto de uma vez (evita N+1 chamadas por CPU).
+    try:
+        contextos = api_call(
+            method="GET", path=f"/api/projects/{project_id}/catalog/cpus-contexto", base_url=base_url, actor=actor
+        )
+    except Exception:
+        contextos = {}
     for cpu_id in sorted(cpu_ids):
         cpu: dict = dict(catalog_cpus.get(cpu_id) or {})
         cpu = _resolve_hydrated_cpu(cpu_id, cpu, catalog_id, project_id, base_url, actor, master_cache)
         if not cpu:
             st.warning(f"CPU '{cpu_id}' não encontrada.")
             continue
-        _render_cpu_comp_expander(cpu_id, cpu, insumos_cat, project_id, base_url, actor)
+        _render_cpu_comp_expander(
+            cpu_id, cpu, insumos_cat, project_id, base_url, actor, contexto_atual=contextos.get(cpu_id, "")
+        )
 
 

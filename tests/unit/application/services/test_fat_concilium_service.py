@@ -27,6 +27,9 @@ def _make_svc(config_root: Path | None = None):
         deps.input_builder._config_root = config_root
     else:
         deps.input_builder._config_root = Path("/nonexistent_fake_root_abc123")
+    # ADR-149: resolve_cpu chama get_cpu_contexto — default "sem contexto" para não poluir
+    # asserts de igualdade exata nos testes que não exercitam esse caminho especificamente.
+    deps.override_service.get_cpu_contexto.return_value = None
     svc = ConciliumService(dependencies=deps)
     return svc, deps
 
@@ -477,6 +480,72 @@ class TestResolveCpu:
         svc.get_catalog_cpu = MagicMock(side_effect=_get_cpu)
         result = svc.resolve_cpu("proj-1", "CPU-X")
         assert result == master
+
+
+class TestResolveCpuContextoProjeto:
+    """ADR-149: contexto_projeto é sempre complementar, anexado independente da fonte resolvida."""
+
+    def test_attaches_contexto_when_present_master_only(self):
+        svc, deps = _make_svc()
+        master = {"codigo": "CPU-X", "descricao": "Master only"}
+        deps.override_service.resolve_cpu.return_value = None
+        deps.override_service.get_cpu_contexto.return_value = "Solo argiloso nesta obra."
+        project = _make_project_mock(meta={"catalogo_base": "cat1"})
+        deps.repository.get_project.return_value = project
+        svc.get_catalog_cpu = MagicMock(return_value=master)
+        result = svc.resolve_cpu("proj-1", "CPU-X")
+        assert result["descricao"] == "Master only"
+        assert result["contexto_projeto"] == "Solo argiloso nesta obra."
+
+    def test_attaches_contexto_when_present_candidate_and_master(self):
+        svc, deps = _make_svc()
+        candidate = {"codigo": "CPU-X", "project_factor": 2}
+        master = {"codigo": "CPU-X", "composicao_itens": [{"insumo": "areia"}]}
+        deps.override_service.resolve_cpu.return_value = candidate
+        deps.override_service.get_cpu_contexto.return_value = "Acesso restrito por chuva."
+        project = _make_project_mock(meta={"catalogo_base": "cat1"})
+        deps.repository.get_project.return_value = project
+        svc.get_catalog_cpu = MagicMock(return_value=master)
+        result = svc.resolve_cpu("proj-1", "CPU-X")
+        assert result["contexto_projeto"] == "Acesso restrito por chuva."
+        # Complementar: descrição/composição herdadas do catálogo continuam presentes.
+        assert result["composicao_itens"] == [{"insumo": "areia"}]
+
+    def test_no_contexto_key_when_absent(self):
+        svc, deps = _make_svc()
+        master = {"codigo": "CPU-X", "descricao": "Master only"}
+        deps.override_service.resolve_cpu.return_value = None
+        deps.override_service.get_cpu_contexto.return_value = None
+        project = _make_project_mock(meta={"catalogo_base": "cat1"})
+        deps.repository.get_project.return_value = project
+        svc.get_catalog_cpu = MagicMock(return_value=master)
+        result = svc.resolve_cpu("proj-1", "CPU-X")
+        assert "contexto_projeto" not in result
+
+    def test_no_contexto_attached_when_cpu_not_found(self):
+        svc, deps = _make_svc()
+        deps.override_service.resolve_cpu.return_value = None
+        deps.override_service.get_cpu_contexto.return_value = "não deveria aparecer"
+        project = _make_project_mock(meta={})
+        deps.repository.get_project.return_value = project
+        svc.get_catalog_cpu = MagicMock(return_value=None)
+        result = svc.resolve_cpu("proj-1", "CPU-MISSING")
+        assert result is None
+
+    def test_set_cpu_contexto_delegates(self):
+        svc, deps = _make_svc()
+        svc.set_cpu_contexto("proj-1", "CPU-X", "texto", actor="eng-1")
+        deps.override_service.set_cpu_contexto.assert_called_once_with("proj-1", "CPU-X", "texto", actor="eng-1")
+
+    def test_get_cpu_contexto_delegates(self):
+        svc, deps = _make_svc()
+        deps.override_service.get_cpu_contexto.return_value = "texto salvo"
+        assert svc.get_cpu_contexto("proj-1", "CPU-X") == "texto salvo"
+
+    def test_list_cpu_contextos_delegates(self):
+        svc, deps = _make_svc()
+        deps.override_service.list_cpu_contextos.return_value = {"CPU-X": "texto"}
+        assert svc.list_cpu_contextos("proj-1") == {"CPU-X": "texto"}
 
 
 # ─── _candidate_catalog_ids ───────────────────────────────────────────────────
