@@ -53,3 +53,16 @@ def validate_and_resolve_producao_file(catalog_root: Path, producao_id: str, val
         if candidate.exists():
             return candidate
     raise CatalogGovernanceError(f"Metodologia {producao_id} não encontrada no catálogo mestre.")
+
+
+def validate_and_resolve_cpu_file(catalog_root: Path, cpu_id: str) -> Path:
+    """Valida e resolve o arquivo da CPU no catálogo mestre (ADR-150, extensão do escopo de INSUMO).
+
+    Mesma convenção de `validate_and_resolve_insumo_file`/`validate_and_resolve_producao_file`:
+    a CPU vive em um arquivo individual `cpus/{cpu_id}.json`, mesma estrutura lida por
+    `resolve_cpu` (ADR-040/150) na cascata projeto -> master -> snapshot.
+    """
+    candidate = catalog_root / "cpus" / f"{cpu_id}.json"
+    if candidate.exists():
+        return candidate
+    raise CatalogGovernanceError(f"CPU {cpu_id} não encontrada no catálogo mestre.")

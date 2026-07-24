@@ -131,7 +131,7 @@ def _impl_catalog_promote(
     actor: str = typer.Option("cli", "--actor", help="Ator para trilha de auditoria e regra dos quatro-olhos."),
     force: bool = typer.Option(False, "--force", help="Confirma ação de promoção para camada master."),
 ) -> None:
-    """Promove os overrides de insumo pendentes do projeto para o catálogo master (ADR-150 D4).
+    """Promove os overrides de insumo e CPU pendentes do projeto para o catálogo master (ADR-150 D4).
 
     Antes desta ADR, este comando gravava direto em `insumo_file` via
     `_write_json` — sem rascunho, sem `CatalogSnapshot`, sem quatro-olhos, sem
@@ -150,8 +150,10 @@ def _impl_catalog_promote(
     `CONCILIUM__AUTH_ENABLED=1`, o gate de ownership do projeto (ADR-126).
     `--force` continua sendo a confirmação de intenção explícita.
 
-    Promove TODOS os overrides de insumo pendentes do projeto de uma vez —
-    a granularidade por `--insumo`/`--data-vigencia` foi descontinuada.
+    Promove TODOS os overrides de insumo E de CPU pendentes do projeto de uma
+    vez — a granularidade por `--insumo`/`--data-vigencia` foi descontinuada.
+    `bdi_override.json` não é coberto (ver ADR-150, seção Achados: arquivo sem
+    leitor no pipeline real).
     """
     from concilium.infrastructure.auth.permission_guard import (
         _current_roles,

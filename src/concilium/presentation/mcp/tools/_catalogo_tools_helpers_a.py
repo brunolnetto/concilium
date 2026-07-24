@@ -15,6 +15,7 @@ from concilium.application.orchestrators.catalog_draft_lifecycle import (
 from concilium.application.orchestrators.catalog_governance import (
     CatalogGovernanceError,
     collect_catalog_critical_errors,
+    validate_and_resolve_cpu_file,
     validate_and_resolve_insumo_file,
     validate_and_resolve_producao_file,
 )
@@ -280,6 +281,31 @@ def _apply_preco_insumo_delta(
         repo.atualizar_preco(insumo_id, novo_preco, data_vigencia, fonte=autor, nota=nota)
 
     insumo_file.write_text(json.dumps(insumo_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# Chaves de governança do override (aprovação/justificativa) que não fazem parte
+# da definição real de uma CPU no catálogo mestre — nunca devem ser mescladas no
+# arquivo master (ADR-150, extensão do escopo de INSUMO para CPU).
+_CPU_OVERRIDE_METADATA_KEYS = frozenset({"motivo", "aprovado_por", "aprovado_em", "observacoes", "nota"})
+
+
+def _apply_cpu_override_delta(catalog_root: Path, cpu_id: str, override_data: dict[str, Any]) -> None:
+    """Aplica um delta de override de CPU ao catálogo mestre no momento da promoção (ADR-150).
+
+    Reproduz em escrita a mesma semântica de leitura já usada pelo pipeline real
+    (`ConciliumService.resolve_cpu`, `{**master_cpu, **candidate}`): os campos do
+    override do projeto sobrepõem os campos correspondentes da CPU master, sem
+    descartar o restante da definição (composição, categoria, etc.). Chaves de
+    metadado de governança (`motivo`/`aprovado_por`/...) não são gravadas no
+    arquivo mestre — não fazem parte do schema de CPU, só do rastro de aprovação.
+    """
+    cpu_file = validate_and_resolve_cpu_file(catalog_root, cpu_id)
+    cpu_data = json.loads(cpu_file.read_text(encoding="utf-8"))
+    for key, value in override_data.items():
+        if key in _CPU_OVERRIDE_METADATA_KEYS:
+            continue
+        cpu_data[key] = value
+    cpu_file.write_text(json.dumps(cpu_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _impl_atualizar_preco_insumo(

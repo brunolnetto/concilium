@@ -14,7 +14,7 @@ from concilium.application.orchestrators.catalog_draft_lifecycle import (
 )
 from concilium.presentation.mcp._context import _config_root, _projetos_root, _runtime, _wrap_response
 
-from ._catalogo_tools_helpers_a import _apply_preco_insumo_delta
+from ._catalogo_tools_helpers_a import _apply_cpu_override_delta, _apply_preco_insumo_delta
 from ._catalogo_tools_helpers_a import _catalog_root as _resolve_catalog_root
 
 
@@ -51,13 +51,23 @@ def _impl_promover_override_projeto(
     contexto_id: str | None = None,
     justificativa: str = "",
 ) -> dict[str, Any]:
-    """Promove os overrides de insumo pendentes de um projeto ao catálogo master (ADR-150).
+    """Promove os overrides de insumo e CPU pendentes de um projeto ao catálogo master (ADR-150).
 
     Fecha o bypass de governança do `concilium manage catalog promote` (CLI):
     antes desta ADR, aquele comando gravava direto no catálogo mestre via
     `_write_json`, sem rascunho, sem 4-olhos, sem `CatalogSnapshot`. Este é o
     caminho gated que o substitui — reaproveitado tanto pelo tool MCP quanto
     pelo comando CLI (ADR-150 D4).
+
+    Cobre os dois tipos de override de projeto que hoje têm alvo real no
+    catálogo mestre: `insumos_override.json` (preço) e `cpus_override.json`
+    (produtividade/composição calibrada) — ambos sob o mesmo rascunho de
+    projeto e o mesmo gate dual (D1/D2), uma única promoção para os dois.
+    `bdi_override.json` fica de fora: investigação desta extensão (ver ADR-150,
+    seção Achados) constatou que esse arquivo não tem nenhum leitor no pipeline
+    real nem gravador fora da inicialização vazia — a governança de BDI por
+    projeto já existe, mas por um mecanismo totalmente diferente
+    (`PerfilBdiProjeto`/`bdi-update`), sem conceito de "promoção ao master".
 
     Gate dual (D2), cumulativo:
       (a) `require_owner_or_admin` (ADR-126) — promotor é o dono do projeto ou admin;
@@ -104,12 +114,20 @@ def _impl_promover_override_projeto(
         except Exception:
             overrides = {}
 
-    if not overrides:
+    cpus_overrides_file = proj_path / "overrides" / "cpus_override.json"
+    cpus_overrides: dict[str, Any] = {}
+    if cpus_overrides_file.exists():
+        try:
+            cpus_overrides = json.loads(cpus_overrides_file.read_text(encoding="utf-8"))
+        except Exception:
+            cpus_overrides = {}
+
+    if not overrides and not cpus_overrides:
         return _wrap_response(
             {
                 "status": "SEM_PENDENCIAS",
                 "projeto_id": projeto_id,
-                "nota": "Nenhum override de insumo pendente para promover.",
+                "nota": "Nenhum override de insumo ou CPU pendente para promover.",
             }
         )
 
@@ -130,6 +148,7 @@ def _impl_promover_override_projeto(
     hoje = date.today()
 
     deltas_aplicados = 0
+    deltas_insumo = 0
     for key, entry in overrides.items():
         insumo_id, jurisdicao_id = _parse_override_key(key)
         _apply_preco_insumo_delta(
@@ -142,6 +161,15 @@ def _impl_promover_override_projeto(
             hoje,
         )
         deltas_aplicados += 1
+        deltas_insumo += 1
+
+    deltas_cpu = 0
+    for cpu_id, cpu_entry in cpus_overrides.items():
+        if not isinstance(cpu_entry, dict):
+            continue
+        _apply_cpu_override_delta(catalog_root, cpu_id, cpu_entry)
+        deltas_aplicados += 1
+        deltas_cpu += 1
 
     catalogo_depois = _runtime().load_catalogo(ctx.catalogo_id)
     snapshot_id, diff_summary = build_and_persist_snapshot(
@@ -155,14 +183,21 @@ def _impl_promover_override_projeto(
     )
 
     # Arquiva os overrides aplicados (ADR-040 D4) — depois de promovidos, não
-    # devem seguir sombreando o preço recém-escrito no master como se ainda
-    # fossem uma calibração pendente.
+    # devem seguir sombreando o preço/definição recém-escrita no master como se
+    # ainda fossem uma calibração pendente. Cada tipo de override é arquivado e
+    # limpo independentemente — a ausência de um tipo não impede o outro.
     historico_dir = proj_path / "overrides" / "historico"
     historico_dir.mkdir(parents=True, exist_ok=True)
-    (historico_dir / f"insumos_override_{hoje.isoformat()}.json").write_text(
-        json.dumps(overrides, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    overrides_file.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
+    if overrides:
+        (historico_dir / f"insumos_override_{hoje.isoformat()}.json").write_text(
+            json.dumps(overrides, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        overrides_file.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
+    if cpus_overrides:
+        (historico_dir / f"cpus_override_{hoje.isoformat()}.json").write_text(
+            json.dumps(cpus_overrides, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        cpus_overrides_file.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
 
     marcar_rascunho_projeto_aprovado(projects_dir, projeto_id, actor)
 
@@ -175,6 +210,8 @@ def _impl_promover_override_projeto(
             "aprovado_por": actor,
             "justificativa": justificativa,
             "deltas_aplicados": deltas_aplicados,
+            "deltas_insumo": deltas_insumo,
+            "deltas_cpu": deltas_cpu,
             "snapshot_id": snapshot_id,
             "diff_summary": diff_summary,
         }

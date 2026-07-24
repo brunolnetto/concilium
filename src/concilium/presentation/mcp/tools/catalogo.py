@@ -653,8 +653,8 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description=(
-            "Promove os overrides de insumo pendentes de um projeto (calibrados livremente via "
-            "atualizar_preco_insumo com projeto_id) para o catálogo master. "
+            "Promove os overrides de insumo e CPU pendentes de um projeto (calibrados livremente via "
+            "atualizar_preco_insumo/extend_cpu com projeto_id) para o catálogo master. "
             "Requer catalog:merge E ser o dono do projeto (ou admin) — gate duplo, ADR-150. "
             "Quem editou o override não pode ser quem promove (quatro olhos)."
         )
@@ -666,12 +666,19 @@ def register(server: FastMCP) -> None:
         justificativa: str,
         contexto_id: str | None = None,
     ) -> dict[str, Any]:
-        """Promove overrides de insumo de um projeto ao catálogo master (ADR-150 D2/D3).
+        """Promove overrides de insumo e CPU de um projeto ao catálogo master (ADR-150 D2/D3).
 
         Fecha o bypass de governança do `catalog promote` (CLI), que escrevia
         direto no catálogo mestre sem gate algum (ADR-150 P2). Reaproveita o
         mesmo caminho de escrita de `aprovar_merge_catalogo` (SCD2/ADR-041,
         CatalogSnapshot/CatalogDiff ADR-024/145).
+
+        Cobre `insumos_override.json` (preço) e `cpus_override.json`
+        (produtividade/composição calibrada), sob o mesmo rascunho de projeto e
+        o mesmo gate. `bdi_override.json` não é coberto — não tem leitor no
+        pipeline real; BDI de projeto é governado por `PerfilBdiProjeto`/
+        `bdi-update`, um mecanismo próprio sem conceito de promoção ao master
+        (ver ADR-150, seção Achados).
 
         Args:
             projeto_id: ID do projeto de origem do override.
