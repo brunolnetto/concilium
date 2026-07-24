@@ -188,6 +188,12 @@ def _write_projeto_overrides(projects_root: Path, projeto_id: str, overrides: di
     (overrides_dir / "insumos_override.json").write_text(json.dumps(overrides), encoding="utf-8")
 
 
+def _write_projeto_cpu_overrides(projects_root: Path, projeto_id: str, overrides: dict) -> None:
+    overrides_dir = projects_root / projeto_id / "overrides"
+    overrides_dir.mkdir(parents=True, exist_ok=True)
+    (overrides_dir / "cpus_override.json").write_text(json.dumps(overrides), encoding="utf-8")
+
+
 def _write_projeto_meta(projects_root: Path, projeto_id: str, owner_id: str | None) -> None:
     (projects_root / projeto_id).mkdir(parents=True, exist_ok=True)
     (projects_root / projeto_id / "meta.json").write_text(json.dumps({"owner_id": owner_id}), encoding="utf-8")
@@ -236,6 +242,40 @@ class TestRascunhosPendentesProjeto:
         result = rascunhos_pendentes(tmp_path)
 
         assert set(result.keys()) == {"mendeslobo"}
+
+    def test_override_de_cpu_sem_insumo_tambem_e_pendente(self, tmp_path: Path):
+        """ADR-150, extensão CPU: projeto com só CPU pendente também deve aparecer no digest."""
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_cpu_overrides(projects_root, "PROJ-001", {"CPU-001": {"producao_horaria": 4.0}})
+
+        result = rascunhos_pendentes(tmp_path, projects_root)
+
+        assert "projeto:PROJ-001" in result
+        assert "CPU" in result["projeto:PROJ-001"][0]["motivo"]
+
+    def test_override_de_insumo_e_cpu_combinados_no_mesmo_motivo(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+        _write_projeto_cpu_overrides(projects_root, "PROJ-001", {"CPU-001": {"producao_horaria": 4.0}})
+
+        result = rascunhos_pendentes(tmp_path, projects_root)
+
+        motivo = result["projeto:PROJ-001"][0]["motivo"]
+        assert "insumo" in motivo
+        assert "CPU" in motivo
+
+    def test_sem_overrides_de_insumo_nem_cpu_excluido(self, tmp_path: Path):
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {})
+        _write_projeto_cpu_overrides(projects_root, "PROJ-001", {})
+
+        assert rascunhos_pendentes(tmp_path, projects_root) == {}
 
 
 class TestEnviarDigestNotificaDonoDoProjeto:

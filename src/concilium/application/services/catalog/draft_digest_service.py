@@ -25,11 +25,26 @@ from concilium.infrastructure.auth.auth_store import get_auth_store
 PROJETO_KEY_PREFIX = "projeto:"
 
 
+def _contar_overrides(proj_dir: Path, filename: str) -> int:
+    """Conta entradas pendentes num arquivo de override de projeto (0 se ausente/inválido)."""
+    overrides_file = proj_dir / "overrides" / filename
+    if not overrides_file.exists():
+        return 0
+    try:
+        overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
+        return len(overrides) if isinstance(overrides, dict) else 0
+    except Exception:
+        return 0
+
+
 def _rascunhos_projeto_pendentes(projects_root: Path) -> dict[str, list[dict[str, Any]]]:
     """Overrides de projeto pendentes de promoção (ADR-150 D1/D5).
 
     Pendente = arquivo de estado (`_rascunho_estado.json`) em RASCUNHO/REVISADO
-    (não terminal) E ao menos um override de insumo ainda não promovido/arquivado.
+    (não terminal) E ao menos um override (insumo e/ou CPU) ainda não
+    promovido/arquivado — mesmos dois tipos cobertos por
+    `promover_override_projeto` (ADR-150, extensão CPU). `bdi_override.json`
+    não entra aqui: não tem caminho de promoção (ver ADR-150, seção Achados).
     Projetos sem edição alguma (sem arquivo de estado) não aparecem — nada a decidir.
     """
     pendentes: dict[str, list[dict[str, Any]]] = {}
@@ -44,16 +59,16 @@ def _rascunhos_projeto_pendentes(projects_root: Path) -> dict[str, list[dict[str
         if estado_rascunho(estado_data) not in (ESTADO_RASCUNHO, ESTADO_REVISADO):
             continue
 
-        overrides_file = proj_dir / "overrides" / "insumos_override.json"
-        n_pendentes = 0
-        if overrides_file.exists():
-            try:
-                overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
-                n_pendentes = len(overrides) if isinstance(overrides, dict) else 0
-            except Exception:
-                n_pendentes = 0
-        if not n_pendentes:
+        n_insumo = _contar_overrides(proj_dir, "insumos_override.json")
+        n_cpu = _contar_overrides(proj_dir, "cpus_override.json")
+        if not n_insumo and not n_cpu:
             continue
+
+        motivos = []
+        if n_insumo:
+            motivos.append(f"{n_insumo} override(s) de insumo")
+        if n_cpu:
+            motivos.append(f"{n_cpu} override(s) de CPU")
 
         owner_id = None
         meta_file = proj_dir / "meta.json"
@@ -67,7 +82,7 @@ def _rascunhos_projeto_pendentes(projects_root: Path) -> dict[str, list[dict[str
         pendentes[f"{PROJETO_KEY_PREFIX}{projeto_id}"] = [
             {
                 "version": f"{PROJETO_KEY_PREFIX}{projeto_id}",
-                "motivo": f"{n_pendentes} override(s) de insumo pendente(s) de promoção",
+                "motivo": " e ".join(motivos) + " pendente(s) de promoção",
                 "created_by": estado_data.get("created_by"),
                 "projeto_id": projeto_id,
                 "owner_id": owner_id,
