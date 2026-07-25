@@ -44,14 +44,15 @@ class TestCostDecompositionInvariant:
             "materiais_gerados — a compactação consumia material que NENHUMA atividade "
             "produzia (producao_por_semana vazio), estoque negativo desde a primeira "
             "semana. Corrigido em scripts/catalog/cure_producao_escavacao_solo_mendeslobo.py "
-            "(replica o padrão já correto de rfi-r02). Confirmado: MA-SOLO-ESCAVADO-1CAT "
-            "resolve por completo. (4) AINDA ABERTA, escala bem menor: (a) 2CAT está "
-            "convergindo mas pode não caber na cota de _MAX_REPAIR_ROUNDS=10 (cada rodada "
-            "só avança 1 semana antes de auto-interromper); (b) 3CAT tem um TERCEIRO "
-            "consumidor não contabilizado antes (CPU-TERRA-COMPAC-FINAL-ROCHA, eap-1_10, "
-            "24.721 m³) que excede a produção — déficit residual exigindo decisão de "
-            "engenharia (a camada final é adicional ao corpo do aterro, ou sobreposta?), "
-            "não derivável dos dados. Ver achados 2026-07-25 (1-4) em ADR-128 (nota F7) e "
+            "(replica o padrão já correto de rfi-r02). Confirmado: 1CAT e 2CAT resolvem por "
+            "completo (2CAT parecia ainda falhar pela mensagem de erro, mas era só relatório "
+            "causal cumulativo — negativo_no_final=False confirmado por instrumentação "
+            "direta; nenhuma correção de código necessária, _MAX_REPAIR_ROUNDS=10 já basta). "
+            "(4) AINDA ABERTA, único item real restante: 3CAT tem um TERCEIRO consumidor "
+            "não contabilizado antes (CPU-TERRA-COMPAC-FINAL-ROCHA, eap-1_10, 24.721 m³) que "
+            "excede a produção — déficit residual exigindo decisão de engenharia (a camada "
+            "final é adicional ao corpo do aterro, ou sobreposta?), não derivável dos dados. "
+            "Rastreado no issue #118. Ver achados 2026-07-25 (1-4) em ADR-128 (nota F7) e "
             "ADR-139 (F5-bis, F5-ter)."
         ),
         strict=True,
@@ -106,17 +107,17 @@ class TestCostDecompositionInvariant:
 
     @pytest.mark.xfail(
         reason=(
-            "Mesmas 4 causas de test_cost_decomposition_closes_with_pool_contracts: "
+            "Mesmas causas de test_cost_decomposition_closes_with_pool_contracts: "
             "pareamento de solo (cure_pareamento_solo_compac_pn_agis.py), gap "
             "ResourcePool×reparo (ADR-128 F7, issue #117) e ausência total de produtor "
             "vinculado à escavação (ADR-139 F5-ter, cure_producao_escavacao_solo_mendeslobo.py "
-            "— causa raiz real, confirmada: producao_por_semana estava vazio) já corrigidos. "
-            "Resta: 2CAT convergindo mas pode exceder _MAX_REPAIR_ROUNDS=10, e 3CAT com um "
+            "— causa raiz real, confirmada: producao_por_semana estava vazio) já corrigidos; "
+            "1CAT e 2CAT resolvem por completo. Único item real restante: 3CAT com um "
             "terceiro consumidor (CPU-TERRA-COMPAC-FINAL-ROCHA, eap-1_10) exigindo decisão "
-            "de engenharia sobre se é adicional ou sobreposto ao corpo do aterro. Baseline "
-            "de 16.529.359,75 é anterior ao wiring do motor de estoque (ADR-128 F5/ADR-139 "
-            "F5, 2026-07-15). Ver achados 2026-07-25 (1-4) em ADR-128 (nota F7) e ADR-139 "
-            "(F5-bis, F5-ter)."
+            "de engenharia sobre se é adicional ou sobreposto ao corpo do aterro (issue "
+            "#118). Baseline de 16.529.359,75 é anterior ao wiring do motor de estoque "
+            "(ADR-128 F5/ADR-139 F5, 2026-07-15). Ver achados 2026-07-25 (1-4) em ADR-128 "
+            "(nota F7) e ADR-139 (F5-bis, F5-ter)."
         ),
         strict=True,
     )
