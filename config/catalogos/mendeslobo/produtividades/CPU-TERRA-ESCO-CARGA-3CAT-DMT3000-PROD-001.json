@@ -56,5 +56,13 @@
       }
     ],
     "gargalo_declarado": null
-  }
+  },
+  "materiais_gerados": [
+    {
+      "insumo_id": "MA-SOLO-ESCAVADO-3CAT",
+      "geracao_por_hora": 142.16,
+      "unidade": "m3",
+      "descricao": "1 m³ escavado → 1 m³ de material, sem fator de empolamento — escavação 3ª categoria (ADR-139 F5-ter — replicado de rfi-r02, achado 2026-07-25: AGIS consumia este material sem nenhum produtor vinculado, estoque sempre negativo)"
+    }
+  ]
 }

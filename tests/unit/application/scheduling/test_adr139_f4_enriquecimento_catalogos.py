@@ -35,11 +35,15 @@ _SOLOS = {"MA-SOLO-ESCAVADO-1CAT", "MA-SOLO-ESCAVADO-2CAT", "MA-SOLO-ESCAVADO-3C
 
 # produtoras_dado inclui as usinagens (PROD-USINAGEM-*): 2 no mendeslobo
 # (build_usinagem_bgtc_cbuq.py) e 1 no rfi-r02 (restore_bom_usinagem_rfi_r02.py),
-# além das mapeadas pelo script de enriquecimento.
+# além das mapeadas pelo script de enriquecimento. mendeslobo ganhou +6 em F5-ter
+# (cure_producao_escavacao_solo_mendeslobo.py): as 6 escavações 1CAT/2CAT/3CAT ×
+# DMT2000/3000 passam a declarar materiais_gerados, replicando o padrão já
+# correto de rfi-r02 (achado 2026-07-25: AGIS consumia esses materiais sem
+# nenhum produtor vinculado).
 _ESPERADO = {
     "rfi-r02": {"produtoras_dado": 9, "consumidoras": 5, "gerados": _SOLOS | {"MA-CBUQ-FAIXA-C"}},
     "mendeslobo": {
-        "produtoras_dado": 8,
+        "produtoras_dado": 14,
         "consumidoras": 7,
         "gerados": _SOLOS | {"MA-BGTC-MIX", "MA-CBUQ-FAIXA-C"},
     },
