@@ -192,8 +192,8 @@ class TestBackfillOrigemEntrada:
         assert data["composicao_padrao_equipe"]["materiais"][0]["origem_entrada"] == "consumo_operacional"
 
     def test_catalogo_real_mendeslobo_esta_classificado_ou_backfill_cobre(self):
-        """33 entradas da ADR-138 F2 + 7 do enriquecimento F4 + 13 das usinagens BGTC/CBUQ —
-        todas classificadas."""
+        """33 entradas da ADR-138 F2 + 7 do enriquecimento F4 + 13 das usinagens BGTC/CBUQ
+        + 1 do split F5-bis (CPU-TERRA-COMPAC-PN em 1CAT+2CAT) — todas classificadas."""
         from pathlib import Path
 
         base = Path("config/catalogos/mendeslobo")
@@ -204,7 +204,7 @@ class TestBackfillOrigemEntrada:
             d = json.loads(p.read_text(encoding="utf-8-sig"))
             if isinstance(d, dict) and "composicao_padrao_equipe" in d:
                 entradas.extend((d["composicao_padrao_equipe"] or {}).get("materiais") or [])
-        assert len(entradas) == 53
+        assert len(entradas) == 54
         # Pós-backfill (ADR-138 F2), enriquecimento e usinagens (F4): todas classificadas.
         assert all(m.get("origem_entrada") == "bom_convertido" for m in entradas)
 

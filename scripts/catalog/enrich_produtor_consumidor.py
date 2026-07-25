@@ -184,7 +184,14 @@ _CONSUMIDORAS: dict[str, dict[str, tuple[str, float | None, str]]] = {
     "mendeslobo": {
         "producoes/PROD-ATI-017.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
         "producoes/PROD-COMPACT-ATERRO-100PN-001.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
-        "produtividades/CPU-TERRA-COMPAC-PN-PROD-001.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
+        "produtividades/CPU-TERRA-COMPAC-PN-PROD-001.json": (
+            "MA-SOLO-ESCAVADO-1CAT",
+            67.70,
+            _NORMA_ATERRO_1CAT
+            + " — ADR-139 F5-bis (2026-07-25): BOM dividido com MA-SOLO-ESCAVADO-2CAT "
+            "(taxa=105,31), pareamento fora do escopo deste script — ver "
+            "cure_pareamento_solo_compac_pn_agis.py",
+        ),
         "produtividades/CPU-TERRA-COMPAC-PI-PROD-001.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
         "produtividades/CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001.json": (
             "MA-SOLO-ESCAVADO-3CAT",

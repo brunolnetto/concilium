@@ -65,9 +65,16 @@
     "materiais": [
       {
         "insumo_id": "MA-SOLO-ESCAVADO-1CAT",
-        "consumo_por_hora": 173.01,
+        "consumo_por_hora": 67.7,
         "unidade": "m3",
-        "descricao": "BOM 1 m³/m³ convertido via coeficiente × valor_horario — DNIT 108/2009-ES §5.1: aterro com solo de corte/empréstimo (1ª/2ª categoria; ensaio Proctor aplica-se a solos, 3ª cat só por exceção); composição usa rolo pé-de-carneiro; 2ª categoria também admissível — pareamento de projeto decide (D5) (ADR-139 F4)",
+        "descricao": "BOM dividido 2026-07-25 (ADR-139 F5-bis): quantitativo do item de EAP que usa esta CPU (1.135.635,3 m³) bate exato com a soma real de 1ª+2ª categoria na EAP AGIS (444.378,2 + 691.257,1); antes 100% em 1CAT, deixando 2CAT sem consumidor e 1CAT com déficit — schedule saía infeasible (VAL-ESTOQUE-DELAY-02). Coeficiente segue 1 m³/m³, só a fração entre os dois materiais mudou.",
+        "origem_entrada": "bom_convertido"
+      },
+      {
+        "insumo_id": "MA-SOLO-ESCAVADO-2CAT",
+        "consumo_por_hora": 105.31,
+        "unidade": "m3",
+        "descricao": "BOM dividido 2026-07-25 (ADR-139 F5-bis): quantitativo do item de EAP que usa esta CPU (1.135.635,3 m³) bate exato com a soma real de 1ª+2ª categoria na EAP AGIS (444.378,2 + 691.257,1); antes 100% em 1CAT, deixando 2CAT sem consumidor e 1CAT com déficit — schedule saía infeasible (VAL-ESTOQUE-DELAY-02). Coeficiente segue 1 m³/m³, só a fração entre os dois materiais mudou.",
         "origem_entrada": "bom_convertido"
       }
     ]

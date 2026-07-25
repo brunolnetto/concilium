@@ -29,12 +29,18 @@ class TestCostDecompositionInvariant:
     @pytest.mark.xfail(
         reason=(
             "AGIS quebrou após o wiring do motor de estoque real (ADR-128 F5/ADR-139 F5, "
-            "2026-07-15): CPU-TERRA-COMPAC-PN/PI consomem MA-SOLO-ESCAVADO-1CAT em dobro "
-            "(déficit ~720k m³) e MA-SOLO-ESCAVADO-2CAT nunca é consumido (~691k m³ ociosos) "
-            "— pareamento de categoria de solo incompleto no catálogo (D5), não bug de "
-            "scheduler. Schedule sai infeasible (VAL-ESTOQUE-DELAY-02) e custo_direto zera. "
-            "Ver achado 2026-07-25 em ADR-139 F5. Requer curadoria de catálogo + rebaseline, "
-            "não é patch de código."
+            "2026-07-15) — 2 causas distintas. (1) CORRIGIDA: CPU-TERRA-COMPAC-PN/PI "
+            "consumiam MA-SOLO-ESCAVADO-1CAT em dobro (déficit ~720k m³) e "
+            "MA-SOLO-ESCAVADO-2CAT nunca era consumido (~691k m³ ociosos) — pareamento de "
+            "categoria de solo incompleto no catálogo (D5); corrigido de forma derivável em "
+            "scripts/catalog/cure_pareamento_solo_compac_pn_agis.py (quantitativo da EAP "
+            "bate exato com a soma 1CAT+2CAT). (2) AINDA ABERTA: mesmo com o BOM corrigido, "
+            "o schedule AGIS continua infeasible — agora por 'violou precedência, "
+            "capacidade de pool ou horizonte', não mais estoque negativo. O mesmo atraso de "
+            "+10 semanas já era necessário para o par 3CAT (que sempre fechou em "
+            "quantidade) mesmo antes da correção — é um problema de timing/horizonte "
+            "pré-existente no reparo de disponibilidade (ADR-128), não de catálogo. Causa "
+            "raiz ainda não isolada. Ver achado 2026-07-25 (2/2) em ADR-139 F5."
         ),
         strict=True,
     )
@@ -88,11 +94,14 @@ class TestCostDecompositionInvariant:
 
     @pytest.mark.xfail(
         reason=(
-            "Mesma causa raiz de test_cost_decomposition_closes_with_pool_contracts: "
-            "pareamento de MA-SOLO-ESCAVADO-1CAT/2CAT incompleto no catálogo AGIS deixa o "
-            "schedule infeasible (VAL-ESTOQUE-DELAY-02) e custo_direto zerado. Baseline de "
-            "16.529.359,75 é anterior ao wiring do motor de estoque (ADR-128 F5/ADR-139 F5, "
-            "2026-07-15). Ver achado 2026-07-25 em ADR-139 F5."
+            "Mesmas 2 causas de test_cost_decomposition_closes_with_pool_contracts: o "
+            "pareamento de MA-SOLO-ESCAVADO-1CAT/2CAT já foi corrigido (ver "
+            "scripts/catalog/cure_pareamento_solo_compac_pn_agis.py), mas o schedule AGIS "
+            "ainda sai infeasible por um problema de timing/horizonte pré-existente no "
+            "reparo de disponibilidade (ADR-128) — afeta até o par 3CAT, que sempre fechou "
+            "em quantidade. Baseline de 16.529.359,75 é anterior ao wiring do motor de "
+            "estoque (ADR-128 F5/ADR-139 F5, 2026-07-15). Ver achado 2026-07-25 (2/2) em "
+            "ADR-139 F5."
         ),
         strict=True,
     )
