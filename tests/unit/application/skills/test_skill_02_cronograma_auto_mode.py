@@ -216,6 +216,56 @@ def test_02_auto_relaxacao_explicita():
     assert call_count[0] == 2, "explore_schedules must be called twice (nominal + relaxed)"
 
 
+def test_02_auto_relaxacao_usa_deficit_exato_quando_disponivel():
+    """ADR-128 F7 (issue #117): quando a 1a tentativa falha por
+    'estoque_insuficiente' e reporta `pool_deficit`, o retry deve usar o pico
+    exato de demanda — não o percentual cego de 110% (`_relax_pool` sem args),
+    que pode não crescer nada para capacidades pequenas (`int(4*1.1) == 4`)."""
+    from concilium.application.scheduling import explore_schedules as real_explore
+    from concilium.application.scheduling.models import ScheduleMetrics, ScheduleOutput
+    from concilium.application.scheduling.selector import ExploreResult
+
+    pools_seen: list = []
+
+    def fake_explore(*args, **kwargs):
+        pools_seen.append(kwargs["pool"])
+        if len(pools_seen) == 1:
+            # Déficit deliberadamente distinto de qualquer percentual "redondo" de
+            # 110% — prova que o valor usado no retry veio do deficit, não do
+            # heurístico padrão.
+            deficit = {k: v * 5 for k, v in kwargs["pool"].resources.items()}
+            fake_output = ScheduleOutput(
+                scheduled_activities=[],
+                makespan=0,
+                feasible=False,
+                metrics=ScheduleMetrics(
+                    makespan=0,
+                    resource_leveling_score=1.0,
+                    idle_time=0,
+                    activity_fragmentation=0,
+                    critical_path_slack_min=0.0,
+                    resource_utilization_avg=1.0,
+                ),
+                pool_deficit=deficit,
+            )
+            return [ExploreResult("CP-SAT", fake_output, 0.0, error="estoque_insuficiente")]
+        return real_explore(*args, **kwargs)
+
+    canonical = _make_canonical(num_activities=2, deadline_days=20, pool_resources={"escavadeira": 4})
+
+    target = "concilium.application.skills.cronograma._mod_validacao.explore_schedules"
+    with patch(target, side_effect=fake_explore):
+        result = run_cronograma(canonical, {"deadline_weeks": 20})
+
+    aviso_codes = {v.codigo for v in result.validacoes if v.status == "AVISO"}
+    assert "VAL-SCHED-03" in aviso_codes
+    assert len(pools_seen) == 2, "explore_schedules deve ser chamado duas vezes (nominal + relaxado)"
+    original, relaxed = pools_seen
+    assert relaxed.resources == {k: v * 5 for k, v in original.resources.items()}, (
+        "retry deveria usar o pico exato do deficit, não o percentual cego de 110%"
+    )
+
+
 def test_02_auto_infeasivel_quando_tudo_falha():
     """When all fallback steps fail, VAL-SCHED-05 ERRO is returned."""
 

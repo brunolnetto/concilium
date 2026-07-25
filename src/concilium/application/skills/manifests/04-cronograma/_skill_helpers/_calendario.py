@@ -263,9 +263,21 @@ def _extract_pool(canonical: CanonicalModel) -> ResourcePool:
     return ResourcePool(resources=resources)
 
 
-def _relax_pool(pool: ResourcePool, factor: float = 1.1) -> ResourcePool:
-    """Retorna novo ResourcePool com capacidades multiplicadas por factor."""
-    return ResourcePool(resources={k: max(1, int(v * factor)) for k, v in pool.resources.items()})
+def _relax_pool(pool: ResourcePool, factor: float = 1.1, deficit: dict[str, int] | None = None) -> ResourcePool:
+    """Retorna novo ResourcePool com capacidades multiplicadas por factor.
+
+    ADR-128 F7 (issue #117): `deficit`, quando fornecido (tipicamente
+    `ScheduleOutput.pool_deficit` de uma tentativa anterior que falhou por
+    capacidade de pool), sobrescreve o percentual heurístico com o pico real de
+    demanda para os recursos ali listados — o percentual sozinho pode não crescer
+    nada para capacidades pequenas (`int(4 * 1.1) == 4`) e nunca é garantidamente
+    suficiente. Recursos fora de `deficit` (ou fora do `pool` original) continuam
+    seguindo o percentual de sempre.
+    """
+    deficit = deficit or {}
+    return ResourcePool(
+        resources={k: deficit.get(k, max(1, int(v * factor))) for k, v in pool.resources.items()}
+    )
 
 
 def _compute_ramp_profile(

@@ -470,6 +470,76 @@ class TestCpSatSchedulerReplenishableRevalidation:
         assert by_id["B"].start_week == by_id["X"].start_week
         assert result.feasible is False
 
+
+class TestPoolDeficitReporting:
+    """ADR-128 F7 — quando o reparo de estoque cria uma colisão de `ResourcePool` que
+    `_validate_repaired_schedule` rejeita (mesmo cenário de
+    `test_irreconcilable_cascade_still_marks_infeasible_pool_capacity`), `ScheduleOutput`
+    deve reportar causalmente qual recurso faltou e quanto — não só `feasible=False` sem
+    explicação. Isso permite ao chamador (skill-04) recalcular o pool exato necessário em
+    vez de tentar relaxar às cegas (issue #117)."""
+
+    def _scheduler_irreconcilable_pool_scenario(self):
+        acts = [
+            Activity(activity_id="A", description="", duration_weeks=1, required_resources={}),
+            Activity(activity_id="B", description="", duration_weeks=1, required_resources={"E": 1}),
+            Activity(activity_id="H", description="", duration_weeks=3, required_resources={}),
+            Activity(activity_id="X", description="", duration_weeks=1, required_resources={"E": 1}),
+        ]
+        dag = ActivityDAG(activities=acts, precedence=[("A", "B"), ("H", "X")])
+        pool = ResourcePool(resources={"E": 1})
+        scheduler = CpSatScheduler(timeout_seconds=10.0)
+        resource = ReplenishableResource(
+            resource_id="DIESEL",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, taxa_reabastecimento_max=10.0),
+            consumo_por_semana={"A": 30.0},
+        )
+        return dag, pool, scheduler, resource
+
+    def test_pool_deficit_reports_exact_peak_demand_needed(self):
+        dag, pool, scheduler, resource = self._scheduler_irreconcilable_pool_scenario()
+        result = scheduler.schedule(dag, pool, replenishable_resources=[resource])
+
+        assert result.feasible is False
+        # B e X colidem sobre "E" (cap=1): pico real de demanda é 2 (1+1) — não a
+        # capacidade atual, nem um percentual arbitrário dela.
+        assert result.pool_deficit == {"E": 2}
+
+    def test_pool_deficit_empty_when_feasible(self):
+        """Regressão zero: schedule feasible não reporta deficit nenhum."""
+        acts = [Activity(activity_id="A", description="", duration_weeks=1, required_resources={"E": 1})]
+        dag = ActivityDAG(activities=acts, precedence=[])
+        pool = ResourcePool(resources={"E": 10})
+        scheduler = CpSatScheduler(timeout_seconds=10.0)
+
+        result = scheduler.schedule(dag, pool)
+
+        assert result.feasible is True
+        assert result.pool_deficit == {}
+
+    def test_pool_deficit_empty_when_infeasible_for_non_pool_reason(self):
+        """Deficit só é reportado quando a causa é capacidade de pool — precedência/
+        horizonte quebrados não têm "quantidade que faltou", não devem popular
+        pool_deficit."""
+        acts = [
+            Activity(activity_id="A", description="", duration_weeks=1, required_resources={}),
+            Activity(activity_id="B", description="", duration_weeks=1, required_resources={}),
+        ]
+        dag = ActivityDAG(activities=acts, precedence=[("A", "B")])
+        pool = ResourcePool(resources={})
+        scheduler = CpSatScheduler(timeout_seconds=10.0)
+
+        scheduled = [
+            ScheduledActivity(activity_id="A", start_week=5, end_week=6, duration_weeks=1),
+            ScheduledActivity(activity_id="B", start_week=0, end_week=1, duration_weeks=1),
+        ]
+        # Chamada direta ao validador (não end-to-end) — violação de precedência pura,
+        # sem nenhum ReplenishableResource envolvido.
+        ok = scheduler._validate_repaired_schedule(scheduled, dag, None, pool, 100)
+        assert ok is False
+        deficit = scheduler._compute_pool_deficit(scheduled, pool)
+        assert deficit == {}
+
     # ── `_validate_repaired_schedule` unitário direto ────────────────────────
     #
     # As checagens abaixo testam `CpSatScheduler._validate_repaired_schedule` chamando-o

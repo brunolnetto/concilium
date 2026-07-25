@@ -29,23 +29,28 @@ class TestCostDecompositionInvariant:
     @pytest.mark.xfail(
         reason=(
             "AGIS quebrou após o wiring do motor de estoque real (ADR-128 F5/ADR-139 F5, "
-            "2026-07-15) — 2 causas distintas. (1) CORRIGIDA: CPU-TERRA-COMPAC-PN/PI "
+            "2026-07-15) — 3 causas distintas, encontradas em sequência conforme cada "
+            "correção revelava a próxima. (1) CORRIGIDA: CPU-TERRA-COMPAC-PN/PI "
             "consumiam MA-SOLO-ESCAVADO-1CAT em dobro (déficit ~720k m³) e "
             "MA-SOLO-ESCAVADO-2CAT nunca era consumido (~691k m³ ociosos) — pareamento de "
             "categoria de solo incompleto no catálogo (D5); corrigido de forma derivável em "
             "scripts/catalog/cure_pareamento_solo_compac_pn_agis.py (quantitativo da EAP "
-            "bate exato com a soma 1CAT+2CAT). (2) NÃO É BUG — gap arquitetural documentado: "
-            "instrumentando _validate_repaired_schedule, a rejeição real é por capacidade de "
-            "ResourcePool (semana 54, EQUIPE-COMP-<hash>: demanda 6, capacidade 4), não "
-            "horizonte/precedência. inferir_pool_minimo (ADR-091) dimensiona o pool a partir "
-            "do DAG original, sem saber dos atrasos que o reparo de estoque desta ADR-128 "
-            "aplica depois — os dois sistemas rodam em sequência sem se realimentar. "
-            "_validate_repaired_schedule está funcionando exatamente como desenhado (rede de "
-            "segurança documentada na nota de implementação F2b do ADR-128); só nunca tinha "
-            "sido disparada por um benchmark real antes do AGIS. Fix real exigiria realimentar "
-            "o pool com os atrasos causais (delay_causes) antes de fixá-lo — registrado como "
-            "ADR-128 F7 (não iniciada), fora do escopo de correção pontual. Ver achados "
-            "2026-07-25 em ADR-128 (nota F5/F7) e ADR-139 F5-bis."
+            "bate exato com a soma 1CAT+2CAT). (2) CORRIGIDA (ADR-128 F7, issue #117, TDD): "
+            "inferir_pool_minimo (ADR-091) dimensionava o pool sem saber dos atrasos que o "
+            "reparo de estoque desta ADR-128 aplica depois — quando o atraso empurrava "
+            "atividades de compactação para semanas concorridas, o pool 'mínimo' original "
+            "(ex.: EQUIPE-COMP-<hash>: capacidade 4) deixava de bastar (demanda real 6). "
+            "ScheduleOutput.pool_deficit + _relax_pool(deficit=...) corrige isso: confirmado "
+            "em produção via `concilium benchmark run --slug AGIS --reset` que o pool é "
+            "corretamente ajustado a 6 e o retry acontece. (3) AINDA ABERTA: mesmo com o "
+            "pool corrigido, o retry falha por um motivo NOVO — 'esgotou "
+            "_MAX_REPAIR_ROUNDS sem eliminar estoque negativo' (não mais capacidade de "
+            "pool) para os mesmos 3 pares material→atividade. Hipótese: mais equipamento "
+            "disponível faz o CP-SAT compactar mais o schedule, piorando a concorrência por "
+            "material no tempo mesmo tendo resolvido a concorrência por equipamento. Pode "
+            "ser limitação adicional do reparo em duas passadas, ou achado genuíno sobre a "
+            "viabilidade física do plano AGIS como especificado — não investigado a fundo. "
+            "Ver achados 2026-07-25 (1/2/3) em ADR-128 (nota F7) e ADR-139 F5-bis."
         ),
         strict=True,
     )
@@ -99,16 +104,15 @@ class TestCostDecompositionInvariant:
 
     @pytest.mark.xfail(
         reason=(
-            "Mesmas 2 causas de test_cost_decomposition_closes_with_pool_contracts: o "
-            "pareamento de MA-SOLO-ESCAVADO-1CAT/2CAT já foi corrigido (ver "
-            "scripts/catalog/cure_pareamento_solo_compac_pn_agis.py), mas o schedule AGIS "
-            "ainda sai infeasible por um gap arquitetural documentado (não é bug) entre "
-            "inferir_pool_minimo (ADR-091) e o reparo de disponibilidade (ADR-128) — o pool "
-            "de EQUIPE-COMP é dimensionado sem saber dos atrasos que o reparo aplica depois, "
-            "e a rejeição por capacidade de pool é a rede de segurança funcionando como "
-            "desenhado. Baseline de 16.529.359,75 é anterior ao wiring do motor de estoque "
-            "(ADR-128 F5/ADR-139 F5, 2026-07-15). Fix real = ADR-128 F7 (não iniciada). Ver "
-            "achados 2026-07-25 em ADR-128 (nota F5/F7) e ADR-139 F5-bis."
+            "Mesmas 3 causas de test_cost_decomposition_closes_with_pool_contracts: "
+            "pareamento de solo corrigido (scripts/catalog/cure_pareamento_solo_compac_pn_agis.py) "
+            "e gap ResourcePool×reparo de estoque corrigido (ADR-128 F7, issue #117, "
+            "ScheduleOutput.pool_deficit + _relax_pool exato — confirmado em produção), mas "
+            "o schedule AGIS ainda sai infeasible por uma terceira causa aberta: reparo de "
+            "estoque não converge mesmo com o pool correto ('esgotou _MAX_REPAIR_ROUNDS sem "
+            "eliminar estoque negativo'). Baseline de 16.529.359,75 é anterior ao wiring do "
+            "motor de estoque (ADR-128 F5/ADR-139 F5, 2026-07-15). Ver achados 2026-07-25 "
+            "(1/2/3) em ADR-128 (nota F7) e ADR-139 F5-bis."
         ),
         strict=True,
     )

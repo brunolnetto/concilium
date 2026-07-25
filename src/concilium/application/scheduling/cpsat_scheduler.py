@@ -420,6 +420,9 @@ class CpSatScheduler:
             EstoqueDelayCause(resource_id=rid, activity_id=aid, delay_weeks=weeks)
             for (rid, aid), weeks in sorted(delay_causes.items())
         ]
+        # ADR-128 F7: só há "quantidade que faltou" quando o reparo de fato quebrou
+        # algo — feasible=True nunca reporta deficit (regressão zero).
+        pool_deficit = self._compute_pool_deficit(scheduled, pool) if not feasible else {}
 
         return ScheduleOutput(
             scheduled_activities=scheduled,
@@ -428,6 +431,7 @@ class CpSatScheduler:
             metrics=metrics,
             heuristic="CP-SAT",
             estoque_delays=estoque_delays,
+            pool_deficit=pool_deficit,
         )
 
     # ── helpers ───────────────────────────────────────────────────────────────
@@ -442,6 +446,25 @@ class CpSatScheduler:
                     weekly.setdefault(t, {}).setdefault(res, 0)
                     weekly[t][res] += qty
         return weekly
+
+    @staticmethod
+    def _compute_pool_deficit(scheduled: list[ScheduledActivity], pool: ResourcePool) -> dict[str, int]:
+        """ADR-128 F7: pico real de demanda por recurso, só para os que excedem a
+        capacidade declarada em `pool` — não a capacidade atual, nem um percentual
+        dela. Usado para reportar causalmente por que o reparo de disponibilidade
+        (estoque + repropagação de precedência) quebrou capacidade de `ResourcePool`,
+        permitindo ao chamador recalcular o pool exato necessário em vez de relaxar
+        às cegas (issue #117)."""
+        weekly = CpSatScheduler._compute_weekly_resource_usage(scheduled)
+        peak: dict[str, int] = {}
+        for usages in weekly.values():
+            for res, qty in usages.items():
+                if qty > peak.get(res, 0):
+                    peak[res] = qty
+        # Resource ausente de pool.resources = capacidade ilimitada (mesma convenção
+        # de _validate_repaired_schedule: `cap is not None and qty > cap`) — nunca
+        # entra como deficit.
+        return {res: qty for res, qty in peak.items() if (cap := pool.resources.get(res)) is not None and qty > cap}
 
     @staticmethod
     def _compute_resource_leveling_score(pool: ResourcePool, weekly: dict[int, dict[str, int]], makespan: int) -> float:

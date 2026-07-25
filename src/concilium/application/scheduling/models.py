@@ -236,6 +236,12 @@ class ScheduleOutput:
     # ADR-128 F5: causas de atraso por recurso consumível (vazio quando nenhum
     # ReplenishableResource foi passado ao scheduler, ou nenhum atraso foi aplicado).
     estoque_delays: list[EstoqueDelayCause] = field(default_factory=list)
+    # ADR-128 F7: quando o reparo de disponibilidade (estoque + repropagação de
+    # precedência) produz um schedule que viola capacidade de ResourcePool,
+    # resource_id -> pico real de demanda necessário (não a capacidade atual, nem
+    # um percentual dela) — vazio quando feasible=True ou quando a causa da
+    # infeasibilidade é precedência/horizonte (sem "quantidade que faltou").
+    pool_deficit: dict[str, int] = field(default_factory=dict)
 
     def get_weekly_resource_usage(self, week: int) -> dict[str, int]:
         """Return total resource usage in a given week."""

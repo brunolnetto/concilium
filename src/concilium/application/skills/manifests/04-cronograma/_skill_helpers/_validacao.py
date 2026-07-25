@@ -455,6 +455,19 @@ def _build_replenishable_resources_if_any(
     return resources or None
 
 
+def _merge_pool_deficits(explored: list) -> dict[str, int]:
+    """ADR-128 F7 (issue #117): mescla `ScheduleOutput.pool_deficit` de todos os
+    resultados explorados, tomando o pico máximo por recurso quando mais de um
+    resultado reporta o mesmo recurso. Vazio quando nenhum resultado tem deficit
+    (feasible=True, ou infeasible por motivo que não capacidade de pool)."""
+    merged: dict[str, int] = {}
+    for r in explored:
+        for res, qty in (getattr(r.schedule, "pool_deficit", None) or {}).items():
+            if qty > merged.get(res, 0):
+                merged[res] = qty
+    return merged
+
+
 def _rasfc_report_estoque_delays(explored: list, validacoes: list) -> list:
     """ADR-128 F5: reporta causalmente atrasos por consumível e filtra resultados
     infeasible-por-estoque (``error == "estoque_insuficiente"``, ver
@@ -542,7 +555,7 @@ def _rasfc_run_heuristics(
         replenishable_resources = None
 
     heuristics = strategy.heuristics or ["MINSLK"]
-    explored = explore_schedules(
+    first_attempt = explore_schedules(
         activities=activities,
         dag=dag,
         pool=pool,
@@ -552,11 +565,16 @@ def _rasfc_run_heuristics(
         strategy=strategy,
         replenishable_resources=replenishable_resources,
     )
-    explored = _rasfc_report_estoque_delays(explored, validacoes)
+    # ADR-128 F7 (issue #117): captura o pico real de demanda por recurso ANTES do
+    # filtro abaixo descartar o(s) resultado(s) infeasible — só assim o retry pode
+    # usar o valor exato em vez do percentual cego de _relax_pool (que não cresce
+    # nada para capacidades pequenas: int(4*1.1) == 4).
+    pool_deficit = _merge_pool_deficits(first_attempt)
+    explored = _rasfc_report_estoque_delays(first_attempt, validacoes)
     relaxed_flag = False
 
     if not explored:
-        relaxed_pool = _relax_pool(pool)
+        relaxed_pool = _relax_pool(pool, deficit=pool_deficit)
         explored = explore_schedules(
             activities=activities,
             dag=dag,
@@ -570,7 +588,12 @@ def _rasfc_run_heuristics(
         explored = _rasfc_report_estoque_delays(explored, validacoes)
         if explored:
             relaxed_flag = True
-            validacoes.append(ValidacaoItem(codigo="VAL-SCHED-03", status="AVISO", mensagem="Pool relaxado 110%."))
+            mensagem = (
+                f"Pool ajustado ao pico real de demanda pós-reparo de estoque: {pool_deficit}."
+                if pool_deficit
+                else "Pool relaxado 110%."
+            )
+            validacoes.append(ValidacaoItem(codigo="VAL-SCHED-03", status="AVISO", mensagem=mensagem))
 
     if explored and replenishable_resources:
         # ADR-139/128: violation_estoque_acima_capacidade já existia mas nunca era
