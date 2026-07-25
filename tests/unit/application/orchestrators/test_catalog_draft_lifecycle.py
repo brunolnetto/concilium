@@ -116,7 +116,7 @@ class TestCriarStateMachine:
                 "_aprovado_por": "mgr-1",
             }
         )
-        assert sm.current_state.value == ESTADO_APROVADO
+        assert sm.current_state_value == ESTADO_APROVADO
 
     def test_reconstroi_ate_rejeitado_com_rejeitado_por(self):
         # Fluxo normal: _revisado presente antes de _rejeitado, com _rejeitado_por
@@ -130,7 +130,7 @@ class TestCriarStateMachine:
                 "_rejeitado_por": "mgr-1",
             }
         )
-        assert sm.current_state.value == ESTADO_REJEITADO
+        assert sm.current_state_value == ESTADO_REJEITADO
         assert sm.rascunho_data["_rejeitado_por"] == "mgr-1"
 
     def test_reconstroi_ate_revisado_sem_aprovar_nem_rejeitar(self):
@@ -138,7 +138,7 @@ class TestCriarStateMachine:
         # quanto o `elif` finais são falsos e a função cai direto em `return sm`
         # (branch 121->126).
         sm = criar_state_machine({"_revisado": True, "_revisado_por": "eng-1"})
-        assert sm.current_state.value == ESTADO_REVISADO
+        assert sm.current_state_value == ESTADO_REVISADO
 
     def test_reconstroi_rejeitado_legado_sem_revisado_nem_rejeitado_por(self):
         # Rascunho legado: rejeitado diretamente sem ter passado por _revisado e
@@ -146,7 +146,7 @@ class TestCriarStateMachine:
         # diretamente, e `rejeitado_por=None` cobre o branch de saída (skip) de
         # `if rejeitado_por:` em on_rejeitar.
         sm = criar_state_machine({"_rejeitado": True})
-        assert sm.current_state.value == ESTADO_REJEITADO
+        assert sm.current_state_value == ESTADO_REJEITADO
         assert "_rejeitado_por" not in sm.rascunho_data
 
     def test_reconstroi_aprovado_legado_sem_revisado_levanta(self):
