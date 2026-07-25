@@ -146,7 +146,7 @@ class CatalogAction:
 
 | Efeito | Descrição |
 |---|---|
-| Princípio dos 4 olhos | Quem edita o rascunho não pode fazer o merge — separa author de approver |
+| Princípio dos 4 olhos | Quem edita o rascunho não pode fazer o merge — separa author de approver _(nota 2026-07-24: esta ADR só separa por ROLE — a checagem por ATOR (`created_by != aprovador`) e o bloqueio de promover rascunho `_rejeitado` só foram implementados depois, no commit `89a0b3b4` (2026-07-21, `assert_pode_aprovar`/`catalog_draft_lifecycle.py`); a ADR-145 (dia seguinte) estendeu essa proteção do ponteiro de metadados para o dado real do catálogo mestre)_ |
 | Impacto visível antes do merge | `consultar_impacto_reajuste` permite estimar ΔR$ em todos os projetos antes de promover |
 | Role especializado | `catalog-manager` permite onboarding de especialistas de custos sem acesso a projetos |
 | Rastreabilidade completa | Todo preço alterado em produção tem audit trail de quem editou e quem aprovou |

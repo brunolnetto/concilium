@@ -1,6 +1,6 @@
 # ADR-062: Versionamento Explícito de Contextos e Perfis — `ConfigVersionService`
 
-**Status:** Implementado  
+**Status:** ⚠️ Parcialmente Implementado _(status revisado 2026-07-24 — infraestrutura de versionamento completa e funcional, mas o pipeline real de execução não a consome para cálculo; ver §6 "Achado 2026-07-24")_
 **Data:** 2026-05-18  
 **Autor:** Engenheiro Sênior  
 **Relacionado:** ADR-040 (Hierarquia Project Layer), ADR-023 (BDI), ADR-053 (CPU/Produtividade), ADR-056 (Débito Técnico)
@@ -207,6 +207,19 @@ Tabela `context_versions(id, version, payload, created_at, author)`. Rejeitado n
 
 - [ ] Decidir se o `contexto_id` deve ser obrigatório na `referencia.json` ou continuar com default `"mendeslobo"`
 - [ ] Estratégia de propagação de mudanças de contexto para projetos existentes (notificação vs. migração automática)
+
+### ⚠️ Achado 2026-07-24 — pipeline real não consome o versionamento
+
+Existem dois loaders de contexto/perfil independentes e desconectados:
+
+1. `ConfigVersionService` (este ADR) — implementa o versionamento completo (`current` → `versions/vN.json`). Usado pela UI de edição, CLI (`concilium context/perfil ...`), API (`/api/contextos`, `/api/perfis`) e por `BenchmarkSpecLoader` — mas este último só para gravar `contexto_version`/`perfil_version` como metadado em `meta.json`, nunca para obter o conteúdo efetivamente usado no cálculo.
+2. `ConfigMixin.load_contexto()`/`load_perfil()` (`application/runtime/mixins/config.py:49-102`) — é quem o **pipeline real de execução** usa. Ambos chamam `_load_json_config()`, que lê diretamente `config_root/{contextos,perfis}/{id}.json` (arquivo flat) e **ignora completamente** o diretório `versions/`/`current`.
+
+**Consequência prática:** criar uma nova versão de contexto ou perfil pela UI (v2, v3...) nunca afeta nenhum cálculo real — só atualiza metadado de bookkeeping (`contexto_version`/`perfil_version` em `meta.json`). O ponteiro `current` pode apontar para uma versão "ativa" que está, na prática, morta para efeitos de cálculo.
+
+**Como foi descoberto:** ao reconstruir um perfil sintético a partir de `versions/v2.json` (o "current" da UI), um golden test divergiu 28,94% do valor calibrado — só bateu de novo ao usar o arquivo flat legado.
+
+**Se for endereçar esta lacuna:** o fix é fazer `ConfigMixin` respeitar `current`/`versions/` (via `ConfigVersionService.resolve()`) em vez de ler o flat direto — ou, alternativamente, reconciliar os dois mecanismos numa ADR própria de amendment.
 
 ---
 

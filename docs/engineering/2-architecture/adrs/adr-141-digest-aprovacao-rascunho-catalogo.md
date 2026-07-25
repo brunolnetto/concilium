@@ -1,6 +1,6 @@
 # ADR-141 — Digest Periódico de Rascunhos de Catálogo Pendentes de Aprovação
 
-**Status:** Proposta
+**Status:** ✅ Implementado _(F1-F6 completas; status corrigido em 2026-07-24 — o código já existia implementado e em produção quando o arquivo ainda declarava "Proposta")_
 **Data:** 2026-07-16
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-140 (critério atômico vs. digest — esta ADR aplica D1/D2/D3), ADR-120 (RBAC do ciclo de vida do catálogo — origem de `criar_rascunho_catalogo`/`aprovar_merge_catalogo`/`rejeitar_rascunho_catalogo`), ADR-134 (mecanismo de envio reaproveitado), ADR-103 (Jobs na Camada de Aplicação — precedente de thread com intervalo reaproveitado)
@@ -101,26 +101,28 @@ O scheduler é iniciado explicitamente em `presentation/api/app.py::main()` (pro
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 — Settings | `CatalogDigestSettings` (`_catalog_digest.py`), testado | ⬜ |
-| F2 — Exposição de estado | `_list_versions` expõe `_rascunho`/`_rejeitado`/campos relacionados (D2), testado | ⬜ |
-| F3 — Lógica de negócio | `application/services/catalog/draft_digest_service.py`: `rascunhos_pendentes()` + `enviar_digest_rascunhos_pendentes()`, testado | ⬜ |
-| F4 — Notificação | `notify_catalog_drafts_pending()` em `application/services/notifications.py`, testado | ⬜ |
-| F5 — Scheduler | `DraftDigestScheduler` (start/stop), testado | ⬜ |
-| F6 — Wiring | Início condicional (`CONCILIUM__CATALOG_DIGEST_ENABLED`) em `app.py::main()` | ⬜ |
+| F1 — Settings | `CatalogDigestSettings` (`_catalog_digest.py`), testado | ✅ |
+| F2 — Exposição de estado | `_list_versions` expõe `_rascunho`/`_rejeitado`/campos relacionados (D2), testado | ✅ |
+| F3 — Lógica de negócio | `application/services/catalog/draft_digest_service.py`: `rascunhos_pendentes()` + `enviar_digest_rascunhos_pendentes()`, testado | ✅ |
+| F4 — Notificação | `notify_catalog_drafts_pending()` em `application/services/notifications.py`, testado | ✅ |
+| F5 — Scheduler | `DraftDigestScheduler` (start/stop), testado | ✅ |
+| F6 — Wiring | Início condicional (`CONCILIUM__CATALOG_DIGEST_ENABLED`) em `app.py::main()` | ✅ |
 
 ## Definition of Done
 
+**Nota 2026-07-24:** o arquivo permanecia com Status "Proposta" e DoD não marcado apesar do código já existir, testado e em produção — descompasso encontrado durante auditoria do índice de ADRs. Checkboxes abaixo corrigidos para refletir o estado real do código (`app.py::main()` já referencia "ADR-141 D6" explicitamente na wiring).
+
 ### Fase 1-5 (TDD — teste antes da implementação em cada fase)
-- [ ] `CatalogDigestSettings.from_env()` cobre defaults e overrides de env var
-- [ ] `_list_versions` inclui `_rascunho`/`_rejeitado`/etc. quando presentes, sem quebrar consumidores existentes (`versoes_catalogo`, `list_contexts`)
-- [ ] `rascunhos_pendentes()`: inclui rascunho não-decidido; exclui rejeitado; exclui já promovido (== current_version); exclui versão sem `_rascunho`
-- [ ] `enviar_digest_rascunhos_pendentes()`: nenhum email quando não há pendência; 1 email por catalog-manager com email cadastrado; ignora catalog-manager sem email
-- [ ] `notify_catalog_drafts_pending()`: assunto/contexto corretos, template genérico, sem `cta`
-- [ ] `DraftDigestScheduler`: `start()` inicia thread; `stop()` encerra e faz join; chamar `start()` duas vezes não duplica thread
+- [x] `CatalogDigestSettings.from_env()` cobre defaults e overrides de env var
+- [x] `_list_versions` inclui `_rascunho`/`_rejeitado`/etc. quando presentes, sem quebrar consumidores existentes (`versoes_catalogo`, `list_contexts`)
+- [x] `rascunhos_pendentes()`: inclui rascunho não-decidido; exclui rejeitado; exclui já promovido (== current_version); exclui versão sem `_rascunho`
+- [x] `enviar_digest_rascunhos_pendentes()`: nenhum email quando não há pendência; 1 email por catalog-manager com email cadastrado; ignora catalog-manager sem email
+- [x] `notify_catalog_drafts_pending()`: assunto/contexto corretos, template genérico, sem `cta`
+- [x] `DraftDigestScheduler`: `start()` inicia thread; `stop()` encerra e faz join; chamar `start()` duas vezes não duplica thread
 
 ### Fase 6
-- [ ] Scheduler só inicia quando `CONCILIUM__CATALOG_DIGEST_ENABLED=1`; `create_app()` nunca inicia thread real (verificado por import em teste)
-- [ ] Suíte completa (`make test`), lint/type/fmt (`make check`) e cobertura (`make cov`) sem regressão
+- [x] Scheduler só inicia quando `CONCILIUM__CATALOG_DIGEST_ENABLED=1`; `create_app()` nunca inicia thread real (verificado por import em teste)
+- [x] Suíte completa (`make test`), lint/type/fmt (`make check`) e cobertura (`make cov`) sem regressão
 
 ---
 
