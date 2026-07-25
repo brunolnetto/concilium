@@ -115,6 +115,21 @@ class TestRenderTemplate:
         assert "Só o essencial" in body
         assert ":" not in body.replace("Só o essencial", "")
 
+    def test_html_download_note_wraps_long_urls(self):
+        """URLs assinadas (SAS) não têm espaços e podem passar de 200-400 chars —
+        sem overflow-wrap/word-break, estouram a tabela de 600px fixos da _base
+        (white-space:pre-wrap sozinho só preserva as quebras, não quebra a URL)."""
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        svc = NotificationService(settings=_make_smtp_settings())
+        ctx = {
+            "heading": "Bem-vindo ao Concilium",
+            "download_note": "  Windows : https://example.blob.core.windows.net/proxy/" + "a" * 300,
+        }
+        body = svc._render("user_created.html.jinja2", ctx)
+        assert "overflow-wrap:break-word" in body
+        assert "word-break:break-all" in body
+
 
 class TestBuildMessage:
     def test_alternative_without_attachments(self):
