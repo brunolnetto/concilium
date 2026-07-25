@@ -67,9 +67,7 @@ class TestAtivarDispositivo:
         store.activate_device_code.return_value = rt_record
         with (
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
-            patch(
-                "concilium.application.services.device_detection.notify_if_unknown_device"
-            ) as notify_mock,
+            patch("concilium.application.services.device_detection.notify_if_unknown_device") as notify_mock,
         ):
             result = tools["ativar_dispositivo"]("RCODE-abc", "meu-pc")
 
@@ -89,9 +87,7 @@ class TestAtivarDispositivo:
         store.activate_device_code.return_value = rt_record
         with (
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
-            patch(
-                "concilium.application.services.notifications.notify_new_device"
-            ) as notify_new_device_mock,
+            patch("concilium.application.services.notifications.notify_new_device") as notify_new_device_mock,
         ):
             result = tools["ativar_dispositivo"]("RCODE-abc", "meu-pc")
 
@@ -141,9 +137,7 @@ class TestRenovarToken:
                 "concilium.infrastructure.auth.token_service.issue_token",
                 return_value="jwt-token",
             ),
-            patch(
-                "concilium.application.services.device_detection.notify_if_unknown_device"
-            ) as notify_mock,
+            patch("concilium.application.services.device_detection.notify_if_unknown_device") as notify_mock,
         ):
             result = tools["renovar_token"]("RT-123")
 
@@ -314,7 +308,7 @@ class TestObterInstrucoesAtualizadas:
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store),
             patch(
                 "concilium.application.services.skill_content.read_skill_content",
-                return_value=b"# Versao: 5 - 2026-07-20\nconteudo do skill",
+                return_value=b"---\nname: x\ndescription: y\nversion: 5\n---\nconteudo do skill",
             ),
         ):
             result = tools["obter_instrucoes_atualizadas"]()
@@ -336,12 +330,12 @@ class TestObterInstrucoesAtualizadas:
         ):
             with patch(
                 "concilium.application.services.skill_content.read_skill_content",
-                return_value=b"# Versao: 1 - 2026-01-01\nprimeira",
+                return_value=b"---\nname: x\ndescription: y\nversion: 1\n---\nprimeira",
             ):
                 first = tools["obter_instrucoes_atualizadas"]()
             with patch(
                 "concilium.application.services.skill_content.read_skill_content",
-                return_value=b"# Versao: 2 - 2026-07-20\nsegunda",
+                return_value=b"---\nname: x\ndescription: y\nversion: 2\n---\nsegunda",
             ):
                 second = tools["obter_instrucoes_atualizadas"]()
 

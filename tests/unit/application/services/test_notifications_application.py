@@ -50,16 +50,16 @@ class TestBuildProxyDownloadNote:
         assert "macOS" not in note
 
 
-class TestReadSkillTutorialDelegation:
-    """ADR-144 D6: a leitura real do skill vive em skill_content.py — aqui só
-    confere que notifications.py delega para lá, sem duplicar a lógica
+class TestSkillZipPackagingDelegation:
+    """ADR-144 D6 + empacotamento real em zip: notifications.py delega o
+    empacotamento do anexo para skill_content.py, sem duplicar a lógica
     (coberta em detalhe por tests/unit/test_skill_content.py)."""
 
     def test_delegates_to_shared_skill_content_module(self):
         from concilium.application.services import notifications
-        from concilium.application.services.skill_content import read_skill_content
+        from concilium.application.services.skill_content import package_skill_zip
 
-        assert notifications._read_skill_tutorial is read_skill_content
+        assert notifications.package_skill_zip is package_skill_zip
 
 
 class TestNotifyUserCreated:
@@ -80,9 +80,13 @@ class TestNotifyUserCreated:
         names = [a[0] for a in kwargs["attachments"]]
         assert "claude_desktop_config-macos-linux.json" in names
         assert "claude_desktop_config-windows.json" in names
-        assert "concilium_usage_tutorial.skill" in names
+        assert "concilium-usage-tutorial.skill" in names
         # attachments carry bytes content (ADR-134 D1 contract)
         assert all(isinstance(a[1], bytes) for a in kwargs["attachments"])
+        # o .skill agora é de fato um zip válido (não markdown solto)
+        skill_attachment = next(a for a in kwargs["attachments"] if a[0] == "concilium-usage-tutorial.skill")
+        assert skill_attachment[2] == "application/zip"
+        assert skill_attachment[1][:2] == b"PK"  # assinatura de zip
 
     def test_download_note_included_when_urls_present(self):
         from concilium.application.services.notifications import notify_user_created

@@ -1,4 +1,8 @@
-# Versão: 2 — 2026-07-23
+---
+name: concilium-usage-tutorial
+description: Tutorial de uso do Concilium via MCP — criação de projetos, execução de pipeline, diagnóstico, catálogo e benchmarks.
+version: 3
+---
 
 # Tutorial — Criar e Executar Projetos via MCP
 

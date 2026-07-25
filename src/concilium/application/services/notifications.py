@@ -15,15 +15,17 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from concilium.application.services.skill_content import read_skill_content as _read_skill_tutorial
+from concilium.application.services.skill_content import package_skill_zip
 from concilium.infrastructure.services.notification_service import get_notification_service
 
 logger = logging.getLogger(__name__)
 
 # ── Helpers de conteúdo ──────────────────────────────────────────────────────────
-# `_read_skill_tutorial` (leitura do anexo de onboarding) foi promovida para
+# A leitura/empacotamento do skill de onboarding vive em
 # `application/services/skill_content.py` (ADR-144 D6) — reaproveitada também
 # pela tool MCP `obter_instrucoes_atualizadas`, sem duplicar path/fallback.
+# `package_skill_zip()` gera um `.skill` que é de fato um zip válido (formato
+# oficial de Skill da Anthropic), em vez do markdown solto enviado antes.
 
 
 def _build_proxy_download_note(proxy_download_urls: dict[str, str | None] | None) -> str:
@@ -84,7 +86,7 @@ def _distribution_attachments(config_json_unix: str, config_json_windows: str) -
     return [
         ("claude_desktop_config-macos-linux.json", config_json_unix.encode("utf-8"), "application/json"),
         ("claude_desktop_config-windows.json", config_json_windows.encode("utf-8"), "application/json"),
-        ("concilium_usage_tutorial.skill", _read_skill_tutorial(), "text/plain"),
+        ("concilium-usage-tutorial.skill", package_skill_zip(), "application/zip"),
     ]
 
 
