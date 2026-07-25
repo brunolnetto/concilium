@@ -84,6 +84,122 @@ class TestProjectEstoqueSemanal:
         assert niveis[0] == 30.0
 
 
+class TestProjectEstoqueSemanalDeficitProvisionado:
+    """ADR-151: `deficit_provisionado_externamente` é injetado just-in-time — na
+    primeira semana em que faria falta, nunca antes. Não é equivalente a somá-lo a
+    `estoque_inicial` (que entraria em t=0): a atividade consumidora costuma começar
+    bem depois de t=0, e injetar cedo demais desperdiçaria parte do provisionamento
+    contra `capacidade_armazenamento` antes de ele ser necessário — o "intervalo de
+    conforto/relaxação" é justamente não fixar a semana de chegada, só a garantia de
+    que chega a tempo (no mais tardar, quando o estoque zeraria)."""
+
+    def test_nao_injeta_quando_nao_faz_falta(self):
+        """Estoque nunca fica negativo sem o déficit — o campo não deve alterar nada."""
+        resource = ReplenishableResource(
+            resource_id="ROCHA",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=100.0, deficit_provisionado_externamente=50.0),
+            consumo_por_semana={"A1": 30.0},
+        )
+        scheduled = [ScheduledActivity("A1", start_week=0, end_week=2, duration_weeks=2)]
+        niveis = project_estoque_semanal(resource, scheduled)
+        # 100-30=70; 70-30=40 — nunca precisou do déficit
+        assert niveis == {0: 70.0, 1: 40.0}
+
+    def test_injeta_na_primeira_semana_que_faz_falta_no_valor_exato(self):
+        """Sem o déficit: 0-30=-30 já na semana 0. Com deficit=50: -30+50=20."""
+        resource = ReplenishableResource(
+            resource_id="ROCHA",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, deficit_provisionado_externamente=50.0),
+            consumo_por_semana={"A1": 30.0},
+        )
+        scheduled = [ScheduledActivity("A1", start_week=0, end_week=1, duration_weeks=1)]
+        niveis = project_estoque_semanal(resource, scheduled)
+        assert niveis[0] == 20.0
+        assert not has_estoque_negativo(niveis)
+
+    def test_injecao_tardia_evita_desperdicio_por_capacidade(self):
+        """Cenário motivador (ADR-151): se o déficit fosse somado a estoque_inicial
+        (t=0), a produção inicial já lotaria a pilha (cap) antes do consumo começar,
+        descartando parte do provisionamento por bota-fora — nunca chegaria a ser
+        usado. Injetando just-in-time (só quando falta), o provisionamento nunca
+        colide com o teto de capacidade."""
+        resource = ReplenishableResource(
+            resource_id="ROCHA",
+            disponibilidade=DisponibilidadeConsumivel(
+                capacidade_armazenamento=100.0, estoque_inicial=0.0, deficit_provisionado_externamente=50.0
+            ),
+            producao_por_semana={"PRODUTORA": 100.0},
+            consumo_por_semana={"CONSUMIDORA": 130.0},
+        )
+        scheduled = [
+            # Produtora ativa só na semana 0 (enche a pilha até o teto: 100).
+            ScheduledActivity("PRODUTORA", start_week=0, end_week=1, duration_weeks=1),
+            # Consumidora só começa na semana 3 — se o déficit tivesse sido somado em
+            # t=0, a pilha já estaria no teto (100) e o excedente (deficit) seria
+            # descartado por bota-fora antes de a consumidora sequer existir.
+            ScheduledActivity("CONSUMIDORA", start_week=3, end_week=4, duration_weeks=1),
+        ]
+        niveis = project_estoque_semanal(resource, scheduled)
+        # semana 0: 0+100=100 (no teto, sem sobra); semanas 1-2: sem produção/consumo,
+        # estoque continua 100; semana 3: 100-130=-30, deficit injetado -> -30+50=20.
+        assert niveis[3] == 20.0
+        assert not has_estoque_negativo(niveis)
+
+    def test_deficit_insuficiente_ainda_deixa_estoque_negativo_pelo_residual(self):
+        resource = ReplenishableResource(
+            resource_id="ROCHA",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, deficit_provisionado_externamente=10.0),
+            consumo_por_semana={"A1": 30.0},
+        )
+        scheduled = [ScheduledActivity("A1", start_week=0, end_week=1, duration_weeks=1)]
+        niveis = project_estoque_semanal(resource, scheduled)
+        # -30 + 10 (todo o deficit usado, só uma vez) = -20 — ainda negativo.
+        assert niveis[0] == -20.0
+        assert has_estoque_negativo(niveis)
+
+    def test_deficit_e_usado_uma_unica_vez_nao_repetido_a_cada_semana_negativa(self):
+        resource = ReplenishableResource(
+            resource_id="ROCHA",
+            disponibilidade=DisponibilidadeConsumivel(estoque_inicial=0.0, deficit_provisionado_externamente=10.0),
+            consumo_por_semana={"A1": 30.0},
+        )
+        scheduled = [ScheduledActivity("A1", start_week=0, end_week=3, duration_weeks=3)]
+        niveis = project_estoque_semanal(resource, scheduled)
+        # semana 0: -30+10=-20 (deficit usado aqui); semana 1: -20-30=-50 (não injeta de novo); semana 2: -80.
+        assert niveis == {0: -20.0, 1: -50.0, 2: -80.0}
+
+    def test_deficit_reservado_para_o_ultimo_trecho_negativo_nao_o_primeiro(self):
+        """Cenário real que motivou a correção (AGIS/ADR-151): um déficit inicial,
+        transitório, é resolvido pelo próprio mecanismo de atraso do ADR-128 (fora
+        de `_project`); o provisionamento externo não deve ser "gasto" nele — deve
+        ficar reservado para o segundo trecho negativo, mais tardio, que representa
+        o déficit estrutural genuíno (atividade consumidora sem produtora pareada).
+        Duas atividades consumidoras isoladas por semanas de reabastecimento
+        positivo entre elas: A1 (semana 0, trecho negativo cedo e transitório) e A2
+        (semana 5, trecho negativo tardio e maior, isolado do primeiro)."""
+        resource = ReplenishableResource(
+            resource_id="ROCHA",
+            disponibilidade=DisponibilidadeConsumivel(
+                estoque_inicial=0.0, taxa_reabastecimento_max=20.0, deficit_provisionado_externamente=100.0
+            ),
+            consumo_por_semana={"A1": 30.0, "A2": 200.0},
+        )
+        scheduled = [
+            ScheduledActivity("A1", start_week=0, end_week=1, duration_weeks=1),
+            ScheduledActivity("A2", start_week=5, end_week=6, duration_weeks=1),
+        ]
+        niveis = project_estoque_semanal(resource, scheduled)
+        # semana 0: 0+20-30=-10 (primeiro trecho negativo — isolado, deficit NÃO usado aqui).
+        assert niveis[0] == -10.0
+        # semanas 1-4: só reabastecimento (20/semana), sem consumo — reergue e fica positivo.
+        assert niveis[1] == 10.0
+        assert niveis[2] == 30.0
+        assert niveis[3] == 50.0
+        assert niveis[4] == 70.0
+        # semana 5: 70+20-200=-110 (segundo/último trecho negativo) + deficit(100) = -10.
+        assert niveis[5] == -10.0
+
+
 # ── apply_replenishable_delay ─────────────────────────────────────────────────
 
 

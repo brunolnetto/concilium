@@ -37,6 +37,30 @@ def _taxa_por_semana(taxas: dict[str, float], scheduled: list[ScheduledActivity]
     return por_t
 
 
+def _project_raw(
+    disp: object, max_week: int, consumo_por_t: dict[int, float], producao_por_t: dict[int, float],
+    *, deficit_at: int | None = None,
+) -> tuple[dict[int, float], dict[int, float]]:
+    """Passada única de projeção, com injeção opcional do déficit numa semana fixa."""
+    taxa_max = disp.taxa_reabastecimento_max or 0.0  # type: ignore[attr-defined]
+    cap = disp.capacidade_armazenamento  # type: ignore[attr-defined]
+    niveis: dict[int, float] = {}
+    overflow: dict[int, float] = {}
+    estoque = disp.estoque_inicial  # type: ignore[attr-defined]
+    for t in range(max_week):
+        estoque = estoque + taxa_max + producao_por_t.get(t, 0.0)
+        if cap is not None and estoque > cap:
+            # Excedente sobre a pilha/tanque é descartado (VAL-ESTOQUE-CAP-01, AVISO) —
+            # decisão econômica (bota-fora), não motivo de reparo de cronograma (ADR-139 D4).
+            overflow[t] = estoque - cap
+            estoque = cap
+        estoque -= consumo_por_t.get(t, 0.0)
+        if t == deficit_at:
+            estoque += disp.deficit_provisionado_externamente  # type: ignore[attr-defined]
+        niveis[t] = estoque
+    return niveis, overflow
+
+
 def _project(
     resource: ReplenishableResource, scheduled_activities: Iterable[ScheduledActivity]
 ) -> tuple[dict[int, float], dict[int, float]]:
@@ -46,25 +70,31 @@ def _project(
         return {}, {}
 
     disp = resource.disponibilidade
-    taxa_max = disp.taxa_reabastecimento_max or 0.0
-    cap = disp.capacidade_armazenamento
-
     consumo_por_t = _taxa_por_semana(resource.consumo_por_semana, scheduled)
     producao_por_t = _taxa_por_semana(resource.producao_por_semana, scheduled)
-
     max_week = max(sa.end_week for sa in scheduled)
-    niveis: dict[int, float] = {}
-    overflow: dict[int, float] = {}
-    estoque = disp.estoque_inicial
-    for t in range(max_week):
-        estoque = estoque + taxa_max + producao_por_t.get(t, 0.0)
-        if cap is not None and estoque > cap:
-            # Excedente sobre a pilha/tanque é descartado (VAL-ESTOQUE-CAP-01, AVISO) —
-            # decisão econômica (bota-fora), não motivo de reparo de cronograma (ADR-139 D4).
-            overflow[t] = estoque - cap
-            estoque = cap
-        estoque -= consumo_por_t.get(t, 0.0)
-        niveis[t] = estoque
+
+    niveis, overflow = _project_raw(disp, max_week, consumo_por_t, producao_por_t)
+    if disp.deficit_provisionado_externamente > 0 and any(v < 0 for v in niveis.values()):
+        # ADR-151: provisionamento externo conhecido, injetado just-in-time — não no
+        # primeiro estoque negativo do recurso (que pode ser um déficit transitório
+        # que o mecanismo de atraso do ADR-128 já resolveria sozinho), mas no início
+        # do ÚLTIMO trecho contíguo de estoque negativo. Isso reserva o
+        # provisionamento para o déficit estrutural genuíno mais tardio (ex.: uma
+        # atividade consumidora sem produtora pareada) e deixa qualquer déficit
+        # anterior, mais cedo e transitório, para o reparo por atraso resolver como
+        # já fazia antes desta ADR — em vez de gastar o provisionamento no primeiro
+        # estoque negativo encontrado, não necessariamente o que ele foi pensado
+        # para cobrir. O "intervalo de conforto" é justamente não fixar a semana
+        # exata de chegada, só garantir que chega a tempo do trecho final.
+        neg_weeks = sorted(t for t, v in niveis.items() if v < 0)
+        seg_start = neg_weeks[-1]
+        for t in reversed(neg_weeks[:-1]):
+            if t == seg_start - 1:
+                seg_start = t
+            else:
+                break
+        niveis, overflow = _project_raw(disp, max_week, consumo_por_t, producao_por_t, deficit_at=seg_start)
     return niveis, overflow
 
 

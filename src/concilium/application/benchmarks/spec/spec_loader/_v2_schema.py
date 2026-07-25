@@ -126,6 +126,13 @@ def _v2_build_eap_and_rcpsp(spec: dict[str, Any]) -> tuple[list, dict[str, Any],
     return eap, eap_by_id, rcpsp_spec
 
 
+def _v2_build_logistica_consumiveis(spec: dict[str, Any]) -> dict[str, Any]:
+    """ADR-151: spec.logistica_consumiveis → ref['logistica_consumiveis'] (mesmo
+    padrão de rcpsp_spec) — provisionamento externo de déficit declarado no
+    benchmark, repassado para inputs_cronograma em _load_dict.py."""
+    return spec.get("logistica_consumiveis") or {}
+
+
 def _v2_build_tail_fields(ref: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     """8. diretos → equipes_detalhadas, 9. cenarios, 10. resultado (já no topo em v2)."""
     return {
@@ -162,6 +169,9 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     eap, eap_by_id, rcpsp_spec = _v2_build_eap_and_rcpsp(spec)
     out["eap"] = eap
     out["rcpsp_spec"] = rcpsp_spec
+    logistica_consumiveis = _v2_build_logistica_consumiveis(spec)
+    if logistica_consumiveis:
+        out["logistica_consumiveis"] = logistica_consumiveis
 
     atividades, cron_compacto = _v2_build_cronograma(spec, eap_by_id)
     out["cronograma"] = {"atividades": atividades}

@@ -452,6 +452,23 @@ def _build_replenishable_resources_if_any(
     except ValueError as exc:
         validacoes.append(ValidacaoItem(codigo="VAL-ESTOQUE-BUILD-01", status="ERRO", mensagem=str(exc)))
         return None
+    # ADR-151: torna visível, no relatório do projeto, todo material com déficit
+    # estrutural conhecido e já provisionado externamente — em vez de só o
+    # cronograma fechar "magicamente", o engenheiro vê explicitamente o quê e
+    # quanto precisa ser adquirido/providenciado além da produção interna pareada.
+    for resource in resources:
+        deficit = resource.disponibilidade.deficit_provisionado_externamente
+        if deficit > 0:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-ESTOQUE-PROVISIONAMENTO-01",
+                    status="AVISO",
+                    mensagem=(
+                        f"{resource.resource_id}: {deficit:,.2f} provisionado externamente além da "
+                        f"produção interna pareada — garanta a aquisição/logística correspondente."
+                    ),
+                )
+            )
     return resources or None
 
 

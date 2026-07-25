@@ -83,6 +83,9 @@ class _LoadDictMixin(_Base):
             inputs_cronograma={
                 "num_equipes_por_item": num_equipes_por_item,
                 **({"rcpsp_spec": ref["rcpsp_spec"]} if ref.get("rcpsp_spec") else {}),
+                # ADR-151: provisionamento externo de déficit declarado na referência
+                # (mesmo padrão de passthrough de rcpsp_spec acima) — Escopo.logistica_consumiveis.
+                **({"logistica_consumiveis": ref["logistica_consumiveis"]} if ref.get("logistica_consumiveis") else {}),
             },
             inputs_indiretos=inputs_indiretos,
             extra_inputs=extra_inputs,

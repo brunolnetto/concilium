@@ -26,37 +26,6 @@ class TestCostDecompositionInvariant:
         assert eq.custo_inst_mo is None  # Default deve ser None
         assert eq.custo_inst_eq is None
 
-    @pytest.mark.xfail(
-        reason=(
-            "AGIS quebrou após o wiring do motor de estoque real (ADR-128 F5/ADR-139 F5, "
-            "2026-07-15) — 4 causas distintas, encontradas em sequência conforme cada "
-            "correção revelava a próxima. (1) CORRIGIDA: CPU-TERRA-COMPAC-PN/PI "
-            "consumiam MA-SOLO-ESCAVADO-1CAT em dobro (déficit ~720k m³) e "
-            "MA-SOLO-ESCAVADO-2CAT nunca era consumido (~691k m³ ociosos) — pareamento de "
-            "categoria de solo incompleto no catálogo (D5); corrigido de forma derivável em "
-            "scripts/catalog/cure_pareamento_solo_compac_pn_agis.py. (2) CORRIGIDA "
-            "(ADR-128 F7, issue #117, TDD): inferir_pool_minimo (ADR-091) dimensionava o "
-            "pool sem saber dos atrasos que o reparo de estoque aplica depois — "
-            "ScheduleOutput.pool_deficit + _relax_pool(deficit=...) corrige isso, "
-            "confirmado em produção. (3) CORRIGIDA (ADR-139 F5-ter, achado 2026-07-25 3/3, "
-            "causa raiz real): as 6 produtividades de escavação do mendeslobo "
-            "(CPU-TERRA-ESCO-CARGA-{1,2,3}CAT-DMT{2000,3000}) nunca declaravam "
-            "materiais_gerados — a compactação consumia material que NENHUMA atividade "
-            "produzia (producao_por_semana vazio), estoque negativo desde a primeira "
-            "semana. Corrigido em scripts/catalog/cure_producao_escavacao_solo_mendeslobo.py "
-            "(replica o padrão já correto de rfi-r02). Confirmado: 1CAT e 2CAT resolvem por "
-            "completo (2CAT parecia ainda falhar pela mensagem de erro, mas era só relatório "
-            "causal cumulativo — negativo_no_final=False confirmado por instrumentação "
-            "direta; nenhuma correção de código necessária, _MAX_REPAIR_ROUNDS=10 já basta). "
-            "(4) AINDA ABERTA, único item real restante: 3CAT tem um TERCEIRO consumidor "
-            "não contabilizado antes (CPU-TERRA-COMPAC-FINAL-ROCHA, eap-1_10, 24.721 m³) que "
-            "excede a produção — déficit residual exigindo decisão de engenharia (a camada "
-            "final é adicional ao corpo do aterro, ou sobreposta?), não derivável dos dados. "
-            "Rastreado no issue #118. Ver achados 2026-07-25 (1-4) em ADR-128 (nota F7) e "
-            "ADR-139 (F5-bis, F5-ter)."
-        ),
-        strict=True,
-    )
     def test_cost_decomposition_closes_with_pool_contracts(self, agis_benchmark):
         """Valida que custo_total == soma(custo_inst_*) após ADR-085."""
         canonical = agis_benchmark.canonical
@@ -105,22 +74,6 @@ class TestCostDecompositionInvariant:
                 f"Breakdown não fecha: componentes={componentes:,.2f}, total={total:,.2f}"
             )
 
-    @pytest.mark.xfail(
-        reason=(
-            "Mesmas causas de test_cost_decomposition_closes_with_pool_contracts: "
-            "pareamento de solo (cure_pareamento_solo_compac_pn_agis.py), gap "
-            "ResourcePool×reparo (ADR-128 F7, issue #117) e ausência total de produtor "
-            "vinculado à escavação (ADR-139 F5-ter, cure_producao_escavacao_solo_mendeslobo.py "
-            "— causa raiz real, confirmada: producao_por_semana estava vazio) já corrigidos; "
-            "1CAT e 2CAT resolvem por completo. Único item real restante: 3CAT com um "
-            "terceiro consumidor (CPU-TERRA-COMPAC-FINAL-ROCHA, eap-1_10) exigindo decisão "
-            "de engenharia sobre se é adicional ou sobreposto ao corpo do aterro (issue "
-            "#118). Baseline de 16.529.359,75 é anterior ao wiring do motor de estoque "
-            "(ADR-128 F5/ADR-139 F5, 2026-07-15). Ver achados 2026-07-25 (1-4) em ADR-128 "
-            "(nota F7) e ADR-139 (F5-bis, F5-ter)."
-        ),
-        strict=True,
-    )
     def test_agis_custo_direto_matches_reference(self, agis_benchmark):
         """AGIS: custo_direto instancial (pós TD-1/TD-3 + NEP-043 Bug 2) deve bater com baseline.
 

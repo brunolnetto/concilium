@@ -28,6 +28,7 @@ class TestDisponibilidadeConsumivelDefaults:
         assert disp.estoque_inicial == 0.0
         assert disp.taxa_reabastecimento_max is None
         assert disp.lead_time_reabastecimento_dias is None
+        assert disp.deficit_provisionado_externamente == 0.0
 
     def test_accepts_fully_populated_values(self):
         disp = DisponibilidadeConsumivel(
@@ -35,11 +36,13 @@ class TestDisponibilidadeConsumivelDefaults:
             estoque_inicial=500.0,
             taxa_reabastecimento_max=200.0,
             lead_time_reabastecimento_dias=3.0,
+            deficit_provisionado_externamente=100.0,
         )
         assert disp.capacidade_armazenamento == 1000.0
         assert disp.estoque_inicial == 500.0
         assert disp.taxa_reabastecimento_max == 200.0
         assert disp.lead_time_reabastecimento_dias == 3.0
+        assert disp.deficit_provisionado_externamente == 100.0
 
 
 class TestDisponibilidadeConsumivelValidation:
@@ -59,6 +62,10 @@ class TestDisponibilidadeConsumivelValidation:
         with pytest.raises(ValueError, match="lead_time_reabastecimento_dias"):
             DisponibilidadeConsumivel(lead_time_reabastecimento_dias=-1.0)
 
+    def test_negative_deficit_provisionado_externamente_raises(self):
+        with pytest.raises(ValueError, match="deficit_provisionado_externamente"):
+            DisponibilidadeConsumivel(deficit_provisionado_externamente=-1.0)
+
     def test_estoque_inicial_above_capacidade_raises(self):
         with pytest.raises(ValueError, match="estoque_inicial"):
             DisponibilidadeConsumivel(capacidade_armazenamento=100.0, estoque_inicial=200.0)
@@ -66,6 +73,20 @@ class TestDisponibilidadeConsumivelValidation:
     def test_estoque_inicial_equal_capacidade_is_valid(self):
         disp = DisponibilidadeConsumivel(capacidade_armazenamento=100.0, estoque_inicial=100.0)
         assert disp.estoque_inicial == 100.0
+
+    def test_estoque_inicial_mais_deficit_acima_capacidade_raises(self):
+        """ADR-151: a soma do que está disponível desde o início (estoque físico +
+        provisionamento externo conhecido) ainda precisa caber na pilha declarada."""
+        with pytest.raises(ValueError, match="deficit_provisionado_externamente"):
+            DisponibilidadeConsumivel(
+                capacidade_armazenamento=100.0, estoque_inicial=60.0, deficit_provisionado_externamente=50.0
+            )
+
+    def test_estoque_inicial_mais_deficit_igual_capacidade_e_valido(self):
+        disp = DisponibilidadeConsumivel(
+            capacidade_armazenamento=100.0, estoque_inicial=60.0, deficit_provisionado_externamente=40.0
+        )
+        assert disp.deficit_provisionado_externamente == 40.0
 
 
 # ── parse_prazo_entrega (F3) ──────────────────────────────────────────────────

@@ -44,6 +44,14 @@ class DisponibilidadeConsumivel:
     estoque_inicial: float = 0.0
     taxa_reabastecimento_max: float | None = None
     lead_time_reabastecimento_dias: float | None = None
+    # ADR-151: quantidade planejada e conhecida antecipadamente, distinta de
+    # estoque_inicial (estoque físico já em mãos) e taxa_reabastecimento_max (fluxo
+    # contínuo) — declaração explícita do engenheiro de que um material de geração
+    # interna (ADR-139) tem um déficit estrutural genuíno entre demanda e produção
+    # pareada, que precisa ser provisionado de fora (compra adicional, jazida
+    # externa) para a obra ser fisicamente executável. Tratada como disponível desde
+    # o início, na mesma posição de estoque_inicial na projeção de estoque.
+    deficit_provisionado_externamente: float = 0.0
 
     def __post_init__(self) -> None:
         if self.capacidade_armazenamento is not None and self.capacidade_armazenamento < 0:
@@ -56,10 +64,20 @@ class DisponibilidadeConsumivel:
             raise ValueError(
                 f"lead_time_reabastecimento_dias must be >= 0, got {self.lead_time_reabastecimento_dias}"
             )
+        if self.deficit_provisionado_externamente < 0:
+            raise ValueError(
+                f"deficit_provisionado_externamente must be >= 0, got {self.deficit_provisionado_externamente}"
+            )
         if self.capacidade_armazenamento is not None and self.estoque_inicial > self.capacidade_armazenamento:
             raise ValueError(
                 f"estoque_inicial ({self.estoque_inicial}) must be <= capacidade_armazenamento "
                 f"({self.capacidade_armazenamento})"
+            )
+        disponivel_desde_inicio = self.estoque_inicial + self.deficit_provisionado_externamente
+        if self.capacidade_armazenamento is not None and disponivel_desde_inicio > self.capacidade_armazenamento:
+            raise ValueError(
+                f"estoque_inicial + deficit_provisionado_externamente ({disponivel_desde_inicio}) must be <= "
+                f"capacidade_armazenamento ({self.capacidade_armazenamento})"
             )
 
     @classmethod

@@ -627,7 +627,12 @@
     "driver": "projeto",
     "mao_obra": []
    }
-  ]
+  ],
+  "logistica_consumiveis": {
+   "MA-SOLO-ESCAVADO-3CAT": {
+    "deficit_provisionado_externamente": 71900.0
+   }
+  }
  },
  "resultado": {
   "benchmark_confronto_referencia": {

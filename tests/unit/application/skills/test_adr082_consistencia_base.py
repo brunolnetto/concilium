@@ -203,6 +203,15 @@ class TestParseLogisticaConsumiveisOverrides:
         assert "INSUMO-X" not in result
         assert result["INSUMO-Y"].estoque_inicial == 10.0
 
+    def test_deficit_provisionado_externamente_e_aceito(self):
+        # ADR-151: o override de projeto (Escopo.logistica_consumiveis) é o lugar
+        # onde o engenheiro declara o provisionamento externo conhecido.
+        result = _cron._mod_validacao._parse_logistica_consumiveis_overrides(
+            {"MA-SOLO-ESCAVADO-3CAT": {"deficit_provisionado_externamente": 24721.17}}
+        )
+        assert result is not None
+        assert result["MA-SOLO-ESCAVADO-3CAT"].deficit_provisionado_externamente == 24721.17
+
 
 class TestBuildReplenishableResourcesIfAnyErro:
     def test_value_error_do_builder_vira_val_estoque_build_01(self):
@@ -224,6 +233,53 @@ class TestBuildReplenishableResourcesIfAnyErro:
         )
         assert result is None
         assert any(v.codigo == "VAL-ESTOQUE-BUILD-01" and v.status == "ERRO" for v in validacoes)
+
+
+class TestBuildReplenishableResourcesIfAnyProvisionamento:
+    def test_deficit_provisionado_emite_aviso(self):
+        """ADR-151: engenheiro declara, via logistica_consumiveis, que MA-ROCHA
+        (geração interna) tem déficit estrutural conhecido — VAL-ESTOQUE-
+        PROVISIONAMENTO-01 (AVISO) torna isso visível no relatório do projeto."""
+        validacoes: list = []
+        producoes_por_atividade = {
+            "A1": {
+                "id": "PROD-X",
+                "materiais_gerados": [{"insumo_id": "MA-ROCHA", "geracao_por_hora": 10.0}],
+            }
+        }
+        insumos_lookup = {"MA-ROCHA": {"origem_material": "GERACAO_INTERNA"}}
+        result = _cron._mod_validacao._build_replenishable_resources_if_any(
+            producoes_por_atividade,
+            insumos_lookup=insumos_lookup,
+            logistica_consumiveis={"MA-ROCHA": {"deficit_provisionado_externamente": 500.0}},
+            validacoes=validacoes,
+        )
+        assert result is not None
+        avisos = [v for v in validacoes if v.codigo == "VAL-ESTOQUE-PROVISIONAMENTO-01"]
+        assert len(avisos) == 1
+        assert avisos[0].status == "AVISO"
+        assert "MA-ROCHA" in avisos[0].mensagem
+        assert "500" in avisos[0].mensagem
+
+    def test_sem_deficit_nao_emite_aviso(self):
+        """Regressão zero: recurso sem deficit_provisionado_externamente (default
+        0.0) não deve gerar nenhum aviso de provisionamento."""
+        validacoes: list = []
+        producoes_por_atividade = {
+            "A1": {
+                "id": "PROD-X",
+                "materiais_gerados": [{"insumo_id": "MA-ROCHA", "geracao_por_hora": 10.0}],
+            }
+        }
+        insumos_lookup = {"MA-ROCHA": {"origem_material": "GERACAO_INTERNA"}}
+        result = _cron._mod_validacao._build_replenishable_resources_if_any(
+            producoes_por_atividade,
+            insumos_lookup=insumos_lookup,
+            logistica_consumiveis=None,
+            validacoes=validacoes,
+        )
+        assert result is not None
+        assert not any(v.codigo == "VAL-ESTOQUE-PROVISIONAMENTO-01" for v in validacoes)
 
 
 class TestRasfcRunHeuristicsEstoque:
