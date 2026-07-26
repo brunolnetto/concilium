@@ -36,23 +36,19 @@ O framework **Concilium** utiliza uma arquitetura de pipeline orientada a skills
 
 ### Skills Disponíveis
 
-As skills são auto-descobertas em `src/concilium/application/skills/manifests/`:
+As skills são auto-descobertas em `src/concilium/application/skills/manifests/`. O pipeline
+tem 9 skills ativas (NEP-041 consolidou 15→11; NEP-049 aposentou as duas dormentes e
+renumerou para ordem contígua):
 
-- `01-escopo-e-eap` — Estruturação analítica do projeto
-- `02-produtividade-climatica` — Análise de fatores ambientais
-- `03-catalogo-de-recursos` — Gestão de insumos e recursos
-- `04-cronograma` — Planejamento temporal
-- `05-equipes-e-alocacao` — Alocação de mão de obra e equipamentos
-- `06-precificacao-unitaria` — Cálculo de custos unitários
-- `07-custos-indiretos` — Custos administrativos e indiretos
-- `08-consolidacao-financeira` — Consolidação orçamentária
-- `09-relatorio-e-artefatos` — Geração de documentação
-- `10-diagnostico-criticidade` — Análise de riscos
-- `11-avaliacao-intervencoes` — Avaliação de mudanças
-- `12-registro-decisoes` — Rastreabilidade de decisões
-- `13-assessor-replanejamento` — Assistente de replanejamento
-- `14-explorador-cenarios` — Análise de cenários
-- `15-relatorio-executivo` — Relatórios gerenciais
+- `01-escopo-e-eap` — Escopo (EAP), atividades e sequenciamento (DAG)
+- `02-produtividade-climatica` — Percentual produtivo mensal a partir de dados climáticos
+- `03-catalogo-de-recursos` — Tipos de recursos e pool inicial antes do cronograma
+- `04-cronograma` — Cronograma semanal (manual ou solver automático — ADR-004)
+- `05-equipes-e-alocacao` — Dimensionamento de equipes e alocação de recursos em pool
+- `06-resultado-financeiro` — Precificação unitária, custos indiretos e consolidação financeira
+- `07-diagnostico-criticidade` — Diagnóstico de criticidade (prazo, custo, recurso, sensibilidade)
+- `08-replanejamento-e-cenarios` — Assessor de replanejamento e exploração do espaço de planos
+- `09-relatorio-e-artefatos` — Canônico final em planilha Excel auditável (.xlsm)
 
 ---
 
@@ -89,6 +85,7 @@ pip install .
 concilium --help
 concilium-api --help
 concilium-ui --help
+concilium-mcp --help
 ```
 
 ---
@@ -284,9 +281,10 @@ agente-gerente-de-engenharia/
 
 - `src/concilium/presentation/main.py` — Entrada da CLI
 - `src/concilium/presentation/api/app.py` — Aplicação FastAPI
+- `src/concilium/presentation/mcp/server.py` — MCP server
 - `src/concilium/presentation/ui/prototype_streamlit.py` — Interface Streamlit
-- `src/concilium/application/runtime.py` — Orquestração do runtime
-- `src/concilium/infrastructure/settings.py` — Configurações e variáveis de ambiente
+- `src/concilium/application/runtime/` — Orquestração do runtime
+- `src/concilium/infrastructure/settings/` — Configurações e variáveis de ambiente
 
 ---
 
@@ -294,7 +292,7 @@ agente-gerente-de-engenharia/
 
 ### Variáveis de Ambiente
 
-Referência completa: `src/concilium/infrastructure/settings.py`.
+Referência completa: `src/concilium/infrastructure/settings/`.
 
 #### Desenvolvimento Local
 
@@ -359,7 +357,7 @@ cd/scripts/deploy.sh promote --revision <revision>
 | `CONCILIUM__SP_CLIENT_ID` | ✓ | ✓ | App Registration client ID |
 | `CONCILIUM__SP_CLIENT_SECRET` | ✓ | ✓ | Client secret |
 | `CONCILIUM__SP_DRIVE_ID` | ✓ | ✓ | Drive ID do SharePoint |
-| `CONCILIUM__SP_ROOT_PATH` | ✓ | ✓ | `Concilium/prod` |
+| `CONCILIUM__SP_ROOT_PATH` | ✓ | ✓ | `Concilium/producao` |
 | `CONCILIUM__AUTH_ENABLED` | ✓ | ✓ | `1` |
 | `CONCILIUM__JWT_KEY_VAULT_URL` | ✓ | ✓ | Key Vault URL |
 | `CONCILIUM__API_HOST` | ✓ | — | `0.0.0.0` |
@@ -447,28 +445,28 @@ python scripts/dev/audit_commit_history.py --detailed
 ### Qualidade de Código
 
 ```bash
-# Executar testes
+# Executar testes (agrupados por arquivo, -v)
 make test
 
-# Lint (verificação de estilo)
-make lint
+# Rodar um único arquivo de teste
+make test-file FILE=path/to_test.py
 
-# Type checking (verificação de tipos)
-make type-check
-
-# Formatação automática
-make fmt
+# Lint · type check · formatação · tamanho de arquivos (default: todos)
+make check
+make check OPT=lint      # só lint
+make check OPT=fmt       # só formatação (auto-fix)
 
 # Cobertura de testes
-make coverage
+make cov          # → .coverage-reports/
+make cov-stats    # análise completa → .coverage-reports/report.md
 ```
 
 ### Documentação
 
 Consulte os seguintes recursos para mais informações:
 
-- **[COMMIT_GOVERNANCE.md](COMMIT_GOVERNANCE.md)** — Guia completo de governança
-- **[COMMIT_GOVERNANCE_QUICKSTART.md](COMMIT_GOVERNANCE_QUICKSTART.md)** — Guia rápido
+- **[COMMIT_GOVERNANCE.md](docs/engineering/1-governance/COMMIT_GOVERNANCE.md)** — Guia completo de governança
+- **[COMMIT_GOVERNANCE_QUICKSTART.md](docs/engineering/1-governance/COMMIT_GOVERNANCE_QUICKSTART.md)** — Guia rápido
 - **[Conventional Commits](https://www.conventionalcommits.org/)** — Especificação oficial
 - **`docs/engineering/`** — Documentação técnica e ADRs
 - **`docs/product/`** — Documentação de produto e NEPs
@@ -477,9 +475,9 @@ Consulte os seguintes recursos para mais informações:
 
 ## 📚 Documentação Técnica
 
-- **Arquitetura e ADRs:** `docs/engineering/0-architecture/`
-- **NEPs e Backlog de Produto:** `docs/engineering/2-development/neps/`
-- **Notas Técnicas de Engenharia:** `docs/engineering/3-technical_notes/`
+- **Arquitetura e ADRs:** `docs/engineering/2-architecture/adrs/`
+- **NEPs e Backlog de Produto:** `docs/engineering/4-development/neps/`
+- **Notas Técnicas de Engenharia:** `docs/engineering/5-technical_notes/`
 
 ---
 
