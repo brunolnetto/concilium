@@ -38,14 +38,23 @@ P4. **Admin não sabe o SO do usuário no momento do cadastro.** O fluxo atual c
 sempre os dois blocos (Windows e macOS/Linux) juntos, deixando o próprio usuário escolher o
 correto — funciona, mas duplica o artefato gerado por cadastro.
 
+> **Atualização (2026-07-27):** P4 tem solução completa, não só contorno — ver D3/D1. O manifest
+> MCPB v0.3 suporta `platform_overrides`, permitindo um único `.mcpb` universal com os 3 binários
+> embutidos, e o próprio Claude Desktop escolhe o certo em runtime. Nem admin nem usuário precisam
+> discernir SO em momento nenhum do fluxo.
+
 ---
 
 ## Decisão
 
-D1. Empacotar o proxy (`concilium-mcp-proxy`, hoje distribuído como binário PyInstaller cru) como
-uma **Desktop Extension (`.mcpb`)**, usando o CLI oficial `@anthropic-ai/mcpb` (`mcpb init` /
-`mcpb pack`), referenciando o binário existente via `server.binary` no manifest. O proxy em si não
-é reescrito — o `.mcpb` só empacota o artefato que o `build-proxy.yml` já produz.
+D1. Empacotar o proxy (`concilium-mcp-proxy`, hoje distribuído como binário PyInstaller cru, um por
+SO) como uma **única Desktop Extension (`.mcpb`) universal**, usando o CLI oficial
+`@anthropic-ai/mcpb` (`mcpb init` / `mcpb pack`). O `.mcpb` é um ZIP: os 3 binários (Windows/
+macOS/Linux) vão embutidos juntos em `server/`, e o manifest declara `platform_overrides`
+(chaveado pelos valores de `process.platform`: `win32`/`darwin`/`linux`) apontando cada um pro seu
+binário. O Claude Desktop detecta o SO do host e escolhe o binário certo sozinho, na instalação —
+nenhum script de detecção próprio é necessário. O proxy em si não é reescrito — o `.mcpb` só
+empacota os artefatos que o `build-proxy.yml` já produz.
 
 D2. Usar a seção `user_config` do `manifest.json` para pedir o `CONCILIUM_CLIENT_CODE` **na própria
 UI de instalação** do Claude Desktop (campo `sensitive: true` — mascarado na tela, armazenado no
@@ -57,7 +66,18 @@ fixo no manifest (igual pra todos os usuários) e não precisa ser pedido.
   "manifest_version": "0.3",
   "name": "concilium-mcp-proxy",
   "version": "1.0.0",
-  "server": { "type": "binary", "entry_point": "concilium-mcp-proxy" },
+  "server": {
+    "type": "binary",
+    "entry_point": "server/concilium-mcp-proxy",
+    "mcp_config": {
+      "command": "server/concilium-mcp-proxy",
+      "platform_overrides": {
+        "win32":  { "command": "server/concilium-mcp-proxy.exe" },
+        "darwin": { "command": "server/concilium-mcp-proxy-macos" },
+        "linux":  { "command": "server/concilium-mcp-proxy-linux" }
+      }
+    }
+  },
   "user_config": {
     "concilium_client_code": {
       "description": "Código de ativação do seu dispositivo (RCODE-...)",
@@ -69,10 +89,11 @@ fixo no manifest (igual pra todos os usuários) e não precisa ser pedido.
 }
 ```
 
-D3. Um `.mcpb` **por sistema operacional** (Windows / macOS-Linux) substitui os dois blocos JSON —
-não um pacote por usuário. `add-user` / `regenerate-code` / `migrate-legacy-codes` passam a enviar
-o link fixo do `.mcpb` do SO do usuário (não muda por cadastro) + o `client_code` em separado, pra
-colar na tela de instalação — em vez de montar e enviar um JSON completo por pessoa.
+D3. **Um único `.mcpb` universal substitui os dois blocos JSON e os dois links por SO** — não um
+pacote por usuário, nem um pacote por SO. `add-user` / `regenerate-code` / `migrate-legacy-codes`
+passam a enviar sempre o **mesmo link fixo** (reaproveitado entre cadastros, independente do SO do
+usuário) + o `client_code` em separado, pra colar na tela de instalação — em vez de montar e enviar
+um JSON completo (ou escolher entre dois blocos) por pessoa.
 
 D4. O pipeline de build do proxy (`build-proxy.yml`, PyInstaller por SO) não muda — o `.mcpb`
 consome o binário resultante como está.
@@ -93,6 +114,7 @@ afeta.
 | A1 | Manter `claude_desktop_config.json` manual como está | Não resolve P1-P3; é o problema que esta ADR existe pra resolver |
 | A2 | Implementar OAuth2 completo (authorization server próprio) para usar "Add custom connector" nativo — URL remota, sem proxy local nenhum | Já avaliado e rejeitado em ADR-099 (R4): dependência pesada, LDAP/Entra ID necessários, prematuro pro estágio do projeto. O motivo permanece válido; esta ADR não o reabre |
 | A3 | Gerar um `.mcpb` por usuário, com o `client_code` já embutido no pacote (em vez de pedido via `user_config`) | Perde a vantagem central do formato — reintroduz "um artefato por pessoa" (P1/P4), só trocando JSON por ZIP |
+| A4 | Um `.mcpb` por SO (Windows / macOS-Linux), como no rascunho inicial desta ADR | Superada por D1/D3: `platform_overrides` permite os 3 binários num único pacote universal, sem custo de tamanho relevante (~30-105MB, sem limite técnico documentado) — não há razão pra manter a divisão por SO |
 
 ---
 
@@ -102,7 +124,8 @@ afeta.
 
 | Efeito | Descrição |
 |---|---|
-| Menos artefato por cadastro | Um `.mcpb` por SO (link fixo, reaproveitado entre cadastros) em vez de um JSON por usuário — `add-user` só precisa gerar o `client_code` e apontar pro link |
+| Zero discernimento de SO | Um único `.mcpb` universal (`platform_overrides`) resolve P4 por completo — nem admin nem usuário escolhem SO em ponto nenhum do fluxo; mesmo link pra todos os cadastros |
+| Menos artefato por cadastro | `add-user` só precisa gerar o `client_code` e apontar pro link fixo — não monta mais JSON nem escolhe entre blocos |
 | Secret fora de texto plano | `client_code`/credencial de dispositivo saem do JSON local e vão para o Keychain/Credential Manager do SO via campo `sensitive` |
 | UX de instalação | Elimina "baixar binário → salvar em caminho fixo → editar JSON à mão → reiniciar"; vira instalação nativa com formulário de configuração |
 | Candidato a resolver P2 | Armazenamento em `extensions-installations.json` (separado de `mcpServers`) é indício de que escapa do bug de team sync — a confirmar em D5/F1 |
@@ -122,7 +145,7 @@ afeta.
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F0 — Protótipo | `mcpb init`/`mcpb pack` local empacotando o binário PyInstaller já existente; instalação manual de teste no Claude Desktop | ⬜ Não iniciada |
+| F0 — Protótipo | `mcpb init`/`mcpb pack` local empacotando os 3 binários PyInstaller já existentes num `.mcpb` universal (`platform_overrides`); instalação manual de teste em pelo menos 2 SOs distintos | ⬜ Não iniciada |
 | F1 — Validação do bug de team sync (D5) | Instalar `.mcpb` numa máquina com `remoteToolsDeviceName` ativo; confirmar sobrevivência da config a múltiplos reinícios | ⬜ Não iniciada |
 | F2 — `user_config` fim a fim | Manifest com `concilium_client_code` (sensitive) + `CONCILIUM_SERVER_URL` fixo; validar que a env var chega ao processo do proxy e completa `ativar_dispositivo` | ⬜ Não iniciada |
 | F3 — Ajuste do fluxo de onboarding | `add-user`/`regenerate-code`/`migrate-legacy-codes` passam a enviar o link fixo do `.mcpb` do SO + `client_code` separado, em vez do JSON completo; atualizar README e o tutorial `concilium-usage-tutorial/SKILL.md` | ⬜ Não iniciada |
@@ -133,8 +156,9 @@ afeta.
 ## Definition of Done
 
 ### F0
-- [ ] `.mcpb` gerado localmente com `mcpb pack`, instalável no Claude Desktop de teste
-- [ ] Binário PyInstaller existente reaproveitado sem modificação
+- [ ] `.mcpb` universal gerado localmente com `mcpb pack`, contendo os 3 binários (`platform_overrides`), instalável no Claude Desktop de teste
+- [ ] Binários PyInstaller existentes reaproveitados sem modificação
+- [ ] Confirmado em pelo menos 2 SOs distintos que o Claude Desktop escolhe o binário certo sozinho
 
 ### F1
 - [ ] Extensão sobrevive a pelo menos 3 reinícios do Claude Desktop com team sync ativo, sem perder configuração
