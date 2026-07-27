@@ -78,27 +78,76 @@ jobs:
         run: |
           "$VENV_BIN/pyinstaller" --onefile --name concilium-mcp-proxy tools/mcp-proxy/proxy.py
 
-      # Instalação separada — só para o `concilium ops blob put` do step de
-      # publish abaixo, não entra no executável empacotado.
+      # O binário cru não é mais publicado por SO (ADR-161 F3, sunset do
+      # mecanismo antigo) — cada entrada da matrix só sobe seu binário como
+      # artifact efêmero (retention curta), para o job pack-mcpb reunir os 3
+      # (Windows/Linux/macOS nunca coexistem no filesystem do mesmo runner) e
+      # empacotar como .mcpb universal.
+      - name: Stage binary for artifact upload
+        shell: bash
+        run: |
+          mkdir -p artifact-staging
+          cp "${{ matrix.dist_file }}" "artifact-staging/$(basename '${{ matrix.blob_path }}')"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: proxy-binary-${{ matrix.os }}
+          path: artifact-staging/
+          retention-days: 1
+
+  pack-mcpb:
+    name: Empacotar .mcpb universal e publicar versionado
+    needs: build-exe
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # merge-multiple funde os 3 artifacts (1 arquivo cada) num único
+      # diretório — exatamente o BIN_DIR que tools/mcp-proxy/mcpb/build.sh
+      # espera (concilium-mcp-proxy.exe / -linux / -macos lado a lado).
+      - name: Download proxy binaries (Windows/Linux/macOS)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: proxy-binary-*
+          path: proxy-bins
+          merge-multiple: true
+
+      # ubuntu-latest hospedado pela GitHub já vem com Node/npx — o CLI
+      # oficial @anthropic-ai/mcpb (usado por build.sh via npx) não precisa
+      # de setup adicional.
+      - name: Build .mcpb universal
+        run: bash tools/mcp-proxy/mcpb/build.sh proxy-bins concilium-mcp-proxy.mcpb
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Instalação separada — só para o `concilium ops blob put-versioned`
+      # abaixo, não entra no pacote .mcpb.
       - name: Install publish dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ".[sharepoint]"
 
-      # Publica só o executável cru. O zip por usuário e por SO (executável +
-      # config já preenchido com o client_code) é montado sob demanda em
-      # commands_auth.py::_build_distribution_zips() no momento do envio do
-      # email de boas-vindas — nunca persistido aqui, porque dependeria de um
-      # client_code específico.
-      - name: Publish to blob storage
+      # Versionado (ADR-161 F3): grava distribuicao/concilium-mcp-proxy/vN.mcpb
+      # (imutável) e distribuicao/concilium-mcp-proxy/latest.mcpb (ponteiro
+      # estável, sobrescrito) — o link enviado aos usuários (commands_auth.py
+      # _get_mcpb_download_url) sempre aponta pro path "latest".
+      - name: Publish versioned .mcpb to blob storage
         env:
           # Console legado do Windows (codepage cp1252) não decodifica os símbolos
           # Unicode (✓, →) que o rich/rprint usa no output — força UTF-8 no stdout
           # independente do codepage do runner.
           PYTHONUTF8: "1"
           # A CLI valida config_root no startup (mesmo para comandos que não usam
-          # catálogo, como "blob put") — sem isso, "pip install ." (não-editável)
-          # resolve a raiz a partir do local de instalação do pacote, não do checkout.
+          # catálogo, como "blob put-versioned") — sem isso, "pip install ."
+          # (não-editável) resolve a raiz a partir do local de instalação do
+          # pacote, não do checkout.
           CONCILIUM__CONFIG_ROOT: ${{ github.workspace }}/config
           # Mesmo backend usado em produção pelo concilium-mcp/concilium-api
           # (provision.sh) — reaproveita o SharePoint já contratado, sem gerar
@@ -115,4 +164,4 @@ jobs:
           CONCILIUM__SP_SYSTEM_DRIVE_ID: ${{ secrets.CONCILIUM__SP_SYSTEM_DRIVE_ID }}
           CONCILIUM__SP_SYSTEM_ROOT_PATH: ${{ vars.CONCILIUM__SP_SYSTEM_ROOT_PATH }}
         run: |
-          concilium ops blob put --system ${{ matrix.dist_file }} ${{ matrix.blob_path }}
+          concilium ops blob put-versioned --system concilium-mcp-proxy.mcpb distribuicao/concilium-mcp-proxy

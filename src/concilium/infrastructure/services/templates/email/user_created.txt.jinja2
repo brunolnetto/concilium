@@ -10,26 +10,15 @@
 {% endfor %}
 
 {% endif -%}
-Em anexo:
-
-  concilium_usage_tutorial.skill        → tutorial de instalação e uso
-  claude_desktop_config-macos-linux.json → config pronto (macOS/Linux)
-  claude_desktop_config-windows.json     → config pronto (Windows)
-
-Siga o tutorial anexo (concilium_usage_tutorial.skill) para os passos de
-instalação.
-
 {% if download_note -%}
 {{ download_note }}
-
 {% endif -%}
-Se não conseguir abrir os anexos, o conteúdo dos configs é:
+Código de ativação (cole quando a instalação pedir, passo 3 acima):
 
-[macOS/Linux]
-{{ config_json_unix }}
+  {{ client_code }}
 
-[Windows]
-{{ config_json_windows }}
+Em anexo: concilium_usage_tutorial.skill — tutorial de uso do Concilium (depois
+de instalado).
 
 Atenciosamente,
 Equipe Concilium

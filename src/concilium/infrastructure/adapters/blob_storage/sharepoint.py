@@ -352,9 +352,9 @@ class SharePointBlobStorage(BlobStoragePort):
         destinatário já tem conta no tenant (ex.: link do proxy para funcionários).
 
         Se a chamada falhar (qualquer scope), retorna ``None`` — não há mais
-        fallback de anexo (executáveis são bloqueados por provedores de email,
-        ver `notifications._distribution_attachments`), então o chamador
-        (`commands_auth.py::_warn_if_no_download_urls`) avisa o admin no
+        fallback de anexo (executáveis/.mcpb são bloqueados por provedores de
+        email, ver `notifications._distribution_attachments`), então o
+        chamador (`commands_auth.py::_warn_if_no_mcpb_url`) avisa o admin no
         terminal para entrega manual. A falha é logada (não mais engolida
         silenciosamente) para que a causa fique visível nos logs em vez de
         aparecer só como "None" sem explicação.

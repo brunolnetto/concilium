@@ -28,40 +28,32 @@ logger = logging.getLogger(__name__)
 # oficial de Skill da Anthropic), em vez do markdown solto enviado antes.
 
 
-def _build_proxy_download_note(proxy_download_urls: dict[str, str | None] | None) -> str:
-    """Monta o trecho do email com os links de download do executável standalone.
+def _build_mcpb_download_note(mcpb_download_url: str | None) -> str:
+    """Monta o passo a passo de instalação do pacote .mcpb (ADR-161).
 
-    Um link por SO (Windows/Linux/macOS) — não há PyPI/wheel publicado para o
-    usuário final instalar via pip. Retorna string vazia se nenhum link estiver
-    disponível (ex.: backend de storage sem suporte a URL assinada em dev).
+    Um único link universal — `platform_overrides` no manifest escolhe o
+    binário certo (Windows/Linux/macOS) em runtime, então não há mais um link
+    por SO. Retorna string vazia se nenhum link estiver disponível (ex.:
+    backend de storage sem suporte a URL assinada em dev).
 
-    Os links são gerados com scope="organization" (ver
-    _get_proxy_exe_download_urls) — abrem sem confirmação extra para quem já
-    está logado com a conta Microsoft/M365 da MendesLobo; se pedir login, é
-    só entrar com a conta da empresa (o arquivo não é público).
+    O link é gerado com scope="organization" (ver
+    commands_auth._get_mcpb_download_url) — abre sem confirmação extra para
+    quem já está logado com a conta Microsoft/M365 da MendesLobo; se pedir
+    login, é só entrar com a conta da empresa (o arquivo não é público).
     """
-    urls = proxy_download_urls or {}
-    windows_url = urls.get("windows")
-    linux_url = urls.get("linux")
-    macos_url = urls.get("macos")
-    if not (windows_url or linux_url or macos_url):
+    if not mcpb_download_url:
         return ""
 
-    lines = [
-        "Antes de colar a configuração, baixe o executável do proxy correspondente ao\n"
-        "seu sistema operacional e salve no caminho indicado (o link abre com a sua\n"
-        "conta Microsoft/M365 da empresa — não precisa de senha adicional):\n",
-    ]
-    if windows_url:
-        lines.append(f"  Windows : {windows_url}")
-        lines.append(r"            salvar em C:\Concilium\concilium-mcp-proxy.exe" + "\n")
-    if linux_url:
-        lines.append(f"  Linux   : {linux_url}")
-        lines.append("            salvar em ~/.concilium/bin/concilium-mcp-proxy (chmod +x)\n")
-    if macos_url:
-        lines.append(f"  macOS   : {macos_url}")
-        lines.append("            salvar em ~/.concilium/bin/concilium-mcp-proxy (chmod +x)\n")
-    return "\n".join(lines) + "\n\n"
+    return (
+        "Como instalar:\n\n"
+        f"  1. Baixe o pacote de instalação: {mcpb_download_url}\n"
+        "     (o link abre com a sua conta Microsoft/M365 da empresa — não precisa\n"
+        "     de senha adicional)\n"
+        "  2. Abra o arquivo baixado — o Claude Desktop detecta sozinho o seu sistema\n"
+        "     operacional e mostra a tela de instalação.\n"
+        "  3. Quando a instalação pedir o código de ativação, cole o código abaixo.\n"
+        "  4. Aguarde o Claude Desktop concluir a instalação. Pronto — sem mais passos.\n\n"
+    )
 
 
 def _base_url() -> str:
@@ -74,36 +66,26 @@ def _base_url() -> str:
 # ── ADR-123/ADR-131: os 7 casos de uso originais (ADR-134 D5) ───────────────────
 
 
-def _distribution_attachments(config_json_unix: str, config_json_windows: str) -> list[tuple[str, bytes, str]]:
-    """Anexos comuns a notify_user_created/notify_client_code_migrated.
+def _distribution_attachments() -> list[tuple[str, bytes, str]]:
+    """Anexo comum a notify_user_created/notify_client_code_migrated.
 
-    O executável do proxy NUNCA vai em anexo (nem solto, nem em zip) — provedores
-    de email (Gmail incluso, confirmado em produção: SMTP 552 5.7.0 "potential
-    security issue") bloqueiam mensagens com payload executável, zipado ou não.
-    A entrega do executável é só pelo link assinado (`download_note`, ver
-    `_build_proxy_download_note`); aqui só vão os configs (texto) e o tutorial.
+    O pacote .mcpb NUNCA vai em anexo — provedores de email (Gmail incluso,
+    confirmado em produção: SMTP 552 5.7.0 "potential security issue")
+    bloqueiam mensagens com payload executável/zip contendo binários, mesmo
+    dentro de outro zip. A entrega do .mcpb é só pelo link assinado
+    (`download_note`, ver `_build_mcpb_download_note`); aqui só vai o tutorial.
     """
-    return [
-        ("claude_desktop_config-macos-linux.json", config_json_unix.encode("utf-8"), "application/json"),
-        ("claude_desktop_config-windows.json", config_json_windows.encode("utf-8"), "application/json"),
-        ("concilium-usage-tutorial.skill", package_skill_zip(), "application/zip"),
-    ]
+    return [("concilium-usage-tutorial.skill", package_skill_zip(), "application/zip")]
 
 
 def notify_user_created(
     client_id: str,
     role: str,
     email: str,
-    config_json_unix: str,
-    config_json_windows: str,
-    proxy_download_urls: dict[str, str | None] | None = None,
+    client_code: str,
+    mcpb_download_url: str | None = None,
 ) -> bool:
-    """Email de boas-vindas com os dois configs (macOS/Linux e Windows) em anexo.
-
-    O admin não sabe necessariamente o SO do dispositivo do usuário no momento do
-    cadastro — manda os dois e deixa o próprio usuário escolher o que corresponde
-    ao seu sistema, em vez de arriscar mandar o formato errado.
-    """
+    """Email de boas-vindas com o link de instalação do .mcpb e o client_code (ADR-161)."""
     return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Bem-vindo, {client_id}! Sua conta foi criada.",
@@ -112,22 +94,20 @@ def notify_user_created(
             "heading": f"Bem-vindo ao Concilium, {client_id}!",
             "intro": "Sua conta no Concilium foi criada com sucesso.",
             "details": [("Usuário", client_id), ("Perfil", role)],
-            "download_note": _build_proxy_download_note(proxy_download_urls),
-            "config_json_unix": config_json_unix,
-            "config_json_windows": config_json_windows,
+            "download_note": _build_mcpb_download_note(mcpb_download_url),
+            "client_code": client_code,
         },
-        attachments=_distribution_attachments(config_json_unix, config_json_windows),
+        attachments=_distribution_attachments(),
     )
 
 
 def notify_client_code_migrated(
     client_id: str,
     email: str,
-    config_json_unix: str,
-    config_json_windows: str,
-    proxy_download_urls: dict[str, str | None] | None = None,
+    client_code: str,
+    mcpb_download_url: str | None = None,
 ) -> bool:
-    """Notifica um client migrado (client_code gerado retroativamente) com os dois configs."""
+    """Notifica um client migrado (client_code gerado retroativamente)."""
     return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Novo código de ativação para '{client_id}'",
@@ -139,11 +119,10 @@ def notify_client_code_migrated(
                 "(atualização do sistema de autenticação — nenhuma ação sua causou isso)."
             ),
             "details": None,
-            "download_note": _build_proxy_download_note(proxy_download_urls),
-            "config_json_unix": config_json_unix,
-            "config_json_windows": config_json_windows,
+            "download_note": _build_mcpb_download_note(mcpb_download_url),
+            "client_code": client_code,
         },
-        attachments=_distribution_attachments(config_json_unix, config_json_windows),
+        attachments=_distribution_attachments(),
     )
 
 
