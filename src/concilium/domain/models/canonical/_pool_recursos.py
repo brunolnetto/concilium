@@ -160,6 +160,10 @@ class RecursoContrato(BaseModel):
     # Invariante: custo_unit_semanal_eq ≈ custo_unit_semanal_locacao + custo_unit_semanal_manutencao
     # ADR-083: partição causal de custo por item (produtivo + ocioso + mob_imputado)
     particao_por_item: list[CustoParticionadoItem] = Field(default_factory=list)
+    # ADR-156: composição de funções de MO por trás deste tipo_id — {funcao_id: num_pessoas}
+    # por UMA instância de equipe (não multiplicado por quantidade_contratada). Default {}
+    # preserva comportamento (nenhum builder do pipeline real popula ainda — ver ADR-157).
+    composicao_funcoes_mo: dict[str, int] = Field(default_factory=dict)
 
 
 # ── ADR-077: Recurso Instancial ───────────────────────────────────────────────
