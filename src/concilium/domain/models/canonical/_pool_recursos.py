@@ -173,6 +173,10 @@ class SegmentoAtividade(BaseModel):
     por `_build_instancias_recurso` a partir do rastreio semana-a-semana do slot.
     Utilizado por `_enrich_particao_overhead` para calcular `overhead_ocioso` e
     `custo_ocioso_imputado` com base nos gaps reais entre atividades consecutivas.
+
+    ADR-153 F1: `identidade_fisica_id` é um rótulo opcional, declarado externamente
+    após o solve — não muda o que o segmento representa (ainda é sobre o slot
+    contratual, não sobre identidade física por definição do próprio slot).
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -181,6 +185,11 @@ class SegmentoAtividade(BaseModel):
     semana_inicio: str  # primeira semana do segmento (ISO, ex: "2026-W35")
     semana_fim: str  # última semana do segmento (inclusive)
     machine_weeks: int = 0  # quantidade de semanas de trabalho neste segmento
+    # ADR-153 F1: rótulo declarativo opcional — qual ativo físico (matrícula/placa)
+    # de fato ocupou este segmento. Nunca preenchido pelo solver/atribuição de slots
+    # (ADR-077 segue sem noção de identidade física); só por enriquecimento externo
+    # via atribuir_identidade_fisica_segmentos (pool_identidade_fisica.py).
+    identidade_fisica_id: str | None = None
 
 
 class InstanciaRecurso(BaseModel):
