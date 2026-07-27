@@ -32,6 +32,20 @@ class TestBuildMcpbDownloadNote:
         note = _build_mcpb_download_note("https://x/concilium-mcp-proxy.mcpb")
         assert "https://x/concilium-mcp-proxy.mcpb" in note
 
+    def test_includes_numbered_install_steps(self):
+        """Passo a passo explícito no corpo do email — não delega instalação ao
+        tutorial anexo nem menciona o mecanismo antigo (claude_desktop_config.json)."""
+        from concilium.application.services.notifications import _build_mcpb_download_note
+
+        note = _build_mcpb_download_note("https://x/concilium-mcp-proxy.mcpb")
+        assert "1." in note
+        assert "2." in note
+        assert "3." in note
+        assert "4." in note
+        assert "código de ativação" in note.lower()
+        assert "claude_desktop_config" not in note
+        assert ".exe" not in note
+
 
 class TestSkillZipPackagingDelegation:
     """ADR-144 D6 + empacotamento real em zip: notifications.py delega o

@@ -15,10 +15,10 @@
 {% endfor %}
 </table>
 {% endif %}
-<p style="font-size:14px;line-height:1.5;margin:0 0 8px;">Em anexo: <code>concilium_usage_tutorial.skill</code> → tutorial de instalação e uso.</p>
 {% if download_note %}
-<p style="font-size:13px;line-height:1.5;color:#374151;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-all;">{{ download_note }}</p>
+<p style="font-size:13px;line-height:1.6;color:#374151;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-all;margin:0 0 16px;">{{ download_note }}</p>
 {% endif %}
-<p style="font-size:14px;line-height:1.5;margin:16px 0 4px;">Código de ativação (cole no campo pedido durante a instalação):</p>
-<p style="font-size:16px;font-weight:bold;font-family:monospace;margin:0;">{{ client_code }}</p>
+<p style="font-size:14px;line-height:1.5;margin:0 0 4px;">Código de ativação (cole quando a instalação pedir):</p>
+<p style="font-size:16px;font-weight:bold;font-family:monospace;margin:0 0 16px;">{{ client_code }}</p>
+<p style="font-size:12px;color:#6b7280;margin:16px 0 0;">Em anexo: <code>concilium_usage_tutorial.skill</code> — tutorial de uso do Concilium (depois de instalado).</p>
 {% endblock %}

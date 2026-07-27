@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 def _build_mcpb_download_note(mcpb_download_url: str | None) -> str:
-    """Monta o trecho do email com o link de instalação do pacote .mcpb (ADR-161).
+    """Monta o passo a passo de instalação do pacote .mcpb (ADR-161).
 
     Um único link universal — `platform_overrides` no manifest escolhe o
     binário certo (Windows/Linux/macOS) em runtime, então não há mais um link
@@ -45,11 +45,14 @@ def _build_mcpb_download_note(mcpb_download_url: str | None) -> str:
         return ""
 
     return (
-        "Antes de colar o código de ativação, baixe e abra o pacote de instalação\n"
-        "(.mcpb) abaixo — o Claude Desktop mostra a tela de instalação sozinho e já\n"
-        "detecta o seu sistema operacional (o link abre com a sua conta Microsoft/M365\n"
-        "da empresa — não precisa de senha adicional):\n\n"
-        f"  {mcpb_download_url}\n\n"
+        "Como instalar:\n\n"
+        f"  1. Baixe o pacote de instalação: {mcpb_download_url}\n"
+        "     (o link abre com a sua conta Microsoft/M365 da empresa — não precisa\n"
+        "     de senha adicional)\n"
+        "  2. Abra o arquivo baixado — o Claude Desktop detecta sozinho o seu sistema\n"
+        "     operacional e mostra a tela de instalação.\n"
+        "  3. Quando a instalação pedir o código de ativação, cole o código abaixo.\n"
+        "  4. Aguarde o Claude Desktop concluir a instalação. Pronto — sem mais passos.\n\n"
     )
 
 
