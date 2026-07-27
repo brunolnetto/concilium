@@ -16,6 +16,9 @@ from ._causal_cost_partition import (  # ty: ignore[unresolved-import]
     _sucessor_critico_id,
     particionar_contrato,
 )
+from ._composicao_por_tipo import (  # ty: ignore[unresolved-import]
+    enriquecer_composicao_por_tipo,
+)
 from ._custo_diferenciado_permanencia import (  # ty: ignore[unresolved-import]
     calcular_custo_contrato_por_instancia,
 )
@@ -419,5 +422,6 @@ __all__ = [
     "_week_idx",
     "_week_to_idx",
     "calcular_custo_contrato_por_instancia",
+    "enriquecer_composicao_por_tipo",
     "particionar_contrato",
 ]
