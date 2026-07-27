@@ -1,6 +1,6 @@
 # ADR-154 — Roster Real de Mão-de-Obra: Custo Individualizado sem Amarrar Identidade ao Cronograma
 
-**Status:** Proposta
+**Status:** Implementado
 **Data:** 2026-07-26
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-097 (Tributação Social — encargos SINTRACON/INSS/IRRF), ADR-106 (`EquipeCustoEngine`/`LifecycleEngine`), ADR-071 (Resource Contract Model — `RecursoContrato.custo_unit_semanal_mo`)
@@ -121,7 +121,7 @@ Sem ligação nenhuma com `InstanciaRecurso`/`segmentos_atividade`/`identidade_f
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `MembroEquipeReal` + `custo_real_mo_semanal`/`custo_real_mo_total` + testes | ⬜ |
+| F1 | `MembroEquipeReal` + `custo_real_mo_semanal`/`custo_real_mo_total` + testes | ✅ |
 | F2 (futura) | Estrutura análoga para equipamento (roster de ativos com contrato de locação real) | ⬜ (não iniciada — ADR de continuação) |
 | F3 (futura) | Wiring ao pipeline real (`RecursoContrato.custo_unit_semanal_mo`, override em projeto) | ⬜ (não iniciada — decisão de produto) |
 
@@ -129,15 +129,15 @@ Sem ligação nenhuma com `InstanciaRecurso`/`segmentos_atividade`/`identidade_f
 
 ### Fase 1 (TDD — teste antes da implementação)
 
-- [ ] Membro ativo durante toda a semana conta o custo cheio daquela semana
-- [ ] Membro admitido no meio do span do contrato só conta a partir da semana ISO de `data_admissao` (inclusive)
-- [ ] Membro desligado no meio do span só conta até a semana ISO de `data_desligamento` (inclusive); depois disso, zero
-- [ ] Membro sem `data_desligamento` (`None`) conta em todas as semanas do span a partir da admissão
-- [ ] Membro de outra função (`funcao_id` diferente) é ignorado
-- [ ] Encargo resolvido via `resolver_encargo` com a mesma precedência de ADR-097 (override explícito → `percentual_encargos_local` → categoria sindical)
-- [ ] Múltiplos membros na mesma função somam corretamente por semana
-- [ ] `custo_real_mo_total` é a soma de `custo_real_mo_semanal`
-- [ ] Suíte completa sem regressão
+- [x] Membro ativo durante toda a semana conta o custo cheio daquela semana
+- [x] Membro admitido no meio do span do contrato só conta a partir da semana ISO de `data_admissao` (inclusive)
+- [x] Membro desligado no meio do span só conta até a semana ISO de `data_desligamento` (inclusive); depois disso, zero
+- [x] Membro sem `data_desligamento` (`None`) conta em todas as semanas do span a partir da admissão
+- [x] Membro de outra função (`funcao_id` diferente) é ignorado
+- [x] Encargo resolvido via `resolver_encargo` com a mesma precedência de ADR-097 (override explícito → `percentual_encargos_local` → categoria sindical)
+- [x] Múltiplos membros na mesma função somam corretamente por semana
+- [x] `custo_real_mo_total` é a soma de `custo_real_mo_semanal`
+- [x] Suíte completa sem regressão
 
 ---
 
