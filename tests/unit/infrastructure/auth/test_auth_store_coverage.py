@@ -29,6 +29,62 @@ class TestAuthStore:
         with pytest.raises(ValueError, match="Roles inválidos"):
             store.add_client("c1", "s1", ["invalid_role"])
 
+    def test_add_client_duplicate_email_raises(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("alice", "s1", ["operator"], email="alice@x.com")
+        with pytest.raises(ValueError, match="já está em uso"):
+            store.add_client("alice-teste", "s2", ["operator"], email="alice@x.com")
+
+    def test_add_client_duplicate_email_case_insensitive(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("alice", "s1", ["operator"], email="Alice@X.com")
+        with pytest.raises(ValueError, match="já está em uso"):
+            store.add_client("alice2", "s2", ["operator"], email="alice@x.com")
+
+    def test_add_client_blocks_email_reuse_even_after_remove(self, tmp_path):
+        """Email de um client_id removido (soft-delete) continua reservado."""
+        store = self._make_store(tmp_path)
+        store.add_client("alice", "s1", ["operator"], email="alice@x.com")
+        store.remove_client("alice")
+        with pytest.raises(ValueError, match="já está em uso"):
+            store.add_client("alice2", "s2", ["operator"], email="alice@x.com")
+
+    def test_add_client_allows_email_after_forget(self, tmp_path):
+        """forget_client() apaga o email — libera o endereço para reuso."""
+        store = self._make_store(tmp_path)
+        store.add_client("alice", "s1", ["operator"], email="alice@x.com")
+        store.forget_client("alice")
+        rec = store.add_client("alice2", "s2", ["operator"], email="alice@x.com")
+        assert rec.email == "alice@x.com"
+
+    def test_add_client_allows_distinct_emails(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("alice", "s1", ["operator"], email="alice@x.com")
+        rec = store.add_client("bob", "s2", ["operator"], email="bob@x.com")
+        assert rec.email == "bob@x.com"
+
+    def test_add_client_allows_empty_email(self, tmp_path):
+        """Sem email (string vazia), múltiplos clients não colidem entre si."""
+        store = self._make_store(tmp_path)
+        store.add_client("c1", "s1", ["operator"])
+        rec = store.add_client("c2", "s2", ["operator"])
+        assert rec.email == ""
+
+    def test_update_client_duplicate_email_raises(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("alice", "s1", ["operator"], email="alice@x.com")
+        store.add_client("bob", "s2", ["operator"], email="bob@x.com")
+        with pytest.raises(ValueError, match="já está em uso"):
+            store.update_client("bob", email="alice@x.com")
+
+    def test_update_client_allows_setting_own_unchanged_email(self, tmp_path):
+        """Reenviar o mesmo email que o próprio client_id já tem não deve falsear conflito."""
+        store = self._make_store(tmp_path)
+        store.add_client("alice", "s1", ["operator"], email="alice@x.com")
+        rec = store.update_client("alice", notes="atualizado", email="alice@x.com")
+        assert rec.email == "alice@x.com"
+        assert rec.notes == "atualizado"
+
     def test_add_client_empty_roles_defaults_to_operator(self, tmp_path):
         store = self._make_store(tmp_path)
         rec = store.add_client("c2", "s", [])

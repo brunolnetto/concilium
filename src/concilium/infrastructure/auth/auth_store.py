@@ -105,6 +105,30 @@ def _validate_roles(effective_roles: list[str]) -> None:
         raise ValueError(f"Roles inválidos: {invalid}. Válidos: {sorted(VALID_ROLES)}")
 
 
+def _check_email_not_taken(existing: list[ClientRecord], email: str, *, exclude_client_id: str = "") -> None:
+    """Raises ValueError se `email` já pertencer a outro client_id.
+
+    Comparação case-insensitive (email corporativo/M365 não distingue caixa) e
+    contra QUALQUER registro — inclusive client_id inativo/removido (soft-delete)
+    continua reservando o email para sempre. `forget_client()` (LGPD Art. 18)
+    apaga o campo `email` para "" — a partir daí o endereço fica livre para reuso,
+    efeito colateral intencional da anonimização, não um caso especial aqui.
+    """
+    if not email:
+        return
+    normalized = email.strip().lower()
+    conflict = next(
+        (
+            r
+            for r in existing
+            if r.client_id != exclude_client_id and r.email and r.email.strip().lower() == normalized
+        ),
+        None,
+    )
+    if conflict is not None:
+        raise ValueError(f"Email '{email}' já está em uso por outro client ('{conflict.client_id}').")
+
+
 @dataclass
 class RevokePendingRecord:
     """Solicitação de revogação de dispositivo aguardando confirmação (ADR-123 F3)."""
@@ -257,7 +281,7 @@ class AuthStore:
         email: str = "",  # ADR-123: endereço de email para notificações
         client_code: str = "",  # código de bootstrap reutilizável (ver activate_device_code)
     ) -> ClientRecord:
-        """Register a new client. Raises ValueError if client_id already exists."""
+        """Register a new client. Raises ValueError if client_id or email already exists."""
         effective_roles = _resolve_effective_roles(roles, scopes)
         _validate_roles(effective_roles)
 
@@ -265,6 +289,7 @@ class AuthStore:
             existing = [ClientRecord(**r) for r in self._read_clients()]
             if any(r.client_id == client_id for r in existing):
                 raise ValueError(f"Client '{client_id}' already exists.")
+            _check_email_not_taken(existing, email)
             record = ClientRecord(
                 client_id=client_id,
                 secret_hash=_hash(secret),
@@ -400,7 +425,8 @@ class AuthStore:
     ) -> ClientRecord:
         """Atualiza role(s)/email/notes de um client existente. Campos None não mudam.
 
-        Raises ValueError se client_id não existir, ou se roles for inválido.
+        Raises ValueError se client_id não existir, roles for inválido, ou o
+        novo email já pertencer a outro client_id.
         Não filtra por `active` — mesmo precedente de regenerate_client_code().
         """
         effective_roles = _resolve_effective_roles(roles, None) if roles is not None else None
@@ -410,6 +436,8 @@ class AuthStore:
         with self._lock:
             raw = self._read_clients()
             records = [ClientRecord(**r) for r in raw]
+            if email:
+                _check_email_not_taken(records, email, exclude_client_id=client_id)
             for r in records:
                 if r.client_id == client_id:
                     if effective_roles is not None:
