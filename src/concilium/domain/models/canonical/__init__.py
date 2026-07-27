@@ -112,6 +112,7 @@ from ._replan_criticidade import (
     ValidacaoPUResumida,
     VetorExposuraCpu,
 )
+from ._roster_equipamento import AtivoEquipamentoReal
 from ._roster_mo import MembroEquipeReal
 
 __all__ = [
@@ -122,6 +123,7 @@ __all__ = [
     "AtividadeInsumo",
     "AtividadeIntervalo",
     "Atividade",
+    "AtivoEquipamentoReal",
     "BalancoControle",
     "BalancoPontoEquilibrio",
     "BdiCategorias",
