@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from concilium.domain.constants import SEMANAS_POR_MES
-from concilium.domain.models.canonical import AtivoEquipamentoReal
+from concilium.domain.models.canonical import AtivoEquipamentoReal, RecursoContrato
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
 
@@ -92,6 +92,23 @@ def custo_real_eq_idle_semanal(
         )
         custo[semana] = round(total_semana, 2)
     return custo
+
+
+def taxa_media_eq_idle_real(contrato: RecursoContrato, roster: list[AtivoEquipamentoReal]) -> float:
+    """ADR-160: taxa média real de EQ ocioso para um contrato inteiro — mesma
+    lógica de agregação de `aplicar_roster_custo_real_eq` (ADR-157), trocando o
+    numerador para `custo_real_eq_idle_semanal`. Não verifica cobertura — isso é
+    responsabilidade do chamador (ver ADR-160 D3). Retorna 0.0 quando a
+    composição de equipamentos do contrato está vazia.
+    """
+    if not contrato.composicao_equipamentos_eq:
+        return 0.0
+    custo_real_total = sum(
+        sum(custo_real_eq_idle_semanal(roster, equip_id, contrato.semana_inicio, contrato.semana_fim).values())
+        for equip_id in contrato.composicao_equipamentos_eq
+    )
+    denom = contrato.quantidade_contratada * contrato.semanas_contrato
+    return round(custo_real_total / denom, 4) if denom > 0 else 0.0
 
 
 def custo_real_eq_total(
