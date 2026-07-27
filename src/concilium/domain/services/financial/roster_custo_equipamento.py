@@ -42,19 +42,21 @@ def _custo_semanal_ativo(ativo: AtivoEquipamentoReal) -> float:
 
 def custo_real_eq_semanal(
     roster: list[AtivoEquipamentoReal],
-    tipo_id: str,
+    equip_id: str,
     semana_inicio: str,
     semana_fim: str,
 ) -> dict[str, float]:
     """Custo real de equipamento por semana — soma, por semana, o custo de cada
-    ativo do roster ativo naquele tipo e naquele intervalo.
+    ativo do roster ativo naquele equip_id e naquele intervalo.
 
         custo_semana(t) = Σ_{ativo ativo em t} (custo_locacao_mensal_real
                            + custo_manutencao_mensal_real) / SEMANAS_POR_MES
 
-    Ativos de outro tipo (`tipo_id` diferente) são ignorados.
+    Ativos de outro equip_id são ignorados. `equip_id` casa com
+    `EquipamentoEquipe.equip_id` do catálogo (ADR-157) — não com `RecursoContrato.
+    tipo_id`, que é um hash de composição de equipe inteira (ADR-046/156).
     """
-    ativos_tipo = [a for a in roster if a.tipo_id == tipo_id]
+    ativos_tipo = [a for a in roster if a.equip_id == equip_id]
     custo: dict[str, float] = {}
     for semana in enumerar_semanas(semana_inicio, semana_fim):
         total_semana = sum(
@@ -66,9 +68,9 @@ def custo_real_eq_semanal(
 
 def custo_real_eq_total(
     roster: list[AtivoEquipamentoReal],
-    tipo_id: str,
+    equip_id: str,
     semana_inicio: str,
     semana_fim: str,
 ) -> float:
     """Custo real total de equipamento no span — soma de `custo_real_eq_semanal`."""
-    return round(sum(custo_real_eq_semanal(roster, tipo_id, semana_inicio, semana_fim).values()), 2)
+    return round(sum(custo_real_eq_semanal(roster, equip_id, semana_inicio, semana_fim).values()), 2)

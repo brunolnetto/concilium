@@ -1,9 +1,11 @@
 # ADR-155 — Roster Real de Equipamento: Custo Individualizado sem Amarrar Identidade ao Cronograma
 
-**Status:** Proposta
+**Status:** Implementado
 **Data:** 2026-07-26
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-154 (Roster Real de Mão-de-Obra — estrutura irmã, mesma disciplina de escopo), ADR-088 (Decomposição Sub-composicional de Equipamento — locação/manutenção), ADR-071 (Resource Contract Model — `RecursoContrato.custo_unit_semanal_eq`)
+
+**Correção (ADR-157, 2026-07-27):** o campo `tipo_id` de `AtivoEquipamentoReal` foi renomeado para `equip_id`. O desenho original assumia que batia com `RecursoContrato.tipo_id` — mas a investigação da ADR-156 revelou que `tipo_id` do pool é um hash de composição de equipe inteira (ADR-046), não um tipo de equipamento isolado. `equip_id` casa com `EquipamentoEquipe.equip_id` do catálogo, a mesma chave usada por `composicao_equipamentos_eq` (ADR-157). Sem impacto — nenhum consumidor real usava o campo (função pura sem wiring).
 
 ---
 
@@ -35,7 +37,7 @@ class AtivoEquipamentoReal(BaseModel):
     """
 
     ativo_id: str
-    tipo_id: str
+    equip_id: str
     custo_locacao_mensal_real: float = Field(ge=0)
     custo_manutencao_mensal_real: float = 0.0
     data_contrato_inicio: date
@@ -47,7 +49,7 @@ class AtivoEquipamentoReal(BaseModel):
 ```python
 def custo_real_eq_semanal(
     roster: list[AtivoEquipamentoReal],
-    tipo_id: str,
+    equip_id: str,
     semana_inicio: str,
     semana_fim: str,
 ) -> dict[str, float]:
@@ -63,7 +65,7 @@ def custo_real_eq_semanal(
     """
 ```
 
-E `custo_real_eq_total(roster, tipo_id, semana_inicio, semana_fim) -> float` (soma de `custo_real_eq_semanal`).
+E `custo_real_eq_total(roster, equip_id, semana_inicio, semana_fim) -> float` (soma de `custo_real_eq_semanal`).
 
 Sem equivalente de `resolver_encargo`: não há taxa social sobre custo de equipamento — `custo_locacao_mensal_real + custo_manutencao_mensal_real` já é o valor real de contrato, ponto. BDI (ADR-023/088/090) é etapa downstream separada, aplicada sobre o custo agregado do projeto inteiro, não sobre o roster individual — mesma exclusão de escopo de ADR-154 D2 quanto a impostos/BDI não entrarem na camada de roster.
 
@@ -111,22 +113,22 @@ Mesma disciplina de ADR-152 D3, ADR-153 A4, ADR-154 D4: função de domínio pur
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `AtivoEquipamentoReal` + `custo_real_eq_semanal`/`custo_real_eq_total` + testes | ⬜ |
+| F1 | `AtivoEquipamentoReal` + `custo_real_eq_semanal`/`custo_real_eq_total` + testes | ✅ |
 | F2 (futura) | Wiring ao pipeline real (`RecursoContrato.custo_unit_semanal_eq`, override em projeto) — mesma decisão de produto pendente em ADR-154 F3 | ⬜ (não iniciada) |
 
 ## Definition of Done
 
 ### Fase 1 (TDD — teste antes da implementação)
 
-- [ ] Ativo com contrato ativo durante toda a semana conta o custo cheio daquela semana (locação + manutenção)
-- [ ] Ativo com contrato iniciado no meio do span só conta a partir da semana ISO de `data_contrato_inicio` (inclusive)
-- [ ] Ativo com contrato encerrado no meio do span só conta até a semana ISO de `data_contrato_fim` (inclusive); depois disso, zero
-- [ ] Ativo sem `data_contrato_fim` (`None`) conta em todas as semanas do span a partir do início
-- [ ] Ativo de outro tipo (`tipo_id` diferente) é ignorado
-- [ ] Custo soma locação + manutenção corretamente
-- [ ] Múltiplos ativos do mesmo tipo somam corretamente por semana
-- [ ] `custo_real_eq_total` é a soma de `custo_real_eq_semanal`
-- [ ] Suíte completa sem regressão
+- [x] Ativo com contrato ativo durante toda a semana conta o custo cheio daquela semana (locação + manutenção)
+- [x] Ativo com contrato iniciado no meio do span só conta a partir da semana ISO de `data_contrato_inicio` (inclusive)
+- [x] Ativo com contrato encerrado no meio do span só conta até a semana ISO de `data_contrato_fim` (inclusive); depois disso, zero
+- [x] Ativo sem `data_contrato_fim` (`None`) conta em todas as semanas do span a partir do início
+- [x] Ativo de outro `equip_id` é ignorado
+- [x] Custo soma locação + manutenção corretamente
+- [x] Múltiplos ativos do mesmo tipo somam corretamente por semana
+- [x] `custo_real_eq_total` é a soma de `custo_real_eq_semanal`
+- [x] Suíte completa sem regressão
 
 ---
 

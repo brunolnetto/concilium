@@ -1,6 +1,6 @@
 # ADR-156 — Composição de Funções por Tipo de Pool: Substituição de Custo Real de MO (Fase 1 — Sem Wiring)
 
-**Status:** Proposta
+**Status:** Implementado
 **Data:** 2026-07-26
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-154 (Roster Real de Mão-de-Obra), ADR-046 (RCPSP — tipos de equipe fungíveis), ADR-071 (Resource Contract Model)
@@ -124,20 +124,20 @@ Sem wiring ao orquestrador real (`skill.py`/`_processar_instancias_recurso`/`ins
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `composicao_funcoes_mo` (campo) + `extrair_composicao_funcoes_mo` + `aplicar_roster_custo_real_mo` + testes | ⬜ |
+| F1 | `composicao_funcoes_mo` (campo) + `extrair_composicao_funcoes_mo` + `aplicar_roster_custo_real_mo` + testes | ✅ |
 | F2 (ADR-157, futura) | Wiring real: `Escopo.roster_mo`, chamada no orquestrador de skill-05, populamento de `composicao_funcoes_mo` em `_derive_item_tipo_requerido` | ⬜ (não iniciada) |
 
 ## Definition of Done
 
 ### Fase 1 (TDD — teste antes da implementação)
 
-- [ ] `extrair_composicao_funcoes_mo` extrai `{funcao_id: num_pessoas}` corretamente de uma `ComposicaoPadraoEquipe`, ignorando entradas sem `funcao_id`
-- [ ] `aplicar_roster_custo_real_mo` substitui quando o roster cobre TODAS as funções com headcount suficiente (`quantidade_contratada` considerado)
-- [ ] `aplicar_roster_custo_real_mo` NÃO substitui (retorna contrato inalterado) quando qualquer função tem headcount insuficiente
-- [ ] `aplicar_roster_custo_real_mo` NÃO substitui quando `composicao_funcoes_mo` está vazio (comportamento atual — nenhum contrato real hoje tem esse campo populado)
-- [ ] `custo_unit_semanal_mo`/`custo_unit_semanal`/`custo_total_contrato` recalculados consistentemente quando a substituição ocorre (`custo_unit_semanal_eq/_comb/_mat` preservados)
-- [ ] Contrato original (`RecursoContrato` de entrada) não é mutado — função pura, retorna nova instância
-- [ ] Suíte completa sem regressão
+- [x] `extrair_composicao_funcoes_mo` extrai `{funcao_id: num_pessoas}` corretamente de uma `ComposicaoPadraoEquipe`, ignorando entradas sem `funcao_id`
+- [x] `aplicar_roster_custo_real_mo` substitui quando o roster cobre TODAS as funções com headcount suficiente (`quantidade_contratada` considerado)
+- [x] `aplicar_roster_custo_real_mo` NÃO substitui (retorna contrato inalterado) quando qualquer função tem headcount insuficiente
+- [x] `aplicar_roster_custo_real_mo` NÃO substitui quando `composicao_funcoes_mo` está vazio (comportamento atual — nenhum contrato real hoje tem esse campo populado)
+- [x] `custo_unit_semanal_mo`/`custo_unit_semanal`/`custo_total_contrato` recalculados consistentemente quando a substituição ocorre (`custo_unit_semanal_eq/_comb/_mat` preservados)
+- [x] Contrato original (`RecursoContrato` de entrada) não é mutado — função pura, retorna nova instância
+- [x] Suíte completa sem regressão
 
 ---
 
