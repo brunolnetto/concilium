@@ -112,6 +112,7 @@ from ._replan_criticidade import (
     ValidacaoPUResumida,
     VetorExposuraCpu,
 )
+from ._roster_mo import MembroEquipeReal
 
 __all__ = [
     "ActivityDag",
@@ -165,6 +166,7 @@ __all__ = [
     "ItemCustoAquisicao",
     "Lever",
     "LeverEquilibrio",
+    "MembroEquipeReal",
     "Meta",
     "MobilizacaoAtividade",
     "Mobilizacao",
