@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.3",
   "name": "concilium-mcp-proxy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "display_name": "Concilium",
   "description": "Ponte MCP para o Concilium (MendesLobo Construtora) — ativação automática de dispositivo via client_code.",
   "author": {
@@ -11,20 +11,20 @@
     "type": "binary",
     "entry_point": "server/concilium-mcp-proxy-linux",
     "mcp_config": {
-      "command": "server/concilium-mcp-proxy-linux",
+      "command": "${__dirname}/server/concilium-mcp-proxy-linux",
       "env": {
         "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
         "CONCILIUM_CLIENT_CODE": "${user_config.concilium_client_code}"
       },
       "platform_overrides": {
         "win32": {
-          "command": "server/concilium-mcp-proxy.exe"
+          "command": "${__dirname}/server/concilium-mcp-proxy.exe"
         },
         "darwin": {
-          "command": "server/concilium-mcp-proxy-macos"
+          "command": "${__dirname}/server/concilium-mcp-proxy-macos"
         },
         "linux": {
-          "command": "server/concilium-mcp-proxy-linux"
+          "command": "${__dirname}/server/concilium-mcp-proxy-linux"
         }
       }
     }
