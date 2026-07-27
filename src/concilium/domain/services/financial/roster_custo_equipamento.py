@@ -40,6 +40,12 @@ def _custo_semanal_ativo(ativo: AtivoEquipamentoReal) -> float:
     return (ativo.custo_locacao_mensal_real + ativo.custo_manutencao_mensal_real) / SEMANAS_POR_MES
 
 
+def _custo_semanal_ativo_idle(ativo: AtivoEquipamentoReal) -> float:
+    """ADR-158: custo ocioso real — só locação, sem manutenção (equipamento parado
+    não gera desgaste ativo, mas o contrato de locação continua sendo cobrado)."""
+    return ativo.custo_locacao_mensal_real / SEMANAS_POR_MES
+
+
 def custo_real_eq_semanal(
     roster: list[AtivoEquipamentoReal],
     equip_id: str,
@@ -61,6 +67,28 @@ def custo_real_eq_semanal(
     for semana in enumerar_semanas(semana_inicio, semana_fim):
         total_semana = sum(
             _custo_semanal_ativo(a) for a in ativos_tipo if _ativo_ativo_na_semana(a, semana)
+        )
+        custo[semana] = round(total_semana, 2)
+    return custo
+
+
+def custo_real_eq_idle_semanal(
+    roster: list[AtivoEquipamentoReal],
+    equip_id: str,
+    semana_inicio: str,
+    semana_fim: str,
+) -> dict[str, float]:
+    """ADR-158: custo real de equipamento OCIOSO por semana — só locação, sem
+    manutenção. Espelha o fallback calibrado (`custo_idle_semanal_unit = cus_mo +
+    cus_locacao`, `_pool_contrato_demanda.py::_resolve_gap_max_e_idle_efetivo`):
+    equipamento ocioso continua sob contrato de locação (custo fixo), mas não
+    incorre manutenção ativa. Mesma estrutura de `custo_real_eq_semanal`.
+    """
+    ativos_tipo = [a for a in roster if a.equip_id == equip_id]
+    custo: dict[str, float] = {}
+    for semana in enumerar_semanas(semana_inicio, semana_fim):
+        total_semana = sum(
+            _custo_semanal_ativo_idle(a) for a in ativos_tipo if _ativo_ativo_na_semana(a, semana)
         )
         custo[semana] = round(total_semana, 2)
     return custo
