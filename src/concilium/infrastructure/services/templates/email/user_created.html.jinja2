@@ -16,7 +16,7 @@
 </table>
 {% endif %}
 {% if download_note %}
-<p style="font-size:13px;line-height:1.6;color:#374151;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-all;margin:0 0 16px;">{{ download_note }}</p>
+<p style="font-size:13px;line-height:1.6;color:#374151;overflow-wrap:break-word;word-break:break-all;margin:0 0 16px;">{{ download_note | nl2br }}</p>
 {% endif %}
 <p style="font-size:14px;line-height:1.5;margin:0 0 4px;">Código de ativação (cole quando a instalação pedir):</p>
 <p style="font-size:16px;font-weight:bold;font-family:monospace;margin:0 0 16px;">{{ client_code }}</p>

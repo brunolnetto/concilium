@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import jinja2
+from markupsafe import Markup, escape
 
 from concilium.infrastructure.settings import SmtpSettings, get_smtp
 
@@ -66,13 +67,28 @@ def _is_html_template(template_name: str | None) -> bool:
     return template_name is not None and template_name.endswith(".html.jinja2")
 
 
+def _nl2br(value: str) -> Markup:
+    """Converte '\\n' em '<br>' — única quebra de linha universalmente suportada em email HTML.
+
+    `white-space: pre-wrap` (usado antes) depende do motor de renderização
+    respeitar a propriedade CSS: o Outlook desktop (baseado no Word, não um
+    engine de browser real) a ignora e colapsa todo o texto numa linha só —
+    bug relatado em produção no email de boas-vindas (download_note). Cada
+    linha é escapada individualmente antes de juntar com `<br>`, já que o
+    resultado marcado `Markup` não passa pelo autoescape do Jinja de novo.
+    """
+    return Markup("<br>\n").join(escape(line) for line in value.split("\n"))
+
+
 def _build_jinja_env() -> jinja2.Environment:
-    return jinja2.Environment(
+    env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
         autoescape=_is_html_template,
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    env.filters["nl2br"] = _nl2br
+    return env
 
 
 _jinja_env = _build_jinja_env()

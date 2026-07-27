@@ -117,8 +117,7 @@ class TestRenderTemplate:
 
     def test_html_download_note_wraps_long_urls(self):
         """URLs assinadas (SAS) não têm espaços e podem passar de 200-400 chars —
-        sem overflow-wrap/word-break, estouram a tabela de 600px fixos da _base
-        (white-space:pre-wrap sozinho só preserva as quebras, não quebra a URL)."""
+        sem overflow-wrap/word-break, estouram a tabela de 600px fixos da _base."""
         from concilium.infrastructure.services.notification_service import NotificationService
 
         svc = NotificationService(settings=_make_smtp_settings())
@@ -129,6 +128,40 @@ class TestRenderTemplate:
         body = svc._render("user_created.html.jinja2", ctx)
         assert "overflow-wrap:break-word" in body
         assert "word-break:break-all" in body
+
+    def test_html_download_note_uses_br_not_css_pre_wrap(self):
+        """Outlook desktop (motor Word) ignora white-space:pre-wrap e colapsa tudo
+
+        numa linha só (bug real em produção) — a quebra de linha precisa ser
+        <br> real, universalmente suportado, não depender de CSS."""
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        svc = NotificationService(settings=_make_smtp_settings())
+        ctx = {
+            "heading": "Bem-vindo ao Concilium",
+            "download_note": "Como instalar:\n\n  1. Baixe o pacote\n  2. Abra o arquivo",
+        }
+        body = svc._render("user_created.html.jinja2", ctx)
+        assert "white-space:pre-wrap" not in body
+        assert "<br>" in body
+        # cada uma das 4 linhas do download_note vira sua própria linha visual
+        assert body.count("<br>") >= 3
+
+    def test_html_download_note_escapes_html_special_chars(self):
+        """nl2br escapa cada linha antes de juntar com <br> — sem essa etapa,
+
+        conteúdo com '<'/'&' quebraria o HTML do email em vez de aparecer como texto."""
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        svc = NotificationService(settings=_make_smtp_settings())
+        ctx = {
+            "heading": "Bem-vindo ao Concilium",
+            "download_note": "Linha 1 <script>alert(1)</script>\nLinha 2 & cia",
+        }
+        body = svc._render("user_created.html.jinja2", ctx)
+        assert "<script>alert(1)</script>" not in body
+        assert "&lt;script&gt;" in body
+        assert "Linha 2 &amp; cia" in body
 
 
 class TestBuildMessage:
