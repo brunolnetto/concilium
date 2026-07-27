@@ -145,7 +145,7 @@ afeta.
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F0 — Protótipo | `mcpb init`/`mcpb pack` local empacotando os 3 binários PyInstaller já existentes num `.mcpb` universal (`platform_overrides`); instalação manual de teste em pelo menos 2 SOs distintos | ⬜ Não iniciada |
+| F0 — Protótipo | `mcpb init`/`mcpb pack` local empacotando os 3 binários PyInstaller já existentes num `.mcpb` universal (`platform_overrides`); instalação manual de teste em pelo menos 2 SOs distintos | 🔶 Parcial — ver nota |
 | F1 — Validação do bug de team sync (D5) | Instalar `.mcpb` numa máquina com `remoteToolsDeviceName` ativo; confirmar sobrevivência da config a múltiplos reinícios | ⬜ Não iniciada |
 | F2 — `user_config` fim a fim | Manifest com `concilium_client_code` (sensitive) + `CONCILIUM_SERVER_URL` fixo; validar que a env var chega ao processo do proxy e completa `ativar_dispositivo` | ⬜ Não iniciada |
 | F3 — Ajuste do fluxo de onboarding | `add-user`/`regenerate-code`/`migrate-legacy-codes` passam a enviar o link fixo do `.mcpb` do SO + `client_code` separado, em vez do JSON completo; atualizar README e o tutorial `concilium-usage-tutorial/SKILL.md` | ⬜ Não iniciada |
@@ -156,9 +156,10 @@ afeta.
 ## Definition of Done
 
 ### F0
-- [ ] `.mcpb` universal gerado localmente com `mcpb pack`, contendo os 3 binários (`platform_overrides`), instalável no Claude Desktop de teste
-- [ ] Binários PyInstaller existentes reaproveitados sem modificação
-- [ ] Confirmado em pelo menos 2 SOs distintos que o Claude Desktop escolhe o binário certo sozinho
+- [x] `.mcpb` universal gerado localmente com `mcpb pack` — `tools/mcp-proxy/mcpb/manifest.json` + `build.sh`; `mcpb validate` passa; pacote resultante tem `manifest.json` na raiz e os 3 binários em `server/`, nomes idênticos aos já usados em `blob_path` do `build-proxy.yml` (`concilium-mcp-proxy.exe`/`-macos`/`-linux`)
+- [x] Binários PyInstaller existentes reaproveitados sem modificação — testado com o binário Linux real (`pyinstaller --onefile tools/mcp-proxy/proxy.py`, 9,5MB, sem alteração em `proxy.py`); Windows/macOS só têm stub vazio neste teste local (sem runner desses SOs disponível aqui)
+- [ ] Instalável no Claude Desktop de teste — não verificado (sem GUI neste ambiente)
+- [ ] Confirmado em pelo menos 2 SOs distintos que o Claude Desktop escolhe o binário certo sozinho — pendente, requer os 3 binários reais (via CI `build-proxy.yml`) + instalação manual
 
 ### F1
 - [ ] Extensão sobrevive a pelo menos 3 reinícios do Claude Desktop com team sync ativo, sem perder configuração
