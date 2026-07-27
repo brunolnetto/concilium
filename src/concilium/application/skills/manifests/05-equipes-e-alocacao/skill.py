@@ -41,6 +41,7 @@ from ._skill_helpers import (  # ty: ignore[unresolved-import]
     _resolve_planejamento_maps,
     _resolve_rcpsp_spec,
     _validar_estagio1_inst_none,
+    enriquecer_composicao_por_tipo,
 )
 
 _mod_compartilhamento = _skill_helpers.compartilhamento
@@ -97,6 +98,9 @@ def run_equipes_e_alocacao(
             horas_semana,
             benchmark_mode,
         )
+        # ADR-159: popula composicao_funcoes_mo/composicao_equipamentos_eq (ADR-156/157)
+        # em cada RecursoContrato — puramente descritivo, não altera nenhum custo.
+        enriquecer_composicao_por_tipo(contratos_recurso, canonical_in.eap, cron_lookup, cpu_lookup, prod_lookup)
 
     # ADR-077: mapa instancial de utilização — executado quando há pool contracts
     instancias_recurso, composicao_equipes_atividade, resumo_utilizacao_contratos = _processar_instancias_recurso(
