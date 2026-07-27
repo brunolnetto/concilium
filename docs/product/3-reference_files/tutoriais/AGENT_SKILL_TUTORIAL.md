@@ -115,51 +115,15 @@ Para ambientes com autenticação JWT (Azure deploy — ADR-096):
 1. O admin cadastra o usuário com `concilium ops auth add-user --id <id> --role <role> --email <email>`
    (ver `commands_auth.py`) — o mesmo `client_code` reutilizável ativa quantos dispositivos o
    usuário precisar, sem um comando por dispositivo.
-2. Se `--email` foi informado, o usuário recebe automaticamente por email: o executável do
-   proxy (link de download por SO — Windows/Linux/macOS) e os dois `claude_desktop_config.json`
-   já preenchidos (`claude_desktop_config-windows.json` / `claude_desktop_config-macos-linux.json`).
-   Sem `--email`, o admin entrega esses dois arquivos manualmente (impressos no terminal).
-3. Baixe o executável do proxy e salve exatamente no caminho indicado no email:
-   `C:\Concilium\concilium-mcp-proxy.exe` (Windows) ou `~/.concilium/bin/concilium-mcp-proxy`
-   com `chmod +x` (Linux/macOS).
-4. Cole o conteúdo do JSON correspondente ao seu sistema em `claude_desktop_config.json` e
-   reinicie o Claude Desktop.
-
-**Windows (Claude Desktop):**
-Arquivo: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "concilium": {
-      "command": "C:\\Concilium\\concilium-mcp-proxy.exe",
-      "env": {
-        "CONCILIUM_CLIENT_CODE": "RCODE-...",
-        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br"
-      }
-    }
-  }
-}
-```
-
-**macOS/Linux:**
-Arquivo: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) ou
-equivalente do seu cliente MCP (Linux).
-
-```json
-{
-  "mcpServers": {
-    "concilium": {
-      "command": "sh",
-      "args": ["-c", "$HOME/.concilium/bin/concilium-mcp-proxy"],
-      "env": {
-        "CONCILIUM_CLIENT_CODE": "RCODE-...",
-        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br"
-      }
-    }
-  }
-}
-```
+2. Se `--email` foi informado, o usuário recebe automaticamente por email o link de instalação
+   do pacote **Desktop Extension (`.mcpb`)** e o `client_code` (ADR-161). Sem `--email`, o admin
+   entrega os dois manualmente (impressos no terminal).
+3. Baixe e abra o arquivo `.mcpb` — o Claude Desktop mostra a tela de instalação sozinho e já
+   detecta o sistema operacional certo (um único pacote universal cobre Windows/Linux/macOS, sem
+   escolha manual). Não há mais executável para baixar/salvar em caminho fixo nem
+   `claude_desktop_config.json` para editar à mão.
+4. Quando a instalação pedir o código de ativação, cole o `client_code` recebido. O Claude
+   Desktop reinicia o servidor MCP sozinho ao concluir.
 
 ---
 

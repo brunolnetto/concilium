@@ -14,15 +14,14 @@ import typer
 from typer.testing import CliRunner
 
 from concilium.presentation.cli.commands_auth import (
-    _build_mcp_config_block,
-    _get_proxy_exe_download_urls,
+    _get_mcpb_download_url,
     app,
 )
 
 runner = CliRunner()
 
 PATCH_GET_AUTH_STORE = "concilium.infrastructure.auth.auth_store.get_auth_store"
-PATCH_GET_PROXY_DOWNLOAD_URLS = "concilium.presentation.cli.commands_auth._get_proxy_exe_download_urls"
+PATCH_GET_MCPB_DOWNLOAD_URL = "concilium.presentation.cli.commands_auth._get_mcpb_download_url"
 
 # ADR-134 F2: os antigos métodos notify_* de NotificationService viraram funções
 # em application/services/notifications.py — patch aponta para lá.
@@ -107,75 +106,36 @@ def _make_store(**kwargs) -> MagicMock:
 
 
 # ===========================================================================
-# _build_mcp_config_block — "command" varia por plataforma, sem path hardcoded
+# _get_mcpb_download_url — link temporário do pacote .mcpb (blob storage)
 # ===========================================================================
 
-
-class TestBuildMcpConfigBlock:
-    def test_unix_uses_sh_wrapper_with_fixed_home_path(self):
-        """Sem pacote Python/PyPI publicado, o Unix aponta pro executável standalone
-        (PyInstaller) num caminho fixo local — "sh -c" expande $HOME em runtime."""
-        block = _build_mcp_config_block("RCODE-X", "unix")
-        entry = block["mcpServers"]["concilium"]
-        assert entry["command"] == "sh"
-        assert entry["args"] == ["-c", "$HOME/.concilium/bin/concilium-mcp-proxy"]
-        assert entry["env"]["CONCILIUM_CLIENT_CODE"] == "RCODE-X"
-
-    def test_windows_uses_fixed_standalone_exe_path(self):
-        """Sem pacote Python/PyPI publicado, o Windows aponta pro .exe standalone
-        (PyInstaller) num caminho fixo local — sem depender de PATH."""
-        block = _build_mcp_config_block("RCODE-X", "windows")
-        entry = block["mcpServers"]["concilium"]
-        assert entry["command"] == r"C:\Concilium\concilium-mcp-proxy.exe"
-        assert "args" not in entry
-        assert entry["env"]["CONCILIUM_CLIENT_CODE"] == "RCODE-X"
+BUILD_SYSTEM_BLOB_STORAGE = "concilium.infrastructure.storage.store_factory.build_system_blob_storage"
 
 
-# ===========================================================================
-# _get_proxy_exe_download_urls — links temporários dos executáveis (blob storage)
-# ===========================================================================
-
-BUILD_BLOB_STORAGE = "concilium.infrastructure.storage.store_factory.build_blob_storage"
-
-
-class TestGetProxyExeDownloadUrls:
-    def test_returns_signed_url_per_platform(self):
+class TestGetMcpbDownloadUrl:
+    def test_returns_signed_url_for_latest_mcpb_path(self):
         storage = MagicMock()
         storage.gerar_url_temporaria.side_effect = lambda path, ttl_segundos, scope: f"https://example.com/{path}"
 
-        with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            urls = _get_proxy_exe_download_urls()
+        with patch(BUILD_SYSTEM_BLOB_STORAGE, return_value=storage):
+            url = _get_mcpb_download_url()
 
-        assert urls == {
-            "windows": "https://example.com/distribuicao/concilium-mcp-proxy.exe",
-            "linux": "https://example.com/distribuicao/concilium-mcp-proxy-linux",
-            "macos": "https://example.com/distribuicao/concilium-mcp-proxy-macos",
-        }
-        assert storage.gerar_url_temporaria.call_count == 3
-        storage.gerar_url_temporaria.assert_any_call(
-            "distribuicao/concilium-mcp-proxy.exe", ttl_segundos=7 * 24 * 3600, scope="organization"
+        assert url == "https://example.com/distribuicao/concilium-mcp-proxy/latest.mcpb"
+        storage.gerar_url_temporaria.assert_called_once_with(
+            "distribuicao/concilium-mcp-proxy/latest.mcpb",
+            ttl_segundos=10 * 365 * 24 * 3600,
+            scope="organization",
         )
 
     def test_returns_none_when_backend_unsupported(self):
-        """Backend sem suporte a URL assinada (ex.: filesystem local) -> None por SO."""
+        """Backend sem suporte a URL assinada (ex.: filesystem local) -> None."""
         storage = MagicMock()
         storage.gerar_url_temporaria.return_value = None
 
-        with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            urls = _get_proxy_exe_download_urls()
+        with patch(BUILD_SYSTEM_BLOB_STORAGE, return_value=storage):
+            url = _get_mcpb_download_url()
 
-        assert urls == {"windows": None, "linux": None, "macos": None}
-
-    def test_custom_ttl_passed_through(self):
-        storage = MagicMock()
-        storage.gerar_url_temporaria.return_value = "https://example.com/x"
-
-        with patch(BUILD_BLOB_STORAGE, return_value=storage):
-            _get_proxy_exe_download_urls(ttl_segundos=3600)
-
-        storage.gerar_url_temporaria.assert_any_call(
-            "distribuicao/concilium-mcp-proxy.exe", ttl_segundos=3600, scope="organization"
-        )
+        assert url is None
 
 
 # ===========================================================================
@@ -555,33 +515,31 @@ class TestRemoveUser:
         store.forget_client.assert_not_called()
         assert "forget-user" in result.output
 
-    def test_add_user_no_email_prints_both_platform_configs(self):
-        """Sem --email, o console mostra os dois blocos (macOS/Linux e Windows) —
-        não há --platform: o admin não escolhe, o usuário final decide."""
+    def test_add_user_no_email_prints_mcpb_link_and_code(self):
+        """Sem --email, o console mostra o link do .mcpb e o client_code (ADR-161) —
+        não há mais bloco JSON nem escolha de plataforma."""
         store = _make_store(add_client_return=_make_client_record())
 
-        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
+        ):
             result = runner.invoke(
                 app,
                 ["add-user", "--id", "alice", "--secret", "s"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "$HOME/.concilium/bin/concilium-mcp-proxy" in result.output
-        assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in result.output
+        assert "https://example.com/concilium-mcp-proxy.mcpb" in result.output
 
-    def test_add_user_with_email_sends_both_platform_configs(self):
+    def test_add_user_with_email_sends_mcpb_link_and_code(self):
         store = _make_store(add_client_return=_make_client_record())
-        fake_urls = {
-            "windows": "https://example.com/concilium-mcp-proxy.exe",
-            "linux": "https://example.com/concilium-mcp-proxy-linux",
-            "macos": "https://example.com/concilium-mcp-proxy-macos",
-        }
+        fake_url = "https://example.com/concilium-mcp-proxy.mcpb"
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_USER_CREATED) as notify_mock,
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value=fake_urls),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=fake_url),
         ):
             result = runner.invoke(
                 app,
@@ -591,15 +549,14 @@ class TestRemoveUser:
         assert result.exit_code == 0, result.output
         notify_mock.assert_called_once()
         kwargs = notify_mock.call_args.kwargs
-        assert "$HOME/.concilium/bin/concilium-mcp-proxy" in kwargs["config_json_unix"]
-        assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in kwargs["config_json_windows"]
-        assert kwargs["proxy_download_urls"] == fake_urls
+        assert kwargs["mcpb_download_url"] == fake_url
+        assert kwargs["client_code"]
 
-    def test_add_user_warns_admin_when_no_download_urls_generated(self):
+    def test_add_user_warns_admin_when_no_download_url_generated(self):
         """Sem link de download (backend sem suporte, ou Graph createLink falhando —
 
         ADR-135), o email ainda é enviado com sucesso mas sem instrução de onde obter o
-        executável. Sem este aviso, isso passa desapercebido: a CLI só reportaria
+        pacote. Sem este aviso, isso passa desapercebido: a CLI só reportaria
         "✓ enviado" (ver test_add_user_reports_failure_and_prints_fallback_when_email_send_fails
         para o caso, diferente, de o próprio ENVIO do email falhar)."""
         store = _make_store(add_client_return=_make_client_record())
@@ -607,7 +564,7 @@ class TestRemoveUser:
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_USER_CREATED, return_value=True),
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(
                 app,
@@ -615,19 +572,16 @@ class TestRemoveUser:
             )
 
         assert result.exit_code == 0, result.output
-        assert "Nenhum link de download" in result.output
+        assert "Não foi possível gerar o link de download" in result.output
         assert "Email de boas-vindas enviado" in result.output
 
-    def test_add_user_no_warning_when_at_least_one_download_url_generated(self):
+    def test_add_user_no_warning_when_download_url_generated(self):
         store = _make_store(add_client_return=_make_client_record())
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_USER_CREATED, return_value=True),
-            patch(
-                PATCH_GET_PROXY_DOWNLOAD_URLS,
-                return_value={"windows": "https://example.com/win.exe", "linux": None, "macos": None},
-            ),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
         ):
             result = runner.invoke(
                 app,
@@ -635,20 +589,20 @@ class TestRemoveUser:
             )
 
         assert result.exit_code == 0, result.output
-        assert "Nenhum link de download" not in result.output
+        assert "Não foi possível gerar o link de download" not in result.output
 
     def test_add_user_reports_failure_and_prints_fallback_when_email_send_fails(self):
         """notify_user_created() retornando False (ex.: SMTP rejeitou por anexo grande
 
         demais) não deve ser reportado como sucesso — a CLI precisa avisar o admin e
-        imprimir os configs para entrega manual, em vez do "✓ enviado" silenciosamente
-        errado que causava o bug real em produção."""
+        imprimir o link/client_code para entrega manual, em vez do "✓ enviado"
+        silenciosamente errado que causava o bug real em produção."""
         store = _make_store(add_client_return=_make_client_record())
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_USER_CREATED, return_value=False),
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(
                 app,
@@ -658,7 +612,7 @@ class TestRemoveUser:
         assert result.exit_code == 0, result.output
         assert "Falha ao enviar" in result.output
         assert "Email de boas-vindas enviado" not in result.output
-        assert "CONCILIUM_CLIENT_CODE" in result.output
+        assert "Código de ativação" in result.output
 
 
 # ===========================================================================
@@ -800,51 +754,57 @@ class TestForgetUser:
 
 
 class TestRegenerateCode:
-    def test_no_config_flag_no_json_block(self):
-        """--no-config → no JSON block with CONCILIUM_CLIENT_CODE."""
+    def test_no_link_flag_hides_link_and_echoes_raw_code(self):
+        """--no-link → não mostra o link do .mcpb, só ecoa o client_code cru."""
         store = _make_store()
         store.regenerate_client_code.return_value = "RCODE-ABCDEF1234567890"
 
         with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
-                ["regenerate-code", "--user", "alice", "--no-config"],
+                ["regenerate-code", "--user", "alice", "--no-link"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "CONCILIUM_CLIENT_CODE" not in result.output
+        assert "Link de instalação" not in result.output
         # Code itself is displayed
         assert "RCODE-ABCDEF1234567890" in result.output
 
-    def test_with_config_default_shows_json_block(self):
-        """--config (default) → JSON block contains CONCILIUM_CLIENT_CODE."""
+    def test_with_link_shows_download_url_and_code(self):
+        """--link (default) → mostra o link de instalação do .mcpb e o client_code."""
         store = _make_store()
         store.regenerate_client_code.return_value = "RCODE-TESTCODE123"
 
-        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
+        ):
             result = runner.invoke(
                 app,
-                ["regenerate-code", "--user", "alice", "--config"],
+                ["regenerate-code", "--user", "alice", "--link"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "CONCILIUM_CLIENT_CODE" in result.output
+        assert "https://example.com/concilium-mcp-proxy.mcpb" in result.output
         assert "RCODE-TESTCODE123" in result.output
 
-    def test_default_shows_config(self):
-        """Default show_config=True → JSON block present without explicit flag."""
+    def test_default_shows_link(self):
+        """Default show_link=True → link/código presentes sem flag explícita."""
         store = _make_store()
         store.regenerate_client_code.return_value = "RCODE-DEFAULTCODE"
 
-        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
+        ):
             result = runner.invoke(
                 app,
                 ["regenerate-code", "--user", "alice"],
-                # no flag → default is --config (show_config=True)
+                # no flag → default is --link (show_link=True)
             )
 
         assert result.exit_code == 0, result.output
-        assert "CONCILIUM_CLIENT_CODE" in result.output
+        assert "RCODE-DEFAULTCODE" in result.output
 
     def test_unknown_user_exits_1(self):
         """regenerate_client_code returning None (unknown user) exits with error."""
@@ -860,20 +820,22 @@ class TestRegenerateCode:
         assert result.exit_code == 1
         assert "não encontrado" in result.output
 
-    def test_config_shows_both_platform_blocks(self):
-        """Sem --platform: --config mostra os dois blocos (macOS/Linux e Windows)."""
+    def test_link_shows_manual_delivery_fallback_when_url_unavailable(self):
         store = _make_store()
         store.regenerate_client_code.return_value = "RCODE-WIN"
 
-        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
+        ):
             result = runner.invoke(
                 app,
                 ["regenerate-code", "--user", "alice"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "$HOME/.concilium/bin/concilium-mcp-proxy" in result.output
-        assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in result.output
+        assert "nenhum gerado" in result.output
+        assert "RCODE-WIN" in result.output
 
     def test_with_email_notifies_user_edited(self):
         """ADR-131 D2 — regenerate-code chama notify_user_edited quando há email cadastrado."""
@@ -1243,27 +1205,21 @@ class TestMigrateLegacyCodes:
         store.migrate_legacy_client_codes.return_value = [
             ("legacy1", "RCODE-AAA", "legacy1@example.com"),
         ]
-        fake_urls = {"windows": "https://example.com/concilium-mcp-proxy.exe", "linux": None, "macos": None}
+        fake_url = "https://example.com/concilium-mcp-proxy.mcpb"
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value=fake_urls),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=fake_url),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
         assert result.exit_code == 0, result.output
         assert "legacy1" in result.output
         assert "email enviado" in result.output
-        notify_mock.assert_called_once()
-        args = notify_mock.call_args[0]
-        assert args[0] == "legacy1"
-        assert args[1] == "legacy1@example.com"
-        assert "RCODE-AAA" in args[2]  # config_json_unix
-        assert "RCODE-AAA" in args[3]  # config_json_windows
-        assert args[4] == fake_urls
+        notify_mock.assert_called_once_with("legacy1", "legacy1@example.com", "RCODE-AAA", fake_url)
 
-    def test_migrate_warns_admin_when_no_download_urls_generated(self):
+    def test_migrate_warns_admin_when_no_download_url_generated(self):
         store = _make_store()
         store.migrate_legacy_client_codes.return_value = [
             ("legacy1", "RCODE-AAA", "legacy1@example.com"),
@@ -1272,12 +1228,12 @@ class TestMigrateLegacyCodes:
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=True),
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
         assert result.exit_code == 0, result.output
-        assert "Nenhum link de download" in result.output
+        assert "Não foi possível gerar o link de download" in result.output
 
     def test_migrates_without_email_lists_for_manual_delivery(self):
         store = _make_store()
@@ -1288,7 +1244,7 @@ class TestMigrateLegacyCodes:
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
@@ -1298,28 +1254,8 @@ class TestMigrateLegacyCodes:
         assert "RCODE-BBB" in result.output
         notify_mock.assert_not_called()
 
-    def test_email_path_sends_both_platforms(self):
-        store = _make_store()
-        store.migrate_legacy_client_codes.return_value = [
-            ("legacy1", "RCODE-AAA", "legacy1@example.com"),
-        ]
-        fake_urls = {"windows": "https://example.com/concilium-mcp-proxy.exe", "linux": None, "macos": None}
-
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value=fake_urls),
-        ):
-            result = runner.invoke(app, ["migrate-legacy-codes"])
-
-        assert result.exit_code == 0, result.output
-        args = notify_mock.call_args[0]
-        config_json_unix, config_json_windows = args[2], args[3]
-        assert "$HOME/.concilium/bin/concilium-mcp-proxy" in config_json_unix
-        assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in config_json_windows
-
-    def test_manual_delivery_shows_both_platforms(self):
-        """Sem email: os dois formatos são impressos pro admin entregar — sem escolha prévia."""
+    def test_manual_delivery_shows_link_and_code(self):
+        """Sem email: link do .mcpb + client_code são impressos pro admin entregar."""
         store = _make_store()
         store.migrate_legacy_client_codes.return_value = [
             ("legacy_no_email", "RCODE-BBB", ""),
@@ -1327,13 +1263,13 @@ class TestMigrateLegacyCodes:
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
         assert result.exit_code == 0, result.output
-        assert "$HOME/.concilium/bin/concilium-mcp-proxy" in result.output
-        assert r"C:\\Concilium\\concilium-mcp-proxy.exe" in result.output
+        assert "https://example.com/concilium-mcp-proxy.mcpb" in result.output
+        assert "RCODE-BBB" in result.output
 
     def test_email_send_failure_added_to_manual_delivery(self):
         """notify_client_code_migrated() retornando False não é silenciado — usuário
@@ -1347,7 +1283,7 @@ class TestMigrateLegacyCodes:
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=False),
-            patch(PATCH_GET_PROXY_DOWNLOAD_URLS, return_value={"windows": None, "linux": None, "macos": None}),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 

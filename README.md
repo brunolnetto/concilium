@@ -130,58 +130,22 @@ concilium-api
 Não há pacote publicado (PyPI/wheel) para instalar `concilium-mcp-proxy` via pip numa máquina de
 usuário final — só é instalável via `pip install .` a partir de um clone do repositório, um fluxo de
 desenvolvedor. Para eliminar essa dependência de Python/pip na máquina do usuário final, o CI
-([build-proxy.yml](.github/workflows/build-proxy.yml)) empacota o proxy com PyInstaller (build nativo
-por SO — Windows/Linux/macOS) e publica os executáveis no blob storage de produção; `concilium ops
-auth add-user`/`regenerate-code`/`migrate-legacy-codes` geram um link de download temporário (7 dias)
-por SO e os incluem no email, e o `claude_desktop_config.json` de cada plataforma já aponta para um
-caminho fixo local — sem depender de `PATH`.
+([build-proxy.yml](.github/workflows/build-proxy.yml)) builda os 3 binários PyInstaller nativos
+(Windows/Linux/macOS) e os empacota numa única **Desktop Extension (`.mcpb`) universal** (ADR-161) —
+o manifest usa `platform_overrides` para o Claude Desktop escolher o binário certo em runtime, sem
+o usuário nem o admin precisarem discernir SO em ponto nenhum do fluxo. O `.mcpb` é publicado
+versionado no blob storage (`distribuicao/concilium-mcp-proxy/vN.mcpb`, imutável, + ponteiro estável
+`distribuicao/concilium-mcp-proxy/latest.mcpb`, sobrescrito a cada build).
 
-Baixe o executável correspondente ao seu sistema e salve no caminho indicado (crie a pasta se não
-existir):
+`concilium ops auth add-user`/`regenerate-code`/`migrate-legacy-codes` enviam por email o link fixo
+de instalação do `.mcpb` (sempre o mesmo, reaproveitado entre cadastros — aponta pro path "latest")
+e o `client_code` separado. Não há mais `claude_desktop_config.json` para editar à mão nem
+executável para baixar e salvar num caminho fixo:
 
-- **Windows:** `C:\Concilium\concilium-mcp-proxy.exe`
-- **macOS/Linux:** `~/.concilium/bin/concilium-mcp-proxy` (depois `chmod +x` no arquivo)
-
-**macOS/Linux:**
-
-```json
-{
-  "mcpServers": {
-    "concilium": {
-      "command": "sh",
-      "args": ["-c", "$HOME/.concilium/bin/concilium-mcp-proxy"],
-      "env": {
-        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
-        "CONCILIUM_CLIENT_CODE": "RCODE-..."
-      }
-    }
-  }
-}
-```
-
-`"command"` sozinho não expande `$HOME` (não passa por um shell) — por isso o bloco usa `sh -c`,
-que resolve a variável em tempo de execução independente do usuário/máquina.
-
-**Windows:**
-
-```json
-{
-  "mcpServers": {
-    "concilium": {
-      "command": "C:\\Concilium\\concilium-mcp-proxy.exe",
-      "env": {
-        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
-        "CONCILIUM_CLIENT_CODE": "RCODE-..."
-      }
-    }
-  }
-}
-```
-
-`concilium ops auth add-user`, `regenerate-code` e `migrate-legacy-codes` não pedem pra escolher a
-plataforma — o admin não sabe necessariamente o SO do dispositivo final no momento do cadastro.
-Os dois blocos (macOS/Linux e Windows) são sempre gerados/enviados juntos (por email, em anexos
-separados; no console, um após o outro), e o próprio usuário usa o que corresponde ao seu sistema.
+1. Baixe e abra o arquivo `.mcpb` — o Claude Desktop mostra a tela de instalação sozinho.
+2. Quando pedido, cole o `client_code` no campo de configuração (`sensitive: true` — mascarado na
+   UI, nunca fica em texto plano num arquivo local).
+3. `CONCILIUM_SERVER_URL` já vem fixo no manifest — não precisa ser informado.
 
 **Notas:**
 - `CONCILIUM_CLIENT_CODE`: Código fornecido pelo administrador para ativar o dispositivo
@@ -196,26 +160,17 @@ Isso confirma que o `refresh_token` foi salvo em `~/.concilium/tokens/<device_id
 o proxy não depende mais do `CONCILIUM_CLIENT_CODE` no dia a dia (só reativa com ele se o token expirar
 ou for revogado; validade padrão: 90 dias).
 
-**Problema conhecido — `claude_desktop_config.json` "voltando sozinho":** em algumas instalações, o
-Claude Desktop reescreve esse arquivo com um valor antigo/de outra sessão ao reiniciar (ex.: sincronização
-de configuração de MCP servers atrelada à conta), revertendo edições manuais no bloco `env`. Se isso
-acontecer e a ativação continuar falhando mesmo com o código correto, ative uma vez manualmente pelo
-terminal para gravar o token em cache diretamente (sem depender do arquivo persistir):
-
-```bash
-CONCILIUM_CLIENT_CODE="RCODE-..." CONCILIUM_SERVER_URL="https://mcp.mendesloboconstrucao.com.br" ~/.concilium/bin/concilium-mcp-proxy
-# aguarde a linha "Autenticado com sucesso." e encerre com Ctrl+C
-```
-
-No Windows (Prompt de Comando), rode o `.exe` diretamente em vez do comando acima:
-
-```cmd
-set CONCILIUM_CLIENT_CODE=RCODE-...
-set CONCILIUM_SERVER_URL=https://mcp.mendesloboconstrucao.com.br
-C:\Concilium\concilium-mcp-proxy.exe
-```
-
-Isso é um comportamento do cliente (Claude Desktop), fora do controle deste projeto.
+**Problema conhecido — configuração de MCP servers "voltando sozinha":** em algumas instalações, o
+Claude Desktop reescreve `mcpServers` (sem merge) ao reiniciar quando team cloud sync está ativo
+(indicado pela chave `remoteToolsDeviceName` no config), revertendo edições manuais — comportamento
+documentado só em issues públicas do GitHub, não reconhecido oficialmente pela Anthropic. Extensões
+instaladas via `.mcpb` são armazenadas separadamente (`extensions-installations.json`, não
+`mcpServers`), o que é indício de que escapam desse bug — mas isso ainda **não foi confirmado** em
+produção (ADR-161 F1, validação pendente). O fallback antigo (invocar o executável cru manualmente
+num caminho fixo local) não se aplica mais: o `.mcpb` empacota o binário dentro da própria extensão,
+sem expô-lo num caminho estável e documentado. Se a ativação falhar repetidamente após reinstalar,
+reporte ao time — a estratégia de fallback manual para este cenário está em aberto até F1 confirmar
+o comportamento real.
 
 ### 3. Interface de Usuário (UI)
 

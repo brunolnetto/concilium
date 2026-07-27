@@ -58,105 +58,67 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-_MCP_SERVER_URL = "https://mcp.mendesloboconstrucao.com.br"
+# Publicado versionado por build-proxy.yml (ADR-161 F3): .mcpb universal com
+# os 3 binários PyInstaller embutidos (platform_overrides escolhe o certo em
+# runtime) — substitui os 3 links por SO do executável cru + os 2 blocos
+# claude_desktop_config.json do mecanismo antigo (sunset).
+_MCPB_BLOB_PATH = "distribuicao/concilium-mcp-proxy/latest.mcpb"
 
-_WINDOWS_INSTALL_PATH = r"C:\Concilium\concilium-mcp-proxy.exe"
-_UNIX_INSTALL_PATH = "$HOME/.concilium/bin/concilium-mcp-proxy"
-
-# Publicados pela workflow build-proxy.yml (PyInstaller, um build nativo por SO) —
-# não há PyPI/wheel publicado para instalação via pip em máquinas de usuário final.
-_PROXY_EXE_BLOB_PATHS = {
-    "windows": "distribuicao/concilium-mcp-proxy.exe",
-    "linux": "distribuicao/concilium-mcp-proxy-linux",
-    "macos": "distribuicao/concilium-mcp-proxy-macos",
-}
+# "Link fixo" (ADR-161 D3): em vez de renovar a cada cadastro, usamos um TTL
+# bem longo — Graph createLink é idempotente por item+type+scope, então
+# chamadas repetidas tendem a devolver o mesmo link enquanto o path
+# (`_MCPB_BLOB_PATH`) não mudar, mesmo com o conteúdo sendo sobrescrito a
+# cada build (mesma driveItem, nova versão SharePoint).
+_MCPB_LINK_TTL_SEGUNDOS = 10 * 365 * 24 * 3600
 
 
-def _get_proxy_exe_download_urls(ttl_segundos: int = 7 * 24 * 3600) -> dict[str, str | None]:
-    """Gera links de download temporário dos executáveis do proxy (um por SO).
+def _get_mcpb_download_url() -> str | None:
+    """Gera o link de download do pacote .mcpb universal (ADR-161).
 
     scope="organization": o destinatário (funcionário com conta no tenant
     MendesLobo) só precisa estar logado no M365 para abrir o link — não expõe o
     arquivo publicamente. Diferente de scope="anonymous" (default do backend),
     que depende de compartilhamento externo estar habilitado no site do
     SharePoint — confirmado em produção que está desabilitado (ADR-135 §D3.1).
-    "organization" funciona hoje sem nenhuma mudança de configuração do site.
 
-    Retorna {"windows": url, "linux": url, "macos": url} — cada valor é None se o
-    backend não suportar URL assinada (ex.: filesystem local em dev), tratado pelo
-    chamador (cai no texto de fallback assumindo instalação via pip).
+    None se o backend não suportar URL assinada (ex.: filesystem local em dev)
+    ou a chamada falhar — tratado pelo chamador (aviso + entrega manual).
     """
     from concilium.infrastructure.storage.store_factory import build_system_blob_storage
 
     storage = build_system_blob_storage()
-    return {
-        platform: storage.gerar_url_temporaria(blob_path, ttl_segundos=ttl_segundos, scope="organization")
-        for platform, blob_path in _PROXY_EXE_BLOB_PATHS.items()
-    }
+    return storage.gerar_url_temporaria(_MCPB_BLOB_PATH, ttl_segundos=_MCPB_LINK_TTL_SEGUNDOS, scope="organization")
 
 
-def _warn_if_no_download_urls(proxy_download_urls: dict[str, str | None]) -> None:
-    """Avisa o admin no terminal quando nenhum link de download pôde ser gerado.
+def _warn_if_no_mcpb_url(mcpb_url: str | None) -> None:
+    """Avisa o admin no terminal quando o link de download não pôde ser gerado.
 
-    O executável do proxy só chega ao usuário pelo link assinado (não há mais
-    fallback de anexo — ver `notifications._distribution_attachments`); se os
-    3 SOs vierem None (backend sem suporte, ou Graph createLink falhando —
-    já aconteceu em produção, ADR-135), o email de boas-vindas ainda é enviado
-    com sucesso, mas sem nenhuma instrução de onde obter o executável. Sem
-    este aviso, isso passa desapercebido (o comando só reporta "✓ enviado").
+    O .mcpb só chega ao usuário pelo link assinado (não há mais fallback de
+    anexo — ver `notifications._distribution_attachments`); se vier None
+    (backend sem suporte, ou Graph createLink falhando — já aconteceu em
+    produção, ADR-135), o email de boas-vindas ainda é enviado com sucesso,
+    mas sem instrução de onde obter o pacote. Sem este aviso, isso passa
+    desapercebido (o comando só reporta "✓ enviado").
     """
-    if not any(proxy_download_urls.values()):
+    if not mcpb_url:
         rprint(
-            "\n[yellow]⚠ Nenhum link de download do executável do proxy foi gerado "
+            "\n[yellow]⚠ Não foi possível gerar o link de download do pacote .mcpb "
             "(backend de storage sem suporte a URL assinada, ou falha ao gerar — veja os "
             "logs do servidor). O email de boas-vindas será enviado sem o link de download; "
-            "entregue o executável ao usuário por outro meio.[/yellow]"
+            "entregue o pacote ao usuário por outro meio.[/yellow]"
         )
 
 
-def _build_mcp_config_block(client_code: str, platform: str) -> dict:
-    """Monta o bloco claude_desktop_config.json — "command" varia por plataforma.
+def _print_mcpb_link_and_code(client_code: str, mcpb_url: str | None) -> None:
+    """Instruções de entrega manual: link do .mcpb + client_code (ADR-161 D3).
 
-    Windows e Unix apontam para o executável standalone (PyInstaller) num caminho
-    fixo local — o usuário baixa o binário (link enviado por email) e salva nesse
-    caminho. Isso evita depender do pacote Python/PATH estar instalado na máquina do
-    usuário final, já que não há PyPI/wheel publicado para `concilium`.
-
-    No Unix, "command" não expande "$HOME" sozinho (não passa por um shell) — por
-    isso usamos "sh -c" para forçar a expansão, análogo ao "cmd /c" usado no Windows
-    para outros fins (aqui não é sobre PATH, é sobre variável de ambiente).
+    Substitui `_print_both_configs`/os dois blocos claude_desktop_config.json
+    do mecanismo antigo — o .mcpb + `user_config` elimina a configuração manual,
+    o usuário só precisa do link (abre a instalação no Claude Desktop) e do
+    client_code (colado no campo pedido durante a instalação).
     """
-    entry: dict = {}
-    if platform == "windows":
-        entry["command"] = _WINDOWS_INSTALL_PATH
-    else:
-        entry["command"] = "sh"
-        entry["args"] = ["-c", _UNIX_INSTALL_PATH]
-    entry["env"] = {
-        "CONCILIUM_CLIENT_CODE": client_code,
-        "CONCILIUM_SERVER_URL": _MCP_SERVER_URL,
-    }
-    return {"mcpServers": {"concilium": entry}}
-
-
-def _build_mcp_config_jsons(client_code: str) -> tuple[str, str]:
-    """Retorna (config_json_unix, config_json_windows) — o admin nunca escolhe
-
-    plataforma na hora do cadastro (não sabe o SO do dispositivo final com
-    certeza), então sempre geramos os dois e deixamos o usuário decidir qual usar.
-    """
-    import json as _json
-
-    unix_json = _json.dumps(_build_mcp_config_block(client_code, "unix"), indent=2, ensure_ascii=False)
-    windows_json = _json.dumps(_build_mcp_config_block(client_code, "windows"), indent=2, ensure_ascii=False)
-    return unix_json, windows_json
-
-
-def _print_both_configs(config_json_unix: str, config_json_windows: str) -> None:
-    rprint("\n[bold]macOS/Linux:[/bold]")
-    typer.echo(config_json_unix)
-    rprint("\n[bold]Windows:[/bold]")
-    typer.echo(config_json_windows)
+    rprint(f"  Link de instalação (.mcpb): {mcpb_url or '(nenhum gerado — entregue o pacote por outro meio)'}")
+    rprint(f"  Código de ativação: {client_code}")
 
 
 # ── Usuários ──────────────────────────────────────────────────────────────────
@@ -266,8 +228,8 @@ def add_user(
     para ativar quantos dispositivos o usuário precisar (Claude Desktop em casa,
     no trabalho, etc.), sem depender do admin/TI para cadastrar cada um.
 
-    Se --email for fornecido, o claude_desktop_config.json pronto é enviado por
-    email automaticamente (ADR-123 F2).
+    Se --email for fornecido, o link de instalação do pacote .mcpb e o
+    client_code são enviados por email automaticamente (ADR-161).
     """
     from concilium.application.services.notifications import notify_user_created
 
@@ -289,32 +251,27 @@ def add_user(
     rprint("\n[yellow]Client code gerado (guarde agora — não será exibido de novo):[/yellow]")
     rprint(f"  [bold]{client_code}[/bold]")
 
-    config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
-
     if email:
-        proxy_download_urls = _get_proxy_exe_download_urls()
-        _warn_if_no_download_urls(proxy_download_urls)
+        mcpb_url = _get_mcpb_download_url()
+        _warn_if_no_mcpb_url(mcpb_url)
         sent = notify_user_created(
             client_id=client_id,
             role=", ".join(role),
             email=email,
-            config_json_unix=config_json_unix,
-            config_json_windows=config_json_windows,
-            proxy_download_urls=proxy_download_urls,
+            client_code=client_code,
+            mcpb_download_url=mcpb_url,
         )
         if sent:
             rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
         else:
             rprint(
                 f"\n[red]✗ Falha ao enviar o email de boas-vindas para {email}[/red] "
-                "[yellow](veja os logs do servidor para o motivo) — entregue o client_code manualmente:[/yellow]"
+                "[yellow](veja os logs do servidor para o motivo) — entregue manualmente:[/yellow]"
             )
-            _print_both_configs(config_json_unix, config_json_windows)
+            _print_mcpb_link_and_code(client_code, mcpb_url)
     else:
-        rprint("\n[bold]Cole em claude_desktop_config.json (use o bloco do seu sistema):[/bold]")
-        rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
-        rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]")
-        _print_both_configs(config_json_unix, config_json_windows)
+        rprint("\n[bold]Envie ao usuário:[/bold]")
+        _print_mcpb_link_and_code(client_code, _get_mcpb_download_url())
 
 
 @app.command("update-user")
@@ -775,8 +732,8 @@ def forget_user(
 @app.command("regenerate-code")
 def regenerate_code(
     user: str = typer.Option(..., "--user", "-u", help="client_id do usuário."),
-    show_config: bool = typer.Option(
-        True, "--config/--no-config", help="Exibir bloco JSON para claude_desktop_config."
+    show_link: bool = typer.Option(
+        True, "--link/--no-link", help="Exibir o link de instalação do .mcpb e o client_code."
     ),
 ) -> None:
     """Gera um novo client_code para o usuário (invalida o anterior).
@@ -799,13 +756,9 @@ def regenerate_code(
         if not notify_user_edited(user, existing.email, {"client_code": "regenerado"}):
             rprint(f"[red]✗ Falha ao enviar email de aviso para {existing.email}[/red]")
 
-    if show_config:
-        config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
-
-        rprint("\n[bold]Envie ao usuário — colar em claude_desktop_config.json (use o bloco do seu sistema):[/bold]")
-        rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
-        rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]")
-        _print_both_configs(config_json_unix, config_json_windows)
+    if show_link:
+        rprint("\n[bold]Envie ao usuário:[/bold]")
+        _print_mcpb_link_and_code(client_code, _get_mcpb_download_url())
     else:
         typer.echo(client_code)
 
@@ -820,10 +773,9 @@ def migrate_legacy_codes() -> None:
     servidor para corrigir todos de uma vez, em vez de esperar cada usuário
     reportar o problema e rodar 'regenerate-code' individualmente.
 
-    Usuários com email cadastrado recebem os dois configs (macOS/Linux e Windows)
-    por email automaticamente (ADR-123) — o próprio usuário escolhe o certo.
-    Usuários sem email ficam listados no terminal (também os dois formatos) para
-    envio manual.
+    Usuários com email cadastrado recebem o link de instalação do .mcpb e o
+    client_code por email automaticamente (ADR-161). Usuários sem email ficam
+    listados no terminal para envio manual.
     """
     from concilium.application.services.notifications import notify_client_code_migrated
     from concilium.infrastructure.auth.auth_store import get_auth_store
@@ -837,19 +789,12 @@ def migrate_legacy_codes() -> None:
 
     rprint(f"[green]✓ {len(migrated)} usuário(s) migrado(s):[/green]\n")
 
-    proxy_download_urls = _get_proxy_exe_download_urls()
-    _warn_if_no_download_urls(proxy_download_urls)
+    mcpb_url = _get_mcpb_download_url()
+    _warn_if_no_mcpb_url(mcpb_url)
     manual: list[tuple[str, str]] = []
     for client_id, client_code, email in migrated:
-        config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
         if email:
-            sent = notify_client_code_migrated(
-                client_id,
-                email,
-                config_json_unix,
-                config_json_windows,
-                proxy_download_urls,
-            )
+            sent = notify_client_code_migrated(client_id, email, client_code, mcpb_url)
             if sent:
                 rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
             else:
@@ -862,9 +807,8 @@ def migrate_legacy_codes() -> None:
     if manual:
         rprint("\n[bold]Entrega manual (sem email cadastrado ou falha no envio):[/bold]")
         for client_id, client_code in manual:
-            config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
             rprint(f"\n  [cyan]{client_id}[/cyan]:")
-            _print_both_configs(config_json_unix, config_json_windows)
+            _print_mcpb_link_and_code(client_code, mcpb_url)
 
 
 @app.command("list-devices")

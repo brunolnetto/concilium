@@ -1,14 +1,16 @@
 """CLI para operações de blob storage — migração entre backends.
 
 Comandos:
-    concilium ops blob migrate   — copia blobs de source para target
-    concilium ops blob status    — lista blobs e estatísticas do backend atual
-    concilium ops blob put       — envia um arquivo local para o blob storage
-    concilium ops blob delete    — remove um blob/pasta (recursivo, irreversível na prática)
+    concilium ops blob migrate       — copia blobs de source para target
+    concilium ops blob status        — lista blobs e estatísticas do backend atual
+    concilium ops blob put           — envia um arquivo local para o blob storage
+    concilium ops blob put-versioned — publica versionado (vN + ponteiro "latest")
+    concilium ops blob delete        — remove um blob/pasta (recursivo, irreversível na prática)
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
@@ -203,6 +205,50 @@ def put(
     storage = _make_storage(backend, root, system=system)
     storage.gravar_blob(blob_path, local_path.read_bytes())
     rprint(f"[bold green]✓[/bold green] {local_path} → {blob_path}")
+
+
+@blob_app.command("put-versioned")
+def put_versioned(
+    local_path: Annotated[Path, typer.Argument(help="Arquivo local a enviar.")],
+    prefix: Annotated[
+        str, typer.Argument(help="Pasta de destino no blob storage (ex.: distribuicao/concilium-mcp-proxy).")
+    ],
+    latest_name: Annotated[
+        str, typer.Option("--latest-name", help="Nome do ponteiro estável sobrescrito a cada publish.")
+    ] = "latest",
+    backend: Annotated[str, typer.Option("--backend", "-b", help=_BACKEND_HELP)] = "",
+    root: Annotated[str, typer.Option("--root", help="Diretório raiz (apenas backend filesystem).")] = "",
+    system: Annotated[
+        bool,
+        typer.Option("--system", help="Usa o Drive de sistema (auth/distribuição) em vez do Drive de projetos."),
+    ] = False,
+) -> None:
+    """Publica um artefato versionado (ex.: o .mcpb do proxy — ADR-161 F3).
+
+    Grava dois blobs: `<prefix>/vN<ext>` (imutável, N sequencial — mesma convenção
+    vN de `ConfigVersionService`/ADR-062, adaptada aqui para blob storage) e
+    `<prefix>/<latest_name><ext>` (ponteiro estável, sobrescrito a cada publish —
+    é este path que deve ser usado para gerar o link fixo de download).
+
+    N é calculado a partir dos blobs `vN<ext>` já existentes no prefixo — nunca
+    sobrescreve uma versão anterior.
+    """
+    storage = _make_storage(backend, root, system=system)
+    ext = local_path.suffix
+    clean_prefix = prefix.rstrip("/")
+    existing = storage.listar_blobs(f"{clean_prefix}/")
+    version_re = re.compile(rf"^{re.escape(clean_prefix)}/v(\d+){re.escape(ext)}$")
+    versions = [int(m.group(1)) for b in existing if (m := version_re.match(b))]
+    next_version = max(versions, default=0) + 1
+
+    content = local_path.read_bytes()
+    versioned_path = f"{clean_prefix}/v{next_version}{ext}"
+    latest_path = f"{clean_prefix}/{latest_name}{ext}"
+
+    storage.gravar_blob(versioned_path, content)
+    storage.gravar_blob(latest_path, content)
+    rprint(f"[bold green]✓[/bold green] {local_path} → {versioned_path} (versão {next_version})")
+    rprint(f"[bold green]✓[/bold green] {local_path} → {latest_path} (ponteiro estável)")
 
 
 @blob_app.command("delete")

@@ -449,6 +449,103 @@ class TestPut:
 
 
 # ---------------------------------------------------------------------------
+# put-versioned
+# ---------------------------------------------------------------------------
+
+
+class TestPutVersioned:
+    def test_first_version_when_prefix_empty(self, tmp_path):
+        local_file = tmp_path / "concilium-mcp-proxy.mcpb"
+        local_file.write_bytes(b"pkg-v1")
+        mock_storage = MagicMock()
+        mock_storage.listar_blobs.return_value = []
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(
+                blob_app, ["put-versioned", str(local_file), "distribuicao/concilium-mcp-proxy"]
+            )
+
+        assert result.exit_code == 0, result.output
+        mock_storage.gravar_blob.assert_any_call("distribuicao/concilium-mcp-proxy/v1.mcpb", b"pkg-v1")
+        mock_storage.gravar_blob.assert_any_call("distribuicao/concilium-mcp-proxy/latest.mcpb", b"pkg-v1")
+        assert "v1.mcpb" in result.output
+        assert "latest.mcpb" in result.output
+
+    def test_next_version_computed_from_existing_max(self, tmp_path):
+        local_file = tmp_path / "concilium-mcp-proxy.mcpb"
+        local_file.write_bytes(b"pkg-v4")
+        mock_storage = MagicMock()
+        mock_storage.listar_blobs.return_value = [
+            "distribuicao/concilium-mcp-proxy/v1.mcpb",
+            "distribuicao/concilium-mcp-proxy/v3.mcpb",
+            "distribuicao/concilium-mcp-proxy/latest.mcpb",
+        ]
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(
+                blob_app, ["put-versioned", str(local_file), "distribuicao/concilium-mcp-proxy"]
+            )
+
+        assert result.exit_code == 0, result.output
+        mock_storage.gravar_blob.assert_any_call("distribuicao/concilium-mcp-proxy/v4.mcpb", b"pkg-v4")
+
+    def test_ignores_non_matching_files_when_computing_next_version(self, tmp_path):
+        """'latest.mcpb' e arquivos de outro prefixo/extensão não contam como versão."""
+        local_file = tmp_path / "concilium-mcp-proxy.mcpb"
+        local_file.write_bytes(b"pkg")
+        mock_storage = MagicMock()
+        mock_storage.listar_blobs.return_value = [
+            "distribuicao/concilium-mcp-proxy/latest.mcpb",
+            "distribuicao/concilium-mcp-proxy/v2.exe",
+            "distribuicao/outro-pacote/v99.mcpb",
+        ]
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(
+                blob_app, ["put-versioned", str(local_file), "distribuicao/concilium-mcp-proxy"]
+            )
+
+        assert result.exit_code == 0, result.output
+        mock_storage.gravar_blob.assert_any_call("distribuicao/concilium-mcp-proxy/v1.mcpb", b"pkg")
+
+    def test_custom_latest_name(self, tmp_path):
+        local_file = tmp_path / "concilium-mcp-proxy.mcpb"
+        local_file.write_bytes(b"pkg")
+        mock_storage = MagicMock()
+        mock_storage.listar_blobs.return_value = []
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(
+                blob_app,
+                [
+                    "put-versioned",
+                    str(local_file),
+                    "distribuicao/concilium-mcp-proxy",
+                    "--latest-name",
+                    "current",
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        mock_storage.gravar_blob.assert_any_call("distribuicao/concilium-mcp-proxy/current.mcpb", b"pkg")
+
+    def test_system_flag_uses_system_storage(self, tmp_path):
+        local_file = tmp_path / "concilium-mcp-proxy.mcpb"
+        local_file.write_bytes(b"pkg")
+        mock_storage = MagicMock()
+        mock_storage.listar_blobs.return_value = []
+
+        with patch(f"{STORE_FACTORY}.build_system_blob_storage", return_value=mock_storage) as mock_build:
+            result = runner.invoke(
+                blob_app, ["put-versioned", str(local_file), "distribuicao/concilium-mcp-proxy", "--system"]
+            )
+
+        assert result.exit_code == 0, result.output
+        mock_build.assert_called_once()
+        mock_storage.gravar_blob.assert_any_call("distribuicao/concilium-mcp-proxy/v1.mcpb", b"pkg")
+
+
+# ---------------------------------------------------------------------------
 # delete
 # ---------------------------------------------------------------------------
 

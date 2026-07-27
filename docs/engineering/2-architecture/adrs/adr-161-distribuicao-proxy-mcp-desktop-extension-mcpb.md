@@ -95,8 +95,26 @@ passam a enviar sempre o **mesmo link fixo** (reaproveitado entre cadastros, ind
 usuário) + o `client_code` em separado, pra colar na tela de instalação — em vez de montar e enviar
 um JSON completo (ou escolher entre dois blocos) por pessoa.
 
+> **Atualização (2026-07-27, F3):** "link fixo" implementado como TTL de 10 anos em vez de
+> renovação por cadastro (`_MCPB_LINK_TTL_SEGUNDOS`, `commands_auth.py`) — Graph `createLink` é
+> idempotente por item+type+scope, então chamadas repetidas tendem a devolver o mesmo `webUrl`
+> enquanto o path (`distribuicao/concilium-mcp-proxy/latest.mcpb`) não mudar, mesmo com o conteúdo
+> sendo sobrescrito a cada build (mesma driveItem, nova versão SharePoint). Resolve a lacuna
+> deixada em aberto nesta decisão (como o link deixava de expirar em 7 dias).
+
 D4. O pipeline de build do proxy (`build-proxy.yml`, PyInstaller por SO) não muda — o `.mcpb`
 consome o binário resultante como está.
+
+D6. **Publicação versionada, não sobrescrita (F3).** `build-proxy.yml` ganha um job `pack-mcpb`
+(após a matrix de build, via `actions/upload-artifact`/`download-artifact` — os 3 binários nunca
+coexistem no mesmo runner) que empacota o `.mcpb` e publica com `concilium ops blob put-versioned`
+(novo comando, `commands_blob.py`): grava `distribuicao/concilium-mcp-proxy/vN.mcpb` (imutável, N
+sequencial — mesma convenção `vN` de `ConfigVersionService`/ADR-062, adaptada para blob storage) +
+`distribuicao/concilium-mcp-proxy/latest.mcpb` (ponteiro estável, sobrescrito a cada publish — é
+este path usado por D3). O mecanismo antigo (`_get_proxy_exe_download_urls`, os 3 binários crus
+publicados direto em `distribuicao/concilium-mcp-proxy.exe`/`-linux`/`-macos`, sempre sobrescritos
+sem versão) foi **removido, não mantido em paralelo** — decisão do usuário em 2026-07-27: sunset
+imediato, sem fallback dual. Isso diverge do F4 original desta ADR (ver nota na seção de fases).
 
 D5. **Validar experimentalmente antes de migrar a distribuição de produção**: instalar o `.mcpb`
 numa máquina com team cloud sync ativo (`remoteToolsDeviceName` presente) e confirmar, através de
@@ -136,7 +154,7 @@ afeta.
 |---|---|
 | `.mcpb` pode sofrer do mesmo bug de team sync — não confirmado oficialmente pela Anthropic | D5/F1: validar em ambiente controlado antes de qualquer rollout; se falhar, registrar aqui e reavaliar a decisão sem prosseguir |
 | Assinatura do pacote não está claramente documentada — risco de aviso de "extensão não confiável" na instalação | Testar instalação local (F0) antes do rollout; investigar processo de assinatura se o aviso aparecer |
-| Migração exige nova rodada de onboarding para usuários já ativos (precisam reinstalar como extensão) | Rollout gradual (F4) — manter o fluxo JSON atual funcional em paralelo até confirmar estabilidade |
+| Migração exige nova rodada de onboarding para usuários já ativos (precisam reinstalar como extensão) | **Mudou em F3:** mecanismo antigo (JSON + link por SO) foi removido, não mantido em paralelo (D6) — usuários já ativos com o fluxo antigo continuam funcionando via token em cache (`~/.concilium/tokens/`) até o token expirar/ser revogado, mas um `regenerate-code`/reativação daqui em diante só oferece o caminho `.mcpb`. Sem fallback automático se F1 revelar problema — reavaliar antes de expandir o rollout |
 | CLI oficial `mcpb` ainda não é suportado via Claude Code CLI, só Claude Desktop (limitação pública conhecida) | Sem impacto — o uso alvo desta ADR é sempre Claude Desktop |
 
 ---
@@ -148,8 +166,8 @@ afeta.
 | F0 — Protótipo | `mcpb init`/`mcpb pack` local empacotando os 3 binários PyInstaller já existentes num `.mcpb` universal (`platform_overrides`); instalação manual de teste em pelo menos 2 SOs distintos | 🔶 Parcial — ver nota |
 | F1 — Validação do bug de team sync (D5) | Instalar `.mcpb` numa máquina com `remoteToolsDeviceName` ativo; confirmar sobrevivência da config a múltiplos reinícios | ⬜ Não iniciada |
 | F2 — `user_config` fim a fim | Manifest com `concilium_client_code` (sensitive) + `CONCILIUM_SERVER_URL` fixo; validar que a env var chega ao processo do proxy e completa `ativar_dispositivo` | ⬜ Não iniciada |
-| F3 — Ajuste do fluxo de onboarding | `add-user`/`regenerate-code`/`migrate-legacy-codes` passam a enviar o link fixo do `.mcpb` do SO + `client_code` separado, em vez do JSON completo; atualizar README e o tutorial `concilium-usage-tutorial/SKILL.md` | ⬜ Não iniciada |
-| F4 — Rollout | Migrar usuários existentes; manter fallback do fluxo JSON durante a transição | ⬜ Não iniciada |
+| F3 — Ajuste do fluxo de onboarding | `add-user`/`regenerate-code`/`migrate-legacy-codes` passam a enviar o link fixo do `.mcpb` + `client_code` separado, em vez do JSON completo; publicação versionada (D6); atualizar README e o tutorial `concilium-usage-tutorial/SKILL.md` | ✅ Feita |
+| F4 — Rollout | Migrar usuários existentes | ⬜ Não iniciada — nota: mecanismo antigo já foi removido em F3 (sem fallback dual, ver D6), diferente do plano original desta linha |
 
 ---
 
@@ -170,12 +188,16 @@ afeta.
 - [ ] Valor preenchido chega como env var ao processo do proxy e completa `ativar_dispositivo` com sucesso
 
 ### F3
-- [ ] `_build_mcp_config_jsons` (ou equivalente) atualizado para apontar pro `.mcpb`
-- [ ] `README.md` e `concilium-usage-tutorial/SKILL.md` atualizados
+- [x] `_build_mcp_config_jsons`/`_get_proxy_exe_download_urls`/`_print_both_configs` removidos; `_get_mcpb_download_url`/`_print_mcpb_link_and_code` implementados em `commands_auth.py`, usados por `add-user`, `regenerate-code` (flag renomeada `--link/--no-link`) e `migrate-legacy-codes`
+- [x] `notifications.py` (`notify_user_created`/`notify_client_code_migrated`) e os templates `user_created.txt/html.jinja2` atualizados — anexo dos 2 JSONs removido, só o `.skill` + `client_code` em destaque
+- [x] `concilium ops blob put-versioned` novo (`commands_blob.py`) — vN + ponteiro `latest`, testado (`test_commands_blob_coverage.py`)
+- [x] `build-proxy.yml`: job `pack-mcpb` publica versionado via `put-versioned`; binário cru não é mais publicado direto (sunset)
+- [x] `README.md` e `concilium-usage-tutorial/SKILL.md` (+ espelho em `docs/product/.../AGENT_SKILL_TUTORIAL.md`) atualizados
+- [x] Testes de `commands_auth`/`notifications` reescritos para o novo mecanismo (nenhuma referência ao antigo restante fora de comentários históricos)
 
 ### F4
-- [ ] Pelo menos um usuário real migrado com sucesso do fluxo JSON atual para o `.mcpb`
-- [ ] Fallback do fluxo JSON mantido até confirmação de estabilidade em produção
+- [ ] Pelo menos um usuário real migrado com sucesso para o `.mcpb` — pendente, depende de F0/F1 (instalação real validada) antes de rollout
+- [x] ~~Fallback do fluxo JSON mantido até confirmação de estabilidade~~ — não aplicável: mecanismo antigo já removido em F3 (D6, decisão do usuário de sunset imediato). Se F1 revelar que `.mcpb` também sofre do bug de team sync, não há fallback automático — reavaliar antes de expandir o rollout
 
 ---
 

@@ -19,35 +19,18 @@ def _patched_service():
     return patcher, mock_service
 
 
-class TestBuildProxyDownloadNote:
-    def test_empty_when_no_urls(self):
-        from concilium.application.services.notifications import _build_proxy_download_note
+class TestBuildMcpbDownloadNote:
+    def test_empty_when_no_url(self):
+        from concilium.application.services.notifications import _build_mcpb_download_note
 
-        assert _build_proxy_download_note(None) == ""
-        assert _build_proxy_download_note({}) == ""
-        assert _build_proxy_download_note({"windows": None, "linux": None, "macos": None}) == ""
+        assert _build_mcpb_download_note(None) == ""
+        assert _build_mcpb_download_note("") == ""
 
-    def test_includes_each_present_url(self):
-        from concilium.application.services.notifications import _build_proxy_download_note
+    def test_includes_url_when_present(self):
+        from concilium.application.services.notifications import _build_mcpb_download_note
 
-        note = _build_proxy_download_note(
-            {
-                "windows": "https://x/win.exe",
-                "linux": "https://x/linux",
-                "macos": "https://x/macos",
-            }
-        )
-        assert "https://x/win.exe" in note
-        assert "https://x/linux" in note
-        assert "https://x/macos" in note
-
-    def test_omits_windows_block_when_only_linux_present(self):
-        from concilium.application.services.notifications import _build_proxy_download_note
-
-        note = _build_proxy_download_note({"linux": "https://x/linux"})
-        assert "https://x/linux" in note
-        assert "Windows" not in note
-        assert "macOS" not in note
+        note = _build_mcpb_download_note("https://x/concilium-mcp-proxy.mcpb")
+        assert "https://x/concilium-mcp-proxy.mcpb" in note
 
 
 class TestSkillZipPackagingDelegation:
@@ -68,18 +51,17 @@ class TestNotifyUserCreated:
 
         patcher, mock_service = _patched_service()
         with patcher:
-            notify_user_created("bruno", "operator", "bruno@x.com", '{"unix":true}', '{"windows":true}')
+            notify_user_created("bruno", "operator", "bruno@x.com", "RCODE-XYZ")
 
         mock_service.send.assert_called_once()
         kwargs = mock_service.send.call_args.kwargs
         assert kwargs["to"] == "bruno@x.com"
         assert kwargs["template"] == "user_created"
         assert kwargs["context"]["heading"] == "Bem-vindo ao Concilium, bruno!"
+        assert kwargs["context"]["client_code"] == "RCODE-XYZ"
         assert ("Perfil", "operator") in kwargs["context"]["details"]
-        assert len(kwargs["attachments"]) == 3
+        assert len(kwargs["attachments"]) == 1
         names = [a[0] for a in kwargs["attachments"]]
-        assert "claude_desktop_config-macos-linux.json" in names
-        assert "claude_desktop_config-windows.json" in names
         assert "concilium-usage-tutorial.skill" in names
         # attachments carry bytes content (ADR-134 D1 contract)
         assert all(isinstance(a[1], bytes) for a in kwargs["attachments"])
@@ -88,7 +70,7 @@ class TestNotifyUserCreated:
         assert skill_attachment[2] == "application/zip"
         assert skill_attachment[1][:2] == b"PK"  # assinatura de zip
 
-    def test_download_note_included_when_urls_present(self):
+    def test_download_note_included_when_url_present(self):
         from concilium.application.services.notifications import notify_user_created
 
         patcher, mock_service = _patched_service()
@@ -97,12 +79,11 @@ class TestNotifyUserCreated:
                 "bruno",
                 "operator",
                 "bruno@x.com",
-                "{}",
-                "{}",
-                proxy_download_urls={"windows": "https://x/win.exe"},
+                "RCODE-XYZ",
+                mcpb_download_url="https://x/concilium-mcp-proxy.mcpb",
             )
         kwargs = mock_service.send.call_args.kwargs
-        assert "https://x/win.exe" in kwargs["context"]["download_note"]
+        assert "https://x/concilium-mcp-proxy.mcpb" in kwargs["context"]["download_note"]
 
 
 class TestNotifyClientCodeMigrated:
@@ -111,12 +92,13 @@ class TestNotifyClientCodeMigrated:
 
         patcher, mock_service = _patched_service()
         with patcher:
-            notify_client_code_migrated("legacy1", "legacy1@x.com", "{}", "{}")
+            notify_client_code_migrated("legacy1", "legacy1@x.com", "RCODE-XYZ")
         mock_service.send.assert_called_once()
         kwargs = mock_service.send.call_args.kwargs
         assert kwargs["template"] == "user_created"
         assert "legacy1" in kwargs["context"]["heading"]
         assert kwargs["context"]["details"] is None
+        assert kwargs["context"]["client_code"] == "RCODE-XYZ"
 
 
 class TestNotifyUserRemoved:
