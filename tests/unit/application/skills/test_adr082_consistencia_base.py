@@ -11,7 +11,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 _ROOT = Path(__file__).parent.parent.parent.parent.parent / "src/concilium/application/skills/manifests"
 
@@ -364,3 +364,22 @@ class TestRasfcRunHeuristicsEstoque:
         assert repl == [resource]
         assert any(v.codigo == "VAL-ESTOQUE-CAP-01" and v.status == "AVISO" for v in validacoes)
         assert candidates
+
+
+class TestMergePoolDeficits:
+    def test_segundo_resultado_sem_melhora_nao_atualiza_merge(self):
+        # ADR-128 F7 (issue #117): quando mais de um resultado explorado reporta
+        # déficit para o MESMO recurso, o merge deve tomar o pico máximo — o
+        # segundo valor, menor ou igual ao já mesclado, não deve sobrescrever.
+        r1 = SimpleNamespace(schedule=SimpleNamespace(pool_deficit={"E": 5}))
+        r2 = SimpleNamespace(schedule=SimpleNamespace(pool_deficit={"E": 3}))
+        result = _cron._mod_validacao._merge_pool_deficits([r1, r2])
+        assert result == {"E": 5}
+
+    def test_segundo_resultado_com_pico_maior_atualiza_merge(self):
+        # Complementa o caso acima: quando o segundo valor É maior, o merge
+        # atualiza normalmente (branch TRUE do mesmo `if`).
+        r1 = SimpleNamespace(schedule=SimpleNamespace(pool_deficit={"E": 3}))
+        r2 = SimpleNamespace(schedule=SimpleNamespace(pool_deficit={"E": 5}))
+        result = _cron._mod_validacao._merge_pool_deficits([r1, r2])
+        assert result == {"E": 5}

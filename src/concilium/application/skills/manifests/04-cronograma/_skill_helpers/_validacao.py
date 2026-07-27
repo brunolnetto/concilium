@@ -366,6 +366,36 @@ def _rasfc_extract_from_canonical(
     return activities, dag, pool
 
 
+def _rasfc_warn_if_pool_vazio(pool: Any, validacoes: list) -> None:
+    """VAL-SCHED-02 (AVISO) quando o pool extraído não tem nenhum recurso."""
+    if not pool.resources:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-SCHED-02", status="AVISO", mensagem="Pool vazio — agendando sem restrições de recursos."
+            )
+        )
+
+
+def _rasfc_compute_deadline_weeks(inputs: dict, rcpsp_spec: Any, canonical_in: CanonicalModel) -> int:
+    """Resolve o prazo em semanas: ``inputs`` > ``rcpsp_spec`` > datas do projeto."""
+    return int(
+        inputs.get("deadline_weeks")
+        or (rcpsp_spec.get("deadline_weeks") if isinstance(rcpsp_spec, dict) else None)
+        or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
+    )
+
+
+def _rasfc_build_producoes_por_atividade(
+    canonical_in: CanonicalModel, cpu_lookup: dict | None, producao_lookup: dict | None
+) -> dict[str, Any]:
+    """Pareamento atividade→Producao (ADR-139 D5); vazio sem ambos os lookups de catálogo."""
+    return (
+        _build_producoes_por_atividade(canonical_in.eap or [], cpu_lookup, producao_lookup)
+        if cpu_lookup and producao_lookup
+        else {}
+    )
+
+
 def _rasfc_extract_inputs(
     canonical_in: CanonicalModel,
     inputs: dict,
@@ -392,23 +422,10 @@ def _rasfc_extract_inputs(
         return None
     activities, dag, pool = result
 
-    if not pool.resources:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-SCHED-02", status="AVISO", mensagem="Pool vazio — agendando sem restrições de recursos."
-            )
-        )
+    _rasfc_warn_if_pool_vazio(pool, validacoes)
 
-    deadline_weeks = int(
-        inputs.get("deadline_weeks")
-        or (rcpsp_spec.get("deadline_weeks") if isinstance(rcpsp_spec, dict) else None)
-        or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
-    )
-    producoes_por_atividade = (
-        _build_producoes_por_atividade(canonical_in.eap or [], cpu_lookup, producao_lookup)
-        if cpu_lookup and producao_lookup
-        else {}
-    )
+    deadline_weeks = _rasfc_compute_deadline_weeks(inputs, rcpsp_spec, canonical_in)
+    producoes_por_atividade = _rasfc_build_producoes_por_atividade(canonical_in, cpu_lookup, producao_lookup)
     return activities, dag, pool, deadline_weeks, producoes_por_atividade
 
 
@@ -521,6 +538,92 @@ def _rasfc_report_estoque_delays(explored: list, validacoes: list) -> list:
     return kept
 
 
+def _rasfc_apply_algorithm_overrides(strategy: Any, inputs: dict) -> None:
+    """Aplica overrides explícitos de ``inputs`` (``algorithm``/``heuristics``) sobre a
+    estratégia inferida por ``select_scheduling_algorithm``."""
+    if inputs.get("algorithm"):
+        strategy.algorithm = str(inputs["algorithm"])
+    if inputs.get("heuristics"):
+        strategy.heuristics = list(inputs["heuristics"])
+
+
+def _rasfc_disable_replenishable_if_incompatible(
+    replenishable_resources: list[ReplenishableResource] | None,
+    strategy: Any,
+    validacoes: list,
+) -> list[ReplenishableResource] | None:
+    """ADR-128 F5: torna visível o caso "restrição declarada mas ignorada" em vez
+    de um no-op silencioso — só o path CP-SAT (selector._explore_cpsat) aplica
+    ReplenishableResource."""
+    if replenishable_resources and strategy.algorithm != "CP-SAT":
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-ESTOQUE-ALGO-01",
+                status="AVISO",
+                mensagem=(
+                    f"Restrição de estoque consumível não aplicada — algoritmo selecionado "
+                    f"('{strategy.algorithm}') não suporta ADR-128. Force algorithm='CP-SAT' "
+                    "para aplicar a restrição."
+                ),
+            )
+        )
+        return None
+    return replenishable_resources
+
+
+def _rasfc_retry_with_relaxed_pool(
+    activities: list,
+    dag: Any,
+    pool: Any,
+    deadline_weeks: int,
+    heuristics: list,
+    strategy: Any,
+    replenishable_resources: list[ReplenishableResource] | None,
+    pool_deficit: dict[str, int],
+    validacoes: list,
+) -> tuple[list, bool]:
+    """Reexplora com pool relaxado quando o primeiro attempt não produziu nenhum
+    candidato viável. ADR-128 F7: usa o pico real de demanda (``pool_deficit``) em
+    vez do percentual cego de ``_relax_pool``. Retorna ``(explored, relaxed_flag)``."""
+    relaxed_pool = _relax_pool(pool, deficit=pool_deficit)
+    explored = explore_schedules(
+        activities=activities,
+        dag=dag,
+        pool=relaxed_pool,
+        deadline_weeks=deadline_weeks,
+        heuristics=heuristics,
+        top_n=3,
+        strategy=strategy,
+        replenishable_resources=replenishable_resources,
+    )
+    explored = _rasfc_report_estoque_delays(explored, validacoes)
+    if not explored:
+        return explored, False
+    mensagem = (
+        f"Pool ajustado ao pico real de demanda pós-reparo de estoque: {pool_deficit}."
+        if pool_deficit
+        else "Pool relaxado 110%."
+    )
+    validacoes.append(ValidacaoItem(codigo="VAL-SCHED-03", status="AVISO", mensagem=mensagem))
+    return explored, True
+
+
+def _rasfc_report_estoque_cap_violations(
+    explored: list, replenishable_resources: list[ReplenishableResource] | None, validacoes: list
+) -> None:
+    """ADR-139/128: violation_estoque_acima_capacidade já existia mas nunca era
+    chamada em produção — fecha essa lacuna junto (mesmo gatilho opt-in)."""
+    if not (explored and replenishable_resources):
+        return
+    from concilium.application.scheduling.replenishable import violation_estoque_acima_capacidade
+
+    top_schedule = explored[0].schedule
+    for resource in replenishable_resources:
+        v = violation_estoque_acima_capacidade(resource, top_schedule.scheduled_activities)
+        if v is not None:
+            validacoes.append(ValidacaoItem(codigo=v.code, status=v.status, mensagem=v.remediation_hint or ""))
+
+
 def _rasfc_run_heuristics(
     activities: list,
     dag: Any,
@@ -546,30 +649,14 @@ def _rasfc_run_heuristics(
         deadline_margin_pct=float(inputs.get("deadline_margin_pct", 0.2)),
         criticality=str(inputs.get("criticality", "medium")),
     )
-    if inputs.get("algorithm"):
-        strategy.algorithm = str(inputs["algorithm"])
-    if inputs.get("heuristics"):
-        strategy.heuristics = list(inputs["heuristics"])
+    _rasfc_apply_algorithm_overrides(strategy, inputs)
 
     replenishable_resources = _build_replenishable_resources_if_any(
         producoes_por_atividade, insumos_lookup, logistica_consumiveis, validacoes
     )
-    if replenishable_resources and strategy.algorithm != "CP-SAT":
-        # ADR-128 F5: torna visível o caso "restrição declarada mas ignorada" em vez
-        # de um no-op silencioso — só o path CP-SAT (selector._explore_cpsat) aplica
-        # ReplenishableResource.
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-ESTOQUE-ALGO-01",
-                status="AVISO",
-                mensagem=(
-                    f"Restrição de estoque consumível não aplicada — algoritmo selecionado "
-                    f"('{strategy.algorithm}') não suporta ADR-128. Force algorithm='CP-SAT' "
-                    "para aplicar a restrição."
-                ),
-            )
-        )
-        replenishable_resources = None
+    replenishable_resources = _rasfc_disable_replenishable_if_incompatible(
+        replenishable_resources, strategy, validacoes
+    )
 
     heuristics = strategy.heuristics or ["MINSLK"]
     first_attempt = explore_schedules(
@@ -591,37 +678,12 @@ def _rasfc_run_heuristics(
     relaxed_flag = False
 
     if not explored:
-        relaxed_pool = _relax_pool(pool, deficit=pool_deficit)
-        explored = explore_schedules(
-            activities=activities,
-            dag=dag,
-            pool=relaxed_pool,
-            deadline_weeks=deadline_weeks,
-            heuristics=heuristics,
-            top_n=3,
-            strategy=strategy,
-            replenishable_resources=replenishable_resources,
+        explored, relaxed_flag = _rasfc_retry_with_relaxed_pool(
+            activities, dag, pool, deadline_weeks, heuristics, strategy, replenishable_resources, pool_deficit,
+            validacoes,
         )
-        explored = _rasfc_report_estoque_delays(explored, validacoes)
-        if explored:
-            relaxed_flag = True
-            mensagem = (
-                f"Pool ajustado ao pico real de demanda pós-reparo de estoque: {pool_deficit}."
-                if pool_deficit
-                else "Pool relaxado 110%."
-            )
-            validacoes.append(ValidacaoItem(codigo="VAL-SCHED-03", status="AVISO", mensagem=mensagem))
 
-    if explored and replenishable_resources:
-        # ADR-139/128: violation_estoque_acima_capacidade já existia mas nunca era
-        # chamada em produção — fecha essa lacuna junto (mesmo gatilho opt-in).
-        from concilium.application.scheduling.replenishable import violation_estoque_acima_capacidade
-
-        top_schedule = explored[0].schedule
-        for resource in replenishable_resources:
-            v = violation_estoque_acima_capacidade(resource, top_schedule.scheduled_activities)
-            if v is not None:
-                validacoes.append(ValidacaoItem(codigo=v.code, status=v.status, mensagem=v.remediation_hint or ""))
+    _rasfc_report_estoque_cap_violations(explored, replenishable_resources, validacoes)
 
     return (
         [_to_canonical_candidate(r.heuristic, r.schedule, r.quality_score, relaxed_flag) for r in explored],

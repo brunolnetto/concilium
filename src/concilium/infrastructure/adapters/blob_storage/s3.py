@@ -42,6 +42,31 @@ class S3BlobStorage(BlobStoragePort):
         )
         self._session = self._build_session()
 
+    @staticmethod
+    def _resolve_bucket(s3: Any, *, system: bool) -> str:
+        bucket = (s3.system_bucket if system else s3.bucket).strip()
+        if not bucket:
+            env_var = "CONCILIUM__S3_SYSTEM_BUCKET ou CONCILIUM__S3_BUCKET" if system else "CONCILIUM__S3_BUCKET"
+            raise OSError(f"{env_var} é obrigatório para CONCILIUM__STORE_BACKEND=s3.")
+        return bucket
+
+    @staticmethod
+    def _stripped_or_none(value: str) -> str | None:
+        return value.strip() or None
+
+    @classmethod
+    def _from_env_kwargs(cls, s3: Any, *, system: bool) -> dict[str, str | None]:
+        return {
+            "region": cls._stripped_or_none(s3.region),
+            "root_prefix": (s3.system_root_prefix if system else s3.root_prefix).strip(),
+            "endpoint_url": cls._stripped_or_none(s3.endpoint_url),
+            "addressing_style": cls._stripped_or_none(s3.addressing_style),
+            "aws_access_key_id": cls._stripped_or_none(s3.access_key_id),
+            "aws_secret_access_key": cls._stripped_or_none(s3.secret_access_key),
+            "aws_session_token": cls._stripped_or_none(s3.session_token),
+            "server_side_encryption": cls._stripped_or_none(s3.server_side_encryption),
+        }
+
     @classmethod
     def from_env(cls, *, system: bool = False) -> S3BlobStorage:
         """Instancia a partir das variáveis de ambiente CONCILIUM__S3_*.
@@ -50,22 +75,8 @@ class S3BlobStorage(BlobStoragePort):
         isolado do bucket de projetos — ver CONCILIUM__S3_SYSTEM_BUCKET.
         """
         s3 = get_storage().s3
-        bucket = (s3.system_bucket if system else s3.bucket).strip()
-        if not bucket:
-            env_var = "CONCILIUM__S3_SYSTEM_BUCKET ou CONCILIUM__S3_BUCKET" if system else "CONCILIUM__S3_BUCKET"
-            raise OSError(f"{env_var} é obrigatório para CONCILIUM__STORE_BACKEND=s3.")
-
-        return cls(
-            bucket=bucket,
-            region=s3.region.strip() or None,
-            root_prefix=(s3.system_root_prefix if system else s3.root_prefix).strip(),
-            endpoint_url=s3.endpoint_url.strip() or None,
-            addressing_style=s3.addressing_style.strip() or None,
-            aws_access_key_id=s3.access_key_id.strip() or None,
-            aws_secret_access_key=s3.secret_access_key.strip() or None,
-            aws_session_token=s3.session_token.strip() or None,
-            server_side_encryption=s3.server_side_encryption.strip() or None,
-        )
+        bucket = cls._resolve_bucket(s3, system=system)
+        return cls(bucket=bucket, **cls._from_env_kwargs(s3, system=system))
 
     @staticmethod
     def _build_session() -> Any:

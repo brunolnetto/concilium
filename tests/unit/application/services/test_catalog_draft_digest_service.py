@@ -169,6 +169,35 @@ class TestEnviarDigestRascunhosPendentes:
         mock_store.assert_not_called()
         assert enviados == 0
 
+    def test_projects_root_explicito_prevalece_quando_config_root_omitido(self, tmp_path: Path):
+        """Branch 137->140: projects_root já informado não deve ser sobrescrito pelo storage global."""
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+
+        mock_storage = MagicMock(config_root=tmp_path, projects_root=tmp_path / "nunca-deveria-ser-usado")
+        clients = [_make_client("mgr1", ["catalog-manager"], email="mgr1@x.com")]
+        mock_store = MagicMock()
+        mock_store.list_clients.return_value = clients
+        mock_notify = MagicMock(return_value=True)
+
+        with (
+            patch("concilium.infrastructure.settings.get_storage", return_value=mock_storage),
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.get_auth_store",
+                return_value=mock_store,
+            ),
+            patch(
+                "concilium.application.services.catalog.draft_digest_service.notify_catalog_drafts_pending",
+                mock_notify,
+            ),
+        ):
+            enviados = enviar_digest_rascunhos_pendentes(projects_root=projects_root)
+
+        assert enviados == 1
+        assert "projeto:PROJ-001" in mock_notify.call_args.args[1]
+
 
 # ---------------------------------------------------------------------------
 # ADR-150 D5: rascunhos de override de projeto no mesmo digest
@@ -276,6 +305,46 @@ class TestRascunhosPendentesProjeto:
         _write_projeto_cpu_overrides(projects_root, "PROJ-001", {})
 
         assert rascunhos_pendentes(tmp_path, projects_root) == {}
+
+    def test_overrides_insumo_com_json_invalido_conta_zero(self, tmp_path: Path):
+        """Linhas 36-37: `_contar_overrides` com JSON malformado retorna 0 (não propaga)."""
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        overrides_dir = projects_root / "PROJ-001" / "overrides"
+        overrides_dir.mkdir(parents=True, exist_ok=True)
+        (overrides_dir / "insumos_override.json").write_text("{ isso não é json", encoding="utf-8")
+        _write_projeto_cpu_overrides(projects_root, "PROJ-001", {"CPU-001": {"producao_horaria": 4.0}})
+
+        result = rascunhos_pendentes(tmp_path, projects_root)
+
+        assert "projeto:PROJ-001" in result
+        assert "insumo" not in result["projeto:PROJ-001"][0]["motivo"]
+        assert "CPU" in result["projeto:PROJ-001"][0]["motivo"]
+
+    def test_estado_rascunho_com_json_invalido_e_ignorado(self, tmp_path: Path):
+        """Linhas 57-58: `_rascunho_estado.json` malformado → projeto ignorado (continue)."""
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        overrides_dir = projects_root / "PROJ-001" / "overrides"
+        overrides_dir.mkdir(parents=True, exist_ok=True)
+        (overrides_dir / "_rascunho_estado.json").write_text("{ isso não é json", encoding="utf-8")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+
+        assert rascunhos_pendentes(tmp_path, projects_root) == {}
+
+    def test_meta_com_json_invalido_owner_id_none(self, tmp_path: Path):
+        """Linhas 78-79: `meta.json` malformado → owner_id vira None, sem propagar exceção."""
+        (tmp_path / "contextos").mkdir()
+        projects_root = tmp_path / "projetos"
+        _write_projeto_estado(projects_root, "PROJ-001")
+        _write_projeto_overrides(projects_root, "PROJ-001", {"INS-001::BASE": {"preco": 10.0}})
+        (projects_root / "PROJ-001").mkdir(parents=True, exist_ok=True)
+        (projects_root / "PROJ-001" / "meta.json").write_text("{ isso não é json", encoding="utf-8")
+
+        result = rascunhos_pendentes(tmp_path, projects_root)
+
+        assert result["projeto:PROJ-001"][0]["owner_id"] is None
 
 
 class TestEnviarDigestNotificaDonoDoProjeto:

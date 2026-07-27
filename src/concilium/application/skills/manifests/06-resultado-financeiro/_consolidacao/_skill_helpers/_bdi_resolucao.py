@@ -82,6 +82,76 @@ def _get_bdi_value(manual: dict[str, Any], *keys: str, default: float = 0.0) -> 
     return float(default)
 
 
+def _rbf_parse_tabela_bdi(
+    tabela_raw: Any, validacoes: list[ValidacaoItem]
+) -> tuple[TabelaBdi | None, str, bool]:
+    """Parses inputs.tabela_bdi (dict ou já-modelo). Returns (tabela_ou_None, fonte, override)."""
+    if tabela_raw is None:
+        return None, "DEFAULT_BDI_TABELA", False
+    try:
+        tabela = TabelaBdi.model_validate(tabela_raw) if isinstance(tabela_raw, dict) else tabela_raw
+        return tabela, "inputs.tabela_bdi", True
+    except Exception as e:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CONSOL-BDI-PARSE",
+                status="AVISO",
+                mensagem=f"Falha ao parsear tabela_bdi: {e}. Usando DEFAULT_BDI_TABELA.",
+            )
+        )
+        return None, "DEFAULT_BDI_TABELA", False
+
+
+def _rbf_aplicar_perfil_bdi(
+    tabela: TabelaBdi, perfil_bdi_raw: Any, fonte: str, override: bool, validacoes: list[ValidacaoItem]
+) -> tuple[TabelaBdi, str, bool, str]:
+    """Aplica PerfilBdiProjeto sobre a tabela quando presente. Returns (tabela, fonte, override, regime_str)."""
+    regime_str = "pre_reforma"
+    if perfil_bdi_raw is None:
+        return tabela, fonte, override, regime_str
+    try:
+        perfil_bdi = (
+            PerfilBdiProjeto.model_validate(perfil_bdi_raw) if isinstance(perfil_bdi_raw, dict) else perfil_bdi_raw
+        )
+        tabela = resolver_componentes_bdi(tabela, perfil_bdi)
+        fonte += " + PerfilBdiProjeto"
+        override = True
+        regime_v = getattr(perfil_bdi, "regime_version", None)
+        regime_str = regime_v.value if regime_v else "pre_reforma"
+    except Exception as e:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CONSOL-BDI-PERFIL",
+                status="AVISO",
+                mensagem=f"Falha ao aplicar perfil_bdi: {e}. Mantendo tabela base.",
+            )
+        )
+    return tabela, fonte, override, regime_str
+
+
+def _rbf_aplicar_jurisdicao_fallback(
+    tabela: TabelaBdi, fonte: str, override: bool, inputs: dict[str, Any], validacoes: list[ValidacaoItem]
+) -> tuple[TabelaBdi, str]:
+    """Sem tabela_bdi/perfil_bdi explícitos, aplica a alíquota da jurisdição do escopo."""
+    if override:
+        return tabela, fonte
+    aliquotas_jurisdicao = inputs.get("aliquotas_bdi_jurisdicao")
+    if not aliquotas_jurisdicao:
+        return tabela, fonte
+    tabela = resolver_bdi_jurisdicao(tabela, aliquotas_jurisdicao)
+    fonte += " + jurisdicao (ADR-038)"
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-CONSOL-BDI-JURISDICAO",
+            status="OK",
+            mensagem=(
+                f"BDI ajustado pela jurisdição do escopo (ISS={aliquotas_jurisdicao.get('ISS', 0) * 100:.2f}%)."
+            ),
+        )
+    )
+    return tabela, fonte
+
+
 def _rbf_resolve_tabela_perfil(
     inputs: dict[str, Any], validacoes: list[ValidacaoItem]
 ) -> tuple[TabelaBdi, str, bool, str]:
@@ -90,63 +160,17 @@ def _rbf_resolve_tabela_perfil(
     Returns (tabela, fonte, override, regime_str).
     """
     tabela_raw = inputs.get("tabela_bdi")
-    tabela: TabelaBdi | None = None
-    fonte = "DEFAULT_BDI_TABELA"
-    override = False
-    if tabela_raw is not None:
-        try:
-            tabela = TabelaBdi.model_validate(tabela_raw) if isinstance(tabela_raw, dict) else tabela_raw
-            fonte = "inputs.tabela_bdi"
-            override = True
-        except Exception as e:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-CONSOL-BDI-PARSE",
-                    status="AVISO",
-                    mensagem=f"Falha ao parsear tabela_bdi: {e}. Usando DEFAULT_BDI_TABELA.",
-                )
-            )
+    tabela, fonte, override = _rbf_parse_tabela_bdi(tabela_raw, validacoes)
     if tabela is None:
         tabela = DEFAULT_BDI_TABELA
+
     perfil_bdi_raw = inputs.get("bdi_perfil") or inputs.get("perfil_bdi")
-    regime_str = "pre_reforma"
-    if perfil_bdi_raw is not None:
-        try:
-            perfil_bdi = (
-                PerfilBdiProjeto.model_validate(perfil_bdi_raw) if isinstance(perfil_bdi_raw, dict) else perfil_bdi_raw
-            )
-            tabela = resolver_componentes_bdi(tabela, perfil_bdi)
-            fonte += " + PerfilBdiProjeto"
-            override = True
-            regime_v = getattr(perfil_bdi, "regime_version", None)
-            regime_str = regime_v.value if regime_v else "pre_reforma"
-        except Exception as e:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-CONSOL-BDI-PERFIL",
-                    status="AVISO",
-                    mensagem=f"Falha ao aplicar perfil_bdi: {e}. Mantendo tabela base.",
-                )
-            )
+    tabela, fonte, override, regime_str = _rbf_aplicar_perfil_bdi(tabela, perfil_bdi_raw, fonte, override, validacoes)
 
     # ADR-038: sem tabela_bdi/perfil_bdi explícitos, aplica a alíquota da jurisdição
     # do escopo (ISS/PIS/COFINS) sobre o default — fecha o gap onde a jurisdição
     # resolvida nunca chegava a influenciar o BDI calculado (era só metadado).
-    if not override:
-        aliquotas_jurisdicao = inputs.get("aliquotas_bdi_jurisdicao")
-        if aliquotas_jurisdicao:
-            tabela = resolver_bdi_jurisdicao(tabela, aliquotas_jurisdicao)
-            fonte += " + jurisdicao (ADR-038)"
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-CONSOL-BDI-JURISDICAO",
-                    status="OK",
-                    mensagem=(
-                        f"BDI ajustado pela jurisdição do escopo "
-                        f"(ISS={aliquotas_jurisdicao.get('ISS', 0) * 100:.2f}%)."
-                    ),
-                )
-            )
+    tabela, fonte = _rbf_aplicar_jurisdicao_fallback(tabela, fonte, override, inputs, validacoes)
 
     return tabela, fonte, override, regime_str
 

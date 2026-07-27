@@ -206,6 +206,67 @@ class CpSatScheduler:
             if res_intervals:
                 model.add_cumulative(res_intervals, res_demands, cap)
 
+    @staticmethod
+    def _validate_classic_precedence(
+        dag: ActivityDAG,
+        acts: dict[str, Activity],
+        by_id: dict[str, ScheduledActivity],
+    ) -> bool:
+        """Precedências FS (ActivityDAG.precedence + thresholds, ADR-081)."""
+        for pred_id, succ_id in dag.precedence:
+            if pred_id not in by_id or succ_id not in by_id:
+                continue
+            theta = dag.get_threshold(pred_id, succ_id)
+            pred, succ = by_id[pred_id], by_id[succ_id]
+            if theta >= 1.0:
+                if succ.start_week < pred.end_week:
+                    return False
+            else:
+                lag = math.ceil(theta * acts[pred_id].duration_weeks)
+                if succ.start_week < pred.start_week + lag:
+                    return False
+        return True
+
+    @staticmethod
+    def _is_extended_precedence_violated(
+        ep: ExtendedPrecedence, pred: ScheduledActivity, succ: ScheduledActivity
+    ) -> bool:
+        """Checa um único vínculo estendido SS/FF/FS+lag (NEP-031 L4)."""
+        if ep.tipo == "FS":
+            return succ.start_week < pred.end_week + ep.lag
+        if ep.tipo == "SS":
+            return succ.start_week < pred.start_week + ep.lag
+        if ep.tipo == "FF":
+            return succ.end_week < pred.end_week + ep.lag
+        return False
+
+    @staticmethod
+    def _validate_extended_precedence(
+        dag: ActivityDAG,
+        extended_precedences: list[ExtendedPrecedence] | None,
+        by_id: dict[str, ScheduledActivity],
+    ) -> bool:
+        """Precedências estendidas SS/FF/FS+lag (NEP-031 L4)."""
+        all_extended = list(getattr(dag, "extended_precedences", None) or [])
+        all_extended.extend(extended_precedences or [])
+        for ep in all_extended:
+            if ep.pred not in by_id or ep.succ not in by_id:
+                continue
+            pred, succ = by_id[ep.pred], by_id[ep.succ]
+            if CpSatScheduler._is_extended_precedence_violated(ep, pred, succ):
+                return False
+        return True
+
+    def _validate_pool_capacity(self, scheduled: list[ScheduledActivity], pool: ResourcePool) -> bool:
+        """Capacidade de ResourcePool (recursos reutilizáveis, não-consumíveis)."""
+        weekly = self._compute_weekly_resource_usage(scheduled)
+        for usages in weekly.values():
+            for res, qty in usages.items():
+                cap = pool.resources.get(res)
+                if cap is not None and qty > cap:
+                    return False
+        return True
+
     def _validate_repaired_schedule(
         self,
         scheduled: list[ScheduledActivity],
@@ -228,43 +289,13 @@ class CpSatScheduler:
         if any(sa.end_week > horizon for sa in scheduled):
             return False
 
-        # Precedências FS (ActivityDAG.precedence + thresholds, ADR-081)
-        for pred_id, succ_id in dag.precedence:
-            if pred_id not in by_id or succ_id not in by_id:
-                continue
-            theta = dag.get_threshold(pred_id, succ_id)
-            pred, succ = by_id[pred_id], by_id[succ_id]
-            if theta >= 1.0:
-                if succ.start_week < pred.end_week:
-                    return False
-            else:
-                lag = math.ceil(theta * acts[pred_id].duration_weeks)
-                if succ.start_week < pred.start_week + lag:
-                    return False
+        if not self._validate_classic_precedence(dag, acts, by_id):
+            return False
 
-        # Precedências estendidas SS/FF/FS+lag (NEP-031 L4)
-        all_extended = list(getattr(dag, "extended_precedences", None) or [])
-        all_extended.extend(extended_precedences or [])
-        for ep in all_extended:
-            if ep.pred not in by_id or ep.succ not in by_id:
-                continue
-            pred, succ = by_id[ep.pred], by_id[ep.succ]
-            if ep.tipo == "FS" and succ.start_week < pred.end_week + ep.lag:
-                return False
-            if ep.tipo == "SS" and succ.start_week < pred.start_week + ep.lag:
-                return False
-            if ep.tipo == "FF" and succ.end_week < pred.end_week + ep.lag:
-                return False
+        if not self._validate_extended_precedence(dag, extended_precedences, by_id):
+            return False
 
-        # Capacidade de ResourcePool (recursos reutilizáveis, não-consumíveis)
-        weekly = self._compute_weekly_resource_usage(scheduled)
-        for usages in weekly.values():
-            for res, qty in usages.items():
-                cap = pool.resources.get(res)
-                if cap is not None and qty > cap:
-                    return False
-
-        return True
+        return self._validate_pool_capacity(scheduled, pool)
 
     @staticmethod
     def _build_scheduled_activities(
@@ -286,6 +317,123 @@ class CpSatScheduler:
                 )
             )
         return scheduled
+
+    @staticmethod
+    def _validate_producao_reference(
+        acts: dict[str, Activity], replenishable_resources: list[ReplenishableResource] | None
+    ) -> None:
+        """ADR-139 D4: valida referência de atividade produtora (fail loud).
+
+        producao_por_semana é campo novo (sem legado): referência a atividade fora
+        do DAG é sempre erro de montagem do projeto, nunca dado histórico tolerável.
+        """
+        for resource in replenishable_resources or []:
+            desconhecidas = sorted(set(resource.producao_por_semana) - set(acts))
+            if desconhecidas:
+                raise ValueError(
+                    f"VAL-ESTOQUE-PROD-01: producao_por_semana do recurso "
+                    f"'{resource.resource_id}' referencia atividade(s) fora do DAG: "
+                    f"{', '.join(desconhecidas)}"
+                )
+
+    def _build_model(
+        self,
+        dag: ActivityDAG,
+        pool: ResourcePool,
+        acts: dict[str, Activity],
+        horizon: int,
+        extended_precedences: list[ExtendedPrecedence] | None,
+    ) -> tuple[cp_model.CpModel, dict[str, cp_model.IntVar], cp_model.IntVar]:
+        """Monta o modelo CP-SAT completo: variáveis de decisão, precedências FS e
+        estendidas, restrições de capacidade e o objetivo de minimizar o makespan."""
+        model = cp_model.CpModel()
+        starts, ends, intervals = self._add_activity_variables(model, dag, horizon)
+        self._add_fs_precedence_constraints(model, dag, acts, starts, ends)
+        self._add_extended_precedence_constraints(model, dag, extended_precedences, starts, ends)
+        self._add_resource_constraints(model, dag, pool, intervals)
+
+        makespan = model.new_int_var(0, horizon, "makespan")
+        model.add_max_equality(makespan, list(ends.values()))
+        model.minimize(makespan)
+        return model, starts, makespan
+
+    def _solve_model(
+        self, model: cp_model.CpModel, makespan: cp_model.IntVar
+    ) -> tuple[cp_model.CpSolver, cp_model.CpSolverStatus]:
+        """Configura os parâmetros do solver CP-SAT e resolve o modelo."""
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = self.timeout_seconds
+        solver.parameters.num_workers = self.num_workers
+        solver.parameters.log_search_progress = False
+
+        callback = _MakespanCallback(makespan)
+        status = solver.solve(model, callback)
+        return solver, status
+
+    @staticmethod
+    def _repair_replenishable_delays(
+        scheduled: list[ScheduledActivity],
+        dag: ActivityDAG,
+        extended_precedences: list[ExtendedPrecedence] | None,
+        replenishable_resources: list[ReplenishableResource] | None,
+    ) -> tuple[list[ScheduledActivity], dict[tuple[str, str], int]]:
+        """ADR-128: post-process consumable-resource delays (opt-in).
+
+        Fase 2b: reparo de estoque e repropagação de precedência rodam em laço de
+        ponto fixo — repropagar um atraso pode empurrar uma atividade que consome um
+        OUTRO recurso consumível, reabrindo uma violação de estoque já resolvida para
+        esse recurso (ver _MAX_REPAIR_ROUNDS acima).
+        """
+        delay_causes: dict[tuple[str, str], int] = {}
+        for _round in range(_MAX_REPAIR_ROUNDS):
+            before = [(sa.start_week, sa.end_week) for sa in scheduled]
+            for resource in replenishable_resources or []:
+                scheduled = apply_replenishable_delay(scheduled, resource, delay_causes)
+            scheduled = repropagate_precedence_delays(scheduled, dag, extended_precedences)
+            after = [(sa.start_week, sa.end_week) for sa in scheduled]
+            if before == after:
+                break
+        return scheduled, delay_causes
+
+    def _check_repair_feasibility(
+        self,
+        scheduled: list[ScheduledActivity],
+        dag: ActivityDAG,
+        extended_precedences: list[ExtendedPrecedence] | None,
+        pool: ResourcePool,
+        horizon: int,
+        replenishable_resources: list[ReplenishableResource] | None,
+    ) -> bool:
+        """Revalida o cronograma reparado (ADR-128).
+
+        O reparo de estoque desloca a atividade consumidora e a repropagação de
+        precedência (ADR-128 Fase 2b) empurra seus sucessores no DAG para preservar
+        FS/SS/FF/FS+lag — mas o laço de ponto fixo tem cota (`_MAX_REPAIR_ROUNDS`) e
+        nenhuma das duas passadas sabe sobre capacidade de `ResourcePool` ou o
+        horizonte. Marca infeasible em vez de devolver um cronograma potencialmente
+        inválido como feasible=True — rede de segurança final.
+        """
+        if not self._validate_repaired_schedule(scheduled, dag, extended_precedences, pool, horizon):
+            _log.warning(
+                "CpSatScheduler: reparo de disponibilidade de consumíveis (ADR-128) "
+                "violou precedência, capacidade de pool ou horizonte — output marcado "
+                "como infeasible."
+            )
+            return False
+        if any(
+            has_estoque_negativo(project_estoque_semanal(resource, scheduled))
+            for resource in replenishable_resources or []
+        ):
+            # ADR-128 F5: o laço de ponto fixo pode esgotar _MAX_REPAIR_ROUNDS sem
+            # convergir — sem esta checagem, o estoque final poderia seguir negativo
+            # para algum recurso e o cronograma ainda ser reportado feasible=True.
+            _log.warning(
+                "CpSatScheduler: reparo de disponibilidade de consumíveis (ADR-128) "
+                "esgotou _MAX_REPAIR_ROUNDS sem eliminar estoque negativo — output "
+                "marcado como infeasible."
+            )
+            return False
+        return True
 
     def schedule(
         self,
@@ -313,48 +461,14 @@ class CpSatScheduler:
                                    the projected stock negative are delayed as a
                                    post-processing pass over the CP-SAT solution.
         """
-        model = cp_model.CpModel()
         acts: dict[str, Activity] = {a.activity_id: a for a in dag.activities}
         H = self.horizon_weeks
 
-        # ── ADR-139 D4: valida referência de atividade produtora (fail loud) ──
-        # producao_por_semana é campo novo (sem legado): referência a atividade fora
-        # do DAG é sempre erro de montagem do projeto, nunca dado histórico tolerável.
-        for resource in replenishable_resources or []:
-            desconhecidas = sorted(set(resource.producao_por_semana) - set(acts))
-            if desconhecidas:
-                raise ValueError(
-                    f"VAL-ESTOQUE-PROD-01: producao_por_semana do recurso "
-                    f"'{resource.resource_id}' referencia atividade(s) fora do DAG: "
-                    f"{', '.join(desconhecidas)}"
-                )
+        self._validate_producao_reference(acts, replenishable_resources)
 
-        # ── decision variables ────────────────────────────────────────────
-        starts, ends, intervals = self._add_activity_variables(model, dag, H)
+        model, starts, makespan = self._build_model(dag, pool, acts, H, extended_precedences)
 
-        # ── FS precedences from ActivityDAG (ADR-081: completion_threshold_pct) ──
-        self._add_fs_precedence_constraints(model, dag, acts, starts, ends)
-
-        # ── extended precedences (SS, FF, FS+lag) ────────────────────────
-        self._add_extended_precedence_constraints(model, dag, extended_precedences, starts, ends)
-
-        # ── resource constraints ─────────────────────────────────────────
-        self._add_resource_constraints(model, dag, pool, intervals)
-
-        # ── objective: minimise makespan ─────────────────────────────────
-        makespan = model.new_int_var(0, H, "makespan")
-        model.add_max_equality(makespan, list(ends.values()))
-        model.minimize(makespan)
-
-        # ── solve ────────────────────────────────────────────────────────
-        solver = cp_model.CpSolver()
-        solver.parameters.max_time_in_seconds = self.timeout_seconds
-        solver.parameters.num_workers = self.num_workers
-        solver.parameters.log_search_progress = False
-
-        callback = _MakespanCallback(makespan)
-        status = solver.solve(model, callback)
-
+        solver, status = self._solve_model(model, makespan)
         feasible = status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
 
         if not feasible:  # pragma: no branch
@@ -369,49 +483,17 @@ class CpSatScheduler:
         # ── build output ─────────────────────────────────────────────────
         scheduled = self._build_scheduled_activities(dag, solver, starts)
 
-        # ── ADR-128: post-process consumable-resource delays (opt-in) ─────
-        # Fase 2b: reparo de estoque e repropagação de precedência rodam em laço de
-        # ponto fixo — repropagar um atraso pode empurrar uma atividade que consome um
-        # OUTRO recurso consumível, reabrindo uma violação de estoque já resolvida para
-        # esse recurso (ver _MAX_REPAIR_ROUNDS acima).
         repaired = bool(replenishable_resources)
         delay_causes: dict[tuple[str, str], int] = {}
         if repaired:
-            for _round in range(_MAX_REPAIR_ROUNDS):
-                before = [(sa.start_week, sa.end_week) for sa in scheduled]
-                for resource in replenishable_resources or []:
-                    scheduled = apply_replenishable_delay(scheduled, resource, delay_causes)
-                scheduled = repropagate_precedence_delays(scheduled, dag, extended_precedences)
-                after = [(sa.start_week, sa.end_week) for sa in scheduled]
-                if before == after:
-                    break
+            scheduled, delay_causes = self._repair_replenishable_delays(
+                scheduled, dag, extended_precedences, replenishable_resources
+            )
 
-        # O reparo de estoque desloca a atividade consumidora e a repropagação de
-        # precedência (ADR-128 Fase 2b) empurra seus sucessores no DAG para preservar
-        # FS/SS/FF/FS+lag — mas o laço de ponto fixo tem cota (`_MAX_REPAIR_ROUNDS`) e
-        # nenhuma das duas passadas sabe sobre capacidade de `ResourcePool` ou o
-        # horizonte. Revalida e marca infeasible em vez de devolver um cronograma
-        # potencialmente inválido como feasible=True — rede de segurança final.
         feasible = True
-        if repaired and not self._validate_repaired_schedule(scheduled, dag, extended_precedences, pool, H):
-            _log.warning(
-                "CpSatScheduler: reparo de disponibilidade de consumíveis (ADR-128) "
-                "violou precedência, capacidade de pool ou horizonte — output marcado "
-                "como infeasible."
-            )
-            feasible = False
-        elif repaired and any(
-            has_estoque_negativo(project_estoque_semanal(resource, scheduled))
-            for resource in replenishable_resources or []
+        if repaired and not self._check_repair_feasibility(
+            scheduled, dag, extended_precedences, pool, H, replenishable_resources
         ):
-            # ADR-128 F5: o laço de ponto fixo pode esgotar _MAX_REPAIR_ROUNDS sem
-            # convergir — sem esta checagem, o estoque final poderia seguir negativo
-            # para algum recurso e o cronograma ainda ser reportado feasible=True.
-            _log.warning(
-                "CpSatScheduler: reparo de disponibilidade de consumíveis (ADR-128) "
-                "esgotou _MAX_REPAIR_ROUNDS sem eliminar estoque negativo — output "
-                "marcado como infeasible."
-            )
             feasible = False
 
         ms_val = max((sa.end_week for sa in scheduled), default=solver.value(makespan))

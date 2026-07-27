@@ -37,6 +37,40 @@ def _contar_overrides(proj_dir: Path, filename: str) -> int:
         return 0
 
 
+def _estado_rascunho_pendente(proj_dir: Path) -> dict[str, Any] | None:
+    """Lê o estado do rascunho de projeto; None se ausente, JSON inválido ou estado terminal."""
+    estado_file = proj_dir / "overrides" / "_rascunho_estado.json"
+    if not estado_file.exists():
+        return None
+    try:
+        estado_data = json.loads(estado_file.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if estado_rascunho(estado_data) not in (ESTADO_RASCUNHO, ESTADO_REVISADO):
+        return None
+    return estado_data
+
+
+def _owner_id_do_projeto(proj_dir: Path) -> str | None:
+    """Lê o owner_id do meta.json do projeto (None se ausente/JSON inválido)."""
+    meta_file = proj_dir / "meta.json"
+    if not meta_file.exists():
+        return None
+    try:
+        return json.loads(meta_file.read_text(encoding="utf-8")).get("owner_id")
+    except Exception:
+        return None
+
+
+def _motivo_overrides(n_insumo: int, n_cpu: int) -> str:
+    motivos = []
+    if n_insumo:
+        motivos.append(f"{n_insumo} override(s) de insumo")
+    if n_cpu:
+        motivos.append(f"{n_cpu} override(s) de CPU")
+    return " e ".join(motivos) + " pendente(s) de promoção"
+
+
 def _rascunhos_projeto_pendentes(projects_root: Path) -> dict[str, list[dict[str, Any]]]:
     """Overrides de projeto pendentes de promoção (ADR-150 D1/D5).
 
@@ -49,14 +83,8 @@ def _rascunhos_projeto_pendentes(projects_root: Path) -> dict[str, list[dict[str
     """
     pendentes: dict[str, list[dict[str, Any]]] = {}
     for proj_dir in sorted(p for p in projects_root.iterdir() if p.is_dir()):
-        estado_file = proj_dir / "overrides" / "_rascunho_estado.json"
-        if not estado_file.exists():
-            continue
-        try:
-            estado_data = json.loads(estado_file.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        if estado_rascunho(estado_data) not in (ESTADO_RASCUNHO, ESTADO_REVISADO):
+        estado_data = _estado_rascunho_pendente(proj_dir)
+        if estado_data is None:
             continue
 
         n_insumo = _contar_overrides(proj_dir, "insumos_override.json")
@@ -64,28 +92,14 @@ def _rascunhos_projeto_pendentes(projects_root: Path) -> dict[str, list[dict[str
         if not n_insumo and not n_cpu:
             continue
 
-        motivos = []
-        if n_insumo:
-            motivos.append(f"{n_insumo} override(s) de insumo")
-        if n_cpu:
-            motivos.append(f"{n_cpu} override(s) de CPU")
-
-        owner_id = None
-        meta_file = proj_dir / "meta.json"
-        if meta_file.exists():
-            try:
-                owner_id = json.loads(meta_file.read_text(encoding="utf-8")).get("owner_id")
-            except Exception:
-                owner_id = None
-
         projeto_id = proj_dir.name
         pendentes[f"{PROJETO_KEY_PREFIX}{projeto_id}"] = [
             {
                 "version": f"{PROJETO_KEY_PREFIX}{projeto_id}",
-                "motivo": " e ".join(motivos) + " pendente(s) de promoção",
+                "motivo": _motivo_overrides(n_insumo, n_cpu),
                 "created_by": estado_data.get("created_by"),
                 "projeto_id": projeto_id,
-                "owner_id": owner_id,
+                "owner_id": _owner_id_do_projeto(proj_dir),
             }
         ]
     return pendentes
@@ -120,6 +134,38 @@ def rascunhos_pendentes(config_root: Path, projects_root: Path | None = None) ->
     return pendentes
 
 
+def _resolver_raizes(config_root: Path | None, projects_root: Path | None) -> tuple[Path, Path | None]:
+    """Resolve config_root/projects_root a partir do storage global quando config_root é omitido."""
+    if config_root is not None:
+        return config_root, projects_root
+
+    from concilium.infrastructure.settings import get_storage
+
+    storage = get_storage()
+    root = storage.config_root
+    if projects_root is None:
+        projects_root = storage.projects_root
+    return root, projects_root
+
+
+def _emails_catalog_managers(clients: list[Any]) -> set[str]:
+    return {c.email for c in clients if c.active and "catalog-manager" in c.roles and c.email}
+
+
+def _owner_ids_pendentes(pendentes: dict[str, list[dict[str, Any]]]) -> set[str]:
+    return {
+        versao.get("owner_id")
+        for key, versoes in pendentes.items()
+        if key.startswith(PROJETO_KEY_PREFIX)
+        for versao in versoes
+        if versao.get("owner_id")
+    }
+
+
+def _emails_donos_projeto(clients: list[Any], owner_ids: set[str]) -> set[str]:
+    return {c.email for c in clients if c.active and c.client_id in owner_ids and c.email}
+
+
 def enviar_digest_rascunhos_pendentes(config_root: Path | None = None, projects_root: Path | None = None) -> int:
     """Envia um email consolidado para cada catalog-manager ativo com email cadastrado,
     e para cada dono de projeto com override de projeto pendente (ADR-150 D5).
@@ -128,30 +174,17 @@ def enviar_digest_rascunhos_pendentes(config_root: Path | None = None, projects_
     rascunho pendente, não consulta destinatários nem envia nada (ADR-141 D4
     — silêncio é o comportamento correto, sem "0 pendências" recorrente).
     """
-    root = config_root
-    if root is None:
-        from concilium.infrastructure.settings import get_storage
-
-        storage = get_storage()
-        root = storage.config_root
-        if projects_root is None:
-            projects_root = storage.projects_root
+    root, projects_root = _resolver_raizes(config_root, projects_root)
 
     pendentes = rascunhos_pendentes(root, projects_root)
     if not pendentes:
         return 0
 
     clients = get_auth_store().list_clients()
-    destinatarios = {c.email for c in clients if c.active and "catalog-manager" in c.roles and c.email}
+    destinatarios = _emails_catalog_managers(clients)
 
-    owner_ids = {
-        versao.get("owner_id")
-        for key, versoes in pendentes.items()
-        if key.startswith(PROJETO_KEY_PREFIX)
-        for versao in versoes
-        if versao.get("owner_id")
-    }
+    owner_ids = _owner_ids_pendentes(pendentes)
     if owner_ids:
-        destinatarios |= {c.email for c in clients if c.active and c.client_id in owner_ids and c.email}
+        destinatarios |= _emails_donos_projeto(clients, owner_ids)
 
     return sum(1 for email in destinatarios if notify_catalog_drafts_pending(email, pendentes))

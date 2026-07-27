@@ -76,6 +76,70 @@ def _horas_da_atividade(activity_id: str, horas_semana: float | dict[str, float]
     return horas_semana
 
 
+def _accumulate_producao_gerada(
+    activity_id: str,
+    producao: dict[str, Any],
+    horas: float,
+    insumos: dict[str, dict[str, Any]],
+    producao_flows: dict[str, dict[str, float]],
+) -> None:
+    """Acumula ``materiais_gerados`` de uma atividade em ``producao_flows``.
+
+    Raises:
+        ValueError: VAL-PROD-GERACAO-01 — insumo inexistente ou com
+            ``origem_material != "GERACAO_INTERNA"``.
+    """
+    for gerado in producao.get("materiais_gerados") or []:
+        insumo_id = gerado["insumo_id"]
+        insumo = insumos.get(insumo_id)
+        if insumo is None or insumo.get("origem_material") != "GERACAO_INTERNA":
+            origem = insumo.get("origem_material") if insumo is not None else "<insumo inexistente>"
+            raise ValueError(
+                f"VAL-PROD-GERACAO-01: materiais_gerados de '{producao.get('id')}' (atividade "
+                f"'{activity_id}') referencia '{insumo_id}' com origem_material="
+                f"{origem!r}, esperado 'GERACAO_INTERNA'"
+            )
+        atual = producao_flows[insumo_id].get(activity_id, 0.0)
+        producao_flows[insumo_id][activity_id] = atual + float(gerado["geracao_por_hora"]) * horas
+
+
+def _accumulate_consumo(
+    activity_id: str,
+    producao: dict[str, Any],
+    horas: float,
+    consumo_flows: dict[str, dict[str, float]],
+) -> None:
+    """Acumula os ``materiais`` consumidos pela equipe de uma atividade em ``consumo_flows``."""
+    for consumido in _equipe(producao).get("materiais") or []:
+        insumo_id = consumido["insumo_id"]
+        atual = consumo_flows[insumo_id].get(activity_id, 0.0)
+        consumo_flows[insumo_id][activity_id] = atual + float(consumido["consumo_por_hora"]) * horas
+
+
+def _build_resource_if_restrito(
+    insumo_id: str,
+    insumos: dict[str, dict[str, Any]],
+    disponibilidade_overrides: dict[str, DisponibilidadeConsumivel] | None,
+    producao_flows: dict[str, dict[str, float]],
+    consumo_flows: dict[str, dict[str, float]],
+) -> ReplenishableResource | None:
+    """Monta o ``ReplenishableResource`` de ``insumo_id`` quando ele é restrito
+    (ADR-128 D1 / F5); ``None`` quando irrestrito (sem restrição de catálogo, sem
+    override de projeto e sem produção interna — contrato de regressão zero)."""
+    declarada = _disponibilidade_declarada(insumos.get(insumo_id))
+    override = (disponibilidade_overrides or {}).get(insumo_id)
+    produzido_internamente = insumo_id in producao_flows
+    if declarada is None and override is None and not produzido_internamente:
+        return None
+    disponibilidade = override or declarada or DisponibilidadeConsumivel(estoque_inicial=0.0)
+    return ReplenishableResource(
+        resource_id=insumo_id,
+        disponibilidade=disponibilidade,
+        consumo_por_semana=dict(consumo_flows.get(insumo_id, {})),
+        producao_por_semana=dict(producao_flows.get(insumo_id, {})),
+    )
+
+
 def build_replenishable_resources(
     producoes_por_atividade: dict[str, Producao | dict[str, Any]],
     insumos_por_id: dict[str, Insumo | dict[str, Any]],
@@ -111,39 +175,14 @@ def build_replenishable_resources(
     for activity_id, producao_raw in producoes_por_atividade.items():
         producao = _producao_as_dict(producao_raw)
         horas = _horas_da_atividade(activity_id, horas_semana)
-        for gerado in producao.get("materiais_gerados") or []:
-            insumo_id = gerado["insumo_id"]
-            insumo = insumos.get(insumo_id)
-            if insumo is None or insumo.get("origem_material") != "GERACAO_INTERNA":
-                origem = insumo.get("origem_material") if insumo is not None else "<insumo inexistente>"
-                raise ValueError(
-                    f"VAL-PROD-GERACAO-01: materiais_gerados de '{producao.get('id')}' (atividade "
-                    f"'{activity_id}') referencia '{insumo_id}' com origem_material="
-                    f"{origem!r}, esperado 'GERACAO_INTERNA'"
-                )
-            atual = producao_flows[insumo_id].get(activity_id, 0.0)
-            producao_flows[insumo_id][activity_id] = atual + float(gerado["geracao_por_hora"]) * horas
-        for consumido in _equipe(producao).get("materiais") or []:
-            insumo_id = consumido["insumo_id"]
-            atual = consumo_flows[insumo_id].get(activity_id, 0.0)
-            consumo_flows[insumo_id][activity_id] = atual + float(consumido["consumo_por_hora"]) * horas
+        _accumulate_producao_gerada(activity_id, producao, horas, insumos, producao_flows)
+        _accumulate_consumo(activity_id, producao, horas, consumo_flows)
 
     resources: list[ReplenishableResource] = []
     for insumo_id in sorted(set(producao_flows) | set(consumo_flows)):
-        declarada = _disponibilidade_declarada(insumos.get(insumo_id))
-        override = (disponibilidade_overrides or {}).get(insumo_id)
-        produzido_internamente = insumo_id in producao_flows
-        if declarada is None and override is None and not produzido_internamente:
-            # ADR-128 D1 / F5: sem restrição de catálogo, sem override de projeto e sem
-            # produção interna — irrestrito, não vira recurso (contrato de regressão zero).
-            continue
-        disponibilidade = override or declarada or DisponibilidadeConsumivel(estoque_inicial=0.0)
-        resources.append(
-            ReplenishableResource(
-                resource_id=insumo_id,
-                disponibilidade=disponibilidade,
-                consumo_por_semana=dict(consumo_flows.get(insumo_id, {})),
-                producao_por_semana=dict(producao_flows.get(insumo_id, {})),
-            )
+        resource = _build_resource_if_restrito(
+            insumo_id, insumos, disponibilidade_overrides, producao_flows, consumo_flows
         )
+        if resource is not None:
+            resources.append(resource)
     return resources

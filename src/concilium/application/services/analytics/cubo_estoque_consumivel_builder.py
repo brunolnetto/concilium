@@ -76,37 +76,52 @@ class CuboEstoqueConsumivelBuilder:
     def build(self, canonical_in: Any, *, gerado_em: str = "") -> CuboEstoqueConsumivel:
         projeto_id = _get_projeto_id(canonical_in)
         recursos = list(getattr(canonical_in, "recursos_consumiveis", None) or [])
-        cronograma = getattr(canonical_in, "cronograma", None)
-        scheduled = [_to_scheduled_activity(sa) for sa in getattr(cronograma, "scheduled_activities", None) or []]
-
-        proj = getattr(canonical_in, "projeto", None)
-        data_inicio = getattr(proj, "data_inicio", None) if proj is not None else None
+        scheduled = self._scheduled_activities(canonical_in)
+        data_inicio = self._data_inicio(canonical_in)
 
         celulas: list[CelulaEstoqueConsumivel] = []
         for rec in recursos:
-            resource = _to_replenishable_resource(rec)
-            niveis = project_estoque_semanal(resource, scheduled)
-            overflow = project_overflow_semanal(resource, scheduled)
-            consumo_por_t = _taxa_por_semana(resource.consumo_por_semana, scheduled)
-            producao_por_t = _taxa_por_semana(resource.producao_por_semana, scheduled)
-            reabastecimento = resource.disponibilidade.taxa_reabastecimento_max or 0.0
-
-            for t in sorted(niveis):
-                nivel = niveis[t]
-                ovf = overflow.get(t, 0.0)
-                estado: EstadoEstoque = "deficit" if nivel < 0 else "overflow" if ovf > 0 else "normal"
-                semana_iso = _iso_week_key(data_inicio + timedelta(weeks=t)) if data_inicio else str(t)
-                celulas.append(
-                    CelulaEstoqueConsumivel(
-                        resource_id=rec.resource_id,
-                        semana_iso=semana_iso,
-                        estado=estado,
-                        estoque_nivel=round(nivel, 6),
-                        consumo=round(consumo_por_t.get(t, 0.0), 6),
-                        producao=round(producao_por_t.get(t, 0.0), 6),
-                        reabastecimento_externo=reabastecimento,
-                        overflow=round(ovf, 6),
-                    )
-                )
+            celulas.extend(self._celulas_do_recurso(rec, scheduled, data_inicio))
 
         return CuboEstoqueConsumivel(projeto_id=projeto_id, gerado_em=gerado_em, celulas=tuple(celulas))
+
+    @staticmethod
+    def _scheduled_activities(canonical_in: Any) -> list[ScheduledActivity]:
+        cronograma = getattr(canonical_in, "cronograma", None)
+        return [_to_scheduled_activity(sa) for sa in getattr(cronograma, "scheduled_activities", None) or []]
+
+    @staticmethod
+    def _data_inicio(canonical_in: Any) -> date | None:
+        proj = getattr(canonical_in, "projeto", None)
+        return getattr(proj, "data_inicio", None) if proj is not None else None
+
+    @staticmethod
+    def _celulas_do_recurso(
+        rec: Any, scheduled: list[ScheduledActivity], data_inicio: date | None
+    ) -> list[CelulaEstoqueConsumivel]:
+        resource = _to_replenishable_resource(rec)
+        niveis = project_estoque_semanal(resource, scheduled)
+        overflow = project_overflow_semanal(resource, scheduled)
+        consumo_por_t = _taxa_por_semana(resource.consumo_por_semana, scheduled)
+        producao_por_t = _taxa_por_semana(resource.producao_por_semana, scheduled)
+        reabastecimento = resource.disponibilidade.taxa_reabastecimento_max or 0.0
+
+        celulas: list[CelulaEstoqueConsumivel] = []
+        for t in sorted(niveis):
+            nivel = niveis[t]
+            ovf = overflow.get(t, 0.0)
+            estado: EstadoEstoque = "deficit" if nivel < 0 else "overflow" if ovf > 0 else "normal"
+            semana_iso = _iso_week_key(data_inicio + timedelta(weeks=t)) if data_inicio else str(t)
+            celulas.append(
+                CelulaEstoqueConsumivel(
+                    resource_id=rec.resource_id,
+                    semana_iso=semana_iso,
+                    estado=estado,
+                    estoque_nivel=round(nivel, 6),
+                    consumo=round(consumo_por_t.get(t, 0.0), 6),
+                    producao=round(producao_por_t.get(t, 0.0), 6),
+                    reabastecimento_externo=reabastecimento,
+                    overflow=round(ovf, 6),
+                )
+            )
+        return celulas

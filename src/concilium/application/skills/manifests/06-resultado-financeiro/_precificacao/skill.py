@@ -77,64 +77,60 @@ def _frac_locacao_equipamentos(canonical_in: Any) -> float:
     return loc / total if total > 0 else 1.0
 
 
-def _resolve_bdi(
-    inputs: dict[str, Any],
-    validacoes: list[ValidacaoItem],
-    frac_locacao: float = 1.0,
-) -> dict[str, float]:
-    def _to_flat_bdi(base: dict[str, Any]) -> dict[str, float]:
-        material = float(base.get("material", 0.0) or 0.0)
-        diesel = float(base.get("diesel", 0.0) or 0.0)
-        mao_obra = float(base.get("mao_obra", 0.0) or 0.0)
-        equipamentos_raw = base.get("equipamentos")
+def _to_flat_bdi(base: dict[str, Any], frac_locacao: float) -> dict[str, float]:
+    material = float(base.get("material", 0.0) or 0.0)
+    diesel = float(base.get("diesel", 0.0) or 0.0)
+    mao_obra = float(base.get("mao_obra", 0.0) or 0.0)
+    equipamentos_raw = base.get("equipamentos")
 
-        if equipamentos_raw is None:
-            # ADR-023 §D3 (revisado): o bucket equipamentos contém apenas locação +
-            # manutenção (ADR-088 — combustível e operador são categorias próprias).
-            # Locação de bens móveis não sofre ISS (Súmula Vinculante 31/STF) → taxa
-            # de material; manutenção é serviço → taxa de MO. O placeholder 70/30
-            # original aplicava markup de MO/diesel a uma base que não os contém.
-            f = min(max(float(frac_locacao), 0.0), 1.0)
-            equip = round(f * material + (1.0 - f) * mao_obra, 6)
-        else:
-            equip = float(equipamentos_raw or 0.0)
+    if equipamentos_raw is None:
+        # ADR-023 §D3 (revisado): o bucket equipamentos contém apenas locação +
+        # manutenção (ADR-088 — combustível e operador são categorias próprias).
+        # Locação de bens móveis não sofre ISS (Súmula Vinculante 31/STF) → taxa
+        # de material; manutenção é serviço → taxa de MO. O placeholder 70/30
+        # original aplicava markup de MO/diesel a uma base que não os contém.
+        f = min(max(float(frac_locacao), 0.0), 1.0)
+        equip = round(f * material + (1.0 - f) * mao_obra, 6)
+    else:
+        equip = float(equipamentos_raw or 0.0)
 
-        return {
-            "material": material,
-            "diesel": diesel,
-            "mao_obra": mao_obra,
-            "equipamentos": float(equip),
-        }
+    return {
+        "material": material,
+        "diesel": diesel,
+        "mao_obra": mao_obra,
+        "equipamentos": float(equip),
+    }
 
+
+def _resolve_bdi_manual(
+    inputs: dict[str, Any], validacoes: list[ValidacaoItem], frac_locacao: float
+) -> dict[str, float] | None:
+    """Override manual via inputs.bdi_aplicado. Retorna None quando ausente."""
     manual = inputs.get("bdi_aplicado")
-    if isinstance(manual, dict):
-        resolved = _to_flat_bdi(
-            {
-                "material": float(manual.get("material", 0.0) or 0.0),
-                "diesel": float(manual.get("diesel", 0.0) or 0.0),
-                "mao_obra": float(manual.get("mao_obra", 0.0) or 0.0),
-                "servicos": manual.get("servicos"),
-                "equipamentos": manual.get("equipamentos"),
-            }
+    if not isinstance(manual, dict):
+        return None
+    resolved = _to_flat_bdi(
+        {
+            "material": float(manual.get("material", 0.0) or 0.0),
+            "diesel": float(manual.get("diesel", 0.0) or 0.0),
+            "mao_obra": float(manual.get("mao_obra", 0.0) or 0.0),
+            "servicos": manual.get("servicos"),
+            "equipamentos": manual.get("equipamentos"),
+        },
+        frac_locacao,
+    )
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-BDI-FONTE",
+            status="AVISO",
+            mensagem="BDI aplicado via override manual (inputs.bdi_aplicado).",
         )
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-BDI-FONTE",
-                status="AVISO",
-                mensagem="BDI aplicado via override manual (inputs.bdi_aplicado).",
-            )
-        )
-        return resolved
+    )
+    return resolved
 
-    # ADR-055: path CBS/IBS. Estava implementado em _bdi_regime.py mas nunca
-    # importado/chamado aqui — o estágio de precificação nunca honrava
-    # inputs["tax_scenario"], só o de consolidação (_bdi_resolucao.py) o fazia.
-    from ._skill_helpers._bdi_regime import _rb_try_tax_scenario  # ty: ignore[unresolved-import]
 
-    tax_scenario_result = _rb_try_tax_scenario(inputs, validacoes)
-    if tax_scenario_result is not None:
-        return tax_scenario_result
-
+def _resolve_bdi_tabela(inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> Any:
+    """Resolve TabelaBdi de inputs.tabela_bdi, com fallback de jurisdição (ADR-038) sobre o default."""
     tabela_raw = inputs.get("tabela_bdi")
     tabela = None
     if tabela_raw is not None:
@@ -151,30 +147,57 @@ def _resolve_bdi(
                 )
             )
 
-    if tabela is None:
-        if DEFAULT_BDI_TABELA is None:
-            return {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}  # pragma: no cover
-        # ADR-038: sem tabela_bdi explícita, aplica a alíquota da jurisdição do
-        # escopo (ISS/PIS/COFINS) sobre o default antes de cair puro no
-        # DEFAULT_BDI_TABELA — fecha o gap onde a jurisdição resolvida nunca
-        # chegava a influenciar o BDI calculado.
-        aliquotas_jurisdicao = inputs.get("aliquotas_bdi_jurisdicao")
-        if aliquotas_jurisdicao:
-            from concilium.domain.models.financial.bdi import resolver_bdi_jurisdicao
+    if tabela is not None:
+        return tabela
 
-            tabela = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, aliquotas_jurisdicao)
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-BDI-JURISDICAO",
-                    status="OK",
-                    mensagem=(
-                        f"BDI ajustado pela jurisdição do escopo "
-                        f"(ISS={aliquotas_jurisdicao.get('ISS', 0) * 100:.2f}%)."
-                    ),
-                )
+    if DEFAULT_BDI_TABELA is None:
+        return None  # pragma: no cover
+
+    # ADR-038: sem tabela_bdi explícita, aplica a alíquota da jurisdição do
+    # escopo (ISS/PIS/COFINS) sobre o default antes de cair puro no
+    # DEFAULT_BDI_TABELA — fecha o gap onde a jurisdição resolvida nunca
+    # chegava a influenciar o BDI calculado.
+    aliquotas_jurisdicao = inputs.get("aliquotas_bdi_jurisdicao")
+    if aliquotas_jurisdicao:
+        from concilium.domain.models.financial.bdi import resolver_bdi_jurisdicao
+
+        tabela = resolver_bdi_jurisdicao(DEFAULT_BDI_TABELA, aliquotas_jurisdicao)
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-BDI-JURISDICAO",
+                status="OK",
+                mensagem=(
+                    f"BDI ajustado pela jurisdição do escopo "
+                    f"(ISS={aliquotas_jurisdicao.get('ISS', 0) * 100:.2f}%)."
+                ),
             )
-        else:
-            tabela = DEFAULT_BDI_TABELA
+        )
+        return tabela
+
+    return DEFAULT_BDI_TABELA
+
+
+def _resolve_bdi(
+    inputs: dict[str, Any],
+    validacoes: list[ValidacaoItem],
+    frac_locacao: float = 1.0,
+) -> dict[str, float]:
+    manual_result = _resolve_bdi_manual(inputs, validacoes, frac_locacao)
+    if manual_result is not None:
+        return manual_result
+
+    # ADR-055: path CBS/IBS. Estava implementado em _bdi_regime.py mas nunca
+    # importado/chamado aqui — o estágio de precificação nunca honrava
+    # inputs["tax_scenario"], só o de consolidação (_bdi_resolucao.py) o fazia.
+    from ._skill_helpers._bdi_regime import _rb_try_tax_scenario  # ty: ignore[unresolved-import]
+
+    tax_scenario_result = _rb_try_tax_scenario(inputs, validacoes)
+    if tax_scenario_result is not None:
+        return tax_scenario_result
+
+    tabela = _resolve_bdi_tabela(inputs, validacoes)
+    if tabela is None:
+        return {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}  # pragma: no cover
 
     result = _to_flat_bdi(
         {
@@ -182,7 +205,8 @@ def _resolve_bdi(
             "diesel": float(tabela.diesel.bdi_total),
             "mao_obra": float(tabela.mao_obra.bdi_total),
             "servicos": float(tabela.servicos.bdi_total),
-        }
+        },
+        frac_locacao,
     )
     validacoes.append(
         ValidacaoItem(

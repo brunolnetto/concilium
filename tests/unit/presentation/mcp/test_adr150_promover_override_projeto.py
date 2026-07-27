@@ -19,6 +19,11 @@ from concilium.application.orchestrators.catalog_draft_lifecycle import (
     estado_rascunho,
     rascunho_projeto_file_path,
 )
+from concilium.presentation.mcp.tools._catalogo_tools_helpers_c import (
+    _override_preco,
+    _parse_override_key,
+    _read_project_meta,
+)
 
 _CATALOGO_MOD = "concilium.presentation.mcp.tools.catalogo"
 
@@ -255,3 +260,27 @@ class TestPromoverOverrideProjetoGateDuplo:
 
         assert "erro" in result
         assert "contexto" in result["erro"].lower()
+
+
+class TestParseOverrideKey:
+    def test_key_sem_separador_retorna_jurisdicao_none(self):
+        assert _parse_override_key("MAT-001") == ("MAT-001", None)
+
+
+class TestOverridePreco:
+    def test_preco_calibrado_tem_prioridade_sobre_os_demais(self):
+        # Também exercita os desvios preco_calibrado->preco_unitario e
+        # preco_unitario->preco (nenhum fallback é avaliado quando o
+        # primeiro campo já resolve o preço).
+        assert _override_preco({"preco_calibrado": 42.5, "preco_unitario": 10.0, "preco": 1.0}) == 42.5
+
+
+class TestReadProjectMeta:
+    def test_sem_meta_json_retorna_dict_vazio(self, tmp_path):
+        assert _read_project_meta(tmp_path / "projeto-sem-meta") == {}
+
+    def test_meta_json_malformado_retorna_dict_vazio(self, tmp_path):
+        proj_path = tmp_path / "projeto-meta-invalido"
+        proj_path.mkdir()
+        (proj_path / "meta.json").write_text("{invalido", encoding="utf-8")
+        assert _read_project_meta(proj_path) == {}

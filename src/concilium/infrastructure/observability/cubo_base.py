@@ -62,15 +62,29 @@ class Cubo(Generic[CelulaT]):
         if not self.celulas:
             return []
 
+        con = duckdb.connect(":memory:")
+        self._popular_tabela(con)
+
+        sql = self._montar_sql(group_by, aggs, where, order_by)
+        result = con.execute(sql).fetchall()
+
+        out_cols = self._colunas_saida(group_by, aggs)
+        return [dict(zip(out_cols, row, strict=True)) for row in result]
+
+    def _popular_tabela(self, con: Any) -> None:
+        """Cria a tabela `cells` no DuckDB e insere as células como linhas."""
         cols = [f.name for f in fields(self.celulas[0])]
         col_defs = ", ".join(f"{c} {self._sql_types.get(c, 'TEXT')}" for c in cols)
-        con = duckdb.connect(":memory:")
         con.execute(f"CREATE TABLE cells ({col_defs})")
 
         rows = [tuple(getattr(c, col) for col in cols) for c in self.celulas]
         placeholders = ", ".join("?" for _ in cols)
         con.executemany(f"INSERT INTO cells VALUES ({placeholders})", rows)
 
+    @staticmethod
+    def _montar_sql(
+        group_by: list[str], aggs: dict[str, str], where: str | None, order_by: str | None
+    ) -> str:
         select_list = ", ".join([*group_by, *(f"{expr} AS {alias}" for alias, expr in aggs.items())])
         sql = f"SELECT {select_list} FROM cells"
         if where:
@@ -78,9 +92,10 @@ class Cubo(Generic[CelulaT]):
         sql += " GROUP BY ALL"
         if order_by:
             sql += f" ORDER BY {order_by}"
+        return sql
 
-        result = con.execute(sql).fetchall()
-        # group_by com alias usa exatamente " AS " (maiúsculo) — ver docstring.
+    @staticmethod
+    def _colunas_saida(group_by: list[str], aggs: dict[str, str]) -> list[str]:
+        # group_by com alias usa exatamente " AS " (maiúsculo) — ver docstring de query().
         out_cols = [c.split(" AS ")[-1].strip() if " AS " in c else c for c in group_by]
-        out_cols = [*out_cols, *aggs.keys()]
-        return [dict(zip(out_cols, row, strict=True)) for row in result]
+        return [*out_cols, *aggs.keys()]

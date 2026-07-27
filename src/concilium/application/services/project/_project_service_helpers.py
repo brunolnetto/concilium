@@ -9,6 +9,8 @@ from .project_files import ProjectFiles
 from .project_repository import ProjectHandle
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from concilium.application.services.project.project_service._host_protocol import ProjectServiceHost
 
 
@@ -104,12 +106,47 @@ def _load_snapshot_catalog(project: Any) -> dict[str, Any] | None:
         return None
 
 
+def _load_cpus_from_catalog_dir(cat_dir: Path) -> list[Any]:
+    import json
+
+    cpu_dir = cat_dir / "cpus"
+    if cpu_dir.exists():
+        return [json.loads(f.read_text(encoding="utf-8")) for f in cpu_dir.glob("*.json")]
+    aggregate = cat_dir / "cpus.json"
+    if aggregate.exists():
+        data = json.loads(aggregate.read_text(encoding="utf-8"))
+        return list(data.get("cpus", data)) if isinstance(data, dict) else list(data)
+    return []
+
+
+def _load_insumos_from_catalog_dir(cat_dir: Path) -> list[Any]:
+    import json
+
+    insumos: list[Any] = []
+    insumos_dir = cat_dir / "insumos"
+    if insumos_dir.exists():
+        for f in insumos_dir.glob("*.json"):
+            data = json.loads(f.read_text(encoding="utf-8"))
+            insumos.extend(data if isinstance(data, list) else [data])
+    return insumos
+
+
+def _load_producoes_from_catalog_dir(cat_dir: Path) -> list[Any]:
+    import json
+
+    producoes: list[Any] = []
+    for dname in ("producoes", "produtividades"):
+        p_dir = cat_dir / dname
+        if p_dir.exists():
+            producoes.extend(json.loads(f.read_text(encoding="utf-8")) for f in p_dir.glob("*.json"))
+    return producoes
+
+
 def _load_live_catalog(project: Any) -> dict[str, Any] | None:
     """ADR-066 Fase 8: sem snapshot integral nem resolved_catalog.json, monta o catálogo a
     partir do master ao vivo (config/catalogos/{catalogo_base}/) — a mesma fonte que
     resolve_cpu() já usa para resolução sob demanda por CPU."""
     try:
-        import json as _json3
         from pathlib import Path
 
         catalogo_base = (project.meta or {}).get("catalogo_base")
@@ -118,28 +155,9 @@ def _load_live_catalog(project: Any) -> dict[str, Any] | None:
         concilium_root = Path(project.root).resolve().parents[1]
         cat_dir = concilium_root / "config" / "catalogos" / catalogo_base
 
-        cpus: list[Any] = []
-        cpu_dir = cat_dir / "cpus"
-        if cpu_dir.exists():
-            cpus = [_json3.loads(f.read_text(encoding="utf-8")) for f in cpu_dir.glob("*.json")]
-        else:
-            aggregate = cat_dir / "cpus.json"
-            if aggregate.exists():
-                data = _json3.loads(aggregate.read_text(encoding="utf-8"))
-                cpus = list(data.get("cpus", data)) if isinstance(data, dict) else list(data)
-
-        insumos: list[Any] = []
-        insumos_dir = cat_dir / "insumos"
-        if insumos_dir.exists():
-            for f in insumos_dir.glob("*.json"):
-                data = _json3.loads(f.read_text(encoding="utf-8"))
-                insumos.extend(data if isinstance(data, list) else [data])
-
-        producoes: list[Any] = []
-        for dname in ("producoes", "produtividades"):
-            p_dir = cat_dir / dname
-            if p_dir.exists():
-                producoes.extend(_json3.loads(f.read_text(encoding="utf-8")) for f in p_dir.glob("*.json"))
+        cpus = _load_cpus_from_catalog_dir(cat_dir)
+        insumos = _load_insumos_from_catalog_dir(cat_dir)
+        producoes = _load_producoes_from_catalog_dir(cat_dir)
 
         if not cpus and not insumos:
             return None

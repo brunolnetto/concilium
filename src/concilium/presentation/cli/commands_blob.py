@@ -27,6 +27,45 @@ blob_app = typer.Typer(
 _BACKEND_HELP = "Backend: filesystem | azure_blob | sharepoint | s3 | gdrive. Padrão: CONCILIUM__STORE_BACKEND."
 
 
+def _make_storage_default_backend(root: str, *, system: bool) -> BlobStoragePort:
+    """Backend vazio: cai no comportamento padrão (CONCILIUM__STORE_BACKEND)."""
+    from concilium.infrastructure.storage.store_factory import build_blob_storage, build_system_blob_storage
+
+    if system:
+        return build_system_blob_storage(root_override=Path(root) if root else None)
+    return build_blob_storage(root_override=Path(root) if root else None)
+
+
+def _make_storage_filesystem(root: str) -> BlobStoragePort:
+    from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+    return LocalBlobStorage(root_dir=Path(root) if root else Path("."))
+
+
+def _make_storage_sharepoint(*, system: bool) -> BlobStoragePort:
+    from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
+
+    return SharePointBlobStorage.from_env(system=system)
+
+
+def _make_storage_azure() -> BlobStoragePort:
+    from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
+
+    return AzureBlobStorage.from_env()
+
+
+def _make_storage_s3() -> BlobStoragePort:
+    from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
+
+    return S3BlobStorage.from_env()
+
+
+def _make_storage_gdrive() -> BlobStoragePort:
+    from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
+
+    return GoogleDriveBlobStorage.from_env()
+
+
 def _make_storage(backend: str, root: str = "", *, system: bool = False) -> BlobStoragePort:
     """Instancia um BlobStoragePort a partir do tipo de backend explícito.
 
@@ -37,43 +76,29 @@ def _make_storage(backend: str, root: str = "", *, system: bool = False) -> Blob
     system=True usa o Drive de sistema (auth/distribuição) em vez do Drive de
     projetos — só tem efeito com backend vazio (padrão) ou "sharepoint".
     """
-    from concilium.infrastructure.storage.store_factory import (
-        _BACKEND_ALIASES,
-        build_blob_storage,
-        build_system_blob_storage,
-    )
+    from concilium.infrastructure.storage.store_factory import _BACKEND_ALIASES
 
     if not backend:
-        if system:
-            return build_system_blob_storage(root_override=Path(root) if root else None)
-        return build_blob_storage(root_override=Path(root) if root else None)
+        return _make_storage_default_backend(root, system=system)
 
     canonical = _BACKEND_ALIASES.get(backend.strip().lower(), backend.strip().lower())
+    if canonical == "azure_blob":
+        canonical = "azure"
 
-    if canonical == "filesystem":
-        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
-
-        return LocalBlobStorage(root_dir=Path(root) if root else Path("."))
-    if canonical == "sharepoint":
-        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
-
-        return SharePointBlobStorage.from_env(system=system)
-    if canonical in ("azure", "azure_blob"):
-        from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
-
-        return AzureBlobStorage.from_env()
-    if canonical == "s3":
-        from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
-
-        return S3BlobStorage.from_env()
-    if canonical == "gdrive":
-        from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
-
-        return GoogleDriveBlobStorage.from_env()
-    raise typer.BadParameter(
-        f"Backend desconhecido: '{backend}'. Valores válidos: filesystem, azure_blob, sharepoint, s3, gdrive.",
-        param_hint="--source-backend / --target-backend",
-    )
+    factories = {
+        "filesystem": lambda: _make_storage_filesystem(root),
+        "sharepoint": lambda: _make_storage_sharepoint(system=system),
+        "azure": _make_storage_azure,
+        "s3": _make_storage_s3,
+        "gdrive": _make_storage_gdrive,
+    }
+    factory = factories.get(canonical)
+    if factory is None:
+        raise typer.BadParameter(
+            f"Backend desconhecido: '{backend}'. Valores válidos: filesystem, azure_blob, sharepoint, s3, gdrive.",
+            param_hint="--source-backend / --target-backend",
+        )
+    return factory()
 
 
 @blob_app.command("migrate")

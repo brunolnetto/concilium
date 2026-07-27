@@ -277,6 +277,20 @@ def get_cubo_contrato() -> dict[str, Any]:
     }
 
 
+def _parse_lista_csv(valor: str) -> list[str]:
+    return [item.strip() for item in valor.split(",") if item.strip()]
+
+
+def _validar_contra_contrato(cubo: str, itens: list[str], validos: dict[str, Any] | tuple, rotulo: str) -> None:
+    invalidos = [item for item in itens if item not in validos]
+    if invalidos:
+        raise HTTPException(400, detail=f"{rotulo} inválidas para '{cubo}': {invalidos}. Válidas: {list(validos)}")
+
+
+def _filtros_projecao(dims_validas: tuple[str, ...], filtros_brutos: dict[str, str | None]) -> dict[str, str]:
+    return {k: v for k, v in filtros_brutos.items() if v is not None and k in dims_validas}
+
+
 @router.get(
     "/gold/cubo/{cubo}/projecao",
     summary="Projeção ad-hoc de um cubo Gold — qualquer combinação de dimensões/medidas do contrato",
@@ -303,19 +317,11 @@ def get_cubo_projecao(
     dims_validas = _CUBO_DIMENSOES[cubo]
     medidas_validas = _CUBO_MEDIDAS[cubo]
 
-    dims = [d.strip() for d in group_by.split(",") if d.strip()]
-    med_names = [m.strip() for m in medidas.split(",") if m.strip()]
+    dims = _parse_lista_csv(group_by)
+    med_names = _parse_lista_csv(medidas)
 
-    invalid_dims = [d for d in dims if d not in dims_validas]
-    if invalid_dims:
-        raise HTTPException(
-            400, detail=f"Dimensões inválidas para '{cubo}': {invalid_dims}. Válidas: {list(dims_validas)}"
-        )
-    invalid_medidas = [m for m in med_names if m not in medidas_validas]
-    if invalid_medidas:
-        raise HTTPException(
-            400, detail=f"Medidas inválidas para '{cubo}': {invalid_medidas}. Válidas: {list(medidas_validas)}"
-        )
+    _validar_contra_contrato(cubo, dims, dims_validas, "Dimensões")
+    _validar_contra_contrato(cubo, med_names, medidas_validas, "Medidas")
 
     filtros_brutos = {
         "date": date,
@@ -329,7 +335,7 @@ def get_cubo_projecao(
         "fallback_type": fallback_type,
         "metric_name": metric_name,
     }
-    filtros = {k: v for k, v in filtros_brutos.items() if v is not None and k in dims_validas}
+    filtros = _filtros_projecao(dims_validas, filtros_brutos)
 
     cubo_obj = _build_cubo(cubo, storage)
     if filtros:

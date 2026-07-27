@@ -23,9 +23,11 @@ from concilium.domain.models.canonical._base import ValidacaoItem
 if TYPE_CHECKING:
     from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe
     from concilium.domain.models.catalog.producao import (
+        CapacidadeElemento,
         FonteCapacidade,
         GrafoSinergiaEquipe,
         Producao,
+        RelacaoSinergia,
     )
 
 # ADR-130 D4: limiar de divergência entre producao_horaria_derivada e valor_horario declarado.
@@ -131,6 +133,42 @@ class _UnionFind:
             self._parent[ra] = rb
 
 
+def _capacidades_efetivas_iniciais(
+    capacidades: dict[str, CapacidadeElemento], composicao: ComposicaoPadraoEquipe
+) -> dict[str, float]:
+    return {eid: c.capacidade_horaria * _num_unidades_elemento(eid, composicao) for eid, c in capacidades.items()}
+
+
+def _aplicar_acoplamento(efetivas: dict[str, float], relacoes: list[RelacaoSinergia]) -> None:
+    """Propaga o acoplamento (par opera na capacidade do menor) via union-find, in-place."""
+    uf = _UnionFind(list(efetivas.keys()))
+    for r in relacoes:
+        if r.tipo == "acoplamento" and r.origem in efetivas and r.destino in efetivas:
+            uf.union(r.origem, r.destino)
+
+    grupos: dict[str, list[str]] = defaultdict(list)
+    for eid in efetivas:
+        grupos[uf.find(eid)].append(eid)
+    for membros in grupos.values():
+        if len(membros) > 1:
+            minimo = min(efetivas[m] for m in membros)
+            for m in membros:
+                efetivas[m] = minimo
+
+
+def _aplicar_dimensionamento(efetivas: dict[str, float], relacoes: list[RelacaoSinergia]) -> None:
+    """Satura capacidade_efetiva(destino) pela de origem, in-place."""
+    for r in relacoes:
+        if r.tipo == "dimensionamento" and r.origem in efetivas and r.destino in efetivas:
+            efetivas[r.destino] = min(efetivas[r.destino], efetivas[r.origem])
+
+
+def _dominio_sem_precondicao(efetivas: dict[str, float], relacoes: list[RelacaoSinergia]) -> dict[str, float]:
+    """Exclui do domínio do mínimo os elementos que são origem de uma relação `precondicao`."""
+    excluidos_precondicao = {r.origem for r in relacoes if r.tipo == "precondicao"}
+    return {eid: v for eid, v in efetivas.items() if eid not in excluidos_precondicao}
+
+
 def derivar_producao_horaria(grafo: GrafoSinergiaEquipe, composicao: ComposicaoPadraoEquipe) -> DerivacaoSinergia:
     """ADR-130 D2 — produtividade derivada do gargalo (min de capacidades efetivas).
 
@@ -149,31 +187,11 @@ def derivar_producao_horaria(grafo: GrafoSinergiaEquipe, composicao: ComposicaoP
     if not capacidades:
         return DerivacaoSinergia(producao_horaria_derivada=None, gargalo_derivado=None, capacidades_efetivas={})
 
-    efetivas: dict[str, float] = {
-        eid: c.capacidade_horaria * _num_unidades_elemento(eid, composicao) for eid, c in capacidades.items()
-    }
+    efetivas = _capacidades_efetivas_iniciais(capacidades, composicao)
+    _aplicar_acoplamento(efetivas, grafo.relacoes)
+    _aplicar_dimensionamento(efetivas, grafo.relacoes)
 
-    uf = _UnionFind(list(efetivas.keys()))
-    for r in grafo.relacoes:
-        if r.tipo == "acoplamento" and r.origem in efetivas and r.destino in efetivas:
-            uf.union(r.origem, r.destino)
-
-    grupos: dict[str, list[str]] = defaultdict(list)
-    for eid in efetivas:
-        grupos[uf.find(eid)].append(eid)
-    for membros in grupos.values():
-        if len(membros) > 1:
-            minimo = min(efetivas[m] for m in membros)
-            for m in membros:
-                efetivas[m] = minimo
-
-    for r in grafo.relacoes:
-        if r.tipo == "dimensionamento" and r.origem in efetivas and r.destino in efetivas:
-            efetivas[r.destino] = min(efetivas[r.destino], efetivas[r.origem])
-
-    excluidos_precondicao = {r.origem for r in grafo.relacoes if r.tipo == "precondicao"}
-    dominio = {eid: v for eid, v in efetivas.items() if eid not in excluidos_precondicao}
-
+    dominio = _dominio_sem_precondicao(efetivas, grafo.relacoes)
     if not dominio:
         return DerivacaoSinergia(producao_horaria_derivada=None, gargalo_derivado=None, capacidades_efetivas=efetivas)
 
@@ -183,6 +201,67 @@ def derivar_producao_horaria(grafo: GrafoSinergiaEquipe, composicao: ComposicaoP
         gargalo_derivado=gargalo_id,
         capacidades_efetivas=efetivas,
     )
+
+
+def _val_sinergia_divergencia(derivacao: DerivacaoSinergia, valor_horario: float) -> list[ValidacaoItem]:
+    """VAL-SINERGIA-02 (AVISO): derivado diverge do declarado além do limiar."""
+    if derivacao.producao_horaria_derivada is None or valor_horario <= 0:
+        return []
+    divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+    if divergencia <= LIMIAR_DIVERGENCIA_SINERGIA:
+        return []
+    return [
+        ValidacaoItem(
+            codigo="VAL-SINERGIA-02",
+            status="AVISO",
+            mensagem=(
+                f"producao_horaria_derivada={derivacao.producao_horaria_derivada:g} diverge "
+                f"{divergencia:.1%} do valor_horario declarado={valor_horario:g} "
+                f"(limiar {LIMIAR_DIVERGENCIA_SINERGIA:.0%}). Valor declarado preservado."
+            ),
+        )
+    ]
+
+
+def _val_sinergia_gargalo_divergente(
+    grafo: GrafoSinergiaEquipe, derivacao: DerivacaoSinergia
+) -> list[ValidacaoItem]:
+    """VAL-SINERGIA-03 (AVISO): gargalo_declarado não coincide com o gargalo derivado."""
+    if grafo.gargalo_declarado is None or grafo.gargalo_declarado == derivacao.gargalo_derivado:
+        return []
+    return [
+        ValidacaoItem(
+            codigo="VAL-SINERGIA-03",
+            status="AVISO",
+            mensagem=(
+                f"gargalo_declarado={grafo.gargalo_declarado!r} não coincide com o gargalo "
+                f"derivado das capacidades={derivacao.gargalo_derivado!r}."
+            ),
+        )
+    ]
+
+
+def _avaliar_grafo_sinergia(
+    grafo: GrafoSinergiaEquipe, producao: Producao
+) -> tuple[DerivacaoSinergia, bool, list[ValidacaoItem]]:
+    """Valida referências, deriva a produção e monta VAL-SINERGIA-02/03 para um grafo presente."""
+    validacoes = list(validar_referencias_grafo(grafo, producao.composicao_padrao_equipe))
+    grafo_invalido = any(v.status == "ERRO" for v in validacoes)
+    derivacao = derivar_producao_horaria(grafo, producao.composicao_padrao_equipe)
+    validacoes.extend(_val_sinergia_divergencia(derivacao, producao.valor_horario))
+    validacoes.extend(_val_sinergia_gargalo_divergente(grafo, derivacao))
+    return derivacao, grafo_invalido, validacoes
+
+
+def _decidir_fonte_producao(
+    producao: Producao, grafo_invalido: bool, derivacao: DerivacaoSinergia | None
+) -> tuple[float, str]:
+    """Precedência D3: calibrado > derivado > declarado."""
+    if producao.origem.tipo == "calibrado_contra_obra_real":
+        return producao.valor_horario, "calibrado"
+    if not grafo_invalido and derivacao is not None and derivacao.producao_horaria_derivada is not None:
+        return derivacao.producao_horaria_derivada, "derivado"
+    return producao.valor_horario, "declarado"
 
 
 def resolver_producao_efetiva(producao: Producao) -> ResolucaoProducao:
@@ -205,50 +284,11 @@ def resolver_producao_efetiva(producao: Producao) -> ResolucaoProducao:
     grafo_invalido = False
 
     if grafo is not None:
-        validacoes.extend(validar_referencias_grafo(grafo, producao.composicao_padrao_equipe))
-        grafo_invalido = any(v.status == "ERRO" for v in validacoes)
-        derivacao = derivar_producao_horaria(grafo, producao.composicao_padrao_equipe)
+        derivacao, grafo_invalido, extra_validacoes = _avaliar_grafo_sinergia(grafo, producao)
+        validacoes.extend(extra_validacoes)
 
-        if derivacao.producao_horaria_derivada is not None and producao.valor_horario > 0:
-            divergencia = abs(derivacao.producao_horaria_derivada - producao.valor_horario) / producao.valor_horario
-            if divergencia > LIMIAR_DIVERGENCIA_SINERGIA:
-                validacoes.append(
-                    ValidacaoItem(
-                        codigo="VAL-SINERGIA-02",
-                        status="AVISO",
-                        mensagem=(
-                            f"producao_horaria_derivada={derivacao.producao_horaria_derivada:g} diverge "
-                            f"{divergencia:.1%} do valor_horario declarado={producao.valor_horario:g} "
-                            f"(limiar {LIMIAR_DIVERGENCIA_SINERGIA:.0%}). Valor declarado preservado."
-                        ),
-                    )
-                )
-
-        if grafo.gargalo_declarado is not None and grafo.gargalo_declarado != derivacao.gargalo_derivado:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-SINERGIA-03",
-                    status="AVISO",
-                    mensagem=(
-                        f"gargalo_declarado={grafo.gargalo_declarado!r} não coincide com o gargalo "
-                        f"derivado das capacidades={derivacao.gargalo_derivado!r}."
-                    ),
-                )
-            )
-
-    if producao.origem.tipo == "calibrado_contra_obra_real":
-        return ResolucaoProducao(
-            valor=producao.valor_horario, fonte="calibrado", derivacao=derivacao, validacoes=validacoes
-        )
-
-    if not grafo_invalido and derivacao is not None and derivacao.producao_horaria_derivada is not None:
-        return ResolucaoProducao(
-            valor=derivacao.producao_horaria_derivada, fonte="derivado", derivacao=derivacao, validacoes=validacoes
-        )
-
-    return ResolucaoProducao(
-        valor=producao.valor_horario, fonte="declarado", derivacao=derivacao, validacoes=validacoes
-    )
+    valor, fonte = _decidir_fonte_producao(producao, grafo_invalido, derivacao)
+    return ResolucaoProducao(valor=valor, fonte=fonte, derivacao=derivacao, validacoes=validacoes)
 
 
 def revalidar_apos_mudanca_composicao(

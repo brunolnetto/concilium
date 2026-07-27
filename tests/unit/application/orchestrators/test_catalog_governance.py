@@ -87,6 +87,24 @@ class TestCatalogGovernance:
         with pytest.raises(CatalogGovernanceError, match="maior que zero"):
             validate_and_resolve_producao_file(tmp_path, "P1", 0.0)
 
+    def test_validate_cpu_file_found(self, tmp_path):
+        from concilium.application.orchestrators.catalog_governance import validate_and_resolve_cpu_file
+
+        cpus_dir = tmp_path / "cpus"
+        cpus_dir.mkdir()
+        (cpus_dir / "CPU-1.json").write_text('{"codigo": "CPU-1"}', encoding="utf-8")
+        result = validate_and_resolve_cpu_file(tmp_path, "CPU-1")
+        assert result.name == "CPU-1.json"
+
+    def test_validate_cpu_not_found_raises(self, tmp_path):
+        from concilium.application.orchestrators.catalog_governance import (
+            CatalogGovernanceError,
+            validate_and_resolve_cpu_file,
+        )
+
+        (tmp_path / "cpus").mkdir()
+        with pytest.raises(CatalogGovernanceError, match="não encontrada no catálogo mestre"):
+            validate_and_resolve_cpu_file(tmp_path, "CPU-999")
 
 
 

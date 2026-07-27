@@ -46,6 +46,101 @@ def _read_project_meta(proj_path) -> dict[str, Any]:
         return {}
 
 
+def _carregar_overrides_pendentes(proj_path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Lê `insumos_override.json` e `cpus_override.json` pendentes do projeto.
+
+    Arquivo ausente ou JSON malformado é tratado como "nada pendente" (dict
+    vazio) — não é erro: overrides livres de projeto (ADR-040) são efêmeros
+    por natureza.
+    """
+    overrides_file = proj_path / "overrides" / "insumos_override.json"
+    overrides: dict[str, Any] = {}
+    if overrides_file.exists():
+        try:
+            overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
+        except Exception:
+            overrides = {}
+
+    cpus_overrides_file = proj_path / "overrides" / "cpus_override.json"
+    cpus_overrides: dict[str, Any] = {}
+    if cpus_overrides_file.exists():
+        try:
+            cpus_overrides = json.loads(cpus_overrides_file.read_text(encoding="utf-8"))
+        except Exception:
+            cpus_overrides = {}
+
+    return overrides, cpus_overrides
+
+
+def _aplicar_deltas_insumo(
+    catalog_root,
+    overrides: dict[str, Any],
+    actor: str,
+    hoje: date,
+) -> int:
+    """Aplica cada override de preço de insumo pendente ao catálogo mestre.
+
+    Retorna a quantidade de deltas aplicados.
+    """
+    deltas_insumo = 0
+    for key, entry in overrides.items():
+        insumo_id, jurisdicao_id = _parse_override_key(key)
+        _apply_preco_insumo_delta(
+            catalog_root,
+            insumo_id,
+            _override_preco(entry),
+            jurisdicao_id,
+            entry.get("nota") or entry.get("motivo"),
+            actor,
+            hoje,
+        )
+        deltas_insumo += 1
+    return deltas_insumo
+
+
+def _aplicar_deltas_cpu(catalog_root, cpus_overrides: dict[str, Any]) -> int:
+    """Aplica cada override de CPU pendente ao catálogo mestre, pulando entradas malformadas.
+
+    Retorna a quantidade de deltas aplicados.
+    """
+    deltas_cpu = 0
+    for cpu_id, cpu_entry in cpus_overrides.items():
+        if not isinstance(cpu_entry, dict):
+            continue
+        _apply_cpu_override_delta(catalog_root, cpu_id, cpu_entry)
+        deltas_cpu += 1
+    return deltas_cpu
+
+
+def _arquivar_overrides_aplicados(
+    proj_path,
+    overrides: dict[str, Any],
+    cpus_overrides: dict[str, Any],
+    hoje: date,
+) -> None:
+    """Arquiva os overrides aplicados (ADR-040 D4) — depois de promovidos, não
+    devem seguir sombreando o preço/definição recém-escrita no master como se
+    ainda fossem uma calibração pendente. Cada tipo de override é arquivado e
+    limpo independentemente — a ausência de um tipo não impede o outro.
+    """
+    historico_dir = proj_path / "overrides" / "historico"
+    historico_dir.mkdir(parents=True, exist_ok=True)
+    if overrides:
+        (historico_dir / f"insumos_override_{hoje.isoformat()}.json").write_text(
+            json.dumps(overrides, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (proj_path / "overrides" / "insumos_override.json").write_text(
+            json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    if cpus_overrides:
+        (historico_dir / f"cpus_override_{hoje.isoformat()}.json").write_text(
+            json.dumps(cpus_overrides, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (proj_path / "overrides" / "cpus_override.json").write_text(
+            json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+
 def _impl_promover_override_projeto(
     projeto_id: str,
     contexto_id: str | None = None,
@@ -106,21 +201,7 @@ def _impl_promover_override_projeto(
     # editado ainda, ou já promovido e arquivado) é apenas informativa — não
     # deve levantar um erro de gate confuso (ex.: quatro-olhos contra si mesmo
     # só porque abrir_ou_obter_rascunho_projeto criaria um estado novo agora).
-    overrides_file = proj_path / "overrides" / "insumos_override.json"
-    overrides: dict[str, Any] = {}
-    if overrides_file.exists():
-        try:
-            overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
-        except Exception:
-            overrides = {}
-
-    cpus_overrides_file = proj_path / "overrides" / "cpus_override.json"
-    cpus_overrides: dict[str, Any] = {}
-    if cpus_overrides_file.exists():
-        try:
-            cpus_overrides = json.loads(cpus_overrides_file.read_text(encoding="utf-8"))
-        except Exception:
-            cpus_overrides = {}
+    overrides, cpus_overrides = _carregar_overrides_pendentes(proj_path)
 
     if not overrides and not cpus_overrides:
         return _wrap_response(
@@ -147,29 +228,9 @@ def _impl_promover_override_projeto(
     catalog_root = _resolve_catalog_root(config_root, ctx.catalogo_id)
     hoje = date.today()
 
-    deltas_aplicados = 0
-    deltas_insumo = 0
-    for key, entry in overrides.items():
-        insumo_id, jurisdicao_id = _parse_override_key(key)
-        _apply_preco_insumo_delta(
-            catalog_root,
-            insumo_id,
-            _override_preco(entry),
-            jurisdicao_id,
-            entry.get("nota") or entry.get("motivo"),
-            actor,
-            hoje,
-        )
-        deltas_aplicados += 1
-        deltas_insumo += 1
-
-    deltas_cpu = 0
-    for cpu_id, cpu_entry in cpus_overrides.items():
-        if not isinstance(cpu_entry, dict):
-            continue
-        _apply_cpu_override_delta(catalog_root, cpu_id, cpu_entry)
-        deltas_aplicados += 1
-        deltas_cpu += 1
+    deltas_insumo = _aplicar_deltas_insumo(catalog_root, overrides, actor, hoje)
+    deltas_cpu = _aplicar_deltas_cpu(catalog_root, cpus_overrides)
+    deltas_aplicados = deltas_insumo + deltas_cpu
 
     catalogo_depois = _runtime().load_catalogo(ctx.catalogo_id)
     snapshot_id, diff_summary = build_and_persist_snapshot(
@@ -182,22 +243,7 @@ def _impl_promover_override_projeto(
         justificativa=justificativa,
     )
 
-    # Arquiva os overrides aplicados (ADR-040 D4) — depois de promovidos, não
-    # devem seguir sombreando o preço/definição recém-escrita no master como se
-    # ainda fossem uma calibração pendente. Cada tipo de override é arquivado e
-    # limpo independentemente — a ausência de um tipo não impede o outro.
-    historico_dir = proj_path / "overrides" / "historico"
-    historico_dir.mkdir(parents=True, exist_ok=True)
-    if overrides:
-        (historico_dir / f"insumos_override_{hoje.isoformat()}.json").write_text(
-            json.dumps(overrides, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        overrides_file.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
-    if cpus_overrides:
-        (historico_dir / f"cpus_override_{hoje.isoformat()}.json").write_text(
-            json.dumps(cpus_overrides, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        cpus_overrides_file.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
+    _arquivar_overrides_aplicados(proj_path, overrides, cpus_overrides, hoje)
 
     marcar_rascunho_projeto_aprovado(projects_dir, projeto_id, actor)
 

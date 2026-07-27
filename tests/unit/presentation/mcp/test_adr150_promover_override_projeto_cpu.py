@@ -320,6 +320,136 @@ class TestPromoverOverrideProjetoCpu:
         assert result["status"] == "SEM_PENDENCIAS"
 
 
+class TestOverridesFileEdgeCases:
+    """Cobre os desvios de leitura de insumos_override.json/cpus_override.json:
+    arquivo ausente e conteúdo malformado (JSON inválido) — em ambos os casos o
+    dict correspondente vira {} e a promoção segue com o que sobrar."""
+
+    def test_insumos_override_json_ausente_promove_so_cpu(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_dir = tmp_path / "config"
+        projects_dir = tmp_path / "projetos"
+        _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
+        _seed_projeto(
+            projects_dir,
+            "PROJ-001",
+            owner_id="owner-1",
+            contexto_id="ctx-1",
+            cpu_overrides={"CPU-001": {"producao_horaria": 4.0}},
+            created_by="eng-1",
+        )
+        (projects_dir / "PROJ-001" / "overrides" / "insumos_override.json").unlink()
+
+        result = _promote_as(
+            monkeypatch,
+            tools,
+            user_id="owner-1",
+            roles={"catalog-manager"},
+            projeto_id="PROJ-001",
+            justificativa="sem arquivo de insumo",
+        )
+
+        assert result["status"] == "APROVADO"
+        assert result["deltas_insumo"] == 0
+        assert result["deltas_cpu"] == 1
+
+    def test_insumos_override_json_malformado_e_tratado_como_vazio(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_dir = tmp_path / "config"
+        projects_dir = tmp_path / "projetos"
+        _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
+        _seed_projeto(
+            projects_dir,
+            "PROJ-001",
+            owner_id="owner-1",
+            contexto_id="ctx-1",
+            cpu_overrides={"CPU-001": {"producao_horaria": 4.0}},
+            created_by="eng-1",
+        )
+        (projects_dir / "PROJ-001" / "overrides" / "insumos_override.json").write_text(
+            "{invalido", encoding="utf-8"
+        )
+
+        result = _promote_as(
+            monkeypatch,
+            tools,
+            user_id="owner-1",
+            roles={"catalog-manager"},
+            projeto_id="PROJ-001",
+            justificativa="insumo malformado",
+        )
+
+        assert result["status"] == "APROVADO"
+        assert result["deltas_insumo"] == 0
+        assert result["deltas_cpu"] == 1
+        # Conteúdo malformado não é considerado "override pendente" (overrides
+        # vira {}, que é falsy) — por isso não é arquivado nem limpo.
+        insumos_file = projects_dir / "PROJ-001" / "overrides" / "insumos_override.json"
+        assert insumos_file.read_text(encoding="utf-8") == "{invalido"
+
+    def test_cpus_override_json_malformado_e_tratado_como_vazio(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_dir = tmp_path / "config"
+        projects_dir = tmp_path / "projetos"
+        _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
+        _seed_projeto(
+            projects_dir,
+            "PROJ-001",
+            owner_id="owner-1",
+            contexto_id="ctx-1",
+            insumo_overrides={"MAT-001::BASE": {"preco": 55.0}},
+            created_by="eng-1",
+        )
+        (projects_dir / "PROJ-001" / "overrides" / "cpus_override.json").write_text(
+            "{invalido", encoding="utf-8"
+        )
+
+        result = _promote_as(
+            monkeypatch,
+            tools,
+            user_id="owner-1",
+            roles={"catalog-manager"},
+            projeto_id="PROJ-001",
+            justificativa="cpu malformado",
+        )
+
+        assert result["status"] == "APROVADO"
+        assert result["deltas_insumo"] == 1
+        assert result["deltas_cpu"] == 0
+        cpus_file = projects_dir / "PROJ-001" / "overrides" / "cpus_override.json"
+        assert cpus_file.read_text(encoding="utf-8") == "{invalido"
+
+
+class TestCpuOverrideEntryNaoDict:
+    def test_entrada_de_cpu_que_nao_e_dict_e_ignorada(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_dir = tmp_path / "config"
+        projects_dir = tmp_path / "projetos"
+        _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
+        _seed_projeto(
+            projects_dir,
+            "PROJ-001",
+            owner_id="owner-1",
+            contexto_id="ctx-1",
+            cpu_overrides={"CPU-001": "producao_horaria=4.0"},
+            created_by="eng-1",
+        )
+
+        result = _promote_as(
+            monkeypatch,
+            tools,
+            user_id="owner-1",
+            roles={"catalog-manager"},
+            projeto_id="PROJ-001",
+            justificativa="entrada invalida",
+        )
+
+        assert result["status"] == "APROVADO"
+        assert result["deltas_cpu"] == 0
+        cpu_file = config_dir / "catalogos" / "cat-1" / "cpus" / "CPU-001.json"
+        assert json.loads(cpu_file.read_text(encoding="utf-8"))["producao_horaria"] == 2.0
+
+
 class TestBdiOverrideNaoCoberto:
     """Documenta a decisão deliberada de não promover bdi_override.json (ver ADR-150 Achados)."""
 

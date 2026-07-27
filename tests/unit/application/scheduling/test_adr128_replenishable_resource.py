@@ -656,6 +656,23 @@ class TestPoolDeficitReporting:
         deficit = scheduler._compute_pool_deficit(scheduled, pool)
         assert deficit == {}
 
+    def test_pool_deficit_peak_not_overwritten_by_smaller_later_week(self):
+        """Cobre o branch em que uma semana posterior reporta o MESMO recurso com
+        qty <= ao pico já registrado: `peak[res]` não deve ser sobrescrito, o pico
+        continua sendo a maior demanda semanal observada (não a última)."""
+        pool = ResourcePool(resources={"E": 1})
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        scheduled = [
+            ScheduledActivity(
+                activity_id="A", start_week=0, end_week=1, duration_weeks=1, assigned_resources={"E": 3}
+            ),
+            ScheduledActivity(
+                activity_id="B", start_week=1, end_week=2, duration_weeks=1, assigned_resources={"E": 2}
+            ),
+        ]
+        deficit = scheduler._compute_pool_deficit(scheduled, pool)
+        assert deficit == {"E": 3}
+
     # ── `_validate_repaired_schedule` unitário direto ────────────────────────
     #
     # As checagens abaixo testam `CpSatScheduler._validate_repaired_schedule` chamando-o

@@ -156,6 +156,40 @@ def has_estoque_negativo(niveis: dict[int, float]) -> bool:
     return any(v < 0 for v in niveis.values())
 
 
+def _find_delay_target(
+    activities: Iterable[ScheduledActivity], resource: ReplenishableResource, t0: int
+) -> ScheduledActivity | None:
+    """Escolhe a candidata a atrasar: consome ``resource``, está ativa em ``t0`` e
+    começa mais tarde entre as candidatas (heurística gulosa). ``None`` quando não há
+    nenhuma atividade candidata (estoque inviável sem consumidora agendável)."""
+    candidates = [
+        sa
+        for sa in activities
+        if sa.start_week <= t0 < sa.end_week and resource.consumo_por_semana.get(sa.activity_id, 0.0)
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda sa: sa.start_week)
+
+
+def _is_delay_fixed_point(
+    target: ScheduledActivity,
+    offset: int,
+    deficit: float,
+    activity_anterior: str | None,
+    offset_anterior: int | None,
+    deficit_anterior: float | None,
+) -> bool:
+    """ADR-128 F5 (achado de performance): ponto fixo — mesma atividade, mesmo
+    deslocamento relativo ao novo início e déficit que não progrediu desde a rodada
+    anterior (ver nota completa em ``apply_replenishable_delay``)."""
+    return (
+        target.activity_id == activity_anterior
+        and offset == offset_anterior
+        and deficit <= deficit_anterior  # type: ignore[operator]
+    )
+
+
 def apply_replenishable_delay(
     scheduled_activities: Sequence[ScheduledActivity],
     resource: ReplenishableResource,
@@ -208,20 +242,15 @@ def apply_replenishable_delay(
         if not has_estoque_negativo(niveis):
             break
         t0 = min(t for t, v in niveis.items() if v < 0)
-        candidates = [
-            sa
-            for sa in activities.values()
-            if sa.start_week <= t0 < sa.end_week and resource.consumo_por_semana.get(sa.activity_id, 0.0)
-        ]
-        if not candidates:
+        target = _find_delay_target(activities.values(), resource, t0)
+        if target is None:
             # Estoque inviável sem nenhuma atividade candidata a atrasar (ex.: déficit
             # já presente antes de qualquer consumo agendável) — não há reparo possível
             # nesta estratégia; interrompe sem lançar exceção, preservando o cronograma.
             break
-        target = max(candidates, key=lambda sa: sa.start_week)
         deficit = niveis[t0]
         offset = t0 - target.start_week
-        if target.activity_id == activity_anterior and offset == offset_anterior and deficit <= deficit_anterior:  # type: ignore[operator]
+        if _is_delay_fixed_point(target, offset, deficit, activity_anterior, offset_anterior, deficit_anterior):
             break
         activity_anterior = target.activity_id
         offset_anterior = offset

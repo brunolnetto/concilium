@@ -24,27 +24,17 @@ from collections import deque
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from concilium.application.scheduling.models import ActivityDAG, ScheduledActivity
+from concilium.application.scheduling.models import Activity, ActivityDAG, ScheduledActivity
 
 if TYPE_CHECKING:
     from concilium.application.scheduling.cpsat_scheduler import ExtendedPrecedence
 
 
-def _topological_order_with_extended(
-    dag: ActivityDAG, extended: Sequence[ExtendedPrecedence]
-) -> list[str]:
-    """Ordem topológica que respeita `dag.precedence` *e* arestas SS/FF/FS+lag.
-
-    `ActivityDAG.topological_order()` só enxerga `dag.precedence` — como precedências
-    estendidas costumam ser declaradas sem uma entrada correspondente em
-    `dag.precedence` (ver testes de `cpsat_scheduler`), usar aquele método sozinho
-    poderia processar um sucessor antes do predecessor estendido já ter sido deslocado.
-    Constrói um Kahn's algorithm local sobre a união das duas listas de arestas.
-    """
-    node_ids = [a.activity_id for a in dag.activities]
-    edges: list[tuple[str, str]] = list(dag.precedence)
-    edges.extend((ep.pred, ep.succ) for ep in extended)
-
+def _pr_build_successor_graph(
+    node_ids: list[str], edges: list[tuple[str, str]]
+) -> tuple[dict[str, list[str]], dict[str, int]]:
+    """Constrói o mapa de sucessores e o grau de entrada a partir da união de arestas
+    (`dag.precedence` + estendidas), ignorando arestas que referenciam nó desconhecido."""
     successors: dict[str, list[str]] = {aid: [] for aid in node_ids}
     in_degree: dict[str, int] = dict.fromkeys(node_ids, 0)
     for pred_id, succ_id in edges:
@@ -52,7 +42,13 @@ def _topological_order_with_extended(
             continue
         successors[pred_id].append(succ_id)
         in_degree[succ_id] += 1
+    return successors, in_degree
 
+
+def _pr_kahn_order(
+    node_ids: list[str], successors: dict[str, list[str]], in_degree: dict[str, int]
+) -> list[str]:
+    """Executa Kahn's algorithm sobre o grafo de sucessores já construído."""
     queue: deque[str] = deque(aid for aid in node_ids if in_degree[aid] == 0)
     order: list[str] = []
     seen_in_degree = dict(in_degree)
@@ -74,6 +70,97 @@ def _topological_order_with_extended(
     return order
 
 
+def _topological_order_with_extended(
+    dag: ActivityDAG, extended: Sequence[ExtendedPrecedence]
+) -> list[str]:
+    """Ordem topológica que respeita `dag.precedence` *e* arestas SS/FF/FS+lag.
+
+    `ActivityDAG.topological_order()` só enxerga `dag.precedence` — como precedências
+    estendidas costumam ser declaradas sem uma entrada correspondente em
+    `dag.precedence` (ver testes de `cpsat_scheduler`), usar aquele método sozinho
+    poderia processar um sucessor antes do predecessor estendido já ter sido deslocado.
+    Constrói um Kahn's algorithm local sobre a união das duas listas de arestas.
+    """
+    node_ids = [a.activity_id for a in dag.activities]
+    edges: list[tuple[str, str]] = list(dag.precedence)
+    edges.extend((ep.pred, ep.succ) for ep in extended)
+
+    successors, in_degree = _pr_build_successor_graph(node_ids, edges)
+    return _pr_kahn_order(node_ids, successors, in_degree)
+
+
+def _pr_clone_activities(scheduled_activities: Sequence[ScheduledActivity]) -> dict[str, ScheduledActivity]:
+    """Copia cada `ScheduledActivity` para uma nova instância, para não mutar as
+    instâncias originais do chamador."""
+    return {
+        sa.activity_id: ScheduledActivity(
+            activity_id=sa.activity_id,
+            start_week=sa.start_week,
+            end_week=sa.end_week,
+            duration_weeks=sa.duration_weeks,
+            assigned_resources=dict(sa.assigned_resources),
+            ramp_profile=sa.ramp_profile,
+        )
+        for sa in scheduled_activities
+    }
+
+
+def _pr_group_extended_by_succ(
+    all_extended: list[ExtendedPrecedence],
+) -> dict[str, list[ExtendedPrecedence]]:
+    """Agrupa as precedências estendidas por sucessor, para lookup O(1) no laço principal."""
+    extended_by_succ: dict[str, list[ExtendedPrecedence]] = {}
+    for ep in all_extended:
+        extended_by_succ.setdefault(ep.succ, []).append(ep)
+    return extended_by_succ
+
+
+def _pr_classic_min_start(
+    dag: ActivityDAG,
+    acts_by_id: dict[str, Activity],
+    activities: dict[str, ScheduledActivity],
+    activity_id: str,
+    min_start: int,
+) -> int:
+    """Precedências FS clássicas (ActivityDAG.precedence + thresholds, ADR-081) —
+    mesma fórmula de lag usada por `_validate_repaired_schedule`."""
+    for pred_id in dag.predecessors(activity_id):
+        pred = activities.get(pred_id)
+        if pred is None:
+            continue
+        theta = dag.get_threshold(pred_id, activity_id)
+        if theta >= 1.0:
+            required_start = pred.end_week
+        else:
+            pred_activity = acts_by_id.get(pred_id)
+            pred_duration = pred_activity.duration_weeks if pred_activity else pred.duration_weeks
+            lag = math.ceil(theta * pred_duration)
+            required_start = pred.start_week + lag
+        min_start = max(min_start, required_start)
+    return min_start
+
+
+def _pr_extended_min_start_end(
+    extended_by_succ: dict[str, list[ExtendedPrecedence]],
+    activities: dict[str, ScheduledActivity],
+    activity_id: str,
+    min_start: int,
+    min_end: int,
+) -> tuple[int, int]:
+    """Precedências estendidas SS/FF/FS+lag (NEP-031 L4)."""
+    for ep in extended_by_succ.get(activity_id, []):
+        pred = activities.get(ep.pred)
+        if pred is None:
+            continue
+        if ep.tipo == "FS":
+            min_start = max(min_start, pred.end_week + ep.lag)
+        elif ep.tipo == "SS":
+            min_start = max(min_start, pred.start_week + ep.lag)
+        elif ep.tipo == "FF":
+            min_end = max(min_end, pred.end_week + ep.lag)
+    return min_start, min_end
+
+
 def repropagate_precedence_delays(
     scheduled_activities: Sequence[ScheduledActivity],
     dag: ActivityDAG,
@@ -93,24 +180,12 @@ def repropagate_precedence_delays(
     Não modifica as instâncias originais — retorna uma nova lista de
     `ScheduledActivity`. Não conhece recursos/estoque — só precedência.
     """
-    activities: dict[str, ScheduledActivity] = {
-        sa.activity_id: ScheduledActivity(
-            activity_id=sa.activity_id,
-            start_week=sa.start_week,
-            end_week=sa.end_week,
-            duration_weeks=sa.duration_weeks,
-            assigned_resources=dict(sa.assigned_resources),
-            ramp_profile=sa.ramp_profile,
-        )
-        for sa in scheduled_activities
-    }
+    activities = _pr_clone_activities(scheduled_activities)
     acts_by_id = {a.activity_id: a for a in dag.activities}
 
     all_extended = list(getattr(dag, "extended_precedences", None) or [])
     all_extended.extend(extended_precedences or [])
-    extended_by_succ: dict[str, list] = {}
-    for ep in all_extended:
-        extended_by_succ.setdefault(ep.succ, []).append(ep)
+    extended_by_succ = _pr_group_extended_by_succ(all_extended)
 
     order = _topological_order_with_extended(dag, all_extended)
 
@@ -119,36 +194,10 @@ def repropagate_precedence_delays(
         if succ is None:
             continue
 
-        min_start = succ.start_week
-        min_end = succ.end_week
-
-        # Precedências FS clássicas (ActivityDAG.precedence + thresholds, ADR-081) —
-        # mesma fórmula de lag usada por `_validate_repaired_schedule`.
-        for pred_id in dag.predecessors(activity_id):
-            pred = activities.get(pred_id)
-            if pred is None:
-                continue
-            theta = dag.get_threshold(pred_id, activity_id)
-            if theta >= 1.0:
-                required_start = pred.end_week
-            else:
-                pred_activity = acts_by_id.get(pred_id)
-                pred_duration = pred_activity.duration_weeks if pred_activity else pred.duration_weeks
-                lag = math.ceil(theta * pred_duration)
-                required_start = pred.start_week + lag
-            min_start = max(min_start, required_start)
-
-        # Precedências estendidas SS/FF/FS+lag (NEP-031 L4).
-        for ep in extended_by_succ.get(activity_id, []):
-            pred = activities.get(ep.pred)
-            if pred is None:
-                continue
-            if ep.tipo == "FS":
-                min_start = max(min_start, pred.end_week + ep.lag)
-            elif ep.tipo == "SS":
-                min_start = max(min_start, pred.start_week + ep.lag)
-            elif ep.tipo == "FF":
-                min_end = max(min_end, pred.end_week + ep.lag)
+        min_start = _pr_classic_min_start(dag, acts_by_id, activities, activity_id, succ.start_week)
+        min_start, min_end = _pr_extended_min_start_end(
+            extended_by_succ, activities, activity_id, min_start, succ.end_week
+        )
 
         # Déficit = maior deslocamento exigido entre início e fim (FF via fim);
         # nunca negativo (nunca antecipa).

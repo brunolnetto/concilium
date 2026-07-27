@@ -48,18 +48,16 @@ _EQUIP_KEYS_SINERGIA = {"equip_id", "num_unidades", "consumo_litros_hora_estimad
 _MATERIAL_KEYS_SINERGIA = {"insumo_id", "consumo_por_hora", "unidade", "descricao"}
 
 
+def _filtrar_itens_por_chaves(itens: list | None, chaves: set[str]) -> list[dict]:
+    return [{k: v for k, v in item.items() if k in chaves} for item in itens or []]
+
+
 def _sanitize_comp_para_sinergia(comp_raw: dict) -> dict:
     """Filtra `comp_raw` para as chaves aceitas pelos modelos tipados (ADR-130 F3)."""
     return {
-        "funcoes": [
-            {k: v for k, v in f.items() if k in _FUNCAO_KEYS_SINERGIA} for f in comp_raw.get("funcoes", []) or []
-        ],
-        "equipamentos": [
-            {k: v for k, v in e.items() if k in _EQUIP_KEYS_SINERGIA} for e in comp_raw.get("equipamentos", []) or []
-        ],
-        "materiais": [
-            {k: v for k, v in m.items() if k in _MATERIAL_KEYS_SINERGIA} for m in comp_raw.get("materiais", []) or []
-        ],
+        "funcoes": _filtrar_itens_por_chaves(comp_raw.get("funcoes", []), _FUNCAO_KEYS_SINERGIA),
+        "equipamentos": _filtrar_itens_por_chaves(comp_raw.get("equipamentos", []), _EQUIP_KEYS_SINERGIA),
+        "materiais": _filtrar_itens_por_chaves(comp_raw.get("materiais", []), _MATERIAL_KEYS_SINERGIA),
     }
 
 

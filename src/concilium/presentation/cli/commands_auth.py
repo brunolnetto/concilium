@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import csv
 import secrets
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import typer
 from rich import print as rprint
@@ -191,6 +191,52 @@ def _do_update_user(client_id: str, role: str | None, email: str | None, notes: 
     return store.update_client(client_id, roles=[role] if role is not None else None, email=email, notes=notes)
 
 
+def _describe_update_user_changes(
+    existing: ClientRecord, role: str | None, email: str | None, notes: str | None
+) -> dict[str, str]:
+    """Resume em texto o que muda em `existing` — usado só para o email de aviso."""
+    changes: dict[str, str] = {}
+    if role is not None and [role] != existing.roles:
+        changes["role"] = f"{'/'.join(existing.roles)} → {role}"
+    if email is not None and email != existing.email:
+        changes["email"] = "atualizado"
+    if notes is not None and notes != existing.notes:
+        changes["notes"] = "atualizado"
+    return changes
+
+
+def _print_update_user_result(record: ClientRecord) -> None:
+    rprint(f"[green]✓ Usuário '{record.client_id}' atualizado.[/green]")
+    rprint(f"  Role    : {', '.join(record.roles)}")
+    if record.email:
+        rprint(f"  Email   : {record.email}")
+    if record.notes:
+        rprint(f"  Notas   : {record.notes}")
+
+
+def _resolve_update_user_target(
+    client_id: str, role: str | None, email: str | None, notes: str | None
+) -> ClientRecord:
+    """Valida os argumentos de update-user e resolve o registro existente.
+
+    Raises typer.Exit(1) se nenhum campo foi informado ou o usuário não existe.
+    """
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    if role is None and email is None and notes is None:
+        rprint("[red]Erro:[/red] informe ao menos --role, --email ou --notes.")
+        raise typer.Exit(1)
+
+    store = get_auth_store()
+    existing = store.get_client(client_id)
+    if existing is None:
+        rprint(f"[red]Erro:[/red] usuário '{client_id}' não encontrado. Use add-user para criar.")
+        raise typer.Exit(1)
+    if not existing.active:
+        rprint(f"[yellow]Aviso:[/yellow] '{client_id}' está inativo/removido — atualizando mesmo assim.")
+    return existing
+
+
 @app.command("add-user")
 def add_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente/usuário."),
@@ -282,27 +328,9 @@ def update_user(
 ) -> None:
     """Atualiza role/email/notes de um usuário existente (para criar, use add-user)."""
     from concilium.application.services.notifications import notify_user_edited
-    from concilium.infrastructure.auth.auth_store import get_auth_store
 
-    if role is None and email is None and notes is None:
-        rprint("[red]Erro:[/red] informe ao menos --role, --email ou --notes.")
-        raise typer.Exit(1)
-
-    store = get_auth_store()
-    existing = store.get_client(client_id)
-    if existing is None:
-        rprint(f"[red]Erro:[/red] usuário '{client_id}' não encontrado. Use add-user para criar.")
-        raise typer.Exit(1)
-    if not existing.active:
-        rprint(f"[yellow]Aviso:[/yellow] '{client_id}' está inativo/removido — atualizando mesmo assim.")
-
-    changes: dict[str, str] = {}
-    if role is not None and [role] != existing.roles:
-        changes["role"] = f"{'/'.join(existing.roles)} → {role}"
-    if email is not None and email != existing.email:
-        changes["email"] = "atualizado"
-    if notes is not None and notes != existing.notes:
-        changes["notes"] = "atualizado"
+    existing = _resolve_update_user_target(client_id, role, email, notes)
+    changes = _describe_update_user_changes(existing, role, email, notes)
 
     try:
         record = _do_update_user(client_id, role, email, notes)
@@ -310,16 +338,97 @@ def update_user(
         rprint(f"[red]Erro:[/red] {e}")
         raise typer.Exit(1) from e
 
-    rprint(f"[green]✓ Usuário '{record.client_id}' atualizado.[/green]")
-    rprint(f"  Role    : {', '.join(record.roles)}")
-    if record.email:
-        rprint(f"  Email   : {record.email}")
-    if record.notes:
-        rprint(f"  Notas   : {record.notes}")
+    _print_update_user_result(record)
 
     if changes and record.email:
         if not notify_user_edited(client_id, record.email, changes):
             rprint(f"[red]✗ Falha ao enviar email de aviso para {record.email}[/red]")
+
+
+class _BatchRow(NamedTuple):
+    """Uma linha do CSV de `batch`, já normalizada (strip/lower nos campos textuais)."""
+
+    action: str
+    client_id: str
+    role_cell: str  # "" = nao informado (relevante so pra update)
+    email_cell: str
+    notes_cell: str
+    secret_cell: str
+    role_for_add: str  # add sempre tem role (default operator, como add-user)
+    role_to_validate: str
+
+
+def _parse_batch_row(row: dict[str, str]) -> _BatchRow:
+    action = (row.get("action") or "").strip().lower()
+    client_id = (row.get("id") or "").strip()
+    role_cell = (row.get("role") or "").strip()
+    email_cell = (row.get("email") or "").strip()
+    notes_cell = (row.get("notes") or "").strip()
+    secret_cell = (row.get("secret") or "").strip()
+    role_for_add = role_cell or "operator"
+    role_to_validate = role_for_add if action == "add" else role_cell
+    return _BatchRow(action, client_id, role_cell, email_cell, notes_cell, secret_cell, role_for_add, role_to_validate)
+
+
+def _batch_role_invalid(role_to_validate: str, valid_roles: frozenset[str]) -> bool:
+    return bool(role_to_validate) and role_to_validate not in valid_roles
+
+
+def _batch_update_missing_fields(parsed: _BatchRow) -> bool:
+    if parsed.action != "update":
+        return False
+    return not (parsed.role_cell or parsed.email_cell or parsed.notes_cell)
+
+
+def _validate_batch_row(parsed: _BatchRow, valid_roles: frozenset[str]) -> tuple[str, str, str] | None:
+    """Retorna (action_display, client_id_display, detalhe) se a linha for inválida, senão None."""
+    if parsed.action not in ("add", "update"):
+        return parsed.action or "(vazio)", parsed.client_id or "(vazio)", "action inválida"
+    if not parsed.client_id:
+        return parsed.action, "(vazio)", "id obrigatório"
+    if _batch_role_invalid(parsed.role_to_validate, valid_roles):
+        return parsed.action, parsed.client_id, f"role inválida: {parsed.role_to_validate}"
+    if _batch_update_missing_fields(parsed):
+        return parsed.action, parsed.client_id, "nenhum campo pra atualizar"
+    return None
+
+
+def _dry_run_batch_row(store, parsed: _BatchRow) -> tuple[bool, str, str]:
+    """Retorna (ok, status_markup, detalhe) sem gravar nada no store."""
+    exists = store.get_client(parsed.client_id) is not None
+    if parsed.action == "add":
+        detalhe = "já existe (falharia)" if exists else f"criaria com role={parsed.role_for_add}"
+        status = "[red]✗[/red]" if exists else "[green]✓[/green]"
+    else:
+        detalhe = f"atualizaria role={parsed.role_cell or '—'}" if exists else "não existe (falharia)"
+        status = "[green]✓[/green]" if exists else "[red]✗[/red]"
+    ok = (parsed.action == "add" and not exists) or (parsed.action == "update" and exists)
+    return ok, status, detalhe
+
+
+def _apply_batch_row(parsed: _BatchRow) -> str:
+    """Executa o add/update de fato. Retorna o texto de detalhe. Raises ValueError se falhar."""
+    if parsed.action == "add":
+        used_secret = parsed.secret_cell or secrets.token_urlsafe(32)
+        _record, client_code = _do_add_user(
+            parsed.client_id, used_secret, parsed.role_for_add, parsed.notes_cell, parsed.email_cell
+        )
+        detalhe = f"code={client_code}"
+        if not parsed.secret_cell:
+            detalhe += f", secret gerado={used_secret}"
+        return detalhe
+    _do_update_user(parsed.client_id, parsed.role_cell or None, parsed.email_cell or None, parsed.notes_cell or None)
+    return "atualizado"
+
+
+def _read_batch_csv(file: str) -> list[dict[str, str]]:
+    """Lê o CSV de `batch`. Raises typer.Exit(1) se o arquivo não puder ser aberto."""
+    try:
+        with open(file, newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except OSError as e:
+        rprint(f"[red]Erro:[/red] não foi possível ler '{file}': {e}")
+        raise typer.Exit(1) from e
 
 
 @app.command("batch")
@@ -338,12 +447,7 @@ def batch(
     """
     from concilium.infrastructure.auth.permission_guard import VALID_ROLES
 
-    try:
-        with open(file, newline="", encoding="utf-8") as f:
-            rows = list(csv.DictReader(f))
-    except OSError as e:
-        rprint(f"[red]Erro:[/red] não foi possível ler '{file}': {e}")
-        raise typer.Exit(1) from e
+    rows = _read_batch_csv(file)
 
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
@@ -358,64 +462,30 @@ def batch(
     n_ok = 0
     n_failed = 0
     for i, row in enumerate(rows, start=2):  # linha 1 = header
-        action = (row.get("action") or "").strip().lower()
-        client_id = (row.get("id") or "").strip()
-        role_cell = (row.get("role") or "").strip()  # "" = nao informado (relevante so pra update)
-        email_cell = (row.get("email") or "").strip()
-        notes_cell = (row.get("notes") or "").strip()
-        secret_cell = (row.get("secret") or "").strip()
-        role_for_add = role_cell or "operator"  # add sempre tem role (default operator, como add-user)
+        parsed = _parse_batch_row(row)
 
-        if action not in ("add", "update"):
-            table.add_row(str(i), action or "(vazio)", client_id or "(vazio)", "[red]✗[/red]", "action inválida")
-            n_failed += 1
-            continue
-        if not client_id:
-            table.add_row(str(i), action, "(vazio)", "[red]✗[/red]", "id obrigatório")
-            n_failed += 1
-            continue
-
-        role_to_validate = role_for_add if action == "add" else role_cell
-        if role_to_validate and role_to_validate not in VALID_ROLES:
-            table.add_row(str(i), action, client_id, "[red]✗[/red]", f"role inválida: {role_to_validate}")
-            n_failed += 1
-            continue
-
-        if action == "update" and not (role_cell or email_cell or notes_cell):
-            table.add_row(str(i), action, client_id, "[red]✗[/red]", "nenhum campo pra atualizar")
+        invalid = _validate_batch_row(parsed, VALID_ROLES)
+        if invalid is not None:
+            action_display, client_id_display, detalhe = invalid
+            table.add_row(str(i), action_display, client_id_display, "[red]✗[/red]", detalhe)
             n_failed += 1
             continue
 
         if dry_run:
-            exists = store.get_client(client_id) is not None
-            if action == "add":
-                detalhe = "já existe (falharia)" if exists else f"criaria com role={role_for_add}"
-                status = "[red]✗[/red]" if exists else "[green]✓[/green]"
-            else:
-                detalhe = f"atualizaria role={role_cell or '—'}" if exists else "não existe (falharia)"
-                status = "[green]✓[/green]" if exists else "[red]✗[/red]"
-            ok_row = (action == "add" and not exists) or (action == "update" and exists)
+            ok_row, status, detalhe = _dry_run_batch_row(store, parsed)
             n_ok += 1 if ok_row else 0
             n_failed += 0 if ok_row else 1
-            table.add_row(str(i), action, client_id, status, detalhe)
+            table.add_row(str(i), parsed.action, parsed.client_id, status, detalhe)
             continue
 
         try:
-            if action == "add":
-                used_secret = secret_cell or secrets.token_urlsafe(32)
-                _record, client_code = _do_add_user(client_id, used_secret, role_for_add, notes_cell, email_cell)
-                detalhe = f"code={client_code}"
-                if not secret_cell:
-                    detalhe += f", secret gerado={used_secret}"
-            else:
-                _do_update_user(client_id, role_cell or None, email_cell or None, notes_cell or None)
-                detalhe = "atualizado"
+            detalhe = _apply_batch_row(parsed)
         except ValueError as e:
-            table.add_row(str(i), action, client_id, "[red]✗[/red]", str(e))
+            table.add_row(str(i), parsed.action, parsed.client_id, "[red]✗[/red]", str(e))
             n_failed += 1
             continue
 
-        table.add_row(str(i), action, client_id, "[green]✓[/green]", detalhe)
+        table.add_row(str(i), parsed.action, parsed.client_id, "[green]✓[/green]", detalhe)
         n_ok += 1
 
     rprint(table)
@@ -578,6 +648,28 @@ def _forget_pii(store, client_id: str) -> None:
     )
 
 
+def _confirm_remove_user(client_id: str, forget: bool, yes: bool) -> None:
+    confirm_msg = f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?"
+    if forget:
+        confirm_msg = (
+            f"Remover usuário '{client_id}', revogar todos os seus dispositivos E apagar "
+            "permanentemente sua PII (email, notas, credenciais, histórico de invocações)? "
+            "Esta ação NÃO PODE ser desfeita."
+        )
+    if not yes:
+        typer.confirm(confirm_msg, abort=True)
+
+
+def _notify_remove_user_result(client_id: str, existing: ClientRecord | None) -> None:
+    from concilium.application.services.notifications import notify_user_removed
+
+    if existing and existing.email:
+        if not notify_user_removed(client_id, existing.email):
+            rprint(f"[red]✗ Falha ao enviar email de confirmação para {existing.email}[/red]")
+    else:
+        rprint("[dim]Usuário sem email cadastrado — nenhuma notificação enviada.[/dim]")
+
+
 @app.command("remove-user")
 def remove_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente a remover."),
@@ -613,20 +705,10 @@ def remove_user(
     quem já o referencia (ownership, audit trails). Use --forget para também
     apagar a PII (direito de ser esquecido, LGPD Art. 18).
     """
-    from concilium.application.services.notifications import notify_user_removed
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     _check_owned_projects(client_id, reassign_to, force, force_yes)
-
-    confirm_msg = f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?"
-    if forget:
-        confirm_msg = (
-            f"Remover usuário '{client_id}', revogar todos os seus dispositivos E apagar "
-            "permanentemente sua PII (email, notas, credenciais, histórico de invocações)? "
-            "Esta ação NÃO PODE ser desfeita."
-        )
-    if not yes:
-        typer.confirm(confirm_msg, abort=True)
+    _confirm_remove_user(client_id, forget, yes)
 
     store = get_auth_store()
     # Captura o email antes da remoção/esquecimento — --forget apaga o campo email do registro.
@@ -642,11 +724,7 @@ def remove_user(
         return
 
     rprint(f"[green]✓ Usuário '{client_id}' removido. Dispositivos revogados.[/green]")
-    if existing and existing.email:
-        if not notify_user_removed(client_id, existing.email):
-            rprint(f"[red]✗ Falha ao enviar email de confirmação para {existing.email}[/red]")
-    else:
-        rprint("[dim]Usuário sem email cadastrado — nenhuma notificação enviada.[/dim]")
+    _notify_remove_user_result(client_id, existing)
 
     if forget:
         _forget_pii(store, client_id)
