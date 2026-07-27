@@ -37,7 +37,7 @@ def _cobertura_suficiente(roster: list[MembroEquipeReal], funcao_id: str, necess
     return len(distintos) >= necessario
 
 
-def _roster_cobre_composicao(contrato: RecursoContrato, roster: list[MembroEquipeReal]) -> bool:
+def roster_cobre_composicao_mo(contrato: RecursoContrato, roster: list[MembroEquipeReal]) -> bool:
     return all(
         _cobertura_suficiente(roster, funcao_id, num_pessoas * contrato.quantidade_contratada)
         for funcao_id, num_pessoas in contrato.composicao_funcoes_mo.items()
@@ -62,7 +62,7 @@ def aplicar_roster_custo_real_mo(
     """
     if not contrato.composicao_funcoes_mo:
         return contrato
-    if not _roster_cobre_composicao(contrato, roster):
+    if not roster_cobre_composicao_mo(contrato, roster):
         return contrato
 
     custo_real_total = sum(
