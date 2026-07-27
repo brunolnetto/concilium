@@ -80,16 +80,22 @@ class _LoadDictMixin(_Base):
             inputs_escopo=self._lfd_build_inputs_escopo(
                 projeto_nome, localizacao, regime_trabalho, data_ini, data_fim, eap, ref
             ),
-            inputs_cronograma={
-                "num_equipes_por_item": num_equipes_por_item,
-                **({"rcpsp_spec": ref["rcpsp_spec"]} if ref.get("rcpsp_spec") else {}),
-                # ADR-151: provisionamento externo de déficit declarado na referência
-                # (mesmo padrão de passthrough de rcpsp_spec acima) — Escopo.logistica_consumiveis.
-                **({"logistica_consumiveis": ref["logistica_consumiveis"]} if ref.get("logistica_consumiveis") else {}),
-            },
+            inputs_cronograma=self._lfd_build_inputs_cronograma(ref, num_equipes_por_item),
             inputs_indiretos=inputs_indiretos,
             extra_inputs=extra_inputs,
         )
+
+    @staticmethod
+    def _lfd_build_inputs_cronograma(ref: dict[str, Any], num_equipes_por_item: dict) -> dict[str, Any]:
+        """Monta `inputs_cronograma` — passthrough opcional de `rcpsp_spec` (ADR-071) e
+        `logistica_consumiveis` (ADR-151: provisionamento externo de déficit declarado
+        na referência, mesmo padrão de passthrough de `rcpsp_spec`)."""
+        inputs_cronograma: dict[str, Any] = {"num_equipes_por_item": num_equipes_por_item}
+        if ref.get("rcpsp_spec"):
+            inputs_cronograma["rcpsp_spec"] = ref["rcpsp_spec"]
+        if ref.get("logistica_consumiveis"):
+            inputs_cronograma["logistica_consumiveis"] = ref["logistica_consumiveis"]
+        return inputs_cronograma
 
     @staticmethod
     def _infer_slug_from_path(path: Path) -> str:

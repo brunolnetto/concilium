@@ -49,35 +49,37 @@ class DisponibilidadeConsumivel:
     # contínuo) — declaração explícita do engenheiro de que um material de geração
     # interna (ADR-139) tem um déficit estrutural genuíno entre demanda e produção
     # pareada, que precisa ser provisionado de fora (compra adicional, jazida
-    # externa) para a obra ser fisicamente executável. Tratada como disponível desde
-    # o início, na mesma posição de estoque_inicial na projeção de estoque.
+    # externa) para a obra ser fisicamente executável. Injetado just-in-time na
+    # projeção de estoque (não em t=0/estoque_inicial) — ver `replenishable._project`.
     deficit_provisionado_externamente: float = 0.0
 
     def __post_init__(self) -> None:
-        if self.capacidade_armazenamento is not None and self.capacidade_armazenamento < 0:
-            raise ValueError(f"capacidade_armazenamento must be >= 0, got {self.capacidade_armazenamento}")
+        self._validar_nao_negativos()
+        self._validar_capacidade()
+
+    def _validar_nao_negativos(self) -> None:
+        for nome, valor in (
+            ("capacidade_armazenamento", self.capacidade_armazenamento),
+            ("taxa_reabastecimento_max", self.taxa_reabastecimento_max),
+            ("lead_time_reabastecimento_dias", self.lead_time_reabastecimento_dias),
+            ("deficit_provisionado_externamente", self.deficit_provisionado_externamente),
+        ):
+            if valor is not None and valor < 0:
+                raise ValueError(f"{nome} must be >= 0, got {valor}")
         if self.estoque_inicial < 0:
             raise ValueError(f"estoque_inicial must be >= 0, got {self.estoque_inicial}")
-        if self.taxa_reabastecimento_max is not None and self.taxa_reabastecimento_max < 0:
-            raise ValueError(f"taxa_reabastecimento_max must be >= 0, got {self.taxa_reabastecimento_max}")
-        if self.lead_time_reabastecimento_dias is not None and self.lead_time_reabastecimento_dias < 0:
-            raise ValueError(
-                f"lead_time_reabastecimento_dias must be >= 0, got {self.lead_time_reabastecimento_dias}"
-            )
-        if self.deficit_provisionado_externamente < 0:
-            raise ValueError(
-                f"deficit_provisionado_externamente must be >= 0, got {self.deficit_provisionado_externamente}"
-            )
-        if self.capacidade_armazenamento is not None and self.estoque_inicial > self.capacidade_armazenamento:
-            raise ValueError(
-                f"estoque_inicial ({self.estoque_inicial}) must be <= capacidade_armazenamento "
-                f"({self.capacidade_armazenamento})"
-            )
+
+    def _validar_capacidade(self) -> None:
+        cap = self.capacidade_armazenamento
+        if cap is None:
+            return
+        if self.estoque_inicial > cap:
+            raise ValueError(f"estoque_inicial ({self.estoque_inicial}) must be <= capacidade_armazenamento ({cap})")
         disponivel_desde_inicio = self.estoque_inicial + self.deficit_provisionado_externamente
-        if self.capacidade_armazenamento is not None and disponivel_desde_inicio > self.capacidade_armazenamento:
+        if disponivel_desde_inicio > cap:
             raise ValueError(
                 f"estoque_inicial + deficit_provisionado_externamente ({disponivel_desde_inicio}) must be <= "
-                f"capacidade_armazenamento ({self.capacidade_armazenamento})"
+                f"capacidade_armazenamento ({cap})"
             )
 
     @classmethod
