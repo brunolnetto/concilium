@@ -735,14 +735,22 @@ def regenerate_code(
     show_link: bool = typer.Option(
         True, "--link/--no-link", help="Exibir o link de instalação do .mcpb e o client_code."
     ),
+    welcome_email: bool = typer.Option(
+        False,
+        "--welcome-email",
+        help="Envia o email completo (link do .mcpb + client_code) em vez do aviso genérico de alteração.",
+    ),
 ) -> None:
     """Gera um novo client_code para o usuário (invalida o anterior).
 
     O client_code é reutilizável em quantos dispositivos o usuário precisar —
-    não é necessário gerar um código por dispositivo. Use este comando apenas
-    se o usuário perdeu o código original ou se ele vazou e precisa ser trocado.
+    não é necessário gerar um código por dispositivo. Use este comando se o
+    usuário perdeu o código original, se ele vazou e precisa ser trocado, ou
+    para reenviar as instruções completas de instalação (--welcome-email) —
+    útil para reonboarding de quem já está cadastrado (não passa por add-user,
+    que só funciona para client_id novo).
     """
-    from concilium.application.services.notifications import notify_user_edited
+    from concilium.application.services.notifications import notify_client_code_migrated, notify_user_edited
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     store = get_auth_store()
@@ -753,7 +761,14 @@ def regenerate_code(
 
     existing = next((r for r in store.list_clients() if r.client_id == user), None)
     if existing and existing.email:
-        if not notify_user_edited(user, existing.email, {"client_code": "regenerado"}):
+        if welcome_email:
+            mcpb_url = _get_mcpb_download_url()
+            _warn_if_no_mcpb_url(mcpb_url)
+            if notify_client_code_migrated(user, existing.email, client_code, mcpb_url):
+                rprint(f"\n[green]✓ Email completo reenviado para {existing.email}[/green]")
+            else:
+                rprint(f"[red]✗ Falha ao enviar o email completo para {existing.email}[/red]")
+        elif not notify_user_edited(user, existing.email, {"client_code": "regenerado"}):
             rprint(f"[red]✗ Falha ao enviar email de aviso para {existing.email}[/red]")
 
     if show_link:

@@ -896,6 +896,60 @@ class TestRegenerateCode:
         assert result.exit_code == 0, result.output
         assert "Falha ao enviar email de aviso para alice@example.com" in result.output
 
+    def test_welcome_email_flag_sends_full_content_instead_of_generic_notice(self):
+        """--welcome-email: reonboarding de quem já está cadastrado — reenvia link
+        do .mcpb + client_code (notify_client_code_migrated), não o aviso genérico."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        store.regenerate_client_code.return_value = "RCODE-NEW"
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=True) as notify_migrated_mock,
+            patch(PATCH_NOTIFY_USER_EDITED) as notify_edited_mock,
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
+        ):
+            result = runner.invoke(app, ["regenerate-code", "--user", "alice", "--welcome-email"])
+
+        assert result.exit_code == 0, result.output
+        notify_migrated_mock.assert_called_once_with(
+            "alice", "alice@example.com", "RCODE-NEW", "https://example.com/concilium-mcp-proxy.mcpb"
+        )
+        notify_edited_mock.assert_not_called()
+        assert "Email completo reenviado" in result.output
+
+    def test_welcome_email_flag_reports_failure(self):
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        store.regenerate_client_code.return_value = "RCODE-NEW"
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=False),
+            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
+        ):
+            result = runner.invoke(app, ["regenerate-code", "--user", "alice", "--welcome-email"])
+
+        assert result.exit_code == 0, result.output
+        assert "Falha ao enviar o email completo para alice@example.com" in result.output
+
+    def test_without_welcome_email_flag_still_sends_generic_notice(self):
+        """Default (sem --welcome-email) preserva o comportamento antigo."""
+        client = _make_client_record("alice", email="alice@example.com")
+        store = _make_store(list_clients_return=[client])
+        store.regenerate_client_code.return_value = "RCODE-NEW"
+
+        with (
+            patch(PATCH_GET_AUTH_STORE, return_value=store),
+            patch(PATCH_NOTIFY_USER_EDITED, return_value=True) as notify_edited_mock,
+            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_migrated_mock,
+        ):
+            result = runner.invoke(app, ["regenerate-code", "--user", "alice"])
+
+        assert result.exit_code == 0, result.output
+        notify_edited_mock.assert_called_once_with("alice", "alice@example.com", {"client_code": "regenerado"})
+        notify_migrated_mock.assert_not_called()
+
 
 # ===========================================================================
 # update-user
