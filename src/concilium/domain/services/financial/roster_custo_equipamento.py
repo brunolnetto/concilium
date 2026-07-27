@@ -1,0 +1,74 @@
+"""ADR-155 F1 — Roster real de equipamento: custo individualizado por semana.
+
+Soma, semana a semana, o custo real de cada `AtivoEquipamentoReal` ativo num tipo —
+locação + manutenção mensal do contrato real, convertidas a taxa semanal.
+
+Sem nenhuma ligação com `InstanciaRecurso`/`segmentos_atividade`/`identidade_fisica_id`
+(ADR-153) — o pool RCPSP permanece fungível; isto é puramente uma camada de custo
+bottom-up a partir de ativos reais, independente de scheduling. Estrutura irmã de
+`roster_custo_mo.py` (ADR-154).
+
+Granularidade semanal (mesma do resto do motor RCPSP): início/fim de contrato no
+meio de uma semana ISO não gera rateio por dia — a semana inteira em que a data cai
+é contabilizada por completo.
+"""
+
+from __future__ import annotations
+
+from datetime import date, timedelta
+
+from concilium.domain.constants import SEMANAS_POR_MES
+from concilium.domain.models.canonical import AtivoEquipamentoReal
+from concilium.domain.services.planning.week_sequence import enumerar_semanas
+
+
+def _intervalo_semana(semana: str) -> tuple[date, date]:
+    """Segunda a domingo de uma semana ISO (ex: "2026-W03")."""
+    year_str, week_str = semana.split("-W")
+    segunda = date.fromisocalendar(int(year_str), int(week_str), 1)
+    return segunda, segunda + timedelta(days=6)
+
+
+def _ativo_ativo_na_semana(ativo: AtivoEquipamentoReal, semana: str) -> bool:
+    segunda, domingo = _intervalo_semana(semana)
+    if ativo.data_contrato_inicio > domingo:
+        return False
+    return ativo.data_contrato_fim is None or ativo.data_contrato_fim >= segunda
+
+
+def _custo_semanal_ativo(ativo: AtivoEquipamentoReal) -> float:
+    return (ativo.custo_locacao_mensal_real + ativo.custo_manutencao_mensal_real) / SEMANAS_POR_MES
+
+
+def custo_real_eq_semanal(
+    roster: list[AtivoEquipamentoReal],
+    tipo_id: str,
+    semana_inicio: str,
+    semana_fim: str,
+) -> dict[str, float]:
+    """Custo real de equipamento por semana — soma, por semana, o custo de cada
+    ativo do roster ativo naquele tipo e naquele intervalo.
+
+        custo_semana(t) = Σ_{ativo ativo em t} (custo_locacao_mensal_real
+                           + custo_manutencao_mensal_real) / SEMANAS_POR_MES
+
+    Ativos de outro tipo (`tipo_id` diferente) são ignorados.
+    """
+    ativos_tipo = [a for a in roster if a.tipo_id == tipo_id]
+    custo: dict[str, float] = {}
+    for semana in enumerar_semanas(semana_inicio, semana_fim):
+        total_semana = sum(
+            _custo_semanal_ativo(a) for a in ativos_tipo if _ativo_ativo_na_semana(a, semana)
+        )
+        custo[semana] = round(total_semana, 2)
+    return custo
+
+
+def custo_real_eq_total(
+    roster: list[AtivoEquipamentoReal],
+    tipo_id: str,
+    semana_inicio: str,
+    semana_fim: str,
+) -> float:
+    """Custo real total de equipamento no span — soma de `custo_real_eq_semanal`."""
+    return round(sum(custo_real_eq_semanal(roster, tipo_id, semana_inicio, semana_fim).values()), 2)
