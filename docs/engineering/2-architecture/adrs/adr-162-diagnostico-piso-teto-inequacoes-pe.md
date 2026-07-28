@@ -61,6 +61,17 @@ equivalente, em frentes-semana, a dividir por `h·d`. Hoje o pipeline calcula `�
 
 P4. A formalização do usuário usa `C̃^D_i` em base **semanal explícita por frentes** (`Σ_j h·d·m_ij`). O código hoje usa base **mensal** (`equipe.custo_fixo_mensal × permanencia_base`, `_ponto_equilibrio.py:320`) — granularidade agregada, sem abrir por semana/frente. Isso é suficiente para o piso (delta agregado) e para a decomposição de P2 (que só precisa de `H_i` total, não por semana), mas insuficiente para apontar *em qual semana* um eventual estouro ocorre (ramp-up vs ramp-down) — o mesmo problema que o cross-term de timing do ADR-061 (`t0*`, minimiza `Cov(n,p)`) já resolve por outro caminho (função objetivo global, não limite por-atividade-por-semana).
 
+P5. **`H_i = h·d·Σ_j^{N_i} m_ij` só existe por completo depois do cronograma (skill-04), nunca antes — e a razão não é simétrica entre `m_ij` e `N_i`.**
+
+`m_ij` (frentes na semana `j`) tem uma estimativa disponível cedo: `_calendario.py:122` deriva a duração inicial de uma atividade por `duration_weeks = ⌈Q_i/(ρ_i·h·d·n_equipes)⌉`, onde `n_equipes` (≈ `m_ij` constante) vem de uma decisão de mobilização/dimensionamento (skill 03/05) anterior ao cronograma. Até aqui, o número de frentes *pretendido* é conhecido antes do schedule rodar.
+
+Mas **`N_i` (e o `m_ij` semana-a-semana real) só se resolve depois do cronograma completo**, por dois motivos distintos:
+
+1. Essa duração inicial é só um parâmetro *fixo* de entrada para o CP-SAT (`cpsat_scheduler.py`) — o solver decide apenas os *start times* sujeitos a precedência e contenção de recursos com outras atividades; a duração nominal não é variável de decisão nessa etapa.
+2. O `N_i` **efetivo** vem de outro lugar: `_assembly.py:201-207` deriva `semanas_com_producao` (e portanto `N_i = end_week − start_week + 1`) da distribuição semanal de produção *já ajustada* por clima/praticabilidade (η) e pelo `ramp_profile` (rampa de subida/descida de frentes) — os mesmos fatores causais do ADR-060/061. Ou seja, mesmo o `m_ij` por semana carrega uma componente que só se resolve após clima e rampa serem aplicados, não é puramente a mobilização planejada.
+
+**Implicação para o desenho desta ADR**: o intervalo de P3 (`(C^D_i−Γ)/γ_i^o < H_i < C^D_i/γ_i^o`) pode ser calculado cedo — depende só de `Q_i`, `ρ_i`, `Γ` e taxas, todos dado de catálogo/perfil — e serve como **alvo de planejamento** antes do cronograma rodar. Mas `Δ_i`/`causa_dominante` (D1), que compara esse alvo contra o `H_i` **realizado**, é estritamente um **diagnóstico pós-cronograma** (pós skill-04, dentro de skill-06) — nunca uma validação prospectiva durante a mobilização. D1/D3 devem deixar essa dependência de ordem explícita na implementação (não é possível emitir `causa_dominante` nem popular `horas_reais_min/max` com dado realizado antes de skill-04 terminar).
+
 ### Fase 0 — Fundação: eliminar o atalho por referência, sempre bottom-up (✅ implementado, 28/07)
 
 Discutindo P2, o usuário observou que `γ_i^v ≠ γ_i^o` "soa estranho — custo horário deveria ser algo único", e pediu para investigar a diferença real no código e, dependendo do achado, **remover completamente** qualquer atalho de cálculo por referência de catálogo, deixando a dedução sempre bottom-up.
@@ -95,6 +106,8 @@ Adicionar a `PontoEquilibrio` um campo derivado `causa_dominante: Literal["CRONO
 
 `causa_dominante = "CRONOGRAMA"` se `|T_cronograma| > |T_precificacao|`, `"PRECIFICACAO"` caso contrário, `"INDETERMINADO"` quando `H_i` não puder ser resolvido (ex.: fase de planejamento sem schedule real ainda montado — ver Riscos). Isso substitui o `causa_piso` binário da versão anterior desta ADR (que rotulava só por qual dos dois limites era cruzado, não pela causa real).
 
+**Dependência de ordem (P5)**: `H_i` só existe por completo depois de skill-04 (cronograma) rodar — `causa_dominante` é necessariamente um diagnóstico pós-cronograma (calculado em skill-06, sobre o `custo_operacional_real` já realizado), nunca uma validação prospectiva durante mobilização/dimensionamento (skill 03/05). `INDETERMINADO` cobre explicitamente qualquer chamada antes dessa etapa, não só o caso de `γ_i` não isolável.
+
 ### D2 — Teto `Γ` como parâmetro configurável, com validação nova `VAL-PONTO-EQUILIBRIO-TETO` (AVISO)
 
 `Γ` entra como campo de perfil (`config/contextos/<perfil>.json`, ao lado de `limiar_ponto_equilibrio` citado em `MEMORIAL_FORMULAS.md` §13), com fallback `None` (desabilitado) — perfis existentes não ganham um teto por default, evitando regressão silenciosa em contratos já aprovados. Quando configurado e `Δ_i ≥ Γ`, emite `VAL-PONTO-EQUILIBRIO-TETO` como AVISO (mesma filosofia não-bloqueante de todo o resto da skill 06 — ver `validador_cobertura_item.py:13-18`), nunca ERRO. Diferente da versão anterior, esta ADR **não afirma** que estourar `Γ` seja intrinsecamente um problema de preço — o campo `causa_dominante` (D1) é quem diagnostica isso caso a caso, para violação de piso ou de teto igualmente.
@@ -102,6 +115,8 @@ Adicionar a `PontoEquilibrio` um campo derivado `causa_dominante: Literal["CRONO
 ### D3 — Expor o intervalo de horas reais como campo informativo, não como gate de schedule
 
 Adicionar `horas_reais_min`/`horas_reais_max` (derivados de `(C^D_i − Γ)/γ_i^o` e `C^D_i/γ_i^o`, P3) ao `PontoEquilibrio` quando `Γ` e `γ_i^o` estiverem disponíveis — informativo no relatório/UI (mesma seção EQUILIBRIO do Excel), **não** um bloqueio no momento de montar o schedule (skill 04/05). Acoplar ao RCPSP é mudança de escopo maior e fica fora desta proposta.
+
+**Nuance de P5**: o intervalo em si (`Q_i/ρ_i`-dependente, não `H_i`-dependente) *poderia* ser calculado antes do cronograma, como alvo de planejamento — mas como `PontoEquilibrio` só é construído em skill-06 (pós skill-04/05), esta ADR não propõe uma consulta antecipada nesta fase; ficaria para um uso futuro fora deste escopo (ex.: uma tool de pré-checagem que leia só o catálogo, sem depender de `PontoEquilibrio`).
 
 ### D4 — Não migrar a base operacional de mensal para semanal-por-frente nesta ADR
 
@@ -165,6 +180,7 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 ### Fase 1
 - [ ] `causa_dominante` retorna `"CRONOGRAMA"` quando `|T_cronograma| > |T_precificacao|`, `"PRECIFICACAO"` no caso contrário
 - [ ] `causa_dominante = "INDETERMINADO"` quando `H_i` não resolvível (`custo_operacional_real <= 0` ou schedule ausente) — nunca um valor inventado
+- [ ] Teste prova que `causa_dominante` nunca é chamado/exposto antes de skill-04 terminar (P5) — não é uma validação prospectiva de mobilização
 - [ ] Teste de regressão prova a identidade `T_cronograma + T_precificacao == delta` (dentro de tolerância de arredondamento, mesmo padrão de `ε_tol` do roundtrip do ADR-061)
 - [ ] Suíte completa sem regressão (golden tests inclusos)
 
