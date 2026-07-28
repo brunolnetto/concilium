@@ -83,6 +83,15 @@ class BacktrackingPEItem:
     solucao_recomendada: SolucaoInversa | None  # menor Σ impactos nos 3 eixos
     roundtrips_falharam: tuple[str, ...]  # parametros com falha
 
+    # ADR-162: aponta, entre as soluções já computadas acima (nenhum cálculo novo), a que
+    # ataca a causa raiz identificada por PontoEquilibrio.causa_dominante — não é
+    # necessariamente `solucao_recomendada` (que otimiza menor Σ impactos, não causa raiz).
+    # PRECIFICACAO->L; CRONOGRAMA->P (produtividade, prioridade), com T0_RAMP/T0_CALENDARIO
+    # (timing) como alternativa quando não há solução válida de P; MISTO->COMBINADA.
+    # None quando causa_dominante="INDETERMINADO", ou quando nenhuma solução válida existe
+    # para o(s) parâmetro(s) correspondente(s).
+    solucao_causa_dominante: SolucaoInversa | None = None
+
     @property
     def tem_solucao_sem_repasse(self) -> bool:
         return any(s.roundtrip_valido and s.impacto_preco_pct < 0.5 for s in self.solucoes)

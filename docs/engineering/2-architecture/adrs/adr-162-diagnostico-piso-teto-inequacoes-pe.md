@@ -100,15 +100,39 @@ A Fase 0 acima já está implementada (nesta worktree, ainda não mergeada em `m
 
 ### D1 — Campo `causa_dominante`: decomposição Cronograma × Precificação, sem novo cálculo de origem
 
-Adicionar a `PontoEquilibrio` um campo derivado `causa_dominante: Literal["CRONOGRAMA", "PRECIFICACAO", "INDETERMINADO"]`, computado sempre (não só quando `status_validacao == "ERRO"`) a partir de:
+Adicionar a `PontoEquilibrio` um campo derivado `causa_dominante: Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO", "INDETERMINADO"]`, computado sempre (não só quando `status_validacao == "ERRO"`) a partir de:
 
 - `γ_i^v = p_i^c · ρ_i` (taxa de venda implícita, de `custo_venda_total`/`Q_i` e a produtividade de catálogo já usada em `_pe_pu_calibrado`)
 - `H_i` (horas reais totais — deriva de `n_frentes`/`permanencia_base` já existentes em `_build_pe_for_equipe`, multiplicado por `h·d` do `RegimeTrabalho` do projeto)
 - `γ_i^o = custo_operacional_real / H_i` (taxa real implícita, quando `H_i > 0`)
 
-`causa_dominante = "CRONOGRAMA"` se `|T_cronograma| > |T_precificacao|`, `"PRECIFICACAO"` caso contrário, `"INDETERMINADO"` quando `H_i` não puder ser resolvido (ex.: fase de planejamento sem schedule real ainda montado — ver Riscos). Isso substitui o `causa_piso` binário da versão anterior desta ADR (que rotulava só por qual dos dois limites era cruzado, não pela causa real).
+**Revisão (28/07, mesma sessão): partição simétrica em vez de convenção unilateral.** A formulação original decompunha `T_cronograma = γ_i^v·(Q_i/ρ_i − H_i)` e `T_precificacao = (γ_i^v−γ_i^o)·H_i` — uma escolha arbitrária de qual taxa/quantidade "fica fixa" ao medir cada efeito, o clássico problema de decomposição preço×quantidade em dois fatores (rate variance/efficiency variance, custeio padrão). A convenção alternativa (trocar quem fica fixo) é igualmente válida e atribui o termo de interação `(γ_i^v−γ_i^o)·(H_cat−H_i)` inteiro ao outro lado — podendo inverter qual causa é "dominante" trocando só a convenção. Corrigido com a **partição simétrica** (Shapley/Bennet, resolução padrão desse problema em contabilidade/economia — divide a interação meio a meio):
+
+```
+T_cronograma   = (H_cat − H_i) · (γ_i^v + γ_i^o) / 2
+T_precificacao = (γ_i^v − γ_i^o) · (H_cat + H_i) / 2
+```
+
+Ainda soma exatamente a `delta` (verificado algebricamente — os termos cruzados se cancelam), mas não depende de convenção.
+
+`causa_dominante` por **participação relativa**, não por "quem é maior" simples (uma divisão 51/49 não sustenta afirmar causa única): `share = |T_cronograma| / (|T_cronograma| + |T_precificacao|)`.
+- `share ≥ 0.65` → `"CRONOGRAMA"`; `share ≤ 0.35` → `"PRECIFICACAO"`; caso contrário → `"MISTO"` (nenhuma causa isolada explica a maior parte — inclui o caso `T_cronograma = T_precificacao = 0`, delta nulo com dados válidos).
+- `"INDETERMINADO"` quando `H_i`/`ρ_i`/`custo_operacional_real` não puderem ser resolvidos (ex.: fase de planejamento sem schedule real ainda montado — ver Riscos) — semanticamente diferente de `"MISTO"` (dado ausente vs causa ausente).
+
+Isso substitui o `causa_piso` binário da versão anterior desta ADR (que rotulava só por qual dos dois limites era cruzado, não pela causa real).
 
 **Dependência de ordem (P5)**: `H_i` só existe por completo depois de skill-04 (cronograma) rodar — `causa_dominante` é necessariamente um diagnóstico pós-cronograma (calculado em skill-06, sobre o `custo_operacional_real` já realizado), nunca uma validação prospectiva durante mobilização/dimensionamento (skill 03/05). `INDETERMINADO` cobre explicitamente qualquer chamada antes dessa etapa, não só o caso de `γ_i` não isolável.
+
+**Extensão: apontar para a solução inversa correspondente (ADR-061).** `BacktrackingPEItem` (`backtracking_pe.py`) ganha `solucao_causa_dominante: SolucaoInversa | None` — não é um cálculo novo, é uma **seleção** entre as `SolucaoInversa` que `BacktrackingPEBuilder` já computa (roundtrip validado) para o item, pelo mapa `causa_dominante → parametro`:
+
+| causa_dominante | parâmetro(s) tentados, em ordem | racional |
+|---|---|---|
+| `PRECIFICACAO` | `L` | gap é de taxa (γ_v≠γ_o) — margem fecha via preço, repasse ao cliente |
+| `CRONOGRAMA` | `P`, depois `T0_RAMP`, depois `T0_CALENDARIO` | gap é de eficiência (η) — produtividade recalibrada corrige a causa raiz; timing é alternativa quando P não tem solução válida. **Não é `n_max*`** — esse lever ataca `F_ind` (custo indireto por duração), uma classe de gap diferente da que `causa_dominante` decompõe, apesar de a versão anterior desta ADR (seção "Relacionados") sugerir esse mapeamento |
+| `MISTO` | `COMBINADA`, depois `L`, depois `P` | nenhuma causa isolada domina — combinação (mesmo padrão da opção "E" na UI proposta, §4.6/§7) |
+| `INDETERMINADO` | (nenhum) | sem causa identificada, sem lever a apontar |
+
+`BacktrackingPEBuilder.build()` lê `causa_dominante` de `canonical_in.ponto_equilibrio` (já calculado por skill-06 antes deste builder rodar) — nenhuma mudança na matemática de `_solve_L`/`_solve_P`/`_solve_timing`/`_solve_combinada`.
 
 ### D2 — Teto `Γ` como parâmetro configurável, com validação nova `VAL-PONTO-EQUILIBRIO-TETO` (AVISO)
 
@@ -180,11 +204,13 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 - [x] Suíte completa sem regressão (14.441 testes; 11 falhas pré-existentes em `test_adr115_procurement_rfx.py`, não relacionadas, passam isoladas)
 
 ### Fase 1
-- [x] `causa_dominante` retorna `"CRONOGRAMA"` quando `|T_cronograma| > |T_precificacao|`, `"PRECIFICACAO"` no caso contrário
+- [x] `causa_dominante` por participação relativa (share, partição simétrica Shapley/Bennet), com `"MISTO"` quando nenhuma causa isolada domina (share entre 35% e 65%) — substitui o critério "quem é maior" original, que dependia de convenção arbitrária de decomposição preço×quantidade
 - [x] `causa_dominante = "INDETERMINADO"` quando `H_i` não resolvível (`custo_operacional_real <= 0` ou schedule ausente) — nunca um valor inventado (também cobre `ρ_i`/`Q_i`/`RegimeTrabalho` ausentes — necessários e não previstos explicitamente no texto original de D1)
 - [x] Teste prova que `causa_dominante` nunca é chamado/exposto antes de skill-04 terminar (P5) — não é uma validação prospectiva de mobilização (`test_sem_schedule_real_fica_indeterminado`)
 - [x] Teste de regressão prova a identidade `T_cronograma + T_precificacao == delta` (dentro de tolerância de arredondamento, mesmo padrão de `ε_tol` do roundtrip do ADR-061) — `TestPeCausaDominanteIdentidade`, parametrizado
-- [x] Suíte completa sem regressão (`tests/unit/application/skills/test_adr162_causa_dominante.py`, 15 testes novos; suíte completa do repo sem falhas novas)
+- [x] Teste prova que a partição simétrica fica estritamente entre as duas convenções unilaterais possíveis, nunca coincide com nenhuma quando `γ_i^v ≠ γ_i^o` — `TestPeCausaDominanteSimetriaResolveAmbiguidade`
+- [x] `BacktrackingPEItem.solucao_causa_dominante` aponta, entre as `SolucaoInversa` já computadas pelo ADR-061 (sem cálculo novo), a que ataca `causa_dominante` — `None` quando `"INDETERMINADO"` ou quando nenhum parâmetro candidato tem solução roundtrip-válida
+- [x] Suíte completa sem regressão (`test_adr162_causa_dominante.py` + testes novos em `test_backtracking_pe_builder.py`/`test_adr060_061_diagnostico_pe.py`; suíte completa do repo sem falhas novas)
 
 ### Fase 2
 - [ ] `Γ` lido do perfil (`config/contextos/<perfil>.json`), `None` por default — nenhum perfil existente muda de comportamento sem opt-in
@@ -196,7 +222,7 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 ## Relacionados
 
 - ADR-060 — Diagnóstico de Ponto de Equilíbrio (decomposição causal agregada; esta ADR propõe um recorte mais rápido nas mesmas duas famílias de causa, complementar, não substituto)
-- ADR-061 — Inversão/Backtracking de PE (espaço de correção `L*`/`η*`/`n_max*`/`t0*` — `causa_dominante` aponta qual dessas inversas é relevante: `PRECIFICACAO`→`L*`, `CRONOGRAMA`→`n_max*`/`t0*`)
+- ADR-061 — Inversão/Backtracking de PE (espaço de correção `L*`/`η*`/`n_max*`/`t0*` — `causa_dominante` aponta qual dessas inversas é relevante, via `BacktrackingPEItem.solucao_causa_dominante`: `PRECIFICACAO`→`L*`, `CRONOGRAMA`→`η*`(`P*`)/`t0*` — **não** `n_max*`, que ataca `F_ind`/duração, gap de classe diferente da que D1 decompõe; ver mapeamento completo em D1)
 - ADR-076 — Calibração PU/Frentes (`frentes_nec`, mesmo espírito de expor um número acionável antes do erro)
 - ADR-083 — Decomposição Causal do Gap de Pool (mesma família de `gap_*` em `PontoEquilibrio`)
 - ADR-152 — Timelapse de Ocupação de Pool (fonte de dados semanal candidata para a Fase 3/D4)

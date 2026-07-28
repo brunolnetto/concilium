@@ -53,6 +53,29 @@ def _find_solucao(solucoes: list, parametro: str):
     return None
 
 
+# ADR-162: qual(is) parâmetro(s) de SolucaoInversa atacam a causa raiz identificada por
+# PontoEquilibrio.causa_dominante — não recalcula nada, só seleciona entre as soluções
+# que este builder já computou (roundtrip validado). Ordem = prioridade de tentativa;
+# primeira com solução roundtrip-válida ganha. CRONOGRAMA tenta produtividade (corrige a
+# calibração do catálogo) antes de timing (sincronização clima×rampa, efeito mais restrito).
+_CAUSA_PARA_PARAMETROS: dict[str, tuple[str, ...]] = {
+    "PRECIFICACAO": ("L",),
+    "CRONOGRAMA": ("P", "T0_RAMP", "T0_CALENDARIO"),
+    "MISTO": ("COMBINADA", "L", "P"),
+}
+
+
+def _selecionar_solucao_por_causa(solucoes: list, causa_dominante: str) -> SolucaoInversa | None:
+    """Aponta a SolucaoInversa (já computada) que ataca `causa_dominante` — None quando
+    causa_dominante="INDETERMINADO", ou quando nenhum parâmetro candidato tem solução
+    roundtrip-válida entre as já calculadas."""
+    for parametro in _CAUSA_PARA_PARAMETROS.get(causa_dominante, ()):
+        sol = _find_solucao(solucoes, parametro)
+        if sol is not None:
+            return sol
+    return None
+
+
 def _get_gap_fator(item, codigo: str) -> float:
     for f in item.fatores:
         if f.codigo == codigo:
@@ -103,6 +126,10 @@ class BacktrackingPEBuilder:
     ) -> BacktrackingPERelatorio:
         projeto_id = diagnostico.projeto_id
         equipe_lookup, sched_lookup, plan_lookup, prat = _btpb_build_lookups(canonical_in)
+        # ADR-162: causa_dominante já vem calculada em PontoEquilibrio (skill-06/_consolidacao,
+        # anterior a este builder) — só é lida daqui, nenhum recálculo.
+        _pe_items = getattr(canonical_in, "ponto_equilibrio", None) or []
+        causa_por_item = {pe.item_id: pe.causa_dominante for pe in _pe_items}
         explicacao_natureza_periodo = (
             diagnostico.explicacao_natureza_periodo if isinstance(diagnostico.explicacao_natureza_periodo, dict) else {}
         )
@@ -110,8 +137,9 @@ class BacktrackingPEBuilder:
         n_fail = 0
         for item in diagnostico.itens_deficit:
             item_cubo_hint = _get_item_cubo_hint(diagnostico, item.atividade_id)
+            causa_dominante = causa_por_item.get(item.atividade_id, "INDETERMINADO")
             bt_item, fails_count = self._btpb_process_item(
-                item, equipe_lookup, sched_lookup, plan_lookup, prat, pe_gap_alvo, item_cubo_hint
+                item, equipe_lookup, sched_lookup, plan_lookup, prat, pe_gap_alvo, item_cubo_hint, causa_dominante
             )
             n_fail += fails_count
             itens_bt.append(bt_item)
@@ -136,6 +164,7 @@ class BacktrackingPEBuilder:
         prat: Any,
         pe_gap_alvo: float,
         item_cubo_hint: dict[str, Any] | None = None,
+        causa_dominante: str = "INDETERMINADO",
     ) -> tuple[BacktrackingPEItem, int]:
         solucoes = self._compute_solucoes(item, equipe_lookup, sched_lookup, plan_lookup, prat, pe_gap_alvo)
         fails = tuple(s.parametro for s in solucoes if not s.roundtrip_valido)
@@ -163,6 +192,7 @@ class BacktrackingPEBuilder:
                 return base
 
             recom = min(validas, key=score)
+        solucao_causa = _selecionar_solucao_por_causa(solucoes, causa_dominante)
         return (
             BacktrackingPEItem(
                 atividade_id=item.atividade_id,
@@ -172,6 +202,7 @@ class BacktrackingPEBuilder:
                 solucoes=tuple(sorted(solucoes, key=lambda s: (-s.confianca, s.impacto_preco_pct))),
                 solucao_recomendada=recom,
                 roundtrips_falharam=fails,
+                solucao_causa_dominante=solucao_causa,
             ),
             len(fails),
         )

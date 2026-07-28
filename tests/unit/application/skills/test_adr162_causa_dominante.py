@@ -2,7 +2,12 @@
 
 Cobre `_pe_causa_dominante` (_ponto_equilibrio.py) e sua integração em
 `_build_pe_for_equipe`/`_build_ponto_equilibrio` (_balanco_pe.py):
-  - causa_dominante = "CRONOGRAMA" | "PRECIFICACAO" pela magnitude de T_cronograma/T_precificacao
+  - partição SIMÉTRICA (Shapley/Bennet) de T_cronograma/T_precificacao — o termo de
+    interação entre as duas causas é dividido meio a meio, não atribuído a uma convenção
+    arbitrária (ver conversa de revisão: a convenção "ingênua" pode inverter o rótulo
+    dominante trocando qual fator é mantido fixo)
+  - causa_dominante por participação relativa (share), com limiar de 65%/35% — "MISTO"
+    quando nenhuma causa isolada tem participação clara
   - "INDETERMINADO" quando H_i/ρ_i/custo_operacional_real não são resolvíveis
   - identidade T_cronograma + T_precificacao == delta (dentro de tolerância de arredondamento)
   - P5: nunca um diagnóstico antes do cronograma real (schedule ausente)
@@ -107,7 +112,8 @@ class TestPeCausaDominanteIndeterminado:
 
 
 class TestPeCausaDominanteClassificacao:
-    """DoD: CRONOGRAMA quando |T_cronograma| > |T_precificacao|, PRECIFICACAO no caso contrário."""
+    """CRONOGRAMA quando share(|T_cronograma|) >= 65%, PRECIFICACAO quando <= 35%,
+    MISTO na faixa intermediária (ver TestPeCausaDominanteMisto)."""
 
     def test_gap_puro_de_horas_e_cronograma(self):
         """ρ_i e taxas iguais nos dois lados (γ_v==γ_o), mas H_i real >> H_i catálogo
@@ -143,6 +149,73 @@ class TestPeCausaDominanteClassificacao:
         assert t_cron == 0.0
         assert t_prec != 0.0
         assert causa == "PRECIFICACAO"
+
+
+class TestPeCausaDominanteMisto:
+    """MISTO quando nenhuma causa isolada tem participação clara (share entre 35% e 65%)."""
+
+    def test_share_proximo_de_50_50_e_misto(self):
+        """γ e H divergem nos dois lados simultaneamente, em magnitude comparável —
+        nem cronograma nem precificação isolados explicam a maior parte do gap."""
+        plan = _plan(qty=1000.0, produtividade_catalogo=25.0)
+        # H_cat = 40h. H_i real = 52h (1,3x catálogo) E γ_o = 150 (1,5x γ_v=100) — as
+        # duas causas contribuem de forma comparável (share ≈ 0,39, dentro de [0.35,0.65]).
+        causa, t_cron, t_prec = _pe_causa_dominante(
+            plan, custo_venda_total=4_000.0, custo_fixo_total=7_800.0,
+            custo_operacional_real=7_800.0, machine_weeks_brutas=52.0 / (8.0 * 6.0),
+            horas_dia=8.0, dias_semana=6.0,
+        )
+        share = abs(t_cron) / (abs(t_cron) + abs(t_prec))
+        assert 0.35 < share < 0.65
+        assert causa == "MISTO"
+
+    def test_ambos_os_termos_nulos_e_misto_nao_indeterminado(self):
+        """Delta~0 com dados válidos (não ausentes) -> MISTO, não INDETERMINADO —
+        os dois rótulos significam coisas diferentes (sem causa vs sem dado)."""
+        plan = _plan(qty=1000.0, produtividade_catalogo=25.0)
+        # H_cat = H_i = 40h e γ_v = γ_o -> os dois termos são exatamente zero.
+        mwb = 40.0 / (8.0 * 6.0)
+        causa, t_cron, t_prec = _pe_causa_dominante(
+            plan, custo_venda_total=4_000.0, custo_fixo_total=4_000.0,
+            custo_operacional_real=4_000.0, machine_weeks_brutas=mwb,
+            horas_dia=8.0, dias_semana=6.0,
+        )
+        assert t_cron == 0.0
+        assert t_prec == 0.0
+        assert causa == "MISTO"
+
+
+class TestPeCausaDominanteSimetriaResolveAmbiguidade:
+    """A partição simétrica evita que o rótulo 'dominante' dependa de qual fator se
+    mantém fixo — provado comparando contra as duas convenções unilaterais possíveis."""
+
+    def test_termo_de_interacao_dividido_meio_a_meio(self):
+        """Quando γ e H divergem nos dois lados simultaneamente, a convenção unilateral
+        'T_cronograma à taxa de venda' (γ_v) daria um T_cronograma diferente do que
+        'à taxa operacional' (γ_o) — a versão simétrica fica exatamente no meio das duas."""
+        plan = _plan(qty=1000.0, produtividade_catalogo=25.0)
+        h_cat = 1000.0 / 25.0  # 40h
+        h_i = 8.0 * 6.0 * 6.0  # 288h
+        custo_venda_total = 4_000.0  # γ_v = 4000/40 = 100
+        custo_fixo_total = 43_200.0  # γ_o = 43200/288 = 150
+        gamma_v, gamma_o = 100.0, 150.0
+
+        causa, t_cron_sym, t_prec_sym = _pe_causa_dominante(
+            plan, custo_venda_total, custo_fixo_total,
+            custo_operacional_real=custo_fixo_total, machine_weeks_brutas=6.0,
+            horas_dia=8.0, dias_semana=6.0,
+        )
+
+        t_cron_via_venda = (h_cat - h_i) * gamma_v  # convenção unilateral A
+        t_cron_via_operacional = (h_cat - h_i) * gamma_o  # convenção unilateral B
+        t_cron_sym_esperado = (h_cat - h_i) * (gamma_v + gamma_o) / 2.0
+
+        assert t_cron_sym == pytest.approx(t_cron_sym_esperado, abs=0.01)
+        # A versão simétrica fica estritamente entre as duas convenções unilaterais —
+        # não coincide com nenhuma delas quando γ_v != γ_o.
+        assert min(t_cron_via_venda, t_cron_via_operacional) < t_cron_sym < max(
+            t_cron_via_venda, t_cron_via_operacional
+        )
 
 
 class TestPeCausaDominanteIdentidade:
@@ -215,7 +288,7 @@ class TestBuildPeForEquipeWiringAdr162:
             regime=REGIME,
         )
         assert pe is not None
-        assert pe.causa_dominante in ("CRONOGRAMA", "PRECIFICACAO")
+        assert pe.causa_dominante in ("CRONOGRAMA", "PRECIFICACAO", "MISTO")
         assert round(pe.t_cronograma + pe.t_precificacao, 2) == pytest.approx(pe.delta, abs=0.02)
 
     def test_sem_schedule_real_fica_indeterminado(self):
@@ -257,4 +330,4 @@ class TestBuildPeForEquipeWiringAdr162:
         validacoes: list = []
         result = _build_ponto_equilibrio(canonical_in, validacoes)
         assert len(result) == 1
-        assert result[0].causa_dominante in ("CRONOGRAMA", "PRECIFICACAO")
+        assert result[0].causa_dominante in ("CRONOGRAMA", "PRECIFICACAO", "MISTO")

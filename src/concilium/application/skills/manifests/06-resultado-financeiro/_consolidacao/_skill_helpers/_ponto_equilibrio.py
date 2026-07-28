@@ -177,6 +177,12 @@ def _pe_gap_escala_abs(equipe: Any, n_equipes_ef: float, custo_fixo_total: float
     return round(custo_base_cat * max(0.0, n_equipes_ef - 1.0), 2)
 
 
+# ADR-162: share (0.5=empate) fora de [1-LIMIAR, LIMIAR] declara causa única; dentro
+# da faixa (interação material entre as duas causas) declara "MISTO". Mesmo espírito
+# da banda de tolerância de VAL-PROD-VS-PU (10%), só que centrada em 50% em vez de 100%.
+_CAUSA_DOMINANTE_LIMIAR_SHARE = 0.65
+
+
 def _pe_causa_dominante(
     plan: Any,
     custo_venda_total: float,
@@ -185,18 +191,32 @@ def _pe_causa_dominante(
     machine_weeks_brutas: float,
     horas_dia: float,
     dias_semana: float,
-) -> tuple[Literal["CRONOGRAMA", "PRECIFICACAO", "INDETERMINADO"], float, float]:
+) -> tuple[Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO", "INDETERMINADO"], float, float]:
     """ADR-162 D1: decompõe delta (= custo_venda_total − custo_fixo_total) em duas causas.
 
         H_i           = horas_dia · dias_semana · machine_weeks_brutas      (real, pós-cronograma)
-        H_i_catalogo  = Q_i / ρ_i                                          (nominal, catálogo)
-        γ_i^v         = custo_venda_total / H_i_catalogo                   (taxa de venda)
+        H_cat         = Q_i / ρ_i                                          (nominal, catálogo)
+        γ_i^v         = custo_venda_total / H_cat                          (taxa de venda)
         γ_i^o         = custo_fixo_total / H_i                             (taxa operacional real)
-        T_cronograma  = custo_venda_total − γ_i^v · H_i                    (gap de horas, taxa de venda)
-        T_precificacao = (γ_i^v − γ_i^o) · H_i                             (gap de taxa, horas reais)
 
-    T_cronograma + T_precificacao == delta por construção (γ_i^o·H_i ≡ custo_fixo_total).
-    causa_dominante = "CRONOGRAMA" se |T_cronograma| > |T_precificacao|, senão "PRECIFICACAO".
+    Partição SIMÉTRICA (Shapley/Bennet — resolve a ambiguidade clássica de decomposição
+    preço×quantidade em dois fatores: a convenção "ingênua" atribuiria o termo de
+    interação (γ_i^v−γ_i^o)·(H_cat−H_i) inteiro a uma das duas causas, dependendo de qual
+    convenção se escolhe — arbitrário e sujeito a inverter o rótulo "dominante" trocando
+    de convenção. A partição simétrica divide essa interação meio a meio):
+
+        T_cronograma   = (H_cat − H_i) · (γ_i^v + γ_i^o) / 2
+        T_precificacao = (γ_i^v − γ_i^o) · (H_cat + H_i) / 2
+
+    T_cronograma + T_precificacao == delta por construção (verificado algebricamente:
+    os termos cruzados γ_i^v·H_i e γ_i^o·H_cat se cancelam na soma).
+
+    causa_dominante por participação relativa (share = |T_cronograma| / (|T_cronograma| +
+    |T_precificacao|)), não por "quem é maior" simples — uma divisão 51/49 não sustenta
+    afirmar uma causa única:
+      - share >= LIMIAR (0.65)      -> "CRONOGRAMA"
+      - share <= 1 - LIMIAR (0.35)  -> "PRECIFICACAO"
+      - caso contrário               -> "MISTO" (nenhuma causa isolada explica a maior parte)
 
     "INDETERMINADO" (nunca um valor inventado) quando:
       - ρ_i (plan.produtividade_catalogo) não resolvido — Fonte 1 bottom-up (NEP-032) não
@@ -212,16 +232,28 @@ def _pe_causa_dominante(
     if q <= 0 or rho <= 0 or h_i <= 0 or custo_operacional_real <= 0:
         return "INDETERMINADO", 0.0, 0.0
 
-    h_i_catalogo = q / rho
-    gamma_v = custo_venda_total / h_i_catalogo
+    h_cat = q / rho
+    gamma_v = custo_venda_total / h_cat
     gamma_o = custo_fixo_total / h_i
 
-    t_cronograma = custo_venda_total - gamma_v * h_i
-    t_precificacao = (gamma_v - gamma_o) * h_i
+    t_cronograma = (h_cat - h_i) * (gamma_v + gamma_o) / 2.0
+    t_precificacao = (gamma_v - gamma_o) * (h_cat + h_i) / 2.0
 
-    causa: Literal["CRONOGRAMA", "PRECIFICACAO"] = (
-        "CRONOGRAMA" if abs(t_cronograma) > abs(t_precificacao) else "PRECIFICACAO"
-    )
+    denom = abs(t_cronograma) + abs(t_precificacao)
+    if denom <= 0:
+        # Ambos os termos nulos (delta ~0 e sem gap de taxa nem de horas) — não há causa
+        # a atribuir, mas os dados existem (diferente de INDETERMINADO): "MISTO" é o rótulo
+        # honesto para "nenhuma causa presente", não "não foi possível calcular".
+        causa: Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO"] = "MISTO"
+    else:
+        share_cronograma = abs(t_cronograma) / denom
+        if share_cronograma >= _CAUSA_DOMINANTE_LIMIAR_SHARE:
+            causa = "CRONOGRAMA"
+        elif share_cronograma <= 1.0 - _CAUSA_DOMINANTE_LIMIAR_SHARE:
+            causa = "PRECIFICACAO"
+        else:
+            causa = "MISTO"
+
     return causa, round(t_cronograma, 2), round(t_precificacao, 2)
 
 

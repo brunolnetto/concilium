@@ -174,12 +174,15 @@ class PontoEquilibrio(BaseModel):
 
     # ADR-162 D1: decomposição causal de delta em duas famílias — cronograma (gap de
     # horas reais vs catalogadas) e precificação (gap entre a taxa de venda e a taxa
-    # real de execução). causa_dominante="INDETERMINADO" quando H_i/γ_i^v/γ_i^o não são
-    # resolvíveis (ex.: sem schedule real ainda, ou item sem base bottom-up de produção)
-    # — nunca um valor inventado. Ver _pe_causa_dominante em _ponto_equilibrio.py.
-    causa_dominante: Literal["CRONOGRAMA", "PRECIFICACAO", "INDETERMINADO"] = "INDETERMINADO"
-    t_cronograma: float = 0.0  # γ_i^v · (Q_i/ρ_i − H_i) — gap de horas, precificado pela taxa de venda
-    t_precificacao: float = 0.0  # (γ_i^v − γ_i^o) · H_i — gap de taxa, ponderado pelas horas reais
+    # real de execução). Partição simétrica (Shapley/Bennet — ver _pe_causa_dominante em
+    # _ponto_equilibrio.py): o termo de interação entre as duas causas é dividido meio a
+    # meio, em vez de atribuído inteiro a uma convenção arbitrária. "MISTO" quando nenhuma
+    # causa tem participação claramente maior (share < 65%); "INDETERMINADO" quando
+    # H_i/γ_i^v/γ_i^o não são resolvíveis (ex.: sem schedule real ainda, ou item sem base
+    # bottom-up de produção) — nunca um valor inventado.
+    causa_dominante: Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO", "INDETERMINADO"] = "INDETERMINADO"
+    t_cronograma: float = 0.0  # (H_cat − H_i) · (γ_i^v + γ_i^o)/2 — partição simétrica, gap de horas
+    t_precificacao: float = 0.0  # (γ_i^v − γ_i^o) · (H_cat + H_i)/2 — partição simétrica, gap de taxa
 
 
 class Venda(BaseModel):
