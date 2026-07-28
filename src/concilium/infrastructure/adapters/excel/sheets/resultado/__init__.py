@@ -34,6 +34,7 @@ from ._indiretos import (
 )
 from ._referencia import (
     _build_referencia_bridge_rows,
+    _build_referencia_clima_n4_nota,
     _build_referencia_items,
     _ref_sv,
     _render_referencia_bridge_rows,
@@ -51,6 +52,7 @@ from ._resultado_ml import (
 
 __all__ = [
     "_build_referencia_bridge_rows",
+    "_build_referencia_clima_n4_nota",
     "_build_referencia_items",
     "_compute_resultado_alavancas",
     "_rcr_build_qty_by_item",

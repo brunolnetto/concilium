@@ -204,18 +204,13 @@ def _rre_build_intervencao(psr, proj, now, status_margem: StatusMargem) -> tuple
     return relatorio, artifact, validacao
 
 
-def _rre_build_bridge(bridge_analysis, proj, now) -> tuple:
-    """Builds bridge waterfall artifact and validation."""
-    if not (bridge_analysis and isinstance(bridge_analysis, dict)):
-        validacao = ValidacaoItem(
-            codigo="VAL-REX-BRIDGE",
-            status="AVISO",
-            mensagem=(
-                "Bridge Analysis ausente — execute a consolidação financeira "
-                "(06-resultado-financeiro/_consolidacao) antes."
-            ),
-        )
-        return None, validacao
+def _rre_build_bridge_waterfall(bridge_analysis: dict, limitacao_clima_n4: Any = None) -> dict:
+    """Monta o dict do artefato BridgeWaterfall (extraído para ser testável isoladamente).
+
+    Args:
+        limitacao_clima_n4: `Resultado.limitacao_clima_n4` (issue #124) quando presente —
+            documenta no artefato que o gap climático diagnosticado (N3) não é cobrado em N4.
+    """
     n1 = bridge_analysis.get("nivel_1_catalogo_base", 0)
     n2 = bridge_analysis.get("nivel_2_catalogo_escalado", 0)
     n3 = bridge_analysis.get("nivel_3_catalogo_normalizado", 0)
@@ -255,6 +250,41 @@ def _rre_build_bridge(bridge_analysis, proj, now) -> tuple:
         },
         "status_alerta": status_bridge,
     }
+    # Issue #124: torna explícito, no artefato voltado ao usuário final, que o gap
+    # climático diagnosticado (N3) nunca é cobrado no custo operacional real (N4).
+    if limitacao_clima_n4 is not None:
+        waterfall["limitacao_clima_n4"] = {
+            "gap_praticabilidade_abs": limitacao_clima_n4.gap_praticabilidade_abs,
+            "cobrado_no_custo_operacional": limitacao_clima_n4.cobrado_no_custo_operacional,
+            "mensagem": limitacao_clima_n4.mensagem,
+        }
+    return waterfall
+
+
+def _rre_build_bridge(bridge_analysis, proj, now, limitacao_clima_n4: Any = None) -> tuple:
+    """Builds bridge waterfall artifact and validation.
+
+    Args:
+        limitacao_clima_n4: `Resultado.limitacao_clima_n4` (issue #124) quando presente —
+            documenta no artefato que o gap climático diagnosticado (N3) não é cobrado em N4.
+    """
+    if not (bridge_analysis and isinstance(bridge_analysis, dict)):
+        validacao = ValidacaoItem(
+            codigo="VAL-REX-BRIDGE",
+            status="AVISO",
+            mensagem=(
+                "Bridge Analysis ausente — execute a consolidação financeira "
+                "(06-resultado-financeiro/_consolidacao) antes."
+            ),
+        )
+        return None, validacao
+    n4 = bridge_analysis.get("nivel_4_operacional")
+    status_bridge = bridge_analysis.get("status_alerta", "SEM_DADOS")
+    delta_pct = bridge_analysis.get("delta_real_percentual")
+    n1 = bridge_analysis.get("nivel_1_catalogo_base", 0)
+    n2 = bridge_analysis.get("nivel_2_catalogo_escalado", 0)
+    n3 = bridge_analysis.get("nivel_3_catalogo_normalizado", 0)
+    waterfall = _rre_build_bridge_waterfall(bridge_analysis, limitacao_clima_n4)
     # NEP-041 Fase 1: como estágio interno do skill de saída (09), um bridge VERMELHO
     # é um achado diagnóstico a reportar — não uma falha de geração de relatório.
     # Mantém-se como AVISO (visível) em vez de ERRO (que bloquearia o nó terminal).
@@ -302,7 +332,8 @@ def build_relatorio_executivo(canonical_in: Any) -> tuple[dict, list, list]:
     relatorio_int, art_int, val_int = _rre_build_intervencao(canonical_in.plan_space_result, proj, now, status_margem)
     artifacts.append(art_int)
     validacoes.append(val_int)
-    art_bridge, val_bridge = _rre_build_bridge(canonical_in.bridge_analysis, proj, now)
+    _limitacao_clima_n4 = getattr(resultado, "limitacao_clima_n4", None) if resultado else None
+    art_bridge, val_bridge = _rre_build_bridge(canonical_in.bridge_analysis, proj, now, _limitacao_clima_n4)
     if art_bridge is not None:
         artifacts.append(art_bridge)
     validacoes.append(val_bridge)

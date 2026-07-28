@@ -192,6 +192,33 @@ class CustoTotal(BaseModel):
     total: float
 
 
+class LimitacaoClimaN4(BaseModel):
+    """Issue #124 — visibiliza que o gap climático diagnosticado (N3) nunca é cobrado em N4.
+
+    Na bridge N1→N2→N3→N4 (ADR-039/NEP-042, ``_bridge.py``), ``gap_praticabilidade_abs``
+    é o custo que a praticabilidade climática *deveria* causar (entra em N3), mas esse valor
+    nunca entra em N4 — o custo operacional real (pool instancial) efetivamente cobrado.
+
+    Isso é uma decisão arquitetural deliberada, não uma lacuna a corrigir: a duração das
+    atividades não é estendida por praticabilidade climática, para manter o RCPSP computável
+    (ADR-148 D2-bis, precedente ADR-082-cons). A alternativa de recalibrar o catálogo pela
+    eficiência (A3) foi explicitamente rejeitada pelo usuário. Este campo só documenta/expõe
+    a limitação — não altera nenhum cálculo de custo, duração ou o valor de N4.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    gap_praticabilidade_abs: float = 0.0  # mesmo valor agregado que compõe N3 (Σ gap_praticabilidade_abs)
+    cobrado_no_custo_operacional: bool = False  # sempre False — nunca entra em N4, por design
+    mensagem: str = (
+        "Custo climático diagnosticado na bridge (N3), mas NÃO é cobrado no custo "
+        "operacional real (N4): a duração das atividades não é estendida por "
+        "praticabilidade climática, por decisão arquitetural que mantém o RCPSP "
+        "computável (ADR-148 D2-bis / ADR-082-cons). A alternativa de recalibrar o "
+        "catálogo pela eficiência (A3) foi explicitamente rejeitada. Ver issue #124."
+    )
+
+
 class BalancoPontoEquilibrio(BaseModel):
     """Visão macro do Custo Fixo Estrutural e Headcount do canteiro."""
 
@@ -235,6 +262,9 @@ class Resultado(BaseModel):
     validacoes: list[ValidacaoItem]
     balanco_de_controle: "BalancoControle | None" = None  # ADR-028
     balanco_ponto_equilibrio: "BalancoPontoEquilibrio | None" = None
+    # Issue #124: limitação conhecida — gap climático diagnosticado na bridge (N3) mas
+    # nunca cobrado no custo operacional real (N4). Ver LimitacaoClimaN4.
+    limitacao_clima_n4: "LimitacaoClimaN4 | None" = None
 
 
 # ── Fase 2: Resource Binding ──────────────────────────────────────────────
