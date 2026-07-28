@@ -6,6 +6,7 @@ from typing import Any
 
 from concilium.domain.models.canonical import (
     CanonicalModel,
+    LimitacaoClimaN4,
     ValidacaoItem,
 )
 
@@ -87,6 +88,34 @@ def _bridge_build_dict(
     }
 
 
+def _bridge_build_limitacao_clima_n4(gap_prat: float) -> LimitacaoClimaN4 | None:
+    """Issue #124: materializa `gap_praticabilidade_abs` como campo de 1ª classe.
+
+    Retorna None quando não há gap climático diagnosticado neste run (gap_prat <= 0),
+    espelhando o mesmo critério de `_pe_lever_gap_praticabilidade` — evita ruído em
+    projetos sem lesão de praticabilidade.
+    """
+    if gap_prat <= 0:
+        return None
+    return LimitacaoClimaN4(gap_praticabilidade_abs=round(gap_prat, 2))
+
+
+def _bridge_append_clima_n4_validacao(validacoes: list, limitacao: LimitacaoClimaN4 | None) -> None:
+    if limitacao is None:
+        return
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-BRIDGE-CLIMA-N4",
+            status="INFO",
+            mensagem=(
+                f"Gap climático diagnosticado (N3): R$ {limitacao.gap_praticabilidade_abs:,.0f} — "
+                "NÃO cobrado no custo operacional real (N4); ver Resultado.limitacao_clima_n4 "
+                "(ADR-148 D2-bis / ADR-082-cons, issue #124)."
+            ),
+        )
+    )
+
+
 def _bridge_append_ok_validacao(
     validacoes: list, n1: float, n2: float, n3: float, n4: float | None, n_pool: float, status: str
 ) -> None:
@@ -107,13 +136,18 @@ def _build_bridge_from_pe(
     custo_direto_equipe: float,
     inputs: dict,
     validacoes: list,
-) -> dict | None:
+) -> tuple[dict | None, LimitacaoClimaN4 | None]:
     """Deriva bridge N1→N2→N3→N4 das três camadas de PontoEquilibrio (NEP-042 D5).
 
     N1 = Σ(PU_cat × Q)     — catálogo puro
     N2 = N1 + Σ gap_escala  — corrigido por escala de frentes (quantização)
     N3 = N2 + Σ gap_prat    — corrigido por praticabilidade climática
     N4 = custo operacional real (pool instancial)
+
+    Returns:
+        (bridge_dict, limitacao_clima_n4) — o segundo elemento (issue #124) expõe
+        `gap_praticabilidade_abs` como campo de 1ª classe para `Resultado.limitacao_clima_n4`,
+        None quando não há gap climático diagnosticado neste run.
     """
     try:
         benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
@@ -133,12 +167,14 @@ def _build_bridge_from_pe(
             N1, N2, N3, N4, N_pool, fq, praticabilidade, gap_escala, gap_prat, delta_abs, delta_pct, status
         )
         _bridge_append_ok_validacao(validacoes, N1, N2, N3, N4, N_pool, status)
-        return bridge
+        limitacao_clima_n4 = _bridge_build_limitacao_clima_n4(gap_prat)
+        _bridge_append_clima_n4_validacao(validacoes, limitacao_clima_n4)
+        return bridge, limitacao_clima_n4
     except Exception as exc:  # pragma: no cover
         validacoes.append(
             ValidacaoItem(codigo="VAL-BRIDGE-WARN", status="AVISO", mensagem=f"Bridge não calculada: {exc}")
         )
-        return None
+        return None, None
 
 
 def _build_diagnostico_pe(

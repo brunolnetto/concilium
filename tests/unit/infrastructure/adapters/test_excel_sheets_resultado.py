@@ -287,3 +287,67 @@ class TestRenderReferencia:
 
         assert "REFERÊNCIA" in wb.sheetnames
 
+
+# ---------------------------------------------------------------------------
+# Issue #124: nota da aba REFERÊNCIA — gap climático diagnosticado (N1→N2→N3)
+# nunca é cobrado no custo operacional real (N4).
+# ---------------------------------------------------------------------------
+
+
+class TestReferenciaClimaN4Nota:
+    def _canonical_com_resultado(self, limitacao):
+        resultado = SimpleNamespace(limitacao_clima_n4=limitacao)
+        return SimpleNamespace(
+            resultado=resultado,
+            indiretos=None,
+            ponto_equilibrio=[],
+            eap=[],
+        )
+
+    def test_sem_limitacao_retorna_none(self):
+        from concilium.infrastructure.adapters.excel.sheets.resultado import _build_referencia_clima_n4_nota
+
+        canonical = self._canonical_com_resultado(None)
+        assert _build_referencia_clima_n4_nota(canonical) is None
+
+    def test_resultado_none_retorna_none(self):
+        from concilium.infrastructure.adapters.excel.sheets.resultado import _build_referencia_clima_n4_nota
+
+        canonical = SimpleNamespace(resultado=None, indiretos=None, ponto_equilibrio=[], eap=[])
+        assert _build_referencia_clima_n4_nota(canonical) is None
+
+    def test_com_limitacao_retorna_mensagem(self):
+        from concilium.infrastructure.adapters.excel.sheets.resultado import _build_referencia_clima_n4_nota
+
+        limitacao = SimpleNamespace(mensagem="Custo climático diagnosticado, não cobrado (ADR-148, issue #124).")
+        canonical = self._canonical_com_resultado(limitacao)
+        nota = _build_referencia_clima_n4_nota(canonical)
+        assert nota == limitacao.mensagem
+
+    def test_render_referencia_adiciona_linha_de_nota_quando_ha_limitacao(self):
+        """A aba REFERÊNCIA ganha uma linha extra com a nota quando há gap climático."""
+        from concilium.infrastructure.adapters.excel.sheets.resultado import render_referencia
+
+        limitacao = SimpleNamespace(
+            mensagem="Custo climático diagnosticado (N3) mas NÃO cobrado no custo operacional real (N4)."
+        )
+        canonical = self._canonical_com_resultado(limitacao)
+        wb = Workbook()
+        render_referencia(wb, canonical)
+
+        ws = wb["REFERÊNCIA"]
+        valores = [ws.cell(row=r, column=1).value for r in range(1, ws.max_row + 1)]
+        assert any(v and "NÃO cobrado no custo operacional real" in str(v) for v in valores)
+
+    def test_render_referencia_sem_linha_de_nota_quando_sem_limitacao(self):
+        """Sem gap climático diagnosticado, nenhuma linha extra é adicionada (sem ruído)."""
+        from concilium.infrastructure.adapters.excel.sheets.resultado import render_referencia
+
+        canonical = self._canonical_com_resultado(None)
+        wb = Workbook()
+        render_referencia(wb, canonical)
+
+        ws = wb["REFERÊNCIA"]
+        valores = [ws.cell(row=r, column=1).value for r in range(1, ws.max_row + 1)]
+        assert not any(v and "cobrado no custo operacional real" in str(v) for v in valores)
+

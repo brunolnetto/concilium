@@ -75,7 +75,14 @@ def run_consolidacao_financeira(
         margem_reconciliada_pct=margem,
         status_margem_reconciliado=status_margem,
     )
-    bridge_dict = _build_bridge_from_pe(ponto_equilibrio_items, venda_sem_bdi, custo_direto_equipe, inputs, validacoes)
+    bridge_dict, limitacao_clima_n4 = _build_bridge_from_pe(
+        ponto_equilibrio_items, venda_sem_bdi, custo_direto_equipe, inputs, validacoes
+    )
+    if limitacao_clima_n4 is not None:
+        # Issue #124: anexa a limitação conhecida ao Resultado como campo de 1ª classe,
+        # tipado e com mensagem explicativa (ver LimitacaoClimaN4) — não altera nenhum
+        # valor de custo/venda já calculado em `res`.
+        res = res.model_copy(update={"limitacao_clima_n4": limitacao_clima_n4})
     custos_atividades = _build_custos_atividades(canonical_in)
     _diag_pe, _back_pe = _build_diagnostico_pe(
         canonical_in, custos_atividades, ponto_equilibrio_items, validacoes, _bdi_tabela

@@ -199,6 +199,50 @@ class TestRreHelpers:
         assert "EQUIPES" in eixo.nome
         assert eixo.confianca == "ALTA"
 
+    # ── Issue #124: gap climático diagnosticado (N3) nunca cobrado em N4 ──────
+
+    def test_rre_build_bridge_sem_limitacao_clima_nao_adiciona_chave(self):
+        """Sem limitacao_clima_n4 (comportamento pré-existente), a chave não aparece."""
+        mod = self._load()
+        bridge = {
+            "nivel_1_catalogo_base": 1_000_000,
+            "nivel_2_catalogo_escalado": 1_050_000,
+            "nivel_3_catalogo_normalizado": 1_020_000,
+            "nivel_4_operacional": 1_040_000,
+            "status_alerta": "VERDE",
+        }
+        waterfall = mod._rre_build_bridge_waterfall(bridge)
+        assert "limitacao_clima_n4" not in waterfall
+        # e o artefato/validação continuam sendo gerados normalmente
+        artifact, _validacao = mod._rre_build_bridge(bridge, _make_proj(), _NOW)
+        assert artifact is not None
+
+    def test_rre_build_bridge_com_limitacao_clima_adiciona_nota(self):
+        """Issue #124: quando Resultado.limitacao_clima_n4 é passado, o artefato
+        BridgeWaterfall expõe a limitação conhecida (gap diagnosticado, não cobrado)."""
+        mod = self._load()
+        bridge = {
+            "nivel_1_catalogo_base": 1_000_000,
+            "nivel_2_catalogo_escalado": 1_050_000,
+            "nivel_3_catalogo_normalizado": 1_020_000,
+            "nivel_4_operacional": 1_040_000,
+            "status_alerta": "AMARELO",
+        }
+        limitacao = MagicMock(
+            gap_praticabilidade_abs=7_000.0,
+            cobrado_no_custo_operacional=False,
+            mensagem="Custo climático diagnosticado mas não cobrado (ADR-148/ADR-082-cons, issue #124).",
+        )
+        waterfall = mod._rre_build_bridge_waterfall(bridge, limitacao)
+        nota = waterfall["limitacao_clima_n4"]
+        assert nota["gap_praticabilidade_abs"] == 7_000.0
+        assert nota["cobrado_no_custo_operacional"] is False
+        assert "ADR-148" in nota["mensagem"]
+
+        # e o wiring completo (_rre_build_bridge) segue gerando artefato/validação
+        artifact, _validacao = mod._rre_build_bridge(bridge, _make_proj(), _NOW, limitacao)
+        assert artifact is not None
+
 
 
 # ─── application/skills/manifests/09/_skill_helpers_executivo.py ─────────────
