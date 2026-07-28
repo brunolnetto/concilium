@@ -3,34 +3,10 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any
 
 from concilium.presentation.mcp._context import _config_root, _wrap_response
-
-
-class _MergeReport(Protocol):
-    """Formato de retorno de mod._merge_entities() — mod é carregado via importlib
-    de um script externo (merge_rfi.py), então seu tipo real não é conhecido
-    estaticamente. Descreve a forma esperada pro consumo tipado do relatório."""
-
-    inner_high: list[dict[str, Any]]
-    inner_low: list[dict[str, Any]]
-    right_only: list[dict[str, Any]]
-    left_only: list[dict[str, Any]]
-
-
-class _MergeRfiModule(Protocol):
-    """Superfície esperada de tools/merge_rfi.py — script externo carregado via
-    importlib (não importável estaticamente). O cast único no ponto de load dá
-    checagem real a todos os acessos, no lugar de N supressões."""
-
-    XLSM: Path
-    ROOT: Path
-    extract_rfi: Callable[[Any], dict[str, Any]]
-    _merge_entities: Callable[..., tuple[_MergeReport, Any]]
-    _apply_merge: Callable[..., list[Any]]
 
 
 def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
@@ -95,32 +71,56 @@ def _impl_tendencia_precos_catalogo(
     return _wrap_response(result)
 
 
-def _rfi_deltas_amostra(inner_high: list) -> list:
+# ═══════════════════════════════════════════════════════════════════════════════
+# comparar_catalogo / mesclar_catalogo (issue #134) — agnósticos de fonte: cada
+# origem pode ser um catálogo (catalogo_id) ou uma planilha PLANILHA PADRÃO RFI
+# (.xlsm/.xlsx). Motor de comparação/merge + resolução de fonte compartilhados com
+# os comandos CLI equivalentes (`catalog compare`/`catalog merge`) via
+# concilium.application.services.catalog.catalog_compare — aqui só a tradução para
+# o formato de resposta MCP ({"erro": ...} em vez de typer.Exit) é específica.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _cc_resolver_tipos(tipo: str) -> list[str]:
+    from concilium.application.services.catalog.catalog_compare import resolver_tipos
+
+    return resolver_tipos(tipo)
+
+
+def _cc_resolver_fonte(origem: str) -> dict[str, list[dict]]:
+    from concilium.application.services.catalog.catalog_compare import resolver_fonte_entidades
+    from concilium.presentation.mcp._context import _runtime
+
+    rt = _runtime()
+    repo_root = rt.config_root.parent
+    return resolver_fonte_entidades(origem, rt, repo_root)
+
+
+def _cc_amostra_deltas(inner_high: list) -> list:
     return [
-        {"codigo": i["catalog"].get("codigo") or i["catalog"].get("id"), "delta": i["delta"]}
+        {"id": i["catalog"].get("codigo") or i["catalog"].get("id"), "delta": i["delta"]}
         for i in inner_high
         if i["delta"]
     ][:20]
 
 
-def _rfi_colisoes(inner_low: list) -> list:
+def _cc_amostra_colisoes(inner_low: list) -> list:
     return [
         {
-            "cat_codigo": i["catalog"].get("codigo") or i["catalog"].get("id"),
-            "cat_descricao": i["catalog"].get("descricao", "")[:60],
-            "rfi_codigo": i["rfi"].get("codigo") or i["rfi"].get("id"),
-            "rfi_descricao": i["rfi"].get("descricao", "")[:60],
+            "base_id": i["catalog"].get("codigo") or i["catalog"].get("id"),
+            "base_descricao": i["catalog"].get("descricao", "")[:60],
+            "origem_id": i["rfi"].get("codigo") or i["rfi"].get("id"),
+            "origem_descricao": i["rfi"].get("descricao", "")[:60],
             "score": i["score"],
-            "acao": f"RFI-{i['rfi'].get('codigo') or i['rfi'].get('id')} será criado",
         }
         for i in inner_low
     ]
 
 
-def _rfi_novos(right_only: list) -> list:
+def _cc_amostra_novos(right_only: list) -> list:
     return [
         {
-            "codigo": i["rfi"].get("codigo") or i["rfi"].get("id"),
+            "id": i["rfi"].get("codigo") or i["rfi"].get("id"),
             "descricao": i["rfi"].get("descricao", "")[:60],
             "unidade": i["rfi"].get("unidade"),
         }
@@ -128,126 +128,153 @@ def _rfi_novos(right_only: list) -> list:
     ][:30]
 
 
-def _rfi_summarize_report(rep: _MergeReport) -> dict:
-    """Sumariza um _MergeReport (insumos ou producoes) para a resposta de comparar_rfi_catalogo."""
+def _cc_sumarizar_relatorio(rep: Any) -> dict:
+    """Sumariza um RelatorioComparacao (por tipo de entidade) para a resposta MCP."""
     return {
         "inner_high": len(rep.inner_high),
         "inner_high_com_delta": sum(1 for i in rep.inner_high if i["delta"]),
         "inner_low": len(rep.inner_low),
         "right_only": len(rep.right_only),
         "left_only": len(rep.left_only),
-        "deltas_amostra": _rfi_deltas_amostra(rep.inner_high),
-        "colisoes": _rfi_colisoes(rep.inner_low),
-        "novos": _rfi_novos(rep.right_only),
+        "deltas_amostra": _cc_amostra_deltas(rep.inner_high),
+        "colisoes": _cc_amostra_colisoes(rep.inner_low),
+        "novos": _cc_amostra_novos(rep.right_only),
     }
 
 
-def _build_comparar_rfi_result(
-    dry_run: bool,
-    contexto_id: str,
-    cat_insumos: list,
-    cat_producoes: list,
-    rfi: dict,
-    rep_ins: _MergeReport,
-    rep_prod: _MergeReport,
-) -> dict:
-    """Monta o dict de resultado (sem aplicar merge) de comparar_rfi_catalogo."""
-    return {
-        "mode": "DRY_RUN" if dry_run else "APPLIED",
-        "contexto_id": contexto_id,
-        "catalogo_atual": {"insumos": len(cat_insumos), "producoes": len(cat_producoes)},
-        "rfi": {"insumos": len(rfi["insumos"]), "producoes": len(rfi["producoes"])},
-        "insumos": _rfi_summarize_report(rep_ins),
-        "producoes": _rfi_summarize_report(rep_prod),
-        "resumo": {
-            "atualizacoes_preco": sum(1 for i in rep_ins.inner_high if i["delta"]),
-            "novos_total": len(rep_ins.right_only) + len(rep_prod.right_only),
-            "colisoes_total": len(rep_ins.inner_low) + len(rep_prod.inner_low),
-        },
-    }
-
-
-def _apply_rfi_merge(
-    mod: _MergeRfiModule,
-    bundle: dict,
-    bundle_path: Path,
-    cat_insumos: list,
-    cat_producoes: list,
-    rfi: dict,
-    rep_ins: _MergeReport,
-    rep_prod: _MergeReport,
-    result: dict,
-) -> None:
-    """Aplica o merge RFI no bundle (persistindo em disco) e anota `result["aplicado"]`."""
-    new_ins = mod._apply_merge(cat_insumos, rfi["insumos"], rep_ins)
-    new_prod = mod._apply_merge(cat_producoes, rfi["producoes"], rep_prod, id_key="id")
-    if "producoes" in bundle:
-        bundle["producoes"] = new_prod
-    else:
-        bundle["produtividades"] = new_prod
-    bundle["insumos"] = new_ins
-    bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
-    result["aplicado"] = {
-        "insumos_novos": len(new_ins) - len(cat_insumos),
-        "producoes_novas": len(new_prod) - len(cat_producoes),
-    }
-
-
-def _impl_comparar_rfi_catalogo(
-    contexto_id: str,
-    dry_run: bool = True,
+def _impl_comparar_catalogo(
+    origem_a: str,
+    origem_b: str,
+    tipo: str = "todos",
 ) -> dict[str, Any]:
-    """Compara o catálogo com a PLANILHA PADRÃO RFI e retorna relatório estruturado.
+    """Compara duas fontes de entidades de catálogo e retorna relatório estruturado.
 
-    Útil para o agente iterar sobre divergências antes de aplicar o merge.
-    Retorna INNER_HIGH (matches confiantes), INNER_LOW (colisões), RIGHT_ONLY (novos).
+    Útil para o agente iterar sobre divergências antes de aplicar um merge.
+    Retorna INNER_HIGH (matches confiantes), INNER_LOW (colisões), RIGHT_ONLY (só em
+    origem_b), LEFT_ONLY (só em origem_a) — sempre dry-run, este tool nunca escreve nada.
 
     Args:
-        contexto_id: ID do contexto (ex.: "mendeslobo").
-        dry_run: Se True (padrão), não altera nada. Se False, aplica o merge.
+        origem_a: Catálogo (catalogo_id, ex.: "mendeslobo") ou caminho de planilha .xlsm/.xlsx.
+        origem_b: Catálogo (catalogo_id) ou caminho de planilha .xlsm/.xlsx.
+        tipo: insumos | producoes | cpus | todos (padrão).
     """
-    import importlib.util
-
-    config_dir = _config_root()
-    tools_dir = config_dir.parents[1] / "tools"
-    merge_path = tools_dir / "merge_rfi.py"
-
-    if not merge_path.exists():
-        return {"erro": f"merge_rfi.py não encontrado em {tools_dir}"}
+    from concilium.application.services.catalog.catalog_compare import eh_planilha, gerar_relatorios
 
     try:
-        import openpyxl
-    except ImportError:
-        return {"erro": "openpyxl não instalado — execute: uv add openpyxl"}
+        tipos = _cc_resolver_tipos(tipo)
+    except ValueError as exc:
+        return {"erro": str(exc)}
 
-    spec = importlib.util.spec_from_file_location("merge_rfi", merge_path)
-    assert spec is not None and spec.loader is not None
-    raw_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(raw_mod)
-    mod = cast("_MergeRfiModule", raw_mod)
+    aviso = None
+    if "cpus" in tipos and (eh_planilha(origem_a) or eh_planilha(origem_b)):
+        aviso = "cpus: pulado — planilha RFI não modela esse tipo de entidade."
+        tipos = [t for t in tipos if t != "cpus"]
+    if not tipos:
+        return {"erro": "Nenhum tipo válido para comparar."}
 
-    bundle_path = _catalog_root(config_dir, _resolve_catalogo_id(config_dir, contexto_id)) / ".catalog_bundle.json"
-    if not bundle_path.exists():
-        return {"erro": f"Bundle não encontrado: {bundle_path}"}
+    try:
+        fonte_a = _cc_resolver_fonte(origem_a)
+        fonte_b = _cc_resolver_fonte(origem_b)
+    except RuntimeError as exc:
+        return {"erro": str(exc)}
 
-    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
-    cat_insumos = bundle.get("insumos", [])
-    cat_producoes = bundle.get("producoes", []) or bundle.get("produtividades", [])
+    relatorios = gerar_relatorios(fonte_a, fonte_b, tipos)
 
-    if not mod.XLSM.exists():
-        return {"erro": f"Planilha RFI não encontrada: {mod.XLSM}"}
+    result: dict[str, Any] = {
+        "origem_a": origem_a,
+        "origem_b": origem_b,
+        "tamanho_origem_a": {t: len(fonte_a.get(t, [])) for t in tipos},
+        "tamanho_origem_b": {t: len(fonte_b.get(t, [])) for t in tipos},
+        **{t: _cc_sumarizar_relatorio(rep) for t, rep in relatorios.items()},
+        "resumo": {
+            "atualizacoes": sum(sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()),
+            "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
+            "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
+        },
+    }
+    if aviso:
+        result["aviso"] = aviso
+    return _wrap_response(result)
 
-    wb = openpyxl.load_workbook(mod.XLSM, data_only=True, keep_vba=False)
-    rfi = mod.extract_rfi(wb)
-    wb.close()
 
-    rep_ins, _ = mod._merge_entities(cat_insumos, rfi["insumos"])
-    rep_prod, _ = mod._merge_entities(cat_producoes, rfi["producoes"], id_key="id")
+def _impl_mesclar_catalogo(
+    destino: str,
+    origem: str,
+    dry_run: bool = True,
+    tipo: str = "todos",
+) -> dict[str, Any]:
+    """Mescla uma fonte de origem (catálogo ou planilha RFI) no catálogo de destino.
 
-    result = _build_comparar_rfi_result(dry_run, contexto_id, cat_insumos, cat_producoes, rfi, rep_ins, rep_prod)
+    dry_run=True (padrão) só calcula o relatório de comparação — nada é escrito.
+    dry_run=False escreve direto no `.catalog_bundle.json` do destino (mesma mecânica
+    do antigo comparar_rfi_catalogo(dry_run=False) — issue #134 não resolve a
+    governança de escrita direta em catálogo, ver ADR-145).
+
+    Args:
+        destino: Catálogo de destino (catalogo_id) — precisa ser um catálogo, não planilha.
+        origem: Catálogo (catalogo_id) ou caminho de planilha .xlsm/.xlsx de origem.
+        dry_run: Se True (padrão), não altera nada. Se False, aplica o merge.
+        tipo: insumos | producoes | cpus | todos (padrão).
+    """
+    from concilium.application.services.catalog.catalog_compare import (
+        ID_KEYS,
+        aplicar_merge,
+        eh_planilha,
+        gerar_relatorios,
+    )
+    from concilium.presentation.mcp._context import _runtime
+
+    if eh_planilha(destino):
+        return {"erro": "Destino do merge precisa ser um catálogo — não é possível escrever em uma planilha."}
+
+    try:
+        tipos = _cc_resolver_tipos(tipo)
+    except ValueError as exc:
+        return {"erro": str(exc)}
+
+    aviso = None
+    if "cpus" in tipos and eh_planilha(origem):
+        aviso = "cpus: pulado — planilha RFI não modela esse tipo de entidade."
+        tipos = [t for t in tipos if t != "cpus"]
+    if not tipos:
+        return {"erro": "Nenhum tipo válido para mesclar."}
+
+    try:
+        fonte_destino = _cc_resolver_fonte(destino)
+        fonte_origem = _cc_resolver_fonte(origem)
+    except RuntimeError as exc:
+        return {"erro": str(exc)}
+
+    relatorios = gerar_relatorios(fonte_destino, fonte_origem, tipos)
+
+    result: dict[str, Any] = {
+        "mode": "DRY_RUN" if dry_run else "APPLIED",
+        "destino": destino,
+        "origem": origem,
+        **{t: _cc_sumarizar_relatorio(rep) for t, rep in relatorios.items()},
+        "resumo": {
+            "atualizacoes": sum(sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()),
+            "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
+            "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
+        },
+    }
+    if aviso:
+        result["aviso"] = aviso
 
     if not dry_run:
-        _apply_rfi_merge(mod, bundle, bundle_path, cat_insumos, cat_producoes, rfi, rep_ins, rep_prod, result)
+        rt = _runtime()
+        bundle = rt.load_catalogo(destino)
+        bundle_path = rt.config_root / "catalogos" / destino / ".catalog_bundle.json"
+        aplicado: dict[str, Any] = {}
+        for t in tipos:
+            merged = aplicar_merge(fonte_destino.get(t, []), fonte_origem.get(t, []), relatorios[t], id_key=ID_KEYS[t])
+            if t == "producoes" and "producoes" not in bundle:
+                bundle["produtividades"] = merged
+            else:
+                bundle[t] = merged
+            aplicado[t] = {"total": len(merged), "era": len(fonte_destino.get(t, []))}
+        bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
+        result["aplicado"] = aplicado
 
     return _wrap_response(result)
 

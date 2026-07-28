@@ -454,73 +454,9 @@ class TestImplCatalogExport:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-class TestCmrPrintInnerLow:
-    def test_empty_list_does_nothing(self):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_print_inner_low
-
-        console = MagicMock()
-        _cmr_print_inner_low([], console)
-        console.print.assert_not_called()
-
-    def test_few_items_prints_all(self):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_print_inner_low
-
-        console = MagicMock()
-        items = [
-            (
-                {
-                    "catalog": {"codigo": "C1", "descricao": "d1"},
-                    "rfi": {"codigo": "R1", "descricao": "r1"},
-                    "score": 0.6,
-                },
-                "INSUMO",
-            )
-        ]
-        _cmr_print_inner_low(items, console)
-        assert console.print.called
-
-    def test_many_items_shows_overflow(self):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_print_inner_low
-
-        console = MagicMock()
-        items = [
-            (
-                {
-                    "catalog": {"codigo": f"C{i}", "descricao": "d"},
-                    "rfi": {"codigo": f"R{i}", "descricao": "r"},
-                    "score": 0.6,
-                },
-                "INSUMO",
-            )
-            for i in range(20)
-        ]
-        _cmr_print_inner_low(items, console)
-        # Should print the header, 15 items, plus overflow line
-        assert console.print.call_count >= 17
-
-
-class TestCmrBuildAllLow:
-    def test_combines_ins_and_prod(self):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_build_all_low
-
-        report_ins = SimpleNamespace(inner_low=[{"x": 1}])
-        report_prod = SimpleNamespace(inner_low=[{"y": 2}])
-        result = _cmr_build_all_low(report_ins, report_prod)
-        assert len(result) == 2
-        assert result[0][1] == "INSUMO"
-        assert result[1][1] == "PROD"
-
-    def test_empty(self):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_build_all_low
-
-        report_ins = SimpleNamespace(inner_low=[])
-        report_prod = SimpleNamespace(inner_low=[])
-        assert _cmr_build_all_low(report_ins, report_prod) == []
-
-
-class TestCmrAddTableRow:
+class TestCcAddTableRow:
     def test_adds_row_correctly(self):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_add_table_row
+        from concilium.presentation.cli._commands_manage_helpers_c import _cc_add_table_row
 
         table = MagicMock()
         rep = SimpleNamespace(
@@ -529,131 +465,116 @@ class TestCmrAddTableRow:
             right_only=[1],
             left_only=[1, 2, 3],
         )
-        _cmr_add_table_row(table, "INSUMOS", rep)
+        _cc_add_table_row(table, "INSUMOS", rep)
         table.add_row.assert_called_once_with("INSUMOS", "2", "1", "2", "1", "3")
 
 
-class TestCmrWriteReport:
-    def test_writes_json_file(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_write_report
+class TestCcPrintSummaryTable:
+    def test_prints_one_row_per_tipo(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cc_print_summary_table
 
         console = MagicMock()
-        report_ins = SimpleNamespace(
+        rep = SimpleNamespace(inner_high=[], inner_low=[], right_only=[], left_only=[])
+        _cc_print_summary_table({"insumos": rep, "producoes": rep}, console, "Titulo")
+        console.print.assert_called_once()
+
+
+class TestCcPrintInnerLow:
+    def test_empty_does_nothing(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cc_print_inner_low
+
+        console = MagicMock()
+        rep = SimpleNamespace(inner_low=[])
+        _cc_print_inner_low({"insumos": rep}, console)
+        console.print.assert_not_called()
+
+    def test_few_items_combines_tipos(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cc_print_inner_low
+
+        console = MagicMock()
+        item_ins = {
+            "catalog": {"codigo": "C1", "descricao": "d1"},
+            "rfi": {"codigo": "R1", "descricao": "r1"},
+            "score": 0.6,
+        }
+        rep_ins = SimpleNamespace(inner_low=[item_ins])
+        item_prod = {
+            "catalog": {"id": "P1", "descricao": "p"},
+            "rfi": {"id": "P2", "descricao": "q"},
+            "score": 0.55,
+        }
+        rep_prod = SimpleNamespace(inner_low=[item_prod])
+        _cc_print_inner_low({"insumos": rep_ins, "producoes": rep_prod}, console)
+        assert console.print.called
+
+    def test_many_items_shows_overflow(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cc_print_inner_low
+
+        console = MagicMock()
+        rep = SimpleNamespace(
+            inner_low=[
+                {
+                    "catalog": {"codigo": f"C{i}", "descricao": "d"},
+                    "rfi": {"codigo": f"R{i}", "descricao": "r"},
+                    "score": 0.6,
+                }
+                for i in range(20)
+            ]
+        )
+        _cc_print_inner_low({"insumos": rep}, console)
+        # header + 15 items + overflow line
+        assert console.print.call_count >= 17
+
+
+class TestCcWriteReport:
+    def test_writes_json_file(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cc_write_report
+
+        console = MagicMock()
+        rep_ins = SimpleNamespace(
             inner_high=[{"delta": True, "catalog": {"codigo": "C1"}}, {"delta": None, "catalog": {"codigo": "C2"}}],
             inner_low=[{"catalog": {"codigo": "CX"}, "rfi": {"codigo": "RX"}, "score": 0.6}],
             right_only=[{"rfi": {"codigo": "N1", "descricao": "novo"}}],
             left_only=[{"x": 1}],
         )
-        report_prod = SimpleNamespace(
+        rep_prod = SimpleNamespace(
             inner_high=[],
             inner_low=[{"catalog": {"id": "P1"}, "rfi": {"id": "P2"}, "score": 0.55}],
             right_only=[{"rfi": {"id": "NP", "descricao": "new prod"}}],
             left_only=[],
         )
         out_path = str(tmp_path / "report.json")
-        _cmr_write_report(out_path, report_ins, report_prod, "DRY-RUN", "ctx1", console)
+        _cc_write_report(out_path, {"insumos": rep_ins, "producoes": rep_prod}, "DRY-RUN", "origA", "origB", console)
         data = json.loads(Path(out_path).read_text())
         assert data["mode"] == "DRY-RUN"
-        assert data["contexto_id"] == "ctx1"
+        assert data["origem_a"] == "origA"
+        assert data["origem_b"] == "origB"
         assert "insumos" in data
         console.print.assert_called_once()
 
 
-class TestCmrLoadBundle:
-    def test_raises_exit_when_bundle_missing(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_bundle
+class TestCmVerifyPu:
+    def test_with_faltantes(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cm_verify_pu
 
-        mod = SimpleNamespace(ROOT=tmp_path)
-        import typer
-
-        with pytest.raises((SystemExit, typer.Exit)):
-            _cmr_load_bundle("testctx", mod)
-
-    def test_loads_bundle_with_producoes(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_bundle
-
-        ctx = "testctx"
-        bundle_dir = tmp_path / "config" / "catalogos" / ctx
-        bundle_dir.mkdir(parents=True)
-        bundle = {"insumos": [{"codigo": "I1"}], "producoes": [{"id": "P1"}]}
-        (bundle_dir / ".catalog_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
-        mod = SimpleNamespace(ROOT=tmp_path)
-        result_bundle, path, ins, prods = _cmr_load_bundle(ctx, mod)
-        assert len(ins) == 1
-        assert len(prods) == 1
-
-    def test_loads_bundle_with_produtividades(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_bundle
-
-        ctx = "testctx2"
-        bundle_dir = tmp_path / "config" / "catalogos" / ctx
-        bundle_dir.mkdir(parents=True)
-        bundle = {"insumos": [], "produtividades": [{"id": "P2"}]}
-        (bundle_dir / ".catalog_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
-        mod = SimpleNamespace(ROOT=tmp_path)
-        _, _, ins, prods = _cmr_load_bundle(ctx, mod)
-        assert len(prods) == 1
-
-
-class TestCmrApplyChanges:
-    def test_apply_with_producoes_key(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_apply_changes
-
-        bundle_path = tmp_path / "bundle.json"
-        bundle_path.write_text("{}", encoding="utf-8")
+        console = MagicMock()
         bundle = {"insumos": [], "producoes": []}
-        console = MagicMock()
-        mod = MagicMock()
-        mod._apply_merge.side_effect = [["new_ins"], ["new_prod"]]
-
-        _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), False, console)
-        data = json.loads(bundle_path.read_text())
-        assert data["producoes"] == ["new_prod"]
-        assert data["insumos"] == ["new_ins"]
-
-    def test_apply_with_produtividades_key(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_apply_changes
-
-        bundle_path = tmp_path / "bundle2.json"
-        bundle_path.write_text("{}", encoding="utf-8")
-        bundle = {"insumos": [], "produtividades": []}
-        console = MagicMock()
-        mod = MagicMock()
-        mod._apply_merge.side_effect = [["new_ins"], ["new_prod"]]
-
-        _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), False, console)
-        data = json.loads(bundle_path.read_text())
-        assert data["produtividades"] == ["new_prod"]
-
-    def test_verify_pu_with_faltantes(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_apply_changes
-
-        bundle_path = tmp_path / "bundle3.json"
-        bundle_path.write_text("{}", encoding="utf-8")
-        bundle = {"insumos": [], "producoes": []}
-        console = MagicMock()
-        mod = MagicMock()
-        mod._apply_merge.side_effect = [[], []]
-
         mock_resultado = {"referencias_faltantes": [{"producao_id": "P1", "faltantes": ["I1"]}], "com_composicao": 0}
         with patch("concilium.application.catalog.pu_calculator.calcular_catalogo", return_value=mock_resultado):
-            with patch("concilium.application.catalog.pu_calculator.ParametrosCalculo"):
-                _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), True, console)
+            _cm_verify_pu(bundle, console)
+        printed = [str(c) for c in console.print.call_args_list]
+        assert any("Referências faltantes" in p for p in printed)
 
-    def test_verify_pu_without_faltantes(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_apply_changes
+    def test_without_faltantes_uses_produtividades_key(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cm_verify_pu
 
-        bundle_path = tmp_path / "bundle4.json"
-        bundle_path.write_text("{}", encoding="utf-8")
-        bundle = {"insumos": [], "producoes": []}
         console = MagicMock()
-        mod = MagicMock()
-        mod._apply_merge.side_effect = [[], []]
-
+        bundle = {"insumos": [], "produtividades": []}
         mock_resultado = {"referencias_faltantes": [], "com_composicao": 5}
         with patch("concilium.application.catalog.pu_calculator.calcular_catalogo", return_value=mock_resultado):
-            with patch("concilium.application.catalog.pu_calculator.ParametrosCalculo"):
-                _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), True, console)
+            _cm_verify_pu(bundle, console)
+        printed = [str(c) for c in console.print.call_args_list]
+        assert any("Integridade referencial OK" in p for p in printed)
 
 
 class TestCcpPrintFixed:
@@ -728,40 +649,83 @@ class TestImplPlanInit:
         mock_escopo.create_plan.assert_called_once()
 
 
-class TestCmrLoadOpenpyxl:
-    def test_xlsm_missing_raises(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_openpyxl
+class TestResolverTipos:
+    def test_todos_expands_to_full_list(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _resolver_tipos
 
-        mod = SimpleNamespace(XLSM=tmp_path / "nope.xlsm")
-        with pytest.raises(typer.Exit):
-            _cmr_load_openpyxl(mod)
+        assert _resolver_tipos("todos") == ["insumos", "producoes", "cpus"]
 
-    def test_import_error_raises_exit(self, tmp_path, monkeypatch):
-        import builtins
+    def test_single_tipo_returned_as_list(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _resolver_tipos
 
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_openpyxl
+        assert _resolver_tipos("insumos") == ["insumos"]
 
-        orig_import = builtins.__import__
+    def test_invalid_tipo_raises_exit_1(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _resolver_tipos
 
-        def fake_import(name, *args, **kwargs):
-            if name == "openpyxl":
-                raise ImportError("no openpyxl")
-            return orig_import(name, *args, **kwargs)
+        with pytest.raises(typer.Exit) as exc_info:
+            _resolver_tipos("invalido")
+        assert exc_info.value.exit_code == 1
 
-        monkeypatch.setattr(builtins, "__import__", fake_import)
-        mod = SimpleNamespace(XLSM=tmp_path / "x.xlsm")
-        with pytest.raises(typer.Exit):
-            _cmr_load_openpyxl(mod)
 
-    def test_ok_returns_openpyxl_and_path(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_openpyxl
+class TestEhPlanilha:
+    def test_existing_xlsm_is_planilha(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _eh_planilha
 
         xlsm = tmp_path / "x.xlsm"
         xlsm.touch()
-        mod = SimpleNamespace(XLSM=xlsm)
-        openpyxl_mod, xlsm_out = _cmr_load_openpyxl(mod)
-        assert xlsm_out == xlsm
-        assert hasattr(openpyxl_mod, "load_workbook")
+        assert _eh_planilha(str(xlsm)) is True
+
+    def test_nonexistent_xlsm_is_not_planilha(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _eh_planilha
+
+        assert _eh_planilha(str(tmp_path / "nope.xlsm")) is False
+
+    def test_catalogo_id_is_not_planilha(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _eh_planilha
+
+        assert _eh_planilha("mendeslobo") is False
+
+
+class TestResolverFonteEntidades:
+    def test_catalogo_source_uses_runtime(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _resolver_fonte_entidades
+
+        catalogo = {"insumos": [{"codigo": "I1"}], "producoes": [{"id": "P1"}], "cpus": [{"codigo": "C1"}]}
+        rt = SimpleNamespace(config_root=tmp_path / "config", load_catalogo=lambda cid: catalogo)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            result = _resolver_fonte_entidades("mendeslobo")
+        assert result["insumos"] == [{"codigo": "I1"}]
+        assert result["cpus"] == [{"codigo": "C1"}]
+
+    def test_planilha_source_script_missing_raises_exit_2(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _resolver_fonte_entidades
+
+        xlsm = tmp_path / "planilha.xlsm"
+        xlsm.touch()
+        # repo_root (config_root.parent) sem scripts/benchmark/merge_rfi.py
+        rt = SimpleNamespace(config_root=tmp_path / "config", load_catalogo=lambda cid: {})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with pytest.raises(typer.Exit) as exc_info:
+                _resolver_fonte_entidades(str(xlsm))
+        assert exc_info.value.exit_code == 2
+
+    def test_planilha_source_reads_via_real_merge_rfi_script(self, tmp_path):
+        """Usa o repo_root real (onde scripts/benchmark/merge_rfi.py de fato existe)
+        para exercitar o caminho de sucesso do adaptador de planilha ponta-a-ponta."""
+        import openpyxl
+
+        from concilium.presentation.cli._commands_manage_helpers_c import _resolver_fonte_entidades
+
+        real_repo_root = Path(__file__).resolve().parents[4]
+        xlsm = tmp_path / "planilha.xlsm"
+        openpyxl.Workbook().save(xlsm)
+
+        rt = SimpleNamespace(config_root=real_repo_root / "config", load_catalogo=lambda cid: {})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            result = _resolver_fonte_entidades(str(xlsm))
+        # Workbook em branco não tem as abas BD_* -> listas vazias, mas sempre com "cpus".
+        assert result == {"insumos": [], "producoes": [], "cpus": []}
 
 
 class TestCcpWriteBundle:
@@ -801,126 +765,182 @@ class TestCcpWriteBundle:
         assert any("ATENÇÃO" in p for p in printed)
 
 
-class TestImplCatalogMergeRfi:
-    """Exercises the full _impl_catalog_merge_rfi flow by faking the externally
-    loaded merge_rfi.py script (tools_dir resolves outside the repo in this
-    environment, so we redirect the importlib load to a fake module we control)."""
+def _make_rt_multi(tmp_path: Path, catalogos: dict) -> SimpleNamespace:
+    """Fake Runtime cujo load_catalogo despacha por catalogo_id (mapa de catálogos).
 
-    def _make_fake_module_file(self, tmp_path: Path) -> Path:
-        content = """
-from pathlib import Path
+    Retorna sempre uma deepcopy — mesmo contrato do Runtime.load_catalogo real —
+    para que mutações feitas por um teste (ex.: `_impl_catalog_merge --apply`, que
+    escreve de volta no dict recebido) não vazem para os fixtures compartilhados
+    entre classes de teste.
+    """
+    import copy
 
-
-class _Report:
-    def __init__(self):
-        self.inner_high = []
-        self.inner_low = []
-        self.right_only = []
-        self.left_only = []
+    return SimpleNamespace(
+        config_root=tmp_path / "config",
+        load_catalogo=lambda cid: copy.deepcopy(catalogos[cid]),
+    )
 
 
-def extract_rfi(wb):
-    return {"insumos": [], "producoes": []}
+class TestImplCatalogCompare:
+    """_impl_catalog_compare (issue #134) — agnóstico de fonte, sempre dry-run."""
+
+    _CAT_A = {
+        "insumos": [{"codigo": "I1", "descricao": "Cimento", "unidade": "kg", "preco_unitario": 10.0}],
+        "producoes": [{"id": "P1", "descricao": "Escavação"}],
+        "cpus": [{"codigo": "CPU-1", "descricao": "Terraplenagem"}],
+    }
+    _CAT_B = {
+        "insumos": [{"codigo": "I1", "descricao": "Cimento", "unidade": "kg", "preco_unitario": 12.0}],
+        "producoes": [{"id": "P2", "descricao": "Compactação"}],
+        "cpus": [{"codigo": "CPU-2", "descricao": "Pavimentação"}],
+    }
+
+    def test_compares_two_catalogos_todos(self, tmp_path, capsys):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_compare
+
+        rt = _make_rt_multi(tmp_path, {"catA": self._CAT_A, "catB": self._CAT_B})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            _impl_catalog_compare("catA", "catB", "todos")
+        out = capsys.readouterr().out
+        assert "Comparação de catálogo" in out
+        assert "INSUMOS" in out and "PRODUCOES" in out and "CPUS" in out
+
+    def test_invalid_tipo_raises_exit_1(self):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_compare
+
+        with pytest.raises(typer.Exit) as exc_info:
+            _impl_catalog_compare("catA", "catB", "invalido")
+        assert exc_info.value.exit_code == 1
+
+    def test_cpus_only_with_planilha_side_raises_exit_1(self, tmp_path):
+        """tipo=cpus + uma origem é planilha -> cpus é o único tipo, é pulado, não resta nada."""
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_compare
+
+        xlsm = tmp_path / "planilha.xlsm"
+        xlsm.touch()
+        rt = _make_rt_multi(tmp_path, {"catA": self._CAT_A})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with pytest.raises(typer.Exit) as exc_info:
+                _impl_catalog_compare("catA", str(xlsm), "cpus")
+        assert exc_info.value.exit_code == 1
+
+    def test_cpus_skipped_with_planilha_but_other_tipos_proceed(self, tmp_path, capsys):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_compare
+
+        xlsm = tmp_path / "planilha.xlsm"
+        import openpyxl
+
+        openpyxl.Workbook().save(xlsm)
+
+        real_repo_root = Path(__file__).resolve().parents[4]
+        rt = SimpleNamespace(config_root=real_repo_root / "config", load_catalogo=lambda cid: self._CAT_A)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            _impl_catalog_compare("catA", str(xlsm), "todos")
+        out = capsys.readouterr().out
+        assert "cpus: pulado" in out
+        assert "CPUS" not in out
 
 
-def _merge_entities(cat, rfi, id_key="codigo"):
-    return _Report(), None
+class TestImplCatalogMerge:
+    """_impl_catalog_merge (issue #134) — dry-run por padrão, --apply escreve no destino."""
 
+    _DESTINO = {
+        "insumos": [{"codigo": "I1", "descricao": "Cimento", "unidade": "kg", "preco_unitario": 10.0}],
+        "producoes": [{"id": "P1", "descricao": "Escavação"}],
+        "cpus": [],
+    }
+    _ORIGEM = {
+        "insumos": [{"codigo": "I2", "descricao": "Areia", "unidade": "m3", "preco_unitario": 5.0}],
+        "producoes": [],
+        "cpus": [],
+    }
 
-def _apply_merge(cat, rfi, report, id_key="codigo"):
-    return list(cat)
-"""
-        script = tmp_path / "fake_merge_rfi.py"
-        script.write_text(content, encoding="utf-8")
-        return script
+    def test_destino_planilha_raises_exit_2(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge
 
-    def _setup(self, monkeypatch, tmp_path, contexto_id):
-        import importlib.util as real_importlib_util
+        xlsm = tmp_path / "planilha.xlsm"
+        xlsm.touch()
+        with pytest.raises(typer.Exit) as exc_info:
+            _impl_catalog_merge(str(xlsm), "origem_cat")
+        assert exc_info.value.exit_code == 2
 
-        import openpyxl as real_openpyxl
+    def test_dry_run_does_not_write_bundle(self, tmp_path, capsys):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge
 
-        xlsm_path = tmp_path / "planilha.xlsm"
-        wb = real_openpyxl.Workbook()
-        wb.save(xlsm_path)
+        rt = _make_rt_multi(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            _impl_catalog_merge(
+                "dest", "orig", apply=False, incluir_novos=True, tipo="todos", verify_pu=False, report_json=None
+            )
+        bundle_path = tmp_path / "config" / "catalogos" / "dest" / ".catalog_bundle.json"
+        assert not bundle_path.exists()
+        out = capsys.readouterr().out
+        assert "Dry-run" in out
 
-        fake_script = self._make_fake_module_file(tmp_path)
+    def test_apply_writes_bundle(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge
 
-        bundle_dir = tmp_path / "config" / "catalogos" / contexto_id
+        rt = _make_rt_multi(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
         bundle_dir.mkdir(parents=True)
-        (bundle_dir / ".catalog_bundle.json").write_text(json.dumps({"insumos": [], "producoes": []}), encoding="utf-8")
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            _impl_catalog_merge(
+                "dest", "orig", apply=True, incluir_novos=True, tipo="todos", verify_pu=False, report_json=None
+            )
+        bundle_path = bundle_dir / ".catalog_bundle.json"
+        assert bundle_path.exists()
+        data = json.loads(bundle_path.read_text())
+        codigos = {i["codigo"] for i in data["insumos"]}
+        assert "I1" in codigos
+        assert "I2" in codigos  # RIGHT_ONLY incluído (incluir_novos=True default)
 
-        orig_exists = Path.exists
+    def test_apply_incluir_novos_false_omits_right_only(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge
 
-        def fake_exists(self_path):
-            if self_path.name == "merge_rfi.py":
-                return True
-            return orig_exists(self_path)
+        rt = _make_rt_multi(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
+        bundle_dir.mkdir(parents=True)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            _impl_catalog_merge(
+                "dest", "orig", apply=True, incluir_novos=False, tipo="todos", verify_pu=False, report_json=None
+            )
+        data = json.loads((bundle_dir / ".catalog_bundle.json").read_text())
+        codigos = {i["codigo"] for i in data["insumos"]}
+        assert "I2" not in codigos
 
-        monkeypatch.setattr(Path, "exists", fake_exists)
+    def test_apply_with_verify_pu_and_report_json(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge
 
-        orig_spec = real_importlib_util.spec_from_file_location
-
-        def fake_spec_from_file_location(name, location, *args, **kwargs):
-            if str(location).endswith("merge_rfi.py"):
-                return orig_spec(name, fake_script, *args, **kwargs)
-            return orig_spec(name, location, *args, **kwargs)
-
-        monkeypatch.setattr(real_importlib_util, "spec_from_file_location", fake_spec_from_file_location)
-
-        # Patch mod.XLSM/mod.ROOT indirectly: since our fake module doesn't define
-        # them at import time (they must be Path values known only once tmp_path
-        # exists), inject them onto the loaded module after exec via a wrapper.
-        return xlsm_path
-
-    def test_apply_with_verify_pu_and_report_json(self, monkeypatch, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge_rfi
-
-        ctx = "ctx_apply"
-        xlsm_path = self._setup(monkeypatch, tmp_path, ctx)
-
-        import concilium.presentation.cli._commands_manage_helpers_c as helpers_c
-
-        def fake_cast(_type, value):
-            value.ROOT = tmp_path
-            value.XLSM = xlsm_path
-            return value
-
-        monkeypatch.setattr(helpers_c, "cast", fake_cast)
-
+        rt = _make_rt_multi(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
+        bundle_dir.mkdir(parents=True)
         report_path = str(tmp_path / "report.json")
-        mock_resultado = {"referencias_faltantes": [], "com_composicao": 0}
-        with patch("concilium.application.catalog.pu_calculator.calcular_catalogo", return_value=mock_resultado):
-            _impl_catalog_merge_rfi(ctx, apply=True, verify_pu=True, report_json=report_path)
-
+        mock_resultado = {"referencias_faltantes": [], "com_composicao": 1}
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.application.catalog.pu_calculator.calcular_catalogo", return_value=mock_resultado),
+        ):
+            _impl_catalog_merge(
+                "dest", "orig", apply=True, incluir_novos=True, tipo="todos", verify_pu=True, report_json=report_path
+            )
         assert Path(report_path).exists()
-        bundle_data = json.loads((tmp_path / "config" / "catalogos" / ctx / ".catalog_bundle.json").read_text())
-        assert bundle_data["insumos"] == []
+        report_data = json.loads(Path(report_path).read_text())
+        assert report_data["origem_a"] == "dest"
+        assert report_data["origem_b"] == "orig"
 
-    def test_dry_run_without_report(self, monkeypatch, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge_rfi
+    def test_produtividades_key_preserved_when_producoes_absent(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge
 
-        ctx = "ctx_dry"
-        xlsm_path = self._setup(monkeypatch, tmp_path, ctx)
-
-        import concilium.presentation.cli._commands_manage_helpers_c as helpers_c
-
-        def fake_cast(_type, value):
-            value.ROOT = tmp_path
-            value.XLSM = xlsm_path
-            return value
-
-        monkeypatch.setattr(helpers_c, "cast", fake_cast)
-
-        _impl_catalog_merge_rfi(ctx, apply=False, verify_pu=False, report_json=None)
-
-    def test_script_not_found_raises_exit(self, tmp_path):
-        # No monkeypatching here — merge_rfi.py genuinely does not exist at the
-        # computed tools_dir path in this environment, so this exercises the
-        # real "script not found" branch without mocking.
-        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge_rfi
-
-        with pytest.raises(typer.Exit):
-            _impl_catalog_merge_rfi("whatever-ctx", apply=False, verify_pu=False, report_json=None)
+        destino_produtividades = {"insumos": [], "produtividades": [{"id": "P1"}], "cpus": []}
+        rt = _make_rt_multi(tmp_path, {"dest": destino_produtividades, "orig": self._ORIGEM})
+        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
+        bundle_dir.mkdir(parents=True)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            _impl_catalog_merge(
+                "dest", "orig", apply=True, incluir_novos=True, tipo="producoes", verify_pu=False, report_json=None
+            )
+        data = json.loads((bundle_dir / ".catalog_bundle.json").read_text())
+        assert "produtividades" in data
 
 
 class TestImplCatalogCurePlausibility:

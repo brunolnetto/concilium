@@ -10,7 +10,8 @@ from concilium.presentation.mcp.tools._catalogo_tools_helpers_b import (
     _catalog_root,
     _impl_avaliar_plausibilidade_catalogo,
     _impl_calcular_pu_producao,
-    _impl_comparar_rfi_catalogo,
+    _impl_comparar_catalogo,
+    _impl_mesclar_catalogo,
     _impl_tendencia_precos_catalogo,
     _impl_verificar_integridade_catalogo,
     _resolve_catalogo_id,
@@ -249,254 +250,152 @@ class TestImplTendenciaPrecosCatalogo:
 
 
 # ---------------------------------------------------------------------------
-# _impl_comparar_rfi_catalogo
+# _impl_comparar_catalogo / _impl_mesclar_catalogo (issue #134) — agnósticos de
+# fonte: cada origem pode ser um catálogo (catalogo_id) ou uma planilha RFI
+# (.xlsm/.xlsx). Fakeamos o Runtime via _runtime() em vez de ler bundle direto.
 # ---------------------------------------------------------------------------
 
 
-class TestImplCompararRfiCatalogo:
-    def _config_path(self, tmp_path):
-        # Um nível extra de aninhamento garante que config_dir.parents[1]
-        # (usado por _tools_path) fique contido em tmp_path, sem escapar
-        # para o diretório base compartilhado do pytest.
-        return tmp_path / "fakerepo" / "config"
+def _make_rt(tmp_path: Path, catalogos: dict) -> MagicMock:
+    """Fake Runtime cujo load_catalogo despacha por catalogo_id, sempre deepcopy."""
+    import copy
 
-    def _tools_path(self, config_dir: Path) -> Path:
-        # In the source: tools_dir = config_dir.parents[1] / "tools"
-        # config_dir.parents[1] is the grandparent of config_dir
-        return config_dir.parents[1] / "tools"
+    rt = MagicMock()
+    rt.config_root = tmp_path / "config"
+    rt.load_catalogo.side_effect = lambda cid: copy.deepcopy(catalogos[cid])
+    return rt
 
-    def test_sad_path_merge_rfi_missing(self, tmp_path):
-        config_dir = self._config_path(tmp_path)
-        config_dir.mkdir(parents=True)
 
-        with patch(f"{MODULE}._config_root", return_value=config_dir):
-            result = _impl_comparar_rfi_catalogo("mendeslobo")
+class TestImplCompararCatalogo:
+    _CAT_A = {
+        "insumos": [{"codigo": "I1", "descricao": "Cimento", "unidade": "kg", "preco_unitario": 10.0}],
+        "producoes": [{"id": "P1", "descricao": "Escavação"}],
+        "cpus": [{"codigo": "CPU-1", "descricao": "Terraplenagem"}],
+    }
+    _CAT_B = {
+        "insumos": [{"codigo": "I1", "descricao": "Cimento", "unidade": "kg", "preco_unitario": 12.0}],
+        "producoes": [{"id": "P2", "descricao": "Compactação"}],
+        "cpus": [{"codigo": "CPU-2", "descricao": "Pavimentação"}],
+    }
+
+    def test_tipo_invalido_returns_erro(self):
+        result = _impl_comparar_catalogo("catA", "catB", tipo="invalido")
+        assert "erro" in result
+
+    def test_compara_dois_catalogos(self, tmp_path):
+        rt = _make_rt(tmp_path, {"catA": self._CAT_A, "catB": self._CAT_B})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_comparar_catalogo("catA", "catB", tipo="todos")
+
+        assert result["origem_a"] == "catA"
+        assert result["origem_b"] == "catB"
+        assert "insumos" in result and "producoes" in result and "cpus" in result
+        assert "resumo" in result
+        assert "aviso" not in result
+
+    def test_cpus_pulado_quando_origem_e_planilha(self, tmp_path):
+        xlsm = tmp_path / "planilha.xlsm"
+        xlsm.touch()
+        rt = _make_rt(tmp_path, {"catA": self._CAT_A})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_comparar_catalogo("catA", str(xlsm), tipo="cpus")
+
+        assert "erro" in result  # cpus era o único tipo pedido, foi pulado -> nada resta
+
+    def test_planilha_source_script_not_found_returns_erro(self, tmp_path):
+        """repo_root (config_root.parent) sem scripts/benchmark/merge_rfi.py."""
+        xlsm = tmp_path / "planilha.xlsm"
+        xlsm.touch()
+        rt = _make_rt(tmp_path, {"catA": self._CAT_A})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            result = _impl_comparar_catalogo("catA", str(xlsm), tipo="insumos")
 
         assert "erro" in result
-        assert "merge_rfi.py" in result["erro"]
+        assert "Script não encontrado" in result["erro"]
 
-    def test_sad_path_openpyxl_not_installed(self, tmp_path):
-        config_dir = self._config_path(tmp_path)
-        config_dir.mkdir(parents=True)
-        tools_dir = self._tools_path(config_dir)
-        tools_dir.mkdir(parents=True, exist_ok=True)
-        merge_path = tools_dir / "merge_rfi.py"
-        merge_path.write_text("# stub", encoding="utf-8")
+    def test_planilha_source_reads_via_real_merge_rfi_script(self, tmp_path):
+        """Usa o repo_root real para exercitar o adaptador de planilha ponta-a-ponta."""
+        import openpyxl
 
-        import builtins
+        real_repo_root = Path(__file__).resolve().parents[4]
+        xlsm = tmp_path / "planilha.xlsm"
+        openpyxl.Workbook().save(xlsm)
 
-        original_import = builtins.__import__
+        rt = MagicMock()
+        rt.config_root = real_repo_root / "config"
+        rt.load_catalogo.return_value = self._CAT_A
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_comparar_catalogo("catA", str(xlsm), tipo="todos")
 
-        def mock_import(name, *args, **kwargs):
-            if name == "openpyxl":
-                raise ImportError("openpyxl not installed")
-            return original_import(name, *args, **kwargs)
+        assert result["aviso"] == "cpus: pulado — planilha RFI não modela esse tipo de entidade."
+        assert "cpus" not in result
 
-        with patch(f"{MODULE}._config_root", return_value=config_dir):
-            with patch("builtins.__import__", side_effect=mock_import):
-                result = _impl_comparar_rfi_catalogo("mendeslobo")
 
+class TestImplMesclarCatalogo:
+    _DESTINO = {
+        "insumos": [{"codigo": "I1", "descricao": "Cimento", "unidade": "kg", "preco_unitario": 10.0}],
+        "producoes": [{"id": "P1", "descricao": "Escavação"}],
+        "cpus": [],
+    }
+    _ORIGEM = {
+        "insumos": [{"codigo": "I2", "descricao": "Areia", "unidade": "m3", "preco_unitario": 5.0}],
+        "producoes": [],
+        "cpus": [],
+    }
+
+    def test_destino_planilha_returns_erro(self, tmp_path):
+        xlsm = tmp_path / "planilha.xlsm"
+        xlsm.touch()
+        result = _impl_mesclar_catalogo(str(xlsm), "origem_cat")
         assert "erro" in result
-        assert "openpyxl" in result["erro"]
+        assert "planilha" in result["erro"]
 
-    def test_sad_path_bundle_missing(self, tmp_path):
-        """Covers lines 90-92: bundle not found after merge_rfi loaded."""
-        config_dir = self._config_path(tmp_path)
-        config_dir.mkdir(parents=True)
-        tools_dir = self._tools_path(config_dir)
-        tools_dir.mkdir(parents=True, exist_ok=True)
-        merge_path = tools_dir / "merge_rfi.py"
-        merge_path.write_text("# stub", encoding="utf-8")
-
-        mock_mod = MagicMock()
-        mock_spec = MagicMock()
-        mock_spec.loader = MagicMock()
-
-        with patch(f"{MODULE}._config_root", return_value=config_dir):
-            with patch("importlib.util.spec_from_file_location", return_value=mock_spec):
-                with patch("importlib.util.module_from_spec", return_value=mock_mod):
-                    result = _impl_comparar_rfi_catalogo("mendeslobo")
-
-        assert "erro" in result
-        assert "Bundle" in result["erro"]
-
-    def test_sad_path_planilha_not_found(self, tmp_path):
-        """Covers line ~98-99: XLSM not found."""
-        config_dir = self._config_path(tmp_path)
-        bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
-        _write_bundle(bundle_path, _make_bundle(insumos=[], producoes=[]))
-        tools_dir = self._tools_path(config_dir)
-        tools_dir.mkdir(parents=True, exist_ok=True)
-        merge_path = tools_dir / "merge_rfi.py"
-        merge_path.write_text("# stub", encoding="utf-8")
-
-        mock_mod = MagicMock()
-        xlsm_path = MagicMock(spec=Path)
-        xlsm_path.exists.return_value = False
-        mock_mod.XLSM = xlsm_path
-
-        mock_spec = MagicMock()
-        mock_spec.loader = MagicMock()
-
-        with patch(f"{MODULE}._config_root", return_value=config_dir):
-            with patch("importlib.util.spec_from_file_location", return_value=mock_spec):
-                with patch("importlib.util.module_from_spec", return_value=mock_mod):
-                    import openpyxl as _openpyxl  # noqa — ensure available
-
-                    result = _impl_comparar_rfi_catalogo("ctx")
-
-        assert "erro" in result
-        assert "RFI" in result["erro"] or "Planilha" in result["erro"]
-
-    def test_happy_path_dry_run(self, tmp_path):
-        """Covers lines 101-172 (dry_run=True path)."""
-        config_dir = self._config_path(tmp_path)
-        bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
-        bundle = _make_bundle(
-            insumos=[{"codigo": "INS-001", "descricao": "Insumo 1"}],
-            producoes=[{"id": "PROD-001", "descricao": "Producao 1"}],
-        )
-        _write_bundle(bundle_path, bundle)
-
-        tools_dir = self._tools_path(config_dir)
-        tools_dir.mkdir(parents=True, exist_ok=True)
-        merge_path = tools_dir / "merge_rfi.py"
-        merge_path.write_text("# stub", encoding="utf-8")
-
-        # Build mock merge report
-        def _make_rep(inner_high=None, inner_low=None, right_only=None, left_only=None):
-            rep = MagicMock()
-            rep.inner_high = inner_high or []
-            rep.inner_low = inner_low or []
-            rep.right_only = right_only or []
-            rep.left_only = left_only or []
-            return rep
-
-        mock_mod = MagicMock()
-        xlsm_path = MagicMock(spec=Path)
-        xlsm_path.exists.return_value = True
-        mock_mod.XLSM = xlsm_path
-        mock_mod.extract_rfi.return_value = {"insumos": [], "producoes": []}
-
-        rep_ins = _make_rep(
-            inner_high=[{"catalog": {"codigo": "INS-001"}, "delta": {"preco_unitario": 5.0}}],
-            inner_low=[],
-            right_only=[{"rfi": {"codigo": "RFI-NEW-001", "descricao": "Novo", "unidade": "m"}}],
-            left_only=[],
-        )
-        rep_prod = _make_rep()
-        mock_mod._merge_entities.side_effect = [
-            (rep_ins, {}),
-            (rep_prod, {}),
-        ]
-
-        mock_spec = MagicMock()
-        mock_spec.loader = MagicMock()
-
-        mock_wb = MagicMock()
-        mock_mod.extract_rfi.return_value = {"insumos": [], "producoes": []}
-
-        with patch(f"{MODULE}._config_root", return_value=config_dir):
-            with patch("importlib.util.spec_from_file_location", return_value=mock_spec):
-                with patch("importlib.util.module_from_spec", return_value=mock_mod):
-                    with patch("openpyxl.load_workbook", return_value=mock_wb):
-                        with patch(f"{MODULE}._wrap_response", side_effect=_identity):
-                            result = _impl_comparar_rfi_catalogo("ctx", dry_run=True)
+    def test_dry_run_nao_escreve_bundle(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo("dest", "orig", dry_run=True)
 
         assert result["mode"] == "DRY_RUN"
-        assert result["contexto_id"] == "ctx"
-        assert "insumos" in result
-        assert "producoes" in result
-        assert "resumo" in result
         assert "aplicado" not in result
+        bundle_path = tmp_path / "config" / "catalogos" / "dest" / ".catalog_bundle.json"
+        assert not bundle_path.exists()
 
-    def test_happy_path_applied_producoes_key(self, tmp_path):
-        """Covers lines 158-167 (dry_run=False with 'producoes' key in bundle)."""
-        config_dir = self._config_path(tmp_path)
-        bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
-        bundle = _make_bundle(insumos=[], producoes=[])
-        _write_bundle(bundle_path, bundle)
-
-        tools_dir = self._tools_path(config_dir)
-        tools_dir.mkdir(parents=True, exist_ok=True)
-        merge_path = tools_dir / "merge_rfi.py"
-        merge_path.write_text("# stub", encoding="utf-8")
-
-        def _make_rep(**kw):
-            rep = MagicMock()
-            rep.inner_high = kw.get("inner_high", [])
-            rep.inner_low = kw.get("inner_low", [])
-            rep.right_only = kw.get("right_only", [])
-            rep.left_only = kw.get("left_only", [])
-            return rep
-
-        mock_mod = MagicMock()
-        xlsm_path = MagicMock(spec=Path)
-        xlsm_path.exists.return_value = True
-        mock_mod.XLSM = xlsm_path
-        mock_mod.extract_rfi.return_value = {"insumos": [], "producoes": []}
-        mock_mod._merge_entities.side_effect = [(_make_rep(), {}), (_make_rep(), {})]
-        mock_mod._apply_merge.side_effect = [[], []]
-
-        mock_spec = MagicMock()
-        mock_spec.loader = MagicMock()
-        mock_wb = MagicMock()
-
-        with patch(f"{MODULE}._config_root", return_value=config_dir):
-            with patch("importlib.util.spec_from_file_location", return_value=mock_spec):
-                with patch("importlib.util.module_from_spec", return_value=mock_mod):
-                    with patch("openpyxl.load_workbook", return_value=mock_wb):
-                        with patch(f"{MODULE}._wrap_response", side_effect=_identity):
-                            result = _impl_comparar_rfi_catalogo("ctx", dry_run=False)
+    def test_apply_escreve_bundle(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
+        bundle_dir.mkdir(parents=True)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo("dest", "orig", dry_run=False)
 
         assert result["mode"] == "APPLIED"
         assert "aplicado" in result
+        bundle_path = bundle_dir / ".catalog_bundle.json"
+        assert bundle_path.exists()
+        data = json.loads(bundle_path.read_text())
+        codigos = {i["codigo"] for i in data["insumos"]}
+        assert {"I1", "I2"} <= codigos
 
-    def test_happy_path_applied_produtividades_key(self, tmp_path):
-        """Covers line 164: bundle has 'produtividades' key instead of 'producoes'."""
-        config_dir = self._config_path(tmp_path)
-        bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
-        # Bundle uses 'produtividades' instead of 'producoes'
-        bundle = _make_bundle(insumos=[], producoes=[], use_produtividades_key=True)
-        _write_bundle(bundle_path, bundle)
+    def test_apply_produtividades_key_preserved(self, tmp_path):
+        destino_produtividades = {"insumos": [], "produtividades": [{"id": "P1"}], "cpus": []}
+        rt = _make_rt(tmp_path, {"dest": destino_produtividades, "orig": self._ORIGEM})
+        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
+        bundle_dir.mkdir(parents=True)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                _impl_mesclar_catalogo("dest", "orig", dry_run=False, tipo="producoes")
 
-        tools_dir = self._tools_path(config_dir)
-        tools_dir.mkdir(parents=True, exist_ok=True)
-        merge_path = tools_dir / "merge_rfi.py"
-        merge_path.write_text("# stub", encoding="utf-8")
+        data = json.loads((bundle_dir / ".catalog_bundle.json").read_text())
+        assert "produtividades" in data
+        assert "producoes" not in data
 
-        def _make_rep(**kw):
-            rep = MagicMock()
-            rep.inner_high = []
-            rep.inner_low = []
-            rep.right_only = []
-            rep.left_only = []
-            return rep
-
-        mock_mod = MagicMock()
-        xlsm_path = MagicMock(spec=Path)
-        xlsm_path.exists.return_value = True
-        mock_mod.XLSM = xlsm_path
-        mock_mod.extract_rfi.return_value = {"insumos": [], "producoes": []}
-        mock_mod._merge_entities.side_effect = [(_make_rep(), {}), (_make_rep(), {})]
-        mock_mod._apply_merge.side_effect = [[], []]
-
-        mock_spec = MagicMock()
-        mock_spec.loader = MagicMock()
-        mock_wb = MagicMock()
-
-        with patch(f"{MODULE}._config_root", return_value=config_dir):
-            with patch("importlib.util.spec_from_file_location", return_value=mock_spec):
-                with patch("importlib.util.module_from_spec", return_value=mock_mod):
-                    with patch("openpyxl.load_workbook", return_value=mock_wb):
-                        with patch(f"{MODULE}._wrap_response", side_effect=_identity):
-                            result = _impl_comparar_rfi_catalogo("ctx", dry_run=False)
-
-        assert result["mode"] == "APPLIED"
-        # The bundle was updated using 'produtividades' key
-        updated = json.loads(bundle_path.read_text(encoding="utf-8"))
-        assert "produtividades" in updated
-        assert "producoes" not in updated
+    def test_tipo_invalido_returns_erro(self):
+        result = _impl_mesclar_catalogo("dest", "orig", tipo="invalido")
+        assert "erro" in result
 
 
 # ---------------------------------------------------------------------------

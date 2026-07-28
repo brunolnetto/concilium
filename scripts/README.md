@@ -42,7 +42,14 @@ See [COMMIT_GOVERNANCE.md](../COMMIT_GOVERNANCE.md) and [COMMIT_GOVERNANCE_QUICK
 ## Misc utilities
 
 - `generate_pesquisa.py`
-- `merge_rfi.py`
+- `merge_rfi.py` — adaptador específico do formato "PLANILHA PADRÃO RFI.xlsm": lê as
+  abas BD_MÃO_DE_OBRA/BD_EQUIPAMENTOS/BD_MATERIAIS/SERVIÇOS TERCEIRIZADOS/BD_PRODUTIVIDADES
+  (`extract_rfi`) e consome o motor de comparação/merge genérico e agnóstico de fonte em
+  `concilium.application.services.catalog.catalog_compare` (issue #134). Uso standalone:
+  `python scripts/benchmark/merge_rfi.py --contexto mendeslobo [--apply]`. Para comparar ou
+  mesclar dois catálogos entre si (ou catálogo x planilha), use os comandos genéricos
+  `concilium catalog compare <origem_a> <origem_b>` / `concilium catalog merge <destino> <origem>`
+  — `catalog merge-rfi` foi removido (sem alias), substituído por esses dois comandos.
 - `migrate_overlays.py`
 - `price_resolver.py`
 - `reclassificar_diversos.py`

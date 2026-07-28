@@ -15,8 +15,9 @@ from ._commands_manage_helpers_b import (
     _impl_catalog_survey,
 )
 from ._commands_manage_helpers_c import (
+    _impl_catalog_compare,
     _impl_catalog_cure_plausibility,
-    _impl_catalog_merge_rfi,
+    _impl_catalog_merge,
     _impl_plan_init,
     _impl_structure_list,
 )
@@ -255,13 +256,30 @@ def catalog_audit_reasonability(
     return _impl_catalog_audit_reasonability(contexto_id, output, max_findings)
 
 
-def catalog_merge_rfi(
-    contexto_id: str = typer.Argument(..., help="ID do contexto do catálogo."),
+@app_catalog.command("compare")
+def catalog_compare(
+    origem_a: str = typer.Argument(..., help="Catálogo (catalogo_id) ou planilha .xlsm/.xlsx"),
+    origem_b: str = typer.Argument(..., help="Catálogo (catalogo_id) ou planilha .xlsm/.xlsx"),
+    tipo: str = typer.Option("todos", "--tipo", "-t", help="insumos | producoes | cpus | todos"),
+):
+    """Compara duas fontes de entidades de catálogo (dry-run — só relatório)."""
+    return _impl_catalog_compare(origem_a, origem_b, tipo)
+
+
+@app_catalog.command("merge")
+def catalog_merge(
+    destino: str = typer.Argument(..., help="Catálogo de destino (catalogo_id) — não pode ser planilha."),
+    origem: str = typer.Argument(..., help="Catálogo (catalogo_id) ou planilha .xlsm/.xlsx de origem."),
     apply: bool = typer.Option(False, "--apply", help="Aplica as mudanças no bundle (default: dry-run)."),
-    verify_pu: bool = typer.Option(False, "--verify-pu", help="Verifica integridade referencial após merge."),
+    incluir_novos: bool = typer.Option(
+        True, "--incluir-novos/--no-incluir-novos", help="Inclui RIGHT_ONLY (só na origem) no destino."
+    ),
+    tipo: str = typer.Option("todos", "--tipo", "-t", help="insumos | producoes | cpus | todos"),
+    verify_pu: bool = typer.Option(False, "--verify-pu", help="Verifica integridade referencial após o merge."),
     report_json: str = typer.Option(None, "--report-json", help="Salva relatório detalhado em JSON."),
 ):
-    return _impl_catalog_merge_rfi(contexto_id, apply, verify_pu, report_json)
+    """Mescla uma fonte de origem (catálogo ou planilha RFI) no catálogo de destino."""
+    return _impl_catalog_merge(destino, origem, apply, incluir_novos, tipo, verify_pu, report_json)
 
 
 def catalog_cure_plausibility(

@@ -41,7 +41,8 @@ ALL_TOOL_NAMES = [
     "atualizar_preco_insumo",
     "adicionar_variante_producao",
     "historico_preco_insumo",  # ADR-116 F5
-    "comparar_rfi_catalogo",
+    "comparar_catalogo",  # issue #134 — substitui comparar_rfi_catalogo
+    "mesclar_catalogo",  # issue #134 — substitui comparar_rfi_catalogo(dry_run=False)
     "calcular_pu_producao",
     "versoes_catalogo",  # ADR-116 F5
     # escopo
@@ -154,6 +155,7 @@ class TestToolPermissionsCoverage:
             "disparar_pipeline",
             "atualizar_preco_insumo",
             "adicionar_variante_producao",
+            "mesclar_catalogo",  # issue #134
             "aprovar_versao",
             "criar_rascunho_catalogo",  # ADR-120
             "aprovar_merge_catalogo",  # ADR-120
