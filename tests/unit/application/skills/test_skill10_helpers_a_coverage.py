@@ -505,6 +505,36 @@ class TestRraBuildPeRows:
         assert row["item_id"] == "I-01"
         assert "margem_operacional_direta" in row
 
+    def test_pe_row_expoe_causa_dominante_e_horas_reais(self):
+        """ADR-162 D1/D3: causa_dominante e horas_reais_min/max chegam na linha do
+        relatório — None quando o PE não os resolveu (perfil sem Γ configurado)."""
+        pe = MagicMock()
+        pe.item_id = "I-01"
+        pe.custo_fixo_equipe = 500.0
+        pe.custo_venda_cpu = 1000.0
+        pe.delta = -200.0
+        pe.status_validacao = "AVISO"
+        pe.levers_equilibrio = []
+        pe.frentes_equivalentes = 1.0
+        pe.frentes_equivalentes_necessarias = 1.0
+        pe.eta_real = 1.0
+        pe.machine_weeks_brutas = 10.0
+        pe.machine_weeks_efetivas = 9.0
+        pe.custo_pool_total = 0.0
+        pe.economia_pool_abs = 0.0
+        pe.pu_catalogo_unitario = 100.0
+        pe.pu_operacional_autonomo = 95.0
+        pe.custo_operacional_real = 800.0
+        pe.causa_dominante = "PRECIFICACAO"
+        pe.horas_reais_min = 1800.0
+        pe.horas_reais_max = 2000.0
+
+        canonical = _make_canonical(ponto_equilibrio=[pe], resultado=None, contratos_recurso=None)
+        row = _rra_build_pe_rows(canonical)[0]
+        assert row["causa_dominante"] == "PRECIFICACAO"
+        assert row["horas_reais_min"] == 1800.0
+        assert row["horas_reais_max"] == 2000.0
+
     def test_pe_rows_with_resultado_section(self):
         pe = MagicMock()
         pe.item_id = "I-01"

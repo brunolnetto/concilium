@@ -571,6 +571,41 @@ class TestBacktrackingPEBuilder:
         bt = BacktrackingPEBuilder().build(diag, canonical)
         assert len(bt.itens) == 1
 
+    def _with_causa_dominante(self, canonical, causa_dominante: str):
+        from concilium.domain.models.canonical import PontoEquilibrio
+
+        pe = PontoEquilibrio(
+            item_id="eap-01",
+            custo_fixo_equipe=73_000.0,
+            custo_venda_cpu=91_797.0,
+            delta=-7500.0,
+            delta_pct=-0.10,
+            status_validacao="AVISO",
+            custo_operacional_real=99_297.0,
+            causa_dominante=causa_dominante,
+        )
+        return canonical.model_copy(update={"ponto_equilibrio": [pe]})
+
+    def test_solucao_causa_dominante_precificacao_aponta_para_l(self):
+        """ADR-162: causa_dominante="PRECIFICACAO" -> solucao_causa_dominante.parametro == "L"
+        (mesma SolucaoInversa já computada para solucoes/solucao_recomendada — sem novo cálculo)."""
+        diag = self._make_minimal_diagnostico()
+        canonical = self._with_causa_dominante(self._make_minimal_canonical(), "PRECIFICACAO")
+        bt = BacktrackingPEBuilder().build(diag, canonical)
+        item = bt.itens[0]
+        assert item.solucao_causa_dominante is not None
+        assert item.solucao_causa_dominante.parametro == "L"
+        # É a MESMA instância presente em `solucoes` — prova que não houve recálculo.
+        assert item.solucao_causa_dominante in item.solucoes
+
+    def test_solucao_causa_dominante_indeterminado_e_none(self):
+        """causa_dominante="INDETERMINADO" (default, sem ponto_equilibrio anexado) -> None,
+        nunca aponta para uma solução arbitrária quando a causa raiz não foi identificada."""
+        diag = self._make_minimal_diagnostico()
+        canonical = self._make_minimal_canonical()  # sem ponto_equilibrio -> causa_por_item vazio
+        bt = BacktrackingPEBuilder().build(diag, canonical)
+        assert bt.itens[0].solucao_causa_dominante is None
+
     def test_l_solution_always_present(self):
         diag = self._make_minimal_diagnostico()
         canonical = self._make_minimal_canonical()

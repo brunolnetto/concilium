@@ -221,8 +221,10 @@ class TestResolvePrecoCatItemFallbackFlag:
         cpu = {"codigo": "CPU-01"}
         preco_cat = {"material": 1.0, "diesel": 0.0, "mao_obra": 2.0, "equipamentos": 0.0}
         validacoes: list = []
-        with patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=preco_cat):
-            result, equip_sem_decomp, usou_fallback = MOD._resolve_preco_cat_item(
+        with patch.object(
+            MOD._process_item, "_compute_preco_cat_from_production", return_value=(preco_cat, 42.5)
+        ):
+            result, equip_sem_decomp, usou_fallback, produtividade_catalogo = MOD._resolve_preco_cat_item(
                 item,
                 cpu,
                 self._ARGS["prod_lookup"],
@@ -241,6 +243,7 @@ class TestResolvePrecoCatItemFallbackFlag:
         assert result == preco_cat
         assert equip_sem_decomp == set()
         assert usou_fallback is False
+        assert produtividade_catalogo == 42.5
         assert any(v.codigo == "VAL-PLAN-BOTTOM-UP" for v in validacoes)
 
     def test_fonte2_composicao_retorna_fallback_true(self):
@@ -249,14 +252,14 @@ class TestResolvePrecoCatItemFallbackFlag:
         preco_cat_fallback = {"material": 3.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 1.0}
         validacoes: list = []
         with (
-            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=(None, 0.0)),
             patch.object(
                 MOD._process_item,
                 "_preco_cat_fallback_composicao",
                 return_value=(preco_cat_fallback, {"EQ-1"}),
             ),
         ):
-            result, equip_sem_decomp, usou_fallback = MOD._resolve_preco_cat_item(
+            result, equip_sem_decomp, usou_fallback, produtividade_catalogo = MOD._resolve_preco_cat_item(
                 item,
                 cpu,
                 self._ARGS["prod_lookup"],
@@ -275,6 +278,7 @@ class TestResolvePrecoCatItemFallbackFlag:
         assert result == preco_cat_fallback
         assert equip_sem_decomp == {"EQ-1"}
         assert usou_fallback is True
+        assert produtividade_catalogo == 0.0
 
     def test_fonte2_falha_ainda_marca_fallback_true(self):
         """Mesmo quando a Fonte 2 falha (preco_cat=None, ex. VAL-PLAN-MO-EQ-SEM-FONTE),
@@ -284,10 +288,10 @@ class TestResolvePrecoCatItemFallbackFlag:
         cpu = {"codigo": "CPU-03"}
         validacoes: list = []
         with (
-            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=(None, 0.0)),
             patch.object(MOD._process_item, "_preco_cat_fallback_composicao", return_value=(None, set())),
         ):
-            result, equip_sem_decomp, usou_fallback = MOD._resolve_preco_cat_item(
+            result, equip_sem_decomp, usou_fallback, produtividade_catalogo = MOD._resolve_preco_cat_item(
                 item,
                 cpu,
                 self._ARGS["prod_lookup"],
@@ -305,6 +309,7 @@ class TestResolvePrecoCatItemFallbackFlag:
             )
         assert result is None
         assert usou_fallback is True
+        assert produtividade_catalogo == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -784,7 +789,7 @@ class TestProcessEapItem:
         plan_out: list = []
         with (
             patch.object(MOD._process_item, "_try_early_override", return_value=None),
-            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=(None, 0.0)),
             patch.object(MOD._cpu_fallback, "_compute_preco_cat_from_cpu", return_value=(None, set())),
             patch(
                 "concilium.domain.models.catalog.catalogo.CPU.model_validate",
@@ -827,11 +832,14 @@ class TestProcessEapItem:
         preco_cat = {"material": 1.0, "diesel": 0.0, "mao_obra": 2.0, "equipamentos": 0.0}
         with (
             patch.object(MOD._process_item, "_try_early_override", return_value=None),
-            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=preco_cat),
+            patch.object(
+                MOD._process_item, "_compute_preco_cat_from_production", return_value=(preco_cat, 55.0)
+            ),
         ):
             self._call_com_bdi(item, cpu_lookup, prod_lookup, plan_out, [], [])
         assert len(plan_out) == 1
         assert plan_out[0].precificacao_via_fallback_composicao is False
+        assert plan_out[0].produtividade_catalogo == 55.0
 
     def test_fonte2_sucesso_planejamento_com_fallback(self):
         """Issue #132: Fonte 1 falhou, Fonte 2 (composicao_itens) resolveu →
@@ -844,7 +852,7 @@ class TestProcessEapItem:
         preco_cat_fallback = {"material": 1.0, "diesel": 0.0, "mao_obra": 2.0, "equipamentos": 3.0}
         with (
             patch.object(MOD._process_item, "_try_early_override", return_value=None),
-            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=(None, 0.0)),
             patch.object(
                 MOD._process_item,
                 "_preco_cat_fallback_composicao",
@@ -854,6 +862,7 @@ class TestProcessEapItem:
             self._call_com_bdi(item, cpu_lookup, prod_lookup, plan_out, [], [])
         assert len(plan_out) == 1
         assert plan_out[0].precificacao_via_fallback_composicao is True
+        assert plan_out[0].produtividade_catalogo == 0.0
 
 
 # _precificacao/_skill_helpers_a.py
@@ -864,8 +873,8 @@ class TestComputePrecoFromProduction:
     """_compute_preco_cat_from_production early returns."""
 
     def test_no_prod_id_returns_none(self):
-        """Line 269: cpu has no producao_id_ref → return None."""
-        result = PREC._compute_preco_cat_from_production(
+        """Line 269: cpu has no producao_id_ref → return (None, 0.0)."""
+        result, produtividade_catalogo = PREC._compute_preco_cat_from_production(
             cpu={},  # no producao_id_ref
             prod_lookup={},
             insumo_lookup={},
@@ -875,10 +884,11 @@ class TestComputePrecoFromProduction:
             validacoes=[],
         )
         assert result is None
+        assert produtividade_catalogo == 0.0
 
     def test_prod_id_not_in_lookup_returns_none(self):
-        """Line 273: producao not found in prod_lookup → return None."""
-        result = PREC._compute_preco_cat_from_production(
+        """Line 273: producao not found in prod_lookup → return (None, 0.0)."""
+        result, produtividade_catalogo = PREC._compute_preco_cat_from_production(
             cpu={"producao_id_ref": "PROD-999"},
             prod_lookup={},  # PROD-999 not here
             insumo_lookup={},
@@ -888,11 +898,12 @@ class TestComputePrecoFromProduction:
             validacoes=[],
         )
         assert result is None
+        assert produtividade_catalogo == 0.0
 
     def test_valor_horario_zero_emits_warning_and_returns_none(self):
-        """Lines 276-287: valor_horario=0 → emit VAL-PLAN-PROD-HORARIO and return None."""
+        """Lines 276-287: valor_horario=0 → emit VAL-PLAN-PROD-HORARIO and return (None, 0.0)."""
         validacoes = []
-        result = PREC._compute_preco_cat_from_production(
+        result, produtividade_catalogo = PREC._compute_preco_cat_from_production(
             cpu={"producao_id_ref": "PROD-001", "codigo": "CPU-001"},
             prod_lookup={"PROD-001": {"valor_horario": 0.0}},
             insumo_lookup={},
@@ -902,13 +913,14 @@ class TestComputePrecoFromProduction:
             validacoes=validacoes,
         )
         assert result is None
+        assert produtividade_catalogo == 0.0
         codes = [v.codigo for v in validacoes]
         assert "VAL-PLAN-PROD-HORARIO" in codes
 
     def test_valor_horario_none_treated_as_zero(self):
         """Line 275: valor_horario = float(None or 0.0) = 0.0 → same path."""
         validacoes = []
-        result = PREC._compute_preco_cat_from_production(
+        result, produtividade_catalogo = PREC._compute_preco_cat_from_production(
             cpu={"producao_id_ref": "PROD-002", "codigo": "CPU-002"},
             prod_lookup={"PROD-002": {"valor_horario": None}},
             insumo_lookup={},
@@ -918,6 +930,7 @@ class TestComputePrecoFromProduction:
             validacoes=validacoes,
         )
         assert result is None
+        assert produtividade_catalogo == 0.0
 
     def test_sbdi_legado_field_emits_info(self):
         """Line 309: cpu has precos_unitarios_sbdi → emit VAL-PLAN-SBDI-LEGADO."""
@@ -926,7 +939,7 @@ class TestComputePrecoFromProduction:
         validacoes = []
         fake_sbdi = {"total": 100.0, "mo": 40.0, "diesel": 20.0, "equipamentos": 30.0, "material": 10.0}
         with patch("concilium.application.catalog.pu_calculator.derivar_precos_unitarios_sbdi", return_value=fake_sbdi):
-            result = PREC._compute_preco_cat_from_production(
+            result, produtividade_catalogo = PREC._compute_preco_cat_from_production(
                 cpu={
                     "producao_id_ref": "PROD-003",
                     "codigo": "CPU-003",
@@ -940,6 +953,7 @@ class TestComputePrecoFromProduction:
                 validacoes=validacoes,
             )
         assert result is not None
+        assert produtividade_catalogo == 50.0
         codes = [v.codigo for v in validacoes]
         assert "VAL-PLAN-SBDI-LEGADO" in codes
 

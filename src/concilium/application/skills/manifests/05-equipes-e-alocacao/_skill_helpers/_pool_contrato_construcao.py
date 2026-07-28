@@ -279,8 +279,8 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
     composição padrão (funções + equipamentos + quantidades). Assim, CPUs iguais
     ou com mesma composição compartilham recurso sem depender de regex sobre cpu_id.
 
-    resource_costs é omitido propositalmente → custo_unit_semanal derivado de
-    custo_hora_total_referencia do catálogo via _resolve_custo_hora_ref_sem.
+    resource_costs é omitido propositalmente → custo_unit_semanal derivado sempre
+    bottom-up (custo_total_item / machine_weeks, ver _compute_custo_unit_fracs).
 
     Capacidades declaradas explicitamente em canonical_in.recurso_pool (skill 03) são
     respeitadas quando o tipo_id coincide com o equip_id (convenção natural).
@@ -411,9 +411,6 @@ def _build_contratos_recurso(
     rcpsp_spec: dict,
     sched_lookup: dict,
     validacoes: list,
-    cpu_lookup: dict | None = None,
-    prod_lookup: dict | None = None,
-    horas_semana: float = 48.0,
 ) -> tuple[list[RecursoContrato], dict[str, tuple[float, str, float]], list[CadeiaPerpetuacao]]:
     """Calcula contratos de pool e retorna (contratos, atribuicao_por_item, cadeias).
 
@@ -453,9 +450,6 @@ def _build_contratos_recurso(
         pool,
         sched_lookup,
         validacoes,
-        cpu_lookup=cpu_lookup,
-        prod_lookup=prod_lookup,
-        horas_semana=horas_semana,
     )
 
     atribuicao: dict[str, tuple[float, str, float]] = {}

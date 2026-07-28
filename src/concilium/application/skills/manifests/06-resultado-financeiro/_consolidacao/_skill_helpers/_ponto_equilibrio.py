@@ -177,6 +177,157 @@ def _pe_gap_escala_abs(equipe: Any, n_equipes_ef: float, custo_fixo_total: float
     return round(custo_base_cat * max(0.0, n_equipes_ef - 1.0), 2)
 
 
+# ADR-162: share (0.5=empate) fora de [1-LIMIAR, LIMIAR] declara causa única; dentro
+# da faixa (interação material entre as duas causas) declara "MISTO". Mesmo espírito
+# da banda de tolerância de VAL-PROD-VS-PU (10%), só que centrada em 50% em vez de 100%.
+_CAUSA_DOMINANTE_LIMIAR_SHARE = 0.65
+
+
+def _pe_resolve_h_i_gamma_o(
+    custo_fixo_total: float,
+    custo_operacional_real: float,
+    machine_weeks_brutas: float,
+    horas_dia: float,
+    dias_semana: float,
+) -> tuple[float, float] | None:
+    """H_i (real, pós-cronograma) e γ_i^o (taxa operacional real) — compartilhado por
+    causa_dominante (D1) e horas_reais_min/max (D3), mesma condição de resolvibilidade
+    (P5: None quando custo_operacional_real<=0 ou schedule ainda ausente)."""
+    h_i = horas_dia * dias_semana * machine_weeks_brutas
+    if h_i <= 0 or custo_operacional_real <= 0:
+        return None
+    return h_i, custo_fixo_total / h_i
+
+
+def _pe_causa_dominante(
+    plan: Any,
+    custo_venda_total: float,
+    custo_fixo_total: float,
+    custo_operacional_real: float,
+    machine_weeks_brutas: float,
+    horas_dia: float,
+    dias_semana: float,
+) -> tuple[Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO", "INDETERMINADO"], float, float]:
+    """ADR-162 D1: decompõe delta (= custo_venda_total − custo_fixo_total) em duas causas.
+
+        H_i           = horas_dia · dias_semana · machine_weeks_brutas      (real, pós-cronograma)
+        H_cat         = Q_i / ρ_i                                          (nominal, catálogo)
+        γ_i^v         = custo_venda_total / H_cat                          (taxa de venda)
+        γ_i^o         = custo_fixo_total / H_i                             (taxa operacional real)
+
+    Partição SIMÉTRICA (Shapley/Bennet — resolve a ambiguidade clássica de decomposição
+    preço×quantidade em dois fatores: a convenção "ingênua" atribuiria o termo de
+    interação (γ_i^v−γ_i^o)·(H_cat−H_i) inteiro a uma das duas causas, dependendo de qual
+    convenção se escolhe — arbitrário e sujeito a inverter o rótulo "dominante" trocando
+    de convenção. A partição simétrica divide essa interação meio a meio):
+
+        T_cronograma   = (H_cat − H_i) · (γ_i^v + γ_i^o) / 2
+        T_precificacao = (γ_i^v − γ_i^o) · (H_cat + H_i) / 2
+
+    T_cronograma + T_precificacao == delta por construção (verificado algebricamente:
+    os termos cruzados γ_i^v·H_i e γ_i^o·H_cat se cancelam na soma).
+
+    causa_dominante por participação relativa (share = |T_cronograma| / (|T_cronograma| +
+    |T_precificacao|)), não por "quem é maior" simples — uma divisão 51/49 não sustenta
+    afirmar uma causa única:
+      - share >= LIMIAR (0.65)      -> "CRONOGRAMA"
+      - share <= 1 - LIMIAR (0.35)  -> "PRECIFICACAO"
+      - caso contrário               -> "MISTO" (nenhuma causa isolada explica a maior parte)
+
+    "INDETERMINADO" (nunca um valor inventado) quando:
+      - ρ_i (plan.produtividade_catalogo) não resolvido — Fonte 1 bottom-up (NEP-032) não
+        aplicou para este item (override manual, ou fallback de composição — issue #132);
+      - H_i real não resolvível — custo_operacional_real <= 0 ou schedule ainda ausente
+        (machine_weeks_brutas <= 0) — P5: causa_dominante é sempre diagnóstico pós-cronograma,
+        nunca validação prospectiva de mobilização.
+    """
+    q = float(getattr(plan, "quantitativo", 0.0) or 0.0) if plan else 0.0
+    rho = float(getattr(plan, "produtividade_catalogo", 0.0) or 0.0) if plan else 0.0
+
+    resolved = _pe_resolve_h_i_gamma_o(
+        custo_fixo_total, custo_operacional_real, machine_weeks_brutas, horas_dia, dias_semana
+    )
+    if q <= 0 or rho <= 0 or resolved is None:
+        return "INDETERMINADO", 0.0, 0.0
+    h_i, gamma_o = resolved
+
+    h_cat = q / rho
+    gamma_v = custo_venda_total / h_cat
+
+    t_cronograma = (h_cat - h_i) * (gamma_v + gamma_o) / 2.0
+    t_precificacao = (gamma_v - gamma_o) * (h_cat + h_i) / 2.0
+
+    denom = abs(t_cronograma) + abs(t_precificacao)
+    if denom <= 0:
+        # Ambos os termos nulos (delta ~0 e sem gap de taxa nem de horas) — não há causa
+        # a atribuir, mas os dados existem (diferente de INDETERMINADO): "MISTO" é o rótulo
+        # honesto para "nenhuma causa presente", não "não foi possível calcular".
+        causa: Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO"] = "MISTO"
+    else:
+        share_cronograma = abs(t_cronograma) / denom
+        if share_cronograma >= _CAUSA_DOMINANTE_LIMIAR_SHARE:
+            causa = "CRONOGRAMA"
+        elif share_cronograma <= 1.0 - _CAUSA_DOMINANTE_LIMIAR_SHARE:
+            causa = "PRECIFICACAO"
+        else:
+            causa = "MISTO"
+
+    return causa, round(t_cronograma, 2), round(t_precificacao, 2)
+
+
+def _pe_horas_reais_min_max(
+    custo_venda_total: float,
+    teto_rs: float | None,
+    custo_fixo_total: float,
+    custo_operacional_real: float,
+    machine_weeks_brutas: float,
+    horas_dia: float,
+    dias_semana: float,
+) -> tuple[float | None, float | None]:
+    """ADR-162 D3: intervalo de horas reais tolerado pelo critério `0 < Δ_i < Γ` (P3),
+    reparametrizado pela taxa operacional real γ_i^o:
+
+        (custo_venda_total − Γ) / γ_i^o  <  H_i  <  custo_venda_total / γ_i^o
+
+    Informativo (relatório/Excel), nunca gate de schedule (skill 04/05) — D3 do ADR.
+    (None, None) quando Γ não está configurado no perfil (`teto_ponto_equilibrio_rs`,
+    opt-in, default desabilitado) ou quando γ_i^o não é resolvível (mesma condição de
+    D1/P5 — via `_pe_resolve_h_i_gamma_o`).
+    """
+    if teto_rs is None:
+        return None, None
+    resolved = _pe_resolve_h_i_gamma_o(
+        custo_fixo_total, custo_operacional_real, machine_weeks_brutas, horas_dia, dias_semana
+    )
+    if resolved is None:
+        return None, None
+    _h_i, gamma_o = resolved
+    if gamma_o <= 0:
+        return None, None
+    return round((custo_venda_total - teto_rs) / gamma_o, 2), round(custo_venda_total / gamma_o, 2)
+
+
+def _validate_pe_teto(pe: PontoEquilibrio, teto_rs: float | None, validacoes: list) -> None:
+    """VAL-PONTO-EQUILIBRIO-TETO (ADR-162 D2): AVISO quando Γ está configurado no perfil
+    e delta >= Γ — teto de competitividade excedido. Nunca ERRO (mesma filosofia
+    não-bloqueante do resto da skill 06, ver validador_cobertura_item.py:13-18); causa_dominante
+    (D1) diagnostica se o excesso é de cronograma ou de precificação, para piso ou teto igualmente.
+    """
+    if teto_rs is None or pe.delta < teto_rs:
+        return
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-PONTO-EQUILIBRIO-TETO",
+            status="AVISO",
+            mensagem=(
+                f"Item '{pe.item_id}': margem de R$ {pe.delta:,.2f} excede o teto de "
+                f"competitividade configurado (Γ=R$ {teto_rs:,.2f}). causa_dominante="
+                f"{pe.causa_dominante} — reavaliar preço/produtividade conforme a causa."
+            ),
+        )
+    )
+
+
 def _pe_status_frentes(frentes_nec: float) -> Literal["OK", "AVISO", "CRITICO"]:
     """Threshold status_frentes: OK ≤ 1.25, AVISO ≤ 1.5, CRITICO > 1.5."""
     if frentes_nec <= 1.25:
@@ -306,6 +457,8 @@ def _build_pe_for_equipe(
     particao_por_item: dict | None = None,
     idle_por_item: dict | None = None,
     pool_total_por_item: dict | None = None,
+    regime: Any = None,
+    teto_rs: float | None = None,
 ) -> PontoEquilibrio | None:
     """Constrói PontoEquilibrio para uma equipe. Retorna None se custo_fixo ≤ 0.
 
@@ -314,6 +467,13 @@ def _build_pe_for_equipe(
     - sched_por_item: fatores de lesão de produtividade (fator_clima, n_equipes, semanas_lesadas).
     ADR-083:
     - particao_por_item: {item_id: CustoParticionadoItem} — decomposição causal do gap_pool.
+    ADR-162:
+    - regime: RegimeTrabalho do projeto (horas_dia/dias_semana) — usado por causa_dominante (D1)
+      e horas_reais_min/max (D3) para converter machine_weeks_brutas em horas reais (H_i).
+      None -> causa_dominante="INDETERMINADO", horas_reais_min/max=None.
+    - teto_rs: Γ, teto de competitividade opt-in do perfil (`teto_ponto_equilibrio_rs`,
+      None = desabilitado). Usado só por horas_reais_min/max (D3) e VAL-PONTO-EQUILIBRIO-TETO
+      (D2, emitido em _bpe_process_equipe — precisa de teto_rs, não só do pe já construído).
     """
     permanencia_base = float(
         getattr(equipe, "permanencia_efetiva_meses", 0.0) or getattr(equipe, "permanencia_meses", 0.0) or 1.0
@@ -345,6 +505,21 @@ def _build_pe_for_equipe(
 
     _Q, pu_operacional_autonomo, machine_weeks_brutas, machine_weeks_efetivas, eta_real = _pe_camada2_producao(
         plan, custo_total_autonomo, lesao
+    )
+
+    horas_dia = float(getattr(regime, "horas_dia", 0.0) or 0.0)
+    dias_semana = float(getattr(regime, "dias_semana", 0.0) or 0.0)
+    causa_dominante, t_cronograma, t_precificacao = _pe_causa_dominante(
+        plan, custo_venda_total, custo_fixo_total, custo_operacional_real, machine_weeks_brutas, horas_dia, dias_semana
+    )
+    horas_reais_min, horas_reais_max = _pe_horas_reais_min_max(
+        custo_venda_total,
+        teto_rs,
+        custo_fixo_total,
+        custo_operacional_real,
+        machine_weeks_brutas,
+        horas_dia,
+        dias_semana,
     )
 
     custo_pool_total, custo_pool_por_unidade, economia_pool_abs = _pe_camada3_pool(
@@ -415,6 +590,13 @@ def _build_pe_for_equipe(
         custo_pool_total=custo_pool_total,
         custo_pool_por_unidade=custo_pool_por_unidade,
         economia_pool_abs=economia_pool_abs,
+        # ADR-162 D1
+        causa_dominante=causa_dominante,
+        t_cronograma=t_cronograma,
+        t_precificacao=t_precificacao,
+        # ADR-162 D3
+        horas_reais_min=horas_reais_min,
+        horas_reais_max=horas_reais_max,
     )
 
 

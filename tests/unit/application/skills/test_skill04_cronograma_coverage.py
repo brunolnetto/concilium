@@ -646,16 +646,6 @@ class TestCatalogLookupBuilders:
 
 
 class TestCustoHoraEquipe:
-    def test_custo_hora_referencia_overrides_all(self):
-        result = _custo_hora_equipe({}, {}, 160.0, 0.2, custo_hora_referencia=100.0)
-        assert result == pytest.approx(100.0)
-
-    def test_custo_hora_referencia_zero_not_override(self):
-        composicao = {"funcoes": [{"funcao_id": "MO-01", "num_pessoas": 1}]}
-        insumos = {"MO-01": {"preco_unitario": 3200.0, "unidade": "mes"}}
-        result = _custo_hora_equipe(composicao, insumos, 160.0, 0.0, custo_hora_referencia=0.0)
-        assert result == pytest.approx(20.0)
-
     def test_funcao_mes_converts_to_hourly(self):
         composicao = {"funcoes": [{"funcao_id": "MO-01", "num_pessoas": 1}]}
         insumos = {"MO-01": {"preco_unitario": 1600.0, "unidade": "mes"}}

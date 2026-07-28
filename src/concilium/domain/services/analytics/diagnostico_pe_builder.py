@@ -190,9 +190,16 @@ def _build_gap_fatores(
 
 
 def _resolve_pe_prices(pe: Any, plan: Any, ca: Any) -> tuple[float, float]:
-    """Retorna (preco_venda, custo_real) priorizando dados de plano/ca sobre PE."""
+    """Retorna (preco_venda, custo_real) priorizando dados de plano/ca sobre PE.
+
+    ADR-162: `preco_venda` usa `sem_bdi` — PE compara custo×custo (BDI é margem
+    deliberada aplicada depois do equilíbrio, ver `_balanco_pe.py::_bpe_build_lookup_maps`).
+    Antes desta correção, este era o único ponto da máquina de PE ainda usando
+    `com_bdi`, inconsistente com `_ponto_equilibrio.py` (venda_sem_bdi/pu_catalogo_unitario)
+    e com `_compute_recalibracao_l` abaixo (mesmo arquivo, já usa `sem_bdi` para `C_cat`).
+    """
     preco_venda = float(
-        (plan.subtotal.com_bdi.total if plan and plan.subtotal and plan.subtotal.com_bdi else 0) or pe.custo_venda_cpu
+        (plan.subtotal.sem_bdi.total if plan and plan.subtotal and plan.subtotal.sem_bdi else 0) or pe.custo_venda_cpu
     )
     custo_real = float((ca.custo_total_atividade if ca else 0) or pe.custo_operacional_real or pe.custo_fixo_equipe)
     return preco_venda, custo_real

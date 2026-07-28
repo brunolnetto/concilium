@@ -41,75 +41,6 @@ def _resolve_prod_lookup(catalogo: dict) -> dict:
     return {p.get("id"): p for p in fonte if p.get("id")}
 
 
-def _resolve_calibration_fractions(cpu: dict, prod_lookup: dict) -> tuple[float, float, float, float] | None:
-    """Resolve (C_ref, frac_mo, frac_eq, frac_diesel) a partir do PU_sbdi; None se não calibrável."""
-    prod_id = cpu.get("producao_id_ref") or ""
-    prod = prod_lookup.get(prod_id) or {}
-    C_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
-    if C_ref <= 0.0:
-        return None
-
-    sbdi = cpu.get("precos_unitarios_sbdi") or {}
-    pu_mo = float(sbdi.get("mo", 0.0) or 0.0)
-    pu_eq = float(sbdi.get("equipamentos", 0.0) or 0.0)
-    pu_diesel = float(sbdi.get("diesel", 0.0) or 0.0)
-    pu_total = pu_mo + pu_eq + pu_diesel
-    if pu_total <= 0.0:
-        return None
-
-    # Decompor pelas frações do PU_sbdi
-    return C_ref, pu_mo / pu_total, pu_eq / pu_total, pu_diesel / pu_total
-
-
-def _calibrar_custos_por_cref(
-    cpu: dict,
-    prod_lookup: dict,
-    horas_dia: float,
-    custo_mo: float,
-    custo_encargos: float,
-    custo_mo_base: float,
-    custo_eq: float,
-    custo_comb: float,
-) -> tuple[float, float, float, float, float]:
-    """NEP-029/S1: recalibra custos mensais usando custo_hora_total_referencia do catálogo.
-
-    Os preços individuais de insumos do catálogo divergem do custo calibrado pela planilha
-    (custo_hora_total_referencia), gerando custo autônomo inconsistente com o pool.
-    Usando precos_unitarios_sbdi como frações e C_ref como base, a equipe autônoma
-    fica alinhada com o pool (mesmo custo_unit_semanal).
-
-    Retorna (custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb) calibrados.
-    Sem alteração quando C_ref ausente ou insumos zerados (fallback silencioso).
-    """
-    fracs = _resolve_calibration_fractions(cpu, prod_lookup)
-    if fracs is None:
-        return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
-    C_ref, frac_mo, frac_eq, frac_diesel = fracs
-
-    # Custo total por mês calibrado = C_ref × horas_semana × SEMANAS_POR_MES
-    horas_semana = horas_dia * 6  # dias_semana fixo via regime
-    custo_mes_ref = C_ref * horas_semana * SEMANAS_POR_MES
-
-    # O PU_sbdi de MO já inclui encargos (B_base × (1+enc)) — manter enc proporcional
-    custo_mo_cal = custo_mes_ref * frac_mo  # inclui encargos
-    custo_eq_cal = custo_mes_ref * frac_eq
-    custo_comb_cal = custo_mes_ref * frac_diesel
-
-    # Derivar custo_mo_base e custo_encargos mantendo a proporção original
-    mo_total_orig = custo_mo if custo_mo > 0 else custo_mo_cal
-    frac_enc = custo_encargos / mo_total_orig if mo_total_orig > 0 else 0.0
-    custo_mo_base_cal = round(custo_mo_cal * (1.0 - frac_enc), 2)
-    custo_encargos_cal = round(custo_mo_cal * frac_enc, 2)
-
-    return (
-        round(custo_mo_cal, 2),
-        custo_encargos_cal,
-        custo_mo_base_cal,
-        round(custo_eq_cal, 2),
-        round(custo_comb_cal, 2),
-    )
-
-
 def _setup_dimensionamento_context(
     canonical_in: CanonicalModel,
     inputs: dict,
@@ -150,26 +81,30 @@ def _resolve_num_equipes_paralelas(cron: Any) -> int:
 
 
 def _resolve_permanencia_e_custo_total_ajustados(
-    team_weeks: float,
-    num_equipes_paralelas: int,
-    custo_total: float,
+    ativos: int,
+    custo_1frente: float,
     custo_mat: float,
     custo_ocioso: float,
     custo_mob_desmob: float,
 ) -> tuple[float, float]:
-    """ADR-091: divide permanência e custo total pelo número de equipes paralelas (n_frentes).
+    """ADR-162 D4: permanência e custo total na base de UMA frente de referência,
+    semana a semana (`_sum_1frente_cost`) — substitui a versão anterior (ADR-091), que
+    dividia o agregado multi-frente (`team_weeks`/`custo_total`) por um único
+    `num_equipes_paralelas` constante.
 
-    CRÍTICO: team_weeks já vem do cronograma SOMANDO o num_equipes para cada semana
-    (ex: 3 equipes × 32 semanas vem como 96 weeks) — dividir por num_equipes obtém a
-    permanência de UMA equipe.
+    Essa divisão por constante só reconstruía exatamente 1 frente quando o número de
+    frentes era constante em todas as semanas ativas; com rampa (mobilização/desmobilização
+    parcial, lesão climática reduzindo frentes efetivas em algumas semanas), subestimava a
+    permanência/custo de referência — verificado numericamente: rampa 1→3→1 ao longo de
+    7 semanas ativas subestimava a permanência em ~40% (0,9966 vs 1,6099 meses corretos).
+
+    `ativos` (contagem de semanas com `num_equipes > 0`) e `custo_1frente` (taxa semanal de
+    1 frente somada só nas semanas ativas, sem multiplicar por `num_equipes`) são robustos a
+    qualquer forma de rampa — a mesma fonte semanal-por-item já usada por `machine_weeks_brutas`
+    no diagnóstico `causa_dominante` (D1) do ADR-162.
     """
-    team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
-    permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
-    # custo_total_ajustado = custo total / n_frentes = custo de 1 frente (ADR-091)
-    custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
-    custo_total_final = round(
-        custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2
-    )
+    permanencia_efetiva = round(ativos / SEMANAS_POR_MES, 4)
+    custo_total_final = round(custo_1frente + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
     return permanencia_efetiva, custo_total_final
 
 
@@ -185,7 +120,6 @@ def _dimensionar_item_equipe(
     horas_dia: float,
     dias_uteis: float,
     preco_diesel: float,
-    prod_lookup: dict,
     validacoes: list,
 ) -> EquipeDireta:
     """Dimensiona a equipe direta de um item de EAP, agregando MO/encargos/equipamentos/custos."""
@@ -202,13 +136,10 @@ def _dimensionar_item_equipe(
     # Skill-05 apenas valida cobertura via VAL-EQUIP-MAT-01/02.
     custo_mat = 0.0
 
-    # NEP-029/S1: calibrar custos mensais pelo custo_hora_total_referencia do catálogo.
-    # precos_unitarios_sbdi fornece as frações mo/eq/diesel já calculadas pela planilha.
-    # Sem esta calibração, os insumos individuais divergem do C_ref e o custo autônomo
-    # fica ~2.5× menor que o pool, gerando "economia negativa" espúria no painel.
-    custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb = _calibrar_custos_por_cref(
-        cpu, prod_lookup, horas_dia, custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
-    )
+    # Sem calibração por custo_hora_total_referencia (removida): _processar_equipamentos_item
+    # já prioriza preco_h_unitario embutido na composição sobre o catálogo geral (ADR-132),
+    # o que por si só reproduz o custo de referência calibrado contra obra real (verificado
+    # para PROD-REJEITO-COMP-EQ1-4, delta < 0,003%) — o atalho por C_ref era redundante.
 
     # NEP-031 L3 / ADR-106 F2-bis: custo de mob/desmob por evento de transição de
     # recursos, separado em mob/demob — antes só o agregado era calculado, e os
@@ -216,13 +147,13 @@ def _dimensionar_item_equipe(
     # (nunca atribuídos), apesar do invariante documentado no modelo.
     custo_mob_mensal, custo_demob_mensal = _calc_custo_mob_desmob_split(comp, cron)
     custo_mob_desmob = round(custo_mob_mensal + custo_demob_mensal, 2)
-    custo_total, ativos, custo_comb_efetivo, _fixo_mensal, team_weeks, custo_ocioso = _calc_custo_cron(
-        cron, custo_mo, custo_eq, custo_comb
+    _custo_total, ativos, custo_comb_efetivo, _fixo_mensal, _team_weeks, custo_ocioso, custo_1frente = (
+        _calc_custo_cron(cron, custo_mo, custo_eq, custo_comb)
     )
     num_equipes_paralelas = _resolve_num_equipes_paralelas(cron)
 
     permanencia_efetiva, custo_total_final = _resolve_permanencia_e_custo_total_ajustados(
-        team_weeks, num_equipes_paralelas, custo_total, custo_mat, custo_ocioso, custo_mob_desmob
+        ativos, custo_1frente, custo_mat, custo_ocioso, custo_mob_desmob
     )
     # NEP-037: custo_fixo_mensal usa custo_mo_base (sem encargos) — encargos ficam em custo_encargos_mensal.
     fixo_mensal_total = round(custo_mo_base + custo_eq + custo_comb_efetivo + custo_mat, 2)
@@ -289,7 +220,6 @@ def _build_dimensionamento(
                 horas_dia,
                 dias_uteis,
                 preco_diesel,
-                prod_lookup,
                 validacoes,
             )
         )

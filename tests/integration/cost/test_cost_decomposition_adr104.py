@@ -75,17 +75,28 @@ class TestCostDecompositionInvariant:
             )
 
     def test_agis_custo_direto_matches_reference(self, agis_benchmark):
-        """AGIS: custo_direto instancial (pós TD-1/TD-3 + NEP-043 Bug 2) deve bater com baseline.
+        """AGIS: custo_direto instancial (pós TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4) deve bater com baseline.
 
         Histórico de baseline:
           pré-TD-1/TD-3:     R$ 44,259,799.68  — encargos duplos + pool sem n_frentes
           pós-TD-1/TD-3:     R$ 35,255,483.25  — TD-1/TD-3 corrigidos, ainda com encargos duplos
           pós-NEP-043 Bug 2: R$ 16,529,359.75  — encargos CLT não reaplicados sobre taxa all-in
+          pós-ADR-162 D4:    R$ 17,611,540.46  — permanência/custo de 1 frente corrigidos p/ rampa
 
         NEP-043 Bug 2 (2026-06-12): insumos AGIS têm nota_encargos="taxa horária já inclui
         encargos". O engine não deve multiplicar por (1 + enc_horista) uma taxa que já embute
         esses encargos. Correto: custo_fixo_mensal usa preco_unitario × horas_mes diretamente,
         sem replicação do fator CLT. Isso reduz custo_total em ~53% vs o baseline anterior.
+
+        ADR-162 D4 (2026-07-28): `_resolve_permanencia_e_custo_total_ajustados` dividia o
+        agregado multi-frente (`team_weeks`/`custo_total`) por um único `num_equipes_paralelas`
+        constante — exato só quando o número de frentes é constante em todas as semanas ativas.
+        Com rampa (ex: eap-1_6 no AGIS: team_weeks=72, ativos=25, max_n=4 → 72/4=18 semanas
+        estimadas vs. 25 semanas reais, ~28% de subestimação), a divisão por um único N
+        subestima a permanência/custo de referência. Corrigido via soma semana a semana
+        (`_sum_1frente_cost`, robusta a qualquer forma de rampa) — aumenta o agregado em ~6,55%
+        (o ajuste antigo só podia subestimar, nunca sobrestimar: `team_weeks/max_n <= ativos`
+        sempre, pela definição de `max_n`).
 
         sum(eq.custo_total) aqui é a soma dos custos de 1-frente por atividade.
         custo.direto_equipes = Σ(custo_total × n_frentes) é o custo real completo (~43.8M).
@@ -94,8 +105,8 @@ class TestCostDecompositionInvariant:
 
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
-        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 (encargos all-in, 1-frente)
-        expected = 16_529_359.75
+        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 (encargos all-in, 1-frente)
+        expected = 17_611_540.46
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (

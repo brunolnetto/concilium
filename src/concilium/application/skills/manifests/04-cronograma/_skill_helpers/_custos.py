@@ -118,7 +118,14 @@ def _custo_hora_combustivel_equip(equip: dict, ins: dict | None, n: float, diese
 
 def _custo_hora_equipamentos(composicao: dict, insumos_lookup: dict[str, dict]) -> float:
     """Soma custo horário de equipamentos + combustível da composição (NEP-029 D2,
-    termos custo_hora_eq + custo_hora_comb)."""
+    termos custo_hora_eq + custo_hora_comb).
+
+    ADR-132: ``preco_h_unitario`` na composição sobrepõe o ``preco_unitario`` do
+    insumo no catálogo geral (mesma precedência de `_process_one_equipamento`,
+    skill-05) — sem isso, uma composição calibrada com preço próprio por
+    equipamento diverge silenciosamente do catálogo geral quando este é
+    atualizado depois.
+    """
     custo_hora = 0.0
     diesel_ins = _resolve_diesel_insumo(insumos_lookup)
 
@@ -126,7 +133,10 @@ def _custo_hora_equipamentos(composicao: dict, insumos_lookup: dict[str, dict]) 
         eid = equip.get("equip_id") or ""
         n = float(equip.get("num_unidades", 1) or 1)  # planilha usa frações (0.17)
         ins = insumos_lookup.get(eid)
-        if ins:
+        preco_comp = equip.get("preco_h_unitario")
+        if preco_comp is not None:
+            custo_hora += n * float(preco_comp)
+        elif ins:
             pu = float(ins.get("preco_unitario", 0) or 0)
             custo_hora += n * pu  # equipment insumos are in R$/h
         custo_hora += _custo_hora_combustivel_equip(equip, ins, n, diesel_ins)
@@ -139,27 +149,26 @@ def _custo_hora_equipe(
     insumos_lookup: dict[str, dict],
     horas_mes: float,
     taxa_encargos: float,
-    custo_hora_referencia: float | None = None,
 ) -> float:
-    """Computa custo horário total da equipe a partir da composição padrão.
-
-    Quando ``custo_hora_referencia`` está disponível (planilha AGIS 2026-05), usa-o
-    diretamente sem precisar de lookup de insumos — elimina dependência de catálogo e
-    garante identidade exata P_canonico = C (produção da planilha).
+    """Computa custo horário total da equipe a partir da composição padrão, sempre bottom-up.
 
     Fórmula (NEP-029 D2):
       custo_hora_mo  = Σ funcoes: n_pessoas × (preco_unit / horas_mes) × (1 + taxa_encargos)
                        onde preco_unit está em R$/mês quando unidade='mes',
                             ou em R$/h quando unidade='h'
-      custo_hora_eq  = Σ equips: n_unidades × preco_hora_equip       (unidade='h')
+      custo_hora_eq  = Σ equips: n_unidades × preco_hora_equip       (unidade='h', ADR-132
+                       prioriza preco_h_unitario embutido na composição sobre o catálogo)
       custo_hora_comb = Σ equips: n_unidades × consumo_L_h × preco_diesel
       total          = custo_hora_mo + custo_hora_eq + custo_hora_comb
 
     Diesel é buscado pelos códigos MA-DIESEL-S10, MA-DIESEL ou MA-DIESEL-ESCALA.
     Retorna 0.0 se a composição estiver incompleta (insumos não encontrados).
+
+    Não há mais atalho via referência de catálogo (`custo_hora_total_referencia`):
+    verificado que, com a composição correta (ADR-132), este cálculo já reproduz
+    o valor de referência calibrado contra obra real (PROD-REJEITO-COMP-EQ1-4,
+    delta < 0,003%) — a referência era redundante, não autoritativa.
     """
-    if custo_hora_referencia and custo_hora_referencia > 0:
-        return float(custo_hora_referencia)
     custo_hora_mo = _custo_hora_mao_de_obra(composicao, insumos_lookup, horas_mes, taxa_encargos)
     custo_hora_eq_comb = _custo_hora_equipamentos(composicao, insumos_lookup)
     return custo_hora_mo + custo_hora_eq_comb
@@ -264,16 +273,7 @@ def _enrich_producao_canonico(
             continue
         pu_sbdi, prod, composicao = ctx
 
-        # Prioriza o custo horário de referência da planilha (gravado no registro de producao)
-        # — zero dependência de lookup de insumos, identidade exata P_canonico = C.
-        custo_hora_ref = prod.get("custo_hora_total_referencia")
-        custo_hora = _custo_hora_equipe(
-            composicao,
-            insumos_lookup,
-            horas_mes,
-            taxa_encargos,
-            custo_hora_referencia=custo_hora_ref,
-        )
+        custo_hora = _custo_hora_equipe(composicao, insumos_lookup, horas_mes, taxa_encargos)
         if custo_hora <= 0:
             continue
 

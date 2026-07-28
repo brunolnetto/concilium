@@ -187,6 +187,34 @@ class TestProcessPeItemEmptyActive:
         assert cross is False
 
 
+class TestResolvePePrices:
+    """ADR-162: preco_venda deve usar sem_bdi — PE compara custo×custo, BDI é margem
+    deliberada aplicada depois do equilíbrio (mesma convenção de _ponto_equilibrio.py e
+    de _compute_recalibracao_l, no mesmo módulo, que já usava sem_bdi para C_cat)."""
+
+    def _plan(self, sem_bdi_total: float, com_bdi_total: float):
+        subtotal = SimpleNamespace(
+            sem_bdi=SimpleNamespace(total=sem_bdi_total),
+            com_bdi=SimpleNamespace(total=com_bdi_total),
+        )
+        return SimpleNamespace(subtotal=subtotal)
+
+    def test_usa_sem_bdi_nao_com_bdi(self):
+        from concilium.domain.services.analytics.diagnostico_pe_builder import _resolve_pe_prices
+
+        plan = self._plan(sem_bdi_total=73_000.0, com_bdi_total=94_900.0)
+        pe = SimpleNamespace(custo_venda_cpu=0.0, custo_operacional_real=8_000.0, custo_fixo_equipe=7_000.0)
+        preco_venda, _custo_real = _resolve_pe_prices(pe, plan, ca=None)
+        assert preco_venda == 73_000.0
+
+    def test_fallback_pe_custo_venda_cpu_quando_sem_plano(self):
+        from concilium.domain.services.analytics.diagnostico_pe_builder import _resolve_pe_prices
+
+        pe = SimpleNamespace(custo_venda_cpu=12_345.0, custo_operacional_real=8_000.0, custo_fixo_equipe=7_000.0)
+        preco_venda, _custo_real = _resolve_pe_prices(pe, plan=None, ca=None)
+        assert preco_venda == 12_345.0
+
+
 class TestBuildRelatorioSummaryValidacoes:
     def _make_item(self, gap_rs: float, fator_gap_rs: float):
         from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, FatorPE

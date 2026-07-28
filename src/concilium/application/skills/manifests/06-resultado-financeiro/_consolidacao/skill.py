@@ -66,7 +66,7 @@ def run_consolidacao_financeira(
         custo_total_catalogo,
     ) = _build_resultado(canonical_in, inputs, validacoes, perfil)
 
-    ponto_equilibrio_items = _build_ponto_equilibrio(canonical_in, validacoes)
+    ponto_equilibrio_items = _build_ponto_equilibrio(canonical_in, validacoes, perfil)
     recon = ResultadoReconciliado(
         itens_aquisicao=[],
         delta_custo_total=0.0,

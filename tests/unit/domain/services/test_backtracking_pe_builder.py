@@ -19,6 +19,66 @@ class TestBacktrackingPEBuilder:
         result = _find_solucao([], "parametro")
         assert result is None
 
+    def _make_sol(self, parametro, roundtrip_valido=True):
+        from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
+
+        return SolucaoInversa(
+            parametro=parametro,
+            valor_atual=0.0,
+            valor_requerido=0.0,
+            delta_abs=0.0,
+            delta_pct=0.0,
+            impacto_preco_pct=0.0,
+            impacto_produtividade_pct=0.0,
+            impacto_recursos_pct=0.0,
+            impacto_prazo_semanas=0.0,
+            pe_gap_recalculado=0.0,
+            roundtrip_valido=roundtrip_valido,
+            erro_roundtrip=0.0,
+            confianca=5,
+        )
+
+    def test_selecionar_solucao_por_causa_precificacao(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _selecionar_solucao_por_causa
+
+        sols = [self._make_sol("L"), self._make_sol("P")]
+        sel = _selecionar_solucao_por_causa(sols, "PRECIFICACAO")
+        assert sel is sols[0]
+
+    def test_selecionar_solucao_por_causa_cronograma_prioriza_p(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _selecionar_solucao_por_causa
+
+        sols = [self._make_sol("L"), self._make_sol("T0_RAMP"), self._make_sol("P")]
+        sel = _selecionar_solucao_por_causa(sols, "CRONOGRAMA")
+        assert sel.parametro == "P"
+
+    def test_selecionar_solucao_por_causa_cronograma_cai_para_timing_sem_p(self):
+        """P sem solução válida -> cai para T0_RAMP (próximo da prioridade), não para None."""
+        from concilium.domain.services.analytics.backtracking_pe_builder import _selecionar_solucao_por_causa
+
+        sols = [self._make_sol("L"), self._make_sol("T0_RAMP")]
+        sel = _selecionar_solucao_por_causa(sols, "CRONOGRAMA")
+        assert sel.parametro == "T0_RAMP"
+
+    def test_selecionar_solucao_por_causa_misto_prioriza_combinada(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _selecionar_solucao_por_causa
+
+        sols = [self._make_sol("L"), self._make_sol("COMBINADA")]
+        sel = _selecionar_solucao_por_causa(sols, "MISTO")
+        assert sel.parametro == "COMBINADA"
+
+    def test_selecionar_solucao_por_causa_indeterminado_e_none(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _selecionar_solucao_por_causa
+
+        sols = [self._make_sol("L"), self._make_sol("P")]
+        assert _selecionar_solucao_por_causa(sols, "INDETERMINADO") is None
+
+    def test_selecionar_solucao_por_causa_ignora_roundtrip_invalido(self):
+        from concilium.domain.services.analytics.backtracking_pe_builder import _selecionar_solucao_por_causa
+
+        sols = [self._make_sol("L", roundtrip_valido=False)]
+        assert _selecionar_solucao_por_causa(sols, "PRECIFICACAO") is None
+
     def test_btpb_validacoes_empty(self):
         from concilium.domain.services.analytics.backtracking_pe_builder import _btpb_validacoes
 

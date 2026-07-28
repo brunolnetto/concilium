@@ -121,20 +121,22 @@ class TestCustoHoraEquipe:
         # Planilha: 1125.73 + 345.93 + 304.07 = 1775.73
         assert abs(ch - 1775.73) < 1.0, f"custo_hora={ch:.2f} esperado≈1775.73"
 
-    def test_custo_hora_referencia_overrides_composicao(self):
-        """Se custo_hora_total_referencia está no registro, usa diretamente sem lookup."""
-        comp = self._comp()  # vazio — não importa
-        ch = _s._custo_hora_equipe(comp, {}, HORAS_MES, ENCARGOS, custo_hora_referencia=1775.73)
-        assert abs(ch - 1775.73) < 1e-9
-        # P_canonico ≈ 231.87 (C da planilha)
-        pu_sbdi = 7.6583
-        P_can = ch / pu_sbdi
-        assert abs(P_can - 231.87) < 1.0, f"P_canonico={P_can:.2f} esperado≈231.87"
-
     def test_sem_insumos_retorna_zero(self):
         comp = self._comp(funcoes=[{"funcao_id": "MO-INEXISTENTE", "num_pessoas": 1}])
         ch = _s._custo_hora_equipe(comp, {}, HORAS_MES, ENCARGOS)
         assert ch == 0.0
+
+    def test_preco_h_unitario_composicao_sobrepoe_catalogo_geral(self):
+        """ADR-132: preco_h_unitario embutido no equipamento da composição prevalece
+        sobre insumo_lookup[equip_id].preco_unitario — mesma precedência de
+        _process_one_equipamento (skill-05). Sem isso, o atalho por
+        custo_hora_total_referencia (removido) era necessário para reproduzir o
+        custo real quando o catálogo geral diverge do preço calibrado da composição
+        (caso real: PROD-REJEITO-COMP-EQ1-4, catálogo geral ~14-54% divergente)."""
+        insumos = {"EQ-01": {"preco_unitario": 90.0, "unidade": "h"}}  # catálogo geral, desatualizado
+        comp = self._comp(equipamentos=[{"equip_id": "EQ-01", "num_unidades": 2, "preco_h_unitario": 138.8889}])
+        ch = _s._custo_hora_equipe(comp, insumos, HORAS_MES, ENCARGOS)
+        assert abs(ch - 2 * 138.8889) < 1e-4  # usa o embutido (138.8889), não o catálogo (90.0)
 
 
 # ── _enrich_producao_canonico ─────────────────────────────────────────────────

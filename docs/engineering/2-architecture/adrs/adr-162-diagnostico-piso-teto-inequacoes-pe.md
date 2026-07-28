@@ -1,0 +1,250 @@
+# ADR-162 — Diagnóstico do Ponto de Equilíbrio: Decomposição Causal Cronograma × Precificação
+
+**Status:** Implementado — Fase 0 (fundação bottom-up) ✅ — Fase 1 (D1, `causa_dominante`) ✅ — Fase 2 (D2 teto `Γ` + D3 `horas_reais_min`/`max`) ✅ — Fase 3 (D4, permanência/custo de 1 frente robustos a rampa) ✅
+**Data:** 2026-07-28
+**Contexto:** MendesLobo Construtora — Concilium
+**Dependências:** ADR-060 (Diagnóstico de Ponto de Equilíbrio), ADR-061 (Inversão/Backtracking de PE), ADR-076 (Calibração PU/Frentes), ADR-083 (Decomposição Causal do Gap de Pool), ADR-132 (preço embutido na composição), NEP-029 (divergência de caminhos de precificação)
+
+---
+
+## Contexto
+
+### Problema
+
+P1. **Formalização do usuário (conversa 28/07)** para o Ponto de Equilíbrio de negócios, por atividade `i`:
+
+```
+C^D_i      = custo de venda      = p_i^c · Q_i,  onde p_i^c = γ_i / ρ_i (PU catálogo)
+C̃^D_i      = custo operacional   = Σ_j^{N_i} γ_i · h · d · m_ij   (base contrato semanal, N_i semanas, m_ij frentes na semana j)
+
+Δ_i = C^D_i − C̃^D_i = γ_i · ( Q_i/ρ_i − h·d·Σ_j m_ij )
+
+Critério racional: 0 < Δ_i < Γ
+```
+
+O piso (`Δ_i > 0`, venda cobre o operacional) **já existe** no código: `delta = custo_venda_total - custo_fixo_total` em `_build_pe_for_equipe` (`_ponto_equilibrio.py:325`), com `status_validacao = "OK" if delta >= 0 else "ERRO"` (linha 387). O teto de competitividade `Γ` **não existe** — nenhuma validação hoje limita o quão positivo `Δ_i` pode ficar. Os únicos bilaterais existentes no sistema são de outra métrica: o Semáforo de Margem (`m_alvo_min ≤ m ≤ m_alvo_max`, percentual sobre resultado/receita, `MEMORIAL_FORMULAS.md` §12.4) e o `θ_PE` legado (`Δ_pct = |C_unit,real − P_cpu|/C_unit,real > θ_PE`, 15% AGIS / 5% MendesLobo, §13) — nenhum é um teto absoluto sobre `Δ_i` por atividade.
+
+### Nota de revisão (28/07) — correção de um argumento matemático incorreto
+
+Uma versão anterior desta ADR afirmava que "o sinal de `Δ_i` é independente de `γ_i`" e, a partir disso, propunha rotular violação de **piso** como problema de **cronograma** e violação de **teto** como problema de **custo/precificação**. O usuário corretamente apontou a fragilidade do argumento: `Δ_i = γ_i·(...)` mostra `γ_i` como fator explícito, então chamar isso de "independência" sem qualificação era leviano.
+
+Refazendo a conta com rigor: sob a fórmula P1 (um único `γ_i` alimentando *tanto* o preço de venda quanto o custo operacional), não é só o sinal que é invariante a `γ_i` — a **margem relativa inteira** também é:
+
+```
+Δ_i / C^D_i = 1 − (ρ_i · h · d · Σ_j m_ij) / Q_i
+```
+
+`γ_i` cancela por completo. Isso é mais forte do que "independência de sinal" e na verdade **invalida** a separação piso=cronograma / teto=custo: se `Γ` fosse percentual (preservando a mesma invariância do piso), a violação de teto seria **tão de cronograma quanto o piso** — nenhum dos dois enxergaria erro de precificação. E se `Γ` for absoluto em R$ (como D2 propõe), o que ele mede não é "preço mal calibrado", é só **escala do contrato** (`γ_i` grande = atividade cara em termos absolutos) — não um sinal de precificação errada.
+
+Para existir de fato um modo de falha de precificação, o modelo precisa de **duas** taxas — a embutida no catálogo/venda (`γ_i^v`) e a real de execução (`γ_i^o`) — que já são, na prática, fontes distintas no código hoje: `custo_venda_total` vem do PU de catálogo; `custo_fixo_total`/`custo_operacional_real` vêm do custo real contratado da equipe. A formalização P1 com um único `γ_i` é a hipótese simplificadora "taxa de venda = taxa real"; a decisão desta ADR (D1) abandona essa hipótese e decompõe `Δ_i` nas duas taxas.
+
+P2. **Decomposição aditiva correta (duas taxas).** Seja `H_i = h·d·Σ_j m_ij` o total de horas operacionais reais da atividade (quantidade física, vem do schedule — `n_frentes`/permanência já existentes em `_build_pe_for_equipe`, e `h`/`d` de `RegimeTrabalho`). Somando e subtraindo `γ_i^v·H_i`:
+
+```
+Δ_i = (γ_i^v/ρ_i)·Q_i − γ_i^o·H_i
+    = γ_i^v·(Q_i/ρ_i − H_i)          +  (γ_i^v − γ_i^o)·H_i
+    = T_cronograma                   +  T_precificacao
+```
+
+- **T_cronograma** `= γ_i^v·(Q_i/ρ_i − H_i)`: gap de capacidade/produtividade, precificado consistentemente pela taxa de venda — positivo quando o catálogo previa menos horas do que as realmente alocadas (excesso de frentes/lesão de produtividade), negativo no caso contrário.
+- **T_precificacao** `= (γ_i^v − γ_i^o)·H_i`: proporcional ao **gap de taxa** ponderado pelas horas reais — positivo quando a taxa de venda excede a real (folga de margem por precificação favorável), negativo quando a taxa real excede a de catálogo (erosão por custo/encargo subestimado — mesma classe dos achados de BDI/`T_efetivo` já mapeados em `nep043-cr-reconciliacao`).
+
+Esta decomposição, ao contrário da anterior, atribui a causa **por magnitude relativa dos dois termos**, não por qual limite (`0` ou `Γ`) foi cruzado — um estouro de piso pode ser majoritariamente `T_precificacao` (custo real muito acima do catalogado) tanto quanto majoritariamente `T_cronograma`, e o mesmo vale para um estouro de teto. A decomposição causal agregada do ADR-060 (η, clima, calendário, cross-term, quantização) continua sendo a análise de referência mais completa — esta ADR propõe um recorte mais rápido e direto, nas mesmas duas famílias de causa, sem precisar rodar o pipeline causal inteiro.
+
+P3. **O intervalo de horas reais, reparametrizado pela taxa real (não pela taxa única).** Com `γ_i^o = custo_operacional_real / H_i` (quando `H_i > 0`), o critério `0 < Δ_i < Γ` vira diretamente um intervalo de horas reais toleradas:
+
+```
+(C^D_i − Γ) / γ_i^o  <  H_i  <  C^D_i / γ_i^o
+```
+
+equivalente, em frentes-semana, a dividir por `h·d`. Hoje o pipeline calcula `Δ_i` só *depois* de o schedule já ter sido montado (skill 06, pós skill 04/05) e reporta erro a posteriori; este intervalo poderia ser consultado *antes* de alocar frentes, como bound de planejamento por atividade — validação adicional, complementar às existentes, não uma mudança de quando o schedule roda.
+
+P4. A formalização do usuário usa `C̃^D_i` em base **semanal explícita por frentes** (`Σ_j h·d·m_ij`). O código hoje usa base **mensal** (`equipe.custo_fixo_mensal × permanencia_base`, `_ponto_equilibrio.py:320`) — granularidade agregada, sem abrir por semana/frente. Isso é suficiente para o piso (delta agregado) e para a decomposição de P2 (que só precisa de `H_i` total, não por semana), mas insuficiente para apontar *em qual semana* um eventual estouro ocorre (ramp-up vs ramp-down) — o mesmo problema que o cross-term de timing do ADR-061 (`t0*`, minimiza `Cov(n,p)`) já resolve por outro caminho (função objetivo global, não limite por-atividade-por-semana).
+
+P5. **`H_i = h·d·Σ_j^{N_i} m_ij` só existe por completo depois do cronograma (skill-04), nunca antes — e a razão não é simétrica entre `m_ij` e `N_i`.**
+
+`m_ij` (frentes na semana `j`) tem uma estimativa disponível cedo: `_calendario.py:122` deriva a duração inicial de uma atividade por `duration_weeks = ⌈Q_i/(ρ_i·h·d·n_equipes)⌉`, onde `n_equipes` (≈ `m_ij` constante) vem de uma decisão de mobilização/dimensionamento (skill 03/05) anterior ao cronograma. Até aqui, o número de frentes *pretendido* é conhecido antes do schedule rodar.
+
+Mas **`N_i` (e o `m_ij` semana-a-semana real) só se resolve depois do cronograma completo**, por dois motivos distintos:
+
+1. Essa duração inicial é só um parâmetro *fixo* de entrada para o CP-SAT (`cpsat_scheduler.py`) — o solver decide apenas os *start times* sujeitos a precedência e contenção de recursos com outras atividades; a duração nominal não é variável de decisão nessa etapa.
+2. O `N_i` **efetivo** vem de outro lugar: `_assembly.py:201-207` deriva `semanas_com_producao` (e portanto `N_i = end_week − start_week + 1`) da distribuição semanal de produção *já ajustada* por clima/praticabilidade (η) e pelo `ramp_profile` (rampa de subida/descida de frentes) — os mesmos fatores causais do ADR-060/061. Ou seja, mesmo o `m_ij` por semana carrega uma componente que só se resolve após clima e rampa serem aplicados, não é puramente a mobilização planejada.
+
+**Implicação para o desenho desta ADR**: o intervalo de P3 (`(C^D_i−Γ)/γ_i^o < H_i < C^D_i/γ_i^o`) pode ser calculado cedo — depende só de `Q_i`, `ρ_i`, `Γ` e taxas, todos dado de catálogo/perfil — e serve como **alvo de planejamento** antes do cronograma rodar. Mas `Δ_i`/`causa_dominante` (D1), que compara esse alvo contra o `H_i` **realizado**, é estritamente um **diagnóstico pós-cronograma** (pós skill-04, dentro de skill-06) — nunca uma validação prospectiva durante a mobilização. D1/D3 devem deixar essa dependência de ordem explícita na implementação (não é possível emitir `causa_dominante` nem popular `horas_reais_min/max` com dado realizado antes de skill-04 terminar).
+
+### Fase 0 — Fundação: eliminar o atalho por referência, sempre bottom-up (✅ implementado, 28/07)
+
+Discutindo P2, o usuário observou que `γ_i^v ≠ γ_i^o` "soa estranho — custo horário deveria ser algo único", e pediu para investigar a diferença real no código e, dependendo do achado, **remover completamente** qualquer atalho de cálculo por referência de catálogo, deixando a dedução sempre bottom-up.
+
+Investigação encontrou 3 caminhos onde `custo_hora_total_referencia` (C_ref) ainda funcionava como **atalho de cálculo** (não só de auditoria, ao contrário do que o NEP-032 já havia estabelecido para o lado de venda/skill-06):
+
+1. `_calibrar_custos_por_cref` (skill-05, `_dimensionamento_orquestracao.py`) — recalibrava `custo_mo`/`custo_eq`/`custo_comb` standalone usando C_ref × frações de `precos_unitarios_sbdi`.
+2. `_custo_hora_equipe(..., custo_hora_referencia=...)` (skill-04, `_custos.py`) — usava C_ref diretamente para derivar `P_canonico`, pulando o lookup de composição.
+3. `_resolve_custo_hora_ref_sem` (skill-05, `_pool_contrato_demanda.py`) — preferia C_ref sobre `custo_total_item/machine_weeks` no custo unitário semanal do pool.
+
+Em todo o catálogo, **apenas 4 CPUs** (`PROD-REJEITO-COMP-EQ1` a `EQ4`, mineração Serra Verde) de fato acionavam o atalho — o resto do sistema (incluindo `rfi-r02`, 100%) já caía no fallback bottom-up. Esses 4 são justamente o caso mais delicado: `custo_hora_total_referencia` ali é **medição real de campo** (`origem.tipo: "calibrado_contra_obra_real"`, com intervalo de confiança e desvio padrão), não uma planilha teórica — e uma tentativa anterior de eliminar essa dependência (memória `num-pessoas-fracionario-e-calibrado-nao-corrigir`) havia sido revertida por inflar o custo calculado.
+
+**Verificação numérica antes de remover** (não assumida): rodando o motor bottom-up real contra os 4 CPUs, o resultado cru divergia até 35% do C_ref — mas a causa não era o C_ref ser necessário, era um **bug** no motor: `_custo_hora_equipamentos` (skill-04) não respeitava a precedência do ADR-132 (`preco_h_unitario` embutido na composição sobre o preço do insumo no catálogo geral) — precedência que o skill-05 real já aplicava. Corrigido esse bug, o bottom-up passou a reproduzir C_ref com delta < 0,003% nos 4 casos (ex.: EQ1: C_ref=1517,0346 vs bottom-up=1517,0007). **Achado lateral**: o catálogo geral de insumos de equipamento já diverge hoje do preço embutido nessas composições (até 54%, ex. `E0027`: 138,89 embutido vs 90,00 no catálogo) — inofensivo enquanto o ADR-132 for respeitado, mas débito de dado a reconciliar depois.
+
+Com isso confirmado, os 3 atalhos foram removidos (não só marcados como legado) — `custo_hora_total_referencia` deixa de ser lido por qualquer caminho de cálculo, preservado apenas como campo histórico no JSON. Detalhes e nota de resolução em `nep-029-divergencia-caminhos-precificacao-unitaria.md` e `nep-043-reconciliacao-cr-custo-operacional-pu-catalogo.md`. Suíte completa sem regressão (14.441 testes, golden AGIS incluso).
+
+**Implicação para D1**: com a Fase 0, `γ_i^o` (taxa operacional real) não tem mais nenhuma fonte de override por catálogo — só pode divergir de `γ_i^v` por (a) override manual de PU no planejamento (brecha 1, issue #121, `VAL-PLAN-OVR-BDI-DIVERGE`) ou (b) divergência genuína entre o catálogo geral de insumos e a composição real (achado lateral acima). `T_precificacao` deixa de ser um "modo de falha frequente" e vira um sinal raro e de alto valor diagnóstico quando aparece.
+
+---
+
+## Decisão
+
+A Fase 0 acima já está implementada (nesta worktree, ainda não mergeada em `main`). D1 (causa_dominante) também já está implementada — ver Fase 1 no Plano de Implementação e Definition of Done abaixo. D2-D4 continuam **proposta de avaliação** — não implementadas.
+
+**Nota de implementação (D1)**: a fórmula literal do texto acima (`γ_i^v = p_i^c · ρ_i`) precisa de `ρ_i` (produtividade catalogada) como quantidade independente — não está disponível em nenhum campo já existente no builder de PE (skill-06/_consolidacao). Resolvida via plumbing real (opção escolhida explicitamente pelo usuário entre 3 alternativas nesta implementação): novo campo `Planejamento.produtividade_catalogo` (ρ_i, resolvido na Fonte 1 bottom-up de NEP-032, 0.0 quando não resolvível — Fonte 2/fallback de composição, ou override manual), threaded por `_precificacao/_skill_helpers/_preco_cpu.py` → `_process_item.py` → `_planejamento_entry.py`. `H_i` (real) usa `machine_weeks_brutas` (já existente, `Σ_j m_ij` — ver `PontoEquilibrio.machine_weeks_brutas`) × `RegimeTrabalho.horas_dia/dias_semana` (threaded de `canonical_in.projeto` até `_build_pe_for_equipe` via novo parâmetro `regime`). `γ_i^o` usa `custo_fixo_total` (não `custo_operacional_real` — garante a identidade `T_cronograma + T_precificacao == delta` por construção exata, já que `delta` existente usa `custo_fixo_total`, não `custo_operacional_real`).
+
+### D1 — Campo `causa_dominante`: decomposição Cronograma × Precificação, sem novo cálculo de origem
+
+Adicionar a `PontoEquilibrio` um campo derivado `causa_dominante: Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO", "INDETERMINADO"]`, computado sempre (não só quando `status_validacao == "ERRO"`) a partir de:
+
+- `γ_i^v = p_i^c · ρ_i` (taxa de venda implícita, de `custo_venda_total`/`Q_i` e a produtividade de catálogo já usada em `_pe_pu_calibrado`)
+- `H_i` (horas reais totais — deriva de `n_frentes`/`permanencia_base` já existentes em `_build_pe_for_equipe`, multiplicado por `h·d` do `RegimeTrabalho` do projeto)
+- `γ_i^o = custo_operacional_real / H_i` (taxa real implícita, quando `H_i > 0`)
+
+**Revisão (28/07, mesma sessão): partição simétrica em vez de convenção unilateral.** A formulação original decompunha `T_cronograma = γ_i^v·(Q_i/ρ_i − H_i)` e `T_precificacao = (γ_i^v−γ_i^o)·H_i` — uma escolha arbitrária de qual taxa/quantidade "fica fixa" ao medir cada efeito, o clássico problema de decomposição preço×quantidade em dois fatores (rate variance/efficiency variance, custeio padrão). A convenção alternativa (trocar quem fica fixo) é igualmente válida e atribui o termo de interação `(γ_i^v−γ_i^o)·(H_cat−H_i)` inteiro ao outro lado — podendo inverter qual causa é "dominante" trocando só a convenção. Corrigido com a **partição simétrica** (Shapley/Bennet, resolução padrão desse problema em contabilidade/economia — divide a interação meio a meio):
+
+```
+T_cronograma   = (H_cat − H_i) · (γ_i^v + γ_i^o) / 2
+T_precificacao = (γ_i^v − γ_i^o) · (H_cat + H_i) / 2
+```
+
+Ainda soma exatamente a `delta` (verificado algebricamente — os termos cruzados se cancelam), mas não depende de convenção.
+
+`causa_dominante` por **participação relativa**, não por "quem é maior" simples (uma divisão 51/49 não sustenta afirmar causa única): `share = |T_cronograma| / (|T_cronograma| + |T_precificacao|)`.
+- `share ≥ 0.65` → `"CRONOGRAMA"`; `share ≤ 0.35` → `"PRECIFICACAO"`; caso contrário → `"MISTO"` (nenhuma causa isolada explica a maior parte — inclui o caso `T_cronograma = T_precificacao = 0`, delta nulo com dados válidos).
+- `"INDETERMINADO"` quando `H_i`/`ρ_i`/`custo_operacional_real` não puderem ser resolvidos (ex.: fase de planejamento sem schedule real ainda montado — ver Riscos) — semanticamente diferente de `"MISTO"` (dado ausente vs causa ausente).
+
+Isso substitui o `causa_piso` binário da versão anterior desta ADR (que rotulava só por qual dos dois limites era cruzado, não pela causa real).
+
+**Dependência de ordem (P5)**: `H_i` só existe por completo depois de skill-04 (cronograma) rodar — `causa_dominante` é necessariamente um diagnóstico pós-cronograma (calculado em skill-06, sobre o `custo_operacional_real` já realizado), nunca uma validação prospectiva durante mobilização/dimensionamento (skill 03/05). `INDETERMINADO` cobre explicitamente qualquer chamada antes dessa etapa, não só o caso de `γ_i` não isolável.
+
+**Extensão: apontar para a solução inversa correspondente (ADR-061).** `BacktrackingPEItem` (`backtracking_pe.py`) ganha `solucao_causa_dominante: SolucaoInversa | None` — não é um cálculo novo, é uma **seleção** entre as `SolucaoInversa` que `BacktrackingPEBuilder` já computa (roundtrip validado) para o item, pelo mapa `causa_dominante → parametro`:
+
+| causa_dominante | parâmetro(s) tentados, em ordem | racional |
+|---|---|---|
+| `PRECIFICACAO` | `L` | gap é de taxa (γ_v≠γ_o) — margem fecha via preço, repasse ao cliente |
+| `CRONOGRAMA` | `P`, depois `T0_RAMP`, depois `T0_CALENDARIO` | gap é de eficiência (η) — produtividade recalibrada corrige a causa raiz; timing é alternativa quando P não tem solução válida. **Não é `n_max*`** — esse lever ataca `F_ind` (custo indireto por duração), uma classe de gap diferente da que `causa_dominante` decompõe, apesar de a versão anterior desta ADR (seção "Relacionados") sugerir esse mapeamento |
+| `MISTO` | `COMBINADA`, depois `L`, depois `P` | nenhuma causa isolada domina — combinação (mesmo padrão da opção "E" na UI proposta, §4.6/§7) |
+| `INDETERMINADO` | (nenhum) | sem causa identificada, sem lever a apontar |
+
+`BacktrackingPEBuilder.build()` lê `causa_dominante` de `canonical_in.ponto_equilibrio` (já calculado por skill-06 antes deste builder rodar) — nenhuma mudança na matemática de `_solve_L`/`_solve_P`/`_solve_timing`/`_solve_combinada`.
+
+### D2 — Teto `Γ` como parâmetro configurável, com validação nova `VAL-PONTO-EQUILIBRIO-TETO` (AVISO)
+
+`Γ` entra como campo de perfil (`config/contextos/<perfil>.json`, ao lado de `limiar_ponto_equilibrio` citado em `MEMORIAL_FORMULAS.md` §13), com fallback `None` (desabilitado) — perfis existentes não ganham um teto por default, evitando regressão silenciosa em contratos já aprovados. Quando configurado e `Δ_i ≥ Γ`, emite `VAL-PONTO-EQUILIBRIO-TETO` como AVISO (mesma filosofia não-bloqueante de todo o resto da skill 06 — ver `validador_cobertura_item.py:13-18`), nunca ERRO. Diferente da versão anterior, esta ADR **não afirma** que estourar `Γ` seja intrinsecamente um problema de preço — o campo `causa_dominante` (D1) é quem diagnostica isso caso a caso, para violação de piso ou de teto igualmente.
+
+### D3 — Expor o intervalo de horas reais como campo informativo, não como gate de schedule
+
+Adicionar `horas_reais_min`/`horas_reais_max` (derivados de `(C^D_i − Γ)/γ_i^o` e `C^D_i/γ_i^o`, P3) ao `PontoEquilibrio` quando `Γ` e `γ_i^o` estiverem disponíveis — informativo no relatório/UI (mesma seção EQUILIBRIO do Excel), **não** um bloqueio no momento de montar o schedule (skill 04/05). Acoplar ao RCPSP é mudança de escopo maior e fica fora desta proposta.
+
+**Nuance de P5**: o intervalo em si (`Q_i/ρ_i`-dependente, não `H_i`-dependente) *poderia* ser calculado antes do cronograma, como alvo de planejamento — mas como `PontoEquilibrio` só é construído em skill-06 (pós skill-04/05), esta ADR não propõe uma consulta antecipada nesta fase; ficaria para um uso futuro fora deste escopo (ex.: uma tool de pré-checagem que leia só o catálogo, sem depender de `PontoEquilibrio`).
+
+### D4 — Migração para base semanal-por-frente: implementada, mas não onde o texto original previa
+
+**Nota de implementação (28/07, mesma sessão).** O texto original de D4 (abaixo, preservado por transparência) apontava `project_ocupacao_semanal`/ADR-152 como a fonte de dados semanal-por-item faltante, condicionando a migração à existência dessa fonte. Investigação mostrou que essa condição estava mal colocada: `project_ocupacao_semanal` está de fato dormente (nenhum código de produção o consome) e, mesmo se estivesse ativo, agrega só por contrato, sem granularidade por item — não serviria para isto de qualquer forma. A fonte semanal-por-item correta **já existe e já está em produção**: `distribuicao_semanal`/`num_equipes`, a mesma usada por `machine_weeks_brutas` no D1.
+
+O gap real não era "falta fonte de dados" — é que `EquipeDireta.permanencia_efetiva_meses`/`.custo_total` (que `_build_pe_for_equipe` já usa preferencialmente para `custo_fixo_total`) são computados em skill-05 (`_resolve_permanencia_e_custo_total_ajustados`, rotulado "ADR-091") **dividindo o agregado multi-frente por um único `num_equipes_paralelas` constante** (`team_weeks/N`, `custo_total/N`). Essa divisão só reconstrói exatamente "1 frente de referência" quando o número de frentes é constante em todas as semanas ativas — com rampa (mobilização parcial, lesão climática reduzindo frentes efetivas em algumas semanas), subestima a permanência/custo de referência, porque `team_weeks/max(N) ≤ ativos` sempre (nunca `>`, pela definição de `max`). Verificado numericamente: rampa 1→3→1 ao longo de 7 semanas ativas subestimava a permanência em ~40% (0,9966 vs. 1,6099 meses corretos).
+
+**Correção**: `_sum_1frente_cost` (nova, em `_dimensionamento_itens.py`) soma a taxa semanal de 1 frente (sem multiplicar por `num_equipes`) uma vez por semana ATIVA — robusta a qualquer forma de rampa, porque não depende de nenhum `num_equipes_paralelas` constante. `_resolve_permanencia_e_custo_total_ajustados` passa a receber `ativos`/`custo_1frente` em vez de `team_weeks`/`num_equipes_paralelas`/`custo_total`. `num_equipes_paralelas`/`_resolve_num_equipes_paralelas` continuam existindo (usados para `EquipeDireta.num_equipes_base`, propósito diferente: `gap_escala`/diagnóstico em skill-06, não a base de custo). Como o fix é na fonte (skill-05), `_build_pe_for_equipe` (skill-06) **não precisou de nenhuma mudança** — o valor corrigido já chega pronto via `permanencia_efetiva_meses`/`custo_total`.
+
+Verificado contra o benchmark AGIS: `sum(eq.custo_total)` sobe de R$ 16.529.359,75 para R$ 17.611.540,46 (+6,55%), puxado majoritariamente por `eap-1_6` (`team_weeks=72, ativos=25, max_n=4` → 18 semanas estimadas vs. 25 reais, ~28% de subestimação antes da correção) — baseline do golden test `test_cost_decomposition_adr104.py::test_agis_custo_direto_matches_reference` atualizado, com o histórico de correções documentado no docstring do teste (mesmo padrão das correções TD-1/TD-3/NEP-043 Bug 2 já registradas ali).
+
+---
+
+**Texto original da proposta (preservado por transparência):** "Não migrar a base operacional de mensal para semanal-por-frente nesta ADR." A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual semana um estouro ocorre, mas migrar `custo_fixo_total` de mensal para essa forma explícita foi tratado como mudança de modelo de dados maior que tocaria `_build_pe_for_equipe` e potencialmente o schedule real (ADR-152, `project_ocupacao_semanal`, citado como fonte candidata — ver nota acima sobre por que essa fonte não era a correta). Registrado como Fase 3 candidata, condicionada a essa fonte semanal já existir de fato ligada ao item de EAP — condição satisfeita, mas por `distribuicao_semanal`, não por ADR-152.
+
+---
+
+## Alternativas Rejeitadas
+
+| ID | Alternativa | Motivo |
+|---|---|---|
+| A1 | Implementar `Γ` como ERRO bloqueante (nunca aprovar acima do teto) | Contraria a filosofia confirmada do resto da skill 06 (bloquear impediria a geração do relatório de diagnóstico); mantém o padrão AVISO com override no gate de aprovação |
+| A2 | Migrar `custo_fixo_total` para base semanal por frentes já nesta ADR | Escopo maior que o pedido (mudança de modelo de dados, não só de diagnóstico); deferido para Fase 3 condicionada a fonte de dados semanal por item já existir |
+| A3 | Usar o intervalo de horas reais (D3) como gate direto do solver RCPSP | Acoplaria restrição comercial ao motor de schedule; decisão de produto maior, fora do escopo de "extrair diagnóstico" que motivou esta ADR |
+| A4 | Manter a atribuição de causa binária por limite cruzado (piso→cronograma, teto→custo), como na primeira versão desta ADR | **Refutada matematicamente** (ver Nota de revisão): sob taxa única, nenhuma leitura adimensional de `Δ_i` carrega informação de custo; a atribuição correta exige duas taxas (D1) e compara magnitude dos termos, não qual limite foi cruzado |
+| A5 | Definir `Γ` como percentual (`Δ_i/C^D_i`) em vez de absoluto, para preservar invariância a `γ_i` | Rejeitada para esta ADR porque, sob a decomposição de duas taxas (P2), a invariância deixa de ser o critério relevante — `causa_dominante` já isola a componente de precificação independentemente da forma de `Γ`; manter `Γ` absoluto também é mais legível para o usuário de negócio ("quanto de margem em R$", não um percentual abstrato) |
+
+---
+
+## Consequências
+
+### Positivas
+
+| Efeito | Descrição |
+|---|---|
+| Diagnóstico causal correto | `causa_dominante` separa "dói no cronograma" de "dói na precificação" com uma decomposição aditiva matematicamente válida (P2), não uma correlação espúria com qual limite foi cruzado |
+| Reaproveita quase tudo do cálculo existente | `H_i`, `γ_i^v`, `γ_i^o` derivam de `n_frentes`/`permanencia_base`/`custo_venda_total`/`custo_operacional_real` já calculados; só `RegimeTrabalho.h`/`d` e a divisão final são novos |
+| Teto `Γ` fecha uma lacuna nomeada explicitamente pelo usuário | Hoje só existe piso; `Γ` opt-in por perfil evita regressão em contratos já calibrados |
+| Complementa (não duplica) o ADR-060 | `causa_dominante` é um recorte rápido de 2 categorias; a decomposição causal completa (η/clima/calendário/cross-term/quantização) continua sendo a análise de referência para investigação profunda |
+
+### Negativas / Riscos
+
+| Risco | Mitigação |
+|---|---|
+| `H_i` pode não ser resolvível (schedule real ainda não montado, ou `custo_operacional_real == 0`) | `causa_dominante = "INDETERMINADO"` — nunca inventar `γ_i^o` a partir de dado ausente |
+| `γ_i^v`/`γ_i^o` são taxas *implícitas* (derivadas por divisão), não armazenadas diretamente — sensíveis a arredondamento quando `Q_i`/`H_i` são pequenos | Aplicar o mesmo piso de materialidade já usado em `_pe_frentes_nec` (fallback conservador quando a razão é absurda) |
+| Confusão entre este teto por-atividade e o Semáforo de Margem (percentual, agregado) | Nomear a validação como `VAL-PONTO-EQUILIBRIO-TETO` (paralelo a `VAL-PONTO-EQUILIBRIO-PARTICAO`/`-MITIGACAO` já existentes) e documentar a distinção explicitamente no relatório |
+| Perfis existentes sem `Γ` configurado não ganham nenhum benefício automático de D2/D3 (mas D1/`causa_dominante` independe de `Γ` e já se aplica) | Aceitável — opt-in deliberado para o teto; `causa_dominante` já funciona hoje só com o piso existente |
+
+---
+
+## Plano de Implementação
+
+| Fase | Entregas | Status |
+|---|---|---|
+| F0 | Remover atalho por `custo_hora_total_referencia` nas 3 camadas (skill-04/05, pool) + fix ADR-132 em `_custo_hora_equipamentos` | ✅ Implementado (28/07, nesta worktree) |
+| F1 | `H_i`/`γ_i^v`/`γ_i^o` + `causa_dominante` (D1) + testes | ✅ Implementado (28/07, nesta worktree) |
+| F2 | `Γ` como campo de perfil opcional + `VAL-PONTO-EQUILIBRIO-TETO` (D2) + `horas_reais_min`/`max` no relatório/Excel (D3) | ✅ Implementado (28/07, nesta worktree) |
+| F3 | Permanência/custo de 1 frente de referência robustos a rampa (D4) — `_sum_1frente_cost` em skill-05, via `distribuicao_semanal` (não `project_ocupacao_semanal`/ADR-152, ver nota de implementação em D4) | ✅ Implementado (28/07, nesta worktree) |
+
+## Definition of Done
+
+### Fase 0
+- [x] `_custo_hora_equipamentos` (skill-04) respeita `preco_h_unitario` embutido na composição sobre o catálogo geral (ADR-132)
+- [x] `_custo_hora_equipe` sem parâmetro `custo_hora_referencia` — sempre bottom-up
+- [x] `_calibrar_custos_por_cref`/`_resolve_calibration_fractions` removidos do skill-05
+- [x] `_resolve_custo_hora_ref_sem`/`custo_hora_ref_sem` removidos do caminho de pool
+- [x] Verificação numérica: bottom-up reproduz `custo_hora_total_referencia` dos 4 CPUs Serra Verde com delta < 0,003%
+- [x] Suíte completa sem regressão (14.441 testes; 11 falhas pré-existentes em `test_adr115_procurement_rfx.py`, não relacionadas, passam isoladas)
+
+### Fase 1
+- [x] `causa_dominante` por participação relativa (share, partição simétrica Shapley/Bennet), com `"MISTO"` quando nenhuma causa isolada domina (share entre 35% e 65%) — substitui o critério "quem é maior" original, que dependia de convenção arbitrária de decomposição preço×quantidade
+- [x] `causa_dominante = "INDETERMINADO"` quando `H_i` não resolvível (`custo_operacional_real <= 0` ou schedule ausente) — nunca um valor inventado (também cobre `ρ_i`/`Q_i`/`RegimeTrabalho` ausentes — necessários e não previstos explicitamente no texto original de D1)
+- [x] Teste prova que `causa_dominante` nunca é chamado/exposto antes de skill-04 terminar (P5) — não é uma validação prospectiva de mobilização (`test_sem_schedule_real_fica_indeterminado`)
+- [x] Teste de regressão prova a identidade `T_cronograma + T_precificacao == delta` (dentro de tolerância de arredondamento, mesmo padrão de `ε_tol` do roundtrip do ADR-061) — `TestPeCausaDominanteIdentidade`, parametrizado
+- [x] Teste prova que a partição simétrica fica estritamente entre as duas convenções unilaterais possíveis, nunca coincide com nenhuma quando `γ_i^v ≠ γ_i^o` — `TestPeCausaDominanteSimetriaResolveAmbiguidade`
+- [x] `BacktrackingPEItem.solucao_causa_dominante` aponta, entre as `SolucaoInversa` já computadas pelo ADR-061 (sem cálculo novo), a que ataca `causa_dominante` — `None` quando `"INDETERMINADO"` ou quando nenhum parâmetro candidato tem solução roundtrip-válida
+- [x] Suíte completa sem regressão (`test_adr162_causa_dominante.py` + testes novos em `test_backtracking_pe_builder.py`/`test_adr060_061_diagnostico_pe.py`; suíte completa do repo sem falhas novas)
+
+### Fase 2
+- [x] `Γ` lido do perfil (`perfil.get("teto_ponto_equilibrio_rs")`, `config/perfis/<perfil_id>.json` via `load_perfil`), `None` por default — nenhum perfil existente muda de comportamento sem opt-in; threaded `_build_ponto_equilibrio(canonical_in, validacoes, perfil=None)` → `_bpe_collect_pe_items` → `_bpe_process_equipe` → `_build_pe_for_equipe(..., regime, teto_rs)`
+- [x] `VAL-PONTO-EQUILIBRIO-TETO` emitido como AVISO (nunca ERRO) quando `Γ` configurado e `Δ_i ≥ Γ`, mensagem inclui `causa_dominante` (D1) para apontar se o excesso é de cronograma ou de precificação — `TestValidatePeTeto`
+- [x] `horas_reais_min`/`horas_reais_max` = `(custo_venda_total − Γ)/γ_i^o` e `custo_venda_total/γ_i^o` — `None`/`None` quando `Γ` não configurado ou `γ_i^o` não resolvível (mesma condição de D1, via `_pe_resolve_h_i_gamma_o` compartilhado) — `TestPeHorasReaisMinMax`
+- [x] `causa_dominante`/`horas_reais_min`/`horas_reais_max` expostos na linha de `ponto_equilibrio` do relatório (`_rra_build_pe_row`, skill 09) — `test_pe_row_expoe_causa_dominante_e_horas_reais`
+- [x] Suíte completa sem regressão (`test_adr162_causa_dominante.py` + `test_skill10_helpers_a_coverage.py`; suíte completa do repo sem falhas novas atribuíveis a esta fase)
+
+### Fase 3
+- [x] `_sum_1frente_cost` (nova, `_dimensionamento_itens.py`) — custo semanal de 1 frente de referência, somado só nas semanas ativas, sem multiplicar por `num_equipes` — robusto a qualquer forma de rampa — `TestSum1FrenteCost`
+- [x] `_resolve_permanencia_e_custo_total_ajustados` recebe `ativos`/`custo_1frente` em vez de `team_weeks`/`num_equipes_paralelas`/`custo_total` — permanência = `ativos/SEMANAS_POR_MES`, não mais `team_weeks/max(num_equipes_paralelas)` — `TestResolvePermanenciaECustoTotalAjustados`
+- [x] Teste prova que a versão anterior subestimava a permanência sob rampa (1→3→1 ao longo de 7 semanas ativas: 0,9966 meses antigo vs. 1,6099 meses correto) — `test_rampa_nao_subestima_permanencia`
+- [x] `num_equipes_paralelas`/`_resolve_num_equipes_paralelas` preservados para `EquipeDireta.num_equipes_base` (propósito diferente: gap_escala/diagnóstico em skill-06) — não usados mais na base de custo
+- [x] `_build_pe_for_equipe`/skill-06 não precisaram de nenhuma mudança — o fix é na fonte (skill-05), o valor corrigido já chega via `permanencia_efetiva_meses`/`custo_total`
+- [x] Verificado contra o benchmark AGIS: `sum(eq.custo_total)` sobe de R$ 16.529.359,75 para R$ 17.611.540,46 (+6,55%), puxado majoritariamente por `eap-1_6` (~28% de subestimação antes da correção) — baseline do golden test `test_cost_decomposition_adr104.py::test_agis_custo_direto_matches_reference` atualizado com o histórico documentado
+- [x] Suíte completa sem regressão (`test_adr162_d4_permanencia_semanal.py`, 8 testes novos; suíte completa do repo: 14688 passed, mesma contagem da Fase 2 + 8)
+
+---
+
+## Relacionados
+
+- ADR-060 — Diagnóstico de Ponto de Equilíbrio (decomposição causal agregada; esta ADR propõe um recorte mais rápido nas mesmas duas famílias de causa, complementar, não substituto)
+- ADR-061 — Inversão/Backtracking de PE (espaço de correção `L*`/`η*`/`n_max*`/`t0*` — `causa_dominante` aponta qual dessas inversas é relevante, via `BacktrackingPEItem.solucao_causa_dominante`: `PRECIFICACAO`→`L*`, `CRONOGRAMA`→`η*`(`P*`)/`t0*` — **não** `n_max*`, que ataca `F_ind`/duração, gap de classe diferente da que D1 decompõe; ver mapeamento completo em D1)
+- ADR-076 — Calibração PU/Frentes (`frentes_nec`, mesmo espírito de expor um número acionável antes do erro)
+- ADR-083 — Decomposição Causal do Gap de Pool (mesma família de `gap_*` em `PontoEquilibrio`)
+- ADR-152 — Timelapse de Ocupação de Pool (citada como fonte candidata para a Fase 3/D4 no texto original; investigação mostrou que é dormente e agrega só por contrato, sem granularidade por item — não foi a fonte usada; ver nota de implementação em D4)
+- [[nep043-cr-reconciliacao]] — precedente real de `T_precificacao` diferente de zero (BDI/`T_efetivo` divergente entre camadas antes da correção `716a155e`)

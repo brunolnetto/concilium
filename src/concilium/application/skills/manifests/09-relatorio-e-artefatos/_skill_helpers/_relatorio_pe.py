@@ -149,6 +149,12 @@ def _rra_build_pe_row(
         "machine_weeks_efetivas": _f(getattr(pe, "machine_weeks_efetivas", 0.0)),
         "burden_pool": _f(getattr(pe, "custo_pool_total", 0.0)),
         "economia_pool_abs": _f(getattr(pe, "economia_pool_abs", 0.0)),
+        # ADR-162 D1/D3: diagnóstico causal (cronograma × precificação) e intervalo de
+        # horas reais tolerado por Γ — None quando não resolvível (H_i/ρ_i ausentes ou Γ
+        # não configurado no perfil), nunca um valor inventado.
+        "causa_dominante": getattr(pe, "causa_dominante", "INDETERMINADO"),
+        "horas_reais_min": getattr(pe, "horas_reais_min", None),
+        "horas_reais_max": getattr(pe, "horas_reais_max", None),
     }
 
 
