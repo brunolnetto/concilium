@@ -100,8 +100,13 @@ def _bpe_build_idle_por_item(canonical_in: CanonicalModel) -> dict[str, float]:
 
 
 def _bpe_build_lookup_maps(canonical_in: CanonicalModel) -> tuple[dict, dict, dict]:
+    # Ponto de equilíbrio não tem BDI (ADR-162): a base de comparação é o custo de
+    # venda SEM markup — BDI é margem deliberada, aplicada depois do equilíbrio,
+    # não faz parte da conta de custo×custo. Antes desta correção, delta/status_validacao
+    # usavam com_bdi.total, inconsistente com o resto da máquina de PE (ADR-076
+    # já usa sem_bdi em frentes_nec/pu_catalogo_unitario).
     venda_por_item = {
-        p.item_id: p.subtotal.com_bdi.total for p in canonical_in.planejamento if p.item_id and p.subtotal
+        p.item_id: p.subtotal.sem_bdi.total for p in canonical_in.planejamento if p.item_id and p.subtotal
     }
     planejamento_por_item = {p.item_id: p for p in canonical_in.planejamento if p.item_id}
     equipe_by_item = {e.item_id: e for e in canonical_in.equipes_diretas if e.item_id}

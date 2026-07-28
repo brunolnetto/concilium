@@ -762,3 +762,28 @@ class TestBuildPontoEquilibrioIdlePorItem:
         # que o cálculo roda sem erro e produz um PE para a equipe.
         assert len(result) == 1
         assert result[0].item_id == "eap-01"
+
+
+class TestVendaPorItemUsaSemBdi:
+    """ADR-162: _bpe_build_lookup_maps deve montar venda_por_item a partir de sem_bdi,
+    não com_bdi — PE compara custo×custo, BDI é margem deliberada aplicada depois do
+    equilíbrio (mesma convenção de pu_catalogo_unitario/frentes_nec em _ponto_equilibrio.py)."""
+
+    def test_custo_venda_cpu_usa_sem_bdi(self):
+        equipe = _make_equipe(item_id="eap-01", custo_fixo_mensal=100_000.0, permanencia_efetiva_meses=6.0)
+        equipe.cpu_id = "CPU-01"
+        # sem_bdi_total = 500*1000 = 500_000; com_bdi_total = 575_000 (bdi_factor=0.15) — bem distintos.
+        plan = _make_plan(item_id="eap-01", qty=1000.0, pu_sem_bdi=500.0, bdi_factor=0.15)
+        canonical_in = SimpleNamespace(
+            planejamento=[plan],
+            equipes_diretas=[equipe],
+            cronograma=None,
+            contratos_recurso=[],
+            instancias_recurso=[],
+        )
+        validacoes: list = []
+        result = _mod._build_ponto_equilibrio(canonical_in, validacoes)
+        assert len(result) == 1
+        pe = result[0]
+        assert pe.custo_venda_cpu == 500_000.0  # sem_bdi, não 575_000.0 (com_bdi)
+        assert pe.delta == 500_000.0 - 600_000.0  # custo_fixo_total = 100_000 * 6
