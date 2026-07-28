@@ -131,29 +131,35 @@ def run_cronograma(
             validacoes,
         )
 
-    mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed, replenishable_resources = (
-        _determine_mode_and_distribuicao(
-            canonical_in,
-            inputs,
-            num_equipes_por_item,
-            semanas_obra,
-            cpu_lookup,
-            producao_lookup,
-            regime,
-            prat_semanal,
-            prat_mensal,
-            fator_calendario_semanal,
-            catalogo,
-            validacoes,
-            insumos_lookup,
-        )
+    (
+        mode,
+        distribuicao_por_item,
+        schedule_candidates,
+        schedule_selected,
+        failed,
+        replenishable_resources,
+        fallback_item_ids,
+    ) = _determine_mode_and_distribuicao(
+        canonical_in,
+        inputs,
+        num_equipes_por_item,
+        semanas_obra,
+        cpu_lookup,
+        producao_lookup,
+        regime,
+        prat_semanal,
+        prat_mensal,
+        fator_calendario_semanal,
+        catalogo,
+        validacoes,
+        insumos_lookup,
     )
     if failed:
         return SkillResult(canonical_in, validacoes)
 
     pool_violations = _check_pool_violations(canonical_in, distribuicao_por_item, cpu_lookup, validacoes)
     scheduled_activities_out = _build_scheduled_activities(
-        canonical_in, distribuicao_por_item, semanas_obra, schedule_selected
+        canonical_in, distribuicao_por_item, semanas_obra, schedule_selected, fallback_item_ids
     )
     distribuicao_mensal = _aggregate_to_monthly(distribuicao_por_item)
     cronograma_out = _build_cronograma_out(

@@ -2,10 +2,11 @@
 
 As validações que sinalizam inconsistência entre preço de venda e custo
 operacional (`VAL-COB-NEG`, `VAL-PROD-04`, `VAL-PROD-VS-PU`,
-`VAL-GAP-CATALOGO-OPERACIONAL`, `VAL-STALE-UPSTREAM`) são deliberadamente
-`AVISO`, não `ERRO` — promovê-las a `ERRO` bloquearia as skills 07-15 e
-impediria a geração do próprio relatório financeiro que o gestor usa para
-diagnosticar o problema (ver `domain/services/validador_cobertura_item.py`).
+`VAL-GAP-CATALOGO-OPERACIONAL`, `VAL-STALE-UPSTREAM`,
+`VAL-PROD-PU-FALLBACK-DESYNC`) são deliberadamente `AVISO`, não `ERRO` —
+promovê-las a `ERRO` bloquearia as skills 07-15 e impediria a geração do
+próprio relatório financeiro que o gestor usa para diagnosticar o problema
+(ver `domain/services/validador_cobertura_item.py`).
 
 O bloqueio certo não é na execução das skills — é na aprovação da versão, o
 momento em que o resultado passa a ser tratado como definitivo. Este módulo
@@ -25,6 +26,7 @@ _BLOCKING_AVISO_CODES = frozenset(
         "VAL-PROD-VS-PU",
         "VAL-GAP-CATALOGO-OPERACIONAL",
         "VAL-STALE-UPSTREAM",
+        "VAL-PROD-PU-FALLBACK-DESYNC",
     }
 )
 

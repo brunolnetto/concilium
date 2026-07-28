@@ -396,7 +396,7 @@ def _compute_productive_weeks(
     cpu = cpu_lookup.get(cpu_id)
     if not cpu:
         return None
-    P = _resolve_productivity(cpu, producao_lookup, validacoes)
+    P, _is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
     if not P or P <= 0:
         return None
     regime = canonical_in.projeto.regime_trabalho
@@ -464,7 +464,7 @@ def _resolve_productivity(
     cpu: dict,
     producao_lookup: dict[str, dict],
     validacoes: list[ValidacaoItem],
-) -> float:
+) -> tuple[float, bool]:
     """Resolve produtividade da CPU via producao_id_ref (ADR-053 Fase 3).
 
     Usa 'valor_horario' do registro de producao para o scheduling. 'valor_horario_canonico'
@@ -473,15 +473,19 @@ def _resolve_productivity(
     A atualização do catalog é feita manualmente após validação humana.
 
     Also checks for stored productivity data in cpu_meta (from enrichment).
+
+    Retorna (P, is_fallback) — is_fallback=True apenas quando P veio do default
+    arbitrário de 1000.0 (issue #132: sinaliza item cuja produtividade não tem base
+    real, para correlacionar com o fallback de precificação em skill-06).
     """
     # First check if productivity was enriched directly from project data
     valor = _resolve_productivity_from_cpu_meta(cpu)
     if valor is not None:
-        return valor
+        return valor, False
 
     valor = _resolve_productivity_from_lookup(cpu, producao_lookup, validacoes)
     if valor is not None:
-        return valor
+        return valor, False
 
     _warn_legacy_productivity_fields(cpu, validacoes)
 
@@ -489,13 +493,17 @@ def _resolve_productivity(
         ValidacaoItem(
             codigo="VAL-PROD-04",
             status="AVISO",
-            mensagem=f"Produtividade não encontrada para CPU {cpu.get('codigo')} (producao_id_ref); assumindo 1000.0.",
+            mensagem=(
+                f"Produtividade não encontrada para CPU {cpu.get('codigo')} (producao_id_ref); assumindo 1000.0. "
+                "A duração/custo desta atividade não reflete produtividade real; se o PU também não tiver base "
+                "bottom-up, o ponto de equilíbrio deste item é inconclusivo."
+            ),
         )
     )
     # Use high default productivity (1000 units/hour) when CPU not found
     # Allows scheduling to proceed; actual productivity should come from catalog
     # This is a graceful degradation allowing benchmarks to execute despite missing data
-    return 1000.0
+    return 1000.0, True
 
 
 __all__ = [

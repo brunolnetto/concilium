@@ -178,7 +178,7 @@ def _emm_process_item(
     validacoes: list,
 ) -> tuple[dict, list, list]:
     """Computes distribuicao and error lists for a single EAP item."""
-    P = _resolve_productivity(cpu, producao_lookup, validacoes)
+    P, _is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
     producao_semanal_base = P * regime.horas_dia * regime.dias_semana
     equipes_semanas = num_equipes_por_item.get(item.item_id, {})
     # NEP-035: n_max = pico de alocação planejado para a atividade (η_s = n_j / n_max)

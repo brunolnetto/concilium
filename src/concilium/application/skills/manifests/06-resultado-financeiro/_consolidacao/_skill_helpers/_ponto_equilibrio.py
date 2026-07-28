@@ -474,6 +474,50 @@ def _validate_prod_vs_pu(pe: PontoEquilibrio, validacoes: list) -> None:
     )
 
 
+def _validate_prod_pu_fallback_desync(
+    item_id: str,
+    sched_por_item: dict | None,
+    planejamento_por_item: dict | None,
+    validacoes: list,
+) -> None:
+    """VAL-PROD-PU-FALLBACK-DESYNC (issue #132): correlaciona os DOIS fallbacks independentes.
+
+    skill-04 (`_resolve_productivity`) e skill-06 (`_resolve_preco_cat_item`) resolvem
+    produtividade/preço de forma independente para a mesma CPU. Quando ambos caem em
+    fallback para o MESMO item — schedule usa P=1000 un/h arbitrário (sem
+    `producao_id_ref` resolvível) e a precificação cai na Fonte 2 (composicao_itens ×
+    preco_insumo, sem nenhum conceito de produtividade horária) — a tese central do
+    sistema (ADR-060: venda e custo derivam da mesma `Producao.valor_horario`) quebra
+    silenciosamente: nem o custo operacional nem o preço de venda têm base real de
+    produtividade, e o ponto de equilíbrio resultante é inconclusivo.
+
+    NOTA: fallback isolado em um único lado já é sinalizado individualmente por
+    VAL-PROD-04 (skill-04) e implicitamente pela ausência de VAL-PLAN-BOTTOM-UP
+    (skill-06) — esta validação é especificamente sobre a CORRELAÇÃO dos dois.
+    """
+    sched = (sched_por_item or {}).get(item_id)
+    plan = (planejamento_por_item or {}).get(item_id)
+    if sched is None or plan is None:
+        return
+    if not (
+        getattr(sched, "produtividade_fallback_aplicada", False)
+        and getattr(plan, "precificacao_via_fallback_composicao", False)
+    ):
+        return
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-PROD-PU-FALLBACK-DESYNC",
+            status="AVISO",
+            mensagem=(
+                f"Item '{item_id}': produtividade do schedule (P=1000 un/h, fallback) e preço "
+                "unitário (composicao_itens, sem base de produtividade) vieram de fontes "
+                "desconectadas — nem venda nem custo operacional têm base real de produtividade "
+                "para este item. Ponto de equilíbrio inconclusivo; resolva producao_id_ref na CPU."
+            ),
+        )
+    )
+
+
 def _validate_frentes_necessarias(pe: PontoEquilibrio, validacoes: list) -> None:
     """VAL-FRENTES-NECESSARIAS-ALTA (ADR-076): execução autônoma supera o PU de catálogo.
 

@@ -189,6 +189,58 @@ class TestValProdVsPU:
         assert val == []
 
 
+# ── VAL-PROD-PU-FALLBACK-DESYNC (issue #132): correlação dos DOIS fallbacks ──
+
+
+def _sched(fallback: bool):
+    return SimpleNamespace(produtividade_fallback_aplicada=fallback)
+
+
+def _plan(fallback: bool):
+    return SimpleNamespace(precificacao_via_fallback_composicao=fallback)
+
+
+class TestValProdPuFallbackDesync:
+    def test_dispara_quando_ambos_os_lados_tem_fallback(self):
+        sched_por_item = {"eap-1": _sched(True)}
+        plan_por_item = {"eap-1": _plan(True)}
+        val = []
+        _cons._validate_prod_pu_fallback_desync("eap-1", sched_por_item, plan_por_item, val)
+        assert len(val) == 1
+        assert val[0].codigo == "VAL-PROD-PU-FALLBACK-DESYNC"
+        assert val[0].status == "AVISO"
+        assert "eap-1" in val[0].mensagem
+
+    def test_nao_dispara_quando_so_schedule_tem_fallback(self):
+        # fallback isolado do lado do cronograma já é sinalizado por VAL-PROD-04;
+        # esta validação é especificamente sobre a correlação dos dois lados.
+        sched_por_item = {"eap-2": _sched(True)}
+        plan_por_item = {"eap-2": _plan(False)}
+        val = []
+        _cons._validate_prod_pu_fallback_desync("eap-2", sched_por_item, plan_por_item, val)
+        assert val == []
+
+    def test_nao_dispara_quando_so_precificacao_tem_fallback(self):
+        sched_por_item = {"eap-3": _sched(False)}
+        plan_por_item = {"eap-3": _plan(True)}
+        val = []
+        _cons._validate_prod_pu_fallback_desync("eap-3", sched_por_item, plan_por_item, val)
+        assert val == []
+
+    def test_nao_dispara_quando_nenhum_lado_tem_fallback(self):
+        sched_por_item = {"eap-4": _sched(False)}
+        plan_por_item = {"eap-4": _plan(False)}
+        val = []
+        _cons._validate_prod_pu_fallback_desync("eap-4", sched_por_item, plan_por_item, val)
+        assert val == []
+
+    def test_item_ausente_em_sched_ou_plan_nao_dispara(self):
+        val = []
+        _cons._validate_prod_pu_fallback_desync("eap-ausente", {}, {"eap-ausente": _plan(True)}, val)
+        _cons._validate_prod_pu_fallback_desync("eap-ausente", {"eap-ausente": _sched(True)}, {}, val)
+        assert val == []
+
+
 # ── ADR-128/139 F5: estoque de consumíveis — edge cases de _validacao.py ────
 
 
