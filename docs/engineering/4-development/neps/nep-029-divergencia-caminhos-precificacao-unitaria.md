@@ -1,23 +1,44 @@
 # NEP-029: Divergência estrutural na precificação unitária — dois caminhos incompatíveis e ausência de fonte canônica
 
-**Status:** Parcialmente Implementado ⚠️ _(S1 parcial — 2026-06-09)_  
-**Prioridade:** 🔴 Crítico  
+**Status:** ✅ Resolvido — atalho por referência removido (2026-07-28)
+**Prioridade:** ~~🔴 Crítico~~ — fechado
 **Área:** Arquitetura e Skills  
 **Tipo:** Bug + Governança + Dados  
 **Esforço:** XL  
 **Identificado em:** 2026-05-24
 
-> **Nota de implementação (2026-06-09 — Sprint S1 parcial):**
-> - ✅ `_calibrar_custos_por_cref` em skill-05 `_build_dimensionamento`: usa
+> **Resolução final (2026-07-28 — worktree ADR-162):** o atalho por
+> `custo_hora_total_referencia` (S1, nota abaixo) foi **removido por completo**,
+> nas 3 camadas onde existia: `_calibrar_custos_por_cref` (skill-05, dimensionamento
+> standalone), `_custo_hora_equipe(..., custo_hora_referencia=...)` (skill-04,
+> P_canonico) e `_resolve_custo_hora_ref_sem` (skill-05, contrato de pool).
+> Motivo: verificado numericamente que o bottom-up puro, uma vez corrigido para
+> respeitar a precedência do ADR-132 (`preco_h_unitario` embutido na composição
+> sobre o catálogo geral de insumos — gap que fazia o bottom-up cru divergir até
+> 35% do C_ref), já reproduz o custo de referência calibrado contra obra real
+> (`PROD-REJEITO-COMP-EQ1-4`, Serra Verde) com delta < 0,003% — o atalho era
+> redundante, não autoritativo. `custo_hora_total_referencia` deixa de ser lido
+> por qualquer caminho de cálculo; o campo permanece nos JSONs de produção como
+> histórico, sem consumidor. Fix aplicado em `_custos.py` (`_custo_hora_equipamentos`),
+> `_dimensionamento_orquestracao.py` e `_pool_contrato_demanda.py`. Suíte completa
+> sem regressão (14.441 testes, golden AGIS incluso). Decisão do usuário: "gostaria
+> que a dedução fosse sempre bottom-up, e remover por todas este valor referencial."
+> Achado lateral: o catálogo geral de insumos (`insumos/equipamento/E00XX.json`) já
+> diverge hoje do preço embutido nas composições calibradas (até 54% em alguns
+> casos) — inofensivo enquanto ADR-132 for respeitado, mas é débito de dado a
+> reconciliar separadamente.
+
+> **Nota de implementação (2026-06-09 — Sprint S1 parcial, superada pela resolução acima):**
+> - ~~`_calibrar_custos_por_cref` em skill-05 `_build_dimensionamento`: usa
 >   `custo_hora_total_referencia × h_sem × SEMANAS_POR_MES` como base, com frações
->   de `precos_unitarios_sbdi.{mo,eq,diesel}` — garante consistência com pool.
+>   de `precos_unitarios_sbdi.{mo,eq,diesel}` — garante consistência com pool.~~
 > - ✅ `gap_pool_overhead` no ponto de equilíbrio usa idle real das instâncias
 >   (não mais diferença pool vs autônomo, que era falso positivo de n_frentes).
 > - ✅ AGIS: autônomo e pool convergem; painel_equilibrio mostra apenas
 >   praticabilidade (0.81M) — sem artefato de "overhead de pool".
-> - ⚠️ CTC/LUNDIN/ROSH/PRIVATE_LOG: BLOQUEADOS porque `custo_hora_total_referencia`
->   foi calibrado da planilha AGIS; outros benchmarks precisam de C_ref próprio.
->   Cada benchmark requer calibração NEP-029 independente — trabalho de curadoria.
+> - ~~⚠️ CTC/LUNDIN/ROSH/PRIVATE_LOG: BLOQUEADOS porque `custo_hora_total_referencia`
+>   foi calibrado da planilha AGIS; outros benchmarks precisam de C_ref próprio.~~
+>   Não se aplica mais — nenhum benchmark depende de C_ref próprio agora.
 
 ---
 

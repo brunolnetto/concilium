@@ -60,10 +60,8 @@ _week_idx = _MOD._week_idx
 _eq_comp_floats = _MOD._eq_comp_floats
 _accum_week_demand = _MOD._accum_week_demand
 _get_active_weeks = _MOD._get_active_weeks
-_resolve_custo_hora_ref_sem = _MOD._resolve_custo_hora_ref_sem
 _resolve_prod_lookup = _MOD._resolve_prod_lookup
 _process_item_tipo_map = _MOD._process_item_tipo_map
-_calibrar_custos_por_cref = _MOD._calibrar_custos_por_cref
 _build_resumo_e_validacoes = _MOD._build_resumo_e_validacoes
 _build_perpetuation_chains = _MOD._build_perpetuation_chains
 _build_predecessor_map = _MOD._build_predecessor_map
@@ -1107,51 +1105,6 @@ class TestGetActiveWeeks:
 
 
 # ===========================================================================
-# 30. _resolve_custo_hora_ref_sem
-# ===========================================================================
-
-
-class TestResolveCustoHoraRefSem:
-    def test_no_cpu_lookup_returns_zero(self):
-        """Line 1079: cpu_lookup is None → 0."""
-        eq = SimpleNamespace(cpu_id="CPU-01")
-        result = _resolve_custo_hora_ref_sem(eq, None, {}, 48.0)
-        assert result == 0.0
-
-    def test_cpu_not_found_returns_zero(self):
-        """Linha 1091-1092: cpu_lookup e prod_lookup não-vazios (não disparam o guard
-        inicial), mas eq.cpu_id não está em cpu_lookup → cpu=None → 0."""
-        eq = SimpleNamespace(cpu_id="MISSING")
-        result = _resolve_custo_hora_ref_sem(eq, {"OUTRO-CPU": {}}, {"PROD-1": {}}, 48.0)
-        assert result == 0.0
-
-    def test_no_prod_returns_zero(self):
-        """Linha 1094-1095: cpu encontrado, mas producao_id_ref não está em
-        prod_lookup (que é não-vazio, para não disparar o guard inicial) → 0."""
-        eq = SimpleNamespace(cpu_id="CPU-01")
-        cpu_lookup = {"CPU-01": {"producao_id_ref": "MISSING-PROD"}}
-        prod_lookup = {"OUTRO-PROD": {}}
-        result = _resolve_custo_hora_ref_sem(eq, cpu_lookup, prod_lookup, 48.0)
-        assert result == 0.0
-
-    def test_c_ref_zero_returns_zero(self):
-        """c_ref == 0 → 0."""
-        eq = SimpleNamespace(cpu_id="CPU-01")
-        cpu_lookup = {"CPU-01": {"producao_id_ref": "PROD-1"}}
-        prod_lookup = {"PROD-1": {"custo_hora_total_referencia": 0.0}}
-        result = _resolve_custo_hora_ref_sem(eq, cpu_lookup, prod_lookup, 48.0)
-        assert result == 0.0
-
-    def test_valid_returns_product(self):
-        """Line 1084: returns c_ref × horas_semana."""
-        eq = SimpleNamespace(cpu_id="CPU-01")
-        cpu_lookup = {"CPU-01": {"producao_id_ref": "PROD-1"}}
-        prod_lookup = {"PROD-1": {"custo_hora_total_referencia": 10.0}}
-        result = _resolve_custo_hora_ref_sem(eq, cpu_lookup, prod_lookup, 48.0)
-        assert result == pytest.approx(480.0)
-
-
-# ===========================================================================
 # 30b. _process_item_tipo_map
 # ===========================================================================
 
@@ -1245,47 +1198,6 @@ class TestResolveProdLookup:
         result = _resolve_prod_lookup(catalogo)
         assert None not in result
         assert "P3" in result
-
-
-# ===========================================================================
-# 32. _calibrar_custos_por_cref
-# ===========================================================================
-
-
-class TestCalibrarCustosPorCref:
-    def test_no_c_ref_returns_unchanged(self):
-        """Lines 793-794: C_ref <= 0 → return as-is."""
-        cpu = {"producao_id_ref": "P1"}
-        prod_lookup = {"P1": {"custo_hora_total_referencia": 0.0}}
-        result = _calibrar_custos_por_cref(cpu, prod_lookup, 8.0, 100.0, 70.0, 30.0, 50.0, 10.0)
-        assert result == (100.0, 70.0, 30.0, 50.0, 10.0)
-
-    def test_no_pu_total_returns_unchanged(self):
-        """Lines 800-802: pu_total <= 0 → return as-is."""
-        cpu = {
-            "producao_id_ref": "P1",
-            "precos_unitarios_sbdi": {"mo": 0.0, "equipamentos": 0.0, "diesel": 0.0},
-        }
-        prod_lookup = {"P1": {"custo_hora_total_referencia": 50.0}}
-        result = _calibrar_custos_por_cref(cpu, prod_lookup, 8.0, 100.0, 70.0, 30.0, 50.0, 10.0)
-        assert result == (100.0, 70.0, 30.0, 50.0, 10.0)
-
-    def test_calibration_applied(self):
-        """Lines 804-824: C_ref × horas decomposes correctly."""
-
-        cpu = {
-            "producao_id_ref": "P1",
-            "precos_unitarios_sbdi": {"mo": 60.0, "equipamentos": 30.0, "diesel": 10.0},
-        }
-        prod_lookup = {"P1": {"custo_hora_total_referencia": 10.0}}
-        horas_dia = 8.0
-        result = _calibrar_custos_por_cref(cpu, prod_lookup, horas_dia, 6000.0, 2000.0, 4000.0, 3000.0, 1000.0)
-        mo_cal, enc_cal, mo_base_cal, eq_cal, comb_cal = result
-        assert mo_cal > 0
-        assert eq_cal > 0
-        assert comb_cal > 0
-        # Proportional fractions: mo=60%, eq=30%, diesel=10%
-        assert mo_cal > eq_cal > comb_cal
 
 
 # ===========================================================================

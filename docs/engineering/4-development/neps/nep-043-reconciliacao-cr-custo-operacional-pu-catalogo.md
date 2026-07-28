@@ -14,7 +14,7 @@ Os três bugs documentados foram **curados** em trabalho subsequente:
 |---|---|---|
 | 1 — ADR-091 divide sem compensar | `custo_total × num_equipes_base` na consolidação | `_consolidacao/_skill_helpers_a.py:95` (comentário NEP-043) |
 | 2 — encargos ausentes em skill-06 | skill-06 usa `encargo_resolver.resolver_encargo()` | `_indiretos/_skill_helpers_a.py:208` |
-| 3 — `custo_hora_total_referencia` ambíguo | `custo_inst_*` separa custo por frente; `num_equipes_base` aplicado | `_consolidacao/_skill_helpers_a.py:486` |
+| 3 — `custo_hora_total_referencia` ambíguo | `custo_inst_*` separa custo por frente; `num_equipes_base` aplicado. **Fechado definitivamente 2026-07-28** (worktree ADR-162, ver NEP-029): em vez de separar os dois usos por ADR (Fase 3 original), o campo foi removido de todo caminho de cálculo — bottom-up (corrigido ADR-132) já reproduz o valor sem precisar de referência alguma | `_consolidacao/_skill_helpers_a.py:486` |
 
 **Evidência:** `test_cost_decomposition_adr104::test_agis_custo_direto_matches_reference`
 passa com `custo_direto = 16.5M` (antes 22M divergente).

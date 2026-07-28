@@ -1,9 +1,9 @@
 # ADR-162 — Diagnóstico do Ponto de Equilíbrio: Decomposição Causal Cronograma × Precificação
 
-**Status:** Proposta
+**Status:** Proposta (D1-D4) — Fase 0 (fundação bottom-up) ✅ Implementado
 **Data:** 2026-07-28
 **Contexto:** MendesLobo Construtora — Concilium
-**Dependências:** ADR-060 (Diagnóstico de Ponto de Equilíbrio), ADR-061 (Inversão/Backtracking de PE), ADR-076 (Calibração PU/Frentes), ADR-083 (Decomposição Causal do Gap de Pool)
+**Dependências:** ADR-060 (Diagnóstico de Ponto de Equilíbrio), ADR-061 (Inversão/Backtracking de PE), ADR-076 (Calibração PU/Frentes), ADR-083 (Decomposição Causal do Gap de Pool), ADR-132 (preço embutido na composição), NEP-029 (divergência de caminhos de precificação)
 
 ---
 
@@ -61,11 +61,29 @@ equivalente, em frentes-semana, a dividir por `h·d`. Hoje o pipeline calcula `�
 
 P4. A formalização do usuário usa `C̃^D_i` em base **semanal explícita por frentes** (`Σ_j h·d·m_ij`). O código hoje usa base **mensal** (`equipe.custo_fixo_mensal × permanencia_base`, `_ponto_equilibrio.py:320`) — granularidade agregada, sem abrir por semana/frente. Isso é suficiente para o piso (delta agregado) e para a decomposição de P2 (que só precisa de `H_i` total, não por semana), mas insuficiente para apontar *em qual semana* um eventual estouro ocorre (ramp-up vs ramp-down) — o mesmo problema que o cross-term de timing do ADR-061 (`t0*`, minimiza `Cov(n,p)`) já resolve por outro caminho (função objetivo global, não limite por-atividade-por-semana).
 
+### Fase 0 — Fundação: eliminar o atalho por referência, sempre bottom-up (✅ implementado, 28/07)
+
+Discutindo P2, o usuário observou que `γ_i^v ≠ γ_i^o` "soa estranho — custo horário deveria ser algo único", e pediu para investigar a diferença real no código e, dependendo do achado, **remover completamente** qualquer atalho de cálculo por referência de catálogo, deixando a dedução sempre bottom-up.
+
+Investigação encontrou 3 caminhos onde `custo_hora_total_referencia` (C_ref) ainda funcionava como **atalho de cálculo** (não só de auditoria, ao contrário do que o NEP-032 já havia estabelecido para o lado de venda/skill-06):
+
+1. `_calibrar_custos_por_cref` (skill-05, `_dimensionamento_orquestracao.py`) — recalibrava `custo_mo`/`custo_eq`/`custo_comb` standalone usando C_ref × frações de `precos_unitarios_sbdi`.
+2. `_custo_hora_equipe(..., custo_hora_referencia=...)` (skill-04, `_custos.py`) — usava C_ref diretamente para derivar `P_canonico`, pulando o lookup de composição.
+3. `_resolve_custo_hora_ref_sem` (skill-05, `_pool_contrato_demanda.py`) — preferia C_ref sobre `custo_total_item/machine_weeks` no custo unitário semanal do pool.
+
+Em todo o catálogo, **apenas 4 CPUs** (`PROD-REJEITO-COMP-EQ1` a `EQ4`, mineração Serra Verde) de fato acionavam o atalho — o resto do sistema (incluindo `rfi-r02`, 100%) já caía no fallback bottom-up. Esses 4 são justamente o caso mais delicado: `custo_hora_total_referencia` ali é **medição real de campo** (`origem.tipo: "calibrado_contra_obra_real"`, com intervalo de confiança e desvio padrão), não uma planilha teórica — e uma tentativa anterior de eliminar essa dependência (memória `num-pessoas-fracionario-e-calibrado-nao-corrigir`) havia sido revertida por inflar o custo calculado.
+
+**Verificação numérica antes de remover** (não assumida): rodando o motor bottom-up real contra os 4 CPUs, o resultado cru divergia até 35% do C_ref — mas a causa não era o C_ref ser necessário, era um **bug** no motor: `_custo_hora_equipamentos` (skill-04) não respeitava a precedência do ADR-132 (`preco_h_unitario` embutido na composição sobre o preço do insumo no catálogo geral) — precedência que o skill-05 real já aplicava. Corrigido esse bug, o bottom-up passou a reproduzir C_ref com delta < 0,003% nos 4 casos (ex.: EQ1: C_ref=1517,0346 vs bottom-up=1517,0007). **Achado lateral**: o catálogo geral de insumos de equipamento já diverge hoje do preço embutido nessas composições (até 54%, ex. `E0027`: 138,89 embutido vs 90,00 no catálogo) — inofensivo enquanto o ADR-132 for respeitado, mas débito de dado a reconciliar depois.
+
+Com isso confirmado, os 3 atalhos foram removidos (não só marcados como legado) — `custo_hora_total_referencia` deixa de ser lido por qualquer caminho de cálculo, preservado apenas como campo histórico no JSON. Detalhes e nota de resolução em `nep-029-divergencia-caminhos-precificacao-unitaria.md` e `nep-043-reconciliacao-cr-custo-operacional-pu-catalogo.md`. Suíte completa sem regressão (14.441 testes, golden AGIS incluso).
+
+**Implicação para D1**: com a Fase 0, `γ_i^o` (taxa operacional real) não tem mais nenhuma fonte de override por catálogo — só pode divergir de `γ_i^v` por (a) override manual de PU no planejamento (brecha 1, issue #121, `VAL-PLAN-OVR-BDI-DIVERGE`) ou (b) divergência genuína entre o catálogo geral de insumos e a composição real (achado lateral acima). `T_precificacao` deixa de ser um "modo de falha frequente" e vira um sinal raro e de alto valor diagnóstico quando aparece.
+
 ---
 
 ## Decisão
 
-Esta ADR é uma **proposta de avaliação** (worktree separada) — não implementa ainda. Define o desenho a avaliar antes de decidir se segue para `main`.
+A Fase 0 acima já está implementada (nesta worktree, ainda não mergeada em `main`). D1-D4 abaixo continuam **proposta de avaliação** — não implementadas.
 
 ### D1 — Campo `causa_dominante`: decomposição Cronograma × Precificação, sem novo cálculo de origem
 
@@ -129,11 +147,20 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 
 | Fase | Entregas | Status |
 |---|---|---|
+| F0 | Remover atalho por `custo_hora_total_referencia` nas 3 camadas (skill-04/05, pool) + fix ADR-132 em `_custo_hora_equipamentos` | ✅ Implementado (28/07, nesta worktree) |
 | F1 | `H_i`/`γ_i^v`/`γ_i^o` + `causa_dominante` (D1) + testes | ⬜ (avaliação nesta worktree) |
 | F2 | `Γ` como campo de perfil opcional + `VAL-PONTO-EQUILIBRIO-TETO` (D2) + `horas_reais_min`/`max` no relatório/Excel (D3) | ⬜ (depende de F1 aprovado) |
 | F3 (futura, condicionada) | Migração de `custo_fixo_total` para base semanal explícita por frentes (D4), reaproveitando `project_ocupacao_semanal` (ADR-152) | ⬜ (não iniciada — precisa de decisão própria) |
 
 ## Definition of Done
+
+### Fase 0
+- [x] `_custo_hora_equipamentos` (skill-04) respeita `preco_h_unitario` embutido na composição sobre o catálogo geral (ADR-132)
+- [x] `_custo_hora_equipe` sem parâmetro `custo_hora_referencia` — sempre bottom-up
+- [x] `_calibrar_custos_por_cref`/`_resolve_calibration_fractions` removidos do skill-05
+- [x] `_resolve_custo_hora_ref_sem`/`custo_hora_ref_sem` removidos do caminho de pool
+- [x] Verificação numérica: bottom-up reproduz `custo_hora_total_referencia` dos 4 CPUs Serra Verde com delta < 0,003%
+- [x] Suíte completa sem regressão (14.441 testes; 11 falhas pré-existentes em `test_adr115_procurement_rfx.py`, não relacionadas, passam isoladas)
 
 ### Fase 1
 - [ ] `causa_dominante` retorna `"CRONOGRAMA"` quando `|T_cronograma| > |T_precificacao|`, `"PRECIFICACAO"` no caso contrário

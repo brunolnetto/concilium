@@ -41,75 +41,6 @@ def _resolve_prod_lookup(catalogo: dict) -> dict:
     return {p.get("id"): p for p in fonte if p.get("id")}
 
 
-def _resolve_calibration_fractions(cpu: dict, prod_lookup: dict) -> tuple[float, float, float, float] | None:
-    """Resolve (C_ref, frac_mo, frac_eq, frac_diesel) a partir do PU_sbdi; None se não calibrável."""
-    prod_id = cpu.get("producao_id_ref") or ""
-    prod = prod_lookup.get(prod_id) or {}
-    C_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
-    if C_ref <= 0.0:
-        return None
-
-    sbdi = cpu.get("precos_unitarios_sbdi") or {}
-    pu_mo = float(sbdi.get("mo", 0.0) or 0.0)
-    pu_eq = float(sbdi.get("equipamentos", 0.0) or 0.0)
-    pu_diesel = float(sbdi.get("diesel", 0.0) or 0.0)
-    pu_total = pu_mo + pu_eq + pu_diesel
-    if pu_total <= 0.0:
-        return None
-
-    # Decompor pelas frações do PU_sbdi
-    return C_ref, pu_mo / pu_total, pu_eq / pu_total, pu_diesel / pu_total
-
-
-def _calibrar_custos_por_cref(
-    cpu: dict,
-    prod_lookup: dict,
-    horas_dia: float,
-    custo_mo: float,
-    custo_encargos: float,
-    custo_mo_base: float,
-    custo_eq: float,
-    custo_comb: float,
-) -> tuple[float, float, float, float, float]:
-    """NEP-029/S1: recalibra custos mensais usando custo_hora_total_referencia do catálogo.
-
-    Os preços individuais de insumos do catálogo divergem do custo calibrado pela planilha
-    (custo_hora_total_referencia), gerando custo autônomo inconsistente com o pool.
-    Usando precos_unitarios_sbdi como frações e C_ref como base, a equipe autônoma
-    fica alinhada com o pool (mesmo custo_unit_semanal).
-
-    Retorna (custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb) calibrados.
-    Sem alteração quando C_ref ausente ou insumos zerados (fallback silencioso).
-    """
-    fracs = _resolve_calibration_fractions(cpu, prod_lookup)
-    if fracs is None:
-        return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
-    C_ref, frac_mo, frac_eq, frac_diesel = fracs
-
-    # Custo total por mês calibrado = C_ref × horas_semana × SEMANAS_POR_MES
-    horas_semana = horas_dia * 6  # dias_semana fixo via regime
-    custo_mes_ref = C_ref * horas_semana * SEMANAS_POR_MES
-
-    # O PU_sbdi de MO já inclui encargos (B_base × (1+enc)) — manter enc proporcional
-    custo_mo_cal = custo_mes_ref * frac_mo  # inclui encargos
-    custo_eq_cal = custo_mes_ref * frac_eq
-    custo_comb_cal = custo_mes_ref * frac_diesel
-
-    # Derivar custo_mo_base e custo_encargos mantendo a proporção original
-    mo_total_orig = custo_mo if custo_mo > 0 else custo_mo_cal
-    frac_enc = custo_encargos / mo_total_orig if mo_total_orig > 0 else 0.0
-    custo_mo_base_cal = round(custo_mo_cal * (1.0 - frac_enc), 2)
-    custo_encargos_cal = round(custo_mo_cal * frac_enc, 2)
-
-    return (
-        round(custo_mo_cal, 2),
-        custo_encargos_cal,
-        custo_mo_base_cal,
-        round(custo_eq_cal, 2),
-        round(custo_comb_cal, 2),
-    )
-
-
 def _setup_dimensionamento_context(
     canonical_in: CanonicalModel,
     inputs: dict,
@@ -185,7 +116,6 @@ def _dimensionar_item_equipe(
     horas_dia: float,
     dias_uteis: float,
     preco_diesel: float,
-    prod_lookup: dict,
     validacoes: list,
 ) -> EquipeDireta:
     """Dimensiona a equipe direta de um item de EAP, agregando MO/encargos/equipamentos/custos."""
@@ -202,13 +132,10 @@ def _dimensionar_item_equipe(
     # Skill-05 apenas valida cobertura via VAL-EQUIP-MAT-01/02.
     custo_mat = 0.0
 
-    # NEP-029/S1: calibrar custos mensais pelo custo_hora_total_referencia do catálogo.
-    # precos_unitarios_sbdi fornece as frações mo/eq/diesel já calculadas pela planilha.
-    # Sem esta calibração, os insumos individuais divergem do C_ref e o custo autônomo
-    # fica ~2.5× menor que o pool, gerando "economia negativa" espúria no painel.
-    custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb = _calibrar_custos_por_cref(
-        cpu, prod_lookup, horas_dia, custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
-    )
+    # Sem calibração por custo_hora_total_referencia (removida): _processar_equipamentos_item
+    # já prioriza preco_h_unitario embutido na composição sobre o catálogo geral (ADR-132),
+    # o que por si só reproduz o custo de referência calibrado contra obra real (verificado
+    # para PROD-REJEITO-COMP-EQ1-4, delta < 0,003%) — o atalho por C_ref era redundante.
 
     # NEP-031 L3 / ADR-106 F2-bis: custo de mob/desmob por evento de transição de
     # recursos, separado em mob/demob — antes só o agregado era calculado, e os
@@ -289,7 +216,6 @@ def _build_dimensionamento(
                 horas_dia,
                 dias_uteis,
                 preco_diesel,
-                prod_lookup,
                 validacoes,
             )
         )

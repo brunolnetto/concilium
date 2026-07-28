@@ -88,9 +88,7 @@ from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
 )
 from ._dimensionamento_orquestracao import (  # ty: ignore[unresolved-import]
     _build_dimensionamento,
-    _calibrar_custos_por_cref,
     _dimensionar_item_equipe,
-    _resolve_calibration_fractions,
     _resolve_num_equipes_paralelas,
     _resolve_permanencia_e_custo_total_ajustados,
     _resolve_preco_diesel,
@@ -139,7 +137,6 @@ from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
     _fill_atribuicao,
     _get_active_weeks,
     _process_item_tipo_map,
-    _resolve_custo_hora_ref_sem,
     _resolve_gap_max_e_idle_efetivo,
     _week_idx,
 )
@@ -295,7 +292,6 @@ __all__ = [
     "_calcular_custo_equipamento",
     "_calcular_custo_funcao",
     "_calcular_permanencia_e_custo_total",
-    "_calibrar_custos_por_cref",
     "_collect_item_tipo_ids_and_pool_caps",
     "_collect_items_data_for_tipo",
     "_collect_tipo_items_and_demands",
@@ -379,9 +375,7 @@ __all__ = [
     "_reescalar_custo_inst_se_necessario",
     "_reescalar_particao",
     "_reset_custo_inst_para_items",
-    "_resolve_calibration_fractions",
     "_resolve_consumo_equip",
-    "_resolve_custo_hora_ref_sem",
     "_resolve_custo_unit_funcao",
     "_resolve_encargo_funcao",
     "_resolve_equip_attrs_and_tipo",

@@ -80,7 +80,7 @@ def run_equipes_e_alocacao(
     # ADR-104 Checkpoint 1: Estágio 1 — custo_inst_* deve estar None (sem pool contracts ainda)
     _validar_estagio1_inst_none(equipes, validacoes)
 
-    cron_lookup, cpu_lookup, prod_lookup, horas_semana = _build_pool_setup(canonical_in, catalogo)
+    cron_lookup, cpu_lookup, prod_lookup = _build_pool_setup(canonical_in, catalogo)
 
     # ADR-071/073: Pool Contract Model + Perpetuation Chains
     contratos_recurso: list[RecursoContrato] = []
@@ -93,9 +93,6 @@ def run_equipes_e_alocacao(
             rcpsp_derivado,
             cron_lookup,
             validacoes,
-            cpu_lookup,
-            prod_lookup,
-            horas_semana,
             benchmark_mode,
         )
         # ADR-159: popula composicao_funcoes_mo/composicao_equipamentos_eq (ADR-156/157)

@@ -32,19 +32,17 @@ def _validar_estagio1_inst_none(equipes: list, validacoes: list[ValidacaoItem]) 
             )
 
 
-def _build_pool_setup(canonical_in: CanonicalModel, catalogo: dict[str, Any]) -> tuple[dict, dict, dict, float]:
-    """Monta os lookups de cronograma/catálogo e horas/semana usados na derivação de contratos de pool."""
+def _build_pool_setup(canonical_in: CanonicalModel, catalogo: dict[str, Any]) -> tuple[dict, dict, dict]:
+    """Monta os lookups de cronograma/catálogo usados na derivação de contratos de pool."""
     sched_acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     cron_lookup = {sa.activity_id: sa for sa in sched_acts}
-    # Indexes para custo_hora_total_referencia do catálogo → custo_unit_semanal de catálogo
+    # Indexes usados por enriquecer_composicao_por_tipo (ADR-159) — composição, não custo.
     cpu_lookup: dict = {c["codigo"]: c for c in catalogo.get("cpus", []) if c.get("codigo")}
     prod_lookup: dict = {
         p.get("id") or p.get("codigo", ""): p
         for p in (catalogo.get("producoes") or catalogo.get("produtividades") or [])
     }
-    regime = canonical_in.projeto.regime_trabalho
-    horas_semana = float(regime.horas_dia * regime.dias_semana)
-    return cron_lookup, cpu_lookup, prod_lookup, horas_semana
+    return cron_lookup, cpu_lookup, prod_lookup
 
 
 def _resolve_rcpsp_spec(
@@ -141,9 +139,6 @@ def _processar_pool_contratos(
     rcpsp_derivado: bool,
     cron_lookup: dict,
     validacoes: list[ValidacaoItem],
-    cpu_lookup: dict,
-    prod_lookup: dict,
-    horas_semana: float,
     benchmark_mode: bool,
 ) -> tuple[list[RecursoContrato], list]:
     """ADR-071/073: deriva contratos de pool e cadeias de perpetuação a partir do rcpsp_spec."""
@@ -152,9 +147,6 @@ def _processar_pool_contratos(
         rcpsp_spec,
         cron_lookup,
         validacoes,
-        cpu_lookup=cpu_lookup,
-        prod_lookup=prod_lookup,
-        horas_semana=horas_semana,
     )
     _atualizar_custo_via_atribuicao(equipes, atribuicao, benchmark_mode)
     if contratos_recurso:
