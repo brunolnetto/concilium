@@ -240,10 +240,17 @@ def _convert_schedule_to_distribuicao(
     prat_mensal: dict[str, float],
     fator_calendario_semanal: dict[str, float],
     validacoes: list[ValidacaoItem],
-) -> dict[str, dict[str, DistribuicaoSemanal]]:
-    """Converte scheduled activities para distribuicao_semanal."""
+) -> tuple[dict[str, dict[str, DistribuicaoSemanal]], set[str]]:
+    """Converte scheduled activities para distribuicao_semanal.
+
+    Retorna também `fallback_item_ids` (issue #132): item_ids cuja produtividade foi
+    resolvida via fallback arbitrário (P=1000 un/h), para correlacionar com o fallback
+    de precificação em skill-06 e detectar quando ambos os lados do ponto de equilíbrio
+    ficam sem base real de produtividade para o mesmo item.
+    """
 
     distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]] = {}
+    fallback_item_ids: set[str] = set()
     activity_to_item = _build_activity_item_map(canonical_in)
 
     for sa in schedule_selected.scheduled_activities:
@@ -254,7 +261,9 @@ def _convert_schedule_to_distribuicao(
 
         cpu = _resolve_cpu_for_item(item, cpu_lookup, validacoes)
 
-        P = _resolve_productivity(cpu, producao_lookup, validacoes)
+        P, is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
+        if is_fallback:
+            fallback_item_ids.add(item_id)
         producao_semanal_base = P * regime.horas_dia * regime.dias_semana
         # NEP-035: pré-cômputo de n_max (pico de alocação da atividade) para η_s = n_j/n_max.
         ramp = getattr(sa, "ramp_profile", None)
@@ -279,7 +288,7 @@ def _convert_schedule_to_distribuicao(
 
         distribuicao_por_item[item_id] = distribuicao
 
-    return distribuicao_por_item
+    return distribuicao_por_item, fallback_item_ids
 
 
 def _cpv_get_equip_needed(cpu: dict) -> dict[str, int]:
@@ -508,7 +517,7 @@ def _process_single_wmp_policy(
 
     _check_wmp_pool(item_id, cpu, policy, pool, validacoes)
 
-    P = _resolve_productivity(cpu, producao_lookup, validacoes)
+    P, _is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
     Q = float(getattr(eap_item, "quantitativo", 0))
     if Q <= 0:
         validacoes.append(

@@ -41,13 +41,18 @@ def _resolve_preco_cat_item(
     alpha_clt: float,
     alpha_mensalista: float,
     catalog_session: object | None,
-) -> tuple[dict[str, float] | None, set[str]]:
+) -> tuple[dict[str, float] | None, set[str], bool]:
     """NEP-032 D1: precificação bottom-up canônica, com fallback para composicao_itens.
 
     Hierarquia de fontes:
       1. derivar_precos_unitarios_sbdi(producao, insumos) — bottom-up via composição da equipe
       2. composicao_itens × preco_insumo — fallback para CPUs sem producao completa
       precos_unitarios_sbdi hard-coded nos JSONs é campo depreciado (emite VAL-PLAN-SBDI-LEGADO).
+
+    Retorna também `usou_fallback_composicao` (issue #132): True quando a Fonte 1 (bottom-up,
+    com base em produtividade) falhou e o preço caiu na Fonte 2 (composicao_itens × preco_insumo,
+    sem relação com produtividade) — sinal de 1ª classe para correlacionar com o fallback de
+    produtividade do schedule (skill-04) sobre o mesmo item.
     """
     # Fonte 1: bottom-up da composição da equipe (produção + insumos SICRO/SINAPI)
     preco_cat = _compute_preco_cat_from_production(
@@ -69,11 +74,12 @@ def _resolve_preco_cat_item(
                 mensagem=f"Item '{item.item_id}': preço unitário derivado de composição da equipe (NEP-032).",
             )
         )
-        return preco_cat, set()
+        return preco_cat, set(), False
 
-    return _preco_cat_fallback_composicao(
+    preco_cat_fallback, equip_sem_decomp = _preco_cat_fallback_composicao(
         cpu, insumo_lookup, repo, jurisdicao_id, overrides, data_base, erros_insumo, validacoes
     )
+    return preco_cat_fallback, equip_sem_decomp, True
 
 
 def _process_eap_item(
@@ -109,7 +115,7 @@ def _process_eap_item(
         plan_out.append(early)
         return
 
-    preco_cat, equip_sem_decomp_item = _resolve_preco_cat_item(
+    preco_cat, equip_sem_decomp_item, usou_fallback_composicao = _resolve_preco_cat_item(
         item,
         cpu,
         prod_lookup,
@@ -135,6 +141,14 @@ def _process_eap_item(
     )
     _apply_sem_bdi_override(item.item_id, item_override, preco_cat, validacoes)
     preco_cat_com_bdi = _apply_com_bdi_override(item.item_id, item_override, preco_cat, bdi_aplicado, validacoes)
-    plan_out.append(_build_planejamento_entry(item, preco_cat, preco_cat_com_bdi, bdi_aplicado))
+    plan_out.append(
+        _build_planejamento_entry(
+            item,
+            preco_cat,
+            preco_cat_com_bdi,
+            bdi_aplicado,
+            precificacao_via_fallback_composicao=usou_fallback_composicao,
+        )
+    )
 
 

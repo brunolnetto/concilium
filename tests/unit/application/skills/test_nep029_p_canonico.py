@@ -256,14 +256,16 @@ class TestResolveProdutividadeCanonica:
                 "valor_horario_canonico": 200.0,  # diagnóstico, não usado pelo scheduler
             }
         }
-        P = _s._resolve_productivity(cpu, prod_lookup, [])
+        P, is_fallback = _s._resolve_productivity(cpu, prod_lookup, [])
         assert P == 50.0  # scheduling usa valor_horario, não canonico
+        assert is_fallback is False
 
     def test_fallback_para_producao_horaria_quando_sem_valor_horario(self):
         cpu = {"codigo": "CPU-Z", "producao_id_ref": "PROD-Z"}
         prod_lookup = {"PROD-Z": {"id": "PROD-Z", "producao_horaria": 80.0}}
-        P = _s._resolve_productivity(cpu, prod_lookup, [])
+        P, is_fallback = _s._resolve_productivity(cpu, prod_lookup, [])
         assert P == 80.0
+        assert is_fallback is False
 
 
 # ── Propriedade fe_nec = 1/η_p ────────────────────────────────────────────────

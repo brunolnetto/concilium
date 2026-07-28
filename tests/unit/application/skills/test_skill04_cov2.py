@@ -435,9 +435,10 @@ class TestResolveProductivityNoValue:
             }
         }
         validacoes = []
-        result = _resolve_productivity(cpu, prod_lookup, validacoes)
+        result, is_fallback = _resolve_productivity(cpu, prod_lookup, validacoes)
         # Falls through to default 1000.0
         assert result == 1000.0
+        assert is_fallback is True
 
     def test_prod_item_has_producao_horaria_but_valor_horario_none(self):
         """Line 1020->1031 True path: producao_horaria exists → VAL-PROD-04-PROD-LEGACY."""
@@ -450,8 +451,9 @@ class TestResolveProductivityNoValue:
             }
         }
         validacoes = []
-        result = _resolve_productivity(cpu, prod_lookup, validacoes)
+        result, is_fallback = _resolve_productivity(cpu, prod_lookup, validacoes)
         assert result == pytest.approx(5.0)
+        assert is_fallback is False
         assert any(v.codigo == "VAL-PROD-04-PROD-LEGACY" for v in validacoes)
 
 
@@ -553,23 +555,26 @@ class TestDetermineModeNoMode:
                 return self
 
         validacoes = []
-        mode, distr, candidates, selected, failed, replenishable_resources = _determine_mode_and_distribuicao(
-            canonical_in=FakeCanonical(),
-            inputs={},
-            num_equipes_por_item=None,
-            semanas_obra=["2025-W01"],
-            cpu_lookup={},
-            producao_lookup={},
-            regime=SimpleNamespace(horas_dia=8, dias_semana=5),
-            prat_semanal={},
-            prat_mensal={},
-            fator_calendario_semanal={},
-            catalogo={},
-            validacoes=validacoes,
+        mode, distr, candidates, selected, failed, replenishable_resources, fallback_item_ids = (
+            _determine_mode_and_distribuicao(
+                canonical_in=FakeCanonical(),
+                inputs={},
+                num_equipes_por_item=None,
+                semanas_obra=["2025-W01"],
+                cpu_lookup={},
+                producao_lookup={},
+                regime=SimpleNamespace(horas_dia=8, dias_semana=5),
+                prat_semanal={},
+                prat_mensal={},
+                fator_calendario_semanal={},
+                catalogo={},
+                validacoes=validacoes,
+            )
         )
         assert failed is True
         assert replenishable_resources == []
         assert mode is None
+        assert fallback_item_ids == set()
         assert any(v.codigo == "VAL-CRON-MODE" and v.status == "ERRO" for v in validacoes)
 
 
@@ -705,6 +710,52 @@ class TestBuildScheduledActivitiesNoneActivityId:
             schedule_selected=sched_sel,
         )
         assert result[0].duration_weeks == 5
+
+
+# ---------------------------------------------------------------------------
+# _build_scheduled_activities — produtividade_fallback_aplicada (issue #132)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildScheduledActivitiesFallbackFlag:
+    def _make_canonical(self, item_ids):
+        class FakeEapItem:
+            def __init__(self, item_id):
+                self.item_id = item_id
+                self.quantitativo = 100.0
+
+        class FakeCanonical:
+            eap = [FakeEapItem(i) for i in item_ids]
+            projeto = SimpleNamespace(data_inicio=date(2025, 1, 6))
+
+        return FakeCanonical()
+
+    def test_marca_true_apenas_para_itens_no_fallback_set(self):
+        canonical = self._make_canonical(["IT-01", "IT-02"])
+        result = _build_scheduled_activities(
+            canonical,
+            distribuicao_por_item={"IT-01": {}, "IT-02": {}},
+            semanas_obra=["2025-W02"],
+            schedule_selected=None,
+            fallback_item_ids={"IT-01"},
+        )
+        by_id = {sa.activity_id: sa for sa in result}
+        assert by_id["IT-01"].produtividade_fallback_aplicada is True
+        assert by_id["IT-02"].produtividade_fallback_aplicada is False
+
+    def test_default_none_nao_marca_nenhum_item(self):
+        """fallback_item_ids omitido (default None) -> nenhum item marcado. Modo manual
+        (_execute_manual_mode) também rastreia fallback e passa o set real — ver
+        TestExecuteManualModeFallbackFlag; este default só cobre chamadores que
+        genuinamente não têm a informação (ex. testes diretos deste helper)."""
+        canonical = self._make_canonical(["IT-01"])
+        result = _build_scheduled_activities(
+            canonical,
+            distribuicao_por_item={"IT-01": {}},
+            semanas_obra=["2025-W02"],
+            schedule_selected=None,
+        )
+        assert result[0].produtividade_fallback_aplicada is False
 
 
 # ---------------------------------------------------------------------------
@@ -1329,10 +1380,11 @@ class TestConvertScheduleToDistribuicaoUnmapped:
         sa = SimpleNamespace(activity_id="ACT-UNKNOWN")
         schedule_selected = SimpleNamespace(scheduled_activities=[sa])
         validacoes: list = []
-        result = _convert_schedule_to_distribuicao(
+        result, fallback_item_ids = _convert_schedule_to_distribuicao(
             schedule_selected, FakeCanonical(), [], {}, {}, SimpleNamespace(), {}, {}, {}, validacoes
         )
         assert result == {}
+        assert fallback_item_ids == set()
         assert any(v.codigo == "VAL-CRON-CONVERT" for v in validacoes)
 
     def test_zero_quantitativo_skips_completude_check(self):
@@ -1355,7 +1407,7 @@ class TestConvertScheduleToDistribuicaoUnmapped:
         sa = SimpleNamespace(activity_id="IT-01", start_week=0, duration_weeks=1, assigned_resources={})
         schedule_selected = SimpleNamespace(scheduled_activities=[sa])
         validacoes: list = []
-        result = _convert_schedule_to_distribuicao(
+        result, fallback_item_ids = _convert_schedule_to_distribuicao(
             schedule_selected,
             FakeCanonical(),
             ["2025-W02"],
@@ -1368,6 +1420,8 @@ class TestConvertScheduleToDistribuicaoUnmapped:
             validacoes,
         )
         assert "IT-01" in result
+        # CPU/produção não encontradas → fallback aplicado (issue #132)
+        assert fallback_item_ids == {"IT-01"}
         assert not any(v.codigo == "VAL-CRON-01" for v in validacoes)
 
     def test_mapped_item_not_found_in_eap_skips(self):
@@ -1384,10 +1438,11 @@ class TestConvertScheduleToDistribuicaoUnmapped:
         sa = SimpleNamespace(activity_id="ACT-1")
         schedule_selected = SimpleNamespace(scheduled_activities=[sa])
         validacoes: list = []
-        result = _convert_schedule_to_distribuicao(
+        result, fallback_item_ids = _convert_schedule_to_distribuicao(
             schedule_selected, FakeCanonical(), [], {}, {}, SimpleNamespace(), {}, {}, {}, validacoes
         )
         assert result == {}
+        assert fallback_item_ids == set()
         assert not any(v.codigo == "VAL-CRON-CONVERT" for v in validacoes)
 
 
@@ -1446,27 +1501,33 @@ class TestDetermineModeRcpspSpecSuccess:
         sched_sel = SimpleNamespace(scheduled_activities=[])
         with (
             patch(f"{_MOD_NAME}._mod_assembly._run_auto_schedule_fallback_chain", return_value=([], sched_sel, [])),
-            patch(f"{_MOD_NAME}._mod_assembly._convert_schedule_to_distribuicao", return_value={"IT-01": {}}),
+            patch(
+                f"{_MOD_NAME}._mod_assembly._convert_schedule_to_distribuicao",
+                return_value=({"IT-01": {}}, {"IT-01"}),
+            ),
         ):
-            mode, distr, candidates, selected, failed, replenishable_resources = _determine_mode_and_distribuicao(
-                canonical_in=canonical,
-                inputs={"rcpsp_spec": {"activities": []}},
-                num_equipes_por_item=None,
-                semanas_obra=["2025-W01"],
-                cpu_lookup={},
-                producao_lookup={},
-                regime=SimpleNamespace(horas_dia=8, dias_semana=5),
-                prat_semanal={},
-                prat_mensal={},
-                fator_calendario_semanal={},
-                catalogo={},
-                validacoes=[],
+            mode, distr, candidates, selected, failed, replenishable_resources, fallback_item_ids = (
+                _determine_mode_and_distribuicao(
+                    canonical_in=canonical,
+                    inputs={"rcpsp_spec": {"activities": []}},
+                    num_equipes_por_item=None,
+                    semanas_obra=["2025-W01"],
+                    cpu_lookup={},
+                    producao_lookup={},
+                    regime=SimpleNamespace(horas_dia=8, dias_semana=5),
+                    prat_semanal={},
+                    prat_mensal={},
+                    fator_calendario_semanal={},
+                    catalogo={},
+                    validacoes=[],
+                )
             )
         assert mode == "AUTO_SCHEDULE (rcpsp_spec)"
         assert failed is False
         assert distr == {"IT-01": {}}
         assert selected is sched_sel
         assert replenishable_resources == []
+        assert fallback_item_ids == {"IT-01"}
 
     def test_rcpsp_spec_no_schedule_selected_returns_failed(self):
         """Line 1857: fallback chain exhausted (schedule_selected falsy) -> early
@@ -1476,25 +1537,28 @@ class TestDetermineModeRcpspSpecSuccess:
             f"{_MOD_NAME}._mod_assembly._run_auto_schedule_fallback_chain",
             return_value=([{"heuristic": "MINSLK"}], None, []),
         ):
-            mode, distr, candidates, selected, failed, replenishable_resources = _determine_mode_and_distribuicao(
-                canonical_in=canonical,
-                inputs={"rcpsp_spec": {"activities": []}},
-                num_equipes_por_item=None,
-                semanas_obra=["2025-W01"],
-                cpu_lookup={},
-                producao_lookup={},
-                regime=SimpleNamespace(horas_dia=8, dias_semana=5),
-                prat_semanal={},
-                prat_mensal={},
-                fator_calendario_semanal={},
-                catalogo={},
-                validacoes=[],
+            mode, distr, candidates, selected, failed, replenishable_resources, fallback_item_ids = (
+                _determine_mode_and_distribuicao(
+                    canonical_in=canonical,
+                    inputs={"rcpsp_spec": {"activities": []}},
+                    num_equipes_por_item=None,
+                    semanas_obra=["2025-W01"],
+                    cpu_lookup={},
+                    producao_lookup={},
+                    regime=SimpleNamespace(horas_dia=8, dias_semana=5),
+                    prat_semanal={},
+                    prat_mensal={},
+                    fator_calendario_semanal={},
+                    catalogo={},
+                    validacoes=[],
+                )
             )
         assert mode == "AUTO_SCHEDULE (rcpsp_spec)"
         assert failed is True
         assert distr == {}
         assert selected is None
         assert replenishable_resources == []
+        assert fallback_item_ids == set()
 
 
 # ---------------------------------------------------------------------------

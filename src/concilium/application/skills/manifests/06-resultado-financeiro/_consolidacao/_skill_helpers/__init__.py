@@ -68,6 +68,7 @@ from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
     _validate_frentes_necessarias,
     _validate_pe_duplo_risco,
     _validate_pe_particao,
+    _validate_prod_pu_fallback_desync,
     _validate_prod_vs_pu,
 )
 from ._resultado import (  # ty: ignore[unresolved-import]
@@ -158,5 +159,6 @@ __all__ = [
     "_validate_frentes_necessarias",
     "_validate_pe_duplo_risco",
     "_validate_pe_particao",
+    "_validate_prod_pu_fallback_desync",
     "_validate_prod_vs_pu",
 ]
