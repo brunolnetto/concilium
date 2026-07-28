@@ -22,7 +22,8 @@ from ._catalogo_tools_helpers_a import (
 from ._catalogo_tools_helpers_b import (
     _impl_avaliar_plausibilidade_catalogo,
     _impl_calcular_pu_producao,
-    _impl_comparar_rfi_catalogo,
+    _impl_comparar_catalogo,
+    _impl_mesclar_catalogo,
     _impl_tendencia_precos_catalogo,
     _impl_verificar_integridade_catalogo,
 )
@@ -206,15 +207,32 @@ def register(server: FastMCP) -> None:
             return _wrap_response({"erro": f"modo '{modo}' inválido. Use: pontual | tendencia"})
 
     @server.tool(
-        description="Compara dados de RFI (Request for Information) com o catálogo master e lista divergências. "
-        "dry_run=True (padrão) apenas mostra — use dry_run=False para aplicar as diferenças."
+        description="Compara duas fontes de entidades de catálogo (catálogo x catálogo, ou catálogo x planilha "
+        "PLANILHA PADRÃO RFI .xlsm/.xlsx) e lista divergências (LEFT_ONLY/INNER_HIGH/INNER_LOW/RIGHT_ONLY). "
+        "Sempre dry-run — este tool nunca escreve nada; use mesclar_catalogo para aplicar."
     )
     @permission("financials:read")
-    def comparar_rfi_catalogo(
-        contexto_id: str,
-        dry_run: bool = True,
+    def comparar_catalogo(
+        origem_a: str,
+        origem_b: str,
+        tipo: str = "todos",
     ) -> dict[str, Any]:
-        return _impl_comparar_rfi_catalogo(contexto_id, dry_run)
+        return _impl_comparar_catalogo(origem_a, origem_b, tipo)
+
+    @server.tool(
+        description="Mescla uma fonte de origem (catálogo ou planilha PLANILHA PADRÃO RFI .xlsm/.xlsx) no "
+        "catálogo de destino. dry_run=True (padrão) apenas mostra o relatório — use dry_run=False para aplicar "
+        "as diferenças direto no catálogo de destino (escrita direta, fora do fluxo de rascunho — ADR-145)."
+    )
+    @permission("catalog:write")
+    @mcp_rate_limit()
+    def mesclar_catalogo(
+        destino: str,
+        origem: str,
+        dry_run: bool = True,
+        tipo: str = "todos",
+    ) -> dict[str, Any]:
+        return _impl_mesclar_catalogo(destino, origem, dry_run, tipo)
 
     @server.tool(
         description="Recalcula o preço unitário de uma produção específica dado alpha_clt, alpha_pj e preço do diesel. "

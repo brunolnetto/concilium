@@ -4,7 +4,7 @@ Targets:
   - commands_manage.py — catalog_list, catalog_browse, catalog_quality,
     catalog_simulate, catalog_export, catalog_survey, catalog_promote,
     catalog_search, catalog_validate_schema, catalog_cure_schema,
-    catalog_tendencia, catalog_audit_reasonability, catalog_merge_rfi,
+    catalog_tendencia, catalog_audit_reasonability, catalog_compare, catalog_merge,
     catalog_cure_plausibility, structure_list, plan_init
 """
 
@@ -393,27 +393,50 @@ class TestCatalogAuditReasonability:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# catalog_merge_rfi and catalog_cure_plausibility — bare functions (no decorator)
+# catalog compare / catalog merge (issue #134) — registrados via @app_catalog.command
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-class TestCatalogMergeRfi:
-    """catalog_merge_rfi is not registered with a @app_catalog.command decorator.
-    Calling it with explicit values bypasses Typer option processing."""
+class TestCatalogCompare:
+    def test_defaults_forwarded(self):
+        with patch(f"{_PATCH_BASE}._impl_catalog_compare") as mock_impl:
+            result = runner.invoke(app_catalog, ["compare", "catA", "catB"])
+        assert result.exit_code == 0
+        mock_impl.assert_called_once_with("catA", "catB", "todos")
 
-    def test_delegates_with_explicit_defaults(self):
-        from concilium.presentation.cli.commands_manage import catalog_merge_rfi
+    def test_tipo_option_forwarded(self):
+        with patch(f"{_PATCH_BASE}._impl_catalog_compare") as mock_impl:
+            result = runner.invoke(app_catalog, ["compare", "catA", "planilha.xlsm", "--tipo", "insumos"])
+        assert result.exit_code == 0
+        mock_impl.assert_called_once_with("catA", "planilha.xlsm", "insumos")
 
-        with patch(f"{_PATCH_BASE}._impl_catalog_merge_rfi") as mock_impl:
-            catalog_merge_rfi("ctx1", False, False, None)
-        mock_impl.assert_called_once_with("ctx1", False, False, None)
 
-    def test_delegates_with_apply_and_verify(self):
-        from concilium.presentation.cli.commands_manage import catalog_merge_rfi
+class TestCatalogMerge:
+    def test_defaults_forwarded(self):
+        with patch(f"{_PATCH_BASE}._impl_catalog_merge") as mock_impl:
+            result = runner.invoke(app_catalog, ["merge", "dest", "orig"])
+        assert result.exit_code == 0
+        mock_impl.assert_called_once_with("dest", "orig", False, True, "todos", False, None)
 
-        with patch(f"{_PATCH_BASE}._impl_catalog_merge_rfi") as mock_impl:
-            catalog_merge_rfi("ctx2", True, True, "/tmp/r.json")
-        mock_impl.assert_called_once_with("ctx2", True, True, "/tmp/r.json")
+    def test_all_options_forwarded(self):
+        with patch(f"{_PATCH_BASE}._impl_catalog_merge") as mock_impl:
+            result = runner.invoke(
+                app_catalog,
+                [
+                    "merge",
+                    "dest",
+                    "orig",
+                    "--apply",
+                    "--no-incluir-novos",
+                    "--tipo",
+                    "cpus",
+                    "--verify-pu",
+                    "--report-json",
+                    "/tmp/r.json",
+                ],
+            )
+        assert result.exit_code == 0
+        mock_impl.assert_called_once_with("dest", "orig", True, False, "cpus", True, "/tmp/r.json")
 
 
 class TestCatalogCurePlausibility:

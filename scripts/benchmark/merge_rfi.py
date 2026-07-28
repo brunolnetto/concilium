@@ -3,20 +3,22 @@
 Merge entre catálogo Concilium e PLANILHA PADRÃO RFI.xlsm
 
 Uso:
-    python tools/merge_rfi.py --contexto mendeslobo          # dry-run (relatório)
-    python tools/merge_rfi.py --contexto mendeslobo --apply  # aplica merge
+    python scripts/benchmark/merge_rfi.py --contexto mendeslobo          # dry-run (relatório)
+    python scripts/benchmark/merge_rfi.py --contexto mendeslobo --apply  # aplica merge
+
+Este script é o adaptador específico do formato "PLANILHA PADRÃO RFI.xlsm" — sabe ler as
+abas BD_MÃO_DE_OBRA/BD_EQUIPAMENTOS/BD_MATERIAIS/SERVIÇOS TERCEIRIZADOS/BD_PRODUTIVIDADES
+e convertê-las para o formato de entidades do catálogo (`extract_rfi`). O motor de
+comparação/merge genérico (agnóstico de origem) vive em
+`concilium.application.services.catalog.catalog_compare` (issue #134) — este script apenas
+consome esse motor para o caso de uso "catálogo vs planilha RFI". Para comparar/mesclar
+dois catálogos entre si (ou catálogo vs planilha), use `concilium catalog compare|merge`.
 
 Operações de comparação (como JOIN):
     LEFT_ONLY   : no catálogo, não na planilha   → mantém (sem alteração)
     RIGHT_ONLY  : na planilha, não no catálogo   → candidato a inclusão
     INNER_HIGH  : match confiante (score ≥ 0.85) → atualiza preço/dados se diferente
     INNER_LOW   : match incerto  (0.50–0.85)     → reporta para revisão manual
-
-Heurística de matching:
-    1. Código direto              → score 1.0
-    2. Overlap de tokens          → score 0.0–1.0 (após normalização ASCII)
-    3. Boost +0.10 se mesma unidade E preço dentro de ±30%
-    Limiar HIGH ≥ 0.85 / LOW 0.50–0.85 / NO_MATCH < 0.50
 """
 from __future__ import annotations
 
@@ -26,145 +28,26 @@ import json
 import re
 import sys
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+_SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
+if str(_SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SRC_ROOT))
 
-try:
-    import openpyxl
-except ImportError:
-    print("openpyxl não encontrado. Execute: uv add openpyxl", file=sys.stderr)
-    sys.exit(2)
+from concilium.application.services.catalog.catalog_compare import (  # noqa: E402
+    THRESHOLD_HIGH,
+    THRESHOLD_LOW,
+    RelatorioComparacao as MergeReport,
+    _norm_unit,
+    aplicar_merge as _apply_merge,
+    comparar_entidades as _merge_entities,
+)
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 XLSM = ROOT / "docs/product/3-reference_files/catalogos/PLANILHA PADRÃO RFI.xlsm"
 HEADER_ROW = 3  # linha real do header nas abas BD_* (1-indexed)
-
-# ── Constantes de matching ────────────────────────────────────────────────────
-THRESHOLD_HIGH = 0.85
-THRESHOLD_LOW  = 0.50
-PRICE_TOLERANCE = 0.30       # ±30%
-CODE_COLLISION_DESC_MIN = 0.28  # código igual mas desc muito divergente → INNER_LOW
-
-# ── Normalização de unidades ──────────────────────────────────────────────────
-# Mapeia variantes gráficas para forma canônica ASCII
-_UNIT_CANON: dict[str, str] = {
-    "m²": "m2", "m³": "m3",
-    "M²": "m2", "M³": "m3",
-    "M2": "m2", "M3": "m3",
-    "m2": "m2", "m3": "m3",
-    "UND": "un", "und": "un", "UN": "un", "Und": "un",
-    "KG":  "kg", "Kg":  "kg",
-    "TON": "t",  "Ton": "t",
-    "H":   "h",  "Hr":  "h",
-    "L":   "l",  "Lt":  "l",
-}
-
-def _norm_unit(u: str | None) -> str:
-    if not u:
-        return ""
-    s = u.strip()
-    # Substitui caracteres superscript unicode → ASCII equivalente
-    s = s.replace("²", "2").replace("³", "3")  # ² → 2, ³ → 3
-    return _UNIT_CANON.get(s, s.lower())
-
-# ── Normalização de texto ─────────────────────────────────────────────────────
-_STOP = {"de", "do", "da", "dos", "das", "e", "a", "o", "em", "com", "para", "por"}
-
-# Abreviações técnicas de construção → forma expandida
-# Permite que "Esc/carg/transp" bata com "Escavação, carga e transporte"
-_ABBREV = {
-    "esc":     "escavacao",
-    "carg":    "carga",
-    "transp":  "transporte",
-    "compac":  "compactacao",
-    "compact": "compactacao",
-    "regul":   "regularizacao",
-    "subl":    "subleito",
-    "sublet":  "subleito",
-    "sub":     "subleito",
-    "reg":     "regularizacao",
-    "bgtc":    "brita graduada tratada cimento",
-    "bgsc":    "brita graduada sem cimento",
-    "cbuq":    "concreto betuminoso usinado quente",
-    "pn":      "proctor normal",
-    "pi":      "proctor intermediario",
-    "dmt":     "distancia media transporte",
-    "dn":      "diametro nominal",
-    "pba":     "pba",
-    "cat":     "categoria",
-}
-
-def _normalize(text: str) -> set[str]:
-    """Converte texto em conjunto de tokens ASCII normalizados com expansão de abreviações."""
-    t = unicodedata.normalize("NFD", str(text).lower())
-    t = "".join(c for c in t if unicodedata.category(c) != "Mn")  # remove acentos
-    t = re.sub(r"[^a-z0-9\s]", " ", t)
-    tokens = {w for w in t.split() if w not in _STOP and len(w) > 1}
-    # Expande abreviações: substitui token abreviado pelos tokens expandidos (multi-palavra)
-    expanded: set[str] = set()
-    for tok in tokens:
-        expansion = _ABBREV.get(tok, tok)
-        if expansion == tok:
-            expanded.add(tok)
-        else:
-            # Expansão multi-palavra: divide e filtra cada palavra individualmente
-            for word in expansion.split():
-                if word not in _STOP and len(word) > 1:
-                    expanded.add(word)
-    return expanded
-
-def _similarity(a: str, b: str) -> float:
-    """Jaccard similarity entre tokens normalizados."""
-    ta, tb = _normalize(a), _normalize(b)
-    if not ta or not tb:
-        return 0.0
-    return len(ta & tb) / len(ta | tb)
-
-def _match_score(rfi: dict, cat: dict) -> float:
-    """Score de matching entre uma entidade RFI e uma do catálogo."""
-    # 0. Tipos incompatíveis → sem match (evita cross-type MATERIAL vs TERCEIRIZADO, etc.)
-    tipo_rfi = rfi.get("tipo")
-    tipo_cat = cat.get("tipo")
-    if tipo_rfi and tipo_cat and tipo_rfi != tipo_cat:
-        return 0.0
-
-    desc_sim = _similarity(rfi.get("descricao", ""), cat.get("descricao", ""))
-
-    # 1. Código direto (usa codigo com fallback para id — producoes podem ter só id)
-    rfi_code = rfi.get("codigo") or rfi.get("id", "")
-    cat_code = cat.get("codigo") or cat.get("id", "")
-    if rfi_code and rfi_code == cat_code:
-        # Protege contra code collision: código igual mas conteúdo divergente
-        if desc_sim < CODE_COLLISION_DESC_MIN:
-            return 0.70  # força INNER_LOW para revisão manual
-        return 1.0
-
-    # 2. Similaridade de descrição
-    score = desc_sim
-
-    # 3. Boost por unidade + preço (usa unidades normalizadas)
-    u_rfi = _norm_unit(rfi.get("unidade"))
-    u_cat = _norm_unit(cat.get("unidade"))
-    if u_rfi and u_rfi == u_cat:
-        p_rfi = rfi.get("preco_unitario") or 0
-        p_cat = cat.get("preco_unitario") or 0
-        if p_cat > 0 and abs(p_rfi - p_cat) / p_cat <= PRICE_TOLERANCE:
-            score = min(1.0, score + 0.10)
-
-    return round(score, 4)
-
-def _categorize(score: float, rfi: dict, cat: dict | None) -> str:
-    if cat is None:
-        return "RIGHT_ONLY"
-    if score >= THRESHOLD_HIGH:
-        return "INNER_HIGH"
-    if score >= THRESHOLD_LOW:
-        return "INNER_LOW"
-    return "NO_MATCH"  # tratar como RIGHT_ONLY
 
 # ── Mapeamento de fonte ───────────────────────────────────────────────────────
 _FONTE_MAP = {
@@ -424,150 +307,6 @@ def extract_rfi(wb: Any) -> dict:
 
     return {"insumos": insumos, "producoes": producoes}
 
-# ── Merge ─────────────────────────────────────────────────────────────────────
-
-class MergeReport:
-    def __init__(self) -> None:
-        self.inner_high: list[dict] = []
-        self.inner_low:  list[dict] = []
-        self.right_only: list[dict] = []
-        self.left_only:  list[dict] = []
-
-def _merge_entities(
-    catalog_list: list[dict],
-    rfi_list: list[dict],
-    id_key: str = "codigo",
-) -> tuple[MergeReport, list[dict]]:
-    """
-    Compara duas listas de entidades e retorna relatório + lista mergeada.
-    Estratégia INNER_HIGH: preço do catálogo é atualizado com o da RFI se diferente.
-    """
-    report = MergeReport()
-    cat_by_code = {e.get(id_key, ""): e for e in catalog_list}
-    rfi_matched: set[str] = set()
-    result = list(catalog_list)  # começa com tudo do catálogo
-
-    for rfi in rfi_list:
-        rfi_code = rfi.get(id_key, "")
-        best_score = 0.0
-        best_cat   = None
-
-        # Procura melhor match no catálogo
-        for cat in catalog_list:
-            s = _match_score(rfi, cat)
-            if s > best_score:
-                best_score = s
-                best_cat = cat
-
-        category = _categorize(best_score, rfi, best_cat)
-
-        if category == "RIGHT_ONLY" or category == "NO_MATCH":
-            report.right_only.append({"rfi": rfi, "score": best_score})
-        elif category == "INNER_HIGH":
-            rfi_matched.add(best_cat.get(id_key, ""))
-            delta = _delta(best_cat, rfi)
-            report.inner_high.append({
-                "catalog": best_cat, "rfi": rfi,
-                "score": best_score, "delta": delta,
-            })
-        elif category == "INNER_LOW":
-            report.inner_low.append({
-                "catalog": best_cat, "rfi": rfi,
-                "score": best_score,
-            })
-
-    # LEFT_ONLY: no catálogo mas não matchou com nada na RFI
-    matched_cat_codes = {e["catalog"].get(id_key, "") for e in report.inner_high}
-    matched_cat_codes |= {e["catalog"].get(id_key, "") for e in report.inner_low}
-    for cat in catalog_list:
-        if cat.get(id_key, "") not in matched_cat_codes:
-            report.left_only.append({"catalog": cat})
-
-    return report, result
-
-def _delta(cat: dict, rfi: dict) -> dict:
-    """Computa diferenças relevantes entre catálogo e RFI (ignora variações gráficas)."""
-    d: dict = {}
-    for field in ("preco_unitario", "descricao", "unidade", "fonte_preco"):
-        v_cat = cat.get(field)
-        v_rfi = rfi.get(field)
-        if v_rfi is None:
-            continue
-        # Normaliza unidades antes de comparar (m³ == m3, etc.)
-        if field == "unidade":
-            if _norm_unit(str(v_cat or "")) == _norm_unit(str(v_rfi or "")):
-                continue  # mesma unidade, variação gráfica apenas
-        # Normaliza descrições
-        if field == "descricao":
-            t_cat = _normalize(str(v_cat or ""))
-            t_rfi = _normalize(str(v_rfi or ""))
-            if t_cat == t_rfi:
-                continue  # idênticas após normalização
-            # RFI é subconjunto do catálogo: catálogo é mais completo → manter catálogo
-            if t_rfi and t_rfi.issubset(t_cat):
-                continue
-        if v_cat != v_rfi:
-            d[field] = {"catalog": v_cat, "rfi": v_rfi}
-            if field == "preco_unitario" and v_cat and v_rfi:
-                try:
-                    pct = (float(v_rfi) - float(v_cat)) / float(v_cat) * 100
-                    d[field]["delta_pct"] = round(pct, 2)
-                except (TypeError, ZeroDivisionError):
-                    pass
-    return d
-
-def _apply_merge(
-    catalog_list: list[dict],
-    rfi_list: list[dict],
-    report: MergeReport,
-    id_key: str = "codigo",
-    include_right_only: bool = True,
-) -> list[dict]:
-    """Aplica merge: atualiza INNER_HIGH, adiciona RIGHT_ONLY ao catálogo."""
-    result = {e.get(id_key, ""): dict(e) for e in catalog_list}
-
-    # Atualiza INNER_HIGH
-    for item in report.inner_high:
-        cat_code = item["catalog"].get(id_key, "")
-        if cat_code in result and item["delta"]:
-            for field, chg in item["delta"].items():
-                result[cat_code][field] = chg["rfi"]
-            result[cat_code]["_rfi_updated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-    # Adiciona RIGHT_ONLY
-    if include_right_only:
-        for item in report.right_only:
-            rfi = item["rfi"]
-            cod = rfi.get(id_key, "")
-            if not cod:
-                continue
-            # Se o código já existe no catálogo (colisão verdadeira), importa com prefixo RFI-
-            if cod in result:
-                cod = f"RFI-{cod}"
-            clean = {k: v for k, v in rfi.items() if not k.startswith("_")}
-            clean[id_key] = cod
-            clean["_rfi_imported_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            result[cod] = clean
-
-    # Converte INNER_LOW colisões reais em RIGHT_ONLY com prefixo RFI-
-    # (código bate mas conteúdo diverge completamente — não sobrescreve catálogo)
-    for item in report.inner_low:
-        rfi_e = item["rfi"]
-        cat_e = item["catalog"]
-        rfi_cod = rfi_e.get(id_key, "")
-        cat_cod = cat_e.get(id_key, "")
-        if rfi_cod == cat_cod and rfi_cod:
-            # True collision: importa RFI com novo código prefixado
-            new_cod = f"RFI-{rfi_cod}"
-            if new_cod not in result:
-                clean = {k: v for k, v in rfi_e.items() if not k.startswith("_")}
-                clean[id_key] = new_cod
-                clean["_rfi_collision_original_code"] = rfi_cod
-                clean["_rfi_imported_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-                result[new_cod] = clean
-
-    return list(result.values())
-
 # ── Report printer ────────────────────────────────────────────────────────────
 
 def _print_report(report: MergeReport, label: str) -> None:
@@ -611,6 +350,20 @@ def _print_report(report: MergeReport, label: str) -> None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    # Reconfigura stdout/stderr para UTF-8 (necessário em consoles Windows) e garante
+    # openpyxl disponível — só ao rodar como script standalone, nunca como side-effect
+    # de import: este módulo também é carregado via importlib por catalog_compare.py's
+    # consumidores (CLI `catalog compare/merge`, MCP tools, testes), e reconfigurar
+    # sys.stdout/stderr globalmente nesses contextos quebra a captura de output deles.
+    global openpyxl
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    try:
+        import openpyxl
+    except ImportError:
+        print("openpyxl não encontrado. Execute: uv add openpyxl", file=sys.stderr)
+        sys.exit(2)
+
     parser = argparse.ArgumentParser(description="Merge catálogo Concilium ↔ PLANILHA PADRÃO RFI")
     parser.add_argument("--contexto", required=True, help="ID do contexto (ex: mendeslobo)")
     parser.add_argument("--apply", action="store_true", help="Aplica merge (padrão: dry-run)")
@@ -678,15 +431,15 @@ def main() -> None:
 
     if not args.apply:
         print("  Modo DRY-RUN — nenhuma alteração feita.")
-        print("  Para aplicar: python tools/merge_rfi.py --contexto mendeslobo --apply")
+        print("  Para aplicar: python scripts/benchmark/merge_rfi.py --contexto mendeslobo --apply")
         return
 
     # 6. Aplica merge
     print("  Aplicando merge...")
     new_insumos   = _apply_merge(cat_insumos, rfi_insumos, report_ins,
-                                  include_right_only=args.include_right_only)
+                                  incluir_novos=args.include_right_only)
     new_producoes = _apply_merge(cat_producoes, rfi_producoes, report_prod,
-                                  id_key="id", include_right_only=args.include_right_only)
+                                  id_key="id", incluir_novos=args.include_right_only)
 
     if "producoes" in bundle:
         bundle["producoes"] = new_producoes
