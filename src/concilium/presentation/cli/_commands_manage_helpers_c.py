@@ -238,11 +238,13 @@ def _impl_catalog_merge(
     _cc_print_inner_low(relatorios, console)
 
     if apply:
+        from concilium.application.services.catalog.catalog_compare import resolver_catalogo_id
         from concilium.presentation.mcp._context import _runtime
 
         rt = _runtime()
-        bundle = rt.load_catalogo(destino)
-        bundle_path = rt.config_root / "catalogos" / destino / ".catalog_bundle.json"
+        catalogo_id = resolver_catalogo_id(rt, destino)
+        bundle = rt.load_catalogo(catalogo_id)
+        bundle_path = rt.config_root / "catalogos" / catalogo_id / ".catalog_bundle.json"
 
         console.print("\n[bold]Aplicando merge...[/bold]")
         for t in tipos:

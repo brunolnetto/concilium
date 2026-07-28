@@ -262,9 +262,12 @@ def _impl_mesclar_catalogo(
         result["aviso"] = aviso
 
     if not dry_run:
+        from concilium.application.services.catalog.catalog_compare import resolver_catalogo_id
+
         rt = _runtime()
-        bundle = rt.load_catalogo(destino)
-        bundle_path = rt.config_root / "catalogos" / destino / ".catalog_bundle.json"
+        catalogo_id = resolver_catalogo_id(rt, destino)
+        bundle = rt.load_catalogo(catalogo_id)
+        bundle_path = rt.config_root / "catalogos" / catalogo_id / ".catalog_bundle.json"
         aplicado: dict[str, Any] = {}
         for t in tipos:
             merged = aplicar_merge(fonte_destino.get(t, []), fonte_origem.get(t, []), relatorios[t], id_key=ID_KEYS[t])

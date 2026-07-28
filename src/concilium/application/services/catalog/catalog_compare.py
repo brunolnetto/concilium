@@ -320,11 +320,27 @@ def aplicar_merge(
     return list(result.values())
 
 
+def resolver_catalogo_id(rt: Any, id_ou_contexto: str) -> str:
+    """Resolve um contexto_id para o catalogo_id real, quando divergem (ex.: contexto
+    "mendeslobo-rfi" -> catálogo "rfi-r02").
+
+    `id_ou_contexto` pode ser diretamente um catalogo_id (a maioria dos casos, onde
+    contexto_id == catalogo_id) ou um contexto_id que aponta para outro catálogo — só
+    `rt.load_contexto` sabe essa relação. Fallback para `id_ou_contexto` como está quando
+    não existe contexto com esse id (ex.: já é um catalogo_id puro, sem contexto próprio).
+    """
+    try:
+        return str(rt.load_contexto(id_ou_contexto).catalogo_id)
+    except Exception:
+        return id_ou_contexto
+
+
 def carregar_entidades_catalogo(rt: Any, catalogo_id: str) -> dict[str, list[dict]]:
     """Adaptador de fonte "catálogo": carrega insumos/producoes/cpus via `rt.load_catalogo`.
 
     Usa a via canônica de carregamento (`rt.load_catalogo`), que já lida com staleness
     e regeneração do `.catalog_bundle.json` — nunca lê esse cache diretamente.
+    `catalogo_id` já deve estar resolvido (ver `resolver_catalogo_id`) antes de chegar aqui.
     """
     catalogo = rt.load_catalogo(catalogo_id)
     producoes = catalogo.get("producoes") or catalogo.get("produtividades") or []
@@ -384,11 +400,12 @@ def resolver_fonte_entidades(origem: str, rt: Any, repo_root: Path) -> dict[str,
     """Resolve `origem` para {"insumos": [...], "producoes": [...], "cpus": [...]}.
 
     - Planilha (.xlsm/.xlsx existente no disco) -> `carregar_entidades_planilha`.
-    - Caso contrário -> catálogo (catalogo_id) via `carregar_entidades_catalogo`.
+    - Caso contrário -> catálogo (contexto_id ou catalogo_id, resolvidos via
+      `resolver_catalogo_id`) -> `carregar_entidades_catalogo`.
     """
     if eh_planilha(origem):
         return carregar_entidades_planilha(Path(origem), repo_root)
-    return carregar_entidades_catalogo(rt, origem)
+    return carregar_entidades_catalogo(rt, resolver_catalogo_id(rt, origem))
 
 
 def resolver_tipos(tipo: str) -> list[str]:

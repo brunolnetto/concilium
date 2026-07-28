@@ -257,12 +257,18 @@ class TestImplTendenciaPrecosCatalogo:
 
 
 def _make_rt(tmp_path: Path, catalogos: dict) -> MagicMock:
-    """Fake Runtime cujo load_catalogo despacha por catalogo_id, sempre deepcopy."""
+    """Fake Runtime cujo load_catalogo despacha por catalogo_id, sempre deepcopy.
+
+    `load_contexto` levanta (sem contexto de teste para catA/catB/etc.) para que
+    `resolver_catalogo_id` caia no fallback real: usar o id como está — mesmo
+    comportamento de um catalogo_id puro, sem contexto próprio, em produção.
+    """
     import copy
 
     rt = MagicMock()
     rt.config_root = tmp_path / "config"
     rt.load_catalogo.side_effect = lambda cid: copy.deepcopy(catalogos[cid])
+    rt.load_contexto.side_effect = Exception("sem contexto de teste")
     return rt
 
 
