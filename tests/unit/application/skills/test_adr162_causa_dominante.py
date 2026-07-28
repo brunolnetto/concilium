@@ -1,7 +1,7 @@
-"""Testes ADR-162 Fase 1 (D1) — causa_dominante: decomposição causal Cronograma × Precificação.
+"""Testes ADR-162 — decomposição causal Cronograma × Precificação do Ponto de Equilíbrio.
 
-Cobre `_pe_causa_dominante` (_ponto_equilibrio.py) e sua integração em
-`_build_pe_for_equipe`/`_build_ponto_equilibrio` (_balanco_pe.py):
+Fase 1 (D1) — `causa_dominante`. Cobre `_pe_causa_dominante` (_ponto_equilibrio.py) e sua
+integração em `_build_pe_for_equipe`/`_build_ponto_equilibrio` (_balanco_pe.py):
   - partição SIMÉTRICA (Shapley/Bennet) de T_cronograma/T_precificacao — o termo de
     interação entre as duas causas é dividido meio a meio, não atribuído a uma convenção
     arbitrária (ver conversa de revisão: a convenção "ingênua" pode inverter o rótulo
@@ -11,6 +11,14 @@ Cobre `_pe_causa_dominante` (_ponto_equilibrio.py) e sua integração em
   - "INDETERMINADO" quando H_i/ρ_i/custo_operacional_real não são resolvíveis
   - identidade T_cronograma + T_precificacao == delta (dentro de tolerância de arredondamento)
   - P5: nunca um diagnóstico antes do cronograma real (schedule ausente)
+
+Fase 2 (D2 + D3) — teto de competitividade Γ e horas_reais_min/max. Cobre
+`_pe_horas_reais_min_max` e `_validate_pe_teto` (_ponto_equilibrio.py):
+  - Γ opt-in via `perfil.get("teto_ponto_equilibrio_rs")` — None por default, nenhum perfil
+    existente muda de comportamento sem configuração explícita
+  - horas_reais_min/max = None quando Γ não configurado ou γ_i^o não resolvível (mesma
+    condição de resolvibilidade de D1, via `_pe_resolve_h_i_gamma_o`)
+  - VAL-PONTO-EQUILIBRIO-TETO (AVISO, nunca ERRO) só quando Γ configurado E delta >= Γ
 """
 
 from __future__ import annotations
@@ -21,6 +29,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+from concilium.domain.models.canonical import PontoEquilibrio
 
 _helpers_path = (
     Path(__file__).resolve().parent.parent.parent.parent.parent
@@ -40,6 +50,8 @@ sys.modules["skill_adr162_helpers"] = _mod
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
 _pe_causa_dominante = _mod._pe_causa_dominante
+_pe_horas_reais_min_max = _mod._pe_horas_reais_min_max
+_validate_pe_teto = _mod._validate_pe_teto
 _build_pe_for_equipe = _mod._build_pe_for_equipe
 _build_ponto_equilibrio = _mod._build_ponto_equilibrio
 
@@ -331,3 +343,159 @@ class TestBuildPeForEquipeWiringAdr162:
         result = _build_ponto_equilibrio(canonical_in, validacoes)
         assert len(result) == 1
         assert result[0].causa_dominante in ("CRONOGRAMA", "PRECIFICACAO", "MISTO")
+
+    def test_build_ponto_equilibrio_thread_teto_do_perfil(self):
+        """_build_ponto_equilibrio deriva teto_rs de perfil["teto_ponto_equilibrio_rs"] — o
+        mesmo caminho usado por horas_reais_min/max (D3) e VAL-PONTO-EQUILIBRIO-TETO (D2)."""
+        equipe = self._equipe()
+        plan = SimpleNamespace(
+            item_id="eap-01",
+            quantitativo=1000.0,
+            produtividade_catalogo=25.0,
+            subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=500_000.0)),
+        )
+        sa = SimpleNamespace(
+            activity_id="eap-01",
+            distribuicao_semanal=self._sched_com_producao().distribuicao_semanal,
+        )
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(regime_trabalho=REGIME),
+            planejamento=[plan],
+            equipes_diretas=[equipe],
+            cronograma=SimpleNamespace(scheduled_activities=[sa]),
+            contratos_recurso=[],
+            instancias_recurso=[],
+        )
+        validacoes: list = []
+        result = _build_ponto_equilibrio(canonical_in, validacoes, perfil={"teto_ponto_equilibrio_rs": 50_000.0})
+        assert len(result) == 1
+        pe = result[0]
+        assert pe.horas_reais_min is not None
+        assert pe.horas_reais_max is not None
+        assert pe.horas_reais_min < pe.horas_reais_max
+
+    def test_build_ponto_equilibrio_sem_perfil_nao_afeta_horas_reais(self):
+        """Sem perfil (default None) — comportamento idêntico ao pré-D2, horas_reais_min/max
+        seguem None; nenhum caller existente que não passa `perfil` muda de resultado."""
+        equipe = self._equipe()
+        plan = SimpleNamespace(
+            item_id="eap-01",
+            quantitativo=1000.0,
+            produtividade_catalogo=25.0,
+            subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=500_000.0)),
+        )
+        sa = SimpleNamespace(
+            activity_id="eap-01",
+            distribuicao_semanal=self._sched_com_producao().distribuicao_semanal,
+        )
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(regime_trabalho=REGIME),
+            planejamento=[plan],
+            equipes_diretas=[equipe],
+            cronograma=SimpleNamespace(scheduled_activities=[sa]),
+            contratos_recurso=[],
+            instancias_recurso=[],
+        )
+        validacoes: list = []
+        result = _build_ponto_equilibrio(canonical_in, validacoes)
+        assert len(result) == 1
+        assert result[0].horas_reais_min is None
+        assert result[0].horas_reais_max is None
+
+
+class TestPeHorasReaisMinMax:
+    """ADR-162 D2/D3: intervalo de horas reais tolerado por `0 < Δ_i < Γ` (P3),
+    reparametrizado pela taxa operacional real γ_i^o. Informativo, nunca gate de schedule."""
+
+    _KW = dict(
+        custo_fixo_total=600_000.0,
+        custo_operacional_real=700_000.0,
+        machine_weeks_brutas=50.0,
+        horas_dia=8.0,
+        dias_semana=6.0,
+    )
+
+    def test_teto_nao_configurado_retorna_none_none(self):
+        """Γ é opt-in (perfil) — default None não muda comportamento de nenhum perfil existente."""
+        result = _pe_horas_reais_min_max(custo_venda_total=500_000.0, teto_rs=None, **self._KW)
+        assert result == (None, None)
+
+    def test_sem_schedule_machine_weeks_zero_retorna_none_none(self):
+        """P5: H_i real só existe pós-cronograma — sem schedule, D3 não inventa um intervalo."""
+        kw = {**self._KW, "machine_weeks_brutas": 0.0}
+        result = _pe_horas_reais_min_max(custo_venda_total=500_000.0, teto_rs=50_000.0, **kw)
+        assert result == (None, None)
+
+    def test_custo_operacional_real_zero_retorna_none_none(self):
+        kw = {**self._KW, "custo_operacional_real": 0.0}
+        result = _pe_horas_reais_min_max(custo_venda_total=500_000.0, teto_rs=50_000.0, **kw)
+        assert result == (None, None)
+
+    def test_happy_path_intervalo_calculado_via_gamma_o(self):
+        """h_i = 8·6·50 = 2400; γ_i^o = 600_000/2400 = 250;
+        min = (500_000 − 50_000)/250 = 1800; max = 500_000/250 = 2000."""
+        horas_min, horas_max = _pe_horas_reais_min_max(custo_venda_total=500_000.0, teto_rs=50_000.0, **self._KW)
+        assert horas_min == 1800.0
+        assert horas_max == 2000.0
+
+    def test_min_e_sempre_menor_que_max(self):
+        """max − min = Γ/γ_i^o > 0 sempre que Γ>0 e γ_i^o resolvível — identidade estrutural."""
+        horas_min, horas_max = _pe_horas_reais_min_max(custo_venda_total=800_000.0, teto_rs=30_000.0, **self._KW)
+        assert horas_min is not None
+        assert horas_max is not None
+        assert horas_min < horas_max
+
+
+class TestValidatePeTeto:
+    """ADR-162 D2: VAL-PONTO-EQUILIBRIO-TETO — AVISO (nunca ERRO) quando Γ configurado
+    E delta >= Γ (mesma filosofia não-bloqueante do resto da skill 06)."""
+
+    def _pe(self, delta: float) -> PontoEquilibrio:
+        return PontoEquilibrio(
+            item_id="eap-01",
+            custo_fixo_equipe=600_000.0,
+            custo_venda_cpu=600_000.0 + delta,
+            delta=delta,
+            delta_pct=delta / 600_000.0,
+            status_validacao="OK",
+            causa_dominante="PRECIFICACAO",
+        )
+
+    def test_teto_nao_configurado_nao_emite_validacao(self):
+        validacoes: list = []
+        _validate_pe_teto(self._pe(delta=100_000.0), None, validacoes)
+        assert validacoes == []
+
+    def test_delta_abaixo_do_teto_nao_emite_validacao(self):
+        validacoes: list = []
+        _validate_pe_teto(self._pe(delta=40_000.0), 50_000.0, validacoes)
+        assert validacoes == []
+
+    def test_delta_igual_ao_teto_emite_aviso(self):
+        """>= (não só >) — teto atingido exatamente também dispara o aviso."""
+        validacoes: list = []
+        _validate_pe_teto(self._pe(delta=50_000.0), 50_000.0, validacoes)
+        assert len(validacoes) == 1
+        assert validacoes[0].codigo == "VAL-PONTO-EQUILIBRIO-TETO"
+        assert validacoes[0].status == "AVISO"
+
+    def test_delta_acima_do_teto_emite_aviso_nunca_erro(self):
+        validacoes: list = []
+        pe = self._pe(delta=120_000.0)
+        _validate_pe_teto(pe, 50_000.0, validacoes)
+        assert len(validacoes) == 1
+        item = validacoes[0]
+        assert item.codigo == "VAL-PONTO-EQUILIBRIO-TETO"
+        assert item.status == "AVISO"
+        assert item.status != "ERRO"
+        assert pe.item_id in item.mensagem
+        assert "PRECIFICACAO" in item.mensagem
+
+    def test_causa_dominante_aparece_na_mensagem_para_direcionar_o_lever(self):
+        """causa_dominante deve aparecer na mensagem — quem lê o aviso sabe se reavalia
+        preço (PRECIFICACAO) ou cronograma (CRONOGRAMA) sem abrir o painel_equilibrio."""
+        validacoes: list = []
+        pe = self._pe(delta=90_000.0)
+        pe = pe.model_copy(update={"causa_dominante": "CRONOGRAMA"})
+        _validate_pe_teto(pe, 50_000.0, validacoes)
+        assert "CRONOGRAMA" in validacoes[0].mensagem

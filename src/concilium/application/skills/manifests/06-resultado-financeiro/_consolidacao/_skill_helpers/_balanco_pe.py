@@ -17,6 +17,7 @@ from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
     _validate_frentes_necessarias,
     _validate_pe_duplo_risco,
     _validate_pe_particao,
+    _validate_pe_teto,
     _validate_prod_pu_fallback_desync,
     _validate_prod_vs_pu,
 )
@@ -32,6 +33,7 @@ def _bpe_process_equipe(
     idle_por_item: dict | None = None,
     pool_total_por_item: dict | None = None,
     regime: Any = None,
+    teto_rs: float | None = None,
 ) -> PontoEquilibrio | None:
     """Builds and validates PE for a single equipe; returns None if skipped."""
     if not equipe.item_id:
@@ -45,6 +47,7 @@ def _bpe_process_equipe(
         idle_por_item,
         pool_total_por_item,
         regime,
+        teto_rs,
     )
     if pe is None:
         return None
@@ -54,6 +57,7 @@ def _bpe_process_equipe(
     _validate_frentes_necessarias(pe, validacoes)
     _validate_prod_vs_pu(pe, validacoes)
     _validate_prod_pu_fallback_desync(equipe.item_id, sched_por_item, planejamento_por_item, validacoes)
+    _validate_pe_teto(pe, teto_rs, validacoes)
     return pe
 
 
@@ -124,9 +128,10 @@ def _bpe_collect_pe_items(
     particao_por_item: dict,
     idle_por_item: dict,
     pool_total_por_item: dict,
+    teto_rs: float | None = None,
 ) -> list[PontoEquilibrio]:
-    # ADR-162: RegimeTrabalho (horas_dia/dias_semana) — só usado por causa_dominante
-    # para converter machine_weeks_brutas em H_i (horas reais).
+    # ADR-162: RegimeTrabalho (horas_dia/dias_semana) — usado por causa_dominante (D1) e
+    # horas_reais_min/max (D3) para converter machine_weeks_brutas em H_i (horas reais).
     _projeto = getattr(canonical_in, "projeto", None)
     regime = getattr(_projeto, "regime_trabalho", None) if _projeto else None
     pe_items: list[PontoEquilibrio] = []
@@ -141,19 +146,27 @@ def _bpe_collect_pe_items(
             idle_por_item,
             pool_total_por_item,
             regime,
+            teto_rs,
         )
         if pe is not None:
             pe_items.append(pe)
     return pe_items
 
 
-def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> list[PontoEquilibrio]:
-    """Calcula ponto de equilíbrio para todas as equipes diretas."""
+def _build_ponto_equilibrio(
+    canonical_in: CanonicalModel, validacoes: list, perfil: dict | None = None
+) -> list[PontoEquilibrio]:
+    """Calcula ponto de equilíbrio para todas as equipes diretas.
+
+    ADR-162 D2: `perfil.get("teto_ponto_equilibrio_rs")` — Γ opt-in por perfil, `None` por
+    default (nenhum perfil existente muda de comportamento sem configuração explícita).
+    """
     venda_por_item, planejamento_por_item, equipe_by_item = _bpe_build_lookup_maps(canonical_in)
     sched_por_item = _bpe_build_sched_por_item(canonical_in)
     particao_por_item = _bpe_build_particao_por_item(canonical_in)
     pool_total_por_item = _bpe_build_pool_total_por_item(canonical_in)
     idle_por_item = _bpe_build_idle_por_item(canonical_in)
+    teto_rs = (perfil or {}).get("teto_ponto_equilibrio_rs")
 
     pe_items = _bpe_collect_pe_items(
         canonical_in,
@@ -164,6 +177,7 @@ def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> l
         particao_por_item,
         idle_por_item,
         pool_total_por_item,
+        teto_rs,
     )
     if pe_items:
         validacoes.append(

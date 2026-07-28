@@ -184,6 +184,13 @@ class PontoEquilibrio(BaseModel):
     t_cronograma: float = 0.0  # (H_cat − H_i) · (γ_i^v + γ_i^o)/2 — partição simétrica, gap de horas
     t_precificacao: float = 0.0  # (γ_i^v − γ_i^o) · (H_cat + H_i)/2 — partição simétrica, gap de taxa
 
+    # ADR-162 D2/D3: teto de competitividade Γ (config/perfis/<id>.json, campo
+    # `teto_ponto_equilibrio_rs`, opt-in por perfil — None = desabilitado) e o intervalo de
+    # horas reais toleradas que ele implica. Informativo (relatório/Excel), nunca gate de
+    # schedule. None quando Γ não configurado, ou γ_i^o não resolvível (mesma condição de D1).
+    horas_reais_min: float | None = None  # (custo_venda_total − Γ) / γ_i^o
+    horas_reais_max: float | None = None  # custo_venda_total / γ_i^o
+
 
 class Venda(BaseModel):
     model_config = ConfigDict(extra="ignore")

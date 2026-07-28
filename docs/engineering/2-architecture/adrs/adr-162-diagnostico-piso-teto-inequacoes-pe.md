@@ -1,6 +1,6 @@
 # ADR-162 — Diagnóstico do Ponto de Equilíbrio: Decomposição Causal Cronograma × Precificação
 
-**Status:** Proposta (D2-D4) — Fase 0 (fundação bottom-up) ✅ Implementado — Fase 1 (D1, `causa_dominante`) ✅ Implementado
+**Status:** Proposta (D4) — Fase 0 (fundação bottom-up) ✅ Implementado — Fase 1 (D1, `causa_dominante`) ✅ Implementado — Fase 2 (D2 teto `Γ` + D3 `horas_reais_min`/`max`) ✅ Implementado
 **Data:** 2026-07-28
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-060 (Diagnóstico de Ponto de Equilíbrio), ADR-061 (Inversão/Backtracking de PE), ADR-076 (Calibração PU/Frentes), ADR-083 (Decomposição Causal do Gap de Pool), ADR-132 (preço embutido na composição), NEP-029 (divergência de caminhos de precificação)
@@ -190,7 +190,7 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 |---|---|---|
 | F0 | Remover atalho por `custo_hora_total_referencia` nas 3 camadas (skill-04/05, pool) + fix ADR-132 em `_custo_hora_equipamentos` | ✅ Implementado (28/07, nesta worktree) |
 | F1 | `H_i`/`γ_i^v`/`γ_i^o` + `causa_dominante` (D1) + testes | ✅ Implementado (28/07, nesta worktree) |
-| F2 | `Γ` como campo de perfil opcional + `VAL-PONTO-EQUILIBRIO-TETO` (D2) + `horas_reais_min`/`max` no relatório/Excel (D3) | ⬜ (depende de F1 aprovado pelo usuário) |
+| F2 | `Γ` como campo de perfil opcional + `VAL-PONTO-EQUILIBRIO-TETO` (D2) + `horas_reais_min`/`max` no relatório/Excel (D3) | ✅ Implementado (28/07, nesta worktree) |
 | F3 (futura, condicionada) | Migração de `custo_fixo_total` para base semanal explícita por frentes (D4), reaproveitando `project_ocupacao_semanal` (ADR-152) | ⬜ (não iniciada — precisa de decisão própria) |
 
 ## Definition of Done
@@ -213,9 +213,11 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 - [x] Suíte completa sem regressão (`test_adr162_causa_dominante.py` + testes novos em `test_backtracking_pe_builder.py`/`test_adr060_061_diagnostico_pe.py`; suíte completa do repo sem falhas novas)
 
 ### Fase 2
-- [ ] `Γ` lido do perfil (`config/contextos/<perfil>.json`), `None` por default — nenhum perfil existente muda de comportamento sem opt-in
-- [ ] `VAL-PONTO-EQUILIBRIO-TETO` emitido como AVISO (nunca ERRO) quando `Γ` configurado e `Δ_i ≥ Γ`
-- [ ] `horas_reais_min`/`horas_reais_max` expostos no relatório/Excel quando `Γ` e `γ_i^o` disponíveis
+- [x] `Γ` lido do perfil (`perfil.get("teto_ponto_equilibrio_rs")`, `config/perfis/<perfil_id>.json` via `load_perfil`), `None` por default — nenhum perfil existente muda de comportamento sem opt-in; threaded `_build_ponto_equilibrio(canonical_in, validacoes, perfil=None)` → `_bpe_collect_pe_items` → `_bpe_process_equipe` → `_build_pe_for_equipe(..., regime, teto_rs)`
+- [x] `VAL-PONTO-EQUILIBRIO-TETO` emitido como AVISO (nunca ERRO) quando `Γ` configurado e `Δ_i ≥ Γ`, mensagem inclui `causa_dominante` (D1) para apontar se o excesso é de cronograma ou de precificação — `TestValidatePeTeto`
+- [x] `horas_reais_min`/`horas_reais_max` = `(custo_venda_total − Γ)/γ_i^o` e `custo_venda_total/γ_i^o` — `None`/`None` quando `Γ` não configurado ou `γ_i^o` não resolvível (mesma condição de D1, via `_pe_resolve_h_i_gamma_o` compartilhado) — `TestPeHorasReaisMinMax`
+- [x] `causa_dominante`/`horas_reais_min`/`horas_reais_max` expostos na linha de `ponto_equilibrio` do relatório (`_rra_build_pe_row`, skill 09) — `test_pe_row_expoe_causa_dominante_e_horas_reais`
+- [x] Suíte completa sem regressão (`test_adr162_causa_dominante.py` + `test_skill10_helpers_a_coverage.py`; suíte completa do repo sem falhas novas atribuíveis a esta fase)
 
 ---
 
