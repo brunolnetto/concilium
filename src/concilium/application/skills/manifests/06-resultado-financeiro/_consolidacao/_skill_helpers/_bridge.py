@@ -146,6 +146,7 @@ def _build_diagnostico_pe(
     custos_atividades: list,
     pe_items: list,
     validacoes: list,
+    bdi_tabela: Any = None,
 ) -> tuple:
     try:
         from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
@@ -159,8 +160,11 @@ def _build_diagnostico_pe(
                 "ponto_equilibrio": pe_items,
             }
         )
-        diag = DiagnosticoPEBuilder().build(_cp)
-        back = BacktrackingPEBuilder().build(diag, _cp)
+        # Repassa a alíquota de tributos da tabela de BDI efetivamente aplicada
+        # neste run, em vez do fallback 0.1338 (ver diagnostico_pe_builder/backtracking_pe_builder).
+        bdi_rates = {"tributos_efetivo": bdi_tabela.mao_obra.tributos} if bdi_tabela is not None else None
+        diag = DiagnosticoPEBuilder().build(_cp, bdi_rates=bdi_rates)
+        back = BacktrackingPEBuilder(tabela_bdi=bdi_tabela).build(diag, _cp)
         return diag, back
     except Exception as exc:  # pragma: no cover
         import logging

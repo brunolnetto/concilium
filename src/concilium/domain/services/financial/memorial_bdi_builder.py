@@ -125,9 +125,11 @@ class MemorialBDIBuilder:
         margem = float(resultado.resultado_financeiro) if resultado else 0.0
         margem_pct = float(resultado.margem_pct) if resultado else 0.0
 
-        # Aproximação conservadora de tributos totais na receita.
-        # Mantemos a taxa histórica até concluir distribuição por categoria no consolidado.
-        tributos_total = venda * 0.1338
+        # Aproximação conservadora de tributos totais na receita: usa a alíquota
+        # de mao_obra/servicos da tabela efetivamente aplicada (dominante em venda),
+        # não uma constante pré-reforma fixa — a tabela real pode isentar
+        # COFINS/PIS (regime de infraestrutura) ou refletir CBS/IBS (ADR-055).
+        tributos_total = venda * tabela.mao_obra.tributos
         # Overhead sintético = parcela restante da receita após custo direto, margem e tributos.
         overhead_total = venda - custo_direto - margem - tributos_total
 

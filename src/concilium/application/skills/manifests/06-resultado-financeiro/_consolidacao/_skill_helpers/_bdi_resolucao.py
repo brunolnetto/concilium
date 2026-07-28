@@ -28,6 +28,28 @@ from concilium.domain.models.financial.bdi import (
 )
 
 
+def _frac_locacao_equipamentos(canonical_in: Any) -> float:
+    """Fração do bucket 'equipamentos' que é locação (vs manutenção), das equipes diretas.
+
+    Espelha _precificacao/skill.py:_frac_locacao_equipamentos — mantido local para não
+    acoplar os dois estágios de skill-06 (issue #121: consolidação tratava equipamentos
+    sempre como capital good/material, ignorando a composição real locação/manutenção
+    que a precificação já usa via ADR-023 §D3/ADR-088).
+    """
+    loc = man = 0.0
+    for eq in getattr(canonical_in, "equipes_diretas", None) or []:
+        loc += float(getattr(eq, "custo_locacao_mensal", 0.0) or 0.0)
+        man += float(getattr(eq, "custo_manutencao_mensal", 0.0) or 0.0)
+    total = loc + man
+    return loc / total if total > 0 else 1.0
+
+
+def _blend_equipamentos_bdi(tabela: TabelaBdi, frac_locacao: float) -> float:
+    """equip_bdi = frac_locacao × bdi_material + (1 − frac_locacao) × bdi_mao_obra (ADR-023 §D3)."""
+    f = min(max(float(frac_locacao), 0.0), 1.0)
+    return round(f * float(tabela.material.bdi_total) + (1.0 - f) * float(tabela.mao_obra.bdi_total), 6)
+
+
 def _build_abc_analytics(
     canonical_in: CanonicalModel, inputs: dict, bdi_tabela: Any, bdi_regime: str, validacoes: list
 ) -> tuple:
@@ -176,7 +198,7 @@ def _rbf_resolve_tabela_perfil(
 
 
 def _rbf_try_tax_scenario(
-    inputs: dict[str, Any], validacoes: list[ValidacaoItem]
+    inputs: dict[str, Any], validacoes: list[ValidacaoItem], frac_locacao: float = 1.0
 ) -> tuple[dict[str, float], TabelaBdi, str, str, bool] | None:
     """Attempt BDI resolution via TaxSimulationScenario (ADR-055). Returns None on failure/absence."""
     tax_scenario_raw = inputs.get("tax_scenario")
@@ -187,9 +209,9 @@ def _rbf_try_tax_scenario(
         tabela_cbs_ibs = resolver_bdi_cbs_ibs(DEFAULT_BDI_TABELA, scenario)
         rates = {
             "mao_obra": float(tabela_cbs_ibs.mao_obra.bdi_total),
-            "equipamentos": float(
-                tabela_cbs_ibs.material.bdi_total
-            ),  # Fixed: equipment = capital good, uses material BDI (4%)
+            # ADR-023 §D3: equipamentos = blend locação(material)/manutenção(mao_obra),
+            # não mais fixo em material — locação pura (frac_locacao=1.0) ainda reduz a 4%.
+            "equipamentos": _blend_equipamentos_bdi(tabela_cbs_ibs, frac_locacao),
             "material": float(tabela_cbs_ibs.material.bdi_total),
             "diesel": float(tabela_cbs_ibs.diesel.bdi_total),
             "indireto": float(tabela_cbs_ibs.indireto.bdi_total),
@@ -256,13 +278,17 @@ def _rbf_try_manual_bdi(
 
 
 def _resolve_bdi_full(
-    inputs: dict[str, Any], validacoes: list[ValidacaoItem]
+    inputs: dict[str, Any], validacoes: list[ValidacaoItem], frac_locacao: float = 1.0
 ) -> tuple[dict[str, float], TabelaBdi, str, str, bool]:
     """ADR-057: resolve BDI retornando também (tabela, fonte, regime_version, override_aplicado).
 
+    frac_locacao: fração locação/(locação+manutenção) das equipes diretas do projeto
+    (issue #121 — antes hardcoded a 1.0/material, divergindo de _precificacao quando
+    havia manutenção real). Default 1.0 preserva o comportamento de quem não a informa.
+
     Retorna: (rates_dict, tabela_usada, fonte_bdi, regime_version, override_aplicado)
     """
-    result = _rbf_try_tax_scenario(inputs, validacoes)
+    result = _rbf_try_tax_scenario(inputs, validacoes, frac_locacao)
     if result is not None:
         return result
     result = _rbf_try_manual_bdi(inputs, validacoes)
@@ -272,8 +298,8 @@ def _resolve_bdi_full(
     tabela, fonte, override, regime_str = _rbf_resolve_tabela_perfil(inputs, validacoes)
     rates = {
         "mao_obra": float(tabela.mao_obra.bdi_total),
-        # Equipment = capital good, treated as material for BDI purposes (4% per AGIS reference).
-        "equipamentos": float(tabela.material.bdi_total),
+        # ADR-023 §D3: blend locação(material)/manutenção(mao_obra) pela composição real.
+        "equipamentos": _blend_equipamentos_bdi(tabela, frac_locacao),
         "material": float(tabela.material.bdi_total),
         "diesel": float(tabela.diesel.bdi_total),
         "indireto": float(tabela.indireto.bdi_total),
@@ -293,9 +319,11 @@ def _resolve_bdi_full(
     return rates, tabela, fonte, regime_str, override
 
 
-def _resolve_bdi_rates(inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> dict[str, float]:
+def _resolve_bdi_rates(
+    inputs: dict[str, Any], validacoes: list[ValidacaoItem], frac_locacao: float = 1.0
+) -> dict[str, float]:
     """Backward-compat wrapper — retorna apenas os rates."""
-    rates, _, _, _, _ = _resolve_bdi_full(inputs, validacoes)
+    rates, _, _, _, _ = _resolve_bdi_full(inputs, validacoes, frac_locacao)
     return rates
 
 

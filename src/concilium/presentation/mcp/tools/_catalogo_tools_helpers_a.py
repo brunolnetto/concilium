@@ -523,23 +523,41 @@ def _impl_adicionar_variante_producao(
         equipe_data = json.loads(equipe_json)
 
         if projeto_id:
-            # Camada de Projeto
+            # Camada de Projeto — grava em producoes_overlay.json (o arquivo que
+            # o CatalogResolver de fato lê, ADR-066 §_load_project_producao_overlay).
+            # Antes desta correção, este ramo gravava em overrides/production_variants.json,
+            # um arquivo que nenhum código de produção consome (achado da avaliação
+            # de consistência venda×operacional, issue #121).
             proj_path = projects_dir / projeto_id
             if not proj_path.exists():
                 return {"erro": f"Projeto {projeto_id} não encontrado."}
 
-            overrides_file = proj_path / "overrides" / "production_variants.json"
-            overrides_file.parent.mkdir(parents=True, exist_ok=True)
+            overlay_file = proj_path / "overrides" / "producoes_overlay.json"
+            overlay_file.parent.mkdir(parents=True, exist_ok=True)
 
-            overrides = {}
-            if overrides_file.exists():
-                overrides = json.loads(overrides_file.read_text(encoding="utf-8"))
+            overlay = {}
+            if overlay_file.exists():
+                overlay = json.loads(overlay_file.read_text(encoding="utf-8"))
 
-            key = f"{producao_id}::{variante_id}"
-            overrides[key] = {"nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
-            overrides_file.write_text(json.dumps(overrides, indent=2, ensure_ascii=False), encoding="utf-8")
+            entry = dict(overlay.get(producao_id, {}))
+            variantes = [v for v in entry.get("variantes", []) if v.get("id") != variante_id]
+            variantes.append(
+                {"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
+            )
+            entry["variantes"] = variantes
+            overlay[producao_id] = entry
+            overlay_file.write_text(json.dumps(overlay, indent=2, ensure_ascii=False), encoding="utf-8")
             return _wrap_response(
-                {"status": "SUCESSO", "layer": "PROJETO", "projeto_id": projeto_id, "producao": producao_id}
+                {
+                    "status": "SUCESSO",
+                    "layer": "PROJETO",
+                    "projeto_id": projeto_id,
+                    "producao": producao_id,
+                    "nota": "Variante registrada como alternativa documentada em producoes_overlay.json "
+                    "(visível em resolved_catalog.json e exports). Ela NÃO substitui automaticamente o "
+                    "'valor_horario'/'custo_hora_total_referencia' usado no cálculo — nenhuma variante, "
+                    "de projeto ou de catálogo mestre, é selecionada pelo pipeline hoje.",
+                }
             )
 
         if not rascunho_id:

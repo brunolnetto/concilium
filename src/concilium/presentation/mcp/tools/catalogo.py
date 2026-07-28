@@ -142,8 +142,10 @@ def register(server: FastMCP) -> None:
         )
 
     @server.tool(
-        description="Adiciona uma variante de produtividade a uma producao existente "
-        "(ex: equipe alternativa com custo/hora diferente). "
+        description="Registra uma variante de produtividade documentada para uma producao existente "
+        "(ex: equipe alternativa com custo/hora diferente) — fica visível em resolved_catalog.json e "
+        "exports, mas NÃO é selecionada automaticamente pelo pipeline: o cálculo sempre usa o "
+        "'valor_horario'/'custo_hora_total_referencia' da producao base, nunca uma variante. "
         "Para editar o catálogo mestre, informe rascunho_id (criado via criar_rascunho_catalogo) — "
         "a mudança fica pendente até aprovar_merge_catalogo (ADR-145)."
     )

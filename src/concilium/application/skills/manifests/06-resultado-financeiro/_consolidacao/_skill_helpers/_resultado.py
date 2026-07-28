@@ -21,7 +21,11 @@ from ._venda_custo import (  # ty: ignore[unresolved-import]
 if TYPE_CHECKING:
     from concilium.domain.models.financial.bdi import TabelaBdi
 
-from ._bdi_resolucao import _classificar_margem, _resolve_bdi_full  # ty: ignore[unresolved-import]
+from ._bdi_resolucao import (  # ty: ignore[unresolved-import]
+    _classificar_margem,
+    _frac_locacao_equipamentos,
+    _resolve_bdi_full,
+)
 
 
 def _build_resultado(
@@ -49,7 +53,10 @@ def _build_resultado(
     venda_plus, custo_operacional_real, custo_total_catalogo).
     """
     venda_sem_bdi, venda_com_bdi, custo_direto_equipe, _custo_mat, custo_direto = _br_build_venda_custo(canonical_in)
-    bdi_rates, _bdi_tabela, _bdi_fonte, _bdi_regime, _bdi_override = _resolve_bdi_full(inputs, validacoes)
+    frac_locacao = _frac_locacao_equipamentos(canonical_in)
+    bdi_rates, _bdi_tabela, _bdi_fonte, _bdi_regime, _bdi_override = _resolve_bdi_full(
+        inputs, validacoes, frac_locacao
+    )
     bdi_indireto_efetivo = inputs.get("bdi_indireto_efetivo")
     if not isinstance(bdi_indireto_efetivo, (int, float)):
         bdi_indireto_efetivo = None

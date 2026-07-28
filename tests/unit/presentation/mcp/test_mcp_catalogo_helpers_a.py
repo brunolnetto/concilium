@@ -761,7 +761,9 @@ class TestImplAdicionarVarianteProducao:
         assert "MISSING-PROJ" in result["erro"]
 
     def test_projeto_creates_new_overrides(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # lines 324-336 — new overrides file created
+        # lines 324-336 — new overlay file created, no longer the orphaned
+        # production_variants.json (issue #121): grava em producoes_overlay.json,
+        # o arquivo que o CatalogResolver de fato lê.
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         proj_dir = projects_dir / "PROJ-001"
@@ -774,21 +776,23 @@ class TestImplAdicionarVarianteProducao:
         )
         assert result["status"] == "SUCESSO"
         assert result["layer"] == "PROJETO"
-        overrides_file = proj_dir / "overrides" / "production_variants.json"
-        assert overrides_file.exists()
-        saved = json.loads(overrides_file.read_text(encoding="utf-8"))
-        assert "PROD-001::V1" in saved
-        assert saved["PROD-001::V1"]["valor_horario"] == 150.0
+        overlay_file = proj_dir / "overrides" / "producoes_overlay.json"
+        assert overlay_file.exists()
+        saved = json.loads(overlay_file.read_text(encoding="utf-8"))
+        variantes = saved["PROD-001"]["variantes"]
+        assert len(variantes) == 1
+        assert variantes[0]["id"] == "V1"
+        assert variantes[0]["valor_horario"] == 150.0
 
     def test_projeto_merges_existing_overrides(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        # lines 327-333 — existing overrides merged
+        # lines 327-333 — existing overlay merged, variantes de outras producoes preservadas
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
         proj_dir = projects_dir / "PROJ-001"
         overrides_dir = proj_dir / "overrides"
         overrides_dir.mkdir(parents=True)
-        existing = {"OTHER::V0": {"nome": "old", "valor_horario": 50.0, "equipe": {}}}
-        (overrides_dir / "production_variants.json").write_text(json.dumps(existing), encoding="utf-8")
+        existing = {"OTHER-PROD": {"variantes": [{"id": "V0", "nome": "old", "valor_horario": 50.0, "equipe": {}}]}}
+        (overrides_dir / "producoes_overlay.json").write_text(json.dumps(existing), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir)
 
         equipe = json.dumps({"funcoes": []})
@@ -796,9 +800,9 @@ class TestImplAdicionarVarianteProducao:
             "ctx1", "PROD-001", "V2", "Nova Variante", 200.0, equipe, projeto_id="PROJ-001"
         )
         assert result["status"] == "SUCESSO"
-        saved = json.loads((overrides_dir / "production_variants.json").read_text(encoding="utf-8"))
-        assert "OTHER::V0" in saved
-        assert "PROD-001::V2" in saved
+        saved = json.loads((overrides_dir / "producoes_overlay.json").read_text(encoding="utf-8"))
+        assert saved["OTHER-PROD"]["variantes"][0]["id"] == "V0"
+        assert saved["PROD-001"]["variantes"][0]["id"] == "V2"
 
     def test_no_rascunho_id_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # ADR-145 D1 — sem rascunho_id (e sem projeto_id) não pode editar o master
