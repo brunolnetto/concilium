@@ -722,6 +722,111 @@ def test_process_decision_variables_applies_dv_dict(config_root):
     assert new_result.canonical.decision_variables.dv4_indirect_policy == "lean"
 
 
+# ── execution mixin: _process_staleness_check (issue #121) ─────────────────
+
+
+def test_process_staleness_check_no_deps_returns_unchanged(config_root):
+    from types import SimpleNamespace
+
+    from concilium.application.skills.base import SkillResult
+
+    r = Runtime(config_root)
+    canonical = _make_minimal_canonical_for_execution()
+    result = SkillResult(canonical, [])
+    contract = SimpleNamespace(depends_on_skills=[])
+    plano_store = SimpleNamespace(read_premissas_por_skill=lambda: {"04-cronograma": {"escopo_hash": "x"}})
+
+    new_result = r._process_staleness_check("06-resultado-financeiro", contract, {"jurisdicao_id": "sp"}, result, plano_store)
+    assert new_result is result
+
+
+def test_process_staleness_check_dep_never_ran_no_warning(config_root):
+    """Dependência ainda não registrada em premissas_por_skill (nunca rodou) — não é staleness."""
+    from types import SimpleNamespace
+
+    from concilium.application.skills.base import SkillResult
+
+    r = Runtime(config_root)
+    canonical = _make_minimal_canonical_for_execution()
+    result = SkillResult(canonical, [])
+    contract = SimpleNamespace(depends_on_skills=["04-cronograma"])
+    plano_store = SimpleNamespace(read_premissas_por_skill=lambda: {})
+
+    new_result = r._process_staleness_check("06-resultado-financeiro", contract, {"jurisdicao_id": "sp"}, result, plano_store)
+    assert new_result is result
+
+
+def test_process_staleness_check_matching_hash_no_warning(config_root):
+    from types import SimpleNamespace
+
+    from concilium.application.skills.base import SkillResult
+
+    r = Runtime(config_root)
+    canonical = _make_minimal_canonical_for_execution()
+    result = SkillResult(canonical, [])
+    escopo_meta = {"jurisdicao_id": "sp"}
+    contract = SimpleNamespace(depends_on_skills=["04-cronograma"])
+
+    import json
+    from hashlib import sha256
+
+    matching_hash = sha256(json.dumps(escopo_meta, sort_keys=True, default=str).encode()).hexdigest()
+    plano_store = SimpleNamespace(read_premissas_por_skill=lambda: {"04-cronograma": {"escopo_hash": matching_hash}})
+
+    new_result = r._process_staleness_check("06-resultado-financeiro", contract, escopo_meta, result, plano_store)
+    assert new_result is result
+
+
+def test_process_staleness_check_diverging_hash_emits_aviso(config_root):
+    from types import SimpleNamespace
+
+    from concilium.application.skills.base import SkillResult
+
+    r = Runtime(config_root)
+    canonical = _make_minimal_canonical_for_execution()
+    result = SkillResult(canonical, [])
+    contract = SimpleNamespace(depends_on_skills=["04-cronograma"])
+    plano_store = SimpleNamespace(
+        read_premissas_por_skill=lambda: {"04-cronograma": {"escopo_hash": "hash-antigo-diferente"}}
+    )
+
+    new_result = r._process_staleness_check(
+        "06-resultado-financeiro", contract, {"jurisdicao_id": "sp"}, result, plano_store
+    )
+    assert new_result is not result
+    codigos = [v.codigo for v in new_result.validacoes]
+    assert "VAL-STALE-UPSTREAM" in codigos
+    assert new_result.has_errors is False  # AVISO não é ERRO — não bloqueia a skill
+
+
+def test_process_staleness_check_multiple_deps_only_stale_ones_flagged(config_root):
+    from types import SimpleNamespace
+
+    from concilium.application.skills.base import SkillResult
+
+    r = Runtime(config_root)
+    canonical = _make_minimal_canonical_for_execution()
+    result = SkillResult(canonical, [])
+    escopo_meta = {"jurisdicao_id": "sp"}
+    contract = SimpleNamespace(depends_on_skills=["04-cronograma", "05-equipes-e-alocacao"])
+
+    import json
+    from hashlib import sha256
+
+    matching_hash = sha256(json.dumps(escopo_meta, sort_keys=True, default=str).encode()).hexdigest()
+    plano_store = SimpleNamespace(
+        read_premissas_por_skill=lambda: {
+            "04-cronograma": {"escopo_hash": matching_hash},
+            "05-equipes-e-alocacao": {"escopo_hash": "outro-hash"},
+        }
+    )
+
+    new_result = r._process_staleness_check("06-resultado-financeiro", contract, escopo_meta, result, plano_store)
+    mensagens = [v.mensagem for v in new_result.validacoes]
+    assert any("05-equipes-e-alocacao" in m for m in mensagens)
+    assert not any("04-cronograma" in m for m in mensagens)
+
+
 # ── execution mixin: _process_side_effects ──────────────────────────────────
 
 

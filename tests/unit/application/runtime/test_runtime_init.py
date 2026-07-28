@@ -324,6 +324,8 @@ class TestRunSkillOnPlanoShouldSaveFalse:
             escopo_store=SimpleNamespace(meta={"escopo_id": "e1", "contexto_id": "ctx"}),
             save_canonical=MagicMock(),
             log_invocation=MagicMock(),
+            read_premissas_por_skill=MagicMock(return_value={}),
+            write_premissas_efetivas=MagicMock(),
         )
         project = SimpleNamespace(meta={"id": "proj-1"})
 
@@ -338,6 +340,141 @@ class TestRunSkillOnPlanoShouldSaveFalse:
 
         plano_store.save_canonical.assert_not_called()
 
+
+class TestRunSkillOnPlanoStalenessWiring:
+    """issue #121: run_skill_on_plano de fato congela premissas e detecta staleness
+    ponta a ponta (PlanoStore/EscopoStore reais em disco, não mockados)."""
+
+    def _make_stores(self, tmp_path):
+        from concilium.domain.models.canonical import CanonicalModel
+        from concilium.infrastructure.storage.escopo_store import EscopoStore
+
+        escopo_root = tmp_path / "escopos" / "esc-1"
+        escopo_root.mkdir(parents=True)
+        (escopo_root / "escopo.json").write_text('{"escopo_id": "esc-1", "jurisdicao_id": "sp"}', encoding="utf-8")
+        es = EscopoStore(root=escopo_root)
+        plano_store = es.plan("plan-1")
+        plano_store.root.mkdir(parents=True)
+
+        canonical = CanonicalModel.model_validate(
+            {
+                "meta": {"gerado_em": "2026-01-01T00:00:00Z", "contexto_id": "ctx-test"},
+                "projeto": {
+                    "id": "proj-test",
+                    "nome": "Test Project",
+                    "tipo_obra": "terraplenagem",
+                    "localizacao": "SP",
+                    "coordenadas": {"lat": -23.5, "lng": -46.6},
+                    "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
+                    "data_inicio": "2026-01-01",
+                    "data_termino": "2026-12-31",
+                    "snapshot_catalogo_id": "cat-v1",
+                    "snapshot_perfil_id": "perf-v1",
+                },
+            }
+        )
+        (plano_store.root / plano_store.CANONICAL_FILE).write_text(
+            canonical.model_dump_json(indent=2), encoding="utf-8"
+        )
+        return es, plano_store, canonical
+
+    def _make_fake_runtime(self, depends_on_skills):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        from concilium.application.runtime.mixins.execution import ExecutionMixin
+
+        class FakeRuntime(ExecutionMixin):
+            def get_skill_contract(self, skill_id):
+                return SimpleNamespace(depends_on_skills=depends_on_skills.get(skill_id, []))
+
+            def _load_context(self, escopo_meta, project):
+                return MagicMock(), {}, {}
+
+            def _apply_runtime_defaults(self, skill_id, project, contexto, base_inputs):
+                return dict(base_inputs)
+
+            def _build_skill_kwargs(self, contract, **kwargs):
+                return {}
+
+            def _build_log_entry(self, *args, **kwargs):
+                return {}
+
+            def _process_side_effects(self, *args, **kwargs):
+                pass
+
+        return FakeRuntime()
+
+    def test_dependencia_com_escopo_alterado_emite_stale_upstream(self, tmp_path):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.skills.base import SkillResult
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        es, plano_store, canonical = self._make_stores(tmp_path)
+        runtime = self._make_fake_runtime({"06-resultado-financeiro": ["04-cronograma"]})
+        project = MagicMock()
+        project.meta = {"id": "proj-1"}
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"04-cronograma": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, [ValidacaoItem(codigo="OK-01", status="OK", mensagem="ok")]),
+            ),
+        ):
+            runtime.run_skill_on_plano("04-cronograma", project, plano_store)
+
+        # Premissas de "04-cronograma" congeladas com jurisdicao_id="sp".
+        por_skill = plano_store.read_premissas_por_skill()
+        assert "04-cronograma" in por_skill
+
+        # Escopo muda de jurisdição sem reexecutar a cadeia inteira.
+        es.update_meta(jurisdicao_id="rj")
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"06-resultado-financeiro": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, []),
+            ),
+        ):
+            result = runtime.run_skill_on_plano("06-resultado-financeiro", project, plano_store)
+
+        codigos = [v.codigo for v in result.validacoes]
+        assert "VAL-STALE-UPSTREAM" in codigos
+        assert result.has_errors is False
+
+    def test_sem_mudanca_de_escopo_nao_emite_stale_upstream(self, tmp_path):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.skills.base import SkillResult
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        _es, plano_store, canonical = self._make_stores(tmp_path)
+        runtime = self._make_fake_runtime({"06-resultado-financeiro": ["04-cronograma"]})
+        project = MagicMock()
+        project.meta = {"id": "proj-1"}
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"04-cronograma": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, [ValidacaoItem(codigo="OK-01", status="OK", mensagem="ok")]),
+            ),
+        ):
+            runtime.run_skill_on_plano("04-cronograma", project, plano_store)
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"06-resultado-financeiro": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, []),
+            ),
+        ):
+            result = runtime.run_skill_on_plano("06-resultado-financeiro", project, plano_store)
+
+        assert "VAL-STALE-UPSTREAM" not in [v.codigo for v in result.validacoes]
 
 
 # ─── application/runtime/__init__.py (30 missing) ─────────────────────────────

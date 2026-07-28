@@ -291,12 +291,29 @@ def register(server: FastMCP) -> None:
     @server.tool()
     @permission("project:approve")
     @mcp_rate_limit()
-    def aprovar_versao(project_id: str, escopo_id: str | None = None, plano_id: str | None = None) -> dict[str, Any]:
+    def aprovar_versao(
+        project_id: str,
+        escopo_id: str | None = None,
+        plano_id: str | None = None,
+        justificativa_override: str | None = None,
+    ) -> dict[str, Any]:
         """Aprova o plano ativo do projeto (operação irreversível — confirmar com o usuário).
 
-        Arquiva os planos alternativos do escopo e congela o plano aprovado.
+        Arquiva os planos alternativos do escopo e congela o plano aprovado (canônico,
+        log de invocações e premissas efetivas — issue #121).
+
+        Um gate bloqueia a aprovação (`assert_pode_aprovar_plano`) quando a última
+        execução de alguma skill sinaliza inconsistência não resolvida entre preço
+        de venda e custo operacional (margem negativa, produtividade padrão não
+        calibrada, produtividade divergente do preço unitário, gap catálogo×operacional,
+        ou premissas desatualizadas entre skills dependentes) — ou qualquer ERRO
+        pendente (esta última condição não tem escape). Para aprovar mesmo com um
+        AVISO bloqueante, preencha `justificativa_override` com o motivo da decisão;
+        ele fica registrado no audit trail.
+
         Use consultar_estrutura_projeto para obter escopo_id e plano_id antes de chamar.
         """
+        from concilium.application.orchestrators.plano_approval_gate import assert_pode_aprovar_plano
         from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
 
         store = _project(project_id)
@@ -307,6 +324,7 @@ def register(server: FastMCP) -> None:
             pid = plano_id or (active.plano_id if active else None)
             if not pid:
                 return {"erro": f"Nenhum plano ativo no escopo '{eid}'. Informe plano_id."}
+            assert_pode_aprovar_plano(es.plan(pid), justificativa_override)
             arquivados = es.approve_plan(pid)
         except Exception as e:
             return {"erro": str(e)}
@@ -328,12 +346,15 @@ def register(server: FastMCP) -> None:
 
             user_id = get_current_user_id() or "system"
             roles = list(_current_roles.get())
+            detalhes: dict[str, Any] = {"escopo_id": eid, "planos_arquivados": arquivados}
+            if justificativa_override and justificativa_override.strip():
+                detalhes["justificativa_override"] = justificativa_override.strip()
             va = VersionAction(
                 action="approve",
                 version_afetada=pid,
                 actor_id=user_id,
                 actor_role=roles[0] if roles else None,
-                detalhes={"escopo_id": eid, "planos_arquivados": arquivados},
+                detalhes=detalhes,
             )
             from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
 

@@ -39,6 +39,73 @@ class TestPlanoStore:
         assert ps.read_invocations() == []
 
 
+class TestPlanoStorePremissasEfetivas:
+    """issue #121: congelamento de premissas junto com o resultado, não só o canônico."""
+
+    def _make_plano_store(self, tmp_path):
+        from concilium.infrastructure.storage.escopo_store import EscopoStore, PlanoStore
+
+        plano_root = tmp_path / "escopos" / "esc-1" / "planos" / "plan-1"
+        plano_root.mkdir(parents=True)
+        es = EscopoStore(root=tmp_path / "escopos" / "esc-1")
+        return PlanoStore(root=plano_root, escopo_store=es)
+
+    def test_write_creates_both_files(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas("06-resultado-financeiro", {"bdi_aplicado": {"mao_obra": 0.3}}, {"jurisdicao_id": "sp"})
+
+        assert (ps.root / ps.PREMISSAS_EFETIVAS_FILE).exists()
+        assert (ps.root / ps.PREMISSAS_POR_SKILL_FILE).exists()
+
+    def test_read_premissas_por_skill_empty_when_missing(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        assert ps.read_premissas_por_skill() == {}
+
+    def test_read_premissas_por_skill_roundtrip(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas("04-cronograma", {"a": 1}, {"jurisdicao_id": "sp"})
+        por_skill = ps.read_premissas_por_skill()
+        assert "04-cronograma" in por_skill
+        assert "hash" in por_skill["04-cronograma"]
+        assert "escopo_hash" in por_skill["04-cronograma"]
+
+    def test_mesmo_escopo_meta_produz_mesmo_escopo_hash(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        escopo_meta = {"jurisdicao_id": "sp", "snapshot_catalogo_id": "cat-1"}
+        ps.write_premissas_efetivas("04-cronograma", {"a": 1}, escopo_meta)
+        ps.write_premissas_efetivas("06-resultado-financeiro", {"b": 2}, escopo_meta)
+        por_skill = ps.read_premissas_por_skill()
+        assert por_skill["04-cronograma"]["escopo_hash"] == por_skill["06-resultado-financeiro"]["escopo_hash"]
+
+    def test_escopo_meta_diferente_produz_hash_diferente(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas("04-cronograma", {"a": 1}, {"jurisdicao_id": "sp"})
+        ps.write_premissas_efetivas("06-resultado-financeiro", {"b": 2}, {"jurisdicao_id": "rj"})
+        por_skill = ps.read_premissas_por_skill()
+        assert por_skill["04-cronograma"]["escopo_hash"] != por_skill["06-resultado-financeiro"]["escopo_hash"]
+
+    def test_no_op_quando_readonly(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        (ps.root / ps.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+        ps.approve()
+        ps.write_premissas_efetivas("06-resultado-financeiro", {"a": 1}, {"jurisdicao_id": "sp"})
+        # nada foi escrito, pois o plano já está read-only
+        assert not (ps.root / ps.PREMISSAS_EFETIVAS_FILE).exists()
+
+    def test_approve_chmod_premissas(self, tmp_path):
+        import stat
+
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas("06-resultado-financeiro", {"a": 1}, {"jurisdicao_id": "sp"})
+        (ps.root / ps.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+
+        ps.approve()
+
+        for fname in (ps.PREMISSAS_EFETIVAS_FILE, ps.PREMISSAS_POR_SKILL_FILE):
+            f = ps.root / fname
+            assert not bool(f.stat().st_mode & stat.S_IWUSR), f"{fname} deveria estar read-only após approve()"
+
+
 class TestEscopoStore:
     def _make_escopo_store(self, tmp_path):
         from concilium.infrastructure.storage.escopo_store import EscopoStore

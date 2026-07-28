@@ -703,6 +703,91 @@ class TestAprovarVersao:
         assert result["status"] == "APROVADO"
         assert result["plano_aprovado"] == "plano-explicit"
 
+    def test_gate_bloqueia_sem_justificativa(self, tools):
+        """issue #121: VAL-COB-NEG na última invocação de skill-06 bloqueia aprovação."""
+        store = _make_store(Path("/tmp/fake"))
+        store.list_escopos.return_value = ["esc-001"]
+
+        active_plan = MagicMock()
+        active_plan.plano_id = "plano-main"
+        plano_store = MagicMock()
+        plano_store.read_invocations.return_value = [
+            {
+                "skill": "06-resultado-financeiro",
+                "validacoes": [{"codigo": "VAL-COB-NEG", "status": "AVISO"}],
+            }
+        ]
+        es = MagicMock()
+        es.active_plan.return_value = active_plan
+        es.plan.return_value = plano_store
+        store.escopo.return_value = es
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-001"),
+        ):
+            result = tools["aprovar_versao"](project_id="proj-001")
+
+        assert "erro" in result
+        assert "VAL-COB-NEG" in result["erro"]
+        es.approve_plan.assert_not_called()
+
+    def test_gate_libera_com_justificativa(self, tools):
+        """issue #121: justificativa_override não vazia libera aprovação mesmo com AVISO bloqueante."""
+        store = _make_store(Path("/tmp/fake"))
+        store.list_escopos.return_value = ["esc-001"]
+
+        active_plan = MagicMock()
+        active_plan.plano_id = "plano-main"
+        plano_store = MagicMock()
+        plano_store.read_invocations.return_value = [
+            {
+                "skill": "06-resultado-financeiro",
+                "validacoes": [{"codigo": "VAL-COB-NEG", "status": "AVISO"}],
+            }
+        ]
+        es = MagicMock()
+        es.active_plan.return_value = active_plan
+        es.plan.return_value = plano_store
+        es.approve_plan.return_value = []
+        store.escopo.return_value = es
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-001"),
+        ):
+            result = tools["aprovar_versao"](
+                project_id="proj-001", justificativa_override="loss-leader aprovado pela diretoria"
+            )
+
+        assert result["status"] == "APROVADO"
+        es.approve_plan.assert_called_once_with("plano-main")
+
+    def test_gate_erro_bloqueia_mesmo_com_justificativa(self, tools):
+        """issue #121: ERRO na última invocação bloqueia mesmo com justificativa."""
+        store = _make_store(Path("/tmp/fake"))
+        store.list_escopos.return_value = ["esc-001"]
+
+        active_plan = MagicMock()
+        active_plan.plano_id = "plano-main"
+        plano_store = MagicMock()
+        plano_store.read_invocations.return_value = [
+            {"skill": "04-cronograma", "validacoes": [{"codigo": "ERR-XPTO", "status": "ERRO"}]}
+        ]
+        es = MagicMock()
+        es.active_plan.return_value = active_plan
+        es.plan.return_value = plano_store
+        store.escopo.return_value = es
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-001"),
+        ):
+            result = tools["aprovar_versao"](project_id="proj-001", justificativa_override="não importa")
+
+        assert "erro" in result
+        es.approve_plan.assert_not_called()
+
 
 # ===========================================================================
 # nova_versao

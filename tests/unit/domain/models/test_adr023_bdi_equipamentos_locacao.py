@@ -95,6 +95,26 @@ class TestBdiEquipamentosDerivado:
             f"precificação={prec_rates['equipamentos']:.4f} vs consolidação={cons_rates['equipamentos']:.4f}"
         )
 
+    def test_consistencia_com_consolidacao_frac_parcial(self):
+        """issue #121: antes desta correção, consolidação ignorava frac_locacao e sempre
+        usava a taxa de material (locação pura), divergindo de precificação sempre que
+        havia manutenção real (frac_locacao < 1.0)."""
+        mod = _load_precificacao()
+        import importlib
+
+        cons = importlib.import_module(
+            "concilium.application.skills.manifests.06-resultado-financeiro._consolidacao._skill_helpers._bdi_resolucao"
+        )
+
+        v1, v2 = [], []
+        prec_rates = mod._resolve_bdi({}, v1, frac_locacao=0.6)
+        cons_rates = cons._resolve_bdi_rates({}, v2, frac_locacao=0.6)
+        assert prec_rates["equipamentos"] == pytest.approx(cons_rates["equipamentos"], abs=1e-6), (
+            f"precificação={prec_rates['equipamentos']:.4f} vs consolidação={cons_rates['equipamentos']:.4f}"
+        )
+        # Confirma que de fato blenda (não cai de volta para material puro)
+        assert cons_rates["equipamentos"] != pytest.approx(cons_rates["material"], abs=1e-6)
+
 
 class TestFracLocacaoDoCanonical:
     """run_precificacao_unitaria deriva frac_locacao das equipes do canônico."""
@@ -167,3 +187,49 @@ class TestFracLocacaoDoCanonical:
         )
         can = CanonicalModel(meta=meta, projeto=projeto, equipes_diretas=[])
         assert mod._frac_locacao_equipamentos(can) == pytest.approx(1.0)
+
+    def test_helper_frac_locacao_em_consolidacao(self):
+        """A consolidação (skill-06 _consolidacao) tem o mesmo helper — issue #121:
+        antes desta correção, ele não existia lá e a taxa de equipamentos era sempre material."""
+        from datetime import UTC, datetime
+
+        import importlib
+
+        from concilium.domain.models.canonical import (
+            CanonicalModel,
+            Coordenadas,
+            EquipeDireta,
+            Meta,
+            Projeto,
+            RegimeTrabalho,
+        )
+
+        cons = importlib.import_module(
+            "concilium.application.skills.manifests.06-resultado-financeiro._consolidacao._skill_helpers._bdi_resolucao"
+        )
+        meta = Meta(gerado_em=datetime.now(UTC), contexto_id="t")
+        projeto = Projeto(
+            id="p",
+            nome="T",
+            tipo_obra="terraplenagem",
+            localizacao="BR",
+            coordenadas=Coordenadas(lat=0, lng=0),
+            regime_trabalho=RegimeTrabalho(dias_semana=6, horas_dia=8),
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
+            snapshot_catalogo_id="c",
+            snapshot_perfil_id="p",
+        )
+        eqs = [
+            EquipeDireta(
+                equipe_id="e1",
+                item_id="i1",
+                cpu_id="C",
+                nome="E1",
+                custo_total=0.0,
+                custo_locacao_mensal=8_000.0,
+                custo_manutencao_mensal=2_000.0,
+            ),
+        ]
+        can = CanonicalModel(meta=meta, projeto=projeto, equipes_diretas=eqs)
+        assert cons._frac_locacao_equipamentos(can) == pytest.approx(0.8, abs=1e-6)

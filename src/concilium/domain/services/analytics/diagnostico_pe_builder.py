@@ -538,7 +538,11 @@ class DiagnosticoPEBuilder:
         sched_lookup, equipe_lookup, plan_lookup, ca_lookup, eap_lookup = _dpb_build_lookups(canonical_in)
         resultado = canonical_in.resultado
         L_aplicado = float(getattr(getattr(resultado, "venda", None), "bdi_lucro_impostos", 0.09) or 0.09)
-        T_efetivo = 0.1338
+        # T_efetivo vem da tabela de BDI realmente aplicada neste run (via bdi_rates),
+        # não de uma constante pré-reforma fixa — ela pode divergir por isenção
+        # regional de COFINS/PIS ou por regime CBS/IBS (ADR-055). 0.1338 permanece
+        # só como fallback quando o chamador não tem a tabela efetiva à mão.
+        T_efetivo = float((bdi_rates or {}).get("tributos_efetivo", 0.1338))
 
         cubo = _resolve_cubo_analitico(canonical_in)
         activity_week_map = _build_activity_week_map(cubo)

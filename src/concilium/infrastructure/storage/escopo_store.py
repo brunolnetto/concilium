@@ -39,6 +39,8 @@ class PlanoStore:
     CANONICAL_FILE = "canonical.json"
     INVOCATIONS_LOG = "invocations.log"
     PLANO_FILE = "plano.json"
+    PREMISSAS_EFETIVAS_FILE = "premissas_efetivas.json"
+    PREMISSAS_POR_SKILL_FILE = "premissas_por_skill.json"
 
     def __init__(self, root: Path, escopo_store: EscopoStore | None = None) -> None:
         self.root = root
@@ -155,6 +157,57 @@ class PlanoStore:
                     pass
         return out
 
+    # ── Premissas efetivas (issue #121 — congelamento junto com o resultado) ──
+
+    def write_premissas_efetivas(
+        self, skill_id: str, normalized_inputs: dict[str, Any], escopo_meta: dict[str, Any]
+    ) -> None:
+        """Congela os inputs efetivamente usados por uma skill para o canônico atual.
+
+        `premissas_efetivas.json` guarda sempre o último snapshot completo (o que
+        gerou o canônico corrente, para auditoria/reprodutibilidade).
+
+        `premissas_por_skill.json` guarda, por skill, o hash de `escopo_meta`
+        (não de `normalized_inputs` inteiro — cada skill tem inputs próprios por
+        contrato, comparar o dict inteiro entre skills diferentes sempre daria
+        divergente). `escopo_meta` é a superfície de premissas compartilhada por
+        todas as skills do plano (catálogo/jurisdição/perfil do escopo) — é o que
+        `_process_staleness_check` compara para detectar reexecução parcial com
+        premissas divergentes entre skills dependentes.
+        """
+        if self._is_readonly():
+            return
+        from hashlib import sha256
+
+        payload = json.dumps(normalized_inputs, sort_keys=True, default=str)
+        content_hash = sha256(payload.encode()).hexdigest()
+        escopo_hash = sha256(json.dumps(escopo_meta, sort_keys=True, default=str).encode()).hexdigest()
+        ts = datetime.now(UTC).isoformat()
+
+        (self.root / self.PREMISSAS_EFETIVAS_FILE).write_text(
+            json.dumps(
+                {"skill_id": skill_id, "hash": content_hash, "ts": ts, "inputs": normalized_inputs},
+                indent=2,
+                default=str,
+            ),
+            encoding="utf-8",
+        )
+
+        por_skill = self.read_premissas_por_skill()
+        por_skill[skill_id] = {"hash": content_hash, "escopo_hash": escopo_hash, "ts": ts}
+        (self.root / self.PREMISSAS_POR_SKILL_FILE).write_text(
+            json.dumps(por_skill, indent=2, default=str), encoding="utf-8"
+        )
+
+    def read_premissas_por_skill(self) -> dict[str, dict[str, Any]]:
+        f = self.root / self.PREMISSAS_POR_SKILL_FILE
+        if not f.exists():
+            return {}
+        try:
+            return json.loads(f.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+
     # ── Outputs ────────────────────────────────────────────────────────
 
     def save_output_file(self, data: bytes, filename: str = "resultado.xlsx") -> Path:
@@ -206,8 +259,18 @@ class PlanoStore:
     # ── Ciclo de vida ─────────────────────────────────────────────────
 
     def approve(self) -> None:
-        """Marca plano como APROVADO: chmod 444 em canonical + invocations."""
-        for fname in (self.CANONICAL_FILE, self.INVOCATIONS_LOG):
+        """Marca plano como APROVADO: chmod 444 em canonical + invocations + premissas.
+
+        As premissas efetivas (issue #121) são congeladas junto com o resultado —
+        antes desta correção, só canonical/invocations ficavam read-only, enquanto
+        overrides e inputs de skill continuavam editáveis por baixo da versão aprovada.
+        """
+        for fname in (
+            self.CANONICAL_FILE,
+            self.INVOCATIONS_LOG,
+            self.PREMISSAS_EFETIVAS_FILE,
+            self.PREMISSAS_POR_SKILL_FILE,
+        ):
             f = self.root / fname
             if f.exists():
                 os.chmod(f, 0o444)

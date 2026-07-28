@@ -77,7 +77,9 @@ def run_consolidacao_financeira(
     )
     bridge_dict = _build_bridge_from_pe(ponto_equilibrio_items, venda_sem_bdi, custo_direto_equipe, inputs, validacoes)
     custos_atividades = _build_custos_atividades(canonical_in)
-    _diag_pe, _back_pe = _build_diagnostico_pe(canonical_in, custos_atividades, ponto_equilibrio_items, validacoes)
+    _diag_pe, _back_pe = _build_diagnostico_pe(
+        canonical_in, custos_atividades, ponto_equilibrio_items, validacoes, _bdi_tabela
+    )
     curva_abc, s_curve, cubo_analitico = _build_abc_analytics(
         canonical_in, inputs, _bdi_tabela, _bdi_regime, validacoes
     )

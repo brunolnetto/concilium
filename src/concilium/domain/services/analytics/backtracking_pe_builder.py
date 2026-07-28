@@ -85,6 +85,16 @@ def _get_item_cubo_hint(diagnostico: DiagnosticoPERelatorio, atividade_id: str) 
 class BacktrackingPEBuilder:
     """Computa soluções inversas para cada item em déficit."""
 
+    def __init__(self, tabela_bdi: Any = None) -> None:
+        """tabela_bdi: TabelaBdi efetivamente aplicada no run (opcional).
+
+        Quando ausente, cai no fallback histórico 0.1338 (pré-reforma) — a tabela
+        real pode divergir por isenção regional de COFINS/PIS ou regime CBS/IBS
+        (ADR-055), então passar a tabela do run evita que a inversão de L sugira
+        um alvo baseado em tributos que não são os que o projeto realmente paga.
+        """
+        self._t_efetivo = tabela_bdi.mao_obra.tributos if tabela_bdi is not None else 0.1338
+
     def build(
         self,
         diagnostico: DiagnosticoPERelatorio,
@@ -170,7 +180,7 @@ class BacktrackingPEBuilder:
         self, item: DiagnosticoPEItem, plan: Any, alvo: float, gap: float
     ) -> tuple[SolucaoInversa | None, float, float]:
         """Solução A: inversa de L. Retorna (solucao, denominator, T_ef)."""
-        T_ef = 0.1338
+        T_ef = self._t_efetivo
         C_cat = float((plan.subtotal.sem_bdi.total if plan and plan.subtotal and plan.subtotal.sem_bdi else 0) or 1)
         denominator = C_cat / max(1.0 - T_ef, 0.01)
         if denominator <= 0:
