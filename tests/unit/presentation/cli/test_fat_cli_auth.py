@@ -13,15 +13,11 @@ from unittest.mock import MagicMock, patch
 import typer
 from typer.testing import CliRunner
 
-from concilium.presentation.cli.commands_auth import (
-    _get_mcpb_download_url,
-    app,
-)
+from concilium.presentation.cli.commands_auth import app
 
 runner = CliRunner()
 
 PATCH_GET_AUTH_STORE = "concilium.infrastructure.auth.auth_store.get_auth_store"
-PATCH_GET_MCPB_DOWNLOAD_URL = "concilium.presentation.cli.commands_auth._get_mcpb_download_url"
 
 # ADR-134 F2: os antigos métodos notify_* de NotificationService viraram funções
 # em application/services/notifications.py — patch aponta para lá.
@@ -104,38 +100,6 @@ def _make_store(**kwargs) -> MagicMock:
     store.migrate_legacy_client_codes.return_value = kwargs.get("migrate_legacy_client_codes_return", [])
     return store
 
-
-# ===========================================================================
-# _get_mcpb_download_url — link temporário do pacote .mcpb (blob storage)
-# ===========================================================================
-
-BUILD_SYSTEM_BLOB_STORAGE = "concilium.infrastructure.storage.store_factory.build_system_blob_storage"
-
-
-class TestGetMcpbDownloadUrl:
-    def test_returns_signed_url_for_latest_mcpb_path(self):
-        storage = MagicMock()
-        storage.gerar_url_temporaria.side_effect = lambda path, ttl_segundos, scope: f"https://example.com/{path}"
-
-        with patch(BUILD_SYSTEM_BLOB_STORAGE, return_value=storage):
-            url = _get_mcpb_download_url()
-
-        assert url == "https://example.com/distribuicao/concilium-mcp-proxy/latest.mcpb"
-        storage.gerar_url_temporaria.assert_called_once_with(
-            "distribuicao/concilium-mcp-proxy/latest.mcpb",
-            ttl_segundos=10 * 365 * 24 * 3600,
-            scope="organization",
-        )
-
-    def test_returns_none_when_backend_unsupported(self):
-        """Backend sem suporte a URL assinada (ex.: filesystem local) -> None."""
-        storage = MagicMock()
-        storage.gerar_url_temporaria.return_value = None
-
-        with patch(BUILD_SYSTEM_BLOB_STORAGE, return_value=storage):
-            url = _get_mcpb_download_url()
-
-        assert url is None
 
 
 # ===========================================================================
@@ -515,31 +479,28 @@ class TestRemoveUser:
         store.forget_client.assert_not_called()
         assert "forget-user" in result.output
 
-    def test_add_user_no_email_prints_mcpb_link_and_code(self):
-        """Sem --email, o console mostra o link do .mcpb e o client_code (ADR-161) —
-        não há mais bloco JSON nem escolha de plataforma."""
+    def test_add_user_no_email_prints_activation_code(self):
+        """Sem --email, o console mostra o client_code (ADR-161) — a extensão já
+
+        está aprovada no allowlist da organização, sem link de download nem
+        escolha de plataforma."""
         store = _make_store(add_client_return=_make_client_record())
 
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
-        ):
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
                 ["add-user", "--id", "alice", "--secret", "s"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "https://example.com/concilium-mcp-proxy.mcpb" in result.output
+        assert "Código de ativação" in result.output
 
-    def test_add_user_with_email_sends_mcpb_link_and_code(self):
+    def test_add_user_with_email_sends_client_code(self):
         store = _make_store(add_client_return=_make_client_record())
-        fake_url = "https://example.com/concilium-mcp-proxy.mcpb"
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_USER_CREATED) as notify_mock,
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=fake_url),
         ):
             result = runner.invoke(
                 app,
@@ -549,60 +510,20 @@ class TestRemoveUser:
         assert result.exit_code == 0, result.output
         notify_mock.assert_called_once()
         kwargs = notify_mock.call_args.kwargs
-        assert kwargs["mcpb_download_url"] == fake_url
         assert kwargs["client_code"]
-
-    def test_add_user_warns_admin_when_no_download_url_generated(self):
-        """Sem link de download (backend sem suporte, ou Graph createLink falhando —
-
-        ADR-135), o email ainda é enviado com sucesso mas sem instrução de onde obter o
-        pacote. Sem este aviso, isso passa desapercebido: a CLI só reportaria
-        "✓ enviado" (ver test_add_user_reports_failure_and_prints_fallback_when_email_send_fails
-        para o caso, diferente, de o próprio ENVIO do email falhar)."""
-        store = _make_store(add_client_return=_make_client_record())
-
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_NOTIFY_USER_CREATED, return_value=True),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
-        ):
-            result = runner.invoke(
-                app,
-                ["add-user", "--id", "alice", "--secret", "s", "--email", "alice@example.com"],
-            )
-
-        assert result.exit_code == 0, result.output
-        assert "Não foi possível gerar o link de download" in result.output
-        assert "Email de boas-vindas enviado" in result.output
-
-    def test_add_user_no_warning_when_download_url_generated(self):
-        store = _make_store(add_client_return=_make_client_record())
-
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_NOTIFY_USER_CREATED, return_value=True),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
-        ):
-            result = runner.invoke(
-                app,
-                ["add-user", "--id", "alice", "--secret", "s", "--email", "alice@example.com"],
-            )
-
-        assert result.exit_code == 0, result.output
-        assert "Não foi possível gerar o link de download" not in result.output
+        assert "mcpb_download_url" not in kwargs
 
     def test_add_user_reports_failure_and_prints_fallback_when_email_send_fails(self):
         """notify_user_created() retornando False (ex.: SMTP rejeitou por anexo grande
 
         demais) não deve ser reportado como sucesso — a CLI precisa avisar o admin e
-        imprimir o link/client_code para entrega manual, em vez do "✓ enviado"
+        imprimir o client_code para entrega manual, em vez do "✓ enviado"
         silenciosamente errado que causava o bug real em produção."""
         store = _make_store(add_client_return=_make_client_record())
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_USER_CREATED, return_value=False),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(
                 app,
@@ -754,8 +675,8 @@ class TestForgetUser:
 
 
 class TestRegenerateCode:
-    def test_no_link_flag_hides_link_and_echoes_raw_code(self):
-        """--no-link → não mostra o link do .mcpb, só ecoa o client_code cru."""
+    def test_no_link_flag_hides_client_code_block(self):
+        """--no-link → não mostra o bloco de instrução, só ecoa o client_code cru."""
         store = _make_store()
         store.regenerate_client_code.return_value = "RCODE-ABCDEF1234567890"
 
@@ -766,37 +687,30 @@ class TestRegenerateCode:
             )
 
         assert result.exit_code == 0, result.output
-        assert "Link de instalação" not in result.output
+        assert "Envie ao usuário" not in result.output
         # Code itself is displayed
         assert "RCODE-ABCDEF1234567890" in result.output
 
-    def test_with_link_shows_download_url_and_code(self):
-        """--link (default) → mostra o link de instalação do .mcpb e o client_code."""
+    def test_with_link_shows_activation_code(self):
+        """--link (default) → mostra o bloco de instrução com o client_code."""
         store = _make_store()
         store.regenerate_client_code.return_value = "RCODE-TESTCODE123"
 
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
-        ):
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
                 ["regenerate-code", "--user", "alice", "--link"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "https://example.com/concilium-mcp-proxy.mcpb" in result.output
         assert "RCODE-TESTCODE123" in result.output
 
     def test_default_shows_link(self):
-        """Default show_link=True → link/código presentes sem flag explícita."""
+        """Default show_link=True → código presente sem flag explícita."""
         store = _make_store()
         store.regenerate_client_code.return_value = "RCODE-DEFAULTCODE"
 
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
-        ):
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
                 ["regenerate-code", "--user", "alice"],
@@ -819,23 +733,6 @@ class TestRegenerateCode:
 
         assert result.exit_code == 1
         assert "não encontrado" in result.output
-
-    def test_link_shows_manual_delivery_fallback_when_url_unavailable(self):
-        store = _make_store()
-        store.regenerate_client_code.return_value = "RCODE-WIN"
-
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
-        ):
-            result = runner.invoke(
-                app,
-                ["regenerate-code", "--user", "alice"],
-            )
-
-        assert result.exit_code == 0, result.output
-        assert "nenhum gerado" in result.output
-        assert "RCODE-WIN" in result.output
 
     def test_with_email_notifies_user_edited(self):
         """ADR-131 D2 — regenerate-code chama notify_user_edited quando há email cadastrado."""
@@ -897,8 +794,10 @@ class TestRegenerateCode:
         assert "Falha ao enviar email de aviso para alice@example.com" in result.output
 
     def test_welcome_email_flag_sends_full_content_instead_of_generic_notice(self):
-        """--welcome-email: reonboarding de quem já está cadastrado — reenvia link
-        do .mcpb + client_code (notify_client_code_migrated), não o aviso genérico."""
+        """--welcome-email: reonboarding de quem já está cadastrado — reenvia as
+
+        instruções completas + client_code (notify_client_code_migrated), não o
+        aviso genérico."""
         client = _make_client_record("alice", email="alice@example.com")
         store = _make_store(list_clients_return=[client])
         store.regenerate_client_code.return_value = "RCODE-NEW"
@@ -907,14 +806,11 @@ class TestRegenerateCode:
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=True) as notify_migrated_mock,
             patch(PATCH_NOTIFY_USER_EDITED) as notify_edited_mock,
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
         ):
             result = runner.invoke(app, ["regenerate-code", "--user", "alice", "--welcome-email"])
 
         assert result.exit_code == 0, result.output
-        notify_migrated_mock.assert_called_once_with(
-            "alice", "alice@example.com", "RCODE-NEW", "https://example.com/concilium-mcp-proxy.mcpb"
-        )
+        notify_migrated_mock.assert_called_once_with("alice", "alice@example.com", "RCODE-NEW")
         notify_edited_mock.assert_not_called()
         assert "Email completo reenviado" in result.output
 
@@ -926,7 +822,6 @@ class TestRegenerateCode:
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=False),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(app, ["regenerate-code", "--user", "alice", "--welcome-email"])
 
@@ -1259,35 +1154,17 @@ class TestMigrateLegacyCodes:
         store.migrate_legacy_client_codes.return_value = [
             ("legacy1", "RCODE-AAA", "legacy1@example.com"),
         ]
-        fake_url = "https://example.com/concilium-mcp-proxy.mcpb"
 
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=fake_url),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
         assert result.exit_code == 0, result.output
         assert "legacy1" in result.output
         assert "email enviado" in result.output
-        notify_mock.assert_called_once_with("legacy1", "legacy1@example.com", "RCODE-AAA", fake_url)
-
-    def test_migrate_warns_admin_when_no_download_url_generated(self):
-        store = _make_store()
-        store.migrate_legacy_client_codes.return_value = [
-            ("legacy1", "RCODE-AAA", "legacy1@example.com"),
-        ]
-
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=True),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
-        ):
-            result = runner.invoke(app, ["migrate-legacy-codes"])
-
-        assert result.exit_code == 0, result.output
-        assert "Não foi possível gerar o link de download" in result.output
+        notify_mock.assert_called_once_with("legacy1", "legacy1@example.com", "RCODE-AAA")
 
     def test_migrates_without_email_lists_for_manual_delivery(self):
         store = _make_store()
@@ -1298,7 +1175,6 @@ class TestMigrateLegacyCodes:
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED) as notify_mock,
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
@@ -1308,21 +1184,17 @@ class TestMigrateLegacyCodes:
         assert "RCODE-BBB" in result.output
         notify_mock.assert_not_called()
 
-    def test_manual_delivery_shows_link_and_code(self):
-        """Sem email: link do .mcpb + client_code são impressos pro admin entregar."""
+    def test_manual_delivery_shows_code(self):
+        """Sem email: client_code é impresso pro admin entregar manualmente."""
         store = _make_store()
         store.migrate_legacy_client_codes.return_value = [
             ("legacy_no_email", "RCODE-BBB", ""),
         ]
 
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value="https://example.com/concilium-mcp-proxy.mcpb"),
-        ):
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 
         assert result.exit_code == 0, result.output
-        assert "https://example.com/concilium-mcp-proxy.mcpb" in result.output
         assert "RCODE-BBB" in result.output
 
     def test_email_send_failure_added_to_manual_delivery(self):
@@ -1337,7 +1209,6 @@ class TestMigrateLegacyCodes:
         with (
             patch(PATCH_GET_AUTH_STORE, return_value=store),
             patch(PATCH_NOTIFY_CLIENT_CODE_MIGRATED, return_value=False),
-            patch(PATCH_GET_MCPB_DOWNLOAD_URL, return_value=None),
         ):
             result = runner.invoke(app, ["migrate-legacy-codes"])
 

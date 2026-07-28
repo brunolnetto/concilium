@@ -10,10 +10,23 @@
 {% endfor %}
 
 {% endif -%}
-{% if download_note -%}
-{{ download_note }}
-{% endif -%}
-Código de ativação (cole quando a instalação pedir, passo 3 acima):
+Como instalar:
+
+  0. Instale o Git para Windows (pré-requisito, uma vez só):
+     https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.3/Git-2.55.0.3-64-bit.exe
+  1. Clique no componente com seu nome no canto inferior esquerdo do Claude
+     Desktop.
+  2. Clique em "Configurações".
+  3. Clique em "Extensões".
+  4. Clique em "Explorar extensões".
+  5. Clique no cartão "Concilium".
+  6. Clique em "Instalar".
+  7. Cole o código de ativação (abaixo) na janela pop-up e confirme.
+  8. Habilite o botão toggle de "Desativado" para "Ativado".
+  9. Relogue no Claude Desktop para habilitar a conexão.
+ 10. Alterne para a opção "Code" e inicie uma conversa com: ping()
+
+Código de ativação:
 
   {{ client_code }}
 

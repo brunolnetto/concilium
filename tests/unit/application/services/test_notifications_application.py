@@ -19,34 +19,6 @@ def _patched_service():
     return patcher, mock_service
 
 
-class TestBuildMcpbDownloadNote:
-    def test_empty_when_no_url(self):
-        from concilium.application.services.notifications import _build_mcpb_download_note
-
-        assert _build_mcpb_download_note(None) == ""
-        assert _build_mcpb_download_note("") == ""
-
-    def test_includes_url_when_present(self):
-        from concilium.application.services.notifications import _build_mcpb_download_note
-
-        note = _build_mcpb_download_note("https://x/concilium-mcp-proxy.mcpb")
-        assert "https://x/concilium-mcp-proxy.mcpb" in note
-
-    def test_includes_numbered_install_steps(self):
-        """Passo a passo explícito no corpo do email — não delega instalação ao
-        tutorial anexo nem menciona o mecanismo antigo (claude_desktop_config.json)."""
-        from concilium.application.services.notifications import _build_mcpb_download_note
-
-        note = _build_mcpb_download_note("https://x/concilium-mcp-proxy.mcpb")
-        assert "1." in note
-        assert "2." in note
-        assert "3." in note
-        assert "4." in note
-        assert "código de ativação" in note.lower()
-        assert "claude_desktop_config" not in note
-        assert ".exe" not in note
-
-
 class TestSkillZipPackagingDelegation:
     """ADR-144 D6 + empacotamento real em zip: notifications.py delega o
     empacotamento do anexo para skill_content.py, sem duplicar a lógica
@@ -83,21 +55,6 @@ class TestNotifyUserCreated:
         skill_attachment = next(a for a in kwargs["attachments"] if a[0] == "concilium-usage-tutorial.skill")
         assert skill_attachment[2] == "application/zip"
         assert skill_attachment[1][:2] == b"PK"  # assinatura de zip
-
-    def test_download_note_included_when_url_present(self):
-        from concilium.application.services.notifications import notify_user_created
-
-        patcher, mock_service = _patched_service()
-        with patcher:
-            notify_user_created(
-                "bruno",
-                "operator",
-                "bruno@x.com",
-                "RCODE-XYZ",
-                mcpb_download_url="https://x/concilium-mcp-proxy.mcpb",
-            )
-        kwargs = mock_service.send.call_args.kwargs
-        assert "https://x/concilium-mcp-proxy.mcpb" in kwargs["context"]["download_note"]
 
 
 class TestNotifyClientCodeMigrated:

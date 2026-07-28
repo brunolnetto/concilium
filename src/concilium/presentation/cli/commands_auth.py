@@ -58,67 +58,25 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Publicado versionado por build-proxy.yml (ADR-161 F3): .mcpb universal com
-# os 3 binários PyInstaller embutidos (platform_overrides escolhe o certo em
-# runtime) — substitui os 3 links por SO do executável cru + os 2 blocos
-# claude_desktop_config.json do mecanismo antigo (sunset).
-_MCPB_BLOB_PATH = "distribuicao/concilium-mcp-proxy/latest.mcpb"
-
-# "Link fixo" (ADR-161 D3): em vez de renovar a cada cadastro, usamos um TTL
-# bem longo — Graph createLink é idempotente por item+type+scope, então
-# chamadas repetidas tendem a devolver o mesmo link enquanto o path
-# (`_MCPB_BLOB_PATH`) não mudar, mesmo com o conteúdo sendo sobrescrito a
-# cada build (mesma driveItem, nova versão SharePoint).
-_MCPB_LINK_TTL_SEGUNDOS = 10 * 365 * 24 * 3600
+# A extensão (.mcpb, publicado versionado por build-proxy.yml — ADR-161 F3) é
+# aprovada previamente no allowlist de desktop extensions da organização —
+# o usuário final instala de dentro do próprio Claude Desktop (Configurações >
+# Extensões > Explorar extensões > Concilium), sem precisar de link de
+# download nem editar claude_desktop_config.json manualmente. Só falta o
+# client_code, colado no campo pedido durante a instalação.
 
 
-def _get_mcpb_download_url() -> str | None:
-    """Gera o link de download do pacote .mcpb universal (ADR-161).
-
-    scope="organization": o destinatário (funcionário com conta no tenant
-    MendesLobo) só precisa estar logado no M365 para abrir o link — não expõe o
-    arquivo publicamente. Diferente de scope="anonymous" (default do backend),
-    que depende de compartilhamento externo estar habilitado no site do
-    SharePoint — confirmado em produção que está desabilitado (ADR-135 §D3.1).
-
-    None se o backend não suportar URL assinada (ex.: filesystem local em dev)
-    ou a chamada falhar — tratado pelo chamador (aviso + entrega manual).
-    """
-    from concilium.infrastructure.storage.store_factory import build_system_blob_storage
-
-    storage = build_system_blob_storage()
-    return storage.gerar_url_temporaria(_MCPB_BLOB_PATH, ttl_segundos=_MCPB_LINK_TTL_SEGUNDOS, scope="organization")
-
-
-def _warn_if_no_mcpb_url(mcpb_url: str | None) -> None:
-    """Avisa o admin no terminal quando o link de download não pôde ser gerado.
-
-    O .mcpb só chega ao usuário pelo link assinado (não há mais fallback de
-    anexo — ver `notifications._distribution_attachments`); se vier None
-    (backend sem suporte, ou Graph createLink falhando — já aconteceu em
-    produção, ADR-135), o email de boas-vindas ainda é enviado com sucesso,
-    mas sem instrução de onde obter o pacote. Sem este aviso, isso passa
-    desapercebido (o comando só reporta "✓ enviado").
-    """
-    if not mcpb_url:
-        rprint(
-            "\n[yellow]⚠ Não foi possível gerar o link de download do pacote .mcpb "
-            "(backend de storage sem suporte a URL assinada, ou falha ao gerar — veja os "
-            "logs do servidor). O email de boas-vindas será enviado sem o link de download; "
-            "entregue o pacote ao usuário por outro meio.[/yellow]"
-        )
-
-
-def _print_mcpb_link_and_code(client_code: str, mcpb_url: str | None) -> None:
-    """Instruções de entrega manual: link do .mcpb + client_code (ADR-161 D3).
+def _print_activation_code(client_code: str) -> None:
+    """Instrução de entrega manual: só o client_code (ADR-161 D3, atualizado).
 
     Substitui `_print_both_configs`/os dois blocos claude_desktop_config.json
-    do mecanismo antigo — o .mcpb + `user_config` elimina a configuração manual,
-    o usuário só precisa do link (abre a instalação no Claude Desktop) e do
-    client_code (colado no campo pedido durante a instalação).
+    do mecanismo antigo — a extensão já está aprovada no allowlist da
+    organização, o usuário só precisa abrir Configurações > Extensões >
+    Explorar extensões > Concilium > Instalar, e colar este código quando
+    pedido.
     """
-    rprint(f"  Link de instalação (.mcpb): {mcpb_url or '(nenhum gerado — entregue o pacote por outro meio)'}")
     rprint(f"  Código de ativação: {client_code}")
+    rprint("  (instalar via Configurações > Extensões > Explorar extensões > Concilium, no Claude Desktop)")
 
 
 # ── Usuários ──────────────────────────────────────────────────────────────────
@@ -228,8 +186,9 @@ def add_user(
     para ativar quantos dispositivos o usuário precisar (Claude Desktop em casa,
     no trabalho, etc.), sem depender do admin/TI para cadastrar cada um.
 
-    Se --email for fornecido, o link de instalação do pacote .mcpb e o
-    client_code são enviados por email automaticamente (ADR-161).
+    Se --email for fornecido, as instruções de instalação (extensão já
+    aprovada no allowlist da organização) e o client_code são enviados por
+    email automaticamente (ADR-161).
     """
     from concilium.application.services.notifications import notify_user_created
 
@@ -252,14 +211,11 @@ def add_user(
     rprint(f"  [bold]{client_code}[/bold]")
 
     if email:
-        mcpb_url = _get_mcpb_download_url()
-        _warn_if_no_mcpb_url(mcpb_url)
         sent = notify_user_created(
             client_id=client_id,
             role=", ".join(role),
             email=email,
             client_code=client_code,
-            mcpb_download_url=mcpb_url,
         )
         if sent:
             rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
@@ -268,10 +224,10 @@ def add_user(
                 f"\n[red]✗ Falha ao enviar o email de boas-vindas para {email}[/red] "
                 "[yellow](veja os logs do servidor para o motivo) — entregue manualmente:[/yellow]"
             )
-            _print_mcpb_link_and_code(client_code, mcpb_url)
+            _print_activation_code(client_code)
     else:
         rprint("\n[bold]Envie ao usuário:[/bold]")
-        _print_mcpb_link_and_code(client_code, _get_mcpb_download_url())
+        _print_activation_code(client_code)
 
 
 @app.command("update-user")
@@ -732,13 +688,11 @@ def forget_user(
 @app.command("regenerate-code")
 def regenerate_code(
     user: str = typer.Option(..., "--user", "-u", help="client_id do usuário."),
-    show_link: bool = typer.Option(
-        True, "--link/--no-link", help="Exibir o link de instalação do .mcpb e o client_code."
-    ),
+    show_link: bool = typer.Option(True, "--link/--no-link", help="Exibir o client_code para entrega manual."),
     welcome_email: bool = typer.Option(
         False,
         "--welcome-email",
-        help="Envia o email completo (link do .mcpb + client_code) em vez do aviso genérico de alteração.",
+        help="Envia o email completo (instruções de instalação + client_code) em vez do aviso genérico de alteração.",
     ),
 ) -> None:
     """Gera um novo client_code para o usuário (invalida o anterior).
@@ -762,9 +716,7 @@ def regenerate_code(
     existing = next((r for r in store.list_clients() if r.client_id == user), None)
     if existing and existing.email:
         if welcome_email:
-            mcpb_url = _get_mcpb_download_url()
-            _warn_if_no_mcpb_url(mcpb_url)
-            if notify_client_code_migrated(user, existing.email, client_code, mcpb_url):
+            if notify_client_code_migrated(user, existing.email, client_code):
                 rprint(f"\n[green]✓ Email completo reenviado para {existing.email}[/green]")
             else:
                 rprint(f"[red]✗ Falha ao enviar o email completo para {existing.email}[/red]")
@@ -773,7 +725,7 @@ def regenerate_code(
 
     if show_link:
         rprint("\n[bold]Envie ao usuário:[/bold]")
-        _print_mcpb_link_and_code(client_code, _get_mcpb_download_url())
+        _print_activation_code(client_code)
     else:
         typer.echo(client_code)
 
@@ -788,7 +740,7 @@ def migrate_legacy_codes() -> None:
     servidor para corrigir todos de uma vez, em vez de esperar cada usuário
     reportar o problema e rodar 'regenerate-code' individualmente.
 
-    Usuários com email cadastrado recebem o link de instalação do .mcpb e o
+    Usuários com email cadastrado recebem as instruções de instalação e o
     client_code por email automaticamente (ADR-161). Usuários sem email ficam
     listados no terminal para envio manual.
     """
@@ -804,12 +756,10 @@ def migrate_legacy_codes() -> None:
 
     rprint(f"[green]✓ {len(migrated)} usuário(s) migrado(s):[/green]\n")
 
-    mcpb_url = _get_mcpb_download_url()
-    _warn_if_no_mcpb_url(mcpb_url)
     manual: list[tuple[str, str]] = []
     for client_id, client_code, email in migrated:
         if email:
-            sent = notify_client_code_migrated(client_id, email, client_code, mcpb_url)
+            sent = notify_client_code_migrated(client_id, email, client_code)
             if sent:
                 rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
             else:
@@ -823,7 +773,7 @@ def migrate_legacy_codes() -> None:
         rprint("\n[bold]Entrega manual (sem email cadastrado ou falha no envio):[/bold]")
         for client_id, client_code in manual:
             rprint(f"\n  [cyan]{client_id}[/cyan]:")
-            _print_mcpb_link_and_code(client_code, mcpb_url)
+            _print_activation_code(client_code)
 
 
 @app.command("list-devices")

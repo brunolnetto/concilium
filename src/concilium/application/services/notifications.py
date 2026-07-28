@@ -28,34 +28,6 @@ logger = logging.getLogger(__name__)
 # oficial de Skill da Anthropic), em vez do markdown solto enviado antes.
 
 
-def _build_mcpb_download_note(mcpb_download_url: str | None) -> str:
-    """Monta o passo a passo de instalação do pacote .mcpb (ADR-161).
-
-    Um único link universal — `platform_overrides` no manifest escolhe o
-    binário certo (Windows/Linux/macOS) em runtime, então não há mais um link
-    por SO. Retorna string vazia se nenhum link estiver disponível (ex.:
-    backend de storage sem suporte a URL assinada em dev).
-
-    O link é gerado com scope="organization" (ver
-    commands_auth._get_mcpb_download_url) — abre sem confirmação extra para
-    quem já está logado com a conta Microsoft/M365 da MendesLobo; se pedir
-    login, é só entrar com a conta da empresa (o arquivo não é público).
-    """
-    if not mcpb_download_url:
-        return ""
-
-    return (
-        "Como instalar:\n\n"
-        f"  1. Baixe o pacote de instalação: {mcpb_download_url}\n"
-        "     (o link abre com a sua conta Microsoft/M365 da empresa — não precisa\n"
-        "     de senha adicional)\n"
-        "  2. Abra o arquivo baixado — o Claude Desktop detecta sozinho o seu sistema\n"
-        "     operacional e mostra a tela de instalação.\n"
-        "  3. Quando a instalação pedir o código de ativação, cole o código abaixo.\n"
-        "  4. Aguarde o Claude Desktop concluir a instalação. Pronto — sem mais passos.\n\n"
-    )
-
-
 def _base_url() -> str:
     from concilium.infrastructure.settings import get_api
 
@@ -72,8 +44,9 @@ def _distribution_attachments() -> list[tuple[str, bytes, str]]:
     O pacote .mcpb NUNCA vai em anexo — provedores de email (Gmail incluso,
     confirmado em produção: SMTP 552 5.7.0 "potential security issue")
     bloqueiam mensagens com payload executável/zip contendo binários, mesmo
-    dentro de outro zip. A entrega do .mcpb é só pelo link assinado
-    (`download_note`, ver `_build_mcpb_download_note`); aqui só vai o tutorial.
+    dentro de outro zip. A extensão é instalada pelo próprio Claude Desktop
+    (Configurações > Extensões > Explorar extensões — aprovada previamente no
+    allowlist da organização); aqui só vai o tutorial de uso.
     """
     return [("concilium-usage-tutorial.skill", package_skill_zip(), "application/zip")]
 
@@ -83,9 +56,8 @@ def notify_user_created(
     role: str,
     email: str,
     client_code: str,
-    mcpb_download_url: str | None = None,
 ) -> bool:
-    """Email de boas-vindas com o link de instalação do .mcpb e o client_code (ADR-161)."""
+    """Email de boas-vindas com o client_code — instruções de instalação são estáticas no template."""
     return get_notification_service().send(
         to=email,
         subject=f"[Concilium] Bem-vindo, {client_id}! Sua conta foi criada.",
@@ -94,19 +66,13 @@ def notify_user_created(
             "heading": f"Bem-vindo ao Concilium, {client_id}!",
             "intro": "Sua conta no Concilium foi criada com sucesso.",
             "details": [("Usuário", client_id), ("Perfil", role)],
-            "download_note": _build_mcpb_download_note(mcpb_download_url),
             "client_code": client_code,
         },
         attachments=_distribution_attachments(),
     )
 
 
-def notify_client_code_migrated(
-    client_id: str,
-    email: str,
-    client_code: str,
-    mcpb_download_url: str | None = None,
-) -> bool:
+def notify_client_code_migrated(client_id: str, email: str, client_code: str) -> bool:
     """Notifica um client migrado (client_code gerado retroativamente)."""
     return get_notification_service().send(
         to=email,
@@ -119,7 +85,6 @@ def notify_client_code_migrated(
                 "(atualização do sistema de autenticação — nenhuma ação sua causou isso)."
             ),
             "details": None,
-            "download_note": _build_mcpb_download_note(mcpb_download_url),
             "client_code": client_code,
         },
         attachments=_distribution_attachments(),

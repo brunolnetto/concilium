@@ -82,3 +82,6 @@ benchmarks/data/CTC-*/
 # NEP-039 audit store — runtime, gerado pelo BenchmarkRunner (não é fonte)
 benchmarks/data/.nep039/
 benchmarks/projetos/.nep039/
+
+# Logs locais copiados pra debug (ex.: main.log do Claude Desktop) — nunca fonte
+*.log

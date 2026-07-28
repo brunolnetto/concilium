@@ -115,53 +115,34 @@ class TestRenderTemplate:
         assert "Só o essencial" in body
         assert ":" not in body.replace("Só o essencial", "")
 
-    def test_html_download_note_wraps_long_urls(self):
-        """URLs assinadas (SAS) não têm espaços e podem passar de 200-400 chars —
-        sem overflow-wrap/word-break, estouram a tabela de 600px fixos da _base."""
-        from concilium.infrastructure.services.notification_service import NotificationService
-
-        svc = NotificationService(settings=_make_smtp_settings())
-        ctx = {
-            "heading": "Bem-vindo ao Concilium",
-            "download_note": "  Windows : https://example.blob.core.windows.net/proxy/" + "a" * 300,
-        }
-        body = svc._render("user_created.html.jinja2", ctx)
-        assert "overflow-wrap:break-word" in body
-        assert "word-break:break-all" in body
-
-    def test_html_download_note_uses_br_not_css_pre_wrap(self):
+    def test_nl2br_filter_uses_br_not_css_pre_wrap(self):
         """Outlook desktop (motor Word) ignora white-space:pre-wrap e colapsa tudo
 
-        numa linha só (bug real em produção) — a quebra de linha precisa ser
-        <br> real, universalmente suportado, não depender de CSS."""
-        from concilium.infrastructure.services.notification_service import NotificationService
+        numa linha só (bug real em produção, achado no email de boas-vindas) — a
+        quebra de linha precisa ser <br> real, universalmente suportado, não
+        depender de CSS. Testado no filtro Jinja diretamente (registrado em
+        _build_jinja_env) — é infraestrutura genérica, não específica de um
+        template."""
+        from concilium.infrastructure.services.notification_service import _jinja_env
 
-        svc = NotificationService(settings=_make_smtp_settings())
-        ctx = {
-            "heading": "Bem-vindo ao Concilium",
-            "download_note": "Como instalar:\n\n  1. Baixe o pacote\n  2. Abra o arquivo",
-        }
-        body = svc._render("user_created.html.jinja2", ctx)
-        assert "white-space:pre-wrap" not in body
-        assert "<br>" in body
-        # cada uma das 4 linhas do download_note vira sua própria linha visual
-        assert body.count("<br>") >= 3
+        rendered = _jinja_env.from_string("{{ value | nl2br }}").render(
+            value="Como instalar:\n\n  1. Baixe o pacote\n  2. Abra o arquivo"
+        )
+        assert "<br>" in rendered
+        assert rendered.count("<br>") >= 3
 
-    def test_html_download_note_escapes_html_special_chars(self):
+    def test_nl2br_filter_escapes_html_special_chars(self):
         """nl2br escapa cada linha antes de juntar com <br> — sem essa etapa,
 
         conteúdo com '<'/'&' quebraria o HTML do email em vez de aparecer como texto."""
-        from concilium.infrastructure.services.notification_service import NotificationService
+        from concilium.infrastructure.services.notification_service import _jinja_env
 
-        svc = NotificationService(settings=_make_smtp_settings())
-        ctx = {
-            "heading": "Bem-vindo ao Concilium",
-            "download_note": "Linha 1 <script>alert(1)</script>\nLinha 2 & cia",
-        }
-        body = svc._render("user_created.html.jinja2", ctx)
-        assert "<script>alert(1)</script>" not in body
-        assert "&lt;script&gt;" in body
-        assert "Linha 2 &amp; cia" in body
+        rendered = _jinja_env.from_string("{{ value | nl2br }}").render(
+            value="Linha 1 <script>alert(1)</script>\nLinha 2 & cia"
+        )
+        assert "<script>alert(1)</script>" not in rendered
+        assert "&lt;script&gt;" in rendered
+        assert "Linha 2 &amp; cia" in rendered
 
 
 class TestBuildMessage:
