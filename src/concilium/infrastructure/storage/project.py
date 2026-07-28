@@ -12,6 +12,11 @@ from uuid import uuid4
 
 from concilium.domain.models.canonical import CanonicalModel
 
+from ._bdi_perfil_freeze import (
+    bdi_perfil_versao_filename,
+    bdi_perfil_versoes_referenciadas,
+    extract_bdi_perfil_versao,
+)
 from .escopo_store import EscopoStore
 from .snapshot import SnapshotStore
 
@@ -58,6 +63,8 @@ class ProjectStore:
     META_FILE = "meta.json"
     CANONICAL_FILE = "canonical.json"
     INVOCATIONS_LOG = "invocations.log"
+    PREMISSAS_EFETIVAS_FILE = "premissas_efetivas.json"
+    PREMISSAS_POR_SKILL_FILE = "premissas_por_skill.json"
 
     def __init__(self, root: Path):
         """root = projetos/{uuid}/"""
@@ -280,15 +287,91 @@ class ProjectStore:
         with log_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry, default=str) + "\n")
 
+    # ── Premissas efetivas (issue #123 — congelamento no modelo vN flat) ──
+    # Espelha PlanoStore.write_premissas_efetivas/read_premissas_por_skill
+    # (escopo_store.py, issue #121), com a mesma lógica de hash — só muda o
+    # escopo de armazenamento: por versão (vN/) em vez de por plano.
+
+    def write_premissas_efetivas(
+        self, version: str, skill_id: str, normalized_inputs: dict[str, Any], escopo_meta: dict[str, Any]
+    ) -> None:
+        """Congela os inputs efetivamente usados por uma skill para o canônico atual da versão.
+
+        Ver docstring de `PlanoStore.write_premissas_efetivas` (escopo_store.py) —
+        mesma semântica: `premissas_efetivas.json` guarda o último snapshot
+        completo; `premissas_por_skill.json` guarda por skill o hash de
+        `escopo_meta` (superfície de premissas compartilhada — aqui,
+        contexto/catálogo/perfil da versão flat) usado para detecção de
+        staleness entre skills dependentes.
+        """
+        vpath = self.root / version
+        if self._is_readonly(vpath):
+            return
+        from hashlib import sha256
+
+        payload = json.dumps(normalized_inputs, sort_keys=True, default=str)
+        content_hash = sha256(payload.encode()).hexdigest()
+        escopo_hash = sha256(json.dumps(escopo_meta, sort_keys=True, default=str).encode()).hexdigest()
+        ts = datetime.now(UTC).isoformat()
+
+        (vpath / self.PREMISSAS_EFETIVAS_FILE).write_text(
+            json.dumps(
+                {"skill_id": skill_id, "hash": content_hash, "ts": ts, "inputs": normalized_inputs},
+                indent=2,
+                default=str,
+            ),
+            encoding="utf-8",
+        )
+
+        por_skill = self.read_premissas_por_skill(version)
+        registro: dict[str, Any] = {"hash": content_hash, "escopo_hash": escopo_hash, "ts": ts}
+        bdi_perfil_versao = extract_bdi_perfil_versao(normalized_inputs)
+        if bdi_perfil_versao is not None:
+            registro["bdi_perfil_versao"] = bdi_perfil_versao
+        por_skill[skill_id] = registro
+        (vpath / self.PREMISSAS_POR_SKILL_FILE).write_text(
+            json.dumps(por_skill, indent=2, default=str), encoding="utf-8"
+        )
+
+    def read_premissas_por_skill(self, version: str) -> dict[str, dict[str, Any]]:
+        f = self.root / version / self.PREMISSAS_POR_SKILL_FILE
+        if not f.exists():
+            return {}
+        try:
+            return json.loads(f.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+
+    def _protect_bdi_perfil_versoes(self, version: str) -> None:
+        """Protege (chmod 444) os snapshots de perfil BDI usados pelas skills desta versão (issue #123).
+
+        Espelha `PlanoStore._protect_bdi_perfil_versoes` — `bdi/perfil_bdi.json`
+        (cabeça) não é protegido, só os snapshots efetivamente referenciados.
+        """
+        versoes = bdi_perfil_versoes_referenciadas(self.read_premissas_por_skill(version))
+        if not versoes:
+            return
+        bdi_dir = self.root / "bdi"
+        for versao in versoes:
+            f = bdi_dir / bdi_perfil_versao_filename(versao)
+            if f.exists():
+                os.chmod(f, 0o444)
+
     def approve(self, version: str) -> None:
-        """Marca versão como APROVADA: chmod 444 no canonical.json + invocations.log."""
+        """Marca versão como APROVADA: chmod 444 no canonical.json + invocations.log + premissas (#123)."""
         vpath = self.root / version
         if not vpath.exists():
             raise FileNotFoundError(f"Versão {version} não existe")
-        for fname in (self.CANONICAL_FILE, self.INVOCATIONS_LOG):
+        for fname in (
+            self.CANONICAL_FILE,
+            self.INVOCATIONS_LOG,
+            self.PREMISSAS_EFETIVAS_FILE,
+            self.PREMISSAS_POR_SKILL_FILE,
+        ):
             f = vpath / fname
             if f.exists():
                 os.chmod(f, 0o444)
+        self._protect_bdi_perfil_versoes(version)
         self.update_meta(approved_versions=[*self.meta.get("approved_versions", []), version])
 
     def save_intermediate_file(self, filename: str, data: bytes | str, version: str) -> Path:

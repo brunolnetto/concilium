@@ -32,6 +32,12 @@ from uuid import uuid4
 from concilium.domain.models.canonical import CanonicalModel
 from concilium.domain.models.project.escopo import Escopo, StatusPlano
 
+from ._bdi_perfil_freeze import (
+    bdi_perfil_versao_filename,
+    bdi_perfil_versoes_referenciadas,
+    extract_bdi_perfil_versao,
+)
+
 
 class PlanoStore:
     """Gerencia o diretório de um PlanoTrabalho (ADR-031 §D2, §D3)."""
@@ -194,7 +200,11 @@ class PlanoStore:
         )
 
         por_skill = self.read_premissas_por_skill()
-        por_skill[skill_id] = {"hash": content_hash, "escopo_hash": escopo_hash, "ts": ts}
+        registro: dict[str, Any] = {"hash": content_hash, "escopo_hash": escopo_hash, "ts": ts}
+        bdi_perfil_versao = extract_bdi_perfil_versao(normalized_inputs)
+        if bdi_perfil_versao is not None:
+            registro["bdi_perfil_versao"] = bdi_perfil_versao
+        por_skill[skill_id] = registro
         (self.root / self.PREMISSAS_POR_SKILL_FILE).write_text(
             json.dumps(por_skill, indent=2, default=str), encoding="utf-8"
         )
@@ -274,10 +284,38 @@ class PlanoStore:
             f = self.root / fname
             if f.exists():
                 os.chmod(f, 0o444)
+        self._protect_bdi_perfil_versoes()
         self._update_meta(
             status="APROVADO",
             aprovado_em=datetime.now(UTC).isoformat(),
         )
+
+    def _projeto_root(self) -> Path:
+        """Raiz do projeto — várias camadas acima do diretório do plano.
+
+        Preferencialmente via `escopo_store.root` (projetos/{pid}/escopos/{eid}/);
+        fallback pela estrutura fixa do próprio diretório quando não há referência
+        ao EscopoStore (ex.: PlanoStore construído solto em teste).
+        """
+        if self.escopo_store is not None:
+            return self.escopo_store.root.parents[1]
+        return self.root.parents[3]
+
+    def _protect_bdi_perfil_versoes(self) -> None:
+        """Protege (chmod 444) os snapshots de perfil BDI usados pelas skills deste plano (issue #123).
+
+        `bdi/perfil_bdi.json` (cabeça) NÃO é protegido — deve continuar editável
+        para futuras versões/planos. Só os snapshots `perfil_bdi_v{NNN}.json`
+        efetivamente referenciados em `premissas_por_skill.json` são congelados.
+        """
+        versoes = bdi_perfil_versoes_referenciadas(self.read_premissas_por_skill())
+        if not versoes:
+            return
+        bdi_dir = self._projeto_root() / "bdi"
+        for versao in versoes:
+            f = bdi_dir / bdi_perfil_versao_filename(versao)
+            if f.exists():
+                os.chmod(f, 0o444)
 
     def archive(self) -> None:
         self._update_meta(status="ARQUIVADO", arquivado_em=datetime.now(UTC).isoformat())

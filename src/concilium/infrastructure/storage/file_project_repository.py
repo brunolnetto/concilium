@@ -294,6 +294,14 @@ class FileProjectHandle(ProjectHandle):
     def log_invocation(self, version: str, entry: dict[str, Any]) -> None:
         self._store.log_invocation(version, entry)
 
+    def write_premissas_efetivas(
+        self, version: str, skill_id: str, normalized_inputs: dict[str, Any], escopo_meta: dict[str, Any]
+    ) -> None:
+        self._store.write_premissas_efetivas(version, skill_id, normalized_inputs, escopo_meta)
+
+    def read_premissas_por_skill(self, version: str) -> dict[str, dict[str, Any]]:
+        return self._store.read_premissas_por_skill(version)
+
     def approve(self, version: str) -> None:
         self._store.approve(version)
 

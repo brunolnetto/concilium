@@ -984,3 +984,100 @@ class TestStorageProjectHandleSatisfiesProjectHandleProtocol:
         handle_members = {name for name in dir(StorageProjectHandle) if not name.startswith("_")}
         missing = protocol_members - handle_members
         assert not missing, f"StorageProjectHandle não implementa: {sorted(missing)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  StorageProjectHandle — premissas efetivas no modelo vN flat (issue #123)
+#  Espelha TestPlanoStorePremissasEfetivas (test_escopo_store.py, issue #121),
+#  escopado por versão (via BlobStoragePort) em vez de por plano.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestStorageProjectHandlePremissasEfetivas:
+    def test_write_creates_both_files(self, handle: StorageProjectHandle, project_id: str) -> None:
+        handle.write_premissas_efetivas(
+            "v1", "06-resultado-financeiro", {"bdi_aplicado": {"mao_obra": 0.3}}, {"contexto_id": "ctx-test"}
+        )
+        assert handle.exists("v1/premissas_efetivas.json")
+        assert handle.exists("v1/premissas_por_skill.json")
+
+    def test_read_premissas_por_skill_empty_when_missing(self, handle: StorageProjectHandle) -> None:
+        assert handle.read_premissas_por_skill("v1") == {}
+
+    def test_read_premissas_por_skill_roundtrip(self, handle: StorageProjectHandle) -> None:
+        handle.write_premissas_efetivas("v1", "04-cronograma", {"a": 1}, {"contexto_id": "ctx-test"})
+        por_skill = handle.read_premissas_por_skill("v1")
+        assert "04-cronograma" in por_skill
+        assert "hash" in por_skill["04-cronograma"]
+        assert "escopo_hash" in por_skill["04-cronograma"]
+
+    def test_mesmo_escopo_meta_produz_mesmo_escopo_hash(self, handle: StorageProjectHandle) -> None:
+        escopo_meta = {"contexto_id": "ctx-test", "snapshot_catalogo_id": "cat-1"}
+        handle.write_premissas_efetivas("v1", "04-cronograma", {"a": 1}, escopo_meta)
+        handle.write_premissas_efetivas("v1", "06-resultado-financeiro", {"b": 2}, escopo_meta)
+        por_skill = handle.read_premissas_por_skill("v1")
+        assert por_skill["04-cronograma"]["escopo_hash"] == por_skill["06-resultado-financeiro"]["escopo_hash"]
+
+    def test_escopo_meta_diferente_produz_hash_diferente(self, handle: StorageProjectHandle) -> None:
+        handle.write_premissas_efetivas("v1", "04-cronograma", {"a": 1}, {"contexto_id": "ctx-a"})
+        handle.write_premissas_efetivas("v1", "06-resultado-financeiro", {"b": 2}, {"contexto_id": "ctx-b"})
+        por_skill = handle.read_premissas_por_skill("v1")
+        assert por_skill["04-cronograma"]["escopo_hash"] != por_skill["06-resultado-financeiro"]["escopo_hash"]
+
+    def test_approve_protects_premissas_files(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        handle.write_premissas_efetivas("v1", "06-resultado-financeiro", {"a": 1}, {"contexto_id": "ctx-test"})
+        handle.approve("v1")
+        assert f"{project_id}/v1/premissas_efetivas.json" in storage._approved
+        assert f"{project_id}/v1/premissas_por_skill.json" in storage._approved
+
+    def test_approve_does_not_fail_when_premissas_missing(self, handle: StorageProjectHandle) -> None:
+        """approve() não deve tentar aprovar arquivos de premissas inexistentes
+        (backends reais como SharePoint levantam FileNotFoundError em blob ausente)."""
+        handle.approve("v1")  # não deve lançar
+
+    def test_bdi_perfil_versao_captured_when_present(self, handle: StorageProjectHandle) -> None:
+        handle.write_premissas_efetivas(
+            "v1",
+            "06-resultado-financeiro",
+            {"bdi_perfil": {"versao": 3, "content_hash": "abc"}},
+            {"contexto_id": "ctx-test"},
+        )
+        por_skill = handle.read_premissas_por_skill("v1")
+        assert por_skill["06-resultado-financeiro"]["bdi_perfil_versao"] == 3
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  StorageProjectHandle — proteção do perfil BDI versionado na aprovação (#123)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestStorageProjectHandleProtectBdiPerfilVersoes:
+    def test_approve_protects_referenced_bdi_perfil_version(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        handle.write_json("bdi/perfil_bdi_v003.json", {"versao": 3})
+        handle.write_json("bdi/perfil_bdi.json", {"versao": 3})
+        handle.write_premissas_efetivas(
+            "v1", "06-resultado-financeiro", {"bdi_perfil": {"versao": 3}}, {"contexto_id": "ctx-test"}
+        )
+
+        handle.approve("v1")
+
+        assert f"{project_id}/bdi/perfil_bdi_v003.json" in storage._approved
+        assert f"{project_id}/bdi/perfil_bdi.json" not in storage._approved
+
+    def test_approve_no_op_when_no_bdi_perfil_referenced(self, handle: StorageProjectHandle) -> None:
+        handle.write_premissas_efetivas("v1", "04-cronograma", {"a": 1}, {"contexto_id": "ctx-test"})
+        handle.approve("v1")  # não deve lançar
+
+    def test_approve_skips_missing_perfil_version_blob(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        """approve() não deve tentar aprovar um blob de perfil BDI que não existe mais."""
+        handle.write_premissas_efetivas(
+            "v1", "06-resultado-financeiro", {"bdi_perfil": {"versao": 99}}, {"contexto_id": "ctx-test"}
+        )
+        handle.approve("v1")  # não deve lançar
+        assert f"{project_id}/bdi/perfil_bdi_v099.json" not in storage._approved

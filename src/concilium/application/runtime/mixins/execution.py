@@ -151,10 +151,11 @@ class ExecutionMixin(_Base):
 
         if should_save:
             plano_store.save_canonical(result.canonical, created_by=skill_id)
-            # issue #121: congelamento de premissas — só no modelo escopo/plano
-            # (PlanoStore). O modelo vN flat (FlatVersionStore) não implementa
-            # esse método ainda; escopo desta correção é deliberadamente restrito
-            # ao modelo que `aprovar_versao` usa (ver plano da fase 2).
+            # issue #121/#123: congelamento de premissas — suportado tanto pelo
+            # modelo escopo/plano (PlanoStore) quanto pelo modelo vN flat
+            # (FlatVersionStore, que delega para ProjectStore/StorageProjectHandle).
+            # O hasattr() é mantido como defesa adicional para plano_stores que não
+            # implementem o método (ex.: duplos de teste simplificados).
             if hasattr(plano_store, "write_premissas_efetivas"):
                 plano_store.write_premissas_efetivas(skill_id, normalized_inputs, escopo_meta)
 
@@ -244,9 +245,10 @@ class ExecutionMixin(_Base):
         `application/orchestrators/plano_approval_gate.py`).
         """
         depends_on = getattr(contract, "depends_on_skills", None) or []
-        # issue #121: staleness só é detectável no modelo escopo/plano (PlanoStore) —
-        # o modelo vN flat (FlatVersionStore) não implementa read_premissas_por_skill
-        # ainda; escopo desta correção é deliberadamente restrito (ver plano da fase 2).
+        # issue #121/#123: staleness é detectável tanto no modelo escopo/plano
+        # (PlanoStore) quanto no modelo vN flat (FlatVersionStore). O hasattr()
+        # é mantido como defesa adicional para plano_stores que não implementem
+        # o método (ex.: duplos de teste simplificados).
         if not depends_on or not hasattr(plano_store, "read_premissas_por_skill"):
             return result
 

@@ -916,3 +916,132 @@ class TestConciliumRoot:
         root = store._concilium_root()
         assert isinstance(root, Path)
         assert root == Path(project_module.__file__).resolve().parents[4]
+
+
+# ── Premissas efetivas no modelo vN flat (issue #123) ─────────────────────────
+# Espelha TestPlanoStorePremissasEfetivas (test_escopo_store.py, issue #121),
+# mas escopado por versão (vN/) em vez de por plano.
+
+
+class TestProjectStorePremissasEfetivas:
+    def _make_versioned_store(self, tmp_path) -> tuple[ProjectStore, str]:
+        store = _make_store(tmp_path)
+        v = store.new_version()
+        return store, v
+
+    def test_write_creates_both_files(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(
+            v, "06-resultado-financeiro", {"bdi_aplicado": {"mao_obra": 0.3}}, {"contexto_id": "ctx-test"}
+        )
+
+        assert (store.root / v / store.PREMISSAS_EFETIVAS_FILE).exists()
+        assert (store.root / v / store.PREMISSAS_POR_SKILL_FILE).exists()
+
+    def test_read_premissas_por_skill_empty_when_missing(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        assert store.read_premissas_por_skill(v) == {}
+
+    def test_read_premissas_por_skill_roundtrip(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(v, "04-cronograma", {"a": 1}, {"contexto_id": "ctx-test"})
+        por_skill = store.read_premissas_por_skill(v)
+        assert "04-cronograma" in por_skill
+        assert "hash" in por_skill["04-cronograma"]
+        assert "escopo_hash" in por_skill["04-cronograma"]
+
+    def test_mesmo_escopo_meta_produz_mesmo_escopo_hash(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        escopo_meta = {"contexto_id": "ctx-test", "snapshot_catalogo_id": "cat-1"}
+        store.write_premissas_efetivas(v, "04-cronograma", {"a": 1}, escopo_meta)
+        store.write_premissas_efetivas(v, "06-resultado-financeiro", {"b": 2}, escopo_meta)
+        por_skill = store.read_premissas_por_skill(v)
+        assert por_skill["04-cronograma"]["escopo_hash"] == por_skill["06-resultado-financeiro"]["escopo_hash"]
+
+    def test_escopo_meta_diferente_produz_hash_diferente(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(v, "04-cronograma", {"a": 1}, {"contexto_id": "ctx-a"})
+        store.write_premissas_efetivas(v, "06-resultado-financeiro", {"b": 2}, {"contexto_id": "ctx-b"})
+        por_skill = store.read_premissas_por_skill(v)
+        assert por_skill["04-cronograma"]["escopo_hash"] != por_skill["06-resultado-financeiro"]["escopo_hash"]
+
+    def test_no_op_quando_readonly(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        (store.root / v / store.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+        store.approve(v)
+        store.write_premissas_efetivas(v, "06-resultado-financeiro", {"a": 1}, {"contexto_id": "ctx-test"})
+        # nada foi escrito, pois a versão já está read-only
+        assert not (store.root / v / store.PREMISSAS_EFETIVAS_FILE).exists()
+
+    def test_approve_chmod_premissas(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(v, "06-resultado-financeiro", {"a": 1}, {"contexto_id": "ctx-test"})
+        (store.root / v / store.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+
+        store.approve(v)
+
+        for fname in (store.PREMISSAS_EFETIVAS_FILE, store.PREMISSAS_POR_SKILL_FILE):
+            f = store.root / v / fname
+            assert not bool(f.stat().st_mode & stat.S_IWUSR), f"{fname} deveria estar read-only após approve()"
+
+    def test_bdi_perfil_versao_captured_when_present(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(
+            v,
+            "06-resultado-financeiro",
+            {"bdi_perfil": {"versao": 3, "content_hash": "abc"}},
+            {"contexto_id": "ctx-test"},
+        )
+        por_skill = store.read_premissas_por_skill(v)
+        assert por_skill["06-resultado-financeiro"]["bdi_perfil_versao"] == 3
+
+    def test_bdi_perfil_versao_absent_when_no_perfil_used(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(v, "04-cronograma", {"a": 1}, {"contexto_id": "ctx-test"})
+        por_skill = store.read_premissas_por_skill(v)
+        assert "bdi_perfil_versao" not in por_skill["04-cronograma"]
+
+
+# ── Proteção do perfil BDI versionado na aprovação (issue #123) ───────────────
+
+
+class TestProjectStoreProtectBdiPerfilVersoes:
+    def _make_versioned_store(self, tmp_path) -> tuple[ProjectStore, str]:
+        store = _make_store(tmp_path)
+        v = store.new_version()
+        return store, v
+
+    def test_approve_chmods_referenced_bdi_perfil_version(self, tmp_path):
+        store, v = self._make_versioned_store(tmp_path)
+        bdi_dir = store.root / "bdi"
+        bdi_dir.mkdir(parents=True)
+        perfil_v_path = bdi_dir / "perfil_bdi_v003.json"
+        perfil_v_path.write_text("{}", encoding="utf-8")
+        perfil_head_path = bdi_dir / "perfil_bdi.json"
+        perfil_head_path.write_text("{}", encoding="utf-8")
+
+        store.write_premissas_efetivas(
+            v, "06-resultado-financeiro", {"bdi_perfil": {"versao": 3}}, {"contexto_id": "ctx-test"}
+        )
+        (store.root / v / store.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+
+        store.approve(v)
+
+        assert not bool(perfil_v_path.stat().st_mode & stat.S_IWUSR), "snapshot v003 deveria ficar read-only"
+        assert bool(perfil_head_path.stat().st_mode & stat.S_IWUSR), "cabeça perfil_bdi.json deve continuar editável"
+
+    def test_approve_no_op_when_no_bdi_perfil_referenced(self, tmp_path):
+        """approve() não deve falhar quando nenhuma skill usou perfil_bdi."""
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(v, "04-cronograma", {"a": 1}, {"contexto_id": "ctx-test"})
+        (store.root / v / store.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+        store.approve(v)  # não deve lançar
+
+    def test_approve_skips_missing_perfil_version_file(self, tmp_path):
+        """approve() não deve falhar se o arquivo de versão referenciado não existir mais."""
+        store, v = self._make_versioned_store(tmp_path)
+        store.write_premissas_efetivas(
+            v, "06-resultado-financeiro", {"bdi_perfil": {"versao": 99}}, {"contexto_id": "ctx-test"}
+        )
+        (store.root / v / store.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+        store.approve(v)  # não deve lançar mesmo sem bdi/perfil_bdi_v099.json
