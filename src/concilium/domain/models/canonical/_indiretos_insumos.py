@@ -236,6 +236,10 @@ class ScheduledActivityCanonical(BaseModel):
     # Distribuição semanal: chave "AAAA-Www" -> {num_equipes, qtd_executada, qtd_acumulada, pct, eficiencia}
     distribuicao_semanal: dict[str, DistribuicaoSemanal] = Field(default_factory=dict)
 
+    # Issue #132: produtividade resolvida via fallback (CPU sem producao_id_ref válido) —
+    # custo operacional desta atividade não reflete produtividade real.
+    produtividade_fallback_aplicada: bool = False
+
 
 class EstoqueDelayCanonical(BaseModel):
     """ADR-128 F5: causa de atraso por recurso consumível (diesel/material) — espelho

@@ -105,6 +105,79 @@ class TestPlanoStorePremissasEfetivas:
             f = ps.root / fname
             assert not bool(f.stat().st_mode & stat.S_IWUSR), f"{fname} deveria estar read-only após approve()"
 
+    def test_bdi_perfil_versao_captured_when_present(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas(
+            "06-resultado-financeiro",
+            {"bdi_perfil": {"versao": 3, "content_hash": "abc"}},
+            {"jurisdicao_id": "sp"},
+        )
+        por_skill = ps.read_premissas_por_skill()
+        assert por_skill["06-resultado-financeiro"]["bdi_perfil_versao"] == 3
+
+    def test_bdi_perfil_versao_absent_when_no_perfil_used(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas("04-cronograma", {"a": 1}, {"jurisdicao_id": "sp"})
+        por_skill = ps.read_premissas_por_skill()
+        assert "bdi_perfil_versao" not in por_skill["04-cronograma"]
+
+
+class TestPlanoStoreProtectBdiPerfilVersoes:
+    """issue #123: o perfil BDI versionado usado por um plano fica órfão de chmod
+
+    no congelamento do issue #121 — só canonical/invocations/premissas eram
+    protegidos, deixando `bdi/perfil_bdi_v{NNN}.json` editável mesmo após aprovar
+    um plano que efetivamente usou aquela versão."""
+
+    def _make_plano_store(self, tmp_path):
+        from concilium.infrastructure.storage.escopo_store import EscopoStore, PlanoStore
+
+        plano_root = tmp_path / "escopos" / "esc-1" / "planos" / "plan-1"
+        plano_root.mkdir(parents=True)
+        es = EscopoStore(root=tmp_path / "escopos" / "esc-1")
+        return PlanoStore(root=plano_root, escopo_store=es)
+
+    def test_approve_chmods_referenced_bdi_perfil_version(self, tmp_path):
+        import stat
+
+        ps = self._make_plano_store(tmp_path)
+        bdi_dir = tmp_path / "bdi"
+        bdi_dir.mkdir(parents=True)
+        perfil_v_path = bdi_dir / "perfil_bdi_v003.json"
+        perfil_v_path.write_text("{}", encoding="utf-8")
+        perfil_head_path = bdi_dir / "perfil_bdi.json"
+        perfil_head_path.write_text("{}", encoding="utf-8")
+
+        ps.write_premissas_efetivas("06-resultado-financeiro", {"bdi_perfil": {"versao": 3}}, {"jurisdicao_id": "sp"})
+        (ps.root / ps.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+
+        ps.approve()
+
+        assert not bool(perfil_v_path.stat().st_mode & stat.S_IWUSR), "snapshot v003 deveria ficar read-only"
+        assert bool(perfil_head_path.stat().st_mode & stat.S_IWUSR), "cabeça perfil_bdi.json deve continuar editável"
+
+    def test_approve_no_op_when_no_bdi_perfil_referenced(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas("04-cronograma", {"a": 1}, {"jurisdicao_id": "sp"})
+        (ps.root / ps.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+        ps.approve()  # não deve lançar
+
+    def test_approve_skips_missing_perfil_version_file(self, tmp_path):
+        ps = self._make_plano_store(tmp_path)
+        ps.write_premissas_efetivas("06-resultado-financeiro", {"bdi_perfil": {"versao": 99}}, {"jurisdicao_id": "sp"})
+        (ps.root / ps.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+        ps.approve()  # não deve lançar mesmo sem bdi/perfil_bdi_v099.json
+
+    def test_projeto_root_fallback_without_escopo_store(self, tmp_path):
+        """Sem escopo_store (construção solta), cai para self.root.parents[3]."""
+        from concilium.infrastructure.storage.escopo_store import PlanoStore
+
+        plano_root = tmp_path / "escopos" / "esc-1" / "planos" / "plan-1"
+        plano_root.mkdir(parents=True)
+        ps = PlanoStore(root=plano_root)
+
+        assert ps._projeto_root() == tmp_path
+
 
 class TestEscopoStore:
     def _make_escopo_store(self, tmp_path):

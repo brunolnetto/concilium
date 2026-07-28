@@ -87,3 +87,45 @@ def test_cronograma_emite_val_pool_quando_excede_pool():
     # E também violações estruturadas anexadas ao canônico
     assert result.canonical.constraint_violations
     assert any(cv.code == "VAL-POOL-01" for cv in result.canonical.constraint_violations)
+
+
+def test_manual_mode_marca_fallback_produtividade_para_cpu_fora_do_catalogo():
+    """issue #132: modo MANUAL_ALLOCATION com CPU fora do catálogo sintetiza uma CPU sem
+    producao_id_ref (_execute_manual_mode, _validacao.py:244), forçando o fallback de
+    produtividade (P=1000). O ScheduledActivityCanonical final deve refletir isso via
+    produtividade_fallback_aplicada — sem essa marcação, a correlação com o fallback de
+    precificação em skill-06 (VAL-PROD-PU-FALLBACK-DESYNC) nunca dispara para runs em
+    modo manual, que é justamente o modo onde a CPU sintética é criada."""
+    meta = Meta(gerado_em=datetime.now(UTC), contexto_id="test")
+    proj = Projeto(
+        id="p1",
+        nome="proj",
+        tipo_obra="terraplenagem",
+        localizacao="x",
+        coordenadas=Coordenadas(lat=0.0, lng=0.0),
+        regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+        data_inicio=date(2026, 6, 1),
+        data_termino=date(2026, 7, 31),
+        snapshot_catalogo_id="s",
+        snapshot_perfil_id="s",
+    )
+
+    eap = [
+        EapItem(
+            item_id="eap-1",
+            ordem=1,
+            cpu_id="CPU-INEXISTENTE",
+            descricao="",
+            unidade="m",
+            quantitativo=100.0,
+        )
+    ]
+
+    canonical = CanonicalModel(meta=meta, projeto=proj, eap=eap)
+    inputs = {"num_equipes_por_item": {"eap-1": {"2026-W23": 2}}}
+
+    result = run_cronograma(canonical, inputs, catalogo={"cpus": []})
+
+    assert any(v.codigo == "VAL-PROD-04" and v.status == "AVISO" for v in result.validacoes)
+    sa = next(s for s in result.canonical.cronograma.scheduled_activities if s.activity_id == "eap-1")
+    assert sa.produtividade_fallback_aplicada is True

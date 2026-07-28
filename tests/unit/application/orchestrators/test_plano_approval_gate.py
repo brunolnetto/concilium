@@ -39,7 +39,14 @@ class TestAssertPodeAprovarPlano:
 
     @pytest.mark.parametrize(
         "codigo",
-        ["VAL-COB-NEG", "VAL-PROD-04", "VAL-PROD-VS-PU", "VAL-GAP-CATALOGO-OPERACIONAL", "VAL-STALE-UPSTREAM"],
+        [
+            "VAL-COB-NEG",
+            "VAL-PROD-04",
+            "VAL-PROD-VS-PU",
+            "VAL-GAP-CATALOGO-OPERACIONAL",
+            "VAL-STALE-UPSTREAM",
+            "VAL-PROD-PU-FALLBACK-DESYNC",
+        ],
     )
     def test_aviso_bloqueante_sem_justificativa_bloqueia(self, codigo):
         store = _plano_store(

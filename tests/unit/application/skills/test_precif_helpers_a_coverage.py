@@ -167,6 +167,147 @@ class TestBuildPlanejamentoEntry:
 
 
 # ---------------------------------------------------------------------------
+# _build_planejamento_entry — precificacao_via_fallback_composicao (issue #132)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildPlanejamentoEntryFallbackFlag:
+    def _make_item(self, item_id="I-01", cpu_id="CPU-01", q=10.0):
+        item = MagicMock()
+        item.item_id = item_id
+        item.cpu_id = cpu_id
+        item.quantitativo = q
+        return item
+
+    def test_default_e_false(self):
+        item = self._make_item()
+        preco_cat = {"material": 5.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        bdi = {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        result = MOD._build_planejamento_entry(item, preco_cat, preco_cat, bdi)
+        assert result.precificacao_via_fallback_composicao is False
+
+    def test_propaga_true_quando_informado(self):
+        item = self._make_item()
+        preco_cat = {"material": 5.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        bdi = {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        result = MOD._build_planejamento_entry(
+            item, preco_cat, preco_cat, bdi, precificacao_via_fallback_composicao=True
+        )
+        assert result.precificacao_via_fallback_composicao is True
+
+
+# ---------------------------------------------------------------------------
+# _resolve_preco_cat_item — usou_fallback_composicao (issue #132)
+# ---------------------------------------------------------------------------
+
+
+class TestResolvePrecoCatItemFallbackFlag:
+    _ARGS = dict(
+        prod_lookup={},
+        insumo_lookup={},
+        repo=None,
+        jurisdicao_id=None,
+        overrides=None,
+        data_base=None,
+        erros_insumo=None,
+        preco_diesel=6.2,
+        alpha_clt=1.777,
+        alpha_mensalista=1.060,
+        catalog_session=None,
+    )
+
+    def test_fonte1_bottom_up_retorna_fallback_false(self):
+        item = SimpleNamespace(item_id="I-01")
+        cpu = {"codigo": "CPU-01"}
+        preco_cat = {"material": 1.0, "diesel": 0.0, "mao_obra": 2.0, "equipamentos": 0.0}
+        validacoes: list = []
+        with patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=preco_cat):
+            result, equip_sem_decomp, usou_fallback = MOD._resolve_preco_cat_item(
+                item,
+                cpu,
+                self._ARGS["prod_lookup"],
+                self._ARGS["insumo_lookup"],
+                self._ARGS["repo"],
+                self._ARGS["jurisdicao_id"],
+                self._ARGS["overrides"],
+                self._ARGS["data_base"],
+                set(),
+                validacoes,
+                self._ARGS["preco_diesel"],
+                self._ARGS["alpha_clt"],
+                self._ARGS["alpha_mensalista"],
+                self._ARGS["catalog_session"],
+            )
+        assert result == preco_cat
+        assert equip_sem_decomp == set()
+        assert usou_fallback is False
+        assert any(v.codigo == "VAL-PLAN-BOTTOM-UP" for v in validacoes)
+
+    def test_fonte2_composicao_retorna_fallback_true(self):
+        item = SimpleNamespace(item_id="I-02")
+        cpu = {"codigo": "CPU-02"}
+        preco_cat_fallback = {"material": 3.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 1.0}
+        validacoes: list = []
+        with (
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(
+                MOD._process_item,
+                "_preco_cat_fallback_composicao",
+                return_value=(preco_cat_fallback, {"EQ-1"}),
+            ),
+        ):
+            result, equip_sem_decomp, usou_fallback = MOD._resolve_preco_cat_item(
+                item,
+                cpu,
+                self._ARGS["prod_lookup"],
+                self._ARGS["insumo_lookup"],
+                self._ARGS["repo"],
+                self._ARGS["jurisdicao_id"],
+                self._ARGS["overrides"],
+                self._ARGS["data_base"],
+                set(),
+                validacoes,
+                self._ARGS["preco_diesel"],
+                self._ARGS["alpha_clt"],
+                self._ARGS["alpha_mensalista"],
+                self._ARGS["catalog_session"],
+            )
+        assert result == preco_cat_fallback
+        assert equip_sem_decomp == {"EQ-1"}
+        assert usou_fallback is True
+
+    def test_fonte2_falha_ainda_marca_fallback_true(self):
+        """Mesmo quando a Fonte 2 falha (preco_cat=None, ex. VAL-PLAN-MO-EQ-SEM-FONTE),
+        usou_fallback_composicao é True — o item "caiu" no branch de fallback, mesmo que
+        o resultado final não tenha sido precificado."""
+        item = SimpleNamespace(item_id="I-03")
+        cpu = {"codigo": "CPU-03"}
+        validacoes: list = []
+        with (
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(MOD._process_item, "_preco_cat_fallback_composicao", return_value=(None, set())),
+        ):
+            result, equip_sem_decomp, usou_fallback = MOD._resolve_preco_cat_item(
+                item,
+                cpu,
+                self._ARGS["prod_lookup"],
+                self._ARGS["insumo_lookup"],
+                self._ARGS["repo"],
+                self._ARGS["jurisdicao_id"],
+                self._ARGS["overrides"],
+                self._ARGS["data_base"],
+                set(),
+                validacoes,
+                self._ARGS["preco_diesel"],
+                self._ARGS["alpha_clt"],
+                self._ARGS["alpha_mensalista"],
+                self._ARGS["catalog_session"],
+            )
+        assert result is None
+        assert usou_fallback is True
+
+
+# ---------------------------------------------------------------------------
 # _try_early_override  (lines 131-160, missing 143-145, 151-152, 159)
 # ---------------------------------------------------------------------------
 
@@ -652,6 +793,67 @@ class TestProcessEapItem:
         ):
             self._call(item, cpu_lookup, prod_lookup, plan_out, [], [])
         assert plan_out == []
+
+    def _call_com_bdi(self, item, cpu_lookup, prod_lookup, plan_out, erros_eap, validacoes):
+        """Como _call, mas com bdi_aplicado completo (necessário quando preco_cat resolve
+        e o fluxo chega em _apply_com_bdi_override, que indexa bdi_aplicado[cat])."""
+        bdi_aplicado = {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        return MOD._process_eap_item(
+            item,
+            cpu_lookup,
+            {},
+            prod_lookup,
+            {},
+            {},
+            bdi_aplicado,
+            MagicMock(),
+            None,
+            None,
+            None,
+            plan_out,
+            erros_eap,
+            set(),
+            set(),
+            validacoes,
+        )
+
+    def test_fonte1_sucesso_planejamento_sem_fallback(self):
+        """Issue #132: Fonte 1 (bottom-up) resolveu → Planejamento.precificacao_via_fallback_composicao=False."""
+        item = SimpleNamespace(cpu_id="CPU-4", item_id="I4", quantitativo=1.0)
+        cpu = {"codigo": "CPU-4", "producao_id_ref": "PR4"}
+        cpu_lookup = {"CPU-4": cpu}
+        prod_lookup = {"PR4": {"id": "PR4"}}
+        plan_out: list = []
+        preco_cat = {"material": 1.0, "diesel": 0.0, "mao_obra": 2.0, "equipamentos": 0.0}
+        with (
+            patch.object(MOD._process_item, "_try_early_override", return_value=None),
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=preco_cat),
+        ):
+            self._call_com_bdi(item, cpu_lookup, prod_lookup, plan_out, [], [])
+        assert len(plan_out) == 1
+        assert plan_out[0].precificacao_via_fallback_composicao is False
+
+    def test_fonte2_sucesso_planejamento_com_fallback(self):
+        """Issue #132: Fonte 1 falhou, Fonte 2 (composicao_itens) resolveu →
+        Planejamento.precificacao_via_fallback_composicao=True."""
+        item = SimpleNamespace(cpu_id="CPU-5", item_id="I5", quantitativo=1.0)
+        cpu = {"codigo": "CPU-5", "producao_id_ref": "PR5"}
+        cpu_lookup = {"CPU-5": cpu}
+        prod_lookup = {"PR5": {"id": "PR5"}}
+        plan_out: list = []
+        preco_cat_fallback = {"material": 1.0, "diesel": 0.0, "mao_obra": 2.0, "equipamentos": 3.0}
+        with (
+            patch.object(MOD._process_item, "_try_early_override", return_value=None),
+            patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(
+                MOD._process_item,
+                "_preco_cat_fallback_composicao",
+                return_value=(preco_cat_fallback, set()),
+            ),
+        ):
+            self._call_com_bdi(item, cpu_lookup, prod_lookup, plan_out, [], [])
+        assert len(plan_out) == 1
+        assert plan_out[0].precificacao_via_fallback_composicao is True
 
 
 # _precificacao/_skill_helpers_a.py

@@ -468,15 +468,17 @@ class TestResolveProductivity:
     def test_cpu_meta_producao_horaria_returns_early(self):
         """Lines 1010-1012: cpu_meta has producao_horaria → return float(valor)."""
         cpu = {"codigo": "CPU-X", "cpu_meta": {"producao_horaria": 12.5}}
-        result = MOD._resolve_productivity(cpu, producao_lookup={}, validacoes=[])
+        result, is_fallback = MOD._resolve_productivity(cpu, producao_lookup={}, validacoes=[])
         assert result == pytest.approx(12.5)
+        assert is_fallback is False
 
     def test_cpu_meta_none_valor_falls_through_to_default(self):
         """Line 1011: valor=None → condition fails → falls through to 1000.0 default."""
         cpu = {"codigo": "CPU-X", "cpu_meta": {"producao_horaria": None}}
         validacoes = []
-        result = MOD._resolve_productivity(cpu, producao_lookup={}, validacoes=validacoes)
+        result, is_fallback = MOD._resolve_productivity(cpu, producao_lookup={}, validacoes=validacoes)
         assert result == 1000.0
+        assert is_fallback is True
 
     def test_prod_id_ref_with_legacy_producao_horaria_warns(self):
         """Lines 1020-1031: prod_item uses legacy 'producao_horaria' field → AVISO."""
@@ -485,8 +487,9 @@ class TestResolveProductivity:
             "PROD-001": {"producao_horaria": 8.0}  # no valor_horario → legacy
         }
         validacoes = []
-        result = MOD._resolve_productivity(cpu, producao_lookup, validacoes)
+        result, is_fallback = MOD._resolve_productivity(cpu, producao_lookup, validacoes)
         assert result == pytest.approx(8.0)
+        assert is_fallback is False
         codes = [v.codigo for v in validacoes]
         assert "VAL-PROD-04-PROD-LEGACY" in codes
 

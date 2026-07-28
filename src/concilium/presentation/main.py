@@ -115,6 +115,10 @@ def _populate_catalog_into(target: typer.Typer, cmd) -> None:
         target.command("validate")(cmd.catalog_validate_schema)
     if hasattr(cmd, "catalog_cure_schema"):
         target.command("cure")(cmd.catalog_cure_schema)
+    if hasattr(cmd, "catalog_compare"):
+        target.command("compare")(cmd.catalog_compare)
+    if hasattr(cmd, "catalog_merge"):
+        target.command("merge")(cmd.catalog_merge)
 
 
 def _load_catalog() -> None:

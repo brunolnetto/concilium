@@ -157,14 +157,23 @@ class TestCatalogoWrappers:
             result = tools["historico_preco_insumo"](contexto_id="ctx", modo="tendencia")
         assert "tendencias" in result
 
-    def test_comparar_rfi_catalogo(self, monkeypatch, tmp_path):
+    def test_comparar_catalogo(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
-            f"{_CATALOGO_MOD}._impl_comparar_rfi_catalogo",
+            f"{_CATALOGO_MOD}._impl_comparar_catalogo",
             return_value={"divergencias": []},
         ):
-            result = tools["comparar_rfi_catalogo"](contexto_id="ctx", dry_run=True)
+            result = tools["comparar_catalogo"](origem_a="catA", origem_b="catB", tipo="todos")
         assert "divergencias" in result
+
+    def test_mesclar_catalogo(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        with patch(
+            f"{_CATALOGO_MOD}._impl_mesclar_catalogo",
+            return_value={"mode": "DRY_RUN"},
+        ):
+            result = tools["mesclar_catalogo"](destino="dest", origem="orig", dry_run=True, tipo="todos")
+        assert result["mode"] == "DRY_RUN"
 
     def test_calcular_pu_producao(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)

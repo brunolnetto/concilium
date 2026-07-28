@@ -58,10 +58,17 @@ def _determine_mode_and_distribuicao(
     catalogo: dict,
     validacoes: list,
     insumos_lookup: dict | None = None,
-) -> tuple[str | None, dict, list, ScheduleCandidateCanonical | None, bool, list[ReplenishableResource]]:
+) -> tuple[str | None, dict, list, ScheduleCandidateCanonical | None, bool, list[ReplenishableResource], set[str]]:
     """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed,
-    replenishable_resources) — o 6º elemento (ADR-128 F6) é vazio em MANUAL_ALLOCATION e no
-    caso "nenhum modo detectado", já que só o path AUTO_SCHEDULE constrói ReplenishableResource.
+    replenishable_resources, fallback_item_ids) — o 6º elemento (ADR-128 F6) é vazio em
+    MANUAL_ALLOCATION e no caso "nenhum modo detectado", já que só o path AUTO_SCHEDULE
+    constrói ReplenishableResource. O 7º elemento (issue #132) é o set de item_ids cuja
+    produtividade foi resolvida via fallback (P=1000 un/h) — populado tanto por
+    AUTO_SCHEDULE (`_convert_schedule_to_distribuicao`) quanto por MANUAL_ALLOCATION
+    (`_execute_manual_mode`, que inclusive sintetiza uma CPU sem `producao_id_ref` quando
+    o catálogo não tem a CPU do item — o cenário mais direto de fallback); vazio só no
+    caso "nenhum modo detectado" e quando o scheduler AUTO_SCHEDULE falha em produzir
+    `schedule_selected`.
     """
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
@@ -72,8 +79,8 @@ def _determine_mode_and_distribuicao(
             canonical_in, inputs, validacoes, cpu_lookup, producao_lookup, insumos_lookup
         )
         if not schedule_selected:
-            return mode, {}, schedule_candidates, None, True, []
-        distribuicao_por_item = _convert_schedule_to_distribuicao(
+            return mode, {}, schedule_candidates, None, True, [], set()
+        distribuicao_por_item, fallback_item_ids = _convert_schedule_to_distribuicao(
             schedule_selected,
             canonical_in,
             semanas_obra,
@@ -85,12 +92,20 @@ def _determine_mode_and_distribuicao(
             fator_calendario_semanal,
             validacoes,
         )
-        return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False, replenishable_resources
+        return (
+            mode,
+            distribuicao_por_item,
+            schedule_candidates,
+            schedule_selected,
+            False,
+            replenishable_resources,
+            fallback_item_ids,
+        )
 
     elif num_equipes_por_item is not None and isinstance(num_equipes_por_item, dict):
         mode = "MANUAL_ALLOCATION"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo MANUAL."))
-        distribuicao_por_item = _execute_manual_mode(
+        distribuicao_por_item, fallback_item_ids = _execute_manual_mode(
             canonical_in,
             num_equipes_por_item,
             semanas_obra,
@@ -103,7 +118,7 @@ def _determine_mode_and_distribuicao(
             catalogo,
             validacoes,
         )
-        return mode, distribuicao_por_item, [], None, False, []
+        return mode, distribuicao_por_item, [], None, False, [], fallback_item_ids
 
     elif _can_extract_dag(canonical_in):
         mode = "AUTO_SCHEDULE"
@@ -113,8 +128,8 @@ def _determine_mode_and_distribuicao(
             canonical_in, inputs, validacoes, cpu_lookup, producao_lookup, insumos_lookup
         )
         if not schedule_selected:
-            return mode, {}, schedule_candidates, None, True, []
-        distribuicao_por_item = _convert_schedule_to_distribuicao(
+            return mode, {}, schedule_candidates, None, True, [], set()
+        distribuicao_por_item, fallback_item_ids = _convert_schedule_to_distribuicao(
             schedule_selected,
             canonical_in,
             semanas_obra,
@@ -126,7 +141,15 @@ def _determine_mode_and_distribuicao(
             fator_calendario_semanal,
             validacoes,
         )
-        return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False, replenishable_resources
+        return (
+            mode,
+            distribuicao_por_item,
+            schedule_candidates,
+            schedule_selected,
+            False,
+            replenishable_resources,
+            fallback_item_ids,
+        )
 
     else:
         validacoes.append(
@@ -136,7 +159,7 @@ def _determine_mode_and_distribuicao(
                 mensagem="Nenhum modo detectado: forneca 'num_equipes_por_item' ou DAG + recursos.",
             )
         )
-        return None, {}, [], None, True, []
+        return None, {}, [], None, True, [], set()
 
 
 def _build_assigned_resources_lookup(schedule_selected: ScheduleCandidateCanonical | None) -> dict[str, dict]:
@@ -187,6 +210,7 @@ def _build_scheduled_activity_for_item(
     assigned_lookup: dict[str, dict],
     duration_lookup: dict[str, int],
     ramp_lookup: dict[str, list[float] | None],
+    fallback_item_ids: set[str] | None = None,
 ) -> Any:
     """Constrói o ScheduledActivityCanonical de um item da EAP a partir da distribuição semanal."""
 
@@ -216,6 +240,7 @@ def _build_scheduled_activity_for_item(
         distribuicao_semanal=distribuicao_semanal,
         assigned_resources=assigned_lookup.get(item.item_id, {}),
         ramp_profile=ramp_lookup.get(item.item_id),
+        produtividade_fallback_aplicada=item.item_id in (fallback_item_ids or set()),
     )
 
 
@@ -224,7 +249,15 @@ def _build_scheduled_activities(
     distribuicao_por_item: dict,
     semanas_obra: list,
     schedule_selected: ScheduleCandidateCanonical | None = None,
+    fallback_item_ids: set[str] | None = None,
 ) -> list:
+    """Constrói os ScheduledActivityCanonical finais.
+
+    `fallback_item_ids` (issue #132) marca `produtividade_fallback_aplicada=True` nos
+    itens cuja produtividade veio do default arbitrário (P=1000 un/h) — necessário para
+    correlacionar, em skill-06, com o fallback de precificação (composicao_itens) do
+    mesmo item.
+    """
     # Build lookup: activity_id → assigned_resources from the scheduler output.
     assigned_lookup = _build_assigned_resources_lookup(schedule_selected)
 
@@ -233,7 +266,14 @@ def _build_scheduled_activities(
 
     scheduled_activities_out = [
         _build_scheduled_activity_for_item(
-            item, distribuicao_por_item, semanas_obra, canonical_in, assigned_lookup, duration_lookup, ramp_lookup
+            item,
+            distribuicao_por_item,
+            semanas_obra,
+            canonical_in,
+            assigned_lookup,
+            duration_lookup,
+            ramp_lookup,
+            fallback_item_ids,
         )
         for item in canonical_in.eap
     ]

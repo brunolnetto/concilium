@@ -53,6 +53,9 @@ class Planejamento(BaseModel):
     bdi: BdiCategorias = Field(default_factory=BdiCategorias)
     preco_unitario_com_bdi: PrecoUnitarioCategoria = Field(default_factory=PrecoUnitarioCategoria)
     subtotal: SubtotalSemBdiComBdi | None = None
+    # Issue #132: preço veio da Fonte 2 (composicao_itens × preco_insumo), sem relação
+    # com produtividade — não há base bottom-up (NEP-032) para este item.
+    precificacao_via_fallback_composicao: bool = False
 
 
 class Mobilizacao(BaseModel):
