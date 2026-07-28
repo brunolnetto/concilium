@@ -197,7 +197,15 @@ usuário; o agente só levanta o sinal antes de agir.
 
 ### 1A — Via QQP (forma recomendada para novos projetos)
 
-Conduzir conversa em 7 blocos, pulando os que têm defaults aceitáveis:
+**Regra de fricção mínima:** só os Blocos 1-3 bloqueiam a criação do projeto. Custos de
+canteiro, regime tributário/lucro e mobilização **não são perguntados na criação** — o
+pipeline já roda de ponta a ponta sem eles (nenhuma skill os exige: `06-resultado-financeiro`
+não tem `required` inputs, tudo cai nos padrões do perfil `mendeslobo`). Rode primeiro com os
+padrões, mostre o resultado, e só então ofereça ajuste — reagir a um número real ("margem
+ficou 18%, quer revisar o canteiro?") funciona melhor do que perguntar tudo às cegas antes de
+existir qualquer resultado.
+
+Conduzir conversa em 3 blocos antes de criar, pulando os que têm defaults aceitáveis:
 
 **Bloco 1 — Identificação** (sempre perguntar)
 ```python
@@ -257,20 +265,40 @@ pesquisar_catalogo(contexto_id="mendeslobo", query="carga transporte terraplenag
 
 Repetir `criar_projeto` com `cpu_id` preenchido.
 
-**Bloco 4 — Custos de canteiro** (perguntar; aceita "não sei")
+### Passo pós-criação — Rodar com os padrões, ajustar depois
 
-Perguntar: "Você tem os custos mensais do canteiro (ADM, supervisão, segurança, mobilização)?"
+Assim que `criar_projeto`/`iniciar_orcamento` retornar `status: "criado"`, **não pergunte
+canteiro, tributário/lucro, mobilização ou restrição de equipamento ainda**. Diga algo como:
 
-- Se sim: coletar valores em R$/mês por categoria
-- Se não (ou "use o padrão"): usar defaults derivados dos benchmarks MendesLobo
+> "Projeto criado. Vou rodar com os padrões MendesLobo (custos de canteiro do perfil, Lucro
+> Presumido, mobilização inferida pelo cronograma) e te mostro o resultado. Ajustamos qualquer
+> coisa depois, se fizer sentido."
 
-Ao usar defaults, informar: "Usarei os padrões MendesLobo: ADM ~R$1M/mês, supervisão ~R$67k/mês, lab ~R$11k, QSMS ~R$59k. Posso ajustar depois."
+Dispare `disparar_pipeline` skill a skill (Fluxo 2) até `06-resultado-financeiro` ou até travar
+em algo que realmente precise de input (ex.: `num_equipes_por_item` no cronograma). Só depois
+de ter um `consultar_status` com resultado — mesmo que amarelo/vermelho — ofereça os ajustes
+abaixo, um de cada vez e só quando o resultado sugerir que vale a pena revisar.
 
-**Bloco 5 — Regime e lucro** (perguntar; aceita "padrão")
+**Ajuste opcional — Custos de canteiro**
 
-Pergunta única: "Qual o regime tributário (Lucro Presumido/Simples/Lucro Real) e qual o lucro objetivo da obra?"
+Se a margem vier abaixo do esperado, ou o usuário perguntar: "Hoje usei os custos padrão do
+perfil MendesLobo para ADM/topografia/laboratório/QSMS. Você tem os valores reais do canteiro
+desta obra (R$/mês por categoria)?" Se sim, re-dispare a skill com os valores informados:
+```python
+disparar_pipeline(
+    project_id="rodovia-ce040-lote09",
+    skill_id="06-resultado-financeiro",
+    inputs={"composicoes_indireto": {...}},  # por categoria ADM/TOP/LAB/QSMS
+)
+```
 
-Tradução de "8% de lucro" → `bdi_lucro`:
+**Ajuste opcional — Regime tributário e lucro**
+
+Só perguntar se o usuário questionar a margem ou pedir explicitamente: "Qual o regime
+tributário (Lucro Presumido/Simples/Lucro Real) e qual o lucro objetivo da obra?" (default já
+aplicado: Lucro Presumido, margem-alvo ~10%).
+
+Tradução de "8% de lucro" → `bdi_lucro`, salvo via `salvar_perfil_bdi`:
 ```python
 # Regra interna — nunca expor ao usuário:
 L = 0.08
@@ -282,8 +310,10 @@ bdi_lucro = {
 }
 ```
 
-**Bloco 6 — Mobilização** (perguntar se obra > 3 meses)
+**Ajuste opcional — Mobilização**
 
+O sistema já infere a janela de mobilização automaticamente a partir do cronograma (margem
+padrão de 1 semana antes/depois da EAP). Só perguntar se o usuário quiser um valor diferente:
 "Quantas semanas para montar o canteiro antes de começar a produção?"
 
 Tradução interna (nunca expor o nome do campo):
@@ -291,12 +321,11 @@ Tradução interna (nunca expor o nome do campo):
 # "3 semanas" → cronograma[*].leadtime_mob_semanas = 3
 # "1 semana para devolver os equipamentos" → cronograma[*].lag_demob_semanas = 1
 ```
-
-Sugestão do agente baseada no porte:
+Sugestão do agente baseada no porte, se pedirem uma referência:
 - Obra ≤ R$20M ou ≤ 6 meses → sugerir 1–2 semanas mob, 1 semana demob
 - Obra > R$50M ou > 12 meses → sugerir 3–4 semanas mob, 2 semanas demob
 
-**Bloco 7 — Equipamento na região** (só se localização remota)
+**Ajuste opcional — Equipamento na região** (só se localização remota)
 
 "A região tem restrição de disponibilidade de equipamentos pesados?"
 
