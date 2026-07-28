@@ -477,6 +477,163 @@ class TestRunSkillOnPlanoStalenessWiring:
         assert "VAL-STALE-UPSTREAM" not in [v.codigo for v in result.validacoes]
 
 
+class TestRunSkillFlatModelPremissasWiring:
+    """issue #123: run_skill (modelo vN flat) também congela premissas e detecta
+    staleness ponta a ponta, via FlatVersionStore(project, v) → run_skill_on_plano
+    (ProjectStore/FileProjectHandle reais em disco, não mockados)."""
+
+    def _make_project(self, tmp_path, canonical):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+        from concilium.infrastructure.storage.project import ProjectStore
+
+        store = ProjectStore.init(tmp_path, "Test", "ctx-test")
+        v = store.new_version()
+        (store.root / v / store.CANONICAL_FILE).write_text(canonical.model_dump_json(indent=2), encoding="utf-8")
+        return FileProjectHandle(store), v
+
+    def _make_fake_runtime(self, depends_on_skills):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        from concilium.application.runtime.mixins.execution import ExecutionMixin
+
+        class FakeRuntime(ExecutionMixin):
+            def get_skill_contract(self, skill_id):
+                return SimpleNamespace(depends_on_skills=depends_on_skills.get(skill_id, []))
+
+            def _load_context(self, escopo_meta, project):
+                return MagicMock(), {}, {}
+
+            def _apply_runtime_defaults(self, skill_id, project, contexto, base_inputs):
+                return dict(base_inputs)
+
+            def _build_skill_kwargs(self, contract, **kwargs):
+                return {}
+
+            def _build_log_entry(self, *args, **kwargs):
+                return {}
+
+            def _process_side_effects(self, *args, **kwargs):
+                pass
+
+        return FakeRuntime()
+
+    def test_run_skill_congela_premissas(self, tmp_path):
+        from concilium.application.skills.base import SkillResult
+
+        canonical = _minimal_canonical()
+        project, v = self._make_project(tmp_path, canonical)
+        runtime = self._make_fake_runtime({})
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"04-cronograma": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, []),
+            ),
+        ):
+            runtime.run_skill("04-cronograma", project, version=v, inputs={"a": 1}, _executed_ok=set())
+
+        from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
+        fvs = FlatVersionStore(project, v)
+        por_skill = fvs.read_premissas_por_skill()
+        assert "04-cronograma" in por_skill
+        assert (project.version_path(v) / "premissas_efetivas.json").exists()
+
+    def test_dependencia_com_contexto_alterado_emite_stale_upstream(self, tmp_path):
+        from concilium.application.skills.base import SkillResult
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        canonical = _minimal_canonical()
+        project, v = self._make_project(tmp_path, canonical)
+        runtime = self._make_fake_runtime({"06-resultado-financeiro": ["04-cronograma"]})
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"04-cronograma": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, [ValidacaoItem(codigo="OK-01", status="OK", mensagem="ok")]),
+            ),
+        ):
+            runtime.run_skill("04-cronograma", project, version=v, _executed_ok=set())
+
+        # Muda o contexto do projeto (superfície de premissas compartilhada do
+        # modelo flat) sem reexecutar a cadeia inteira a partir de "04-cronograma".
+        project.update_meta(contexto_id="ctx-outro")
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"06-resultado-financeiro": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, []),
+            ),
+        ):
+            result = runtime.run_skill(
+                "06-resultado-financeiro", project, version=v, _executed_ok={"04-cronograma"}
+            )
+
+        codigos = [val.codigo for val in result.validacoes]
+        assert "VAL-STALE-UPSTREAM" in codigos
+        assert result.has_errors is False
+
+    def test_sem_mudanca_de_contexto_nao_emite_stale_upstream(self, tmp_path):
+        from concilium.application.skills.base import SkillResult
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        canonical = _minimal_canonical()
+        project, v = self._make_project(tmp_path, canonical)
+        runtime = self._make_fake_runtime({"06-resultado-financeiro": ["04-cronograma"]})
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"04-cronograma": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, [ValidacaoItem(codigo="OK-01", status="OK", mensagem="ok")]),
+            ),
+        ):
+            runtime.run_skill("04-cronograma", project, version=v, _executed_ok=set())
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"06-resultado-financeiro": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, []),
+            ),
+        ):
+            result = runtime.run_skill(
+                "06-resultado-financeiro", project, version=v, _executed_ok={"04-cronograma"}
+            )
+
+        assert "VAL-STALE-UPSTREAM" not in [v.codigo for v in result.validacoes]
+
+    def test_run_skill_approve_protege_premissas(self, tmp_path):
+        """Ponta a ponta: run_skill congela premissas; ProjectStore.approve() protege os arquivos novos (#123)."""
+        import stat
+
+        from concilium.application.skills.base import SkillResult
+
+        canonical = _minimal_canonical()
+        project, v = self._make_project(tmp_path, canonical)
+        runtime = self._make_fake_runtime({})
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"04-cronograma": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, []),
+            ),
+        ):
+            runtime.run_skill("04-cronograma", project, version=v, _executed_ok=set())
+
+        project.approve(v)
+
+        premissas_efetivas = project.version_path(v) / "premissas_efetivas.json"
+        premissas_por_skill = project.version_path(v) / "premissas_por_skill.json"
+        for f in (premissas_efetivas, premissas_por_skill):
+            assert not bool(f.stat().st_mode & stat.S_IWUSR), f"{f.name} deveria estar read-only após approve()"
+
+
 # ─── application/runtime/__init__.py (30 missing) ─────────────────────────────
 
 

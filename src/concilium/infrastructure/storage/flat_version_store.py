@@ -10,7 +10,7 @@ Convenção: escopo_id = '__flat__', plano_id = versão flat (ex: "v1").
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from concilium.domain.models.canonical import CanonicalModel
 
@@ -92,3 +92,23 @@ class FlatVersionStore:
                 except Exception:
                     pass
         return out
+
+    # ── Premissas efetivas (issue #123) ─────────────────────────────────
+    # Delega para o ProjectHandle/ProjectStore subjacente, que armazena por
+    # versão (vN/) em vez de por plano. Isso faz com que run_skill_on_plano
+    # (execution.py) congele premissas e detecte staleness também para o
+    # modelo vN flat, sem precisar de nenhuma mudança em execution.py — o
+    # hasattr() defensivo lá já cobre este wrapper automaticamente.
+
+    def write_premissas_efetivas(
+        self, skill_id: str, normalized_inputs: dict[str, Any], escopo_meta: dict[str, Any]
+    ) -> None:
+        writer = getattr(self._project, "write_premissas_efetivas", None)
+        if writer is not None:
+            writer(self._version, skill_id, normalized_inputs, escopo_meta)
+
+    def read_premissas_por_skill(self) -> dict[str, dict[str, Any]]:
+        reader = getattr(self._project, "read_premissas_por_skill", None)
+        if reader is not None:
+            return reader(self._version)
+        return {}

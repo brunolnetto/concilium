@@ -143,4 +143,54 @@ class TestFlatVersionStore2:
         assert len(entries) == 2
 
 
+# ── FlatVersionStore.write_premissas_efetivas/read_premissas_por_skill (#123) ──
+# Verifica que o wrapper delega para o ProjectStore subjacente com a versão
+# correta — a lógica de hash em si já é coberta em TestProjectStorePremissasEfetivas.
+
+
+class TestFlatVersionStorePremissasEfetivas:
+    def _make_store(self, tmp_path):
+        from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+        from concilium.infrastructure.storage.project import ProjectStore
+
+        store = ProjectStore.init(tmp_path, "Test", "ctx")
+        v = store.new_version()
+        return FlatVersionStore(store, v), store, v
+
+    def test_write_delegates_to_project_with_version(self, tmp_path):
+        fvs, store, v = self._make_store(tmp_path)
+        fvs.write_premissas_efetivas("06-resultado-financeiro", {"a": 1}, {"contexto_id": "ctx"})
+
+        assert (store.root / v / store.PREMISSAS_EFETIVAS_FILE).exists()
+        por_skill = store.read_premissas_por_skill(v)
+        assert "06-resultado-financeiro" in por_skill
+
+    def test_read_delegates_to_project_with_version(self, tmp_path):
+        fvs, store, v = self._make_store(tmp_path)
+        store.write_premissas_efetivas(v, "04-cronograma", {"a": 1}, {"contexto_id": "ctx"})
+
+        por_skill = fvs.read_premissas_por_skill()
+        assert "04-cronograma" in por_skill
+
+    def test_read_empty_when_nothing_written(self, tmp_path):
+        fvs, store, v = self._make_store(tmp_path)
+        assert fvs.read_premissas_por_skill() == {}
+
+    def test_write_no_op_when_project_lacks_method(self, tmp_path):
+        """Defesa: um project stub sem write_premissas_efetivas não deve quebrar o wrapper."""
+        from unittest.mock import MagicMock
+
+        from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
+        proj_mock = MagicMock(spec=["meta", "version_path", "load_canonical"])
+        proj_mock.meta = {"contexto_id": "ctx-1"}
+        ver_path = tmp_path / "v1"
+        ver_path.mkdir()
+        proj_mock.version_path.return_value = ver_path
+
+        fvs = FlatVersionStore(proj_mock, "v1")
+        fvs.write_premissas_efetivas("06-resultado-financeiro", {"a": 1}, {"contexto_id": "ctx-1"})  # não deve lançar
+        assert fvs.read_premissas_por_skill() == {}
+
+
 

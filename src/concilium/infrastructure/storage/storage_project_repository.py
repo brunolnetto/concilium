@@ -11,6 +11,12 @@ from typing import Any
 from concilium.domain.models.canonical import CanonicalModel
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
+from ._bdi_perfil_freeze import (
+    bdi_perfil_versao_filename,
+    bdi_perfil_versoes_referenciadas,
+    extract_bdi_perfil_versao,
+)
+
 
 class StorageProjectHandle:
     """ProjectHandle backed by BlobStoragePort (ADR-047 §D5).
@@ -22,6 +28,8 @@ class StorageProjectHandle:
     _META_FILE = "meta.json"
     _CANONICAL_FILE = "canonical.json"
     _INVOCATIONS_LOG = "invocations.log"
+    _PREMISSAS_EFETIVAS_FILE = "premissas_efetivas.json"
+    _PREMISSAS_POR_SKILL_FILE = "premissas_por_skill.json"
 
     def __init__(self, storage: BlobStoragePort, project_id: str) -> None:
         self._storage = storage
@@ -361,8 +369,57 @@ class StorageProjectHandle:
     def log_invocation(self, version: str, entry: dict[str, Any]) -> None:
         self.append_jsonl(f"{version}/{self._INVOCATIONS_LOG}", entry)
 
+    # ── Premissas efetivas (issue #123 — congelamento no modelo vN flat) ──
+    # Espelha PlanoStore.write_premissas_efetivas/read_premissas_por_skill
+    # (escopo_store.py, issue #121) e ProjectStore (project.py) — mesma lógica
+    # de hash, armazenada por versão via BlobStoragePort em vez de filesystem local.
+
+    def write_premissas_efetivas(
+        self, version: str, skill_id: str, normalized_inputs: dict[str, Any], escopo_meta: dict[str, Any]
+    ) -> None:
+        from hashlib import sha256
+
+        payload = json.dumps(normalized_inputs, sort_keys=True, default=str)
+        content_hash = sha256(payload.encode()).hexdigest()
+        escopo_hash = sha256(json.dumps(escopo_meta, sort_keys=True, default=str).encode()).hexdigest()
+        ts = datetime.now(UTC).isoformat()
+
+        self.write_json(
+            f"{version}/{self._PREMISSAS_EFETIVAS_FILE}",
+            {"skill_id": skill_id, "hash": content_hash, "ts": ts, "inputs": normalized_inputs},
+        )
+
+        por_skill = self.read_premissas_por_skill(version)
+        registro: dict[str, Any] = {"hash": content_hash, "escopo_hash": escopo_hash, "ts": ts}
+        bdi_perfil_versao = extract_bdi_perfil_versao(normalized_inputs)
+        if bdi_perfil_versao is not None:
+            registro["bdi_perfil_versao"] = bdi_perfil_versao
+        por_skill[skill_id] = registro
+        self.write_json(f"{version}/{self._PREMISSAS_POR_SKILL_FILE}", por_skill)
+
+    def read_premissas_por_skill(self, version: str) -> dict[str, dict[str, Any]]:
+        result = self.read_json(f"{version}/{self._PREMISSAS_POR_SKILL_FILE}", {})
+        return result if isinstance(result, dict) else {}
+
+    def _protect_bdi_perfil_versoes(self, version: str) -> None:
+        """Protege (aprovar_versao) os snapshots de perfil BDI usados pelas skills desta versão (issue #123).
+
+        `bdi/perfil_bdi.json` (cabeça) não é protegido — só os snapshots
+        `perfil_bdi_v{NNN}.json` efetivamente referenciados.
+        """
+        versoes = bdi_perfil_versoes_referenciadas(self.read_premissas_por_skill(version))
+        for versao in versoes:
+            relative = f"bdi/{bdi_perfil_versao_filename(versao)}"
+            if self.exists(relative):
+                self._storage.aprovar_versao(self._path(relative))
+
     def approve(self, version: str) -> None:
         self._storage.aprovar_versao(self._path(f"{version}/{self._CANONICAL_FILE}"))
+        for fname in (self._PREMISSAS_EFETIVAS_FILE, self._PREMISSAS_POR_SKILL_FILE):
+            relative = f"{version}/{fname}"
+            if self.exists(relative):
+                self._storage.aprovar_versao(self._path(relative))
+        self._protect_bdi_perfil_versoes(version)
 
     @property
     def snapshots(self) -> Any:
