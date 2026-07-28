@@ -41,7 +41,7 @@ def _resolve_preco_cat_item(
     alpha_clt: float,
     alpha_mensalista: float,
     catalog_session: object | None,
-) -> tuple[dict[str, float] | None, set[str], bool]:
+) -> tuple[dict[str, float] | None, set[str], bool, float]:
     """NEP-032 D1: precificação bottom-up canônica, com fallback para composicao_itens.
 
     Hierarquia de fontes:
@@ -53,9 +53,12 @@ def _resolve_preco_cat_item(
     com base em produtividade) falhou e o preço caiu na Fonte 2 (composicao_itens × preco_insumo,
     sem relação com produtividade) — sinal de 1ª classe para correlacionar com o fallback de
     produtividade do schedule (skill-04) sobre o mesmo item.
+
+    E `produtividade_catalogo` (ADR-162 D1): ρ_i resolvido na Fonte 1, 0.0 na Fonte 2 (não há
+    produtividade catalogada quando o preço vem de composicao_itens).
     """
     # Fonte 1: bottom-up da composição da equipe (produção + insumos SICRO/SINAPI)
-    preco_cat = _compute_preco_cat_from_production(
+    preco_cat, produtividade_catalogo = _compute_preco_cat_from_production(
         cpu,
         prod_lookup,
         insumo_lookup,
@@ -74,12 +77,12 @@ def _resolve_preco_cat_item(
                 mensagem=f"Item '{item.item_id}': preço unitário derivado de composição da equipe (NEP-032).",
             )
         )
-        return preco_cat, set(), False
+        return preco_cat, set(), False, produtividade_catalogo
 
     preco_cat_fallback, equip_sem_decomp = _preco_cat_fallback_composicao(
         cpu, insumo_lookup, repo, jurisdicao_id, overrides, data_base, erros_insumo, validacoes
     )
-    return preco_cat_fallback, equip_sem_decomp, True
+    return preco_cat_fallback, equip_sem_decomp, True, 0.0
 
 
 def _process_eap_item(
@@ -115,7 +118,7 @@ def _process_eap_item(
         plan_out.append(early)
         return
 
-    preco_cat, equip_sem_decomp_item, usou_fallback_composicao = _resolve_preco_cat_item(
+    preco_cat, equip_sem_decomp_item, usou_fallback_composicao, produtividade_catalogo = _resolve_preco_cat_item(
         item,
         cpu,
         prod_lookup,
@@ -148,6 +151,7 @@ def _process_eap_item(
             preco_cat_com_bdi,
             bdi_aplicado,
             precificacao_via_fallback_composicao=usou_fallback_composicao,
+            produtividade_catalogo=produtividade_catalogo,
         )
     )
 

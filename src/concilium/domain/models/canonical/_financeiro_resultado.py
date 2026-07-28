@@ -56,6 +56,10 @@ class Planejamento(BaseModel):
     # Issue #132: preço veio da Fonte 2 (composicao_itens × preco_insumo), sem relação
     # com produtividade — não há base bottom-up (NEP-032) para este item.
     precificacao_via_fallback_composicao: bool = False
+    # ADR-162 D1: ρ_i — Producao.valor_horario resolvida na Fonte 1 (bottom-up, NEP-032).
+    # 0.0 quando não resolvível (Fonte 2/fallback de composição, ou override manual de PU)
+    # — γ_i^v/causa_dominante ficam INDETERMINADO nesses casos, nunca um valor inventado.
+    produtividade_catalogo: float = 0.0
 
 
 class Mobilizacao(BaseModel):
@@ -167,6 +171,15 @@ class PontoEquilibrio(BaseModel):
     custo_pool_total: float = 0.0  # Σ_r custo_total_particionado_r para esta atividade
     custo_pool_por_unidade: float = 0.0  # custo_pool_total / Q_i — razão comparativa, não preço
     economia_pool_abs: float = 0.0  # custo_total_autonomo − custo_pool_total (>0 = pool economiza)
+
+    # ADR-162 D1: decomposição causal de delta em duas famílias — cronograma (gap de
+    # horas reais vs catalogadas) e precificação (gap entre a taxa de venda e a taxa
+    # real de execução). causa_dominante="INDETERMINADO" quando H_i/γ_i^v/γ_i^o não são
+    # resolvíveis (ex.: sem schedule real ainda, ou item sem base bottom-up de produção)
+    # — nunca um valor inventado. Ver _pe_causa_dominante em _ponto_equilibrio.py.
+    causa_dominante: Literal["CRONOGRAMA", "PRECIFICACAO", "INDETERMINADO"] = "INDETERMINADO"
+    t_cronograma: float = 0.0  # γ_i^v · (Q_i/ρ_i − H_i) — gap de horas, precificado pela taxa de venda
+    t_precificacao: float = 0.0  # (γ_i^v − γ_i^o) · H_i — gap de taxa, ponderado pelas horas reais
 
 
 class Venda(BaseModel):

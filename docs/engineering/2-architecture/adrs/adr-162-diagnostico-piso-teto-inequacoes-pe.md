@@ -1,6 +1,6 @@
 # ADR-162 — Diagnóstico do Ponto de Equilíbrio: Decomposição Causal Cronograma × Precificação
 
-**Status:** Proposta (D1-D4) — Fase 0 (fundação bottom-up) ✅ Implementado
+**Status:** Proposta (D2-D4) — Fase 0 (fundação bottom-up) ✅ Implementado — Fase 1 (D1, `causa_dominante`) ✅ Implementado
 **Data:** 2026-07-28
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-060 (Diagnóstico de Ponto de Equilíbrio), ADR-061 (Inversão/Backtracking de PE), ADR-076 (Calibração PU/Frentes), ADR-083 (Decomposição Causal do Gap de Pool), ADR-132 (preço embutido na composição), NEP-029 (divergência de caminhos de precificação)
@@ -94,7 +94,9 @@ Com isso confirmado, os 3 atalhos foram removidos (não só marcados como legado
 
 ## Decisão
 
-A Fase 0 acima já está implementada (nesta worktree, ainda não mergeada em `main`). D1-D4 abaixo continuam **proposta de avaliação** — não implementadas.
+A Fase 0 acima já está implementada (nesta worktree, ainda não mergeada em `main`). D1 (causa_dominante) também já está implementada — ver Fase 1 no Plano de Implementação e Definition of Done abaixo. D2-D4 continuam **proposta de avaliação** — não implementadas.
+
+**Nota de implementação (D1)**: a fórmula literal do texto acima (`γ_i^v = p_i^c · ρ_i`) precisa de `ρ_i` (produtividade catalogada) como quantidade independente — não está disponível em nenhum campo já existente no builder de PE (skill-06/_consolidacao). Resolvida via plumbing real (opção escolhida explicitamente pelo usuário entre 3 alternativas nesta implementação): novo campo `Planejamento.produtividade_catalogo` (ρ_i, resolvido na Fonte 1 bottom-up de NEP-032, 0.0 quando não resolvível — Fonte 2/fallback de composição, ou override manual), threaded por `_precificacao/_skill_helpers/_preco_cpu.py` → `_process_item.py` → `_planejamento_entry.py`. `H_i` (real) usa `machine_weeks_brutas` (já existente, `Σ_j m_ij` — ver `PontoEquilibrio.machine_weeks_brutas`) × `RegimeTrabalho.horas_dia/dias_semana` (threaded de `canonical_in.projeto` até `_build_pe_for_equipe` via novo parâmetro `regime`). `γ_i^o` usa `custo_fixo_total` (não `custo_operacional_real` — garante a identidade `T_cronograma + T_precificacao == delta` por construção exata, já que `delta` existente usa `custo_fixo_total`, não `custo_operacional_real`).
 
 ### D1 — Campo `causa_dominante`: decomposição Cronograma × Precificação, sem novo cálculo de origem
 
@@ -163,8 +165,8 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 | Fase | Entregas | Status |
 |---|---|---|
 | F0 | Remover atalho por `custo_hora_total_referencia` nas 3 camadas (skill-04/05, pool) + fix ADR-132 em `_custo_hora_equipamentos` | ✅ Implementado (28/07, nesta worktree) |
-| F1 | `H_i`/`γ_i^v`/`γ_i^o` + `causa_dominante` (D1) + testes | ⬜ (avaliação nesta worktree) |
-| F2 | `Γ` como campo de perfil opcional + `VAL-PONTO-EQUILIBRIO-TETO` (D2) + `horas_reais_min`/`max` no relatório/Excel (D3) | ⬜ (depende de F1 aprovado) |
+| F1 | `H_i`/`γ_i^v`/`γ_i^o` + `causa_dominante` (D1) + testes | ✅ Implementado (28/07, nesta worktree) |
+| F2 | `Γ` como campo de perfil opcional + `VAL-PONTO-EQUILIBRIO-TETO` (D2) + `horas_reais_min`/`max` no relatório/Excel (D3) | ⬜ (depende de F1 aprovado pelo usuário) |
 | F3 (futura, condicionada) | Migração de `custo_fixo_total` para base semanal explícita por frentes (D4), reaproveitando `project_ocupacao_semanal` (ADR-152) | ⬜ (não iniciada — precisa de decisão própria) |
 
 ## Definition of Done
@@ -178,11 +180,11 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 - [x] Suíte completa sem regressão (14.441 testes; 11 falhas pré-existentes em `test_adr115_procurement_rfx.py`, não relacionadas, passam isoladas)
 
 ### Fase 1
-- [ ] `causa_dominante` retorna `"CRONOGRAMA"` quando `|T_cronograma| > |T_precificacao|`, `"PRECIFICACAO"` no caso contrário
-- [ ] `causa_dominante = "INDETERMINADO"` quando `H_i` não resolvível (`custo_operacional_real <= 0` ou schedule ausente) — nunca um valor inventado
-- [ ] Teste prova que `causa_dominante` nunca é chamado/exposto antes de skill-04 terminar (P5) — não é uma validação prospectiva de mobilização
-- [ ] Teste de regressão prova a identidade `T_cronograma + T_precificacao == delta` (dentro de tolerância de arredondamento, mesmo padrão de `ε_tol` do roundtrip do ADR-061)
-- [ ] Suíte completa sem regressão (golden tests inclusos)
+- [x] `causa_dominante` retorna `"CRONOGRAMA"` quando `|T_cronograma| > |T_precificacao|`, `"PRECIFICACAO"` no caso contrário
+- [x] `causa_dominante = "INDETERMINADO"` quando `H_i` não resolvível (`custo_operacional_real <= 0` ou schedule ausente) — nunca um valor inventado (também cobre `ρ_i`/`Q_i`/`RegimeTrabalho` ausentes — necessários e não previstos explicitamente no texto original de D1)
+- [x] Teste prova que `causa_dominante` nunca é chamado/exposto antes de skill-04 terminar (P5) — não é uma validação prospectiva de mobilização (`test_sem_schedule_real_fica_indeterminado`)
+- [x] Teste de regressão prova a identidade `T_cronograma + T_precificacao == delta` (dentro de tolerância de arredondamento, mesmo padrão de `ε_tol` do roundtrip do ADR-061) — `TestPeCausaDominanteIdentidade`, parametrizado
+- [x] Suíte completa sem regressão (`tests/unit/application/skills/test_adr162_causa_dominante.py`, 15 testes novos; suíte completa do repo sem falhas novas)
 
 ### Fase 2
 - [ ] `Γ` lido do perfil (`config/contextos/<perfil>.json`), `None` por default — nenhum perfil existente muda de comportamento sem opt-in

@@ -31,6 +31,7 @@ def _bpe_process_equipe(
     particao_por_item: dict | None = None,
     idle_por_item: dict | None = None,
     pool_total_por_item: dict | None = None,
+    regime: Any = None,
 ) -> PontoEquilibrio | None:
     """Builds and validates PE for a single equipe; returns None if skipped."""
     if not equipe.item_id:
@@ -43,6 +44,7 @@ def _bpe_process_equipe(
         particao_por_item,
         idle_por_item,
         pool_total_por_item,
+        regime,
     )
     if pe is None:
         return None
@@ -123,6 +125,10 @@ def _bpe_collect_pe_items(
     idle_por_item: dict,
     pool_total_por_item: dict,
 ) -> list[PontoEquilibrio]:
+    # ADR-162: RegimeTrabalho (horas_dia/dias_semana) — só usado por causa_dominante
+    # para converter machine_weeks_brutas em H_i (horas reais).
+    _projeto = getattr(canonical_in, "projeto", None)
+    regime = getattr(_projeto, "regime_trabalho", None) if _projeto else None
     pe_items: list[PontoEquilibrio] = []
     for e in canonical_in.equipes_diretas:
         pe = _bpe_process_equipe(
@@ -134,6 +140,7 @@ def _bpe_collect_pe_items(
             particao_por_item,
             idle_por_item,
             pool_total_por_item,
+            regime,
         )
         if pe is not None:
             pe_items.append(pe)

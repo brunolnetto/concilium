@@ -177,6 +177,54 @@ def _pe_gap_escala_abs(equipe: Any, n_equipes_ef: float, custo_fixo_total: float
     return round(custo_base_cat * max(0.0, n_equipes_ef - 1.0), 2)
 
 
+def _pe_causa_dominante(
+    plan: Any,
+    custo_venda_total: float,
+    custo_fixo_total: float,
+    custo_operacional_real: float,
+    machine_weeks_brutas: float,
+    horas_dia: float,
+    dias_semana: float,
+) -> tuple[Literal["CRONOGRAMA", "PRECIFICACAO", "INDETERMINADO"], float, float]:
+    """ADR-162 D1: decompõe delta (= custo_venda_total − custo_fixo_total) em duas causas.
+
+        H_i           = horas_dia · dias_semana · machine_weeks_brutas      (real, pós-cronograma)
+        H_i_catalogo  = Q_i / ρ_i                                          (nominal, catálogo)
+        γ_i^v         = custo_venda_total / H_i_catalogo                   (taxa de venda)
+        γ_i^o         = custo_fixo_total / H_i                             (taxa operacional real)
+        T_cronograma  = custo_venda_total − γ_i^v · H_i                    (gap de horas, taxa de venda)
+        T_precificacao = (γ_i^v − γ_i^o) · H_i                             (gap de taxa, horas reais)
+
+    T_cronograma + T_precificacao == delta por construção (γ_i^o·H_i ≡ custo_fixo_total).
+    causa_dominante = "CRONOGRAMA" se |T_cronograma| > |T_precificacao|, senão "PRECIFICACAO".
+
+    "INDETERMINADO" (nunca um valor inventado) quando:
+      - ρ_i (plan.produtividade_catalogo) não resolvido — Fonte 1 bottom-up (NEP-032) não
+        aplicou para este item (override manual, ou fallback de composição — issue #132);
+      - H_i real não resolvível — custo_operacional_real <= 0 ou schedule ainda ausente
+        (machine_weeks_brutas <= 0) — P5: causa_dominante é sempre diagnóstico pós-cronograma,
+        nunca validação prospectiva de mobilização.
+    """
+    q = float(getattr(plan, "quantitativo", 0.0) or 0.0) if plan else 0.0
+    rho = float(getattr(plan, "produtividade_catalogo", 0.0) or 0.0) if plan else 0.0
+    h_i = horas_dia * dias_semana * machine_weeks_brutas
+
+    if q <= 0 or rho <= 0 or h_i <= 0 or custo_operacional_real <= 0:
+        return "INDETERMINADO", 0.0, 0.0
+
+    h_i_catalogo = q / rho
+    gamma_v = custo_venda_total / h_i_catalogo
+    gamma_o = custo_fixo_total / h_i
+
+    t_cronograma = custo_venda_total - gamma_v * h_i
+    t_precificacao = (gamma_v - gamma_o) * h_i
+
+    causa: Literal["CRONOGRAMA", "PRECIFICACAO"] = (
+        "CRONOGRAMA" if abs(t_cronograma) > abs(t_precificacao) else "PRECIFICACAO"
+    )
+    return causa, round(t_cronograma, 2), round(t_precificacao, 2)
+
+
 def _pe_status_frentes(frentes_nec: float) -> Literal["OK", "AVISO", "CRITICO"]:
     """Threshold status_frentes: OK ≤ 1.25, AVISO ≤ 1.5, CRITICO > 1.5."""
     if frentes_nec <= 1.25:
@@ -306,6 +354,7 @@ def _build_pe_for_equipe(
     particao_por_item: dict | None = None,
     idle_por_item: dict | None = None,
     pool_total_por_item: dict | None = None,
+    regime: Any = None,
 ) -> PontoEquilibrio | None:
     """Constrói PontoEquilibrio para uma equipe. Retorna None se custo_fixo ≤ 0.
 
@@ -314,6 +363,9 @@ def _build_pe_for_equipe(
     - sched_por_item: fatores de lesão de produtividade (fator_clima, n_equipes, semanas_lesadas).
     ADR-083:
     - particao_por_item: {item_id: CustoParticionadoItem} — decomposição causal do gap_pool.
+    ADR-162:
+    - regime: RegimeTrabalho do projeto (horas_dia/dias_semana) — usado só por causa_dominante
+      para converter machine_weeks_brutas em horas reais (H_i). None -> causa_dominante="INDETERMINADO".
     """
     permanencia_base = float(
         getattr(equipe, "permanencia_efetiva_meses", 0.0) or getattr(equipe, "permanencia_meses", 0.0) or 1.0
@@ -345,6 +397,12 @@ def _build_pe_for_equipe(
 
     _Q, pu_operacional_autonomo, machine_weeks_brutas, machine_weeks_efetivas, eta_real = _pe_camada2_producao(
         plan, custo_total_autonomo, lesao
+    )
+
+    horas_dia = float(getattr(regime, "horas_dia", 0.0) or 0.0)
+    dias_semana = float(getattr(regime, "dias_semana", 0.0) or 0.0)
+    causa_dominante, t_cronograma, t_precificacao = _pe_causa_dominante(
+        plan, custo_venda_total, custo_fixo_total, custo_operacional_real, machine_weeks_brutas, horas_dia, dias_semana
     )
 
     custo_pool_total, custo_pool_por_unidade, economia_pool_abs = _pe_camada3_pool(
@@ -415,6 +473,10 @@ def _build_pe_for_equipe(
         custo_pool_total=custo_pool_total,
         custo_pool_por_unidade=custo_pool_por_unidade,
         economia_pool_abs=economia_pool_abs,
+        # ADR-162 D1
+        causa_dominante=causa_dominante,
+        t_cronograma=t_cronograma,
+        t_precificacao=t_precificacao,
     )
 
 

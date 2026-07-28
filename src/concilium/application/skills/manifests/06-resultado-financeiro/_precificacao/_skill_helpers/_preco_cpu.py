@@ -128,7 +128,7 @@ def _compute_preco_cat_from_production(
     alpha_mensalista: float,
     validacoes: list,
     catalog_session: object | None = None,  # ADR-100
-) -> dict | None:
+) -> tuple[dict | None, float]:
     """NEP-032 D1: deriva preco_cat da composição da equipe × produtividade (bottom-up canônico).
 
     Fórmula: PU_categoria = custo_categoria_hora / producao.valor_horario
@@ -141,13 +141,16 @@ def _compute_preco_cat_from_production(
 
     Emite VAL-PLAN-SBDI-LEGADO se o CPU ainda tiver precos_unitarios_sbdi
     hard-coded (campo agora depreciado — não é usado no cálculo).
+
+    Retorna também `producao.valor_horario` (ADR-162 D1: ρ_i, produtividade catalogada
+    usada por causa_dominante em skill-06/_consolidacao) — 0.0 quando não resolvível.
     """
     from concilium.application.catalog.pu_calculator import ParametrosCalculo, derivar_precos_unitarios_sbdi
     from concilium.domain.constants import ENCARGOS_PJ, HORAS_MES_REGIME_6x1
 
     producao = _resolve_producao_valida(cpu, prod_lookup, validacoes)
     if producao is None:
-        return None
+        return None, 0.0
 
     params = ParametrosCalculo(
         alpha_clt=alpha_clt,
@@ -158,7 +161,7 @@ def _compute_preco_cat_from_production(
 
     sbdi = derivar_precos_unitarios_sbdi(producao, insumo_lookup, params, catalog_session=catalog_session)
     if not sbdi or float(sbdi.get("total", 0.0) or 0.0) <= 0:
-        return None
+        return None, 0.0
 
     preco_cat = {
         "mao_obra": float(sbdi.get("mo", sbdi.get("mao_obra", 0.0)) or 0.0),
@@ -169,6 +172,6 @@ def _compute_preco_cat_from_production(
 
     _avisar_sbdi_legado(cpu, validacoes)
 
-    return preco_cat
+    return preco_cat, float(producao.get("valor_horario") or 0.0)
 
 
