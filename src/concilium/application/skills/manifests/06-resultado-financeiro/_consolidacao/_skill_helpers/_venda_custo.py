@@ -195,3 +195,63 @@ def _br_append_gap_catalogo_validacao(validacoes: list, venda_sem_bdi: float, cu
         )
 
 
+# ADR-023 §D1: limiar de materialidade para o AVISO de possível sobreposição AC×ADM.
+# Escolha (issue #126): 2% do custo operacional total para CADA lado (AC embutido e
+# ADM real). Abaixo disso, qualquer um dos dois valores é pequeno o bastante para ser
+# ruído de rateio/arredondamento e não merece interromper a leitura do resultado; acima
+# disso, os dois já representam quantia material o suficiente para que uma eventual
+# sobreposição conceitual (cobrar "administração" duas vezes) afete a margem de forma
+# perceptível — só aí vale a pena pedir confirmação humana (time de orçamento) de que
+# AC (overhead corporativo/matriz, via BDI) e ADM (equipe administrativa do canteiro,
+# custo indireto real) são conceitos distintos e complementares neste projeto.
+_LIMIAR_AC_ADM_PCT = 0.02
+
+
+def _validate_ac_adm_sobreposicao(
+    ac_rate_indireto: float,
+    custo_indireto_total: float,
+    adm_real: float,
+    custo_operacional_real: float,
+    validacoes: list,
+) -> None:
+    """Issue #126: AVISO informativo (nunca ERRO, nunca bloqueia) de possível dupla
+    contagem entre o componente `ac` do BDI ("Administração central",
+    `ComponentesBdi.ac` — domain/models/financial/bdi/_components.py:34) e o custo real
+    de indireto categoria `ADM` (`Indireto.categoria == "ADM"` —
+    domain/models/canonical/_financeiro_resultado.py:70-93), que por sua vez também
+    recebe o mesmo componente `ac` via `_calc_venda_com_bdi` (acima, `r_indir`).
+
+    IMPORTANTE: isto NÃO decide se há dupla contagem — essa é uma pergunta de negócio
+    em aberto (issue #126), só confirmável com o time de orçamento. Esta validação
+    apenas torna visível quando ambos os valores são simultaneamente significativos,
+    para que alguém avalie se representam conceitos distintos (AC = overhead
+    corporativo/matriz vs. ADM = equipe administrativa alocada no canteiro específico)
+    ou se merecem revisão. Não remove, reduz nem recalcula nenhum dos dois valores.
+
+    Heurística de detecção (análoga a `_validate_encargos_separacao` /
+    VAL-PLAN-ENCARGOS-DUPLA): `ac_rate_indireto × custo_indireto_total` aproxima o
+    valor de administração central embutido no BDI que incide sobre os indiretos do
+    projeto. Comparado contra o custo real de ADM, ambos expressos como fração do
+    custo operacional total (direto + indireto) para julgar materialidade.
+    """
+    if custo_operacional_real <= 0:
+        return
+    ac_embutido = round(ac_rate_indireto * custo_indireto_total, 2)
+    ac_pct = ac_embutido / custo_operacional_real
+    adm_pct = adm_real / custo_operacional_real
+    if ac_pct > _LIMIAR_AC_ADM_PCT and adm_pct > _LIMIAR_AC_ADM_PCT:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-BDI-AC-ADM-POSSIVEL-SOBREPOSICAO",
+                status="AVISO",
+                mensagem=(
+                    f"AC embutido no BDI (R$ {ac_embutido:,.0f}, {ac_pct * 100:.1f}% do custo "
+                    f"operacional) e custo real de ADM (R$ {adm_real:,.0f}, {adm_pct * 100:.1f}%) "
+                    "são ambos significativos neste projeto — confirme que representam conceitos "
+                    "distintos (ex: overhead corporativo vs. equipe administrativa do canteiro) "
+                    "e não estão cobrando a mesma coisa duas vezes."
+                ),
+            )
+        )
+
+

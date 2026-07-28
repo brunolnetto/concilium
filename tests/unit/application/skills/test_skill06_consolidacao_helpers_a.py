@@ -66,6 +66,65 @@ class TestCalcVendaComBdiMissingRate:
         assert ct == 0.0
 
 
+class TestValidateAcAdmSobreposicao:
+    """Issue #126: VAL-BDI-AC-ADM-POSSIVEL-SOBREPOSICAO — validação puramente
+    informativa (AVISO, nunca ERRO, nunca bloqueia) de possível sobreposição entre
+    o componente `ac` do BDI e o custo real de indireto categoria ADM.
+    """
+
+    _CUSTO_OPERACIONAL = 1_000_000.0
+
+    def test_ambos_significativos_dispara_aviso(self):
+        """AC embutido (5% × 1MM = 50k = 5%) e ADM real (50k = 5%) acima do limiar de 2%."""
+        validacoes: list = []
+        _cons._validate_ac_adm_sobreposicao(
+            0.05, 1_000_000.0, 50_000.0, self._CUSTO_OPERACIONAL, validacoes
+        )
+        assert any(
+            v.codigo == "VAL-BDI-AC-ADM-POSSIVEL-SOBREPOSICAO" and v.status == "AVISO" for v in validacoes
+        )
+
+    def test_somente_ac_significativo_nao_dispara(self):
+        """AC embutido = 5% (> limiar) mas ADM real = 0,5% (< limiar) — não dispara."""
+        validacoes: list = []
+        _cons._validate_ac_adm_sobreposicao(
+            0.05, 1_000_000.0, 5_000.0, self._CUSTO_OPERACIONAL, validacoes
+        )
+        assert all(v.codigo != "VAL-BDI-AC-ADM-POSSIVEL-SOBREPOSICAO" for v in validacoes)
+
+    def test_somente_adm_significativo_nao_dispara(self):
+        """ADM real = 5% (> limiar) mas AC embutido = 0,1% (< limiar) — não dispara."""
+        validacoes: list = []
+        _cons._validate_ac_adm_sobreposicao(
+            0.001, 1_000_000.0, 50_000.0, self._CUSTO_OPERACIONAL, validacoes
+        )
+        assert all(v.codigo != "VAL-BDI-AC-ADM-POSSIVEL-SOBREPOSICAO" for v in validacoes)
+
+    def test_nenhum_significativo_nao_dispara(self):
+        """Ambos abaixo do limiar de 2% — não dispara."""
+        validacoes: list = []
+        _cons._validate_ac_adm_sobreposicao(
+            0.001, 1_000_000.0, 5_000.0, self._CUSTO_OPERACIONAL, validacoes
+        )
+        assert all(v.codigo != "VAL-BDI-AC-ADM-POSSIVEL-SOBREPOSICAO" for v in validacoes)
+
+    def test_custo_operacional_zero_nao_dispara(self):
+        """Guard: custo_operacional_real <= 0 → retorna sem calcular (evita ZeroDivisionError)."""
+        validacoes: list = []
+        _cons._validate_ac_adm_sobreposicao(0.05, 1_000_000.0, 50_000.0, 0.0, validacoes)
+        assert validacoes == []
+
+    def test_mensagem_menciona_ambos_valores(self):
+        """A mensagem deve ser educativa e citar os dois valores/percentuais envolvidos."""
+        validacoes: list = []
+        _cons._validate_ac_adm_sobreposicao(
+            0.05, 1_000_000.0, 50_000.0, self._CUSTO_OPERACIONAL, validacoes
+        )
+        msg = next(v.mensagem for v in validacoes if v.codigo == "VAL-BDI-AC-ADM-POSSIVEL-SOBREPOSICAO")
+        assert "AC" in msg and "ADM" in msg
+        assert "conceitos distintos" in msg
+
+
 class TestBrBuildVendaCustoFallback:
     def _make_canonical_no_planejamento(self, custo_total=10_000.0):
         eq = SimpleNamespace(

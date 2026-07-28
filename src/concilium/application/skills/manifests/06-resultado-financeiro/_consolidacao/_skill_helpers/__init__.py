@@ -84,6 +84,7 @@ from ._venda_custo import (  # ty: ignore[unresolved-import]
     _catv_from_equipes,
     _catv_from_scheduled,
     _cpu_familia,
+    _validate_ac_adm_sobreposicao,
 )
 
 __all__ = [
@@ -149,6 +150,7 @@ __all__ = [
     "_pe_plan_calibracao",
     "_pe_pu_calibrado",
     "_pe_status_frentes",
+    "_validate_ac_adm_sobreposicao",
     "_validate_frentes_necessarias",
     "_validate_pe_duplo_risco",
     "_validate_pe_particao",
