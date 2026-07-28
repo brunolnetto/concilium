@@ -87,6 +87,39 @@ def _apply_sem_bdi_override(item_id: str, item_override: Any, preco_cat: dict, v
     )
 
 
+_TOL_BDI_IMPLICITO = 0.001  # 0.1pp — issue #121 item 1: visibilidade de divergência
+
+
+def _check_bdi_implicito_diverge(
+    item_id: str, override_com: dict, preco_cat: dict, bdi_aplicado: dict, validacoes: list
+) -> None:
+    """Issue #121 (item 1): torna visível quando o override com-BDI implica um BDI
+    diferente do `bdi_aplicado` desta run — hoje esse mecanismo permite fixar o preço
+    com BDI independentemente do preço sem BDI, quebrando `com_bdi = sem_bdi × (1+BDI)`
+    silenciosamente. Não bloqueia nada (o bloqueio, se cabível, é feito no gate de
+    aprovação via VAL-COB-NEG observando o resultado final) — só emite o número.
+    """
+    divergentes = []
+    for cat, valor_override in override_com.items():
+        base = preco_cat.get(cat, 0.0)
+        if cat not in bdi_aplicado or base <= 0:
+            continue
+        bdi_implicito = float(valor_override) / base - 1.0
+        if abs(bdi_implicito - bdi_aplicado[cat]) > _TOL_BDI_IMPLICITO:
+            divergentes.append(f"{cat}: aplicado={bdi_aplicado[cat] * 100:.2f}%, implícito={bdi_implicito * 100:.2f}%")
+    if divergentes:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PLAN-OVR-BDI-DIVERGE",
+                status="AVISO",
+                mensagem=(
+                    f"Item '{item_id}': BDI implícito no override com-BDI diverge do BDI "
+                    f"aplicado nesta run — {'; '.join(divergentes)}."
+                ),
+            )
+        )
+
+
 def _apply_com_bdi_override(
     item_id: str, item_override: Any, preco_cat: dict, bdi_aplicado: dict, validacoes: list
 ) -> dict:
@@ -107,6 +140,7 @@ def _apply_com_bdi_override(
                 mensagem=f"Item '{item_id}': preço unitário com BDI calibrado por referência.",
             )
         )
+        _check_bdi_implicito_diverge(item_id, override_com, preco_cat, bdi_aplicado, validacoes)
     else:
         preco_cat_com_bdi = {cat: preco_cat[cat] * (1 + bdi_aplicado[cat]) for cat in preco_cat}
     return preco_cat_com_bdi

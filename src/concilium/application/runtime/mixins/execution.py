@@ -147,9 +147,16 @@ class ExecutionMixin(_Base):
         should_save = not (skill_id == "00-escopo" and result.has_errors)
         result, should_save = self._process_taint(skill_id, result, should_save)
         result, should_save = self._process_decision_variables(normalized_inputs, result, should_save)
+        result = self._process_staleness_check(skill_id, contract, escopo_meta, result, plano_store)
 
         if should_save:
             plano_store.save_canonical(result.canonical, created_by=skill_id)
+            # issue #121: congelamento de premissas — só no modelo escopo/plano
+            # (PlanoStore). O modelo vN flat (FlatVersionStore) não implementa
+            # esse método ainda; escopo desta correção é deliberadamente restrito
+            # ao modelo que `aprovar_versao` usa (ver plano da fase 2).
+            if hasattr(plano_store, "write_premissas_efetivas"):
+                plano_store.write_premissas_efetivas(skill_id, normalized_inputs, escopo_meta)
 
         self._process_side_effects(skill_id, result, project, plano_store.plano_id)
 
@@ -216,6 +223,62 @@ class ExecutionMixin(_Base):
             except Exception:  # pragma: no cover
                 pass
         return result, should_save
+
+    def _process_staleness_check(
+        self,
+        skill_id: str,
+        contract: Any,
+        escopo_meta: dict[str, Any],
+        result: SkillResult,
+        plano_store: Any,
+    ) -> SkillResult:
+        """Detecta reexecução parcial com premissas divergentes entre skills dependentes.
+
+        Compara o hash de `escopo_meta` (catálogo/jurisdição/perfil do escopo — a
+        superfície de premissas compartilhada por todas as skills do plano) contra
+        o hash registrado da última vez que cada dependência (`contract.depends_on_skills`)
+        rodou. Se divergem, a dependência foi calculada sobre premissas diferentes
+        das que este run está usando agora (ex: overlay de catálogo mudou entre uma
+        corrida e outra sem reexecutar a cadeia inteira). Emite AVISO — não bloqueia
+        a execução; o bloqueio, se cabível, é feito no gate de aprovação (issue #121,
+        `application/orchestrators/plano_approval_gate.py`).
+        """
+        depends_on = getattr(contract, "depends_on_skills", None) or []
+        # issue #121: staleness só é detectável no modelo escopo/plano (PlanoStore) —
+        # o modelo vN flat (FlatVersionStore) não implementa read_premissas_por_skill
+        # ainda; escopo desta correção é deliberadamente restrito (ver plano da fase 2).
+        if not depends_on or not hasattr(plano_store, "read_premissas_por_skill"):
+            return result
+
+        import json
+        from hashlib import sha256
+
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        escopo_hash_atual = sha256(json.dumps(escopo_meta, sort_keys=True, default=str).encode()).hexdigest()
+        por_skill = plano_store.read_premissas_por_skill()
+
+        stale_deps = [
+            dep
+            for dep in depends_on
+            if (registrado := por_skill.get(dep)) and registrado.get("escopo_hash") != escopo_hash_atual
+        ]
+        if not stale_deps:
+            return result
+
+        novas = [
+            ValidacaoItem(
+                codigo="VAL-STALE-UPSTREAM",
+                status="AVISO",
+                mensagem=(
+                    f"Dependência '{dep}' de '{skill_id}' rodou com premissas de escopo "
+                    "(catálogo/jurisdição/perfil) diferentes das atuais — recalcule a "
+                    "cadeia antes de aprovar."
+                ),
+            )
+            for dep in stale_deps
+        ]
+        return SkillResult(result.canonical, [*result.validacoes, *novas], result.artifacts)
 
     def _process_side_effects(self, skill_id: str, result: SkillResult, project: ProjectHandle, v: str) -> None:
         _persist_typed_artifacts(result, project, v)

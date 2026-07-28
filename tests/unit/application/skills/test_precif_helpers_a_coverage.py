@@ -278,6 +278,29 @@ class TestApplyComBdiOverride:
         assert result["material"] == pytest.approx(99.0)
         assert any(v.codigo == "VAL-PLAN-OVR-ITEM-BDI" for v in validacoes)
 
+    def test_com_bdi_override_diverge_emite_aviso(self):
+        """issue #121 item 1: override com-BDI implicando BDI diferente do aplicado
+        na run agora é visível (antes, era absorvido silenciosamente)."""
+        preco_cat = {"material": 10.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        bdi = {"material": 0.2, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        validacoes = []
+        # material com BDI aplicado seria 10*1.2=12.0; override fixa em 99.0 (BDI implícito 8.9)
+        override = {"preco_unitario_com_bdi": {"material": 99.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}}
+        MOD._apply_com_bdi_override("I-01", override, preco_cat, bdi, validacoes)
+        diverge = [v for v in validacoes if v.codigo == "VAL-PLAN-OVR-BDI-DIVERGE"]
+        assert len(diverge) == 1
+        assert diverge[0].status == "AVISO"
+        assert "material" in diverge[0].mensagem
+
+    def test_com_bdi_override_consistente_nao_emite_aviso(self):
+        """Override com-BDI que respeita com_bdi = sem_bdi × (1+BDI) não deve gerar ruído."""
+        preco_cat = {"material": 10.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        bdi = {"material": 0.2, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+        validacoes = []
+        override = {"preco_unitario_com_bdi": {"material": 12.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}}
+        MOD._apply_com_bdi_override("I-01", override, preco_cat, bdi, validacoes)
+        assert not any(v.codigo == "VAL-PLAN-OVR-BDI-DIVERGE" for v in validacoes)
+
 
 # ---------------------------------------------------------------------------
 # _get_bdi_value  (lines 594-602, missing 595-601)

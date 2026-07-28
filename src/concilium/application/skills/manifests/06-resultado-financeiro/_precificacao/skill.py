@@ -199,6 +199,8 @@ def _resolve_bdi(
     if tabela is None:
         return {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}  # pragma: no cover
 
+    _validar_bdi_margem_minima(tabela, inputs, validacoes)
+
     result = _to_flat_bdi(
         {
             "material": float(tabela.material.bdi_total),
@@ -216,6 +218,38 @@ def _resolve_bdi(
         )
     )
     return result
+
+
+def _validar_bdi_margem_minima(tabela: Any, inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> None:
+    """Issue #121 (item 6): valida que o BDI cobre um piso de lucro líquido, quando informado.
+
+    Puramente aditivo — sem `inputs.lucro_minimo_pct`, nenhum comportamento muda (não
+    existe piso de lucro hoje; não inventamos um default). Compara a margem líquida
+    embutida no preço (`ComponentesBdi.decomposicao_no_preco()["margem_l"]`, ADR-056)
+    contra o piso, categoria a categoria.
+    """
+    lucro_minimo_pct = inputs.get("lucro_minimo_pct")
+    if not isinstance(lucro_minimo_pct, (int, float)):
+        return
+    abaixo = []
+    for cat in ("mao_obra", "material", "servicos", "indireto", "diesel"):
+        comp = getattr(tabela, cat, None)
+        if comp is None:
+            continue
+        margem_l = comp.decomposicao_no_preco()["margem_l"]
+        if margem_l < lucro_minimo_pct:
+            abaixo.append(f"{cat}={margem_l * 100:.2f}%")
+    if abaixo:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-BDI-MARGEM-INSUFICIENTE",
+                status="AVISO",
+                mensagem=(
+                    f"Margem líquida embutida no BDI abaixo do piso configurado "
+                    f"({lucro_minimo_pct * 100:.2f}%): {', '.join(abaixo)}."
+                ),
+            )
+        )
 
 
 def _validar_bdi_dentro_da_faixa(bdi_aplicado: dict[str, float]) -> list[str]:
