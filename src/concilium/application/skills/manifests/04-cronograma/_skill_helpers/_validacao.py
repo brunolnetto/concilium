@@ -176,9 +176,14 @@ def _emm_process_item(
     semanas_obra: list,
     num_equipes_por_item: dict,
     validacoes: list,
-) -> tuple[dict, list, list]:
-    """Computes distribuicao and error lists for a single EAP item."""
-    P, _is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
+) -> tuple[dict, list, list, bool]:
+    """Computes distribuicao and error lists for a single EAP item.
+
+    O 4º elemento (issue #132) é `is_fallback`: True quando a produtividade veio do
+    default arbitrário (P=1000 un/h) — usado por `_execute_manual_mode` para marcar
+    `produtividade_fallback_aplicada` no `ScheduledActivityCanonical` final.
+    """
+    P, is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
     producao_semanal_base = P * regime.horas_dia * regime.dias_semana
     equipes_semanas = num_equipes_por_item.get(item.item_id, {})
     # NEP-035: n_max = pico de alocação planejado para a atividade (η_s = n_j / n_max)
@@ -206,7 +211,7 @@ def _emm_process_item(
     if pct_completude < 0.999:
         erros_completude.append((item.item_id, round(pct_completude, 4)))
     erros_vazios = _emm_find_vazios(item.item_id, distribuicao, semanas_obra)
-    return distribuicao, erros_completude, erros_vazios
+    return distribuicao, erros_completude, erros_vazios, is_fallback
 
 
 def _execute_manual_mode(
@@ -221,9 +226,17 @@ def _execute_manual_mode(
     fator_calendario_semanal: dict[str, float],
     catalogo: dict[str, Any],
     validacoes: list[ValidacaoItem],
-) -> dict[str, dict[str, DistribuicaoSemanal]]:
-    """Executa lógica Skill 04 (modo manual)."""
+) -> tuple[dict[str, dict[str, DistribuicaoSemanal]], set[str]]:
+    """Executa lógica Skill 04 (modo manual).
+
+    Retorna também `fallback_item_ids` (issue #132) — mesma semântica de
+    `_convert_schedule_to_distribuicao` (modo AUTO_SCHEDULE): item_ids cuja
+    produtividade veio do default arbitrário (P=1000 un/h). Este modo é justamente
+    onde a CPU sintética (linha ~244, sem `producao_id_ref`) força o fallback, então
+    cobri-lo aqui é essencial — não é um call-site secundário.
+    """
     distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]] = {}
+    fallback_item_ids: set[str] = set()
     erros_completude_all = []
     erros_vazios_all = []
 
@@ -246,7 +259,7 @@ def _execute_manual_mode(
                 "descricao": f"CPU sintética para {item.item_id}",
                 "producao_id_ref": None,  # Will trigger default productivity of 100.0
             }
-        dist, erros_c, erros_v = _emm_process_item(
+        dist, erros_c, erros_v, is_fallback = _emm_process_item(
             item,
             cpu,
             producao_lookup,
@@ -259,6 +272,8 @@ def _execute_manual_mode(
             validacoes,
         )
         distribuicao_por_item[item.item_id] = dist
+        if is_fallback:
+            fallback_item_ids.add(item.item_id)
         erros_completude_all.extend(erros_c)
         erros_vazios_all.extend(erros_v)
 
@@ -276,7 +291,7 @@ def _execute_manual_mode(
                 codigo="VAL-CRON-02", status="ERRO", mensagem=f"Gaps detectados: {'; '.join(erros_vazios_all[:5])}"
             )
         )
-    return distribuicao_por_item
+    return distribuicao_por_item, fallback_item_ids
 
 
 def _rasfc_propagate_pool_config(rcpsp_spec: dict, inputs: dict) -> None:

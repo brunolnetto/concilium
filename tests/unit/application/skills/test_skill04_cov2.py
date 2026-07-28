@@ -744,8 +744,10 @@ class TestBuildScheduledActivitiesFallbackFlag:
         assert by_id["IT-02"].produtividade_fallback_aplicada is False
 
     def test_default_none_nao_marca_nenhum_item(self):
-        """fallback_item_ids omitido (default None) -> nenhum item marcado (comportamento
-        preservado para chamadores que não rastreiam fallback, ex. modo manual)."""
+        """fallback_item_ids omitido (default None) -> nenhum item marcado. Modo manual
+        (_execute_manual_mode) também rastreia fallback e passa o set real — ver
+        TestExecuteManualModeFallbackFlag; este default só cobre chamadores que
+        genuinamente não têm a informação (ex. testes diretos deste helper)."""
         canonical = self._make_canonical(["IT-01"])
         result = _build_scheduled_activities(
             canonical,

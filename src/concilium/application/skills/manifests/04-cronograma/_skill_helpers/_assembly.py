@@ -63,9 +63,12 @@ def _determine_mode_and_distribuicao(
     replenishable_resources, fallback_item_ids) — o 6º elemento (ADR-128 F6) é vazio em
     MANUAL_ALLOCATION e no caso "nenhum modo detectado", já que só o path AUTO_SCHEDULE
     constrói ReplenishableResource. O 7º elemento (issue #132) é o set de item_ids cuja
-    produtividade foi resolvida via fallback (P=1000 un/h); também vazio fora do path
-    AUTO_SCHEDULE, que é o único que hoje alimenta _resolve_productivity até os
-    ScheduledActivityCanonical finais.
+    produtividade foi resolvida via fallback (P=1000 un/h) — populado tanto por
+    AUTO_SCHEDULE (`_convert_schedule_to_distribuicao`) quanto por MANUAL_ALLOCATION
+    (`_execute_manual_mode`, que inclusive sintetiza uma CPU sem `producao_id_ref` quando
+    o catálogo não tem a CPU do item — o cenário mais direto de fallback); vazio só no
+    caso "nenhum modo detectado" e quando o scheduler AUTO_SCHEDULE falha em produzir
+    `schedule_selected`.
     """
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
@@ -102,7 +105,7 @@ def _determine_mode_and_distribuicao(
     elif num_equipes_por_item is not None and isinstance(num_equipes_por_item, dict):
         mode = "MANUAL_ALLOCATION"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo MANUAL."))
-        distribuicao_por_item = _execute_manual_mode(
+        distribuicao_por_item, fallback_item_ids = _execute_manual_mode(
             canonical_in,
             num_equipes_por_item,
             semanas_obra,
@@ -115,7 +118,7 @@ def _determine_mode_and_distribuicao(
             catalogo,
             validacoes,
         )
-        return mode, distribuicao_por_item, [], None, False, [], set()
+        return mode, distribuicao_por_item, [], None, False, [], fallback_item_ids
 
     elif _can_extract_dag(canonical_in):
         mode = "AUTO_SCHEDULE"
