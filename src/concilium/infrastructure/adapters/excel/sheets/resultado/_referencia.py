@@ -130,6 +130,17 @@ def _build_referencia_bridge_rows(canonical) -> list[tuple[str, float, str]]:
     ]
 
 
+def _build_referencia_clima_n4_nota(canonical) -> str | None:
+    """Issue #124: nota explicando que o gap de praticabilidade (N1→N2→N3) não é
+    cobrado no custo operacional real (N4) — retorna None quando não há gap
+    climático diagnosticado neste run (mesmo critério de LimitacaoClimaN4).
+    """
+    limitacao = getattr(canonical.resultado, "limitacao_clima_n4", None) if canonical.resultado else None
+    if limitacao is None:
+        return None
+    return limitacao.mensagem
+
+
 def _render_referencia_bridge_rows(ws, row: int, fills: list, bridge_rows: list[tuple[str, float, str]]) -> int:
     """Renderiza as linhas do bridge de precificação e retorna a próxima linha livre."""
     for i, (label, value, note) in enumerate(bridge_rows):
@@ -190,6 +201,17 @@ def render_referencia(wb, canonical) -> None:
 
     bridge_rows = _build_referencia_bridge_rows(canonical)
     row = _render_referencia_bridge_rows(ws, row, fills, bridge_rows)
+
+    # Issue #124: nota — o gap de praticabilidade acima é diagnosticado, mas nunca
+    # é cobrado no custo operacional real (N4). Renderizada só quando há gap > 0.
+    nota_clima_n4 = _build_referencia_clima_n4_nota(canonical)
+    if nota_clima_n4:
+        row += 1
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NCOLS)
+        cell_nota = ws.cell(row=row, column=1, value=f"⚠ {nota_clima_n4}")
+        cell_nota.alignment = _align("left")
+        cell_nota.font = _font(italic=True, size=9)
+        row += 1
 
     ws.freeze_panes = "A4"
 

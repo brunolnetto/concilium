@@ -25,8 +25,10 @@ from ._bdi_resolucao import (  # ty: ignore[unresolved-import]
 )
 from ._bridge import (  # ty: ignore[unresolved-import]
     _as_bool,
+    _bridge_append_clima_n4_validacao,
     _bridge_append_ok_validacao,
     _bridge_build_dict,
+    _bridge_build_limitacao_clima_n4,
     _bridge_compute_delta_status,
     _bridge_compute_n4,
     _bridge_compute_n123,
@@ -84,6 +86,7 @@ from ._venda_custo import (  # ty: ignore[unresolved-import]
     _catv_from_equipes,
     _catv_from_scheduled,
     _cpu_familia,
+    _validate_ac_adm_sobreposicao,
 )
 
 __all__ = [
@@ -106,8 +109,10 @@ __all__ = [
     "_bpe_process_equipe",
     "_br_append_gap_catalogo_validacao",
     "_br_build_venda_custo",
+    "_bridge_append_clima_n4_validacao",
     "_bridge_append_ok_validacao",
     "_bridge_build_dict",
+    "_bridge_build_limitacao_clima_n4",
     "_bridge_compute_delta_status",
     "_bridge_compute_n123",
     "_bridge_compute_n4",
@@ -149,6 +154,7 @@ __all__ = [
     "_pe_plan_calibracao",
     "_pe_pu_calibrado",
     "_pe_status_frentes",
+    "_validate_ac_adm_sobreposicao",
     "_validate_frentes_necessarias",
     "_validate_pe_duplo_risco",
     "_validate_pe_particao",

@@ -16,6 +16,7 @@ from ._venda_custo import (  # ty: ignore[unresolved-import]
     _br_append_gap_catalogo_validacao,
     _br_build_venda_custo,
     _calc_venda_com_bdi,
+    _validate_ac_adm_sobreposicao,
 )
 
 if TYPE_CHECKING:
@@ -97,6 +98,13 @@ def _build_resultado(
         )
     )
     _br_append_gap_catalogo_validacao(validacoes, venda_sem_bdi, custo_direto)
+    _validate_ac_adm_sobreposicao(
+        _bdi_tabela.indireto.ac,
+        custo_indireto_total,
+        custos_indiretos.get("ADM", 0.0),
+        custo_operacional_real,
+        validacoes,
+    )
     indir_kwargs = {f"indireto_{k.lower()}": v for k, v in custos_indiretos.items() if k != "MOB"}
     res = Resultado(
         venda=Venda(

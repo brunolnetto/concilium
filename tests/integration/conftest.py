@@ -17,9 +17,27 @@ def agis_benchmark(config_root):
     root = config_root.parent
     facade = BenchmarkFacade.from_root(root)
 
-    # Executar benchmark AGIS
-    # Se já foi executado, reset=False reutiliza resultado em cache
-    facade.run_single("AGIS", reset=False)
+    # Executar benchmark AGIS SEMPRE do zero (reset=True).
+    #
+    # ADR-104/NEP-043 (issue #125): esta fixture é session-scoped, então dentro de
+    # UM MESMO processo pytest o benchmark já só roda uma vez — reset=False não
+    # ganhava nada em velocidade aqui, só criava risco.
+    #
+    # `reset=False` faz `BenchmarkRunner._load_existing_report_if_fresh()`
+    # devolver o canonical + relatório já persistidos em
+    # `benchmarks/projetos/AGIS/` (diretório real do working tree, gitignored
+    # mas NÃO efêmero) sem rodar nenhum código do pipeline atual, sempre que
+    # esse diretório já existir — não importa de qual commit ele veio.
+    #
+    # Isso é uma armadilha clássica de bisect/dev local: se alguém já rodou o
+    # benchmark AGIS num commit antigo (ex: investigando #121/#125 com git
+    # bisect/checkout), o diretório fica no working tree e os testes voltam a
+    # "passar" ou "falhar" refletindo aquele commit antigo, não o HEAD atual.
+    # Foi exatamente isso que reproduzimos ao investigar a falha relatada na
+    # #125: com reset=True (fresh) os dois testes batem com o baseline atual;
+    # só reaparecia divergência ao reaproveitar um cache gerado por um commit
+    # anterior. Ver INVESTIGACAO_125.md na raiz do repo para os detalhes.
+    facade.run_single("AGIS", reset=True)
 
     # Carregar canonical model do store
     # ProjectStore descobre o projeto pelo ID no meta.json do diretório AGIS
