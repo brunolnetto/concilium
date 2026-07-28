@@ -1,6 +1,6 @@
 # ADR-162 — Diagnóstico do Ponto de Equilíbrio: Decomposição Causal Cronograma × Precificação
 
-**Status:** Proposta (D4) — Fase 0 (fundação bottom-up) ✅ Implementado — Fase 1 (D1, `causa_dominante`) ✅ Implementado — Fase 2 (D2 teto `Γ` + D3 `horas_reais_min`/`max`) ✅ Implementado
+**Status:** Implementado — Fase 0 (fundação bottom-up) ✅ — Fase 1 (D1, `causa_dominante`) ✅ — Fase 2 (D2 teto `Γ` + D3 `horas_reais_min`/`max`) ✅ — Fase 3 (D4, permanência/custo de 1 frente robustos a rampa) ✅
 **Data:** 2026-07-28
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-060 (Diagnóstico de Ponto de Equilíbrio), ADR-061 (Inversão/Backtracking de PE), ADR-076 (Calibração PU/Frentes), ADR-083 (Decomposição Causal do Gap de Pool), ADR-132 (preço embutido na composição), NEP-029 (divergência de caminhos de precificação)
@@ -144,9 +144,19 @@ Adicionar `horas_reais_min`/`horas_reais_max` (derivados de `(C^D_i − Γ)/γ_i
 
 **Nuance de P5**: o intervalo em si (`Q_i/ρ_i`-dependente, não `H_i`-dependente) *poderia* ser calculado antes do cronograma, como alvo de planejamento — mas como `PontoEquilibrio` só é construído em skill-06 (pós skill-04/05), esta ADR não propõe uma consulta antecipada nesta fase; ficaria para um uso futuro fora deste escopo (ex.: uma tool de pré-checagem que leia só o catálogo, sem depender de `PontoEquilibrio`).
 
-### D4 — Não migrar a base operacional de mensal para semanal-por-frente nesta ADR
+### D4 — Migração para base semanal-por-frente: implementada, mas não onde o texto original previa
 
-A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual semana um estouro ocorre, mas migrar `custo_fixo_total` de mensal para essa forma explícita é mudança de modelo de dados maior (precisa de `m_ij` por semana, não só `n_frentes`/`H_i` agregados) que toca `_build_pe_for_equipe` e potencialmente o schedule real (ADR-152, `project_ocupacao_semanal`, que já tem granularidade semanal e poderia alimentar isso). Registrado como Fase 3 candidata (ver Plano), condicionada a essa fonte de dados semanal já existir de fato ligada ao item de EAP. Não é necessária para D1/D2/D3 — `H_i` agregado já basta para a decomposição causal.
+**Nota de implementação (28/07, mesma sessão).** O texto original de D4 (abaixo, preservado por transparência) apontava `project_ocupacao_semanal`/ADR-152 como a fonte de dados semanal-por-item faltante, condicionando a migração à existência dessa fonte. Investigação mostrou que essa condição estava mal colocada: `project_ocupacao_semanal` está de fato dormente (nenhum código de produção o consome) e, mesmo se estivesse ativo, agrega só por contrato, sem granularidade por item — não serviria para isto de qualquer forma. A fonte semanal-por-item correta **já existe e já está em produção**: `distribuicao_semanal`/`num_equipes`, a mesma usada por `machine_weeks_brutas` no D1.
+
+O gap real não era "falta fonte de dados" — é que `EquipeDireta.permanencia_efetiva_meses`/`.custo_total` (que `_build_pe_for_equipe` já usa preferencialmente para `custo_fixo_total`) são computados em skill-05 (`_resolve_permanencia_e_custo_total_ajustados`, rotulado "ADR-091") **dividindo o agregado multi-frente por um único `num_equipes_paralelas` constante** (`team_weeks/N`, `custo_total/N`). Essa divisão só reconstrói exatamente "1 frente de referência" quando o número de frentes é constante em todas as semanas ativas — com rampa (mobilização parcial, lesão climática reduzindo frentes efetivas em algumas semanas), subestima a permanência/custo de referência, porque `team_weeks/max(N) ≤ ativos` sempre (nunca `>`, pela definição de `max`). Verificado numericamente: rampa 1→3→1 ao longo de 7 semanas ativas subestimava a permanência em ~40% (0,9966 vs. 1,6099 meses corretos).
+
+**Correção**: `_sum_1frente_cost` (nova, em `_dimensionamento_itens.py`) soma a taxa semanal de 1 frente (sem multiplicar por `num_equipes`) uma vez por semana ATIVA — robusta a qualquer forma de rampa, porque não depende de nenhum `num_equipes_paralelas` constante. `_resolve_permanencia_e_custo_total_ajustados` passa a receber `ativos`/`custo_1frente` em vez de `team_weeks`/`num_equipes_paralelas`/`custo_total`. `num_equipes_paralelas`/`_resolve_num_equipes_paralelas` continuam existindo (usados para `EquipeDireta.num_equipes_base`, propósito diferente: `gap_escala`/diagnóstico em skill-06, não a base de custo). Como o fix é na fonte (skill-05), `_build_pe_for_equipe` (skill-06) **não precisou de nenhuma mudança** — o valor corrigido já chega pronto via `permanencia_efetiva_meses`/`custo_total`.
+
+Verificado contra o benchmark AGIS: `sum(eq.custo_total)` sobe de R$ 16.529.359,75 para R$ 17.611.540,46 (+6,55%), puxado majoritariamente por `eap-1_6` (`team_weeks=72, ativos=25, max_n=4` → 18 semanas estimadas vs. 25 reais, ~28% de subestimação antes da correção) — baseline do golden test `test_cost_decomposition_adr104.py::test_agis_custo_direto_matches_reference` atualizado, com o histórico de correções documentado no docstring do teste (mesmo padrão das correções TD-1/TD-3/NEP-043 Bug 2 já registradas ali).
+
+---
+
+**Texto original da proposta (preservado por transparência):** "Não migrar a base operacional de mensal para semanal-por-frente nesta ADR." A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual semana um estouro ocorre, mas migrar `custo_fixo_total` de mensal para essa forma explícita foi tratado como mudança de modelo de dados maior que tocaria `_build_pe_for_equipe` e potencialmente o schedule real (ADR-152, `project_ocupacao_semanal`, citado como fonte candidata — ver nota acima sobre por que essa fonte não era a correta). Registrado como Fase 3 candidata, condicionada a essa fonte semanal já existir de fato ligada ao item de EAP — condição satisfeita, mas por `distribuicao_semanal`, não por ADR-152.
 
 ---
 
@@ -191,7 +201,7 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 | F0 | Remover atalho por `custo_hora_total_referencia` nas 3 camadas (skill-04/05, pool) + fix ADR-132 em `_custo_hora_equipamentos` | ✅ Implementado (28/07, nesta worktree) |
 | F1 | `H_i`/`γ_i^v`/`γ_i^o` + `causa_dominante` (D1) + testes | ✅ Implementado (28/07, nesta worktree) |
 | F2 | `Γ` como campo de perfil opcional + `VAL-PONTO-EQUILIBRIO-TETO` (D2) + `horas_reais_min`/`max` no relatório/Excel (D3) | ✅ Implementado (28/07, nesta worktree) |
-| F3 (futura, condicionada) | Migração de `custo_fixo_total` para base semanal explícita por frentes (D4), reaproveitando `project_ocupacao_semanal` (ADR-152) | ⬜ (não iniciada — precisa de decisão própria) |
+| F3 | Permanência/custo de 1 frente de referência robustos a rampa (D4) — `_sum_1frente_cost` em skill-05, via `distribuicao_semanal` (não `project_ocupacao_semanal`/ADR-152, ver nota de implementação em D4) | ✅ Implementado (28/07, nesta worktree) |
 
 ## Definition of Done
 
@@ -219,6 +229,15 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 - [x] `causa_dominante`/`horas_reais_min`/`horas_reais_max` expostos na linha de `ponto_equilibrio` do relatório (`_rra_build_pe_row`, skill 09) — `test_pe_row_expoe_causa_dominante_e_horas_reais`
 - [x] Suíte completa sem regressão (`test_adr162_causa_dominante.py` + `test_skill10_helpers_a_coverage.py`; suíte completa do repo sem falhas novas atribuíveis a esta fase)
 
+### Fase 3
+- [x] `_sum_1frente_cost` (nova, `_dimensionamento_itens.py`) — custo semanal de 1 frente de referência, somado só nas semanas ativas, sem multiplicar por `num_equipes` — robusto a qualquer forma de rampa — `TestSum1FrenteCost`
+- [x] `_resolve_permanencia_e_custo_total_ajustados` recebe `ativos`/`custo_1frente` em vez de `team_weeks`/`num_equipes_paralelas`/`custo_total` — permanência = `ativos/SEMANAS_POR_MES`, não mais `team_weeks/max(num_equipes_paralelas)` — `TestResolvePermanenciaECustoTotalAjustados`
+- [x] Teste prova que a versão anterior subestimava a permanência sob rampa (1→3→1 ao longo de 7 semanas ativas: 0,9966 meses antigo vs. 1,6099 meses correto) — `test_rampa_nao_subestima_permanencia`
+- [x] `num_equipes_paralelas`/`_resolve_num_equipes_paralelas` preservados para `EquipeDireta.num_equipes_base` (propósito diferente: gap_escala/diagnóstico em skill-06) — não usados mais na base de custo
+- [x] `_build_pe_for_equipe`/skill-06 não precisaram de nenhuma mudança — o fix é na fonte (skill-05), o valor corrigido já chega via `permanencia_efetiva_meses`/`custo_total`
+- [x] Verificado contra o benchmark AGIS: `sum(eq.custo_total)` sobe de R$ 16.529.359,75 para R$ 17.611.540,46 (+6,55%), puxado majoritariamente por `eap-1_6` (~28% de subestimação antes da correção) — baseline do golden test `test_cost_decomposition_adr104.py::test_agis_custo_direto_matches_reference` atualizado com o histórico documentado
+- [x] Suíte completa sem regressão (`test_adr162_d4_permanencia_semanal.py`, 8 testes novos; suíte completa do repo: 14688 passed, mesma contagem da Fase 2 + 8)
+
 ---
 
 ## Relacionados
@@ -227,5 +246,5 @@ A formalização por semana (`Σ_j m_ij`) é mais fiel para localizar em qual se
 - ADR-061 — Inversão/Backtracking de PE (espaço de correção `L*`/`η*`/`n_max*`/`t0*` — `causa_dominante` aponta qual dessas inversas é relevante, via `BacktrackingPEItem.solucao_causa_dominante`: `PRECIFICACAO`→`L*`, `CRONOGRAMA`→`η*`(`P*`)/`t0*` — **não** `n_max*`, que ataca `F_ind`/duração, gap de classe diferente da que D1 decompõe; ver mapeamento completo em D1)
 - ADR-076 — Calibração PU/Frentes (`frentes_nec`, mesmo espírito de expor um número acionável antes do erro)
 - ADR-083 — Decomposição Causal do Gap de Pool (mesma família de `gap_*` em `PontoEquilibrio`)
-- ADR-152 — Timelapse de Ocupação de Pool (fonte de dados semanal candidata para a Fase 3/D4)
+- ADR-152 — Timelapse de Ocupação de Pool (citada como fonte candidata para a Fase 3/D4 no texto original; investigação mostrou que é dormente e agrega só por contrato, sem granularidade por item — não foi a fonte usada; ver nota de implementação em D4)
 - [[nep043-cr-reconciliacao]] — precedente real de `T_precificacao` diferente de zero (BDI/`T_efetivo` divergente entre camadas antes da correção `716a155e`)

@@ -165,7 +165,7 @@ def test_l2_sem_ociosidade():
     """Sem semanas ociosas dentro da janela → custo_ocioso = 0."""
     h = _h05()
     cron = _make_cron([2, 2, 2, 2])
-    *_, custo_ocioso = h._calc_custo_cron(cron, 5000.0, 2000.0, 500.0)
+    *_, custo_ocioso, _custo_1frente = h._calc_custo_cron(cron, 5000.0, 2000.0, 500.0)
     assert custo_ocioso == 0.0
 
 
@@ -176,7 +176,7 @@ def test_l2_gap_interno_gera_custo_ocioso():
     h = _h05()
     cron = _make_cron([2, 0, 2])  # gap na semana do meio
     custo_eq = 3000.0
-    *_, custo_ocioso = h._calc_custo_cron(cron, 5000.0, custo_eq, 500.0)
+    *_, custo_ocioso, _custo_1frente = h._calc_custo_cron(cron, 5000.0, custo_eq, 500.0)
     assert custo_ocioso == pytest.approx(custo_eq / SEMANAS_POR_MES, rel=1e-3)
 
 
@@ -184,7 +184,7 @@ def test_l2_semanas_apos_ultimo_ativo_nao_custam():
     """Semanas inteiramente APÓS o último ativo não geram custo de ociosidade."""
     h = _h05()
     cron = _make_cron([3, 2, 1, 0, 0])  # ramp-down + 2 semanas sem atividade
-    *_, custo_ocioso = h._calc_custo_cron(cron, 5000.0, 2000.0, 500.0)
+    *_, custo_ocioso, _custo_1frente = h._calc_custo_cron(cron, 5000.0, 2000.0, 500.0)
     assert custo_ocioso == 0.0
 
 
@@ -195,7 +195,7 @@ def test_l2_multiplos_gaps_acumulam():
     h = _h05()
     cron = _make_cron([1, 0, 1, 0, 1])  # dois gaps internos
     custo_eq = 4000.0
-    *_, custo_ocioso = h._calc_custo_cron(cron, 5000.0, custo_eq, 500.0)
+    *_, custo_ocioso, _custo_1frente = h._calc_custo_cron(cron, 5000.0, custo_eq, 500.0)
     assert custo_ocioso == pytest.approx(2 * custo_eq / SEMANAS_POR_MES, rel=1e-3)
 
 

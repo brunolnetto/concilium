@@ -554,6 +554,24 @@ def _sum_eq_weeks_and_cron_cost(periodos_lista, fixo_sem_comb: float, comb_nomin
     return custo, team_weeks
 
 
+def _sum_1frente_cost(periodos_lista, fixo_sem_comb: float, comb_nominal: float) -> float:
+    """ADR-162 D4: custo de UMA frente de referência, semana a semana — soma a taxa
+    semanal (não multiplicada por num_equipes) uma vez por semana ATIVA, em vez de
+    dividir o agregado multi-frente por um único num_equipes_paralelas constante
+    (`_resolve_permanencia_e_custo_total_ajustados`, versão anterior). Robusto a rampa
+    (num_equipes variando semana a semana) — dividir o agregado por uma constante só
+    reconstrói exatamente 1 frente quando num_equipes é constante em todas as semanas
+    ativas; com rampa, subestima a duração/custo de referência (verificado: rampa
+    1→3→1 ao longo de 7 semanas ativas subestimava a permanência em ~40%)."""
+    custo = 0.0
+    for d in periodos_lista:
+        if d.num_equipes <= 0:
+            continue
+        eff = getattr(d, "eficiencia", 1.0) or 1.0
+        custo += fixo_sem_comb + comb_nominal * eff
+    return custo
+
+
 def _calcular_permanencia_e_custo_total(cron, custo_fixo_mensal: float) -> tuple[float, float]:
     """Permanência em meses e custo total a partir da distribuição do cronograma."""
     mensal = getattr(cron, "distribuicao_mensal", None) or {}
@@ -594,15 +612,21 @@ def _custo_ocioso_eq(periodos_lista: list, custo_eq_semanal: float, ativos: int)
 
 
 def _calc_custo_cron(cron, custo_mo: float, custo_eq: float, custo_comb: float) -> tuple:
-    """Calcula custo total e permanência a partir do cronograma."""
+    """Calcula custo total e permanência a partir do cronograma.
+
+    ADR-162 D4: `custo_1frente` (semana a semana, ver `_sum_1frente_cost`) é o custo de
+    referência de UMA frente robusto a rampa — substitui `custo_total / num_equipes_paralelas`
+    em `_resolve_permanencia_e_custo_total_ajustados`.
+    """
     periodos_lista = list(cron.distribuicao_semanal.values())
     ativos = sum(1 for d in periodos_lista if d.num_equipes > 0)
     fixo_sem_comb_semanal = (custo_mo + custo_eq) / SEMANAS_POR_MES
     comb_nominal_semanal = custo_comb / SEMANAS_POR_MES
     custo_total, team_weeks = _sum_eq_weeks_and_cron_cost(periodos_lista, fixo_sem_comb_semanal, comb_nominal_semanal)
+    custo_1frente = _sum_1frente_cost(periodos_lista, fixo_sem_comb_semanal, comb_nominal_semanal)
     custo_comb_efetivo = _comb_efetivo_mensal(periodos_lista, comb_nominal_semanal, team_weeks, custo_comb)
     custo_ocioso_total = _custo_ocioso_eq(periodos_lista, custo_eq / SEMANAS_POR_MES, ativos)
     fixo_mensal = round(custo_mo + custo_eq + custo_comb_efetivo, 2)
-    return custo_total, ativos, custo_comb_efetivo, fixo_mensal, team_weeks, round(custo_ocioso_total, 2)
+    return custo_total, ativos, custo_comb_efetivo, fixo_mensal, team_weeks, round(custo_ocioso_total, 2), custo_1frente
 
 
