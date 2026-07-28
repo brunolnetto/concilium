@@ -469,6 +469,100 @@ def test_cli_approve_no_canonical(env_with_config):
     assert result.exit_code != 0
 
 
+def _approve_project_with_canonical(env_with_config, nome: str):
+    """Cria projeto, roda 01-escopo-e-eap (canônico mínimo) e retorna (project, v) — issue #123."""
+    from concilium.application.runtime import Runtime
+    from concilium.infrastructure.storage.project import ProjectStore
+
+    config_root = Path(env_with_config["config"])
+    projects_root = Path(env_with_config["projects"])
+
+    project = ProjectStore.init(projects_root, nome, "test")
+    project.new_version()
+    rt = Runtime(config_root)
+    rt.run_skill(
+        "01-escopo-e-eap",
+        project,
+        inputs={
+            "nome": nome,
+            "tipo_obra": "terraplenagem",
+            "localizacao": "Aracoiaba, CE",
+            "coordenadas": {"lat": -4.36, "lng": -38.74},
+            "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
+            "data_inicio": "2026-06-01",
+            "data_termino": "2026-12-31",
+            "eap": [
+                {
+                    "item_id": "eap-01",
+                    "ordem": 1,
+                    "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
+                    "descricao": "Escavação",
+                    "unidade": "m3",
+                    "quantitativo": 1000,
+                }
+            ],
+        },
+    )
+    return project, project.current_version()
+
+
+def test_cli_approve_flat_model_blocks_on_blocking_aviso(env_with_config):
+    """issue #123: gate de aprovação (VAL-PROD-04 etc.) agora também bloqueia o modelo vN flat."""
+    project, v = _approve_project_with_canonical(env_with_config, "FlatGateBlock")
+    project.log_invocation(
+        v,
+        {"skill": "04-cronograma", "validacoes": [{"codigo": "VAL-PROD-04", "status": "AVISO"}]},
+    )
+
+    result = runner.invoke(app, ["project", "approve", "FlatGateBlock", "--as", "eng_senior"])
+    assert result.exit_code != 0
+    assert "VAL-PROD-04" in result.output
+
+
+def test_cli_approve_flat_model_erro_blocks_even_with_justificativa(env_with_config):
+    """ERRO pendente nunca tem escape, nem com --justificativa-override (issue #123)."""
+    project, v = _approve_project_with_canonical(env_with_config, "FlatGateErro")
+    project.log_invocation(
+        v,
+        {"skill": "04-cronograma", "validacoes": [{"codigo": "ERR-XPTO", "status": "ERRO"}]},
+    )
+
+    result = runner.invoke(
+        app,
+        ["project", "approve", "FlatGateErro", "--as", "eng_senior", "--justificativa-override", "aceito o risco"],
+    )
+    assert result.exit_code != 0
+    assert "ERRO" in result.output
+
+
+def test_cli_approve_flat_model_justificativa_override_allows(env_with_config):
+    """--justificativa-override permite aprovar com AVISO bloqueante e fica registrada no log (issue #123)."""
+    project, v = _approve_project_with_canonical(env_with_config, "FlatGateOverride")
+    project.log_invocation(
+        v,
+        {"skill": "04-cronograma", "validacoes": [{"codigo": "VAL-PROD-04", "status": "AVISO"}]},
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "project",
+            "approve",
+            "FlatGateOverride",
+            "--as",
+            "eng_senior",
+            "--justificativa-override",
+            "produtividade calibrada manualmente, risco aceito",
+        ],
+    )
+    assert result.exit_code == 0
+
+    invocacoes = [
+        json.loads(line) for line in (project.root / v / "invocations.log").read_text(encoding="utf-8").splitlines()
+    ]
+    assert any(entry.get("justificativa_override") for entry in invocacoes)
+
+
 # ── adapter run command ───────────────────────────────────────────────────────
 
 

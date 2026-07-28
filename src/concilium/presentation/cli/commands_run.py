@@ -131,8 +131,30 @@ def approve(
         "--allow-pending-overrides",
         help="Permite aprovar mesmo com overrides de catálogo pendentes de curadoria.",
     ),
+    justificativa_override: str | None = typer.Option(
+        None,
+        "--justificativa-override",
+        help=(
+            "Justificativa para aprovar mesmo com AVISO bloqueante de inconsistência "
+            "venda×operacional (VAL-COB-NEG/VAL-PROD-04/VAL-PROD-VS-PU/"
+            "VAL-GAP-CATALOGO-OPERACIONAL/VAL-STALE-UPSTREAM). Registrada no invocations.log."
+        ),
+    ),
 ) -> None:
-    """Aprova versÃ£o: atualiza status no canÃ´nico e torna arquivos read-only (chmod 444)."""
+    """Aprova versÃ£o: atualiza status no canÃ´nico e torna arquivos read-only (chmod 444).
+
+    Um gate bloqueia a aprovação (`assert_pode_aprovar_plano`, issue #123 — paridade com
+    `aprovar_versao` do modelo escopo/plano) quando a última execução de alguma skill nesta
+    versão sinaliza inconsistência não resolvida entre preço de venda e custo operacional, ou
+    qualquer ERRO pendente (sem escape). Para aprovar mesmo com um AVISO bloqueante, preencha
+    --justificativa-override.
+    """
+    from concilium.application.orchestrators.plano_approval_gate import (
+        PlanoApprovalGateError,
+        assert_pode_aprovar_plano,
+    )
+    from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
     nome, ver = parse_project_version(arg)
     project = resolve_project(nome)
     v = ver or project.current_version()
@@ -157,6 +179,12 @@ def approve(
         raise typer.Exit(1)
 
     try:
+        assert_pode_aprovar_plano(FlatVersionStore(project, v), justificativa_override)
+    except PlanoApprovalGateError as exc:
+        rprint(f"[yellow]{exc}[/yellow]")
+        raise typer.Exit(1) from None
+
+    try:
         novo_projeto = canonical.projeto.with_status("APROVADO")
     except ValueError as exc:
         rprint(f"[red]{exc}[/red]")
@@ -164,19 +192,21 @@ def approve(
     canonical_aprovado = canonical.model_copy(update={"projeto": novo_projeto})
     project.save_canonical(canonical_aprovado, v)
 
-    project.log_invocation(
-        v,
-        {
-            "ts": datetime.now(UTC).isoformat(),
-            "acao": "APPROVE",
-            "papel": papel,
-            "motivo": motivo,
-        },
-    )
+    log_entry = {
+        "ts": datetime.now(UTC).isoformat(),
+        "acao": "APPROVE",
+        "papel": papel,
+        "motivo": motivo,
+    }
+    if justificativa_override and justificativa_override.strip():
+        log_entry["justificativa_override"] = justificativa_override.strip()
+    project.log_invocation(v, log_entry)
 
     project.approve(v)
 
     rprint(f"[green][OK][/green] VersÃ£o [bold]{v}[/bold] aprovada por [bold]{papel}[/bold].")
     if motivo:
         rprint(f"  Motivo: {motivo}")
+    if justificativa_override:
+        rprint(f"  Justificativa de override: {justificativa_override}")
     rprint("  Arquivos agora read-only (chmod 444).")
