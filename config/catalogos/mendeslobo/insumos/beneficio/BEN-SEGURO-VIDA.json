@@ -1,0 +1,12 @@
+{
+  "codigo": "BEN-SEGURO-VIDA",
+  "tipo": "BENEFICIO",
+  "descricao": "Seguro de vida",
+  "unidade": "mes",
+  "preco_unitario": 35.0,
+  "categoria": "BENEFICIOS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "periodicidade_beneficio": "mensal"
+  }
+}

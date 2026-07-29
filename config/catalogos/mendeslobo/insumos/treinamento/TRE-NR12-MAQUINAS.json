@@ -1,0 +1,12 @@
+{
+  "codigo": "TRE-NR12-MAQUINAS",
+  "tipo": "TREINAMENTO",
+  "descricao": "NR-12 (Máquinas e Equipamentos)",
+  "unidade": "unid",
+  "preco_unitario": 300.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360
+  }
+}

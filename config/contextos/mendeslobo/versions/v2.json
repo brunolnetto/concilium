@@ -1,0 +1,601 @@
+{
+  "version": "v2",
+  "created_at": "2026-07-29T14:23:50.851980+00:00",
+  "created_by": "adr165-carga-inicial",
+  "motivo": "rascunho: ADR-165: carga inicial de EPI/Treinamento/Exame/Benefício",
+  "id": "mendeslobo",
+  "perfil_id": "mendeslobo",
+  "jurisdicao_id": "BR",
+  "referencia_id": "SICRO_2024_CE",
+  "catalogo_id": "mendeslobo",
+  "tema_id": "mendeslobo-corporativo",
+  "_rascunho": true,
+  "_rascunho_descricao": "ADR-165: carga inicial de EPI/Treinamento/Exame/Benefício",
+  "_deltas": [
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-PROTETOR-SOLAR",
+        "tipo": "MATERIAL",
+        "descricao": "Protetor solar FPS 60",
+        "unidade": "unid",
+        "preco_unitario": 60.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 60
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-ABAFADOR-CONCHA",
+        "tipo": "MATERIAL",
+        "descricao": "Abafador de ruídos tipo concha",
+        "unidade": "unid",
+        "preco_unitario": 90.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-BOTA-COURO",
+        "tipo": "MATERIAL",
+        "descricao": "Bota de couro com biqueira de aço",
+        "unidade": "unid",
+        "preco_unitario": 100.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 180
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-UNIFORME",
+        "tipo": "MATERIAL",
+        "descricao": "Uniforme",
+        "unidade": "unid",
+        "preco_unitario": 255.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 180
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-PERNEIRA",
+        "tipo": "MATERIAL",
+        "descricao": "Perneira",
+        "unidade": "unid",
+        "preco_unitario": 100.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 180
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-CAPACETE-3M",
+        "tipo": "MATERIAL",
+        "descricao": "Capacete 3M",
+        "unidade": "unid",
+        "preco_unitario": 170.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-ROUPA-MOTOSSERRA",
+        "tipo": "MATERIAL",
+        "descricao": "Roupa operador de motosserra",
+        "unidade": "unid",
+        "preco_unitario": 620.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-OCULOS-SEGURANCA",
+        "tipo": "MATERIAL",
+        "descricao": "Óculos de segurança",
+        "unidade": "unid",
+        "preco_unitario": 40.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 180
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-LUVA-VAQUETA",
+        "tipo": "MATERIAL",
+        "descricao": "Luvas de vaqueta",
+        "unidade": "unid",
+        "preco_unitario": 50.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 120
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EPI-PROTETOR-FACIAL",
+        "tipo": "MATERIAL",
+        "descricao": "Protetor facial",
+        "unidade": "unid",
+        "preco_unitario": 110.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-NR22-MINERACAO",
+        "tipo": "TREINAMENTO",
+        "descricao": "NR-22 (Mineração)",
+        "unidade": "unid",
+        "preco_unitario": 315.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-PLANO-TRANSITO",
+        "tipo": "TREINAMENTO",
+        "descricao": "Plano de Trânsito Integrado",
+        "unidade": "unid",
+        "preco_unitario": 300.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-OP-MOTOSSERRA",
+        "tipo": "TREINAMENTO",
+        "descricao": "Operador de Motosserra",
+        "unidade": "unid",
+        "preco_unitario": 450.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-OP-MOTOPODA",
+        "tipo": "TREINAMENTO",
+        "descricao": "Operador de Motopoda",
+        "unidade": "unid",
+        "preco_unitario": 400.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-FERRAMENTAS-MANUAIS",
+        "tipo": "TREINAMENTO",
+        "descricao": "Ferramentas Manuais",
+        "unidade": "unid",
+        "preco_unitario": 175.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-PRODUTOS-QUIMICOS",
+        "tipo": "TREINAMENTO",
+        "descricao": "Produtos Químicos",
+        "unidade": "unid",
+        "preco_unitario": 315.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-NR12-MAQUINAS",
+        "tipo": "TREINAMENTO",
+        "descricao": "NR-12 (Máquinas e Equipamentos)",
+        "unidade": "unid",
+        "preco_unitario": 300.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-NR6-USO-EPI",
+        "tipo": "TREINAMENTO",
+        "descricao": "NR-6 (Uso de EPIs)",
+        "unidade": "unid",
+        "preco_unitario": 150.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "TRE-NR35-ALTURA",
+        "tipo": "TREINAMENTO",
+        "descricao": "NR-35 (Trabalho em Altura)",
+        "unidade": "unid",
+        "preco_unitario": 350.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-ASO-ADMISSIONAL",
+        "tipo": "EXAME",
+        "descricao": "ASO — Admissional e Demissional",
+        "unidade": "unid",
+        "preco_unitario": 400.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-CLINICO",
+        "tipo": "EXAME",
+        "descricao": "Exame Clínico",
+        "unidade": "unid",
+        "preco_unitario": 46.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-AUDIOMETRIA",
+        "tipo": "EXAME",
+        "descricao": "Audiometria",
+        "unidade": "unid",
+        "preco_unitario": 35.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-LIPIDOGRAMA",
+        "tipo": "EXAME",
+        "descricao": "Lipidograma",
+        "unidade": "unid",
+        "preco_unitario": 19.5,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-HEMOGRAMA",
+        "tipo": "EXAME",
+        "descricao": "Hemograma Completo",
+        "unidade": "unid",
+        "preco_unitario": 19.5,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-URINA",
+        "tipo": "EXAME",
+        "descricao": "Urina",
+        "unidade": "unid",
+        "preco_unitario": 15.6,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-GLICEMIA",
+        "tipo": "EXAME",
+        "descricao": "Glicemia",
+        "unidade": "unid",
+        "preco_unitario": 15.6,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-ELETROCARDIOGRAMA",
+        "tipo": "EXAME",
+        "descricao": "Eletrocardiograma",
+        "unidade": "unid",
+        "preco_unitario": 65.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "EXA-TIPAGEM-SANGUINEA",
+        "tipo": "EXAME",
+        "descricao": "Tipagem Sanguínea",
+        "unidade": "unid",
+        "preco_unitario": 65.0,
+        "categoria": "QSMS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "vida_util_dias": 360
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-CAFE-MANHA",
+        "tipo": "BENEFICIO",
+        "descricao": "Café da manhã",
+        "unidade": "unid",
+        "preco_unitario": 9.0,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "diaria"
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-ALMOCO",
+        "tipo": "BENEFICIO",
+        "descricao": "Almoço",
+        "unidade": "unid",
+        "preco_unitario": 16.5,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "diaria"
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-JANTAR",
+        "tipo": "BENEFICIO",
+        "descricao": "Jantar (opcional para PJ)",
+        "unidade": "unid",
+        "preco_unitario": 16.5,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "diaria",
+          "aplicavel_tipo_contrato": [
+            "CLT"
+          ]
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-VALE-ALIMENTACAO",
+        "tipo": "BENEFICIO",
+        "descricao": "Vale-alimentação",
+        "unidade": "mes",
+        "preco_unitario": 1260.0,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "mensal"
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-CESTA-BASICA",
+        "tipo": "BENEFICIO",
+        "descricao": "Cesta básica",
+        "unidade": "mes",
+        "preco_unitario": 462.25,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "mensal"
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-SEGURO-VIDA",
+        "tipo": "BENEFICIO",
+        "descricao": "Seguro de vida",
+        "unidade": "mes",
+        "preco_unitario": 35.0,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "mensal"
+        }
+      },
+      "autor": "adr165-carga-inicial",
+      "timestamp": "2026-07-29T14:23:50.855760+00:00"
+    }
+  ],
+  "_revisado": true,
+  "_revisado_por": "adr165-carga-inicial",
+  "_aprovado": true,
+  "_aprovado_por": "adr165-carga-inicial-aprovador"
+}

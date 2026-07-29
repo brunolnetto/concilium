@@ -1,0 +1,12 @@
+{
+  "codigo": "EXA-ASO-ADMISSIONAL",
+  "tipo": "EXAME",
+  "descricao": "ASO — Admissional e Demissional",
+  "unidade": "unid",
+  "preco_unitario": 400.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360
+  }
+}

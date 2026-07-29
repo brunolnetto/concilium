@@ -1,0 +1,12 @@
+{
+  "codigo": "TRE-FERRAMENTAS-MANUAIS",
+  "tipo": "TREINAMENTO",
+  "descricao": "Ferramentas Manuais",
+  "unidade": "unid",
+  "preco_unitario": 175.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360
+  }
+}

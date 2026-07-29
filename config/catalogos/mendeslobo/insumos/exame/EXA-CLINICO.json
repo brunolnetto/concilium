@@ -1,0 +1,12 @@
+{
+  "codigo": "EXA-CLINICO",
+  "tipo": "EXAME",
+  "descricao": "Exame Clínico",
+  "unidade": "unid",
+  "preco_unitario": 46.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360
+  }
+}

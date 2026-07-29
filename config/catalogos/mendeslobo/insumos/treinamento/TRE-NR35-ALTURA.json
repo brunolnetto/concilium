@@ -1,0 +1,12 @@
+{
+  "codigo": "TRE-NR35-ALTURA",
+  "tipo": "TREINAMENTO",
+  "descricao": "NR-35 (Trabalho em Altura)",
+  "unidade": "unid",
+  "preco_unitario": 350.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360
+  }
+}
