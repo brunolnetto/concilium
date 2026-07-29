@@ -1,6 +1,6 @@
 # ADR-167 — ADM/TOP com Função Real + Paridade de Catálogo (mendeslobo × rfi-r02)
 
-**Status:** ✅ Implementado (fases ADM/TOP) — LAB/Alojamento explicitamente adiados
+**Status:** ✅ Implementado (fases ADM/TOP) — LAB explicitamente adiado; Alojamento implementado na **ADR-168**
 **Data:** 2026-07-29
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-163/164 (CRUD/Batch de Insumo), ADR-165 (Catálogo de Treinamentos, Exames, EPIs e Benefícios de MO), ADR-166 (Wiring de Indiretos + Mapeamento Função→Item)
@@ -39,7 +39,7 @@ D4. `_composicao_default_por_categoria("ADM"/"TOP")` ganha `funcao_id` real (`P0
 
 D5. `config/schemas/catalog/common.schema.json#/$defs/tipoInsumo` estendido com `TREINAMENTO`/`EXAME`/`BENEFICIO` (achado — nunca foi atualizado pela ADR-165); `insumo.schema.json` ganha `$defs` `atributosTreinamento`/`atributosExame`/`atributosBeneficio` + branches `if/then` correspondentes, e `atributosMaterial` ganha `vida_util_dias`/`funcoes_aplicaveis` (para EPI).
 
-D6. **Fora de escopo desta ADR, por decisão explícita do usuário** ("depois corrigir LAB e alojamento respectivamente"): a verba "Alojamento" (ADM, R$3.500/mês) e a verba LAB ("Ensaios laboratoriais", R$4.000/mês) continuam hardcoded — nenhum dos dois tem hoje um tipo de insumo catalogável equivalente (não são cargo de mão de obra); ficam para uma ADR/fase seguinte que provavelmente exige modelar um novo conceito de insumo, no mesmo espírito da ADR-165.
+D6. **Fora de escopo desta ADR, por decisão explícita do usuário** ("depois corrigir LAB e alojamento respectivamente"): a verba "Alojamento" (ADM, R$3.500/mês) e a verba LAB ("Ensaios laboratoriais", R$4.000/mês) continuam hardcoded — nenhum dos dois tem hoje um tipo de insumo catalogável equivalente (não são cargo de mão de obra). **Atualização**: "Alojamento" foi implementado na ADR-168 (bottom-up por número de casas); LAB permanece adiado — sem modelo de negócio fornecido ainda.
 
 ## Alternativas Rejeitadas
 
