@@ -46,14 +46,23 @@ def _meses_entre(inicio, fim) -> int:
 
 
 def _composicao_default_por_categoria(categoria: str) -> dict:
-    """Composição default mínima por categoria (heurística Fase 1A)."""
+    """Composição default mínima por categoria (heurística Fase 1A).
+
+    ADR-167: ADM ("Coordenador" -> `P0092`) e TOP ("Topógrafo" -> `P0057`) ganham
+    `funcao_id` real — `_bcfd_enrich_mo_itens` (chamada por `_build_categoria_from_dict`
+    para qualquer comp_dict, inclusive este fallback) preenche `custo_mensal` com o
+    preço real do catálogo quando o código existe no repo. Sem `custo_fixo_mensal`
+    fixo no componente `mao_de_obra` (removido de propósito): `_parse_component`
+    recalcula a partir dos itens, usando `custo_mensal` (enriquecido) se presente ou
+    `valor_mensal` (o número antigo, como fallback) senão — mesma degradação segura
+    dos bottom-up de QSMS/MOB (ADR-166).
+    """
     if categoria == "ADM":
         return {
             "mao_de_obra": {
                 "nome": "MÃO DE OBRA ADM",
-                "custo_fixo_mensal": 12500.0,
                 "itens": [
-                    {"funcao": "Coordenador", "quantidade": 1, "custo_mensal": 12500.0},
+                    {"funcao_id": "P0092", "descricao": "Coordenador", "quantidade": 1, "valor_mensal": 12500.0},
                 ],
             },
             "verbas": {
@@ -68,9 +77,8 @@ def _composicao_default_por_categoria(categoria: str) -> dict:
         return {
             "mao_de_obra": {
                 "nome": "MÃO DE OBRA TOP",
-                "custo_fixo_mensal": 9216.0,
                 "itens": [
-                    {"funcao": "Topógrafo", "quantidade": 1, "custo_mensal": 9216.0},
+                    {"funcao_id": "P0057", "descricao": "Topógrafo", "quantidade": 1, "valor_mensal": 9216.0},
                 ],
             },
         }

@@ -567,6 +567,88 @@ class TestResolveCategoriaQsmsBottomUp:
         assert result.custo_fixo_mensal == 3000.0
 
 
+class TestResolveCategoriaAdmTopFuncaoIdReal:
+    """ADR-167: itens ADM ("Coordenador") e TOP ("Topógrafo") do fallback default
+    ganham funcao_id real (P0092/P0057) — _bcfd_enrich_mo_itens passa a puxar o
+    preço real do catálogo quando disponível, com o valor hardcoded antigo como
+    fallback (`valor_mensal`) se o catálogo não tiver o código."""
+
+    def _kwargs(self, codigo, repo, catalogo):
+        return dict(
+            codigo=codigo,
+            cat={},
+            composicoes_input={},
+            categorias_config_raw=[],
+            n_semanas=12,
+            repo=repo,
+            data_base=None,
+            overrides=None,
+            jurisdicao_id=None,
+            canonical_in=None,
+            catalogo=catalogo,
+        )
+
+    def test_top_sem_catalogo_usa_lump_default(self):
+        result = INDIR._resolve_categoria_comp(**self._kwargs("TOP", None, None))
+        assert result.custo_fixo_mensal == 9216.0
+
+    def test_top_com_catalogo_usa_preco_real_p0057(self):
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalogo = {
+            "insumos": [
+                {
+                    "codigo": "P0057",
+                    "tipo": "MAO_OBRA",
+                    "descricao": "Topógrafo",
+                    "unidade": "mes",
+                    "preco_unitario": 18000.0,
+                    "fonte_preco": "negociado",
+                    "atributos_especificos": {"categoria_sindical": "pj_CE"},
+                }
+            ]
+        }
+        repo = RepositorioInsumo(catalogo)
+        result = INDIR._resolve_categoria_comp(**self._kwargs("TOP", repo, catalogo))
+        assert result.custo_fixo_mensal == 18000.0
+        assert result.custo_fixo_mensal != 9216.0
+
+    def test_adm_sem_catalogo_usa_lump_default(self):
+        result = INDIR._resolve_categoria_comp(**self._kwargs("ADM", None, None))
+        assert result.custo_fixo_mensal == pytest.approx(12500.0 + 3500.0)
+
+    def test_adm_com_catalogo_usa_preco_real_p0092_mas_preserva_alojamento(self):
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalogo = {
+            "insumos": [
+                {
+                    "codigo": "P0092",
+                    "tipo": "MAO_OBRA",
+                    "descricao": "Coordenador",
+                    "unidade": "mes",
+                    "preco_unitario": 12500.0,
+                    "fonte_preco": "negociado",
+                    "atributos_especificos": {"categoria_sindical": "pj_CE"},
+                }
+            ]
+        }
+        repo = RepositorioInsumo(catalogo)
+        result = INDIR._resolve_categoria_comp(**self._kwargs("ADM", repo, catalogo))
+        # Coordenador (real, igual ao lump neste caso) + Alojamento (verba, ainda hardcoded)
+        assert result.custo_fixo_mensal == pytest.approx(12500.0 + 3500.0)
+        assert result.verbas.itens[0]["descricao"] == "Alojamento"
+
+    def test_top_com_catalogo_sem_p0057_mantem_fallback(self):
+        """Catálogo real mas sem o código específico — degradação segura pro lump."""
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        catalogo = {"insumos": []}
+        repo = RepositorioInsumo(catalogo)
+        result = INDIR._resolve_categoria_comp(**self._kwargs("TOP", repo, catalogo))
+        assert result.custo_fixo_mensal == 9216.0
+
+
 # ===========================================================================
 
 
