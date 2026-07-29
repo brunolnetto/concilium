@@ -688,6 +688,32 @@ class TestResolveCategoriaAdmAlojamentoBottomUp:
         # capacidade 4/casa -> 1 casa x 5000
         assert result.custo_fixo_mensal == pytest.approx(12500.0 + 5000.0)
 
+    def test_adm_com_ben_alojamento_no_catalogo(self):
+        """ADR-170: BEN-ALOJAMENTO no catálogo alimenta a capacidade/valor,
+        sem precisar de override de perfil."""
+        catalogo = {
+            "insumos": [
+                {
+                    "codigo": "BEN-ALOJAMENTO",
+                    "tipo": "BENEFICIO",
+                    "preco_unitario": 4500.0,
+                    "status": "ativo",
+                    "atributos_especificos": {
+                        "periodicidade_beneficio": "mensal",
+                        "quartos_por_casa": 5,
+                        "pessoas_por_quarto": 1,
+                    },
+                }
+            ]
+        }
+        result = INDIR._resolve_categoria_comp(
+            codigo="ADM", cat={}, composicoes_input={}, categorias_config_raw=[], n_semanas=12,
+            repo=None, data_base=None, overrides=None, jurisdicao_id=None,
+            canonical_in=self._canonical(5), catalogo=catalogo,
+        )
+        # capacidade do catálogo: 5/casa -> 1 casa x 4500 (não 4000 hardcoded)
+        assert result.custo_fixo_mensal == pytest.approx(12500.0 + 4500.0)
+
 
 class TestResolveCategoriaLabCondicional:
     """ADR-169: LAB só cobra a verba quando o projeto tem CPU de TERRAPLENAGEM/

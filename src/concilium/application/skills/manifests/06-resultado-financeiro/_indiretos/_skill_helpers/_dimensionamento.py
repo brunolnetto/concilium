@@ -104,11 +104,34 @@ def _categorias_cpu_do_projeto(canonical_in: Any, catalogo: dict | None) -> set[
 _CATEGORIAS_CPU_COM_LAB = {"TERRAPLENAGEM", "PAVIMENTACAO"}
 
 
+def _alojamento_config_do_catalogo(catalogo: dict | None) -> dict | None:
+    """ADR-170: lê `BEN-ALOJAMENTO` (tipo BENEFICIO) do catálogo e retorna a
+    config equivalente a `alojamento_config` (quartos_por_casa/pessoas_por_quarto/
+    valor_aluguel_mensal). Retorna `None` se o catálogo não tiver o insumo (ou
+    estiver descontinuado) — o chamador cai então para o hardcoded (degradação
+    segura, mesmo padrão do restante desta série de ADRs)."""
+    if not catalogo:
+        return None
+    for ins in catalogo.get("insumos", []):
+        if ins.get("codigo") != "BEN-ALOJAMENTO" or ins.get("tipo") != "BENEFICIO":
+            continue
+        if ins.get("status") == "descontinuado":
+            continue
+        atributos = ins.get("atributos_especificos") or {}
+        return {
+            "quartos_por_casa": atributos.get("quartos_por_casa", 3),
+            "pessoas_por_quarto": atributos.get("pessoas_por_quarto", 2),
+            "valor_aluguel_mensal": ins.get("preco_unitario", 4000.0),
+        }
+    return None
+
+
 def _composicao_default_por_categoria(
     categoria: str,
     equipes_diretas: list | None = None,
     alojamento_config: dict | None = None,
     cpu_categorias_presentes: set[str] | None = None,
+    catalogo: dict | None = None,
 ) -> dict:
     """Composição default mínima por categoria (heurística Fase 1A).
 
@@ -130,9 +153,17 @@ def _composicao_default_por_categoria(
     (categorias do projeto desconhecidas) preserva o comportamento antigo
     (sempre cobra) — só zera quando se sabe positivamente que o projeto não
     tem nenhuma das duas categorias.
+
+    ADR-170: Alojamento é conceitualmente um BENEFICIO (mesma categoria de
+    café/almoço/vale-alimentação, ADR-165) — só que compartilhado (uma casa
+    serve várias pessoas). O custo continua na categoria ADM (decisão do
+    usuário — não move para o bottom-up de benefícios do MOB), mas a
+    capacidade/valor passam a vir do insumo `BEN-ALOJAMENTO` quando presente
+    no catálogo. Prioridade: `alojamento_config` (override de perfil) >
+    `BEN-ALOJAMENTO` (catálogo) > hardcoded (3 quartos, 2 pessoas, R$4.000).
     """
     if categoria == "ADM":
-        cfg = alojamento_config or {}
+        cfg = {**(_alojamento_config_do_catalogo(catalogo) or {}), **(alojamento_config or {})}
         verbas = None
         if equipes_diretas:
             verbas = _custo_alojamento_bottom_up(
@@ -363,6 +394,7 @@ def _dimensionar_automatico(codigo: str, regra: dict, canonical: CanonicalModel,
         canonical.equipes_diretas,
         regra.get("alojamento"),
         _categorias_cpu_do_projeto(canonical, catalogo),
+        catalogo,
     )
 
 

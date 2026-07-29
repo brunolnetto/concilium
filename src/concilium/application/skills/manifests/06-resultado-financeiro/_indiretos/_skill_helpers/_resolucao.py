@@ -68,6 +68,7 @@ def _resolve_categoria_comp(
         canonical_in.equipes_diretas if canonical_in is not None else None,
         cat.get("alojamento"),
         _categorias_cpu_do_projeto(canonical_in, catalogo),
+        catalogo,
     )
     return _build_categoria_from_dict(
         codigo, comp_default, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
