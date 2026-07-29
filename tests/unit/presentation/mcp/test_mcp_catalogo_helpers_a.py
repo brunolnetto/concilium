@@ -748,6 +748,145 @@ class TestImplAtualizarPrecoInsumo:
         assert "erro" in result
         assert "terminal" in result["erro"]
 
+    # ── ADR-163 D4: novo_valor_locacao_mensal opcional, mesmo caminho gated por rascunho ──
+
+    def test_sem_preco_e_sem_locacao_retorna_erro_validacao(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        self._setup(monkeypatch, rt, tmp_path, projects_dir)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", None, rascunho_id="v1")
+        assert "erro" in result
+        assert "novo_preco" in result["erro"] or "novo_valor_locacao_mensal" in result["erro"]
+
+    def test_so_locacao_mensal_grava_delta_com_preco_none(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Cotação de mercado pode trazer só o custo de manutenção mensal (sem
+        alterar o preço/hora) — o delta deve refletir isso sem exigir novo_preco."""
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 100.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_preco_insumo(
+            "ctx1", "INS-001", None, rascunho_id="v1", novo_valor_locacao_mensal=22000.0
+        )
+        assert result["status"] == "RASCUNHO"
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["novo_preco"] is None
+        assert delta["novo_valor_locacao_mensal"] == 22000.0
+
+        # insumo mestre permanece intocado até o merge
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["preco_unitario"] == 100.0
+
+    def test_preco_e_locacao_no_mesmo_delta(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 100.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        _impl_atualizar_preco_insumo(
+            "ctx1", "INS-001", 120.0, rascunho_id="v1", novo_valor_locacao_mensal=24000.0
+        )
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["novo_preco"] == 120.0
+        assert delta["novo_valor_locacao_mensal"] == 24000.0
+
+    def test_delta_shape_preserved_sem_locacao(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Regressão: chamada só-com-preço não ganha a chave novo_valor_locacao_mensal —
+        preserva o shape exato já coberto por test_master_no_jurisdicao_records_delta_in_rascunho."""
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 5.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        _impl_atualizar_preco_insumo("ctx1", "INS-001", 42.0, rascunho_id="v1")
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert "novo_valor_locacao_mensal" not in delta
+
+
+class TestApplyPrecoInsumoDelta:
+    """ADR-163 D4: aplicação do delta de valor_locacao_mensal no merge (aprovar_merge_catalogo)."""
+
+    def test_aplica_valor_locacao_mensal_no_insumo_master(self, tmp_path: Path) -> None:
+        from datetime import date
+
+        from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import _apply_preco_insumo_delta
+
+        catalog_root = tmp_path / "cat1"
+        insumos_dir = catalog_root / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        insumo_file = insumos_dir / "EQ-001.json"
+        insumo_file.write_text(
+            json.dumps({"codigo": "EQ-001", "preco_unitario": 100.0, "atributos_especificos": {}}),
+            encoding="utf-8",
+        )
+
+        _apply_preco_insumo_delta(
+            catalog_root,
+            "EQ-001",
+            None,
+            None,
+            None,
+            "mgr-1",
+            date(2026, 7, 28),
+            novo_valor_locacao_mensal=22000.0,
+        )
+
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["atributos_especificos"]["valor_locacao_mensal"] == 22000.0
+        # preço não deve mudar quando novo_preco é None
+        assert data["preco_unitario"] == 100.0
+
+    def test_aplica_preco_e_locacao_juntos(self, tmp_path: Path) -> None:
+        from datetime import date
+
+        from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import _apply_preco_insumo_delta
+
+        catalog_root = tmp_path / "cat1"
+        insumos_dir = catalog_root / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        insumo_file = insumos_dir / "EQ-002.json"
+        insumo_file.write_text(
+            json.dumps({"codigo": "EQ-002", "preco_unitario": 100.0, "atributos_especificos": {}}),
+            encoding="utf-8",
+        )
+
+        _apply_preco_insumo_delta(
+            catalog_root,
+            "EQ-002",
+            150.0,
+            None,
+            "revisão de mercado",
+            "mgr-1",
+            date(2026, 7, 28),
+            novo_valor_locacao_mensal=30000.0,
+        )
+
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["preco_unitario"] == 150.0
+        assert data["atributos_especificos"]["valor_locacao_mensal"] == 30000.0
+
+
 
 # ---------------------------------------------------------------------------
 # _impl_consultar_preco_insumo_temporal

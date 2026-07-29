@@ -327,40 +327,55 @@ def _append_delta_to_rascunho(
 def _apply_preco_insumo_delta(
     catalog_root: Path,
     insumo_id: str,
-    novo_preco: float,
+    novo_preco: float | None,
     jurisdicao_id: str | None,
     nota: str | None,
     autor: str,
     data_vigencia: date,
+    novo_valor_locacao_mensal: float | None = None,
 ) -> None:
-    """Aplica um delta de preço ao catálogo mestre no momento do merge (ADR-145 D2/D4).
+    """Aplica um delta de preço e/ou locação mensal ao catálogo mestre no momento
+    do merge (ADR-145 D2/D4; `novo_valor_locacao_mensal` — ADR-163 D4).
 
     Preço base: via RepositorioInsumo.atualizar_preco() — SCD Type 2 real (ADR-041),
     com `nota` gravada no próprio registro histórico (append-only).
     Preço regional: `regionalizacao[jurisdicao_id]` ganha um histórico append-only
     próprio, análogo ao SCD2 do preço base (ADR-145 D4).
+    `novo_valor_locacao_mensal` (só EQUIPAMENTO) grava direto em
+    `atributos_especificos.valor_locacao_mensal` — mesmo padrão já usado pela
+    rotina de cura em lote (`cure_plausibility.py`), sem histórico próprio (campo
+    sem leitor de série temporal hoje, ao contrário de `historico_precos`).
+    `novo_preco` é opcional: uma cotação de mercado pode trazer só a locação
+    mensal, sem alterar o preço/hora.
     """
     from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-    insumo_file = validate_and_resolve_insumo_file(catalog_root, insumo_id, novo_preco)
+    insumo_file = validate_and_resolve_insumo_file(
+        catalog_root, insumo_id, novo_preco if novo_preco is not None else 0.0
+    )
     insumo_data = json.loads(insumo_file.read_text(encoding="utf-8"))
 
-    if jurisdicao_id:
-        regionalizacao = insumo_data.setdefault("regionalizacao", {})
-        bloco = regionalizacao.setdefault(jurisdicao_id, {})
-        historico = bloco.setdefault("historico", [])
-        historico.append(
-            {
-                "preco": novo_preco,
-                "data_inicio_vigencia": data_vigencia.isoformat(),
-                "nota": nota,
-                "autor": autor,
-            }
-        )
-        bloco["preco"] = novo_preco
-    else:
-        repo = RepositorioInsumo({"insumos": [insumo_data]})
-        repo.atualizar_preco(insumo_id, novo_preco, data_vigencia, fonte=autor, nota=nota)
+    if novo_preco is not None:
+        if jurisdicao_id:
+            regionalizacao = insumo_data.setdefault("regionalizacao", {})
+            bloco = regionalizacao.setdefault(jurisdicao_id, {})
+            historico = bloco.setdefault("historico", [])
+            historico.append(
+                {
+                    "preco": novo_preco,
+                    "data_inicio_vigencia": data_vigencia.isoformat(),
+                    "nota": nota,
+                    "autor": autor,
+                }
+            )
+            bloco["preco"] = novo_preco
+        else:
+            repo = RepositorioInsumo({"insumos": [insumo_data]})
+            repo.atualizar_preco(insumo_id, novo_preco, data_vigencia, fonte=autor, nota=nota)
+
+    if novo_valor_locacao_mensal is not None:
+        attrs = insumo_data.setdefault("atributos_especificos", {})
+        attrs["valor_locacao_mensal"] = novo_valor_locacao_mensal
 
     insumo_file.write_text(json.dumps(insumo_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -393,13 +408,14 @@ def _apply_cpu_override_delta(catalog_root: Path, cpu_id: str, override_data: di
 def _impl_atualizar_preco_insumo(
     contexto_id: str,
     insumo_id: str,
-    novo_preco: float,
+    novo_preco: float | None,
     rascunho_id: str | None = None,
     projeto_id: str | None = None,
     jurisdicao_id: str | None = None,
     nota: str | None = None,
+    novo_valor_locacao_mensal: float | None = None,
 ) -> dict[str, Any]:
-    """Atualiza o preço de um insumo (Base ou Regional).
+    """Atualiza o preço e/ou a locação mensal de um insumo (Base ou Regional).
 
     Se projeto_id for informado, a alteração é salva como um 'override' local do projeto,
     sem afetar o catálogo mestre corporativo (ADR-038).
@@ -411,13 +427,21 @@ def _impl_atualizar_preco_insumo(
     Args:
         contexto_id: ID do contexto (mendeslobo).
         insumo_id: Código do insumo.
-        novo_preco: O valor atualizado.
+        novo_preco: O valor de preço/hora atualizado. Opcional se
+            novo_valor_locacao_mensal for informado (ADR-163 D4) — uma cotação
+            de mercado pode trazer só o custo de locação mensal.
         rascunho_id: Obrigatório para editar o catálogo mestre. Ignorado se projeto_id
             for informado. Crie um rascunho com criar_rascunho_catalogo antes.
         projeto_id: Opcional. Se informado, salva apenas para este projeto.
         jurisdicao_id: Opcional. Região específica.
         nota: Opcional. Justificativa.
+        novo_valor_locacao_mensal: Opcional. Custo de locação mensal (só
+            EQUIPAMENTO). Pelo menos um entre novo_preco/novo_valor_locacao_mensal
+            deve ser informado.
     """
+    if novo_preco is None and novo_valor_locacao_mensal is None:
+        return {"erro": "Informe ao menos um entre novo_preco e novo_valor_locacao_mensal."}
+
     rt = _runtime()
     config_dir = _config_root()
     projects_dir = _projetos_root()
@@ -447,7 +471,7 @@ def _impl_atualizar_preco_insumo(
         validate_and_resolve_insumo_file(
             _catalog_root(config_dir, ctx.catalogo_id),
             insumo_id,
-            novo_preco,
+            novo_preco if novo_preco is not None else 0.0,
         )
     except CatalogGovernanceError as exc:
         return {"erro": str(exc)}
@@ -463,6 +487,8 @@ def _impl_atualizar_preco_insumo(
         "autor": get_current_user_id() or "system",
         "timestamp": datetime.now(UTC).isoformat(),
     }
+    if novo_valor_locacao_mensal is not None:
+        delta["novo_valor_locacao_mensal"] = novo_valor_locacao_mensal
     erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
     if erro:
         return {"erro": erro}

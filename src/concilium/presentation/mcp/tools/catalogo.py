@@ -141,7 +141,9 @@ def register(server: FastMCP) -> None:
     # ── Mutação / atualização ────────────────────────────────────────────────
 
     @server.tool(
-        description="Atualiza o preço de um insumo (ex: novo preço de diesel após cotação). "
+        description="Atualiza o preço e/ou a locação mensal de um insumo (ex: novo preço de diesel após "
+        "cotação, ou custo de manutenção mensal de um equipamento). Informe ao menos um entre novo_preco "
+        "e novo_valor_locacao_mensal (ADR-163). "
         "Para editar o catálogo mestre, informe rascunho_id (criado via criar_rascunho_catalogo) — "
         "a mudança fica pendente até aprovar_merge_catalogo (ADR-145). "
         "Use projeto_id para override de projeto em vez de alterar o master."
@@ -151,14 +153,22 @@ def register(server: FastMCP) -> None:
     def atualizar_preco_insumo(
         contexto_id: str,
         insumo_id: str,
-        novo_preco: float,
+        novo_preco: float | None = None,
         rascunho_id: str | None = None,
         projeto_id: str | None = None,
         jurisdicao_id: str | None = None,
         nota: str | None = None,
+        novo_valor_locacao_mensal: float | None = None,
     ) -> dict[str, Any]:
         return _impl_atualizar_preco_insumo(
-            contexto_id, insumo_id, novo_preco, rascunho_id, projeto_id, jurisdicao_id, nota
+            contexto_id,
+            insumo_id,
+            novo_preco,
+            rascunho_id,
+            projeto_id,
+            jurisdicao_id,
+            nota,
+            novo_valor_locacao_mensal,
         )
 
     @server.tool(
@@ -565,6 +575,7 @@ def register(server: FastMCP) -> None:
                             delta.get("nota"),
                             delta.get("autor") or actor,
                             hoje,
+                            novo_valor_locacao_mensal=delta.get("novo_valor_locacao_mensal"),
                         )
                         deltas_aplicados += 1
                     elif tipo == "variante_producao":
