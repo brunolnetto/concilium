@@ -1,6 +1,6 @@
 # ADR-168 — Alojamento (ADM) Bottom-Up por Número de Casas
 
-**Status:** ✅ Implementado
+**Status:** ✅ Implementado — capacidade/valor passaram a ter fonte de catálogo na **ADR-170** (`BEN-ALOJAMENTO`)
 **Data:** 2026-07-29
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-166 (Wiring de Indiretos — mesmo padrão de degradação segura), ADR-167 (ADM/TOP com Função Real — deferiu "Alojamento" para esta ADR)
