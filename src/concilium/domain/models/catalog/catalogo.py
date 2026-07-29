@@ -152,6 +152,10 @@ class AtributosInsumo(BaseModel):
     periodicidade_beneficio : base temporal do preco_unitario ("diaria" ou "mensal")
     aplicavel_tipo_contrato : regimes a que o benefício se aplica — None = CLT e PJ
                                (ex.: jantar com ["CLT"] exclui PJ)
+    quartos_por_casa        : ADR-170 — capacidade compartilhada (ex.: BEN-ALOJAMENTO,
+                               uma casa serve várias pessoas, não é um benefício direto por pessoa)
+    pessoas_por_quarto      : ADR-170 — usado junto de quartos_por_casa para derivar a
+                               capacidade de pessoas por unidade do benefício
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -190,6 +194,9 @@ class AtributosInsumo(BaseModel):
     # ── BENEFICIO — ADR-165 ─────────────────────────────────────────────
     periodicidade_beneficio: Literal["diaria", "mensal"] | None = None
     aplicavel_tipo_contrato: list[Literal["CLT", "PJ"]] | None = None
+    # ── BENEFICIO (capacidade compartilhada) — ADR-170 ───────────────────
+    quartos_por_casa: int | None = Field(default=None, gt=0)
+    pessoas_por_quarto: int | None = Field(default=None, gt=0)
 
 
 class Insumo(BaseModel):
@@ -244,10 +251,16 @@ class Insumo(BaseModel):
                 f"VAL-INSUMO-FUNCOES-01: funcoes_aplicaveis só é válido para insumo tipo "
                 f"MATERIAL/TREINAMENTO, recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
             )
-        if (a.periodicidade_beneficio is not None or a.aplicavel_tipo_contrato is not None) and self.tipo != "BENEFICIO":
+        if (
+            a.periodicidade_beneficio is not None
+            or a.aplicavel_tipo_contrato is not None
+            or a.quartos_por_casa is not None
+            or a.pessoas_por_quarto is not None
+        ) and self.tipo != "BENEFICIO":
             raise ValueError(
-                f"VAL-INSUMO-BENEFICIO-01: periodicidade_beneficio/aplicavel_tipo_contrato só são "
-                f"válidos para insumo tipo BENEFICIO, recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
+                f"VAL-INSUMO-BENEFICIO-01: periodicidade_beneficio/aplicavel_tipo_contrato/"
+                f"quartos_por_casa/pessoas_por_quarto só são válidos para insumo tipo BENEFICIO, "
+                f"recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
             )
         return self
 

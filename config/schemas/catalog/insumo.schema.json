@@ -165,6 +165,16 @@
           "description": "Regimes a que o benefício se aplica — null = CLT e PJ (ex.: jantar com [\"CLT\"] exclui PJ).",
           "type": ["array", "null"],
           "items": {"type": "string", "enum": ["CLT", "PJ"]}
+        },
+        "quartos_por_casa": {
+          "description": "ADR-170: capacidade compartilhada (ex.: BEN-ALOJAMENTO, uma casa serve várias pessoas).",
+          "type": ["integer", "null"],
+          "exclusiveMinimum": 0
+        },
+        "pessoas_por_quarto": {
+          "description": "ADR-170: usado junto de quartos_por_casa para derivar a capacidade de pessoas por unidade.",
+          "type": ["integer", "null"],
+          "exclusiveMinimum": 0
         }
       }
     }

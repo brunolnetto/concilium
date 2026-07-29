@@ -154,6 +154,60 @@ class TestBeneficio:
         assert AtributosInsumo().periodicidade_beneficio is None
 
 
+class TestBeneficioCapacidadeCompartilhada:
+    """ADR-170: quartos_por_casa/pessoas_por_quarto — dimensão de capacidade
+    compartilhada de um benefício (ex.: BEN-ALOJAMENTO, uma casa serve N pessoas),
+    só válida para tipo=BENEFICIO."""
+
+    def test_aceita_em_beneficio(self):
+        insumo = Insumo(
+            **_insumo_kwargs(
+                codigo="BEN-ALOJAMENTO",
+                tipo="BENEFICIO",
+                descricao="Alojamento",
+                atributos_especificos=AtributosInsumo(
+                    periodicidade_beneficio="mensal",
+                    quartos_por_casa=3,
+                    pessoas_por_quarto=2,
+                ),
+            )
+        )
+        assert insumo.atributos_especificos.quartos_por_casa == 3
+        assert insumo.atributos_especificos.pessoas_por_quarto == 2
+
+    @pytest.mark.parametrize("tipo", ["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO", "TREINAMENTO", "EXAME"])
+    def test_val_insumo_beneficio_01_quartos_por_casa_fora_de_beneficio_falha_alto(self, tipo):
+        with pytest.raises(ValidationError, match="VAL-INSUMO-BENEFICIO-01"):
+            Insumo(
+                **_insumo_kwargs(
+                    codigo=_codigo_seguro(tipo),
+                    tipo=tipo,
+                    atributos_especificos=AtributosInsumo(quartos_por_casa=3),
+                )
+            )
+
+    @pytest.mark.parametrize("tipo", ["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO", "TREINAMENTO", "EXAME"])
+    def test_val_insumo_beneficio_01_pessoas_por_quarto_fora_de_beneficio_falha_alto(self, tipo):
+        with pytest.raises(ValidationError, match="VAL-INSUMO-BENEFICIO-01"):
+            Insumo(
+                **_insumo_kwargs(
+                    codigo=_codigo_seguro(tipo),
+                    tipo=tipo,
+                    atributos_especificos=AtributosInsumo(pessoas_por_quarto=2),
+                )
+            )
+
+    def test_valores_nao_positivos_rejeitados(self):
+        with pytest.raises(ValidationError):
+            AtributosInsumo(quartos_por_casa=0)
+        with pytest.raises(ValidationError):
+            AtributosInsumo(pessoas_por_quarto=0)
+
+    def test_default_none(self):
+        assert AtributosInsumo().quartos_por_casa is None
+        assert AtributosInsumo().pessoas_por_quarto is None
+
+
 class TestRetrocompatibilidade:
     def test_insumo_mao_obra_existente_continua_valido(self):
         insumo = Insumo(
