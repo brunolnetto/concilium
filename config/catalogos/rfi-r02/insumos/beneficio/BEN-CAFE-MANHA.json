@@ -1,0 +1,12 @@
+{
+  "codigo": "BEN-CAFE-MANHA",
+  "tipo": "BENEFICIO",
+  "descricao": "Café da manhã",
+  "unidade": "unid",
+  "preco_unitario": 9.0,
+  "categoria": "BENEFICIOS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "periodicidade_beneficio": "diaria"
+  }
+}

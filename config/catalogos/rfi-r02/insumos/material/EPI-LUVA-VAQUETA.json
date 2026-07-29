@@ -1,0 +1,12 @@
+{
+  "codigo": "EPI-LUVA-VAQUETA",
+  "tipo": "MATERIAL",
+  "descricao": "Luvas de vaqueta",
+  "unidade": "unid",
+  "preco_unitario": 50.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 120
+  }
+}

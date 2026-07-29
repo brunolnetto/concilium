@@ -17,6 +17,9 @@ Uso:
 
     # Aplica de fato em config/catalogos/mendeslobo:
     python scripts/catalog/adr165_carga_inicial_rh.py --apply
+
+    # ADR-167: mesma carga no catálogo rfi-r02 (contexto_id "mendeslobo-rfi"):
+    python scripts/catalog/adr165_carga_inicial_rh.py --apply --contexto mendeslobo-rfi
 """
 
 from __future__ import annotations
@@ -33,7 +36,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-CONTEXTO_ID = "mendeslobo"
+CONTEXTO_ID_DEFAULT = "mendeslobo"
 ACTOR_CRIADOR = "adr165-carga-inicial"
 ACTOR_APROVADOR = "adr165-carga-inicial-aprovador"
 
@@ -165,7 +168,7 @@ def _register_tools(config_root: Path) -> dict[str, Any]:
     return tools
 
 
-def run(config_root: Path) -> dict[str, Any]:
+def run(config_root: Path, contexto_id: str = CONTEXTO_ID_DEFAULT) -> dict[str, Any]:
     from concilium.infrastructure.auth.permission_guard import reset_auth_context, set_auth_context, set_roles
 
     tools = _register_tools(config_root)
@@ -174,22 +177,22 @@ def run(config_root: Path) -> dict[str, Any]:
     tokens = set_auth_context(user_id=ACTOR_CRIADOR, tenant_id=None)
     try:
         rascunho_resp = tools["criar_rascunho_catalogo"](
-            contexto_id=CONTEXTO_ID,
+            contexto_id=contexto_id,
             descricao="ADR-165: carga inicial de EPI/Treinamento/Exame/Benefício",
         )
         if "rascunho_id" not in rascunho_resp:
             raise RuntimeError(f"criar_rascunho_catalogo falhou: {rascunho_resp}")
         rascunho_id = rascunho_resp["rascunho_id"]
 
-        lote_resp = tools["criar_insumos_lote"](contexto_id=CONTEXTO_ID, rascunho_id=rascunho_id, itens=ITENS)
-        tools["listar_divergencias_rascunho"](contexto_id=CONTEXTO_ID, rascunho_id=rascunho_id)
+        lote_resp = tools["criar_insumos_lote"](contexto_id=contexto_id, rascunho_id=rascunho_id, itens=ITENS)
+        tools["listar_divergencias_rascunho"](contexto_id=contexto_id, rascunho_id=rascunho_id)
     finally:
         reset_auth_context(tokens)
 
     tokens = set_auth_context(user_id=ACTOR_APROVADOR, tenant_id=None)
     try:
         merge_resp = tools["aprovar_merge_catalogo"](
-            contexto_id=CONTEXTO_ID,
+            contexto_id=contexto_id,
             rascunho_id=rascunho_id,
             justificativa="ADR-165: carga inicial de catálogo de RH (EPI/Treinamento/Exame/Benefício)",
         )
@@ -205,18 +208,23 @@ def main() -> int:
     group.add_argument(
         "--dry-run", action="store_true", help="roda contra uma cópia temporária de config/, descartada ao final"
     )
-    group.add_argument("--apply", action="store_true", help="grava de fato em config/catalogos/mendeslobo")
+    group.add_argument("--apply", action="store_true", help="grava de fato em config/catalogos/<contexto>")
+    parser.add_argument(
+        "--contexto",
+        default=CONTEXTO_ID_DEFAULT,
+        help=f"contexto_id alvo (default: {CONTEXTO_ID_DEFAULT}; ex.: mendeslobo-rfi para o catálogo rfi-r02)",
+    )
     args = parser.parse_args()
 
     if args.dry_run:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_config = Path(tmp) / "config"
             shutil.copytree(REPO_ROOT / "config", tmp_config)
-            result = run(tmp_config)
+            result = run(tmp_config, contexto_id=args.contexto)
         modo = "DRY-RUN (cópia temporária, descartada)"
     else:
-        result = run(REPO_ROOT / "config")
-        modo = "APLICADO em config/catalogos/mendeslobo"
+        result = run(REPO_ROOT / "config", contexto_id=args.contexto)
+        modo = f"APLICADO em config/catalogos/ (contexto={args.contexto})"
 
     lote = result["lote"]
     print(f"[{modo}]")

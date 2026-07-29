@@ -1,0 +1,32 @@
+{
+  "codigo": "EPI-ABAFADOR-CONCHA",
+  "tipo": "MATERIAL",
+  "descricao": "Abafador de ruídos tipo concha",
+  "unidade": "unid",
+  "preco_unitario": 90.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "P0040",
+      "P0041",
+      "P0042",
+      "P0043",
+      "P0044",
+      "P0045",
+      "P0046",
+      "P0047",
+      "P0048",
+      "P0049",
+      "P0050",
+      "P0062",
+      "P0069",
+      "P0081",
+      "P0082",
+      "P0085",
+      "P0090",
+      "P0091"
+    ]
+  }
+}

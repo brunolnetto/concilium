@@ -1,0 +1,12 @@
+{
+  "codigo": "EPI-BOTA-COURO",
+  "tipo": "MATERIAL",
+  "descricao": "Bota de couro com biqueira de aço",
+  "unidade": "unid",
+  "preco_unitario": 100.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 180
+  }
+}

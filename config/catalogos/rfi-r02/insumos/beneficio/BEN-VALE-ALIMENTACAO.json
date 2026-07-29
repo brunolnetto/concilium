@@ -1,0 +1,12 @@
+{
+  "codigo": "BEN-VALE-ALIMENTACAO",
+  "tipo": "BENEFICIO",
+  "descricao": "Vale-alimentação",
+  "unidade": "mes",
+  "preco_unitario": 1260.0,
+  "categoria": "BENEFICIOS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "periodicidade_beneficio": "mensal"
+  }
+}

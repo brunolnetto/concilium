@@ -1,0 +1,15 @@
+{
+  "codigo": "BEN-JANTAR",
+  "tipo": "BENEFICIO",
+  "descricao": "Jantar (opcional para PJ)",
+  "unidade": "unid",
+  "preco_unitario": 16.5,
+  "categoria": "BENEFICIOS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "periodicidade_beneficio": "diaria",
+    "aplicavel_tipo_contrato": [
+      "CLT"
+    ]
+  }
+}

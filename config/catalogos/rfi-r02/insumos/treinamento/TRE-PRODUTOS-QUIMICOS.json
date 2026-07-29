@@ -1,0 +1,18 @@
+{
+  "codigo": "TRE-PRODUTOS-QUIMICOS",
+  "tipo": "TREINAMENTO",
+  "descricao": "Produtos Químicos",
+  "unidade": "unid",
+  "preco_unitario": 315.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "P0009",
+      "P0030",
+      "P0041",
+      "P0053"
+    ]
+  }
+}

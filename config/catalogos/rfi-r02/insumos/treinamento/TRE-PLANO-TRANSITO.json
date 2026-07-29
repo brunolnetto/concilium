@@ -1,0 +1,22 @@
+{
+  "codigo": "TRE-PLANO-TRANSITO",
+  "tipo": "TREINAMENTO",
+  "descricao": "Plano de Trânsito Integrado",
+  "unidade": "unid",
+  "preco_unitario": 300.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "P0032",
+      "P0033",
+      "P0034",
+      "P0035",
+      "P0036",
+      "P0071",
+      "P0079",
+      "P0089"
+    ]
+  }
+}

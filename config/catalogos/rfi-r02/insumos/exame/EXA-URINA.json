@@ -1,0 +1,12 @@
+{
+  "codigo": "EXA-URINA",
+  "tipo": "EXAME",
+  "descricao": "Urina",
+  "unidade": "unid",
+  "preco_unitario": 15.6,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360
+  }
+}

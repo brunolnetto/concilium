@@ -1,0 +1,12 @@
+{
+  "codigo": "EPI-CAPACETE-3M",
+  "tipo": "MATERIAL",
+  "descricao": "Capacete 3M",
+  "unidade": "unid",
+  "preco_unitario": 170.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360
+  }
+}

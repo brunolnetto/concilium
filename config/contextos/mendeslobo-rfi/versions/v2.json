@@ -1,0 +1,46 @@
+{
+  "version": "v2",
+  "created_at": "2026-07-29T16:51:39.373047+00:00",
+  "created_by": "adr167-criar-coordenador",
+  "motivo": "rascunho: ADR-167: novo cargo Coordenador (P0092, PJ)",
+  "id": "mendeslobo-rfi",
+  "perfil_id": "rfi-r02",
+  "jurisdicao_id": "BR",
+  "referencia_id": "RFI_R02_2026",
+  "catalogo_id": "rfi-r02",
+  "tema_id": "default",
+  "$comment": "MendesLôbo — catálogo gerado da Planilha Padrão RFI R02 (mai/2026)",
+  "_rascunho": true,
+  "_rascunho_descricao": "ADR-167: novo cargo Coordenador (P0092, PJ)",
+  "_deltas": [
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "P0092",
+        "tipo": "MAO_OBRA",
+        "descricao": "Coordenador",
+        "unidade": "mes",
+        "preco_unitario": 12500.0,
+        "categoria": "DIVERSOS",
+        "fonte_preco": "negociado",
+        "atributos_especificos": {
+          "categoria_sindical": "pj_CE",
+          "horas_extras_pct_padrao": 0.0,
+          "tipo_contrato": "PJ",
+          "metodo_custo_total": "custo_total_ja_incluido",
+          "taxa_encargos_pct": 0.0,
+          "nota_encargos": "Valor já representa custo total ao projeto (salário + encargos + benefícios), conforme orçamento gerencial de RH (mesma convenção de MO-ADM-PJ/MO-TOPOGRAFO)."
+        }
+      },
+      "autor": "adr167-criar-coordenador",
+      "timestamp": "2026-07-29T16:51:39.379004+00:00"
+    }
+  ],
+  "_revisado": true,
+  "_revisado_por": "adr167-criar-coordenador",
+  "_aprovado": true,
+  "_aprovado_por": "adr167-criar-coordenador-aprovador",
+  "_rejeitado": false,
+  "_rejeitado_por": null,
+  "_motivo_rejeicao": null
+}

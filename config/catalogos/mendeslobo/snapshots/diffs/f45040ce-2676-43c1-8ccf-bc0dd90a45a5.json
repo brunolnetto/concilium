@@ -1,0 +1,25 @@
+{
+  "diff": {
+    "diff_id": "f45040ce-2676-43c1-8ccf-bc0dd90a45a5",
+    "previous_snapshot_id": "861b3bae-9c7b-4605-940e-8904d9feaf86",
+    "current_snapshot_id": "66c83d60-f505-4fd0-a16d-26ecd77b5fa6",
+    "computed_at": "2026-07-29T16:51:39.364620Z",
+    "changed": true,
+    "cpus_added": [],
+    "cpus_removed": [],
+    "cpus_modified": [],
+    "insumos_added": [
+      "P0092"
+    ],
+    "insumos_removed": [],
+    "insumos_modified": [],
+    "produtividades_added": [],
+    "produtividades_removed": [],
+    "produtividades_modified": [],
+    "summary": "1 insumo(s) +, 0 -, 0 mod."
+  },
+  "contexto_id": "mendeslobo",
+  "rascunho_id": "v4",
+  "aprovador": "adr167-criar-coordenador-aprovador",
+  "justificativa": "ADR-167: novo cargo Coordenador (P0092, PJ, R$12.500/mês)"
+}

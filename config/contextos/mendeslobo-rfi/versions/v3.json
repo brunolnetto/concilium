@@ -1,0 +1,203 @@
+{
+  "version": "v3",
+  "created_at": "2026-07-29T16:53:23.819191+00:00",
+  "created_by": "adr167-mapeamento-funcoes-rfi",
+  "motivo": "rascunho: ADR-167: mapeamento função->item específico (rfi-r02)",
+  "id": "mendeslobo-rfi",
+  "perfil_id": "rfi-r02",
+  "jurisdicao_id": "BR",
+  "referencia_id": "RFI_R02_2026",
+  "catalogo_id": "rfi-r02",
+  "tema_id": "default",
+  "$comment": "MendesLôbo — catálogo gerado da Planilha Padrão RFI R02 (mai/2026)",
+  "_rascunho": true,
+  "_rascunho_descricao": "ADR-167: mapeamento função->item específico (rfi-r02)",
+  "_deltas": [
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-NR12-MAQUINAS",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0040",
+        "P0041",
+        "P0042",
+        "P0043",
+        "P0044",
+        "P0045",
+        "P0046",
+        "P0047",
+        "P0048",
+        "P0049",
+        "P0050",
+        "P0069",
+        "P0081",
+        "P0082",
+        "P0085",
+        "P0090",
+        "P0091"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-ABAFADOR-CONCHA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0040",
+        "P0041",
+        "P0042",
+        "P0043",
+        "P0044",
+        "P0045",
+        "P0046",
+        "P0047",
+        "P0048",
+        "P0049",
+        "P0050",
+        "P0062",
+        "P0069",
+        "P0081",
+        "P0082",
+        "P0085",
+        "P0090",
+        "P0091"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-OP-MOTOSSERRA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0062"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-OP-MOTOPODA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0062"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-ROUPA-MOTOSSERRA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0062"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-PERNEIRA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0062"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-PLANO-TRANSITO",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0032",
+        "P0033",
+        "P0034",
+        "P0035",
+        "P0036",
+        "P0071",
+        "P0079",
+        "P0089"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-PRODUTOS-QUIMICOS",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0009",
+        "P0030",
+        "P0041",
+        "P0053"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-NR35-ALTURA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0005",
+        "P0015",
+        "P0016",
+        "P0037",
+        "P0038"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-PROTETOR-FACIAL",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": [
+        "P0011",
+        "P0014",
+        "P0073"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-NR22-MINERACAO",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr167-mapeamento-funcoes-rfi",
+      "timestamp": "2026-07-29T16:53:23.822535+00:00",
+      "novos_funcoes_aplicaveis": []
+    }
+  ],
+  "_revisado": true,
+  "_revisado_por": "adr167-mapeamento-funcoes-rfi",
+  "_aprovado": true,
+  "_aprovado_por": "adr167-mapeamento-funcoes-rfi-aprovador",
+  "_rejeitado": false,
+  "_rejeitado_por": null,
+  "_motivo_rejeicao": null
+}

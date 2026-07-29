@@ -1,0 +1,15 @@
+{
+  "codigo": "TRE-OP-MOTOSSERRA",
+  "tipo": "TREINAMENTO",
+  "descricao": "Operador de Motosserra",
+  "unidade": "unid",
+  "preco_unitario": 450.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "P0062"
+    ]
+  }
+}

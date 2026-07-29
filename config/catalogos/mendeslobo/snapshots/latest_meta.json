@@ -1,10 +1,10 @@
 {
-  "snapshot_id": "861b3bae-9c7b-4605-940e-8904d9feaf86",
+  "snapshot_id": "66c83d60-f505-4fd0-a16d-26ecd77b5fa6",
   "catalog_name": "mendeslobo",
-  "version_hash": "88d0e6d0bc6f89a3a211721026087e9eef75a3a300edc34722d149dc02158b36",
-  "created_at": "2026-07-29T15:27:01.697282Z",
+  "version_hash": "d6d29fedb1f9ff1c09dbd53b7f1e0fda44dccc325d903738a7848220cabdb461",
+  "created_at": "2026-07-29T16:51:39.303296Z",
   "source_url": null,
   "source_tab": null,
-  "created_by": "adr166-mapeamento-funcoes-aprovador",
+  "created_by": "adr167-criar-coordenador-aprovador",
   "project_ids": []
 }

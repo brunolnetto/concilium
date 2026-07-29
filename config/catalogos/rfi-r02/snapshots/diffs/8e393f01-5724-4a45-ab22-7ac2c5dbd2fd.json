@@ -1,0 +1,35 @@
+{
+  "diff": {
+    "diff_id": "8e393f01-5724-4a45-ab22-7ac2c5dbd2fd",
+    "previous_snapshot_id": "221baa61-4128-442a-8ded-c5add692cb65",
+    "current_snapshot_id": "c9b4942e-b461-4a07-8ad7-1d955739e824",
+    "computed_at": "2026-07-29T16:53:23.970161Z",
+    "changed": true,
+    "cpus_added": [],
+    "cpus_removed": [],
+    "cpus_modified": [],
+    "insumos_added": [],
+    "insumos_removed": [],
+    "insumos_modified": [
+      "EPI-ABAFADOR-CONCHA",
+      "EPI-PERNEIRA",
+      "EPI-PROTETOR-FACIAL",
+      "EPI-ROUPA-MOTOSSERRA",
+      "TRE-NR12-MAQUINAS",
+      "TRE-NR22-MINERACAO",
+      "TRE-NR35-ALTURA",
+      "TRE-OP-MOTOPODA",
+      "TRE-OP-MOTOSSERRA",
+      "TRE-PLANO-TRANSITO",
+      "TRE-PRODUTOS-QUIMICOS"
+    ],
+    "produtividades_added": [],
+    "produtividades_removed": [],
+    "produtividades_modified": [],
+    "summary": "0 insumo(s) +, 0 -, 11 mod."
+  },
+  "contexto_id": "mendeslobo-rfi",
+  "rascunho_id": "v3",
+  "aprovador": "adr167-mapeamento-funcoes-rfi-aprovador",
+  "justificativa": "ADR-167: mapeamento função->item específico confirmado pelo usuário (rfi-r02)"
+}

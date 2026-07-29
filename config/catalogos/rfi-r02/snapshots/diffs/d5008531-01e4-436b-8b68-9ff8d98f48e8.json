@@ -1,0 +1,25 @@
+{
+  "diff": {
+    "diff_id": "d5008531-01e4-436b-8b68-9ff8d98f48e8",
+    "previous_snapshot_id": "e1e23699-bbbe-4bac-9f01-38a3901aca58",
+    "current_snapshot_id": "221baa61-4128-442a-8ded-c5add692cb65",
+    "computed_at": "2026-07-29T16:51:39.645955Z",
+    "changed": true,
+    "cpus_added": [],
+    "cpus_removed": [],
+    "cpus_modified": [],
+    "insumos_added": [
+      "P0092"
+    ],
+    "insumos_removed": [],
+    "insumos_modified": [],
+    "produtividades_added": [],
+    "produtividades_removed": [],
+    "produtividades_modified": [],
+    "summary": "1 insumo(s) +, 0 -, 0 mod."
+  },
+  "contexto_id": "mendeslobo-rfi",
+  "rascunho_id": "v2",
+  "aprovador": "adr167-criar-coordenador-aprovador",
+  "justificativa": "ADR-167: novo cargo Coordenador (P0092, PJ, R$12.500/mês)"
+}
