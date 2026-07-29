@@ -19,6 +19,7 @@ Inputs (no dict 'inputs'):
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES
@@ -45,7 +46,46 @@ def _meses_entre(inicio, fim) -> int:
     return (fim.year - inicio.year) * 12 + (fim.month - inicio.month) + 1
 
 
-def _composicao_default_por_categoria(categoria: str) -> dict:
+def _headcount_direto(equipes_diretas: list | None) -> int:
+    """Soma num_pessoas de todas as funções de todas as equipes diretas."""
+    return sum(f.num_pessoas for eq in (equipes_diretas or []) for f in (getattr(eq, "funcoes", None) or []))
+
+
+def _custo_alojamento_bottom_up(
+    headcount: int,
+    quartos_por_casa: int = 3,
+    pessoas_por_quarto: int = 2,
+    valor_aluguel_mensal: float = 4000.0,
+) -> dict | None:
+    """ADR-168: custo de "Alojamento" a partir do número de casas necessárias
+    para o headcount direto — cada casa comporta `quartos_por_casa ×
+    pessoas_por_quarto` pessoas (default 3×2=6), ao valor de aluguel informado
+    (default R$4.000/mês/casa). Ambos os parâmetros são configuráveis por
+    categoria via `cat["alojamento"]` (ADR-168 D2). Retorna `None` se
+    `headcount<=0` ou capacidade por casa inválida — o chamador cai então para
+    a verba lump default (degradação segura, mesmo padrão do QSMS/MOB ADR-166).
+    """
+    if headcount <= 0:
+        return None
+    capacidade_por_casa = quartos_por_casa * pessoas_por_quarto
+    if capacidade_por_casa <= 0:
+        return None
+    num_casas = math.ceil(headcount / capacidade_por_casa)
+    custo_total = round(num_casas * valor_aluguel_mensal, 2)
+    return {
+        "nome": "VERBAS ADM",
+        "custo_fixo_mensal": custo_total,
+        "itens": [
+            {"descricao": "Alojamento", "quantidade": num_casas, "valor_mensal": valor_aluguel_mensal},
+        ],
+    }
+
+
+def _composicao_default_por_categoria(
+    categoria: str,
+    equipes_diretas: list | None = None,
+    alojamento_config: dict | None = None,
+) -> dict:
     """Composição default mínima por categoria (heurística Fase 1A).
 
     ADR-167: ADM ("Coordenador" -> `P0092`) e TOP ("Topógrafo" -> `P0057`) ganham
@@ -56,8 +96,28 @@ def _composicao_default_por_categoria(categoria: str) -> dict:
     recalcula a partir dos itens, usando `custo_mensal` (enriquecido) se presente ou
     `valor_mensal` (o número antigo, como fallback) senão — mesma degradação segura
     dos bottom-up de QSMS/MOB (ADR-166).
+
+    ADR-168: a verba "Alojamento" de ADM usa `_custo_alojamento_bottom_up` quando
+    `equipes_diretas` tem headcount — cai para o lump de R$3.500/mês senão.
     """
     if categoria == "ADM":
+        cfg = alojamento_config or {}
+        verbas = None
+        if equipes_diretas:
+            verbas = _custo_alojamento_bottom_up(
+                _headcount_direto(equipes_diretas),
+                quartos_por_casa=cfg.get("quartos_por_casa", 3),
+                pessoas_por_quarto=cfg.get("pessoas_por_quarto", 2),
+                valor_aluguel_mensal=cfg.get("valor_aluguel_mensal", 4000.0),
+            )
+        if verbas is None:
+            verbas = {
+                "nome": "VERBAS ADM",
+                "custo_fixo_mensal": 3500.0,
+                "itens": [
+                    {"descricao": "Alojamento", "valor_mensal": 3500.0},
+                ],
+            }
         return {
             "mao_de_obra": {
                 "nome": "MÃO DE OBRA ADM",
@@ -65,13 +125,7 @@ def _composicao_default_por_categoria(categoria: str) -> dict:
                     {"funcao_id": "P0092", "descricao": "Coordenador", "quantidade": 1, "valor_mensal": 12500.0},
                 ],
             },
-            "verbas": {
-                "nome": "VERBAS ADM",
-                "custo_fixo_mensal": 3500.0,
-                "itens": [
-                    {"descricao": "Alojamento", "valor_mensal": 3500.0},
-                ],
-            },
+            "verbas": verbas,
         }
     if categoria == "TOP":
         return {
@@ -271,7 +325,7 @@ def _dimensionar_automatico(codigo: str, regra: dict, canonical: CanonicalModel,
             return result
     if driver == "volume_mensal":
         return _da_volume_mensal(codigo, regra, canonical)
-    return _composicao_default_por_categoria(codigo)
+    return _composicao_default_por_categoria(codigo, canonical.equipes_diretas, regra.get("alojamento"))
 
 
 def _parse_component(comp_dict: dict | None) -> IndirectoCostComponent | None:

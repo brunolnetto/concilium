@@ -649,6 +649,46 @@ class TestResolveCategoriaAdmTopFuncaoIdReal:
         assert result.custo_fixo_mensal == 9216.0
 
 
+class TestResolveCategoriaAdmAlojamentoBottomUp:
+    """ADR-168: verba "Alojamento" de ADM usa número de casas real (headcount /
+    capacidade) via cat["alojamento"], em vez do lump de R$3.500/mês fixo."""
+
+    def _canonical(self, num_pessoas: int):
+        from concilium.domain.models.canonical import EquipeDireta, FuncaoEquipeDireta
+
+        eq = EquipeDireta(
+            item_id="eq-1", custo_total=0.0, funcoes=[FuncaoEquipeDireta(funcao_id="MO-ARMADOR", num_pessoas=num_pessoas)]
+        )
+        return SimpleNamespace(equipes_diretas=[eq])
+
+    def test_adm_sem_equipes_usa_lump_alojamento(self):
+        result = INDIR._resolve_categoria_comp(
+            codigo="ADM", cat={}, composicoes_input={}, categorias_config_raw=[], n_semanas=12,
+            repo=None, data_base=None, overrides=None, jurisdicao_id=None, canonical_in=None, catalogo=None,
+        )
+        # Coordenador (12500 lump) + Alojamento (3500 lump)
+        assert result.custo_fixo_mensal == pytest.approx(12500.0 + 3500.0)
+
+    def test_adm_com_equipes_usa_num_casas_real(self):
+        result = INDIR._resolve_categoria_comp(
+            codigo="ADM", cat={}, composicoes_input={}, categorias_config_raw=[], n_semanas=12,
+            repo=None, data_base=None, overrides=None, jurisdicao_id=None,
+            canonical_in=self._canonical(7), catalogo=None,
+        )
+        # Coordenador (12500 lump, sem catálogo) + Alojamento (7 pessoas -> 2 casas x 4000 = 8000)
+        assert result.custo_fixo_mensal == pytest.approx(12500.0 + 8000.0)
+
+    def test_adm_com_alojamento_config_no_perfil(self):
+        cat = {"alojamento": {"quartos_por_casa": 4, "pessoas_por_quarto": 1, "valor_aluguel_mensal": 5000.0}}
+        result = INDIR._resolve_categoria_comp(
+            codigo="ADM", cat=cat, composicoes_input={}, categorias_config_raw=[], n_semanas=12,
+            repo=None, data_base=None, overrides=None, jurisdicao_id=None,
+            canonical_in=self._canonical(4), catalogo=None,
+        )
+        # capacidade 4/casa -> 1 casa x 5000
+        assert result.custo_fixo_mensal == pytest.approx(12500.0 + 5000.0)
+
+
 # ===========================================================================
 
 

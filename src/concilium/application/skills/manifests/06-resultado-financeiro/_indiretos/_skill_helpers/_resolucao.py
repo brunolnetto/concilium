@@ -62,7 +62,11 @@ def _resolve_categoria_comp(
             return _build_categoria_from_dict(
                 codigo, comp_bottom_up, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
             )
-    comp_default = _composicao_default_por_categoria(codigo)
+    comp_default = _composicao_default_por_categoria(
+        codigo,
+        canonical_in.equipes_diretas if canonical_in is not None else None,
+        cat.get("alojamento"),
+    )
     return _build_categoria_from_dict(
         codigo, comp_default, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
     )
