@@ -1,0 +1,43 @@
+{
+  "version": "v4",
+  "created_at": "2026-07-29T17:59:10.795309+00:00",
+  "created_by": "adr170-criar-ben-alojamento",
+  "motivo": "rascunho: ADR-170: novo insumo BEN-ALOJAMENTO",
+  "id": "mendeslobo-rfi",
+  "perfil_id": "rfi-r02",
+  "jurisdicao_id": "BR",
+  "referencia_id": "RFI_R02_2026",
+  "catalogo_id": "rfi-r02",
+  "tema_id": "default",
+  "$comment": "MendesLôbo — catálogo gerado da Planilha Padrão RFI R02 (mai/2026)",
+  "_rascunho": true,
+  "_rascunho_descricao": "ADR-170: novo insumo BEN-ALOJAMENTO",
+  "_deltas": [
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-ALOJAMENTO",
+        "tipo": "BENEFICIO",
+        "descricao": "Alojamento (aluguel de casa compartilhada)",
+        "unidade": "mes",
+        "preco_unitario": 4000.0,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "mensal",
+          "quartos_por_casa": 3,
+          "pessoas_por_quarto": 2
+        }
+      },
+      "autor": "adr170-criar-ben-alojamento",
+      "timestamp": "2026-07-29T17:59:10.806002+00:00"
+    }
+  ],
+  "_revisado": true,
+  "_revisado_por": "adr170-criar-ben-alojamento",
+  "_aprovado": true,
+  "_aprovado_por": "adr170-criar-ben-alojamento-aprovador",
+  "_rejeitado": false,
+  "_rejeitado_por": null,
+  "_motivo_rejeicao": null
+}

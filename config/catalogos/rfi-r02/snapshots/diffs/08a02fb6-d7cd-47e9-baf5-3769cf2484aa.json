@@ -1,0 +1,25 @@
+{
+  "diff": {
+    "diff_id": "08a02fb6-d7cd-47e9-baf5-3769cf2484aa",
+    "previous_snapshot_id": "c9b4942e-b461-4a07-8ad7-1d955739e824",
+    "current_snapshot_id": "8ec1605d-352d-4ccd-8b95-d908beec59eb",
+    "computed_at": "2026-07-29T17:59:11.237023Z",
+    "changed": true,
+    "cpus_added": [],
+    "cpus_removed": [],
+    "cpus_modified": [],
+    "insumos_added": [
+      "BEN-ALOJAMENTO"
+    ],
+    "insumos_removed": [],
+    "insumos_modified": [],
+    "produtividades_added": [],
+    "produtividades_removed": [],
+    "produtividades_modified": [],
+    "summary": "1 insumo(s) +, 0 -, 0 mod."
+  },
+  "contexto_id": "mendeslobo-rfi",
+  "rascunho_id": "v4",
+  "aprovador": "adr170-criar-ben-alojamento-aprovador",
+  "justificativa": "ADR-170: BEN-ALOJAMENTO (R$4.000/mês/casa, 3 quartos x 2 pessoas)"
+}

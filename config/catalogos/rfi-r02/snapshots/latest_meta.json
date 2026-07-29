@@ -1,10 +1,10 @@
 {
-  "snapshot_id": "c9b4942e-b461-4a07-8ad7-1d955739e824",
+  "snapshot_id": "8ec1605d-352d-4ccd-8b95-d908beec59eb",
   "catalog_name": "rfi-r02",
-  "version_hash": "d8c973738e5f6df5ca9361217800b191083a823f3fc11766206a4ae6e2687c99",
-  "created_at": "2026-07-29T16:53:23.950445Z",
+  "version_hash": "a842f6bd206df2b71d09188e9830fa0334529ed5ec7b76ffce7d31873fce77a3",
+  "created_at": "2026-07-29T17:59:11.162193Z",
   "source_url": null,
   "source_tab": null,
-  "created_by": "adr167-mapeamento-funcoes-rfi-aprovador",
+  "created_by": "adr170-criar-ben-alojamento-aprovador",
   "project_ids": []
 }

@@ -1,10 +1,10 @@
 {
-  "snapshot_id": "66c83d60-f505-4fd0-a16d-26ecd77b5fa6",
+  "snapshot_id": "b16a5e0c-1fcb-4c82-8ff8-f18a03f59d4e",
   "catalog_name": "mendeslobo",
-  "version_hash": "d6d29fedb1f9ff1c09dbd53b7f1e0fda44dccc325d903738a7848220cabdb461",
-  "created_at": "2026-07-29T16:51:39.303296Z",
+  "version_hash": "2912cd2aa3bc18572cbff0abd5fd0e29e972f7b9d873e7ec2a6644b18e96b952",
+  "created_at": "2026-07-29T17:59:10.689695Z",
   "source_url": null,
   "source_tab": null,
-  "created_by": "adr167-criar-coordenador-aprovador",
+  "created_by": "adr170-criar-ben-alojamento-aprovador",
   "project_ids": []
 }
