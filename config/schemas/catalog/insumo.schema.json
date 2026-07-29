@@ -104,6 +104,16 @@
             {"type": "null"},
             {"$ref": "common.schema.json#/$defs/disponibilidadeConsumivel"}
           ]
+        },
+        "vida_util_dias": {
+          "description": "ADR-165: ciclo de substituição em dias (EPI, prefixo de código EPI-). Só relevante para MATERIAL classificado como EPI.",
+          "type": ["integer", "null"],
+          "exclusiveMinimum": 0
+        },
+        "funcoes_aplicaveis": {
+          "description": "ADR-165: códigos de Insumo(MAO_OBRA) a que este EPI é específico — null = comum a todas as funções.",
+          "type": ["array", "null"],
+          "items": {"type": "string"}
         }
       }
     },
@@ -111,6 +121,52 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {}
+    },
+    "atributosTreinamento": {
+      "description": "ADR-165: atributos específicos de TREINAMENTO.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vida_util_dias": {
+          "description": "Intervalo de revalidação/recorrência, em dias.",
+          "type": ["integer", "null"],
+          "exclusiveMinimum": 0
+        },
+        "funcoes_aplicaveis": {
+          "description": "Códigos de Insumo(MAO_OBRA) a que este treinamento é específico — null = comum a todas as funções.",
+          "type": ["array", "null"],
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "atributosExame": {
+      "description": "ADR-165: atributos específicos de EXAME — sempre comum a todas as funções (sem funcoes_aplicaveis).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vida_util_dias": {
+          "description": "Intervalo de revalidação/recorrência, em dias.",
+          "type": ["integer", "null"],
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "atributosBeneficio": {
+      "description": "ADR-165: atributos específicos de BENEFICIO.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "periodicidade_beneficio": {
+          "description": "Base temporal do preco_unitario.",
+          "type": ["string", "null"],
+          "enum": ["diaria", "mensal", null]
+        },
+        "aplicavel_tipo_contrato": {
+          "description": "Regimes a que o benefício se aplica — null = CLT e PJ (ex.: jantar com [\"CLT\"] exclui PJ).",
+          "type": ["array", "null"],
+          "items": {"type": "string", "enum": ["CLT", "PJ"]}
+        }
+      }
     }
   },
   "required": [
@@ -271,6 +327,33 @@
       },
       "then": {
         "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosTerceirizado"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"tipo": {"const": "TREINAMENTO"}},
+        "required": ["tipo"]
+      },
+      "then": {
+        "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosTreinamento"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"tipo": {"const": "EXAME"}},
+        "required": ["tipo"]
+      },
+      "then": {
+        "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosExame"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"tipo": {"const": "BENEFICIO"}},
+        "required": ["tipo"]
+      },
+      "then": {
+        "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosBeneficio"}}
       }
     }
   ]

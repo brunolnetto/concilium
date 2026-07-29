@@ -34,7 +34,7 @@
     },
     "tipoInsumo": {
       "type": "string",
-      "enum": ["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO"]
+      "enum": ["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO", "TREINAMENTO", "EXAME", "BENEFICIO"]
     },
     "fontePreco": {
       "description": "Fonte do preço. Valores canônicos: catalogo_proprio, tabela_referencia, cotacao_mercado, negociado. Aceita strings livres para referências externas (ex: PLANILHA_AGIS_2026_05, SICRO_DNIT).",

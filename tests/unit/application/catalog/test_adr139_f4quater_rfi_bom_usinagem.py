@@ -53,7 +53,10 @@ class TestClassificacaoCompleta:
             for p in sorted((_CAT / "insumos" / "material").glob("*.json"))
         ]
         sem_classe = [d["codigo"] for d in docs if not d.get("origem_material")]
-        assert sem_classe == []
+        # ADR-165/167: 10 EPIs (prefixo EPI-) replicados de mendeslobo não são material
+        # de construção — origem_material (compra externa x geração interna de obra)
+        # não se aplica a EPI, mesmo gap já documentado para mendeslobo (ADR-139 F1bis).
+        assert all(codigo.startswith("EPI-") for codigo in sem_classe)
         gerados = {d["codigo"] for d in docs if d.get("origem_material") == "GERACAO_INTERNA"}
         assert gerados == {
             "MA-SOLO-ESCAVADO-1CAT",
