@@ -689,6 +689,40 @@ class TestResolveCategoriaAdmAlojamentoBottomUp:
         assert result.custo_fixo_mensal == pytest.approx(12500.0 + 5000.0)
 
 
+class TestResolveCategoriaLabCondicional:
+    """ADR-169: LAB só cobra a verba quando o projeto tem CPU de TERRAPLENAGEM/
+    PAVIMENTACAO — via canonical_in.eap + catalogo["cpus"]."""
+
+    def _canonical_com_eap(self, cpu_id: str):
+        from concilium.domain.models.canonical import EapItem
+
+        eap = [EapItem(item_id="I1", cpu_id=cpu_id, quantitativo=1.0)]
+        return SimpleNamespace(eap=eap, equipes_diretas=[])
+
+    def _kwargs(self, canonical_in, catalogo):
+        return dict(
+            codigo="LAB", cat={}, composicoes_input={}, categorias_config_raw=[], n_semanas=12,
+            repo=None, data_base=None, overrides=None, jurisdicao_id=None,
+            canonical_in=canonical_in, catalogo=catalogo,
+        )
+
+    def test_sem_dados_do_projeto_aplica_lump_legado(self):
+        result = INDIR._resolve_categoria_comp(**self._kwargs(None, None))
+        assert result.custo_fixo_mensal == 4000.0
+
+    def test_projeto_com_terraplenagem_aplica_verba(self):
+        canonical = self._canonical_com_eap("CPU-1")
+        catalogo = {"cpus": [{"codigo": "CPU-1", "categoria": "TERRAPLENAGEM"}]}
+        result = INDIR._resolve_categoria_comp(**self._kwargs(canonical, catalogo))
+        assert result.custo_fixo_mensal == 4000.0
+
+    def test_projeto_sem_terraplenagem_ou_pavimentacao_custo_zero(self):
+        canonical = self._canonical_com_eap("CPU-1")
+        catalogo = {"cpus": [{"codigo": "CPU-1", "categoria": "SANEAMENTO"}]}
+        result = INDIR._resolve_categoria_comp(**self._kwargs(canonical, catalogo))
+        assert result.custo_fixo_mensal == 0.0
+
+
 # ===========================================================================
 
 

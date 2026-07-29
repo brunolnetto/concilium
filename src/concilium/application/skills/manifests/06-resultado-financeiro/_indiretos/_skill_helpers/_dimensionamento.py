@@ -81,10 +81,34 @@ def _custo_alojamento_bottom_up(
     }
 
 
+def _categorias_cpu_do_projeto(canonical_in: Any, catalogo: dict | None) -> set[str] | None:
+    """ADR-169: conjunto de `CategoriaCPU` (TERRAPLENAGEM/PAVIMENTACAO/...) presentes
+    no projeto, via `canonical_in.eap` (cada item tem `cpu_id`) + lookup no catálogo
+    (`catalogo["cpus"]`, cada CPU tem `categoria`). Retorna `None` quando não é
+    possível determinar (sem catálogo, sem `canonical_in`, ou EAP vazia) — o
+    chamador deve tratar `None` como "desconhecido" (degradação segura: preserva
+    o comportamento antigo, não zera custo por falta de dado)."""
+    if not catalogo or canonical_in is None:
+        return None
+    eap = getattr(canonical_in, "eap", None)
+    if not eap:
+        return None
+    cpu_lookup = {c["codigo"]: c for c in catalogo.get("cpus", [])}
+    return {
+        cpu_lookup[item.cpu_id]["categoria"]
+        for item in eap
+        if item.cpu_id in cpu_lookup and cpu_lookup[item.cpu_id].get("categoria")
+    }
+
+
+_CATEGORIAS_CPU_COM_LAB = {"TERRAPLENAGEM", "PAVIMENTACAO"}
+
+
 def _composicao_default_por_categoria(
     categoria: str,
     equipes_diretas: list | None = None,
     alojamento_config: dict | None = None,
+    cpu_categorias_presentes: set[str] | None = None,
 ) -> dict:
     """Composição default mínima por categoria (heurística Fase 1A).
 
@@ -99,6 +123,13 @@ def _composicao_default_por_categoria(
 
     ADR-168: a verba "Alojamento" de ADM usa `_custo_alojamento_bottom_up` quando
     `equipes_diretas` tem headcount — cai para o lump de R$3.500/mês senão.
+
+    ADR-169: a verba LAB (aluguel de equipamentos de ensaio) só é cobrada
+    (R$4.000/mês) quando o projeto tem CPU de TERRAPLENAGEM ou PAVIMENTACAO —
+    achado do engenheiro de planejamento (ex-engenheiro de campo). `None`
+    (categorias do projeto desconhecidas) preserva o comportamento antigo
+    (sempre cobra) — só zera quando se sabe positivamente que o projeto não
+    tem nenhuma das duas categorias.
     """
     if categoria == "ADM":
         cfg = alojamento_config or {}
@@ -137,12 +168,14 @@ def _composicao_default_por_categoria(
             },
         }
     if categoria == "LAB":
+        aplica = cpu_categorias_presentes is None or bool(cpu_categorias_presentes & _CATEGORIAS_CPU_COM_LAB)
+        custo = 4000.0 if aplica else 0.0
         return {
             "verbas": {
                 "nome": "VERBAS LAB",
-                "custo_fixo_mensal": 4000.0,
+                "custo_fixo_mensal": custo,
                 "itens": [
-                    {"descricao": "Ensaios laboratoriais", "valor_mensal": 4000.0},
+                    {"descricao": "Ensaios laboratoriais (aluguel de equipamentos)", "valor_mensal": custo},
                 ],
             },
         }
@@ -325,7 +358,12 @@ def _dimensionar_automatico(codigo: str, regra: dict, canonical: CanonicalModel,
             return result
     if driver == "volume_mensal":
         return _da_volume_mensal(codigo, regra, canonical)
-    return _composicao_default_por_categoria(codigo, canonical.equipes_diretas, regra.get("alojamento"))
+    return _composicao_default_por_categoria(
+        codigo,
+        canonical.equipes_diretas,
+        regra.get("alojamento"),
+        _categorias_cpu_do_projeto(canonical, catalogo),
+    )
 
 
 def _parse_component(comp_dict: dict | None) -> IndirectoCostComponent | None:

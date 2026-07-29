@@ -19,6 +19,7 @@ from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 
 from ._categoria import _as_categoria_indireto, _build_categoria_from_dict  # ty: ignore[unresolved-import]
 from ._dimensionamento import (  # ty: ignore[unresolved-import]
+    _categorias_cpu_do_projeto,
     _composicao_default_por_categoria,
     _composicao_qsms_bottom_up,
     _dimensionar_automatico,
@@ -66,6 +67,7 @@ def _resolve_categoria_comp(
         codigo,
         canonical_in.equipes_diretas if canonical_in is not None else None,
         cat.get("alojamento"),
+        _categorias_cpu_do_projeto(canonical_in, catalogo),
     )
     return _build_categoria_from_dict(
         codigo, comp_default, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
