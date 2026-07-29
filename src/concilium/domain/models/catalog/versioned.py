@@ -82,7 +82,9 @@ class InsumoVersionado(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str = Field(description="Identificador base sem timestamp. Ex.: 'AJUDANTE-BR-CE'")
-    tipo: Literal["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO"]
+    # ADR-165: acompanha TipoInsumo (catalogo.py) — TREINAMENTO/EXAME/BENEFICIO também
+    # passam pela mesma SCD Type 2 de preço via `preco_na_data` (infrastructure/repositories/insumo.py).
+    tipo: Literal["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO", "TREINAMENTO", "EXAME", "BENEFICIO"]
     descricao: str
     unidade: str
     versoes: list[VersaoInsumo] = Field(min_length=1)

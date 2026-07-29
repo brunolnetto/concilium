@@ -12,7 +12,9 @@ from concilium.domain.models.catalog.disponibilidade_consumivel import Disponibi
 from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
 from concilium.domain.units import normalize_unidade
 
-TipoInsumo = Literal["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO"]
+TipoInsumo = Literal[
+    "MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO", "TREINAMENTO", "EXAME", "BENEFICIO"
+]
 
 # ADR-139 D1: origem de material consumível — atributo ortogonal a TipoInsumo.
 # AQUISICAO_EXTERNA — comprado de fornecedor (tinta, areia comprada, aço).
@@ -138,6 +140,18 @@ class AtributosInsumo(BaseModel):
     -------------------------------------
     disponibilidade         : estoque/capacidade/reabastecimento (ADR-128), opcional —
                                None = disponibilidade irrestrita (comportamento atual)
+
+    MATERIAL (EPI) / TREINAMENTO / EXAME — ADR-165
+    ------------------------------------------------
+    vida_util_dias          : ciclo de substituição (EPI) ou revalidação (treinamento/exame), em dias
+    funcoes_aplicaveis      : códigos de Insumo(MAO_OBRA) a que este item é específico —
+                               None = comum a todas as funções (ex.: EPIs/treinamentos gerais)
+
+    BENEFICIO — ADR-165
+    --------------------
+    periodicidade_beneficio : base temporal do preco_unitario ("diaria" ou "mensal")
+    aplicavel_tipo_contrato : regimes a que o benefício se aplica — None = CLT e PJ
+                               (ex.: jantar com ["CLT"] exclui PJ)
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -168,6 +182,14 @@ class AtributosInsumo(BaseModel):
 
     # ── MATERIAL / EQUIPAMENTO (COMBUSTIVEL) — ADR-128 ─────────────────
     disponibilidade: DisponibilidadeConsumivel | None = None
+
+    # ── MATERIAL (EPI) / TREINAMENTO / EXAME — ADR-165 ─────────────────
+    vida_util_dias: int | None = Field(default=None, gt=0)
+    funcoes_aplicaveis: list[str] | None = None
+
+    # ── BENEFICIO — ADR-165 ─────────────────────────────────────────────
+    periodicidade_beneficio: Literal["diaria", "mensal"] | None = None
+    aplicavel_tipo_contrato: list[Literal["CLT", "PJ"]] | None = None
 
 
 class Insumo(BaseModel):
@@ -206,6 +228,26 @@ class Insumo(BaseModel):
             raise ValueError(
                 f"VAL-INSUMO-ORIGEM-01: origem_material ('{self.origem_material}') só é válido "
                 f"para insumo tipo MATERIAL, recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validar_campos_rh_adr165(self) -> Insumo:
+        a = self.atributos_especificos
+        if a.vida_util_dias is not None and self.tipo not in ("MATERIAL", "TREINAMENTO", "EXAME"):
+            raise ValueError(
+                f"VAL-INSUMO-VIDA-UTIL-01: vida_util_dias só é válido para insumo tipo "
+                f"MATERIAL/TREINAMENTO/EXAME, recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
+            )
+        if a.funcoes_aplicaveis is not None and self.tipo not in ("MATERIAL", "TREINAMENTO"):
+            raise ValueError(
+                f"VAL-INSUMO-FUNCOES-01: funcoes_aplicaveis só é válido para insumo tipo "
+                f"MATERIAL/TREINAMENTO, recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
+            )
+        if (a.periodicidade_beneficio is not None or a.aplicavel_tipo_contrato is not None) and self.tipo != "BENEFICIO":
+            raise ValueError(
+                f"VAL-INSUMO-BENEFICIO-01: periodicidade_beneficio/aplicavel_tipo_contrato só são "
+                f"válidos para insumo tipo BENEFICIO, recebido tipo '{self.tipo}' (insumo '{self.codigo}')"
             )
         return self
 

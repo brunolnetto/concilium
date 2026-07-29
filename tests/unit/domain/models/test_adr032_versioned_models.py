@@ -113,6 +113,20 @@ class TestInsumoVersionado:
         )
         assert insumo.id_atu == "DIESEL-S10@2026-04"
 
+    @pytest.mark.parametrize("tipo", ["TREINAMENTO", "EXAME", "BENEFICIO"])
+    def test_adr165_aceita_tipos_novos(self, tipo):
+        """ADR-165: TREINAMENTO/EXAME/BENEFICIO também têm SCD Type 2 de preço via preco_na_data."""
+        insumo = InsumoVersionado(
+            id=f"COD-{tipo}",
+            tipo=tipo,
+            descricao="Item de teste",
+            unidade="unid",
+            versoes=[
+                _versao_insumo("2026-04", 100.0, date(2026, 4, 1), None),
+            ],
+        )
+        assert insumo.preco_em(date(2026, 4, 15)) == 100.0
+
 
 # ── CPUVersionada ─────────────────────────────────────────────────────────────
 

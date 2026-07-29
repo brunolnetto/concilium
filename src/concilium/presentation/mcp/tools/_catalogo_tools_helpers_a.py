@@ -153,7 +153,8 @@ def _impl_listar_insumos(
 
     Args:
         contexto_id: ID do contexto (ex.: "mendeslobo").
-        tipo: Opcional. Filtra por "MATERIAL", "MAO_OBRA" ou "EQUIPAMENTO".
+        tipo: Opcional. Filtra por "MATERIAL", "MAO_OBRA", "EQUIPAMENTO",
+            "TERCEIRIZADO", "TREINAMENTO", "EXAME" ou "BENEFICIO" (ADR-165).
         query: Opcional. Busca textual case-insensitive em código/descrição.
         limite: Máximo de itens retornados por página (padrão 50).
         offset: Deslocamento para paginação (padrão 0).
@@ -458,7 +459,8 @@ def _impl_criar_insumo(
         contexto_id: ID do contexto (ex.: "mendeslobo").
         rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
         codigo: Código do insumo (ex.: "EQ-999"). Deve ser inédito no catálogo.
-        tipo: "MATERIAL", "MAO_OBRA", "EQUIPAMENTO" ou "TERCEIRIZADO".
+        tipo: "MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO",
+            "TREINAMENTO", "EXAME" ou "BENEFICIO" (ADR-165).
         descricao: Descrição do insumo.
         unidade: Unidade de medida (ex.: "h", "m3").
         preco_unitario: Preço/hora ou preço unitário inicial.
