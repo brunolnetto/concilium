@@ -625,6 +625,59 @@ class TestCatalogLifecycleADR120:
         assert apply_preco_mock.call_count == 1
         assert result["deltas_aplicados"] == 1
 
+    def test_aprovar_merge_catalogo_aplica_delta_criacao_insumo(self, monkeypatch, tmp_path):
+        """ADR-163 D5: delta tipo=criacao_insumo é aplicado via _apply_criar_insumo_delta."""
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_root = tmp_path / "config"
+        entity_dir = config_root / "contextos" / "ctx-1"
+        entity_dir.mkdir(parents=True)
+
+        insumo_novo = {
+            "codigo": "EQ-999",
+            "tipo": "EQUIPAMENTO",
+            "descricao": "Retroescavadeira",
+            "unidade": "h",
+            "preco_unitario": 120.0,
+            "categoria": "TERRAPLENAGEM",
+            "fonte_preco": "cotacao_mercado",
+            "atributos_especificos": {},
+        }
+        rascunho_data = {
+            "version": "v2",
+            "_revisado": True,
+            "_deltas": [{"tipo": "criacao_insumo", "insumo": insumo_novo, "autor": "mgr-1"}],
+        }
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = rascunho_data
+        version_svc.current_version.return_value = "v1"
+
+        ctx = MagicMock()
+        ctx.catalogo_id = "cat-1"
+        rt = MagicMock()
+        rt.load_contexto.return_value = ctx
+        rt.load_catalogo.return_value = {"cpus": [], "insumos": [], "producoes": []}
+
+        apply_criar_mock = MagicMock()
+
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch("concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=config_root)),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch(
+                "concilium.presentation.mcp.tools._catalogo_tools_helpers_a._apply_criar_insumo_delta",
+                apply_criar_mock,
+            ),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+
+        assert result["status"] == "APROVADO"
+        assert apply_criar_mock.call_count == 1
+        assert result["deltas_aplicados"] == 1
+
     def test_aprovar_merge_catalogo_ainda_nao_revisado_bloqueia(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()

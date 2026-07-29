@@ -44,6 +44,20 @@ def validate_and_resolve_insumo_file(catalog_root: Path, insumo_id: str, novo_pr
     raise CatalogGovernanceError(f"Insumo {insumo_id} não encontrado no catálogo mestre.")
 
 
+def validate_insumo_nao_existe(catalog_root: Path, codigo: str) -> None:
+    """Valida que um insumo com este código ainda não existe no catálogo mestre (ADR-163 D5).
+
+    Inverso de `validate_and_resolve_insumo_file`: `criar_insumo` só é aceito
+    quando o código é genuinamente novo, evitando sobrescrever um insumo
+    existente por engano.
+    """
+    insumos_dir = catalog_root / "insumos"
+    if not insumos_dir.exists():
+        return
+    for _ in insumos_dir.rglob(f"{codigo}.json"):
+        raise CatalogGovernanceError(f"Insumo {codigo} já existe no catálogo mestre.")
+
+
 def validate_and_resolve_producao_file(catalog_root: Path, producao_id: str, valor_horario: float) -> Path:
     """Valida escrita de variante de produção e resolve o arquivo no catálogo mestre."""
     if valor_horario <= 0:

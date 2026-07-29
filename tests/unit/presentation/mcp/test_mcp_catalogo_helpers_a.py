@@ -15,6 +15,7 @@ from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import (
     _impl_atualizar_preco_insumo,
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
+    _impl_criar_insumo,
     _impl_listar_contextos,
     _impl_listar_insumos,
     _impl_pesquisar_catalogo,
@@ -887,6 +888,125 @@ class TestApplyPrecoInsumoDelta:
         assert data["atributos_especificos"]["valor_locacao_mensal"] == 30000.0
 
 
+# ---------------------------------------------------------------------------
+# _impl_criar_insumo (ADR-163 D5)
+# ---------------------------------------------------------------------------
+
+
+class TestImplCriarInsumo:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, rt: MagicMock, tmp_path: Path) -> None:
+        monkeypatch.setattr(mod, "_runtime", lambda: rt)
+        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
+        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
+
+    def _kwargs(self, **overrides):
+        base = dict(
+            codigo="EQ-999",
+            tipo="EQUIPAMENTO",
+            descricao="Retroescavadeira",
+            unidade="h",
+            preco_unitario=120.0,
+            categoria="TERRAPLENAGEM",
+            fonte_preco="cotacao_mercado",
+        )
+        base.update(overrides)
+        return base
+
+    def test_codigo_ja_existente_retorna_erro_sem_tocar_rascunho(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-999.json").write_text('{"codigo": "EQ-999"}', encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_criar_insumo("ctx1", "v1", **self._kwargs())
+        assert "erro" in result
+        assert "já existe" in result["erro"]
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert rascunho_data.get("_deltas", []) == []
+
+    def test_insumo_invalido_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # codigo fora do pattern ^[A-Z0-9-]{3,40}$ do modelo Insumo
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_criar_insumo("ctx1", "v1", **self._kwargs(codigo="eq minusculo!"))
+        assert "erro" in result
+
+    def test_happy_path_grava_delta_de_criacao(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_criar_insumo("ctx1", "v1", **self._kwargs())
+        assert result["status"] == "RASCUNHO"
+        assert result["layer"] == "MASTER"
+        assert result["insumo_id"] == "EQ-999"
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert len(rascunho_data["_deltas"]) == 1
+        delta = rascunho_data["_deltas"][0]
+        assert delta["tipo"] == "criacao_insumo"
+        assert delta["insumo"]["codigo"] == "EQ-999"
+        assert delta["insumo"]["descricao"] == "Retroescavadeira"
+
+        # nada foi criado no catálogo mestre ainda
+        insumo_file = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento" / "EQ-999.json"
+        assert not insumo_file.exists()
+
+    def test_rascunho_inexistente_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+
+        result = _impl_criar_insumo("ctx1", "v-nao-existe", **self._kwargs())
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+    def test_atributos_especificos_opcional(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_criar_insumo(
+            "ctx1", "v1", **self._kwargs(atributos_especificos={"valor_locacao_mensal": 24000.0})
+        )
+        assert result["status"] == "RASCUNHO"
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["insumo"]["atributos_especificos"]["valor_locacao_mensal"] == 24000.0
+
+
+class TestApplyCriarInsumoDelta:
+    def test_cria_arquivo_no_diretorio_do_tipo(self, tmp_path: Path) -> None:
+        from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import _apply_criar_insumo_delta
+
+        catalog_root = tmp_path / "cat1"
+        insumo_data = {
+            "codigo": "EQ-999",
+            "tipo": "EQUIPAMENTO",
+            "descricao": "Retroescavadeira",
+            "unidade": "h",
+            "preco_unitario": 120.0,
+            "categoria": "TERRAPLENAGEM",
+            "fonte_preco": "cotacao_mercado",
+            "atributos_especificos": {},
+        }
+        _apply_criar_insumo_delta(catalog_root, insumo_data)
+
+        insumo_file = catalog_root / "insumos" / "equipamento" / "EQ-999.json"
+        assert insumo_file.exists()
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["codigo"] == "EQ-999"
+        assert data["descricao"] == "Retroescavadeira"
 
 # ---------------------------------------------------------------------------
 # _impl_consultar_preco_insumo_temporal

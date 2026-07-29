@@ -18,6 +18,7 @@ from concilium.application.orchestrators.catalog_governance import (
     validate_and_resolve_cpu_file,
     validate_and_resolve_insumo_file,
     validate_and_resolve_producao_file,
+    validate_insumo_nao_existe,
 )
 from concilium.presentation.mcp._context import _config_root, _projetos_root, _runtime, _wrap_response
 
@@ -403,6 +404,101 @@ def _apply_cpu_override_delta(catalog_root: Path, cpu_id: str, override_data: di
             continue
         cpu_data[key] = value
     cpu_file.write_text(json.dumps(cpu_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _apply_criar_insumo_delta(catalog_root: Path, insumo_data: dict[str, Any]) -> None:
+    """Cria o arquivo do insumo novo no catálogo mestre no momento do merge (ADR-163 D5).
+
+    Mesma convenção de diretório dos insumos existentes: `insumos/{tipo_lower}/{codigo}.json`.
+    """
+    tipo_dir = str(insumo_data["tipo"]).lower()
+    insumos_dir = catalog_root / "insumos" / tipo_dir
+    insumos_dir.mkdir(parents=True, exist_ok=True)
+    insumo_file = insumos_dir / f"{insumo_data['codigo']}.json"
+    insumo_file.write_text(json.dumps(insumo_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _impl_criar_insumo(
+    contexto_id: str,
+    rascunho_id: str,
+    codigo: str,
+    tipo: str,
+    descricao: str,
+    unidade: str,
+    preco_unitario: float,
+    categoria: str,
+    fonte_preco: str,
+    atributos_especificos: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Cria um insumo novo no catálogo mestre (ADR-163 D5).
+
+    Mesmo caminho gated por rascunho de `atualizar_preco_insumo` (ADR-145): grava
+    um delta de criação; o arquivo só é escrito no momento do merge
+    (`aprovar_merge_catalogo`), nunca aqui.
+
+    Args:
+        contexto_id: ID do contexto (ex.: "mendeslobo").
+        rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
+        codigo: Código do insumo (ex.: "EQ-999"). Deve ser inédito no catálogo.
+        tipo: "MATERIAL", "MAO_OBRA", "EQUIPAMENTO" ou "TERCEIRIZADO".
+        descricao: Descrição do insumo.
+        unidade: Unidade de medida (ex.: "h", "m3").
+        preco_unitario: Preço/hora ou preço unitário inicial.
+        categoria: Categoria do insumo.
+        fonte_preco: "catalogo_proprio", "tabela_referencia", "cotacao_mercado" ou "negociado".
+        atributos_especificos: Opcional. Ex.: {"valor_locacao_mensal": ...} para EQUIPAMENTO.
+    """
+    from pydantic import ValidationError
+
+    from concilium.domain.models.catalog.catalogo import Insumo
+
+    rt = _runtime()
+    config_dir = _config_root()
+    ctx = rt.load_contexto(contexto_id)
+    catalog_root = _catalog_root(config_dir, ctx.catalogo_id)
+
+    try:
+        validate_insumo_nao_existe(catalog_root, codigo)
+    except CatalogGovernanceError as exc:
+        return {"erro": str(exc)}
+
+    insumo_data: dict[str, Any] = {
+        "codigo": codigo,
+        "tipo": tipo,
+        "descricao": descricao,
+        "unidade": unidade,
+        "preco_unitario": preco_unitario,
+        "categoria": categoria,
+        "fonte_preco": fonte_preco,
+        "atributos_especificos": atributos_especificos or {},
+    }
+    try:
+        Insumo(**insumo_data)
+    except ValidationError as exc:
+        return {"erro": f"Insumo inválido: {exc}"}
+
+    from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+    delta = {
+        "tipo": "criacao_insumo",
+        "insumo": insumo_data,
+        "autor": get_current_user_id() or "system",
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
+    if erro:
+        return {"erro": erro}
+
+    return _wrap_response(
+        {
+            "status": "RASCUNHO",
+            "layer": "MASTER",
+            "rascunho_id": rascunho_id,
+            "insumo_id": codigo,
+            "nota": "Criação registrada no rascunho — o insumo só existirá no catálogo mestre "
+            "após aprovar_merge_catalogo.",
+        }
+    )
 
 
 def _impl_atualizar_preco_insumo(

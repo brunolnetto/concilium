@@ -69,6 +69,31 @@ class TestCatalogGovernance:
         with pytest.raises(CatalogGovernanceError, match="não encontrado"):
             validate_and_resolve_insumo_file(tmp_path, "MISSING", 50.0)
 
+    def test_validate_insumo_nao_existe_passa_quando_ausente(self, tmp_path):
+        """ADR-163 D5: criar_insumo bloqueia se codigo já existir."""
+        from concilium.application.orchestrators.catalog_governance import validate_insumo_nao_existe
+
+        (tmp_path / "insumos").mkdir()
+        validate_insumo_nao_existe(tmp_path, "EQ-NOVO")  # não deve levantar
+
+    def test_validate_insumo_nao_existe_sem_pasta_insumos_passa(self, tmp_path):
+        from concilium.application.orchestrators.catalog_governance import validate_insumo_nao_existe
+
+        validate_insumo_nao_existe(tmp_path, "EQ-NOVO")  # pasta insumos/ nem existe ainda
+
+    def test_validate_insumo_nao_existe_raises_quando_ja_existe(self, tmp_path):
+        from concilium.application.orchestrators.catalog_governance import (
+            CatalogGovernanceError,
+            validate_insumo_nao_existe,
+        )
+
+        insumos_dir = tmp_path / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-001.json").write_text('{"codigo": "EQ-001"}', encoding="utf-8")
+
+        with pytest.raises(CatalogGovernanceError, match="já existe"):
+            validate_insumo_nao_existe(tmp_path, "EQ-001")
+
     def test_validate_producao_file_found(self, tmp_path):
         from concilium.application.orchestrators.catalog_governance import validate_and_resolve_producao_file
 

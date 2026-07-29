@@ -16,6 +16,7 @@ from ._catalogo_tools_helpers_a import (
     _impl_atualizar_preco_insumo,
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
+    _impl_criar_insumo,
     _impl_listar_contextos,
     _impl_listar_insumos,
     _impl_pesquisar_catalogo,
@@ -169,6 +170,40 @@ def register(server: FastMCP) -> None:
             jurisdicao_id,
             nota,
             novo_valor_locacao_mensal,
+        )
+
+    @server.tool(
+        description=(
+            "Cria um insumo novo (material/mão-de-obra/equipamento) no catálogo mestre. "
+            "Requer rascunho_id (criado via criar_rascunho_catalogo) — a criação fica pendente "
+            "até aprovar_merge_catalogo (ADR-163)."
+        )
+    )
+    @permission("catalog:write")
+    @mcp_rate_limit()
+    def criar_insumo(
+        contexto_id: str,
+        rascunho_id: str,
+        codigo: str,
+        tipo: str,
+        descricao: str,
+        unidade: str,
+        preco_unitario: float,
+        categoria: str,
+        fonte_preco: str,
+        atributos_especificos: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return _impl_criar_insumo(
+            contexto_id,
+            rascunho_id,
+            codigo,
+            tipo,
+            descricao,
+            unidade,
+            preco_unitario,
+            categoria,
+            fonte_preco,
+            atributos_especificos,
         )
 
     @server.tool(
@@ -531,6 +566,7 @@ def register(server: FastMCP) -> None:
         from concilium.presentation.mcp._context import _runtime
 
         from ._catalogo_tools_helpers_a import (
+            _apply_criar_insumo_delta,
             _apply_preco_insumo_delta,
             _apply_variante_producao_delta,
         )
@@ -587,6 +623,9 @@ def register(server: FastMCP) -> None:
                             delta["valor_horario"],
                             delta["equipe"],
                         )
+                        deltas_aplicados += 1
+                    elif tipo == "criacao_insumo":
+                        _apply_criar_insumo_delta(catalog_root, delta["insumo"])
                         deltas_aplicados += 1
 
             # Promove: atualiza ponteiro "current" para o rascunho
