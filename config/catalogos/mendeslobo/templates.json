@@ -79,11 +79,11 @@
       "descricao": "Estrutura ADM básica para obras até R$ 10M",
       "mao_de_obra": [
         {
-          "funcao_id": "ENCARREG-GERAL",
+          "funcao_id": "MO-ENCARREG-GERAL",
           "quantidade": 1
         },
         {
-          "funcao_id": "AUX-ADM",
+          "funcao_id": "MO-AUX-ADM",
           "quantidade": 1
         }
       ],
@@ -99,19 +99,19 @@
       "descricao": "Estrutura ADM para obras de médio porte (até R$ 50M)",
       "mao_de_obra": [
         {
-          "funcao_id": "ENG-CIVIL",
+          "funcao_id": "MO-ENG-CIVIL",
           "quantidade": 1
         },
         {
-          "funcao_id": "ENCARREG-GERAL",
+          "funcao_id": "MO-ENCARREG-GERAL",
           "quantidade": 1
         },
         {
-          "funcao_id": "ALMOXARIFE",
+          "funcao_id": "MO-ALMOXARIFE",
           "quantidade": 1
         },
         {
-          "funcao_id": "AUX-ADM",
+          "funcao_id": "MO-AUX-ADM",
           "quantidade": 3
         }
       ],
@@ -133,23 +133,23 @@
       "descricao": "Estrutura ADM robusta para obras de grande porte (> R$ 50M)",
       "mao_de_obra": [
         {
-          "funcao_id": "GERENTE",
+          "funcao_id": "MO-GERENTE",
           "quantidade": 1
         },
         {
-          "funcao_id": "ENG-CIVIL",
+          "funcao_id": "MO-ENG-CIVIL",
           "quantidade": 2
         },
         {
-          "funcao_id": "ENCARREG-GERAL",
+          "funcao_id": "MO-ENCARREG-GERAL",
           "quantidade": 2
         },
         {
-          "funcao_id": "ALMOXARIFE",
+          "funcao_id": "MO-ALMOXARIFE",
           "quantidade": 2
         },
         {
-          "funcao_id": "AUX-ADM",
+          "funcao_id": "MO-AUX-ADM",
           "quantidade": 7
         }
       ],

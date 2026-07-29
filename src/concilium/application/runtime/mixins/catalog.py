@@ -215,7 +215,13 @@ class CatalogMixin:
             except Exception:
                 pass
 
-        catalogo: dict[str, Any] = {"cpus": [], "insumos": [], "templates": {}, "produtividades": []}
+        catalogo: dict[str, Any] = {
+            "cpus": [],
+            "insumos": [],
+            "templates": {},
+            "estruturas_indiretas": [],
+            "produtividades": [],
+        }
 
         catalogo["cpus"] = self._load_cpus_from_cpu_dir(cat_dir / "cpus")
         if not catalogo["cpus"]:
@@ -229,6 +235,7 @@ class CatalogMixin:
         if templates_path.exists():
             data = json.loads(templates_path.read_text(encoding="utf-8"))
             catalogo["templates"] = data.get("templates", data) if isinstance(data, dict) else {}
+            catalogo["estruturas_indiretas"] = data.get("estruturas_indiretas", []) if isinstance(data, dict) else []
 
         catalogo["producoes"] = self._load_and_synthesize_producoes(catalogo["cpus"], cat_dir)
 

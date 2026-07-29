@@ -120,6 +120,92 @@ class TestDaMagnitudeFinanceira:
         assert "mao_de_obra" in result
 
 
+class TestDaMagnitudeFinanceiraRealCatalogMendeslobo:
+    """Regressão: catalog.py descartava 'estruturas_indiretas' de templates.json, então o driver
+    magnitude_financeira do perfil mendeslobo (real) nunca escalava ADM por porte da obra — toda
+    obra caía no fallback estático de _composicao_default_por_categoria. Estes testes usam o
+    perfil e o catálogo reais (não sintéticos) para travar que a segmentação ADM_PEQUENA/MEDIA/
+    GRANDE de fato dispara."""
+
+    @staticmethod
+    def _catalogo_real():
+        import json
+
+        path = _ROOT / "config/catalogos/mendeslobo/templates.json"
+        return {"estruturas_indiretas": json.loads(path.read_text(encoding="utf-8"))["estruturas_indiretas"]}
+
+    @staticmethod
+    def _regra_adm_real():
+        import json
+
+        path = _ROOT / "config/perfis/mendeslobo.json"
+        perfil = json.loads(path.read_text(encoding="utf-8"))
+        adm = next(c for c in perfil["categorias_indireto"] if c["codigo"] == "ADM")
+        return adm["regra_dimensionamento"]
+
+    @staticmethod
+    def _mk_canonical(total_venda):
+        from types import SimpleNamespace
+
+        plan_item = SimpleNamespace(subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=total_venda)))
+        return SimpleNamespace(planejamento=[plan_item])
+
+    def _funcao_ids(self, mod, venda_sem_bdi):
+        result = mod._dimensionar_automatico(
+            "ADM", self._regra_adm_real(), self._mk_canonical(venda_sem_bdi), self._catalogo_real()
+        )
+        return {item["funcao_id"] for item in result["mao_de_obra"]["itens"]}
+
+    def test_obra_pequena_usa_template_adm_pequena(self):
+        mod = _load_ind_helpers_a()
+        assert self._funcao_ids(mod, 5_000_000.0) == {"MO-ENCARREG-GERAL", "MO-AUX-ADM"}
+
+    def test_obra_media_usa_template_adm_media(self):
+        mod = _load_ind_helpers_a()
+        assert self._funcao_ids(mod, 30_000_000.0) == {
+            "MO-ENG-CIVIL",
+            "MO-ENCARREG-GERAL",
+            "MO-ALMOXARIFE",
+            "MO-AUX-ADM",
+        }
+
+    def test_obra_grande_usa_template_adm_grande_nao_fallback_estatico(self):
+        """Antes do fix, isso caía em _composicao_default_por_categoria (só 'Coordenador')."""
+        mod = _load_ind_helpers_a()
+        ids = self._funcao_ids(mod, 200_000_000.0)
+        assert ids == {
+            "MO-GERENTE",
+            "MO-ENG-CIVIL",
+            "MO-ENCARREG-GERAL",
+            "MO-ALMOXARIFE",
+            "MO-AUX-ADM",
+        }
+        assert "Coordenador" not in ids  # não é o item do fallback estático
+
+    def test_obra_grande_mao_de_obra_resolve_custo_real_nao_zero(self):
+        """Regressão do bug de prefixo MO-: sem 'MO-' no funcao_id, RepositorioInsumo.obter_insumo
+        não encontra o insumo (chave real é 'MO-GERENTE' etc.), _bcfd_enrich_mo_item não populava
+        custo_mensal, e a mão de obra inteira do ADM_GRANDE silenciosamente custava R$0."""
+        import json
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+        mod = _load_ind_helpers_a()
+        catalogo = self._catalogo_real()
+        insumos_dir = _ROOT / "config/catalogos/mendeslobo/insumos/mao_obra"
+        catalogo["insumos"] = [
+            json.loads(p.read_text(encoding="utf-8")) for p in insumos_dir.glob("*.json")
+        ]
+        repo = RepositorioInsumo(catalogo)
+
+        comp = mod._dimensionar_automatico(
+            "ADM", self._regra_adm_real(), self._mk_canonical(200_000_000.0), catalogo
+        )
+        mod._bcfd_enrich_mo_itens(comp, repo, None, None, None)
+        custo_total = sum(item["custo_mensal"] for item in comp["mao_de_obra"]["itens"])
+        assert custo_total > 0
+
+
 class TestBcfdResolveSalarioBase:
     def test_exception_returns_preco(self):
         """Lines 202-203: ConversorUnidades.converter_preco raises → returns preco."""

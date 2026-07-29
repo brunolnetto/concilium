@@ -175,6 +175,35 @@ class TestLoadCatalogoFromDisk:
         cat = mixin._load_catalogo_from_disk("cat1")
         assert "T1" in cat.get("templates", {})
 
+    def test_estruturas_indiretas_loaded_when_file_exists(self, tmp_path):
+        """Regressão: templates.json com 'estruturas_indiretas' (irmã de 'templates') não pode ser
+        descartada — sem isso, o driver magnitude_financeira (dimensionamento de ADM por porte da
+        obra) sempre cai no fallback estático, pois _da_magnitude_financeira lê exatamente
+        catalogo['estruturas_indiretas']."""
+        mixin = _make_catalog_mixin(tmp_path)
+        cat_dir = _make_cat_dir(tmp_path, "cat1")
+        (cat_dir / "templates.json").write_text(
+            json.dumps(
+                {
+                    "templates": {"T1": {"desc": "Template 1"}},
+                    "estruturas_indiretas": [{"codigo": "ADM_PEQUENA", "mao_de_obra": []}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        cat = mixin._load_catalogo_from_disk("cat1")
+        assert [e["codigo"] for e in cat.get("estruturas_indiretas", [])] == ["ADM_PEQUENA"]
+
+    def test_estruturas_indiretas_defaults_empty_when_absent(self, tmp_path):
+        """templates.json sem 'estruturas_indiretas' → chave presente e vazia (não ausente)."""
+        mixin = _make_catalog_mixin(tmp_path)
+        cat_dir = _make_cat_dir(tmp_path, "cat1")
+        (cat_dir / "templates.json").write_text(
+            json.dumps({"templates": {"T1": {"desc": "Template 1"}}}), encoding="utf-8"
+        )
+        cat = mixin._load_catalogo_from_disk("cat1")
+        assert cat.get("estruturas_indiretas") == []
+
     def test_bundle_write_failure_is_swallowed(self, tmp_path):
         """Lines 237-238: bundle write fails → exception caught, catalog still returned."""
         mixin = _make_catalog_mixin(tmp_path)

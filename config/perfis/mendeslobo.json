@@ -43,10 +43,10 @@
       "regra_dimensionamento": {
         "driver": "frentes_ativas",
         "proporcao": 3,
-        "funcao_lider": "TOPOGRAFO",
+        "funcao_lider": "MO-TOPOGRAFO",
         "itens_apoio": [
           {
-            "funcao_id": "AUX-TOPO",
+            "funcao_id": "MO-AUX-TOPO",
             "quantidade": 2
           }
         ]
@@ -58,7 +58,7 @@
       "regra_dimensionamento": {
         "driver": "volume_mensal",
         "proporcao": 50000,
-        "funcao_lider": "LABORATORISTA"
+        "funcao_lider": "MO-LABORATORISTA"
       }
     },
     {
@@ -67,7 +67,7 @@
       "regra_dimensionamento": {
         "driver": "hc_direto",
         "proporcao": 100,
-        "funcao_lider": "TEC-SEG"
+        "funcao_lider": "MO-TEC-SEG"
       }
     },
     {
