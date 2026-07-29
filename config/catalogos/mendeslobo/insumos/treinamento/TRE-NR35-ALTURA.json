@@ -7,6 +7,23 @@
   "categoria": "QSMS",
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
-    "vida_util_dias": 360
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "MO-ARMADOR",
+      "MO-CARPINTEIRO",
+      "MO-ELETRICISTA",
+      "MO-MONTADOR",
+      "MO-MONTADOR-AGUA",
+      "MO-P0005",
+      "MO-P0015",
+      "MO-P0016",
+      "MO-P0037",
+      "MO-P0038",
+      "P0005",
+      "P0015",
+      "P0016",
+      "P0037",
+      "P0038"
+    ]
   }
 }

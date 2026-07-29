@@ -7,6 +7,41 @@
   "categoria": "QSMS",
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
-    "vida_util_dias": 360
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "AGIS-FN-MOTOR-BASC",
+      "AGIS-FN-MOTOR-PIPA",
+      "AGIS-FN-SINALEIRO",
+      "MO-MOTOR-CAM",
+      "MO-MOTOR-CAM-BASC",
+      "MO-MOTOR-CAM-COMB",
+      "MO-MOTOR-CAM-PIPA",
+      "MO-MOTOR-ONIBUS",
+      "MO-MOTOR-ONIBUS-A",
+      "MO-MOTORISTA-DE-CAMINHA",
+      "MO-P0032",
+      "MO-P0033",
+      "MO-P0034",
+      "MO-P0035",
+      "MO-P0036",
+      "MO-P0071",
+      "MO-P0079",
+      "MO-P0089",
+      "MO-SINALEIRO",
+      "P0032",
+      "P0033",
+      "P0034",
+      "P0035",
+      "P0036",
+      "P0036A",
+      "P0060",
+      "P0071",
+      "P0079",
+      "P0089",
+      "SV-P0032-D",
+      "SV-P0032-N",
+      "SV-P0033-D",
+      "SV-P0033-N"
+    ]
   }
 }

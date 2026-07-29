@@ -7,6 +7,18 @@
   "categoria": "QSMS",
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
-    "vida_util_dias": 360
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "MO-AUX-MEC",
+      "MO-BORRACHEIRO",
+      "MO-MECANICO",
+      "MO-P0011",
+      "MO-P0014",
+      "MO-P0073",
+      "P0011",
+      "P0014",
+      "P0073",
+      "P0083"
+    ]
   }
 }

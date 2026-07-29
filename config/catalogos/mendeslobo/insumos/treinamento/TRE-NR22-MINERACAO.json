@@ -7,6 +7,7 @@
   "categoria": "QSMS",
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
-    "vida_util_dias": 360
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": []
   }
 }

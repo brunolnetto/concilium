@@ -7,6 +7,20 @@
   "categoria": "QSMS",
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
-    "vida_util_dias": 360
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "MO-AUX-LAB",
+      "MO-LABORATORISTA",
+      "MO-OPER-ESPARG",
+      "MO-P0009",
+      "MO-P0030",
+      "MO-P0041",
+      "MO-P0053",
+      "MO-PINTOR",
+      "P0009",
+      "P0030",
+      "P0041",
+      "P0053"
+    ]
   }
 }

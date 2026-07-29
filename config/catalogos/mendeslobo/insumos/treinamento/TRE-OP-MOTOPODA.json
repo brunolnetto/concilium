@@ -7,6 +7,12 @@
   "categoria": "QSMS",
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
-    "vida_util_dias": 360
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "AGIS-FN-OPER-MOTOSSERRA",
+      "MO-OPERADOR-DE-MOTOSSER",
+      "MO-P0062",
+      "P0062"
+    ]
   }
 }
