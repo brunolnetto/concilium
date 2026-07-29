@@ -71,7 +71,9 @@ jobs:
     with:
       command: |
         sleep 30
-        cd/scripts/deploy.sh smoke --revision "${{ needs.deploy-revision.outputs.deployed_revision }}"
+        cd/scripts/deploy.sh smoke \
+          --revision "${{ needs.deploy-revision.outputs.deployed_revision }}" \
+          --mcp-revision "${{ needs.deploy-revision.outputs.deployed_mcp_revision }}"
 
 # ── Job 4a: Promote (smoke passou) ───────────────────────────────────────────
   promote:
@@ -82,7 +84,9 @@ jobs:
     secrets: inherit
     with:
       command: |
-        cd/scripts/deploy.sh promote --revision "${{ needs.deploy-revision.outputs.deployed_revision }}"
+        cd/scripts/deploy.sh promote \
+          --revision "${{ needs.deploy-revision.outputs.deployed_revision }}" \
+          --mcp-revision "${{ needs.deploy-revision.outputs.deployed_mcp_revision }}"
         cd/scripts/deploy.sh status
 
 # ── Job 4b: Rollback (smoke falhou) ──────────────────────────────────────────
@@ -95,7 +99,9 @@ jobs:
     with:
       command: |
         if [[ -n "${{ needs.deploy-revision.outputs.active_revision }}" ]]; then
-          cd/scripts/deploy.sh rollback --revision "${{ needs.deploy-revision.outputs.active_revision }}"
+          cd/scripts/deploy.sh rollback \
+            --revision "${{ needs.deploy-revision.outputs.active_revision }}" \
+            --mcp-revision "${{ needs.deploy-revision.outputs.active_mcp_revision }}"
         else
           echo "::warning::Nenhuma revision ativa anterior encontrada; rollback de trafego ignorado."
         fi

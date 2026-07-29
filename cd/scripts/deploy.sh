@@ -9,6 +9,11 @@
 #   rollback [--revision]   Volta para revision anterior (ou especificada)
 #   status                  Mostra revisions e pesos de trafego
 #
+# deploy aceita --api-only/--mcp-only para agir só sobre concilium-api ou
+# concilium-mcp. promote/rollback inferem o mesmo pela presença dos flags
+# --revision/--mcp-revision: só um dos dois -> só aquele app; os dois ou
+# nenhum -> os dois (default: ambos).
+#
 # Para provisionamento de plataforma (bootstrap, configure, domain, keys, github)
 # use: cd/scripts/provision.sh
 #
@@ -153,7 +158,17 @@ _wait_revision_running() {
 # -- ACA Revisions: runtime deployment ------------------------------------------
 
 cmd_deploy() {
-    local image_tag="${1:-latest}"
+    local image_tag="" only=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --api-only) only="api"; shift ;;
+            --mcp-only) only="mcp"; shift ;;
+            *)          image_tag="$1"; shift ;;
+        esac
+    done
+    image_tag="${image_tag:-latest}"
+
     need az
     require_login
 
@@ -168,57 +183,65 @@ cmd_deploy() {
     fi
 
     # ── Deploy API (blue-green) ───────────────────────────────────────────────
-    step "ACA Deploy — app '$ACA_API_APP' com imagem '$image_tag'"
-    [[ -n "$previous_primary" ]] && log "Revision com trafego atual: $previous_primary"
+    local new_revision=""
+    if [[ "$only" != "mcp" ]]; then
+        step "ACA Deploy — app '$ACA_API_APP' com imagem '$image_tag'"
+        [[ -n "$previous_primary" ]] && log "Revision com trafego atual: $previous_primary"
 
-    az containerapp revision set-mode \
-        --name "$ACA_API_APP" \
-        --resource-group "$RESOURCE_GROUP" \
-        --mode multiple \
-        --output none
-
-    az containerapp update \
-        --name "$ACA_API_APP" \
-        --resource-group "$RESOURCE_GROUP" \
-        --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${image_tag}" \
-        --output none
-
-    local new_revision
-    new_revision=$(_aca_latest_revision "$ACA_API_APP")
-    [[ -n "$new_revision" ]] || die "Nao foi possivel identificar a revision criada no deploy."
-
-    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-        echo "deployed_revision=${new_revision}" >> "$GITHUB_OUTPUT"
-    fi
-
-    _wait_revision_running "$ACA_API_APP" "$new_revision"
-
-    if [[ -n "$previous_primary" && "$previous_primary" != "$new_revision" ]]; then
-        _az_retry az containerapp ingress traffic set \
+        az containerapp revision set-mode \
             --name "$ACA_API_APP" \
             --resource-group "$RESOURCE_GROUP" \
-            --revision-weight "${previous_primary}=100" "${new_revision}=0" \
+            --mode multiple \
             --output none
+
+        az containerapp update \
+            --name "$ACA_API_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${image_tag}" \
+            --output none
+
+        new_revision=$(_aca_latest_revision "$ACA_API_APP")
+        [[ -n "$new_revision" ]] || die "Nao foi possivel identificar a revision criada no deploy."
+
+        if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+            echo "deployed_revision=${new_revision}" >> "$GITHUB_OUTPUT"
+        fi
+
+        _wait_revision_running "$ACA_API_APP" "$new_revision"
+
+        if [[ -n "$previous_primary" && "$previous_primary" != "$new_revision" ]]; then
+            _az_retry az containerapp ingress traffic set \
+                --name "$ACA_API_APP" \
+                --resource-group "$RESOURCE_GROUP" \
+                --revision-weight "${previous_primary}=100" "${new_revision}=0" \
+                --output none
+        else
+            _az_retry az containerapp ingress traffic set \
+                --name "$ACA_API_APP" \
+                --resource-group "$RESOURCE_GROUP" \
+                --revision-weight "${new_revision}=100" \
+                --output none
+        fi
+
+        local new_url
+        new_url=$(_aca_revision_url "$ACA_API_APP" "$new_revision")
+        ok "Revision API pronta: $new_revision"
+        log "URL da revision: $new_url"
     else
-        _az_retry az containerapp ingress traffic set \
-            --name "$ACA_API_APP" \
-            --resource-group "$RESOURCE_GROUP" \
-            --revision-weight "${new_revision}=100" \
-            --output none
+        log "Pulando API (--mcp-only)."
     fi
-
-    local new_url
-    new_url=$(_aca_revision_url "$ACA_API_APP" "$new_revision")
-    ok "Revision API pronta: $new_revision"
-    log "URL da revision: $new_url"
 
     # ── Deploy MCP (blue/green — mesma imagem, comando diferente) ───────────
     local mcp_revision=""
-    if _aca_app_exists "$ACA_MCP_APP"; then
+    if [[ "$only" != "api" ]] && _aca_app_exists "$ACA_MCP_APP"; then
         step "ACA Deploy — app '$ACA_MCP_APP' com imagem '$image_tag'"
 
         local mcp_previous_primary
         mcp_previous_primary=$(_aca_primary_revision "$ACA_MCP_APP")
+
+        if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+            echo "active_mcp_revision=${mcp_previous_primary}" >> "$GITHUB_OUTPUT"
+        fi
 
         az containerapp revision set-mode \
             --name "$ACA_MCP_APP" \
@@ -254,7 +277,8 @@ cmd_deploy() {
         ok "Revision MCP pronta: $mcp_revision (aguardando smoke + promote)"
     fi
 
-    local next_step="cd/scripts/deploy.sh smoke --revision $new_revision"
+    local next_step="cd/scripts/deploy.sh smoke"
+    [[ -n "$new_revision" ]] && next_step+=" --revision $new_revision"
     [[ -n "$mcp_revision" ]] && next_step+=" --mcp-revision $mcp_revision"
     echo "  Proximo passo: $next_step"
 }
@@ -476,11 +500,12 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
 
 cmd_promote() {
     local target_revision="" mcp_revision=""
+    local target_given=0 mcp_given=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --revision)     target_revision="$2"; shift 2 ;;
-            --mcp-revision) mcp_revision="$2"; shift 2 ;;
+            --revision)     target_revision="$2"; target_given=1; shift 2 ;;
+            --mcp-revision) mcp_revision="$2"; mcp_given=1; shift 2 ;;
             *)              shift ;;
         esac
     done
@@ -490,47 +515,62 @@ cmd_promote() {
 
     _aca_app_exists "$ACA_API_APP" || die "Container App '$ACA_API_APP' nao encontrado."
 
-    [[ -n "$target_revision" ]] || target_revision=$(_aca_latest_revision "$ACA_API_APP")
-    [[ -n "$target_revision" ]] || die "Nao foi possivel determinar a revision para promote."
+    # Inferencia pela presenca dos flags: só --revision -> só API; só
+    # --mcp-revision -> só MCP; ambos ou nenhum -> os dois (nenhum cai no
+    # fallback de "latest revision" de cada app, igual ao comportamento
+    # historico de "promote" sem argumentos).
+    local do_api=1 do_mcp=1
+    if [[ $target_given -eq 1 && $mcp_given -eq 0 ]]; then
+        do_mcp=0
+    elif [[ $mcp_given -eq 1 && $target_given -eq 0 ]]; then
+        do_api=0
+    fi
 
-    local current
-    current=$(_aca_primary_revision "$ACA_API_APP")
+    if [[ $do_api -eq 1 ]]; then
+        [[ -n "$target_revision" ]] || target_revision=$(_aca_latest_revision "$ACA_API_APP")
+        [[ -n "$target_revision" ]] || die "Nao foi possivel determinar a revision para promote."
 
-    step "Promote API Revision"
-    log "Atual: ${current:-nenhuma}"
-    log "Nova ativa: $target_revision"
+        local current
+        current=$(_aca_primary_revision "$ACA_API_APP")
 
-    az containerapp ingress traffic set \
-        --name "$ACA_API_APP" \
-        --resource-group "$RESOURCE_GROUP" \
-        --revision-weight "${target_revision}=100" \
-        --output none
+        step "Promote API Revision"
+        log "Atual: ${current:-nenhuma}"
+        log "Nova ativa: $target_revision"
 
-    ok "API: trafego 100% para '$target_revision'."
-
-    # Desativa todas as revisions da API que não recebem tráfego.
-    log "Desativando revisions API sem trafego..."
-    local old_revs
-    old_revs=$(az containerapp revision list \
-        --name "$ACA_API_APP" \
-        --resource-group "$RESOURCE_GROUP" \
-        --query "[?properties.active && name != '$target_revision'].name" \
-        --output tsv 2>/dev/null)
-
-    local count=0
-    while IFS= read -r rev; do
-        [[ -z "$rev" ]] && continue
-        az containerapp revision deactivate \
+        az containerapp ingress traffic set \
             --name "$ACA_API_APP" \
             --resource-group "$RESOURCE_GROUP" \
-            --revision "$rev" \
-            --output none 2>/dev/null && (( count++ )) || true
-    done <<< "$old_revs"
+            --revision-weight "${target_revision}=100" \
+            --output none
 
-    [[ $count -gt 0 ]] && ok "$count revision(s) API desativada(s)." || log "Nenhuma revision API extra para desativar."
+        ok "API: trafego 100% para '$target_revision'."
+
+        # Desativa todas as revisions da API que não recebem tráfego.
+        log "Desativando revisions API sem trafego..."
+        local old_revs
+        old_revs=$(az containerapp revision list \
+            --name "$ACA_API_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?properties.active && name != '$target_revision'].name" \
+            --output tsv 2>/dev/null)
+
+        local count=0
+        while IFS= read -r rev; do
+            [[ -z "$rev" ]] && continue
+            az containerapp revision deactivate \
+                --name "$ACA_API_APP" \
+                --resource-group "$RESOURCE_GROUP" \
+                --revision "$rev" \
+                --output none 2>/dev/null && (( count++ )) || true
+        done <<< "$old_revs"
+
+        [[ $count -gt 0 ]] && ok "$count revision(s) API desativada(s)." || log "Nenhuma revision API extra para desativar."
+    else
+        log "Pulando API (só --mcp-revision informado)."
+    fi
 
     # ── Promote MCP (simetrico) ───────────────────────────────────────────────
-    if _aca_app_exists "$ACA_MCP_APP"; then
+    if [[ $do_mcp -eq 1 ]] && _aca_app_exists "$ACA_MCP_APP"; then
         [[ -n "$mcp_revision" ]] || mcp_revision=$(_aca_latest_revision "$ACA_MCP_APP")
 
         if [[ -n "$mcp_revision" ]]; then
@@ -576,11 +616,12 @@ cmd_promote() {
 
 cmd_rollback() {
     local target_revision="" mcp_revision=""
+    local target_given=0 mcp_given=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --revision)     target_revision="$2"; shift 2 ;;
-            --mcp-revision) mcp_revision="$2"; shift 2 ;;
+            --revision)     target_revision="$2"; target_given=1; shift 2 ;;
+            --mcp-revision) mcp_revision="$2"; mcp_given=1; shift 2 ;;
             *)              shift ;;
         esac
     done
@@ -590,29 +631,42 @@ cmd_rollback() {
 
     _aca_app_exists "$ACA_API_APP" || die "Container App '$ACA_API_APP' nao encontrado."
 
-    local current
-    current=$(_aca_primary_revision "$ACA_API_APP")
-    [[ -n "$current" ]] || die "Nao existe revision ativa para rollback."
-
-    if [[ -z "$target_revision" ]]; then
-        target_revision=$(_aca_previous_revision "$ACA_API_APP" "$current")
+    # Mesma inferencia de cmd_promote: só um dos dois flags -> só aquele app;
+    # ambos ou nenhum -> os dois (nenhum cai no fallback de "revision anterior").
+    local do_api=1 do_mcp=1
+    if [[ $target_given -eq 1 && $mcp_given -eq 0 ]]; then
+        do_mcp=0
+    elif [[ $mcp_given -eq 1 && $target_given -eq 0 ]]; then
+        do_api=0
     fi
-    [[ -n "$target_revision" ]] || die "Nenhuma revision anterior disponivel para rollback."
 
-    step "Rollback API Revision"
-    log "Atual: $current"
-    log "Destino rollback: $target_revision"
+    if [[ $do_api -eq 1 ]]; then
+        local current
+        current=$(_aca_primary_revision "$ACA_API_APP")
+        [[ -n "$current" ]] || die "Nao existe revision ativa para rollback."
 
-    az containerapp ingress traffic set \
-        --name "$ACA_API_APP" \
-        --resource-group "$RESOURCE_GROUP" \
-        --revision-weight "${target_revision}=100" \
-        --output none
+        if [[ -z "$target_revision" ]]; then
+            target_revision=$(_aca_previous_revision "$ACA_API_APP" "$current")
+        fi
+        [[ -n "$target_revision" ]] || die "Nenhuma revision anterior disponivel para rollback."
 
-    ok "API rollback concluido. Trafego em '$target_revision'."
+        step "Rollback API Revision"
+        log "Atual: $current"
+        log "Destino rollback: $target_revision"
+
+        az containerapp ingress traffic set \
+            --name "$ACA_API_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --revision-weight "${target_revision}=100" \
+            --output none
+
+        ok "API rollback concluido. Trafego em '$target_revision'."
+    else
+        log "Pulando API (só --mcp-revision informado)."
+    fi
 
     # ── Rollback MCP (simetrico) ──────────────────────────────────────────────
-    if _aca_app_exists "$ACA_MCP_APP"; then
+    if [[ $do_mcp -eq 1 ]] && _aca_app_exists "$ACA_MCP_APP"; then
         local mcp_current
         mcp_current=$(_aca_primary_revision "$ACA_MCP_APP")
 
@@ -739,14 +793,18 @@ Uso: deploy.sh [comando] [opcoes]
 
 -- Runtime Deployment (ACA Revisions, CI-safe) ---------------------------------
   image [--tag TAG]             Builda imagem nova (sem --tag) ou valida tag existente
-  deploy IMAGE_TAG              Cria nova revision (API+MCP) sem promover trafego (blue/green)
+  deploy IMAGE_TAG               Cria nova revision (API+MCP) sem promover trafego (blue/green)
+         [--api-only|--mcp-only] Restringe o deploy a só um dos dois apps
   smoke [--revision REV]        Smoke exaustivo contra a revision API alvo
         [--mcp-revision REV]    Smoke contra revision MCP especifica (fallback: app FQDN)
         [--url URL] [--mcp-url URL]
-  promote [--revision REV]      Direciona 100% do trafego para a revision API
-          [--mcp-revision REV]  Idem para o MCP (fallback: latest revision)
-  rollback [--revision REV]     Volta para revision anterior da API (ou especificada)
-           [--mcp-revision REV] Idem para o MCP
+  promote [--revision REV]      Só --revision -> promove só a API.
+          [--mcp-revision REV]  Só --mcp-revision -> promove só o MCP.
+                                 Os dois, ou nenhum -> promove os dois (sem
+                                 nenhum, cada app usa sua latest revision).
+  rollback [--revision REV]     Mesma inferencia de promote: só --revision ->
+           [--mcp-revision REV] só API; só --mcp-revision -> só MCP; os dois
+                                 ou nenhum -> os dois (fallback: revision anterior).
   status                        Mostra revisions e pesos de trafego
   update-job IMAGE_TAG          Atualiza a imagem do Container Apps Job de observabilidade
                                  (sem revision/trafego — nao precisa de smoke/promote)

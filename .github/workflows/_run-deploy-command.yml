@@ -12,11 +12,17 @@ on:
         description: "Image tag emitted by deploy.sh image"
         value: ${{ jobs.run-command.outputs.image_tag }}
       active_revision:
-        description: "Current active revision emitted by deploy.sh deploy"
+        description: "Current active API revision emitted by deploy.sh deploy"
         value: ${{ jobs.run-command.outputs.active_revision }}
       deployed_revision:
-        description: "Deployed revision emitted by deploy.sh deploy"
+        description: "Deployed API revision emitted by deploy.sh deploy"
         value: ${{ jobs.run-command.outputs.deployed_revision }}
+      active_mcp_revision:
+        description: "Current active MCP revision emitted by deploy.sh deploy"
+        value: ${{ jobs.run-command.outputs.active_mcp_revision }}
+      deployed_mcp_revision:
+        description: "Deployed MCP revision emitted by deploy.sh deploy"
+        value: ${{ jobs.run-command.outputs.deployed_mcp_revision }}
 
 permissions:
   id-token: write
@@ -29,6 +35,8 @@ jobs:
       image_tag: ${{ steps.exec.outputs.image_tag }}
       active_revision: ${{ steps.exec.outputs.active_revision }}
       deployed_revision: ${{ steps.exec.outputs.deployed_revision }}
+      active_mcp_revision: ${{ steps.exec.outputs.active_mcp_revision }}
+      deployed_mcp_revision: ${{ steps.exec.outputs.deployed_mcp_revision }}
     steps:
       - uses: actions/checkout@v4
 

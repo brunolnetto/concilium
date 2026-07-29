@@ -147,13 +147,15 @@ image:
 	$(DEPLOY) image $(if $(TAG),--tag $(TAG),)
 
 smoke:
-	$(DEPLOY) smoke $(if $(REV),--revision $(REV),)
+	$(DEPLOY) smoke $(if $(REV),--revision $(REV),) $(if $(MCP_REV),--mcp-revision $(MCP_REV),)
 
+# Só REV -> promove/rollback só a API; só MCP_REV -> só o MCP; os dois ou
+# nenhum -> os dois (nenhum cai no fallback de cada app dentro do deploy.sh).
 promote:
-	$(DEPLOY) promote $(if $(REV),--revision $(REV),)
+	$(DEPLOY) promote $(if $(REV),--revision $(REV),) $(if $(MCP_REV),--mcp-revision $(MCP_REV),)
 
 rollback:
-	$(DEPLOY) rollback $(if $(REV),--revision $(REV),)
+	$(DEPLOY) rollback $(if $(REV),--revision $(REV),) $(if $(MCP_REV),--mcp-revision $(MCP_REV),)
 
 # ── Plataforma (wrappers para provision.sh) ───────────────────────────────────
 
