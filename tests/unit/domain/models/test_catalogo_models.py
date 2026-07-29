@@ -103,6 +103,53 @@ class TestInsumoNormalizarUnidade:
         assert insumo.unidade is not None
 
 
+class TestInsumoStatus:
+    """ADR-163 D6: soft delete — status default 'ativo', retrocompatível."""
+
+    def test_status_default_ativo(self):
+        from concilium.domain.models.catalog.catalogo import Insumo
+
+        insumo = Insumo(
+            codigo="MAT-001",
+            tipo="MATERIAL",
+            descricao="Concreto usinado",
+            unidade="m3",
+            preco_unitario=350.0,
+            fonte_preco="catalogo_proprio",
+        )
+        assert insumo.status == "ativo"
+
+    def test_status_explicito_descontinuado(self):
+        from concilium.domain.models.catalog.catalogo import Insumo
+
+        insumo = Insumo(
+            codigo="MAT-001",
+            tipo="MATERIAL",
+            descricao="Concreto usinado",
+            unidade="m3",
+            preco_unitario=350.0,
+            fonte_preco="catalogo_proprio",
+            status="descontinuado",
+        )
+        assert insumo.status == "descontinuado"
+
+    def test_status_invalido_rejeitado(self):
+        import pydantic
+
+        from concilium.domain.models.catalog.catalogo import Insumo
+
+        with pytest.raises(pydantic.ValidationError):
+            Insumo(
+                codigo="MAT-001",
+                tipo="MATERIAL",
+                descricao="Concreto usinado",
+                unidade="m3",
+                preco_unitario=350.0,
+                fonte_preco="catalogo_proprio",
+                status="removido",
+            )
+
+
 # ---------------------------------------------------------------------------
 
 

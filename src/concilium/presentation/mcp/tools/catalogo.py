@@ -17,6 +17,7 @@ from ._catalogo_tools_helpers_a import (
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
     _impl_criar_insumo,
+    _impl_descontinuar_insumo,
     _impl_listar_contextos,
     _impl_listar_insumos,
     _impl_pesquisar_catalogo,
@@ -205,6 +206,24 @@ def register(server: FastMCP) -> None:
             fonte_preco,
             atributos_especificos,
         )
+
+    @server.tool(
+        description=(
+            "Descontinua um insumo do catálogo mestre (soft delete — nunca remove o arquivo, "
+            "preserva histórico/snapshots). Requer rascunho_id (criado via criar_rascunho_catalogo) — "
+            "fica pendente até aprovar_merge_catalogo. Insumos descontinuados são excluídos de "
+            "listar_insumos por padrão (ADR-163)."
+        )
+    )
+    @permission("catalog:write")
+    @mcp_rate_limit()
+    def descontinuar_insumo(
+        contexto_id: str,
+        rascunho_id: str,
+        insumo_id: str,
+        motivo: str | None = None,
+    ) -> dict[str, Any]:
+        return _impl_descontinuar_insumo(contexto_id, rascunho_id, insumo_id, motivo)
 
     @server.tool(
         description="Registra uma variante de produtividade documentada para uma producao existente "
@@ -567,6 +586,7 @@ def register(server: FastMCP) -> None:
 
         from ._catalogo_tools_helpers_a import (
             _apply_criar_insumo_delta,
+            _apply_descontinuacao_insumo_delta,
             _apply_preco_insumo_delta,
             _apply_variante_producao_delta,
         )
@@ -626,6 +646,11 @@ def register(server: FastMCP) -> None:
                         deltas_aplicados += 1
                     elif tipo == "criacao_insumo":
                         _apply_criar_insumo_delta(catalog_root, delta["insumo"])
+                        deltas_aplicados += 1
+                    elif tipo == "descontinuacao_insumo":
+                        _apply_descontinuacao_insumo_delta(
+                            catalog_root, delta["insumo_id"], delta.get("motivo")
+                        )
                         deltas_aplicados += 1
 
             # Promove: atualiza ponteiro "current" para o rascunho

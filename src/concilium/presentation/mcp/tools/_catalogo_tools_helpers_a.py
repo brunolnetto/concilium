@@ -501,6 +501,73 @@ def _impl_criar_insumo(
     )
 
 
+def _apply_descontinuacao_insumo_delta(catalog_root: Path, insumo_id: str, motivo: str | None) -> None:
+    """Marca o insumo como descontinuado no momento do merge (ADR-163 D6).
+
+    Soft delete: nunca remove o arquivo — só seta `status`, preservando
+    fidelidade retroativa de `resolved_catalog.json`/`CatalogSnapshot` que
+    referenciem este `insumo_id`.
+    """
+    insumo_file = validate_and_resolve_insumo_file(catalog_root, insumo_id, 0.0)
+    insumo_data = json.loads(insumo_file.read_text(encoding="utf-8"))
+    insumo_data["status"] = "descontinuado"
+    if motivo:
+        insumo_data["motivo_descontinuacao"] = motivo
+    insumo_file.write_text(json.dumps(insumo_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _impl_descontinuar_insumo(
+    contexto_id: str,
+    rascunho_id: str,
+    insumo_id: str,
+    motivo: str | None = None,
+) -> dict[str, Any]:
+    """Descontinua (soft delete) um insumo no catálogo mestre (ADR-163 D6).
+
+    Mesmo caminho gated por rascunho de `atualizar_preco_insumo`/`criar_insumo`
+    (ADR-145): grava um delta; o insumo só é marcado `status="descontinuado"`
+    no momento do merge (`aprovar_merge_catalogo`) — nunca removido fisicamente.
+
+    Args:
+        contexto_id: ID do contexto (ex.: "mendeslobo").
+        rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
+        insumo_id: Código do insumo a descontinuar.
+        motivo: Opcional. Justificativa (ex.: "substituído por modelo mais novo").
+    """
+    rt = _runtime()
+    config_dir = _config_root()
+    ctx = rt.load_contexto(contexto_id)
+
+    try:
+        validate_and_resolve_insumo_file(_catalog_root(config_dir, ctx.catalogo_id), insumo_id, 0.0)
+    except CatalogGovernanceError as exc:
+        return {"erro": str(exc)}
+
+    from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+    delta = {
+        "tipo": "descontinuacao_insumo",
+        "insumo_id": insumo_id,
+        "motivo": motivo,
+        "autor": get_current_user_id() or "system",
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
+    if erro:
+        return {"erro": erro}
+
+    return _wrap_response(
+        {
+            "status": "RASCUNHO",
+            "layer": "MASTER",
+            "rascunho_id": rascunho_id,
+            "insumo_id": insumo_id,
+            "nota": "Descontinuação registrada no rascunho — o insumo permanece ativo até "
+            "aprovar_merge_catalogo (nunca é removido fisicamente).",
+        }
+    )
+
+
 def _impl_atualizar_preco_insumo(
     contexto_id: str,
     insumo_id: str,

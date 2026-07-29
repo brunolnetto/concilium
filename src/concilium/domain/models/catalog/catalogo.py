@@ -195,6 +195,10 @@ class Insumo(BaseModel):
     classe_compartilhamento: ClasseCompartilhamento | None = None
     # ADR-139 D1: origem do material (None = não classificado). Restrito a tipo MATERIAL.
     origem_material: OrigemMaterial | None = None
+    # ADR-163 D6: soft delete — descontinuado nunca remove o arquivo (preserva
+    # fidelidade retroativa de resolved_catalog.json/CatalogSnapshot). Default
+    # "ativo" preserva retrocompatibilidade de todo catálogo existente.
+    status: Literal["ativo", "descontinuado"] = "ativo"
 
     @model_validator(mode="after")
     def _validar_origem_material(self) -> Insumo:

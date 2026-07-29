@@ -16,6 +16,7 @@ from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import (
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
     _impl_criar_insumo,
+    _impl_descontinuar_insumo,
     _impl_listar_contextos,
     _impl_listar_insumos,
     _impl_pesquisar_catalogo,
@@ -1007,6 +1008,87 @@ class TestApplyCriarInsumoDelta:
         data = json.loads(insumo_file.read_text(encoding="utf-8"))
         assert data["codigo"] == "EQ-999"
         assert data["descricao"] == "Retroescavadeira"
+
+
+# ---------------------------------------------------------------------------
+# _impl_descontinuar_insumo (ADR-163 D6)
+# ---------------------------------------------------------------------------
+
+
+class TestImplDescontinuarInsumo:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, rt: MagicMock, tmp_path: Path) -> None:
+        monkeypatch.setattr(mod, "_runtime", lambda: rt)
+        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
+        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
+
+    def test_insumo_inexistente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1" / "insumos").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_descontinuar_insumo("ctx1", "v1", "EQ-INEXISTENTE", "obsoleto")
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+    def test_happy_path_grava_delta_de_descontinuacao(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        insumo_file = insumos_dir / "EQ-001.json"
+        insumo_file.write_text(json.dumps({"codigo": "EQ-001", "status": "ativo"}), encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_descontinuar_insumo("ctx1", "v1", "EQ-001", "substituído por modelo mais novo")
+        assert result["status"] == "RASCUNHO"
+        assert result["insumo_id"] == "EQ-001"
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["tipo"] == "descontinuacao_insumo"
+        assert delta["insumo_id"] == "EQ-001"
+        assert delta["motivo"] == "substituído por modelo mais novo"
+
+        # arquivo mestre permanece intocado até o merge
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["status"] == "ativo"
+
+    def test_rascunho_inexistente_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-001.json").write_text(json.dumps({"codigo": "EQ-001"}), encoding="utf-8")
+
+        result = _impl_descontinuar_insumo("ctx1", "v-nao-existe", "EQ-001", "obsoleto")
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+
+class TestApplyDescontinuacaoInsumoDelta:
+    def test_marca_status_descontinuado_sem_remover_arquivo(self, tmp_path: Path) -> None:
+        from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import (
+            _apply_descontinuacao_insumo_delta,
+        )
+
+        catalog_root = tmp_path / "cat1"
+        insumos_dir = catalog_root / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        insumo_file = insumos_dir / "EQ-001.json"
+        insumo_file.write_text(
+            json.dumps({"codigo": "EQ-001", "descricao": "X", "status": "ativo"}), encoding="utf-8"
+        )
+
+        _apply_descontinuacao_insumo_delta(catalog_root, "EQ-001", "obsoleto")
+
+        assert insumo_file.exists()  # nunca remoção física
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["status"] == "descontinuado"
+        assert data["descricao"] == "X"  # resto do insumo preservado
+
 
 # ---------------------------------------------------------------------------
 # _impl_consultar_preco_insumo_temporal
