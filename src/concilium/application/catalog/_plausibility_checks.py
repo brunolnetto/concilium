@@ -261,7 +261,7 @@ def _pc_eq_locacao(eq: list[dict]) -> list[Anomalia]:
                     tipo="INCOMPLETO",
                     severidade="INFO",
                     mensagem="valor_locacao_mensal ausente — custo de manutenção não calculável",
-                    detalhe={"preco_h": ins["preco_unitario"]},
+                    detalhe={"preco_h": ins["preco_unitario"], "descricao": ins.get("descricao", "")},
                 )
             )
     return result

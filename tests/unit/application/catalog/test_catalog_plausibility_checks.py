@@ -576,6 +576,26 @@ class TestPcEqLocacao:
         assert result[0].tipo == "INCOMPLETO"
         assert result[0].severidade == "INFO"
 
+    def test_detalhe_inclui_descricao_do_equipamento(self):
+        """ADR-163 D2: descricao no detalhe, mesmo padrão de _pc_eq_zscore/_pc_mo_zscore —
+        sem isso um agente não consegue identificar de qual equipamento se trata."""
+        eq = [
+            {
+                "codigo": "EQ-001",
+                "descricao": "Caminhão Basculante 12m³",
+                "preco_unitario": 100.0,
+                "atributos_especificos": {},
+            }
+        ]
+        result = _pc_eq_locacao(eq)
+        assert result[0].detalhe["descricao"] == "Caminhão Basculante 12m³"
+        assert result[0].detalhe["preco_h"] == 100.0
+
+    def test_detalhe_descricao_ausente_vira_string_vazia(self):
+        eq = [{"codigo": "EQ-001", "preco_unitario": 100.0, "atributos_especificos": {}}]
+        result = _pc_eq_locacao(eq)
+        assert result[0].detalhe["descricao"] == ""
+
     def test_has_valor_locacao_is_clean(self):
         eq = [
             {
