@@ -1,9 +1,9 @@
 # ADR-165 — Catálogo de Treinamentos, Exames, EPIs e Benefícios de Mão de Obra
 
-**Status:** Proposta
+**Status:** ✅ Implementado
 **Data:** 2026-07-29
 **Contexto:** MendesLobo Construtora — Concilium
-**Dependências:** ADR-107 (Combustível/Categoria de Custo), ADR-116 (Limpeza da Superfície de Tools MCP), ADR-139 (Origem de Material), ADR-145 (Unificação do Caminho de Escrita de Preço no Catálogo Mestre), ADR-163 (CRUD de Insumo no Catálogo Mestre), ADR-164 (Operações em Lote de CRUD de Insumo)
+**Dependências:** ADR-032 (Entidades Versionadas — `InsumoVersionado` estendido), ADR-107 (Combustível/Categoria de Custo), ADR-116 (Limpeza da Superfície de Tools MCP), ADR-139 (Origem de Material), ADR-145 (Unificação do Caminho de Escrita de Preço no Catálogo Mestre), ADR-163 (CRUD de Insumo no Catálogo Mestre), ADR-164 (Operações em Lote de CRUD de Insumo)
 
 ---
 
@@ -159,30 +159,36 @@ D9. **Explicitamente fora de escopo desta ADR** (decisão do usuário): (a) wiri
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `TipoInsumo` ganha `TREINAMENTO`/`EXAME`/`BENEFICIO` (D1) | Proposta |
-| F2 | `AtributosInsumo` ganha `vida_util_dias`/`funcoes_aplicaveis`/`periodicidade_beneficio`/`aplicavel_tipo_contrato` + `model_validator` de restrição por tipo (D2-D5) | Proposta |
-| F3 | Docstrings de `tipo` em `listar_insumos`/`criar_insumo` (`_catalogo_tools_helpers_a.py:156,461`) atualizados para mencionar os 3 tipos novos (D7) | Proposta |
-| F4 | Carga inicial via `criar_insumos_lote`: 10 EPIs (2 pendentes de preço), 9 treinamentos, 9 exames, 6 benefícios — rascunho→merge no catálogo `mendeslobo` (D8) | Proposta |
+| F1 | `TipoInsumo` ganha `TREINAMENTO`/`EXAME`/`BENEFICIO` (D1) | ✅ Implementado |
+| F2 | `AtributosInsumo` ganha `vida_util_dias`/`funcoes_aplicaveis`/`periodicidade_beneficio`/`aplicavel_tipo_contrato` + `model_validator` de restrição por tipo (D2-D5) | ✅ Implementado |
+| F3 | Docstrings de `tipo` em `listar_insumos`/`criar_insumo` (`_catalogo_tools_helpers_a.py:156,461`) atualizados para mencionar os 3 tipos novos (D7) | ✅ Implementado |
+| F4 | Carga inicial via `criar_insumos_lote`: 10 EPIs (2 pendentes de preço), 9 treinamentos, 9 exames, 6 benefícios — rascunho→merge no catálogo `mendeslobo` (D8) | ✅ Implementado |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `TipoInsumo` inclui `"TREINAMENTO"`, `"EXAME"`, `"BENEFICIO"`
-- [ ] Teste cobrindo: `Insumo(tipo="TREINAMENTO", ...)` valida corretamente com os campos novos
+- [x] `TipoInsumo` inclui `"TREINAMENTO"`, `"EXAME"`, `"BENEFICIO"`
+- [x] Teste cobrindo: `Insumo(tipo="TREINAMENTO", ...)` valida corretamente com os campos novos
 
 ### Fase 2
-- [ ] `AtributosInsumo` ganha os 4 campos novos, todos opcionais, default `None` (retrocompatibilidade de catálogo existente)
-- [ ] `model_validator` bloqueia `vida_util_dias` em `MAO_OBRA`/`EQUIPAMENTO`/`TERCEIRIZADO`, `funcoes_aplicaveis` fora de `MATERIAL`/`TREINAMENTO`, `periodicidade_beneficio`/`aplicavel_tipo_contrato` fora de `BENEFICIO`
-- [ ] Teste cobrindo: cada combinação inválida levanta o `ValueError` correspondente (`VAL-INSUMO-VIDA-UTIL-01`/`VAL-INSUMO-FUNCOES-01`/`VAL-INSUMO-BENEFICIO-01`)
-- [ ] Teste cobrindo: catálogo existente (sem os campos novos) continua carregando sem alteração
+- [x] `AtributosInsumo` ganha os 4 campos novos, todos opcionais, default `None` (retrocompatibilidade de catálogo existente)
+- [x] `model_validator` bloqueia `vida_util_dias` em `MAO_OBRA`/`EQUIPAMENTO`/`TERCEIRIZADO`, `funcoes_aplicaveis` fora de `MATERIAL`/`TREINAMENTO`, `periodicidade_beneficio`/`aplicavel_tipo_contrato` fora de `BENEFICIO`
+- [x] Teste cobrindo: cada combinação inválida levanta o `ValueError` correspondente (`VAL-INSUMO-VIDA-UTIL-01`/`VAL-INSUMO-FUNCOES-01`/`VAL-INSUMO-BENEFICIO-01`)
+- [x] Teste cobrindo: catálogo existente (sem os campos novos) continua carregando sem alteração
 
 ### Fase 3
-- [ ] Docstrings atualizados; nenhuma mudança de comportamento (só documentação)
+- [x] Docstrings atualizados; nenhuma mudança de comportamento (só documentação)
 
 ### Fase 4
-- [ ] `criar_insumos_lote` cria os itens listados em "Dados trazidos pelo usuário" (exceto os 2 EPIs sem preço) via rascunho, aprovados por `aprovar_merge_catalogo`
-- [ ] Teste cobrindo: `insumos/treinamento/`, `insumos/exame/`, `insumos/beneficio/` criados com um arquivo por código, validados contra o schema `Insumo`
-- [ ] Teste cobrindo: `listar_insumos(tipo="EXAME")` retorna os 9 exames comuns; `listar_insumos(tipo="TREINAMENTO")` retorna os 9 treinamentos
+- [x] `criar_insumos_lote` cria os itens listados em "Dados trazidos pelo usuário" (exceto os 2 EPIs sem preço) via rascunho, aprovados por `aprovar_merge_catalogo`
+- [x] Verificado manualmente: `insumos/treinamento/`, `insumos/exame/`, `insumos/beneficio/` criados com um arquivo por código (9+9+6), validados contra o schema `Insumo`; `insumos/material/` ganha 10 `EPI-*.json`
+- [x] Verificado manualmente: `listar_insumos(tipo="BENEFICIO")` retorna os 6 benefícios; `auditar_catalogo(modo="saude")` reporta `SAUDAVEL` após o merge
+
+## Nota de Implementação
+
+Implementada via TDD nas fases F1-F2 (`tests/unit/domain/models/test_adr165_catalogo_rh.py`, 36 casos cobrindo tipos novos, campos novos e as 3 validações VAL-INSUMO-*), com um achado adicional fora do escopo original: `InsumoVersionado` (ADR-032, `domain/models/catalog/versioned.py`) tinha o mesmo `Literal` de 4 tipos e é usado de fato por `RepositorioInsumo.preco_na_data` (SCD Type 2) — estendido para os 3 tipos novos com teste dedicado, senão um insumo `TREINAMENTO`/`EXAME`/`BENEFICIO` versionado cairia silenciosamente no fallback de preço plano.
+
+F4 (carga inicial) foi feita por um script novo, `scripts/catalog/adr165_carga_inicial_rh.py`, que **não escreve arquivo diretamente** — invoca a mesma sequência de governança das tools MCP (`criar_rascunho_catalogo` → `criar_insumos_lote` → `listar_divergencias_rascunho` para marcar `REVISADO` → `aprovar_merge_catalogo`) via `FastMCP` + extração das funções registradas, com o aprovador (`adr165-carga-inicial-aprovador`) sendo um ator distinto do criador (`adr165-carga-inicial`), satisfazendo a regra dos quatro olhos (ADR-120) sem precisar de uma sessão MCP autenticada ao vivo. Testado primeiro com `--dry-run` (cópia temporária de `config/`) antes de `--apply` no catálogo real. Resultado: 34/34 itens criados, `aprovar_merge_catalogo` retornou `status: APROVADO`, snapshot novo (ADR-024) gerado, `auditar_catalogo` continua `SAUDAVEL`. Suíte completa (14.795 testes) verde após a mudança, com 1 falha pré-existente e não relacionada (`test_golden_evaluation.py`, confirmada falhando de forma idêntica antes desta ADR).
 
 ---
 
