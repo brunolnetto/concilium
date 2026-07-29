@@ -489,6 +489,50 @@ class TestImplCalcularPuProducao:
 
         assert "producao_id" in result
 
+    def test_default_detalhado_false_omits_itens(self, tmp_path):
+        """ADR-163 D3: detalhado=False (default) preserva o formato de resposta atual."""
+        config_dir = self._config_path(tmp_path)
+        bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
+        bundle = _make_bundle(
+            insumos=[{"codigo": "MO-001", "tipo": "MAO_OBRA", "preco_unitario": 30.0, "unidade": "h"}],
+            producoes=[
+                {
+                    "id": "PROD-001",
+                    "valor_horario": 5.0,
+                    "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-001", "num_pessoas": 1}]},
+                }
+            ],
+        )
+        _write_bundle(bundle_path, bundle)
+
+        with patch(f"{MODULE}._config_root", return_value=config_dir):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_calcular_pu_producao("ctx", "PROD-001")
+
+        assert "itens" not in result
+
+    def test_detalhado_true_inclui_itens(self, tmp_path):
+        config_dir = self._config_path(tmp_path)
+        bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
+        bundle = _make_bundle(
+            insumos=[{"codigo": "MO-001", "tipo": "MAO_OBRA", "preco_unitario": 30.0, "unidade": "h"}],
+            producoes=[
+                {
+                    "id": "PROD-001",
+                    "valor_horario": 5.0,
+                    "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-001", "num_pessoas": 1}]},
+                }
+            ],
+        )
+        _write_bundle(bundle_path, bundle)
+
+        with patch(f"{MODULE}._config_root", return_value=config_dir):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_calcular_pu_producao("ctx", "PROD-001", detalhado=True)
+
+        assert "itens" in result
+        assert result["itens"][0]["insumo_id"] == "MO-001"
+
     def test_happy_path_uses_produtividades_key(self, tmp_path):
         """Covers line 205: bundle uses 'produtividades' instead of 'producoes'."""
         config_dir = self._config_path(tmp_path)

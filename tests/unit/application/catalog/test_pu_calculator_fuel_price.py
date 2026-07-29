@@ -353,6 +353,81 @@ class TestPuCalculator:
         bd = calcular_pu(producao, {})
         assert "MAT-MISS" in bd.referencias_faltantes
 
+    def test_breakdown_pu_itens_default_empty(self):
+        """ADR-163 D3: BreakdownPU.itens default [] — não quebra consumidores existentes."""
+        from concilium.application.catalog.pu_calculator import BreakdownPU
+
+        bd = BreakdownPU(producao_id="P1", valor_horario=10.0)
+        assert bd.itens == []
+
+    def test_calcular_pu_itens_populado_mo_equipamento_diesel_material(self):
+        """ADR-163 D3: itens item-a-item, mesmo formato de calcular_pu_composicao_itens."""
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, calcular_pu
+
+        producao = {
+            "id": "CPU-ITENS",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "funcoes": [{"funcao_id": "OP-1", "num_pessoas": 1}],
+                "equipamentos": [{"equip_id": "EQ-1", "num_unidades": 1}],
+                "materiais": [{"insumo_id": "MAT-1", "consumo_por_hora": 2.0}],
+            },
+        }
+        insumo_index = {
+            "OP-1": {"codigo": "OP-1", "preco_unitario": 30.0, "unidade": "h"},
+            "EQ-1": {
+                "codigo": "EQ-1",
+                "preco_unitario": 40.0,
+                "atributos_especificos": {"consumo_litros_hora": 2.0},
+            },
+            "MAT-1": {"codigo": "MAT-1", "preco_unitario": 5.0},
+        }
+        params = ParametrosCalculo(preco_diesel=6.5)
+        bd = calcular_pu(producao, insumo_index, params)
+
+        pares = {(item["insumo_id"], item["categoria"]) for item in bd.itens}
+        assert ("OP-1", "mo") in pares
+        assert ("EQ-1", "equipamento") in pares
+        assert ("EQ-1", "diesel") in pares
+        assert ("MAT-1", "material") in pares
+
+        soma_contribuicoes = sum(item["contribuicao_h"] for item in bd.itens)
+        assert abs(soma_contribuicoes - bd.custo_total_h) < 0.01
+
+    def test_calcular_pu_itens_vazio_quando_sem_composicao(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {"id": "CPU-VAZIO", "valor_horario": 10.0}
+        bd = calcular_pu(producao, {})
+        assert bd.itens == []
+
+    def test_calcular_pu_itens_nao_populado_para_referencia_faltante(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "CPU-MISS",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MISSING-FN", "num_pessoas": 1}]},
+        }
+        bd = calcular_pu(producao, {})
+        assert bd.itens == []
+
+    def test_to_dict_sem_detalhado_nao_inclui_itens(self):
+        from concilium.application.catalog.pu_calculator import BreakdownPU
+
+        bd = BreakdownPU(producao_id="P1", valor_horario=10.0, custo_mo_h=20.0)
+        bd.itens.append({"insumo_id": "X", "categoria": "mo"})
+        d = bd.to_dict()
+        assert "itens" not in d
+
+    def test_to_dict_com_detalhado_inclui_itens(self):
+        from concilium.application.catalog.pu_calculator import BreakdownPU
+
+        bd = BreakdownPU(producao_id="P1", valor_horario=10.0, custo_mo_h=20.0)
+        bd.itens.append({"insumo_id": "X", "categoria": "mo"})
+        d = bd.to_dict(detalhado=True)
+        assert d["itens"] == [{"insumo_id": "X", "categoria": "mo"}]
+
     def test_calcular_pu_material_empty_id_skipped(self):
         from concilium.application.catalog.pu_calculator import calcular_pu
 

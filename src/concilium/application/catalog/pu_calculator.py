@@ -102,6 +102,9 @@ class BreakdownPU:
     # Erros de integridade referencial
     referencias_faltantes: list[str] = field(default_factory=list)
     alertas: list[str] = field(default_factory=list)
+    # ADR-163 D3: composição item-a-item (mesmo formato de calcular_pu_composicao_itens),
+    # populada só quando o insumo é resolvido (referências faltantes não geram item).
+    itens: list[dict] = field(default_factory=list)
 
     @property
     def custo_total_h(self) -> float:
@@ -117,8 +120,8 @@ class BreakdownPU:
     def ok(self) -> bool:
         return not self.referencias_faltantes
 
-    def to_dict(self) -> dict:
-        return {
+    def to_dict(self, detalhado: bool = False) -> dict:
+        result = {
             "producao_id": self.producao_id,
             "valor_horario": self.valor_horario,
             "pu_calculado": self.pu_calculado,
@@ -133,6 +136,9 @@ class BreakdownPU:
             "alertas": self.alertas,
             "ok": self.ok,
         }
+        if detalhado:
+            result["itens"] = self.itens
+        return result
 
 
 def _alpha(insumo: dict, params: ParametrosCalculo) -> float:
@@ -287,11 +293,22 @@ def _acumular_custo_mo(
         if unidade_fn == "h":
             # Taxa horária já carregada (convenção planilha AGIS: inclui encargos).
             # Uso direto sem multiplicar por alpha para evitar dupla contagem.
-            bd.custo_mo_h += salario * num_pessoas
+            contrib = salario * num_pessoas
+            bd.custo_mo_h += contrib
         else:
             # Salário mensal — converte para horário e aplica fator de encargos
             hm = _horas_mes(ins, params)
-            bd.custo_mo_h += (salario / hm) * _alpha(ins, params) * num_pessoas
+            contrib = (salario / hm) * _alpha(ins, params) * num_pessoas
+            bd.custo_mo_h += contrib
+        bd.itens.append(
+            {
+                "insumo_id": fid,
+                "categoria": "mo",
+                "preco_unitario": salario,
+                "quantidade": num_pessoas,
+                "contribuicao_h": round(contrib, 4),
+            }
+        )
 
 
 def _preco_h_equipamento(eq: dict, ins: dict) -> float:
@@ -329,9 +346,30 @@ def _acumular_custo_equipamentos(
             bd.referencias_faltantes.append(eid)
             continue
         preco_h = _preco_h_equipamento(eq, ins)
-        bd.custo_equip_h += preco_h * num_un
+        contrib_equip = preco_h * num_un
+        bd.custo_equip_h += contrib_equip
+        bd.itens.append(
+            {
+                "insumo_id": eid,
+                "categoria": "equipamento",
+                "preco_unitario": preco_h,
+                "quantidade": num_un,
+                "contribuicao_h": round(contrib_equip, 4),
+            }
+        )
         consumo = _consumo_diesel_equipamento(bd, eq, eid, ins)
-        bd.custo_diesel_h += consumo * params.preco_diesel * num_un
+        if consumo:
+            contrib_diesel = consumo * params.preco_diesel * num_un
+            bd.custo_diesel_h += contrib_diesel
+            bd.itens.append(
+                {
+                    "insumo_id": eid,
+                    "categoria": "diesel",
+                    "preco_unitario": params.preco_diesel,
+                    "quantidade": consumo * num_un,
+                    "contribuicao_h": round(contrib_diesel, 4),
+                }
+            )
 
 
 def _material_id_e_consumo(mat: dict) -> tuple[str, float]:
@@ -349,7 +387,17 @@ def _acumular_custo_materiais(bd: BreakdownPU, materiais: list, insumo_index: di
             continue
         if ins:
             preco = float(ins.get("preco_unitario") or 0)
-            bd.custo_material_h += consumo_h * preco
+            contrib = consumo_h * preco
+            bd.custo_material_h += contrib
+            bd.itens.append(
+                {
+                    "insumo_id": mid,
+                    "categoria": "material",
+                    "preco_unitario": preco,
+                    "quantidade": consumo_h,
+                    "contribuicao_h": round(contrib, 4),
+                }
+            )
 
 
 def _cpu_get_equipe(producao: dict) -> tuple:

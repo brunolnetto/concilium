@@ -236,7 +236,8 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description="Recalcula o preço unitário de uma produção específica dado alpha_clt, alpha_pj e preço do diesel. "
-        "Use para simular impacto de mudança de encargos ou combustível em uma CPU."
+        "Use para simular impacto de mudança de encargos ou combustível em uma CPU. "
+        "detalhado=True inclui a contribuição item-a-item de cada insumo da equipe (ADR-163)."
     )
     @permission("catalog:read")
     def calcular_pu_producao(
@@ -246,8 +247,11 @@ def register(server: FastMCP) -> None:
         alpha_pj: float = 1.06,
         preco_diesel: float = 6.50,
         horas_mes: float = 208.0,
+        detalhado: bool = False,
     ) -> dict[str, Any]:
-        return _impl_calcular_pu_producao(contexto_id, producao_id, alpha_clt, alpha_pj, preco_diesel, horas_mes)
+        return _impl_calcular_pu_producao(
+            contexto_id, producao_id, alpha_clt, alpha_pj, preco_diesel, horas_mes, detalhado
+        )
 
     # ── Versionamento de contexto (ADR-062) ─────────────────────────────────
 

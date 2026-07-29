@@ -289,6 +289,7 @@ def _impl_calcular_pu_producao(
     alpha_pj: float = 1.06,
     preco_diesel: float = 6.50,
     horas_mes: float = 208.0,
+    detalhado: bool = False,
 ) -> dict[str, Any]:
     """Calcula o Preço Unitário teórico de uma produção a partir da composição.
 
@@ -302,6 +303,9 @@ def _impl_calcular_pu_producao(
         alpha_pj: Fator de encargos PJ (default 1.06).
         preco_diesel: Preço do diesel R$/L (default 6.50).
         horas_mes: Horas produtivas/mês (default 208 — regime 6×8h).
+        detalhado: Se True, inclui "itens" com a contribuição item-a-item de
+            cada insumo da equipe (ADR-163 D3). Default False preserva o
+            formato de resposta atual.
     """
     from concilium.application.catalog.pu_calculator import ParametrosCalculo, calcular_pu
 
@@ -326,7 +330,7 @@ def _impl_calcular_pu_producao(
         horas_mes=horas_mes,
     )
     resultado = calcular_pu(prod, insumo_index, params)
-    return _wrap_response(resultado.to_dict())
+    return _wrap_response(resultado.to_dict(detalhado=detalhado))
 
 
 def _impl_avaliar_plausibilidade_catalogo(
