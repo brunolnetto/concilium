@@ -353,6 +353,7 @@ def _apply_preco_insumo_delta(
     autor: str,
     data_vigencia: date,
     novo_valor_locacao_mensal: float | None = None,
+    novos_funcoes_aplicaveis: list[str] | None = None,
 ) -> None:
     """Aplica um delta de preço e/ou locação mensal ao catálogo mestre no momento
     do merge (ADR-145 D2/D4; `novo_valor_locacao_mensal` — ADR-163 D4).
@@ -367,6 +368,10 @@ def _apply_preco_insumo_delta(
     sem leitor de série temporal hoje, ao contrário de `historico_precos`).
     `novo_preco` é opcional: uma cotação de mercado pode trazer só a locação
     mensal, sem alterar o preço/hora.
+    `novos_funcoes_aplicaveis` (só MATERIAL/TREINAMENTO, ADR-165/166) grava direto
+    em `atributos_especificos.funcoes_aplicaveis` — mesmo padrão de
+    `novo_valor_locacao_mensal`. Lista vazia (`[]`) é um valor distinto de `None`
+    ("aplica a nenhuma função ainda", não "campo não informado nesta chamada").
     """
     from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
@@ -396,6 +401,10 @@ def _apply_preco_insumo_delta(
     if novo_valor_locacao_mensal is not None:
         attrs = insumo_data.setdefault("atributos_especificos", {})
         attrs["valor_locacao_mensal"] = novo_valor_locacao_mensal
+
+    if novos_funcoes_aplicaveis is not None:
+        attrs = insumo_data.setdefault("atributos_especificos", {})
+        attrs["funcoes_aplicaveis"] = novos_funcoes_aplicaveis
 
     insumo_file.write_text(json.dumps(insumo_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -768,6 +777,7 @@ def _impl_atualizar_preco_insumo(
     jurisdicao_id: str | None = None,
     nota: str | None = None,
     novo_valor_locacao_mensal: float | None = None,
+    novos_funcoes_aplicaveis: list[str] | None = None,
 ) -> dict[str, Any]:
     """Atualiza o preço e/ou a locação mensal de um insumo (Base ou Regional).
 
@@ -790,11 +800,16 @@ def _impl_atualizar_preco_insumo(
         jurisdicao_id: Opcional. Região específica.
         nota: Opcional. Justificativa.
         novo_valor_locacao_mensal: Opcional. Custo de locação mensal (só
-            EQUIPAMENTO). Pelo menos um entre novo_preco/novo_valor_locacao_mensal
-            deve ser informado.
+            EQUIPAMENTO). Pelo menos um entre novo_preco/novo_valor_locacao_mensal/
+            novos_funcoes_aplicaveis deve ser informado.
+        novos_funcoes_aplicaveis: Opcional. Lista de códigos de Insumo(MAO_OBRA)
+            a que este item (MATERIAL/TREINAMENTO) é específico — `[]` restringe
+            a nenhuma função ainda; omitir o parâmetro não altera o campo (ADR-165/166).
     """
-    if novo_preco is None and novo_valor_locacao_mensal is None:
-        return {"erro": "Informe ao menos um entre novo_preco e novo_valor_locacao_mensal."}
+    if novo_preco is None and novo_valor_locacao_mensal is None and novos_funcoes_aplicaveis is None:
+        return {
+            "erro": "Informe ao menos um entre novo_preco, novo_valor_locacao_mensal e novos_funcoes_aplicaveis."
+        }
 
     rt = _runtime()
     config_dir = _config_root()
@@ -843,6 +858,8 @@ def _impl_atualizar_preco_insumo(
     }
     if novo_valor_locacao_mensal is not None:
         delta["novo_valor_locacao_mensal"] = novo_valor_locacao_mensal
+    if novos_funcoes_aplicaveis is not None:
+        delta["novos_funcoes_aplicaveis"] = novos_funcoes_aplicaveis
     erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
     if erro:
         return {"erro": erro}
@@ -876,7 +893,8 @@ def _impl_atualizar_precos_insumos_lote(
         rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
         itens: Lista de atualizações — cada item aceita os mesmos campos de
             `atualizar_preco_insumo` (insumo_id, novo_preco, novo_valor_locacao_mensal,
-            jurisdicao_id, nota), exceto projeto_id. Até MAX_LOTE_INSUMOS itens.
+            novos_funcoes_aplicaveis, jurisdicao_id, nota), exceto projeto_id.
+            Até MAX_LOTE_INSUMOS itens.
     """
     if not itens:
         return {"erro": "itens não pode ser vazio."}
@@ -899,11 +917,14 @@ def _impl_atualizar_precos_insumos_lote(
         insumo_id = item.get("insumo_id")
         novo_preco = item.get("novo_preco")
         novo_valor_locacao_mensal = item.get("novo_valor_locacao_mensal")
+        novos_funcoes_aplicaveis = item.get("novos_funcoes_aplicaveis")
         try:
             if not insumo_id:
                 raise ValueError("insumo_id é obrigatório")
-            if novo_preco is None and novo_valor_locacao_mensal is None:
-                raise ValueError("informe ao menos um entre novo_preco e novo_valor_locacao_mensal")
+            if novo_preco is None and novo_valor_locacao_mensal is None and novos_funcoes_aplicaveis is None:
+                raise ValueError(
+                    "informe ao menos um entre novo_preco, novo_valor_locacao_mensal e novos_funcoes_aplicaveis"
+                )
             validate_and_resolve_insumo_file(
                 catalog_root, insumo_id, novo_preco if novo_preco is not None else 0.0
             )
@@ -922,6 +943,8 @@ def _impl_atualizar_precos_insumos_lote(
         }
         if novo_valor_locacao_mensal is not None:
             delta["novo_valor_locacao_mensal"] = novo_valor_locacao_mensal
+        if novos_funcoes_aplicaveis is not None:
+            delta["novos_funcoes_aplicaveis"] = novos_funcoes_aplicaveis
         deltas_validos.append(delta)
         resultados.append({"insumo_id": insumo_id, "status": "ok"})
 

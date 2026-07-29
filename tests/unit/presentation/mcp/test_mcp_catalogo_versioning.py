@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -325,6 +326,44 @@ class TestCatalogLifecycleADR120:
         ):
             result = tools["criar_rascunho_catalogo"](contexto_id="ctx-1", descricao="Reajuste INCC")
         assert "erro" in result
+
+    def test_novo_rascunho_nao_herda_estado_de_rascunho_anterior_aprovado(self, monkeypatch, tmp_path):
+        """Regressão (achada durante ADR-166): ContextoVersionService.create_version clona
+        `existing[-1]` inteiro como base (só remove version/created_at/created_by/motivo) —
+        se o rascunho anterior já foi aprovado, o novo nascia com `_aprovado=True` e os
+        `_deltas` antigos herdados, rejeitando qualquer edição nova como "rascunho em
+        estado terminal". Usa o ContextoVersionService REAL (sem mock) para exercitar o
+        bug de verdade, não a versão mockada dos outros testes desta classe."""
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_root = tmp_path / "config"
+
+        with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="autor-1"):
+            r1 = tools["criar_rascunho_catalogo"](contexto_id="ctx-1", descricao="primeiro rascunho")
+        assert "erro" not in r1
+        v1_id = r1["rascunho_id"]
+
+        # Simula o estado de v1 após um aprovar_merge_catalogo real: aprovado, com deltas.
+        v1_file = config_root / "contextos" / "ctx-1" / "versions" / f"{v1_id}.json"
+        v1_data = json.loads(v1_file.read_text(encoding="utf-8"))
+        v1_data["_revisado"] = True
+        v1_data["_revisado_por"] = "autor-1"
+        v1_data["_aprovado"] = True
+        v1_data["_aprovado_por"] = "aprovador-1"
+        v1_data["_deltas"] = [{"tipo": "criacao_insumo", "insumo": {"codigo": "EPI-X"}}]
+        v1_file.write_text(json.dumps(v1_data), encoding="utf-8")
+
+        with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="autor-2"):
+            r2 = tools["criar_rascunho_catalogo"](contexto_id="ctx-1", descricao="segundo rascunho")
+        assert "erro" not in r2
+        v2_id = r2["rascunho_id"]
+        assert v2_id != v1_id
+
+        v2_file = config_root / "contextos" / "ctx-1" / "versions" / f"{v2_id}.json"
+        v2_data = json.loads(v2_file.read_text(encoding="utf-8"))
+        assert v2_data.get("_aprovado") is not True, "novo rascunho não pode nascer já aprovado"
+        assert not v2_data.get("_revisado"), "novo rascunho não pode nascer já revisado"
+        assert not v2_data.get("_rejeitado")
+        assert v2_data.get("_deltas") in (None, []), "novo rascunho não pode herdar deltas do anterior"
 
     def test_listar_divergencias_rascunho_sucesso(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)

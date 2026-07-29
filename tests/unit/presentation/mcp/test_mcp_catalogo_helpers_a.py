@@ -825,6 +825,72 @@ class TestImplAtualizarPrecoInsumo:
         delta = rascunho_data["_deltas"][0]
         assert "novo_valor_locacao_mensal" not in delta
 
+    # ── ADR-165/166: novos_funcoes_aplicaveis opcional, mesmo caminho gated por rascunho ──
+
+    def test_so_funcoes_aplicaveis_grava_delta_sem_erro(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Popular funcoes_aplicaveis de um TREINAMENTO/EPI já existente não exige
+        novo_preco nem novo_valor_locacao_mensal."""
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 100.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_preco_insumo(
+            "ctx1",
+            "TRE-NR35-ALTURA",
+            None,
+            rascunho_id="v1",
+            novos_funcoes_aplicaveis=["MO-ELETRICISTA", "MO-P0016"],
+        )
+        assert result["status"] == "RASCUNHO"
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["novo_preco"] is None
+        assert delta["novos_funcoes_aplicaveis"] == ["MO-ELETRICISTA", "MO-P0016"]
+
+    def test_funcoes_aplicaveis_lista_vazia_e_preservada(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Lista vazia ([]) é um valor válido e distinto de None — "aplica a nenhuma
+        função ainda" — não deve ser tratada como ausente."""
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 100.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        _impl_atualizar_preco_insumo(
+            "ctx1", "TRE-NR22-MINERACAO", None, rascunho_id="v1", novos_funcoes_aplicaveis=[]
+        )
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["novos_funcoes_aplicaveis"] == []
+
+    def test_delta_shape_preserved_sem_funcoes_aplicaveis(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Regressão: chamada só-com-preço não ganha a chave novos_funcoes_aplicaveis."""
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(json.dumps({"preco_unitario": 5.0}), encoding="utf-8")
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        _impl_atualizar_preco_insumo("ctx1", "INS-001", 42.0, rascunho_id="v1")
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert "novos_funcoes_aplicaveis" not in delta
+
 
 class TestApplyPrecoInsumoDelta:
     """ADR-163 D4: aplicação do delta de valor_locacao_mensal no merge (aprovar_merge_catalogo)."""
@@ -887,6 +953,65 @@ class TestApplyPrecoInsumoDelta:
         data = json.loads(insumo_file.read_text(encoding="utf-8"))
         assert data["preco_unitario"] == 150.0
         assert data["atributos_especificos"]["valor_locacao_mensal"] == 30000.0
+
+    def test_aplica_funcoes_aplicaveis_no_insumo_master(self, tmp_path: Path) -> None:
+        """ADR-165/166: novos_funcoes_aplicaveis grava direto em
+        atributos_especificos.funcoes_aplicaveis no momento do merge."""
+        from datetime import date
+
+        from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import _apply_preco_insumo_delta
+
+        catalog_root = tmp_path / "cat1"
+        insumos_dir = catalog_root / "insumos" / "treinamento"
+        insumos_dir.mkdir(parents=True)
+        insumo_file = insumos_dir / "TRE-NR35-ALTURA.json"
+        insumo_file.write_text(
+            json.dumps({"codigo": "TRE-NR35-ALTURA", "preco_unitario": 350.0, "atributos_especificos": {}}),
+            encoding="utf-8",
+        )
+
+        _apply_preco_insumo_delta(
+            catalog_root,
+            "TRE-NR35-ALTURA",
+            None,
+            None,
+            None,
+            "mgr-1",
+            date(2026, 7, 29),
+            novos_funcoes_aplicaveis=["MO-ELETRICISTA", "MO-P0016"],
+        )
+
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["atributos_especificos"]["funcoes_aplicaveis"] == ["MO-ELETRICISTA", "MO-P0016"]
+        assert data["preco_unitario"] == 350.0
+
+    def test_funcoes_aplicaveis_lista_vazia_e_gravada(self, tmp_path: Path) -> None:
+        from datetime import date
+
+        from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import _apply_preco_insumo_delta
+
+        catalog_root = tmp_path / "cat1"
+        insumos_dir = catalog_root / "insumos" / "treinamento"
+        insumos_dir.mkdir(parents=True)
+        insumo_file = insumos_dir / "TRE-NR22-MINERACAO.json"
+        insumo_file.write_text(
+            json.dumps({"codigo": "TRE-NR22-MINERACAO", "preco_unitario": 315.0, "atributos_especificos": {}}),
+            encoding="utf-8",
+        )
+
+        _apply_preco_insumo_delta(
+            catalog_root,
+            "TRE-NR22-MINERACAO",
+            None,
+            None,
+            None,
+            "mgr-1",
+            date(2026, 7, 29),
+            novos_funcoes_aplicaveis=[],
+        )
+
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["atributos_especificos"]["funcoes_aplicaveis"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -1306,6 +1431,34 @@ class TestImplAtualizarPrecosInsumosLote:
         itens = [{"insumo_id": "EQ-INEXISTENTE", "novo_preco": 10.0}]
         result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
         assert result["falhas"] == 1
+
+    def test_novos_funcoes_aplicaveis_por_item_lote(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """ADR-165/166: novos_funcoes_aplicaveis também é aceito por item no lote,
+        sozinho (sem novo_preco/novo_valor_locacao_mensal)."""
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "treinamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "TRE-NR35-ALTURA.json").write_text(json.dumps({"preco_unitario": 350.0}), encoding="utf-8")
+        (insumos_dir / "TRE-NR22-MINERACAO.json").write_text(json.dumps({"preco_unitario": 315.0}), encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [
+            {"insumo_id": "TRE-NR35-ALTURA", "novos_funcoes_aplicaveis": ["MO-ELETRICISTA"]},
+            {"insumo_id": "TRE-NR22-MINERACAO", "novos_funcoes_aplicaveis": []},
+        ]
+        result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 2
+        assert result["falhas"] == 0
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        deltas = rascunho_data["_deltas"]
+        d1 = next(d for d in deltas if d["insumo_id"] == "TRE-NR35-ALTURA")
+        assert d1["novos_funcoes_aplicaveis"] == ["MO-ELETRICISTA"]
+        d2 = next(d for d in deltas if d["insumo_id"] == "TRE-NR22-MINERACAO")
+        assert d2["novos_funcoes_aplicaveis"] == []
 
 
 # ---------------------------------------------------------------------------

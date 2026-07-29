@@ -147,9 +147,10 @@ def register(server: FastMCP) -> None:
     # ── Mutação / atualização ────────────────────────────────────────────────
 
     @server.tool(
-        description="Atualiza o preço e/ou a locação mensal de um insumo (ex: novo preço de diesel após "
-        "cotação, ou custo de manutenção mensal de um equipamento). Informe ao menos um entre novo_preco "
-        "e novo_valor_locacao_mensal (ADR-163). "
+        description="Atualiza o preço, a locação mensal e/ou as funções aplicáveis de um insumo (ex: novo "
+        "preço de diesel após cotação, custo de manutenção mensal de um equipamento, ou quais funções MAO_OBRA "
+        "usam um EPI/treinamento específico). Informe ao menos um entre novo_preco, novo_valor_locacao_mensal "
+        "e novos_funcoes_aplicaveis (ADR-163/165/166). "
         "Para editar o catálogo mestre, informe rascunho_id (criado via criar_rascunho_catalogo) — "
         "a mudança fica pendente até aprovar_merge_catalogo (ADR-145). "
         "Use projeto_id para override de projeto em vez de alterar o master."
@@ -165,6 +166,7 @@ def register(server: FastMCP) -> None:
         jurisdicao_id: str | None = None,
         nota: str | None = None,
         novo_valor_locacao_mensal: float | None = None,
+        novos_funcoes_aplicaveis: list[str] | None = None,
     ) -> dict[str, Any]:
         return _impl_atualizar_preco_insumo(
             contexto_id,
@@ -175,6 +177,7 @@ def register(server: FastMCP) -> None:
             jurisdicao_id,
             nota,
             novo_valor_locacao_mensal,
+            novos_funcoes_aplicaveis,
         )
 
     @server.tool(
@@ -478,7 +481,24 @@ def register(server: FastMCP) -> None:
             current_v = svc.current_version(contexto_id)
             new_v = svc.create_version(
                 contexto_id,
-                fields={"_rascunho": True, "_rascunho_descricao": descricao},
+                # `create_version` clona `existing[-1]` inteiro como base (SCD genérico:
+                # só remove version/created_at/created_by/motivo) — sem resetar
+                # explicitamente as chaves de ciclo de vida abaixo, um novo rascunho
+                # criado após o anterior já ter sido aprovado nasceria com _aprovado=True
+                # e os _deltas antigos herdados, rejeitando qualquer edição nova como
+                # "rascunho em estado terminal" (achado durante ADR-166).
+                fields={
+                    "_rascunho": True,
+                    "_rascunho_descricao": descricao,
+                    "_deltas": [],
+                    "_revisado": False,
+                    "_revisado_por": None,
+                    "_aprovado": False,
+                    "_aprovado_por": None,
+                    "_rejeitado": False,
+                    "_rejeitado_por": None,
+                    "_motivo_rejeicao": None,
+                },
                 motivo=f"rascunho: {descricao}",
                 author=actor,
                 make_current=False,  # não promove automaticamente
@@ -688,6 +708,7 @@ def register(server: FastMCP) -> None:
                             delta.get("autor") or actor,
                             hoje,
                             novo_valor_locacao_mensal=delta.get("novo_valor_locacao_mensal"),
+                            novos_funcoes_aplicaveis=delta.get("novos_funcoes_aplicaveis"),
                         )
                         deltas_aplicados += 1
                     elif tipo == "variante_producao":
