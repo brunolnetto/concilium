@@ -17,6 +17,7 @@ from ._catalogo_tools_helpers_a import (
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
     _impl_listar_contextos,
+    _impl_listar_insumos,
     _impl_pesquisar_catalogo,
 )
 from ._catalogo_tools_helpers_b import (
@@ -72,6 +73,24 @@ def register(server: FastMCP) -> None:
         limite: int = 20,
     ) -> dict[str, Any]:
         return _impl_pesquisar_catalogo(contexto_id, query, tipo_obra, limite)
+
+    @server.tool(
+        description=(
+            "Lista/busca insumos (material, mão-de-obra, equipamento) por id, descrição e/ou tipo, paginado. "
+            "Use para descobrir insumo_id antes de atualizar_preco_insumo/historico_preco_insumo, "
+            "ou para identificar insumos citados em auditar_catalogo (ADR-163)."
+        )
+    )
+    @permission("catalog:read")
+    def listar_insumos(
+        contexto_id: str,
+        tipo: str | None = None,
+        query: str | None = None,
+        limite: int = 50,
+        offset: int = 0,
+        incluir_descontinuados: bool = False,
+    ) -> dict[str, Any]:
+        return _impl_listar_insumos(contexto_id, tipo, query, limite, offset, incluir_descontinuados)
 
     # ── Diagnóstico — use um de cada vez ────────────────────────────────────
     # consultar_saude_catalogo  → cobertura (quantos insumos têm preço, % CPUs calculáveis)

@@ -16,6 +16,7 @@ from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import (
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
     _impl_listar_contextos,
+    _impl_listar_insumos,
     _impl_pesquisar_catalogo,
 )
 
@@ -236,6 +237,176 @@ class TestImplPesquisarCatalogo:
         result = _impl_pesquisar_catalogo("ctx1", query="escav", tipo_obra="terraplenagem")
         assert "eap_sugerida" in result
         assert "busca_resultados" in result
+
+
+# ---------------------------------------------------------------------------
+# _impl_listar_insumos (ADR-163 D1)
+# ---------------------------------------------------------------------------
+
+
+class TestImplListarInsumos:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, rt: MagicMock, tmp_path: Path) -> None:
+        monkeypatch.setattr(mod, "_runtime", lambda: rt)
+        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
+        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
+
+    def _catalogo_insumos(self) -> dict:
+        return {
+            "cpus": [],
+            "insumos": [
+                {
+                    "codigo": "EQ-001",
+                    "tipo": "EQUIPAMENTO",
+                    "descricao": "Caminhão Basculante 12m³",
+                    "unidade": "h",
+                    "preco_unitario": 112.0,
+                    "categoria": "DIVERSOS",
+                    "atributos_especificos": {"valor_locacao_mensal": 22400.0},
+                },
+                {
+                    "codigo": "MO-001",
+                    "tipo": "MAO_OBRA",
+                    "descricao": "Gerente de Contrato",
+                    "unidade": "h",
+                    "preco_unitario": 80.0,
+                    "categoria": "GESTAO",
+                },
+                {
+                    "codigo": "MAT-001",
+                    "tipo": "MATERIAL",
+                    "descricao": "Brita 1",
+                    "unidade": "m3",
+                    "preco_unitario": 55.0,
+                    "categoria": "AGREGADO",
+                },
+            ],
+        }
+
+    def test_load_contexto_raises_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt()
+        rt.load_contexto.side_effect = RuntimeError("not found")
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1")
+        assert "erro" in result
+        assert "not found" in result["erro"]
+
+    def test_sem_filtro_retorna_todos(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        rt.load_catalogo.return_value = self._catalogo_insumos()
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1")
+        assert result["contexto_id"] == "ctx1"
+        assert result["catalogo_id"] == "cat1"
+        assert result["total"] == 3
+        assert len(result["insumos"]) == 3
+
+    def test_campos_retornados_para_equipamento(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        rt.load_catalogo.return_value = self._catalogo_insumos()
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", tipo="EQUIPAMENTO")
+        assert len(result["insumos"]) == 1
+        item = result["insumos"][0]
+        assert item["insumo_id"] == "EQ-001"
+        assert item["descricao"] == "Caminhão Basculante 12m³"
+        assert item["tipo"] == "EQUIPAMENTO"
+        assert item["categoria"] == "DIVERSOS"
+        assert item["unidade"] == "h"
+        assert item["preco_unitario"] == 112.0
+        assert item["valor_locacao_mensal"] == 22400.0
+
+    def test_nao_equipamento_sem_valor_locacao_mensal(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        rt.load_catalogo.return_value = self._catalogo_insumos()
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", tipo="MAO_OBRA")
+        assert len(result["insumos"]) == 1
+        assert "valor_locacao_mensal" not in result["insumos"][0]
+
+    def test_filtro_por_tipo(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        rt.load_catalogo.return_value = self._catalogo_insumos()
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", tipo="MATERIAL")
+        assert len(result["insumos"]) == 1
+        assert result["insumos"][0]["insumo_id"] == "MAT-001"
+
+    def test_busca_por_descricao_parcial_case_insensitive(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        rt.load_catalogo.return_value = self._catalogo_insumos()
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", query="gerente de contrato")
+        assert len(result["insumos"]) == 1
+        assert result["insumos"][0]["insumo_id"] == "MO-001"
+
+    def test_busca_por_codigo(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        rt.load_catalogo.return_value = self._catalogo_insumos()
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", query="eq-001")
+        assert len(result["insumos"]) == 1
+        assert result["insumos"][0]["insumo_id"] == "EQ-001"
+
+    def test_paginacao_limite_offset(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        catalogo = {
+            "insumos": [
+                {"codigo": f"MAT-{i:03d}", "tipo": "MATERIAL", "descricao": "x", "unidade": "m3", "preco_unitario": 1.0}
+                for i in range(10)
+            ]
+        }
+        rt.load_catalogo.return_value = catalogo
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", limite=3, offset=2)
+        assert result["total"] == 10
+        assert len(result["insumos"]) == 3
+        assert result["insumos"][0]["insumo_id"] == "MAT-002"
+
+    def test_query_sem_match_retorna_vazio(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        rt.load_catalogo.return_value = self._catalogo_insumos()
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", query="inexistente-xyz")
+        assert result["insumos"] == []
+        assert result["total"] == 0
+
+    def test_descontinuado_excluido_por_padrao(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """ADR-163 D6: soft delete não deve aparecer em listagens por padrão."""
+        rt = _make_rt("ctx1", "cat1")
+        catalogo = self._catalogo_insumos()
+        catalogo["insumos"][0]["status"] = "descontinuado"
+        rt.load_catalogo.return_value = catalogo
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1")
+        assert result["total"] == 2
+        assert all(i["insumo_id"] != "EQ-001" for i in result["insumos"])
+
+    def test_incluir_descontinuados_true_mostra_todos(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        catalogo = self._catalogo_insumos()
+        catalogo["insumos"][0]["status"] = "descontinuado"
+        rt.load_catalogo.return_value = catalogo
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_listar_insumos("ctx1", incluir_descontinuados=True)
+        assert result["total"] == 3
+        assert any(i["insumo_id"] == "EQ-001" for i in result["insumos"])
 
 
 # ---------------------------------------------------------------------------

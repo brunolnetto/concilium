@@ -95,6 +95,88 @@ def _buscar_cpus_por_texto(catalogo: dict[str, Any], query: str, limite: int) ->
     return matches
 
 
+def _buscar_insumos_por_texto(
+    catalogo: dict[str, Any],
+    tipo: str | None,
+    query: str | None,
+    incluir_descontinuados: bool = False,
+) -> list[dict[str, Any]]:
+    """Filtra insumos por tipo e/ou busca textual em código/descrição (ADR-163 D1).
+
+    Por padrão exclui insumos `status="descontinuado"` (soft delete, ADR-163 D6)
+    — `incluir_descontinuados=True` os expõe quando o histórico completo é necessário.
+    """
+    query_norm = query.lower() if query else None
+    matches: list[dict[str, Any]] = []
+    for ins in catalogo.get("insumos", []):
+        if not incluir_descontinuados and ins.get("status") == "descontinuado":
+            continue
+        if tipo and ins.get("tipo") != tipo:
+            continue
+        if query_norm:
+            cod = str(ins.get("codigo", "")).lower()
+            desc = str(ins.get("descricao", "")).lower()
+            if query_norm not in cod and query_norm not in desc:
+                continue
+        item: dict[str, Any] = {
+            "insumo_id": ins.get("codigo"),
+            "descricao": ins.get("descricao"),
+            "tipo": ins.get("tipo"),
+            "categoria": ins.get("categoria"),
+            "unidade": ins.get("unidade"),
+            "preco_unitario": ins.get("preco_unitario"),
+        }
+        if ins.get("tipo") == "EQUIPAMENTO":
+            attrs = ins.get("atributos_especificos") or {}
+            item["valor_locacao_mensal"] = attrs.get("valor_locacao_mensal")
+        matches.append(item)
+    return matches
+
+
+def _impl_listar_insumos(
+    contexto_id: str,
+    tipo: str | None = None,
+    query: str | None = None,
+    limite: int = 50,
+    offset: int = 0,
+    incluir_descontinuados: bool = False,
+) -> dict[str, Any]:
+    """Lista/busca insumos do catálogo por id, descrição e/ou tipo (ADR-163 D1).
+
+    Fecha a lacuna de `pesquisar_catalogo` (que busca só CPUs): identifica
+    insumos sem exigir que o chamador já conheça o `insumo_id`.
+
+    Args:
+        contexto_id: ID do contexto (ex.: "mendeslobo").
+        tipo: Opcional. Filtra por "MATERIAL", "MAO_OBRA" ou "EQUIPAMENTO".
+        query: Opcional. Busca textual case-insensitive em código/descrição.
+        limite: Máximo de itens retornados por página (padrão 50).
+        offset: Deslocamento para paginação (padrão 0).
+        incluir_descontinuados: Opcional. Inclui insumos descontinuados
+            (soft delete, ADR-163 D6) — excluídos por padrão.
+    """
+    rt = _runtime()
+    try:
+        ctx = rt.load_contexto(contexto_id)
+        catalogo = rt.load_catalogo(ctx.catalogo_id)
+    except Exception as e:
+        return {"erro": str(e)}
+
+    todos = _buscar_insumos_por_texto(catalogo, tipo, query, incluir_descontinuados)
+    pagina = todos[offset : offset + limite]
+
+    return _wrap_response(
+        {
+            "contexto_id": contexto_id,
+            "catalogo_id": ctx.catalogo_id,
+            "total": len(todos),
+            "limite": limite,
+            "offset": offset,
+            "insumos": pagina,
+        }
+    )
+
+
 def _impl_pesquisar_catalogo(
     contexto_id: str,
     query: str | None = None,
