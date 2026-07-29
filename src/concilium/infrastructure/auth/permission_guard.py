@@ -5,10 +5,14 @@ Isso permite alterar ROLE_PERMISSIONS sem revogar tokens existentes.
 
 Roles disponíveis:
   operator        → health check + leitura + criar projetos + executar pipeline + dados financeiros
-  engineer        → operator + aprovar versões + escrever catálogo
-  admin           → engineer + gerir usuários e sistema
+  engineer        → operator + aprovar versões (domínio projeto; NÃO escreve catálogo — ADR-163 D7)
+  admin           → engineer + gerir usuários e sistema + escrever/aprovar catálogo
   auditor         → health check + leitura + dados financeiros (sem executar nada)
   catalog-manager → health check + especialista em catálogo (sem acesso a projetos de clientes)
+
+  Um usuário que precise de projeto E catálogo recebe dois roles (ex.: ["engineer",
+  "catalog-manager"]) — get_permissions() já faz união de permissões sobre todos os
+  roles do token, sem precisar de um role combinado dedicado.
 
 Decorators disponíveis (funcionam em FastAPI routes e MCP tools):
 
@@ -72,10 +76,16 @@ _OPERATOR = frozenset(
     }
 )
 
-_ENGINEER = _OPERATOR | frozenset({PROJECT_APPROVE, CATALOG_WRITE})
+_ENGINEER = _OPERATOR | frozenset({PROJECT_APPROVE})
 # ADR-120 D3: engineer NÃO tem CATALOG_MERGE (princípio dos 4 olhos: quem edita não aprova)
+# ADR-163 D7: engineer NÃO tem mais CATALOG_WRITE — escopo restrito a domínio projeto;
+# catalog:write/catalog:merge ficam exclusivos de catalog-manager/admin. Um usuário que
+# precise de ambos os domínios recebe o role catalog-manager adicionalmente (composição
+# multi-role via get_permissions, já suportada nativamente).
 
-_ADMIN = _ENGINEER | frozenset({AUTH_MANAGE, SYSTEM_READ, CATALOG_MERGE})
+_ADMIN = _ENGINEER | frozenset({AUTH_MANAGE, SYSTEM_READ, CATALOG_MERGE, CATALOG_WRITE})
+# CATALOG_WRITE listada explicitamente aqui (não mais herdada de _ENGINEER, ADR-163 D7) —
+# omitir isso removeria silenciosamente o acesso de escrita de catálogo do próprio admin.
 
 # ADR-120 D2: catalog-manager — especialista em catálogo, sem acesso a projetos de clientes
 _CATALOG_MANAGER = frozenset(

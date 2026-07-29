@@ -74,10 +74,12 @@ class TestEngineerDoesNotHaveMerge:
 
         assert "catalog:merge" not in ROLE_PERMISSIONS["engineer"]
 
-    def test_engineer_still_has_catalog_write(self):
+    def test_engineer_no_longer_has_catalog_write(self):
+        """ADR-163 D7 (emenda): engineer restrito a domínio projeto — catalog:write
+        passa a ser exclusivo de catalog-manager/admin."""
         from concilium.infrastructure.auth.permission_guard import ROLE_PERMISSIONS
 
-        assert "catalog:write" in ROLE_PERMISSIONS["engineer"]
+        assert "catalog:write" not in ROLE_PERMISSIONS["engineer"]
 
     def test_engineer_has_catalog_validate(self):
         from concilium.infrastructure.auth.permission_guard import ROLE_PERMISSIONS
@@ -104,6 +106,45 @@ class TestEngineerDoesNotHaveMerge:
         from concilium.infrastructure.auth.permission_guard import ROLE_PERMISSIONS
 
         assert "catalog:write" not in ROLE_PERMISSIONS["auditor"]
+
+
+class TestAdr163EngineerCatalogWriteRemoved:
+    """ADR-163 D7 (emenda ADR-099/ADR-120): engineer = domínio projeto;
+    catalog:write/catalog:merge ficam exclusivos de catalog-manager/admin.
+    """
+
+    def test_admin_still_has_catalog_write(self):
+        """Guarda de regressão: _ADMIN não pode perder catalog:write por herança
+        silenciosa de _ENGINEER quando catalog:write for removida de _ENGINEER."""
+        from concilium.infrastructure.auth.permission_guard import ROLE_PERMISSIONS
+
+        assert "catalog:write" in ROLE_PERMISSIONS["admin"]
+
+    def test_catalog_manager_still_has_catalog_write(self):
+        from concilium.infrastructure.auth.permission_guard import ROLE_PERMISSIONS
+
+        assert "catalog:write" in ROLE_PERMISSIONS["catalog-manager"]
+
+    def test_get_permissions_engineer_alone_no_catalog_write(self):
+        from concilium.infrastructure.auth.permission_guard import get_permissions
+
+        assert "catalog:write" not in get_permissions(["engineer"])
+
+    def test_get_permissions_engineer_plus_catalog_manager_has_catalog_write(self):
+        """Composição multi-role: engineer + catalog-manager recupera catalog:write
+        (e catalog:merge) via união de permissões — mecanismo já existente, sem
+        código novo (ADR-120, 'role pode ser combinado')."""
+        from concilium.infrastructure.auth.permission_guard import get_permissions
+
+        perms = get_permissions(["engineer", "catalog-manager"])
+        assert "catalog:write" in perms
+        assert "catalog:merge" in perms
+        assert "project:approve" in perms  # continua tendo o lado projeto do engineer
+
+    def test_get_permissions_admin_has_catalog_write(self):
+        from concilium.infrastructure.auth.permission_guard import get_permissions
+
+        assert "catalog:write" in get_permissions(["admin"])
 
 
 class TestAdrOneNinteenIntegration:
