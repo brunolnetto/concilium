@@ -51,13 +51,13 @@ class TestApplyBodyRow:
         fill = MagicMock()
         border = MagicMock()
 
-        _apply_body_row(cells, fill, border, "Calibri", 10)
+        body_font = MagicMock()
+        _apply_body_row(cells, fill, border, body_font)
 
         for cell in cells:
             assert cell.fill == fill
             assert cell.border == border
-            # font was set (we can't easily check name but it was assigned)
-            assert cell.font is not None
+            assert cell.font == body_font
 
     def test_fill_not_applied_when_none(self):
         from concilium.infrastructure.exporters.catalog_excel import _apply_body_row
@@ -65,7 +65,7 @@ class TestApplyBodyRow:
         cell = self._make_cell()
         border = MagicMock()
 
-        _apply_body_row([cell], None, border, "Calibri", 10)
+        _apply_body_row([cell], None, border, MagicMock())
 
         # fill attribute should not have been set
         assert cell.fill != MagicMock()  # it remains the default mock attribute
@@ -77,7 +77,7 @@ class TestApplyBodyRow:
         cell = self._make_cell()
         border = MagicMock()
 
-        _apply_body_row([cell], None, border, "Arial", 9)
+        _apply_body_row([cell], None, border, MagicMock())
 
         assert cell.border == border
 
@@ -85,7 +85,7 @@ class TestApplyBodyRow:
         from concilium.infrastructure.exporters.catalog_excel import _apply_body_row
 
         # Must not raise even with empty iterable
-        _apply_body_row([], MagicMock(), MagicMock(), "Calibri", 10)
+        _apply_body_row([], MagicMock(), MagicMock(), MagicMock())
 
 
 # ---------------------------------------------------------------------------
@@ -719,7 +719,7 @@ class TestAplicarEstilo:
 
         called_fills = []
 
-        def _fake_apply_body_row(row, fill, border, fname, fsize):
+        def _fake_apply_body_row(row, fill, border, body_font):
             called_fills.append(fill)
 
         writer = self._make_mock_writer(["ZebraSheet"])
