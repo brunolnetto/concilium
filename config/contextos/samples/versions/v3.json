@@ -1,0 +1,236 @@
+{
+  "version": "v3",
+  "created_at": "2026-07-29T18:30:04.887779+00:00",
+  "created_by": "adr171-enriquecer-samples",
+  "motivo": "rascunho: ADR-171: enriquece samples (Coordenador, BEN-ALOJAMENTO, mapeamento função→item)",
+  "id": "samples",
+  "perfil_id": "mendeslobo",
+  "jurisdicao_id": "BR",
+  "referencia_id": "SICRO_2024_CE",
+  "catalogo_id": "samples",
+  "nome": "Samples — casos de teste",
+  "descricao": "Contexto para amostras sintéticas: casos feliz, delta-PE e cronograma (para iteração futura com dados reais)",
+  "_rascunho": true,
+  "_rascunho_descricao": "ADR-171: enriquece samples (Coordenador, BEN-ALOJAMENTO, mapeamento função→item)",
+  "_deltas": [
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "P0092",
+        "tipo": "MAO_OBRA",
+        "descricao": "Coordenador",
+        "unidade": "mes",
+        "preco_unitario": 12500.0,
+        "categoria": "DIVERSOS",
+        "fonte_preco": "negociado",
+        "atributos_especificos": {
+          "categoria_sindical": "pj_CE",
+          "horas_extras_pct_padrao": 0.0,
+          "tipo_contrato": "PJ",
+          "metodo_custo_total": "custo_total_ja_incluido",
+          "taxa_encargos_pct": 0.0,
+          "nota_encargos": "Valor já representa custo total ao projeto (mesma convenção de ADM-PJ/TOPOGRAFO, ADR-167)."
+        }
+      },
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.893020+00:00"
+    },
+    {
+      "tipo": "criacao_insumo",
+      "insumo": {
+        "codigo": "BEN-ALOJAMENTO",
+        "tipo": "BENEFICIO",
+        "descricao": "Alojamento (aluguel de casa compartilhada)",
+        "unidade": "mes",
+        "preco_unitario": 4000.0,
+        "categoria": "BENEFICIOS",
+        "fonte_preco": "catalogo_proprio",
+        "atributos_especificos": {
+          "periodicidade_beneficio": "mensal",
+          "quartos_por_casa": 3,
+          "pessoas_por_quarto": 2
+        }
+      },
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.893020+00:00"
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-NR12-MAQUINAS",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "OPER-BETONEIRA",
+        "OPER-ESCAV",
+        "OPER-ESPARG",
+        "OPER-MINI-ESCAV",
+        "OPER-MOTO",
+        "OPER-PA-CARR",
+        "OPER-RETRO",
+        "OPER-ROLO-COMP",
+        "OPER-ROLO-PNEU",
+        "OPER-TRATOR-EST",
+        "OPER-TRATOR-PNE",
+        "OPER-VALETAD",
+        "OPERADOR-DE-MAQUINAS",
+        "OPERADOR-DE-MOTOSCRA"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-ABAFADOR-CONCHA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "OPER-BETONEIRA",
+        "OPER-ESCAV",
+        "OPER-ESPARG",
+        "OPER-MINI-ESCAV",
+        "OPER-MOTO",
+        "OPER-PA-CARR",
+        "OPER-RETRO",
+        "OPER-ROLO-COMP",
+        "OPER-ROLO-PNEU",
+        "OPER-TRATOR-EST",
+        "OPER-TRATOR-PNE",
+        "OPER-VALETAD",
+        "OPERADOR-DE-MAQUINAS",
+        "OPERADOR-DE-MOTOSCRA",
+        "OPERADOR-DE-MOTOSSER"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-OP-MOTOSSERRA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "OPERADOR-DE-MOTOSSER"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-OP-MOTOPODA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "OPERADOR-DE-MOTOSSER"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-ROUPA-MOTOSSERRA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "OPERADOR-DE-MOTOSSER"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-PERNEIRA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "OPERADOR-DE-MOTOSSER"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-PLANO-TRANSITO",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "MOTOR-CAM",
+        "MOTOR-CAM-BASC",
+        "MOTOR-CAM-COMB",
+        "MOTOR-CAM-PIPA",
+        "MOTOR-ONIBUS",
+        "MOTORISTA-DE-CAMINHÃ"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-PRODUTOS-QUIMICOS",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "AUX-LAB",
+        "LABORATORISTA",
+        "OPER-ESPARG",
+        "PINTOR"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-NR35-ALTURA",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "ARMADOR",
+        "CARPINTEIRO",
+        "ELETRICISTA",
+        "MONTADOR",
+        "MONTADOR-AGUA"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "EPI-PROTETOR-FACIAL",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": [
+        "AUX-MEC",
+        "BORRACHEIRO",
+        "MECÂNICO"
+      ]
+    },
+    {
+      "tipo": "preco_insumo",
+      "insumo_id": "TRE-NR22-MINERACAO",
+      "novo_preco": null,
+      "jurisdicao_id": null,
+      "nota": null,
+      "autor": "adr171-enriquecer-samples",
+      "timestamp": "2026-07-29T18:30:04.896623+00:00",
+      "novos_funcoes_aplicaveis": []
+    }
+  ],
+  "_revisado": true,
+  "_revisado_por": "adr171-enriquecer-samples",
+  "_aprovado": true,
+  "_aprovado_por": "adr171-enriquecer-samples-aprovador",
+  "_rejeitado": false,
+  "_rejeitado_por": null,
+  "_motivo_rejeicao": null
+}

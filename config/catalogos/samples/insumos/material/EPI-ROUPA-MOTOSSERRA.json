@@ -1,0 +1,15 @@
+{
+  "codigo": "EPI-ROUPA-MOTOSSERRA",
+  "tipo": "MATERIAL",
+  "descricao": "Roupa operador de motosserra",
+  "unidade": "unid",
+  "preco_unitario": 620.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "OPERADOR-DE-MOTOSSER"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "diff": {
+    "diff_id": "8309e7ff-34f4-4883-ab11-3ac1cdc8b9d9",
+    "previous_snapshot_id": "f6531f0c-adc9-47b4-8505-c9ac4bb7934b",
+    "current_snapshot_id": "435e39f8-e54b-435b-94c8-80a800098560",
+    "computed_at": "2026-07-29T18:30:04.959078Z",
+    "changed": true,
+    "cpus_added": [],
+    "cpus_removed": [],
+    "cpus_modified": [],
+    "insumos_added": [
+      "BEN-ALOJAMENTO",
+      "P0092"
+    ],
+    "insumos_removed": [],
+    "insumos_modified": [
+      "EPI-ABAFADOR-CONCHA",
+      "EPI-PERNEIRA",
+      "EPI-PROTETOR-FACIAL",
+      "EPI-ROUPA-MOTOSSERRA",
+      "TRE-NR12-MAQUINAS",
+      "TRE-NR22-MINERACAO",
+      "TRE-NR35-ALTURA",
+      "TRE-OP-MOTOPODA",
+      "TRE-OP-MOTOSSERRA",
+      "TRE-PLANO-TRANSITO",
+      "TRE-PRODUTOS-QUIMICOS"
+    ],
+    "produtividades_added": [],
+    "produtividades_removed": [],
+    "produtividades_modified": [],
+    "summary": "2 insumo(s) +, 0 -, 11 mod."
+  },
+  "contexto_id": "samples",
+  "rascunho_id": "v3",
+  "aprovador": "adr171-enriquecer-samples-aprovador",
+  "justificativa": "ADR-171: Coordenador/BEN-ALOJAMENTO/mapeamento função→item em samples"
+}

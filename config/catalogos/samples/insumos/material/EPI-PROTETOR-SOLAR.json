@@ -1,0 +1,12 @@
+{
+  "codigo": "EPI-PROTETOR-SOLAR",
+  "tipo": "MATERIAL",
+  "descricao": "Protetor solar FPS 60",
+  "unidade": "unid",
+  "preco_unitario": 60.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 60
+  }
+}

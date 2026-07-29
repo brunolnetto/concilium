@@ -1,0 +1,17 @@
+{
+  "codigo": "EPI-PROTETOR-FACIAL",
+  "tipo": "MATERIAL",
+  "descricao": "Protetor facial",
+  "unidade": "unid",
+  "preco_unitario": 110.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "AUX-MEC",
+      "BORRACHEIRO",
+      "MECÂNICO"
+    ]
+  }
+}

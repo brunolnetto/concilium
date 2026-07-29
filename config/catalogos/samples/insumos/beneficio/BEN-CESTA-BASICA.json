@@ -1,0 +1,12 @@
+{
+  "codigo": "BEN-CESTA-BASICA",
+  "tipo": "BENEFICIO",
+  "descricao": "Cesta básica",
+  "unidade": "mes",
+  "preco_unitario": 462.25,
+  "categoria": "BENEFICIOS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "periodicidade_beneficio": "mensal"
+  }
+}

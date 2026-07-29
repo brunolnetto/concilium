@@ -1,0 +1,15 @@
+{
+  "codigo": "TRE-OP-MOTOPODA",
+  "tipo": "TREINAMENTO",
+  "descricao": "Operador de Motopoda",
+  "unidade": "unid",
+  "preco_unitario": 400.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "OPERADOR-DE-MOTOSSER"
+    ]
+  }
+}

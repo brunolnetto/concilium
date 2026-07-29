@@ -1,0 +1,20 @@
+{
+  "codigo": "TRE-PLANO-TRANSITO",
+  "tipo": "TREINAMENTO",
+  "descricao": "Plano de Trânsito Integrado",
+  "unidade": "unid",
+  "preco_unitario": 300.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "MOTOR-CAM",
+      "MOTOR-CAM-BASC",
+      "MOTOR-CAM-COMB",
+      "MOTOR-CAM-PIPA",
+      "MOTOR-ONIBUS",
+      "MOTORISTA-DE-CAMINHÃ"
+    ]
+  }
+}

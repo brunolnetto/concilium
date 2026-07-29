@@ -1,0 +1,17 @@
+{
+  "codigo": "P0092",
+  "tipo": "MAO_OBRA",
+  "descricao": "Coordenador",
+  "unidade": "mes",
+  "preco_unitario": 12500.0,
+  "categoria": "DIVERSOS",
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "pj_CE",
+    "horas_extras_pct_padrao": 0.0,
+    "tipo_contrato": "PJ",
+    "metodo_custo_total": "custo_total_ja_incluido",
+    "taxa_encargos_pct": 0.0,
+    "nota_encargos": "Valor já representa custo total ao projeto (mesma convenção de ADM-PJ/TOPOGRAFO, ADR-167)."
+  }
+}

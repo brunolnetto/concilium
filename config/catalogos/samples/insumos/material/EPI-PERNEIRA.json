@@ -1,0 +1,15 @@
+{
+  "codigo": "EPI-PERNEIRA",
+  "tipo": "MATERIAL",
+  "descricao": "Perneira",
+  "unidade": "unid",
+  "preco_unitario": 100.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 180,
+    "funcoes_aplicaveis": [
+      "OPERADOR-DE-MOTOSSER"
+    ]
+  }
+}

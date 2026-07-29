@@ -1,0 +1,29 @@
+{
+  "codigo": "EPI-ABAFADOR-CONCHA",
+  "tipo": "MATERIAL",
+  "descricao": "Abafador de ruídos tipo concha",
+  "unidade": "unid",
+  "preco_unitario": 90.0,
+  "categoria": "QSMS",
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "vida_util_dias": 360,
+    "funcoes_aplicaveis": [
+      "OPER-BETONEIRA",
+      "OPER-ESCAV",
+      "OPER-ESPARG",
+      "OPER-MINI-ESCAV",
+      "OPER-MOTO",
+      "OPER-PA-CARR",
+      "OPER-RETRO",
+      "OPER-ROLO-COMP",
+      "OPER-ROLO-PNEU",
+      "OPER-TRATOR-EST",
+      "OPER-TRATOR-PNE",
+      "OPER-VALETAD",
+      "OPERADOR-DE-MAQUINAS",
+      "OPERADOR-DE-MOTOSCRA",
+      "OPERADOR-DE-MOTOSSER"
+    ]
+  }
+}
