@@ -350,23 +350,6 @@ class AtributosCategoriaCPU(BaseModel):
     dmt_referencia_m: float | None = Field(default=None, ge=0)
 
 
-class Funcao(BaseModel):
-    """Mapeamento canônico entre papel funcional, insumo de mão de obra e código SICRO/SINAPI.
-
-    funcao_id -> insumo_id é a ligação de preço autorizada: uma CPU deve sempre referenciar
-    funcao_id e o runtime resolve para o Insumo correto via este catálogo, eliminando a
-    ambiguidade entre códigos P (SICRO) e IDs descritivos MendesLobo.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    funcao_id: str = Field(pattern=r"^[A-Z0-9-]{3,40}$")
-    descricao: str
-    insumo_id: str  # -> Insumo(MAO_OBRA).codigo — fonte canônica de preço
-    codigo_sicro: str | None = None  # ex: "P0040"
-    codigo_sinapi: str | None = None
-
-
 class CPU(BaseModel):
     """Composição de Preço Unitário — dimensão de insumos e custos (ADR-053 Fase 3).
 
