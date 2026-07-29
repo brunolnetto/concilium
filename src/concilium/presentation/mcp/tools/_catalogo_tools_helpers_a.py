@@ -22,6 +22,10 @@ from concilium.application.orchestrators.catalog_governance import (
 )
 from concilium.presentation.mcp._context import _config_root, _projetos_root, _runtime, _wrap_response
 
+# ADR-164: teto de itens por chamada nas tools de lote de insumo — evita
+# sobrecarga de rede/payload de uma única chamada MCP muito grande.
+MAX_LOTE_INSUMOS = 100
+
 
 def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
@@ -291,13 +295,17 @@ def _rascunho_file_path(config_root: Path, contexto_id: str, rascunho_id: str) -
     return config_root / "contextos" / contexto_id / "versions" / f"{rascunho_id}.json"
 
 
-def _append_delta_to_rascunho(
+def _append_deltas_to_rascunho(
     config_root: Path,
     contexto_id: str,
     rascunho_id: str,
-    delta: dict[str, Any],
+    deltas_novos: list[dict[str, Any]],
 ) -> str | None:
-    """Acrescenta um delta ao rascunho (ADR-145 D1). Retorna mensagem de erro, ou None em sucesso.
+    """Acrescenta um ou mais deltas ao rascunho numa única leitura+escrita (ADR-164).
+
+    Generaliza o caminho de escrita para lote: uma tool batch com N itens
+    válidos grava todos os N deltas com uma única leitura+escrita do arquivo
+    do rascunho, em vez de N leituras+escritas (uma por chamada individual).
 
     O catálogo mestre só é tocado no commit (aprovar_merge_catalogo, D2) — esta
     função nunca escreve em `config/catalogos/`, apenas na versão do rascunho.
@@ -316,13 +324,23 @@ def _append_delta_to_rascunho(
         return f"Rascunho '{rascunho_id}' está em estado terminal ({estado}) e não aceita novas edições."
 
     deltas: list[dict[str, Any]] = data.setdefault("_deltas", [])
-    deltas.append(delta)
+    deltas.extend(deltas_novos)
 
     try:
         rascunho_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
         return f"Falha ao gravar delta no rascunho: {e}"
     return None
+
+
+def _append_delta_to_rascunho(
+    config_root: Path,
+    contexto_id: str,
+    rascunho_id: str,
+    delta: dict[str, Any],
+) -> str | None:
+    """Acrescenta um delta ao rascunho (ADR-145 D1). Retorna mensagem de erro, ou None em sucesso."""
+    return _append_deltas_to_rascunho(config_root, contexto_id, rascunho_id, [delta])
 
 
 def _apply_preco_insumo_delta(
@@ -501,6 +519,104 @@ def _impl_criar_insumo(
     )
 
 
+def _impl_criar_insumos_lote(
+    contexto_id: str,
+    rascunho_id: str,
+    itens: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Cria múltiplos insumos novos no catálogo mestre numa única chamada (ADR-164).
+
+    Mesmo caminho gated por rascunho de `criar_insumo`, mas grava todos os
+    deltas válidos numa única leitura+escrita do rascunho (`_append_deltas_to_rascunho`),
+    em vez de N leituras+escritas para N chamadas individuais.
+
+    Validação e persistência não são atômicas do mesmo jeito: cada item é
+    validado independentemente (código duplicado no lote, código já existente
+    no catálogo, schema inválido) e itens inválidos não abortam o lote inteiro
+    — o resultado reporta sucesso/erro por item. Já a escrita dos itens
+    válidos é atômica: ou todos os deltas válidos são persistidos juntos, ou
+    nenhum é (se o rascunho não existir/estiver em estado terminal).
+
+    Args:
+        contexto_id: ID do contexto (ex.: "mendeslobo").
+        rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
+        itens: Lista de insumos a criar (mesmos campos de `criar_insumo`),
+            até MAX_LOTE_INSUMOS itens por chamada.
+    """
+    if not itens:
+        return {"erro": "itens não pode ser vazio."}
+    if len(itens) > MAX_LOTE_INSUMOS:
+        return {"erro": f"Máximo de {MAX_LOTE_INSUMOS} itens por chamada (recebido: {len(itens)})."}
+
+    from pydantic import ValidationError
+
+    from concilium.domain.models.catalog.catalogo import Insumo
+    from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+    rt = _runtime()
+    config_dir = _config_root()
+    ctx = rt.load_contexto(contexto_id)
+    catalog_root = _catalog_root(config_dir, ctx.catalogo_id)
+    autor = get_current_user_id() or "system"
+    timestamp = datetime.now(UTC).isoformat()
+
+    resultados: list[dict[str, Any]] = []
+    deltas_validos: list[dict[str, Any]] = []
+    codigos_no_lote: set[str] = set()
+
+    for item in itens:
+        codigo = item.get("codigo")
+        try:
+            if not codigo:
+                raise ValueError("codigo é obrigatório")
+            if codigo in codigos_no_lote:
+                raise ValueError(f"codigo '{codigo}' duplicado dentro do próprio lote")
+            validate_insumo_nao_existe(catalog_root, codigo)
+            insumo_data: dict[str, Any] = {
+                "codigo": codigo,
+                "tipo": item.get("tipo"),
+                "descricao": item.get("descricao"),
+                "unidade": item.get("unidade"),
+                "preco_unitario": item.get("preco_unitario"),
+                "categoria": item.get("categoria"),
+                "fonte_preco": item.get("fonte_preco"),
+                "atributos_especificos": item.get("atributos_especificos") or {},
+            }
+            Insumo(**insumo_data)
+        except (CatalogGovernanceError, ValidationError, ValueError, TypeError) as exc:
+            resultados.append({"codigo": codigo, "status": "erro", "erro": str(exc)})
+            continue
+
+        codigos_no_lote.add(codigo)
+        deltas_validos.append(
+            {
+                "tipo": "criacao_insumo",
+                "insumo": insumo_data,
+                "autor": autor,
+                "timestamp": timestamp,
+            }
+        )
+        resultados.append({"codigo": codigo, "status": "ok"})
+
+    if deltas_validos:
+        erro = _append_deltas_to_rascunho(config_dir, contexto_id, rascunho_id, deltas_validos)
+        if erro:
+            return {"erro": erro}
+
+    sucesso = sum(1 for r in resultados if r["status"] == "ok")
+    return _wrap_response(
+        {
+            "status": "RASCUNHO",
+            "layer": "MASTER",
+            "rascunho_id": rascunho_id,
+            "total": len(itens),
+            "sucesso": sucesso,
+            "falhas": len(resultados) - sucesso,
+            "resultados": resultados,
+        }
+    )
+
+
 def _apply_descontinuacao_insumo_delta(catalog_root: Path, insumo_id: str, motivo: str | None) -> None:
     """Marca o insumo como descontinuado no momento do merge (ADR-163 D6).
 
@@ -564,6 +680,79 @@ def _impl_descontinuar_insumo(
             "insumo_id": insumo_id,
             "nota": "Descontinuação registrada no rascunho — o insumo permanece ativo até "
             "aprovar_merge_catalogo (nunca é removido fisicamente).",
+        }
+    )
+
+
+def _impl_descontinuar_insumos_lote(
+    contexto_id: str,
+    rascunho_id: str,
+    itens: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Descontinua (soft delete) múltiplos insumos numa única chamada (ADR-164).
+
+    Mesmo caminho gated por rascunho de `descontinuar_insumo`, gravando todos
+    os deltas válidos numa única leitura+escrita do rascunho.
+
+    Args:
+        contexto_id: ID do contexto (ex.: "mendeslobo").
+        rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
+        itens: Lista de descontinuações — cada item aceita `insumo_id` e
+            `motivo` opcional. Até MAX_LOTE_INSUMOS itens por chamada.
+    """
+    if not itens:
+        return {"erro": "itens não pode ser vazio."}
+    if len(itens) > MAX_LOTE_INSUMOS:
+        return {"erro": f"Máximo de {MAX_LOTE_INSUMOS} itens por chamada (recebido: {len(itens)})."}
+
+    from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+    rt = _runtime()
+    config_dir = _config_root()
+    ctx = rt.load_contexto(contexto_id)
+    catalog_root = _catalog_root(config_dir, ctx.catalogo_id)
+    autor = get_current_user_id() or "system"
+    timestamp = datetime.now(UTC).isoformat()
+
+    resultados: list[dict[str, Any]] = []
+    deltas_validos: list[dict[str, Any]] = []
+
+    for item in itens:
+        insumo_id = item.get("insumo_id")
+        try:
+            if not insumo_id:
+                raise ValueError("insumo_id é obrigatório")
+            validate_and_resolve_insumo_file(catalog_root, insumo_id, 0.0)
+        except (CatalogGovernanceError, ValueError) as exc:
+            resultados.append({"insumo_id": insumo_id, "status": "erro", "erro": str(exc)})
+            continue
+
+        deltas_validos.append(
+            {
+                "tipo": "descontinuacao_insumo",
+                "insumo_id": insumo_id,
+                "motivo": item.get("motivo"),
+                "autor": autor,
+                "timestamp": timestamp,
+            }
+        )
+        resultados.append({"insumo_id": insumo_id, "status": "ok"})
+
+    if deltas_validos:
+        erro = _append_deltas_to_rascunho(config_dir, contexto_id, rascunho_id, deltas_validos)
+        if erro:
+            return {"erro": erro}
+
+    sucesso = sum(1 for r in resultados if r["status"] == "ok")
+    return _wrap_response(
+        {
+            "status": "RASCUNHO",
+            "layer": "MASTER",
+            "rascunho_id": rascunho_id,
+            "total": len(itens),
+            "sucesso": sucesso,
+            "falhas": len(resultados) - sucesso,
+            "resultados": resultados,
         }
     )
 
@@ -665,6 +854,90 @@ def _impl_atualizar_preco_insumo(
             "novo_preco": novo_preco,
             "nota": "Alteração registrada no rascunho — ainda não aplicada ao catálogo mestre. "
             "Use aprovar_merge_catalogo para promover.",
+        }
+    )
+
+
+def _impl_atualizar_precos_insumos_lote(
+    contexto_id: str,
+    rascunho_id: str,
+    itens: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Atualiza preço e/ou locação mensal de múltiplos insumos numa única chamada (ADR-164).
+
+    Mesmo caminho gated por rascunho de `atualizar_preco_insumo` (só catálogo
+    mestre — sem suporte a override de projeto em lote), gravando todos os
+    deltas válidos numa única leitura+escrita do rascunho.
+
+    Args:
+        contexto_id: ID do contexto (ex.: "mendeslobo").
+        rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
+        itens: Lista de atualizações — cada item aceita os mesmos campos de
+            `atualizar_preco_insumo` (insumo_id, novo_preco, novo_valor_locacao_mensal,
+            jurisdicao_id, nota), exceto projeto_id. Até MAX_LOTE_INSUMOS itens.
+    """
+    if not itens:
+        return {"erro": "itens não pode ser vazio."}
+    if len(itens) > MAX_LOTE_INSUMOS:
+        return {"erro": f"Máximo de {MAX_LOTE_INSUMOS} itens por chamada (recebido: {len(itens)})."}
+
+    from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+    rt = _runtime()
+    config_dir = _config_root()
+    ctx = rt.load_contexto(contexto_id)
+    catalog_root = _catalog_root(config_dir, ctx.catalogo_id)
+    autor = get_current_user_id() or "system"
+    timestamp = datetime.now(UTC).isoformat()
+
+    resultados: list[dict[str, Any]] = []
+    deltas_validos: list[dict[str, Any]] = []
+
+    for item in itens:
+        insumo_id = item.get("insumo_id")
+        novo_preco = item.get("novo_preco")
+        novo_valor_locacao_mensal = item.get("novo_valor_locacao_mensal")
+        try:
+            if not insumo_id:
+                raise ValueError("insumo_id é obrigatório")
+            if novo_preco is None and novo_valor_locacao_mensal is None:
+                raise ValueError("informe ao menos um entre novo_preco e novo_valor_locacao_mensal")
+            validate_and_resolve_insumo_file(
+                catalog_root, insumo_id, novo_preco if novo_preco is not None else 0.0
+            )
+        except (CatalogGovernanceError, ValueError) as exc:
+            resultados.append({"insumo_id": insumo_id, "status": "erro", "erro": str(exc)})
+            continue
+
+        delta: dict[str, Any] = {
+            "tipo": "preco_insumo",
+            "insumo_id": insumo_id,
+            "novo_preco": novo_preco,
+            "jurisdicao_id": item.get("jurisdicao_id"),
+            "nota": item.get("nota"),
+            "autor": autor,
+            "timestamp": timestamp,
+        }
+        if novo_valor_locacao_mensal is not None:
+            delta["novo_valor_locacao_mensal"] = novo_valor_locacao_mensal
+        deltas_validos.append(delta)
+        resultados.append({"insumo_id": insumo_id, "status": "ok"})
+
+    if deltas_validos:
+        erro = _append_deltas_to_rascunho(config_dir, contexto_id, rascunho_id, deltas_validos)
+        if erro:
+            return {"erro": erro}
+
+    sucesso = sum(1 for r in resultados if r["status"] == "ok")
+    return _wrap_response(
+        {
+            "status": "RASCUNHO",
+            "layer": "MASTER",
+            "rascunho_id": rascunho_id,
+            "total": len(itens),
+            "sucesso": sucesso,
+            "falhas": len(resultados) - sucesso,
+            "resultados": resultados,
         }
     )
 

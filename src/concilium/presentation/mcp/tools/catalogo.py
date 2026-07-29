@@ -12,12 +12,16 @@ from concilium.presentation.mcp._context import _wrap_response
 from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 from ._catalogo_tools_helpers_a import (
+    MAX_LOTE_INSUMOS,
     _impl_adicionar_variante_producao,
     _impl_atualizar_preco_insumo,
+    _impl_atualizar_precos_insumos_lote,
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
     _impl_criar_insumo,
+    _impl_criar_insumos_lote,
     _impl_descontinuar_insumo,
+    _impl_descontinuar_insumos_lote,
     _impl_listar_contextos,
     _impl_listar_insumos,
     _impl_pesquisar_catalogo,
@@ -175,6 +179,23 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description=(
+            "Atualiza preço e/ou locação mensal de múltiplos insumos numa única chamada (ADR-164) — "
+            "evita N chamadas individuais para atualizar N insumos. Só catálogo mestre (sem override de "
+            f"projeto em lote), requer rascunho_id. Até {MAX_LOTE_INSUMOS} itens por chamada. "
+            "Itens inválidos não abortam o lote — resposta reporta sucesso/erro por item."
+        )
+    )
+    @permission("catalog:write")
+    @mcp_rate_limit()
+    def atualizar_precos_insumos_lote(
+        contexto_id: str,
+        rascunho_id: str,
+        itens: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return _impl_atualizar_precos_insumos_lote(contexto_id, rascunho_id, itens)
+
+    @server.tool(
+        description=(
             "Cria um insumo novo (material/mão-de-obra/equipamento) no catálogo mestre. "
             "Requer rascunho_id (criado via criar_rascunho_catalogo) — a criação fica pendente "
             "até aprovar_merge_catalogo (ADR-163)."
@@ -209,6 +230,24 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description=(
+            "Cria múltiplos insumos novos numa única chamada (ADR-164) — evita N chamadas "
+            "individuais para criar N insumos. Requer rascunho_id. Cada item aceita os mesmos "
+            f"campos de criar_insumo. Até {MAX_LOTE_INSUMOS} itens por chamada. "
+            "Itens inválidos (código duplicado no lote, código já existente) não abortam o lote — "
+            "resposta reporta sucesso/erro por item."
+        )
+    )
+    @permission("catalog:write")
+    @mcp_rate_limit()
+    def criar_insumos_lote(
+        contexto_id: str,
+        rascunho_id: str,
+        itens: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return _impl_criar_insumos_lote(contexto_id, rascunho_id, itens)
+
+    @server.tool(
+        description=(
             "Descontinua um insumo do catálogo mestre (soft delete — nunca remove o arquivo, "
             "preserva histórico/snapshots). Requer rascunho_id (criado via criar_rascunho_catalogo) — "
             "fica pendente até aprovar_merge_catalogo. Insumos descontinuados são excluídos de "
@@ -224,6 +263,23 @@ def register(server: FastMCP) -> None:
         motivo: str | None = None,
     ) -> dict[str, Any]:
         return _impl_descontinuar_insumo(contexto_id, rascunho_id, insumo_id, motivo)
+
+    @server.tool(
+        description=(
+            "Descontinua (soft delete) múltiplos insumos numa única chamada (ADR-164) — evita N "
+            "chamadas individuais. Requer rascunho_id. Cada item aceita insumo_id e motivo opcional. "
+            f"Até {MAX_LOTE_INSUMOS} itens por chamada. Itens inválidos não abortam o lote — "
+            "resposta reporta sucesso/erro por item."
+        )
+    )
+    @permission("catalog:write")
+    @mcp_rate_limit()
+    def descontinuar_insumos_lote(
+        contexto_id: str,
+        rascunho_id: str,
+        itens: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return _impl_descontinuar_insumos_lote(contexto_id, rascunho_id, itens)
 
     @server.tool(
         description="Registra uma variante de produtividade documentada para uma producao existente "

@@ -1091,6 +1091,289 @@ class TestApplyDescontinuacaoInsumoDelta:
 
 
 # ---------------------------------------------------------------------------
+# _impl_criar_insumos_lote (ADR-164)
+# ---------------------------------------------------------------------------
+
+
+class TestImplCriarInsumosLote:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, rt: MagicMock, tmp_path: Path) -> None:
+        monkeypatch.setattr(mod, "_runtime", lambda: rt)
+        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
+        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
+
+    def _item(self, **overrides):
+        base = dict(
+            codigo="EQ-999",
+            tipo="EQUIPAMENTO",
+            descricao="Retroescavadeira",
+            unidade="h",
+            preco_unitario=120.0,
+            categoria="TERRAPLENAGEM",
+            fonte_preco="cotacao_mercado",
+        )
+        base.update(overrides)
+        return base
+
+    def test_lista_vazia_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = mod._impl_criar_insumos_lote("ctx1", "v1", [])
+        assert "erro" in result
+
+    def test_acima_do_limite_retorna_erro_sem_gravar_nada(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [self._item(codigo=f"EQ-{i:04d}") for i in range(mod.MAX_LOTE_INSUMOS + 1)]
+        result = mod._impl_criar_insumos_lote("ctx1", "v1", itens)
+        assert "erro" in result
+        assert str(mod.MAX_LOTE_INSUMOS) in result["erro"]
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert rascunho_data.get("_deltas", []) == []
+
+    def test_todos_validos_grava_um_delta_por_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [self._item(codigo="EQ-001"), self._item(codigo="EQ-002"), self._item(codigo="EQ-003")]
+        result = mod._impl_criar_insumos_lote("ctx1", "v1", itens)
+
+        assert result["status"] == "RASCUNHO"
+        assert result["total"] == 3
+        assert result["sucesso"] == 3
+        assert result["falhas"] == 0
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert len(rascunho_data["_deltas"]) == 3
+        assert {d["insumo"]["codigo"] for d in rascunho_data["_deltas"]} == {"EQ-001", "EQ-002", "EQ-003"}
+
+    def test_codigo_duplicado_dentro_do_lote_falha_so_o_segundo(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [self._item(codigo="EQ-001"), self._item(codigo="EQ-001")]
+        result = mod._impl_criar_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 1
+        assert result["falhas"] == 1
+        assert result["resultados"][0]["status"] == "ok"
+        assert result["resultados"][1]["status"] == "erro"
+        assert "duplicado" in result["resultados"][1]["erro"]
+
+    def test_codigo_ja_existente_no_catalogo_falha_so_aquele_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-001.json").write_text('{"codigo": "EQ-001"}', encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [self._item(codigo="EQ-001"), self._item(codigo="EQ-002")]
+        result = mod._impl_criar_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 1
+        assert result["falhas"] == 1
+        falha = next(r for r in result["resultados"] if r["codigo"] == "EQ-001")
+        assert falha["status"] == "erro"
+        assert "já existe" in falha["erro"]
+        sucesso = next(r for r in result["resultados"] if r["codigo"] == "EQ-002")
+        assert sucesso["status"] == "ok"
+
+    def test_item_com_schema_invalido_falha_so_aquele_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [self._item(codigo="EQ-001"), self._item(codigo="eq minusculo!")]
+        result = mod._impl_criar_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 1
+        assert result["falhas"] == 1
+
+    def test_rascunho_inexistente_retorna_erro_top_level(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
+
+        result = mod._impl_criar_insumos_lote("ctx1", "v-nao-existe", [self._item()])
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+
+# ---------------------------------------------------------------------------
+# _impl_atualizar_precos_insumos_lote (ADR-164)
+# ---------------------------------------------------------------------------
+
+
+class TestImplAtualizarPrecosInsumosLote:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, rt: MagicMock, tmp_path: Path) -> None:
+        monkeypatch.setattr(mod, "_runtime", lambda: rt)
+        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
+        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
+
+    def test_lista_vazia_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", [])
+        assert "erro" in result
+
+    def test_acima_do_limite_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        itens = [{"insumo_id": f"INS-{i}", "novo_preco": 1.0} for i in range(mod.MAX_LOTE_INSUMOS + 1)]
+        result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
+        assert "erro" in result
+
+    def test_todos_validos_grava_um_delta_por_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-001.json").write_text(json.dumps({"preco_unitario": 100.0}), encoding="utf-8")
+        (insumos_dir / "EQ-002.json").write_text(json.dumps({"preco_unitario": 50.0}), encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [
+            {"insumo_id": "EQ-001", "novo_preco": 150.0},
+            {"insumo_id": "EQ-002", "novo_valor_locacao_mensal": 9000.0},
+        ]
+        result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 2
+        assert result["falhas"] == 0
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        deltas = rascunho_data["_deltas"]
+        assert len(deltas) == 2
+        d1 = next(d for d in deltas if d["insumo_id"] == "EQ-001")
+        assert d1["novo_preco"] == 150.0
+        d2 = next(d for d in deltas if d["insumo_id"] == "EQ-002")
+        assert d2["novo_valor_locacao_mensal"] == 9000.0
+
+        # insumos mestre intocados até o merge
+        assert json.loads((insumos_dir / "EQ-001.json").read_text())["preco_unitario"] == 100.0
+
+    def test_item_sem_preco_nem_locacao_falha_so_aquele_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-001.json").write_text(json.dumps({"preco_unitario": 100.0}), encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [{"insumo_id": "EQ-001", "novo_preco": 150.0}, {"insumo_id": "EQ-002"}]
+        result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 1
+        assert result["falhas"] == 1
+        falha = next(r for r in result["resultados"] if r["insumo_id"] == "EQ-002")
+        assert falha["status"] == "erro"
+
+    def test_insumo_inexistente_falha_so_aquele_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [{"insumo_id": "EQ-INEXISTENTE", "novo_preco": 10.0}]
+        result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
+        assert result["falhas"] == 1
+
+
+# ---------------------------------------------------------------------------
+# _impl_descontinuar_insumos_lote (ADR-164)
+# ---------------------------------------------------------------------------
+
+
+class TestImplDescontinuarInsumosLote:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, rt: MagicMock, tmp_path: Path) -> None:
+        monkeypatch.setattr(mod, "_runtime", lambda: rt)
+        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
+        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
+
+    def test_lista_vazia_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        result = mod._impl_descontinuar_insumos_lote("ctx1", "v1", [])
+        assert "erro" in result
+
+    def test_acima_do_limite_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        itens = [{"insumo_id": f"INS-{i}"} for i in range(mod.MAX_LOTE_INSUMOS + 1)]
+        result = mod._impl_descontinuar_insumos_lote("ctx1", "v1", itens)
+        assert "erro" in result
+
+    def test_todos_validos_grava_um_delta_por_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-001.json").write_text(json.dumps({"codigo": "EQ-001"}), encoding="utf-8")
+        (insumos_dir / "EQ-002.json").write_text(json.dumps({"codigo": "EQ-002"}), encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [
+            {"insumo_id": "EQ-001", "motivo": "obsoleto"},
+            {"insumo_id": "EQ-002", "motivo": "substituído"},
+        ]
+        result = mod._impl_descontinuar_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 2
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert len(rascunho_data["_deltas"]) == 2
+
+        # arquivos mestre intocados até o merge (soft delete só no merge)
+        assert json.loads((insumos_dir / "EQ-001.json").read_text()).get("status") is None
+
+    def test_insumo_inexistente_falha_so_aquele_item(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
+        insumos_dir.mkdir(parents=True)
+        (insumos_dir / "EQ-001.json").write_text(json.dumps({"codigo": "EQ-001"}), encoding="utf-8")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        itens = [{"insumo_id": "EQ-001"}, {"insumo_id": "EQ-INEXISTENTE"}]
+        result = mod._impl_descontinuar_insumos_lote("ctx1", "v1", itens)
+
+        assert result["sucesso"] == 1
+        assert result["falhas"] == 1
+
+
+# ---------------------------------------------------------------------------
 # _impl_consultar_preco_insumo_temporal
 # ---------------------------------------------------------------------------
 
@@ -1420,6 +1703,75 @@ class TestAppendDeltaToRascunho:
             result = mod._append_delta_to_rascunho(tmp_path, "ctx1", "v1", {"tipo": "preco_insumo"})
         assert result is not None
         assert "Falha ao gravar delta no rascunho" in result
+
+
+# ---------------------------------------------------------------------------
+# _append_deltas_to_rascunho (ADR-164 — lote: N deltas numa única leitura+escrita)
+# ---------------------------------------------------------------------------
+
+
+class TestAppendDeltasToRascunho:
+    def test_grava_multiplos_deltas_numa_unica_escrita(self, tmp_path: Path) -> None:
+        _make_rascunho(tmp_path, "ctx1", "v1")
+        deltas = [
+            {"tipo": "preco_insumo", "insumo_id": "A"},
+            {"tipo": "preco_insumo", "insumo_id": "B"},
+            {"tipo": "preco_insumo", "insumo_id": "C"},
+        ]
+
+        result = mod._append_deltas_to_rascunho(tmp_path, "ctx1", "v1", deltas)
+        assert result is None
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert len(rascunho_data["_deltas"]) == 3
+        assert [d["insumo_id"] for d in rascunho_data["_deltas"]] == ["A", "B", "C"]
+
+    def test_preserva_deltas_ja_existentes_no_rascunho(self, tmp_path: Path) -> None:
+        _make_rascunho(tmp_path, "ctx1", "v1")
+        mod._append_delta_to_rascunho(tmp_path, "ctx1", "v1", {"tipo": "preco_insumo", "insumo_id": "PRE"})
+
+        result = mod._append_deltas_to_rascunho(
+            tmp_path, "ctx1", "v1", [{"tipo": "preco_insumo", "insumo_id": "A"}]
+        )
+        assert result is None
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert [d["insumo_id"] for d in rascunho_data["_deltas"]] == ["PRE", "A"]
+
+    def test_rascunho_inexistente_returns_erro(self, tmp_path: Path) -> None:
+        result = mod._append_deltas_to_rascunho(tmp_path, "ctx1", "v-nao-existe", [{"tipo": "preco_insumo"}])
+        assert result is not None
+        assert "não encontrado" in result
+
+    def test_rascunho_em_estado_terminal_returns_erro(self, tmp_path: Path) -> None:
+        _make_rascunho(tmp_path, "ctx1", "v1", {"version": "v1", "_aprovado": True})
+        result = mod._append_deltas_to_rascunho(tmp_path, "ctx1", "v1", [{"tipo": "preco_insumo"}])
+        assert result is not None
+        assert "terminal" in result
+
+    def test_read_failure_returns_erro(self, tmp_path: Path) -> None:
+        versions_dir = tmp_path / "contextos" / "ctx1" / "versions"
+        versions_dir.mkdir(parents=True)
+        (versions_dir / "v1.json").write_text("NOT_VALID_JSON{", encoding="utf-8")
+
+        result = mod._append_deltas_to_rascunho(tmp_path, "ctx1", "v1", [{"tipo": "preco_insumo"}])
+        assert result is not None
+        assert "Falha ao ler rascunho" in result
+
+    def test_write_failure_returns_erro(self, tmp_path: Path) -> None:
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        with patch.object(Path, "write_text", side_effect=OSError("disk full")):
+            result = mod._append_deltas_to_rascunho(tmp_path, "ctx1", "v1", [{"tipo": "preco_insumo"}])
+        assert result is not None
+        assert "Falha ao gravar delta no rascunho" in result
+
+    def test_lista_vazia_nao_altera_rascunho(self, tmp_path: Path) -> None:
+        _make_rascunho(tmp_path, "ctx1", "v1")
+        result = mod._append_deltas_to_rascunho(tmp_path, "ctx1", "v1", [])
+        assert result is None
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert rascunho_data.get("_deltas", []) == []
 
 
 # ---------------------------------------------------------------------------
