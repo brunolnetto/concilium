@@ -19,13 +19,20 @@ Inputs (no dict 'inputs'):
 
 from __future__ import annotations
 
+from typing import Any
+
+from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES
 from concilium.domain.models.canonical import (
     CanonicalModel,
+    EquipeDireta,
     IndirectoCostComponent,
 )
 
 # Fator padrão: 1 mês = 4.33 semanas
 # _SEMANAS_POR_MES agora importada de domain/constants.py (era 4.33, corrigido para 4.3482)
+
+# ADR-166 D2: dias/mês para amortizar custo de RH (EPI/treinamento/exame) por vida_util_dias.
+_DIAS_POR_MES = _SEMANAS_POR_MES * 7
 
 
 def _semanas_projeto(inicio, fim) -> int:
@@ -88,6 +95,92 @@ def _composicao_default_por_categoria(categoria: str) -> dict:
             },
         }
     return {}
+
+
+def _rh_insumos_por_tipo(catalogo: dict | None) -> tuple[list[dict], list[dict], list[dict]]:
+    """ADR-166 D2: separa insumos EPI (MATERIAL prefixo `EPI-`)/TREINAMENTO/EXAME
+    ativos do catálogo — a base de dado para a composição QSMS bottom-up."""
+    if not catalogo:
+        return [], [], []
+    epis: list[dict] = []
+    treinamentos: list[dict] = []
+    exames: list[dict] = []
+    for ins in catalogo.get("insumos", []):
+        if ins.get("status") == "descontinuado":
+            continue
+        tipo = ins.get("tipo")
+        codigo = ins.get("codigo", "")
+        if tipo == "MATERIAL" and codigo.startswith("EPI-"):
+            epis.append(ins)
+        elif tipo == "TREINAMENTO":
+            treinamentos.append(ins)
+        elif tipo == "EXAME":
+            exames.append(ins)
+    return epis, treinamentos, exames
+
+
+def _custo_mensal_rh_por_funcao(funcao_id: str, *grupos_insumos: list[dict]) -> float:
+    """ADR-166 D2: soma o custo mensal amortizado (preço ÷ vida_util_dias × dias/mês) dos
+    itens aplicáveis a `funcao_id` — comuns (`funcoes_aplicaveis` None) + específicos
+    (`funcao_id` presente na lista)."""
+    total = 0.0
+    for grupo in grupos_insumos:
+        for ins in grupo:
+            atributos = ins.get("atributos_especificos") or {}
+            aplicaveis = atributos.get("funcoes_aplicaveis")
+            if aplicaveis is not None and funcao_id not in aplicaveis:
+                continue
+            vida_util = atributos.get("vida_util_dias")
+            if not vida_util:
+                continue
+            total += ins.get("preco_unitario", 0.0) / vida_util * _DIAS_POR_MES
+    return total
+
+
+def _composicao_qsms_bottom_up(equipes_diretas: list[EquipeDireta], catalogo: dict | None) -> dict | None:
+    """ADR-166 D2: composição QSMS bottom-up por função (EPI+treinamento+exame),
+    substituindo a verba lump default (`_composicao_default_por_categoria`) quando o
+    catálogo tiver itens RH cadastrados (ADR-165). Retorna `None` se não houver
+    itens RH no catálogo, nenhum headcount direto, ou nenhuma função com custo
+    aplicável — o chamador cai então para o fallback lump (degradação segura)."""
+    epis, treinamentos, exames = _rh_insumos_por_tipo(catalogo)
+    if not (epis or treinamentos or exames):
+        return None
+
+    headcount: dict[str, int] = {}
+    for eq in equipes_diretas:
+        for f in eq.funcoes:
+            headcount[f.funcao_id] = headcount.get(f.funcao_id, 0) + f.num_pessoas
+    if not headcount:
+        return None
+
+    itens: list[dict[str, Any]] = []
+    total_mensal = 0.0
+    for funcao_id in sorted(headcount):
+        num_pessoas = headcount[funcao_id]
+        custo_unitario = _custo_mensal_rh_por_funcao(funcao_id, epis, treinamentos, exames)
+        if custo_unitario <= 0:
+            continue
+        custo_funcao = round(custo_unitario * num_pessoas, 2)
+        total_mensal += custo_funcao
+        itens.append(
+            {
+                "descricao": f"EPI/treinamento/exame — {funcao_id}",
+                "funcao_id": funcao_id,
+                "quantidade": num_pessoas,
+                "valor_mensal": custo_funcao,
+            }
+        )
+    if not itens:
+        return None
+
+    return {
+        "verbas": {
+            "nome": "QSMS — EPI/Treinamento/Exame (bottom-up ADR-166)",
+            "custo_fixo_mensal": round(total_mensal, 2),
+            "itens": itens,
+        }
+    }
 
 
 def _da_hc_direto(codigo: str, regra: dict, canonical) -> dict:

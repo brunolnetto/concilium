@@ -20,6 +20,7 @@ from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 from ._categoria import _as_categoria_indireto, _build_categoria_from_dict  # ty: ignore[unresolved-import]
 from ._dimensionamento import (  # ty: ignore[unresolved-import]
     _composicao_default_por_categoria,
+    _composicao_qsms_bottom_up,
     _dimensionar_automatico,
 )
 
@@ -55,6 +56,12 @@ def _resolve_categoria_comp(
         return _build_categoria_from_dict(
             codigo, comp_auto, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
         )
+    if codigo == "QSMS" and canonical_in is not None:
+        comp_bottom_up = _composicao_qsms_bottom_up(canonical_in.equipes_diretas, catalogo)
+        if comp_bottom_up is not None:
+            return _build_categoria_from_dict(
+                codigo, comp_bottom_up, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
+            )
     comp_default = _composicao_default_por_categoria(codigo)
     return _build_categoria_from_dict(
         codigo, comp_default, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id

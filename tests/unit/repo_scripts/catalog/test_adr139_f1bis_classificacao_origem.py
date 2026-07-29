@@ -118,20 +118,22 @@ class TestRunClassification:
 class TestCatalogoRealClassificado:
     def test_censo_mendeslobo(self):
         """53 compras externas (43 fonte_preco + 10 agregados/ligantes SICRO da usinagem);
-        5 gerados (3 solos + 2 usinados produzidos por PROD-USINAGEM-*); 49 AGIS ficam None."""
+        5 gerados (3 solos + 2 usinados produzidos por PROD-USINAGEM-*); 49 AGIS + 10 EPI
+        (ADR-165 — origem_material não se aplica a EPI, que é sempre compra externa por
+        definição mas fora do escopo de sourcing de material de construção) ficam None."""
         from pathlib import Path
 
         base = Path("config/catalogos/mendeslobo/insumos/material")
         if not base.exists():  # pragma: no cover
             pytest.skip("catálogo mendeslobo indisponível")
         docs = [json.loads(p.read_text(encoding="utf-8-sig")) for p in sorted(base.glob("*.json"))]
-        assert len(docs) == 112
+        assert len(docs) == 122
         externos = [d for d in docs if d.get("origem_material") == "AQUISICAO_EXTERNA"]
         gerados = [d for d in docs if d.get("origem_material") == "GERACAO_INTERNA"]
         sem_classe = [d for d in docs if not d.get("origem_material")]
         assert len(externos) == 58
         assert len(gerados) == 5
-        assert len(sem_classe) == 49
-        assert all(d["codigo"].startswith("MA-AGIS-CPU-") for d in sem_classe)
+        assert len(sem_classe) == 59
+        assert all(d["codigo"].startswith(("MA-AGIS-CPU-", "EPI-")) for d in sem_classe)
         assert not any(d["codigo"].startswith("MA-AGIS-CPU-") for d in externos)
         assert {"MA-BGTC-MIX", "MA-CBUQ-FAIXA-C"} <= {d["codigo"] for d in gerados}

@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 _BASE = Path("src/concilium/application/skills/manifests/06-resultado-financeiro")
 
 def _load(rel: str, name: str):
@@ -138,6 +140,143 @@ class TestCustoMobLegadoGranularidadePorEquipe:
         dados_mob = {"custo_pessoa_mes": 2000}
         total, _ = INDIR._custo_mob_composicional(dados_mob, num_pessoas_direta=5, prazo_meses=3, equipes_diretas=[])
         assert total == 5 * 2000 * 3
+
+
+class TestComposicaoMobBeneficioBottomUp:
+    """ADR-166 D3: bottom-up de benefício (café/almoço/jantar/vale-alimentação/
+    cesta-básica/seguro-vida) por função, substituindo o termo flat
+    custo_pessoa_mes de _custo_alimentacao_por_equipe quando o catálogo tiver
+    BENEFICIO cadastrado (ADR-165) — preserva permanencia_efetiva_meses por equipe."""
+
+    @staticmethod
+    def _mk_equipe(funcoes: list[tuple[str, int]], permanencia_efetiva_meses: float):
+        return SimpleNamespace(
+            funcoes=[SimpleNamespace(funcao_id=fid, num_pessoas=n) for fid, n in funcoes],
+            permanencia_efetiva_meses=permanencia_efetiva_meses,
+        )
+
+    @staticmethod
+    def _beneficio(codigo, preco, periodicidade, aplicavel_tipo_contrato=None, status="ativo"):
+        return {
+            "codigo": codigo,
+            "tipo": "BENEFICIO",
+            "preco_unitario": preco,
+            "status": status,
+            "atributos_especificos": {
+                "periodicidade_beneficio": periodicidade,
+                "aplicavel_tipo_contrato": aplicavel_tipo_contrato,
+            },
+        }
+
+    @staticmethod
+    def _mao_obra(codigo, tipo_contrato):
+        return {
+            "codigo": codigo,
+            "tipo": "MAO_OBRA",
+            "atributos_especificos": {"tipo_contrato": tipo_contrato},
+        }
+
+    def test_sem_catalogo_retorna_none(self):
+        equipes = [self._mk_equipe([("MO-ARMADOR", 1)], 1.0)]
+        assert INDIR._composicao_mob_beneficio_bottom_up(equipes, None) is None
+
+    def test_catalogo_sem_beneficio_ativo_retorna_none(self):
+        equipes = [self._mk_equipe([("MO-ARMADOR", 1)], 1.0)]
+        catalogo = {"insumos": [self._beneficio("BEN-X", 35.0, "mensal", status="descontinuado")]}
+        assert INDIR._composicao_mob_beneficio_bottom_up(equipes, catalogo) is None
+
+    def test_beneficio_mensal_comum_multiplicado_por_headcount_e_permanencia(self):
+        equipes = [self._mk_equipe([("MO-ARMADOR", 2)], 3.0)]
+        catalogo = {"insumos": [self._beneficio("BEN-SEGURO-VIDA", 35.0, "mensal")]}
+        total = INDIR._composicao_mob_beneficio_bottom_up(equipes, catalogo)
+        assert total == pytest.approx(2 * 35.0 * 3.0)
+
+    def test_beneficio_diario_multiplica_por_dias_mes(self):
+        from concilium.domain.constants import SEMANAS_POR_MES
+
+        dias_mes = SEMANAS_POR_MES * 7
+        equipes = [self._mk_equipe([("MO-ARMADOR", 1)], 1.0)]
+        catalogo = {"insumos": [self._beneficio("BEN-ALMOCO", 16.5, "diaria")]}
+        total = INDIR._composicao_mob_beneficio_bottom_up(equipes, catalogo)
+        assert total == pytest.approx(16.5 * dias_mes, abs=0.05)
+
+    def test_jantar_exclui_pj(self):
+        equipes = [
+            self._mk_equipe([("MO-ADM-PJ", 1)], 1.0),
+            self._mk_equipe([("MO-ARMADOR", 1)], 1.0),
+        ]
+        catalogo = {
+            "insumos": [
+                self._beneficio("BEN-JANTAR", 16.5, "diaria", aplicavel_tipo_contrato=["CLT"]),
+                self._mao_obra("MO-ADM-PJ", "PJ"),
+                self._mao_obra("MO-ARMADOR", "CLT"),
+            ]
+        }
+        total = INDIR._composicao_mob_beneficio_bottom_up(equipes, catalogo)
+        # só MO-ARMADOR (CLT) recebe jantar
+        from concilium.domain.constants import SEMANAS_POR_MES
+
+        dias_mes = SEMANAS_POR_MES * 7
+        assert total == pytest.approx(16.5 * dias_mes, abs=0.05)
+
+    def test_jantar_aplica_a_tipo_contrato_desconhecido(self):
+        """Função sem tipo_contrato cadastrado (None) não é positivamente PJ — recebe o benefício."""
+        equipes = [self._mk_equipe([("MO-DESCONHECIDO", 1)], 1.0)]
+        catalogo = {
+            "insumos": [
+                self._beneficio("BEN-JANTAR", 16.5, "diaria", aplicavel_tipo_contrato=["CLT"]),
+            ]
+        }
+        total = INDIR._composicao_mob_beneficio_bottom_up(equipes, catalogo)
+        assert total > 0
+
+    def test_soma_multiplas_equipes_com_permanencias_distintas(self):
+        equipes = [
+            self._mk_equipe([("MO-ARMADOR", 10)], 3.0),
+            self._mk_equipe([("MO-CARPINTEIRO", 5)], 6.0),
+        ]
+        catalogo = {"insumos": [self._beneficio("BEN-SEGURO-VIDA", 35.0, "mensal")]}
+        total = INDIR._composicao_mob_beneficio_bottom_up(equipes, catalogo)
+        assert total == pytest.approx(10 * 35.0 * 3.0 + 5 * 35.0 * 6.0)
+
+
+class TestCustoMobComposicionalUsaBeneficioBottomUp:
+    """Wiring: _custo_mob_composicional prefere o bottom-up de benefício (ADR-166 D3)
+    ao termo legado custo_pessoa_mes quando o catálogo tiver BENEFICIO ativo."""
+
+    def test_catalogo_com_beneficio_substitui_custo_pessoa_mes_flat(self):
+        equipes = [
+            SimpleNamespace(
+                funcoes=[SimpleNamespace(funcao_id="MO-ARMADOR", num_pessoas=2)],
+                permanencia_efetiva_meses=3.0,
+            )
+        ]
+        catalogo = {
+            "insumos": [
+                {
+                    "codigo": "BEN-SEGURO-VIDA",
+                    "tipo": "BENEFICIO",
+                    "preco_unitario": 35.0,
+                    "status": "ativo",
+                    "atributos_especificos": {"periodicidade_beneficio": "mensal", "aplicavel_tipo_contrato": None},
+                }
+            ]
+        }
+        dados_mob = {"custo_pessoa_mes": 1850}
+        total, _mobs = INDIR._custo_mob_composicional(
+            dados_mob, num_pessoas_direta=2, prazo_meses=3, equipes_diretas=equipes, catalogo=catalogo
+        )
+        assert total == pytest.approx(2 * 35.0 * 3.0)  # não 2*1850*3
+
+    def test_catalogo_sem_beneficio_mantem_legado(self):
+        equipes = [
+            SimpleNamespace(funcoes=[SimpleNamespace(num_pessoas=2)], permanencia_efetiva_meses=3.0)
+        ]
+        dados_mob = {"custo_pessoa_mes": 1850}
+        total, _mobs = INDIR._custo_mob_composicional(
+            dados_mob, num_pessoas_direta=2, prazo_meses=3, equipes_diretas=equipes, catalogo={"insumos": []}
+        )
+        assert total == pytest.approx(2 * 1850 * 3.0)
 
 
 class TestApplyDv4ScaleToCategoria:
@@ -364,6 +503,68 @@ class TestResolveCategoriaCatCfgRaw:
 
         assert isinstance(result, IndirectoCategoria)
         assert result.custo_fixo_mensal == 0.0
+
+
+class TestResolveCategoriaQsmsBottomUp:
+    """ADR-166 D2: QSMS usa a composição bottom-up quando o catálogo tem itens RH,
+    caindo para a verba lump default (_composicao_default_por_categoria) senão."""
+
+    def _canonical(self, funcoes: list[tuple[str, int]]):
+        from concilium.domain.models.canonical import EquipeDireta, FuncaoEquipeDireta
+
+        eq = EquipeDireta(
+            item_id="eq-1",
+            custo_total=0.0,
+            funcoes=[FuncaoEquipeDireta(funcao_id=fid, num_pessoas=n) for fid, n in funcoes],
+        )
+        return SimpleNamespace(equipes_diretas=[eq])
+
+    def _kwargs(self, canonical_in, catalogo):
+        return dict(
+            codigo="QSMS",
+            cat={},
+            composicoes_input={},
+            categorias_config_raw=[],
+            n_semanas=12,
+            repo=None,
+            data_base=None,
+            overrides=None,
+            jurisdicao_id=None,
+            canonical_in=canonical_in,
+            catalogo=catalogo,
+        )
+
+    def test_catalogo_com_itens_rh_usa_bottom_up(self):
+        catalogo = {
+            "insumos": [
+                {
+                    "codigo": "EPI-CAPACETE-3M",
+                    "tipo": "MATERIAL",
+                    "preco_unitario": 360.0,
+                    "status": "ativo",
+                    "atributos_especificos": {"vida_util_dias": 360, "funcoes_aplicaveis": None},
+                }
+            ]
+        }
+        result = INDIR._resolve_categoria_comp(
+            **self._kwargs(self._canonical([("MO-ARMADOR", 2)]), catalogo)
+        )
+        assert result.custo_fixo_mensal != 3000.0
+        assert result.custo_fixo_mensal > 0.0
+        assert result.verbas.nome == "QSMS — EPI/Treinamento/Exame (bottom-up ADR-166)"
+
+    def test_catalogo_sem_itens_rh_usa_lump_default(self):
+        result = INDIR._resolve_categoria_comp(
+            **self._kwargs(self._canonical([("MO-ARMADOR", 2)]), {"insumos": []})
+        )
+        assert result.custo_fixo_mensal == 3000.0
+
+    def test_canonical_none_usa_lump_default_sem_quebrar(self):
+        """Compatibilidade: chamadas legadas com canonical_in=None (categorias != QSMS
+        já testadas acima) não devem quebrar — QSMS com canonical_in=None cai no lump
+        default sem tentar acessar .equipes_diretas de None."""
+        result = INDIR._resolve_categoria_comp(**self._kwargs(None, {"insumos": []}))
+        assert result.custo_fixo_mensal == 3000.0
 
 
 # ===========================================================================

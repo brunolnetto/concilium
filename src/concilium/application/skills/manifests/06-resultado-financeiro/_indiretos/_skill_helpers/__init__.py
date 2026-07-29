@@ -28,6 +28,7 @@ from ._categoria import _as_categoria_indireto, _build_categoria_from_dict  # ty
 from ._dimensionamento import (  # ty: ignore[unresolved-import]
     _bcfd_enrich_mo_itens,
     _composicao_default_por_categoria,
+    _composicao_qsms_bottom_up,
     _dimensionar_automatico,
     _meses_entre,
     _parse_component,
@@ -37,6 +38,7 @@ from ._mob import (  # ty: ignore[unresolved-import]
     _accrue_desmobilizacao_fase,
     _accrue_mobilizacao_fase,
     _accrue_operacao_fase,
+    _composicao_mob_beneficio_bottom_up,
     _count_pessoas_diretas,
     _custo_mob_composicional,
     _distribuir_mob_fases,
@@ -58,6 +60,8 @@ from ._resolucao import (  # ty: ignore[unresolved-import]
 __all__ = [
     "_bcfd_enrich_mo_itens",
     "_composicao_default_por_categoria",
+    "_composicao_qsms_bottom_up",
+    "_composicao_mob_beneficio_bottom_up",
     "_dimensionar_automatico",
     "_meses_entre",
     "_parse_component",

@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 
 from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
+from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES
 from concilium.domain.models.canonical import (
     CanonicalModel,
     IndirectoCategoria,
@@ -22,6 +23,79 @@ from concilium.domain.models.project.decision_variables import DecisionVariables
 from ._breakdown import _build_semanal_breakdown  # ty: ignore[unresolved-import]
 
 logger = logging.getLogger(__name__)
+
+# ADR-166 D3: dias/mês para converter benefício diário (café/almoço/jantar) em mensal.
+_DIAS_POR_MES = _SEMANAS_POR_MES * 7
+
+
+def _beneficios_ativos(catalogo: dict | None) -> list[dict]:
+    if not catalogo:
+        return []
+    return [
+        ins
+        for ins in catalogo.get("insumos", [])
+        if ins.get("tipo") == "BENEFICIO" and ins.get("status") != "descontinuado"
+    ]
+
+
+def _tipo_contrato_por_funcao(catalogo: dict | None) -> dict[str, str]:
+    """Mapa funcao_id (código de Insumo MAO_OBRA) -> tipo_contrato, do catálogo."""
+    if not catalogo:
+        return {}
+    out: dict[str, str] = {}
+    for ins in catalogo.get("insumos", []):
+        if ins.get("tipo") != "MAO_OBRA":
+            continue
+        tipo_contrato = (ins.get("atributos_especificos") or {}).get("tipo_contrato")
+        if tipo_contrato:
+            out[ins["codigo"]] = tipo_contrato
+    return out
+
+
+def _custo_mensal_beneficio_por_funcao(
+    funcao_id: str, beneficios: list[dict], tipo_contrato: str | None
+) -> float:
+    """ADR-166 D3: soma o custo mensal dos benefícios aplicáveis a uma função —
+    diária (café/almoço/jantar) convertida por dias/mês, mensal direto.
+    `aplicavel_tipo_contrato` exclui a função só quando o regime é positivamente
+    conhecido e não está na lista (regime desconhecido/None recebe o benefício —
+    default seguro, não penaliza função sem tipo_contrato cadastrado)."""
+    total = 0.0
+    for ins in beneficios:
+        atributos = ins.get("atributos_especificos") or {}
+        aplicavel_contrato = atributos.get("aplicavel_tipo_contrato")
+        if aplicavel_contrato is not None and tipo_contrato is not None and tipo_contrato not in aplicavel_contrato:
+            continue
+        periodicidade = atributos.get("periodicidade_beneficio")
+        preco = ins.get("preco_unitario", 0.0)
+        if periodicidade == "diaria":
+            total += preco * _DIAS_POR_MES
+        elif periodicidade == "mensal":
+            total += preco
+    return total
+
+
+def _composicao_mob_beneficio_bottom_up(equipes_diretas: list, catalogo: dict | None) -> float | None:
+    """ADR-166 D3: bottom-up de benefício (café/almoço/jantar/vale-alimentação/
+    cesta-básica/seguro-vida) por função, substituindo o termo flat
+    `custo_pessoa_mes` de `_custo_alimentacao_por_equipe`. Preserva a
+    granularidade de `permanencia_efetiva_meses` própria de cada equipe (ADR-136
+    F4). Retorna `None` se o catálogo não tiver nenhum BENEFICIO ativo — o
+    chamador cai então para o termo legado (degradação segura)."""
+    beneficios = _beneficios_ativos(catalogo)
+    if not beneficios:
+        return None
+    tipo_contrato_map = _tipo_contrato_por_funcao(catalogo)
+    total = 0.0
+    for eq in equipes_diretas:
+        permanencia = float(getattr(eq, "permanencia_efetiva_meses", 0.0) or 0.0)
+        for f in getattr(eq, "funcoes", None) or []:
+            funcao_id = getattr(f, "funcao_id", "")
+            custo_unitario = _custo_mensal_beneficio_por_funcao(
+                funcao_id, beneficios, tipo_contrato_map.get(funcao_id)
+            )
+            total += f.num_pessoas * custo_unitario * permanencia
+    return round(total, 2)
 
 
 def _custo_alimentacao_por_equipe(equipes_diretas: list, custo_pessoa_mes: float) -> float:
@@ -48,6 +122,7 @@ def _custo_mob_composicional(
     num_pessoas_direta: int,
     prazo_meses: int,
     equipes_diretas: list | None = None,
+    catalogo: dict | None = None,
 ) -> tuple[float, list[Mobilizacao]]:
     """Calcula custo MOB a partir da composição item a item (não de um total pré-agregado).
 
@@ -70,6 +145,11 @@ def _custo_mob_composicional(
     permanência própria de cada uma), em vez do agregado
     ``num_pessoas_direta * prazo_meses``. Retrocompatível — sem ela (ou vazia),
     o comportamento é idêntico ao anterior.
+
+    ``catalogo`` (ADR-166 D3, opcional): quando fornecido e com BENEFICIO ativo
+    (ADR-165), o termo de alimentação/seguro/cesta básica é o bottom-up por
+    função (`_composicao_mob_beneficio_bottom_up`) em vez do `custo_pessoa_mes`
+    flat — mesma granularidade de `permanencia_efetiva_meses` por equipe.
     """
     custo_total = 0.0
     mobilizacoes: list[Mobilizacao] = []
@@ -85,13 +165,18 @@ def _custo_mob_composicional(
         )
         mobilizacoes.append(mob)
         custo_total += mob.custo_total
-    custo_pessoa_mes = dados_mob.get(
-        "custo_pessoa_mes", 1850
-    )  # B3-known: R$1.850 legado; idealmente derivar do catálogo
-    if equipes_diretas:
-        custo_total += _custo_alimentacao_por_equipe(equipes_diretas, custo_pessoa_mes)
+
+    custo_beneficio_bottom_up = _composicao_mob_beneficio_bottom_up(equipes_diretas, catalogo) if equipes_diretas else None
+    if custo_beneficio_bottom_up is not None:
+        custo_total += custo_beneficio_bottom_up
     else:
-        custo_total += num_pessoas_direta * custo_pessoa_mes * prazo_meses
+        custo_pessoa_mes = dados_mob.get(
+            "custo_pessoa_mes", 1850
+        )  # B3-known: R$1.850 legado; idealmente derivar do catálogo
+        if equipes_diretas:
+            custo_total += _custo_alimentacao_por_equipe(equipes_diretas, custo_pessoa_mes)
+        else:
+            custo_total += num_pessoas_direta * custo_pessoa_mes * prazo_meses
     for b in dados_mob.get("baixadas", []):
         n_ocorrencias = len(b.get("meses_ocorrencia", []))
         custo_total += b.get("num_pessoas", 0) * b.get("valor_por_pessoa", 0) * n_ocorrencias
@@ -135,6 +220,7 @@ def _process_mob_categoria(
     policy_scale: dict,
     mob_schedule: dict | None = None,
     equipes_diretas: list | None = None,
+    catalogo: dict | None = None,
 ) -> tuple[Indireto, list[IndiretoSemanal]]:
     descricao: str = cat["descricao"]
     cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == "MOB"), None)
@@ -143,7 +229,9 @@ def _process_mob_categoria(
         custo = cat_obj.custo_fixo_total
         mobs: list[Mobilizacao] = []
     else:
-        custo, mobs = _custo_mob_composicional(dados_mob, num_pessoas_direta, prazo_meses, equipes_diretas)
+        custo, mobs = _custo_mob_composicional(
+            dados_mob, num_pessoas_direta, prazo_meses, equipes_diretas, catalogo=catalogo
+        )
         cat_obj = IndirectoCategoria(
             categoria="MOB",
             driver="one_time",
