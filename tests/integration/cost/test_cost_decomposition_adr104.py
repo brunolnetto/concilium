@@ -75,13 +75,14 @@ class TestCostDecompositionInvariant:
             )
 
     def test_agis_custo_direto_matches_reference(self, agis_benchmark):
-        """AGIS: custo_direto instancial (pós TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4) deve bater com baseline.
+        """AGIS: custo_direto instancial (pós issue #139) deve bater com baseline.
 
         Histórico de baseline:
           pré-TD-1/TD-3:     R$ 44,259,799.68  — encargos duplos + pool sem n_frentes
           pós-TD-1/TD-3:     R$ 35,255,483.25  — TD-1/TD-3 corrigidos, ainda com encargos duplos
           pós-NEP-043 Bug 2: R$ 16,529,359.75  — encargos CLT não reaplicados sobre taxa all-in
           pós-ADR-162 D4:    R$ 17,611,540.46  — permanência/custo de 1 frente corrigidos p/ rampa
+          pós-issue #139:    R$ 43,776,042.47  — custo_total pós-pool deixa de ser 1-frente
 
         NEP-043 Bug 2 (2026-06-12): insumos AGIS têm nota_encargos="taxa horária já inclui
         encargos". O engine não deve multiplicar por (1 + enc_horista) uma taxa que já embute
@@ -98,15 +99,27 @@ class TestCostDecompositionInvariant:
         (o ajuste antigo só podia subestimar, nunca sobrestimar: `team_weeks/max_n <= ativos`
         sempre, pela definição de `max_n`).
 
-        sum(eq.custo_total) aqui é a soma dos custos de 1-frente por atividade.
-        custo.direto_equipes = Σ(custo_total × n_frentes) é o custo real completo (~43.8M).
+        Issue #139 (2026-07-29): `_add_tipo_item_demand`/`_compute_custo_unit_fracs` (skill 05,
+        contrato de pool) dividiam `eq.custo_total` (sempre 1 frente, ADR-091/ADR-162 D4) por
+        `machine_weeks` (agregado — soma num_equipes real por semana, todas as frentes),
+        subestimando `custo_unit_semanal` sempre que algum item do pool tinha `num_equipes > 1`.
+        `eq.custo_total` pós-sobrescrita do pool (`_atualizar_custo_via_atribuicao`) herdava essa
+        subestimação. Corrigido via `_eq_custo_total_agregado` (usa
+        `EquipeDireta.custo_operacional_agregado`, ADR-172 — já na mesma base agregada de
+        `machine_weeks`). `eq.custo_total` para itens cobertos por pool deixa de ser
+        artificialmente 1-frente — passa a refletir o custo real agregado, daí o salto
+        para ~43,8M (o valor que este próprio teste já antecipava no comentário abaixo,
+        antes da correção, como "custo real completo").
+
+        sum(eq.custo_total) aqui mistura: itens SEM pool continuam na base 1-frente (não
+        afetados por #139); itens COM pool agora refletem o custo real agregado.
         """
         canonical = agis_benchmark.canonical
 
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
-        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 (encargos all-in, 1-frente)
-        expected = 17_611_540.46
+        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 + issue #139
+        expected = 43_776_042.47
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (
