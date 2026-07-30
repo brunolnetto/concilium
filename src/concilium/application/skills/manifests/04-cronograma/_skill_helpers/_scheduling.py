@@ -20,8 +20,10 @@ from ._calendario import _resolve_productivity  # ty: ignore[unresolved-import]
 from ._custos import _build_dist_cell, _iso_week_key, _lookup_eficiencia  # ty: ignore[unresolved-import]
 from ._validacao import (  # ty: ignore[unresolved-import]
     _build_activity_item_map,
+    _extract_taxa_desmobilizacao_fracao,
     _find_item_by_id,
     _infer_teams_from_resources,
+    _producao_maxima_com_rampa_down,
     _rasfc_extract_inputs,
     _rasfc_run_heuristics,
 )
@@ -169,14 +171,23 @@ def _build_activity_distribuicao(
     déficit só gerava um AVISO não-bloqueante (VAL-CRON-01) e ficava incompleto.
 
     Semanas extras (week_num além de `len(semanas_obra)`) repetem o mesmo padrão de
-    alocação e clima/calendário da última semana real conhecida:
-      - alocação: `_infer_teams_from_resources` já retorna o pico quando `week_offset`
-        excede o `ramp_profile` original (seguro: verificado que, nos casos reais de
-        sub-entrega, a atividade já está no pico quando a janela nominal termina, sem
-        ramp-down em andamento);
-      - clima/calendário: `last_fator_clima`/`last_fator_calendario` (última semana com
-        week_num < len(semanas_obra)) — sem isso, `_lookup_eficiencia`/`.get(..., 1.0)`
-        recairiam no default de clima perfeito para semanas fora da tabela conhecida.
+    clima/calendário da última semana real conhecida (`last_fator_clima`/
+    `last_fator_calendario`) — sem isso, `_lookup_eficiencia`/`.get(..., 1.0)` recairiam
+    no default de clima perfeito para semanas fora da tabela conhecida.
+
+    Gate de ramp-down orientado a estado, não a calendário: `ramp_profile` (ADR-074) foi
+    calculado ANTES de saber se a atividade ia sub-entregar, ancorando o início do
+    ramp-down numa duração nominal que pode estar errada — deixado sem correção, isso
+    tanto deixa a equipe encolher enquanto ainda falta muito quantitativo (rampa ancorada
+    no fim errado) quanto nunca deixa a equipe encolher durante a extensão (fallback de
+    `_infer_teams_from_resources` sempre volta ao pico). Em vez de confiar na posição no
+    array, extraímos μ⁻ dele (`_extract_taxa_desmobilizacao_fracao`) e decidimos toda
+    semana, com o estado real (Q remanescente), se é seguro começar/continuar a
+    desmobilização agora (`_producao_maxima_com_rampa_down`) — nunca prevendo clima
+    futuro, só usando o que já é fato. Quando o item não tem nenhum trecho de
+    desmobilização declarado (μ⁻ indeterminável), o comportamento é idêntico ao anterior
+    (sem gate, sem mudança).
+
     Teto de segurança: `TETO_EXTENSAO_CRONOGRAMA_SEMANAS` (10 anos) — nunca estende
     indefinidamente (ex: clima=0 por muitas semanas seguidas).
     """
@@ -196,6 +207,9 @@ def _build_activity_distribuicao(
     # só por arredondamento (achado real no AGIS: eap-1_6).
     quantitativo_min = item.quantitativo * 0.999
 
+    taxa_desmob_fracao = _extract_taxa_desmobilizacao_fracao(ramp)
+    frac_atual: float | None = None  # None = gate ainda dormente (ramp-up em curso)
+
     week_offset = 0
     while week_offset < sa.duration_weeks or (
         qtd_acumulada < quantitativo_min and week_offset < TETO_EXTENSAO_CRONOGRAMA_SEMANAS
@@ -212,13 +226,31 @@ def _build_activity_distribuicao(
             fator_clima = last_fator_clima
             fator_calendario = last_fator_calendario
 
-        inferred_num_equipes = _infer_teams_from_resources(
+        equipes_estatico = _infer_teams_from_resources(
             sa.assigned_resources,
             cpu,
             week_offset,
             sa.duration_weeks,
             ramp_profile=ramp,
         )
+
+        if taxa_desmob_fracao is None:
+            inferred_num_equipes = equipes_estatico
+        else:
+            if frac_atual is None and n_max > 0 and equipes_estatico >= n_max:
+                frac_atual = 1.0  # atingiu o pico pela 1ª vez: gate passa a decidir
+            if frac_atual is None:
+                inferred_num_equipes = equipes_estatico
+            else:
+                frac_candidata = max(0.0, frac_atual - taxa_desmob_fracao)
+                capacidade_pico_semanal = producao_semanal_base * n_max * fator_clima * fator_calendario * fator_jornada
+                producao_max_se_reduzir = _producao_maxima_com_rampa_down(
+                    frac_candidata, taxa_desmob_fracao, capacidade_pico_semanal
+                )
+                qtd_remanescente_pre_semana = max(0.0, item.quantitativo - qtd_acumulada)
+                if producao_max_se_reduzir >= qtd_remanescente_pre_semana:
+                    frac_atual = frac_candidata
+                inferred_num_equipes = max(0, round(frac_atual * n_max))
         cell = _build_dist_cell(
             producao_semanal_base,
             inferred_num_equipes,

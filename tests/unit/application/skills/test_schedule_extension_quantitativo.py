@@ -21,6 +21,15 @@ Duas consistências adicionais que a extensão exige (senão ficam stale):
     e o makespan real das `scheduled_activities_out` (usado por custo indireto/canteiro
     e pelo gatilho de replanejamento).
 
+Gate de ramp-down orientado a estado (não a calendário): `ramp_profile` é calculado pelo
+RCPSP ANTES de saber se a atividade vai sub-entregar, ancorando o início do ramp-down numa
+duração nominal que pode estar errada. Em vez de confiar na posição do array, extraímos a
+taxa de desmobilização (`_extract_taxa_desmobilizacao_fracao`) e decidimos toda semana, com
+o estado real (Q remanescente), se é seguro reduzir a equipe agora
+(`_producao_maxima_com_rampa_down`) — nunca prevendo clima futuro. Resolve dois problemas:
+sub-entrega por desmobilizar cedo demais (rampa ancorada no fim errado) e o platô "eterno"
+sem nenhum ramp-down durante a extensão (fallback antigo sempre voltava ao pico).
+
 Import strategy: idêntica a test_skill04_cov2.py — carrega o skill via
 `concilium.application.skills` para que sys.modules seja populado via importlib,
 preservando os imports relativos dos helpers.
@@ -32,6 +41,8 @@ import sys
 from datetime import date
 from types import SimpleNamespace
 
+import pytest
+
 from concilium.application.skills import run_cronograma  # noqa: F401 — trigger module loading
 
 _MOD_NAME = "_concilium_skillpkg_04_cronograma.skill"
@@ -40,10 +51,13 @@ _MOD = sys.modules[_MOD_NAME]
 _mod_scheduling = _MOD._mod_scheduling
 _mod_assembly = _MOD._mod_assembly
 _mod_custos = _MOD._mod_custos
+_mod_validacao = _MOD._mod_validacao
 _build_activity_distribuicao = _mod_scheduling._build_activity_distribuicao
 _warn_if_activity_underdelivers = _mod_scheduling._warn_if_activity_underdelivers
 _build_scheduled_activity_for_item = _mod_assembly._build_scheduled_activity_for_item
 _build_cronograma_out = _MOD._build_cronograma_out
+_extract_taxa_desmobilizacao_fracao = _mod_validacao._extract_taxa_desmobilizacao_fracao
+_producao_maxima_com_rampa_down = _mod_validacao._producao_maxima_com_rampa_down
 
 _DATA_INICIO = date(2026, 1, 5)  # segunda-feira, semana ISO 2026-W02
 
@@ -300,3 +314,149 @@ class TestBuildCronogramaOutMakespanRecompute:
         )
 
         assert cronograma_out.makespan_weeks == 3
+
+
+class TestExtractTaxaDesmobilizacaoFracao:
+    def test_extracts_rate_from_trailing_decreasing_segment(self):
+        ramp = [1.0, 1.0, 1.0, 0.75, 0.5, 0.25, 0.0]
+        assert _extract_taxa_desmobilizacao_fracao(ramp) == pytest.approx(0.25)
+
+    def test_ignores_ramp_up_before_trailing_decrease(self):
+        """Só a cauda decrescente conta — sobe, mantém, desce."""
+        ramp = [0.2, 0.6, 1.0, 1.0, 0.6, 0.2]
+        assert _extract_taxa_desmobilizacao_fracao(ramp) == pytest.approx(0.4)
+
+    def test_none_when_profile_is_none(self):
+        assert _extract_taxa_desmobilizacao_fracao(None) is None
+
+    def test_none_when_profile_never_decreases(self):
+        """Ramp-up puro ou platô sem ramp-down: nenhuma política declarada."""
+        assert _extract_taxa_desmobilizacao_fracao([0.25, 0.5, 0.75, 1.0, 1.0]) is None
+
+    def test_none_when_too_short(self):
+        assert _extract_taxa_desmobilizacao_fracao([1.0]) is None
+        assert _extract_taxa_desmobilizacao_fracao([]) is None
+
+
+class TestProducaoMaximaComRampaDown:
+    def test_triangle_area_formula(self):
+        # capacidade_pico=400, frac=0.75, taxa=0.25 -> 400 * 0.75^2 / (2*0.25) = 450
+        assert _producao_maxima_com_rampa_down(0.75, 0.25, 400.0) == pytest.approx(450.0)
+
+    def test_zero_when_frac_is_zero(self):
+        assert _producao_maxima_com_rampa_down(0.0, 0.25, 400.0) == 0.0
+
+    def test_infinite_when_taxa_is_zero(self):
+        assert _producao_maxima_com_rampa_down(1.0, 0.0, 400.0) == float("inf")
+
+
+class TestRampDownGateOrientadoAEstado:
+    """`_build_activity_distribuicao` só reduz a equipe quando o estado real (Q
+    remanescente) confirma que é seguro — nunca por posição no calendário."""
+
+    _RAMP = [1.0, 1.0, 1.0, 0.75, 0.5, 0.25, 0.0]  # taxa extraída = 0.25/semana
+
+    def test_vetoes_premature_rampdown_when_much_work_remains(self):
+        """Muito trabalho restante: gate mantém o pico em vez de seguir o ramp_profile
+        estático (que, na posição do calendário, já estaria descendo)."""
+        sa = _sa(start_week=0, duration_weeks=3, num_eq=4)
+        item = SimpleNamespace(quantitativo=1000.0)
+        semanas_obra = ["2026-W02", "2026-W03", "2026-W04"]
+
+        distribuicao, qtd_acumulada = _build_activity_distribuicao(
+            sa,
+            item,
+            cpu={},
+            ramp=self._RAMP,
+            n_max=4,
+            producao_semanal_base=100.0,
+            semanas_obra=semanas_obra,
+            canonical_in=_canonical(),
+            prat_semanal={},
+            prat_mensal={},
+            fator_calendario_semanal={},
+        )
+
+        equipes = [c.num_equipes for _, c in sorted(distribuicao.items())]
+        assert equipes == [4, 4, 3]  # só reduz na semana em que passa a ser seguro
+        assert qtd_acumulada == 1000.0
+
+    def test_allows_immediate_descent_when_little_work_remains(self):
+        """Pouco trabalho: seguro descer já na primeira semana no pico (regime
+        'triângulo' emergente, sem precisar resolver a equação fechada)."""
+        sa = _sa(start_week=0, duration_weeks=1, num_eq=4)
+        item = SimpleNamespace(quantitativo=200.0)
+        semanas_obra = ["2026-W02"]
+
+        distribuicao, qtd_acumulada = _build_activity_distribuicao(
+            sa,
+            item,
+            cpu={},
+            ramp=self._RAMP,
+            n_max=4,
+            producao_semanal_base=100.0,
+            semanas_obra=semanas_obra,
+            canonical_in=_canonical(),
+            prat_semanal={},
+            prat_mensal={},
+            fator_calendario_semanal={},
+        )
+
+        cell = distribuicao["2026-W02"]
+        assert cell.num_equipes == 3  # já desmobiliza 1 equipe na própria 1ª semana
+        assert qtd_acumulada == 200.0
+
+    def test_no_gating_without_a_declared_demobilization_rate(self):
+        """Sem trecho decrescente no ramp_profile (ou ramp=None), comportamento
+        idêntico ao anterior — nunca inventa uma política de desmobilização."""
+        sa = _sa(start_week=0, duration_weeks=3, num_eq=4)
+        item = SimpleNamespace(quantitativo=100_000.0)  # nunca fecha na janela nominal
+        semanas_obra = ["2026-W02", "2026-W03", "2026-W04"]
+
+        distribuicao, _qtd_acumulada = _build_activity_distribuicao(
+            sa,
+            item,
+            cpu={},
+            ramp=[1.0, 1.0, 1.0],  # platô puro, sem cauda decrescente
+            n_max=4,
+            producao_semanal_base=100.0,
+            semanas_obra=semanas_obra,
+            canonical_in=_canonical(),
+            prat_semanal={},
+            prat_mensal={},
+            fator_calendario_semanal={},
+        )
+
+        # todas as semanas (nominais + extensão) seguem no pico — igual ao fallback antigo
+        assert all(c.num_equipes == 4 for c in distribuicao.values())
+
+    def test_self_corrects_by_pausing_descent_after_a_bad_week(self):
+        """Já em ramp-down, uma semana de clima ruim atrasa o progresso — o gate
+        PAUSA a redução (mantém o nível atual) em vez de continuar descendo às
+        cegas até esvaziar a equipe com trabalho ainda pendente. Retoma a descida
+        assim que o clima volta e o teste de suficiência passa a valer de novo."""
+        sa = _sa(start_week=0, duration_weeks=5, num_eq=4)
+        item = SimpleNamespace(quantitativo=1250.0)
+        semanas_obra = ["2026-W02", "2026-W03", "2026-W04", "2026-W05", "2026-W06"]
+        prat_semanal = {"2026-W05": 0.0}  # clima ruim só na semana em que já reduziu 1x
+
+        distribuicao, qtd_acumulada = _build_activity_distribuicao(
+            sa,
+            item,
+            cpu={},
+            ramp=self._RAMP,
+            n_max=4,
+            producao_semanal_base=100.0,
+            semanas_obra=semanas_obra,
+            canonical_in=_canonical(),
+            prat_semanal=prat_semanal,
+            prat_mensal={},
+            fator_calendario_semanal={},
+        )
+
+        equipes = [distribuicao[s].num_equipes for s in semanas_obra]
+        # semanas 0-1: veto (falta muito); semana 2: reduz p/ 3 (seguro); semana 3
+        # (clima=0): PAUSA em 3 em vez de continuar p/ 2; semana 4: clima normaliza,
+        # retoma a descida p/ 2 e fecha exatamente Q.
+        assert equipes == [4, 4, 3, 3, 2]
+        assert qtd_acumulada == 1250.0

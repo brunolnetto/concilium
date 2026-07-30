@@ -136,6 +136,55 @@ def _infer_teams_from_resources(
     return peak
 
 
+def _extract_taxa_desmobilizacao_fracao(ramp_profile: list[float] | None) -> float | None:
+    """Recupera μ⁻ (taxa de desmobilização, fração do pico por semana) do trecho final
+    decrescente de `ramp_profile`, se houver.
+
+    `_compute_ramp_profile` (ADR-074) já embute ramp-up/platô/ramp-down num único array
+    normalizado [0,1] — aqui só extraímos de volta a taxa do trecho decrescente, para
+    reaplicar a MESMA política no momento certo (decidido por estado real, via
+    `_producao_maxima_com_rampa_down`) em vez de confiar na posição pré-computada do
+    array, que foi ancorada numa duração nominal que pode estar errada.
+
+    Varre de trás para frente e para no primeiro par não-decrescente — isola exatamente
+    o trecho de ramp-down, ignorando platô/ramp-up antes dele. Retorna None quando não há
+    trecho decrescente identificável (perfil ausente, curto demais, ou monotonicamente
+    não-decrescente) — nesse caso não há política de desmobilização declarada, e nenhuma
+    é inventada.
+    """
+    if ramp_profile is None or len(ramp_profile) < 2:
+        return None
+    diffs: list[float] = []
+    for i in range(len(ramp_profile) - 1, 0, -1):
+        diff = ramp_profile[i - 1] - ramp_profile[i]
+        if diff <= 0:
+            break
+        diffs.append(diff)
+    if not diffs:
+        return None
+    return sum(diffs) / len(diffs)
+
+
+def _producao_maxima_com_rampa_down(
+    frac_atual: float, taxa_desmob_fracao: float, capacidade_pico_semanal: float
+) -> float:
+    """Produção total alcançável se a desmobilização (linear, `taxa_desmob_fracao` do
+    pico por semana) começar AGORA, a partir de `frac_atual` (fração do pico em uso
+    nesta semana) até zerar — área do triângulo fração×pico:
+
+        capacidade_pico_semanal · frac_atual² / (2 · taxa_desmob_fracao)
+
+    Usado por `_build_activity_distribuicao` para decidir, semana a semana, se é seguro
+    reduzir a equipe agora — um look-ahead orientado a estado real (Q remanescente),
+    não à posição no calendário: resolve a circularidade de "quando começar o
+    ramp-down" sem precisar prever N_i, porque é recalculado a cada semana com dados
+    já conhecidos (nunca clima futuro).
+    """
+    if taxa_desmob_fracao <= 0:
+        return float("inf")
+    return capacidade_pico_semanal * (frac_atual**2) / (2.0 * taxa_desmob_fracao)
+
+
 def _aggregate_to_monthly(distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]]) -> dict[str, dict]:
     """Agrega distribuicao_semanal em distribuicao_mensal."""
     monthly_agg: dict[str, dict] = {}
@@ -715,9 +764,11 @@ __all__ = [
     "_emm_find_vazios",
     "_emm_process_item",
     "_execute_manual_mode",
+    "_extract_taxa_desmobilizacao_fracao",
     "_find_item_by_id",
     "_infer_teams_from_resources",
     "_parse_logistica_consumiveis_overrides",
+    "_producao_maxima_com_rampa_down",
     "_rasfc_enrich_from_catalog_if_available",
     "_rasfc_extract_from_canonical",
     "_rasfc_extract_from_spec",
