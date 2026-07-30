@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from concilium.application.scheduling.models import ReplenishableResource
+from concilium.domain.constants import TETO_EXTENSAO_CRONOGRAMA_SEMANAS
 from concilium.domain.models.canonical import (
     CanonicalModel,
     DistribuicaoSemanal,
@@ -15,7 +16,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._calendario import _mean_praticabilidade, _resolve_productivity  # ty: ignore[unresolved-import]
+from ._calendario import _resolve_productivity  # ty: ignore[unresolved-import]
 from ._custos import _build_dist_cell, _iso_week_key, _lookup_eficiencia  # ty: ignore[unresolved-import]
 from ._validacao import (  # ty: ignore[unresolved-import]
     _build_activity_item_map,
@@ -159,17 +160,57 @@ def _build_activity_distribuicao(
     fator_calendario_semanal: dict[str, float],
     fator_jornada: float = 1.0,
 ) -> tuple[dict[str, DistribuicaoSemanal], float]:
-    """Constrói a distribuição semanal (célula a célula) de uma scheduled activity."""
+    """Constrói a distribuição semanal (célula a célula) de uma scheduled activity.
+
+    Estende além de `sa.duration_weeks` (duração nominal do RCPSP, calculada com
+    produtividade nominal, sem antecipar clima/calendário/jornada real) quando η_p real
+    reduz a produção semanal a ponto de não completar `item.quantitativo` dentro da
+    janela original — sempre terminamos o quantitativo da atividade. Antes disso, o
+    déficit só gerava um AVISO não-bloqueante (VAL-CRON-01) e ficava incompleto.
+
+    Semanas extras (week_num além de `len(semanas_obra)`) repetem o mesmo padrão de
+    alocação e clima/calendário da última semana real conhecida:
+      - alocação: `_infer_teams_from_resources` já retorna o pico quando `week_offset`
+        excede o `ramp_profile` original (seguro: verificado que, nos casos reais de
+        sub-entrega, a atividade já está no pico quando a janela nominal termina, sem
+        ramp-down em andamento);
+      - clima/calendário: `last_fator_clima`/`last_fator_calendario` (última semana com
+        week_num < len(semanas_obra)) — sem isso, `_lookup_eficiencia`/`.get(..., 1.0)`
+        recairiam no default de clima perfeito para semanas fora da tabela conhecida.
+    Teto de segurança: `TETO_EXTENSAO_CRONOGRAMA_SEMANAS` (10 anos) — nunca estende
+    indefinidamente (ex: clima=0 por muitas semanas seguidas).
+    """
     distribuicao: dict[str, DistribuicaoSemanal] = {}
     qtd_acumulada = 0.0
+    # Último clima/calendário real conhecido (dentro de semanas_obra) — repetido nas
+    # semanas de extensão em vez de recair no default 1.0 de _lookup_eficiencia/.get,
+    # que assumiria clima perfeito "de graça" para semanas que não existiam no
+    # cronograma original.
+    last_fator_clima = 1.0
+    last_fator_calendario = 1.0
+    # Tolerância de 99,9% (mesmo critério de _warn_if_activity_underdelivers) em vez de
+    # `qtd_acumulada < item.quantitativo` exato: `_build_dist_cell` arredonda qtd_acumulada
+    # a 2 casas decimais a cada semana, então um resíduo residual menor que a granularidade
+    # do arredondamento (ex: 0,003 de 676.519) nunca converge — cada incremento semanal é
+    # absorvido pelo round() e a atividade nunca "termina", estendendo até o teto de 10 anos
+    # só por arredondamento (achado real no AGIS: eap-1_6).
+    quantitativo_min = item.quantitativo * 0.999
 
-    for week_offset in range(sa.duration_weeks):
+    week_offset = 0
+    while week_offset < sa.duration_weeks or (
+        qtd_acumulada < quantitativo_min and week_offset < TETO_EXTENSAO_CRONOGRAMA_SEMANAS
+    ):
         week_num = sa.start_week + week_offset
-        semana_key = (
-            semanas_obra[week_num]
-            if week_num < len(semanas_obra)
-            else _iso_week_key(canonical_in.projeto.data_inicio + timedelta(weeks=week_num))
-        )
+        if week_num < len(semanas_obra):
+            semana_key = semanas_obra[week_num]
+            fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
+            fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
+            last_fator_clima = fator_clima
+            last_fator_calendario = fator_calendario
+        else:
+            semana_key = _iso_week_key(canonical_in.projeto.data_inicio + timedelta(weeks=week_num))
+            fator_clima = last_fator_clima
+            fator_calendario = last_fator_calendario
 
         inferred_num_equipes = _infer_teams_from_resources(
             sa.assigned_resources,
@@ -178,8 +219,6 @@ def _build_activity_distribuicao(
             sa.duration_weeks,
             ramp_profile=ramp,
         )
-        fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
-        fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
         cell = _build_dist_cell(
             producao_semanal_base,
             inferred_num_equipes,
@@ -192,6 +231,7 @@ def _build_activity_distribuicao(
         )
         qtd_acumulada = cell.qtd_acumulada
         distribuicao[semana_key] = cell
+        week_offset += 1
 
     return distribuicao, qtd_acumulada
 
@@ -201,29 +241,30 @@ def _warn_if_activity_underdelivers(
     item_id: str,
     sa: Any,
     qtd_acumulada: float,
-    canonical_in: CanonicalModel,
     validacoes: list[ValidacaoItem],
 ) -> None:
-    """ADR-082-cons: emite AVISO quando Σ q_ij < Q na janela agendada (não bloqueia)."""
-    # ADR-082-cons: checagem de completude também no caminho AUTO_SCHEDULE
-    # (antes só existia no modo manual) — torna VISÍVEL a sub-entrega Σ q_ij < Q
-    # antes silenciosa. Não bloqueia (AVISO): entregar Q sob clima é decisão de
-    # prazo/pool (estender janela ou +equipes — ADR-091), não um default.
+    """AVISO quando mesmo o teto de extensão (10 anos) não bastou para entregar Q.
+
+    `_build_activity_distribuicao` já estende a janela automaticamente além de
+    `sa.duration_weeks`, repetindo o padrão de alocação/clima das últimas semanas,
+    até Σ q_ij atingir 100% do quantitativo ou até TETO_EXTENSAO_CRONOGRAMA_SEMANAS.
+    Este AVISO só dispara no caso patológico em que nem o teto de 10 anos bastou —
+    sinal de que a praticabilidade da região é baixa demais para a atividade convergir.
+    """
     if item.quantitativo <= 0:
         return
     pct_completude = qtd_acumulada / item.quantitativo
     if pct_completude < 0.999:
-        p_bar = _mean_praticabilidade(canonical_in)
-        semanas_nec = math.ceil(sa.duration_weeks / p_bar) if p_bar > 0 else sa.duration_weeks
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-CRON-01",
                 status="AVISO",
                 mensagem=(
-                    f"Item '{item_id}' sub-entrega: Σ q_ij = {pct_completude * 100:.1f}% de Q na "
-                    f"janela agendada ({sa.duration_weeks}sem). Clima reduz a produção semanal além "
-                    f"da capacidade da janela. Para entregar Q (p̄={p_bar:.2f}): ~{semanas_nec}sem "
-                    "OU +equipes (decisão de prazo/pool — ADR-091)."
+                    f"Item '{item_id}' não atinge 100% do quantitativo mesmo após estender o "
+                    f"cronograma até o teto de segurança ({TETO_EXTENSAO_CRONOGRAMA_SEMANAS} "
+                    f"semanas): Σ q_ij = {pct_completude * 100:.1f}% de Q. Praticabilidade da "
+                    "região é extremamente baixa — revisar clima/calendário/jornada ou "
+                    "considerar +equipes (ADR-091)."
                 ),
             )
         )
@@ -284,7 +325,7 @@ def _convert_schedule_to_distribuicao(
             fator_jornada=regime.eta_jornada,
         )
 
-        _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, canonical_in, validacoes)
+        _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, validacoes)
 
         distribuicao_por_item[item_id] = distribuicao
 

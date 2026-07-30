@@ -108,8 +108,25 @@ class TestCostDecompositionInvariant:
         `EquipeDireta.custo_operacional_agregado`, ADR-172 — já na mesma base agregada de
         `machine_weeks`). `eq.custo_total` para itens cobertos por pool deixa de ser
         artificialmente 1-frente — passa a refletir o custo real agregado, daí o salto
-        para ~43,8M (o valor que este próprio teste já antecipava no comentário abaixo,
-        antes da correção, como "custo real completo").
+        para ~43,8M (valor que este teste antecipava, antes da correção, como "custo real
+        completo").
+
+        pós-extensão de cronograma: R$ 55,074,575.61 — skill 04 (`_build_activity_distribuicao`)
+        antes iterava um número FIXO de semanas (`sa.duration_weeks`, nominal do RCPSP, sem
+        antecipar clima/calendário real). Quando η_p real reduzia a produção semanal, a atividade
+        terminava sub-entregue (Σ q_ij < Q) e isso só gerava um AVISO não-bloqueante (VAL-CRON-01)
+        — mas o preço/custo sempre usava o quantitativo INTEGRAL da EAP, então itens sub-entregues
+        eram cobrados pelo Q completo com um custo calculado sobre uma janela menor que a
+        necessária para produzi-lo de fato. Corrigido: o loop agora estende além de
+        `sa.duration_weeks` (repetindo o padrão de alocação/clima da última semana conhecida) até
+        Σ q_ij fechar o quantitativo, com teto de segurança de 10 anos
+        (`TETO_EXTENSAO_CRONOGRAMA_SEMANAS`). No AGIS, eap-1_2/eap-1_3/eap-1_6 (sub-entrega
+        65%-89% na janela nominal) passam a completar 100% do quantitativo, aumentando o custo
+        agregado em ~25,8% — aumento genuíno (mais semanas de presença de MO/equipamento
+        realmente necessárias), não um artefato de arredondamento (verificado: o primeiro cálculo
+        pós-extensão explodiu para ~433M por um bug de plateau de arredondamento — `qtd_acumulada`
+        arredondada a 2 casas fazia o resíduo residual nunca convergir quando menor que a
+        granularidade do round(); corrigido comparando com tolerância de 99,9% em vez de exato).
 
         sum(eq.custo_total) aqui mistura: itens SEM pool continuam na base 1-frente (não
         afetados por #139); itens COM pool agora refletem o custo real agregado.
@@ -118,8 +135,9 @@ class TestCostDecompositionInvariant:
 
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
-        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 + issue #139
-        expected = 43_776_042.47
+        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 + issue #139 +
+        # extensão de cronograma até fechar quantitativo (ver docstring)
+        expected = 55_074_575.61
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (

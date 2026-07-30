@@ -222,13 +222,17 @@ def _build_scheduled_activity_for_item(
     data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)
     data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)
 
-    # ADR-072: Use original duration from scheduler if available
+    # ADR-072: usa a duração original do scheduler como piso, mas nunca abaixo da
+    # duração real observada na distribuição — a extensão do loop além de
+    # sa.duration_weeks (fechamento de quantitativo) faz end_week avançar sem que
+    # duration_lookup (RCPSP pré-extensão) seja atualizado, então o valor stale
+    # subestimaria a duração real do item quando isso ocorre.
     duration_from_scheduler = duration_lookup.get(item.item_id, None)
+    duration_from_distribuicao = max(1, end_week - start_week + 1)
     if duration_from_scheduler is not None:
-        duration_weeks = duration_from_scheduler
+        duration_weeks = max(duration_from_scheduler, duration_from_distribuicao)
     else:
-        # Fallback: calculate from scheduled weeks if no scheduler duration
-        duration_weeks = max(1, end_week - start_week + 1)
+        duration_weeks = duration_from_distribuicao
 
     return ScheduledActivityCanonical(
         activity_id=item.item_id,
@@ -316,10 +320,20 @@ def _build_cronograma_out(
     heuristic = schedule_selected.heuristic if schedule_selected is not None else None
     _algo = _resolve_cronograma_algorithm(mode, heuristic)
 
+    # makespan_weeks precisa refletir a duração real das atividades, incluindo a
+    # extensão do loop (fechamento de quantitativo) além do makespan pré-extensão
+    # do RCPSP — caso contrário custo indireto/canteiro e o gatilho de replanejamento
+    # (que leem makespan_weeks) subestimariam silenciosamente a duração da obra.
+    makespan_from_activities = (
+        max((sa.end_week for sa in scheduled_activities_out), default=-1) + 1
+    )
+    makespan_nominal = schedule_selected.makespan if schedule_selected is not None else len(semanas_obra)
+    makespan_weeks = max(makespan_nominal, makespan_from_activities)
+
     return Cronograma(
         algorithm=_algo,
         quality_score=schedule_selected.quality_score if schedule_selected is not None else 0.0,
-        makespan_weeks=schedule_selected.makespan if schedule_selected is not None else len(semanas_obra),
+        makespan_weeks=makespan_weeks,
         is_feasible=not any(v.status == "ERRO" for v in validacoes),
         was_relaxed=schedule_selected.relaxed if schedule_selected is not None else False,
         scheduled_activities=scheduled_activities_out,

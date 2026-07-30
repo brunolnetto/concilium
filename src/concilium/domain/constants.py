@@ -28,6 +28,13 @@ SEMANAS_POR_MES: float = 365.25 / 7 / 12  # ≈ 4,3482 semanas/mês
 # Usado em: Skills 05, 07, 08; pu_calculator
 HORAS_MES_REGIME_6x1: float = DIAS_SEMANA_PADRAO * HORAS_DIA_PADRAO * SEMANAS_POR_MES  # ≈ 208 h/mês
 
+# Teto de segurança para extensão de cronograma além da duração nominal do RCPSP
+# (skill 04, _build_activity_distribuicao) — nunca estender uma atividade além disso,
+# mesmo que ela ainda não tenha entregue 100% do quantitativo (ex: clima=0 por muitas
+# semanas seguidas). 10 anos, não um número arbitrário de semanas.
+SEMANAS_POR_ANO: float = 365.25 / 7  # ≈ 52,1786 semanas/ano
+TETO_EXTENSAO_CRONOGRAMA_SEMANAS: int = round(10 * SEMANAS_POR_ANO)  # ≈ 522 semanas
+
 # Horas/mês CLT — convenção legal brasileira para contratação e precificação de MO:
 #   44 h/semana × 5 semanas = 220 h/mês  (NR-6 / CLT art. 58 — convenção contábil)
 # ATENÇÃO: usado para conversão de preços de mercado (R$/h → R$/mês) e verificação
