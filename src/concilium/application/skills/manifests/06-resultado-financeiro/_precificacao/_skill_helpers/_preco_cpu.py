@@ -104,6 +104,33 @@ def _resolve_producao_valida(cpu: dict, prod_lookup: dict, validacoes: list) -> 
     return producao
 
 
+def _resolve_beta_praticabilidade(item_id: str, sched_por_item: dict | None) -> float:
+    """ADR-172: β_i = média de η_p (praticabilidade: clima×calendário×jornada, já calculada
+    por semana em `DistribuicaoSemanal.eta_p`, skill 04) ponderada por `num_equipes`, só sobre
+    semanas ativas do cronograma já construído deste item.
+
+    1.0 (sem correção) quando o item não tem cronograma associado ou não há semanas ativas —
+    nunca um valor inventado (mesma filosofia do `causa_dominante`, ADR-162 D1).
+    """
+    sa = (sched_por_item or {}).get(item_id)
+    dist = getattr(sa, "distribuicao_semanal", None) if sa else None
+    if not dist:
+        return 1.0
+    peso_total = 0.0
+    soma_ponderada = 0.0
+    for d in dist.values():
+        num_equipes = float(getattr(d, "num_equipes", 0.0) or 0.0)
+        if num_equipes <= 0:
+            continue
+        eta_p = float(getattr(d, "eta_p", 1.0) or 0.0)
+        soma_ponderada += eta_p * num_equipes
+        peso_total += num_equipes
+    if peso_total <= 0:
+        return 1.0
+    beta = soma_ponderada / peso_total
+    return beta if beta > 0 else 1.0
+
+
 def _avisar_sbdi_legado(cpu: dict, validacoes: list) -> None:
     """Advertir se CPU ainda tem sbdi hard-coded (campo legado, ignorado)."""
     if cpu.get("precos_unitarios_sbdi"):

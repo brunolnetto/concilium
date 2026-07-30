@@ -147,7 +147,7 @@ def _dimensionar_item_equipe(
     # (nunca atribuídos), apesar do invariante documentado no modelo.
     custo_mob_mensal, custo_demob_mensal = _calc_custo_mob_desmob_split(comp, cron)
     custo_mob_desmob = round(custo_mob_mensal + custo_demob_mensal, 2)
-    _custo_total, ativos, custo_comb_efetivo, _fixo_mensal, _team_weeks, custo_ocioso, custo_1frente = (
+    custo_operacional_agregado, ativos, custo_comb_efetivo, _fixo_mensal, _team_weeks, custo_ocioso, custo_1frente = (
         _calc_custo_cron(cron, custo_mo, custo_eq, custo_comb)
     )
     num_equipes_paralelas = _resolve_num_equipes_paralelas(cron)
@@ -175,6 +175,12 @@ def _dimensionar_item_equipe(
         permanencia_meses=round(ativos / SEMANAS_POR_MES, 2),
         permanencia_efetiva_meses=permanencia_efetiva,
         custo_total=custo_total_final,
+        # ADR-172: integral semana a semana (mo+eq+diesel × num_equipes daquela semana),
+        # robusto a rampa por construção — sem idle/mob-desmob (somados à parte). Usado
+        # pelo Ponto de Equilíbrio para comparar venda (agregada) com o custo real
+        # agregado, em vez de custo_fixo_total × n_frentes nominal (mesma ramp-sensibilidade
+        # que a correção D4 já eliminou de permanencia_efetiva_meses).
+        custo_operacional_agregado=round(custo_operacional_agregado, 2),
         modo_estimativa=modo_est,
         custo_ocioso_equipamentos=custo_ocioso,
         custo_mob_desmob=custo_mob_desmob,

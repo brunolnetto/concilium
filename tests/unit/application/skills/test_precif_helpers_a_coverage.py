@@ -224,7 +224,7 @@ class TestResolvePrecoCatItemFallbackFlag:
         with patch.object(
             MOD._process_item, "_compute_preco_cat_from_production", return_value=(preco_cat, 42.5)
         ):
-            result, equip_sem_decomp, usou_fallback, produtividade_catalogo = MOD._resolve_preco_cat_item(
+            result, equip_sem_decomp, usou_fallback, produtividade_catalogo, _beta = MOD._resolve_preco_cat_item(
                 item,
                 cpu,
                 self._ARGS["prod_lookup"],
@@ -259,7 +259,7 @@ class TestResolvePrecoCatItemFallbackFlag:
                 return_value=(preco_cat_fallback, {"EQ-1"}),
             ),
         ):
-            result, equip_sem_decomp, usou_fallback, produtividade_catalogo = MOD._resolve_preco_cat_item(
+            result, equip_sem_decomp, usou_fallback, produtividade_catalogo, _beta = MOD._resolve_preco_cat_item(
                 item,
                 cpu,
                 self._ARGS["prod_lookup"],
@@ -291,7 +291,7 @@ class TestResolvePrecoCatItemFallbackFlag:
             patch.object(MOD._process_item, "_compute_preco_cat_from_production", return_value=(None, 0.0)),
             patch.object(MOD._process_item, "_preco_cat_fallback_composicao", return_value=(None, set())),
         ):
-            result, equip_sem_decomp, usou_fallback, produtividade_catalogo = MOD._resolve_preco_cat_item(
+            result, equip_sem_decomp, usou_fallback, produtividade_catalogo, _beta = MOD._resolve_preco_cat_item(
                 item,
                 cpu,
                 self._ARGS["prod_lookup"],

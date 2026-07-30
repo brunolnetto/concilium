@@ -26,6 +26,7 @@ from ._cpu_fallback import (  # ty: ignore[unresolved-import]
 from ._cpu_helpers import (  # ty: ignore[unresolved-import]
     _CATEGORIA_MAP,
     _build_equipe_lookup,
+    _build_sched_por_item,
     _create_synthetic_cpu,
     _resolve_insumo_preco,
 )
@@ -39,6 +40,7 @@ from ._preco_cpu import (  # ty: ignore[unresolved-import]
     _avisar_sbdi_legado,
     _compute_preco_cat_from_cpu,
     _compute_preco_cat_from_production,
+    _resolve_beta_praticabilidade,
     _resolve_producao_valida,
 )
 from ._process_item import _process_eap_item, _resolve_preco_cat_item  # ty: ignore[unresolved-import]
@@ -59,12 +61,14 @@ __all__ = [
     "_build_equipe_lookup",
     "_build_lookups",
     "_build_planejamento_entry",
+    "_build_sched_por_item",
     "_compute_preco_cat_from_cpu",
     "_compute_preco_cat_from_production",
     "_create_synthetic_cpu",
     "_get_bdi_value",
     "_preco_cat_fallback_composicao",
     "_process_eap_item",
+    "_resolve_beta_praticabilidade",
     "_resolve_cpu_com_fallback",
     "_resolve_insumo_preco",
     "_resolve_preco_cat_item",

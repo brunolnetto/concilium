@@ -60,6 +60,12 @@ class Planejamento(BaseModel):
     # 0.0 quando não resolvível (Fonte 2/fallback de composição, ou override manual de PU)
     # — γ_i^v/causa_dominante ficam INDETERMINADO nesses casos, nunca um valor inventado.
     produtividade_catalogo: float = 0.0
+    # ADR-172: β_i — média de η_p (praticabilidade: clima×calendário×jornada) ponderada por
+    # num_equipes sobre o cronograma já construído deste item. Aplicado como produtividade
+    # efetiva (ρ_i·β_i) na precificação — nunca sobrescreve produtividade_catalogo (ρ_i puro,
+    # referência estrutural do catálogo). 1.0 (sem correção) quando o item não tem cronograma
+    # associado ou não há semanas ativas — nunca um valor inventado.
+    beta_praticabilidade: float = 1.0
 
 
 class Mobilizacao(BaseModel):

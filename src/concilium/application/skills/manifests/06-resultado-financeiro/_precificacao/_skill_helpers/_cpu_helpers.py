@@ -63,3 +63,12 @@ def _build_equipe_lookup(canonical_in: CanonicalModel) -> dict:
     return {eq.item_id: eq for eq in (canonical_in.equipes_diretas or [])}
 
 
+def _build_sched_por_item(canonical_in: CanonicalModel) -> dict:
+    """ADR-172: activity_id -> ScheduledActivityCanonical, para ler `distribuicao_semanal`
+    (η_p já calculado por semana pela skill 04) na hora de precificar — mesmo padrão de
+    `_bpe_build_sched_por_item` (skill 06 `_consolidacao`)."""
+    cronograma = getattr(canonical_in, "cronograma", None)
+    scheduled_activities = getattr(cronograma, "scheduled_activities", None) if cronograma else None
+    return {sa.activity_id: sa for sa in (scheduled_activities or [])}
+
+
