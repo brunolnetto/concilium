@@ -43,6 +43,7 @@ from ._categorial import (  # ty: ignore[unresolved-import]
     _cat_accumulate_equipes_sem_particao,
     _cat_accumulate_particao,
     _cat_find_part_by_item,
+    _resolve_custo_equipe_agregado,
 )
 from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
     _apm_build_familia_rows,
@@ -105,6 +106,7 @@ __all__ = [
     "_get_bdi_value",
     "_resolve_bdi_full",
     "_resolve_bdi_rates",
+    "_resolve_custo_equipe_agregado",
     "_bpe_build_idle_por_item",
     "_bpe_build_lookup_maps",
     "_bpe_build_particao_por_item",

@@ -10,6 +10,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
+from ._categorial import _resolve_custo_equipe_agregado  # ty: ignore[unresolved-import]
 from ._resultado import _build_diagnostico_lesao, _lesao_from_sched  # ty: ignore[unresolved-import]
 from ._venda_custo import _cpu_familia  # ty: ignore[unresolved-import]
 
@@ -490,15 +491,13 @@ def _build_pe_for_equipe(
     # ADR-172: mas `custo_venda_total`/`machine_weeks_brutas` são agregados (todas as frentes),
     # enquanto `custo_fixo_total` é referência de 1 frente — comparar os dois diretamente
     # (delta/causa_dominante/horas_reais_min_max) subestimava o lado do custo. A correção usa
-    # `custo_operacional_agregado` (integral semana a semana, skill-05, já soma num_equipes real
-    # por semana — robusto a rampa por construção), com fallback em cascata quando não
-    # resolvível: custo_operacional_real × n_frentes (nominal, mesmo padrão de
-    # `_pe_custo_autonomo_e_gap_pool`), e por fim custo_fixo_total (garantidamente > 0 pelo
-    # guard acima) — nunca uma divisão por zero em delta_pct.
+    # `_resolve_custo_equipe_agregado` (issue #139 parte 2) — pool-aware: prefere `custo_total`
+    # quando coberta por pool (já ajustado pelo contrato, issue #139), senão
+    # `custo_operacional_agregado` (integral semana a semana, skill-05, robusto a rampa), com
+    # fallback nominal (`custo_operacional_real × n_frentes`). Por fim, `custo_fixo_total`
+    # (garantidamente > 0 pelo guard acima) — nunca uma divisão por zero em delta_pct.
     _n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
-    custo_operacional_agregado = float(getattr(equipe, "custo_operacional_agregado", 0.0) or 0.0)
-    if custo_operacional_agregado <= 0:
-        custo_operacional_agregado = custo_operacional_real * _n_frentes
+    custo_operacional_agregado = _resolve_custo_equipe_agregado(equipe)
     if custo_operacional_agregado <= 0:
         custo_operacional_agregado = custo_fixo_total
     delta = custo_venda_total - custo_operacional_agregado

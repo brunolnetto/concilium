@@ -369,3 +369,18 @@ class TestBuildPeForEquipeCustoOperacionalAgregado:
         pe = CONSOLID._build_pe_for_equipe(eq, {"eap-01": 3_500_000.0})
         assert pe is not None
         assert pe.frentes_equivalentes == pytest.approx(700_000.0 / 600_000.0, abs=0.01)
+
+    def test_coberta_por_pool_usa_custo_total_direto_nao_agregado_autonomo(self):
+        """Issue #139 parte 2: com contrato_tipo_id preenchido, custo_total já é o custo
+        real agregado ajustado pelo contrato (issue #139 parte 1) — delta deve usar esse
+        valor diretamente, não custo_operacional_agregado (autônomo, pode divergir por
+        economia de escala compartilhada ou ociosidade imputada)."""
+        eq = self._equipe(
+            custo_total=6_000_000.0,  # já agregado, pós-pool
+            custo_operacional_agregado=9_000_000.0,  # autônomo, deliberadamente diferente
+            contrato_tipo_id="ESC",
+        )
+        pe = CONSOLID._build_pe_for_equipe(eq, {"eap-01": 6_500_000.0})
+        assert pe is not None
+        assert pe.custo_fixo_equipe == pytest.approx(6_000_000.0)
+        assert pe.delta == pytest.approx(500_000.0)

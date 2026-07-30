@@ -95,7 +95,15 @@ def _aplicar_reconciliacao_planejamento(
     planejamento_ref_map: dict[str, float],
     validacoes: list[ValidacaoItem],
 ) -> None:
-    """ADR-107: usa custo_sem_bdi do planejamento como fonte de verdade de custo_total."""
+    """ADR-107: usa custo_sem_bdi do planejamento como fonte de verdade de custo_total.
+
+    `custo_ref` (subtotal.sem_bdi.total = p^u_i × Q) é agregado — toda a quantidade do
+    item, todas as frentes — assim como o `custo_total` pós-pool (issue #139). ADR-172:
+    `custo_operacional_agregado` precisa ser mantido em sincronia com essa reconciliação,
+    senão `_resolve_custo_equipe_agregado` (skill 06) usaria o valor stale, pré-reconciliação
+    (calculado em skill-05 antes desta função rodar) em vez do valor reconciliado — mesmo
+    tipo de inconsistência que a issue #139 corrigiu para itens de pool.
+    """
     for eq in equipes:
         custo_ref = 0.0
         if eq.item_id in planejamento_map:
@@ -117,5 +125,6 @@ def _aplicar_reconciliacao_planejamento(
                 )
             )
             eq.custo_total = round(custo_ref, 2)
+            eq.custo_operacional_agregado = round(custo_ref, 2)
 
 
