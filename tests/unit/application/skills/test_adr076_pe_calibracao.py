@@ -372,8 +372,11 @@ class TestBuildPeForEquipeNewFields:
         assert pe.gap_pool_overhead == pytest.approx(gap_pool, abs=1)
 
     def test_campos_legados_nao_regridem(self):
-        """Campos originais (custo_fixo_equipe, delta, frentes_equivalentes) não regridem."""
-        # custo_fixo_mensal=100k × perm_efetiva=6 = 600k
+        """frentes_equivalentes (base de 1 frente) não regride. custo_fixo_equipe/delta
+        (ADR-172): passam a refletir custo_operacional_agregado (real, todas as frentes) —
+        sem o campo novo populado (fixture legada) e num_equipes_base=1 (default do
+        SimpleNamespace), o fallback é custo_operacional_real × 1 = custo_total = 700_000."""
+        # custo_fixo_mensal=100k × perm_efetiva=6 = 600k (base de 1 frente, frentes_equivalentes)
         eq = _make_equipe(
             custo_fixo_mensal=100_000,
             permanencia_efetiva_meses=6.0,
@@ -382,9 +385,9 @@ class TestBuildPeForEquipeNewFields:
         )
         pe = _build_pe_for_equipe(eq, {"eap-01": 575_000})
         assert pe is not None
-        assert pe.custo_fixo_equipe == pytest.approx(600_000.0, abs=1)
+        assert pe.custo_fixo_equipe == pytest.approx(700_000.0, abs=1)
         assert pe.custo_venda_cpu == pytest.approx(575_000.0, abs=1)
-        assert pe.delta == pytest.approx(-25_000.0, abs=1)
+        assert pe.delta == pytest.approx(-125_000.0, abs=1)
         assert pe.status_validacao == "ERRO"
         assert pe.frentes_equivalentes == pytest.approx(700_000 / 600_000, abs=0.01)
 
@@ -786,4 +789,6 @@ class TestVendaPorItemUsaSemBdi:
         assert len(result) == 1
         pe = result[0]
         assert pe.custo_venda_cpu == 500_000.0  # sem_bdi, não 575_000.0 (com_bdi)
-        assert pe.delta == 500_000.0 - 600_000.0  # custo_fixo_total = 100_000 * 6
+        # ADR-172: delta usa custo_operacional_agregado, não custo_fixo_total (100_000*6=600k)
+        # — sem o campo novo populado, fallback = custo_operacional_real(700k) × n_frentes(1)
+        assert pe.delta == 500_000.0 - 700_000.0

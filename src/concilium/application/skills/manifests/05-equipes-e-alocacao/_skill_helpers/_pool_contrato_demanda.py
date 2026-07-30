@@ -47,6 +47,26 @@ def _eq_comp_floats(eq) -> tuple:
     )
 
 
+def _eq_custo_total_agregado(eq) -> float:
+    """Issue #139: `custo_total_item` precisa estar na MESMA base agregada que
+    `machine_weeks` (que já soma `num_equipes` real por semana, todas as frentes) —
+    `eq.custo_total` é sempre "1 frente" por convenção (ADR-091/ADR-162 D4), nunca
+    multiplicado por `num_equipes`. Dividir esse numerador de 1 frente pelo `machine_weeks`
+    agregado subestimava `custo_unit_semanal` sistematicamente (verificado: item sozinho
+    no pool com NE=3 constante devolvia o valor de 1 frente inalterado, 1/3 do custo real).
+
+    `custo_operacional_agregado` (ADR-172, skill 05, `_calc_custo_cron`) já é essa integral
+    semana a semana — robusta a rampa por construção, mesma escala de `machine_weeks`.
+    Fallback nominal (`custo_total × num_equipes_base`) só quando o campo novo não está
+    disponível (dados antigos/testes que ainda não o populam) — nunca 0 silenciosamente.
+    """
+    agregado = float(getattr(eq, "custo_operacional_agregado", 0.0) or 0.0)
+    if agregado > 0:
+        return agregado
+    n_frentes = max(1, int(getattr(eq, "num_equipes_base", 1) or 1))
+    return float(getattr(eq, "custo_total", 0.0) or 0.0) * n_frentes
+
+
 def _accum_week_demand(
     tipo_week_demand: dict, tipo: str, active_weeks: list, dist: dict, required: int, total_required_peak: int
 ) -> None:
@@ -81,7 +101,7 @@ def _add_tipo_item_demand(
             "item_id": iid,
             "required": required,
             "active_weeks": active_weeks,
-            "custo_total_item": eq.custo_total,
+            "custo_total_item": _eq_custo_total_agregado(eq),
             "machine_weeks": actual_mw,
             "start_idx": _week_idx(active_weeks[0]),
             "end_idx": _week_idx(active_weeks[-1]) + 1,
@@ -176,10 +196,19 @@ def _compute_custo_unit_fracs(mw_list: list) -> tuple:
     sempre bottom-up: custo_total_item / machine_weeks (estimativa a partir da equipe
     dimensionada, skill-05). Sem atalho por referência de catálogo — removido porque
     a composição bottom-up (ADR-132) já reproduz o custo real por construção.
+
+    Issue #139: `custo_total_item` (via `_eq_custo_total_agregado`) precisa estar na MESMA
+    base agregada que `machine_weeks` (soma `num_equipes` real por semana, todas as
+    frentes) — `eq.custo_total` sozinho é sempre "1 frente" (ADR-091/ADR-162 D4), e dividir
+    esse numerador de 1 frente pelo `machine_weeks` agregado subestimava `custo_unit_semanal`
+    sistematicamente sempre que algum item do pool tinha `num_equipes > 1`.
     """
     total_mw = sum(mw for _, mw, _ in mw_list)
     custo_unit_semanal = (
-        sum((it["custo_total_item"] / it["machine_weeks"] if it["machine_weeks"] > 0 else 0.0) * mw for _, mw, it in mw_list)
+        sum(
+            (it["custo_total_item"] / it["machine_weeks"] if it["machine_weeks"] > 0 else 0.0) * mw
+            for _, mw, it in mw_list
+        )
         / total_mw
         if total_mw > 0
         else 0.0

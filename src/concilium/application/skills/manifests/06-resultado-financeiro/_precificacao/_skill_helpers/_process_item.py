@@ -18,7 +18,10 @@ from ._cpu_fallback import (  # ty: ignore[unresolved-import]
     _validar_producao_id_ref,
 )
 from ._planejamento_entry import _build_planejamento_entry, _try_early_override  # ty: ignore[unresolved-import]
-from ._preco_cpu import _compute_preco_cat_from_production  # ty: ignore[unresolved-import]
+from ._preco_cpu import (  # ty: ignore[unresolved-import]
+    _compute_preco_cat_from_production,
+    _resolve_beta_praticabilidade,
+)
 from ._validacao import (  # ty: ignore[unresolved-import]
     _apply_com_bdi_override,
     _apply_sem_bdi_override,
@@ -41,7 +44,8 @@ def _resolve_preco_cat_item(
     alpha_clt: float,
     alpha_mensalista: float,
     catalog_session: object | None,
-) -> tuple[dict[str, float] | None, set[str], bool, float]:
+    sched_por_item: dict | None = None,
+) -> tuple[dict[str, float] | None, set[str], bool, float, float]:
     """NEP-032 D1: precificação bottom-up canônica, com fallback para composicao_itens.
 
     Hierarquia de fontes:
@@ -56,6 +60,9 @@ def _resolve_preco_cat_item(
 
     E `produtividade_catalogo` (ADR-162 D1): ρ_i resolvido na Fonte 1, 0.0 na Fonte 2 (não há
     produtividade catalogada quando o preço vem de composicao_itens).
+
+    ADR-172: `beta_praticabilidade` (β_i) — só aplicado na Fonte 1 (única com produtividade a
+    corrigir); 1.0 (sem correção) na Fonte 2, sem cronograma, ou sem semanas ativas.
     """
     # Fonte 1: bottom-up da composição da equipe (produção + insumos SICRO/SINAPI)
     preco_cat, produtividade_catalogo = _compute_preco_cat_from_production(
@@ -70,6 +77,9 @@ def _resolve_preco_cat_item(
     )
 
     if preco_cat is not None:
+        beta = _resolve_beta_praticabilidade(item.item_id, sched_por_item)
+        if beta != 1.0:
+            preco_cat = {cat: valor / beta for cat, valor in preco_cat.items()}
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-PLAN-BOTTOM-UP",
@@ -77,12 +87,12 @@ def _resolve_preco_cat_item(
                 mensagem=f"Item '{item.item_id}': preço unitário derivado de composição da equipe (NEP-032).",
             )
         )
-        return preco_cat, set(), False, produtividade_catalogo
+        return preco_cat, set(), False, produtividade_catalogo, beta
 
     preco_cat_fallback, equip_sem_decomp = _preco_cat_fallback_composicao(
         cpu, insumo_lookup, repo, jurisdicao_id, overrides, data_base, erros_insumo, validacoes
     )
-    return preco_cat_fallback, equip_sem_decomp, True, 0.0
+    return preco_cat_fallback, equip_sem_decomp, True, 0.0, 1.0
 
 
 def _process_eap_item(
@@ -107,6 +117,7 @@ def _process_eap_item(
     alpha_clt: float = 1.777,
     alpha_mensalista: float = 1.060,
     catalog_session: object | None = None,  # ADR-100
+    sched_por_item: dict | None = None,
 ) -> None:
     cpu = _resolve_cpu_com_fallback(item, cpu_lookup, validacoes, erros_eap)
     if cpu is None:
@@ -118,21 +129,24 @@ def _process_eap_item(
         plan_out.append(early)
         return
 
-    preco_cat, equip_sem_decomp_item, usou_fallback_composicao, produtividade_catalogo = _resolve_preco_cat_item(
-        item,
-        cpu,
-        prod_lookup,
-        insumo_lookup,
-        repo,
-        jurisdicao_id,
-        overrides,
-        data_base,
-        erros_insumo,
-        validacoes,
-        preco_diesel,
-        alpha_clt,
-        alpha_mensalista,
-        catalog_session,
+    preco_cat, equip_sem_decomp_item, usou_fallback_composicao, produtividade_catalogo, beta_praticabilidade = (
+        _resolve_preco_cat_item(
+            item,
+            cpu,
+            prod_lookup,
+            insumo_lookup,
+            repo,
+            jurisdicao_id,
+            overrides,
+            data_base,
+            erros_insumo,
+            validacoes,
+            preco_diesel,
+            alpha_clt,
+            alpha_mensalista,
+            catalog_session,
+            sched_por_item,
+        )
     )
 
     if preco_cat is None:
@@ -152,6 +166,7 @@ def _process_eap_item(
             bdi_aplicado,
             precificacao_via_fallback_composicao=usou_fallback_composicao,
             produtividade_catalogo=produtividade_catalogo,
+            beta_praticabilidade=beta_praticabilidade,
         )
     )
 

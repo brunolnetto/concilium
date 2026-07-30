@@ -79,8 +79,16 @@ class EquipeDireta(BaseModel):
     custo_manutencao_mensal: float = 0.0  # Σ equipamentos.custo_manutencao_mensal × num_unidades
     # Invariante: custo_equipamentos_mensal ≈ custo_locacao_mensal + custo_manutencao_mensal
     permanencia_meses: float = Field(default=0.0, ge=0)
-    permanencia_efetiva_meses: float = Field(default=0.0, ge=0)  # Σ(num_equipes_j) / SEMANAS_POR_MES — correto para N>1
+    # ADR-172: ativos/SEMANAS_POR_MES (contagem de semanas ativas, robusto a rampa) — antes
+    # dividia team_weeks/num_equipes_paralelas, que subestimava sob rampa (fix D4).
+    permanencia_efetiva_meses: float = Field(default=0.0, ge=0)
     custo_total: float = 0.0
+    # ADR-172: integral semana a semana (mo+eq+diesel × num_equipes daquela semana, já
+    # inclui todas as frentes) — sem idle/mob-desmob (somados à parte). Robusto a rampa por
+    # construção (nunca multiplica por uma constante nominal de n_frentes). Usado pelo Ponto
+    # de Equilíbrio para comparar contra custo_venda_total (também agregado). 0.0 quando não
+    # resolvível (fallback para custo_operacional_real × n_frentes em _build_pe_for_equipe).
+    custo_operacional_agregado: float = 0.0
     modo_estimativa: Literal["inicial", "refinado"] = "refinado"  # ADR-030 D4
     # NEP-031 L2: custo de aluguel de equipamentos ociosos dentro da janela de mobilização (§6.3)
     custo_ocioso_equipamentos: float = 0.0

@@ -288,7 +288,9 @@ class TestBuildPeForEquipeWiringAdr162:
         )
         assert pe is not None
         assert pe.causa_dominante == "INDETERMINADO"
-        assert pe.delta == 500_000.0 - 600_000.0  # PE em si não é afetado por causa_dominante
+        # ADR-172: delta usa custo_operacional_agregado (fallback custo_operacional_real ×
+        # n_frentes=1 = 700_000, campo novo não populado nesta fixture), não custo_fixo_total
+        assert pe.delta == 500_000.0 - 700_000.0  # PE em si não é afetado por causa_dominante
 
     def test_com_regime_e_produtividade_causa_dominante_resolvida(self):
         plan = _plan(qty=1000.0, produtividade_catalogo=25.0)

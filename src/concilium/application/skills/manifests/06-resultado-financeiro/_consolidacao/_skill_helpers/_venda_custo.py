@@ -10,7 +10,10 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._categorial import _build_custo_categorial_bottom_up  # ty: ignore[unresolved-import]
+from ._categorial import (  # ty: ignore[unresolved-import]
+    _build_custo_categorial_bottom_up,
+    _resolve_custo_equipe_agregado,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -164,10 +167,10 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     """
     venda_sem_bdi, venda_com_bdi, custo_materiais = _bvc_totais_planejamento(canonical_in.planejamento)
 
-    # ADR-091: custo_total já armazena o custo total de todas as frentes (normalizado
-    # em skill-05 por divisão por num_equipes_paralelas antes de armazenar).
-    # Não multiplicar por num_equipes_base — evitar dupla contagem.
-    custo_direto_equipe = sum(float(e.custo_total or 0.0) for e in canonical_in.equipes_diretas)
+    # Issue #139 (parte 2): custo_total só é agregado (todas as frentes) para itens
+    # cobertos por pool — para os demais, é "1 frente" (ADR-091/ADR-162 D4).
+    # _resolve_custo_equipe_agregado trata os dois casos de forma consistente.
+    custo_direto_equipe = sum(_resolve_custo_equipe_agregado(e) for e in canonical_in.equipes_diretas)
 
     venda_sem_bdi, venda_com_bdi = _bvc_apply_fallback(venda_sem_bdi, venda_com_bdi, custo_direto_equipe)
 

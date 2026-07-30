@@ -39,6 +39,7 @@ from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 from ._skill_helpers import (  # ty: ignore[unresolved-import]
     _build_equipe_lookup,
     _build_lookups,
+    _build_sched_por_item,
     _process_eap_item,
     _validate_coverage,
 )
@@ -359,6 +360,9 @@ def _process_eap_items(
     erros_eap: list[str] = []
     erros_insumo: set[str] = set()
     equip_sem_decomp: set[str] = set()
+    # ADR-172: cronograma já construído (06 depende de 05, que depende de 04) — β_i lê
+    # η_p (praticabilidade) já calculado por semana, sem re-rodar nada.
+    sched_por_item = _build_sched_por_item(canonical_in)
 
     for item in canonical_in.eap:
         _process_eap_item(
@@ -383,6 +387,7 @@ def _process_eap_items(
             alpha_clt=alpha_clt,
             alpha_mensalista=alpha_mensalista,
             catalog_session=catalog_session,  # ADR-100
+            sched_por_item=sched_por_item,
         )
 
     return plan_out, erros_eap, erros_insumo, equip_sem_decomp

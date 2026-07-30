@@ -24,6 +24,7 @@ def _build_planejamento_entry(
     bdi_aplicado: dict,
     precificacao_via_fallback_composicao: bool = False,
     produtividade_catalogo: float = 0.0,
+    beta_praticabilidade: float = 1.0,
 ) -> Planejamento:
     q = item.quantitativo
     total_sem_bdi = sum(preco_cat.values())
@@ -34,6 +35,7 @@ def _build_planejamento_entry(
         quantitativo=q,
         precificacao_via_fallback_composicao=precificacao_via_fallback_composicao,
         produtividade_catalogo=produtividade_catalogo,
+        beta_praticabilidade=beta_praticabilidade,
         preco_unitario=PrecoUnitarioCategoria(
             material=round(preco_cat["material"], 4),
             diesel=round(preco_cat["diesel"], 4),

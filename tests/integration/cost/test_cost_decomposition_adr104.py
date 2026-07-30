@@ -75,13 +75,14 @@ class TestCostDecompositionInvariant:
             )
 
     def test_agis_custo_direto_matches_reference(self, agis_benchmark):
-        """AGIS: custo_direto instancial (pós TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4) deve bater com baseline.
+        """AGIS: custo_direto instancial (pós issue #139) deve bater com baseline.
 
         Histórico de baseline:
           pré-TD-1/TD-3:     R$ 44,259,799.68  — encargos duplos + pool sem n_frentes
           pós-TD-1/TD-3:     R$ 35,255,483.25  — TD-1/TD-3 corrigidos, ainda com encargos duplos
           pós-NEP-043 Bug 2: R$ 16,529,359.75  — encargos CLT não reaplicados sobre taxa all-in
           pós-ADR-162 D4:    R$ 17,611,540.46  — permanência/custo de 1 frente corrigidos p/ rampa
+          pós-issue #139:    R$ 43,776,042.47  — custo_total pós-pool deixa de ser 1-frente
 
         NEP-043 Bug 2 (2026-06-12): insumos AGIS têm nota_encargos="taxa horária já inclui
         encargos". O engine não deve multiplicar por (1 + enc_horista) uma taxa que já embute
@@ -98,15 +99,45 @@ class TestCostDecompositionInvariant:
         (o ajuste antigo só podia subestimar, nunca sobrestimar: `team_weeks/max_n <= ativos`
         sempre, pela definição de `max_n`).
 
-        sum(eq.custo_total) aqui é a soma dos custos de 1-frente por atividade.
-        custo.direto_equipes = Σ(custo_total × n_frentes) é o custo real completo (~43.8M).
+        Issue #139 (2026-07-29): `_add_tipo_item_demand`/`_compute_custo_unit_fracs` (skill 05,
+        contrato de pool) dividiam `eq.custo_total` (sempre 1 frente, ADR-091/ADR-162 D4) por
+        `machine_weeks` (agregado — soma num_equipes real por semana, todas as frentes),
+        subestimando `custo_unit_semanal` sempre que algum item do pool tinha `num_equipes > 1`.
+        `eq.custo_total` pós-sobrescrita do pool (`_atualizar_custo_via_atribuicao`) herdava essa
+        subestimação. Corrigido via `_eq_custo_total_agregado` (usa
+        `EquipeDireta.custo_operacional_agregado`, ADR-172 — já na mesma base agregada de
+        `machine_weeks`). `eq.custo_total` para itens cobertos por pool deixa de ser
+        artificialmente 1-frente — passa a refletir o custo real agregado, daí o salto
+        para ~43,8M (valor que este teste antecipava, antes da correção, como "custo real
+        completo").
+
+        pós-extensão de cronograma: R$ 55,074,575.61 — skill 04 (`_build_activity_distribuicao`)
+        antes iterava um número FIXO de semanas (`sa.duration_weeks`, nominal do RCPSP, sem
+        antecipar clima/calendário real). Quando η_p real reduzia a produção semanal, a atividade
+        terminava sub-entregue (Σ q_ij < Q) e isso só gerava um AVISO não-bloqueante (VAL-CRON-01)
+        — mas o preço/custo sempre usava o quantitativo INTEGRAL da EAP, então itens sub-entregues
+        eram cobrados pelo Q completo com um custo calculado sobre uma janela menor que a
+        necessária para produzi-lo de fato. Corrigido: o loop agora estende além de
+        `sa.duration_weeks` (repetindo o padrão de alocação/clima da última semana conhecida) até
+        Σ q_ij fechar o quantitativo, com teto de segurança de 10 anos
+        (`TETO_EXTENSAO_CRONOGRAMA_SEMANAS`). No AGIS, eap-1_2/eap-1_3/eap-1_6 (sub-entrega
+        65%-89% na janela nominal) passam a completar 100% do quantitativo, aumentando o custo
+        agregado em ~25,8% — aumento genuíno (mais semanas de presença de MO/equipamento
+        realmente necessárias), não um artefato de arredondamento (verificado: o primeiro cálculo
+        pós-extensão explodiu para ~433M por um bug de plateau de arredondamento — `qtd_acumulada`
+        arredondada a 2 casas fazia o resíduo residual nunca convergir quando menor que a
+        granularidade do round(); corrigido comparando com tolerância de 99,9% em vez de exato).
+
+        sum(eq.custo_total) aqui mistura: itens SEM pool continuam na base 1-frente (não
+        afetados por #139); itens COM pool agora refletem o custo real agregado.
         """
         canonical = agis_benchmark.canonical
 
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
-        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 (encargos all-in, 1-frente)
-        expected = 17_611_540.46
+        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 + issue #139 +
+        # extensão de cronograma até fechar quantitativo (ver docstring)
+        expected = 55_074_575.61
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (

@@ -7,6 +7,29 @@ from typing import Any
 from concilium.domain.models.canonical import CanonicalModel
 
 
+def _resolve_custo_equipe_agregado(equipe: Any) -> float:
+    """Issue #139 (parte 2): custo agregado real (todas as frentes) desta equipe,
+    consistente com a cobertura de pool.
+
+    - Coberta por pool (`contrato_tipo_id` preenchido): `custo_total` já É o custo real
+      agregado ajustado pelo contrato (corrigido na issue #139 — pode diferir do custo
+      autônomo por economia de escala compartilhada ou ociosidade imputada; usar o
+      agregado autônomo aqui reintroduziria o mesmo tipo de inconsistência).
+    - Sem pool: `custo_total` continua "1 frente" (ADR-091/ADR-162 D4) — usa
+      `custo_operacional_agregado` (ADR-172, integral semana a semana, robusto a rampa),
+      com fallback nominal (`custo_total × num_equipes_base`) quando o campo novo não
+      está disponível (dados antigos/testes).
+    """
+    custo_total = float(getattr(equipe, "custo_total", 0.0) or 0.0)
+    if getattr(equipe, "contrato_tipo_id", ""):
+        return custo_total
+    agregado = float(getattr(equipe, "custo_operacional_agregado", 0.0) or 0.0)
+    if agregado > 0:
+        return agregado
+    n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
+    return custo_total * n_frentes
+
+
 def _cat_find_part_by_item(canonical_in: CanonicalModel) -> dict[str, Any]:
     """1. Itens com partição instancial categorial (pool, ADR-085 ativo)."""
     part_by_item: dict[str, Any] = {}
@@ -81,14 +104,14 @@ def _cat_accumulate_equipes_sem_particao(
 ) -> None:
     """2. Demais itens: prioriza custo_inst_* se disponível (ADR-106 F7), senão heurística proporcional.
 
-    NEP-043: custo_inst_* armazena custo de 1 frente — multiplicar por num_equipes_base
-    (mesma correção de _br_build_venda_custo, que usa custo_total × n_frentes).
+    Issue #139 (parte 2): o fallback heurístico usa `_resolve_custo_equipe_agregado`
+    (agregado real, todas as frentes, pool-aware) em vez de `eq.custo_total` puro — que é
+    "1 frente" para itens sem pool (ADR-091/ADR-162 D4).
     """
     for eq in canonical_in.equipes_diretas:
         if eq.item_id in contados:
             continue
-        # ADR-091: custo_total já armazena o custo total de todas as frentes.
-        ct = float(eq.custo_total or 0.0)
+        ct = _resolve_custo_equipe_agregado(eq)
         if getattr(eq, "custo_inst_mo", None) is not None:
             _cat_accumulate_equipe_inst(cat, eq)
             continue

@@ -10,6 +10,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
+from ._categorial import _resolve_custo_equipe_agregado  # ty: ignore[unresolved-import]
 from ._resultado import _build_diagnostico_lesao, _lesao_from_sched  # ty: ignore[unresolved-import]
 from ._venda_custo import _cpu_familia  # ty: ignore[unresolved-import]
 
@@ -482,13 +483,24 @@ def _build_pe_for_equipe(
     if custo_fixo_total <= 0:
         return None
     custo_venda_total = venda_por_item.get(equipe.item_id, 0.0)
-    delta = custo_venda_total - custo_fixo_total
     custo_operacional_real = float(equipe.custo_total or 0.0)
     frentes = custo_operacional_real / custo_fixo_total if custo_fixo_total > 0 else 1.0
 
-    # ADR-091: custo_total já armazena o custo total de todas as frentes (normalizado em
-    # skill-05). _n_frentes mantido apenas para gap_escala e diagnóstico.
+    # ADR-091: custo_total (custo_operacional_real) já armazena o custo total de todas as
+    # frentes (normalizado em skill-05) — daí `frentes` acima ficar ~1 (1-frente vs 1-frente).
+    # ADR-172: mas `custo_venda_total`/`machine_weeks_brutas` são agregados (todas as frentes),
+    # enquanto `custo_fixo_total` é referência de 1 frente — comparar os dois diretamente
+    # (delta/causa_dominante/horas_reais_min_max) subestimava o lado do custo. A correção usa
+    # `_resolve_custo_equipe_agregado` (issue #139 parte 2) — pool-aware: prefere `custo_total`
+    # quando coberta por pool (já ajustado pelo contrato, issue #139), senão
+    # `custo_operacional_agregado` (integral semana a semana, skill-05, robusto a rampa), com
+    # fallback nominal (`custo_operacional_real × n_frentes`). Por fim, `custo_fixo_total`
+    # (garantidamente > 0 pelo guard acima) — nunca uma divisão por zero em delta_pct.
     _n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
+    custo_operacional_agregado = _resolve_custo_equipe_agregado(equipe)
+    if custo_operacional_agregado <= 0:
+        custo_operacional_agregado = custo_fixo_total
+    delta = custo_venda_total - custo_operacional_agregado
 
     custo_total_autonomo, gap_pool_overhead = _pe_custo_autonomo_e_gap_pool(
         equipe, custo_operacional_real, _n_frentes, idle_por_item
@@ -510,12 +522,18 @@ def _build_pe_for_equipe(
     horas_dia = float(getattr(regime, "horas_dia", 0.0) or 0.0)
     dias_semana = float(getattr(regime, "dias_semana", 0.0) or 0.0)
     causa_dominante, t_cronograma, t_precificacao = _pe_causa_dominante(
-        plan, custo_venda_total, custo_fixo_total, custo_operacional_real, machine_weeks_brutas, horas_dia, dias_semana
+        plan,
+        custo_venda_total,
+        custo_operacional_agregado,
+        custo_operacional_real,
+        machine_weeks_brutas,
+        horas_dia,
+        dias_semana,
     )
     horas_reais_min, horas_reais_max = _pe_horas_reais_min_max(
         custo_venda_total,
         teto_rs,
-        custo_fixo_total,
+        custo_operacional_agregado,
         custo_operacional_real,
         machine_weeks_brutas,
         horas_dia,
@@ -555,10 +573,15 @@ def _build_pe_for_equipe(
 
     return PontoEquilibrio(
         item_id=equipe.item_id,
-        custo_fixo_equipe=round(custo_fixo_total, 2),
+        # ADR-172: custo operacional agregado real (integral semana a semana, todas as
+        # frentes, sem idle) — reconcilia com delta = custo_venda_cpu − custo_fixo_equipe.
+        # `frentes_equivalentes` (abaixo) usa a base de 1 frente (`custo_fixo_total`,
+        # variável local) — propósito diferente (produtividade real vs referência), não
+        # reportado neste campo.
+        custo_fixo_equipe=round(custo_operacional_agregado, 2),
         custo_venda_cpu=round(custo_venda_total, 2),
         delta=round(delta, 2),
-        delta_pct=round(delta / custo_fixo_total, 5),
+        delta_pct=round(delta / custo_operacional_agregado, 5),
         status_validacao="OK" if delta >= 0 else "ERRO",
         custo_operacional_real=round(custo_operacional_real, 2),
         frentes_equivalentes=round(frentes, 2),
