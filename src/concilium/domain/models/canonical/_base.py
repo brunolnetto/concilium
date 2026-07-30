@@ -1,7 +1,7 @@
 """Camada 4 — Modelo canônico do orçamento (parte extraída de canonical.py)."""
 
 from datetime import date, datetime
-from typing import Literal, cast
+from typing import Literal, cast, get_args
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -145,6 +145,14 @@ class Projeto(BaseModel):
     def with_status(self, status_destino: StatusProjeto) -> "Projeto":
         novo_status = transition_status_projeto(self.status, status_destino)
         return self.model_copy(update={"status": novo_status})
+
+
+def tipos_obra_validos() -> tuple[str, ...]:
+    """Valores válidos de `Projeto.tipo_obra` — fonte única de verdade, derivada do próprio
+    `Literal` do modelo (nunca duplicar como lista solta em ferramentas MCP/schemas JSON, que
+    podem divergir do modelo silenciosamente — ver issue de projeto órfão sem versão criado
+    com `tipo_obra` inválido: a persistência acontecia antes de qualquer validação)."""
+    return get_args(Projeto.model_fields["tipo_obra"].annotation)
 
 
 class Praticabilidade(BaseModel):

@@ -11,6 +11,7 @@ from ._base import (
     StatusProjeto,
     StatusValidacao,
     ValidacaoItem,
+    tipos_obra_validos,
     transition_status_projeto,
 )
 from ._canonical_model import CalendarioOperacionalSemanal, CanonicalModel, IndiretoComBdi
@@ -217,6 +218,7 @@ __all__ = [
     "_extract_weeks_from_dist",
     "_migrate_cron_item_to_dict",
     "_migrate_cron_list_to_cronograma",
+    "tipos_obra_validos",
     "transition_status_projeto",
 ]
 

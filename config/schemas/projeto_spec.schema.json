@@ -16,7 +16,7 @@
         "contexto_id": { "type": "string", "minLength": 1 },
         "tipo_obra": {
           "type": "string",
-          "enum": ["terraplenagem", "pavimentacao", "saneamento", "drenagem", "obras_arte", "diversos"]
+          "enum": ["terraplenagem", "pavimentacao", "saneamento"]
         },
         "localizacao": {
           "type": "string",

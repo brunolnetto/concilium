@@ -519,6 +519,54 @@ class TestCriarProjetoFormulario:
         mock_rt.assert_not_called()
         mock_pr.assert_not_called()
 
+    def test_tipo_obra_invalido_modo_formulario_nao_persiste_nada(self, tool_criar):
+        """Achado real: tipo_obra="terraplenagem_drenagem" só era rejeitado dentro da
+        skill 01 (ao montar Projeto), depois de ProjectStore.init/create_escopo já terem
+        persistido em disco — projeto órfão sem versão, que nem re-rodar a skill resolvia
+        (o escopo salvo já carregava o valor inválido). Corrigido: valida ANTES de
+        qualquer I/O — _runtime/_projetos_root nunca são chamados."""
+        servicos = [{"descricao": "Escavacao", "quantidade": 100.0, "unidade": "m3", "cpu_id": "CPU-X"}]
+        kwargs = {**_COMMON_KWARGS, "tipo_obra": "terraplenagem_drenagem"}
+
+        with (
+            patch("concilium.presentation.mcp.tools.formulario._runtime") as mock_rt,
+            patch("concilium.presentation.mcp.tools.formulario._projetos_root") as mock_pr,
+        ):
+            result = tool_criar(servicos=servicos, **kwargs)
+
+        assert "erro" in result
+        assert "terraplenagem_drenagem" in result["erro"]
+        assert "terraplenagem" in result["erro"]  # lista de valores aceitos na mensagem
+        mock_rt.assert_not_called()
+        mock_pr.assert_not_called()
+
+    def test_tipo_obra_invalido_modo_spec_e_defesa_em_profundidade(self, tool_criar):
+        """Mesmo achado, caminho spec=... — aqui a checagem é defesa-em-profundidade:
+        o schema JSON (projeto_spec.schema.json) já tem o enum sincronizado com o modelo
+        (ver TestSchemaTipoObraSincronizadoComModelo), então _validate_spec já pegaria
+        "drenagem" sozinho. Simula o schema desatualizado (mock retornando []) para provar
+        que a checagem contra tipos_obra_validos() protege mesmo se o schema voltar a
+        divergir — nunca depende só do schema JSON como única linha de defesa."""
+        spec = {
+            "meta": {
+                "nome": "Projeto Teste",
+                "contexto_id": "mendeslobo",
+                "tipo_obra": "drenagem",
+                "localizacao": "Fortaleza, CE",
+                "coordenadas": {"lat": -3.71, "lng": -38.54},
+                "data_inicio": "2026-01-01",
+                "data_termino": "2026-06-30",
+            },
+            "escopos": [],
+        }
+
+        with patch("concilium.presentation.mcp.tools.spec._validate_spec", return_value=[]):
+            result = tool_criar(spec=spec)
+
+        assert "erro" in result
+        assert "drenagem" in result["erro"]
+        assert "terraplenagem" in result["erro"]
+
     def test_all_mapped_success_returns_criado(self, tmp_path):
         """When all mapped and coordinator succeeds, returns status=criado."""
         server = _make_server()

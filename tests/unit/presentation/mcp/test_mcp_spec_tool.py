@@ -93,6 +93,31 @@ class TestSchemaPath:
         assert "config" in p.parts
         assert "schemas" in p.parts
 
+    def test_arquivo_existe_de_fato(self):
+        """Regressão: `parents[6]` apontava um nível acima da raiz do repo — o path tinha
+        os componentes certos (pegaria os dois asserts acima) mas o arquivo não existia,
+        e _validate_spec crashava com FileNotFoundError não capturado sempre que jsonschema
+        estava instalado. Checar só as partes do path (como acima) não bastava."""
+        assert _schema_path().is_file()
+
+
+class TestSchemaTipoObraSincronizadoComModelo:
+    """O enum `meta.tipo_obra` do schema JSON tinha divergido do Literal real de
+    `Projeto.tipo_obra` (aceitava "drenagem"/"obras_arte"/"diversos", que o modelo rejeita)
+    — um spec passava _validate_spec mas quebrava mais adiante ao montar o Projeto, deixando
+    um projeto órfão sem versão (mesmo tipo de bug do tipo_obra solto sem validação em
+    criar_projeto/iniciar_orcamento). Este teste lê o schema real (não mockado) e falha se
+    ele voltar a divergir do Literal — a fonte única de verdade é o modelo, não o schema."""
+
+    def test_enum_tipo_obra_bate_com_tipos_obra_validos(self):
+        import json
+
+        from concilium.domain.models.canonical import tipos_obra_validos
+
+        schema = json.loads(_schema_path().read_text(encoding="utf-8"))
+        enum_schema = set(schema["properties"]["meta"]["properties"]["tipo_obra"]["enum"])
+        assert enum_schema == set(tipos_obra_validos())
+
 
 # ===========================================================================
 # _validate_spec

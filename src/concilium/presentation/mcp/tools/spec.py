@@ -12,7 +12,12 @@ from concilium.domain.constants import ISS_PADRAO
 
 
 def _schema_path() -> Path:
-    root = Path(__file__).resolve().parents[6]
+    # __file__ = src/concilium/presentation/mcp/tools/spec.py — 5 parents até a raiz do repo
+    # (tools/mcp/presentation/concilium/src/<raiz>). parents[6] apontava um nível acima da
+    # raiz do repo — _validate_spec nunca funcionou de fato com jsonschema instalado
+    # (FileNotFoundError não capturado, só ImportError; com jsonschema ausente, o fallback
+    # silencioso mascarava o path errado retornando [] sempre).
+    root = Path(__file__).resolve().parents[5]
     return root / "config" / "schemas" / "projeto_spec.schema.json"
 
 

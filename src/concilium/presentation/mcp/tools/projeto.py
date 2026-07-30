@@ -8,6 +8,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.domain.models.canonical import tipos_obra_validos
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.infrastructure.storage.project import ProjectStore
 from concilium.presentation.mcp._context import (
@@ -90,6 +91,16 @@ def register(server: FastMCP) -> None:
         Returns:
             project_id, escopo_id, plano_id, status_skill_01, proxima_skill_sugerida
         """
+        if tipo_obra not in tipos_obra_validos():
+            return _wrap_response(
+                {
+                    "erro": (
+                        f"tipo_obra inválido: '{tipo_obra}'. "
+                        f"Valores aceitos: {', '.join(tipos_obra_validos())}."
+                    )
+                }
+            )
+
         rt = _runtime()
         proj_root = _projetos_root()
         proj_root.mkdir(parents=True, exist_ok=True)

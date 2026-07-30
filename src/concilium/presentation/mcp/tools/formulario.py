@@ -19,6 +19,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.domain.models.canonical import tipos_obra_validos
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
@@ -250,6 +251,13 @@ def register(server: FastMCP) -> None:
             if erros_spec:
                 return {"erro": "Spec inválido", "detalhes": erros_spec[:10]}
             meta = spec["meta"]
+            if meta.get("tipo_obra") not in tipos_obra_validos():
+                return {
+                    "erro": (
+                        f"tipo_obra inválido: '{meta.get('tipo_obra')}'. "
+                        f"Valores aceitos: {', '.join(tipos_obra_validos())}."
+                    )
+                }
             rt = _runtime()
             try:
                 rt.load_contexto(meta["contexto_id"])
@@ -328,6 +336,15 @@ def register(server: FastMCP) -> None:
         if not nome or not contexto_id or not tipo_obra or not localizacao or not data_inicio:
             return _wrap_response(
                 {"erro": "Parâmetros obrigatórios: nome, contexto_id, tipo_obra, localizacao, data_inicio"}
+            )
+        if tipo_obra not in tipos_obra_validos():
+            return _wrap_response(
+                {
+                    "erro": (
+                        f"tipo_obra inválido: '{tipo_obra}'. "
+                        f"Valores aceitos: {', '.join(tipos_obra_validos())}."
+                    )
+                }
             )
         if servicos is None:
             servicos = []

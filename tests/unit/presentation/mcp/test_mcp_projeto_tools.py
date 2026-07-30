@@ -294,6 +294,27 @@ class TestIniciarOrcamento:
         assert "coord error!" in result["erro"]
         assert result["project_id"] == "proj-exc-001"
 
+    def test_tipo_obra_invalido_retorna_erro_sem_persistir_nada(self, tools, tmp_path):
+        """Achado real: tipo_obra="terraplenagem_drenagem" (valor inválido) só falhava
+        dentro da skill 01, ao montar Projeto — mas ProjectStore.init/create_escopo já
+        tinham persistido em disco, deixando um projeto órfão sem versão que nem re-rodar
+        a skill resolvia (o escopo salvo já carregava o tipo_obra inválido). Corrigido:
+        valida ANTES de qualquer persistência — ProjectStore.init nunca é chamado."""
+        proj_root = tmp_path / "projetos"
+        proj_root.mkdir()
+        kwargs = {**self._base_kwargs, "tipo_obra": "terraplenagem_drenagem"}
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
+            patch("concilium.presentation.mcp.tools.projeto.ProjectStore") as MockPS,
+        ):
+            result = tools["iniciar_orcamento"](**kwargs)
+
+        assert "erro" in result
+        assert "terraplenagem_drenagem" in result["erro"]
+        assert "terraplenagem" in result["erro"]  # lista de valores aceitos na mensagem
+        MockPS.init.assert_not_called()
+
 
 # ===========================================================================
 # consultar_status
