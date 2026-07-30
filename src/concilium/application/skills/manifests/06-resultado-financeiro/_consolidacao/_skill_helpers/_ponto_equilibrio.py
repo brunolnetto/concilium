@@ -212,7 +212,7 @@ def _pe_causa_dominante(
     """ADR-162 D1: decompõe delta (= custo_venda_total − custo_fixo_total) em duas causas.
 
         H_i           = horas_dia · dias_semana · machine_weeks_brutas      (real, pós-cronograma)
-        H_cat         = Q_i / ρ_i                                          (nominal, catálogo)
+        H_cat         = (Q_i / ρ_i) / β_i                                  (catálogo, ADR-172-aware)
         γ_i^v         = custo_venda_total / H_cat                          (taxa de venda)
         γ_i^o         = custo_fixo_total / H_i                             (taxa operacional real)
 
@@ -227,6 +227,21 @@ def _pe_causa_dominante(
 
     T_cronograma + T_precificacao == delta por construção (verificado algebricamente:
     os termos cruzados γ_i^v·H_i e γ_i^o·H_cat se cancelam na soma).
+
+    ADR-172 (β_i): H_cat divide por `plan.beta_praticabilidade` (1.0 quando β_i não se
+    aplica — Fonte 2, ou item sem cronograma). Sem essa correção, H_cat = Q_i/ρ_i é a
+    referência SEM perdas de η_p (clima×calendário×jornada), mas `custo_venda_total` já
+    embute a correção de preço por β_i (ADR-172 divide p^u_i por β_i) — comparar um preço
+    já corrigido contra uma referência de horas NÃO corrigida conta o mesmo efeito de
+    clima duas vezes, com sinais opostos: uma vez em T_precificacao (positivo, β_i
+    elevando γ^v) e de novo em T_cronograma (negativo, H_i > H_cat pela mesma perda de
+    η_p) — os dois quase se cancelam em delta, mas o T_cronograma isolado fica inflado por
+    um fator de até ~10x, atribuindo à causa "cronograma" um gap que na verdade já foi
+    tratado pela precificação (issue #140: T_cronograma caía de até 12x no AGIS ao
+    reconciliar a referência). Dividindo H_cat por β_i, o efeito de η_p já
+    coberto por β_i cancela algebricamente, e o que resta em T_cronograma é o resíduo
+    genuíno (η_s/η_w — compressão de prazo, alocação — nunca coberto por β_i por design,
+    ver ADR-124).
 
     causa_dominante por participação relativa (share = |T_cronograma| / (|T_cronograma| +
     |T_precificacao|)), não por "quem é maior" simples — uma divisão 51/49 não sustenta
@@ -244,15 +259,19 @@ def _pe_causa_dominante(
     """
     q = float(getattr(plan, "quantitativo", 0.0) or 0.0) if plan else 0.0
     rho = float(getattr(plan, "produtividade_catalogo", 0.0) or 0.0) if plan else 0.0
+    # `or 1.0` mascararia um beta_praticabilidade=0.0 explícito (falsy) como "ausente" —
+    # usa None-check para que o guard `beta <= 0` abaixo capture esse caso corretamente.
+    _beta_raw = getattr(plan, "beta_praticabilidade", 1.0) if plan else 1.0
+    beta = float(_beta_raw) if _beta_raw is not None else 1.0
 
     resolved = _pe_resolve_h_i_gamma_o(
         custo_fixo_total, custo_operacional_real, machine_weeks_brutas, horas_dia, dias_semana
     )
-    if q <= 0 or rho <= 0 or resolved is None:
+    if q <= 0 or rho <= 0 or beta <= 0 or resolved is None:
         return "INDETERMINADO", 0.0, 0.0
     h_i, gamma_o = resolved
 
-    h_cat = q / rho
+    h_cat = (q / rho) / beta
     gamma_v = custo_venda_total / h_cat
 
     t_cronograma = (h_cat - h_i) * (gamma_v + gamma_o) / 2.0

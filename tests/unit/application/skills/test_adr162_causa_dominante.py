@@ -19,6 +19,15 @@ Fase 2 (D2 + D3) — teto de competitividade Γ e horas_reais_min/max. Cobre
   - horas_reais_min/max = None quando Γ não configurado ou γ_i^o não resolvível (mesma
     condição de resolvibilidade de D1, via `_pe_resolve_h_i_gamma_o`)
   - VAL-PONTO-EQUILIBRIO-TETO (AVISO, nunca ERRO) só quando Γ configurado E delta >= Γ
+
+Fase 3 (issue #140) — H_cat reconciliado com β_i (ADR-172). `custo_venda_total` já embute
+a correção de preço por β_i, mas H_cat = Q_i/ρ_i (sem essa correção) fazia o mesmo efeito
+de η_p ser contado duas vezes com sinais opostos (uma vez em T_precificacao via β_i, outra
+em T_cronograma via H_i > H_cat pela mesma perda de clima) — inflava T_cronograma em até
+~10x no AGIS, atribuindo à causa "cronograma" um gap que a precificação já cobria. Fix:
+H_cat = (Q_i/ρ_i) / plan.beta_praticabilidade (1.0 = sem correção, comportamento idêntico
+ao anterior — todos os testes das Fases 1/2 usam `_plan()` sem `beta_praticabilidade`,
+portanto `getattr(..., 1.0)` cai no default e permanecem válidos sem alteração).
 """
 
 from __future__ import annotations
@@ -59,14 +68,24 @@ _build_ponto_equilibrio = _mod._build_ponto_equilibrio
 REGIME = SimpleNamespace(horas_dia=8.0, dias_semana=6.0)
 
 
-def _plan(qty: float, produtividade_catalogo: float, venda_sem_bdi: float | None = None) -> SimpleNamespace:
+def _plan(
+    qty: float,
+    produtividade_catalogo: float,
+    venda_sem_bdi: float | None = None,
+    beta_praticabilidade: float = 1.0,
+) -> SimpleNamespace:
     """`venda_sem_bdi` só é necessário quando o plan passa por `_pe_plan_calibracao`
     (integração via `_build_pe_for_equipe`) — os testes unitários de `_pe_causa_dominante`
-    chamam a função direto e não tocam `plan.subtotal`."""
+    chamam a função direto e não tocam `plan.subtotal`.
+
+    `beta_praticabilidade=1.0` default (ADR-172, mesmo default do campo real em
+    PlanejamentoItem) — testes que não passam esse argumento continuam com H_cat
+    sem correção, comportamento idêntico ao pré-issue #140."""
     return SimpleNamespace(
         quantitativo=qty,
         produtividade_catalogo=produtividade_catalogo,
         subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=venda_sem_bdi or 0.0)),
+        beta_praticabilidade=beta_praticabilidade,
     )
 
 
@@ -501,3 +520,94 @@ class TestValidatePeTeto:
         pe = pe.model_copy(update={"causa_dominante": "CRONOGRAMA"})
         _validate_pe_teto(pe, 50_000.0, validacoes)
         assert "CRONOGRAMA" in validacoes[0].mensagem
+
+
+class TestPeCausaDominanteReconciliacaoBetaAdr172:
+    """Fase 3 (issue #140): H_cat = (Q_i/ρ_i)/β_i reconcilia a referência de horas do D1
+    com a correção de preço que β_i (ADR-172) já aplicou — sem isso, o mesmo efeito de η_p
+    é contado duas vezes com sinais opostos (T_precificacao positivo via β_i, T_cronograma
+    negativo via H_i > H_cat pela mesma perda de clima), quase se cancelando em delta mas
+    inflando cada termo isolado."""
+
+    def test_beta_1_e_identico_ao_comportamento_anterior(self):
+        """default (sem correção) — H_cat = Q/ρ, exatamente como antes da issue #140."""
+        plan = _plan(qty=1000.0, produtividade_catalogo=25.0, beta_praticabilidade=1.0)
+        causa, t_cron, t_prec = _pe_causa_dominante(
+            plan, custo_venda_total=10_000.0, custo_fixo_total=10_000.0,
+            custo_operacional_real=10_000.0, machine_weeks_brutas=50.0 / (8.0 * 6.0),
+            horas_dia=8.0, dias_semana=6.0,
+        )
+        # H_cat=40h, H_i=50h, gamma_v=250, gamma_o=200 -> termos nao-nulos mesmo com delta=0
+        assert t_cron == pytest.approx(-2_250.0, abs=0.5)
+        assert t_prec == pytest.approx(2_250.0, abs=0.5)
+
+    def test_beta_corrigido_zera_termos_espurios_quando_h_i_bate_com_previsao(self):
+        """Mesmo cenário do teste anterior, mas com β_i=0.8: H_cat_corrigido = 40/0.8 = 50h
+        == H_i real exatamente. Quando o real bate com o que β_i já previa, T_cronograma E
+        T_precificacao colapsam para 0 — nao ficam artificialmente inflados e cancelando-se
+        (como no caso beta=1.0 acima), porque a referência agora reflete a mesma perda de
+        clima que o preço já foi corrigido para cobrir."""
+        plan = _plan(qty=1000.0, produtividade_catalogo=25.0, beta_praticabilidade=0.8)
+        causa, t_cron, t_prec = _pe_causa_dominante(
+            plan, custo_venda_total=10_000.0, custo_fixo_total=10_000.0,
+            custo_operacional_real=10_000.0, machine_weeks_brutas=50.0 / (8.0 * 6.0),
+            horas_dia=8.0, dias_semana=6.0,
+        )
+        assert t_cron == pytest.approx(0.0, abs=0.5)
+        assert t_prec == pytest.approx(0.0, abs=0.5)
+        assert causa == "MISTO"  # ambos os termos nulos -> MISTO (nao INDETERMINADO)
+
+    def test_beta_menor_que_1_reduz_magnitude_de_t_cronograma(self):
+        """Caso geral (delta != 0): dividir H_cat por β_i<1 aumenta H_cat, aproximando-o de
+        H_i real (quando H_i > H_cat) — |T_cronograma| encolhe em vez de crescer."""
+        kwargs = dict(
+            custo_venda_total=13_835_842.20,
+            custo_fixo_total=14_353_509.29,
+            custo_operacional_real=14_353_509.29,
+            machine_weeks_brutas=112.0,
+            horas_dia=8.0,
+            dias_semana=6.0,
+        )
+        plan_sem_beta = _plan(qty=676_519.0, produtividade_catalogo=142.16, beta_praticabilidade=1.0)
+        plan_com_beta = _plan(qty=676_519.0, produtividade_catalogo=142.16, beta_praticabilidade=0.8945)
+
+        _causa_sem, t_cron_sem, _t_prec_sem = _pe_causa_dominante(plan_sem_beta, **kwargs)
+        _causa_com, t_cron_com, _t_prec_com = _pe_causa_dominante(plan_com_beta, **kwargs)
+
+        assert abs(t_cron_com) < abs(t_cron_sem)
+
+    @pytest.mark.parametrize("beta", [1.0, 0.9, 0.75, 0.5])
+    def test_identidade_vale_para_qualquer_beta(self, beta):
+        """T_cronograma + T_precificacao == delta independe de β_i — a correção só desloca
+        a referência H_cat, nunca quebra a identidade algébrica (mesmos termos cruzados se
+        cancelam na soma, agora com h_cat/beta em vez de h_cat)."""
+        plan = _plan(qty=1000.0, produtividade_catalogo=25.0, beta_praticabilidade=beta)
+        venda, fixo = 500_000.0, 600_000.0
+        _causa, t_cron, t_prec = _pe_causa_dominante(
+            plan, venda, fixo, custo_operacional_real=fixo, machine_weeks_brutas=50.0,
+            horas_dia=8.0, dias_semana=6.0,
+        )
+        assert round(t_cron + t_prec, 2) == pytest.approx(round(venda - fixo, 2), abs=0.02)
+
+    def test_beta_zero_ou_negativo_retorna_indeterminado(self):
+        """β_i<=0 é dado inválido (nunca deveria ocorrer — _resolve_beta_praticabilidade
+        sempre retorna >0 — mas o guard evita ZeroDivisionError se algo o corromper)."""
+        plan = _plan(qty=1000.0, produtividade_catalogo=25.0, beta_praticabilidade=0.0)
+        causa, t_cron, t_prec = _pe_causa_dominante(
+            plan, custo_venda_total=500_000.0, custo_fixo_total=600_000.0,
+            custo_operacional_real=700_000.0, machine_weeks_brutas=50.0,
+            horas_dia=8.0, dias_semana=6.0,
+        )
+        assert causa == "INDETERMINADO"
+
+    def test_beta_ausente_no_plan_usa_default_1(self):
+        """plan sem o atributo beta_praticabilidade (fixtures antigas, dados legados) —
+        getattr cai no default 1.0, comportamento idêntico ao pré-issue #140."""
+        plan_sem_beta_attr = SimpleNamespace(quantitativo=1000.0, produtividade_catalogo=25.0)
+        causa, t_cron, t_prec = _pe_causa_dominante(
+            plan_sem_beta_attr, custo_venda_total=10_000.0, custo_fixo_total=10_000.0,
+            custo_operacional_real=10_000.0, machine_weeks_brutas=50.0 / (8.0 * 6.0),
+            horas_dia=8.0, dias_semana=6.0,
+        )
+        assert t_cron == pytest.approx(-2_250.0, abs=0.5)
+        assert t_prec == pytest.approx(2_250.0, abs=0.5)
