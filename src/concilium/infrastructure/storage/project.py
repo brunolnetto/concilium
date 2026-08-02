@@ -560,6 +560,7 @@ class ProjectStore:
         bdi_perfil_id: str | None = None,
         logistica_consumiveis: dict[str, dict[str, float]] | None = None,
         roster_mo: list[dict] | None = None,
+        roster_eq: list[dict] | None = None,
     ) -> EscopoStore:
         """Cria novo escopo no projeto. Falha se escopo_id já existir."""
         escopo_dir = self.root / "escopos" / escopo_id
@@ -589,6 +590,8 @@ class ProjectStore:
             "logistica_consumiveis": logistica_consumiveis or {},
             # ADR-173 D4: sempre uma lista (mesmo vazia) — mesma convenção de logistica_consumiveis.
             "roster_mo": roster_mo or [],
+            # ADR-174 D2: espelha roster_mo — fecha assimetria MO/EQ.
+            "roster_eq": roster_eq or [],
             "revisao": 1,
             "criado_em": datetime.now(UTC).isoformat(),
         }

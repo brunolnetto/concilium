@@ -384,24 +384,33 @@ class EscopoStore:
         except Exception:
             return None
 
-    def upsert_roster_mo_membro(self, membro: dict[str, Any]) -> None:
-        """ADR-173 D5: adiciona ou edita um membro de `roster_mo` por `individuo_id`.
-
-        Merge raso — campos ausentes em `membro` preservam o valor já persistido
-        (ex.: "desligar" só precisa enviar `individuo_id` + `data_desligamento`).
-        Nunca remove um registro já presente na lista.
-        """
-        individuo_id = membro.get("individuo_id")
-        if not individuo_id:
-            raise ValueError("membro.individuo_id é obrigatório")
-        roster = list(self.meta.get("roster_mo") or [])
+    def _upsert_roster_item(self, campo: str, chave: str, item: dict[str, Any]) -> None:
+        """Merge raso por `chave` (ex.: `individuo_id`/`ativo_id`) dentro da lista
+        `campo` (ex.: `roster_mo`/`roster_eq`). Campos ausentes em `item` preservam
+        o valor já persistido (ex.: "desligar" só precisa enviar `chave` +
+        `data_desligamento`/`data_contrato_fim`). Nunca remove um registro já
+        presente na lista."""
+        valor_chave = item.get(chave)
+        if not valor_chave:
+            raise ValueError(f"item.{chave} é obrigatório")
+        roster = list(self.meta.get(campo) or [])
         for i, m in enumerate(roster):
-            if m.get("individuo_id") == individuo_id:
-                roster[i] = {**m, **membro}
+            if m.get(chave) == valor_chave:
+                roster[i] = {**m, **item}
                 break
         else:
-            roster.append(membro)
-        self.update_meta(roster_mo=roster)
+            roster.append(item)
+        self.update_meta(**{campo: roster})
+
+    def upsert_roster_mo_membro(self, membro: dict[str, Any]) -> None:
+        """ADR-173 D5: adiciona ou edita um membro de `roster_mo` por `individuo_id`.
+        Ver `_upsert_roster_item` para a semântica de merge/nunca-remove."""
+        self._upsert_roster_item("roster_mo", "individuo_id", membro)
+
+    def upsert_roster_eq_ativo(self, ativo: dict[str, Any]) -> None:
+        """ADR-174 D2: adiciona ou edita um ativo de `roster_eq` por `ativo_id`.
+        Ver `_upsert_roster_item` para a semântica de merge/nunca-remove."""
+        self._upsert_roster_item("roster_eq", "ativo_id", ativo)
 
     # ── Planos ─────────────────────────────────────────────────────────
 

@@ -447,6 +447,78 @@ class TestEditarRosterMo:
         store.create_escopo.assert_called_once()
 
 
+class TestEditarRosterEq:
+    def test_adiciona_ativo(self, tools):
+        es = MagicMock()
+        store = _make_store()
+        store.escopo.return_value = es
+
+        with (
+            patch("concilium.presentation.mcp.tools.escopo._project", return_value=store),
+            patch(
+                "concilium.presentation.mcp.tools.escopo._wrap_response",
+                side_effect=lambda x: x,
+            ),
+        ):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="escopo",
+                escopo_id="esc-001",
+                acao="editar_roster_eq",
+                roster_eq_ativo={
+                    "ativo_id": "eq-001",
+                    "equip_id": "EQ-ESCAVADEIRA",
+                    "custo_locacao_mensal_real": 12000.0,
+                    "data_contrato_inicio": "2026-01-05",
+                },
+            )
+
+        assert result["status"] == "OK"
+        es.upsert_roster_eq_ativo.assert_called_once_with(
+            {
+                "ativo_id": "eq-001",
+                "equip_id": "EQ-ESCAVADEIRA",
+                "custo_locacao_mensal_real": 12000.0,
+                "data_contrato_inicio": "2026-01-05",
+            }
+        )
+        store.create_escopo.assert_not_called()
+
+    def test_sem_roster_eq_ativo_retorna_erro(self, tools):
+        es = MagicMock()
+        store = _make_store()
+        store.escopo.return_value = es
+
+        with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="escopo",
+                escopo_id="esc-001",
+                acao="editar_roster_eq",
+            )
+
+        assert "erro" in result
+        es.upsert_roster_eq_ativo.assert_not_called()
+
+    def test_upsert_lanca_excecao_retorna_erro(self, tools):
+        es = MagicMock()
+        es.upsert_roster_eq_ativo.side_effect = ValueError("item.ativo_id é obrigatório")
+        store = _make_store()
+        store.escopo.return_value = es
+
+        with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="escopo",
+                escopo_id="esc-001",
+                acao="editar_roster_eq",
+                roster_eq_ativo={"equip_id": "EQ-ESCAVADEIRA"},
+            )
+
+        assert "erro" in result
+        assert "ativo_id" in result["erro"]
+
+
 # ===========================================================================
 # gerir_escopo (entidade="plano")
 # ===========================================================================

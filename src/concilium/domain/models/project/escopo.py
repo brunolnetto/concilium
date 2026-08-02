@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from concilium.domain.models.canonical import MembroEquipeReal
+from concilium.domain.models.canonical import AtivoEquipamentoReal, MembroEquipeReal
 
 if TYPE_CHECKING:
     pass
@@ -92,6 +92,9 @@ class Escopo(BaseModel):
     # transiente). Lista vazia (default) preserva o comportamento atual — nenhuma
     # substituição de custo calibrado/agregado por custo real de indivíduo.
     roster_mo: list[MembroEquipeReal] = Field(default_factory=list)
+    # ADR-174 D2: roster real de EQ, mesmo padrão de roster_mo — fecha a assimetria
+    # MO/EQ (ADR-155/157 nunca tinha ganho persistência equivalente).
+    roster_eq: list[AtivoEquipamentoReal] = Field(default_factory=list)
 
 
 class PlanoTrabalho(BaseModel):
