@@ -131,6 +131,58 @@ class TestCatalogBundleValid:
             result = mixin._catalog_bundle_valid(cat_dir, bundle_path)
         assert result is False
 
+    def test_no_bundle_is_invalid(self, tmp_path):
+        mixin = _make_catalog_mixin(tmp_path)
+        cat_dir = _make_cat_dir(tmp_path, "cat1")
+        assert mixin._catalog_bundle_valid(cat_dir, cat_dir / ".catalog_bundle.json") is False
+
+    def test_bundle_newer_than_insumos_is_valid(self, tmp_path):
+        """Caminho normal: bundle escrito por último, estritamente depois dos insumos."""
+        import os
+
+        mixin = _make_catalog_mixin(tmp_path)
+        cat_dir = _make_cat_dir(tmp_path, "cat1")
+        bundle_path = cat_dir / ".catalog_bundle.json"
+        bundle_path.write_text("{}", encoding="utf-8")
+        insumo_path = cat_dir / "insumos" / "mao_obra.json"
+        # bundle 10s mais novo que o insumo — caso comum (bundle escrito bem depois).
+        base = insumo_path.stat().st_mtime
+        os.utime(bundle_path, (base + 10, base + 10))
+
+        assert mixin._catalog_bundle_valid(cat_dir, bundle_path) is True
+
+    def test_insumo_rewritten_after_bundle_is_invalid(self, tmp_path):
+        """Insumo reescrito estritamente depois do bundle → invalida (caso já cobria antes do fix)."""
+        import os
+
+        mixin = _make_catalog_mixin(tmp_path)
+        cat_dir = _make_cat_dir(tmp_path, "cat1")
+        bundle_path = cat_dir / ".catalog_bundle.json"
+        bundle_path.write_text("{}", encoding="utf-8")
+        insumo_path = cat_dir / "insumos" / "mao_obra.json"
+        base = bundle_path.stat().st_mtime
+        os.utime(insumo_path, (base + 10, base + 10))
+
+        assert mixin._catalog_bundle_valid(cat_dir, bundle_path) is False
+
+    def test_insumo_mtime_tied_with_bundle_is_invalid(self, tmp_path):
+        """Regressão: insumo reescrito na MESMA janela de mtime do bundle (empate) —
+        antes do fix (`>`), isso era tratado como bundle válido, servindo dado
+        obsoleto (bug real: aprovar_merge_catalogo/ADR-145 detectava 'Sem
+        mudanças' após um segundo merge de preço, porque o catálogo pós-merge
+        vinha do bundle obsoleto em vez do disco recém-escrito)."""
+        import os
+
+        mixin = _make_catalog_mixin(tmp_path)
+        cat_dir = _make_cat_dir(tmp_path, "cat1")
+        bundle_path = cat_dir / ".catalog_bundle.json"
+        bundle_path.write_text("{}", encoding="utf-8")
+        insumo_path = cat_dir / "insumos" / "mao_obra.json"
+        tied = bundle_path.stat().st_mtime
+        os.utime(insumo_path, (tied, tied))
+
+        assert mixin._catalog_bundle_valid(cat_dir, bundle_path) is False
+
 
 class TestLoadProducoesFromCatDirs:
     def test_dict_branch(self, tmp_path):

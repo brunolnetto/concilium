@@ -117,7 +117,14 @@ class CatalogMixin:
             for json_file in cat_dir.rglob("*.json"):
                 if json_file.name == ".catalog_bundle.json":
                     continue
-                if json_file.stat().st_mtime > bundle_mtime:
+                # >= (não só >): um insumo reescrito na mesma janela de resolução
+                # de mtime do filesystem pode empatar com bundle_mtime — tratar
+                # empate como "possivelmente mais novo" evita servir bundle
+                # obsoleto (visto em runs rápidos: escrita de preço + rebuild do
+                # bundle no mesmo tick). Bundle é sempre escrito por último no
+                # caminho normal, então isto não invalida bundles genuinamente
+                # atuais (insumos não reescritos ficam com mtime bem anterior).
+                if json_file.stat().st_mtime >= bundle_mtime:
                     return False
             return True
         except Exception:
