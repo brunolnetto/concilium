@@ -384,6 +384,25 @@ class EscopoStore:
         except Exception:
             return None
 
+    def upsert_roster_mo_membro(self, membro: dict[str, Any]) -> None:
+        """ADR-173 D5: adiciona ou edita um membro de `roster_mo` por `individuo_id`.
+
+        Merge raso — campos ausentes em `membro` preservam o valor já persistido
+        (ex.: "desligar" só precisa enviar `individuo_id` + `data_desligamento`).
+        Nunca remove um registro já presente na lista.
+        """
+        individuo_id = membro.get("individuo_id")
+        if not individuo_id:
+            raise ValueError("membro.individuo_id é obrigatório")
+        roster = list(self.meta.get("roster_mo") or [])
+        for i, m in enumerate(roster):
+            if m.get("individuo_id") == individuo_id:
+                roster[i] = {**m, **membro}
+                break
+        else:
+            roster.append(membro)
+        self.update_meta(roster_mo=roster)
+
     # ── Planos ─────────────────────────────────────────────────────────
 
     @property

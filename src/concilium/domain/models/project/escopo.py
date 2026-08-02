@@ -12,6 +12,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from concilium.domain.models.canonical import MembroEquipeReal
+
 if TYPE_CHECKING:
     pass
 
@@ -86,6 +88,10 @@ class Escopo(BaseModel):
     # None (default) preserva o comportamento anterior — nenhum ReplenishableResource é
     # construído a partir de dado de projeto quando ausente (zero regressão, ADR-128 D1).
     logistica_consumiveis: dict[str, LogisticaConsumivelConfig] | None = None
+    # ADR-173 D2: roster real de MO, por Escopo (supera ADR-160 D4 — deixa de ser
+    # transiente). Lista vazia (default) preserva o comportamento atual — nenhuma
+    # substituição de custo calibrado/agregado por custo real de indivíduo.
+    roster_mo: list[MembroEquipeReal] = Field(default_factory=list)
 
 
 class PlanoTrabalho(BaseModel):

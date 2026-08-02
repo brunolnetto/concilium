@@ -86,18 +86,28 @@ def register(server: FastMCP) -> None:
         plano_id: str | None = None,
         hipotese: str | None = None,
         logistica_consumiveis: dict[str, dict[str, float]] | None = None,
+        roster_mo_membro: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Cria ou gerencia escopos e planos do projeto.
 
         entidade: "escopo" | "plano"
 
         Para entidade="escopo":
-          - acao="criar": cria/atualiza um escopo. Requer nome, tipo_obra, localizacao,
-            data_inicio, data_termino.
+          - acao="criar" (default): cria/atualiza um escopo. Requer nome, tipo_obra,
+            localizacao, data_inicio, data_termino.
+          - acao="editar_roster_mo" (ADR-173 F3): adiciona ou edita um membro do
+            roster real de MO por `individuo_id` — merge raso, nunca remove um
+            registro já presente (desligamento é `data_desligamento` setada, não
+            remoção). Requer `roster_mo_membro` com ao menos `individuo_id`.
           - logistica_consumiveis (ADR-128 F5, opcional): capacidade logística real por
             insumo_id para o cronograma automático considerar estoque de consumíveis
             (diesel/material) — ex.: {"MA-DIESEL-S10": {"capacidade_armazenamento": 15000,
             "estoque_inicial": 5000, "taxa_reabastecimento_max": 3000}}.
+          - roster_mo_membro (ADR-173, opcional, só para acao="editar_roster_mo"):
+            dict com `individuo_id` (obrigatório) + campos de `MembroEquipeReal`
+            (`funcao_id`, `salario_base_mensal`, `data_admissao`, `data_desligamento`,
+            ...). `individuo_id` é um identificador opaco de simulação — não precisa
+            (e não deve) ser CPF/nome real.
 
         Para entidade="plano":
           - acao="criar": cria plano no escopo. Requer nome.
@@ -107,6 +117,14 @@ def register(server: FastMCP) -> None:
         store = _project(project_id)
 
         if entidade == "escopo":
+            if acao == "editar_roster_mo":
+                if not roster_mo_membro:
+                    return {"erro": "roster_mo_membro obrigatório (ao menos individuo_id) para acao='editar_roster_mo'"}
+                try:
+                    store.escopo(escopo_id).upsert_roster_mo_membro(roster_mo_membro)
+                except Exception as e:
+                    return {"erro": str(e)}
+                return _wrap_response({"status": "OK", "escopo_id": escopo_id})
             try:
                 es = store.create_escopo(
                     escopo_id=escopo_id,

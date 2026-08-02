@@ -342,6 +342,112 @@ class TestConfigurarEscopo:
 
 
 # ===========================================================================
+# gerir_escopo (entidade="escopo", acao="editar_roster_mo") — ADR-173 F3
+# ===========================================================================
+
+
+class TestEditarRosterMo:
+    def test_adiciona_membro(self, tools):
+        es = MagicMock()
+        store = _make_store()
+        store.escopo.return_value = es
+
+        with (
+            patch("concilium.presentation.mcp.tools.escopo._project", return_value=store),
+            patch(
+                "concilium.presentation.mcp.tools.escopo._wrap_response",
+                side_effect=lambda x: x,
+            ),
+        ):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="escopo",
+                escopo_id="esc-001",
+                acao="editar_roster_mo",
+                roster_mo_membro={
+                    "individuo_id": "mo-001",
+                    "funcao_id": "MO-ARMADOR",
+                    "salario_base_mensal": 3200.0,
+                    "data_admissao": "2026-01-05",
+                },
+            )
+
+        assert result["status"] == "OK"
+        es.upsert_roster_mo_membro.assert_called_once_with(
+            {
+                "individuo_id": "mo-001",
+                "funcao_id": "MO-ARMADOR",
+                "salario_base_mensal": 3200.0,
+                "data_admissao": "2026-01-05",
+            }
+        )
+        store.create_escopo.assert_not_called()
+
+    def test_sem_roster_mo_membro_retorna_erro(self, tools):
+        es = MagicMock()
+        store = _make_store()
+        store.escopo.return_value = es
+
+        with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="escopo",
+                escopo_id="esc-001",
+                acao="editar_roster_mo",
+            )
+
+        assert "erro" in result
+        es.upsert_roster_mo_membro.assert_not_called()
+
+    def test_upsert_lanca_excecao_retorna_erro(self, tools):
+        es = MagicMock()
+        es.upsert_roster_mo_membro.side_effect = ValueError("membro.individuo_id é obrigatório")
+        store = _make_store()
+        store.escopo.return_value = es
+
+        with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="escopo",
+                escopo_id="esc-001",
+                acao="editar_roster_mo",
+                roster_mo_membro={"funcao_id": "MO-ARMADOR"},
+            )
+
+        assert "erro" in result
+        assert "individuo_id" in result["erro"]
+
+    def test_acao_criar_ainda_funciona_sem_regressao(self, tools):
+        """acao default ('criar') continua chamando create_escopo — editar_roster_mo
+        não deve interferir no caminho existente."""
+        store = _make_store()
+        es = MagicMock()
+        es.escopo_id = "esc-001"
+        store.create_escopo.return_value = es
+
+        with (
+            patch("concilium.presentation.mcp.tools.escopo._project", return_value=store),
+            patch(
+                "concilium.presentation.mcp.tools.escopo._wrap_response",
+                side_effect=lambda x: x,
+            ),
+        ):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="escopo",
+                escopo_id="esc-001",
+                nome="Escopo",
+                tipo_obra="terraplenagem",
+                localizacao="BR",
+                data_inicio="2026-01-01",
+                data_termino="2026-12-31",
+            )
+
+        assert result["status"] == "OK"
+        store.create_escopo.assert_called_once()
+
+
+# ===========================================================================
 # gerir_escopo (entidade="plano")
 # ===========================================================================
 
