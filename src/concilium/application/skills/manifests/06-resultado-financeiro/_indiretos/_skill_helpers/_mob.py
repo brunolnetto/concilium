@@ -28,6 +28,9 @@ from concilium.domain.services.financial.rh_custo_catalogo import (
 from concilium.domain.services.financial.rh_custo_catalogo import (
     tipo_contrato_por_funcao as _tipo_contrato_por_funcao,
 )
+from concilium.domain.services.financial.roster_custo_mo_substituicao import (
+    cobertura_funcao_suficiente as _cobertura_funcao_suficiente,
+)
 
 from ._breakdown import _build_semanal_breakdown  # ty: ignore[unresolved-import]
 
@@ -37,26 +40,64 @@ logger = logging.getLogger(__name__)
 _DIAS_POR_MES = _SEMANAS_POR_MES * 7
 
 
-def _composicao_mob_beneficio_bottom_up(equipes_diretas: list, catalogo: dict | None) -> float | None:
+def _headcount_agregado_por_funcao(equipes_diretas: list) -> dict[str, int]:
+    headcount: dict[str, int] = {}
+    for eq in equipes_diretas:
+        for f in getattr(eq, "funcoes", None) or []:
+            funcao_id = getattr(f, "funcao_id", "")
+            headcount[funcao_id] = headcount.get(funcao_id, 0) + f.num_pessoas
+    return headcount
+
+
+def _num_pessoas_efetivo(
+    funcao_id: str,
+    num_pessoas_equipe: int,
+    headcount_agregado: dict[str, int],
+    roster_mo: list,
+) -> float:
+    """ADR-173 D9/D10: quando o roster cobre integralmente o headcount agregado
+    (across todas as equipes) desta função, redistribui a contagem real de
+    indivíduos proporcionalmente ao `num_pessoas` de cada equipe — preserva a
+    ponderação por `permanencia_efetiva_meses` própria de cada equipe (ADR-136
+    F4) mesmo quando a mesma função aparece em mais de uma equipe. Se a função
+    aparecer numa única equipe (caso comum), a proporção é 1:1 e o resultado é
+    exatamente a contagem real. Sem cobertura suficiente, mantém `num_pessoas_equipe`
+    (degradação segura)."""
+    necessario = headcount_agregado.get(funcao_id, num_pessoas_equipe)
+    if necessario <= 0 or not _cobertura_funcao_suficiente(roster_mo, funcao_id, necessario):
+        return num_pessoas_equipe
+    contagem_real = len({m.individuo_id for m in roster_mo if m.funcao_id == funcao_id})
+    return num_pessoas_equipe * (contagem_real / necessario)
+
+
+def _composicao_mob_beneficio_bottom_up(
+    equipes_diretas: list, catalogo: dict | None, roster_mo: list | None = None
+) -> float | None:
     """ADR-166 D3: bottom-up de benefício (café/almoço/jantar/vale-alimentação/
     cesta-básica/seguro-vida) por função, substituindo o termo flat
     `custo_pessoa_mes` de `_custo_alimentacao_por_equipe`. Preserva a
     granularidade de `permanencia_efetiva_meses` própria de cada equipe (ADR-136
     F4). Retorna `None` se o catálogo não tiver nenhum BENEFICIO ativo — o
-    chamador cai então para o termo legado (degradação segura)."""
+    chamador cai então para o termo legado (degradação segura).
+
+    `roster_mo` (ADR-173, opcional): quando cobre integralmente uma função
+    (agregada across todas as equipes), a contagem real de indivíduos substitui
+    o `num_pessoas` cadastrado — ver `_num_pessoas_efetivo`."""
     beneficios = _beneficios_ativos(catalogo)
     if not beneficios:
         return None
     tipo_contrato_map = _tipo_contrato_por_funcao(catalogo)
+    headcount_agregado = _headcount_agregado_por_funcao(equipes_diretas) if roster_mo else {}
     total = 0.0
     for eq in equipes_diretas:
         permanencia = float(getattr(eq, "permanencia_efetiva_meses", 0.0) or 0.0)
         for f in getattr(eq, "funcoes", None) or []:
             funcao_id = getattr(f, "funcao_id", "")
-            custo_unitario = _custo_mensal_beneficio_por_funcao(
-                funcao_id, beneficios, tipo_contrato_map.get(funcao_id)
-            )
-            total += f.num_pessoas * custo_unitario * permanencia
+            custo_unitario = _custo_mensal_beneficio_por_funcao(funcao_id, beneficios, tipo_contrato_map.get(funcao_id))
+            num_pessoas = f.num_pessoas
+            if roster_mo:
+                num_pessoas = _num_pessoas_efetivo(funcao_id, f.num_pessoas, headcount_agregado, roster_mo)
+            total += num_pessoas * custo_unitario * permanencia
     return round(total, 2)
 
 
@@ -85,6 +126,7 @@ def _custo_mob_composicional(
     prazo_meses: int,
     equipes_diretas: list | None = None,
     catalogo: dict | None = None,
+    roster_mo: list | None = None,
 ) -> tuple[float, list[Mobilizacao]]:
     """Calcula custo MOB a partir da composição item a item (não de um total pré-agregado).
 
@@ -128,7 +170,9 @@ def _custo_mob_composicional(
         mobilizacoes.append(mob)
         custo_total += mob.custo_total
 
-    custo_beneficio_bottom_up = _composicao_mob_beneficio_bottom_up(equipes_diretas, catalogo) if equipes_diretas else None
+    custo_beneficio_bottom_up = (
+        _composicao_mob_beneficio_bottom_up(equipes_diretas, catalogo, roster_mo) if equipes_diretas else None
+    )
     if custo_beneficio_bottom_up is not None:
         custo_total += custo_beneficio_bottom_up
     else:
@@ -183,6 +227,7 @@ def _process_mob_categoria(
     mob_schedule: dict | None = None,
     equipes_diretas: list | None = None,
     catalogo: dict | None = None,
+    roster_mo: list | None = None,
 ) -> tuple[Indireto, list[IndiretoSemanal]]:
     descricao: str = cat["descricao"]
     cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == "MOB"), None)
@@ -192,7 +237,7 @@ def _process_mob_categoria(
         mobs: list[Mobilizacao] = []
     else:
         custo, mobs = _custo_mob_composicional(
-            dados_mob, num_pessoas_direta, prazo_meses, equipes_diretas, catalogo=catalogo
+            dados_mob, num_pessoas_direta, prazo_meses, equipes_diretas, catalogo=catalogo, roster_mo=roster_mo
         )
         cat_obj = IndirectoCategoria(
             categoria="MOB",
@@ -344,5 +389,3 @@ def _distribuir_mob_fases(
         "total_demob": round(total_demob, 2),
         "semanal": semanal,
     }
-
-

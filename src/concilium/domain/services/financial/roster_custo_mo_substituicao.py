@@ -32,14 +32,20 @@ def extrair_composicao_funcoes_mo(composicao: ComposicaoPadraoEquipe) -> dict[st
     return {f.funcao_id: f.num_pessoas for f in composicao.funcoes if f.funcao_id}
 
 
-def _cobertura_suficiente(roster: list[MembroEquipeReal], funcao_id: str, necessario: int) -> bool:
+def cobertura_funcao_suficiente(roster: list[MembroEquipeReal], funcao_id: str, necessario: int) -> bool:
+    """ADR-173 D10: critério de cobertura por função — número de indivíduos
+    distintos no roster com aquele `funcao_id` >= `necessario`. Público (exposto
+    além do uso interno em `roster_cobre_composicao_mo`) para que skill-06
+    (custo indireto, ADR-173 F7) use exatamente o mesmo critério de skill-05
+    (custo direto) para a mesma função — nunca um lado considera coberto e o
+    outro não."""
     distintos = {m.individuo_id for m in roster if m.funcao_id == funcao_id}
     return len(distintos) >= necessario
 
 
 def roster_cobre_composicao_mo(contrato: RecursoContrato, roster: list[MembroEquipeReal]) -> bool:
     return all(
-        _cobertura_suficiente(roster, funcao_id, num_pessoas * contrato.quantidade_contratada)
+        cobertura_funcao_suficiente(roster, funcao_id, num_pessoas * contrato.quantidade_contratada)
         for funcao_id, num_pessoas in contrato.composicao_funcoes_mo.items()
     )
 

@@ -38,6 +38,7 @@ def _resolve_categoria_comp(
     jurisdicao_id: str | None,
     canonical_in: CanonicalModel,
     catalogo: dict | None,
+    roster_mo: list | None = None,
 ) -> IndirectoCategoria:
     cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == codigo), None)
     if cat_cfg_raw:
@@ -58,7 +59,7 @@ def _resolve_categoria_comp(
             codigo, comp_auto, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
         )
     if codigo == "QSMS" and canonical_in is not None:
-        comp_bottom_up = _composicao_qsms_bottom_up(canonical_in.equipes_diretas, catalogo)
+        comp_bottom_up = _composicao_qsms_bottom_up(canonical_in.equipes_diretas, catalogo, roster_mo)
         if comp_bottom_up is not None:
             return _build_categoria_from_dict(
                 codigo, comp_bottom_up, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
@@ -281,5 +282,3 @@ def _apply_bdi_to_indiretos(
             )
         )
     return indiretos_com_bdi_out
-
-

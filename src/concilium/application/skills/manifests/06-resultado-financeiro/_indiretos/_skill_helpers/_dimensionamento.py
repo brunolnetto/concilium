@@ -27,12 +27,16 @@ from concilium.domain.models.canonical import (
     CanonicalModel,
     EquipeDireta,
     IndirectoCostComponent,
+    MembroEquipeReal,
 )
 from concilium.domain.services.financial.rh_custo_catalogo import (
     custo_mensal_rh_por_funcao as _custo_mensal_rh_por_funcao,
 )
 from concilium.domain.services.financial.rh_custo_catalogo import (
     rh_insumos_por_tipo as _rh_insumos_por_tipo,
+)
+from concilium.domain.services.financial.roster_custo_mo_substituicao import (
+    cobertura_funcao_suficiente as _cobertura_funcao_suficiente,
 )
 
 # Fator padrão: 1 mês = 4.33 semanas
@@ -229,12 +233,32 @@ def _composicao_default_por_categoria(
     return {}
 
 
-def _composicao_qsms_bottom_up(equipes_diretas: list[EquipeDireta], catalogo: dict | None) -> dict | None:
+def _headcount_efetivo_funcao(funcao_id: str, num_pessoas: int, roster_mo: list[MembroEquipeReal] | None) -> int:
+    """ADR-173 D9/D10: usa a contagem real de indivíduos distintos do roster para
+    esta função quando cobrir integralmente o headcount de `equipes_diretas` —
+    mesmo critério (`cobertura_funcao_suficiente`) usado pela substituição de
+    custo direto em skill-05 (`roster_cobre_composicao_mo`), para nunca um lado
+    considerar coberto e o outro não. Sem cobertura suficiente, mantém o
+    headcount agregado atual (degradação segura)."""
+    if roster_mo and _cobertura_funcao_suficiente(roster_mo, funcao_id, num_pessoas):
+        return len({m.individuo_id for m in roster_mo if m.funcao_id == funcao_id})
+    return num_pessoas
+
+
+def _composicao_qsms_bottom_up(
+    equipes_diretas: list[EquipeDireta],
+    catalogo: dict | None,
+    roster_mo: list[MembroEquipeReal] | None = None,
+) -> dict | None:
     """ADR-166 D2: composição QSMS bottom-up por função (EPI+treinamento+exame),
     substituindo a verba lump default (`_composicao_default_por_categoria`) quando o
     catálogo tiver itens RH cadastrados (ADR-165). Retorna `None` se não houver
     itens RH no catálogo, nenhum headcount direto, ou nenhuma função com custo
-    aplicável — o chamador cai então para o fallback lump (degradação segura)."""
+    aplicável — o chamador cai então para o fallback lump (degradação segura).
+
+    `roster_mo` (ADR-173, opcional): quando cobre integralmente uma função, o
+    headcount agregado dessa função é substituído pela contagem real de
+    indivíduos do roster (D9) — nunca substituição parcial (D10)."""
     epis, treinamentos, exames = _rh_insumos_por_tipo(catalogo)
     if not (epis or treinamentos or exames):
         return None
@@ -249,7 +273,7 @@ def _composicao_qsms_bottom_up(equipes_diretas: list[EquipeDireta], catalogo: di
     itens: list[dict[str, Any]] = []
     total_mensal = 0.0
     for funcao_id in sorted(headcount):
-        num_pessoas = headcount[funcao_id]
+        num_pessoas = _headcount_efetivo_funcao(funcao_id, headcount[funcao_id], roster_mo)
         custo_unitario = _custo_mensal_rh_por_funcao(funcao_id, epis, treinamentos, exames)
         if custo_unitario <= 0:
             continue

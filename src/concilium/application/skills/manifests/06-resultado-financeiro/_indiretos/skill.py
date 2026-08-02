@@ -29,6 +29,7 @@ from concilium.domain.models.canonical import (
     IndiretoSemanal,
     ValidacaoItem,
 )
+from concilium.domain.services.financial.roster_custo_mo import parse_roster_mo
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 from ._skill_helpers import (  # ty: ignore[unresolved-import]
@@ -96,6 +97,7 @@ def _process_regular_categoria(
     dv4_policy: Any,
     policy_scale: dict,
     prazo_meses: float,
+    roster_mo: list | None = None,
 ) -> tuple[Indireto, list[IndiretoSemanal]]:
     """Processa uma categoria indireta não-MOB: resolve composição, aplica DV4 e monta indireto + semanal."""
     cat_obj = _resolve_categoria_comp(
@@ -110,6 +112,7 @@ def _process_regular_categoria(
         jurisdicao_id,
         canonical_in,
         catalogo,
+        roster_mo,
     )
     custo, cat_obj = _apply_dv4_scale_to_categoria(
         cat_obj,
@@ -148,6 +151,7 @@ def _process_categorias_indiretas(
     jurisdicao_id: Any,
     canonical_in: CanonicalModel,
     catalogo: dict[str, Any] | None,
+    roster_mo: list | None = None,
 ) -> tuple[list[Indireto], list[IndiretoSemanal]]:
     """Itera as categorias indiretas do perfil, roteando MOB para o processamento especial e demais para o regular."""
     indiretos_out: list[Indireto] = []
@@ -170,6 +174,7 @@ def _process_categorias_indiretas(
                 mob_schedule=mob_schedule,
                 equipes_diretas=canonical_in.equipes_diretas,
                 catalogo=catalogo,
+                roster_mo=roster_mo,
             )
         else:
             indir, semanal = _process_regular_categoria(
@@ -187,6 +192,7 @@ def _process_categorias_indiretas(
                 dv4_policy,
                 policy_scale,
                 prazo_meses,
+                roster_mo,
             )
         indiretos_out.append(indir)
         indiretos_semanal_out.extend(semanal)
@@ -235,6 +241,11 @@ def run_custos_indiretos(
     # ADR-105: Tentar obter mob_schedule do canônico (inferido por Skill-04)
     mob_schedule = getattr(canonical_in, "mob_schedule", None)
 
+    # ADR-173 F7: roster real de MO (Escopo.roster_mo, propagado via inputs) — quando
+    # cobre integralmente uma função, substitui o headcount agregado no bottom-up de
+    # QSMS/MOB por contagem real de indivíduos (degradação segura sem roster).
+    roster_mo = parse_roster_mo(inputs.get("roster_mo"))
+
     indiretos_out, indiretos_semanal_out = _process_categorias_indiretas(
         perfil,
         mob_bloqueada,
@@ -253,6 +264,7 @@ def run_custos_indiretos(
         jurisdicao_id,
         canonical_in,
         catalogo,
+        roster_mo,
     )
 
     _validate_dv4_policy(dv4_policy, validacoes, policy_scale)

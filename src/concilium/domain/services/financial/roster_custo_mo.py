@@ -30,6 +30,16 @@ from concilium.domain.services.financial.rh_custo_catalogo import (
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
 
+def parse_roster_mo(roster_mo_raw: list[dict] | None) -> list[MembroEquipeReal]:
+    """ADR-173 — parseia `inputs["roster_mo"]` (lista de dicts crus, vinda de
+    `Escopo.roster_mo` via propagação genérica de `Runtime.run_skill_on_plano`)
+    para `list[MembroEquipeReal]`. Compartilhado por skill-05 (custo direto) e
+    skill-06 (custo indireto) — mesma conversão, uma única implementação."""
+    if not roster_mo_raw:
+        return []
+    return [MembroEquipeReal.model_validate(m) for m in roster_mo_raw]
+
+
 def _intervalo_semana(semana: str) -> tuple[date, date]:
     """Segunda a domingo de uma semana ISO (ex: "2026-W03")."""
     year_str, week_str = semana.split("-W")
@@ -70,9 +80,7 @@ def custo_real_mo_semanal(
     membros_funcao = [m for m in roster if m.funcao_id == funcao_id]
     custo: dict[str, float] = {}
     for semana in enumerar_semanas(semana_inicio, semana_fim):
-        total_semana = sum(
-            _custo_semanal_membro(m) for m in membros_funcao if _membro_ativo_na_semana(m, semana)
-        )
+        total_semana = sum(_custo_semanal_membro(m) for m in membros_funcao if _membro_ativo_na_semana(m, semana))
         custo[semana] = round(total_semana, 2)
     return custo
 

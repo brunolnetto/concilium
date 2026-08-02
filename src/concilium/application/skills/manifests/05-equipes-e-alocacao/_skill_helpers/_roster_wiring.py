@@ -14,16 +14,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from concilium.domain.models.canonical import MembroEquipeReal, RecursoContrato
+from concilium.domain.models.canonical import RecursoContrato
+from concilium.domain.services.financial.roster_custo_mo import parse_roster_mo
 from concilium.domain.services.financial.roster_custo_mo_substituicao import (
     aplicar_roster_custo_real_mo,
 )
-
-
-def _parse_roster_mo(roster_mo_raw: list[dict[str, Any]] | None) -> list[MembroEquipeReal]:
-    if not roster_mo_raw:
-        return []
-    return [MembroEquipeReal.model_validate(m) for m in roster_mo_raw]
 
 
 def aplicar_roster_a_contratos(
@@ -34,7 +29,7 @@ def aplicar_roster_a_contratos(
     parseado de `inputs["roster_mo"]`. Retorna a mesma lista (novos objetos via
     `model_copy`) quando `roster_mo_raw` é vazio/None — sem custo de parsing
     nem substituição, comportamento idêntico ao atual (degradação segura)."""
-    roster = _parse_roster_mo(roster_mo_raw)
+    roster = parse_roster_mo(roster_mo_raw)
     if not roster:
         return contratos_recurso
     return [aplicar_roster_custo_real_mo(contrato, roster) for contrato in contratos_recurso]
