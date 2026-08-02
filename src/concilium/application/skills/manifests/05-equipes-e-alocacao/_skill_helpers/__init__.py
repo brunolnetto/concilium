@@ -165,6 +165,9 @@ from ._resource_instance_build import (  # ty: ignore[unresolved-import]
     _build_item_resource_maps,
     _build_resumo_e_validacoes,
 )
+from ._roster_wiring import (  # ty: ignore[unresolved-import]
+    aplicar_roster_a_contratos,
+)
 from .b import (  # ty: ignore[unresolved-import]
     _build_alocacoes_pool,
     _build_requisitos_e_tipos,
@@ -419,6 +422,7 @@ __all__ = [
     "_validar_sinergia_producao",
     "_week_idx",
     "_week_to_idx",
+    "aplicar_roster_a_contratos",
     "calcular_custo_contrato_por_instancia",
     "enriquecer_composicao_por_tipo",
     "particionar_contrato",

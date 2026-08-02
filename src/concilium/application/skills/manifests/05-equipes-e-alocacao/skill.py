@@ -41,6 +41,7 @@ from ._skill_helpers import (  # ty: ignore[unresolved-import]
     _resolve_planejamento_maps,
     _resolve_rcpsp_spec,
     _validar_estagio1_inst_none,
+    aplicar_roster_a_contratos,
     enriquecer_composicao_por_tipo,
 )
 
@@ -55,6 +56,7 @@ _calcular_permanencia_e_custo_total = _skill_helpers._calcular_permanencia_e_cus
 _mod_a = None  # No longer used in new structure, kept for compatibility
 _mod_b = None  # No longer used in new structure, kept for compatibility
 _mod_pre = None  # No longer used in new structure, kept for compatibility
+
 
 def run_equipes_e_alocacao(
     canonical_in: CanonicalModel,
@@ -98,6 +100,10 @@ def run_equipes_e_alocacao(
         # ADR-159: popula composicao_funcoes_mo/composicao_equipamentos_eq (ADR-156/157)
         # em cada RecursoContrato — puramente descritivo, não altera nenhum custo.
         enriquecer_composicao_por_tipo(contratos_recurso, canonical_in.eap, cron_lookup, cpu_lookup, prod_lookup)
+        # ADR-173 F6: substitui custo direto de MO pelo real do roster (Escopo.roster_mo,
+        # propagado via inputs) quando cobrir integralmente a composição — sem roster
+        # (ou cobertura insuficiente), mantém o custo calibrado (degradação segura).
+        contratos_recurso = aplicar_roster_a_contratos(contratos_recurso, inputs.get("roster_mo"))
 
     # ADR-077: mapa instancial de utilização — executado quando há pool contracts
     instancias_recurso, composicao_equipes_atividade, resumo_utilizacao_contratos = _processar_instancias_recurso(
