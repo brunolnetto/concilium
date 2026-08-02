@@ -1,6 +1,6 @@
 # ADR-174 — Cubo de Roster Real: Custo por Instância (Categoria/Grupo/Instância)
 
-**Status:** Proposta
+**Status:** ✅ Implementado
 **Data:** 2026-08-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-086 (Cubo Pool Instancial), ADR-128 F6 (Cubo de Estoque Consumível — precedente de cubo-irmão), ADR-154/155 (Roster Real MO/EQ), ADR-173 (Roster Real Persistido por Escopo + `custo_semanal_individual_mo`/`_eq`, D13)
@@ -76,37 +76,47 @@ D6. **Desvio documentado do padrão de acesso a dado dos cubos-irmãos**: o serv
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | D2 — `Escopo.roster_eq` + persistência (`EscopoStore`, `ProjectStore.create_escopo`) + `gerir_escopo acao="editar_roster_eq"` | Pendente |
-| F2 | D1 — `CelulaRosterReal`/`CuboRosterReal` (domain model) | Pendente |
-| F3 | D3 — `CuboRosterRealBuilder` | Pendente |
-| F4 | D4 — `resolve_cubo_roster_real_projection` + `cubo_roster_real_projection_contract` | Pendente |
-| F5 | D5/D6 — serviço (`_CuboRosterRealMixin`) + API + MCP | Pendente |
+| F1 | D2 — `Escopo.roster_eq` + persistência (`EscopoStore`, `ProjectStore.create_escopo`) + `gerir_escopo acao="editar_roster_eq"` | ✅ Implementado |
+| F2 | D1 — `CelulaRosterReal`/`CuboRosterReal` (domain model) | ✅ Implementado |
+| F3 | D3 — `CuboRosterRealBuilder` | ✅ Implementado |
+| F4 | D4 — `resolve_cubo_roster_real_projection` + `cubo_roster_real_projection_contract` | ✅ Implementado |
+| F5 | D5/D6 — serviço (`_CuboRosterRealMixin`) + API + MCP | ✅ Implementado |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `Escopo.roster_eq: list[AtivoEquipamentoReal] = Field(default_factory=list)`
-- [ ] `ProjectStore.create_escopo()` aceita `roster_eq`; `EscopoStore.upsert_roster_eq_ativo()` (merge por `ativo_id`)
-- [ ] `gerir_escopo` aceita `acao="editar_roster_eq"` + `roster_eq_ativo`
+- [x] `Escopo.roster_eq: list[AtivoEquipamentoReal] = Field(default_factory=list)`
+- [x] `ProjectStore.create_escopo()` aceita `roster_eq`; `EscopoStore.upsert_roster_eq_ativo()` (merge por `ativo_id`, reusa `_upsert_roster_item` genérico junto com `upsert_roster_mo_membro`)
+- [x] `gerir_escopo` aceita `acao="editar_roster_eq"` + `roster_eq_ativo`
 
 ### Fase 2
-- [ ] `CelulaRosterReal`/`CuboRosterReal` — `slice`/`group_by`/projeções de conveniência; teste puro sem fixtures externas
+- [x] `CelulaRosterReal`/`CuboRosterReal` — `slice`/`group_by`/projeções de conveniência (`custo_por_instancia`/`_grupo`/`_categoria`, `custo_total_geral`); teste puro sem fixtures externas
 
 ### Fase 3
-- [ ] `CuboRosterRealBuilder.build` — MO+EQ, span do projeto, degradação segura (roster vazio → `celulas=()`)
-- [ ] Teste: soma das células de uma instância == `custo_semanal_individual_mo/_eq` chamada direta para a mesma instância/span
+- [x] `CuboRosterRealBuilder.build` — MO+EQ, span do projeto, degradação segura (roster vazio ou datas ausentes → `celulas=()`)
+- [x] Teste: soma das células de uma instância == `custo_semanal_individual_mo/_eq` chamada direta para a mesma instância/span
 
 ### Fase 4
-- [ ] 4 faces implementadas + contrato navegável
-- [ ] Teste: cada face, filtros por categoria/grupo/instância, fallback de face/granularidade inválida, truncamento top_n
+- [x] 4 faces implementadas (`resumo_por_instancia`/`_grupo`/`_categoria`, `custo_temporal`) + contrato navegável
+- [x] Teste: cada face, filtros por categoria/grupo_id/instancia_id, fallback de face/granularidade inválida, truncamento top_n
 
 ### Fase 5
-- [ ] Serviço carrega canonical (datas) + Escopo (roster) via `repository.get_project`
-- [ ] Rotas API + tool MCP registradas e testadas
+- [x] Serviço (`_CuboRosterRealMixin`) carrega canonical (datas) + Escopo (roster, via `repository.get_project(...).escopo(escopo_id).to_escopo()`) + catálogo best-effort (`_candidate_catalog_ids`, reusado de `_CpuResolutionMixin`)
+- [x] Rotas API (`GET /{project_id}/cubo-roster-real/projecao[?escopo_id=...]` + `.../contrato`) e tool MCP (`explorar_roster_real`) registradas e testadas
 
 ## Nota de Implementação
 
-_(preenchida ao final da implementação)_
+Implementada via TDD em todas as fases, na mesma worktree da ADR-173 (`worktree-adr-173-roster-real-persistido`), 8 commits. Suíte completa (`pytest tests/`): 15.082 passaram, 1 falha pré-existente e não relacionada (`test_adr145_catalogo_escrita_unificada.py::test_segundo_merge_gera_diff_contra_snapshot_anterior`, isolamento/ordem-dependente entre testes — reproduz identicamente sem nenhuma mudança desta ADR, confirmado via `git stash`).
+
+Estrutura final espelha 1:1 o padrão de `CuboEstoqueConsumivel` (ADR-128 F6), com uma diferença estrutural deliberada em cada camada:
+
+- **Modelo** (`domain/models/analytics/cubo_roster_real.py`): 3 dimensões de filtro (`categoria`/`grupo_id`/`instancia_id`) em vez da única dimensão do estoque consumível (`resource_id`) — reflete a hierarquia confirmada na conversa.
+- **Builder** (`application/services/analytics/cubo_roster_real_builder.py`): recebe `roster_mo`/`roster_eq`/`catalogo` como parâmetros explícitos, não lidos do `canonical_in` — porque roster nunca é "baked-in" no canônico (ADR-160 D1), diferente de `recursos_consumiveis` (baked-in pela skill-04).
+- **Projeção** (`application/services/analytics/cubo_roster_real_projection/`): mesmo contrato de retorno; faces adaptadas à hierarquia de 3 níveis.
+- **Serviço** (`application/services/concilium_service/_cubo_roster_real.py`): único mixin de cubo que precisa carregar *dois* objetos (canonical + Escopo) em vez de um — consequência direta e aceita de D6.
+- **API/MCP**: paridade total de superfície com os cubos-irmãos (`/cubo-roster-real/projecao[/contrato]`, `explorar_roster_real`), incluindo o parâmetro novo `escopo_id` (default `"default"`) que os outros não precisam.
+
+Nenhum desvio do desenho original da ADR além do já esperado em D6. `roster_eq` (F1) fecha uma lacuna que existia desde a ADR-155/157 — equipamento nunca teve caminho de persistência, mesmo depois da ADR-173 cobrir apenas MO.
 
 ---
 
