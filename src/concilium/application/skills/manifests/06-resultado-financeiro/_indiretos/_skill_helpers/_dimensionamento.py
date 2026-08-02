@@ -28,6 +28,12 @@ from concilium.domain.models.canonical import (
     EquipeDireta,
     IndirectoCostComponent,
 )
+from concilium.domain.services.financial.rh_custo_catalogo import (
+    custo_mensal_rh_por_funcao as _custo_mensal_rh_por_funcao,
+)
+from concilium.domain.services.financial.rh_custo_catalogo import (
+    rh_insumos_por_tipo as _rh_insumos_por_tipo,
+)
 
 # Fator padrão: 1 mês = 4.33 semanas
 # _SEMANAS_POR_MES agora importada de domain/constants.py (era 4.33, corrigido para 4.3482)
@@ -221,46 +227,6 @@ def _composicao_default_por_categoria(
             },
         }
     return {}
-
-
-def _rh_insumos_por_tipo(catalogo: dict | None) -> tuple[list[dict], list[dict], list[dict]]:
-    """ADR-166 D2: separa insumos EPI (MATERIAL prefixo `EPI-`)/TREINAMENTO/EXAME
-    ativos do catálogo — a base de dado para a composição QSMS bottom-up."""
-    if not catalogo:
-        return [], [], []
-    epis: list[dict] = []
-    treinamentos: list[dict] = []
-    exames: list[dict] = []
-    for ins in catalogo.get("insumos", []):
-        if ins.get("status") == "descontinuado":
-            continue
-        tipo = ins.get("tipo")
-        codigo = ins.get("codigo", "")
-        if tipo == "MATERIAL" and codigo.startswith("EPI-"):
-            epis.append(ins)
-        elif tipo == "TREINAMENTO":
-            treinamentos.append(ins)
-        elif tipo == "EXAME":
-            exames.append(ins)
-    return epis, treinamentos, exames
-
-
-def _custo_mensal_rh_por_funcao(funcao_id: str, *grupos_insumos: list[dict]) -> float:
-    """ADR-166 D2: soma o custo mensal amortizado (preço ÷ vida_util_dias × dias/mês) dos
-    itens aplicáveis a `funcao_id` — comuns (`funcoes_aplicaveis` None) + específicos
-    (`funcao_id` presente na lista)."""
-    total = 0.0
-    for grupo in grupos_insumos:
-        for ins in grupo:
-            atributos = ins.get("atributos_especificos") or {}
-            aplicaveis = atributos.get("funcoes_aplicaveis")
-            if aplicaveis is not None and funcao_id not in aplicaveis:
-                continue
-            vida_util = atributos.get("vida_util_dias")
-            if not vida_util:
-                continue
-            total += ins.get("preco_unitario", 0.0) / vida_util * _DIAS_POR_MES
-    return total
 
 
 def _composicao_qsms_bottom_up(equipes_diretas: list[EquipeDireta], catalogo: dict | None) -> dict | None:

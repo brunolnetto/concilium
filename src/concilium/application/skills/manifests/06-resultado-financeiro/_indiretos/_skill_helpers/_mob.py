@@ -19,6 +19,15 @@ from concilium.domain.models.canonical import (
     Mobilizacao,
 )
 from concilium.domain.models.project.decision_variables import DecisionVariables
+from concilium.domain.services.financial.rh_custo_catalogo import (
+    beneficios_ativos as _beneficios_ativos,
+)
+from concilium.domain.services.financial.rh_custo_catalogo import (
+    custo_mensal_beneficio_por_funcao as _custo_mensal_beneficio_por_funcao,
+)
+from concilium.domain.services.financial.rh_custo_catalogo import (
+    tipo_contrato_por_funcao as _tipo_contrato_por_funcao,
+)
 
 from ._breakdown import _build_semanal_breakdown  # ty: ignore[unresolved-import]
 
@@ -26,53 +35,6 @@ logger = logging.getLogger(__name__)
 
 # ADR-166 D3: dias/mês para converter benefício diário (café/almoço/jantar) em mensal.
 _DIAS_POR_MES = _SEMANAS_POR_MES * 7
-
-
-def _beneficios_ativos(catalogo: dict | None) -> list[dict]:
-    if not catalogo:
-        return []
-    return [
-        ins
-        for ins in catalogo.get("insumos", [])
-        if ins.get("tipo") == "BENEFICIO" and ins.get("status") != "descontinuado"
-    ]
-
-
-def _tipo_contrato_por_funcao(catalogo: dict | None) -> dict[str, str]:
-    """Mapa funcao_id (código de Insumo MAO_OBRA) -> tipo_contrato, do catálogo."""
-    if not catalogo:
-        return {}
-    out: dict[str, str] = {}
-    for ins in catalogo.get("insumos", []):
-        if ins.get("tipo") != "MAO_OBRA":
-            continue
-        tipo_contrato = (ins.get("atributos_especificos") or {}).get("tipo_contrato")
-        if tipo_contrato:
-            out[ins["codigo"]] = tipo_contrato
-    return out
-
-
-def _custo_mensal_beneficio_por_funcao(
-    funcao_id: str, beneficios: list[dict], tipo_contrato: str | None
-) -> float:
-    """ADR-166 D3: soma o custo mensal dos benefícios aplicáveis a uma função —
-    diária (café/almoço/jantar) convertida por dias/mês, mensal direto.
-    `aplicavel_tipo_contrato` exclui a função só quando o regime é positivamente
-    conhecido e não está na lista (regime desconhecido/None recebe o benefício —
-    default seguro, não penaliza função sem tipo_contrato cadastrado)."""
-    total = 0.0
-    for ins in beneficios:
-        atributos = ins.get("atributos_especificos") or {}
-        aplicavel_contrato = atributos.get("aplicavel_tipo_contrato")
-        if aplicavel_contrato is not None and tipo_contrato is not None and tipo_contrato not in aplicavel_contrato:
-            continue
-        periodicidade = atributos.get("periodicidade_beneficio")
-        preco = ins.get("preco_unitario", 0.0)
-        if periodicidade == "diaria":
-            total += preco * _DIAS_POR_MES
-        elif periodicidade == "mensal":
-            total += preco
-    return total
 
 
 def _composicao_mob_beneficio_bottom_up(equipes_diretas: list, catalogo: dict | None) -> float | None:
