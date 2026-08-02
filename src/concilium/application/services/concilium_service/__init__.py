@@ -27,6 +27,7 @@ from ._catalog import _CatalogMixin
 from ._cpu_resolution import _CpuResolutionMixin
 from ._cubo_analitico import _CuboAnaliticoMixin
 from ._cubo_estoque_consumivel import _CuboEstoqueConsumivelMixin
+from ._cubo_roster_real import _CuboRosterRealMixin
 from ._mobilizacao_deliverables import _MobilizacaoDeliverablesMixin
 from ._project_crud import _ProjectCrudMixin
 from ._run_version import _RunVersionMixin
@@ -55,6 +56,7 @@ class ConciliumService(
     _ArtifactsReferenceMixin,
     _CuboAnaliticoMixin,
     _CuboEstoqueConsumivelMixin,
+    _CuboRosterRealMixin,
     _MobilizacaoDeliverablesMixin,
 ):
     def __init__(self, dependencies: ConciliumDependencies) -> None:
