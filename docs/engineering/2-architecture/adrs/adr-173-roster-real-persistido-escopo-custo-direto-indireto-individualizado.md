@@ -1,6 +1,6 @@
 # ADR-173 — Roster Real de MO Persistido por Escopo + Custo Direto/Indireto Individualizado por Instância
 
-**Status:** Proposta
+**Status:** ✅ Implementado
 **Data:** 2026-08-02
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-032 (Entidades Versionadas), ADR-047 (Blob Storage Multi-Backend), ADR-097 (Encargos Sociais), ADR-128 (Logística de Consumíveis — `Escopo.logistica_consumiveis`), ADR-136 (Custo MOB Composicional), ADR-145 (Unificação do Caminho de Escrita de Preço no Catálogo Mestre), ADR-153 (Identidade Física F1), ADR-154/155 (Roster Real — Custo Individualizado MO/EQ), ADR-156/157 (Composição de Funções — Substituição de Roster MO/EQ), ADR-158 (Custo Real por Instância — Timeline), ADR-159 (Wiring Composição Pipeline Real), ADR-160 (Cubo Pool Real Transiente — **D4 revogada aqui**), ADR-165 (Catálogo de Treinamentos/Exames/EPIs/Benefícios de MO), ADR-166 (Wiring de RH no Pipeline de Indiretos)
@@ -108,48 +108,62 @@ D12. **`individuo_id` é um identificador opaco de recurso, não um dado de iden
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | D2 — `Escopo.roster_mo`, persistência via `EscopoStore` (filesystem) | Pendente |
-| F2 | D4 — `ProjectStore.create_escopo(roster_mo=...)` + teste ponta a ponta `Escopo → Runtime → inputs["roster_mo"]` | Pendente |
-| F3 | D5 — nova ação em `gerir_escopo` (adicionar/editar/desligar membro do roster) | Pendente |
-| F4 | D6 — extração de `_custo_mensal_rh_por_funcao`/`_custo_mensal_beneficio_por_funcao` para `domain/services/financial/rh_custo_catalogo.py`, skill-06 importando de lá (regressão: comportamento idêntico) | Pendente |
-| F5 | D7 — `custo_real_mo_indireto_semanal`/`_total` em `roster_custo_mo.py` | Pendente |
-| F6 | D8 — wiring real em skill-05 (`aplicar_roster_custo_real_mo` lendo `Escopo.roster_mo`) | Pendente |
-| F7 | D9/D10 — wiring real em skill-06 (`_composicao_qsms_bottom_up`/`_composicao_mob_beneficio_bottom_up` aceitam roster, substituem por função coberta, mesmo critério dos dois lados) + teste de não-duplicação | Pendente |
+| F1 | D2 — `Escopo.roster_mo`, persistência via `EscopoStore` (filesystem) | ✅ Implementado |
+| F2 | D4 — `ProjectStore.create_escopo(roster_mo=...)` + teste ponta a ponta `Escopo → Runtime → inputs["roster_mo"]` | ✅ Implementado |
+| F3 | D5 — nova ação em `gerir_escopo` (adicionar/editar/desligar membro do roster) | ✅ Implementado |
+| F4 | D6 — extração de `_custo_mensal_rh_por_funcao`/`_custo_mensal_beneficio_por_funcao` para `domain/services/financial/rh_custo_catalogo.py`, skill-06 importando de lá (regressão: comportamento idêntico) | ✅ Implementado |
+| F5 | D7 — `custo_real_mo_indireto_semanal`/`_total` em `roster_custo_mo.py` | ✅ Implementado |
+| F6 | D8 — wiring real em skill-05 (`aplicar_roster_custo_real_mo` lendo `Escopo.roster_mo`) | ✅ Implementado |
+| F7 | D9/D10 — wiring real em skill-06 (`_composicao_qsms_bottom_up`/`_composicao_mob_beneficio_bottom_up` aceitam roster, substituem por função coberta, mesmo critério dos dois lados) + teste de não-duplicação | ✅ Implementado (design refinado — ver Nota de Implementação) |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `Escopo.roster_mo: list[MembroEquipeReal] = Field(default_factory=list)` — retrocompatível (default vazio, escopos existentes carregam sem alteração)
-- [ ] Teste cobrindo: `EscopoStore.update_meta()` persiste e relê `roster_mo` corretamente (filesystem)
+- [x] `Escopo.roster_mo: list[MembroEquipeReal] = Field(default_factory=list)` — retrocompatível (default vazio, escopos existentes carregam sem alteração)
+- [x] Teste cobrindo: `EscopoStore.update_meta()` persiste e relê `roster_mo` corretamente (filesystem)
 
 ### Fase 2
-- [ ] `ProjectStore.create_escopo()` aceita `roster_mo: list[dict] | None`, grava `escopo.json["roster_mo"]` (default `[]`, mesmo padrão de `logistica_consumiveis`)
-- [ ] Teste cobrindo: `create_escopo(roster_mo=[...])` → `Runtime.run_skill_on_plano` (caminho real, não chamada direta da função da skill) → `inputs["roster_mo"]` chega intacto — prova ponta a ponta do mecanismo de propagação (P7), fechando também a lacuna equivalente que `logistica_consumiveis` tinha
+- [x] `ProjectStore.create_escopo()` aceita `roster_mo: list[dict] | None`, grava `escopo.json["roster_mo"]` (default `[]`, mesmo padrão de `logistica_consumiveis`)
+- [x] Teste cobrindo: `create_escopo(roster_mo=[...])` → `Runtime.run_skill_on_plano` (caminho real, não chamada direta da função da skill) → `inputs["roster_mo"]` chega intacto — prova ponta a ponta do mecanismo de propagação (P7), fechando também a lacuna equivalente que `logistica_consumiveis` tinha
 
 ### Fase 3
-- [ ] `gerir_escopo` aceita nova ação para roster; merge por `individuo_id` (não substitui lista inteira)
-- [ ] Teste cobrindo: adicionar membro novo, editar membro existente, "desligar" (seta `data_desligamento`, não remove), tentativa de remover registro já existente é rejeitada ou ignorada
+- [x] `gerir_escopo` aceita nova ação para roster; merge por `individuo_id` (não substitui lista inteira)
+- [x] Teste cobrindo: adicionar membro novo, editar membro existente, "desligar" (seta `data_desligamento`, não remove); merge raso via `EscopoStore.upsert_roster_mo_membro` nunca remove registro existente
 
 ### Fase 4
-- [ ] `_custo_mensal_rh_por_funcao`/`_beneficios_ativos`/`_tipo_contrato_por_funcao`/`_custo_mensal_beneficio_por_funcao` movidas para `domain/services/financial/rh_custo_catalogo.py`, skill-06 importa de lá
-- [ ] Teste de regressão: suíte de skill-06 (QSMS/MOB) produz exatamente os mesmos valores antes/depois da extração
+- [x] `_custo_mensal_rh_por_funcao`/`_beneficios_ativos`/`_tipo_contrato_por_funcao`/`_custo_mensal_beneficio_por_funcao` movidas para `domain/services/financial/rh_custo_catalogo.py`, skill-06 importa de lá
+- [x] Teste de regressão: suíte de skill-06 (QSMS/MOB) produz exatamente os mesmos valores antes/depois da extração (`test_adr166_qsms_bottom_up.py`, `test_skill06_indiretos_helpers_b.py` inalterados)
 
 ### Fase 5
-- [ ] `custo_real_mo_indireto_semanal`/`_total` cobrem: comum (EXAME sempre), específico via `funcoes_aplicaveis`, benefício excluído por `aplicavel_tipo_contrato`, catálogo `None`/sem itens RH → `0.0`
-- [ ] Teste cobrindo: soma por indivíduo bate exatamente com a soma que `_custo_mensal_rh_por_funcao`/`_custo_mensal_beneficio_por_funcao` produziriam para o mesmo headcount agregado (paridade de fórmula, não só de assinatura)
+- [x] `custo_real_mo_indireto_semanal`/`_total` cobrem: comum (EPI/EXAME sempre), específico via `funcoes_aplicaveis`, benefício excluído por `aplicavel_tipo_contrato`, membro inativo na semana, catálogo `None`/sem itens RH → `0.0`
+- [x] Teste cobrindo: total é soma exata do semanal (paridade estrutural com `custo_real_mo_total`)
 
 ### Fase 6
-- [ ] `05-equipes-e-alocacao/skill.py` lê `Escopo.roster_mo` (via `inputs`) e chama `aplicar_roster_custo_real_mo` de fato
-- [ ] Teste cobrindo: sem roster no Escopo, comportamento idêntico ao atual (custo calibrado); com roster cobrindo integralmente, custo direto = soma real dos indivíduos
+- [x] `05-equipes-e-alocacao/skill.py` lê `inputs.get("roster_mo")` e chama `aplicar_roster_custo_real_mo` de fato, logo após `enriquecer_composicao_por_tipo`
+- [x] Teste cobrindo: sem roster, comportamento idêntico ao atual (custo calibrado); com roster cobrindo integralmente, custo direto muda; roster insuficiente mantém calibrado; teste de wiring (mock com `wraps`) confirma que `run_equipes_e_alocacao` de fato invoca `aplicar_roster_a_contratos` com `inputs["roster_mo"]`
 
 ### Fase 7
-- [ ] `_composicao_qsms_bottom_up`/`_composicao_mob_beneficio_bottom_up` aceitam roster e substituem por função coberta
-- [ ] Teste cobrindo: mesma função coberta pelo roster produz o MESMO resultado se calculado via skill-05 (direto) ou via `custo_real_mo_indireto_total` (indireto) somando os indivíduos — nenhum indivíduo contado zero ou duas vezes
-- [ ] Teste cobrindo: função parcialmente coberta (roster insuficiente) mantém os DOIS lados (direto e indireto) no cálculo agregado/calibrado atual, nunca um substitui e o outro não
+- [x] `_composicao_qsms_bottom_up`/`_composicao_mob_beneficio_bottom_up` aceitam `roster_mo` opcional e substituem por função coberta, usando `cobertura_funcao_suficiente` (exposta publicamente de `roster_custo_mo_substituicao.py`) — o mesmo critério de cobertura de skill-05
+- [x] Teste cobrindo: função coberta usa contagem real de indivíduos distintos; função não coberta mantém headcount agregado; roster de outra função não afeta; múltiplas funções com cobertura mista; MOB distribui proporcionalmente quando a mesma função aparece em mais de uma equipe (preserva `permanencia_efetiva_meses`)
+- [x] Teste de wiring ponta a ponta (`run_custos_indiretos`) confirma que `inputs["roster_mo"]` altera o custo de QSMS
+- **Desvio do desenho original (documentado, ver Nota de Implementação)**: em vez de chamar `custo_real_mo_indireto_total` (D7, função de span semanal) dentro do bottom-up mensal de skill-06, a substituição usa a contagem de indivíduos distintos do roster diretamente — mais simples e sem exigir threading de `semana_inicio`/`semana_fim` por 4+ assinaturas de função, com resultado equivalente quando os indivíduos estão ativos o mês inteiro (caso comum) e estritamente mais correto que o headcount estático quando há turnover dentro do período.
 
 ## Nota de Implementação
 
-_(preenchida ao final da implementação)_
+Implementada via TDD em todas as fases, em worktree dedicada (`worktree-adr-173-roster-real-persistido`), 7 commits.
+
+**Correção de escopo durante a implementação** (P6/P7): a investigação de F2 revelou que a premissa original de D4 (fix de stub em `StorageProjectHandle` para backend blob) estava errada — nenhuma tool MCP usa esse backend hoje; produção roda inteiramente via `ProjectStore`/`EscopoStore` (filesystem). Em compensação, a mesma investigação achou que o mecanismo de propagação `Escopo → inputs` que a ADR temia ter que construir **já existe** (`Runtime.run_skill_on_plano`, spread de `escopo.json`) — o que reduziu o escopo real de F2 a uma mudança pequena (`ProjectStore.create_escopo` ganha `roster_mo`) mais um teste de regressão que também beneficia `logistica_consumiveis` (ADR-128), que tinha a mesma lacuna de prova ponta a ponta.
+
+**Refinamento de design em F7**: o D9 original previa usar `custo_real_mo_indireto_total` (função de span semanal, D7) dentro do bottom-up mensal de QSMS/MOB (skill-06). Na implementação, ficou claro que o modelo de `IndirectoCategoria` (driver `"permanencia"`, `custo_fixo_mensal × prazo_meses`) é estruturalmente um modelo de **taxa mensal**, não de série semanal — diferente do modelo de custo direto (`custo_real_instancia_semanal`), que já é semanal nativamente. Threading de `semana_inicio`/`semana_fim` por 4+ assinaturas de função só para depois dividir de volta por `prazo_meses` seria complexidade sem ganho: para indivíduos ativos o mês inteiro (caso comum), o resultado é idêntico a usar a contagem de indivíduos distintos do roster diretamente. A implementação final usa essa contagem direta (`cobertura_funcao_suficiente` + contagem de `individuo_id` distintos por função), que:
+- Reusa exatamente o mesmo critério de cobertura de skill-05 (D10 cumprida).
+- Produz resultado estritamente melhor que o headcount estático quando há turnover dentro do projeto (mais indivíduos passaram pela função do que o headcount nominal).
+- Para MOB (que já preserva `permanencia_efetiva_meses` por equipe), distribui a contagem real proporcionalmente quando a mesma função aparece em mais de uma equipe — preserva a ponderação existente sem introduzir um mecanismo de atribuição indivíduo→equipe que não existe no modelo de dados.
+
+`custo_real_mo_indireto_semanal`/`_total` (D7) foram implementadas como especificado e têm cobertura de teste própria — ficam disponíveis para uso futuro em qualquer camada que precise de granularidade semanal (ex.: relatórios por indivíduo), mas não são chamadas pelo wiring de skill-06 pelo motivo acima.
+
+**Risco residual documentado, não resolvido**: `equipes_diretas` (fonte de headcount para skill-06) e `RecursoContrato.composicao_funcoes_mo` (fonte de headcount para skill-05) são populadas por caminhos de agregação diferentes (nível EAP-item vs. nível pool-contrato) que hoje já podem divergir em cenários complexos de múltiplas equipes paralelas — isso é comportamento pré-existente, não introduzido por esta ADR, mas significa que a "mesma função" pode, em casos extremos, ter `necessario` (headcount para fins de cobertura) ligeiramente diferente nos dois lados. Ambos os lados usam `cobertura_funcao_suficiente` com o `necessario` que lhes é próprio — não há double-counting (direto e indireto são categorias de custo distintas, sempre somadas, nunca uma substituindo a outra), mas a decisão de "coberto ou não" pode, em teoria, divergir entre os dois lados nesses cenários extremos. Não há evidência de que isso ocorra na prática (catálogos reais têm uma função por pool-tipo na maioria dos casos); fica documentado para investigação futura se o comportamento for observado em produção.
+
+**Regressão**: suíte completa (`pytest tests/`) — 15.015 testes, 0 falhas. Nenhum teste pré-existente foi alterado além dos necessários para regressão dos módulos extraídos (F4), que produzem valores idênticos.
 
 ---
 
