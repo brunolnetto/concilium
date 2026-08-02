@@ -66,6 +66,12 @@ class _FakeService:
     def get_cubo_estoque_consumivel_projection_contract(self, **kw):
         return {"estoque_consumivel_contratos": []}
 
+    def get_cubo_roster_real_projection(self, project_id, version=None, **kw):
+        return {"roster_real": []}
+
+    def get_cubo_roster_real_projection_contract(self, **kw):
+        return {"roster_real_contratos": []}
+
 
 class _ErrorService(_FakeService):
     def compare_versions(self, *a, **kw):
@@ -202,6 +208,10 @@ class TestCuboRoutes:
         resp = _fake_client.get("/api/projects/proj-1/cubo-estoque-consumivel/projecao")
         assert resp.status_code == 200
 
+    def test_cubo_roster_real_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/cubo-roster-real/projecao")
+        assert resp.status_code == 200
+
 
 class TestAnalysisErrorPaths:
     """Cover remaining uncovered lines: compare_query, download_artifact, cubo projecao contrato,
@@ -261,6 +271,28 @@ class TestAnalysisErrorPaths:
 
         c = _client(ValueErrSvc())
         resp = c.get("/api/projects/proj-1/cubo-estoque-consumivel/projecao")
+        assert resp.status_code == 400
+
+    def test_cubo_roster_real_projecao_contrato_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/cubo-roster-real/projecao/contrato")
+        assert resp.status_code == 200
+
+    def test_cubo_roster_real_not_found(self):
+        class FNFSvc(_FakeService):
+            def get_cubo_roster_real_projection(self, *a, **kw):
+                raise FileNotFoundError("no")
+
+        c = _client(FNFSvc())
+        resp = c.get("/api/projects/proj-1/cubo-roster-real/projecao")
+        assert resp.status_code == 404
+
+    def test_cubo_roster_real_bad_request(self):
+        class ValueErrSvc(_FakeService):
+            def get_cubo_roster_real_projection(self, *a, **kw):
+                raise ValueError("face inválida")
+
+        c = _client(ValueErrSvc())
+        resp = c.get("/api/projects/proj-1/cubo-roster-real/projecao")
         assert resp.status_code == 400
 
 
@@ -536,6 +568,3 @@ class TestAnalysisRoutes:
         svc.get_cubo_pool_projection_contract.return_value = {"faces": []}
         result = get_cubo_pool_projecao_contrato("proj-1", service=svc)
         assert "faces" in result
-
-
-

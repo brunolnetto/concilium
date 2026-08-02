@@ -347,3 +347,54 @@ def get_cubo_estoque_consumivel_projecao_contrato(
 ) -> dict[str, Any]:
     _ = project_id
     return service.get_cubo_estoque_consumivel_projection_contract()
+
+
+@router.get(
+    "/{project_id}/cubo-roster-real/projecao",
+    summary="ADR-174: Explore real roster cost by instance (categoria/grupo/instancia faces)",
+)
+def get_cubo_roster_real_projecao(
+    project_id: str,
+    version: str | None = Query(None),
+    escopo_id: str = Query("default"),
+    face: Literal[
+        "resumo_por_instancia",
+        "resumo_por_grupo",
+        "resumo_por_categoria",
+        "custo_temporal",
+    ] = Query("resumo_por_instancia"),
+    granularidade: Literal["semana", "mes", "trimestre", "ano"] = Query("mes"),
+    categoria: Literal["MAO_OBRA", "EQUIPAMENTO"] | None = Query(None),
+    grupo_id: str | None = Query(None),
+    instancia_id: str | None = Query(None),
+    top_n: int = Query(300, ge=1, le=2000),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.get_cubo_roster_real_projection(
+            project_id,
+            version=version,
+            escopo_id=escopo_id,
+            face=face,
+            granularidade=granularidade,
+            categoria=categoria,
+            grupo_id=grupo_id,
+            instancia_id=instancia_id,
+            top_n=top_n,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/{project_id}/cubo-roster-real/projecao/contrato",
+    summary="ADR-174: Get real roster cost projection contract (faces x natureza x granularidade)",
+)
+def get_cubo_roster_real_projecao_contrato(
+    project_id: str,
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    _ = project_id
+    return service.get_cubo_roster_real_projection_contract()
