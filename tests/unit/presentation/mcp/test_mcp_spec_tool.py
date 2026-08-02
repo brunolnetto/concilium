@@ -507,7 +507,10 @@ class TestCriarProjetoSpec:
     # -----------------------------------------------------------------------
 
     def test_success_escopo_with_cronograma_spec(self, _base_mocks, tmp_path):
-        """Escopo with cronograma_spec injects _cronograma_spec into inputs_01."""
+        """ADR-106 F5: cronograma[*].leadtime_mob_semanas/lag_demob_semanas (indexado por
+        item_id) é mesclado no item de EAP correspondente antes de chamar a skill 01 —
+        antes desta correção, ficava preso em `_cronograma_spec`, uma chave nunca lida
+        por nenhuma skill (bug de plumbing)."""
         mocks = _base_mocks
 
         spec_with_cron = {
@@ -515,7 +518,15 @@ class TestCriarProjetoSpec:
             "escopos": [
                 {
                     **_VALID_SPEC["escopos"][0],
-                    "cronograma": [{"item_id": "it-01", "n_equipes": 2, "producao_diaria": 50.0}],
+                    "cronograma": [
+                        {
+                            "item_id": "it-01",
+                            "n_equipes": 2,
+                            "producao_diaria": 50.0,
+                            "leadtime_mob_semanas": 3,
+                            "lag_demob_semanas": 1,
+                        }
+                    ],
                 }
             ],
         }
@@ -552,10 +563,14 @@ class TestCriarProjetoSpec:
             result = tool(spec=spec_with_cron)
 
         assert result["escopos"][0]["status_skill_01"] == "OK"
-        # cronograma_spec should have been added to inputs
+        # leadtime_mob_semanas/lag_demob_semanas devem ser mesclados no item de EAP
+        # correspondente (por item_id) — não deve sobrar nenhuma chave "_cronograma_spec" morta.
         call_kwargs = mocks["mock_coord"].avancar_plano.call_args
         inputs_passed = call_kwargs[1]["inputs"] if call_kwargs[1] else call_kwargs[0][3]
-        assert "_cronograma_spec" in inputs_passed
+        assert "_cronograma_spec" not in inputs_passed
+        item = next(i for i in inputs_passed["eap"] if i["item_id"] == "it-01")
+        assert item["leadtime_mob_semanas"] == 3
+        assert item["lag_demob_semanas"] == 1
 
     # -----------------------------------------------------------------------
     # Escopo creation failure

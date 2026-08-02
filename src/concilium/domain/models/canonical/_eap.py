@@ -53,6 +53,10 @@ class EapItem(BaseModel):
     # NEP-031 L4: predecessores com tipo de relação (FS/SS/FF) e lag.
     # Aceita str (legado, tratado como FS lag=0) ou PrecedenciaItem.
     predecessores: list[str | PrecedenciaItem] = Field(default_factory=list)
+    # ADR-106 F5: override explícito de janela de mob/desmob (semanas), por item de EAP.
+    # None = sem override (backward compat — nenhum custo de janela adicionado).
+    leadtime_mob_semanas: int | None = Field(default=None, ge=0)
+    lag_demob_semanas: int | None = Field(default=None, ge=0)
 
     def predecessores_tipados(self) -> list[PrecedenciaItem]:
         """Normaliza predecessores para PrecedenciaItem (converte str legados)."""
@@ -83,6 +87,9 @@ class Atividade(BaseModel):
     # (mobilizacao_policy_override.json). Enables per-Atividade policy embedded
     # in the canonical — useful for scenario branching and full auditability.
     mobilizacao_policy: MobilizacaoPolicy | None = None
+    # ADR-106 F5: propagado de EapItem.leadtime_mob_semanas/lag_demob_semanas (skill 01).
+    leadtime_mob_semanas: int | None = None
+    lag_demob_semanas: int | None = None
 
 
 class ArestaActivityDag(BaseModel):

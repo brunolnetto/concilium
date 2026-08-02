@@ -524,6 +524,55 @@ class TestSkillEquipesDiretas:
         assert custo_com > custo_sem
 
 
+class TestSkillEquipesDiretasMobilizacaoOverride:
+    """Regressão: leadtime_mob_semanas/lag_demob_semanas eram aceitos pelas skills
+    01/04 (schema + inputs) mas descartados silenciosamente — nenhum efeito no
+    custo/contrato final da skill 05. Ver ADR-106 F5 e issue de mobilização."""
+
+    def _run_pipeline(self, inputs_escopo, catalogo):
+        can = _canonical_com_prat(inputs_escopo, catalogo)
+        inputs_cron = {
+            "num_equipes_por_item": {
+                "eap-01": {f"2026-W{w:02d}": 1 for w in range(23, 31)},
+                "eap-02": {f"2026-W{w:02d}": 1 for w in range(27, 37)},
+                "eap-03": {f"2026-W{w:02d}": 1 for w in range(35, 41)},
+            }
+        }
+        can = run_cronograma(can, inputs_cron, catalogo).canonical
+        return run_equipes_e_alocacao(can, {}, catalogo)
+
+    def test_leadtime_mob_semanas_altera_custo_e_contrato_equipe(self, inputs_escopo_terraplenagem, config_root):
+        import copy
+
+        catalogo = {
+            "cpus": json.loads((config_root / "catalogos" / "test" / "cpus.json").read_text())["cpus"],
+            "insumos": _load_catalogo_insumos(config_root),
+        }
+
+        inputs_sem_override = copy.deepcopy(inputs_escopo_terraplenagem)
+        inputs_com_override = copy.deepcopy(inputs_escopo_terraplenagem)
+        inputs_com_override["eap"][0]["leadtime_mob_semanas"] = 3
+        inputs_com_override["eap"][0]["lag_demob_semanas"] = 2
+
+        result_sem = self._run_pipeline(inputs_sem_override, catalogo)
+        result_com = self._run_pipeline(inputs_com_override, catalogo)
+        assert not result_sem.has_errors
+        assert not result_com.has_errors
+
+        eq_sem = next(e for e in result_sem.canonical.equipes_diretas if e.item_id == "eap-01")
+        eq_com = next(e for e in result_com.canonical.equipes_diretas if e.item_id == "eap-01")
+
+        # Regressão central: contrato do item com override NÃO é idêntico ao sem override.
+        assert eq_com.custo_total != eq_sem.custo_total
+        assert eq_com.custo_mobilizacao_mensal > eq_sem.custo_mobilizacao_mensal
+        assert eq_com.custo_desmobilizacao_mensal > eq_sem.custo_desmobilizacao_mensal
+
+        # Itens sem override no EAP permanecem inalterados (fix não vaza para outros itens).
+        eq_sem_02 = next(e for e in result_sem.canonical.equipes_diretas if e.item_id == "eap-02")
+        eq_com_02 = next(e for e in result_com.canonical.equipes_diretas if e.item_id == "eap-02")
+        assert eq_com_02.custo_total == eq_sem_02.custo_total
+
+
 class TestSkillPlanejamentoBDI:
     def test_decomposicao_4_categorias(self, inputs_escopo_terraplenagem, config_root):
         import json

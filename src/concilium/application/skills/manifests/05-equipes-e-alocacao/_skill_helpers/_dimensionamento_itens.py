@@ -519,6 +519,25 @@ def _calc_custo_mob_desmob(comp: dict, cron: object) -> float:
     return round(custo_mob + custo_demob, 2)
 
 
+def _calc_custo_mob_janela(item: Any, custo_mo_mensal: float, custo_eq_mensal: float) -> tuple[float, float]:
+    """ADR-106 F5: custo da janela de pré-ativação/pós-atividade por override explícito
+    de EapItem.leadtime_mob_semanas/lag_demob_semanas.
+
+    Fórmula: (c_mo + c_eq) semanais × leadtime_mob_semanas / lag_demob_semanas — mesma
+    lógica de LifecycleEngine.calcular() (equipe_custo_engine.py), aplicada diretamente
+    aqui pois o dimensionamento de equipes diretas (skill-05) não passa pelo engine.
+    None (sem override) = 0 — backward compat, nenhuma janela extra de custo.
+    """
+    leadtime = item.leadtime_mob_semanas
+    lag = item.lag_demob_semanas
+    if not leadtime and not lag:
+        return 0.0, 0.0
+    c_semanal = (custo_mo_mensal + custo_eq_mensal) / SEMANAS_POR_MES
+    custo_mob = round(c_semanal * leadtime, 2) if leadtime else 0.0
+    custo_demob = round(c_semanal * lag, 2) if lag else 0.0
+    return custo_mob, custo_demob
+
+
 def _validar_materiais_item(comp: dict, cpu: dict, validacoes: list) -> None:
     """Emite VAL-EQUIP-MAT-01/02 para inconsistências entre MaterialEquipe e composicao_itens."""
     # Ignora entradas promovidas automaticamente de cpu.composicao_itens — apenas MaterialEquipe explícitas.

@@ -251,12 +251,16 @@ bdi_lucro = {
 
 **Bloco 6 — Mobilização** (perguntar se obra > 3 meses)
 
-"Quantas semanas para montar o canteiro antes de começar a produção?"
+"Quantas semanas de canteiro pagas antes de começar a produção?" — controla o **custo**
+extra de MO+equipamento mobilizado, não a data inferida da janela (essa é sempre automática).
 
-Tradução interna (nunca expor o nome do campo):
+Tradução interna (nunca expor o nome do campo) — no `eap[*]` do item, ou em
+`cronograma[*]` (indexado por item_id) quando usando `criar_projeto(spec=...)`. Só tem
+efeito na criação do plano via skill `01-escopo-e-eap` — não é aplicável reprocessando
+um plano já existente:
 ```python
-# "3 semanas" → cronograma[*].leadtime_mob_semanas = 3
-# "1 semana para devolver os equipamentos" → cronograma[*].lag_demob_semanas = 1
+# "3 semanas" → eap[*].leadtime_mob_semanas = 3
+# "1 semana para devolver os equipamentos" → eap[*].lag_demob_semanas = 1
 ```
 
 Sugestão do agente baseada no porte:

@@ -32,6 +32,32 @@ from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
+def _merge_cronograma_mob_em_eap(eap: list[dict], cronograma: list[dict] | None) -> list[dict]:
+    """ADR-106 F5: aplica overrides de leadtime_mob_semanas/lag_demob_semanas de
+    ``cronograma[*]`` (indexado por item_id) nos itens de EAP correspondentes.
+
+    ``escopo_spec.cronograma`` é uma lista separada de hints por item_id (ver
+    config/schemas/projeto_spec.schema.json); EapItem só lê seus próprios campos,
+    então o merge precisa acontecer aqui antes de chamar a skill 01.
+    """
+    if not cronograma:
+        return eap
+    hints = {c["item_id"]: c for c in cronograma if c.get("item_id")}
+    merged = []
+    for item in eap:
+        hint = hints.get(item.get("item_id"))
+        if not hint:
+            merged.append(item)
+            continue
+        item = {**item}
+        if "leadtime_mob_semanas" in hint:
+            item["leadtime_mob_semanas"] = hint["leadtime_mob_semanas"]
+        if "lag_demob_semanas" in hint:
+            item["lag_demob_semanas"] = hint["lag_demob_semanas"]
+        merged.append(item)
+    return merged
+
+
 def _suggest_cpu_por_regra(desc_upper: str) -> tuple[str, int] | None:
     """Tenta mapear via cpu_mapping_rules.json (keyword matching explícito). None se não mapeado."""
     try:
@@ -293,6 +319,7 @@ def register(server: FastMCP) -> None:
                 except Exception as e:
                     return {"erro": f"Falha ao criar escopo '{eid}': {e}"}
                 ps = es.create_plan(nome="Plano Principal")
+                eap_com_mob = _merge_cronograma_mob_em_eap(escopo_spec["eap"], escopo_spec.get("cronograma"))
                 inputs_01 = {
                     "nome": meta["nome"],
                     "tipo_obra": meta["tipo_obra"],
@@ -306,11 +333,9 @@ def register(server: FastMCP) -> None:
                     "data_inicio": meta["data_inicio"],
                     "data_termino": meta["data_termino"],
                     "versao_referencia_id": rt.load_contexto(meta["contexto_id"]).referencia_id,
-                    "eap": escopo_spec["eap"],
+                    "eap": eap_com_mob,
                     "regime_tributario": tributario,
                 }
-                if escopo_spec.get("cronograma"):
-                    inputs_01["_cronograma_spec"] = escopo_spec["cronograma"]
                 try:
                     r = coord.avancar_plano("01-escopo-e-eap", store, ps, inputs=inputs_01)
                     status_01 = "ERRO" if r.has_errors else "OK"

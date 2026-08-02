@@ -20,6 +20,7 @@ from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
     _build_comp_para_item,
     _calc_custo_cron,
     _calc_custo_mob_desmob_split,
+    _calc_custo_mob_janela,
     _processar_equipamentos_item,
     _processar_funcoes_item,
     _validar_materiais_item,
@@ -146,6 +147,11 @@ def _dimensionar_item_equipe(
     # campos custo_mobilizacao_mensal/custo_desmobilizacao_mensal ficavam mortos
     # (nunca atribuídos), apesar do invariante documentado no modelo.
     custo_mob_mensal, custo_demob_mensal = _calc_custo_mob_desmob_split(comp, cron)
+    # ADR-106 F5: adiciona custo de janela de mob/desmob quando o item de EAP tem
+    # override explícito de leadtime_mob_semanas/lag_demob_semanas (issue mobilização).
+    custo_mob_janela, custo_demob_janela = _calc_custo_mob_janela(item, custo_mo, custo_eq)
+    custo_mob_mensal = round(custo_mob_mensal + custo_mob_janela, 2)
+    custo_demob_mensal = round(custo_demob_mensal + custo_demob_janela, 2)
     custo_mob_desmob = round(custo_mob_mensal + custo_demob_mensal, 2)
     custo_operacional_agregado, ativos, custo_comb_efetivo, _fixo_mensal, _team_weeks, custo_ocioso, custo_1frente = (
         _calc_custo_cron(cron, custo_mo, custo_eq, custo_comb)

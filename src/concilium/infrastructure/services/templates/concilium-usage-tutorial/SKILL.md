@@ -312,18 +312,30 @@ bdi_lucro = {
 
 **Ajuste opcional — Mobilização**
 
-O sistema já infere a janela de mobilização automaticamente a partir do cronograma (margem
-padrão de 1 semana antes/depois da EAP). Só perguntar se o usuário quiser um valor diferente:
-"Quantas semanas para montar o canteiro antes de começar a produção?"
+O sistema já infere a **data** da janela de mobilização automaticamente a partir do
+cronograma (margem padrão de 1 semana antes/depois da EAP) — isso nunca muda.
+`leadtime_mob_semanas`/`lag_demob_semanas` controlam outra coisa: o **custo extra** de manter
+MO+equipamento mobilizados durante essa janela (semanas pagas antes/depois da produção).
+Só perguntar se o usuário quiser cobrar esse custo: "Quantas semanas de canteiro pagas antes
+de começar a produção?"
 
-Tradução interna (nunca expor o nome do campo):
+Tradução interna (nunca expor o nome do campo) — setar **no item de EAP**, não como
+parâmetro solto de `disparar_pipeline`:
 ```python
-# "3 semanas" → cronograma[*].leadtime_mob_semanas = 3
-# "1 semana para devolver os equipamentos" → cronograma[*].lag_demob_semanas = 1
+# "3 semanas" → eap[*].leadtime_mob_semanas = 3  (ou cronograma[*].leadtime_mob_semanas
+#   em criar_projeto(spec=...), indexado por item_id — o backend faz o merge)
+# "1 semana para devolver os equipamentos" → eap[*].lag_demob_semanas = 1
 ```
 Sugestão do agente baseada no porte, se pedirem uma referência:
 - Obra ≤ R$20M ou ≤ 6 meses → sugerir 1–2 semanas mob, 1 semana demob
 - Obra > R$50M ou > 12 meses → sugerir 3–4 semanas mob, 2 semanas demob
+
+**Importante — só tem efeito na criação do plano.** Esses campos são lidos pela skill
+`01-escopo-e-eap` ao montar a EAP (não podem ser aplicados retroativamente reprocessando
+a skill `04-cronograma`/`05-equipes-e-alocacao` sobre um plano já existente, porque a skill
+01 recusa rodar sobre um canônico pré-existente). Para testar um valor diferente em um
+projeto já criado, crie um **plano irmão** (`create_plan`) e rode a skill 01 de novo com o
+override no `eap[*]`.
 
 **Ajuste opcional — Equipamento na região** (só se localização remota)
 
