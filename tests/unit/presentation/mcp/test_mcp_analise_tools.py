@@ -23,6 +23,7 @@ _ESCOPO_MODULE = "concilium.presentation.mcp.tools.escopo"
 _ANALISE_MODULE = "concilium.presentation.mcp.tools.analise"
 _CUBO_MODULE = "concilium.application.services.analytics.cubo_pool_projection"
 _CUBO_ESTOQUE_MODULE = "concilium.application.services.analytics.cubo_estoque_consumivel_projection"
+_CUBO_ROSTER_MODULE = "concilium.application.services.analytics.cubo_roster_real_projection"
 
 # The tool closures reference _project via the name bound in analise.py at
 # import time ("from _context import _project"), so we must patch at the
@@ -126,6 +127,7 @@ def test_register_creates_three_tools(monkeypatch, tmp_path):
     assert "comparar_planos" in tools
     assert "explorar_pool_recursos" in tools
     assert "explorar_estoque_consumiveis" in tools
+    assert "explorar_roster_real" in tools
 
 
 # ---------------------------------------------------------------------------
@@ -777,3 +779,170 @@ class TestExplorarEstoqueConsumiveis:
             result = tools["explorar_estoque_consumiveis"]("proj-test", plano_id="PL-EXPLICITO")
 
         assert result["plano_id"] == "PL-EXPLICITO"
+
+
+# ---------------------------------------------------------------------------
+# Tests: explorar_roster_real (ADR-174)
+# ---------------------------------------------------------------------------
+
+
+def _make_escopo_com_roster(roster_mo=None, roster_eq=None):
+    from concilium.domain.models.project.escopo import Escopo
+
+    return Escopo(
+        escopo_id="ESC-01",
+        projeto_id="proj-test",
+        nome="Escopo",
+        tipo_obra="terraplenagem",
+        localizacao="BR",
+        coordenadas_lat=0.0,
+        coordenadas_lng=0.0,
+        data_inicio=datetime.date(2026, 1, 1),
+        data_termino=datetime.date(2026, 12, 31),
+        roster_mo=roster_mo or [],
+        roster_eq=roster_eq or [],
+    )
+
+
+class TestExplorarRosterReal:
+    def _make_roster_store(
+        self, canonical, escopo_obj, escopo_id: str = "ESC-01", plano_id: str = "PL-01"
+    ) -> MagicMock:
+        store = MagicMock()
+        store.list_escopos.return_value = [escopo_id]
+        store.meta = {"id": "proj-test"}
+
+        escopo = MagicMock()
+        active_plan = MagicMock()
+        active_plan.plano_id = plano_id
+        escopo.active_plan.return_value = active_plan
+        escopo.to_escopo.return_value = escopo_obj
+
+        plan_store = MagicMock()
+        plan_store.load_canonical.return_value = canonical
+        escopo.plan.return_value = plan_store
+
+        store.escopo.return_value = escopo
+        return store
+
+    def _make_cubo_result(self) -> dict:
+        return {
+            "face": "resumo_por_instancia",
+            "natureza": "causal",
+            "narrativa": "Narrativa de teste",
+            "rows": [{"instancia_id": "mo-001"}],
+            "totais": {"custo_total_geral": 1000.0},
+            "invariantes_ok": True,
+        }
+
+    def test_happy_path(self, monkeypatch, tmp_path):
+        from concilium.domain.models.canonical import MembroEquipeReal
+
+        membro = MembroEquipeReal(
+            individuo_id="mo-001",
+            funcao_id="MO-ARMADOR",
+            salario_base_mensal=3000.0,
+            data_admissao=datetime.date(2026, 1, 1),
+        )
+        canonical = _make_canonical()
+        escopo_obj = _make_escopo_com_roster(roster_mo=[membro])
+        store = self._make_roster_store(canonical, escopo_obj)
+        cubo_result = self._make_cubo_result()
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+            patch(f"{_CUBO_ROSTER_MODULE}.resolve_cubo_roster_real_projection", return_value=cubo_result),
+        ):
+            result = tools["explorar_roster_real"]("proj-test")
+
+        assert "schema_version" in result
+        assert result["face"] == "resumo_por_instancia"
+        assert result["rows"] == [{"instancia_id": "mo-001"}]
+        assert result["invariantes_ok"] is True
+        assert result["escopo_id"] == "ESC-01"
+        assert result["plano_id"] == "PL-01"
+
+    def test_no_canonical_returns_erro(self, monkeypatch, tmp_path):
+        escopo_obj = _make_escopo_com_roster()
+        store = self._make_roster_store(None, escopo_obj)
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_roster_real"]("proj-test")
+
+        assert "erro" in result
+
+    def test_roster_vazio_triggers_guard(self, monkeypatch, tmp_path):
+        canonical = _make_canonical()
+        escopo_obj = _make_escopo_com_roster()
+        store = self._make_roster_store(canonical, escopo_obj)
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_roster_real"]("proj-test")
+
+        assert "erro" in result
+        assert "roster" in result["erro"].lower()
+
+    def test_resolve_escopo_raises_returns_erro(self, monkeypatch, tmp_path):
+        store = MagicMock()
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", side_effect=ValueError("sem escopos")),
+        ):
+            result = tools["explorar_roster_real"]("proj-test")
+
+        assert "erro" in result
+        assert "sem escopos" in result["erro"]
+
+    def test_no_plano_id_and_no_active_plan_returns_erro(self, monkeypatch, tmp_path):
+        store = MagicMock()
+        store.list_escopos.return_value = ["ESC-01"]
+        store.meta = {"id": "proj-test"}
+        escopo = MagicMock()
+        escopo.active_plan.return_value = None
+        store.escopo.return_value = escopo
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_roster_real"]("proj-test")
+
+        assert "erro" in result
+        assert "sem plano ativo" in result["erro"].lower()
+
+    def test_roster_eq_apenas_tambem_passa_guard(self, monkeypatch, tmp_path):
+        from concilium.domain.models.canonical import AtivoEquipamentoReal
+
+        ativo = AtivoEquipamentoReal(
+            ativo_id="eq-001",
+            equip_id="EQ-ESCAVADEIRA",
+            custo_locacao_mensal_real=12000.0,
+            data_contrato_inicio=datetime.date(2026, 1, 1),
+        )
+        canonical = _make_canonical()
+        escopo_obj = _make_escopo_com_roster(roster_eq=[ativo])
+        store = self._make_roster_store(canonical, escopo_obj)
+        cubo_result = self._make_cubo_result()
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+            patch(f"{_CUBO_ROSTER_MODULE}.resolve_cubo_roster_real_projection", return_value=cubo_result),
+        ):
+            result = tools["explorar_roster_real"]("proj-test")
+
+        assert "erro" not in result

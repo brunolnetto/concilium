@@ -7,7 +7,21 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.auth.permission_guard import permission
-from concilium.presentation.mcp._context import _project, _wrap_response
+from concilium.presentation.mcp._context import _project, _runtime, _wrap_response
+
+
+def _load_catalogo_best_effort(store: Any) -> dict[str, Any] | None:
+    """ADR-174: sem catálogo, custo_indireto de MO degrada para 0.0 (mesmo padrão
+    de toda a cadeia ADR-165/166/173) — nunca lança erro."""
+    meta = store.meta if isinstance(store.meta, dict) else {}
+    for catalog_id in (meta.get("catalogo_base"), meta.get("contexto_id")):
+        if not catalog_id:
+            continue
+        try:
+            return _runtime().load_catalogo(catalog_id)
+        except Exception:
+            continue
+    return None
 
 
 def register(server: FastMCP) -> None:
@@ -203,6 +217,88 @@ def register(server: FastMCP) -> None:
             face=face,
             granularidade=granularidade,
             resource_id=resource_id,
+        )
+        return _wrap_response(
+            {
+                "project_id": project_id,
+                "escopo_id": eid,
+                "plano_id": pid,
+                "face": proj["face"],
+                "natureza": proj["natureza"],
+                "narrativa": proj["narrativa"],
+                "rows": proj["rows"],
+                "totais": proj["totais"],
+                "invariantes_ok": proj["invariantes_ok"],
+            }
+        )
+
+    @server.tool()
+    @permission("project:read")
+    def explorar_roster_real(
+        project_id: str,
+        face: str = "resumo_por_instancia",
+        escopo_id: str | None = None,
+        plano_id: str | None = None,
+        granularidade: str = "mes",
+        categoria: str | None = None,
+        grupo_id: str | None = None,
+        instancia_id: str | None = None,
+    ) -> dict[str, Any]:
+        """ADR-174: Explora o custo real por instância de roster (MO+EQ), em
+        paridade com `explorar_pool_recursos`/`explorar_estoque_consumiveis`.
+
+        Hierarquia: categoria (MAO_OBRA/EQUIPAMENTO) > grupo_id (função/tipo de
+        equipamento) > instancia_id (indivíduo/ativo real). Custo direto/indireto/
+        total são medidas, não dimensões — equipamento nunca tem custo_indireto
+        (EPI/treinamento/exame/benefício são conceitos exclusivamente humanos).
+
+        Faces: resumo_por_instancia | resumo_por_grupo | resumo_por_categoria | custo_temporal.
+        """
+        from concilium.application.services.analytics.cubo_roster_real_projection import (
+            resolve_cubo_roster_real_projection,
+        )
+        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
+
+        store = _project(project_id)
+        try:
+            eid = _resolve_escopo_id(store, escopo_id)
+            es = store.escopo(eid)
+            active = es.active_plan()
+            if plano_id is not None:
+                pid = plano_id
+            elif active is not None:
+                pid = active.plano_id
+            else:
+                return {"erro": "Escopo sem plano ativo. Execute disparar_pipeline primeiro."}
+            canonical = es.plan(pid).load_canonical()
+        except Exception as e:
+            return {"erro": str(e)}
+
+        if not canonical:
+            return {"erro": "Plano sem dados canônicos. Execute disparar_pipeline primeiro."}
+
+        escopo_obj = es.to_escopo()
+        roster_mo = escopo_obj.roster_mo if escopo_obj else []
+        roster_eq = escopo_obj.roster_eq if escopo_obj else []
+        if not roster_mo and not roster_eq:
+            return {
+                "erro": (
+                    "Roster real vazio neste escopo. Use gerir_escopo "
+                    "acao='editar_roster_mo'/'editar_roster_eq' para cadastrar indivíduos/ativos reais."
+                )
+            }
+
+        catalogo = _load_catalogo_best_effort(store)
+        proj = resolve_cubo_roster_real_projection(
+            canonical,
+            roster_mo,
+            roster_eq,
+            catalogo,
+            face=face,
+            granularidade=granularidade,
+            categoria=categoria,
+            grupo_id=grupo_id,
+            instancia_id=instancia_id,
         )
         return _wrap_response(
             {
