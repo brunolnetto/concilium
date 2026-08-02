@@ -20,6 +20,13 @@ from datetime import date, timedelta
 from concilium.domain.constants import ENCARGOS_CLT, ENCARGOS_MENSALISTA, SEMANAS_POR_MES
 from concilium.domain.models.canonical import MembroEquipeReal
 from concilium.domain.services.financial.encargo_resolver import resolver_encargo
+from concilium.domain.services.financial.rh_custo_catalogo import (
+    beneficios_ativos,
+    custo_mensal_beneficio_por_funcao,
+    custo_mensal_rh_por_funcao,
+    rh_insumos_por_tipo,
+    tipo_contrato_por_funcao,
+)
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
 
@@ -78,3 +85,51 @@ def custo_real_mo_total(
 ) -> float:
     """Custo real total de MO no span — soma de `custo_real_mo_semanal`."""
     return round(sum(custo_real_mo_semanal(roster, funcao_id, semana_inicio, semana_fim).values()), 2)
+
+
+def custo_real_mo_indireto_semanal(
+    roster: list[MembroEquipeReal],
+    funcao_id: str,
+    semana_inicio: str,
+    semana_fim: str,
+    catalogo: dict | None,
+) -> dict[str, float]:
+    """ADR-173 D7 — Custo real indireto de MO por semana: soma, por semana, o custo
+    de RH (EPI+TREINAMENTO+EXAME+BENEFICIO) amortizado de cada membro do roster
+    ativo naquela função e naquele intervalo — mesma elegibilidade/amortização do
+    bottom-up agregado de skill-06 (ADR-166), agora por indivíduo real.
+
+    Retorna `0.0` por semana se `catalogo` for `None` ou não tiver itens RH
+    aplicáveis — degradação segura, mesmo padrão da cadeia ADR-165/166.
+    """
+    membros_funcao = [m for m in roster if m.funcao_id == funcao_id]
+    epis, treinamentos, exames = rh_insumos_por_tipo(catalogo)
+    beneficios = beneficios_ativos(catalogo)
+    tipo_contrato_map = tipo_contrato_por_funcao(catalogo)
+
+    custo: dict[str, float] = {}
+    for semana in enumerar_semanas(semana_inicio, semana_fim):
+        total_semana = 0.0
+        for m in membros_funcao:
+            if not _membro_ativo_na_semana(m, semana):
+                continue
+            custo_mensal = custo_mensal_rh_por_funcao(m.funcao_id, epis, treinamentos, exames)
+            custo_mensal += custo_mensal_beneficio_por_funcao(
+                m.funcao_id, beneficios, tipo_contrato_map.get(m.funcao_id)
+            )
+            total_semana += custo_mensal / SEMANAS_POR_MES
+        custo[semana] = round(total_semana, 2)
+    return custo
+
+
+def custo_real_mo_indireto_total(
+    roster: list[MembroEquipeReal],
+    funcao_id: str,
+    semana_inicio: str,
+    semana_fim: str,
+    catalogo: dict | None,
+) -> float:
+    """Custo real indireto total de MO no span — soma de `custo_real_mo_indireto_semanal`."""
+    return round(
+        sum(custo_real_mo_indireto_semanal(roster, funcao_id, semana_inicio, semana_fim, catalogo).values()), 2
+    )
