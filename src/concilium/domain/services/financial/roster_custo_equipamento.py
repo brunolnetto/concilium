@@ -65,9 +65,7 @@ def custo_real_eq_semanal(
     ativos_tipo = [a for a in roster if a.equip_id == equip_id]
     custo: dict[str, float] = {}
     for semana in enumerar_semanas(semana_inicio, semana_fim):
-        total_semana = sum(
-            _custo_semanal_ativo(a) for a in ativos_tipo if _ativo_ativo_na_semana(a, semana)
-        )
+        total_semana = sum(_custo_semanal_ativo(a) for a in ativos_tipo if _ativo_ativo_na_semana(a, semana))
         custo[semana] = round(total_semana, 2)
     return custo
 
@@ -87,9 +85,7 @@ def custo_real_eq_idle_semanal(
     ativos_tipo = [a for a in roster if a.equip_id == equip_id]
     custo: dict[str, float] = {}
     for semana in enumerar_semanas(semana_inicio, semana_fim):
-        total_semana = sum(
-            _custo_semanal_ativo_idle(a) for a in ativos_tipo if _ativo_ativo_na_semana(a, semana)
-        )
+        total_semana = sum(_custo_semanal_ativo_idle(a) for a in ativos_tipo if _ativo_ativo_na_semana(a, semana))
         custo[semana] = round(total_semana, 2)
     return custo
 
@@ -119,3 +115,27 @@ def custo_real_eq_total(
 ) -> float:
     """Custo real total de equipamento no span — soma de `custo_real_eq_semanal`."""
     return round(sum(custo_real_eq_semanal(roster, equip_id, semana_inicio, semana_fim).values()), 2)
+
+
+def custo_semanal_individual_eq(
+    ativo: AtivoEquipamentoReal,
+    semana_inicio: str,
+    semana_fim: str,
+) -> list[dict]:
+    """ADR-173 D13 — custo semanal detalhado de UMA instância de equipamento:
+    só direto (locação+manutenção) — equipamento não tem análogo de custo
+    indireto (EPI/treinamento/exame/benefício são conceitos exclusivamente
+    humanos, ADR-165). Restrito às semanas em que o ativo está sob contrato
+    dentro do span informado.
+
+    A soma de `custo_total` da lista retornada é, por construção, o custo total
+    de permanência real da instância no span — equivalente a
+    `custo_real_eq_total([ativo], ...)`, com detalhamento semana a semana.
+    """
+    itens: list[dict] = []
+    for semana in enumerar_semanas(semana_inicio, semana_fim):
+        if not _ativo_ativo_na_semana(ativo, semana):
+            continue
+        custo_direto = round(_custo_semanal_ativo(ativo), 2)
+        itens.append({"semana": semana, "custo_direto": custo_direto, "custo_total": custo_direto})
+    return itens

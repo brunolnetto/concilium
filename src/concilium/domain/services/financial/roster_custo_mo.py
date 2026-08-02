@@ -141,3 +141,42 @@ def custo_real_mo_indireto_total(
     return round(
         sum(custo_real_mo_indireto_semanal(roster, funcao_id, semana_inicio, semana_fim, catalogo).values()), 2
     )
+
+
+def custo_semanal_individual_mo(
+    membro: MembroEquipeReal,
+    semana_inicio: str,
+    semana_fim: str,
+    catalogo: dict | None,
+) -> list[dict]:
+    """ADR-173 D13 — custo semanal detalhado de UMA instância de MO: direto
+    (salário+encargos) + indireto (EPI/TREINAMENTO/EXAME/BENEFICIO) por semana,
+    restrito às semanas em que o membro está ativo dentro do span informado.
+
+    A soma de `custo_total` da lista retornada é, por construção, o custo total
+    de permanência real da instância no span — equivalente a
+    `custo_real_mo_total([membro], ...) + custo_real_mo_indireto_total([membro], ...)`,
+    mas com o detalhamento semana a semana que os totais agregados não expõem.
+    """
+    epis, treinamentos, exames = rh_insumos_por_tipo(catalogo)
+    beneficios = beneficios_ativos(catalogo)
+    tipo_contrato = tipo_contrato_por_funcao(catalogo).get(membro.funcao_id)
+
+    itens: list[dict] = []
+    for semana in enumerar_semanas(semana_inicio, semana_fim):
+        if not _membro_ativo_na_semana(membro, semana):
+            continue
+        custo_direto = round(_custo_semanal_membro(membro), 2)
+        custo_mensal_indireto = custo_mensal_rh_por_funcao(
+            membro.funcao_id, epis, treinamentos, exames
+        ) + custo_mensal_beneficio_por_funcao(membro.funcao_id, beneficios, tipo_contrato)
+        custo_indireto = round(custo_mensal_indireto / SEMANAS_POR_MES, 2)
+        itens.append(
+            {
+                "semana": semana,
+                "custo_direto": custo_direto,
+                "custo_indireto": custo_indireto,
+                "custo_total": round(custo_direto + custo_indireto, 2),
+            }
+        )
+    return itens

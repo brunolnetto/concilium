@@ -70,6 +70,8 @@ D11. **Explicitamente fora de escopo desta ADR**: propagação de `FuncaoEquipe.
 
 D12. **`individuo_id` é um identificador opaco de recurso, não um dado de identidade real** (resolve o risco de PII levantado na revisão desta ADR) — decisão do usuário: esta etapa do pipeline é simulação de planejamento, não um sistema de registro de RH; `MembroEquipeReal.individuo_id` não precisa (e não deve) carregar CPF/nome/matrícula real. É exatamente o mesmo tratamento que `InstanciaRecurso`/`AtivoEquipamentoReal` já dão a equipamento (ADR-153/157): um identificador único e estável dentro do Escopo, arbitrário na sua forma (ex.: `"mo-001"`), suficiente para diferenciar instâncias e resolver cobertura/substituição (D8-D10), sem exigir nem armazenar vínculo com uma pessoa do mundo real. `gerir_escopo` (D5) não valida nem exige formato de matrícula/CPF — só unicidade de `individuo_id` dentro do `roster_mo` do Escopo.
 
+D13. **Lista de custo semanal detalhado por instância** (adicionada após revisão do usuário — "cada instância do Pool tem custos associados em sua permanência total no pool"): nova função `custo_semanal_individual_mo(membro, semana_inicio, semana_fim, catalogo) -> list[dict]` (`roster_custo_mo.py`) retorna, para cada semana em que o indivíduo está ativo dentro do span informado, um registro `{"semana", "custo_direto", "custo_indireto", "custo_total"}` — combina `_custo_semanal_membro` (direto, já existente) com a mesma lógica de amortização de RH usada em `custo_real_mo_indireto_semanal` (D7), agora por UM indivíduo por vez em vez de agregado por função. A soma de `custo_total` da lista é, por construção, o custo total de permanência real da instância dentro do span. Espelho para equipamento — `custo_semanal_individual_eq(ativo, semana_inicio, semana_fim) -> list[dict]` (`roster_custo_equipamento.py`) — só com `custo_direto`/`custo_total` (sem `custo_indireto`: equipamento não tem análogo de EPI/treinamento/exame/benefício, ADR-165 é conceito exclusivamente humano). Ambas as funções recebem o span como parâmetro explícito (mesma convenção de toda a cadeia ADR-154→173) — não derivam de `date.today()`; passar o span do projeto/contrato produz a permanência real completa da instância (bounded por `data_desligamento`/`data_contrato_fim` quando definido).
+
 ## Alternativas Rejeitadas
 
 | ID | Alternativa | Motivo |
@@ -115,6 +117,7 @@ D12. **`individuo_id` é um identificador opaco de recurso, não um dado de iden
 | F5 | D7 — `custo_real_mo_indireto_semanal`/`_total` em `roster_custo_mo.py` | ✅ Implementado |
 | F6 | D8 — wiring real em skill-05 (`aplicar_roster_custo_real_mo` lendo `Escopo.roster_mo`) | ✅ Implementado |
 | F7 | D9/D10 — wiring real em skill-06 (`_composicao_qsms_bottom_up`/`_composicao_mob_beneficio_bottom_up` aceitam roster, substituem por função coberta, mesmo critério dos dois lados) + teste de não-duplicação | ✅ Implementado (design refinado — ver Nota de Implementação) |
+| F8 | D13 — `custo_semanal_individual_mo`/`_eq`: lista de custo por semana (direto+indireto/só direto) por instância, soma == total de permanência | ✅ Implementado |
 
 ## Definition of Done
 
@@ -148,6 +151,11 @@ D12. **`individuo_id` é um identificador opaco de recurso, não um dado de iden
 - [x] Teste de wiring ponta a ponta (`run_custos_indiretos`) confirma que `inputs["roster_mo"]` altera o custo de QSMS
 - **Desvio do desenho original (documentado, ver Nota de Implementação)**: em vez de chamar `custo_real_mo_indireto_total` (D7, função de span semanal) dentro do bottom-up mensal de skill-06, a substituição usa a contagem de indivíduos distintos do roster diretamente — mais simples e sem exigir threading de `semana_inicio`/`semana_fim` por 4+ assinaturas de função, com resultado equivalente quando os indivíduos estão ativos o mês inteiro (caso comum) e estritamente mais correto que o headcount estático quando há turnover dentro do período.
 
+### Fase 8
+- [x] `custo_semanal_individual_mo(membro, semana_inicio, semana_fim, catalogo)` retorna lista `{"semana","custo_direto","custo_indireto","custo_total"}` só para semanas em que o membro está ativo; soma de `custo_total` == `custo_real_mo_total + custo_real_mo_indireto_total` para o mesmo membro/span
+- [x] `custo_semanal_individual_eq(ativo, semana_inicio, semana_fim)` retorna lista `{"semana","custo_direto","custo_total"}` (sem `custo_indireto`); soma == `custo_real_eq_total` para o mesmo ativo/span
+- [x] Teste cobrindo: membro/ativo fora do span (não admitido ainda, já desligado) produz lista vazia; span maior que a permanência real trunca corretamente nas duas pontas
+
 ## Nota de Implementação
 
 Implementada via TDD em todas as fases, em worktree dedicada (`worktree-adr-173-roster-real-persistido`), 7 commits.
@@ -159,7 +167,7 @@ Implementada via TDD em todas as fases, em worktree dedicada (`worktree-adr-173-
 - Produz resultado estritamente melhor que o headcount estático quando há turnover dentro do projeto (mais indivíduos passaram pela função do que o headcount nominal).
 - Para MOB (que já preserva `permanencia_efetiva_meses` por equipe), distribui a contagem real proporcionalmente quando a mesma função aparece em mais de uma equipe — preserva a ponderação existente sem introduzir um mecanismo de atribuição indivíduo→equipe que não existe no modelo de dados.
 
-`custo_real_mo_indireto_semanal`/`_total` (D7) foram implementadas como especificado e têm cobertura de teste própria — ficam disponíveis para uso futuro em qualquer camada que precise de granularidade semanal (ex.: relatórios por indivíduo), mas não são chamadas pelo wiring de skill-06 pelo motivo acima.
+`custo_real_mo_indireto_semanal`/`_total` (D7) foram implementadas como especificado e têm cobertura de teste própria — ficam disponíveis para uso futuro em qualquer camada que precise de granularidade semanal (ex.: relatórios por indivíduo). O uso concreto veio em F8 (D13): a pedido do usuário ("cada instância do Pool tem custos associados em sua permanência total no pool"), `custo_semanal_individual_mo` combina essa função (indireto) com `_custo_semanal_membro` (direto, já existente) numa única lista por semana, por indivíduo — exatamente a granularidade que D7 foi desenhada para fornecer, só que aplicada ao nível de instância em vez do bottom-up agregado de skill-06.
 
 **Risco residual documentado, não resolvido**: `equipes_diretas` (fonte de headcount para skill-06) e `RecursoContrato.composicao_funcoes_mo` (fonte de headcount para skill-05) são populadas por caminhos de agregação diferentes (nível EAP-item vs. nível pool-contrato) que hoje já podem divergir em cenários complexos de múltiplas equipes paralelas — isso é comportamento pré-existente, não introduzido por esta ADR, mas significa que a "mesma função" pode, em casos extremos, ter `necessario` (headcount para fins de cobertura) ligeiramente diferente nos dois lados. Ambos os lados usam `cobertura_funcao_suficiente` com o `necessario` que lhes é próprio — não há double-counting (direto e indireto são categorias de custo distintas, sempre somadas, nunca uma substituindo a outra), mas a decisão de "coberto ou não" pode, em teoria, divergir entre os dois lados nesses cenários extremos. Não há evidência de que isso ocorra na prática (catálogos reais têm uma função por pool-tipo na maioria dos casos); fica documentado para investigação futura se o comportamento for observado em produção.
 
