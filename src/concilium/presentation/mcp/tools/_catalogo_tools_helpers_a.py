@@ -820,6 +820,17 @@ def _impl_atualizar_preco_insumo(
     if projeto_id:
         from concilium.infrastructure.auth.permission_guard import get_current_user_id
 
+        if novo_preco is None:
+            # _save_preco_insumo_override_projeto só grava "preco" — sem esta
+            # guarda, um chamador que informou só novo_valor_locacao_mensal/
+            # novos_funcoes_aplicaveis (válido para o caminho de rascunho, ver
+            # docstring) gravaria silenciosamente "preco": None no override.
+            return {
+                "erro": "Override de projeto (projeto_id informado) exige novo_preco — "
+                "novo_valor_locacao_mensal/novos_funcoes_aplicaveis só são suportados via "
+                "edição do catálogo mestre (rascunho_id, sem projeto_id)."
+            }
+
         return _save_preco_insumo_override_projeto(
             projects_dir,
             projeto_id,

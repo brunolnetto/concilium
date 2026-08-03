@@ -58,7 +58,6 @@ class S3BlobStorage(BlobStoragePort):
     def _from_env_kwargs(cls, s3: Any, *, system: bool) -> dict[str, str | None]:
         return {
             "region": cls._stripped_or_none(s3.region),
-            "root_prefix": (s3.system_root_prefix if system else s3.root_prefix).strip(),
             "endpoint_url": cls._stripped_or_none(s3.endpoint_url),
             "addressing_style": cls._stripped_or_none(s3.addressing_style),
             "aws_access_key_id": cls._stripped_or_none(s3.access_key_id),
@@ -76,7 +75,8 @@ class S3BlobStorage(BlobStoragePort):
         """
         s3 = get_storage().s3
         bucket = cls._resolve_bucket(s3, system=system)
-        return cls(bucket=bucket, **cls._from_env_kwargs(s3, system=system))
+        root_prefix = (s3.system_root_prefix if system else s3.root_prefix).strip()
+        return cls(bucket=bucket, root_prefix=root_prefix, **cls._from_env_kwargs(s3, system=system))
 
     @staticmethod
     def _build_session() -> Any:

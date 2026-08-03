@@ -154,11 +154,11 @@ def _emails_catalog_managers(clients: list[Any]) -> set[str]:
 
 def _owner_ids_pendentes(pendentes: dict[str, list[dict[str, Any]]]) -> set[str]:
     return {
-        versao.get("owner_id")
+        owner_id
         for key, versoes in pendentes.items()
         if key.startswith(PROJETO_KEY_PREFIX)
         for versao in versoes
-        if versao.get("owner_id")
+        if isinstance(owner_id := versao.get("owner_id"), str) and owner_id
     }
 
 

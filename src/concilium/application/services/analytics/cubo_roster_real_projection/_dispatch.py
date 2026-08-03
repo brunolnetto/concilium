@@ -14,7 +14,19 @@ from concilium.application.services.analytics.cubo_roster_real_builder import (
     CuboRosterRealBuilder,
 )
 from concilium.domain.models.analytics.cubo_pool import bucket_periodo
-from concilium.domain.models.analytics.cubo_roster_real import CuboRosterReal
+from concilium.domain.models.analytics.cubo_roster_real import CategoriaRosterReal, CuboRosterReal
+
+
+def _categoria_valida(categoria: str | None) -> CategoriaRosterReal | None:
+    """Valida `categoria` (string livre de entrada externa, MCP/API) contra o
+    Literal fechado do domínio — inválida ou ausente cai em None (sem filtro)."""
+    match categoria:
+        case "MAO_OBRA":
+            return "MAO_OBRA"
+        case "EQUIPAMENTO":
+            return "EQUIPAMENTO"
+        case _:
+            return None
 
 _FACES: dict[str, dict] = {
     "resumo_por_instancia": {
@@ -173,7 +185,7 @@ def resolve_cubo_roster_real_projection(
     granularidade_valida = granularidade if granularidade in _GRANULARIDADES else "mes"
 
     cubo_completo = CuboRosterRealBuilder().build(canonical_in, roster_mo, roster_eq, catalogo, gerado_em=gerado_em)
-    cubo = cubo_completo.slice(categoria=categoria, grupo_id=grupo_id, instancia_id=instancia_id)
+    cubo = cubo_completo.slice(categoria=_categoria_valida(categoria), grupo_id=grupo_id, instancia_id=instancia_id)
 
     if face == "resumo_por_grupo":
         columns, rows, narrativa, operator_meta = _face_resumo_por_grupo(cubo)

@@ -130,6 +130,7 @@ class ProjectHandle(Protocol):
         data_termino: str,
         dias_semana: int = 6,
         horas_dia: int = 8,
+        horas_improdutivas_dia: float = 0.5,
         snapshot_catalogo_id: str = "",
         snapshot_perfil_id: str = "",
         bdi_perfil_id: str | None = None,

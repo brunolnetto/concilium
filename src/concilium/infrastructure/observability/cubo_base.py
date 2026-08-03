@@ -15,9 +15,15 @@ dimensão, em vez de fixo em (date, skill_id).
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
 
-CelulaT = TypeVar("CelulaT")
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
+
+#: Vinculado a DataclassInstance (typeshed-only, ver TYPE_CHECKING acima) — todas as
+#: subclasses concretas de Cubo[CelulaT] parametrizam com uma @dataclass real,
+#: consumida por `_popular_tabela` via `dataclasses.fields()`.
+CelulaT = TypeVar("CelulaT", bound="DataclassInstance")
 
 
 @dataclass(frozen=True)

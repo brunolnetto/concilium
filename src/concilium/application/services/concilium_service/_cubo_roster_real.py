@@ -104,7 +104,7 @@ class _CuboRosterRealMixin(_Base):
             project = repository.get_project(project_id)
         except Exception:
             return None
-        candidate_ids = self._candidate_catalog_ids(project) if hasattr(self, "_candidate_catalog_ids") else []
+        candidate_ids = self._candidate_catalog_ids(project)
         rt = Runtime(self.config_root)
         for catalog_id in candidate_ids:
             try:

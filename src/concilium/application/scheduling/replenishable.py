@@ -19,6 +19,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Sequence
 
 from concilium.application.scheduling.models import ReplenishableResource, ScheduledActivity
+from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
 from concilium.domain.models.project.constraint_violation import ConstraintViolation
 from concilium.domain.validations.catalog import ValidationCode, make_violation
 
@@ -38,15 +39,15 @@ def _taxa_por_semana(taxas: dict[str, float], scheduled: list[ScheduledActivity]
 
 
 def _project_raw(
-    disp: object, max_week: int, consumo_por_t: dict[int, float], producao_por_t: dict[int, float],
+    disp: DisponibilidadeConsumivel, max_week: int, consumo_por_t: dict[int, float], producao_por_t: dict[int, float],
     *, deficit_at: int | None = None,
 ) -> tuple[dict[int, float], dict[int, float]]:
     """Passada única de projeção, com injeção opcional do déficit numa semana fixa."""
-    taxa_max = disp.taxa_reabastecimento_max or 0.0  # type: ignore[attr-defined]
-    cap = disp.capacidade_armazenamento  # type: ignore[attr-defined]
+    taxa_max = disp.taxa_reabastecimento_max or 0.0
+    cap = disp.capacidade_armazenamento
     niveis: dict[int, float] = {}
     overflow: dict[int, float] = {}
-    estoque = disp.estoque_inicial  # type: ignore[attr-defined]
+    estoque = disp.estoque_inicial
     for t in range(max_week):
         estoque = estoque + taxa_max + producao_por_t.get(t, 0.0)
         if cap is not None and estoque > cap:
@@ -56,7 +57,7 @@ def _project_raw(
             estoque = cap
         estoque -= consumo_por_t.get(t, 0.0)
         if t == deficit_at:
-            estoque += disp.deficit_provisionado_externamente  # type: ignore[attr-defined]
+            estoque += disp.deficit_provisionado_externamente
         niveis[t] = estoque
     return niveis, overflow
 
@@ -183,10 +184,10 @@ def _is_delay_fixed_point(
     """ADR-128 F5 (achado de performance): ponto fixo — mesma atividade, mesmo
     deslocamento relativo ao novo início e déficit que não progrediu desde a rodada
     anterior (ver nota completa em ``apply_replenishable_delay``)."""
+    if deficit_anterior is None:
+        return False
     return (
-        target.activity_id == activity_anterior
-        and offset == offset_anterior
-        and deficit <= deficit_anterior  # type: ignore[operator]
+        target.activity_id == activity_anterior and offset == offset_anterior and deficit <= deficit_anterior
     )
 
 

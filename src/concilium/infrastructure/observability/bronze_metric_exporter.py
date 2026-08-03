@@ -52,7 +52,10 @@ class BronzeMetricExporter(MetricExporter):
         for resource_metrics in metrics_data.resource_metrics:
             service = ""
             if resource_metrics.resource:
-                service = resource_metrics.resource.attributes.get("service.name", "")
+                # `service.name` é sempre semanticamente uma string, mas o tipo de
+                # Attributes (OTel) permite bool/int/float/sequências — normaliza
+                # explicitamente para o `str` que `_points_for_metric` espera.
+                service = str(resource_metrics.resource.attributes.get("service.name") or "")
             for scope_metrics in resource_metrics.scope_metrics:
                 for metric in scope_metrics.metrics:
                     if metric.name.startswith("otel.sdk."):
