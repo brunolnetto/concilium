@@ -162,6 +162,64 @@ class TestInputsMixin:
         result = mixin._apply_runtime_defaults("04-cronograma", proj, ctx, {})
         assert "calendario_operacional" in result
 
+    def _make_fs_project(self, tmp_path, version="v1"):
+        """Projeto com `.root`/`.current_version()` reais (não MagicMock) — necessário
+        para exercitar a persistência em disco de `resolved_calendario.json`."""
+        proj = MagicMock()
+        proj.meta = {"nome": "Test"}
+        proj.id = "proj-1"
+        proj.root = tmp_path
+        proj.current_version = MagicMock(return_value=version)
+        return proj
+
+    def test_calendario_primeira_resolucao_persiste_snapshot(self, tmp_path):
+        """ADR-066 §F4 estendido: a primeira resolução da versão grava
+        resolved_calendario.json — fidelidade por-run, igual a resolved_catalog.json."""
+        mixin = self._make_mixin()
+        mixin.load_calendario_operacional = MagicMock(return_value={"eventos": [{"id": "E1"}]})
+        proj = self._make_fs_project(tmp_path)
+        ctx = self._make_contexto()
+
+        result = mixin._apply_runtime_defaults("04-cronograma", proj, ctx, {})
+
+        assert result["calendario_operacional"] == {"eventos": [{"id": "E1"}]}
+        snapshot_path = tmp_path / "v1" / "resolved_calendario.json"
+        assert snapshot_path.exists()
+
+    def test_calendario_segunda_resolucao_reusa_snapshot_ignora_config_live(self, tmp_path):
+        """Re-rodar a MESMA versão não deve refletir uma mudança em config/calendarios/
+        entre as duas execuções — deve reusar o snapshot já persistido."""
+        mixin = self._make_mixin()
+        mixin.load_calendario_operacional = MagicMock(return_value={"eventos": [{"id": "E1"}]})
+        proj = self._make_fs_project(tmp_path)
+        ctx = self._make_contexto()
+
+        mixin._apply_runtime_defaults("04-cronograma", proj, ctx, {})
+
+        # Simula config/calendarios/ mudando entre as duas execuções da mesma versão
+        mixin.load_calendario_operacional = MagicMock(return_value={"eventos": [{"id": "E2"}]})
+        result = mixin._apply_runtime_defaults("04-cronograma", proj, ctx, {})
+
+        assert result["calendario_operacional"] == {"eventos": [{"id": "E1"}]}
+        mixin.load_calendario_operacional.assert_not_called()
+
+    def test_calendario_versoes_diferentes_resolvem_independentemente(self, tmp_path):
+        """Versões diferentes do mesmo projeto não compartilham snapshot."""
+        mixin = self._make_mixin()
+        ctx = self._make_contexto()
+
+        mixin.load_calendario_operacional = MagicMock(return_value={"eventos": [{"id": "E1"}]})
+        proj_v1 = self._make_fs_project(tmp_path, version="v1")
+        mixin._apply_runtime_defaults("04-cronograma", proj_v1, ctx, {})
+
+        mixin.load_calendario_operacional = MagicMock(return_value={"eventos": [{"id": "E2"}]})
+        proj_v2 = self._make_fs_project(tmp_path, version="v2")
+        result_v2 = mixin._apply_runtime_defaults("04-cronograma", proj_v2, ctx, {})
+
+        assert result_v2["calendario_operacional"] == {"eventos": [{"id": "E2"}]}
+        assert (tmp_path / "v1" / "resolved_calendario.json").exists()
+        assert (tmp_path / "v2" / "resolved_calendario.json").exists()
+
     def test_apply_runtime_defaults_skill09_gerar_excel(self):
         mixin = self._make_mixin()
         proj = self._make_project()

@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "martires-de-cunhau-e-uruacu-2017",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2017-10-03",
+      "fim": "2017-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-2-2018",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2018-10-03",
+      "fim": "2018-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-3-2019",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2019-10-03",
+      "fim": "2019-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-4-2020",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2020-10-03",
+      "fim": "2020-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-5-2021",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2021-10-03",
+      "fim": "2021-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-6-2022",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2022-10-03",
+      "fim": "2022-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-7-2023",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2023-10-03",
+      "fim": "2023-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-8-2024",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2024-10-03",
+      "fim": "2024-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-9-2025",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2025-10-03",
+      "fim": "2025-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    },
+    {
+      "id": "martires-de-cunhau-e-uruacu-10-2026",
+      "nome": "Mártires de Cunhaú e Uruaçu",
+      "tipo": "feriado",
+      "inicio": "2026-10-03",
+      "fim": "2026-10-03",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RN"
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "adesao-ao-imperio-brasileiro-2017",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2017-08-15",
+      "fim": "2017-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-2017",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2017-12-08",
+      "fim": "2017-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-2-2018",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2018-08-15",
+      "fim": "2018-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-2-2018",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2018-12-08",
+      "fim": "2018-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-3-2019",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2019-08-15",
+      "fim": "2019-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-3-2019",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2019-12-08",
+      "fim": "2019-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-4-2020",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2020-08-15",
+      "fim": "2020-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-4-2020",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2020-12-08",
+      "fim": "2020-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-5-2021",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2021-08-15",
+      "fim": "2021-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-5-2021",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2021-12-08",
+      "fim": "2021-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-6-2022",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2022-08-15",
+      "fim": "2022-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-6-2022",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2022-12-08",
+      "fim": "2022-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-7-2023",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2023-08-15",
+      "fim": "2023-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-7-2023",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2023-12-08",
+      "fim": "2023-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-8-2024",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2024-08-15",
+      "fim": "2024-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-8-2024",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2024-12-08",
+      "fim": "2024-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-ao-imperio-brasileiro-9-2025",
+      "nome": "Adesão ao Império Brasileiro",
+      "tipo": "feriado",
+      "inicio": "2025-08-15",
+      "fim": "2025-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "n-sra-conceicao-9-2025",
+      "nome": "N. Sra. Conceição",
+      "tipo": "feriado",
+      "inicio": "2025-12-08",
+      "fim": "2025-12-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    },
+    {
+      "id": "adesao-do-para-a-independencia-do-brasil-2026",
+      "nome": "Adesão do Pará à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2026-08-15",
+      "fim": "2026-08-15",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PA"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "dia-do-evangelico-2017",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2017-11-30",
+      "fim": "2017-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-2-2018",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2018-11-30",
+      "fim": "2018-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-3-2019",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2019-11-30",
+      "fim": "2019-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-4-2020",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2020-11-30",
+      "fim": "2020-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-5-2021",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2021-11-30",
+      "fim": "2021-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-6-2022",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2022-11-30",
+      "fim": "2022-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-7-2023",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2023-11-30",
+      "fim": "2023-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-8-2024",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2024-11-30",
+      "fim": "2024-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-9-2025",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2025-11-30",
+      "fim": "2025-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "corpus-christi-10-2026",
+      "nome": "Corpus Christi",
+      "tipo": "feriado",
+      "inicio": "2026-06-04",
+      "fim": "2026-06-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    },
+    {
+      "id": "dia-do-evangelico-10-2026",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2026-11-30",
+      "fim": "2026-11-30",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-DF"
+    }
+  ]
+}

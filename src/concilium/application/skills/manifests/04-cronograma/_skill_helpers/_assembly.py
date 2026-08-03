@@ -17,7 +17,10 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._calendario import _build_fator_calendario_semanal  # ty: ignore[unresolved-import]
+from ._calendario import (  # ty: ignore[unresolved-import]
+    OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT,
+    _build_fator_calendario_semanal,
+)
 from ._custos import (  # ty: ignore[unresolved-import]
     _build_cpu_lookup,
     _build_insumos_lookup,
@@ -450,11 +453,19 @@ def _run_cronograma_build_context(
     calendario_config = (
         inputs.get("calendario_operacional") if isinstance(inputs.get("calendario_operacional"), dict) else {}
     )
+    # Observar ponto_facultativo (tratá-lo como parada total, igual a um
+    # feriado) é escolha binária de configuração de projeto — não um fato do
+    # warehouse de feriados (ADR-068). Feita ao gerar a primeira versão e
+    # ajustável entre versões para comparar o efeito no custo/cronograma.
+    observar_pontos_facultativos = bool(
+        inputs.get("observar_pontos_facultativos", OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT)
+    )
     fator_calendario_semanal, calendario_operacional = _build_fator_calendario_semanal(
         semanas_obra,
         canonical_in.projeto.data_inicio,
         regime.dias_semana,
         calendario_config,
+        observar_pontos_facultativos,
     )
     return (
         regime,

@@ -1,0 +1,214 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "aniversario-de-roraima-2017",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2017-10-05",
+      "fim": "2017-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-2017",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2017-11-20",
+      "fim": "2017-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-2-2018",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2018-10-05",
+      "fim": "2018-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-2-2018",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2018-11-20",
+      "fim": "2018-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-3-2019",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2019-10-05",
+      "fim": "2019-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-3-2019",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2019-11-20",
+      "fim": "2019-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-4-2020",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2020-10-05",
+      "fim": "2020-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-4-2020",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2020-11-20",
+      "fim": "2020-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-5-2021",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2021-10-05",
+      "fim": "2021-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-5-2021",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2021-11-20",
+      "fim": "2021-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-6-2022",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2022-10-05",
+      "fim": "2022-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-6-2022",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2022-11-20",
+      "fim": "2022-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-7-2023",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2023-10-05",
+      "fim": "2023-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-7-2023",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2023-11-20",
+      "fim": "2023-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-8-2024",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2024-10-05",
+      "fim": "2024-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-8-2024",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2024-11-20",
+      "fim": "2024-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-9-2025",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2025-10-05",
+      "fim": "2025-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "dia-da-consciencia-negra-9-2025",
+      "nome": "Dia da Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2025-11-20",
+      "fim": "2025-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    },
+    {
+      "id": "aniversario-de-roraima-10-2026",
+      "nome": "Aniversário de Roraima",
+      "tipo": "feriado",
+      "inicio": "2026-10-05",
+      "fim": "2026-10-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RR"
+    }
+  ]
+}

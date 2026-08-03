@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-2017",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2017-10-11",
+      "fim": "2017-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-2-2018",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2018-10-11",
+      "fim": "2018-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-3-2019",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2019-10-11",
+      "fim": "2019-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-4-2020",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2020-10-11",
+      "fim": "2020-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-5-2021",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2021-10-11",
+      "fim": "2021-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-6-2022",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2022-10-11",
+      "fim": "2022-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-7-2023",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2023-10-11",
+      "fim": "2023-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-8-2024",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2024-10-11",
+      "fim": "2024-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "aniversario-do-mato-grosso-do-sul-9-2025",
+      "nome": "Aniversário do Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2025-10-11",
+      "fim": "2025-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    },
+    {
+      "id": "criacao-do-estado-de-mato-grosso-do-sul-2026",
+      "nome": "Criação do Estado de Mato Grosso do Sul",
+      "tipo": "feriado",
+      "inicio": "2026-10-11",
+      "fim": "2026-10-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MS"
+    }
+  ]
+}

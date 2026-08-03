@@ -1,0 +1,214 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "aniversario-de-rondonia-2017",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2017-01-04",
+      "fim": "2017-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-12-2017",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2017-06-18",
+      "fim": "2017-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-2-2018",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2018-01-04",
+      "fim": "2018-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-14-2018",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2018-06-18",
+      "fim": "2018-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-3-2019",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2019-01-04",
+      "fim": "2019-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-16-2019",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2019-06-18",
+      "fim": "2019-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-4-2020",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2020-01-04",
+      "fim": "2020-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-18-2020",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2020-06-18",
+      "fim": "2020-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-5-2021",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2021-01-04",
+      "fim": "2021-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-20-2021",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2021-06-18",
+      "fim": "2021-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-6-2022",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2022-01-04",
+      "fim": "2022-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-22-2022",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2022-06-18",
+      "fim": "2022-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-7-2023",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2023-01-04",
+      "fim": "2023-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-24-2023",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2023-06-18",
+      "fim": "2023-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-8-2024",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2024-01-04",
+      "fim": "2024-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-26-2024",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2024-06-18",
+      "fim": "2024-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-9-2025",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2025-01-04",
+      "fim": "2025-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "dia-do-evangelico-28-2025",
+      "nome": "Dia do Evangélico",
+      "tipo": "feriado",
+      "inicio": "2025-06-18",
+      "fim": "2025-06-18",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    },
+    {
+      "id": "aniversario-de-rondonia-10-2026",
+      "nome": "Aniversário de Rondônia",
+      "tipo": "feriado",
+      "inicio": "2026-01-04",
+      "fim": "2026-01-04",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RO"
+    }
+  ]
+}

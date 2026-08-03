@@ -48,8 +48,38 @@ def _event_occurs_on_day(evento: dict[str, Any], day: date) -> bool:
     return inicio <= day <= fim
 
 
+#: Default de `observar_pontos_facultativos` (escolha de configuração de
+#: projeto, ADR-068 — não um fato do warehouse de feriados) quando o projeto
+#: não define `inputs["observar_pontos_facultativos"]` explicitamente. Ponto
+#: facultativo é binário, não uma fração de produtividade: ou a obra segue
+#: trabalhando normalmente nesse dia (não observa -> fator 1.0, o default) ou
+#: para inteiramente, igual a um feriado (observa -> fator 0.0). Ajustável
+#: entre versões do mesmo projeto para comparar o efeito no custo/cronograma.
+OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT = False
+
+
+def _resolve_fator_evento(evento: dict[str, Any], observar_pontos_facultativos: bool) -> float:
+    """Resolve o fator_operacao de um evento: valor explícito > default por tipo.
+
+    tipo="feriado" sem fator_operacao explícito é 0.0 (parada integral,
+    estrutural — não é uma escolha). tipo="ponto_facultativo" sem valor
+    explícito é binário: 0.0 se o projeto optou por observá-lo (parada
+    integral, igual a um feriado), 1.0 se não (dia normal) — nunca um valor
+    intermediário, pontos facultativos não têm meio-termo de adesão parcial.
+    """
+    fo = evento.get("fator_operacao")
+    if fo is not None:
+        return float(fo)
+    if evento.get("tipo") == "ponto_facultativo":
+        return 0.0 if observar_pontos_facultativos else 1.0
+    return 0.0
+
+
 def _compute_dias_uteis_efetivos_semana(
-    week_start: date, dias_semana_regime: int, eventos: list
+    week_start: date,
+    dias_semana_regime: int,
+    eventos: list,
+    observar_pontos_facultativos: bool = OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT,
 ) -> tuple[float, set[str]]:
     """Calcula os dias úteis efetivos e os eventos aplicados em uma semana, dia a dia."""
     dias_uteis_efetivos = 0.0
@@ -62,8 +92,7 @@ def _compute_dias_uteis_efetivos_semana(
             if not isinstance(evento, dict):
                 continue
             if _event_occurs_on_day(evento, dia):
-                _fo = evento.get("fator_operacao")
-                fator_evt = float(_fo if _fo is not None else 0.0)
+                fator_evt = _resolve_fator_evento(evento, observar_pontos_facultativos)
                 fator_dia = min(fator_dia, max(0.0, min(1.0, fator_evt)))
                 if evento.get("id"):
                     eventos_aplicados.add(str(evento["id"]))
@@ -77,6 +106,7 @@ def _build_fator_calendario_semanal(
     data_inicio: date,
     dias_semana_regime: int,
     calendario_config: dict[str, Any] | None,
+    observar_pontos_facultativos: bool = OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT,
 ) -> tuple[dict[str, float], list[CalendarioOperacionalSemanal]]:
     eventos = list((calendario_config or {}).get("eventos", []) or [])
     fatores: dict[str, float] = {}
@@ -87,7 +117,7 @@ def _build_fator_calendario_semanal(
         dias_uteis_base = float(dias_semana_regime)
 
         dias_uteis_efetivos, eventos_aplicados = _compute_dias_uteis_efetivos_semana(
-            week_start, dias_semana_regime, eventos
+            week_start, dias_semana_regime, eventos, observar_pontos_facultativos
         )
 
         fator = dias_uteis_efetivos / dias_uteis_base if dias_uteis_base > 0 else 1.0
@@ -507,6 +537,7 @@ def _resolve_productivity(
 
 
 __all__ = [
+    "OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT",
     "_build_fator_calendario_semanal",
     "_compute_dias_uteis_efetivos_semana",
     "_compute_productive_weeks",
@@ -519,6 +550,7 @@ __all__ = [
     "_infer_linear_edge_thresholds",
     "_mean_praticabilidade",
     "_relax_pool",
+    "_resolve_fator_evento",
     "_resolve_productivity",
     "_resolve_productivity_from_cpu_meta",
     "_resolve_productivity_from_lookup",

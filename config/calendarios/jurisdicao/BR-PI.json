@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "dia-do-piaui-2017",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2017-10-19",
+      "fim": "2017-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-2-2018",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2018-10-19",
+      "fim": "2018-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-3-2019",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2019-10-19",
+      "fim": "2019-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-4-2020",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2020-10-19",
+      "fim": "2020-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-5-2021",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2021-10-19",
+      "fim": "2021-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-6-2022",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2022-10-19",
+      "fim": "2022-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-7-2023",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2023-10-19",
+      "fim": "2023-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-8-2024",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2024-10-19",
+      "fim": "2024-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-9-2025",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2025-10-19",
+      "fim": "2025-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    },
+    {
+      "id": "dia-do-piaui-10-2026",
+      "nome": "Dia do Piauí",
+      "tipo": "feriado",
+      "inicio": "2026-10-19",
+      "fim": "2026-10-19",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PI"
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "proc-republica-rio-grandense-2017",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2017-09-20",
+      "fim": "2017-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-2-2018",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2018-09-20",
+      "fim": "2018-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-3-2019",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2019-09-20",
+      "fim": "2019-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-4-2020",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2020-09-20",
+      "fim": "2020-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-5-2021",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2021-09-20",
+      "fim": "2021-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-6-2022",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2022-09-20",
+      "fim": "2022-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-7-2023",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2023-09-20",
+      "fim": "2023-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-8-2024",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2024-09-20",
+      "fim": "2024-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "proc-republica-rio-grandense-9-2025",
+      "nome": "Proc. República Rio Grandense",
+      "tipo": "feriado",
+      "inicio": "2025-09-20",
+      "fim": "2025-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    },
+    {
+      "id": "revolucao-farroupilha-dia-do-gaucho-2026",
+      "nome": "Revolução Farroupilha (Dia do Gaúcho)",
+      "tipo": "feriado",
+      "inicio": "2026-09-20",
+      "fim": "2026-09-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-RS"
+    }
+  ]
+}

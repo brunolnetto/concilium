@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
+from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
 app_temas = typer.Typer(name="temas", help="Temas visuais disponíveis.", no_args_is_help=True)
 app_jurisdicao = typer.Typer(name="jurisdicao", help="Jurisdições disponíveis.", no_args_is_help=True)
+app_calendarios = typer.Typer(
+    name="calendarios", help="Calendário operacional (feriados/pontos facultativos, ADR-068).", no_args_is_help=True
+)
 
 
 def _config_root() -> Path:
@@ -94,3 +99,51 @@ def jurisdicao_list() -> None:
             f"{total * 100:.2f}%" if total is not None else "-",
         )
     Console().print(table)
+
+
+@app_calendarios.command("sync")
+def calendarios_sync(
+    source: Annotated[
+        str,
+        typer.Argument(
+            help="Caminho do holiday_history.json (local, ou blob path quando --backend for informado)."
+        ),
+    ],
+    backend: Annotated[
+        str,
+        typer.Option(
+            "--backend",
+            "-b",
+            help="Backend de blob storage (ex.: sharepoint) para baixar `source` remotamente. "
+            "Se omitido, `source` é lido como arquivo local.",
+        ),
+    ] = "",
+) -> None:
+    """Sincroniza config/calendarios/ (ADR-068) a partir do histórico de feriados.
+
+    Fonte: `holiday_history.json`, exportado por
+    `lab/feriados_api/src/exporters/holiday_history.py` (SCD2 por dia). Filtra
+    automaticamente para registros vigentes (valid_to nulo) e níveis
+    NACIONAL/ESTADUAL — MUNICIPAL é ignorado (cobertura só de capitais).
+
+    Eventos de ponto_facultativo saem com fator_operacao=None: observá-lo ou
+    não (binário — parada integral vs dia normal, sem meio-termo) NÃO é
+    decidido aqui — é escolha de configuração de projeto, resolvida em
+    runtime por skill 04 via `inputs["observar_pontos_facultativos"]`.
+    """
+    import json
+
+    from concilium.application.services.catalog.calendario_sync import sync_calendarios_config
+
+    if backend:
+        from concilium.presentation.cli.commands_blob import _make_storage
+
+        storage = _make_storage(backend)
+        content = storage.ler_blob(source)
+    else:
+        content = Path(source).read_bytes()
+
+    rows = json.loads(content)
+    resultado = sync_calendarios_config(rows, _config_root())
+    for path, n_eventos in sorted(resultado.items()):
+        rprint(f"[bold green]✓[/bold green] {path}: {n_eventos} eventos")

@@ -1,0 +1,126 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "pedra-fundamental-de-goiania-2017",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2017-10-24",
+      "fim": "2017-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-2-2018",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2018-10-24",
+      "fim": "2018-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-3-2019",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2019-10-24",
+      "fim": "2019-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-4-2020",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2020-10-24",
+      "fim": "2020-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-5-2021",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2021-10-24",
+      "fim": "2021-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-6-2022",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2022-10-24",
+      "fim": "2022-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-7-2023",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2023-10-24",
+      "fim": "2023-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-8-2024",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2024-10-24",
+      "fim": "2024-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-9-2025",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2025-10-24",
+      "fim": "2025-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "fundacao-da-cidade-de-goias-2026",
+      "nome": "Fundação da Cidade de Goiás",
+      "tipo": "feriado",
+      "inicio": "2026-07-26",
+      "fim": "2026-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    },
+    {
+      "id": "pedra-fundamental-de-goiania-10-2026",
+      "nome": "Pedra fundamental de Goiânia",
+      "tipo": "ponto_facultativo",
+      "inicio": "2026-10-24",
+      "fim": "2026-10-24",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-GO"
+    }
+  ]
+}

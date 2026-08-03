@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "revolucao-constitucionalista-de-1932-2017",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2017-07-09",
+      "fim": "2017-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-2-2018",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2018-07-09",
+      "fim": "2018-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-3-2019",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2019-07-09",
+      "fim": "2019-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-4-2020",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2020-07-09",
+      "fim": "2020-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-5-2021",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2021-07-09",
+      "fim": "2021-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-6-2022",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2022-07-09",
+      "fim": "2022-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-7-2023",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2023-07-09",
+      "fim": "2023-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-8-2024",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2024-07-09",
+      "fim": "2024-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-9-2025",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2025-07-09",
+      "fim": "2025-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    },
+    {
+      "id": "revolucao-constitucionalista-de-1932-10-2026",
+      "nome": "Revolução Constitucionalista de 1932",
+      "tipo": "feriado",
+      "inicio": "2026-07-09",
+      "fim": "2026-07-09",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SP"
+    }
+  ]
+}

@@ -81,13 +81,61 @@ class InputsMixin(_Base):
         if aliquotas:
             normalized["aliquotas_bdi_jurisdicao"] = aliquotas
 
+    def _load_resolved_calendario(self, project: Any) -> dict[str, Any] | None:
+        """Lê `resolved_calendario.json` já persistido para a versão ativa do projeto,
+        se existir — mesma lógica de fidelidade por-run de `resolved_catalog.json`
+        (ADR-066 §F4): sem isso, re-rodar a mesma versão em datas diferentes poderia
+        produzir um `fator_calendario` diferente caso `config/calendarios/` tenha
+        mudado nesse intervalo."""
+        try:
+            version = project.current_version()
+            if not version:
+                return None
+            path = project.root / version / "resolved_calendario.json"
+            if not path.exists():
+                return None
+            import json
+
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else None
+        except Exception:
+            return None
+
+    def _persist_resolved_calendario(self, project: Any, calendario: dict[str, Any]) -> None:
+        """Persiste o calendário resolvido para a versão ativa (best-effort, write-once).
+
+        Nunca sobrescreve um snapshot já existente — a primeira resolução de cada
+        versão é a que vale, igual à semântica de `resolved_catalog.json`.
+        """
+        try:
+            version = project.current_version()
+            if not version:
+                return
+            path = project.root / version / "resolved_calendario.json"
+            if path.exists():
+                return
+            import json
+
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(calendario, ensure_ascii=False, default=str), encoding="utf-8")
+        except Exception:
+            pass  # best-effort: a normalização de inputs não pode falhar por isso
+
     def _apply_defaults_cronograma(self, project: Any, contexto: Any, normalized: dict[str, Any]) -> None:
-        """Aplica default de calendário operacional para a skill de cronograma in-place."""
+        """Aplica default de calendário operacional para a skill de cronograma in-place.
+
+        ADR-066 §F4 (estendido): prefere o snapshot já persistido para esta versão
+        do projeto sobre a config live — ver `_load_resolved_calendario`.
+        """
+        existente = self._load_resolved_calendario(project)
+        if existente is not None:
+            normalized["calendario_operacional"] = existente
+            return
+
         proj_id = str(getattr(project, "id", "") or "")
-        normalized["calendario_operacional"] = self.load_calendario_operacional(
-            contexto.jurisdicao_id,
-            proj_id or None,
-        )
+        calendario = self.load_calendario_operacional(contexto.jurisdicao_id, proj_id or None)
+        normalized["calendario_operacional"] = calendario
+        self._persist_resolved_calendario(project, calendario)
 
     def _apply_defaults_relatorio(self, project: Any, normalized: dict[str, Any]) -> None:
         """Aplica default de geração de Excel a partir da config de entregáveis do projeto in-place."""

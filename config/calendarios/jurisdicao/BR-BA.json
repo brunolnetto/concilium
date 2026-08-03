@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "independencia-da-bahia-2017",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2017-07-02",
+      "fim": "2017-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-2-2018",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2018-07-02",
+      "fim": "2018-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-3-2019",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2019-07-02",
+      "fim": "2019-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-4-2020",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2020-07-02",
+      "fim": "2020-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-5-2021",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2021-07-02",
+      "fim": "2021-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-6-2022",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2022-07-02",
+      "fim": "2022-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-7-2023",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2023-07-02",
+      "fim": "2023-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-8-2024",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2024-07-02",
+      "fim": "2024-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-9-2025",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2025-07-02",
+      "fim": "2025-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    },
+    {
+      "id": "independencia-da-bahia-10-2026",
+      "nome": "Independência da Bahia",
+      "tipo": "feriado",
+      "inicio": "2026-07-02",
+      "fim": "2026-07-02",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-BA"
+    }
+  ]
+}

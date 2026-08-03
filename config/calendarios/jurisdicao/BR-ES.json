@@ -1,0 +1,16 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "nossa-senhora-da-penha-10-2026",
+      "nome": "Nossa Senhora da Penha",
+      "tipo": "feriado",
+      "inicio": "2026-04-13",
+      "fim": "2026-04-13",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-ES"
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "dia-de-santa-catarina-2017",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2017-08-11",
+      "fim": "2017-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-2-2018",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2018-08-11",
+      "fim": "2018-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-3-2019",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2019-08-11",
+      "fim": "2019-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-4-2020",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2020-08-11",
+      "fim": "2020-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-5-2021",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2021-08-11",
+      "fim": "2021-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-6-2022",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2022-08-11",
+      "fim": "2022-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-7-2023",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2023-08-11",
+      "fim": "2023-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-8-2024",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2024-08-11",
+      "fim": "2024-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-de-santa-catarina-9-2025",
+      "nome": "Dia de Santa Catarina",
+      "tipo": "feriado",
+      "inicio": "2025-08-11",
+      "fim": "2025-08-11",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    },
+    {
+      "id": "dia-do-estado-de-santa-catarina-data-magna-2026",
+      "nome": "Dia do Estado de Santa Catarina (Data Magna)",
+      "tipo": "feriado",
+      "inicio": "2026-08-16",
+      "fim": "2026-08-16",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SC"
+    }
+  ]
+}

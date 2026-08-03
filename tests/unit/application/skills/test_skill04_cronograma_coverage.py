@@ -362,6 +362,67 @@ class TestBuildFatorCalendarioSemanal:
         _, artefato = _build_fator_calendario_semanal(semanas, start, 5, {})
         assert len(artefato) == len(semanas)
 
+    def test_ponto_facultativo_sem_fator_explicito_usa_default_nao_observa(self):
+        """Evento tipo=ponto_facultativo sem fator_operacao (ex.: vindo de
+        config/calendarios/, ADR-068) usa OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT
+        (False) -> dia normal, sem impacto."""
+        start = date(2025, 1, 6)
+        semanas = self._make_semanas(start, 1)
+        eventos = [
+            {
+                "id": "facultativo-1",
+                "tipo": "ponto_facultativo",
+                "inicio": "2025-01-06",
+                "fim": "2025-01-06",
+                "recorrencia": "unica",
+                "fator_operacao": None,
+            }
+        ]
+        fatores, _ = _build_fator_calendario_semanal(semanas, start, 5, {"eventos": eventos})
+        assert fatores[semanas[0]] == 1.0
+
+    def test_ponto_facultativo_sem_fator_explicito_respeita_override_do_projeto(self):
+        """`observar_pontos_facultativos=True` (escolha de projeto, ajustável
+        entre versões) trata o ponto facultativo como parada integral,
+        igual a um feriado — binário, sem meio-termo."""
+        start = date(2025, 1, 6)
+        semanas = self._make_semanas(start, 1)
+        eventos = [
+            {
+                "id": "facultativo-1",
+                "tipo": "ponto_facultativo",
+                "inicio": "2025-01-06",
+                "fim": "2025-01-06",
+                "recorrencia": "unica",
+                "fator_operacao": None,
+            }
+        ]
+        fatores, _ = _build_fator_calendario_semanal(
+            semanas, start, 5, {"eventos": eventos}, observar_pontos_facultativos=True
+        )
+        # tratado como parada integral: 4/5 = 0.8
+        assert fatores[semanas[0]] == pytest.approx(0.8, abs=0.001)
+
+    def test_feriado_sem_fator_explicito_e_sempre_zero_nao_configuravel(self):
+        """tipo=feriado sem fator_operacao explícito é sempre 0.0, mesmo com
+        observar_pontos_facultativos=False — parada integral não é uma escolha."""
+        start = date(2025, 1, 6)
+        semanas = self._make_semanas(start, 1)
+        eventos = [
+            {
+                "id": "feriado-1",
+                "tipo": "feriado",
+                "inicio": "2025-01-06",
+                "fim": "2025-01-06",
+                "recorrencia": "unica",
+                "fator_operacao": None,
+            }
+        ]
+        fatores, _ = _build_fator_calendario_semanal(
+            semanas, start, 5, {"eventos": eventos}, observar_pontos_facultativos=False
+        )
+        assert fatores[semanas[0]] == pytest.approx(0.8, abs=0.001)
+
 
 # ===========================================================================
 # _week_to_month

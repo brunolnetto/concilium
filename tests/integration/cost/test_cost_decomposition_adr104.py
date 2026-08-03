@@ -83,6 +83,8 @@ class TestCostDecompositionInvariant:
           pós-NEP-043 Bug 2: R$ 16,529,359.75  — encargos CLT não reaplicados sobre taxa all-in
           pós-ADR-162 D4:    R$ 17,611,540.46  — permanência/custo de 1 frente corrigidos p/ rampa
           pós-issue #139:    R$ 43,776,042.47  — custo_total pós-pool deixa de ser 1-frente
+          pós-extensão cronog.: R$ 55,074,575.61 — sub-entrega deixa de ser subprecificada
+          pós-ADR-068 feriados:  R$ 56,205,905.16 — δ (fator_calendario) passa a refletir feriados reais
 
         NEP-043 Bug 2 (2026-06-12): insumos AGIS têm nota_encargos="taxa horária já inclui
         encargos". O engine não deve multiplicar por (1 + enc_horista) uma taxa que já embute
@@ -130,14 +132,30 @@ class TestCostDecompositionInvariant:
 
         sum(eq.custo_total) aqui mistura: itens SEM pool continuam na base 1-frente (não
         afetados por #139); itens COM pool agora refletem o custo real agregado.
+
+        ADR-068 feriados (2026-08-03): `config/calendarios/` (global.json +
+        jurisdicao/BR-{UF}.json) passa a ser populado a partir de um warehouse real
+        de feriados (lab/feriados_api, SCD2 por dia), plugado em
+        `ConfigMixin.load_calendario_operacional` (já disparado por skill 04 desde a
+        ADR-068, mas sem dado nenhum até aqui — δ=fator_calendario era sempre 1.0
+        silenciosamente). Com dado real, semanas com feriado NACIONAL/ESTADUAL passam
+        a ter dias_uteis_efetivos < dias_uteis_base, o que estica a extensão de
+        cronograma (ver parágrafo anterior) e aumenta o agregado em ~2,05%. A maior
+        parte do desvio vem de tipo="feriado" (fator_operacao=0.0, estrutural, não
+        configurável — parada legal). tipo="ponto_facultativo" é resolvido à parte
+        via `inputs["observar_pontos_facultativos"]` (bool, default False = dia
+        normal, escolha de configuração de projeto) — com o default, ponto
+        facultativo não contribui neste baseline; setar True nesse input trataria
+        pontos facultativos como parada integral e aumentaria o custo mais ainda
+        (não é o que este teste mede).
         """
         canonical = agis_benchmark.canonical
 
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
         # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 + issue #139 +
-        # extensão de cronograma até fechar quantitativo (ver docstring)
-        expected = 55_074_575.61
+        # extensão de cronograma + feriados reais (ADR-068, ver docstring)
+        expected = 56_205_905.16
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (

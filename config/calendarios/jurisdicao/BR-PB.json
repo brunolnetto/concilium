@@ -1,0 +1,214 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "data-magna-do-estado-da-paraiba-2017",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2017-07-26",
+      "fim": "2017-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-2017",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2017-08-05",
+      "fim": "2017-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-2-2018",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2018-07-26",
+      "fim": "2018-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-2-2018",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2018-08-05",
+      "fim": "2018-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-3-2019",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2019-07-26",
+      "fim": "2019-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-3-2019",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2019-08-05",
+      "fim": "2019-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-4-2020",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2020-07-26",
+      "fim": "2020-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-4-2020",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2020-08-05",
+      "fim": "2020-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-5-2021",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2021-07-26",
+      "fim": "2021-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-5-2021",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2021-08-05",
+      "fim": "2021-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-6-2022",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2022-07-26",
+      "fim": "2022-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-6-2022",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2022-08-05",
+      "fim": "2022-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-7-2023",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2023-07-26",
+      "fim": "2023-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-7-2023",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2023-08-05",
+      "fim": "2023-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-8-2024",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2024-07-26",
+      "fim": "2024-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-8-2024",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2024-08-05",
+      "fim": "2024-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "data-magna-do-estado-da-paraiba-9-2025",
+      "nome": "Data Magna do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2025-07-26",
+      "fim": "2025-07-26",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-9-2025",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2025-08-05",
+      "fim": "2025-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    },
+    {
+      "id": "fundacao-do-estado-da-paraiba-10-2026",
+      "nome": "Fundação do Estado da Paraíba",
+      "tipo": "feriado",
+      "inicio": "2026-08-05",
+      "fim": "2026-08-05",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PB"
+    }
+  ]
+}

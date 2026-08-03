@@ -1,0 +1,115 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "emancipacao-politica-de-sergipe-2017",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2017-07-08",
+      "fim": "2017-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-2-2018",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2018-07-08",
+      "fim": "2018-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-3-2019",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2019-07-08",
+      "fim": "2019-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-4-2020",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2020-07-08",
+      "fim": "2020-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-5-2021",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2021-07-08",
+      "fim": "2021-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-6-2022",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2022-07-08",
+      "fim": "2022-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-7-2023",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2023-07-08",
+      "fim": "2023-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-8-2024",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2024-07-08",
+      "fim": "2024-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-9-2025",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2025-07-08",
+      "fim": "2025-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    },
+    {
+      "id": "emancipacao-politica-de-sergipe-10-2026",
+      "nome": "Emancipação Política de Sergipe",
+      "tipo": "feriado",
+      "inicio": "2026-07-08",
+      "fim": "2026-07-08",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-SE"
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "data-magna-de-pernambuco-2017",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2017-03-06",
+      "fim": "2017-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-2017",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2017-06-24",
+      "fim": "2017-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-2-2018",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2018-03-06",
+      "fim": "2018-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-2-2018",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2018-06-24",
+      "fim": "2018-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-3-2019",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2019-03-06",
+      "fim": "2019-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-3-2019",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2019-06-24",
+      "fim": "2019-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-4-2020",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2020-03-06",
+      "fim": "2020-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-4-2020",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2020-06-24",
+      "fim": "2020-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-5-2021",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2021-03-06",
+      "fim": "2021-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-5-2021",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2021-06-24",
+      "fim": "2021-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-6-2022",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2022-03-06",
+      "fim": "2022-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-6-2022",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2022-06-24",
+      "fim": "2022-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-7-2023",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2023-03-06",
+      "fim": "2023-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-7-2023",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2023-06-24",
+      "fim": "2023-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-8-2024",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2024-03-06",
+      "fim": "2024-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-8-2024",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2024-06-24",
+      "fim": "2024-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-9-2025",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2025-03-06",
+      "fim": "2025-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "dia-de-sao-joao-9-2025",
+      "nome": "Dia de São João",
+      "tipo": "feriado",
+      "inicio": "2025-06-24",
+      "fim": "2025-06-24",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    },
+    {
+      "id": "data-magna-de-pernambuco-10-2026",
+      "nome": "Data Magna de Pernambuco",
+      "tipo": "feriado",
+      "inicio": "2026-03-06",
+      "fim": "2026-03-06",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-PE"
+    }
+  ]
+}

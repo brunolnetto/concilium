@@ -73,13 +73,14 @@ skills_app = typer.Typer(
 
 # Context and perfil versioning + temas/jurisdicoes
 from concilium.presentation.cli.commands_config_version import app_context, app_perfil  # noqa: E402
-from concilium.presentation.cli.commands_configuration import app_jurisdicao, app_temas  # noqa: E402
+from concilium.presentation.cli.commands_configuration import app_calendarios, app_jurisdicao, app_temas  # noqa: E402
 
 configuration_app.add_typer(skills_app)
 configuration_app.add_typer(app_context, name="contexto")
 configuration_app.add_typer(app_perfil)
 configuration_app.add_typer(app_temas)
 configuration_app.add_typer(app_jurisdicao)
+configuration_app.add_typer(app_calendarios)
 
 from concilium.presentation.cli.commands_blob import blob_app  # noqa: E402
 from concilium.presentation.cli.commands_deploy import deploy_app  # noqa: E402

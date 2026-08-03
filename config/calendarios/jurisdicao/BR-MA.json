@@ -1,0 +1,214 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-2017",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2017-07-28",
+      "fim": "2017-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-2017",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2017-11-20",
+      "fim": "2017-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-2-2018",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2018-07-28",
+      "fim": "2018-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-2-2018",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2018-11-20",
+      "fim": "2018-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-3-2019",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2019-07-28",
+      "fim": "2019-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-3-2019",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2019-11-20",
+      "fim": "2019-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-4-2020",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2020-07-28",
+      "fim": "2020-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-4-2020",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2020-11-20",
+      "fim": "2020-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-5-2021",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2021-07-28",
+      "fim": "2021-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-5-2021",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2021-11-20",
+      "fim": "2021-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-6-2022",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2022-07-28",
+      "fim": "2022-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-6-2022",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2022-11-20",
+      "fim": "2022-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-7-2023",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2023-07-28",
+      "fim": "2023-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-7-2023",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2023-11-20",
+      "fim": "2023-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-8-2024",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2024-07-28",
+      "fim": "2024-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-9-2024",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2024-11-20",
+      "fim": "2024-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-9-2025",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2025-07-28",
+      "fim": "2025-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "consciencia-negra-8-2025",
+      "nome": "Consciência Negra",
+      "tipo": "feriado",
+      "inicio": "2025-11-20",
+      "fim": "2025-11-20",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    },
+    {
+      "id": "adesao-do-maranhao-a-independencia-do-brasil-10-2026",
+      "nome": "Adesão do Maranhão à Independência do Brasil",
+      "tipo": "feriado",
+      "inicio": "2026-07-28",
+      "fim": "2026-07-28",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-MA"
+    }
+  ]
+}

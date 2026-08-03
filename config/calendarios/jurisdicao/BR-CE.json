@@ -1,0 +1,225 @@
+{
+  "versao": "1",
+  "eventos": [
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-2017",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2017-03-19",
+      "fim": "2017-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-2017",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2017-03-25",
+      "fim": "2017-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-2-2018",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2018-03-19",
+      "fim": "2018-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-2-2018",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2018-03-25",
+      "fim": "2018-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-3-2019",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2019-03-19",
+      "fim": "2019-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-3-2019",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2019-03-25",
+      "fim": "2019-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-4-2020",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2020-03-19",
+      "fim": "2020-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-4-2020",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2020-03-25",
+      "fim": "2020-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-5-2021",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2021-03-19",
+      "fim": "2021-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-5-2021",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2021-03-25",
+      "fim": "2021-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-6-2022",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2022-03-19",
+      "fim": "2022-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-6-2022",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2022-03-25",
+      "fim": "2022-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-7-2023",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2023-03-19",
+      "fim": "2023-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-7-2023",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2023-03-25",
+      "fim": "2023-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-8-2024",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2024-03-19",
+      "fim": "2024-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-8-2024",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2024-03-25",
+      "fim": "2024-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-9-2025",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2025-03-19",
+      "fim": "2025-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-9-2025",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2025-03-25",
+      "fim": "2025-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "dia-de-sao-jose-padroeiro-do-ceara-10-2026",
+      "nome": "Dia de São José - Padroeiro do Ceará",
+      "tipo": "ponto_facultativo",
+      "inicio": "2026-03-19",
+      "fim": "2026-03-19",
+      "recorrencia": "unica",
+      "fator_operacao": null,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    },
+    {
+      "id": "data-magna-do-ceara-10-2026",
+      "nome": "Data Magna do Ceará",
+      "tipo": "feriado",
+      "inicio": "2026-03-25",
+      "fim": "2026-03-25",
+      "recorrencia": "unica",
+      "fator_operacao": 0.0,
+      "escopo": "jurisdicao",
+      "jurisdicao_id": "BR-CE"
+    }
+  ]
+}
