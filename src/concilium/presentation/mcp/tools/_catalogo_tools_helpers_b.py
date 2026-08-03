@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from concilium.presentation.mcp._context import _config_root, _wrap_response
 
@@ -197,30 +199,186 @@ def _impl_comparar_catalogo(
     return _wrap_response(result)
 
 
+_MERGE_PREVIEW_TTL_HOURS = 24
+
+
+def _caminho_insumo_individual(catalog_root: Path, insumo: dict[str, Any]) -> Path:
+    """Resolve o arquivo individual de um insumo — existente ou novo (convenção de `_apply_criar_insumo_delta`)."""
+    codigo = insumo.get("codigo", "")
+    for p in (catalog_root / "insumos").rglob(f"{codigo}.json"):
+        return p
+    tipo_dir = str(insumo.get("tipo", "outro")).lower()
+    return catalog_root / "insumos" / tipo_dir / f"{codigo}.json"
+
+
+def _caminho_producao_individual(catalog_root: Path, producao: dict[str, Any]) -> Path:
+    """Resolve o arquivo individual de uma produção — existente (`producoes/` ou `produtividades/`) ou novo."""
+    pid = producao.get("id") or producao.get("codigo", "")
+    for folder in ("producoes", "produtividades"):
+        candidate = catalog_root / folder / f"{pid}.json"
+        if candidate.exists():
+            return candidate
+    return catalog_root / "producoes" / f"{pid}.json"
+
+
+def _caminho_cpu_individual(catalog_root: Path, cpu: dict[str, Any]) -> Path:
+    """Resolve o arquivo individual de uma CPU — existente ou novo (`cpus/{codigo}.json`)."""
+    return catalog_root / "cpus" / f"{cpu.get('codigo', '')}.json"
+
+
+_RESOLVER_CAMINHO_INDIVIDUAL = {
+    "insumos": _caminho_insumo_individual,
+    "producoes": _caminho_producao_individual,
+    "cpus": _caminho_cpu_individual,
+}
+
+
+def _persistir_merge_em_arquivos_individuais(
+    catalog_root: Path,
+    tipo: str,
+    base: list[dict[str, Any]],
+    merged: list[dict[str, Any]],
+    id_key: str,
+) -> int:
+    """ADR-175 D1: grava o resultado do merge nos arquivos individuais por entidade
+    (mesma convenção de `_apply_criar_insumo_delta`/`_apply_cpu_override_delta`) —
+    nunca no `.catalog_bundle.json`, cache derivado que seria descartado silenciosamente
+    na próxima invalidação (bug de durabilidade real, issue #141).
+
+    Escreve só entidades novas ou com conteúdo diferente do estado anterior (`base`):
+    compara `merged` (retorno de `aplicar_merge`, já cobre INNER_HIGH atualizado,
+    RIGHT_ONLY novo e colisões INNER_LOW reimportadas com prefixo RFI-) diretamente
+    contra `base`, em vez de replicar a categorização interna de `aplicar_merge`.
+
+    Returns:
+        Quantidade de arquivos efetivamente escritos.
+    """
+    resolver = _RESOLVER_CAMINHO_INDIVIDUAL[tipo]
+    base_by_id = {e.get(id_key, ""): e for e in base}
+    escritos = 0
+    for entidade in merged:
+        codigo = entidade.get(id_key, "")
+        if not codigo or base_by_id.get(codigo) == entidade:
+            continue
+        caminho = resolver(catalog_root, entidade)
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        caminho.write_text(json.dumps(entidade, ensure_ascii=False, indent=2), encoding="utf-8")
+        escritos += 1
+    return escritos
+
+
+def _merge_preview_dir(config_root: Path, catalogo_id: str) -> Path:
+    return _catalog_root(config_root, catalogo_id) / "merges_pendentes"
+
+
+def _persistir_preview_merge(
+    config_root: Path,
+    catalogo_id: str,
+    merge_id: str,
+    *,
+    destino: str,
+    origem: str,
+    tipo: str,
+    resumo: dict[str, Any],
+    criado_por: str,
+) -> None:
+    """ADR-175 D3: persiste o preview de um merge para aplicação posterior por outro ator."""
+    preview_dir = _merge_preview_dir(config_root, catalogo_id)
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "destino": destino,
+        "origem": origem,
+        "tipo": tipo,
+        "resumo": resumo,
+        "criado_por": criado_por,
+        "criado_em": datetime.now(UTC).isoformat(),
+    }
+    (preview_dir / f"{merge_id}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _carregar_preview_merge(config_root: Path, catalogo_id: str, merge_id: str) -> dict[str, Any] | None:
+    path = _merge_preview_dir(config_root, catalogo_id) / f"{merge_id}.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _apagar_preview_merge(config_root: Path, catalogo_id: str, merge_id: str) -> None:
+    (_merge_preview_dir(config_root, catalogo_id) / f"{merge_id}.json").unlink(missing_ok=True)
+
+
+def _validar_preview_merge(
+    preview: dict[str, Any] | None,
+    *,
+    destino: str,
+    origem: str,
+    tipo: str,
+    actor: str,
+    resumo_atual: dict[str, Any],
+) -> str | None:
+    """Valida um preview de merge antes da aplicação (ADR-175 D3). Retorna mensagem de erro, ou None se ok."""
+    from concilium.application.orchestrators.catalog_draft_lifecycle import (
+        CatalogDraftGovernanceError,
+        _checar_quatro_olhos,
+    )
+
+    if preview is None:
+        return "merge_id não encontrado ou já aplicado/expirado. Gere um novo preview com dry_run=True."
+    criado_em = datetime.fromisoformat(preview["criado_em"])
+    if datetime.now(UTC) - criado_em > timedelta(hours=_MERGE_PREVIEW_TTL_HOURS):
+        return f"Preview expirado (TTL {_MERGE_PREVIEW_TTL_HOURS}h) — gere um novo com dry_run=True."
+    if (preview["destino"], preview["origem"], preview["tipo"]) != (destino, origem, tipo):
+        return "destino/origem/tipo não coincidem com o preview gerado — gere um novo preview para estes parâmetros."
+    try:
+        _checar_quatro_olhos(preview["criado_por"], actor)
+    except CatalogDraftGovernanceError as exc:
+        return str(exc)
+    if preview["resumo"] != resumo_atual:
+        return "O catálogo mudou desde o preview (resumo diverge) — gere um novo preview com dry_run=True."
+    return None
+
+
 def _impl_mesclar_catalogo(
     destino: str,
     origem: str,
     dry_run: bool = True,
     tipo: str = "todos",
+    merge_id: str | None = None,
+    actor: str = "system",
+    justificativa: str = "Merge de catálogo",
 ) -> dict[str, Any]:
     """Mescla uma fonte de origem (catálogo ou planilha RFI) no catálogo de destino.
 
-    dry_run=True (padrão) só calcula o relatório de comparação — nada é escrito.
-    dry_run=False escreve direto no `.catalog_bundle.json` do destino (mesma mecânica
-    do antigo comparar_rfi_catalogo(dry_run=False) — issue #134 não resolve a
-    governança de escrita direta em catálogo, ver ADR-145).
+    dry_run=True (padrão) calcula o relatório de comparação — nada é escrito no catálogo,
+    mas um preview é persistido (`merge_id` retornado), permitindo a aplicação posterior
+    por um segundo ator (ADR-175 D3, regra dos quatro olhos — ADR-120).
+
+    dry_run=False aplica um preview existente: exige `merge_id` de um preview válido,
+    gerado por um ator DIFERENTE do que aplica, dentro do TTL de 24h, com o catálogo
+    ainda no mesmo estado do preview (senão, TOCTOU — rejeita e pede um preview novo).
+    Escreve nos arquivos individuais por entidade — nunca no `.catalog_bundle.json`
+    (ADR-175 D1, corrige bug de durabilidade da issue #141) — e gera CatalogSnapshot/
+    CatalogDiff (ADR-175 D4).
 
     Args:
         destino: Catálogo de destino (catalogo_id) — precisa ser um catálogo, não planilha.
         origem: Catálogo (catalogo_id) ou caminho de planilha .xlsm/.xlsx de origem.
-        dry_run: Se True (padrão), não altera nada. Se False, aplica o merge.
+        dry_run: Se True (padrão), só gera preview. Se False, aplica um preview existente.
         tipo: insumos | producoes | cpus | todos (padrão).
+        merge_id: Obrigatório quando dry_run=False — id do preview a aplicar.
+        actor: Ator que está chamando (resolvido pelo wrapper MCP via get_current_user_id()).
+        justificativa: Motivo do merge, gravado no CatalogDiff (ADR-175 D4).
     """
+    from concilium.application.orchestrators.catalog_draft_lifecycle import build_and_persist_snapshot
     from concilium.application.services.catalog.catalog_compare import (
         ID_KEYS,
         aplicar_merge,
         eh_planilha,
         gerar_relatorios,
+        resolver_catalogo_id,
     )
     from concilium.presentation.mcp._context import _runtime
 
@@ -247,37 +405,70 @@ def _impl_mesclar_catalogo(
 
     relatorios = gerar_relatorios(fonte_destino, fonte_origem, tipos)
 
+    resumo = {
+        "atualizacoes": sum(sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()),
+        "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
+        "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
+    }
     result: dict[str, Any] = {
         "mode": "DRY_RUN" if dry_run else "APPLIED",
         "destino": destino,
         "origem": origem,
         **{t: _cc_sumarizar_relatorio(rep) for t, rep in relatorios.items()},
-        "resumo": {
-            "atualizacoes": sum(sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()),
-            "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
-            "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
-        },
+        "resumo": resumo,
     }
     if aviso:
         result["aviso"] = aviso
 
-    if not dry_run:
-        from concilium.application.services.catalog.catalog_compare import resolver_catalogo_id
+    rt = _runtime()
+    catalogo_id = resolver_catalogo_id(rt, destino)
+    config_root = rt.config_root
 
-        rt = _runtime()
-        catalogo_id = resolver_catalogo_id(rt, destino)
-        bundle = rt.load_catalogo(catalogo_id)
-        bundle_path = rt.config_root / "catalogos" / catalogo_id / ".catalog_bundle.json"
-        aplicado: dict[str, Any] = {}
-        for t in tipos:
-            merged = aplicar_merge(fonte_destino.get(t, []), fonte_origem.get(t, []), relatorios[t], id_key=ID_KEYS[t])
-            if t == "producoes" and "producoes" not in bundle:
-                bundle["produtividades"] = merged
-            else:
-                bundle[t] = merged
-            aplicado[t] = {"total": len(merged), "era": len(fonte_destino.get(t, []))}
-        bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
-        result["aplicado"] = aplicado
+    if dry_run:
+        novo_merge_id = str(uuid4())
+        _persistir_preview_merge(
+            config_root, catalogo_id, novo_merge_id,
+            destino=destino, origem=origem, tipo=tipo, resumo=resumo, criado_por=actor,
+        )
+        result["merge_id"] = novo_merge_id
+        result["expira_em_horas"] = _MERGE_PREVIEW_TTL_HOURS
+        return _wrap_response(result)
+
+    if not merge_id:
+        return {"erro": "merge_id obrigatório para aplicar (dry_run=False). Gere um preview com dry_run=True primeiro."}
+
+    from concilium.infrastructure.auth.permission_guard import _effective_mcp_roles, require_permission
+
+    try:
+        require_permission("catalog:merge", _effective_mcp_roles())
+    except PermissionError as exc:
+        return {"erro": str(exc)}
+
+    preview = _carregar_preview_merge(config_root, catalogo_id, merge_id)
+    erro_preview = _validar_preview_merge(
+        preview, destino=destino, origem=origem, tipo=tipo, actor=actor, resumo_atual=resumo
+    )
+    if erro_preview:
+        return {"erro": erro_preview}
+
+    catalog_root = _catalog_root(config_root, catalogo_id)
+    aplicado: dict[str, Any] = {}
+    for t in tipos:
+        base_t = fonte_destino.get(t, [])
+        merged = aplicar_merge(base_t, fonte_origem.get(t, []), relatorios[t], id_key=ID_KEYS[t])
+        escritos = _persistir_merge_em_arquivos_individuais(catalog_root, t, base_t, merged, ID_KEYS[t])
+        aplicado[t] = {"total": len(merged), "era": len(base_t), "arquivos_escritos": escritos}
+    result["aplicado"] = aplicado
+
+    catalogo_depois = _runtime().load_catalogo(catalogo_id)
+    snapshot_id, diff_summary = build_and_persist_snapshot(
+        config_root, catalogo_id, catalogo_depois,
+        actor=actor, contexto_id=destino, rascunho_id=merge_id, justificativa=justificativa,
+    )
+    result["snapshot_id"] = snapshot_id
+    result["diff_summary"] = diff_summary
+
+    _apagar_preview_merge(config_root, catalogo_id, merge_id)
 
     return _wrap_response(result)
 

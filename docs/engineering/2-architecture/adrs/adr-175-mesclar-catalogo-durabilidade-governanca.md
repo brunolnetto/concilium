@@ -1,6 +1,6 @@
 # ADR-175 — `mesclar_catalogo`: Escrita Durável + Governança (4-Olhos/Snapshot)
 
-**Status:** Proposta
+**Status:** ✅ Implementado
 **Data:** 2026-08-03
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-041 (SCD Type 2 de preço), ADR-120 (Regra dos Quatro Olhos), ADR-145 (Unificação do Caminho de Escrita de Preço no Catálogo Mestre), ADR-150 (Rascunho de Catálogo por Projeto — mesmo padrão de risco fechado para `promover_override_projeto`), issue #141
@@ -79,30 +79,50 @@ D5. **Sem SCD2 por ora** — `RepositorioInsumo.atualizar_preco()` grava histór
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | D1 — escrita em arquivos individuais (`_persistir_merge_em_arquivos_individuais`) | Pendente |
-| F2 | D3 — preview com `merge_id` + TTL + 4-olhos + validação de consistência | Pendente |
-| F3 | D2 — permissão `catalog:merge` para `dry_run=False` | Pendente |
-| F4 | D4 — snapshot/diff via `build_and_persist_snapshot` | Pendente |
+| F1 | D1 — escrita em arquivos individuais (`_persistir_merge_em_arquivos_individuais`) | ✅ |
+| F2 | D3 — preview com `merge_id` + TTL + 4-olhos + validação de consistência | ✅ |
+| F3 | D2 — permissão `catalog:merge` para `dry_run=False` | ✅ |
+| F4 | D4 — snapshot/diff via `build_and_persist_snapshot` | ✅ |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `dry_run=False` escreve nos arquivos individuais corretos (insumo/cpu/producao), nunca no `.catalog_bundle.json`
-- [ ] Teste cobrindo: após o merge, uma leitura fresca via `rt.load_catalogo()` reflete o merge mesmo depois do cache ser invalidado por outra escrita não relacionada (prova a durabilidade — regressão do bug real)
+- [x] `dry_run=False` escreve nos arquivos individuais corretos (insumo/cpu/producao), nunca no `.catalog_bundle.json`
+- [x] Teste cobrindo: após o merge, uma leitura fresca via `rt.load_catalogo()` reflete o merge mesmo depois do cache ser invalidado por outra escrita não relacionada (prova a durabilidade — regressão do bug real)
 
 ### Fase 2
-- [ ] `dry_run=True` retorna `merge_id`; `dry_run=False` sem `merge_id` retorna erro
-- [ ] Teste cobrindo: mesmo ator não pode aplicar seu próprio preview (4-olhos); preview expirado (TTL) rejeitado; `destino`/`origem`/`tipo` divergentes do preview rejeitados; catálogo mudou entre preview e apply (resumo diverge) rejeitado; preview aplicado com sucesso é removido (não reaplicável)
+- [x] `dry_run=True` retorna `merge_id`; `dry_run=False` sem `merge_id` retorna erro
+- [x] Teste cobrindo: mesmo ator não pode aplicar seu próprio preview (4-olhos); preview expirado (TTL) rejeitado; `destino`/`origem`/`tipo` divergentes do preview rejeitados; catálogo mudou entre preview e apply (resumo diverge) rejeitado; preview aplicado com sucesso é removido (não reaplicável)
 
 ### Fase 3
-- [ ] `dry_run=False` exige `catalog:merge`; `dry_run=True` continua com `catalog:write`
+- [x] `dry_run=False` exige `catalog:merge`; `dry_run=True` continua com `catalog:write`
 
 ### Fase 4
-- [ ] Merge aplicado com sucesso gera `CatalogSnapshot`/`CatalogDiff` persistido, com `justificativa` gravada
+- [x] Merge aplicado com sucesso gera `CatalogSnapshot`/`CatalogDiff` persistido, com `justificativa` gravada
 
 ## Nota de Implementação
 
-_(preenchida ao final da implementação)_
+Implementado em `_catalogo_tools_helpers_b.py` (`_impl_mesclar_catalogo` e helpers
+`_persistir_merge_em_arquivos_individuais`/`_persistir_preview_merge`/
+`_carregar_preview_merge`/`_validar_preview_merge`/`_apagar_preview_merge`) e no
+wrapper MCP `mesclar_catalogo` (`catalogo.py`), que agora resolve `actor` via
+`get_current_user_id()` e propaga `merge_id`/`justificativa`.
+
+Um desvio do D1 literal: em vez de replicar a categorização interna de
+`aplicar_merge` (percorrer `inner_high`/`right_only` separadamente),
+`_persistir_merge_em_arquivos_individuais` compara o resultado final (`merged`)
+diretamente contra o estado anterior (`base`) por `id_key` e escreve só o que é
+novo ou mudou. Isso cobre uniformemente INNER_HIGH atualizado, RIGHT_ONLY novo
+e colisões INNER_LOW reimportadas com prefixo `RFI-` sem duplicar a lógica de
+`aplicar_merge` — mais robusto a mudanças futuras nesse motor.
+
+O gate `catalog:merge` (D2) é um segundo gate inline (`require_permission`),
+dentro de `_impl_mesclar_catalogo`, sobre a base do `@permission("catalog:write")`
+do decorator — mesmo padrão de "gate duplo" já usado por `require_owner_or_admin`
+em `promover_override_projeto` (ADR-150), já que o decorator `@permission` só
+aceita uma permissão estática por tool e aqui a exigência depende de `dry_run`.
+
+Suíte completa: 15.1xx testes, todos verdes (nenhuma regressão introduzida).
 
 ---
 
