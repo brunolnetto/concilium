@@ -1,4 +1,4 @@
-# ADR-175 — `mesclar_catalogo`: Escrita Durável + Governança (4-Olhos/Snapshot)
+# ADR-177 — `mesclar_catalogo`: Escrita Durável + Governança (4-Olhos/Snapshot)
 
 **Status:** ✅ Implementado
 **Data:** 2026-08-03

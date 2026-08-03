@@ -240,7 +240,7 @@ def _persistir_merge_em_arquivos_individuais(
     merged: list[dict[str, Any]],
     id_key: str,
 ) -> int:
-    """ADR-175 D1: grava o resultado do merge nos arquivos individuais por entidade
+    """ADR-177 D1: grava o resultado do merge nos arquivos individuais por entidade
     (mesma convenção de `_apply_criar_insumo_delta`/`_apply_cpu_override_delta`) —
     nunca no `.catalog_bundle.json`, cache derivado que seria descartado silenciosamente
     na próxima invalidação (bug de durabilidade real, issue #141).
@@ -282,7 +282,7 @@ def _persistir_preview_merge(
     resumo: dict[str, Any],
     criado_por: str,
 ) -> None:
-    """ADR-175 D3: persiste o preview de um merge para aplicação posterior por outro ator."""
+    """ADR-177 D3: persiste o preview de um merge para aplicação posterior por outro ator."""
     preview_dir = _merge_preview_dir(config_root, catalogo_id)
     preview_dir.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -319,7 +319,7 @@ def _validar_preview_merge(
     actor: str,
     resumo_atual: dict[str, Any],
 ) -> str | None:
-    """Valida um preview de merge antes da aplicação (ADR-175 D3). Retorna mensagem de erro, ou None se ok."""
+    """Valida um preview de merge antes da aplicação (ADR-177 D3). Retorna mensagem de erro, ou None se ok."""
     from concilium.application.orchestrators.catalog_draft_lifecycle import (
         CatalogDraftGovernanceError,
         _checar_quatro_olhos,
@@ -354,14 +354,14 @@ def _impl_mesclar_catalogo(
 
     dry_run=True (padrão) calcula o relatório de comparação — nada é escrito no catálogo,
     mas um preview é persistido (`merge_id` retornado), permitindo a aplicação posterior
-    por um segundo ator (ADR-175 D3, regra dos quatro olhos — ADR-120).
+    por um segundo ator (ADR-177 D3, regra dos quatro olhos — ADR-120).
 
     dry_run=False aplica um preview existente: exige `merge_id` de um preview válido,
     gerado por um ator DIFERENTE do que aplica, dentro do TTL de 24h, com o catálogo
     ainda no mesmo estado do preview (senão, TOCTOU — rejeita e pede um preview novo).
     Escreve nos arquivos individuais por entidade — nunca no `.catalog_bundle.json`
-    (ADR-175 D1, corrige bug de durabilidade da issue #141) — e gera CatalogSnapshot/
-    CatalogDiff (ADR-175 D4).
+    (ADR-177 D1, corrige bug de durabilidade da issue #141) — e gera CatalogSnapshot/
+    CatalogDiff (ADR-177 D4).
 
     Args:
         destino: Catálogo de destino (catalogo_id) — precisa ser um catálogo, não planilha.
@@ -370,7 +370,7 @@ def _impl_mesclar_catalogo(
         tipo: insumos | producoes | cpus | todos (padrão).
         merge_id: Obrigatório quando dry_run=False — id do preview a aplicar.
         actor: Ator que está chamando (resolvido pelo wrapper MCP via get_current_user_id()).
-        justificativa: Motivo do merge, gravado no CatalogDiff (ADR-175 D4).
+        justificativa: Motivo do merge, gravado no CatalogDiff (ADR-177 D4).
     """
     from concilium.application.orchestrators.catalog_draft_lifecycle import build_and_persist_snapshot
     from concilium.application.services.catalog.catalog_compare import (

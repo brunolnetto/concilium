@@ -342,7 +342,7 @@ class TestImplCompararCatalogo:
 
 
 class TestImplMesclarCatalogo:
-    """ADR-175: preview com merge_id (dry_run=True) -> aplicação por outro ator (dry_run=False).
+    """ADR-177: preview com merge_id (dry_run=True) -> aplicação por outro ator (dry_run=False).
 
     Escrita durável nos arquivos individuais (issue #141) é coberta à parte, com um
     Runtime real, em TestImplMesclarCatalogoDurabilidade — aqui a mecânica de preview/
@@ -498,7 +498,7 @@ class TestImplMesclarCatalogo:
         assert result["aplicado"]["insumos"]["arquivos_escritos"] == 1
         assert result["snapshot_id"]
         bundle_path = tmp_path / "config" / "catalogos" / "dest" / ".catalog_bundle.json"
-        assert not bundle_path.exists()  # ADR-175 D1: nunca escreve no bundle
+        assert not bundle_path.exists()  # ADR-177 D1: nunca escreve no bundle
         insumo_novo = tmp_path / "config" / "catalogos" / "dest" / "insumos" / "outro" / "I2.json"
         assert insumo_novo.exists()
         assert json.loads(insumo_novo.read_text())["descricao"] == "Areia"
@@ -545,7 +545,7 @@ class TestImplMesclarCatalogo:
 
 
 class TestImplMesclarCatalogoDurabilidade:
-    """ADR-175 D1: regressão do bug real — merge sobrevive à invalidação do cache
+    """ADR-177 D1: regressão do bug real — merge sobrevive à invalidação do cache
     (issue #141). Precisa de um Runtime de verdade (não o _make_rt fake) para
     exercitar `_catalog_bundle_valid`/`_load_catalogo_from_disk` de fato.
     """
@@ -583,7 +583,7 @@ class TestImplMesclarCatalogoDurabilidade:
         assert "snapshot_id" in applied
 
         # Simula uma escrita de catálogo totalmente não relacionada, depois do merge —
-        # é exatamente essa escrita que, antes da ADR-175, fazia _catalog_bundle_valid
+        # é exatamente essa escrita que, antes da ADR-177, fazia _catalog_bundle_valid
         # invalidar o cache e reconstruir o bundle a partir dos arquivos individuais
         # (que nunca tinham sido tocados), revertendo o merge silenciosamente.
         (catalog_root / "insumos" / "material" / "I1.json").write_text(

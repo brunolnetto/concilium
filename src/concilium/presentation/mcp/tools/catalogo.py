@@ -363,7 +363,7 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description="Mescla uma fonte de origem (catálogo ou planilha PLANILHA PADRÃO RFI .xlsm/.xlsx) no "
-        "catálogo de destino, em duas etapas (ADR-175). dry_run=True (padrão) gera um preview e retorna "
+        "catálogo de destino, em duas etapas (ADR-177). dry_run=True (padrão) gera um preview e retorna "
         "`merge_id` — nada é escrito no catálogo. dry_run=False aplica um preview existente: exige `merge_id`, "
         "`catalog:merge`, e um ator diferente do que gerou o preview (quatro olhos, ADR-120); escreve nos "
         "arquivos individuais do catálogo mestre e gera CatalogSnapshot/CatalogDiff."
