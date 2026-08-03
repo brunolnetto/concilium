@@ -1616,3 +1616,157 @@ class TestBuildProducoesPorAtividadeSemCpuResolvivel:
 
         assert "eap-01" in result
         assert "eap-02" not in result
+
+
+# ---------------------------------------------------------------------------
+# _rasfc_build_producoes_por_atividade — issue #142: item_id vs atividade_id
+# ---------------------------------------------------------------------------
+
+
+class TestRasfcBuildProducoesPorAtividadeTraduzParaAtividadeId:
+    def test_com_atividades_populado_chave_e_atividade_id(self):
+        """Quando canonical.atividades está populado (caso comum — sempre
+        populado pela skill 01), o DAG do CP-SAT usa atividade_id
+        (_extract_activities), então producoes_por_atividade precisa estar no
+        mesmo espaço de IDs — senão VAL-ESTOQUE-PROD-01 dispara mesmo com a
+        atividade presente no DAG (issue #142)."""
+
+        class FakeEapItem:
+            item_id = "eap-2"
+            cpu_id = "CPU-TERRA"
+            quantitativo = 100.0
+
+        class FakeAtividade:
+            atividade_id = "eap-2-atv-1"
+            eap_item_id = "eap-2"
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = [FakeAtividade()]
+
+        cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+
+        rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
+        result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup)
+
+        assert result == {"eap-2-atv-1": {"id": "PROD-X", "valor_horario": 10.0}}
+        assert "eap-2" not in result
+
+    def test_sem_atividades_mantem_item_id_fallback_eap(self):
+        """Sem canonical.atividades (fallback EAP), _extract_activities usa
+        item_id puro — producoes_por_atividade deve continuar chaveado por
+        item_id nesse caso, preservando o comportamento atual."""
+
+        class FakeEapItem:
+            item_id = "eap-2"
+            cpu_id = "CPU-TERRA"
+            quantitativo = 100.0
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = None
+
+        cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+
+        rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
+        result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup)
+
+        assert result == {"eap-2": {"id": "PROD-X", "valor_horario": 10.0}}
+
+
+# ---------------------------------------------------------------------------
+# Integração ponta-a-ponta (issue #142) — reproduz o caminho real da skill 04
+# (canonical.atividades populado + modo automático/CP-SAT), não a montagem
+# manual de ActivityDAG/ReplenishableResource com as MESMAS strings nos dois
+# lados que os testes anteriores usavam (por isso o bug nunca foi pego antes).
+# ---------------------------------------------------------------------------
+
+
+class TestRasfcRunHeuristicsMaterialGeradoInternamenteModoAutomatico:
+    def _build_canonical(self):
+        class FakeEapItem:
+            item_id = "eap-1"
+            cpu_id = "CPU-TERRA"
+            quantitativo = 100.0
+            descricao = "Escavação"
+
+            def predecessores_tipados(self):
+                return []
+
+        class FakeAtividade:
+            atividade_id = "eap-1-atv-1"
+            eap_item_id = "eap-1"
+            descricao = "Escavação"
+
+        class FakeRegime:
+            horas_dia = 8
+            dias_semana = 5
+
+        class FakeProjeto:
+            data_inicio = date(2025, 1, 6)
+            data_termino = date(2025, 3, 31)
+            regime_trabalho = FakeRegime()
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = [FakeAtividade()]
+            projeto = FakeProjeto()
+            recurso_pool = []
+            activity_dag = None
+            praticabilidade = None
+
+        return FakeCanonical()
+
+    def _lookups(self):
+        cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-ESCO", "precos_unitarios_sbdi": {"total": 0.0}}}
+        producao_lookup = {
+            "PROD-ESCO": {
+                "id": "PROD-ESCO",
+                "valor_horario": 100.0,
+                "materiais_gerados": [{"insumo_id": "MA-SOLO", "geracao_por_hora": 100.0}],
+                "composicao_padrao_equipe": {"funcoes": [], "equipamentos": []},
+            }
+        }
+        insumos_lookup = {"MA-SOLO": {"origem_material": "GERACAO_INTERNA"}}
+        return cpu_lookup, producao_lookup, insumos_lookup
+
+    def test_nao_dispara_val_estoque_prod_01_via_pipeline_real(self):
+        """Antes do fix (issue #142): `_rasfc_run_heuristics` sempre lançava
+        ScheduleError envelopando 'VAL-ESTOQUE-PROD-01: ... referencia
+        atividade(s) fora do DAG: eap-1' — mesmo com 'eap-1-atv-1' (a
+        atividade real) presente no DAG, porque producoes_por_atividade vinha
+        chaveado por 'eap-1' (item_id) enquanto o DAG usa atividade_id.
+        Depois do fix, o pipeline real (extração do canônico +
+        _rasfc_run_heuristics, o mesmo caminho de `skill.py`) deve produzir um
+        candidato viável sem levantar nada."""
+        canonical = self._build_canonical()
+        cpu_lookup, producao_lookup, insumos_lookup = self._lookups()
+        validacoes: list = []
+
+        rasfc_extract_inputs = _MOD._mod_validacao._rasfc_extract_inputs
+        rasfc_run_heuristics = _MOD._mod_validacao._rasfc_run_heuristics
+
+        extracted = rasfc_extract_inputs(canonical, {}, validacoes, cpu_lookup, producao_lookup)
+        assert extracted is not None
+        activities, dag, pool, deadline_weeks, producoes_por_atividade = extracted
+
+        # A tradução deve ter acontecido: chave é a atividade_id do DAG, não o item_id.
+        assert "eap-1-atv-1" in producoes_por_atividade
+        assert "eap-1" not in producoes_por_atividade
+
+        candidates, _relaxed, resources = rasfc_run_heuristics(
+            activities,
+            dag,
+            pool,
+            deadline_weeks,
+            {},
+            validacoes,
+            producoes_por_atividade=producoes_por_atividade,
+            insumos_lookup=insumos_lookup,
+        )
+
+        assert candidates, "esperava ao menos um candidato viável"
+        assert resources and resources[0].resource_id == "MA-SOLO"
+        assert not any(v.codigo == "VAL-ESTOQUE-BUILD-01" for v in validacoes)
