@@ -74,11 +74,30 @@ class TestRosterMoPersistenciaFilesystem:
         deve reenviar a lista completa (merge por-membro é responsabilidade da
         camada MCP/gerir_escopo, ADR-173 F3, não do EscopoStore)."""
         es = _make_escopo_store(tmp_path)
-        es.update_meta(roster_mo=[{"individuo_id": "mo-001", "funcao_id": "MO-ARMADOR", "salario_base_mensal": 3200.0, "data_admissao": "2026-01-05"}])
         es.update_meta(
             roster_mo=[
-                {"individuo_id": "mo-001", "funcao_id": "MO-ARMADOR", "salario_base_mensal": 3200.0, "data_admissao": "2026-01-05"},
-                {"individuo_id": "mo-002", "funcao_id": "MO-ARMADOR", "salario_base_mensal": 3100.0, "data_admissao": "2026-02-01"},
+                {
+                    "individuo_id": "mo-001",
+                    "funcao_id": "MO-ARMADOR",
+                    "salario_base_mensal": 3200.0,
+                    "data_admissao": "2026-01-05",
+                }
+            ]
+        )
+        es.update_meta(
+            roster_mo=[
+                {
+                    "individuo_id": "mo-001",
+                    "funcao_id": "MO-ARMADOR",
+                    "salario_base_mensal": 3200.0,
+                    "data_admissao": "2026-01-05",
+                },
+                {
+                    "individuo_id": "mo-002",
+                    "funcao_id": "MO-ARMADOR",
+                    "salario_base_mensal": 3100.0,
+                    "data_admissao": "2026-02-01",
+                },
             ]
         )
         escopo = es.to_escopo()

@@ -736,7 +736,9 @@ def test_process_staleness_check_no_deps_returns_unchanged(config_root):
     contract = SimpleNamespace(depends_on_skills=[])
     plano_store = SimpleNamespace(read_premissas_por_skill=lambda: {"04-cronograma": {"escopo_hash": "x"}})
 
-    new_result = r._process_staleness_check("06-resultado-financeiro", contract, {"jurisdicao_id": "sp"}, result, plano_store)
+    new_result = r._process_staleness_check(
+        "06-resultado-financeiro", contract, {"jurisdicao_id": "sp"}, result, plano_store
+    )
     assert new_result is result
 
 
@@ -752,7 +754,9 @@ def test_process_staleness_check_dep_never_ran_no_warning(config_root):
     contract = SimpleNamespace(depends_on_skills=["04-cronograma"])
     plano_store = SimpleNamespace(read_premissas_por_skill=lambda: {})
 
-    new_result = r._process_staleness_check("06-resultado-financeiro", contract, {"jurisdicao_id": "sp"}, result, plano_store)
+    new_result = r._process_staleness_check(
+        "06-resultado-financeiro", contract, {"jurisdicao_id": "sp"}, result, plano_store
+    )
     assert new_result is result
 
 

@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import sys
 
-import pytest
-
 
 def _load_precificacao():
     from concilium.application.skills import load_skill_stage

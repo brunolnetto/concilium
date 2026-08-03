@@ -71,7 +71,9 @@ class TestComposicaoDefaultAdmPrioridadeFontes:
 
         return [
             EquipeDireta(
-                item_id="eq-1", custo_total=0.0, funcoes=[FuncaoEquipeDireta(funcao_id="MO-ARMADOR", num_pessoas=num_pessoas)]
+                item_id="eq-1",
+                custo_total=0.0,
+                funcoes=[FuncaoEquipeDireta(funcao_id="MO-ARMADOR", num_pessoas=num_pessoas)],
             )
         ]
 

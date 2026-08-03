@@ -52,7 +52,9 @@ class TestPlanoStorePremissasEfetivas:
 
     def test_write_creates_both_files(self, tmp_path):
         ps = self._make_plano_store(tmp_path)
-        ps.write_premissas_efetivas("06-resultado-financeiro", {"bdi_aplicado": {"mao_obra": 0.3}}, {"jurisdicao_id": "sp"})
+        ps.write_premissas_efetivas(
+            "06-resultado-financeiro", {"bdi_aplicado": {"mao_obra": 0.3}}, {"jurisdicao_id": "sp"}
+        )
 
         assert (ps.root / ps.PREMISSAS_EFETIVAS_FILE).exists()
         assert (ps.root / ps.PREMISSAS_POR_SKILL_FILE).exists()

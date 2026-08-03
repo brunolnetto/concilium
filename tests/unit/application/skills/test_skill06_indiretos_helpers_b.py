@@ -657,7 +657,9 @@ class TestResolveCategoriaAdmAlojamentoBottomUp:
         from concilium.domain.models.canonical import EquipeDireta, FuncaoEquipeDireta
 
         eq = EquipeDireta(
-            item_id="eq-1", custo_total=0.0, funcoes=[FuncaoEquipeDireta(funcao_id="MO-ARMADOR", num_pessoas=num_pessoas)]
+            item_id="eq-1",
+            custo_total=0.0,
+            funcoes=[FuncaoEquipeDireta(funcao_id="MO-ARMADOR", num_pessoas=num_pessoas)],
         )
         return SimpleNamespace(equipes_diretas=[eq])
 

@@ -114,8 +114,8 @@ ignore = ["B008"]
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
 "tests/conftest.py" = ["E402"]
-"tests/unit/test_skills.py" = ["E402"]
-"tests/unit/test_application_services_refactor.py" = ["E402"]
+"tests/unit/application/skills/test_skills.py" = ["E402"]
+"tests/unit/application/services/test_application_services_refactor.py" = ["E402"]
 "**/theme.py" = ["E501"]  # CSS strings cannot be split across lines
 
 [tool.coverage.run]

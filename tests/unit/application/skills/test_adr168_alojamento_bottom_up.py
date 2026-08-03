@@ -97,7 +97,9 @@ class TestComposicaoDefaultAdmComAlojamento:
                 funcoes=[FuncaoEquipeDireta(funcao_id="MO-ARMADOR", num_pessoas=4)],
             )
         ]
-        result = self._fn()("ADM", equipes, {"quartos_por_casa": 4, "pessoas_por_quarto": 1, "valor_aluguel_mensal": 5000.0})
+        result = self._fn()(
+            "ADM", equipes, {"quartos_por_casa": 4, "pessoas_por_quarto": 1, "valor_aluguel_mensal": 5000.0}
+        )
         # capacidade 4/casa -> 1 casa x 5000
         assert result["verbas"]["custo_fixo_mensal"] == 5000.0
 
@@ -109,6 +111,10 @@ class TestComposicaoDefaultAdmComAlojamento:
     def test_top_ignora_parametros_novos_sem_quebrar(self):
         from concilium.domain.models.canonical import EquipeDireta, FuncaoEquipeDireta
 
-        equipes = [EquipeDireta(item_id="eq-1", custo_total=0.0, funcoes=[FuncaoEquipeDireta(funcao_id="P0057", num_pessoas=5)])]
+        equipes = [
+            EquipeDireta(
+                item_id="eq-1", custo_total=0.0, funcoes=[FuncaoEquipeDireta(funcao_id="P0057", num_pessoas=5)]
+            )
+        ]
         result = self._fn()("TOP", equipes)
         assert result["mao_de_obra"]["itens"][0]["funcao_id"] == "P0057"

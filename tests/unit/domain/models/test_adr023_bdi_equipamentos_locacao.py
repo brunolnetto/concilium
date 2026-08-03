@@ -191,9 +191,8 @@ class TestFracLocacaoDoCanonical:
     def test_helper_frac_locacao_em_consolidacao(self):
         """A consolidação (skill-06 _consolidacao) tem o mesmo helper — issue #121:
         antes desta correção, ele não existia lá e a taxa de equipamentos era sempre material."""
-        from datetime import UTC, datetime
-
         import importlib
+        from datetime import UTC, datetime
 
         from concilium.domain.models.canonical import (
             CanonicalModel,
