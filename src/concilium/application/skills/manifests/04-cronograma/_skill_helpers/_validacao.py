@@ -21,6 +21,7 @@ from concilium.domain.models.canonical import (
 from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
 
 from ._calendario import (  # ty: ignore[unresolved-import]
+    _build_item_to_activity_map,
     _extract_activities,
     _extract_dag,
     _extract_pool,
@@ -452,12 +453,24 @@ def _rasfc_compute_deadline_weeks(inputs: dict, rcpsp_spec: Any, canonical_in: C
 def _rasfc_build_producoes_por_atividade(
     canonical_in: CanonicalModel, cpu_lookup: dict | None, producao_lookup: dict | None
 ) -> dict[str, Any]:
-    """Pareamento atividade→Producao (ADR-139 D5); vazio sem ambos os lookups de catálogo."""
-    return (
-        _build_producoes_por_atividade(canonical_in.eap or [], cpu_lookup, producao_lookup)
-        if cpu_lookup and producao_lookup
-        else {}
-    )
+    """Pareamento atividade→Producao (ADR-139 D5); vazio sem ambos os lookups de catálogo.
+
+    Traduz item_id -> atividade_id via `_build_item_to_activity_map` (mesmo
+    mapeamento já usado por `_extract_edge_thresholds_from_eap` para as arestas
+    de precedência): quando `canonical.atividades` está populado (sempre, na
+    prática — `_extract_activities` usa `atividade_id` nesse caso), o DAG do
+    CP-SAT é montado nesse espaço de IDs. Sem esta tradução, `producao_por_semana`/
+    `consumo_por_semana` do `ReplenishableResource` (chaveados por item_id puro)
+    nunca batem com `acts` (chaveado por atividade_id), e `VAL-ESTOQUE-PROD-01`
+    dispara sempre que há material gerado internamente — mesmo com a atividade
+    de fato presente no DAG (issue #142). `.get(item_id, item_id)` preserva o
+    comportamento atual quando `atividades` não está populado (fallback EAP).
+    """
+    if not (cpu_lookup and producao_lookup):
+        return {}
+    por_item = _build_producoes_por_atividade(canonical_in.eap or [], cpu_lookup, producao_lookup)
+    item_to_activity = _build_item_to_activity_map(canonical_in)
+    return {item_to_activity.get(item_id, item_id): prod for item_id, prod in por_item.items()}
 
 
 def _rasfc_extract_inputs(

@@ -1616,3 +1616,61 @@ class TestBuildProducoesPorAtividadeSemCpuResolvivel:
 
         assert "eap-01" in result
         assert "eap-02" not in result
+
+
+# ---------------------------------------------------------------------------
+# _rasfc_build_producoes_por_atividade — issue #142: item_id vs atividade_id
+# ---------------------------------------------------------------------------
+
+
+class TestRasfcBuildProducoesPorAtividadeTraduzParaAtividadeId:
+    def test_com_atividades_populado_chave_e_atividade_id(self):
+        """Quando canonical.atividades está populado (caso comum — sempre
+        populado pela skill 01), o DAG do CP-SAT usa atividade_id
+        (_extract_activities), então producoes_por_atividade precisa estar no
+        mesmo espaço de IDs — senão VAL-ESTOQUE-PROD-01 dispara mesmo com a
+        atividade presente no DAG (issue #142)."""
+
+        class FakeEapItem:
+            item_id = "eap-2"
+            cpu_id = "CPU-TERRA"
+            quantitativo = 100.0
+
+        class FakeAtividade:
+            atividade_id = "eap-2-atv-1"
+            eap_item_id = "eap-2"
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = [FakeAtividade()]
+
+        cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+
+        rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
+        result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup)
+
+        assert result == {"eap-2-atv-1": {"id": "PROD-X", "valor_horario": 10.0}}
+        assert "eap-2" not in result
+
+    def test_sem_atividades_mantem_item_id_fallback_eap(self):
+        """Sem canonical.atividades (fallback EAP), _extract_activities usa
+        item_id puro — producoes_por_atividade deve continuar chaveado por
+        item_id nesse caso, preservando o comportamento atual."""
+
+        class FakeEapItem:
+            item_id = "eap-2"
+            cpu_id = "CPU-TERRA"
+            quantitativo = 100.0
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = None
+
+        cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+
+        rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
+        result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup)
+
+        assert result == {"eap-2": {"id": "PROD-X", "valor_horario": 10.0}}
