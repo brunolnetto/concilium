@@ -363,8 +363,10 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description="Mescla uma fonte de origem (catálogo ou planilha PLANILHA PADRÃO RFI .xlsm/.xlsx) no "
-        "catálogo de destino. dry_run=True (padrão) apenas mostra o relatório — use dry_run=False para aplicar "
-        "as diferenças direto no catálogo de destino (escrita direta, fora do fluxo de rascunho — ADR-145)."
+        "catálogo de destino, em duas etapas (ADR-177). dry_run=True (padrão) gera um preview e retorna "
+        "`merge_id` — nada é escrito no catálogo. dry_run=False aplica um preview existente: exige `merge_id`, "
+        "`catalog:merge`, e um ator diferente do que gerou o preview (quatro olhos, ADR-120); escreve nos "
+        "arquivos individuais do catálogo mestre e gera CatalogSnapshot/CatalogDiff."
     )
     @permission("catalog:write")
     @mcp_rate_limit()
@@ -373,8 +375,13 @@ def register(server: FastMCP) -> None:
         origem: str,
         dry_run: bool = True,
         tipo: str = "todos",
+        merge_id: str | None = None,
+        justificativa: str = "Merge de catálogo",
     ) -> dict[str, Any]:
-        return _impl_mesclar_catalogo(destino, origem, dry_run, tipo)
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+        actor = get_current_user_id() or "system"
+        return _impl_mesclar_catalogo(destino, origem, dry_run, tipo, merge_id, actor, justificativa)
 
     @server.tool(
         description="Recalcula o preço unitário de uma produção específica dado alpha_clt, alpha_pj e preço do diesel. "

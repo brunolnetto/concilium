@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -341,6 +342,13 @@ class TestImplCompararCatalogo:
 
 
 class TestImplMesclarCatalogo:
+    """ADR-177: preview com merge_id (dry_run=True) -> aplicação por outro ator (dry_run=False).
+
+    Escrita durável nos arquivos individuais (issue #141) é coberta à parte, com um
+    Runtime real, em TestImplMesclarCatalogoDurabilidade — aqui a mecânica de preview/
+    quatro-olhos/TTL é exercitada com o Runtime fake de sempre (_make_rt).
+    """
+
     _DESTINO = {
         "insumos": [{"codigo": "I1", "descricao": "Cimento", "unidade": "kg", "preco_unitario": 10.0}],
         "producoes": [{"id": "P1", "descricao": "Escavação"}],
@@ -352,6 +360,11 @@ class TestImplMesclarCatalogo:
         "cpus": [],
     }
 
+    def _gerar_preview(self, tmp_path, rt, **kwargs):
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                return _impl_mesclar_catalogo("dest", "orig", dry_run=True, actor="ator-a", **kwargs)
+
     def test_destino_planilha_returns_erro(self, tmp_path):
         xlsm = tmp_path / "planilha.xlsm"
         xlsm.touch()
@@ -359,49 +372,229 @@ class TestImplMesclarCatalogo:
         assert "erro" in result
         assert "planilha" in result["erro"]
 
-    def test_dry_run_nao_escreve_bundle(self, tmp_path):
-        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
-        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
-            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
-                result = _impl_mesclar_catalogo("dest", "orig", dry_run=True)
-
-        assert result["mode"] == "DRY_RUN"
-        assert "aplicado" not in result
-        bundle_path = tmp_path / "config" / "catalogos" / "dest" / ".catalog_bundle.json"
-        assert not bundle_path.exists()
-
-    def test_apply_escreve_bundle(self, tmp_path):
-        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
-        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
-        bundle_dir.mkdir(parents=True)
-        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
-            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
-                result = _impl_mesclar_catalogo("dest", "orig", dry_run=False)
-
-        assert result["mode"] == "APPLIED"
-        assert "aplicado" in result
-        bundle_path = bundle_dir / ".catalog_bundle.json"
-        assert bundle_path.exists()
-        data = json.loads(bundle_path.read_text())
-        codigos = {i["codigo"] for i in data["insumos"]}
-        assert {"I1", "I2"} <= codigos
-
-    def test_apply_produtividades_key_preserved(self, tmp_path):
-        destino_produtividades = {"insumos": [], "produtividades": [{"id": "P1"}], "cpus": []}
-        rt = _make_rt(tmp_path, {"dest": destino_produtividades, "orig": self._ORIGEM})
-        bundle_dir = tmp_path / "config" / "catalogos" / "dest"
-        bundle_dir.mkdir(parents=True)
-        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
-            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
-                _impl_mesclar_catalogo("dest", "orig", dry_run=False, tipo="producoes")
-
-        data = json.loads((bundle_dir / ".catalog_bundle.json").read_text())
-        assert "produtividades" in data
-        assert "producoes" not in data
-
     def test_tipo_invalido_returns_erro(self):
         result = _impl_mesclar_catalogo("dest", "orig", tipo="invalido")
         assert "erro" in result
+
+    def test_dry_run_gera_preview_com_merge_id_sem_escrever_nada(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        result = self._gerar_preview(tmp_path, rt)
+
+        assert result["mode"] == "DRY_RUN"
+        assert "aplicado" not in result
+        assert result["merge_id"]
+        assert result["expira_em_horas"] == 24
+        bundle_path = tmp_path / "config" / "catalogos" / "dest" / ".catalog_bundle.json"
+        assert not bundle_path.exists()
+        preview_path = tmp_path / "config" / "catalogos" / "dest" / "merges_pendentes" / f"{result['merge_id']}.json"
+        assert preview_path.exists()
+        preview = json.loads(preview_path.read_text())
+        assert preview["criado_por"] == "ator-a"
+
+    def test_apply_sem_merge_id_retorna_erro(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo("dest", "orig", dry_run=False, actor="ator-b")
+
+        assert "erro" in result
+        assert "merge_id" in result["erro"]
+
+    def test_apply_merge_id_inexistente_retorna_erro(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, merge_id="fantasma", actor="ator-b"
+                )
+
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+    def test_apply_mesmo_ator_do_preview_bloqueado_quatro_olhos(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        preview = self._gerar_preview(tmp_path, rt)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, merge_id=preview["merge_id"], actor="ator-a"
+                )
+
+        assert "erro" in result
+        assert "quatro olhos" in result["erro"]
+
+    def test_apply_origem_divergente_do_preview_retorna_erro(self, tmp_path):
+        """destino continua "dest" (mesmo catalogo_id, mesmo diretório de preview) — só
+        `origem` diverge do que foi revisado no preview."""
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM, "outra-origem": self._ORIGEM})
+        preview = self._gerar_preview(tmp_path, rt)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo(
+                    "dest", "outra-origem", dry_run=False, merge_id=preview["merge_id"], actor="ator-b"
+                )
+
+        assert "erro" in result
+        assert "não coincidem" in result["erro"]
+
+    def test_apply_preview_expirado_retorna_erro(self, tmp_path):
+        from datetime import UTC, datetime, timedelta
+
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        preview = self._gerar_preview(tmp_path, rt)
+        preview_path = (
+            tmp_path / "config" / "catalogos" / "dest" / "merges_pendentes" / f"{preview['merge_id']}.json"
+        )
+        data = json.loads(preview_path.read_text())
+        data["criado_em"] = (datetime.now(UTC) - timedelta(hours=25)).isoformat()
+        preview_path.write_text(json.dumps(data), encoding="utf-8")
+
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, merge_id=preview["merge_id"], actor="ator-b"
+                )
+
+        assert "erro" in result
+        assert "expirado" in result["erro"]
+
+    def test_apply_catalogo_mudou_desde_preview_retorna_erro(self, tmp_path):
+        catalogos = {"dest": dict(self._DESTINO), "orig": self._ORIGEM}
+        rt = _make_rt(tmp_path, catalogos)
+        preview = self._gerar_preview(tmp_path, rt)
+        # Catálogo destino mudou entre o preview e a aplicação (TOCTOU): I2 (antes
+        # RIGHT_ONLY, "novo") agora já existe na base com preço divergente — muda a
+        # categoria para INNER_HIGH com delta, alterando os contadores do resumo.
+        catalogos["dest"] = {
+            "insumos": [
+                *self._DESTINO["insumos"],
+                {"codigo": "I2", "descricao": "Areia", "unidade": "m3", "preco_unitario": 999.0},
+            ],
+            "producoes": self._DESTINO["producoes"],
+            "cpus": [],
+        }
+
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, merge_id=preview["merge_id"], actor="ator-b"
+                )
+
+        assert "erro" in result
+        assert "mudou" in result["erro"]
+
+    def test_apply_com_sucesso_escreve_arquivos_individuais_gera_snapshot_e_remove_preview(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        preview = self._gerar_preview(tmp_path, rt)
+
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                result = _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, merge_id=preview["merge_id"],
+                    actor="ator-b", justificativa="importação RFI lote 3",
+                )
+
+        assert result["mode"] == "APPLIED"
+        assert result["aplicado"]["insumos"]["arquivos_escritos"] == 1
+        assert result["snapshot_id"]
+        bundle_path = tmp_path / "config" / "catalogos" / "dest" / ".catalog_bundle.json"
+        assert not bundle_path.exists()  # ADR-177 D1: nunca escreve no bundle
+        insumo_novo = tmp_path / "config" / "catalogos" / "dest" / "insumos" / "outro" / "I2.json"
+        assert insumo_novo.exists()
+        assert json.loads(insumo_novo.read_text())["descricao"] == "Areia"
+        preview_path = (
+            tmp_path / "config" / "catalogos" / "dest" / "merges_pendentes" / f"{preview['merge_id']}.json"
+        )
+        assert not preview_path.exists()  # estado terminal — não reaplicável
+
+    def test_apply_com_merge_id_ja_aplicado_retorna_erro(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        preview = self._gerar_preview(tmp_path, rt)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, merge_id=preview["merge_id"], actor="ator-b"
+                )
+                result = _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, merge_id=preview["merge_id"], actor="ator-c"
+                )
+
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+    def test_apply_exige_permissao_catalog_merge(self, tmp_path):
+        rt = _make_rt(tmp_path, {"dest": self._DESTINO, "orig": self._ORIGEM})
+        preview = self._gerar_preview(tmp_path, rt)
+
+        with (
+            patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}),
+            patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True),
+            patch("concilium.infrastructure.auth.permission_guard._effective_mcp_roles", return_value=["operator"]),
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch(f"{MODULE}._wrap_response", side_effect=_identity),
+        ):
+            result = _impl_mesclar_catalogo(
+                "dest", "orig", dry_run=False, merge_id=preview["merge_id"], actor="ator-b"
+            )
+
+        assert "erro" in result
+        assert "catalog:merge" in result["erro"]
+        # Nada foi escrito — o gate de permissão bloqueou antes de tocar o preview/arquivos
+        insumo_novo = tmp_path / "config" / "catalogos" / "dest" / "insumos" / "outro" / "I2.json"
+        assert not insumo_novo.exists()
+
+
+class TestImplMesclarCatalogoDurabilidade:
+    """ADR-177 D1: regressão do bug real — merge sobrevive à invalidação do cache
+    (issue #141). Precisa de um Runtime de verdade (não o _make_rt fake) para
+    exercitar `_catalog_bundle_valid`/`_load_catalogo_from_disk` de fato.
+    """
+
+    def _seed_catalogo(self, catalog_root: Path, insumos: list[dict]) -> None:
+        for insumo in insumos:
+            tipo_dir = catalog_root / "insumos" / str(insumo.get("tipo", "outro")).lower()
+            tipo_dir.mkdir(parents=True, exist_ok=True)
+            (tipo_dir / f"{insumo['codigo']}.json").write_text(json.dumps(insumo), encoding="utf-8")
+
+    def test_merge_sobrevive_invalidacao_de_cache_por_escrita_nao_relacionada(self, tmp_path):
+        from concilium.application.runtime import Runtime
+
+        config_root = tmp_path / "config"
+        catalog_root = config_root / "catalogos" / "dest"
+        self._seed_catalogo(
+            catalog_root, [{"codigo": "I1", "tipo": "material", "descricao": "Cimento", "preco_unitario": 10.0}]
+        )
+        origem_dir = config_root / "catalogos" / "orig"
+        self._seed_catalogo(
+            origem_dir, [{"codigo": "I2", "tipo": "material", "descricao": "Areia", "preco_unitario": 5.0}]
+        )
+
+        rt1 = Runtime(config_root)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt1):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                preview = _impl_mesclar_catalogo("dest", "orig", dry_run=True, tipo="insumos", actor="ator-a")
+
+        rt2 = Runtime(config_root)  # ator diferente, chamada nova -> Runtime novo (sem cache do preview)
+        with patch("concilium.presentation.mcp._context._runtime", return_value=rt2):
+            with patch(f"{MODULE}._wrap_response", side_effect=_identity):
+                applied = _impl_mesclar_catalogo(
+                    "dest", "orig", dry_run=False, tipo="insumos", merge_id=preview["merge_id"], actor="ator-b"
+                )
+        assert "snapshot_id" in applied
+
+        # Simula uma escrita de catálogo totalmente não relacionada, depois do merge —
+        # é exatamente essa escrita que, antes da ADR-177, fazia _catalog_bundle_valid
+        # invalidar o cache e reconstruir o bundle a partir dos arquivos individuais
+        # (que nunca tinham sido tocados), revertendo o merge silenciosamente.
+        (catalog_root / "insumos" / "material" / "I1.json").write_text(
+            json.dumps({"codigo": "I1", "tipo": "material", "descricao": "Cimento", "preco_unitario": 11.0}),
+            encoding="utf-8",
+        )
+
+        rt3 = Runtime(config_root)  # leitura fresca, sem cache em memória de nenhuma chamada anterior
+        catalogo_final = rt3.load_catalogo("dest")
+        codigos = {i["codigo"] for i in catalogo_final["insumos"]}
+        assert {"I1", "I2"} <= codigos  # o merge persiste — não foi revertido pela invalidação de cache
 
 
 # ---------------------------------------------------------------------------
