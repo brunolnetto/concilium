@@ -112,6 +112,7 @@ def _categorias_cpu_do_projeto(canonical_in: Any, catalogo: dict | None) -> set[
 
 
 _CATEGORIAS_CPU_COM_LAB = {"TERRAPLENAGEM", "PAVIMENTACAO"}
+_CATEGORIAS_CPU_COM_TOP = {"TERRAPLENAGEM", "PAVIMENTACAO", "DRENAGEM", "SANEAMENTO"}
 
 
 def _alojamento_config_do_catalogo(catalogo: dict | None) -> dict | None:
@@ -171,6 +172,13 @@ def _composicao_default_por_categoria(
     capacidade/valor passam a vir do insumo `BEN-ALOJAMENTO` quando presente
     no catálogo. Prioridade: `alojamento_config` (override de perfil) >
     `BEN-ALOJAMENTO` (catálogo) > hardcoded (3 quartos, 2 pessoas, R$4.000).
+
+    ADR-176: TOP (Topógrafo) ganha o mesmo gate circunstancial do LAB — só é
+    cobrado (`quantidade=1`) quando o projeto tem CPU de TERRAPLENAGEM,
+    PAVIMENTACAO, DRENAGEM ou SANEAMENTO (obras lineares que exigem locação
+    topográfica de rede/perfil/greide); `quantidade=0` fora desse conjunto.
+    Mesma degradação segura da LAB: `cpu_categorias_presentes=None` preserva o
+    comportamento antigo (sempre cobra).
     """
     if categoria == "ADM":
         cfg = {**(_alojamento_config_do_catalogo(catalogo) or {}), **(alojamento_config or {})}
@@ -200,11 +208,17 @@ def _composicao_default_por_categoria(
             "verbas": verbas,
         }
     if categoria == "TOP":
+        aplica = cpu_categorias_presentes is None or bool(cpu_categorias_presentes & _CATEGORIAS_CPU_COM_TOP)
         return {
             "mao_de_obra": {
                 "nome": "MÃO DE OBRA TOP",
                 "itens": [
-                    {"funcao_id": "P0057", "descricao": "Topógrafo", "quantidade": 1, "valor_mensal": 9216.0},
+                    {
+                        "funcao_id": "P0057",
+                        "descricao": "Topógrafo",
+                        "quantidade": 1 if aplica else 0,
+                        "valor_mensal": 9216.0,
+                    },
                 ],
             },
         }
