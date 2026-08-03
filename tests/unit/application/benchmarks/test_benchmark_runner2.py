@@ -5,6 +5,19 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+# Força o import real de `procurement` antes de qualquer patch de
+# `phase_classifier.get_pipeline_profile_for_intent` nos testes abaixo.
+# `procurement.py` faz `from ...phase_classifier import get_pipeline_profile_
+# for_intent` (name-import por valor, não por referência) — se essa primeira
+# importação ocorrer enquanto o patch estiver ativo (runner.py importa
+# `procurement` lazily, dentro de `_resolve_procurement_profile`, chamado por
+# `runner.run()` dentro do `with patch(...)` de alguns testes abaixo),
+# `procurement.get_pipeline_profile_for_intent` fica permanentemente vinculado
+# ao MagicMock — o `patch()` só restaura o atributo em `phase_classifier`, não
+# essa cópia em `procurement`. Sintoma: KeyError com um MagicMock em
+# test_adr115_procurement_rfx.py, só na suíte completa (nunca isolado).
+import concilium.domain.models.procurement  # noqa: F401
+
 
 def _make_spec(tmp_path, slug="bench-test", nome="Bench Test", contexto_id="ctx", referencia_path=None):
     from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
