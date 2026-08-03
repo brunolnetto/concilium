@@ -5,6 +5,16 @@
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-106 (EquipeCustoEngine — Lifecycle Unificado), ADR-105 (Mobilização e Desmobilização — Política Integrada), ADR-129 (Cotação por Proximidade Geográfica), ADR-073 (Cadeias de Perpetuação), ADR-136 (Custo de Mob/Demob no Pool — F1-F3/F6)
 
+> **Nota de reabertura (2026-08-03):** a alternativa **A1** desta ADR (rejeitar
+> unificação dos 3 modelos) foi **reaberta deliberadamente pela ADR-176**, por
+> decisão do usuário — investigação adicional mostrou que o núcleo físico dos
+> 3 modelos é o mesmo evento (mobilizar/desmobilizar recurso produtivo), ao
+> contrário do caso já resolvido pela ADR-136 F5 (onde os "duplicados" eram
+> genuinamente incompatíveis). D2 (revisão dos valores R$6.500/800) e D3
+> (geografia) passam a fazer parte do plano de fases da ADR-176 F3/F5. Esta
+> ADR permanece como registro histórico do levantamento original — não
+> reescrita.
+
 ---
 
 ## Contexto
