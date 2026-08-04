@@ -6,7 +6,8 @@
   "preco_unitario": 177.6,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
-    "consumo_litros_hora": 18.0
+    "consumo_litros_hora": 18.0,
+    "valor_locacao_mensal": 39072.0
   },
   "classe_compartilhamento": {
     "classe": "exclusivo_dedicado",

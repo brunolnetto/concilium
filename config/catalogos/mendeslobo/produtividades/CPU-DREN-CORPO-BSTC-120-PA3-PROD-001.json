@@ -7,19 +7,19 @@
   "composicao_padrao_equipe": {
     "funcoes": [
       {
-        "funcao_id": "P0052",
+        "funcao_id": "MO-OFICIAL",
         "num_pessoas": 5
       },
       {
-        "funcao_id": "P0040",
+        "funcao_id": "MO-OPER-ESCAV",
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0001",
+        "funcao_id": "MO-AJUDANTE",
         "num_pessoas": 4
       },
       {
-        "funcao_id": "P0020",
+        "funcao_id": "MO-ENCARREG-DREN",
         "num_pessoas": 1
       },
       {
@@ -27,7 +27,7 @@
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0071",
+        "funcao_id": "MO-MOTORISTA-DE-CAMINHA",
         "num_pessoas": 1
       }
     ],

@@ -16,6 +16,7 @@
       "custo_diesel_h": 0.0,
       "custo_material_h": 88.4
     },
-    "_rental_unit": "hora_produtiva"
+    "_rental_unit": "hora_produtiva",
+    "valor_locacao_mensal": 53680.0
   }
 }

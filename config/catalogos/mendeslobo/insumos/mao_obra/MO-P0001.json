@@ -3,7 +3,7 @@
   "tipo": "MAO_OBRA",
   "descricao": "Ajudante",
   "unidade": "mes",
-  "preco_unitario": 200.0,
+  "preco_unitario": 1830.51,
   "fonte_preco": "negociado",
   "atributos_especificos": {
     "categoria_sindical": "CLT",
@@ -17,5 +17,6 @@
   },
   "data_referencia_preco": "2025-05-01",
   "codigo_sicro": "P0001",
-  "categoria": "DIVERSOS"
+  "categoria": "DIVERSOS",
+  "_cure_preco_at": "2026-08-04"
 }

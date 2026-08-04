@@ -10,6 +10,7 @@
   "atributos_especificos": {
     "consumo_litros_hora": 18.0,
     "horas_mes": 200,
-    "_rental_unit": "hora_produtiva"
+    "_rental_unit": "hora_produtiva",
+    "valor_locacao_mensal": 30600.0
   }
 }

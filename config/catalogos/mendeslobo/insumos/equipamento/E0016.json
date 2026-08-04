@@ -8,6 +8,7 @@
   "data_referencia_preco": "2026-05-01",
   "atributos_especificos": {
     "horas_mes": 200.0,
-    "consumo_litros_hora": 34.0
+    "consumo_litros_hora": 34.0,
+    "valor_locacao_mensal": 84360.0
   }
 }

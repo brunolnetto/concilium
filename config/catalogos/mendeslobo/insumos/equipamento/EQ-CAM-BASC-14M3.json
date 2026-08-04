@@ -14,7 +14,8 @@
       "custo_diesel_h": 20.0,
       "custo_material_h": 10.0
     },
-    "_comment_consumo_derivado": "11.69 L/h = 72.496 R$/h ÷ 6.20 R$/L (fonte: decomposicao_equip.custo_diesel_h)"
+    "_comment_consumo_derivado": "11.69 L/h = 72.496 R$/h ÷ 6.20 R$/L (fonte: decomposicao_equip.custo_diesel_h)",
+    "valor_locacao_mensal": 22000.0
   },
   "classe_compartilhamento": {
     "classe": "exclusivo_dedicado",

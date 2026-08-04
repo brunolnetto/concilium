@@ -17,5 +17,6 @@
   },
   "data_referencia_preco": "2025-05-01",
   "codigo_sicro": "P0085",
-  "categoria": "DIVERSOS"
+  "categoria": "DIVERSOS",
+  "codigo_referencia_externa": "P0085"
 }

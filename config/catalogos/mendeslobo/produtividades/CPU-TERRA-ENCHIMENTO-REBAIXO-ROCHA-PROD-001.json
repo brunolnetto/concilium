@@ -7,19 +7,19 @@
   "composicao_padrao_equipe": {
     "funcoes": [
       {
-        "funcao_id": "P0046",
+        "funcao_id": "MO-OPER-ROLO-COMP",
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0043",
+        "funcao_id": "MO-OPER-MOTO",
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0001",
+        "funcao_id": "MO-AJUDANTE",
         "num_pessoas": 3
       },
       {
-        "funcao_id": "P0048",
+        "funcao_id": "MO-OPER-TRATOR-EST",
         "num_pessoas": 1
       }
     ],

@@ -7,11 +7,11 @@
   "composicao_padrao_equipe": {
     "funcoes": [
       {
-        "funcao_id": "P0001",
+        "funcao_id": "MO-AJUDANTE",
         "num_pessoas": 4
       },
       {
-        "funcao_id": "P0032",
+        "funcao_id": "MO-MOTOR-CAM-BASC",
         "num_pessoas": 1
       },
       {
@@ -19,7 +19,7 @@
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0046",
+        "funcao_id": "MO-OPER-ROLO-COMP",
         "num_pessoas": 1
       }
     ],

@@ -1,13 +1,13 @@
 {
-  "codigo": "MO-P0075",
+  "codigo": "MO-TECNICO-DE-PLANEJAME",
   "tipo": "MAO_OBRA",
   "descricao": "Técnico de Planejamento",
   "unidade": "mes",
   "preco_unitario": 14000.0,
   "fonte_preco": "negociado",
   "atributos_especificos": {
-    "categoria_sindical": "PJ",
-    "horas_extras_pct_padrao": 0,
+    "categoria_sindical": "horista_CE",
+    "horas_extras_pct_padrao": 0.25,
     "metodo_custo_total": "custo_total_ja_incluido",
     "taxa_encargos_pct": 0.0,
     "nota_encargos": "Valor já representa custo total ao projeto (salário + encargos + benefícios), conforme orçamento gerencial de RH.",
@@ -15,10 +15,10 @@
     "tipo_contrato": "CLT"
   },
   "classe_compartilhamento": {
-    "classe": "exclusivo_dedicado",
-    "capacidade_cobertura": 1
+    "classe": "concorrente_compartilhavel",
+    "capacidade_cobertura": 3
   },
   "data_referencia_preco": "2025-05-01",
-  "codigo_sicro": "P0075",
-  "categoria": "DIVERSOS"
+  "categoria": "DIVERSOS",
+  "codigo_referencia_externa": "MO-P0075, P0075"
 }

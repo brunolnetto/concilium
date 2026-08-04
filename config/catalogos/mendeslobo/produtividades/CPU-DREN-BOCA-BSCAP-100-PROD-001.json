@@ -7,15 +7,15 @@
   "composicao_padrao_equipe": {
     "funcoes": [
       {
-        "funcao_id": "P0052",
+        "funcao_id": "MO-OFICIAL",
         "num_pessoas": 5
       },
       {
-        "funcao_id": "P0001",
+        "funcao_id": "MO-AJUDANTE",
         "num_pessoas": 2
       },
       {
-        "funcao_id": "P0071",
+        "funcao_id": "MO-MOTORISTA-DE-CAMINHA",
         "num_pessoas": 1
       }
     ],

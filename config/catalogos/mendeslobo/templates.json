@@ -83,7 +83,7 @@
           "quantidade": 1
         },
         {
-          "funcao_id": "MO-AUX-ADM",
+          "funcao_id": "MO-P0006",
           "quantidade": 1
         }
       ],
@@ -111,7 +111,7 @@
           "quantidade": 1
         },
         {
-          "funcao_id": "MO-AUX-ADM",
+          "funcao_id": "MO-P0006",
           "quantidade": 3
         }
       ],
@@ -149,7 +149,7 @@
           "quantidade": 2
         },
         {
-          "funcao_id": "MO-AUX-ADM",
+          "funcao_id": "MO-P0006",
           "quantidade": 7
         }
       ],

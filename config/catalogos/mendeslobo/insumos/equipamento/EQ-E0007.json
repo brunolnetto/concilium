@@ -15,7 +15,8 @@
       "custo_mao_obra_h": 17.8,
       "custo_diesel_h": 45.0,
       "custo_material_h": 15.0
-    }
+    },
+    "valor_locacao_mensal": 28560.0
   },
   "classe_compartilhamento": {
     "classe": "exclusivo_dedicado",

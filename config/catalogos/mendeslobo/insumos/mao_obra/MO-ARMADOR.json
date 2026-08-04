@@ -16,5 +16,6 @@
     "capacidade_cobertura": 1
   },
   "data_referencia_preco": "2025-05-01",
-  "categoria": "DIVERSOS"
+  "categoria": "DIVERSOS",
+  "codigo_referencia_externa": "P0005"
 }

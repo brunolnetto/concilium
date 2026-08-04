@@ -11,6 +11,7 @@
     "consumo_litros_hora": 1.5,
     "horas_mes": 200,
     "_rental_unit": "hora_produtiva",
-    "_combustivel": "gasolina"
+    "_combustivel": "gasolina",
+    "valor_locacao_mensal": 3000.0
   }
 }

@@ -8,7 +8,7 @@
   "atributos_especificos": {
     "categoria_sindical": "horista_CE",
     "horas_extras_pct_padrao": 0.25,
-    "percentual_encargos_local": 1.777,
+    "percentual_encargos_local": 0.777,
     "tipo_contrato": "CLT"
   },
   "classe_compartilhamento": {

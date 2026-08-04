@@ -7,27 +7,27 @@
   "composicao_padrao_equipe": {
     "funcoes": [
       {
-        "funcao_id": "P0046",
+        "funcao_id": "MO-OPER-ROLO-COMP",
         "num_pessoas": 2
       },
       {
-        "funcao_id": "P0049",
+        "funcao_id": "MO-OPER-TRATOR-PNE",
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0043",
+        "funcao_id": "MO-OPER-MOTO",
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0033",
+        "funcao_id": "MO-MOTOR-CAM-PIPA",
         "num_pessoas": 1
       },
       {
-        "funcao_id": "P0001",
+        "funcao_id": "MO-AJUDANTE",
         "num_pessoas": 2
       },
       {
-        "funcao_id": "P0029",
+        "funcao_id": "MO-GREDISTA",
         "num_pessoas": 1
       }
     ],
