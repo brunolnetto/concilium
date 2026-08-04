@@ -21,6 +21,8 @@ from concilium.domain.constants import HORAS_MES_CLT as HORAS_MES_PADRAO
 from concilium.domain.constants import VALIDADE_PRECO_DIAS as VALIDADE_DIAS
 from concilium.domain.validations.catalog_refs import REFERENCIAS_EQUIPE, ids_faltantes
 
+from .similarity import build_idf, insumo_similarity
+
 
 @dataclass
 class Anomalia:
@@ -80,9 +82,25 @@ def _zscore_map(values: list[float]) -> dict[int, float]:
 # ── Helpers for _check_mao_obra ───────────────────────────────────────────────
 
 
+def _mo_preco_hora(ins: dict) -> float:
+    """Normaliza preco_unitario de um insumo MAO_OBRA para R$/h, respeitando `unidade`.
+
+    `unidade == "h"/"hr"` → preco_unitario já é a taxa horária (convenção AGIS: inclui
+    encargos), usa direto. Qualquer outro valor (default "mes") → preco_unitario é
+    salário mensal, divide por horas_mes. Mesma convenção de pu_calculator._acumular_custo_mo.
+    """
+    preco = float(ins.get("preco_unitario") or 0)
+    unidade = (ins.get("unidade") or "mes").strip().lower()
+    if unidade in ("h", "hr"):
+        return preco
+    attrs = ins.get("atributos_especificos") or {}
+    hm = float(attrs.get("horas_mes") or HORAS_MES_PADRAO)
+    return preco / hm if hm > 0 else 0.0
+
+
 def _pc_mo_zscore(mo: list[dict]) -> list[Anomalia]:
-    precos = [float(i["preco_unitario"]) for i in mo]
-    zmap = _zscore_map(precos)
+    precos_h = [_mo_preco_hora(i) for i in mo]
+    zmap = _zscore_map(precos_h)
     result = []
     for idx, ins in enumerate(mo):
         z = zmap.get(idx, 0.0)
@@ -93,7 +111,12 @@ def _pc_mo_zscore(mo: list[dict]) -> list[Anomalia]:
                     tipo="ESTATISTICO",
                     severidade="AVISO",
                     mensagem=f"Salário extremamente fora da média (z={z:+.2f})",
-                    detalhe={"preco": ins["preco_unitario"], "z": round(z, 2), "descricao": ins.get("descricao", "")},
+                    detalhe={
+                        "preco": ins["preco_unitario"],
+                        "preco_hora_normalizado": round(precos_h[idx], 2),
+                        "z": round(z, 2),
+                        "descricao": ins.get("descricao", ""),
+                    },
                 )
             )
     return result
@@ -104,9 +127,7 @@ def _pc_mo_salario_minimo(mo: list[dict]) -> list[Anomalia]:
     for ins in mo:
         if _is_estagiario(ins):
             continue
-        attrs = ins.get("atributos_especificos") or {}
-        hm = float(attrs.get("horas_mes") or HORAS_MES_PADRAO)
-        preco_h = float(ins["preco_unitario"]) / hm
+        preco_h = _mo_preco_hora(ins)
         if preco_h < SMH * 0.95:
             result.append(
                 Anomalia(
@@ -114,7 +135,11 @@ def _pc_mo_salario_minimo(mo: list[dict]) -> list[Anomalia]:
                     tipo="FISICO",
                     severidade="ERRO",
                     mensagem=f"Salário horário R${preco_h:.2f}/h abaixo do mínimo legal R${SMH:.2f}/h",
-                    detalhe={"preco_mensal": ins["preco_unitario"], "horas_mes": hm, "preco_hora": round(preco_h, 2)},
+                    detalhe={
+                        "preco_unitario": ins["preco_unitario"],
+                        "unidade": (ins.get("unidade") or "mes").strip().lower(),
+                        "preco_hora": round(preco_h, 2),
+                    },
                 )
             )
     return result
@@ -141,22 +166,40 @@ def _pc_mo_encargos(mo: list[dict]) -> list[Anomalia]:
 
 
 def _pc_mo_duplicatas(mo: list[dict]) -> list[Anomalia]:
-    seen: dict[tuple, str] = {}
+    """Detecta duplicata via score determinístico de similaridade (ADR-179), não só
+    igualdade exata de (descrição, preço) — pega o caso de mesma função importada
+    com tratamento de encargos diferente (ex.: P0058/MO-SALA-TEC, ver similarity.py).
+
+    Mantém a semântica de referência de `_build_dup_map`: cada item aponta para o
+    primeiro item anterior na lista com o qual casou (não necessariamente o de maior
+    score), formando um agrupamento estrela em torno do primeiro código visto.
+    """
+    idf = build_idf([ins.get("descricao", "") for ins in mo])
     result = []
-    for ins in mo:
-        key = (ins.get("descricao", "").strip().lower(), ins.get("preco_unitario"))
-        if key in seen:
-            result.append(
-                Anomalia(
-                    codigo=ins["codigo"],
-                    tipo="DUPLICATA",
-                    severidade="AVISO",
-                    mensagem=f"Possível duplicata de '{seen[key]}' (mesma descrição e preço)",
-                    detalhe={"duplicata_de": seen[key], "descricao": ins.get("descricao"), "preco": key[1]},
+    for j in range(1, len(mo)):
+        for i in range(j):
+            sc = insumo_similarity(mo[i], mo[j], idf)
+            if sc.classificacao is not None:
+                confianca = "alta" if sc.classificacao == "duplicata_provavel" else "revisar"
+                result.append(
+                    Anomalia(
+                        codigo=mo[j]["codigo"],
+                        tipo="DUPLICATA",
+                        severidade="AVISO",
+                        mensagem=(
+                            f"Possível duplicata de '{mo[i]['codigo']}' "
+                            f"(confiança {confianca}, score={sc.score:.2f})"
+                        ),
+                        detalhe={
+                            "duplicata_de": mo[i]["codigo"],
+                            "score": round(sc.score, 3),
+                            "classificacao": sc.classificacao,
+                            "desc_sim": round(sc.desc_sim, 3),
+                            "price_sim": round(sc.price_sim, 3),
+                        },
+                    )
                 )
-            )
-        else:
-            seen[key] = ins["codigo"]
+                break
     return result
 
 

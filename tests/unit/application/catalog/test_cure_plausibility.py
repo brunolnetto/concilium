@@ -63,6 +63,20 @@ class TestHorasMes:
         assert cp._horas_mes({"atributos_especificos": {"horas_mes": "abc"}}) == cp.HORAS_MES_PADRAO
 
 
+class TestPrecoHora:
+    def test_unidade_h_usa_preco_direto(self):
+        assert cp._preco_hora({"preco_unitario": 26.9105, "unidade": "h"}) == 26.9105
+
+    def test_unidade_hr_usa_preco_direto(self):
+        assert cp._preco_hora({"preco_unitario": 30.0, "unidade": "hr"}) == 30.0
+
+    def test_unidade_mes_divide_por_horas_mes(self):
+        assert cp._preco_hora({"preco_unitario": 1830.51, "unidade": "mes"}) == 1830.51 / cp.HORAS_MES_PADRAO
+
+    def test_unidade_ausente_assume_mes(self):
+        assert cp._preco_hora({"preco_unitario": 1830.51}) == 1830.51 / cp.HORAS_MES_PADRAO
+
+
 class TestCureReport:
     def test_add_methods_append(self):
         report = cp.CureReport()
@@ -183,6 +197,37 @@ class TestCureErrosFisicos:
         cp.cure_erros_fisicos(insumos, report, apply=True)
         assert report.fixed == []
         assert report.manual == []
+
+    def test_unidade_h_preco_plausivel_nao_e_falso_positivo(self):
+        """Regressão do bug real (catálogo mendeslobo): insumo unidade="h" já é taxa
+        horária com encargos — não deve ser dividido por horas_mes de novo."""
+        report = cp.CureReport()
+        insumos = [
+            {
+                "codigo": "AGIS-FN-AJUD",
+                "tipo": "MAO_OBRA",
+                "descricao": "Ajudante",
+                "unidade": "h",
+                "preco_unitario": 19.45,
+            }
+        ]
+        cp.cure_erros_fisicos(insumos, report, apply=True)
+        assert report.fixed == []
+        assert report.manual == []
+
+    def test_unidade_h_realmente_abaixo_do_minimo_ainda_vai_para_manual(self):
+        report = cp.CureReport()
+        insumos = [
+            {
+                "codigo": "MO-SUSPEITO",
+                "tipo": "MAO_OBRA",
+                "descricao": "Ajudante",
+                "unidade": "h",
+                "preco_unitario": 1.0,
+            }
+        ]
+        cp.cure_erros_fisicos(insumos, report, apply=True)
+        assert any("abaixo do mínimo legal" in m for m in report.manual)
 
 
 # ─── cure_duplicatas ─────────────────────────────────────────────────────────

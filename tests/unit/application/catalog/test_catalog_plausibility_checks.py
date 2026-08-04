@@ -8,6 +8,7 @@ from unittest.mock import patch
 from concilium.application.catalog._plausibility_checks import (
     Anomalia,
     _is_estagiario,
+    _mo_preco_hora,
     _parse_date,
     _pc_check_equipe_refs,
     _pc_check_prod_item,
@@ -213,6 +214,60 @@ class TestPcMoZscore:
         result = _pc_mo_zscore(mo)
         assert result == []
 
+    def test_unidade_h_not_diluted_by_unidade_mes_in_same_population(self):
+        """Regressão: unidade="h" (~R$/h) e "mes" (~R$/mês) misturados sem normalizar
+        faziam salários mensais legítimos parecerem outliers estatísticos (bug real
+        encontrado no catálogo mendeslobo — item MO-GERENTE R$30.000/mês, z=+4,64
+        contra uma população dominada por insumos AGIS unidade="h" ~R$17-45)."""
+        # Maioria unidade="h" (taxa horária realista ~R$20-45/h)
+        horistas = [
+            {"codigo": f"AGIS-{i:02d}", "descricao": "Operador", "preco_unitario": p, "unidade": "h"}
+            for i, p in enumerate([20.0, 25.0, 30.0, 35.0, 40.0, 42.0, 22.0, 28.0, 33.0, 38.0])
+        ]
+        # Um mensalista plausível (não deveria ser outlier após normalizar para R$/h)
+        gerente = {
+            "codigo": "MO-GERENTE",
+            "descricao": "Gerente de Contrato",
+            "preco_unitario": 12_000.0,
+            "unidade": "mes",
+        }
+        mo = [*horistas, gerente]
+        result = _pc_mo_zscore(mo)
+        codigos_anomalos = {a.codigo for a in result}
+        assert "MO-GERENTE" not in codigos_anomalos
+
+    def test_anomalia_contains_preco_hora_normalizado(self):
+        precos_h = [1000.0] * 20 + [1_000_000.0]
+        mo = self._make_mo(precos_h)
+        result = _pc_mo_zscore(mo)
+        assert "preco_hora_normalizado" in result[-1].detalhe
+        assert "preco" in result[-1].detalhe
+
+
+# ── _mo_preco_hora ────────────────────────────────────────────────────────────
+
+
+class TestMoPrecoHora:
+    def test_unidade_h_usa_preco_direto(self):
+        ins = {"preco_unitario": 26.9105, "unidade": "h"}
+        assert _mo_preco_hora(ins) == 26.9105
+
+    def test_unidade_hr_usa_preco_direto(self):
+        ins = {"preco_unitario": 30.0, "unidade": "hr"}
+        assert _mo_preco_hora(ins) == 30.0
+
+    def test_unidade_mes_divide_por_horas_mes(self):
+        ins = {"preco_unitario": 1830.51, "unidade": "mes"}
+        assert _mo_preco_hora(ins) == 1830.51 / HORAS_MES_PADRAO
+
+    def test_unidade_ausente_assume_mes(self):
+        ins = {"preco_unitario": 1830.51}
+        assert _mo_preco_hora(ins) == 1830.51 / HORAS_MES_PADRAO
+
+    def test_unidade_h_maiuscula_e_com_espacos(self):
+        ins = {"preco_unitario": 26.9105, "unidade": " H "}
+        assert _mo_preco_hora(ins) == 26.9105
+
 
 # ── _pc_mo_salario_minimo ─────────────────────────────────────────────────────
 
@@ -264,6 +319,38 @@ class TestPcMoSalarioMinimo:
         above = SMH * 1.2 * HORAS_MES_PADRAO
         mo = [self._make_ins(above)]
         result = _pc_mo_salario_minimo(mo)
+        assert result == []
+
+    def test_unidade_h_preco_plausivel_nao_e_falso_positivo(self):
+        """Regressão do bug real: insumo com unidade="h" e preco_unitario já é a taxa
+        horária (ex.: AGIS-FN-AJUD real do mendeslobo, R$19,45/h, "nota_encargos":
+        "Taxa horária já inclui encargos"). Antes do fix, isso era dividido por
+        HORAS_MES_PADRAO de novo (19,45/220 ≈ R$0,09/h) e disparava ERRO falso."""
+        ins = {
+            "codigo": "AGIS-FN-AJUD",
+            "descricao": "Ajudante",
+            "preco_unitario": 19.45,
+            "unidade": "h",
+        }
+        result = _pc_mo_salario_minimo([ins])
+        assert result == []
+
+    def test_unidade_h_realmente_abaixo_do_minimo_ainda_detectado(self):
+        """Com unidade="h", um valor genuinamente abaixo do mínimo (sem dividir de
+        novo) ainda deve ser detectado — o fix não deve mascarar erros reais."""
+        ins = {
+            "codigo": "MO-SUSPEITO",
+            "descricao": "Ajudante",
+            "preco_unitario": SMH * 0.5,
+            "unidade": "h",
+        }
+        result = _pc_mo_salario_minimo([ins])
+        assert len(result) == 1
+        assert result[0].severidade == "ERRO"
+
+    def test_unidade_hr_tratada_como_unidade_h(self):
+        ins = {"codigo": "MO-X", "descricao": "Motorista", "preco_unitario": 30.0, "unidade": "hr"}
+        result = _pc_mo_salario_minimo([ins])
         assert result == []
 
 
@@ -318,43 +405,100 @@ class TestPcMoEncargos:
 
 
 class TestPcMoDuplicatas:
+    """ADR-179: _pc_mo_duplicatas usa similarity.insumo_similarity (score
+    determinístico), não mais igualdade exata de (descrição, preço)."""
+
     def test_two_entries_same_descricao_and_preco_triggers_aviso(self):
         mo = [
-            {"codigo": "MO-001", "descricao": "Pedreiro", "preco_unitario": 100.0},
-            {"codigo": "MO-002", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-001", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-002", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
         ]
         result = _pc_mo_duplicatas(mo)
         assert len(result) == 1
         assert result[0].tipo == "DUPLICATA"
         assert result[0].severidade == "AVISO"
         assert result[0].codigo == "MO-002"
+        assert result[0].detalhe["classificacao"] == "duplicata_provavel"
 
     def test_different_entries_are_clean(self):
         mo = [
-            {"codigo": "MO-001", "descricao": "Pedreiro", "preco_unitario": 100.0},
-            {"codigo": "MO-002", "descricao": "Carpinteiro", "preco_unitario": 120.0},
+            {"codigo": "MO-001", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-002", "tipo": "MAO_OBRA", "descricao": "Carpinteiro", "preco_unitario": 120.0},
         ]
         result = _pc_mo_duplicatas(mo)
         assert result == []
 
-    def test_same_descricao_different_preco_not_duplicate(self):
+    def test_mesma_descricao_sempre_gera_pelo_menos_revisao_independente_do_preco(self):
+        """ADR-179: descrição pesa 0.75 no score — descrição idêntica (desc_sim=1.0)
+        sozinha já ultrapassa SIMILARIDADE_REVISAR_MIN (0.55), então dois insumos com
+        o MESMO texto de descrição sempre acendem ao menos "revisar", qualquer que
+        seja o preço. Decisão deliberada: nunca esconder silenciosamente duas entradas
+        com descrição byte-idêntica — é exatamente o sinal que faltava para pegar o
+        caso real P0058/MO-SALA-TEC (razão de preço 2,06x, dentro da faixa de α)."""
         mo = [
-            {"codigo": "MO-001", "descricao": "Pedreiro", "preco_unitario": 100.0},
-            {"codigo": "MO-002", "descricao": "Pedreiro", "preco_unitario": 200.0},
+            {"codigo": "MO-001", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-002", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 200.0},
+        ]
+        result = _pc_mo_duplicatas(mo)
+        assert len(result) == 1
+        assert result[0].detalhe["classificacao"] in ("revisar", "duplicata_provavel")
+
+    def test_descricao_parcialmente_similar_e_preco_muito_diferente_fica_limpo(self):
+        """Descrição só parcialmente parecida (não idêntica) + preço muito diferente
+        não deve ultrapassar nem o piso de revisão — evita ruído entre papéis
+        distintos que só compartilham uma palavra."""
+        mo = [
+            {"codigo": "MO-001", "tipo": "MAO_OBRA", "descricao": "Operador de Escavadeira", "preco_unitario": 42.7},
+            {
+                "codigo": "MO-002",
+                "tipo": "MAO_OBRA",
+                "descricao": "Operador de Motoniveladora",
+                "preco_unitario": 4_018.14,
+            },
         ]
         result = _pc_mo_duplicatas(mo)
         assert result == []
 
     def test_duplicate_detalhe_has_original_codigo(self):
         mo = [
-            {"codigo": "MO-001", "descricao": "Pedreiro", "preco_unitario": 100.0},
-            {"codigo": "MO-002", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-001", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-002", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
         ]
         result = _pc_mo_duplicatas(mo)
         assert result[0].detalhe["duplicata_de"] == "MO-001"
 
     def test_empty_list_returns_empty(self):
         assert _pc_mo_duplicatas([]) == []
+
+    def test_tres_itens_duplicados_apontam_todos_para_o_primeiro(self):
+        """Mantém a semântica "estrela" do dedup antigo: agrupamento de 3+ itens
+        aponta todos para o primeiro item visto, não encadeado."""
+        mo = [
+            {"codigo": "MO-001", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-002", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
+            {"codigo": "MO-003", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 100.0},
+        ]
+        result = _pc_mo_duplicatas(mo)
+        assert len(result) == 2
+        assert all(r.detalhe["duplicata_de"] == "MO-001" for r in result)
+
+    def test_sala_tecnica_caso_real_p0058_vs_mo_sala_tec(self):
+        """Regressão do caso real que motivou a ADR-179: mesmo dedup exato antigo
+        não pegava (preços diferentes por tratamento de encargos)."""
+        mo = [
+            {"codigo": "P0058", "tipo": "MAO_OBRA", "descricao": "Sala Técnica", "preco_unitario": 24_720.0},
+            {
+                "codigo": "MO-SALA-TEC",
+                "tipo": "MAO_OBRA",
+                "descricao": "Sala Técnica",
+                "preco_unitario": 12_000.0,
+                "categoria": "DIVERSOS",
+            },
+        ]
+        result = _pc_mo_duplicatas(mo)
+        assert len(result) == 1
+        assert result[0].codigo == "MO-SALA-TEC"
+        assert result[0].detalhe["duplicata_de"] == "P0058"
 
 
 # ── _pc_mo_semantica ──────────────────────────────────────────────────────────

@@ -144,6 +144,25 @@ ENCARGOS_PJ: float = 0.06  # 6% sobre o valor do serviço (estimativa)
 # custo_mensal = salário_base × alpha → alpha ∈ [ALPHA_MIN, ALPHA_MAX]
 ALPHA_MIN_ENCARGOS: float = 1.0  # 100% — sem encargos (PJ puro)
 ALPHA_MAX_ENCARGOS: float = 2.5  # 250% — encargos máximos observados em obras
+ALPHA_CLT_TIPICO: float = 1.777  # fator de encargos "central" CLT horista — usado como
+# referência de proximidade em comparações de similaridade de preço (ADR-179)
+
+# ── Similaridade determinística de insumos (ADR-179) ─────────────────────────
+# Score = SIMILARIDADE_PESO_DESCRICAO·desc_sim + SIMILARIDADE_PESO_PRECO·price_sim
+#       + SIMILARIDADE_PESO_CATEGORIA·categoria_sim  (pesos somam 1.0)
+# Descrição domina deliberadamente (evita falso positivo entre papéis distintos que
+# compartilham faixa salarial plana — comum em MAO_OBRA — só por coincidência de preço).
+SIMILARIDADE_PESO_DESCRICAO: float = 0.75
+SIMILARIDADE_PESO_PRECO: float = 0.20
+SIMILARIDADE_PESO_CATEGORIA: float = 0.05
+SIMILARIDADE_TOL_PRECO_DIRETO: float = 0.15  # 15% — tolerância p/ preços "diretamente" equivalentes
+SIMILARIDADE_DUPLICATA_MIN: float = 0.80  # score ≥ → duplicata provável
+SIMILARIDADE_REVISAR_MIN: float = 0.55  # score ≥ (e < DUPLICATA_MIN) → revisar manualmente
+# Hipótese de preço-com-encargos (α) só entra se a descrição JÁ é um bom match —
+# sem isso, papéis distintos (ex.: "Encarregado de Frente" vs "Encarregado de
+# Obras") acendiam falso-positivo só por a razão de preço calhar de cair na faixa
+# larga de α (achado real ao validar contra o catálogo mendeslobo, ADR-179).
+SIMILARIDADE_DESC_MIN_HIPOTESE_ENCARGOS: float = 0.6
 
 # ── Salário mínimo (vigência 2026) ────────────────────────────────────────────
 # Atualizar a cada reajuste do governo federal.

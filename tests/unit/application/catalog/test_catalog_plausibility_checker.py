@@ -231,9 +231,20 @@ def test_pc_mo_duplicatas_same_descricao_preco():
     assert a.codigo == "MO-B"
 
 
-def test_pc_mo_duplicatas_different_preco():
+def test_pc_mo_duplicatas_different_preco_na_faixa_de_encargos_e_flagueado():
+    """ADR-179: mesma descrição + razão de preço (2,0x) dentro da faixa plausível de
+    α de encargos não é mais silenciosamente ignorado — mesmo padrão do caso real
+    P0058/MO-SALA-TEC (razão 2,06x) que o dedup exato antigo perdia."""
     ins1 = _mo(codigo="MO-A", descricao="Servente", preco=1000.0)
     ins2 = _mo(codigo="MO-B", descricao="Servente", preco=2000.0)
+    result = _pc_mo_duplicatas([ins1, ins2])
+    assert len(result) == 1
+    assert result[0].detalhe["classificacao"] in ("revisar", "duplicata_provavel")
+
+
+def test_pc_mo_duplicatas_different_descricao_e_preco_fora_da_faixa_fica_limpo():
+    ins1 = _mo(codigo="MO-A", descricao="Operador de Escavadeira", preco=1000.0)
+    ins2 = _mo(codigo="MO-B", descricao="Operador de Motoniveladora", preco=9000.0)
     result = _pc_mo_duplicatas([ins1, ins2])
     assert result == []
 

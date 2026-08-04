@@ -34,11 +34,14 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
+from concilium.domain.constants import HORAS_MES_CLT as HORAS_MES_PADRAO
+from concilium.domain.constants import SALARIO_MINIMO_MENSAL
+
 ROOT = Path(__file__).resolve().parents[4]
 
 # ── Constantes ────────────────────────────────────────────────────────────────
-SALARIO_MINIMO_MENSAL = 1_518.0  # R$ Brasil 2025
-HORAS_MES_PADRAO = 220.0
+# SALARIO_MINIMO_MENSAL e HORAS_MES_PADRAO vêm de domain/constants.py (fonte única —
+# esse arquivo tinha valor de 2025 hardcoded e desatualizado; ver domain/constants.py:1-9).
 SMM = SALARIO_MINIMO_MENSAL  # R$/mês — piso para MAO_OBRA regular
 
 # Estagiários são isentos do SMM CLT (bolsa-auxílio, não salário)
@@ -83,6 +86,21 @@ def _horas_mes(ins: dict) -> float:
         return HORAS_MES_PADRAO
 
 
+def _preco_hora(ins: dict) -> float:
+    """Normaliza preco_unitario para R$/h respeitando `unidade` (mesma convenção de
+    pu_calculator._acumular_custo_mo e _plausibility_checks._mo_preco_hora).
+
+    `unidade == "h"/"hr"` → preco_unitario já é taxa horária, usa direto — NÃO divide
+    por horas_mes de novo (bug: gerava falso "abaixo do mínimo" para insumos AGIS/turno).
+    """
+    preco = float(ins.get("preco_unitario") or 0)
+    unidade = (ins.get("unidade") or "mes").strip().lower()
+    if unidade in ("h", "hr"):
+        return preco
+    hm = _horas_mes(ins)
+    return preco / hm if hm > 0 else 0.0
+
+
 class CureReport:
     def __init__(self) -> None:
         self.fixed: list[str] = []
@@ -123,10 +141,9 @@ def _cure_encargos_alpha(ins: dict, cod: str, attrs: dict, report: CureReport, a
 
 
 def _cure_preco_minimo(ins: dict, cod: str, report: CureReport, apply: bool) -> None:
-    """b) preco_unitario abaixo do mínimo mensal (ignora estagiários)."""
+    """b) preco_unitario abaixo do mínimo mensal (ignora estagiários e unidade="h")."""
     preco = float(ins.get("preco_unitario") or 0)
-    hm = _horas_mes(ins)
-    preco_h = preco / hm if hm > 0 else 0
+    preco_h = _preco_hora(ins)
 
     if _is_estagiario(ins) or not (0 < preco_h < (SALARIO_MINIMO_MENSAL / HORAS_MES_PADRAO) * 0.95):
         return
