@@ -95,7 +95,36 @@ configure_logging(level="WARNING", json_format=False)
 
 from concilium.application.runtime import Runtime
 from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, OpenMeteoClient
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
+
+
+def _clone_project(source_root: Path, dest_projects_root: Path):
+    """Clona um projeto local via shutil.copytree e retorna o handle da cópia.
+
+    Só usado por fixtures de performance (session-scoped) que compartilham um
+    pipeline pesado (skills 01-03, ~50-80s) entre vários testes read-only —
+    sempre backend filesystem local nos testes, não uma operação genérica de
+    BlobStoragePort (copytree não existe em BlobStoragePort).
+
+    `handle.root` é lógico (Path(project_id), sem backing real) desde o corte
+    de backend da Fase 4 — anota `_test_real_root` no handle para consumidores
+    que ainda precisam de um Path físico de verdade (ex.: um segundo
+    shutil.copytree em cima desta cópia). Só existe para uso de teste."""
+    dest_projects_root.mkdir(parents=True, exist_ok=True)
+    dest = dest_projects_root / source_root.name
+    shutil.copytree(source_root, dest)
+    handle = build_project_repository(dest_projects_root).get_project(dest.name)
+    handle._test_real_root = dest
+    return handle
+
+
+def _real_root(projetos_root: Path, handle) -> Path:
+    """Path físico real de um handle criado via build_project_repository(projetos_root).
+
+    Só válido para o backend filesystem local (StorageProjectHandle.root é lógico,
+    Path(project_id), sem backing real) — usado por fixtures que precisam de um
+    Path de verdade (ex.: shutil.copytree)."""
+    return projetos_root / handle.root.name
 
 
 @pytest.fixture(autouse=True)
@@ -133,13 +162,13 @@ def runtime(config_root: Path) -> Runtime:
 
 
 @pytest.fixture
-def projeto_terraplenagem(projetos_root: Path) -> ProjectStore:
+def projeto_terraplenagem(projetos_root: Path):
     """Projeto novo para o cenário de terraplenagem.
 
     Usa contexto "test" (estável para CI, não evolui com mudanças em catalogos de produção).
     Testes são isolados de mudanças futuras em dados reais.
     """
-    return ProjectStore.init(projetos_root, "terraplenagem-aracoiaba-test", "test")
+    return build_project_repository(projetos_root).create_project("terraplenagem-aracoiaba-test", "test")
 
 
 @pytest.fixture(scope="session")
@@ -261,7 +290,7 @@ def _session_pipeline_sk03(tmp_path_factory, runtime, inputs_escopo_terraplenage
     """
     _start = time.time()
     projetos_root = tmp_path_factory.mktemp("session_sk03")
-    proj = ProjectStore.init(projetos_root, "session-sk03-test", "test")
+    proj = build_project_repository(projetos_root).create_project("session-sk03-test", "test")
     proj.new_version()
 
     # Desabilitar PDF em testes: render_markdown_pdf é o maior gargalo de skill-09 (~20-25s)
@@ -296,7 +325,7 @@ def _session_pipeline_sk03(tmp_path_factory, runtime, inputs_escopo_terraplenage
     runtime.run_skill("03-catalogo-de-recursos", proj, inputs={})
     print(f"[PERF] sk03/03-catalogo-de-recursos (GARGALO): {time.time() - _t:.2f}s")
     print(f"[PERF] Base sk03 completo: {time.time() - _start:.2f}s")
-    return proj.root
+    return _real_root(projetos_root, proj)
 
 
 @pytest.fixture(scope="session")
@@ -311,9 +340,8 @@ def _session_pipeline_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     PERFORMANCE: ~10-15s para skills 04-09. Base sk03 já tem catálogo carregado.
     """
     _start = time.time()
-    dest = tmp_path_factory.mktemp("session_sk09") / "projeto"
-    shutil.copytree(_session_pipeline_sk03, dest)
-    proj = ProjectStore(dest)
+    dest_projects_root = tmp_path_factory.mktemp("session_sk09")
+    proj = _clone_project(_session_pipeline_sk03, dest_projects_root)
 
     cron_inputs = {
         "num_equipes_por_item": {
@@ -353,9 +381,8 @@ def _session_edge_case_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     PERFORMANCE: ~5-8s (edge case é mais rápido por ter menos dados).
     """
     _start = time.time()
-    dest = tmp_path_factory.mktemp("session_edge_sk09") / "projeto"
-    shutil.copytree(_session_pipeline_sk03, dest)
-    proj = ProjectStore(dest)
+    dest_projects_root = tmp_path_factory.mktemp("session_edge_sk09")
+    proj = _clone_project(_session_pipeline_sk03, dest_projects_root)
 
     cron_inputs = {"num_equipes_por_item": {"eap-01": {"2026-W31": 1}}}  # cronograma mínimo
     runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
@@ -383,7 +410,7 @@ def _session_pipeline_mendeslobo_sk09(tmp_path_factory, runtime, inputs_escopo_t
     inputs_agis["contexto_id"] = "mendeslobo"
 
     projetos_root = tmp_path_factory.mktemp("session_mendeslobo_sk09")
-    proj = ProjectStore.init(projetos_root, "session-mendeslobo-sk09-test", "test")
+    proj = build_project_repository(projetos_root).create_project("session-mendeslobo-sk09-test", "test")
     proj.new_version()
 
     proj.write_json(

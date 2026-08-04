@@ -96,14 +96,10 @@ class TestManageHelpersBFunctions:
         result = _cs_resolve_path("/tmp/custom.xlsx", "project", "price", "ctx1", None, "cat1", lambda: Path("/cfg"))
         assert result == Path("/tmp/custom.xlsx")
 
-    def test_cs_resolve_path_project_layer(self, monkeypatch, tmp_path):
-        from concilium.presentation.cli import _commands_manage_helpers_b as mod
+    def test_cs_survey_filename(self):
+        from concilium.presentation.cli._commands_manage_helpers_b import _cs_survey_filename
 
-        fake_store = MagicMock()
-        fake_store.root = tmp_path
-        monkeypatch.setattr(mod, "resolve_project", lambda p: fake_store)
-        result = mod._cs_resolve_path(None, "project", "price", "ctx1", "proj1", "cat1", lambda: Path("/cfg"))
-        assert result == tmp_path / "overrides" / "surveys" / "pesquisa_price_ctx1.xlsx"
+        assert _cs_survey_filename("price", "ctx1") == "pesquisa_price_ctx1.xlsx"
 
     def test_cs_resolve_path_master_layer(self):
         from concilium.presentation.cli._commands_manage_helpers_b import _cs_resolve_path
@@ -184,8 +180,13 @@ class TestManageHelpersBFunctions:
             actor="tester",
         )
         exporter_instance.export.assert_called_once()
-        audit_file = fake_store.root / "audit_log.jsonl"
-        assert audit_file.exists()
+        fake_store.write_bytes.assert_called_once()
+        relative_path, _data = fake_store.write_bytes.call_args[0]
+        assert relative_path == "overrides/surveys/pesquisa_price_ctx1.xlsx"
+        fake_store.append_jsonl.assert_called_once()
+        log_path, payload = fake_store.append_jsonl.call_args[0]
+        assert log_path == "audit_log.jsonl"
+        assert payload["action"] == "catalog_survey_export"
 
     def test_impl_catalog_survey_productivity_type_uses_productivity_exporter(self, monkeypatch, tmp_path):
         """survey_type != 'price' -> usa ProductivitySurveyExporter (linha 97)."""

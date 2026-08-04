@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
 from concilium.presentation.main import app
 
 runner = CliRunner()
@@ -100,7 +100,7 @@ def test_parse_project_version_at_syntax_approve(env_cfg):
 def test_run_skill_inputs_os_error_via_long_string(env_cfg):
     """Very long --inputs string triggers OSError on Windows Path.exists() (lines 251-252)."""
     projects_path = env_cfg["projects_path"]
-    store = ProjectStore.init(projects_path, "LongInputProj", "test")
+    store = build_project_repository(projects_path).create_project("LongInputProj", "test")
     store.new_version()
 
     # On Windows, filenames > 260 chars raise OSError
@@ -142,7 +142,7 @@ def test_run_skill_inputs_os_error_via_long_string(env_cfg):
 def test_run_skill_returns_has_errors(env_cfg):
     """run command exits 1 and shows ERRO output when skill has_errors=True (lines 268, 279)."""
     projects_path = env_cfg["projects_path"]
-    store = ProjectStore.init(projects_path, "HasErrProj", "test")
+    store = build_project_repository(projects_path).create_project("HasErrProj", "test")
     store.new_version()
 
     # Create a mock SkillResult with errors
@@ -172,7 +172,7 @@ def test_status_with_invocations_log(env_cfg):
     from concilium.application.runtime import Runtime
 
     projects_path = env_cfg["projects_path"]
-    store = ProjectStore.init(projects_path, "LoggedStatus", "test")
+    store = build_project_repository(projects_path).create_project("LoggedStatus", "test")
     store.new_version()
     # Run skill-00 so an invocation is logged
     rt = Runtime(CONFIG_ROOT)
@@ -226,11 +226,12 @@ def test_validate_with_canonical_resultado(env_cfg):
     mock_canonical.cronograma = []
     mock_canonical.equipes_diretas = []
 
-    projects_path = env_cfg["projects_path"]
-    store = ProjectStore.init(projects_path, "ValResProj", "test")
-    store.new_version()
+    mock_project = MagicMock()
+    mock_project.current_version.return_value = "v1"
+    mock_project.load_canonical.return_value = mock_canonical
+    mock_project.meta = {"id": "proj-val-res", "contexto_id": "test"}
 
-    with patch.object(ProjectStore, "load_canonical", return_value=mock_canonical):
+    with patch("concilium.presentation.cli.commands_validate.resolve_project", return_value=mock_project):
         result = runner.invoke(app, ["project", "validate", "ValResProj"])
     assert result.exit_code == 0
     assert "Margem" in result.output or "15" in result.output
@@ -244,7 +245,7 @@ def test_approve_invalid_status_transition(env_cfg):
     from concilium.application.runtime import Runtime
 
     projects_path = env_cfg["projects_path"]
-    store = ProjectStore.init(projects_path, "AlreadyApproved", "test")
+    store = build_project_repository(projects_path).create_project("AlreadyApproved", "test")
     store.new_version()
     rt = Runtime(CONFIG_ROOT)
     rt.run_skill(
@@ -277,7 +278,11 @@ def test_approve_invalid_status_transition(env_cfg):
     mock_projeto.with_status.side_effect = ValueError("Transição inválida")
     mock_canonical = MagicMock()
     mock_canonical.projeto = mock_projeto
-    with patch.object(ProjectStore, "load_canonical", return_value=mock_canonical):
+    # Reusa o handle real (já aprovado de verdade acima) mas troca load_canonical
+    # nessa instância — resolve_project() cria um handle novo por chamada,
+    # então patchar a classe legada ProjectStore não teria efeito nenhum aqui.
+    store.load_canonical = MagicMock(return_value=mock_canonical)
+    with patch("concilium.presentation.cli.commands_run.resolve_project", return_value=store):
         result2 = runner.invoke(app, ["project", "approve", "AlreadyApproved", "--as", "eng"])
     assert result2.exit_code == 1
 
@@ -290,7 +295,7 @@ def test_approve_with_motivo_prints_motivo_line(env_cfg):
     from concilium.application.runtime import Runtime
 
     projects_path = env_cfg["projects_path"]
-    store = ProjectStore.init(projects_path, "ApprovedWithMotivo", "test")
+    store = build_project_repository(projects_path).create_project("ApprovedWithMotivo", "test")
     store.new_version()
     rt = Runtime(CONFIG_ROOT)
     rt.run_skill(

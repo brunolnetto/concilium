@@ -37,5 +37,4 @@ def adapter_run(
             rprint(f"  [{cor}]{val.status:5s}[/{cor}] {val.codigo}: {val.mensagem or ''}")
         raise typer.Exit(1)
 
-    output_path = project.version_path(v) / "outputs" / "relatorio.json"
-    rprint(f"[green]âœ“[/green] RelatÃ³rio gerado: {output_path}")
+    rprint(f"[green]âœ“[/green] RelatÃ³rio gerado: {v}/outputs/relatorio.json")

@@ -382,7 +382,7 @@ class TestCriarProjeto:
         mock_runtime.load_contexto.return_value = mock_contexto
 
         with (
-            patch("concilium.infrastructure.storage.project.ProjectStore") as MockPS,
+            patch("concilium.infrastructure.storage.store_factory.build_project_repository") as MockBuildRepo,
             patch(
                 "concilium.application.runtime.Runtime",
                 return_value=mock_runtime,
@@ -392,7 +392,7 @@ class TestCriarProjeto:
                 side_effect=RuntimeError("boom"),
             ),
         ):
-            MockPS.init.return_value = store
+            MockBuildRepo.return_value.create_project.return_value = store
             result = criar_projeto(
                 nome="Proj",
                 contexto_id="ctx-1",
@@ -426,7 +426,7 @@ class TestCriarProjeto:
         mock_coord.avancar_plano.return_value = mock_result
 
         with (
-            patch("concilium.infrastructure.storage.project.ProjectStore") as MockPS,
+            patch("concilium.infrastructure.storage.store_factory.build_project_repository") as MockBuildRepo,
             patch(
                 "concilium.application.runtime.Runtime",
                 return_value=mock_runtime,
@@ -436,7 +436,7 @@ class TestCriarProjeto:
                 return_value=mock_coord,
             ),
         ):
-            MockPS.init.return_value = store
+            MockBuildRepo.return_value.create_project.return_value = store
             result = criar_projeto(
                 nome="Proj",
                 contexto_id="ctx-1",
@@ -467,7 +467,7 @@ class TestCriarProjeto:
         mock_coord.avancar_plano.return_value = mock_result
 
         with (
-            patch("concilium.infrastructure.storage.project.ProjectStore") as MockPS,
+            patch("concilium.infrastructure.storage.store_factory.build_project_repository") as MockBuildRepo,
             patch(
                 "concilium.application.runtime.Runtime",
                 return_value=mock_runtime,
@@ -477,7 +477,7 @@ class TestCriarProjeto:
                 return_value=mock_coord,
             ),
         ):
-            MockPS.init.return_value = store
+            MockBuildRepo.return_value.create_project.return_value = store
             result = criar_projeto(
                 nome="Proj",
                 contexto_id="ctx-1",
@@ -514,7 +514,7 @@ class TestCriarProjeto:
         mock_coord.avancar_plano.return_value = mock_result
 
         with (
-            patch("concilium.infrastructure.storage.project.ProjectStore") as MockPS,
+            patch("concilium.infrastructure.storage.store_factory.build_project_repository") as MockBuildRepo,
             patch(
                 "concilium.application.runtime.Runtime",
                 return_value=mock_runtime,
@@ -528,7 +528,7 @@ class TestCriarProjeto:
                 return_value=mock_storage,
             ),
         ):
-            MockPS.init.return_value = store
+            MockBuildRepo.return_value.create_project.return_value = store
             result = criar_projeto(
                 nome="Proj",
                 contexto_id="ctx-1",
@@ -588,13 +588,13 @@ class TestCriarProjeto:
 
         sentinel = RuntimeError("coordinator-reached")
         with (
-            patch("concilium.infrastructure.storage.project.ProjectStore") as MockPS,
+            patch("concilium.infrastructure.storage.store_factory.build_project_repository") as MockBuildRepo,
             patch(
                 "concilium.application.orchestrators.lifecycle_coordinator.LifecycleCoordinator",
                 side_effect=sentinel,
             ),
         ):
-            MockPS.init.return_value = store
+            MockBuildRepo.return_value.create_project.return_value = store
             result = criar_projeto(
                 nome="Proj",
                 contexto_id="ctx-1",

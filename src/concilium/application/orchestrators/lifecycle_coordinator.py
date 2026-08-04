@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from concilium.application.runtime import Runtime
@@ -47,10 +46,9 @@ class LifecycleCoordinator:
         """Injeta camadas de catálogo do projeto para resolução em cascata (ADR-040/041)."""
         enriched = dict(inputs or {})
 
-        overrides_path = project.root / "overrides" / "insumos_override.json"
-        if "insumos_override" not in enriched and overrides_path.exists():
+        if "insumos_override" not in enriched:
             try:
-                loaded = json.loads(overrides_path.read_text(encoding="utf-8"))
+                loaded = project.read_json("overrides/insumos_override.json", None)
                 if isinstance(loaded, dict):
                     enriched["insumos_override"] = loaded
             except Exception:

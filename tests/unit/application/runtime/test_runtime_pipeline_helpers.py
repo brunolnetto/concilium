@@ -31,77 +31,58 @@ from concilium.application.runtime.helpers.pipeline import (
 
 
 class TestParseExecutedSkills:
-    def test_nonexistent_path_returns_empty_set(self, tmp_path):
-        p = tmp_path / "nonexistent.jsonl"
-        result = _parse_executed_skills(p)
+    def test_no_lines_returns_empty_set(self):
+        result = _parse_executed_skills([])
         assert result == set()
 
-    def test_valid_ok_line_adds_skill(self, tmp_path):
-        p = tmp_path / "log.jsonl"
-        p.write_text(json.dumps({"status": "OK", "skill": "01-escopo"}) + "\n")
-        result = _parse_executed_skills(p)
+    def test_valid_ok_line_adds_skill(self):
+        result = _parse_executed_skills([json.dumps({"status": "OK", "skill": "01-escopo"})])
         assert "01-escopo" in result
 
-    def test_valid_erro_line_adds_skill(self, tmp_path):
-        p = tmp_path / "log.jsonl"
-        p.write_text(json.dumps({"status": "ERRO", "skill": "02-produtividade"}) + "\n")
-        result = _parse_executed_skills(p)
+    def test_valid_erro_line_adds_skill(self):
+        result = _parse_executed_skills([json.dumps({"status": "ERRO", "skill": "02-produtividade"})])
         assert "02-produtividade" in result
 
-    def test_multiple_skills_added(self, tmp_path):
-        p = tmp_path / "log.jsonl"
+    def test_multiple_skills_added(self):
         lines = [
             json.dumps({"status": "OK", "skill": "01-escopo"}),
             json.dumps({"status": "ERRO", "skill": "03-catalogo"}),
         ]
-        p.write_text("\n".join(lines) + "\n")
-        result = _parse_executed_skills(p)
+        result = _parse_executed_skills(lines)
         assert result == {"01-escopo", "03-catalogo"}
 
-    def test_other_status_not_added(self, tmp_path):
-        p = tmp_path / "log.jsonl"
-        p.write_text(json.dumps({"status": "EXCEPTION", "skill": "04-cronograma"}) + "\n")
-        result = _parse_executed_skills(p)
+    def test_other_status_not_added(self):
+        result = _parse_executed_skills([json.dumps({"status": "EXCEPTION", "skill": "04-cronograma"})])
         assert result == set()
 
-    def test_missing_skill_key_not_added(self, tmp_path):
-        p = tmp_path / "log.jsonl"
-        p.write_text(json.dumps({"status": "OK"}) + "\n")
-        result = _parse_executed_skills(p)
+    def test_missing_skill_key_not_added(self):
+        result = _parse_executed_skills([json.dumps({"status": "OK"})])
         assert result == set()
 
-    def test_malformed_json_line_silently_skipped(self, tmp_path):
-        p = tmp_path / "log.jsonl"
-        p.write_text("this is not json\n")
-        result = _parse_executed_skills(p)
+    def test_malformed_json_line_silently_skipped(self):
+        result = _parse_executed_skills(["this is not json"])
         assert result == set()
 
-    def test_blank_lines_skipped(self, tmp_path):
-        p = tmp_path / "log.jsonl"
-        p.write_text("\n   \n\n")
-        result = _parse_executed_skills(p)
+    def test_blank_lines_skipped(self):
+        result = _parse_executed_skills(["", "   ", ""])
         assert result == set()
 
-    def test_mixed_valid_and_invalid_lines(self, tmp_path):
-        p = tmp_path / "log.jsonl"
+    def test_mixed_valid_and_invalid_lines(self):
         lines = [
             json.dumps({"status": "OK", "skill": "01-escopo"}),
             "BAD JSON",
             "",
             json.dumps({"status": "ERRO", "skill": "03-catalogo"}),
         ]
-        p.write_text("\n".join(lines) + "\n")
-        result = _parse_executed_skills(p)
+        result = _parse_executed_skills(lines)
         assert result == {"01-escopo", "03-catalogo"}
 
-    def test_duplicate_skill_only_once(self, tmp_path):
-        p = tmp_path / "log.jsonl"
+    def test_duplicate_skill_only_once(self):
         lines = [
             json.dumps({"status": "OK", "skill": "01-escopo"}),
             json.dumps({"status": "ERRO", "skill": "01-escopo"}),
         ]
-        p.write_text("\n".join(lines) + "\n")
-        result = _parse_executed_skills(p)
+        result = _parse_executed_skills(lines)
         assert result == {"01-escopo"}
         assert len(result) == 1
 

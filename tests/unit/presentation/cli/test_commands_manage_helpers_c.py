@@ -1,4 +1,4 @@
-"""Tests for FileProjectRepository and manage_helpers_c to boost coverage."""
+"""Tests for manage_helpers_c to boost coverage."""
 
 from __future__ import annotations
 

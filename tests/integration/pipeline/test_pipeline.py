@@ -1,7 +1,7 @@
 """Testes de integração: pipeline completo via Runtime.
 
 Testa as 3 skills implementadas (00 → 01 → 06) end-to-end usando dados seed reais
-de config/, persistindo via ProjectStore, com cliente Open-Meteo mockado.
+de config/, persistindo via ProjectHandle (ADR-047), com cliente Open-Meteo mockado.
 """
 
 import json
@@ -15,7 +15,7 @@ import pytest
 pytestmark = pytest.mark.slow  # runs full pipeline / copytree fixtures
 
 from concilium.application.runtime import Runtime  # noqa: E402
-from concilium.infrastructure.storage.project import ProjectStore  # noqa: E402
+from concilium.infrastructure.storage.store_factory import build_project_repository  # noqa: E402
 
 # ── Fixtures para TestPipelineAnalitico ───────────────────────────────────────
 
@@ -34,7 +34,8 @@ def projeto_analitico(tmp_path_factory, _session_pipeline_sk09):
 
     _start = time.time()
     proj_base, _ = _session_pipeline_sk09
-    dest = tmp_path_factory.mktemp("analitico") / "projeto"
+    dest_root = tmp_path_factory.mktemp("analitico")
+    dest = dest_root / "projeto"
 
     # Ignore patterns otimizados: não copiar arquivos grandes/temporários
     def _ignore(dir_path, names):
@@ -47,9 +48,9 @@ def projeto_analitico(tmp_path_factory, _session_pipeline_sk09):
                 ignore.add(name)
         return ignore
 
-    shutil.copytree(proj_base.root, dest, ignore=_ignore)
+    shutil.copytree(proj_base._test_real_root, dest, ignore=_ignore)
     print(f"\n[PERF] copytree projeto_analitico: {time.time() - _start:.2f}s")
-    return ProjectStore(dest)
+    return build_project_repository(dest_root).get_project("projeto")
 
 
 # Fixture intermediária removida - usar _session_pipeline_sk09 diretamente
@@ -59,7 +60,7 @@ class TestPipelineEndToEnd:
     def test_init_e_snapshot_funcionam(
         self,
         runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
+        projeto_terraplenagem,
     ):
         """Init cria projeto; snapshots de jurisdicao/perfil dedupedam por hash.
 
@@ -72,21 +73,21 @@ class TestPipelineEndToEnd:
         assert snaps["catalogo"]  # id de referência, não um hash de conteúdo gravado em disco
 
         # Snapshots de jurisdicao/perfil continuam gravados em disco
-        snap_dir = projeto_terraplenagem.root / "snapshots"
-        assert any(snap_dir.glob("perfil-*.json"))
+        snap_names = projeto_terraplenagem.list_file_names("snapshots")
+        assert any(name.startswith("perfil-") for name in snap_names)
         # Catálogo integral NÃO é mais copiado (o pedido original: sob demanda, não bulk copy)
-        assert not any(snap_dir.glob("catalogo-*.json"))
+        assert not any(name.startswith("catalogo-") for name in snap_names)
 
         # Re-criar = deduplicação (mesmo número de arquivos)
-        before = len(list(snap_dir.glob("*.json")))
+        before = len(projeto_terraplenagem.list_file_names("snapshots"))
         runtime.create_snapshots(projeto_terraplenagem)
-        after = len(list(snap_dir.glob("*.json")))
+        after = len(projeto_terraplenagem.list_file_names("snapshots"))
         assert before == after
 
     def test_skill_00_escopo_via_runtime(
         self,
         runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
+        projeto_terraplenagem,
         inputs_escopo_terraplenagem: dict[str, Any],
     ):
         """Skill 00 invocada via runtime persiste canônico."""
@@ -101,14 +102,14 @@ class TestPipelineEndToEnd:
         assert len(canonical.eap) == 3
 
         # Log de invocação registrado
-        log = (projeto_terraplenagem.root / "v1" / "invocations.log").read_text()
+        log = "\n".join(projeto_terraplenagem.read_lines(f"v1/{projeto_terraplenagem.INVOCATIONS_LOG}"))
         assert "01-escopo-e-eap" in log
         assert '"status": "OK"' in log
 
     def test_skill_01_praticabilidade_via_runtime_com_mock(
         self,
         runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
+        projeto_terraplenagem,
         inputs_escopo_terraplenagem: dict[str, Any],
         mock_openmeteo_aracoiaba,
     ):
@@ -135,7 +136,7 @@ class TestPipelineEndToEnd:
     def test_validate_canonical_persistido(
         self,
         runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
+        projeto_terraplenagem,
         inputs_escopo_terraplenagem: dict[str, Any],
     ):
         """Canônico persistido pode ser recarregado e validado."""
@@ -152,7 +153,7 @@ class TestEnforcementSemanticas:
     def test_save_em_versao_aprovada_falha(
         self,
         runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
+        projeto_terraplenagem,
         inputs_escopo_terraplenagem: dict[str, Any],
     ):
         """Após approve, save_canonical em mesma versão deve falhar."""
@@ -178,7 +179,7 @@ class TestPipelineCompleto:
     def test_pipeline_terraplenagem_caso_feliz(
         self,
         runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
+        projeto_terraplenagem,
         inputs_escopo_terraplenagem: dict,
         mock_openmeteo_aracoiaba,
     ):
@@ -237,8 +238,8 @@ class TestPipelineCompleto:
         assert len(canonical.ponto_equilibrio) > 0
 
         # Log de invocações deve ter 7 entradas (uma por skill invocada)
-        log = (projeto_terraplenagem.root / "v1" / "invocations.log").read_text()
-        n_invocacoes = len([ln for ln in log.strip().splitlines() if ln])
+        lines = projeto_terraplenagem.read_lines(f"v1/{projeto_terraplenagem.INVOCATIONS_LOG}")
+        n_invocacoes = len([ln for ln in lines if ln.strip()])
         assert n_invocacoes >= 6, (
             f"Esperadas >= 6 invocações (NEP-041 F4: pipeline encolheu), encontradas {n_invocacoes}"
         )
@@ -253,7 +254,7 @@ class TestPipelineCompleto:
         from unittest.mock import patch
 
         # Projeto com prazo muito curto para o quantitativo
-        project = ProjectStore.init(projetos_root, "saneamento-falha-cron", "mendeslobo")
+        project = build_project_repository(projetos_root).create_project("saneamento-falha-cron", "mendeslobo")
         project.new_version()
 
         inputs_escopo = {
@@ -364,14 +365,14 @@ class TestPipelineAnalitico:
         sk09_proj, _ = _session_pipeline_sk09
         # Cópia isolada para não sujar o estado compartilhado
         dest = tmp_path / "projeto"
-        shutil.copytree(sk09_proj.root, dest)
-        proj = ProjectStore(dest)
+        shutil.copytree(sk09_proj._test_real_root, dest)
+        proj = build_project_repository(tmp_path).get_project("projeto")
 
         runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
         runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
 
-        log_text = (proj.root / "v1" / "invocations.log").read_text()
-        n_inv = len([line for line in log_text.strip().splitlines() if line])
+        lines = proj.read_lines(f"v1/{proj.INVOCATIONS_LOG}")
+        n_inv = len([line for line in lines if line.strip()])
         assert n_inv >= 6, f"Esperadas >= 6 invocações, encontradas {n_inv}"
 
 

@@ -1,7 +1,7 @@
 """ADR-029 Fase 1 — camada infrastructure.
 
 Pacote raiz da camada de infraestrutura DDD. Subpacotes:
-  infrastructure/storage      — filesystem, copy-on-write (ProjectStore, SnapshotStore)
+  infrastructure/storage      — BlobStoragePort, copy-on-write (StorageProjectRepository)
   infrastructure/clients      — clientes externos (OpenMeteo, FuelPriceClient)
   infrastructure/adapters     — renderizadores Excel, interpretador de templates
   infrastructure/catalog      — loader, updater, completeness do catálogo

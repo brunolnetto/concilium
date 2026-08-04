@@ -40,6 +40,7 @@ def _fake_project(
     versions=("v1",),
     version_path=None,
     load_canonical=None,
+    invocations_lines=(),
 ):
     """Build a MagicMock that mimics a ProjectStore instance."""
     proj = MagicMock()
@@ -55,6 +56,8 @@ def _fake_project(
     proj.version_path.return_value = version_path or Path("/tmp/fake_version")
     proj.load_canonical.return_value = load_canonical
     proj.root = Path("/tmp/fake_project")
+    proj.INVOCATIONS_LOG = "invocations.log"
+    proj.read_lines.return_value = list(invocations_lines)
     return proj
 
 
@@ -72,88 +75,58 @@ def _make_conflito(recurso_id="RES-01", quantidade_excedente=2, semana="2026-W10
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+def _handle(project_id, meta=None):
+    handle = MagicMock()
+    handle.root.name = project_id
+    handle.meta = meta or {}
+    return handle
+
+
 class TestListProjects:
-    def test_no_root_dir_prints_warning(self, tmp_path):
-        missing = tmp_path / "does_not_exist"
-        with patch(f"{MODULE}.projetos_root", return_value=missing):
+    def test_no_projects_prints_warning(self):
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = []
+        with patch(f"{MODULE}.project_repository", return_value=mock_repo):
             result = runner.invoke(app, ["list"])
         assert result.exit_code == 0
         assert "Nenhum projeto" in result.output
 
-    def test_empty_root_prints_warning(self, tmp_path):
-        root = tmp_path / "projetos"
-        root.mkdir()
-        with patch(f"{MODULE}.projetos_root", return_value=root):
-            result = runner.invoke(app, ["list"])
-        assert result.exit_code == 0
-        assert "Nenhum projeto" in result.output
+    def test_lists_projects_with_valid_meta(self):
+        handle = _handle(
+            "proj-aaa", meta={"nome": "Obra AAA", "contexto_id": "samples", "current_version": "v1"}
+        )
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = [handle]
 
-    def test_lists_projects_with_valid_meta(self, tmp_path):
-        root = tmp_path / "projetos"
-        proj_dir = root / "proj-aaa"
-        proj_dir.mkdir(parents=True)
-
-        store_mock = MagicMock()
-        store_mock.meta = {
-            "nome": "Obra AAA",
-            "contexto_id": "samples",
-            "current_version": "v1",
-        }
-
-        # ProjectStore is imported locally inside list_projects; patch at its source
-        with (
-            patch(f"{MODULE}.projetos_root", return_value=root),
-            patch("concilium.infrastructure.storage.project.ProjectStore", return_value=store_mock),
-            patch("concilium.presentation.cli.commands_basic.ProjectStore", return_value=store_mock, create=True),
-        ):
+        with patch(f"{MODULE}.project_repository", return_value=mock_repo):
             result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         assert "proj-aaa" in result.output or "Obra AAA" in result.output
 
-    def test_lists_projects_store_exception(self, tmp_path):
-        root = tmp_path / "projetos"
-        proj_dir = root / "proj-broken"
-        proj_dir.mkdir(parents=True)
+    def test_lists_projects_store_exception(self):
+        broken = MagicMock()
+        broken.root.name = "proj-broken"
+        type(broken).meta = property(lambda self: (_ for _ in ()).throw(ValueError("meta missing")))
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = [broken]
 
-        with (
-            patch(f"{MODULE}.projetos_root", return_value=root),
-            patch("concilium.infrastructure.storage.project.ProjectStore", side_effect=ValueError("meta missing")),
-        ):
+        with patch(f"{MODULE}.project_repository", return_value=mock_repo):
             result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         # The error message should be shown inside the row
         assert "meta missing" in result.output
 
-    def test_only_dirs_are_listed(self, tmp_path):
-        """Non-directory entries are skipped."""
-        root = tmp_path / "projetos"
-        root.mkdir()
-        (root / "some_file.txt").write_text("not a dir")
+    def test_multiple_projects_sorted(self):
+        handles = [_handle(name, meta={"nome": "X", "contexto_id": "test"}) for name in ("proj-zzz", "proj-aaa")]
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = handles
 
-        with patch(f"{MODULE}.projetos_root", return_value=root):
+        with patch(f"{MODULE}.project_repository", return_value=mock_repo):
             result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
-        assert "Nenhum projeto" in result.output
-
-    def test_multiple_projects_sorted(self, tmp_path):
-        root = tmp_path / "projetos"
-        for name in ("proj-zzz", "proj-aaa", "proj-mmm"):
-            (root / name).mkdir(parents=True)
-
-        store_mock = MagicMock()
-        store_mock.meta = {"nome": "X", "contexto_id": "test", "current_version": None}
-
-        with (
-            patch(f"{MODULE}.projetos_root", return_value=root),
-            patch("concilium.infrastructure.storage.project.ProjectStore", return_value=store_mock),
-        ):
-            result = runner.invoke(app, ["list"])
-
-        assert result.exit_code == 0
-        # All three names should appear in output (sorted order ensured)
         assert "proj-aaa" in result.output
         assert "proj-zzz" in result.output
 
@@ -436,18 +409,13 @@ class TestStatus:
 
     def test_status_with_invocations_log(self, tmp_path):
         """Status reads invocations.log when it exists and has data."""
-        version_dir = tmp_path / "v1"
-        version_dir.mkdir()
-
         log_entry = json.dumps({"status": "OK", "skill": "01-escopo-e-eap", "ts": "2026-06-01T10:00:00"})
-        log_path = version_dir / "invocations.log"
-        log_path.write_text(log_entry + "\n", encoding="utf-8")
 
         proj = _fake_project(
             nome="Obra Log",
             current_version="v1",
             versions=["v1"],
-            version_path=version_dir,
+            invocations_lines=[log_entry],
         )
 
         from concilium.presentation.cli.commands_basic import status
@@ -464,18 +432,13 @@ class TestStatus:
 
     def test_status_with_failed_skill_in_log(self, tmp_path):
         """Status shows red for failed skill entries."""
-        version_dir = tmp_path / "v1"
-        version_dir.mkdir()
-
         log_entry = json.dumps({"status": "ERRO", "skill": "04-cronograma", "ts": "2026-06-02T09:00:00"})
-        log_path = version_dir / "invocations.log"
-        log_path.write_text(log_entry + "\n", encoding="utf-8")
 
         proj = _fake_project(
             nome="Obra Err",
             current_version="v1",
             versions=["v1"],
-            version_path=version_dir,
+            invocations_lines=[log_entry],
         )
 
         from concilium.presentation.cli.commands_basic import status

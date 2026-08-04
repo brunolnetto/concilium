@@ -14,8 +14,6 @@ from rich.table import Table
 
 from concilium.presentation.cli.shared import resolve_project
 
-from ._commands_manage_helpers_a import _append_jsonl
-
 
 def _cs_resolve_layer(
     target: str | None,
@@ -45,13 +43,19 @@ def _cs_validate_layer(layer: str, projeto: str | None, confirm_master: bool) ->
         raise typer.Exit(1)
 
 
+def _cs_survey_filename(survey_type: str, contexto_id: str) -> str:
+    return f"pesquisa_{survey_type}_{contexto_id}.xlsx"
+
+
 def _cs_resolve_path(output, layer, survey_type, contexto_id, projeto, catalogo_id, config_root_fn) -> Path:
+    """Resolve o Path real de saída — só para --output explícito ou camada master.
+
+    Camada "project" NÃO resolve para um Path de filesystem: `ProjectHandle.root`
+    é lógico (não-backed) em backends não-filesystem (StorageProjectHandle);
+    o caller grava via `project_store.write_bytes(...)` em vez de um Path real."""
     if output and output.strip().lower() not in {"project", "master"}:
         return Path(output)
-    filename = f"pesquisa_{survey_type}_{contexto_id}.xlsx"
-    if layer == "project":
-        project_store = resolve_project(projeto)
-        return project_store.root / "overrides" / "surveys" / filename
+    filename = _cs_survey_filename(survey_type, contexto_id)
     return config_root_fn() / "catalogos" / catalogo_id / "surveys" / filename
 
 
@@ -83,26 +87,45 @@ def _impl_catalog_survey(
 
     layer, output = _cs_resolve_layer(target, output)
     _cs_validate_layer(layer, projeto, confirm_master)
-    path = _cs_resolve_path(output, layer, survey_type, contexto_id, projeto, ctx.catalogo_id, _config_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
 
+    filename = _cs_survey_filename(survey_type, contexto_id)
+    explicit_output = bool(output and output.strip().lower() not in {"project", "master"})
     jur_id = jurisdicao_id or ctx.jurisdicao_id
 
-    with console.status(f"[bold yellow]Gerando mapa de cotação ({jur_id}) em {path.name}..."):
+    with console.status(f"[bold yellow]Gerando mapa de cotação ({jur_id}) em {filename}..."):
         try:
             if survey_type == "price":
                 exporter = PriceSurveyExporter(catalogo, jurisdicao_id=jur_id)
             else:
                 exporter = ProductivitySurveyExporter(catalogo, jurisdicao_id=jur_id)  # type: ignore[assignment]
-            exporter.export(path)
+
+            if layer == "project" and not explicit_output:
+                # Camada project: grava via ProjectHandle.write_bytes, nunca um Path real
+                # de filesystem — project_store.root é lógico (não-backed) em backends
+                # não-filesystem (StorageProjectHandle).
+                import tempfile
+
+                relative_path = f"overrides/surveys/{filename}"
+                with tempfile.NamedTemporaryFile(suffix=".xlsx") as tmp:
+                    exporter.export(Path(tmp.name))
+                    data = Path(tmp.name).read_bytes()
+                project_store = resolve_project(projeto)
+                project_store.write_bytes(relative_path, data)
+                display_path = f"{relative_path} (projeto {projeto})"
+            else:
+                path = _cs_resolve_path(output, layer, survey_type, contexto_id, projeto, ctx.catalogo_id, _config_root)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                exporter.export(path)
+                display_path = str(path.absolute())
+
             console.print(
-                f"\n[bold yellow][OK] Mapa de Cotação gerado ({layer}):[/bold yellow] [cyan]{path.absolute()}[/cyan]"
+                f"\n[bold yellow][OK] Mapa de Cotação gerado ({layer}):[/bold yellow] [cyan]{display_path}[/cyan]"
             )
             console.print("Dica: Os campos em destaque Amarelo são para preenchimento do fornecedor.")
             if layer == "project":
                 project_store = resolve_project(projeto)
-                _append_jsonl(
-                    project_store.root / "audit_log.jsonl",
+                project_store.append_jsonl(
+                    "audit_log.jsonl",
                     {
                         "timestamp": datetime.now(UTC).isoformat(),
                         "actor": actor,
@@ -112,7 +135,7 @@ def _impl_catalog_survey(
                             "survey_type": survey_type,
                             "jurisdicao_id": jur_id,
                             "target": layer,
-                            "path": str(path),
+                            "path": display_path,
                         },
                         "result": {"status": "OK"},
                         "status": "OK",

@@ -237,27 +237,21 @@ class AlgorithmComparisonRunner:
     # ── internals ──────────────────────────────────────────────────────────
 
     def _find_or_create(self, spec: Any, *, reset: bool) -> Any:
-        import shutil
+        from concilium.infrastructure.storage.store_factory import build_local_project_repository
 
-        from concilium.infrastructure.storage.project import ProjectStore
-
-        if self.projects_root.exists():
-            for project_dir in self.projects_root.iterdir():
-                meta_path = project_dir / "meta.json"
-                if not project_dir.is_dir() or not meta_path.exists():
-                    continue
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                if meta.get("nome") == spec.nome:
-                    if reset:
-                        print(f"  [DEL] Removing existing project: {project_dir.name}")
-                        shutil.rmtree(project_dir, ignore_errors=True)
-                        break
-                    print(f"  [OK]  Found existing project: {project_dir.name}")
-                    return ProjectStore(project_dir)
+        repo = build_local_project_repository(self.projects_root)
+        for handle in repo.list_projects():
+            if handle.meta.get("nome") != spec.nome:
+                continue
+            if reset:
+                print(f"  [DEL] Removing existing project: {handle.root.name}")
+                handle.delete_tree("")
+                break
+            print(f"  [OK]  Found existing project: {handle.root.name}")
+            return handle
 
         print(f"  [NEW] Creating '{spec.nome}'...")
-        self.projects_root.mkdir(parents=True, exist_ok=True)
-        return ProjectStore.init(self.projects_root, spec.nome, spec.contexto_id)
+        return repo.create_project(spec.nome, spec.contexto_id)
 
     def _load_referencia(self, spec: Any) -> dict[str, Any] | None:
         if spec.referencia_path and spec.referencia_path.exists():

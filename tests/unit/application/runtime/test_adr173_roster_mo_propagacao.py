@@ -19,7 +19,7 @@ import pytest
 from concilium.application.runtime.mixins.execution import ExecutionMixin
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 
 class _FakeRuntime(ExecutionMixin):
@@ -67,19 +67,12 @@ def _make_canonical() -> CanonicalModel:
 
 
 @pytest.fixture
-def project_store(tmp_path: Path) -> ProjectStore:
-    proj_root = tmp_path / "proj-1"
-    proj_root.mkdir()
-    (proj_root / "snapshots").mkdir()
-    meta = {"id": "proj-1", "nome": "Projeto Teste", "contexto_id": "ctx-test", "current_version": None}
-    import json
-
-    (proj_root / ProjectStore.META_FILE).write_text(json.dumps(meta), encoding="utf-8")
-    return ProjectStore(proj_root)
+def project_store(tmp_path: Path):
+    return build_project_repository(tmp_path).create_project("Projeto Teste", "ctx-test", project_id="proj-1")
 
 
 class TestRosterMoPropagacaoPontaAPonta:
-    def test_roster_mo_chega_em_inputs_via_create_escopo_real(self, project_store: ProjectStore):
+    def test_roster_mo_chega_em_inputs_via_create_escopo_real(self, project_store):
         roster = [
             {
                 "individuo_id": "mo-001",
@@ -100,9 +93,7 @@ class TestRosterMoPropagacaoPontaAPonta:
             roster_mo=roster,
         )
         plano_store = es.create_plan(nome="Plano 1")
-        (plano_store.root / plano_store.CANONICAL_FILE).write_text(
-            _make_canonical().model_dump_json(indent=2), encoding="utf-8"
-        )
+        plano_store.save_canonical(_make_canonical())
 
         runtime = _FakeRuntime()
         project = MagicMock()
@@ -123,7 +114,7 @@ class TestRosterMoPropagacaoPontaAPonta:
         assert runtime.captured_kwargs is not None
         assert runtime.captured_kwargs["inputs"]["roster_mo"] == roster
 
-    def test_sem_roster_mo_inputs_traz_lista_vazia(self, project_store: ProjectStore):
+    def test_sem_roster_mo_inputs_traz_lista_vazia(self, project_store):
         es = project_store.create_escopo(
             escopo_id="esc-2",
             nome="Lote B",
@@ -135,9 +126,7 @@ class TestRosterMoPropagacaoPontaAPonta:
             data_termino="2026-12-31",
         )
         plano_store = es.create_plan(nome="Plano 1")
-        (plano_store.root / plano_store.CANONICAL_FILE).write_text(
-            _make_canonical().model_dump_json(indent=2), encoding="utf-8"
-        )
+        plano_store.save_canonical(_make_canonical())
 
         runtime = _FakeRuntime()
         project = MagicMock()

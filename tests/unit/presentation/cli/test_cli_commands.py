@@ -18,18 +18,14 @@ runner = CliRunner()
 
 
 def _new_version(projects_root: Path, project_name: str) -> None:
-    """Cria nova versão de projeto via ProjectStore (substitui 'version new' CLI removida)."""
-    from concilium.infrastructure.storage.project import ProjectStore
+    """Cria nova versão de projeto (substitui 'version new' CLI removida)."""
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
-    for d in projects_root.iterdir():
-        if d.is_dir() and (d / "meta.json").exists():
-            import json as _json
-
-            meta = _json.loads((d / "meta.json").read_text(encoding="utf-8"))
-            if meta.get("nome") == project_name:
-                ps = ProjectStore(d)
-                ps.new_version()
-                return
+    repo = build_project_repository(projects_root)
+    for handle in repo.list_projects():
+        if handle.meta.get("nome") == project_name:
+            handle.new_version()
+            return
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -103,18 +99,13 @@ def test_cli_version_new(env_with_config):
     # 'version new' foi removido — cria versão programaticamente
     _new_version(Path(env_with_config["projects"]), "VerProj")
     # Verifica que a versão foi criada
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     projects = Path(env_with_config["projects"])
-    for d in projects.iterdir():
-        if d.is_dir() and (d / "meta.json").exists():
-            import json
-
-            meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
-            if meta.get("nome") == "VerProj":
-                store = ProjectStore(d)
-                assert store.current_version() is not None
-                return
+    for handle in build_project_repository(projects).list_projects():
+        if handle.meta.get("nome") == "VerProj":
+            assert handle.current_version() is not None
+            return
     pytest.fail("Versão não foi criada para VerProj")
 
 
@@ -148,13 +139,13 @@ def test_cli_validate_no_canonical(env_with_config):
 def test_cli_validate_with_canonical(env_with_config, tmp_path):
     """validate on a project with actual canonical data."""
     from concilium.application.runtime import Runtime
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     config_root = Path(env_with_config["config"])
     projects_root = Path(env_with_config["projects"])
 
     # Create project and run skill-00 to produce a canonical
-    project = ProjectStore.init(projects_root, "ValProj2", "test")
+    project = build_project_repository(projects_root).create_project("ValProj2", "test")
     project.new_version()
 
     rt = Runtime(config_root)
@@ -201,31 +192,27 @@ def test_cli_run_skill_no_version(env_with_config):
 @pytest.mark.slow
 def test_cli_run_skill_with_inputs_json(env_with_config):
     """run with --inputs JSON string."""
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.presentation.cli.shared import resolve_project
 
-    projects_root = Path(env_with_config["projects"])
     runner.invoke(app, ["project", "init", "RunProj2", "--contexto", "test"])
-    # Find the created project and set up escopo + plano
-    proj_dirs = [d for d in projects_root.iterdir() if d.is_dir() and (d / "meta.json").exists()]
-    for d in proj_dirs:
-        import json as _json
-
-        meta = _json.loads((d / "meta.json").read_text(encoding="utf-8"))
-        if meta.get("nome") == "RunProj2":
-            ps = ProjectStore(d)
-            ps.create_escopo(
-                "default",
-                "Escopo padrão",
-                tipo_obra="terraplenagem",
-                localizacao="Aracoiaba, CE",
-                coordenadas_lat=-4.36,
-                coordenadas_lng=-38.74,
-                data_inicio="2026-06-01",
-                data_termino="2026-12-31",
-            )
-            es = ps.escopo("default")
-            es.create_plan("Plano 1")
-            break
+    # Resolve o projeto criado via a abstração (não via scan de filesystem) e
+    # monta escopo + plano — precisa ser o mesmo repositório/handle que
+    # `resolve_project()` usará em "project run" abaixo (StorageProjectHandle
+    # em backend filesystem via ADR-047, não ProjectStore/EscopoStore legado —
+    # nomes de arquivo divergem entre as duas implementações).
+    project = resolve_project("RunProj2")
+    project.create_escopo(
+        "default",
+        "Escopo padrão",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
+    )
+    es = project.escopo("default")
+    es.create_plan("Plano 1")
     inputs = {
         "nome": "RunProj2",
         "tipo_obra": "terraplenagem",
@@ -255,31 +242,27 @@ def test_cli_run_skill_with_inputs_json(env_with_config):
 @pytest.mark.slow
 def test_cli_run_skill_with_inputs_file(env_with_config, tmp_path):
     """run with --inputs pointing to a .json file."""
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.presentation.cli.shared import resolve_project
 
-    projects_root = Path(env_with_config["projects"])
     runner.invoke(app, ["project", "init", "RunProj3", "--contexto", "test"])
-    # Find the created project and set up escopo + plano
-    proj_dirs = [d for d in projects_root.iterdir() if d.is_dir() and (d / "meta.json").exists()]
-    for d in proj_dirs:
-        import json as _json
-
-        meta = _json.loads((d / "meta.json").read_text(encoding="utf-8"))
-        if meta.get("nome") == "RunProj3":
-            ps = ProjectStore(d)
-            ps.create_escopo(
-                "default",
-                "Escopo padrão",
-                tipo_obra="terraplenagem",
-                localizacao="Aracoiaba, CE",
-                coordenadas_lat=-4.36,
-                coordenadas_lng=-38.74,
-                data_inicio="2026-06-01",
-                data_termino="2026-12-31",
-            )
-            es = ps.escopo("default")
-            es.create_plan("Plano 1")
-            break
+    # Resolve o projeto criado via a abstração (não via scan de filesystem) e
+    # monta escopo + plano — precisa ser o mesmo repositório/handle que
+    # `resolve_project()` usará em "project run" abaixo (StorageProjectHandle
+    # em backend filesystem via ADR-047, não ProjectStore/EscopoStore legado —
+    # nomes de arquivo divergem entre as duas implementações).
+    project = resolve_project("RunProj3")
+    project.create_escopo(
+        "default",
+        "Escopo padrão",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
+    )
+    es = project.escopo("default")
+    es.create_plan("Plano 1")
     inputs = {
         "nome": "RunProj3",
         "tipo_obra": "terraplenagem",
@@ -322,12 +305,12 @@ def test_cli_run_skill_runtime_error(env_with_config):
 def test_cli_approve(env_with_config, tmp_path):
     """approve on a project with canonical."""
     from concilium.application.runtime import Runtime
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     config_root = Path(env_with_config["config"])
     projects_root = Path(env_with_config["projects"])
 
-    project = ProjectStore.init(projects_root, "ApproveProj", "test")
+    project = build_project_repository(projects_root).create_project("ApproveProj", "test")
     project.new_version()
     rt = Runtime(config_root)
     rt.run_skill(
@@ -361,12 +344,12 @@ def test_cli_approve(env_with_config, tmp_path):
 def test_cli_approve_blocks_when_pending_catalog_overrides(env_with_config):
     """approve blocks by default when project has pending catalog overrides (ADR-040)."""
     from concilium.application.runtime import Runtime
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     config_root = Path(env_with_config["config"])
     projects_root = Path(env_with_config["projects"])
 
-    project = ProjectStore.init(projects_root, "ApprovePendingOverrides", "test")
+    project = build_project_repository(projects_root).create_project("ApprovePendingOverrides", "test")
     project.new_version()
     rt = Runtime(config_root)
     rt.run_skill(
@@ -393,12 +376,7 @@ def test_cli_approve_blocks_when_pending_catalog_overrides(env_with_config):
         },
     )
 
-    overrides_dir = project.root / "overrides"
-    overrides_dir.mkdir(parents=True, exist_ok=True)
-    (overrides_dir / "insumos_override.json").write_text(
-        json.dumps({"INS-TESTE": {"preco_calibrado": 12.34}}, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    project.write_json("overrides/insumos_override.json", {"INS-TESTE": {"preco_calibrado": 12.34}})
 
     result = runner.invoke(app, ["project", "approve", "ApprovePendingOverrides", "--as", "eng_senior"])
     assert result.exit_code != 0
@@ -408,12 +386,12 @@ def test_cli_approve_blocks_when_pending_catalog_overrides(env_with_config):
 def test_cli_approve_allows_pending_overrides_with_explicit_flag(env_with_config):
     """approve succeeds with pending overrides when --allow-pending-overrides is passed."""
     from concilium.application.runtime import Runtime
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     config_root = Path(env_with_config["config"])
     projects_root = Path(env_with_config["projects"])
 
-    project = ProjectStore.init(projects_root, "ApproveWithPendingOverrides", "test")
+    project = build_project_repository(projects_root).create_project("ApproveWithPendingOverrides", "test")
     project.new_version()
     rt = Runtime(config_root)
     rt.run_skill(
@@ -440,12 +418,7 @@ def test_cli_approve_allows_pending_overrides_with_explicit_flag(env_with_config
         },
     )
 
-    overrides_dir = project.root / "overrides"
-    overrides_dir.mkdir(parents=True, exist_ok=True)
-    (overrides_dir / "insumos_override.json").write_text(
-        json.dumps({"INS-TESTE": {"preco_calibrado": 12.34}}, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    project.write_json("overrides/insumos_override.json", {"INS-TESTE": {"preco_calibrado": 12.34}})
 
     result = runner.invoke(
         app,
@@ -472,12 +445,12 @@ def test_cli_approve_no_canonical(env_with_config):
 def _approve_project_with_canonical(env_with_config, nome: str):
     """Cria projeto, roda 01-escopo-e-eap (canônico mínimo) e retorna (project, v) — issue #123."""
     from concilium.application.runtime import Runtime
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     config_root = Path(env_with_config["config"])
     projects_root = Path(env_with_config["projects"])
 
-    project = ProjectStore.init(projects_root, nome, "test")
+    project = build_project_repository(projects_root).create_project(nome, "test")
     project.new_version()
     rt = Runtime(config_root)
     rt.run_skill(
@@ -557,9 +530,7 @@ def test_cli_approve_flat_model_justificativa_override_allows(env_with_config):
     )
     assert result.exit_code == 0
 
-    invocacoes = [
-        json.loads(line) for line in (project.root / v / "invocations.log").read_text(encoding="utf-8").splitlines()
-    ]
+    invocacoes = [json.loads(line) for line in project.read_lines(f"{v}/{project.INVOCATIONS_LOG}")]
     assert any(entry.get("justificativa_override") for entry in invocacoes)
 
 
@@ -619,10 +590,10 @@ def test_cli_schedule_weekly_missing_deps(env_with_config):
 
 def test_cli_resolve_project_by_uuid(env_with_config):
     """Can reference project by its UUID directory name."""
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     projects_root = Path(env_with_config["projects"])
-    p = ProjectStore.init(projects_root, "ByUUID", "test")
+    p = build_project_repository(projects_root).create_project("ByUUID", "test")
     uuid_name = p.root.name  # the actual directory name (UUID)
     result = runner.invoke(app, ["project", "status", uuid_name])
     assert result.exit_code == 0
@@ -630,11 +601,11 @@ def test_cli_resolve_project_by_uuid(env_with_config):
 
 def test_cli_resolve_project_multiple_same_name(env_with_config):
     """Two projects with same name → CLI reports ambiguity and exits 1."""
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
     projects_root = Path(env_with_config["projects"])
-    ProjectStore.init(projects_root, "DupName", "test")
-    ProjectStore.init(projects_root, "DupName", "test")
+    build_project_repository(projects_root).create_project("DupName", "test")
+    build_project_repository(projects_root).create_project("DupName", "test")
     result = runner.invoke(app, ["project", "status", "DupName"])
     assert result.exit_code == 1
 

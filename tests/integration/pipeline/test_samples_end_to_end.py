@@ -61,10 +61,9 @@ class TestPipelineComSamples:
         assert len(relatorio["EQUIPE"]) > 0, "Deve ter equipes"
         assert relatorio["RESULTADO"]["status_margem"] in ("VERDE", "AMARELO", "VERMELHO")
 
-        log_path = proj.root / "v1" / "invocations.log"
-        assert log_path.exists()
-        log_content = log_path.read_text()
-        n_invocacoes = len([ln for ln in log_content.strip().splitlines() if ln])
+        assert proj.exists(f"v1/{proj.INVOCATIONS_LOG}")
+        lines = proj.read_lines(f"v1/{proj.INVOCATIONS_LOG}")
+        n_invocacoes = len([ln for ln in lines if ln.strip()])
         assert n_invocacoes == 8, (
             f"Esperadas 8 invocações (01-05 + 06-unificada + 10-diagnostico + 09), encontradas {n_invocacoes}"
         )

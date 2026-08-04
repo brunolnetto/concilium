@@ -18,10 +18,10 @@ class TestCommandsBasic:
         assert result.exit_code == 0
 
 class TestRuntimeHelpersPipeline:
-    def test_parse_executed_skills_returns_set(self, tmp_path):
+    def test_parse_executed_skills_returns_set(self):
         from concilium.application.runtime.helpers.pipeline import _parse_executed_skills
 
-        result = _parse_executed_skills(tmp_path / "nofile.json")
+        result = _parse_executed_skills([])
         assert isinstance(result, set)
 
     def test_execute_skill_calls_fn(self):

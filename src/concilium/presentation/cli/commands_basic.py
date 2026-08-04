@@ -8,7 +8,6 @@ from concilium.presentation.cli.shared import (
     config_root,
     parse_project_version,
     project_repository,
-    projetos_root,
     resolve_project,
 )
 
@@ -18,14 +17,7 @@ app = typer.Typer(name="root", help="Comandos bÃ¡sicos.", no_args_is_help=True
 @app.command("list")
 def list_projects() -> None:
     """Lista todos os projetos existentes."""
-    from concilium.infrastructure.storage.project import ProjectStore
-
-    root = projetos_root()
-    if not root.exists():
-        rprint("[yellow]Nenhum projeto encontrado.[/yellow]")
-        return
-
-    projetos = [p for p in sorted(root.iterdir()) if p.is_dir()]
+    projetos = project_repository().list_projects()
     if not projetos:
         rprint("[yellow]Nenhum projeto encontrado.[/yellow]")
         return
@@ -35,13 +27,18 @@ def list_projects() -> None:
     t.add_column("Nome")
     t.add_column("Contexto")
     t.add_column("Versão")
-    for p in projetos:
+    for handle in projetos:
+        project_id = handle.root.name
         try:
-            store = ProjectStore(p)
-            meta = store.meta
-            t.add_row(p.name, meta.get("nome", "?"), meta.get("contexto_id", "?"), meta.get("current_version") or "-")
+            meta = handle.meta
+            t.add_row(
+                project_id,
+                meta.get("nome", "?"),
+                meta.get("contexto_id", "?"),
+                meta.get("current_version") or "-",
+            )
         except Exception as e:
-            t.add_row(p.name, "[red]?[/red]", "[red]?[/red]", f"[red]{e}[/red]")
+            t.add_row(project_id, "[red]?[/red]", "[red]?[/red]", f"[red]{e}[/red]")
     rprint(t)
 
 
@@ -127,10 +124,10 @@ def status(
 
     cur = project.current_version()
     if cur:
-        log_path = project.version_path(cur) / "invocations.log"
-        if log_path.exists() and log_path.stat().st_size > 0:
+        lines = project.read_lines(f"{cur}/{project.INVOCATIONS_LOG}")
+        if lines:
             console.print(f"\n[bold]Invocação de Skills em {cur}:[/bold]")
-            for line in log_path.read_text(encoding="utf-8").splitlines():
+            for line in lines:
                 entry = json.loads(line)
                 cor = "green" if entry["status"] == "OK" else "red"
                 console.print(f"  [{cor}]{entry['status']:5s}[/{cor}] {entry['skill']:30s}  {entry['ts']}")

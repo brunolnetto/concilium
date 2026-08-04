@@ -8,9 +8,9 @@ from __future__ import annotations
 class TestFlatVersionStore:
     def _make_store(self, tmp_path):
         from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "Test", "ctx")
+        store = build_project_repository(tmp_path).create_project("Test", "ctx")
         v = store.new_version()
         return FlatVersionStore(store, v), store, v
 
@@ -46,8 +46,6 @@ class TestFlatVersionStore:
 
 
 import json  # noqa: E402
-import tempfile  # noqa: E402
-from pathlib import Path  # noqa: E402
 from unittest.mock import MagicMock  # noqa: E402
 
 # flat_version_store.py line 89->87: empty line in invocations.log → if line: False
@@ -59,30 +57,20 @@ class TestFlatVersionStoreReadInvocationsEmptyLines:
         """Line 89->87 branch: invocations.log has blank lines → stripped line='' → if line: False."""
         from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
 
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "v1"
-            root.mkdir()
+        project_mock = MagicMock()
+        project_mock.meta = {}
+        project_mock.read_lines.return_value = [
+            "",  # blank line (if line: False)
+            "   ",  # whitespace-only (if line: False)
+            json.dumps({"skill_id": "04"}),  # valid line
+        ]
 
-            # Write log with blank lines AND a valid JSON line
-            log_path = root / FlatVersionStore.INVOCATIONS_LOG
-            log_path.write_text(
-                "\n"  # blank line (if line: False)
-                + "   \n"  # whitespace-only (if line: False)
-                + json.dumps({"skill_id": "04"})
-                + "\n",  # valid line
-                encoding="utf-8",
-            )
+        store = FlatVersionStore(project_mock, "v1")
+        result = store.read_invocations()
 
-            project_mock = MagicMock()
-            project_mock.version_path.return_value = root
-            project_mock.meta = {}
-
-            store = FlatVersionStore(project_mock, "v1")
-            result = store.read_invocations()
-
-            # Only the valid JSON line returned; blank lines skipped
-            assert len(result) == 1
-            assert result[0]["skill_id"] == "04"
+        # Only the valid JSON line returned; blank lines skipped
+        assert len(result) == 1
+        assert result[0]["skill_id"] == "04"
 
 
 # ---------------------------------------------------------------------------
@@ -103,10 +91,16 @@ class TestFlatVersionStore2:
             "snapshot_catalogo_id": "cat-v2",
             "snapshot_perfil_id": "perf-1",
         }
-        ver_path = tmp_path / "v1"
-        ver_path.mkdir()
-        proj_mock.version_path.return_value = ver_path
         proj_mock.load_canonical.return_value = None
+
+        # log_invocation/read_lines em memória — FlatVersionStore delega ao
+        # ProjectHandle em vez de I/O direto em version_path() (Path lógico,
+        # não-backed, em backends não-filesystem).
+        log_lines: list[str] = []
+        proj_mock.log_invocation.side_effect = lambda version, entry: log_lines.append(
+            json.dumps(entry, default=str)
+        )
+        proj_mock.read_lines.side_effect = lambda relative_path: list(log_lines)
         return FlatVersionStore(proj_mock, "v1")
 
     def test_plano_id(self, tmp_path):
@@ -137,8 +131,8 @@ class TestFlatVersionStore2:
 
     def test_read_invocations_skips_invalid_json(self, tmp_path):
         store = self._make_store(tmp_path)
-        log_file = store.root / store.INVOCATIONS_LOG
-        log_file.write_text('{"ok": true}\nBAD JSON\n{"second": true}\n')
+        store._project.read_lines.side_effect = None
+        store._project.read_lines.return_value = ['{"ok": true}', "BAD JSON", '{"second": true}']
         entries = store.read_invocations()
         assert len(entries) == 2
 
@@ -151,9 +145,9 @@ class TestFlatVersionStore2:
 class TestFlatVersionStorePremissasEfetivas:
     def _make_store(self, tmp_path):
         from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "Test", "ctx")
+        store = build_project_repository(tmp_path).create_project("Test", "ctx")
         v = store.new_version()
         return FlatVersionStore(store, v), store, v
 
@@ -161,7 +155,7 @@ class TestFlatVersionStorePremissasEfetivas:
         fvs, store, v = self._make_store(tmp_path)
         fvs.write_premissas_efetivas("06-resultado-financeiro", {"a": 1}, {"contexto_id": "ctx"})
 
-        assert (store.root / v / store.PREMISSAS_EFETIVAS_FILE).exists()
+        assert store.exists(f"{v}/premissas_efetivas.json")
         por_skill = store.read_premissas_por_skill(v)
         assert "06-resultado-financeiro" in por_skill
 

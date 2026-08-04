@@ -359,10 +359,11 @@ def _make_tool_with_patches(tmp_path, mock_rt, mock_coord, mock_store, extra_pat
 
     patches = {
         "concilium.presentation.mcp.tools.formulario._runtime": mock_rt,
-        "concilium.presentation.mcp.tools.formulario._projetos_root": MagicMock(return_value=tmp_path),
         "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator": MagicMock(return_value=mock_coord),
         "concilium.presentation.mcp.tools.formulario._wrap_response": MagicMock(side_effect=lambda d: d),
-        "concilium.infrastructure.storage.project.ProjectStore.init": MagicMock(return_value=mock_store),
+        "concilium.presentation.mcp.tools.formulario._project_repository": MagicMock(
+            return_value=MagicMock(create_project=MagicMock(return_value=mock_store))
+        ),
     }
     if extra_patches:
         patches.update(extra_patches)
@@ -478,10 +479,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -490,8 +487,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             result = tool(spec=_VALID_SPEC)
@@ -541,10 +538,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -553,8 +546,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             server = _make_server()
@@ -591,10 +584,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -603,8 +592,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             server = _make_server()
@@ -634,10 +623,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -646,8 +631,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             server = _make_server()
@@ -688,10 +673,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -700,8 +681,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             server = _make_server()
@@ -780,10 +761,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -792,8 +769,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             server = _make_server()
@@ -856,10 +833,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -868,8 +841,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             server = _make_server()
@@ -904,10 +877,6 @@ class TestCriarProjetoSpec:
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
@@ -916,8 +885,8 @@ class TestCriarProjetoSpec:
                 side_effect=lambda d: d,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mocks["mock_store"],
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mocks["mock_store"])),
             ),
         ):
             server = _make_server()

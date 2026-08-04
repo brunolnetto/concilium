@@ -39,12 +39,12 @@ from concilium.infrastructure.auth.permission_guard import (
     get_permissions,
     require_owner_or_admin,
 )
-from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 
 @pytest.fixture
 def repo(tmp_path):
-    return FileProjectRepository(tmp_path)
+    return build_project_repository(tmp_path)
 
 
 @pytest.fixture
@@ -582,7 +582,7 @@ class TestRemoveUserCliOwnershipPropagation:
             "concilium.infrastructure.auth.auth_store.get_auth_store",
             lambda: store,
         )
-        repo = FileProjectRepository(tmp_path / "projetos")
+        repo = build_project_repository(tmp_path / "projetos")
         _make_project(repo, owner_id="joao.silva")
         monkeypatch.setattr("concilium.presentation.cli.shared.project_repository", lambda **kw: repo)
 
@@ -599,7 +599,7 @@ class TestRemoveUserCliOwnershipPropagation:
             "concilium.infrastructure.auth.auth_store.get_auth_store",
             lambda: store,
         )
-        repo = FileProjectRepository(tmp_path / "projetos")
+        repo = build_project_repository(tmp_path / "projetos")
         project = _make_project(repo, owner_id="joao.silva")
         monkeypatch.setattr("concilium.presentation.cli.shared.project_repository", lambda **kw: repo)
 
@@ -618,7 +618,7 @@ class TestRemoveUserCliOwnershipPropagation:
             "concilium.infrastructure.auth.auth_store.get_auth_store",
             lambda: store,
         )
-        repo = FileProjectRepository(tmp_path / "projetos")
+        repo = build_project_repository(tmp_path / "projetos")
         project = _make_project(repo, owner_id="joao.silva")
         monkeypatch.setattr("concilium.presentation.cli.shared.project_repository", lambda **kw: repo)
 
@@ -637,7 +637,7 @@ class TestRemoveUserCliOwnershipPropagation:
             "concilium.infrastructure.auth.auth_store.get_auth_store",
             lambda: store,
         )
-        repo = FileProjectRepository(tmp_path / "projetos")
+        repo = build_project_repository(tmp_path / "projetos")
         monkeypatch.setattr("concilium.presentation.cli.shared.project_repository", lambda **kw: repo)
 
         result = self._run(client_id="joao.silva")

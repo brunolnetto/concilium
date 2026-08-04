@@ -39,15 +39,15 @@ def agis_benchmark(config_root):
     # anterior. Ver INVESTIGACAO_125.md na raiz do repo para os detalhes.
     facade.run_single("AGIS", reset=True)
 
-    # Carregar canonical model do store
-    # ProjectStore descobre o projeto pelo ID no meta.json do diretório AGIS
-    agis_store_root = facade.projects_root / "AGIS"
-    if not agis_store_root.exists():
-        raise FileNotFoundError(f"AGIS project not found at {agis_store_root} after benchmark run")
+    # Carregar canonical model do projeto — project_id é determinístico (= slug do
+    # benchmark, "AGIS") via BenchmarkRunner._find_or_create/build_local_project_repository.
+    from concilium.infrastructure.storage.store_factory import build_local_project_repository
 
-    from concilium.infrastructure.storage.project import ProjectStore
-
-    store = ProjectStore(root=agis_store_root)
+    repo = build_local_project_repository(facade.projects_root)
+    try:
+        store = repo.get_project("AGIS")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"AGIS project not found under {facade.projects_root} after benchmark run") from None
     canonical = store.load_canonical()
     return BenchmarkWrapper(canonical)
 

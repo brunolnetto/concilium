@@ -163,13 +163,22 @@ class TestInputsMixin:
         assert "calendario_operacional" in result
 
     def _make_fs_project(self, tmp_path, version="v1"):
-        """Projeto com `.root`/`.current_version()` reais (não MagicMock) — necessário
-        para exercitar a persistência em disco de `resolved_calendario.json`."""
-        proj = MagicMock()
-        proj.meta = {"nome": "Test"}
+        """Projeto real via build_project_repository (não MagicMock) — necessário
+        para exercitar a persistência de verdade de `resolved_calendario.json`
+        através do ProjectHandle (ADR-047; `.root` é lógico, sem backing real).
+
+        `project_id` fixo por `tmp_path` — chamadas subsequentes com o mesmo
+        `tmp_path` reabrem o mesmo projeto (simula 2 versões do mesmo projeto)."""
+        from concilium.infrastructure.storage.store_factory import build_project_repository
+
+        repo = build_project_repository(tmp_path)
+        existing = {p.root.name for p in repo.list_projects()}
+        proj = repo.get_project("proj-1") if "proj-1" in existing else repo.create_project(
+            "Test", "ctx", project_id="proj-1"
+        )
         proj.id = "proj-1"
-        proj.root = tmp_path
-        proj.current_version = MagicMock(return_value=version)
+        while proj.current_version() != version:
+            proj.new_version()
         return proj
 
     def test_calendario_primeira_resolucao_persiste_snapshot(self, tmp_path):
@@ -183,8 +192,7 @@ class TestInputsMixin:
         result = mixin._apply_runtime_defaults("04-cronograma", proj, ctx, {})
 
         assert result["calendario_operacional"] == {"eventos": [{"id": "E1"}]}
-        snapshot_path = tmp_path / "v1" / "resolved_calendario.json"
-        assert snapshot_path.exists()
+        assert proj.exists("v1/resolved_calendario.json")
 
     def test_calendario_segunda_resolucao_reusa_snapshot_ignora_config_live(self, tmp_path):
         """Re-rodar a MESMA versão não deve refletir uma mudança em config/calendarios/
@@ -217,8 +225,8 @@ class TestInputsMixin:
         result_v2 = mixin._apply_runtime_defaults("04-cronograma", proj_v2, ctx, {})
 
         assert result_v2["calendario_operacional"] == {"eventos": [{"id": "E2"}]}
-        assert (tmp_path / "v1" / "resolved_calendario.json").exists()
-        assert (tmp_path / "v2" / "resolved_calendario.json").exists()
+        assert proj_v1.exists("v1/resolved_calendario.json")
+        assert proj_v2.exists("v2/resolved_calendario.json")
 
     def test_apply_runtime_defaults_skill09_gerar_excel(self):
         mixin = self._make_mixin()

@@ -6,8 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 from concilium.infrastructure.storage import store_factory
-from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+from concilium.infrastructure.storage.storage_project_repository import StorageProjectRepository
 from concilium.infrastructure.storage.store_factory import build_project_repository, resolve_store_backend
 
 
@@ -50,13 +51,16 @@ def test_projects_prefix_defaults_and_normalizes(monkeypatch) -> None:
 def test_build_project_repository_filesystem(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("CONCILIUM__STORE_BACKEND", "filesystem")
     repo = build_project_repository(tmp_path)
-    assert isinstance(repo, FileProjectRepository)
+    assert isinstance(repo, StorageProjectRepository)
+    assert isinstance(repo._storage, LocalBlobStorage)
+    assert repo._storage.root_dir == tmp_path
 
 
 def test_build_project_repository_local_json_alias(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("CONCILIUM__STORE_BACKEND", "local_json")
     repo = build_project_repository(tmp_path)
-    assert isinstance(repo, FileProjectRepository)
+    assert isinstance(repo, StorageProjectRepository)
+    assert isinstance(repo._storage, LocalBlobStorage)
 
 
 def test_build_project_repository_sharepoint_dispatch(monkeypatch, tmp_path: Path) -> None:

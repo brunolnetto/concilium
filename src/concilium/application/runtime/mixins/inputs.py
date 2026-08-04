@@ -91,12 +91,7 @@ class InputsMixin(_Base):
             version = project.current_version()
             if not version:
                 return None
-            path = project.root / version / "resolved_calendario.json"
-            if not path.exists():
-                return None
-            import json
-
-            data = json.loads(path.read_text(encoding="utf-8"))
+            data = project.read_json(f"{version}/resolved_calendario.json", None)
             return data if isinstance(data, dict) else None
         except Exception:
             return None
@@ -111,13 +106,10 @@ class InputsMixin(_Base):
             version = project.current_version()
             if not version:
                 return
-            path = project.root / version / "resolved_calendario.json"
-            if path.exists():
+            relative = f"{version}/resolved_calendario.json"
+            if project.exists(relative):
                 return
-            import json
-
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(calendario, ensure_ascii=False, default=str), encoding="utf-8")
+            project.write_json(relative, calendario)
         except Exception:
             pass  # best-effort: a normalização de inputs não pode falhar por isso
 

@@ -913,6 +913,16 @@ class TestReadRunProgress:
 # ─── TestPersistResolvedCatalog ───────────────────────────────────────────────
 
 
+def _resolved_catalog_write(project: MagicMock) -> dict:
+    """Extrai o payload gravado em `{version}/resolved_catalog.json` — `project.write_json`
+    também é chamado por `_update_run` (runs.json), então precisa filtrar pelo path."""
+    for call in project.write_json.call_args_list:
+        path = call.args[0] if call.args else call.kwargs.get("relative_path")
+        if isinstance(path, str) and path.endswith("resolved_catalog.json"):
+            return call.args[1] if len(call.args) > 1 else call.kwargs.get("payload")
+    raise AssertionError("project.write_json não foi chamado com resolved_catalog.json")
+
+
 class TestPersistResolvedCatalog:
     """Covers lines 371-449: _persist_resolved_catalog."""
 
@@ -959,9 +969,7 @@ class TestPersistResolvedCatalog:
 
         svc._persist_resolved_catalog(project, "v1", run_id, runtime)
 
-        out_path = tmp_path / "project" / "v1" / "resolved_catalog.json"
-        assert out_path.exists()
-        data = json.loads(out_path.read_text("utf-8"))
+        data = _resolved_catalog_write(project)
         assert data["run_id"] == run_id
         assert data["version"] == "v1"
         assert data["catalogo_id"] == "cat-1"
@@ -1014,8 +1022,7 @@ class TestPersistResolvedCatalog:
 
         svc._persist_resolved_catalog(project, "v1", run_id, runtime)
 
-        out_path = tmp_path / "project" / "v1" / "resolved_catalog.json"
-        data = json.loads(out_path.read_text("utf-8"))
+        data = _resolved_catalog_write(project)
         assert len(data["items"]["cpus"]) == 1
         assert data["items"]["cpus"][0]["codigo"] == "CPU-A"
 
@@ -1042,9 +1049,7 @@ class TestPersistResolvedCatalog:
 
         svc._persist_resolved_catalog(project, "v1", run_id, runtime)
 
-        out_path = tmp_path / "project" / "v1" / "resolved_catalog.json"
-        assert out_path.exists()
-        data = json.loads(out_path.read_text("utf-8"))
+        data = _resolved_catalog_write(project)
         assert data["catalogo_base_origem"] == "project_reference"
         assert data["items"]["cpus"] == [{"codigo": "CPU-LOCAL"}]
 
@@ -1052,10 +1057,7 @@ class TestPersistResolvedCatalog:
         svc, project, audit, runtime = _make_svc(tmp_path=tmp_path)
         project = self._make_project_with_root(tmp_path)
 
-        # Make project.root raise to force outer exception path
-        project.root = MagicMock()
-        project.root.__truediv__ = MagicMock(side_effect=Exception("disk error"))
-
+        # Força o caminho de exceção externa via leitura falhando
         project.read_json.side_effect = Exception("can't read json")
 
         # Should not raise

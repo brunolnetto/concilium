@@ -8,10 +8,10 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from concilium.application.services.project.project_repository import ProjectHandle
 from concilium.application.skills import MANIFEST_META, SKILLS
 from concilium.application.skills.executor import ExecutionRecord, SkillExecutor
 from concilium.domain.models.canonical import CanonicalModel
-from concilium.infrastructure.storage.project import ProjectStore
 
 # Re-exports para compatibilidade retroativa
 from .contracts import SkillExecutionContract
@@ -75,18 +75,20 @@ class Runtime(ConfigMixin, CatalogMixin, InputsMixin, ExecutionMixin):
             output_schema={"result_type": "SkillResult", "fields": ["canonical", "validacoes", "has_errors"]},
         )
 
-    def check_manifest_deps(self, skill_id: str, project: ProjectStore, version: str) -> list[str]:
+    def check_manifest_deps(self, skill_id: str, project: ProjectHandle, version: str) -> list[str]:
         manifest = self.load_manifest(skill_id)
         if manifest is None:
             return []
         dep_skills: list[str] = manifest.get("depends_on", {}).get("skills", [])
         if not dep_skills:
             return []
-        log_path = project.version_path(version) / project.INVOCATIONS_LOG
-        executed_ok = _parse_executed_skills(log_path)
+        # `version_path(version) / INVOCATIONS_LOG` é um Path lógico não-backed em
+        # backends não-filesystem (StorageProjectHandle) — sempre ler via read_lines().
+        lines = project.read_lines(f"{version}/{project.INVOCATIONS_LOG}")
+        executed_ok = _parse_executed_skills(lines)
         return [dep for dep in dep_skills if dep not in executed_ok]
 
-    def create_snapshots(self, project: ProjectStore) -> dict[str, str]:
+    def create_snapshots(self, project: ProjectHandle) -> dict[str, str]:
         """Cria snapshots imutáveis de jurisdição e perfil.
 
         ADR-066 Fase 8: o catálogo NÃO é mais copiado integralmente aqui — CPUs são
@@ -107,7 +109,7 @@ class Runtime(ConfigMixin, CatalogMixin, InputsMixin, ExecutionMixin):
 
     def run_pipeline(
         self,
-        store: ProjectStore,
+        store: ProjectHandle,
         skill_inputs: dict[str, dict] | None = None,
         invocation_context: dict[str, Any] | None = None,
         skill_sequence: list[str] | None = None,

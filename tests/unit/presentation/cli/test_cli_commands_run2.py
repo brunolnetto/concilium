@@ -111,40 +111,26 @@ class TestRunReportResult:
 
 
 class TestApproveLoadPendingOverrides:
-    def test_no_overrides_file(self, tmp_path):
+    def test_no_overrides_file(self):
+        # project.root é lógico (não-backed) em StorageProjectHandle — a função
+        # lê via project.read_json(), nunca um Path cru.
         project = MagicMock()
-        project.root = tmp_path
+        project.read_json.return_value = {}
         result = _approve_load_pending_overrides(project)
         assert result == []
 
-    def test_overrides_file_with_keys(self, tmp_path):
-        overrides_dir = tmp_path / "overrides"
-        overrides_dir.mkdir()
-        overrides_file = overrides_dir / "insumos_override.json"
-        overrides_file.write_text('{"INS-1": {}, "INS-2": {}}')
+    def test_overrides_file_with_keys(self):
         project = MagicMock()
-        project.root = tmp_path
+        project.read_json.return_value = {"INS-1": {}, "INS-2": {}}
         result = _approve_load_pending_overrides(project)
         assert "INS-1" in result
         assert "INS-2" in result
 
-    def test_invalid_json_returns_empty(self, tmp_path):
-        overrides_dir = tmp_path / "overrides"
-        overrides_dir.mkdir()
-        (overrides_dir / "insumos_override.json").write_text("NOT JSON")
+    def test_valid_json_not_a_dict_returns_empty(self):
+        """JSON válido que não é um dict (ex.: lista) cai no `isinstance(loaded, dict)`
+        falso e retorna []."""
         project = MagicMock()
-        project.root = tmp_path
-        result = _approve_load_pending_overrides(project)
-        assert result == []
-
-    def test_valid_json_not_a_dict_returns_empty(self, tmp_path):
-        """Valid JSON that parses to a list (not a dict) falls through the
-        `isinstance(loaded, dict)` false branch to the trailing `return []`."""
-        overrides_dir = tmp_path / "overrides"
-        overrides_dir.mkdir()
-        (overrides_dir / "insumos_override.json").write_text("[1, 2, 3]")
-        project = MagicMock()
-        project.root = tmp_path
+        project.read_json.return_value = [1, 2, 3]
         result = _approve_load_pending_overrides(project)
         assert result == []
 

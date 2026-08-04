@@ -23,7 +23,7 @@ from concilium.domain.models.canonical import tipos_obra_validos
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
-    _projetos_root,
+    _project_repository,
     _runtime,
     _wrap_response,
 )
@@ -267,7 +267,6 @@ def register(server: FastMCP) -> None:
         """
         # Route to spec mode if spec dict is provided
         if spec is not None:
-            from concilium.infrastructure.storage.project import ProjectStore
             from concilium.presentation.mcp.tools.spec import (
                 _resolve_tributario,
                 _validate_spec,
@@ -295,9 +294,7 @@ def register(server: FastMCP) -> None:
             _horas = int(regime.get("horas_dia", 8))
             # ADR-148: preserva horas_improdutivas_dia do spec original em vez de descartar.
             _horas_improd = float(regime.get("horas_improdutivas_dia", 0.5))
-            proj_root = _projetos_root()
-            proj_root.mkdir(parents=True, exist_ok=True)
-            store = ProjectStore.init(proj_root, meta["nome"], contexto_id=meta["contexto_id"])
+            store = _project_repository().create_project(meta["nome"], meta["contexto_id"])
             coord = _lifecycle_coordinator()
             escopos_criados = []
             for escopo_spec in spec["escopos"]:
@@ -456,12 +453,7 @@ def register(server: FastMCP) -> None:
         # ── Todos mapeados → criar projeto ────────────────────────────────────
 
         rt = _runtime()
-        proj_root = _projetos_root()
-        proj_root.mkdir(parents=True, exist_ok=True)
-
-        from concilium.infrastructure.storage.project import ProjectStore
-
-        store = ProjectStore.init(proj_root, nome, contexto_id=contexto_id)
+        store = _project_repository().create_project(nome, contexto_id)
         store.update_meta(procurement_intent=intent)
 
         # ADR-031: cria estrutura de escopo+plano para compatibilidade com disparar_pipeline

@@ -50,6 +50,9 @@ class FlatVersionStore:
     def __init__(self, project: ProjectHandle, version: str) -> None:
         self._project = project
         self._version = version
+        # Path lógico (não-backed em backends não-filesystem) — usado só por
+        # `plano_id`/exibição, nunca para I/O direto. Ver `log_invocation`/
+        # `read_invocations` abaixo, que passam por `self._project` em vez disso.
         self.root = project.version_path(version)
         self.escopo_store = _EscopoStoreProxy(project.meta)
 
@@ -74,17 +77,11 @@ class FlatVersionStore:
         self._project.save_canonical(model, self._version, trace_id=trace_id, created_by=created_by)
 
     def log_invocation(self, entry: dict) -> None:
-        log = self.root / self.INVOCATIONS_LOG
-        log.parent.mkdir(parents=True, exist_ok=True)
-        with log.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, default=str) + "\n")
+        self._project.log_invocation(self._version, entry)
 
     def read_invocations(self) -> list[dict]:
-        log = self.root / self.INVOCATIONS_LOG
-        if not log.exists():
-            return []
         out: list[dict] = []
-        for line in log.read_text(encoding="utf-8").splitlines():
+        for line in self._project.read_lines(f"{self._version}/{self.INVOCATIONS_LOG}"):
             line = line.strip()
             if line:
                 try:

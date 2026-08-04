@@ -26,12 +26,12 @@ from concilium.application.services.project.audit_service import (
     OwnershipTransferAction,
     VersionAction,
 )
-from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 
 @pytest.fixture
 def repo(tmp_path):
-    return FileProjectRepository(tmp_path / "projetos")
+    return build_project_repository(tmp_path / "projetos")
 
 
 @pytest.fixture

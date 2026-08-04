@@ -8,7 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from concilium.application.runtime import Runtime
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
 from concilium.presentation.main import app
 
 runner = CliRunner()
@@ -84,7 +84,7 @@ def test_survey_project_writes_in_project_layer_with_audit(adr040_env: dict[str,
     monkeypatch.setattr(price_survey_mod, "PriceSurveyExporter", DummyPriceSurveyExporter)
 
     projects_root = adr040_env["projects"]
-    project = ProjectStore.init(projects_root, "adr040-survey", "test")
+    project = build_project_repository(projects_root).create_project("adr040-survey", "test")
     project_id = project.root.name
 
     result = runner.invoke(
@@ -102,12 +102,11 @@ def test_survey_project_writes_in_project_layer_with_audit(adr040_env: dict[str,
     )
     assert result.exit_code == 0, result.stdout
 
-    generated = project.root / "overrides" / "surveys" / "pesquisa_price_test.xlsx"
-    assert generated.exists()
+    assert project.read_bytes("overrides/surveys/pesquisa_price_test.xlsx") == b"xlsx-mock"
 
-    audit_log = project.root / "audit_log.jsonl"
-    assert audit_log.exists()
-    lines = [json.loads(line) for line in audit_log.read_text(encoding="utf-8").splitlines() if line.strip()]
+    log_lines = project.read_lines("audit_log.jsonl")
+    assert log_lines
+    lines = [json.loads(line) for line in log_lines if line.strip()]
     assert any(row.get("action") == "catalog_survey_export" for row in lines)
 
 
@@ -125,18 +124,17 @@ def test_promote_moves_project_override_to_master_with_history(adr040_env: dict[
     projects_root = adr040_env["projects"]
 
     contexto_id, insumo_id = _first_master_insumo(config_root)
-    project = ProjectStore.init(projects_root, "adr040-promote", "test")
+    project = build_project_repository(projects_root).create_project("adr040-promote", "test")
     project.update_meta(contexto_id=contexto_id)
     project_id = project.root.name
 
-    override_path = project.root / "overrides" / "insumos_override.json"
     override_payload = {
         f"{insumo_id}::BASE": {
             "preco_calibrado": 9.5,
             "motivo": "Calibracao de campo",
         }
     }
-    override_path.write_text(json.dumps(override_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    project.write_json("overrides/insumos_override.json", override_payload)
     # Simula que o override foi editado por outra pessoa antes da promoção
     # (regra dos quatro-olhos, ADR-150 D2) — sem isso, a state machine trataria
     # o próprio --actor da promoção como "criador" (rascunho implícito).
@@ -179,12 +177,11 @@ def test_promote_moves_project_override_to_master_with_history(adr040_env: dict[
         assert float(historico[-1].get("preco_unitario", 0.0)) == pytest.approx(9.5)
 
         # Overrides aplicados são arquivados e o arquivo live esvaziado (ADR-040 D4)
-        override_after = json.loads(override_path.read_text(encoding="utf-8"))
+        override_after = project.read_json("overrides/insumos_override.json", None)
         assert override_after == {}
-        historico_dir = project.root / "overrides" / "historico"
-        arquivados = list(historico_dir.glob("insumos_override_*.json"))
+        arquivados = [f for f in project.list_file_names("overrides/historico") if f.startswith("insumos_override_")]
         assert arquivados
-        arquivo = json.loads(arquivados[0].read_text(encoding="utf-8"))
+        arquivo = project.read_json(f"overrides/historico/{arquivados[0]}", None)
         assert f"{insumo_id}::BASE" in arquivo
 
         # Rascunho de projeto vira estado terminal APROVADO

@@ -195,52 +195,31 @@ class TestCatalogResolverApplyOverlays:
         assert trace.to_dict().get("CPU-A") == "master"
 
 
-# ─── F2: set_overlay via FileProjectHandle ────────────────────────────────────
+# ─── F2: set_overlay via ProjectHandle (BlobStoragePort, ADR-047) ─────────────
 
 
 class TestSetOverlay:
+    def _make_handle(self, tmp_path):
+        from concilium.infrastructure.storage.store_factory import build_project_repository
+
+        return build_project_repository(tmp_path).create_project("X", "c")
+
     def test_set_overlay_creates_file(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
-        from concilium.infrastructure.storage.project import ProjectStore
-
-        proj_root = tmp_path / "proj"
-        proj_root.mkdir()
-        (proj_root / "overrides").mkdir()
-        (proj_root / "overrides" / "cpus_override.json").write_text("{}", encoding="utf-8")
-
-        import json as _j
-
-        (proj_root / "meta.json").write_text(_j.dumps({"id": "x", "nome": "X", "contexto_id": "c"}), encoding="utf-8")
-
-        store = ProjectStore(proj_root)
-        handle = FileProjectHandle(store)
+        handle = self._make_handle(tmp_path)
         handle.set_overlay("cpu", "CPU-TEST", {"producao_horaria": 55.0}, actor="test", motivo="unit test")
 
-        overlay_file = proj_root / "overrides" / "cpus_overlay.json"
-        assert overlay_file.exists()
-        data = _j.loads(overlay_file.read_text())
+        data = handle.read_json("overrides/cpus_overlay.json", None)
+        assert data is not None
         assert "CPU-TEST" in data
         assert data["CPU-TEST"]["producao_horaria"] == 55.0
 
     def test_set_overlay_writes_audit(self, tmp_path):
         import json as _j
 
-        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
-        from concilium.infrastructure.storage.project import ProjectStore
-
-        proj_root = tmp_path / "proj"
-        proj_root.mkdir()
-        (proj_root / "overrides").mkdir()
-        (proj_root / "overrides" / "cpus_override.json").write_text("{}", encoding="utf-8")
-        (proj_root / "meta.json").write_text(_j.dumps({"id": "x", "nome": "X", "contexto_id": "c"}), encoding="utf-8")
-
-        store = ProjectStore(proj_root)
-        handle = FileProjectHandle(store)
+        handle = self._make_handle(tmp_path)
         handle.set_overlay("cpu", "CPU-X", {"preco": 100}, actor="u1", motivo="Ajuste")
 
-        audit = proj_root / "overrides" / "overlay_audit.jsonl"
-        assert audit.exists()
-        lines = [ln for ln in audit.read_text().splitlines() if ln.strip()]
+        lines = [ln for ln in handle.read_lines("overrides/overlay_audit.jsonl") if ln.strip()]
         assert len(lines) == 1
         entry = _j.loads(lines[0])
         assert entry["item_id"] == "CPU-X"
