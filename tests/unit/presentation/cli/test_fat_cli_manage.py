@@ -728,43 +728,6 @@ class TestResolverFonteEntidades:
         assert result == {"insumos": [], "producoes": [], "cpus": []}
 
 
-class TestCcpWriteBundle:
-    def test_with_producoes_key_ok(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _ccp_write_bundle
-
-        bundle_path = tmp_path / "b.json"
-        bundle_path.write_text("{}", encoding="utf-8")
-        bundle = {"insumos": [], "producoes": []}
-        console = MagicMock()
-        mock_result = {"resumo": {"erros": 0, "avisos": 0, "infos": 0}}
-        with patch(
-            "concilium.application.catalog.plausibility_checker.verificar_plausibilidade",
-            return_value=mock_result,
-        ):
-            _ccp_write_bundle(bundle, bundle_path, [{"codigo": "I1"}], [{"id": "P1"}], console)
-        data = json.loads(bundle_path.read_text())
-        assert data["producoes"] == [{"id": "P1"}]
-        assert data["insumos"] == [{"codigo": "I1"}]
-
-    def test_with_produtividades_key_and_erros(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _ccp_write_bundle
-
-        bundle_path = tmp_path / "b2.json"
-        bundle_path.write_text("{}", encoding="utf-8")
-        bundle = {"insumos": [], "produtividades": []}
-        console = MagicMock()
-        mock_result = {"resumo": {"erros": 2, "avisos": 1, "infos": 0}}
-        with patch(
-            "concilium.application.catalog.plausibility_checker.verificar_plausibilidade",
-            return_value=mock_result,
-        ):
-            _ccp_write_bundle(bundle, bundle_path, [], [], console)
-        data = json.loads(bundle_path.read_text())
-        assert "produtividades" in data
-        printed = [str(c) for c in console.print.call_args_list]
-        assert any("ATENÇÃO" in p for p in printed)
-
-
 def _make_rt_multi(tmp_path: Path, catalogos: dict) -> SimpleNamespace:
     """Fake Runtime cujo load_catalogo despacha por catalogo_id (mapa de catálogos).
 
@@ -968,7 +931,11 @@ class TestImplCatalogCurePlausibility:
 
         _impl_catalog_cure_plausibility(ctx, False)
 
-    def test_apply_with_fixed_and_manual_writes_bundle(self, tmp_path, monkeypatch):
+    def test_apply_with_fixed_and_manual_writes_individual_files_not_bundle(self, tmp_path, monkeypatch):
+        """ADR-177/durabilidade: --apply escreve no arquivo individual do insumo
+        (não no bundle, que fica intocado — reverteria na próxima invalidação de
+        cache). Achado real: este wrapper CLI tinha sua própria cópia divergente
+        da orquestração/escrita; agora delega para cure_plausibility."""
         import concilium.application.catalog.cure_plausibility as cure_mod
         from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_cure_plausibility
 
@@ -981,12 +948,16 @@ class TestImplCatalogCurePlausibility:
             "produtividades": [{"id": "P1", "valor_horario": 5}],
         }
         bundle_path = bundle_dir / ".catalog_bundle.json"
-        bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+        bundle_bytes_antes = json.dumps(bundle).encode("utf-8")
+        bundle_path.write_bytes(bundle_bytes_antes)
 
         _impl_catalog_cure_plausibility(ctx, True)
 
-        data = json.loads(bundle_path.read_text())
-        assert "produtividades" in data
+        assert bundle_path.read_bytes() == bundle_bytes_antes
+        arquivo_individual = bundle_dir / "insumos" / "equipamento" / "EQ1.json"
+        assert arquivo_individual.exists()
+        saved = json.loads(arquivo_individual.read_text(encoding="utf-8"))
+        assert saved["atributos_especificos"]["valor_locacao_mensal"] > 0
 
     def test_dry_run_with_no_fixed_and_no_manual_items(self, tmp_path, monkeypatch):
         """Empty bundle → report.fixed and report.manual both empty, covering

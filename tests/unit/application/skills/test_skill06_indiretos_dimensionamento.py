@@ -158,7 +158,7 @@ class TestDaMagnitudeFinanceiraRealCatalogMendeslobo:
 
     def test_obra_pequena_usa_template_adm_pequena(self):
         mod = _load_ind_helpers_a()
-        assert self._funcao_ids(mod, 5_000_000.0) == {"MO-ENCARREG-GERAL", "MO-AUX-ADM"}
+        assert self._funcao_ids(mod, 5_000_000.0) == {"MO-ENCARREG-GERAL", "MO-P0006"}
 
     def test_obra_media_usa_template_adm_media(self):
         mod = _load_ind_helpers_a()
@@ -166,7 +166,7 @@ class TestDaMagnitudeFinanceiraRealCatalogMendeslobo:
             "MO-ENG-CIVIL",
             "MO-ENCARREG-GERAL",
             "MO-ALMOXARIFE",
-            "MO-AUX-ADM",
+            "MO-P0006",
         }
 
     def test_obra_grande_usa_template_adm_grande_nao_fallback_estatico(self):
@@ -178,7 +178,7 @@ class TestDaMagnitudeFinanceiraRealCatalogMendeslobo:
             "MO-ENG-CIVIL",
             "MO-ENCARREG-GERAL",
             "MO-ALMOXARIFE",
-            "MO-AUX-ADM",
+            "MO-P0006",
         }
         assert "Coordenador" not in ids  # não é o item do fallback estático
 

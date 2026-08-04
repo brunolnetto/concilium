@@ -51,7 +51,14 @@ Idf = dict[str, float]
 # Stopwords de descrição de cargo/insumo em pt-BR — preposições/artigos que inflam
 # a similaridade de tokens sem carregar significado (ex.: "Operador DE Trator DE
 # Esteiras" vs "Operador DE Trator DE Pneus" — "de" não deve contar como overlap).
-_STOPWORDS = frozenset({"de", "da", "do", "das", "dos", "e", "a", "o", "as", "os", "em", "com", "para", "no", "na"})
+# "diurno"/"noturno" entram pelo mesmo motivo: são metadado de turno (convenção
+# SV-P00xx-D/N, "(Diurno, 12×36)"), não descrevem a função/equipamento — achado
+# real ao validar: sem isso, "Operador de Motoniveladora (Diurno, 12×36)" e
+# "Operador de Escavadeira (Diurno, 12×36)" (equipamentos DIFERENTES) pontuavam
+# desc_sim=0,8 só por compartilharem "diurno"+os dígitos do turno.
+_STOPWORDS = frozenset(
+    {"de", "da", "do", "das", "dos", "e", "a", "o", "as", "os", "em", "com", "para", "no", "na", "diurno", "noturno"}
+)
 
 
 @dataclass
@@ -79,11 +86,15 @@ class SimilarityScore:
 
 
 def _tokens_de_conteudo(descricao: str) -> frozenset[str]:
-    """Normaliza (remove acento, minúsculo) e tokeniza, descartando stopwords."""
+    """Normaliza (remove acento, minúsculo) e tokeniza, descartando stopwords e
+    tokens puramente numéricos (padrão de turno "12×36" — dígito isolado não
+    descreve função/equipamento neste domínio; se algum dia houver token
+    alfanumérico com significado real, ex. "180TH", ele não é puramente
+    numérico e não é afetado)."""
     t = unicodedata.normalize("NFD", str(descricao or "").lower())
     t = "".join(c for c in t if unicodedata.category(c) != "Mn")
     tokens = t.replace("(", " ").replace(")", " ").replace(",", " ").replace("×", " ").split()
-    return frozenset(tok for tok in tokens if tok not in _STOPWORDS)
+    return frozenset(tok for tok in tokens if tok not in _STOPWORDS and not tok.isdigit())
 
 
 def build_idf(descricoes: list[str]) -> Idf:
@@ -148,10 +159,19 @@ def _price_sim(a: dict, b: dict, desc_sim: float) -> float:
     pb = float(b.get("preco_unitario") or 0)
     direto = _price_sim_direto(pa, pb)
     tipo = a.get("tipo") or b.get("tipo")
-    if tipo != "MAO_OBRA" or desc_sim < _DESC_MIN_ENCARGOS:
-        # Hipótese de encargos só faz sentido para mão de obra, e só quando a
-        # descrição já corrobora — senão qualquer par de salários "normais" cai na
-        # faixa de α por coincidência (a faixa cobre boa parte de uma folha real).
+    unidade_a = (a.get("unidade") or "mes").strip().lower()
+    unidade_b = (b.get("unidade") or "mes").strip().lower()
+    ambos_mensais = unidade_a not in ("h", "hr") and unidade_b not in ("h", "hr")
+    if tipo != "MAO_OBRA" or desc_sim < _DESC_MIN_ENCARGOS or not ambos_mensais:
+        # Hipótese de encargos só faz sentido para mão de obra MENSAL (salário-base
+        # vs. taxa com encargos embutidos), e só quando a descrição já corrobora —
+        # senão qualquer par de salários "normais" cai na faixa de α por coincidência
+        # (a faixa cobre boa parte de uma folha real). unidade="h" já é taxa
+        # all-in por convenção (AGIS/SV) — não existe "hora sem encargos" no
+        # catálogo para essa hipótese resgatar; achado real: AGIS-FN-MOTOR-BASC
+        # (R$38,1/h) x SV-P0032-D (R$18,48/h) caía na faixa só por coincidência de
+        # razão, mas são duas fontes de preço distintas (terceirizado AGIS x tabela
+        # interna Serra Verde por turno), não a mesma pessoa em duas bases.
         return direto
     return max(direto, _price_sim_encargos(pa, pb))
 

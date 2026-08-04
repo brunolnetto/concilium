@@ -28,8 +28,18 @@ class TestTokensDeConteudo:
         assert _tokens_de_conteudo("Operador de Trator de Esteiras") == frozenset({"operador", "trator", "esteiras"})
 
     def test_remove_parenteses_e_virgulas(self):
-        tokens = _tokens_de_conteudo("Operador de Escavadeira (Diurno, 12×36)")
-        assert tokens == frozenset({"operador", "escavadeira", "diurno", "12", "36"})
+        tokens = _tokens_de_conteudo("Operador de Escavadeira (Sábado, 12×36)")
+        assert tokens == frozenset({"operador", "escavadeira", "sabado"})
+
+    def test_remove_turno_e_digitos_de_escala(self):
+        """Regressão real: "Diurno"/"Noturno" + dígitos de escala ("12×36") são
+        metadado de turno, não da função/equipamento — inflavam desc_sim entre
+        equipamentos DIFERENTES (Motoniveladora x Escavadeira) que só compartilham
+        o boilerplate de turno."""
+        diurno = _tokens_de_conteudo("Operador de Motoniveladora (Diurno, 12×36)")
+        noturno = _tokens_de_conteudo("Operador de Escavadeira (Noturno, 12×36)")
+        assert diurno == frozenset({"operador", "motoniveladora"})
+        assert noturno == frozenset({"operador", "escavadeira"})
 
     def test_string_vazia(self):
         assert _tokens_de_conteudo("") == frozenset()
@@ -163,6 +173,51 @@ class TestCategoriaSim:
 
 
 class TestInsumoSimilarity:
+    def test_equipamentos_diferentes_com_mesmo_turno_boilerplate_nao_e_duplicata(self):
+        """Regressão de bug real achado ao validar antes de aplicar no catálogo:
+        SV-P0043-D (Motoniveladora) e SV-P0040-D (Escavadeira) — equipamentos
+        DIFERENTES — pontuavam duplicata_provavel (score=0,825) só por
+        compartilharem "(Diurno, 12×36)"; teria fundido dois cargos distintos."""
+        motonivel = {
+            "codigo": "SV-P0043-D",
+            "tipo": "MAO_OBRA",
+            "descricao": "Operador de Motoniveladora (Diurno, 12×36)",
+            "preco_unitario": 27.0759,
+        }
+        escav = {
+            "codigo": "SV-P0040-D",
+            "tipo": "MAO_OBRA",
+            "descricao": "Operador de Escavadeira (Diurno, 12×36)",
+            "preco_unitario": 27.0759,
+        }
+        result = insumo_similarity(motonivel, escav)
+        assert result.classificacao != "duplicata_provavel"
+
+    def test_unidade_h_nao_usa_hipotese_de_encargos(self):
+        """Regressão de bug real: unidade="h" já é taxa all-in por convenção (AGIS/SV)
+        — não existe "hora sem encargos" nesse catálogo pra hipótese de α resgatar.
+        AGIS-FN-MOTOR-BASC (R$38,10/h, terceirizado) x SV-P0032-D (R$18,48/h,
+        tabela interna por turno) caem na faixa de α [1,0-2,5] por coincidência de
+        razão (2,06x) — não é a mesma pessoa em duas bases, são fontes de preço
+        distintas. Com unidade="h" em ambos, a hipótese de encargos não deve
+        entrar (só a tolerância direta, que aqui reprova por estarem longe)."""
+        agis = {
+            "codigo": "AGIS-FN-MOTOR-BASC",
+            "tipo": "MAO_OBRA",
+            "descricao": "Motorista de Caminhão Basculante",
+            "preco_unitario": 38.1,
+            "unidade": "h",
+        }
+        sv = {
+            "codigo": "SV-P0032-D",
+            "tipo": "MAO_OBRA",
+            "descricao": "Motorista de Caminhão Basculante (Diurno, 12×36)",
+            "preco_unitario": 18.4792,
+            "unidade": "h",
+        }
+        result = insumo_similarity(agis, sv)
+        assert result.classificacao != "duplicata_provavel"
+
     def test_sala_tecnica_p0058_vs_mo_sala_tec(self):
         """Caso real que escapou do dedup exato: mesma função, preços diferentes
         por tratamento de encargos (AGIS embutido vs. CLT-normalizado ADR-009)."""

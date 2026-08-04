@@ -21,11 +21,20 @@ Não automáticas (reportadas apenas):
   - Outliers estatísticos extremos (podem ser corretos)
   - Produções CAP sem composição (necessitam dados de campo)
   - P0058 "Sala Técnica" — erro semântico que requer redesign
+
+Persistência (--apply): escreve nos arquivos individuais (insumos/{tipo}/{codigo}.json,
+producoes|produtividades/{id}.json, templates.json) — NUNCA no .catalog_bundle.json
+diretamente. Mesma lição da ADR-177 (mesclar_catalogo): escrever só no bundle cria
+um fix fantasma que desaparece na próxima invalidação de cache (qualquer outra
+escrita de catálogo que toque um arquivo individual depois). A próxima leitura via
+Runtime.load_catalogo() reconstrói o bundle a partir dos arquivos individuais
+corretos.
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import sys
@@ -36,6 +45,8 @@ from pathlib import Path
 
 from concilium.domain.constants import HORAS_MES_CLT as HORAS_MES_PADRAO
 from concilium.domain.constants import SALARIO_MINIMO_MENSAL
+
+from .similarity import find_candidate_duplicates
 
 ROOT = Path(__file__).resolve().parents[4]
 
@@ -101,6 +112,115 @@ def _preco_hora(ins: dict) -> float:
     return preco / hm if hm > 0 else 0.0
 
 
+# ── Resolução de arquivo individual (mesma convenção de catalog_governance.py /
+# _catalogo_tools_helpers_b.py — insumos/{tipo_lower}/{codigo}.json,
+# producoes|produtividades/{id}.json) — cure_plausibility.py é standalone (fora do
+# Runtime/MCP), replica localmente em vez de importar os helpers do MCP (que
+# arrastam Runtime/ProjectHandle no import).
+
+
+def _caminho_insumo_individual(catalog_root: Path, tipo: str, codigo: str) -> Path:
+    """Resolve o arquivo de um insumo — existente (rglob, não presume nome de
+    subpasta) ou, se novo, a convenção canônica insumos/{tipo_lower}/{codigo}.json."""
+    insumos_dir = catalog_root / "insumos"
+    for existente in insumos_dir.rglob(f"{codigo}.json"):
+        return existente
+    return insumos_dir / str(tipo).lower() / f"{codigo}.json"
+
+
+def _caminho_producao_individual(catalog_root: Path, producao_id: str) -> Path:
+    """producoes/ e produtividades/ coexistem (legado) — usa o que já existir,
+    default producoes/ para item novo."""
+    for sub in ("producoes", "produtividades"):
+        candidato = catalog_root / sub / f"{producao_id}.json"
+        if candidato.exists():
+            return candidato
+    return catalog_root / "producoes" / f"{producao_id}.json"
+
+
+def _persistir_insumos_individuais(
+    catalog_root: Path, insumos_originais: list[dict], insumos_finais: list[dict], removidos: set[str]
+) -> tuple[int, int]:
+    """Escreve cada insumo alterado no arquivo individual — nunca no bundle (ver
+    docstring do módulo). Remove o arquivo dos insumos deletados (duplicata
+    fundida) — sem precedente no repo para isso; `_persistir_merge_em_arquivos_
+    individuais` da ADR-177 não cobre remoção porque `mesclar_catalogo` nunca
+    remove entidade, só `cure_duplicatas` remove."""
+    originais_by_code = {i["codigo"]: i for i in insumos_originais if i.get("codigo")}
+
+    escritos = 0
+    for ins in insumos_finais:
+        cod = ins.get("codigo", "")
+        if not cod or originais_by_code.get(cod) == ins:
+            continue
+        caminho = _caminho_insumo_individual(catalog_root, ins.get("tipo", ""), cod)
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        caminho.write_text(json.dumps(ins, indent=2, ensure_ascii=False), encoding="utf-8")
+        escritos += 1
+
+    removidos_ok = 0
+    for cod in removidos:
+        original = originais_by_code.get(cod)
+        if original is None:
+            continue
+        caminho = _caminho_insumo_individual(catalog_root, original.get("tipo", ""), cod)
+        if caminho.exists():
+            caminho.unlink()
+            removidos_ok += 1
+    return escritos, removidos_ok
+
+
+def _persistir_producoes_individuais(
+    catalog_root: Path, producoes_originais: list[dict], producoes_finais: list[dict]
+) -> int:
+    originais_by_id = {p.get("id", p.get("codigo", "")): p for p in producoes_originais if p.get("id") or p.get("codigo")}
+    escritos = 0
+    for p in producoes_finais:
+        pid = p.get("id") or p.get("codigo", "")
+        if not pid or originais_by_id.get(pid) == p:
+            continue
+        caminho = _caminho_producao_individual(catalog_root, pid)
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        caminho.write_text(json.dumps(p, indent=2, ensure_ascii=False), encoding="utf-8")
+        escritos += 1
+    return escritos
+
+
+def _cure_templates_estruturas_indiretas(
+    catalog_root: Path, dup_map: dict[str, str], report: CureReport, apply: bool
+) -> None:
+    """Atualiza funcao_id em templates.json/estruturas_indiretas conforme dup_map
+    — superfície de referência que producoes/produtividades NÃO cobre (achado
+    real: MO-AUX-ADM referenciado 3x em estruturas_indiretas, nunca visto por
+    _update_producoes_funcao_ids, ficaria órfão após a remoção da duplicata)."""
+    if not dup_map:
+        return
+    path = catalog_root / "templates.json"
+    if not path.exists():
+        return
+    original_bytes = path.read_bytes()
+    usa_crlf = b"\r\n" in original_bytes  # templates.json é CRLF no mendeslobo; insumos/producoes são LF
+    data = json.loads(original_bytes.decode("utf-8"))
+    estruturas = data.get("estruturas_indiretas") or []
+    mudou = False
+    for estrutura in estruturas:
+        for item in estrutura.get("mao_de_obra") or []:
+            antigo = item.get("funcao_id")
+            if antigo in dup_map:
+                novo = dup_map[antigo]
+                report.add_fixed(
+                    f"  templates.json [{estrutura.get('codigo', '?')}]: funcao_id {antigo} → {novo}"
+                )
+                if apply:
+                    item["funcao_id"] = novo
+                    mudou = True
+    if apply and mudou:
+        texto = json.dumps(data, indent=2, ensure_ascii=False)
+        if usa_crlf:
+            texto = texto.replace("\n", "\r\n")
+        path.write_text(texto, encoding="utf-8", newline="")
+
+
 class CureReport:
     def __init__(self) -> None:
         self.fixed: list[str] = []
@@ -121,7 +241,15 @@ class CureReport:
 
 
 def _cure_encargos_alpha(ins: dict, cod: str, attrs: dict, report: CureReport, apply: bool) -> None:
-    """a) percentual_encargos_local armazenado como α (> 1.5) em vez de α-1."""
+    """a) percentual_encargos_local armazenado como α (> 1.5) em vez de α-1.
+
+    `attrs` chega por referência de `ins["atributos_especificos"]` (não copiado
+    em `cure_erros_fisicos`) — mutar em-place aliasaria de volta pro insumo
+    ORIGINAL (mesmo objeto dict), fazendo `_persistir_insumos_individuais`
+    (que compara por igualdade contra o original) concluir "nada mudou" e
+    NUNCA escrever o fix em disco. Achado real: MO-OPERADOR-DE-MOTOSCRA teve o
+    α corrigido em memória mas nunca persistido. Copia antes de mutar, mesmo
+    padrão de `_cure_locacao_mensal_item`."""
     enc = attrs.get("percentual_encargos_local")
     if enc is None:
         return
@@ -134,8 +262,9 @@ def _cure_encargos_alpha(ins: dict, cod: str, attrs: dict, report: CureReport, a
                 f"(era α armazenado como enc_local; corrigido para α-1)"
             )
             if apply:
-                attrs["percentual_encargos_local"] = round(correto, 4)
-                ins["atributos_especificos"] = attrs
+                novos_attrs = dict(attrs)
+                novos_attrs["percentual_encargos_local"] = round(correto, 4)
+                ins["atributos_especificos"] = novos_attrs
     except (TypeError, ValueError):
         pass
 
@@ -185,24 +314,145 @@ def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> 
 # ── 2. Duplicatas P#### → MO-NOME ─────────────────────────────────────────────
 
 
-def _build_dup_map(insumos: list[dict]) -> dict[str, str]:
-    """Retorna {p_code: canonical_code} para todos os duplicados detectados."""
-    grupos: dict[tuple, list[str]] = defaultdict(list)
-    for ins in insumos:
-        if ins.get("tipo") != "MAO_OBRA":
-            continue
-        key = (_norm(ins.get("descricao", "")), ins.get("preco_unitario"))
-        grupos[key].append(ins["codigo"])
+def _eh_codigo_p(codigo: str) -> bool:
+    return bool(re.match(r"^(MO-P|P)\d+$", codigo))
 
-    dup_map: dict[str, str] = {}
-    for codes in grupos.values():
+
+# Faixas de razão de preço (max/min) liberadas para fusão AUTOMÁTICA — validadas
+# manualmente contra o catálogo mendeslobo real nesta sessão (ADR-179):
+#   ~1,0   → preço idêntico, sem ambiguidade (25 pares no mendeslobo).
+#   1,9-2,2 → padrão de encargos confirmado (Sala Técnica R$24.720/R$12.000=2,06,
+#             Encarregado de Drenagem R$20.600/R$10.000=2,06, etc. — 17 pares).
+# Fora dessas faixas (validado: 63 pares em 1,05-1,9 com razões sistemáticas como
+# 1,335/1,2/1,325 repetidas dezenas de vezes, +51 pares >2,2) a origem é
+# desconhecida — pode ser o mesmo padrão de import duplicado (mesclar é seguro)
+# OU duas tabelas de preço intencionalmente paralelas (mesclar apagaria dado
+# válido). Usuário optou por não mesclar automaticamente até investigar a origem
+# — fica em report.manual para revisão humana, não desaparece silenciosamente.
+_RATIO_IDENTICO_MAX = 1.05
+_RATIO_ENCARGOS_CONFIRMADO = (1.9, 2.2)
+
+
+def _razao_preco_liberada_para_fusao(pa: float, pb: float) -> bool:
+    if pa <= 0 or pb <= 0:
+        return False
+    ratio = max(pa, pb) / min(pa, pb)
+    if ratio <= _RATIO_IDENTICO_MAX:
+        return True
+    lo, hi = _RATIO_ENCARGOS_CONFIRMADO
+    return lo <= ratio <= hi
+
+
+def _escolher_canonico(codes: list[str], ins_by_code: dict[str, dict]) -> str:
+    """Canônico do cluster: prefere o MENOR preco_unitario primeiro — para
+    unidade="mes", pu_calculator aplica seu próprio α por cima (ADR-009); manter
+    o valor já-com-encargos (o lado "P####" tipicamente importado via AGIS)
+    causaria dupla contagem de encargos na cadeia de custo. Empate de preço
+    (caso comum do dedup exato original, onde ambos os lados já tinham o mesmo
+    valor): prefere código que não seja P####/MO-P####, critério original.
+    `codes` é ordenado antes do min() para determinismo (independe de ordem de
+    iteração de set/dict)."""
+
+    def chave(c: str) -> tuple[float, int]:
+        preco = float(ins_by_code[c].get("preco_unitario") or 0)
+        return (preco, 1 if _eh_codigo_p(c) else 0)
+
+    return min(sorted(codes), key=chave)
+
+
+def _build_dup_map(insumos: list[dict], report: CureReport | None = None) -> dict[str, str]:
+    """Retorna {codigo: canonical_code} para todos os duplicados detectados.
+
+    Duas fontes, combinadas por union-find (ADR-179):
+    (a) match exato de (descrição normalizada, preço) — comportamento original.
+    (b) similarity.find_candidate_duplicates, só classificacao="duplicata_provavel"
+        (score ≥ 0,80) — pega pares como P0058/MO-SALA-TEC que (a) nunca captura
+        porque o preço difere por um fator de encargos, não é igual.
+
+    classificacao="revisar" NÃO é fundido automaticamente (fica para decisão
+    humana) — se `report` for passado, cada par de baixa confiança é listado em
+    report.manual, para não desaparecer silenciosamente.
+    """
+    mo = [i for i in insumos if i.get("tipo") == "MAO_OBRA"]
+    ins_by_code = {i["codigo"]: i for i in mo}
+
+    parent: dict[str, str] = {}
+
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            x = parent[x]
+        return x
+
+    def union(a: str, b: str) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    participantes: set[str] = set()
+
+    grupos_exatos: dict[tuple, list[str]] = defaultdict(list)
+    for ins in mo:
+        key = (_norm(ins.get("descricao", "")), ins.get("preco_unitario"))
+        grupos_exatos[key].append(ins["codigo"])
+    for codes in grupos_exatos.values():
         if len(codes) < 2:
             continue
-        # Canônico: prefere MO-NOME (não começa com P ou MO-P)
-        canonical = next((c for c in codes if not re.match(r"^(MO-P|P)\d+$", c)), codes[0])
+        participantes.update(codes)
+        for c in codes[1:]:
+            union(codes[0], c)
+
+    for m in find_candidate_duplicates(mo):
+        if m.classificacao is None:
+            continue
+        pa = float(ins_by_code[m.codigo_a].get("preco_unitario") or 0)
+        pb = float(ins_by_code[m.codigo_b].get("preco_unitario") or 0)
+        liberado = m.classificacao == "duplicata_provavel" and _razao_preco_liberada_para_fusao(pa, pb)
+        if liberado:
+            participantes.add(m.codigo_a)
+            participantes.add(m.codigo_b)
+            union(m.codigo_a, m.codigo_b)
+        elif report is not None:
+            ratio = max(pa, pb) / min(pa, pb) if pa > 0 and pb > 0 else None
+            if m.classificacao == "revisar":
+                motivo = f"revisar, score={m.score:.2f}"
+            else:
+                motivo = f"duplicata_provavel (score={m.score:.2f}) mas razão de preço {ratio:.3f} fora das faixas validadas — origem não confirmada"
+            report.add_manual(
+                f"INSUMO {m.codigo_a}/{m.codigo_b}: {motivo} — "
+                f"'{ins_by_code[m.codigo_a].get('descricao')}' (R${pa}) vs "
+                f"'{ins_by_code[m.codigo_b].get('descricao')}' (R${pb}) — não fundido automaticamente"
+            )
+
+    clusters: dict[str, list[str]] = defaultdict(list)
+    for code in sorted(participantes):
+        clusters[find(code)].append(code)
+
+    dup_map: dict[str, str] = {}
+    for codes in clusters.values():
+        if len(codes) < 2:
+            continue
+        canonical = _escolher_canonico(codes, ins_by_code)
+        preco_canon = float(ins_by_code[canonical].get("preco_unitario") or 0)
         for c in codes:
-            if c != canonical:
+            if c == canonical:
+                continue
+            # Reconfirma a razão contra o CANÔNICO especificamente — a & b podem ter
+            # entrado no mesmo cluster via um terceiro nó-ponte (A-B seguro, B-C
+            # seguro, mas A-C não) sem que A-C jamais tenha sido validado direto
+            # (achado real: P0006/MO-AUX-ADM/MO-P0006, razão direta P0006×MO-P0006
+            # = 4,13, bem fora de qualquer faixa, mesmo com os dois links intermediários
+            # seguros). Sem essa revalidação, a transitividade do union-find fundiria
+            # itens nunca comparados diretamente.
+            preco_c = float(ins_by_code[c].get("preco_unitario") or 0)
+            if _razao_preco_liberada_para_fusao(preco_c, preco_canon):
                 dup_map[c] = canonical
+            elif report is not None:
+                ratio = max(preco_c, preco_canon) / min(preco_c, preco_canon) if preco_c > 0 and preco_canon > 0 else None
+                report.add_manual(
+                    f"INSUMO {c}/{canonical}: conectados via cadeia transitiva mas razão "
+                    f"direta {ratio:.3f} fora das faixas validadas — não fundido"
+                )
     return dup_map
 
 
@@ -292,21 +542,24 @@ def cure_duplicatas(
     producoes: list[dict],
     report: CureReport,
     apply: bool,
-) -> tuple[list[dict], list[dict]]:
-    """Remove P#### duplicados, adiciona codigo_referencia_externa, atualiza producoes."""
-    dup_map = _build_dup_map(insumos)
+) -> tuple[list[dict], list[dict], dict[str, str]]:
+    """Remove duplicados (match exato + similaridade ADR-179), adiciona
+    codigo_referencia_externa, atualiza producoes. Retorna também o dup_map —
+    quem chama precisa dele para atualizar outras superfícies de referência
+    (templates.json/estruturas_indiretas, que producoes não cobre)."""
+    dup_map = _build_dup_map(insumos, report)
 
     if not dup_map:
-        return insumos, producoes
+        return insumos, producoes, dup_map
 
-    report.add_fixed(f"Duplicatas detectadas: {len(dup_map)} P#### → MO-NOME")
+    report.add_fixed(f"Duplicatas detectadas: {len(dup_map)} → código canônico")
 
     ins_by_code = {i["codigo"]: dict(i) for i in insumos}
     _add_referencias_externas(dup_map, ins_by_code, report, apply)
     new_insumos = _remove_duplicated_insumos(dup_map, ins_by_code, report, apply)
     updated_prods = _update_producoes_funcao_ids(producoes, dup_map, report, apply)
 
-    return (new_insumos if apply else insumos), (updated_prods if apply else producoes)
+    return (new_insumos if apply else insumos), (updated_prods if apply else producoes), dup_map
 
 
 # ── 3. Atualiza data_referencia_preco dos itens atualizados pelo merge ─────────
@@ -402,34 +655,41 @@ def main() -> None:
     print(f"  Curação de Plausibilidade [{mode}] — contexto: {args.contexto}")
     print(f"{'=' * 65}\n")
 
-    bundle_path = ROOT / f"config/catalogos/{args.contexto}/.catalog_bundle.json"
+    catalog_root = ROOT / f"config/catalogos/{args.contexto}"
+    bundle_path = catalog_root / ".catalog_bundle.json"
     if not bundle_path.exists():
         print(f"Bundle não encontrado: {bundle_path}", file=sys.stderr)
         sys.exit(1)
 
+    # Bundle é só a FONTE DE LEITURA — nunca escrita (ver docstring do módulo).
     bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
-    insumos = bundle.get("insumos", [])
-    producoes = bundle.get("producoes", []) or bundle.get("produtividades", [])
+    # deepcopy: alguns cure_* mutam atributos_especificos por referência (achado
+    # real, MO-OPERADOR-DE-MOTOSCRA) — sem isso, o snapshot "original" usado pra
+    # diff em _persistir_insumos_individuais seria corrompido de volta, e o fix
+    # nunca chegaria a disco (comparação vê "nada mudou").
+    insumos_originais = copy.deepcopy(bundle.get("insumos", []))
+    producoes_originais = copy.deepcopy(bundle.get("producoes", []) or bundle.get("produtividades", []))
 
     report = CureReport()
-    insumos, producoes = _run_cure_steps(insumos, producoes, report, args.apply)
+    insumos, producoes = _run_cure_steps(catalog_root, insumos_originais, producoes_originais, report, args.apply)
     _print_cure_report(report, args.apply)
 
     if args.apply:
-        _save_bundle_and_validate(bundle, bundle_path, insumos, producoes)
+        _persistir_e_validar(catalog_root, insumos_originais, insumos, producoes_originais, producoes)
     else:
         print("\n  Dry-run — use --apply para aplicar as correções")
         sys.exit(1 if report.manual else 0)
 
 
 def _run_cure_steps(
-    insumos: list[dict], producoes: list[dict], report: CureReport, apply: bool
+    catalog_root: Path, insumos: list[dict], producoes: list[dict], report: CureReport, apply: bool
 ) -> tuple[list[dict], list[dict]]:
     print("[1/5] Erros físicos (encargos + salário mínimo) ...")
     insumos = cure_erros_fisicos(insumos, report, apply)
 
     print("[2/5] Duplicatas (P#### → MO-NOME) ...")
-    insumos, producoes = cure_duplicatas(insumos, producoes, report, apply)
+    insumos, producoes, dup_map = cure_duplicatas(insumos, producoes, report, apply)
+    _cure_templates_estruturas_indiretas(catalog_root, dup_map, report, apply)
 
     print("[3/5] Datas desatualizadas via merge RFI ...")
     insumos = cure_stale_rfi(insumos, report, apply)
@@ -460,19 +720,28 @@ def _print_cure_report(report: CureReport, apply: bool) -> None:
             print(f"  · {msg}")
 
 
-def _save_bundle_and_validate(bundle: dict, bundle_path: Path, insumos: list[dict], producoes: list[dict]) -> None:
-    if "producoes" in bundle:
-        bundle["producoes"] = producoes
-    else:
-        bundle["produtividades"] = producoes
-    bundle["insumos"] = insumos
-    bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\n  Bundle salvo: {bundle_path}")
-    print(f"  Insumos:   {len(insumos)}")
-    print(f"  Producoes: {len(producoes)}")
+def _persistir_e_validar(
+    catalog_root: Path,
+    insumos_originais: list[dict],
+    insumos: list[dict],
+    producoes_originais: list[dict],
+    producoes: list[dict],
+) -> None:
+    """Escreve nos arquivos individuais (nunca no .catalog_bundle.json — ver
+    docstring do módulo, mesma lição da ADR-177). Detecta remoção por diferença
+    de conjunto de códigos entre original e final (funciona independente de qual
+    etapa de cura removeu — não depende de receber dup_map aqui)."""
+    codigos_originais = {i["codigo"] for i in insumos_originais if i.get("codigo")}
+    codigos_finais = {i["codigo"] for i in insumos if i.get("codigo")}
+    removidos = codigos_originais - codigos_finais
 
-    # Valida plausibilidade pós-curação
-    sys.path.insert(0, str(ROOT / "src"))
+    escritos, removidos_ok = _persistir_insumos_individuais(catalog_root, insumos_originais, insumos, removidos)
+    escritos_prod = _persistir_producoes_individuais(catalog_root, producoes_originais, producoes)
+
+    print(f"\n  Arquivos individuais persistidos em: {catalog_root}")
+    print(f"  Insumos escritos/atualizados: {escritos}  |  removidos: {removidos_ok}  |  producoes: {escritos_prod}")
+
+    # Valida plausibilidade pós-curação (em memória — não depende do bundle em disco)
     from concilium.application.catalog.plausibility_checker import verificar_plausibilidade
 
     pos = verificar_plausibilidade(insumos, producoes)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -272,23 +273,6 @@ def _impl_catalog_merge(
         console.print("\n[dim]Dry-run — use --apply para aplicar o merge[/dim]")
 
 
-def _ccp_write_bundle(bundle: dict, bundle_path, insumos: list, producoes: list, console) -> None:
-
-    from concilium.application.catalog.plausibility_checker import verificar_plausibilidade
-
-    if "producoes" in bundle:
-        bundle["producoes"] = producoes
-    else:
-        bundle["produtividades"] = producoes
-    bundle["insumos"] = insumos
-    bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
-    console.print(f"\n[green]Bundle atualizado:[/green] {len(insumos)} insumos, {len(producoes)} producoes")
-    pos = verificar_plausibilidade(insumos, producoes)
-    r = pos["resumo"]
-    status = "[green]OK[/green]" if r["erros"] == 0 else "[yellow]ATENÇÃO[/yellow]"
-    console.print(f"  Pós-curação: {status} — {r['erros']} erros | {r['avisos']} avisos | {r['infos']} infos")
-
-
 def _ccp_print_fixed(fixed: list, apply: bool, console) -> None:
     console.print("\n[green]Correções:[/green]")
     for msg in fixed[:30]:
@@ -307,42 +291,47 @@ def _impl_catalog_cure_plausibility(
     Detecta e corrige (quando possível automaticamente):
       - Encargos armazenados como alpha em vez de alpha-1
       - Preço abaixo do salário mínimo com referência RFI disponível
-      - Duplicatas P#### vs MO-NOME (remove duplicata, mantém código canônico)
+      - Duplicatas — match exato OU similaridade determinística (ADR-179),
+        restrita a faixas de preço validadas; adiciona codigo_referencia_externa,
+        remove o código duplicado, mantém o canônico
       - Datas desatualizadas após merge RFI
       - Equipamento sem valor_locacao_mensal (deriva automaticamente)
+      - templates.json/estruturas_indiretas (funcao_id de duplicatas fundidas)
 
     Itens não-automatizáveis são reportados para revisão manual.
+
+    Delega inteiramente para cure_plausibility._run_cure_steps/_persistir_e_validar
+    — não duplica a orquestração aqui. Antes duplicava (bundle-only write, sem
+    templates.json), o que divergiu e quebrou ao motor de similaridade mudar de
+    assinatura; nunca escrever em dois lugares a mesma lógica de novo.
     """
     from concilium.application.catalog.cure_plausibility import ROOT as CURE_ROOT
     from concilium.application.catalog.cure_plausibility import (
         CureReport,
-        cure_duplicatas,
-        cure_erros_fisicos,
-        cure_locacao_mensal,
-        cure_stale_rfi,
-        report_manual,
+        _persistir_e_validar,
+        _run_cure_steps,
     )
 
     console = Console()
 
-    bundle_path = CURE_ROOT / f"config/catalogos/{contexto_id}/.catalog_bundle.json"
+    catalog_root = CURE_ROOT / f"config/catalogos/{contexto_id}"
+    bundle_path = catalog_root / ".catalog_bundle.json"
     if not bundle_path.exists():
         rprint(f"[red]Bundle não encontrado: {bundle_path}[/red]")
         raise typer.Exit(1)
 
     bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
-    insumos = bundle.get("insumos", [])
-    producoes = bundle.get("producoes", []) or bundle.get("produtividades", [])
+    # deepcopy: protege o snapshot "original" usado no diff de persistência
+    # contra cure_* que mutem atributos_especificos por referência (ver
+    # cure_plausibility.main() para o achado real que motivou isso).
+    insumos_originais = copy.deepcopy(bundle.get("insumos", []))
+    producoes_originais = copy.deepcopy(bundle.get("producoes", []) or bundle.get("produtividades", []))
 
     mode = "APPLY" if apply else "DRY-RUN"
     console.print(f"\n[bold]Curação de Plausibilidade [{mode}][/bold] — contexto: {contexto_id}")
 
     report = CureReport()
-    insumos = cure_erros_fisicos(insumos, report, apply)
-    insumos, producoes = cure_duplicatas(insumos, producoes, report, apply)
-    insumos = cure_stale_rfi(insumos, report, apply)
-    insumos = cure_locacao_mensal(insumos, report, apply)
-    report_manual(insumos, producoes, report)
+    insumos, producoes = _run_cure_steps(catalog_root, insumos_originais, producoes_originais, report, apply)
 
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Categoria")
@@ -360,7 +349,8 @@ def _impl_catalog_cure_plausibility(
             console.print(f"  ⚠ {msg}")
 
     if apply:
-        _ccp_write_bundle(bundle, bundle_path, insumos, producoes, console)
+        _persistir_e_validar(catalog_root, insumos_originais, insumos, producoes_originais, producoes)
+        console.print(f"\n[green]Arquivos individuais persistidos em:[/green] {catalog_root}")
     else:
         console.print("\n[dim]Dry-run — use --apply para aplicar[/dim]")
 
