@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -247,7 +248,7 @@ class ProjectHandle(Protocol):
 
 
 class ProjectRepository(Protocol):
-    def list_projects(self) -> list[ProjectHandle]: ...
+    def list_projects(self) -> Sequence[ProjectHandle]: ...
 
     def create_project(
         self, nome: str, contexto_id: str, catalogo_base: str | None = None, project_id: str | None = None
