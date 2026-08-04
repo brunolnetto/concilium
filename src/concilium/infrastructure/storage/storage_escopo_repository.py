@@ -220,6 +220,35 @@ class StoragePlanoHandle:
         result = self._read_json(self.PREMISSAS_POR_SKILL_FILE, {})
         return result if isinstance(result, dict) else {}
 
+    # ── Acesso genérico (paridade com ProjectHandle) ─────────────────────
+    #
+    # side_effects.py (relatórios/PDFs/artefatos tipados) foi escrito só contra
+    # ProjectHandle (versão explícita como parâmetro) — sem estes métodos aqui,
+    # o único jeito de reaproveitá-lo em run_skill_on_plano era passar `project`
+    # (o handle do PROJETO) com `plano_store.plano_id` como se fosse uma versão
+    # flat vN, gravando tudo solto em `{project_id}/{plano_id}/...` em vez de
+    # dentro da árvore real do plano. Estes métodos fecham a lacuna que fazia
+    # esse shim ser necessário.
+
+    def write_json(self, relative_path: str, payload: Any) -> None:
+        self._write_json(relative_path, payload)
+
+    def read_json(self, relative_path: str, default: Any) -> Any:
+        return self._read_json(relative_path, default)
+
+    def save_intermediate_file(self, filename: str, data: bytes | str) -> Path:
+        """Salva arquivo em intermediate/{filename}. Aceita bytes ou str."""
+        relative = f"intermediate/{filename}"
+        content = data.encode("utf-8") if isinstance(data, str) else data
+        self._storage.gravar_blob(self._path(relative), content)
+        return Path(self._project_id) / "escopos" / self._escopo_id / "planos" / self._plano_id / relative
+
+    def load_intermediate_file(self, filename: str) -> bytes | None:
+        try:
+            return self._storage.ler_blob(self._path(f"intermediate/{filename}"))
+        except FileNotFoundError:
+            return None
+
     # ── Outputs ────────────────────────────────────────────────────────
 
     def save_output_file(self, data: bytes, filename: str = "resultado.xlsx") -> Path:
@@ -247,6 +276,20 @@ class StoragePlanoHandle:
 
     # ── Ciclo de vida ─────────────────────────────────────────────────
 
+    def _aprovar_versao_best_effort(self, path: str) -> None:
+        """`aprovar_versao` (chmod 444/checkin) é defesa em profundidade — a fonte
+        de verdade de "somente-leitura" é `_is_readonly()` (status=="APROVADO"
+        no meta.json, agnóstico de backend). Uma falha aqui (ex.: quirk de
+        checkin do Graph, permissão) não pode travar a transição de status."""
+        try:
+            self._storage.aprovar_versao(path)
+        except Exception as exc:  # noqa: BLE001 — best-effort, ver docstring
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "aprovar_versao (best-effort) falhou para '%s': %s", path, exc
+            )
+
     def approve(self) -> None:
         """Marca plano como APROVADO: `aprovar_versao` em canonical + invocations + premissas
         (Local=chmod 444, SharePoint=checkin — mesma semântica de `StorageProjectHandle.approve`)."""
@@ -258,7 +301,7 @@ class StoragePlanoHandle:
         ):
             path = self._path(fname)
             if self._storage.blob_existe(path):
-                self._storage.aprovar_versao(path)
+                self._aprovar_versao_best_effort(path)
         self._protect_bdi_perfil_versoes()
         self._update_meta(status="APROVADO", aprovado_em=datetime.now(UTC).isoformat())
 
@@ -272,7 +315,7 @@ class StoragePlanoHandle:
             relative = f"bdi/{bdi_perfil_versao_filename(versao)}"
             path = f"{self._project_id}/{relative}"
             if self._storage.blob_existe(path):
-                self._storage.aprovar_versao(path)
+                self._aprovar_versao_best_effort(path)
 
     def archive(self) -> None:
         self._update_meta(status="ARQUIVADO", arquivado_em=datetime.now(UTC).isoformat())

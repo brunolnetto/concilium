@@ -329,8 +329,22 @@ class SharePointBlobStorage(BlobStoragePort):
         Equivalente ao chmod 444 do LocalBlobStorage. O arquivo passa a ser
         somente-leitura para edições diretas; histórico de versões fica auditável
         no portal M365.
+
+        Graph exige que o item esteja checked out antes de aceitar um checkin
+        quando a biblioteca tem "Require Check Out" habilitado — como
+        `gravar_blob` grava via PUT direto (nunca checa o arquivo out), o
+        checkin sempre falhava com 400 ("the item is not checked out"). Faz o
+        checkout aqui, best-effort: se já estiver checked out (por nós ou por
+        outra sessão) ou se a biblioteca não exigir check-out, o Graph
+        devolve erro no checkout mas o checkin subsequente ainda é a fonte de
+        verdade — só ele propaga falha real (permissão, item inexistente etc.).
         """
         httpx = self._client()
+        try:
+            httpx.post(f"{self._item_url(path)}:/checkout", headers=self._headers())
+        except Exception as exc:  # noqa: BLE001 — best-effort, checkin reporta o erro real
+            logger.debug("checkout best-effort falhou para '%s' (seguindo para checkin): %s", path, exc)
+
         r = httpx.post(
             f"{self._item_url(path)}:/checkin",
             headers=self._headers({"Content-Type": "application/json"}),

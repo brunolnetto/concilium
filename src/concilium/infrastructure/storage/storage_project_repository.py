@@ -415,6 +415,20 @@ class StorageProjectHandle:
         result = self.read_json(f"{version}/{self._PREMISSAS_POR_SKILL_FILE}", {})
         return result if isinstance(result, dict) else {}
 
+    def _aprovar_versao_best_effort(self, path: str) -> None:
+        """`aprovar_versao` (chmod 444/checkin) é defesa em profundidade — a fonte
+        de verdade de "somente-leitura" é `_is_readonly()` (approved_versions no
+        meta.json, agnóstico de backend). Uma falha aqui (ex.: quirk de checkin
+        do Graph, permissão) não pode travar a transição de status."""
+        try:
+            self._storage.aprovar_versao(path)
+        except Exception as exc:  # noqa: BLE001 — best-effort, ver docstring
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "aprovar_versao (best-effort) falhou para '%s': %s", path, exc
+            )
+
     def _protect_bdi_perfil_versoes(self, version: str) -> None:
         """Protege (aprovar_versao) os snapshots de perfil BDI usados pelas skills desta versão (issue #123).
 
@@ -425,14 +439,14 @@ class StorageProjectHandle:
         for versao in versoes:
             relative = f"bdi/{bdi_perfil_versao_filename(versao)}"
             if self.exists(relative):
-                self._storage.aprovar_versao(self._path(relative))
+                self._aprovar_versao_best_effort(self._path(relative))
 
     def approve(self, version: str) -> None:
-        self._storage.aprovar_versao(self._path(f"{version}/{self._CANONICAL_FILE}"))
+        self._aprovar_versao_best_effort(self._path(f"{version}/{self._CANONICAL_FILE}"))
         for fname in (self._PREMISSAS_EFETIVAS_FILE, self._PREMISSAS_POR_SKILL_FILE):
             relative = f"{version}/{fname}"
             if self.exists(relative):
-                self._storage.aprovar_versao(self._path(relative))
+                self._aprovar_versao_best_effort(self._path(relative))
         self._protect_bdi_perfil_versoes(version)
         self.update_meta(approved_versions=[*(self.meta.get("approved_versions") or []), version])
 

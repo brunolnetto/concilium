@@ -653,6 +653,19 @@ class TestMiscMethods:
         # MemoryBlobStorage records approved paths
         assert f"{project_id}/v1/canonical.json" in storage._approved
 
+    def test_approve_transitions_status_even_when_aprovar_versao_fails(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage
+    ) -> None:
+        """aprovar_versao (chmod 444/checkin SharePoint) é defesa em profundidade —
+        a fonte de verdade de somente-leitura é `approved_versions` no
+        meta.json. Uma falha no checkin (ex.: quirk do Graph) não pode travar
+        approve()."""
+        storage.aprovar_versao = lambda path: (_ for _ in ()).throw(RuntimeError("400 Bad Request: checkin"))
+
+        handle.approve("v1")  # não deve levantar
+
+        assert "v1" in (handle.meta.get("approved_versions") or [])
+
     def test_snapshots_stores_and_dedupes(self, handle: StorageProjectHandle) -> None:
         snaps = handle.snapshots
         h1 = snaps.store("jurisdicao", {"a": 1})

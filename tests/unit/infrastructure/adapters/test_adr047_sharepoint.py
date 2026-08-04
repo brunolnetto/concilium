@@ -295,6 +295,36 @@ class TestSharePointBlobStorage:
             call_args = mock_httpx.post.call_args
             assert "checkin" in str(call_args)
 
+    def test_aprovar_versao_checks_out_before_checkin(self):
+        """Graph exige checkout antes do checkin quando a biblioteca tem
+        'Require Check Out' habilitado — sem isso, checkin sempre 400 (bug
+        real reproduzido em produção: gravar_blob nunca faz checkout)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            mock_httpx = self._mock_httpx(200)
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                storage.aprovar_versao("v1/canonical.json")
+            urls_chamadas = [str(call.args[0]) for call in mock_httpx.post.call_args_list]
+            assert any(u.endswith(":/checkout") for u in urls_chamadas), urls_chamadas
+            assert any(u.endswith(":/checkin") for u in urls_chamadas), urls_chamadas
+            # checkout precisa vir ANTES do checkin
+            idx_checkout = next(i for i, u in enumerate(urls_chamadas) if u.endswith(":/checkout"))
+            idx_checkin = next(i for i, u in enumerate(urls_chamadas) if u.endswith(":/checkin"))
+            assert idx_checkout < idx_checkin
+
+    def test_aprovar_versao_checkout_failure_does_not_block_checkin(self):
+        """Checkout é best-effort: se a biblioteca não exige check-out (ou já está
+        checked out), o checkout pode falhar sem impedir o checkin real."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            checkin_resp = MagicMock(status_code=200)
+            checkin_resp.raise_for_status = MagicMock()
+            mock_httpx = MagicMock()
+            mock_httpx.post.side_effect = [RuntimeError("checkout not supported"), checkin_resp]
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                storage.aprovar_versao("v1/canonical.json")  # não deve levantar
+            assert mock_httpx.post.call_count == 2
+
     def test_health_check_ok(self):
         with tempfile.TemporaryDirectory() as tmp:
             storage = _make_storage(Path(tmp))
@@ -1442,9 +1472,15 @@ def test_sharepoint_success_and_error_branches(tmp_path, monkeypatch):
     with pytest.raises(FileNotFoundError):
         storage.listar_blobs("pref")
 
-    # Success branches: approve, temporary URL, health_check=ok
+    # Success branches: approve (checkout + checkin), temporary URL, health_check=ok
     httpx_ok = SimpleNamespace(
-        post=MagicMock(side_effect=[_Resp(status_code=200), _Resp(status_code=200, data={"link": {"webUrl": "u"}})]),
+        post=MagicMock(
+            side_effect=[
+                _Resp(status_code=200),  # checkout (best-effort)
+                _Resp(status_code=200),  # checkin
+                _Resp(status_code=200, data={"link": {"webUrl": "u"}}),  # createLink
+            ]
+        ),
         get=MagicMock(return_value=_Resp(status_code=200, data={"name": "Drive", "driveType": "documentLibrary"})),
     )
     monkeypatch.setattr(storage, "_client", lambda: httpx_ok)

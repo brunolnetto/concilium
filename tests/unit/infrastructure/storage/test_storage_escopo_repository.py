@@ -302,6 +302,19 @@ class TestStoragePlanoHandleApprove:
         ps.approve()
         assert storage.is_approved(ps._path(ps.CANONICAL_FILE))
 
+    def test_approve_transitions_status_even_when_aprovar_versao_fails(self, storage, project):
+        """aprovar_versao (chmod 444/checkin SharePoint) é defesa em profundidade —
+        a fonte de verdade de somente-leitura é o status no meta.json. Uma
+        falha no checkin (ex.: quirk do Graph) não pode travar approve()."""
+        es = _create_escopo(project)
+        ps = es.create_plan(nome="P")
+        ps.save_canonical(_make_minimal_canonical())
+        storage.aprovar_versao = lambda path: (_ for _ in ()).throw(RuntimeError("400 Bad Request: checkin"))
+
+        ps.approve()  # não deve levantar
+
+        assert ps.status == "APROVADO"
+
     def test_save_canonical_raises_on_approved(self, project):
         es = _create_escopo(project)
         ps = es.create_plan(nome="P")
