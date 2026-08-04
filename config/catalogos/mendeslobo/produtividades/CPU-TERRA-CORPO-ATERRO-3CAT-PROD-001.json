@@ -53,5 +53,25 @@
         "origem_entrada": "bom_convertido"
       }
     ]
+  },
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "AGIS-ROLO-PC-10T",
+        "capacidade_horaria": 107.46,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Herdado do rfi-r02 (CPU-TERRA-CORPO-ATERRO-3CAT, ADR-179 F3/F4 — match cross-catálogo confirmado: mesmo código de CPU, valor_horario idêntico 214,92, mesmo equipamento exato Rolo Pé-de-Carneiro 10T em ambos os catálogos). Rolo pé-de-carneiro é o elemento com menor produção horária, limitando a produtividade da equipe — capacidade_horaria = valor_horario/2 (2 rolos na composição), recalculado a partir do valor_horario real do mendeslobo (idêntico ao rfi-r02, não é número importado sem verificação)."
+      },
+      {
+        "elemento_id": "AGIS-TRAT-EST-40T",
+        "capacidade_horaria": 400.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Adaptado do rfi-r02 (equipamento de categoria equivalente — Trator de Esteiras 30T/440HP no rfi-r02 vs. 40T no mendeslobo, mesma classe/função na composição, tonelagem não idêntica). Valor não-vinculante (o gargalo é o rolo, não este trator) — mantido como referência de folga, mas NÃO confirmado especificamente para o modelo 40T do mendeslobo; revisar se uma pesquisa de especificação de fabricante dedicada ao AGIS-TRAT-EST-40T for feita."
+      }
+    ],
+    "gargalo_declarado": "AGIS-ROLO-PC-10T"
   }
 }

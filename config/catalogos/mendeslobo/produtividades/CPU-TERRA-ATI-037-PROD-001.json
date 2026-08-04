@@ -34,5 +34,39 @@
       }
     ]
   },
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "MO-MONTADOR",
+        "capacidade_horaria": 0.0625,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Herdado do rfi-r02 (CPU-TERRA-ATI-037, que no rfi-r02 compartilha a mesma produção de CPU-TERRA-ATI-036 — mesma dimensão de composição de equipe; ADR-179 F3/F4 — match cross-catálogo confirmado: mesmo código de CPU, valor_horario idêntico 0,25, mesma equipe e equipamento exatos via codigo_planilha EQ-E0027/EQ-E0026/EQ-E0002 ↔ E0027/E0026/E0002). Processo real (DNIT 025/2025-ES) é construção de bueiro celular de concreto armado moldado in loco em sub-etapas em série (armação+forma → concretagem) — armação/forma (mão de obra, não equipamento) é o estágio dominante; pesquisa por taxa de armadura padrão (kg de aço/m³) não achou fonte validada, só analogias fracas — aceito o valor_horario real como capacidade calibrada da equipe de montagem, sem forçar derivação com esse grau de incerteza. capacidade_horaria = valor_horario/4 (4 montadores), recalculado a partir do valor_horario real do mendeslobo (idêntico ao rfi-r02)."
+      },
+      {
+        "elemento_id": "EQ-E0026",
+        "capacidade_horaria": 3.0,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Herdado do rfi-r02 — mesmo equipamento exato (Retroescavadeira 75HP, ligação via codigo_planilha). Estimativa aproximada — escavação/posicionamento tem folga confirmada pela pesquisa de processo (armação/forma domina). Valor não-vinculante."
+      },
+      {
+        "elemento_id": "EQ-E0027",
+        "capacidade_horaria": 3.0,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Herdado do rfi-r02 — mesmo equipamento exato (Mini Escavadeira 2t, ligação via codigo_planilha). Estimativa aproximada — escavação/posicionamento tem folga confirmada pela pesquisa de processo (armação/forma domina). Valor não-vinculante."
+      },
+      {
+        "elemento_id": "EQ-E0002",
+        "capacidade_horaria": 1.5,
+        "unidade": "m",
+        "fonte": "fabricante",
+        "justificativa": "Herdado do rfi-r02 — mesmo equipamento exato (Betoneira 400L, ligação via codigo_planilha). Estimativa aproximada (rendimento efetivo ~1,5-2 m³/h por lote) — concretagem tem folga confirmada pela pesquisa de processo. Valor não-vinculante."
+      }
+    ],
+    "gargalo_declarado": "MO-MONTADOR"
+  },
   "historico_observacoes": []
 }

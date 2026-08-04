@@ -59,5 +59,39 @@
         "origem_entrada": "bom_convertido"
       }
     ]
+  },
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "AGIS-ROLO-LISO",
+        "capacidade_horaria": 50.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Herdado do rfi-r02 (CPU-TERRA-COMPAC-FINAL-ROCHA, ADR-179 F3/F4 — match cross-catálogo confirmado: mesmo código de CPU, valor_horario idêntico 100,0, mesmo papel de equipamento — Rolo Liso — na mesma quantidade). Camada final de aterro de rocha é compactada por rolo liso vibratório (material granular grosso não responde ao pé-de-carneiro) — elemento limitante. capacidade_horaria = valor_horario/2 (2 rolos na composição), recalculado a partir do valor_horario real do mendeslobo (idêntico ao rfi-r02)."
+      },
+      {
+        "elemento_id": "AGIS-ROLO-PC-10T",
+        "capacidade_horaria": 300.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Adaptado do rfi-r02 — mesmo equipamento exato (Rolo Pé-de-Carneiro 10T em ambos os catálogos). Provavelmente presente por arraste de composição-padrão de aterro (solo coesivo), redundante/apoio nesta etapa em material rochoso — não o elemento crítico. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "AGIS-TRAT-EST-20T",
+        "capacidade_horaria": 400.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Adaptado do rfi-r02 — mesmo equipamento exato (Trator de Esteiras 20T em ambos os catálogos). Espalhamento prévio, tem folga frente à compactação. Valor não-vinculante."
+      },
+      {
+        "elemento_id": "AGIS-CAM-PIPA-18K",
+        "capacidade_horaria": 400.0,
+        "unidade": "m3",
+        "fonte": "fabricante",
+        "justificativa": "Adaptado do rfi-r02 (equipamento de categoria equivalente — Caminhão Pipa 10.000L no rfi-r02 vs. 18.000L no mendeslobo, mesma função de umedecimento, capacidade de tanque não idêntica). Valor não-vinculante (folga frente à compactação) — mantido como referência, mas NÃO confirmado especificamente para o modelo 18k do mendeslobo."
+      }
+    ],
+    "gargalo_declarado": "AGIS-ROLO-LISO"
   }
 }
