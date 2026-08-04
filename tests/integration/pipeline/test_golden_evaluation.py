@@ -112,13 +112,13 @@ def golden_benchmark(config_root):
     facade = BenchmarkFacade.from_root(root)
     facade.run_single("GOLDEN", reset=True, mode=PipelineMode.OLTP)
 
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.infrastructure.storage.store_factory import build_local_project_repository
 
-    agis_store_root = facade.projects_root / "GOLDEN"
-    if not agis_store_root.exists():
+    try:
+        store = build_local_project_repository(facade.projects_root).get_project("GOLDEN")
+    except FileNotFoundError:
         pytest.skip("GOLDEN benchmark não foi executado — rodar manualmente com --run-golden")
 
-    store = ProjectStore(root=agis_store_root)
     canonical = store.load_canonical()
     return canonical
 

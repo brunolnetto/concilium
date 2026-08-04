@@ -25,7 +25,7 @@ from concilium.application.services.project._ownership_helpers import (
     transfer_ownership_forced,
 )
 from concilium.application.services.project.audit_service import AuditService
-from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 PATCH_AUTH_STORE = "concilium.infrastructure.auth.auth_store.get_auth_store"
 
@@ -48,7 +48,7 @@ def _store_with(*clients):
 
 @pytest.fixture
 def repo(tmp_path):
-    return FileProjectRepository(tmp_path)
+    return build_project_repository(tmp_path)
 
 
 @pytest.fixture
@@ -238,7 +238,7 @@ class TestRemoveUserReassignToRegressionNotification:
         store.add_client("joao.silva", "secret123", ["engineer"])
         store.add_client("maria.santos", "secret456", ["engineer"], email="maria.santos@x.com")
 
-        repo = FileProjectRepository(tmp_path / "projetos")
+        repo = build_project_repository(tmp_path / "projetos")
         project = _make_project(repo, owner_id="joao.silva")
 
         runner = CliRunner()

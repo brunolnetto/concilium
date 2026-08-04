@@ -5,7 +5,7 @@ Covers:
 - AlgorithmComparisonReport.best_by_quality / best_by_makespan selection
 - AlgorithmComparisonReport.summary_table formatting
 - AlgorithmComparisonReport.to_dict serialisation
-- AlgorithmComparisonRunner.compare() with mocked Runtime / ProjectStore /
+- AlgorithmComparisonRunner.compare() with mocked Runtime / _find_or_create /
   BenchmarkInferenceService
 - AlgorithmComparisonRunner._extract_entry() in isolation
 - DEFAULT_COMPARISON_ALGORITHMS value
@@ -546,7 +546,7 @@ class TestAlgorithmComparisonRunnerInit:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AlgorithmComparisonRunner.compare() — with mocked Runtime/ProjectStore/Service
+# AlgorithmComparisonRunner.compare() — with mocked Runtime/_find_or_create/Service
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -579,27 +579,6 @@ class TestRunnerCompare:
             config_root=Path("/tmp/cfg"),
             projects_root=Path("/tmp/projects"),
         )
-
-    def _patch_all(self):
-        """Return a context-manager dict that patches Runtime, ProjectStore, and inference."""
-        patches = {}
-
-        # Mock Runtime
-        mock_runtime_cls = MagicMock()
-        mock_runtime = MagicMock()
-        mock_runtime_cls.return_value = mock_runtime
-        patches["runtime_cls"] = patch("concilium.application.runtime.Runtime", mock_runtime_cls)
-
-        # Mock ProjectStore
-        mock_store_cls = MagicMock()
-        mock_store = MagicMock()
-        mock_store_cls.return_value = mock_store
-        mock_store_cls.init.return_value = mock_store
-        mock_store.new_version.return_value = "v1"
-        mock_store.load_canonical.return_value = _make_canonical()
-        patches["store_cls"] = patch("concilium.infrastructure.storage.project.ProjectStore", mock_store_cls)
-
-        return patches, mock_runtime, mock_store, mock_runtime_cls, mock_store_cls
 
     def test_compare_returns_report_with_entries(self):
         runner = self._build_runner()
@@ -1116,86 +1095,62 @@ class TestFindOrCreate:
             runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), non_existent)
             spec = SimpleNamespace(nome="MyProject", contexto_id="CTX-1")
 
-            mock_store = MagicMock()
-            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
-                MockStore.init.return_value = mock_store
-                runner._find_or_create(spec, reset=False)
+            result = runner._find_or_create(spec, reset=False)
 
-            MockStore.init.assert_called_once_with(non_existent, "MyProject", "CTX-1")
+            assert result.meta["nome"] == "MyProject"
+            assert result.meta["contexto_id"] == "CTX-1"
 
     def test_returns_existing_store_when_found(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             projects_root = Path(tmpdir)
-            # Create a fake project directory with meta.json
-            proj_dir = projects_root / "abc123"
-            proj_dir.mkdir()
-            (proj_dir / "meta.json").write_text(json.dumps({"nome": "ExistingProject"}), encoding="utf-8")
-
             runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), projects_root)
             spec = SimpleNamespace(nome="ExistingProject", contexto_id="CTX-1")
 
-            mock_store = MagicMock()
-            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
-                MockStore.return_value = mock_store
-                result = runner._find_or_create(spec, reset=False)
+            from concilium.infrastructure.storage.store_factory import build_local_project_repository
 
-            MockStore.assert_called_once_with(proj_dir)
-            assert result is mock_store
+            repo = build_local_project_repository(projects_root)
+            created = repo.create_project("ExistingProject", "CTX-1")
+
+            result = runner._find_or_create(spec, reset=False)
+
+            assert result.root.name == created.root.name
 
     def test_reset_deletes_and_falls_through_to_create(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             projects_root = Path(tmpdir)
-            proj_dir = projects_root / "abc123"
-            proj_dir.mkdir()
-            (proj_dir / "meta.json").write_text(json.dumps({"nome": "ExistingProject"}), encoding="utf-8")
-
             runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), projects_root)
             spec = SimpleNamespace(nome="ExistingProject", contexto_id="CTX-1")
 
-            mock_store = MagicMock()
-            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
-                MockStore.init.return_value = mock_store
-                runner._find_or_create(spec, reset=True)
+            from concilium.infrastructure.storage.store_factory import build_local_project_repository
 
-            # After reset, we call ProjectStore.init (not ProjectStore())
-            MockStore.init.assert_called_once()
+            repo = build_local_project_repository(projects_root)
+            existing = repo.create_project("ExistingProject", "CTX-1")
+            existing_id = existing.root.name
 
-    def test_skips_non_directory_entries(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            projects_root = Path(tmpdir)
-            # Create a file (not a directory) in projects_root
-            (projects_root / "not_a_dir.txt").write_text("hello", encoding="utf-8")
+            result = runner._find_or_create(spec, reset=True)
 
-            runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), projects_root)
-            spec = SimpleNamespace(nome="SomeProject", contexto_id="CTX-1")
-
-            mock_store = MagicMock()
-            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
-                MockStore.init.return_value = mock_store
-                runner._find_or_create(spec, reset=False)
-
-            MockStore.init.assert_called_once()
+            # Reset apaga o projeto anterior e cria um novo (project_id diferente,
+            # ao contrário de runner.py::BenchmarkRunner que usa id determinístico).
+            assert result.root.name != existing_id
+            assert result.meta["nome"] == "ExistingProject"
 
     def test_continues_loop_past_non_matching_name(self):
-        """A project dir whose meta.json 'nome' doesn't match spec.nome must
-        not short-circuit the search — the loop keeps going to the next dir
-        (covers the false branch of the name-match check)."""
+        """Um projeto cujo meta 'nome' não bate com spec.nome não deve
+        interromper a busca — o loop continua para o próximo (cobre o branch
+        falso da checagem de nome)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             projects_root = Path(tmpdir)
-            other_dir = projects_root / "other"
-            other_dir.mkdir()
-            (other_dir / "meta.json").write_text(json.dumps({"nome": "OtherProject"}), encoding="utf-8")
-
             runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), projects_root)
             spec = SimpleNamespace(nome="NewProject", contexto_id="CTX-1")
 
-            mock_store = MagicMock()
-            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
-                MockStore.init.return_value = mock_store
-                result = runner._find_or_create(spec, reset=False)
+            from concilium.infrastructure.storage.store_factory import build_local_project_repository
 
-            MockStore.init.assert_called_once()
-            assert result is mock_store
+            repo = build_local_project_repository(projects_root)
+            repo.create_project("OtherProject", "CTX-1")
+
+            result = runner._find_or_create(spec, reset=False)
+
+            assert result.meta["nome"] == "NewProject"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

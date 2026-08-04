@@ -9,32 +9,24 @@ import pytest
 from concilium.application.services.artifact import artifact_bundle as ab
 
 
-class _StoreStub:
-    """Stub mínimo de ProjectStore: expõe root, meta e current_version()."""
-
-    def __init__(self, root, nome="Obra Teste", version="v1"):
-        self.root = root
-        self.meta = {"nome": nome}
-        self._version = version
-
-    def current_version(self):
-        return self._version
-
-
 @pytest.fixture
 def store(tmp_path):
-    v = tmp_path / "v1"
-    (v / "outputs").mkdir(parents=True)
-    (v / "intermediate").mkdir(parents=True)
-    (v / "artifacts").mkdir(parents=True)
-    (v / "outputs" / "relatorio.md").write_text("# Relatório\nconteúdo", encoding="utf-8")
-    (v / "outputs" / "memorial_bdi.md").write_text("# Memorial BDI", encoding="utf-8")
-    (v / "outputs" / "resultado_planejamento.xlsx").write_bytes(b"PK\x03\x04fake-xlsx")
-    (v / "outputs" / "gantt_cronograma.png").write_bytes(b"\x89PNG\r\n\x1a\nfakepng")
-    (v / "intermediate" / "relatorio.json").write_text('{"a": 1}', encoding="utf-8")
-    (v / "artifacts" / "abc123.json").write_text('{"kind": "x"}', encoding="utf-8")
-    (v / "artifacts" / "abc123.meta.json").write_text('{"meta": 1}', encoding="utf-8")
-    return _StoreStub(tmp_path)
+    """ProjectHandle real via BlobStoragePort (ADR-047) — artifact_bundle.py não
+    depende de filesystem local, então o teste tem que exercitar a abstração
+    de verdade (list_file_names/read_bytes/exists), não um stub com `.root`
+    tratado como Path real."""
+    from concilium.infrastructure.storage.store_factory import build_project_repository
+
+    project = build_project_repository(tmp_path).create_project("Obra Teste", "ctx-test")
+    v = project.new_version()
+    project.write_bytes(f"{v}/outputs/relatorio.md", "# Relatório\nconteúdo".encode())
+    project.write_bytes(f"{v}/outputs/memorial_bdi.md", b"# Memorial BDI")
+    project.write_bytes(f"{v}/outputs/resultado_planejamento.xlsx", b"PK\x03\x04fake-xlsx")
+    project.write_bytes(f"{v}/outputs/gantt_cronograma.png", b"\x89PNG\r\n\x1a\nfakepng")
+    project.write_bytes(f"{v}/intermediate/relatorio.json", b'{"a": 1}')
+    project.write_bytes(f"{v}/artifacts/abc123.json", b'{"kind": "x"}')
+    project.write_bytes(f"{v}/artifacts/abc123.meta.json", b'{"meta": 1}')
+    return project
 
 
 class TestClassificacao:
@@ -360,29 +352,15 @@ class TestMissingLineCoverage:
             ab.build_bundle(_NoVersionStore(), None)
 
     # -- build_bundle skips missing src file ---------------------------------
-    def test_build_bundle_skips_file_if_missing_during_zip(self, tmp_path):
-        # Line 305: src.exists() → False during zip iteration
-        # Inject a fake artifact entry that points to a non-existent file.
+    def test_build_bundle_skips_file_if_missing_during_zip(self, store):
+        # Linha `if data is None: continue` — entrada injetada aponta para um
+        # blob que nunca foi gravado (ghost).
         import base64
         import io
         import zipfile
         from unittest.mock import patch
 
-        v = tmp_path / "v1"
-        (v / "outputs").mkdir(parents=True)
-        real_file = v / "outputs" / "real.md"
-        real_file.write_text("real content")
-
-        class _Store:
-            root = tmp_path
-            meta = {"nome": "Test"}
-
-            def current_version(self):
-                return "v1"
-
-        store = _Store()
-
-        # Patch list_artifacts to inject a ghost entry (file that doesn't exist on disk)
+        # Patch list_artifacts to inject a ghost entry (blob que nunca foi gravado)
         original_list = ab.list_artifacts
 
         def _patched_list(s, ver):
@@ -408,24 +386,21 @@ class TestMissingLineCoverage:
         assert any("MANIFESTO.md" in n for n in names)
         assert not any("ghost.md" in n for n in names)
 
-    # -- _iter_artifact_files skips non-file entries -------------------------
-    def test_iter_artifact_files_skips_subdirs(self, tmp_path):
-        # Line 128: f.is_file() guard
+    # -- _iter_artifact_files só lista filhos diretos -------------------------
+    def test_iter_artifact_files_ignores_nested_files(self, store):
+        # list_file_names só retorna filhos diretos — um arquivo dentro de um
+        # subdiretório de outputs/ não deve aparecer (equivalente ao antigo
+        # guard f.is_file() do filesystem cru).
         from concilium.application.services.artifact.artifact_bundle import _iter_artifact_files
 
-        class _S:
-            root = tmp_path
+        v = store.current_version()
+        store.write_bytes(f"{v}/outputs/subdir/nested.md", b"data")
 
-        v = tmp_path / "v1"
-        outputs = v / "outputs"
-        outputs.mkdir(parents=True)
-        (outputs / "file.md").write_text("data")
-        (outputs / "subdir").mkdir()  # directory, not file
-
-        items = _iter_artifact_files(_S(), "v1")
-        names = [p.name for _, p in items]
-        assert "file.md" in names
-        assert "subdir" not in names
+        items = _iter_artifact_files(store, v)
+        names = [name for _, name in items]
+        assert "relatorio.md" in names
+        assert "nested.md" not in names
+        assert not any("subdir" in n for n in names)
 
 
 class TestResumoExecutivo:

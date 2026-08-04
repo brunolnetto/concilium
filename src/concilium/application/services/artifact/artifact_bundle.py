@@ -1,8 +1,10 @@
 """ADR-093: Serviço de artefatos — classificação por audiência, leitura e bundle zip.
 
-Opera diretamente sobre o layout em disco de um ``ProjectStore``:
+Opera sobre o layout de um ``ProjectHandle`` (ADR-047, via BlobStoragePort —
+não depende de filesystem local: `list_file_names`/`read_bytes`/`exists`
+funcionam igual para SharePoint/S3/Azure/local):
 
-    projetos/{id}/{versao}/
+    {versao}/
         outputs/        relatorio.md, memorial_bdi.{md,pdf}, *.xlsx, *.png, ...
         intermediate/   relatorio.json, schedules_weekly.json, ...
         artifacts/      {artifact_id}.json (+ .meta.json)   — ADR-018
@@ -100,13 +102,9 @@ def is_text_artifact(filename: str) -> bool:
     return Path(filename).suffix.lower() in _TEXT_EXTS
 
 
-# ── Acesso ao layout do ProjectStore ───────────────────────────────────────
+# ── Acesso ao layout do ProjectHandle ───────────────────────────────────────
 
 _KIND_DIRS = ("outputs", "intermediate", "artifacts")
-
-
-def _version_dir(store: Any, version: str) -> Path:
-    return Path(store.root) / version
 
 
 def _resolve_version(store: Any, version: str | None) -> str | None:
@@ -118,17 +116,12 @@ def _resolve_version(store: Any, version: str | None) -> str | None:
         return None
 
 
-def _iter_artifact_files(store: Any, version: str) -> list[tuple[str, Path]]:
-    """Retorna [(kind, path)] de todos os arquivos das três pastas de artefatos."""
-    base = _version_dir(store, version)
-    found: list[tuple[str, Path]] = []
+def _iter_artifact_files(store: Any, version: str) -> list[tuple[str, str]]:
+    """Retorna [(kind, filename)] de todos os arquivos das três pastas de artefatos."""
+    found: list[tuple[str, str]] = []
     for kind in _KIND_DIRS:
-        d = base / kind
-        if not d.exists():
-            continue
-        for f in sorted(d.iterdir()):
-            if f.is_file():
-                found.append((kind, f))
+        for name in store.list_file_names(f"{version}/{kind}"):
+            found.append((kind, name))
     return found
 
 
@@ -140,14 +133,12 @@ def _safe_name(filename: str) -> str:
     return name
 
 
-def _find_file(store: Any, version: str, filename: str) -> tuple[str, Path] | None:
+def _find_file(store: Any, version: str, filename: str) -> tuple[str, str] | None:
     """Localiza um artefato por nome nas três pastas (outputs → intermediate → artifacts)."""
     name = _safe_name(filename)
-    base = _version_dir(store, version)
     for kind in _KIND_DIRS:
-        candidate = base / kind / name
-        if candidate.exists() and candidate.is_file():
-            return kind, candidate
+        if store.exists(f"{version}/{kind}/{name}"):
+            return kind, name
     return None
 
 
@@ -161,17 +152,20 @@ def list_artifacts(store: Any, version: str | None) -> dict[str, Any]:
         return {"version": None, "artefatos": [], "total": 0}
 
     artefatos: list[dict[str, Any]] = []
-    for kind, path in _iter_artifact_files(store, resolved):
+    for kind, name in _iter_artifact_files(store, resolved):
         # Sidecars .meta.json de artefatos tipados não são entregáveis primários.
-        if kind == "artifacts" and path.name.endswith(".meta.json"):
+        if kind == "artifacts" and name.endswith(".meta.json"):
+            continue
+        data = store.read_bytes(f"{resolved}/{kind}/{name}")
+        if data is None:
             continue
         artefatos.append(
             {
-                "nome": path.name,
+                "nome": name,
                 "kind": kind,
-                "audiencia": classify_audience(path.name),
-                "tamanho_bytes": path.stat().st_size,
-                "descricao": describe_artifact(path.name),
+                "audiencia": classify_audience(name),
+                "tamanho_bytes": len(data),
+                "descricao": describe_artifact(name),
             }
         )
     return {"version": resolved, "artefatos": artefatos, "total": len(artefatos)}
@@ -187,13 +181,16 @@ def read_text(store: Any, version: str | None, filename: str) -> dict[str, Any]:
     hit = _find_file(store, resolved, filename)
     if hit is None:
         raise FileNotFoundError(f"Artefato '{filename}' não encontrado na versão '{resolved}'.")
-    kind, path = hit
+    kind, name = hit
+    data = store.read_bytes(f"{resolved}/{kind}/{name}")
+    if data is None:
+        raise FileNotFoundError(f"Artefato '{filename}' não encontrado na versão '{resolved}'.")
     return {
-        "nome": path.name,
+        "nome": name,
         "kind": kind,
         "versao": resolved,
-        "audiencia": classify_audience(path.name),
-        "conteudo": path.read_text(encoding="utf-8"),
+        "audiencia": classify_audience(name),
+        "conteudo": data.decode("utf-8"),
     }
 
 
@@ -216,7 +213,10 @@ def read_binary_b64(
     hit = _find_file(store, resolved, filename)
     if hit is None:
         raise FileNotFoundError(f"Artefato '{filename}' não encontrado na versão '{resolved}'.")
-    kind, path = hit
+    kind, name = hit
+    data = store.read_bytes(f"{resolved}/{kind}/{name}")
+    if data is None:
+        raise FileNotFoundError(f"Artefato '{filename}' não encontrado na versão '{resolved}'.")
 
     if transport is None:
         from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
@@ -225,13 +225,18 @@ def read_binary_b64(
 
     import mimetypes
 
-    mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    entrega = transport.deliver(nome=path.name, data=path.read_bytes(), mime=mime, source_path=path)
+    mime = mimetypes.guess_type(name)[0] or "application/octet-stream"
+    # source_path aqui é só um rótulo informativo (ADR-047: sem Path real
+    # backed em todo backend) — usado pelo transporte local só para exibir
+    # "caminho" quando o conteúdo excede max_mb, nunca para I/O real.
+    entrega = transport.deliver(
+        nome=name, data=data, mime=mime, source_path=Path(f"{resolved}/{kind}/{name}")
+    )
     base: dict[str, Any] = {
-        "nome": path.name,
+        "nome": name,
         "kind": kind,
         "versao": resolved,
-        "audiencia": classify_audience(path.name),
+        "audiencia": classify_audience(name),
     }
     base.update(entrega)
     return base
@@ -281,7 +286,8 @@ def _safe_root_folder(projeto_nome: str, resolved: str) -> str:
 
 
 def _write_bundle_zip(
-    base_dir: Path,
+    store: Any,
+    version: str,
     incluidos: list[dict[str, Any]],
     root_folder: str,
     manifesto: str,
@@ -293,11 +299,11 @@ def _write_bundle_zip(
         zf.writestr(f"{root_folder}/MANIFESTO.md", manifesto)
         nomes_no_zip.append("MANIFESTO.md")
         for it in incluidos:
-            src = base_dir / it["kind"] / it["nome"]
-            if not src.exists():
+            data = store.read_bytes(f"{version}/{it['kind']}/{it['nome']}")
+            if data is None:
                 continue
             subpath = f"graficos/{it['nome']}" if it["nome"].lower().endswith(".png") else it["nome"]
-            zf.write(src, f"{root_folder}/{subpath}")
+            zf.writestr(f"{root_folder}/{subpath}", data)
             nomes_no_zip.append(subpath)
     return buffer.getvalue(), nomes_no_zip
 
@@ -333,9 +339,8 @@ def build_bundle(
 
     root_folder = _safe_root_folder(projeto_nome, resolved)
 
-    base_dir = _version_dir(store, resolved)
     manifesto = _build_manifesto(projeto_nome, resolved, incluidos)
-    data, nomes_no_zip = _write_bundle_zip(base_dir, incluidos, root_folder, manifesto)
+    data, nomes_no_zip = _write_bundle_zip(store, resolved, incluidos, root_folder, manifesto)
 
     nome_zip = f"{root_folder}.zip"
 

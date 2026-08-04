@@ -11,9 +11,8 @@ from rich import print as rprint
 from concilium.presentation.cli.shared import config_root, parse_project_version, resolve_project
 
 if TYPE_CHECKING:
-    from concilium.application.services.project.project_repository import ProjectHandle
+    from concilium.application.services.project.project_repository import EscopoHandle, ProjectHandle
     from concilium.application.skills.base import SkillResult
-    from concilium.infrastructure.storage.escopo_store import EscopoStore
 
 # Runtime Ã© importado dentro de cada funÃ§Ã£o para evitar cascade Pydantic no startup.
 
@@ -47,7 +46,7 @@ def _run_resolve_escopo(project: "ProjectHandle", escopo_id: str | None) -> str:
     raise typer.Exit(1)
 
 
-def _run_resolve_plano(es: "EscopoStore", plano_id: str | None, resolved_escopo: str) -> str:
+def _run_resolve_plano(es: "EscopoHandle", plano_id: str | None, resolved_escopo: str) -> str:
     if plano_id is not None:
         return plano_id
     active = es.active_plan()
@@ -69,15 +68,11 @@ def _run_report_result(result: "SkillResult", skill: str) -> None:
 
 
 def _approve_load_pending_overrides(project: "ProjectHandle") -> list[str]:
-    overrides_path = project.root / "overrides" / "insumos_override.json"
-    if not overrides_path.exists():
-        return []
-    try:
-        loaded = json.loads(overrides_path.read_text(encoding="utf-8"))
-        if isinstance(loaded, dict):
-            return [k for k in loaded.keys() if isinstance(k, str)]
-    except Exception:
-        pass
+    # project.root é lógico (não-backed) em backends não-filesystem
+    # (StorageProjectHandle) — sempre ler via read_json(), nunca um Path cru.
+    loaded = project.read_json("overrides/insumos_override.json", {})
+    if isinstance(loaded, dict):
+        return [k for k in loaded.keys() if isinstance(k, str)]
     return []
 
 

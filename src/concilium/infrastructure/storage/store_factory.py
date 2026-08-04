@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING
 from concilium.application.services.project.project_repository import ProjectRepository
 from concilium.infrastructure.settings import get_storage
 
-from .file_project_repository import FileProjectRepository
-
 if TYPE_CHECKING:
     from concilium.domain.repositories.blob_storage_port import BlobStoragePort
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
@@ -204,7 +202,15 @@ def build_project_repository(projects_root: Path) -> ProjectRepository:
     """
     backend = resolve_store_backend()
     if backend == "filesystem":
-        return FileProjectRepository(projects_root)
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+        from .storage_project_repository import StorageProjectRepository
+
+        # projects_prefix="" — projects_root já É o diretório de projetos (diferente
+        # do SharePoint, onde o Drive é compartilhado com outros dados e precisa do
+        # prefixo "projetos"). Mesma implementação de sharepoint/s3/azure/gdrive,
+        # só o BlobStoragePort concreto muda (ADR-047 completa).
+        return StorageProjectRepository(storage=LocalBlobStorage(root_dir=projects_root), projects_prefix="")
     if backend == "sharepoint":
         return _build_sharepoint_repository()
     if backend == "s3":
@@ -218,3 +224,18 @@ def build_project_repository(projects_root: Path) -> ProjectRepository:
         "Unsupported CONCILIUM__STORE_BACKEND='"
         f"{backend}'. Supported backends: local_json, filesystem, sharepoint, s3, azure, gdrive."
     )
+
+
+def build_local_project_repository(root: Path) -> ProjectRepository:
+    """ProjectRepository sempre em filesystem local, ignorando CONCILIUM__STORE_BACKEND.
+
+    Uso: benchmarks (algorithm_comparison.py, execution/runner.py) — escrevem
+    artefatos/relatórios locais incondicionalmente, então a persistência do
+    projeto de benchmark também fica sempre local. Evita que uma máquina de
+    dev com backend sharepoint/s3 configurado (para testar comportamento de
+    produção) mande ruído de benchmark para esse backend por engano."""
+    from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+    from .storage_project_repository import StorageProjectRepository
+
+    return StorageProjectRepository(storage=LocalBlobStorage(root_dir=root), projects_prefix="")

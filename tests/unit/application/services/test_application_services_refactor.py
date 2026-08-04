@@ -9,7 +9,7 @@ from concilium.application.services.pipeline_service import PipelineService
 from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.project.project_service import ProjectService
 from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent
-from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+from concilium.infrastructure.storage.store_factory import build_project_repository
 from concilium.presentation.api.app import create_app
 
 pytestmark = [pytest.mark.slow]
@@ -41,7 +41,7 @@ class RuntimeSpy:
 def repository(tmp_path):
     root = tmp_path / "projects"
     root.mkdir()
-    return FileProjectRepository(root)
+    return build_project_repository(root)
 
 
 @pytest.fixture

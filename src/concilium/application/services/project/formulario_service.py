@@ -245,11 +245,10 @@ def _create_project_store_and_plan(
     horas_dia: int,
     horas_improdutivas_dia: float = 0.5,
 ) -> tuple[Any, str, Any]:
-    """Inicializa o ProjectStore e cria escopo+plano principal (ADR-031)."""
-    from concilium.infrastructure.storage.project import ProjectStore
+    """Inicializa o projeto (via backend configurado) e cria escopo+plano principal (ADR-031)."""
+    from concilium.infrastructure.storage.store_factory import build_project_repository
 
-    projetos_root.mkdir(parents=True, exist_ok=True)
-    store = ProjectStore.init(projetos_root, nome, contexto_id=contexto_id)
+    store = build_project_repository(projetos_root).create_project(nome, contexto_id)
 
     escopo_id = "esc-principal"
     es = store.create_escopo(
@@ -275,10 +274,9 @@ def _run_escopo_skill(
     """Executa a skill 01-escopo-e-eap. Retorna (resultado, None) ou (None, resposta_de_erro)."""
     try:
         from concilium.application.orchestrators.lifecycle_coordinator import LifecycleCoordinator
-        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
 
         coord = LifecycleCoordinator(rt)
-        r = coord.avancar_plano("01-escopo-e-eap", FileProjectHandle(store), ps, inputs=inputs_escopo)
+        r = coord.avancar_plano("01-escopo-e-eap", store, ps, inputs=inputs_escopo)
     except Exception as exc:
         return None, {"status": "erro", "project_id": store.root.name, "escopo_id": escopo_id, "erro": str(exc)}
 

@@ -278,45 +278,31 @@ class TestFindOrCreate:
             report_builder=MagicMock(),
             report_printer=MagicMock(),
         )
-        store_mock = MagicMock()
-        with patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=store_mock,
-        ):
-            result = runner._find_or_create("Test", "bench-slug", "ctx", reset=False)
-        assert result is store_mock
+        result = runner._find_or_create("Test", "bench-slug", "ctx", reset=False)
+        assert result.meta["nome"] == "Test"
+        assert result.meta["id"] == "bench-slug"
 
     def test_finds_existing_project(self, tmp_path):
         runner = _make_runner(tmp_path)
-        projects_root = runner.projects_root
-        proj_dir = projects_root / "proj-abc"
-        proj_dir.mkdir(parents=True)
-        (proj_dir / "meta.json").write_text('{"nome": "Bench Test"}', encoding="utf-8")
+        # Cria via a mesma abstração que _find_or_create usa (project_id determinístico
+        # = benchmark_id), depois chama de novo e espera reuso, não recriação.
+        repo = runner._benchmark_repository()
+        repo.create_project("Bench Test", "ctx", project_id="bench-test")
 
-        with patch(
-            "concilium.infrastructure.storage.project.ProjectStore",
-        ) as MockPS:
-            MockPS.return_value = MagicMock()
-            result = runner._find_or_create("Bench Test", "bench-test", "ctx", reset=False)
-        assert result is not None
+        result = runner._find_or_create("Bench Test", "bench-test", "ctx", reset=False)
+        assert result.meta["nome"] == "Bench Test"
+        assert result.meta["id"] == "bench-test"
 
     def test_reset_removes_and_recreates(self, tmp_path):
         runner = _make_runner(tmp_path)
-        projects_root = runner.projects_root
-        proj_dir = projects_root / "proj-del"
-        proj_dir.mkdir(parents=True)
-        (proj_dir / "meta.json").write_text('{"nome": "Bench Test"}', encoding="utf-8")
-        overrides_dir = proj_dir / "overrides"
-        overrides_dir.mkdir()
-        (overrides_dir / "cpus_overlay.json").write_bytes(b"{}")
+        repo = runner._benchmark_repository()
+        handle = repo.create_project("Bench Test", "ctx", project_id="bench-test")
+        handle.write_bytes("overrides/cpus_overlay.json", b"{}")
 
-        store_mock = MagicMock()
-        with patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=store_mock,
-        ):
-            result = runner._find_or_create("Bench Test", "bench-test", "ctx", reset=True)
-        assert result is store_mock
+        result = runner._find_or_create("Bench Test", "bench-test", "ctx", reset=True)
+        assert result.meta["nome"] == "Bench Test"
+        # overrides preservados através do reset
+        assert result.read_bytes("overrides/cpus_overlay.json") == b"{}"
 
 
 from pathlib import Path  # noqa: E402
@@ -832,37 +818,6 @@ class TestRunOltpProfilePermissionError:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# _find_or_create: reset quando rmtree não remove completamente (linha 322)
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-class TestFindOrCreateResetWarning:
-    def test_warning_printed_when_dir_still_exists_after_rmtree(self, tmp_path, capsys):
-        runner = _make_runner(tmp_path)
-        projects_root = runner.projects_root
-        projects_root.mkdir(parents=True, exist_ok=True)
-
-        proj_dir = projects_root / "proj-stubborn"
-        proj_dir.mkdir()
-        (proj_dir / "meta.json").write_text('{"nome": "Stubborn"}', encoding="utf-8")
-
-        store_mock = MagicMock()
-
-        # rmtree é chamado mas o dir ainda existe (simula falha parcial)
-        def _fake_rmtree(path, ignore_errors=False):
-            pass  # não remove nada
-
-        with (
-            patch("shutil.rmtree", side_effect=_fake_rmtree),
-            patch("concilium.infrastructure.storage.project.ProjectStore.init", return_value=store_mock),
-        ):
-            runner._find_or_create("Stubborn", "stubborn-slug", "ctx", reset=True)
-
-        captured = capsys.readouterr()
-        assert "[AVISO]" in captured.out or "AVISO" in captured.out
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # _prepare_inputs: planejamento_ref injetado (linha 379)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -981,22 +936,15 @@ class TestEmitBusinessTelemetry:
 class TestFindOrCreateNoMatchCreatesNew:
     def test_creates_new_when_existing_projects_dont_match_nome(self, tmp_path, capsys):
         runner = _make_runner(tmp_path)
-        projects_root = runner.projects_root
-        projects_root.mkdir(parents=True, exist_ok=True)
+        # Projeto existente sob um benchmark_id DIFERENTE — get_project("novo-slug")
+        # não o encontra (project_id é determinístico = benchmark_id).
+        repo = runner._benchmark_repository()
+        repo.create_project("Outro Projeto", "ctx", project_id="outro-projeto")
 
-        other_dir = projects_root / "outro-projeto"
-        other_dir.mkdir()
-        (other_dir / "meta.json").write_text('{"nome": "Outro Projeto"}', encoding="utf-8")
+        result = runner._find_or_create("Projeto Novo", "novo-slug", "ctx", reset=False)
 
-        store_mock = MagicMock()
-        with patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=store_mock,
-        ) as mock_init:
-            result = runner._find_or_create("Projeto Novo", "novo-slug", "ctx", reset=False)
-
-        mock_init.assert_called_once()
-        assert result is store_mock
+        assert result.meta["nome"] == "Projeto Novo"
+        assert result.meta["id"] == "novo-slug"
         captured = capsys.readouterr()
         assert "[NEW]" in captured.out
 

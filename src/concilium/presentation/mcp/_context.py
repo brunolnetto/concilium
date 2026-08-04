@@ -9,9 +9,9 @@ from typing import Any
 
 from concilium.application.runtime import _GATE_SKILLS, Runtime  # noqa: F401 (re-exportado)
 from concilium.application.runtime import RuntimeError as ConciliumRuntimeError  # noqa: F401 (re-exportado)
+from concilium.application.services.project.project_repository import ProjectHandle
 from concilium.application.skills.registry import SkillRegistry
 from concilium.infrastructure.settings import StorageSettings
-from concilium.infrastructure.storage.project import ProjectStore
 
 
 def _resolve_env_path(primary: str, default: str) -> Path:
@@ -56,11 +56,22 @@ def _lifecycle_coordinator() -> Any:
     return LifecycleCoordinator(_runtime())
 
 
-def _project(project_id: str) -> ProjectStore:
-    proj_root = _projetos_root() / project_id
-    if not proj_root.exists():
-        raise ValueError(f"Projeto '{project_id}' não encontrado em {_projetos_root()}")
-    return ProjectStore(proj_root)
+def _project_repository() -> Any:
+    """Repositório de projetos respeitando CONCILIUM__STORE_BACKEND (issue #146).
+
+    Ponto único usado pelo MCP para criar/ler projetos — nunca construir
+    ProjectStore/StorageProjectHandle diretamente fora daqui, ou o backend
+    configurado (sharepoint/s3/azure/gdrive) é ignorado silenciosamente."""
+    from concilium.infrastructure.storage.store_factory import build_project_repository
+
+    return build_project_repository(_projetos_root())
+
+
+def _project(project_id: str) -> ProjectHandle:
+    try:
+        return _project_repository().get_project(project_id)
+    except FileNotFoundError:
+        raise ValueError(f"Projeto '{project_id}' não encontrado em {_projetos_root()}") from None
 
 
 # ── ADR-022: Mapa de predecessores GATE por skill ──────────────────────────
@@ -203,7 +214,7 @@ def _di_build_func_resources(func_max: dict, insumos_idx: dict, horas_mes: float
     return tipos, pool
 
 
-def _derivar_inputs_01A(rt: Runtime, store: ProjectStore, version: str) -> dict[str, Any]:
+def _derivar_inputs_01A(rt: Runtime, store: ProjectHandle, version: str) -> dict[str, Any]:
     """
     Deriva tipos_recurso e pool_inicial para 01A a partir das CPUs da EAP.
 

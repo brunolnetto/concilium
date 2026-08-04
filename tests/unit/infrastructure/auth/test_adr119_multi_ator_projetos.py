@@ -86,9 +86,9 @@ class TestCheckIntentAllowed:
 
 class TestVersionMetaExtension:
     def test_new_version_stores_criado_por(self, tmp_path):
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "TestProj", "test")
+        store = build_project_repository(tmp_path).create_project("TestProj", "test")
         store.new_version(criado_por="joao.silva", role_criador="operator", procurement_intent="rfi")
         v = store.current_version()
         meta = store.get_version_meta(v)
@@ -97,9 +97,9 @@ class TestVersionMetaExtension:
         assert meta["procurement_intent"] == "rfi"
 
     def test_new_version_stores_forked_from(self, tmp_path):
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "TestProj", "test")
+        store = build_project_repository(tmp_path).create_project("TestProj", "test")
         store.new_version()  # v1
         store.new_version(forked_from="v1", criado_por="maria.santos", procurement_intent="rfp")
         v2 = store.current_version()
@@ -109,25 +109,25 @@ class TestVersionMetaExtension:
         assert meta["procurement_intent"] == "rfp"
 
     def test_missing_version_returns_empty_dict(self, tmp_path):
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "TestProj", "test")
+        store = build_project_repository(tmp_path).create_project("TestProj", "test")
         assert store.get_version_meta("v99") == {}
 
     def test_version_history_persists_across_instances(self, tmp_path):
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "TestProj", "test")
+        store = build_project_repository(tmp_path).create_project("TestProj", "test")
         store.new_version(criado_por="actor-x", procurement_intent="rfi")
         # re-open
-        store2 = ProjectStore(store.root)
+        store2 = build_project_repository(tmp_path).get_project(store.root.name)
         v = store2.current_version()
         assert store2.get_version_meta(v)["criado_por"] == "actor-x"
 
     def test_none_fields_stored_gracefully(self, tmp_path):
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "TestProj", "test")
+        store = build_project_repository(tmp_path).create_project("TestProj", "test")
         store.new_version()  # all None
         meta = store.get_version_meta(store.current_version())
         assert meta.get("criado_por") is None
@@ -165,9 +165,9 @@ class TestVersionAction:
 
     def test_audit_service_log_version_action(self, tmp_path):
         from concilium.application.services.project.audit_service import AuditService, VersionAction
-        from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        repo = FileProjectRepository(tmp_path)
+        repo = build_project_repository(tmp_path)
         handle = repo.create_project("TestProj", "test")
         svc = AuditService()
         va = VersionAction(action="approve", version_afetada="v1", actor_id="engineer-x")
@@ -187,38 +187,38 @@ class TestForkVersionTracking:
         from concilium.application.services.project.audit_service import AuditService
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
         from concilium.application.services.project.project_service import ProjectService
-        from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        repo = FileProjectRepository(tmp_path)
+        repo = build_project_repository(tmp_path)
         handle = repo.create_project("TestProj", "test")
         svc = ProjectService(repo, AuditService(), DEFAULT_PROJECT_FILES)
         return svc, handle
 
     def test_fork_stores_forked_from(self, tmp_path):
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
         svc, handle = self._make_service_and_project(tmp_path)
         project_id = handle.meta.get("id")
         # Create initial version with authorship
-        store = ProjectStore(handle.root)
+        store = build_project_repository(tmp_path).get_project(handle.root.name)
         store.new_version(criado_por="joao", procurement_intent="rfi")
 
         result = svc.fork_version(project_id, "v1", actor="maria")
 
-        store2 = ProjectStore(handle.root)
+        store2 = build_project_repository(tmp_path).get_project(handle.root.name)
         v2_meta = store2.get_version_meta(result["forked_version"])
         assert v2_meta["forked_from"] == "v1"
 
     def test_fork_inherits_intent(self, tmp_path):
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
         svc, handle = self._make_service_and_project(tmp_path)
         project_id = handle.meta.get("id")
-        store = ProjectStore(handle.root)
+        store = build_project_repository(tmp_path).get_project(handle.root.name)
         store.new_version(criado_por="joao", procurement_intent="rfp")
 
         result = svc.fork_version(project_id, "v1", actor="maria")
 
-        store2 = ProjectStore(handle.root)
+        store2 = build_project_repository(tmp_path).get_project(handle.root.name)
         v2_meta = store2.get_version_meta(result["forked_version"])
         assert v2_meta["procurement_intent"] == "rfp"

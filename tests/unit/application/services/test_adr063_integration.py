@@ -10,17 +10,14 @@ import pytest
 from concilium.application.pipeline_strategy import ProjectStrategy, get_pipeline_strategy
 from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.project.project_service import ProjectService
-from concilium.infrastructure.storage.file_project_repository import (
-    FileProjectHandle,
-    FileProjectRepository,
-)
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 
 @pytest.fixture
 def repo(tmp_path):
     root = tmp_path / "projetos"
     root.mkdir()
-    return FileProjectRepository(root)
+    return build_project_repository(root)
 
 
 @pytest.fixture
@@ -163,19 +160,17 @@ class TestProjectTypeIntegration:
         """ProjectStrategy.validate_preconditions raises when status_eap=RASCUNHO."""
         project = repo.create_project("Proj Bloqueado", "mendeslobo")
         project.update_meta(tipo_projeto="project", status_eap="RASCUNHO")
-        handle = FileProjectHandle(project._store if hasattr(project, "_store") else project)
 
-        strategy = get_pipeline_strategy(handle)
+        strategy = get_pipeline_strategy(project)
         assert isinstance(strategy, ProjectStrategy)
 
         with pytest.raises(ValueError, match="RASCUNHO_PRONTO"):
-            strategy.validate_preconditions(handle)
+            strategy.validate_preconditions(project)
 
     def test_strategy_allows_pipeline_after_eap_ready(self, repo):
         """ProjectStrategy passes when status_eap=RASCUNHO_PRONTO."""
         project = repo.create_project("Proj Pronto", "mendeslobo")
         project.update_meta(tipo_projeto="project", status_eap="RASCUNHO_PRONTO")
-        handle = FileProjectHandle(project._store if hasattr(project, "_store") else project)
 
-        strategy = get_pipeline_strategy(handle)
-        strategy.validate_preconditions(handle)  # must not raise
+        strategy = get_pipeline_strategy(project)
+        strategy.validate_preconditions(project)  # must not raise

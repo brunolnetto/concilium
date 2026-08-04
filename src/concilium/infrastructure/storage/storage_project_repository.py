@@ -27,7 +27,7 @@ class StorageProjectHandle:
 
     _META_FILE = "meta.json"
     _CANONICAL_FILE = "canonical.json"
-    _INVOCATIONS_LOG = "invocations.log"
+    INVOCATIONS_LOG = "invocations.log"
     _PREMISSAS_EFETIVAS_FILE = "premissas_efetivas.json"
     _PREMISSAS_POR_SKILL_FILE = "premissas_por_skill.json"
 
@@ -98,7 +98,7 @@ class StorageProjectHandle:
         new_name = f"v{next_num}"
 
         # Write empty invocations log (marks the version as existing)
-        self._storage.gravar_blob(self._path(f"{new_name}/{self._INVOCATIONS_LOG}"), b"")
+        self._storage.gravar_blob(self._path(f"{new_name}/{self.INVOCATIONS_LOG}"), b"")
 
         # Copy-on-write from base
         source = base or self.current_version()
@@ -146,6 +146,13 @@ class StorageProjectHandle:
         except (FileNotFoundError, Exception):
             return None
 
+    def _is_readonly(self, version: str) -> bool:
+        """Equivalente ao chmod 444 do `ProjectStore` local: em BlobStoragePort não há
+        bit de permissão a checar de forma agnóstica de backend, então
+        `approved_versions` no meta.json (a mesma fonte de verdade que
+        `approve()` grava) já basta como sinal de imutabilidade."""
+        return version in (self.meta.get("approved_versions") or [])
+
     def save_canonical(
         self,
         model: CanonicalModel,
@@ -157,6 +164,8 @@ class StorageProjectHandle:
         v = version or self.current_version()
         if v is None:
             raise RuntimeError("Nenhuma versão ativa — chame new_version() primeiro.")
+        if self._is_readonly(v):
+            raise PermissionError(f"Versão {v} está APROVADA (read-only). Crie nova versão antes de modificar.")
         payload = model.model_dump_json(indent=2)
         self._storage.gravar_blob(self._path(f"{v}/{self._CANONICAL_FILE}"), payload.encode("utf-8"))
         self._write_canonical_meta_sidecar(
@@ -237,6 +246,9 @@ class StorageProjectHandle:
         except FileNotFoundError:
             return None
 
+    def write_bytes(self, relative_path: str, data: bytes) -> None:
+        self._storage.gravar_blob(self._path(relative_path), data)
+
     def exists(self, relative_path: str) -> bool:
         return self._storage.blob_existe(self._path(relative_path))
 
@@ -315,12 +327,14 @@ class StorageProjectHandle:
                 pass
 
     def list_output_files(self, version: str | None = None) -> list[str]:
+        """Nomes de arquivo em {version}/outputs/, sem o subdiretório
+        (visualizations/reports) — paridade com `ProjectStore.list_output_files`."""
         v = version or self.current_version()
         if not v:
             return []
         prefix = self._path(f"{v}/outputs")
         blobs = self._storage.listar_blobs(prefix)
-        return [b.removeprefix(prefix + "/") for b in blobs if not b.endswith("/")]
+        return sorted({b.rsplit("/", 1)[-1] for b in blobs if not b.endswith("/")})
 
     def load_output_file(self, version: str | None = None, filename: str = "resultado.xlsx") -> bytes | None:
         v = version or self.current_version()
@@ -367,7 +381,7 @@ class StorageProjectHandle:
         return overrides.get(cpu_id)
 
     def log_invocation(self, version: str, entry: dict[str, Any]) -> None:
-        self.append_jsonl(f"{version}/{self._INVOCATIONS_LOG}", entry)
+        self.append_jsonl(f"{version}/{self.INVOCATIONS_LOG}", entry)
 
     # ── Premissas efetivas (issue #123 — congelamento no modelo vN flat) ──
     # Espelha PlanoStore.write_premissas_efetivas/read_premissas_por_skill
@@ -420,16 +434,23 @@ class StorageProjectHandle:
             if self.exists(relative):
                 self._storage.aprovar_versao(self._path(relative))
         self._protect_bdi_perfil_versoes(version)
+        self.update_meta(approved_versions=[*(self.meta.get("approved_versions") or []), version])
 
     @property
     def snapshots(self) -> Any:
-        return None
+        from .storage_escopo_repository import StorageSnapshotStore
+
+        return StorageSnapshotStore(self._storage, self._project_id)
 
     def list_escopos(self) -> list[str]:
-        return []
+        idx = self.read_json("escopos/_index.json", {"escopo_ids": []})
+        escopo_ids = idx.get("escopo_ids", [])
+        return sorted(escopo_ids) if isinstance(escopo_ids, list) else []
 
     def escopo(self, escopo_id: str = "default") -> Any:
-        return None
+        from .storage_escopo_repository import StorageEscopoHandle
+
+        return StorageEscopoHandle(self._storage, self._project_id, escopo_id)
 
     def create_escopo(
         self,
@@ -448,29 +469,47 @@ class StorageProjectHandle:
         snapshot_perfil_id: str = "",
         bdi_perfil_id: str | None = None,
         logistica_consumiveis: dict[str, dict[str, float]] | None = None,
+        roster_mo: list[dict[str, Any]] | None = None,
+        roster_eq: list[dict[str, Any]] | None = None,
     ) -> Any:
         """ADR-056 §A3 — cria escopo via BlobStoragePort (ADR-031 via cloud storage).
 
-        Estrutura: {project_id}/escopos/{escopo_id}/meta.json
+        Estrutura: {project_id}/escopos/{escopo_id}/meta.json — formato plano
+        (não aninhado), espelhando `ProjectStore.create_escopo` (project.py) para
+        que `to_escopo()`/`Escopo.model_validate()` funcionem igual em qualquer
+        backend (`projeto_id`/`coordenadas_lat`/`coordenadas_lng` são campos
+        obrigatórios no topo do modelo `Escopo`, não aninhados).
         """
+        from .storage_escopo_repository import StorageEscopoHandle
+
+        if self.exists(f"escopos/{escopo_id}/meta.json"):
+            raise FileExistsError(f"Escopo '{escopo_id}' já existe no projeto.")
+
+        pm = self.meta
         escopo_meta = {
             "escopo_id": escopo_id,
+            "projeto_id": pm.get("id", self._project_id),
             "nome": nome,
             "tipo_obra": tipo_obra,
             "localizacao": localizacao,
-            "coordenadas": {"lat": coordenadas_lat, "lng": coordenadas_lng},
+            "coordenadas_lat": coordenadas_lat,
+            "coordenadas_lng": coordenadas_lng,
+            "dias_semana": dias_semana,
+            "horas_dia": horas_dia,
+            "horas_improdutivas_dia": horas_improdutivas_dia,
             "data_inicio": data_inicio,
             "data_termino": data_termino,
-            "regime_trabalho": {
-                "dias_semana": dias_semana,
-                "horas_dia": horas_dia,
-                "horas_improdutivas_dia": horas_improdutivas_dia,
-            },
-            "snapshot_catalogo_id": snapshot_catalogo_id,
-            "snapshot_perfil_id": snapshot_perfil_id,
+            "status": "RASCUNHO",
+            "snapshot_catalogo_id": snapshot_catalogo_id or pm.get("snapshot_catalogo_id", ""),
+            "snapshot_perfil_id": snapshot_perfil_id or pm.get("snapshot_perfil_id", ""),
             "bdi_perfil_id": bdi_perfil_id,
             # ADR-128 F5: sempre um dict (mesmo vazio) — JSON-serializável de forma estável.
             "logistica_consumiveis": logistica_consumiveis or {},
+            # ADR-173 D4 / ADR-174 D2: sempre uma lista (mesmo vazia) — mesma
+            # convenção de logistica_consumiveis.
+            "roster_mo": roster_mo or [],
+            "roster_eq": roster_eq or [],
+            "revisao": 1,
             "criado_em": datetime.now(UTC).isoformat(),
         }
         self.write_json(f"escopos/{escopo_id}/meta.json", escopo_meta)
@@ -482,12 +521,14 @@ class StorageProjectHandle:
             idx["escopo_ids"].append(escopo_id)
         self.write_json("escopos/_index.json", idx)
 
-        return {"escopo_id": escopo_id, "meta": escopo_meta}
+        return StorageEscopoHandle(self._storage, self._project_id, escopo_id)
 
     def write_canonical_raw(self, content: dict[str, Any], version: str | None = None) -> None:
         v = version or self.current_version()
         if not v:
             raise RuntimeError("Nenhuma versão ativa.")
+        if self._is_readonly(v):
+            raise PermissionError(f"Versão {v} é read-only")
         payload = json.dumps(content, indent=2, ensure_ascii=False, default=str).encode("utf-8")
         self._storage.gravar_blob(self._path(f"{v}/{self._CANONICAL_FILE}"), payload)
 
@@ -505,11 +546,13 @@ class StorageProjectRepository:
         project = repo.create_project("Obra Norte", "mendeslobo")
     """
 
-    _PROJECTS_INDEX = "projetos/_index.json"
-
     def __init__(self, storage: BlobStoragePort, projects_prefix: str = "projetos") -> None:
         self._storage = storage
         self._prefix = projects_prefix.strip("/")
+
+    @property
+    def _index_path(self) -> str:
+        return f"{self._prefix}/_index.json" if self._prefix else "_index.json"
 
     def _full_storage(self, project_id: str) -> BlobStoragePort:
         """Returns a view of storage prefixed with `projects_prefix` only.
@@ -541,6 +584,9 @@ class StorageProjectRepository:
             def blob_existe(self, path: str) -> bool:
                 return self._inner.blob_existe(f"{self._prefix}/{path.lstrip('/')}")
 
+            def deletar_blob(self, path: str) -> None:
+                self._inner.deletar_blob(f"{self._prefix}/{path.lstrip('/')}")
+
             def aprovar_versao(self, path: str) -> None:
                 self._inner.aprovar_versao(f"{self._prefix}/{path.lstrip('/')}")
 
@@ -548,13 +594,15 @@ class StorageProjectRepository:
 
     def list_projects(self) -> list[StorageProjectHandle]:
         try:
-            index = json.loads(self._storage.ler_blob(self._PROJECTS_INDEX).decode("utf-8"))
+            index = json.loads(self._storage.ler_blob(self._index_path).decode("utf-8"))
         except FileNotFoundError:
             return []
         return [StorageProjectHandle(self._full_storage(pid), pid) for pid in index.get("project_ids", [])]
 
-    def create_project(self, nome: str, contexto_id: str, catalogo_base: str | None = None) -> StorageProjectHandle:
-        project_id = str(uuid.uuid4())
+    def create_project(
+        self, nome: str, contexto_id: str, catalogo_base: str | None = None, project_id: str | None = None
+    ) -> StorageProjectHandle:
+        project_id = project_id or str(uuid.uuid4())
         scoped = self._full_storage(project_id)
         handle = StorageProjectHandle(scoped, project_id)
 
@@ -587,12 +635,12 @@ class StorageProjectRepository:
 
     def _update_index(self, project_id: str) -> None:
         try:
-            index = json.loads(self._storage.ler_blob(self._PROJECTS_INDEX).decode("utf-8"))
+            index = json.loads(self._storage.ler_blob(self._index_path).decode("utf-8"))
         except FileNotFoundError:
             index = {"project_ids": []}
         if project_id not in index["project_ids"]:
             index["project_ids"].append(project_id)
         self._storage.gravar_blob(
-            self._PROJECTS_INDEX,
+            self._index_path,
             json.dumps(index, indent=2).encode("utf-8"),
         )

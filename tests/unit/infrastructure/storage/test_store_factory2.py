@@ -71,7 +71,7 @@ class TestBuildBlobStorage:
 
 class TestBuildProjectRepository:
     def test_filesystem_backend(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+        from concilium.infrastructure.storage.storage_project_repository import StorageProjectRepository
         from concilium.infrastructure.storage.store_factory import build_project_repository
 
         with patch(
@@ -79,7 +79,7 @@ class TestBuildProjectRepository:
             return_value="filesystem",
         ):
             repo = build_project_repository(tmp_path)
-        assert isinstance(repo, FileProjectRepository)
+        assert isinstance(repo, StorageProjectRepository)
 
     def test_unknown_backend_raises(self, tmp_path):
         from concilium.infrastructure.storage.store_factory import build_project_repository

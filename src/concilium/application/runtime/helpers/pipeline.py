@@ -8,12 +8,14 @@ from ..exceptions import RuntimeTechnicalError
 from ..gates import _GATE_SKILLS
 
 
-def _parse_executed_skills(log_path: Any) -> set:
-    """Parses invocations log and returns set of executed skill IDs."""
+def _parse_executed_skills(lines: list[str]) -> set:
+    """Parses invocations log lines and returns set of executed skill IDs.
+
+    Recebe as linhas já lidas via `ProjectHandle.read_lines()` — nunca um Path
+    cru: `version_path(version)` é lógico (não-backed) em backends não-filesystem
+    (StorageProjectHandle)."""
     executed: set = set()
-    if not log_path.exists():
-        return executed
-    for line in log_path.read_text(encoding="utf-8").splitlines():
+    for line in lines:
         if not line.strip():
             continue
         try:

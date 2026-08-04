@@ -22,26 +22,27 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 from concilium.application.orchestrators.lifecycle_coordinator import LifecycleCoordinator
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
 # ---------------------------------------------------------------------------
 
 
-def _make_project_store(tmp_path: Path, meta: dict | None = None) -> ProjectStore:
-    """Build a minimal ProjectStore backed by a real tmp directory."""
-    root = tmp_path / "project"
-    root.mkdir(parents=True, exist_ok=True)
-    effective_meta = meta if meta is not None else {}
-    (root / ProjectStore.META_FILE).write_text(json.dumps(effective_meta, ensure_ascii=False), encoding="utf-8")
-    return ProjectStore(root)
+def _make_project_store(tmp_path: Path, meta: dict | None = None) -> Any:
+    """Build a minimal ProjectHandle backed by a real tmp directory.
+
+    meta.json começa vazio por padrão (não com nome/contexto_id reais) —
+    vários testes exercitam o fallback do coordinator quando meta.get(...)
+    não encontra o campo esperado."""
+    handle = build_project_repository(tmp_path).create_project("Test", "ctx")
+    handle.write_json("meta.json", meta if meta is not None else {})
+    return handle
 
 
 def _make_plano_store(escopo_meta: dict | None = None) -> Any:
@@ -238,10 +239,8 @@ class TestInjectInsumos:
         project = _make_project_store(tmp_path)
 
         # Create a valid overrides/insumos_override.json
-        overrides_dir = project.root / "overrides"
-        overrides_dir.mkdir(parents=True, exist_ok=True)
         override_data = {"item-01": {"preco": 100.0}}
-        (overrides_dir / "insumos_override.json").write_text(json.dumps(override_data), encoding="utf-8")
+        project.write_json("overrides/insumos_override.json", override_data)
 
         coordinator = LifecycleCoordinator(runtime)
         result = coordinator._inject_project_catalog_layers(project, {})
@@ -253,9 +252,7 @@ class TestInjectInsumos:
         runtime = _make_runtime()
         project = _make_project_store(tmp_path)
 
-        overrides_dir = project.root / "overrides"
-        overrides_dir.mkdir(parents=True, exist_ok=True)
-        (overrides_dir / "insumos_override.json").write_text(json.dumps({"disk-value": 1}), encoding="utf-8")
+        project.write_json("overrides/insumos_override.json", {"disk-value": 1})
 
         caller_value = {"caller-value": 99}
         coordinator = LifecycleCoordinator(runtime)
@@ -267,7 +264,9 @@ class TestInjectInsumos:
     def test_absent_override_file_is_silently_ignored(self, tmp_path):
         runtime = _make_runtime()
         project = _make_project_store(tmp_path)
-        # No overrides directory at all
+        # create_project() já escreve overrides/insumos_override.json vazio
+        # (ADR-047) — apaga para exercitar o caso "arquivo realmente ausente".
+        project.delete_tree("overrides/insumos_override.json")
 
         coordinator = LifecycleCoordinator(runtime)
         result = coordinator._inject_project_catalog_layers(project, {"x": 1})
@@ -279,9 +278,7 @@ class TestInjectInsumos:
         runtime = _make_runtime()
         project = _make_project_store(tmp_path)
 
-        overrides_dir = project.root / "overrides"
-        overrides_dir.mkdir(parents=True, exist_ok=True)
-        (overrides_dir / "insumos_override.json").write_text("NOT JSON", encoding="utf-8")
+        project.write_bytes("overrides/insumos_override.json", b"NOT JSON")
 
         coordinator = LifecycleCoordinator(runtime)
         # Must not raise
@@ -292,10 +289,8 @@ class TestInjectInsumos:
         runtime = _make_runtime()
         project = _make_project_store(tmp_path)
 
-        overrides_dir = project.root / "overrides"
-        overrides_dir.mkdir(parents=True, exist_ok=True)
         # Valid JSON but not a dict
-        (overrides_dir / "insumos_override.json").write_text("[1, 2, 3]", encoding="utf-8")
+        project.write_json("overrides/insumos_override.json", [1, 2, 3])
 
         coordinator = LifecycleCoordinator(runtime)
         result = coordinator._inject_project_catalog_layers(project, {})

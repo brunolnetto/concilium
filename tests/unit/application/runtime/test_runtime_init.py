@@ -121,23 +121,21 @@ class TestRuntimeEdgeCases:
     def test_check_manifest_deps_blank_line_skipped(self, tmp_path):
         """Blank lines in invocations log are skipped (line 136)."""
         from concilium.application.runtime import Runtime
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
         r = Runtime(tmp_path / "config")
         projetos = tmp_path / "projetos"
         projetos.mkdir()
-        project = ProjectStore.init(projetos, "test-proj", "test")
+        project = build_project_repository(projetos).create_project("test-proj", "test")
         v = project.new_version()
-        log_path = project.version_path(v) / project.INVOCATIONS_LOG
-        log_path.parent.mkdir(parents=True, exist_ok=True)
         # Write log with blank lines and valid entries
-        log_path.write_text(
+        log_content = (
             '{"skill": "02-produtividade-climatica", "status": "OK"}\n'
             "\n"  # blank line — triggers continue at line 136
             "   \n"  # whitespace-only line
-            '{"skill": "01-escopo-e-eap", "status": "OK"}\n',
-            encoding="utf-8",
+            '{"skill": "01-escopo-e-eap", "status": "OK"}\n'
         )
+        project.write_bytes(f"{v}/{project.INVOCATIONS_LOG}", log_content.encode("utf-8"))
         # Patch load_manifest to return deps so we exercise the log parsing
         with patch.object(r, "load_manifest", return_value={"depends_on": {"skills": ["02-produtividade-climatica"]}}):
             deps = r.check_manifest_deps("04-cronograma", project, v)
@@ -148,14 +146,14 @@ class TestRuntimeEdgeCases:
         """run_skill raises RuntimeError when check_manifest_deps returns missing (line 185)."""
         from concilium.application.runtime import Runtime
         from concilium.application.runtime import RuntimeError as ConciliumRE
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
         # Use test config_root from actual config dir
         config_root = Path(__file__).parents[5] / "config"
         r = Runtime(config_root)
         projetos = tmp_path / "projetos"
         projetos.mkdir()
-        project = ProjectStore.init(projetos, "test-missing-deps", "test")
+        project = build_project_repository(projetos).create_project("test-missing-deps", "test")
         v = project.new_version()
         # Patch check_manifest_deps to simulate missing deps
         with patch.object(r, "check_manifest_deps", return_value=["02-produtividade-climatica"]):
@@ -347,14 +345,21 @@ class TestRunSkillOnPlanoStalenessWiring:
 
     def _make_stores(self, tmp_path):
         from concilium.domain.models.canonical import CanonicalModel
-        from concilium.infrastructure.storage.escopo_store import EscopoStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        escopo_root = tmp_path / "escopos" / "esc-1"
-        escopo_root.mkdir(parents=True)
-        (escopo_root / "escopo.json").write_text('{"escopo_id": "esc-1", "jurisdicao_id": "sp"}', encoding="utf-8")
-        es = EscopoStore(root=escopo_root)
-        plano_store = es.plan("plan-1")
-        plano_store.root.mkdir(parents=True)
+        project = build_project_repository(tmp_path).create_project("Test", "ctx-test")
+        es = project.create_escopo(
+            escopo_id="esc-1",
+            nome="Escopo Teste",
+            tipo_obra="terraplenagem",
+            localizacao="SP",
+            coordenadas_lat=-23.5,
+            coordenadas_lng=-46.6,
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
+        )
+        es.update_meta(jurisdicao_id="sp")
+        plano_store = es.create_plan("Plano 1")
 
         canonical = CanonicalModel.model_validate(
             {
@@ -373,9 +378,7 @@ class TestRunSkillOnPlanoStalenessWiring:
                 },
             }
         )
-        (plano_store.root / plano_store.CANONICAL_FILE).write_text(
-            canonical.model_dump_json(indent=2), encoding="utf-8"
-        )
+        plano_store.save_canonical(canonical)
         return es, plano_store, canonical
 
     def _make_fake_runtime(self, depends_on_skills):
@@ -480,16 +483,15 @@ class TestRunSkillOnPlanoStalenessWiring:
 class TestRunSkillFlatModelPremissasWiring:
     """issue #123: run_skill (modelo vN flat) também congela premissas e detecta
     staleness ponta a ponta, via FlatVersionStore(project, v) → run_skill_on_plano
-    (ProjectStore/FileProjectHandle reais em disco, não mockados)."""
+    (ProjectHandle real via BlobStoragePort — ADR-047, não mockado)."""
 
     def _make_project(self, tmp_path, canonical):
-        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
-        from concilium.infrastructure.storage.project import ProjectStore
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        store = ProjectStore.init(tmp_path, "Test", "ctx-test")
-        v = store.new_version()
-        (store.root / v / store.CANONICAL_FILE).write_text(canonical.model_dump_json(indent=2), encoding="utf-8")
-        return FileProjectHandle(store), v
+        project = build_project_repository(tmp_path).create_project("Test", "ctx-test")
+        v = project.new_version()
+        project.save_canonical(canonical, v)
+        return project, v
 
     def _make_fake_runtime(self, depends_on_skills):
         from types import SimpleNamespace
@@ -539,7 +541,7 @@ class TestRunSkillFlatModelPremissasWiring:
         fvs = FlatVersionStore(project, v)
         por_skill = fvs.read_premissas_por_skill()
         assert "04-cronograma" in por_skill
-        assert (project.version_path(v) / "premissas_efetivas.json").exists()
+        assert project.exists(f"{v}/premissas_efetivas.json")
 
     def test_dependencia_com_contexto_alterado_emite_stale_upstream(self, tmp_path):
         from concilium.application.skills.base import SkillResult
@@ -628,10 +630,12 @@ class TestRunSkillFlatModelPremissasWiring:
 
         project.approve(v)
 
-        premissas_efetivas = project.version_path(v) / "premissas_efetivas.json"
-        premissas_por_skill = project.version_path(v) / "premissas_por_skill.json"
-        for f in (premissas_efetivas, premissas_por_skill):
-            assert not bool(f.stat().st_mode & stat.S_IWUSR), f"{f.name} deveria estar read-only após approve()"
+        # `.root` é lógico (Path(project_id), sem backing real) — reconstrói o
+        # Path físico real só para checar o chmod 444 do backend Local (ADR-047).
+        real_root = tmp_path / project.root.name
+        for fname in ("premissas_efetivas.json", "premissas_por_skill.json"):
+            f = real_root / v / fname
+            assert not bool(f.stat().st_mode & stat.S_IWUSR), f"{fname} deveria estar read-only após approve()"
 
 
 # ─── application/runtime/__init__.py (30 missing) ─────────────────────────────

@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import json
 import logging
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -315,49 +314,41 @@ class BenchmarkRunner:
         # data/{slug}/ é somente leitura: referencia.json, campaign_v{i}.json, artifacts/raw/.
         return self.projects_root / spec.slug / "artifacts" / "outputs"
 
-    def _reset_project_dir(self, project_dir: Path) -> None:
-        """Remove o projeto existente preservando overrides/ (calibrações de projeto)."""
-        print(f"  [DEL] Removendo projeto anterior: {project_dir.name}")
-        # Preservar overrides/ — contém calibrações de projeto (cpus, insumos, producoes)
-        overrides_dir = project_dir / "overrides"
-        overrides_backup = {}
-        if overrides_dir.exists():
-            for f in overrides_dir.iterdir():
-                overrides_backup[f.name] = f.read_bytes()
-        shutil.rmtree(project_dir, ignore_errors=True)
-        if project_dir.exists():
-            print(f"  [AVISO] Nao foi possivel remover completamente {project_dir.name}. Continuando...")
-        # Restaurar overrides/
-        if overrides_backup:
-            overrides_dir.mkdir(parents=True, exist_ok=True)
-            for fname, content in overrides_backup.items():
-                (overrides_dir / fname).write_bytes(content)
+    def _benchmark_repository(self):
+        from concilium.infrastructure.storage.store_factory import build_local_project_repository
+
+        return build_local_project_repository(self.projects_root)
+
+    def _reset_project(self, handle, repo, nome: str, benchmark_id: str, contexto_id: str):
+        """Recria o projeto do zero preservando overrides/ (calibrações de projeto)."""
+        print(f"  [DEL] Removendo projeto anterior: {benchmark_id}")
+        overrides_backup: dict[str, bytes] = {}
+        for fname in handle.list_file_names("overrides"):
+            data = handle.read_bytes(f"overrides/{fname}")
+            if data is not None:
+                overrides_backup[fname] = data
+        handle.delete_tree("")
+        fresh = repo.create_project(nome, contexto_id, project_id=benchmark_id)
+        for fname, data in overrides_backup.items():
+            fresh.write_bytes(f"overrides/{fname}", data)
+        return fresh
 
     def _find_or_create(self, nome: str, benchmark_id: str, contexto_id: str, reset: bool):
-        from concilium.infrastructure.storage.project import ProjectStore
+        repo = self._benchmark_repository()
+        try:
+            handle = repo.get_project(benchmark_id)
+        except FileNotFoundError:
+            handle = None
 
-        if self.projects_root.exists():
-            for project_dir in self.projects_root.iterdir():
-                meta_path = project_dir / "meta.json"
-                if not project_dir.is_dir() or not meta_path.exists():
-                    continue
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                if meta.get("nome") != nome:
-                    continue
+        if handle is not None:
+            if handle.meta.get("nome") == nome:
                 if reset:
-                    self._reset_project_dir(project_dir)
-                    break
-                print(f"  [OK]  Projeto existente: {project_dir.name}")
-                return ProjectStore(project_dir)
+                    return self._reset_project(handle, repo, nome, benchmark_id, contexto_id)
+                print(f"  [OK]  Projeto existente: {benchmark_id}")
+                return handle
 
         print(f"  [NEW] Criando '{nome}'...")
-        self.projects_root.mkdir(parents=True, exist_ok=True)
-        return ProjectStore.init(
-            self.projects_root,
-            nome,
-            contexto_id,
-            derivado_de_benchmark=benchmark_id,
-        )
+        return repo.create_project(nome, contexto_id, project_id=benchmark_id)
 
     def _load_referencia(self, spec: ProjectSpec) -> dict[str, Any] | None:
         if spec.referencia_path and spec.referencia_path.exists():

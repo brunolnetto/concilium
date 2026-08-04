@@ -76,6 +76,12 @@ class LocalBlobStorage(BlobStoragePort):
             "root": str(self.root_dir),
         }
 
+    def deletar_blob(self, path: str) -> None:
+        """Remove o arquivo do disco. Sem-op se já não existir (base permite omitir)."""
+        p = self._resolve_path(path)
+        if p.exists():
+            p.unlink()
+
     def aprovar_versao(self, path: str) -> None:
         """Torna o blob somente-leitura (chmod 444) — equivalente local ao checkin SharePoint."""
         import stat as _stat

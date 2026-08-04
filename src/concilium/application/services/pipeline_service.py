@@ -498,8 +498,6 @@ class PipelineService:
         test environments where the runtime does not implement catalog methods.
         """
         try:
-            import json as _json
-
             run = self._find_run(project, run_id) or {}
 
             # Determine project catalog baseline from local file (no runtime needed)
@@ -515,11 +513,7 @@ class PipelineService:
                 # runtime catalog support, or contexts where contexto is unavailable)
                 payload = self._resolve_catalog_fallback(version, run_id, _project_catalog, catalogo_base_origem_local)
 
-            out_path = project.root / version / "resolved_catalog.json"
-            out_path.write_text(
-                _json.dumps(payload, ensure_ascii=False, default=str),
-                encoding="utf-8",
-            )
+            project.write_json(f"{version}/resolved_catalog.json", payload)
             self._update_run(
                 project,
                 run_id,

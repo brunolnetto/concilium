@@ -80,13 +80,22 @@ def _make_store(root: Path) -> MagicMock:
 # ===========================================================================
 
 
+def _mock_handle(project_id, meta=None, versions=None):
+    handle = MagicMock()
+    handle.root.name = project_id
+    handle.meta = meta or {}
+    handle.list_versions.return_value = versions or []
+    return handle
+
+
 class TestListarProjetos:
-    def test_proj_root_missing_returns_empty(self, tools, tmp_path):
-        """Line 30: proj_root does not exist → returns empty projetos list."""
-        missing = tmp_path / "nonexistent"
+    def test_no_projects_returns_empty(self, tools, tmp_path):
+        """repositório vazio → retorna projetos vazio."""
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = []
 
         with (
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=missing),
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
         ):
             result = tools["listar_projetos"]()
@@ -95,21 +104,18 @@ class TestListarProjetos:
         assert "projetos_root" in result
 
     def test_iterates_valid_project_dirs(self, tools, tmp_path):
-        """Lines 34-39: iterates dirs, reads ProjectStore.meta."""
-        proj_root = tmp_path / "projetos"
-        proj_root.mkdir()
-        # create a project directory with a meta.json (required by listar_projetos filter)
-        p1 = proj_root / "projeto-abc"
-        p1.mkdir()
-        (p1 / "meta.json").write_text("{}")
-
-        mock_store = MagicMock()
-        mock_store.meta = {"nome": "Proj ABC", "contexto_id": "ctx1", "current_version": "v1"}
-        mock_store.list_versions.return_value = ["v1"]
+        """Itera handles do repositório, lê meta/versoes de cada um."""
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = [
+            _mock_handle(
+                "projeto-abc",
+                meta={"nome": "Proj ABC", "contexto_id": "ctx1", "current_version": "v1"},
+                versions=["v1"],
+            )
+        ]
 
         with (
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
-            patch("concilium.presentation.mcp.tools.projeto.ProjectStore", return_value=mock_store),
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
         ):
             result = tools["listar_projetos"]()
@@ -122,35 +128,17 @@ class TestListarProjetos:
         assert projetos[0]["current_version"] == "v1"
         assert projetos[0]["versoes"] == ["v1"]
 
-    def test_skips_non_directories(self, tools, tmp_path):
-        """Line 34: non-directory entries are skipped."""
-        proj_root = tmp_path / "projetos"
-        proj_root.mkdir()
-        # Create a file (not a dir) that should be skipped
-        (proj_root / "some_file.txt").write_text("x")
+    def test_handle_meta_raises_appends_error(self, tools, tmp_path):
+        """handle.meta levanta exceção → resultado inclui id + erro, sem quebrar a listagem."""
+        broken = MagicMock()
+        broken.root.name = "broken-proj"
+        type(broken).meta = property(lambda self: (_ for _ in ()).throw(RuntimeError("corrupt meta")))
+
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = [broken]
 
         with (
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
-            patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
-        ):
-            result = tools["listar_projetos"]()
-
-        assert result["projetos"] == []
-
-    def test_projectstore_raises_appends_error(self, tools, tmp_path):
-        """Lines 48-49: ProjectStore raises → appends error dict."""
-        proj_root = tmp_path / "projetos"
-        proj_root.mkdir()
-        p1 = proj_root / "broken-proj"
-        p1.mkdir()
-        (p1 / "meta.json").write_text("{}")  # required by listar_projetos filter
-
-        def _bad_store(path):
-            raise RuntimeError("corrupt meta")
-
-        with (
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
-            patch("concilium.presentation.mcp.tools.projeto.ProjectStore", side_effect=_bad_store),
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
         ):
             result = tools["listar_projetos"]()
@@ -208,13 +196,14 @@ class TestIniciarOrcamento:
         r.validacoes = []
         coord.avancar_plano.return_value = r
 
+        mock_repo = MagicMock()
+        mock_repo.create_project.return_value = store
+
         with (
             patch("concilium.presentation.mcp.tools.projeto._runtime", return_value=rt),
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
-            patch("concilium.presentation.mcp.tools.projeto.ProjectStore") as MockPS,
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._lifecycle_coordinator", return_value=coord),
         ):
-            MockPS.init.return_value = store
             result = tools["iniciar_orcamento"](**self._base_kwargs)
 
         assert result["project_id"] == "proj-uuid-123"
@@ -248,13 +237,14 @@ class TestIniciarOrcamento:
         r.validacoes = [err_v]
         coord.avancar_plano.return_value = r
 
+        mock_repo = MagicMock()
+        mock_repo.create_project.return_value = store
+
         with (
             patch("concilium.presentation.mcp.tools.projeto._runtime", return_value=rt),
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
-            patch("concilium.presentation.mcp.tools.projeto.ProjectStore") as MockPS,
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._lifecycle_coordinator", return_value=coord),
         ):
-            MockPS.init.return_value = store
             result = tools["iniciar_orcamento"](**self._base_kwargs)
 
         assert "erro" in result
@@ -281,13 +271,14 @@ class TestIniciarOrcamento:
         coord = MagicMock()
         coord.avancar_plano.side_effect = RuntimeError("coord error!")
 
+        mock_repo = MagicMock()
+        mock_repo.create_project.return_value = store
+
         with (
             patch("concilium.presentation.mcp.tools.projeto._runtime", return_value=rt),
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
-            patch("concilium.presentation.mcp.tools.projeto.ProjectStore") as MockPS,
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._lifecycle_coordinator", return_value=coord),
         ):
-            MockPS.init.return_value = store
             result = tools["iniciar_orcamento"](**self._base_kwargs)
 
         assert "erro" in result
@@ -296,24 +287,20 @@ class TestIniciarOrcamento:
 
     def test_tipo_obra_invalido_retorna_erro_sem_persistir_nada(self, tools, tmp_path):
         """Achado real: tipo_obra="terraplenagem_drenagem" (valor inválido) só falhava
-        dentro da skill 01, ao montar Projeto — mas ProjectStore.init/create_escopo já
-        tinham persistido em disco, deixando um projeto órfão sem versão que nem re-rodar
-        a skill resolvia (o escopo salvo já carregava o tipo_obra inválido). Corrigido:
-        valida ANTES de qualquer persistência — ProjectStore.init nunca é chamado."""
-        proj_root = tmp_path / "projetos"
-        proj_root.mkdir()
+        dentro da skill 01, ao montar Projeto — mas o projeto já tinha sido persistido
+        (create_project/create_escopo), deixando um projeto órfão sem versão que nem
+        re-rodar a skill resolvia (o escopo salvo já carregava o tipo_obra inválido).
+        Corrigido: valida ANTES de qualquer persistência — create_project nunca é chamado."""
         kwargs = {**self._base_kwargs, "tipo_obra": "terraplenagem_drenagem"}
+        mock_repo = MagicMock()
 
-        with (
-            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=proj_root),
-            patch("concilium.presentation.mcp.tools.projeto.ProjectStore") as MockPS,
-        ):
+        with patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo):
             result = tools["iniciar_orcamento"](**kwargs)
 
         assert "erro" in result
         assert "terraplenagem_drenagem" in result["erro"]
         assert "terraplenagem" in result["erro"]  # lista de valores aceitos na mensagem
-        MockPS.init.assert_not_called()
+        mock_repo.create_project.assert_not_called()
 
 
 # ===========================================================================
@@ -421,17 +408,6 @@ class TestConsultarStatus:
 
     def test_with_current_version_invocations_log(self, tools, tmp_path):
         """Lines 221-237: current_version + INVOCATIONS_LOG → invocations list."""
-        version_dir = tmp_path / "v1"
-        version_dir.mkdir()
-        log_path = version_dir / "invocations.log"
-        log_path.write_text(
-            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"})
-            + "\n"
-            + json.dumps({"skill": "02-produtividade-climatica", "status": "ERRO", "ts": "2026-01-01T11:00:00"})
-            + "\n",
-            encoding="utf-8",
-        )
-
         store = _make_store(tmp_path)
         store.meta = {
             "nome": "Versioned Proj",
@@ -440,9 +416,12 @@ class TestConsultarStatus:
         }
         store.list_versions.return_value = ["v1"]
         store.list_escopos.return_value = []
-        store.version_path.return_value = version_dir
         store.INVOCATIONS_LOG = "invocations.log"
         store.load_canonical.return_value = None
+        store.read_lines.return_value = [
+            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"}),
+            json.dumps({"skill": "02-produtividade-climatica", "status": "ERRO", "ts": "2026-01-01T11:00:00"}),
+        ]
 
         with (
             patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),
@@ -456,14 +435,6 @@ class TestConsultarStatus:
 
     def test_invocations_log_skips_blank_lines(self, tools, tmp_path):
         """Linhas em branco no invocations.log são ignoradas (loop continua sem parsear)."""
-        version_dir = tmp_path / "v1"
-        version_dir.mkdir()
-        log_path = version_dir / "invocations.log"
-        log_path.write_text(
-            "\n   \n" + json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"}) + "\n",
-            encoding="utf-8",
-        )
-
         store = _make_store(tmp_path)
         store.meta = {
             "nome": "Versioned Proj",
@@ -472,9 +443,13 @@ class TestConsultarStatus:
         }
         store.list_versions.return_value = ["v1"]
         store.list_escopos.return_value = []
-        store.version_path.return_value = version_dir
         store.INVOCATIONS_LOG = "invocations.log"
         store.load_canonical.return_value = None
+        store.read_lines.return_value = [
+            "",
+            "   ",
+            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"}),
+        ]
 
         with (
             patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),
@@ -540,20 +515,14 @@ class TestConsultarStatus:
 
     def test_canonical_no_blocked_with_errors_is_parcial(self, tools, tmp_path):
         """Lines 246-254: no blocked but skills_com_erro → PARCIAL integridade."""
-        version_dir = tmp_path / "v1"
-        version_dir.mkdir()
-        log_path = version_dir / "invocations.log"
-        log_path.write_text(
-            json.dumps({"skill": "02-clima", "status": "ERRO", "ts": "2026-01-01T11:00:00"}) + "\n",
-            encoding="utf-8",
-        )
-
         store = _make_store(tmp_path)
         store.meta = {"nome": "P", "contexto_id": "c", "current_version": "v1"}
         store.list_versions.return_value = ["v1"]
         store.list_escopos.return_value = []
-        store.version_path.return_value = version_dir
         store.INVOCATIONS_LOG = "invocations.log"
+        store.read_lines.return_value = [
+            json.dumps({"skill": "02-clima", "status": "ERRO", "ts": "2026-01-01T11:00:00"})
+        ]
 
         canonical = MagicMock()
         canonical.pipeline_blocked_from = []  # no blocked
@@ -1131,17 +1100,6 @@ class TestSalvarPerfilBdi:
 class TestConsultarStatusEdgeCases:
     def test_invalid_json_line_in_log_skipped(self, tools, tmp_path):
         """Lines 235-236: JSONDecodeError in log line → line is skipped."""
-        version_dir = tmp_path / "v1"
-        version_dir.mkdir()
-        log_path = version_dir / "invocations.log"
-        # Write one valid and one invalid JSON line
-        log_path.write_text(
-            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"})
-            + "\n"
-            + "NOT VALID JSON !!!\n",
-            encoding="utf-8",
-        )
-
         store = _make_store(tmp_path)
         store.meta = {
             "nome": "P",
@@ -1150,9 +1108,12 @@ class TestConsultarStatusEdgeCases:
         }
         store.list_versions.return_value = ["v1"]
         store.list_escopos.return_value = []
-        store.version_path.return_value = version_dir
         store.INVOCATIONS_LOG = "invocations.log"
         store.load_canonical.return_value = None
+        store.read_lines.return_value = [
+            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"}),
+            "NOT VALID JSON !!!",
+        ]
 
         with (
             patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),

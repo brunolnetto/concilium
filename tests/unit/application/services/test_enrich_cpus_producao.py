@@ -196,9 +196,9 @@ class TestEnrichedCpusCache:
         from concilium.application.services.project.override_service import OverrideService
         from concilium.application.services.project.project_input_builder import ProjectInputBuilder
         from concilium.application.services.project.project_service import ProjectService
-        from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+        from concilium.infrastructure.storage.store_factory import build_project_repository
 
-        repo = FileProjectRepository(projects_root)
+        repo = build_project_repository(projects_root)
         audit = AuditService()
         ps = ProjectService(repo, audit)
         ov = OverrideService(repo, audit)

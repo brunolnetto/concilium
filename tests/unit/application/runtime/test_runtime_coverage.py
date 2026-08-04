@@ -15,7 +15,7 @@ from concilium.application.runtime import (
     _md_to_pdf_bytes,
     _memorial_bdi_to_md,
 )
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 # ── _json_default ─────────────────────────────────────────────────────────────
 
@@ -141,17 +141,38 @@ def test_check_manifest_deps_parses_invocations_log(config_root, projeto_terrapl
     p = projeto_terraplenagem
     v = p.new_version()
     # Write some invocations log entries
-    log_path = p.version_path(v) / p.INVOCATIONS_LOG
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_path.write_text(
-        '{"skill": "01-escopo-e-eap", "status": "OK"}\n'
-        "{invalid json line}\n"
-        '{"skill": "02-produtividade-climatica", "status": "OK"}\n',
-        encoding="utf-8",
+    p.write_lines(
+        f"{v}/{p.INVOCATIONS_LOG}",
+        [
+            '{"skill": "01-escopo-e-eap", "status": "OK"}',
+            "{invalid json line}",
+            '{"skill": "02-produtividade-climatica", "status": "OK"}',
+        ],
     )
     # check_manifest_deps for 04-cronograma requires 02-produtividade-climatica
     deps = r.check_manifest_deps("04-cronograma", p, v)
     # 02-produtividade-climatica is logged as OK, so no deps missing for that one
+    assert "02-produtividade-climatica" not in deps
+
+
+def test_check_manifest_deps_works_on_non_filesystem_backend(config_root):
+    """Regressão issue #146: `version_path(v) / INVOCATIONS_LOG` é um Path lógico
+    (não-backed) em StorageProjectHandle — antes da Fase 2, isso fazia
+    check_manifest_deps() sempre reportar TODAS as deps como faltantes para
+    qualquer backend não-filesystem (sharepoint/s3/azure/gdrive), quebrando a
+    primeira skill com `depends_on.skills` executada. Este teste falha em
+    `main` e passa após o fix (leitura via `read_lines`, nunca Path cru)."""
+    from concilium.infrastructure.storage.storage_project_repository import StorageProjectHandle
+    from tests.support.fake_blob_storage import FakeBlobStorage
+
+    storage = FakeBlobStorage()
+    project = StorageProjectHandle(storage, "proj-1")
+    project.write_json(project._META_FILE, {"contexto_id": "samples"})
+    v = project.new_version()
+    project.log_invocation(v, {"skill": "02-produtividade-climatica", "status": "OK"})
+
+    r = Runtime(config_root)
+    deps = r.check_manifest_deps("04-cronograma", project, v)
     assert "02-produtividade-climatica" not in deps
 
 
@@ -171,7 +192,7 @@ def test_run_skill_no_version(config_root, tmp_path):
     # Create project without any version
     projetos_root = tmp_path / "projetos"
     projetos_root.mkdir()
-    p = ProjectStore.init(projetos_root, "novo-projeto-test", "test")
+    p = build_project_repository(projetos_root).create_project("novo-projeto-test", "test")
     # no version created — current_version() returns None
     with pytest.raises(RuntimeError, match="Nenhuma versão"):
         r.run_skill("01-escopo-e-eap", p)
@@ -196,8 +217,7 @@ def test_run_skill_loga_observabilidade(config_root, projeto_terraplenagem, inpu
         v,
         inputs={**inputs_escopo_terraplenagem, "correlation_id": "corr-test", "execution_id": "exec-test"},
     )
-    log_path = p.version_path(v) / p.INVOCATIONS_LOG
-    entry = json.loads(log_path.read_text(encoding="utf-8").splitlines()[-1])
+    entry = json.loads(p.read_lines(f"{v}/{p.INVOCATIONS_LOG}")[-1])
     assert entry["correlation_id"] == "corr-test"
     assert entry["execution_id"] == "exec-test"
     assert "duration_ms" in entry

@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from mcp.server.fastmcp.exceptions import ToolError
 
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
 from concilium.presentation.mcp._context import (
     _config_root,
     _project,
@@ -97,10 +97,13 @@ def test_project_helper_not_found(server_env):
 
 def test_project_helper_found(server_env):
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "TestProj", "test")
+    store = build_project_repository(projects_path).create_project("TestProj", "test")
     proj_id = store.root.name
     result = _project(proj_id)
-    assert result.root == store.root
+    # result.root é lógico (Path(project_id)) via StorageProjectHandle — só o
+    # project_id importa aqui, não o Path absoluto de filesystem.
+    assert result.root.name == store.root.name
+    assert result.meta["nome"] == "TestProj"
 
 
 # ── tool: listar_contextos ────────────────────────────────────────────────────
@@ -148,7 +151,7 @@ async def test_listar_projetos_empty(server):
 @pytest.mark.asyncio
 async def test_listar_projetos_with_projects(server, server_env):
     projects_path = server_env["projects_path"]
-    ProjectStore.init(projects_path, "ListProj", "test")
+    build_project_repository(projects_path).create_project("ListProj", "test")
     result = await server.call_tool("listar_projetos", arguments={})
     assert result is not None
 
@@ -167,7 +170,7 @@ async def test_listar_projetos_no_root(monkeypatch, tmp_path):
 async def test_consultar_preco_insumo_temporal_tool(server, server_env):
     """ADR-041 / ADR-116 F5: historico_preco_insumo(modo='pontual') substitui consultar_preco_insumo_temporal."""
     projects_path = server_env["projects_path"]
-    project = ProjectStore.init(projects_path, "TemporalProj", "test")
+    project = build_project_repository(projects_path).create_project("TemporalProj", "test")
     project_id = project.root.name
 
     rt = _runtime()
@@ -194,7 +197,7 @@ async def test_consultar_preco_insumo_temporal_tool(server, server_env):
 @pytest.mark.asyncio
 async def test_consultar_status_fresh_project(server, server_env):
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "StatusProj", "test")
+    store = build_project_repository(projects_path).create_project("StatusProj", "test")
     proj_id = store.root.name
     result = await server.call_tool("consultar_status", arguments={"project_id": proj_id})
     assert result is not None
@@ -212,7 +215,7 @@ async def test_consultar_status_with_version_and_log(server, server_env):
     from concilium.application.runtime import Runtime
 
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "LoggedProj", "test")
+    store = build_project_repository(projects_path).create_project("LoggedProj", "test")
     store.new_version()
     rt = Runtime(CONFIG_ROOT)
     rt.run_skill(
@@ -253,7 +256,7 @@ async def test_consultar_status_with_version_and_log(server, server_env):
 async def test_aprovar_versao_no_version(server, server_env):
     """aprovar_versao when no current version → returns error dict."""
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "AprovProj", "test")
+    store = build_project_repository(projects_path).create_project("AprovProj", "test")
     proj_id = store.root.name
     result = await server.call_tool("aprovar_versao", arguments={"project_id": proj_id})
     assert result is not None
@@ -265,7 +268,7 @@ async def test_aprovar_versao_with_version(server, server_env):
     from concilium.application.runtime import Runtime
 
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "AprovProj2", "test")
+    store = build_project_repository(projects_path).create_project("AprovProj2", "test")
     store.new_version()
     rt = Runtime(CONFIG_ROOT)
     rt.run_skill(
@@ -383,7 +386,7 @@ async def test_listar_projetos_skips_file_in_root(server, server_env):
     projects_path = server_env["projects_path"]
     (projects_path / "not_a_project.txt").write_text("ignored")
     # Also create a valid project so result is not empty
-    ProjectStore.init(projects_path, "ValidListProj", "test")
+    build_project_repository(projects_path).create_project("ValidListProj", "test")
     result = await server.call_tool("listar_projetos", arguments={})
     assert result is not None
 
@@ -392,7 +395,7 @@ async def test_listar_projetos_skips_file_in_root(server, server_env):
 async def test_listar_projetos_handles_invalid_dir(server, server_env):
     """listar_projetos catches Exception from invalid project dir (lines 132-133)."""
     projects_path = server_env["projects_path"]
-    # Create a dir without meta.json — ProjectStore(p).meta will raise FileNotFoundError
+    # Create a dir without meta.json — list_projects() deve pular esse diretório
     invalid_dir = projects_path / "invalid_no_meta"
     invalid_dir.mkdir()
     result = await server.call_tool("listar_projetos", arguments={})
@@ -461,12 +464,11 @@ async def test_iniciar_orcamento_generic_exception(server, server_env):
 async def test_consultar_status_malformed_log_line(server, server_env):
     """consultar_status handles malformed JSON in log (lines 338-339)."""
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "StatusMalformed", "test")
+    store = build_project_repository(projects_path).create_project("StatusMalformed", "test")
     store.new_version()
     v = store.current_version()
 
-    log_path = store.version_path(v) / store.INVOCATIONS_LOG
-    log_path.write_text("BAD JSON\n", encoding="utf-8")
+    store.write_lines(f"{v}/{store.INVOCATIONS_LOG}", ["BAD JSON"])
 
     proj_id = store.root.name
     result = await server.call_tool("consultar_status", arguments={"project_id": proj_id})
@@ -479,7 +481,7 @@ async def test_consultar_status_with_resultado_populated(server, server_env):
     from concilium.application.runtime import Runtime
 
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "StatusResultado", "test")
+    store = build_project_repository(projects_path).create_project("StatusResultado", "test")
     store.new_version()
     rt = Runtime(CONFIG_ROOT)
 
@@ -517,14 +519,15 @@ async def test_consultar_status_with_resultado_populated(server, server_env):
 @pytest.mark.asyncio
 async def test_aprovar_versao_approve_raises(server, server_env):
     """aprovar_versao returns error dict when store.approve() raises (lines 368-369)."""
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
     projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "ApproveRaises", "test")
+    store = build_project_repository(projects_path).create_project("ApproveRaises", "test")
     store.new_version()
     proj_id = store.root.name
+    store.approve = MagicMock(side_effect=PermissionError("read-only"))
 
-    with patch.object(ProjectStore, "approve", side_effect=PermissionError("read-only")):
+    with patch("concilium.presentation.mcp._context._project", return_value=store):
         result = await server.call_tool("aprovar_versao", arguments={"project_id": proj_id})
     assert result is not None
 

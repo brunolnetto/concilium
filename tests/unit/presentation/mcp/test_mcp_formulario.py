@@ -504,7 +504,7 @@ class TestCriarProjetoFormulario:
                 ),
             ),
             patch("concilium.presentation.mcp.tools.formulario._runtime") as mock_rt,
-            patch("concilium.presentation.mcp.tools.formulario._projetos_root") as mock_pr,
+            patch("concilium.presentation.mcp.tools.formulario._project_repository") as mock_repo_factory,
             patch(
                 "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
@@ -515,22 +515,22 @@ class TestCriarProjetoFormulario:
         assert result["status"] == "pendente_mapeamento"
         assert result["total_servicos"] == 1
         assert len(result["nao_mapeados"]) == 1
-        # _runtime and _projetos_root must NOT have been called
+        # _runtime e _project_repository não devem ser chamados
         mock_rt.assert_not_called()
-        mock_pr.assert_not_called()
+        mock_repo_factory.assert_not_called()
 
     def test_tipo_obra_invalido_modo_formulario_nao_persiste_nada(self, tool_criar):
         """Achado real: tipo_obra="terraplenagem_drenagem" só era rejeitado dentro da
-        skill 01 (ao montar Projeto), depois de ProjectStore.init/create_escopo já terem
-        persistido em disco — projeto órfão sem versão, que nem re-rodar a skill resolvia
+        skill 01 (ao montar Projeto), depois de create_project/create_escopo já terem
+        persistido — projeto órfão sem versão, que nem re-rodar a skill resolvia
         (o escopo salvo já carregava o valor inválido). Corrigido: valida ANTES de
-        qualquer I/O — _runtime/_projetos_root nunca são chamados."""
+        qualquer I/O — _runtime/_project_repository nunca são chamados."""
         servicos = [{"descricao": "Escavacao", "quantidade": 100.0, "unidade": "m3", "cpu_id": "CPU-X"}]
         kwargs = {**_COMMON_KWARGS, "tipo_obra": "terraplenagem_drenagem"}
 
         with (
             patch("concilium.presentation.mcp.tools.formulario._runtime") as mock_rt,
-            patch("concilium.presentation.mcp.tools.formulario._projetos_root") as mock_pr,
+            patch("concilium.presentation.mcp.tools.formulario._project_repository") as mock_repo_factory,
         ):
             result = tool_criar(servicos=servicos, **kwargs)
 
@@ -538,7 +538,7 @@ class TestCriarProjetoFormulario:
         assert "terraplenagem_drenagem" in result["erro"]
         assert "terraplenagem" in result["erro"]  # lista de valores aceitos na mensagem
         mock_rt.assert_not_called()
-        mock_pr.assert_not_called()
+        mock_repo_factory.assert_not_called()
 
     def test_tipo_obra_invalido_modo_spec_e_defesa_em_profundidade(self, tool_criar):
         """Mesmo achado, caminho spec=... — aqui a checagem é defesa-em-profundidade:
@@ -619,16 +619,12 @@ class TestCriarProjetoFormulario:
                 return_value=mock_rt,
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mock_coord,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mock_store,
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mock_store)),
             ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
@@ -685,16 +681,12 @@ class TestCriarProjetoFormulario:
                 return_value=mock_rt,
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mock_coord,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mock_store,
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mock_store)),
             ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
@@ -762,16 +754,12 @@ class TestCriarProjetoFormulario:
                 return_value=mock_rt,
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mock_coord,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mock_store,
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mock_store)),
             ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
@@ -873,16 +861,12 @@ class TestCriarProjetoFormulario:
                 return_value=mock_rt,
             ),
             patch(
-                "concilium.presentation.mcp.tools.formulario._projetos_root",
-                return_value=tmp_path,
-            ),
-            patch(
                 "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mock_coord,
             ),
             patch(
-                "concilium.infrastructure.storage.project.ProjectStore.init",
-                return_value=mock_store,
+                "concilium.presentation.mcp.tools.formulario._project_repository",
+                return_value=MagicMock(create_project=MagicMock(return_value=mock_store)),
             ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)

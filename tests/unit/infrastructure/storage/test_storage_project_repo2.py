@@ -14,35 +14,11 @@ from concilium.infrastructure.storage.storage_project_repository import (
     StorageProjectHandle,
     StorageProjectRepository,
 )
+from tests.support.fake_blob_storage import FakeBlobStorage as MemoryBlobStorage
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  In-memory stub for BlobStoragePort
+#  In-memory stub for BlobStoragePort — ver tests/support/fake_blob_storage.py
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-class MemoryBlobStorage(BlobStoragePort):
-    """In-memory dict-backed stub implementing BlobStoragePort."""
-
-    def __init__(self) -> None:
-        self._data: dict[str, bytes] = {}
-        self._approved: set[str] = set()
-
-    def ler_blob(self, path: str) -> bytes:
-        if path not in self._data:
-            raise FileNotFoundError(f"Blob not found: {path}")
-        return self._data[path]
-
-    def gravar_blob(self, path: str, content: bytes) -> None:
-        self._data[path] = content
-
-    def listar_blobs(self, prefix: str) -> list[str]:
-        return [k for k in self._data if k.startswith(prefix)]
-
-    def blob_existe(self, path: str) -> bool:
-        return path in self._data
-
-    def aprovar_versao(self, path: str) -> None:
-        self._approved.add(path)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -677,14 +653,18 @@ class TestMiscMethods:
         # MemoryBlobStorage records approved paths
         assert f"{project_id}/v1/canonical.json" in storage._approved
 
-    def test_snapshots_returns_none(self, handle: StorageProjectHandle) -> None:
-        assert handle.snapshots is None
+    def test_snapshots_stores_and_dedupes(self, handle: StorageProjectHandle) -> None:
+        snaps = handle.snapshots
+        h1 = snaps.store("jurisdicao", {"a": 1})
+        h2 = snaps.store("jurisdicao", {"a": 1})
+        assert h1 == h2
 
     def test_list_escopos_returns_empty(self, handle: StorageProjectHandle) -> None:
         assert handle.list_escopos() == []
 
-    def test_escopo_returns_none(self, handle: StorageProjectHandle) -> None:
-        assert handle.escopo("default") is None
+    def test_escopo_returns_handle(self, handle: StorageProjectHandle) -> None:
+        es = handle.escopo("default")
+        assert es.escopo_id == "default"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -704,11 +684,11 @@ class TestCreateEscopo:
             data_inicio="2026-01-01",
             data_termino="2026-12-31",
         )
-        assert result["escopo_id"] == "esc-001"
+        assert result.escopo_id == "esc-001"
         meta = handle.read_json("escopos/esc-001/meta.json", {})
         assert meta["nome"] == "Escopo Principal"
         assert meta["tipo_obra"] == "terraplenagem"
-        assert meta["coordenadas"]["lat"] == -15.7801
+        assert meta["coordenadas_lat"] == -15.7801
 
     def test_create_escopo_updates_index(self, handle: StorageProjectHandle) -> None:
         handle.create_escopo(
@@ -736,9 +716,33 @@ class TestCreateEscopo:
         assert "esc-B" in idx["escopo_ids"]
 
     def test_create_escopo_no_duplicate_in_index(self, handle: StorageProjectHandle) -> None:
-        for _ in range(3):
+        handle.create_escopo(
+            escopo_id="esc-dup",
+            nome="Dup",
+            tipo_obra="terraplenagem",
+            localizacao="MG",
+            coordenadas_lat=-19.9,
+            coordenadas_lng=-43.9,
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
+        )
+        idx = handle.read_json("escopos/_index.json", {"escopo_ids": []})
+        assert idx["escopo_ids"].count("esc-dup") == 1
+
+    def test_create_escopo_duplicate_raises(self, handle: StorageProjectHandle) -> None:
+        handle.create_escopo(
+            escopo_id="esc-dup2",
+            nome="Dup",
+            tipo_obra="terraplenagem",
+            localizacao="MG",
+            coordenadas_lat=-19.9,
+            coordenadas_lng=-43.9,
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
+        )
+        with pytest.raises(FileExistsError):
             handle.create_escopo(
-                escopo_id="esc-dup",
+                escopo_id="esc-dup2",
                 nome="Dup",
                 tipo_obra="terraplenagem",
                 localizacao="MG",
@@ -747,8 +751,6 @@ class TestCreateEscopo:
                 data_inicio="2026-01-01",
                 data_termino="2026-12-31",
             )
-        idx = handle.read_json("escopos/_index.json", {"escopo_ids": []})
-        assert idx["escopo_ids"].count("esc-dup") == 1
 
     def test_create_escopo_writes_planos_index(self, handle: StorageProjectHandle) -> None:
         handle.create_escopo(

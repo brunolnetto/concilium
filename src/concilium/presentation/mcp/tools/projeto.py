@@ -10,10 +10,10 @@ from mcp.server.fastmcp import FastMCP
 
 from concilium.domain.models.canonical import tipos_obra_validos
 from concilium.infrastructure.auth.permission_guard import permission
-from concilium.infrastructure.storage.project import ProjectStore
 from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
     _project,
+    _project_repository,
     _projetos_root,
     _runtime,
     _wrap_response,
@@ -30,29 +30,22 @@ def register(server: FastMCP) -> None:
     def listar_projetos() -> dict[str, Any]:
         """Lista os projetos existentes no sistema com versão atual e contexto."""
         proj_root = _projetos_root()
-        if not proj_root.exists():
-            return _wrap_response({"projetos": [], "projetos_root": str(proj_root)})
-
         out = []
-        for p in sorted(proj_root.iterdir()):
-            if not p.is_dir() or p.name.startswith("."):
-                continue  # pula diretórios ocultos (ex: .tool_invocations)
-            if not (p / "meta.json").exists():
-                continue  # pula diretórios sem meta.json (não são projetos)
+        for handle in _project_repository().list_projects():
+            project_id = handle.root.name
             try:
-                store = ProjectStore(p)
-                meta = store.meta
+                meta = handle.meta
                 out.append(
                     {
-                        "id": p.name,
+                        "id": project_id,
                         "nome": meta.get("nome", "?"),
                         "contexto_id": meta.get("contexto_id"),
                         "current_version": meta.get("current_version"),
-                        "versoes": store.list_versions(),
+                        "versoes": handle.list_versions(),
                     }
                 )
             except Exception as e:
-                out.append({"id": p.name, "erro": str(e)})
+                out.append({"id": project_id, "erro": str(e)})
         return _wrap_response({"projetos": out, "projetos_root": str(proj_root)})
 
     # ── 3. Iniciar orçamento ─────────────────────────────────────────────
@@ -102,10 +95,7 @@ def register(server: FastMCP) -> None:
             )
 
         rt = _runtime()
-        proj_root = _projetos_root()
-        proj_root.mkdir(parents=True, exist_ok=True)
-
-        store = ProjectStore.init(proj_root, nome, contexto_id=contexto_id)
+        store = _project_repository().create_project(nome, contexto_id)
 
         # ADR-031: cria estrutura de escopo+plano para compatibilidade com disparar_pipeline
         escopo_id = "esc-principal"
@@ -244,21 +234,19 @@ def register(server: FastMCP) -> None:
             pass
 
         if v:
-            log_path = store.version_path(v) / store.INVOCATIONS_LOG
             executadas: list[dict] = []
             skills_com_erro: list[str] = []
-            if log_path.exists():
-                for line in log_path.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        try:
-                            entry = json.loads(line)
-                            skill_name = entry.get("skill", "")
-                            status = entry.get("status", "")
-                            executadas.append({"skill": skill_name, "status": status, "ts": entry.get("ts")})
-                            if status == "ERRO":
-                                skills_com_erro.append(skill_name)
-                        except json.JSONDecodeError:
-                            pass
+            for line in store.read_lines(f"{v}/{store.INVOCATIONS_LOG}"):
+                if line.strip():
+                    try:
+                        entry = json.loads(line)
+                        skill_name = entry.get("skill", "")
+                        status = entry.get("status", "")
+                        executadas.append({"skill": skill_name, "status": status, "ts": entry.get("ts")})
+                        if status == "ERRO":
+                            skills_com_erro.append(skill_name)
+                    except json.JSONDecodeError:
+                        pass
             out["invocations"] = executadas
 
             canonical = store.load_canonical(v)
@@ -367,9 +355,7 @@ def register(server: FastMCP) -> None:
                 actor_role=roles[0] if roles else None,
                 detalhes=detalhes,
             )
-            from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
-
-            AuditService().log_version_action(FileProjectHandle(store), va)
+            AuditService().log_version_action(store, va)
         except Exception:
             pass  # auditoria é best-effort
         return result

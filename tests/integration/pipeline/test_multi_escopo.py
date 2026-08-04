@@ -2,58 +2,22 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
 from concilium.domain.models.financial.resultado import BreakdownEscopo, ResultadoConsolidadoProjeto
-from concilium.infrastructure.storage.escopo_store import EscopoStore, PlanoStore
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.infrastructure.storage.store_factory import build_project_repository
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
-def projeto_novo(tmp_path: Path) -> ProjectStore:
-    """ProjectStore novo (pré-ADR-031, sem vN/ nem escopos/)."""
-    p = tmp_path / "projetos" / "proj-teste"
-    p.mkdir(parents=True)
-    meta = {
-        "id": "proj-teste",
-        "nome": "Projeto Teste Multi-Escopo",
-        "contexto_id": "test",
-        "current_version": None,
-        "snapshot_catalogo_id": "",
-        "snapshot_perfil_id": "",
-    }
-    (p / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
-    (p / "snapshots").mkdir()
-    return ProjectStore(p)
-
-
-@pytest.fixture
-def projeto_legado(tmp_path: Path) -> ProjectStore:
-    """ProjectStore com estrutura legada vN/ (pré-ADR-031)."""
-    p = tmp_path / "projetos" / "proj-legado"
-    p.mkdir(parents=True)
-    meta = {
-        "id": "proj-legado",
-        "nome": "Projeto Legado",
-        "contexto_id": "test",
-        "current_version": "v1",
-        "snapshot_catalogo_id": "",
-        "snapshot_perfil_id": "",
-        "approved_versions": [],
-    }
-    (p / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
-    (p / "snapshots").mkdir()
-    # Cria versão legada
-    v1 = p / "v1"
-    v1.mkdir()
-    (v1 / "outputs").mkdir()
-    (v1 / "invocations.log").touch()
-    return ProjectStore(p)
+def projeto_novo(tmp_path: Path):
+    """Projeto novo via BlobStoragePort (ADR-047) — sem vN/ nem escopos/ ainda."""
+    return build_project_repository(tmp_path).create_project(
+        "Projeto Teste Multi-Escopo", "test", project_id="proj-teste"
+    )
 
 
 # ── create_escopo / list_escopos ─────────────────────────────────────────────
@@ -71,9 +35,9 @@ class TestEscopos:
             data_inicio="2026-06-01",
             data_termino="2026-12-31",
         )
-        assert es.root.exists()
-        assert (es.root / "planos").exists()
-        assert (es.root / EscopoStore.ESCOPO_FILE).exists()
+        assert es.escopo_id == "lote-a"
+        assert "lote-a" in projeto_novo.list_escopos()
+        assert es.list_plans() == []
 
     def test_criar_escopo_registra_meta(self, projeto_novo):
         projeto_novo.create_escopo(
@@ -190,7 +154,7 @@ class TestEscopos:
 
 
 class TestPlanos:
-    def _make_escopo(self, projeto_novo) -> EscopoStore:
+    def _make_escopo(self, projeto_novo):
         return projeto_novo.create_escopo(
             escopo_id="lote-a",
             nome="Lote A",
@@ -205,9 +169,8 @@ class TestPlanos:
     def test_criar_plano_cria_diretorio(self, projeto_novo):
         es = self._make_escopo(projeto_novo)
         ps = es.create_plan("Plano Agressivo", hipotese="Equipe dupla")
-        assert ps.root.exists()
-        assert (ps.root / PlanoStore.PLANO_FILE).exists()
-        assert (ps.root / "outputs").exists()
+        assert ps.plano_id in es.list_plans()
+        assert ps.meta["nome"] == "Plano Agressivo"
 
     def test_criar_plano_meta_inicial(self, projeto_novo):
         es = self._make_escopo(projeto_novo)
@@ -234,9 +197,8 @@ class TestPlanos:
     def test_approve_plan_marca_aprovado(self, projeto_novo):
         es = self._make_escopo(projeto_novo)
         ps = es.create_plan("Plano Principal")
-        # precisa de canonical.json para poder aprovar (chmod 444 é optional se não existir)
-        (ps.root / PlanoStore.CANONICAL_FILE).write_text("{}", encoding="utf-8")
-        (ps.root / PlanoStore.INVOCATIONS_LOG).write_text("", encoding="utf-8")
+        # precisa de canonical.json para poder aprovar (aprovar_versao é no-op se ausente)
+        ps.write_canonical_raw({})
         es.approve_plan(ps.plano_id)
         assert es.approved_plan() is not None
         assert es.approved_plan().plano_id == ps.plano_id
@@ -248,8 +210,7 @@ class TestPlanos:
         ps2 = es.create_plan("Plano B")
         ps3 = es.create_plan("Plano C")
         for ps in (ps1, ps2, ps3):
-            (ps.root / PlanoStore.CANONICAL_FILE).write_text("{}", encoding="utf-8")
-            (ps.root / PlanoStore.INVOCATIONS_LOG).write_text("", encoding="utf-8")
+            ps.write_canonical_raw({})
         arquivados = es.approve_plan(ps2.plano_id)
         assert sorted(arquivados) == sorted([ps1.plano_id, ps3.plano_id])
         assert es.plan(ps1.plano_id).status == "ARQUIVADO"
@@ -259,8 +220,7 @@ class TestPlanos:
     def test_active_plan_retorna_aprovado_se_existir(self, projeto_novo):
         es = self._make_escopo(projeto_novo)
         ps = es.create_plan("Único")
-        (ps.root / PlanoStore.CANONICAL_FILE).write_text("{}", encoding="utf-8")
-        (ps.root / PlanoStore.INVOCATIONS_LOG).write_text("", encoding="utf-8")
+        ps.write_canonical_raw({})
         es.approve_plan(ps.plano_id)
         assert es.active_plan().plano_id == ps.plano_id
 
@@ -281,8 +241,7 @@ class TestPlanos:
     def test_save_output_file(self, projeto_novo):
         es = self._make_escopo(projeto_novo)
         ps = es.create_plan("Plano Output")
-        p = ps.save_output_file(b"dummy-xlsx-data", "resultado.xlsm")
-        assert p.exists()
+        ps.save_output_file(b"dummy-xlsx-data", "resultado.xlsm")
         assert ps.load_output_file("resultado.xlsm") == b"dummy-xlsx-data"
         assert "resultado.xlsm" in ps.list_output_files()
 
