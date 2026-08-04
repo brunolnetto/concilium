@@ -451,24 +451,40 @@ def _rasfc_compute_deadline_weeks(inputs: dict, rcpsp_spec: Any, canonical_in: C
 
 
 def _rasfc_build_producoes_por_atividade(
-    canonical_in: CanonicalModel, cpu_lookup: dict | None, producao_lookup: dict | None
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict | None,
+    producao_lookup: dict | None,
+    *,
+    usa_atividade_id: bool = True,
 ) -> dict[str, Any]:
     """Pareamento atividade→Producao (ADR-139 D5); vazio sem ambos os lookups de catálogo.
 
     Traduz item_id -> atividade_id via `_build_item_to_activity_map` (mesmo
     mapeamento já usado por `_extract_edge_thresholds_from_eap` para as arestas
-    de precedência): quando `canonical.atividades` está populado (sempre, na
-    prática — `_extract_activities` usa `atividade_id` nesse caso), o DAG do
-    CP-SAT é montado nesse espaço de IDs. Sem esta tradução, `producao_por_semana`/
+    de precedência) SÓ quando o DAG do CP-SAT de fato usa esse espaço de IDs —
+    ou seja, quando `_rasfc_extract_from_canonical` construiu as atividades via
+    `_extract_activities` (usa `atividade_id` se `canonical.atividades` estiver
+    populado). Sem esta tradução nesse caso, `producao_por_semana`/
     `consumo_por_semana` do `ReplenishableResource` (chaveados por item_id puro)
     nunca batem com `acts` (chaveado por atividade_id), e `VAL-ESTOQUE-PROD-01`
     dispara sempre que há material gerado internamente — mesmo com a atividade
-    de fato presente no DAG (issue #142). `.get(item_id, item_id)` preserva o
-    comportamento atual quando `atividades` não está populado (fallback EAP).
+    de fato presente no DAG (issue #142).
+
+    `usa_atividade_id=False` (issue #125, regressão do fix acima): quando
+    `_rasfc_extract_from_spec` monta as atividades a partir de `rcpsp_spec`
+    (`_build_activity_from_spec_entry`), `activity_id` é SEMPRE `item.item_id`
+    puro — mesmo com `canonical.atividades` populado (caso comum, ex. AGIS). A
+    tradução incondicional fazia `producao_por_semana` referenciar IDs
+    (`-atv-N`) inexistentes nesse DAG, disparando `VAL-ESTOQUE-PROD-01` para
+    todo projeto rcpsp_spec com material de geração interna. `_rasfc_extract_inputs`
+    passa `usa_atividade_id=not bool(rcpsp_spec)` para escolher o espaço de IDs
+    certo por chamada, em vez de assumir um único DAG-building path.
     """
     if not (cpu_lookup and producao_lookup):
         return {}
     por_item = _build_producoes_por_atividade(canonical_in.eap or [], cpu_lookup, producao_lookup)
+    if not usa_atividade_id:
+        return por_item
     item_to_activity = _build_item_to_activity_map(canonical_in)
     return {item_to_activity.get(item_id, item_id): prod for item_id, prod in por_item.items()}
 
@@ -502,7 +518,13 @@ def _rasfc_extract_inputs(
     _rasfc_warn_if_pool_vazio(pool, validacoes)
 
     deadline_weeks = _rasfc_compute_deadline_weeks(inputs, rcpsp_spec, canonical_in)
-    producoes_por_atividade = _rasfc_build_producoes_por_atividade(canonical_in, cpu_lookup, producao_lookup)
+    # issue #125: só traduz item_id->atividade_id quando o DAG foi montado por
+    # _rasfc_extract_from_canonical (usa atividade_id) — _rasfc_extract_from_spec
+    # (rcpsp_spec presente) sempre usa item_id puro (_build_activity_from_spec_entry).
+    usa_atividade_id = not (rcpsp_spec and isinstance(rcpsp_spec, dict))
+    producoes_por_atividade = _rasfc_build_producoes_por_atividade(
+        canonical_in, cpu_lookup, producao_lookup, usa_atividade_id=usa_atividade_id
+    )
     return activities, dag, pool, deadline_weeks, producoes_por_atividade
 
 

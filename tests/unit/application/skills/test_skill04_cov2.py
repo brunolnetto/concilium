@@ -1770,3 +1770,128 @@ class TestRasfcRunHeuristicsMaterialGeradoInternamenteModoAutomatico:
         assert candidates, "esperava ao menos um candidato viável"
         assert resources and resources[0].resource_id == "MA-SOLO"
         assert not any(v.codigo == "VAL-ESTOQUE-BUILD-01" for v in validacoes)
+
+
+# ---------------------------------------------------------------------------
+# Regressão do fix de #142 sobre projetos rcpsp_spec (issue #125) — AGIS
+# ---------------------------------------------------------------------------
+#
+# _rasfc_extract_from_spec (rcpsp_spec presente) monta activity_id sempre a
+# partir de item.item_id puro (_build_activity_from_spec_entry), mesmo com
+# canonical.atividades populado — diferente de _rasfc_extract_from_canonical
+# (usa atividade_id via _extract_activities nesse caso). A tradução
+# incondicional adicionada pelo fix de #142 quebrava todo projeto rcpsp_spec
+# com material de geração interna (VAL-ESTOQUE-PROD-01 disparava sempre).
+
+
+class TestRasfcBuildProducoesPorAtividadeRcpspSpecMantemItemId:
+    def test_usa_atividade_id_false_preserva_item_id(self):
+        """Com usa_atividade_id=False (rcpsp_spec presente), a tradução não deve
+        acontecer mesmo com canonical.atividades populado."""
+
+        class FakeEapItem:
+            item_id = "eap-2"
+            cpu_id = "CPU-TERRA"
+            quantitativo = 100.0
+
+        class FakeAtividade:
+            atividade_id = "eap-2-atv-1"
+            eap_item_id = "eap-2"
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = [FakeAtividade()]
+
+        cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+
+        rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
+        result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup, usa_atividade_id=False)
+
+        assert result == {"eap-2": {"id": "PROD-X", "valor_horario": 10.0}}
+        assert "eap-2-atv-1" not in result
+
+
+class TestRasfcExtractInputsRcpspSpecMaterialGeradoInternamente:
+    def _build_canonical(self):
+        class FakeEapItem:
+            item_id = "eap-1"
+            cpu_id = "CPU-TERRA"
+            quantitativo = 100.0
+            descricao = "Escavação"
+
+            def predecessores_tipados(self):
+                return []
+
+        # canonical.atividades POPULADO — o mesmo cenário que disparava a
+        # tradução incondicional (issue #125): rcpsp_spec presente deveria
+        # ignorar este espaço de IDs para producoes_por_atividade.
+        class FakeAtividade:
+            atividade_id = "eap-1-atv-1"
+            eap_item_id = "eap-1"
+            descricao = "Escavação"
+
+        class FakeRegime:
+            horas_dia = 8
+            dias_semana = 5
+            eta_jornada = 1.0  # ADR-148: isola o teste do fator de jornada
+
+        class FakeProjeto:
+            data_inicio = date(2025, 1, 6)
+            data_termino = date(2025, 3, 31)
+            regime_trabalho = FakeRegime()
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = [FakeAtividade()]
+            projeto = FakeProjeto()
+            recurso_pool = []
+            activity_dag = None
+            praticabilidade = None
+
+        return FakeCanonical()
+
+    def _lookups(self):
+        cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-ESCO", "precos_unitarios_sbdi": {"total": 0.0}}}
+        producao_lookup = {
+            "PROD-ESCO": {
+                "id": "PROD-ESCO",
+                "valor_horario": 100.0,
+                "materiais_gerados": [{"insumo_id": "MA-SOLO", "geracao_por_hora": 100.0}],
+                "composicao_padrao_equipe": {"funcoes": [], "equipamentos": []},
+            }
+        }
+        return cpu_lookup, producao_lookup
+
+    def test_producoes_por_atividade_casa_com_activity_id_do_rcpsp_spec(self):
+        """issue #125: com rcpsp_spec presente, _rasfc_extract_from_spec monta
+        activities com activity_id=item_id puro (_build_activity_from_spec_entry)
+        — producoes_por_atividade tem que ficar no MESMO espaço de IDs, mesmo
+        com canonical.atividades populado, senão VAL-ESTOQUE-PROD-01 dispara
+        para todo projeto rcpsp_spec com material de geração interna (AGIS)."""
+        canonical = self._build_canonical()
+        cpu_lookup, producao_lookup = self._lookups()
+        validacoes: list = []
+        rcpsp_spec = {
+            "activities": [{"item_id": "eap-1", "duration_weeks": 4, "descricao": "Escavação"}],
+            "resource_pool": {"DUMMY": 1},
+        }
+
+        rasfc_extract_inputs = _MOD._mod_validacao._rasfc_extract_inputs
+
+        extracted = rasfc_extract_inputs(
+            canonical, {"rcpsp_spec": rcpsp_spec}, validacoes, cpu_lookup, producao_lookup
+        )
+        assert extracted is not None
+        activities, _dag, _pool, _deadline_weeks, producoes_por_atividade = extracted
+
+        activity_ids = {a.activity_id for a in activities}
+        assert activity_ids == {"eap-1"}, "rcpsp_spec sempre usa item_id puro como activity_id"
+
+        # A causa raiz de #125: sem o fix, a chave seria "eap-1-atv-1" (traduzida
+        # incondicionalmente), fora do DAG que só conhece "eap-1".
+        assert "eap-1" in producoes_por_atividade
+        assert "eap-1-atv-1" not in producoes_por_atividade
+        assert set(producoes_por_atividade) <= activity_ids, (
+            "producoes_por_atividade não pode referenciar atividade fora do DAG (VAL-ESTOQUE-PROD-01)"
+        )
