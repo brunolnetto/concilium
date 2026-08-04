@@ -164,6 +164,17 @@ SIMILARIDADE_REVISAR_MIN: float = 0.55  # score ≥ (e < DUPLICATA_MIN) → revi
 # larga de α (achado real ao validar contra o catálogo mendeslobo, ADR-179).
 SIMILARIDADE_DESC_MIN_HIPOTESE_ENCARGOS: float = 0.6
 
+# Nível 2/3 (produção/CPU) — mesmas classificações duplicata_provavel/revisar de
+# SIMILARIDADE_DUPLICATA_MIN/REVISAR_MIN acima, pesos próprios por combinarem
+# sinais diferentes (descrição da CPU + composição de recursos + valor_horario).
+SIMILARIDADE_PESO_DESC_CPU: float = 0.50
+SIMILARIDADE_PESO_RECEITA_RECURSOS: float = 0.20
+SIMILARIDADE_PESO_QUANTIDADE_RECURSOS: float = 0.15
+SIMILARIDADE_PESO_VALOR_HORARIO: float = 0.15
+SIMILARIDADE_TOL_VALOR_HORARIO: float = 0.30  # 30% — frotas/fontes diferentes têm mais ruído que preço de MO
+SIMILARIDADE_CPU_DUPLICATA_MIN: float = 0.75
+SIMILARIDADE_CPU_REVISAR_MIN: float = 0.50
+
 # ── Salário mínimo (vigência 2026) ────────────────────────────────────────────
 # Atualizar a cada reajuste do governo federal.
 # ADR-097: portaria MTE/2025 → R$ 1.621,00 vigente jan/2026

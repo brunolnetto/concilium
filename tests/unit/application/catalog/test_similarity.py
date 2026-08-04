@@ -6,15 +6,23 @@ import pytest
 
 from concilium.application.catalog.similarity import (
     _categoria_sim,
+    _cosseno,
     _desc_sim,
+    _jaccard,
     _price_sim,
     _price_sim_direto,
     _price_sim_encargos,
+    _recursos_canonicos,
     _tokens_de_conteudo,
+    _vh_sim,
     _weighted_dice,
     build_idf,
+    cpu_similarity,
+    find_candidate_cpu_duplicates,
     find_candidate_duplicates,
+    find_cross_catalog_cpu_matches,
     insumo_similarity,
+    producao_similarity,
 )
 
 # ── _tokens_de_conteudo ───────────────────────────────────────────────────────
@@ -344,3 +352,196 @@ class TestFindCandidateDuplicates:
         result = find_candidate_duplicates(insumos)
         par_ab = [r for r in result if {r.codigo_a, r.codigo_b} == {"A", "B"}]
         assert not par_ab or par_ab[0].classificacao != "duplicata_provavel"
+
+
+# ── Nível 2 (produção) / Nível 3 (CPU) ────────────────────────────────────────
+
+
+class TestJaccard:
+    def test_conjuntos_identicos(self):
+        assert _jaccard({"a", "b"}, {"a", "b"}) == 1.0
+
+    def test_conjuntos_disjuntos(self):
+        assert _jaccard({"a"}, {"b"}) == 0.0
+
+    def test_ambos_vazios(self):
+        assert _jaccard(set(), set()) == 1.0
+
+    def test_overlap_parcial(self):
+        assert _jaccard({"a", "b", "c"}, {"a", "b", "d"}) == pytest.approx(2 / 4, abs=1e-6)
+
+
+class TestCosseno:
+    def test_vetores_identicos(self):
+        assert _cosseno({"a": 2.0, "b": 3.0}, {"a": 2.0, "b": 3.0}) == pytest.approx(1.0, abs=1e-6)
+
+    def test_vetores_ortogonais(self):
+        assert _cosseno({"a": 1.0}, {"b": 1.0}) == 0.0
+
+    def test_ambos_vazios(self):
+        assert _cosseno({}, {}) == 1.0
+
+    def test_proporcionais_mas_escala_diferente(self):
+        # {a:1,b:2} e {a:2,b:4} têm a mesma "direção" -> cosseno 1.0
+        assert _cosseno({"a": 1.0, "b": 2.0}, {"a": 2.0, "b": 4.0}) == pytest.approx(1.0, abs=1e-6)
+
+
+class TestVhSim:
+    def test_identicos(self):
+        assert _vh_sim(100.0, 100.0) == 1.0
+
+    def test_dentro_da_tolerancia_30pct(self):
+        assert _vh_sim(100.0, 115.0) > 0.4
+
+    def test_muito_diferentes(self):
+        assert _vh_sim(100.0, 500.0) == 0.0
+
+    def test_zero_nao_comparavel(self):
+        assert _vh_sim(0.0, 100.0) == 0.0
+
+
+class TestRecursosCanonicos:
+    def test_soma_funcoes_equipamentos_materiais(self):
+        producao = {
+            "composicao_padrao_equipe": {
+                "funcoes": [{"funcao_id": "MO-A", "num_pessoas": 2}],
+                "equipamentos": [{"equip_id": "EQ-A", "num_unidades": 1}],
+                "materiais": [{"insumo_id": "MA-A", "consumo_por_hora": 5.0}],
+            }
+        }
+        r = _recursos_canonicos(producao, None)
+        assert r == {"MO-A": 2.0, "EQ-A": 1.0, "MA-A": 5.0}
+
+    def test_aceita_chave_equipe_alternativa(self):
+        producao = {"equipe": {"funcoes": [{"funcao_id": "MO-A", "num_pessoas": 1}]}}
+        assert _recursos_canonicos(producao, None) == {"MO-A": 1.0}
+
+    def test_producao_none_retorna_vazio(self):
+        assert _recursos_canonicos(None, None) == {}
+
+    def test_canon_map_resolve_codigo_duplicado(self):
+        """Duas produções referenciando P0058 e MO-SALA-TEC (mesmo recurso real,
+        códigos diferentes) devem contar como o MESMO recurso quando canon_map
+        os liga — sem isso, recipe_sim entre produções equivalentes cairia."""
+        producao = {"composicao_padrao_equipe": {"funcoes": [{"funcao_id": "P0058", "num_pessoas": 1}]}}
+        r = _recursos_canonicos(producao, {"P0058": "MO-SALA-TEC"})
+        assert r == {"MO-SALA-TEC": 1.0}
+
+
+class TestProducaoSimilarity:
+    def _mk(self, id_, descricao, vh, funcoes=None, equipamentos=None):
+        return {
+            "id": id_,
+            "descricao": descricao,
+            "valor_horario": vh,
+            "composicao_padrao_equipe": {"funcoes": funcoes or [], "equipamentos": equipamentos or []},
+        }
+
+    def test_producoes_identicas_sao_duplicata_provavel(self):
+        a = self._mk("A", "Escavação 1a categoria", 200.0, funcoes=[{"funcao_id": "MO-X", "num_pessoas": 2}])
+        b = self._mk("B", "Escavação 1a categoria", 200.0, funcoes=[{"funcao_id": "MO-X", "num_pessoas": 2}])
+        r = producao_similarity(a, b)
+        assert r.classificacao == "duplicata_provavel"
+
+    def test_producoes_totalmente_diferentes_ficam_limpas(self):
+        a = self._mk("A", "Escavação 1a categoria", 200.0, funcoes=[{"funcao_id": "MO-X", "num_pessoas": 2}])
+        b = self._mk("B", "Fresagem de pavimento", 50.0, funcoes=[{"funcao_id": "MO-Y", "num_pessoas": 5}])
+        r = producao_similarity(a, b)
+        assert r.classificacao is None
+
+
+class TestCpuSimilarity:
+    def _mk_cpu(self, codigo, descricao, categoria, unidade="m3", producao_id_ref=None):
+        return {
+            "codigo": codigo,
+            "descricao": descricao,
+            "categoria": categoria,
+            "unidade": unidade,
+            "producao_id_ref": producao_id_ref or f"{codigo}-PROD-001",
+        }
+
+    def _mk_prod(self, id_, vh, funcoes=None):
+        return {"id": id_, "valor_horario": vh, "composicao_padrao_equipe": {"funcoes": funcoes or []}}
+
+    def test_unidade_incompativel_e_gate_score_zero_sem_classificar(self):
+        cpu_a = self._mk_cpu("CPU-A", "Escavação", "TERRAPLENAGEM", unidade="m3")
+        cpu_b = self._mk_cpu("CPU-B", "Escavação", "TERRAPLENAGEM", unidade="m2")
+        r = cpu_similarity(cpu_a, cpu_b, None, None)
+        assert r.classificacao is None
+        assert r.score == 0.0
+        assert r.detalhe.get("motivo") == "unidade_incompativel"
+
+    def test_cpus_equivalentes_com_mesma_composicao_e_duplicata_provavel(self):
+        cpu_a = self._mk_cpu("CPU-A", "Escavação 1a categoria DMT2000", "TERRAPLENAGEM", producao_id_ref="P-A")
+        cpu_b = self._mk_cpu("CPU-B", "Escavação 1a categoria DMT2000", "TERRAPLENAGEM", producao_id_ref="P-B")
+        prod_a = self._mk_prod("P-A", 200.0, funcoes=[{"funcao_id": "MO-X", "num_pessoas": 2}])
+        prod_b = self._mk_prod("P-B", 205.0, funcoes=[{"funcao_id": "MO-X", "num_pessoas": 2}])
+        r = cpu_similarity(cpu_a, cpu_b, prod_a, prod_b)
+        assert r.classificacao == "duplicata_provavel"
+
+    def test_producao_ausente_nao_quebra(self):
+        cpu_a = self._mk_cpu("CPU-A", "Escavação", "TERRAPLENAGEM")
+        cpu_b = self._mk_cpu("CPU-B", "Fresagem", "TERRAPLENAGEM")
+        r = cpu_similarity(cpu_a, cpu_b, None, None)
+        assert r.classificacao is None
+
+
+class TestFindCandidateCpuDuplicates:
+    def test_bloqueia_por_categoria(self):
+        cpus = [
+            {"codigo": "CPU-A", "descricao": "Escavação", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "P-A"},
+            {"codigo": "CPU-B", "descricao": "Escavação", "categoria": "DRENAGEM", "unidade": "m3", "producao_id_ref": "P-B"},
+        ]
+        producoes = [
+            {"id": "P-A", "valor_horario": 100.0, "composicao_padrao_equipe": {}},
+            {"id": "P-B", "valor_horario": 100.0, "composicao_padrao_equipe": {}},
+        ]
+        assert find_candidate_cpu_duplicates(cpus, producoes) == []
+
+    def test_encontra_duplicata_na_mesma_categoria(self):
+        cpus = [
+            {"codigo": "CPU-A", "descricao": "Escavação 1a categoria", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "P-A"},
+            {"codigo": "CPU-B", "descricao": "Escavação 1a categoria", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "P-B"},
+        ]
+        producoes = [
+            {"id": "P-A", "valor_horario": 200.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]}},
+            {"id": "P-B", "valor_horario": 200.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]}},
+        ]
+        result = find_candidate_cpu_duplicates(cpus, producoes)
+        assert len(result) == 1
+        assert {result[0].codigo_a, result[0].codigo_b} == {"CPU-A", "CPU-B"}
+
+
+class TestFindCrossCatalogCpuMatches:
+    def test_so_compara_categorias_em_comum(self):
+        cpus_a = [{"codigo": "A1", "descricao": "Escavação", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "PA1"}]
+        cpus_b = [{"codigo": "B1", "descricao": "Escavação", "categoria": "DRENAGEM", "unidade": "m3", "producao_id_ref": "PB1"}]
+        prod_a = [{"id": "PA1", "valor_horario": 100.0, "composicao_padrao_equipe": {}}]
+        prod_b = [{"id": "PB1", "valor_horario": 100.0, "composicao_padrao_equipe": {}}]
+        assert find_cross_catalog_cpu_matches(cpus_a, prod_a, cpus_b, prod_b) == []
+
+    def test_encontra_match_cross_catalogo_por_descricao(self):
+        cpus_a = [
+            {
+                "codigo": "MENDESLOBO-1",
+                "descricao": "Escavação, carga e transporte de material de 1a categoria",
+                "categoria": "TERRAPLENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "PA1",
+            }
+        ]
+        cpus_b = [
+            {
+                "codigo": "RFI-1",
+                "descricao": "Escavação, carga e transporte de material de 1a categoria",
+                "categoria": "TERRAPLENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "PB1",
+            }
+        ]
+        prod_a = [{"id": "PA1", "valor_horario": 230.0, "composicao_padrao_equipe": {}}]
+        prod_b = [{"id": "PB1", "valor_horario": 210.0, "composicao_padrao_equipe": {}}]
+        result = find_cross_catalog_cpu_matches(cpus_a, prod_a, cpus_b, prod_b)
+        assert len(result) == 1
+        assert result[0].codigo_a == "MENDESLOBO-1"
+        assert result[0].codigo_b == "RFI-1"

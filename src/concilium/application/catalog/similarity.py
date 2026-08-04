@@ -26,25 +26,36 @@ aleatoriedade) combinando:
 
 Cada score carrega o breakdown completo para auditoria manual.
 
-Escopo desta primeira fase: Nível 1 (insumo-a-insumo). Níveis 2 (produção) e
-3 (CPU) — comparar composições/recursos agregados — ficam propostos na ADR-179
-para uma fase seguinte, não implementados aqui.
+Nível 2 (produção) e Nível 3 (CPU) — ver `producao_similarity`/`cpu_similarity`
+mais abaixo — comparam composições agregadas (Jaccard de recursos canônicos +
+cosseno de quantidade + proximidade de valor_horario), tanto dentro de um
+catálogo (dedup — "enxugar") quanto entre dois catálogos (achar equivalentes
+reais para herdar dado, ex.: `grafo_sinergia` do rfi-r02 pra CPUs sem dado do
+mendeslobo — nunca inventar número, só copiar de um par confirmado).
 """
 
 from __future__ import annotations
 
 import math
+import re
 import unicodedata
 from dataclasses import dataclass, field
 
 from concilium.domain.constants import ALPHA_CLT_TIPICO, ALPHA_MAX_ENCARGOS, ALPHA_MIN_ENCARGOS
+from concilium.domain.constants import SIMILARIDADE_CPU_DUPLICATA_MIN as _CPU_DUPLICATA_MIN
+from concilium.domain.constants import SIMILARIDADE_CPU_REVISAR_MIN as _CPU_REVISAR_MIN
 from concilium.domain.constants import SIMILARIDADE_DESC_MIN_HIPOTESE_ENCARGOS as _DESC_MIN_ENCARGOS
 from concilium.domain.constants import SIMILARIDADE_DUPLICATA_MIN as _DUPLICATA_MIN
 from concilium.domain.constants import SIMILARIDADE_PESO_CATEGORIA as _PESO_CATEGORIA
+from concilium.domain.constants import SIMILARIDADE_PESO_DESC_CPU as _PESO_DESC_CPU
 from concilium.domain.constants import SIMILARIDADE_PESO_DESCRICAO as _PESO_DESCRICAO
 from concilium.domain.constants import SIMILARIDADE_PESO_PRECO as _PESO_PRECO
+from concilium.domain.constants import SIMILARIDADE_PESO_QUANTIDADE_RECURSOS as _PESO_QTY
+from concilium.domain.constants import SIMILARIDADE_PESO_RECEITA_RECURSOS as _PESO_RECIPE
+from concilium.domain.constants import SIMILARIDADE_PESO_VALOR_HORARIO as _PESO_VH
 from concilium.domain.constants import SIMILARIDADE_REVISAR_MIN as _REVISAR_MIN
 from concilium.domain.constants import SIMILARIDADE_TOL_PRECO_DIRETO as _TOL_PRECO_DIRETO
+from concilium.domain.constants import SIMILARIDADE_TOL_VALOR_HORARIO as _TOL_VH
 
 Idf = dict[str, float]
 
@@ -59,6 +70,15 @@ Idf = dict[str, float]
 _STOPWORDS = frozenset(
     {"de", "da", "do", "das", "dos", "e", "a", "o", "as", "os", "em", "com", "para", "no", "na", "diurno", "noturno"}
 )
+
+# Padrão de turno "12×36" (dígito, SINAL DE MULTIPLICAÇÃO UNICODE ×, dígito) — só
+# esse caractere específico, nunca a letra ASCII "X" usada em dimensão de CPU
+# ("2,00 X 2,00 M"). Removido como unidade ANTES da tokenização geral — achado
+# real ao validar Nível 2/3 (produção/CPU): descartar todo token puramente
+# numérico (fix anterior, pensado só pra turno de MAO_OBRA) também zerava as
+# dimensões de CPUs de drenagem ("2,00 X 2,00" e "3,00 X 2,00" ficavam
+# idênticas), quase fundindo CPUs de tamanho físico diferente.
+_TURNO_PATTERN = re.compile(r"\d+\s*×\s*\d+")
 
 
 @dataclass
@@ -87,14 +107,17 @@ class SimilarityScore:
 
 def _tokens_de_conteudo(descricao: str) -> frozenset[str]:
     """Normaliza (remove acento, minúsculo) e tokeniza, descartando stopwords e
-    tokens puramente numéricos (padrão de turno "12×36" — dígito isolado não
-    descreve função/equipamento neste domínio; se algum dia houver token
-    alfanumérico com significado real, ex. "180TH", ele não é puramente
-    numérico e não é afetado)."""
+    o padrão de turno "12×36" (removido como unidade via `_TURNO_PATTERN`, não
+    por descartar todo dígito — dígitos isolados podem ser dimensão real de CPU,
+    ex. "2,00" em "CORPO BSCC 2,00 X 2,00 M"). Números genéricos que sobrarem
+    (ex. "00" repetido em toda descrição decimal) são naturalmente descontados
+    pelo IDF do corpus (mesma lógica que já desconta "operador"/"encarregado"),
+    não precisam de stopword explícita."""
     t = unicodedata.normalize("NFD", str(descricao or "").lower())
     t = "".join(c for c in t if unicodedata.category(c) != "Mn")
+    t = _TURNO_PATTERN.sub(" ", t)
     tokens = t.replace("(", " ").replace(")", " ").replace(",", " ").replace("×", " ").split()
-    return frozenset(tok for tok in tokens if tok not in _STOPWORDS and not tok.isdigit())
+    return frozenset(tok for tok in tokens if tok not in _STOPWORDS)
 
 
 def build_idf(descricoes: list[str]) -> Idf:
@@ -237,6 +260,235 @@ def find_candidate_duplicates(insumos: list[dict]) -> list[SimilarityScore]:
         for j in range(1, len(grupo)):
             for i in range(j):
                 sc = insumo_similarity(grupo[i], grupo[j], idf)
+                if sc.classificacao is not None:
+                    resultado.append(sc)
+    resultado.sort(key=lambda s: s.score, reverse=True)
+    return resultado
+
+
+# ── Nível 2 (produção) / Nível 3 (CPU) ────────────────────────────────────────
+
+
+@dataclass
+class CompositeSimilarityScore:
+    """Score de produção OU CPU — composição agregada, não insumo isolado."""
+
+    codigo_a: str
+    codigo_b: str
+    score: float
+    desc_sim: float
+    recipe_sim: float
+    qty_sim: float
+    vh_sim: float
+    classificacao: str | None  # "duplicata_provavel" | "revisar" | None
+    detalhe: dict = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return {
+            "codigo_a": self.codigo_a,
+            "codigo_b": self.codigo_b,
+            "score": round(self.score, 4),
+            "desc_sim": round(self.desc_sim, 4),
+            "recipe_sim": round(self.recipe_sim, 4),
+            "qty_sim": round(self.qty_sim, 4),
+            "vh_sim": round(self.vh_sim, 4),
+            "classificacao": self.classificacao,
+            "detalhe": self.detalhe,
+        }
+
+
+def _recursos_canonicos(producao: dict | None, canon_map: dict[str, str] | None) -> dict[str, float]:
+    """Multiset {recurso_id_canônico: quantidade} da composição de uma produção
+    (funcoes + equipamentos + materiais). `canon_map` (ex.: {p_code: mo_nome},
+    saída de `find_candidate_duplicates` a nível insumo) resolve códigos
+    duplicados pro mesmo recurso ANTES de comparar — sem isso, duas produções
+    com o mesmo recurso referenciado por códigos-P diferentes pareceriam usar
+    recursos diferentes."""
+    if not producao:
+        return {}
+    canon_map = canon_map or {}
+    equipe = producao.get("composicao_padrao_equipe") or producao.get("equipe") or {}
+    recursos: dict[str, float] = {}
+    for fn in equipe.get("funcoes") or []:
+        rid = fn.get("funcao_id", "")
+        rid = canon_map.get(rid, rid)
+        if rid:
+            recursos[rid] = recursos.get(rid, 0.0) + float(fn.get("num_pessoas") or 1)
+    for eq in equipe.get("equipamentos") or []:
+        rid = eq.get("equip_id", "")
+        rid = canon_map.get(rid, rid)
+        if rid:
+            recursos[rid] = recursos.get(rid, 0.0) + float(eq.get("num_unidades") or 1)
+    for mat in equipe.get("materiais") or []:
+        rid = mat.get("insumo_id", "")
+        rid = canon_map.get(rid, rid)
+        if rid:
+            recursos[rid] = recursos.get(rid, 0.0) + float(mat.get("consumo_por_hora") or 0)
+    return recursos
+
+
+def _jaccard(a: set, b: set) -> float:
+    if not a and not b:
+        return 1.0
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def _cosseno(a: dict[str, float], b: dict[str, float]) -> float:
+    chaves = set(a) | set(b)
+    if not chaves:
+        return 1.0
+    va = [a.get(k, 0.0) for k in chaves]
+    vb = [b.get(k, 0.0) for k in chaves]
+    norma = math.sqrt(sum(x * x for x in va))
+    normb = math.sqrt(sum(x * x for x in vb))
+    if norma == 0 or normb == 0:
+        return 0.0
+    return sum(x * y for x, y in zip(va, vb, strict=True)) / (norma * normb)
+
+
+def _vh_sim(vh_a: float, vh_b: float) -> float:
+    """Proximidade de valor_horario — tolerância mais larga que preço de MO
+    (SIMILARIDADE_TOL_VALOR_HORARIO, 30%): frotas/fontes/calibração diferentes
+    entre catálogos geram mais ruído natural do que uma tabela de salário."""
+    if vh_a <= 0 or vh_b <= 0:
+        return 0.0
+    rel_diff = abs(vh_a - vh_b) / max(vh_a, vh_b)
+    return max(0.0, 1.0 - rel_diff / _TOL_VH)
+
+
+def _classificar_cpu(score: float) -> str | None:
+    if score >= _CPU_DUPLICATA_MIN:
+        return "duplicata_provavel"
+    if score >= _CPU_REVISAR_MIN:
+        return "revisar"
+    return None
+
+
+def producao_similarity(
+    a: dict, b: dict, canon_map: dict[str, str] | None = None, idf: Idf | None = None
+) -> CompositeSimilarityScore:
+    """Nível 2 — similaridade entre duas produções pela composição agregada:
+    Jaccard do conjunto de recursos canônicos usados + cosseno do vetor de
+    quantidade + proximidade de valor_horario + Dice/IDF da descrição."""
+    ra = _recursos_canonicos(a, canon_map)
+    rb = _recursos_canonicos(b, canon_map)
+    recipe_sim = _jaccard(set(ra), set(rb))
+    qty_sim = _cosseno(ra, rb)
+    vh_sim = _vh_sim(float(a.get("valor_horario") or 0), float(b.get("valor_horario") or 0))
+    desc_sim = _desc_sim(a, b, idf)
+    score = _PESO_DESC_CPU * desc_sim + _PESO_RECIPE * recipe_sim + _PESO_QTY * qty_sim + _PESO_VH * vh_sim
+    cod_a = a.get("id") or a.get("codigo", "")
+    cod_b = b.get("id") or b.get("codigo", "")
+    return CompositeSimilarityScore(cod_a, cod_b, score, desc_sim, recipe_sim, qty_sim, vh_sim, _classificar_cpu(score))
+
+
+def cpu_similarity(
+    cpu_a: dict,
+    cpu_b: dict,
+    prod_a: dict | None,
+    prod_b: dict | None,
+    canon_map: dict[str, str] | None = None,
+    idf: Idf | None = None,
+) -> CompositeSimilarityScore:
+    """Nível 3 — CPU→produção é 1:1 no schema real (producao_id_ref), então
+    similaridade de CPU é a de suas produções vinculadas, com a descrição
+    vindo do CPU (mais estável entre catálogos que a da produção — costuma
+    seguir convenção DNIT/SICRO padronizada) e `unidade` como GATE: m³ vs m²
+    não pode ser a mesma atividade, curto-circuita score=0 sem classificar."""
+    ua, ub = cpu_a.get("unidade"), cpu_b.get("unidade")
+    if ua and ub and ua != ub:
+        cod_a, cod_b = cpu_a.get("codigo", ""), cpu_b.get("codigo", "")
+        return CompositeSimilarityScore(
+            codigo_a=cod_a,
+            codigo_b=cod_b,
+            score=0.0,
+            desc_sim=0.0,
+            recipe_sim=0.0,
+            qty_sim=0.0,
+            vh_sim=0.0,
+            classificacao=None,
+            detalhe={"motivo": "unidade_incompativel"},
+        )
+
+    ra = _recursos_canonicos(prod_a, canon_map)
+    rb = _recursos_canonicos(prod_b, canon_map)
+    recipe_sim = _jaccard(set(ra), set(rb))
+    qty_sim = _cosseno(ra, rb)
+    vh_sim = _vh_sim(float((prod_a or {}).get("valor_horario") or 0), float((prod_b or {}).get("valor_horario") or 0))
+    desc_sim = _desc_sim(cpu_a, cpu_b, idf)
+    score = _PESO_DESC_CPU * desc_sim + _PESO_RECIPE * recipe_sim + _PESO_QTY * qty_sim + _PESO_VH * vh_sim
+    cod_a, cod_b = cpu_a.get("codigo", ""), cpu_b.get("codigo", "")
+    return CompositeSimilarityScore(cod_a, cod_b, score, desc_sim, recipe_sim, qty_sim, vh_sim, _classificar_cpu(score))
+
+
+def _prod_por_id(producoes: list[dict]) -> dict[str, dict]:
+    return {p.get("id") or p.get("codigo", ""): p for p in producoes}
+
+
+def find_candidate_cpu_duplicates(
+    cpus: list[dict], producoes: list[dict], canon_map: dict[str, str] | None = None
+) -> list[CompositeSimilarityScore]:
+    """Dedup DENTRO de um catálogo — blocking por `categoria` (TERRAPLENAGEM não
+    é comparado com DRENAGEM etc.). `unidade` incompatível é filtrado dentro de
+    `cpu_similarity` (gate), não no blocking, porque duas CPUs de mesma
+    categoria/unidade-diferente ainda podem valer registrar como "revisar" no
+    relatório de auditoria mais amplo — aqui, coerente com find_candidate_
+    duplicates, só devolve pares classificados."""
+    prod_by_id = _prod_por_id(producoes)
+    blocos: dict[str, list[dict]] = {}
+    for cpu in cpus:
+        blocos.setdefault(cpu.get("categoria", ""), []).append(cpu)
+
+    resultado: list[CompositeSimilarityScore] = []
+    for grupo in blocos.values():
+        idf = build_idf([c.get("descricao", "") for c in grupo])
+        for j in range(1, len(grupo)):
+            for i in range(j):
+                a, b = grupo[i], grupo[j]
+                pa, pb = prod_by_id.get(a.get("producao_id_ref", "")), prod_by_id.get(b.get("producao_id_ref", ""))
+                sc = cpu_similarity(a, b, pa, pb, canon_map, idf)
+                if sc.classificacao is not None:
+                    resultado.append(sc)
+    resultado.sort(key=lambda s: s.score, reverse=True)
+    return resultado
+
+
+def find_cross_catalog_cpu_matches(
+    cpus_a: list[dict],
+    producoes_a: list[dict],
+    cpus_b: list[dict],
+    producoes_b: list[dict],
+    canon_map: dict[str, str] | None = None,
+) -> list[CompositeSimilarityScore]:
+    """Compara CPUs de DOIS catálogos diferentes (produto cruzado dentro de cada
+    bloco de `categoria` compartilhada) — não remove/funde nada, só identifica
+    equivalentes reais candidatos a herdar dado (ex.: `grafo_sinergia`) de um
+    catálogo pro outro. `canon_map` aqui tende a contribuir pouco pro recipe_sim/
+    qty_sim (códigos de insumo raramente coincidem entre catálogos sem uma
+    dedup de insumo cross-catálogo dedicada, fora de escopo) — desc_sim domina
+    por design (peso 0,50), coerente com CPUs seguirem nomenclatura DNIT/SICRO
+    padronizada entre fontes."""
+    prod_by_id_a, prod_by_id_b = _prod_por_id(producoes_a), _prod_por_id(producoes_b)
+    blocos_a: dict[str, list[dict]] = {}
+    for cpu in cpus_a:
+        blocos_a.setdefault(cpu.get("categoria", ""), []).append(cpu)
+    blocos_b: dict[str, list[dict]] = {}
+    for cpu in cpus_b:
+        blocos_b.setdefault(cpu.get("categoria", ""), []).append(cpu)
+
+    resultado: list[CompositeSimilarityScore] = []
+    for categoria, grupo_a in blocos_a.items():
+        grupo_b = blocos_b.get(categoria)
+        if not grupo_b:
+            continue
+        idf = build_idf([c.get("descricao", "") for c in grupo_a] + [c.get("descricao", "") for c in grupo_b])
+        for a in grupo_a:
+            for b in grupo_b:
+                pa = prod_by_id_a.get(a.get("producao_id_ref", ""))
+                pb = prod_by_id_b.get(b.get("producao_id_ref", ""))
+                sc = cpu_similarity(a, b, pa, pb, canon_map, idf)
                 if sc.classificacao is not None:
                     resultado.append(sc)
     resultado.sort(key=lambda s: s.score, reverse=True)
