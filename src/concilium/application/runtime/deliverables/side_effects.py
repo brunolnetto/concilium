@@ -16,8 +16,50 @@ from .reports.pdf_renderer import render_markdown_pdf
 from .visualizations.png_bundle import build_visualization_png_files
 
 if TYPE_CHECKING:
-    from concilium.application.services.project.project_repository import ProjectHandle
+    from concilium.application.services.project.project_repository import PlanoHandle, ProjectHandle
     from concilium.application.skills.base import SkillResult
+
+
+class _PlanoAsVersionedProject:
+    """Adapta um `PlanoHandle` (modelo Escopo/Plano, ADR-031) para a mesma
+    assinatura de `ProjectHandle` usada por este módulo (versão como parâmetro
+    explícito, ex.: `save_output_file(data, version, filename)`).
+
+    Sem isto, `run_skill_on_plano` tinha que passar o `ProjectHandle` do
+    PROJETO junto com `plano_store.plano_id` como se fosse uma versão do
+    modelo flat vN — os side effects (relatórios, PDFs, artefatos tipados)
+    acabavam gravados soltos em `{project_id}/{plano_id}/...` (uma pasta UUID
+    órfã direto na raiz do projeto), em vez de dentro da árvore real do plano
+    (`{project_id}/escopos/{escopo_id}/planos/{plano_id}/...`) — e por isso
+    nunca eram encontrados por `StoragePlanoHandle.list_output_files()` nem
+    pelas tools MCP de artefato.
+
+    `plano_store` já escopa tudo pelo próprio `plano_id`, então "versão" aqui
+    é sempre ignorada (aceita só para casar a assinatura de `ProjectHandle`).
+    """
+
+    def __init__(self, plano_store: PlanoHandle) -> None:
+        self._plano = plano_store
+        self._v = plano_store.plano_id
+
+    def save_output_file(self, data: bytes, _version: str, filename: str) -> Path:
+        return self._plano.save_output_file(data, filename)
+
+    def load_output_file(self, _version: str, filename: str) -> bytes | None:
+        return self._plano.load_output_file(filename)
+
+    def save_intermediate_file(self, filename: str, data: bytes | str, _version: str) -> Path:
+        return self._plano.save_intermediate_file(filename, data)
+
+    def load_canonical(self, _version: str | None = None) -> Any:
+        return self._plano.load_canonical()
+
+    def write_json(self, relative_path: str, payload: Any) -> None:
+        # Chamadores constroem o path como f"{v}/{resto}" (convenção do
+        # ProjectHandle) — remove esse prefixo, já que o plano não precisa
+        # dele (plano_id já escopa o caminho inteiro via self._plano._path).
+        relative = relative_path.removeprefix(f"{self._v}/")
+        self._plano.write_json(relative, payload)
 
 
 def _json_default(obj: object) -> object:

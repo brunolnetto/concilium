@@ -39,6 +39,12 @@ def _make_proj(data_inicio="2026-06-01", data_termino="2026-07-31"):
 def _minimal_canonical(**kw):
     return CanonicalModel(meta=_make_meta(), projeto=_make_proj(), **kw)
 
+
+def _make_canonical_com_cronograma():
+    from concilium.domain.models.canonical import Cronograma
+
+    return _minimal_canonical(cronograma=Cronograma(algorithm="CP-SAT"))
+
 def _load_skill_module(skill_id: str) -> object:
     import concilium.application.skills as _skills_pkg
 
@@ -478,6 +484,79 @@ class TestRunSkillOnPlanoStalenessWiring:
             result = runtime.run_skill_on_plano("06-resultado-financeiro", project, plano_store)
 
         assert "VAL-STALE-UPSTREAM" not in [v.codigo for v in result.validacoes]
+
+
+class TestRunSkillOnPlanoSideEffectsNaoOrfaos:
+    """Ponta a ponta: run_skill_on_plano grava side effects (schedules_weekly.json,
+    skill 04) dentro da árvore real do plano, não soltos em
+    {project_id}/{plano_id}/... na raiz do projeto (bug pré-existente — passava
+    `project` do PROJETO + `plano_store.plano_id` como se fosse versão flat vN)."""
+
+    def _make_stores(self, tmp_path):
+        from concilium.infrastructure.storage.store_factory import build_project_repository
+
+        project = build_project_repository(tmp_path).create_project("Test", "ctx-test")
+        es = project.create_escopo(
+            escopo_id="esc-1",
+            nome="Escopo Teste",
+            tipo_obra="terraplenagem",
+            localizacao="SP",
+            coordenadas_lat=-23.5,
+            coordenadas_lng=-46.6,
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
+        )
+        plano_store = es.create_plan(nome="Plano 1")
+        plano_store.save_canonical(_make_canonical_com_cronograma())
+        return project, plano_store
+
+    def _make_fake_runtime(self):
+        from concilium.application.runtime.mixins.execution import ExecutionMixin
+
+        class FakeRuntime(ExecutionMixin):
+            def get_skill_contract(self, skill_id):
+                from types import SimpleNamespace
+
+                return SimpleNamespace(depends_on_skills=[])
+
+            def _load_context(self, escopo_meta, project):
+                return MagicMock(), {}, {}
+
+            def _apply_runtime_defaults(self, skill_id, project, contexto, base_inputs):
+                return dict(base_inputs)
+
+            def _build_skill_kwargs(self, contract, **kwargs):
+                return {}
+
+            def _build_log_entry(self, *args, **kwargs):
+                return {}
+
+        return FakeRuntime()
+
+    def test_schedules_weekly_grava_dentro_da_arvore_do_plano(self, tmp_path):
+        from concilium.application.skills.base import SkillResult
+
+        project, plano_store = self._make_stores(tmp_path)
+        runtime = self._make_fake_runtime()
+        canonical = plano_store.load_canonical()
+
+        with (
+            patch("concilium.application.runtime.mixins.execution.SKILLS", {"04-cronograma": MagicMock()}),
+            patch(
+                "concilium.application.runtime.mixins.execution._execute_skill",
+                return_value=SkillResult(canonical, []),
+            ),
+        ):
+            runtime.run_skill_on_plano("04-cronograma", project, plano_store)
+
+        # Gravado dentro da árvore real do plano — recuperável via o próprio plano_store.
+        raw = plano_store.load_intermediate_file("schedules_weekly.json")
+        assert raw is not None
+        data = json.loads(raw)
+        assert data["algorithm"] == "CP-SAT"
+
+        # Não ficou órfão soltando direto em {project_id}/{plano_id}/... na raiz.
+        assert not project.exists(f"{plano_store.plano_id}/intermediate/schedules_weekly.json")
 
 
 class TestRunSkillFlatModelPremissasWiring:

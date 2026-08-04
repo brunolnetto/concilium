@@ -14,6 +14,7 @@ from ..deliverables.side_effects import (
     _handle_skill_04_side_effects,
     _handle_skill_09_side_effects,
     _persist_typed_artifacts,
+    _PlanoAsVersionedProject,
 )
 from ..exceptions import RuntimeDomainError
 from ..gates import _GATE_SKILLS
@@ -159,7 +160,16 @@ class ExecutionMixin(_Base):
             if hasattr(plano_store, "write_premissas_efetivas"):
                 plano_store.write_premissas_efetivas(skill_id, normalized_inputs, escopo_meta)
 
-        self._process_side_effects(skill_id, result, project, plano_store.plano_id)
+        # FlatVersionStore (modelo vN flat, ver run_skill) já usa a versão real
+        # do projeto como plano_id ("v1", "v2"...) — project+plano_id endereça
+        # o lugar certo sem adaptação. Só um StoragePlanoHandle/PlanoStore real
+        # (modelo Escopo/Plano, plano_id é um UUID) precisa do adapter, senão
+        # os side effects gravam soltos em {project_id}/{plano_id}/... na raiz
+        # do projeto em vez de escopos/{escopo_id}/planos/{plano_id}/...
+        from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
+        write_target = None if isinstance(plano_store, FlatVersionStore) else _PlanoAsVersionedProject(plano_store)
+        self._process_side_effects(skill_id, result, project, plano_store.plano_id, write_target=write_target)
 
         ts_fim = datetime.now(UTC)
         catalog_source = str(catalogo.get("_catalog_source", "master")) if isinstance(catalogo, dict) else "master"
@@ -282,8 +292,26 @@ class ExecutionMixin(_Base):
         ]
         return SkillResult(result.canonical, [*result.validacoes, *novas], result.artifacts)
 
-    def _process_side_effects(self, skill_id: str, result: SkillResult, project: ProjectHandle, v: str) -> None:
-        _persist_typed_artifacts(result, project, v)
+    def _process_side_effects(
+        self,
+        skill_id: str,
+        result: SkillResult,
+        project: ProjectHandle,
+        v: str,
+        write_target: Any | None = None,
+    ) -> None:
+        """Persiste os side effects da skill (relatórios, PDFs, artefatos tipados).
+
+        `write_target` (opcional) é para onde os arquivos versionados de fato
+        vão — no modelo flat vN é o próprio `project`+`v` (default, quando
+        omitido); no modelo Escopo/Plano é um `_PlanoAsVersionedProject` (ver
+        `run_skill_on_plano`), para não gravar soltos em `{project_id}/{v}/...`
+        quando `v` é na verdade um `plano_id`. `project` continua sendo usado
+        para configuração de nível de projeto (`deliverables_config.json`),
+        que não é escopada por plano.
+        """
+        target = write_target if write_target is not None else project
+        _persist_typed_artifacts(result, target, v)
 
         if skill_id == "09-relatorio-e-artefatos":
             try:
@@ -291,7 +319,7 @@ class ExecutionMixin(_Base):
                 _outputs_cfg: dict = _deliv_cfg.get("outputs", {})
             except Exception:  # pragma: no cover
                 _outputs_cfg = {}
-            _handle_skill_09_side_effects(result, project, v, _outputs_cfg)
+            _handle_skill_09_side_effects(result, target, v, _outputs_cfg)
 
         elif skill_id == "04-cronograma":
-            _handle_skill_04_side_effects(result, project, v)
+            _handle_skill_04_side_effects(result, target, v)
