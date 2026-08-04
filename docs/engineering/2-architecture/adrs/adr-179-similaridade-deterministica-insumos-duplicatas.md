@@ -1,6 +1,6 @@
 # ADR-179 — Similaridade Determinística de Insumos para Detecção de Duplicatas
 
-**Status:** ⚠️ Parcialmente Implementado _(Nível 1 — insumo ✅; Níveis 2/3 — produção/CPU, propostos)_
+**Status:** ⚠️ Parcialmente Implementado _(Níveis 1/2/3 ✅ — insumo/produção/CPU; F5 modo `auditar_catalogo` dedicado, proposto)_
 **Data:** 2026-08-04
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-178 (Gate de Plausibilidade Pré-Merge de Catálogo)
@@ -71,8 +71,8 @@ D7. **Duas classificações**: `score ≥ 0,80` → `duplicata_provavel` (alta c
 |---|---|---|
 | F1 | `similarity.py` — `insumo_similarity`/`build_idf`/`find_candidate_duplicates` (Nível 1) | ✅ |
 | F2 | Upgrade de `_pc_mo_duplicatas` para usar o motor de similaridade | ✅ |
-| F3 | Nível 2 — similaridade de produção (Jaccard de recursos canonicalizados + cosseno de quantidade + proximidade de `valor_horario`, *blocking* por `categoria`) | ⬜ |
-| F4 | Nível 3 — similaridade de CPU (melhor par de produções entre duas CPUs) | ⬜ |
+| F3 | Nível 2 — similaridade de produção (Jaccard de recursos canonicalizados + cosseno de quantidade + proximidade de `valor_horario`, *blocking* por `categoria`) | ✅ |
+| F4 | Nível 3 — similaridade de CPU (CPU→produção é 1:1 no schema real via `producao_id_ref`; `unidade` incompatível é gate) — `find_candidate_cpu_duplicates` (intra-catálogo) e `find_cross_catalog_cpu_matches` (entre 2 catálogos) | ✅ |
 | F5 | Novo modo `auditar_catalogo(modo="similaridade")` expondo o relatório cross-catálogo explicitamente | ⬜ |
 
 ## Definition of Done
@@ -84,9 +84,13 @@ D7. **Duas classificações**: `score ≥ 0,80` → `duplicata_provavel` (alta c
 - [x] `_pc_mo_duplicatas` upgradeado, mantendo semântica "estrela" e severidade `AVISO`
 - [x] Suíte completa verde (14.8xx testes, sem regressão)
 
-### Fase 3-5
-- [ ] Similaridade de produção implementada e testada
-- [ ] Similaridade de CPU implementada e testada
+### Fase 3-4
+- [x] `producao_similarity`/`cpu_similarity` implementados e testados
+- [x] `find_candidate_cpu_duplicates` (dedup intra-catálogo) e `find_cross_catalog_cpu_matches` (entre catálogos)
+- [x] Teste de regressão: dígito de dimensão de CPU não pode ser descartado como o dígito de turno de MAO_OBRA
+- [x] Validado dry-run contra `mendeslobo`×`rfi-r02` real; 4 produções enriquecidas com `grafo_sinergia` herdado (commit `0b6b07a0`), só onde equipamento+equipe foram confirmados idênticos — 2 candidatos de score alto (`CPU-TERRA-ATI-016/014`) foram investigados e rejeitados por frota genuinamente diferente
+
+### Fase 5
 - [ ] `modo="similaridade"` exposto em `auditar_catalogo`
 
 ## Nota de Implementação
@@ -94,6 +98,8 @@ D7. **Duas classificações**: `score ≥ 0,80` → `duplicata_provavel` (alta c
 Validação contra dado real do `mendeslobo` foi parte do processo de design, não só verificação pós-hoc — a primeira versão (Dice não-ponderado, sem gate de `desc_sim` na hipótese de encargos) gerou 236 candidatos, a maioria falso-positivo; a versão com IDF + gate reduziu para 200, mas a composição mudou qualitativamente: a maior parte dos 73 "duplicata_provavel" são achados novos e prováveis (padrão de fator de encargos ~2,06x repetido em dezenas de pares), não ruído. Isso foi confirmado inspecionando manualmente uma amostra de ~20 pares nos dois extremos (score alto e score próximo do piso de "revisar").
 
 `domain/constants.py` ganhou `ALPHA_CLT_TIPICO` (extraído do `ALPHA_CLT` que já existia hardcoded em `cure_plausibility.py`, agora centralizado) e a seção `SIMILARIDADE_*`.
+
+**Fase 3-4 (continuação, mesma sessão)**: usuário pediu explicitamente comparar CPUs do `mendeslobo` com o `rfi-r02` (100% `grafo_sinergia` real, achado da consulta anterior) para "enxugar e enriquecer com grafos". Validar contra dado real achou 2 bugs novos (dígito de dimensão de CPU sendo descartado pela regra de turno de MAO_OBRA; bug de kwargs no gate de `unidade`) e uma lacuna de design: comparar recipe_sim/qty_sim cross-catálogo sem um `canon_map` cross-catálogo é inútil (códigos de insumo nunca coincidem entre catálogos). Descoberta lateral relevante: `EQ-E0XXX` (mendeslobo, EQUIPAMENTO) tem `codigo_planilha` explícito ligando 1:1 ao `E0XXX` bare do `rfi-r02` — mas o `E0XXX` bare PRÓPRIO do mendeslobo é uma numeração INDEPENDENTE não-relacionada (mesmo número, equipamento diferente). Combinar esse mapeamento + o `dup_map` de MAO_OBRA já confirmado (via `codigo_referencia_externa` dos insumos fundidos na ADR-178/179 anterior) elevou os matches de CPU cross-catálogo de 2 para 13 `duplicata_provavel`. Também achado: dentro do `mendeslobo`, muitos pares de alta similaridade de CPU (família "Corpo BSCC/BDCC/BTCC" de drenagem) refletem uma equipe genérica COMPARTILHADA entre dimensões físicas diferentes (não calibrada por tamanho) — confirmado que o `rfi-r02` tem o MESMO padrão (`producao_id_ref` compartilhado entre CPUs de dimensão distinta) — não é bug do mendeslobo, é convenção de catálogo replicada nos dois; não foi tratado como duplicata a fundir.
 
 ---
 
