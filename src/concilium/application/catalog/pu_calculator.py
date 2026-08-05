@@ -4,10 +4,10 @@ Calculadora de Preço Unitário a partir da composição da equipe e produtivida
 Modelo:
     PU = custo_total_horario / producao.valor_horario
 
-Onde custo_total_horario:
-    MÃO DE OBRA   : Σ (salario_mensal / horas_mes) × α × num_pessoas
-    EQUIPAMENTO   : Σ preco_unitario_h × num_unidades
-    DIESEL        : Σ consumo_litros_hora × preco_diesel × num_unidades
+Onde custo_total_horario (fracao_dedicacao default 1,0 — ver ADR-132 D2):
+    MÃO DE OBRA   : Σ (salario_mensal / horas_mes) × α × num_pessoas × fracao_dedicacao
+    EQUIPAMENTO   : Σ preco_unitario_h × num_unidades × fracao_dedicacao
+    DIESEL        : Σ consumo_litros_hora × preco_diesel × num_unidades × fracao_dedicacao
     MATERIAL equipe: Σ consumo_por_hora × preco_unitario
 
 Parâmetros configuráveis:
@@ -284,6 +284,12 @@ def _acumular_custo_mo(
     for fn in funcoes:
         fid = fn.get("funcao_id", "")
         num_pessoas = float(fn.get("num_pessoas") or 1)
+        # ADR-132 D2 (revisão): quando o mesmo headcount é compartilhado entre
+        # n_frentes simultâneas, num_pessoas permanece inteiro (contagem discreta
+        # real) e a fração de rateio por frente vem em fracao_dedicacao — nunca
+        # sobrecarregar num_pessoas com um valor fracionário diretamente.
+        fracao = float(fn.get("fracao_dedicacao") or 1.0)
+        quantidade_efetiva = num_pessoas * fracao
         ins = insumo_index.get(fid)
         if ins is None:
             bd.referencias_faltantes.append(fid)
@@ -293,19 +299,19 @@ def _acumular_custo_mo(
         if unidade_fn == "h":
             # Taxa horária já carregada (convenção planilha AGIS: inclui encargos).
             # Uso direto sem multiplicar por alpha para evitar dupla contagem.
-            contrib = salario * num_pessoas
+            contrib = salario * quantidade_efetiva
             bd.custo_mo_h += contrib
         else:
             # Salário mensal — converte para horário e aplica fator de encargos
             hm = _horas_mes(ins, params)
-            contrib = (salario / hm) * _alpha(ins, params) * num_pessoas
+            contrib = (salario / hm) * _alpha(ins, params) * quantidade_efetiva
             bd.custo_mo_h += contrib
         bd.itens.append(
             {
                 "insumo_id": fid,
                 "categoria": "mo",
                 "preco_unitario": salario,
-                "quantidade": num_pessoas,
+                "quantidade": quantidade_efetiva,
                 "contribuicao_h": round(contrib, 4),
             }
         )
@@ -341,32 +347,36 @@ def _acumular_custo_equipamentos(
     for eq in equipamentos:
         eid = eq.get("equip_id", "")
         num_un = float(eq.get("num_unidades") or 1)
+        # ADR-132 D2 (revisão): mesma lógica de _acumular_custo_mo — num_unidades
+        # fica inteiro, o rateio por frente vai em fracao_dedicacao.
+        fracao = float(eq.get("fracao_dedicacao") or 1.0)
+        quantidade_efetiva = num_un * fracao
         ins = insumo_index.get(eid)
         if ins is None:
             bd.referencias_faltantes.append(eid)
             continue
         preco_h = _preco_h_equipamento(eq, ins)
-        contrib_equip = preco_h * num_un
+        contrib_equip = preco_h * quantidade_efetiva
         bd.custo_equip_h += contrib_equip
         bd.itens.append(
             {
                 "insumo_id": eid,
                 "categoria": "equipamento",
                 "preco_unitario": preco_h,
-                "quantidade": num_un,
+                "quantidade": quantidade_efetiva,
                 "contribuicao_h": round(contrib_equip, 4),
             }
         )
         consumo = _consumo_diesel_equipamento(bd, eq, eid, ins)
         if consumo:
-            contrib_diesel = consumo * params.preco_diesel * num_un
+            contrib_diesel = consumo * params.preco_diesel * quantidade_efetiva
             bd.custo_diesel_h += contrib_diesel
             bd.itens.append(
                 {
                     "insumo_id": eid,
                     "categoria": "diesel",
                     "preco_unitario": params.preco_diesel,
-                    "quantidade": consumo * num_un,
+                    "quantidade": consumo * quantidade_efetiva,
                     "contribuicao_h": round(contrib_diesel, 4),
                 }
             )

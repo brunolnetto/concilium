@@ -75,6 +75,12 @@
           "type": "integer",
           "minimum": 1
         },
+        "fracao_dedicacao": {
+          "description": "Fração de dedicação desta pessoa/headcount a esta frente específica, quando o mesmo headcount é compartilhado entre n_frentes simultâneas (ADR-132 D2). Ex.: 1 pessoa compartilhada igualmente entre 3 frentes → num_pessoas=1, fracao_dedicacao=0,3333 em cada frente. Ausente/null equivale a 1,0 (dedicação integral, retrocompatível). pu_calculator multiplica o custo por este fator.",
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
         "horas_extras_pct": {
           "type": ["number", "null"],
           "minimum": 0,
@@ -108,6 +114,12 @@
         "num_unidades": {
           "type": "integer",
           "minimum": 1
+        },
+        "fracao_dedicacao": {
+          "description": "Fração de dedicação desta unidade a esta frente específica, quando a mesma unidade de equipamento é compartilhada entre n_frentes simultâneas (ADR-132 D2). Ex.: 1 unidade compartilhada igualmente entre 3 frentes → num_unidades=1, fracao_dedicacao=0,3333 em cada frente. Ausente/null equivale a 1,0 (dedicação integral, retrocompatível). pu_calculator multiplica o custo por este fator.",
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0,
+          "maximum": 1
         },
         "consumo_litros_hora_estimado": {
           "type": ["number", "null"],

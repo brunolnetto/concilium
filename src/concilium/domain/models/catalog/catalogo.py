@@ -298,6 +298,10 @@ class FuncaoEquipe(BaseModel):
 
     funcao_id: str
     num_pessoas: int = Field(ge=1)
+    # ADR-132 D2 (revisão): fração de dedicação a esta frente quando o mesmo
+    # headcount é compartilhado entre n_frentes simultâneas. None == 1,0
+    # (dedicação integral, retrocompatível). Ver pu_calculator._acumular_custo_mo.
+    fracao_dedicacao: float | None = Field(default=None, gt=0, le=1)
     horas_extras_pct: float | None = Field(default=None, ge=0, le=1)
     # Papel funcional na atividade — determina em qual pool de custo este membro é contabilizado.
     # direto   -> equipes diretas (skill 03)    | padrão para retrocompatibilidade
@@ -311,6 +315,10 @@ class EquipamentoEquipe(BaseModel):
 
     equip_id: str
     num_unidades: int = Field(ge=1)
+    # ADR-132 D2 (revisão): fração de dedicação a esta frente quando a mesma
+    # unidade é compartilhada entre n_frentes simultâneas. None == 1,0
+    # (dedicação integral, retrocompatível). Ver pu_calculator._acumular_custo_equipamentos.
+    fracao_dedicacao: float | None = Field(default=None, gt=0, le=1)
     # ADR-030 D1: consumo estimado na especificação da equipe (sobrepõe Insumo.atributos_especificos)
     consumo_litros_hora_estimado: float | None = Field(
         default=None,

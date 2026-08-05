@@ -33,117 +33,130 @@
     "funcoes": [
       {
         "funcao_id": "SV-P0046-D",
-        "num_pessoas": 4.0,
+        "num_pessoas": 4,
         "custo_mobilizacao": 800.0,
         "custo_desmobilizacao": 800.0
       },
       {
         "funcao_id": "SV-P0048-D",
-        "num_pessoas": 2.0,
+        "num_pessoas": 2,
         "custo_mobilizacao": 800.0,
         "custo_desmobilizacao": 800.0
       },
       {
         "funcao_id": "SV-P0043-D",
-        "num_pessoas": 0.3333,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.3333
       },
       {
         "funcao_id": "SV-P0049-D",
-        "num_pessoas": 0.3333,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.3333
       },
       {
         "funcao_id": "SV-P0033-D",
-        "num_pessoas": 0.3333,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.3333
       },
       {
         "funcao_id": "SV-P0032-D",
-        "num_pessoas": 1.0,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
         "custo_desmobilizacao": 800.0
       },
       {
         "funcao_id": "SV-P0045-D",
-        "num_pessoas": 0.3333,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.3333
       },
       {
         "funcao_id": "SV-P0040-D",
-        "num_pessoas": 0.3333,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.3333
       },
       {
         "funcao_id": "SV-P0029-D",
-        "num_pessoas": 0.3333,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.3333
       },
       {
         "funcao_id": "SV-P0046-N",
-        "num_pessoas": 2.0,
+        "num_pessoas": 2,
         "custo_mobilizacao": 800.0,
         "custo_desmobilizacao": 800.0
       },
       {
         "funcao_id": "SV-P0048-N",
-        "num_pessoas": 1.0,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
         "custo_desmobilizacao": 800.0
       },
       {
         "funcao_id": "SV-P0043-N",
-        "num_pessoas": 0.1667,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "funcao_id": "SV-P0049-N",
-        "num_pessoas": 0.1667,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "funcao_id": "SV-P0033-N",
-        "num_pessoas": 0.1667,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "funcao_id": "SV-P0032-N",
-        "num_pessoas": 0.5,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.5
       },
       {
         "funcao_id": "SV-P0045-N",
-        "num_pessoas": 0.1667,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "funcao_id": "SV-P0040-N",
-        "num_pessoas": 0.1667,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "funcao_id": "SV-P0029-N",
-        "num_pessoas": 0.1667,
+        "num_pessoas": 1,
         "custo_mobilizacao": 800.0,
-        "custo_desmobilizacao": 800.0
+        "custo_desmobilizacao": 800.0,
+        "fracao_dedicacao": 0.1667
       }
     ],
     "equipamentos": [
       {
         "equip_id": "E0027",
-        "num_unidades": 2.0,
+        "num_unidades": 2,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
@@ -151,7 +164,7 @@
       },
       {
         "equip_id": "E0035",
-        "num_unidades": 1.0,
+        "num_unidades": 1,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
@@ -159,51 +172,57 @@
       },
       {
         "equip_id": "E0021",
-        "num_unidades": 0.1667,
+        "num_unidades": 1,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
-        "preco_h_unitario": 200.0
+        "preco_h_unitario": 200.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "equip_id": "E0034",
-        "num_unidades": 0.1667,
+        "num_unidades": 1,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
-        "preco_h_unitario": 104.1667
+        "preco_h_unitario": 104.1667,
+        "fracao_dedicacao": 0.1667
       },
       {
         "equip_id": "E0013",
-        "num_unidades": 0.1667,
+        "num_unidades": 1,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
-        "preco_h_unitario": 125.0
+        "preco_h_unitario": 125.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "equip_id": "E0005",
-        "num_unidades": 0.5,
+        "num_unidades": 1,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
-        "preco_h_unitario": 145.8333
+        "preco_h_unitario": 145.8333,
+        "fracao_dedicacao": 0.5
       },
       {
         "equip_id": "E0024",
-        "num_unidades": 0.1667,
+        "num_unidades": 1,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
-        "preco_h_unitario": 125.0
+        "preco_h_unitario": 125.0,
+        "fracao_dedicacao": 0.1667
       },
       {
         "equip_id": "E0014",
-        "num_unidades": 0.1667,
+        "num_unidades": 1,
         "consumo_litros_hora": 0,
         "custo_mobilizacao": 6500.0,
         "custo_desmobilizacao": 6500.0,
-        "preco_h_unitario": 200.0
+        "preco_h_unitario": 200.0,
+        "fracao_dedicacao": 0.1667
       }
     ]
   }
