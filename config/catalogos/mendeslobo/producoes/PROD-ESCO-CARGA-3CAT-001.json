@@ -29,18 +29,6 @@
   },
   "historico_observacoes": [
     {
-      "obra_id": "Lote_09_10_CE_2025",
-      "periodo": "2025-07-01/2025-09-30",
-      "producao_realizada": 144.541473391304,
-      "delta_pct": 0.0,
-      "contexto_observado": {
-        "solo": "rocha_desmontada",
-        "dmt": 1850,
-        "season": "seco"
-      },
-      "confiabilidade": 0.85,
-      "notas": "Calibração inicial — menor amostra por ocorrência menor de 3ª cat.",
-      "timestamp": "2025-10-15T10:30:00Z",
       "data": "2026-05-22T20:08:50.756149+00:00",
       "autor": "cure_catalog",
       "descricao": "(migrado sem descrição original)",

@@ -98,7 +98,11 @@
           "maxItems": 2
         },
         "quantidade_amostras": {"type": "integer", "minimum": 1},
-        "desvio_padrao": {"type": "number", "minimum": 0}
+        "desvio_padrao": {"type": "number", "minimum": 0},
+        "nota": {
+          "description": "Nota textual de auditoria sobre a origem/qualidade deste valor (ex.: 'Adotada do SICRO P5.2').",
+          "type": ["string", "null"]
+        }
       }
     },
     "composicao_padrao_equipe": {
@@ -126,7 +130,19 @@
     "variantes": {
       "description": "Variantes de cenário desta produção (ex: diferentes DMTs, condições climáticas).",
       "type": ["array", "null"],
-      "items": {"type": "object", "additionalProperties": true}
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "nome": {"type": "string", "minLength": 1},
+          "valor_horario": {"type": "number", "exclusiveMinimum": 0},
+          "equipe": {
+            "description": "Composição da equipe para esta variante — mesmo formato de composicao_padrao_equipe (lido/normalizado por cure_schema._cure_producao_variantes).",
+            "$ref": "common.schema.json#/$defs/composicaoPadraoEquipe"
+          }
+        }
+      }
     },
     "atributos_categoria": {
       "description": "Atributos específicos da categoria operacional (ex.: custos padrão CLT/PJ).",

@@ -29,17 +29,6 @@
   },
   "historico_observacoes": [
     {
-      "obra_id": "Lote_09_10_CE_2025",
-      "periodo": "2025-06-01/2025-09-30",
-      "producao_realizada": 173.197428,
-      "delta_pct": 0.0,
-      "contexto_observado": {
-        "solo": "argila_e_laterita",
-        "season": "seco"
-      },
-      "confiabilidade": 0.9,
-      "notas": "Calibração inicial",
-      "timestamp": "2025-10-15T10:30:00Z",
       "data": "2026-05-22T20:08:50.755499+00:00",
       "autor": "cure_catalog",
       "descricao": "(migrado sem descrição original)",
