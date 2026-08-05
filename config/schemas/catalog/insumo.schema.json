@@ -39,6 +39,20 @@
         "_audit_encargos": {
           "description": "Nota de auditoria sobre remoção de custo_com_encargos (ADR-009). Somente leitura.",
           "type": ["string", "null"]
+        },
+        "turno": {
+          "description": "Identificador de turno para modelos de recurso com regime de turno (ex.: 12x36, Serra Verde/ADR-108). D=diurno, N=noturno.",
+          "type": ["string", "null"],
+          "enum": ["D", "N", null]
+        },
+        "custo_total_mensal": {
+          "description": "Custo total mensal de referência desta função (R$/mês), informativo/auditoria — usado em modelos calibrados de pool (ADR-108). Não é lido pelo cálculo bottom-up.",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "nota": {
+          "description": "Nota textual livre de auditoria/contexto sobre este insumo.",
+          "type": ["string", "null"]
         }
       }
     },

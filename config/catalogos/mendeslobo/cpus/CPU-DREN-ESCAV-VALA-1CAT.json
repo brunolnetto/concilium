@@ -1,7 +1,7 @@
 {
   "codigo": "CPU-DREN-ESCAV-VALA-1CAT",
   "descricao": "ESCAVAÇÃO MECÂNICA DE VALA EM MATERIAL DE 1ª CATEGORIA",
-  "unidade": "m³",
+  "unidade": "m3",
   "origem": "PROPRIA",
   "categoria": "DRENAGEM",
   "composicao_itens": [

@@ -382,14 +382,18 @@ class ValidadorCPUInsumo:
                     )
                 )
 
-            if any(k in entidade for k in ["producao_horaria", "producao_id", "equipe", "atributos_categoria"]):
+            # ADR-130/produção: "atributos_categoria" saiu desta lista — é um campo
+            # legítimo e declarado em cpu.schema.json (ex.: dmt_referencia_m), não um
+            # remanescente do formato pré-refatoração. Falso-positivo achado ao investigar
+            # os avisos de `catalog quality`.
+            if any(k in entidade for k in ["producao_horaria", "producao_id", "equipe"]):
                 erros.append(
                     ValidacaoItem(
                         codigo="VAL-CPU-VAL-LEGACY",
                         status="AVISO",
                         mensagem=(
                             f"CPU '{entidade.get('codigo')}' contém campos legados "
-                            "(producao_horaria/producao_id/equipe/atributos_categoria)."
+                            "(producao_horaria/producao_id/equipe)."
                         ),
                     )
                 )
@@ -416,15 +420,14 @@ class ValidadorCPUInsumo:
                 )
             )
 
-        if any(k in cpu for k in ["producao_horaria", "producao_id", "equipe", "atributos_categoria"]):
+        # ADR-130/produção: "atributos_categoria" saiu desta lista — ver comentário
+        # equivalente em validar_valores_auditaveis.
+        if any(k in cpu for k in ["producao_horaria", "producao_id", "equipe"]):
             resultados.append(
                 ValidacaoItem(
                     codigo="VAL-CPU-STR-03",
                     status="AVISO",
-                    mensagem=(
-                        f"CPU '{codigo}' contém campos legados "
-                        "(producao_horaria/producao_id/equipe/atributos_categoria)."
-                    ),
+                    mensagem=(f"CPU '{codigo}' contém campos legados (producao_horaria/producao_id/equipe)."),
                 )
             )
 

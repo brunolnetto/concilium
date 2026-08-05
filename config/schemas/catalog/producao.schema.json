@@ -31,6 +31,11 @@
       "type": "number",
       "exclusiveMinimum": 0
     },
+    "custo_hora_total_referencia": {
+      "description": "Custo-hora total de referência desta produção (R$/h), informativo/auditoria — usado em modelos de pool com frentes simultâneas calibrados contra obra real (ex.: A_equip+B_mo/C, ADR-108). Não é lido pelo cálculo bottom-up.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
     "unidade": {
       "type": "string",
       "minLength": 1
