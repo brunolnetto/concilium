@@ -41,7 +41,17 @@ class CatalogMixin:
     def load_catalogo(self, catalogo_id: str) -> dict[str, Any]:
         key = f"catalogo:{catalogo_id}"
         if key not in self._config_cache:
-            self._config_cache[key] = self._load_catalogo_from_disk(catalogo_id)
+            # issue #147: CONCILIUM__STORE_BACKEND (a mesma env var que já rege
+            # projetos, ADR-047/issue #146) também rege o catálogo master —
+            # backend "filesystem" (padrão) continua no caminho local inalterado;
+            # qualquer outro backend (sharepoint/s3/azure/gdrive) passa por
+            # BlobStoragePort via _catalog_storage.load_catalogo_via_storage.
+            from ._catalog_storage import catalog_storage_backend, load_catalogo_via_storage
+
+            if catalog_storage_backend() == "filesystem":
+                self._config_cache[key] = self._load_catalogo_from_disk(catalogo_id)
+            else:
+                self._config_cache[key] = load_catalogo_via_storage(self.config_root, catalogo_id)
         return copy.deepcopy(self._config_cache[key])
 
     def _resolve_project_catalog_base(self, catalogo_id: str, project: Any) -> tuple[dict[str, Any], str]:

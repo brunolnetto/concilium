@@ -22,6 +22,11 @@ _LARGE_FILE_THRESHOLD = 4 * 1024 * 1024  # 4 MB
 # token MSAL da revisão nova ainda está "frio" ou o Graph está sob throttling.
 _TRANSIENT_STATUS_CODES = frozenset({429, 502, 503, 504})
 _TRANSIENT_RETRY_DELAYS_S = (0.5, 1.0, 2.0)
+# issue #147: timeout explícito de leitura — sem isto, algumas chamadas (ex.:
+# listar_blobs antes desta correção) dependiam só do default do httpx, e uma
+# resposta lenta/silenciosa do Graph podia se acumular por dezenas de segundos
+# ao longo de uma listagem recursiva sem erro nem retorno.
+_READ_TIMEOUT_S = 30.0
 
 
 class SharePointBlobStorage(BlobStoragePort):
@@ -103,11 +108,13 @@ class SharePointBlobStorage(BlobStoragePort):
     def _item_content_url(self, path: str) -> str:
         return f"{self._item_url(path)}:/content"
 
-    def _get_with_retry(self, httpx: Any, url: str, headers: dict[str, str]) -> Any:
+    def _get_with_retry(
+        self, httpx: Any, url: str, headers: dict[str, str], params: dict[str, str] | None = None
+    ) -> Any:
         """GET com retry/backoff em erros transitórios do Graph (429/502/503/504)."""
         last_response = None
         for attempt, delay in enumerate((*_TRANSIENT_RETRY_DELAYS_S, None)):
-            r = httpx.get(url, headers=headers, follow_redirects=True)
+            r = httpx.get(url, headers=headers, params=params, follow_redirects=True, timeout=_READ_TIMEOUT_S)
             if r.status_code not in _TRANSIENT_STATUS_CODES:
                 return r
             last_response = r
@@ -274,7 +281,14 @@ class SharePointBlobStorage(BlobStoragePort):
 
         while url:
             try:
-                r = httpx.get(url, headers=self._headers(), params={"$select": "name,folder,file", "$top": "200"})
+                # issue #147: sem timeout explícito aqui, uma falha de rede transitória
+                # (ou muitos níveis de recursão em subpastas, cada um sujeito ao default
+                # do httpx) podia se acumular em dezenas de segundos sem erro nem retorno
+                # — usa o mesmo _get_with_retry (com backoff) das demais leituras, e um
+                # timeout de request explícito, para um comportamento previsível e limitado.
+                r = self._get_with_retry(
+                    httpx, url, self._headers(), params={"$select": "name,folder,file", "$top": "200"}
+                )
             except Exception as exc:
                 if self._offline and self._cache:
                     logger.warning(f"SharePoint offline — listar_blobs({prefix}) retorna lista vazia.")
