@@ -44,5 +44,18 @@
     ]
   },
   "historico_observacoes": [],
-  "valor_horario": 11.5425
+  "valor_horario": 11.5425,
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-RETRO-ESCAV",
+        "capacidade_horaria": 11.5425,
+        "unidade": "un",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Único equipamento na composição — gargalo por definição estrutural. Valor_horario real do CPU aceito como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "EQ-RETRO-ESCAV"
+  }
 }

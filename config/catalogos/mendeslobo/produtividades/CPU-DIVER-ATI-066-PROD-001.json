@@ -22,5 +22,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "MO-CERQUEIRO",
+        "capacidade_horaria": 16.666667,
+        "unidade": "un",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Serviço de execução predominantemente manual (mão-de-obra qualificada), com veículo leve/equipamento presente só como apoio de transporte ou preparação pontual — mesmo padrão estrutural confirmado no Tomo 3 (DNIT/SICRO2) para corpo/boca de bueiro: quando o equipamento aparece em uso fracionário/logístico e a mão-de-obra é o elemento central do serviço, ela é o gargalo real. capacidade_horaria = valor_horario/num_pessoas do elemento indicado."
+      }
+    ],
+    "gargalo_declarado": "MO-CERQUEIRO"
+  }
 }

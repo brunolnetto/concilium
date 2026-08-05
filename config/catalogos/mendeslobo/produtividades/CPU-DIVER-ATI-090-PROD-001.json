@@ -22,5 +22,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-CAM-MUNCK-23T",
+        "capacidade_horaria": 0.05,
+        "unidade": "un",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Único equipamento na composição — gargalo por definição estrutural. Valor_horario real do CPU aceito como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "EQ-CAM-MUNCK-23T"
+  }
 }

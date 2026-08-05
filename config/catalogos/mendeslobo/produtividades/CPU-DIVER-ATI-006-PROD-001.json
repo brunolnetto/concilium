@@ -26,5 +26,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0031",
+        "capacidade_horaria": 1428.57,
+        "unidade": "un",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Equipamento \"Spread\" (EQ-E0031) é operado pela função MO-OPERADOR-DE-MOTOSCRA (Operador de Motoscraper) — inferência de que se trata de um implemento da família motoscraper/raspo-transportador, não confirmada por especificação de fabricante. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), §2.2.1.1 \"Escavação com Motoscraper\": motoscraper é equipamento de referência do SICRO2 para raspagem/limpeza extensiva de superfície, com trator de esteiras em função de apoio (\"pusher\") e motoniveladora para conservação dos caminhos de serviço — papéis de apoio, não de gargalo. Não copiado valor numérico do Tomo1 (o documento não tabela produção horária para esta operação, só descreve o método); aceita-se o valor_horario real do CPU como capacidade calibrada do Spread/motoscraper."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0031"
+  }
 }

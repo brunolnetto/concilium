@@ -30,5 +30,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "MO-MONTADOR-AGUA",
+        "capacidade_horaria": 7.125,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Mesma família estrutural já validada em CPU-OBRAS-ATI-025-032 (Padrão VALEC) e no padrão de corpo/boca de bueiro (Tomo3 DNIT/SICRO2 §2.2/2.3): assentamento de tubo em vala já aberta é processo de mão-de-obra (encanador/montador), com retroescavadeira e mini escavadeira presentes só para abertura/acabamento de vala (folga confirmada pela mesma fonte). capacidade_horaria = valor_horario/num_pessoas de MO-MONTADOR-AGUA."
+      }
+    ],
+    "gargalo_declarado": "MO-MONTADOR-AGUA"
+  }
 }

@@ -22,5 +22,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "MO-AJUDANTE",
+        "capacidade_horaria": 21.43,
+        "unidade": "un",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Único ofício/função de mão-de-obra na composição (além de eventual encarregado/apoio) — gargalo por definição estrutural. Valor_horario real do CPU aceito como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "MO-AJUDANTE"
+  }
 }
