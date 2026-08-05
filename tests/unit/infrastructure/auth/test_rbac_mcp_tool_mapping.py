@@ -1,7 +1,7 @@
 """TDD — Item 5: RBAC role ↔ MCP tool mapping.
 
 Cobre:
-  - TOOL_PERMISSIONS cobre todas as 55 tools MCP registradas
+  - TOOL_PERMISSIONS cobre todas as 56 tools MCP registradas
   - patch_mcp_auth_permissions() bloqueia chamadas não autorizadas
   - patch_mcp_auth_permissions() permite chamadas autorizadas
   - validate_tool_coverage() detecta tools sem mapeamento
@@ -64,7 +64,8 @@ ALL_TOOL_NAMES = [
     "nova_versao",
     "salvar_perfil_bdi",
     # replan
-    "simular_cenario_replan",
+    "simular_cenario_replan",  # [DEPRECATED] usar consultar_ponto_equilibrio para baseline
+    "consultar_ponto_equilibrio",
     # spec
     # system
     "ping",

@@ -10,6 +10,51 @@ from concilium.domain.constants import META_MARGEM_PADRAO
 from concilium.infrastructure.auth.permission_guard import permission
 
 
+def _nomes_por_item(canonical: Any) -> dict[str, str]:
+    """Mapa item_id -> descrição legível (EAP), com fallback para o próprio item_id."""
+    eap = list(getattr(canonical, "eap", []) or [])
+    return {item.item_id: (item.descricao or item.item_id) for item in eap}
+
+
+def _build_tabela_ponto_equilibrio(canonical: Any) -> list[dict[str, Any]]:
+    """Tabela equipe-a-equipe: Equipe | Custo de Venda | Custo Operacional | PU Catálogo |
+    PU Operacional (ADR-162 P1).
+
+    Fonte única: ``canonical.ponto_equilibrio`` (mesmo dado que alimenta o app
+    interativo ``diagnostico-pe`` — ver ADR-101/ADR-162). Não simula nada, é o
+    estado atual (pós-cronograma) do projeto.
+
+    ATENÇÃO — armadilha de nomenclatura em ``PontoEquilibrio``: o campo
+    ``custo_fixo_equipe`` (apesar do nome) é o custo operacional agregado real
+    (integral semana-a-semana, pool-aware — ``_resolve_custo_equipe_agregado``)
+    que efetivamente compõe ``delta = custo_venda_cpu − custo_fixo_equipe``
+    (comentário explícito em ``_build_pe_for_equipe``, `_ponto_equilibrio.py`).
+    O campo ``custo_operacional_real`` é uma grandeza *diferente*
+    (``equipe.custo_total``, usada só para ``frentes_equivalentes``) que diverge
+    de ``custo_fixo_equipe`` sempre que há overhead de pool/rampa (ADR-083/172).
+    Usar ``custo_operacional_real`` aqui produziria uma diferença que NÃO bate
+    com o ``delta``/``causa_dominante`` já validados — por isso a coluna abaixo
+    usa ``custo_fixo_equipe``, não ``custo_operacional_real``.
+
+    Mesma cautela vale para os PUs: ``pu_catalogo_unitario`` (= custo_venda_cpu/Q)
+    e ``pu_operacional_unitario`` (= custo_fixo_equipe/Q, ADR-162) já vêm calculados
+    do domínio — não usar ``pu_operacional_autonomo`` (custo_total_autonomo/Q, uma
+    grandeza diferente, de diagnóstico de pool).
+    """
+    nomes = _nomes_por_item(canonical)
+    pes = list(getattr(canonical, "ponto_equilibrio", []) or [])
+    return [
+        {
+            "equipe": nomes.get(pe.item_id, pe.item_id),
+            "custo_venda": round(float(getattr(pe, "custo_venda_cpu", 0.0) or 0.0), 2),
+            "custo_operacional": round(float(getattr(pe, "custo_fixo_equipe", 0.0) or 0.0), 2),
+            "pu_catalogo": round(float(getattr(pe, "pu_catalogo_unitario", 0.0) or 0.0), 4),
+            "pu_operacional": round(float(getattr(pe, "pu_operacional_unitario", 0.0) or 0.0), 4),
+        }
+        for pe in pes
+    ]
+
+
 def _lever_prod_factor(canonical: Any, parametros: dict) -> tuple[float, float, float, float]:
     """Resolve fator_equipes, novos horas/dia e dias/semana, e o prod_factor resultante."""
     fator_eq = float(parametros.get("fator_equipes", 1.0))
@@ -145,6 +190,39 @@ def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de replanejamento."""
 
     @server.tool()
+    @permission("project:read")
+    def consultar_ponto_equilibrio(project_id: str) -> dict[str, Any]:
+        """Tabela equipe-a-equipe: Custo de Venda × Custo Operacional (ADR-162 P1).
+
+        Consulta não-interativa e não-simulada — retorna o estado atual do
+        projeto (pós-cronograma), a mesma fonte (``canonical.ponto_equilibrio``)
+        que alimenta o app interativo ``diagnostico-pe``. Substitui o uso de
+        ``simular_cenario_replan`` para leitura de baseline (sem ajuste de levers).
+        """
+        try:
+            from concilium.presentation.mcp._context import _project
+            from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
+
+            store = _project(project_id)
+            canonical = None
+            try:
+                eid = _resolve_escopo_id(store, None)
+                es = store.escopo(eid)
+                active = es.active_plan()
+                if active is not None:
+                    canonical = es.plan(active.plano_id).load_canonical()
+            except Exception:
+                canonical = None
+            if canonical is None:
+                canonical = store.load_canonical()
+            if canonical is None:
+                return {"erro": f"Canonical não encontrado para projeto '{project_id}'."}
+
+            return {"equipes": _build_tabela_ponto_equilibrio(canonical)}
+        except Exception as exc:
+            return {"erro": f"Erro ao consultar ponto de equilíbrio: {exc}"}
+
+    @server.tool()
     @permission("project:run")
     def simular_cenario_replan(
         project_id: str,
@@ -152,7 +230,12 @@ def register(server: FastMCP) -> None:
         parametros: dict[str, Any],
         incluir_indiretos: bool = True,
     ) -> dict[str, Any]:
-        """Simula o impacto de mudanças de levers operacionais sem re-executar o pipeline.
+        """[DEPRECATED] Simula o impacto de mudanças de levers operacionais sem re-executar o pipeline.
+
+        **Depreciada** — para consultar o estado atual (sem simular ajuste de
+        levers) use ``consultar_ponto_equilibrio``. Esta tool permanece apenas
+        para o fluxo de simulação de levers do app ``diagnostico-pe``; não usar
+        para leitura de baseline.
 
         Tipos suportados:
           - ``lever_adjust``: ajuste de fator_equipes, horas_dia, dias_semana, meta_margem_pct

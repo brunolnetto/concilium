@@ -151,6 +151,35 @@ class TestBuildPeForEquipeNewFields:
         assert pe is not None
         assert pe.pu_catalogo_unitario == pytest.approx(500.0, abs=0.01)
 
+    def test_pu_operacional_unitario(self):
+        """pu_operacional_unitario = custo_fixo_equipe / Q (ADR-162) — NÃO
+        custo_total_autonomo/Q (isso é pu_operacional_autonomo, campo diferente)."""
+        eq = _make_equipe(custo_total_autonomo=600_000)  # custo_total default = 700_000
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0)
+        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan})
+        assert pe is not None
+        # sem custo_operacional_agregado/contrato_tipo_id no fixture -> fallback
+        # custo_total × num_equipes_base(1) = 700_000 = custo_fixo_equipe
+        assert pe.pu_operacional_unitario == pytest.approx(700.0, abs=0.01)
+        assert pe.pu_operacional_unitario != pytest.approx(pe.pu_operacional_autonomo)
+
+    def test_pu_catalogo_menos_pu_operacional_reconcilia_com_delta(self):
+        """(pu_catalogo_unitario − pu_operacional_unitario) × Q == delta (ADR-162 P1) —
+        garante que os dois PUs, subtraídos, reproduzem exatamente o Δ_i já validado.
+
+        venda_por_item precisa refletir o MESMO valor de plan.subtotal.sem_bdi.total
+        (500_000 = 500×1000) — em produção os dois vêm do mesmo campo
+        (`_bpe_build_lookup_maps`: venda_por_item = {item.subtotal.sem_bdi.total}`),
+        nunca divergem; outros testes deste arquivo usam venda_por_item=575_000
+        desacoplado do plan só para isolar o campo sob teste, o que quebraria esta
+        reconciliação (não é um invariante real de produção, é artefato de fixture)."""
+        eq = _make_equipe(custo_total_autonomo=600_000)
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0)
+        pe = _build_pe_for_equipe(eq, {"eap-01": 500_000}, {"eap-01": plan})
+        assert pe is not None
+        diferenca_via_pu = (pe.pu_catalogo_unitario - pe.pu_operacional_unitario) * plan.quantitativo
+        assert diferenca_via_pu == pytest.approx(pe.delta, abs=0.5)
+
     def test_pu_calibrado_maior_que_catalogo_quando_autonomo_supera(self):
         """pu_calibrado > pu_catalogo quando custo_autonomo/Q > PU_catalogo."""
         eq = _make_equipe(custo_total_autonomo=600_000)

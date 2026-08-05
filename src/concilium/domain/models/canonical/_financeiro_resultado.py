@@ -145,7 +145,12 @@ class PontoEquilibrio(BaseModel):
     status_frentes: Literal["OK", "AVISO", "CRITICO"] | None = None  # OK≤1.25, AVISO≤1.5, CRITICO>1.5
 
     # ADR-076 Opção D: calibração de PU — ajuste mínimo para margem zero
-    pu_catalogo_unitario: float = 0.0  # PU_sem_bdi por unidade (referência catálogo)
+    pu_catalogo_unitario: float = 0.0  # PU_sem_bdi por unidade (referência catálogo) = custo_venda_cpu / Q
+    # ADR-162: PU operacional real = custo_fixo_equipe / Q (custo_fixo_equipe é o custo
+    # operacional agregado real, ver comentário em _build_pe_for_equipe — NÃO usar
+    # custo_total_autonomo/Q aqui, esse é pu_operacional_autonomo, grandeza diferente).
+    # Comparável diretamente a pu_catalogo_unitario: delta/Q ≈ pu_catalogo_unitario − pu_operacional_unitario.
+    pu_operacional_unitario: float = 0.0
     pu_calibrado_unitario: float = 0.0  # max(pu_catalogo, custo_total_autonomo / Q)
     ajuste_minimo_pct: float = 0.0  # (pu_calibrado − pu_catalogo) / pu_catalogo × 100
     gap_praticabilidade_abs: float = 0.0  # RESIDUAL pós-escala: custo_total_autonomo − (custo_base × N_equipes)

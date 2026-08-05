@@ -537,6 +537,10 @@ def _build_pe_for_equipe(
     _Q, pu_operacional_autonomo, machine_weeks_brutas, machine_weeks_efetivas, eta_real = _pe_camada2_producao(
         plan, custo_total_autonomo, lesao
     )
+    # ADR-162: PU operacional real, comparável a pu_catalogo_unitario (mesmo Q no
+    # denominador). Usa custo_operacional_agregado (= custo_fixo_equipe), não
+    # custo_total_autonomo (esse alimenta pu_operacional_autonomo, grandeza diferente).
+    pu_operacional_unitario = round(custo_operacional_agregado / _Q, 4) if _Q > 0 else 0.0
 
     horas_dia = float(getattr(regime, "horas_dia", 0.0) or 0.0)
     dias_semana = float(getattr(regime, "dias_semana", 0.0) or 0.0)
@@ -610,6 +614,8 @@ def _build_pe_for_equipe(
         status_frentes=status_frentes,
         # ADR-076 Opção D
         pu_catalogo_unitario=pu_catalogo_unitario,
+        # ADR-162: PU operacional real (custo_fixo_equipe/Q) — comparável a pu_catalogo_unitario
+        pu_operacional_unitario=pu_operacional_unitario,
         pu_calibrado_unitario=pu_calibrado_unitario,
         ajuste_minimo_pct=ajuste_minimo_pct,
         gap_praticabilidade_abs=gap_praticabilidade_abs,

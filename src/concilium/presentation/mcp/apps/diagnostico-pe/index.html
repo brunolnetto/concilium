@@ -89,8 +89,8 @@
       <div class="card-title">Ponto de Equilíbrio por Item</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Item</th><th>Custo Op</th><th>Venda</th><th>fe_nec</th><th>Status</th><th>Gap Escala</th></tr></thead>
-          <tbody id="pe-tbody"><tr><td colspan="6" class="empty">Sem dados</td></tr></tbody>
+          <thead><tr><th>Item</th><th>Custo Op</th><th>Venda</th><th>PU Catálogo</th><th>PU Operacional</th><th>fe_nec</th><th>Status</th><th>Gap Escala</th></tr></thead>
+          <tbody id="pe-tbody"><tr><td colspan="8" class="empty">Sem dados</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -198,7 +198,7 @@
         document.getElementById('pe-tbody').innerHTML = pes.map(p => {
           const fn = p.frentes_equivalentes_necessarias;
           const cls = fn==null?'':fn<=1.25?'badge-ok':fn<=1.5?'badge-warn':'badge-crit';
-          return `<tr><td><strong>${p.item_id}</strong></td><td>${fmt(p.custo_operacional_real)}</td><td>${fmt(p.custo_venda_cpu)}</td><td><span class="badge ${cls}">${num(fn)}</span></td><td>${p.status_frentes??'—'}</td><td>${fmt(p.gap_escala_abs)}</td></tr>`;
+          return `<tr><td><strong>${p.item_id}</strong></td><td>${fmt(p.custo_fixo_equipe)}</td><td>${fmt(p.custo_venda_cpu)}</td><td>${fmt(p.pu_catalogo_unitario)}</td><td>${fmt(p.pu_operacional_unitario)}</td><td><span class="badge ${cls}">${num(fn)}</span></td><td>${p.status_frentes??'—'}</td><td>${fmt(p.gap_escala_abs)}</td></tr>`;
         }).join('');
         document.getElementById('btn-apply').disabled = false;
         document.getElementById('btn-copy-comando').disabled = false;
