@@ -46,5 +46,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "MO-OFICIAL",
+        "capacidade_horaria": 0.05,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 3 (Drenagem e Outros Custos I, 2003), §2.2/2.3 \"Bueiro Celular/Tubular de Concreto\" — composições reais de referência para Corpo/Boca de bueiro (mesma nomenclatura e escala de dimensão/altura do aterro) NÃO têm equipamento pesado dedicado: só caminhões em uso fracionário (0,01 a 0,42 — puramente logística de entrega de material) e mão-de-obra (Encarregado/Pedreiro/Servente) executando forma, armação e concretagem — um processo manual/artesanal em série, não pautado por equipamento. Composição real do mendeslobo confirma o mesmo padrão internamente: MO-OFICIAL está fixo em 5 pessoas em toda a família (37 CPUs), enquanto o equipamento (guindaste/carregadeira/caminhão) varia e aparece só como apoio pontual (posicionamento de peças pesadas/entrega). capacidade_horaria = valor_horario/5 (MO-OFICIAL, elemento que a fonte confirma ser o gargalo real deste processo de forma+armação+concretagem)."
+      }
+    ],
+    "gargalo_declarado": "MO-OFICIAL"
+  }
 }

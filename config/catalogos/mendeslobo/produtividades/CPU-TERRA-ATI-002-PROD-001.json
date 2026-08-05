@@ -22,5 +22,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0016",
+        "capacidade_horaria": 750.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Único equipamento na composição — gargalo por definição estrutural, não por pesquisa de processo. Valor_horario real do CPU aceito como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0016"
+  }
 }

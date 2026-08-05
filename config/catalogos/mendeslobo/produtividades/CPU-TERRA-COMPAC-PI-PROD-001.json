@@ -71,5 +71,18 @@
         "origem_entrada": "bom_convertido"
       }
     ]
+  },
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "AGIS-ROLO-PC-10T",
+        "capacidade_horaria": 132.32,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), §2.2.1.5 \"Compactação de Aterros\": serviço nomeado e tabelado especificamente em torno do rolo compactador (distinto da motoniveladora, que aqui atua só em apoio de espalhamento). Composição real usa rolo pé-de-carneiro dedicado (não trator de esteiras genérico) — equipamento correto para compactação de solo por amassamento. Não copiado valor numérico do Tomo1 (classe/modelo específico não detalhado com a mesma granularidade da escavadeira); aceita-se o valor_horario real do CPU como capacidade calibrada do rolo (elemento que a metodologia confirma ser o gargalo de serviços de compactação de aterro)."
+      }
+    ],
+    "gargalo_declarado": "AGIS-ROLO-PC-10T"
   }
 }

@@ -38,5 +38,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0020",
+        "capacidade_horaria": 900.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), §2.2.2.1 + composições RCTR0220 \"Imprimação\"/\"Pintura de Ligação\": texto explícito — \"a execução destas atividades é feita com a utilização do caminhão distribuidor de asfalto, sendo este o equipamento que determina a produção da patrulha\". Composição real do Tomo1 confirma: PRODUÇÃO DA EQUIPE = produção do caminhão distribuidor em todas as linhas (vassoura mecânica e trator agrícola têm utilização operativa <100%, ou seja, folga). mendeslobo usa Espargidor de Ligante Betuminoso — equipamento equivalente. Não copiado valor numérico do Tomo1 (modelo 150kW/6000l específico, capacidade real da frota não verificada); aceita-se o valor_horario real do CPU como capacidade calibrada do espargidor."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0020"
+  }
 }

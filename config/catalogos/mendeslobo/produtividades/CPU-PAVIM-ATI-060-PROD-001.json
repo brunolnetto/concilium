@@ -30,5 +30,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0050",
+        "capacidade_horaria": 26.1,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Sem composição SICRO2 equivalente no Tomo1 (2003) — demolição de pavimento com rompedor hidráulico sobre escavadeira não é um serviço tabelado no manual consultado (equipamento mais recente que a edição de referência). Gargalo identificado por raciocínio estrutural, não por fonte documental: a escavadeira com rompedor (ferramenta especializada de demolição) é o processo determinante — a escavadeira comum de carga e os caminhões basculantes têm folga em relação a ela. Valor_horario real do CPU aceito como capacidade calibrada, sem número inventado."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0050"
+  }
 }

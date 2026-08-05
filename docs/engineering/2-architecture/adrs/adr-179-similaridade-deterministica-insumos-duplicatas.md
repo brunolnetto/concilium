@@ -103,6 +103,40 @@ Validação contra dado real do `mendeslobo` foi parte do processo de design, n�
 
 ---
 
+## Continuação — Força-tarefa de enriquecimento de `grafo_sinergia` via pesquisa DNIT/SICRO2 (mesma sessão)
+
+Usuário pediu, após a dedup: "enxugar e depois enriquecer com grafos baseado na reflexão da capacidade e velocidade de equipe e materiais" — força-tarefa para popular `grafo_sinergia` nos 128 CPUs do `mendeslobo` que ainda não tinham (93 sem par no `rfi-r02`, que é 100% `TERRAPLENAGEM`).
+
+**Achado 1 — o PDF errado foi verificado primeiro.** O "Caderno Técnico de Parâmetros de Equipamentos do SICRO" (jan/2023), único documento que os 8 agentes de pesquisa web (workflow) e a leitura manual direta do PDF localizaram inicialmente, contém **só parâmetros de custo/depreciação** (potência, vida útil, HTA, coeficiente de manutenção/consumo) — nenhuma fórmula de produtividade. O próprio documento afirma que produção horária está em "cadernos técnicos e planilhas de equipes mecânicas" separados. Os agentes de pesquisa também erraram ao reportar o PDF como rasterizado — `pdftotext` extraiu limpo (documento gerado por Word).
+
+**Achado 2 — o documento certo existe e tem fórmulas reais.** DNIT/SICRO2, *Manual de Custos Rodoviários*, Volume 4 (*Composições de Custos Unitários de Referência*), dividido em 4 Tomos por categoria de serviço:
+- Tomo 1 — Terraplenagem e Pavimentação (2003, 14.054 linhas)
+- Tomo 2 — Obras de Arte Especiais
+- Tomo 3 — Drenagem e Outros Custos I
+- Tomo 4 — Drenagem e Outros Custos II
+
+Cada Tomo tem composições reais no formato "VARIÁVEIS INTERVENIENTES" com `FATOR DE EFICIÊNCIA`, `TEMPO DE CICLO`, fórmulas explícitas (ex.: `P=60.b.g.h.i/s` para escavadeira) e `PRODUÇÃO HORÁRIA` por equipamento — exatamente o que faltava. Não há Tomo equivalente para SANEAMENTO/MINERACAO (não são categorias clássicas de obra rodoviária DNIT) — usuário decidiu não sintetizar essas duas (32 CPUs ficam sem grafo, documentado, não inventado).
+
+**Achado 3 — metodologia de aplicação (nunca copiar o número, sempre copiar a estrutura).** Em nenhum dos 93 CPUs enriquecidos o valor numérico de `PRODUÇÃO HORÁRIA` do Tomo foi copiado diretamente — a frota real do mendeslobo é de classe de potência diferente da usada nas composições de referência (ex.: escavadeira Cat 330/166kW/1,7m³ no Tomo1 vs. 22t/38t/48t real). Em vez disso, o Tomo foi usado para **identificar qual elemento da equipe é o gargalo real** (a fórmula/estrutura da composição, não o número), e `capacidade_horaria` = `valor_horario` real do CPU mendeslobo (já calibrado), seguindo o mesmo princípio já validado nos 4 CPUs portados do `rfi-r02` nesta mesma ADR.
+
+Padrões de gargalo identificados e aplicados (item a item, nenhum lote aplicado sem inspecionar a composição real e cruzar com a fonte):
+
+| Padrão | Fonte Tomo | Gargalo | CPUs |
+|---|---|---|---|
+| Escavação/carga/transporte por categoria | Tomo1 §2.2.1.3/1.4 — escavadeira não depende de DMT, caminhão sim (por isso não recebe capacidade — DMT não é fixa no CPU) | Escavadeira hidráulica | 7 |
+| Regularização/espalhamento/acabamento sem rolo dedicado | Tomo1 §2.2.2.1 "Produtividade da Motoniveladora" — único equip. com discussão de rendimento dedicada no manual | Motoniveladora | 23 (TERRA+PAVIM) |
+| Compactação de aterro com rolo pé-de-carneiro dedicado | Tomo1 §2.2.1.5 "Compactação de Aterros" | Rolo compactador | 4 |
+| Imprimação/pintura de ligação/TSD | Tomo1 §2.2.2.1 — texto explícito: "o caminhão distribuidor de asfalto... determina a produção da patrulha"; composição real confirma (PRODUÇÃO DA EQUIPE = produção do distribuidor, demais com folga) | Espargidor de ligante | 3 |
+| CBUQ/recomposição asfáltica | Tomo1 — usina de asfalto é o gargalo teórico (75t/h, todo equip. de campo com folga), mas o CPU do mendeslobo não modela a usina (CBUQ chega como material comprado) — gargalo local passa a ser a vibro-acabadora | Vibro-acabadora | 2 |
+| Corpo/Boca de bueiro (drenagem/obras de arte, moldado no local) | Tomo3 §2.2/2.3 — composição real NÃO tem equipamento pesado dedicado (só caminhão em uso fracionário 0,01-0,42 para entrega); mão-de-obra qualificada (Pedreiro/Encarregado) executa forma+armação+concretagem em série | MO-OFICIAL / MO-MONTADOR | 47 (37 DREN + 10 OBRAS_ARTE) |
+| Escavação/reaterro de vala confinada | Tomo3 "Escavação mecânica de vala"/"reat. e comp." — único equip. real é a retroescavadeira (57kW≈75HP, classe quase idêntica); compactação confinada usa "Compactador Manual soquete vibratório" = "Sapo compactador" do mendeslobo | Retroescavadeira / Sapo compactador | 2 |
+| Único equipamento na composição | Gargalo por definição estrutural, sem necessidade de fonte | — | 5 |
+| Sem fonte SICRO2 aplicável (equipamento pós-2003 ou serviço não tabelado) | Demolição c/ rompedor hidráulico — gargalo por raciocínio estrutural (ferramenta especializada), sem valor de fonte documental | Escavadeira c/ rompedor | 1 |
+
+**Total: 93 CPUs enriquecidos** (32 TERRAPLENAGEM + 12 PAVIMENTACAO + 39 DRENAGEM + 10 OBRAS_ARTE). Ficam sem grafo, por falta de fonte SICRO2/DNIT aplicável e por política de não-invenção: 3 CPUs de TERRAPLENAGEM (`ATI-001` supressão vegetal, `ATI-005` topografia, `ATI-080` hidrossemeadura) e as 32 categorias SANEAMENTO/MINERACAO/DIVERSOS não pedidas nesta passada.
+
+**Achado lateral, não tratado**: `AGIS-ROLO-PC-10T`/`AGIS-TRATOR-PNEU-GRADE`/etc. (CPU `CPU-TERRA-COMPAC-PN`) e `EQ-ROLO-PE-CARNEIRO`/`EQ-MOTONIVEL-140K` (CPU `CPU-TERRA-COMPACT-ATERRO-100PN`) parecem ser a mesma composição real duplicada sob dois esquemas de código de insumo/função (`AGIS-*` vs `EQ-*`/`MO-*`), com `valor_horario` quase idêntico (173,01 vs 173,197428). Não é um CPU/insumo-nível 3 dedup que a Nível-3 (`find_candidate_cpu_duplicates`) tenha capturado ainda — grafo foi aplicado a ambos por paridade, mas a duplicata de CPU em si não foi investigada/fundida nesta passada.
+
 ## Relacionados
 
 - ADR-178 — Gate de Plausibilidade Pré-Merge de Catálogo (este motor é o candidato natural para substituir/reforçar a checagem de duplicata elevada a `ERRO` no contexto de pré-merge, D5 daquela ADR — não wireado ainda, fica para quando F1-F5 da ADR-178 forem implementadas)

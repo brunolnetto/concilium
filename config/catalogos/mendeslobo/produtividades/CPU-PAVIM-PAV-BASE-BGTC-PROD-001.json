@@ -46,5 +46,18 @@
     ]
   },
   "historico_observacoes": [],
-  "valor_horario": 22.0
+  "valor_horario": 22.0,
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-ROLO-PE-CARNEIRO",
+        "capacidade_horaria": 22.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), §2.2.1.5 \"Compactação de Aterros\": mesmo padrão aplicado aos CPUs de compactação de aterro (rolo pé-de-carneiro dedicado, distinto de motoniveladora que aqui só espalha o material antes da compactação). Não copiado valor numérico do Tomo1; aceita-se o valor_horario real do CPU como capacidade calibrada do rolo."
+      }
+    ],
+    "gargalo_declarado": "EQ-ROLO-PE-CARNEIRO"
+  }
 }

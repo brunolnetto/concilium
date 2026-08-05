@@ -54,5 +54,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0028",
+        "capacidade_horaria": 55.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), §2.2.2.1 \"Produtividade da Motoniveladora\": documento cita a motoniveladora como o equipamento que executa e determina o rendimento dos serviços de regularização/reforço de subleito/sub-base/base (\"seu rendimento operacional depende extremamente do planejamento... e da habilidade do operador\"). Não há rolo compactador dedicado nesta composição. Modelo do Tomo1 (CAT 120G) é de classe distinta da frota real mendeslobo — não copiado o valor numérico; aceita-se o valor_horario real do CPU como capacidade calibrada da motoniveladora."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0028"
+  }
 }

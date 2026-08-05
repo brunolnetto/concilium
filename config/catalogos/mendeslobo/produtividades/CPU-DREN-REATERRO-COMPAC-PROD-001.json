@@ -51,5 +51,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0030",
+        "capacidade_horaria": 12.0,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 3 (Drenagem e Outros Custos I, 2003), composição RCTR0220 \"2 S 04 001 01 — Escavação mecânica reat. e comp. vala mat.1a cat.\": equipamento de compactação em vala confinada é o \"Compactador Manual - soquete vibratório\" (3 un. no Tomo3) — equivalente direto ao \"Sapo compactador\" do mendeslobo (2 un.); retroescavadeira e motoniveladora não entram nesta operação específica (escavação já é CPU separado no mendeslobo). Não copiado valor numérico do Tomo1/3; aceita-se o valor_horario real do CPU como capacidade calibrada do sapo compactador (elemento que a fonte confirma ser o gargalo de compactação em vala confinada)."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0030"
+  }
 }

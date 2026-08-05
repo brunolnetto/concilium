@@ -55,5 +55,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0041",
+        "capacidade_horaria": 816.67,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), composição RCTR0220 \"Concreto Betuminoso Usinado a Quente\": no Tomo1, o elemento que efetivamente pauta todo o processo é a USINA de asfalto (\"PRODUÇÃO DA USINA: 75 t/h\" — todo o equipamento de campo, incl. vibro-acabadora, roda com utilização operativa <100% para acompanhar a usina). Esta CPU do mendeslobo NÃO inclui a usina no seu escopo — o CBUQ chega como material já usinado (MA-CBUQ-FAIXA-C, origem AQUISICAO_EXTERNA/compra) — portanto, dentro do escopo real desta composição (só aplicação em pista), a vibro-acabadora é o elemento determinante local, não a usina (que é upstream, fora deste CPU). Não copiado valor numérico do Tomo1 (modelo 74kW é de classe distinta); aceita-se o valor_horario real do CPU como capacidade calibrada da vibro-acabadora."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0041"
+  }
 }

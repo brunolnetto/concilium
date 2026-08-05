@@ -57,5 +57,18 @@
         "consumo_litros_hora_estimado": 1.5
       }
     ]
+  },
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "AGIS-TRAT-EST-20T",
+        "capacidade_horaria": 738.0,
+        "unidade": "m2",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), §2.2.1.6 + composição RCTR0220 \"Desmat. Destoc. e Limpeza de Áreas\": o trator de esteiras com lâmina é o equipamento de referência do SICRO2 para este serviço (fórmula P=60·b·g·h·i/(f·s), único equipamento na composição SICRO2). Classe de potência do Tomo1 (228kW) diverge da frota real mendeslobo (20T, ~130kW) — não copiado o valor numérico; aceita-se o valor_horario real do CPU como capacidade calibrada do trator de esteiras (elemento que a metodologia confirma ser o gargalo)."
+      }
+    ],
+    "gargalo_declarado": "AGIS-TRAT-EST-20T"
   }
 }

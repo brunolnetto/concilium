@@ -38,5 +38,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0029",
+        "capacidade_horaria": 162.12,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 1 (Terraplenagem e Pavimentação, 2003), §2.2.2.1 \"Produtividade da Motoniveladora\": documento cita explicitamente a motoniveladora como o equipamento que executa e determina o rendimento dos serviços de regularização/escarificação/espalhamento/acabamento (\"seu rendimento operacional depende extremamente do planejamento da operação... e da habilidade do operador\"), com fórmulas P1/P2 tabeladas para o modelo CAT 120G. Não há rolo compactador dedicado nesta composição (trator de esteiras/pneus provê apenas apoio); modelo do Tomo1 (CAT 120G) é de classe distinta da frota real mendeslobo — não copiado o valor numérico do Tomo1; aceita-se o valor_horario real do CPU como capacidade calibrada da motoniveladora (elemento que a metodologia confirma ser o gargalo destes serviços de acabamento/regularização/espalhamento)."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0029"
+  }
 }

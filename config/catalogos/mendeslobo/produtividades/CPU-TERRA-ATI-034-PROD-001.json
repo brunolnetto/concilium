@@ -34,5 +34,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "MO-MONTADOR",
+        "capacidade_horaria": 0.0625,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Mesma família/padrão já validado em CPU-TERRA-ATI-036/037 (drenagem moldada in loco, equipe de montagem MO-MONTADOR/MO-AJUDANTE + mini escavadeira/retroescavadeira/betoneira de apoio). Pesquisa de processo (armação+forma em série, concretagem) confirmou que armação/forma domina — não a escavação/concretagem, que têm folga. capacidade_horaria = valor_horario/num_montadores (equipe de montagem, elemento que a pesquisa de processo já confirmou ser o gargalo real desta família)."
+      }
+    ],
+    "gargalo_declarado": "MO-MONTADOR"
+  }
 }

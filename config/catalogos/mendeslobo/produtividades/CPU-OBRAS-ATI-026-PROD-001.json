@@ -38,5 +38,18 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "MO-MONTADOR",
+        "capacidade_horaria": 0.5,
+        "unidade": "m",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Mesma família/padrão já validado em CPU-TERRA-ATI-036/037/033-040 (drenagem/obras de arte corrente moldada in loco, equipe de montagem MO-MONTADOR/MO-AJUDANTE + mini escavadeira/retroescavadeira de apoio) e confirmado pela composição real do DNIT/SICRO2 Tomo 3 (Corpo/Boca de bueiro): mão-de-obra qualificada é o elemento que executa forma+armação+concretagem em série, equipamento leve só posiciona/escava vala de apoio, sem ser o processo determinante. capacidade_horaria = valor_horario/2 (MO-MONTADOR, 2 pessoas em todos os 10 CPUs desta categoria)."
+      }
+    ],
+    "gargalo_declarado": "MO-MONTADOR"
+  }
 }

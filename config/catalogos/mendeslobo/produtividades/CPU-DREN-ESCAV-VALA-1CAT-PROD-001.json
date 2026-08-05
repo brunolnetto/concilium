@@ -34,5 +34,18 @@
       "unidade": "m3",
       "descricao": "descrição: escavação de vala em 1ª categoria (ADR-139 F4)"
     }
-  ]
+  ],
+  "grafo_sinergia": {
+    "relacoes": [],
+    "capacidades": [
+      {
+        "elemento_id": "EQ-E0026",
+        "capacidade_horaria": 19.701,
+        "unidade": "m3",
+        "fonte": "medicao_obra",
+        "justificativa": "Sem grafo prévio. Fonte: DNIT/SICRO2, Manual de Custos Rodoviários, Volume 4 Tomo 3 (Drenagem e Outros Custos I, 2003), composição RCTR0220 \"2 S 04 001 00 — Escavação mecânica de vala em mat. 1a cat.\": único equipamento da composição real é a Retroescavadeira (57kW ≈ 76HP, classe quase idêntica à frota real mendeslobo de 75HP) — confirma gargalo=equipamento nesta operação, sem necessidade de escoramento manual (que só entra na variante \"reat. e comp.\"). Valor_horario real do CPU aceito como capacidade calibrada."
+      }
+    ],
+    "gargalo_declarado": "EQ-E0026"
+  }
 }
