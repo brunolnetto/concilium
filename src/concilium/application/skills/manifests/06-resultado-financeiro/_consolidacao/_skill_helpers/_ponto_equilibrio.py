@@ -200,6 +200,35 @@ def _pe_resolve_h_i_gamma_o(
     return h_i, custo_fixo_total / h_i
 
 
+def _pcd_validar_preconditions(
+    plan: Any,
+    q: float,
+    rho: float,
+    beta: float,
+    resolved: tuple | None,
+) -> tuple[bool, tuple[float, float] | None]:
+    """Valida precondições para causa_dominante. Retorna (é_valido, (h_i, gamma_o) se válido)."""
+    if q <= 0 or rho <= 0 or beta <= 0 or resolved is None:
+        return False, None
+    return True, resolved
+
+
+def _pcd_classificar_causa(
+    t_cronograma: float,
+    t_precificacao: float,
+) -> Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO"]:
+    """Classifica causa dominante por share relativo dos termos. Retorna rótulo."""
+    denom = abs(t_cronograma) + abs(t_precificacao)
+    if denom <= 0:
+        return "MISTO"
+    share_cronograma = abs(t_cronograma) / denom
+    if share_cronograma >= _CAUSA_DOMINANTE_LIMIAR_SHARE:
+        return "CRONOGRAMA"
+    if share_cronograma <= 1.0 - _CAUSA_DOMINANTE_LIMIAR_SHARE:
+        return "PRECIFICACAO"
+    return "MISTO"
+
+
 def _pe_causa_dominante(
     plan: Any,
     custo_venda_total: float,
@@ -267,30 +296,18 @@ def _pe_causa_dominante(
     resolved = _pe_resolve_h_i_gamma_o(
         custo_fixo_total, custo_operacional_real, machine_weeks_brutas, horas_dia, dias_semana
     )
-    if q <= 0 or rho <= 0 or beta <= 0 or resolved is None:
+    is_valid, h_i_gamma_o = _pcd_validar_preconditions(plan, q, rho, beta, resolved)
+    if not is_valid:
         return "INDETERMINADO", 0.0, 0.0
-    h_i, gamma_o = resolved
 
+    h_i, gamma_o = h_i_gamma_o
     h_cat = (q / rho) / beta
     gamma_v = custo_venda_total / h_cat
 
     t_cronograma = (h_cat - h_i) * (gamma_v + gamma_o) / 2.0
     t_precificacao = (gamma_v - gamma_o) * (h_cat + h_i) / 2.0
 
-    denom = abs(t_cronograma) + abs(t_precificacao)
-    if denom <= 0:
-        # Ambos os termos nulos (delta ~0 e sem gap de taxa nem de horas) — não há causa
-        # a atribuir, mas os dados existem (diferente de INDETERMINADO): "MISTO" é o rótulo
-        # honesto para "nenhuma causa presente", não "não foi possível calcular".
-        causa: Literal["CRONOGRAMA", "PRECIFICACAO", "MISTO"] = "MISTO"
-    else:
-        share_cronograma = abs(t_cronograma) / denom
-        if share_cronograma >= _CAUSA_DOMINANTE_LIMIAR_SHARE:
-            causa = "CRONOGRAMA"
-        elif share_cronograma <= 1.0 - _CAUSA_DOMINANTE_LIMIAR_SHARE:
-            causa = "PRECIFICACAO"
-        else:
-            causa = "MISTO"
+    causa = _pcd_classificar_causa(t_cronograma, t_precificacao)
 
     return causa, round(t_cronograma, 2), round(t_precificacao, 2)
 
@@ -469,32 +486,13 @@ def _pe_build_levers(
     return levers
 
 
-def _build_pe_for_equipe(
+def _bpe_calcular_custos_iniciais(
     equipe: Any,
     venda_por_item: dict,
-    planejamento_por_item: dict | None = None,
-    sched_por_item: dict | None = None,
-    particao_por_item: dict | None = None,
-    idle_por_item: dict | None = None,
-    pool_total_por_item: dict | None = None,
-    regime: Any = None,
-    teto_rs: float | None = None,
-) -> PontoEquilibrio | None:
-    """Constrói PontoEquilibrio para uma equipe. Retorna None se custo_fixo ≤ 0.
-
-    ADR-076:
-    - planejamento_por_item: frentes_equivalentes_necessarias (Opção C) e calibração PU (Opção D).
-    - sched_por_item: fatores de lesão de produtividade (fator_clima, n_equipes, semanas_lesadas).
-    ADR-083:
-    - particao_por_item: {item_id: CustoParticionadoItem} — decomposição causal do gap_pool.
-    ADR-162:
-    - regime: RegimeTrabalho do projeto (horas_dia/dias_semana) — usado por causa_dominante (D1)
-      e horas_reais_min/max (D3) para converter machine_weeks_brutas em horas reais (H_i).
-      None -> causa_dominante="INDETERMINADO", horas_reais_min/max=None.
-    - teto_rs: Γ, teto de competitividade opt-in do perfil (`teto_ponto_equilibrio_rs`,
-      None = desabilitado). Usado só por horas_reais_min/max (D3) e VAL-PONTO-EQUILIBRIO-TETO
-      (D2, emitido em _bpe_process_equipe — precisa de teto_rs, não só do pe já construído).
-    """
+) -> tuple[float, float, float, float, float]:
+    """Calcula permanencia_base, custos fixo/operacional, e frentes iniciais.
+    Retorna (permanencia_base, custo_fixo_total, custo_venda_total,
+    custo_operacional_real, frentes) ou None se custo_fixo_total <= 0."""
     permanencia_base = float(
         getattr(equipe, "permanencia_efetiva_meses", 0.0) or getattr(equipe, "permanencia_meses", 0.0) or 1.0
     )
@@ -504,17 +502,25 @@ def _build_pe_for_equipe(
     custo_venda_total = venda_por_item.get(equipe.item_id, 0.0)
     custo_operacional_real = float(equipe.custo_total or 0.0)
     frentes = custo_operacional_real / custo_fixo_total if custo_fixo_total > 0 else 1.0
+    return permanencia_base, custo_fixo_total, custo_venda_total, custo_operacional_real, frentes
 
-    # ADR-091: custo_total (custo_operacional_real) já armazena o custo total de todas as
-    # frentes (normalizado em skill-05) — daí `frentes` acima ficar ~1 (1-frente vs 1-frente).
-    # ADR-172: mas `custo_venda_total`/`machine_weeks_brutas` são agregados (todas as frentes),
-    # enquanto `custo_fixo_total` é referência de 1 frente — comparar os dois diretamente
-    # (delta/causa_dominante/horas_reais_min_max) subestimava o lado do custo. A correção usa
-    # `_resolve_custo_equipe_agregado` (issue #139 parte 2) — pool-aware: prefere `custo_total`
-    # quando coberta por pool (já ajustado pelo contrato, issue #139), senão
-    # `custo_operacional_agregado` (integral semana a semana, skill-05, robusto a rampa), com
-    # fallback nominal (`custo_operacional_real × n_frentes`). Por fim, `custo_fixo_total`
-    # (garantidamente > 0 pelo guard acima) — nunca uma divisão por zero em delta_pct.
+
+def _bpe_extrair_e_processar_features(
+    equipe: Any,
+    permanencia_base: float,
+    custo_fixo_total: float,
+    custo_venda_total: float,
+    custo_operacional_real: float,
+    planejamento_por_item: dict | None,
+    sched_por_item: dict | None,
+    pool_total_por_item: dict | None,
+    particao_por_item: dict | None,
+    idle_por_item: dict | None,
+    regime: Any,
+    teto_rs: float | None,
+) -> tuple:
+    """Extrai e processa todas as features de uma equipe para PE. Retorna tuple com
+    todos os intermediários calculados necessários para construir PontoEquilibrio."""
     _n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
     custo_operacional_agregado = _resolve_custo_equipe_agregado(equipe)
     if custo_operacional_agregado <= 0:
@@ -537,9 +543,6 @@ def _build_pe_for_equipe(
     _Q, pu_operacional_autonomo, machine_weeks_brutas, machine_weeks_efetivas, eta_real = _pe_camada2_producao(
         plan, custo_total_autonomo, lesao
     )
-    # ADR-162: PU operacional real, comparável a pu_catalogo_unitario (mesmo Q no
-    # denominador). Usa custo_operacional_agregado (= custo_fixo_equipe), não
-    # custo_total_autonomo (esse alimenta pu_operacional_autonomo, grandeza diferente).
     pu_operacional_unitario = round(custo_operacional_agregado / _Q, 4) if _Q > 0 else 0.0
 
     horas_dia = float(getattr(regime, "horas_dia", 0.0) or 0.0)
@@ -594,6 +597,120 @@ def _build_pe_for_equipe(
         custo_venda_total,
     )
 
+    return (
+        custo_operacional_agregado,
+        delta,
+        pu_catalogo_unitario,
+        pu_operacional_unitario,
+        pu_calibrado_unitario,
+        ajuste_minimo_pct,
+        gap_praticabilidade_abs,
+        economia_pool_abs,
+        gap_pool_overhead,
+        n_equipes_ef,
+        semanas_ativas_v,
+        fator_clima_v,
+        fator_cal_v,
+        semanas_lesadas_v,
+        gap_escala_abs,
+        diag,
+        levers,
+        pu_operacional_autonomo,
+        machine_weeks_brutas,
+        machine_weeks_efetivas,
+        eta_real,
+        custo_pool_total,
+        custo_pool_por_unidade,
+        causa_dominante,
+        t_cronograma,
+        t_precificacao,
+        horas_reais_min,
+        horas_reais_max,
+        frentes_nec,
+        status_frentes,
+    )
+
+
+def _build_pe_for_equipe(
+    equipe: Any,
+    venda_por_item: dict,
+    planejamento_por_item: dict | None = None,
+    sched_por_item: dict | None = None,
+    particao_por_item: dict | None = None,
+    idle_por_item: dict | None = None,
+    pool_total_por_item: dict | None = None,
+    regime: Any = None,
+    teto_rs: float | None = None,
+) -> PontoEquilibrio | None:
+    """Constrói PontoEquilibrio para uma equipe. Retorna None se custo_fixo ≤ 0.
+
+    ADR-076:
+    - planejamento_por_item: frentes_equivalentes_necessarias (Opção C) e calibração PU (Opção D).
+    - sched_por_item: fatores de lesão de produtividade (fator_clima, n_equipes, semanas_lesadas).
+    ADR-083:
+    - particao_por_item: {item_id: CustoParticionadoItem} — decomposição causal do gap_pool.
+    ADR-162:
+    - regime: RegimeTrabalho do projeto (horas_dia/dias_semana) — usado por causa_dominante (D1)
+      e horas_reais_min/max (D3) para converter machine_weeks_brutas em horas reais (H_i).
+      None -> causa_dominante="INDETERMINADO", horas_reais_min/max=None.
+    - teto_rs: Γ, teto de competitividade opt-in do perfil (`teto_ponto_equilibrio_rs`,
+      None = desabilitado). Usado só por horas_reais_min/max (D3) e VAL-PONTO-EQUILIBRIO-TETO
+      (D2, emitido em _bpe_process_equipe — precisa de teto_rs, não só do pe já construído).
+    """
+    custos_iniciais = _bpe_calcular_custos_iniciais(equipe, venda_por_item)
+    if custos_iniciais is None:
+        return None
+
+    permanencia_base, custo_fixo_total, custo_venda_total, custo_operacional_real, _frentes = custos_iniciais
+
+    features = _bpe_extrair_e_processar_features(
+        equipe,
+        permanencia_base,
+        custo_fixo_total,
+        custo_venda_total,
+        custo_operacional_real,
+        planejamento_por_item,
+        sched_por_item,
+        pool_total_por_item,
+        particao_por_item,
+        idle_por_item,
+        regime,
+        teto_rs,
+    )
+
+    (
+        custo_operacional_agregado,
+        delta,
+        pu_catalogo_unitario,
+        pu_operacional_unitario,
+        pu_calibrado_unitario,
+        ajuste_minimo_pct,
+        gap_praticabilidade_abs,
+        economia_pool_abs,
+        gap_pool_overhead,
+        n_equipes_ef,
+        semanas_ativas_v,
+        fator_clima_v,
+        fator_cal_v,
+        semanas_lesadas_v,
+        gap_escala_abs,
+        diag,
+        levers,
+        pu_operacional_autonomo,
+        machine_weeks_brutas,
+        machine_weeks_efetivas,
+        eta_real,
+        custo_pool_total,
+        custo_pool_por_unidade,
+        causa_dominante,
+        t_cronograma,
+        t_precificacao,
+        horas_reais_min,
+        horas_reais_max,
+        frentes_nec,
+        status_frentes,
+    ) = features
+
     return PontoEquilibrio(
         item_id=equipe.item_id,
         # ADR-172: custo operacional agregado real (integral semana a semana, todas as
@@ -607,7 +724,7 @@ def _build_pe_for_equipe(
         delta_pct=round(delta / custo_operacional_agregado, 5),
         status_validacao="OK" if delta >= 0 else "ERRO",
         custo_operacional_real=round(custo_operacional_real, 2),
-        frentes_equivalentes=round(frentes, 2),
+        frentes_equivalentes=round(_frentes, 2),
         # ADR-076 Opção C
         frentes_equivalentes_necessarias=frentes_nec,
         gap_pool_overhead=gap_pool_overhead,
