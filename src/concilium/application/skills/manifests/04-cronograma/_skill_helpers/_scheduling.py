@@ -148,6 +148,85 @@ def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
     )
 
 
+def _bad_preparar_inicializacao(
+    item: Any,
+) -> tuple[float, float, float]:
+    """Prepara quantitativo_min (99.9% tolerance) e retorna valor para uso no while."""
+    quantitativo_min = item.quantitativo * 0.999
+    taxa_desmob_fracao = _extract_taxa_desmobilizacao_fracao(None)  # placeholder
+    return quantitativo_min, taxa_desmob_fracao, 0.0  # last_fator_clima
+
+
+def _bad_processar_semana_parametros(
+    week_offset: int,
+    sa: Any,
+    semanas_obra: list[str],
+    canonical_in: Any,
+    prat_semanal: dict[str, float],
+    prat_mensal: dict[str, float],
+    fator_calendario_semanal: dict[str, float],
+    last_fator_clima: float,
+    last_fator_calendario: float,
+) -> tuple[str, float, float, float, float]:
+    """Calcula week_num, semana_key, fator_clima, fator_calendario para semana."""
+    week_num = sa.start_week + week_offset
+    if week_num < len(semanas_obra):
+        semana_key = semanas_obra[week_num]
+        fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
+        fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
+        last_fator_clima_novo = fator_clima
+        last_fator_calendario_novo = fator_calendario
+    else:
+        semana_key = _iso_week_key(canonical_in.projeto.data_inicio + timedelta(weeks=week_num))
+        fator_clima = last_fator_clima
+        fator_calendario = last_fator_calendario
+        last_fator_clima_novo = last_fator_clima
+        last_fator_calendario_novo = last_fator_calendario
+
+    return semana_key, fator_clima, fator_calendario, last_fator_clima_novo, last_fator_calendario_novo
+
+
+def _bad_calcular_equipes_com_ramp(
+    equipes_estatico: int,
+    n_max: int,
+    taxa_desmob_fracao: float | None,
+    frac_atual: float | None,
+    producao_semanal_base: float,
+    fator_clima: float,
+    fator_calendario: float,
+    fator_jornada: float,
+    qtd_acumulada: float,
+    item_quantitativo: float,
+) -> tuple[int, float | None]:
+    """Calcula número de equipes considerando lógica de ramp-down.
+
+    Retorna (inferred_num_equipes, frac_atual_novo).
+    """
+    if taxa_desmob_fracao is None:
+        return equipes_estatico, None
+
+    frac_atual_novo = frac_atual
+    if frac_atual_novo is None and n_max > 0 and equipes_estatico >= n_max:
+        frac_atual_novo = 1.0  # atingiu o pico pela 1ª vez: gate passa a decidir
+
+    if frac_atual_novo is None:
+        inferred_num_equipes = equipes_estatico
+    else:
+        frac_candidata = max(0.0, frac_atual_novo - taxa_desmob_fracao)
+        capacidade_pico_semanal = (
+            producao_semanal_base * n_max * fator_clima * fator_calendario * fator_jornada
+        )
+        producao_max_se_reduzir = _producao_maxima_com_rampa_down(
+            frac_candidata, taxa_desmob_fracao, capacidade_pico_semanal
+        )
+        qtd_remanescente_pre_semana = max(0.0, item_quantitativo - qtd_acumulada)
+        if producao_max_se_reduzir >= qtd_remanescente_pre_semana:
+            frac_atual_novo = frac_candidata
+        inferred_num_equipes = max(0, round(frac_atual_novo * n_max))
+
+    return inferred_num_equipes, frac_atual_novo
+
+
 def _build_activity_distribuicao(
     sa: Any,
     item: Any,
@@ -156,7 +235,7 @@ def _build_activity_distribuicao(
     n_max: int,
     producao_semanal_base: float,
     semanas_obra: list[str],
-    canonical_in: CanonicalModel,
+    canonical_in: Any,
     prat_semanal: dict[str, float],
     prat_mensal: dict[str, float],
     fator_calendario_semanal: dict[str, float],
@@ -193,20 +272,9 @@ def _build_activity_distribuicao(
     """
     distribuicao: dict[str, DistribuicaoSemanal] = {}
     qtd_acumulada = 0.0
-    # Último clima/calendário real conhecido (dentro de semanas_obra) — repetido nas
-    # semanas de extensão em vez de recair no default 1.0 de _lookup_eficiencia/.get,
-    # que assumiria clima perfeito "de graça" para semanas que não existiam no
-    # cronograma original.
     last_fator_clima = 1.0
     last_fator_calendario = 1.0
-    # Tolerância de 99,9% (mesmo critério de _warn_if_activity_underdelivers) em vez de
-    # `qtd_acumulada < item.quantitativo` exato: `_build_dist_cell` arredonda qtd_acumulada
-    # a 2 casas decimais a cada semana, então um resíduo residual menor que a granularidade
-    # do arredondamento (ex: 0,003 de 676.519) nunca converge — cada incremento semanal é
-    # absorvido pelo round() e a atividade nunca "termina", estendendo até o teto de 10 anos
-    # só por arredondamento (achado real no AGIS: eap-1_6).
     quantitativo_min = item.quantitativo * 0.999
-
     taxa_desmob_fracao = _extract_taxa_desmobilizacao_fracao(ramp)
     frac_atual: float | None = None  # None = gate ainda dormente (ramp-up em curso)
 
@@ -214,17 +282,19 @@ def _build_activity_distribuicao(
     while week_offset < sa.duration_weeks or (
         qtd_acumulada < quantitativo_min and week_offset < TETO_EXTENSAO_CRONOGRAMA_SEMANAS
     ):
-        week_num = sa.start_week + week_offset
-        if week_num < len(semanas_obra):
-            semana_key = semanas_obra[week_num]
-            fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
-            fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
-            last_fator_clima = fator_clima
-            last_fator_calendario = fator_calendario
-        else:
-            semana_key = _iso_week_key(canonical_in.projeto.data_inicio + timedelta(weeks=week_num))
-            fator_clima = last_fator_clima
-            fator_calendario = last_fator_calendario
+        semana_key, fator_clima, fator_calendario, last_fator_clima, last_fator_calendario = (
+            _bad_processar_semana_parametros(
+                week_offset,
+                sa,
+                semanas_obra,
+                canonical_in,
+                prat_semanal,
+                prat_mensal,
+                fator_calendario_semanal,
+                last_fator_clima,
+                last_fator_calendario,
+            )
+        )
 
         equipes_estatico = _infer_teams_from_resources(
             sa.assigned_resources,
@@ -234,23 +304,19 @@ def _build_activity_distribuicao(
             ramp_profile=ramp,
         )
 
-        if taxa_desmob_fracao is None:
-            inferred_num_equipes = equipes_estatico
-        else:
-            if frac_atual is None and n_max > 0 and equipes_estatico >= n_max:
-                frac_atual = 1.0  # atingiu o pico pela 1ª vez: gate passa a decidir
-            if frac_atual is None:
-                inferred_num_equipes = equipes_estatico
-            else:
-                frac_candidata = max(0.0, frac_atual - taxa_desmob_fracao)
-                capacidade_pico_semanal = producao_semanal_base * n_max * fator_clima * fator_calendario * fator_jornada
-                producao_max_se_reduzir = _producao_maxima_com_rampa_down(
-                    frac_candidata, taxa_desmob_fracao, capacidade_pico_semanal
-                )
-                qtd_remanescente_pre_semana = max(0.0, item.quantitativo - qtd_acumulada)
-                if producao_max_se_reduzir >= qtd_remanescente_pre_semana:
-                    frac_atual = frac_candidata
-                inferred_num_equipes = max(0, round(frac_atual * n_max))
+        inferred_num_equipes, frac_atual = _bad_calcular_equipes_com_ramp(
+            equipes_estatico,
+            n_max,
+            taxa_desmob_fracao,
+            frac_atual,
+            producao_semanal_base,
+            fator_clima,
+            fator_calendario,
+            fator_jornada,
+            qtd_acumulada,
+            item.quantitativo,
+        )
+
         cell = _build_dist_cell(
             producao_semanal_base,
             inferred_num_equipes,

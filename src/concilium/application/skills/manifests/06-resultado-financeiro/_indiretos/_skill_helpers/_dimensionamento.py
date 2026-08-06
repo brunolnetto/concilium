@@ -137,6 +137,82 @@ def _alojamento_config_do_catalogo(catalogo: dict | None) -> dict | None:
     return None
 
 
+def _cdpc_categoria_adm(equipes_diretas: list | None, alojamento_config: dict | None, catalogo: dict | None) -> dict:
+    """Retorna composição default de ADM com MÃO DE OBRA e VERBAS."""
+    cfg = {**(_alojamento_config_do_catalogo(catalogo) or {}), **(alojamento_config or {})}
+    verbas = None
+    if equipes_diretas:
+        verbas = _custo_alojamento_bottom_up(
+            _headcount_direto(equipes_diretas),
+            quartos_por_casa=cfg.get("quartos_por_casa", 3),
+            pessoas_por_quarto=cfg.get("pessoas_por_quarto", 2),
+            valor_aluguel_mensal=cfg.get("valor_aluguel_mensal", 4000.0),
+        )
+    if verbas is None:
+        verbas = {
+            "nome": "VERBAS ADM",
+            "custo_fixo_mensal": 3500.0,
+            "itens": [
+                {"descricao": "Alojamento", "valor_mensal": 3500.0},
+            ],
+        }
+    return {
+        "mao_de_obra": {
+            "nome": "MÃO DE OBRA ADM",
+            "itens": [
+                {"funcao_id": "P0092", "descricao": "Coordenador", "quantidade": 1, "valor_mensal": 12500.0},
+            ],
+        },
+        "verbas": verbas,
+    }
+
+
+def _cdpc_categoria_top(cpu_categorias_presentes: set[str] | None) -> dict:
+    """Retorna composição default de TOP com MÃO DE OBRA."""
+    aplica = cpu_categorias_presentes is None or bool(cpu_categorias_presentes & _CATEGORIAS_CPU_COM_TOP)
+    return {
+        "mao_de_obra": {
+            "nome": "MÃO DE OBRA TOP",
+            "itens": [
+                {
+                    "funcao_id": "P0057",
+                    "descricao": "Topógrafo",
+                    "quantidade": 1 if aplica else 0,
+                    "valor_mensal": 9216.0,
+                },
+            ],
+        },
+    }
+
+
+def _cdpc_categoria_lab(cpu_categorias_presentes: set[str] | None) -> dict:
+    """Retorna composição default de LAB com VERBAS."""
+    aplica = cpu_categorias_presentes is None or bool(cpu_categorias_presentes & _CATEGORIAS_CPU_COM_LAB)
+    custo = 4000.0 if aplica else 0.0
+    return {
+        "verbas": {
+            "nome": "VERBAS LAB",
+            "custo_fixo_mensal": custo,
+            "itens": [
+                {"descricao": "Ensaios laboratoriais (aluguel de equipamentos)", "valor_mensal": custo},
+            ],
+        },
+    }
+
+
+def _cdpc_categoria_qsms() -> dict:
+    """Retorna composição default de QSMS com VERBAS."""
+    return {
+        "verbas": {
+            "nome": "VERBAS QSMS",
+            "custo_fixo_mensal": 3000.0,
+            "itens": [
+                {"descricao": "EPIs e treinamentos", "valor_mensal": 3000.0},
+            ],
+        },
+    }
+
+
 def _composicao_default_por_categoria(
     categoria: str,
     equipes_diretas: list | None = None,
@@ -181,69 +257,13 @@ def _composicao_default_por_categoria(
     comportamento antigo (sempre cobra).
     """
     if categoria == "ADM":
-        cfg = {**(_alojamento_config_do_catalogo(catalogo) or {}), **(alojamento_config or {})}
-        verbas = None
-        if equipes_diretas:
-            verbas = _custo_alojamento_bottom_up(
-                _headcount_direto(equipes_diretas),
-                quartos_por_casa=cfg.get("quartos_por_casa", 3),
-                pessoas_por_quarto=cfg.get("pessoas_por_quarto", 2),
-                valor_aluguel_mensal=cfg.get("valor_aluguel_mensal", 4000.0),
-            )
-        if verbas is None:
-            verbas = {
-                "nome": "VERBAS ADM",
-                "custo_fixo_mensal": 3500.0,
-                "itens": [
-                    {"descricao": "Alojamento", "valor_mensal": 3500.0},
-                ],
-            }
-        return {
-            "mao_de_obra": {
-                "nome": "MÃO DE OBRA ADM",
-                "itens": [
-                    {"funcao_id": "P0092", "descricao": "Coordenador", "quantidade": 1, "valor_mensal": 12500.0},
-                ],
-            },
-            "verbas": verbas,
-        }
+        return _cdpc_categoria_adm(equipes_diretas, alojamento_config, catalogo)
     if categoria == "TOP":
-        aplica = cpu_categorias_presentes is None or bool(cpu_categorias_presentes & _CATEGORIAS_CPU_COM_TOP)
-        return {
-            "mao_de_obra": {
-                "nome": "MÃO DE OBRA TOP",
-                "itens": [
-                    {
-                        "funcao_id": "P0057",
-                        "descricao": "Topógrafo",
-                        "quantidade": 1 if aplica else 0,
-                        "valor_mensal": 9216.0,
-                    },
-                ],
-            },
-        }
+        return _cdpc_categoria_top(cpu_categorias_presentes)
     if categoria == "LAB":
-        aplica = cpu_categorias_presentes is None or bool(cpu_categorias_presentes & _CATEGORIAS_CPU_COM_LAB)
-        custo = 4000.0 if aplica else 0.0
-        return {
-            "verbas": {
-                "nome": "VERBAS LAB",
-                "custo_fixo_mensal": custo,
-                "itens": [
-                    {"descricao": "Ensaios laboratoriais (aluguel de equipamentos)", "valor_mensal": custo},
-                ],
-            },
-        }
+        return _cdpc_categoria_lab(cpu_categorias_presentes)
     if categoria == "QSMS":
-        return {
-            "verbas": {
-                "nome": "VERBAS QSMS",
-                "custo_fixo_mensal": 3000.0,
-                "itens": [
-                    {"descricao": "EPIs e treinamentos", "valor_mensal": 3000.0},
-                ],
-            },
-        }
+        return _cdpc_categoria_qsms()
     return {}
 
 
