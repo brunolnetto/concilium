@@ -48,9 +48,21 @@ def _run_persist_apply(
     cured_insumos: list[dict],
     catalog_root: Path,
 ) -> None:
-    n_cpus = _persist_entity_files([(p, obj) for (p, _), obj in zip(cpu_entries, cured_cpus, strict=False)], True, catalog_root)
-    n_prods = _persist_entity_files([(p, obj) for (p, _), obj in zip(prod_entries, cured_prods, strict=False)], True, catalog_root)
-    n_ins = _persist_entity_files([(p, obj) for (p, _), obj in zip(insumo_entries, cured_insumos, strict=False)], True, catalog_root)
+    n_cpus = _persist_entity_files(
+        [(p, obj) for (p, _), obj in zip(cpu_entries, cured_cpus, strict=False)],
+        True,
+        catalog_root,
+    )
+    n_prods = _persist_entity_files(
+        [(p, obj) for (p, _), obj in zip(prod_entries, cured_prods, strict=False)],
+        True,
+        catalog_root,
+    )
+    n_ins = _persist_entity_files(
+        [(p, obj) for (p, _), obj in zip(insumo_entries, cured_insumos, strict=False)],
+        True,
+        catalog_root,
+    )
     print(f"  Arquivos atualizados: CPUs={n_cpus}, PRODUCOES={n_prods}, INSUMOS={n_ins}")
     for _cache in (".catalog_bundle.json", ".catalog_bundle_remote.json"):
         p = catalog_root / _cache

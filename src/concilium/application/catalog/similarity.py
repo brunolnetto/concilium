@@ -231,9 +231,27 @@ def insumo_similarity(a: dict, b: dict, idf: Idf | None = None) -> SimilaritySco
     ref_a = str(a.get("codigo_referencia_externa") or "")
     ref_b = str(b.get("codigo_referencia_externa") or "")
     if cod_b and cod_b in [x.strip() for x in ref_a.split(",")]:
-        return SimilarityScore(cod_a, cod_b, 1.0, 1.0, 1.0, 1.0, "duplicata_provavel", {"motivo": "referencia_externa_declarada"})
+        return SimilarityScore(
+            cod_a,
+            cod_b,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            "duplicata_provavel",
+            {"motivo": "referencia_externa_declarada"},
+        )
     if cod_a and cod_a in [x.strip() for x in ref_b.split(",")]:
-        return SimilarityScore(cod_a, cod_b, 1.0, 1.0, 1.0, 1.0, "duplicata_provavel", {"motivo": "referencia_externa_declarada"})
+        return SimilarityScore(
+            cod_a,
+            cod_b,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            "duplicata_provavel",
+            {"motivo": "referencia_externa_declarada"},
+        )
 
     desc_sim = _desc_sim(a, b, idf)
     price_sim = _price_sim(a, b, desc_sim)

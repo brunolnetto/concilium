@@ -212,7 +212,11 @@ def _persistir_insumos_individuais(
 def _persistir_producoes_individuais(
     catalog_root: Path, producoes_originais: list[dict], producoes_finais: list[dict]
 ) -> int:
-    originais_by_id = {p.get("id", p.get("codigo", "")): p for p in producoes_originais if p.get("id") or p.get("codigo")}
+    originais_by_id = {
+        p.get("id", p.get("codigo", "")): p
+        for p in producoes_originais
+        if p.get("id") or p.get("codigo")
+    }
     escritos = 0
     for p in producoes_finais:
         pid = p.get("id") or p.get("codigo", "")
@@ -456,7 +460,10 @@ def _build_dup_map(insumos: list[dict], report: CureReport | None = None) -> dic
             if m.classificacao == "revisar":
                 motivo = f"revisar, score={m.score:.2f}"
             else:
-                motivo = f"duplicata_provavel (score={m.score:.2f}) mas razão de preço {ratio:.3f} fora das faixas validadas — origem não confirmada"
+                motivo = (
+                    f"duplicata_provavel (score={m.score:.2f}) mas razão de preço "
+                    f"{ratio:.3f} fora das faixas validadas — origem não confirmada"
+                )
             report.add_manual(
                 f"INSUMO {m.codigo_a}/{m.codigo_b}: {motivo} — "
                 f"'{ins_by_code[m.codigo_a].get('descricao')}' (R${pa}) vs "
@@ -487,7 +494,11 @@ def _build_dup_map(insumos: list[dict], report: CureReport | None = None) -> dic
             if _razao_preco_liberada_para_fusao(preco_c, preco_canon):
                 dup_map[c] = canonical
             elif report is not None:
-                ratio = max(preco_c, preco_canon) / min(preco_c, preco_canon) if preco_c > 0 and preco_canon > 0 else None
+                ratio = (
+                    max(preco_c, preco_canon) / min(preco_c, preco_canon)
+                    if preco_c > 0 and preco_canon > 0
+                    else None
+                )
                 report.add_manual(
                     f"INSUMO {c}/{canonical}: conectados via cadeia transitiva mas razão "
                     f"direta {ratio:.3f} fora das faixas validadas — não fundido"
