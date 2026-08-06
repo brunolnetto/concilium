@@ -315,6 +315,26 @@ class CompositeSimilarityScore:
         }
 
 
+def _rc_process_spec_items(
+    items: list | None,
+    id_chave: str,
+    qtd_chave: str,
+    canon_map: dict[str, str],
+) -> dict[str, float]:
+    """Processa items de uma spec categoria (funcoes/equipamentos/materiais),
+    resolvendo IDs canônicos e acumulando quantidades. Retorna dict parcial
+    {recurso_id_canônico: quantidade} para merge posterior."""
+    result: dict[str, float] = {}
+    for item in items or []:
+        rid = item.get(id_chave, "")
+        rid = canon_map.get(rid, rid)
+        if rid:
+            result[rid] = result.get(rid, 0.0) + float(
+                item.get(qtd_chave) or (1 if qtd_chave != "consumo_por_hora" else 0)
+            )
+    return result
+
+
 def _recursos_canonicos(producao: dict | None, canon_map: dict[str, str] | None) -> dict[str, float]:
     """Multiset {recurso_id_canônico: quantidade} da composição de uma produção
     (funcoes + equipamentos + materiais). `canon_map` resolve códigos duplicados
@@ -332,13 +352,9 @@ def _recursos_canonicos(producao: dict | None, canon_map: dict[str, str] | None)
         ("materiais", "insumo_id", "consumo_por_hora"),
     ]
     for categoria_chave, id_chave, qtd_chave in specs:
-        for item in equipe.get(categoria_chave) or []:
-            rid = item.get(id_chave, "")
-            rid = canon_map.get(rid, rid)
-            if rid:
-                recursos[rid] = recursos.get(rid, 0.0) + float(
-                    item.get(qtd_chave) or (1 if qtd_chave != "consumo_por_hora" else 0)
-                )
+        items = equipe.get(categoria_chave) or []
+        categoria_recursos = _rc_process_spec_items(items, id_chave, qtd_chave, canon_map)
+        recursos.update(categoria_recursos)
     return recursos
 
 

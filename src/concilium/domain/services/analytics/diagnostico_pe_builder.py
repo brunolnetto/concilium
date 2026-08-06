@@ -523,6 +523,79 @@ def _build_relatorio_summary(
     )
 
 
+def _dpb_prepare_contexto(
+    canonical_in: Any,
+    bdi_rates: dict[str, float] | None = None,
+) -> tuple[Any, dict, dict, dict, dict, dict, float, float, dict, dict]:
+    """Prepara contexto e lookups: extrai proyecto_id, carrega estruturas de lookup,
+    calcula L_aplicado e T_efetivo, resolve cubo e constrói activity_week_map.
+    Retorna (resultado, sched_lookup, equipe_lookup, plan_lookup, ca_lookup,
+    eap_lookup, L_aplicado, T_efetivo, cubo_resolvido, activity_week_map)."""
+    resultado = canonical_in.resultado
+    L_aplicado = float(getattr(getattr(resultado, "venda", None), "bdi_lucro_impostos", 0.09) or 0.09)
+    T_efetivo = float((bdi_rates or {}).get("tributos_efetivo", 0.1338))
+
+    sched_lookup, equipe_lookup, plan_lookup, ca_lookup, eap_lookup = _dpb_build_lookups(
+        canonical_in
+    )
+    cubo = _resolve_cubo_analitico(canonical_in)
+    activity_week_map = _build_activity_week_map(cubo)
+
+    return (
+        resultado,
+        sched_lookup,
+        equipe_lookup,
+        plan_lookup,
+        ca_lookup,
+        eap_lookup,
+        L_aplicado,
+        T_efetivo,
+        cubo,
+        activity_week_map,
+    )
+
+
+def _dpb_processar_itens_deficit(
+    deficit_items: list,
+    resultado: Any,
+    sched_lookup: dict,
+    equipe_lookup: dict,
+    plan_lookup: dict,
+    ca_lookup: dict,
+    eap_lookup: dict,
+    L_aplicado: float,
+    T_efetivo: float,
+    canonical_in: Any,
+    activity_week_map: dict,
+) -> tuple[list, bool]:
+    """Processa cada item deficit: constrói hints do cubo, chama _process_pe_item,
+    coleta resultados e flag de cross-term. Retorna (itens_diag, cross_term_presente)."""
+    itens_diag: list[DiagnosticoPEItem] = []
+    cross_term_presente = False
+
+    for pe in deficit_items:
+        item_cubo_hint = _build_item_cubo_hint(activity_week_map, pe.item_id)
+        item, cross = _process_pe_item(
+            pe,
+            equipe_lookup,
+            sched_lookup,
+            plan_lookup,
+            ca_lookup,
+            eap_lookup,
+            L_aplicado,
+            T_efetivo,
+            canonical_in,
+            resultado,
+            item_cubo_hint,
+        )
+        if item is not None:
+            itens_diag.append(item)
+        if cross:
+            cross_term_presente = True
+
+    return itens_diag, cross_term_presente
+
+
 class DiagnosticoPEBuilder:
     """Constrói DiagnosticoPERelatorio a partir do canonical pós-Skill 08."""
 
@@ -542,40 +615,32 @@ class DiagnosticoPEBuilder:
         if not deficit_items:
             return _dpb_empty_relatorio(projeto_id)
 
-        sched_lookup, equipe_lookup, plan_lookup, ca_lookup, eap_lookup = _dpb_build_lookups(canonical_in)
-        resultado = canonical_in.resultado
-        L_aplicado = float(getattr(getattr(resultado, "venda", None), "bdi_lucro_impostos", 0.09) or 0.09)
-        # T_efetivo vem da tabela de BDI realmente aplicada neste run (via bdi_rates),
-        # não de uma constante pré-reforma fixa — ela pode divergir por isenção
-        # regional de COFINS/PIS ou por regime CBS/IBS (ADR-055). 0.1338 permanece
-        # só como fallback quando o chamador não tem a tabela efetiva à mão.
-        T_efetivo = float((bdi_rates or {}).get("tributos_efetivo", 0.1338))
+        (
+            resultado,
+            sched_lookup,
+            equipe_lookup,
+            plan_lookup,
+            ca_lookup,
+            eap_lookup,
+            L_aplicado,
+            T_efetivo,
+            cubo,
+            activity_week_map,
+        ) = _dpb_prepare_contexto(canonical_in, bdi_rates)
 
-        cubo = _resolve_cubo_analitico(canonical_in)
-        activity_week_map = _build_activity_week_map(cubo)
-
-        itens_diag: list[DiagnosticoPEItem] = []
-        cross_term_presente = False
-
-        for pe in deficit_items:
-            item_cubo_hint = _build_item_cubo_hint(activity_week_map, pe.item_id)
-            item, cross = _process_pe_item(
-                pe,
-                equipe_lookup,
-                sched_lookup,
-                plan_lookup,
-                ca_lookup,
-                eap_lookup,
-                L_aplicado,
-                T_efetivo,
-                canonical_in,
-                resultado,
-                item_cubo_hint,
-            )
-            if item is not None:
-                itens_diag.append(item)
-            if cross:
-                cross_term_presente = True
+        itens_diag, cross_term_presente = _dpb_processar_itens_deficit(
+            deficit_items,
+            resultado,
+            sched_lookup,
+            equipe_lookup,
+            plan_lookup,
+            ca_lookup,
+            eap_lookup,
+            L_aplicado,
+            T_efetivo,
+            canonical_in,
+            activity_week_map,
+        )
 
         explicacao_natureza_periodo = _build_explicacao_natureza_periodo(cubo, activity_week_map, itens_diag)
 
