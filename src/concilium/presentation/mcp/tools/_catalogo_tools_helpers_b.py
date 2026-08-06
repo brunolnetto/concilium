@@ -144,6 +144,53 @@ def _cc_sumarizar_relatorio(rep: Any) -> dict:
     }
 
 
+def _cc_validar_e_resolver_tipos_fontes(
+    tipo: str, origem_a: str, origem_b: str
+) -> tuple[list[str], dict, dict, str | None]:
+    """Valida tipos, filtra CPUs de planilha, resolve fontes. Retorna (tipos, fonte_a, fonte_b, aviso)."""
+    from concilium.application.services.catalog.catalog_compare import eh_planilha
+
+    tipos = _cc_resolver_tipos(tipo)
+    aviso = None
+    if "cpus" in tipos and (eh_planilha(origem_a) or eh_planilha(origem_b)):
+        aviso = "cpus: pulado — planilha RFI não modela esse tipo de entidade."
+        tipos = [t for t in tipos if t != "cpus"]
+    if not tipos:
+        raise ValueError("Nenhum tipo válido para comparar.")
+    fonte_a = _cc_resolver_fonte(origem_a)
+    fonte_b = _cc_resolver_fonte(origem_b)
+    return tipos, fonte_a, fonte_b, aviso
+
+
+def _cc_construir_resultado_comparacao(
+    origem_a: str,
+    origem_b: str,
+    tipos: list[str],
+    fonte_a: dict,
+    fonte_b: dict,
+    relatorios: dict,
+    aviso: str | None,
+) -> dict[str, Any]:
+    """Constrói resultado estruturado de comparação."""
+    result: dict[str, Any] = {
+        "origem_a": origem_a,
+        "origem_b": origem_b,
+        "tamanho_origem_a": {t: len(fonte_a.get(t, [])) for t in tipos},
+        "tamanho_origem_b": {t: len(fonte_b.get(t, [])) for t in tipos},
+        **{t: _cc_sumarizar_relatorio(rep) for t, rep in relatorios.items()},
+        "resumo": {
+            "atualizacoes": sum(
+                sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()
+            ),
+            "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
+            "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
+        },
+    }
+    if aviso:
+        result["aviso"] = aviso
+    return result
+
+
 def _impl_comparar_catalogo(
     origem_a: str,
     origem_b: str,
@@ -160,42 +207,17 @@ def _impl_comparar_catalogo(
         origem_b: Catálogo (catalogo_id) ou caminho de planilha .xlsm/.xlsx.
         tipo: insumos | producoes | cpus | todos (padrão).
     """
-    from concilium.application.services.catalog.catalog_compare import eh_planilha, gerar_relatorios
+    from concilium.application.services.catalog.catalog_compare import gerar_relatorios
 
     try:
-        tipos = _cc_resolver_tipos(tipo)
-    except ValueError as exc:
-        return {"erro": str(exc)}
-
-    aviso = None
-    if "cpus" in tipos and (eh_planilha(origem_a) or eh_planilha(origem_b)):
-        aviso = "cpus: pulado — planilha RFI não modela esse tipo de entidade."
-        tipos = [t for t in tipos if t != "cpus"]
-    if not tipos:
-        return {"erro": "Nenhum tipo válido para comparar."}
-
-    try:
-        fonte_a = _cc_resolver_fonte(origem_a)
-        fonte_b = _cc_resolver_fonte(origem_b)
-    except RuntimeError as exc:
+        tipos, fonte_a, fonte_b, aviso = _cc_validar_e_resolver_tipos_fontes(tipo, origem_a, origem_b)
+    except (ValueError, RuntimeError) as exc:
         return {"erro": str(exc)}
 
     relatorios = gerar_relatorios(fonte_a, fonte_b, tipos)
-
-    result: dict[str, Any] = {
-        "origem_a": origem_a,
-        "origem_b": origem_b,
-        "tamanho_origem_a": {t: len(fonte_a.get(t, [])) for t in tipos},
-        "tamanho_origem_b": {t: len(fonte_b.get(t, [])) for t in tipos},
-        **{t: _cc_sumarizar_relatorio(rep) for t, rep in relatorios.items()},
-        "resumo": {
-            "atualizacoes": sum(sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()),
-            "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
-            "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
-        },
-    }
-    if aviso:
-        result["aviso"] = aviso
+    result = _cc_construir_resultado_comparacao(
+        origem_a, origem_b, tipos, fonte_a, fonte_b, relatorios, aviso
+    )
     return _wrap_response(result)
 
 
@@ -386,6 +408,8 @@ def _mesclar_handle_apply(
     relatorios: dict[str, Any],
     result: dict[str, Any],
     destino: str,
+    origem: str,
+    tipo: str,
     justificativa: str,
 ) -> dict[str, Any]:
     """Aplica preview existente (ADR-177 D1, D4)."""
@@ -405,7 +429,7 @@ def _mesclar_handle_apply(
 
     preview = _carregar_preview_merge(config_root, catalogo_id, merge_id)
     erro_preview = _validar_preview_merge(
-        preview, destino=destino, origem=fonte_origem, tipo=", ".join(tipos),
+        preview, destino=destino, origem=origem, tipo=tipo,
         actor=actor, resumo_atual=result.get("resumo", {})
     )
     if erro_preview:
@@ -522,7 +546,7 @@ def _impl_mesclar_catalogo(
 
     return _mesclar_handle_apply(
         config_root, catalogo_id, merge_id, actor, tipos,
-        fonte_destino, fonte_origem, relatorios, result, destino, justificativa
+        fonte_destino, fonte_origem, relatorios, result, destino, origem, tipo, justificativa
     )
 
 

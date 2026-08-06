@@ -317,31 +317,28 @@ class CompositeSimilarityScore:
 
 def _recursos_canonicos(producao: dict | None, canon_map: dict[str, str] | None) -> dict[str, float]:
     """Multiset {recurso_id_canônico: quantidade} da composição de uma produção
-    (funcoes + equipamentos + materiais). `canon_map` (ex.: {p_code: mo_nome},
-    saída de `find_candidate_duplicates` a nível insumo) resolve códigos
-    duplicados pro mesmo recurso ANTES de comparar — sem isso, duas produções
-    com o mesmo recurso referenciado por códigos-P diferentes pareceriam usar
-    recursos diferentes."""
+    (funcoes + equipamentos + materiais). `canon_map` resolve códigos duplicados
+    pro mesmo recurso ANTES de comparar — sem isso, duas produções com o mesmo
+    recurso referenciado por códigos-P diferentes pareceriam usar recursos
+    diferentes."""
     if not producao:
         return {}
     canon_map = canon_map or {}
     equipe = producao.get("composicao_padrao_equipe") or producao.get("equipe") or {}
     recursos: dict[str, float] = {}
-    for fn in equipe.get("funcoes") or []:
-        rid = fn.get("funcao_id", "")
-        rid = canon_map.get(rid, rid)
-        if rid:
-            recursos[rid] = recursos.get(rid, 0.0) + float(fn.get("num_pessoas") or 1)
-    for eq in equipe.get("equipamentos") or []:
-        rid = eq.get("equip_id", "")
-        rid = canon_map.get(rid, rid)
-        if rid:
-            recursos[rid] = recursos.get(rid, 0.0) + float(eq.get("num_unidades") or 1)
-    for mat in equipe.get("materiais") or []:
-        rid = mat.get("insumo_id", "")
-        rid = canon_map.get(rid, rid)
-        if rid:
-            recursos[rid] = recursos.get(rid, 0.0) + float(mat.get("consumo_por_hora") or 0)
+    specs = [
+        ("funcoes", "funcao_id", "num_pessoas"),
+        ("equipamentos", "equip_id", "num_unidades"),
+        ("materiais", "insumo_id", "consumo_por_hora"),
+    ]
+    for categoria_chave, id_chave, qtd_chave in specs:
+        for item in equipe.get(categoria_chave) or []:
+            rid = item.get(id_chave, "")
+            rid = canon_map.get(rid, rid)
+            if rid:
+                recursos[rid] = recursos.get(rid, 0.0) + float(
+                    item.get(qtd_chave) or (1 if qtd_chave != "consumo_por_hora" else 0)
+                )
     return recursos
 
 

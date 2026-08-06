@@ -11,6 +11,8 @@ from rich import print as rprint
 from concilium.presentation.cli.shared import config_root, parse_project_version, resolve_project
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from concilium.application.services.project.project_repository import EscopoHandle, ProjectHandle
     from concilium.application.skills.base import SkillResult
 
@@ -116,6 +118,86 @@ def run(
         raise typer.Exit(1)
 
 
+def _approve_parse_and_resolve(arg: str) -> tuple["ProjectHandle", str]:
+    """Parse project@version e resolve project + version ativa. Retorna (project, v)."""
+    nome, ver = parse_project_version(arg)
+    project = resolve_project(nome)
+    v = ver or project.current_version()
+    if v is None:
+        rprint("[red]Nenhuma versão ativa.[/red]")
+        raise typer.Exit(1)
+    return project, v
+
+
+def _approve_validate_prerequisites(
+    project: "ProjectHandle",
+    v: str,
+    allow_pending_overrides: bool,
+    justificativa_override: str | None,
+) -> "Any":
+    """Valida overrides pendentes e gate de aprovação. Retorna canonical."""
+    from concilium.application.orchestrators.plano_approval_gate import (
+        PlanoApprovalGateError,
+        assert_pode_aprovar_plano,
+    )
+    from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
+    canonical = project.load_canonical(v)
+    if canonical is None:
+        rprint(f"[red]Sem canônico na versão {v}[/red]")
+        raise typer.Exit(1)
+    pending_override_ids = _approve_load_pending_overrides(project)
+    if pending_override_ids and not allow_pending_overrides:
+        preview = ", ".join(sorted(pending_override_ids)[:5])
+        suffix = "" if len(pending_override_ids) <= 5 else f" ... (+{len(pending_override_ids) - 5})"
+        rprint(
+            "[yellow]Aprovação bloqueada: existem overrides pendentes de curadoria.[/yellow]\n"
+            f"  Itens: {preview}{suffix}\n"
+            "  Opções: promova/arquive os overrides ou reexecute com --allow-pending-overrides."
+        )
+        raise typer.Exit(1)
+    try:
+        assert_pode_aprovar_plano(FlatVersionStore(project, v), justificativa_override)
+    except PlanoApprovalGateError as exc:
+        rprint(f"[yellow]{exc}[/yellow]")
+        raise typer.Exit(1) from None
+    return canonical
+
+
+def _approve_execute_and_log(
+    project: "ProjectHandle",
+    v: str,
+    canonical: "Any",
+    papel: str,
+    motivo: str,
+    justificativa_override: str | None,
+) -> None:
+    """Executa aprovação, atualiza canonical, loga e exibe resultado."""
+    try:
+        novo_projeto = canonical.projeto.with_status("APROVADO")
+    except ValueError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    canonical_aprovado = canonical.model_copy(update={"projeto": novo_projeto})
+    project.save_canonical(canonical_aprovado, v)
+    log_entry = {
+        "ts": datetime.now(UTC).isoformat(),
+        "acao": "APPROVE",
+        "papel": papel,
+        "motivo": motivo,
+    }
+    if justificativa_override and justificativa_override.strip():
+        log_entry["justificativa_override"] = justificativa_override.strip()
+    project.log_invocation(v, log_entry)
+    project.approve(v)
+    rprint(f"[green][OK][/green] Versão [bold]{v}[/bold] aprovada por [bold]{papel}[/bold].")
+    if motivo:
+        rprint(f"  Motivo: {motivo}")
+    if justificativa_override:
+        rprint(f"  Justificativa de override: {justificativa_override}")
+    rprint("  Arquivos agora read-only (chmod 444).")
+
+
 @app.command()
 def approve(
     arg: str = typer.Argument(..., help="projeto ou projeto@vN"),
@@ -136,72 +218,14 @@ def approve(
         ),
     ),
 ) -> None:
-    """Aprova versÃ£o: atualiza status no canÃ´nico e torna arquivos read-only (chmod 444).
+    """Aprova versão: atualiza status no canônico e torna arquivos read-only (chmod 444).
 
-    Um gate bloqueia a aprovação (`assert_pode_aprovar_plano`, issue #123 — paridade com
-    `aprovar_versao` do modelo escopo/plano) quando a última execução de alguma skill nesta
-    versão sinaliza inconsistência não resolvida entre preço de venda e custo operacional, ou
-    qualquer ERRO pendente (sem escape). Para aprovar mesmo com um AVISO bloqueante, preencha
-    --justificativa-override.
+    Um gate bloqueia a aprovação (`assert_pode_aprovar_plano`, issue #123) quando a última
+    execução de alguma skill nesta versão sinaliza inconsistência venda×operacional ou
+    ERRO pendente (sem escape). Para aprovar com AVISO bloqueante, preencha --justificativa-override.
     """
-    from concilium.application.orchestrators.plano_approval_gate import (
-        PlanoApprovalGateError,
-        assert_pode_aprovar_plano,
+    project, v = _approve_parse_and_resolve(arg)
+    canonical = _approve_validate_prerequisites(
+        project, v, allow_pending_overrides, justificativa_override
     )
-    from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
-
-    nome, ver = parse_project_version(arg)
-    project = resolve_project(nome)
-    v = ver or project.current_version()
-    if v is None:
-        rprint("[red]Nenhuma versÃ£o ativa.[/red]")
-        raise typer.Exit(1)
-
-    canonical = project.load_canonical(v)
-    if canonical is None:
-        rprint(f"[red]Sem canÃ´nico na versÃ£o {v}[/red]")
-        raise typer.Exit(1)
-
-    pending_override_ids = _approve_load_pending_overrides(project)
-    if pending_override_ids and not allow_pending_overrides:
-        preview = ", ".join(sorted(pending_override_ids)[:5])
-        suffix = "" if len(pending_override_ids) <= 5 else f" ... (+{len(pending_override_ids) - 5})"
-        rprint(
-            "[yellow]AprovaÃ§Ã£o bloqueada: existem overrides pendentes de curadoria.[/yellow]\n"
-            f"  Itens: {preview}{suffix}\n"
-            "  OpÃ§Ãµes: promova/arquive os overrides ou reexecute com --allow-pending-overrides."
-        )
-        raise typer.Exit(1)
-
-    try:
-        assert_pode_aprovar_plano(FlatVersionStore(project, v), justificativa_override)
-    except PlanoApprovalGateError as exc:
-        rprint(f"[yellow]{exc}[/yellow]")
-        raise typer.Exit(1) from None
-
-    try:
-        novo_projeto = canonical.projeto.with_status("APROVADO")
-    except ValueError as exc:
-        rprint(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    canonical_aprovado = canonical.model_copy(update={"projeto": novo_projeto})
-    project.save_canonical(canonical_aprovado, v)
-
-    log_entry = {
-        "ts": datetime.now(UTC).isoformat(),
-        "acao": "APPROVE",
-        "papel": papel,
-        "motivo": motivo,
-    }
-    if justificativa_override and justificativa_override.strip():
-        log_entry["justificativa_override"] = justificativa_override.strip()
-    project.log_invocation(v, log_entry)
-
-    project.approve(v)
-
-    rprint(f"[green][OK][/green] VersÃ£o [bold]{v}[/bold] aprovada por [bold]{papel}[/bold].")
-    if motivo:
-        rprint(f"  Motivo: {motivo}")
-    if justificativa_override:
-        rprint(f"  Justificativa de override: {justificativa_override}")
-    rprint("  Arquivos agora read-only (chmod 444).")
+    _approve_execute_and_log(project, v, canonical, papel, motivo, justificativa_override)
