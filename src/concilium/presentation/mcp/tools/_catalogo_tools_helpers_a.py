@@ -100,6 +100,41 @@ def _buscar_cpus_por_texto(catalogo: dict[str, Any], query: str, limite: int) ->
     return matches
 
 
+def _bs_match_insumo(
+    ins: dict[str, Any],
+    tipo: str | None,
+    query_norm: str | None,
+    incluir_descontinuados: bool,
+) -> bool:
+    """Verifica se um insumo atende aos critérios de filtro (tipo, query, status)."""
+    if not incluir_descontinuados and ins.get("status") == "descontinuado":
+        return False
+    if tipo and ins.get("tipo") != tipo:
+        return False
+    if query_norm:
+        cod = str(ins.get("codigo", "")).lower()
+        desc = str(ins.get("descricao", "")).lower()
+        if query_norm not in cod and query_norm not in desc:
+            return False
+    return True
+
+
+def _bs_build_item(ins: dict[str, Any]) -> dict[str, Any]:
+    """Constrói dict de resposta para um insumo, incluindo atributos específicos."""
+    item: dict[str, Any] = {
+        "insumo_id": ins.get("codigo"),
+        "descricao": ins.get("descricao"),
+        "tipo": ins.get("tipo"),
+        "categoria": ins.get("categoria"),
+        "unidade": ins.get("unidade"),
+        "preco_unitario": ins.get("preco_unitario"),
+    }
+    if ins.get("tipo") == "EQUIPAMENTO":
+        attrs = ins.get("atributos_especificos") or {}
+        item["valor_locacao_mensal"] = attrs.get("valor_locacao_mensal")
+    return item
+
+
 def _buscar_insumos_por_texto(
     catalogo: dict[str, Any],
     tipo: str | None,
@@ -114,27 +149,8 @@ def _buscar_insumos_por_texto(
     query_norm = query.lower() if query else None
     matches: list[dict[str, Any]] = []
     for ins in catalogo.get("insumos", []):
-        if not incluir_descontinuados and ins.get("status") == "descontinuado":
-            continue
-        if tipo and ins.get("tipo") != tipo:
-            continue
-        if query_norm:
-            cod = str(ins.get("codigo", "")).lower()
-            desc = str(ins.get("descricao", "")).lower()
-            if query_norm not in cod and query_norm not in desc:
-                continue
-        item: dict[str, Any] = {
-            "insumo_id": ins.get("codigo"),
-            "descricao": ins.get("descricao"),
-            "tipo": ins.get("tipo"),
-            "categoria": ins.get("categoria"),
-            "unidade": ins.get("unidade"),
-            "preco_unitario": ins.get("preco_unitario"),
-        }
-        if ins.get("tipo") == "EQUIPAMENTO":
-            attrs = ins.get("atributos_especificos") or {}
-            item["valor_locacao_mensal"] = attrs.get("valor_locacao_mensal")
-        matches.append(item)
+        if _bs_match_insumo(ins, tipo, query_norm, incluir_descontinuados):
+            matches.append(_bs_build_item(ins))
     return matches
 
 
@@ -530,6 +546,44 @@ def _impl_criar_insumo(
     )
 
 
+def _cil_validar_e_builditem(
+    item: dict[str, Any],
+    catalog_root: Path,
+    codigos_no_lote: set[str],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Valida item do lote e retorna (erro_result, insumo_data) ou (None, insumo_data) se OK.
+
+    Returns:
+        (None, insumo_data): Item válido, pronto para delta.
+        (error_dict, None): Item inválido, erro reportado.
+    """
+    from pydantic import ValidationError
+
+    from concilium.domain.models.catalog.catalogo import Insumo
+
+    codigo = item.get("codigo")
+    try:
+        if not codigo:
+            raise ValueError("codigo é obrigatório")
+        if codigo in codigos_no_lote:
+            raise ValueError(f"codigo '{codigo}' duplicado dentro do próprio lote")
+        validate_insumo_nao_existe(catalog_root, codigo)
+        insumo_data: dict[str, Any] = {
+            "codigo": codigo,
+            "tipo": item.get("tipo"),
+            "descricao": item.get("descricao"),
+            "unidade": item.get("unidade"),
+            "preco_unitario": item.get("preco_unitario"),
+            "categoria": item.get("categoria"),
+            "fonte_preco": item.get("fonte_preco"),
+            "atributos_especificos": item.get("atributos_especificos") or {},
+        }
+        Insumo(**insumo_data)
+        return None, insumo_data
+    except (CatalogGovernanceError, ValidationError, ValueError, TypeError) as exc:
+        return {"codigo": codigo, "status": "erro", "erro": str(exc)}, None
+
+
 def _impl_criar_insumos_lote(
     contexto_id: str,
     rascunho_id: str,
@@ -559,9 +613,6 @@ def _impl_criar_insumos_lote(
     if len(itens) > MAX_LOTE_INSUMOS:
         return {"erro": f"Máximo de {MAX_LOTE_INSUMOS} itens por chamada (recebido: {len(itens)})."}
 
-    from pydantic import ValidationError
-
-    from concilium.domain.models.catalog.catalogo import Insumo
     from concilium.infrastructure.auth.permission_guard import get_current_user_id
 
     rt = _runtime()
@@ -576,28 +627,12 @@ def _impl_criar_insumos_lote(
     codigos_no_lote: set[str] = set()
 
     for item in itens:
-        codigo = item.get("codigo")
-        try:
-            if not codigo:
-                raise ValueError("codigo é obrigatório")
-            if codigo in codigos_no_lote:
-                raise ValueError(f"codigo '{codigo}' duplicado dentro do próprio lote")
-            validate_insumo_nao_existe(catalog_root, codigo)
-            insumo_data: dict[str, Any] = {
-                "codigo": codigo,
-                "tipo": item.get("tipo"),
-                "descricao": item.get("descricao"),
-                "unidade": item.get("unidade"),
-                "preco_unitario": item.get("preco_unitario"),
-                "categoria": item.get("categoria"),
-                "fonte_preco": item.get("fonte_preco"),
-                "atributos_especificos": item.get("atributos_especificos") or {},
-            }
-            Insumo(**insumo_data)
-        except (CatalogGovernanceError, ValidationError, ValueError, TypeError) as exc:
-            resultados.append({"codigo": codigo, "status": "erro", "erro": str(exc)})
+        erro_result, insumo_data = _cil_validar_e_builditem(item, catalog_root, codigos_no_lote)
+        if erro_result:
+            resultados.append(erro_result)
             continue
 
+        codigo = item.get("codigo")
         codigos_no_lote.add(codigo)
         deltas_validos.append(
             {
@@ -695,6 +730,20 @@ def _impl_descontinuar_insumo(
     )
 
 
+def _dil_validar_item(
+    insumo_id: str | None,
+    catalog_root: Path,
+) -> dict[str, Any] | None:
+    """Valida um item de descontinuação e retorna erro_dict ou None se OK."""
+    try:
+        if not insumo_id:
+            raise ValueError("insumo_id é obrigatório")
+        validate_and_resolve_insumo_file(catalog_root, insumo_id, 0.0)
+        return None
+    except (CatalogGovernanceError, ValueError) as exc:
+        return {"insumo_id": insumo_id, "status": "erro", "erro": str(exc)}
+
+
 def _impl_descontinuar_insumos_lote(
     contexto_id: str,
     rascunho_id: str,
@@ -730,12 +779,9 @@ def _impl_descontinuar_insumos_lote(
 
     for item in itens:
         insumo_id = item.get("insumo_id")
-        try:
-            if not insumo_id:
-                raise ValueError("insumo_id é obrigatório")
-            validate_and_resolve_insumo_file(catalog_root, insumo_id, 0.0)
-        except (CatalogGovernanceError, ValueError) as exc:
-            resultados.append({"insumo_id": insumo_id, "status": "erro", "erro": str(exc)})
+        erro = _dil_validar_item(insumo_id, catalog_root)
+        if erro:
+            resultados.append(erro)
             continue
 
         deltas_validos.append(
@@ -766,6 +812,44 @@ def _impl_descontinuar_insumos_lote(
             "resultados": resultados,
         }
     )
+
+
+def _apu_validar_entrada(
+    novo_preco: float | None,
+    novo_valor_locacao_mensal: float | None,
+    novos_funcoes_aplicaveis: list[str] | None,
+) -> str | None:
+    """Valida que ao menos um parâmetro de atualização foi fornecido. Retorna erro ou None."""
+    if novo_preco is None and novo_valor_locacao_mensal is None and novos_funcoes_aplicaveis is None:
+        return "Informe ao menos um entre novo_preco, novo_valor_locacao_mensal e novos_funcoes_aplicaveis."
+    return None
+
+
+def _apu_build_delta(
+    insumo_id: str,
+    novo_preco: float | None,
+    novo_valor_locacao_mensal: float | None,
+    novos_funcoes_aplicaveis: list[str] | None,
+    jurisdicao_id: str | None,
+    nota: str | None,
+    autor: str,
+    timestamp: str,
+) -> dict[str, Any]:
+    """Constrói delta de atualização de preço com atributos opcionais."""
+    delta: dict[str, Any] = {
+        "tipo": "preco_insumo",
+        "insumo_id": insumo_id,
+        "novo_preco": novo_preco,
+        "jurisdicao_id": jurisdicao_id,
+        "nota": nota,
+        "autor": autor,
+        "timestamp": timestamp,
+    }
+    if novo_valor_locacao_mensal is not None:
+        delta["novo_valor_locacao_mensal"] = novo_valor_locacao_mensal
+    if novos_funcoes_aplicaveis is not None:
+        delta["novos_funcoes_aplicaveis"] = novos_funcoes_aplicaveis
+    return delta
 
 
 def _impl_atualizar_preco_insumo(
@@ -806,10 +890,9 @@ def _impl_atualizar_preco_insumo(
             a que este item (MATERIAL/TREINAMENTO) é específico — `[]` restringe
             a nenhuma função ainda; omitir o parâmetro não altera o campo (ADR-165/166).
     """
-    if novo_preco is None and novo_valor_locacao_mensal is None and novos_funcoes_aplicaveis is None:
-        return {
-            "erro": "Informe ao menos um entre novo_preco, novo_valor_locacao_mensal e novos_funcoes_aplicaveis."
-        }
+    erro = _apu_validar_entrada(novo_preco, novo_valor_locacao_mensal, novos_funcoes_aplicaveis)
+    if erro:
+        return {"erro": erro}
 
     rt = _runtime()
     config_dir = _config_root()
@@ -858,19 +941,16 @@ def _impl_atualizar_preco_insumo(
 
     from concilium.infrastructure.auth.permission_guard import get_current_user_id
 
-    delta = {
-        "tipo": "preco_insumo",
-        "insumo_id": insumo_id,
-        "novo_preco": novo_preco,
-        "jurisdicao_id": jurisdicao_id,
-        "nota": nota,
-        "autor": get_current_user_id() or "system",
-        "timestamp": datetime.now(UTC).isoformat(),
-    }
-    if novo_valor_locacao_mensal is not None:
-        delta["novo_valor_locacao_mensal"] = novo_valor_locacao_mensal
-    if novos_funcoes_aplicaveis is not None:
-        delta["novos_funcoes_aplicaveis"] = novos_funcoes_aplicaveis
+    delta = _apu_build_delta(
+        insumo_id,
+        novo_preco,
+        novo_valor_locacao_mensal,
+        novos_funcoes_aplicaveis,
+        jurisdicao_id,
+        nota,
+        get_current_user_id() or "system",
+        datetime.now(UTC).isoformat(),
+    )
     erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
     if erro:
         return {"erro": erro}
@@ -886,6 +966,44 @@ def _impl_atualizar_preco_insumo(
             "Use aprovar_merge_catalogo para promover.",
         }
     )
+
+
+def _apul_validar_e_build_delta(
+    item: dict[str, Any],
+    catalog_root: Path,
+    autor: str,
+    timestamp: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Valida item do lote de atualização e retorna (erro_result, delta) ou (None, delta) se OK."""
+    insumo_id = item.get("insumo_id")
+    novo_preco = item.get("novo_preco")
+    novo_valor_locacao_mensal = item.get("novo_valor_locacao_mensal")
+    novos_funcoes_aplicaveis = item.get("novos_funcoes_aplicaveis")
+
+    try:
+        if not insumo_id:
+            raise ValueError("insumo_id é obrigatório")
+        if novo_preco is None and novo_valor_locacao_mensal is None and novos_funcoes_aplicaveis is None:
+            raise ValueError(
+                "informe ao menos um entre novo_preco, novo_valor_locacao_mensal e novos_funcoes_aplicaveis"
+            )
+        validate_and_resolve_insumo_file(
+            catalog_root, insumo_id, novo_preco if novo_preco is not None else 0.0
+        )
+    except (CatalogGovernanceError, ValueError) as exc:
+        return {"insumo_id": insumo_id, "status": "erro", "erro": str(exc)}, None
+
+    delta = _apu_build_delta(
+        insumo_id,
+        novo_preco,
+        novo_valor_locacao_mensal,
+        novos_funcoes_aplicaveis,
+        item.get("jurisdicao_id"),
+        item.get("nota"),
+        autor,
+        timestamp,
+    )
+    return None, delta
 
 
 def _impl_atualizar_precos_insumos_lote(
@@ -925,37 +1043,12 @@ def _impl_atualizar_precos_insumos_lote(
     deltas_validos: list[dict[str, Any]] = []
 
     for item in itens:
-        insumo_id = item.get("insumo_id")
-        novo_preco = item.get("novo_preco")
-        novo_valor_locacao_mensal = item.get("novo_valor_locacao_mensal")
-        novos_funcoes_aplicaveis = item.get("novos_funcoes_aplicaveis")
-        try:
-            if not insumo_id:
-                raise ValueError("insumo_id é obrigatório")
-            if novo_preco is None and novo_valor_locacao_mensal is None and novos_funcoes_aplicaveis is None:
-                raise ValueError(
-                    "informe ao menos um entre novo_preco, novo_valor_locacao_mensal e novos_funcoes_aplicaveis"
-                )
-            validate_and_resolve_insumo_file(
-                catalog_root, insumo_id, novo_preco if novo_preco is not None else 0.0
-            )
-        except (CatalogGovernanceError, ValueError) as exc:
-            resultados.append({"insumo_id": insumo_id, "status": "erro", "erro": str(exc)})
+        erro_result, delta = _apul_validar_e_build_delta(item, catalog_root, autor, timestamp)
+        if erro_result:
+            resultados.append(erro_result)
             continue
 
-        delta: dict[str, Any] = {
-            "tipo": "preco_insumo",
-            "insumo_id": insumo_id,
-            "novo_preco": novo_preco,
-            "jurisdicao_id": item.get("jurisdicao_id"),
-            "nota": item.get("nota"),
-            "autor": autor,
-            "timestamp": timestamp,
-        }
-        if novo_valor_locacao_mensal is not None:
-            delta["novo_valor_locacao_mensal"] = novo_valor_locacao_mensal
-        if novos_funcoes_aplicaveis is not None:
-            delta["novos_funcoes_aplicaveis"] = novos_funcoes_aplicaveis
+        insumo_id = item.get("insumo_id")
         deltas_validos.append(delta)
         resultados.append({"insumo_id": insumo_id, "status": "ok"})
 
@@ -1068,6 +1161,49 @@ def _apply_variante_producao_delta(
     prod_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _avp_handle_projeto_overlay(
+    projects_dir: Path,
+    projeto_id: str,
+    producao_id: str,
+    variante_id: str,
+    nome_variante: str,
+    valor_horario: float,
+    equipe_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Grava variante de produção em overlay de projeto (ADR-066 D1)."""
+    proj_path = projects_dir / projeto_id
+    if not proj_path.exists():
+        return {"erro": f"Projeto {projeto_id} não encontrado."}
+
+    overlay_file = proj_path / "overrides" / "producoes_overlay.json"
+    overlay_file.parent.mkdir(parents=True, exist_ok=True)
+
+    overlay = {}
+    if overlay_file.exists():
+        overlay = json.loads(overlay_file.read_text(encoding="utf-8"))
+
+    entry = dict(overlay.get(producao_id, {}))
+    variantes = [v for v in entry.get("variantes", []) if v.get("id") != variante_id]
+    variantes.append(
+        {"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
+    )
+    entry["variantes"] = variantes
+    overlay[producao_id] = entry
+    overlay_file.write_text(json.dumps(overlay, indent=2, ensure_ascii=False), encoding="utf-8")
+    return _wrap_response(
+        {
+            "status": "SUCESSO",
+            "layer": "PROJETO",
+            "projeto_id": projeto_id,
+            "producao": producao_id,
+            "nota": "Variante registrada como alternativa documentada em producoes_overlay.json "
+            "(visível em resolved_catalog.json e exports). Ela NÃO substitui automaticamente o "
+            "'valor_horario'/'custo_hora_total_referencia' usado no cálculo — nenhuma variante, "
+            "de projeto ou de catálogo mestre, é selecionada pelo pipeline hoje.",
+        }
+    )
+
+
 def _impl_adicionar_variante_producao(
     contexto_id: str,
     producao_id: str,
@@ -1103,41 +1239,8 @@ def _impl_adicionar_variante_producao(
         equipe_data = json.loads(equipe_json)
 
         if projeto_id:
-            # Camada de Projeto — grava em producoes_overlay.json (o arquivo que
-            # o CatalogResolver de fato lê, ADR-066 §_load_project_producao_overlay).
-            # Antes desta correção, este ramo gravava em overrides/production_variants.json,
-            # um arquivo que nenhum código de produção consome (achado da avaliação
-            # de consistência venda×operacional, issue #121).
-            proj_path = projects_dir / projeto_id
-            if not proj_path.exists():
-                return {"erro": f"Projeto {projeto_id} não encontrado."}
-
-            overlay_file = proj_path / "overrides" / "producoes_overlay.json"
-            overlay_file.parent.mkdir(parents=True, exist_ok=True)
-
-            overlay = {}
-            if overlay_file.exists():
-                overlay = json.loads(overlay_file.read_text(encoding="utf-8"))
-
-            entry = dict(overlay.get(producao_id, {}))
-            variantes = [v for v in entry.get("variantes", []) if v.get("id") != variante_id]
-            variantes.append(
-                {"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
-            )
-            entry["variantes"] = variantes
-            overlay[producao_id] = entry
-            overlay_file.write_text(json.dumps(overlay, indent=2, ensure_ascii=False), encoding="utf-8")
-            return _wrap_response(
-                {
-                    "status": "SUCESSO",
-                    "layer": "PROJETO",
-                    "projeto_id": projeto_id,
-                    "producao": producao_id,
-                    "nota": "Variante registrada como alternativa documentada em producoes_overlay.json "
-                    "(visível em resolved_catalog.json e exports). Ela NÃO substitui automaticamente o "
-                    "'valor_horario'/'custo_hora_total_referencia' usado no cálculo — nenhuma variante, "
-                    "de projeto ou de catálogo mestre, é selecionada pelo pipeline hoje.",
-                }
+            return _avp_handle_projeto_overlay(
+                projects_dir, projeto_id, producao_id, variante_id, nome_variante, valor_horario, equipe_data
             )
 
         if not rascunho_id:
