@@ -229,6 +229,27 @@ def _persistir_producoes_individuais(
     return escritos
 
 
+def _cte_process_estrutura_items(
+    estrutura: dict,
+    dup_map: dict[str, str],
+    report: CureReport,
+    apply: bool,
+) -> bool:
+    """Processa items de mao_de_obra de uma estrutura. Retorna True se mudou."""
+    mudou = False
+    for item in estrutura.get("mao_de_obra") or []:
+        antigo = item.get("funcao_id")
+        if antigo in dup_map:
+            novo = dup_map[antigo]
+            report.add_fixed(
+                f"  templates.json [{estrutura.get('codigo', '?')}]: funcao_id {antigo} → {novo}"
+            )
+            if apply:
+                item["funcao_id"] = novo
+                mudou = True
+    return mudou
+
+
 def _cure_templates_estruturas_indiretas(
     catalog_root: Path, dup_map: dict[str, str], report: CureReport, apply: bool
 ) -> None:
@@ -247,16 +268,8 @@ def _cure_templates_estruturas_indiretas(
     estruturas = data.get("estruturas_indiretas") or []
     mudou = False
     for estrutura in estruturas:
-        for item in estrutura.get("mao_de_obra") or []:
-            antigo = item.get("funcao_id")
-            if antigo in dup_map:
-                novo = dup_map[antigo]
-                report.add_fixed(
-                    f"  templates.json [{estrutura.get('codigo', '?')}]: funcao_id {antigo} → {novo}"
-                )
-                if apply:
-                    item["funcao_id"] = novo
-                    mudou = True
+        if _cte_process_estrutura_items(estrutura, dup_map, report, apply):
+            mudou = True
     if apply and mudou:
         texto = json.dumps(data, indent=2, ensure_ascii=False)
         if usa_crlf:
@@ -432,6 +445,24 @@ def _process_exact_dup_groups(
             union(codes[0], c)
 
 
+def _psc_calc_preco_ratio(pa: float, pb: float) -> float | None:
+    """Calcula razão de preço entre dois valores."""
+    return max(pa, pb) / min(pa, pb) if pa > 0 and pb > 0 else None
+
+
+def _psc_build_rejection_motivo(
+    m: object,  # tipo Match do similarity module
+    ratio: float | None,
+) -> str:
+    """Constrói motivo de rejeição para um par de insumos."""
+    if m.classificacao == "revisar":
+        return f"revisar, score={m.score:.2f}"
+    return (
+        f"duplicata_provavel (score={m.score:.2f}) mas razão de preço "
+        f"{ratio:.3f} fora das faixas validadas — origem não confirmada"
+    )
+
+
 def _process_similar_candidates(
     mo: list[dict],
     ins_by_code: dict[str, dict],
@@ -463,21 +494,39 @@ def _process_similar_candidates(
             participantes.add(m.codigo_b)
             union(m.codigo_a, m.codigo_b)
         elif report is not None:
-            ratio = max(pa, pb) / min(pa, pb) if pa > 0 and pb > 0 else None
-            motivo = (
-                f"revisar, score={m.score:.2f}"
-                if m.classificacao == "revisar"
-                else (
-                    f"duplicata_provavel (score={m.score:.2f}) mas razão de preço "
-                    f"{ratio:.3f} fora das faixas validadas — origem não confirmada"
-                )
-            )
+            ratio = _psc_calc_preco_ratio(pa, pb)
+            motivo = _psc_build_rejection_motivo(m, ratio)
             report.add_manual(
                 f"INSUMO {m.codigo_a}/{m.codigo_b}: {motivo} — "
                 f"'{ins_by_code[m.codigo_a].get('descricao')}' (R${pa}) vs "
                 f"'{ins_by_code[m.codigo_b].get('descricao')}' (R${pb}) — "
                 "não fundido automaticamente"
             )
+
+
+def _bdmfc_process_candidate(
+    c: str,
+    canonical: str,
+    ins_by_code: dict[str, dict],
+    dup_map: dict[str, str],
+    report: CureReport | None,
+) -> None:
+    """Processa um candidate dentro de um cluster, comparando com canonical."""
+    preco_c = float(ins_by_code[c].get("preco_unitario") or 0)
+    preco_canon = float(ins_by_code[canonical].get("preco_unitario") or 0)
+
+    if _razao_preco_liberada_para_fusao(preco_c, preco_canon):
+        dup_map[c] = canonical
+    elif report is not None:
+        ratio = (
+            max(preco_c, preco_canon) / min(preco_c, preco_canon)
+            if preco_c > 0 and preco_canon > 0
+            else None
+        )
+        report.add_manual(
+            f"INSUMO {c}/{canonical}: conectados via cadeia transitiva mas razão "
+            f"direta {ratio:.3f} fora das faixas validadas — não fundido"
+        )
 
 
 def _build_dup_map_from_clusters(
@@ -503,25 +552,9 @@ def _build_dup_map_from_clusters(
             continue
 
         canonical = _escolher_canonico(codes, ins_by_code)
-        preco_canon = float(ins_by_code[canonical].get("preco_unitario") or 0)
-
         for c in codes:
-            if c == canonical:
-                continue
-
-            preco_c = float(ins_by_code[c].get("preco_unitario") or 0)
-            if _razao_preco_liberada_para_fusao(preco_c, preco_canon):
-                dup_map[c] = canonical
-            elif report is not None:
-                ratio = (
-                    max(preco_c, preco_canon) / min(preco_c, preco_canon)
-                    if preco_c > 0 and preco_canon > 0
-                    else None
-                )
-                report.add_manual(
-                    f"INSUMO {c}/{canonical}: conectados via cadeia transitiva mas razão "
-                    f"direta {ratio:.3f} fora das faixas validadas — não fundido"
-                )
+            if c != canonical:
+                _bdmfc_process_candidate(c, canonical, ins_by_code, dup_map, report)
 
     return dup_map
 
