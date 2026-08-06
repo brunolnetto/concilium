@@ -403,6 +403,129 @@ def _escolher_canonico(codes: list[str], ins_by_code: dict[str, dict]) -> str:
     return min(sorted(codes), key=chave)
 
 
+def _process_exact_dup_groups(
+    mo: list[dict],
+    parent: dict[str, str],
+    participantes: set[str],
+) -> None:
+    """Processa grupos com match exato de (descrição normalizada, preço)."""
+    def union(a: str, b: str) -> None:
+        def find(x: str) -> str:
+            parent.setdefault(x, x)
+            while parent[x] != x:
+                x = parent[x]
+            return x
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    grupos_exatos: dict[tuple, list[str]] = defaultdict(list)
+    for ins in mo:
+        key = (_norm(ins.get("descricao", "")), ins.get("preco_unitario"))
+        grupos_exatos[key].append(ins["codigo"])
+
+    for codes in grupos_exatos.values():
+        if len(codes) < 2:
+            continue
+        participantes.update(codes)
+        for c in codes[1:]:
+            union(codes[0], c)
+
+
+def _process_similar_candidates(
+    mo: list[dict],
+    ins_by_code: dict[str, dict],
+    parent: dict[str, str],
+    participantes: set[str],
+    report: CureReport | None,
+) -> None:
+    """Processa candidatos similares (ADR-179) com report de rejeitados."""
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            x = parent[x]
+        return x
+
+    def union(a: str, b: str) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    for m in find_candidate_duplicates(mo):
+        if m.classificacao is None:
+            continue
+
+        pa = float(ins_by_code[m.codigo_a].get("preco_unitario") or 0)
+        pb = float(ins_by_code[m.codigo_b].get("preco_unitario") or 0)
+
+        if m.classificacao == "duplicata_provavel" and _razao_preco_liberada_para_fusao(pa, pb):
+            participantes.add(m.codigo_a)
+            participantes.add(m.codigo_b)
+            union(m.codigo_a, m.codigo_b)
+        elif report is not None:
+            ratio = max(pa, pb) / min(pa, pb) if pa > 0 and pb > 0 else None
+            motivo = (
+                f"revisar, score={m.score:.2f}"
+                if m.classificacao == "revisar"
+                else (
+                    f"duplicata_provavel (score={m.score:.2f}) mas razão de preço "
+                    f"{ratio:.3f} fora das faixas validadas — origem não confirmada"
+                )
+            )
+            report.add_manual(
+                f"INSUMO {m.codigo_a}/{m.codigo_b}: {motivo} — "
+                f"'{ins_by_code[m.codigo_a].get('descricao')}' (R${pa}) vs "
+                f"'{ins_by_code[m.codigo_b].get('descricao')}' (R${pb}) — "
+                "não fundido automaticamente"
+            )
+
+
+def _build_dup_map_from_clusters(
+    participantes: set[str],
+    ins_by_code: dict[str, dict],
+    parent: dict[str, str],
+    report: CureReport | None,
+) -> dict[str, str]:
+    """Constrói dup_map a partir de clusters, com revalidação transitiva."""
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            x = parent[x]
+        return x
+
+    clusters: dict[str, list[str]] = defaultdict(list)
+    for code in sorted(participantes):
+        clusters[find(code)].append(code)
+
+    dup_map: dict[str, str] = {}
+    for codes in clusters.values():
+        if len(codes) < 2:
+            continue
+
+        canonical = _escolher_canonico(codes, ins_by_code)
+        preco_canon = float(ins_by_code[canonical].get("preco_unitario") or 0)
+
+        for c in codes:
+            if c == canonical:
+                continue
+
+            preco_c = float(ins_by_code[c].get("preco_unitario") or 0)
+            if _razao_preco_liberada_para_fusao(preco_c, preco_canon):
+                dup_map[c] = canonical
+            elif report is not None:
+                ratio = (
+                    max(preco_c, preco_canon) / min(preco_c, preco_canon)
+                    if preco_c > 0 and preco_canon > 0
+                    else None
+                )
+                report.add_manual(
+                    f"INSUMO {c}/{canonical}: conectados via cadeia transitiva mas razão "
+                    f"direta {ratio:.3f} fora das faixas validadas — não fundido"
+                )
+
+    return dup_map
+
+
 def _build_dup_map(insumos: list[dict], report: CureReport | None = None) -> dict[str, str]:
     """Retorna {codigo: canonical_code} para todos os duplicados detectados.
 
@@ -417,93 +540,17 @@ def _build_dup_map(insumos: list[dict], report: CureReport | None = None) -> dic
     report.manual, para não desaparecer silenciosamente.
     """
     mo = [i for i in insumos if i.get("tipo") == "MAO_OBRA"]
+    if not mo:
+        return {}
+
     ins_by_code = {i["codigo"]: i for i in mo}
-
     parent: dict[str, str] = {}
-
-    def find(x: str) -> str:
-        parent.setdefault(x, x)
-        while parent[x] != x:
-            x = parent[x]
-        return x
-
-    def union(a: str, b: str) -> None:
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[ra] = rb
-
     participantes: set[str] = set()
 
-    grupos_exatos: dict[tuple, list[str]] = defaultdict(list)
-    for ins in mo:
-        key = (_norm(ins.get("descricao", "")), ins.get("preco_unitario"))
-        grupos_exatos[key].append(ins["codigo"])
-    for codes in grupos_exatos.values():
-        if len(codes) < 2:
-            continue
-        participantes.update(codes)
-        for c in codes[1:]:
-            union(codes[0], c)
+    _process_exact_dup_groups(mo, parent, participantes)
+    _process_similar_candidates(mo, ins_by_code, parent, participantes, report)
 
-    for m in find_candidate_duplicates(mo):
-        if m.classificacao is None:
-            continue
-        pa = float(ins_by_code[m.codigo_a].get("preco_unitario") or 0)
-        pb = float(ins_by_code[m.codigo_b].get("preco_unitario") or 0)
-        liberado = m.classificacao == "duplicata_provavel" and _razao_preco_liberada_para_fusao(pa, pb)
-        if liberado:
-            participantes.add(m.codigo_a)
-            participantes.add(m.codigo_b)
-            union(m.codigo_a, m.codigo_b)
-        elif report is not None:
-            ratio = max(pa, pb) / min(pa, pb) if pa > 0 and pb > 0 else None
-            if m.classificacao == "revisar":
-                motivo = f"revisar, score={m.score:.2f}"
-            else:
-                motivo = (
-                    f"duplicata_provavel (score={m.score:.2f}) mas razão de preço "
-                    f"{ratio:.3f} fora das faixas validadas — origem não confirmada"
-                )
-            report.add_manual(
-                f"INSUMO {m.codigo_a}/{m.codigo_b}: {motivo} — "
-                f"'{ins_by_code[m.codigo_a].get('descricao')}' (R${pa}) vs "
-                f"'{ins_by_code[m.codigo_b].get('descricao')}' (R${pb}) — não fundido automaticamente"
-            )
-
-    clusters: dict[str, list[str]] = defaultdict(list)
-    for code in sorted(participantes):
-        clusters[find(code)].append(code)
-
-    dup_map: dict[str, str] = {}
-    for codes in clusters.values():
-        if len(codes) < 2:
-            continue
-        canonical = _escolher_canonico(codes, ins_by_code)
-        preco_canon = float(ins_by_code[canonical].get("preco_unitario") or 0)
-        for c in codes:
-            if c == canonical:
-                continue
-            # Reconfirma a razão contra o CANÔNICO especificamente — a & b podem ter
-            # entrado no mesmo cluster via um terceiro nó-ponte (A-B seguro, B-C
-            # seguro, mas A-C não) sem que A-C jamais tenha sido validado direto
-            # (achado real: P0006/MO-AUX-ADM/MO-P0006, razão direta P0006×MO-P0006
-            # = 4,13, bem fora de qualquer faixa, mesmo com os dois links intermediários
-            # seguros). Sem essa revalidação, a transitividade do union-find fundiria
-            # itens nunca comparados diretamente.
-            preco_c = float(ins_by_code[c].get("preco_unitario") or 0)
-            if _razao_preco_liberada_para_fusao(preco_c, preco_canon):
-                dup_map[c] = canonical
-            elif report is not None:
-                ratio = (
-                    max(preco_c, preco_canon) / min(preco_c, preco_canon)
-                    if preco_c > 0 and preco_canon > 0
-                    else None
-                )
-                report.add_manual(
-                    f"INSUMO {c}/{canonical}: conectados via cadeia transitiva mas razão "
-                    f"direta {ratio:.3f} fora das faixas validadas — não fundido"
-                )
-    return dup_map
+    return _build_dup_map_from_clusters(participantes, ins_by_code, parent, report)
 
 
 def _add_referencias_externas(

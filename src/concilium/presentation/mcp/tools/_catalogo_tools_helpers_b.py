@@ -354,6 +354,86 @@ def _validar_preview_merge(
     return None
 
 
+def _mesclar_handle_dry_run(
+    config_root: Path,
+    catalogo_id: str,
+    result: dict[str, Any],
+    actor: str,
+    destino: str,
+    origem: str,
+    tipo: str,
+    resumo: dict[str, Any],
+) -> dict[str, Any]:
+    """Cria preview do merge para aplicação posterior (ADR-177 D3)."""
+    novo_merge_id = str(uuid4())
+    _persistir_preview_merge(
+        config_root, catalogo_id, novo_merge_id,
+        destino=destino, origem=origem, tipo=tipo, resumo=resumo, criado_por=actor,
+    )
+    result["merge_id"] = novo_merge_id
+    result["expira_em_horas"] = _MERGE_PREVIEW_TTL_HOURS
+    return _wrap_response(result)
+
+
+def _mesclar_handle_apply(
+    config_root: Path,
+    catalogo_id: str,
+    merge_id: str,
+    actor: str,
+    tipos: list[str],
+    fonte_destino: dict[str, list[dict]],
+    fonte_origem: dict[str, list[dict]],
+    relatorios: dict[str, Any],
+    result: dict[str, Any],
+    destino: str,
+    justificativa: str,
+) -> dict[str, Any]:
+    """Aplica preview existente (ADR-177 D1, D4)."""
+    from concilium.application.orchestrators.catalog_draft_lifecycle import build_and_persist_snapshot
+    from concilium.application.services.catalog.catalog_compare import ID_KEYS, aplicar_merge
+    from concilium.presentation.mcp._context import _runtime
+
+    if not merge_id:
+        return {"erro": "merge_id obrigatório para aplicar (dry_run=False). Gere um preview com dry_run=True primeiro."}
+
+    from concilium.infrastructure.auth.permission_guard import _effective_mcp_roles, require_permission
+
+    try:
+        require_permission("catalog:merge", _effective_mcp_roles())
+    except PermissionError as exc:
+        return {"erro": str(exc)}
+
+    preview = _carregar_preview_merge(config_root, catalogo_id, merge_id)
+    erro_preview = _validar_preview_merge(
+        preview, destino=destino, origem=fonte_origem, tipo=", ".join(tipos),
+        actor=actor, resumo_atual=result.get("resumo", {})
+    )
+    if erro_preview:
+        return {"erro": erro_preview}
+
+    catalog_root = _catalog_root(config_root, catalogo_id)
+    aplicado: dict[str, Any] = {}
+    for t in tipos:
+        base_t = fonte_destino.get(t, [])
+        merged = aplicar_merge(base_t, fonte_origem.get(t, []), relatorios[t], id_key=ID_KEYS[t])
+        escritos = _persistir_merge_em_arquivos_individuais(catalog_root, t, base_t, merged, ID_KEYS[t])
+        aplicado[t] = {"total": len(merged), "era": len(base_t), "arquivos_escritos": escritos}
+    result["aplicado"] = aplicado
+
+    rt = _runtime()
+    catalogo_depois = rt.load_catalogo(catalogo_id)
+    snapshot_id, diff_summary = build_and_persist_snapshot(
+        config_root, catalogo_id, catalogo_depois,
+        actor=actor, contexto_id=destino, rascunho_id=merge_id, justificativa=justificativa,
+    )
+    result["snapshot_id"] = snapshot_id
+    result["diff_summary"] = diff_summary
+
+    _apagar_preview_merge(config_root, catalogo_id, merge_id)
+
+    return _wrap_response(result)
+
+
 def _impl_mesclar_catalogo(
     destino: str,
     origem: str,
@@ -385,10 +465,7 @@ def _impl_mesclar_catalogo(
         actor: Ator que está chamando (resolvido pelo wrapper MCP via get_current_user_id()).
         justificativa: Motivo do merge, gravado no CatalogDiff (ADR-177 D4).
     """
-    from concilium.application.orchestrators.catalog_draft_lifecycle import build_and_persist_snapshot
     from concilium.application.services.catalog.catalog_compare import (
-        ID_KEYS,
-        aplicar_merge,
         eh_planilha,
         gerar_relatorios,
         resolver_catalogo_id,
@@ -438,52 +515,15 @@ def _impl_mesclar_catalogo(
     config_root = rt.config_root
 
     if dry_run:
-        novo_merge_id = str(uuid4())
-        _persistir_preview_merge(
-            config_root, catalogo_id, novo_merge_id,
-            destino=destino, origem=origem, tipo=tipo, resumo=resumo, criado_por=actor,
+        return _mesclar_handle_dry_run(
+            config_root, catalogo_id, result, actor,
+            destino, origem, tipo, resumo
         )
-        result["merge_id"] = novo_merge_id
-        result["expira_em_horas"] = _MERGE_PREVIEW_TTL_HOURS
-        return _wrap_response(result)
 
-    if not merge_id:
-        return {"erro": "merge_id obrigatório para aplicar (dry_run=False). Gere um preview com dry_run=True primeiro."}
-
-    from concilium.infrastructure.auth.permission_guard import _effective_mcp_roles, require_permission
-
-    try:
-        require_permission("catalog:merge", _effective_mcp_roles())
-    except PermissionError as exc:
-        return {"erro": str(exc)}
-
-    preview = _carregar_preview_merge(config_root, catalogo_id, merge_id)
-    erro_preview = _validar_preview_merge(
-        preview, destino=destino, origem=origem, tipo=tipo, actor=actor, resumo_atual=resumo
+    return _mesclar_handle_apply(
+        config_root, catalogo_id, merge_id, actor, tipos,
+        fonte_destino, fonte_origem, relatorios, result, destino, justificativa
     )
-    if erro_preview:
-        return {"erro": erro_preview}
-
-    catalog_root = _catalog_root(config_root, catalogo_id)
-    aplicado: dict[str, Any] = {}
-    for t in tipos:
-        base_t = fonte_destino.get(t, [])
-        merged = aplicar_merge(base_t, fonte_origem.get(t, []), relatorios[t], id_key=ID_KEYS[t])
-        escritos = _persistir_merge_em_arquivos_individuais(catalog_root, t, base_t, merged, ID_KEYS[t])
-        aplicado[t] = {"total": len(merged), "era": len(base_t), "arquivos_escritos": escritos}
-    result["aplicado"] = aplicado
-
-    catalogo_depois = _runtime().load_catalogo(catalogo_id)
-    snapshot_id, diff_summary = build_and_persist_snapshot(
-        config_root, catalogo_id, catalogo_depois,
-        actor=actor, contexto_id=destino, rascunho_id=merge_id, justificativa=justificativa,
-    )
-    result["snapshot_id"] = snapshot_id
-    result["diff_summary"] = diff_summary
-
-    _apagar_preview_merge(config_root, catalogo_id, merge_id)
-
-    return _wrap_response(result)
 
 
 def _impl_calcular_pu_producao(
