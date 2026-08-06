@@ -72,6 +72,69 @@ def _gerar_relatorios(
     return gerar_relatorios(base, origem, tipos)
 
 
+def _icm_validar_e_resolver_tipos(destino: str, origem: str, tipo: str, console: Console) -> list[str] | None:
+    """Valida destino e resolve tipos para merge. Retorna tipos válidos ou None se falha."""
+    if _eh_planilha(destino):
+        rprint("[red]Destino do merge precisa ser um catálogo — não é possível escrever em uma planilha.[/red]")
+        return None
+
+    tipos = _resolver_tipos(tipo)
+    if "cpus" in tipos and _eh_planilha(origem):
+        console.print("[yellow]cpus: pulado — planilha RFI não modela esse tipo de entidade.[/yellow]")
+        tipos = [t for t in tipos if t != "cpus"]
+    if not tipos:
+        rprint("[red]Nenhum tipo válido para mesclar.[/red]")
+        return None
+    return tipos
+
+
+def _icm_apply_merge(
+    destino: str,
+    tipos: list[str],
+    fonte_destino: dict,
+    fonte_origem: dict,
+    relatorios: dict,
+    apply: bool,
+    verify_pu: bool,
+    console: Console,
+) -> None:
+    """Aplica o merge no bundle do destino quando apply=True."""
+    from concilium.application.services.catalog.catalog_compare import (
+        ID_KEYS,
+        aplicar_merge,
+        resolver_catalogo_id,
+    )
+    from concilium.presentation.mcp._context import _runtime
+
+    if not apply:
+        return
+
+    rt = _runtime()
+    catalogo_id = resolver_catalogo_id(rt, destino)
+    bundle = rt.load_catalogo(catalogo_id)
+    bundle_path = rt.config_root / "catalogos" / catalogo_id / ".catalog_bundle.json"
+
+    console.print("\n[bold]Aplicando merge...[/bold]")
+    for t in tipos:
+        merged = aplicar_merge(
+            fonte_destino.get(t, []),
+            fonte_origem.get(t, []),
+            relatorios[t],
+            id_key=ID_KEYS[t],
+            incluir_novos=True,  # ADR-177: caller option removed, always True for CLI
+        )
+        if t == "producoes" and "producoes" not in bundle:
+            bundle["produtividades"] = merged
+        else:
+            bundle[t] = merged
+        console.print(f"  {t}: {len(merged)} (era {len(fonte_destino.get(t, []))})")
+
+    bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
+    console.print(f"\n[green]Bundle atualizado:[/green] {bundle_path}")
+    if verify_pu:
+        _cm_verify_pu(bundle, console)
+
+
 def _cc_print_summary_table(relatorios: dict[str, Any], console: Console, titulo: str) -> None:
     table = Table(title=titulo, show_header=True, header_style="bold cyan")
     table.add_column("Entidade")
@@ -212,20 +275,10 @@ def _impl_catalog_merge(
       INNER_LOW  : match incerto (0.50-0.85)         -> importa como RFI-* (sem sobrescrever)
       RIGHT_ONLY : só na origem                       -> adiciona ao destino
     """
-    from concilium.application.services.catalog.catalog_compare import ID_KEYS, aplicar_merge
-
     console = Console()
 
-    if _eh_planilha(destino):
-        rprint("[red]Destino do merge precisa ser um catálogo — não é possível escrever em uma planilha.[/red]")
-        raise typer.Exit(2)
-
-    tipos = _resolver_tipos(tipo)
-    if "cpus" in tipos and _eh_planilha(origem):
-        console.print("[yellow]cpus: pulado — planilha RFI não modela esse tipo de entidade.[/yellow]")
-        tipos = [t for t in tipos if t != "cpus"]
-    if not tipos:
-        rprint("[red]Nenhum tipo válido para mesclar.[/red]")
+    tipos = _icm_validar_e_resolver_tipos(destino, origem, tipo, console)
+    if tipos is None:
         raise typer.Exit(1)
 
     fonte_destino = _resolver_fonte_entidades(destino)
@@ -238,34 +291,7 @@ def _impl_catalog_merge(
     _cc_print_summary_table(relatorios, console, "Merge Report")
     _cc_print_inner_low(relatorios, console)
 
-    if apply:
-        from concilium.application.services.catalog.catalog_compare import resolver_catalogo_id
-        from concilium.presentation.mcp._context import _runtime
-
-        rt = _runtime()
-        catalogo_id = resolver_catalogo_id(rt, destino)
-        bundle = rt.load_catalogo(catalogo_id)
-        bundle_path = rt.config_root / "catalogos" / catalogo_id / ".catalog_bundle.json"
-
-        console.print("\n[bold]Aplicando merge...[/bold]")
-        for t in tipos:
-            merged = aplicar_merge(
-                fonte_destino.get(t, []),
-                fonte_origem.get(t, []),
-                relatorios[t],
-                id_key=ID_KEYS[t],
-                incluir_novos=incluir_novos,
-            )
-            if t == "producoes" and "producoes" not in bundle:
-                bundle["produtividades"] = merged
-            else:
-                bundle[t] = merged
-            console.print(f"  {t}: {len(merged)} (era {len(fonte_destino.get(t, []))})")
-
-        bundle_path.write_text(json.dumps(bundle, indent=2, ensure_ascii=False), encoding="utf-8")
-        console.print(f"\n[green]Bundle atualizado:[/green] {bundle_path}")
-        if verify_pu:
-            _cm_verify_pu(bundle, console)
+    _icm_apply_merge(destino, tipos, fonte_destino, fonte_origem, relatorios, apply, verify_pu, console)
 
     if report_json:
         _cc_write_report(report_json, relatorios, mode, destino, origem, console)

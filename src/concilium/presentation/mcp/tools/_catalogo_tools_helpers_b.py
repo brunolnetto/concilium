@@ -458,6 +458,64 @@ def _mesclar_handle_apply(
     return _wrap_response(result)
 
 
+def _imc_validar_e_preparar(
+    destino: str,
+    origem: str,
+    tipo: str,
+) -> tuple[dict | None, list[str], dict, dict, dict]:
+    """Valida e prepara dados para merge.
+
+    Retorna (erro_dict, tipos, fonte_destino, fonte_origem, relatorios)
+    ou (erro_dict, [], {}, {}, {}) em caso de erro.
+    """
+    from concilium.application.services.catalog.catalog_compare import (
+        eh_planilha,
+        gerar_relatorios,
+    )
+
+    if eh_planilha(destino):
+        return (
+            {
+                "erro": (
+                    "Destino do merge precisa ser um catálogo — "
+                    "não é possível escrever em uma planilha."
+                )
+            },
+            [],
+            {},
+            {},
+            {},
+        )
+
+    try:
+        tipos = _cc_resolver_tipos(tipo)
+    except ValueError as exc:
+        return {"erro": str(exc)}, [], {}, {}, {}
+
+    if "cpus" in tipos and eh_planilha(origem):
+        tipos = [t for t in tipos if t != "cpus"]
+    if not tipos:
+        return {"erro": "Nenhum tipo válido para mesclar."}, [], {}, {}, {}
+
+    try:
+        fonte_destino = _cc_resolver_fonte(destino)
+        fonte_origem = _cc_resolver_fonte(origem)
+    except RuntimeError as exc:
+        return {"erro": str(exc)}, [], {}, {}, {}
+
+    relatorios = gerar_relatorios(fonte_destino, fonte_origem, tipos)
+    return None, tipos, fonte_destino, fonte_origem, relatorios
+
+
+def _imc_calcular_resumo(relatorios: dict) -> dict:
+    """Calcula resumo de atualizações/novos/colisões do relatório."""
+    return {
+        "atualizacoes": sum(sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()),
+        "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
+        "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
+    }
+
+
 def _impl_mesclar_catalogo(
     destino: str,
     origem: str,
@@ -491,39 +549,19 @@ def _impl_mesclar_catalogo(
     """
     from concilium.application.services.catalog.catalog_compare import (
         eh_planilha,
-        gerar_relatorios,
         resolver_catalogo_id,
     )
     from concilium.presentation.mcp._context import _runtime
 
-    if eh_planilha(destino):
-        return {"erro": "Destino do merge precisa ser um catálogo — não é possível escrever em uma planilha."}
-
-    try:
-        tipos = _cc_resolver_tipos(tipo)
-    except ValueError as exc:
-        return {"erro": str(exc)}
+    erro, tipos, fonte_destino, fonte_origem, relatorios = _imc_validar_e_preparar(destino, origem, tipo)
+    if erro:
+        return erro
 
     aviso = None
-    if "cpus" in tipos and eh_planilha(origem):
+    if "cpus" in _cc_resolver_tipos(tipo) and eh_planilha(origem):
         aviso = "cpus: pulado — planilha RFI não modela esse tipo de entidade."
-        tipos = [t for t in tipos if t != "cpus"]
-    if not tipos:
-        return {"erro": "Nenhum tipo válido para mesclar."}
 
-    try:
-        fonte_destino = _cc_resolver_fonte(destino)
-        fonte_origem = _cc_resolver_fonte(origem)
-    except RuntimeError as exc:
-        return {"erro": str(exc)}
-
-    relatorios = gerar_relatorios(fonte_destino, fonte_origem, tipos)
-
-    resumo = {
-        "atualizacoes": sum(sum(1 for i in rep.inner_high if i["delta"]) for rep in relatorios.values()),
-        "novos_total": sum(len(rep.right_only) for rep in relatorios.values()),
-        "colisoes_total": sum(len(rep.inner_low) for rep in relatorios.values()),
-    }
+    resumo = _imc_calcular_resumo(relatorios)
     result: dict[str, Any] = {
         "mode": "DRY_RUN" if dry_run else "APPLIED",
         "destino": destino,
