@@ -76,30 +76,36 @@ def _read_json_blobs(storage: BlobStoragePort, prefix: str) -> list[tuple[str, A
     return out
 
 
-def _storage_load_cpus(storage: BlobStoragePort, base: str) -> list[dict]:
-    cpus: list[dict] = []
-    for _path, data in _read_json_blobs(storage, f"{base}/cpus"):
-        if isinstance(data, list):
-            cpus.extend(data)
-        elif isinstance(data, dict) and "cpus" in data:
-            cpus.extend(data["cpus"])
-        elif isinstance(data, dict):
-            cpus.append(data)
-    if cpus:
-        return cpus
-    # Fallback: cpus.json único (formato legado, ver _load_cpus_from_json).
+def _slc_processar_blob_data(data: Any) -> list[dict]:
+    """Processa um blob JSON data e retorna lista de CPUs extraídas.
+    Suporta: list direto, dict com chave 'cpus', dict individual."""
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and "cpus" in data:
+        return list(data["cpus"])
+    if isinstance(data, dict):
+        return [data]
+    return []
+
+
+def _slc_tentar_fallback_legado(storage: BlobStoragePort, base: str) -> list[dict]:
+    """Tenta carregar cpus.json legado como fallback quando blobs vazios."""
     try:
         raw = storage.ler_blob(f"{base}/cpus.json")
         data = json.loads(raw.decode("utf-8"))
-        if isinstance(data, list):
-            return data
-        if isinstance(data, dict) and "cpus" in data:
-            return list(data["cpus"])
-    except FileNotFoundError:
-        pass
-    except Exception:
-        pass
-    return cpus
+        return _slc_processar_blob_data(data)
+    except (FileNotFoundError, Exception):
+        return []
+
+
+def _storage_load_cpus(storage: BlobStoragePort, base: str) -> list[dict]:
+    cpus: list[dict] = []
+    for _path, data in _read_json_blobs(storage, f"{base}/cpus"):
+        cpus.extend(_slc_processar_blob_data(data))
+    if cpus:
+        return cpus
+    # Fallback: cpus.json único (formato legado, ver _load_cpus_from_json).
+    return _slc_tentar_fallback_legado(storage, base)
 
 
 def _storage_load_insumos(storage: BlobStoragePort, base: str) -> list[dict]:

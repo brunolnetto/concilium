@@ -101,14 +101,16 @@ class ExecutionMixin(_Base):
 
         return self.run_skill_on_plano(skill_id, project, FlatVersionStore(project, v), inputs, trace_id)
 
-    def run_skill_on_plano(
+    def _rsp_preparar_execucao(
         self,
         skill_id: str,
         project: ProjectHandle,
         plano_store: Any,
         inputs: dict[str, Any] | None = None,
-        trace_id: str | None = None,
-    ) -> SkillResult:
+    ) -> tuple[Any, Any, Any, Any, dict[str, Any], dict[str, Any], dict, str, str, datetime]:
+        """Prepara contexto, inputs, timestamps e kwargs para execução.
+        Retorna (canonical_in, contract, skill_fn, escopo_meta, normalized_inputs,
+        kwargs, contexto_perfil_catalogo_dict, execution_id, correlation_id, ts_inicio)."""
         contract = self.get_skill_contract(skill_id)
         skill_fn = SKILLS[skill_id]
 
@@ -143,6 +145,34 @@ class ExecutionMixin(_Base):
             version=plano_store.plano_id,
         )
 
+        contexto_perfil_catalogo = {"contexto": contexto, "perfil": perfil, "catalogo": catalogo}
+        return (
+            canonical_in,
+            contract,
+            skill_fn,
+            escopo_meta,
+            normalized_inputs,
+            kwargs,
+            contexto_perfil_catalogo,
+            execution_id,
+            correlation_id,
+            ts_inicio,
+        )
+
+    def _rsp_executar_e_pos_processar(
+        self,
+        skill_id: str,
+        skill_fn: Any,
+        kwargs: dict,
+        execution_id: str,
+        ts_inicio: datetime,
+        plano_store: Any,
+        contract: Any,
+        escopo_meta: dict[str, Any],
+        normalized_inputs: dict[str, Any],
+    ) -> tuple[SkillResult, bool]:
+        """Executa skill e aplica pós-processamento: taint, decision variables, staleness.
+        Retorna (result, should_save)."""
         result = _execute_skill(skill_fn, kwargs, skill_id, execution_id, ts_inicio, plano_store)
 
         should_save = not (skill_id == "00-escopo" and result.has_errors)
@@ -150,6 +180,44 @@ class ExecutionMixin(_Base):
         result, should_save = self._process_decision_variables(normalized_inputs, result, should_save)
         result = self._process_staleness_check(skill_id, contract, escopo_meta, result, plano_store)
 
+        return result, should_save
+
+    def run_skill_on_plano(
+        self,
+        skill_id: str,
+        project: ProjectHandle,
+        plano_store: Any,
+        inputs: dict[str, Any] | None = None,
+        trace_id: str | None = None,
+    ) -> SkillResult:
+        # Preparação
+        (
+            canonical_in,
+            contract,
+            skill_fn,
+            escopo_meta,
+            normalized_inputs,
+            kwargs,
+            contexto_perfil_catalogo,
+            execution_id,
+            correlation_id,
+            ts_inicio,
+        ) = self._rsp_preparar_execucao(skill_id, project, plano_store, inputs)
+
+        # Execução + Pós-Processamento
+        result, should_save = self._rsp_executar_e_pos_processar(
+            skill_id,
+            skill_fn,
+            kwargs,
+            execution_id,
+            ts_inicio,
+            plano_store,
+            contract,
+            escopo_meta,
+            normalized_inputs,
+        )
+
+        # Persistência
         if should_save:
             plano_store.save_canonical(result.canonical, created_by=skill_id)
             # issue #121/#123: congelamento de premissas — suportado tanto pelo
@@ -172,6 +240,7 @@ class ExecutionMixin(_Base):
         self._process_side_effects(skill_id, result, project, plano_store.plano_id, write_target=write_target)
 
         ts_fim = datetime.now(UTC)
+        catalogo = contexto_perfil_catalogo["catalogo"]
         catalog_source = str(catalogo.get("_catalog_source", "master")) if isinstance(catalogo, dict) else "master"
         plano_store.log_invocation(
             self._build_log_entry(
