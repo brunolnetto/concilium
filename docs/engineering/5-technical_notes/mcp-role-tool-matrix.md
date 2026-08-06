@@ -3,6 +3,9 @@
 > Fonte de verdade do código: `src/concilium/presentation/mcp/tools/` e
 > `src/concilium/infrastructure/auth/permission_guard.py`  
 > Última revisão: 2026-06-23 (43 tools; revisão completa dos register())
+> Nota (2026-08-04): `consultar_ponto_equilibrio` adicionada; `simular_cenario_replan`
+> depreciada (ver `docs/engineering/2-architecture/adrs/ADR-101-mcp-apps-interface-interativa.md`).
+> Contagem de 43 não reauditada nesta nota — ver `test_rbac_mcp_tool_mapping.py` (56) como fonte viva.
 
 ---
 
@@ -24,6 +27,7 @@
 | `listar_jobs_pipeline` | project:read | ✓ | ✓ | ✓ | ✓ | — |
 | `listar_runs_campanha` | project:read | ✓ | ✓ | ✓ | ✓ | — |
 | `consultar_benchmark` | project:read | ✓ | ✓ | ✓ | ✓ | — |
+| `consultar_ponto_equilibrio` | project:read | ✓ | ✓ | ✓ | ✓ | — |
 | **Projetos — criação** | | | | | | |
 | `criar_projeto` | project:create | ✓ | ✓ | ✓ | — | — |
 | `iniciar_orcamento` | project:create | ✓ | ✓ | ✓ | — | — |
@@ -35,7 +39,7 @@
 | `explorar_configuracoes_go` | project:run | ◑ RFI | ✓ RFI+RFP | ✓ RFI+RFP | — | — |
 | `empacotar_benchmark` | project:run | ✓ | ✓ | ✓ | — | — |
 | `salvar_perfil_bdi` | project:run | ✓ | ✓ | ✓ | — | — |
-| `simular_cenario_replan` | project:run | ✓ | ✓ | ✓ | — | — |
+| `simular_cenario_replan` **[DEPRECATED]** — usar `consultar_ponto_equilibrio` para baseline | project:run | ✓ | ✓ | ✓ | — | — |
 | **Projetos — aprovação** | | | | | | |
 | `aprovar_versao` | project:approve | — | ✓ | ✓ | — | — |
 | **Artefatos** | | | | | | |

@@ -253,3 +253,58 @@ def load_catalogo_via_storage(config_root: Path, catalogo_id: str, *, force_refr
         pass
 
     return catalogo
+
+
+# ── Write helpers (issue #147 parte 2) ────────────────────────────────────────
+# Espelham load_catalogo_via_storage: filesystem usa Path direto; qualquer outro
+# backend passa por BlobStoragePort com o mesmo prefixo de _catalog_prefix().
+
+
+def gravar_catalogo_blob(config_root: Path, catalogo_id: str, relative_path: str, content: bytes) -> None:
+    """Grava blob individual do catálogo via CONCILIUM__STORE_BACKEND."""
+    backend = catalog_storage_backend()
+    if backend == "filesystem":
+        dest = config_root / "catalogos" / catalogo_id / relative_path.lstrip("/")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(content)
+        return
+    base = _catalog_prefix(catalogo_id, backend)
+    build_blob_storage().gravar_blob(f"{base}/{relative_path.lstrip('/')}", content)
+
+
+def ler_catalogo_blob(config_root: Path, catalogo_id: str, relative_path: str) -> bytes:
+    """Lê blob individual do catálogo via CONCILIUM__STORE_BACKEND."""
+    backend = catalog_storage_backend()
+    if backend == "filesystem":
+        src = config_root / "catalogos" / catalogo_id / relative_path.lstrip("/")
+        if not src.exists():
+            raise FileNotFoundError(f"Blob de catálogo não encontrado: {relative_path}")
+        return src.read_bytes()
+    base = _catalog_prefix(catalogo_id, backend)
+    return build_blob_storage().ler_blob(f"{base}/{relative_path.lstrip('/')}")
+
+
+def deletar_catalogo_blob(config_root: Path, catalogo_id: str, relative_path: str) -> None:
+    """Remove blob individual do catálogo via CONCILIUM__STORE_BACKEND."""
+    backend = catalog_storage_backend()
+    if backend == "filesystem":
+        dest = config_root / "catalogos" / catalogo_id / relative_path.lstrip("/")
+        if dest.exists():
+            dest.unlink()
+        return
+    base = _catalog_prefix(catalogo_id, backend)
+    try:
+        build_blob_storage().deletar_blob(f"{base}/{relative_path.lstrip('/')}")
+    except FileNotFoundError:
+        pass
+
+
+def invalidar_catalogo_cache(config_root: Path, catalogo_id: str) -> None:
+    """Invalida os bundles de cache locais após uma escrita no catálogo."""
+    for name in (".catalog_bundle.json", ".catalog_bundle_remote.json"):
+        p = config_root / "catalogos" / catalogo_id / name
+        if p.exists():
+            try:
+                p.unlink()
+            except OSError:
+                pass

@@ -33,20 +33,33 @@ def _load_entity_files(base: Path, subdirs: tuple[str, ...]) -> list[tuple[Path,
     return rows
 
 
-def _persist_entity_files(entries: list[tuple[Path, dict]], apply: bool) -> int:
+def _persist_entity_files(
+    entries: list[tuple[Path, dict]], apply: bool, catalog_root: Path | None = None
+) -> int:
     if not apply:
         return 0
+    from concilium.application.runtime.mixins._catalog_storage import (
+        catalog_storage_backend,
+        gravar_catalogo_blob,
+    )
+    use_storage = catalog_root is not None and catalog_storage_backend() != "filesystem"
     written = 0
     for file_path, payload in entries:
-        should_write = True
-        try:
-            current = json.loads(file_path.read_text(encoding="utf-8"))
-            should_write = current != payload
-        except Exception:
-            should_write = True
-        if should_write:
-            file_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        content = (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+        if use_storage:
+            relative = str(file_path.relative_to(catalog_root))  # type: ignore[arg-type]
+            gravar_catalogo_blob(catalog_root.parent.parent, catalog_root.name, relative, content)  # type: ignore[union-attr]
             written += 1
+        else:
+            should_write = True
+            try:
+                current = json.loads(file_path.read_text(encoding="utf-8"))
+                should_write = current != payload
+            except Exception:
+                should_write = True
+            if should_write:
+                file_path.write_bytes(content)
+                written += 1
     return written
 
 

@@ -112,11 +112,51 @@ def _preco_hora(ins: dict) -> float:
     return preco / hm if hm > 0 else 0.0
 
 
-# ── Resolução de arquivo individual (mesma convenção de catalog_governance.py /
-# _catalogo_tools_helpers_b.py — insumos/{tipo_lower}/{codigo}.json,
-# producoes|produtividades/{id}.json) — cure_plausibility.py é standalone (fora do
-# Runtime/MCP), replica localmente em vez de importar os helpers do MCP (que
-# arrastam Runtime/ProjectHandle no import).
+# ── Blob I/O por backend + resolução de caminho individual ──────────────────────
+
+
+def _write_blob(catalog_root: Path, relative: str, content: bytes) -> None:
+    """Writes a catalog blob via the configured storage backend."""
+    from concilium.application.runtime.mixins._catalog_storage import (
+        catalog_storage_backend,
+        gravar_catalogo_blob,
+    )
+
+    if catalog_storage_backend() == "filesystem":
+        dest = catalog_root / relative
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(content)
+    else:
+        gravar_catalogo_blob(catalog_root.parent.parent, catalog_root.name, relative, content)
+
+
+def _read_blob(catalog_root: Path, relative: str) -> bytes:
+    """Reads a catalog blob via the configured storage backend."""
+    from concilium.application.runtime.mixins._catalog_storage import (
+        catalog_storage_backend,
+        ler_catalogo_blob,
+    )
+
+    if catalog_storage_backend() == "filesystem":
+        return (catalog_root / relative).read_bytes()
+    return ler_catalogo_blob(catalog_root.parent.parent, catalog_root.name, relative)
+
+
+def _delete_blob(catalog_root: Path, relative: str) -> bool:
+    """Removes a catalog blob via the configured storage backend. Returns True if deleted."""
+    from concilium.application.runtime.mixins._catalog_storage import (
+        catalog_storage_backend,
+        deletar_catalogo_blob,
+    )
+
+    if catalog_storage_backend() == "filesystem":
+        p = catalog_root / relative
+        if p.exists():
+            p.unlink()
+            return True
+        return False
+    deletar_catalogo_blob(catalog_root.parent.parent, catalog_root.name, relative)
+    return True
 
 
 def _caminho_insumo_individual(catalog_root: Path, tipo: str, codigo: str) -> Path:
@@ -154,8 +194,8 @@ def _persistir_insumos_individuais(
         if not cod or originais_by_code.get(cod) == ins:
             continue
         caminho = _caminho_insumo_individual(catalog_root, ins.get("tipo", ""), cod)
-        caminho.parent.mkdir(parents=True, exist_ok=True)
-        caminho.write_text(json.dumps(ins, indent=2, ensure_ascii=False), encoding="utf-8")
+        _write_blob(catalog_root, str(caminho.relative_to(catalog_root)),
+                    json.dumps(ins, indent=2, ensure_ascii=False).encode("utf-8"))
         escritos += 1
 
     removidos_ok = 0
@@ -164,8 +204,7 @@ def _persistir_insumos_individuais(
         if original is None:
             continue
         caminho = _caminho_insumo_individual(catalog_root, original.get("tipo", ""), cod)
-        if caminho.exists():
-            caminho.unlink()
+        if _delete_blob(catalog_root, str(caminho.relative_to(catalog_root))):
             removidos_ok += 1
     return escritos, removidos_ok
 
@@ -180,8 +219,8 @@ def _persistir_producoes_individuais(
         if not pid or originais_by_id.get(pid) == p:
             continue
         caminho = _caminho_producao_individual(catalog_root, pid)
-        caminho.parent.mkdir(parents=True, exist_ok=True)
-        caminho.write_text(json.dumps(p, indent=2, ensure_ascii=False), encoding="utf-8")
+        _write_blob(catalog_root, str(caminho.relative_to(catalog_root)),
+                    json.dumps(p, indent=2, ensure_ascii=False).encode("utf-8"))
         escritos += 1
     return escritos
 
@@ -195,10 +234,10 @@ def _cure_templates_estruturas_indiretas(
     _update_producoes_funcao_ids, ficaria órfão após a remoção da duplicata)."""
     if not dup_map:
         return
-    path = catalog_root / "templates.json"
-    if not path.exists():
+    try:
+        original_bytes = _read_blob(catalog_root, "templates.json")
+    except FileNotFoundError:
         return
-    original_bytes = path.read_bytes()
     usa_crlf = b"\r\n" in original_bytes  # templates.json é CRLF no mendeslobo; insumos/producoes são LF
     data = json.loads(original_bytes.decode("utf-8"))
     estruturas = data.get("estruturas_indiretas") or []
@@ -218,7 +257,7 @@ def _cure_templates_estruturas_indiretas(
         texto = json.dumps(data, indent=2, ensure_ascii=False)
         if usa_crlf:
             texto = texto.replace("\n", "\r\n")
-        path.write_text(texto, encoding="utf-8", newline="")
+        _write_blob(catalog_root, "templates.json", texto.encode("utf-8"))
 
 
 class CureReport:
@@ -656,13 +695,28 @@ def main() -> None:
     print(f"{'=' * 65}\n")
 
     catalog_root = ROOT / f"config/catalogos/{args.contexto}"
-    bundle_path = catalog_root / ".catalog_bundle.json"
-    if not bundle_path.exists():
-        print(f"Bundle não encontrado: {bundle_path}", file=sys.stderr)
-        sys.exit(1)
 
-    # Bundle é só a FONTE DE LEITURA — nunca escrita (ver docstring do módulo).
-    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    from concilium.application.runtime.mixins._catalog_storage import (
+        catalog_storage_backend,
+        invalidar_catalogo_cache,
+        load_catalogo_via_storage,
+    )
+    backend = catalog_storage_backend()
+
+    # Bundle é a fonte de leitura — nunca escrita (ver docstring do módulo).
+    if backend == "filesystem":
+        bundle_path = catalog_root / ".catalog_bundle.json"
+        if not bundle_path.exists():
+            print(f"Bundle não encontrado: {bundle_path}", file=sys.stderr)
+            sys.exit(1)
+        bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    else:
+        remote_cache = catalog_root / ".catalog_bundle_remote.json"
+        if remote_cache.exists():
+            bundle = json.loads(remote_cache.read_text(encoding="utf-8"))
+        else:
+            print(f"  Carregando catálogo de backend {backend!r} ...")
+            bundle = load_catalogo_via_storage(catalog_root.parent.parent, catalog_root.name, force_refresh=True)
     # deepcopy: alguns cure_* mutam atributos_especificos por referência (achado
     # real, MO-OPERADOR-DE-MOTOSCRA) — sem isso, o snapshot "original" usado pra
     # diff em _persistir_insumos_individuais seria corrompido de volta, e o fix
@@ -676,6 +730,7 @@ def main() -> None:
 
     if args.apply:
         _persistir_e_validar(catalog_root, insumos_originais, insumos, producoes_originais, producoes)
+        invalidar_catalogo_cache(catalog_root.parent.parent, catalog_root.name)
     else:
         print("\n  Dry-run — use --apply para aplicar as correções")
         sys.exit(1 if report.manual else 0)

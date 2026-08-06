@@ -585,7 +585,7 @@ class TestRun:
         out = capsys.readouterr().out
         assert "APPLY" in out
         assert "Arquivos atualizados" in out
-        assert "Bundle invalidado" in out
+        assert "Cache de catálogo invalidado" in out
         assert not (tmp_path / ".catalog_bundle.json").exists()
         assert "Nenhum erro residual" in out
 

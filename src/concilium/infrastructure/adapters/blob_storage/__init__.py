@@ -7,6 +7,7 @@ Public API (all backends re-exported):
 """
 
 from .azure import AzureBlobStorage
+from .caching import CachingBlobStorage
 from .cloud import CloudBlobStorageAdapter
 from .gdrive import GoogleDriveBlobStorage
 from .local import LocalBlobStorage
@@ -16,6 +17,7 @@ from .sharepoint import SharePointBlobStorage, SharePointCredential, StorageConc
 __all__ = [
     "LocalBlobStorage",
     "AzureBlobStorage",
+    "CachingBlobStorage",
     "SharePointBlobStorage",
     "SharePointCredential",
     "StorageConcurrencyError",

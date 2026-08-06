@@ -253,22 +253,32 @@ def _persistir_merge_em_arquivos_individuais(
     Returns:
         Quantidade de arquivos efetivamente escritos.
     """
+    from concilium.application.runtime.mixins._catalog_storage import (
+        gravar_catalogo_blob,
+        invalidar_catalogo_cache,
+    )
+
     resolver = _RESOLVER_CAMINHO_INDIVIDUAL[tipo]
     base_by_id = {e.get(id_key, ""): e for e in base}
+    # catalog_root = config_root / "catalogos" / catalogo_id
+    config_root = catalog_root.parent.parent
+    catalogo_id = catalog_root.name
     escritos = 0
     for entidade in merged:
         codigo = entidade.get(id_key, "")
         if not codigo or base_by_id.get(codigo) == entidade:
             continue
         caminho = resolver(catalog_root, entidade)
-        caminho.parent.mkdir(parents=True, exist_ok=True)
-        caminho.write_text(json.dumps(entidade, ensure_ascii=False, indent=2), encoding="utf-8")
+        relative = str(caminho.relative_to(catalog_root))
+        content = (json.dumps(entidade, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        gravar_catalogo_blob(config_root, catalogo_id, relative, content)
         escritos += 1
+    if escritos:
+        invalidar_catalogo_cache(config_root, catalogo_id)
     return escritos
 
 
-def _merge_preview_dir(config_root: Path, catalogo_id: str) -> Path:
-    return _catalog_root(config_root, catalogo_id) / "merges_pendentes"
+_PREVIEW_PREFIX = "merges_pendentes"
 
 
 def _persistir_preview_merge(
@@ -283,8 +293,8 @@ def _persistir_preview_merge(
     criado_por: str,
 ) -> None:
     """ADR-177 D3: persiste o preview de um merge para aplicação posterior por outro ator."""
-    preview_dir = _merge_preview_dir(config_root, catalogo_id)
-    preview_dir.mkdir(parents=True, exist_ok=True)
+    from concilium.application.runtime.mixins._catalog_storage import gravar_catalogo_blob
+
     payload = {
         "destino": destino,
         "origem": origem,
@@ -293,21 +303,24 @@ def _persistir_preview_merge(
         "criado_por": criado_por,
         "criado_em": datetime.now(UTC).isoformat(),
     }
-    (preview_dir / f"{merge_id}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    content = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+    gravar_catalogo_blob(config_root, catalogo_id, f"{_PREVIEW_PREFIX}/{merge_id}.json", content)
 
 
 def _carregar_preview_merge(config_root: Path, catalogo_id: str, merge_id: str) -> dict[str, Any] | None:
-    path = _merge_preview_dir(config_root, catalogo_id) / f"{merge_id}.json"
-    if not path.exists():
-        return None
+    from concilium.application.runtime.mixins._catalog_storage import ler_catalogo_blob
+
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+        raw = ler_catalogo_blob(config_root, catalogo_id, f"{_PREVIEW_PREFIX}/{merge_id}.json")
+        return json.loads(raw.decode("utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
         return None
 
 
 def _apagar_preview_merge(config_root: Path, catalogo_id: str, merge_id: str) -> None:
-    (_merge_preview_dir(config_root, catalogo_id) / f"{merge_id}.json").unlink(missing_ok=True)
+    from concilium.application.runtime.mixins._catalog_storage import deletar_catalogo_blob
+
+    deletar_catalogo_blob(config_root, catalogo_id, f"{_PREVIEW_PREFIX}/{merge_id}.json")
 
 
 def _validar_preview_merge(

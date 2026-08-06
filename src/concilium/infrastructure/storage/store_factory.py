@@ -79,6 +79,28 @@ def resolve_store_backend() -> str:
     return _BACKEND_ALIASES.get(value, value)
 
 
+def _maybe_wrap_cache(storage: BlobStoragePort) -> BlobStoragePort:
+    """Wrap opt-in via CONCILIUM__BLOB_CACHE_TTL_SECONDS (issues #2/#3).
+
+    Aplica CachingBlobStorage sobre S3, Azure e GDrive para uniformizar
+    a janela de staleness com o ETag cache do SharePoint e habilitar
+    offline fallback por stale cache em todos os backends remotos.
+    SharePoint tem cache próprio (ETag + TTL em _BlobCache) e não é wrappado.
+    """
+    import os
+
+    raw = os.getenv("CONCILIUM__BLOB_CACHE_TTL_SECONDS", "").strip()
+    if not raw:
+        return storage
+    try:
+        ttl = float(raw)
+    except ValueError:
+        return storage
+    from concilium.infrastructure.adapters.blob_storage.caching import CachingBlobStorage
+
+    return CachingBlobStorage(storage, ttl_seconds=ttl)
+
+
 def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
     """Constrói BlobStoragePort de acordo com CONCILIUM__STORE_BACKEND.
 
@@ -101,15 +123,15 @@ def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
     if backend == "s3":
         from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
 
-        return S3BlobStorage.from_env()
+        return _maybe_wrap_cache(S3BlobStorage.from_env())
     if backend == "azure":
         from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
 
-        return AzureBlobStorage.from_env()
+        return _maybe_wrap_cache(AzureBlobStorage.from_env())
     if backend == "gdrive":
         from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
 
-        return GoogleDriveBlobStorage.from_env()
+        return _maybe_wrap_cache(GoogleDriveBlobStorage.from_env())
     raise ValueError(f"Backend não suportado: {backend}")
 
 

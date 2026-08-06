@@ -163,6 +163,14 @@
       "Bash(python3 -m pytest tests/unit/test_nep041_f4_resultado_financeiro.py -q)",
       "Bash(rm -rf 06-precificacao-unitaria 07-custos-indiretos 08-consolidacao-financeira)"
     ],
+    "ask": [
+      "mcp__claude_ai_Microsoft_365__sharepoint_upload_file",
+      "mcp__claude_ai_Microsoft_365__sharepoint_update_file",
+      "mcp__claude_ai_Microsoft_365__sharepoint_delete_item",
+      "mcp__claude_ai_Microsoft_365__sharepoint_move_item",
+      "mcp__claude_ai_Microsoft_365__sharepoint_rename_item",
+      "mcp__claude_ai_Microsoft_365__sharepoint_create_folder"
+    ],
     "additionalDirectories": [
       "/tmp"
     ]

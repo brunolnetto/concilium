@@ -46,15 +46,20 @@ def _run_persist_apply(
     cured_prods: list[dict],
     insumo_entries: list[tuple[Path, dict]],
     cured_insumos: list[dict],
-    bundle_path: Path,
+    catalog_root: Path,
 ) -> None:
-    n_cpus = _persist_entity_files([(p, obj) for (p, _), obj in zip(cpu_entries, cured_cpus, strict=False)], True)
-    n_prods = _persist_entity_files([(p, obj) for (p, _), obj in zip(prod_entries, cured_prods, strict=False)], True)
-    n_ins = _persist_entity_files([(p, obj) for (p, _), obj in zip(insumo_entries, cured_insumos, strict=False)], True)
+    n_cpus = _persist_entity_files([(p, obj) for (p, _), obj in zip(cpu_entries, cured_cpus, strict=False)], True, catalog_root)
+    n_prods = _persist_entity_files([(p, obj) for (p, _), obj in zip(prod_entries, cured_prods, strict=False)], True, catalog_root)
+    n_ins = _persist_entity_files([(p, obj) for (p, _), obj in zip(insumo_entries, cured_insumos, strict=False)], True, catalog_root)
     print(f"  Arquivos atualizados: CPUs={n_cpus}, PRODUCOES={n_prods}, INSUMOS={n_ins}")
-    if bundle_path.exists():
-        bundle_path.unlink()
-        print(f"  Bundle invalidado: {bundle_path}")
+    for _cache in (".catalog_bundle.json", ".catalog_bundle_remote.json"):
+        p = catalog_root / _cache
+        if p.exists():
+            try:
+                p.unlink()
+            except OSError:
+                pass
+    print(f"  Cache de catálogo invalidado: {catalog_root.name}")
 
 
 def _run_validate_residual(
@@ -101,7 +106,6 @@ def run(contexto_id: str, apply: bool = False) -> None:
     _run_print_header(contexto_id, apply)
 
     base = _context_base(contexto_id)
-    bundle_path = base / ".catalog_bundle.json"
     cpu_entries = _load_entity_files(base, ("cpus",))
     insumo_entries = _load_entity_files(base, ("insumos",))
     prod_entries = _load_entity_files(base, ("producoes", "produtividades"))
@@ -121,7 +125,7 @@ def run(contexto_id: str, apply: bool = False) -> None:
 
     if apply:
         _run_persist_apply(
-            cpu_entries, cured_cpus, prod_entries, cured_prods, insumo_entries, cured_insumos, bundle_path
+            cpu_entries, cured_cpus, prod_entries, cured_prods, insumo_entries, cured_insumos, base
         )
 
     _run_validate_residual(contexto_id, apply, cpus, cured_cpus, prods, cured_prods, insumos, cured_insumos)

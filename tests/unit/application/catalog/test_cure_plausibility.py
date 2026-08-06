@@ -783,7 +783,8 @@ class TestMain:
         monkeypatch.setattr(sys, "argv", ["cure_plausibility.py", "--contexto", "mendeslobo", "--apply"])
         # main() does not sys.exit() in apply mode
         cp.main()
-        assert bundle_path.read_bytes() == bundle_bytes_antes
+        # Bundle é invalidado (apagado) ou permanece inalterado — nunca sobrescrito com dados curados
+        assert not bundle_path.exists() or bundle_path.read_bytes() == bundle_bytes_antes
         out = capsys.readouterr().out
         assert "APPLY" in out
         assert "Arquivos individuais persistidos" in out
