@@ -63,6 +63,11 @@ jobs:
           OTEL_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           SMOKE_CLIENT_ID: ${{ vars.SMOKE_CLIENT_ID || 'smoke-test' }}
           SMOKE_CLIENT_SECRET: ${{ secrets.SMOKE_CLIENT_SECRET }}
+          SP_TENANT_ID: ${{ secrets.CONCILIUM__SP_TENANT_ID }}
+          SP_CLIENT_ID: ${{ secrets.CONCILIUM__SP_CLIENT_ID }}
+          SP_CLIENT_SECRET: ${{ secrets.CONCILIUM__SP_CLIENT_SECRET }}
+          SP_DRIVE_ID: ${{ secrets.CONCILIUM__SP_DRIVE_ID }}
+          SP_ROOT_PATH: ${{ vars.CONCILIUM__SP_ROOT_PATH || 'Concilium/prod' }}
         run: |
           chmod +x cd/scripts/deploy.sh
           ${{ inputs.command }}
