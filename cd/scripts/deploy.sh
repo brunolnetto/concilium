@@ -155,6 +155,32 @@ _wait_revision_running() {
     die "Revision '$revision' nao ficou Running em $((max*10))s."
 }
 
+# -- ACA Revisions: build env vars helper -----------------------------------
+
+_build_deploy_env_vars_mcp() {
+    # Constroi array de env vars para o MCP, preservando SharePoint config.
+    # Retorna em stdout como espaço-separado para passar ao --set-env-vars.
+    local env_vars=(
+        "CONCILIUM__CONFIG_ROOT=/app"
+    )
+
+    # SharePoint vars (se configuradas no CI/env)
+    if [[ -n "$SP_TENANT_ID" ]]; then
+        env_vars+=("CONCILIUM__STORE_BACKEND=sharepoint")
+        env_vars+=("CONCILIUM__SP_TENANT_ID=${SP_TENANT_ID}")
+        env_vars+=("CONCILIUM__SP_CLIENT_ID=${SP_CLIENT_ID}")
+        env_vars+=("CONCILIUM__SP_CLIENT_SECRET=${SP_CLIENT_SECRET}")
+        env_vars+=("CONCILIUM__SP_DRIVE_ID=${SP_DRIVE_ID}")
+        env_vars+=("CONCILIUM__SP_ROOT_PATH=${SP_ROOT_PATH}")
+    else
+        # Se nao tem config SharePoint no CI, assume filesystem (dev/teste)
+        env_vars+=("CONCILIUM__STORE_BACKEND=filesystem")
+    fi
+
+    # Print em formato que --set-env-vars aceita
+    printf '%s\n' "${env_vars[@]}"
+}
+
 # -- ACA Revisions: runtime deployment ------------------------------------------
 
 cmd_deploy() {
@@ -248,10 +274,16 @@ cmd_deploy() {
             --resource-group "$RESOURCE_GROUP" \
             --mode multiple \
             --output none
+
+        # Construir env vars do MCP (preserve SharePoint config se existir)
+        local mcp_env_vars
+        mcp_env_vars=$(_build_deploy_env_vars_mcp)
+
         az containerapp update \
             --name "$ACA_MCP_APP" \
             --resource-group "$RESOURCE_GROUP" \
             --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${image_tag}" \
+            --set-env-vars ${mcp_env_vars} \
             --output none
         mcp_revision=$(_aca_latest_revision "$ACA_MCP_APP")
         _wait_revision_running "$ACA_MCP_APP" "$mcp_revision"
