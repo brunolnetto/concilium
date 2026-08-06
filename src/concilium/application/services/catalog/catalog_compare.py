@@ -89,6 +89,19 @@ _ABBREV = {
 }
 
 
+def _expand_abbrev_token(tok: str) -> set[str]:
+    """Expande um token que pode ser abreviação para seu conjunto de palavras."""
+    expansion = _ABBREV.get(tok, tok)
+    if expansion == tok:
+        return {tok}
+    # Expansão multi-palavra: divide e filtra cada palavra individualmente
+    result = set()
+    for word in expansion.split():
+        if word not in _STOP and len(word) > 1:
+            result.add(word)
+    return result
+
+
 def _normalize(text: str) -> set[str]:
     """Converte texto em conjunto de tokens ASCII normalizados com expansão de abreviações."""
     t = unicodedata.normalize("NFD", str(text).lower())
@@ -98,14 +111,7 @@ def _normalize(text: str) -> set[str]:
     # Expande abreviações: substitui token abreviado pelos tokens expandidos (multi-palavra)
     expanded: set[str] = set()
     for tok in tokens:
-        expansion = _ABBREV.get(tok, tok)
-        if expansion == tok:
-            expanded.add(tok)
-        else:
-            # Expansão multi-palavra: divide e filtra cada palavra individualmente
-            for word in expansion.split():
-                if word not in _STOP and len(word) > 1:
-                    expanded.add(word)
+        expanded.update(_expand_abbrev_token(tok))
     return expanded
 
 
@@ -117,12 +123,31 @@ def _similarity(a: str, b: str) -> float:
     return len(ta & tb) / len(ta | tb)
 
 
+def _check_tipo_mismatch(origem: dict, destino: dict) -> bool:
+    """Retorna True se tipos são incompatíveis (void match)."""
+    tipo_origem = origem.get("tipo")
+    tipo_destino = destino.get("tipo")
+    return bool(tipo_origem and tipo_destino and tipo_origem != tipo_destino)
+
+
+def _boost_price_match(score: float, origem: dict, destino: dict) -> float:
+    """Aplica boost +0.10 se unidade e preço compatíveis (dentro de ±30%)."""
+    u_origem = _norm_unit(origem.get("unidade"))
+    u_destino = _norm_unit(destino.get("unidade"))
+    if not u_origem or u_origem != u_destino:
+        return score
+
+    p_origem = origem.get("preco_unitario") or 0
+    p_destino = destino.get("preco_unitario") or 0
+    if p_destino > 0 and abs(p_origem - p_destino) / p_destino <= PRICE_TOLERANCE:
+        return min(1.0, score + 0.10)
+    return score
+
+
 def _match_score(origem: dict, destino: dict) -> float:
     """Score de matching entre uma entidade de origem e uma de destino (base)."""
     # 0. Tipos incompatíveis → sem match (evita cross-type MATERIAL vs TERCEIRIZADO, etc.)
-    tipo_origem = origem.get("tipo")
-    tipo_destino = destino.get("tipo")
-    if tipo_origem and tipo_destino and tipo_origem != tipo_destino:
+    if _check_tipo_mismatch(origem, destino):
         return 0.0
 
     desc_sim = _similarity(origem.get("descricao", ""), destino.get("descricao", ""))
@@ -140,13 +165,7 @@ def _match_score(origem: dict, destino: dict) -> float:
     score = desc_sim
 
     # 3. Boost por unidade + preço (usa unidades normalizadas)
-    u_origem = _norm_unit(origem.get("unidade"))
-    u_destino = _norm_unit(destino.get("unidade"))
-    if u_origem and u_origem == u_destino:
-        p_origem = origem.get("preco_unitario") or 0
-        p_destino = destino.get("preco_unitario") or 0
-        if p_destino > 0 and abs(p_origem - p_destino) / p_destino <= PRICE_TOLERANCE:
-            score = min(1.0, score + 0.10)
+    score = _boost_price_match(score, origem, destino)
 
     return round(score, 4)
 
@@ -161,35 +180,64 @@ def _categorize(score: float, origem: dict, destino: dict | None) -> str:
     return "NO_MATCH"  # tratar como RIGHT_ONLY
 
 
+def _dpf_check_unidade(v_base: Any, v_origem: Any) -> bool:
+    """Retorna True se unidades são iguais após normalização (false positive)."""
+    return _norm_unit(str(v_base or "")) == _norm_unit(str(v_origem or ""))
+
+
+def _dpf_check_descricao(v_base: Any, v_origem: Any) -> bool:
+    """Retorna True se descrições são iguais/subset após normalização (false positive)."""
+    t_base = _normalize(str(v_base or ""))
+    t_origem = _normalize(str(v_origem or ""))
+    if t_base == t_origem:
+        return True  # idênticas após normalização
+    # origem é subconjunto da base: base é mais completa → manter base
+    if t_origem and t_origem.issubset(t_base):
+        return True
+    return False
+
+
+def _dpf_build_entry(v_base: Any, v_origem: Any, field: str) -> dict[str, Any]:
+    """Constrói delta_entry com delta_pct opcional para preco_unitario."""
+    delta_entry: dict[str, Any] = {"catalog": v_base, "rfi": v_origem}
+    if field == "preco_unitario" and v_base and v_origem:
+        try:
+            pct = (float(v_origem) - float(v_base)) / float(v_base) * 100
+            delta_entry["delta_pct"] = round(pct, 2)
+        except (TypeError, ZeroDivisionError):
+            pass
+    return delta_entry
+
+
+def _delta_process_field(field: str, v_base: Any, v_origem: Any) -> dict[str, Any] | None:
+    """Processa um campo para detectar diferenças relevantes. Retorna delta_entry ou None se igual."""
+    if v_origem is None:
+        return None
+
+    # Normaliza unidades antes de comparar (m³ == m3, etc.)
+    if field == "unidade":
+        if _dpf_check_unidade(v_base, v_origem):
+            return None  # mesma unidade, variação gráfica apenas
+
+    # Normaliza descrições
+    if field == "descricao":
+        if _dpf_check_descricao(v_base, v_origem):
+            return None  # idênticas ou subset após normalização
+
+    if v_base != v_origem:
+        return _dpf_build_entry(v_base, v_origem, field)
+    return None
+
+
 def _delta(base: dict, origem: dict) -> dict:
     """Computa diferenças relevantes entre a entidade da base e a de origem (ignora variações gráficas)."""
     d: dict = {}
     for field in ("preco_unitario", "descricao", "unidade", "fonte_preco"):
         v_base = base.get(field)
         v_origem = origem.get(field)
-        if v_origem is None:
-            continue
-        # Normaliza unidades antes de comparar (m³ == m3, etc.)
-        if field == "unidade":
-            if _norm_unit(str(v_base or "")) == _norm_unit(str(v_origem or "")):
-                continue  # mesma unidade, variação gráfica apenas
-        # Normaliza descrições
-        if field == "descricao":
-            t_base = _normalize(str(v_base or ""))
-            t_origem = _normalize(str(v_origem or ""))
-            if t_base == t_origem:
-                continue  # idênticas após normalização
-            # origem é subconjunto da base: base é mais completa → manter base
-            if t_origem and t_origem.issubset(t_base):
-                continue
-        if v_base != v_origem:
-            d[field] = {"catalog": v_base, "rfi": v_origem}
-            if field == "preco_unitario" and v_base and v_origem:
-                try:
-                    pct = (float(v_origem) - float(v_base)) / float(v_base) * 100
-                    d[field]["delta_pct"] = round(pct, 2)
-                except (TypeError, ZeroDivisionError):
-                    pass
+        delta_entry = _delta_process_field(field, v_base, v_origem)
+        if delta_entry:
+            d[field] = delta_entry
     return d
 
 
@@ -209,6 +257,51 @@ class RelatorioComparacao:
         self.left_only: list[dict] = []
 
 
+def _find_best_match(item_origem: dict, base: list[dict]) -> tuple[float, dict | None]:
+    """Encontra o melhor match de item_origem na base, retornando (best_score, best_base)."""
+    best_score = 0.0
+    best_base: dict | None = None
+    for item_base in base:
+        s = _match_score(item_origem, item_base)
+        if s > best_score:
+            best_score = s
+            best_base = item_base
+    return best_score, best_base
+
+
+def _ce_add_categorized_item(
+    report: RelatorioComparacao,
+    category: str,
+    best_score: float,
+    item_origem: dict,
+    best_base: dict | None,
+) -> None:
+    """Adiciona item ao relatório na categoria apropriada."""
+    if category == "RIGHT_ONLY" or category == "NO_MATCH":
+        report.right_only.append({"rfi": item_origem, "score": best_score})
+    elif category == "INNER_HIGH":
+        assert best_base is not None
+        delta = _delta(best_base, item_origem)
+        report.inner_high.append({
+            "catalog": best_base, "rfi": item_origem,
+            "score": best_score, "delta": delta,
+        })
+    elif category == "INNER_LOW":
+        report.inner_low.append({
+            "catalog": best_base, "rfi": item_origem,
+            "score": best_score,
+        })
+
+
+def _ce_add_left_only(report: RelatorioComparacao, base: list[dict], id_key: str) -> None:
+    """Adiciona ao relatório entidades da base que não matcharam com nada na origem (LEFT_ONLY)."""
+    matched_base_codes = {e["catalog"].get(id_key, "") for e in report.inner_high}
+    matched_base_codes |= {e["catalog"].get(id_key, "") for e in report.inner_low}
+    for item_base in base:
+        if item_base.get(id_key, "") not in matched_base_codes:
+            report.left_only.append({"catalog": item_base})
+
+
 def comparar_entidades(
     base: list[dict],
     origem: list[dict],
@@ -220,46 +313,73 @@ def comparar_entidades(
     com os da origem se diferentes (ver `aplicar_merge`).
     """
     report = RelatorioComparacao()
-    origem_matched: set[str] = set()
     result = list(base)  # começa com tudo da base
 
     for item_origem in origem:
-        best_score = 0.0
-        best_base: dict | None = None
-
-        # Procura melhor match na base
-        for item_base in base:
-            s = _match_score(item_origem, item_base)
-            if s > best_score:
-                best_score = s
-                best_base = item_base
-
+        best_score, best_base = _find_best_match(item_origem, base)
         category = _categorize(best_score, item_origem, best_base)
-
-        if category == "RIGHT_ONLY" or category == "NO_MATCH":
-            report.right_only.append({"rfi": item_origem, "score": best_score})
-        elif category == "INNER_HIGH":
-            assert best_base is not None
-            origem_matched.add(best_base.get(id_key, ""))
-            delta = _delta(best_base, item_origem)
-            report.inner_high.append({
-                "catalog": best_base, "rfi": item_origem,
-                "score": best_score, "delta": delta,
-            })
-        elif category == "INNER_LOW":
-            report.inner_low.append({
-                "catalog": best_base, "rfi": item_origem,
-                "score": best_score,
-            })
+        _ce_add_categorized_item(report, category, best_score, item_origem, best_base)
 
     # LEFT_ONLY: na base mas não matchou com nada na origem
-    matched_base_codes = {e["catalog"].get(id_key, "") for e in report.inner_high}
-    matched_base_codes |= {e["catalog"].get(id_key, "") for e in report.inner_low}
-    for item_base in base:
-        if item_base.get(id_key, "") not in matched_base_codes:
-            report.left_only.append({"catalog": item_base})
+    _ce_add_left_only(report, base, id_key)
 
     return report, result
+
+
+def _apply_inner_high_updates(
+    result: dict[str, dict],
+    relatorio: RelatorioComparacao,
+    id_key: str,
+) -> None:
+    """Atualiza INNER_HIGH: aplica deltas na base onde match foi confiante."""
+    for item in relatorio.inner_high:
+        base_code = item["catalog"].get(id_key, "")
+        if base_code in result and item["delta"]:
+            for field, chg in item["delta"].items():
+                result[base_code][field] = chg["rfi"]
+            result[base_code]["_rfi_updated_at"] = datetime.now(UTC).strftime("%Y-%m-%d")
+
+
+def _apply_right_only_additions(
+    result: dict[str, dict],
+    relatorio: RelatorioComparacao,
+    id_key: str,
+) -> None:
+    """Adiciona RIGHT_ONLY: inclui novas entidades da origem na base."""
+    for item in relatorio.right_only:
+        item_origem = item["rfi"]
+        cod = item_origem.get(id_key, "")
+        if not cod:
+            continue
+        # Se o código já existe na base (colisão verdadeira), importa com prefixo RFI-
+        if cod in result:
+            cod = f"RFI-{cod}"
+        clean = {k: v for k, v in item_origem.items() if not k.startswith("_")}
+        clean[id_key] = cod
+        clean["_rfi_imported_at"] = datetime.now(UTC).strftime("%Y-%m-%d")
+        result[cod] = clean
+
+
+def _apply_inner_low_collisions(
+    result: dict[str, dict],
+    relatorio: RelatorioComparacao,
+    id_key: str,
+) -> None:
+    """Processa INNER_LOW colisões: código igual mas conteúdo diverge → importa com prefixo RFI-."""
+    for item in relatorio.inner_low:
+        origem_e = item["rfi"]
+        base_e = item["catalog"]
+        origem_cod = origem_e.get(id_key, "")
+        base_cod = base_e.get(id_key, "")
+        if origem_cod == base_cod and origem_cod:
+            # True collision: importa origem com novo código prefixado
+            new_cod = f"RFI-{origem_cod}"
+            if new_cod not in result:
+                clean = {k: v for k, v in origem_e.items() if not k.startswith("_")}
+                clean[id_key] = new_cod
+                clean["_rfi_collision_original_code"] = origem_cod
+                clean["_rfi_imported_at"] = datetime.now(UTC).strftime("%Y-%m-%d")
+                result[new_cod] = clean
 
 
 def aplicar_merge(
@@ -278,44 +398,14 @@ def aplicar_merge(
     result = {e.get(id_key, ""): dict(e) for e in base}
 
     # Atualiza INNER_HIGH
-    for item in relatorio.inner_high:
-        base_code = item["catalog"].get(id_key, "")
-        if base_code in result and item["delta"]:
-            for field, chg in item["delta"].items():
-                result[base_code][field] = chg["rfi"]
-            result[base_code]["_rfi_updated_at"] = datetime.now(UTC).strftime("%Y-%m-%d")
+    _apply_inner_high_updates(result, relatorio, id_key)
 
     # Adiciona RIGHT_ONLY
     if incluir_novos:
-        for item in relatorio.right_only:
-            item_origem = item["rfi"]
-            cod = item_origem.get(id_key, "")
-            if not cod:
-                continue
-            # Se o código já existe na base (colisão verdadeira), importa com prefixo RFI-
-            if cod in result:
-                cod = f"RFI-{cod}"
-            clean = {k: v for k, v in item_origem.items() if not k.startswith("_")}
-            clean[id_key] = cod
-            clean["_rfi_imported_at"] = datetime.now(UTC).strftime("%Y-%m-%d")
-            result[cod] = clean
+        _apply_right_only_additions(result, relatorio, id_key)
 
-    # Converte INNER_LOW colisões reais em RIGHT_ONLY com prefixo RFI-
-    # (código bate mas conteúdo diverge completamente — não sobrescreve a base)
-    for item in relatorio.inner_low:
-        origem_e = item["rfi"]
-        base_e = item["catalog"]
-        origem_cod = origem_e.get(id_key, "")
-        base_cod = base_e.get(id_key, "")
-        if origem_cod == base_cod and origem_cod:
-            # True collision: importa origem com novo código prefixado
-            new_cod = f"RFI-{origem_cod}"
-            if new_cod not in result:
-                clean = {k: v for k, v in origem_e.items() if not k.startswith("_")}
-                clean[id_key] = new_cod
-                clean["_rfi_collision_original_code"] = origem_cod
-                clean["_rfi_imported_at"] = datetime.now(UTC).strftime("%Y-%m-%d")
-                result[new_cod] = clean
+    # Processa INNER_LOW colisões reais
+    _apply_inner_low_collisions(result, relatorio, id_key)
 
     return list(result.values())
 
