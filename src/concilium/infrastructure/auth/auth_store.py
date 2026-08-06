@@ -188,6 +188,45 @@ def _build_refresh_token_record(client: ClientRecord, device_name: str, ttl: tim
     )
 
 
+def _aus_preparar_efetivo_roles(roles: list[str] | None) -> list[str] | None:
+    """Prepara effective_roles com resolução e validação."""
+    if roles is None:
+        return None
+    effective_roles = _resolve_effective_roles(roles, None)
+    _validate_roles(effective_roles)
+    return effective_roles
+
+
+def _aus_validar_update_constraints(
+    records: list[ClientRecord],
+    email: str | None,
+    client_id: str,
+) -> None:
+    """Valida restrições de update: email não duplicado."""
+    if email:
+        _check_email_not_taken(records, email, exclude_client_id=client_id)
+
+
+def _aus_encontrar_e_atualizar_cliente(
+    records: list[ClientRecord],
+    client_id: str,
+    effective_roles: list[str] | None,
+    email: str | None,
+    notes: str | None,
+) -> ClientRecord | None:
+    """Encontra cliente por id e aplica updates de roles/email/notes."""
+    for r in records:
+        if r.client_id == client_id:
+            if effective_roles is not None:
+                r.roles = effective_roles
+            if email is not None:
+                r.email = email
+            if notes is not None:
+                r.notes = notes
+            return r
+    return None
+
+
 # ── Store ─────────────────────────────────────────────────────────────────────
 
 
@@ -429,27 +468,20 @@ class AuthStore:
         novo email já pertencer a outro client_id.
         Não filtra por `active` — mesmo precedente de regenerate_client_code().
         """
-        effective_roles = _resolve_effective_roles(roles, None) if roles is not None else None
-        if effective_roles is not None:
-            _validate_roles(effective_roles)
+        effective_roles = _aus_preparar_efetivo_roles(roles)
 
         with self._lock:
             raw = self._read_clients()
             records = [ClientRecord(**r) for r in raw]
-            if email:
-                _check_email_not_taken(records, email, exclude_client_id=client_id)
-            for r in records:
-                if r.client_id == client_id:
-                    if effective_roles is not None:
-                        r.roles = effective_roles
-                    if email is not None:
-                        r.email = email
-                    if notes is not None:
-                        r.notes = notes
-                    self._write("clients.json", [asdict(x) for x in records])
-                    self._invalidate_clients_cache()
-                    return r
-        raise ValueError(f"Client '{client_id}' not found.")
+            _aus_validar_update_constraints(records, email, client_id)
+            updated_record = _aus_encontrar_e_atualizar_cliente(
+                records, client_id, effective_roles, email, notes
+            )
+            if updated_record is None:
+                raise ValueError(f"Client '{client_id}' not found.")
+            self._write("clients.json", [asdict(x) for x in records])
+            self._invalidate_clients_cache()
+            return updated_record
 
     def migrate_legacy_client_codes(self) -> list[tuple[str, str, str]]:
         """Gera client_code para todo client ativo criado antes do bootstrap por código (ADR-099 F...).
