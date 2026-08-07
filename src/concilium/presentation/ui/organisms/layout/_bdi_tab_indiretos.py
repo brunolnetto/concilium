@@ -1,4 +1,18 @@
-"""Camada de apresentação — layout Streamlit (parte extraída de layout.py)."""
+"""Streamlit UI layer for indirect costs (BDI) editor with category breakdown.
+
+Provides interactive UI for team composition (ADM/TOP/LAB/QSMS) and mobilization (MOB)
+cost configuration. Renders labor/equipment/allowances tables with live cost totals,
+supports regime-based overhead calculation, and persists overrides via skill 06 endpoint.
+
+Key responsibilities:
+  - Load reference state from benchmark-reference API (equipes, detalhamento, encargos)
+  - Render category-specific editor tabs (Equipe de Apoio, MOB/desmob)
+  - Support nested labor (funcoes + equipment + verbas) with regime-based rates
+  - Fallback to saved overrides if reference empty (hydration pattern)
+  - Persist edited configuration to project overrides (skill_id: 06-resultado-financeiro)
+
+Used by: project page, layout.py expanders, BDI configuration workflow.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +29,10 @@ from ._bdi_editor import _hydrate_indiretos_from_overrides, render_bdi_editor
 
 
 def render_bdi_tab(base_url: str, project: dict, actor: str) -> None:
-    """Renderiza o editor de BDI isolado (para uso em expander próprio)."""
+    """Render isolated BDI editor for use in standalone expander or tab.
+
+    Fetches benchmark-reference from API and delegates to render_bdi_editor.
+    """
     project_id = project["project_id"]
     try:
         reference = api_call(
@@ -41,12 +58,18 @@ _INDIR_PERM_CATS = [
 
 
 def _verbas_from_dict(raw: dict) -> list[tuple[str, float]]:
-    """Extracts verbas from a dict mapping name->value."""
+    """Extract verbas (allowances) from dict mapping name -> value.
+
+    Filters fields starting with '_' and non-numeric values.
+    """
     return [(k, float(v)) for k, v in raw.items() if not str(k).startswith("_") and isinstance(v, (int, float))]
 
 
 def _verbas_from_list_items(raw: list) -> list[tuple[str, float]]:
-    """Extracts verbas from a list of dicts or numbers."""
+    """Extract verbas from list of dicts or numeric items.
+
+    Handles both dict (with descricao/nome/valor_mensal keys) and bare numbers.
+    """
     result: list[tuple[str, float]] = []
     for item in raw:
         if isinstance(item, dict):
@@ -57,7 +80,7 @@ def _verbas_from_list_items(raw: list) -> list[tuple[str, float]]:
 
 
 def _indir_verbas_list(raw: object) -> list[tuple[str, float]]:
-    """Normaliza verbas_mensais (dict ou list) para [(descricao, valor)]."""
+    """Normalize verbas_mensais (dict or list format) to [(descricao, valor)]."""
     if isinstance(raw, dict):
         return _verbas_from_dict(raw)
     if isinstance(raw, list):
@@ -66,7 +89,10 @@ def _indir_verbas_list(raw: object) -> list[tuple[str, float]]:
 
 
 def _indir_equips_list(raw: object) -> list[dict]:
-    """Normaliza equipamentos (list ou dict) para list[dict]."""
+    """Normalize equipamentos (list or dict format) to list[dict].
+
+    Handles list of dicts directly, or dict with (tipo -> value/dict) entries.
+    """
     if isinstance(raw, list):
         return [e for e in raw if isinstance(e, dict)]
     if isinstance(raw, dict):
@@ -86,7 +112,11 @@ def _indir_equips_list(raw: object) -> list[dict]:
 def _render_indir_mo_section(
     mo_pessoas: list, encargos: dict, regimes: list, project_id: str, cat_id: str
 ) -> tuple[float, list[dict]]:
-    """Renders MO table for one indirect category. Returns (total_mo, itens_mo)."""
+    """Render labor table for one indirect category. Returns (total_mo, itens_mo).
+
+    Creates editable DataFrame with salary, regime, encargos, and cost calculations.
+    Computes custo_unitario = salario × (1 + encargos), custo_mensal = custo_unitario × qty.
+    """
     import pandas as pd
 
     total_mo = 0.0
@@ -148,7 +178,7 @@ def _render_indir_mo_section(
 
 
 def _build_eq_seed_list(equips: list) -> list[dict]:
-    """Builds seed rows for the equipment data_editor."""
+    """Build seed DataFrame rows for equipment editor."""
     return [
         {
             "Tipo": e.get("tipo") or e.get("descricao") or "",
@@ -162,7 +192,10 @@ def _build_eq_seed_list(equips: list) -> list[dict]:
 
 
 def _process_eq_edited_rows(edited_list: list) -> tuple[float, list[dict]]:
-    """Processes edited equipment rows. Returns (total_eq, equips_out)."""
+    """Process edited equipment rows. Returns (total_eq, equips_out).
+
+    Filters empty Tipo entries and computes total_mes_e = aluguel_u × qtd per item.
+    """
     total_eq = 0.0
     equips_out: list[dict] = []
     for row in edited_list:
@@ -178,7 +211,7 @@ def _process_eq_edited_rows(edited_list: list) -> tuple[float, list[dict]]:
 
 
 def _render_indir_equips_section(equips: list, project_id: str, cat_id: str) -> tuple[float, list[dict]]:
-    """Renders equipment table for one indirect category. Returns (total_eq, equips_out)."""
+    """Render equipment table for one indirect category. Returns (total_eq, equips_out)."""
     st.caption("**Equipamentos**")
     edited_eq = st.data_editor(
         _build_eq_seed_list(equips),
@@ -201,7 +234,7 @@ def _render_indir_equips_section(equips: list, project_id: str, cat_id: str) -> 
 
 
 def _render_indir_verbas_section(verbas: list, project_id: str, cat_id: str) -> tuple[float, list[dict]]:
-    """Renders verbas table for one indirect category. Returns (total_verbas, verbas_out)."""
+    """Render allowances table for one indirect category. Returns (total_verbas, verbas_out)."""
     st.caption("**Verbas mensais**")
     verbas_seed = [{"Descrição": n, "R$/mês": v} for n, v in verbas]
     edited_verbas = st.data_editor(
@@ -234,7 +267,10 @@ def _render_indir_verbas_section(verbas: list, project_id: str, cat_id: str) -> 
 def _render_indir_cat_equipe(
     cat_id: str, cat_label: str, equipes: dict, encargos: dict, regimes: list, project_id: str
 ) -> tuple[dict, float]:
-    """Renders one indirect support category (ADM/TOP/LAB/QSMS). Returns (entry, total)."""
+    """Render one indirect support category (ADM/TOP/LAB/QSMS) with sub-tabs.
+
+    Returns (entry dict with categoria/driver/costs, total_monthly).
+    """
     eq = equipes.get(cat_id) or {}
     mo_pessoas = eq.get("mao_obra") or []
     equips = _indir_equips_list(eq.get("equipamentos"))
@@ -256,7 +292,10 @@ def _render_indir_cat_equipe(
 
 
 def _render_indir_mob_section(equipes: dict, ind_det: dict, project_id: str) -> dict:
-    """Renders the MOB/DESMOB tab content. Returns the entry dict."""
+    """Render MOB/DESMOB (mobilization) tab with transport and personnel lowering costs.
+
+    Returns entry dict with categoria=MOB, driver=one_time, custo_fixo_total.
+    """
     eq = equipes.get("MOB") or {}
     det = ind_det.get("MOB") or {}
     custo_mob_ref = float(eq.get("custo_total") or det.get("custo_fixo_total") or 0)
@@ -304,7 +343,7 @@ def _render_indir_mob_section(equipes: dict, ind_det: dict, project_id: str) -> 
 
 
 def _fill_indir_totals_placeholder(placeholder: DeltaGenerator, totals_by_cat: dict) -> None:
-    """Fills the totals bar at top of equipe tab."""
+    """Update metrics bar at top with totals per category, or empty if empty dict."""
     if totals_by_cat:
         with placeholder.container():
             cols_t = st.columns(len(totals_by_cat))
@@ -318,7 +357,7 @@ def _fill_indir_totals_placeholder(placeholder: DeltaGenerator, totals_by_cat: d
 def _fallback_indiretos_from_overrides_if_empty(
     equipes: dict, ind_det: dict, base_url: str, project_id: str, actor: str
 ) -> tuple[dict, dict]:
-    """Se equipes/detalhamento vierem vazios da referência, tenta hidratar a partir de overrides salvos."""
+    """If equipes/detalhamento empty, try hydrating from saved overrides (skill 07)."""
     if equipes or ind_det:
         return equipes, ind_det
     equipes_fb, ind_det_fb = _hydrate_indiretos_from_overrides(base_url, project_id, actor)
@@ -329,7 +368,11 @@ def _fallback_indiretos_from_overrides_if_empty(
 
 
 def _load_indiretos_reference_state(base_url: str, project_id: str, actor: str) -> tuple[dict, dict, dict[str, float]]:
-    """Busca a referência de benchmark e resolve equipes/detalhamento/encargos dos indiretos (com fallbacks)."""
+    """Load indirect costs reference state from benchmark-reference API.
+
+    Returns: (equipes_indexed_by_cat, indiretos_detalhamento, encargos_by_regime).
+    Includes fallback to overrides if reference empty.
+    """
     try:
         reference = api_call(
             method="GET", path=f"/api/projects/{project_id}/benchmark-reference", base_url=base_url, actor=actor
@@ -355,7 +398,10 @@ def _load_indiretos_reference_state(base_url: str, project_id: str, actor: str) 
 
 
 def _render_indir_equipe_tab(equipes: dict, encargos: dict[str, float], project_id: str) -> list[dict]:
-    """Renderiza a aba de Equipe de Apoio e retorna as entradas de categoria editadas."""
+    """Render Equipe de Apoio tab with all permanent categories (ADM/TOP/LAB/QSMS).
+
+    Returns list of entry dicts ready for save.
+    """
     st.caption(
         "Salário base: valor contratado. "
         "Custo unitário = salário × (1 + encargos). "
@@ -373,7 +419,10 @@ def _render_indir_equipe_tab(equipes: dict, encargos: dict[str, float], project_
 
 
 def _save_indiretos_config(base_url: str, project_id: str, actor: str, cats_config_edited: list[dict]) -> None:
-    """Renderiza o botão de salvar e persiste a configuração de categorias de indiretos."""
+    """Render save button and persist indirect costs configuration to project overrides.
+
+    Posts to /api/projects/{id}/overrides with skill_id=06-resultado-financeiro.
+    """
     if not st.button(
         "Salvar custos indiretos", key=f"save-indir-{project_id}", use_container_width=True, type="primary"
     ):
@@ -392,7 +441,10 @@ def _save_indiretos_config(base_url: str, project_id: str, actor: str, cats_conf
 
 
 def render_indiretos_config(base_url: str, project_id: str, actor: str) -> None:
-    """Editor de custos indiretos — composição por categoria com regime trabalhista editável."""
+    """Render main indirect costs editor UI with Equipe de Apoio and MOB tabs.
+
+    Integrates: reference loading, category tabs, save logic.
+    """
     equipes, ind_det, encargos = _load_indiretos_reference_state(base_url, project_id, actor)
     tab_equipe, tab_mob = st.tabs(["👥 Equipe de Apoio", "🚛 Mobilização/desmobilização"])
     cats_config_edited: list[dict] = []

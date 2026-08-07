@@ -36,6 +36,11 @@ class _CreateProjectRequestLike(Protocol):
 
 
 def _try_enrich_cpu_with_prod(cpu: dict[str, Any], prod_lkp: dict[str, Any]) -> dict[str, Any]:
+    """Enrich CPU with production template defaults (producao_horaria, equipe).
+
+    Resolves CPU.producao_id_ref in prod_lkp, merges missing fields from template.
+    Returns enriched CPU dict (copy if modified, original if not).
+    """
     if not isinstance(cpu, dict):
         return cpu
     ref = cpu.get("producao_id_ref")
@@ -56,11 +61,20 @@ def _try_enrich_cpu_with_prod(cpu: dict[str, Any], prod_lkp: dict[str, Any]) -> 
 
 
 def _build_joined_cpus(cpus_snap: list[Any], prods: list[Any]) -> list[Any]:
+    """Join CPU snapshot with production templates (enrichment for hourly rate + equipe).
+
+    Maps prods by id, applies _try_enrich_cpu_with_prod to each CPU.
+    """
     prod_lkp = {p["id"]: p for p in prods if isinstance(p, dict) and "id" in p}
     return [_try_enrich_cpu_with_prod(cpu, prod_lkp) for cpu in cpus_snap]
 
 
 def _build_catalog_from_snapshot(cat: dict[str, Any]) -> dict[str, Any]:
+    """Build composite catalog dict from snapshot (CPUs + insumos + productions).
+
+    Enriches CPUs with production templates, preserves insumos and produtividades.
+    Returns flattened dict ready for use.
+    """
     cpus_snap = cat.get("cpus") or []
     prods = cat.get("produtividades") or cat.get("producoes", [])
     catalog: dict[str, Any] = {}
@@ -77,7 +91,11 @@ def _build_catalog_from_snapshot(cat: dict[str, Any]) -> dict[str, Any]:
 
 
 def _load_resolved_catalog_items(project: Any) -> dict[str, Any] | None:
-    """ADR-066 Fase 8: catálogo 'sob demanda', filtrado por CPU usada na EAP, persistido por versão."""
+    """Load catalog from project.load_resolved_catalog() (ADR-066 Phase 8).
+
+    On-demand, version-specific catalog (filtered by CPU usage in EAP).
+    Returns None if unavailable or empty.
+    """
     load_resolved = getattr(project, "load_resolved_catalog", None)
     if not callable(load_resolved):
         return None
@@ -92,7 +110,10 @@ def _load_resolved_catalog_items(project: Any) -> dict[str, Any] | None:
 
 
 def _load_snapshot_catalog(project: Any) -> dict[str, Any] | None:
-    """Retrocompat: projetos antigos que ainda têm o snapshot integral em disco."""
+    """Load legacy snapshot catalog from disk (retrocompat for old projects).
+
+    Reads catalogo-*.json from snapshots/ dir, returns latest.
+    """
     try:
         import json as _json2
         from pathlib import Path
@@ -107,6 +128,7 @@ def _load_snapshot_catalog(project: Any) -> dict[str, Any] | None:
 
 
 def _load_cpus_from_catalog_dir(cat_dir: Path) -> list[Any]:
+    """Load CPUs from catalog directory (cpus/{codigo}.json or cpus.json aggregate)."""
     import json
 
     cpu_dir = cat_dir / "cpus"
@@ -120,6 +142,7 @@ def _load_cpus_from_catalog_dir(cat_dir: Path) -> list[Any]:
 
 
 def _load_insumos_from_catalog_dir(cat_dir: Path) -> list[Any]:
+    """Load insumos from catalog directory (insumos/{tipo}/{codigo}.json files)."""
     import json
 
     insumos: list[Any] = []
@@ -132,6 +155,7 @@ def _load_insumos_from_catalog_dir(cat_dir: Path) -> list[Any]:
 
 
 def _load_producoes_from_catalog_dir(cat_dir: Path) -> list[Any]:
+    """Load production templates from catalog directory (producoes/ or produtividades/)."""
     import json
 
     producoes: list[Any] = []
@@ -143,9 +167,11 @@ def _load_producoes_from_catalog_dir(cat_dir: Path) -> list[Any]:
 
 
 def _load_live_catalog(project: Any) -> dict[str, Any] | None:
-    """ADR-066 Fase 8: sem snapshot integral nem resolved_catalog.json, monta o catálogo a
-    partir do master ao vivo (config/catalogos/{catalogo_base}/) — a mesma fonte que
-    resolve_cpu() já usa para resolução sob demanda por CPU."""
+    """Load live master catalog from config/catalogos/{catalogo_base} (ADR-066 Phase 8).
+
+    Fallback when no snapshot or resolved_catalog available. Sources resolve_cpu() uses.
+    Returns None if unavailable or empty.
+    """
     try:
         from pathlib import Path
 
@@ -167,12 +193,19 @@ def _load_live_catalog(project: Any) -> dict[str, Any] | None:
 
 
 def _resolve_benchmark_catalog_source(project: Any) -> dict[str, Any] | None:
-    """Ordem de preferência (ADR-066 Fase 8): resolved_catalog.json (sob demanda, por
-    versão) → snapshot integral legado (retrocompat) → catálogo master ao vivo."""
+    """Resolve catalog source in priority order (ADR-066 Phase 8).
+
+    Priority: resolved_catalog.json (on-demand) → snapshot (legacy) → live master.
+    Returns None if none available.
+    """
     return _load_resolved_catalog_items(project) or _load_snapshot_catalog(project) or _load_live_catalog(project)
 
 
 def _enrich_payload_catalog(payload: dict[str, Any], project: Any) -> None:
+    """Enrich benchmark_reference payload with catalog (CPUs + insumos) if available.
+
+    Resolves source via _resolve_benchmark_catalog_source, persists to project.
+    """
     try:
         cat = _resolve_benchmark_catalog_source(project)
         if cat:
@@ -185,6 +218,7 @@ def _enrich_payload_catalog(payload: dict[str, Any], project: Any) -> None:
 
 
 def _enrich_payload_encargos(payload: dict[str, Any], project: Any) -> None:
+    """Enrich payload with social charge rates (PJ, CLT-mensalista, CLT-horista) from snapshot."""
     try:
         import json as _json
 
@@ -203,6 +237,11 @@ def _enrich_payload_encargos(payload: dict[str, Any], project: Any) -> None:
 
 
 def _compute_bdi_for_categoria(comps: Any) -> float | None:
+    """Compute BDI factor from component dict (ac, df, r, cr, lucro, impostos).
+
+    Formula: ((1 + ac + df + r + cr + lucro) / (1 - impostos)) - 1.
+    Returns None if missing ac field or t >= 1 (undefined).
+    """
     if not isinstance(comps, dict) or "ac" not in comps:
         return None
     ac = float(comps.get("ac", 0))
@@ -215,6 +254,11 @@ def _compute_bdi_for_categoria(comps: Any) -> float | None:
 
 
 def _compute_flat_bdi(tabela_bdi: dict[str, Any]) -> dict[str, float]:
+    """Flatten BDI table (categoria -> components) to single-value dict.
+
+    Computes BDI per category via _compute_bdi_for_categoria, includes fallbacks
+    for equipamentos and servicos (ADR-023 §D3 revised).
+    """
     flat: dict[str, float] = {}
     for cat, comps in tabela_bdi.items():
         bdi = _compute_bdi_for_categoria(comps)
@@ -233,6 +277,7 @@ def _compute_flat_bdi(tabela_bdi: dict[str, Any]) -> dict[str, float]:
 
 
 def _enrich_payload_bdi(payload: dict[str, Any]) -> None:
+    """Enrich payload with computed BDI (bdi_aplicado) from skill 06 tabela_bdi."""
     try:
         s6 = (payload.get("skill_inputs") or {}).get("06-resultado-financeiro") or {}  # NEP-041 F4
         tabela_bdi = s6.get("tabela_bdi") or {}
@@ -246,7 +291,7 @@ def _enrich_payload_bdi(payload: dict[str, Any]) -> None:
 
 
 def _cp_build_meta_kwargs(inputs_escopo: dict[str, Any], req: _CreateProjectRequestLike) -> dict[str, Any]:
-    """Extracts nested coordenadas/regime_trabalho kwargs with or-fallback."""
+    """Extract nested coordenadas/regime_trabalho with or-fallback from request."""
     return {
         "coordenadas_lat": (inputs_escopo.get("coordenadas") or {}).get("lat", req.coordenadas_lat),
         "coordenadas_lng": (inputs_escopo.get("coordenadas") or {}).get("lng", req.coordenadas_lng),
@@ -258,7 +303,7 @@ def _cp_build_meta_kwargs(inputs_escopo: dict[str, Any], req: _CreateProjectRequ
 def _cp_embed_catalog_if_needed(
     project: ProjectHandle, benchmark_reference: dict[str, Any] | None, files: ProjectFiles
 ) -> None:
-    """Embeds catalog snapshot into ref_to_save if not already present, then saves."""
+    """Embed catalog snapshot into benchmark_reference if not already present, then save."""
     if benchmark_reference is None:
         return
     ref_to_save = dict(benchmark_reference)
@@ -275,7 +320,10 @@ def _cp_embed_catalog_if_needed(
 
 
 def _resolve_catalogo_base_from_context(svc: ProjectServiceHost, contexto_id: str) -> str | None:
-    """Resolve canonical catalog id from current context version metadata."""
+    """Resolve canonical catalog_id from contexto version metadata (ADR-062).
+
+    Falls back to contexto_id if versions unavailable.
+    """
     try:
         versions = svc.list_contexto_versions(contexto_id)
     except Exception:
@@ -295,7 +343,7 @@ def _cp_save_perfil_context(
     perfil_id: str | None,
     perfil_version: str | None,
 ) -> None:
-    """Persists ADR-062 context/perfil versions into meta.json if any are set."""
+    """Persist ADR-062 context/perfil versions to project meta.json (if any set)."""
     if not (contexto_version or perfil_id or perfil_version):
         return
     meta = dict(project.meta)
@@ -309,6 +357,7 @@ def _cp_save_perfil_context(
 
 
 def _sort_versions(versions: list) -> list:
+    """Sort version strings (v1, v2, ...) by numeric suffix, non-versioned last."""
     return sorted(
         versions,
         key=lambda item: int(item[1:]) if item.startswith("v") and item[1:].isdigit() else -1,
@@ -316,6 +365,7 @@ def _sort_versions(versions: list) -> list:
 
 
 def _count_orphaned_runs(runs: list, version: str) -> int:
+    """Count runs that reference deleted version as base or current version."""
     count = 0
     if not isinstance(runs, list):
         return count
@@ -339,6 +389,11 @@ def _ps_create_project(
     perfil_id: str | None = None,  # ADR-062
     perfil_version: str | None = None,  # ADR-062
 ) -> dict[str, Any]:
+    """Create new project with versioning, skill inputs, benchmark reference, and audit trail.
+
+    Resolves catalogo_base from context, creates initial version, writes artifacts,
+    enriches benchmark_reference with catalog/encargos/BDI, logs action.
+    """
     project_name = req.nome or inputs_escopo.get("nome") or f"Prototype {benchmark_slug or 'Project'}"
     # catalogo_base drives project-level CPU resolution and must be a real catalog id.
     # benchmark_slug identifies a dataset/template and is not necessarily a catalog id.
@@ -385,6 +440,11 @@ def _ps_create_project(
 def _ps_upsert_eap(
     svc: ProjectServiceHost, project_id: str, eap_items: list[dict[str, Any]], actor: str = "system"
 ) -> dict[str, Any]:
+    """Upsert EAP items (work breakdown structure) with DAG validation (ADR-063).
+
+    Validates EapItem schema, checks DAG predecessor constraints, persists, updates status_eap.
+    Returns new status (RASCUNHO_PRONTO if all CPUs set, else RASCUNHO).
+    """
     from concilium.domain.models.canonical import EapItem
     from concilium.domain.services.eap_dag_validator import validar_dag_predecessores
 
@@ -419,6 +479,10 @@ def _ps_upsert_eap(
 
 
 def _ps_delete_version(svc: ProjectServiceHost, project_id: str, version: str, actor: str = "system") -> dict[str, Any]:
+    """Delete project version with cascade updates (current_version, approved_versions, orphaned runs).
+
+    Validates deletion constraints, removes version tree, updates meta, counts orphaned runs.
+    """
     from concilium.domain.services.versioning import validate_delete_version
 
     project = svc._repository.get_project(project_id)
@@ -451,6 +515,7 @@ def _ps_delete_version(svc: ProjectServiceHost, project_id: str, version: str, a
 
 
 def _ps_delete_project(svc: ProjectServiceHost, project_id: str, actor: str = "system") -> dict[str, Any]:
+    """Delete entire project directory (irrevocable)."""
     import shutil
 
     project = svc._repository.get_project(project_id)

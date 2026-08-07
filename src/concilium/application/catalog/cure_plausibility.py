@@ -73,22 +73,29 @@ ALPHA_MAX = 1.5  # se percentual_encargos_local > ALPHA_MAX → provavelmente ar
 
 
 def _now_iso() -> str:
+    """Return current UTC time as ISO date string (YYYY-MM-DD)."""
     return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
 def _norm(text: str) -> str:
+    """Normalize text: NFD decompose, remove diacritics, lowercase, collapse whitespace."""
     t = unicodedata.normalize("NFD", str(text).lower())
     t = "".join(c for c in t if unicodedata.category(c) != "Mn")
     return re.sub(r"\s+", " ", t).strip()
 
 
 def _is_estagiario(ins: dict) -> bool:
+    """Check if insumo (input) is an internship role (bolsa-auxílio, exempt from SMM CLT).
+
+    Searches normalized descricao and codigo for ESTAGIARIO_KEYWORDS.
+    """
     desc = _norm(ins.get("descricao", ""))
     cod = _norm(ins.get("codigo", ""))
     return any(k in desc or k in cod for k in ESTAGIARIO_KEYWORDS)
 
 
 def _horas_mes(ins: dict) -> float:
+    """Extract horas_mes from insumo, fallback to HORAS_MES_PADRAO (176 CLT)."""
     attrs = ins.get("atributos_especificos") or {}
     h = attrs.get("horas_mes")
     try:
@@ -116,7 +123,7 @@ def _preco_hora(ins: dict) -> float:
 
 
 def _write_blob(catalog_root: Path, relative: str, content: bytes) -> None:
-    """Writes a catalog blob via the configured storage backend."""
+    """Write catalog blob via filesystem or remote backend (configured by catalog_storage_backend)."""
     from concilium.application.runtime.mixins._catalog_storage import (
         catalog_storage_backend,
         gravar_catalogo_blob,
@@ -131,7 +138,7 @@ def _write_blob(catalog_root: Path, relative: str, content: bytes) -> None:
 
 
 def _read_blob(catalog_root: Path, relative: str) -> bytes:
-    """Reads a catalog blob via the configured storage backend."""
+    """Read catalog blob via filesystem or remote backend (configured)."""
     from concilium.application.runtime.mixins._catalog_storage import (
         catalog_storage_backend,
         ler_catalogo_blob,
@@ -143,7 +150,7 @@ def _read_blob(catalog_root: Path, relative: str) -> bytes:
 
 
 def _delete_blob(catalog_root: Path, relative: str) -> bool:
-    """Removes a catalog blob via the configured storage backend. Returns True if deleted."""
+    """Remove catalog blob via filesystem or remote backend. Returns True if deleted."""
     from concilium.application.runtime.mixins._catalog_storage import (
         catalog_storage_backend,
         deletar_catalogo_blob,
@@ -160,8 +167,10 @@ def _delete_blob(catalog_root: Path, relative: str) -> bool:
 
 
 def _caminho_insumo_individual(catalog_root: Path, tipo: str, codigo: str) -> Path:
-    """Resolve o arquivo de um insumo — existente (rglob, não presume nome de
-    subpasta) ou, se novo, a convenção canônica insumos/{tipo_lower}/{codigo}.json."""
+    """Resolve path for individual insumo file (existing via rglob, or canonical new path).
+
+    Priority: find existing insumos/{*}/{codigo}.json, else default insumos/{tipo}/{codigo}.json.
+    """
     insumos_dir = catalog_root / "insumos"
     for existente in insumos_dir.rglob(f"{codigo}.json"):
         return existente
@@ -169,8 +178,11 @@ def _caminho_insumo_individual(catalog_root: Path, tipo: str, codigo: str) -> Pa
 
 
 def _caminho_producao_individual(catalog_root: Path, producao_id: str) -> Path:
-    """producoes/ e produtividades/ coexistem (legado) — usa o que já existir,
-    default producoes/ para item novo."""
+    """Resolve path for individual producao/produtividade file.
+
+    Checks both producoes/ and produtividades/ directories (legacy coexistence),
+    defaults to producoes/ for new items.
+    """
     for sub in ("producoes", "produtividades"):
         candidato = catalog_root / sub / f"{producao_id}.json"
         if candidato.exists():
@@ -181,11 +193,11 @@ def _caminho_producao_individual(catalog_root: Path, producao_id: str) -> Path:
 def _persistir_insumos_individuais(
     catalog_root: Path, insumos_originais: list[dict], insumos_finais: list[dict], removidos: set[str]
 ) -> tuple[int, int]:
-    """Escreve cada insumo alterado no arquivo individual — nunca no bundle (ver
-    docstring do módulo). Remove o arquivo dos insumos deletados (duplicata
-    fundida) — sem precedente no repo para isso; `_persistir_merge_em_arquivos_
-    individuais` da ADR-177 não cobre remoção porque `mesclar_catalogo` nunca
-    remove entidade, só `cure_duplicatas` remove."""
+    """Persist individual insumo files and remove deleted entries.
+
+    Writes modified insumos to individual files (never bundle). Deletes removed files.
+    Returns (count_written, count_deleted).
+    """
     originais_by_code = {i["codigo"]: i for i in insumos_originais if i.get("codigo")}
 
     escritos = 0
@@ -212,6 +224,7 @@ def _persistir_insumos_individuais(
 def _persistir_producoes_individuais(
     catalog_root: Path, producoes_originais: list[dict], producoes_finais: list[dict]
 ) -> int:
+    """Persist individual production/productivity files. Returns count written."""
     originais_by_id = {
         p.get("id", p.get("codigo", "")): p
         for p in producoes_originais
@@ -235,7 +248,10 @@ def _cte_process_estrutura_items(
     report: CureReport,
     apply: bool,
 ) -> bool:
-    """Processa items de mao_de_obra de uma estrutura. Retorna True se mudou."""
+    """Update mao_de_obra funcao_id references in estrutura per dup_map.
+
+    Returns True if any changes made (used for dirty-flag). Logs updates to report.
+    """
     mudou = False
     for item in estrutura.get("mao_de_obra") or []:
         antigo = item.get("funcao_id")
@@ -253,10 +269,11 @@ def _cte_process_estrutura_items(
 def _cure_templates_estruturas_indiretas(
     catalog_root: Path, dup_map: dict[str, str], report: CureReport, apply: bool
 ) -> None:
-    """Atualiza funcao_id em templates.json/estruturas_indiretas conforme dup_map
-    — superfície de referência que producoes/produtividades NÃO cobre (achado
-    real: MO-AUX-ADM referenciado 3x em estruturas_indiretas, nunca visto por
-    _update_producoes_funcao_ids, ficaria órfão após a remoção da duplicata)."""
+    """Update funcao_id in templates.json/estruturas_indiretas per dup_map.
+
+    Handles indirect structure references not covered by _update_producoes_funcao_ids.
+    Preserves CRLF vs. LF line endings (mendeslobo convention).
+    """
     if not dup_map:
         return
     try:
@@ -278,18 +295,22 @@ def _cure_templates_estruturas_indiretas(
 
 
 class CureReport:
+    """Accumulator for cure actions (fixed, manual review, skipped)."""
     def __init__(self) -> None:
         self.fixed: list[str] = []
         self.manual: list[str] = []
         self.skipped: list[str] = []
 
     def add_fixed(self, msg: str) -> None:
+        """Log a fixed (automated correction) item."""
         self.fixed.append(msg)
 
     def add_manual(self, msg: str) -> None:
+        """Log a manual review item (human decision required)."""
         self.manual.append(msg)
 
     def add_skipped(self, msg: str) -> None:
+        """Log a skipped item (already correct or non-applicable)."""
         self.skipped.append(msg)
 
 
@@ -297,15 +318,10 @@ class CureReport:
 
 
 def _cure_encargos_alpha(ins: dict, cod: str, attrs: dict, report: CureReport, apply: bool) -> None:
-    """a) percentual_encargos_local armazenado como α (> 1.5) em vez de α-1.
+    """Fix percentual_encargos_local stored as α (> 1.5) instead of α-1.
 
-    `attrs` chega por referência de `ins["atributos_especificos"]` (não copiado
-    em `cure_erros_fisicos`) — mutar em-place aliasaria de volta pro insumo
-    ORIGINAL (mesmo objeto dict), fazendo `_persistir_insumos_individuais`
-    (que compara por igualdade contra o original) concluir "nada mudou" e
-    NUNCA escrever o fix em disco. Achado real: MO-OPERADOR-DE-MOTOSCRA teve o
-    α corrigido em memória mas nunca persistido. Copia antes de mutar, mesmo
-    padrão de `_cure_locacao_mensal_item`."""
+    Mutates copy of attrs to avoid aliasing. See docstring above for context.
+    """
     enc = attrs.get("percentual_encargos_local")
     if enc is None:
         return
@@ -326,7 +342,10 @@ def _cure_encargos_alpha(ins: dict, cod: str, attrs: dict, report: CureReport, a
 
 
 def _cure_preco_minimo(ins: dict, cod: str, report: CureReport, apply: bool) -> None:
-    """b) preco_unitario abaixo do mínimo mensal (ignora estagiários e unidade="h")."""
+    """Fix preco_unitario below legal minimum (ignores interns, unidade='h').
+
+    Attempts correction via RFI reference table, else reports for manual review.
+    """
     preco = float(ins.get("preco_unitario") or 0)
     preco_h = _preco_hora(ins)
 
@@ -352,6 +371,10 @@ def _cure_preco_minimo(ins: dict, cod: str, report: CureReport, apply: bool) -> 
 
 
 def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> list[dict]:
+    """Apply physical error corrections (encargos alpha, preco_minimo) to MAO_OBRA insumos.
+
+    Returns modified copy if apply, else original list.
+    """
     changed = [dict(i) for i in insumos]
 
     for ins in changed:
@@ -371,6 +394,7 @@ def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> 
 
 
 def _eh_codigo_p(codigo: str) -> bool:
+    """Check if codigo matches P#### or MO-P#### pattern (legacy/duplicate format)."""
     return bool(re.match(r"^(MO-P|P)\d+$", codigo))
 
 
@@ -390,6 +414,10 @@ _RATIO_ENCARGOS_CONFIRMADO = (1.9, 2.2)
 
 
 def _razao_preco_liberada_para_fusao(pa: float, pb: float) -> bool:
+    """Check if price ratio between two inputs is within approved merge tolerance.
+
+    Approved ranges: identical (≤1.05) or confirmed overhead pattern (1.9-2.2).
+    """
     if pa <= 0 or pb <= 0:
         return False
     ratio = max(pa, pb) / min(pa, pb)
@@ -400,14 +428,10 @@ def _razao_preco_liberada_para_fusao(pa: float, pb: float) -> bool:
 
 
 def _escolher_canonico(codes: list[str], ins_by_code: dict[str, dict]) -> str:
-    """Canônico do cluster: prefere o MENOR preco_unitario primeiro — para
-    unidade="mes", pu_calculator aplica seu próprio α por cima (ADR-009); manter
-    o valor já-com-encargos (o lado "P####" tipicamente importado via AGIS)
-    causaria dupla contagem de encargos na cadeia de custo. Empate de preço
-    (caso comum do dedup exato original, onde ambos os lados já tinham o mesmo
-    valor): prefere código que não seja P####/MO-P####, critério original.
-    `codes` é ordenado antes do min() para determinismo (independe de ordem de
-    iteração de set/dict)."""
+    """Select canonical code from cluster: prefers minimum preco_unitario, then non-P#### codes.
+
+    Deterministic ordering (sorts before min) independent of dict iteration order.
+    """
 
     def chave(c: str) -> tuple[float, int]:
         preco = float(ins_by_code[c].get("preco_unitario") or 0)
@@ -421,7 +445,7 @@ def _process_exact_dup_groups(
     parent: dict[str, str],
     participantes: set[str],
 ) -> None:
-    """Processa grupos com match exato de (descrição normalizada, preço)."""
+    """Process clusters with exact match (normalized descricao + preco) via union-find."""
     def union(a: str, b: str) -> None:
         def find(x: str) -> str:
             parent.setdefault(x, x)
@@ -446,7 +470,7 @@ def _process_exact_dup_groups(
 
 
 def _psc_calc_preco_ratio(pa: float, pb: float) -> float | None:
-    """Calcula razão de preço entre dois valores."""
+    """Calculate price ratio between two values. Returns None if either <= 0."""
     return max(pa, pb) / min(pa, pb) if pa > 0 and pb > 0 else None
 
 
@@ -454,7 +478,7 @@ def _psc_build_rejection_motivo(
     m: object,  # tipo Match do similarity module
     ratio: float | None,
 ) -> str:
-    """Constrói motivo de rejeição para um par de insumos."""
+    """Build human-readable rejection reason for insumo pair (low confidence or price out of range)."""
     if m.classificacao == "revisar":
         return f"revisar, score={m.score:.2f}"
     return (
@@ -470,7 +494,10 @@ def _process_similar_candidates(
     participantes: set[str],
     report: CureReport | None,
 ) -> None:
-    """Processa candidatos similares (ADR-179) com report de rejeitados."""
+    """Process similarity-based candidates (ADR-179) with union-find clustering.
+
+    Merges only if price ratio within approved ranges, logs rejections to report.
+    """
     def find(x: str) -> str:
         parent.setdefault(x, x)
         while parent[x] != x:
@@ -511,7 +538,10 @@ def _bdmfc_process_candidate(
     dup_map: dict[str, str],
     report: CureReport | None,
 ) -> None:
-    """Processa um candidate dentro de um cluster, comparando com canonical."""
+    """Process single candidate against cluster canonical (price ratio validation).
+
+    Adds to dup_map if ratio approved, else logs to report.manual.
+    """
     preco_c = float(ins_by_code[c].get("preco_unitario") or 0)
     preco_canon = float(ins_by_code[canonical].get("preco_unitario") or 0)
 
@@ -535,7 +565,10 @@ def _build_dup_map_from_clusters(
     parent: dict[str, str],
     report: CureReport | None,
 ) -> dict[str, str]:
-    """Constrói dup_map a partir de clusters, com revalidação transitiva."""
+    """Build dup_map from union-find clusters with transitive revalidation.
+
+    Returns {codigo: canonical_code} dict for merge operation.
+    """
     def find(x: str) -> str:
         parent.setdefault(x, x)
         while parent[x] != x:
@@ -560,17 +593,11 @@ def _build_dup_map_from_clusters(
 
 
 def _build_dup_map(insumos: list[dict], report: CureReport | None = None) -> dict[str, str]:
-    """Retorna {codigo: canonical_code} para todos os duplicados detectados.
+    """Build duplicate map from exact matches + similarity candidates (ADR-179).
 
-    Duas fontes, combinadas por union-find (ADR-179):
-    (a) match exato de (descrição normalizada, preço) — comportamento original.
-    (b) similarity.find_candidate_duplicates, só classificacao="duplicata_provavel"
-        (score ≥ 0,80) — pega pares como P0058/MO-SALA-TEC que (a) nunca captura
-        porque o preço difere por um fator de encargos, não é igual.
-
-    classificacao="revisar" NÃO é fundido automaticamente (fica para decisão
-    humana) — se `report` for passado, cada par de baixa confiança é listado em
-    report.manual, para não desaparecer silenciosamente.
+    Returns {codigo: canonical_code}. Combines two sources via union-find:
+    (a) Exact (normalized descricao, preco), (b) similarity score >= 0.80.
+    Rejects low-confidence and transitive price mismatches to report.manual.
     """
     mo = [i for i in insumos if i.get("tipo") == "MAO_OBRA"]
     if not mo:
@@ -624,7 +651,10 @@ def _remove_duplicated_insumos(
 def _update_producao_funcao_ids(
     prod: dict, dup_map: dict[str, str], report: CureReport, apply: bool
 ) -> tuple[dict, int]:
-    """Atualiza funcao_id de uma produção conforme dup_map; retorna (produção, refs_atualizadas)."""
+    """Update funcao_id references in production/productivity template per dup_map.
+
+    Returns (updated_prod, refs_updated_count).
+    """
     p = dict(prod)
     equipe = dict(p.get("composicao_padrao_equipe") or p.get("equipe") or {})
     changed_equipe = False
@@ -653,7 +683,10 @@ def _update_producao_funcao_ids(
 def _update_producoes_funcao_ids(
     producoes: list[dict], dup_map: dict[str, str], report: CureReport, apply: bool
 ) -> list[dict]:
-    """Atualiza funcao_id nas producoes para todos os itens em dup_map."""
+    """Update funcao_id references in all productions per dup_map.
+
+    Returns updated_producoes (or original if not apply).
+    """
     updated_prods: list[dict] = []
     refs_updated = 0
     for prod in producoes:
@@ -673,10 +706,11 @@ def cure_duplicatas(
     report: CureReport,
     apply: bool,
 ) -> tuple[list[dict], list[dict], dict[str, str]]:
-    """Remove duplicados (match exato + similaridade ADR-179), adiciona
-    codigo_referencia_externa, atualiza producoes. Retorna também o dup_map —
-    quem chama precisa dele para atualizar outras superfícies de referência
-    (templates.json/estruturas_indiretas, que producoes não cobre)."""
+    """Remove duplicates (exact + similarity ADR-179), merge references.
+
+    Adds codigo_referencia_externa to canonical, updates production funcao_id refs.
+    Returns (updated_insumos, updated_producoes, dup_map).
+    """
     dup_map = _build_dup_map(insumos, report)
 
     if not dup_map:
@@ -696,7 +730,10 @@ def cure_duplicatas(
 
 
 def cure_stale_rfi(insumos: list[dict], report: CureReport, apply: bool) -> list[dict]:
-    """Para insumos com _rfi_updated_at ou _rfi_imported_at, propaga a data ao campo oficial."""
+    """Propagate RFI import dates (_rfi_updated_at, _rfi_imported_at) to data_referencia_preco.
+
+    Returns updated_insumos (or original if not apply).
+    """
     changed = [dict(i) for i in insumos]
     n = 0
     for ins in changed:
@@ -717,7 +754,10 @@ def cure_stale_rfi(insumos: list[dict], report: CureReport, apply: bool) -> list
 
 
 def _cure_locacao_mensal_item(ins: dict, report: CureReport, apply: bool) -> bool:
-    """Deriva valor_locacao_mensal para um insumo EQUIPAMENTO; retorna True se derivado."""
+    """Derive valor_locacao_mensal for EQUIPAMENTO if missing (preco_unitario * horas_mes).
+
+    Returns True if derived.
+    """
     if ins.get("tipo") != "EQUIPAMENTO":
         return False
     preco_h = float(ins.get("preco_unitario") or 0)
@@ -767,15 +807,19 @@ def _report_insumos_suspeitos(insumos: list[dict], report: CureReport) -> None:
 
 
 def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport) -> None:
-    _report_producoes_sem_composicao(producoes, report)
-    _report_insumos_suspeitos(insumos, report)
+    """Log non-automatable anomalies (productions without composition, suspicious insumo names).
+    """
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Curação cirúrgica de plausibilidade do catálogo")
+    """CLI entry point: Surgical catalog plausibility curation (5 correction steps).
+    
+    Steps: (1) Physical errors, (2) Duplicates, (3) Stale RFI dates, (4) Equipment rental,
+    (5) Manual review items. Dry-run by default, --apply to persist.
+    """
     parser.add_argument("--contexto", required=True, help="ID do contexto (ex: mendeslobo)")
     parser.add_argument("--apply", action="store_true", help="Aplica correções (padrão: dry-run)")
     args = parser.parse_args()
@@ -830,7 +874,10 @@ def main() -> None:
 def _run_cure_steps(
     catalog_root: Path, insumos: list[dict], producoes: list[dict], report: CureReport, apply: bool
 ) -> tuple[list[dict], list[dict]]:
-    print("[1/5] Erros físicos (encargos + salário mínimo) ...")
+    """Execute all 5 cure steps (physical errors, duplicates, stale dates, equipment, manual).
+    
+    Returns (updated_insumos, updated_producoes).
+    """
     insumos = cure_erros_fisicos(insumos, report, apply)
 
     print("[2/5] Duplicatas (P#### → MO-NOME) ...")
@@ -850,7 +897,8 @@ def _run_cure_steps(
 
 
 def _print_cure_report(report: CureReport, apply: bool) -> None:
-    print(f"\n{'─' * 65}")
+    """Print formatted cure report (fixed, manual, skipped items).
+    """
     print(f"  Correções automáticas: {len(report.fixed)}")
     print(f"  Intervenção manual:    {len(report.manual)}")
     print()

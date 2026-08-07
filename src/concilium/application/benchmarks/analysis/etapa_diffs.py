@@ -1,4 +1,22 @@
-"""Gerador de diffs por etapa (Skills 03-06): canonical vs. extracted_references."""
+"""Benchmark forensics: generates stage-by-stage (03-06) discrepancy reports.
+
+Compares canonical project output (v1/vN) against extracted reference data (project
+snapshots, RFI payloads, CTC reconciliation) to identify plausibility anomalies across:
+  - Skill 05 (Equipe e Alocação): team composition, equipment list, cost totals
+  - Skill 04 (Planejamento e Insumos): EAP item prices and cost subtotals
+  - Indiretos (Permanência + MOB/Desmob): indirect cost categories
+  - Skill 06 (Consolidação Resultado): price, costs, margins
+
+Output: benchmark_diffs.json per project with por_etapa[skill_id] discrepancy list
+and severity classification (CRITICA > ALTA > MEDIA > BAIXA) to drive quality gates.
+
+Key forensic patterns:
+  - Null canonical → CRITICA (missing data, not field mismatch)
+  - Mismatch > threshold → severity based on field type
+  - Reference format normalization (legacy/current) for backward compatibility
+
+Used by: CTC audit trail, NEP-041 benchmark forensics reporting
+"""
 
 from __future__ import annotations
 
@@ -11,14 +29,22 @@ _DEFAULT_ROOT = Path(__file__).resolve().parents[5]
 
 
 def _ces03_cost_severidade(can_cost: float, ref_cost: float, pct_diff: float) -> str:
-    """Classifica severidade para diferenca de custo_total em equipes."""
+    """Classify severity level for team cost mismatch.
+
+    Logic: if canonical cost is 0 but reference has value → CRITICA (missing data)
+    else if percentage delta > 10% → ALTA, else MEDIA.
+    """
     if can_cost == 0 and ref_cost > 0:
         return "CRITICA"
     return "ALTA" if pct_diff > 10 else "MEDIA"
 
 
 def _ces03_compare_item(item_id: str, can_eq: dict, ref_eq: dict) -> list:
-    """Compara uma equipe individual e retorna lista de discrepancias."""
+    """Compare one team (equipe) item between canonical and reference versions.
+
+    Checks: funcoes_count, equipamentos_count, custo_total. Returns list of
+    mismatch dicts with campo, delta, severity. Empty list if all match.
+    """
     diffs = []
     can_func_count = len(can_eq.get("funcoes", []))
     ref_func_count = len(ref_eq.get("funcoes", []))
@@ -65,6 +91,11 @@ def _ces03_compare_item(item_id: str, can_eq: dict, ref_eq: dict) -> list:
 
 
 def compare_equipes_skill05(canonical_equipes: list, ref_equipes: list) -> list[dict[str, Any]]:
+    """Compare teams across canonical vs. reference (Skill 05 Equipe e Alocação).
+
+    Matches items by item_id and calls _ces03_compare_item for each pair.
+    Returns flattened list of all discrepancies found.
+    """
     can_dict = {eq["item_id"]: eq for eq in canonical_equipes if eq.get("item_id")}
     ref_dict = {eq.get("item_id"): eq for eq in ref_equipes if eq.get("item_id")}
     discrepancias: list[dict[str, Any]] = []
@@ -76,7 +107,15 @@ def compare_equipes_skill05(canonical_equipes: list, ref_equipes: list) -> list[
 
 
 def _normalize_ref_equipes(ref_equipes_raw: Any) -> list[dict[str, Any]]:
-    """Aceita formatos antigo/novo de iteracao_referencias e normaliza equipes."""
+    """Normalize team data from reference payload (handles legacy/current formats).
+
+    Priority:
+      1. Direct list format
+      2. Nested dict.equipes list (v2 structure)
+      3. dict.detalhes with nested custos → flattened dict with item_id
+
+    Returns empty list if format unrecognized.
+    """
     if isinstance(ref_equipes_raw, list):
         return ref_equipes_raw
     if not isinstance(ref_equipes_raw, dict):
@@ -104,6 +143,11 @@ def _normalize_ref_equipes(ref_equipes_raw: Any) -> list[dict[str, Any]]:
 
 
 def compare_planejamento_skill04(canonical_plan: list, ref_plan: list) -> list[dict[str, Any]]:
+    """Compare planning items across canonical vs. reference (Skill 04).
+
+    Matches by item_id and compares subtotal_sem_bdi (raw cost before BDI).
+    Severity: ALTA if pct_diff > 20%, MEDIA if > 5%, else BAIXA.
+    """
     discrepancias: list[dict[str, Any]] = []
     can_dict = {item["item_id"]: item for item in canonical_plan if item.get("item_id")}
     ref_dict = {item.get("item_id"): item for item in ref_plan if item.get("item_id")}
@@ -131,7 +175,15 @@ def compare_planejamento_skill04(canonical_plan: list, ref_plan: list) -> list[d
 
 
 def _normalize_ref_planejamento(ref_plan_raw: Any) -> list[dict[str, Any]]:
-    """Aceita formatos antigo/novo de iteracao_referencias e normaliza planejamento."""
+    """Normalize planning (EAP) data from reference payload (handles legacy/current).
+
+    Priority:
+      1. Direct list format
+      2. Nested dict.itens_com_precos list
+      3. dict.itens with nested subtotal.sem_bdi → flattened
+
+    Returns empty list if format unrecognized.
+    """
     if isinstance(ref_plan_raw, list):
         return ref_plan_raw
     if not isinstance(ref_plan_raw, dict):
@@ -157,6 +209,11 @@ def _normalize_ref_planejamento(ref_plan_raw: Any) -> list[dict[str, Any]]:
 
 
 def compare_indiretos_skill05(canonical_indir: list, ref_indir: dict) -> list[dict[str, Any]]:
+    """Compare indirect costs by category (ADM, TOP, LAB, QSMS, MOB).
+
+    Sums canonical costs per category and compares against reference.
+    Severity: CRITICA if canonical=0 but ref>0, else ALTA if pct_diff > 15%, else MEDIA.
+    """
     discrepancias: list[dict[str, Any]] = []
     for cat in ("ADM", "TOP", "LAB", "QSMS", "MOB"):
         can_val = sum(i.get("custo_total", 0.0) for i in canonical_indir if i.get("categoria") == cat)
@@ -178,7 +235,15 @@ def compare_indiretos_skill05(canonical_indir: list, ref_indir: dict) -> list[di
 
 
 def _normalize_ref_indiretos(ref_indir_raw: Any) -> dict[str, dict[str, float]]:
-    """Aceita formatos antigo/novo de iteracao_referencias e normaliza indiretos por categoria."""
+    """Normalize indirect costs from reference payload (legacy/current formats).
+
+    Priority:
+      1. Direct dict with keys (ADM, TOP, LAB, QSMS, MOB)
+      2. dict.raw_indiretos list with (categoria, custo_total) → indexed
+      3. dict.raw_indiretos_com_bdi list (same structure, value_key diff)
+
+    Returns dict{categoria: {custo_com_bdi: value}} for each category.
+    """
     if not isinstance(ref_indir_raw, dict):
         return {}
 
@@ -200,6 +265,11 @@ def _normalize_ref_indiretos(ref_indir_raw: Any) -> dict[str, dict[str, float]]:
 
 
 def compare_resultado_skill06(canonical_result: dict, ref_result: dict) -> list[dict[str, Any]]:
+    """Compare financial result metrics (price, costs, margin) across canonical vs. ref.
+
+    Checks: venda (sales), custo (cost), margem_pct via _normalize_resultado_pairs.
+    Severity: CRITICA for venda/custo mismatches, else ALTA.
+    """
     discrepancias: list[dict[str, Any]] = []
     for campo, can_val, ref_val in _normalize_resultado_pairs(canonical_result, ref_result):
         if abs(can_val - ref_val) > 0.01:
@@ -218,6 +288,11 @@ def compare_resultado_skill06(canonical_result: dict, ref_result: dict) -> list[
 
 
 def _to_float(val: Any, keys: tuple[str, ...] = ()) -> float:
+    """Convert value to float with fallback keys for nested extraction.
+
+    If val is numeric, return directly. If dict, try extracting nested keys in order.
+    Default to 0.0 if none found or parse fails.
+    """
     if isinstance(val, (int, float)):
         return float(val)
     if isinstance(val, dict):
@@ -231,7 +306,11 @@ def _to_float(val: Any, keys: tuple[str, ...] = ()) -> float:
 def _normalize_resultado_pairs(
     canonical_result: dict | None, ref_result: dict | None
 ) -> list[tuple[str, float, float]]:
-    """Normaliza campos de resultado em formatos antigo/novo para comparação numérica."""
+    """Extract comparable (field, canonical_value, ref_value) tuples from result dicts.
+
+    Handles nested result formats: benchmark_confronto_ferramenta, benchmark_confronto_referencia.
+    Returns list of (venda, custo, margem_pct) tuples for comparison.
+    """
     canonical_result = canonical_result or {}
     ref_result = ref_result or {}
     can_venda = _to_float(canonical_result.get("venda"), ("total_custo_plus", "total_com_bdi", "total"))
@@ -263,14 +342,15 @@ def _normalize_resultado_pairs(
 
 
 def _summarize(diffs: list[dict], *, label_key: str = "campo") -> str:
-    crit = sum(1 for d in diffs if d.get("severidade") == "CRÃTICA")
+    """Generate severity summary string: 'N CRITICA, N ALTA, N MEDIA'."""
+    crit = sum(1 for d in diffs if d.get("severidade") == "CRÃTICA")
     alta = sum(1 for d in diffs if d.get("severidade") == "ALTA")
     media = sum(1 for d in diffs if d.get("severidade") == "MEDIA")
     return f"{crit} CRITICA, {alta} ALTA, {media} MEDIA"
 
 
 def _find_benchmark_report(slug: str, root: Path) -> Path | None:
-    """Localiza benchmark_report.json: caminho organizado primeiro, fallback histórico."""
+    """Locate benchmark_report.json for a slug (prefers organized paths, fallback legacy)."""
     candidates = [
         root / "benchmarks" / "data" / slug.upper() / "artifacts" / "outputs" / "benchmark_report.json",
         root / "benchmarks" / "data" / slug.upper() / "outputs" / "benchmark_report.json",
@@ -286,7 +366,7 @@ def _find_benchmark_report(slug: str, root: Path) -> Path | None:
 
 
 def _find_reference_payload(slug: str, root: Path) -> Path | None:
-    """Localiza payload de referência em formato legado ou atual (artifacts/inputs)."""
+    """Locate reference payload file (current: artifacts/inputs/referencia.json, legacy formats)."""
     slug_u = slug.upper()
     slug_l = slug.lower()
     candidates = [
@@ -299,6 +379,7 @@ def _find_reference_payload(slug: str, root: Path) -> Path | None:
 
 
 def _load_meta_json(meta_path: Path) -> dict | None:
+    """Safely load meta.json file. Returns None on parse/read errors."""
     try:
         return json.loads(meta_path.read_text(encoding="utf-8"))
     except Exception:
@@ -306,11 +387,13 @@ def _load_meta_json(meta_path: Path) -> dict | None:
 
 
 def _meta_matches_projeto(meta: dict, projeto_nome: str) -> bool:
+    """Check if meta.json nome matches target projeto_nome."""
     nome = str(meta.get("nome") or "")
     return not projeto_nome or projeto_nome in {nome, str(meta.get("id") or "")}
 
 
 def _load_canonical_for_meta(d: Path, meta: dict) -> dict | None:
+    """Load canonical.json from project directory (current_version, fallback v1)."""
     # Prioriza versao ativa; fallback para v1.
     current_version = str(meta.get("current_version") or "v1")
     can_candidates = [
@@ -324,6 +407,7 @@ def _load_canonical_for_meta(d: Path, meta: dict) -> dict | None:
 
 
 def _find_canonical_in_project_dir(d: Path, projeto_nome: str) -> dict | None:
+    """Find and load canonical.json from project directory matching nome."""
     if not d.is_dir():
         return None
     meta_path = d / "meta.json"
@@ -338,7 +422,7 @@ def _find_canonical_in_project_dir(d: Path, projeto_nome: str) -> dict | None:
 
 
 def _gdfb_load_canonical(bench: dict, r: Path) -> dict:
-    """Carrega canonical.json do projeto associado ao benchmark."""
+    """Load canonical.json from project dir matching benchmark slug/nome."""
     projeto_nome = bench.get("projeto") or bench.get("slug", "")
     roots = [r / "benchmarks" / "projetos", r / "projetos"]
     for projects_root in roots:
@@ -352,7 +436,11 @@ def _gdfb_load_canonical(bench: dict, r: Path) -> dict:
 
 
 def _build_indiretos_from_categorias(payload: dict[str, Any], cats: tuple[str, ...]) -> dict[str, dict[str, float]]:
-    """Estrutura AGIS atual: categorias no topo com custos mensais/fixos."""
+    """Build indirect cost dict from AGIS categories (monthly + one-time costs).
+
+    Extracts custo_fixo_mensal_total and custo_fixo_total per category, scales
+    monthly by deadline_weeks / 4.34524 (weeks per month). Returns dict indexed by cat.
+    """
     indiretos_out: dict[str, dict[str, float]] = {}
     semanas = float((payload.get("rcpsp_spec") or {}).get("deadline_weeks") or 0.0)
     # Evita hardcode de constante externa e mantém aproximação estável para benchmark.
@@ -368,7 +456,12 @@ def _build_indiretos_from_categorias(payload: dict[str, Any], cats: tuple[str, .
 
 
 def _normalize_reference_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Normaliza payload de referência para o contrato esperado pelos comparadores de etapa."""
+    """Normalize reference payload to stage-comparer contract.
+
+    If already normalized (has equipes/planejamento/indiretos), return as-is.
+    Else map equipes_detalhadas → equipes, planejamento_detalhado → planejamento,
+    and extract indiretos from categories.
+    """
     if not isinstance(payload, dict):
         return {}
     if any(k in payload for k in ("equipes", "planejamento", "indiretos")):
@@ -389,7 +482,12 @@ def _normalize_reference_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def generate_diffs_for_benchmark(slug: str, root: Path | None = None) -> dict[str, Any] | None:
-    """Gera diffs por etapa (03-06) para um slug de benchmark."""
+    """Generate stage-by-stage diffs (04-06) for a benchmark slug.
+
+    Locates benchmark_report.json and extracted reference payload, loads canonical
+    from associated project, then calls compare_* functions to build por_etapa results.
+    Returns None if files not found.
+    """
     r = root or _DEFAULT_ROOT
     extracted_ref_path = _find_reference_payload(slug, r)
 

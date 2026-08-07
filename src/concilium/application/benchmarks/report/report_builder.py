@@ -1,3 +1,18 @@
+"""Builder for benchmark HTML/JSON reports with quality gate analysis.
+
+Orchestraates benchmark projection, delta computation, risk classification, and
+recommendation generation for stakeholder reporting. Handles:
+  - Ferramenta vs. reference data integration (pricing, costs, margins)
+  - Delta analysis (absolute + percentual) with source attribution
+  - Resource scheduling and peak workload computation
+  - Quality gate classification (S0-S3) with decision logic (APROVADO/BLOQUEADO)
+  - Action table lookup for recommended remediation by severity/metric
+  - RCPSP schedule serialization (makespan, deadlines, resource peaks)
+
+Gate decision logic: worst_severity + critical_metric_check → GO/NOGO determination.
+Used by: ETL pipeline reporting, NEP-041 stakeholder dashboards.
+"""
+
 from __future__ import annotations
 
 import importlib
@@ -8,6 +23,10 @@ from .projection import BenchmarkProjection
 
 
 def _load_inference_service() -> Any:
+    """Dynamically load BenchmarkInferenceService from inference module.
+
+    Raises RuntimeError if module/class unavailable.
+    """
     mod = importlib.import_module("concilium.application.benchmarks.inference")
     svc_cls = getattr(mod, "BenchmarkInferenceService", None)
     if svc_cls is None:
@@ -16,6 +35,11 @@ def _load_inference_service() -> Any:
 
 
 def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProjection) -> None:
+    """Merge ferramenta (tool) attributes into confronto dict in-place.
+
+    Copies: ferramenta metrics, preco_venda_fonte, ponto_equilibrio, breakdowns,
+    actionable_insights.
+    """
     if projection.ferramenta:
         confronto["ferramenta"] = projection.ferramenta
     _pvf = getattr(projection, "preco_venda_fonte", None)
@@ -32,6 +56,11 @@ def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProject
 
 
 def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, Any]) -> dict[str, Any]:
+    """Compute delta (absolute, percentual) for key metrics: custo_direto, indireto, preco_venda.
+
+    For preco_venda: includes fonte and homogeneo flag (source == 'total_com_bdi').
+    Returns dict keyed by metric with {absoluto, percentual, fonte, homogeneo} entries.
+    """
     deltas: dict[str, Any] = {}
     for key in ("custo_direto", "custo_indireto", "preco_venda"):
         ref_v = ref_vals.get(key)
@@ -50,6 +79,11 @@ def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, A
 
 
 def _compute_peak_recursos(scheduled_activities: list[Any], spec_acts: dict[str, Any]) -> dict[str, int]:
+    """Find peak resource requirement (by type) across all weeks of schedule.
+
+    Aggregates required_resources from spec_acts per activity per week,
+    then returns max qty for each resource type.
+    """
     by_week: dict[int, dict[str, int]] = {}
     for sa in scheduled_activities:
         req_res = (spec_acts.get(sa.activity_id) or {}).get("required_resources") or {}
@@ -67,6 +101,11 @@ def _compute_peak_recursos(scheduled_activities: list[Any], spec_acts: dict[str,
 
 
 def _build_rcpsp_schedule(canonical: Any, spec: ProjectSpec) -> dict[str, Any]:
+    """Serialize RCPSP schedule from canonical cronograma and spec.
+
+    Includes: algorithm, makespan, feasibility, deadline_weeks (if set), folga_semanas,
+    activity details (start_week, end_week, duration), and peak resource requirements.
+    """
     cron = canonical.cronograma
     rcpsp_spec = (spec.inputs_cronograma or {}).get("rcpsp_spec") or {}
     deadline_weeks = rcpsp_spec.get("deadline_weeks")
@@ -97,7 +136,11 @@ def _build_rcpsp_schedule(canonical: Any, spec: ProjectSpec) -> dict[str, Any]:
 
 
 def _bq_get_cause(metric: str) -> str:
-    """Maps metric name to cause category string."""
+    """Map metric name to cause category for quality gate action routing.
+
+    Routing: custo_direto → CATALOGO, indireto/margem → CONSOLIDACAO,
+    preco_venda → PARAMETRIZACAO_BDI, else OUTROS.
+    """
     if metric == "custo_direto":
         return "CATALOGO"
     if metric == "custo_indireto":
@@ -120,7 +163,11 @@ def _bq_build_gate_item(
     action: str,
     owner: str,
 ) -> dict:
-    """Builds a single quality gate item dict."""
+    """Build a quality gate item with metric, delta, severity, SLA, and action.
+
+    Severity S0 → no SLA, S1 → 48h, S2 → 24h, S3 → 0h (blocker).
+    Status: NAO_APLICAVEL (S0) or ABERTA (S1-S3).
+    """
     pct = delta.get("percentual")
     return {
         "metric": metric,
@@ -140,13 +187,13 @@ def _bq_build_gate_item(
 
 
 def _bq_compute_worst(gate_items: list) -> str:
-    """Returns the worst severity label across all gate items."""
+    """Determine worst (max priority) severity across all gate items (S0 < S1 < S2 < S3)."""
     worst_rank = {"S0": 0, "S1": 1, "S2": 2, "S3": 3}
     return max((item["severidade"] for item in gate_items), key=lambda s: worst_rank.get(s, 0), default="S0")
 
 
 def _bq_check_critical_over_10(gate_items: list, critical_metrics: set) -> bool:
-    """Returns True if any critical metric has delta > 10%."""
+    """Check if any critical metric exceeds 10% delta threshold (absolute value)."""
     return any(
         item["metric"] in critical_metrics
         and item["delta_percentual"] is not None
@@ -156,7 +203,11 @@ def _bq_check_critical_over_10(gate_items: list, critical_metrics: set) -> bool:
 
 
 def _bq_get_decision(worst: str, has_critical: bool) -> str:
-    """Returns pipeline decision string based on worst severity."""
+    """Determine pipeline decision based on worst severity and critical_metrics check.
+
+    Logic: S3 → BLOQUEADO, S2 or has_critical → BLOQUEADO_COM_INVESTIGACAO,
+    S1 → APROVADO_COM_RESSALVAS, else APROVADO.
+    """
     if worst == "S3":
         return "BLOQUEADO"
     if worst == "S2" or has_critical:
@@ -167,6 +218,7 @@ def _bq_get_decision(worst: str, has_critical: bool) -> str:
 
 
 def _fallback_custo_total(ferramenta: dict) -> dict:
+    """Compute custo_total as sum of direto + indireto if not already set."""
     if ferramenta.get("custo_total") is None:
         direto = ferramenta.get("custo_direto")
         indireto = ferramenta.get("custo_indireto")
@@ -176,6 +228,10 @@ def _fallback_custo_total(ferramenta: dict) -> dict:
 
 
 def _build_composicao_item(ref_value, tool_value) -> dict | None:
+    """Build composition comparison item (referencia vs. ferramenta with deltas).
+
+    Returns None if both values None, else dict with delta_absoluto and delta_percentual.
+    """
     if ref_value is None and tool_value is None:
         return None
     delta_abs = None
