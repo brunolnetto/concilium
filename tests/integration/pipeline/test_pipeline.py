@@ -461,7 +461,7 @@ class TestValidacaoAgisComSeedData:
         result = run_diagnostico_criticidade(can, {})
         assert not result.has_errors
 
-        cr = result.canonical.criticality_report  # type: ignore
+        cr = result.canonical.criticality_report
         assert cr is not None
         critical_path = cr.get("critical_path", [])
         assert len(critical_path) > 0, "critical_path vazio"

@@ -300,6 +300,7 @@ def _pe_causa_dominante(
     if not is_valid:
         return "INDETERMINADO", 0.0, 0.0
 
+    assert h_i_gamma_o is not None, "h_i_gamma_o deve ser não-None quando is_valid=True"
     h_i, gamma_o = h_i_gamma_o
     h_cat = (q / rho) / beta
     gamma_v = custo_venda_total / h_cat
@@ -489,7 +490,7 @@ def _pe_build_levers(
 def _bpe_calcular_custos_iniciais(
     equipe: Any,
     venda_por_item: dict,
-) -> tuple[float, float, float, float, float]:
+) -> tuple[float, float, float, float, float] | None:
     """Calcula permanencia_base, custos fixo/operacional, e frentes iniciais.
     Retorna (permanencia_base, custo_fixo_total, custo_venda_total,
     custo_operacional_real, frentes) ou None se custo_fixo_total <= 0."""
