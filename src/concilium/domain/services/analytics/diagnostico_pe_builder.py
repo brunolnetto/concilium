@@ -526,7 +526,7 @@ def _build_relatorio_summary(
 def _dpb_prepare_contexto(
     canonical_in: Any,
     bdi_rates: dict[str, float] | None = None,
-) -> tuple[Any, dict, dict, dict, dict, dict, float, float, dict, dict]:
+) -> tuple[Any, dict, dict, dict, dict, dict, float, float, Any | None, dict[str, dict[str, dict[str, float]]]]:
     """Prepara contexto e lookups: extrai proyecto_id, carrega estruturas de lookup,
     calcula L_aplicado e T_efetivo, resolve cubo e constrói activity_week_map.
     Retorna (resultado, sched_lookup, equipe_lookup, plan_lookup, ca_lookup,

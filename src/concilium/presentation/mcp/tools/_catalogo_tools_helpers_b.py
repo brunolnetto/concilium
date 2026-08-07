@@ -582,6 +582,9 @@ def _impl_mesclar_catalogo(
             destino, origem, tipo, resumo
         )
 
+    if merge_id is None:
+        return {"erro": "merge_id obrigatório quando dry_run=False"}
+
     return _mesclar_handle_apply(
         config_root, catalogo_id, merge_id, actor, tipos,
         fonte_destino, fonte_origem, relatorios, result, destino, origem, tipo, justificativa

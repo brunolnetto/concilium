@@ -633,7 +633,8 @@ def _impl_criar_insumos_lote(
             continue
 
         codigo = item.get("codigo")
-        codigos_no_lote.add(codigo)
+        if codigo:
+            codigos_no_lote.add(codigo)
         deltas_validos.append(
             {
                 "tipo": "criacao_insumo",
@@ -1049,7 +1050,8 @@ def _impl_atualizar_precos_insumos_lote(
             continue
 
         insumo_id = item.get("insumo_id")
-        deltas_validos.append(delta)
+        if delta is not None:
+            deltas_validos.append(delta)
         resultados.append({"insumo_id": insumo_id, "status": "ok"})
 
     if deltas_validos:
