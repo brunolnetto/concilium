@@ -329,8 +329,18 @@ class TestBuildDupMap:
 
     def test_adr179_razao_dentro_da_faixa_de_encargos_confirmada_e_fundida(self):
         insumos = [
-            {"codigo": "MO-ENCARREG-DREN", "tipo": "MAO_OBRA", "descricao": "Encarregado de Drenagem", "preco_unitario": 10_000.0},
-            {"codigo": "P0020", "tipo": "MAO_OBRA", "descricao": "Encarregado de Drenagem", "preco_unitario": 20_600.0},
+            {
+                "codigo": "MO-ENCARREG-DREN",
+                "tipo": "MAO_OBRA",
+                "descricao": "Encarregado de Drenagem",
+                "preco_unitario": 10_000.0,
+            },
+            {
+                "codigo": "P0020",
+                "tipo": "MAO_OBRA",
+                "descricao": "Encarregado de Drenagem",
+                "preco_unitario": 20_600.0,
+            },
         ]
         dup_map = cp._build_dup_map(insumos)
         assert dup_map == {"P0020": "MO-ENCARREG-DREN"}
@@ -860,15 +870,32 @@ class TestMain:
         catalog_dir = tmp_path / "config/catalogos/mendeslobo"
         insumos_dir = catalog_dir / "insumos/mao_obra"
         insumos_dir.mkdir(parents=True)
-        p0058 = {"codigo": "P0058", "tipo": "MAO_OBRA", "descricao": "Sala Técnica", "preco_unitario": 24_720.0}
-        mo_sala_tec = {"codigo": "MO-SALA-TEC", "tipo": "MAO_OBRA", "descricao": "Sala Técnica", "preco_unitario": 12_000.0}
+        p0058 = {
+            "codigo": "P0058",
+            "tipo": "MAO_OBRA",
+            "descricao": "Sala Técnica",
+            "preco_unitario": 24_720.0,
+        }
+        mo_sala_tec = {
+            "codigo": "MO-SALA-TEC",
+            "tipo": "MAO_OBRA",
+            "descricao": "Sala Técnica",
+            "preco_unitario": 12_000.0,
+        }
         (insumos_dir / "P0058.json").write_text(json.dumps(p0058), encoding="utf-8")
-        (insumos_dir / "MO-SALA-TEC.json").write_text(json.dumps(mo_sala_tec), encoding="utf-8")
+        (insumos_dir / "MO-SALA-TEC.json").write_text(
+            json.dumps(mo_sala_tec), encoding="utf-8"
+        )
 
-        producao = {"id": "PR-1", "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "P0058"}]}}
+        producao = {
+            "id": "PR-1",
+            "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "P0058"}]},
+        }
         produtividades_dir = catalog_dir / "produtividades"
         produtividades_dir.mkdir(parents=True)
-        (produtividades_dir / "PR-1.json").write_text(json.dumps(producao), encoding="utf-8")
+        (produtividades_dir / "PR-1.json").write_text(
+            json.dumps(producao), encoding="utf-8"
+        )
 
         bundle_path = catalog_dir / ".catalog_bundle.json"
         _write_bundle(bundle_path, insumos=[p0058, mo_sala_tec], producoes=[producao])
@@ -880,16 +907,30 @@ class TestMain:
         assert saved["composicao_padrao_equipe"]["funcoes"][0]["funcao_id"] == "MO-SALA-TEC"
         assert not (catalog_dir / "producoes" / "PR-1.json").exists()
 
-    def test_apply_atualiza_funcao_id_em_templates_estruturas_indiretas(self, tmp_path, monkeypatch):
+    def test_apply_atualiza_funcao_id_em_templates_estruturas_indiretas(
+        self, tmp_path, monkeypatch
+    ):
         """Achado real: templates.json/estruturas_indiretas referencia funcao_id e
         producoes/produtividades não cobre essa superfície — ficaria órfão sem isso."""
         catalog_dir = tmp_path / "config/catalogos/mendeslobo"
         insumos_dir = catalog_dir / "insumos/mao_obra"
         insumos_dir.mkdir(parents=True)
-        p0058 = {"codigo": "P0058", "tipo": "MAO_OBRA", "descricao": "Sala Técnica", "preco_unitario": 24_720.0}
-        mo_sala_tec = {"codigo": "MO-SALA-TEC", "tipo": "MAO_OBRA", "descricao": "Sala Técnica", "preco_unitario": 12_000.0}
+        p0058 = {
+            "codigo": "P0058",
+            "tipo": "MAO_OBRA",
+            "descricao": "Sala Técnica",
+            "preco_unitario": 24_720.0,
+        }
+        mo_sala_tec = {
+            "codigo": "MO-SALA-TEC",
+            "tipo": "MAO_OBRA",
+            "descricao": "Sala Técnica",
+            "preco_unitario": 12_000.0,
+        }
         (insumos_dir / "P0058.json").write_text(json.dumps(p0058), encoding="utf-8")
-        (insumos_dir / "MO-SALA-TEC.json").write_text(json.dumps(mo_sala_tec), encoding="utf-8")
+        (insumos_dir / "MO-SALA-TEC.json").write_text(
+            json.dumps(mo_sala_tec), encoding="utf-8"
+        )
 
         templates_path = catalog_dir / "templates.json"
         templates_path.write_text(
@@ -912,17 +953,31 @@ class TestMain:
         saved = json.loads(templates_path.read_text(encoding="utf-8"))
         assert saved["estruturas_indiretas"][0]["mao_de_obra"][0]["funcao_id"] == "MO-SALA-TEC"
 
-    def test_apply_preserva_crlf_do_templates_json_original(self, tmp_path, monkeypatch):
+    def test_apply_preserva_crlf_do_templates_json_original(
+        self, tmp_path, monkeypatch
+    ):
         """Achado real: templates.json do mendeslobo é CRLF; reescrever com LF
         (padrão do json.dumps) produzia diff de 342 linhas pra uma mudança de 3 —
         todo o arquivo aparecia como alterado no git, mascarando a mudança real."""
         catalog_dir = tmp_path / "config/catalogos/mendeslobo"
         insumos_dir = catalog_dir / "insumos/mao_obra"
         insumos_dir.mkdir(parents=True)
-        p0058 = {"codigo": "P0058", "tipo": "MAO_OBRA", "descricao": "Sala Técnica", "preco_unitario": 24_720.0}
-        mo_sala_tec = {"codigo": "MO-SALA-TEC", "tipo": "MAO_OBRA", "descricao": "Sala Técnica", "preco_unitario": 12_000.0}
+        p0058 = {
+            "codigo": "P0058",
+            "tipo": "MAO_OBRA",
+            "descricao": "Sala Técnica",
+            "preco_unitario": 24_720.0,
+        }
+        mo_sala_tec = {
+            "codigo": "MO-SALA-TEC",
+            "tipo": "MAO_OBRA",
+            "descricao": "Sala Técnica",
+            "preco_unitario": 12_000.0,
+        }
         (insumos_dir / "P0058.json").write_text(json.dumps(p0058), encoding="utf-8")
-        (insumos_dir / "MO-SALA-TEC.json").write_text(json.dumps(mo_sala_tec), encoding="utf-8")
+        (insumos_dir / "MO-SALA-TEC.json").write_text(
+            json.dumps(mo_sala_tec), encoding="utf-8"
+        )
 
         templates_path = catalog_dir / "templates.json"
         conteudo = json.dumps(

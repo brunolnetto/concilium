@@ -9,7 +9,6 @@ from concilium.application.catalog.similarity import (
     _cosseno,
     _desc_sim,
     _jaccard,
-    _price_sim,
     _price_sim_direto,
     _price_sim_encargos,
     _recursos_canonicos,
@@ -296,10 +295,30 @@ class TestInsumoSimilarity:
         assert result.classificacao is None
 
     def test_to_dict_tem_todas_as_chaves(self):
-        a = {"codigo": "MO-1", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 3000.0}
-        b = {"codigo": "MO-2", "tipo": "MAO_OBRA", "descricao": "Pedreiro", "preco_unitario": 3000.0}
+        a = {
+            "codigo": "MO-1",
+            "tipo": "MAO_OBRA",
+            "descricao": "Pedreiro",
+            "preco_unitario": 3000.0,
+        }
+        b = {
+            "codigo": "MO-2",
+            "tipo": "MAO_OBRA",
+            "descricao": "Pedreiro",
+            "preco_unitario": 3000.0,
+        }
         d = insumo_similarity(a, b).to_dict()
-        assert set(d.keys()) == {"codigo_a", "codigo_b", "score", "desc_sim", "price_sim", "categoria_sim", "classificacao", "detalhe"}
+        expected_keys = {
+            "codigo_a",
+            "codigo_b",
+            "score",
+            "desc_sim",
+            "price_sim",
+            "categoria_sim",
+            "classificacao",
+            "detalhe",
+        }
+        assert set(d.keys()) == expected_keys
 
 
 # ── find_candidate_duplicates ─────────────────────────────────────────────────
@@ -489,8 +508,20 @@ class TestCpuSimilarity:
 class TestFindCandidateCpuDuplicates:
     def test_bloqueia_por_categoria(self):
         cpus = [
-            {"codigo": "CPU-A", "descricao": "Escavação", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "P-A"},
-            {"codigo": "CPU-B", "descricao": "Escavação", "categoria": "DRENAGEM", "unidade": "m3", "producao_id_ref": "P-B"},
+            {
+                "codigo": "CPU-A",
+                "descricao": "Escavação",
+                "categoria": "TERRAPLENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "P-A",
+            },
+            {
+                "codigo": "CPU-B",
+                "descricao": "Escavação",
+                "categoria": "DRENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "P-B",
+            },
         ]
         producoes = [
             {"id": "P-A", "valor_horario": 100.0, "composicao_padrao_equipe": {}},
@@ -500,12 +531,36 @@ class TestFindCandidateCpuDuplicates:
 
     def test_encontra_duplicata_na_mesma_categoria(self):
         cpus = [
-            {"codigo": "CPU-A", "descricao": "Escavação 1a categoria", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "P-A"},
-            {"codigo": "CPU-B", "descricao": "Escavação 1a categoria", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "P-B"},
+            {
+                "codigo": "CPU-A",
+                "descricao": "Escavação 1a categoria",
+                "categoria": "TERRAPLENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "P-A",
+            },
+            {
+                "codigo": "CPU-B",
+                "descricao": "Escavação 1a categoria",
+                "categoria": "TERRAPLENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "P-B",
+            },
         ]
         producoes = [
-            {"id": "P-A", "valor_horario": 200.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]}},
-            {"id": "P-B", "valor_horario": 200.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]}},
+            {
+                "id": "P-A",
+                "valor_horario": 200.0,
+                "composicao_padrao_equipe": {
+                    "funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]
+                },
+            },
+            {
+                "id": "P-B",
+                "valor_horario": 200.0,
+                "composicao_padrao_equipe": {
+                    "funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]
+                },
+            },
         ]
         result = find_candidate_cpu_duplicates(cpus, producoes)
         assert len(result) == 1
@@ -514,8 +569,24 @@ class TestFindCandidateCpuDuplicates:
 
 class TestFindCrossCatalogCpuMatches:
     def test_so_compara_categorias_em_comum(self):
-        cpus_a = [{"codigo": "A1", "descricao": "Escavação", "categoria": "TERRAPLENAGEM", "unidade": "m3", "producao_id_ref": "PA1"}]
-        cpus_b = [{"codigo": "B1", "descricao": "Escavação", "categoria": "DRENAGEM", "unidade": "m3", "producao_id_ref": "PB1"}]
+        cpus_a = [
+            {
+                "codigo": "A1",
+                "descricao": "Escavação",
+                "categoria": "TERRAPLENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "PA1",
+            }
+        ]
+        cpus_b = [
+            {
+                "codigo": "B1",
+                "descricao": "Escavação",
+                "categoria": "DRENAGEM",
+                "unidade": "m3",
+                "producao_id_ref": "PB1",
+            }
+        ]
         prod_a = [{"id": "PA1", "valor_horario": 100.0, "composicao_padrao_equipe": {}}]
         prod_b = [{"id": "PB1", "valor_horario": 100.0, "composicao_padrao_equipe": {}}]
         assert find_cross_catalog_cpu_matches(cpus_a, prod_a, cpus_b, prod_b) == []
