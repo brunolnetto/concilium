@@ -46,7 +46,7 @@ from pathlib import Path
 from concilium.domain.constants import HORAS_MES_CLT as HORAS_MES_PADRAO
 from concilium.domain.constants import SALARIO_MINIMO_MENSAL
 
-from .similarity import find_candidate_duplicates
+from .similarity import SimilarityScore, find_candidate_duplicates
 
 ROOT = Path(__file__).resolve().parents[4]
 
@@ -493,7 +493,7 @@ def _psc_calc_preco_ratio(pa: float, pb: float) -> float | None:
 
 
 def _psc_build_rejection_motivo(
-    m: object,  # tipo Match do similarity module
+    m: SimilarityScore,
     ratio: float | None,
 ) -> str:
     """Build human-readable rejection reason for insumo pair (low confidence or price out of range)."""
@@ -827,6 +827,8 @@ def _report_insumos_suspeitos(insumos: list[dict], report: CureReport) -> None:
 def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport) -> None:
     """Log non-automatable anomalies (productions without composition, suspicious insumo names).
     """
+    _report_producoes_sem_composicao(producoes, report)
+    _report_insumos_suspeitos(insumos, report)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
