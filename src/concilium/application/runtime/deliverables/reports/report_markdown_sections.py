@@ -1,4 +1,23 @@
-"""Seções base do relatório financeiro em Markdown."""
+"""Base sections for financial report generation in Markdown format.
+
+Provides utilities to build structured financial report paragraphs and tables from
+canonical resultado (financial summary) and metadata. Handles:
+  - Executive summary narrative (identity + financial overview + cost structure)
+  - Header section (project name, generation timestamp, framework)
+  - Financial metrics table (price, costs, margins, ratios)
+  - Formatting of currencies (BRL), percentages, and numeric values
+
+Key sections:
+  - Executive Summary: contextual paragraphs (3-part narrative)
+  - Header: project identity & metadata
+  - Resultado Table: key financial KPIs
+  - Cronograma Table: monthly execution schedule
+  - Equipes Table: team/labor structure
+  - And others (as added to functions below)
+
+All rendering functions return list[str] (lines to join with newline) for
+flexible Markdown composition.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +25,11 @@ from typing import Any, cast
 
 
 def _brl(value: Any) -> str:
+    """Format numeric value as Brazilian Real (BRL) currency string.
+
+    Handles None, non-numeric, and unparseable inputs gracefully by returning
+    str(value) as fallback.
+    """
     try:
         return f"R$ {float(value):,.2f}"
     except Exception:
@@ -13,6 +37,12 @@ def _brl(value: Any) -> str:
 
 
 def _pct(value: Any) -> str:
+    """Format numeric value as percentage string with auto-scaling.
+
+    If value is in range [-1.0, 1.0], assumes it's a decimal fraction (0.17 = 17%)
+    and multiplies by 100. Otherwise, uses value as-is (e.g., 17.5 = 17.5%).
+    Gracefully handles None and unparseable inputs.
+    """
     try:
         v = float(value)
         # margem_pct is stored as a decimal fraction (0.17 = 17%); multiply to get display %
@@ -47,6 +77,11 @@ def _exec_summary_parag1(resumo: dict[str, Any]) -> str:
 
 
 def _exec_summary_margem_label(status_margem: str) -> str:
+    """Map profit margin status (traffic light) to descriptive label.
+
+    Returns descriptive Portuguese string for VERDE/AMARELO/VERMELHO,
+    or empty string for unknown status.
+    """
     if status_margem == "VERDE":
         return "dentro da faixa objetivo"
     if status_margem == "AMARELO":
@@ -57,7 +92,12 @@ def _exec_summary_margem_label(status_margem: str) -> str:
 
 
 def _exec_summary_parag2(resultado: dict[str, Any]) -> str | None:
-    """Financial overview paragraph; returns None when there's no sales price."""
+    """Generate financial overview paragraph from resultado metrics.
+
+    Composes sentence with sales price, cost breakdown (direct + indirect),
+    gross result, and profit margin with status label. Returns None if no
+    valid sales price found (preco_venda_total <= 0).
+    """
     preco_venda = float(resultado.get("preco_venda_total") or 0)
     if preco_venda <= 0:
         return None
@@ -80,7 +120,12 @@ def _exec_summary_parag2(resultado: dict[str, Any]) -> str | None:
 
 
 def _exec_summary_parag3(resultado: dict[str, Any]) -> str | None:
-    """Cost structure observation paragraph; returns None when not applicable."""
+    """Generate cost structure observation paragraph from resultado metrics.
+
+    Composes sentence with percentages of direct vs. indirect costs relative to
+    total, plus optional indirect/direct ratio. Returns None if total or direct
+    costs are zero or negative (invalid for analysis).
+    """
     custo_total = float(resultado.get("custo_total") or 0)
     custo_direto = float(resultado.get("custo_direto") or 0)
     if custo_direto <= 0 or custo_total <= 0:
@@ -100,7 +145,12 @@ def _exec_summary_parag3(resultado: dict[str, Any]) -> str | None:
 
 
 def render_executive_summary(resumo: dict[str, Any], resultado: dict[str, Any]) -> list[str]:
-    """Generates a brief executive prose summary from the relatorio structured data."""
+    """Generate executive summary section (Markdown header + 3 paragraphs).
+
+    Combines project identity (parag1), financial overview (parag2), and cost
+    structure (parag3). Returns list of Markdown lines for composition into report.
+    Gracefully handles missing/invalid data by returning empty list.
+    """
     if not isinstance(resumo, dict) or not isinstance(resultado, dict):
         return []
 
@@ -125,6 +175,11 @@ def render_executive_summary(resumo: dict[str, Any], resultado: dict[str, Any]) 
 
 
 def render_header(meta: dict[str, Any], resumo: dict[str, Any]) -> list[str]:
+    """Generate report header section with title, generation timestamp, and framework.
+
+    Returns list of Markdown lines with H1 title, metadata attributes, and
+    horizontal divider.
+    """
     nome = resumo.get("projeto") or meta.get("framework", "Projeto")
     gerado = str(meta.get("gerado_em", ""))[:19].replace("T", " ")
     return [
@@ -139,6 +194,12 @@ def render_header(meta: dict[str, Any], resumo: dict[str, Any]) -> list[str]:
 
 
 def render_resultado(resultado: dict[str, Any]) -> list[str]:
+    """Generate financial metrics table (Dimensionamento Financeiro).
+
+    Renders key KPIs from resultado: sales price, direct/indirect costs,
+    margins, ratios. Returns Markdown table lines, or empty list if resultado
+    invalid/empty.
+    """
     if not isinstance(resultado, dict) or not resultado:
         return []
     lines = [

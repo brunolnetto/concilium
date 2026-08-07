@@ -1,4 +1,18 @@
-"""Helpers extracted from project_page.py (parte extraída de _project_page_helpers_b.py, grupo _pcat_helpers)."""
+"""Helpers for project page EAP/catalog cross-reference analysis.
+
+Provides utilities to extract, index, and compare CPU (composite production unit) data
+from catalog references within project EAP (WBS) structures. Handles:
+  - EAP row extraction and CPU ID resolution from project reference data
+  - Catalog indexing (insumos, CPUs) for fast O(1) lookups
+  - Price reference staleness checks (e.g., prices older than 6 months)
+  - CPU composition analysis (team, equipment, direct inputs)
+  - CPU override detection and diff badge generation for UI display
+
+Key entities:
+  - CPU (Composite Production Unit): pricing/productivity baseline with optional overrides
+  - EAP (Estrutura Analítica de Projeto / WBS): work breakdown structure
+  - Override: user-modified CPU fields (producao_horaria, equipe, composicao_itens)
+"""
 
 from __future__ import annotations
 
@@ -9,6 +23,14 @@ _VALID_COST_CATS = {"MAO_OBRA", "MATERIAL", "EQUIPAMENTO", "DIESEL", "SERVICO"}
 
 
 def _pcat_extract_eap_rows(reference: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract EAP (WBS) row items from project reference data.
+
+    Tries two locations in order:
+      1. reference.cpus.itens_eap (newer nested format)
+      2. reference.eap (legacy flat format)
+
+    Filters non-dict items and returns empty list if neither location found.
+    """
     cpus_block = reference.get("cpus")
     if isinstance(cpus_block, dict):
         items = cpus_block.get("itens_eap")
@@ -21,6 +43,11 @@ def _pcat_extract_eap_rows(reference: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _pcat_cpus_used_in_eap(reference: dict[str, Any]) -> set[str]:
+    """Get the set of CPU IDs referenced in the project's EAP.
+
+    Extracts unique cpu_id values from all EAP rows. Used to determine which
+    CPUs are actually deployed in the project (vs catalog breadth).
+    """
     used: set[str] = set()
     for it in _pcat_extract_eap_rows(reference):
         cpu_id = str(it.get("cpu_id") or "").strip()
@@ -30,6 +57,11 @@ def _pcat_cpus_used_in_eap(reference: dict[str, Any]) -> set[str]:
 
 
 def _pcat_insumo_index(reference: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Build an O(1) lookup index of insumos (materials/inputs) from catalog.
+
+    Indexes by codigo (primary) or id (fallback). Returns empty dict if catalog
+    or insumos list not found in reference.
+    """
     cat = reference.get("catalog") or {}
     raw = cat.get("insumos") or []
     out: dict[str, dict[str, Any]] = {}
@@ -43,6 +75,11 @@ def _pcat_insumo_index(reference: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _pcat_catalog_cpus_index(reference: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Build an O(1) lookup index of CPUs from catalog.
+
+    Indexes CPUs by codigo field. Returns empty dict if catalog or cpus list
+    not found in reference.
+    """
     cat = reference.get("catalog") or {}
     out: dict[str, dict[str, Any]] = {}
     for cpu in cat.get("cpus") or []:
@@ -54,6 +91,11 @@ def _pcat_catalog_cpus_index(reference: dict[str, Any]) -> dict[str, dict[str, A
 
 
 def _pcat_parse_ref_yyyy_mm(text: str) -> tuple[int, int] | None:
+    """Parse YYYY-MM date string (e.g., '2024-08') into (year, month) tuple.
+
+    Expected format: 'YYYY-MM' (ISO 8601 prefix). Returns None if format invalid
+    or month out of range [1, 12].
+    """
     s = (text or "").strip()
     if len(s) < 7 or s[4] != "-":
         return None
@@ -68,6 +110,11 @@ def _pcat_parse_ref_yyyy_mm(text: str) -> tuple[int, int] | None:
 
 
 def _pcat_is_price_reference_stale(ref: str, max_age_months: int = 6) -> bool:
+    """Check if a price reference date (YYYY-MM) is stale (older than max_age_months).
+
+    Returns True if reference is unparseable, or age exceeds max_age_months.
+    Default threshold is 6 months (ADR-XXX: pricing recalibration baseline).
+    """
     parsed = _pcat_parse_ref_yyyy_mm(ref)
     if parsed is None:
         return True
@@ -78,6 +125,14 @@ def _pcat_is_price_reference_stale(ref: str, max_age_months: int = 6) -> bool:
 
 
 def _pcat_resolve_equipe(cpu: dict[str, Any]) -> dict[str, Any]:
+    """Resolve CPU team composition (equipe) from explicit or default source.
+
+    Priority:
+      1. cpu.equipe (explicit team override)
+      2. cpu.composicao_padrao_equipe (default team template)
+
+    Returns empty dict if neither found.
+    """
     equipe = cpu.get("equipe")
     if isinstance(equipe, dict):
         return equipe
@@ -86,10 +141,16 @@ def _pcat_resolve_equipe(cpu: dict[str, Any]) -> dict[str, Any]:
 
 
 def _pcat_dict_items(raw: Any) -> list[dict[str, Any]]:
+    """Filter list-like to extract only dict items. Safe for None/non-list inputs."""
     return [item for item in (raw or []) if isinstance(item, dict)]
 
 
 def _pcat_cpu_parts(cpu: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Decompose CPU into its three composition parts: (funcoes, equipamentos, composicao_itens).
+
+    Returns:
+        (funcoes, equipamentos, composicao_itens) - three lists of dict items
+    """
     equipe = _pcat_resolve_equipe(cpu)
     funcoes = _pcat_dict_items(equipe.get("funcoes"))
     equips = _pcat_dict_items(equipe.get("equipamentos"))
@@ -98,11 +159,19 @@ def _pcat_cpu_parts(cpu: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dic
 
 
 def _pcat_has_complete_composition(cpu: dict[str, Any]) -> bool:
+    """Check if CPU has any composition defined (team, equipment, or direct inputs)."""
     funcoes, equips, comp = _pcat_cpu_parts(cpu)
     return bool(funcoes or equips or comp)
 
 
 def _pcat_cpu_diff_flags(base_cpu: dict[str, Any], ov_cpu: dict[str, Any]) -> dict[str, bool]:
+    """Detect which CPU fields differ between base and override versions.
+
+    Returns dict with three boolean flags:
+      - producao: productivity_hourly changed
+      - equipe: team (funcoes/equipamentos) changed
+      - composicao: direct inputs (composicao_itens) changed
+    """
     out = {"producao": False, "equipe": False, "composicao": False}
     if not ov_cpu:
         return out
@@ -118,6 +187,13 @@ def _pcat_cpu_diff_flags(base_cpu: dict[str, Any], ov_cpu: dict[str, Any]) -> di
 
 
 def _pcat_override_badge(base_cpu: dict[str, Any], ov_cpu: dict[str, Any]) -> str:
+    """Generate UI badge label for CPU override status.
+
+    Returns one of:
+      - 'Sem override': No override present or no changes detected
+      - 'Override total': All 3 fields changed (producao + equipe + composicao)
+      - 'Override parcial': 1-2 fields changed
+    """
     if not ov_cpu:
         return "Sem override"
     flags = _pcat_cpu_diff_flags(base_cpu, ov_cpu)
@@ -130,6 +206,11 @@ def _pcat_override_badge(base_cpu: dict[str, Any], ov_cpu: dict[str, Any]) -> st
 
 
 def _pcat_mini_diff_text(base_cpu: dict[str, Any], ov_cpu: dict[str, Any]) -> str:
+    """Generate compact text summary of CPU override changes for UI display.
+
+    Format: 'Prod.: 5.00 -> 6.50 | Equipe: 3 -> 2 | Composição: 5 -> 4'
+    Returns '—' if no override or no changes detected.
+    """
     if not ov_cpu:
         return "—"
     flags = _pcat_cpu_diff_flags(base_cpu, ov_cpu)

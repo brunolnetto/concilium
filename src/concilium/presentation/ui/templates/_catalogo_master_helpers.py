@@ -1,4 +1,15 @@
-"""Helpers for catalogo_master_page (extracted)."""
+"""Helpers for catalogo_master_page (extracted).
+
+Provides utilities for loading and enriching catalog data (CPUs, insumos, produtividades)
+from filesystem JSON files with Streamlit session-state caching. Handles dynamic filtering,
+formatting, and rendering of catalog components with type-safe validation.
+
+Key responsibilities:
+  - Load & cache JSON catalogs from config/catalogos/{catalog_id}/ with TTL strategy
+  - Enrich CPU components (funcoes, equipamentos, composicao_itens) with catalog data
+  - Format and render dataframes, dialogs, and detail views for master catalog UI
+  - Validate user input on edit/save workflows with audit trail (motivo)
+"""
 
 from __future__ import annotations
 
@@ -33,35 +44,68 @@ def _cmb_catalog_root(catalog_id: str) -> Path:
     return _cmb_workspace_root() / "config" / "catalogos" / catalog_id
 
 
-def _cmb_load_produtividades_index(catalog_id: str) -> dict[str, dict]:
-    cache_key = f"master-produtividades-index-{catalog_id}"
+def _cmb_load_json_index_from_dir(catalog_id: str, subdir: str, id_key: str = "id") -> dict[str, dict]:
+    """Load all JSON files from a catalog subdirectory into a keyed index.
+
+    Caches in Streamlit session state for performance. Each JSON file is parsed and
+    indexed by either its `id_key` field or filename stem (fallback).
+
+    Args:
+        catalog_id: Catalog identifier (e.g., 'mendeslobo')
+        subdir: Subdirectory name relative to catalog root (e.g., 'produtividades', 'insumos')
+        id_key: JSON field name to use as primary key (default 'id')
+
+    Returns:
+        Dictionary mapping ID→data for all valid JSON files in the directory.
+        Empty dict if directory doesn't exist or all files are malformed.
+    """
+    cache_key = f"master-{subdir}-index-{catalog_id}"
     cached = st.session_state.get(cache_key)
     if isinstance(cached, dict):
         return cached
 
     index: dict[str, dict] = {}
-    prod_dir = _cmb_catalog_root(catalog_id) / "produtividades"
-    if prod_dir.exists():
-        for prod_file in sorted(prod_dir.glob("*.json")):
+    data_dir = _cmb_catalog_root(catalog_id) / subdir
+    if data_dir.exists():
+        for json_file in sorted(data_dir.glob("*.json")):
             try:
-                data = json.loads(prod_file.read_text(encoding="utf-8"))
+                data = json.loads(json_file.read_text(encoding="utf-8"))
             except Exception:
                 continue
             if not isinstance(data, dict):
                 continue
-            prod_id = str(data.get("id") or prod_file.stem).strip()
-            if prod_id:
-                index[prod_id] = data
-            stem_id = prod_file.stem.strip()
-            if stem_id:
+            # Index by primary key (e.g., data['id'])
+            primary_id = str(data.get(id_key) or json_file.stem).strip()
+            if primary_id:
+                index[primary_id] = data
+            # Fallback: also index by filename stem
+            stem_id = json_file.stem.strip()
+            if stem_id and stem_id != primary_id:
                 index.setdefault(stem_id, data)
 
     st.session_state[cache_key] = index
     return index
 
 
+def _cmb_load_produtividades_index(catalog_id: str) -> dict[str, dict]:
+    """Load produtividades (productivity templates) index for a catalog.
+
+    Returns mapping of productivity_id→productivity_data (e.g., 'PADRÃO' → {...}).
+    Uses generic JSON loader with session-state caching.
+    """
+    return _cmb_load_json_index_from_dir(catalog_id, "produtividades", id_key="id")
+
+
 def _cmb_parse_insumo_file(insumo_file: Path) -> list:
-    """Parse one insumo JSON file into a list of item dicts (empty on any mismatch)."""
+    """Parse one insumo JSON file into a list of item dicts.
+
+    Handles three formats:
+      - Array of items: returned as-is
+      - Single object: wrapped in a single-element list
+      - Other types (null, string, number): returns empty list
+
+    Silently ignores parse errors (returns []) to allow partial catalog loading.
+    """
     try:
         data = json.loads(insumo_file.read_text(encoding="utf-8"))
     except Exception:
@@ -74,7 +118,11 @@ def _cmb_parse_insumo_file(insumo_file: Path) -> list:
 
 
 def _cmb_merge_insumo_items(index: dict[str, dict], items: list) -> None:
-    """Merge parsed insumo items into ``index`` keyed by their ``codigo``."""
+    """Merge parsed insumo items into ``index`` keyed by their ``codigo``.
+
+    Mutates index in-place. Skips non-dict items and items without valid codigo.
+    Later items with the same codigo override earlier ones (last-write-wins).
+    """
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -84,6 +132,13 @@ def _cmb_merge_insumo_items(index: dict[str, dict], items: list) -> None:
 
 
 def _cmb_load_insumos_index(catalog_id: str) -> dict[str, dict]:
+    """Load insumos (inputs/materials) index for a catalog with recursive glob.
+
+    Searches insumos/ recursively for all *.json files (unlike produtividades which
+    is flat). Each file is parsed and merged into a single codigo→insumo mapping.
+
+    Returns empty dict if directory doesn't exist or all files are malformed.
+    """
     cache_key = f"master-insumos-index-{catalog_id}"
     cached = st.session_state.get(cache_key)
     if isinstance(cached, dict):
@@ -100,6 +155,11 @@ def _cmb_load_insumos_index(catalog_id: str) -> dict[str, dict]:
 
 
 def _cmb_regime_label(insumo: dict) -> str:
+    """Extract labor regime label from insumo attributes.
+
+    Looks for categoria_sindical in atributos_especificos. Returns normalized
+    label ('Horista', 'Mensalista', or '—' if unknown/missing).
+    """
     categoria = str((insumo.get("atributos_especificos") or {}).get("categoria_sindical") or "").lower()
     if categoria.startswith("horista"):
         return "Horista"
@@ -109,6 +169,10 @@ def _cmb_regime_label(insumo: dict) -> str:
 
 
 def _cmb_format_money(value: object) -> str:
+    """Format numeric value as Brazilian currency string (R$ format).
+
+    Returns '—' for null, non-numeric, or unparseable values.
+    """
     if not isinstance(value, (int, float, str)):
         return "—"
     try:
@@ -118,6 +182,17 @@ def _cmb_format_money(value: object) -> str:
 
 
 def _cmb_equipment_monthly_cost(insumo: dict) -> object:
+    """Resolve monthly equipment cost from insumo with fallback cascade.
+
+    Priority order:
+      1. atributos_especificos.valor_locacao_mensal
+      2. atributos_especificos.custo_mensal
+      3. root-level custo_mensal
+      4. preco_unitario * atributos_especificos.horas_mes (if both present)
+      5. None (not found)
+
+    Returns first non-None value in the cascade, or None if none found.
+    """
     attrs = insumo.get("atributos_especificos") or {}
     for key in ("valor_locacao_mensal", "custo_mensal"):
         value = attrs.get(key)
@@ -139,7 +214,8 @@ def _cmb_equipment_monthly_cost(insumo: dict) -> object:
 def _cmb_first_truthy(*values: object, default: object = "") -> object:
     """Return the first truthy value in ``values``, or ``default``.
 
-    Colapsa cadeias `a or b or c or default` em uma única chamada.
+    Provides a functional alternative to `a or b or c or default` chains.
+    Useful for resolving fallback hierarchies (e.g., prefer user input over catalog data).
     """
     for value in values:
         if value:
@@ -148,6 +224,15 @@ def _cmb_first_truthy(*values: object, default: object = "") -> object:
 
 
 def _cmb_enrich_funcao_item(funcao: dict, insumo: dict, funcao_id: str) -> dict:
+    """Enrich a single function/role item with catalog data.
+
+    Merges function definition with insumo (labor) attributes:
+      - descricao: prefers funcao.descricao, fallback to insumo.descricao, then funcao_id
+      - regime: labor regime (Horista/Mensalista) from insumo or funcao
+      - salario_base: salary from funcao or insumo price_unitario
+
+    Returns new dict with enriched fields merged over original funcao.
+    """
     descricao = _cmb_first_truthy(funcao.get("descricao"), insumo.get("descricao"), funcao.get("funcao"), funcao_id)
     return {
         **funcao,
@@ -158,6 +243,11 @@ def _cmb_enrich_funcao_item(funcao: dict, insumo: dict, funcao_id: str) -> dict:
 
 
 def _cmb_enrich_funcoes(funcoes: list, catalog_id: str) -> list[dict]:
+    """Enrich all function/role items by looking up each funcao_id in the insumos catalog.
+
+    Iterates through funcoes list, skips non-dicts, and enriches each with corresponding
+    insumo data via _cmb_enrich_funcao_item. Returns filtered list of enriched dicts.
+    """
     insumos_index = _cmb_load_insumos_index(catalog_id)
     enriched: list[dict] = []
     for funcao in funcoes:
@@ -170,6 +260,15 @@ def _cmb_enrich_funcoes(funcoes: list, catalog_id: str) -> list[dict]:
 
 
 def _cmb_enrich_composicao_item(item: dict, insumo: dict) -> dict:
+    """Enrich a single composition (direct input) item with catalog insumo data.
+
+    Merges:
+      - descricao: prefers item, fallback to insumo
+      - unidade: prefers item, fallback to insumo
+      - custo_mensal: tries item field, then insumo atributos_especificos, then insumo root
+
+    Returns new dict with enriched fields merged over original item.
+    """
     attrs = insumo.get("atributos_especificos") or {}
     return {
         **item,
@@ -180,6 +279,11 @@ def _cmb_enrich_composicao_item(item: dict, insumo: dict) -> dict:
 
 
 def _cmb_enrich_composicao_itens(composicao: list, catalog_id: str) -> list[dict]:
+    """Enrich all composition (direct input) items by looking up each insumo_id in catalog.
+
+    Iterates through composicao list, skips non-dicts, and enriches each with corresponding
+    insumo data via _cmb_enrich_composicao_item. Returns filtered list of enriched dicts.
+    """
     insumos_index = _cmb_load_insumos_index(catalog_id)
     enriched: list[dict] = []
     for item in composicao:
@@ -192,6 +296,11 @@ def _cmb_enrich_composicao_itens(composicao: list, catalog_id: str) -> list[dict
 
 
 def _cmb_enrich_equipamentos(equipamentos: list, catalog_id: str) -> list[dict]:
+    """Enrich all equipment items by looking up each equip_id in the insumos catalog.
+
+    Similar to _cmb_enrich_funcoes but for equipment. Merges equipment definition with
+    insumo attributes (descricao, unidade, custo_mensal via _cmb_equipment_monthly_cost).
+    """
     insumos_index = _cmb_load_insumos_index(catalog_id)
     enriched: list[dict] = []
     for equipamento in equipamentos:
@@ -211,6 +320,15 @@ def _cmb_enrich_equipamentos(equipamentos: list, catalog_id: str) -> list[dict]:
 
 
 def _cmb_resolve_equipe(cpu: dict, catalog_id: str) -> dict:
+    """Resolve and enrich the team composition (equipe) for a CPU.
+
+    Tries two sources in order:
+      1. cpu.equipe (explicit team definition)
+      2. Fallback to produtividade template via cpu.producao_id_ref
+
+    Returns dict with enriched funcoes (via _cmb_enrich_funcoes). Returns empty dict
+    if neither source is available.
+    """
     equipe = cpu.get("equipe") or {}
     if equipe:
         return {
