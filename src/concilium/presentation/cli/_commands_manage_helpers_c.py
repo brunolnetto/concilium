@@ -95,6 +95,7 @@ def _icm_apply_merge(
     fonte_origem: dict,
     relatorios: dict,
     apply: bool,
+    incluir_novos: bool,
     verify_pu: bool,
     console: Console,
 ) -> None:
@@ -121,7 +122,7 @@ def _icm_apply_merge(
             fonte_origem.get(t, []),
             relatorios[t],
             id_key=ID_KEYS[t],
-            incluir_novos=True,  # ADR-177: caller option removed, always True for CLI
+            incluir_novos=incluir_novos,
         )
         if t == "producoes" and "producoes" not in bundle:
             bundle["produtividades"] = merged
@@ -279,7 +280,7 @@ def _impl_catalog_merge(
 
     tipos = _icm_validar_e_resolver_tipos(destino, origem, tipo, console)
     if tipos is None:
-        raise typer.Exit(1)
+        raise typer.Exit(2)
 
     fonte_destino = _resolver_fonte_entidades(destino)
     fonte_origem = _resolver_fonte_entidades(origem)
@@ -291,7 +292,7 @@ def _impl_catalog_merge(
     _cc_print_summary_table(relatorios, console, "Merge Report")
     _cc_print_inner_low(relatorios, console)
 
-    _icm_apply_merge(destino, tipos, fonte_destino, fonte_origem, relatorios, apply, verify_pu, console)
+    _icm_apply_merge(destino, tipos, fonte_destino, fonte_origem, relatorios, apply, incluir_novos, verify_pu, console)
 
     if report_json:
         _cc_write_report(report_json, relatorios, mode, destino, origem, console)
