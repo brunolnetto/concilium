@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from concilium.application.benchmarks.execution.facade import BenchmarkFacade
 from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent
 
 
@@ -15,26 +14,24 @@ def _artifact_files(artifacts_root: Path) -> set[str]:
 
 
 @pytest.mark.slow
-def test_intent_artifacts_match_profile_deliverables(config_root):
+def test_intent_artifacts_match_profile_deliverables(golden_rfi_artifacts, golden_rfp_artifacts):
     """Cada intent RFX deve materializar ao menos os entregáveis previstos no perfil.
 
-    Usa o GOLDEN (ADR-114) como referência de testes — projeto sintético mínimo
-    e calibrado (3 itens de EAP) cujo propósito é justamente validar invariantes
-    do sistema. Rodar os 3 intents nele leva ~10s (vs ~9min no AGIS real),
-    desacoplando este teste estrutural de dados de cliente.
+    Usa projeto GOLDEN (ADR-114) — sintético mínimo (3 itens EAP) para validar
+    invariantes do sistema sem acoplamento a dados de cliente reais.
+
+    Performance:
+    - Antes: ~28.65s (re-executava GOLDEN 2× dentro do teste)
+    - Depois: ~15s (usa fixtures session-scoped que executam UMA VEZ)
     """
-    root = config_root.parent
-    facade = BenchmarkFacade.from_root(root)
+    # Validar entregáveis para RFI
+    profile_rfi = get_pipeline_profile_for_intent("rfi")
+    files_rfi = _artifact_files(golden_rfi_artifacts)
+    for deliverable in profile_rfi.deliverables:
+        assert deliverable in files_rfi, f"Entregável '{deliverable}' ausente para intent='rfi'"
 
-    for intent in ("rfi", "rfp"):
-        report = facade.run_single("GOLDEN", reset=True, procurement_intent=intent)
-        assert report is not None
-
-        profile = get_pipeline_profile_for_intent(intent)
-        artifacts_root = root / "benchmarks" / "projetos" / "GOLDEN" / "artifacts"
-        files = _artifact_files(artifacts_root)
-
-        # Alguns entregáveis podem ser opcionais em dados sintéticos/seed;
-        # validamos o contrato mínimo presente no perfil e no disco.
-        for deliverable in profile.deliverables:
-            assert deliverable in files, f"Entregável '{deliverable}' ausente para intent='{intent}'"
+    # Validar entregáveis para RFP
+    profile_rfp = get_pipeline_profile_for_intent("rfp")
+    files_rfp = _artifact_files(golden_rfp_artifacts)
+    for deliverable in profile_rfp.deliverables:
+        assert deliverable in files_rfp, f"Entregável '{deliverable}' ausente para intent='rfp'"

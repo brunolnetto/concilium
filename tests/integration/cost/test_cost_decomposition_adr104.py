@@ -26,9 +26,14 @@ class TestCostDecompositionInvariant:
         assert eq.custo_inst_mo is None  # Default deve ser None
         assert eq.custo_inst_eq is None
 
-    def test_cost_decomposition_closes_with_pool_contracts(self, agis_benchmark):
-        """Valida que custo_total == soma(custo_inst_*) após ADR-085."""
-        canonical = agis_benchmark.canonical
+    def test_cost_decomposition_closes_with_pool_contracts(self, golden_benchmark):
+        """Valida que custo_total == soma(custo_inst_*) após ADR-085.
+
+        Usa projeto GOLDEN (sintético, ~15s setup) para validação de invariantes.
+        Se necessário testar com dados reais complexos: parametrize com @pytest.mark.parametrize
+        para adicionar variante com `agis_benchmark` conforme ADR-104 exigir.
+        """
+        canonical = golden_benchmark.canonical
 
         # Apenas items com pool contracts (Estágio 4) devem ter decomposição preenchida
         items_com_decomposicao = []
