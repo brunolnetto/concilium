@@ -78,16 +78,27 @@ def _now_iso() -> str:
 
 
 def _norm(text: str) -> str:
-    """Normalize text: NFD decompose, remove diacritics, lowercase, collapse whitespace."""
+    """Normalize text for comparison.
+    
+    Args:
+        text: Input string to normalize
+    
+    Returns:
+        str: Normalized text (lowercase, no diacritics, single spaces)
+    """
     t = unicodedata.normalize("NFD", str(text).lower())
     t = "".join(c for c in t if unicodedata.category(c) != "Mn")
     return re.sub(r"\s+", " ", t).strip()
 
 
 def _is_estagiario(ins: dict) -> bool:
-    """Check if insumo (input) is an internship role (bolsa-auxílio, exempt from SMM CLT).
-
-    Searches normalized descricao and codigo for ESTAGIARIO_KEYWORDS.
+    """Check if insumo is an internship role.
+    
+    Args:
+        ins: Insumo dict to check
+    
+    Returns:
+        bool: True if matches internship keywords
     """
     desc = _norm(ins.get("descricao", ""))
     cod = _norm(ins.get("codigo", ""))
@@ -95,7 +106,14 @@ def _is_estagiario(ins: dict) -> bool:
 
 
 def _horas_mes(ins: dict) -> float:
-    """Extract horas_mes from insumo, fallback to HORAS_MES_PADRAO (176 CLT)."""
+    """Extract horas_mes from insumo.
+    
+    Args:
+        ins: Insumo dict
+    
+    Returns:
+        float: Hours per month (default 176 CLT)
+    """
     attrs = ins.get("atributos_especificos") or {}
     h = attrs.get("horas_mes")
     try:
@@ -820,6 +838,7 @@ def main() -> None:
     Steps: (1) Physical errors, (2) Duplicates, (3) Stale RFI dates, (4) Equipment rental,
     (5) Manual review items. Dry-run by default, --apply to persist.
     """
+    parser = argparse.ArgumentParser(description="Curação cirúrgica de plausibilidade do catálogo")
     parser.add_argument("--contexto", required=True, help="ID do contexto (ex: mendeslobo)")
     parser.add_argument("--apply", action="store_true", help="Aplica correções (padrão: dry-run)")
     args = parser.parse_args()
