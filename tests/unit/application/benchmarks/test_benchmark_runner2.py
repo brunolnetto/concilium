@@ -268,6 +268,81 @@ class TestRunSkipArtifacts:
         assert (audit_dir / "benchmark_report.json").exists()
 
 
+class TestRunGateSkillException:
+    """issue #148 follow-up: skill gate que lança (status=EXCEPTION) não pode
+    produzir um relatório calculado a partir de estado pré-falha em silêncio
+    (achado real: custo_direto=0.00 sem sinal de que o pipeline abortou —
+    ver test_cost_decomposition_adr104.py)."""
+
+    def test_exception_record_raises_technical_error_instead_of_silent_report(self, tmp_path):
+        from concilium.application.runtime.exceptions import RuntimeTechnicalError
+
+        runner = _make_runner(tmp_path)
+        spec = _make_spec(tmp_path)
+
+        store = MagicMock()
+        store.current_version.return_value = None
+        store.load_canonical.return_value = {}
+        store.list_output_files.return_value = []
+
+        svc_cls = MagicMock()
+        svc_cls.derive.return_value = {}
+        svc_cls.apply_to_skill_inputs.side_effect = lambda inputs, pack: inputs
+
+        with (
+            patch.object(runner, "_find_or_create", return_value=store),
+            patch.object(runner, "_load_referencia", return_value=None),
+            patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
+            patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
+        ):
+            MockRuntime.return_value.run_pipeline.return_value = [
+                {"skill": "01-escopo-e-eap", "status": "OK", "duration_ms": 10, "avisos": []},
+                {
+                    "skill": "04-cronograma",
+                    "status": "EXCEPTION",
+                    "duration_ms": 5,
+                    "avisos": [],
+                    "erros": ["boom"],
+                    "erro": "boom",
+                },
+            ]
+            with pytest.raises(RuntimeTechnicalError, match="04-cronograma"):
+                runner.run(spec, skip_artifacts=True)
+
+        # report_builder.build nunca deveria ter sido chamado com estado corrompido.
+        runner.report_builder.build.assert_not_called()
+
+    def test_no_exception_records_builds_report_normally(self, tmp_path):
+        """Contraprova: sem EXCEPTION no results_log, comportamento não muda."""
+        runner = _make_runner(tmp_path)
+        spec = _make_spec(tmp_path)
+
+        store = MagicMock()
+        store.current_version.return_value = None
+        store.load_canonical.return_value = {}
+        store.list_output_files.return_value = []
+
+        fake_report = {"resultado": "ok", "quality_gates": {}}
+        runner.report_builder.build.return_value = fake_report
+
+        svc_cls = MagicMock()
+        svc_cls.derive.return_value = {}
+        svc_cls.apply_to_skill_inputs.side_effect = lambda inputs, pack: inputs
+
+        with (
+            patch.object(runner, "_find_or_create", return_value=store),
+            patch.object(runner, "_load_referencia", return_value=None),
+            patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
+            patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
+        ):
+            MockRuntime.return_value.run_pipeline.return_value = [
+                {"skill": "01-escopo-e-eap", "status": "OK", "duration_ms": 10, "avisos": []},
+            ]
+            result = runner.run(spec, skip_artifacts=True)
+
+        assert result == fake_report
+
+
 class TestFindOrCreate:
     def test_creates_new_when_projects_root_missing(self, tmp_path):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner

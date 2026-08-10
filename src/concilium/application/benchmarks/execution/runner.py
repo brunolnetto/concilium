@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from concilium.application.runtime import Runtime
+from concilium.application.runtime.exceptions import RuntimeTechnicalError
 
 from ..inference import BenchmarkInferenceService  # noqa: F401 — needed for monkeypatching in tests
 from ..report.report_builder import BenchmarkReportBuilder
@@ -266,6 +267,26 @@ class BenchmarkRunner:
             self._prepare_inputs(spec, ref_data, inference_pack),
             skill_sequence=_skill_seq,
         )
+        # Fail-loud: um skill gate que LANÇA (status=EXCEPTION) interrompe o
+        # pipeline mas SkillExecutor não propaga a exceção (ela é capturada e
+        # registrada — ver executor.py:_execute_node) — por design, para o
+        # caller (ex.: MCP tool interativa) receber um dict de erro em vez de
+        # um 500 cru. Mas o benchmark aqui monta `report`/`canonical` a partir
+        # do estado PRÉ-skill-falho (pipeline_integridade=CORROMPIDO,
+        # equipes_diretas nunca populado etc.) e devolvia isso silenciosamente
+        # como se fosse um resultado válido — achado real: um bug/crash dentro
+        # de uma skill (não uma falha de validação de negócio) produzia
+        # métricas erradas (ex.: custo_direto=0.00) sem nenhum sinal de que o
+        # benchmark não rodou até o fim. Ver test_cost_decomposition_adr104.
+        _exception_records = [r for r in results_log if r.get("status") == "EXCEPTION"]
+        if _exception_records:
+            failed = _exception_records[0]
+            raise RuntimeTechnicalError(
+                f"Benchmark '{spec.slug}' abortou: skill '{failed['skill']}' lançou exceção "
+                f"inesperada ({failed.get('erro', '?')!r}). O pipeline não executou até o "
+                "fim — qualquer relatório/canônico calculado a partir daqui refletiria "
+                "estado pré-falha, não o resultado real do projeto."
+            )
         report = self.report_builder.build(
             spec=spec,
             version=store.current_version(),
