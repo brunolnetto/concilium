@@ -27,6 +27,13 @@ _TRANSIENT_RETRY_DELAYS_S = (0.5, 1.0, 2.0)
 # resposta lenta/silenciosa do Graph podia se acumular por dezenas de segundos
 # ao longo de uma listagem recursiva sem erro nem retorno.
 _READ_TIMEOUT_S = 30.0
+# 2026-08-10: incidente de produção — _ler_blob_cached ficou de fora da correção
+# do #147 (só cobriu _get_with_retry/listar_blobs) e travou o único worker do
+# concilium-mcp por >30min sem erro nem timeout, ao alcançar o Graph via
+# ping()/listar_projetos (tools MCP síncronas, executadas direto no event loop
+# pelo FastMCP). Timeout maior para escritas (upload de sessão em chunks de
+# 5MB pode legitimamente demorar mais que uma leitura).
+_WRITE_TIMEOUT_S = 60.0
 
 
 class SharePointBlobStorage(BlobStoragePort):
@@ -164,6 +171,7 @@ class SharePointBlobStorage(BlobStoragePort):
                     self._item_url(path),
                     headers=self._headers({"If-None-Match": meta.etag}),
                     follow_redirects=True,
+                    timeout=_READ_TIMEOUT_S,
                 )
                 if r.status_code == 304:
                     return content
@@ -174,6 +182,7 @@ class SharePointBlobStorage(BlobStoragePort):
                         self._item_content_url(path),
                         headers=self._headers(),
                         follow_redirects=True,
+                        timeout=_READ_TIMEOUT_S,
                     )
                     if content_r.status_code == 200:
                         cache.put(path, content_r.content, etag, lm)
@@ -234,6 +243,7 @@ class SharePointBlobStorage(BlobStoragePort):
             self._item_content_url(path),
             headers=self._headers({"Content-Type": "application/octet-stream"}),
             content=content,
+            timeout=_WRITE_TIMEOUT_S,
         )
         if r.status_code == 412:
             raise StorageConcurrencyError(
@@ -248,6 +258,7 @@ class SharePointBlobStorage(BlobStoragePort):
             f"{self._item_url(path)}:/createUploadSession",
             headers=self._headers({"Content-Type": "application/json"}),
             json={"item": {"@microsoft.graph.conflictBehavior": "replace"}},
+            timeout=_WRITE_TIMEOUT_S,
         )
         r.raise_for_status()
         upload_url = r.json()["uploadUrl"]
@@ -264,7 +275,7 @@ class SharePointBlobStorage(BlobStoragePort):
                 "Content-Range": f"bytes {offset}-{end}/{total}",
                 "Content-Type": "application/octet-stream",
             }
-            r = httpx.put(upload_url, headers=headers, content=chunk)
+            r = httpx.put(upload_url, headers=headers, content=chunk, timeout=_WRITE_TIMEOUT_S)
             r.raise_for_status()
             offset += len(chunk)
 
@@ -317,7 +328,7 @@ class SharePointBlobStorage(BlobStoragePort):
         """Verifica existência — sempre consulta a API (sem cache, ADR-047 §D3)."""
         httpx = self._client()
         try:
-            r = httpx.get(self._item_url(path), headers=self._headers())
+            r = httpx.get(self._item_url(path), headers=self._headers(), timeout=_READ_TIMEOUT_S)
             return r.status_code == 200
         except Exception:
             return False
@@ -329,7 +340,7 @@ class SharePointBlobStorage(BlobStoragePort):
         Lança FileNotFoundError se o item não existir.
         """
         httpx = self._client()
-        r = httpx.delete(self._item_url(path), headers=self._headers())
+        r = httpx.delete(self._item_url(path), headers=self._headers(), timeout=_READ_TIMEOUT_S)
         if r.status_code == 404:
             raise FileNotFoundError(f"Blob não encontrado para deletar: {path}")
         if r.status_code not in (200, 204):
@@ -355,7 +366,7 @@ class SharePointBlobStorage(BlobStoragePort):
         """
         httpx = self._client()
         try:
-            httpx.post(f"{self._item_url(path)}:/checkout", headers=self._headers())
+            httpx.post(f"{self._item_url(path)}:/checkout", headers=self._headers(), timeout=_READ_TIMEOUT_S)
         except Exception as exc:  # noqa: BLE001 — best-effort, checkin reporta o erro real
             logger.debug("checkout best-effort falhou para '%s' (seguindo para checkin): %s", path, exc)
 
@@ -363,6 +374,7 @@ class SharePointBlobStorage(BlobStoragePort):
             f"{self._item_url(path)}:/checkin",
             headers=self._headers({"Content-Type": "application/json"}),
             json={"checkInAs": "majorVersion", "comment": "Aprovado via Concilium"},
+            timeout=_READ_TIMEOUT_S,
         )
         if r.status_code == 404:
             raise FileNotFoundError(f"Arquivo não encontrado para aprovar: {path}")
@@ -396,6 +408,7 @@ class SharePointBlobStorage(BlobStoragePort):
                 f"{self._item_url(path)}:/createLink",
                 headers=self._headers({"Content-Type": "application/json"}),
                 json={"type": "view", "scope": scope, "expirationDateTime": exp},
+                timeout=_READ_TIMEOUT_S,
             )
             if r.status_code in (200, 201):
                 return (r.json().get("link") or {}).get("webUrl")
