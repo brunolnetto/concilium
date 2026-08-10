@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -21,7 +22,7 @@ def register(server: FastMCP) -> None:
 
     @server.tool()
     @permission("health:read")
-    def ping() -> dict[str, Any]:
+    async def ping() -> dict[str, Any]:
         """Verifica a saúde do servidor MCP sem criar nem alterar dados.
 
         Retorna:
@@ -34,6 +35,15 @@ def register(server: FastMCP) -> None:
         Use como primeira chamada para calibrar o estado do sistema antes
         de qualquer operação de planejamento.
         """
+        # issue #148: todo o corpo (I/O de storage síncrono — health_check,
+        # load_catalogo, check_and_report_novidades) roda em thread separada.
+        # O worker asyncio único do concilium-mcp NÃO pode ficar bloqueado
+        # aqui: uma resposta lenta/pendurada do Graph/SharePoint travaria
+        # TODAS as requisições da réplica, não só esta (ver incidente de
+        # produção 2026-08-10, causa raiz em _ler_blob_cached sem timeout).
+        return await asyncio.to_thread(_ping_impl)
+
+    def _ping_impl() -> dict[str, Any]:
         config_dir = _config_root()
         proj_root = _projetos_root()
 

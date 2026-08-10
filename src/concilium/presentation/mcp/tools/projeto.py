@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC
 from typing import Any
@@ -27,8 +28,14 @@ def register(server: FastMCP) -> None:
     # ── 2. Listar projetos existentes ─────────────────────────────────────
     @server.tool()
     @permission("project:read")
-    def listar_projetos() -> dict[str, Any]:
+    async def listar_projetos() -> dict[str, Any]:
         """Lista os projetos existentes no sistema com versão atual e contexto."""
+        # issue #148: I/O de storage (list_projects/meta/list_versions) roda em
+        # thread separada — não pode bloquear o único worker asyncio do
+        # concilium-mcp (ver incidente de produção 2026-08-10).
+        return await asyncio.to_thread(_listar_projetos_impl)
+
+    def _listar_projetos_impl() -> dict[str, Any]:
         proj_root = _projetos_root()
         out = []
         for handle in _project_repository().list_projects():

@@ -26,6 +26,7 @@ Decorators disponíveis (funcionam em FastAPI routes e MCP tools):
 from __future__ import annotations
 
 import contextvars
+import inspect
 import logging as _logging
 from functools import wraps
 from typing import Any
@@ -451,8 +452,7 @@ def permission(perm: str):
     """
 
     def decorator(fn: Any) -> Any:
-        @wraps(fn)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def _check(kwargs: dict[str, Any]) -> None:
             # AUTH_PUBLIC: bootstrap sem token (ex: ativar_dispositivo) — sempre permitido,
             # não passa por _auth_enabled()/roles pois é chamado antes de existir qualquer token.
             if perm != AUTH_PUBLIC and _auth_enabled():
@@ -463,7 +463,22 @@ def permission(perm: str):
                         f"Roles do token: {token_roles or ['(nenhum)']!r}. "
                         "Solicite ao admin o role adequado."
                     )
-            return fn(*args, **kwargs)
+
+        # issue #148: fn async precisa de um wrapper `async def` que faça `await` —
+        # um wrapper síncrono devolveria a coroutine sem executá-la (bug silencioso:
+        # o FastMCP decide is_async inspecionando este wrapper, não a fn original).
+        if inspect.iscoroutinefunction(fn):
+
+            @wraps(fn)
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
+                _check(kwargs)
+                return await fn(*args, **kwargs)
+        else:
+
+            @wraps(fn)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                _check(kwargs)
+                return fn(*args, **kwargs)
 
         # ADR-117: tag introspectável — fonte única da permissão da tool,
         # lida por patch_mcp_auth_permissions e pelo teste de governança.
@@ -489,15 +504,27 @@ def roles(*required_roles: str):
     """
 
     def decorator(fn: Any) -> Any:
-        @wraps(fn)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def _check(kwargs: dict[str, Any]) -> None:
             if _auth_enabled():
                 token_roles = _get_roles_from_context(kwargs)
                 if not any(r in token_roles for r in required_roles):
                     raise PermissionError(
                         f"Roles necessários: {list(required_roles)}. Roles do token: {token_roles or ['(nenhum)']!r}."
                     )
-            return fn(*args, **kwargs)
+
+        # issue #148: mesmo tratamento async-aware do permission() acima.
+        if inspect.iscoroutinefunction(fn):
+
+            @wraps(fn)
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
+                _check(kwargs)
+                return await fn(*args, **kwargs)
+        else:
+
+            @wraps(fn)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                _check(kwargs)
+                return fn(*args, **kwargs)
 
         return wrapper
 
@@ -584,8 +611,7 @@ def patch_mcp_auth_permissions(server: Any) -> None:
         required_perm = getattr(original_fn, "_required_permission", None) or _FAILCLOSED_TOOL_PERMISSION
 
         def _make_wrapper(fn: Any, perm: str) -> Any:
-            @wraps(fn)
-            def _auth_wrapper(*args: Any, **kwargs: Any) -> Any:
+            def _check() -> None:
                 # AUTH_PUBLIC: bootstrap sem token — ver permission() acima.
                 if perm != AUTH_PUBLIC and _auth_enabled():
                     token_roles = _effective_mcp_roles()
@@ -595,7 +621,22 @@ def patch_mcp_auth_permissions(server: Any) -> None:
                             f"Roles do token: {token_roles or ['(nenhum)']}. "
                             "Solicite ao admin o role adequado."
                         )
-                return fn(*args, **kwargs)
+
+            # issue #148: fn pode chegar aqui já async (ping()/listar_projetos()
+            # marcadas @permission tornam-se async — ver permission() acima). Um
+            # _auth_wrapper síncrono devolveria a coroutine sem executá-la.
+            if inspect.iscoroutinefunction(fn):
+
+                @wraps(fn)
+                async def _auth_wrapper(*args: Any, **kwargs: Any) -> Any:
+                    _check()
+                    return await fn(*args, **kwargs)
+            else:
+
+                @wraps(fn)
+                def _auth_wrapper(*args: Any, **kwargs: Any) -> Any:
+                    _check()
+                    return fn(*args, **kwargs)
 
             # setattr (não atributo direto): mesma justificativa do @permission acima.
             setattr(_auth_wrapper, "_required_permission", perm)  # noqa: B010  # propaga a tag

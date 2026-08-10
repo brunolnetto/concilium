@@ -89,7 +89,7 @@ def _mock_handle(project_id, meta=None, versions=None):
 
 
 class TestListarProjetos:
-    def test_no_projects_returns_empty(self, tools, tmp_path):
+    async def test_no_projects_returns_empty(self, tools, tmp_path):
         """repositório vazio → retorna projetos vazio."""
         mock_repo = MagicMock()
         mock_repo.list_projects.return_value = []
@@ -98,12 +98,12 @@ class TestListarProjetos:
             patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
         ):
-            result = tools["listar_projetos"]()
+            result = await tools["listar_projetos"]()
 
         assert result["projetos"] == []
         assert "projetos_root" in result
 
-    def test_iterates_valid_project_dirs(self, tools, tmp_path):
+    async def test_iterates_valid_project_dirs(self, tools, tmp_path):
         """Itera handles do repositório, lê meta/versoes de cada um."""
         mock_repo = MagicMock()
         mock_repo.list_projects.return_value = [
@@ -118,7 +118,7 @@ class TestListarProjetos:
             patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
         ):
-            result = tools["listar_projetos"]()
+            result = await tools["listar_projetos"]()
 
         projetos = result["projetos"]
         assert len(projetos) == 1
@@ -128,7 +128,7 @@ class TestListarProjetos:
         assert projetos[0]["current_version"] == "v1"
         assert projetos[0]["versoes"] == ["v1"]
 
-    def test_handle_meta_raises_appends_error(self, tools, tmp_path):
+    async def test_handle_meta_raises_appends_error(self, tools, tmp_path):
         """handle.meta levanta exceção → resultado inclui id + erro, sem quebrar a listagem."""
         broken = MagicMock()
         broken.root.name = "broken-proj"
@@ -141,7 +141,7 @@ class TestListarProjetos:
             patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
             patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
         ):
-            result = tools["listar_projetos"]()
+            result = await tools["listar_projetos"]()
 
         projetos = result["projetos"]
         assert len(projetos) == 1

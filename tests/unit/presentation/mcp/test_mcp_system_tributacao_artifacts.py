@@ -36,14 +36,14 @@ _SYSTEM_MOD = "concilium.presentation.mcp.tools.system"
 
 
 class TestSystemPing:
-    def test_ping_no_config_returns_erro(self, monkeypatch, tmp_path):
+    async def test_ping_no_config_returns_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
         # config_root points to tmp_path/config which doesn't have contextos/
-        result = tools["ping"]()
+        result = await tools["ping"]()
         # No contextos → status SAUDAVEL (empty catalogos → no DEGRADADO)
         assert "status" in result
 
-    def test_ping_with_contextos(self, monkeypatch, tmp_path):
+    async def test_ping_with_contextos(self, monkeypatch, tmp_path):
         config_dir = tmp_path / "config"
         contextos_dir = config_dir / "contextos"
         contextos_dir.mkdir(parents=True, exist_ok=True)
@@ -66,10 +66,10 @@ class TestSystemPing:
                 return_value=[],
             ),
         ):
-            result = tools["ping"]()
+            result = await tools["ping"]()
         assert "status" in result
 
-    def test_ping_with_projects(self, monkeypatch, tmp_path):
+    async def test_ping_with_projects(self, monkeypatch, tmp_path):
         config_dir = tmp_path / "config"
         proj_root = tmp_path / "projetos"
         proj_dir = proj_root / "proj-1"
@@ -82,10 +82,10 @@ class TestSystemPing:
             patch(f"{_SYSTEM_MOD}._config_root", return_value=config_dir),
             patch(f"{_SYSTEM_MOD}._projetos_root", return_value=proj_root),
         ):
-            result = tools["ping"]()
+            result = await tools["ping"]()
         assert "status" in result
 
-    def test_ping_blob_storage_health_check_exception_sets_status_erro(self, monkeypatch, tmp_path):
+    async def test_ping_blob_storage_health_check_exception_sets_status_erro(self, monkeypatch, tmp_path):
         """Lines 84-91: build_blob_storage().health_check() raising → storage_health has
         status='error' → status_geral becomes 'ERRO'."""
         tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
@@ -94,11 +94,11 @@ class TestSystemPing:
             "concilium.infrastructure.storage.store_factory.build_blob_storage",
             side_effect=RuntimeError("blob storage unreachable"),
         ):
-            result = tools["ping"]()
+            result = await tools["ping"]()
 
         assert result["status"] == "ERRO"
 
-    def test_ping_catalog_exception_returns_erro_entry(self, monkeypatch, tmp_path):
+    async def test_ping_catalog_exception_returns_erro_entry(self, monkeypatch, tmp_path):
         config_dir = tmp_path / "config"
         contextos_dir = config_dir / "contextos"
         contextos_dir.mkdir(parents=True, exist_ok=True)
@@ -114,7 +114,7 @@ class TestSystemPing:
             patch(f"{_SYSTEM_MOD}._config_root", return_value=config_dir),
             patch(f"{_SYSTEM_MOD}._projetos_root", return_value=tmp_path / "projetos"),
         ):
-            result = tools["ping"]()
+            result = await tools["ping"]()
         # Should be DEGRADADO because a catalog errored
         assert result.get("status") in {"DEGRADADO", "ERRO"}
 

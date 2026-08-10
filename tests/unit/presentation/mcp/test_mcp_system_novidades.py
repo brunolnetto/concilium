@@ -38,16 +38,16 @@ def _register_tools(monkeypatch, tmp_path: Path) -> dict:
 
 
 class TestPingNovidades:
-    def test_novidades_absent_when_nothing_to_report(self, monkeypatch, tmp_path):
+    async def test_novidades_absent_when_nothing_to_report(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         with (
             patch(f"{_SYSTEM_MOD}.get_current_user_id", return_value="c1"),
             patch(f"{_SYSTEM_MOD}.check_and_report_novidades", return_value=None),
         ):
-            result = tools["ping"]()
+            result = await tools["ping"]()
         assert "novidades" not in result
 
-    def test_novidades_present_when_something_to_report(self, monkeypatch, tmp_path):
+    async def test_novidades_present_when_something_to_report(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         novidades = {
             "deploy": {"resumo": "ADR-144", "promoted_at": "2026-07-20T14:32:00+00:00"},
@@ -57,16 +57,16 @@ class TestPingNovidades:
             patch(f"{_SYSTEM_MOD}.get_current_user_id", return_value="c1"),
             patch(f"{_SYSTEM_MOD}.check_and_report_novidades", return_value=novidades),
         ):
-            result = tools["ping"]()
+            result = await tools["ping"]()
         assert result["novidades"] == novidades
 
-    def test_no_identity_never_calls_novidades_check(self, monkeypatch, tmp_path):
+    async def test_no_identity_never_calls_novidades_check(self, monkeypatch, tmp_path):
         """Sem client_id resolvível, nem vale a pena chamar — não há cursor a comparar."""
         tools = _register_tools(monkeypatch, tmp_path)
         with (
             patch(f"{_SYSTEM_MOD}.get_current_user_id", return_value=None),
             patch(f"{_SYSTEM_MOD}.check_and_report_novidades") as mock_check,
         ):
-            result = tools["ping"]()
+            result = await tools["ping"]()
         mock_check.assert_not_called()
         assert "novidades" not in result
