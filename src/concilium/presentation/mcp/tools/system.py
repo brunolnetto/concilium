@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 from concilium.application.services.system_novelties import check_and_report_novidades
 from concilium.infrastructure.auth.permission_guard import get_current_user_id, permission
 from concilium.presentation.mcp._context import (
+    TOOL_IO_TIMEOUT_S,
     _config_root,
     _projetos_root,
     _runtime,
@@ -41,7 +42,21 @@ def register(server: FastMCP) -> None:
         # aqui: uma resposta lenta/pendurada do Graph/SharePoint travaria
         # TODAS as requisições da réplica, não só esta (ver incidente de
         # produção 2026-08-10, causa raiz em _ler_blob_cached sem timeout).
-        return await asyncio.to_thread(_ping_impl)
+        try:
+            return await asyncio.wait_for(asyncio.to_thread(_ping_impl), timeout=TOOL_IO_TIMEOUT_S)
+        except TimeoutError:
+            return _wrap_response(
+                {
+                    "status": "ERRO",
+                    "erro": (
+                        f"ping excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage (SharePoint). "
+                        "A thread de I/O pode continuar rodando em segundo plano — isto é uma "
+                        "falha rápida do lado do tool, não uma garantia de que o storage liberou "
+                        "o recurso. Tente novamente; se persistir, é um sintoma de degradação de "
+                        "rede/Graph API, não do servidor MCP em si."
+                    ),
+                }
+            )
 
     def _ping_impl() -> dict[str, Any]:
         config_dir = _config_root()

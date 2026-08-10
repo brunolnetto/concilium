@@ -112,6 +112,19 @@ _GATE_PREDECESSORS: dict[str, frozenset[str]] = _build_gate_predecessors()
 
 RESPONSE_SCHEMA_VERSION = "2026-05-03"
 
+# 2026-08-10, pós-#148: deadline de parede para tools async que delegam I/O
+# de storage a asyncio.to_thread (ping, listar_projetos). timeout=30s do
+# httpx (issue #147) é por-chunk, não por-requisição total — uma resposta
+# que "goteja" bytes lentamente evita esse timeout indefinidamente (issue
+# #149, causa raiz da correção definitiva ainda pendente: BlobStoragePort
+# assíncrono ponta a ponta). Observado em produção: tool pendurada por 12+
+# min mesmo com #147/#148 já deployados. Este valor é menor que o timeout
+# de 60s do client MCP (Claude Desktop) para o tool falhar rápido e claro
+# em vez do usuário só ver um timeout opaco do client. Mitigação, não fix
+# — a thread de I/O pode continuar rodando em background após o cancelamento
+# lógico do wait_for (asyncio não mata threads).
+TOOL_IO_TIMEOUT_S = 45.0
+
 # Contexto de sessão — trace_id gerado uma vez por sessão do servidor
 _session_context: dict[str, str] = {}
 

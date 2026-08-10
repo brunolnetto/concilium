@@ -149,6 +149,24 @@ class TestListarProjetos:
         assert "erro" in projetos[0]
         assert "corrupt meta" in projetos[0]["erro"]
 
+    async def test_times_out_returns_erro_instead_of_hanging(self, tools, tmp_path):
+        """issue #149: I/O de storage sem timeout total (httpx timeout é por-chunk)
+        pode pendurar a thread indefinidamente — o wait_for precisa cortar e devolver
+        um erro claro em vez de deixar o tool (e o client) pendurados."""
+        import time
+
+        mock_repo = MagicMock()
+        mock_repo.list_projects.side_effect = lambda: (time.sleep(0.2), [])[1]
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto.TOOL_IO_TIMEOUT_S", 0.01),
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
+        ):
+            result = await tools["listar_projetos"]()
+
+        assert "erro" in result
+        assert "excedeu" in result["erro"]
+
 
 # ===========================================================================
 # iniciar_orcamento

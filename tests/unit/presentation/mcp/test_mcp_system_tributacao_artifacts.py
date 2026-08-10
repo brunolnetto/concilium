@@ -118,6 +118,33 @@ class TestSystemPing:
         # Should be DEGRADADO because a catalog errored
         assert result.get("status") in {"DEGRADADO", "ERRO"}
 
+    async def test_ping_times_out_returns_erro_instead_of_hanging(self, monkeypatch, tmp_path):
+        """issue #149: I/O de storage sem timeout total (httpx timeout é por-chunk)
+        pode pendurar a thread indefinidamente — o wait_for precisa cortar e devolver
+        um erro claro em vez de deixar o tool (e o client) pendurados."""
+        import time
+
+        tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
+
+        def _slow_health_check():
+            time.sleep(0.2)
+            return {"status": "ok"}
+
+        slow_storage = MagicMock()
+        slow_storage.health_check.side_effect = _slow_health_check
+
+        with (
+            patch(f"{_SYSTEM_MOD}.TOOL_IO_TIMEOUT_S", 0.01),
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_blob_storage",
+                return_value=slow_storage,
+            ),
+        ):
+            result = await tools["ping"]()
+
+        assert result["status"] == "ERRO"
+        assert "excedeu" in result["erro"]
+
 
 # ─── tributacao.py ─────────────────────────────────────────────────────────────
 

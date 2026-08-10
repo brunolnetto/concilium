@@ -12,6 +12,7 @@ from mcp.server.fastmcp import FastMCP
 from concilium.domain.models.canonical import tipos_obra_validos
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import (
+    TOOL_IO_TIMEOUT_S,
     _lifecycle_coordinator,
     _project,
     _project_repository,
@@ -33,7 +34,18 @@ def register(server: FastMCP) -> None:
         # issue #148: I/O de storage (list_projects/meta/list_versions) roda em
         # thread separada — não pode bloquear o único worker asyncio do
         # concilium-mcp (ver incidente de produção 2026-08-10).
-        return await asyncio.to_thread(_listar_projetos_impl)
+        # issue #149: deadline de parede — timeout do httpx é por-chunk, não
+        # por-requisição total (ver TOOL_IO_TIMEOUT_S em _context.py).
+        try:
+            return await asyncio.wait_for(asyncio.to_thread(_listar_projetos_impl), timeout=TOOL_IO_TIMEOUT_S)
+        except TimeoutError:
+            return {
+                "erro": (
+                    f"listar_projetos excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage "
+                    "(SharePoint). Tente novamente; se persistir, é sintoma de degradação de "
+                    "rede/Graph API, não do servidor MCP em si."
+                )
+            }
 
     def _listar_projetos_impl() -> dict[str, Any]:
         proj_root = _projetos_root()
