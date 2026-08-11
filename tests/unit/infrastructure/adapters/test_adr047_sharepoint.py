@@ -1793,3 +1793,155 @@ class TestConcurrencyLimiter:
 
         assert state["peak"] <= limit
         assert mock_httpx.get.call_count == 6
+
+
+# ---------------------------------------------------------------------------
+# ler_blobs_batch — Graph $batch (issue #147/#148/#149/#153: ataca o N+1)
+# ---------------------------------------------------------------------------
+
+
+def _batch_response(pairs: list[tuple[str, int, object]]):
+    """Monta um mock de resposta de `$batch`: pairs de (id, status, body)."""
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.json.return_value = {
+        "responses": [{"id": rid, "status": status, "body": body} for rid, status, body in pairs]
+    }
+    return resp
+
+
+class TestSharePointBlobStorageLerBlobsBatch:
+    def test_empty_paths_returns_empty_without_http_call(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            assert storage.ler_blobs_batch([]) == {}
+        mock_httpx.post.assert_not_called()
+
+    def test_decodes_native_json_body(self):
+        """Caso esperado: arquivo .json volta como objeto JSON nativo no body
+        (Content-Type application/json da sub-resposta), sem base64."""
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        mock_httpx.post.return_value = _batch_response([("0", 200, {"id": "PROD-1", "valor_horario": 10.0})])
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["produtividades/PROD-1.json"])
+        assert json.loads(result["produtividades/PROD-1.json"]) == {"id": "PROD-1", "valor_horario": 10.0}
+
+    def test_decodes_base64_body(self):
+        import base64
+
+        raw = json.dumps({"id": "PROD-2"}).encode("utf-8")
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        mock_httpx.post.return_value = _batch_response([("0", 200, base64.b64encode(raw).decode("ascii"))])
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["produtividades/PROD-2.json"])
+        assert result["produtividades/PROD-2.json"] == raw
+
+    def test_decodes_plain_string_body(self):
+        """String que não decodifica como base64 válido é tratada como texto puro."""
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        mock_httpx.post.return_value = _batch_response([("0", 200, "não é base64 válido")])
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["a.json"])
+        assert result["a.json"] == "não é base64 válido".encode()
+
+    def test_non_200_sub_response_omitted(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        mock_httpx.post.return_value = _batch_response(
+            [("0", 200, {"id": "OK"}), ("1", 404, None)]
+        )
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["ok.json", "missing.json"])
+        assert "ok.json" in result
+        assert "missing.json" not in result
+
+    def test_unrecognized_body_type_omitted(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        mock_httpx.post.return_value = _batch_response([("0", 200, 12345)])
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["weird.json"])
+        assert result == {}
+
+    def test_batch_call_non_200_omits_whole_chunk_without_raising(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        resp = MagicMock()
+        resp.status_code = 500
+        mock_httpx.post.return_value = resp
+        with (
+            patch.dict("sys.modules", {"httpx": mock_httpx}),
+            patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep"),
+        ):
+            result = storage.ler_blobs_batch(["a.json", "b.json"])
+        assert result == {}
+
+    def test_batch_call_exception_omits_chunk_without_raising(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        mock_httpx.post.side_effect = RuntimeError("rede caiu")
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["a.json"])
+        assert result == {}
+
+    def test_splits_into_chunks_of_20(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        def _respond(url, headers, json, timeout):
+            pairs = [(r["id"], 200, {"i": r["id"]}) for r in json["requests"]]
+            return _batch_response(pairs)
+
+        mock_httpx.post.side_effect = _respond
+        paths = [f"produtividades/PROD-{i:03d}.json" for i in range(45)]  # 3 lotes: 20+20+5
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(paths)
+
+        assert mock_httpx.post.call_count == 3
+        for call in mock_httpx.post.call_args_list[:-1]:
+            assert len(call.kwargs["json"]["requests"]) == 20
+        assert len(mock_httpx.post.call_args_list[-1].kwargs["json"]["requests"]) == 5
+        assert len(result) == 45
+
+    def test_retries_on_transient_429_then_succeeds(self):
+        """$batch está sujeito ao mesmo throttling do Graph que as chamadas
+        individuais — precisa do mesmo retry/backoff (_post_with_retry)."""
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        resp_429 = MagicMock()
+        resp_429.status_code = 429
+        resp_429.headers = {}
+        resp_200 = _batch_response([("0", 200, {"id": "OK"})])
+        mock_httpx.post.side_effect = [resp_429, resp_200]
+
+        with (
+            patch.dict("sys.modules", {"httpx": mock_httpx}),
+            patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep"),
+        ):
+            result = storage.ler_blobs_batch(["a.json"])
+
+        assert "a.json" in result
+        assert mock_httpx.post.call_count == 2
+
+    def test_relative_content_url_has_no_absolute_graph_prefix(self):
+        """Sub-requests de $batch são relativas ao root do Graph — URL absoluta
+        é rejeitada pela API."""
+        storage = _make_storage()
+        url = storage._batch_relative_content_url("produtividades/PROD-1.json")
+        assert url == "/drives/drive-1/root:/Concilium/test/produtividades/PROD-1.json:/content"
+        assert not url.startswith("http")
