@@ -36,7 +36,13 @@ _RETRY_AFTER_CAP_S = 10.0
 # _MAX_CONCURRENT_REQUESTS: teto de sequências de retry simultâneas por processo
 # — bounded queue em vez de concorrência ilimitada quando várias chamadas
 # (ex.: múltiplas tentativas do usuário) tentam falar com o Graph ao mesmo tempo.
-_MAX_CONCURRENT_REQUESTS = 4
+#
+# 2026-08-11 (follow-up): reduzido de 4 pra 2 junto com _MAX_PARALLEL_FETCHES
+# (_catalog_storage.py) — concilium-mcp roda com CPU limitada (0.5 vCPU, hoje
+# aumentado pra 1.0) e rajadas de threads concorrentes fazendo parsing/TLS
+# estouravam a cota de CPU do cgroup, suspendendo o container inteiro
+# (inclusive o event loop do asyncio) por minutos. Ver ADR-180/issue #149.
+_MAX_CONCURRENT_REQUESTS = 2
 _concurrency_limiter = threading.Semaphore(_MAX_CONCURRENT_REQUESTS)
 
 

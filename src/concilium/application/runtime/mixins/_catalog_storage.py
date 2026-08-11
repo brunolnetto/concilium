@@ -48,7 +48,17 @@ _REMOTE_CACHE_TTL_SECONDS = 60 * 60
 # precisa do ping() responder rápido. Paralelizado via ThreadPoolExecutor; a
 # concorrência real com o Graph continua limitada por _concurrency_limiter
 # (sharepoint.py, threading.Semaphore) — aqui só paralelizamos o disparo.
-_MAX_PARALLEL_FETCHES = 8
+#
+# 2026-08-11 (follow-up): 8 workers travava o próprio container por 7+ minutos
+# em produção — concilium-mcp roda com só 0.5 vCPU (hoje aumentado pra 1.0, mas
+# mesmo assim). Rajada de 8 threads fazendo parsing de JSON + handshake TLS
+# concorrente estourava a cota de CPU do cgroup, e o container inteiro (INCLUSIVE
+# o event loop do asyncio que deveria disparar TOOL_IO_TIMEOUT_S) ficava
+# suspenso pelo kernel — o timeout de 45s nunca disparava porque o mecanismo de
+# cancelamento também ficava congelado. Reduzido para um valor conservador —
+# ainda um ganho real sobre sequencial, sem rajada grande o bastante pra
+# derrubar o event loop num container pequeno.
+_MAX_PARALLEL_FETCHES = 3
 
 
 def _fetch_all_parallel(paths: list[str], fetch_one) -> list[Any]:
