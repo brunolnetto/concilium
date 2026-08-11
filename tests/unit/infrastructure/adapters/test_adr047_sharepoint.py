@@ -1561,3 +1561,148 @@ class TestSharePointAuthCoverage:
         call_kwargs = mock_msal.ConfidentialClientApplication.call_args[1]
         assert "private_key" in call_kwargs.get("client_credential", {})
 
+
+
+# ---------------------------------------------------------------------------
+# Incidente 2026-08-11: tempestade de 429 sustentada — Retry-After ignorado +
+# concorrência ilimitada de sequências de retry no mesmo processo.
+# ---------------------------------------------------------------------------
+
+
+class TestRetryAfterSeconds:
+    def test_absent_header_returns_default(self):
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import _retry_after_seconds
+
+        r = MagicMock()
+        r.headers = {}
+        assert _retry_after_seconds(r, default=0.5) == 0.5
+
+    def test_seconds_header_larger_than_default_is_used(self):
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import _retry_after_seconds
+
+        r = MagicMock()
+        r.headers = {"Retry-After": "3"}
+        assert _retry_after_seconds(r, default=0.5) == 3.0
+
+    def test_seconds_header_smaller_than_default_uses_default(self):
+        """O Graph pode pedir menos que nosso próprio mínimo — não confiamos
+        nisso, usamos o maior dos dois."""
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import _retry_after_seconds
+
+        r = MagicMock()
+        r.headers = {"Retry-After": "0.1"}
+        assert _retry_after_seconds(r, default=0.5) == 0.5
+
+    def test_capped_at_max(self):
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import (
+            _RETRY_AFTER_CAP_S,
+            _retry_after_seconds,
+        )
+
+        r = MagicMock()
+        r.headers = {"Retry-After": "9999"}
+        assert _retry_after_seconds(r, default=0.5) == _RETRY_AFTER_CAP_S
+
+    def test_http_date_header_parsed(self):
+        from datetime import UTC, datetime, timedelta
+        from email.utils import format_datetime
+
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import _retry_after_seconds
+
+        future = datetime.now(UTC) + timedelta(seconds=4)
+        header_value = format_datetime(future, usegmt=True)
+        r = MagicMock()
+        r.headers = {"Retry-After": header_value}
+        result = _retry_after_seconds(r, default=0.5)
+        assert 2.0 <= result <= 4.5  # margem por tempo de execução do teste
+
+    def test_invalid_header_falls_back_to_default(self):
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import _retry_after_seconds
+
+        r = MagicMock()
+        r.headers = {"Retry-After": "not-a-date-or-number"}
+        assert _retry_after_seconds(r, default=0.5) == 0.5
+
+
+class TestGetWithRetryRespectsRetryAfter:
+    def test_sleeps_for_retry_after_value_not_fixed_schedule(self):
+        storage = _make_storage_no_cache()
+        resp_429 = MagicMock()
+        resp_429.status_code = 429
+        resp_429.headers = {"Retry-After": "3"}
+        resp_200 = MagicMock()
+        resp_200.status_code = 200
+        resp_200.headers = {}
+
+        mock_httpx = MagicMock()
+        mock_httpx.get.side_effect = [resp_429, resp_200]
+
+        with patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep") as mock_sleep:
+            result = storage._get_with_retry(mock_httpx, "http://x", {})
+
+        assert result is resp_200
+        mock_sleep.assert_called_once_with(3.0)
+
+    def test_no_retry_after_uses_fixed_schedule(self):
+        storage = _make_storage_no_cache()
+        resp_429 = MagicMock()
+        resp_429.status_code = 429
+        resp_429.headers = {}
+        resp_200 = MagicMock()
+        resp_200.status_code = 200
+        resp_200.headers = {}
+
+        mock_httpx = MagicMock()
+        mock_httpx.get.side_effect = [resp_429, resp_200]
+
+        with patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep") as mock_sleep:
+            storage._get_with_retry(mock_httpx, "http://x", {})
+
+        mock_sleep.assert_called_once_with(0.5)
+
+
+class TestConcurrencyLimiter:
+    """issue 2026-08-11: várias sequências de retry concorrentes no mesmo processo
+    amplificavam o throttling em vez de esperar ele passar — agora limitado a
+    _MAX_CONCURRENT_REQUESTS sequências simultâneas."""
+
+    def test_limits_concurrent_retry_sequences(self):
+        import threading
+        import time as time_module
+
+        from concilium.infrastructure.adapters.blob_storage import sharepoint as sp_module
+
+        limit = 2
+        test_semaphore = threading.Semaphore(limit)
+        state = {"active": 0, "peak": 0}
+        lock = threading.Lock()
+
+        def _slow_get(*args, **kwargs):
+            with lock:
+                state["active"] += 1
+                state["peak"] = max(state["peak"], state["active"])
+            time_module.sleep(0.05)
+            with lock:
+                state["active"] -= 1
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.headers = {}
+            return resp
+
+        mock_httpx = MagicMock()
+        mock_httpx.get.side_effect = _slow_get
+
+        storage = _make_storage_no_cache()
+
+        with patch.object(sp_module, "_concurrency_limiter", test_semaphore):
+            threads = [
+                threading.Thread(target=storage._get_with_retry, args=(mock_httpx, "http://x", {}))
+                for _ in range(6)
+            ]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        assert state["peak"] <= limit
+        assert mock_httpx.get.call_count == 6

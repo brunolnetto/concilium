@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
-from datetime import UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,45 @@ _LARGE_FILE_THRESHOLD = 4 * 1024 * 1024  # 4 MB
 # token MSAL da revisão nova ainda está "frio" ou o Graph está sob throttling.
 _TRANSIENT_STATUS_CODES = frozenset({429, 502, 503, 504})
 _TRANSIENT_RETRY_DELAYS_S = (0.5, 1.0, 2.0)
+# 2026-08-11: incidente de produção — tempestade de 429 sustentada por 6+ minutos,
+# auto-realimentada. Duas causas: (1) o cronograma fixo acima ignorava o header
+# Retry-After do Graph — reter cedo demais insistia durante a própria janela de
+# throttling; (2) cada retry do usuário abria uma NOVA thread (asyncio.to_thread,
+# issue #148) sem cancelar as antigas — múltiplas sequências de retry concorrentes
+# no mesmo processo amplificavam o throttling em vez de esperar ele passar.
+# _RETRY_AFTER_CAP_S: não vale esperar mais que isto por tentativa — se o Graph
+# pedir mais, o chamador tem seu próprio deadline (TOOL_IO_TIMEOUT_S) e é melhor
+# falhar rápido do que segurar a thread por um tempo arbitrariamente longo.
+_RETRY_AFTER_CAP_S = 10.0
+# _MAX_CONCURRENT_REQUESTS: teto de sequências de retry simultâneas por processo
+# — bounded queue em vez de concorrência ilimitada quando várias chamadas
+# (ex.: múltiplas tentativas do usuário) tentam falar com o Graph ao mesmo tempo.
+_MAX_CONCURRENT_REQUESTS = 4
+_concurrency_limiter = threading.Semaphore(_MAX_CONCURRENT_REQUESTS)
+
+
+def _retry_after_seconds(r: Any, default: float) -> float:
+    """Extrai Retry-After do response 429/503 (RFC 7231 — segundos ou data HTTP).
+
+    Cai para `default` (o cronograma fixo) se o header estiver ausente ou for
+    inválido. Resultado limitado a `_RETRY_AFTER_CAP_S` — nunca menor que
+    `default` (o Graph pode pedir menos que nosso próprio mínimo, mas não
+    vale a pena confiar nisso) nem maior que o cap.
+    """
+    header = r.headers.get("Retry-After")
+    if not header:
+        return default
+    try:
+        seconds = float(header)
+    except ValueError:
+        try:
+            from email.utils import parsedate_to_datetime
+
+            dt = parsedate_to_datetime(header)
+            seconds = (dt - datetime.now(dt.tzinfo or UTC)).total_seconds()
+        except Exception:
+            return default
+    return min(max(default, seconds), _RETRY_AFTER_CAP_S)
 # issue #147: timeout explícito de leitura — sem isto, algumas chamadas (ex.:
 # listar_blobs antes desta correção) dependiam só do default do httpx, e uma
 # resposta lenta/silenciosa do Graph podia se acumular por dezenas de segundos
@@ -118,22 +158,31 @@ class SharePointBlobStorage(BlobStoragePort):
     def _get_with_retry(
         self, httpx: Any, url: str, headers: dict[str, str], params: dict[str, str] | None = None
     ) -> Any:
-        """GET com retry/backoff em erros transitórios do Graph (429/502/503/504)."""
+        """GET com retry/backoff em erros transitórios do Graph (429/502/503/504).
+
+        Toda a sequência de tentativas roda sob `_concurrency_limiter` — no máximo
+        `_MAX_CONCURRENT_REQUESTS` sequências de retry simultâneas por processo
+        (incidente 2026-08-11: sem isso, cada chamada concorrente abria sua própria
+        sequência, amplificando o throttling em vez de esperar ele passar).
+        """
         last_response = None
-        for attempt, delay in enumerate((*_TRANSIENT_RETRY_DELAYS_S, None)):
-            r = httpx.get(url, headers=headers, params=params, follow_redirects=True, timeout=_READ_TIMEOUT_S)
-            if r.status_code not in _TRANSIENT_STATUS_CODES:
-                return r
-            last_response = r
-            if delay is not None:
-                logger.warning(
-                    "SharePoint: status %s transitório (tentativa %d/%d) — retry em %.1fs",
-                    r.status_code,
-                    attempt + 1,
-                    len(_TRANSIENT_RETRY_DELAYS_S) + 1,
-                    delay,
-                )
-                time.sleep(delay)
+        with _concurrency_limiter:
+            for attempt, delay in enumerate((*_TRANSIENT_RETRY_DELAYS_S, None)):
+                r = httpx.get(url, headers=headers, params=params, follow_redirects=True, timeout=_READ_TIMEOUT_S)
+                if r.status_code not in _TRANSIENT_STATUS_CODES:
+                    return r
+                last_response = r
+                if delay is not None:
+                    wait_s = _retry_after_seconds(r, delay)
+                    logger.warning(
+                        "SharePoint: status %s transitório (tentativa %d/%d) — retry em %.1fs%s",
+                        r.status_code,
+                        attempt + 1,
+                        len(_TRANSIENT_RETRY_DELAYS_S) + 1,
+                        wait_s,
+                        " (Retry-After respeitado)" if wait_s != delay else "",
+                    )
+                    time.sleep(wait_s)
         return last_response
 
     def _raise_for_read_status(self, r: Any, path: str) -> None:

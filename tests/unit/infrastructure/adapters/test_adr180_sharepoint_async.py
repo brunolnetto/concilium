@@ -333,3 +333,74 @@ class TestCancelamentoReal:
         # Dá uma volta no event loop para a CancelledError propagar antes de checar.
         await asyncio.sleep(0)
         assert cancelled is True
+
+
+class TestRetryAfterRespectedAsync:
+    """Espelho async de TestGetWithRetryRespectsRetryAfter (test_adr047_sharepoint.py) —
+    mesmo incidente 2026-08-11, mesma correção (_retry_after_seconds compartilhado
+    entre os dois módulos, ver import em sharepoint_async.py)."""
+
+    async def test_sleeps_for_retry_after_value_not_fixed_schedule(self):
+        storage = _make_storage()
+
+        resp_429 = MagicMock()
+        resp_429.status_code = 429
+        resp_429.headers = {"Retry-After": "3"}
+        resp_200 = MagicMock()
+        resp_200.status_code = 200
+        resp_200.headers = {}
+        resp_200.content = b"ok"
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(side_effect=[resp_429, resp_200])
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_httpx = MagicMock()
+        mock_httpx.AsyncClient = MagicMock(return_value=mock_client)
+
+        with (
+            patch.dict("sys.modules", {"httpx": mock_httpx}),
+            patch("concilium.infrastructure.adapters.blob_storage.sharepoint_async.asyncio.sleep") as mock_sleep,
+        ):
+            result = await storage.ler_blob("foo.json")
+
+        assert result == b"ok"
+        mock_sleep.assert_called_once_with(3.0)
+
+
+class TestConcurrencyLimiterAsync:
+    """Espelho async de TestConcurrencyLimiter (test_adr047_sharepoint.py) —
+    asyncio.Semaphore em vez de threading.Semaphore, domínio próprio."""
+
+    async def test_limits_concurrent_retry_sequences(self):
+        import concilium.infrastructure.adapters.blob_storage.sharepoint_async as sp_async_module
+
+        storage = _make_storage()
+        limit = 2
+        test_semaphore = asyncio.Semaphore(limit)
+        state = {"active": 0, "peak": 0}
+
+        async def _slow_get(*args, **kwargs):
+            state["active"] += 1
+            state["peak"] = max(state["peak"], state["active"])
+            await asyncio.sleep(0.05)
+            state["active"] -= 1
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.headers = {}
+            return resp
+
+        mock_client = MagicMock()
+        mock_client.get = _slow_get
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_httpx = MagicMock()
+        mock_httpx.AsyncClient = MagicMock(return_value=mock_client)
+
+        with (
+            patch.dict("sys.modules", {"httpx": mock_httpx}),
+            patch.object(sp_async_module, "_concurrency_limiter", test_semaphore),
+        ):
+            await asyncio.gather(*(storage._get_with_retry(f"http://x/{i}", {}) for i in range(6)))
+
+        assert state["peak"] <= limit

@@ -34,14 +34,22 @@ from ._sharepoint_auth import SharePointCredential, _BlobCache
 from .sharepoint import (
     _GRAPH_BASE,
     _LARGE_FILE_THRESHOLD,
+    _MAX_CONCURRENT_REQUESTS,
     _READ_TIMEOUT_S,
     _TRANSIENT_RETRY_DELAYS_S,
     _TRANSIENT_STATUS_CODES,
     _WRITE_TIMEOUT_S,
     StorageConcurrencyError,
+    _retry_after_seconds,
 )
 
 logger = logging.getLogger(__name__)
+
+# 2026-08-11: mesmo limite de concorrência do módulo síncrono (ver sharepoint.py),
+# mas em domínio próprio — asyncio.Semaphore não é intercambiável com
+# threading.Semaphore. Cada domínio (thread pool do caminho síncrono legado vs.
+# coroutines deste módulo) tem seu próprio teto independente.
+_concurrency_limiter = asyncio.Semaphore(_MAX_CONCURRENT_REQUESTS)
 
 
 class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
@@ -109,11 +117,15 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
     ) -> Any:
         """GET com retry/backoff em erros transitórios do Graph — espelho async de
         `SharePointBlobStorage._get_with_retry`, usando `asyncio.sleep` (não
-        bloqueia o event loop durante o backoff, diferente de `time.sleep`)."""
+        bloqueia o event loop durante o backoff, diferente de `time.sleep`).
+
+        Toda a sequência de tentativas roda sob `_concurrency_limiter` — mesmo
+        racional do módulo síncrono (ver sharepoint.py, incidente 2026-08-11).
+        """
         import httpx
 
         last_response = None
-        async with httpx.AsyncClient() as client:
+        async with _concurrency_limiter, httpx.AsyncClient() as client:
             for attempt, delay in enumerate((*_TRANSIENT_RETRY_DELAYS_S, None)):
                 r = await client.get(
                     url, headers=headers, params=params, follow_redirects=True, timeout=_READ_TIMEOUT_S
@@ -122,14 +134,16 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
                     return r
                 last_response = r
                 if delay is not None:
+                    wait_s = _retry_after_seconds(r, delay)
                     logger.warning(
-                        "SharePoint (async): status %s transitório (tentativa %d/%d) — retry em %.1fs",
+                        "SharePoint (async): status %s transitório (tentativa %d/%d) — retry em %.1fs%s",
                         r.status_code,
                         attempt + 1,
                         len(_TRANSIENT_RETRY_DELAYS_S) + 1,
-                        delay,
+                        wait_s,
+                        " (Retry-After respeitado)" if wait_s != delay else "",
                     )
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(wait_s)
         return last_response
 
     def _raise_for_read_status(self, r: Any, path: str) -> None:
