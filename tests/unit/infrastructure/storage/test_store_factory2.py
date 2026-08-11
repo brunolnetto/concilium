@@ -69,6 +69,57 @@ class TestBuildBlobStorage:
                 build_blob_storage()
 
 
+class TestBuildAsyncBlobStorage:
+    """ADR-180 D4: build_async_blob_storage()/build_async_system_blob_storage()
+    só têm implementação para SharePoint — NotImplementedError explícito para
+    os demais backends, sem fallback silencioso."""
+
+    def test_sharepoint_returns_async_sharepoint_storage(self):
+        from concilium.infrastructure.storage.store_factory import build_async_blob_storage
+
+        with (
+            patch("concilium.infrastructure.storage.store_factory.resolve_store_backend", return_value="sharepoint"),
+            patch(
+                "concilium.infrastructure.adapters.blob_storage.sharepoint_async.AsyncSharePointBlobStorage.from_env"
+            ) as mock_from_env,
+        ):
+            sentinel = MagicMock()
+            mock_from_env.return_value = sentinel
+            result = build_async_blob_storage()
+        assert result is sentinel
+        mock_from_env.assert_called_once_with()
+
+    @pytest.mark.parametrize("backend", ["filesystem", "s3", "azure", "gdrive"])
+    def test_non_sharepoint_backend_raises_not_implemented(self, backend):
+        from concilium.infrastructure.storage.store_factory import build_async_blob_storage
+
+        with patch("concilium.infrastructure.storage.store_factory.resolve_store_backend", return_value=backend):
+            with pytest.raises(NotImplementedError, match=backend):
+                build_async_blob_storage()
+
+    def test_system_sharepoint_returns_async_sharepoint_storage_system_true(self):
+        from concilium.infrastructure.storage.store_factory import build_async_system_blob_storage
+
+        with (
+            patch("concilium.infrastructure.storage.store_factory.resolve_store_backend", return_value="sharepoint"),
+            patch(
+                "concilium.infrastructure.adapters.blob_storage.sharepoint_async.AsyncSharePointBlobStorage.from_env"
+            ) as mock_from_env,
+        ):
+            sentinel = MagicMock()
+            mock_from_env.return_value = sentinel
+            result = build_async_system_blob_storage()
+        assert result is sentinel
+        mock_from_env.assert_called_once_with(system=True)
+
+    def test_system_non_sharepoint_raises_not_implemented(self):
+        from concilium.infrastructure.storage.store_factory import build_async_system_blob_storage
+
+        with patch("concilium.infrastructure.storage.store_factory.resolve_store_backend", return_value="s3"):
+            with pytest.raises(NotImplementedError):
+                build_async_system_blob_storage()
+
+
 class TestBuildProjectRepository:
     def test_filesystem_backend(self, tmp_path):
         from concilium.infrastructure.storage.storage_project_repository import StorageProjectRepository

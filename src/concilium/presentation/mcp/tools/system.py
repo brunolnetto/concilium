@@ -36,29 +36,59 @@ def register(server: FastMCP) -> None:
         Use como primeira chamada para calibrar o estado do sistema antes
         de qualquer operação de planejamento.
         """
-        # issue #148: todo o corpo (I/O de storage síncrono — health_check,
-        # load_catalogo, check_and_report_novidades) roda em thread separada.
-        # O worker asyncio único do concilium-mcp NÃO pode ficar bloqueado
-        # aqui: uma resposta lenta/pendurada do Graph/SharePoint travaria
-        # TODAS as requisições da réplica, não só esta (ver incidente de
-        # produção 2026-08-10, causa raiz em _ler_blob_cached sem timeout).
+        # issue #148/#149 + ADR-180: o corpo inteiro (health_check, load_catalogo,
+        # check_and_report_novidades) roda sob UM único deadline (TOOL_IO_TIMEOUT_S).
+        # health_check() usa o caminho assíncrono nativo (cancelamento real) quando
+        # o backend é SharePoint (ADR-180 D5); load_catalogo/check_and_report_novidades
+        # continuam síncronos em thread (fora de escopo desta ADR — passam por
+        # Runtime/DeployLogStore, não diretamente pelo BlobStoragePort).
         try:
-            return await asyncio.wait_for(asyncio.to_thread(_ping_impl), timeout=TOOL_IO_TIMEOUT_S)
+            return await asyncio.wait_for(_ping_async(), timeout=TOOL_IO_TIMEOUT_S)
         except TimeoutError:
             return _wrap_response(
                 {
                     "status": "ERRO",
                     "erro": (
-                        f"ping excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage (SharePoint). "
-                        "A thread de I/O pode continuar rodando em segundo plano — isto é uma "
-                        "falha rápida do lado do tool, não uma garantia de que o storage liberou "
-                        "o recurso. Tente novamente; se persistir, é um sintoma de degradação de "
-                        "rede/Graph API, não do servidor MCP em si."
+                        f"ping excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage. "
+                        "Se o backend for SharePoint, a chamada foi cancelada de verdade "
+                        "(sem thread presa); para o restante (catálogo, novidades) uma "
+                        "thread de I/O pode continuar rodando em segundo plano. Tente "
+                        "novamente; se persistir, é sintoma de degradação de rede/Graph "
+                        "API, não do servidor MCP em si."
                     ),
                 }
             )
 
-    def _ping_impl() -> dict[str, Any]:
+    async def _ping_async() -> dict[str, Any]:
+        storage_health = await _storage_health_async()
+        return await asyncio.to_thread(_ping_impl, storage_health)
+
+    async def _storage_health_async() -> dict[str, Any]:
+        """ADR-180 D5: health_check via AsyncSharePointBlobStorage quando disponível
+        (cancelamento real); cai para o caminho síncrono via to_thread para os
+        demais backends (ADR-180 D6, comportamento inalterado)."""
+        from concilium.infrastructure.storage.store_factory import build_async_blob_storage, build_blob_storage
+
+        try:
+            async_storage = build_async_blob_storage()
+        except NotImplementedError:
+            async_storage = None
+
+        if async_storage is not None:
+            try:
+                return await async_storage.health_check()
+            except Exception as exc:
+                return {"status": "error", "message": str(exc)}
+
+        def _sync_health_check() -> dict[str, Any]:
+            try:
+                return build_blob_storage().health_check()
+            except Exception as exc:
+                return {"status": "error", "message": str(exc)}
+
+        return await asyncio.to_thread(_sync_health_check)
+
+    def _ping_impl(storage_health: dict[str, Any]) -> dict[str, Any]:
         config_dir = _config_root()
         proj_root = _projetos_root()
 
@@ -103,14 +133,6 @@ def register(server: FastMCP) -> None:
                             "erro": str(exc),
                         }
                     )
-
-        # Saúde do blob storage
-        from concilium.infrastructure.storage.store_factory import build_blob_storage
-
-        try:
-            storage_health = build_blob_storage().health_check()
-        except Exception as exc:
-            storage_health = {"status": "error", "message": str(exc)}
 
         # Status geral
         if not config_dir.exists() or storage_health.get("status") == "error":

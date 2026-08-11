@@ -31,6 +31,31 @@ def register(server: FastMCP) -> None:
     @permission("project:read")
     async def listar_projetos() -> dict[str, Any]:
         """Lista os projetos existentes no sistema com versão atual e contexto."""
+        # ADR-180 D5: caminho assíncrono nativo para SharePoint — cancelamento
+        # real via wait_for (fecha o socket, não deixa thread presa). Backends
+        # sem implementação assíncrona (ADR-180 D6) caem no caminho legado
+        # (to_thread + wait_for, issue #148/#149) sem nenhuma mudança de
+        # comportamento.
+        from concilium.infrastructure.storage.store_factory import build_async_blob_storage
+
+        try:
+            async_storage = build_async_blob_storage()
+        except NotImplementedError:
+            async_storage = None
+
+        if async_storage is not None:
+            try:
+                return await asyncio.wait_for(_listar_projetos_async(async_storage), timeout=TOOL_IO_TIMEOUT_S)
+            except TimeoutError:
+                return {
+                    "erro": (
+                        f"listar_projetos excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage "
+                        "(SharePoint). A chamada foi cancelada de verdade (não deixa thread "
+                        "presa) — tente novamente; se persistir, é sintoma de degradação de "
+                        "rede/Graph API, não do servidor MCP em si."
+                    )
+                }
+
         # issue #148: I/O de storage (list_projects/meta/list_versions) roda em
         # thread separada — não pode bloquear o único worker asyncio do
         # concilium-mcp (ver incidente de produção 2026-08-10).
@@ -41,11 +66,63 @@ def register(server: FastMCP) -> None:
         except TimeoutError:
             return {
                 "erro": (
-                    f"listar_projetos excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage "
-                    "(SharePoint). Tente novamente; se persistir, é sintoma de degradação de "
-                    "rede/Graph API, não do servidor MCP em si."
+                    f"listar_projetos excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage. "
+                    "Tente novamente; se persistir, é sintoma de degradação de rede, não do "
+                    "servidor MCP em si."
                 )
             }
+
+    async def _listar_projetos_async(storage: Any) -> dict[str, Any]:
+        """Espelho assíncrono MÍNIMO de `_listar_projetos_impl` para SharePoint
+        (ADR-180 D5) — NÃO é uma `StorageProjectRepository` assíncrona genérica
+        (fora de escopo, ver ADR-180 D6). Replica só a leitura read-only que
+        `listar_projetos` precisa: índice de projetos + `meta.json` + versões de
+        cada um (via `listar_blobs`), usando `AsyncBlobStoragePort` diretamente
+        em vez de passar por `StorageProjectRepository`/`StorageProjectHandle`
+        (que são síncronos e não fazem parte desta ADR).
+        """
+        from concilium.infrastructure.storage.store_factory import _projects_prefix
+
+        proj_root = _projetos_root()
+        prefix = _projects_prefix()
+        index_path = f"{prefix}/_index.json" if prefix else "_index.json"
+
+        try:
+            raw = await storage.ler_blob(index_path)
+            project_ids = json.loads(raw.decode("utf-8")).get("project_ids", [])
+        except FileNotFoundError:
+            project_ids = []
+
+        out = []
+        for project_id in project_ids:
+            base = f"{prefix}/{project_id}" if prefix else project_id
+            try:
+                try:
+                    meta_raw = await storage.ler_blob(f"{base}/meta.json")
+                    meta = json.loads(meta_raw.decode("utf-8"))
+                except (FileNotFoundError, json.JSONDecodeError):
+                    meta = {}
+
+                blobs = await storage.listar_blobs(base)
+                strip = f"{base}/"
+                versions: set[str] = set()
+                for blob in blobs:
+                    parts = blob.removeprefix(strip).split("/")
+                    if parts and parts[0].startswith("v") and parts[0][1:].isdigit():
+                        versions.add(parts[0])
+
+                out.append(
+                    {
+                        "id": project_id,
+                        "nome": meta.get("nome", "?"),
+                        "contexto_id": meta.get("contexto_id"),
+                        "current_version": meta.get("current_version"),
+                        "versoes": sorted(versions, key=lambda v: int(v[1:])),
+                    }
+                )
+            except Exception as e:
+                out.append({"id": project_id, "erro": str(e)})
+        return _wrap_response({"projetos": out, "projetos_root": str(proj_root)})
 
     def _listar_projetos_impl() -> dict[str, Any]:
         proj_root = _projetos_root()

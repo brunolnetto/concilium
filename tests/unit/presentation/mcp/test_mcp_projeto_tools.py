@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
@@ -166,6 +166,106 @@ class TestListarProjetos:
 
         assert "erro" in result
         assert "excedeu" in result["erro"]
+
+
+class TestListarProjetosAsyncSharePoint:
+    """ADR-180 D5: quando build_async_blob_storage() não levanta NotImplementedError
+    (backend SharePoint), listar_projetos() usa o caminho assíncrono nativo em vez
+    de StorageProjectRepository/to_thread."""
+
+    async def test_uses_async_path_reads_index_meta_and_versions(self, tools, tmp_path):
+        async_storage = MagicMock()
+        index_bytes = json.dumps({"project_ids": ["proj-1"]}).encode("utf-8")
+        meta_bytes = json.dumps({"nome": "Proj Um", "contexto_id": "ctx1", "current_version": "v2"}).encode("utf-8")
+
+        async def _ler_blob(path):
+            if path.endswith("_index.json"):
+                return index_bytes
+            if path.endswith("meta.json"):
+                return meta_bytes
+            raise FileNotFoundError(path)
+
+        async_storage.ler_blob = AsyncMock(side_effect=_ler_blob)
+        async_storage.listar_blobs = AsyncMock(
+            return_value=["projetos/proj-1/v1/canonical.json", "projetos/proj-1/v2/canonical.json"]
+        )
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=tmp_path),
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_async_blob_storage",
+                return_value=async_storage,
+            ),
+            patch("concilium.infrastructure.storage.store_factory._projects_prefix", return_value="projetos"),
+        ):
+            result = await tools["listar_projetos"]()
+
+        projetos = result["projetos"]
+        assert len(projetos) == 1
+        assert projetos[0]["id"] == "proj-1"
+        assert projetos[0]["nome"] == "Proj Um"
+        assert projetos[0]["current_version"] == "v2"
+        assert set(projetos[0]["versoes"]) == {"v1", "v2"}
+
+    async def test_missing_index_returns_empty_list(self, tools, tmp_path):
+        async_storage = MagicMock()
+        async_storage.ler_blob = AsyncMock(side_effect=FileNotFoundError("_index.json"))
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=tmp_path),
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_async_blob_storage",
+                return_value=async_storage,
+            ),
+            patch("concilium.infrastructure.storage.store_factory._projects_prefix", return_value="projetos"),
+        ):
+            result = await tools["listar_projetos"]()
+
+        assert result["projetos"] == []
+
+    async def test_meta_read_error_appends_erro_entry(self, tools, tmp_path):
+        async_storage = MagicMock()
+        index_bytes = json.dumps({"project_ids": ["proj-broken"]}).encode("utf-8")
+
+        async def _ler_blob(path):
+            if path.endswith("_index.json"):
+                return index_bytes
+            raise RuntimeError("Graph indisponível")
+
+        async_storage.ler_blob = AsyncMock(side_effect=_ler_blob)
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._projetos_root", return_value=tmp_path),
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_async_blob_storage",
+                return_value=async_storage,
+            ),
+            patch("concilium.infrastructure.storage.store_factory._projects_prefix", return_value="projetos"),
+        ):
+            result = await tools["listar_projetos"]()
+
+        projetos = result["projetos"]
+        assert len(projetos) == 1
+        assert projetos[0]["id"] == "proj-broken"
+        assert "erro" in projetos[0]
+
+    async def test_falls_back_to_sync_when_backend_has_no_async_support(self, tools, tmp_path):
+        """ADR-180 D6: backend sem implementação assíncrona não quebra — cai no
+        caminho síncrono existente (to_thread + wait_for), comportamento inalterado."""
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = []
+
+        with (
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_async_blob_storage",
+                side_effect=NotImplementedError("filesystem sem suporte async"),
+            ),
+            patch("concilium.presentation.mcp.tools.projeto._project_repository", return_value=mock_repo),
+            patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
+        ):
+            result = await tools["listar_projetos"]()
+
+        assert result["projetos"] == []
 
 
 # ===========================================================================

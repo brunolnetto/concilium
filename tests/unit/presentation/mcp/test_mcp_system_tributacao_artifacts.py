@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from mcp.server.fastmcp import FastMCP
 
@@ -144,6 +144,46 @@ class TestSystemPing:
 
         assert result["status"] == "ERRO"
         assert "excedeu" in result["erro"]
+
+    async def test_ping_uses_async_storage_health_when_sharepoint_available(self, monkeypatch, tmp_path):
+        """ADR-180 D5: quando build_async_blob_storage() não levanta NotImplementedError,
+        ping() usa o health_check assíncrono (cancelamento real) em vez do to_thread síncrono."""
+        tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
+
+        async_storage = MagicMock()
+        async_storage.health_check = AsyncMock(
+            return_value={"status": "ok", "backend": "sharepoint", "drive_name": "Documentos"}
+        )
+
+        with patch(
+            "concilium.infrastructure.storage.store_factory.build_async_blob_storage",
+            return_value=async_storage,
+        ):
+            result = await tools["ping"]()
+
+        async_storage.health_check.assert_awaited_once()
+        assert result["storage"]["status"] == "ok"
+        assert result["storage"]["backend"] == "sharepoint"
+
+    async def test_ping_falls_back_to_sync_health_when_no_async_backend(self, monkeypatch, tmp_path):
+        """ADR-180 D6: backend sem implementação assíncrona (NotImplementedError)
+        cai no caminho síncrono existente, sem regressão de comportamento."""
+        tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
+
+        with (
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_async_blob_storage",
+                side_effect=NotImplementedError("s3 sem suporte async"),
+            ),
+            patch(
+                "concilium.infrastructure.storage.store_factory.build_blob_storage",
+            ) as mock_sync_build,
+        ):
+            mock_sync_build.return_value.health_check.return_value = {"status": "ok", "backend": "s3"}
+            result = await tools["ping"]()
+
+        assert result["storage"]["status"] == "ok"
+        assert result["storage"]["backend"] == "s3"
 
 
 # ─── tributacao.py ─────────────────────────────────────────────────────────────

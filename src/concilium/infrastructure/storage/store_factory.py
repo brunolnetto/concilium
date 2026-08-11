@@ -7,6 +7,7 @@ from concilium.application.services.project.project_repository import ProjectRep
 from concilium.infrastructure.settings import get_storage
 
 if TYPE_CHECKING:
+    from concilium.domain.repositories.async_blob_storage_port import AsyncBlobStoragePort
     from concilium.domain.repositories.blob_storage_port import BlobStoragePort
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
     from concilium.infrastructure.storage.tool_invocation_store import BlobToolInvocationRepository
@@ -133,6 +134,43 @@ def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
 
         return _maybe_wrap_cache(GoogleDriveBlobStorage.from_env())
     raise ValueError(f"Backend não suportado: {backend}")
+
+
+def build_async_blob_storage() -> AsyncBlobStoragePort:
+    """Constrói AsyncBlobStoragePort — ADR-180 D4.
+
+    Só existe implementação para o backend SharePoint (único com I/O de rede
+    relevante aos incidentes que motivaram a ADR-180). Para qualquer outro
+    backend, levanta NotImplementedError explícito — SEM fallback silencioso
+    para o caminho síncrono via to_thread aqui dentro; isso reintroduziria o
+    problema que a ADR-180 resolve (thread presa sem cancelamento real). O
+    fallback é responsabilidade do chamador (ver ping()/listar_projetos()).
+    """
+    backend = resolve_store_backend()
+    if backend == "sharepoint":
+        from concilium.infrastructure.adapters.blob_storage.sharepoint_async import AsyncSharePointBlobStorage
+
+        return AsyncSharePointBlobStorage.from_env()
+    raise NotImplementedError(
+        f"build_async_blob_storage: backend '{backend}' não tem implementação assíncrona "
+        "(ADR-180 D6, escopo restrito a SharePoint). Use build_blob_storage() "
+        "(síncrono) via asyncio.to_thread."
+    )
+
+
+def build_async_system_blob_storage() -> AsyncBlobStoragePort:
+    """Constrói AsyncBlobStoragePort para dados de sistema — ADR-180 D4, espelho
+    assíncrono de build_system_blob_storage() (só SharePoint; ver docstring de
+    build_async_blob_storage para o porquê de não ter fallback aqui dentro)."""
+    backend = resolve_store_backend()
+    if backend == "sharepoint":
+        from concilium.infrastructure.adapters.blob_storage.sharepoint_async import AsyncSharePointBlobStorage
+
+        return AsyncSharePointBlobStorage.from_env(system=True)
+    raise NotImplementedError(
+        f"build_async_system_blob_storage: backend '{backend}' não tem implementação "
+        "assíncrona (ADR-180 D6, escopo restrito a SharePoint)."
+    )
 
 
 def build_system_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
