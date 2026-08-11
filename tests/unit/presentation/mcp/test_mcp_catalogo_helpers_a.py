@@ -12,6 +12,7 @@ import concilium.presentation.mcp.tools._catalogo_tools_helpers_a as mod
 from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import (
     _catalog_root,
     _impl_adicionar_variante_producao,
+    _impl_atualizar_composicao_item_cpu,
     _impl_atualizar_preco_insumo,
     _impl_consultar_preco_insumo_temporal,
     _impl_consultar_saude_catalogo,
@@ -320,9 +321,7 @@ class TestImplListarInsumos:
         assert item["preco_unitario"] == 112.0
         assert item["valor_locacao_mensal"] == 22400.0
 
-    def test_nao_equipamento_sem_valor_locacao_mensal(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_nao_equipamento_sem_valor_locacao_mensal(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         rt.load_catalogo.return_value = self._catalogo_insumos()
         self._setup(monkeypatch, rt, tmp_path)
@@ -397,9 +396,7 @@ class TestImplListarInsumos:
         assert result["total"] == 2
         assert all(i["insumo_id"] != "EQ-001" for i in result["insumos"])
 
-    def test_incluir_descontinuados_true_mostra_todos(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_incluir_descontinuados_true_mostra_todos(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         catalogo = self._catalogo_insumos()
         catalogo["insumos"][0]["status"] = "descontinuado"
@@ -801,9 +798,7 @@ class TestImplAtualizarPrecoInsumo:
         self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
         _make_rascunho(tmp_path, "ctx1", "v1")
 
-        _impl_atualizar_preco_insumo(
-            "ctx1", "INS-001", 120.0, rascunho_id="v1", novo_valor_locacao_mensal=24000.0
-        )
+        _impl_atualizar_preco_insumo("ctx1", "INS-001", 120.0, rascunho_id="v1", novo_valor_locacao_mensal=24000.0)
         rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
         delta = rascunho_data["_deltas"][0]
         assert delta["novo_preco"] == 120.0
@@ -827,9 +822,7 @@ class TestImplAtualizarPrecoInsumo:
 
     # ── ADR-165/166: novos_funcoes_aplicaveis opcional, mesmo caminho gated por rascunho ──
 
-    def test_so_funcoes_aplicaveis_grava_delta_sem_erro(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_so_funcoes_aplicaveis_grava_delta_sem_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Popular funcoes_aplicaveis de um TREINAMENTO/EPI já existente não exige
         novo_preco nem novo_valor_locacao_mensal."""
         rt = _make_rt("ctx1", "cat1")
@@ -854,9 +847,7 @@ class TestImplAtualizarPrecoInsumo:
         assert delta["novo_preco"] is None
         assert delta["novos_funcoes_aplicaveis"] == ["MO-ELETRICISTA", "MO-P0016"]
 
-    def test_funcoes_aplicaveis_lista_vazia_e_preservada(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_funcoes_aplicaveis_lista_vazia_e_preservada(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Lista vazia ([]) é um valor válido e distinto de None — "aplica a nenhuma
         função ainda" — não deve ser tratada como ausente."""
         rt = _make_rt("ctx1", "cat1")
@@ -867,9 +858,7 @@ class TestImplAtualizarPrecoInsumo:
         self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
         _make_rascunho(tmp_path, "ctx1", "v1")
 
-        _impl_atualizar_preco_insumo(
-            "ctx1", "TRE-NR22-MINERACAO", None, rascunho_id="v1", novos_funcoes_aplicaveis=[]
-        )
+        _impl_atualizar_preco_insumo("ctx1", "TRE-NR22-MINERACAO", None, rascunho_id="v1", novos_funcoes_aplicaveis=[])
         rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
         delta = rascunho_data["_deltas"][0]
         assert delta["novos_funcoes_aplicaveis"] == []
@@ -1156,9 +1145,7 @@ class TestImplDescontinuarInsumo:
         assert "erro" in result
         assert "não encontrado" in result["erro"]
 
-    def test_happy_path_grava_delta_de_descontinuacao(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_happy_path_grava_delta_de_descontinuacao(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
         insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
@@ -1203,9 +1190,7 @@ class TestApplyDescontinuacaoInsumoDelta:
         insumos_dir = catalog_root / "insumos" / "equipamento"
         insumos_dir.mkdir(parents=True)
         insumo_file = insumos_dir / "EQ-001.json"
-        insumo_file.write_text(
-            json.dumps({"codigo": "EQ-001", "descricao": "X", "status": "ativo"}), encoding="utf-8"
-        )
+        insumo_file.write_text(json.dumps({"codigo": "EQ-001", "descricao": "X", "status": "ativo"}), encoding="utf-8")
 
         _apply_descontinuacao_insumo_delta(catalog_root, "EQ-001", "obsoleto")
 
@@ -1262,9 +1247,7 @@ class TestImplCriarInsumosLote:
         rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
         assert rascunho_data.get("_deltas", []) == []
 
-    def test_todos_validos_grava_um_delta_por_item(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_todos_validos_grava_um_delta_por_item(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
         (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
@@ -1334,9 +1317,7 @@ class TestImplCriarInsumosLote:
         assert result["sucesso"] == 1
         assert result["falhas"] == 1
 
-    def test_rascunho_inexistente_retorna_erro_top_level(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_rascunho_inexistente_retorna_erro_top_level(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
         (tmp_path / "catalogos" / "cat1").mkdir(parents=True)
@@ -1370,9 +1351,7 @@ class TestImplAtualizarPrecosInsumosLote:
         result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
         assert "erro" in result
 
-    def test_todos_validos_grava_um_delta_por_item(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_todos_validos_grava_um_delta_por_item(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
         insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
@@ -1419,9 +1398,7 @@ class TestImplAtualizarPrecosInsumosLote:
         falha = next(r for r in result["resultados"] if r["insumo_id"] == "EQ-002")
         assert falha["status"] == "erro"
 
-    def test_insumo_inexistente_falha_so_aquele_item(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_insumo_inexistente_falha_so_aquele_item(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
         insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
@@ -1432,9 +1409,7 @@ class TestImplAtualizarPrecosInsumosLote:
         result = mod._impl_atualizar_precos_insumos_lote("ctx1", "v1", itens)
         assert result["falhas"] == 1
 
-    def test_novos_funcoes_aplicaveis_por_item_lote(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_novos_funcoes_aplicaveis_por_item_lote(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """ADR-165/166: novos_funcoes_aplicaveis também é aceito por item no lote,
         sozinho (sem novo_preco/novo_valor_locacao_mensal)."""
         rt = _make_rt("ctx1", "cat1")
@@ -1485,9 +1460,7 @@ class TestImplDescontinuarInsumosLote:
         result = mod._impl_descontinuar_insumos_lote("ctx1", "v1", itens)
         assert "erro" in result
 
-    def test_todos_validos_grava_um_delta_por_item(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_todos_validos_grava_um_delta_por_item(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
         insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
@@ -1509,9 +1482,7 @@ class TestImplDescontinuarInsumosLote:
         # arquivos mestre intocados até o merge (soft delete só no merge)
         assert json.loads((insumos_dir / "EQ-001.json").read_text()).get("status") is None
 
-    def test_insumo_inexistente_falha_so_aquele_item(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_insumo_inexistente_falha_so_aquele_item(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
         insumos_dir = tmp_path / "catalogos" / "cat1" / "insumos" / "equipamento"
@@ -1883,9 +1854,7 @@ class TestAppendDeltasToRascunho:
         _make_rascunho(tmp_path, "ctx1", "v1")
         mod._append_delta_to_rascunho(tmp_path, "ctx1", "v1", {"tipo": "preco_insumo", "insumo_id": "PRE"})
 
-        result = mod._append_deltas_to_rascunho(
-            tmp_path, "ctx1", "v1", [{"tipo": "preco_insumo", "insumo_id": "A"}]
-        )
+        result = mod._append_deltas_to_rascunho(tmp_path, "ctx1", "v1", [{"tipo": "preco_insumo", "insumo_id": "A"}])
         assert result is None
 
         rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
@@ -1953,3 +1922,306 @@ class TestApplyVarianteProducaoDelta:
         assert data["variantes"] == [
             {"id": "V-NEW", "nome": "Nova Variante", "valor_horario": 123.0, "equipe": {"funcoes": []}}
         ]
+
+
+# ---------------------------------------------------------------------------
+# _impl_atualizar_composicao_item_cpu — governança de composicao_itens
+# ---------------------------------------------------------------------------
+
+
+def _seed_cpu(catalog_root: Path, cpu_id: str, composicao_itens: list[dict] | None = None) -> Path:
+    cpus_dir = catalog_root / "cpus"
+    cpus_dir.mkdir(parents=True, exist_ok=True)
+    cpu_file = cpus_dir / f"{cpu_id}.json"
+    cpu_file.write_text(json.dumps({"codigo": cpu_id, "composicao_itens": composicao_itens or []}), encoding="utf-8")
+    return cpu_file
+
+
+def _seed_insumo(catalog_root: Path, insumo_id: str, tipo: str = "MATERIAL") -> Path:
+    insumos_dir = catalog_root / "insumos" / tipo.lower()
+    insumos_dir.mkdir(parents=True, exist_ok=True)
+    insumo_file = insumos_dir / f"{insumo_id}.json"
+    insumo_file.write_text(json.dumps({"codigo": insumo_id, "tipo": tipo}), encoding="utf-8")
+    return insumo_file
+
+
+class TestImplAtualizarComposicaoItemCpu:
+    def _setup(self, monkeypatch: pytest.MonkeyPatch, rt: MagicMock, tmp_path: Path) -> None:
+        monkeypatch.setattr(mod, "_runtime", lambda: rt)
+        monkeypatch.setattr(mod, "_config_root", lambda: tmp_path)
+        monkeypatch.setattr(mod, "_wrap_response", _passthrough)
+
+    def test_sem_rascunho_id_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-001", "adicionar", "", coeficiente=1.0, categoria_custo="MATERIAL"
+        )
+        assert "erro" in result
+        assert "rascunho_id" in result["erro"]
+
+    def test_acao_invalida_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-001", "MA-001", "excluir", "v1")
+        assert "erro" in result
+        assert "acao" in result["erro"]
+
+    def test_adicionar_sem_coeficiente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", categoria_custo="MATERIAL"
+        )
+        assert "erro" in result
+        assert "coeficiente" in result["erro"]
+
+    def test_cpu_inexistente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        catalog_root.mkdir(parents=True)
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-NAO-EXISTE", "MA-001", "adicionar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+        )
+        assert "erro" in result
+        assert "não encontrada" in result["erro"]
+
+    def test_insumo_inexistente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        _seed_cpu(catalog_root, "CPU-001")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-NAO-EXISTE", "adicionar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+        )
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+    def test_adicionar_item_ja_existente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        _seed_cpu(catalog_root, "CPU-001", [{"insumo_id": "MA-001", "coeficiente": 0.5, "categoria_custo": "MATERIAL"}])
+        _seed_insumo(catalog_root, "MA-001")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+        )
+        assert "erro" in result
+        assert "já está na composição" in result["erro"]
+
+    def test_atualizar_item_inexistente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        _seed_cpu(catalog_root, "CPU-001")
+        _seed_insumo(catalog_root, "MA-001")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-001", "atualizar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+        )
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+    def test_remover_item_inexistente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        _seed_cpu(catalog_root, "CPU-001")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-001", "MA-001", "remover", "v1")
+        assert "erro" in result
+        assert "não encontrado" in result["erro"]
+
+    def test_categoria_custo_invalida_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # categoria_custo fora do Literal aceito por ComposicaoItem
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        _seed_cpu(catalog_root, "CPU-001")
+        _seed_insumo(catalog_root, "MA-001")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", coeficiente=1.0, categoria_custo="INEXISTENTE"
+        )
+        assert "erro" in result
+        assert "inválido" in result["erro"]
+
+    def test_coeficiente_negativo_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # coeficiente deve ser > 0 (ComposicaoItem.coeficiente = Field(gt=0))
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        _seed_cpu(catalog_root, "CPU-001")
+        _seed_insumo(catalog_root, "MA-001")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", coeficiente=-1.0, categoria_custo="MATERIAL"
+        )
+        assert "erro" in result
+        assert "inválido" in result["erro"]
+
+    def test_adicionar_happy_path_grava_delta_sem_tocar_master(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        cpu_file = _seed_cpu(catalog_root, "CPU-001")
+        _seed_insumo(catalog_root, "MA-001")
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1",
+            "CPU-001",
+            "MA-001",
+            "adicionar",
+            "v1",
+            coeficiente=0.42,
+            categoria_custo="MATERIAL",
+            unidade="L",
+            nota="corrige derivação de combustível",
+        )
+        assert result["status"] == "RASCUNHO"
+        assert result["layer"] == "MASTER"
+        assert result["cpu_id"] == "CPU-001"
+        assert result["insumo_id"] == "MA-001"
+        assert result["acao"] == "adicionar"
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        assert len(rascunho_data["_deltas"]) == 1
+        delta = rascunho_data["_deltas"][0]
+        assert delta["tipo"] == "composicao_item"
+        assert delta["cpu_id"] == "CPU-001"
+        assert delta["insumo_id"] == "MA-001"
+        assert delta["acao"] == "adicionar"
+        assert delta["coeficiente"] == 0.42
+        assert delta["categoria_custo"] == "MATERIAL"
+        assert delta["unidade"] == "L"
+        assert delta["nota"] == "corrige derivação de combustível"
+
+        # o catálogo mestre (arquivo da CPU) permanece intocado até o merge
+        cpu_data = json.loads(cpu_file.read_text(encoding="utf-8"))
+        assert cpu_data["composicao_itens"] == []
+
+    def test_remover_happy_path_grava_delta(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        _seed_cpu(
+            catalog_root,
+            "CPU-001",
+            [{"insumo_id": "MA-DIESEL-S10", "coeficiente": 0.4181, "categoria_custo": "DIESEL"}],
+        )
+        _make_rascunho(tmp_path, "ctx1", "v1")
+
+        result = _impl_atualizar_composicao_item_cpu(
+            "ctx1", "CPU-001", "MA-DIESEL-S10", "remover", "v1", nota="combustível deriva do equipamento"
+        )
+        assert result["status"] == "RASCUNHO"
+        assert result["acao"] == "remover"
+
+        rascunho_data = json.loads((tmp_path / "contextos" / "ctx1" / "versions" / "v1.json").read_text())
+        delta = rascunho_data["_deltas"][0]
+        assert delta["acao"] == "remover"
+        assert delta["coeficiente"] is None
+        assert delta["categoria_custo"] is None
+
+
+# ---------------------------------------------------------------------------
+# _apply_composicao_item_delta — aplicação no merge
+# ---------------------------------------------------------------------------
+
+
+class TestApplyComposicaoItemDelta:
+    def test_adicionar_grava_item_na_cpu_master(self, tmp_path: Path) -> None:
+        catalog_root = tmp_path / "cat1"
+        _seed_cpu(catalog_root, "CPU-001")
+
+        mod._apply_composicao_item_delta(catalog_root, "CPU-001", "MA-001", "adicionar", 0.42, "MATERIAL", "L", None)
+
+        cpu_data = json.loads((catalog_root / "cpus" / "CPU-001.json").read_text(encoding="utf-8"))
+        assert cpu_data["composicao_itens"] == [
+            {
+                "insumo_id": "MA-001",
+                "coeficiente": 0.42,
+                "categoria_custo": "MATERIAL",
+                "unidade": "L",
+                "tipo_combustivel": None,
+            }
+        ]
+
+    def test_atualizar_substitui_item_existente_sem_duplicar(self, tmp_path: Path) -> None:
+        catalog_root = tmp_path / "cat1"
+        _seed_cpu(
+            catalog_root,
+            "CPU-001",
+            [
+                {"insumo_id": "MA-001", "coeficiente": 0.1, "categoria_custo": "MATERIAL"},
+                {"insumo_id": "MA-002", "coeficiente": 0.2, "categoria_custo": "MATERIAL"},
+            ],
+        )
+
+        mod._apply_composicao_item_delta(catalog_root, "CPU-001", "MA-001", "atualizar", 0.99, "MATERIAL", None, None)
+
+        cpu_data = json.loads((catalog_root / "cpus" / "CPU-001.json").read_text(encoding="utf-8"))
+        assert len(cpu_data["composicao_itens"]) == 2
+        item = next(it for it in cpu_data["composicao_itens"] if it["insumo_id"] == "MA-001")
+        assert item["coeficiente"] == 0.99
+        outro = next(it for it in cpu_data["composicao_itens"] if it["insumo_id"] == "MA-002")
+        assert outro["coeficiente"] == 0.2
+
+    def test_remover_descarta_item_correspondente(self, tmp_path: Path) -> None:
+        catalog_root = tmp_path / "cat1"
+        _seed_cpu(
+            catalog_root,
+            "CPU-001",
+            [
+                {"insumo_id": "MA-DIESEL-S10", "coeficiente": 0.4181, "categoria_custo": "DIESEL"},
+                {"insumo_id": "MA-002", "coeficiente": 0.2, "categoria_custo": "MATERIAL"},
+            ],
+        )
+
+        mod._apply_composicao_item_delta(catalog_root, "CPU-001", "MA-DIESEL-S10", "remover", None, None, None, None)
+
+        cpu_data = json.loads((catalog_root / "cpus" / "CPU-001.json").read_text(encoding="utf-8"))
+        assert cpu_data["composicao_itens"] == [
+            {"insumo_id": "MA-002", "coeficiente": 0.2, "categoria_custo": "MATERIAL"}
+        ]
+
+    def test_cpu_inexistente_levanta_erro_governanca(self, tmp_path: Path) -> None:
+        from concilium.application.orchestrators.catalog_governance import CatalogGovernanceError
+
+        catalog_root = tmp_path / "cat1"
+        catalog_root.mkdir(parents=True)
+
+        with pytest.raises(CatalogGovernanceError):
+            mod._apply_composicao_item_delta(
+                catalog_root, "CPU-NAO-EXISTE", "MA-001", "adicionar", 1.0, "MATERIAL", None, None
+            )
+
+    def test_adicionar_sem_coeficiente_ou_categoria_levanta_erro(self, tmp_path: Path) -> None:
+        # narrowing defensivo — nunca deve ser alcançado via _impl (já valida antes),
+        # mas _apply_composicao_item_delta não deve persistir um item incompleto.
+        from concilium.application.orchestrators.catalog_governance import CatalogGovernanceError
+
+        catalog_root = tmp_path / "cat1"
+        _seed_cpu(catalog_root, "CPU-001")
+
+        with pytest.raises(CatalogGovernanceError):
+            mod._apply_composicao_item_delta(
+                catalog_root, "CPU-001", "MA-001", "adicionar", None, "MATERIAL", None, None
+            )

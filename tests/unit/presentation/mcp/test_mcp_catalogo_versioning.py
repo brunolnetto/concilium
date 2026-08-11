@@ -141,6 +141,24 @@ class TestCatalogoWrappers:
             )
         assert result["variante_id"] == "VAR-1"
 
+    def test_atualizar_composicao_item_cpu(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        with patch(
+            f"{_CATALOGO_MOD}._impl_atualizar_composicao_item_cpu",
+            return_value={"status": "RASCUNHO"},
+        ) as impl:
+            result = tools["atualizar_composicao_item_cpu"](
+                contexto_id="ctx",
+                cpu_id="CPU-001",
+                insumo_id="MA-001",
+                acao="adicionar",
+                rascunho_id="v1",
+                coeficiente=0.5,
+                categoria_custo="MATERIAL",
+            )
+        assert result["status"] == "RASCUNHO"
+        impl.assert_called_once_with("ctx", "CPU-001", "MA-001", "adicionar", "v1", 0.5, "MATERIAL", None, None, None)
+
     def test_historico_preco_insumo_pontual_sem_insumo_id_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         result = tools["historico_preco_insumo"](contexto_id="ctx", modo="pontual", data_referencia="2026-01-01")
@@ -780,6 +798,64 @@ class TestCatalogLifecycleADR120:
 
         assert result["status"] == "APROVADO"
         assert apply_descontinuar_mock.call_count == 1
+        assert result["deltas_aplicados"] == 1
+
+    def test_aprovar_merge_catalogo_aplica_delta_composicao_item(self, monkeypatch, tmp_path):
+        """Delta tipo=composicao_item é aplicado via _apply_composicao_item_delta (governança
+        de composicao_itens de CPU, mesmo padrão de criacao_insumo/descontinuacao_insumo)."""
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_root = tmp_path / "config"
+        entity_dir = config_root / "contextos" / "ctx-1"
+        entity_dir.mkdir(parents=True)
+
+        rascunho_data = {
+            "version": "v2",
+            "_revisado": True,
+            "_deltas": [
+                {
+                    "tipo": "composicao_item",
+                    "cpu_id": "CPU-001",
+                    "insumo_id": "MA-DIESEL-S10",
+                    "acao": "remover",
+                    "coeficiente": None,
+                    "categoria_custo": None,
+                    "unidade": None,
+                    "tipo_combustivel": None,
+                    "autor": "mgr-1",
+                }
+            ],
+        }
+        version_svc = MagicMock()
+        version_svc.resolve.return_value = rascunho_data
+        version_svc.current_version.return_value = "v1"
+
+        ctx = MagicMock()
+        ctx.catalogo_id = "cat-1"
+        rt = MagicMock()
+        rt.load_contexto.return_value = ctx
+        rt.load_catalogo.return_value = {"cpus": [], "insumos": [], "producoes": []}
+
+        apply_composicao_mock = MagicMock()
+
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch("concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=config_root)),
+            patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"),
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch(
+                "concilium.presentation.mcp.tools._catalogo_tools_helpers_a._apply_composicao_item_delta",
+                apply_composicao_mock,
+            ),
+        ):
+            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+
+        assert result["status"] == "APROVADO"
+        assert apply_composicao_mock.call_count == 1
+        call_args = apply_composicao_mock.call_args[0]
+        assert call_args[1:] == ("CPU-001", "MA-DIESEL-S10", "remover", None, None, None, None)
         assert result["deltas_aplicados"] == 1
 
     def test_aprovar_merge_catalogo_ainda_nao_revisado_bloqueia(self, monkeypatch, tmp_path):

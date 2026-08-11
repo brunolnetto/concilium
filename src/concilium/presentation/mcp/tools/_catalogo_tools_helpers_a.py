@@ -450,6 +450,56 @@ def _apply_cpu_override_delta(catalog_root: Path, cpu_id: str, override_data: di
     cpu_file.write_text(json.dumps(cpu_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _apply_composicao_item_delta(
+    catalog_root: Path,
+    cpu_id: str,
+    insumo_id: str,
+    acao: str,
+    coeficiente: float | None,
+    categoria_custo: str | None,
+    unidade: str | None,
+    tipo_combustivel: str | None,
+) -> None:
+    """Aplica um delta de item de `composicao_itens` de uma CPU ao catálogo mestre no
+    momento do merge — mesmo padrão de governança item-a-item de
+    `_apply_preco_insumo_delta`/`_apply_cpu_override_delta`.
+
+    `acao='adicionar'`/`'atualizar'` fazem upsert (por `insumo_id`) do item na lista
+    `composicao_itens` da CPU; `acao='remover'` descarta o item correspondente.
+    O item resultante é sempre revalidado via `ComposicaoItem` (Pydantic,
+    `extra='forbid'`) antes da escrita — nunca persiste um item inconsistente no
+    catálogo mestre, mesmo que o insumo/CPU tenham mudado entre a criação do
+    rascunho e a aprovação do merge.
+    """
+    from concilium.domain.models.catalog.catalogo import ComposicaoItem
+
+    cpu_file = validate_and_resolve_cpu_file(catalog_root, cpu_id)
+    cpu_data = json.loads(cpu_file.read_text(encoding="utf-8"))
+    itens: list[dict[str, Any]] = cpu_data.setdefault("composicao_itens", [])
+
+    if acao == "remover":
+        cpu_data["composicao_itens"] = [it for it in itens if it.get("insumo_id") != insumo_id]
+    else:
+        if coeficiente is None or categoria_custo is None:
+            raise CatalogGovernanceError(
+                f"Delta de composicao_item para insumo '{insumo_id}' na CPU '{cpu_id}' com "
+                f"acao='{acao}' exige coeficiente e categoria_custo."
+            )
+        novo_item: dict[str, Any] = {
+            "insumo_id": insumo_id,
+            "coeficiente": coeficiente,
+            "categoria_custo": categoria_custo,
+            "unidade": unidade,
+            "tipo_combustivel": tipo_combustivel,
+        }
+        ComposicaoItem(**novo_item)
+        nova_lista = [it for it in itens if it.get("insumo_id") != insumo_id]
+        nova_lista.append(novo_item)
+        cpu_data["composicao_itens"] = nova_lista
+
+    cpu_file.write_text(json.dumps(cpu_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def _apply_criar_insumo_delta(catalog_root: Path, insumo_data: dict[str, Any]) -> None:
     """Cria o arquivo do insumo novo no catálogo mestre no momento do merge (ADR-163 D5).
 
@@ -988,9 +1038,7 @@ def _apul_validar_e_build_delta(
             raise ValueError(
                 "informe ao menos um entre novo_preco, novo_valor_locacao_mensal e novos_funcoes_aplicaveis"
             )
-        validate_and_resolve_insumo_file(
-            catalog_root, insumo_id, novo_preco if novo_preco is not None else 0.0
-        )
+        validate_and_resolve_insumo_file(catalog_root, insumo_id, novo_preco if novo_preco is not None else 0.0)
     except (CatalogGovernanceError, ValueError) as exc:
         return {"insumo_id": insumo_id, "status": "erro", "erro": str(exc)}, None
 
@@ -1186,9 +1234,7 @@ def _avp_handle_projeto_overlay(
 
     entry = dict(overlay.get(producao_id, {}))
     variantes = [v for v in entry.get("variantes", []) if v.get("id") != variante_id]
-    variantes.append(
-        {"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
-    )
+    variantes.append({"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data})
     entry["variantes"] = variantes
     overlay[producao_id] = entry
     overlay_file.write_text(json.dumps(overlay, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -1291,3 +1337,140 @@ def _impl_adicionar_variante_producao(
         )
     except Exception as e:
         return {"erro": f"Erro ao adicionar variante: {e}"}
+
+
+def _acic_validar_entrada(
+    acao: str,
+    coeficiente: float | None,
+    categoria_custo: str | None,
+) -> str | None:
+    """Valida os parâmetros de entrada conforme a ação solicitada. Retorna erro ou None."""
+    if acao not in ("adicionar", "atualizar", "remover"):
+        return "acao deve ser 'adicionar', 'atualizar' ou 'remover'."
+    if acao in ("adicionar", "atualizar") and (coeficiente is None or categoria_custo is None):
+        return "coeficiente e categoria_custo são obrigatórios para acao='adicionar'/'atualizar'."
+    return None
+
+
+def _impl_atualizar_composicao_item_cpu(
+    contexto_id: str,
+    cpu_id: str,
+    insumo_id: str,
+    acao: str,
+    rascunho_id: str,
+    coeficiente: float | None = None,
+    categoria_custo: str | None = None,
+    unidade: str | None = None,
+    tipo_combustivel: str | None = None,
+    nota: str | None = None,
+) -> dict[str, Any]:
+    """Edita um item de `composicao_itens` de uma CPU no catálogo mestre (governança).
+
+    Fecha a lacuna de governança para `composicao_itens`: até aqui, insumo (preço,
+    criação, descontinuação) e produção (variante) tinham caminho de escrita
+    governado (rascunho -> 4-olhos -> merge, ADR-145/163), mas a lista
+    `composicao_itens` de uma CPU só era editável reescrevendo o arquivo à mão.
+    Mesmo caminho gated por rascunho de `atualizar_preco_insumo`: grava um delta
+    de tipo `composicao_item`; o arquivo da CPU só é escrito no momento do merge
+    (`aprovar_merge_catalogo`), nunca aqui.
+
+    Args:
+        contexto_id: ID do contexto (ex.: "mendeslobo").
+        cpu_id: Código da CPU a editar (ex.: "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000").
+        insumo_id: Código do insumo do item de composição (deve existir no catálogo mestre).
+        acao: "adicionar" (item novo), "atualizar" (substitui item existente) ou
+            "remover" (descarta item existente).
+        rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
+        coeficiente: Obrigatório para acao='adicionar'/'atualizar'. Deve ser > 0.
+        categoria_custo: Obrigatório para acao='adicionar'/'atualizar'. Ex.: "MATERIAL", "DIESEL".
+        unidade: Opcional.
+        tipo_combustivel: Opcional (ex.: "diesel_s10") — só relevante quando
+            categoria_custo é "DIESEL"/"COMBUSTIVEL".
+        nota: Opcional. Justificativa para o audit trail.
+    """
+    from pydantic import ValidationError
+
+    from concilium.domain.models.catalog.catalogo import ComposicaoItem
+
+    erro = _acic_validar_entrada(acao, coeficiente, categoria_custo)
+    if erro:
+        return {"erro": erro}
+
+    if not rascunho_id:
+        return {
+            "erro": "rascunho_id é obrigatório para editar o catálogo mestre (ADR-145). "
+            "Use criar_rascunho_catalogo para abrir um rascunho e informe o rascunho_id retornado."
+        }
+
+    rt = _runtime()
+    config_dir = _config_root()
+    ctx = rt.load_contexto(contexto_id)
+    catalog_root = _catalog_root(config_dir, ctx.catalogo_id)
+
+    try:
+        cpu_file = validate_and_resolve_cpu_file(catalog_root, cpu_id)
+        if acao != "remover":
+            # Insumo precisa existir no catálogo mestre — evita apontar composicao_itens
+            # para um código inexistente/inválido.
+            validate_and_resolve_insumo_file(catalog_root, insumo_id, 0.0)
+    except CatalogGovernanceError as exc:
+        return {"erro": str(exc)}
+
+    cpu_data = json.loads(cpu_file.read_text(encoding="utf-8"))
+    item_existente = next((it for it in cpu_data.get("composicao_itens", []) if it.get("insumo_id") == insumo_id), None)
+    if acao == "adicionar" and item_existente is not None:
+        return {
+            "erro": f"Insumo '{insumo_id}' já está na composição da CPU '{cpu_id}'. "
+            "Use acao='atualizar' para substituir o item existente."
+        }
+    if acao in ("atualizar", "remover") and item_existente is None:
+        return {"erro": f"Insumo '{insumo_id}' não encontrado na composição da CPU '{cpu_id}'."}
+
+    if acao != "remover":
+        # _acic_validar_entrada já garante coeficiente/categoria_custo != None para
+        # acao='adicionar'/'atualizar' — checagem redundante aqui só para narrowing de tipo.
+        if coeficiente is None or categoria_custo is None:
+            return {"erro": "coeficiente e categoria_custo são obrigatórios para acao='adicionar'/'atualizar'."}
+        item_candidato: dict[str, Any] = {
+            "insumo_id": insumo_id,
+            "coeficiente": coeficiente,
+            "categoria_custo": categoria_custo,
+            "unidade": unidade,
+            "tipo_combustivel": tipo_combustivel,
+        }
+        try:
+            ComposicaoItem(**item_candidato)
+        except ValidationError as exc:
+            return {"erro": f"composicao_item inválido: {exc}"}
+
+    from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+    delta = {
+        "tipo": "composicao_item",
+        "cpu_id": cpu_id,
+        "insumo_id": insumo_id,
+        "acao": acao,
+        "coeficiente": coeficiente,
+        "categoria_custo": categoria_custo,
+        "unidade": unidade,
+        "tipo_combustivel": tipo_combustivel,
+        "nota": nota,
+        "autor": get_current_user_id() or "system",
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
+    if erro:
+        return {"erro": erro}
+
+    return _wrap_response(
+        {
+            "status": "RASCUNHO",
+            "layer": "MASTER",
+            "rascunho_id": rascunho_id,
+            "cpu_id": cpu_id,
+            "insumo_id": insumo_id,
+            "acao": acao,
+            "nota": "Alteração registrada no rascunho — ainda não aplicada ao catálogo mestre. "
+            "Use aprovar_merge_catalogo para promover.",
+        }
+    )

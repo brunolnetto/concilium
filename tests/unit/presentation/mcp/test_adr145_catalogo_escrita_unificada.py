@@ -58,6 +58,16 @@ def _seed_contexto_e_catalogo(config_dir: Path, contexto_id: str, catalogo_id: s
     (cat_dir / "producoes" / "PROD-001.json").write_text(
         json.dumps({"id": "PROD-001", "variantes": []}), encoding="utf-8"
     )
+    (cat_dir / "cpus").mkdir(parents=True, exist_ok=True)
+    (cat_dir / "cpus" / "CPU-001.json").write_text(
+        json.dumps(
+            {
+                "codigo": "CPU-001",
+                "composicao_itens": [{"insumo_id": "MAT-001", "coeficiente": 0.5, "categoria_custo": "MATERIAL"}],
+            }
+        ),
+        encoding="utf-8",
+    )
     return cat_dir
 
 
@@ -260,3 +270,109 @@ class TestAprovarMergeCatalogoAplicaDeltas:
         assert diff_record["aprovador"] == "mgr-2"
         assert diff_record["diff"]["previous_snapshot_id"] == first["snapshot_id"]
         assert diff_record["diff"]["current_snapshot_id"] == second["snapshot_id"]
+
+
+class TestConsultarImpactoReajusteSurfaceComposicaoItem:
+    """composicao_item afeta a estrutura de custo de uma CPU — visibilidade própria
+    pro revisor dos 4-olhos, análoga a insumos_modificados (mas por cpu_id)."""
+
+    def test_cpus_com_composicao_alterada_deriva_de_deltas_composicao_item(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_dir = tmp_path / "config"
+        _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
+        _criar_rascunho_com_deltas(
+            config_dir,
+            "ctx-1",
+            "v2",
+            deltas=[
+                {
+                    "tipo": "composicao_item",
+                    "cpu_id": "CPU-001",
+                    "insumo_id": "MA-DIESEL-S10",
+                    "acao": "remover",
+                    "coeficiente": None,
+                    "categoria_custo": None,
+                    "unidade": None,
+                    "tipo_combustivel": None,
+                },
+                # mesma CPU alterada duas vezes no mesmo rascunho — não deve duplicar a contagem
+                {
+                    "tipo": "composicao_item",
+                    "cpu_id": "CPU-001",
+                    "insumo_id": "MAT-001",
+                    "acao": "atualizar",
+                    "coeficiente": 0.7,
+                    "categoria_custo": "MATERIAL",
+                    "unidade": None,
+                    "tipo_combustivel": None,
+                },
+                {"tipo": "preco_insumo", "insumo_id": "MAT-002", "novo_preco": 12.0},
+            ],
+        )
+
+        result = tools["consultar_impacto_reajuste"](contexto_id="ctx-1", rascunho_id="v2")
+        assert result["n_cpus_com_composicao_alterada"] == 1
+        assert result["cpus_com_composicao_alterada"] == ["CPU-001"]
+        # não interfere na contagem de insumos_afetados (preco_insumo, já coberta acima)
+        assert result["n_insumos_afetados"] == 1
+
+
+class TestAprovarMergeCatalogoAplicaDeltaComposicaoItem:
+    def test_merge_aplica_delta_composicao_item_remocao_e_upsert(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        config_dir = tmp_path / "config"
+        _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
+        cpu_dir = config_dir / "catalogos" / "cat-1" / "cpus"
+        # CPU-001 já semeada com composicao_itens=[MAT-001 @ 0.5]; adiciona um item
+        # DIESEL derivado incorretamente (mesmo caso real que motivou esta feature).
+        cpu_data = json.loads((cpu_dir / "CPU-001.json").read_text())
+        cpu_data["composicao_itens"].append(
+            {"insumo_id": "MA-DIESEL-S10", "coeficiente": 0.4181, "categoria_custo": "DIESEL"}
+        )
+        (cpu_dir / "CPU-001.json").write_text(json.dumps(cpu_data), encoding="utf-8")
+        (config_dir / "catalogos" / "cat-1" / "insumos" / "material" / "MA-DIESEL-S10.json").write_text(
+            json.dumps({"codigo": "MA-DIESEL-S10", "tipo": "COMBUSTIVEL"}), encoding="utf-8"
+        )
+
+        _criar_rascunho_com_deltas(
+            config_dir,
+            "ctx-1",
+            "v2",
+            deltas=[
+                {
+                    "tipo": "composicao_item",
+                    "cpu_id": "CPU-001",
+                    "insumo_id": "MA-DIESEL-S10",
+                    "acao": "remover",
+                    "coeficiente": None,
+                    "categoria_custo": None,
+                    "unidade": None,
+                    "tipo_combustivel": None,
+                },
+                {
+                    "tipo": "composicao_item",
+                    "cpu_id": "CPU-001",
+                    "insumo_id": "MAT-001",
+                    "acao": "atualizar",
+                    "coeficiente": 0.65,
+                    "categoria_custo": "MATERIAL",
+                    "unidade": None,
+                    "tipo_combustivel": None,
+                },
+            ],
+        )
+
+        from unittest.mock import patch
+
+        with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"):
+            result = tools["aprovar_merge_catalogo"](
+                contexto_id="ctx-1", rascunho_id="v2", justificativa="Combustível deriva do equipamento, não da CPU"
+            )
+
+        assert result["status"] == "APROVADO"
+        assert result["deltas_aplicados"] == 2
+
+        cpu_data_pos = json.loads((cpu_dir / "CPU-001.json").read_text())
+        itens = cpu_data_pos["composicao_itens"]
+        assert {it["insumo_id"] for it in itens} == {"MAT-001"}
+        assert itens[0]["coeficiente"] == 0.65

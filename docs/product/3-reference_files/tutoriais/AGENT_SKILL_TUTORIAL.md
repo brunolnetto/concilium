@@ -792,6 +792,7 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 | `versoes_catalogo(contexto_id, modo=)` | `modo="listar"` lista versões disponíveis; `modo="comparar"` compara duas versões — substitui `listar_versoes_catalogo` e `comparar_versoes_catalogo` |
 | `atualizar_preco_insumo(...)` | Atualiza preço de insumo no contexto |
 | `adicionar_variante_producao(...)` | Adiciona variante com equipe e valor horário |
+| `atualizar_composicao_item_cpu(contexto_id, cpu_id, insumo_id, acao, rascunho_id, ...)` | Governança de `composicao_itens` de uma CPU — `acao="adicionar"\|"atualizar"\|"remover"`, requer `rascunho_id` (mesmo fluxo rascunho→4-olhos→`aprovar_merge_catalogo` de `atualizar_preco_insumo`) |
 | `calcular_pu_producao(...)` | Calcula PU de produção para uma composição |
 | `salvar_perfil_bdi(...)` | Salva perfil BDI no contexto |
 | `calcular_tributos(tipo=)` | `tipo="custo_empregador_clt"`, `"inss_empregado"` ou `"irrf"` — substitui `calcular_custo_empregador_clt`, `calcular_inss_empregado`, `calcular_irrf` |

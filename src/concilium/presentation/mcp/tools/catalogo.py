@@ -15,6 +15,7 @@ from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 from ._catalogo_tools_helpers_a import (
     MAX_LOTE_INSUMOS,
     _impl_adicionar_variante_producao,
+    _impl_atualizar_composicao_item_cpu,
     _impl_atualizar_preco_insumo,
     _impl_atualizar_precos_insumos_lote,
     _impl_consultar_preco_insumo_temporal,
@@ -329,6 +330,43 @@ def register(server: FastMCP) -> None:
             contexto_id, producao_id, variante_id, nome_variante, valor_horario, equipe_json, rascunho_id, projeto_id
         )
 
+    @server.tool(
+        description=(
+            "Edita um item de composicao_itens de uma CPU no catálogo mestre (adicionar/atualizar/"
+            "remover um insumo × coeficiente × categoria_custo). Requer rascunho_id (criado via "
+            "criar_rascunho_catalogo) — fica pendente até aprovar_merge_catalogo (mesmo padrão de "
+            "governança de atualizar_preco_insumo/criar_insumo, ADR-145/163). Use para corrigir "
+            "itens de composição inconsistentes (ex.: categoria_custo incompatível com o tipo do "
+            "insumo) sem editar o arquivo da CPU manualmente."
+        )
+    )
+    @permission("catalog:write")
+    @mcp_rate_limit()
+    def atualizar_composicao_item_cpu(
+        contexto_id: str,
+        cpu_id: str,
+        insumo_id: str,
+        acao: str,
+        rascunho_id: str,
+        coeficiente: float | None = None,
+        categoria_custo: str | None = None,
+        unidade: str | None = None,
+        tipo_combustivel: str | None = None,
+        nota: str | None = None,
+    ) -> dict[str, Any]:
+        return _impl_atualizar_composicao_item_cpu(
+            contexto_id,
+            cpu_id,
+            insumo_id,
+            acao,
+            rascunho_id,
+            coeficiente,
+            categoria_custo,
+            unidade,
+            tipo_combustivel,
+            nota,
+        )
+
     # ── Análise temporal / RFI ───────────────────────────────────────────────
 
     @server.tool(
@@ -631,6 +669,12 @@ def register(server: FastMCP) -> None:
         insumos_afetados = sorted(
             {d["insumo_id"] for d in rascunho_data.get("_deltas", []) if d.get("tipo") == "preco_insumo"}
         )
+        # composicao_item afeta a estrutura de custo de uma CPU (não seu preço de
+        # insumo isolado) — visibilidade própria pro revisor dos 4-olhos avaliar
+        # o impacto (ex.: remoção de item de composição, troca de categoria_custo).
+        cpus_afetadas = sorted(
+            {d["cpu_id"] for d in rascunho_data.get("_deltas", []) if d.get("tipo") == "composicao_item"}
+        )
         return _wrap_response(
             {
                 "contexto_id": contexto_id,
@@ -638,6 +682,8 @@ def register(server: FastMCP) -> None:
                 "rascunho_id": rascunho_id,
                 "n_insumos_afetados": len(insumos_afetados),
                 "insumos_modificados": insumos_afetados[:20],
+                "n_cpus_com_composicao_alterada": len(cpus_afetadas),
+                "cpus_com_composicao_alterada": cpus_afetadas[:20],
                 "impacto_estimado": "indisponível — requer recálculo full de projetos ativos",
                 "nota": "Para impacto preciso, execute disparar_pipeline nos projetos após o merge.",
             }
@@ -689,6 +735,7 @@ def register(server: FastMCP) -> None:
         from concilium.presentation.mcp._context import _runtime
 
         from ._catalogo_tools_helpers_a import (
+            _apply_composicao_item_delta,
             _apply_criar_insumo_delta,
             _apply_descontinuacao_insumo_delta,
             _apply_preco_insumo_delta,
@@ -753,8 +800,18 @@ def register(server: FastMCP) -> None:
                         _apply_criar_insumo_delta(catalog_root, delta["insumo"])
                         deltas_aplicados += 1
                     elif tipo == "descontinuacao_insumo":
-                        _apply_descontinuacao_insumo_delta(
-                            catalog_root, delta["insumo_id"], delta.get("motivo")
+                        _apply_descontinuacao_insumo_delta(catalog_root, delta["insumo_id"], delta.get("motivo"))
+                        deltas_aplicados += 1
+                    elif tipo == "composicao_item":
+                        _apply_composicao_item_delta(
+                            catalog_root,
+                            delta["cpu_id"],
+                            delta["insumo_id"],
+                            delta["acao"],
+                            delta.get("coeficiente"),
+                            delta.get("categoria_custo"),
+                            delta.get("unidade"),
+                            delta.get("tipo_combustivel"),
                         )
                         deltas_aplicados += 1
 
