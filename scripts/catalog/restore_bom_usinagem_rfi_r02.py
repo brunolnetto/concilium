@@ -305,7 +305,7 @@ def run_restore(apply: bool = False) -> dict[str, Any]:
         if apply:
             _write(path, payload)
 
-    prod_path = CAT_DIR / "producoes" / "PROD-USINAGEM-CBUQ-RFI-001.json"
+    prod_path = CAT_DIR / "produtividades" / "PROD-USINAGEM-CBUQ-RFI-001.json"
     producao = _load(prod_path) if prod_path.exists() else _producao_usinagem_cbuq()
     if not prod_path.exists():
         stats["producoes_criadas"] += 1

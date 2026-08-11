@@ -151,8 +151,8 @@ class TestEndToEnd:
 
     def test_mendeslobo_escavacao_alimenta_aterro(self):
         insumos = _insumos_material("mendeslobo")
-        corte = _load("mendeslobo", "producoes/PROD-ATI-011.json")
-        aterro = _load("mendeslobo", "producoes/PROD-ATI-017.json")
+        corte = _load("mendeslobo", "produtividades/PROD-ATI-011.json")
+        aterro = _load("mendeslobo", "produtividades/PROD-ATI-017.json")
         self._roda_piloto(insumos, corte, aterro)
 
     @staticmethod

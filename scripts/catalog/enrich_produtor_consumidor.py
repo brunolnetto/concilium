@@ -117,29 +117,29 @@ _PRODUTORAS: dict[str, dict[str, tuple[str, float | None, str]]] = {
         ),
     },
     "mendeslobo": {
-        "producoes/PROD-ATI-011.json": (
+        "produtividades/PROD-ATI-011.json": (
             "MA-SOLO-ESCAVADO-1CAT",
             None,
             "descrição: escavação, carga e transporte — 1ª categoria",
         ),
-        "producoes/PROD-ATI-012.json": (
+        "produtividades/PROD-ATI-012.json": (
             "MA-SOLO-ESCAVADO-1CAT",
             None,
             "descrição: escavação, carga e transporte — 1ª categoria",
         ),
-        "producoes/PROD-ESCO-CARGA-1CAT-001.json": (
+        "produtividades/PROD-ESCO-CARGA-1CAT-001.json": (
             "MA-SOLO-ESCAVADO-1CAT",
             None,
             "descrição: escavação 1ª categoria (inclui espalhamento — material entregue no destino "
             "fica disponível para compactação)",
         ),
-        "producoes/PROD-ESCO-CARGA-2CAT-001.json": (
+        "produtividades/PROD-ESCO-CARGA-2CAT-001.json": (
             "MA-SOLO-ESCAVADO-2CAT",
             None,
             "descrição: escavação 2ª categoria (inclui espalhamento — material entregue no destino "
             "fica disponível para compactação)",
         ),
-        "producoes/PROD-ESCO-CARGA-3CAT-001.json": (
+        "produtividades/PROD-ESCO-CARGA-3CAT-001.json": (
             "MA-SOLO-ESCAVADO-3CAT",
             None,
             "descrição: escavação 3ª categoria/rocha (inclui espalhamento — material entregue no "
@@ -182,8 +182,8 @@ _CONSUMIDORAS: dict[str, dict[str, tuple[str, float | None, str]]] = {
         ),
     },
     "mendeslobo": {
-        "producoes/PROD-ATI-017.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
-        "producoes/PROD-COMPACT-ATERRO-100PN-001.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
+        "produtividades/PROD-ATI-017.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
+        "produtividades/PROD-COMPACT-ATERRO-100PN-001.json": ("MA-SOLO-ESCAVADO-1CAT", None, _NORMA_ATERRO_1CAT),
         "produtividades/CPU-TERRA-COMPAC-PN-PROD-001.json": (
             "MA-SOLO-ESCAVADO-1CAT",
             67.70,

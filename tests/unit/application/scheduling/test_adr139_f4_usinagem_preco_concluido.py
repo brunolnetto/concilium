@@ -70,7 +70,7 @@ def _insumo_index() -> dict[str, dict]:
 class TestPrecoConcluidoPorSinergia:
     def test_producao_derivada_pelo_grafo(self, insumo_id):
         caso = _CASOS[insumo_id]
-        producao = Producao.model_validate(_load(f"producoes/{caso['producao']}.json"))
+        producao = Producao.model_validate(_load(f"produtividades/{caso['producao']}.json"))
         resolucao = resolver_producao_efetiva(producao)
         assert resolucao.fonte == "derivado"
         assert resolucao.valor == pytest.approx(producao.valor_horario)
@@ -80,7 +80,7 @@ class TestPrecoConcluidoPorSinergia:
 
     def test_preco_gravado_igual_ao_concluido(self, insumo_id):
         caso = _CASOS[insumo_id]
-        producao = _load(f"producoes/{caso['producao']}.json")
+        producao = _load(f"produtividades/{caso['producao']}.json")
         insumo = _load(f"insumos/material/{insumo_id}.json")
         sbdi = derivar_precos_unitarios_sbdi(producao, _insumo_index())
         assert not sbdi["_meta"]["referencias_faltantes"]
@@ -103,7 +103,7 @@ class TestPrecoConcluidoPorSinergia:
 class TestCadeiaUsinaPavimentacao:
     def test_usinagem_alimenta_base_bgtc(self):
         insumos = _insumo_index()
-        usinagem = _load("producoes/PROD-USINAGEM-BGTC-001.json")
+        usinagem = _load("produtividades/PROD-USINAGEM-BGTC-001.json")
         base = _load("produtividades/CPU-PAVIM-PAV-BASE-BGTC-PROD-001.json")
         resources = build_replenishable_resources(
             producoes_por_atividade={"usinagem": usinagem, "base": base},

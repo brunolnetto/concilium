@@ -87,14 +87,14 @@ class TestBomRestaurado:
 
 class TestUsinagemCbuqDaCasa:
     def test_producao_derivada_pelo_grafo(self):
-        producao = Producao.model_validate(_load("producoes/PROD-USINAGEM-CBUQ-RFI-001.json"))
+        producao = Producao.model_validate(_load("produtividades/PROD-USINAGEM-CBUQ-RFI-001.json"))
         resolucao = resolver_producao_efetiva(producao)
         assert resolucao.fonte == "derivado"
         assert resolucao.valor == pytest.approx(producao.valor_horario)
         assert resolucao.derivacao.gargalo_derivado == "E0043"
 
     def test_preco_concluido_gravado(self):
-        producao = _load("producoes/PROD-USINAGEM-CBUQ-RFI-001.json")
+        producao = _load("produtividades/PROD-USINAGEM-CBUQ-RFI-001.json")
         insumo = _load("insumos/material/MA-CBUQ-FAIXA-C.json")
         sbdi = derivar_precos_unitarios_sbdi(producao, _insumo_index())
         assert not sbdi["_meta"]["referencias_faltantes"]
@@ -104,7 +104,7 @@ class TestUsinagemCbuqDaCasa:
 
     def test_produtor_consumidor_cbuq_fechado(self):
         index = _insumo_index()
-        usinagem = _load("producoes/PROD-USINAGEM-CBUQ-RFI-001.json")
+        usinagem = _load("produtividades/PROD-USINAGEM-CBUQ-RFI-001.json")
         aplicacao = _load("produtividades/CPU-TERRA-ATI-058-PROD-001.json")
         resources = build_replenishable_resources(
             producoes_por_atividade={"usinagem": usinagem, "cbuq-3cm": aplicacao},
