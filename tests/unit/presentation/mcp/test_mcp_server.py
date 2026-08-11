@@ -133,6 +133,52 @@ class TestMcpServer2:
         with pytest.raises(RuntimeError, match="não é diretório"):
             main()
 
+    def _run_main_with_http_transport(self, monkeypatch, tmp_path):
+        """Executa main() com transporte HTTP até `server.run()` (mockado, não bloqueia)."""
+        from unittest.mock import MagicMock, patch
+
+        import concilium.presentation.mcp.server as server_mod
+
+        (tmp_path / "config").mkdir()
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "config"))
+        monkeypatch.setenv("CONCILIUM__MCP_TRANSPORT", "streamable-http")
+
+        fake_server = MagicMock()
+        fake_server._tool_manager._tools = {}
+        thread_mock = MagicMock()
+
+        with (
+            patch("concilium.infrastructure.settings.startup_check"),
+            patch("concilium.infrastructure.storage.store_factory.ensure_storage_root"),
+            patch.object(server_mod, "build_server", return_value=fake_server),
+            patch.object(server_mod.threading, "Thread", thread_mock),
+        ):
+            server_mod.main()
+        return thread_mock
+
+    def test_main_warmup_thread_desabilitado_por_padrao(self, monkeypatch, tmp_path):
+        """2026-08-11: warm-up desabilitado por padrão — causou 429 em cascata no
+        Graph API durante smoke tests de deploy (concilium-mcp e concilium-api
+        competindo pelo mesmo throttle no restart simultâneo)."""
+        monkeypatch.delenv("CONCILIUM__CATALOG_WARMUP_STARTUP", raising=False)
+        thread_mock = self._run_main_with_http_transport(monkeypatch, tmp_path)
+        thread_mock.assert_not_called()
+
+    def test_main_warmup_thread_reabilitavel_via_env(self, monkeypatch, tmp_path):
+        import importlib
+
+        import concilium.presentation.mcp.server as server_mod
+
+        monkeypatch.setenv("CONCILIUM__CATALOG_WARMUP_STARTUP", "1")
+        importlib.reload(server_mod)
+        try:
+            thread_mock = self._run_main_with_http_transport(monkeypatch, tmp_path)
+            thread_mock.assert_called_once()
+            assert thread_mock.call_args.kwargs["target"] is server_mod._warm_up_catalogos_background
+        finally:
+            monkeypatch.delenv("CONCILIUM__CATALOG_WARMUP_STARTUP", raising=False)
+            importlib.reload(server_mod)
+
 
 
 

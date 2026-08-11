@@ -42,6 +42,7 @@ Estrutura de módulos:
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -169,6 +170,11 @@ def _register_ui_resources(server: FastMCP) -> None:
         _make_handler(html_content, uri)
 
 
+# 2026-08-11: desabilitado por padrão — ver comentário no ponto de disparo em
+# main(). Defina CONCILIUM__CATALOG_WARMUP_STARTUP=1 para reabilitar.
+_CATALOG_WARMUP_ENABLED = os.environ.get("CONCILIUM__CATALOG_WARMUP_STARTUP", "0") == "1"
+
+
 def _warm_up_catalogos_background() -> None:
     """Pré-carrega catálogos com backend remoto (SharePoint/S3/...) numa thread
     separada, em paralelo ao startup do servidor (issue #153 follow-up).
@@ -269,12 +275,25 @@ def main() -> None:
 
     server = build_server(host=mcp_host, port=mcp_port)
 
-    if transport != "stdio":
+    if transport != "stdio" and _CATALOG_WARMUP_ENABLED:
         # Container de vida longa (streamable-http/sse) — vale a pena aquecer o
         # cache de catálogo em paralelo ao startup (ver _warm_up_catalogos_background).
         # stdio (uso local via Claude Desktop) tipicamente roda backend "filesystem"
         # (já rápido) e é um processo de vida curta; a função já é um no-op nesse
         # caso, mas o gate aqui deixa a intenção explícita.
+        #
+        # 2026-08-11 DESABILITADO por padrão (CONCILIUM__CATALOG_WARMUP_STARTUP=0):
+        # no primeiro deploy com este warm-up ativo, os smoke tests de
+        # concilium-api falharam (GET /api/projects/ e X-RateLimit-Limit) —
+        # logs do container mostraram SharePoint devolvendo 429 repetido
+        # (Graph API throttling por app/tenant) durante o restart simultâneo
+        # de concilium-mcp (fazendo o warm-up) e concilium-api (fazendo seu
+        # próprio cold-load de catálogo na primeira request). Rollback
+        # automático manteve produção estável. O warm-up em si (cache local,
+        # sem custo pro usuário) não é o problema — é a falta de stagger/
+        # backoff entre os dois processos competindo pelo mesmo throttle do
+        # Graph logo no restart. Reabilitar requer coordenar isso (ex.: delay
+        # aleatório antes do warm-up, ou um lock distribuído entre os apps).
         threading.Thread(target=_warm_up_catalogos_background, name="catalog-warmup", daemon=True).start()
 
     try:
