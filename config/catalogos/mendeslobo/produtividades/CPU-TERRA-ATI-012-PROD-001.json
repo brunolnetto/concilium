@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ATI-012-PROD-001",
   "codigo": "CPU-TERRA-ATI-012-PROD-001",
   "descricao": "Esc/carg/transp 1ªcat DMT 2000-3000m — equipe padrão: Operador de Escavadeira + 5× Motorista de Caminhão Basculante + Encarregado de Terraplenagem; equipamentos: Escavadeira Hidráulica 22t + 4× Caminhão Basculante 14m³",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-TERRA-ATI-012-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [

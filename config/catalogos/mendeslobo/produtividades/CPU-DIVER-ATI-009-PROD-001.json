@@ -2,7 +2,12 @@
   "id": "CPU-DIVER-ATI-009-PROD-001",
   "codigo": "CPU-DIVER-ATI-009-PROD-001",
   "descricao": "Corte/destocamento/romaneio — equipe padrão: Operador de Trator de Esteiras + 3× Ajudante + Encarregado de Terraplenagem; equipamentos: Trator de Esteiras 30t (440HP)",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DIVER-ATI-009-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 9.0,
   "composicao_padrao_equipe": {
     "funcoes": [

@@ -2,7 +2,12 @@
   "id": "CPU-PAVIM-ATI-056-PROD-001",
   "codigo": "CPU-PAVIM-ATI-056-PROD-001",
   "descricao": "Imprimação — equipe padrão: Operador de Espargidor + Motorista de Caminhão Pipa + Sinaleiro; equipamentos: Espargidor de Ligante Betuminoso + Caminhão Pipa 10.000L",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-PAVIM-ATI-056-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 900.0,
   "composicao_padrao_equipe": {
     "funcoes": [

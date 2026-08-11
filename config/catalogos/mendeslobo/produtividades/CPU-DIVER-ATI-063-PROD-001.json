@@ -2,7 +2,12 @@
   "id": "CPU-DIVER-ATI-063-PROD-001",
   "codigo": "CPU-DIVER-ATI-063-PROD-001",
   "descricao": "Piso intertravado espessura 10cm — equipe padrão: Encarregado de Terraplenagem + 4× Montador + 4× Ajudante; equipamentos: Torre De Iluminação + Retroescavadeira 75HP",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DIVER-ATI-063-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 25.0,
   "composicao_padrao_equipe": {
     "funcoes": [

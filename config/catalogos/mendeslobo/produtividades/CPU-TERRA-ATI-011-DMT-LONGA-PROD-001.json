@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ATI-011-DMT-LONGA-PROD-001",
   "codigo": "CPU-TERRA-ATI-011-DMT-LONGA-PROD-001",
   "descricao": "Esc/carg/transp 1ª cat DMT>3km — diesel de escala — equipe padrão: Operador de Escavadeira + 5× Motorista de Caminhão Basculante + Encarregado de Terraplenagem; equipamentos: Escavadeira Hidráulica 22t + 5× Caminhão Basculante 16m³",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-TERRA-ATI-011-DMT-LONGA-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [

@@ -2,7 +2,12 @@
   "id": "CPU-SANEA-ATI-049-PROD-001",
   "codigo": "CPU-SANEA-ATI-049-PROD-001",
   "descricao": "Tubo PVC DEFOFO D=200mm — equipe padrão: Encarregado de Agua/Esgoto + 3× Montador de Água/Esgoto + 2× Ajudante; equipamentos: Retroescavadeira 75HP + Mini Escavadeira 2t",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-SANEA-ATI-049-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 10.965,
   "composicao_padrao_equipe": {
     "funcoes": [

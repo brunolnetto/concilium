@@ -2,7 +2,12 @@
   "id": "CPU-DIVER-ATI-090-PROD-001",
   "codigo": "CPU-DIVER-ATI-090-PROD-001",
   "descricao": "Mata burro padrão VALEC (Fornecimento e Instalação) — equipe padrão: 2× Oficial + 4× Ajudante; equipamentos: Caminhão munck 23T",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DIVER-ATI-090-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 0.05,
   "composicao_padrao_equipe": {
     "funcoes": [

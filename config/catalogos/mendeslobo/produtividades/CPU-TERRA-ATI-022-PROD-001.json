@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ATI-022-PROD-001",
   "codigo": "CPU-TERRA-ATI-022-PROD-001",
   "descricao": "Espalhamento e compactação rachão — equipe padrão: Operador de Motoniveladora + Operador de Rolo Compactador + Encarregado de Terraplenagem; equipamentos: Motoniveladora 120HP + Trator de esteiras 30T",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-TERRA-ATI-022-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [

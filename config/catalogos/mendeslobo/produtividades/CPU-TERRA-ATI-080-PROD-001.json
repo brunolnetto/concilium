@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ATI-080-PROD-001",
   "codigo": "CPU-TERRA-ATI-080-PROD-001",
   "descricao": "Hidrossemeadura para cobertura de taludes — equipe padrão: 4× Ajudante; equipamentos: Hidrossemeadora rebocável",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-TERRA-ATI-080-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 450.0,
   "composicao_padrao_equipe": {
     "funcoes": [

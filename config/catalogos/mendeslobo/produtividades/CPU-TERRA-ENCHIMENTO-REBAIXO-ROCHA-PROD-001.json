@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001",
   "codigo": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001",
   "descricao": "ENCHIMENTO DE REBAIXO EM ROCHA - BRITA PRODUZIDA COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE — equipe padrão: Operador de Rolo Compactador + Operador de Motoniveladora + 3× Ajudante + Operador de Trator de Esteiras; equipamentos: Motoniveladora 120HP + Compactador Vibratório Mão + Trator de esteiras 20T",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
