@@ -2,7 +2,12 @@
   "id": "CPU-DIVER-ATI-072-PROD-001",
   "codigo": "CPU-DIVER-ATI-072-PROD-001",
   "descricao": "Assentamento de guia (terceirizado) — equipe padrão: Encarregado de Frente + 2× Montador de Meio Fio + 2× Ajudante",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DIVER-ATI-072-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 15.0,
   "composicao_padrao_equipe": {
     "funcoes": [

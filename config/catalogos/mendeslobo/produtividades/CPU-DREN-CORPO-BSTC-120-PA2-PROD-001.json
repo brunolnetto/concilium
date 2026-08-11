@@ -2,7 +2,12 @@
   "id": "CPU-DREN-CORPO-BSTC-120-PA2-PROD-001",
   "codigo": "CPU-DREN-CORPO-BSTC-120-PA2-PROD-001",
   "descricao": "CORPO DE BSTC D = 1,20 M PA2 - AREIA, BRITA E PEDRA DE MÃO COMERCIAIS — equipe padrão: 5× Oficial + Operador de Escavadeira + 4× Ajudante + Encarregado de Drenagem + Motorista de caminhão prancha + Motorista de caminhão munck; equipamentos: Carregadeira de Pneu 150HP + Caminhão Basculante 14m³ + Caminhão Basculante 6m³",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DREN-CORPO-BSTC-120-PA2-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 0.75,
   "composicao_padrao_equipe": {
     "funcoes": [

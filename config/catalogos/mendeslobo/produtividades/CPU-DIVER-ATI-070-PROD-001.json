@@ -2,7 +2,12 @@
   "id": "CPU-DIVER-ATI-070-PROD-001",
   "codigo": "CPU-DIVER-ATI-070-PROD-001",
   "descricao": "Implantação de eixo — equipe padrão: Topógrafo + 2× Auxiliar de topografia; equipamentos: Caminhonete (veículo leve) + Vibroacabadora de asfalto sobre pneus - 82 kW",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DIVER-ATI-070-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 0.143,
   "composicao_padrao_equipe": {
     "funcoes": [

@@ -2,7 +2,12 @@
   "id": "CPU-DIVER-ATI-008-PROD-001",
   "codigo": "CPU-DIVER-ATI-008-PROD-001",
   "descricao": "Supressão alta densidade — equipe padrão: Operador de Escavadeira + Operador de Trator de Esteiras + Operador de Motoscraper + 4× Ajudante; equipamentos: Escavadeira Hidráulica 22t + Trator de Esteiras 20t (300HP) + Spread",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DIVER-ATI-008-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 375.0,
   "composicao_padrao_equipe": {
     "funcoes": [

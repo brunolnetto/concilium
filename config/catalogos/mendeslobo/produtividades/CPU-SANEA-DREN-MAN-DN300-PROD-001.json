@@ -2,7 +2,12 @@
   "id": "CPU-SANEA-DREN-MAN-DN300-PROD-001",
   "codigo": "CPU-SANEA-DREN-MAN-DN300-PROD-001",
   "descricao": "Coletor tronco DN300 em manilha cerâmica — abertura, assentamento, reaterro — equipe padrão: Operador de Retro Escavadeira + Encanador + Montador de Água/Esgoto + 2× Servente; equipamentos: Retroescavadeira",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-SANEA-DREN-MAN-DN300-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "composicao_padrao_equipe": {
     "funcoes": [
       {

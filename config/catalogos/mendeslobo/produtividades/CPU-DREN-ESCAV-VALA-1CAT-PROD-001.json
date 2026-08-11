@@ -2,7 +2,12 @@
   "id": "CPU-DREN-ESCAV-VALA-1CAT-PROD-001",
   "codigo": "CPU-DREN-ESCAV-VALA-1CAT-PROD-001",
   "descricao": "ESCAVAÇÃO MECÂNICA DE VALA EM MATERIAL DE 1ª CATEGORIA — equipe padrão: Operador de Retro Escavadeira + Ajudante + OPERADOR DE BOBCAT; equipamentos: Retroescavadeira 75HP",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DREN-ESCAV-VALA-1CAT-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 19.701,
   "composicao_padrao_equipe": {
     "funcoes": [

@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ATI-036-PROD-001",
   "codigo": "CPU-TERRA-ATI-036-PROD-001",
   "descricao": "Corpo BSCC 2,50×2,50m — aterro 2-6m — equipe padrão: Encarregado de Drenagem + 4× Montador + 4× Ajudante; equipamentos: Mini Escavadeira 2t + Retroescavadeira 75HP + Betoneira 400L",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-TERRA-ATI-036-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 0.25,
   "composicao_padrao_equipe": {
     "funcoes": [

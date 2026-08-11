@@ -2,7 +2,12 @@
   "id": "CPU-DREN-BOCA-BDCAP-100-PROD-001",
   "codigo": "CPU-DREN-BOCA-BDCAP-100-PROD-001",
   "descricao": "BOCA BDCAP 1,00 X 1,00 M - ESCONSIDADE 0° - AREIA E BRITA COMERCIAIS — equipe padrão: 2× Ajudante + 5× Oficial + Motorista de caminhão munck; equipamentos: Caminhão Basculante 14m³",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DREN-BOCA-BDCAP-100-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 0.041667,
   "composicao_padrao_equipe": {
     "funcoes": [

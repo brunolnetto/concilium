@@ -2,7 +2,12 @@
   "id": "CPU-DREN-BOCA-BSCC-300X200-PROD-001",
   "codigo": "CPU-DREN-BOCA-BSCC-300X200-PROD-001",
   "descricao": "BOCA BSCC 3,00 X 2,00 M - ESCONSIDADE 0° - AREIA E BRITA COMERCIAIS — equipe padrão: 5× Oficial + 2× Ajudante + Motorista de caminhão munck; equipamentos: Caminhão Basculante 14m³",
-  "origem": "PROPRIA",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "CPU-DREN-BOCA-BSCC-300X200-PROD-001",
+    "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
+    "referencia": "PROPRIA"
+  },
   "valor_horario": 0.017857,
   "composicao_padrao_equipe": {
     "funcoes": [
