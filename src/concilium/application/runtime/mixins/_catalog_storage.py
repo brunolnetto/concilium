@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,28 @@ from ..deliverables.helpers.insumos import dedup_insumos, ingest_insumos
 # Mesmo TTL default do CatalogLoader (ADR-024) — não há mtime de arquivo individual
 # pra comparar num backend remoto, então o cache local é invalidado só por tempo.
 _REMOTE_CACHE_TTL_SECONDS = 60 * 60
+
+# 2026-08-11: incidente de produção — catálogos grandes (ex. "mendeslobo": centenas
+# de CPUs/insumos reais, vs. "mendeslobo-rfi" de referência com 75) levavam 160s+
+# pra carregar via SharePoint com cache frio (leitura sequencial: um listar_blobs +
+# um ler_blob POR ARQUIVO, cada um pagando o round-trip completo ao Graph,
+# ~150-250ms). Cache local (_REMOTE_CACHE_TTL_SECONDS acima) mascarava isso em
+# runs normais, mas mora no disco efêmero do container — some a cada deploy/
+# restart, forçando uma recarga fria completa bem na hora em que o operador mais
+# precisa do ping() responder rápido. Paralelizado via ThreadPoolExecutor; a
+# concorrência real com o Graph continua limitada por _concurrency_limiter
+# (sharepoint.py, threading.Semaphore) — aqui só paralelizamos o disparo.
+_MAX_PARALLEL_FETCHES = 8
+
+
+def _fetch_all_parallel(paths: list[str], fetch_one) -> list[Any]:
+    """Chama `fetch_one(path)` para cada path em paralelo, preservando a ordem
+    de `paths` no resultado (determinismo — mesma ordem que a versão sequencial
+    original, importante para lógica de dedup que depende de "primeiro vence")."""
+    if not paths:
+        return []
+    with ThreadPoolExecutor(max_workers=min(_MAX_PARALLEL_FETCHES, len(paths))) as pool:
+        return list(pool.map(fetch_one, paths))
 
 
 def catalog_storage_backend() -> str:
@@ -59,21 +82,24 @@ def _global_producoes_prefix(backend: str) -> str:
 
 
 def _read_json_blobs(storage: BlobStoragePort, prefix: str) -> list[tuple[str, Any]]:
-    """Lista e lê todo `.json` sob um prefixo — retorna pares (caminho, conteúdo parseado)."""
-    out: list[tuple[str, Any]] = []
+    """Lista e lê todo `.json` sob um prefixo — retorna pares (caminho, conteúdo parseado).
+
+    Leituras paralelizadas (ver _fetch_all_parallel) — catálogos grandes têm
+    centenas de arquivos individuais; sequencial pagava minutos de round-trips.
+    """
     try:
-        paths = storage.listar_blobs(prefix)
+        paths = sorted(p for p in storage.listar_blobs(prefix) if p.endswith(".json"))
     except FileNotFoundError:
-        return out
-    for p in sorted(paths):
-        if not p.endswith(".json"):
-            continue
+        return []
+
+    def _fetch(p: str) -> tuple[str, Any] | None:
         try:
             raw = storage.ler_blob(p)
-            out.append((p, json.loads(raw.decode("utf-8"))))
+            return p, json.loads(raw.decode("utf-8"))
         except Exception:
-            continue
-    return out
+            return None
+
+    return [r for r in _fetch_all_parallel(paths, _fetch) if r is not None]
 
 
 def _slc_processar_blob_data(data: Any) -> list[dict]:
@@ -158,18 +184,22 @@ def _storage_load_producao_by_id(storage: BlobStoragePort, prod_id: str, search_
 def _storage_load_producoes_from_cpus(
     storage: BlobStoragePort, cpus: list[dict], base: str, global_prefix: str
 ) -> list[dict]:
-    seen: set[str] = set()
-    result: list[dict] = []
+    """Uma leitura por `producao_id` único referenciado pelos CPUs — paralelizada
+    (ver _fetch_all_parallel); catálogos com centenas de CPUs distintos pagavam
+    o mesmo custo de round-trip sequencial de _read_json_blobs."""
     search_prefixes = [global_prefix, f"{base}/producoes", f"{base}/produtividades"]
+    prod_ids: list[str] = []
+    seen: set[str] = set()
     for cpu in cpus:
         prod_id = cpu.get("producao_id_ref") or cpu.get("producao_id")
-        if not prod_id or prod_id in seen:
-            continue
-        found = _storage_load_producao_by_id(storage, prod_id, search_prefixes)
-        if found is not None:
-            result.append(found)
+        if prod_id and prod_id not in seen:
             seen.add(prod_id)
-    return result
+            prod_ids.append(prod_id)
+
+    def _fetch(prod_id: str) -> dict | None:
+        return _storage_load_producao_by_id(storage, prod_id, search_prefixes)
+
+    return [r for r in _fetch_all_parallel(prod_ids, _fetch) if r is not None]
 
 
 def _merge_global_producoes(producoes: list[dict], global_prods: list[dict]) -> list[dict]:

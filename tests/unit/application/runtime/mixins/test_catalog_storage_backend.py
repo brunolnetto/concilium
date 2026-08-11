@@ -280,3 +280,71 @@ class TestCatalogMixinLoadCatalogoRoteamento:
                 mixin.load_catalogo(cat_id)
                 mixin.load_catalogo(cat_id)
                 assert build_mock.call_count == 1
+
+
+class TestParallelFetchPerformance:
+    """Incidente de produção 2026-08-11: catálogo "mendeslobo" (centenas de
+    arquivos, cache local frio pós-deploy) levava 160s+ pra carregar via
+    SharePoint — um ler_blob sequencial por arquivo, cada um pagando o
+    round-trip completo ao Graph. _read_json_blobs/_storage_load_producoes_from_cpus
+    passaram a paralelizar via ThreadPoolExecutor (_fetch_all_parallel)."""
+
+    class _SlowStorage:
+        """BlobStoragePort fake que rastreia concorrência de pico em `ler_blob`
+        via contador com lock — determinístico, não sensível a timing/carga de
+        CPU da máquina que roda o teste (métrica de tempo de parede é flaky sob
+        contenção: a suíte completa rodando junto pode inflar qualquer duração
+        absoluta). `peak_concurrency` > 1 prova paralelismo real."""
+
+        def __init__(self, files: dict[str, bytes]):
+            self._files = files
+            self._lock = __import__("threading").Lock()
+            self._active = 0
+            self.peak_concurrency = 0
+
+        def listar_blobs(self, prefix: str) -> list[str]:
+            return [p for p in self._files if p.startswith(prefix)]
+
+        def ler_blob(self, path: str) -> bytes:
+            import time as _t
+
+            with self._lock:
+                self._active += 1
+                self.peak_concurrency = max(self.peak_concurrency, self._active)
+            _t.sleep(0.05)
+            with self._lock:
+                self._active -= 1
+            if path not in self._files:
+                raise FileNotFoundError(path)
+            return self._files[path]
+
+        def gravar_blob(self, path: str, content: bytes) -> None:
+            raise NotImplementedError
+
+        def blob_existe(self, path: str) -> bool:
+            raise NotImplementedError
+
+    def test_read_json_blobs_parallelizes_and_preserves_order(self):
+        n_files = 16
+        files = {f"cat/f{i:02d}.json": json.dumps({"i": i}).encode("utf-8") for i in range(n_files)}
+        storage = self._SlowStorage(files)
+
+        results = cs._read_json_blobs(storage, "cat")
+
+        assert storage.peak_concurrency > 1, "não parece ter paralelizado (pico de concorrência <= 1)"
+
+        # Ordem preservada (sorted por path) mesmo com conclusão fora de ordem.
+        paths = [p for p, _ in results]
+        assert paths == sorted(paths)
+        assert len(results) == n_files
+
+    def test_storage_load_producoes_from_cpus_parallelizes(self):
+        n_cpus = 16
+        files = {f"prod/PROD-{i:02d}.json": json.dumps({"id": f"PROD-{i:02d}"}).encode("utf-8") for i in range(n_cpus)}
+        storage = self._SlowStorage(files)
+        cpus = [{"producao_id_ref": f"PROD-{i:02d}"} for i in range(n_cpus)]
+
+        result = cs._storage_load_producoes_from_cpus(storage, cpus, base="cat", global_prefix="prod")
+
+        assert storage.peak_concurrency > 1, "não parece ter paralelizado (pico de concorrência <= 1)"
+        assert {p["id"] for p in result} == {f"PROD-{i:02d}" for i in range(n_cpus)}
