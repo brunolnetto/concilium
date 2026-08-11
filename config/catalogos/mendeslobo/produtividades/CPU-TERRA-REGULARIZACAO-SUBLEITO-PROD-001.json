@@ -1,7 +1,7 @@
 {
   "id": "CPU-TERRA-REGULARIZACAO-SUBLEITO-PROD-001",
   "codigo": "CPU-TERRA-REGULARIZACAO-SUBLEITO-PROD-001",
-  "descricao": "Produção CPU-TERRA-REGULARIZACAO-SUBLEITO",
+  "descricao": "Regularização de subleito com motoniveladora e rolo — equipe padrão: Operador de Motoniveladora + Operador de Rolo Compactador; equipamentos: Motoniveladora 140K + Rolo compactador liso",
   "origem": "PROPRIA",
   "composicao_padrao_equipe": {
     "funcoes": [

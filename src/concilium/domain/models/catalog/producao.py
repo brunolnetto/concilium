@@ -3,7 +3,8 @@
 Cada instância de Producao representa um valor de produtividade calibrado,
 com rastreabilidade de origem, histórico de observações e auditoria.
 
-Vive em config/producoes/<id>.json e é referenciada pela CPU via producao_id.
+Vive em config/catalogos/<catalogo>/produtividades/<id>.json (producoes/ é layout
+legado, mantido só por robustez) e é referenciada pela CPU via producao_id.
 """
 
 from datetime import datetime
@@ -150,7 +151,18 @@ class Producao(BaseModel):
 
     id: str
     codigo: str  # compartilhado entre versões (ex: "ESCO-CARGA-1CAT")
-    descricao: str
+    descricao: str = Field(
+        description=(
+            "Descrição autoexplicativa da atividade — não pode ser apenas o código/ID "
+            "repetido (ex.: 'Produção CPU-X'), que não agrega nenhuma informação ao lado "
+            "do campo `codigo`. Deve identificar a atividade concreta e, quando disponível, "
+            "condição/fonte que a diferencia de variantes próximas — ex.: "
+            "'Corpo BSTC D=1,00m PA1 — Padrão VALEC' ou 'Usinagem de CBUQ faixa C na usina "
+            "da casa (E0043) — física SICRO 6416078'. Prefira derivar de "
+            "`origem.referencia`/`condicoes_calibracao.notas` já presentes no artefato "
+            "em vez de inventar texto novo."
+        )
+    )
 
     valor_horario: float = Field(gt=0)
     unidade: str

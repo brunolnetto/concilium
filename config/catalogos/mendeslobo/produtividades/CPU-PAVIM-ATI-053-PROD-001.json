@@ -1,7 +1,7 @@
 {
   "id": "CPU-PAVIM-ATI-053-PROD-001",
   "codigo": "CPU-PAVIM-ATI-053-PROD-001",
-  "descricao": "Produção CPU-PAVIM-ATI-053",
+  "descricao": "Reforço do subleito — equipe padrão: Operador de Motoniveladora + 2× Motorista de Caminhão Basculante + Motorista de Caminhão Pipa + Operador de Rolo Compactador + Encarregado de Capa; equipamentos: Motoniveladora 120HP + Trator de esteiras 20T + Caminhão Pipa 10.000L + 2× Caminhão Basculante 16m³",
   "origem": "PROPRIA",
   "valor_horario": 220.0,
   "composicao_padrao_equipe": {

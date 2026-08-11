@@ -1,7 +1,7 @@
 {
   "id": "CPU-TERRA-ATI-005-PROD-001",
   "codigo": "CPU-TERRA-ATI-005-PROD-001",
-  "descricao": "Produção CPU-TERRA-ATI-005",
+  "descricao": "Implantação de eixo (Topografia) — equipe padrão: Topógrafo + 2× Auxiliar de topografia; equipamentos: Estação Total",
   "origem": "PROPRIA",
   "valor_horario": 0.14,
   "composicao_padrao_equipe": {

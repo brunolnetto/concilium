@@ -1,7 +1,7 @@
 {
   "id": "CPU-PAVIM-ATI-059-PROD-001",
   "codigo": "CPU-PAVIM-ATI-059-PROD-001",
-  "descricao": "Produção CPU-PAVIM-ATI-059",
+  "descricao": "Dreno de pavimento — equipe padrão: Encarregado de Terraplenagem + 4× Ajudante; equipamentos: Retroescavadeira 75HP",
   "origem": "PROPRIA",
   "valor_horario": 6.67,
   "composicao_padrao_equipe": {

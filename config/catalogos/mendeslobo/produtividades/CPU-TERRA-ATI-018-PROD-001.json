@@ -1,7 +1,7 @@
 {
   "id": "CPU-TERRA-ATI-018-PROD-001",
   "codigo": "CPU-TERRA-ATI-018-PROD-001",
-  "descricao": "Produção CPU-TERRA-ATI-018",
+  "descricao": "Aterro compactado 100% PI — equipe padrão: Operador de Motoniveladora + Operador de Rolo Compactador + Motorista de Caminhão Pipa + Operador de Rolo de Pneu + Encarregado de Terraplenagem; equipamentos: Motoniveladora 140HP + Trator de esteiras 20T + Trator de esteiras 40T + Caminhão Pipa 10.000L",
   "origem": "PROPRIA",
   "valor_horario": 149.51,
   "composicao_padrao_equipe": {
