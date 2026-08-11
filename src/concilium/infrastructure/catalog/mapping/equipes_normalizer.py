@@ -42,13 +42,18 @@ def _extract_prod_team(prod: dict[str, Any]) -> dict[str, Any] | None:
     return comp if (comp.get("funcoes") or comp.get("equipamentos")) else None
 
 
-def _load_producoes_index(prods_dir: Path) -> dict[str, dict[str, Any]]:
+def _load_producoes_index(catalog_root: Path) -> dict[str, dict[str, Any]]:
+    """Mescla produtividades/ (layout atual) e producoes/ (legado, robustez apenas)."""
     producoes: dict[str, dict[str, Any]] = {}
-    for prod_file in sorted(prods_dir.glob("*.json")):
-        prod = _load_json(prod_file)
-        prod_id = prod.get("id")
-        if isinstance(prod_id, str) and prod_id:
-            producoes[prod_id] = prod
+    for dir_name in ("produtividades", "producoes"):
+        prods_dir = catalog_root / dir_name
+        if not prods_dir.exists():
+            continue
+        for prod_file in sorted(prods_dir.glob("*.json")):
+            prod = _load_json(prod_file)
+            prod_id = prod.get("id")
+            if isinstance(prod_id, str) and prod_id:
+                producoes[prod_id] = prod
     return producoes
 
 
@@ -110,9 +115,8 @@ def normalize_equipes_from_producoes(
     """
     r = catalog_root or (_DEFAULT_ROOT / "config" / "catalogos" / "mendeslobo")
     cpus_dir = r / "cpus"
-    prods_dir = r / "producoes"
 
-    producoes = _load_producoes_index(prods_dir)
+    producoes = _load_producoes_index(r)
     rows: list[AuditRow] = []
     for cpu_file in sorted(cpus_dir.glob("*.json")):
         row = _process_cpu_file(cpu_file, producoes, cpu_filter, apply)

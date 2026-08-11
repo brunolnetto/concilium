@@ -817,6 +817,25 @@ def test_query_engine_rebuild_handles_stale_db_and_writes_timestamp(tmp_path, mo
     assert "rebuild_ms" in payload
 
 
+def test_load_prod_rows_from_dirs_merges_produtividades_and_producoes(tmp_path):
+    """Regressão: produtividades/ e producoes/ coexistindo devem ser mescladas,
+    não "primeiro que existir vence" (bug que descartava producoes/ em silêncio)."""
+    from concilium.infrastructure.catalog.query_engine._loaders_file import _load_prod_rows_from_dirs
+
+    (tmp_path / "produtividades").mkdir()
+    (tmp_path / "produtividades" / "PROD-NOVO.json").write_text(
+        json.dumps({"id": "PROD-NOVO", "cpu_id": "CPU-1"}), encoding="utf-8"
+    )
+    (tmp_path / "producoes").mkdir()
+    (tmp_path / "producoes" / "PROD-LEGADO.json").write_text(
+        json.dumps({"id": "PROD-LEGADO", "cpu_id": "CPU-2"}), encoding="utf-8"
+    )
+
+    rows = _load_prod_rows_from_dirs(tmp_path)
+    ids = {row[0] for row in rows}
+    assert ids == {"PROD-NOVO", "PROD-LEGADO"}
+
+
 def test_query_engine_build_methods_cover_layout_variants(tmp_path):
     engine = CatalogQueryEngine(tmp_path)
     conn = _FakeConn2()

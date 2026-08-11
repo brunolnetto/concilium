@@ -602,8 +602,8 @@ class TestCaminhoProducaoIndividual:
         arquivo.write_text("{}")
         assert cp._caminho_producao_individual(tmp_path, "PR-2") == arquivo
 
-    def test_novo_default_producoes(self, tmp_path):
-        assert cp._caminho_producao_individual(tmp_path, "PR-3") == tmp_path / "producoes" / "PR-3.json"
+    def test_novo_default_produtividades(self, tmp_path):
+        assert cp._caminho_producao_individual(tmp_path, "PR-3") == tmp_path / "produtividades" / "PR-3.json"
 
 
 class TestPersistirInsumosIndividuais:
@@ -668,13 +668,13 @@ class TestPersistirProducoesIndividuais:
         originais = [{"id": "PR-1", "valor_horario": 10.0}]
         finais = [{"id": "PR-1", "valor_horario": 20.0}]
         assert cp._persistir_producoes_individuais(tmp_path, originais, finais) == 1
-        salvo = json.loads((tmp_path / "producoes" / "PR-1.json").read_text())
+        salvo = json.loads((tmp_path / "produtividades" / "PR-1.json").read_text())
         assert salvo["valor_horario"] == 20.0
 
     def test_nao_escreve_producao_inalterada(self, tmp_path):
         item = {"id": "PR-1", "valor_horario": 10.0}
         assert cp._persistir_producoes_individuais(tmp_path, [dict(item)], [dict(item)]) == 0
-        assert not (tmp_path / "producoes" / "PR-1.json").exists()
+        assert not (tmp_path / "produtividades" / "PR-1.json").exists()
 
 
 class TestCureTemplatesEstruturasIndiretas:

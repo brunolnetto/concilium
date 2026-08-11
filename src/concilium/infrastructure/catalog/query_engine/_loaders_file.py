@@ -91,12 +91,13 @@ def _load_prod_rows_from_dir(prod_dir: Path) -> list[tuple[str, str, str]]:
 
 
 def _load_prod_rows_from_dirs(base_dir: Path) -> list[tuple[str, str, str]]:
-    """Tenta 'produtividades/' e depois 'producoes/'; usa o primeiro que existir."""
+    """Mescla 'produtividades/' (layout atual) e 'producoes/' (legado, robustez apenas)."""
+    rows: list[tuple[str, str, str]] = []
     for dir_name in ("produtividades", "producoes"):
         prod_dir = base_dir / dir_name
         if prod_dir.exists():
-            return _load_prod_rows_from_dir(prod_dir)
-    return []
+            rows.extend(_load_prod_rows_from_dir(prod_dir))
+    return rows
 
 
 def _load_prod_rows_fallback_file(prod_file: Path) -> list[tuple[str, str, str]]:

@@ -12,14 +12,16 @@ _DEFAULT_ROOT = Path(__file__).resolve().parents[5]
 
 
 def _heal_producoes(cat_root: Path, id_map: dict, remap_funcoes, remap_equipamentos) -> None:
-    for f in (cat_root / "producoes").glob("*.json"):
-        data = json.loads(f.read_text(encoding="utf-8"))
-        equipe = data.pop("composicao_padrao_equipe", None) or data.get("equipe")
-        if equipe:
-            remap_funcoes(equipe)
-            remap_equipamentos(equipe)
-            data["equipe"] = equipe
-        f.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    # Mescla produtividades/ (layout atual) e producoes/ (legado, robustez apenas).
+    for dir_name in ("produtividades", "producoes"):
+        for f in (cat_root / dir_name).glob("*.json"):
+            data = json.loads(f.read_text(encoding="utf-8"))
+            equipe = data.pop("composicao_padrao_equipe", None) or data.get("equipe")
+            if equipe:
+                remap_funcoes(equipe)
+                remap_equipamentos(equipe)
+                data["equipe"] = equipe
+            f.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def _heal_cpus(cat_root: Path, id_map: dict, remap_funcoes, remap_equipamentos) -> None:

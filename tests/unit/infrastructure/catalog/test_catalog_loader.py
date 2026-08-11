@@ -186,6 +186,20 @@ class TestCatalogLoaderHelpers:
         result = _llj_load_produtividades(tmp_path)
         assert len(result) == 1
 
+    def test_llj_load_produtividades_merges_both_dirs(self, tmp_path):
+        """Regressão: produtividades/ e producoes/ coexistindo devem ser mescladas,
+        não "primeiro que existir vence" (bug que descartava producoes/ em silêncio)."""
+        from concilium.infrastructure.catalog.catalog_loader import _llj_load_produtividades
+
+        (tmp_path / "produtividades").mkdir()
+        (tmp_path / "produtividades" / "PROD-NOVO.json").write_text('{"id": "PROD-NOVO"}', encoding="utf-8")
+        (tmp_path / "producoes").mkdir()
+        (tmp_path / "producoes" / "PROD-LEGADO.json").write_text('{"id": "PROD-LEGADO"}', encoding="utf-8")
+
+        result = _llj_load_produtividades(tmp_path)
+        ids = {p["id"] for p in result}
+        assert ids == {"PROD-NOVO", "PROD-LEGADO"}
+
     def test_llj_load_produtividades_from_json(self, tmp_path):
         from concilium.infrastructure.catalog.catalog_loader import _llj_load_produtividades
 
@@ -358,16 +372,39 @@ class TestCatalogLoaderLsp:
         from concilium.infrastructure.catalog.catalog_loader import _lsp_load_produtividades
 
         storage = MagicMock()
-        storage.listar_blobs.return_value = ["base/produtividades/PROD-1.json"]
+        storage.listar_blobs.side_effect = lambda prefix: (
+            ["base/produtividades/PROD-1.json"] if prefix == "base/produtividades" else []
+        )
         storage.ler_blob.return_value = json.dumps({"id": "PROD-1"}).encode()
         result = _lsp_load_produtividades(storage, "base")
         assert len(result) == 1
+
+    def test_lsp_load_produtividades_merges_producoes_legado(self):
+        """Regressão: producoes/ (legado) não pode ser descartado quando produtividades/ existe."""
+        from concilium.infrastructure.catalog.catalog_loader import _lsp_load_produtividades
+
+        storage = MagicMock()
+        storage.listar_blobs.side_effect = lambda prefix: {
+            "base/produtividades": ["base/produtividades/PROD-NOVO.json"],
+            "base/producoes": ["base/producoes/PROD-LEGADO.json"],
+        }.get(prefix, [])
+        storage.ler_blob.side_effect = lambda path: (
+            json.dumps({"id": "PROD-NOVO"}).encode()
+            if "PROD-NOVO" in path
+            else json.dumps({"id": "PROD-LEGADO"}).encode()
+        )
+        result = _lsp_load_produtividades(storage, "base")
+        assert {p["id"] for p in result} == {"PROD-NOVO", "PROD-LEGADO"}
 
     def test_lsp_load_produtividades_skips_non_json_blob_and_non_dict_raw(self):
         from concilium.infrastructure.catalog.catalog_loader import _lsp_load_produtividades
 
         storage = MagicMock()
-        storage.listar_blobs.return_value = ["base/produtividades/README.txt", "base/produtividades/PROD-list.json"]
+        storage.listar_blobs.side_effect = lambda prefix: (
+            ["base/produtividades/README.txt", "base/produtividades/PROD-list.json"]
+            if prefix == "base/produtividades"
+            else []
+        )
         storage.ler_blob.return_value = json.dumps([1, 2]).encode()
         result = _lsp_load_produtividades(storage, "base")
         assert result == []

@@ -198,14 +198,15 @@ def _caminho_insumo_individual(catalog_root: Path, tipo: str, codigo: str) -> Pa
 def _caminho_producao_individual(catalog_root: Path, producao_id: str) -> Path:
     """Resolve path for individual producao/produtividade file.
 
-    Checks both producoes/ and produtividades/ directories (legacy coexistence),
-    defaults to producoes/ for new items.
+    Checks both produtividades/ (layout atual) and producoes/ (legado — mantido só
+    por robustez com catálogos ainda não migrados) — usa o arquivo onde ele JÁ
+    EXISTE. Para itens novos, escreve em produtividades/.
     """
-    for sub in ("producoes", "produtividades"):
+    for sub in ("produtividades", "producoes"):
         candidato = catalog_root / sub / f"{producao_id}.json"
         if candidato.exists():
             return candidato
-    return catalog_root / "producoes" / f"{producao_id}.json"
+    return catalog_root / "produtividades" / f"{producao_id}.json"
 
 
 def _persistir_insumos_individuais(
