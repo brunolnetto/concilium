@@ -1,7 +1,7 @@
 {
   "id": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001",
   "codigo": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001",
-  "descricao": "Produção CPU-TERRA-BASE-ESTABILIZADA",
+  "descricao": "BASE ESTABILIZADA GRANULOMETRICAMENTE COM MISTURA SOLO BRITA (70% - 30%) EM USINA COM MATERIAL DE JAZIDA E BRITA PRODUZIDA — equipe padrão: 2× Operador de Rolo Compactador + Operador de Trator de Pneu + Operador de Motoniveladora + Motorista de Caminhão Pipa + 2× Ajudante + Gredista; equipamentos: 2× Motoniveladora 120HP + Trator de pneus com grade + Compactador Vibratório Mão + Caminhonete (veículo leve)",
   "origem": "PROPRIA",
   "valor_horario": 149.51,
   "composicao_padrao_equipe": {

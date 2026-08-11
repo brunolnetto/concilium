@@ -323,6 +323,40 @@ done
 # Rollback (se necessário): substitua $NEW_TAG por $OLD_TAG no passo 4
 ```
 
+### 2.1 Sincronização de dados de catálogo (quando o PR mexe em `config/catalogos/`)
+
+O deploy acima só publica a **imagem** (código). Os dados de catálogo
+(`config/catalogos/<id>/**`) NÃO viajam com a imagem em produção — a aplicação lê o
+catálogo via `BlobStoragePort`/SharePoint (`CONCILIUM__STORE_BACKEND=sharepoint`,
+sempre — ver Parte 3), não do filesystem deste repositório. O `git` é só a cópia de
+trabalho/staging. Isso significa que qualquer PR que edite `config/catalogos/`
+(novo insumo, correção de schema, reorganização de pastas, correção de descrição
+etc.) só chega à produção depois de um passo **manual** extra:
+
+```bash
+export CONCILIUM__STORE_BACKEND=sharepoint
+export CONCILIUM__SP_TENANT_ID=<tenant-id>
+export CONCILIUM__SP_CLIENT_ID=<client-id>
+export CONCILIUM__SP_CLIENT_SECRET=<client-secret>   # ou CONCILIUM__SP_CERT_PATH
+export CONCILIUM__SP_DRIVE_ID=<drive-id>
+export CONCILIUM__SP_ROOT_PATH=Concilium/prod
+
+# 1. Ver o que mudaria (não grava nada)
+uv run python scripts/catalog/sync_catalog_to_backend.py mendeslobo --dry-run
+
+# 2. Aplicar
+uv run python scripts/catalog/sync_catalog_to_backend.py mendeslobo --apply
+
+# 3. Se o PR removeu/moveu arquivos (ex.: merge de producoes/ → produtividades/),
+#    os arquivos remotos antigos aparecem como "órfãos" no --dry-run/--apply acima —
+#    só depois de confirmar que a lista de órfãos é exatamente o que esperava:
+uv run python scripts/catalog/sync_catalog_to_backend.py mendeslobo --apply --delete-orphans
+```
+
+Isso hoje é um passo manual — não há automação no CI para ele (verificado: nem
+`deploy.sh`, nem `provision.sh`, nem os workflows do GitHub tocam dados de catálogo).
+Repita para cada catálogo afetado pelo PR (ex.: `rfi-r02`).
+
 ---
 
 ## Parte 3 — Referência de variáveis

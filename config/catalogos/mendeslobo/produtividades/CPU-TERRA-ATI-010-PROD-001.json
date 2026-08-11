@@ -1,7 +1,7 @@
 {
   "id": "CPU-TERRA-ATI-010-PROD-001",
   "codigo": "CPU-TERRA-ATI-010-PROD-001",
-  "descricao": "Produção CPU-TERRA-ATI-010",
+  "descricao": "Escavação canaletas — equipe padrão: Operador de Retro Escavadeira + 2× Ajudante + Encarregado de Terraplenagem; equipamentos: Retroescavadeira 75HP",
   "origem": "PROPRIA",
   "valor_horario": 149.51,
   "composicao_padrao_equipe": {

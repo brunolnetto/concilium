@@ -1,7 +1,7 @@
 {
   "id": "CPU-TERRA-COMPACT-ATERRO-100PN-PROD-001",
   "codigo": "CPU-TERRA-COMPACT-ATERRO-100PN-PROD-001",
-  "descricao": "Produção CPU-TERRA-COMPACT-ATERRO-100PN",
+  "descricao": "Compactação de aterros a 100% do Proctor Normal — equipe padrão: 2× Operador de Rolo Compactador + Operador de Trator de Pneu + Operador de Motoniveladora + Motorista de Caminhão Pipa + 2× Ajudante + Gredista + Encarregado de Terraplenagem; equipamentos: 2× Rolo compactador pé de carneiro 10T + Motoniveladora 140K + Caminhão Pipa 18.000 l",
   "origem": "PROPRIA",
   "composicao_padrao_equipe": {
     "funcoes": [

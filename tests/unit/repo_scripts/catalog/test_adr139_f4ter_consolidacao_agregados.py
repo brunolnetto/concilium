@@ -93,7 +93,7 @@ class TestSupersededSemConsumidores:
 class TestUsinagensUsamCanonicos:
     @pytest.mark.parametrize("pid", ["PROD-USINAGEM-BGTC-001", "PROD-USINAGEM-CBUQ-001"])
     def test_sem_referencias_a_gemeos_sicro(self, pid):
-        d = json.loads((_CAT / "producoes" / f"{pid}.json").read_text(encoding="utf-8-sig"))
+        d = json.loads((_CAT / "produtividades" / f"{pid}.json").read_text(encoding="utf-8-sig"))
         eq = d.get("composicao_padrao_equipe") or {}
         ids = {m["insumo_id"] for m in eq.get("materiais") or []}
         assert not any(i.endswith("-SICRO") for i in ids)

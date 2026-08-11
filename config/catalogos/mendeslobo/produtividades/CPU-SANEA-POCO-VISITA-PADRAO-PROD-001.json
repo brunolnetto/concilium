@@ -1,7 +1,7 @@
 {
   "id": "CPU-SANEA-POCO-VISITA-PADRAO-PROD-001",
   "codigo": "CPU-SANEA-POCO-VISITA-PADRAO-PROD-001",
-  "descricao": "Produção CPU-SANEA-POCO-VISITA-PADRAO",
+  "descricao": "Poço de visita padrão — execução completa — equipe padrão: Oficial + 2× Servente",
   "origem": "PROPRIA",
   "composicao_padrao_equipe": {
     "funcoes": [

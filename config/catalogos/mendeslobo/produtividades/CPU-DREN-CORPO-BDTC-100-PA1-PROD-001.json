@@ -1,7 +1,7 @@
 {
   "id": "CPU-DREN-CORPO-BDTC-100-PA1-PROD-001",
   "codigo": "CPU-DREN-CORPO-BDTC-100-PA1-PROD-001",
-  "descricao": "Produção CPU-DREN-CORPO-BDTC-100-PA1",
+  "descricao": "CORPO DE BDTC D = 1,00 M PA1 - AREIA, BRITA E PEDRA DE MÃO COMERCIAIS — equipe padrão: Operador de Escavadeira + 5× Oficial + 4× Ajudante + Encarregado de Drenagem + Motorista de caminhão munck + Motorista de caminhão prancha; equipamentos: Carregadeira de Pneu 150HP + Caminhão Basculante 14m³ + Caminhão Basculante 6m³",
   "origem": "PROPRIA",
   "valor_horario": 0.5,
   "composicao_padrao_equipe": {

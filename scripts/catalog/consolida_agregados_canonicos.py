@@ -104,8 +104,8 @@ _ALERTAS_DEFASAGEM: dict[str, tuple[float, str]] = {
 # Repoints de consumidores para canônicos: producao -> {antigo: novo}
 _REPOINTS: dict[str, dict[str, str]] = {
     # usinagens: gêmeos SICRO → canônicos
-    "producoes/PROD-USINAGEM-BGTC-001.json": {"MA-BRITA-1-SICRO": "MA-BRITA-1"},
-    "producoes/PROD-USINAGEM-CBUQ-001.json": {
+    "produtividades/PROD-USINAGEM-BGTC-001.json": {"MA-BRITA-1-SICRO": "MA-BRITA-1"},
+    "produtividades/PROD-USINAGEM-CBUQ-001.json": {
         "MA-BRITA-1-SICRO": "MA-BRITA-1",
         "MA-AREIA-MEDIA-SICRO": "MA-AREIA-MEDIA",
     },

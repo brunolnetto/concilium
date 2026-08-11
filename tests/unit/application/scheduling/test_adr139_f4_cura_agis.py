@@ -81,7 +81,7 @@ class TestProdutorConsumidorCbuqFechado:
         for p in (_CAT / "insumos" / "material").glob("*.json"):
             d = json.loads(p.read_text(encoding="utf-8-sig"))
             insumos[d["codigo"]] = d
-        usinagem = _load("producoes/PROD-USINAGEM-CBUQ-001.json")
+        usinagem = _load("produtividades/PROD-USINAGEM-CBUQ-001.json")
         aplicacao = _load("produtividades/CPU-PAVIM-ATI-058-PROD-001.json")
         resources = build_replenishable_resources(
             producoes_por_atividade={"usinagem": usinagem, "cbuq-3cm": aplicacao},

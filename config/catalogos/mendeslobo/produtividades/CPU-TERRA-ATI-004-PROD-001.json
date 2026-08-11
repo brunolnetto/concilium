@@ -1,7 +1,7 @@
 {
   "id": "CPU-TERRA-ATI-004-PROD-001",
   "codigo": "CPU-TERRA-ATI-004-PROD-001",
-  "descricao": "Produção CPU-TERRA-ATI-004",
+  "descricao": "Limpeza e carga de material — equipe padrão: Operador de Escavadeira + 2× Ajudante; equipamentos: Escavadeira Hidráulica 22t",
   "origem": "PROPRIA",
   "valor_horario": 500.0,
   "composicao_padrao_equipe": {

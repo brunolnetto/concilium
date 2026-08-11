@@ -97,23 +97,41 @@ class TestLoadProducoesIndex:
     def test_valid_prod_files_indexed_by_id(self, tmp_path: Path) -> None:
         prod1 = {"id": "PROD-001", "descricao": "Escavação"}
         prod2 = {"id": "PROD-002", "descricao": "Aterro"}
-        (tmp_path / "PROD-001.json").write_text(json.dumps(prod1), encoding="utf-8")
-        (tmp_path / "PROD-002.json").write_text(json.dumps(prod2), encoding="utf-8")
+        prod_dir = tmp_path / "produtividades"
+        prod_dir.mkdir()
+        (prod_dir / "PROD-001.json").write_text(json.dumps(prod1), encoding="utf-8")
+        (prod_dir / "PROD-002.json").write_text(json.dumps(prod2), encoding="utf-8")
 
         result = _load_producoes_index(tmp_path)
         assert "PROD-001" in result
         assert "PROD-002" in result
         assert result["PROD-001"]["descricao"] == "Escavação"
 
+    def test_merges_producoes_legado(self, tmp_path: Path) -> None:
+        """Regressão: producoes/ (legado) não pode ser ignorado quando produtividades/ existe."""
+        prod_dir = tmp_path / "produtividades"
+        prod_dir.mkdir()
+        (prod_dir / "PROD-NOVO.json").write_text(json.dumps({"id": "PROD-NOVO"}), encoding="utf-8")
+        legado_dir = tmp_path / "producoes"
+        legado_dir.mkdir()
+        (legado_dir / "PROD-LEGADO.json").write_text(json.dumps({"id": "PROD-LEGADO"}), encoding="utf-8")
+
+        result = _load_producoes_index(tmp_path)
+        assert set(result) == {"PROD-NOVO", "PROD-LEGADO"}
+
     def test_prod_without_id_field_not_indexed(self, tmp_path: Path) -> None:
         prod = {"descricao": "sem id"}
-        (tmp_path / "NOID.json").write_text(json.dumps(prod), encoding="utf-8")
+        prod_dir = tmp_path / "produtividades"
+        prod_dir.mkdir()
+        (prod_dir / "NOID.json").write_text(json.dumps(prod), encoding="utf-8")
         result = _load_producoes_index(tmp_path)
         assert result == {}
 
     def test_prod_with_non_string_id_not_indexed(self, tmp_path: Path) -> None:
         prod = {"id": 42, "descricao": "id numerico"}
-        (tmp_path / "NUM.json").write_text(json.dumps(prod), encoding="utf-8")
+        prod_dir = tmp_path / "produtividades"
+        prod_dir.mkdir()
+        (prod_dir / "NUM.json").write_text(json.dumps(prod), encoding="utf-8")
         result = _load_producoes_index(tmp_path)
         assert result == {}
 

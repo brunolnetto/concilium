@@ -1,7 +1,7 @@
 {
   "id": "CPU-DIVER-ATI-073-PROD-001",
   "codigo": "CPU-DIVER-ATI-073-PROD-001",
-  "descricao": "Produção CPU-DIVER-ATI-073",
+  "descricao": "Rejuntamento piso intertravado — equipe padrão: 2× Ajudante",
   "origem": "PROPRIA",
   "valor_horario": 25.0,
   "composicao_padrao_equipe": {

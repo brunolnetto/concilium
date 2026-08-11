@@ -138,6 +138,23 @@ class TestHealCatalog:
         assert "equipe" not in healed
         assert healed["id"] == "PROD-002"
 
+    def test_heals_produtividades_dir_too(self, tmp_path: Path) -> None:
+        """Regressão: _heal_producoes só escaneava producoes/ — itens em produtividades/
+        (layout atual, onde o catálogo real vive) ficavam sem cura em silêncio."""
+        cat = _setup_catalog(tmp_path)
+        (cat / "produtividades").mkdir(parents=True)
+        prod_data = {
+            "id": "PROD-003",
+            "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-001"}], "equipamentos": []},
+        }
+        (cat / "produtividades" / "PROD-003.json").write_text(json.dumps(prod_data), encoding="utf-8")
+
+        heal_catalog(cat)
+
+        healed = json.loads((cat / "produtividades" / "PROD-003.json").read_text(encoding="utf-8"))
+        assert "composicao_padrao_equipe" not in healed
+        assert "equipe" in healed
+
     def test_missing_insumo_subfolder_is_skipped(self, tmp_path: Path) -> None:
         """Line 57 false branch: an insumos/{folder} directory that doesn't exist
         is skipped without populating id_map for that prefix."""

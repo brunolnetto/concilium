@@ -234,13 +234,14 @@ def _caminho_insumo_individual(catalog_root: Path, insumo: dict[str, Any]) -> Pa
 
 
 def _caminho_producao_individual(catalog_root: Path, producao: dict[str, Any]) -> Path:
-    """Resolve o arquivo individual de uma produção — existente (`producoes/` ou `produtividades/`) ou novo."""
+    """Resolve o arquivo individual de uma produção — existente (`produtividades/` ou
+    `producoes/`, legado) ou novo (sempre em `produtividades/`)."""
     pid = producao.get("id") or producao.get("codigo", "")
-    for folder in ("producoes", "produtividades"):
+    for folder in ("produtividades", "producoes"):
         candidate = catalog_root / folder / f"{pid}.json"
         if candidate.exists():
             return candidate
-    return catalog_root / "producoes" / f"{pid}.json"
+    return catalog_root / "produtividades" / f"{pid}.json"
 
 
 def _caminho_cpu_individual(catalog_root: Path, cpu: dict[str, Any]) -> Path:

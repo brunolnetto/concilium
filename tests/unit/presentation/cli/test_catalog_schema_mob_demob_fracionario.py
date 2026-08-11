@@ -5,7 +5,7 @@ TDD: testes escritos antes da alteração do schema.
 
 Contexto: `concilium catalog validate --contexto mendeslobo` reportou 263 erros
 na entidade PRODUCAO, concentrados em 4 arquivos reais
-(config/catalogos/mendeslobo/producoes/PROD-REJEITO-COMP-EQ1..4-001.json).
+(config/catalogos/mendeslobo/produtividades/PROD-REJEITO-COMP-EQ1..4-001.json).
 Deste total, 105 eram `custo_mobilizacao`/`custo_desmobilizacao` em itens de
 `funcoes`/`equipamentos` não declarados em common.schema.json
 ($defs.funcaoEquipe/$defs.equipamentoEquipe, additionalProperties=false) —
@@ -42,7 +42,7 @@ import pytest
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 _SCHEMA_ROOT = _ROOT / "config" / "schemas" / "catalog"
 _PROD_REJEITO_FILES = [
-    _ROOT / "config" / "catalogos" / "mendeslobo" / "producoes" / f"PROD-REJEITO-COMP-EQ{n}-001.json"
+    _ROOT / "config" / "catalogos" / "mendeslobo" / "produtividades" / f"PROD-REJEITO-COMP-EQ{n}-001.json"
     for n in range(1, 5)
 ]
 

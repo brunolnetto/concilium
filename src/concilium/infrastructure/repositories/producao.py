@@ -1,6 +1,7 @@
 """Repositório de artefatos Producao (ADR-007 + ADR-017 Opção B).
 
-Carrega Producao de config/producoes/{id}.json por ID.
+Carrega Producao de {producoes_dir}/{id}.json por ID — diretório injetado no construtor
+(no catálogo real, config/catalogos/<id>/produtividades/; producoes/ é layout legado).
 Não há índice em catalogos/ — os IDs são derivados dos campos producao_id das CPUs.
 """
 
@@ -38,7 +39,7 @@ class RepositorioProducao:
         path.write_text(producao.model_dump_json(indent=2), encoding="utf-8")
 
     def listar_ids(self) -> list[str]:
-        """Lista todos os IDs disponíveis em config/producoes/."""
+        """Lista todos os IDs disponíveis no diretório injetado."""
         return [p.stem for p in self._dir.glob("*.json")]
 
     def existe(self, producao_id: str) -> bool:

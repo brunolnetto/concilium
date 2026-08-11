@@ -7,8 +7,8 @@ Layout:
   projetos/{uuid}/v3/canonical.json         ← payload (CanonicalModel)
   projetos/{uuid}/v3/canonical.meta.json    ← ArtifactMeta (sidecar)
 
-  config/producoes/ESCO-CARGA-1CAT-PROD-001.json       ← payload (Producao)
-  config/producoes/ESCO-CARGA-1CAT-PROD-001.meta.json  ← ArtifactMeta (sidecar)
+  config/catalogos/<id>/produtividades/ESCO-CARGA-1CAT-PROD-001.json       ← payload (Producao)
+  config/catalogos/<id>/produtividades/ESCO-CARGA-1CAT-PROD-001.meta.json  ← ArtifactMeta (sidecar)
 """
 
 from __future__ import annotations

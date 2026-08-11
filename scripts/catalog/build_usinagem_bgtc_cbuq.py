@@ -462,7 +462,7 @@ def run_build(apply: bool = False) -> dict[str, Any]:
 
     payloads: dict[str, dict[str, Any]] = {}
     for _insumo, (pid, builder) in _USINADOS.items():
-        path = CAT_DIR / "producoes" / f"{pid}.json"
+        path = CAT_DIR / "produtividades" / f"{pid}.json"
         payloads[pid] = _load(path) if path.exists() else builder()
         if not path.exists():
             stats["producoes_criadas"] += 1

@@ -111,20 +111,25 @@ def _llj_load_insumos(cat_dir) -> dict:
 def _llj_load_produtividades(cat_dir) -> list:
     """Carrega arquivos de produtividade/produção do catálogo.
 
-    Ordem de preferência dos layouts de diretório:
-      1. produtividades/  — layout novo (CPU-*-PROD-001.json individuais)
-      2. producoes/       — layout legado (PROD-*.json individuais)
-      3. produtividades.json — arquivo único (fallback)
+    Layouts de diretório suportados (mesclados, não em ordem de preferência):
+      - produtividades/  — layout atual (CPU-*-PROD-001.json individuais)
+      - producoes/       — layout legado (PROD-*.json individuais); mantido só
+        por robustez com catálogos ainda não migrados — nenhum catálogo atual usa.
+      - produtividades.json — arquivo único (fallback quando nenhum dos dois existe)
     """
+    produtividades: list = []
+    found_any_dir = False
     for dir_name in ("produtividades", "producoes"):
         prod_dir = cat_dir / dir_name
-        if prod_dir.exists():
-            produtividades: list = []
-            for prod_file in sorted(prod_dir.glob("*.json")):
-                raw = json.loads(prod_file.read_text(encoding="utf-8"))
-                if isinstance(raw, dict):
-                    produtividades.append(raw)
-            return produtividades
+        if not prod_dir.exists():
+            continue
+        found_any_dir = True
+        for prod_file in sorted(prod_dir.glob("*.json")):
+            raw = json.loads(prod_file.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                produtividades.append(raw)
+    if found_any_dir:
+        return produtividades
     prod_path = cat_dir / "produtividades.json"
     if prod_path.exists():
         raw = json.loads(prod_path.read_text(encoding="utf-8"))
@@ -210,21 +215,25 @@ def _lsp_load_insumos(storage, base: str) -> dict:
 
 
 def _lsp_load_produtividades(storage, base: str) -> list:
+    """Espelha `_llj_load_produtividades`: mescla produtividades/ e producoes/ (legado)."""
     produtividades: list = []
-    prod_blobs = storage.listar_blobs(f"{base}/produtividades")
-    if prod_blobs:
-        for blob_path in sorted(prod_blobs):
+    found_any_blob = False
+    for dir_name in ("produtividades", "producoes"):
+        blobs = storage.listar_blobs(f"{base}/{dir_name}")
+        if blobs:
+            found_any_blob = True
+        for blob_path in sorted(blobs):
             if blob_path.endswith(".json"):
                 raw = json.loads(storage.ler_blob(blob_path).decode("utf-8"))
                 if isinstance(raw, dict):
                     produtividades.append(raw)
-    else:
-        try:
-            raw = json.loads(storage.ler_blob(f"{base}/produtividades.json").decode("utf-8"))
-            produtividades = raw.get("produtividades", raw) if isinstance(raw, dict) else raw
-        except FileNotFoundError:
-            pass
-    return produtividades
+    if found_any_blob:
+        return produtividades
+    try:
+        raw = json.loads(storage.ler_blob(f"{base}/produtividades.json").decode("utf-8"))
+        return raw.get("produtividades", raw) if isinstance(raw, dict) else raw
+    except FileNotFoundError:
+        return []
 
 
 def _lsp_load_funcoes(storage, base: str) -> list:
