@@ -68,6 +68,8 @@ def _retry_after_seconds(r: Any, default: float) -> float:
         except Exception:
             return default
     return min(max(default, seconds), _RETRY_AFTER_CAP_S)
+
+
 # issue #147: timeout explícito de leitura — sem isto, algumas chamadas (ex.:
 # listar_blobs antes desta correção) dependiam só do default do httpx, e uma
 # resposta lenta/silenciosa do Graph podia se acumular por dezenas de segundos
@@ -115,6 +117,10 @@ class SharePointBlobStorage(BlobStoragePort):
         self._offline = offline
         self._cache: _BlobCache | None = _BlobCache(cache_dir, ttl_minutes=cache_ttl_minutes) if cache_dir else None
         self._root_ensured = False
+        # 2026-08-11 (pooling): client HTTP persistente, criado uma vez e reusado
+        # por toda a vida da instância — ver `_client()`.
+        self._http: Any = None
+        self._http_lock = threading.Lock()
 
     @classmethod
     def from_env(cls, *, cache_dir: Path | None = None, system: bool = False) -> SharePointBlobStorage:
@@ -139,14 +145,46 @@ class SharePointBlobStorage(BlobStoragePort):
     # ── HTTP helpers ───────────────────────────────────────────────────────
 
     def _client(self) -> Any:
-        try:
-            import httpx
-        except ImportError as exc:
-            raise ImportError(
-                "O pacote 'httpx' é necessário para o SharePoint backend. "
-                "Instale com: pip install 'concilium[sharepoint]'"
-            ) from exc
-        return httpx
+        """Client HTTP persistente, criado uma vez e reusado por toda chamada.
+
+        2026-08-11: antes, cada operação usava `httpx.get/put/post/delete` de
+        módulo — equivalente a `requests.get()` solto, que abre e fecha uma
+        conexão TCP+TLS nova a cada chamada. Confirmado em produção: um único
+        `load_catalogo("mendeslobo")` (via `_catalog_storage.py`, ~800 arquivos
+        individuais) deixava ~400 sockets em TIME_WAIT pro Graph API — zero
+        reuso de conexão. `httpx.Client` com pool de conexões elimina o
+        handshake TCP+TLS repetido entre chamadas desta mesma instância; o
+        limite do pool acompanha `_MAX_CONCURRENT_REQUESTS` (mesmo teto que já
+        rege sequências de retry, ver `_get_with_retry`) — não faz sentido
+        manter mais conexões ociosas do que o processo pode usar de verdade.
+        """
+        if self._http is None:
+            with self._http_lock:
+                if self._http is None:
+                    try:
+                        import httpx
+                    except ImportError as exc:
+                        raise ImportError(
+                            "O pacote 'httpx' é necessário para o SharePoint backend. "
+                            "Instale com: pip install 'concilium[sharepoint]'"
+                        ) from exc
+                    self._http = httpx.Client(
+                        limits=httpx.Limits(
+                            max_connections=_MAX_CONCURRENT_REQUESTS * 4,
+                            max_keepalive_connections=_MAX_CONCURRENT_REQUESTS * 4,
+                        )
+                    )
+        return self._http
+
+    def close(self) -> None:
+        """Fecha o client HTTP persistente e libera conexões do pool (best-effort)."""
+        if self._http is not None:
+            with self._http_lock:
+                if self._http is not None:
+                    try:
+                        self._http.close()
+                    finally:
+                        self._http = None
 
     def _headers(self, extra: dict | None = None) -> dict[str, str]:
         h = {"Authorization": f"Bearer {self._credential.acquire_token()}"}

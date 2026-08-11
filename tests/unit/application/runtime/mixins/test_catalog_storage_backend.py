@@ -11,6 +11,8 @@ filesystem, inalterado) sem precisar de credenciais reais de SharePoint.
 from __future__ import annotations
 
 import json
+import threading
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -221,6 +223,96 @@ class TestLoadCatalogoViaStorageParidade:
                 cs.load_catalogo_via_storage(tmp_path, cat_id, force_refresh=True)
                 cs.load_catalogo_via_storage(tmp_path, cat_id, force_refresh=True)
                 assert build_mock.call_count == 2
+
+
+class TestLoadCatalogoViaStorageCoalescencia:
+    """2026-08-11 (warm-up + coalescência): duas cargas concorrentes do MESMO
+    catalogo_id (ex.: warm-up de startup sobreposto à primeira request real do
+    usuário) não devem disparar dois carregamentos completos — a segunda espera
+    a primeira terminar e reaproveita o cache que ela grava."""
+
+    class _SlowOnceStorage:
+        """Delega pro LocalBlobStorage real, mas dorme um pouco na PRIMEIRA
+        chamada de listar_blobs — dá tempo pra outra thread também entrar em
+        load_catalogo_via_storage antes da primeira terminar e gravar o cache
+        (sem isso, dependendo da ordem de agendamento das threads, o teste
+        passaria mesmo sem lock algum — não provaria nada)."""
+
+        def __init__(self, inner, delay_s: float = 0.15):
+            self._inner = inner
+            self._delay_s = delay_s
+            self._slept = threading.Event()
+
+        def listar_blobs(self, prefix):
+            if not self._slept.is_set():
+                self._slept.set()
+                time.sleep(self._delay_s)
+            return self._inner.listar_blobs(prefix)
+
+        def ler_blob(self, path):
+            return self._inner.ler_blob(path)
+
+    def test_cargas_concorrentes_do_mesmo_catalogo_nao_duplicam_fetch(self, tmp_path):
+        cat_id = "cat-concorrente"
+        _build_full_catalog_tree(tmp_path / "config", cat_id)
+        storage = self._SlowOnceStorage(LocalBlobStorage(tmp_path))
+
+        results: list[dict] = []
+
+        def _worker():
+            results.append(cs.load_catalogo_via_storage(tmp_path, cat_id))
+
+        with patch.object(cs, "catalog_storage_backend", return_value="sharepoint"):
+            with patch.object(cs, "build_blob_storage", return_value=storage) as build_mock:
+                threads = [threading.Thread(target=_worker) for _ in range(2)]
+                for t in threads:
+                    t.start()
+                for t in threads:
+                    t.join()
+
+        # A segunda thread esperou o lock e reaproveitou o cache gravado pela
+        # primeira — sem a coalescência, as duas teriam chamado build_blob_storage.
+        assert build_mock.call_count == 1
+        assert len(results) == 2
+        assert {c["codigo"] for c in results[0]["cpus"]} == {c["codigo"] for c in results[1]["cpus"]}
+
+    def test_fecha_storage_apos_carregar(self, tmp_path):
+        """`storage.close()` (duck-typed) é chamado ao final do load — best-effort,
+        libera o pool de conexões do adapter SharePoint real."""
+        cat_id = "cat-close"
+        _build_full_catalog_tree(tmp_path / "config", cat_id)
+        inner = LocalBlobStorage(tmp_path)
+        closed: list[int] = []
+
+        class _ClosableStorage:
+            def listar_blobs(self, prefix):
+                return inner.listar_blobs(prefix)
+
+            def ler_blob(self, path):
+                return inner.ler_blob(path)
+
+            def close(self):
+                closed.append(1)
+
+        with patch.object(cs, "catalog_storage_backend", return_value="sharepoint"):
+            with patch.object(cs, "build_blob_storage", return_value=_ClosableStorage()):
+                cs.load_catalogo_via_storage(tmp_path, cat_id, force_refresh=True)
+
+        assert closed == [1]
+
+    def test_close_ausente_no_backend_nao_lanca(self, tmp_path):
+        """LocalBlobStorage (e qualquer backend sem `close`) não deve quebrar o
+        load — a chamada é via getattr/callable, puramente best-effort."""
+        cat_id = "cat-no-close"
+        _build_full_catalog_tree(tmp_path / "config", cat_id)
+        storage = LocalBlobStorage(tmp_path)
+        assert not hasattr(storage, "close")
+
+        with patch.object(cs, "catalog_storage_backend", return_value="sharepoint"):
+            with patch.object(cs, "build_blob_storage", return_value=storage):
+                resultado = cs.load_catalogo_via_storage(tmp_path, cat_id, force_refresh=True)
+
+        assert {c["codigo"] for c in resultado["cpus"]} == {"CPU-A", "CPU-B", "CPU-C"}
 
 
 class TestCatalogMixinLoadCatalogoRoteamento:

@@ -41,6 +41,8 @@ Estrutura de módulos:
 
 from __future__ import annotations
 
+import logging
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -55,7 +57,7 @@ from concilium.infrastructure.observability.logging_config import configure_logg
 from concilium.infrastructure.observability.pipeline import bronze_storage_for_bootstrap
 from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
 from concilium.infrastructure.telemetry import patch_fastmcp_server, setup_telemetry
-from concilium.presentation.mcp._context import _config_root
+from concilium.presentation.mcp._context import _config_root, _runtime
 from concilium.presentation.mcp.audit import patch_fastmcp_server_with_audit
 from concilium.presentation.mcp.middleware import McpAuthMiddleware
 from concilium.presentation.mcp.tools import (
@@ -167,6 +169,63 @@ def _register_ui_resources(server: FastMCP) -> None:
         _make_handler(html_content, uri)
 
 
+def _warm_up_catalogos_background() -> None:
+    """Pré-carrega catálogos com backend remoto (SharePoint/S3/...) numa thread
+    separada, em paralelo ao startup do servidor (issue #153 follow-up).
+
+    `load_catalogo_via_storage` (`_catalog_storage.py`) tem cache local (TTL 1h,
+    `.catalog_bundle_remote.json`) — aquecer aqui faz a primeira request REAL do
+    usuário, que senão pagaria o cold-load inteiro (~800 round-trips ao Graph
+    pro catálogo "mendeslobo", ver incidente 2026-08-11), já encontrar o cache
+    pronto. Backend "filesystem" não sofre desse problema (leitura local já é
+    rápida) — pula sem nem importar o Runtime.
+
+    Roda numa thread daemon disparada em `main()` ANTES de `server.run()`: o
+    processo já está de pé, mas ainda não aceita conexões — por isso não some
+    junto com o event loop nem atrasa o startup/health check. Best-effort: uma
+    falha aqui (Graph fora, credencial inválida, contexto malformado) só loga
+    — nunca derruba o servidor, que continua respondendo mesmo com o catálogo
+    ainda frio (só mais lento na primeira request real, exatamente como antes
+    desta mudança).
+    """
+    logger = logging.getLogger(__name__)
+    try:
+        from concilium.application.runtime.mixins._catalog_storage import catalog_storage_backend
+
+        if catalog_storage_backend() == "filesystem":
+            return
+
+        contextos_dir = _config_root() / "contextos"
+        if not contextos_dir.exists():
+            return
+
+        rt = _runtime()
+        catalogo_ids: list[str] = []
+        seen: set[str] = set()
+        for p in sorted(contextos_dir.glob("*.json")):
+            try:
+                ctx = rt.load_contexto(p.stem)
+            except Exception:
+                continue
+            if ctx.catalogo_id not in seen:
+                seen.add(ctx.catalogo_id)
+                catalogo_ids.append(ctx.catalogo_id)
+
+        for catalogo_id in catalogo_ids:
+            try:
+                logger.info("Warm-up: pré-carregando catálogo '%s' (backend remoto)...", catalogo_id)
+                rt.load_catalogo(catalogo_id)
+                logger.info("Warm-up: catálogo '%s' pronto.", catalogo_id)
+            except Exception:
+                logger.warning(
+                    "Warm-up: falha ao pré-carregar catálogo '%s' (best-effort, seguindo).",
+                    catalogo_id,
+                    exc_info=True,
+                )
+    except Exception:
+        logger.warning("Warm-up de catálogo falhou de forma inesperada (best-effort).", exc_info=True)
+
+
 def main() -> None:
     """Entry point para `python -m concilium.presentation.mcp`.
 
@@ -209,6 +268,14 @@ def main() -> None:
         mcp_host, mcp_port = "127.0.0.1", 8000
 
     server = build_server(host=mcp_host, port=mcp_port)
+
+    if transport != "stdio":
+        # Container de vida longa (streamable-http/sse) — vale a pena aquecer o
+        # cache de catálogo em paralelo ao startup (ver _warm_up_catalogos_background).
+        # stdio (uso local via Claude Desktop) tipicamente roda backend "filesystem"
+        # (já rápido) e é um processo de vida curta; a função já é um no-op nesse
+        # caso, mas o gate aqui deixa a intenção explícita.
+        threading.Thread(target=_warm_up_catalogos_background, name="catalog-warmup", daemon=True).start()
 
     try:
         n_tools = len(server._tool_manager._tools)

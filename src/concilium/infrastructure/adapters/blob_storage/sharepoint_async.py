@@ -76,6 +76,13 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
         self._read_only = read_only
         self._offline = offline
         self._cache: _BlobCache | None = _BlobCache(cache_dir, ttl_minutes=cache_ttl_minutes) if cache_dir else None
+        # 2026-08-11 (pooling): client HTTP persistente, criado uma vez e reusado
+        # por toda a vida da instância — ver `_client()`. Mesma motivação de
+        # `SharePointBlobStorage._client()` (sharepoint.py); antes cada operação
+        # abria seu próprio `httpx.AsyncClient()` num `async with`, sem reuso de
+        # conexão entre chamadas desta mesma instância.
+        self._http: Any = None
+        self._http_lock = asyncio.Lock()
 
     @classmethod
     def from_env(cls, *, cache_dir: Path | None = None, system: bool = False) -> AsyncSharePointBlobStorage:
@@ -96,6 +103,42 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
 
     # ── HTTP helpers ───────────────────────────────────────────────────────
 
+    async def _client(self) -> Any:
+        """Client HTTP assíncrono persistente — ver `SharePointBlobStorage._client()`
+        (sharepoint.py) para a motivação completa (pooling elimina handshake
+        TCP+TLS repetido; confirmado em produção via ~400 sockets TIME_WAIT
+        pro Graph num único load de catálogo).
+
+        Cancelamento real continua garantido (ADR-180 P1/P4): `asyncio.wait_for`
+        sobre uma coroutine `await`ando `client.get(...)` cancela exatamente
+        ESSA requisição — httpx/httpcore descarta a conexão usada por ela (não
+        a devolve pro pool ocioso), sem afetar as demais conexões do mesmo
+        client. Reusar o client não muda esse comportamento; só evita reabrir
+        TCP+TLS a cada chamada.
+        """
+        if self._http is None:
+            async with self._http_lock:
+                if self._http is None:
+                    import httpx
+
+                    self._http = httpx.AsyncClient(
+                        limits=httpx.Limits(
+                            max_connections=_MAX_CONCURRENT_REQUESTS * 4,
+                            max_keepalive_connections=_MAX_CONCURRENT_REQUESTS * 4,
+                        )
+                    )
+        return self._http
+
+    async def aclose(self) -> None:
+        """Fecha o client HTTP persistente e libera conexões do pool (best-effort)."""
+        if self._http is not None:
+            async with self._http_lock:
+                if self._http is not None:
+                    try:
+                        await self._http.aclose()
+                    finally:
+                        self._http = None
+
     async def _headers(self, extra: dict | None = None) -> dict[str, str]:
         # ADR-180 D3: MSAL não é async-native — roda em thread, com timeout
         # próprio (_MSAL_HTTP_TIMEOUT_S=15s) já configurado na credencial.
@@ -112,9 +155,7 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
     def _item_content_url(self, path: str) -> str:
         return f"{self._item_url(path)}:/content"
 
-    async def _get_with_retry(
-        self, url: str, headers: dict[str, str], params: dict[str, str] | None = None
-    ) -> Any:
+    async def _get_with_retry(self, url: str, headers: dict[str, str], params: dict[str, str] | None = None) -> Any:
         """GET com retry/backoff em erros transitórios do Graph — espelho async de
         `SharePointBlobStorage._get_with_retry`, usando `asyncio.sleep` (não
         bloqueia o event loop durante o backoff, diferente de `time.sleep`).
@@ -122,10 +163,9 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
         Toda a sequência de tentativas roda sob `_concurrency_limiter` — mesmo
         racional do módulo síncrono (ver sharepoint.py, incidente 2026-08-11).
         """
-        import httpx
-
+        client = await self._client()
         last_response = None
-        async with _concurrency_limiter, httpx.AsyncClient() as client:
+        async with _concurrency_limiter:
             for attempt, delay in enumerate((*_TRANSIENT_RETRY_DELAYS_S, None)):
                 r = await client.get(
                     url, headers=headers, params=params, follow_redirects=True, timeout=_READ_TIMEOUT_S
@@ -172,31 +212,30 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
         cached = cache.get(path)
         if cached:
             content, meta = cached
-            import httpx
+            client = await self._client()
 
             try:
                 headers = await self._headers({"If-None-Match": meta.etag})
-                async with httpx.AsyncClient() as client:
-                    r = await client.get(
-                        self._item_url(path),
-                        headers=headers,
+                r = await client.get(
+                    self._item_url(path),
+                    headers=headers,
+                    follow_redirects=True,
+                    timeout=_READ_TIMEOUT_S,
+                )
+                if r.status_code == 304:
+                    return content
+                if r.status_code == 200:
+                    etag = r.headers.get("ETag", meta.etag)
+                    lm = r.headers.get("Last-Modified", meta.last_modified)
+                    content_r = await client.get(
+                        self._item_content_url(path),
+                        headers=await self._headers(),
                         follow_redirects=True,
                         timeout=_READ_TIMEOUT_S,
                     )
-                    if r.status_code == 304:
-                        return content
-                    if r.status_code == 200:
-                        etag = r.headers.get("ETag", meta.etag)
-                        lm = r.headers.get("Last-Modified", meta.last_modified)
-                        content_r = await client.get(
-                            self._item_content_url(path),
-                            headers=await self._headers(),
-                            follow_redirects=True,
-                            timeout=_READ_TIMEOUT_S,
-                        )
-                        if content_r.status_code == 200:
-                            cache.put(path, content_r.content, etag, lm)
-                            return content_r.content
+                    if content_r.status_code == 200:
+                        cache.put(path, content_r.content, etag, lm)
+                        return content_r.content
             except Exception:
                 if self._offline:
                     stale = cache.get_stale(path)
@@ -242,16 +281,14 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
             self._cache.invalidate(path)
 
     async def _gravar_pequeno(self, path: str, content: bytes) -> None:
-        import httpx
-
+        client = await self._client()
         headers = await self._headers({"Content-Type": "application/octet-stream"})
-        async with httpx.AsyncClient() as client:
-            r = await client.put(
-                self._item_content_url(path),
-                headers=headers,
-                content=content,
-                timeout=_WRITE_TIMEOUT_S,
-            )
+        r = await client.put(
+            self._item_content_url(path),
+            headers=headers,
+            content=content,
+            timeout=_WRITE_TIMEOUT_S,
+        )
         if r.status_code == 412:
             raise StorageConcurrencyError(
                 f"Conflito de escrita (ETag mismatch) para {path}. Outro agente gravou o arquivo concorrentemente."
@@ -259,33 +296,31 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
         r.raise_for_status()
 
     async def _gravar_upload_session(self, path: str, content: bytes) -> None:
-        import httpx
+        client = await self._client()
+        headers = await self._headers({"Content-Type": "application/json"})
+        r = await client.post(
+            f"{self._item_url(path)}:/createUploadSession",
+            headers=headers,
+            json={"item": {"@microsoft.graph.conflictBehavior": "replace"}},
+            timeout=_WRITE_TIMEOUT_S,
+        )
+        r.raise_for_status()
+        upload_url = r.json()["uploadUrl"]
 
-        async with httpx.AsyncClient() as client:
-            headers = await self._headers({"Content-Type": "application/json"})
-            r = await client.post(
-                f"{self._item_url(path)}:/createUploadSession",
-                headers=headers,
-                json={"item": {"@microsoft.graph.conflictBehavior": "replace"}},
-                timeout=_WRITE_TIMEOUT_S,
-            )
+        chunk_size = 5 * 1024 * 1024  # 5 MB
+        total = len(content)
+        offset = 0
+        while offset < total:
+            chunk = content[offset : offset + chunk_size]
+            end = offset + len(chunk) - 1
+            chunk_headers = {
+                "Content-Length": str(len(chunk)),
+                "Content-Range": f"bytes {offset}-{end}/{total}",
+                "Content-Type": "application/octet-stream",
+            }
+            r = await client.put(upload_url, headers=chunk_headers, content=chunk, timeout=_WRITE_TIMEOUT_S)
             r.raise_for_status()
-            upload_url = r.json()["uploadUrl"]
-
-            chunk_size = 5 * 1024 * 1024  # 5 MB
-            total = len(content)
-            offset = 0
-            while offset < total:
-                chunk = content[offset : offset + chunk_size]
-                end = offset + len(chunk) - 1
-                chunk_headers = {
-                    "Content-Length": str(len(chunk)),
-                    "Content-Range": f"bytes {offset}-{end}/{total}",
-                    "Content-Type": "application/octet-stream",
-                }
-                r = await client.put(upload_url, headers=chunk_headers, content=chunk, timeout=_WRITE_TIMEOUT_S)
-                r.raise_for_status()
-                offset += len(chunk)
+            offset += len(chunk)
 
     async def listar_blobs(self, prefix: str) -> list[str]:
         """Lista blobs com prefixo via children API com paginação — espelho
@@ -328,12 +363,10 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
     async def blob_existe(self, path: str) -> bool:
         """Verifica existência — sempre consulta a API (sem cache) — espelho
         async de `blob_existe`."""
-        import httpx
-
         try:
+            client = await self._client()
             headers = await self._headers()
-            async with httpx.AsyncClient() as client:
-                r = await client.get(self._item_url(path), headers=headers, timeout=_READ_TIMEOUT_S)
+            r = await client.get(self._item_url(path), headers=headers, timeout=_READ_TIMEOUT_S)
             return r.status_code == 200
         except Exception:
             return False
@@ -341,11 +374,9 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
     async def deletar_blob(self, path: str) -> None:
         """Remove um item do SharePoint via Graph DELETE — espelho async de
         `deletar_blob`."""
-        import httpx
-
+        client = await self._client()
         headers = await self._headers()
-        async with httpx.AsyncClient() as client:
-            r = await client.delete(self._item_url(path), headers=headers, timeout=_READ_TIMEOUT_S)
+        r = await client.delete(self._item_url(path), headers=headers, timeout=_READ_TIMEOUT_S)
         if r.status_code == 404:
             raise FileNotFoundError(f"Blob não encontrado para deletar: {path}")
         if r.status_code not in (200, 204):
@@ -355,22 +386,20 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
 
     async def aprovar_versao(self, path: str) -> None:
         """Checkin de versão major no SharePoint — espelho async de `aprovar_versao`."""
-        import httpx
+        client = await self._client()
+        try:
+            headers = await self._headers()
+            await client.post(f"{self._item_url(path)}:/checkout", headers=headers, timeout=_READ_TIMEOUT_S)
+        except Exception as exc:  # noqa: BLE001 — best-effort, checkin reporta o erro real
+            logger.debug("checkout (async) best-effort falhou para '%s' (seguindo para checkin): %s", path, exc)
 
-        async with httpx.AsyncClient() as client:
-            try:
-                headers = await self._headers()
-                await client.post(f"{self._item_url(path)}:/checkout", headers=headers, timeout=_READ_TIMEOUT_S)
-            except Exception as exc:  # noqa: BLE001 — best-effort, checkin reporta o erro real
-                logger.debug("checkout (async) best-effort falhou para '%s' (seguindo para checkin): %s", path, exc)
-
-            headers = await self._headers({"Content-Type": "application/json"})
-            r = await client.post(
-                f"{self._item_url(path)}:/checkin",
-                headers=headers,
-                json={"checkInAs": "majorVersion", "comment": "Aprovado via Concilium"},
-                timeout=_READ_TIMEOUT_S,
-            )
+        headers = await self._headers({"Content-Type": "application/json"})
+        r = await client.post(
+            f"{self._item_url(path)}:/checkin",
+            headers=headers,
+            json={"checkInAs": "majorVersion", "comment": "Aprovado via Concilium"},
+            timeout=_READ_TIMEOUT_S,
+        )
         if r.status_code == 404:
             raise FileNotFoundError(f"Arquivo não encontrado para aprovar: {path}")
         r.raise_for_status()
@@ -380,18 +409,16 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
         `gerar_url_temporaria`."""
         from datetime import datetime, timedelta
 
-        import httpx
-
         exp = (datetime.now(UTC) + timedelta(seconds=max(60, ttl_segundos))).isoformat()
         try:
+            client = await self._client()
             headers = await self._headers({"Content-Type": "application/json"})
-            async with httpx.AsyncClient() as client:
-                r = await client.post(
-                    f"{self._item_url(path)}:/createLink",
-                    headers=headers,
-                    json={"type": "view", "scope": scope, "expirationDateTime": exp},
-                    timeout=_READ_TIMEOUT_S,
-                )
+            r = await client.post(
+                f"{self._item_url(path)}:/createLink",
+                headers=headers,
+                json={"type": "view", "scope": scope, "expirationDateTime": exp},
+                timeout=_READ_TIMEOUT_S,
+            )
             if r.status_code in (200, 201):
                 return (r.json().get("link") or {}).get("webUrl")
             logger.warning(
@@ -411,51 +438,47 @@ class AsyncSharePointBlobStorage(AsyncBlobStoragePort):
         de SharePoint, como na versão síncrona)."""
         if not self._root_path:
             return
-        import httpx
-
-        async with httpx.AsyncClient() as client:
-            headers = await self._headers()
-            r = await client.get(
-                f"{_GRAPH_BASE}/drives/{self._drive_id}/root:/{self._root_path}",
+        client = await self._client()
+        headers = await self._headers()
+        r = await client.get(
+            f"{_GRAPH_BASE}/drives/{self._drive_id}/root:/{self._root_path}",
+            headers=headers,
+            timeout=10.0,
+        )
+        if r.status_code == 200:
+            return
+        if r.status_code != 404:
+            r.raise_for_status()
+        segments = self._root_path.split("/")
+        current = ""
+        for segment in segments:
+            if current:
+                url = f"{_GRAPH_BASE}/drives/{self._drive_id}/root:/{current}:/children"
+            else:
+                url = f"{_GRAPH_BASE}/drives/{self._drive_id}/root/children"
+            headers = await self._headers({"Content-Type": "application/json"})
+            r = await client.post(
+                url,
                 headers=headers,
+                json={"name": segment, "folder": {}, "@microsoft.graph.conflictBehavior": "replace"},
                 timeout=10.0,
             )
-            if r.status_code == 200:
-                return
-            if r.status_code != 404:
+            if r.status_code not in (200, 201):
                 r.raise_for_status()
-            segments = self._root_path.split("/")
-            current = ""
-            for segment in segments:
-                if current:
-                    url = f"{_GRAPH_BASE}/drives/{self._drive_id}/root:/{current}:/children"
-                else:
-                    url = f"{_GRAPH_BASE}/drives/{self._drive_id}/root/children"
-                headers = await self._headers({"Content-Type": "application/json"})
-                r = await client.post(
-                    url,
-                    headers=headers,
-                    json={"name": segment, "folder": {}, "@microsoft.graph.conflictBehavior": "replace"},
-                    timeout=10.0,
-                )
-                if r.status_code not in (200, 201):
-                    r.raise_for_status()
-                current = f"{current}/{segment}".lstrip("/") if current else segment
+            current = f"{current}/{segment}".lstrip("/") if current else segment
         logger.info("SharePoint (async) root_path criado: %s", self._root_path)
 
     async def health_check(self) -> dict[str, Any]:
         """Verifica conectividade com o SharePoint Drive — espelho async de
         `health_check`."""
-        import httpx
-
         try:
+            client = await self._client()
             headers = await self._headers()
-            async with httpx.AsyncClient() as client:
-                r = await client.get(
-                    f"{_GRAPH_BASE}/drives/{self._drive_id}",
-                    headers=headers,
-                    timeout=10.0,
-                )
+            r = await client.get(
+                f"{_GRAPH_BASE}/drives/{self._drive_id}",
+                headers=headers,
+                timeout=10.0,
+            )
             if r.status_code == 200:
                 data = r.json()
                 return {

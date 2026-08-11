@@ -168,9 +168,14 @@ class TestSharePointBlobStorage:
             mock_resp.json.return_value = json_data
         mock_resp.raise_for_status = MagicMock()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.return_value = mock_resp
         mock_httpx.put.return_value = mock_resp
         mock_httpx.post.return_value = mock_resp
+        # 2026-08-11 (pooling): `_client()` agora chama `httpx.Client(...)` uma vez
+        # e reusa o resultado — o mock precisa devolver a si mesmo (que já tem
+        # get/put/post configurados) quando "instanciado".
+        mock_httpx.Client.return_value = mock_httpx
         return mock_httpx
 
     def test_ler_blob_success(self):
@@ -210,6 +215,7 @@ class TestSharePointBlobStorage:
             mock_304 = MagicMock()
             mock_304.status_code = 304
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.return_value = mock_304
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.ler_blob("test.json")
@@ -280,6 +286,7 @@ class TestSharePointBlobStorage:
             resp2.raise_for_status = MagicMock()
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = [resp1, resp2]
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 blobs = storage.listar_blobs("config/cpus")
@@ -320,6 +327,7 @@ class TestSharePointBlobStorage:
             checkin_resp = MagicMock(status_code=200)
             checkin_resp.raise_for_status = MagicMock()
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.post.side_effect = [RuntimeError("checkout not supported"), checkin_resp]
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 storage.aprovar_versao("v1/canonical.json")  # não deve levantar
@@ -338,6 +346,7 @@ class TestSharePointBlobStorage:
         with tempfile.TemporaryDirectory() as tmp:
             storage = _make_storage(Path(tmp))
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = Exception("timeout")
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.health_check()
@@ -351,12 +360,58 @@ class TestSharePointBlobStorage:
                 with pytest.raises(ImportError, match="httpx"):
                     storage._client()
 
+    def test_client_not_created_until_first_use(self):
+        """`_http` só é populado no primeiro uso — client é lazy, não eager."""
+        storage = _make_storage()
+        assert storage._http is None
+
+    def test_client_reused_across_multiple_operations(self):
+        """2026-08-11 (pooling): `_client()` cria o `httpx.Client` UMA vez e reusa
+        em todas as chamadas seguintes desta mesma instância — antes, cada
+        operação (`httpx.get/put/post/delete` de módulo) abria e fechava uma
+        conexão nova. `Client()` deve ser chamado 1x mesmo com 3 operações."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            ok_resp = MagicMock(status_code=200, content=b"", headers={})
+            del_resp = MagicMock(status_code=204)
+            mock_client = MagicMock()
+            mock_client.get.return_value = ok_resp
+            mock_client.delete.return_value = del_resp
+            mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_client
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                storage.blob_existe("a.json")
+                storage.blob_existe("b.json")
+                storage.deletar_blob("c.json")
+            assert mock_httpx.Client.call_count == 1
+            assert mock_client.get.call_count == 2
+            assert mock_client.delete.call_count == 1
+
+    def test_close_releases_and_resets_client(self):
+        """close() fecha o client do pool e permite que uma chamada seguinte
+        crie um novo (ex.: depois de `load_catalogo_via_storage` terminar)."""
+        storage = _make_storage()
+        mock_client = MagicMock()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_client
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            storage._client()
+            storage.close()
+        mock_client.close.assert_called_once()
+        assert storage._http is None
+
+    def test_close_before_any_use_is_noop(self):
+        storage = _make_storage()
+        storage.close()  # não deve lançar
+        assert storage._http is None
+
     def test_ler_blob_cached_reraises_when_not_offline(self):
         """Line 135: exception in cached fetch re-raises when offline=False."""
         with tempfile.TemporaryDirectory() as tmp:
             storage = _make_storage(Path(tmp))
             storage._cache.put("file.json", b"cached", "etag-1", "Mon")
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = OSError("connection reset")
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 with pytest.raises(OSError):
@@ -371,6 +426,7 @@ class TestSharePointBlobStorage:
             mock_resp.status_code = 204
             mock_resp.raise_for_status = MagicMock()
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.delete.return_value = mock_resp
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 storage.deletar_blob("del.json")
@@ -384,6 +440,7 @@ class TestSharePointBlobStorage:
             mock_resp = MagicMock()
             mock_resp.status_code = 404
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.delete.return_value = mock_resp
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 with pytest.raises(FileNotFoundError):
@@ -404,6 +461,7 @@ class TestSharePointBlobStorage:
         mock_resp.status_code = 204
         mock_resp.raise_for_status = MagicMock()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.delete.return_value = mock_resp
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             storage.deletar_blob("some.json")
@@ -430,6 +488,7 @@ class TestSharePointBlobStorage:
         cred._app.acquire_token_for_client.return_value = {"access_token": "tok"}
         storage = SharePointBlobStorage("drive-1", "", cred)
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             storage._ensure_root_path(mock_httpx)
         mock_httpx.get.assert_not_called()
@@ -445,6 +504,7 @@ class TestSharePointBlobStorage:
             post_resp.status_code = 201
             post_resp.raise_for_status = MagicMock()
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.return_value = get_resp
             mock_httpx.post.return_value = post_resp
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
@@ -469,6 +529,7 @@ class TestSharePointBlobStorage:
             mock_resp.status_code = 500
             mock_resp.raise_for_status = MagicMock(side_effect=Exception("server error"))
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.delete.return_value = mock_resp
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 with pytest.raises(Exception, match="server error"):
@@ -491,6 +552,7 @@ class TestSharePointBlobStorage:
             get_resp.status_code = 500
             get_resp.raise_for_status = MagicMock(side_effect=Exception("internal server error"))
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.return_value = get_resp
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 with pytest.raises(Exception, match="internal server error"):
@@ -506,6 +568,7 @@ class TestSharePointBlobStorage:
             post_resp.status_code = 500
             post_resp.raise_for_status = MagicMock(side_effect=Exception("folder create failed"))
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.return_value = get_resp
             mock_httpx.post.return_value = post_resp
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
@@ -905,6 +968,7 @@ class TestSharePointLerBlobEdgeCases:
         """Line 100→104: no cache_dir → goes directly to _ler_blob_direct."""
         storage = _make_storage_no_cache()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.return_value = self._mock_resp(200, content=b"direct_data")
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             result = storage.ler_blob("file.json")
@@ -920,6 +984,7 @@ class TestSharePointLerBlobEdgeCases:
             content_resp = self._mock_resp(200, content=b"new_content")
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = [check_resp, content_resp]
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.ler_blob("file.json")
@@ -933,6 +998,7 @@ class TestSharePointLerBlobEdgeCases:
             storage._cache.put("file.json", b"stale_data", "etag-1", "Mon")
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = OSError("connection refused")
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.ler_blob("file.json")
@@ -949,6 +1015,7 @@ class TestSharePointLerBlobEdgeCases:
             storage._cache.get_stale = MagicMock(return_value=None)
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = OSError("connection refused")
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 with pytest.raises(OSError):
@@ -965,6 +1032,7 @@ class TestSharePointLerBlobEdgeCases:
             direct_resp = self._mock_resp(200, content=b"direct_fallback")
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = [check_resp, direct_resp]
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.ler_blob("file.json")
@@ -983,6 +1051,7 @@ class TestSharePointLerBlobEdgeCases:
             direct_resp = self._mock_resp(200, content=b"direct_fallback")
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = [check_resp, content_resp_fail, direct_resp]
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.ler_blob("file.json")
@@ -1000,6 +1069,7 @@ class TestSharePointLerBlobEdgeCases:
             storage._cache._ttl = datetime.timedelta(seconds=0)
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.ler_blob("file.json")
             assert result == b"stale_content"
@@ -1009,6 +1079,7 @@ class TestSharePointLerBlobEdgeCases:
         storage = _make_storage_no_cache()
         storage._offline = True
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         with pytest.raises(FileNotFoundError, match="Modo offline"):
             storage._ler_blob_direct("missing.json", mock_httpx)
 
@@ -1016,6 +1087,7 @@ class TestSharePointLerBlobEdgeCases:
         """Lines 151-152: network exception → FileNotFoundError with original cause."""
         storage = _make_storage_no_cache()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.side_effect = OSError("connection timeout")
         with pytest.raises(FileNotFoundError, match="Erro ao acessar SharePoint"):
             storage._ler_blob_direct("file.json", mock_httpx)
@@ -1024,6 +1096,7 @@ class TestSharePointLerBlobEdgeCases:
         """429 (throttling) seguido de 200 é absorvido pelo retry — sem propagar erro."""
         storage = _make_storage_no_cache()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.side_effect = [
             self._mock_resp(429),
             self._mock_resp(200, content=b"ok_after_retry"),
@@ -1041,6 +1114,7 @@ class TestSharePointLerBlobEdgeCases:
         persistent_503 = self._mock_resp(503)
         persistent_503.raise_for_status.side_effect = RuntimeError("503 Service Unavailable")
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.return_value = persistent_503
         with (
             patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep"),
@@ -1057,6 +1131,7 @@ class TestSharePointLerBlobEdgeCases:
         forbidden = self._mock_resp(403)
         forbidden.raise_for_status.side_effect = RuntimeError("403 Forbidden")
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.return_value = forbidden
         with patch.dict("sys.modules", {"httpx": mock_httpx}), pytest.raises(StorageUnavailableError, match="403"):
             storage.listar_blobs("projetos")
@@ -1070,6 +1145,7 @@ class TestSharePointGravarBlobEdgeCases:
         mock_resp.status_code = 200
         mock_resp.raise_for_status = MagicMock()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.put.return_value = mock_resp
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             storage.gravar_blob("file.json", b"content")
@@ -1087,6 +1163,7 @@ class TestSharePointGravarBlobEdgeCases:
         put_resp.raise_for_status = MagicMock()
 
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.post.return_value = post_resp
         mock_httpx.put.return_value = put_resp
 
@@ -1105,6 +1182,7 @@ class TestSharePointListarBlobsEdgeCases:
             storage = _make_storage(Path(tmp))
             storage._offline = True
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = OSError("network error")
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.listar_blobs("config")
@@ -1114,6 +1192,7 @@ class TestSharePointListarBlobsEdgeCases:
         """Line 242: NOT offline + exception → raises FileNotFoundError."""
         storage = _make_storage_no_cache()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.side_effect = OSError("network error")
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             with pytest.raises(FileNotFoundError):
@@ -1125,6 +1204,7 @@ class TestSharePointListarBlobsEdgeCases:
         mock_resp = MagicMock()
         mock_resp.status_code = 404
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.return_value = mock_resp
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             result = storage.listar_blobs("missing")
@@ -1151,6 +1231,7 @@ class TestSharePointListarBlobsEdgeCases:
             sub_resp.json.return_value = {"value": [{"name": "inner.json", "file": {}}]}
 
             mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
             mock_httpx.get.side_effect = [parent_resp, sub_resp]
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 blobs = storage.listar_blobs("root")
@@ -1165,6 +1246,7 @@ class TestSharePointBlobExisteEdgeCases:
         """Lines 268-269: exception during GET → returns False."""
         storage = _make_storage_no_cache()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.side_effect = OSError("network failure")
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             result = storage.blob_existe("file.json")
@@ -1179,6 +1261,7 @@ class TestSharePointGerarUrlTemporaria:
         post_resp.status_code = 200
         post_resp.json.return_value = {"link": {"webUrl": "https://share.example.com/abc"}}
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.post.return_value = post_resp
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             url = storage.gerar_url_temporaria("doc.pdf")
@@ -1191,6 +1274,7 @@ class TestSharePointGerarUrlTemporaria:
         post_resp.status_code = 201
         post_resp.json.return_value = {"link": {"webUrl": "https://share.example.com/xyz"}}
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.post.return_value = post_resp
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             url = storage.gerar_url_temporaria("doc.pdf")
@@ -1200,6 +1284,7 @@ class TestSharePointGerarUrlTemporaria:
         """Lines 322-323: exception during createLink → returns None."""
         storage = _make_storage_no_cache()
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.post.side_effect = OSError("forbidden")
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             url = storage.gerar_url_temporaria("doc.pdf")
@@ -1211,6 +1296,7 @@ class TestSharePointGerarUrlTemporaria:
         post_resp = MagicMock()
         post_resp.status_code = 403
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.post.return_value = post_resp
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             url = storage.gerar_url_temporaria("doc.pdf")
@@ -1224,6 +1310,7 @@ class TestSharePointHealthCheckEdgeCases:
         mock_resp = MagicMock()
         mock_resp.status_code = 503
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.return_value = mock_resp
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             result = storage.health_check()
@@ -1433,6 +1520,7 @@ def _sp_cred() -> SharePointCredential:
 
 # ─── sharepoint adapter (greatest_gaps_batch2) ───────────────────────────────
 
+
 def test_sharepoint_success_and_error_branches(tmp_path, monkeypatch):
     cred = _sp_cred()
     # Garantir que variáveis de env de SP não poluem o teste via settings cacheados
@@ -1489,8 +1577,6 @@ def test_sharepoint_success_and_error_branches(tmp_path, monkeypatch):
     health = storage.health_check()
     assert health["status"] == "ok"
     assert health["drive_name"] == "Drive"
-
-
 
 
 # ─── infrastructure/adapters/blob_storage/_sharepoint_auth.py ─────────────────
@@ -1560,7 +1646,6 @@ class TestSharePointAuthCoverage:
         assert token == "cert_token"
         call_kwargs = mock_msal.ConfidentialClientApplication.call_args[1]
         assert "private_key" in call_kwargs.get("client_credential", {})
-
 
 
 # ---------------------------------------------------------------------------
@@ -1635,6 +1720,7 @@ class TestGetWithRetryRespectsRetryAfter:
         resp_200.headers = {}
 
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.side_effect = [resp_429, resp_200]
 
         with patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep") as mock_sleep:
@@ -1653,6 +1739,7 @@ class TestGetWithRetryRespectsRetryAfter:
         resp_200.headers = {}
 
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.side_effect = [resp_429, resp_200]
 
         with patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep") as mock_sleep:
@@ -1690,14 +1777,14 @@ class TestConcurrencyLimiter:
             return resp
 
         mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
         mock_httpx.get.side_effect = _slow_get
 
         storage = _make_storage_no_cache()
 
         with patch.object(sp_module, "_concurrency_limiter", test_semaphore):
             threads = [
-                threading.Thread(target=storage._get_with_retry, args=(mock_httpx, "http://x", {}))
-                for _ in range(6)
+                threading.Thread(target=storage._get_with_retry, args=(mock_httpx, "http://x", {})) for _ in range(6)
             ]
             for t in threads:
                 t.start()

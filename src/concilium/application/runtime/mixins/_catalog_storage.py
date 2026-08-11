@@ -24,6 +24,7 @@ o único usado em produção hoje) continua passando por
 from __future__ import annotations
 
 import json
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -59,6 +60,26 @@ _REMOTE_CACHE_TTL_SECONDS = 60 * 60
 # ainda um ganho real sobre sequencial, sem rajada grande o bastante pra
 # derrubar o event loop num container pequeno.
 _MAX_PARALLEL_FETCHES = 3
+
+# 2026-08-11 (warm-up + coalescência): um lock por `catalogo_id`, não um lock
+# global — carga de "mendeslobo" não deve bloquear a de "mendeslobo-rfi". Sem
+# isto, o warm-up assíncrono de startup (`server.py`) e a primeira request real
+# do usuário podiam se sobrepor: as duas erram o cache em disco (ainda não
+# escrito) e disparam ~800 round-trips ao Graph CADA UMA, dobrando a carga em
+# vez de uma reaproveitar o resultado que a outra está gravando. Quem chega
+# depois espera o lock e, ao adquiri-lo, reconsulta o cache — que a primeira
+# chamada acabou de gravar — em vez de repetir a carga fria.
+_load_locks: dict[str, threading.Lock] = {}
+_load_locks_guard = threading.Lock()
+
+
+def _get_catalog_load_lock(catalogo_id: str) -> threading.Lock:
+    with _load_locks_guard:
+        lock = _load_locks.get(catalogo_id)
+        if lock is None:
+            lock = threading.Lock()
+            _load_locks[catalogo_id] = lock
+        return lock
 
 
 def _fetch_all_parallel(paths: list[str], fetch_one) -> list[Any]:
@@ -252,6 +273,18 @@ def _remote_cache_path(config_root: Path, catalogo_id: str) -> Path:
     return config_root / "catalogos" / catalogo_id / ".catalog_bundle_remote.json"
 
 
+def _read_fresh_cache(cache_path: Path) -> dict[str, Any] | None:
+    if not cache_path.exists():
+        return None
+    try:
+        age = time.time() - cache_path.stat().st_mtime
+        if age < _REMOTE_CACHE_TTL_SECONDS:
+            return json.loads(cache_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return None
+
+
 def load_catalogo_via_storage(config_root: Path, catalogo_id: str, *, force_refresh: bool = False) -> dict[str, Any]:
     """Carrega catálogo via `BlobStoragePort`, backend resolvido de `CONCILIUM__STORE_BACKEND`.
 
@@ -262,43 +295,65 @@ def load_catalogo_via_storage(config_root: Path, catalogo_id: str, *, force_refr
     backend = catalog_storage_backend()
     cache_path = _remote_cache_path(config_root, catalogo_id)
 
-    if not force_refresh and cache_path.exists():
+    if not force_refresh:
+        cached = _read_fresh_cache(cache_path)
+        if cached is not None:
+            return cached
+
+    # Coalescência por catalogo_id (ver comentário em _get_catalog_load_lock) —
+    # quem chega enquanto outra carga do MESMO catálogo está em andamento espera
+    # aqui e, ao adquirir o lock, reconsulta o cache antes de repetir os ~800
+    # round-trips ao Graph.
+    lock = _get_catalog_load_lock(catalogo_id)
+    with lock:
+        if not force_refresh:
+            cached = _read_fresh_cache(cache_path)
+            if cached is not None:
+                return cached
+
+        storage = build_blob_storage()
         try:
-            age = time.time() - cache_path.stat().st_mtime
-            if age < _REMOTE_CACHE_TTL_SECONDS:
-                return json.loads(cache_path.read_text(encoding="utf-8"))
+            base = _catalog_prefix(catalogo_id, backend)
+            global_prefix = _global_producoes_prefix(backend)
+
+            catalogo: dict[str, Any] = {
+                "cpus": [],
+                "insumos": [],
+                "templates": {},
+                "estruturas_indiretas": [],
+                # Réplica fiel de uma peculiaridade do caminho filesystem
+                # (`_load_catalogo_from_disk`): esta chave é inicializada mas nunca
+                # populada — mantida vazia aqui de propósito, para paridade de
+                # comportamento entre os dois caminhos (não é um bug introduzido aqui).
+                "produtividades": [],
+            }
+            catalogo["cpus"] = _storage_load_cpus(storage, base)
+            catalogo["insumos"] = _storage_load_insumos(storage, base)
+            templates, estruturas = _storage_load_templates(storage, base)
+            catalogo["templates"] = templates
+            catalogo["estruturas_indiretas"] = estruturas
+            catalogo["producoes"] = _storage_load_and_synthesize_producoes(
+                storage, catalogo["cpus"], base, global_prefix
+            )
+        finally:
+            # Libera o pool de conexões (SharePointBlobStorage.close(), ver
+            # sharepoint.py) — best-effort e via duck-typing: backends que não
+            # abrem conexão persistente (ex. filesystem) simplesmente não têm
+            # este método.
+            close = getattr(storage, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except Exception:
+                    pass
+
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(json.dumps(catalogo, ensure_ascii=False), encoding="utf-8")
         except Exception:
             pass
 
-    storage = build_blob_storage()
-    base = _catalog_prefix(catalogo_id, backend)
-    global_prefix = _global_producoes_prefix(backend)
-
-    catalogo: dict[str, Any] = {
-        "cpus": [],
-        "insumos": [],
-        "templates": {},
-        "estruturas_indiretas": [],
-        # Réplica fiel de uma peculiaridade do caminho filesystem
-        # (`_load_catalogo_from_disk`): esta chave é inicializada mas nunca
-        # populada — mantida vazia aqui de propósito, para paridade de
-        # comportamento entre os dois caminhos (não é um bug introduzido aqui).
-        "produtividades": [],
-    }
-    catalogo["cpus"] = _storage_load_cpus(storage, base)
-    catalogo["insumos"] = _storage_load_insumos(storage, base)
-    templates, estruturas = _storage_load_templates(storage, base)
-    catalogo["templates"] = templates
-    catalogo["estruturas_indiretas"] = estruturas
-    catalogo["producoes"] = _storage_load_and_synthesize_producoes(storage, catalogo["cpus"], base, global_prefix)
-
-    try:
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path.write_text(json.dumps(catalogo, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
-
-    return catalogo
+        return catalogo
 
 
 # ── Write helpers (issue #147 parte 2) ────────────────────────────────────────

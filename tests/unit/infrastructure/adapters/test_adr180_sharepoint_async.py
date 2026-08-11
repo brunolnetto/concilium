@@ -404,3 +404,51 @@ class TestConcurrencyLimiterAsync:
             await asyncio.gather(*(storage._get_with_retry(f"http://x/{i}", {}) for i in range(6)))
 
         assert state["peak"] <= limit
+
+
+class TestConnectionPoolingAsync:
+    """Espelho async de TestSharePointBlobStorage (test_adr047_sharepoint.py,
+    2026-08-11) — `_client()` cria o `httpx.AsyncClient` UMA vez e reusa entre
+    chamadas desta mesma instância, em vez de abrir um novo por operação."""
+
+    async def test_client_not_created_until_first_use(self):
+        storage = _make_storage()
+        assert storage._http is None
+
+    async def test_client_reused_across_multiple_operations(self):
+        storage = _make_storage()
+        ok_resp = MagicMock(status_code=200, content=b"", headers={})
+        del_resp = MagicMock(status_code=204)
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(return_value=ok_resp)
+        mock_client.delete = AsyncMock(return_value=del_resp)
+        mock_httpx = MagicMock()
+        mock_httpx.AsyncClient = MagicMock(return_value=mock_client)
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            await storage.blob_existe("a.json")
+            await storage.blob_existe("b.json")
+            await storage.deletar_blob("c.json")
+
+        assert mock_httpx.AsyncClient.call_count == 1
+        assert mock_client.get.call_count == 2
+        assert mock_client.delete.call_count == 1
+
+    async def test_aclose_releases_and_resets_client(self):
+        storage = _make_storage()
+        mock_client = MagicMock()
+        mock_client.aclose = AsyncMock()
+        mock_httpx = MagicMock()
+        mock_httpx.AsyncClient = MagicMock(return_value=mock_client)
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            await storage._client()
+            await storage.aclose()
+
+        mock_client.aclose.assert_awaited_once()
+        assert storage._http is None
+
+    async def test_aclose_before_any_use_is_noop(self):
+        storage = _make_storage()
+        await storage.aclose()  # não deve lançar
+        assert storage._http is None
