@@ -2023,7 +2023,6 @@ class TestSharePointBlobStorageLerBlobsBatch:
 
     def test_mixed_200_and_302_sub_responses(self):
         """200 direto e 302 redirect no mesmo lote — ambos resolvidos."""
-        direct_bytes = json.dumps({"id": "direct"}).encode("utf-8")
         redirect_bytes = json.dumps({"id": "redirect"}).encode("utf-8")
         download_url = "https://cdn.example.com/redirect"
 
