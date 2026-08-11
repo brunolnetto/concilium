@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
 import threading
 import time
@@ -18,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 _GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _LARGE_FILE_THRESHOLD = 4 * 1024 * 1024  # 4 MB
+# 2026-08-11: teto documentado do Graph API para sub-requests por chamada de
+# $batch — ataca o N+1 de carregar o catálogo (issue #147/#148/#149/#153):
+# ~800 leituras individuais (1 GET :/content por arquivo) viram ~40 chamadas.
+_GRAPH_BATCH_SIZE = 20
 
 # Erros transitórios do Graph API — comuns logo após um blue-green swap, quando o
 # token MSAL da revisão nova ainda está "frio" ou o Graph está sob throttling.
@@ -229,6 +235,36 @@ class SharePointBlobStorage(BlobStoragePort):
                     time.sleep(wait_s)
         return last_response
 
+    def _post_with_retry(
+        self, httpx: Any, url: str, headers: dict[str, str], json_body: dict[str, Any]
+    ) -> Any:
+        """POST com o mesmo retry/backoff de `_get_with_retry` — usado por `$batch`.
+
+        `$batch` está sujeito ao mesmo throttling (429) das chamadas individuais
+        que ele substitui; sem retry aqui, um lote inteiro (até 20 leituras)
+        falharia de uma vez em vez de aguardar e tentar de novo como as
+        chamadas individuais já fazem.
+        """
+        last_response = None
+        with _concurrency_limiter:
+            for attempt, delay in enumerate((*_TRANSIENT_RETRY_DELAYS_S, None)):
+                r = httpx.post(url, headers=headers, json=json_body, timeout=_READ_TIMEOUT_S)
+                if r.status_code not in _TRANSIENT_STATUS_CODES:
+                    return r
+                last_response = r
+                if delay is not None:
+                    wait_s = _retry_after_seconds(r, delay)
+                    logger.warning(
+                        "SharePoint $batch: status %s transitório (tentativa %d/%d) — retry em %.1fs%s",
+                        r.status_code,
+                        attempt + 1,
+                        len(_TRANSIENT_RETRY_DELAYS_S) + 1,
+                        wait_s,
+                        " (Retry-After respeitado)" if wait_s != delay else "",
+                    )
+                    time.sleep(wait_s)
+        return last_response
+
     def _raise_for_read_status(self, r: Any, path: str) -> None:
         """Como r.raise_for_status(), mas erros de leitura persistentes (não 404) viram
         StorageUnavailableError — a rota HTTP não precisa de try/except; o handler
@@ -309,6 +345,97 @@ class SharePointBlobStorage(BlobStoragePort):
             lm = r.headers.get("Last-Modified", "")
             self._cache.put(path, content, etag, lm)
         return content
+
+    def _batch_relative_content_url(self, path: str) -> str:
+        """URL relativa (sem `https://graph.microsoft.com/v1.0`) do conteúdo do
+        item — formato exigido pelos sub-requests de `$batch` (Graph rejeita URL
+        absoluta ali; a autenticação do lote inteiro é feita 1x, no request
+        externo — sub-requests não levam Authorization própria)."""
+        safe = path.strip("/")
+        return f"/drives/{self._drive_id}/root:/{self._root_path}/{safe}:/content"
+
+    @staticmethod
+    def _decode_batch_body(body: Any) -> bytes | None:
+        """Decodifica o `body` de uma sub-resposta de `$batch`.
+
+        Para arquivos .json (o caso do catálogo — só JSON), o Graph normalmente
+        já devolve o conteúdo inline como objeto JSON nativo (a sub-resposta tem
+        Content-Type application/json), sem base64. Trata também string (texto
+        puro ou, mais raro, conteúdo base64) por robustez. Formato não
+        reconhecido retorna None — o chamador cai para leitura individual só
+        daquele path, não do lote inteiro.
+        """
+        if body is None:
+            return None
+        if isinstance(body, dict | list):
+            return json.dumps(body, ensure_ascii=False).encode("utf-8")
+        if isinstance(body, str):
+            try:
+                decoded = base64.b64decode(body, validate=True)
+                decoded.decode("utf-8")  # confirma texto válido — não é binário arbitrário que por acaso decodificou
+                return decoded
+            except Exception:
+                return body.encode("utf-8")
+        return None
+
+    def ler_blobs_batch(self, paths: list[str]) -> dict[str, bytes]:
+        """Lê vários blobs numa única (ou poucas) chamada(s) via Graph `$batch` —
+        até `_GRAPH_BATCH_SIZE` sub-requests por lote (ver BlobStoragePort).
+
+        Causa raiz de fundo do timeout em pesquisar_catalogo/catalog tools (issue
+        #147/#148/#149/#153): carregar o catálogo "mendeslobo" faz 800+ leituras
+        individuais (1 GET :/content por arquivo). O pooling de conexão
+        (2026-08-11) eliminou o handshake TCP+TLS repetido, mas não o N+1 em si
+        — isto ataca o N+1 propriamente: até 20 leituras por chamada HTTP ao
+        Graph, ~800 round-trips → ~40.
+
+        Paths que falharem (sub-resposta ausente/não-200, body em formato não
+        reconhecido) são omitidos do dict de retorno — o chamador
+        (`_read_json_blobs`) cai para `ler_blob` individual só nesses casos.
+        """
+        if not paths:
+            return {}
+        httpx = self._client()
+        result: dict[str, bytes] = {}
+
+        for i in range(0, len(paths), _GRAPH_BATCH_SIZE):
+            chunk = paths[i : i + _GRAPH_BATCH_SIZE]
+            id_to_path = {str(idx): p for idx, p in enumerate(chunk)}
+            requests_body = {
+                "requests": [
+                    {"id": rid, "method": "GET", "url": self._batch_relative_content_url(p)}
+                    for rid, p in id_to_path.items()
+                ]
+            }
+            try:
+                r = self._post_with_retry(httpx, f"{_GRAPH_BASE}/$batch", self._headers(), requests_body)
+            except Exception as exc:
+                logger.warning(
+                    "SharePoint $batch: chamada falhou (%d paths, fallback individual): %s", len(chunk), exc
+                )
+                continue
+            if r is None or r.status_code != 200:
+                logger.warning(
+                    "SharePoint $batch: status %s inesperado (%d paths, fallback individual)",
+                    getattr(r, "status_code", "?"),
+                    len(chunk),
+                )
+                continue
+
+            try:
+                responses = r.json().get("responses", [])
+            except Exception:
+                continue
+
+            for sub in responses:
+                path = id_to_path.get(str(sub.get("id")))
+                if path is None or sub.get("status") != 200:
+                    continue
+                content = self._decode_batch_body(sub.get("body"))
+                if content is not None:
+                    result[path] = content
+
+        return result
 
     def gravar_blob(self, path: str, content: bytes) -> None:
         """Grava blob no SharePoint (ADR-047 §D1, §D3).

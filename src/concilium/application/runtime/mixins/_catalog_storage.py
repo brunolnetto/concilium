@@ -115,22 +115,50 @@ def _global_producoes_prefix(backend: str) -> str:
 def _read_json_blobs(storage: BlobStoragePort, prefix: str) -> list[tuple[str, Any]]:
     """Lista e lê todo `.json` sob um prefixo — retorna pares (caminho, conteúdo parseado).
 
-    Leituras paralelizadas (ver _fetch_all_parallel) — catálogos grandes têm
-    centenas de arquivos individuais; sequencial pagava minutos de round-trips.
+    Leitura em lote via `ler_blobs_batch` (SharePoint: Graph `$batch`, ver
+    SharePointBlobStorage.ler_blobs_batch) — ataca o N+1 de catálogos grandes:
+    centenas de arquivos individuais viravam centenas de round-trips (issue
+    #147/#148/#149/#153), mesmo com pooling de conexão (que só eliminou o
+    handshake TCP+TLS repetido, não o N+1). `getattr` defensivo em vez de
+    chamada direta: alguns fakes de teste (duck-typed, não sub-classe de
+    BlobStoragePort) não implementam o método — nesse caso todos os paths
+    caem no fallback abaixo, preservando o comportamento paralelo-via-ler_blob
+    de antes desta otimização. Paths que o lote não resolveu (falha pontual
+    num item) também caem nesse mesmo fallback.
     """
     try:
         paths = sorted(p for p in storage.listar_blobs(prefix) if p.endswith(".json"))
     except FileNotFoundError:
         return []
+    if not paths:
+        return []
 
-    def _fetch(p: str) -> tuple[str, Any] | None:
+    batch_fn = getattr(storage, "ler_blobs_batch", None)
+    raw_by_path: dict[str, bytes] = batch_fn(paths) if callable(batch_fn) else {}
+
+    missing = [p for p in paths if p not in raw_by_path]
+    if missing:
+
+        def _fetch_raw(p: str) -> bytes | None:
+            try:
+                return storage.ler_blob(p)
+            except Exception:
+                return None
+
+        for p, raw in zip(missing, _fetch_all_parallel(missing, _fetch_raw), strict=True):
+            if raw is not None:
+                raw_by_path[p] = raw
+
+    result: list[tuple[str, Any]] = []
+    for p in paths:
+        raw = raw_by_path.get(p)
+        if raw is None:
+            continue
         try:
-            raw = storage.ler_blob(p)
-            return p, json.loads(raw.decode("utf-8"))
+            result.append((p, json.loads(raw.decode("utf-8"))))
         except Exception:
-            return None
-
-    return [r for r in _fetch_all_parallel(paths, _fetch) if r is not None]
+            continue
+    return result
 
 
 def _slc_processar_blob_data(data: Any) -> list[dict]:
@@ -212,25 +240,85 @@ def _storage_load_producao_by_id(storage: BlobStoragePort, prod_id: str, search_
     return None
 
 
+def _storage_load_producoes_by_ids_batch(
+    storage: BlobStoragePort, prod_ids: list[str], search_prefixes: list[str]
+) -> dict[str, dict]:
+    """Resolve várias `producao_id` de uma vez — mesma semântica de
+    `_storage_load_producao_by_id` (primeiro prefixo da lista que existir
+    vence), mas em lote por prefixo (ver `ler_blobs_batch`) em vez de 1
+    round-trip por (prod_id × prefixo). Catálogos com centenas de CPUs
+    distintos pagavam esse custo sequencial mesmo paralelizado.
+    """
+    remaining = list(prod_ids)
+    result: dict[str, dict] = {}
+
+    # getattr defensivo: fakes de teste duck-typed (não sub-classe de
+    # BlobStoragePort) sem o método pulam direto pra rede de segurança abaixo
+    # — que tenta tudo individualmente, preservando o comportamento
+    # paralelo-via-ler_blob de antes desta otimização.
+    batch_fn = getattr(storage, "ler_blobs_batch", None)
+    if callable(batch_fn):
+        for prefix in search_prefixes:
+            if not remaining:
+                break
+            path_to_id = {f"{prefix}/{pid}.json": pid for pid in remaining}
+            raw_by_path = batch_fn(list(path_to_id))
+            resolved_now: set[str] = set()
+            for path, pid in path_to_id.items():
+                raw = raw_by_path.get(path)
+                if raw is None:
+                    continue
+                try:
+                    result[pid] = json.loads(raw.decode("utf-8"))
+                    resolved_now.add(pid)
+                except Exception:
+                    continue
+            remaining = [pid for pid in remaining if pid not in resolved_now]
+
+    # Rede de segurança: o que sobrou (não resolvido em NENHUM prefixo via lote)
+    # tenta de novo individualmente antes de desistir — cobre backends sem
+    # batch de verdade (já tentaram tudo, custo residual é redundante mas
+    # inofensivo) e qualquer falso-negativo pontual do lote.
+    if remaining:
+
+        def _fetch(prod_id: str) -> tuple[str, dict] | None:
+            found = _storage_load_producao_by_id(storage, prod_id, search_prefixes)
+            return (prod_id, found) if found is not None else None
+
+        for r in _fetch_all_parallel(remaining, _fetch):
+            if r is not None:
+                pid, data = r
+                result[pid] = data
+
+    return result
+
+
 def _storage_load_producoes_from_cpus(
-    storage: BlobStoragePort, cpus: list[dict], base: str, global_prefix: str
+    storage: BlobStoragePort,
+    cpus: list[dict],
+    base: str,
+    global_prefix: str,
+    seen_prod_ids: set[str] | None = None,
 ) -> list[dict]:
-    """Uma leitura por `producao_id` único referenciado pelos CPUs — paralelizada
-    (ver _fetch_all_parallel); catálogos com centenas de CPUs distintos pagavam
-    o mesmo custo de round-trip sequencial de _read_json_blobs."""
+    """Producoes referenciadas por `producao_id_ref`/`producao_id` dos CPUs.
+
+    `seen_prod_ids` (já resolvidos via scan de diretório + síntese direta do
+    CPU — ver `_storage_load_and_synthesize_producoes`) é excluído ANTES de
+    buscar: `_merge_global_producoes` já descartava esses resultados depois
+    (dedup por id) — buscar e descartar era rede gasta à toa, principalmente
+    perceptível com o N+1 do SharePoint (até 3 prefixos × cada id único).
+    """
     search_prefixes = [global_prefix, f"{base}/producoes", f"{base}/produtividades"]
+    seen_prod_ids = seen_prod_ids or set()
     prod_ids: list[str] = []
     seen: set[str] = set()
     for cpu in cpus:
         prod_id = cpu.get("producao_id_ref") or cpu.get("producao_id")
-        if prod_id and prod_id not in seen:
+        if prod_id and prod_id not in seen and prod_id not in seen_prod_ids:
             seen.add(prod_id)
             prod_ids.append(prod_id)
 
-    def _fetch(prod_id: str) -> dict | None:
-        return _storage_load_producao_by_id(storage, prod_id, search_prefixes)
-
-    return [r for r in _fetch_all_parallel(prod_ids, _fetch) if r is not None]
+    return list(_storage_load_producoes_by_ids_batch(storage, prod_ids, search_prefixes).values())
 
 
 def _merge_global_producoes(producoes: list[dict], global_prods: list[dict]) -> list[dict]:
@@ -246,9 +334,9 @@ def _storage_load_and_synthesize_producoes(
 ) -> list[dict]:
     producoes = _storage_load_producoes_dir(storage, base, "producoes")
     producoes += _storage_load_producoes_dir(storage, base, "produtividades")
-    seen_prod_ids = {p.get("id") for p in producoes if "id" in p}
+    seen_prod_ids: set[str] = {p["id"] for p in producoes if "id" in p}
     producoes.extend(_synthesize_missing_producoes(cpus, seen_prod_ids))
-    global_prods = _storage_load_producoes_from_cpus(storage, cpus, base, global_prefix)
+    global_prods = _storage_load_producoes_from_cpus(storage, cpus, base, global_prefix, seen_prod_ids)
     return _merge_global_producoes(producoes, global_prods)
 
 

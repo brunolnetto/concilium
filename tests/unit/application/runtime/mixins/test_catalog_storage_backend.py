@@ -156,6 +156,48 @@ class TestStorageLoadProducoesEmSintese:
         assert global_prod["valor_horario"] == 99.0
 
 
+class TestStorageLoadProducoesFromCpusSkipSeen:
+    """2026-08-11 ($batch): `_merge_global_producoes` já descartava (dedup por
+    id) qualquer resultado de `_storage_load_producoes_from_cpus` cujo id já
+    estivesse em `producoes` — buscar e descartar gastava rede à toa. Agora
+    `seen_prod_ids` é excluído ANTES de buscar."""
+
+    class _CountingStorage(LocalBlobStorage):
+        def __init__(self, root):
+            super().__init__(root)
+            self.ler_blob_calls: list[str] = []
+
+        def ler_blob(self, path: str) -> bytes:
+            self.ler_blob_calls.append(path)
+            return super().ler_blob(path)
+
+    def test_seen_prod_id_nao_dispara_fetch(self, tmp_path):
+        cat_dir = _build_full_catalog_tree(tmp_path)
+        storage = self._CountingStorage(tmp_path)
+        base = f"catalogos/{cat_dir.name}"
+        cpus = [{"producao_id_ref": "PROD-A"}]  # PROD-A já existe em produtividades/ (bulk-load)
+
+        result = cs._storage_load_producoes_from_cpus(
+            storage, cpus, base, global_prefix="producoes", seen_prod_ids={"PROD-A"}
+        )
+
+        assert result == []
+        assert storage.ler_blob_calls == []
+
+    def test_prod_id_nao_visto_ainda_dispara_fetch(self, tmp_path):
+        cat_dir = _build_full_catalog_tree(tmp_path)
+        storage = self._CountingStorage(tmp_path)
+        base = f"catalogos/{cat_dir.name}"
+        cpus = [{"producao_id_ref": "PROD-GLOBAL"}]
+
+        result = cs._storage_load_producoes_from_cpus(
+            storage, cpus, base, global_prefix="producoes", seen_prod_ids=set()
+        )
+
+        assert {p["id"] for p in result} == {"PROD-GLOBAL"}
+        assert storage.ler_blob_calls  # buscou de verdade
+
+
 class TestStorageLoadTemplates:
     def test_carrega_templates_e_estruturas_indiretas(self, tmp_path):
         cat_dir = _build_full_catalog_tree(tmp_path)
