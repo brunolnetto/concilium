@@ -70,6 +70,57 @@ class TestResolveCatalogItemsEmptyId:
         assert result[0]["codigo"] == "INS-01"
 
 
+class TestResolveCatalogItemsOverlayMalformado:
+    """Regressão: overlay de projeto com valor não-dict (ex.: uma sugestão/placeholder
+    de texto gravada onde deveria ir o item completo) não pode injetar uma string solta
+    na lista de itens resolvidos — isso propagava AttributeError mais a jusante em
+    skill-05 ('str' object has no attribute 'get'), num ponto bem mais difícil de
+    diagnosticar do que aqui, na origem da resolução."""
+
+    def test_proj_overlay_only_entry_nao_dict_e_ignorada(self):
+        from concilium.application.services.catalog.catalog_resolver import (
+            CatalogResolutionTrace,
+            _resolve_catalog_items,
+        )
+
+        proj_overlay = {
+            "PROD-VALIDA": {"id": "PROD-VALIDA", "valor_horario": 100.0},
+            "PROD-SUGERIDA": "PROD-SUGERIDA-APROXIMADA",  # malformado: string em vez de dict
+        }
+        trace = CatalogResolutionTrace()
+
+        result = _resolve_catalog_items([], id_key=None, jur_overlay={}, proj_overlay=proj_overlay, trace=trace)
+
+        assert len(result) == 1
+        assert result[0]["id"] == "PROD-VALIDA"
+        assert "PROD-SUGERIDA" not in trace.to_dict()
+
+    def test_deep_merge_overlay_nao_dict_mantem_base_intacta(self):
+        from concilium.application.services.catalog.catalog_resolver import _deep_merge
+
+        base = {"id": "CPU-01", "descricao": "original"}
+
+        result = _deep_merge(base, "algum texto solto")  # malformado: string em vez de dict
+
+        assert result == base
+
+    def test_resolve_catalog_items_com_overlay_de_item_existente_malformado(self):
+        """iid presente tanto no master quanto no overlay de projeto, mas o overlay
+        é uma string — _deep_merge ignora e o item do master é preservado."""
+        from concilium.application.services.catalog.catalog_resolver import (
+            CatalogResolutionTrace,
+            _resolve_catalog_items,
+        )
+
+        items = [{"id": "CPU-01", "descricao": "original"}]
+        proj_overlay = {"CPU-01": "sugestao-invalida"}
+        trace = CatalogResolutionTrace()
+
+        result = _resolve_catalog_items(items, id_key=None, jur_overlay={}, proj_overlay=proj_overlay, trace=trace)
+
+        assert len(result) == 1
+        assert result[0] == {"id": "CPU-01", "descricao": "original"}
+
 
 # catalog_resolver.py lines 157, 168-174:
 # resolve_insumo with master file present → returns (item, "master")

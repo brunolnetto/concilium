@@ -246,6 +246,22 @@ class TestBuildProducaoParaSinergia:
         prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real(), valor_horario="nao-numerico")
         assert _build_producao_para_sinergia(prod) is None
 
+    def test_producao_construida_quando_origem_e_string_solta(self):
+        """Regressão: 119/169 produções do mendeslobo têm `origem` como string
+        solta (ex.: "PROPRIA") em vez do dict {tipo, fonte_id, ...} — legado de
+        como foram enriquecidas com grafo_sinergia (ADR-179). Reproduzia
+        AttributeError('str' object has no attribute 'get') em produção
+        (skill-05, ERRO_PRECONDICAO) sempre que o CPU referenciado tinha essa
+        combinação (origem=string + grafo_sinergia presente)."""
+        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real())
+        prod["origem"] = "PROPRIA"
+
+        producao = _build_producao_para_sinergia(prod)
+
+        assert producao is not None
+        assert producao.origem.referencia == "PROPRIA"
+        assert producao.grafo_sinergia is not None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # _calcular_custo_equipamento — custo_mensal_override
@@ -337,6 +353,47 @@ class TestBuildCompParaItemComGrafo:
         assert comp_sem == comp_com
         # A única diferença é a ausência/presença de validações VAL-SINERGIA-*
         assert [v.codigo for v in validacoes_sem if v.codigo.startswith("VAL-SINERGIA")] == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regressão: item malformado (string em vez de dict) em composicao_itens/
+# prod_lookup não pode travar skill-05 com AttributeError ('str' object has no
+# attribute 'get') — dado de catálogo/overlay resolvido sem validação de schema
+# (CatalogResolver) pode conter isso após um merge/rascunho incompleto.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestDimensionamentoComItemMalformado:
+    def test_build_comp_para_item_prod_lookup_resolve_string(self):
+        """prod_lookup[prod_id_ref] é uma string (não Producao dict) — não deve
+        propagar AttributeError; cai para composição vazia (fallback)."""
+        cpu = _cpu_dict()
+        prod_lookup = {_PROD_ID: "PROD-SUGERIDA-APROXIMADA"}
+        validacoes: list = []
+
+        comp = _build_comp_para_item(cpu, prod_lookup, validacoes)
+
+        assert isinstance(comp, dict)
+
+    def test_validar_materiais_item_composicao_itens_com_string_solta(self):
+        """composicao_itens com um elemento string solto (não {insumo_id, ...}) —
+        não deve propagar AttributeError; item malformado é ignorado."""
+        _validar_materiais_item = _MOD._validar_materiais_item
+        comp = {"materiais": [], "funcoes": [], "equipamentos": []}
+        cpu = {
+            "codigo": "CPU-TESTE-MALFORMADO",
+            "composicao_itens": [
+                {"insumo_id": "AREIA", "categoria_custo": "MATERIAL", "coeficiente": 1.0},
+                "DIESEL-S10",  # malformado: string em vez de dict
+            ],
+        }
+        validacoes: list = []
+
+        _validar_materiais_item(comp, cpu, validacoes)
+
+        # AREIA está em composicao_itens (MATERIAL) mas não em comp["materiais"] —
+        # gera VAL-EQUIP-MAT-02; a string solta não gera exceção nem entra na comparação.
+        assert any(v.codigo == "VAL-EQUIP-MAT-02" for v in validacoes)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

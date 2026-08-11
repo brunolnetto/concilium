@@ -103,6 +103,51 @@ def test_validar_cpu_completa_retorna_7_validacoes_incluindo_funcoes_e_equipamen
     assert "VAL-CPU-INS-07" in codigos
 
 
+def test_validar_cpu_integridade_reporta_item_malformado_em_composicao_itens():
+    """Regressão: composicao_itens com uma string solta (não {insumo_id, ...}) —
+    dado de catálogo/overlay resolvido sem validação de schema pode conter isso
+    após um merge/rascunho incompleto. Deve ser reportado (VAL-CPU-STR-04), não
+    causar AttributeError('str' object has no attribute 'get') em skill-05."""
+    repo = RepositorioInsumo({"insumos": []})
+    validator = ValidadorCPUInsumo(repo)
+    cpu = {
+        "codigo": "TEST-CPU-MALFORMADO",
+        "unidade": "m3",
+        "producao_id_ref": "PROD-X",
+        "composicao_itens": [
+            {"insumo_id": "AJUDANTE", "coeficiente": 0.5, "categoria_custo": "MAO_OBRA"},
+            "DIESEL-S10",  # malformado: string em vez de dict
+        ],
+    }
+
+    resultados = validator.validar_cpu_integridade(cpu)
+    str04 = [r for r in resultados if r.codigo == "VAL-CPU-STR-04"]
+
+    assert len(str04) == 1
+    assert str04[0].status == "ERRO"
+    assert "DIESEL-S10" in str04[0].mensagem
+
+
+def test_validar_cpu_completa_nao_trava_com_item_malformado_em_composicao_itens():
+    """Regressão: validar_cpu_completa não deve propagar AttributeError quando
+    composicao_itens tem um elemento string solto — só reporta via VAL-CPU-STR-04
+    (validar_cpu_integridade) e ignora o item malformado no loop de VAL-CPU-INS-*."""
+    repo = RepositorioInsumo({"insumos": [{"codigo": "AJUDANTE", "tipo": "MAO_OBRA", "unidade": "mes"}]})
+    validator = ValidadorCPUInsumo(repo)
+    cpu = {
+        "codigo": "TEST-CPU-MALFORMADO",
+        "unidade": "m3",
+        "producao_id_ref": "PROD-X",
+        "composicao_itens": [
+            {"insumo_id": "AJUDANTE", "coeficiente": 0.5, "categoria_custo": "MAO_OBRA"},
+            "DIESEL-S10",
+        ],
+    }
+
+    resultados = validator.validar_cpu_completa(cpu)  # não deve levantar AttributeError
+
+    assert any(r.codigo == "VAL-CPU-STR-04" for r in resultados)
+
 
 
 

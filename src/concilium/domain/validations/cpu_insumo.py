@@ -431,6 +431,24 @@ class ValidadorCPUInsumo:
                 )
             )
 
+        # Item de composicao_itens que não é um dict (ex.: string solta) — dado de
+        # catálogo/overlay corrompido a montante (merge/rascunho incompleto). Reportado aqui
+        # em vez de deixar validar_cpu_completa (e o pipeline de skill-05) travar tentando
+        # chamar .get() nele.
+        itens_malformados = [it for it in cpu.get("composicao_itens", []) if not isinstance(it, dict)]
+        if itens_malformados:
+            resultados.append(
+                ValidacaoItem(
+                    codigo="VAL-CPU-STR-04",
+                    status="ERRO",
+                    mensagem=(
+                        f"CPU '{codigo}': {len(itens_malformados)} item(ns) de composicao_itens "
+                        f"malformado(s) (esperado dict, recebido {type(itens_malformados[0]).__name__}: "
+                        f"{itens_malformados[0]!r})"
+                    ),
+                )
+            )
+
         if not resultados:
             resultados.append(ValidacaoItem(codigo="VAL-CPU-STR-01", status="OK"))
 
@@ -443,6 +461,10 @@ class ValidadorCPUInsumo:
         resultados.extend(self.validar_cpu_integridade(cpu))
 
         for composicao_item in cpu.get("composicao_itens", []):
+            # Reportado como VAL-CPU-STR-04 em validar_cpu_integridade (acima) — aqui só
+            # evita chamar .get() num item que não é dict (ex.: string solta).
+            if not isinstance(composicao_item, dict):
+                continue
             resultado_01 = self.validar_insumo_existe(composicao_item)
             resultados.append(resultado_01)
             if resultado_01.status == "ERRO":

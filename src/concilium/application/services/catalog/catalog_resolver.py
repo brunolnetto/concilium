@@ -281,14 +281,25 @@ def _resolve_catalog_items(
         ids_processed.add(iid)
         trace.record(iid, source)
     for iid, data in proj_overlay.items():
-        if iid not in ids_processed:
+        # isinstance(..., dict): overlay de projeto malformado (ex.: uma sugestão/placeholder
+        # de texto gravada onde deveria ir o dict completo do item) não pode injetar uma
+        # string solta na lista de itens resolvidos — isso propagava AttributeError mais
+        # a jusante (skill-05: ('str' object has no attribute 'get')) num ponto bem mais
+        # difícil de diagnosticar do que aqui, na origem da resolução.
+        if iid not in ids_processed and isinstance(data, dict):
             resolved_items.append(data)
             trace.record(iid, "project")
     return resolved_items
 
 
-def _deep_merge(base: dict, overlay: dict) -> dict:
-    """Merge: overlay vence em campos escalares; dicts são mesclados recursivamente."""
+def _deep_merge(base: dict, overlay: Any) -> dict:
+    """Merge: overlay vence em campos escalares; dicts são mesclados recursivamente.
+
+    `overlay` não-dict (dado malformado — ver `_resolve_catalog_items`) é ignorado:
+    mantém `base` intacto em vez de propagar AttributeError em `overlay.items()`.
+    """
+    if not isinstance(overlay, dict):
+        return dict(base)
     result = dict(base)
     for k, v in overlay.items():
         if isinstance(v, dict) and k in result and isinstance(result[k], dict):
