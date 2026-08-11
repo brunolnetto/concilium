@@ -7,6 +7,7 @@ import json
 import logging
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -378,6 +379,46 @@ class SharePointBlobStorage(BlobStoragePort):
                 return body.encode("utf-8")
         return None
 
+    def _fetch_download_urls_parallel(self, httpx: Any, download_urls: dict[str, str]) -> dict[str, bytes]:
+        """Busca o conteúdo real a partir das URLs pré-autenticadas devolvidas
+        pelo `$batch`.
+
+        2026-08-11 (confirmado em produção): o Graph NÃO inlina o conteúdo de
+        `:/content` para itens do SharePoint (drive de site, diferente de
+        OneDrive pessoal) — toda sub-resposta de `$batch` vem como 302 com
+        header `Location` apontando pra uma URL de download pré-autenticada
+        (`tempauth` na própria query string) e body vazio. `_decode_batch_body`
+        nunca é alcançado nesse caso (status != 200); é preciso seguir o
+        redirect manualmente numa segunda fase.
+
+        A URL do `Location` já é pré-autenticada — sem `Authorization`, e sem
+        contar contra a cota de throttling do Graph API (é servida pelo próprio
+        SharePoint/CDN, não pelo endpoint `/v1.0/`) — pode paralelizar mais
+        agressivamente que `_MAX_CONCURRENT_REQUESTS` (esse teto é
+        especificamente sobre chamadas ao Graph). Ainda conservador (2×, não
+        um valor grande) por causa do teto de CPU do cgroup do container (ADR-180
+        / issue #149) — rajada grande de handshakes TLS concorrentes já
+        suspendeu o container inteiro antes.
+        """
+        result: dict[str, bytes] = {}
+        items = list(download_urls.items())
+
+        def _fetch(item: tuple[str, str]) -> tuple[str, bytes | None]:
+            path, url = item
+            try:
+                r = httpx.get(url, follow_redirects=True, timeout=_READ_TIMEOUT_S)
+                if r.status_code == 200:
+                    return path, r.content
+            except Exception:
+                pass
+            return path, None
+
+        with ThreadPoolExecutor(max_workers=min(_MAX_CONCURRENT_REQUESTS * 2, len(items))) as pool:
+            for path, content in pool.map(_fetch, items):
+                if content is not None:
+                    result[path] = content
+        return result
+
     def ler_blobs_batch(self, paths: list[str]) -> dict[str, bytes]:
         """Lê vários blobs numa única (ou poucas) chamada(s) via Graph `$batch` —
         até `_GRAPH_BATCH_SIZE` sub-requests por lote (ver BlobStoragePort).
@@ -386,17 +427,29 @@ class SharePointBlobStorage(BlobStoragePort):
         #147/#148/#149/#153): carregar o catálogo "mendeslobo" faz 800+ leituras
         individuais (1 GET :/content por arquivo). O pooling de conexão
         (2026-08-11) eliminou o handshake TCP+TLS repetido, mas não o N+1 em si
-        — isto ataca o N+1 propriamente: até 20 leituras por chamada HTTP ao
-        Graph, ~800 round-trips → ~40.
+        — isto ataca o N+1 propriamente, em 2 fases:
+          1. `$batch`: até 20 leituras por chamada HTTP ao Graph — ~800
+             round-trips → ~40. Pra drives de SharePoint (não OneDrive pessoal),
+             cada sub-resposta de `:/content` vem como 302 com a URL de
+             download pré-autenticada no header `Location` (confirmado em
+             produção — Graph não inlina o conteúdo aqui), não o conteúdo
+             direto — por isso a fase 2.
+          2. Segue os redirects em paralelo (`_fetch_download_urls_parallel`)
+             — são URLs pré-autenticadas, não chamadas ao Graph, então não
+             sofrem do throttling que rege `_MAX_CONCURRENT_REQUESTS`.
 
-        Paths que falharem (sub-resposta ausente/não-200, body em formato não
-        reconhecido) são omitidos do dict de retorno — o chamador
-        (`_read_json_blobs`) cai para `ler_blob` individual só nesses casos.
+        Sub-resposta com Content-Type JSON nativo (200 direto, sem redirect —
+        mantido por robustez, ex.: OneDrive pessoal ou mudança de comportamento
+        do Graph) também é aceita. Paths que falharem em ambas as fases (sub-
+        resposta ausente/erro, download falhou) são omitidos do dict de
+        retorno — o chamador (`_read_json_blobs`) cai para `ler_blob`
+        individual só nesses casos.
         """
         if not paths:
             return {}
         httpx = self._client()
         result: dict[str, bytes] = {}
+        download_urls: dict[str, str] = {}
 
         for i in range(0, len(paths), _GRAPH_BATCH_SIZE):
             chunk = paths[i : i + _GRAPH_BATCH_SIZE]
@@ -429,11 +482,21 @@ class SharePointBlobStorage(BlobStoragePort):
 
             for sub in responses:
                 path = id_to_path.get(str(sub.get("id")))
-                if path is None or sub.get("status") != 200:
+                if path is None:
                     continue
-                content = self._decode_batch_body(sub.get("body"))
-                if content is not None:
-                    result[path] = content
+                status = sub.get("status")
+                if status == 200:
+                    content = self._decode_batch_body(sub.get("body"))
+                    if content is not None:
+                        result[path] = content
+                elif status in (301, 302, 303, 307, 308):
+                    location = (sub.get("headers") or {}).get("Location")
+                    if location:
+                        download_urls[path] = location
+                # outro status: omitido — cai pro fallback individual do chamador
+
+        if download_urls:
+            result.update(self._fetch_download_urls_parallel(httpx, download_urls))
 
         return result
 

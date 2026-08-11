@@ -23,7 +23,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -1945,3 +1945,205 @@ class TestSharePointBlobStorageLerBlobsBatch:
         url = storage._batch_relative_content_url("produtividades/PROD-1.json")
         assert url == "/drives/drive-1/root:/Concilium/test/produtividades/PROD-1.json:/content"
         assert not url.startswith("http")
+
+    def test_302_sub_response_follows_location_header(self):
+        """Caso real (confirmado em produção, 2026-08-11): Graph retorna 302 com
+        Location pré-autenticado para drives de SharePoint. O conteúdo deve ser
+        buscado na URL do Location, não descartado."""
+        download_url = "https://mendesloboconstrucao.sharepoint.com/sites/engenharia/_layouts/15/download.aspx?UniqueId=abc&tempauth=v1.token"
+        content_bytes = json.dumps({"id": "CPU-001"}).encode("utf-8")
+
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        resp_batch = MagicMock()
+        resp_batch.status_code = 200
+        resp_batch.json.return_value = {
+            "responses": [{"id": "0", "status": 302, "headers": {"Location": download_url}, "body": ""}]
+        }
+        mock_httpx.post.return_value = resp_batch
+
+        resp_download = MagicMock()
+        resp_download.status_code = 200
+        resp_download.content = content_bytes
+        mock_httpx.get.return_value = resp_download
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["cpus/CPU-001.json"])
+
+        assert json.loads(result["cpus/CPU-001.json"]) == {"id": "CPU-001"}
+        mock_httpx.get.assert_called_once_with(download_url, follow_redirects=True, timeout=ANY)
+
+    def test_302_without_location_header_omitted(self):
+        """302 sem Location não vira conteúdo — cai pro fallback individual."""
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        resp_batch = MagicMock()
+        resp_batch.status_code = 200
+        resp_batch.json.return_value = {
+            "responses": [{"id": "0", "status": 302, "headers": {}, "body": ""}]
+        }
+        mock_httpx.post.return_value = resp_batch
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["a.json"])
+
+        assert result == {}
+        mock_httpx.get.assert_not_called()
+
+    def test_all_redirect_codes_collected(self):
+        """301/303/307/308 também são seguidos — não só 302."""
+        download_url = "https://cdn.example.com/file"
+        content_bytes = b'{"id": "x"}'
+
+        for redirect_status in (301, 303, 307, 308):
+            storage = _make_storage()
+            mock_httpx = MagicMock()
+            mock_httpx.Client.return_value = mock_httpx
+
+            resp_batch = MagicMock()
+            resp_batch.status_code = 200
+            resp_batch.json.return_value = {
+                "responses": [{"id": "0", "status": redirect_status, "headers": {"Location": download_url}, "body": ""}]
+            }
+            mock_httpx.post.return_value = resp_batch
+
+            resp_dl = MagicMock()
+            resp_dl.status_code = 200
+            resp_dl.content = content_bytes
+            mock_httpx.get.return_value = resp_dl
+
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                result = storage.ler_blobs_batch(["a.json"])
+
+            assert "a.json" in result, f"status {redirect_status} não foi seguido"
+
+    def test_mixed_200_and_302_sub_responses(self):
+        """200 direto e 302 redirect no mesmo lote — ambos resolvidos."""
+        direct_bytes = json.dumps({"id": "direct"}).encode("utf-8")
+        redirect_bytes = json.dumps({"id": "redirect"}).encode("utf-8")
+        download_url = "https://cdn.example.com/redirect"
+
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        resp_batch = MagicMock()
+        resp_batch.status_code = 200
+        resp_batch.json.return_value = {
+            "responses": [
+                {"id": "0", "status": 200, "body": {"id": "direct"}},
+                {"id": "1", "status": 302, "headers": {"Location": download_url}, "body": ""},
+            ]
+        }
+        mock_httpx.post.return_value = resp_batch
+
+        resp_dl = MagicMock()
+        resp_dl.status_code = 200
+        resp_dl.content = redirect_bytes
+        mock_httpx.get.return_value = resp_dl
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["direct.json", "redirect.json"])
+
+        assert json.loads(result["direct.json"]) == {"id": "direct"}
+        assert json.loads(result["redirect.json"]) == {"id": "redirect"}
+
+    def test_302_download_failure_omits_path(self):
+        """Falha no download da URL pré-autenticada omite o path — não levanta."""
+        download_url = "https://cdn.example.com/file"
+
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        resp_batch = MagicMock()
+        resp_batch.status_code = 200
+        resp_batch.json.return_value = {
+            "responses": [{"id": "0", "status": 302, "headers": {"Location": download_url}, "body": ""}]
+        }
+        mock_httpx.post.return_value = resp_batch
+        mock_httpx.get.side_effect = RuntimeError("download falhou")
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blobs_batch(["a.json"])
+
+        assert result == {}
+
+
+class TestSharePointFetchDownloadUrlsParallel:
+    def test_fetches_content_from_preauth_url(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        content = b'{"id": "CPU-001"}'
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.content = content
+        mock_httpx.get.return_value = resp
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            httpx_client = storage._client()
+            result = storage._fetch_download_urls_parallel(
+                httpx_client, {"cpus/CPU-001.json": "https://cdn.example.com/file"}
+            )
+
+        assert result == {"cpus/CPU-001.json": content}
+
+    def test_non_200_download_omitted(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        resp = MagicMock()
+        resp.status_code = 403
+        mock_httpx.get.return_value = resp
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            httpx_client = storage._client()
+            result = storage._fetch_download_urls_parallel(
+                httpx_client, {"a.json": "https://cdn.example.com/file"}
+            )
+
+        assert result == {}
+
+    def test_exception_during_download_omitted(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+        mock_httpx.get.side_effect = RuntimeError("timeout")
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            httpx_client = storage._client()
+            result = storage._fetch_download_urls_parallel(
+                httpx_client, {"a.json": "https://cdn.example.com/file"}
+            )
+
+        assert result == {}
+
+    def test_multiple_urls_fetched_in_parallel(self):
+        storage = _make_storage()
+        mock_httpx = MagicMock()
+        mock_httpx.Client.return_value = mock_httpx
+
+        files = {f"f{i}.json": f"https://cdn.example.com/{i}" for i in range(5)}
+        contents = {url: f'{{"i":{i}}}'.encode() for i, url in enumerate(files.values())}
+
+        def _get(url, **_):
+            r = MagicMock()
+            r.status_code = 200
+            r.content = contents[url]
+            return r
+
+        mock_httpx.get.side_effect = _get
+
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            httpx_client = storage._client()
+            result = storage._fetch_download_urls_parallel(httpx_client, files)
+
+        assert len(result) == 5
+        assert mock_httpx.get.call_count == 5
