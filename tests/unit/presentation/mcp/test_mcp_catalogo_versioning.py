@@ -52,14 +52,34 @@ class TestCatalogoWrappers:
             result = tools["listar_contextos"]()
         assert "contextos" in result
 
-    def test_pesquisar_catalogo(self, monkeypatch, tmp_path):
+    async def test_pesquisar_catalogo(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_pesquisar_catalogo",
             return_value={"cpus": []},
         ):
-            result = tools["pesquisar_catalogo"](contexto_id="ctx", query="escavação")
+            result = await tools["pesquisar_catalogo"](contexto_id="ctx", query="escavação")
         assert "cpus" in result
+
+    async def test_pesquisar_catalogo_times_out_returns_erro_instead_of_hanging(self, monkeypatch, tmp_path):
+        """issue #147/#148/#149: mesmo achado do ping() — load_catalogo() sem
+        deadline pendura o tool até o timeout opaco de 60s do client."""
+        import time
+
+        tools = _register_tools(monkeypatch, tmp_path)
+
+        def _slow(*args, **kwargs):
+            time.sleep(0.2)
+            return {"cpus": []}
+
+        with (
+            patch(f"{_CATALOGO_MOD}.TOOL_IO_TIMEOUT_S", 0.01),
+            patch(f"{_CATALOGO_MOD}._impl_pesquisar_catalogo", side_effect=_slow),
+        ):
+            result = await tools["pesquisar_catalogo"](contexto_id="ctx", query="escavação")
+
+        assert "erro" in result
+        assert "excedeu" in result["erro"]
 
     def test_auditar_catalogo_saude(self, monkeypatch, tmp_path):
         """ADR-116 F5: modo='saude' substitui consultar_saude_catalogo."""

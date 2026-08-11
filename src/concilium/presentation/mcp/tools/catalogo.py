@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.auth.permission_guard import permission
-from concilium.presentation.mcp._context import _wrap_response
+from concilium.presentation.mcp._context import TOOL_IO_TIMEOUT_S, _wrap_response
 from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 from ._catalogo_tools_helpers_a import (
@@ -72,13 +73,33 @@ def register(server: FastMCP) -> None:
         "Use para encontrar cpu_id antes de criar projeto."
     )
     @permission("catalog:read")
-    def pesquisar_catalogo(
+    async def pesquisar_catalogo(
         contexto_id: str,
         query: str | None = None,
         tipo_obra: str | None = None,
         limite: int = 20,
     ) -> dict[str, Any]:
-        return _impl_pesquisar_catalogo(contexto_id, query, tipo_obra, limite)
+        # 2026-08-11: mesmo achado do incidente de ping() (issue #147/#148/#149) —
+        # rt.load_catalogo() carrega o catálogo inteiro (ex.: "mendeslobo", 138 CPUs)
+        # antes de filtrar; sem deadline, uma leitura fria (cache local expirado/
+        # pós-deploy) pendura o tool até o timeout opaco de 60s do client. Deadline
+        # de parede aqui é mitigação (mesma classe de #149), não a correção
+        # definitiva — outras tools de catálogo têm o mesmo gap (issue aberta pra
+        # aplicar o mesmo padrão nelas).
+        try:
+            return await asyncio.wait_for(
+                asyncio.to_thread(_impl_pesquisar_catalogo, contexto_id, query, tipo_obra, limite),
+                timeout=TOOL_IO_TIMEOUT_S,
+            )
+        except TimeoutError:
+            return {
+                "erro": (
+                    f"pesquisar_catalogo excedeu {TOOL_IO_TIMEOUT_S:.0f}s carregando o catálogo "
+                    f"de '{contexto_id}'. Catálogos grandes com cache local frio (pós-deploy/"
+                    "restart) podem demorar na primeira leitura; tente novamente — o cache "
+                    "aquece após um load bem-sucedido."
+                )
+            }
 
     @server.tool(
         description=(
