@@ -80,6 +80,12 @@ def _build_producao_para_sinergia(prod: dict) -> Producao | None:
         return None
     comp_raw = _sanitize_comp_para_sinergia(prod.get("composicao_padrao_equipe") or {})
     agora = datetime.now(UTC)
+    # ADR-179: 119/169 produções do mendeslobo hoje têm `origem` como string solta
+    # (ex.: "PROPRIA") em vez do dict rico {tipo, fonte_id, ...} — legado de como
+    # foram enriquecidas com grafo_sinergia. `referencia` aceita o texto original
+    # nesse caso (perde o mínimo de informação); dict é lido normalmente.
+    origem_raw = prod.get("origem")
+    referencia = origem_raw.get("referencia", "") if isinstance(origem_raw, dict) else str(origem_raw or "")
     try:
         return Producao(
             id=prod.get("id", ""),
@@ -91,7 +97,7 @@ def _build_producao_para_sinergia(prod: dict) -> Producao | None:
                 tipo="tabela_referencia",
                 fonte_id=prod.get("id", ""),
                 data_calibracao=agora,
-                referencia=(prod.get("origem") or {}).get("referencia", ""),
+                referencia=referencia,
             ),
             condicoes_calibracao=CondicoesCalibração(),
             qualidade=QualidadeProducao(
@@ -103,7 +109,7 @@ def _build_producao_para_sinergia(prod: dict) -> Producao | None:
             ),
             grafo_sinergia=GrafoSinergiaEquipe(**grafo_raw),
         )
-    except (ValidationError, TypeError, ValueError):
+    except (ValidationError, TypeError, ValueError, AttributeError):
         return None
 
 

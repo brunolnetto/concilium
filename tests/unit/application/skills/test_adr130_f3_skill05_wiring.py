@@ -246,6 +246,22 @@ class TestBuildProducaoParaSinergia:
         prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real(), valor_horario="nao-numerico")
         assert _build_producao_para_sinergia(prod) is None
 
+    def test_producao_construida_quando_origem_e_string_solta(self):
+        """Regressão: 119/169 produções do mendeslobo têm `origem` como string
+        solta (ex.: "PROPRIA") em vez do dict {tipo, fonte_id, ...} — legado de
+        como foram enriquecidas com grafo_sinergia (ADR-179). Reproduzia
+        AttributeError('str' object has no attribute 'get') em produção
+        (skill-05, ERRO_PRECONDICAO) sempre que o CPU referenciado tinha essa
+        combinação (origem=string + grafo_sinergia presente)."""
+        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real())
+        prod["origem"] = "PROPRIA"
+
+        producao = _build_producao_para_sinergia(prod)
+
+        assert producao is not None
+        assert producao.origem.referencia == "PROPRIA"
+        assert producao.grafo_sinergia is not None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # _calcular_custo_equipamento — custo_mensal_override
