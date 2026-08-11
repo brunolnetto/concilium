@@ -65,20 +65,67 @@ class TestSystemPing:
         assert "catalogos" not in result
 
     async def test_ping_with_projects(self, monkeypatch, tmp_path):
+        """total_projetos vem de _project_repository().list_projects() — não de
+        varrer o disco local direto (ver test_ping_counts_via_repository_not_local_disk
+        pro achado que motivou essa mudança)."""
         config_dir = tmp_path / "config"
         proj_root = tmp_path / "projetos"
-        proj_dir = proj_root / "proj-1"
-        proj_dir.mkdir(parents=True)
-        (proj_dir / "meta.json").write_text('{"nome": "test"}')
+
+        tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
+
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = [MagicMock(), MagicMock()]
+
+        with (
+            patch(f"{_SYSTEM_MOD}._config_root", return_value=config_dir),
+            patch(f"{_SYSTEM_MOD}._projetos_root", return_value=proj_root),
+            patch(f"{_SYSTEM_MOD}._project_repository", return_value=mock_repo),
+        ):
+            result = await tools["ping"]()
+        assert result["total_projetos"] == 2
+        assert result["projetos_root_exists"] is True
+
+    async def test_ping_counts_via_repository_not_local_disk(self, monkeypatch, tmp_path):
+        """issue relatada 2026-08-11: com backend SharePoint, o diretório local de
+        `_projetos_root()` nunca existe no disco do container (projetos vivem no
+        SharePoint) — mas ping() reportava total_projetos=0/projetos_root_exists=False
+        mesmo com projetos reais, porque checava o disco local direto em vez de passar
+        pela mesma abstração que listar_projetos() usa. Aqui simula exatamente esse
+        cenário: proj_root não existe no disco, repository (mock) reporta 2 projetos."""
+        config_dir = tmp_path / "config"
+        proj_root = tmp_path / "projetos-inexistente-no-disco-local"
+        assert not proj_root.exists()
+
+        tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
+
+        mock_repo = MagicMock()
+        mock_repo.list_projects.return_value = [MagicMock(), MagicMock()]
+
+        with (
+            patch(f"{_SYSTEM_MOD}._config_root", return_value=config_dir),
+            patch(f"{_SYSTEM_MOD}._projetos_root", return_value=proj_root),
+            patch(f"{_SYSTEM_MOD}._project_repository", return_value=mock_repo),
+        ):
+            result = await tools["ping"]()
+
+        assert result["total_projetos"] == 2
+        assert result["projetos_root_exists"] is True
+
+    async def test_ping_project_count_error_reports_zero_and_root_absent(self, monkeypatch, tmp_path):
+        config_dir = tmp_path / "config"
+        proj_root = tmp_path / "projetos"
 
         tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
 
         with (
             patch(f"{_SYSTEM_MOD}._config_root", return_value=config_dir),
             patch(f"{_SYSTEM_MOD}._projetos_root", return_value=proj_root),
+            patch(f"{_SYSTEM_MOD}._project_repository", side_effect=RuntimeError("storage indisponível")),
         ):
             result = await tools["ping"]()
-        assert "status" in result
+
+        assert result["total_projetos"] == 0
+        assert result["projetos_root_exists"] is False
 
     async def test_ping_blob_storage_health_check_exception_sets_status_erro(self, monkeypatch, tmp_path):
         """Lines 84-91: build_blob_storage().health_check() raising → storage_health has

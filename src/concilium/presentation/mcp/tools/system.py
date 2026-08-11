@@ -12,6 +12,7 @@ from concilium.infrastructure.auth.permission_guard import get_current_user_id, 
 from concilium.presentation.mcp._context import (
     TOOL_IO_TIMEOUT_S,
     _config_root,
+    _project_repository,
     _projetos_root,
     _wrap_response,
 )
@@ -105,10 +106,22 @@ def register(server: FastMCP) -> None:
         if contextos_dir.exists():
             contexto_ids = [p.stem for p in sorted(contextos_dir.glob("*.json"))]
 
-        # Contagem de projetos
-        n_projetos = 0
-        if proj_root.exists():
-            n_projetos = sum(1 for p in proj_root.iterdir() if p.is_dir() and (p / "meta.json").exists())
+        # Contagem de projetos — via repository (correto pra qualquer backend).
+        # Achado 2026-08-11: proj_root.exists()/iterdir() checava o disco LOCAL
+        # direto — só faz sentido pro backend filesystem. Com SharePoint
+        # configurado, build_project_repository() ignora esse Path por completo
+        # (usa outro mecanismo, projects_prefix) — então isso sempre reportava
+        # total_projetos=0/projetos_root_exists=False mesmo com projetos reais
+        # existindo, inconsistente com listar_projetos() (que usa a mesma
+        # abstração corrigida aqui). Custo: uma leitura de índice, tão barata
+        # quanto listar_projetos() — não reabre o problema do catálogo (issue
+        # #147/#148/#149), que era N+1 por-arquivo, não uma leitura única.
+        try:
+            n_projetos = len(_project_repository().list_projects())
+            projetos_root_exists = True
+        except Exception:
+            n_projetos = 0
+            projetos_root_exists = False
 
         # Status geral — só storage/config. Saúde de catálogo (erros críticos,
         # total_cpus) NÃO entra aqui — é responsabilidade de auditar_catalogo
@@ -126,7 +139,7 @@ def register(server: FastMCP) -> None:
             "config_root": str(config_dir),
             "config_root_exists": config_dir.exists(),
             "projetos_root": str(proj_root),
-            "projetos_root_exists": proj_root.exists(),
+            "projetos_root_exists": projetos_root_exists,
             "contextos": contexto_ids,
             "total_projetos": n_projetos,
             "storage": storage_health,
