@@ -40,10 +40,14 @@ class TestSystemPing:
         tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
         # config_root points to tmp_path/config which doesn't have contextos/
         result = await tools["ping"]()
-        # No contextos → status SAUDAVEL (empty catalogos → no DEGRADADO)
+        # No contextos, storage_health ok → status SAUDAVEL
         assert "status" in result
 
     async def test_ping_with_contextos(self, monkeypatch, tmp_path):
+        """ping() lista contexto_ids a partir de contextos/*.json sem carregar
+        catálogo nenhum — a varredura de saúde por catálogo foi removida
+        (achado de produção 2026-08-11, ver docstring de ping()); saúde de
+        catálogo agora é responsabilidade exclusiva de auditar_catalogo."""
         config_dir = tmp_path / "config"
         contextos_dir = config_dir / "contextos"
         contextos_dir.mkdir(parents=True, exist_ok=True)
@@ -51,23 +55,14 @@ class TestSystemPing:
 
         tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
 
-        runtime_mock = MagicMock()
-        ctx_mock = MagicMock()
-        ctx_mock.catalogo_id = "cat-test"
-        runtime_mock.load_contexto.return_value = ctx_mock
-        runtime_mock.load_catalogo.return_value = {"cpus": [{"codigo": "CPU-1"}]}
-
         with (
-            patch(f"{_SYSTEM_MOD}._runtime", return_value=runtime_mock),
             patch(f"{_SYSTEM_MOD}._config_root", return_value=config_dir),
             patch(f"{_SYSTEM_MOD}._projetos_root", return_value=tmp_path / "projetos"),
-            patch(
-                "concilium.application.orchestrators.catalog_governance.collect_catalog_critical_errors",
-                return_value=[],
-            ),
         ):
             result = await tools["ping"]()
         assert "status" in result
+        assert result["contextos"] == ["ctx-test"]
+        assert "catalogos" not in result
 
     async def test_ping_with_projects(self, monkeypatch, tmp_path):
         config_dir = tmp_path / "config"
@@ -97,26 +92,6 @@ class TestSystemPing:
             result = await tools["ping"]()
 
         assert result["status"] == "ERRO"
-
-    async def test_ping_catalog_exception_returns_erro_entry(self, monkeypatch, tmp_path):
-        config_dir = tmp_path / "config"
-        contextos_dir = config_dir / "contextos"
-        contextos_dir.mkdir(parents=True, exist_ok=True)
-        (contextos_dir / "ctx-bad.json").write_text('{"catalogo_id": "cat-bad"}')
-
-        tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
-
-        runtime_mock = MagicMock()
-        runtime_mock.load_contexto.side_effect = RuntimeError("load error")
-
-        with (
-            patch(f"{_SYSTEM_MOD}._runtime", return_value=runtime_mock),
-            patch(f"{_SYSTEM_MOD}._config_root", return_value=config_dir),
-            patch(f"{_SYSTEM_MOD}._projetos_root", return_value=tmp_path / "projetos"),
-        ):
-            result = await tools["ping"]()
-        # Should be DEGRADADO because a catalog errored
-        assert result.get("status") in {"DEGRADADO", "ERRO"}
 
     async def test_ping_times_out_returns_erro_instead_of_hanging(self, monkeypatch, tmp_path):
         """issue #149: I/O de storage sem timeout total (httpx timeout é por-chunk)

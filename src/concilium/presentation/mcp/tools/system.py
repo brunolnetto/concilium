@@ -13,7 +13,6 @@ from concilium.presentation.mcp._context import (
     TOOL_IO_TIMEOUT_S,
     _config_root,
     _projetos_root,
-    _runtime,
     _wrap_response,
 )
 
@@ -31,17 +30,25 @@ def register(server: FastMCP) -> None:
         - caminhos de configuração e se existem
         - lista de contextos disponíveis
         - contagem de projetos existentes
-        - saúde resumida de cada catálogo (erros críticos, total de CPUs)
+
+        NÃO inclui saúde de catálogo (erros críticos, total de CPUs) — isso
+        é responsabilidade de `auditar_catalogo(contexto_id, modo="saude")`,
+        chamada por contexto (use a lista `contextos` retornada aqui). ping()
+        é deliberadamente barato: um health check não deveria pagar o custo
+        de carregar catálogos inteiros (achado de produção 2026-08-11 — essa
+        varredura, não o storage em si, era a causa raiz dos hangs de ping()
+        sob catálogos grandes/cache frio).
 
         Use como primeira chamada para calibrar o estado do sistema antes
         de qualquer operação de planejamento.
         """
-        # issue #148/#149 + ADR-180: o corpo inteiro (health_check, load_catalogo,
+        # issue #148/#149 + ADR-180: o corpo inteiro (health_check,
         # check_and_report_novidades) roda sob UM único deadline (TOOL_IO_TIMEOUT_S).
         # health_check() usa o caminho assíncrono nativo (cancelamento real) quando
-        # o backend é SharePoint (ADR-180 D5); load_catalogo/check_and_report_novidades
-        # continuam síncronos em thread (fora de escopo desta ADR — passam por
-        # Runtime/DeployLogStore, não diretamente pelo BlobStoragePort).
+        # o backend é SharePoint (ADR-180 D5); check_and_report_novidades
+        # continua síncrono em thread (fora de escopo desta ADR — passa por
+        # DeployLogStore, não diretamente pelo BlobStoragePort). load_catalogo NÃO
+        # roda mais aqui — ver docstring de ping() (removido, causa raiz dos hangs).
         try:
             return await asyncio.wait_for(_ping_async(), timeout=TOOL_IO_TIMEOUT_S)
         except TimeoutError:
@@ -51,10 +58,10 @@ def register(server: FastMCP) -> None:
                     "erro": (
                         f"ping excedeu {TOOL_IO_TIMEOUT_S:.0f}s aguardando storage. "
                         "Se o backend for SharePoint, a chamada foi cancelada de verdade "
-                        "(sem thread presa); para o restante (catálogo, novidades) uma "
-                        "thread de I/O pode continuar rodando em segundo plano. Tente "
-                        "novamente; se persistir, é sintoma de degradação de rede/Graph "
-                        "API, não do servidor MCP em si."
+                        "(sem thread presa); para o restante (novidades) uma thread de "
+                        "I/O pode continuar rodando em segundo plano. Tente novamente; "
+                        "se persistir, é sintoma de degradação de rede/Graph API, não "
+                        "do servidor MCP em si."
                     ),
                 }
             )
@@ -103,44 +110,13 @@ def register(server: FastMCP) -> None:
         if proj_root.exists():
             n_projetos = sum(1 for p in proj_root.iterdir() if p.is_dir() and (p / "meta.json").exists())
 
-        # Saúde por catálogo (read-only)
-        catalogos: list[dict[str, Any]] = []
-        if contexto_ids and config_dir.exists():
-            from concilium.application.orchestrators.catalog_governance import (
-                collect_catalog_critical_errors,
-            )
-
-            rt = _runtime()
-            for ctx_id in contexto_ids:
-                try:
-                    ctx = rt.load_contexto(ctx_id)
-                    catalogo = rt.load_catalogo(ctx.catalogo_id)
-                    erros = collect_catalog_critical_errors(catalogo)
-                    catalogos.append(
-                        {
-                            "contexto_id": ctx_id,
-                            "catalogo_id": ctx.catalogo_id,
-                            "status": "SAUDAVEL" if not erros else "DEGRADADO",
-                            "erros_criticos": len(erros),
-                            "total_cpus": len(catalogo.get("cpus", [])),
-                        }
-                    )
-                except Exception as exc:
-                    catalogos.append(
-                        {
-                            "contexto_id": ctx_id,
-                            "status": "ERRO",
-                            "erro": str(exc),
-                        }
-                    )
-
-        # Status geral
+        # Status geral — só storage/config. Saúde de catálogo (erros críticos,
+        # total_cpus) NÃO entra aqui — é responsabilidade de auditar_catalogo
+        # por contexto (ver docstring). Uma varredura de todos os catálogos a
+        # cada ping() é o tipo de custo que um health check não deveria pagar.
         if not config_dir.exists() or storage_health.get("status") == "error":
             status_geral = "ERRO"
-        elif any(c.get("status") != "SAUDAVEL" for c in catalogos) or storage_health.get("status") not in (
-            "ok",
-            "SAUDAVEL",
-        ):
+        elif storage_health.get("status") not in ("ok", "SAUDAVEL"):
             status_geral = "DEGRADADO"
         else:
             status_geral = "SAUDAVEL"
@@ -153,7 +129,6 @@ def register(server: FastMCP) -> None:
             "projetos_root_exists": proj_root.exists(),
             "contextos": contexto_ids,
             "total_projetos": n_projetos,
-            "catalogos": catalogos,
             "storage": storage_health,
         }
 

@@ -1,7 +1,7 @@
 ---
 name: concilium-usage-tutorial
 description: Tutorial de uso do Concilium via MCP — criação de projetos, execução de pipeline, diagnóstico, catálogo e benchmarks.
-version: 4
+version: 5
 ---
 
 # Tutorial — Criar e Executar Projetos via MCP
@@ -134,18 +134,24 @@ Para ambientes com autenticação JWT (Azure deploy — ADR-096):
 ## Passo 0 — Verificar saúde do sistema
 
 **Sempre faça isso primeiro.** Retorna contextos disponíveis, contagem de projetos e
-saúde de cada catálogo em uma única chamada.
+saúde do storage em uma única chamada — deliberadamente barato (não carrega nenhum
+catálogo; um health check não deveria pagar esse custo).
 
-> **Permissão:** `ping()` requer role `admin` (escopo `system:read`). Em ambientes com
-> autenticação habilitada, apenas contas admin podem chamar esta ferramenta.
+> **Permissão:** `ping()` requer escopo `health:read`, concedido a todos os roles
+> (operator, engineer, admin, auditor, catalog-manager) — qualquer conta autenticada
+> pode chamar esta ferramenta.
 
 ```python
 ping()
-# → {status: "SAUDAVEL", contextos: ["mendeslobo-ce"], projetos: 3,
-#    catalogos: [{contexto_id: "mendeslobo-ce", cpus: 412, erros_criticos: 0}]}
+# → {status: "SAUDAVEL", contextos: ["mendeslobo-ce"], total_projetos: 3,
+#    storage: {status: "ok", backend: "sharepoint"}}
 ```
 
-Se `status == "DEGRADADO"` ou `erros_criticos > 0`, investigue antes de prosseguir.
+Se `status == "DEGRADADO"` ou `"ERRO"`, investigue o campo `storage` antes de prosseguir.
+
+Para saúde de catálogo (erros críticos, total de CPUs), chame
+`auditar_catalogo(contexto_id, modo="saude")` para cada contexto retornado por
+`ping()` — não é mais parte da resposta de `ping()`.
 
 ---
 
@@ -749,7 +755,7 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 
 | Tool | Descrição |
 |---|---|
-| `ping()` | Saúde do servidor, contextos, projetos e catálogos em uma chamada — requer `system:read` (admin) |
+| `ping()` | Saúde do servidor, storage, contextos e projetos em uma chamada — requer `health:read` (todos os roles) |
 | `listar_contextos()` | Lista contextos de catálogo disponíveis |
 | `listar_projetos()` | Lista todos os projetos existentes |
 
@@ -832,7 +838,7 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 | `Tool not found: comparar_rfi_catalogo` | Ferramenta removida, sem substituto direto ainda | — |
 | `Tool not found: avancar_pipeline` | Ferramenta removida | Use `disparar_pipeline()` + `consultar_job_pipeline()` |
 | `Tool not found: obter_estatisticas_jobs` | Ferramenta removida | Use `listar_jobs_pipeline(incluir_estatisticas=True)` |
-| `403 Forbidden` em `ping()` | `ping()` requer role `admin` (`system:read`) | Usar conta com permissão admin |
+| `403 Forbidden` em `ping()` | Token inválido/expirado ou sem nenhum role no JWT — `health:read` é concedido a todos os roles, então não é questão de role específico | Renovar token (`renovar_token()`) ou confirmar que o JWT tem ao menos um role válido |
 | `pipeline_integridade: CORROMPIDO` | Skill GATE falhou | Ver `validacoes` em `consultar_status`, corrigir inputs e re-executar |
 | `status: pendente_mapeamento` | Serviço sem CPU | Usar `pesquisar_catalogo()` e repassar com `cpu_id` |
 | `margem VERMELHO` | BDI ou pool de equipes fora do alvo | Revisar BDI via `salvar_perfil_bdi` e simular cenários com `simular_cenario_replan` |
