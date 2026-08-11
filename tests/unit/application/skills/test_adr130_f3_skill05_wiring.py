@@ -340,6 +340,47 @@ class TestBuildCompParaItemComGrafo:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Regressão: item malformado (string em vez de dict) em composicao_itens/
+# prod_lookup não pode travar skill-05 com AttributeError ('str' object has no
+# attribute 'get') — dado de catálogo/overlay resolvido sem validação de schema
+# (CatalogResolver) pode conter isso após um merge/rascunho incompleto.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestDimensionamentoComItemMalformado:
+    def test_build_comp_para_item_prod_lookup_resolve_string(self):
+        """prod_lookup[prod_id_ref] é uma string (não Producao dict) — não deve
+        propagar AttributeError; cai para composição vazia (fallback)."""
+        cpu = _cpu_dict()
+        prod_lookup = {_PROD_ID: "PROD-SUGERIDA-APROXIMADA"}
+        validacoes: list = []
+
+        comp = _build_comp_para_item(cpu, prod_lookup, validacoes)
+
+        assert isinstance(comp, dict)
+
+    def test_validar_materiais_item_composicao_itens_com_string_solta(self):
+        """composicao_itens com um elemento string solto (não {insumo_id, ...}) —
+        não deve propagar AttributeError; item malformado é ignorado."""
+        _validar_materiais_item = _MOD._validar_materiais_item
+        comp = {"materiais": [], "funcoes": [], "equipamentos": []}
+        cpu = {
+            "codigo": "CPU-TESTE-MALFORMADO",
+            "composicao_itens": [
+                {"insumo_id": "AREIA", "categoria_custo": "MATERIAL", "coeficiente": 1.0},
+                "DIESEL-S10",  # malformado: string em vez de dict
+            ],
+        }
+        validacoes: list = []
+
+        _validar_materiais_item(comp, cpu, validacoes)
+
+        # AREIA está em composicao_itens (MATERIAL) mas não em comp["materiais"] —
+        # gera VAL-EQUIP-MAT-02; a string solta não gera exceção nem entra na comparação.
+        assert any(v.codigo == "VAL-EQUIP-MAT-02" for v in validacoes)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # End-to-end via _build_dimensionamento / _dimensionar_item_equipe (skill-05 real)
 # ─────────────────────────────────────────────────────────────────────────────
 

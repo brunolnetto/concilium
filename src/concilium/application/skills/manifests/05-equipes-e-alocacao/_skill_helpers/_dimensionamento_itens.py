@@ -148,7 +148,11 @@ def _build_comp_para_item(cpu: dict, prod_lookup: dict, validacoes: list) -> dic
     prod_id_ref = cpu.get("producao_id_ref")
     prod: dict = {}
     if prod_id_ref:
-        prod = prod_lookup.get(prod_id_ref) or {}
+        # isinstance(..., dict): prod_lookup vem de catálogo/overlay resolvido sem validação de
+        # schema (CatalogResolver) — uma entrada malformada (ex.: string em vez do dict de
+        # Producao) não pode travar o dimensionamento inteiro, só essa referência específica.
+        resolved = prod_lookup.get(prod_id_ref)
+        prod = resolved if isinstance(resolved, dict) else {}
         comp = prod.get("composicao_padrao_equipe") or {}
     comp = _fallback_cpu_comp(comp, cpu, prod_id_ref, validacoes)
     if not comp.get("materiais"):
@@ -541,9 +545,18 @@ def _calc_custo_mob_janela(item: Any, custo_mo_mensal: float, custo_eq_mensal: f
 def _validar_materiais_item(comp: dict, cpu: dict, validacoes: list) -> None:
     """Emite VAL-EQUIP-MAT-01/02 para inconsistências entre MaterialEquipe e composicao_itens."""
     # Ignora entradas promovidas automaticamente de cpu.composicao_itens — apenas MaterialEquipe explícitas.
-    materiais_cpu_ids = {m["insumo_id"] for m in comp.get("materiais", []) if m.get("fonte") != "cpu.composicao_itens"}
+    # isinstance(..., dict): dado de catálogo/overlay malformado (ex.: item solto como string
+    # em vez de {insumo_id, categoria_custo, ...}) não pode travar o dimensionamento inteiro —
+    # ver _promote_materiais_from_cpu, mesmo padrão.
+    materiais_cpu_ids = {
+        m["insumo_id"]
+        for m in comp.get("materiais", [])
+        if isinstance(m, dict) and m.get("fonte") != "cpu.composicao_itens"
+    }
     itens_material_ids = {
-        it["insumo_id"] for it in cpu.get("composicao_itens", []) if it.get("categoria_custo") == "MATERIAL"
+        it["insumo_id"]
+        for it in cpu.get("composicao_itens", [])
+        if isinstance(it, dict) and it.get("categoria_custo") == "MATERIAL"
     }
     for mat_id in materiais_cpu_ids - itens_material_ids:
         validacoes.append(
