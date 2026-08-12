@@ -75,7 +75,7 @@ _LAZY_MAP: dict[str, tuple[str, str]] = {
     "DecisionVariables": ("concilium.domain.models.project.decision_variables", "DecisionVariables"),
     "ConstraintViolation": ("concilium.domain.models.project.constraint_violation", "ConstraintViolation"),
     # ADR-054: workforce mobilization policy
-    "MobilizacaoPolicy": ("concilium.domain.models.planning.mobilizacao", "MobilizacaoPolicy"),
+    "WorkforcePolicy": ("concilium.domain.models.planning.mobilizacao", "WorkforcePolicy"),
     "CurvaForca": ("concilium.domain.models.planning.mobilizacao", "CurvaForca"),
     "CurvaForcaSemanal": ("concilium.domain.models.planning.mobilizacao", "CurvaForcaSemanal"),
 }

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-class MobilizacaoPolicy(BaseModel):
+class WorkforcePolicy(BaseModel):
     """Declarative workforce mobilization policy for a compositional activity.
 
     Describes HOW teams ramp up and (optionally) wind down — not WHEN.
@@ -53,18 +53,18 @@ class MobilizacaoPolicy(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_ordering(self) -> MobilizacaoPolicy:
+    def _validate_ordering(self) -> WorkforcePolicy:
         if self.n_maximo < self.n_inicial:
             raise ValueError(f"n_maximo ({self.n_maximo}) must be >= n_inicial ({self.n_inicial})")
         return self
 
     @classmethod
-    def imediato(cls, n_maximo: int) -> MobilizacaoPolicy:
+    def imediato(cls, n_maximo: int) -> WorkforcePolicy:
         """Convenience: deploy all teams from week 0 (no ramp)."""
         return cls(n_inicial=n_maximo, n_maximo=n_maximo, taxa_mobilizacao=n_maximo)
 
     @classmethod
-    def padrao(cls, n_maximo: int, taxa_mobilizacao: float = 1.0) -> MobilizacaoPolicy:
+    def padrao(cls, n_maximo: int, taxa_mobilizacao: float = 1.0) -> WorkforcePolicy:
         """Convenience: start with 1 team, ramp at given rate."""
         return cls(n_inicial=1, n_maximo=n_maximo, taxa_mobilizacao=taxa_mobilizacao)
 
@@ -104,7 +104,7 @@ class CurvaForca(BaseModel):
     producao_horaria: float = Field(ge=0)
     dias_semana: int = Field(ge=1, le=7)
     horas_dia: int = Field(ge=1, le=24)
-    policy: MobilizacaoPolicy
+    policy: WorkforcePolicy
     semanas: list[CurvaForcaSemanal] = Field(default_factory=list)
     incompleta: bool = Field(
         default=False,

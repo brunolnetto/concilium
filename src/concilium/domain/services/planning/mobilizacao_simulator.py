@@ -11,7 +11,7 @@ Where:
     h           = horas_dia  (working hours/day, from regime)
     eta_jornada = ADR-148 fração produtiva do dia (structural, not week-varying), defaults to 1.0
     p(t)        = practicability factor for week t ∈ (0, 1], defaults to 1.0
-    n(t)        = teams active in week t, derived from MobilizacaoPolicy
+    n(t)        = teams active in week t, derived from WorkforcePolicy
 
 Termination:
     SUCCESS  — cumulative production >= quantitativo_alvo
@@ -31,7 +31,7 @@ from typing import ClassVar
 from concilium.domain.models.planning.mobilizacao import (
     CurvaForca,
     CurvaForcaSemanal,
-    MobilizacaoPolicy,
+    WorkforcePolicy,
 )
 
 
@@ -41,7 +41,7 @@ class WorkforcePolicySimulator:
     Usage:
         sim = WorkforcePolicySimulator()
         curve = sim.simulate(
-            policy=MobilizacaoPolicy(n_inicial=2, n_maximo=5, taxa_mobilizacao=1.0),
+            policy=WorkforcePolicy(n_inicial=2, n_maximo=5, taxa_mobilizacao=1.0),
             atividade_id="eap-1_0",
             quantitativo=100_000.0,
             producao_horaria=500.0,
@@ -58,7 +58,7 @@ class WorkforcePolicySimulator:
 
     def simulate(
         self,
-        policy: MobilizacaoPolicy,
+        policy: WorkforcePolicy,
         atividade_id: str,
         quantitativo: float,
         producao_horaria: float,
@@ -128,7 +128,7 @@ class WorkforcePolicySimulator:
         if producao_horaria < 0:
             raise ValueError(f"producao_horaria must be >= 0, got {producao_horaria}")
 
-    def _compute_max_weeks(self, producao_semanal_base: float, quantitativo: float, policy: MobilizacaoPolicy) -> int:
+    def _compute_max_weeks(self, producao_semanal_base: float, quantitativo: float, policy: WorkforcePolicy) -> int:
         """Guard computation: based on peak teams at full efficiency."""
         if producao_semanal_base <= 0 or policy.n_maximo <= 0:
             return 1  # Will immediately produce incompleta=True
@@ -137,7 +137,7 @@ class WorkforcePolicySimulator:
 
     def _simulate_weeks(
         self,
-        policy: MobilizacaoPolicy,
+        policy: WorkforcePolicy,
         quantitativo: float,
         producao_semanal_base: float,
         max_weeks: int,
@@ -184,7 +184,7 @@ class WorkforcePolicySimulator:
 
         return semanas, incompleta
 
-    def _compute_n(self, policy: MobilizacaoPolicy, t: int) -> int:
+    def _compute_n(self, policy: WorkforcePolicy, t: int) -> int:
         """Return the integer team count at week offset t.
 
         Phase 1 — Mobilization:
@@ -230,7 +230,7 @@ class WorkforcePolicySimulator:
             taxa_desmobilizacao = m_max / d
         """
         # Week at which n_maximo is first reached. taxa_mobilizacao é sempre > 0
-        # (MobilizacaoPolicy.taxa_mobilizacao usa Field(gt=0) em modelo frozen),
+        # (WorkforcePolicy.taxa_mobilizacao usa Field(gt=0) em modelo frozen),
         # logo a divisão abaixo nunca ocorre por zero.
         t_ramp = math.ceil((policy.n_maximo - policy.n_inicial) / policy.taxa_mobilizacao)
 

@@ -172,10 +172,10 @@ def _cs_get_enriched_cpus(svc: ConciliumServiceHost, catalog_id: str) -> list[di
 
 
 def _cs_simulate_mobilizacao_policy(project_id: str, req: dict[str, Any]) -> dict[str, Any]:
-    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
-    policy = MobilizacaoPolicy(**req["policy"])
+    policy = WorkforcePolicy(**req["policy"])
     simulator = WorkforcePolicySimulator()
 
     prat_semanal = req.get("prat_semanal") or {}
@@ -256,10 +256,10 @@ def _process_wmp_policy(
     sim: Any, item_id: str, policy_dict: dict, eap_items: dict, cpu_lookup: dict, producao_lookup: dict, results: list
 ) -> None:
     """Process one WMP policy: validate, resolve P, simulate, append result."""
-    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
     try:
-        policy = MobilizacaoPolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
+        policy = WorkforcePolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
     except Exception as exc:
         results.append(
             {"codigo": "VAL-WMP-03", "status": "ERRO", "mensagem": f"'{item_id}': política inválida — {exc}"}

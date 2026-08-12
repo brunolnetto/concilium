@@ -277,7 +277,7 @@ $$C^{\text{total}} = \underbrace{\sum_{i \in \mathcal{A}} \sum_{j \in \mathcal{W
 | Atividades | $\mathcal{A}$, $(Q_i, P_i, \mathcal{W}_i)$ | `EapItem`, `Atividade`, `Producao.valor_horario` |
 | Precedências | $\mathcal{E}$ com $(\tau, \lambda)$ | `PrecedenciaItem`, `ArestaActivityDag`, `ActivityDag` |
 | Recursos | $\mathcal{R} = \mathcal{L} \cup \mathcal{Q}$, $e_{i,r}$ | `ComposicaoPadraoEquipe` (funcoes + equipamentos) |
-| Ramp | $(K_i^{\max}, n_0, c_{\text{mob}}, c_{\text{demob}}, P^{\text{plateau}}) \to m_{ij}$ | `MobilizacaoPolicy`, `WorkforcePolicySimulator` |
+| Ramp | $(K_i^{\max}, n_0, c_{\text{mob}}, c_{\text{demob}}, P^{\text{plateau}}) \to m_{ij}$ | `WorkforcePolicy`, `WorkforcePolicySimulator` |
 | Estados | $\sigma_{\omega,j} \in \Sigma$ | `CampanhaEquipamento` / `RegimePermanencia` (equip.) |
 | Perpetuação | $\Pi$, $\pi_{ij,r}$, $\nu_{j,r}$ | `CampanhaEquipamentoBuilder` (equip.); MO via `custo_mob_desmob` |
 | Custo MO | $c_\ell^h$ via encargos sociais $E_\ell$; BDI para PV | `MemorialEncargos`, `ComponentesBdi` |
