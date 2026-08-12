@@ -1,7 +1,9 @@
 # Proposta — CPUs reais de Supressão Vegetal (SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026)
 
-**Status:** 🆕 Proposta — não aplicada ao catálogo. Preparar para entrada via tool de governança
-(`criar_cpu`/`atualizar_composicao_item_cpu`, fluxo rascunho → 4-olhos → merge).
+**Status:** ✅ Aplicada ao catálogo `mendeslobo` (PR #164) — sem acesso à tool de governança MCP
+(`criar_cpu`/`atualizar_composicao_item_cpu`, fluxo rascunho → 4-olhos → merge) nesta sessão de
+código, aplicada diretamente via PR normal (`config/catalogos/` é staging via git). Revisão humana
+(4-olhos) acontece na revisão do PR em si.
 
 **Origem:** planilha de composição unitária de serviço fornecida pelo usuário (fonte primária real,
 substitui as reconstruções especulativas anteriores — `v7.json`/`v8.json`/`v11.json`/`v12.json` do
@@ -138,16 +140,17 @@ Todos os totais (equipamento + mão de obra + combustível → custo unitário D
 conferem exatamente com a planilha original — ver seção de conferência interna (não incluída aqui,
 disponível sob pedido).
 
-## Próximos passos recomendados
+## Próximos passos
 
-1. Criar os 12 insumos novos (`SV-OUV-EQ-*`/`SV-OUV-MO-*`) via `criar_insumo` — avaliar caso a caso se
-   `SV-OUV-EQ-MOTOSSERRA` deve reaproveitar `EQ-MOTOSSERRA`/`E0018` (match exato de preço) ou seguir o
-   padrão de isolamento por escopo negociado.
-2. Criar as 9 CPUs (`CPU-TERRA-ATI-041` a `049`) + suas produtividades, via `criar_cpu`/tool
-   equivalente, com `origem: {tipo: "negociado", referencia: "RFI SUPRESSÃO SERRA VERDE / OUVIDOR-GO ago/2026"}`.
-3. Corrigir os itens de EAP dos projetos `60d6decc-...`/`ddab7d94-...` para apontar para as CPUs
-   corretas (ver "Nota sobre a EAP existente" acima) — isso deve resolver o cronograma sem precisar de
-   92 equipes nem deixar infactível com 8.
+1. ✅ Criados os 14 insumos novos (`SV-OUV-EQ-*`/`SV-OUV-MO-*`, PR #164) — nenhum foi reaproveitado de
+   insumo existente, inclusive `SV-OUV-EQ-MOTOSSERRA` (match exato de preço com `EQ-MOTOSSERRA`/`E0018`,
+   mas mantido isolado seguindo o padrão de escopo negociado adotado para os outros 13).
+2. ✅ Criadas as 9 CPUs (`CPU-TERRA-ATI-041` a `049`) + suas produtividades (PR #164), `origem: "PROPRIA"`
+   na CPU / `origem.tipo: "tabela_referencia"` na produtividade, com `referencia` citando a planilha.
+3. ⬜ Pendente — corrigir os itens de EAP dos projetos `60d6decc-...`/`ddab7d94-...` para apontar para
+   as CPUs corretas (ver "Nota sobre a EAP existente" acima) — isso deve resolver o cronograma sem
+   precisar de 92 equipes nem deixar infactível com 8. Fora do escopo do PR #164 — dado de projeto não
+   é versionado neste repositório (só o catálogo).
 4. Os valores de mob/desmob/canteiro/madeira do `v7.json` (lump "negociado" sem composição) continuam
    pendentes — esta planilha não os cobre (é só produção/custo direto das atividades de supressão em
    si). Confirmar com o cliente/fornecedor se existe uma planilha equivalente pra esses 4 itens.
