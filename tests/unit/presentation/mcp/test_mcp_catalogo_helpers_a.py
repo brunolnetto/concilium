@@ -1956,7 +1956,7 @@ class TestImplAtualizarComposicaoItemCpu:
         self._setup(monkeypatch, rt, tmp_path)
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-001", "adicionar", "", coeficiente=1.0, categoria_custo="MATERIAL"
+            "ctx1", "CPU-001", "adicionar", "MA-001", "", coeficiente=1.0, categoria_custo="MATERIAL"
         )
         assert "erro" in result
         assert "rascunho_id" in result["erro"]
@@ -1965,7 +1965,7 @@ class TestImplAtualizarComposicaoItemCpu:
         rt = _make_rt("ctx1", "cat1")
         self._setup(monkeypatch, rt, tmp_path)
 
-        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-001", "MA-001", "excluir", "v1")
+        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-001", "excluir", "MA-001", "v1")
         assert "erro" in result
         assert "acao" in result["erro"]
 
@@ -1974,7 +1974,7 @@ class TestImplAtualizarComposicaoItemCpu:
         self._setup(monkeypatch, rt, tmp_path)
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", categoria_custo="MATERIAL"
+            "ctx1", "CPU-001", "adicionar", "MA-001", "v1", categoria_custo="MATERIAL"
         )
         assert "erro" in result
         assert "coeficiente" in result["erro"]
@@ -1987,7 +1987,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _make_rascunho(tmp_path, "ctx1", "v1")
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-NAO-EXISTE", "MA-001", "adicionar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+            "ctx1", "CPU-NAO-EXISTE", "adicionar", "MA-001", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
         )
         assert "erro" in result
         assert "não encontrada" in result["erro"]
@@ -2000,7 +2000,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _make_rascunho(tmp_path, "ctx1", "v1")
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-NAO-EXISTE", "adicionar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+            "ctx1", "CPU-001", "adicionar", "MA-NAO-EXISTE", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
         )
         assert "erro" in result
         assert "não encontrado" in result["erro"]
@@ -2014,7 +2014,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _make_rascunho(tmp_path, "ctx1", "v1")
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+            "ctx1", "CPU-001", "adicionar", "MA-001", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
         )
         assert "erro" in result
         assert "já está na composição" in result["erro"]
@@ -2028,7 +2028,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _make_rascunho(tmp_path, "ctx1", "v1")
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-001", "atualizar", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
+            "ctx1", "CPU-001", "atualizar", "MA-001", "v1", coeficiente=1.0, categoria_custo="MATERIAL"
         )
         assert "erro" in result
         assert "não encontrado" in result["erro"]
@@ -2040,7 +2040,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _seed_cpu(catalog_root, "CPU-001")
         _make_rascunho(tmp_path, "ctx1", "v1")
 
-        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-001", "MA-001", "remover", "v1")
+        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-001", "remover", "MA-001", "v1")
         assert "erro" in result
         assert "não encontrado" in result["erro"]
 
@@ -2054,7 +2054,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _make_rascunho(tmp_path, "ctx1", "v1")
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", coeficiente=1.0, categoria_custo="INEXISTENTE"
+            "ctx1", "CPU-001", "adicionar", "MA-001", "v1", coeficiente=1.0, categoria_custo="INEXISTENTE"
         )
         assert "erro" in result
         assert "inválido" in result["erro"]
@@ -2069,7 +2069,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _make_rascunho(tmp_path, "ctx1", "v1")
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-001", "adicionar", "v1", coeficiente=-1.0, categoria_custo="MATERIAL"
+            "ctx1", "CPU-001", "adicionar", "MA-001", "v1", coeficiente=-1.0, categoria_custo="MATERIAL"
         )
         assert "erro" in result
         assert "inválido" in result["erro"]
@@ -2087,8 +2087,8 @@ class TestImplAtualizarComposicaoItemCpu:
         result = _impl_atualizar_composicao_item_cpu(
             "ctx1",
             "CPU-001",
-            "MA-001",
             "adicionar",
+            "MA-001",
             "v1",
             coeficiente=0.42,
             categoria_custo="MATERIAL",
@@ -2129,7 +2129,7 @@ class TestImplAtualizarComposicaoItemCpu:
         _make_rascunho(tmp_path, "ctx1", "v1")
 
         result = _impl_atualizar_composicao_item_cpu(
-            "ctx1", "CPU-001", "MA-DIESEL-S10", "remover", "v1", nota="combustível deriva do equipamento"
+            "ctx1", "CPU-001", "remover", "MA-DIESEL-S10", "v1", nota="combustível deriva do equipamento"
         )
         assert result["status"] == "RASCUNHO"
         assert result["acao"] == "remover"
@@ -2139,6 +2139,34 @@ class TestImplAtualizarComposicaoItemCpu:
         assert delta["acao"] == "remover"
         assert delta["coeficiente"] is None
         assert delta["categoria_custo"] is None
+
+    def test_listar_retorna_composicao_sem_exigir_insumo_id_ou_rascunho_id(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Regressão: acao='listar' não existia — usuário tentou usá-la pra consultar
+        a composição atual de uma CPU e recebeu hang (issue de tool sem deadline,
+        não desta função). Leitura pura: não grava delta, não exige rascunho_id."""
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        composicao = [{"insumo_id": "MA-001", "coeficiente": 0.5, "categoria_custo": "MATERIAL"}]
+        _seed_cpu(catalog_root, "CPU-001", composicao)
+
+        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-001", "listar")
+
+        assert result["cpu_id"] == "CPU-001"
+        assert result["composicao_itens"] == composicao
+
+    def test_listar_cpu_inexistente_retorna_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        rt = _make_rt("ctx1", "cat1")
+        self._setup(monkeypatch, rt, tmp_path)
+        catalog_root = tmp_path / "catalogos" / "cat1"
+        catalog_root.mkdir(parents=True)
+
+        result = _impl_atualizar_composicao_item_cpu("ctx1", "CPU-NAO-EXISTE", "listar")
+
+        assert "erro" in result
+        assert "não encontrada" in result["erro"]
 
 
 # ---------------------------------------------------------------------------
