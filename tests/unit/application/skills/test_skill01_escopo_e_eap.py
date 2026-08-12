@@ -89,6 +89,51 @@ class TestBuildAtividadesForItem:
         assert "VAL-ATV-03" in codigos
         assert result[0].fracao_quantitativo == 1.0
 
+    def test_eap_item_sem_leadtime_aquisicao_nao_quebra(self):
+        """Regressão: AttributeError 'EapItem' object has no attribute
+        'leadtime_aquisicao_semanas' reportado em produção (ADR-181 F1) — objeto
+        que não passou pela construção normal do pydantic (ex.: processo com
+        classe EapItem desatualizada, snapshot antigo, model_construct) não tem
+        o atributo setado, mesmo sendo do tipo/nome EapItem. getattr defensivo
+        degrada para None em vez de propagar AttributeError."""
+        from types import SimpleNamespace
+
+        eap_item = SimpleNamespace(
+            item_id="EAP-004",
+            cpu_id="CPU-A",
+            descricao="Test",
+            quantitativo=100.0,
+            leadtime_mob_semanas=None,
+            lag_demob_semanas=None,
+            # leadtime_aquisicao_semanas propositalmente ausente — simula EapItem
+            # desatualizado/parcialmente construído.
+        )
+        raw_ativs = None
+        validacoes = []
+
+        result = MOD_01._build_atividades_for_item(eap_item, raw_ativs, validacoes)
+        assert len(result) == 1
+        assert result[0].leadtime_aquisicao_semanas is None
+
+    def test_eap_item_sem_leadtime_aquisicao_com_raw_ativs_nao_quebra(self):
+        """Mesma regressão, mas no branch raw_ativs != None (linha ~140)."""
+        from types import SimpleNamespace
+
+        eap_item = SimpleNamespace(
+            item_id="EAP-005",
+            cpu_id="CPU-A",
+            descricao="Test",
+            quantitativo=100.0,
+            leadtime_mob_semanas=None,
+            lag_demob_semanas=None,
+        )
+        raw_ativs = [{"fracao_quantitativo": 1.0, "atividade_id": "EAP-005-atv-1"}]
+        validacoes = []
+
+        result = MOD_01._build_atividades_for_item(eap_item, raw_ativs, validacoes)
+        assert len(result) == 1
+        assert result[0].leadtime_aquisicao_semanas is None
+
 
 # ---------------------------------------------------------------------------
 
