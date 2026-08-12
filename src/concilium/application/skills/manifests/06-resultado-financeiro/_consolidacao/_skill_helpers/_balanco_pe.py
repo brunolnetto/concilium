@@ -17,6 +17,7 @@ from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
     _validate_frentes_necessarias,
     _validate_pe_duplo_risco,
     _validate_pe_particao,
+    _validate_pe_pu_operacional_indisponivel,
     _validate_pe_teto,
     _validate_prod_pu_fallback_desync,
     _validate_prod_vs_pu,
@@ -58,6 +59,7 @@ def _bpe_process_equipe(
     _validate_prod_vs_pu(pe, validacoes)
     _validate_prod_pu_fallback_desync(equipe.item_id, sched_por_item, planejamento_por_item, validacoes)
     _validate_pe_teto(pe, teto_rs, validacoes)
+    _validate_pe_pu_operacional_indisponivel(pe, validacoes)
     return pe
 
 

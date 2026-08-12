@@ -506,6 +506,28 @@ def _bpe_calcular_custos_iniciais(
     return permanencia_base, custo_fixo_total, custo_venda_total, custo_operacional_real, frentes
 
 
+def _pe_resolve_material_real(plan: Any) -> float:
+    """Issue #151: material real do item (mesma fonte de catálogo que já alimenta
+    ``custo_venda_total`` — ``plan.subtotal.sem_bdi``), somado ao custo operacional usado
+    pelo Ponto de Equilíbrio.
+
+    ``custo_operacional_agregado`` (ADR-172) é construído só com MO+EQ+diesel — material
+    nunca é somado em nenhuma etapa do pipeline (``custo_material_mensal`` fica sempre
+    ``0.0``, ver ``_dimensionar_item_equipe``/NEP-029 D4, nunca implementado). Para itens
+    onde material é ~0 do custo (terraplenagem) isso é inócuo; para itens material-dominantes
+    (CBUQ: CAP/ligante asfáltico + agregados) produz margem/delta artificiais — a venda conta
+    o material inteiro, o operacional conta zero (fator observado ~30x no benchmark real).
+
+    Não proporcionaliza por permanência/H_i: como o diesel em NEP-043 (``C_eps`` exclui
+    diesel porque seu consumo segue a produção, não o calendário), material segue Q
+    produzido — mesmo sob atraso/ineficiência, a mesma área pavimentada consome a mesma
+    massa asfáltica.
+    """
+    subtotal = getattr(plan, "subtotal", None) if plan else None
+    sem_bdi = getattr(subtotal, "sem_bdi", None) if subtotal else None
+    return float(getattr(sem_bdi, "material", 0.0) or 0.0) if sem_bdi else 0.0
+
+
 def _bpe_extrair_e_processar_features(
     equipe: Any,
     permanencia_base: float,
@@ -523,16 +545,20 @@ def _bpe_extrair_e_processar_features(
     """Extrai e processa todas as features de uma equipe para PE. Retorna tuple com
     todos os intermediários calculados necessários para construir PontoEquilibrio."""
     _n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
+    plan = (planejamento_por_item or {}).get(equipe.item_id)
     custo_operacional_agregado = _resolve_custo_equipe_agregado(equipe)
     if custo_operacional_agregado <= 0:
         custo_operacional_agregado = custo_fixo_total
+    # Issue #151: soma material real — sem isso, itens material-dominantes (CBUQ) reportam
+    # delta/margem artificiais (ver docstring de _pe_resolve_material_real).
+    material_real = _pe_resolve_material_real(plan)
+    custo_operacional_agregado += material_real
     delta = custo_venda_total - custo_operacional_agregado
 
     custo_total_autonomo, gap_pool_overhead = _pe_custo_autonomo_e_gap_pool(
         equipe, custo_operacional_real, _n_frentes, idle_por_item
     )
 
-    plan = (planejamento_por_item or {}).get(equipe.item_id)
     pu_catalogo_unitario, pu_calibrado_unitario, ajuste_minimo_pct, frentes_nec = _pe_plan_calibracao(
         plan, custo_total_autonomo, custo_operacional_real, custo_venda_total
     )
@@ -548,19 +574,29 @@ def _bpe_extrair_e_processar_features(
 
     horas_dia = float(getattr(regime, "horas_dia", 0.0) or 0.0)
     dias_semana = float(getattr(regime, "dias_semana", 0.0) or 0.0)
+    # PR #152 (review Copilot): causa_dominante (D1) e horas_reais_min/max (D3) dividem por
+    # H_i/H_cat (horas reais/catálogo) para obter as taxas TIME-DRIVEN γ_i^v/γ_i^o — material
+    # não escala com H_i (segue Q, não calendário, mesma lógica de diesel em NEP-043; ver
+    # docstring de _pe_resolve_material_real). Vazar material pra dentro desses dois cálculos
+    # faz o diagnóstico de cronograma×precificação e o intervalo de horas dependerem de H_i
+    # para um termo que deveria ser invariável ao cronograma — por isso ele é subtraído aqui,
+    # só para essa decomposição; `delta`/`pu_operacional_unitario` (acima) continuam usando o
+    # custo operacional total (com material), que é a semântica correta pra margem.
+    custo_venda_time_driven = custo_venda_total - material_real
+    custo_operacional_time_driven = custo_operacional_agregado - material_real
     causa_dominante, t_cronograma, t_precificacao = _pe_causa_dominante(
         plan,
-        custo_venda_total,
-        custo_operacional_agregado,
+        custo_venda_time_driven,
+        custo_operacional_time_driven,
         custo_operacional_real,
         machine_weeks_brutas,
         horas_dia,
         dias_semana,
     )
     horas_reais_min, horas_reais_max = _pe_horas_reais_min_max(
-        custo_venda_total,
+        custo_venda_time_driven,
         teto_rs,
-        custo_operacional_agregado,
+        custo_operacional_time_driven,
         custo_operacional_real,
         machine_weeks_brutas,
         horas_dia,
@@ -891,6 +927,38 @@ def _validate_frentes_necessarias(pe: PontoEquilibrio, validacoes: list) -> None
     )
 
 
+def _validate_pe_pu_operacional_indisponivel(pe: PontoEquilibrio, validacoes: list) -> None:
+    """VAL-PONTO-EQUILIBRIO-PU-INDISPONIVEL (issue #151): pu_operacional_unitario não
+    resolvido (Q<=0, ver `_pe_camada2_producao`) enquanto custo_venda_cpu > 0.
+
+    Sob o pipeline atual isso NÃO pode ser causado por `Planejamento.quantitativo`
+    divergir de `subtotal.sem_bdi.total` — os dois são derivados da MESMA variável `q`
+    num único construtor (`_build_planejamento_entry`, skill-06 `_precificacao`); se
+    `custo_venda_cpu` (via `subtotal.sem_bdi.total`) é > 0, `quantitativo` também é.
+    A causa mais provável é o registro persistido (`canonical.ponto_equilibrio`) ser
+    anterior à introdução do campo (ADR-162, commit `0bed4479`, 2026-08-05) — Pydantic
+    preenche o default `0.0` para uma chave que nunca existiu no JSON serializado.
+
+    Sem este aviso, `pu_operacional_unitario=0.0` é indistinguível de "sem margem
+    operacional" e passa silenciosamente por `consultar_ponto_equilibrio` e pelos
+    relatórios — mesmo quando todo o resto da linha (venda, PU catálogo) está correto.
+    """
+    if pe.pu_operacional_unitario > 0 or pe.custo_venda_cpu <= 0:
+        return
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-PONTO-EQUILIBRIO-PU-INDISPONIVEL",
+            status="AVISO",
+            mensagem=(
+                f"Item '{pe.item_id}': pu_operacional_unitario não resolvido (Q<=0) apesar de "
+                f"custo_venda_cpu=R$ {pe.custo_venda_cpu:,.2f} > 0. Sob o pipeline atual isso indica "
+                "snapshot anterior a 2026-08-05 (ADR-162) — reprocessar o plano (disparar_pipeline) "
+                "antes de usar este PU."
+            ),
+        )
+    )
+
+
 def _validate_pe_particao(pe: PontoEquilibrio, validacoes: list) -> None:
     # Compat: custo_realizado foi substituído por custo_operacional_real no modelo canônico.
     custo_realizado = float(getattr(pe, "custo_realizado", 0.0) or getattr(pe, "custo_operacional_real", 0.0) or 0.0)
@@ -950,5 +1018,3 @@ def _apply_pe_mitigacao(pe_items: list[PontoEquilibrio], equipe_by_item: dict, v
     familia_rows = _apm_build_familia_rows(pe_por_item, equipe_by_item)
     for fam, rows in familia_rows.items():
         _apm_process_familia(fam, rows, validacoes)
-
-
