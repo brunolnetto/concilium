@@ -348,3 +348,14 @@ TAX_REGIME_PADRAO: str = TaxRegime.LUCRO_PRESUMIDO
 # Custo da janela: (c_mo + c_eq_locacao) × n_semanas (sem combustível nem material).
 DEFAULT_LEADTIME_MOB_SEMANAS: int = 2  # 2 semanas de leadtime de mob (padrão terraplenagem)
 DEFAULT_LAG_DEMOB_SEMANAS: int = 1  # 1 semana de lag de demob (padrão terraplenagem)
+
+# ── ADR-181 — Teto de materialidade compartilhado (D3/D6) ──────────────────────
+#
+# D3: acima deste custo direto de item, `leadtime_mob_semanas` ausente vira aviso
+# de qualidade (VAL-MOB-LEADTIME-01) em vez de assumir silenciosamente 0.
+# D6: acima deste valor, insumo com fonte_preco="negociado" exige composição
+# mínima em atributos_especificos (VAL-CAT-NEGOCIADO-01) — caso do v7.json do
+# RFI CMOC Ouvidor (R$674k/R$289k/R$1,37M/R$71,91 sem nenhuma composição).
+# Mesmo teto nos dois casos: ambos protegem contra dado de mobilização/custo
+# alto sem rastro auditável.
+TETO_MATERIALIDADE_MOB: float = 50_000.0

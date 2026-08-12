@@ -282,6 +282,66 @@ def _transporte_ja_contabilizado_direto(equipes_diretas: list | None) -> float:
     )
 
 
+def _custo_pool_ja_contabilizado_direto(contratos_recurso: list | None) -> float:
+    """ADR-181 F5/D2: soma o custo de mob/demob de pool JÁ REALIZADO por contrato
+    (`RecursoContrato.custo_mob_desmob_contrato` = n_cadeias × (custo_mob_unit +
+    custo_demob_unit) × quantidade_contratada — ADR-073, populado em skill-05).
+
+    Generaliza o guard da ADR-176 D4.1 (só `EquipeDireta`) para o terceiro modelo
+    de mob/demob (pool/`CampanhaEquipamento`) que a ADR-137/176 documentaram como
+    historicamente desconectado. `n_cadeias` já reflete o número real de eventos
+    de mob/demob do tipo de recurso (menor que `quantidade_contratada` quando a
+    perpetuação evita desmobilizar entre atividades) — usar esse campo em vez de
+    `quantidade_contratada × (custo_mob_unit+custo_demob_unit)` evita superestimar
+    o desconto quando cadeias de perpetuação reduzem o número real de movimentações.
+
+    Retorna 0.0 sem `contratos_recurso` ou quando nenhum contrato tem o campo
+    populado (>0) — degradação segura, comportamento idêntico ao anterior."""
+    if not contratos_recurso:
+        return 0.0
+    return round(
+        sum(float(getattr(ct, "custo_mob_desmob_contrato", 0.0) or 0.0) for ct in contratos_recurso), 2
+    )
+
+
+def _custo_direto_insumo_mob_tagueado(eap: list | None, catalogo: dict | None) -> float:
+    """ADR-181 F4/D4: soma o custo direto (na EAP) de insumos marcados
+    `classificacao_mob_demob=True` em `composicao_itens` de qualquer CPU referenciada.
+
+    Generaliza `_transporte_ja_contabilizado_direto` (ADR-176 D4.1, que só enxerga
+    `EquipeDireta.custo_mobilizacao_mensal`) para o caso de mob/demob decomposto
+    como insumo de catálogo inserido direto na EAP — exatamente o padrão do
+    `v12.json` do CMOC Ouvidor (`SUPVEG-MOB-*`/`SUPVEG-CANTEIRO-*`, tipo
+    TERCEIRIZADO/SERVICO). Sem essa tag no insumo, o double-count confirmado em
+    SERRA_VERDE (ADR-176 P5) se repetiria pra qualquer decomposição desse tipo.
+
+    Fórmula por item de EAP: quantitativo × Σ(coeficiente × preco_unitario) sobre
+    as linhas de `composicao_itens` da CPU cujo insumo tem a tag. Retorna 0.0 sem
+    `eap`/`catalogo` ou sem nenhum insumo tagueado — degradação segura, idêntico
+    ao comportamento anterior a esta ADR.
+    """
+    if not eap or not catalogo:
+        return 0.0
+    insumo_lookup = {i.get("codigo"): i for i in catalogo.get("insumos", []) if i.get("codigo")}
+    tagueados = {codigo for codigo, ins in insumo_lookup.items() if ins.get("classificacao_mob_demob")}
+    if not tagueados:
+        return 0.0
+    cpu_lookup = {c.get("codigo"): c for c in catalogo.get("cpus", []) if c.get("codigo")}
+    total = 0.0
+    for item in eap:
+        cpu = cpu_lookup.get(getattr(item, "cpu_id", None))
+        if not cpu:
+            continue
+        pu_tagueado = sum(
+            float(ci.get("coeficiente") or 0) * float(insumo_lookup[ci["insumo_id"]].get("preco_unitario") or 0)
+            for ci in cpu.get("composicao_itens") or []
+            if ci.get("insumo_id") in tagueados
+        )
+        if pu_tagueado:
+            total += float(getattr(item, "quantitativo", 0) or 0) * pu_tagueado
+    return round(total, 2)
+
+
 def _extract_overrides(inputs: dict) -> dict | None:
     val = inputs.get("insumos_override")
     if isinstance(val, dict):
@@ -321,10 +381,22 @@ def _process_mob_categoria(
     equipes_diretas: list | None = None,
     catalogo: dict | None = None,
     roster_mo: list | None = None,
+    eap: list | None = None,
+    contratos_recurso: list | None = None,
 ) -> tuple[Indireto, list[IndiretoSemanal]]:
     descricao: str = cat["descricao"]
     cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == "MOB"), None)
-    ja_contabilizado_direto = _transporte_ja_contabilizado_direto(equipes_diretas)
+    # ADR-181 F4/F5/D2/D4: soma os três caminhos de custo direto já contabilizado —
+    # campo fixo de EquipeDireta (ADR-176 D4.1), insumo de catálogo tagueado
+    # inserido direto na EAP, e pool/CampanhaEquipamento realizado por contrato
+    # (generalizações desta ADR para os outros 2 dos "3 modelos desconexos" da
+    # ADR-137/176).
+    ja_contabilizado_direto = round(
+        _transporte_ja_contabilizado_direto(equipes_diretas)
+        + _custo_direto_insumo_mob_tagueado(eap, catalogo)
+        + _custo_pool_ja_contabilizado_direto(contratos_recurso),
+        2,
+    )
     if cat_cfg_raw:
         cat_obj = IndirectoCategoria(**cat_cfg_raw)
         custo = cat_obj.custo_fixo_total

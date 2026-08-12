@@ -66,6 +66,9 @@ def _cq_validate_insumos(insumos: list, validador: ValidadorCPUInsumo) -> tuple[
         res_e = validador.validar_encoding(insumo)
         if res_e.status == "AVISO":
             avisos.append((insumo["codigo"], res_e))
+        res_n = validador.validar_composicao_negociado(insumo)
+        if res_n.status == "AVISO":
+            avisos.append((insumo["codigo"], res_n))
     return avisos, insumos_obsoletos
 
 

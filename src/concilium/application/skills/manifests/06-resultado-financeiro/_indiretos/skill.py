@@ -175,6 +175,8 @@ def _process_categorias_indiretas(
                 equipes_diretas=canonical_in.equipes_diretas,
                 catalogo=catalogo,
                 roster_mo=roster_mo,
+                eap=canonical_in.eap,
+                contratos_recurso=canonical_in.contratos_recurso,
             )
         else:
             indir, semanal = _process_regular_categoria(
