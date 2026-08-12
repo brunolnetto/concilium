@@ -14,6 +14,7 @@ from concilium.domain.models.canonical import (
 )
 
 from ._causal_cost_partition import particionar_contrato  # ty: ignore[unresolved-import]
+from ._dimensionamento_itens import _accum_mob_costs_list  # ty: ignore[unresolved-import]
 from ._perpetuation_chains import _build_perpetuation_chains  # ty: ignore[unresolved-import]
 from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
     _collect_tipo_items_and_demands,
@@ -233,8 +234,16 @@ def _build_cpu_prod_lookups_rcpsp(catalogo: dict) -> tuple[dict, dict]:
     return cpu_lookup, prod_lookup
 
 
-def _derive_item_tipo_requerido(item: Any, sa: Any, cpu_lookup: dict, prod_lookup: dict) -> tuple[str, int] | None:
-    """Deriva (tipo_fungivel, required) para um item de EAP; None se sem composição válida."""
+def _derive_item_tipo_requerido(
+    item: Any, sa: Any, cpu_lookup: dict, prod_lookup: dict
+) -> tuple[str, int, dict] | None:
+    """Deriva (tipo_fungivel, required, composicao) para um item de EAP; None se sem composição válida.
+
+    ADR-176 F4: `composicao` (o dict `composicao_padrao_equipe`) é retornado além de
+    `tipo`/`required` para permitir ao chamador derivar o custo unitário de
+    mob/demob do tipo (`_custo_mob_demob_unit_composicao`) sem repetir a mesma
+    cadeia de lookup cpu→produção→composição.
+    """
     cpu = cpu_lookup.get(item.cpu_id, {})
     prod_id = cpu.get("producao_id_ref")
     prod = prod_lookup.get(prod_id or "", {})
@@ -245,16 +254,32 @@ def _derive_item_tipo_requerido(item: Any, sa: Any, cpu_lookup: dict, prod_looku
     required = max((int(math.ceil(float(getattr(d, "num_equipes", 0) or 0.0))) for d in dist.values()), default=1)
     required = max(1, required)
     tipo = _tipo_recurso_fungivel(str(item.cpu_id or ""), equipe)
-    return tipo, required
+    return tipo, required, equipe
+
+
+def _custo_mob_demob_unit_composicao(composicao: dict) -> tuple[float, float]:
+    """ADR-176 F4: custo de mobilização/desmobilização de UMA unidade do tipo de
+    recurso fungível, a partir dos mesmos campos `custo_mobilizacao`/
+    `custo_desmobilizacao` por função/equipamento embutidos na composição
+    (`composicao_padrao_equipe`) — mesmo dado de catálogo já consumido pelo custo
+    direto (`_calc_custo_mob_desmob_split`, skill-05) e pelo indireto de projeto
+    (`_accum_mob_costs_list`, skill-06). Reaproveita `_accum_mob_costs_list`
+    (mesma fórmula, zero divergência) em vez de reimplementar a soma.
+    """
+    c_mob_fn, c_demob_fn = _accum_mob_costs_list(composicao.get("funcoes") or [], "num_pessoas")
+    c_mob_eq, c_demob_eq = _accum_mob_costs_list(composicao.get("equipamentos") or [], "num_unidades")
+    return round(c_mob_fn + c_mob_eq, 2), round(c_demob_fn + c_demob_eq, 2)
 
 
 def _collect_item_tipo_ids_and_pool_caps(
     eap_items: Any, sched_lookup: dict, cpu_lookup: dict, prod_lookup: dict
-) -> tuple[dict[str, tuple[str, int]], dict[str, int]]:
-    """Percorre a EAP e coleta (tipo, required) por item e a capacidade de pool por tipo."""
+) -> tuple[dict[str, tuple[str, int]], dict[str, int], dict[str, tuple[float, float]]]:
+    """Percorre a EAP e coleta (tipo, required) por item, a capacidade de pool por
+    tipo, e o custo unitário de mob/demob por tipo (ADR-176 F4)."""
     sched_ids = set(sched_lookup)
     item_tipo_ids: dict[str, tuple[str, int]] = {}
     pool_caps: dict[str, int] = {}
+    tipo_mob_demob: dict[str, tuple[float, float]] = {}
 
     for item in eap_items:
         if item.item_id not in sched_ids:
@@ -265,11 +290,13 @@ def _collect_item_tipo_ids_and_pool_caps(
         resultado = _derive_item_tipo_requerido(item, sa, cpu_lookup, prod_lookup)
         if resultado is None:
             continue
-        tipo, required = resultado
+        tipo, required, equipe = resultado
         item_tipo_ids[item.item_id] = (tipo, required)
         pool_caps[tipo] = max(pool_caps.get(tipo, 0), required)
+        if tipo not in tipo_mob_demob:
+            tipo_mob_demob[tipo] = _custo_mob_demob_unit_composicao(equipe)
 
-    return item_tipo_ids, pool_caps
+    return item_tipo_ids, pool_caps, tipo_mob_demob
 
 
 def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -> dict | None:
@@ -279,8 +306,20 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
     composição padrão (funções + equipamentos + quantidades). Assim, CPUs iguais
     ou com mesma composição compartilham recurso sem depender de regex sobre cpu_id.
 
-    resource_costs é omitido propositalmente → custo_unit_semanal derivado sempre
-    bottom-up (custo_total_item / machine_weeks, ver _compute_custo_unit_fracs).
+    custo_unit_semanal é sempre derivado bottom-up (custo_total_item / machine_weeks,
+    ver _compute_custo_unit_fracs) — resource_costs aqui só carrega
+    custo_mob_unit/custo_demob_unit por tipo (ADR-176 F4), nunca custo_unit_semanal.
+
+    resource_costs[tipo]["custo_mob_unit"/"custo_demob_unit"] (ADR-176 F4, D4):
+    somados dos mesmos campos custo_mobilizacao/custo_desmobilizacao por função/
+    equipamento embutidos na composição do tipo — mesma fonte já usada pelo custo
+    direto (EquipeDireta, skill-05) e pelo indireto de projeto (skill-06). Antes
+    desta ADR, resource_costs era omitido propositalmente e
+    RecursoContrato.custo_mob_unit/custo_demob_unit ficavam sempre 0.0 quando o
+    rcpsp_spec era auto-derivado (ADR-137 P1) — a decisão de perpetuação (ADR-073)
+    rodava sempre em modo heurístico de tempo, nunca econômico. Nenhum tipo ganha
+    custo_idle_semanal_unit aqui — o fallback ADR-085 (`cus_mo + cus_locacao`)
+    continua se aplicando normalmente (ver `_setup_contratos_context`).
 
     Capacidades declaradas explicitamente em canonical_in.recurso_pool (skill 03) são
     respeitadas quando o tipo_id coincide com o equip_id (convenção natural).
@@ -298,7 +337,9 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
     sched_lookup = {sa.activity_id: sa for sa in sched_acts}
     cpu_lookup, prod_lookup = _build_cpu_prod_lookups_rcpsp(catalogo)
 
-    item_tipo_ids, pool_caps = _collect_item_tipo_ids_and_pool_caps(eap_items, sched_lookup, cpu_lookup, prod_lookup)
+    item_tipo_ids, pool_caps, tipo_mob_demob = _collect_item_tipo_ids_and_pool_caps(
+        eap_items, sched_lookup, cpu_lookup, prod_lookup
+    )
 
     if not pool_caps:
         return None
@@ -314,8 +355,16 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
         }
         for iid, (tipo, required) in item_tipo_ids.items()
     ]
+    resource_costs = {
+        tipo: {"custo_mob_unit": c_mob, "custo_demob_unit": c_demob}
+        for tipo, (c_mob, c_demob) in tipo_mob_demob.items()
+        if c_mob > 0 or c_demob > 0
+    }
 
-    return {"resource_pool": resource_pool, "activities": activities}
+    result: dict[str, Any] = {"resource_pool": resource_pool, "activities": activities}
+    if resource_costs:
+        result["resource_costs"] = resource_costs
+    return result
 
 
 def _setup_contratos_context(equipes: list, rcpsp_spec: dict) -> tuple:
@@ -332,9 +381,25 @@ def _setup_contratos_context(equipes: list, rcpsp_spec: dict) -> tuple:
     delta_max = int(rcpsp_spec.get("delta_perpetuacao_semanas", 2))
     _raw = rcpsp_spec.get("resource_costs", {})
     resource_costs: dict = _raw if isinstance(_raw, dict) else {}
-    # True quando a chave está ausente no spec (catálogo sem custos explícitos — usa fallback).
-    # False quando resource_costs={} foi passado explicitamente (retrocompatibilidade ADR-071).
-    resource_costs_absent = "resource_costs" not in rcpsp_spec
+    # Três casos, não dois (ADR-176 F4 estende o contrato original):
+    # 1. Chave "resource_costs" ausente do spec → catálogo sem custos explícitos,
+    #    usa fallback (True) — comportamento original, preservado.
+    # 2. "resource_costs": {} presente explicitamente (vazio) → sentinela de
+    #    retrocompatibilidade ADR-071: desliga o fallback de propósito, mantém o
+    #    contrato monolítico (False) — comportamento original, preservado.
+    # 3. "resource_costs" presente e não-vazio (ADR-176 F4): `_derive_rcpsp_from_canonical`
+    #    pode popular só custo_mob_unit/custo_demob_unit reais do catálogo, sem
+    #    custo_idle_semanal_unit — nesse caso o fallback de idle (ADR-085,
+    #    `cus_mo + cus_locacao`) ainda deve engajar; só desliga quando pelo menos um
+    #    tipo tiver custo_idle_semanal_unit explícito.
+    if "resource_costs" not in rcpsp_spec:
+        resource_costs_absent = True
+    elif not resource_costs:
+        resource_costs_absent = False
+    else:
+        resource_costs_absent = not any(
+            isinstance(v, dict) and "custo_idle_semanal_unit" in v for v in resource_costs.values()
+        )
     return pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs, resource_costs_absent
 
 

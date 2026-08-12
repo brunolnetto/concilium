@@ -192,8 +192,8 @@
         "equip_id": "E0013",
         "num_unidades": 1,
         "consumo_litros_hora": 0,
-        "custo_mobilizacao": 6500.0,
-        "custo_desmobilizacao": 6500.0,
+        "custo_mobilizacao": 1300.0,
+        "custo_desmobilizacao": 1300.0,
         "preco_h_unitario": 125.0,
         "fracao_dedicacao": 0.1667
       },
@@ -201,8 +201,8 @@
         "equip_id": "E0005",
         "num_unidades": 1,
         "consumo_litros_hora": 0,
-        "custo_mobilizacao": 6500.0,
-        "custo_desmobilizacao": 6500.0,
+        "custo_mobilizacao": 1300.0,
+        "custo_desmobilizacao": 1300.0,
         "preco_h_unitario": 145.8333,
         "fracao_dedicacao": 0.5
       },
