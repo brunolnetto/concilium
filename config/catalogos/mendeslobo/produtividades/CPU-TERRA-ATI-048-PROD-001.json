@@ -1,0 +1,47 @@
+{
+  "id": "CPU-TERRA-ATI-048-PROD-001",
+  "codigo": "CPU-TERRA-ATI-048-PROD-001",
+  "descricao": "Remoção de topsoil — carga, transporte, descarga e espalhamento, DMT até 1 km — equipe: 2× SV-OUV-MO-OPER-TRAT-EST, 1× SV-OUV-MO-OPER-PA, 3× SV-OUV-MO-MOTOR-BASC, 2× SV-OUV-MO-SINALEIRO; equipamentos: 2× SV-OUV-EQ-TRAT-EST-20T, 1× SV-OUV-EQ-PA-18T, 3× SV-OUV-EQ-CAM-BASC-14M3",
+  "origem": {
+    "tipo": "tabela_referencia",
+    "fonte_id": "CPU-TERRA-ATI-048-PROD-001",
+    "data_calibracao": "2026-08-12T00:00:00+00:00",
+    "referencia": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor). NOTA: Planilha lista material auxiliar 'BRITA' (m³, R$120,00) com custo unitário R$0 (referência de preço, não custeado nesta CPU) — não incluído em composicao_itens."
+  },
+  "valor_horario": 365.05,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "SV-OUV-MO-OPER-TRAT-EST",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "SV-OUV-MO-OPER-PA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "SV-OUV-MO-MOTOR-BASC",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "SV-OUV-MO-SINALEIRO",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "SV-OUV-EQ-TRAT-EST-20T",
+        "num_unidades": 2
+      },
+      {
+        "equip_id": "SV-OUV-EQ-PA-18T",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "SV-OUV-EQ-CAM-BASC-14M3",
+        "num_unidades": 3
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

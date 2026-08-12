@@ -1,0 +1,12 @@
+{
+  "codigo": "CPU-TERRA-ATI-044",
+  "descricao": "Remoção do topsoil — carga, transporte, descarga e espalhamento, DMT até 4,5 km",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "producao_id_ref": "CPU-TERRA-ATI-044-PROD-001",
+  "atributos_categoria": {
+    "dmt_max_metros": 4500
+  }
+}

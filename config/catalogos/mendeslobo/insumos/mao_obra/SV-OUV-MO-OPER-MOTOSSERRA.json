@@ -1,0 +1,18 @@
+{
+  "codigo": "SV-OUV-MO-OPER-MOTOSSERRA",
+  "tipo": "MAO_OBRA",
+  "descricao": "Operador de motosserra",
+  "unidade": "h",
+  "preco_unitario": 24.75,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "tipo_contrato": "CLT",
+    "memoria_calculo": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor). Valor é SALÁRIO BASE (sem encargos) — encargos aplicados via pipeline (resolver_encargo/ENCARGOS_CLT), não incluídos aqui."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2026-08-01",
+  "categoria": "TERRAPLENAGEM"
+}

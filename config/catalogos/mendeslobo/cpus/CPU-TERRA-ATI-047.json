@@ -1,0 +1,12 @@
+{
+  "codigo": "CPU-TERRA-ATI-047",
+  "descricao": "Supressão de vegetação arbustiva — carga, transporte, descarga e espalhamento, DMT até 1 km",
+  "unidade": "m2",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "producao_id_ref": "CPU-TERRA-ATI-047-PROD-001",
+  "atributos_categoria": {
+    "dmt_max_metros": 1000
+  }
+}

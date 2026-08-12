@@ -1,0 +1,19 @@
+{
+  "codigo": "SV-OUV-EQ-PA-18T",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Pá carregadeira 18t",
+  "unidade": "h",
+  "preco_unitario": 225.0,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "consumo_litros_hora": 25.0,
+    "tipo_propriedade": "locacao",
+    "memoria_calculo": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor). Combustível: Diesel S10."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2026-08-01",
+  "categoria": "TERRAPLENAGEM"
+}

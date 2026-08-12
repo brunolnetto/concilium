@@ -1,0 +1,59 @@
+{
+  "id": "CPU-TERRA-ATI-043-PROD-001",
+  "codigo": "CPU-TERRA-ATI-043-PROD-001",
+  "descricao": "Supressão de vegetação arbustiva — carga, transporte, descarga e espalhamento, DMT até 4,5 km — equipe: 1× SV-OUV-MO-OPER-PA, 1× SV-OUV-MO-OPER-ESCAV, 3× SV-OUV-MO-MOTOR-BASC, 4× SV-OUV-MO-AJUDANTE, 2× SV-OUV-MO-SINALEIRO, 3× SV-OUV-MO-OPER-TRAT-EST; equipamentos: 1× SV-OUV-EQ-PA-MANDIBULA, 3× SV-OUV-EQ-CAM-BASC-14M3, 3× SV-OUV-EQ-TRAT-EST-20T, 1× SV-OUV-EQ-ESCAV-22T",
+  "origem": {
+    "tipo": "tabela_referencia",
+    "fonte_id": "CPU-TERRA-ATI-043-PROD-001",
+    "data_calibracao": "2026-08-12T00:00:00+00:00",
+    "referencia": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor)."
+  },
+  "valor_horario": 510.75,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "SV-OUV-MO-OPER-PA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "SV-OUV-MO-OPER-ESCAV",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "SV-OUV-MO-MOTOR-BASC",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "SV-OUV-MO-AJUDANTE",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "SV-OUV-MO-SINALEIRO",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "SV-OUV-MO-OPER-TRAT-EST",
+        "num_pessoas": 3
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "SV-OUV-EQ-PA-MANDIBULA",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "SV-OUV-EQ-CAM-BASC-14M3",
+        "num_unidades": 3
+      },
+      {
+        "equip_id": "SV-OUV-EQ-TRAT-EST-20T",
+        "num_unidades": 3
+      },
+      {
+        "equip_id": "SV-OUV-EQ-ESCAV-22T",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}
