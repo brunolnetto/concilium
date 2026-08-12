@@ -29,7 +29,7 @@ from ._validacao import (  # ty: ignore[unresolved-import]
 )
 
 if TYPE_CHECKING:
-    from concilium.domain.models.planning.mobilizacao import CurvaForca, MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import CurvaForca, WorkforcePolicy
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
 
@@ -511,7 +511,7 @@ def _check_pool_violations(
 def _check_wmp_pool(
     item_id: str,
     cpu: dict,
-    policy: MobilizacaoPolicy,
+    policy: WorkforcePolicy,
     pool: dict,
     validacoes: list,
 ) -> None:
@@ -540,7 +540,7 @@ def _check_wmp_pool(
 def _check_wmp_desmob(
     item_id: str,
     curva: CurvaForca,
-    policy: MobilizacaoPolicy,
+    policy: WorkforcePolicy,
     Q: float,
     P: float,
     validacoes: list,
@@ -571,11 +571,11 @@ def _check_wmp_desmob(
         )
 
 
-def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> MobilizacaoPolicy | None:
-    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> WorkforcePolicy | None:
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
     try:
-        return MobilizacaoPolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
+        return WorkforcePolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
     except Exception as exc:
         validacoes.append(
             ValidacaoItem(codigo="VAL-WMP-03", status="AVISO", mensagem=f"WMP '{item_id}': politica invalida ({exc}).")
@@ -585,7 +585,7 @@ def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> Mobi
 
 def _run_wmp_simulation(
     sim: WorkforcePolicySimulator,
-    policy: MobilizacaoPolicy,
+    policy: WorkforcePolicy,
     item_id: str,
     Q: float,
     P: float,

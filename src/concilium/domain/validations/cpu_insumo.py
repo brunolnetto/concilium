@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from concilium.domain.constants import TETO_MATERIALIDADE_MOB
 from concilium.domain.models.canonical import ValidacaoItem
 from concilium.domain.validations.catalog_refs import REF_EQUIPAMENTOS, REF_FUNCOES, REF_MATERIAIS, ids_faltantes
 
@@ -328,6 +329,37 @@ class ValidadorCPUInsumo:
                 mensagem=f"Data de referência defasada: {data}. Recomenda-se atualização para 2025.",
             )
         return ValidacaoItem(codigo="VAL-INS-VIG-01", status="OK")
+
+    def validar_composicao_negociado(self, insumo: dict[str, Any]) -> ValidacaoItem:
+        """ADR-181 D6/F6: `fonte_preco="negociado"` acima do teto de materialidade
+        exige composição mínima documentada (`atributos_especificos.memoria_calculo`)
+        — mesmo que rudimentar. Sem isso, um lump-sum alto entra no catálogo sem
+        nenhum rastro de como o número foi obtido (caso real: `v7.json` do RFI CMOC
+        Ouvidor — 4 valores de R$71,91 a R$1,37M marcados "negociado" sem nenhuma
+        composição documentada em lugar nenhum do repositório).
+
+        Abaixo do teto, ou com `fonte_preco` diferente de "negociado", ou com
+        `memoria_calculo` preenchido: OK. Não bloqueia (severidade AVISO) — o dado
+        pode ser legítimo, só precisa de revisão humana antes de virar "confiável".
+        """
+        if insumo.get("fonte_preco") != "negociado":
+            return ValidacaoItem(codigo="VAL-CAT-NEGOCIADO-01", status="OK")
+        preco = float(insumo.get("preco_unitario") or 0)
+        if preco <= TETO_MATERIALIDADE_MOB:
+            return ValidacaoItem(codigo="VAL-CAT-NEGOCIADO-01", status="OK")
+        atributos = insumo.get("atributos_especificos") or {}
+        if str(atributos.get("memoria_calculo") or "").strip():
+            return ValidacaoItem(codigo="VAL-CAT-NEGOCIADO-01", status="OK")
+        return ValidacaoItem(
+            codigo="VAL-CAT-NEGOCIADO-01",
+            status="AVISO",
+            mensagem=(
+                f"Insumo '{insumo.get('codigo')}' (R$ {preco:,.2f}, fonte_preco='negociado') "
+                f"acima do teto de materialidade (R$ {TETO_MATERIALIDADE_MOB:,.2f}) sem "
+                f"composição documentada em atributos_especificos.memoria_calculo — risco de "
+                f"dado sem rastro auditável."
+            ),
+        )
 
     def validar_unidade_normalizada(self, entidade: dict[str, Any]) -> ValidacaoItem:
         unidade = str(entidade.get("unidade", "")).strip()

@@ -89,6 +89,7 @@ from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
 )
 from ._dimensionamento_orquestracao import (  # ty: ignore[unresolved-import]
     _build_dimensionamento,
+    _checar_leadtime_mob_ausente,
     _dimensionar_item_equipe,
     _resolve_num_equipes_paralelas,
     _resolve_permanencia_e_custo_total_ajustados,
@@ -298,6 +299,7 @@ __all__ = [
     "_calcular_custo_equipamento",
     "_calcular_custo_funcao",
     "_calcular_permanencia_e_custo_total",
+    "_checar_leadtime_mob_ausente",
     "_collect_item_tipo_ids_and_pool_caps",
     "_custo_mob_demob_unit_composicao",
     "_collect_items_data_for_tipo",

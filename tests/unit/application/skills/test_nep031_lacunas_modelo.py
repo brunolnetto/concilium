@@ -468,10 +468,10 @@ def test_l5_diesel_e_material_nao_disparam():
 
 def test_l6_ramp_up_atinge_plateau():
     """A curva de ramp-up deve atingir n_maximo e mantê-lo no plateau."""
-    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
-    policy = MobilizacaoPolicy(
+    policy = WorkforcePolicy(
         n_inicial=1,
         n_maximo=4,
         taxa_mobilizacao=1.0,
@@ -493,10 +493,10 @@ def test_l6_ramp_up_atinge_plateau():
 
 def test_l6_ramp_up_monotone_crescente():
     """Durante o ramp-up, n(t) é monotonamente não-decrescente."""
-    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
-    policy = MobilizacaoPolicy(
+    policy = WorkforcePolicy(
         n_inicial=1,
         n_maximo=6,
         taxa_mobilizacao=1.5,
@@ -529,11 +529,11 @@ def test_l6_parametrizacao_equivalente_ao_enunciado():
     Os valores diferem em ±1 por semana, mas o total de semanas de ramp-up é o mesmo.
     """
 
-    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
     m_max, r = 5, 5
-    policy = MobilizacaoPolicy(
+    policy = WorkforcePolicy(
         n_inicial=1,
         n_maximo=m_max,
         taxa_mobilizacao=m_max / r,

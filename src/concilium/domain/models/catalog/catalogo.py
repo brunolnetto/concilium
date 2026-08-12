@@ -198,6 +198,16 @@ class AtributosInsumo(BaseModel):
     quartos_por_casa: int | None = Field(default=None, gt=0)
     pessoas_por_quarto: int | None = Field(default=None, gt=0)
 
+    # ── QUALQUER TIPO — ADR-181 D6 ────────────────────────────────────────
+    # memoria_calculo : texto livre explicando como um preço fonte_preco="negociado"
+    #                   acima do teto de materialidade foi obtido (headcount, distância,
+    #                   verba, cotação de fornecedor, planilha do cliente, etc.) — mesmo
+    #                   que rudimentar. Evita lump-sum sem rastro auditável (caso do
+    #                   v7.json do RFI CMOC Ouvidor: 4 valores negociados de R$71,91 a
+    #                   R$1,37M sem nenhuma composição documentada em lugar nenhum do
+    #                   repositório). Ver ValidadorCPUInsumo.validar_composicao_negociado.
+    memoria_calculo: str | None = None
+
 
 class Insumo(BaseModel):
     """Item elementar do catálogo: material, mão de obra, equipamento ou terceirizado."""
@@ -228,6 +238,15 @@ class Insumo(BaseModel):
     # fidelidade retroativa de resolved_catalog.json/CatalogSnapshot). Default
     # "ativo" preserva retrocompatibilidade de todo catálogo existente.
     status: Literal["ativo", "descontinuado"] = "ativo"
+    # ADR-181 D4: marca insumo cujo custo é evento físico de mobilização/desmobilização
+    # (transporte de recurso até o canteiro, canteiro/instalação) — independente do
+    # `tipo` (TERCEIRIZADO/SERVICO na prática, ex.: SUPVEG-MOB-*/CANTEIRO-* do v12.json
+    # do CMOC Ouvidor). Usado pelo guard anti-double-count generalizado da skill-06
+    # (`_mob.py`) para descontar do indireto MOB o que já foi contabilizado como
+    # custo direto via `composicao_itens` de uma CPU na EAP — sem esta tag, o guard
+    # da ADR-176 só enxergava `EquipeDireta.custo_mobilizacao_mensal` (double-count
+    # confirmado em SERRA_VERDE, ADR-176 P5). Default False = comportamento anterior.
+    classificacao_mob_demob: bool = False
 
     @model_validator(mode="after")
     def _validar_origem_material(self) -> Insumo:

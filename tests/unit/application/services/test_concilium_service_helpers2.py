@@ -293,14 +293,14 @@ class TestWmpHelpers:
 
         sim = MagicMock()
         results: list = []
-        # Pass invalid policy_dict that will fail MobilizacaoPolicy(**...)
+        # Pass invalid policy_dict that will fail WorkforcePolicy(**...)
         _process_wmp_policy(sim, "item-1", {"n_minimo": "not-int"}, {}, {}, {}, results)
         assert any(r["codigo"] == "VAL-WMP-03" for r in results)
 
     def _valid_policy_dict(self):
-        from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+        from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
-        return MobilizacaoPolicy(
+        return WorkforcePolicy(
             n_inicial=1, n_maximo=2, taxa_mobilizacao=1.0, taxa_desmobilizacao=0.0, semanas_plateau=None
         ).model_dump()
 
@@ -433,9 +433,9 @@ class TestSimulateMobilizacaoPolicy:
     """Covers _cs_simulate_mobilizacao_policy (lines 174-208)."""
 
     def _make_req(self, with_semana_inicio=False):
-        from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+        from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
-        policy = MobilizacaoPolicy(
+        policy = WorkforcePolicy(
             n_inicial=1, n_maximo=2, taxa_mobilizacao=1.0, taxa_desmobilizacao=0.0, semanas_plateau=None
         )
         req: dict = {

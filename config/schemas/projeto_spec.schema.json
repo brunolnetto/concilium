@@ -196,6 +196,12 @@
                   "minimum": 0,
                   "default": 1,
                   "description": "Semanas de desmobilização após última produção (ADR-106 F5). Hierarquia: item > catálogo > DEFAULT_LAG_DEMOB_SEMANAS=1."
+                },
+                "leadtime_aquisicao_semanas": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 0,
+                  "description": "Semanas entre a decisão de contratar/alugar/comprar o recurso e ele estar contratualmente disponível para começar a se mobilizar (ADR-181 F1) — ANTERIOR a leadtime_mob_semanas. Sem custo direto associado; empurra earliest_start no RCPSP (não afeta custo). Default 0 = recurso já disponível (backward compat)."
                 }
               }
             }

@@ -8,6 +8,7 @@ from concilium.domain.constants import (
     ENCARGOS_CLT,
     ENCARGOS_MENSALISTA,
     SEMANAS_POR_MES,
+    TETO_MATERIALIDADE_MOB,
 )
 from concilium.domain.models.canonical import (
     CanonicalModel,
@@ -59,6 +60,32 @@ def _setup_dimensionamento_context(
     sched_acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     cron_lookup = {sa.activity_id: sa for sa in sched_acts}
     return perc_horista, perc_mensalista, preco_diesel, horas_dia, dias_uteis, cpu_lookup, prod_lookup, cron_lookup
+
+
+def _checar_leadtime_mob_ausente(item: Any, custo_total_final: float, validacoes: list) -> None:
+    """ADR-181 D3/F3: acima do teto de materialidade, item sem `leadtime_mob_semanas`
+    dispara aviso de qualidade em vez de assumir silenciosamente 0.
+
+    Não vira obrigatório em todo o catálogo (mesma trava de dado que bloqueou a
+    ADR-106 F5) — só sinaliza quando o custo direto do item já é material o
+    suficiente pra o dado ausente importar de verdade (mesmo padrão fail-loud
+    condicional do ADR-138).
+    """
+    if item.leadtime_mob_semanas is not None:
+        return
+    if custo_total_final <= TETO_MATERIALIDADE_MOB:
+        return
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-MOB-LEADTIME-01",
+            status="AVISO",
+            mensagem=(
+                f"Item '{item.item_id}' (custo direto R$ {custo_total_final:,.2f}) não informa "
+                f"leadtime_mob_semanas — custo de janela de mobilização assumido 0. Revisar se "
+                f"há prazo real de pré-ativação/deslocamento a considerar."
+            ),
+        )
+    )
 
 
 def _resolve_num_equipes_paralelas(cron: Any) -> int:
@@ -161,6 +188,7 @@ def _dimensionar_item_equipe(
     permanencia_efetiva, custo_total_final = _resolve_permanencia_e_custo_total_ajustados(
         ativos, custo_1frente, custo_mat, custo_ocioso, custo_mob_desmob
     )
+    _checar_leadtime_mob_ausente(item, custo_total_final, validacoes)
     # NEP-037: custo_fixo_mensal usa custo_mo_base (sem encargos) — encargos ficam em custo_encargos_mensal.
     fixo_mensal_total = round(custo_mo_base + custo_eq + custo_comb_efetivo + custo_mat, 2)
 

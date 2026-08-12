@@ -25,7 +25,7 @@ from concilium.domain.models.canonical import (
     Atividade,
     CanonicalModel,
 )
-from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -286,7 +286,7 @@ class TestPolicyPriority:
 
     def test_embedded_atividade_policy_higher_priority_than_file(self):
         """Atividade.mobilizacao_policy embedded in canonical overrides file-level policy."""
-        policy_embedded = MobilizacaoPolicy(n_inicial=4, n_maximo=4, taxa_mobilizacao=4.0)
+        policy_embedded = WorkforcePolicy(n_inicial=4, n_maximo=4, taxa_mobilizacao=4.0)
         canonical = _make_canonical_with_eap([_eap_item(1, quantitativo=10_000.0)])
         catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 500.0}])
 
@@ -344,7 +344,7 @@ class TestWMPValidationCodes:
         assert "VAL-WMP-01" in val_codes
 
     def test_val_wmp_03_invalid_policy_schema(self):
-        """VAL-WMP-03 emitted when policy dict fails MobilizacaoPolicy validation."""
+        """VAL-WMP-03 emitted when policy dict fails WorkforcePolicy validation."""
         canonical = _make_canonical_with_eap([_eap_item(1)])
         catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 500.0}])
 

@@ -6,6 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from concilium.domain.constants import TETO_MATERIALIDADE_MOB
+
 
 def _make_validator():
     from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo
@@ -173,6 +175,59 @@ class TestValidarVigencia:
     def test_current_date(self):
         v = _make_validator()
         result = v.validar_vigencia({"data_referencia_preco": "2025-01"})
+        assert result.status == "OK"
+
+
+class TestValidarComposicaoNegociado:
+    """ADR-181 D6/F6: fonte_preco='negociado' acima do teto exige memoria_calculo."""
+
+    def test_fonte_preco_diferente_de_negociado_ok(self):
+        v = _make_validator()
+        result = v.validar_composicao_negociado({"fonte_preco": "catalogo_proprio", "preco_unitario": 999_999.0})
+        assert result.status == "OK"
+
+    def test_negociado_abaixo_do_teto_ok(self):
+        v = _make_validator()
+        result = v.validar_composicao_negociado(
+            {"fonte_preco": "negociado", "preco_unitario": TETO_MATERIALIDADE_MOB - 1}
+        )
+        assert result.status == "OK"
+
+    def test_negociado_acima_do_teto_sem_composicao_avisa(self):
+        v = _make_validator()
+        result = v.validar_composicao_negociado(
+            {"codigo": "SUPVEG-MOB-001", "fonte_preco": "negociado", "preco_unitario": 674_932.70}
+        )
+        assert result.status == "AVISO"
+        assert result.codigo == "VAL-CAT-NEGOCIADO-01"
+        assert "SUPVEG-MOB-001" in result.mensagem
+
+    def test_negociado_acima_do_teto_com_memoria_calculo_ok(self):
+        v = _make_validator()
+        result = v.validar_composicao_negociado(
+            {
+                "fonte_preco": "negociado",
+                "preco_unitario": 674_932.70,
+                "atributos_especificos": {"memoria_calculo": "68 pessoas x 350km, ver planilha RFI anexa"},
+            }
+        )
+        assert result.status == "OK"
+
+    def test_memoria_calculo_vazia_nao_conta(self):
+        v = _make_validator()
+        result = v.validar_composicao_negociado(
+            {
+                "fonte_preco": "negociado",
+                "preco_unitario": 674_932.70,
+                "atributos_especificos": {"memoria_calculo": "   "},
+            }
+        )
+        assert result.status == "AVISO"
+
+    def test_negociado_no_teto_exato_ok(self):
+        """Limite exclusivo (> teto, não >=) — mesmo padrão do checar_leadtime_mob_ausente."""
+        v = _make_validator()
+        result = v.validar_composicao_negociado({"fonte_preco": "negociado", "preco_unitario": TETO_MATERIALIDADE_MOB})
         assert result.status == "OK"
 
 

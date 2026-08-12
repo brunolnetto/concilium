@@ -1,4 +1,4 @@
-"""Tests for WorkforcePolicySimulator and MobilizacaoPolicy (ADR-054).
+"""Tests for WorkforcePolicySimulator and WorkforcePolicy (ADR-054).
 
 Covers all edge cases listed in the ADR:
     - Zero mobilization (n=0 throughout)
@@ -20,7 +20,7 @@ import pytest
 from pydantic import ValidationError
 
 from concilium.domain.models.planning.mobilizacao import (
-    MobilizacaoPolicy,
+    WorkforcePolicy,
 )
 from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
@@ -40,8 +40,8 @@ def make_policy(
     taxa_mobilizacao: float = 1.0,
     taxa_desmobilizacao: float = 0.0,
     semanas_plateau: int | None = None,
-) -> MobilizacaoPolicy:
-    return MobilizacaoPolicy(
+) -> WorkforcePolicy:
+    return WorkforcePolicy(
         n_inicial=n_inicial,
         n_maximo=n_maximo,
         taxa_mobilizacao=taxa_mobilizacao,
@@ -51,18 +51,18 @@ def make_policy(
 
 
 # ---------------------------------------------------------------------------
-# MobilizacaoPolicy validation
+# WorkforcePolicy validation
 # ---------------------------------------------------------------------------
 
 
 class TestMobilizacaoPolicyValidation:
     def test_valid_policy_minimal(self):
-        p = MobilizacaoPolicy(n_inicial=1, n_maximo=1, taxa_mobilizacao=1.0)
+        p = WorkforcePolicy(n_inicial=1, n_maximo=1, taxa_mobilizacao=1.0)
         assert p.n_inicial == 1
         assert p.n_maximo == 1
 
     def test_valid_policy_full(self):
-        p = MobilizacaoPolicy(
+        p = WorkforcePolicy(
             n_inicial=2,
             n_maximo=6,
             taxa_mobilizacao=0.5,
@@ -73,33 +73,33 @@ class TestMobilizacaoPolicyValidation:
 
     def test_n_maximo_lt_n_inicial_raises(self):
         with pytest.raises(ValueError, match="n_maximo"):
-            MobilizacaoPolicy(n_inicial=5, n_maximo=3, taxa_mobilizacao=1.0)
+            WorkforcePolicy(n_inicial=5, n_maximo=3, taxa_mobilizacao=1.0)
 
     def test_n_inicial_zero_raises(self):
         with pytest.raises(ValidationError):
-            MobilizacaoPolicy(n_inicial=0, n_maximo=5, taxa_mobilizacao=1.0)
+            WorkforcePolicy(n_inicial=0, n_maximo=5, taxa_mobilizacao=1.0)
 
     def test_taxa_mobilizacao_zero_raises(self):
         with pytest.raises(ValidationError):
-            MobilizacaoPolicy(n_inicial=1, n_maximo=5, taxa_mobilizacao=0.0)
+            WorkforcePolicy(n_inicial=1, n_maximo=5, taxa_mobilizacao=0.0)
 
     def test_taxa_desmobilizacao_negative_raises(self):
         with pytest.raises(ValidationError):
-            MobilizacaoPolicy(n_inicial=1, n_maximo=5, taxa_mobilizacao=1.0, taxa_desmobilizacao=-0.1)
+            WorkforcePolicy(n_inicial=1, n_maximo=5, taxa_mobilizacao=1.0, taxa_desmobilizacao=-0.1)
 
     def test_imediato_convenience(self):
-        p = MobilizacaoPolicy.imediato(n_maximo=4)
+        p = WorkforcePolicy.imediato(n_maximo=4)
         assert p.n_inicial == 4
         assert p.n_maximo == 4
 
     def test_padrao_convenience(self):
-        p = MobilizacaoPolicy.padrao(n_maximo=5, taxa_mobilizacao=2.0)
+        p = WorkforcePolicy.padrao(n_maximo=5, taxa_mobilizacao=2.0)
         assert p.n_inicial == 1
         assert p.n_maximo == 5
         assert p.taxa_mobilizacao == 2.0
 
     def test_frozen_policy_immutable(self):
-        p = MobilizacaoPolicy(n_inicial=1, n_maximo=3, taxa_mobilizacao=1.0)
+        p = WorkforcePolicy(n_inicial=1, n_maximo=3, taxa_mobilizacao=1.0)
         with pytest.raises(ValidationError):
             p.n_inicial = 2  # type: ignore[misc]
 
@@ -112,7 +112,7 @@ class TestMobilizacaoPolicyValidation:
 class TestSimulatorNormalCases:
     def test_immediate_full_capacity(self, sim: WorkforcePolicySimulator):
         """n_inicial == n_maximo: all teams from week 0, fastest possible."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=5)
+        policy = WorkforcePolicy.imediato(n_maximo=5)
         Q = 10_000.0
         P = 500.0  # units/hour
         m, h = 6, 8
@@ -164,7 +164,7 @@ class TestSimulatorNormalCases:
 
     def test_production_formula_correctness(self, sim: WorkforcePolicySimulator):
         """Verify qtd_executada = P × m × h × p(t) × n(t)."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        policy = WorkforcePolicy.imediato(n_maximo=3)
         Q = 1_000_000.0
         P = 400.0
         m, h = 5, 8
@@ -194,7 +194,7 @@ class TestSimulatorNormalCases:
         """Delivered quantity must be >= Q for a complete curve."""
         for q in [100.0, 10_000.0, 1_000_000.0]:
             curva = sim.simulate(
-                MobilizacaoPolicy.padrao(n_maximo=4),
+                WorkforcePolicy.padrao(n_maximo=4),
                 "act-target",
                 q,
                 200.0,
@@ -211,7 +211,7 @@ class TestSimulatorNormalCases:
 
     def test_total_team_weeks(self, sim: WorkforcePolicySimulator):
         """total_team_weeks is sum of num_equipes across weeks."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        policy = WorkforcePolicy.imediato(n_maximo=3)
         curva = sim.simulate(policy, "act-tw", 72_000.0, 500.0, 6, 8)
         assert curva.total_team_weeks == sum(s.num_equipes for s in curva.semanas)
 
@@ -224,7 +224,7 @@ class TestSimulatorNormalCases:
 class TestSimulatorEdgeCases:
     def test_zero_productivity_impossible(self, sim: WorkforcePolicySimulator):
         """producao_horaria=0 → no production possible → incompleta=True."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=5)
+        policy = WorkforcePolicy.imediato(n_maximo=5)
         curva = sim.simulate(policy, "act-zero-p", 100_000.0, 0.0, 6, 8)
 
         assert curva.incompleta
@@ -233,19 +233,19 @@ class TestSimulatorEdgeCases:
 
     def test_zero_productivity_raises_on_negative(self, sim: WorkforcePolicySimulator):
         with pytest.raises(ValueError, match="producao_horaria"):
-            sim.simulate(MobilizacaoPolicy.imediato(n_maximo=1), "act", 100.0, -1.0, 6, 8)
+            sim.simulate(WorkforcePolicy.imediato(n_maximo=1), "act", 100.0, -1.0, 6, 8)
 
     def test_zero_quantitativo_raises(self, sim: WorkforcePolicySimulator):
         with pytest.raises(ValueError, match="quantitativo"):
-            sim.simulate(MobilizacaoPolicy.imediato(n_maximo=1), "act", 0.0, 100.0, 6, 8)
+            sim.simulate(WorkforcePolicy.imediato(n_maximo=1), "act", 0.0, 100.0, 6, 8)
 
     def test_negative_quantitativo_raises(self, sim: WorkforcePolicySimulator):
         with pytest.raises(ValueError, match="quantitativo"):
-            sim.simulate(MobilizacaoPolicy.imediato(n_maximo=1), "act", -1.0, 100.0, 6, 8)
+            sim.simulate(WorkforcePolicy.imediato(n_maximo=1), "act", -1.0, 100.0, 6, 8)
 
     def test_extremely_low_productivity_hits_guard(self, sim: WorkforcePolicySimulator):
         """producao_horaria=0.001 with huge Q → guard triggers before completion."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=1)
+        policy = WorkforcePolicy.imediato(n_maximo=1)
         # Q = 1,000,000 with P=0.001, m=6, h=8 → nominal = ceil(1e6/0.048) ≈ 20,833,334 weeks
         # Guard = MAX_MULTIPLIER × max(1, nominal) — so with MAX_MULTIPLIER=10 this will
         # terminate early since we cap at 10 × nominal
@@ -260,7 +260,7 @@ class TestSimulatorEdgeCases:
         """When Q fits in one week at max capacity, exactly 1 week produced."""
         P, m, h, n = 500.0, 6, 8, 3
         Q = P * m * h * n * 0.5  # Exactly half a week of production
-        policy = MobilizacaoPolicy.imediato(n_maximo=n)
+        policy = WorkforcePolicy.imediato(n_maximo=n)
         curva = sim.simulate(policy, "act-1w", Q, P, m, h)
 
         assert curva.duration_weeks == 1
@@ -273,7 +273,7 @@ class TestSimulatorEdgeCases:
         # Production per week = 1000 × 6 × 8 × 5 = 240,000
         # Q = 1.5 × 240,000 → completes mid-week 2
         Q = 360_000.0
-        policy = MobilizacaoPolicy.imediato(n_maximo=n)
+        policy = WorkforcePolicy.imediato(n_maximo=n)
         curva = sim.simulate(policy, "act-partial", Q, P, m, h)
 
         assert curva.duration_weeks == 2
@@ -325,7 +325,7 @@ class TestSimulatorEdgeCases:
 
     def test_praticabilidade_extends_duration(self, sim: WorkforcePolicySimulator):
         """Low efficiency weeks require more weeks to deliver the same Q."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=5)
+        policy = WorkforcePolicy.imediato(n_maximo=5)
         P, m, h = 1_000.0, 6, 8
         Q = 5 * P * m * h * 10  # Exactly 10 weeks at p=1.0
 
@@ -341,7 +341,7 @@ class TestSimulatorEdgeCases:
 
     def test_eficiencia_default_is_1(self, sim: WorkforcePolicySimulator):
         """Weeks not in prat_semanal get eficiencia=1.0."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=1)
+        policy = WorkforcePolicy.imediato(n_maximo=1)
         prat = {"2026-W01": 0.5}
         offsets = {0: "2026-W01", 1: "2026-W02"}
         Q = 100_000.0
@@ -352,7 +352,7 @@ class TestSimulatorEdgeCases:
 
     def test_no_prat_semanal_all_efficiency_one(self, sim: WorkforcePolicySimulator):
         """Without prat_semanal, all weeks have eficiencia=1.0."""
-        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        policy = WorkforcePolicy.imediato(n_maximo=3)
         curva = sim.simulate(policy, "act-noprat", 50_000.0, 200.0, 6, 8)
 
         for s in curva.semanas:
@@ -420,7 +420,7 @@ class TestComputeN:
 
 class TestCurvaForcaProperties:
     def test_to_num_equipes_por_semana_with_iso(self, sim: WorkforcePolicySimulator):
-        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        policy = WorkforcePolicy.imediato(n_maximo=3)
         offsets = {0: "2026-W01", 1: "2026-W02", 2: "2026-W03"}
         curva = sim.simulate(policy, "act", 10_000.0, 200.0, 6, 8, semanas_iso_por_offset=offsets)
 
@@ -429,14 +429,14 @@ class TestCurvaForcaProperties:
         assert mapa["2026-W01"] == 3
 
     def test_to_num_equipes_por_semana_without_iso(self, sim: WorkforcePolicySimulator):
-        policy = MobilizacaoPolicy.imediato(n_maximo=2)
+        policy = WorkforcePolicy.imediato(n_maximo=2)
         curva = sim.simulate(policy, "act", 5_000.0, 500.0, 6, 8)
         mapa = curva.to_num_equipes_por_semana()
         # Keys are string offsets when no ISO anchor
         assert "0" in mapa
 
     def test_is_complete_false_when_incompleta(self, sim: WorkforcePolicySimulator):
-        policy = MobilizacaoPolicy.imediato(n_maximo=1)
+        policy = WorkforcePolicy.imediato(n_maximo=1)
         curva = sim.simulate(policy, "act", 1.0, 0.0, 6, 8)  # zero productivity
         assert not curva.is_complete
         assert curva.incompleta
@@ -531,15 +531,15 @@ class TestMobilizacaoSimulatorEdgeCases:
 
 # mobilizacao_simulator.py line 228:
 # taxa_desmobilizacao=0 with semanas_plateau set → return n_maximo (line 228)
-# (line 206 is unreachable because MobilizacaoPolicy.taxa_mobilizacao has gt=0)
+# (line 206 is unreachable because WorkforcePolicy.taxa_mobilizacao has gt=0)
 # ---------------------------------------------------------------------------
 
 
 class TestMobilizacaoSimulatorDesmobZero:
     def _make_policy(self, **kwargs):
-        from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+        from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
-        return MobilizacaoPolicy(**kwargs)
+        return WorkforcePolicy(**kwargs)
 
     def test_taxa_desmobilizacao_zero_returns_n_maximo_after_plateau(self):
         """Line 228: taxa_desmobilizacao=0, semanas_plateau set, t past plateau → n_maximo."""
@@ -565,19 +565,19 @@ class TestSimulatorEtaJornada:
     """ADR-148: eta_jornada dimensiona producao_semanal_base, como m/h já fazem."""
 
     def test_default_eta_jornada_e_1_sem_regressao(self, sim: WorkforcePolicySimulator):
-        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        policy = WorkforcePolicy.imediato(n_maximo=3)
         curva = sim.simulate(policy, "act-default", 1_000_000.0, 400.0, 5, 8)
         # 400 × 5 × 8 × 1.0 (eta_jornada) × 3 = 48,000
         assert math.isclose(curva.semanas[0].qtd_executada, 48_000.0, rel_tol=1e-6)
 
     def test_eta_jornada_reduz_producao_semanal(self, sim: WorkforcePolicySimulator):
-        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        policy = WorkforcePolicy.imediato(n_maximo=3)
         curva = sim.simulate(policy, "act-eta", 1_000_000.0, 400.0, 5, 8, eta_jornada=0.9375)
         # 400 × 5 × 8 × 0.9375 × 3 = 45,000
         assert math.isclose(curva.semanas[0].qtd_executada, 45_000.0, rel_tol=1e-6)
 
     def test_eta_jornada_e_clima_multiplicam(self, sim: WorkforcePolicySimulator):
-        policy = MobilizacaoPolicy.imediato(n_maximo=3)
+        policy = WorkforcePolicy.imediato(n_maximo=3)
         prat = {"2026-W01": 0.8}
         offsets = {0: "2026-W01"}
         curva = sim.simulate(policy, "act-eta-clima", 1_000_000.0, 400.0, 5, 8, prat, offsets, eta_jornada=0.9375)
@@ -585,7 +585,7 @@ class TestSimulatorEtaJornada:
         assert math.isclose(curva.semanas[0].qtd_executada, 36_000.0, rel_tol=1e-6)
 
     def test_eta_jornada_aumenta_duracao_para_mesma_meta(self, sim: WorkforcePolicySimulator):
-        policy = MobilizacaoPolicy.imediato(n_maximo=1)
+        policy = WorkforcePolicy.imediato(n_maximo=1)
         Q = 48_000.0
         curva_full = sim.simulate(policy, "act-full", Q, 400.0, 5, 8, eta_jornada=1.0)
         curva_reduzida = sim.simulate(policy, "act-red", Q, 400.0, 5, 8, eta_jornada=0.9375)

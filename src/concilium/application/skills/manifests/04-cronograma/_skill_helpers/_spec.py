@@ -279,6 +279,47 @@ def _resolve_spec_activity_ramp_profile(a: dict, productive_w: int) -> list[floa
     return ramp_profile
 
 
+def _resolve_eap_item_for_activity_id(activity_id: str, canonical_in: CanonicalModel):
+    """Traduz `activity_id` (o id usado no RCPSP) para o `EapItem` correspondente.
+
+    ADR-181 F2: `activity_id` é `EapItem.item_id` direto no modo AUTO (RCPSP
+    auto-derivado — mesmo caso que `_compute_productive_weeks` já cobre), mas pode
+    ser `Atividade.atividade_id` (UUID) no modo MANUAL, quando `rcpsp_spec` é
+    fornecido com atividades explícitas — mesma ambiguidade item_id↔atividade_id
+    documentada em `_validacao._build_activity_item_map` (issue #125/#142).
+    Replicada localmente (em vez de importada) porque `_validacao.py` já importa
+    de `_spec.py` — importar de volta criaria ciclo.
+    """
+    eap_item = next((e for e in canonical_in.eap if e.item_id == activity_id), None)
+    if eap_item is not None:
+        return eap_item
+    for act in getattr(canonical_in, "atividades", None) or []:
+        if act.atividade_id == activity_id:
+            return next((e for e in canonical_in.eap if e.item_id == act.eap_item_id), None)
+    return None
+
+
+def _resolve_spec_activity_readiness_weeks(a: dict, canonical_in: CanonicalModel | None) -> int:
+    """ADR-181 F1/F2: resolve `readiness_weeks` (aquisição + mobilização física) do
+    `EapItem` correspondente à entrada de spec — cobre tanto o modo AUTO (`a["item_id"]`
+    == `EapItem.item_id`) quanto o modo MANUAL (`a["item_id"]` == `Atividade.atividade_id`,
+    UUID explícito).
+
+    Sem `canonical_in` (spec bare, sem enriquecimento) ou sem override no item,
+    retorna 0 — backward compat, nenhuma constraint nova.
+    """
+    if canonical_in is None:
+        return 0
+    eap_item = _resolve_eap_item_for_activity_id(a["item_id"], canonical_in)
+    if eap_item is None:
+        return 0
+    # getattr defensivo: alguns testes usam fakes/mocks de EapItem sem todos os
+    # campos (mesmo padrão de _compute_productive_weeks em _calendario.py).
+    aquisicao = getattr(eap_item, "leadtime_aquisicao_semanas", None) or 0
+    mob = getattr(eap_item, "leadtime_mob_semanas", None) or 0
+    return aquisicao + mob
+
+
 def _build_activity_from_spec_entry(
     a: dict,
     use_productive: bool,
@@ -294,6 +335,7 @@ def _build_activity_from_spec_entry(
     )
 
     ramp_profile = _resolve_spec_activity_ramp_profile(a, productive_w)
+    readiness_weeks = _resolve_spec_activity_readiness_weeks(a, canonical_in)
     # Limpar campo temporário para não poluir o dict serializado
     a.pop("ramp_profile_computed", None)
 
@@ -304,6 +346,7 @@ def _build_activity_from_spec_entry(
         required_resources=dict(a.get("required_resources", {})),
         window_weeks=window_w if productive_w < window_w else None,
         ramp_profile=ramp_profile,
+        readiness_weeks=readiness_weeks,
     )
 
 
