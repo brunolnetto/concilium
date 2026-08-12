@@ -1,0 +1,43 @@
+{
+  "id": "CPU-TERRA-ATI-049-PROD-001",
+  "codigo": "CPU-TERRA-ATI-049-PROD-001",
+  "descricao": "Movimentação e armazenamento de madeira — carregamento, baldeio e empilhamento, DMT até 0,5 km — equipe: 1× SV-OUV-MO-OPER-PA, 4× SV-OUV-MO-MOTOR-BASC, 4× SV-OUV-MO-AJUDANTE, 1× SV-OUV-MO-SINALEIRO; equipamentos: 1× SV-OUV-EQ-PA-MANDIBULA, 4× SV-OUV-EQ-CAM-BASC-14M3",
+  "origem": {
+    "tipo": "tabela_referencia",
+    "fonte_id": "CPU-TERRA-ATI-049-PROD-001",
+    "data_calibracao": "2026-08-12T00:00:00+00:00",
+    "referencia": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor)."
+  },
+  "valor_horario": 20.6,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "SV-OUV-MO-OPER-PA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "SV-OUV-MO-MOTOR-BASC",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "SV-OUV-MO-AJUDANTE",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "SV-OUV-MO-SINALEIRO",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "SV-OUV-EQ-PA-MANDIBULA",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "SV-OUV-EQ-CAM-BASC-14M3",
+        "num_unidades": 4
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

@@ -1,0 +1,19 @@
+{
+  "codigo": "SV-OUV-EQ-MOTOSSERRA",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Motosserra a gasolina",
+  "unidade": "h",
+  "preco_unitario": 30.0,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "consumo_litros_hora": 1.5,
+    "tipo_propriedade": "locacao",
+    "memoria_calculo": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor). Combustível: Gasolina."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2026-08-01",
+  "categoria": "TERRAPLENAGEM"
+}

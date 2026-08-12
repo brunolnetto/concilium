@@ -53,6 +53,10 @@
         "nota": {
           "description": "Nota textual livre de auditoria/contexto sobre este insumo.",
           "type": ["string", "null"]
+        },
+        "memoria_calculo": {
+          "description": "ADR-181 D6: texto livre explicando como um preço fonte_preco=\"negociado\" acima do teto de materialidade foi obtido — exigido por VAL-CAT-NEGOCIADO-01.",
+          "type": ["string", "null"]
         }
       }
     },
@@ -97,6 +101,10 @@
             {"type": "null"},
             {"$ref": "common.schema.json#/$defs/decomposicaoEquip"}
           ]
+        },
+        "memoria_calculo": {
+          "description": "ADR-181 D6: texto livre explicando como um preço fonte_preco=\"negociado\" acima do teto de materialidade foi obtido — exigido por VAL-CAT-NEGOCIADO-01.",
+          "type": ["string", "null"]
         }
       }
     },
@@ -108,6 +116,10 @@
         "prazo_entrega": {"type": ["string", "null"]},
         "especificacao": {"type": ["string", "null"]},
         "uso": {"type": ["string", "null"]},
+        "memoria_calculo": {
+          "description": "ADR-181 D6: texto livre explicando como um preço fonte_preco=\"negociado\" acima do teto de materialidade foi obtido — exigido por VAL-CAT-NEGOCIADO-01.",
+          "type": ["string", "null"]
+        },
         "codigo_planilha": {
           "description": "Código na planilha de origem (ex.: RFI R02).",
           "type": ["string", "null"]
@@ -134,7 +146,12 @@
     "atributosTerceirizado": {
       "type": "object",
       "additionalProperties": false,
-      "properties": {}
+      "properties": {
+        "memoria_calculo": {
+          "description": "ADR-181 D6: texto livre explicando como um preço fonte_preco=\"negociado\" acima do teto de materialidade foi obtido — exigido por VAL-CAT-NEGOCIADO-01.",
+          "type": ["string", "null"]
+        }
+      }
     },
     "atributosTreinamento": {
       "description": "ADR-165: atributos específicos de TREINAMENTO.",
@@ -150,6 +167,10 @@
           "description": "Códigos de Insumo(MAO_OBRA) a que este treinamento é específico — null = comum a todas as funções.",
           "type": ["array", "null"],
           "items": {"type": "string"}
+        },
+        "memoria_calculo": {
+          "description": "ADR-181 D6: texto livre explicando como um preço fonte_preco=\"negociado\" acima do teto de materialidade foi obtido — exigido por VAL-CAT-NEGOCIADO-01.",
+          "type": ["string", "null"]
         }
       }
     },
@@ -162,6 +183,10 @@
           "description": "Intervalo de revalidação/recorrência, em dias.",
           "type": ["integer", "null"],
           "exclusiveMinimum": 0
+        },
+        "memoria_calculo": {
+          "description": "ADR-181 D6: texto livre explicando como um preço fonte_preco=\"negociado\" acima do teto de materialidade foi obtido — exigido por VAL-CAT-NEGOCIADO-01.",
+          "type": ["string", "null"]
         }
       }
     },
@@ -189,6 +214,10 @@
           "description": "ADR-170: usado junto de quartos_por_casa para derivar a capacidade de pessoas por unidade.",
           "type": ["integer", "null"],
           "exclusiveMinimum": 0
+        },
+        "memoria_calculo": {
+          "description": "ADR-181 D6: texto livre explicando como um preço fonte_preco=\"negociado\" acima do teto de materialidade foi obtido — exigido por VAL-CAT-NEGOCIADO-01.",
+          "type": ["string", "null"]
         }
       }
     }
@@ -287,6 +316,11 @@
       "description": "Origem do material consumível (ADR-139 D1, ortogonal a tipo): AQUISICAO_EXTERNA = comprado de fornecedor; GERACAO_INTERNA = produzido pela própria obra (preco_unitario = custo interno ou 0.0). Só válido para tipo=MATERIAL (VAL-INSUMO-ORIGEM-01). null = não classificado.",
       "type": ["string", "null"],
       "enum": ["AQUISICAO_EXTERNA", "GERACAO_INTERNA", null]
+    },
+    "classificacao_mob_demob": {
+      "description": "ADR-181 D4: marca insumo cujo custo é evento físico de mobilização/desmobilização (transporte de recurso até o canteiro, canteiro/instalação) — usado pelo guard anti-double-count generalizado da skill-06 (_mob.py). Default false.",
+      "type": "boolean",
+      "default": false
     },
     "metodo_custo_total": {
       "description": "Método de apuração do custo total (ex: locacao_mais_operacao, custo_horario_composto).",

@@ -1,0 +1,12 @@
+{
+  "codigo": "CPU-TERRA-ATI-041",
+  "descricao": "Supressão vegetal de Mata Densa — corte, destocamento, traçamento, baldeio e empilhamento de madeira, DMT até 6 km",
+  "unidade": "m2",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "producao_id_ref": "CPU-TERRA-ATI-041-PROD-001",
+  "atributos_categoria": {
+    "dmt_max_metros": 6000
+  }
+}

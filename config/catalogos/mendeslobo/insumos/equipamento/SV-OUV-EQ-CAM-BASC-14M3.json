@@ -1,0 +1,19 @@
+{
+  "codigo": "SV-OUV-EQ-CAM-BASC-14M3",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão basculante 14 m³",
+  "unidade": "h",
+  "preco_unitario": 125.0,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "consumo_litros_hora": 2.5,
+    "tipo_propriedade": "locacao",
+    "memoria_calculo": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor). Combustível: Diesel S10."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2026-08-01",
+  "categoria": "TERRAPLENAGEM"
+}
