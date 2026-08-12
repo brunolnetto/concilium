@@ -105,9 +105,9 @@ def _build_atividades_for_item(eap_item: EapItem, raw_ativs: list | None, valida
                 fracao_quantitativo=1.0,
                 quantitativo_atividade=eap_item.quantitativo,
                 cpu_id=eap_item.cpu_id,
-                leadtime_mob_semanas=eap_item.leadtime_mob_semanas,
-                lag_demob_semanas=eap_item.lag_demob_semanas,
-                leadtime_aquisicao_semanas=eap_item.leadtime_aquisicao_semanas,
+                leadtime_mob_semanas=getattr(eap_item, "leadtime_mob_semanas", None),
+                lag_demob_semanas=getattr(eap_item, "lag_demob_semanas", None),
+                leadtime_aquisicao_semanas=getattr(eap_item, "leadtime_aquisicao_semanas", None),
             )
         ]
     atividades = []
@@ -135,9 +135,9 @@ def _build_atividades_for_item(eap_item: EapItem, raw_ativs: list | None, valida
                 fracao_quantitativo=frac_modelo,
                 quantitativo_atividade=round(frac_modelo * eap_item.quantitativo, 6),
                 cpu_id=eap_item.cpu_id,
-                leadtime_mob_semanas=eap_item.leadtime_mob_semanas,
-                lag_demob_semanas=eap_item.lag_demob_semanas,
-                leadtime_aquisicao_semanas=eap_item.leadtime_aquisicao_semanas,
+                leadtime_mob_semanas=getattr(eap_item, "leadtime_mob_semanas", None),
+                lag_demob_semanas=getattr(eap_item, "lag_demob_semanas", None),
+                leadtime_aquisicao_semanas=getattr(eap_item, "leadtime_aquisicao_semanas", None),
             )
         )
     if abs(soma_fracoes - 1.0) > _TOLERANCIA_ATV:

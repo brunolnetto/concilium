@@ -71,7 +71,7 @@ def _checar_leadtime_mob_ausente(item: Any, custo_total_final: float, validacoes
     suficiente pra o dado ausente importar de verdade (mesmo padrão fail-loud
     condicional do ADR-138).
     """
-    if item.leadtime_mob_semanas is not None:
+    if getattr(item, "leadtime_mob_semanas", None) is not None:
         return
     if custo_total_final <= TETO_MATERIALIDADE_MOB:
         return
