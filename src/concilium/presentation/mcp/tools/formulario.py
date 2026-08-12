@@ -33,8 +33,9 @@ from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 
 def _merge_cronograma_mob_em_eap(eap: list[dict], cronograma: list[dict] | None) -> list[dict]:
-    """ADR-106 F5: aplica overrides de leadtime_mob_semanas/lag_demob_semanas de
-    ``cronograma[*]`` (indexado por item_id) nos itens de EAP correspondentes.
+    """ADR-106 F5 / ADR-181 F1: aplica overrides de leadtime_mob_semanas/lag_demob_semanas/
+    leadtime_aquisicao_semanas de ``cronograma[*]`` (indexado por item_id) nos itens de EAP
+    correspondentes.
 
     ``escopo_spec.cronograma`` é uma lista separada de hints por item_id (ver
     config/schemas/projeto_spec.schema.json); EapItem só lê seus próprios campos,
@@ -54,6 +55,8 @@ def _merge_cronograma_mob_em_eap(eap: list[dict], cronograma: list[dict] | None)
             item["leadtime_mob_semanas"] = hint["leadtime_mob_semanas"]
         if "lag_demob_semanas" in hint:
             item["lag_demob_semanas"] = hint["lag_demob_semanas"]
+        if "leadtime_aquisicao_semanas" in hint:
+            item["leadtime_aquisicao_semanas"] = hint["leadtime_aquisicao_semanas"]
         merged.append(item)
     return merged
 

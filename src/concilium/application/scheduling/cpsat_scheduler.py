@@ -37,6 +37,7 @@ from concilium.application.scheduling.models import (
     ReplenishableResource,
     ResourcePool,
     ScheduledActivity,
+    ScheduleError,
     ScheduleMetrics,
     ScheduleOutput,
 )
@@ -125,7 +126,13 @@ class CpSatScheduler:
     def _add_activity_variables(
         self, model: cp_model.CpModel, dag: ActivityDAG, horizon: int
     ) -> tuple[dict[str, cp_model.IntVar], dict[str, cp_model.IntVar], dict[str, cp_model.IntervalVar]]:
-        """Cria as variáveis de decisão (start/end/interval) por atividade, com janela de deadline."""
+        """Cria as variáveis de decisão (start/end/interval) por atividade, com janela de deadline.
+
+        ADR-181 F1: `readiness_weeks` (aquisição + mobilização) vira o lower bound de
+        `start` — mesmo floor absoluto a partir de t=0 que o SerialScheduler aplica
+        via max() em `_compute_earliest_starts`, só que aqui expresso diretamente no
+        domínio da variável em vez de uma constraint separada.
+        """
         starts: dict[str, cp_model.IntVar] = {}
         ends: dict[str, cp_model.IntVar] = {}
         intervals: dict[str, cp_model.IntervalVar] = {}
@@ -135,7 +142,15 @@ class CpSatScheduler:
             # Enforce window constraint: start + duration <= window_weeks
             max_start = (a.window_weeks - dur) if a.window_weeks else horizon - dur
             max_start = max(0, min(max_start, horizon - dur))
-            start = model.new_int_var(0, max_start, f"start_{a.activity_id}")
+            min_start = a.readiness_weeks
+            if min_start > max_start:
+                raise ScheduleError(
+                    f"Activity '{a.activity_id}' requires {min_start}w de resource readiness "
+                    f"(leadtime_aquisicao_semanas + leadtime_mob_semanas) mas sua janela só "
+                    f"permite início até a semana {max_start} — aumente a janela/deadline ou "
+                    f"reduza o leadtime."
+                )
+            start = model.new_int_var(min_start, max_start, f"start_{a.activity_id}")
             end = model.new_int_var(dur, horizon, f"end_{a.activity_id}")
             interval = model.new_interval_var(start, dur, end, f"iv_{a.activity_id}")
             starts[a.activity_id] = start

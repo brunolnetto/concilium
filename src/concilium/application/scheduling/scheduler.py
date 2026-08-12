@@ -38,14 +38,24 @@ def _pred_release(pred_id: str, succ_id: str, pred_start: int, dag: ActivityDAG,
 
 
 def _compute_earliest_starts(act_map: dict, dag: ActivityDAG, topo_order: list) -> dict:
-    """ADR-081: usa completion_threshold_pct por aresta para calcular earliest start."""
+    """ADR-081: usa completion_threshold_pct por aresta para calcular earliest start.
+
+    ADR-181 F1: `readiness_weeks` (aquisição + mobilização) é um floor absoluto a
+    partir de t=0 — combinado via max() com o earliest_start de precedência, nunca
+    somado. Procurement pode ocorrer em paralelo com atividades anteriores do
+    projeto; só passa a ser a restrição ativa quando a precedência sozinha
+    permitiria um início mais cedo do que os recursos estarão prontos.
+    """
     earliest_start: dict[str, int] = {}
     for aid in topo_order:
         preds = dag.predecessors(aid)
         if preds:
-            earliest_start[aid] = max(_pred_release(p, aid, earliest_start.get(p, 0), dag, act_map) for p in preds)
+            precedence_earliest = max(
+                _pred_release(p, aid, earliest_start.get(p, 0), dag, act_map) for p in preds
+            )
         else:
-            earliest_start[aid] = 0
+            precedence_earliest = 0
+        earliest_start[aid] = max(precedence_earliest, act_map[aid].readiness_weeks)
     return earliest_start
 
 

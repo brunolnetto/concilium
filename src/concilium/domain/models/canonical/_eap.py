@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
 if TYPE_CHECKING:
     from ._indiretos_insumos import ScheduledActivityCanonical
@@ -57,6 +57,12 @@ class EapItem(BaseModel):
     # None = sem override (backward compat — nenhum custo de janela adicionado).
     leadtime_mob_semanas: int | None = Field(default=None, ge=0)
     lag_demob_semanas: int | None = Field(default=None, ge=0)
+    # ADR-181 F1: prazo de aquisição/contratação (decisão de contratar → recurso
+    # contratualmente disponível), ANTERIOR à mobilização física (leadtime_mob_semanas).
+    # Sem custo direto associado (fornecedor normalmente não cobra standby nesse
+    # período) — afeta só earliest_start no RCPSP, nunca custo. None = sem constraint
+    # (backward compat).
+    leadtime_aquisicao_semanas: int | None = Field(default=None, ge=0)
 
     def predecessores_tipados(self) -> list[PrecedenciaItem]:
         """Normaliza predecessores para PrecedenciaItem (converte str legados)."""
@@ -86,10 +92,12 @@ class Atividade(BaseModel):
     # When present, takes precedence over the project-level override file
     # (mobilizacao_policy_override.json). Enables per-Atividade policy embedded
     # in the canonical — useful for scenario branching and full auditability.
-    mobilizacao_policy: MobilizacaoPolicy | None = None
+    mobilizacao_policy: WorkforcePolicy | None = None
     # ADR-106 F5: propagado de EapItem.leadtime_mob_semanas/lag_demob_semanas (skill 01).
     leadtime_mob_semanas: int | None = None
     lag_demob_semanas: int | None = None
+    # ADR-181 F1: propagado de EapItem.leadtime_aquisicao_semanas (skill 01).
+    leadtime_aquisicao_semanas: int | None = None
 
 
 class ArestaActivityDag(BaseModel):

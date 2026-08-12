@@ -38,6 +38,15 @@ class Activity:
     # Actual demand for resource r at week offset t = max(0, round(required_resources[r] × ramp_profile[t]))
     # None = flat demand (historical behaviour, no change).
     ramp_profile: list[float] | None = None
+    # ADR-181 F1: soma de leadtime_aquisicao_semanas + leadtime_mob_semanas (semanas
+    # de "resource readiness" — contratação + deslocamento físico — antes que a
+    # atividade possa começar). É um FLOOR absoluto a partir de t=0 (max() com o
+    # earliest_start derivado de precedência), não um deslocamento aditivo por
+    # atividade: procurement pode ser feito em paralelo com atividades anteriores
+    # do projeto, então só é a restrição ativa quando a precedência sozinha
+    # permitiria um início mais cedo do que os recursos estarão prontos.
+    # 0 = sem constraint (backward compat — comportamento idêntico ao anterior).
+    readiness_weeks: int = 0
 
     def __post_init__(self) -> None:
         if self.duration_weeks < 1:
@@ -49,6 +58,8 @@ class Activity:
                 raise ValueError(
                     f"ramp_profile length ({len(self.ramp_profile)}) must equal duration_weeks ({self.duration_weeks})"
                 )
+        if self.readiness_weeks < 0:
+            raise ValueError(f"readiness_weeks must be >= 0, got {self.readiness_weeks}")
 
 
 @dataclass
