@@ -104,7 +104,7 @@ def _seed_projeto(
 
 
 class TestPromoverOverrideProjetoHappyPath:
-    def test_dono_do_projeto_promove_override_de_outro_editor(self, monkeypatch, tmp_path):
+    async def test_dono_do_projeto_promove_override_de_outro_editor(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -117,7 +117,7 @@ class TestPromoverOverrideProjetoHappyPath:
             patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
         ):
             mock_roles.get.return_value = frozenset({"catalog-manager"})
-            result = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="preço negociado")
+            result = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="preço negociado")
 
         assert result["status"] == "APROVADO"
         assert result["deltas_aplicados"] == 1
@@ -139,7 +139,7 @@ class TestPromoverOverrideProjetoHappyPath:
         assert estado_rascunho(data) == ESTADO_APROVADO
         assert data["_aprovado_por"] == "owner-1"
 
-    def test_sem_overrides_pendentes_retorna_sem_pendencias(self, monkeypatch, tmp_path):
+    async def test_sem_overrides_pendentes_retorna_sem_pendencias(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -152,13 +152,13 @@ class TestPromoverOverrideProjetoHappyPath:
             patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
         ):
             mock_roles.get.return_value = frozenset({"catalog-manager"})
-            result = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="nada a promover")
+            result = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="nada a promover")
 
         assert result["status"] == "SEM_PENDENCIAS"
 
 
 class TestPromoverOverrideProjetoGateDuplo:
-    def test_bloqueia_quem_nao_e_dono_nem_admin(self, monkeypatch, tmp_path):
+    async def test_bloqueia_quem_nao_e_dono_nem_admin(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -171,7 +171,7 @@ class TestPromoverOverrideProjetoGateDuplo:
             patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
         ):
             mock_roles.get.return_value = frozenset({"catalog-manager"})
-            result = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
+            result = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
 
         assert "erro" in result
         assert "dono do projeto" in result["erro"] or "admin" in result["erro"]
@@ -179,7 +179,7 @@ class TestPromoverOverrideProjetoGateDuplo:
         insumo_file = config_dir / "catalogos" / "cat-1" / "insumos" / "material" / "MAT-001.json"
         assert json.loads(insumo_file.read_text(encoding="utf-8"))["preco_unitario"] == 30.0
 
-    def test_bloqueia_dono_que_tambem_editou_quatro_olhos(self, monkeypatch, tmp_path):
+    async def test_bloqueia_dono_que_tambem_editou_quatro_olhos(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -193,12 +193,12 @@ class TestPromoverOverrideProjetoGateDuplo:
             patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
         ):
             mock_roles.get.return_value = frozenset({"catalog-manager"})
-            result = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
+            result = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
 
         assert "erro" in result
         assert "quatro olhos" in result["erro"]
 
-    def test_admin_pode_promover_mesmo_sem_ser_dono(self, monkeypatch, tmp_path):
+    async def test_admin_pode_promover_mesmo_sem_ser_dono(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -211,11 +211,11 @@ class TestPromoverOverrideProjetoGateDuplo:
             patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
         ):
             mock_roles.get.return_value = frozenset({"admin"})
-            result = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
+            result = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
 
         assert result["status"] == "APROVADO"
 
-    def test_bloqueia_promover_duas_vezes(self, monkeypatch, tmp_path):
+    async def test_bloqueia_promover_duas_vezes(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -228,24 +228,24 @@ class TestPromoverOverrideProjetoGateDuplo:
             patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
         ):
             mock_roles.get.return_value = frozenset({"catalog-manager"})
-            primeira = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="primeira")
+            primeira = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="primeira")
             assert primeira["status"] == "APROVADO"
 
             # segunda chamada: sem overrides pendentes (já arquivados) — não é
             # nem tentativa de re-promoção do mesmo estado, é o caminho normal
             # de "nada a fazer" após uma promoção bem-sucedida.
-            segunda = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="segunda")
+            segunda = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="segunda")
             assert segunda["status"] == "SEM_PENDENCIAS"
 
-    def test_projeto_inexistente_retorna_erro(self, monkeypatch, tmp_path):
+    async def test_projeto_inexistente_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         _seed_contexto_e_catalogo(tmp_path / "config", "ctx-1", "cat-1")
 
-        result = tools["promover_override_projeto"](projeto_id="PROJ-999", justificativa="x")
+        result = await tools["promover_override_projeto"](projeto_id="PROJ-999", justificativa="x")
         assert "erro" in result
         assert "PROJ-999" in result["erro"]
 
-    def test_sem_contexto_id_e_sem_meta_retorna_erro(self, monkeypatch, tmp_path):
+    async def test_sem_contexto_id_e_sem_meta_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         projects_dir = tmp_path / "projetos"
         _seed_projeto(projects_dir, "PROJ-001", owner_id="owner-1", contexto_id=None, created_by="eng-1")
@@ -256,7 +256,7 @@ class TestPromoverOverrideProjetoGateDuplo:
             patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
         ):
             mock_roles.get.return_value = frozenset({"catalog-manager"})
-            result = tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
+            result = await tools["promover_override_projeto"](projeto_id="PROJ-001", justificativa="x")
 
         assert "erro" in result
         assert "contexto" in result["erro"].lower()

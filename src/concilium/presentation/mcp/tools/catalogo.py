@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import functools
+from collections.abc import Callable
 from pathlib import Path
+from types import FunctionType
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -42,8 +45,8 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
 
 
-async def _run_catalog_write_with_deadline(tool_name: str, func: Any, *args: Any) -> dict[str, Any]:
-    """Roda uma tool de escrita de catálogo fora do event loop, com deadline de parede.
+def _com_deadline_de_catalogo(tool_fn: FunctionType) -> Callable[..., Any]:
+    """Decorator: tira uma tool de catálogo do event loop e aplica deadline de parede.
 
     2026-08-12: mesma classe de bug de #147/#148/#149/#153 (pesquisar_catalogo) —
     tools MCP síncronas rodam direto na coroutine do event loop (o SDK `mcp` não
@@ -54,17 +57,30 @@ async def _run_catalog_write_with_deadline(tool_name: str, func: Any, *args: Any
     <1s local — travou 4min em produção porque outra chamada seguurava o loop).
     `asyncio.to_thread` tira a execução do loop; `wait_for` dá erro rápido em vez
     de hang silencioso quando o próprio trabalho demora demais.
+
+    Aplicado direto sobre a função `def` original (que fica igual a antes de
+    #147/#153 — sem duplicar a lista de parâmetros nem repetir o nome da tool
+    como string solta): `functools.wraps` preserva nome/docstring/assinatura,
+    e como o resultado aqui já nasce `async def`, compõe corretamente com
+    `@permission`/`@mcp_rate_limit()` por cima (ambos async-aware — ver
+    issue #148 e o fix equivalente em rate_limit.mcp_rate_limit).
     """
-    try:
-        return await asyncio.wait_for(asyncio.to_thread(func, *args), timeout=TOOL_IO_TIMEOUT_S)
-    except TimeoutError:
-        return {
-            "erro": (
-                f"{tool_name} excedeu {TOOL_IO_TIMEOUT_S:.0f}s. Pode ser catálogo grande com "
-                "cache frio (pós-deploy/restart) ou contenção com outra chamada em andamento — "
-                "tente novamente."
-            )
-        }
+    tool_name = tool_fn.__name__
+
+    @functools.wraps(tool_fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        try:
+            return await asyncio.wait_for(asyncio.to_thread(tool_fn, *args, **kwargs), timeout=TOOL_IO_TIMEOUT_S)
+        except TimeoutError:
+            return {
+                "erro": (
+                    f"{tool_name} excedeu {TOOL_IO_TIMEOUT_S:.0f}s. Pode ser catálogo grande com "
+                    "cache frio (pós-deploy/restart) ou contenção com outra chamada em andamento — "
+                    "tente novamente."
+                )
+            }
+
+    return wrapper
 
 
 def _marcar_rascunho_revisado(config_root: Path, contexto_id: str, rascunho_id: str, revisor: str) -> None:
@@ -91,6 +107,7 @@ def register(server: FastMCP) -> None:
         "Ponto de entrada para descobrir contexto_id."
     )
     @permission("catalog:read")
+    @_com_deadline_de_catalogo
     def listar_contextos() -> dict[str, Any]:
         return _impl_listar_contextos()
 
@@ -99,7 +116,8 @@ def register(server: FastMCP) -> None:
         "Use para encontrar cpu_id antes de criar projeto."
     )
     @permission("catalog:read")
-    async def pesquisar_catalogo(
+    @_com_deadline_de_catalogo
+    def pesquisar_catalogo(
         contexto_id: str,
         query: str | None = None,
         tipo_obra: str | None = None,
@@ -108,24 +126,8 @@ def register(server: FastMCP) -> None:
         # 2026-08-11: mesmo achado do incidente de ping() (issue #147/#148/#149) —
         # rt.load_catalogo() carrega o catálogo inteiro (ex.: "mendeslobo", 138 CPUs)
         # antes de filtrar; sem deadline, uma leitura fria (cache local expirado/
-        # pós-deploy) pendura o tool até o timeout opaco de 60s do client. Deadline
-        # de parede aqui é mitigação (mesma classe de #149), não a correção
-        # definitiva — outras tools de catálogo têm o mesmo gap (issue aberta pra
-        # aplicar o mesmo padrão nelas).
-        try:
-            return await asyncio.wait_for(
-                asyncio.to_thread(_impl_pesquisar_catalogo, contexto_id, query, tipo_obra, limite),
-                timeout=TOOL_IO_TIMEOUT_S,
-            )
-        except TimeoutError:
-            return {
-                "erro": (
-                    f"pesquisar_catalogo excedeu {TOOL_IO_TIMEOUT_S:.0f}s carregando o catálogo "
-                    f"de '{contexto_id}'. Catálogos grandes com cache local frio (pós-deploy/"
-                    "restart) podem demorar na primeira leitura; tente novamente — o cache "
-                    "aquece após um load bem-sucedido."
-                )
-            }
+        # pós-deploy) pendura o tool até o timeout opaco de 60s do client.
+        return _impl_pesquisar_catalogo(contexto_id, query, tipo_obra, limite)
 
     @server.tool(
         description=(
@@ -135,6 +137,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:read")
+    @_com_deadline_de_catalogo
     def listar_insumos(
         contexto_id: str,
         tipo: str | None = None,
@@ -159,6 +162,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:validate")  # ADR-120 F2
+    @_com_deadline_de_catalogo
     def auditar_catalogo(
         contexto_id: str,
         modo: str = "saude",
@@ -204,7 +208,8 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def atualizar_preco_insumo(
+    @_com_deadline_de_catalogo
+    def atualizar_preco_insumo(
         contexto_id: str,
         insumo_id: str,
         novo_preco: float | None = None,
@@ -215,9 +220,7 @@ def register(server: FastMCP) -> None:
         novo_valor_locacao_mensal: float | None = None,
         novos_funcoes_aplicaveis: list[str] | None = None,
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "atualizar_preco_insumo",
-            _impl_atualizar_preco_insumo,
+        return _impl_atualizar_preco_insumo(
             contexto_id,
             insumo_id,
             novo_preco,
@@ -239,14 +242,13 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def atualizar_precos_insumos_lote(
+    @_com_deadline_de_catalogo
+    def atualizar_precos_insumos_lote(
         contexto_id: str,
         rascunho_id: str,
         itens: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "atualizar_precos_insumos_lote", _impl_atualizar_precos_insumos_lote, contexto_id, rascunho_id, itens
-        )
+        return _impl_atualizar_precos_insumos_lote(contexto_id, rascunho_id, itens)
 
     @server.tool(
         description=(
@@ -257,7 +259,8 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def criar_insumo(
+    @_com_deadline_de_catalogo
+    def criar_insumo(
         contexto_id: str,
         rascunho_id: str,
         codigo: str,
@@ -269,9 +272,7 @@ def register(server: FastMCP) -> None:
         fonte_preco: str,
         atributos_especificos: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "criar_insumo",
-            _impl_criar_insumo,
+        return _impl_criar_insumo(
             contexto_id,
             rascunho_id,
             codigo,
@@ -295,14 +296,13 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def criar_insumos_lote(
+    @_com_deadline_de_catalogo
+    def criar_insumos_lote(
         contexto_id: str,
         rascunho_id: str,
         itens: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "criar_insumos_lote", _impl_criar_insumos_lote, contexto_id, rascunho_id, itens
-        )
+        return _impl_criar_insumos_lote(contexto_id, rascunho_id, itens)
 
     @server.tool(
         description=(
@@ -314,15 +314,14 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def descontinuar_insumo(
+    @_com_deadline_de_catalogo
+    def descontinuar_insumo(
         contexto_id: str,
         rascunho_id: str,
         insumo_id: str,
         motivo: str | None = None,
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "descontinuar_insumo", _impl_descontinuar_insumo, contexto_id, rascunho_id, insumo_id, motivo
-        )
+        return _impl_descontinuar_insumo(contexto_id, rascunho_id, insumo_id, motivo)
 
     @server.tool(
         description=(
@@ -334,14 +333,13 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def descontinuar_insumos_lote(
+    @_com_deadline_de_catalogo
+    def descontinuar_insumos_lote(
         contexto_id: str,
         rascunho_id: str,
         itens: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "descontinuar_insumos_lote", _impl_descontinuar_insumos_lote, contexto_id, rascunho_id, itens
-        )
+        return _impl_descontinuar_insumos_lote(contexto_id, rascunho_id, itens)
 
     @server.tool(
         description="Registra uma variante de produtividade documentada para uma producao existente "
@@ -353,7 +351,8 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def adicionar_variante_producao(
+    @_com_deadline_de_catalogo
+    def adicionar_variante_producao(
         contexto_id: str,
         producao_id: str,
         variante_id: str,
@@ -363,9 +362,7 @@ def register(server: FastMCP) -> None:
         rascunho_id: str | None = None,
         projeto_id: str | None = None,
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "adicionar_variante_producao",
-            _impl_adicionar_variante_producao,
+        return _impl_adicionar_variante_producao(
             contexto_id,
             producao_id,
             variante_id,
@@ -389,7 +386,8 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    async def atualizar_composicao_item_cpu(
+    @_com_deadline_de_catalogo
+    def atualizar_composicao_item_cpu(
         contexto_id: str,
         cpu_id: str,
         acao: str,
@@ -401,9 +399,7 @@ def register(server: FastMCP) -> None:
         tipo_combustivel: str | None = None,
         nota: str | None = None,
     ) -> dict[str, Any]:
-        return await _run_catalog_write_with_deadline(
-            "atualizar_composicao_item_cpu",
-            _impl_atualizar_composicao_item_cpu,
+        return _impl_atualizar_composicao_item_cpu(
             contexto_id,
             cpu_id,
             acao,
@@ -427,6 +423,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:read")
+    @_com_deadline_de_catalogo
     def historico_preco_insumo(
         contexto_id: str,
         modo: str = "tendencia",
@@ -462,6 +459,7 @@ def register(server: FastMCP) -> None:
         "Sempre dry-run — este tool nunca escreve nada; use mesclar_catalogo para aplicar."
     )
     @permission("financials:read")
+    @_com_deadline_de_catalogo
     def comparar_catalogo(
         origem_a: str,
         origem_b: str,
@@ -478,6 +476,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
+    @_com_deadline_de_catalogo
     def mesclar_catalogo(
         destino: str,
         origem: str,
@@ -497,6 +496,7 @@ def register(server: FastMCP) -> None:
         "detalhado=True inclui a contribuição item-a-item de cada insumo da equipe (ADR-163)."
     )
     @permission("catalog:read")
+    @_com_deadline_de_catalogo
     def calcular_pu_producao(
         contexto_id: str,
         producao_id: str,
@@ -520,6 +520,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:read")
+    @_com_deadline_de_catalogo
     def versoes_catalogo(
         contexto_id: str,
         modo: str = "listar",
@@ -573,6 +574,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
+    @_com_deadline_de_catalogo
     def criar_rascunho_catalogo(
         contexto_id: str,
         descricao: str,
@@ -642,6 +644,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:validate")
+    @_com_deadline_de_catalogo
     def listar_divergencias_rascunho(
         contexto_id: str,
         rascunho_id: str,
@@ -687,6 +690,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:validate")
+    @_com_deadline_de_catalogo
     def consultar_impacto_reajuste(
         contexto_id: str,
         rascunho_id: str,
@@ -750,6 +754,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:merge")
     @mcp_rate_limit()
+    @_com_deadline_de_catalogo
     def aprovar_merge_catalogo(
         contexto_id: str,
         rascunho_id: str,
@@ -925,6 +930,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:merge")
     @mcp_rate_limit()
+    @_com_deadline_de_catalogo
     def rejeitar_rascunho_catalogo(
         contexto_id: str,
         rascunho_id: str,
@@ -990,6 +996,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:merge")
     @mcp_rate_limit()
+    @_com_deadline_de_catalogo
     def promover_override_projeto(
         projeto_id: str,
         justificativa: str,
@@ -1029,6 +1036,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:read")
+    @_com_deadline_de_catalogo
     def exportar_pesquisa_mercado(
         contexto_id: str = "mendeslobo",
         jurisdicao_id: str = "",

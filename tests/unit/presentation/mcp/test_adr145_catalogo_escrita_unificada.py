@@ -90,7 +90,7 @@ def _criar_rascunho_com_deltas(config_dir: Path, contexto_id: str, rascunho_id: 
 class TestConsultarImpactoReajusteLeDeltasReais:
     """ADR-145 P11 — n_insumos_afetados deriva de _deltas, não da chave inexistente 'modificados'."""
 
-    def test_n_insumos_afetados_bate_com_numero_de_deltas_distintos(self, monkeypatch, tmp_path):
+    async def test_n_insumos_afetados_bate_com_numero_de_deltas_distintos(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
@@ -107,13 +107,13 @@ class TestConsultarImpactoReajusteLeDeltasReais:
             ],
         )
 
-        result = tools["consultar_impacto_reajuste"](contexto_id="ctx-1", rascunho_id="v2")
+        result = await tools["consultar_impacto_reajuste"](contexto_id="ctx-1", rascunho_id="v2")
         assert result["n_insumos_afetados"] == 2
         assert set(result["insumos_modificados"]) == {"MAT-001", "MAT-002"}
 
 
 class TestAprovarMergeCatalogoAplicaDeltas:
-    def test_merge_aplica_deltas_preco_base_regional_e_variante(self, monkeypatch, tmp_path):
+    async def test_merge_aplica_deltas_preco_base_regional_e_variante(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
@@ -156,7 +156,7 @@ class TestAprovarMergeCatalogoAplicaDeltas:
         from unittest.mock import patch
 
         with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"):
-            result = tools["aprovar_merge_catalogo"](
+            result = await tools["aprovar_merge_catalogo"](
                 contexto_id="ctx-1", rascunho_id="v2", justificativa="Reajuste aprovado pela diretoria"
             )
 
@@ -195,7 +195,7 @@ class TestAprovarMergeCatalogoAplicaDeltas:
         assert rascunho_data["_aprovado"] is True
         assert rascunho_data["_aprovado_por"] == "mgr-1"
 
-    def test_merge_sem_deltas_nao_gera_snapshot(self, monkeypatch, tmp_path):
+    async def test_merge_sem_deltas_nao_gera_snapshot(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
@@ -204,14 +204,14 @@ class TestAprovarMergeCatalogoAplicaDeltas:
         from unittest.mock import patch
 
         with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"):
-            result = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
+            result = await tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="ok")
 
         assert result["status"] == "APROVADO"
         assert result["deltas_aplicados"] == 0
         assert result["snapshot_id"] is None
         assert not (config_dir / "catalogos" / "cat-1" / "snapshots").exists()
 
-    def test_segundo_merge_gera_diff_contra_snapshot_anterior(self, monkeypatch, tmp_path):
+    async def test_segundo_merge_gera_diff_contra_snapshot_anterior(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
@@ -235,7 +235,9 @@ class TestAprovarMergeCatalogoAplicaDeltas:
             ],
         )
         with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"):
-            first = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v2", justificativa="primeiro")
+            first = await tools["aprovar_merge_catalogo"](
+                contexto_id="ctx-1", rascunho_id="v2", justificativa="primeiro"
+            )
         assert first["snapshot_id"]
 
         _criar_rascunho_com_deltas(
@@ -255,7 +257,9 @@ class TestAprovarMergeCatalogoAplicaDeltas:
             ],
         )
         with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-2"):
-            second = tools["aprovar_merge_catalogo"](contexto_id="ctx-1", rascunho_id="v3", justificativa="segundo")
+            second = await tools["aprovar_merge_catalogo"](
+                contexto_id="ctx-1", rascunho_id="v3", justificativa="segundo"
+            )
 
         assert second["snapshot_id"] != first["snapshot_id"]
         assert "insumo" in second["diff_summary"]
@@ -276,7 +280,7 @@ class TestConsultarImpactoReajusteSurfaceComposicaoItem:
     """composicao_item afeta a estrutura de custo de uma CPU — visibilidade própria
     pro revisor dos 4-olhos, análoga a insumos_modificados (mas por cpu_id)."""
 
-    def test_cpus_com_composicao_alterada_deriva_de_deltas_composicao_item(self, monkeypatch, tmp_path):
+    async def test_cpus_com_composicao_alterada_deriva_de_deltas_composicao_item(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
@@ -310,7 +314,7 @@ class TestConsultarImpactoReajusteSurfaceComposicaoItem:
             ],
         )
 
-        result = tools["consultar_impacto_reajuste"](contexto_id="ctx-1", rascunho_id="v2")
+        result = await tools["consultar_impacto_reajuste"](contexto_id="ctx-1", rascunho_id="v2")
         assert result["n_cpus_com_composicao_alterada"] == 1
         assert result["cpus_com_composicao_alterada"] == ["CPU-001"]
         # não interfere na contagem de insumos_afetados (preco_insumo, já coberta acima)
@@ -318,7 +322,7 @@ class TestConsultarImpactoReajusteSurfaceComposicaoItem:
 
 
 class TestAprovarMergeCatalogoAplicaDeltaComposicaoItem:
-    def test_merge_aplica_delta_composicao_item_remocao_e_upsert(self, monkeypatch, tmp_path):
+    async def test_merge_aplica_delta_composicao_item_remocao_e_upsert(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
@@ -365,7 +369,7 @@ class TestAprovarMergeCatalogoAplicaDeltaComposicaoItem:
         from unittest.mock import patch
 
         with patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value="mgr-1"):
-            result = tools["aprovar_merge_catalogo"](
+            result = await tools["aprovar_merge_catalogo"](
                 contexto_id="ctx-1", rascunho_id="v2", justificativa="Combustível deriva do equipamento, não da CPU"
             )
 

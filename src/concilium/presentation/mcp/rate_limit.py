@@ -13,6 +13,7 @@ Uso:
 
 from __future__ import annotations
 
+import inspect
 from collections import defaultdict
 from functools import wraps
 from time import monotonic
@@ -38,8 +39,7 @@ def mcp_rate_limit(calls: int = _PIPELINE_CALLS, period_s: int = _PIPELINE_PERIO
     """
 
     def decorator(tool_fn: Any) -> Any:
-        @wraps(tool_fn)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def _check_and_register(kwargs: dict[str, Any]) -> None:
             project_id = kwargs.get("project_id") or "global"
             key = f"{tool_fn.__name__}:{project_id}"
             now = monotonic()
@@ -56,6 +56,26 @@ def mcp_rate_limit(calls: int = _PIPELINE_CALLS, period_s: int = _PIPELINE_PERIO
                 )
 
             _counters[key].append(now)
+
+        # 2026-08-12: mesmo bug de #148 (ver permission_guard.permission) — um
+        # wrapper síncrono em volta de uma tool_fn `async def` devolve a coroutine
+        # sem executá-la, porque o FastMCP decide se dá `await` inspecionando
+        # ESTE wrapper, não a função original. Achado ao investigar as 8 tools de
+        # escrita convertidas a async no PR #159: com @mcp_rate_limit() logo abaixo
+        # de @permission(...), o wrapper síncrono daqui quebrava a cadeia antes do
+        # fix async-aware do permission() ter chance de ver uma função async.
+        if inspect.iscoroutinefunction(tool_fn):
+
+            @wraps(tool_fn)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                _check_and_register(kwargs)
+                return await tool_fn(*args, **kwargs)
+
+            return async_wrapper
+
+        @wraps(tool_fn)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            _check_and_register(kwargs)
             return tool_fn(*args, **kwargs)
 
         return wrapper

@@ -123,18 +123,18 @@ def _seed_projeto(
     return proj_dir
 
 
-def _promote_as(monkeypatch, tools, *, user_id: str, roles: set[str], **kwargs) -> dict:
+async def _promote_as(monkeypatch, tools, *, user_id: str, roles: set[str], **kwargs) -> dict:
     with (
         patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}),
         patch("concilium.infrastructure.auth.permission_guard.get_current_user_id", return_value=user_id),
         patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_roles,
     ):
         mock_roles.get.return_value = frozenset(roles)
-        return tools["promover_override_projeto"](**kwargs)
+        return await tools["promover_override_projeto"](**kwargs)
 
 
 class TestPromoverOverrideProjetoCpu:
-    def test_promove_cpu_junto_com_insumo_em_uma_unica_chamada(self, monkeypatch, tmp_path):
+    async def test_promove_cpu_junto_com_insumo_em_uma_unica_chamada(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -149,7 +149,7 @@ class TestPromoverOverrideProjetoCpu:
             created_by="eng-1",
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -179,7 +179,7 @@ class TestPromoverOverrideProjetoCpu:
         assert any(name.startswith("insumos_override_") for name in historico_files)
         assert any(name.startswith("cpus_override_") for name in historico_files)
 
-    def test_promove_apenas_cpu_sem_insumo_pendente(self, monkeypatch, tmp_path):
+    async def test_promove_apenas_cpu_sem_insumo_pendente(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -193,7 +193,7 @@ class TestPromoverOverrideProjetoCpu:
             created_by="eng-1",
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -210,7 +210,7 @@ class TestPromoverOverrideProjetoCpu:
         cpu_file = config_dir / "catalogos" / "cat-1" / "cpus" / "CPU-001.json"
         assert json.loads(cpu_file.read_text(encoding="utf-8"))["producao_horaria"] == 4.0
 
-    def test_override_de_cpu_faz_merge_preservando_campos_nao_tocados(self, monkeypatch, tmp_path):
+    async def test_override_de_cpu_faz_merge_preservando_campos_nao_tocados(self, monkeypatch, tmp_path):
         """Mesma semântica de leitura de ConciliumService.resolve_cpu ({**master, **override})."""
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
@@ -225,7 +225,7 @@ class TestPromoverOverrideProjetoCpu:
             created_by="eng-1",
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -246,7 +246,7 @@ class TestPromoverOverrideProjetoCpu:
         # Metadado de governança não vaza para o schema de CPU do master
         assert "motivo" not in cpu_data
 
-    def test_gate_quatro_olhos_bloqueia_promocao_de_override_de_cpu(self, monkeypatch, tmp_path):
+    async def test_gate_quatro_olhos_bloqueia_promocao_de_override_de_cpu(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -261,7 +261,7 @@ class TestPromoverOverrideProjetoCpu:
             created_by="owner-1",
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -275,7 +275,7 @@ class TestPromoverOverrideProjetoCpu:
         cpu_file = config_dir / "catalogos" / "cat-1" / "cpus" / "CPU-001.json"
         assert json.loads(cpu_file.read_text(encoding="utf-8"))["producao_horaria"] == 2.0
 
-    def test_gate_bloqueia_quem_nao_e_dono_nem_admin_para_override_de_cpu(self, monkeypatch, tmp_path):
+    async def test_gate_bloqueia_quem_nao_e_dono_nem_admin_para_override_de_cpu(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -289,7 +289,7 @@ class TestPromoverOverrideProjetoCpu:
             created_by="eng-1",
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="mgr-1",
@@ -301,14 +301,14 @@ class TestPromoverOverrideProjetoCpu:
         assert "erro" in result
         assert "dono do projeto" in result["erro"] or "admin" in result["erro"]
 
-    def test_sem_pendencias_quando_insumo_e_cpu_estao_vazios(self, monkeypatch, tmp_path):
+    async def test_sem_pendencias_quando_insumo_e_cpu_estao_vazios(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
         _seed_contexto_e_catalogo(config_dir, "ctx-1", "cat-1")
         _seed_projeto(projects_dir, "PROJ-001", owner_id="owner-1", contexto_id="ctx-1")
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -325,7 +325,7 @@ class TestOverridesFileEdgeCases:
     arquivo ausente e conteúdo malformado (JSON inválido) — em ambos os casos o
     dict correspondente vira {} e a promoção segue com o que sobrar."""
 
-    def test_insumos_override_json_ausente_promove_so_cpu(self, monkeypatch, tmp_path):
+    async def test_insumos_override_json_ausente_promove_so_cpu(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -340,7 +340,7 @@ class TestOverridesFileEdgeCases:
         )
         (projects_dir / "PROJ-001" / "overrides" / "insumos_override.json").unlink()
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -353,7 +353,7 @@ class TestOverridesFileEdgeCases:
         assert result["deltas_insumo"] == 0
         assert result["deltas_cpu"] == 1
 
-    def test_insumos_override_json_malformado_e_tratado_como_vazio(self, monkeypatch, tmp_path):
+    async def test_insumos_override_json_malformado_e_tratado_como_vazio(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -370,7 +370,7 @@ class TestOverridesFileEdgeCases:
             "{invalido", encoding="utf-8"
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -387,7 +387,7 @@ class TestOverridesFileEdgeCases:
         insumos_file = projects_dir / "PROJ-001" / "overrides" / "insumos_override.json"
         assert insumos_file.read_text(encoding="utf-8") == "{invalido"
 
-    def test_cpus_override_json_malformado_e_tratado_como_vazio(self, monkeypatch, tmp_path):
+    async def test_cpus_override_json_malformado_e_tratado_como_vazio(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -404,7 +404,7 @@ class TestOverridesFileEdgeCases:
             "{invalido", encoding="utf-8"
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -421,7 +421,7 @@ class TestOverridesFileEdgeCases:
 
 
 class TestCpuOverrideEntryNaoDict:
-    def test_entrada_de_cpu_que_nao_e_dict_e_ignorada(self, monkeypatch, tmp_path):
+    async def test_entrada_de_cpu_que_nao_e_dict_e_ignorada(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -435,7 +435,7 @@ class TestCpuOverrideEntryNaoDict:
             created_by="eng-1",
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
@@ -453,7 +453,7 @@ class TestCpuOverrideEntryNaoDict:
 class TestBdiOverrideNaoCoberto:
     """Documenta a decisão deliberada de não promover bdi_override.json (ver ADR-150 Achados)."""
 
-    def test_bdi_override_json_nao_e_tocado_pela_promocao(self, monkeypatch, tmp_path):
+    async def test_bdi_override_json_nao_e_tocado_pela_promocao(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         config_dir = tmp_path / "config"
         projects_dir = tmp_path / "projetos"
@@ -469,7 +469,7 @@ class TestBdiOverrideNaoCoberto:
             created_by="eng-1",
         )
 
-        result = _promote_as(
+        result = await _promote_as(
             monkeypatch,
             tools,
             user_id="owner-1",
