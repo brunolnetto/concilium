@@ -42,6 +42,31 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
 
 
+async def _run_catalog_write_with_deadline(tool_name: str, func: Any, *args: Any) -> dict[str, Any]:
+    """Roda uma tool de escrita de catálogo fora do event loop, com deadline de parede.
+
+    2026-08-12: mesma classe de bug de #147/#148/#149/#153 (pesquisar_catalogo) —
+    tools MCP síncronas rodam direto na coroutine do event loop (o SDK `mcp` não
+    tira isso pra thread sozinho); com concilium-mcp de worker único, uma chamada
+    travada (ex.: leitura de catálogo via SharePoint sob throttling) congela o
+    event loop inteiro — inclusive chamadas novas de OUTRAS tools, mesmo leves
+    (achado real: atualizar_composicao_item_cpu, sem bug próprio — reproduz em
+    <1s local — travou 4min em produção porque outra chamada seguurava o loop).
+    `asyncio.to_thread` tira a execução do loop; `wait_for` dá erro rápido em vez
+    de hang silencioso quando o próprio trabalho demora demais.
+    """
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(func, *args), timeout=TOOL_IO_TIMEOUT_S)
+    except TimeoutError:
+        return {
+            "erro": (
+                f"{tool_name} excedeu {TOOL_IO_TIMEOUT_S:.0f}s. Pode ser catálogo grande com "
+                "cache frio (pós-deploy/restart) ou contenção com outra chamada em andamento — "
+                "tente novamente."
+            )
+        }
+
+
 def _marcar_rascunho_revisado(config_root: Path, contexto_id: str, rascunho_id: str, revisor: str) -> None:
     """RASCUNHO -> REVISADO (ADR-120 D5): no-op se o arquivo do rascunho não existir."""
     import json
@@ -179,7 +204,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def atualizar_preco_insumo(
+    async def atualizar_preco_insumo(
         contexto_id: str,
         insumo_id: str,
         novo_preco: float | None = None,
@@ -190,7 +215,9 @@ def register(server: FastMCP) -> None:
         novo_valor_locacao_mensal: float | None = None,
         novos_funcoes_aplicaveis: list[str] | None = None,
     ) -> dict[str, Any]:
-        return _impl_atualizar_preco_insumo(
+        return await _run_catalog_write_with_deadline(
+            "atualizar_preco_insumo",
+            _impl_atualizar_preco_insumo,
             contexto_id,
             insumo_id,
             novo_preco,
@@ -212,12 +239,14 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def atualizar_precos_insumos_lote(
+    async def atualizar_precos_insumos_lote(
         contexto_id: str,
         rascunho_id: str,
         itens: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return _impl_atualizar_precos_insumos_lote(contexto_id, rascunho_id, itens)
+        return await _run_catalog_write_with_deadline(
+            "atualizar_precos_insumos_lote", _impl_atualizar_precos_insumos_lote, contexto_id, rascunho_id, itens
+        )
 
     @server.tool(
         description=(
@@ -228,7 +257,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def criar_insumo(
+    async def criar_insumo(
         contexto_id: str,
         rascunho_id: str,
         codigo: str,
@@ -240,7 +269,9 @@ def register(server: FastMCP) -> None:
         fonte_preco: str,
         atributos_especificos: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return _impl_criar_insumo(
+        return await _run_catalog_write_with_deadline(
+            "criar_insumo",
+            _impl_criar_insumo,
             contexto_id,
             rascunho_id,
             codigo,
@@ -264,12 +295,14 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def criar_insumos_lote(
+    async def criar_insumos_lote(
         contexto_id: str,
         rascunho_id: str,
         itens: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return _impl_criar_insumos_lote(contexto_id, rascunho_id, itens)
+        return await _run_catalog_write_with_deadline(
+            "criar_insumos_lote", _impl_criar_insumos_lote, contexto_id, rascunho_id, itens
+        )
 
     @server.tool(
         description=(
@@ -281,13 +314,15 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def descontinuar_insumo(
+    async def descontinuar_insumo(
         contexto_id: str,
         rascunho_id: str,
         insumo_id: str,
         motivo: str | None = None,
     ) -> dict[str, Any]:
-        return _impl_descontinuar_insumo(contexto_id, rascunho_id, insumo_id, motivo)
+        return await _run_catalog_write_with_deadline(
+            "descontinuar_insumo", _impl_descontinuar_insumo, contexto_id, rascunho_id, insumo_id, motivo
+        )
 
     @server.tool(
         description=(
@@ -299,12 +334,14 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def descontinuar_insumos_lote(
+    async def descontinuar_insumos_lote(
         contexto_id: str,
         rascunho_id: str,
         itens: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return _impl_descontinuar_insumos_lote(contexto_id, rascunho_id, itens)
+        return await _run_catalog_write_with_deadline(
+            "descontinuar_insumos_lote", _impl_descontinuar_insumos_lote, contexto_id, rascunho_id, itens
+        )
 
     @server.tool(
         description="Registra uma variante de produtividade documentada para uma producao existente "
@@ -316,7 +353,7 @@ def register(server: FastMCP) -> None:
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def adicionar_variante_producao(
+    async def adicionar_variante_producao(
         contexto_id: str,
         producao_id: str,
         variante_id: str,
@@ -326,39 +363,51 @@ def register(server: FastMCP) -> None:
         rascunho_id: str | None = None,
         projeto_id: str | None = None,
     ) -> dict[str, Any]:
-        return _impl_adicionar_variante_producao(
-            contexto_id, producao_id, variante_id, nome_variante, valor_horario, equipe_json, rascunho_id, projeto_id
+        return await _run_catalog_write_with_deadline(
+            "adicionar_variante_producao",
+            _impl_adicionar_variante_producao,
+            contexto_id,
+            producao_id,
+            variante_id,
+            nome_variante,
+            valor_horario,
+            equipe_json,
+            rascunho_id,
+            projeto_id,
         )
 
     @server.tool(
         description=(
-            "Edita um item de composicao_itens de uma CPU no catálogo mestre (adicionar/atualizar/"
-            "remover um insumo × coeficiente × categoria_custo). Requer rascunho_id (criado via "
-            "criar_rascunho_catalogo) — fica pendente até aprovar_merge_catalogo (mesmo padrão de "
-            "governança de atualizar_preco_insumo/criar_insumo, ADR-145/163). Use para corrigir "
-            "itens de composição inconsistentes (ex.: categoria_custo incompatível com o tipo do "
-            "insumo) sem editar o arquivo da CPU manualmente."
+            "Consulta (acao='listar', não requer rascunho_id/insumo_id) ou edita "
+            "(adicionar/atualizar/remover um insumo × coeficiente × categoria_custo) a "
+            "composicao_itens de uma CPU no catálogo mestre. Edição requer rascunho_id "
+            "(criado via criar_rascunho_catalogo) — fica pendente até aprovar_merge_catalogo "
+            "(mesmo padrão de governança de atualizar_preco_insumo/criar_insumo, ADR-145/163). "
+            "Use para corrigir itens de composição inconsistentes (ex.: categoria_custo "
+            "incompatível com o tipo do insumo) sem editar o arquivo da CPU manualmente."
         )
     )
     @permission("catalog:write")
     @mcp_rate_limit()
-    def atualizar_composicao_item_cpu(
+    async def atualizar_composicao_item_cpu(
         contexto_id: str,
         cpu_id: str,
-        insumo_id: str,
         acao: str,
-        rascunho_id: str,
+        insumo_id: str | None = None,
+        rascunho_id: str | None = None,
         coeficiente: float | None = None,
         categoria_custo: str | None = None,
         unidade: str | None = None,
         tipo_combustivel: str | None = None,
         nota: str | None = None,
     ) -> dict[str, Any]:
-        return _impl_atualizar_composicao_item_cpu(
+        return await _run_catalog_write_with_deadline(
+            "atualizar_composicao_item_cpu",
+            _impl_atualizar_composicao_item_cpu,
             contexto_id,
             cpu_id,
-            insumo_id,
             acao,
+            insumo_id,
             rascunho_id,
             coeficiente,
             categoria_custo,

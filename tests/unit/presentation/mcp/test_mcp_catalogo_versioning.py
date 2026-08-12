@@ -116,22 +116,22 @@ class TestCatalogoWrappers:
         result = tools["auditar_catalogo"](contexto_id="ctx", modo="invalido")
         assert "erro" in result
 
-    def test_atualizar_preco_insumo(self, monkeypatch, tmp_path):
+    async def test_atualizar_preco_insumo(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_atualizar_preco_insumo",
             return_value={"ok": True},
         ):
-            result = tools["atualizar_preco_insumo"](contexto_id="ctx", insumo_id="INS-1", novo_preco=10.0)
+            result = await tools["atualizar_preco_insumo"](contexto_id="ctx", insumo_id="INS-1", novo_preco=10.0)
         assert result["ok"] is True
 
-    def test_adicionar_variante_producao(self, monkeypatch, tmp_path):
+    async def test_adicionar_variante_producao(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_adicionar_variante_producao",
             return_value={"variante_id": "VAR-1"},
         ):
-            result = tools["adicionar_variante_producao"](
+            result = await tools["adicionar_variante_producao"](
                 contexto_id="ctx",
                 producao_id="P1",
                 variante_id="VAR-1",
@@ -141,13 +141,13 @@ class TestCatalogoWrappers:
             )
         assert result["variante_id"] == "VAR-1"
 
-    def test_atualizar_composicao_item_cpu(self, monkeypatch, tmp_path):
+    async def test_atualizar_composicao_item_cpu(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_atualizar_composicao_item_cpu",
             return_value={"status": "RASCUNHO"},
         ) as impl:
-            result = tools["atualizar_composicao_item_cpu"](
+            result = await tools["atualizar_composicao_item_cpu"](
                 contexto_id="ctx",
                 cpu_id="CPU-001",
                 insumo_id="MA-001",
@@ -157,7 +157,42 @@ class TestCatalogoWrappers:
                 categoria_custo="MATERIAL",
             )
         assert result["status"] == "RASCUNHO"
-        impl.assert_called_once_with("ctx", "CPU-001", "MA-001", "adicionar", "v1", 0.5, "MATERIAL", None, None, None)
+        impl.assert_called_once_with("ctx", "CPU-001", "adicionar", "MA-001", "v1", 0.5, "MATERIAL", None, None, None)
+
+    async def test_atualizar_composicao_item_cpu_listar_nao_exige_insumo_id_nem_rascunho_id(
+        self, monkeypatch, tmp_path
+    ):
+        """acao='listar' — leitura, sem insumo_id/rascunho_id (ação que não existia;
+        usuário tentou usá-la e ficou sem retorno por hang de outra tool, não desta)."""
+        tools = _register_tools(monkeypatch, tmp_path)
+        with patch(
+            f"{_CATALOGO_MOD}._impl_atualizar_composicao_item_cpu",
+            return_value={"cpu_id": "CPU-001", "composicao_itens": []},
+        ) as impl:
+            result = await tools["atualizar_composicao_item_cpu"](contexto_id="ctx", cpu_id="CPU-001", acao="listar")
+        assert result["composicao_itens"] == []
+        impl.assert_called_once_with("ctx", "CPU-001", "listar", None, None, None, None, None, None, None)
+
+    async def test_atualizar_composicao_item_cpu_times_out_returns_erro_instead_of_hanging(self, monkeypatch, tmp_path):
+        """2026-08-12: bug real reportado — acao='listar'/'remover' travaram 4min sem
+        retorno em produção. Causa raiz: nenhuma tool MCP síncrona roda fora do event
+        loop; uma chamada travada (ex.: catálogo via SharePoint sob throttling) congela
+        o processo pra todas as outras, mesmo tools leves como esta. Mesma mitigação de
+        pesquisar_catalogo (issue #147/#148/#149/#153)."""
+        import time
+
+        tools = _register_tools(monkeypatch, tmp_path)
+
+        def _slow(*args, **kwargs):
+            time.sleep(0.2)
+            return {"status": "RASCUNHO"}
+
+        with (
+            patch(f"{_CATALOGO_MOD}.TOOL_IO_TIMEOUT_S", 0.01),
+            patch(f"{_CATALOGO_MOD}._impl_atualizar_composicao_item_cpu", side_effect=_slow),
+        ):
+            result = await tools["atualizar_composicao_item_cpu"](contexto_id="ctx", cpu_id="CPU-001", acao="listar")
+        assert "erro" in result
 
     def test_historico_preco_insumo_pontual_sem_insumo_id_retorna_erro(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)

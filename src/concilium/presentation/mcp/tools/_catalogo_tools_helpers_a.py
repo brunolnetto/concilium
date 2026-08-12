@@ -1345,8 +1345,8 @@ def _acic_validar_entrada(
     categoria_custo: str | None,
 ) -> str | None:
     """Valida os parâmetros de entrada conforme a ação solicitada. Retorna erro ou None."""
-    if acao not in ("adicionar", "atualizar", "remover"):
-        return "acao deve ser 'adicionar', 'atualizar' ou 'remover'."
+    if acao not in ("adicionar", "atualizar", "remover", "listar"):
+        return "acao deve ser 'adicionar', 'atualizar', 'remover' ou 'listar'."
     if acao in ("adicionar", "atualizar") and (coeficiente is None or categoria_custo is None):
         return "coeficiente e categoria_custo são obrigatórios para acao='adicionar'/'atualizar'."
     return None
@@ -1355,16 +1355,16 @@ def _acic_validar_entrada(
 def _impl_atualizar_composicao_item_cpu(
     contexto_id: str,
     cpu_id: str,
-    insumo_id: str,
     acao: str,
-    rascunho_id: str,
+    insumo_id: str | None = None,
+    rascunho_id: str | None = None,
     coeficiente: float | None = None,
     categoria_custo: str | None = None,
     unidade: str | None = None,
     tipo_combustivel: str | None = None,
     nota: str | None = None,
 ) -> dict[str, Any]:
-    """Edita um item de `composicao_itens` de uma CPU no catálogo mestre (governança).
+    """Consulta ou edita `composicao_itens` de uma CPU no catálogo mestre (governança).
 
     Fecha a lacuna de governança para `composicao_itens`: até aqui, insumo (preço,
     criação, descontinuação) e produção (variante) tinham caminho de escrita
@@ -1376,11 +1376,14 @@ def _impl_atualizar_composicao_item_cpu(
 
     Args:
         contexto_id: ID do contexto (ex.: "mendeslobo").
-        cpu_id: Código da CPU a editar (ex.: "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000").
-        insumo_id: Código do insumo do item de composição (deve existir no catálogo mestre).
-        acao: "adicionar" (item novo), "atualizar" (substitui item existente) ou
-            "remover" (descarta item existente).
-        rascunho_id: Obrigatório — crie com criar_rascunho_catalogo antes.
+        cpu_id: Código da CPU a consultar/editar (ex.: "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000").
+        acao: "listar" (leitura, não requer rascunho_id/insumo_id — devolve
+            composicao_itens completa da CPU), "adicionar" (item novo), "atualizar"
+            (substitui item existente) ou "remover" (descarta item existente).
+        insumo_id: Código do insumo do item de composição (deve existir no catálogo
+            mestre). Obrigatório para adicionar/atualizar/remover; ignorado em "listar".
+        rascunho_id: Obrigatório para adicionar/atualizar/remover — crie com
+            criar_rascunho_catalogo antes. Ignorado em "listar".
         coeficiente: Obrigatório para acao='adicionar'/'atualizar'. Deve ser > 0.
         categoria_custo: Obrigatório para acao='adicionar'/'atualizar'. Ex.: "MATERIAL", "DIESEL".
         unidade: Opcional.
@@ -1396,11 +1399,14 @@ def _impl_atualizar_composicao_item_cpu(
     if erro:
         return {"erro": erro}
 
-    if not rascunho_id:
-        return {
-            "erro": "rascunho_id é obrigatório para editar o catálogo mestre (ADR-145). "
-            "Use criar_rascunho_catalogo para abrir um rascunho e informe o rascunho_id retornado."
-        }
+    if acao != "listar":
+        if not insumo_id:
+            return {"erro": "insumo_id é obrigatório para acao='adicionar'/'atualizar'/'remover'."}
+        if not rascunho_id:
+            return {
+                "erro": "rascunho_id é obrigatório para editar o catálogo mestre (ADR-145). "
+                "Use criar_rascunho_catalogo para abrir um rascunho e informe o rascunho_id retornado."
+            }
 
     rt = _runtime()
     config_dir = _config_root()
@@ -1409,7 +1415,10 @@ def _impl_atualizar_composicao_item_cpu(
 
     try:
         cpu_file = validate_and_resolve_cpu_file(catalog_root, cpu_id)
-        if acao != "remover":
+        if acao not in ("remover", "listar"):
+            # insumo_id != None garantido pelo bloco `if acao != "listar"` acima
+            # (mesma condição, exceto por "remover" — coberto pelo `not in`).
+            assert insumo_id is not None
             # Insumo precisa existir no catálogo mestre — evita apontar composicao_itens
             # para um código inexistente/inválido.
             validate_and_resolve_insumo_file(catalog_root, insumo_id, 0.0)
@@ -1417,6 +1426,15 @@ def _impl_atualizar_composicao_item_cpu(
         return {"erro": str(exc)}
 
     cpu_data = json.loads(cpu_file.read_text(encoding="utf-8"))
+
+    if acao == "listar":
+        return _wrap_response(
+            {
+                "cpu_id": cpu_id,
+                "composicao_itens": cpu_data.get("composicao_itens", []),
+            }
+        )
+
     item_existente = next((it for it in cpu_data.get("composicao_itens", []) if it.get("insumo_id") == insumo_id), None)
     if acao == "adicionar" and item_existente is not None:
         return {
@@ -1458,6 +1476,10 @@ def _impl_atualizar_composicao_item_cpu(
         "autor": get_current_user_id() or "system",
         "timestamp": datetime.now(UTC).isoformat(),
     }
+    # rascunho_id != None garantido pelo bloco `if acao != "listar"` no início da função
+    # — este ponto só é alcançado quando acao ∈ {"adicionar", "atualizar", "remover"}
+    # (o branch "listar" já retornou antes).
+    assert rascunho_id is not None
     erro = _append_delta_to_rascunho(config_dir, contexto_id, rascunho_id, delta)
     if erro:
         return {"erro": erro}
