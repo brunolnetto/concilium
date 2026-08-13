@@ -13,16 +13,17 @@ CONFIG_ROOT = Path(__file__).parent.parent / "config"
 
 # 9 atividades com dados reais do projeto CMOC Azamor 3A
 # Dados de origem: Estrutura Analítica de Projeto (EAP) real
+# Sequência lógica: {1, 2, 3} paralelo → 4 → {5} → {6, 7} paralelo → 8 ; 9 independente
 EAP_ITEMS = [
-    {"item_id": "SV-001", "cpu_id": "CPU-TERRA-ATI-041", "descricao": "Supressão vegetal de Mata Densa - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 6 km", "unidade": "m2", "quantitativo": 169798.78, "ordem": 1},
-    {"item_id": "SV-002", "cpu_id": "CPU-TERRA-ATI-042", "descricao": "Supressão de árvore isolada - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 6 km", "unidade": "m2", "quantitativo": 33959.76, "ordem": 2},
-    {"item_id": "SV-003", "cpu_id": "CPU-TERRA-ATI-043", "descricao": "Supressão de vegetação arbustiva - Carga, transporte, descarga e espalhamento com DMT até 4,5 km", "unidade": "m2", "quantitativo": 336787.60, "ordem": 3},
-    {"item_id": "SV-004", "cpu_id": "CPU-TERRA-ATI-044", "descricao": "Remoção do topsoil - Carga, transporte, descarga e espalhamento com DMT até 4,5 km", "unidade": "m3", "quantitativo": 243245.76, "ordem": 4},
-    {"item_id": "SV-005", "cpu_id": "CPU-TERRA-ATI-045", "descricao": "Supressão vegetal de Mata Densa - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 1 km", "unidade": "m2", "quantitativo": 123322.82, "ordem": 5},
-    {"item_id": "SV-006", "cpu_id": "CPU-TERRA-ATI-046", "descricao": "Supressão de árvore isolada - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 1 km", "unidade": "m2", "quantitativo": 2853.89, "ordem": 6},
-    {"item_id": "SV-007", "cpu_id": "CPU-TERRA-ATI-047", "descricao": "Supressão de vegetação arbustiva - Carga, transporte, descarga e espalhamento com DMT até 1 km", "unidade": "m2", "quantitativo": 123285.70, "ordem": 7},
-    {"item_id": "SV-008", "cpu_id": "CPU-TERRA-ATI-048", "descricao": "Remoção de top soil - Carga, transporte, descarga e espalhamento com DMT até 1 km", "unidade": "m3", "quantitativo": 124731.21, "ordem": 8},
-    {"item_id": "SV-009", "cpu_id": "CPU-TERRA-ATI-049", "descricao": "Movimentação de armazenamento de Madeira - Carregamento, baldeio e empilhamento de madeira com DMT até 0,5 km", "unidade": "m3", "quantitativo": 1174.00, "ordem": 9},
+    {"item_id": "SV-001", "cpu_id": "CPU-TERRA-ATI-041", "descricao": "Supressão vegetal de Mata Densa - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 6 km", "unidade": "m2", "quantitativo": 169798.78, "ordem": 1, "predecessores": []},
+    {"item_id": "SV-002", "cpu_id": "CPU-TERRA-ATI-042", "descricao": "Supressão de árvore isolada - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 6 km", "unidade": "m2", "quantitativo": 33959.76, "ordem": 2, "predecessores": []},
+    {"item_id": "SV-003", "cpu_id": "CPU-TERRA-ATI-043", "descricao": "Supressão de vegetação arbustiva - Carga, transporte, descarga e espalhamento com DMT até 4,5 km", "unidade": "m2", "quantitativo": 336787.60, "ordem": 3, "predecessores": []},
+    {"item_id": "SV-004", "cpu_id": "CPU-TERRA-ATI-044", "descricao": "Remoção do topsoil - Carga, transporte, descarga e espalhamento com DMT até 4,5 km", "unidade": "m3", "quantitativo": 243245.76, "ordem": 4, "predecessores": [{"item_id": "SV-001"}, {"item_id": "SV-002"}, {"item_id": "SV-003"}]},
+    {"item_id": "SV-005", "cpu_id": "CPU-TERRA-ATI-045", "descricao": "Supressão vegetal de Mata Densa - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 1 km", "unidade": "m2", "quantitativo": 123322.82, "ordem": 5, "predecessores": [{"item_id": "SV-004"}]},
+    {"item_id": "SV-006", "cpu_id": "CPU-TERRA-ATI-046", "descricao": "Supressão de árvore isolada - Incluso os serviço de corte, destocamento, traçamento, baldeio e empilhamento de madeira com DMT até 1 km", "unidade": "m2", "quantitativo": 2853.89, "ordem": 6, "predecessores": []},
+    {"item_id": "SV-007", "cpu_id": "CPU-TERRA-ATI-047", "descricao": "Supressão de vegetação arbustiva - Carga, transporte, descarga e espalhamento com DMT até 1 km", "unidade": "m2", "quantitativo": 123285.70, "ordem": 7, "predecessores": []},
+    {"item_id": "SV-008", "cpu_id": "CPU-TERRA-ATI-048", "descricao": "Remoção de top soil - Carga, transporte, descarga e espalhamento com DMT até 1 km", "unidade": "m3", "quantitativo": 124731.21, "ordem": 8, "predecessores": [{"item_id": "SV-005"}, {"item_id": "SV-006"}, {"item_id": "SV-007"}]},
+    {"item_id": "SV-009", "cpu_id": "CPU-TERRA-ATI-049", "descricao": "Movimentação de armazenamento de Madeira - Carregamento, baldeio e empilhamento de madeira com DMT até 0,5 km", "unidade": "m3", "quantitativo": 1174.00, "ordem": 9, "predecessores": []},
 ]
 
 # Cronograma estendido para quantitativos reais (muito maiores)
