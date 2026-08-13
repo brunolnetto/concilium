@@ -8,7 +8,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from concilium.application.services.project.project_repository import ProjectHandle
+from concilium.application.services.project.project_repository import PlanoHandle, ProjectHandle
 from concilium.application.skills import MANIFEST_META, SKILLS
 from concilium.application.skills.executor import ExecutionRecord, SkillExecutor
 from concilium.domain.models.canonical import CanonicalModel
@@ -206,3 +206,67 @@ class Runtime(ConfigMixin, CatalogMixin, InputsMixin, ExecutionMixin):
             perfil=perfil,
             extra_inputs=extra_inputs,
         )
+
+    def run_pipeline_on_plano(
+        self,
+        project: ProjectHandle,
+        plano: PlanoHandle,
+        skill_inputs: dict[str, dict] | None = None,
+        skill_sequence: list[str] | None = None,
+    ) -> list[dict]:
+        """Executa pipeline no modelo Escopo/Plano.
+
+        Estado (canonical, outputs, invocations.log) gravado no plano, dentro de
+        escopos/{escopo_id}/planos/{plano_id}/. Contexto (catálogo, perfil,
+        snapshots, overrides) lido do projeto.
+        """
+        from datetime import UTC, datetime
+
+        from .gates import _GATE_SKILLS
+        from .helpers.pipeline import _print_skill_start
+
+        skill_inputs = skill_inputs or {}
+        ordered = skill_sequence or list(SKILLS.keys())
+        records: list[dict] = []
+        executed_ok: set[str] = set()
+        blocked = False
+
+        for skill_id in ordered:
+            if skill_id not in SKILLS:
+                continue
+            if blocked:
+                break
+            _print_skill_start(skill_id)
+            ts0 = datetime.now(UTC)
+            try:
+                result = self.run_skill_on_plano(
+                    skill_id,
+                    project,
+                    plano,
+                    inputs=skill_inputs.get(skill_id),
+                )
+                duration_ms = int((datetime.now(UTC) - ts0).total_seconds() * 1000)
+                status = "ERRO" if result.has_errors else "OK"
+                entry: dict = {"skill_id": skill_id, "status": status, "duration_ms": duration_ms}
+                errs = [v.mensagem for v in result.validacoes if v.status == "ERRO" and v.mensagem]
+                if errs:
+                    entry["erros"] = errs
+                    print(f"[{status}] {duration_ms}ms  {'; '.join(errs[:3])}")
+                else:
+                    print(f"[{status}] {duration_ms}ms")
+                records.append(entry)
+                if not result.has_errors:
+                    executed_ok.add(skill_id)
+                elif skill_id in _GATE_SKILLS:
+                    print(f"  [STOP] Interrompendo pipeline: skill portão '{skill_id}' falhou.")
+                    blocked = True
+            except Exception as exc:
+                duration_ms = int((datetime.now(UTC) - ts0).total_seconds() * 1000)
+                msg = str(exc)
+                print(f"[EXCEPTION] {duration_ms}ms  {msg}")
+                records.append({"skill_id": skill_id, "status": "EXCEPTION", "duration_ms": duration_ms, "erro": msg})
+                if skill_id in _GATE_SKILLS:
+                    print(f"  [STOP] Interrompendo pipeline: skill portão '{skill_id}' falhou.")
+                    blocked = True
+
+        return records
