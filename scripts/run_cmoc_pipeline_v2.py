@@ -42,8 +42,8 @@ CRONOGRAMA = {
     "SV-006": {**{f"2026-W{w:02d}": 1 for w in range(50, 54)}, **{f"2027-W{w:02d}": 1 for w in range(1, 5)}},
     # SV-007: 123.285 m² — múltiplas equipes
     "SV-007": {**{f"2026-W{w:02d}": 2 for w in range(50, 54)}, **{f"2027-W{w:02d}": 3 for w in range(1, 5)}},
-    # SV-008: 124.731 m³ — múltiplas equipes
-    "SV-008": {**{f"2026-W{w:02d}": 2 for w in range(51, 54)}, **{f"2027-W{w:02d}": 3 for w in range(1, 5)}},
+    # SV-008: 124.731 m³ — CRÍTICA: estende desde W45 com 5 equipes (precisa 4x mais)
+    "SV-008": {**{f"2026-W{w:02d}": 5 for w in range(45, 54)}, **{f"2027-W{w:02d}": 5 for w in range(1, 5)}},
     # SV-009: 1.174 m³ (muito pequeno!) — 1 equipe
     "SV-009": {f"2026-W{w:02d}": 1 for w in range(52, 54)} | {f"2027-W{w:02d}": 1 for w in range(1, 5)},
 }
