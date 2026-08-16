@@ -1,10 +1,10 @@
 {
   "slug": "MATA_DENSA_SIMPLES",
   "meta": {
-    "projeto": "Supressão de Mata Densa + Topsoil (2 Atividades)",
-    "descricao": "Projeto de teste com 2 atividades para observar BDI equivalente gradual entre pools direto e indireto",
+    "projeto": "Supressão de Mata Densa + Topsoil + Escavação (3 Atividades)",
+    "descricao": "Projeto em escala de obra real (supressão ampliada 10× + escavação 1ª categoria adicionada) para observar BDI equivalente gradual entre pools direto e indireto",
     "data_inicio": "2026-11-01",
-    "data_termino": "2027-01-31",
+    "data_termino": "2027-04-30",
     "localizacao": {
       "lat": -13.5311,
       "lng": -48.2262,
@@ -27,10 +27,10 @@
       {
         "item_id": "SV-SIMPLES-001",
         "cpu_id": "CPU-TERRA-ATI-041",
-        "quantitativo": 13500.0,
+        "quantitativo": 135000.0,
         "unidade": "m2",
         "predecessores": [],
-        "descricao": "Supressão de Mata Densa — corte, destocamento, traçamento, baldeio e empilhamento de madeira, DMT até 6 km (quantitativo ajustado para aproveitar a capacidade semanal da equipe mobilizada, ver ADR-182 adendo P4)",
+        "descricao": "Supressão de Mata Densa — corte, destocamento, traçamento, baldeio e empilhamento de madeira, DMT até 6 km (escala de obra real, 10× o piloto de teste)",
         "categoria": "supressão_vegetal"
       },
       {
@@ -41,29 +41,38 @@
         "predecessores": ["SV-SIMPLES-001"],
         "descricao": "Remoção do topsoil — carga, transporte, descarga e espalhamento, DMT até 4,5 km (quantitativo ajustado para aproveitar a capacidade semanal da equipe mobilizada, ver ADR-182 adendo P4)",
         "categoria": "movimentação_terra"
+      },
+      {
+        "item_id": "SV-SIMPLES-003",
+        "cpu_id": "CPU-TERRA-ATI-011-DMT-LONGA",
+        "quantitativo": 50000.0,
+        "unidade": "m3",
+        "predecessores": ["SV-SIMPLES-002"],
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria (solo comum), DMT > 3 km, após remoção do topsoil",
+        "categoria": "movimentação_terra"
       }
     ],
     "cronograma": [
       {
         "item_id": "SV-SIMPLES-001",
         "data_inicio": "2026-11-01",
-        "data_termino": "2026-12-31",
+        "data_termino": "2027-01-15",
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
           "taxa_mobilizacao": 0.0,
           "taxa_desmobilizacao": 0.0
         },
-        "descricao": "Supressão de Mata Densa (1 equipe — 10.000 m² cabe em 1 equipe/semana, ver ADR-182 P4/adendo)",
+        "descricao": "Supressão de Mata Densa (1 equipe, escala de obra real — várias semanas de mobilização)",
         "semanas_ativas": {
           "min": 0,
-          "max": 9
+          "max": 12
         }
       },
       {
         "item_id": "SV-SIMPLES-002",
-        "data_inicio": "2026-12-01",
-        "data_termino": "2027-01-31",
+        "data_inicio": "2027-01-01",
+        "data_termino": "2027-02-15",
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -73,33 +82,53 @@
         "descricao": "Remoção de topsoil (após supressão vegetal, 1 equipe)",
         "semanas_ativas": {
           "min": 0,
-          "max": 9
+          "max": 6
+        }
+      },
+      {
+        "item_id": "SV-SIMPLES-003",
+        "data_inicio": "2027-02-01",
+        "data_termino": "2027-04-30",
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "Escavação 1ª categoria (após remoção do topsoil, 1 equipe)",
+        "semanas_ativas": {
+          "min": 0,
+          "max": 12
         }
       }
     ],
     "fatores_clima": {
-      "periodo": "nov_jan",
+      "periodo": "nov_abr",
       "fator_chuva_base": {
         "nov": 0.90,
         "dez": 0.61,
-        "jan": 0.61
+        "jan": 0.61,
+        "fev": 0.65,
+        "mar": 0.75,
+        "abr": 0.85
       },
       "fator_calendario_base": 0.92,
-      "notas": "Período chuvoso em Ouvidor-GO, Beta efetivo ~0.61 em Dez-Jan"
+      "notas": "Período chuvoso em Ouvidor-GO, Beta efetivo ~0.61 em Dez-Jan; transição de chuvas fev-abr (estimado)"
     }
   },
   "observacoes": {
     "prop_teste": true,
-    "proposito": "Análise granular de 1 atividade para diagnosticar problemas de precificação, cronograma e margem",
+    "proposito": "Escopo ampliado (escala de obra real) com 3 atividades — supressão, topsoil e escavação — para diagnosticar precificação, cronograma e margem numa cadeia mais longa",
     "checklist": [
-      "✓ Validar quantitativo (10.000 m²)",
-      "✓ Validar cronograma (8 semanas)",
+      "✓ Validar quantitativo supressão (135.000 m², escala real)",
+      "✓ Validar quantitativo escavação (50.000 m³, 1ª categoria)",
+      "✓ Validar cronograma (3 atividades sequenciais, nov/2026-abr/2027)",
       "✓ Validar custo de MO e equipamento",
-      "✓ Validar fator climático (0.61 em Dez-Jan)",
+      "✓ Validar fator climático (0.61 em Dez-Jan, transição fev-abr)",
       "✓ Validar PU sem BDI (ρ × β aplicado)",
       "✓ Validar BDI aplicado",
       "✓ Validar margem (alvo 8-10%)",
-      "✓ Diagnosticar frentes_nec (deve estar ~1.0-1.5)"
+      "✓ Diagnosticar frentes_nec por item (deve estar ~1.0-1.5)"
     ]
   }
 }
