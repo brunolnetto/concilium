@@ -58,7 +58,7 @@ def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProject
 def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, Any]) -> dict[str, Any]:
     """Compute delta (absolute, percentual) for key metrics: custo_direto, indireto, preco_venda.
 
-    For preco_venda: includes fonte and homogeneo flag (source == 'total_com_bdi').
+    For preco_venda: includes fonte and homogeneo flag (source == 'total_custo_plus', ADR-183).
     Returns dict keyed by metric with {absoluto, percentual, fonte, homogeneo} entries.
     """
     deltas: dict[str, Any] = {}
@@ -73,7 +73,7 @@ def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, A
             if key == "preco_venda":
                 fonte = fer_vals.get("preco_venda_fonte", "indisponivel")
                 entry["fonte"] = fonte
-                entry["homogeneo"] = fonte == "total_com_bdi"
+                entry["homogeneo"] = fonte == "total_custo_plus"
             deltas[key] = entry
     return deltas
 

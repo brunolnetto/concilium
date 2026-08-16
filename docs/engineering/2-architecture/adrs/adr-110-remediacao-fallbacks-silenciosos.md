@@ -95,6 +95,12 @@ Erros de conversão são amplificados silenciosamente em agregações de custo.
 O terceiro fallback mistura `raw_bdi_lucro` de catálogo com `custo_total` instancial — resultado não é
 comparável entre itens e não há indicador de qual fonte foi usada.
 
+> **Errata (ADR-183, 2026-08-16):** a premissa acima — `total_com_bdi` = "(operacional)" — já estava
+> desatualizada quando esta ADR foi escrita: o commit `07ee661c` (2026-06-06, anterior a esta ADR)
+> reverteu `Venda.total_com_bdi` para valor de **catálogo** em `_resultado.py`, sem atualizar
+> `projection.py`/esta ADR. A ADR-183 corrige `_bfc_preco_venda`/`_bfc_bdi_lucro` para ler
+> `total_custo_plus`/`bdi_equivalente_proj` (operacional real) — ver lá para o histórico completo.
+
 ---
 
 ## Decisão

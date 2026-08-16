@@ -84,26 +84,26 @@ class TestCubeInit2:
     # ─── Extended BenchmarkProjection tests ──────────────────────────────────
 
     def test_bfc_preco_venda_fallback_bdi_lucro(self):
-        """Cover line 53-54: fallback via raw_bdi_lucro when no total_com_bdi."""
+        """Cover line 53-54: fallback via raw_bdi_lucro when no total_custo_plus (ADR-183)."""
         from concilium.application.benchmarks.report.projection import _bfc_preco_venda
 
         venda = MagicMock()
-        venda.total_com_bdi = None
+        venda.total_custo_plus = None
         venda.total_custo_plus_catalogo = None
-        venda.bdi_lucro_impostos = 0.20
+        venda.bdi_equivalente_proj = 0.20
         raw_bdi, pv, fonte = _bfc_preco_venda(venda, 1000000.0)
         assert raw_bdi == 0.20
         assert pv == pytest.approx(1200000.0)
         assert fonte == "derivado"
 
     def test_bfc_preco_venda_fallback_catalogo(self):
-        """Cover line 51-52: fallback via total_custo_plus_catalogo."""
+        """Cover line 51-52: fallback via total_custo_plus_catalogo (ADR-183)."""
         from concilium.application.benchmarks.report.projection import _bfc_preco_venda
 
         venda = MagicMock()
-        venda.total_com_bdi = None
+        venda.total_custo_plus = None
         venda.total_custo_plus_catalogo = 1300000.0
-        venda.bdi_lucro_impostos = None
+        venda.bdi_equivalente_proj = None
         raw_bdi, pv, fonte = _bfc_preco_venda(venda, None)
         assert pv == 1300000.0
         assert fonte == "total_custo_plus_catalogo"

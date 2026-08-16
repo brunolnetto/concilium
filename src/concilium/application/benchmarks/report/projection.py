@@ -38,18 +38,27 @@ def _bfc_preco_venda(venda: object, custo_total: float | None) -> tuple[float | 
     """Retorna (raw_bdi_lucro, preco_venda, fonte).
 
     fonte indica qual campo originou o preco_venda, permitindo que comparações downstream
-    filtrem por fonte == "total_com_bdi" para garantir homogeneidade (ADR-110 F7):
-      - "total_com_bdi"           — preço operacional honesto (custo instancial × BDI)
+    filtrem por fonte == "total_custo_plus" para garantir homogeneidade (ADR-110 F7,
+    corrigido pela ADR-183 — ver nota abaixo):
+      - "total_custo_plus"          — preço operacional honesto (custo instancial × BDI)
       - "total_custo_plus_catalogo" — fallback: catálogo PU×Q×BDI (diagnóstico)
-      - "derivado"                — fallback: custo_total × (1 + bdi_lucro) estimado
-      - "indisponivel"            — nenhuma fonte disponível
+      - "derivado"                 — fallback: custo_total × (1 + bdi_lucro) estimado
+      - "indisponivel"             — nenhuma fonte disponível
+
+    ADR-183: `Venda.total_com_bdi` guarda o valor de CATÁLOGO desde o revert `07ee661c`
+    (2026-06-06) — o comentário anterior deste método ("total_com_bdi = venda_plus após
+    refactoring") ficou desatualizado e nunca foi corrigido, fazendo o relatório de
+    benchmark reportar preço de catálogo rotulado como "operacional". O valor operacional
+    real (`venda_plus`) vive em `Venda.total_custo_plus` — ver `_resultado.py` e ADR-114
+    (fonte de verdade atual, que já corrigiu `margem_pct`/`resultado_financeiro` para essa
+    base; só o relatório de benchmark tinha ficado para trás).
     """
-    raw_bdi_lucro = getattr(venda, "bdi_lucro_impostos", None) if venda else None
-    # Nível 1: preço operacional honesto (total_com_bdi = venda_plus após refactoring)
-    preco_venda_op = getattr(venda, "total_com_bdi", None) if venda else None
+    raw_bdi_lucro = getattr(venda, "bdi_equivalente_proj", None) if venda else None
+    # Nível 1: preço operacional honesto — custo instancial (pool) × BDI.
+    preco_venda_op = getattr(venda, "total_custo_plus", None) if venda else None
     if preco_venda_op is not None:
-        return raw_bdi_lucro, round(preco_venda_op, 2), "total_com_bdi"
-    # Nível 2: catálogo (PU×Q×BDI) — usado apenas quando total_com_bdi não existe
+        return raw_bdi_lucro, round(preco_venda_op, 2), "total_custo_plus"
+    # Nível 2: catálogo (PU×Q×BDI) — usado apenas quando total_custo_plus não existe
     preco_venda_cat = getattr(venda, "total_custo_plus_catalogo", None) if venda else None
     if preco_venda_cat is not None:
         return raw_bdi_lucro, round(preco_venda_cat, 2), "total_custo_plus_catalogo"
@@ -62,10 +71,11 @@ def _bfc_preco_venda(venda: object, custo_total: float | None) -> tuple[float | 
 def _bfc_bdi_lucro(preco_venda: float | None, custo_total: float | None, raw_bdi_lucro: float | None) -> float:
     """Retorna o markup efetivo (BDI + lucro + impostos) como fração.
 
-    Prefere ``raw_bdi_lucro`` de ``Venda.bdi_lucro_impostos``, que já é calculado sobre
-    o custo operacional real (``venda_plus / custo_operacional_real − 1``, skill-08).
-    Isso evita o erro de usar custo de catálogo (R$66M) como denominador de um preço
-    operacional (R$103M), que geraria markup artificialmente inflado (≈55%).
+    Prefere ``raw_bdi_lucro`` de ``Venda.bdi_equivalente_proj``, que já é calculado sobre
+    o custo operacional real em ambos os lados (``venda_plus / custo_operacional_real − 1``,
+    ``_resultado.py``). ADR-183: o campo usado anteriormente aqui, ``Venda.bdi_lucro_impostos``,
+    mistura ``venda_catalogo_plus`` (numerador, catálogo) com ``custo_operacional_real``
+    (denominador, operacional) — bases diferentes, markup não confiável para decisão.
     """
     if raw_bdi_lucro is not None:
         return raw_bdi_lucro  # já correto: venda_plus / custo_op_real − 1
@@ -93,11 +103,14 @@ def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], flo
         "custo_total": custo_total,
         "preco_venda": preco_venda,
         "preco_venda_fonte": preco_venda_fonte,  # ADR-110 F7: rastreabilidade da fonte
+        # preco_venda_plus_eq: alias legado de preco_venda_operacional (mesmo campo,
+        # total_custo_plus) — mantido por retrocompatibilidade, candidato a remoção futura.
         "preco_venda_plus_eq": getattr(venda, "total_custo_plus", None) if venda else None,
         # preco_venda_catalogo: referência de benchmarking (PU×Q×BDI) — total_custo_plus_catalogo
-        # total_com_bdi agora é o preço operacional honesto (custo instancial × BDI)
         "preco_venda_catalogo": getattr(venda, "total_custo_plus_catalogo", None) if venda else None,
-        "preco_venda_operacional": getattr(venda, "total_com_bdi", None) if venda else None,
+        # preco_venda_operacional: preço operacional honesto (custo instancial × BDI) —
+        # ADR-183: corrigido de total_com_bdi (catálogo) para total_custo_plus (operacional).
+        "preco_venda_operacional": getattr(venda, "total_custo_plus", None) if venda else None,
         "bdi_lucro_impostos": bdi_lucro,
     }
     return ferramenta, custo_direto, custo_indireto

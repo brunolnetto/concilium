@@ -67,7 +67,7 @@ class BenchmarkReportPrinter:
         fmt_indireto = f"R$ {indireto:>14,.2f}" if indireto is not None else "  (nao disponivel)"
         fmt_venda = f"R$ {preco_venda:>14,.2f}" if preco_venda is not None else "  (nao disponivel)"
         bdi_pct = f"{bdi * 100:.2f}%" if bdi is not None else "N/A"
-        # Preço operacional honesto (total_com_bdi = custo instancial × BDI)
+        # Preço operacional honesto (total_custo_plus = custo instancial × BDI, ADR-183)
         preco_venda_cat = ferramenta.get("preco_venda_catalogo")
         fmt_venda_cat = f"R$ {preco_venda_cat:>14,.2f}" if preco_venda_cat is not None else ""
         print("     base metodologia           : Operacional (custo execucao pool x BDI)")

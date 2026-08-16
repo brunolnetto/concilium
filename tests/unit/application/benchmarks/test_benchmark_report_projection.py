@@ -37,9 +37,9 @@ class TestBfcPrecoVenda:
 
         # venda with no valid preco fields and raw_bdi_lucro=None → fallback all fail
         venda = SimpleNamespace(
-            total_com_bdi=None,
+            total_custo_plus=None,
             total_custo_plus_catalogo=None,
-            bdi_lucro_impostos=None,  # raw_bdi_lucro=None → nivel 3 also fails
+            bdi_equivalente_proj=None,  # raw_bdi_lucro=None → nivel 3 also fails
         )
 
         result = _bfc_preco_venda(venda, custo_total=None)
@@ -52,12 +52,30 @@ class TestBfcPrecoVenda:
         from concilium.application.benchmarks.report.projection import _bfc_preco_venda
 
         venda = SimpleNamespace(
-            total_com_bdi=None,
+            total_custo_plus=None,
             total_custo_plus_catalogo=None,
-            bdi_lucro_impostos=0.15,
+            bdi_equivalente_proj=0.15,
         )
         result = _bfc_preco_venda(venda, custo_total=None)
         assert result[2] == "indisponivel"
+
+    def test_prefere_operacional_sobre_catalogo_adr183(self):
+        """ADR-183: total_custo_plus (operacional) tem prioridade sobre total_com_bdi
+        (catálogo) e total_custo_plus_catalogo — trava a regressão do revert `07ee661c`,
+        que fazia o relatório de benchmark reportar preço de catálogo como se fosse
+        operacional."""
+        from concilium.application.benchmarks.report.projection import _bfc_preco_venda
+
+        venda = SimpleNamespace(
+            total_com_bdi=3379141.65,  # catálogo — NÃO deve ser o valor retornado
+            total_custo_plus=3520488.77,  # operacional — deve ser o valor retornado
+            total_custo_plus_catalogo=3379141.65,
+            bdi_equivalente_proj=0.0656,
+        )
+        raw_bdi, preco_venda, fonte = _bfc_preco_venda(venda, custo_total=3171195.0)
+        assert preco_venda == 3520488.77
+        assert fonte == "total_custo_plus"
+        assert preco_venda != venda.total_com_bdi
 
 
 # ---------------------------------------------------------------------------
@@ -132,10 +150,10 @@ class TestProjectionHelpers:
         from concilium.application.benchmarks.report.projection import _bfc_preco_venda
 
         venda = MagicMock()
-        venda.total_com_bdi = 1200000.0
+        venda.total_custo_plus = 1200000.0
         raw_bdi, pv, fonte = _bfc_preco_venda(venda, 1000000.0)
         assert pv == 1200000.0
-        assert fonte == "total_com_bdi"
+        assert fonte == "total_custo_plus"
 
     def test_bfc_bdi_lucro(self):
         from concilium.application.benchmarks.report.projection import _bfc_bdi_lucro
@@ -201,7 +219,7 @@ class TestProjectionHelpers:
         custo.indireto_qsms = 0.0
         custo.indireto_mob = 0.0
         venda = MagicMock()
-        venda.total_com_bdi = 1000000.0
+        venda.total_custo_plus = 1000000.0
         fd, pv, bdi = _build_ferramenta_custo(custo, venda)
         assert isinstance(fd, dict)
 
