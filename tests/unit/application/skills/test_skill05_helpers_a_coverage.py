@@ -309,23 +309,43 @@ class TestResolveCustoUnitFuncao:
         result = _resolve_custo_unit_funcao("pj_normal", 5000.0, {}, 0.70, 0.0)
         assert result == pytest.approx(5000.0)
 
-    def test_custo_com_encargos_precomputed(self):
-        """atrib.custo_com_encargos > 0 → use that × (1+he_pct)."""
+    def test_custo_com_encargos_legado_e_ignorado(self):
+        """ADR-182: campo legado `custo_com_encargos` (removido do catálogo pela
+        ADR-009, 0 uso confirmado em qualquer catálogo) não é mais lido — cai
+        no cálculo padrão."""
         atrib = {"custo_com_encargos": 4000.0}
         result = _resolve_custo_unit_funcao("clt", 3000.0, atrib, 0.70, 0.10)
-        assert result == pytest.approx(4000.0 * 1.10)
+        assert result == pytest.approx(3000.0 * 1.70 * 1.10)
 
-    def test_inclui_encargos_nota(self):
-        """Line 138: 'inclui encargos' in nota → salario × (1+he_pct) only."""
-        atrib = {"nota": "taxa horaria — inclui encargos e beneficios"}
+    def test_metodo_custo_total_ja_incluido(self):
+        """ADR-182 D1: metodo_custo_total (campo estruturado) → salario × (1+he_pct)."""
+        atrib = {"metodo_custo_total": "custo_total_ja_incluido"}
         result = _resolve_custo_unit_funcao("clt", 100.0, atrib, 0.70, 0.05)
         assert result == pytest.approx(100.0 * 1.05)
 
-    def test_inclui_encargos_nota_encargos_field(self):
-        """'inclui encargos' in nota_encargos field also triggers."""
+    def test_texto_livre_nota_nao_e_mais_reconhecido(self):
+        """ADR-182: o texto livre "inclui encargos" sozinho não basta mais —
+        substituído por `metodo_custo_total`. Sem o campo, cai no cálculo padrão."""
+        atrib = {"nota": "taxa horaria — inclui encargos e beneficios"}
+        result = _resolve_custo_unit_funcao("clt", 100.0, atrib, 0.70, 0.05)
+        assert result == pytest.approx(100.0 * 1.70 * 1.05)
+
+    def test_texto_livre_nota_encargos_nao_e_mais_reconhecido(self):
         atrib = {"nota_encargos": "valor inclui encargos"}
         result = _resolve_custo_unit_funcao("clt", 100.0, atrib, 0.70, 0.0)
-        assert result == pytest.approx(100.0)
+        assert result == pytest.approx(100.0 * 1.70)
+
+    def test_regressao_bug_horista_ce_ja_all_in(self):
+        """ADR-182 P1: reproduz o bug original (MO-ENCARREGADO-DE-FRENT e afins) —
+        horista_CE + metodo_custo_total + horas_extras_pct_padrao não deve mais
+        sofrer dupla contagem de encargo (custo × 3,47 em vez de custo × 1,25)."""
+        atrib = {
+            "categoria_sindical": "horista_CE",
+            "metodo_custo_total": "custo_total_ja_incluido",
+            "horas_extras_pct_padrao": 0.25,
+        }
+        result = _resolve_custo_unit_funcao("horista_ce", 7500.0, atrib, 1.777, 0.25)
+        assert result == pytest.approx(7500.0 * 1.25)
 
     def test_standard_clt(self):
         """Normal CLT: salario × (1+enc) × (1+he)."""
@@ -791,7 +811,7 @@ class TestCalcCustoMaterialItem:
         ctx = SimpleNamespace(repo=MagicMock())
         comp = {}
         cpu = {"producao_id_ref": "P1"}
-        prod_lookup = {"P1": {"valor_horario": 0.0}}
+        prod_lookup = {"P1": {"producao_horaria": 0.0}}
         result = _calc_custo_material_item(comp, cpu, prod_lookup, ctx, 8.0, 21.0)
         assert result == 0.0
 
@@ -804,7 +824,7 @@ class TestCalcCustoMaterialItem:
             "producao_id_ref": "P1",
             "composicao_itens": [{"categoria_custo": "MATERIAL", "insumo_id": "MAT-1", "coeficiente": 3.0}],
         }
-        prod_lookup = {"P1": {"valor_horario": 5.0}}
+        prod_lookup = {"P1": {"producao_horaria": 5.0}}
         result = _calc_custo_material_item(comp, cpu, prod_lookup, ctx, 8.0, 21.0)
         assert result == pytest.approx(round(2.0 * 3.0 * 5.0 * (8.0 * 21.0), 2))
 

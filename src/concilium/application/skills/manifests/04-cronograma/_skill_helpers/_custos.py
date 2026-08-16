@@ -68,6 +68,8 @@ def _custo_hora_mao_de_obra(
     composicao: dict, insumos_lookup: dict[str, dict], horas_mes: float, taxa_encargos: float
 ) -> float:
     """Soma custo horário de mão de obra da composição (NEP-029 D2, termo custo_hora_mo)."""
+    from concilium.domain.services.financial.encargo_resolver import custo_ja_inclui_encargos
+
     custo_hora = 0.0
     for func in composicao.get("funcoes", []):
         fid = func.get("funcao_id") or ""
@@ -77,18 +79,20 @@ def _custo_hora_mao_de_obra(
             continue
         pu = float(ins.get("preco_unitario", 0) or 0)
         unidade = str(ins.get("unidade", "mes")).lower()
+        # ADR-097 D1: preco_unitario já all-in (metodo_custo_total) — não aplicar
+        # taxa_encargos por cima, independente da unidade (h/hora ou mensal).
+        # Fonte única de verdade (substitui o antigo texto livre "inclui encargos",
+        # que só olhava "nota", nem "nota_encargos", e só para unidade h/hora).
+        ja_com_encargos = custo_ja_inclui_encargos(ins.get("atributos_especificos") or {})
         if unidade in ("h", "hora"):
             # Taxa horária já em R$/h.
-            # Se o insumo indica que encargos já estão incluídos (convenção AGIS-FN-*),
-            # não aplicar taxa_encargos adicionalmente.
-            nota = str((ins.get("atributos_especificos") or {}).get("nota", "")).lower()
-            ja_com_encargos = "inclui encargos" in nota  # substring sem acentos
             encargos = 0.0 if ja_com_encargos else taxa_encargos
             custo_hora += n * pu * (1.0 + encargos)
         else:
             # Taxa mensal → converte para horária e aplica encargos
             taxa_hora = pu / horas_mes if horas_mes > 0 else 0.0
-            custo_hora += n * taxa_hora * (1.0 + taxa_encargos)
+            encargos = 0.0 if ja_com_encargos else taxa_encargos
+            custo_hora += n * taxa_hora * (1.0 + encargos)
     return custo_hora
 
 
@@ -116,29 +120,31 @@ def _custo_hora_combustivel_equip(equip: dict, ins: dict | None, n: float, diese
     return n * consumo * preco_diesel
 
 
-def _custo_hora_equipamentos(composicao: dict, insumos_lookup: dict[str, dict]) -> float:
-    """Soma custo horário de equipamentos + combustível da composição (NEP-029 D2,
-    termos custo_hora_eq + custo_hora_comb).
+def _custo_hora_equipamentos(composicao: dict, insumos_lookup: dict[str, dict], horas_mes: float) -> float:
+    """Soma custo horário de equipamentos + combustível da composição (NEP-029 D2).
 
-    ADR-132: ``preco_h_unitario`` na composição sobrepõe o ``preco_unitario`` do
-    insumo no catálogo geral (mesma precedência de `_process_one_equipamento`,
-    skill-05) — sem isso, uma composição calibrada com preço próprio por
-    equipamento diverge silenciosamente do catálogo geral quando este é
-    atualizado depois.
+    ADR-132: ``preco_h_unitario`` na composição é override R$/h regime-independente.
+    Insumos sem override: ``preco_unitario`` em R$/mês (÷ horas_mes) ou R$/h conforme ``unidade``.
     """
     custo_hora = 0.0
     diesel_ins = _resolve_diesel_insumo(insumos_lookup)
 
     for equip in composicao.get("equipamentos", []):
         eid = equip.get("equip_id") or ""
-        n = float(equip.get("num_unidades", 1) or 1)  # planilha usa frações (0.17)
+        n = float(equip.get("num_unidades", 1) or 1)
         ins = insumos_lookup.get(eid)
         preco_comp = equip.get("preco_h_unitario")
         if preco_comp is not None:
+            # Override explícito em R$/h — bypass de regime
             custo_hora += n * float(preco_comp)
         elif ins:
             pu = float(ins.get("preco_unitario", 0) or 0)
-            custo_hora += n * pu  # equipment insumos are in R$/h
+            unidade = str(ins.get("unidade", "mes")).strip().lower()
+            if unidade in ("h", "hora"):
+                custo_hora += n * pu
+            else:
+                # R$/mês → R$/h via regime do projeto
+                custo_hora += n * (pu / horas_mes) if horas_mes > 0 else n * pu
         custo_hora += _custo_hora_combustivel_equip(equip, ins, n, diesel_ins)
 
     return custo_hora
@@ -150,27 +156,21 @@ def _custo_hora_equipe(
     horas_mes: float,
     taxa_encargos: float,
 ) -> float:
-    """Computa custo horário total da equipe a partir da composição padrão, sempre bottom-up.
+    """ Computa custo horário total da equipe a partir da composição padrão, sempre bottom-up.
 
-    Fórmula (NEP-029 D2):
+    Fórmula (NEP-029 D2) — ponto único de normalização:
       custo_hora_mo  = Σ funcoes: n_pessoas × (preco_unit / horas_mes) × (1 + taxa_encargos)
-                       onde preco_unit está em R$/mês quando unidade='mes',
-                            ou em R$/h quando unidade='h'
-      custo_hora_eq  = Σ equips: n_unidades × preco_hora_equip       (unidade='h', ADR-132
-                       prioriza preco_h_unitario embutido na composição sobre o catálogo)
+                       preco_unit em R$/mês (unidade='mes', padrão) ou R$/h (unidade='h')
+      custo_hora_eq  = Σ equips: n_unidades × (preco_unit / horas_mes)  [unidade='mes']
+                       ou n_unidades × preco_h_unitario                  [override R$/h explc.]
       custo_hora_comb = Σ equips: n_unidades × consumo_L_h × preco_diesel
       total          = custo_hora_mo + custo_hora_eq + custo_hora_comb
 
+    horas_mes vem do regime do projeto — custo horário é paramétrico.
     Diesel é buscado pelos códigos MA-DIESEL-S10, MA-DIESEL ou MA-DIESEL-ESCALA.
-    Retorna 0.0 se a composição estiver incompleta (insumos não encontrados).
-
-    Não há mais atalho via referência de catálogo (`custo_hora_total_referencia`):
-    verificado que, com a composição correta (ADR-132), este cálculo já reproduz
-    o valor de referência calibrado contra obra real (PROD-REJEITO-COMP-EQ1-4,
-    delta < 0,003%) — a referência era redundante, não autoritativa.
     """
     custo_hora_mo = _custo_hora_mao_de_obra(composicao, insumos_lookup, horas_mes, taxa_encargos)
-    custo_hora_eq_comb = _custo_hora_equipamentos(composicao, insumos_lookup)
+    custo_hora_eq_comb = _custo_hora_equipamentos(composicao, insumos_lookup, horas_mes)
     return custo_hora_mo + custo_hora_eq_comb
 
 
@@ -202,7 +202,7 @@ def _apply_producao_canonico(
 ) -> None:
     """Deriva P_canonico, aplica a guarda de ratio e grava/valida o resultado em `prod`."""
     P_canonico = custo_hora / pu_sbdi
-    P_original = float(prod.get("valor_horario") or prod.get("producao_horaria") or 0)
+    P_original = float(prod.get("producao_horaria") or 0)
 
     ratio = P_canonico / P_original if P_original > 0 else None
 
@@ -221,13 +221,11 @@ def _apply_producao_canonico(
                     f"[{_RATIO_MIN},{_RATIO_MAX}]. "
                     f"P_canonico={P_canonico:.2f} vs P_original={P_original:.2f}. "
                     f"PU_sbdi={pu_sbdi:.4f} implica custo={custo_hora:.1f} R$/h → "
-                    "valor_horario ou precos_unitarios_sbdi precisa correção no catálogo."
+                    "producao_horaria ou precos_unitarios_sbdi precisa correção no catálogo."
                 ),
             )
         )
         return  # não aplica P_canonico — preserva P_original
-
-    prod["valor_horario_canonico"] = P_canonico
 
     ratio_txt = f" (ratio={ratio:.3f})" if ratio else ""
     validacoes.append(
@@ -291,9 +289,8 @@ def _lookup_eficiencia(
 
     if prat_mensal:
         year_str, week_str = semana_key.split("-W")
-        week_num = int(week_str)
-        month_num = max(1, min(12, (week_num - 1) // 4 + 1))
-        month_key = f"{month_num:02d}"
+        d = date.fromisocalendar(int(year_str), int(week_str), 1)
+        month_key = f"{d.month:02d}"
         if month_key in prat_mensal:
             return prat_mensal[month_key]
 

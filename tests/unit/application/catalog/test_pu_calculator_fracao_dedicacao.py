@@ -21,13 +21,18 @@ from concilium.application.catalog.pu_calculator import (
 
 
 def _bd() -> BreakdownPU:
-    return BreakdownPU(producao_id="PROD-TEST", valor_horario=1.0)
+    return BreakdownPU(producao_id="PROD-TEST", producao_horaria=1.0)
+
+
+# ADR-182: marca o insumo como all-in para isolar o teste de fracao_dedicacao
+# (não é o foco deste arquivo) do cálculo de encargo em _alpha().
+_ALL_IN = {"metodo_custo_total": "custo_total_ja_incluido"}
 
 
 class TestFracaoDedicacaoMaoDeObra:
     def test_sem_fracao_dedicacao_comporta_como_1_0(self):
         """Retrocompat: ausência de fracao_dedicacao não altera o cálculo existente."""
-        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h"}}
+        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h", "atributos_especificos": _ALL_IN}}
         params = ParametrosCalculo()
 
         bd_sem_campo = _bd()
@@ -43,7 +48,7 @@ class TestFracaoDedicacaoMaoDeObra:
     def test_fracao_dedicacao_rateia_custo_proporcionalmente(self):
         """1 pessoa (num_pessoas=1) compartilhada entre 3 frentes (fracao=1/3)
         contribui 1/3 do custo horário desta função nesta frente."""
-        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h"}}
+        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h", "atributos_especificos": _ALL_IN}}
         params = ParametrosCalculo()
 
         bd = _bd()
@@ -56,7 +61,7 @@ class TestFracaoDedicacaoMaoDeObra:
     def test_tres_frentes_somam_ao_custo_de_uma_pessoa_integral(self):
         """Verificação de conservação: 3 frentes com fracao=1/3 cada somam ao
         custo de 1 pessoa integral (nenhum custo perdido ou duplicado no rateio)."""
-        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h"}}
+        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h", "atributos_especificos": _ALL_IN}}
         params = ParametrosCalculo()
 
         total = 0.0
@@ -72,7 +77,7 @@ class TestFracaoDedicacaoMaoDeObra:
     def test_quantidade_no_item_reflete_fracao_efetiva(self):
         """O item de breakdown expõe a quantidade EFETIVA (num_pessoas × fracao),
         não a contagem nominal — necessário para auditoria do rateio."""
-        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h"}}
+        insumo_index = {"F0001": {"preco_unitario": 30.0, "unidade": "h", "atributos_especificos": _ALL_IN}}
         params = ParametrosCalculo()
 
         bd = _bd()
@@ -85,7 +90,7 @@ class TestFracaoDedicacaoMaoDeObra:
 
 class TestFracaoDedicacaoEquipamento:
     def test_sem_fracao_dedicacao_comporta_como_1_0(self):
-        insumo_index = {"E0027": {"preco_unitario": 100.0}}
+        insumo_index = {"E0027": {"preco_unitario": 100.0, "unidade": "h"}}
         params = ParametrosCalculo()
 
         bd_sem_campo = _bd()
@@ -99,7 +104,7 @@ class TestFracaoDedicacaoEquipamento:
         assert bd_sem_campo.custo_equip_h == bd_com_1.custo_equip_h == 200.0
 
     def test_fracao_dedicacao_rateia_custo_de_equipamento(self):
-        insumo_index = {"E0027": {"preco_unitario": 138.8889}}
+        insumo_index = {"E0027": {"preco_unitario": 138.8889, "unidade": "h"}}
         params = ParametrosCalculo()
 
         bd = _bd()

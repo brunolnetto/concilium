@@ -38,3 +38,19 @@ def resolver_encargo(
         return float(enc_local)
     categoria = (atrib.get("categoria_sindical") or "").lower()
     return enc_horista if categoria.startswith("horista") else (enc_mensalista or enc_horista)
+
+
+def custo_ja_inclui_encargos(atrib: dict) -> bool:
+    """Retorna True se `preco_unitario` do insumo já é all-in (ADR-097 D1).
+
+    Fonte única de verdade: campo estruturado `metodo_custo_total` no catálogo.
+    Substitui os mecanismos ad-hoc anteriores — texto livre em `nota`/`nota_encargos`
+    (`"inclui encargos"`, replicado de forma divergente em 3 módulos) e a heurística
+    implícita "unidade == 'h' → all-in" — por um único sinal explícito e auditável
+    pelo JSON Schema (`insumo.schema.json#/$defs/atributosMaoObra`).
+
+    Quando True, o caller deve usar o `preco_unitario` diretamente (multiplicador
+    de encargo = 1.0) — aplicar `resolver_encargo()`/`alpha` por cima seria dupla
+    contagem.
+    """
+    return atrib.get("metodo_custo_total") == "custo_total_ja_incluido"

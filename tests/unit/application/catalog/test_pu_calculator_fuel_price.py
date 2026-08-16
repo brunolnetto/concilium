@@ -70,12 +70,13 @@ class TestPuCalculator:
         return ParametrosCalculo(alpha_clt=alpha_clt, alpha_pj=alpha_pj, preco_diesel=preco_diesel)
 
     def test_alpha_horista(self):
+        """ADR-182 P2: multiplicador total = 1 + alpha_clt (não alpha_clt puro)."""
         from concilium.application.catalog.pu_calculator import _alpha
 
         params = self._params()
         insumo = {"categoria": "horista", "tipo": "MO"}
         result = _alpha(insumo, params)
-        assert result == 1.777
+        assert result == pytest.approx(2.777)
 
     def test_alpha_pj_contract(self):
         from concilium.application.catalog.pu_calculator import _alpha
@@ -83,7 +84,7 @@ class TestPuCalculator:
         params = self._params()
         insumo = {"atributos_especificos": {"tipo_contrato": "PJ"}}
         result = _alpha(insumo, params)
-        assert result == params.alpha_pj
+        assert result == pytest.approx(1.0 + params.alpha_pj)
 
     def test_alpha_clt_contract(self):
         from concilium.application.catalog.pu_calculator import _alpha
@@ -91,7 +92,22 @@ class TestPuCalculator:
         params = self._params()
         insumo = {"atributos_especificos": {"tipo_contrato": "CLT"}}
         result = _alpha(insumo, params)
-        assert result == params.alpha_clt
+        assert result == pytest.approx(1.0 + params.alpha_clt)
+
+    def test_alpha_custo_ja_inclui_encargos_tem_prioridade_sobre_tipo_contrato(self):
+        """ADR-182 P1 (MO-TOPOGRAFO): metodo_custo_total vence tipo_contrato=CLT."""
+        from concilium.application.catalog.pu_calculator import _alpha
+
+        params = self._params()
+        insumo = {
+            "atributos_especificos": {
+                "tipo_contrato": "CLT",
+                "categoria_sindical": "pj_CE",
+                "metodo_custo_total": "custo_total_ja_incluido",
+            }
+        }
+        result = _alpha(insumo, params)
+        assert result == 1.0
 
     def test_horas_mes(self):
         from concilium.application.catalog.pu_calculator import _horas_mes
@@ -105,7 +121,7 @@ class TestPuCalculator:
         from concilium.application.catalog.pu_calculator import calcular_pu
 
         params = self._params()
-        result = calcular_pu({"id": "P1", "valor_horario": 100.0}, {}, params)
+        result = calcular_pu({"id": "P1", "producao_horaria": 100.0}, {}, params)
         assert result is not None
 
     def test_parametros_calculo_defaults(self):
@@ -118,9 +134,9 @@ class TestPuCalculator:
     def test_breakdown_pu_has_producao_id(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=100.0)
+        bd = BreakdownPU(producao_id="P1", producao_horaria=100.0)
         assert bd.producao_id == "P1"
-        assert bd.valor_horario == 100.0
+        assert bd.producao_horaria == 100.0
 
     def test_build_insumo_index(self):
         from concilium.application.catalog.pu_calculator import _build_insumo_index
@@ -192,7 +208,7 @@ class TestPuCalculator:
         params = ParametrosCalculo()
         insumo = {"atributos_especificos": {"percentual_encargos_local": "bad", "tipo_contrato": "PJ"}}
         result = _alpha(insumo, params)
-        assert result == params.alpha_pj
+        assert result == pytest.approx(1.0 + params.alpha_pj)
 
     def test_horas_mes_from_insumo_attrs(self):
         from concilium.application.catalog.pu_calculator import ParametrosCalculo, _horas_mes
@@ -213,25 +229,25 @@ class TestPuCalculator:
     def test_breakdown_pu_ok_false_when_refs_faltantes(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=100.0, referencias_faltantes=["INS-X"])
+        bd = BreakdownPU(producao_id="P1", producao_horaria=100.0, referencias_faltantes=["INS-X"])
         assert bd.ok is False
 
     def test_breakdown_pu_ok_true_when_no_missing_refs(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=100.0)
+        bd = BreakdownPU(producao_id="P1", producao_horaria=100.0)
         assert bd.ok is True
 
     def test_breakdown_pu_calculated_none_when_zero_vh(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=0.0, custo_mo_h=100.0)
+        bd = BreakdownPU(producao_id="P1", producao_horaria=0.0, custo_mo_h=100.0)
         assert bd.pu_calculado is None
 
     def test_breakdown_pu_to_dict(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=10.0, custo_mo_h=20.0)
+        bd = BreakdownPU(producao_id="P1", producao_horaria=10.0, custo_mo_h=20.0)
         d = bd.to_dict()
         assert d["producao_id"] == "P1"
         assert "breakdown" in d
@@ -242,7 +258,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-1",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-1", "num_pessoas": 2}]},
         }
         insumo_index = {"FN-1": {"codigo": "FN-1", "preco_unitario": 4000.0, "unidade": "mes"}}
@@ -252,24 +268,47 @@ class TestPuCalculator:
         assert bd.custo_mo_h > 0
 
     def test_calcular_pu_with_funcao_horista(self):
+        """ADR-182 D1/D4: unidade=h só decide a conversão — all-in é `metodo_custo_total`."""
         from concilium.application.catalog.pu_calculator import calcular_pu
 
         producao = {
             "id": "CPU-2",
-            "valor_horario": 5.0,
+            "producao_horaria": 5.0,
             "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP-1", "num_pessoas": 1}]},
         }
-        insumo_index = {"OP-1": {"codigo": "OP-1", "preco_unitario": 30.0, "unidade": "h"}}
+        insumo_index = {
+            "OP-1": {
+                "codigo": "OP-1",
+                "preco_unitario": 30.0,
+                "unidade": "h",
+                "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
+            }
+        }
         bd = calcular_pu(producao, insumo_index)
-        # unidade=h → direct rate, no alpha
+        # unidade=h + metodo_custo_total all-in → taxa direta, sem alpha
         assert bd.custo_mo_h == 30.0
+
+    def test_calcular_pu_with_funcao_horista_sem_metodo_custo_total_aplica_alpha(self):
+        """ADR-182 P3 (achado SV-OUV-MO-*): unidade=h SEM metodo_custo_total NÃO é
+        mais tratado como all-in — encargo é aplicado normalmente."""
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, calcular_pu
+
+        producao = {
+            "id": "CPU-2B",
+            "producao_horaria": 5.0,
+            "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP-2", "num_pessoas": 1}]},
+        }
+        insumo_index = {"OP-2": {"codigo": "OP-2", "preco_unitario": 30.0, "unidade": "h"}}
+        params = ParametrosCalculo(alpha_clt=1.777)
+        bd = calcular_pu(producao, insumo_index, params)
+        assert bd.custo_mo_h == pytest.approx(30.0 * (1.0 + 1.777))
 
     def test_calcular_pu_funcao_missing_ref(self):
         from concilium.application.catalog.pu_calculator import calcular_pu
 
         producao = {
             "id": "CPU-3",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MISSING-FN", "num_pessoas": 1}]},
         }
         bd = calcular_pu(producao, {})
@@ -280,7 +319,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-4",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {
                 "equipamentos": [{"equip_id": "EQ-1", "num_unidades": 2, "preco_h_unitario": 50.0}]
             },
@@ -295,7 +334,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-5",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {
                 "equipamentos": [
                     {
@@ -324,7 +363,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-6",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {"equipamentos": [{"equip_id": "MISSING-EQ", "num_unidades": 1}]},
         }
         bd = calcular_pu(producao, {})
@@ -335,7 +374,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-7",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {"materiais": [{"insumo_id": "MAT-1", "consumo_por_hora": 2.0}]},
         }
         insumo_index = {"MAT-1": {"codigo": "MAT-1", "preco_unitario": 15.0}}
@@ -347,7 +386,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-8",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {"materiais": [{"insumo_id": "MAT-MISS", "consumo_por_hora": 1.0}]},
         }
         bd = calcular_pu(producao, {})
@@ -357,7 +396,7 @@ class TestPuCalculator:
         """ADR-163 D3: BreakdownPU.itens default [] — não quebra consumidores existentes."""
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=10.0)
+        bd = BreakdownPU(producao_id="P1", producao_horaria=10.0)
         assert bd.itens == []
 
     def test_calcular_pu_itens_populado_mo_equipamento_diesel_material(self):
@@ -366,7 +405,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-ITENS",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {
                 "funcoes": [{"funcao_id": "OP-1", "num_pessoas": 1}],
                 "equipamentos": [{"equip_id": "EQ-1", "num_unidades": 1}],
@@ -397,7 +436,7 @@ class TestPuCalculator:
     def test_calcular_pu_itens_vazio_quando_sem_composicao(self):
         from concilium.application.catalog.pu_calculator import calcular_pu
 
-        producao = {"id": "CPU-VAZIO", "valor_horario": 10.0}
+        producao = {"id": "CPU-VAZIO", "producao_horaria": 10.0}
         bd = calcular_pu(producao, {})
         assert bd.itens == []
 
@@ -406,7 +445,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-MISS",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MISSING-FN", "num_pessoas": 1}]},
         }
         bd = calcular_pu(producao, {})
@@ -415,7 +454,7 @@ class TestPuCalculator:
     def test_to_dict_sem_detalhado_nao_inclui_itens(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=10.0, custo_mo_h=20.0)
+        bd = BreakdownPU(producao_id="P1", producao_horaria=10.0, custo_mo_h=20.0)
         bd.itens.append({"insumo_id": "X", "categoria": "mo"})
         d = bd.to_dict()
         assert "itens" not in d
@@ -423,7 +462,7 @@ class TestPuCalculator:
     def test_to_dict_com_detalhado_inclui_itens(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU
 
-        bd = BreakdownPU(producao_id="P1", valor_horario=10.0, custo_mo_h=20.0)
+        bd = BreakdownPU(producao_id="P1", producao_horaria=10.0, custo_mo_h=20.0)
         bd.itens.append({"insumo_id": "X", "categoria": "mo"})
         d = bd.to_dict(detalhado=True)
         assert d["itens"] == [{"insumo_id": "X", "categoria": "mo"}]
@@ -433,7 +472,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "CPU-9",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {
                 "materiais": [{"consumo_por_hora": 1.0}]  # no id keys
             },
@@ -482,23 +521,23 @@ class TestPuCalculator:
     def test_calcular_catalogo_sem_composicao_skipped(self):
         from concilium.application.catalog.pu_calculator import calcular_catalogo
 
-        producoes = [{"id": "P1", "valor_horario": 10.0}]  # no equipe
+        producoes = [{"id": "P1", "producao_horaria": 10.0}]  # no equipe
         result = calcular_catalogo(producoes, [])
         assert result["com_composicao"] == 0
 
-    def test_calcular_catalogo_sem_valor_horario(self):
+    def test_calcular_catalogo_sem_producao_horaria(self):
         from concilium.application.catalog.pu_calculator import calcular_catalogo
 
         producoes = [
             {
                 "id": "P1",
-                "valor_horario": 0.0,
+                "producao_horaria": 0.0,
                 "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-1", "num_pessoas": 1}]},
             }
         ]
         insumos = [{"codigo": "FN-1", "preco_unitario": 100.0, "tipo": "MO"}]
         result = calcular_catalogo(producoes, insumos)
-        assert "P1" in result["sem_valor_horario"]
+        assert "P1" in result["sem_producao_horaria"]
 
     def test_calcular_catalogo_pu_divergente(self):
         from concilium.application.catalog.pu_calculator import calcular_catalogo
@@ -506,7 +545,7 @@ class TestPuCalculator:
         producoes = [
             {
                 "id": "P-DIV",
-                "valor_horario": 10.0,
+                "producao_horaria": 10.0,
                 "_cu_planilha_referencia": 999.0,  # huge divergence
                 "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-X", "num_pessoas": 1}]},
             }
@@ -522,7 +561,7 @@ class TestPuCalculator:
         producoes = [
             {
                 "id": "P1",
-                "valor_horario": 10.0,
+                "producao_horaria": 10.0,
                 "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-1", "num_pessoas": 1}]},
             }
         ]
@@ -539,7 +578,7 @@ class TestPuCalculator:
         producoes = [
             {
                 "id": "P-MISSING",
-                "valor_horario": 10.0,
+                "producao_horaria": 10.0,
                 "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-UNKNOWN", "num_pessoas": 1}]},
             }
         ]
@@ -552,7 +591,7 @@ class TestPuCalculator:
         """Line 306 false branch: cpu_hint parses to a non-positive ref -> no divergence check."""
         from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
 
-        bd = BreakdownPU(producao_id="P", valor_horario=100.0, custo_mo_h=1001.0)
+        bd = BreakdownPU(producao_id="P", producao_horaria=100.0, custo_mo_h=1001.0)
         divergentes: list = []
         _check_pu_divergencia(bd, {"_cu_planilha_referencia": 0.0}, 20.0, divergentes)
         assert divergentes == []
@@ -590,7 +629,7 @@ class TestPuCalculator:
     def test_check_pu_divergencia_no_hint(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
 
-        bd = BreakdownPU(producao_id="P", valor_horario=10.0, custo_mo_h=50.0)
+        bd = BreakdownPU(producao_id="P", producao_horaria=10.0, custo_mo_h=50.0)
         divergentes: list = []
         _check_pu_divergencia(bd, {"id": "P"}, 20.0, divergentes)
         assert divergentes == []
@@ -598,7 +637,7 @@ class TestPuCalculator:
     def test_check_pu_divergencia_below_tolerance(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
 
-        bd = BreakdownPU(producao_id="P", valor_horario=100.0, custo_mo_h=1001.0)
+        bd = BreakdownPU(producao_id="P", producao_horaria=100.0, custo_mo_h=1001.0)
         divergentes: list = []
         # pu_calculado ≈ 10.01, ref=10.0, delta < 20%
         _check_pu_divergencia(bd, {"_cu_planilha_referencia": 10.0}, 20.0, divergentes)
@@ -609,7 +648,7 @@ class TestPuCalculator:
 
         producao = {
             "id": "P1",
-            "valor_horario": 10.0,
+            "producao_horaria": 10.0,
             "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-1", "num_pessoas": 1}]},
         }
         insumo_index = {"FN-1": {"codigo": "FN-1", "preco_unitario": 100.0, "unidade": "h"}}
@@ -620,7 +659,7 @@ class TestPuCalculator:
     def test_derivar_precos_unitarios_sbdi_zero_vh_returns_empty(self):
         from concilium.application.catalog.pu_calculator import derivar_precos_unitarios_sbdi
 
-        producao = {"id": "P2", "valor_horario": 0.0}
+        producao = {"id": "P2", "producao_horaria": 0.0}
         result = derivar_precos_unitarios_sbdi(producao, {})
         assert result == {}
 
@@ -653,16 +692,16 @@ class TestPuCalculator:
 
 
 # pu_calculator.py line 300:
-# _check_pu_divergencia with bd.pu_calculado is None (valor_horario=0) → return
+# _check_pu_divergencia with bd.pu_calculado is None (producao_horaria=0) → return
 # ---------------------------------------------------------------------------
 
 
 class TestCheckPuDivergenciaNull:
     def test_pu_calculado_none_returns_early(self):
-        """Line 300: bd.pu_calculado is None (valor_horario=0) → early return."""
+        """Line 300: bd.pu_calculado is None (producao_horaria=0) → early return."""
         from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
 
-        bd = BreakdownPU(producao_id="P-01", valor_horario=0.0)  # pu_calculado → None
+        bd = BreakdownPU(producao_id="P-01", producao_horaria=0.0)  # pu_calculado → None
         pu_divergentes: list = []
         _check_pu_divergencia(
             bd, prod={"_cu_planilha_referencia": "100.0"}, tolerancia_pct=5.0, pu_divergentes=pu_divergentes
@@ -681,7 +720,7 @@ class TestCheckPuDivergenciaInvalidHint:
         """Lines 317-318: float('N/A') → ValueError → except → pass."""
         from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
 
-        bd = BreakdownPU(producao_id="P-01", valor_horario=10.0, custo_mo_h=5.0)
+        bd = BreakdownPU(producao_id="P-01", producao_horaria=10.0, custo_mo_h=5.0)
         pu_divergentes: list = []
         _check_pu_divergencia(
             bd,
@@ -696,7 +735,7 @@ class TestCheckPuDivergenciaInvalidHint:
         """Lines 302-303: cpu_hint is None → return early (no conversion attempted)."""
         from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
 
-        bd = BreakdownPU(producao_id="P-01", valor_horario=10.0, custo_mo_h=5.0)
+        bd = BreakdownPU(producao_id="P-01", producao_horaria=10.0, custo_mo_h=5.0)
         pu_divergentes: list = []
         _check_pu_divergencia(bd, prod={}, tolerancia_pct=5.0, pu_divergentes=pu_divergentes)
         assert pu_divergentes == []
@@ -730,7 +769,7 @@ class TestPuCalculatorHelpers:
         insumo = {"atributos_especificos": {"tipo_contrato": "PJ"}}
         params = ParametrosCalculo(alpha_pj=1.06)
         result = _alpha(insumo, params)
-        assert result == 1.06
+        assert result == pytest.approx(2.06)
 
     def test_alpha_local_encargo(self):
         from concilium.application.catalog.pu_calculator import ParametrosCalculo, _alpha
@@ -811,7 +850,7 @@ class TestPuCalculatorHelpers:
 
         producao = {
             "id": "PROD-1",
-            "valor_horario": 50.0,
+            "producao_horaria": 50.0,
             "composicao_padrao_equipe": {
                 "funcoes": [],
                 "equipamentos": [],
@@ -820,7 +859,7 @@ class TestPuCalculatorHelpers:
         insumo_index = _build_insumo_index([])
         bd = calcular_pu(producao, insumo_index)
         assert bd is not None
-        assert hasattr(bd, "valor_horario")
+        assert hasattr(bd, "producao_horaria")
 
     def test_build_insumo_index(self):
         from concilium.application.catalog.pu_calculator import _build_insumo_index
@@ -835,7 +874,7 @@ class TestPuCalculatorHelpers:
 
         producao = {
             "id": "PROD-1",
-            "valor_horario": 50.0,
+            "producao_horaria": 50.0,
             "composicao_padrao_equipe": {
                 "funcoes": [{"funcao_id": "OP", "num_pessoas": 1, "salario_mensal": 3000.0}],
                 "equipamentos": [{"equip_id": "ESC", "num_unidades": 1, "rental_unit": None}],
@@ -856,7 +895,7 @@ class TestPuCalculatorHelpers:
         """Cover calcular_catalogo function."""
         from concilium.application.catalog.pu_calculator import calcular_catalogo
 
-        producoes = [{"id": "P1", "valor_horario": 50.0}]
+        producoes = [{"id": "P1", "producao_horaria": 50.0}]
         result = calcular_catalogo(producoes, [])
         assert "total_producoes" in result
         assert result["total_producoes"] == 1

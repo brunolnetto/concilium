@@ -91,7 +91,7 @@ def _build_producao_para_sinergia(prod: dict) -> Producao | None:
             id=prod.get("id", ""),
             codigo=prod.get("codigo", ""),
             descricao=prod.get("descricao", ""),
-            valor_horario=float(prod.get("valor_horario") or 0.0),
+            producao_horaria=float(prod.get("producao_horaria") or 0.0),
             unidade=prod.get("unidade", ""),
             origem=OrigemProducao(
                 tipo="tabela_referencia",
@@ -191,14 +191,14 @@ def _finalize_funcao(
     """Monta o FuncaoEquipeDireta final e calcula deltas de custo base/encargos.
 
     NEP-037 / NEP-043: custo base (sem encargos) e encargos separados por função.
-    Quando a taxa já é all-in (nota do insumo), enc_unit = 0 — evitar dupla contagem.
+    Quando a taxa já é all-in (ADR-097 D1, `metodo_custo_total`), enc_unit = 0 —
+    evitar dupla contagem.
     """
+    from concilium.domain.services.financial.encargo_resolver import custo_ja_inclui_encargos
+
     enc_field = float(enc_override) if enc_override is not None else perc_horista
-    # Taxa horária all-in (preco_unitario já inclui encargos — convenção planilha AGIS e similares).
-    # Checar tanto "nota" quanto "nota_encargos" para robustez de naming.
     _atrib_f = insumo_f.get("atributos_especificos") or {}
-    _nota = " ".join(str(_atrib_f.get(k) or "") for k in ("nota", "nota_encargos")).lower()
-    _taxa_allin = "inclui encargos" in _nota
+    _taxa_allin = custo_ja_inclui_encargos(_atrib_f)
     sal_base_unit = round(sal * (1.0 + float(he or 0.0)), 2)
     enc_unit = 0.0 if _taxa_allin else round(sal * enc_field * (1.0 + float(he or 0.0)), 2)
     # Canônico representa equipe física → int (ex: 0.5 encarregado compartilhado = 1).
@@ -469,7 +469,7 @@ def _calc_custo_material_item(
         return _mat_fonte1(materiais_equipe, ctx, horas_mes)
     prod_id = cpu.get("producao_id_ref")
     prod = prod_lookup.get(prod_id) if prod_id else None
-    producao_horaria = float((prod or {}).get("valor_horario", 0.0) or 0.0)
+    producao_horaria = float((prod or {}).get("producao_horaria", 0.0) or 0.0)
     if producao_horaria <= 0:
         return 0.0
     return round(

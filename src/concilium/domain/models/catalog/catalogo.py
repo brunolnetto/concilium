@@ -117,6 +117,16 @@ class AtributosInsumo(BaseModel):
     tipo_contrato           : regime de contratação ("CLT" ou "PJ")
     salario_mensal          : salário mensal base sem encargos (R$/mês)
     horas_mes               : horas trabalhadas por mês (h/mês) — também usado em EQ
+    percentual_encargos_local : override explícito da taxa de encargo (fração, ex: 1.06 =
+                                106 %) para este insumo específico — tem precedência sobre
+                                `categoria_sindical`/`tipo_contrato` em `resolver_encargo()`
+                                (ADR-097 §D1/D2). Já lido pelo motor há tempo; formalizado
+                                aqui (antes só existia no JSON Schema, não no Pydantic).
+    metodo_custo_total      : quando `"custo_total_ja_incluido"`, sinaliza que `preco_unitario`
+                              já é all-in (salário + encargos + benefícios) — o motor não deve
+                              reaplicar `resolver_encargo()`/`alpha` por cima (ADR-097 D1).
+                              Fonte única de verdade, ver `custo_ja_inclui_encargos()` em
+                              `domain/services/financial/encargo_resolver.py`.
 
     EQUIPAMENTO
     -----------
@@ -167,6 +177,8 @@ class AtributosInsumo(BaseModel):
     tipo_contrato: Literal["CLT", "PJ"] | None = None
     salario_mensal: float | None = Field(default=None, ge=0)
     horas_mes: float | None = Field(default=None, gt=0)
+    percentual_encargos_local: float | None = Field(default=None, gt=0)
+    metodo_custo_total: Literal["custo_total_ja_incluido"] | None = None
 
     # ── EQUIPAMENTO ───────────────────────────────────────────────────
     consumo_litros_hora: float | None = Field(default=None, ge=0)

@@ -746,14 +746,31 @@ class TestCustoHoraEquipe:
         assert result == pytest.approx(0.0)
 
     def test_funcao_hora_with_encargos_incluidos(self):
+        """ADR-182: metodo_custo_total (campo estruturado) substitui o texto
+        livre "inclui encargos" em nota."""
         composicao = {"funcoes": [{"funcao_id": "FN-01", "num_pessoas": 1}]}
         insumos = {
             "FN-01": {
                 "preco_unitario": 10.0,
                 "unidade": "h",
-                "atributos_especificos": {"nota": "inclui encargos"},
+                "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
             }
         }
         # encargos already included: 1 * 10.0 * (1 + 0) = 10.0 even with taxa=0.5
+        result = _custo_hora_equipe(composicao, insumos, 160.0, 0.5)
+        assert result == pytest.approx(10.0)
+
+    def test_funcao_mensal_com_metodo_custo_total_nao_aplica_encargos(self):
+        """ADR-182: metodo_custo_total agora vale também para unidade mensal
+        (antes só unidade h/hora era verificada)."""
+        composicao = {"funcoes": [{"funcao_id": "FN-02", "num_pessoas": 1}]}
+        insumos = {
+            "FN-02": {
+                "preco_unitario": 1600.0,
+                "unidade": "mes",
+                "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
+            }
+        }
+        # já all-in: (1600/160) * (1+0) = 10.0, mesmo com taxa=0.5
         result = _custo_hora_equipe(composicao, insumos, 160.0, 0.5)
         assert result == pytest.approx(10.0)

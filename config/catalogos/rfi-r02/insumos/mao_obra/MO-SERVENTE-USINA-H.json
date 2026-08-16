@@ -7,5 +7,8 @@
   "fonte_preco": "tabela_referencia",
   "codigo_referencia_externa": "P9824",
   "data_referencia_preco": "2026-07-14",
-  "categoria": "PAVIMENTACAO"
+  "categoria": "PAVIMENTACAO",
+  "atributos_especificos": {
+    "metodo_custo_total": "custo_total_ja_incluido"
+  }
 }

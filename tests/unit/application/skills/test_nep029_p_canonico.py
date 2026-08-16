@@ -26,7 +26,7 @@ INSUMOS = {
         "tipo": "MAO_OBRA",
         "preco_unitario": 42.70,
         "unidade": "h",
-        "atributos_especificos": {"nota": "Taxa horária já inclui encargos (convenção planilha AGIS)"},
+        "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
     },
     "EQ-01": {"codigo": "EQ-01", "tipo": "EQUIPAMENTO", "preco_unitario": 100.0, "unidade": "h"},
     # Diesel com regionalização — deve usar preco_unitario (planilha), NÃO o regionalizado
@@ -54,7 +54,7 @@ class TestCustoHoraEquipe:
         assert abs(ch - 80.0) < 1e-6
 
     def test_mo_horaria_agis_sem_encargos_duplicados(self):
-        # MO horária AGIS com nota "já inclui encargos" → NÃO duplicar
+        # MO horária AGIS com metodo_custo_total="custo_total_ja_incluido" → NÃO duplicar (ADR-182)
         comp = self._comp(funcoes=[{"funcao_id": "MO-AGIS", "num_pessoas": 1}])
         ch = _s._custo_hora_equipe(comp, INSUMOS, HORAS_MES, ENCARGOS)
         # 1 × 42.70 × (1+0) = 42.70 (NÃO × 2)
@@ -86,22 +86,22 @@ class TestCustoHoraEquipe:
             "AGIS-FN-OPER-ESCAV": {
                 "preco_unitario": 42.70,
                 "unidade": "h",
-                "atributos_especificos": {"nota": "Taxa horária já inclui encargos (convenção planilha AGIS)"},
+                "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
             },
             "AGIS-FN-MOTOR-BASC": {
                 "preco_unitario": 38.10,
                 "unidade": "h",
-                "atributos_especificos": {"nota": "Taxa horária já inclui encargos (convenção planilha AGIS)"},
+                "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
             },
             "AGIS-FN-ENCAR": {
                 "preco_unitario": 34.09,
                 "unidade": "h",
-                "atributos_especificos": {"nota": "Taxa horária já inclui encargos (convenção planilha AGIS)"},
+                "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
             },
             "AGIS-FN-AJUD": {
                 "preco_unitario": 19.45,
                 "unidade": "h",
-                "atributos_especificos": {"nota": "Taxa horária já inclui encargos (convenção planilha AGIS)"},
+                "atributos_especificos": {"metodo_custo_total": "custo_total_ja_incluido"},
             },
             "MA-DIESEL-S10": {"preco_unitario": 6.99, "unidade": "litro"},
         }
@@ -168,7 +168,7 @@ class TestEnrichProducaoCanonico:
         producao_lookup = {
             "PROD-X": {
                 "id": "PROD-X",
-                "valor_horario": 100.0,  # "errado" — queremos substituir
+                "producao_horaria": 100.0,  # "errado" — queremos substituir
                 "composicao_padrao_equipe": comp,
             }
         }
@@ -180,22 +180,25 @@ class TestEnrichProducaoCanonico:
         cpu_lookup, prod_lookup = self._setup(pu)
         val = []
         _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, val)
-        P_can = prod_lookup["PROD-X"]["valor_horario_canonico"]
         custo_hora = 180.0
-        assert abs(P_can - custo_hora / pu) < 1e-6
+        P_can_expected = custo_hora / pu
+        # validação deve reportar P_canonico correto
+        ok_vals = [v for v in val if v.codigo == "VAL-PROD-CANONICO"]
+        assert ok_vals, "Esperava VAL-PROD-CANONICO mas não emitido"
+        assert f"P_canonico={P_can_expected:.2f}" in ok_vals[0].mensagem
 
     def test_custo_engine_igual_catalogo(self):
         """
         Identidade fundamental: custo_hora × Q / P_canonico = PU_sbdi × Q
-        i.e., custo direto engine = custo direto catálogo.
         """
         pu = 0.9
         Q = 50_000.0
         cpu_lookup, prod_lookup = self._setup(pu)
-        _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, [])
-        P_can = prod_lookup["PROD-X"]["valor_horario_canonico"]
+        val = []
+        _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, val)
         custo_hora = 180.0
-        custo_engine = custo_hora * Q / P_can  # = custo_hora × Q × pu / custo_hora = pu × Q
+        P_can = custo_hora / pu  # derivado: não mais gravado no dict
+        custo_engine = custo_hora * Q / P_can
         custo_catalog = pu * Q
         assert abs(custo_engine - custo_catalog) < 1e-6
 
@@ -207,8 +210,9 @@ class TestEnrichProducaoCanonico:
 
     def test_sem_pu_sbdi_nao_enriquece(self):
         cpu_lookup, prod_lookup = self._setup(pu_sbdi=0.0)
-        _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, [])
-        assert "valor_horario_canonico" not in prod_lookup["PROD-X"]
+        val = []
+        _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, val)
+        assert not any(v.codigo == "VAL-PROD-CANONICO" for v in val)
 
     def test_ratio_extremo_nao_aplica_e_emite_inconsistencia(self):
         # PU_sbdi muito alto (87.26) vs custo_hora (180) → P_can=2.06, ratio=2.06/100=0.02
@@ -224,7 +228,7 @@ class TestEnrichProducaoCanonico:
             "funcoes": [{"funcao_id": "MO-OP", "num_pessoas": 2}],
             "equipamentos": [{"equip_id": "EQ-01", "num_unidades": 1}],
         }
-        prod_lookup = {"PROD-Z": {"id": "PROD-Z", "valor_horario": 149.51, "composicao_padrao_equipe": comp}}
+        prod_lookup = {"PROD-Z": {"id": "PROD-Z", "producao_horaria": 149.51, "composicao_padrao_equipe": comp}}
         val = []
         _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, val)
         assert "valor_horario_canonico" not in prod_lookup["PROD-Z"]
@@ -238,9 +242,10 @@ class TestEnrichProducaoCanonico:
                 "precos_unitarios_sbdi": {"total": 0.5},
             }
         }
-        prod_lookup = {"PROD-Y": {"id": "PROD-Y", "valor_horario": 100.0}}  # sem composicao
-        _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, [])
-        assert "valor_horario_canonico" not in prod_lookup["PROD-Y"]
+        prod_lookup = {"PROD-Y": {"id": "PROD-Y", "producao_horaria": 100.0}}  # sem composicao
+        val = []
+        _s._enrich_producao_canonico(cpu_lookup, prod_lookup, INSUMOS, HORAS_MES, ENCARGOS, val)
+        assert not any(v.codigo == "VAL-PROD-CANONICO" for v in val)
 
 
 # ── _resolve_productivity com canonico ────────────────────────────────────────
@@ -248,21 +253,21 @@ class TestEnrichProducaoCanonico:
 
 class TestResolveProdutividadeCanonica:
     def test_usa_valor_horario_para_scheduling(self):
-        # _resolve_productivity usa valor_horario (não canonical) para scheduling.
+        # _resolve_productivity usa producao_horaria (não canonical) para scheduling.
         # valor_horario_canonico é diagnóstico — não afeta o scheduler.
         cpu = {"codigo": "CPU-Z", "producao_id_ref": "PROD-Z"}
         prod_lookup = {
             "PROD-Z": {
                 "id": "PROD-Z",
-                "valor_horario": 50.0,
+                "producao_horaria": 50.0,
                 "valor_horario_canonico": 200.0,  # diagnóstico, não usado pelo scheduler
             }
         }
         P, is_fallback = _s._resolve_productivity(cpu, prod_lookup, [])
-        assert P == 50.0  # scheduling usa valor_horario, não canonico
+        assert P == 50.0  # scheduling usa producao_horaria, não canonico
         assert is_fallback is False
 
-    def test_fallback_para_producao_horaria_quando_sem_valor_horario(self):
+    def test_fallback_para_producao_horaria_quando_sem_producao_horaria(self):
         cpu = {"codigo": "CPU-Z", "producao_id_ref": "PROD-Z"}
         prod_lookup = {"PROD-Z": {"id": "PROD-Z", "producao_horaria": 80.0}}
         P, is_fallback = _s._resolve_productivity(cpu, prod_lookup, [])

@@ -9,6 +9,7 @@
   "categoria": "TERRAPLENAGEM",
   "atributos_especificos": {
     "categoria_sindical": "horista",
-    "nota_encargos": "Taxa horária já inclui encargos (convenção planilha AGIS)"
+    "nota_encargos": "Taxa horária já inclui encargos (convenção planilha AGIS)",
+    "metodo_custo_total": "custo_total_ja_incluido"
   }
 }

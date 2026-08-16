@@ -93,14 +93,13 @@ def _resolve_encargo_funcao(
 def _resolve_custo_unit_funcao(categoria: str, salario: float, atrib: dict, enc: float, he_pct: float) -> float:
     if categoria.startswith("pj"):
         return salario
-    # Insumo com custo pré-computado (campo legado)
-    custo_com_encargos = atrib.get("custo_com_encargos")
-    if custo_com_encargos and custo_com_encargos > 0:
-        return custo_com_encargos * (1 + he_pct)
-    # ADR-097 §D3 / NEP-043: taxa horária all-in embute encargos — aplicar enc adicional = dupla contagem.
-    # Checa tanto "nota" quanto "nota_encargos" para robustez de naming entre catálogos.
-    nota = " ".join(str(atrib.get(k) or "") for k in ("nota", "nota_encargos")).lower()
-    if "inclui encargos" in nota:
+    # ADR-097 §D1: preco_unitario já all-in (metodo_custo_total) — aplicar `enc`
+    # por cima seria dupla contagem. Fonte única de verdade (substitui o antigo
+    # texto livre "inclui encargos" em nota/nota_encargos e o campo legado
+    # custo_com_encargos, removido do catálogo — ver ADR-009).
+    from concilium.domain.services.financial.encargo_resolver import custo_ja_inclui_encargos
+
+    if custo_ja_inclui_encargos(atrib):
         return salario * (1 + he_pct)
     return salario * (1 + enc) * (1 + he_pct)
 

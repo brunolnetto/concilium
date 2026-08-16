@@ -1,15 +1,16 @@
 """Unit tests for _skill_helpers_b.py (Skill 05 — Equipes e Alocação).
 
 Covers:
-- _resolve_salario: with/without override, ConversorUnidades success/failure
-- _resolve_encargo_funcao: priority chain (override > percentual_encargos_local > categoria)
-- _calcular_custo_funcao: PJ, custo_com_encargos, full enc+he, custo_unitario_override
-- _converter_preco_equip: success, fallback h, error unmapped unit
-- _consumo_from_decomposicao: with/without custo_diesel_h/preco_diesel
 - _build_requisitos_e_tipos: with and without cronograma (VAL-EQUIP-SEM-CRON)
 - _build_alocacoes_pool: pool auto-creation, Alocacao fields
 - _processar_funcoes_requisitos: tipo creation, requisitos added
 - _processar_equipamentos_requisitos: tipo creation, requisitos added
+
+ADR-182 D6: _resolve_salario/_resolve_encargo_funcao/_calcular_custo_funcao/
+_converter_preco_equip/_consumo_from_decomposicao removidas de b.py (eram
+duplicatas mortas, não importadas por __init__.py) — testes correspondentes
+removidos junto. A versão ativa dessas funções vive em
+_dimensionamento_custos.py, testada em test_skill05_helpers_a_coverage.py.
 """
 
 from __future__ import annotations
@@ -27,9 +28,7 @@ import uuid
 from collections import defaultdict
 from datetime import UTC, date, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 _HELPERS_PATH = str(
     Path(__file__).resolve().parents[4]
@@ -55,11 +54,6 @@ def _load_helpers():
 # Load once at module level
 _mod = _load_helpers()
 
-_resolve_salario = _mod._resolve_salario
-_resolve_encargo_funcao = _mod._resolve_encargo_funcao
-_calcular_custo_funcao = _mod._calcular_custo_funcao
-_converter_preco_equip = _mod._converter_preco_equip
-_consumo_from_decomposicao = _mod._consumo_from_decomposicao
 _build_requisitos_e_tipos = _mod._build_requisitos_e_tipos
 _build_alocacoes_pool = _mod._build_alocacoes_pool
 _processar_funcoes_requisitos = _mod._processar_funcoes_requisitos
@@ -80,9 +74,6 @@ from concilium.domain.models.canonical import (  # noqa: E402
     RequisitoRecurso,
     TipoRecurso,
 )
-
-# ── ConversorUnidades path ───────────────────────────────────────────────────
-_CONV_PATH = "concilium.domain.services.conversor_unidades.ConversorUnidades"
 
 # ============================================================================
 # Shared fixtures
@@ -170,260 +161,12 @@ def _make_equipamento(
 
 
 # ============================================================================
-# Tests for _resolve_salario
+# ADR-182: _resolve_salario/_resolve_encargo_funcao/_calcular_custo_funcao/
+# _converter_preco_equip/_consumo_from_decomposicao removidas deste módulo —
+# eram duplicatas mortas pré-refatoração (não importadas por __init__.py; a
+# versão ativa vive em _dimensionamento_custos.py, testada em
+# test_skill05_helpers_a_coverage.py). Ver ADR-182 D6.
 # ============================================================================
-
-
-class TestResolveSalario:
-    def test_salario_override_returns_override(self):
-        result = _resolve_salario(1000.0, "mes", 5000.0)
-        assert result == 5000.0
-
-    def test_salario_override_zero_is_honoured(self):
-        result = _resolve_salario(1000.0, "mes", 0.0)
-        assert result == 0.0
-
-    def test_no_override_calls_conversor(self):
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=2200.0) as mock_conv:
-            result = _resolve_salario(10.0, "h", None)
-        mock_conv.assert_called_once_with(10.0, "h", "mes")
-        assert result == 2200.0
-
-    def test_no_override_mes_unit_passthrough(self):
-        # "mes" -> "mes" should return same value (ConversorUnidades identity)
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
-            result = _resolve_salario(3000.0, "mes", None)
-        assert result == 3000.0
-
-    def test_conversor_exception_falls_back_to_raw_price(self):
-        with patch(f"{_CONV_PATH}.converter_preco", side_effect=ValueError("no path")):
-            result = _resolve_salario(999.0, "xyz", None)
-        assert result == 999.0
-
-
-# ============================================================================
-# Tests for _resolve_encargo_funcao
-# ============================================================================
-
-
-class TestResolveEncargoFuncao:
-    def test_encargo_override_takes_priority(self):
-        atrib = {"percentual_encargos_local": 0.50}
-        result = _resolve_encargo_funcao(atrib, 0.72, 0.80, 0.60, "horista")
-        assert result == 0.72
-
-    def test_percentual_encargos_local_second_priority(self):
-        atrib = {"percentual_encargos_local": 0.45}
-        result = _resolve_encargo_funcao(atrib, None, 0.80, 0.60, "horista")
-        assert result == 0.45
-
-    def test_horista_categoria_uses_enc_horista(self):
-        atrib = {}
-        result = _resolve_encargo_funcao(atrib, None, 0.80, 0.60, "horista")
-        assert result == 0.80
-
-    def test_horista_prefix_match(self):
-        atrib = {}
-        result = _resolve_encargo_funcao(atrib, None, 0.80, 0.60, "horista_qualificado")
-        assert result == 0.80
-
-    def test_mensalista_uses_enc_mensalista(self):
-        atrib = {}
-        result = _resolve_encargo_funcao(atrib, None, 0.80, 0.60, "mensalista")
-        assert result == 0.60
-
-    def test_mensalista_fallback_to_horista_when_mensalista_none(self):
-        atrib = {}
-        result = _resolve_encargo_funcao(atrib, None, 0.80, None, "mensalista")
-        assert result == 0.80
-
-    def test_empty_categoria_uses_mensalista_path(self):
-        atrib = {}
-        result = _resolve_encargo_funcao(atrib, None, 0.80, 0.55, "")
-        assert result == 0.55
-
-    def test_encargo_override_as_string_converted_to_float(self):
-        atrib = {}
-        result = _resolve_encargo_funcao(atrib, "0.35", 0.80, 0.60, "horista")
-        assert result == pytest.approx(0.35)
-
-
-# ============================================================================
-# Tests for _calcular_custo_funcao
-# ============================================================================
-
-
-class TestCalcularCustoFuncao:
-    def _base_insumo(self, preco=3000.0, unidade="mes", atrib=None):
-        return {
-            "preco_unitario": preco,
-            "unidade": unidade,
-            "atributos_especificos": atrib or {},
-        }
-
-    def test_pj_categoria_custo_unit_equals_salario(self):
-        insumo = self._base_insumo(atrib={"categoria_sindical": "PJ"})
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=None, enc_mensalista=0.6
-            )
-        assert salario == 3000.0
-        assert custo == 3000.0
-
-    def test_custo_com_encargos_path(self):
-        """When atrib has custo_com_encargos > 0, use it directly."""
-        insumo = self._base_insumo(atrib={"custo_com_encargos": 4000.0})
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.0, enc_mensalista=0.6
-            )
-        assert custo == 4000.0
-
-    def test_custo_com_encargos_with_he(self):
-        """custo_com_encargos * (1 + he_pct)."""
-        insumo = self._base_insumo(atrib={"custo_com_encargos": 4000.0})
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.20, enc_mensalista=0.6
-            )
-        assert custo == pytest.approx(4800.0)
-
-    def test_full_enc_he_path(self):
-        """salario * (1 + enc) * (1 + he_pct)."""
-        insumo = self._base_insumo(atrib={"categoria_sindical": "mensalista"})
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=2000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.10, enc_mensalista=0.60
-            )
-        # 2000 * 1.60 * 1.10 = 3520
-        assert custo == pytest.approx(3520.0)
-        assert salario == 2000.0
-        assert he_pct == 0.10
-
-    def test_custo_unitario_override_short_circuits(self):
-        insumo = self._base_insumo(atrib={"categoria_sindical": "horista"})
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=2000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo,
-                num_pessoas=1,
-                enc_horista=0.8,
-                he_override=None,
-                enc_mensalista=0.6,
-                custo_unitario_override=9999.99,
-            )
-        assert custo == 9999.99
-        # salario and he_pct are still computed even with override
-        assert salario == 2000.0
-
-    def test_he_override_none_uses_atrib_default(self):
-        insumo = self._base_insumo(
-            atrib={
-                "categoria_sindical": "mensalista",
-                "horas_extras_pct_padrao": 0.05,
-            }
-        )
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=2000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=None, enc_mensalista=0.60
-            )
-        assert he_pct == 0.05
-        # 2000 * 1.60 * 1.05 = 3360
-        assert custo == pytest.approx(3360.0)
-
-    def test_pj_with_he_override_zero(self):
-        insumo = self._base_insumo(atrib={"categoria_sindical": "pj-autonomo"})
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=5000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.0, enc_mensalista=0.6
-            )
-        assert custo == 5000.0  # PJ path: custo_unit = salario (he not applied for PJ)
-
-    def test_salario_override_used(self):
-        insumo = self._base_insumo(atrib={"categoria_sindical": "PJ"})
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
-            salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=None, enc_mensalista=0.6, salario_override=8000.0
-            )
-        assert salario == 8000.0
-        assert custo == 8000.0
-
-
-# ============================================================================
-# Tests for _converter_preco_equip
-# ============================================================================
-
-
-class TestConverterPrecoEquip:
-    def test_successful_conversion(self):
-        insumo = {"preco_unitario": 10.0, "unidade": "h", "codigo": "EQ-01"}
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=2200.0):
-            result = _converter_preco_equip(insumo, horas_dia=8.0, dias_uteis=26.0)
-        assert result == 2200.0
-
-    def test_fallback_for_unidade_h(self):
-        insumo = {"preco_unitario": 100.0, "unidade": "h", "codigo": "EQ-02"}
-        with patch(f"{_CONV_PATH}.converter_preco", side_effect=Exception("no path")):
-            result = _converter_preco_equip(insumo, horas_dia=8.0, dias_uteis=26.0)
-        # fallback: 100 * (8 * 26) = 100 * 208 = 20800
-        assert result == pytest.approx(20800.0)
-
-    def test_error_path_unmapped_unit_returns_raw_price(self):
-        insumo = {"preco_unitario": 500.0, "unidade": "km", "codigo": "EQ-03"}
-        with patch(f"{_CONV_PATH}.converter_preco", side_effect=Exception("no path")):
-            result = _converter_preco_equip(insumo, horas_dia=8.0, dias_uteis=26.0)
-        # unidade != "h" so returns raw preco
-        assert result == 500.0
-
-    def test_missing_unidade_defaults_to_h(self):
-        """When unidade key is missing, defaults to 'h', so fallback uses horas_mes."""
-        insumo = {"preco_unitario": 50.0}  # no "unidade" key
-        with patch(f"{_CONV_PATH}.converter_preco", side_effect=Exception("fail")):
-            result = _converter_preco_equip(insumo, horas_dia=8.0, dias_uteis=26.0)
-        # default unidade="h", fallback = 50 * (8*26) = 10400
-        assert result == pytest.approx(10400.0)
-
-    def test_no_exception_returns_conversor_result_directly(self):
-        insumo = {"preco_unitario": 30.0, "unidade": "dia", "codigo": "EQ-04"}
-        with patch(f"{_CONV_PATH}.converter_preco", return_value=780.0):
-            result = _converter_preco_equip(insumo, horas_dia=8.0, dias_uteis=26.0)
-        assert result == 780.0
-
-
-# ============================================================================
-# Tests for _consumo_from_decomposicao
-# ============================================================================
-
-
-class TestConsumoFromDecomposicao:
-    def test_with_custo_diesel_h_and_preco_diesel(self):
-        decomp = {"custo_diesel_h": 50.0}
-        result = _consumo_from_decomposicao(decomp, preco_diesel=5.0)
-        assert result == pytest.approx(10.0)
-
-    def test_zero_custo_diesel_h_returns_zero(self):
-        decomp = {"custo_diesel_h": 0.0}
-        result = _consumo_from_decomposicao(decomp, preco_diesel=5.0)
-        assert result == 0.0
-
-    def test_missing_custo_diesel_h_returns_zero(self):
-        decomp = {}
-        result = _consumo_from_decomposicao(decomp, preco_diesel=5.0)
-        assert result == 0.0
-
-    def test_zero_preco_diesel_returns_zero(self):
-        decomp = {"custo_diesel_h": 50.0}
-        result = _consumo_from_decomposicao(decomp, preco_diesel=0.0)
-        assert result == 0.0
-
-    def test_none_custo_diesel_h_treated_as_zero(self):
-        decomp = {"custo_diesel_h": None}
-        result = _consumo_from_decomposicao(decomp, preco_diesel=5.0)
-        assert result == 0.0
-
-    def test_both_positive_divides_correctly(self):
-        decomp = {"custo_diesel_h": 30.0}
-        result = _consumo_from_decomposicao(decomp, preco_diesel=6.0)
-        assert result == pytest.approx(5.0)
 
 
 # ============================================================================

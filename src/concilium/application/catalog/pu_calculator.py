@@ -2,7 +2,7 @@
 Calculadora de Preço Unitário a partir da composição da equipe e produtividade.
 
 Modelo:
-    PU = custo_total_horario / producao.valor_horario
+    PU = custo_total_horario / producao.producao_horaria
 
 Onde custo_total_horario (fracao_dedicacao default 1,0 — ver ADR-132 D2):
     MÃO DE OBRA   : Σ (salario_mensal / horas_mes) × α × num_pessoas × fracao_dedicacao
@@ -29,6 +29,7 @@ from concilium.domain.constants import (
     PRECO_DIESEL_REFERENCIA,
     HORAS_MES_REGIME_6x1,
 )
+from concilium.domain.services.financial.encargo_resolver import custo_ja_inclui_encargos
 
 if TYPE_CHECKING:
     from concilium.infrastructure.clients.fuel import FuelPriceClient
@@ -93,7 +94,7 @@ def resolver_preco_diesel_uf(
 @dataclass
 class BreakdownPU:
     producao_id: str
-    valor_horario: float
+    producao_horaria: float
     custo_mo_h: float = 0.0
     custo_equip_h: float = 0.0
     custo_diesel_h: float = 0.0
@@ -112,9 +113,9 @@ class BreakdownPU:
 
     @property
     def pu_calculado(self) -> float | None:
-        if not self.valor_horario:
+        if not self.producao_horaria:
             return None
-        return round(self.custo_total_h / self.valor_horario, 4)
+        return round(self.custo_total_h / self.producao_horaria, 4)
 
     @property
     def ok(self) -> bool:
@@ -123,7 +124,7 @@ class BreakdownPU:
     def to_dict(self, detalhado: bool = False) -> dict:
         result = {
             "producao_id": self.producao_id,
-            "valor_horario": self.valor_horario,
+            "producao_horaria": self.producao_horaria,
             "pu_calculado": self.pu_calculado,
             "breakdown": {
                 "mo": round(self.custo_mo_h, 4),
@@ -142,18 +143,37 @@ class BreakdownPU:
 
 
 def _alpha(insumo: dict, params: ParametrosCalculo) -> float:
-    """Retorna o fator de encargos (α) para um insumo de mão de obra."""
+    """Retorna o fator de encargos (α) para um insumo de mão de obra.
+
+    Precedência (ADR-097 §D1):
+      1. `metodo_custo_total == "custo_total_ja_incluido"` — preco_unitario já é
+         all-in (salário + encargos + benefícios): α = 1.0, sem reaplicar nada.
+         Fonte única de verdade (substitui a antiga heurística "unidade == 'h'"
+         e o texto livre "inclui encargos" em nota/nota_encargos).
+      2. Fator local explícito (já inclui os encargos completos: base + complementares)
+      3. Tipo de contrato — α = (1 + alpha_clt/alpha_pj): `alpha_clt`/`alpha_pj`
+         representam o PERCENTUAL de encargo (ex: alpha_clt=1.777 = 177,7%),
+         somado sobre a base 1.0 — convenção padrão de mercado para "Custo do
+         Homem-Hora = Salário-Hora × (1 + Encargos%)" (SINAPI/SINDUSCON),
+         mesma usada pelo branch #2 e por `encargo_resolver.resolver_encargo()`.
+         Confirmado por 3 fontes independentes (ADR-182 P2): texto da ADR-097,
+         dado histórico do catálogo (`MO-AJUDANTE`, `custo_com_encargos`
+         removido = salário × 2,06 = salário × (1+1,06)) e exemplo numérico de
+         mercado (pedreiro horista, 90% encargos → salário-hora × 1,90).
+    """
     attrs = insumo.get("atributos_especificos") or {}
-    # 1. Fator local explícito (já inclui os encargos completos: base + complementares)
+    if custo_ja_inclui_encargos(attrs):
+        return 1.0
+    # 2. Fator local explícito (já inclui os encargos completos: base + complementares)
     enc_local = attrs.get("percentual_encargos_local")
     if enc_local is not None:
         try:
             return 1.0 + float(enc_local)
         except (TypeError, ValueError):
             pass
-    # 2. Tipo de contrato
+    # 3. Tipo de contrato
     tipo = str(attrs.get("tipo_contrato") or "CLT").upper()
-    return params.alpha_pj if "PJ" in tipo else params.alpha_clt
+    return 1.0 + (params.alpha_pj if "PJ" in tipo else params.alpha_clt)
 
 
 def _horas_mes(insumo: dict, params: ParametrosCalculo) -> float:
@@ -261,13 +281,13 @@ def calcular_pu(
 ) -> BreakdownPU:
     """Calcula PU para uma unica producao a partir da composicao da equipe.
 
-    PU = custo_total_horario / producao.valor_horario
+    PU = custo_total_horario / producao.producao_horaria
     """
     if params is None:
         params = ParametrosCalculo()
     producao_id = producao.get("id") or producao.get("codigo") or "?"
-    valor_horario = float(producao.get("valor_horario") or 0)
-    bd = BreakdownPU(producao_id=producao_id, valor_horario=valor_horario)
+    producao_horaria = float(producao.get("producao_horaria") or 0)
+    bd = BreakdownPU(producao_id=producao_id, producao_horaria=producao_horaria)
 
     equipe, funcoes, equipamentos, materiais = _cpu_get_equipe(producao)
 
@@ -296,10 +316,12 @@ def _acumular_custo_mo(
             continue
         salario = float(ins.get("preco_unitario") or 0)
         unidade_fn = (ins.get("unidade") or "mes").strip().lower()
+        # `unidade == "h"` decide só a CONVERSÃO de unidade (a taxa já é horária,
+        # não precisa dividir por horas_mes) — o all-in de encargos é decidido
+        # exclusivamente por `_alpha()` via `metodo_custo_total` (ADR-097 D1),
+        # não mais por essa unidade (heurística antiga removida).
         if unidade_fn == "h":
-            # Taxa horária já carregada (convenção planilha AGIS: inclui encargos).
-            # Uso direto sem multiplicar por alpha para evitar dupla contagem.
-            contrib = salario * quantidade_efetiva
+            contrib = salario * _alpha(ins, params) * quantidade_efetiva
             bd.custo_mo_h += contrib
         else:
             # Salário mensal — converte para horário e aplica fator de encargos
@@ -317,17 +339,22 @@ def _acumular_custo_mo(
         )
 
 
-def _preco_h_equipamento(eq: dict, ins: dict) -> float:
-    # ADR-132: preco_h_unitario na entry de composição sobrepõe preco_unitario do
-    # insumo do catálogo, permitindo preços por-atividade sem duplicar insumos no catálogo.
-    # Já armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
+def _preco_h_equipamento(eq: dict, ins: dict, params: ParametrosCalculo) -> float:
+    # ADR-132: preco_h_unitario na entry de composição é override R$/h explc., regime-independente.
     preco_h_override = eq.get("preco_h_unitario")
     if preco_h_override is not None and float(preco_h_override) > 0:
         return float(preco_h_override)
     preco_raw = float(ins.get("preco_unitario") or 0)
+    unidade = str(ins.get("unidade", "mes")).strip().lower()
+    if unidade in ("h", "hora"):
+        return preco_raw
+    # R$/mês → R$/h via regime do projeto (ponto único de normalização)
+    hm = params.horas_mes if params.horas_mes > 0 else 208.0
     rental_unit = ins.get("rental_unit")
     producao_h = float(eq.get("producao_horaria") or 1.0)
-    return _converter_rental_unit(preco_raw, rental_unit, producao_h)
+    if rental_unit and rental_unit != "hora_produtiva":
+        return _converter_rental_unit(preco_raw / hm, rental_unit, producao_h)
+    return preco_raw / hm
 
 
 def _consumo_diesel_equipamento(bd: BreakdownPU, eq: dict, eid: str, ins: dict | None) -> float:
@@ -355,7 +382,7 @@ def _acumular_custo_equipamentos(
         if ins is None:
             bd.referencias_faltantes.append(eid)
             continue
-        preco_h = _preco_h_equipamento(eq, ins)
+        preco_h = _preco_h_equipamento(eq, ins, params)
         contrib_equip = preco_h * quantidade_efetiva
         bd.custo_equip_h += contrib_equip
         bd.itens.append(
@@ -465,7 +492,7 @@ def calcular_catalogo(
         - com_composicao: int
         - referencias_faltantes: list
         - pu_divergentes: list (pu_calculado vs _cu_planilha acima da tolerância)
-        - sem_valor_horario: list
+        - sem_producao_horaria: list
         - breakdown_por_producao: list[BreakdownPU.to_dict()]
     """
     if params is None:
@@ -487,7 +514,7 @@ def calcular_catalogo(
         breakdowns.append(bd.to_dict())
         if bd.referencias_faltantes:
             refs_faltantes.append({"producao_id": bd.producao_id, "faltantes": bd.referencias_faltantes})
-        if not bd.valor_horario:
+        if not bd.producao_horaria:
             sem_valor.append(bd.producao_id)
             continue
         _check_pu_divergencia(bd, prod, tolerancia_pct, pu_divergentes)
@@ -497,7 +524,7 @@ def calcular_catalogo(
         "ok": ok,
         "total_producoes": len(producoes),
         "com_composicao": com_composicao,
-        "sem_valor_horario": sem_valor,
+        "sem_producao_horaria": sem_valor,
         "referencias_faltantes": refs_faltantes,
         "pu_divergentes": pu_divergentes,
         "breakdown_por_producao": breakdowns,
@@ -516,7 +543,7 @@ def derivar_precos_unitarios_sbdi(
     (MO + equipamentos + diesel + materiais) pela produtividade horária da CPU.
 
     Fórmula:
-        PU_categoria = custo_categoria_hora / producao.valor_horario
+        PU_categoria = custo_categoria_hora / producao.producao_horaria
 
     A categoria de diesel inclui fallback ao campo atributos_especificos.consumo_litros_hora
     do insumo quando o campo não estiver na entry da equipe.
@@ -528,14 +555,14 @@ def derivar_precos_unitarios_sbdi(
 
     Returns:
         dict compatível com cpu.precos_unitarios_sbdi, incluindo chave "_meta" com
-        rastreabilidade (producao_id, valor_horario, referencias_faltantes, alertas).
-        Retorna {} se valor_horario=0 ou equipe vazia.
+        rastreabilidade (producao_id, producao_horaria, referencias_faltantes, alertas).
+        Retorna {} se producao_horaria=0 ou equipe vazia.
     """
     bd = calcular_pu(producao, insumo_index, params, catalog_session=catalog_session)
-    if not bd.valor_horario or bd.valor_horario <= 0:
+    if not bd.producao_horaria or bd.producao_horaria <= 0:
         return {}
 
-    vh = bd.valor_horario
+    vh = bd.producao_horaria
     return {
         "mo": round(bd.custo_mo_h / vh, 6),
         "diesel": round(bd.custo_diesel_h / vh, 6),
@@ -544,7 +571,7 @@ def derivar_precos_unitarios_sbdi(
         "total": round(bd.custo_total_h / vh, 6),
         "_meta": {
             "producao_id": bd.producao_id,
-            "valor_horario": vh,
+            "producao_horaria": vh,
             "referencias_faltantes": bd.referencias_faltantes,
             "alertas": bd.alertas,
         },

@@ -17,11 +17,19 @@
         "tipo_contrato": {"type": ["string", "null"], "enum": ["CLT", "PJ", null]},
         "salario_mensal": {"type": ["number", "null"], "minimum": 0},
         "horas_mes": {"type": ["number", "null"], "exclusiveMinimum": 0},
-        "percentual_encargos_local": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "percentual_encargos_local": {
+          "description": "Override explícito da taxa de encargo (fração, ex: 1.06 = 106%) para este insumo — precedência sobre categoria_sindical/tipo_contrato em resolver_encargo() (ADR-097 §D1/D2).",
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0
+        },
         "salario_base": {"type": ["number", "null"], "minimum": 0},
         "taxa_encargos_pct": {"type": ["number", "null"], "minimum": 0},
         "nota_encargos": {"type": ["string", "null"]},
-        "metodo_custo_total": {"type": ["string", "null"]},
+        "metodo_custo_total": {
+          "description": "Quando 'custo_total_ja_incluido', sinaliza que preco_unitario já é all-in (salário + encargos + benefícios) — o motor não reaplica resolver_encargo()/alpha por cima (ADR-097 D1). Fonte única de verdade: custo_ja_inclui_encargos() em domain/services/financial/encargo_resolver.py.",
+          "type": ["string", "null"],
+          "enum": ["custo_total_ja_incluido", null]
+        },
         "salario_base_hora": {
           "description": "Salário-base por hora, referência da planilha de origem (RFI R02). Somente leitura.",
           "type": ["number", "null"],

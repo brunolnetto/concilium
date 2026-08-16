@@ -10,6 +10,7 @@
   "atributos_especificos": {
     "nota": "inclui encargos — taxa horária all-in (custo_total_planilha/360h)",
     "custo_total_mensal": 7384.23,
-    "turno": "N"
+    "turno": "N",
+    "metodo_custo_total": "custo_total_ja_incluido"
   }
 }
