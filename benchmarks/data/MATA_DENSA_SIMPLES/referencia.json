@@ -1,0 +1,105 @@
+{
+  "slug": "MATA_DENSA_SIMPLES",
+  "meta": {
+    "projeto": "Supressão de Mata Densa + Topsoil (2 Atividades)",
+    "descricao": "Projeto de teste com 2 atividades para observar BDI equivalente gradual entre pools direto e indireto",
+    "data_inicio": "2026-11-01",
+    "data_termino": "2027-01-31",
+    "localizacao": {
+      "lat": -13.5311,
+      "lng": -48.2262,
+      "municipio": "Minaçu",
+      "uf": "GO",
+      "bioma": "Cerrado"
+    },
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "modo": "simplificado_teste"
+  },
+  "spec": {
+    "contexto": "mendeslobo",
+    "jurisdicao": "BR-GO",
+    "catalogo": "mendeslobo",
+    "perfil": "mendeslobo",
+    "eap": [
+      {
+        "item_id": "SV-SIMPLES-001",
+        "cpu_id": "CPU-TERRA-ATI-041",
+        "quantitativo": 13500.0,
+        "unidade": "m2",
+        "predecessores": [],
+        "descricao": "Supressão de Mata Densa — corte, destocamento, traçamento, baldeio e empilhamento de madeira, DMT até 6 km (quantitativo ajustado para aproveitar a capacidade semanal da equipe mobilizada, ver ADR-182 adendo P4)",
+        "categoria": "supressão_vegetal"
+      },
+      {
+        "item_id": "SV-SIMPLES-002",
+        "cpu_id": "CPU-TERRA-ATI-044",
+        "quantitativo": 6000.0,
+        "unidade": "m3",
+        "predecessores": ["SV-SIMPLES-001"],
+        "descricao": "Remoção do topsoil — carga, transporte, descarga e espalhamento, DMT até 4,5 km (quantitativo ajustado para aproveitar a capacidade semanal da equipe mobilizada, ver ADR-182 adendo P4)",
+        "categoria": "movimentação_terra"
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "SV-SIMPLES-001",
+        "data_inicio": "2026-11-01",
+        "data_termino": "2026-12-31",
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "Supressão de Mata Densa (1 equipe — 10.000 m² cabe em 1 equipe/semana, ver ADR-182 P4/adendo)",
+        "semanas_ativas": {
+          "min": 0,
+          "max": 9
+        }
+      },
+      {
+        "item_id": "SV-SIMPLES-002",
+        "data_inicio": "2026-12-01",
+        "data_termino": "2027-01-31",
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "Remoção de topsoil (após supressão vegetal, 1 equipe)",
+        "semanas_ativas": {
+          "min": 0,
+          "max": 9
+        }
+      }
+    ],
+    "fatores_clima": {
+      "periodo": "nov_jan",
+      "fator_chuva_base": {
+        "nov": 0.90,
+        "dez": 0.61,
+        "jan": 0.61
+      },
+      "fator_calendario_base": 0.92,
+      "notas": "Período chuvoso em Ouvidor-GO, Beta efetivo ~0.61 em Dez-Jan"
+    }
+  },
+  "observacoes": {
+    "prop_teste": true,
+    "proposito": "Análise granular de 1 atividade para diagnosticar problemas de precificação, cronograma e margem",
+    "checklist": [
+      "✓ Validar quantitativo (10.000 m²)",
+      "✓ Validar cronograma (8 semanas)",
+      "✓ Validar custo de MO e equipamento",
+      "✓ Validar fator climático (0.61 em Dez-Jan)",
+      "✓ Validar PU sem BDI (ρ × β aplicado)",
+      "✓ Validar BDI aplicado",
+      "✓ Validar margem (alvo 8-10%)",
+      "✓ Diagnosticar frentes_nec (deve estar ~1.0-1.5)"
+    ]
+  }
+}
