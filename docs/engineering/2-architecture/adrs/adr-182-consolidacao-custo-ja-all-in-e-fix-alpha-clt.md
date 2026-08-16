@@ -129,6 +129,14 @@ Alinha o branch default à mesma convenção já usada pelo branch `percentual_e
 
 ---
 
+## Adendo — P4: `categoria_sindical` ausente nos 7 insumos `SV-OUV-MO-*` (2026-08-16)
+
+Ao rodar o benchmark `MATA_DENSA_SIMPLES` (2 CPUs que referenciam exatamente os 7 insumos `SV-OUV-MO-*` de P3), achei que esses 7 têm `tipo_contrato: CLT` mas `categoria_sindical: None` — `pu_calculator._alpha()` decide por `tipo_contrato` (α=2,777), `encargo_resolver.resolver_encargo()` (skill-05) decide por `categoria_sindical` (ausente → default mensalista, α=2,06) — mesma classe de inconsistência de P1, ~35% de divergência entre os dois caminhos para o mesmo insumo.
+
+Corrigido: `categoria_sindical: "horista_CE"` adicionado aos 7 (convenção dominante do catálogo, 72 outras ocorrências vs. 13 de `"horista"` puro).
+
+**Não resolveu o GATE=INVIAVEL do benchmark** — reexecutado após o fix, `custo_execucao_pool` saiu idêntico (R$409.491,56, mesmo valor de antes). Confirmado que esse número vem do `CuboPoolInstancial` (ADR-086), um mecanismo de custo de pool separado que não passa por `encargo_resolver.resolver_encargo()` — a divergência de 3,04×/2,39× entre "custo autônomo" e "PU de catálogo" tem causa raiz diferente, ainda sob investigação (fora do escopo original desta ADR — provavelmente uma questão de calibração de `producao_horaria`/composição das CPUs `CPU-TERRA-ATI-041`/`044`, não de encargo). Mantido o fix de `categoria_sindical` de qualquer forma — é uma correção de dado legítima e independente.
+
 ## Relacionados
 
-ADR-097, ADR-009, ADR-165, ADR-167
+ADR-097, ADR-009, ADR-165, ADR-167, ADR-086
