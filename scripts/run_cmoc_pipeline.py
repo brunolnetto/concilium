@@ -12,17 +12,81 @@ PROJECTS_ROOT = Path(__file__).parent.parent / "projetos"
 CONFIG_ROOT = Path(__file__).parent.parent / "config"
 
 EAP_ITEMS = [
-    {"item_id": "SV-001", "cpu_id": "CPU-TERRA-ATI-001", "descricao": "Supressão de Vegetação - Área 1",  "unidade": "ha",  "quantitativo": 15.5, "ordem": 1},
-    {"item_id": "SV-002", "cpu_id": "CPU-TERRA-ATI-001", "descricao": "Limpeza e Destoca - Área 1",       "unidade": "ha",  "quantitativo": 15.5, "ordem": 2},
-    {"item_id": "SV-003", "cpu_id": "CPU-TERRA-ATI-001", "descricao": "Processamento de Madeira",          "unidade": "m3",  "quantitativo": 200.0, "ordem": 3},
-    {"item_id": "SV-004", "cpu_id": "CPU-TERRA-ATI-001", "descricao": "Limpeza Final e Nivelamento",       "unidade": "ha",  "quantitativo": 15.5, "ordem": 4},
+    # Mata Densa (M²) — DMT ≤ 6km
+    {"item_id": "SV-001", "cpu_id": "CPU-TERRA-ATI-041", "descricao": "Supressão Vegetal Mata Densa - Área 1", "unidade": "m2", "quantitativo": 90000.0, "ordem": 1},
+    
+    # Árvore Isolada (M²) — DMT ≤ 6km
+    {"item_id": "SV-002", "cpu_id": "CPU-TERRA-ATI-042", "descricao": "Supressão Vegetal Árvore Isolada - Área 2", "unidade": "m2", "quantitativo": 25000.0, "ordem": 2},
+    
+    # Vegetação Arbustiva (M²) — DMT ≤ 4,5km
+    {"item_id": "SV-003", "cpu_id": "CPU-TERRA-ATI-043", "descricao": "Supressão Vegetal Arbustiva - Área 3", "unidade": "m2", "quantitativo": 50000.0, "ordem": 3},
+    
+    # Remoção Topsoil (M³) — DMT ≤ 4,5km
+    {"item_id": "SV-004", "cpu_id": "CPU-TERRA-ATI-044", "descricao": "Remoção de Topsoil - Área 1", "unidade": "m3", "quantitativo": 20000.0, "ordem": 4},
+    
+    # Mata Densa (M²) — DMT ≤ 1km (mais próxima)
+    {"item_id": "SV-005", "cpu_id": "CPU-TERRA-ATI-045", "descricao": "Supressão Vegetal Mata Densa DMT curta", "unidade": "m2", "quantitativo": 40000.0, "ordem": 5},
+    
+    # Árvore Isolada (M²) — DMT ≤ 1km (mais próxima)
+    {"item_id": "SV-006", "cpu_id": "CPU-TERRA-ATI-046", "descricao": "Supressão Vegetal Árvore Isolada DMT curta", "unidade": "m2", "quantitativo": 12000.0, "ordem": 6},
+    
+    # Vegetação Arbustiva (M²) — DMT ≤ 1km (mais próxima)
+    {"item_id": "SV-007", "cpu_id": "CPU-TERRA-ATI-047", "descricao": "Supressão Vegetal Arbustiva DMT curta", "unidade": "m2", "quantitativo": 30000.0, "ordem": 7},
+    
+    # Remoção Topsoil (M³) — DMT ≤ 1km (mais próxima)
+    {"item_id": "SV-008", "cpu_id": "CPU-TERRA-ATI-048", "descricao": "Remoção de Topsoil DMT curta", "unidade": "m3", "quantitativo": 15000.0, "ordem": 8},
+    
+    # Movimentação de Madeira (M³)
+    {"item_id": "SV-009", "cpu_id": "CPU-TERRA-ATI-049", "descricao": "Movimentação e Armazenamento de Madeira", "unidade": "m3", "quantitativo": 2000.0, "ordem": 9},
 ]
 
 CRONOGRAMA = {
-    "SV-001": {"2026-W45": 2, "2026-W46": 2, "2026-W47": 2, "2026-W48": 2, "2026-W49": 2, "2026-W50": 2},
-    "SV-002": {"2026-W45": 1, "2026-W46": 1, "2026-W47": 1, "2026-W48": 1, "2026-W49": 1, "2026-W50": 1},
-    "SV-003": {"2026-W51": 2, "2026-W52": 2, "2026-W53": 2, "2027-W01": 2, "2027-W02": 2, "2027-W03": 2},
-    "SV-004": {"2027-W03": 2, "2027-W04": 2, "2027-W05": 2},
+    # Mata Densa: 9000 m² ao longo de 12 semanas
+    "SV-001": {
+        "2026-W45": 1, "2026-W46": 1, "2026-W47": 1, "2026-W48": 1, 
+        "2026-W49": 1, "2026-W50": 1, "2026-W51": 1, "2026-W52": 1,
+        "2026-W53": 1, "2027-W01": 1, "2027-W02": 1
+    },
+    # Árvore Isolada: 2500 m² ao longo de 8 semanas
+    "SV-002": {
+        "2026-W45": 1, "2026-W46": 1, "2026-W47": 1, "2026-W48": 1, 
+        "2026-W49": 1, "2026-W50": 1, "2026-W51": 1, "2026-W52": 1
+    },
+    # Arbustiva: 5000 m² ao longo de 10 semanas
+    "SV-003": {
+        "2026-W45": 1, "2026-W46": 1, "2026-W47": 1, "2026-W48": 1, 
+        "2026-W49": 1, "2026-W50": 1, "2026-W51": 1, "2026-W52": 1,
+        "2026-W53": 1, "2027-W01": 1
+    },
+    # Remoção Topsoil: 2000 m³ ao longo de 8 semanas
+    "SV-004": {
+        "2026-W51": 1, "2026-W52": 1, "2026-W53": 1, "2027-W01": 1,
+        "2027-W02": 1, "2027-W03": 1, "2027-W04": 1, "2027-W05": 1
+    },
+    # Mata Densa (DMT curta): 4000 m² ao longo de 8 semanas
+    "SV-005": {
+        "2026-W51": 1, "2026-W52": 1, "2026-W53": 1, "2027-W01": 1,
+        "2027-W02": 1, "2027-W03": 1, "2027-W04": 1, "2027-W05": 1
+    },
+    # Árvore Isolada (DMT curta): 1200 m² ao longo de 6 semanas
+    "SV-006": {
+        "2027-W01": 1, "2027-W02": 1, "2027-W03": 1, "2027-W04": 1,
+        "2027-W05": 1, "2027-W06": 1
+    },
+    # Arbustiva (DMT curta): 3000 m² ao longo de 7 semanas
+    "SV-007": {
+        "2027-W01": 1, "2027-W02": 1, "2027-W03": 1, "2027-W04": 1,
+        "2027-W05": 1, "2027-W06": 1, "2027-W07": 1
+    },
+    # Remoção Topsoil (DMT curta): 1500 m³ ao longo de 6 semanas
+    "SV-008": {
+        "2027-W03": 1, "2027-W04": 1, "2027-W05": 1, "2027-W06": 1,
+        "2027-W07": 1, "2027-W08": 1
+    },
+    # Movimentação Madeira: 200 m³ ao longo de 5 semanas
+    "SV-009": {
+        "2027-W04": 1, "2027-W05": 1, "2027-W06": 1, "2027-W07": 1, "2027-W08": 1
+    },
 }
 
 
@@ -46,9 +110,14 @@ def main() -> int:
     print(f"   Plano   : {plano.meta.get('nome')}  [{plano.status}]")
 
     # Limpa canonical anterior para execução limpa
-    if plano.load_canonical() is not None:
-        print("\n🧹 Resetando canonical do plano...")
-        plano.write_canonical_raw({})
+    print("\n🧹 Removendo canonical anterior...")
+    try:
+        canonical_path = plano._store.path / "canonical.json"
+        if canonical_path.exists():
+            canonical_path.unlink()
+            print("   ✓ Canonical removido")
+    except Exception as e:
+        print(f"   (ignorado: {e})")
 
     # Carrega metadados do escopo
     escopo_meta = escopo.meta

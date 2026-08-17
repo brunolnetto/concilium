@@ -29,27 +29,27 @@ EAP_ITEMS = [
     {"item_id": "SV-009", "cpu_id": "CPU-TERRA-ATI-049", "descricao": "Movimentação de armazenamento de Madeira - Carregamento, baldeio e empilhamento de madeira com DMT até 0,5 km", "unidade": "m3", "quantitativo": 1174.00, "ordem": 9, "predecessores": []},
 ]
 
-# Cronograma estendido para quantitativos reais (muito maiores)
-# Múltiplas equipes e semanas de trabalho para absorver a carga real
+# Cronograma recalibrado após correção do mapeamento semana→mês (fator_clima real):
+# Novembro (W45-W49) = 0.9, Dezembro (W50-W53) = 0.6129, Janeiro (W01-W04) = 0.5484
+# Com fator_clima=0.9 as atividades de novembro completam mais rápido — janelas ajustadas.
+# FASE 1: paralelo W45-W49 → SV-004 sequencial W50-W04 (7 semanas)
+# FASE 2: paralelo W45-W48 → SV-008 sequencial W49-W04 (8 semanas)
+# SV-009 independente (2 semanas, W45-W46)
 CRONOGRAMA = {
-    # SV-001: 169.798 m² (maior atividade) — distribuída em múltiplas equipes/semanas
-    "SV-001": {**{f"2026-W{w:02d}": 4 for w in range(45, 54)}, **{f"2027-W{w:02d}": 4 for w in range(1, 5)}},
-    # SV-002: 33.959 m² — múltiplas equipes
-    "SV-002": {**{f"2026-W{w:02d}": 3 for w in range(45, 54)}, **{f"2027-W{w:02d}": 2 for w in range(1, 5)}},
-    # SV-003: 336.787 m² (maior ainda!) — máximas equipes
-    "SV-003": {**{f"2026-W{w:02d}": 5 for w in range(45, 54)}, **{f"2027-W{w:02d}": 5 for w in range(1, 5)}},
-    # SV-004: 243.245 m³ — máximas equipes (atividade crítica)
-    "SV-004": {**{f"2026-W{w:02d}": 5 for w in range(45, 54)}, **{f"2027-W{w:02d}": 5 for w in range(1, 5)}},
-    # SV-005: 123.322 m² — múltiplas equipes
-    "SV-005": {**{f"2026-W{w:02d}": 3 for w in range(50, 54)}, **{f"2027-W{w:02d}": 4 for w in range(1, 5)}},
-    # SV-006: 2.853 m² (menor atividade!) — 1-2 equipes
-    "SV-006": {**{f"2026-W{w:02d}": 1 for w in range(50, 54)}, **{f"2027-W{w:02d}": 1 for w in range(1, 5)}},
-    # SV-007: 123.285 m² — múltiplas equipes
-    "SV-007": {**{f"2026-W{w:02d}": 2 for w in range(50, 54)}, **{f"2027-W{w:02d}": 3 for w in range(1, 5)}},
-    # SV-008: 124.731 m³ — CRÍTICA: estende desde W45 com 5 equipes (precisa 4x mais)
-    "SV-008": {**{f"2026-W{w:02d}": 5 for w in range(45, 54)}, **{f"2027-W{w:02d}": 5 for w in range(1, 5)}},
-    # SV-009: 1.174 m³ (muito pequeno!) — 1 equipe
-    "SV-009": {f"2026-W{w:02d}": 1 for w in range(52, 54)} | {f"2027-W{w:02d}": 1 for w in range(1, 5)},
+    # FASE 1 — fator_clima=0.9 (novembro): 4–5 semanas suficientes
+    "SV-001": {f"2026-W{w:02d}": 2 for w in range(45, 49)},                                                                           # 2 eq × 4s (W45-W48)
+    "SV-002": {f"2026-W{w:02d}": 3 for w in range(45, 50)},                                                                           # 3 eq × 5s (W45-W49)
+    "SV-003": {f"2026-W{w:02d}": 4 for w in range(45, 50)},                                                                           # 4 eq × 5s (W45-W49)
+    # SV-004 — topsoil após SV-001/002/003 (max termina W49): W50-W04 (7 semanas)
+    "SV-004": {**{f"2026-W{w:02d}": 7 for w in range(50, 54)}, **{f"2027-W{w:02d}": 7 for w in range(1, 5)}},                        # 7 eq × 7s
+    # FASE 2 — fator_clima=0.9: 3–4 semanas suficientes
+    "SV-005": {f"2026-W{w:02d}": 2 for w in range(45, 48)},                                                                           # 2 eq × 3s (W45-W47)
+    "SV-006": {"2026-W45": 1, "2026-W46": 1},                                                                                         # 1 eq × 2s
+    "SV-007": {f"2026-W{w:02d}": 1 for w in range(45, 49)},                                                                           # 1 eq × 4s (W45-W48)
+    # SV-008 — topsoil após SV-005/006/007 (max termina W48): W49-W04 (8 semanas)
+    "SV-008": {**{"2026-W49": 2}, **{f"2026-W{w:02d}": 2 for w in range(50, 54)}, **{f"2027-W{w:02d}": 2 for w in range(1, 5)}},     # 2 eq × 8s
+    # SV-009 — madeira independente: W45-W46 (2 semanas, completa antes de W47)
+    "SV-009": {"2026-W45": 1, "2026-W46": 1},                                                                                         # 1 eq × 2s
 }
 
 
@@ -75,9 +75,9 @@ def main() -> int:
     # Limpa canonical anterior
     print("\n🧹 Removendo canonical anterior...")
     try:
-        canonical_path = plano._store.path / "canonical.json"
-        if canonical_path.exists():
-            canonical_path.unlink()
+        canonical_blob = plano._path("canonical.json")
+        if plano._storage.blob_existe(canonical_blob):
+            plano._storage.deletar_blob(canonical_blob)
             print("   ✓ Canonical removido")
     except Exception as e:
         print(f"   (ignorado: {e})")
@@ -112,6 +112,17 @@ def main() -> int:
     print("\n🏗️  EAP (9 ATIVIDADES CORRIGIDAS):")
     for item in EAP_ITEMS:
         print(f"   - {item['item_id']}: {item['descricao'][:40]} ({item['quantitativo']} {item['unidade']})")
+
+    # ─── AVISOS DE PLANEJAMENTO ────────────────────────────────────────────────
+    print("\n⚠️  AVISOS DE PLANEJAMENTO:")
+    print("   [AVISO-1] SV-004 e SV-008 operam em dezembro/janeiro (W50–W04).")
+    print("             fator_clima ~0.61 (Ouvidor/GO, período chuvoso).")
+    print("             Frentes extras alocadas para compensar: SV-004=7eq, SV-008=2eq.")
+    print("             Risco: atrasos por chuva podem estender prazo além de W04/2027.")
+    print("   [AVISO-2] SV-006 tem quantitativo reduzido: 2.853,89 m² (Supressão árvore isolada - FASE 2).")
+    print("             Volume insuficiente para ocupar 1 equipe por 2 semanas completas.")
+    print("             Equipe ociosa esperada em W46. Considerar agregar ao contrato de SV-005.")
+    print("   ─" * 35)
 
     # Executa
     print("\n🚀 Inicializando Runtime...")
