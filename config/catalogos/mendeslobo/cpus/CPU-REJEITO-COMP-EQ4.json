@@ -6,13 +6,6 @@
   "categoria": "MINERACAO",
   "composicao_itens": [],
   "custo_direto_unitario_planilha": 3.1747,
-  "precos_unitarios_sbdi": {
-    "mo": 0.6188,
-    "equipamentos": 2.5559,
-    "diesel": 0.0,
-    "material": 0.0,
-    "total": 3.1747
-  },
   "producao_id_ref": "PROD-REJEITO-COMP-EQ4-001",
   "_nota_pu_engine": "Serra Verde: A_equip=556.67 + B_mo=134.77 / C=217.80 = 3.1747 R$/m³. Regime 12x36, 2 eq. diurnas + 1 noturna.",
   "_custo_direto_unitario_planilha_engine": 3.1747

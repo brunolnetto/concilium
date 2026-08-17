@@ -12,12 +12,5 @@
     }
   ],
   "custo_direto_unitario_planilha": 9542.511636,
-  "precos_unitarios_sbdi": {
-    "mo": 0.0,
-    "equipamentos": 3427.172583,
-    "diesel": 940.365757,
-    "material": 0.0,
-    "total": 4367.53834
-  },
   "producao_id_ref": "CPU-DREN-BOCA-BSTC-100-PROD-001"
 }

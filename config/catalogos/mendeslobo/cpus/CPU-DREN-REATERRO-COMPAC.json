@@ -12,12 +12,5 @@
     }
   ],
   "custo_direto_unitario_planilha": 34.189679,
-  "precos_unitarios_sbdi": {
-    "mo": 0.0,
-    "equipamentos": 92.943833,
-    "diesel": 14.167125,
-    "material": 0.0,
-    "total": 107.110958
-  },
   "producao_id_ref": "CPU-DREN-REATERRO-COMPAC-PROD-001"
 }

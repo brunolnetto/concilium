@@ -12,12 +12,5 @@
     }
   ],
   "custo_direto_unitario_planilha": 34874.040272,
-  "precos_unitarios_sbdi": {
-    "mo": 0.0,
-    "equipamentos": 258.4,
-    "diesel": 118.734,
-    "material": 0.0,
-    "total": 377.134
-  },
   "producao_id_ref": "CPU-DREN-CORPO-BTCAP-100-PROD-001"
 }

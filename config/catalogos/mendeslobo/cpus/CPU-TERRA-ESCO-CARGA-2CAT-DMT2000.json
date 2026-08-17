@@ -12,13 +12,6 @@
     }
   ],
   "custo_direto_unitario_planilha": 9.966619,
-  "precos_unitarios_sbdi": {
-    "mo": 5.400219,
-    "equipamentos": 6.33864,
-    "diesel": 1.39801,
-    "material": 0.0,
-    "total": 13.13687
-  },
   "producao_id_ref": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000-PROD-001",
   "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=1003.3 + B_base=307.8×(1+1.777) + diesel_SICRO=221.3) / C=158.28 = 13.1369 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L.",
   "_custo_direto_unitario_planilha_engine": 13.13687,

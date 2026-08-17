@@ -12,12 +12,5 @@
     }
   ],
   "custo_direto_unitario_planilha": 18471.739426,
-  "precos_unitarios_sbdi": {
-    "mo": 0.0,
-    "equipamentos": 1722.666667,
-    "diesel": 791.56,
-    "material": 0.0,
-    "total": 2514.226667
-  },
   "producao_id_ref": "CPU-DREN-CORPO-BDCC-100-PROD-001"
 }

@@ -6,13 +6,6 @@
   "categoria": "TERRAPLENAGEM",
   "composicao_itens": [],
   "custo_direto_unitario_planilha": 11.659923,
-  "precos_unitarios_sbdi": {
-    "mo": 5.980351,
-    "equipamentos": 5.612455,
-    "diesel": 3.222211,
-    "material": 0.0,
-    "total": 14.815017
-  },
   "producao_id_ref": "CPU-TERRA-COMPAC-PI-PROD-001",
   "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=742.6 + B_base=285.0×(1+1.777) + diesel_SICRO=426.4) / C=132.32 = 14.8150 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L.",
   "_custo_direto_unitario_planilha_engine": 14.815017
