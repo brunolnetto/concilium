@@ -175,9 +175,9 @@ def _build_item_to_first_activity(nos: list) -> dict[str, str]:
 
 def _edges_from_eap_predecessores(
     eap: list[EapItem], item_to_first_activity: dict[str, str], validacoes: list
-) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int]]:
+) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int, float]]:
     """Fonte 1: extrai arestas válidas a partir de EapItem.predecessores_tipados()."""
-    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]] = []
+    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int, float]] = []
     for item in eap:
         item_id = item.item_id
         if item_id not in item_to_first_activity:
@@ -198,15 +198,15 @@ def _edges_from_eap_predecessores(
                     )
                 )
             else:
-                # Create single edge from predecessor activity to successor activity
-                arestas_validas.append((pred_activity, suc_activity, prec.tipo, prec.lag))
+                # ADR-081: propaga completion_threshold_pct para ArestaActivityDag
+                arestas_validas.append((pred_activity, suc_activity, prec.tipo, prec.lag, prec.completion_threshold_pct))
     return arestas_validas
 
 
 def _append_edges_from_precedencias_raw(
     precedencias_raw: list,
     nos_set: set,
-    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]],
+    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int, float]],
     validacoes: list,
 ) -> None:
     """Fonte 2 (legado): adiciona arestas FS sem lag a partir de precedencias_raw, evitando duplicatas da Fonte 1."""
@@ -215,7 +215,7 @@ def _append_edges_from_precedencias_raw(
         if pred in nos_set and suc in nos_set:
             # Evitar duplicatas com o que já foi inserido pela Fonte 1
             if not any(a[0] == pred and a[1] == suc for a in arestas_validas):
-                arestas_validas.append((pred, suc, "FS", 0))
+                arestas_validas.append((pred, suc, "FS", 0, 1.0))  # legado: FS 100%
         else:
             validacoes.append(
                 ValidacaoItem(codigo="VAL-DAG-01", status="ERRO", mensagem=f"Precedência inválida: {pred} -> {suc}")
@@ -224,8 +224,8 @@ def _append_edges_from_precedencias_raw(
 
 def _build_dag_from_precedencias(
     nos: list, nos_set: set, precedencias_raw: list, eap: list[EapItem], validacoes: list
-) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int]]:
-    """NEP-031 L4: retorna lista de (predecessora, sucessora, tipo, lag).
+) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int, float]]:
+    """NEP-031 L4: retorna lista de (predecessora, sucessora, tipo, lag, completion_threshold_pct).
 
     Fontes de precedência:
     1. EapItem.predecessores (PrecedenciaItem ou str legado) — principal
@@ -249,15 +249,19 @@ def _build_dag_from_precedencias(
 def _compute_longest_paths(
     nos: list,
     succ_map: dict,
-    pred_map_typed: dict,  # {n: [(pred, tipo, lag), ...]}
+    pred_map_typed: dict,  # {n: [(pred, tipo, lag, theta), ...]}
     ordem_topologica: list,
 ) -> tuple[dict, dict]:
-    """NEP-031 L4: calcula start_offset_min considerando tipo e lag das arestas.
+    """NEP-031 L4: calcula start_offset_min considerando tipo, lag e threshold das arestas.
 
-    FS (lag=k): start(B) >= start(A) + 1 + k  (A termina antes de B começar)
-    SS (lag=k): start(B) >= start(A) + k       (B começa lag semanas após A iniciar)
-    FF (lag=k): suporte parcial — tratado como FS; requer duração para constraint exata.
+    FS (lag=k, θ): start(B) >= start(A) + ⌈θ × 1⌉ + k  (aproximação: duration_i=1 slot)
+    SS (lag=k):    start(B) >= start(A) + k
+    FF (lag=k):    suporte parcial — tratado como FS conservador.
+
+    Nota: ⌈θ × 1⌉ = 1 para qualquer θ > 0, portanto start_offset_min aqui é conservador.
+    O scheduler (skill-04) aplica a fórmula exata com durações reais.
     """
+    import math
     longest_path_to = {n: [n] for n in nos}
     start_offset_min = {n: 0 for n in nos}
     for n in ordem_topologica:
@@ -268,31 +272,31 @@ def _compute_longest_paths(
         preds = pred_map_typed.get(n, [])
         if preds:
             offsets = []
-            for pred_id, tipo, lag in preds:
+            for pred_id, tipo, lag, theta in preds:
                 base = start_offset_min[pred_id]
                 if tipo == "SS":
                     offsets.append(base + lag)
                 elif tipo == "FF":
-                    # FF: parcialmente suportado — usa FS como lower bound conservador
                     offsets.append(base + 1 + lag)
-                else:  # FS (default)
-                    offsets.append(base + 1 + lag)
+                else:  # FS — aplica threshold (aproximação com duration=1 slot)
+                    offsets.append(base + math.ceil(theta) + lag)
             start_offset_min[n] = max(offsets)
     return longest_path_to, start_offset_min
 
 
 def _build_activity_dag(
-    nos: list, arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]], ordem_topologica: list
+    nos: list, arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int, float]], ordem_topologica: list
 ) -> ActivityDag:
     succ_map: dict = defaultdict(list)
-    pred_map_typed: dict = defaultdict(list)  # {n: [(pred, tipo, lag), ...]}
-    for a, b, tipo, lag in arestas_validas:
+    pred_map_typed: dict = defaultdict(list)  # {n: [(pred, tipo, lag, theta), ...]}
+    for a, b, tipo, lag, theta in arestas_validas:
         succ_map[a].append(b)
-        pred_map_typed[b].append((a, tipo, lag))
+        pred_map_typed[b].append((a, tipo, lag, theta))
     longest_path_to, start_offset_min = _compute_longest_paths(nos, succ_map, pred_map_typed, ordem_topologica)
     return ActivityDag(
         nos=nos,
-        arestas=[ArestaActivityDag(de=d, para=p, tipo=t, lag=ln) for d, p, t, ln in arestas_validas],
+        # ADR-081: completion_threshold_pct propagado da EAP para auditabilidade
+        arestas=[ArestaActivityDag(de=d, para=p, tipo=t, lag=ln, completion_threshold_pct=th) for d, p, t, ln, th in arestas_validas],
         ordem_topologica=ordem_topologica,
         critical_path=max(longest_path_to.values(), key=len) if longest_path_to else [],
         start_offset_min=start_offset_min,
