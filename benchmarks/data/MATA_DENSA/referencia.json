@@ -1,0 +1,126 @@
+{
+  "slug": "MATA_DENSA",
+  "meta": {
+    "projeto": "Supressão de Mata Densa + Topsoil — Análise de Sobreposição",
+    "descricao": "3 versões derivadas: v1=Sequencial (θ=1.0), v2=Conservador (θ=0.5), v3=Agressivo (θ=0.33). Cada versão forkada da anterior via ADR-081.",
+    "data_inicio": "2026-11-01",
+    "data_termino": "2027-01-31",
+    "localizacao": {
+      "lat": -13.5311,
+      "lng": -48.2262,
+      "municipio": "Minaçu",
+      "uf": "GO",
+      "bioma": "Cerrado"
+    },
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "modo": "cenario_sobreposicao"
+  },
+  "spec": {
+    "contexto": "mendeslobo",
+    "jurisdicao": "BR-GO",
+    "catalogo": "mendeslobo",
+    "perfil": "mendeslobo",
+    "eap": [
+      {
+        "item_id": "SV-SIMPLES-001",
+        "cpu_id": "CPU-TERRA-ATI-041",
+        "quantitativo": 100000.0,
+        "unidade": "m2",
+        "predecessores": [],
+        "descricao": "Supressão de Mata Densa — corte, destacamento, traçamento, baldeio e empilhamento de madeira, DMT até 6 km",
+        "categoria": "supressão_vegetal"
+      },
+      {
+        "item_id": "SV-SIMPLES-002",
+        "cpu_id": "CPU-TERRA-ATI-044",
+        "quantitativo": 30000.0,
+        "unidade": "m3",
+        "predecessores": [
+          {
+            "item_id": "SV-SIMPLES-001",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "descricao": "Remoção do topsoil — carga, transporte, descarga e espalhamento, DMT até 4,5 km",
+        "categoria": "movimentação_terra"
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "SV-SIMPLES-001",
+        "data_inicio": "2026-11-01",
+        "data_termino": "2026-12-31",
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 2,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "Supressão de Mata Densa (1-2 equipes conforme chuva)",
+        "semanas_ativas": {
+          "min": 0,
+          "max": 9
+        }
+      },
+      {
+        "item_id": "SV-SIMPLES-002",
+        "data_inicio": "2026-11-01",
+        "data_termino": "2027-01-31",
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "Remoção de topsoil (início determinado pelo threshold do predecessor)",
+        "semanas_ativas": {
+          "min": 0,
+          "max": 12
+        }
+      }
+    ],
+    "fatores_clima": {
+      "periodo": "nov_jan",
+      "fator_chuva_base": {
+        "nov": 0.9,
+        "dez": 0.61,
+        "jan": 0.61
+      },
+      "fator_calendario_base": 0.92,
+      "notas": "Período chuvoso em Ouvidor-GO, Beta efetivo ~0.61 em Dez-Jan"
+    }
+  },
+  "versoes": {
+    "v1": {
+      "descricao": "Sequencial — FS clássico",
+      "completion_threshold_pct": 1.0,
+      "risco": "nenhum"
+    },
+    "v2": {
+      "descricao": "Conservador — SV-002 inicia em 50% de SV-001",
+      "completion_threshold_pct": 0.5,
+      "risco": "baixo",
+      "forked_from": "v1"
+    },
+    "v3": {
+      "descricao": "Agressivo — SV-002 inicia em 33% de SV-001",
+      "completion_threshold_pct": 0.33,
+      "risco": "medio",
+      "forked_from": "v2"
+    }
+  },
+  "observacoes": {
+    "prop_benchmark": true,
+    "proposito": "Análise de sobreposição produto-consumidor: mata densa (produtor) → topsoil (consumidor)",
+    "adr_referencia": "ADR-081 §B — completion_threshold_pct ∈ {1.0, 0.5, 0.33}",
+    "dinamica_produto_consumidor": {
+      "coeficiente_conversao": 0.30,
+      "nota": "1 m² de mata removida gera 0.30 m³ de topsoil"
+    }
+  }
+}
