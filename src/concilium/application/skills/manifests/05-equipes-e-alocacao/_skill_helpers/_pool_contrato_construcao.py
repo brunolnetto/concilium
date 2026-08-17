@@ -73,6 +73,7 @@ def _build_contrato_entry(
         delta_max=delta_max,
         gap_max=gap_max,
         validacoes=validacoes,
+        week_demand=week_demand,
     )
     todas_cadeias.extend(cadeias)
     _fill_atribuicao(atribuicao, mw_list, custo_total_contrato, tipo)

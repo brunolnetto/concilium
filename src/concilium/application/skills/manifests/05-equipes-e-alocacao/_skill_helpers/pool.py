@@ -71,6 +71,12 @@ def _atualizar_custo_via_atribuicao(equipes: list, atribuicao: dict, benchmark_m
                 eq.custo_total = custo_attr
             eq.contrato_tipo_id = tipo_id
             eq.fracao_atribuicao = frac
+            # Mob/demob standalone não ocorre — pool gerencia via RecursoContrato.custo_mob_desmob_contrato.
+            # Zerar evita que _transporte_ja_contabilizado_direto deduza o custo standalone
+            # do bucket MOB indireto mesmo sem ele estar no custo direto.
+            eq.custo_mobilizacao_mensal = 0.0
+            eq.custo_desmobilizacao_mensal = 0.0
+            eq.custo_mob_desmob = 0.0
 
 
 def _validar_pool_contrato_ok(

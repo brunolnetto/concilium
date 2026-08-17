@@ -90,6 +90,7 @@ class TestCostDecompositionInvariant:
           pós-issue #139:    R$ 43,776,042.47  — custo_total pós-pool deixa de ser 1-frente
           pós-extensão cronog.: R$ 55,074,575.61 — sub-entrega deixa de ser subprecificada
           pós-ADR-068 feriados:  R$ 56,205,905.16 — δ (fator_calendario) passa a refletir feriados reais
+          pós-ADR-175/176/181:   R$ 54,313,337.03 — mob/demob fonte única, leadtime RCPSP, guard anti-double-count
 
         NEP-043 Bug 2 (2026-06-12): insumos AGIS têm nota_encargos="taxa horária já inclui
         encargos". O engine não deve multiplicar por (1 + enc_horista) uma taxa que já embute
@@ -159,8 +160,8 @@ class TestCostDecompositionInvariant:
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
         # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 + ADR-162 D4 + issue #139 +
-        # extensão de cronograma + feriados reais (ADR-068, ver docstring)
-        expected = 56_205_905.16
+        # extensão de cronograma + feriados reais (ADR-068) + ADR-175/176/181 mob/demob
+        expected = 54_313_337.03
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (

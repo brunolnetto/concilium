@@ -126,6 +126,8 @@ def particionar_contrato(
     e complemento para identificar gaps causalmente imputados ao sucessor crítico.
 
     Invariante: Σ custo_total_particionado == C_contrato_total  (via atribuicao ADR-071 D3).
+    Mob/demob (custo_mob_imputado) é custo separado — não entra em custo_total_particionado
+    mas é exposto por item para diagnóstico (campo custo_mob_imputado).
 
     Três fontes de custo atribuídas por atividade (ADR-084):
       1. Produtivo exclusivo  — custo em regiões onde só esta atividade está ativa
@@ -237,13 +239,17 @@ def _build_particionado_item(
         (it["T_end"] - it["T_start"]) * c_unit_semana * required_i + (c_mob + c_demob) * required_i, 2
     )
     mob_standalone = round((c_mob + c_demob) * required_i, 2)
-    economia_mob_i = round(max(0.0, mob_standalone - mob_imputado[iid] - demob_imputado[iid]), 2)
-    custo_total = round(atribuicao.get(iid, (0.0, "", 0.0))[0], 2)
+    mob_imputado_i = round(mob_imputado[iid] + demob_imputado[iid], 2)
+    economia_mob_i = round(max(0.0, mob_standalone - mob_imputado_i), 2)
     oci = round(custo_ocioso[iid], 2)
+    # Autoridade financeira: proporcional a machine-weeks (ADR-071 D3).
+    custo_total = round(atribuicao.get(iid, (0.0, "", 0.0))[0], 2)
+    # economia_vs_autonomo: standalone (envelope+mob) vs pool (atribuicao+mob Shapley) — bases compatíveis.
+    economia_vs_autonomo = round(custo_autonomo - (custo_total + mob_imputado_i), 2)
     return CustoParticionadoItem(
         item_id=iid,
         custo_produtivo=round(custo_excl[iid] + custo_comp[iid], 2),
-        custo_mob_imputado=round(mob_imputado[iid] + demob_imputado[iid], 2),
+        custo_mob_imputado=mob_imputado_i,
         custo_ocioso_imputado=oci,
         custo_total_particionado=custo_total,
         economia_mob=economia_mob_i,
@@ -252,7 +258,7 @@ def _build_particionado_item(
         custo_produtivo_compartilhado=round(custo_comp[iid], 2),
         custo_demob_imputado=demob_imputado[iid],
         custo_total_autonomo=custo_autonomo,
-        economia_vs_autonomo=round(custo_autonomo - custo_total, 2),
+        economia_vs_autonomo=economia_vs_autonomo,
         predecessor_critico_id=predecessor_map.get(iid),
         overlap_semanas=round(overlap_sem[iid], 4),
     )

@@ -1293,6 +1293,70 @@ class TestBuildPerpetuationChains:
         assert len(result) == 1
 
 
+class TestBuildPerpetuationChainsAninhamento:
+    """ADR-073 fix: gap deve ser medido contra a cobertura máxima já vista na
+    cadeia (running max de end_idx), não contra o último item adicionado em
+    ordem de start_idx — bug exposto por atividades aninhadas/escalonadas de
+    forma não-monotônica em end_idx (ex.: B aninhado dentro de A, termina antes).
+    """
+
+    def _item(self, item_id, start, end, required=1):
+        return {
+            "item_id": item_id,
+            "start_idx": start,
+            "end_idx": end,
+            "required": required,
+            "active_weeks": [f"S{w:03d}" for w in range(start, end)],
+            "machine_weeks": end - start,
+            "semana_inicio": f"S{start:03d}",
+            "semana_fim": f"S{end - 1:03d}",
+        }
+
+    def test_nested_item_does_not_create_spurious_gap(self):
+        """A=[0,10) cobre B=[2,4). C começa 2 semanas após o fim REAL da
+        cobertura (10), não 8 semanas após o fim do último item processado
+        por start_idx (B, fim=4)."""
+        items = [self._item("A", 0, 10), self._item("B", 2, 4), self._item("C", 12, 20)]
+        result = _build_perpetuation_chains("TIPO-X", items, delta_max=5)
+        assert len(result) == 1
+        assert set(result[0].item_ids) == {"A", "B", "C"}
+        assert result[0].semanas_ociosas == 2  # gap real 12-10, NÃO 12-4=8
+
+    def test_nested_item_gap_still_breaks_when_real_gap_exceeds_delta(self):
+        """O fix não super-funde: o gap real (2 semanas) ainda quebra a cadeia
+        quando delta_max é menor que ele."""
+        items = [self._item("A", 0, 10), self._item("B", 2, 4), self._item("C", 12, 20)]
+        result = _build_perpetuation_chains("TIPO-X", items, delta_max=1)
+        assert len(result) == 2
+        assert set(result[0].item_ids) == {"A", "B"}
+        assert set(result[1].item_ids) == {"C"}
+
+    def test_nested_item_boundary_uses_week_demand_when_provided(self):
+        """Quando week_demand é fornecido, o custo de standby usa a demanda
+        agregada real na borda do gap, não o `required` isolado do item
+        aninhado (que termina cedo e não reflete a demanda real no fim da
+        cobertura)."""
+        items = [
+            self._item("A", 0, 10, required=3),
+            self._item("B", 2, 4, required=7),  # required maior, mas termina antes
+            self._item("C", 12, 20, required=2),
+        ]
+        week_demand = {
+            **{f"S{w:03d}": 3 for w in range(0, 10)},
+            **{f"S{w:03d}": 2 for w in range(12, 20)},
+        }
+        result = _build_perpetuation_chains(
+            "TIPO-X",
+            items,
+            custo_mob_unit=1000.0,
+            custo_demob_unit=1000.0,
+            custo_standby_unit=10.0,
+            week_demand=week_demand,
+        )
+        assert len(result) == 1
+        assert result[0].custo_standby == pytest.approx(2 * 10.0 * 2)  # min(3,2)=2, não required de B (7)
+
+
 # ===========================================================================
 # 34. _build_predecessor_map
 # ===========================================================================
