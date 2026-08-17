@@ -85,3 +85,9 @@ benchmarks/projetos/.nep039/
 
 # Logs locais copiados pra debug (ex.: main.log do Claude Desktop) — nunca fonte
 *.log
+
+# Telemetria OTel gerada localmente (logs/metrics/traces NDJSON) — runtime, não fonte
+observability/
+
+# Outputs de execução de benchmark (zip gerado por run), distinto de artifacts/ fonte
+benchmarks/data/*/artifacts/outputs/
