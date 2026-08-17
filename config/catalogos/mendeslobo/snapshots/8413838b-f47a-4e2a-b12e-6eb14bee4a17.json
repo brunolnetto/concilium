@@ -12115,7 +12115,7 @@
       "id": "PROD-ATI-014",
       "codigo": "ATI-014",
       "descricao": "Esc/carg/transp 2ªcat DMT 2-3km (Adotado SICRO)",
-      "valor_horario": 110.0,
+      "producao_horaria": 110.0,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12166,7 +12166,7 @@
       "id": "PROD-ATI-016",
       "codigo": "ATI-016",
       "descricao": "Esc/carg/transp 3ªcat DMT 2-3km (Adotado SICRO)",
-      "valor_horario": 72.0,
+      "producao_horaria": 72.0,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12217,7 +12217,7 @@
       "id": "PROD-ATI-058",
       "codigo": "ATI-058",
       "descricao": "CBUQ e=3,0 cm (Adotado SICRO)",
-      "valor_horario": 450.0,
+      "producao_horaria": 450.0,
       "unidade": "m2",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12284,7 +12284,7 @@
       "id": "PROD-ATI-027",
       "codigo": "ATI-027",
       "descricao": "BDTC D=0,80 m - Corpo (Adotado SICRO)",
-      "valor_horario": 0.5,
+      "producao_horaria": 0.5,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12335,7 +12335,7 @@
       "id": "PROD-ATI-055",
       "codigo": "ATI-055",
       "descricao": "Base de Brita Graduada Tratada com Cimento - BGTC (Adotado SICRO)",
-      "valor_horario": 150.0,
+      "producao_horaria": 150.0,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12402,7 +12402,7 @@
       "id": "PROD-ATI-063",
       "codigo": "ATI-063",
       "descricao": "Piso intertravado de concreto e=10cm (Adotado SICRO)",
-      "valor_horario": 15.0,
+      "producao_horaria": 15.0,
       "unidade": "m2",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12453,7 +12453,7 @@
       "id": "PROD-ESCO-CARGA-1CAT-001",
       "codigo": "ESCO-CARGA-1CAT-001",
       "descricao": "Escavação, carga, transporte, descarga e espalhamento — 1ª categoria",
-      "valor_horario": 233.54208,
+      "producao_horaria": 233.54208,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_contra_obra_real",
@@ -12510,7 +12510,7 @@
         {
           "id": "padrao",
           "nome": "Configuração Base (38t + 7 Basc)",
-          "valor_horario": 233.54,
+          "producao_horaria": 233.54,
           "equipe": {
             "funcoes": [
               {
@@ -12545,7 +12545,7 @@
         {
           "id": "agil",
           "nome": "Configuração Leve (22t + 4 Basc)",
-          "valor_horario": 140.0,
+          "producao_horaria": 140.0,
           "equipe": {
             "funcoes": [
               {
@@ -12572,7 +12572,7 @@
         {
           "id": "intensiva",
           "nome": "Alta Produção (2x 38t + 14 Basc)",
-          "valor_horario": 450.0,
+          "producao_horaria": 450.0,
           "equipe": {
             "funcoes": [
               {
@@ -12640,7 +12640,7 @@
       "id": "PROD-POCO-VISITA-PADRAO-001",
       "codigo": "POCO-VISITA-PADRAO-001",
       "descricao": "Poço de visita padrão — execução completa",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "unidade": "un",
       "origem": {
         "tipo": "estimado",
@@ -12692,7 +12692,7 @@
       "id": "PROD-ATI-023",
       "codigo": "ATI-023",
       "descricao": "BSTC D=1,00 m - Corpo (Adotado SICRO)",
-      "valor_horario": 0.85,
+      "producao_horaria": 0.85,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12743,7 +12743,7 @@
       "id": "PROD-USINAGEM-BGTC-001",
       "codigo": "USINAGEM-BGTC",
       "descricao": "Usinagem de BGTC (brita comercial) em usina de solos 300 t/h — composição SICRO 6416042",
-      "valor_horario": 113.18,
+      "producao_horaria": 113.18,
       "unidade": "m3",
       "origem": {
         "tipo": "tabela_referencia",
@@ -12876,7 +12876,7 @@
       "id": "PROD-ATI-017",
       "codigo": "ATI-017",
       "descricao": "Aterro compactado a 100% do Proctor Normal (Adotado SICRO)",
-      "valor_horario": 140.0,
+      "producao_horaria": 140.0,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -12944,7 +12944,7 @@
       "id": "PROD-USINAGEM-CBUQ-001",
       "codigo": "USINAGEM-CBUQ-FAIXA-C",
       "descricao": "Usinagem de CBUQ faixa C (agregados comerciais) em usina gravimétrica 100/140 t/h — composição SICRO 6416078",
-      "valor_horario": 99.6,
+      "producao_horaria": 99.6,
       "unidade": "t",
       "origem": {
         "tipo": "tabela_referencia",
@@ -13092,7 +13092,7 @@
       "id": "PROD-ATI-024",
       "codigo": "ATI-024",
       "descricao": "BSTC D=1,20 m - Corpo (Adotado SICRO)",
-      "valor_horario": 0.7,
+      "producao_horaria": 0.7,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -13139,7 +13139,7 @@
       "id": "PROD-ATI-052",
       "codigo": "ATI-052",
       "descricao": "Regularização do subleito (Adotado SICRO)",
-      "valor_horario": 1200.0,
+      "producao_horaria": 1200.0,
       "unidade": "m2",
       "origem": {
         "tipo": "adotado_sicro",
@@ -13198,7 +13198,7 @@
       "id": "PROD-REJEITO-COMP-EQ1-001",
       "codigo": "REJEITO-COMP-EQ1-001",
       "descricao": "1ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
-      "valor_horario": 279.3333,
+      "producao_horaria": 279.3333,
       "custo_hora_total_referencia": 1517.0346,
       "unidade": "m3",
       "origem": {
@@ -13408,7 +13408,7 @@
       "id": "PROD-PAV-BASE-BGTC-001",
       "codigo": "PAV-BASE-BGTC-001",
       "descricao": "Base de BGTC — execução e compactação",
-      "valor_horario": 22.0,
+      "producao_horaria": 22.0,
       "unidade": "m3",
       "origem": {
         "tipo": "estimado",
@@ -13481,7 +13481,7 @@
       "id": "PROD-ATI-015",
       "codigo": "ATI-015",
       "descricao": "Esc/carg/transp 3ªcat DMT<=2000m (Adotado SICRO)",
-      "valor_horario": 85.0,
+      "producao_horaria": 85.0,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -13532,7 +13532,7 @@
       "id": "PROD-ATI-013",
       "codigo": "ATI-013",
       "descricao": "Esc/carg/transp 2ªcat DMT<=2000m (Adotado SICRO)",
-      "valor_horario": 135.0,
+      "producao_horaria": 135.0,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -13583,7 +13583,7 @@
       "id": "PROD-ATI-043",
       "codigo": "ATI-043",
       "descricao": "Assentamento de tubo PVC PBA DN 50mm (Adotado SINAPI)",
-      "valor_horario": 12.0,
+      "producao_horaria": 12.0,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -13634,7 +13634,7 @@
       "id": "PROD-ESCO-CARGA-3CAT-001",
       "codigo": "ESCO-CARGA-3CAT-001",
       "descricao": "Escavação, carga, transporte, descarga e espalhamento — 3ª categoria (rocha)",
-      "valor_horario": 144.541473391304,
+      "producao_horaria": 144.541473391304,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_contra_obra_real",
@@ -13726,7 +13726,7 @@
       "id": "PROD-ATI-021",
       "codigo": "ATI-021",
       "descricao": "BSTC D=0,60 m - Corpo (Adotado SICRO)",
-      "valor_horario": 1.2,
+      "producao_horaria": 1.2,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -13777,7 +13777,7 @@
       "id": "PROD-ESCO-CARGA-2CAT-001",
       "codigo": "ESCO-CARGA-2CAT-001",
       "descricao": "Escavação, carga, transporte, descarga e espalhamento — 2ª categoria",
-      "valor_horario": 159.108923076923,
+      "producao_horaria": 159.108923076923,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_contra_obra_real",
@@ -13873,7 +13873,7 @@
       "id": "PROD-ATI-011",
       "codigo": "ATI-011",
       "descricao": "Escavação, carga e transporte — 1ª categoria — DMT <= 2.000 m (Adotado SICRO)",
-      "valor_horario": 159.63,
+      "producao_horaria": 159.63,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -13932,7 +13932,7 @@
       "id": "PROD-REGULARIZACAO-SUBLEITO-001",
       "codigo": "REGULARIZACAO-SUBLEITO-001",
       "descricao": "Regularização de subleito com motoniveladora e rolo",
-      "valor_horario": 400.0,
+      "producao_horaria": 400.0,
       "unidade": "m2",
       "origem": {
         "tipo": "estimado",
@@ -13993,7 +13993,7 @@
       "id": "PROD-ATI-045",
       "codigo": "ATI-045",
       "descricao": "Assentamento de tubo PVC PBA DN 100mm (Adotado SINAPI)",
-      "valor_horario": 8.5,
+      "producao_horaria": 8.5,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -14044,7 +14044,7 @@
       "id": "PROD-ATI-022",
       "codigo": "ATI-022",
       "descricao": "BSTC D=0,80 m - Corpo (Adotado SICRO)",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -14095,7 +14095,7 @@
       "id": "PROD-REJEITO-COMP-EQ2-001",
       "codigo": "REJEITO-COMP-EQ2-001",
       "descricao": "2ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
-      "valor_horario": 189.5,
+      "producao_horaria": 189.5,
       "custo_hora_total_referencia": 921.4982,
       "unidade": "m3",
       "origem": {
@@ -14305,7 +14305,7 @@
       "id": "PROD-REJEITO-COMP-EQ4-001",
       "codigo": "REJEITO-COMP-EQ4-001",
       "descricao": "4ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
-      "valor_horario": 222.3333,
+      "producao_horaria": 222.3333,
       "custo_hora_total_referencia": 705.2393,
       "unidade": "m3",
       "origem": {
@@ -14515,7 +14515,7 @@
       "id": "PROD-COMPACT-ATERRO-100PN-001",
       "codigo": "COMPACT-ATERRO-100PN-001",
       "descricao": "Compactação de aterros a 100% do Proctor Normal",
-      "valor_horario": 173.197428,
+      "producao_horaria": 173.197428,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_contra_obra_real",
@@ -14627,7 +14627,7 @@
       "id": "PROD-DREN-MAN-DN300-001",
       "codigo": "DREN-MAN-DN300-001",
       "descricao": "Coletor tronco DN300 em manilha cerâmica — abertura, assentamento, reaterro",
-      "valor_horario": 3.0,
+      "producao_horaria": 3.0,
       "unidade": "m",
       "origem": {
         "tipo": "calibrado_contra_obra_real",
@@ -14710,7 +14710,7 @@
       "id": "PROD-ATI-012",
       "codigo": "ATI-012",
       "descricao": "Escavação, carga e transporte — 1ª categoria — DMT 2.000m a 3.000m (Adotado SICRO)",
-      "valor_horario": 120.0,
+      "producao_horaria": 120.0,
       "unidade": "m3",
       "origem": {
         "tipo": "adotado_sicro",
@@ -14769,7 +14769,7 @@
       "id": "PROD-ATI-028",
       "codigo": "ATI-028",
       "descricao": "BDTC D=1,00 m - Corpo (Adotado SICRO)",
-      "valor_horario": 0.42,
+      "producao_horaria": 0.42,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -14820,7 +14820,7 @@
       "id": "PROD-REJEITO-COMP-EQ3-001",
       "codigo": "REJEITO-COMP-EQ3-001",
       "descricao": "3ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
-      "valor_horario": 268.875,
+      "producao_horaria": 268.875,
       "custo_hora_total_referencia": 824.9129,
       "unidade": "m3",
       "origem": {
@@ -15036,7 +15036,7 @@
       "id": "PROD-ATI-070",
       "codigo": "ATI-070",
       "descricao": "Meio-fio de concreto moldado in loco (Adotado SICRO)",
-      "valor_horario": 45.0,
+      "producao_horaria": 45.0,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -15083,7 +15083,7 @@
       "id": "PROD-ATI-025",
       "codigo": "ATI-025",
       "descricao": "BSTC D=1,50 m - Corpo (Adotado SICRO)",
-      "valor_horario": 0.55,
+      "producao_horaria": 0.55,
       "unidade": "m",
       "origem": {
         "tipo": "adotado_sicro",
@@ -15135,7 +15135,7 @@
       "codigo": "CPU-TERRA-ATI-010-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-010",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15165,7 +15165,7 @@
       "codigo": "CPU-TERRA-ATI-011-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-011",
       "origem": "PROPRIA",
-      "valor_horario": 159.63,
+      "producao_horaria": 159.63,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15199,7 +15199,7 @@
       "codigo": "CPU-DREN-BOCA-BSCC-200X150-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BSCC-200X150",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15229,7 +15229,7 @@
       "codigo": "CPU-TERRA-ATI-022-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-022",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15271,7 +15271,7 @@
       "codigo": "CPU-OBRAS-ATI-031-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-031",
       "origem": "PROPRIA",
-      "valor_horario": 0.375,
+      "producao_horaria": 0.375,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15313,7 +15313,7 @@
       "codigo": "CPU-PAVIM-ATI-062-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-062",
       "origem": "PROPRIA",
-      "valor_horario": 277.0,
+      "producao_horaria": 277.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15364,7 +15364,7 @@
       "codigo": "CPU-DIVER-ATI-008-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-008",
       "origem": "PROPRIA",
-      "valor_horario": 375.0,
+      "producao_horaria": 375.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15406,7 +15406,7 @@
       "codigo": "CPU-DREN-CORPO-BDTC-120-PA2-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BDTC-120-PA2",
       "origem": "PROPRIA",
-      "valor_horario": 0.375,
+      "producao_horaria": 0.375,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15456,7 +15456,7 @@
       "codigo": "CPU-TERRA-ATI-023-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-023",
       "origem": "PROPRIA",
-      "valor_horario": 138.0,
+      "producao_horaria": 138.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15499,7 +15499,7 @@
       "codigo": "CPU-DIVER-ATI-091-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-091",
       "origem": "PROPRIA",
-      "valor_horario": 0.125,
+      "producao_horaria": 0.125,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15520,7 +15520,7 @@
       "codigo": "CPU-SANEA-ATI-050-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-050",
       "origem": "PROPRIA",
-      "valor_horario": 10.4175,
+      "producao_horaria": 10.4175,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15554,7 +15554,7 @@
       "codigo": "CPU-DREN-CORPO-BSCC-100-200X150-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCC-100-200X150",
       "origem": "PROPRIA",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15609,7 +15609,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 158.78,
+      "producao_horaria": 158.78,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15676,7 +15676,7 @@
       "codigo": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001",
       "descricao": "Produção CPU-TERRA-BASE-ESTABILIZADA",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15730,7 +15730,7 @@
       "codigo": "CPU-SANEA-ATI-051-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-051",
       "origem": "PROPRIA",
-      "valor_horario": 9.89625,
+      "producao_horaria": 9.89625,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15764,7 +15764,7 @@
       "codigo": "CPU-OBRAS-ATI-027-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-027",
       "origem": "PROPRIA",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15806,7 +15806,7 @@
       "codigo": "CPU-DREN-CORPO-BTCC-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BTCC",
       "origem": "PROPRIA",
-      "valor_horario": 0.05,
+      "producao_horaria": 0.05,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15856,7 +15856,7 @@
       "codigo": "CPU-TERRA-ATI-013-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-013",
       "origem": "PROPRIA",
-      "valor_horario": 165.74,
+      "producao_horaria": 165.74,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15890,7 +15890,7 @@
       "codigo": "CPU-DREN-CORPO-BSCC-300X250-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCC-300X250",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15940,7 +15940,7 @@
       "codigo": "CPU-DREN-CORPO-BTTC-120-PA2-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BTTC-120-PA2",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -15995,7 +15995,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 142.02,
+      "producao_horaria": 142.02,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16058,7 +16058,7 @@
       "codigo": "CPU-TERRA-ATI-035-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-035",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16101,7 +16101,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 132.32,
+      "producao_horaria": 132.32,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16218,14 +16218,14 @@
         ]
       },
       "historico_observacoes": [],
-      "valor_horario": 173.197428
+      "producao_horaria": 173.197428
     },
     {
       "id": "CPU-PAVIM-ATI-059-PROD-001",
       "codigo": "CPU-PAVIM-ATI-059-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-059",
       "origem": "PROPRIA",
-      "valor_horario": 6.67,
+      "producao_horaria": 6.67,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16259,7 +16259,7 @@
       "codigo": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001",
       "descricao": "Produção CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16306,7 +16306,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 214.92,
+      "producao_horaria": 214.92,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16358,7 +16358,7 @@
       "codigo": "CPU-SANEA-ATI-045-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-045",
       "origem": "PROPRIA",
-      "valor_horario": 12.825,
+      "producao_horaria": 12.825,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16392,7 +16392,7 @@
       "codigo": "CPU-DREN-BOCA-BTTC-120-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BTTC-120",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16422,7 +16422,7 @@
       "codigo": "CPU-OBRAS-ATI-026-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-026",
       "origem": "PROPRIA",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16464,7 +16464,7 @@
       "codigo": "CPU-DREN-CORPO-BSCC-100-300X200-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCC-100-300X200",
       "origem": "PROPRIA",
-      "valor_horario": 0.3,
+      "producao_horaria": 0.3,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16514,7 +16514,7 @@
       "codigo": "CPU-DIVER-ATI-072-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-072",
       "origem": "PROPRIA",
-      "valor_horario": 15.0,
+      "producao_horaria": 15.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16547,7 +16547,7 @@
       "codigo": "CPU-TERRA-ATI-016-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-016",
       "origem": "PROPRIA",
-      "valor_horario": 144.92,
+      "producao_horaria": 144.92,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16581,7 +16581,7 @@
       "codigo": "CPU-PAVIM-ATI-060-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-060",
       "origem": "PROPRIA",
-      "valor_horario": 26.1,
+      "producao_horaria": 26.1,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16615,7 +16615,7 @@
       "codigo": "CPU-TERRA-ATI-018-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-018",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16706,14 +16706,14 @@
         ]
       },
       "historico_observacoes": [],
-      "valor_horario": 11.5425
+      "producao_horaria": 11.5425
     },
     {
       "id": "CPU-DREN-BOCA-BSCC-250X250-PROD-001",
       "codigo": "CPU-DREN-BOCA-BSCC-250X250-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BSCC-250X250",
       "origem": "PROPRIA",
-      "valor_horario": 0.017857,
+      "producao_horaria": 0.017857,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16743,7 +16743,7 @@
       "codigo": "CPU-DIVER-ATI-070-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-070",
       "origem": "PROPRIA",
-      "valor_horario": 0.143,
+      "producao_horaria": 0.143,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16778,7 +16778,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 230.91,
+      "producao_horaria": 230.91,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16845,7 +16845,7 @@
       "codigo": "CPU-DREN-CORPO-BSCC-200X200-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCC-200X200",
       "origem": "PROPRIA",
-      "valor_horario": 0.3,
+      "producao_horaria": 0.3,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16895,7 +16895,7 @@
       "codigo": "CPU-DREN-CORPO-BDCC-100-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BDCC-100",
       "origem": "PROPRIA",
-      "valor_horario": 0.15,
+      "producao_horaria": 0.15,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16945,7 +16945,7 @@
       "codigo": "CPU-TERRA-ATI-005-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-005",
       "origem": "PROPRIA",
-      "valor_horario": 0.14,
+      "producao_horaria": 0.14,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -16971,7 +16971,7 @@
       "codigo": "CPU-DIVER-ATI-009-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-009",
       "origem": "PROPRIA",
-      "valor_horario": 9.0,
+      "producao_horaria": 9.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17001,7 +17001,7 @@
       "codigo": "CPU-DIVER-ATI-067-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-067",
       "origem": "PROPRIA",
-      "valor_horario": 42.86,
+      "producao_horaria": 42.86,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17027,7 +17027,7 @@
       "codigo": "CPU-DIVER-ATI-007-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-007",
       "origem": "PROPRIA",
-      "valor_horario": 625.0,
+      "producao_horaria": 625.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17061,7 +17061,7 @@
       "codigo": "CPU-DREN-CORPO-BSCAP-100-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCAP-100",
       "origem": "PROPRIA",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17111,7 +17111,7 @@
       "codigo": "CPU-TERRA-ATI-020-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-020",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17153,7 +17153,7 @@
       "codigo": "CPU-DREN-CORPO-BSCC-100-200X200-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCC-100-200X200",
       "origem": "PROPRIA",
-      "valor_horario": 0.3,
+      "producao_horaria": 0.3,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17203,7 +17203,7 @@
       "codigo": "CPU-DREN-CORPO-BTCC-100-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BTCC-100",
       "origem": "PROPRIA",
-      "valor_horario": 0.05,
+      "producao_horaria": 0.05,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17253,7 +17253,7 @@
       "codigo": "CPU-OBRAS-ATI-041-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-041",
       "origem": "PROPRIA",
-      "valor_horario": 0.042,
+      "producao_horaria": 0.042,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17287,7 +17287,7 @@
       "codigo": "CPU-SANEA-ATI-048-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-048",
       "origem": "PROPRIA",
-      "valor_horario": 11.5425,
+      "producao_horaria": 11.5425,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17344,14 +17344,14 @@
         ]
       },
       "historico_observacoes": [],
-      "valor_horario": 400.0
+      "producao_horaria": 400.0
     },
     {
       "id": "CPU-DREN-BOCA-BTCC-350X350-PROD-001",
       "codigo": "CPU-DREN-BOCA-BTCC-350X350-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BTCC-350X350",
       "origem": "PROPRIA",
-      "valor_horario": 0.017857,
+      "producao_horaria": 0.017857,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17381,7 +17381,7 @@
       "codigo": "CPU-TERRA-ATI-024-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-024",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17419,7 +17419,7 @@
       "codigo": "CPU-DREN-ESCAV-VALA-1CAT-PROD-001",
       "descricao": "Produção CPU-DREN-ESCAV-VALA-1CAT",
       "origem": "PROPRIA",
-      "valor_horario": 19.701,
+      "producao_horaria": 19.701,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17457,7 +17457,7 @@
       "codigo": "CPU-TERRA-ATI-004-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-004",
       "origem": "PROPRIA",
-      "valor_horario": 500.0,
+      "producao_horaria": 500.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17483,7 +17483,7 @@
       "codigo": "CPU-DREN-BOCA-BSTC-120-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BSTC-120",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17556,14 +17556,14 @@
         ]
       },
       "historico_observacoes": [],
-      "valor_horario": 22.0
+      "producao_horaria": 22.0
     },
     {
       "id": "CPU-DREN-CORPO-BTCAP-100-PROD-001",
       "codigo": "CPU-DREN-CORPO-BTCAP-100-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BTCAP-100",
       "origem": "PROPRIA",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17613,7 +17613,7 @@
       "codigo": "CPU-OBRAS-ATI-032-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-032",
       "origem": "PROPRIA",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17655,7 +17655,7 @@
       "codigo": "CPU-DREN-CORPO-BSTC-100-PA2-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSTC-100-PA2",
       "origem": "PROPRIA",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17705,7 +17705,7 @@
       "codigo": "CPU-DREN-BOCA-BSCAP-100-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BSCAP-100",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17735,7 +17735,7 @@
       "codigo": "CPU-TERRA-ATI-019-M2-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-019-M2",
       "origem": "PROPRIA",
-      "valor_horario": 220.0,
+      "producao_horaria": 220.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17761,7 +17761,7 @@
       "codigo": "CPU-TERRA-ATI-034-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-034",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17799,7 +17799,7 @@
       "codigo": "CPU-PAVIM-ATI-054-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-054",
       "origem": "PROPRIA",
-      "valor_horario": 55.0,
+      "producao_horaria": 55.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17857,7 +17857,7 @@
       "codigo": "CPU-SANEA-ATI-044-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-044",
       "origem": "PROPRIA",
-      "valor_horario": 14.25,
+      "producao_horaria": 14.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17891,7 +17891,7 @@
       "codigo": "CPU-DIVER-ATI-069-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-069",
       "origem": "PROPRIA",
-      "valor_horario": 327.5,
+      "producao_horaria": 327.5,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17925,7 +17925,7 @@
       "codigo": "CPU-OBRAS-ATI-030-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-030",
       "origem": "PROPRIA",
-      "valor_horario": 0.5,
+      "producao_horaria": 0.5,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -17967,7 +17967,7 @@
       "codigo": "CPU-TERRA-ATI-012-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-012",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18001,7 +18001,7 @@
       "codigo": "CPU-SANEA-ATI-049-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-049",
       "origem": "PROPRIA",
-      "valor_horario": 10.965,
+      "producao_horaria": 10.965,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18035,7 +18035,7 @@
       "codigo": "CPU-DREN-BOCA-BSCC-300X200-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BSCC-300X200",
       "origem": "PROPRIA",
-      "valor_horario": 0.017857,
+      "producao_horaria": 0.017857,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18070,7 +18070,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 231.87,
+      "producao_horaria": 231.87,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18137,7 +18137,7 @@
       "codigo": "CPU-PAVIM-ATI-056-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-056",
       "origem": "PROPRIA",
-      "valor_horario": 900.0,
+      "producao_horaria": 900.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18179,7 +18179,7 @@
       "codigo": "CPU-OBRAS-ATI-028-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-028",
       "origem": "PROPRIA",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18221,7 +18221,7 @@
       "codigo": "CPU-DREN-CORPO-BDTC-100-PA1-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BDTC-100-PA1",
       "origem": "PROPRIA",
-      "valor_horario": 0.5,
+      "producao_horaria": 0.5,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18271,7 +18271,7 @@
       "codigo": "CPU-TERRA-ATI-040-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-040",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18309,7 +18309,7 @@
       "codigo": "CPU-SANEA-ATI-047-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-047",
       "origem": "PROPRIA",
-      "valor_horario": 11.5425,
+      "producao_horaria": 11.5425,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18343,7 +18343,7 @@
       "codigo": "CPU-TERRA-ATI-011-DMT-LONGA-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-011-DMT-LONGA",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18377,7 +18377,7 @@
       "codigo": "CPU-TERRA-ATI-021-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-021",
       "origem": "PROPRIA",
-      "valor_horario": 157.25,
+      "producao_horaria": 157.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18411,7 +18411,7 @@
       "codigo": "CPU-OBRAS-ATI-025-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-025",
       "origem": "PROPRIA",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18453,7 +18453,7 @@
       "codigo": "CPU-DREN-CORPO-BSTC-100-PA1-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSTC-100-PA1",
       "origem": "PROPRIA",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18503,7 +18503,7 @@
       "codigo": "CPU-DREN-CORPO-BDCC-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BDCC",
       "origem": "PROPRIA",
-      "valor_horario": 0.2,
+      "producao_horaria": 0.2,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18553,7 +18553,7 @@
       "codigo": "CPU-DREN-CORPO-BSCC-150X200-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCC-150X200",
       "origem": "PROPRIA",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18603,7 +18603,7 @@
       "codigo": "CPU-DREN-CORPO-BDTC-100-PA2-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BDTC-100-PA2",
       "origem": "PROPRIA",
-      "valor_horario": 0.5,
+      "producao_horaria": 0.5,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18653,7 +18653,7 @@
       "codigo": "CPU-DIVER-ATI-068-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-068",
       "origem": "PROPRIA",
-      "valor_horario": 142.86,
+      "producao_horaria": 142.86,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18683,7 +18683,7 @@
       "codigo": "CPU-DREN-CORPO-BSTC-120-PA2-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSTC-120-PA2",
       "origem": "PROPRIA",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18733,7 +18733,7 @@
       "codigo": "CPU-DIVER-ATI-090-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-090",
       "origem": "PROPRIA",
-      "valor_horario": 0.05,
+      "producao_horaria": 0.05,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18759,7 +18759,7 @@
       "codigo": "CPU-DREN-BOCA-BDTC-120-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BDTC-120",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18789,7 +18789,7 @@
       "codigo": "CPU-DREN-BOCA-BSTC-100-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BSTC-100",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18819,7 +18819,7 @@
       "codigo": "CPU-DIVER-ATI-006-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-006",
       "origem": "PROPRIA",
-      "valor_horario": 1428.57,
+      "producao_horaria": 1428.57,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18849,7 +18849,7 @@
       "codigo": "CPU-DIVER-ATI-071-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-071",
       "origem": "PROPRIA",
-      "valor_horario": 25.0,
+      "producao_horaria": 25.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18882,7 +18882,7 @@
       "codigo": "CPU-OBRAS-ATI-042-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-042",
       "origem": "PROPRIA",
-      "valor_horario": 0.018,
+      "producao_horaria": 0.018,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18916,7 +18916,7 @@
       "codigo": "CPU-TERRA-ATI-039-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-039",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18954,7 +18954,7 @@
       "codigo": "CPU-TERRA-ATI-001-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-001",
       "origem": "PROPRIA",
-      "valor_horario": 6.0,
+      "producao_horaria": 6.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -18980,7 +18980,7 @@
       "codigo": "CPU-DIVER-ATI-064-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-064",
       "origem": "PROPRIA",
-      "valor_horario": 15.0,
+      "producao_horaria": 15.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19022,7 +19022,7 @@
       "codigo": "CPU-PAVIM-ATI-053-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-053",
       "origem": "PROPRIA",
-      "valor_horario": 220.0,
+      "producao_horaria": 220.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19085,7 +19085,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 158.28,
+      "producao_horaria": 158.28,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19152,7 +19152,7 @@
       "codigo": "CPU-DIVER-ATI-065-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-065",
       "origem": "PROPRIA",
-      "valor_horario": 37.5,
+      "producao_horaria": 37.5,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19178,7 +19178,7 @@
       "codigo": "CPU-SANEA-ATI-043-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-043",
       "origem": "PROPRIA",
-      "valor_horario": 15.0,
+      "producao_horaria": 15.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19217,7 +19217,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 142.16,
+      "producao_horaria": 142.16,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19280,7 +19280,7 @@
       "codigo": "CPU-TERRA-ATI-037-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-037",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19318,7 +19318,7 @@
       "codigo": "CPU-DIVER-ATI-073-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-073",
       "origem": "PROPRIA",
-      "valor_horario": 25.0,
+      "producao_horaria": 25.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19335,7 +19335,7 @@
       "codigo": "CPU-OBRAS-ATI-029-PROD-001",
       "descricao": "Produção CPU-OBRAS-ATI-029",
       "origem": "PROPRIA",
-      "valor_horario": 0.5,
+      "producao_horaria": 0.5,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19377,7 +19377,7 @@
       "codigo": "CPU-DREN-CORPO-BSTC-120-PA3-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSTC-120-PA3",
       "origem": "PROPRIA",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19432,7 +19432,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 738.0,
+      "producao_horaria": 738.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19488,7 +19488,7 @@
       "codigo": "CPU-TERRA-ATI-014-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-014",
       "origem": "PROPRIA",
-      "valor_horario": 165.74,
+      "producao_horaria": 165.74,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19522,7 +19522,7 @@
       "codigo": "CPU-PAVIM-ATI-061-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-061",
       "origem": "PROPRIA",
-      "valor_horario": 74.07,
+      "producao_horaria": 74.07,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19581,7 +19581,7 @@
       "codigo": "CPU-DREN-BOCA-BDCAP-100-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BDCAP-100",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19616,7 +19616,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 100.0,
+      "producao_horaria": 100.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19674,7 +19674,7 @@
       "codigo": "CPU-SANEA-ATI-046-PROD-001",
       "descricao": "Produção CPU-SANEA-ATI-046",
       "origem": "PROPRIA",
-      "valor_horario": 12.825,
+      "producao_horaria": 12.825,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19708,7 +19708,7 @@
       "codigo": "CPU-TERRA-ATI-015-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-015",
       "origem": "PROPRIA",
-      "valor_horario": 144.92,
+      "producao_horaria": 144.92,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19742,7 +19742,7 @@
       "codigo": "CPU-PAVIM-ATI-057-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-057",
       "origem": "PROPRIA",
-      "valor_horario": 816.67,
+      "producao_horaria": 816.67,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19784,7 +19784,7 @@
       "codigo": "CPU-DREN-CORPO-BSCC-250X250-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BSCC-250X250",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19834,7 +19834,7 @@
       "codigo": "CPU-DREN-BOCA-BDTC-100-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BDTC-100",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19864,7 +19864,7 @@
       "codigo": "CPU-TERRA-ATI-038-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-038",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19902,7 +19902,7 @@
       "codigo": "CPU-TERRA-ATI-017-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-017",
       "origem": "PROPRIA",
-      "valor_horario": 162.12,
+      "producao_horaria": 162.12,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19944,7 +19944,7 @@
       "codigo": "CPU-PAVIM-ATI-052-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-052",
       "origem": "PROPRIA",
-      "valor_horario": 300.0,
+      "producao_horaria": 300.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -19986,7 +19986,7 @@
       "codigo": "CPU-PAVIM-ATI-055-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-055",
       "origem": "PROPRIA",
-      "valor_horario": 55.0,
+      "producao_horaria": 55.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20044,7 +20044,7 @@
       "codigo": "CPU-TERRA-ATI-002-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-002",
       "origem": "PROPRIA",
-      "valor_horario": 750.0,
+      "producao_horaria": 750.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20070,7 +20070,7 @@
       "codigo": "CPU-DREN-BOCA-BTCAP-100-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BTCAP-100",
       "origem": "PROPRIA",
-      "valor_horario": 0.041667,
+      "producao_horaria": 0.041667,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20100,7 +20100,7 @@
       "codigo": "CPU-TERRA-ATI-033-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-033",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20138,7 +20138,7 @@
       "codigo": "CPU-TERRA-ATI-036-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-036",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20176,7 +20176,7 @@
       "codigo": "CPU-DREN-CORPO-BDCAP-100-PROD-001",
       "descricao": "Produção CPU-DREN-CORPO-BDCAP-100",
       "origem": "PROPRIA",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20226,7 +20226,7 @@
       "codigo": "CPU-DREN-BOCA-BSCC-200X200-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BSCC-200X200",
       "origem": "PROPRIA",
-      "valor_horario": 0.017857,
+      "producao_horaria": 0.017857,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20256,7 +20256,7 @@
       "codigo": "CPU-DIVER-ATI-063-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-063",
       "origem": "PROPRIA",
-      "valor_horario": 25.0,
+      "producao_horaria": 25.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20332,14 +20332,14 @@
         ]
       },
       "historico_observacoes": [],
-      "valor_horario": 0.25
+      "producao_horaria": 0.25
     },
     {
       "id": "CPU-TERRA-ATI-080-PROD-001",
       "codigo": "CPU-TERRA-ATI-080-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-080",
       "origem": "PROPRIA",
-      "valor_horario": 450.0,
+      "producao_horaria": 450.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20361,7 +20361,7 @@
       "codigo": "CPU-DREN-REATERRO-COMPAC-PROD-001",
       "descricao": "Produção CPU-DREN-REATERRO-COMPAC",
       "origem": "PROPRIA",
-      "valor_horario": 12.0,
+      "producao_horaria": 12.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20416,7 +20416,7 @@
       "codigo": "CPU-DIVER-ATI-066-PROD-001",
       "descricao": "Produção CPU-DIVER-ATI-066",
       "origem": "PROPRIA",
-      "valor_horario": 50.0,
+      "producao_horaria": 50.0,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20442,7 +20442,7 @@
       "codigo": "CPU-PAVIM-ATI-058-PROD-001",
       "descricao": "Produção CPU-PAVIM-ATI-058",
       "origem": "PROPRIA",
-      "valor_horario": 816.67,
+      "producao_horaria": 816.67,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20501,7 +20501,7 @@
       "codigo": "CPU-TERRA-ATI-019-PROD-001",
       "descricao": "Produção CPU-TERRA-ATI-019",
       "origem": "PROPRIA",
-      "valor_horario": 149.51,
+      "producao_horaria": 149.51,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20548,7 +20548,7 @@
       "codigo": "CPU-DREN-BOCA-BDCC-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BDCC",
       "origem": "PROPRIA",
-      "valor_horario": 0.017857,
+      "producao_horaria": 0.017857,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20583,7 +20583,7 @@
         "data_calibracao": "2026-05-01T00:00:00Z",
         "referencia": "Planilha AGIS 2026-05"
       },
-      "valor_horario": 173.01,
+      "producao_horaria": 173.01,
       "composicao_padrao_equipe": {
         "funcoes": [
           {
@@ -20660,7 +20660,7 @@
       "codigo": "CPU-DREN-BOCA-BTCC-300X300-PROD-001",
       "descricao": "Produção CPU-DREN-BOCA-BTCC-300X300",
       "origem": "PROPRIA",
-      "valor_horario": 0.017857,
+      "producao_horaria": 0.017857,
       "composicao_padrao_equipe": {
         "funcoes": [
           {

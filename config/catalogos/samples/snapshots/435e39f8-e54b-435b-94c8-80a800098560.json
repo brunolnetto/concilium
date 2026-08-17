@@ -2973,7 +2973,7 @@
       "codigo": "ESCO-CARGA-1CAT-DMT3000-PROD-001",
       "descricao": "Produção ESCO-CARGA-1CAT-DMT3000",
       "origem": "PROPRIA",
-      "valor_horario": 233.54208,
+      "producao_horaria": 233.54208,
       "cpu_ids": [
         "ESCO-CARGA-1CAT-DMT3000"
       ]
@@ -2983,7 +2983,7 @@
       "codigo": "POCO-VISITA-PADRAO-PROD-001",
       "descricao": "Produção POCO-VISITA-PADRAO",
       "origem": "PROPRIA",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "cpu_ids": [
         "POCO-VISITA-PADRAO"
       ]
@@ -2993,7 +2993,7 @@
       "codigo": "ESCO-CARGA-1CAT-DMT2000-PROD-001",
       "descricao": "Produção ESCO-CARGA-1CAT-DMT2000",
       "origem": "PROPRIA",
-      "valor_horario": 233.54208,
+      "producao_horaria": 233.54208,
       "cpu_ids": [
         "ESCO-CARGA-1CAT-DMT2000"
       ]
@@ -3003,7 +3003,7 @@
       "codigo": "ESCO-CARGA-2CAT-DMT2000-PROD-001",
       "descricao": "Produção ESCO-CARGA-2CAT-DMT2000",
       "origem": "PROPRIA",
-      "valor_horario": 159.108923076923,
+      "producao_horaria": 159.108923076923,
       "cpu_ids": [
         "ESCO-CARGA-2CAT-DMT2000"
       ]
@@ -3013,7 +3013,7 @@
       "codigo": "COMPACT-ATERRO-100PN-PROD-001",
       "descricao": "Produção COMPACT-ATERRO-100PN",
       "origem": "PROPRIA",
-      "valor_horario": 173.197428,
+      "producao_horaria": 173.197428,
       "cpu_ids": [
         "COMPACT-ATERRO-100PN"
       ]
@@ -3023,7 +3023,7 @@
       "codigo": "ESCO-CARGA-3CAT-DMT3000-PROD-001",
       "descricao": "Produção ESCO-CARGA-3CAT-DMT3000",
       "origem": "PROPRIA",
-      "valor_horario": 144.541473391304,
+      "producao_horaria": 144.541473391304,
       "cpu_ids": [
         "ESCO-CARGA-3CAT-DMT3000"
       ]
@@ -3033,7 +3033,7 @@
       "codigo": "REGULARIZACAO-SUBLEITO-PROD-001",
       "descricao": "Produção REGULARIZACAO-SUBLEITO",
       "origem": "PROPRIA",
-      "valor_horario": 400.0,
+      "producao_horaria": 400.0,
       "cpu_ids": [
         "REGULARIZACAO-SUBLEITO"
       ]
@@ -3043,7 +3043,7 @@
       "codigo": "ESCO-CARGA-2CAT-DMT3000-PROD-001",
       "descricao": "Produção ESCO-CARGA-2CAT-DMT3000",
       "origem": "PROPRIA",
-      "valor_horario": 159.108923076923,
+      "producao_horaria": 159.108923076923,
       "cpu_ids": [
         "ESCO-CARGA-2CAT-DMT3000"
       ]
@@ -3053,7 +3053,7 @@
       "codigo": "PAV-BASE-BGTC-PROD-001",
       "descricao": "Produção PAV-BASE-BGTC",
       "origem": "PROPRIA",
-      "valor_horario": 22.0,
+      "producao_horaria": 22.0,
       "cpu_ids": [
         "PAV-BASE-BGTC"
       ]
@@ -3063,7 +3063,7 @@
       "codigo": "ESCO-CARGA-3CAT-DMT2000-PROD-001",
       "descricao": "Produção ESCO-CARGA-3CAT-DMT2000",
       "origem": "PROPRIA",
-      "valor_horario": 144.541473391304,
+      "producao_horaria": 144.541473391304,
       "cpu_ids": [
         "ESCO-CARGA-3CAT-DMT2000"
       ]
@@ -3073,7 +3073,7 @@
       "codigo": "DREN-MAN-DN300-PROD-001",
       "descricao": "Produção DREN-MAN-DN300",
       "origem": "PROPRIA",
-      "valor_horario": 3.0,
+      "producao_horaria": 3.0,
       "cpu_ids": [
         "DREN-MAN-DN300"
       ]

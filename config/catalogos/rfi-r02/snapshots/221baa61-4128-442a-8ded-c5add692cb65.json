@@ -4234,7 +4234,7 @@
       "id": "PROD-USINAGEM-CBUQ-RFI-001",
       "codigo": "USINAGEM-CBUQ-FAIXA-C-RFI",
       "descricao": "Usinagem de CBUQ faixa C na usina de asfalto da casa (E0043) — física SICRO 6416078, equipamentos/insumos do catálogo rfi-r02 onde existem",
-      "valor_horario": 99.6,
+      "producao_horaria": 99.6,
       "unidade": "t",
       "origem": {
         "tipo": "tabela_referencia",
@@ -4382,7 +4382,7 @@
       "id": "CPU-TERRA-ATI-010-PROD-001",
       "codigo": "ATI-010",
       "descricao": "Escavação canaletas",
-      "valor_horario": 37.5,
+      "producao_horaria": 37.5,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -4439,7 +4439,7 @@
       "id": "CPU-TERRA-ATI-022-PROD-001",
       "codigo": "ATI-022",
       "descricao": "Espalhamento e compactação rachão",
-      "valor_horario": 82.03,
+      "producao_horaria": 82.03,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -4508,7 +4508,7 @@
       "id": "CPU-TERRA-ATI-050-PROD-001",
       "codigo": "ATI-050",
       "descricao": "Tubo PVC DEFOFO D=250mm",
-      "valor_horario": 10.4175,
+      "producao_horaria": 10.4175,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -4577,7 +4577,7 @@
       "id": "CPU-TERRA-ATI-023-PROD-001",
       "codigo": "ATI-023",
       "descricao": "Espalhamento e compactação BGTC",
-      "valor_horario": 138.0,
+      "producao_horaria": 138.0,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -4646,7 +4646,7 @@
       "id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT3000-PROD-001",
       "codigo": "CPU-TERRA-ESCO-CARGA-2CAT-DMT3000",
       "descricao": "Esc/carg/transp 2ªcat DMT 2000-3000m",
-      "valor_horario": 158.78,
+      "producao_horaria": 158.78,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -4720,7 +4720,7 @@
       "id": "CPU-TERRA-ATI-056-PROD-001",
       "codigo": "ATI-056",
       "descricao": "Imprimação",
-      "valor_horario": 900.0,
+      "producao_horaria": 900.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -4789,7 +4789,7 @@
       "id": "CPU-TERRA-ATI-072-PROD-001",
       "codigo": "ATI-072",
       "descricao": "Assentamento de guia (terceirizado)",
-      "valor_horario": 15.0,
+      "producao_horaria": 15.0,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -4833,7 +4833,7 @@
       "id": "CPU-TERRA-ATI-058-PROD-001",
       "codigo": "ATI-058",
       "descricao": "CBUQ E=3,0cm",
-      "valor_horario": 816.67,
+      "producao_horaria": 816.67,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -4932,7 +4932,7 @@
       "id": "CPU-TERRA-ATI-032-PROD-001",
       "codigo": "ATI-032",
       "descricao": "Corpo BTTC D=1,20m PA2",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5001,7 +5001,7 @@
       "id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000-PROD-001",
       "codigo": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000",
       "descricao": "Esc/carg/transp 3ªcat DMT≤2000m",
-      "valor_horario": 142.02,
+      "producao_horaria": 142.02,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -5071,7 +5071,7 @@
       "id": "CPU-TERRA-ATI-035-PROD-001",
       "codigo": "ATI-035",
       "descricao": "Corpo BSCC 2,00×2,00m — aterro 6-10m",
-      "valor_horario": 0.3,
+      "producao_horaria": 0.3,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5149,7 +5149,7 @@
       "id": "CPU-TERRA-ATI-031-PROD-001",
       "codigo": "ATI-031",
       "descricao": "Corpo BDTC D=1,20m PA2",
-      "valor_horario": 0.375,
+      "producao_horaria": 0.375,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5218,7 +5218,7 @@
       "id": "CPU-TERRA-COMPAC-PI-PROD-001",
       "codigo": "CPU-TERRA-COMPAC-PI",
       "descricao": "Aterro compactado 100% PI",
-      "valor_horario": 132.32,
+      "producao_horaria": 132.32,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -5329,7 +5329,7 @@
       "id": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
       "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT",
       "descricao": "Construção de corpo de aterro com material de 3ª categoria oriundo de corte",
-      "valor_horario": 214.92,
+      "producao_horaria": 214.92,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -5408,7 +5408,7 @@
       "id": "CPU-TERRA-ATI-066-PROD-001",
       "codigo": "ATI-066",
       "descricao": "Cercamento — mourão de concreto",
-      "valor_horario": 50.0,
+      "producao_horaria": 50.0,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5460,7 +5460,7 @@
       "id": "CPU-TERRA-ATI-008-PROD-001",
       "codigo": "ATI-008",
       "descricao": "Supressão alta densidade",
-      "valor_horario": 375.0,
+      "producao_horaria": 375.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5535,7 +5535,7 @@
       "id": "CPU-TERRA-ATI-045-PROD-001",
       "codigo": "ATI-045",
       "descricao": "Tubo PVC PBA D=100mm — vala 1ªcat",
-      "valor_horario": 12.825,
+      "producao_horaria": 12.825,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5604,7 +5604,7 @@
       "id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000-PROD-001",
       "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000",
       "descricao": "Esc/carg/transp 1ªcat DMT 2000-3000m",
-      "valor_horario": 230.91,
+      "producao_horaria": 230.91,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -5678,7 +5678,7 @@
       "id": "CPU-TERRA-ATI-060-PROD-001",
       "codigo": "ATI-060",
       "descricao": "Demolição de pavimento asfáltico",
-      "valor_horario": 26.1,
+      "producao_horaria": 26.1,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5745,7 +5745,7 @@
       "id": "CPU-TERRA-ATI-005-PROD-001",
       "codigo": "ATI-005",
       "descricao": "Supressão c/ destocamento",
-      "valor_horario": 6.25,
+      "producao_horaria": 6.25,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5805,7 +5805,7 @@
       "id": "CPU-TERRA-ATI-009-PROD-001",
       "codigo": "ATI-009",
       "descricao": "Corte/destocamento/romaneio",
-      "valor_horario": 9.0,
+      "producao_horaria": 9.0,
       "unidade": "und",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5854,7 +5854,7 @@
       "id": "CPU-TERRA-ATI-064-PROD-001",
       "codigo": "ATI-064",
       "descricao": "Instalação guia 1,00×0,30×0,15",
-      "valor_horario": 15.0,
+      "producao_horaria": 15.0,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5930,7 +5930,7 @@
       "id": "CPU-TERRA-ATI-020-PROD-001",
       "codigo": "ATI-020",
       "descricao": "Espalhamento areia/pó de pedra 5cm",
-      "valor_horario": 20.0,
+      "producao_horaria": 20.0,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -5999,7 +5999,7 @@
       "id": "CPU-TERRA-ATI-057-PROD-001",
       "codigo": "ATI-057",
       "descricao": "Pintura de ligação",
-      "valor_horario": 816.67,
+      "producao_horaria": 816.67,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6068,7 +6068,7 @@
       "id": "CPU-TERRA-ATI-024-PROD-001",
       "codigo": "ATI-024",
       "descricao": "Espalhamento pó de pedra",
-      "valor_horario": 19.0,
+      "producao_horaria": 19.0,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6126,7 +6126,7 @@
       "id": "CPU-TERRA-ATI-065-PROD-001",
       "codigo": "ATI-065",
       "descricao": "Cercamento — mourão de eucalipto",
-      "valor_horario": 37.5,
+      "producao_horaria": 37.5,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6178,7 +6178,7 @@
       "id": "CPU-TERRA-ATI-051-PROD-001",
       "codigo": "ATI-051",
       "descricao": "Tubo PVC DEFOFO D=300mm",
-      "valor_horario": 9.89625,
+      "producao_horaria": 9.89625,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6247,7 +6247,7 @@
       "id": "CPU-TERRA-ATI-069-PROD-001",
       "codigo": "ATI-069",
       "descricao": "Instalação de manta geotêxtil (Bidim)",
-      "valor_horario": 327.5,
+      "producao_horaria": 327.5,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6308,7 +6308,7 @@
       "id": "CPU-TERRA-ATI-062-PROD-001",
       "codigo": "ATI-062",
       "descricao": "TSD",
-      "valor_horario": 277.0,
+      "producao_horaria": 277.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6392,7 +6392,7 @@
       "id": "CPU-TERRA-ATI-067-PROD-001",
       "codigo": "ATI-067",
       "descricao": "Remoção de cerca",
-      "valor_horario": 42.86,
+      "producao_horaria": 42.86,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6444,7 +6444,7 @@
       "id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001",
       "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
       "descricao": "Esc/carg/transp 1ªcat DMT≤2000m",
-      "valor_horario": 231.87,
+      "producao_horaria": 231.87,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -6518,7 +6518,7 @@
       "id": "CPU-TERRA-ATI-073-PROD-001",
       "codigo": "ATI-073",
       "descricao": "Rejuntamento piso intertravado",
-      "valor_horario": 25.0,
+      "producao_horaria": 25.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6554,7 +6554,7 @@
       "id": "CPU-TERRA-ATI-040-PROD-001",
       "codigo": "ATI-040",
       "descricao": "Corpo BTCC 3,00×3,00m — aterro 2-6m",
-      "valor_horario": 0.05,
+      "producao_horaria": 0.05,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6632,7 +6632,7 @@
       "id": "CPU-TERRA-ATI-059-PROD-001",
       "codigo": "ATI-059",
       "descricao": "Dreno de pavimento",
-      "valor_horario": 6.67,
+      "producao_horaria": 6.67,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6677,7 +6677,7 @@
       "id": "CPU-TERRA-ATI-021-PROD-001",
       "codigo": "ATI-021",
       "descricao": "Rebaixo terreno natural argiloso 20cm",
-      "valor_horario": 157.25,
+      "producao_horaria": 157.25,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6745,7 +6745,7 @@
       "id": "CPU-TERRA-ATI-063-PROD-001",
       "codigo": "ATI-063",
       "descricao": "Piso intertravado espessura 10cm",
-      "valor_horario": 25.0,
+      "producao_horaria": 25.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6821,7 +6821,7 @@
       "id": "CPU-TERRA-ATI-052-PROD-001",
       "codigo": "ATI-052",
       "descricao": "Regularização sub-leito por compactação",
-      "valor_horario": 300.0,
+      "producao_horaria": 300.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6896,7 +6896,7 @@
       "id": "CPU-TERRA-ATI-047-PROD-001",
       "codigo": "ATI-047",
       "descricao": "Tubulação água PVC PBA 150mm",
-      "valor_horario": 11.5425,
+      "producao_horaria": 11.5425,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -6956,7 +6956,7 @@
       "id": "CPU-TERRA-ATI-061-PROD-001",
       "codigo": "ATI-061",
       "descricao": "Recomposição de pavimento asfáltico",
-      "valor_horario": 74.07,
+      "producao_horaria": 74.07,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7055,7 +7055,7 @@
       "id": "CPU-TERRA-ATI-044-PROD-001",
       "codigo": "ATI-044",
       "descricao": "Tubo PVC PBA D=75mm — vala 1ªcat",
-      "valor_horario": 14.25,
+      "producao_horaria": 14.25,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7124,7 +7124,7 @@
       "id": "CPU-TERRA-ATI-049-PROD-001",
       "codigo": "ATI-049",
       "descricao": "Tubo PVC DEFOFO D=200mm",
-      "valor_horario": 10.965,
+      "producao_horaria": 10.965,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7193,7 +7193,7 @@
       "id": "CPU-TERRA-ATI-039-PROD-001",
       "codigo": "ATI-039",
       "descricao": "Corpo BDCC 2,50×2,50m — aterro 10-15m",
-      "valor_horario": 0.15,
+      "producao_horaria": 0.15,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7271,7 +7271,7 @@
       "id": "CPU-TERRA-ATI-001-PROD-001",
       "codigo": "ATI-001",
       "descricao": "Supressão vegetal DAP≥0,30 e arbustos",
-      "valor_horario": 0.625,
+      "producao_horaria": 0.625,
       "unidade": "und",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7316,7 +7316,7 @@
       "id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000-PROD-001",
       "codigo": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
       "descricao": "Esc/carg/transp 2ªcat DMT≤2000m",
-      "valor_horario": 158.28,
+      "producao_horaria": 158.28,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -7390,7 +7390,7 @@
       "id": "CPU-TERRA-ATI-071-PROD-001",
       "codigo": "ATI-071",
       "descricao": "Assentamento piso intertravado (terceirizado)",
-      "valor_horario": 25.0,
+      "producao_horaria": 25.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7434,7 +7434,7 @@
       "id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-PROD-001",
       "codigo": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
       "descricao": "Esc/carg/transp 3ªcat DMT 2000-3000m",
-      "valor_horario": 142.16,
+      "producao_horaria": 142.16,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -7504,7 +7504,7 @@
       "id": "CPU-TERRA-ATI-029-PROD-001",
       "codigo": "ATI-029",
       "descricao": "Corpo BDTC D=1,00m PA1",
-      "valor_horario": 0.5,
+      "producao_horaria": 0.5,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7573,7 +7573,7 @@
       "id": "CPU-TERRA-ATI-025-PROD-001",
       "codigo": "ATI-025",
       "descricao": "Corpo BSTC D=1,00m PA1 — Padrão VALEC",
-      "valor_horario": 1.0,
+      "producao_horaria": 1.0,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7642,7 +7642,7 @@
       "id": "CPU-TERRA-ATI-003-PROD-001",
       "codigo": "CPU-TERRA-ATI-003",
       "descricao": "Desmatamento, destocamento, limpeza",
-      "valor_horario": 738.0,
+      "producao_horaria": 738.0,
       "unidade": "m2",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -7732,7 +7732,7 @@
       "id": "CPU-TERRA-ATI-007-PROD-001",
       "codigo": "ATI-007",
       "descricao": "Supressão média densidade",
-      "valor_horario": 625.0,
+      "producao_horaria": 625.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7792,7 +7792,7 @@
       "id": "CPU-TERRA-ATI-070-PROD-001",
       "codigo": "ATI-070",
       "descricao": "Implantação de eixo",
-      "valor_horario": 0.143,
+      "producao_horaria": 0.143,
       "unidade": "km",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -7855,7 +7855,7 @@
       "id": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
       "codigo": "CPU-TERRA-COMPAC-FINAL-ROCHA",
       "descricao": "Compactação de camada final de aterro de rocha",
-      "valor_horario": 100.0,
+      "producao_horaria": 100.0,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
@@ -7954,7 +7954,7 @@
       "id": "CPU-TERRA-ATI-043-PROD-001",
       "codigo": "ATI-043",
       "descricao": "Tubo PVC PBA D=50mm — vala 1ªcat",
-      "valor_horario": 15.0,
+      "producao_horaria": 15.0,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8023,7 +8023,7 @@
       "id": "CPU-TERRA-ATI-068-PROD-001",
       "codigo": "ATI-068",
       "descricao": "Aceiro",
-      "valor_horario": 142.86,
+      "producao_horaria": 142.86,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8079,7 +8079,7 @@
       "id": "CPU-TERRA-ATI-038-PROD-001",
       "codigo": "ATI-038",
       "descricao": "Corpo BDCC 2,00×2,00m — aterro 2-6m",
-      "valor_horario": 0.2,
+      "producao_horaria": 0.2,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8157,7 +8157,7 @@
       "id": "CPU-TERRA-ATI-042-PROD-001",
       "codigo": "ATI-042",
       "descricao": "Boca celulares",
-      "valor_horario": 0.018,
+      "producao_horaria": 0.018,
       "unidade": "unid",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8224,7 +8224,7 @@
       "id": "CPU-TERRA-ATI-002-PROD-001",
       "codigo": "ATI-002",
       "descricao": "Limpeza camada vegetal 20cm",
-      "valor_horario": 500.0,
+      "producao_horaria": 500.0,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8269,7 +8269,7 @@
       "id": "CPU-TERRA-ATI-033-PROD-001",
       "codigo": "ATI-033",
       "descricao": "Corpo BSCC 1,50×2,00m — aterro 0-2m",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8347,7 +8347,7 @@
       "id": "CPU-TERRA-ATI-036-PROD-001",
       "codigo": "ATI-036",
       "descricao": "Corpo BSCC 2,50×2,50m — aterro 2-6m",
-      "valor_horario": 0.25,
+      "producao_horaria": 0.25,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8425,7 +8425,7 @@
       "id": "CPU-TERRA-ATI-006-PROD-001",
       "codigo": "ATI-006",
       "descricao": "Supressão baixa densidade",
-      "valor_horario": 1428.57,
+      "producao_horaria": 1428.57,
       "unidade": "m²",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8481,7 +8481,7 @@
       "id": "CPU-TERRA-ATI-041-PROD-001",
       "codigo": "ATI-041",
       "descricao": "Boca tubulares",
-      "valor_horario": 0.042,
+      "producao_horaria": 0.042,
       "unidade": "unid",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8548,7 +8548,7 @@
       "id": "CPU-TERRA-ATI-054-PROD-001",
       "codigo": "ATI-054",
       "descricao": "Sub-base estabilizada granulometricamente",
-      "valor_horario": 55.0,
+      "producao_horaria": 55.0,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8638,7 +8638,7 @@
       "id": "CPU-TERRA-ATI-027-PROD-001",
       "codigo": "ATI-027",
       "descricao": "Corpo BSTC D=1,20m PA2 — Padrão VALEC",
-      "valor_horario": 0.75,
+      "producao_horaria": 0.75,
       "unidade": "m",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8707,7 +8707,7 @@
       "id": "CPU-TERRA-ATI-053-PROD-001",
       "codigo": "ATI-053",
       "descricao": "Reforço do subleito",
-      "valor_horario": 220.0,
+      "producao_horaria": 220.0,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8806,7 +8806,7 @@
       "id": "CPU-TERRA-ATI-019-PROD-001",
       "codigo": "ATI-019",
       "descricao": "Aterro executado em CCR",
-      "valor_horario": 250.0,
+      "producao_horaria": 250.0,
       "unidade": "m³",
       "origem": {
         "tipo": "planilha_rfi_r02",
@@ -8886,7 +8886,7 @@
       "id": "CPU-TERRA-COMPAC-PN-PROD-001",
       "codigo": "CPU-TERRA-COMPAC-PN",
       "descricao": "Aterro compactado 100% PN",
-      "valor_horario": 173.01,
+      "producao_horaria": 173.01,
       "unidade": "m3",
       "origem": {
         "tipo": "calibrado_agis_rfi",
