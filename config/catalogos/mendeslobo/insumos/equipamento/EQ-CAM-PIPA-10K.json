@@ -2,8 +2,8 @@
   "codigo": "EQ-CAM-PIPA-10K",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão Pipa 10.000 l",
-  "unidade": "h",
-  "preco_unitario": 100.0,
+  "unidade": "mes",
+  "preco_unitario": 20800.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0012",

@@ -2,8 +2,8 @@
   "codigo": "EQ-E0050",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira 35t com rompedor",
-  "unidade": "h",
-  "preco_unitario": 200.675,
+  "unidade": "mes",
+  "preco_unitario": 41740.4,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0050",

@@ -2,8 +2,8 @@
   "codigo": "EQ-E0041",
   "tipo": "EQUIPAMENTO",
   "descricao": "Vibroacabadora de asfalto sobre esteiras - 82 kW",
-  "unidade": "h",
-  "preco_unitario": 106.4,
+  "unidade": "mes",
+  "preco_unitario": 22131.2,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0041",

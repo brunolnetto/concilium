@@ -2,8 +2,8 @@
   "codigo": "E0017",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira Hidráulica 28t",
-  "unidade": "h",
-  "preco_unitario": 246.4,
+  "unidade": "mes",
+  "preco_unitario": 51251.2,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

@@ -2,8 +2,8 @@
   "codigo": "E0037",
   "tipo": "EQUIPAMENTO",
   "descricao": "Rolo Compactador Pneu 16t",
-  "unidade": "h",
-  "preco_unitario": 116.032,
+  "unidade": "mes",
+  "preco_unitario": 24134.656,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

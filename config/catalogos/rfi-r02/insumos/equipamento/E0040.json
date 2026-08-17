@@ -2,8 +2,8 @@
   "codigo": "E0040",
   "tipo": "EQUIPAMENTO",
   "descricao": "Vibrador de Imersão",
-  "unidade": "h",
-  "preco_unitario": 4.025,
+  "unidade": "mes",
+  "preco_unitario": 837.2,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "próprio",

@@ -2,8 +2,8 @@
   "codigo": "EQ-CAM-GUINDAUTO",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão carroceria com guindauto",
-  "unidade": "h",
-  "preco_unitario": 150.0,
+  "unidade": "mes",
+  "preco_unitario": 31200.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0007",

@@ -2,8 +2,8 @@
   "codigo": "E0039",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator Agrícola 75HP Com Grade",
-  "unidade": "h",
-  "preco_unitario": 115.36,
+  "unidade": "mes",
+  "preco_unitario": 23994.88,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

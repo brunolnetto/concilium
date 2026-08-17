@@ -2,8 +2,8 @@
   "codigo": "E0029",
   "tipo": "EQUIPAMENTO",
   "descricao": "Motoniveladora 140HP",
-  "unidade": "h",
-  "preco_unitario": 246.17600000000002,
+  "unidade": "mes",
+  "preco_unitario": 51204.608,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

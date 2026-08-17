@@ -2,8 +2,8 @@
   "codigo": "EQ-E0024",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de Esteiras 20t (300HP)",
-  "unidade": "h",
-  "preco_unitario": 238.50,
+  "unidade": "mes",
+  "preco_unitario": 49608.0,
   "fonte_preco": "PLANILHA_AGIS_2026_05",
   "atributos_especificos": {
     "codigo_planilha": "E0024",

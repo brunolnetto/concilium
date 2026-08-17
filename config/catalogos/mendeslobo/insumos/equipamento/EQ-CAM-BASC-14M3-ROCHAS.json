@@ -2,8 +2,8 @@
   "codigo": "EQ-CAM-BASC-14M3-ROCHAS",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão basculante 14 m³ - rochas",
-  "unidade": "h",
-  "preco_unitario": 195.2,
+  "unidade": "mes",
+  "preco_unitario": 40601.6,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0004",

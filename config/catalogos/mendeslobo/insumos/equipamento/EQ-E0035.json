@@ -2,8 +2,8 @@
   "codigo": "EQ-E0035",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de esteiras 20T",
-  "unidade": "h",
-  "preco_unitario": 123.2,
+  "unidade": "mes",
+  "preco_unitario": 25625.6,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0035",

@@ -2,8 +2,8 @@
   "codigo": "EQ-VAN-15P",
   "tipo": "EQUIPAMENTO",
   "descricao": "Van 15 pessoas",
-  "unidade": "h",
-  "preco_unitario": 80.0,
+  "unidade": "mes",
+  "preco_unitario": 16640.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0019",

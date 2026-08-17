@@ -2,8 +2,8 @@
   "codigo": "E0047",
   "tipo": "EQUIPAMENTO",
   "descricao": "Bobcat / Minicarregadeira",
-  "unidade": "h",
-  "preco_unitario": 78.4,
+  "unidade": "mes",
+  "preco_unitario": 16307.2,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

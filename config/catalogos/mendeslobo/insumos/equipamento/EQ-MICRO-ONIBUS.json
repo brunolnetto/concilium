@@ -2,8 +2,8 @@
   "codigo": "EQ-MICRO-ONIBUS",
   "tipo": "EQUIPAMENTO",
   "descricao": "Micro onibus 32 pessoas",
-  "unidade": "h",
-  "preco_unitario": 125.0,
+  "unidade": "mes",
+  "preco_unitario": 26000.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0022",

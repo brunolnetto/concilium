@@ -2,8 +2,8 @@
   "codigo": "E0013",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhonete (veículo leve)",
-  "unidade": "h",
-  "preco_unitario": 55.0,
+  "unidade": "mes",
+  "preco_unitario": 11440.0,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

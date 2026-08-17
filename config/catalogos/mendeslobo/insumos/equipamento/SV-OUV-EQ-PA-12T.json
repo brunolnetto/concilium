@@ -2,8 +2,8 @@
   "codigo": "SV-OUV-EQ-PA-12T",
   "tipo": "EQUIPAMENTO",
   "descricao": "Pá carregadeira 12t",
-  "unidade": "h",
-  "preco_unitario": 160.0,
+  "unidade": "mes",
+  "preco_unitario": 33280.0,
   "fonte_preco": "negociado",
   "atributos_especificos": {
     "consumo_litros_hora": 16.0,

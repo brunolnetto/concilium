@@ -2,8 +2,8 @@
   "codigo": "EQ-E0051",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira hidráulica sobre esteira 35T",
-  "unidade": "h",
-  "preco_unitario": 100.8,
+  "unidade": "mes",
+  "preco_unitario": 20966.4,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0051",

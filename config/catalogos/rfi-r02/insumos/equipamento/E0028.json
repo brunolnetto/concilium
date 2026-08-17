@@ -2,8 +2,8 @@
   "codigo": "E0028",
   "tipo": "EQUIPAMENTO",
   "descricao": "Motoniveladora 120HP",
-  "unidade": "h",
-  "preco_unitario": 208.32,
+  "unidade": "mes",
+  "preco_unitario": 43330.56,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

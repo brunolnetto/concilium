@@ -2,8 +2,8 @@
   "codigo": "E0002",
   "tipo": "EQUIPAMENTO",
   "descricao": "Betoneira 400L",
-  "unidade": "h",
-  "preco_unitario": 3.45,
+  "unidade": "mes",
+  "preco_unitario": 717.6,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "próprio",

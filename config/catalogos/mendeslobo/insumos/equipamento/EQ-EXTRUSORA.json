@@ -2,8 +2,8 @@
   "codigo": "EQ-EXTRUSORA",
   "tipo": "EQUIPAMENTO",
   "descricao": "Extrusora",
-  "unidade": "h",
-  "preco_unitario": 40.0,
+  "unidade": "mes",
+  "preco_unitario": 8320.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0017",

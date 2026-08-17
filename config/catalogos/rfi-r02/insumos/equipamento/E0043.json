@@ -2,8 +2,8 @@
   "codigo": "E0043",
   "tipo": "EQUIPAMENTO",
   "descricao": "Usina de Asfalto",
-  "unidade": "h",
-  "preco_unitario": 392.0,
+  "unidade": "mes",
+  "preco_unitario": 81536.0,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

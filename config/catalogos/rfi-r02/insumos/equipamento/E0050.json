@@ -2,8 +2,8 @@
   "codigo": "E0050",
   "tipo": "EQUIPAMENTO",
   "descricao": "Rompedor Hidráulico",
-  "unidade": "h",
-  "preco_unitario": 200.675,
+  "unidade": "mes",
+  "preco_unitario": 41740.4,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

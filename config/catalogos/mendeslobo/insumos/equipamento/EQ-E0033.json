@@ -2,8 +2,8 @@
   "codigo": "EQ-E0033",
   "tipo": "EQUIPAMENTO",
   "descricao": "Torre De Iluminação",
-  "unidade": "h",
-  "preco_unitario": 11.5,
+  "unidade": "mes",
+  "preco_unitario": 2392.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0033",

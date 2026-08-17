@@ -2,8 +2,8 @@
   "codigo": "EQ-BETONEIRA-600L",
   "tipo": "EQUIPAMENTO",
   "descricao": "Betoneira com motor a gasolina com capacidade de 600 l - 10 kW",
-  "unidade": "h",
-  "preco_unitario": 3.0,
+  "unidade": "mes",
+  "preco_unitario": 624.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0001",

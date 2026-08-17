@@ -2,8 +2,8 @@
   "codigo": "EQ-PA-CARREG-12T",
   "tipo": "EQUIPAMENTO",
   "descricao": "Pá carregadeira 12t",
-  "unidade": "h",
-  "preco_unitario": 104.5,
+  "unidade": "mes",
+  "preco_unitario": 21736.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0024",

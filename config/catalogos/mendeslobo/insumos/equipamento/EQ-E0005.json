@@ -2,8 +2,8 @@
   "codigo": "EQ-E0005",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão Basculante 10m³",
-  "unidade": "h",
-  "preco_unitario": 98.0,
+  "unidade": "mes",
+  "preco_unitario": 20384.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0005",

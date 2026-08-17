@@ -2,8 +2,8 @@
   "codigo": "EQ-E0026",
   "tipo": "EQUIPAMENTO",
   "descricao": "Retroescavadeira 75HP",
-  "unidade": "h",
-  "preco_unitario": 83.44,
+  "unidade": "mes",
+  "preco_unitario": 17355.52,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0026",

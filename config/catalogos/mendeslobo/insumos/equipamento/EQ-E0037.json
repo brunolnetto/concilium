@@ -2,8 +2,8 @@
   "codigo": "EQ-E0037",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de esteiras 40T",
-  "unidade": "h",
-  "preco_unitario": 116.032,
+  "unidade": "mes",
+  "preco_unitario": 24134.656,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0037",

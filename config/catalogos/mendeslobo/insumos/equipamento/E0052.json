@@ -2,8 +2,8 @@
   "codigo": "E0052",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de esteiras 16,50T",
-  "unidade": "h",
-  "preco_unitario": 204.5,
+  "unidade": "mes",
+  "preco_unitario": 42536.0,
   "fonte_preco": "PLANILHA_AGIS_2026_05",
   "data_referencia_preco": "2026-05-01",
   "atributos_especificos": {

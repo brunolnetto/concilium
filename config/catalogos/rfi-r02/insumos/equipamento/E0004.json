@@ -2,8 +2,8 @@
   "codigo": "E0004",
   "tipo": "EQUIPAMENTO",
   "descricao": "Bulldozer 20t (300HP)",
-  "unidade": "h",
-  "preco_unitario": 281.12,
+  "unidade": "mes",
+  "preco_unitario": 58472.96,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

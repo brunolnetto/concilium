@@ -2,8 +2,8 @@
   "codigo": "EQ-E0001",
   "tipo": "EQUIPAMENTO",
   "descricao": "Automóvel (veículo leve)",
-  "unidade": "h",
-  "preco_unitario": 22.0,
+  "unidade": "mes",
+  "preco_unitario": 4576.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0001",

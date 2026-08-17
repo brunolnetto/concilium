@@ -2,8 +2,8 @@
   "codigo": "EQ-E0047",
   "tipo": "EQUIPAMENTO",
   "descricao": "Guindaste móvel sobre esteiras com capacidade de 40 t - 186 kW",
-  "unidade": "h",
-  "preco_unitario": 78.4,
+  "unidade": "mes",
+  "preco_unitario": 16307.2,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0047",

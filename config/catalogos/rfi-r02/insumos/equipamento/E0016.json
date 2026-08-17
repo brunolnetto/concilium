@@ -2,8 +2,8 @@
   "codigo": "E0016",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira Hidráulica 22t",
-  "unidade": "h",
-  "preco_unitario": 202.496,
+  "unidade": "mes",
+  "preco_unitario": 42119.168,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

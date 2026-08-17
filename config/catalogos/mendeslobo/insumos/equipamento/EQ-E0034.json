@@ -2,8 +2,8 @@
   "codigo": "EQ-E0034",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de pneus com grade",
-  "unidade": "h",
-  "preco_unitario": 44.0,
+  "unidade": "mes",
+  "preco_unitario": 9152.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0034",

@@ -2,8 +2,8 @@
   "codigo": "EQ-E0040",
   "tipo": "EQUIPAMENTO",
   "descricao": "Veículo picape 4 x 4",
-  "unidade": "h",
-  "preco_unitario": 4.025,
+  "unidade": "mes",
+  "preco_unitario": 837.2,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0040",

@@ -2,8 +2,8 @@
   "codigo": "EQ-ESCAV-HID-22T",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira hidráulica sobre esteira 22T",
-  "unidade": "h",
-  "preco_unitario": 192.8,
+  "unidade": "mes",
+  "preco_unitario": 40102.4,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0014",

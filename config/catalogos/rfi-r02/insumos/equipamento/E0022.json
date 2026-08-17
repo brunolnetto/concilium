@@ -2,8 +2,8 @@
   "codigo": "E0022",
   "tipo": "EQUIPAMENTO",
   "descricao": "Fresadora de Pavimento",
-  "unidade": "h",
-  "preco_unitario": 287.5,
+  "unidade": "mes",
+  "preco_unitario": 59800.0,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

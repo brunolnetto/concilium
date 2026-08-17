@@ -2,8 +2,8 @@
   "codigo": "E0033",
   "tipo": "EQUIPAMENTO",
   "descricao": "Placa Vibratória 85kg",
-  "unidade": "h",
-  "preco_unitario": 11.5,
+  "unidade": "mes",
+  "preco_unitario": 2392.0,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "próprio",

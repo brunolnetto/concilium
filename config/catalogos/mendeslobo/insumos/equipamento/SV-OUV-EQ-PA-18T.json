@@ -2,8 +2,8 @@
   "codigo": "SV-OUV-EQ-PA-18T",
   "tipo": "EQUIPAMENTO",
   "descricao": "Pá carregadeira 18t",
-  "unidade": "h",
-  "preco_unitario": 225.0,
+  "unidade": "mes",
+  "preco_unitario": 46800.0,
   "fonte_preco": "negociado",
   "atributos_especificos": {
     "consumo_litros_hora": 25.0,

@@ -2,8 +2,8 @@
   "codigo": "EQ-ESCAV-HID-38T",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira hidráulica sobre esteira 38T",
-  "unidade": "h",
-  "preco_unitario": 278.4,
+  "unidade": "mes",
+  "preco_unitario": 57907.2,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0015",

@@ -2,8 +2,8 @@
   "codigo": "E0051",
   "tipo": "EQUIPAMENTO",
   "descricao": "Valetadeira / Trincheira",
-  "unidade": "h",
-  "preco_unitario": 100.8,
+  "unidade": "mes",
+  "preco_unitario": 20966.4,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

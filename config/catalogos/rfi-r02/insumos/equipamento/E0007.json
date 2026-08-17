@@ -2,8 +2,8 @@
   "codigo": "E0007",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão Basculante 14m³",
-  "unidade": "h",
-  "preco_unitario": 142.8,
+  "unidade": "mes",
+  "preco_unitario": 29702.4,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

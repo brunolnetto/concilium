@@ -2,8 +2,8 @@
   "codigo": "EQ-E0009",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão Basculante 6m³",
-  "unidade": "h",
-  "preco_unitario": 70.0,
+  "unidade": "mes",
+  "preco_unitario": 14560.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0009",

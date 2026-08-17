@@ -2,8 +2,8 @@
   "codigo": "E0018",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira Hidráulica 38t",
-  "unidade": "h",
-  "preco_unitario": 292.768,
+  "unidade": "mes",
+  "preco_unitario": 60895.744,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

@@ -2,8 +2,8 @@
   "codigo": "SV-OUV-EQ-PA-MANDIBULA",
   "tipo": "EQUIPAMENTO",
   "descricao": "Pá carregadeira com mandíbula",
-  "unidade": "h",
-  "preco_unitario": 300.0,
+  "unidade": "mes",
+  "preco_unitario": 62400.0,
   "fonte_preco": "negociado",
   "atributos_especificos": {
     "consumo_litros_hora": 16.0,

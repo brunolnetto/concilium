@@ -2,8 +2,8 @@
   "codigo": "EQ-ROLO-PEQUENO",
   "tipo": "EQUIPAMENTO",
   "descricao": "Rolo compactador pequeno",
-  "unidade": "h",
-  "preco_unitario": 45.0,
+  "unidade": "mes",
+  "preco_unitario": 9360.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0029",

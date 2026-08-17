@@ -2,8 +2,8 @@
   "codigo": "E0020",
   "tipo": "EQUIPAMENTO",
   "descricao": "Espargidor de Ligante Betuminoso",
-  "unidade": "h",
-  "preco_unitario": 98.0,
+  "unidade": "mes",
+  "preco_unitario": 20384.0,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

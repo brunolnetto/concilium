@@ -2,8 +2,8 @@
   "codigo": "EQ-E0015",
   "tipo": "EQUIPAMENTO",
   "descricao": "Distribuidor de Brita",
-  "unidade": "h",
-  "preco_unitario": 19.6,
+  "unidade": "mes",
+  "preco_unitario": 4076.8,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0015",

@@ -2,8 +2,8 @@
   "codigo": "EQ-E0011",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão Poliguindaste",
-  "unidade": "h",
-  "preco_unitario": 110.0,
+  "unidade": "mes",
+  "preco_unitario": 22880.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0011",

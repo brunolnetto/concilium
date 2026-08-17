@@ -2,8 +2,8 @@
   "codigo": "SV-OUV-EQ-MOTOSSERRA",
   "tipo": "EQUIPAMENTO",
   "descricao": "Motosserra a gasolina",
-  "unidade": "h",
-  "preco_unitario": 30.0,
+  "unidade": "mes",
+  "preco_unitario": 6240.0,
   "fonte_preco": "negociado",
   "atributos_especificos": {
     "consumo_litros_hora": 1.5,

@@ -2,8 +2,8 @@
   "codigo": "EQ-E0027",
   "tipo": "EQUIPAMENTO",
   "descricao": "Mini Escavadeira 2t",
-  "unidade": "h",
-  "preco_unitario": 54.88,
+  "unidade": "mes",
+  "preco_unitario": 11415.04,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0027",

@@ -2,8 +2,8 @@
   "codigo": "EQ-E0008",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão Basculante 16m³",
-  "unidade": "h",
-  "preco_unitario": 227.752,
+  "unidade": "mes",
+  "preco_unitario": 47372.416,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0008",

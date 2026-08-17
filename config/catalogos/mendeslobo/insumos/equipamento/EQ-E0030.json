@@ -2,8 +2,8 @@
   "codigo": "EQ-E0030",
   "tipo": "EQUIPAMENTO",
   "descricao": "Sapo compactador",
-  "unidade": "h",
-  "preco_unitario": 313.6,
+  "unidade": "mes",
+  "preco_unitario": 65228.8,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0030",

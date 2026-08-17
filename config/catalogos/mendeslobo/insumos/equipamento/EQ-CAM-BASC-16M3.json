@@ -2,8 +2,8 @@
   "codigo": "EQ-CAM-BASC-16M3",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão basculante 16 m³",
-  "unidade": "h",
-  "preco_unitario": 229.35,
+  "unidade": "mes",
+  "preco_unitario": 47704.8,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0003",

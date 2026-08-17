@@ -2,8 +2,8 @@
   "codigo": "EQ-E0029",
   "tipo": "EQUIPAMENTO",
   "descricao": "Motoniveladora 140HP",
-  "unidade": "h",
-  "preco_unitario": 246.176,
+  "unidade": "mes",
+  "preco_unitario": 51204.608,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0029",

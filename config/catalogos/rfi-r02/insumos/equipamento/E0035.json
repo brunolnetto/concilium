@@ -2,8 +2,8 @@
   "codigo": "E0035",
   "tipo": "EQUIPAMENTO",
   "descricao": "Rolo Compactador Pé-de-Carneiro 10t",
-  "unidade": "h",
-  "preco_unitario": 123.2,
+  "unidade": "mes",
+  "preco_unitario": 25625.6,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

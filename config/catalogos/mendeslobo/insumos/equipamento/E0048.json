@@ -2,8 +2,8 @@
   "codigo": "E0048",
   "tipo": "EQUIPAMENTO",
   "descricao": "Miniescavadeira hidráulica",
-  "unidade": "h",
-  "preco_unitario": 49.0,
+  "unidade": "mes",
+  "preco_unitario": 10192.0,
   "fonte_preco": "PLANILHA_AGIS_2026_05",
   "data_referencia_preco": "2026-05-01",
   "atributos_especificos": {

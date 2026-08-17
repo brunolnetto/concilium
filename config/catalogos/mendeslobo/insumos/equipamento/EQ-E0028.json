@@ -2,8 +2,8 @@
   "codigo": "EQ-E0028",
   "tipo": "EQUIPAMENTO",
   "descricao": "Motoniveladora 120HP",
-  "unidade": "h",
-  "preco_unitario": 208.32,
+  "unidade": "mes",
+  "preco_unitario": 43330.56,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0028",

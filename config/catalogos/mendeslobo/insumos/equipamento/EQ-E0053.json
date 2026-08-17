@@ -2,8 +2,8 @@
   "codigo": "EQ-E0053",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de esteiras 22,75T",
-  "unidade": "h",
-  "preco_unitario": 40.25,
+  "unidade": "mes",
+  "preco_unitario": 8372.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0053",

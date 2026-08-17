@@ -2,8 +2,8 @@
   "codigo": "EQ-E0023",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de Pneu 85HP",
-  "unidade": "h",
-  "preco_unitario": 67.2,
+  "unidade": "mes",
+  "preco_unitario": 13977.6,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0023",

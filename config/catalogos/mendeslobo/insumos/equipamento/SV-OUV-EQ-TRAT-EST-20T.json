@@ -2,8 +2,8 @@
   "codigo": "SV-OUV-EQ-TRAT-EST-20T",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de esteiras 20T",
-  "unidade": "h",
-  "preco_unitario": 245.0,
+  "unidade": "mes",
+  "preco_unitario": 50960.0,
   "fonte_preco": "negociado",
   "atributos_especificos": {
     "consumo_litros_hora": 26.0,

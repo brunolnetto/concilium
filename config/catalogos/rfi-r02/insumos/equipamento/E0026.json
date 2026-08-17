@@ -2,8 +2,8 @@
   "codigo": "E0026",
   "tipo": "EQUIPAMENTO",
   "descricao": "Retroescavadeira 75HP",
-  "unidade": "h",
-  "preco_unitario": 89.6,
+  "unidade": "mes",
+  "preco_unitario": 18636.8,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

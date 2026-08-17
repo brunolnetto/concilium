@@ -2,8 +2,8 @@
   "codigo": "E0003",
   "tipo": "EQUIPAMENTO",
   "descricao": "Bogie Vibratório Tampão",
-  "unidade": "h",
-  "preco_unitario": 26.4,
+  "unidade": "mes",
+  "preco_unitario": 5491.2,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

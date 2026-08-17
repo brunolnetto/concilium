@@ -2,8 +2,8 @@
   "codigo": "EQ-E0044",
   "tipo": "EQUIPAMENTO",
   "descricao": "Pá carregadeira com mandíbula",
-  "unidade": "h",
-  "preco_unitario": 134.4,
+  "unidade": "mes",
+  "preco_unitario": 27955.2,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0044",

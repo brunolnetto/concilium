@@ -2,8 +2,8 @@
   "codigo": "EQ-E0019",
   "tipo": "EQUIPAMENTO",
   "descricao": "Escavadeira Hidráulica 48t",
-  "unidade": "h",
-  "preco_unitario": 388.416,
+  "unidade": "mes",
+  "preco_unitario": 80790.528,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0019",

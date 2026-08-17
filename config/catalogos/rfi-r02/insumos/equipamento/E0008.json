@@ -2,8 +2,8 @@
   "codigo": "E0008",
   "tipo": "EQUIPAMENTO",
   "descricao": "Caminhão Basculante 16m³",
-  "unidade": "h",
-  "preco_unitario": 227.75199999999998,
+  "unidade": "mes",
+  "preco_unitario": 47372.416,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

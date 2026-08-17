@@ -2,8 +2,8 @@
   "codigo": "E0054",
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de esteiras 24T",
-  "unidade": "h",
-  "preco_unitario": 274.5,
+  "unidade": "mes",
+  "preco_unitario": 57096.0,
   "fonte_preco": "PLANILHA_AGIS_2026_05",
   "data_referencia_preco": "2026-05-01",
   "atributos_especificos": {

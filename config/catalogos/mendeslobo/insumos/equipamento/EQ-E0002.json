@@ -2,8 +2,8 @@
   "codigo": "EQ-E0002",
   "tipo": "EQUIPAMENTO",
   "descricao": "Betoneira 400L",
-  "unidade": "h",
-  "preco_unitario": 3.45,
+  "unidade": "mes",
+  "preco_unitario": 717.6,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0002",

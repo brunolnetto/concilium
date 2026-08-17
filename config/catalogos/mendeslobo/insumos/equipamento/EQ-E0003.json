@@ -2,8 +2,8 @@
   "codigo": "EQ-E0003",
   "tipo": "EQUIPAMENTO",
   "descricao": "Bogie Vibratório Tampão",
-  "unidade": "h",
-  "preco_unitario": 26.4,
+  "unidade": "mes",
+  "preco_unitario": 5491.2,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0003",

@@ -2,8 +2,8 @@
   "codigo": "E0030",
   "tipo": "EQUIPAMENTO",
   "descricao": "Motoniveladora 180HP",
-  "unidade": "h",
-  "preco_unitario": 313.6,
+  "unidade": "mes",
+  "preco_unitario": 65228.8,
   "fonte_preco": "planilha_rfi_r02",
   "atributos_especificos": {
     "tipo_locacao": "locação",

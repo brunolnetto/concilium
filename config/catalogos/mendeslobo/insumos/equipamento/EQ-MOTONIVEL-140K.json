@@ -2,8 +2,8 @@
   "codigo": "EQ-MOTONIVEL-140K",
   "tipo": "EQUIPAMENTO",
   "descricao": "Motoniveladora 140K",
-  "unidade": "h",
-  "preco_unitario": 254.64,
+  "unidade": "mes",
+  "preco_unitario": 52965.12,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0021",

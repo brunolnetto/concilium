@@ -2,8 +2,8 @@
   "codigo": "EQ-ROLO-LISO",
   "tipo": "EQUIPAMENTO",
   "descricao": "Rolo compactador liso",
-  "unidade": "h",
-  "preco_unitario": 90.0,
+  "unidade": "mes",
+  "preco_unitario": 18720.0,
   "fonte_preco": "catalogo_proprio",
   "atributos_especificos": {
     "codigo_planilha": "E0027",
