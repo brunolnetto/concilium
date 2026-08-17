@@ -177,6 +177,8 @@ if producao_invalid:
 
 **Axioma**: BDI (Benefícios, Despesas Indiretas, Lucros) é **sempre aplicado por categoria de custo**, nunca como taxa global.
 
+**Ressalva (auditoria cruzada com `FORMULARIO_RIGOROSO_DERIVACAO.md` §21.4):** este axioma é falso como enunciado para o INDIRETO. `_calc_venda_com_bdi` (`_venda_custo.py:69-87`) tem um fallback que aplica sim uma **taxa global/plana** (`BDI_INDIRETO ≈25,21%` sobre o custo indireto agregado inteiro) quando a soma dos sub-custos por categoria é zero — condição real de disparo, não hipotética (ver `Indireto` com campos `default=0.0`, sem `None`, em `_financeiro_resultado.py:83-106`). Além disso, `_apply_bdi_to_indiretos` (`_resolucao.py:231-284`) **sempre** usa a taxa plana para indireto, incondicionalmente, e alimenta o relatório Excel — nunca decompõe por sub-categoria. O axioma vale estritamente apenas para custo **direto** (MO/EQ/MAT/COMB sempre com taxa por categoria); para indireto, é a exceção, não a regra geral. Recomenda-se reformular o axioma como: "BDI é aplicado por categoria de custo sempre que os sub-custos estão disponíveis (sempre o caso no direto; no indireto, cai para taxa plana quando sub-custos somam zero ou via `_apply_bdi_to_indiretos`)."
+
 **Estrutura** (referência ADR-090):
 ```
 BDI_MATERIAL = 34.7%      (lucro + overhead + tributos em serviços/insumos)

@@ -418,7 +418,7 @@ python benchmarks/run_mata_densa_simples.py
 
 Ler nesta ordem:
 1. `docs/AXIOMAS_INVARIANTES_CONFORMIDADE.md` — axiomas e invariantes de negócio
-2. `docs/FORMULARIO_RIGOROSO_DERIVACAO.md` — derivação matemática completa (28 seções)
+2. `docs/product/5-specifications/FORMULARIO_RIGOROSO_DERIVACAO.md` — derivação matemática completa (30 seções, auditada contra código em 2026-08-17)
 3. `docs/MAPEAMENTO_TEORIA_CODIGO.md` — como cada símbolo mapeia para o código
 4. `docs/ALGEBRA_POOL_IMPLEMENTACAO.md` — teoria de conjuntos do pool de recursos
 
@@ -443,7 +443,7 @@ make github-secrets  # configura GitHub Secrets
 
 | Documento | Conteúdo | Status |
 |-----------|---------|--------|
-| `docs/FORMULARIO_RIGOROSO_DERIVACAO.md` | Derivação matemática: Schedule → Pool → BDI → Resultado | ✅ Completo (v5.2) |
+| `docs/product/5-specifications/FORMULARIO_RIGOROSO_DERIVACAO.md` | Derivação matemática: Schedule → Quantitativo Semanal → Pool/Material → BDI → Indireto Semanal → Margem (θ/λ/τ) → Resultado | ✅ Completo e auditado contra código (v5.7) |
 | `docs/MAPEAMENTO_TEORIA_CODIGO.md` | Símbolos teóricos ↔ variáveis de código | ✅ Completo |
 | `docs/AXIOMAS_INVARIANTES_CONFORMIDADE.md` | 11 axiomas + invariantes + matriz de conformidade | ✅ Completo |
 | `docs/MAPEAMENTO_FORMULARIO_SKILLS.md` | Estrutura de dados, fórmulas e rastreamento por skill | ✅ Completo |
