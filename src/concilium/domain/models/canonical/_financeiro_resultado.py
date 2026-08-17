@@ -201,6 +201,8 @@ class PontoEquilibrio(BaseModel):
     # schedule. None quando Γ não configurado, ou γ_i^o não resolvível (mesma condição de D1).
     horas_reais_min: float | None = None  # (custo_venda_total − Γ) / γ_i^o
     horas_reais_max: float | None = None  # custo_venda_total / γ_i^o
+    # Seção 28 do formulário: β̄_i(ε_i) = P_i^op/OC_i − 1 (BDI efetivo dado a composição instancial)
+    bdi_equivalente: float = 0.0
 
 
 class Venda(BaseModel):
@@ -215,6 +217,12 @@ class Venda(BaseModel):
     total_custo_plus: float = 0.0  # preco_venda pelo modelo custo+margem usando custo real da equipe
     total_custo_plus_catalogo: float = 0.0  # preco_venda pelo modelo custo+margem usando direto catálogo
     bdi_lucro_impostos: float = 0.0  # fator aplicado (ex: 0.1433 = lucro 9% + trib 5.33%)
+    # Seção 28: β̄_proj = P_dir / C_dir − 1 (média ponderada dos BDIs por fração de custo do projeto)
+    bdi_equivalente_proj: float = 0.0
+    # Seção 28: pool direto = β̄_dir = P_dir / C_dir − 1 (agrega todas as equipes diretas)
+    bdi_equivalente_direto: float = 0.0
+    # Seção 28: pool indireto = β̄_ind = P_ind / C_ind − 1 (bottom-up das sub-categorias de indiretos)
+    bdi_equivalente_indireto: float = 0.0
 
 
 class CustoTotal(BaseModel):
@@ -226,6 +234,10 @@ class CustoTotal(BaseModel):
     indireto_lab: float = 0
     indireto_qsms: float = 0
     indireto_mob: float = 0
+    # ADR-184 (continuação da ADR-151 D4): custo do déficit de estoque de consumível
+    # provisionado externamente (deficit × preço, quando precificado) — já incluído em
+    # `total`, exposto à parte para auditoria (mesmo padrão dos `indireto_*`).
+    deficit_estoque_externo: float = 0
     total: float
 
 

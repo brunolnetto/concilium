@@ -157,6 +157,20 @@ def has_estoque_negativo(niveis: dict[int, float]) -> bool:
     return any(v < 0 for v in niveis.values())
 
 
+def custo_deficit_provisionado(disp: DisponibilidadeConsumivel) -> float:
+    """Custo do déficit provisionado externamente (ADR-184: continuação da ADR-151 D4).
+
+    ``deficit_provisionado_externamente × preco_provisionamento_externo``. Retorna
+    ``0.0`` quando não há déficit ou quando o preço não foi declarado — mesmo
+    comportamento (custo zero) de antes desta ADR, sem travar nada; a ausência de
+    preço com déficit > 0 é reportada separadamente como aviso
+    (``VAL-ESTOQUE-PROVISIONAMENTO-02``, ver ``_skill_helpers/_validacao.py``).
+    """
+    if disp.preco_provisionamento_externo is None:
+        return 0.0
+    return disp.deficit_provisionado_externamente * disp.preco_provisionamento_externo
+
+
 def _find_delay_target(
     activities: Iterable[ScheduledActivity], resource: ReplenishableResource, t0: int
 ) -> ScheduledActivity | None:

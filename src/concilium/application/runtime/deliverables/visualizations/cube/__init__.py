@@ -14,6 +14,7 @@ from . import (
     bar_tempo_direto_categoria,
     bar_tempo_indireto_categoria,
     bar_tempo_natureza,
+    estoque_temporal,
     linha_recursos_tempo,
     pool_ciclo_vida,
     pool_custo_estado,
@@ -43,6 +44,8 @@ _FACE_BUILDERS: list[tuple[Callable[..., bytes | None], str, bool]] = [
     (pool_ciclo_vida.build, "pool_ciclo_vida.png", False),
     (pool_custo_estado.build, "pool_custo_estado.png", False),
     (pool_economia.build, "pool_economia.png", False),
+    # ── Cubo estoque consumível (ADR-128 F6 / ADR-184) ────────────────────
+    (estoque_temporal.build, "estoque_temporal.png", False),
 ]
 
 

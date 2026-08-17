@@ -34,6 +34,15 @@ class LogisticaConsumivelConfig(BaseModel):
     estoque_inicial: float = Field(default=0.0, ge=0)
     taxa_reabastecimento_max: float | None = Field(default=None, ge=0)
     lead_time_reabastecimento_dias: float | None = Field(default=None, ge=0)
+    # ADR-151 — estava ausente deste espelho Pydantic desde a introdução do campo no
+    # dataclass (`DisponibilidadeConsumivel`); `model_config = extra="ignore"` fazia
+    # este valor ser descartado silenciosamente sempre que um escopo era lido de volta
+    # via `Escopo.model_validate()` (o caminho de agendamento em si não é afetado —
+    # lê o JSON cru direto de `inputs`, sem passar por este modelo). Corrigido junto
+    # da ADR-184 por tocar exatamente este espelho.
+    deficit_provisionado_externamente: float = Field(default=0.0, ge=0)
+    # ADR-184: preço do déficit provisionado externamente — ver `DisponibilidadeConsumivel`.
+    preco_provisionamento_externo: float | None = Field(default=None, ge=0)
 
 
 class Escopo(BaseModel):

@@ -118,17 +118,36 @@ def _cat_accumulate_equipes_sem_particao(
         _cat_accumulate_equipe_heuristica(cat, eq, ct)
 
 
+def _resolve_custo_deficit_estoque_externo(canonical_in: CanonicalModel) -> float:
+    """ADR-184 (continuação da ADR-151 D4): soma o custo do déficit de estoque de
+    consumíveis provisionado externamente, já calculado por recurso em
+    ``ResumoEstoqueConsumivel.custo_deficit_externo`` (skill-04, ADR-128 F6). Zero
+    quando não há recurso consumível restrito ou nenhum déficit foi precificado.
+
+    ``getattr`` com fallback: testes/fakes leves (``SimpleNamespace``) de canonical
+    nem sempre declaram ``resumo_estoque_consumiveis`` — ausência é tratada como
+    lista vazia, não erro (mesmo princípio de outros acessos a campo opcional do
+    canonical neste módulo, ex. ``getattr(eq, "custo_inst_eq", 0.0)``).
+    """
+    resumos = getattr(canonical_in, "resumo_estoque_consumiveis", None) or []
+    return sum(getattr(r, "custo_deficit_externo", 0.0) or 0.0 for r in resumos)
+
+
 def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str, float]:
     """ADR-085 D4/D5 / ADR-089: custo instancial por sub-propriedade (base bottom-up para BDI).
 
-    Retorna ``{"mao_obra", "eq_aluguel", "eq_combustivel", "material"}`` em R$ (sem BDI).
-    "eq_aluguel" = aluguel + manutenção (BDI_servicos); "eq_combustivel" = diesel (BDI_diesel).
+    Retorna ``{"mao_obra", "eq_aluguel", "eq_combustivel", "material", "deficit_estoque_externo"}``
+    em R$ (sem BDI). "eq_aluguel" = aluguel + manutenção (BDI_servicos); "eq_combustivel" =
+    diesel (BDI_diesel); "deficit_estoque_externo" (ADR-184) = déficit de consumível
+    provisionado externamente (ADR-151), custeado à alíquota de BDI de material (é
+    material, mesmo que a compra não venha de nenhuma CPU produtora do catálogo).
     Compatibilidade com consumidores legados via chaves "equipamentos" e "diesel".
     """
     cat = {
         "mao_obra": 0.0,
         "eq_aluguel": 0.0,  # aluguel + manutencao → BDI_servicos
         "material": 0.0,  # consumivel + combustivel → BDI_material (ADR-090)
+        "deficit_estoque_externo": 0.0,  # ADR-184 — provisionamento externo, BDI_material
         # Aliases legados (retrocompat)
         "equipamentos": 0.0,  # = eq_aluguel
         "diesel": 0.0,  # = parcela de material.combustivel
@@ -146,6 +165,7 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
     part_by_item = _cat_find_part_by_item(canonical_in)
     contados = _cat_accumulate_particao(cat, part_by_item, nfrentes_por_item)
     _cat_accumulate_equipes_sem_particao(cat, canonical_in, contados)
+    cat["deficit_estoque_externo"] = _resolve_custo_deficit_estoque_externo(canonical_in)
 
     # Aliases legados (retrocompat)
     cat["equipamentos"] = cat["eq_aluguel"]

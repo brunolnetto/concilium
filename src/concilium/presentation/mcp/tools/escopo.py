@@ -106,7 +106,10 @@ def register(server: FastMCP) -> None:
           - logistica_consumiveis (ADR-128 F5, opcional): capacidade logística real por
             insumo_id para o cronograma automático considerar estoque de consumíveis
             (diesel/material) — ex.: {"MA-DIESEL-S10": {"capacidade_armazenamento": 15000,
-            "estoque_inicial": 5000, "taxa_reabastecimento_max": 3000}}.
+            "estoque_inicial": 5000, "taxa_reabastecimento_max": 3000}}. Aceita também
+            `deficit_provisionado_externamente` (ADR-151, quantidade estrutural a suprir
+            de fora) e `preco_provisionamento_externo` (ADR-184, preço dessa quantidade —
+            sem ele o déficit é custeado como zero e um aviso é emitido).
           - roster_mo_membro (ADR-173, opcional, só para acao="editar_roster_mo"):
             dict com `individuo_id` (obrigatório) + campos de `MembroEquipeReal`
             (`funcao_id`, `salario_base_mensal`, `data_admissao`, `data_desligamento`,

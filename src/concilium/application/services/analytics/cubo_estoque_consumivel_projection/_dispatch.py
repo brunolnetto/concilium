@@ -78,6 +78,7 @@ def _face_resumo_por_recurso(canonical_in: Any, **_: Any) -> tuple[list, list, l
             "overflow_total": r.overflow_total,
             "delay_total_semanas": r.delay_total_semanas,
             "n_atividades_atrasadas": r.n_atividades_atrasadas,
+            "custo_deficit_externo": r.custo_deficit_externo,
         }
         for r in resumos
     ]
@@ -88,10 +89,15 @@ def _face_resumo_por_recurso(canonical_in: Any, **_: Any) -> tuple[list, list, l
         {"id": "estoque_minimo", "label": "Estoque mínimo", "dtype": "float", "role": "value"},
         {"id": "overflow_total", "label": "Excedente descartado", "dtype": "float", "role": "value"},
         {"id": "delay_total_semanas", "label": "Semanas de atraso", "dtype": "int", "role": "value"},
+        # ADR-184: custo do déficit provisionado externamente (ADR-151), quando precificado.
+        {"id": "custo_deficit_externo", "label": "Custo déficit externo (R$)", "dtype": "float", "role": "value"},
     ]
     n_criticos = sum(1 for r in resumos if r.status_estoque == "CRITICO")
     n_avisos = sum(1 for r in resumos if r.status_estoque == "AVISO")
+    custo_deficit_total = round(sum(r.custo_deficit_externo for r in resumos), 2)
     narrativa = [f"{len(resumos)} recurso(s) consumível(is) restrito(s); {n_avisos} em AVISO, {n_criticos} em CRITICO."]
+    if custo_deficit_total > 0:
+        narrativa.append(f"Custo total de déficit provisionado externamente: R$ {custo_deficit_total:,.2f}.")
     return columns, rows, narrativa, {}
 
 

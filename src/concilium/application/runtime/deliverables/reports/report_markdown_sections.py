@@ -625,3 +625,65 @@ def render_pool_economia_origem(canonical: object | None) -> list[str]:
 
     lines += ["---", ""]
     return lines
+
+
+# ── Cubo de estoque consumível (ADR-128 F6 / ADR-184) ──────────────────────────────
+
+
+def _estoque_consumivel_resolve_projection(canonical: object) -> dict[str, Any] | None:
+    """Resolve a face resumo_por_recurso do cubo de estoque; ``None`` em caso de erro
+    (mesmo padrão de degradação graciosa de `_pool_economia_resolve_projections`)."""
+    try:
+        from concilium.application.services.analytics.cubo_estoque_consumivel_projection import (
+            resolve_cubo_estoque_consumivel_projection,
+        )
+
+        return resolve_cubo_estoque_consumivel_projection(canonical, face="resumo_por_recurso", top_n=300)
+    except Exception:
+        return None
+
+
+def _estoque_consumivel_row(row: dict[str, Any]) -> str:
+    resource_id = str(row.get("resource_id", "") or "-")
+    status = str(row.get("status_estoque", "") or "-")
+    estoque_medio = float(row.get("estoque_medio", 0.0) or 0.0)
+    estoque_minimo = float(row.get("estoque_minimo", 0.0) or 0.0)
+    delay = int(row.get("delay_total_semanas", 0) or 0)
+    custo_deficit = float(row.get("custo_deficit_externo", 0.0) or 0.0)
+    custo_str = _brl(custo_deficit) if custo_deficit > 0 else "-"
+    return f"| {resource_id} | {status} | {estoque_medio:,.2f} | {estoque_minimo:,.2f} | {delay} | {custo_str} |"
+
+
+def render_estoque_consumivel(canonical: object | None) -> list[str]:
+    """Resumo de saúde de estoque de recursos consumíveis (ADR-128 F6) — inclui o
+    custo de déficit provisionado externamente quando precificado (ADR-184).
+
+    Retorna `[]` sem cronograma/canonical, sem recurso consumível restrito, ou em
+    caso de erro na projeção — o relatório nunca falha por causa desta seção
+    (mesmo princípio de `render_pool_economia_origem`)."""
+    if canonical is None:
+        return []
+    proj = _estoque_consumivel_resolve_projection(canonical)
+    if proj is None:
+        return []
+    rows = proj.get("rows") or []
+    if not rows:
+        return []
+
+    custo_deficit_total = sum(float(r.get("custo_deficit_externo", 0.0) or 0.0) for r in rows)
+    lines: list[str] = [
+        "## Estoque de Recursos Consumíveis",
+        "",
+        "| Recurso | Status | Estoque médio | Estoque mínimo | Semanas de atraso | Custo déficit externo |",
+        "|---------|--------|--------------:|---------------:|-------------------:|----------------------:|",
+    ]
+    for row in rows:
+        lines.append(_estoque_consumivel_row(row))
+    lines.append("")
+    if custo_deficit_total > 0:
+        lines.append(
+            f"Custo total de déficit de estoque provisionado externamente: **{_brl(custo_deficit_total)}**."
+        )
+        lines.append("")
+    lines += ["---", ""]
+    return lines

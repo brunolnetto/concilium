@@ -698,3 +698,80 @@ class TestRenderPoolEconomiaOrigemNoNegRows:
         assert "---" in full_text
         assert "Sobrecusto" not in full_text
 
+
+# ---------------------------------------------------------------------------
+# render_estoque_consumivel (ADR-128 F6 / ADR-184)
+# ---------------------------------------------------------------------------
+
+
+class TestRenderEstoqueConsumivel:
+    def test_none_canonical_returns_empty(self):
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_estoque_consumivel,
+        )
+
+        assert render_estoque_consumivel(None) == []
+
+    def test_exception_returns_empty(self):
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_estoque_consumivel,
+        )
+
+        with patch(
+            "concilium.application.services.analytics.cubo_estoque_consumivel_projection."
+            "resolve_cubo_estoque_consumivel_projection",
+            side_effect=Exception("fail"),
+        ):
+            assert render_estoque_consumivel(MagicMock()) == []
+
+    def test_no_rows_returns_empty(self):
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_estoque_consumivel,
+        )
+
+        with patch(
+            "concilium.application.services.analytics.cubo_estoque_consumivel_projection."
+            "resolve_cubo_estoque_consumivel_projection",
+            return_value={"rows": []},
+        ):
+            assert render_estoque_consumivel(MagicMock()) == []
+
+    def test_renders_table_and_custo_deficit(self):
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_estoque_consumivel,
+        )
+
+        proj = {
+            "rows": [
+                {
+                    "resource_id": "MA-ROCHA",
+                    "status_estoque": "AVISO",
+                    "estoque_medio": 100.0,
+                    "estoque_minimo": 50.0,
+                    "delay_total_semanas": 2,
+                    "custo_deficit_externo": 20000.0,
+                },
+                {
+                    "resource_id": "MA-DIESEL-S10",
+                    "status_estoque": "OK",
+                    "estoque_medio": 500.0,
+                    "estoque_minimo": 400.0,
+                    "delay_total_semanas": 0,
+                    "custo_deficit_externo": 0.0,
+                },
+            ]
+        }
+        with patch(
+            "concilium.application.services.analytics.cubo_estoque_consumivel_projection."
+            "resolve_cubo_estoque_consumivel_projection",
+            return_value=proj,
+        ):
+            result = render_estoque_consumivel(MagicMock())
+
+        full_text = "\n".join(result)
+        assert "Estoque de Recursos Consumíveis" in full_text
+        assert "MA-ROCHA" in full_text
+        assert "MA-DIESEL-S10" in full_text
+        assert "R$ 20,000.00" in full_text
+        assert "Custo total de déficit" in full_text
+

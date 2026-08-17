@@ -23,6 +23,12 @@ class DisponibilidadeConsumivelCanonical(BaseModel):
     estoque_inicial: float = 0.0
     taxa_reabastecimento_max: float | None = None
     lead_time_reabastecimento_dias: float | None = None
+    # ADR-151/184: ausentes até esta ADR — sem eles, o builder do cubo (ADR-128 F6)
+    # reconstruía a projeção semanal a partir só do canônico SEM o déficit já
+    # aplicado no cronograma real, mostrando estoque negativo na face
+    # "estoque_temporal" para um recurso que na verdade foi reparado/provisionado.
+    deficit_provisionado_externamente: float = 0.0
+    preco_provisionamento_externo: float | None = None
 
 
 class RecursoConsumivelCanonical(BaseModel):
@@ -68,3 +74,6 @@ class ResumoEstoqueConsumivel(BaseModel):
     delay_total_semanas: int = 0
     n_atividades_atrasadas: int = 0
     status_estoque: Literal["OK", "AVISO", "CRITICO"] = "OK"
+    # ADR-184: custo do déficit provisionado externamente (deficit × preço), 0.0
+    # sem déficit ou sem preço declarado — ver `replenishable.custo_deficit_provisionado`.
+    custo_deficit_externo: float = 0.0

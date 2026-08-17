@@ -14,6 +14,7 @@ from ._balanco_pe import (  # ty: ignore[unresolved-import]
     _bpe_collect_pe_items,
     _bpe_process_equipe,
     _build_ponto_equilibrio,
+    enrich_pe_bdi_equivalente,
 )
 from ._bdi_resolucao import (  # ty: ignore[unresolved-import]
     _build_abc_analytics,
@@ -43,6 +44,7 @@ from ._categorial import (  # ty: ignore[unresolved-import]
     _cat_accumulate_equipes_sem_particao,
     _cat_accumulate_particao,
     _cat_find_part_by_item,
+    _resolve_custo_deficit_estoque_externo,
     _resolve_custo_equipe_agregado,
 )
 from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
@@ -107,6 +109,7 @@ __all__ = [
     "_get_bdi_value",
     "_resolve_bdi_full",
     "_resolve_bdi_rates",
+    "_resolve_custo_deficit_estoque_externo",
     "_resolve_custo_equipe_agregado",
     "_bpe_build_idle_por_item",
     "_bpe_build_lookup_maps",
@@ -132,6 +135,7 @@ __all__ = [
     "_build_diagnostico_pe",
     "_build_pe_for_equipe",
     "_build_ponto_equilibrio",
+    "enrich_pe_bdi_equivalente",
     "_build_resultado",
     "_bvc_apply_fallback",
     "_bvc_totais_planejamento",

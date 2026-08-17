@@ -47,10 +47,15 @@ def _calc_venda_com_bdi(
 
     # Direto: combina consumivel e combustivel em material (ambos BDI_material = 4%)
     custo_material_total = cat.get("material", 0.0)  # inclui consumivel + combustivel
+    # ADR-184: déficit de estoque provisionado externamente (ADR-151) é custo de
+    # material por natureza (uma compra), à mesma alíquota — sem categoria de BDI
+    # dedicada (ver ADR-184 D4).
+    custo_deficit_externo = cat.get("deficit_estoque_externo", 0.0)
     venda_direto_eq = (
         cat["mao_obra"] * (1 + _bdi("mao_obra"))
         + cat["eq_aluguel"] * (1 + _bdi("equipamentos"))
         + custo_material_total * (1 + _bdi("material"))
+        + custo_deficit_externo * (1 + _bdi("material"))
     )
 
     # Indireto: BDI por sub-categoria (ADR-090 D5)

@@ -39,6 +39,7 @@ _CAMPOS_DISPONIBILIDADE = (
     "taxa_reabastecimento_max",
     "lead_time_reabastecimento_dias",
     "deficit_provisionado_externamente",  # ADR-151
+    "preco_provisionamento_externo",  # ADR-184
 )
 
 

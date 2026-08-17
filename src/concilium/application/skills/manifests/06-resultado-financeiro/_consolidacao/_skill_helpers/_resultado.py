@@ -12,6 +12,7 @@ from concilium.domain.models.canonical import (
     Venda,
 )
 
+from ._categorial import _resolve_custo_deficit_estoque_externo  # ty: ignore[unresolved-import]
 from ._venda_custo import (  # ty: ignore[unresolved-import]
     _br_append_gap_catalogo_validacao,
     _br_build_venda_custo,
@@ -72,10 +73,15 @@ def _build_resultado(
     venda_plus = round(venda_direto_eq + venda_indireto, 2)  # preço operacional (base do resultado)
 
     # ── Pricing consolidado ───────────────────────────────────────────────────────
-    # custo_operacional_real: pool (produtivo + idle + mob/demob) + indiretos.
+    # custo_operacional_real: pool (produtivo + idle + mob/demob) + indiretos +
+    # déficit de estoque provisionado externamente (ADR-184, continuação da ADR-151
+    # D4) — custo direto de material, mas fora da agregação por equipe/pool, então
+    # somado à parte (não contamina custo_direto_equipe, usado no diagnóstico de
+    # gap catálogo×operacional).
     # venda_plus: BDI aplicado sobre custo operacional real por componente.
     # Margem sempre sobre venda_plus — venda_catalogo_plus é referência de mercado (bridge/N1).
-    custo_operacional_real = round(custo_direto + custo_indireto_total, 2)
+    custo_deficit_estoque_externo = round(_resolve_custo_deficit_estoque_externo(canonical_in), 2)
+    custo_operacional_real = round(custo_direto + custo_indireto_total + custo_deficit_estoque_externo, 2)
     resultado_fin = round(venda_plus - custo_operacional_real, 2)
     margem = resultado_fin / venda_plus if venda_plus > 0 else 0.0
 
@@ -106,6 +112,9 @@ def _build_resultado(
         validacoes,
     )
     indir_kwargs = {f"indireto_{k.lower()}": v for k, v in custos_indiretos.items() if k != "MOB"}
+    bdi_equivalente_proj = round(venda_plus / custo_operacional_real - 1, 6) if custo_operacional_real > 0 else 0.0
+    bdi_equivalente_direto = round(venda_direto_eq / custo_direto - 1, 6) if custo_direto > 0 else 0.0
+    bdi_equivalente_indireto = round(venda_indireto / custo_indireto_total - 1, 6) if custo_indireto_total > 0 else 0.0
     res = Resultado(
         venda=Venda(
             total_sem_bdi=venda_sem_bdi,
@@ -117,6 +126,9 @@ def _build_resultado(
             # Lido por projection.py para o gate do confronto — benchmark estável.
             total_custo_plus_catalogo=venda_catalogo_plus,
             bdi_lucro_impostos=bdi_lucro,
+            bdi_equivalente_proj=bdi_equivalente_proj,
+            bdi_equivalente_direto=bdi_equivalente_direto,
+            bdi_equivalente_indireto=bdi_equivalente_indireto,
         ),
         custo=CustoTotal(
             direto_equipes=custo_direto,
@@ -124,6 +136,7 @@ def _build_resultado(
             total=custo_operacional_real,
             **indir_kwargs,
             indireto_mob=custos_indiretos.get("MOB", 0),
+            deficit_estoque_externo=custo_deficit_estoque_externo,
         ),
         resultado_financeiro=resultado_fin,
         margem_pct=margem,

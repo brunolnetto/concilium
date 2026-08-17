@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from concilium.application.scheduling.models import ReplenishableResource, ScheduledActivity
 from concilium.application.scheduling.replenishable import (
+    custo_deficit_provisionado,
     project_estoque_semanal,
     project_overflow_semanal,
 )
@@ -71,6 +72,7 @@ def _build_resumo_estoque(
         delay_total_semanas=delay_total_semanas,
         n_atividades_atrasadas=n_atividades_atrasadas,
         status_estoque=status,  # type: ignore[arg-type]
+        custo_deficit_externo=round(custo_deficit_provisionado(resource.disponibilidade), 2),
     )
 
 
@@ -104,6 +106,8 @@ def build_estoque_consumivel_canonical(
                     estoque_inicial=resource.disponibilidade.estoque_inicial,
                     taxa_reabastecimento_max=resource.disponibilidade.taxa_reabastecimento_max,
                     lead_time_reabastecimento_dias=resource.disponibilidade.lead_time_reabastecimento_dias,
+                    deficit_provisionado_externamente=resource.disponibilidade.deficit_provisionado_externamente,
+                    preco_provisionamento_externo=resource.disponibilidade.preco_provisionamento_externo,
                 ),
                 consumo_por_semana=dict(resource.consumo_por_semana),
                 producao_por_semana=dict(resource.producao_por_semana),

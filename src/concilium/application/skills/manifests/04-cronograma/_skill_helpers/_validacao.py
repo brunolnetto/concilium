@@ -585,6 +585,22 @@ def _build_replenishable_resources_if_any(
                     ),
                 )
             )
+            # ADR-184 (continuação da ADR-151 D4): déficit sem preço declarado é
+            # custeado como zero (transparente, não trava o cronograma) — torna
+            # visível que o resultado financeiro está subestimando essa compra.
+            if resource.disponibilidade.preco_provisionamento_externo is None:
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-ESTOQUE-PROVISIONAMENTO-02",
+                        status="AVISO",
+                        mensagem=(
+                            f"{resource.resource_id}: déficit provisionado externamente "
+                            f"({deficit:,.2f}) sem preco_provisionamento_externo declarado — "
+                            "custeado como R$ 0,00 no resultado financeiro. Informe o preço em "
+                            "logistica_consumiveis para refletir o custo real da compra."
+                        ),
+                    )
+                )
     return resources or None
 
 

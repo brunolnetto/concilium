@@ -52,6 +52,15 @@ class DisponibilidadeConsumivel:
     # externa) para a obra ser fisicamente executável. Injetado just-in-time na
     # projeção de estoque (não em t=0/estoque_inicial) — ver `replenishable._project`.
     deficit_provisionado_externamente: float = 0.0
+    # ADR-184: preço (R$/unidade) do déficit provisionado externamente — a ADR-151 D4
+    # deixou o custeio dessa quantidade explicitamente fora de escopo (o material
+    # GERACAO_INTERNA tem preco_unitario=0.0 por convenção, ADR-139 D1, mas a parcela
+    # provisionada de fora não tem CPU produtora cobrindo seu custo). Campo de
+    # projeto (mesma decisão de D2 para deficit_provisionado_externamente), não de
+    # catálogo — preço de uma compra emergencial é decisão de mercado/momento, não
+    # fato do insumo mestre. `None` (default) preserva custo zero — mesmo
+    # comportamento de antes desta ADR (regressão zero).
+    preco_provisionamento_externo: float | None = None
 
     def __post_init__(self) -> None:
         self._validar_nao_negativos()
@@ -63,6 +72,7 @@ class DisponibilidadeConsumivel:
             ("taxa_reabastecimento_max", self.taxa_reabastecimento_max),
             ("lead_time_reabastecimento_dias", self.lead_time_reabastecimento_dias),
             ("deficit_provisionado_externamente", self.deficit_provisionado_externamente),
+            ("preco_provisionamento_externo", self.preco_provisionamento_externo),
         ):
             if valor is not None and valor < 0:
                 raise ValueError(f"{nome} must be >= 0, got {valor}")

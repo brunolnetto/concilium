@@ -64,6 +64,13 @@ def _to_replenishable_resource(rec: Any) -> ReplenishableResource:
             estoque_inicial=disp.estoque_inicial,
             taxa_reabastecimento_max=disp.taxa_reabastecimento_max,
             lead_time_reabastecimento_dias=disp.lead_time_reabastecimento_dias,
+            # ADR-184: sem isto, a projeção reconstruída aqui (para as faces
+            # "estoque_temporal"/"fluxo_componente") mostraria estoque negativo para
+            # um recurso que o cronograma real já reparou via provisionamento
+            # externo (ADR-151) — déficit some do canônico, projeção diverge do
+            # cronograma de verdade.
+            deficit_provisionado_externamente=disp.deficit_provisionado_externamente,
+            preco_provisionamento_externo=disp.preco_provisionamento_externo,
         ),
         consumo_por_semana=dict(rec.consumo_por_semana),
         producao_por_semana=dict(rec.producao_por_semana),

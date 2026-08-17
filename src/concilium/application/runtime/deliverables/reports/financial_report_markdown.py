@@ -5,6 +5,7 @@ from __future__ import annotations
 from .report_calibration_sections import render_equilibrium_section, render_insights_section
 from .report_markdown_sections import (
     render_compressao_cronograma,
+    render_estoque_consumivel,
     render_executive_summary,
     render_header,
     render_oportunidades,
@@ -34,6 +35,7 @@ def render_financial_report_markdown(relatorio: dict, canonical: object | None =
     lines += render_planejamento_table(planejamento)
     lines += render_equilibrium_section(ponto_equilibrio, resultado)
     lines += render_pool_economia_origem(canonical)
+    lines += render_estoque_consumivel(canonical)
     lines += render_oportunidades(oportunidades)
     lines += render_compressao_cronograma(compressao)
     lines += render_insights_section(insights)
