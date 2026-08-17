@@ -72,7 +72,9 @@ def _build_referencia_items(canonical) -> list[tuple[str, float, str, bool]]:
         (
             "Margem Bruta",
             _ref_sv(res, "margem_pct"),
-            "(preco_venda_com_bdi - custo_total) / preco_venda_com_bdi",
+            # ADR-183: base operacional (total_custo_plus), não catálogo (total_com_bdi) —
+            # nota corrigida para bater com a fórmula real em _resultado.py.
+            "(preco_venda_operacional - custo_total) / preco_venda_operacional",
             True,
         ),
     ]

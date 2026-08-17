@@ -121,30 +121,6 @@ def _build_monthly_indireto(canonical, data_inicio: date) -> dict[str, float]:
     return dict(monthly)
 
 
-def _bdi_decomp(resultado) -> dict[str, float]:
-    """Extrai componentes de BDI: overhead, lucro, tributos."""
-    tabela = getattr(canonical_g, "tabela_bdi_efetiva", None) if False else None  # noqa (not used)
-    venda = getattr(resultado, "venda", None) if resultado else None
-    custo = getattr(resultado, "custo", None) if resultado else None
-    if not venda or not custo:
-        return {"Overhead BDI": 0.0, "Lucro (L)": 0.0, "Tributos": 0.0}
-
-    preco = float(getattr(venda, "total_com_bdi", 0.0) or 0.0)
-    custo_total = float(getattr(custo, "total", 0.0) or 0.0)
-    bdi_abs = max(0.0, preco - custo_total)
-
-    # Proporções típicas dentro do BDI (AC+DF+R = overhead, L = lucro, T = tributos)
-    # Usar as taxas do perfil se disponíveis; caso contrário, proporção padrão TCU
-    bdi_lucro = float(getattr(getattr(venda, "bdi_lucro_impostos", None) or 0.0, "__float__", lambda: 0.0)())  # noqa
-    # bdi_lucro_impostos é a TAXA total; recalcular a partir dos valores absolutos
-    # Proporção padrão: overhead ~35%, lucro ~30%, tributos ~35%
-    return {
-        "Overhead BDI": bdi_abs * 0.35,
-        "Lucro (L)": bdi_abs * 0.30,
-        "Tributos": bdi_abs * 0.35,
-    }
-
-
 def _fetch_scurve_nat_rows(canonical, cubo_analitico) -> list | None:
     """Busca as rows da face tempo_natureza para o S-curve."""
     nat_payload = build_payload("tempo_natureza", "mes", 220, canonical, cubo_analitico)

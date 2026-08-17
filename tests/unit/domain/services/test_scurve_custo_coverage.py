@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from concilium.application.runtime.deliverables.visualizations.cube.scurve_custo import (
-    _bdi_decomp,
     _build_monthly_direto,
     _build_monthly_indireto,
     _iso_week_to_ym,
@@ -187,56 +186,12 @@ class TestBuildMonthlyIndireto:
 
 
 # ---------------------------------------------------------------------------
-# _bdi_decomp
+# _bdi_decomp removida (ADR-183 adendo): código morto, nunca chamada por build()
+# — verificado que o gráfico real (scurve_custo.png) deriva overhead/lucro/tributos
+# do cubo analítico (_build_bdi_multipliers_from_cubo), sem misturar bases
+# catálogo/operacional. A função tinha o mesmo bug de bdi_lucro_impostos já
+# corrigido em projection.py, mas nunca chegava a afetar o entregável.
 # ---------------------------------------------------------------------------
-
-
-class TestBdiDecomp:
-    def test_resultado_none_all_zeros(self):
-        result = _bdi_decomp(None)
-        assert result == {"Overhead BDI": 0.0, "Lucro (L)": 0.0, "Tributos": 0.0}
-
-    def test_venda_none_all_zeros(self):
-        resultado = SimpleNamespace(venda=None, custo=SimpleNamespace(total=1000.0))
-        result = _bdi_decomp(resultado)
-        assert result == {"Overhead BDI": 0.0, "Lucro (L)": 0.0, "Tributos": 0.0}
-
-    def test_custo_none_all_zeros(self):
-        resultado = SimpleNamespace(venda=SimpleNamespace(total_com_bdi=1200.0), custo=None)
-        result = _bdi_decomp(resultado)
-        assert result == {"Overhead BDI": 0.0, "Lucro (L)": 0.0, "Tributos": 0.0}
-
-    def test_valid_proportional_decomp(self):
-        venda = SimpleNamespace(total_com_bdi=1200.0, bdi_lucro_impostos=None)
-        custo = SimpleNamespace(total=1000.0)
-        resultado = SimpleNamespace(venda=venda, custo=custo)
-        result = _bdi_decomp(resultado)
-        bdi_abs = 200.0
-        assert result["Overhead BDI"] == pytest.approx(bdi_abs * 0.35)
-        assert result["Lucro (L)"] == pytest.approx(bdi_abs * 0.30)
-        assert result["Tributos"] == pytest.approx(bdi_abs * 0.35)
-
-    def test_sum_equals_bdi_abs(self):
-        venda = SimpleNamespace(total_com_bdi=1500.0, bdi_lucro_impostos=None)
-        custo = SimpleNamespace(total=1000.0)
-        resultado = SimpleNamespace(venda=venda, custo=custo)
-        result = _bdi_decomp(resultado)
-        assert sum(result.values()) == pytest.approx(500.0)
-
-    def test_preco_less_than_custo_zero_bdi(self):
-        venda = SimpleNamespace(total_com_bdi=800.0, bdi_lucro_impostos=None)
-        custo = SimpleNamespace(total=1000.0)
-        resultado = SimpleNamespace(venda=venda, custo=custo)
-        result = _bdi_decomp(resultado)
-        # bdi_abs = max(0, 800 - 1000) = 0
-        assert all(v == pytest.approx(0.0) for v in result.values())
-
-    def test_preco_equals_custo(self):
-        venda = SimpleNamespace(total_com_bdi=1000.0, bdi_lucro_impostos=None)
-        custo = SimpleNamespace(total=1000.0)
-        resultado = SimpleNamespace(venda=venda, custo=custo)
-        result = _bdi_decomp(resultado)
-        assert sum(result.values()) == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

@@ -66,6 +66,28 @@ def _canonical_com_resultado():
     )
 
 
+def _canonical_com_resultado_operacional_distinto():
+    """ADR-183: total_com_bdi (catálogo) e total_custo_plus (operacional) DIFERENTES —
+    trava que 'Resultado bruto'/'Margem bruta' na aba RESULTADO usam a base operacional,
+    não o valor de catálogo (bug histórico corrigido)."""
+    return CanonicalModel(
+        meta=_make_meta(),
+        projeto=_make_proj(),
+        resultado=Resultado(
+            venda=Venda(
+                total_sem_bdi=800_000.0,
+                total_com_bdi=1_000_000.0,  # catálogo — NÃO deve alimentar a margem
+                total_custo_plus=900_000.0,  # operacional — deve alimentar a margem
+            ),
+            custo=CustoTotal(direto_equipes=500_000.0, total=800_000.0),
+            resultado_financeiro=100_000.0,  # 900_000 - 800_000
+            margem_pct=100_000.0 / 900_000.0,
+            status_margem="VERDE",
+            validacoes=[ValidacaoItem(codigo="V1", status="OK")],
+        ),
+    )
+
+
 # ── Importação canônica ───────────────────────────────────────────────────────
 
 
@@ -152,6 +174,49 @@ class TestExcelRendererToBytes:
         wb = load_workbook(BytesIO(_xlsx_bytes))
         expected = {"DIRETOS.DET", "PLANEJAMENTO", "RESULTADO"}  # actual sheet names
         assert expected.issubset(set(wb.sheetnames))
+
+
+# ── ADR-183: margem bruta usa base operacional, não catálogo ──────────────────
+
+
+class TestResultadoMlBaseOperacional:
+    """Trava a correção: 'Resultado bruto'/'Margem bruta' na aba RESULTADO devem usar
+    Venda.total_custo_plus (operacional), não Venda.total_com_bdi (catálogo)."""
+
+    pytestmark = [pytest.mark.slow]
+
+    @pytest.fixture(scope="class")
+    def _sheet(self):
+        from openpyxl import load_workbook
+
+        xlsx_bytes = ExcelRenderer(_canonical_com_resultado_operacional_distinto()).to_bytes()
+        wb = load_workbook(BytesIO(xlsx_bytes))
+        return wb["RESULTADO"]
+
+    def _find_row(self, ws, label: str) -> int:
+        for row in range(1, ws.max_row + 1):
+            if ws.cell(row=row, column=1).value == label:
+                return row
+        raise AssertionError(f"Linha '{label}' não encontrada na aba RESULTADO")
+
+    def test_linha_venda_operacional_existe_com_valor_correto(self, _sheet):
+        row = self._find_row(_sheet, "Preço de venda operacional (custo instancial × BDI)")
+        assert _sheet.cell(row=row, column=2).value == 900_000.0
+
+    def test_resultado_bruto_referencia_venda_operacional_nao_catalogo(self, _sheet):
+        row_venda_op = self._find_row(_sheet, "Preço de venda operacional (custo instancial × BDI)")
+        row_venda_catalogo = self._find_row(_sheet, "Preço de venda c/ BDI")
+        row_resultado = self._find_row(_sheet, "Resultado bruto (R$)")
+        formula = _sheet.cell(row=row_resultado, column=2).value
+        assert f"B{row_venda_op}" in formula
+        assert f"B{row_venda_catalogo}" not in formula
+
+    def test_margem_bruta_referencia_venda_operacional_e_formata_como_percentual(self, _sheet):
+        row_venda_op = self._find_row(_sheet, "Preço de venda operacional (custo instancial × BDI)")
+        row_margem = self._find_row(_sheet, "Margem bruta (%)")
+        cell = _sheet.cell(row=row_margem, column=2)
+        assert f"B{row_venda_op}" in cell.value
+        assert cell.number_format == '0.00"%"'  # não "R$ #,##0.00" — bug de formatação corrigido junto
 
 
 # ── resultado=None (degradação graciosa) ──────────────────────────────────────

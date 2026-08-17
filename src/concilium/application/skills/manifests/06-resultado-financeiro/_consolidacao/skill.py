@@ -29,6 +29,7 @@ from ._skill_helpers import (  # ty: ignore[unresolved-import]
     _build_memorial_bdi,
     _build_ponto_equilibrio,
     _build_resultado,
+    enrich_pe_bdi_equivalente,
 )
 
 # Re-export abaixo é consumido apenas por testes de cobertura que acessam a
@@ -67,6 +68,7 @@ def run_consolidacao_financeira(
     ) = _build_resultado(canonical_in, inputs, validacoes, perfil)
 
     ponto_equilibrio_items = _build_ponto_equilibrio(canonical_in, validacoes, perfil)
+    enrich_pe_bdi_equivalente(ponto_equilibrio_items, canonical_in.equipes_diretas, bdi_rates)
     recon = ResultadoReconciliado(
         itens_aquisicao=[],
         delta_custo_total=0.0,

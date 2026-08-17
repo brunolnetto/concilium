@@ -52,10 +52,14 @@ Consumidores fora do relatório de benchmark usam `Venda.total_com_bdi` **corret
 
 ## Achados relacionados — mesma classe de bug, NÃO corrigidos nesta sessão
 
-Mesma mistura de bases (catálogo × operacional) encontrada de passagem em dois lugares independentes, fora do escopo desta ADR — ficam para decisão/sessão futura:
+Mesma mistura de bases (catálogo × operacional) encontrada de passagem em dois lugares independentes — **corrigidos em sessão de acompanhamento (mesmo dia)**:
 
-1. **`infrastructure/adapters/excel/sheets/resultado/_resultado_ml.py`** — fórmula de "Margem bruta (%)" mistura receita de catálogo com custo operacional, divergindo do `res.margem_pct` real do modelo canônico.
-2. **`runtime/deliverables/visualizations/cube/scurve_custo.py::_bdi_decomp`** — decompõe BDI em Overhead/Lucro/Tributos como `preço(catálogo) − custo(operacional)`, mesma mistura de bases do antigo `bdi_lucro_impostos`.
+1. **`infrastructure/adapters/excel/sheets/resultado/_resultado_ml.py`** — "Resultado bruto (R$)"/"Margem bruta (%)" (aba RESULTADO) misturavam `Venda.total_com_bdi` (catálogo, receita) com `res.custo.total` (operacional). Investigação confirmou que `row_venda` (catálogo) é usado corretamente por outros consumidores da mesma aba (capital de giro, alavanca "Preço de venda total") — não podia ser trocado no lugar. Fix: nova linha dedicada "Preço de venda operacional (custo instancial × BDI)" (`res.venda.total_custo_plus`), e as fórmulas de resultado/margem passam a referenciar essa linha em vez da de catálogo. Achados extras no mesmo arquivo, corrigidos juntos:
+   - Bug de formatação independente: a célula "Margem bruta (%)" não tinha `is_money=False`, então recebia formato de moeda (`R$ #,##0.00`) em vez de percentual — e o helper `linha()` também não tratava `pct=True` combinado com valor de fórmula (só `int`/`float` literal), then corrigido para aceitar fórmula também.
+   - "Markup efetivo" (bloco ALAVANCAS DE REAJUSTE) usava `res.venda.bdi_lucro_impostos` (mesma mistura) — trocado para `bdi_equivalente_proj`.
+   - `_referencia.py`: nota explicativa da métrica "Margem Bruta" descrevia a fórmula errada (com `total_com_bdi`) — corrigida para bater com a fórmula real (`total_custo_plus`).
+   - Testes de regressão novos em `test_excel_renderer_coverage.py` (`TestResultadoMlBaseOperacional`) travam a correção.
+2. **`runtime/deliverables/visualizations/cube/scurve_custo.py::_bdi_decomp`** — confirmado **código morto** (nunca chamada por `build()`; o gráfico real deriva overhead/lucro/tributos do cubo analítico, base já consistentemente operacional, sem misturar nada). Removida inteira (~20 linhas, incluía também um resíduo de código morto anterior — `canonical_g` inexistente atrás de `if False`, e proporções hardcoded 35/30/35% que não usavam nenhuma taxa real de BDI). Testes correspondentes (`TestBdiDecomp`) removidos junto em `test_scurve_custo_coverage.py`.
 
 ## ADR-110 — nota de errata
 
@@ -91,6 +95,10 @@ A seção P7/F7 da ADR-110 documenta `total_com_bdi` como "(operacional)" — is
 - [x] Testes atualizados (`test_benchmark_report_projection.py`, `test_viz_cube.py`) + teste de regressão novo
 - [x] Suíte de benchmarks (1635 testes) + integração (golden/pipeline/multi-escopo, 58 testes) verde
 - [x] Excel/cash-flow/scurve confirmados intocados e verdes (consumidores catálogo-based corretos)
+- [x] `_resultado_ml.py`: "Resultado bruto"/"Margem bruta" corrigidos para base operacional; bug de formatação (moeda em vez de percentual) e "Markup efetivo" (bdi_lucro_impostos→bdi_equivalente_proj) corrigidos junto
+- [x] `_referencia.py`: nota da métrica "Margem Bruta" corrigida
+- [x] `scurve_custo.py::_bdi_decomp` removida (código morto confirmado, gráfico real não afetado)
+- [x] Testes novos (`TestResultadoMlBaseOperacional`) + testes mortos removidos (`TestBdiDecomp`); suíte completa (2691 testes em runtime/domain/infrastructure) sem regressão nova
 
 ---
 

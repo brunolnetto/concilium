@@ -182,10 +182,10 @@
     }
   ],
   "resultado": {
-    "$nota": "Valores calibrados via pipeline OLAP em 2026-07-29 (golden update: indiretos ADM/TOP/QSMS/MOB/LAB bottom-up + catálogo samples enriquecido, ADR-165 a ADR-171). Atualizar com commit 'golden(update): razão' quando uma mudança arquitetural alterar os números.",
+    "$nota": "Parcialmente recalibrado em 2026-08-14: total_com_bdi agora é preço catálogo PU×Q×BDI (ADR-110 F7), não preço operacional. Atualizar com commit \"golden(update): razão\" quando mudança arquitetural alterar os números.",
     "venda": {
       "total_sem_bdi": 456781.08,
-      "total_com_bdi": 903234.59,
+      "total_com_bdi": 70211103.04,
       "total_custo_plus": 921600.87
     },
     "custo": {
@@ -193,7 +193,7 @@
       "total": 780810.75
     },
     "resultado_financeiro": 140790.12,
-    "margem_pct": 0.1528,
+    "margem_pct": 0.1537,
     "status_margem": "AMARELO",
     "makespan_weeks": 8,
     "$calibrado": true

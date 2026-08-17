@@ -155,6 +155,34 @@ def _bpe_collect_pe_items(
     return pe_items
 
 
+def _bdi_equiv_equipe(equipe: Any, bdi_rates: dict) -> float:
+    """β̄_i = P_i^op/OC_i − 1 a partir dos custos instanciais (Seção 28 do formulário)."""
+    mo = float(getattr(equipe, "custo_inst_mo", None) or 0.0)
+    eq_c = float(getattr(equipe, "custo_inst_eq", None) or 0.0)
+    comb = float(getattr(equipe, "custo_inst_comb", None) or 0.0)
+    mat = float(getattr(equipe, "custo_inst_mat", None) or 0.0)
+    cost = mo + eq_c + comb + mat
+    if cost <= 0:
+        return 0.0
+    price = (
+        mo * (1 + float(bdi_rates.get("mao_obra", 0.0)))
+        + eq_c * (1 + float(bdi_rates.get("equipamentos", 0.0)))
+        + (comb + mat) * (1 + float(bdi_rates.get("material", 0.0)))
+    )
+    return round(price / cost - 1, 6)
+
+
+def enrich_pe_bdi_equivalente(
+    pe_items: list[PontoEquilibrio], equipes_diretas: list, bdi_rates: dict
+) -> None:
+    """Enriquece cada PontoEquilibrio com bdi_equivalente instancial (in-place)."""
+    eq_by_item = {eq.item_id: eq for eq in equipes_diretas if eq.item_id}
+    for pe in pe_items:
+        eq = eq_by_item.get(pe.item_id)
+        if eq is not None:
+            pe.bdi_equivalente = _bdi_equiv_equipe(eq, bdi_rates)
+
+
 def _build_ponto_equilibrio(
     canonical_in: CanonicalModel, validacoes: list, perfil: dict | None = None
 ) -> list[PontoEquilibrio]:

@@ -158,7 +158,7 @@ def render_resultado_ml(
         if is_money and (isinstance(valor, (int, float)) or is_formula):
             cell.number_format = "R$ #,##0.00"
             cell.alignment = _align("right")
-        elif pct and isinstance(valor, (int, float)):
+        elif pct and (isinstance(valor, (int, float)) or is_formula):
             cell.number_format = '0.00"%"'
             cell.alignment = _align("right")
         else:
@@ -200,7 +200,6 @@ def render_resultado_ml(
     linha(
         "Preço de venda s/ BDI", _xl_resultado_ref("PLANEJAMENTO", 13, planejamento_total_row, res.venda.total_sem_bdi)
     )
-    row_venda = row
     linha("Preço de venda c/ BDI", res.venda.total_com_bdi, destaque=True)
     row += 1
 
@@ -223,18 +222,26 @@ def render_resultado_ml(
     row += 1
 
     # Resultado
+    # ADR-183 (achado pendente): "Resultado bruto"/"Margem bruta" precisam da venda
+    # OPERACIONAL (custo instancial × BDI, total_custo_plus) — não da venda de catálogo
+    # (total_com_bdi, row_venda acima), que é a base certa só para o bloco "RECEITA
+    # CONTRATUAL" e para os consumidores de capital de giro/alavanca mais abaixo.
+    # Linha dedicada evita misturar bases sem alterar o que row_venda já alimenta.
     bloco("RESULTADO")
+    row_venda_operacional = row
+    linha("Preço de venda operacional (custo instancial × BDI)", res.venda.total_custo_plus)
     row_resultado_bruto = row
     linha(
         "Resultado bruto (R$)",
-        f"=B{row_venda}-B{row_custo_total}",
+        f"=B{row_venda_operacional}-B{row_custo_total}",
         destaque=True,
         color_override=_C["verde"] if res.resultado_financeiro >= 0 else _C["vermelho"],
     )
     linha(
         "Margem bruta (%)",
-        f"=IF(B{row_venda}>0, B{row_resultado_bruto}/B{row_venda}, 0)",
+        f"=IF(B{row_venda_operacional}>0, B{row_resultado_bruto}/B{row_venda_operacional}, 0)",
         destaque=True,
+        is_money=False,
         pct=True,
         color_override=s_color,
     )
@@ -271,7 +278,9 @@ def render_resultado_ml(
     linha_alavanca("Base catálogo s/BDI", cd, "Knob de partida para precificação", is_money=True)
     linha_alavanca(
         "Markup efetivo",
-        res.venda.bdi_lucro_impostos,
+        # ADR-183: bdi_equivalente_proj (base operacional consistente), não
+        # bdi_lucro_impostos (mistura venda de catálogo com custo operacional).
+        res.venda.bdi_equivalente_proj,
         "Resultado consolidado, não a fórmula de composição",
         pct=True,
         is_money=False,
