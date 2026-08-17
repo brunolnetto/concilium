@@ -4,6 +4,22 @@
 
 **Abordagem:** Partir do modelo de caixa (cash model), derivar algebricamente cada passo, identificar inconsistências, responder questões abertas.
 
+## Mapa de Navegação (30 seções)
+
+| Se você procura... | Vá para |
+|---|---|
+| Definições base (Q, ρ, ε, custo de pool/material) | §1 |
+| Cálculo de horas nominais/reais, permanência, custo operacional | §2–4 |
+| Custo de catálogo (PU) e razão $R_i$ (real vs catálogo) | §5–12 |
+| Múltiplas atividades, DAG, economia de pool | §13–14 |
+| BDI — estrutura, perpetuação, resolução de precedência | §15, §17–19, §20, §23 |
+| Partição de custo direto/indireto por categoria (bottom-up) | §21 |
+| **Quantitativo e custo semanal (direto)** — $q_{ij}$, pool vs material | **§26** |
+| **Custo semanal do indireto** — $m_l(j)$, drivers permanência/one\_time | **§29** |
+| BDI equivalente ($\bar\beta$) como função de categoria/$\varepsilon$ | §27–28 |
+| Margem — lucro vs overhead vs tributos, por categoria | §30 |
+| Achados de auditoria contra código (não corrigidos) | §21.4, §25.4, §26.6, §30.5 |
+
 ---
 
 ## Seção 1: Definições de Base e Unidades
@@ -1224,7 +1240,7 @@ Dado isso, os 4 passos prescritos originalmente não descrevem o que falta imple
 
 ---
 
-## Seção 26: BDI Instancial — Distributividade e Map-Reduce
+## Seção 26: Quantitativo e Custo Semanal (Direto) — Partição Pool/Material e BDI Instancial
 
 ### 26.1 Custo de Equipe por Recurso Instancial
 
@@ -1329,93 +1345,6 @@ Dado que o BDI é aplicado por distributividade a cada recurso, a soma é exata:
 $$\sum_{r \in \bigcup_i \mathcal{R}_i} c_r \cdot n_r \cdot (1 + \beta_{r.\text{cat}}) = \sum_k \Gamma^k (1 + \beta_k) = P_{\text{total}}^{\text{dir}}$$
 
 Esta equivalência é **garantida algebricamente por construção** (soma distributiva simples — não é uma propriedade emergente que possa quebrar silenciosamente) e é consistente com a forma como `_calc_venda_com_bdi`/`_build_custo_categorial_bottom_up` agregam custo por categoria. Não há, porém, um teste de regressão em `tests/` que exercite explicitamente as duas ordens de avaliação (recurso-primeiro vs. categoria-primeiro) — os testes existentes cobrem outros casos (taxa de BDI ausente, agregação básica). Recomenda-se um teste de round-trip dedicado.
-
----
-
-## Seção 28: BDI Equivalente como Função de $\varepsilon_i$
-
-### 28.1 Custo Semanal com e sem BDI
-
-Retomando §26.2 — $\gamma_i^{\text{pool}}$ (EQ+MO, taxa fixa por semana mobilizada) e $\gamma_i^{\text{mat}}$ (MAT+COMB, escala com produção realizada). O custo semanal **sem BDI** da equipe $i$ na semana $j$:
-
-$$C_{ij} = (\gamma_i^{\text{pool}} + \varepsilon_i \cdot \gamma_i^{\text{mat}}) \cdot h \cdot d \cdot m_{ij}$$
-
-O custo semanal **com BDI**, aplicando $\beta_{\text{pool}}$ sobre o componente de pool e $\beta_{\text{mat}}$ sobre o material:
-
-$$\tilde{C}_{ij} = (\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \cdot \gamma_i^{\text{mat}}(1+\beta_{\text{mat}})) \cdot h \cdot d \cdot m_{ij}$$
-
-### 28.2 BDI Equivalente da Atividade
-
-O BDI equivalente da atividade $i$ é a razão do custo total com BDI pelo sem BDI, complementar a 1:
-
-$$\bar{\beta}_i(\varepsilon_i) = \frac{\sum_j \tilde{C}_{ij}}{\sum_j C_{ij}} - 1$$
-
-Como $h \cdot d \cdot m_{ij}$ cancela numerador e denominador:
-
-$$\bar{\beta}_i(\varepsilon_i) = \frac{\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \gamma_i^{\text{mat}}(1+\beta_{\text{mat}})}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}} - 1 = \frac{\gamma_i^{\text{pool}} \beta_{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}} \beta_{\text{mat}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}}$$
-
-Definindo a **fração de material efetiva** (fração do custo semanal que é produção, não mobilização):
-
-$$\delta_i(\varepsilon_i) = \frac{\varepsilon_i \gamma_i^{\text{mat}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}}$$
-
-obtemos:
-
-$$\boxed{\bar{\beta}_i(\varepsilon_i) = (1 - \delta_i) \cdot \beta_{\text{pool}} + \delta_i \cdot \beta_{\text{mat}}}$$
-
-**Propriedade:** $\bar{\beta}_i$ é função **decrescente** de $\varepsilon_i$, pois $\beta_{\text{pool}} > \beta_{\text{mat}}$ ($30\% \gg 4\%$) e $\delta_i$ cresce com $\varepsilon_i$. Quanto mais a equipe produz por semana (maior $\varepsilon_i$), maior a fração do custo semanal em material (BDI baixo) relativa ao pool fixo (BDI alto) — o BDI equivalente da atividade cai.
-
-| $\varepsilon_i$ | $\delta_i$ | $\bar{\beta}_i$ | Interpretação |
-|----------------|-----------|----------------|---------------|
-| $0$ | $0$ | $\beta_{\text{pool}} \approx 30\%$ | Equipe mobilizada, zero produção — custo é 100% pool parado |
-| $0{,}5$ | $\frac{0{,}5\gamma^{\text{mat}}}{\gamma^{\text{pool}} + 0{,}5\gamma^{\text{mat}}}$ | Intermediário | Produção parcial |
-| $1$ | $\frac{\gamma^{\text{mat}}}{\gamma^{\text{pool}}+\gamma^{\text{mat}}} = \delta$ | $(1-\delta)\beta_{\text{pool}} + \delta\beta_{\text{mat}}$ | Catálogo nominal |
-| $\to\infty$ | $\to 1$ | $\to \beta_{\text{mat}} \approx 4\%$ | Produção domina o custo semanal |
-
-### 28.3 BDI Equivalente do Pool de Mobilização
-
-O pool de recursos **de mobilização** (EQ+MO para a janela $\mathcal{T}_{\text{pool}}$) tem custo total:
-
-$$C_{\text{pool}}^{\text{pool}} = \sum_{i \in V} \gamma_i^{\text{pool}} \cdot |\mathcal{T}_i|$$
-
-Como todos os recursos de pool partilham o mesmo $\beta_{\text{pool}}$, o BDI do pool de mobilização é simplesmente:
-
-$$\bar{\beta}_{\text{pool}}^{\text{pool}} = \beta_{\text{pool}}$$
-
-### 28.4 BDI Equivalente do Pool de Material
-
-O pool de **material** (MAT+COMB, escala com produção) tem custo total:
-
-$$C_{\text{pool}}^{\text{mat}} = \sum_{i \in V} \varepsilon_i \gamma_i^{\text{mat}} \cdot |\mathcal{T}_i|$$
-
-Igualmente, como todo material partilha $\beta_{\text{mat}}$:
-
-$$\bar{\beta}_{\text{pool}}^{\text{mat}} = \beta_{\text{mat}}$$
-
-### 28.5 BDI Equivalente Agregado do Escopo
-
-O BDI de escopo é a média ponderada dos dois pools:
-
-$$\bar{\beta}_{\text{proj}} = \frac{C_{\text{pool}}^{\text{pool}} \cdot \beta_{\text{pool}} + C_{\text{pool}}^{\text{mat}} \cdot \beta_{\text{mat}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{mat}}} = (1 - \Delta) \cdot \beta_{\text{pool}} + \Delta \cdot \beta_{\text{mat}}$$
-
-onde:
-
-$$\Delta = \frac{C_{\text{pool}}^{\text{mat}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{mat}}} = \frac{\sum_i \varepsilon_i \gamma_i^{\text{mat}} |\mathcal{T}_i|}{\sum_i (\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}) |\mathcal{T}_i|}$$
-
-**Relação com $\delta_i$:** $\Delta$ é a média temporal-ponderada das frações de material efetivas:
-
-$$\Delta = \frac{\sum_i \delta_i(\varepsilon_i) \cdot \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|}{\sum_i \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|} \qquad \gamma_i^{\text{op}} \equiv \gamma_i^{\text{pool}} + \varepsilon_i\gamma_i^{\text{mat}}$$
-
-### 28.6 Implicação — R_i e BDI Equivalente Se Reforçam (Não Competem)
-
-Integrando $\bar{\beta}_i$ com $R_i$ (Seção 24.3):
-
-$$P_i = CC_i \cdot R_i \cdot (1 + \bar{\beta}_i(\varepsilon_i))$$
-
-Como $R_i \approx 1/\varepsilon_i$ para projetos grandes (decrescente em $\varepsilon_i$) e $\bar{\beta}_i$ agora também **decresce** com $\varepsilon_i$ (§28.2):
-
-$$\frac{\partial P_i}{\partial \varepsilon_i} = CC_i \cdot \left(\underbrace{\frac{-1}{\varepsilon_i^2}(1+\bar{\beta}_i)}_{< 0} + \underbrace{\frac{1}{\varepsilon_i} \frac{\partial \bar{\beta}_i}{\partial \varepsilon_i}}_{< 0}\right) < 0$$
-
-Os dois termos têm o mesmo sinal — **não há mais ambiguidade**: melhorar a eficiência operacional reduz tanto $R_i$ (menos semanas de pool) quanto $\bar{\beta}_i$ (mais peso em material de BDI baixo), e os dois efeitos se reforçam na direção de reduzir o preço necessário. Não existe um "ponto ótimo" intermediário de $\varepsilon_i$ a buscar — eficiência maior é estritamente melhor para o preço, dado $CC_i$ fixo.
 
 ---
 
@@ -1537,6 +1466,93 @@ Mas isso é **sempre verdade** (BDI é positivo por construção). A condição 
 $$\bar{\beta}_i \geq \frac{\Delta OC_i}{CC_i \times R_i}$$
 
 onde $\Delta OC_i = OC_i^{\text{real}} - OC_i^{\text{esperado}}$.
+
+---
+
+## Seção 28: Custo Semanal com BDI — Equivalente como Função de $\varepsilon_i$
+
+### 28.1 Custo Semanal com e sem BDI
+
+Retomando §26.2 — $\gamma_i^{\text{pool}}$ (EQ+MO, taxa fixa por semana mobilizada) e $\gamma_i^{\text{mat}}$ (MAT+COMB, escala com produção realizada). O custo semanal **sem BDI** da equipe $i$ na semana $j$:
+
+$$C_{ij} = (\gamma_i^{\text{pool}} + \varepsilon_i \cdot \gamma_i^{\text{mat}}) \cdot h \cdot d \cdot m_{ij}$$
+
+O custo semanal **com BDI**, aplicando $\beta_{\text{pool}}$ sobre o componente de pool e $\beta_{\text{mat}}$ sobre o material:
+
+$$\tilde{C}_{ij} = (\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \cdot \gamma_i^{\text{mat}}(1+\beta_{\text{mat}})) \cdot h \cdot d \cdot m_{ij}$$
+
+### 28.2 BDI Equivalente da Atividade
+
+O BDI equivalente da atividade $i$ é a razão do custo total com BDI pelo sem BDI, complementar a 1:
+
+$$\bar{\beta}_i(\varepsilon_i) = \frac{\sum_j \tilde{C}_{ij}}{\sum_j C_{ij}} - 1$$
+
+Como $h \cdot d \cdot m_{ij}$ cancela numerador e denominador:
+
+$$\bar{\beta}_i(\varepsilon_i) = \frac{\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \gamma_i^{\text{mat}}(1+\beta_{\text{mat}})}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}} - 1 = \frac{\gamma_i^{\text{pool}} \beta_{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}} \beta_{\text{mat}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}}$$
+
+Definindo a **fração de material efetiva** (fração do custo semanal que é produção, não mobilização):
+
+$$\delta_i(\varepsilon_i) = \frac{\varepsilon_i \gamma_i^{\text{mat}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}}$$
+
+obtemos:
+
+$$\boxed{\bar{\beta}_i(\varepsilon_i) = (1 - \delta_i) \cdot \beta_{\text{pool}} + \delta_i \cdot \beta_{\text{mat}}}$$
+
+**Propriedade:** $\bar{\beta}_i$ é função **decrescente** de $\varepsilon_i$, pois $\beta_{\text{pool}} > \beta_{\text{mat}}$ ($30\% \gg 4\%$) e $\delta_i$ cresce com $\varepsilon_i$. Quanto mais a equipe produz por semana (maior $\varepsilon_i$), maior a fração do custo semanal em material (BDI baixo) relativa ao pool fixo (BDI alto) — o BDI equivalente da atividade cai.
+
+| $\varepsilon_i$ | $\delta_i$ | $\bar{\beta}_i$ | Interpretação |
+|----------------|-----------|----------------|---------------|
+| $0$ | $0$ | $\beta_{\text{pool}} \approx 30\%$ | Equipe mobilizada, zero produção — custo é 100% pool parado |
+| $0{,}5$ | $\frac{0{,}5\gamma^{\text{mat}}}{\gamma^{\text{pool}} + 0{,}5\gamma^{\text{mat}}}$ | Intermediário | Produção parcial |
+| $1$ | $\frac{\gamma^{\text{mat}}}{\gamma^{\text{pool}}+\gamma^{\text{mat}}} = \delta$ | $(1-\delta)\beta_{\text{pool}} + \delta\beta_{\text{mat}}$ | Catálogo nominal |
+| $\to\infty$ | $\to 1$ | $\to \beta_{\text{mat}} \approx 4\%$ | Produção domina o custo semanal |
+
+### 28.3 BDI Equivalente do Pool de Mobilização
+
+O pool de recursos **de mobilização** (EQ+MO para a janela $\mathcal{T}_{\text{pool}}$) tem custo total:
+
+$$C_{\text{pool}}^{\text{pool}} = \sum_{i \in V} \gamma_i^{\text{pool}} \cdot |\mathcal{T}_i|$$
+
+Como todos os recursos de pool partilham o mesmo $\beta_{\text{pool}}$, o BDI do pool de mobilização é simplesmente:
+
+$$\bar{\beta}_{\text{pool}}^{\text{pool}} = \beta_{\text{pool}}$$
+
+### 28.4 BDI Equivalente do Pool de Material
+
+O pool de **material** (MAT+COMB, escala com produção) tem custo total:
+
+$$C_{\text{pool}}^{\text{mat}} = \sum_{i \in V} \varepsilon_i \gamma_i^{\text{mat}} \cdot |\mathcal{T}_i|$$
+
+Igualmente, como todo material partilha $\beta_{\text{mat}}$:
+
+$$\bar{\beta}_{\text{pool}}^{\text{mat}} = \beta_{\text{mat}}$$
+
+### 28.5 BDI Equivalente Agregado do Escopo
+
+O BDI de escopo é a média ponderada dos dois pools:
+
+$$\bar{\beta}_{\text{proj}} = \frac{C_{\text{pool}}^{\text{pool}} \cdot \beta_{\text{pool}} + C_{\text{pool}}^{\text{mat}} \cdot \beta_{\text{mat}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{mat}}} = (1 - \Delta) \cdot \beta_{\text{pool}} + \Delta \cdot \beta_{\text{mat}}$$
+
+onde:
+
+$$\Delta = \frac{C_{\text{pool}}^{\text{mat}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{mat}}} = \frac{\sum_i \varepsilon_i \gamma_i^{\text{mat}} |\mathcal{T}_i|}{\sum_i (\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}) |\mathcal{T}_i|}$$
+
+**Relação com $\delta_i$:** $\Delta$ é a média temporal-ponderada das frações de material efetivas:
+
+$$\Delta = \frac{\sum_i \delta_i(\varepsilon_i) \cdot \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|}{\sum_i \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|} \qquad \gamma_i^{\text{op}} \equiv \gamma_i^{\text{pool}} + \varepsilon_i\gamma_i^{\text{mat}}$$
+
+### 28.6 Implicação — R_i e BDI Equivalente Se Reforçam (Não Competem)
+
+Integrando $\bar{\beta}_i$ com $R_i$ (Seção 24.3):
+
+$$P_i = CC_i \cdot R_i \cdot (1 + \bar{\beta}_i(\varepsilon_i))$$
+
+Como $R_i \approx 1/\varepsilon_i$ para projetos grandes (decrescente em $\varepsilon_i$) e $\bar{\beta}_i$ agora também **decresce** com $\varepsilon_i$ (§28.2):
+
+$$\frac{\partial P_i}{\partial \varepsilon_i} = CC_i \cdot \left(\underbrace{\frac{-1}{\varepsilon_i^2}(1+\bar{\beta}_i)}_{< 0} + \underbrace{\frac{1}{\varepsilon_i} \frac{\partial \bar{\beta}_i}{\partial \varepsilon_i}}_{< 0}\right) < 0$$
+
+Os dois termos têm o mesmo sinal — **não há mais ambiguidade**: melhorar a eficiência operacional reduz tanto $R_i$ (menos semanas de pool) quanto $\bar{\beta}_i$ (mais peso em material de BDI baixo), e os dois efeitos se reforçam na direção de reduzir o preço necessário. Não existe um "ponto ótimo" intermediário de $\varepsilon_i$ a buscar — eficiência maior é estritamente melhor para o preço, dado $CC_i$ fixo.
 
 ---
 
