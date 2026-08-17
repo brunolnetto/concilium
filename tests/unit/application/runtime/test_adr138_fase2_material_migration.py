@@ -12,12 +12,12 @@ MATERIAL. Resultado: `preco_cat["material"] == 0.0` silenciosamente para essas
 A migração converte cada linha `composicao_itens` MATERIAL dessas 30 CPUs em uma
 entrada `MaterialEquipe` na `Producao` referenciada, via:
 
-    consumo_por_hora = coeficiente × Producao.valor_horario
+    consumo_por_hora = coeficiente × Producao.producao_horaria
 
-`coeficiente` é quantidade por unidade de produto da CPU; `valor_horario` (ρ) é
+`coeficiente` é quantidade por unidade de produto da CPU; `producao_horaria` (ρ) é
 unidades de produto por hora; o produto é quantidade por hora — exatamente a
 definição de `MaterialEquipe.consumo_por_hora`. Isso é *price-preserving por
-construção*: a Fonte 1 calcula `Σ(consumo_por_hora × preco_insumo) / valor_horario`;
+construção*: a Fonte 1 calcula `Σ(consumo_por_hora × preco_insumo) / producao_horaria`;
 substituindo a fórmula acima, isso se reduz a `Σ(coeficiente × preco_insumo)` —
 exatamente o que a Fonte 2 (`_compute_preco_cat_from_cpu`) já calculava
 diretamente a partir de `composicao_itens`. Ver ADR-138 (Fase 2) para o
@@ -30,7 +30,7 @@ migração — ver ADR-138 Fase 2 / nota de exclusão.
 Dois níveis de teste:
   1. `TestFormulaPriceLoserving` — prova algébrica/determinística da fórmula
      com um catálogo sintético mínimo (mesma forma do exemplo concreto do ADR:
-     28 sacos de cimento por poço, valor_horario=0.25 poço/h -> 7.0 sacos/h).
+     28 sacos de cimento por poço, producao_horaria=0.25 poço/h -> 7.0 sacos/h).
   2. `TestMigracaoDados30Cpus` — roda o pipeline real (`run_precificacao_unitaria`)
      sobre o catálogo `mendeslobo` de verdade e verifica, para as 30 CPUs, que o
      preço de MATERIAL bate com o valor pré-computado via Fonte 2
@@ -130,10 +130,10 @@ def _canonical(cpu_id: str, unidade: str = "un", quantitativo: float = 1.0) -> C
 
 
 class TestFormulaPriceLoserving:
-    """Prova determinística: consumo_por_hora = coeficiente × valor_horario é price-preserving.
+    """Prova determinística: consumo_por_hora = coeficiente × producao_horaria é price-preserving.
 
     Mesmo exemplo concreto do ADR-138: poço de visita, 28 sacos de cimento por
-    poço, valor_horario=0.25 poço/h -> consumo_por_hora=7.0 sacos/h. Com um
+    poço, producao_horaria=0.25 poço/h -> consumo_por_hora=7.0 sacos/h. Com um
     catálogo mínimo onde a Fonte 1 (bottom-up) resolve via MaterialEquipe (sem
     nenhuma linha MATERIAL em composicao_itens), o preço de MATERIAL deve bater
     exatamente com coeficiente × preco_insumo (o que a Fonte 2 teria calculado
@@ -160,7 +160,7 @@ class TestFormulaPriceLoserving:
             "produtividades": [
                 {
                     "id": "PROD-FORMULA",
-                    "valor_horario": 0.25,
+                    "producao_horaria": 0.25,
                     "composicao_padrao_equipe": {
                         "funcoes": [{"funcao_id": "MO-OFICIAL", "num_pessoas": 1}],
                         "equipamentos": [],
@@ -172,9 +172,9 @@ class TestFormulaPriceLoserving:
 
     def test_consumo_por_hora_igual_coeficiente_vezes_valor_horario_preserva_preco(self):
         coeficiente = 28.0
-        valor_horario = 0.25
+        producao_horaria = 0.25
         preco_insumo = 38.5
-        consumo_por_hora = coeficiente * valor_horario
+        consumo_por_hora = coeficiente * producao_horaria
         assert consumo_por_hora == pytest.approx(7.0)
 
         # Fonte 1 (bottom-up) via MaterialEquipe migrada — composicao_itens SEM MATERIAL.

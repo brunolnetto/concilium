@@ -2,7 +2,7 @@
   "id": "PROD-ATI-052",
   "codigo": "ATI-052",
   "descricao": "Regularização do subleito (Adotado SICRO)",
-  "valor_horario": 1200.0,
+  "producao_horaria": 1200.0,
   "unidade": "m2",
   "origem": {
     "tipo": "adotado_sicro",

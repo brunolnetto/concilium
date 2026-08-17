@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-005-PROD-001",
   "codigo": "ATI-005",
   "descricao": "Supressão c/ destocamento",
-  "valor_horario": 6.25,
+  "producao_horaria": 6.25,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

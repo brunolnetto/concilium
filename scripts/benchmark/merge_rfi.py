@@ -280,9 +280,9 @@ def extract_rfi(wb: Any) -> dict:
         eq_comp   = str(row.get("Composição Equip.\n(cód. BD_EQ)") or row.get("Composição Equip. (cód. BD_EQ)") or "").strip()
         mat_comp  = str(row.get("Material Principal\n(cód. BD_MAT)") or row.get("Material Principal (cód. BD_MAT)") or "").strip()
         try:
-            valor_horario = float(prod_raw)
+            producao_horaria = float(prod_raw)
         except (TypeError, ValueError):
-            valor_horario = 0
+            producao_horaria = 0
         funcoes      = _parse_mo(mo_comp)
         equipamentos = _parse_eq(eq_comp)
         materiais    = _parse_mat(mat_comp)
@@ -290,7 +290,7 @@ def extract_rfi(wb: Any) -> dict:
             "id": cod,
             "codigo": cod,
             "descricao": descricao,
-            "valor_horario": round(valor_horario, 6) if valor_horario else None,
+            "producao_horaria": round(producao_horaria, 6) if producao_horaria else None,
             "unidade": unidade,
             "origem": "PROPRIA",
             "composicao_padrao_equipe": {

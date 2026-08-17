@@ -21,7 +21,7 @@ def _get_bdi_value(manual: dict[str, Any], *keys: str, default: float = 0.0) -> 
 def _build_lookups(catalogo: dict[str, Any]) -> tuple[dict[str, dict], dict[str, dict], dict[str, dict]]:
     """NEP-032: prod_lookup agora mapeia prod_id → full production dict (não mais float).
 
-    O acesso ao valor_horario deve ser feito via prod.get("valor_horario").
+    O acesso ao valor_horario deve ser feito via prod.get("producao_horaria").
     Mantém retrocompatibilidade: prod_lookup.get(id) is None ainda funciona para
     verificar existência.
     """
@@ -36,8 +36,8 @@ def _build_lookups(catalogo: dict[str, Any]) -> tuple[dict[str, dict], dict[str,
         if not pid:
             continue
         # Normaliza campo legado
-        if p.get("valor_horario") is None and p.get("producao_horaria") is not None:
-            p = {**p, "valor_horario": p["producao_horaria"]}
+        if p.get("producao_horaria") is None and p.get("valor_horario") is not None:
+            p = {**p, "producao_horaria": p["valor_horario"]}
         produtividades[pid] = p
 
     return cpus, insumos, produtividades

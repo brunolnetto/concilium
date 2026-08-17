@@ -125,7 +125,7 @@ def _resolve_producao_context_atividade(
     if resolved is None:
         return None
     Q, prod = resolved
-    P = float(prod.get("valor_horario") or 0)
+    P = float(prod.get("producao_horaria") or 0)
     comp = prod.get("composicao_padrao_equipe") or {}
     if P <= 0 or not comp or not _composicao_tem_recursos(comp):
         return None

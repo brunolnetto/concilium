@@ -1,14 +1,14 @@
 {
   "id": "CPU-TERRA-ATI-044-PROD-001",
   "codigo": "CPU-TERRA-ATI-044-PROD-001",
-  "descricao": "Remoção do topsoil — carga, transporte, descarga e espalhamento, DMT até 4,5 km — equipe: 1× SV-OUV-MO-OPER-PA, 8× SV-OUV-MO-MOTOR-BASC, 2× SV-OUV-MO-OPER-TRAT-EST; equipamentos: 1× SV-OUV-EQ-PA-18T, 8× SV-OUV-EQ-CAM-BASC-14M3, 2× SV-OUV-EQ-TRAT-EST-20T",
+  "descricao": "Remoção do topsoil — carga, transporte, descarga e espalhamento, DMT até 4,5 km — equipe: 1× SV-OUV-MO-OPER-PA, 5× SV-OUV-MO-MOTOR-BASC, 2× SV-OUV-MO-OPER-TRAT-EST; equipamentos: 1× SV-OUV-EQ-PA-18T, 5× SV-OUV-EQ-CAM-BASC-14M3, 2× SV-OUV-EQ-TRAT-EST-20T",
   "origem": {
     "tipo": "tabela_referencia",
     "fonte_id": "CPU-TERRA-ATI-044-PROD-001",
     "data_calibracao": "2026-08-12T00:00:00+00:00",
     "referencia": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor)."
   },
-  "valor_horario": 2754.52,
+  "producao_horaria": 200.0,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -17,7 +17,7 @@
       },
       {
         "funcao_id": "SV-OUV-MO-MOTOR-BASC",
-        "num_pessoas": 8
+        "num_pessoas": 5
       },
       {
         "funcao_id": "SV-OUV-MO-OPER-TRAT-EST",
@@ -31,7 +31,7 @@
       },
       {
         "equip_id": "SV-OUV-EQ-CAM-BASC-14M3",
-        "num_unidades": 8
+        "num_unidades": 5
       },
       {
         "equip_id": "SV-OUV-EQ-TRAT-EST-20T",
@@ -39,5 +39,7 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "unidade_producao": "m3/h",
+  "producao": 200.0
 }

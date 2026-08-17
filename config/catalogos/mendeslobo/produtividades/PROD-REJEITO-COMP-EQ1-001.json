@@ -2,7 +2,7 @@
   "id": "PROD-REJEITO-COMP-EQ1-001",
   "codigo": "REJEITO-COMP-EQ1-001",
   "descricao": "1ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
-  "valor_horario": 279.3333,
+  "producao_horaria": 279.3333,
   "custo_hora_total_referencia": 1517.0346,
   "unidade": "m3",
   "origem": {

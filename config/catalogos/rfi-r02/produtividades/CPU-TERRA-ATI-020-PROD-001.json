@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-020-PROD-001",
   "codigo": "ATI-020",
   "descricao": "Espalhamento areia/pó de pedra 5cm",
-  "valor_horario": 20.0,
+  "producao_horaria": 20.0,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

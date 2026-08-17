@@ -125,7 +125,7 @@ class CatalogExporterExcel:
                 {
                     "ID": p.get("id"),
                     "Descricao": p.get("descricao"),
-                    "Produtividade (H)": p.get("valor_horario"),
+                    "Produtividade (H)": p.get("producao_horaria"),
                     "Unidade": p.get("unidade"),
                     "Categoria": p.get("categoria"),
                 }

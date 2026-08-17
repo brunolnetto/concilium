@@ -37,7 +37,6 @@ from ._planejamento_entry import (  # ty: ignore[unresolved-import]
     _try_early_override,
 )
 from ._preco_cpu import (  # ty: ignore[unresolved-import]
-    _avisar_sbdi_legado,
     _compute_preco_cat_from_cpu,
     _compute_preco_cat_from_production,
     _resolve_beta_praticabilidade,
@@ -56,7 +55,6 @@ __all__ = [
     "_apply_com_bdi_override",
     "_apply_equip_decomp",
     "_apply_sem_bdi_override",
-    "_avisar_sbdi_legado",
     "_avisar_sbdi_presenca",
     "_build_equipe_lookup",
     "_build_lookups",

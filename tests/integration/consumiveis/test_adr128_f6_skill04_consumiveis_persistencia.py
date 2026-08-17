@@ -35,7 +35,7 @@ def _catalogo(consumo_por_hora: float, disponibilidade: dict | None = None) -> d
                 "id": "PROD-01",
                 "codigo": "PROD-01",
                 "descricao": "Producao teste",
-                "valor_horario": 50.0,
+                "producao_horaria": 50.0,
                 "unidade": "m3",
                 "composicao_padrao_equipe": {
                     "equipamentos": [{"equip_id": "EQ-X", "num_unidades": 1}],

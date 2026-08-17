@@ -10,7 +10,7 @@
     "id",
     "codigo",
     "descricao",
-    "valor_horario"
+    "producao_horaria"
   ],
   "properties": {
     "id": {
@@ -27,7 +27,7 @@
       "type": "string",
       "minLength": 1
     },
-    "valor_horario": {
+    "producao_horaria": {
       "type": "number",
       "exclusiveMinimum": 0
     },
@@ -136,7 +136,7 @@
         "properties": {
           "id": {"type": "string", "minLength": 1},
           "nome": {"type": "string", "minLength": 1},
-          "valor_horario": {"type": "number", "exclusiveMinimum": 0},
+          "producao_horaria": {"type": "number", "exclusiveMinimum": 0},
           "equipe": {
             "description": "Composição da equipe para esta variante — mesmo formato de composicao_padrao_equipe (lido/normalizado por cure_schema._cure_producao_variantes).",
             "$ref": "common.schema.json#/$defs/composicaoPadraoEquipe"

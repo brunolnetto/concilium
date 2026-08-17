@@ -197,7 +197,7 @@ def _producao_payload_bgtc() -> dict[str, Any]:
         "id": "PROD-USINAGEM-BGTC-001",
         "codigo": "USINAGEM-BGTC",
         "descricao": "Usinagem de BGTC (brita comercial) em usina de solos 300 t/h — composição SICRO 6416042",
-        "valor_horario": vh,
+        "producao_horaria": vh,
         "unidade": "m3",
         "origem": {
             "tipo": "tabela_referencia",
@@ -287,7 +287,7 @@ def _producao_payload_cbuq() -> dict[str, Any]:
             "Usinagem de CBUQ faixa C (agregados comerciais) em usina gravimétrica 100/140 t/h "
             "— composição SICRO 6416078"
         ),
-        "valor_horario": vh,
+        "producao_horaria": vh,
         "unidade": "t",
         "origem": {
             "tipo": "tabela_referencia",
@@ -435,11 +435,11 @@ def concluir_preco(producao: dict[str, Any], insumo_index: dict[str, dict]) -> f
 
     modelo = Producao.model_validate(producao)
     resolucao = resolver_producao_efetiva(modelo)
-    if resolucao.fonte != "derivado" or abs(resolucao.valor - producao["valor_horario"]) > 1e-6:
+    if resolucao.fonte != "derivado" or abs(resolucao.valor - producao["producao_horaria"]) > 1e-6:
         raise ValueError(
             f"grafo de sinergia de {producao['id']} não deriva o valor declarado: "
             f"fonte={resolucao.fonte!r}, valor={resolucao.valor} × declarado="
-            f"{producao['valor_horario']} — dado inconsistente"
+            f"{producao['producao_horaria']} — dado inconsistente"
         )
     sbdi = derivar_precos_unitarios_sbdi(producao, insumo_index)
     total = float(sbdi.get("total") or 0)
@@ -467,7 +467,7 @@ def run_build(apply: bool = False) -> dict[str, Any]:
         if not path.exists():
             stats["producoes_criadas"] += 1
             print(
-                f"  [PRODUCAO ] {pid} (vh={payloads[pid]['valor_horario']} "
+                f"  [PRODUCAO ] {pid} (vh={payloads[pid]['producao_horaria']} "
                 f"{payloads[pid]['unidade']}/h, grafo de sinergia)"
             )
             if apply:

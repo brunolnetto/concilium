@@ -3,7 +3,7 @@
 Valida o dado real criado por `scripts/catalog/build_usinagem_bgtc_cbuq.py`:
 
   - O grafo de sinergia de cada usinagem é válido (sem VAL-SINERGIA-01) e a produção
-    efetiva vem DERIVADA do gargalo (fonte "derivado"), igual ao `valor_horario`
+    efetiva vem DERIVADA do gargalo (fonte "derivado"), igual ao `producao_horaria`
     declarado — a produção não é número de mão.
   - O `preco_unitario` gravado nos usinados é exatamente o concluído bottom-up:
     custo horário (MO + equipamentos + materiais) ÷ produção derivada.
@@ -73,7 +73,7 @@ class TestPrecoConcluidoPorSinergia:
         producao = Producao.model_validate(_load(f"produtividades/{caso['producao']}.json"))
         resolucao = resolver_producao_efetiva(producao)
         assert resolucao.fonte == "derivado"
-        assert resolucao.valor == pytest.approx(producao.valor_horario)
+        assert resolucao.valor == pytest.approx(producao.producao_horaria)
         assert not any(v.status == "ERRO" for v in resolucao.validacoes)
         assert resolucao.derivacao is not None
         assert resolucao.derivacao.gargalo_derivado == producao.grafo_sinergia.gargalo_declarado

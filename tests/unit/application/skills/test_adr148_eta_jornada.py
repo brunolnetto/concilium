@@ -96,7 +96,7 @@ class TestComputeProductiveWeeksEtaJornada:
     def test_eta_jornada_1_reproduz_formula_original(self):
         canonical = self._make_canonical([self._eap_item(quantitativo=80.0)], eta_jornada=1.0)
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-A"}
-        prod_lookup = {"PROD-A": {"valor_horario": 2.0}}
+        prod_lookup = {"PROD-A": {"producao_horaria": 2.0}}
         result = _cron._compute_productive_weeks("ITEM-A", 1, canonical, {"CPU-A": cpu}, prod_lookup, [])
         # P=2.0, horas=8, dias=5, eta_jornada=1.0, n=1 → prod_per_week=80 → ceil(80/80)=1
         assert result == 1
@@ -104,7 +104,7 @@ class TestComputeProductiveWeeksEtaJornada:
     def test_eta_jornada_reduzido_aumenta_duracao(self):
         canonical = self._make_canonical([self._eap_item(quantitativo=80.0)], eta_jornada=0.9375)
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-A"}
-        prod_lookup = {"PROD-A": {"valor_horario": 2.0}}
+        prod_lookup = {"PROD-A": {"producao_horaria": 2.0}}
         result = _cron._compute_productive_weeks("ITEM-A", 1, canonical, {"CPU-A": cpu}, prod_lookup, [])
         # prod_per_week = 2.0*8*5*0.9375 = 75 → ceil(80/75) = 2
         assert result == 2

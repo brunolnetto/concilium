@@ -17,12 +17,12 @@ BOM real (cimento, areia, brita, tubos, emulsão asfáltica, pavers, etc.).
 
 Fórmula de conversão (ADR-138 Fase 2, price-preserving por construção):
 
-    consumo_por_hora = coeficiente × Producao.valor_horario
+    consumo_por_hora = coeficiente × Producao.producao_horaria
 
-`coeficiente` é quantidade por unidade de produto da CPU; `valor_horario` (ρ)
+`coeficiente` é quantidade por unidade de produto da CPU; `producao_horaria` (ρ)
 é unidades de produto por hora; o produto é quantidade por hora — a definição
 exata de `MaterialEquipe.consumo_por_hora`. Prova algébrica: a Fonte 1 calcula
-`Σ(consumo_por_hora × preco_insumo) / valor_horario`; substituindo a fórmula
+`Σ(consumo_por_hora × preco_insumo) / producao_horaria`; substituindo a fórmula
 acima, isso se reduz a `Σ(coeficiente × preco_insumo)` — exatamente o que a
 Fonte 2 já calculava direto de `composicao_itens`. Ver
 docs/engineering/2-architecture/adrs/adr-138-composicao-itens-restrito-material-diesel.md
@@ -166,11 +166,11 @@ def _migrate_cpu(
     if prod_path not in prod_cache:
         prod_cache[prod_path] = _load_json(prod_path)
     prod = prod_cache[prod_path]
-    valor_horario = prod.get("valor_horario")
-    if not valor_horario or float(valor_horario) <= 0:
-        warnings.append(f"[AVISO] {codigo}: Producao '{prod_id_ref}' sem valor_horario > 0 — não migrado")
+    producao_horaria = prod.get("producao_horaria")
+    if not producao_horaria or float(producao_horaria) <= 0:
+        warnings.append(f"[AVISO] {codigo}: Producao '{prod_id_ref}' sem producao_horaria > 0 — não migrado")
         return False, None, None
-    valor_horario = float(valor_horario)
+    producao_horaria = float(producao_horaria)
 
     comp = prod.get("composicao_padrao_equipe")
     if not isinstance(comp, dict):
@@ -198,7 +198,7 @@ def _migrate_cpu(
             rows_a_remover.append(row)
             continue
         coeficiente = float(row["coeficiente"])
-        consumo_por_hora = round(coeficiente * valor_horario, 6)
+        consumo_por_hora = round(coeficiente * producao_horaria, 6)
         materiais.append(
             {
                 "insumo_id": insumo_id,

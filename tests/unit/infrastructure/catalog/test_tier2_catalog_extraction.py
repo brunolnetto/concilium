@@ -134,7 +134,7 @@ class TestExtractCpuReferences:
         (cpus_dir / "CPU-001.json").write_text(json.dumps(cpu_def), encoding="utf-8")
         prod_def = {
             "descricao": "Produção escavação",
-            "valor_horario": "150.5",
+            "producao_horaria": "150.5",
             "cpu_ids": ["CPU-001"],
         }
         (prods_dir / "PROD-X.json").write_text(json.dumps(prod_def), encoding="utf-8")

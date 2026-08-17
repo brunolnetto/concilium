@@ -2,7 +2,7 @@
   "id": "PROD-REJEITO-COMP-EQ4-001",
   "codigo": "REJEITO-COMP-EQ4-001",
   "descricao": "4ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
-  "valor_horario": 222.3333,
+  "producao_horaria": 222.3333,
   "custo_hora_total_referencia": 705.2393,
   "unidade": "m3",
   "origem": {

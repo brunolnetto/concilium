@@ -74,17 +74,17 @@ class TestCluster3SchemaEReconciliacao:
         from concilium.domain.services.sinergia_equipe import derivar_producao_horaria
 
         data = json.loads((_PRODUTIVIDADES / filename).read_text(encoding="utf-8"))
-        valor_horario = data["valor_horario"]
+        producao_horaria = data["producao_horaria"]
         composicao = ComposicaoPadraoEquipe(**data["composicao_padrao_equipe"])
         grafo = GrafoSinergiaEquipe(**data["grafo_sinergia"])
 
         derivacao = derivar_producao_horaria(grafo, composicao)
         assert derivacao.producao_horaria_derivada is not None, f"{filename}: gargalo não computável"
 
-        divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+        divergencia = abs(derivacao.producao_horaria_derivada - producao_horaria) / producao_horaria
         assert divergencia < 0.15, (
             f"{filename}: derivado={derivacao.producao_horaria_derivada} vs "
-            f"valor_horario={valor_horario} (divergência {divergencia:.1%})"
+            f"producao_horaria={producao_horaria} (divergência {divergencia:.1%})"
         )
 
     @pytest.mark.parametrize("filename", _CLUSTER3_FILES)

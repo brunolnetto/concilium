@@ -2,7 +2,7 @@
   "id": "PROD-ESCO-CARGA-3CAT-001",
   "codigo": "ESCO-CARGA-3CAT-001",
   "descricao": "Escavação, carga, transporte, descarga e espalhamento — 3ª categoria (rocha)",
-  "valor_horario": 144.541473391304,
+  "producao_horaria": 144.541473391304,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_contra_obra_real",

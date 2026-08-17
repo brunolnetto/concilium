@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-040-PROD-001",
   "codigo": "ATI-040",
   "descricao": "Corpo BTCC 3,00×3,00m — aterro 2-6m",
-  "valor_horario": 0.05,
+  "producao_horaria": 0.05,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

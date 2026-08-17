@@ -31,8 +31,8 @@ def test_enrich_spec_resources_agrega_fases_em_tipo_fungivel():
         "CPU-REJEITO-COMP-EQ2": {"producao_id_ref": "PROD-2"},
     }
     producao_lookup = {
-        "PROD-1": {"valor_horario": 10.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "F1"}]}},
-        "PROD-2": {"valor_horario": 10.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "F1"}]}},
+        "PROD-1": {"producao_horaria": 10.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "F1"}]}},
+        "PROD-2": {"producao_horaria": 10.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "F1"}]}},
     }
     validacoes = []
 

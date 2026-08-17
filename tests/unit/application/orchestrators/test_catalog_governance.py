@@ -229,7 +229,7 @@ class TestCatalogGovernanceProducaoNotFound:
             (root / "produtividades").mkdir()
 
             with pytest.raises(CatalogGovernanceError, match="não encontrada"):
-                validate_and_resolve_producao_file(root, "PROD-NONEXISTENT", valor_horario=1.0)
+                validate_and_resolve_producao_file(root, "PROD-NONEXISTENT", producao_horaria=1.0)
 
     def test_finds_in_producoes_dir(self):
         """Normal path: file exists under producoes/ → returns path."""
@@ -242,7 +242,7 @@ class TestCatalogGovernanceProducaoNotFound:
             target = root / "producoes" / "PROD-01.json"
             target.write_text("{}", encoding="utf-8")
 
-            result = validate_and_resolve_producao_file(root, "PROD-01", valor_horario=1.0)
+            result = validate_and_resolve_producao_file(root, "PROD-01", producao_horaria=1.0)
             assert result == target
 
 

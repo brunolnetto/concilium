@@ -203,11 +203,11 @@ def derivar_producao_horaria(grafo: GrafoSinergiaEquipe, composicao: ComposicaoP
     )
 
 
-def _val_sinergia_divergencia(derivacao: DerivacaoSinergia, valor_horario: float) -> list[ValidacaoItem]:
+def _val_sinergia_divergencia(derivacao: DerivacaoSinergia, producao_horaria: float) -> list[ValidacaoItem]:
     """VAL-SINERGIA-02 (AVISO): derivado diverge do declarado além do limiar."""
-    if derivacao.producao_horaria_derivada is None or valor_horario <= 0:
+    if derivacao.producao_horaria_derivada is None or producao_horaria <= 0:
         return []
-    divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+    divergencia = abs(derivacao.producao_horaria_derivada - producao_horaria) / producao_horaria
     if divergencia <= LIMIAR_DIVERGENCIA_SINERGIA:
         return []
     return [
@@ -216,7 +216,7 @@ def _val_sinergia_divergencia(derivacao: DerivacaoSinergia, valor_horario: float
             status="AVISO",
             mensagem=(
                 f"producao_horaria_derivada={derivacao.producao_horaria_derivada:g} diverge "
-                f"{divergencia:.1%} do valor_horario declarado={valor_horario:g} "
+                f"{divergencia:.1%} de producao_horaria declarada={producao_horaria:g} "
                 f"(limiar {LIMIAR_DIVERGENCIA_SINERGIA:.0%}). Valor declarado preservado."
             ),
         )
@@ -248,7 +248,7 @@ def _avaliar_grafo_sinergia(
     validacoes = list(validar_referencias_grafo(grafo, producao.composicao_padrao_equipe))
     grafo_invalido = any(v.status == "ERRO" for v in validacoes)
     derivacao = derivar_producao_horaria(grafo, producao.composicao_padrao_equipe)
-    validacoes.extend(_val_sinergia_divergencia(derivacao, producao.valor_horario))
+    validacoes.extend(_val_sinergia_divergencia(derivacao, producao.producao_horaria))
     validacoes.extend(_val_sinergia_gargalo_divergente(grafo, derivacao))
     return derivacao, grafo_invalido, validacoes
 
@@ -258,16 +258,16 @@ def _decidir_fonte_producao(
 ) -> tuple[float, str]:
     """Precedência D3: calibrado > derivado > declarado."""
     if producao.origem.tipo == "calibrado_contra_obra_real":
-        return producao.valor_horario, "calibrado"
+        return producao.producao_horaria, "calibrado"
     if not grafo_invalido and derivacao is not None and derivacao.producao_horaria_derivada is not None:
         return derivacao.producao_horaria_derivada, "derivado"
-    return producao.valor_horario, "declarado"
+    return producao.producao_horaria, "declarado"
 
 
 def resolver_producao_efetiva(producao: Producao) -> ResolucaoProducao:
     """ADR-130 D3 — precedência calibrado > derivado > declarado.
 
-    Função consultiva: NUNCA muta `producao.valor_horario`. Quando derivado e declarado
+    Função consultiva: NUNCA muta `producao.producao_horaria`. Quando derivado e declarado
     coexistem e divergem, o valor declarado/calibrado é o que este objeto `Producao`
     carrega e continua sendo usado por qualquer código legado que leia `valor_horario`
     diretamente — o valor "derivado" retornado aqui é instrumento de explicação/decisão

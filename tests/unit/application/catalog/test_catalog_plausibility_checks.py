@@ -837,7 +837,7 @@ class TestPcCheckProdItem:
     def _make_prod(self, vh=None, codigo="PROD-001", equipe=None) -> dict:
         prod: dict = {"codigo": codigo}
         if vh is not None:
-            prod["valor_horario"] = vh
+            prod["producao_horaria"] = vh
         if equipe is not None:
             prod["composicao_padrao_equipe"] = equipe
         return prod
@@ -885,7 +885,7 @@ class TestPcCheckProdItem:
         assert result == []
 
     def test_uses_id_field_when_codigo_absent(self):
-        prod = {"id": "PROD-BY-ID", "valor_horario": 0}
+        prod = {"id": "PROD-BY-ID", "producao_horaria": 0}
         result = _pc_check_prod_item(prod, {})
         assert result[0].codigo == "PROD-BY-ID"
 
@@ -903,8 +903,8 @@ class TestPcCheckProdItem:
 class TestPcProdVhs:
     def test_filters_out_zero_valor_horario(self):
         producoes = [
-            {"codigo": "PROD-001", "valor_horario": 0},
-            {"codigo": "PROD-002", "valor_horario": 50.0},
+            {"codigo": "PROD-001", "producao_horaria": 0},
+            {"codigo": "PROD-002", "producao_horaria": 50.0},
         ]
         result = _pc_prod_vhs(producoes)
         assert len(result) == 1
@@ -913,19 +913,19 @@ class TestPcProdVhs:
     def test_filters_out_missing_valor_horario(self):
         producoes = [
             {"codigo": "PROD-001"},
-            {"codigo": "PROD-002", "valor_horario": 30.0},
+            {"codigo": "PROD-002", "producao_horaria": 30.0},
         ]
         result = _pc_prod_vhs(producoes)
         assert len(result) == 1
         assert result[0][1] == 30.0
 
     def test_returns_id_and_float_tuples(self):
-        producoes = [{"id": "PROD-ID", "valor_horario": 25.0}]
+        producoes = [{"id": "PROD-ID", "producao_horaria": 25.0}]
         result = _pc_prod_vhs(producoes)
         assert result == [("PROD-ID", 25.0)]
 
     def test_uses_codigo_when_id_absent(self):
-        producoes = [{"codigo": "PROD-COD", "valor_horario": 10.0}]
+        producoes = [{"codigo": "PROD-COD", "producao_horaria": 10.0}]
         result = _pc_prod_vhs(producoes)
         assert result[0][0] == "PROD-COD"
 
@@ -933,11 +933,11 @@ class TestPcProdVhs:
         assert _pc_prod_vhs([]) == []
 
     def test_all_zero_returns_empty(self):
-        producoes = [{"codigo": f"P-{i}", "valor_horario": 0} for i in range(5)]
+        producoes = [{"codigo": f"P-{i}", "producao_horaria": 0} for i in range(5)]
         assert _pc_prod_vhs(producoes) == []
 
     def test_converts_string_float(self):
-        producoes = [{"codigo": "PROD-001", "valor_horario": "42.5"}]
+        producoes = [{"codigo": "PROD-001", "producao_horaria": "42.5"}]
         result = _pc_prod_vhs(producoes)
         assert result[0][1] == 42.5
 
@@ -947,7 +947,7 @@ class TestPcProdVhs:
 
 class TestPcCheckProdZscore:
     def _make_prods(self, vhs: list[float]) -> list[dict]:
-        return [{"codigo": f"P-{i:03d}", "valor_horario": v} for i, v in enumerate(vhs)]
+        return [{"codigo": f"P-{i:03d}", "producao_horaria": v} for i, v in enumerate(vhs)]
 
     def test_fewer_than_3_items_returns_empty(self):
         prods = self._make_prods([10.0, 20.0])
@@ -978,9 +978,9 @@ class TestPcCheckProdZscore:
     def test_zero_valor_horario_excluded_from_analysis(self):
         # Only 2 non-zero → returns []
         prods = [
-            {"codigo": "P-000", "valor_horario": 0},
-            {"codigo": "P-001", "valor_horario": 10.0},
-            {"codigo": "P-002", "valor_horario": 20.0},
+            {"codigo": "P-000", "producao_horaria": 0},
+            {"codigo": "P-001", "producao_horaria": 10.0},
+            {"codigo": "P-002", "producao_horaria": 20.0},
         ]
         result = _pc_check_prod_zscore(prods)
         assert result == []
@@ -990,7 +990,7 @@ class TestPcCheckProdZscore:
         prods = self._make_prods(vhs)
         result = _pc_check_prod_zscore(prods)
         if result:
-            assert "valor_horario" in result[0].detalhe
+            assert "producao_horaria" in result[0].detalhe
             assert "z" in result[0].detalhe
 
     def test_1_item_returns_empty(self):

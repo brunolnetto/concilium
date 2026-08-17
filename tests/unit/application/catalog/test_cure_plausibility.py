@@ -539,7 +539,7 @@ class TestCureLocacaoMensal:
 class TestReportManual:
     def test_flags_producao_sem_composicao(self):
         report = cp.CureReport()
-        producoes = [{"id": "PR-1", "valor_horario": 100.0}]
+        producoes = [{"id": "PR-1", "producao_horaria": 100.0}]
         cp.report_manual([], producoes, report)
         assert any("sem composição de equipe" in m for m in report.manual)
 
@@ -665,14 +665,14 @@ class TestPersistirInsumosIndividuais:
 
 class TestPersistirProducoesIndividuais:
     def test_escreve_producao_alterada(self, tmp_path):
-        originais = [{"id": "PR-1", "valor_horario": 10.0}]
-        finais = [{"id": "PR-1", "valor_horario": 20.0}]
+        originais = [{"id": "PR-1", "producao_horaria": 10.0}]
+        finais = [{"id": "PR-1", "producao_horaria": 20.0}]
         assert cp._persistir_producoes_individuais(tmp_path, originais, finais) == 1
         salvo = json.loads((tmp_path / "produtividades" / "PR-1.json").read_text())
-        assert salvo["valor_horario"] == 20.0
+        assert salvo["producao_horaria"] == 20.0
 
     def test_nao_escreve_producao_inalterada(self, tmp_path):
-        item = {"id": "PR-1", "valor_horario": 10.0}
+        item = {"id": "PR-1", "producao_horaria": 10.0}
         assert cp._persistir_producoes_individuais(tmp_path, [dict(item)], [dict(item)]) == 0
         assert not (tmp_path / "produtividades" / "PR-1.json").exists()
 
@@ -768,7 +768,7 @@ class TestMain:
         _write_bundle(
             bundle_path,
             insumos=[{"codigo": "MO-9999", "tipo": "MAO_OBRA", "preco_unitario": 100.0}],
-            producoes=[{"id": "PR-1", "valor_horario": 10.0}],
+            producoes=[{"id": "PR-1", "producao_horaria": 10.0}],
         )
         monkeypatch.setattr(cp, "ROOT", tmp_path)
         monkeypatch.setattr(sys, "argv", ["cure_plausibility.py", "--contexto", "mendeslobo"])

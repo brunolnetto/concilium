@@ -197,7 +197,7 @@ class CatalogMixin:
                 result.append(
                     {
                         "id": prod_id_ref,
-                        "valor_horario": float(producao_horaria),
+                        "producao_horaria": float(producao_horaria),
                         "composicao_padrao_equipe": cpu.get("composicao_padrao_equipe"),
                     }
                 )

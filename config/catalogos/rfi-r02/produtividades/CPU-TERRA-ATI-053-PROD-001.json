@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-053-PROD-001",
   "codigo": "ATI-053",
   "descricao": "Reforço do subleito",
-  "valor_horario": 220.0,
+  "producao_horaria": 220.0,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

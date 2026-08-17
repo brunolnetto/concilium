@@ -452,7 +452,7 @@ class TestProducaoSimilarity:
         return {
             "id": id_,
             "descricao": descricao,
-            "valor_horario": vh,
+            "producao_horaria": vh,
             "composicao_padrao_equipe": {"funcoes": funcoes or [], "equipamentos": equipamentos or []},
         }
 
@@ -480,7 +480,7 @@ class TestCpuSimilarity:
         }
 
     def _mk_prod(self, id_, vh, funcoes=None):
-        return {"id": id_, "valor_horario": vh, "composicao_padrao_equipe": {"funcoes": funcoes or []}}
+        return {"id": id_, "producao_horaria": vh, "composicao_padrao_equipe": {"funcoes": funcoes or []}}
 
     def test_unidade_incompativel_e_gate_score_zero_sem_classificar(self):
         cpu_a = self._mk_cpu("CPU-A", "Escavação", "TERRAPLENAGEM", unidade="m3")
@@ -524,8 +524,8 @@ class TestFindCandidateCpuDuplicates:
             },
         ]
         producoes = [
-            {"id": "P-A", "valor_horario": 100.0, "composicao_padrao_equipe": {}},
-            {"id": "P-B", "valor_horario": 100.0, "composicao_padrao_equipe": {}},
+            {"id": "P-A", "producao_horaria": 100.0, "composicao_padrao_equipe": {}},
+            {"id": "P-B", "producao_horaria": 100.0, "composicao_padrao_equipe": {}},
         ]
         assert find_candidate_cpu_duplicates(cpus, producoes) == []
 
@@ -549,14 +549,14 @@ class TestFindCandidateCpuDuplicates:
         producoes = [
             {
                 "id": "P-A",
-                "valor_horario": 200.0,
+                "producao_horaria": 200.0,
                 "composicao_padrao_equipe": {
                     "funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]
                 },
             },
             {
                 "id": "P-B",
-                "valor_horario": 200.0,
+                "producao_horaria": 200.0,
                 "composicao_padrao_equipe": {
                     "funcoes": [{"funcao_id": "MO-X", "num_pessoas": 2}]
                 },
@@ -587,8 +587,8 @@ class TestFindCrossCatalogCpuMatches:
                 "producao_id_ref": "PB1",
             }
         ]
-        prod_a = [{"id": "PA1", "valor_horario": 100.0, "composicao_padrao_equipe": {}}]
-        prod_b = [{"id": "PB1", "valor_horario": 100.0, "composicao_padrao_equipe": {}}]
+        prod_a = [{"id": "PA1", "producao_horaria": 100.0, "composicao_padrao_equipe": {}}]
+        prod_b = [{"id": "PB1", "producao_horaria": 100.0, "composicao_padrao_equipe": {}}]
         assert find_cross_catalog_cpu_matches(cpus_a, prod_a, cpus_b, prod_b) == []
 
     def test_encontra_match_cross_catalogo_por_descricao(self):
@@ -610,8 +610,8 @@ class TestFindCrossCatalogCpuMatches:
                 "producao_id_ref": "PB1",
             }
         ]
-        prod_a = [{"id": "PA1", "valor_horario": 230.0, "composicao_padrao_equipe": {}}]
-        prod_b = [{"id": "PB1", "valor_horario": 210.0, "composicao_padrao_equipe": {}}]
+        prod_a = [{"id": "PA1", "producao_horaria": 230.0, "composicao_padrao_equipe": {}}]
+        prod_b = [{"id": "PB1", "producao_horaria": 210.0, "composicao_padrao_equipe": {}}]
         result = find_cross_catalog_cpu_matches(cpus_a, prod_a, cpus_b, prod_b)
         assert len(result) == 1
         assert result[0].codigo_a == "MENDESLOBO-1"

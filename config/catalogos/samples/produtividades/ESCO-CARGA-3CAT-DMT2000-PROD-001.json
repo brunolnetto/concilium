@@ -3,7 +3,7 @@
   "codigo": "ESCO-CARGA-3CAT-DMT2000-PROD-001",
   "descricao": "Produção ESCO-CARGA-3CAT-DMT2000",
   "origem": "PROPRIA",
-  "valor_horario": 144.541473391304,
+  "producao_horaria": 144.541473391304,
   "cpu_ids": [
     "ESCO-CARGA-3CAT-DMT2000"
   ]

@@ -42,7 +42,7 @@ _PRODUTIVIDADES = _ROOT / "config" / "catalogos" / "rfi-r02" / "produtividades"
 
 _CLUSTER1_FILES = [
     "CPU-TERRA-ATI-025-PROD-001.json",
-    # ATI-026 removida — Producao duplicata de ATI-025 (mesma composição/valor_horario/
+    # ATI-026 removida — Producao duplicata de ATI-025 (mesma composição/producao_horaria/
     # grafo_sinergia), consolidada via CPU.producao_id_ref (ver
     # test_adr130_producao_consolidacao_duplicatas.py)
     "CPU-TERRA-ATI-027-PROD-001.json",
@@ -89,17 +89,17 @@ class TestCluster1SchemaEReconciliacao:
         from concilium.domain.services.sinergia_equipe import derivar_producao_horaria
 
         data = json.loads((_PRODUTIVIDADES / filename).read_text(encoding="utf-8"))
-        valor_horario = data["valor_horario"]
+        producao_horaria = data["producao_horaria"]
         composicao = ComposicaoPadraoEquipe(**data["composicao_padrao_equipe"])
         grafo = GrafoSinergiaEquipe(**data["grafo_sinergia"])
 
         derivacao = derivar_producao_horaria(grafo, composicao)
         assert derivacao.producao_horaria_derivada is not None, f"{filename}: gargalo não computável"
 
-        divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+        divergencia = abs(derivacao.producao_horaria_derivada - producao_horaria) / producao_horaria
         assert divergencia < 0.15, (
             f"{filename}: derivado={derivacao.producao_horaria_derivada} vs "
-            f"valor_horario={valor_horario} (divergência {divergencia:.1%})"
+            f"producao_horaria={producao_horaria} (divergência {divergencia:.1%})"
         )
 
     @pytest.mark.parametrize("filename", _CLUSTER1_FILES)

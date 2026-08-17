@@ -60,7 +60,7 @@ AGIS_CUSTOM_CPUS = {
         "descricao": "Compactação de camada final de aterro de rocha",
         "unidade": "m3",
         "categoria": "TERRAPLENAGEM",
-        "valor_horario": 100.0,
+        "producao_horaria": 100.0,
         "funcoes": [
             {"funcao_id": "P0048", "num_pessoas": 1},   # Oper. Trator de Esteiras
             {"funcao_id": "P0046", "num_pessoas": 3},   # Oper. Rolo Compactador
@@ -78,7 +78,7 @@ AGIS_CUSTOM_CPUS = {
         "descricao": "Construção de corpo de aterro com material de 3ª categoria oriundo de corte",
         "unidade": "m3",
         "categoria": "TERRAPLENAGEM",
-        "valor_horario": 214.92,
+        "producao_horaria": 214.92,
         "funcoes": [
             {"funcao_id": "P0046", "num_pessoas": 2},   # Oper. Rolo Compactador
             {"funcao_id": "P0048", "num_pessoas": 1},   # Oper. Trator de Esteiras
@@ -339,7 +339,7 @@ def gerar_producao_e_cpu(prod: dict) -> None:
         "id": prod_id,
         "codigo": ati_cod,
         "descricao": prod["descricao"],
-        "valor_horario": prod["produtividade_unh"],
+        "producao_horaria": prod["produtividade_unh"],
         "unidade": prod["unidade"],
         "origem": {
             "tipo": "planilha_rfi_r02",
@@ -389,7 +389,7 @@ def gerar_cpus_agis_especificos() -> None:
             "id": prod_id,
             "codigo": cpu_id,
             "descricao": info["descricao"],
-            "valor_horario": info["valor_horario"],
+            "producao_horaria": info["producao_horaria"],
             "unidade": info["unidade"],
             "origem": {
                 "tipo": "construido_rfi_r02",
@@ -418,7 +418,7 @@ def gerar_cpus_agis_especificos() -> None:
             "composicao_itens": [],
             "_nota": (
                 f"CPU AGIS-específico construído com códigos RFI R02. "
-                f"Produtividade {info['valor_horario']} {info['unidade']}/h (calibrado catálogo mendeslobo)."
+                f"Produtividade {info['producao_horaria']} {info['unidade']}/h (calibrado catálogo mendeslobo)."
             ),
         }
         write_json(CATALOG_DIR / "cpus" / f"{cpu_id}.json", cpu)

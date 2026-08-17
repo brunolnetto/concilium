@@ -3,7 +3,7 @@
   "codigo": "DREN-MAN-DN300-PROD-001",
   "descricao": "Produção DREN-MAN-DN300",
   "origem": "PROPRIA",
-  "valor_horario": 3.0,
+  "producao_horaria": 3.0,
   "cpu_ids": [
     "DREN-MAN-DN300"
   ]

@@ -1223,7 +1223,7 @@ class TestBuildCatalogFromSnapshot:
     def test_builds_catalog_with_cpus_and_prods(self):
         cat = {
             "cpus": [{"id": "CPU1", "producao_id_ref": "P1"}],
-            "produtividades": [{"id": "P1", "valor_horario": 10.0}],
+            "produtividades": [{"id": "P1", "producao_horaria": 10.0}],
         }
         result = _build_catalog_from_snapshot(cat)
         assert "cpus" in result
@@ -1243,7 +1243,7 @@ class TestBuildCatalogFromSnapshot:
 class TestTryEnrichCpuWithProd:
     def test_enriches_producao_horaria_from_prod(self):
         cpu = {"id": "C1", "producao_id_ref": "P1"}
-        prod_lkp = {"P1": {"valor_horario": 50.0, "equipe": None}}
+        prod_lkp = {"P1": {"producao_horaria": 50.0, "equipe": None}}
         result = _try_enrich_cpu_with_prod(cpu, prod_lkp)
         assert result["producao_horaria"] == 50.0
 
@@ -1254,7 +1254,7 @@ class TestTryEnrichCpuWithProd:
 
     def test_existing_producao_horaria_not_overwritten(self):
         cpu = {"id": "C1", "producao_id_ref": "P1", "producao_horaria": 99.0}
-        prod_lkp = {"P1": {"valor_horario": 50.0}}
+        prod_lkp = {"P1": {"producao_horaria": 50.0}}
         result = _try_enrich_cpu_with_prod(cpu, prod_lkp)
         assert result["producao_horaria"] == 99.0
 
@@ -1894,7 +1894,7 @@ class TestLoadLiveCatalog:
 
         prod_dir = cat_dir / "producoes"
         prod_dir.mkdir()
-        (prod_dir / "prod1.json").write_text(json.dumps({"id": "P1", "valor_horario": 10.0}))
+        (prod_dir / "prod1.json").write_text(json.dumps({"id": "P1", "producao_horaria": 10.0}))
 
         project = MagicMock()
         project.meta = {"catalogo_base": "cat-x"}
@@ -1905,7 +1905,7 @@ class TestLoadLiveCatalog:
         assert result is not None
         assert result["cpus"] == [{"codigo": "CPU-1"}]
         assert result["insumos"] == [{"id": "INS-1"}, {"id": "INS-2"}]
-        assert result["produtividades"] == [{"id": "P1", "valor_horario": 10.0}]
+        assert result["produtividades"] == [{"id": "P1", "producao_horaria": 10.0}]
 
     def test_loads_cpus_from_aggregate_file_when_no_individual_dir(self, tmp_path):
         """Lines 128-129: no cpus/ dir, falls back to a single cpus.json aggregate."""

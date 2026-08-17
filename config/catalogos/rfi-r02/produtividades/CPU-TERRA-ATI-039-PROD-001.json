@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-039-PROD-001",
   "codigo": "ATI-039",
   "descricao": "Corpo BDCC 2,50×2,50m — aterro 10-15m",
-  "valor_horario": 0.15,
+  "producao_horaria": 0.15,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

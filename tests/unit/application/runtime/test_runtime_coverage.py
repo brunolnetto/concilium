@@ -488,7 +488,7 @@ def test_synthesize_missing_producoes_adds_new():
     result = CatalogMixin._synthesize_missing_producoes(cpus, seen)
     assert len(result) == 1
     assert result[0]["id"] == "PROD-NEW"
-    assert result[0]["valor_horario"] == 25.0
+    assert result[0]["producao_horaria"] == 25.0
 
 
 def test_synthesize_missing_producoes_skips_already_seen():

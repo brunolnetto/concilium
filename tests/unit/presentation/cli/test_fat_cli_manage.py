@@ -925,7 +925,7 @@ class TestImplCatalogCurePlausibility:
         bundle_dir.mkdir(parents=True)
         bundle = {
             "insumos": [{"codigo": "EQ1", "tipo": "EQUIPAMENTO", "preco_unitario": 10.0, "atributos_especificos": {}}],
-            "producoes": [{"id": "P1", "valor_horario": 5}],
+            "producoes": [{"id": "P1", "producao_horaria": 5}],
         }
         (bundle_dir / ".catalog_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
 
@@ -945,7 +945,7 @@ class TestImplCatalogCurePlausibility:
         bundle_dir.mkdir(parents=True)
         bundle = {
             "insumos": [{"codigo": "EQ1", "tipo": "EQUIPAMENTO", "preco_unitario": 10.0, "atributos_especificos": {}}],
-            "produtividades": [{"id": "P1", "valor_horario": 5}],
+            "produtividades": [{"id": "P1", "producao_horaria": 5}],
         }
         bundle_path = bundle_dir / ".catalog_bundle.json"
         bundle_bytes_antes = json.dumps(bundle).encode("utf-8")

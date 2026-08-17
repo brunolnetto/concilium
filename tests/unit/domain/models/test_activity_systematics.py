@@ -49,7 +49,7 @@ def _make_composicao(
 
 
 def _make_producao(
-    valor_horario: float = 234.0,
+    producao_horaria: float = 234.0,
     limite: LimiteProducao = "equipamento",
     composicao: ComposicaoPadraoEquipe | None = None,
 ) -> Producao:
@@ -60,7 +60,7 @@ def _make_producao(
         id="PROD-001",
         codigo="ESCO-CARGA-1CAT",
         descricao="Escavação carga 1ª categoria",
-        valor_horario=valor_horario,
+        producao_horaria=producao_horaria,
         unidade="m3",
         limite_producao=limite,
         origem=OrigemProducao(
@@ -378,7 +378,7 @@ class TestFatorProducao:
         assert prod.fator_producao(nova) == 1.0
 
     def test_producao_ajustada_escala_valor_horario(self):
-        prod = _make_producao(valor_horario=200.0)
+        prod = _make_producao(producao_horaria=200.0)
         nova = _make_composicao(num_equips=3)
         ajustada = prod.producao_ajustada(nova)
         assert abs(ajustada - 200.0 * 3.0) < 0.01

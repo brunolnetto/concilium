@@ -599,7 +599,7 @@ class TestExport:
                 {
                     "id": "PROD-1",
                     "descricao": "Método A",
-                    "valor_horario": 100,
+                    "producao_horaria": 100,
                     "unidade": "m3",
                     "categoria": "TERRA",
                 }

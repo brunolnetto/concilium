@@ -2,7 +2,7 @@
   "id": "PROD-ATI-043",
   "codigo": "ATI-043",
   "descricao": "Assentamento de tubo PVC PBA DN 50mm (Adotado SINAPI)",
-  "valor_horario": 12.0,
+  "producao_horaria": 12.0,
   "unidade": "m",
   "origem": {
     "tipo": "adotado_sicro",

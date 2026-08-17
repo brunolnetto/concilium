@@ -435,24 +435,24 @@ class TestCureProducao:
         cs.cure_producao(prod, report, apply=True)
         assert report.fixed == []
 
-    def test_migrates_producao_horaria_to_valor_horario_apply_true(self):
+    def test_migrates_valor_horario_to_producao_horaria_apply_true(self):
         report = cs.CurationReport()
-        prod = {"id": "PROD-1", "producao_horaria": 10.0}
+        prod = {"id": "PROD-1", "valor_horario": 10.0}
         result = cs.cure_producao(prod, report, apply=True)
-        assert result["valor_horario"] == 10.0
-        assert "producao_horaria" not in result
-        assert any("producao_horaria" in m for m in report.fixed)
+        assert result["producao_horaria"] == 10.0
+        assert "valor_horario" not in result
+        assert any("valor_horario" in m for m in report.fixed)
 
-    def test_producao_horaria_does_not_override_existing_valor_horario(self):
+    def test_valor_horario_does_not_override_existing_producao_horaria(self):
         report = cs.CurationReport()
-        prod = {"id": "PROD-1", "producao_horaria": 10.0, "valor_horario": 5.0}
+        prod = {"id": "PROD-1", "valor_horario": 10.0, "producao_horaria": 5.0}
         result = cs.cure_producao(prod, report, apply=True)
-        assert result["valor_horario"] == 5.0
-        assert "producao_horaria" not in result
+        assert result["producao_horaria"] == 5.0
+        assert "valor_horario" not in result
 
-    def test_producao_horaria_none_value(self):
+    def test_valor_horario_none_value(self):
         report = cs.CurationReport()
-        prod = {"id": "PROD-1", "producao_horaria": None}
+        prod = {"id": "PROD-1", "valor_horario": None}
         result = cs.cure_producao(prod, report, apply=True)
         assert "valor_horario" not in result
         assert "producao_horaria" not in result
@@ -688,7 +688,7 @@ class TestCureProducao:
         report = cs.CurationReport()
         prod = {
             "id": "PROD-1",
-            "valor_horario": 5.0,
+            "producao_horaria": 5.0,
             "composicao_padrao_equipe": {"funcoes": [], "equipamentos": []},
         }
         result = cs.cure_producao(prod, report, apply=True)

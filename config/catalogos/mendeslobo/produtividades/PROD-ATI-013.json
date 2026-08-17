@@ -2,7 +2,7 @@
   "id": "PROD-ATI-013",
   "codigo": "ATI-013",
   "descricao": "Esc/carg/transp 2ªcat DMT<=2000m (Adotado SICRO)",
-  "valor_horario": 135.0,
+  "producao_horaria": 135.0,
   "unidade": "m3",
   "origem": {
     "tipo": "adotado_sicro",

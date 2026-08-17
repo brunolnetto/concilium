@@ -2,7 +2,7 @@
   "id": "PROD-ATI-016",
   "codigo": "ATI-016",
   "descricao": "Esc/carg/transp 3ªcat DMT 2-3km (Adotado SICRO)",
-  "valor_horario": 72.0,
+  "producao_horaria": 72.0,
   "unidade": "m3",
   "origem": {
     "tipo": "adotado_sicro",

@@ -2,7 +2,7 @@
   "id": "PROD-ESCO-CARGA-1CAT-001",
   "codigo": "ESCO-CARGA-1CAT-001",
   "descricao": "Escavação, carga, transporte, descarga e espalhamento — 1ª categoria",
-  "valor_horario": 233.54208,
+  "producao_horaria": 233.54208,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_contra_obra_real",
@@ -47,7 +47,7 @@
     {
       "id": "padrao",
       "nome": "Configuração Base (38t + 7 Basc)",
-      "valor_horario": 233.54,
+      "producao_horaria": 233.54,
       "equipe": {
         "funcoes": [
           {
@@ -82,7 +82,7 @@
     {
       "id": "agil",
       "nome": "Configuração Leve (22t + 4 Basc)",
-      "valor_horario": 140.0,
+      "producao_horaria": 140.0,
       "equipe": {
         "funcoes": [
           {
@@ -109,7 +109,7 @@
     {
       "id": "intensiva",
       "nome": "Alta Produção (2x 38t + 14 Basc)",
-      "valor_horario": 450.0,
+      "producao_horaria": 450.0,
       "equipe": {
         "funcoes": [
           {

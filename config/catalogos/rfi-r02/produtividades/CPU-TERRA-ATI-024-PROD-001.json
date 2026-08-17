@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-024-PROD-001",
   "codigo": "ATI-024",
   "descricao": "Espalhamento pó de pedra",
-  "valor_horario": 19.0,
+  "producao_horaria": 19.0,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

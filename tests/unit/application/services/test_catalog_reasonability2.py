@@ -97,7 +97,7 @@ class TestHelpers:
     def test_build_prod_lookup(self):
         from concilium.application.services.catalog.catalog_reasonability import _build_prod_lookup
 
-        prods = [{"id": "P1", "valor_horario": 10}, {"id": "P2"}, {"valor_horario": 5}]
+        prods = [{"id": "P1", "producao_horaria": 10}, {"id": "P2"}, {"producao_horaria": 5}]
         lookup = _build_prod_lookup(prods)
         assert "P1" in lookup
         assert "P2" in lookup
@@ -159,10 +159,10 @@ class TestBuildCatalogReasonabilityArtifact:
             "producao_id_ref": producao_id_ref,
         }
 
-    def _make_producao(self, pid="P1", valor_horario=50.0):
+    def _make_producao(self, pid="P1", producao_horaria=50.0):
         return {
             "id": pid,
-            "valor_horario": valor_horario,
+            "producao_horaria": producao_horaria,
             "composicao_padrao_equipe": {
                 "funcoes": [{"num_pessoas": 2}],
                 "equipamentos": [{"num_unidades": 1}],
@@ -219,10 +219,10 @@ class TestBuildCatalogReasonabilityArtifact:
         result = build_catalog_reasonability_artifact("cat-1", cpus, prods)
         assert result["summary"]["outliers"] > 0
 
-    def _make_producao_custom(self, pid, valor_horario, num_pessoas):
+    def _make_producao_custom(self, pid, producao_horaria, num_pessoas):
         return {
             "id": pid,
-            "valor_horario": valor_horario,
+            "producao_horaria": producao_horaria,
             "composicao_padrao_equipe": {
                 "funcoes": [{"num_pessoas": num_pessoas}] if num_pessoas > 0 else [],
                 "equipamentos": [{"num_unidades": 1}],

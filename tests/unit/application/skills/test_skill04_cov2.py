@@ -142,7 +142,7 @@ class TestEnrichProducaoCanonicoZeroCusto:
         prod = {
             "composicao_padrao_equipe": {"funcoes": []},  # non-empty composicao but yields custo_hora=0
             "custo_hora_total_referencia": None,
-            "valor_horario": None,
+            "producao_horaria": None,
         }
         validacoes = []
         _enrich_producao_canonico({"CPU-Y": cpu}, {"P1": prod}, {}, 160.0, 1.0, validacoes)
@@ -408,7 +408,7 @@ class TestExtractActivitiesWithLookups:
                 "precos_unitarios_sbdi": {"total": 0.0},
             }
         }
-        producao_lookup = {"P1": {"valor_horario": 10.0, "producao_horaria": 10.0}}
+        producao_lookup = {"P1": {"producao_horaria": 10.0, "producao_horaria": 10.0}}
         validacoes = []
         activities = _extract_activities(FakeCanonical(), cpu_lookup, producao_lookup, validacoes)
         assert len(activities) == 1
@@ -428,8 +428,8 @@ class TestResolveProductivityNoValue:
         cpu = {"codigo": "CPU-X", "producao_id_ref": "P1"}
         prod_lookup = {
             "P1": {
-                # valor_horario is None → check producao_horaria
-                "valor_horario": None,
+                # producao_horaria is None → check producao_horaria
+                "producao_horaria": None,
                 # producao_horaria also None → skip
                 "producao_horaria": None,
             }
@@ -440,14 +440,13 @@ class TestResolveProductivityNoValue:
         assert result == 1000.0
         assert is_fallback is True
 
-    def test_prod_item_has_producao_horaria_but_valor_horario_none(self):
-        """Line 1020->1031 True path: producao_horaria exists → VAL-PROD-04-PROD-LEGACY."""
+    def test_prod_item_has_valor_horario_legado_mas_sem_producao_horaria(self):
+        """Fallback para 'producao_horaria' legado → emite VAL-PROD-04-PROD-LEGACY."""
 
         cpu = {"codigo": "CPU-X", "producao_id_ref": "P2"}
         prod_lookup = {
             "P2": {
-                "valor_horario": None,
-                "producao_horaria": 5.0,  # legacy field
+                "valor_horario": 5.0,  # campo legado (arquivos antigos)
             }
         }
         validacoes = []
@@ -630,7 +629,7 @@ class TestProcessSingleWmpPolicyQZero:
 
         eap_lookup = {"IT-01": FakeEapItem()}
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "P1"}}
-        producao_lookup = {"P1": {"valor_horario": 10.0}}
+        producao_lookup = {"P1": {"producao_horaria": 10.0}}
         validacoes = []
         _process_single_wmp_policy(
             item_id="IT-01",
@@ -940,7 +939,7 @@ class TestEnrichSpecResourcesFromCatalog:
         canonical = _make_canonical()
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
         producao_lookup = {
-            "PROD-01": {"valor_horario": 10.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}]}}
+            "PROD-01": {"producao_horaria": 10.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}]}}
         }
         _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 0, [])
         assert "required_resources" not in spec["activities"][0]
@@ -971,7 +970,7 @@ class TestEnrichSpecResourcesFromCatalog:
         canonical = _make_canonical()
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
         producao_lookup = {
-            "PROD-01": {"valor_horario": 0.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}]}}
+            "PROD-01": {"producao_horaria": 0.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}]}}
         }
         _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
         assert "required_resources" not in spec["activities"][0]
@@ -980,7 +979,7 @@ class TestEnrichSpecResourcesFromCatalog:
         spec = {"activities": [{"item_id": "IT-01"}]}
         canonical = _make_canonical()
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
-        producao_lookup = {"PROD-01": {"valor_horario": 10.0, "composicao_padrao_equipe": {}}}
+        producao_lookup = {"PROD-01": {"producao_horaria": 10.0, "composicao_padrao_equipe": {}}}
         _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
         assert "required_resources" not in spec["activities"][0]
 
@@ -989,7 +988,7 @@ class TestEnrichSpecResourcesFromCatalog:
         spec = {"activities": [{"item_id": "IT-01"}]}
         canonical = _make_canonical()
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
-        producao_lookup = {"PROD-01": {"valor_horario": 10.0, "composicao_padrao_equipe": {"outro_campo": True}}}
+        producao_lookup = {"PROD-01": {"producao_horaria": 10.0, "composicao_padrao_equipe": {"outro_campo": True}}}
         _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
         assert "required_resources" not in spec["activities"][0]
 
@@ -999,7 +998,7 @@ class TestEnrichSpecResourcesFromCatalog:
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
         producao_lookup = {
             "PROD-01": {
-                "valor_horario": 1.0,
+                "producao_horaria": 1.0,
                 "composicao_padrao_equipe": {
                     "funcoes": [{"funcao_id": "OP", "num_pessoas": 1}],
                     "equipamentos": [{"equip_id": "TRATOR", "num_unidades": 1}],
@@ -1023,7 +1022,7 @@ class TestEnrichSpecResourcesFromCatalog:
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
         producao_lookup = {
             "PROD-01": {
-                "valor_horario": 1.0,
+                "producao_horaria": 1.0,
                 "composicao_padrao_equipe": {
                     "funcoes": [{"funcao_id": "  ", "num_pessoas": 1}],
                     "equipamentos": [{"equip_id": "  ", "num_unidades": 1}],
@@ -1044,7 +1043,7 @@ class TestEnrichSpecResourcesFromCatalog:
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
         producao_lookup = {
             "PROD-01": {
-                "valor_horario": 1.0,
+                "producao_horaria": 1.0,
                 "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP", "num_pessoas": 1}]},
             }
         }
@@ -1082,7 +1081,7 @@ class TestExtractActivitiesFromSpecCatalogResources:
         }
         canonical = _make_canonical()
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "cpu_meta": {"producao_horaria": 1000.0}}}
-        producao_lookup = {"PROD-01": {"valor_horario": 1000.0}}
+        producao_lookup = {"PROD-01": {"producao_horaria": 1000.0}}
         result = _extract_activities_from_spec(spec, canonical, cpu_lookup, producao_lookup, [])
         assert result[0].duration_weeks < 10
         assert result[0].window_weeks == 10
@@ -1147,7 +1146,7 @@ class TestExtractActivitiesComputedFalsy:
         _compute_productive_weeks returns None → duration_weeks stays default 1."""
         canonical = _make_canonical()
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "cpu_meta": {"producao_horaria": 0.0}}}
-        producao_lookup = {"P1": {"valor_horario": 0.0}}
+        producao_lookup = {"P1": {"producao_horaria": 0.0}}
         validacoes: list = []
         activities = _extract_activities(canonical, cpu_lookup, producao_lookup, validacoes)
         assert len(activities) == 1
@@ -1282,7 +1281,7 @@ class TestRasfcExtractInputs:
         cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
         producao_lookup = {
             "PROD-01": {
-                "valor_horario": 1.0,
+                "producao_horaria": 1.0,
                 "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP", "num_pessoas": 1}]},
             }
         }
@@ -1610,7 +1609,7 @@ class TestBuildProducoesPorAtividadeSemCpuResolvivel:
             EapItem(item_id="eap-02", ordem=2, cpu_id="CPU-INEXISTENTE", quantitativo=50.0),
         ]
         cpu_lookup = {"CPU-01": {"producao_id_ref": "PROD-01"}}
-        producao_lookup = {"PROD-01": {"id": "PROD-01", "valor_horario": 10.0}}
+        producao_lookup = {"PROD-01": {"id": "PROD-01", "producao_horaria": 10.0}}
 
         result = build_producoes_por_atividade(items, cpu_lookup, producao_lookup)
 
@@ -1645,12 +1644,12 @@ class TestRasfcBuildProducoesPorAtividadeTraduzParaAtividadeId:
             atividades = [FakeAtividade()]
 
         cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
-        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "producao_horaria": 10.0}}
 
         rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
         result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup)
 
-        assert result == {"eap-2-atv-1": {"id": "PROD-X", "valor_horario": 10.0}}
+        assert result == {"eap-2-atv-1": {"id": "PROD-X", "producao_horaria": 10.0}}
         assert "eap-2" not in result
 
     def test_sem_atividades_mantem_item_id_fallback_eap(self):
@@ -1668,12 +1667,12 @@ class TestRasfcBuildProducoesPorAtividadeTraduzParaAtividadeId:
             atividades = None
 
         cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
-        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "producao_horaria": 10.0}}
 
         rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
         result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup)
 
-        assert result == {"eap-2": {"id": "PROD-X", "valor_horario": 10.0}}
+        assert result == {"eap-2": {"id": "PROD-X", "producao_horaria": 10.0}}
 
 
 # ---------------------------------------------------------------------------
@@ -1724,7 +1723,7 @@ class TestRasfcRunHeuristicsMaterialGeradoInternamenteModoAutomatico:
         producao_lookup = {
             "PROD-ESCO": {
                 "id": "PROD-ESCO",
-                "valor_horario": 100.0,
+                "producao_horaria": 100.0,
                 "materiais_gerados": [{"insumo_id": "MA-SOLO", "geracao_por_hora": 100.0}],
                 "composicao_padrao_equipe": {"funcoes": [], "equipamentos": []},
             }
@@ -1803,12 +1802,12 @@ class TestRasfcBuildProducoesPorAtividadeRcpspSpecMantemItemId:
             atividades = [FakeAtividade()]
 
         cpu_lookup = {"CPU-TERRA": {"producao_id_ref": "PROD-X"}}
-        producao_lookup = {"PROD-X": {"id": "PROD-X", "valor_horario": 10.0}}
+        producao_lookup = {"PROD-X": {"id": "PROD-X", "producao_horaria": 10.0}}
 
         rasfc_build = _MOD._mod_validacao._rasfc_build_producoes_por_atividade
         result = rasfc_build(FakeCanonical(), cpu_lookup, producao_lookup, usa_atividade_id=False)
 
-        assert result == {"eap-2": {"id": "PROD-X", "valor_horario": 10.0}}
+        assert result == {"eap-2": {"id": "PROD-X", "producao_horaria": 10.0}}
         assert "eap-2-atv-1" not in result
 
 
@@ -1856,7 +1855,7 @@ class TestRasfcExtractInputsRcpspSpecMaterialGeradoInternamente:
         producao_lookup = {
             "PROD-ESCO": {
                 "id": "PROD-ESCO",
-                "valor_horario": 100.0,
+                "producao_horaria": 100.0,
                 "materiais_gerados": [{"insumo_id": "MA-SOLO", "geracao_por_hora": 100.0}],
                 "composicao_padrao_equipe": {"funcoes": [], "equipamentos": []},
             }

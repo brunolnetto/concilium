@@ -2,7 +2,7 @@
   "id": "PROD-ATI-027",
   "codigo": "ATI-027",
   "descricao": "BDTC D=0,80 m - Corpo (Adotado SICRO)",
-  "valor_horario": 0.5,
+  "producao_horaria": 0.5,
   "unidade": "m",
   "origem": {
     "tipo": "adotado_sicro",

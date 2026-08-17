@@ -2,7 +2,7 @@
   "id": "PROD-USINAGEM-CBUQ-RFI-001",
   "codigo": "USINAGEM-CBUQ-FAIXA-C-RFI",
   "descricao": "Usinagem de CBUQ faixa C na usina de asfalto da casa (E0043) — física SICRO 6416078, equipamentos/insumos do catálogo rfi-r02 onde existem",
-  "valor_horario": 99.6,
+  "producao_horaria": 99.6,
   "unidade": "t",
   "origem": {
     "tipo": "tabela_referencia",

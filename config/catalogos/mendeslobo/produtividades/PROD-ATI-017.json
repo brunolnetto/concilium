@@ -2,7 +2,7 @@
   "id": "PROD-ATI-017",
   "codigo": "ATI-017",
   "descricao": "Aterro compactado a 100% do Proctor Normal (Adotado SICRO)",
-  "valor_horario": 140.0,
+  "producao_horaria": 140.0,
   "unidade": "m3",
   "origem": {
     "tipo": "adotado_sicro",

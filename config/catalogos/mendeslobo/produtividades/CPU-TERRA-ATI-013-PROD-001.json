@@ -8,7 +8,7 @@
     "data_calibracao": "2026-08-11T22:06:27.473208+00:00",
     "referencia": "PROPRIA"
   },
-  "valor_horario": 165.74,
+  "producao_horaria": 165.74,
   "composicao_padrao_equipe": {
     "funcoes": [
       {

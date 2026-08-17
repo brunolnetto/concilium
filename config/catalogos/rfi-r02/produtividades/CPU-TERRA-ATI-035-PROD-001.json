@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-035-PROD-001",
   "codigo": "ATI-035",
   "descricao": "Corpo BSCC 2,00×2,00m — aterro 6-10m",
-  "valor_horario": 0.3,
+  "producao_horaria": 0.3,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

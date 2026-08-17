@@ -89,7 +89,7 @@ class SimuladorEngenharia:
         self.cpus = {c["codigo"]: c for c in catalogo.get("cpus", [])}
         self.insumos = {i["codigo"]: i for i in catalogo.get("insumos", [])}
         producoes = catalogo.get("produtividades", []) or catalogo.get("producoes", [])
-        self.producoes = {p["id"]: p.get("valor_horario", 0) for p in producoes if p.get("id")}
+        self.producoes = {p["id"]: p.get("producao_horaria", 0) for p in producoes if p.get("id")}
         self.producao_fichas = {p["id"]: p for p in producoes if p.get("id")}
 
     def _calcular_dias_trabalhados(self, periodo_dias: int, regime: str) -> int:

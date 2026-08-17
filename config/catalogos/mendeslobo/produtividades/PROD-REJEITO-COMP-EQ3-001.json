@@ -2,7 +2,7 @@
   "id": "PROD-REJEITO-COMP-EQ3-001",
   "codigo": "REJEITO-COMP-EQ3-001",
   "descricao": "3ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
-  "valor_horario": 268.875,
+  "producao_horaria": 268.875,
   "custo_hora_total_referencia": 824.9129,
   "unidade": "m3",
   "origem": {

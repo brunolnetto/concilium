@@ -2,7 +2,7 @@
 
 A migração da ADR-138 Fase 2 (`migrate_composicao_itens_material.py`) criou 33
 entradas `MaterialEquipe` em 30 Producoes de `mendeslobo` a partir do BOM de
-`composicao_itens` (conversão `consumo_por_hora = coeficiente × valor_horario`),
+`composicao_itens` (conversão `consumo_por_hora = coeficiente × producao_horaria`),
 sem nenhum sinal de proveniência no dado — a nota de design da ADR-138 §D7.
 
 A ADR-139 D2 introduz `origem_entrada: "consumo_operacional" | "bom_convertido"`.

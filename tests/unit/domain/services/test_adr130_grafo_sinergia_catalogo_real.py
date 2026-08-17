@@ -6,9 +6,9 @@ reais de PROD-*-ESCO-CARGA-*CAT-DMT*.json com o grafo calibrado.
 
 Contexto: as 6 CPUs da família (1CAT/2CAT/3CAT × DMT2000/DMT3000) compartilham
 só 4 equipamentos (2 escavadeiras + 2 variantes de caminhão). Calibração
-reversa a partir do valor_horario real (não estimativa de fabricante) mostra
+reversa a partir do producao_horaria real (não estimativa de fabricante) mostra
 que a escavadeira é sempre o elemento gargalo em todas as 6 composições — a
-frota de caminhões tem folga generosa (55-130 m³/h acima do valor_horario)
+frota de caminhões tem folga generosa (55-130 m³/h acima do producao_horaria)
 em todos os casos. A capacidade real da escavadeira varia por categoria de
 solo (1ª/2ª/3ª), mesmo usando o mesmo item de catálogo (AGIS-E0015):
 
@@ -62,7 +62,7 @@ class TestSchemaGrafoSinergia:
             "id": "PROD-TEST-GRAFO-1",
             "codigo": "PROD-TEST-GRAFO-1",
             "descricao": "teste",
-            "valor_horario": 100.0,
+            "producao_horaria": 100.0,
             "unidade": "m3/h",
             "categoria": "TERRAPLENAGEM",
             "origem": "PROPRIA",
@@ -83,7 +83,7 @@ class TestSchemaGrafoSinergia:
                         "capacidade_horaria": 231.4,
                         "unidade": "m3/h",
                         "fonte": "medicao_obra",
-                        "justificativa": "calibração reversa a partir do valor_horario real.",
+                        "justificativa": "calibração reversa a partir do producao_horaria real.",
                     },
                     {"elemento_id": "EQ-B", "capacidade_horaria": 48.1, "unidade": "m3/h", "fonte": "fabricante"},
                 ],
@@ -175,7 +175,7 @@ class TestSchemaGrafoSinergia:
 class TestGrafoSinergiaEscoCargaReal:
     """Regressão direta: os 6 arquivos reais da família ESCO-CARGA devem ter
     grafo_sinergia populado, validar contra o schema, e o gargalo derivado
-    deve reconciliar com o valor_horario real (dentro do limiar de
+    deve reconciliar com o producao_horaria real (dentro do limiar de
     divergência ADR-130 D4 — LIMIAR_DIVERGENCIA_SINERGIA=0.15)."""
 
     @pytest.mark.parametrize("filename", _ESCO_CARGA_FILES)
@@ -193,17 +193,17 @@ class TestGrafoSinergiaEscoCargaReal:
         from concilium.domain.services.sinergia_equipe import derivar_producao_horaria
 
         data = json.loads((_PRODUTIVIDADES / filename).read_text(encoding="utf-8"))
-        valor_horario = data["valor_horario"]
+        producao_horaria = data["producao_horaria"]
         composicao = ComposicaoPadraoEquipe(**data["composicao_padrao_equipe"])
         grafo = GrafoSinergiaEquipe(**data["grafo_sinergia"])
 
         derivacao = derivar_producao_horaria(grafo, composicao)
         assert derivacao.producao_horaria_derivada is not None, f"{filename}: gargalo não computável"
 
-        divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+        divergencia = abs(derivacao.producao_horaria_derivada - producao_horaria) / producao_horaria
         assert divergencia < 0.15, (
             f"{filename}: derivado={derivacao.producao_horaria_derivada} vs "
-            f"valor_horario={valor_horario} (divergência {divergencia:.1%})"
+            f"producao_horaria={producao_horaria} (divergência {divergencia:.1%})"
         )
 
     @pytest.mark.parametrize("filename", _ESCO_CARGA_FILES)

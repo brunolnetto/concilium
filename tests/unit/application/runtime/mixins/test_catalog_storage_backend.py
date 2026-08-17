@@ -85,8 +85,8 @@ def _build_full_catalog_tree(config_root: Path, cat_id: str = "mendeslobo") -> P
     )
 
     # produtividades/ e producoes/ coexistindo — merge precisa cobrir os dois
-    _write_json(cat_dir / "produtividades" / "PROD-A.json", {"id": "PROD-A", "valor_horario": 10.0})
-    _write_json(cat_dir / "producoes" / "PROD-OUTRO.json", {"id": "PROD-OUTRO", "valor_horario": 20.0})
+    _write_json(cat_dir / "produtividades" / "PROD-A.json", {"id": "PROD-A", "producao_horaria": 10.0})
+    _write_json(cat_dir / "producoes" / "PROD-OUTRO.json", {"id": "PROD-OUTRO", "producao_horaria": 20.0})
 
     # templates.json com estruturas_indiretas
     _write_json(
@@ -95,7 +95,7 @@ def _build_full_catalog_tree(config_root: Path, cat_id: str = "mendeslobo") -> P
     )
 
     # producao só no diretório GLOBAL (fora do catálogo específico) — CPU-C referencia
-    _write_json(config_root / "producoes" / "PROD-GLOBAL.json", {"id": "PROD-GLOBAL", "valor_horario": 99.0})
+    _write_json(config_root / "producoes" / "PROD-GLOBAL.json", {"id": "PROD-GLOBAL", "producao_horaria": 99.0})
 
     return cat_dir
 
@@ -148,12 +148,12 @@ class TestStorageLoadProducoesEmSintese:
         # PROD-B-SYNTH é sintetizada a partir de CPU-B.producao_horaria (nunca existiu como arquivo)
         assert "PROD-B-SYNTH" in ids
         synth = next(p for p in producoes if p["id"] == "PROD-B-SYNTH")
-        assert synth["valor_horario"] == 42.0
+        assert synth["producao_horaria"] == 42.0
         # PROD-GLOBAL só existe no diretório global config_root/producoes — precisa ser
         # encontrada via busca por CPU (_storage_load_producoes_from_cpus), não pelo bulk-load.
         assert "PROD-GLOBAL" in ids
         global_prod = next(p for p in producoes if p["id"] == "PROD-GLOBAL")
-        assert global_prod["valor_horario"] == 99.0
+        assert global_prod["producao_horaria"] == 99.0
 
 
 class TestStorageLoadProducoesFromCpusSkipSeen:

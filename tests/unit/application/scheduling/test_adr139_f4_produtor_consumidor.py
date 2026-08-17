@@ -33,14 +33,14 @@ from concilium.domain.models.catalog.producao import Producao
 # ── fixtures de modelo ────────────────────────────────────────────────────────
 
 
-def _producao(pid: str, valor_horario: float, materiais_gerados=None, materiais=None) -> Producao:
+def _producao(pid: str, producao_horaria: float, materiais_gerados=None, materiais=None) -> Producao:
     now = datetime.now(UTC)
     return Producao.model_validate(
         {
             "id": pid,
             "codigo": pid,
             "descricao": pid,
-            "valor_horario": valor_horario,
+            "producao_horaria": producao_horaria,
             "unidade": "m3",
             "origem": {
                 "tipo": "estimado",
@@ -51,7 +51,7 @@ def _producao(pid: str, valor_horario: float, materiais_gerados=None, materiais=
             "condicoes_calibracao": {},
             "qualidade": {
                 "confianca_pct": 80,
-                "intervalo_confianca": (0.9 * valor_horario, 1.1 * valor_horario),
+                "intervalo_confianca": (0.9 * producao_horaria, 1.1 * producao_horaria),
                 "quantidade_amostras": 5,
                 "desvio_padrao": 1.0,
             },
@@ -332,7 +332,7 @@ class TestPilotoRfiR02:
         gerados = d.get("materiais_gerados") or []
         assert [g["insumo_id"] for g in gerados] == ["MA-SOLO-ESCAVADO-3CAT"]
         # 1 m³ escavado → 1 m³ de material (sem fator de empolamento no piloto):
-        assert gerados[0]["geracao_por_hora"] == pytest.approx(d["valor_horario"])
+        assert gerados[0]["geracao_por_hora"] == pytest.approx(d["producao_horaria"])
 
     def test_consumidora_declara_consumo_bom_convertido(self):
         d = _load_rfi("produtividades/CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001.json")
@@ -340,7 +340,7 @@ class TestPilotoRfiR02:
         mats = [m for m in equipe.get("materiais") or [] if m["insumo_id"] == "MA-SOLO-ESCAVADO-3CAT"]
         assert len(mats) == 1
         assert mats[0]["origem_entrada"] == "bom_convertido"
-        assert mats[0]["consumo_por_hora"] == pytest.approx(d["valor_horario"])
+        assert mats[0]["consumo_por_hora"] == pytest.approx(d["producao_horaria"])
 
     def test_piloto_end_to_end_scheduler(self):
         """Catálogo real (dicts crus, como no runtime) → builder → CP-SAT."""

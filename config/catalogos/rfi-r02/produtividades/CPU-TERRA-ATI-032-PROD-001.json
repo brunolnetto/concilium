@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-032-PROD-001",
   "codigo": "ATI-032",
   "descricao": "Corpo BTTC D=1,20m PA2",
-  "valor_horario": 0.25,
+  "producao_horaria": 0.25,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

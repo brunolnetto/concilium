@@ -145,7 +145,7 @@ class TestProjectServiceHelpers2:
         from concilium.application.services.project._project_service_helpers import _try_enrich_cpu_with_prod
 
         cpu = {"codigo": "CPU-1", "producao_id_ref": "P1"}
-        prod_lkp = {"P1": {"valor_horario": 50.0, "composicao_padrao_equipe": {"funcoes": []}}}
+        prod_lkp = {"P1": {"producao_horaria": 50.0, "composicao_padrao_equipe": {"funcoes": []}}}
         result = _try_enrich_cpu_with_prod(cpu, prod_lkp)
         assert result.get("producao_horaria") == 50.0
 
@@ -159,7 +159,7 @@ class TestProjectServiceHelpers2:
         from concilium.application.services.project._project_service_helpers import _build_joined_cpus
 
         cpus = [{"codigo": "CPU-1", "producao_id_ref": "P1"}]
-        prods = [{"id": "P1", "valor_horario": 50.0}]
+        prods = [{"id": "P1", "producao_horaria": 50.0}]
         result = _build_joined_cpus(cpus, prods)
         assert len(result) == 1
 

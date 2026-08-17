@@ -2,7 +2,7 @@
   "id": "PROD-ATI-023",
   "codigo": "ATI-023",
   "descricao": "BSTC D=1,00 m - Corpo (Adotado SICRO)",
-  "valor_horario": 0.85,
+  "producao_horaria": 0.85,
   "unidade": "m",
   "origem": {
     "tipo": "adotado_sicro",

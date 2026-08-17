@@ -2,7 +2,7 @@
   "id": "PROD-DREN-MAN-DN300-001",
   "codigo": "DREN-MAN-DN300-001",
   "descricao": "Coletor tronco DN300 em manilha cerâmica — abertura, assentamento, reaterro",
-  "valor_horario": 3.0,
+  "producao_horaria": 3.0,
   "unidade": "m",
   "origem": {
     "tipo": "calibrado_contra_obra_real",

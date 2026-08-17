@@ -36,7 +36,7 @@ def test_reasonability_artifact_returns_ok_when_producao_has_team_and_productivi
     producoes = [
         {
             "id": "CPU-OK-PROD-001",
-            "valor_horario": 12.5,
+            "producao_horaria": 12.5,
             "composicao_padrao_equipe": {
                 "funcoes": [{"funcao_id": "MO-OPER", "num_pessoas": 2}],
                 "equipamentos": [{"equip_id": "EQ-001", "num_unidades": 1}],
@@ -147,7 +147,7 @@ class TestResolveTeamFromProducaoNonDictEquipe:
         """Line 110: prod has no equipe key at all → equipe.get() returns None → return [], []."""
         from concilium.application.services.catalog.catalog_reasonability import _resolve_team_from_producao
 
-        prod = {"valor_horario": 10.0}  # no equipe or composicao_padrao_equipe
+        prod = {"producao_horaria": 10.0}  # no equipe or composicao_padrao_equipe
         funcoes, equipamentos = _resolve_team_from_producao(prod)
         assert funcoes == []
         assert equipamentos == []
@@ -170,11 +170,11 @@ class TestCatalogReasonabilityIQROutlier:
             "producao_id_ref": f"P-{i:02d}",
         }
 
-    def _make_producao(self, i: int, valor_horario: float) -> dict:
+    def _make_producao(self, i: int, producao_horaria: float) -> dict:
         """Build a producao dict with 1 person in equipe."""
         return {
             "id": f"P-{i:02d}",
-            "valor_horario": valor_horario,
+            "producao_horaria": producao_horaria,
             "composicao_padrao_equipe": {
                 "funcoes": [{"funcao": "Operador", "num_pessoas": 1}],
                 "equipamentos": [],
@@ -196,7 +196,7 @@ class TestCatalogReasonabilityIQROutlier:
         result = build_catalog_reasonability_artifact("cat-test", cpus, producoes)
 
         rows = result.get("rows", [])
-        # Find the outlier row (CPU-08 referencing P-08 with valor_horario=100)
+        # Find the outlier row (CPU-08 referencing P-08 with producao_horaria=100)
         outlier_row = next((r for r in rows if r["cpu_id"] == "CPU-08"), None)
         assert outlier_row is not None
         # The outlier should have AVISO severity from IQR detection

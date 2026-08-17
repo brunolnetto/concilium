@@ -12,7 +12,7 @@ Materiais gerados (Insumo GERACAO_INTERNA, preço 0.0 — convenção ADR-139 D1
 em cada catálogo mapeado: MA-SOLO-ESCAVADO-{1,2,3}CAT.
 
 Regras de conversão:
-  - geracao_por_hora/consumo_por_hora = valor_horario da produtividade (1 m³/m³, sem
+  - geracao_por_hora/consumo_por_hora = producao_horaria da produtividade (1 m³/m³, sem
     fator de empolamento), salvo taxa explícita no mapeamento (ex.: rebaixo de 20 cm,
     m²/h × 0,20 m = m³/h).
 
@@ -72,7 +72,7 @@ _INSUMOS_GERADOS: dict[str, str] = {
     ),
 }
 
-# Por catálogo: caminho relativo da produtividade -> (insumo, taxa m³/h ou None=valor_horario, justificativa)
+# Por catálogo: caminho relativo da produtividade -> (insumo, taxa m³/h ou None=producao_horaria, justificativa)
 _PRODUTORAS: dict[str, dict[str, tuple[str, float | None, str]]] = {
     "rfi-r02": {
         "produtividades/CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001.json": (
@@ -264,7 +264,7 @@ def run_enrichment(catalogos_dir: Path = CATALOGOS_DIR, apply: bool = False) -> 
             gerados = data.setdefault("materiais_gerados", [])
             if any(g.get("insumo_id") == insumo_id for g in gerados):
                 continue
-            geracao = taxa if taxa is not None else data["valor_horario"]
+            geracao = taxa if taxa is not None else data["producao_horaria"]
             stats["produtoras_enriquecidas"] += 1
             print(f"  [PRODUTORA] {catalogo}: {data['id']} → {insumo_id} @ {geracao} m³/h ({justificativa})")
             if apply:
@@ -288,7 +288,7 @@ def run_enrichment(catalogos_dir: Path = CATALOGOS_DIR, apply: bool = False) -> 
             materiais = equipe.setdefault("materiais", [])
             if any(m.get("insumo_id") == insumo_id for m in materiais):
                 continue
-            consumo = taxa if taxa is not None else data["valor_horario"]
+            consumo = taxa if taxa is not None else data["producao_horaria"]
             stats["consumidoras_enriquecidas"] += 1
             print(f"  [CONSUMIDORA] {catalogo}: {data['id']} ← {insumo_id} @ {consumo} m³/h ({justificativa})")
             if apply:
@@ -298,7 +298,7 @@ def run_enrichment(catalogos_dir: Path = CATALOGOS_DIR, apply: bool = False) -> 
                         "consumo_por_hora": consumo,
                         "unidade": "m3",
                         "descricao": (
-                            f"BOM 1 m³/m³ convertido via coeficiente × valor_horario — {justificativa} (ADR-139 F4)"
+                            f"BOM 1 m³/m³ convertido via coeficiente × producao_horaria — {justificativa} (ADR-139 F4)"
                         ),
                         "origem_entrada": "bom_convertido",
                     }

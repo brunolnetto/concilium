@@ -1701,7 +1701,7 @@ class TestImplAdicionarVarianteProducao:
         variantes = saved["PROD-001"]["variantes"]
         assert len(variantes) == 1
         assert variantes[0]["id"] == "V1"
-        assert variantes[0]["valor_horario"] == 150.0
+        assert variantes[0]["producao_horaria"] == 150.0
 
     def test_projeto_merges_existing_overrides(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # lines 327-333 — existing overlay merged, variantes de outras producoes preservadas
@@ -1710,7 +1710,7 @@ class TestImplAdicionarVarianteProducao:
         proj_dir = projects_dir / "PROJ-001"
         overrides_dir = proj_dir / "overrides"
         overrides_dir.mkdir(parents=True)
-        existing = {"OTHER-PROD": {"variantes": [{"id": "V0", "nome": "old", "valor_horario": 50.0, "equipe": {}}]}}
+        existing = {"OTHER-PROD": {"variantes": [{"id": "V0", "nome": "old", "producao_horaria": 50.0, "equipe": {}}]}}
         (overrides_dir / "producoes_overlay.json").write_text(json.dumps(existing), encoding="utf-8")
         self._setup(monkeypatch, rt, tmp_path, projects_dir)
 
@@ -1782,7 +1782,7 @@ class TestImplAdicionarVarianteProducao:
         assert delta["tipo"] == "variante_producao"
         assert delta["producao_id"] == "PROD-001"
         assert delta["variante_id"] == "V-NEW"
-        assert delta["valor_horario"] == 88.0
+        assert delta["producao_horaria"] == 88.0
         assert delta["equipe"] == {"funcoes": [{"funcao_id": "MO-001"}]}
 
     def test_rascunho_inexistente_returns_erro(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -1920,7 +1920,7 @@ class TestApplyVarianteProducaoDelta:
 
         data = json.loads(prod_file.read_text(encoding="utf-8"))
         assert data["variantes"] == [
-            {"id": "V-NEW", "nome": "Nova Variante", "valor_horario": 123.0, "equipe": {"funcoes": []}}
+            {"id": "V-NEW", "nome": "Nova Variante", "producao_horaria": 123.0, "equipe": {"funcoes": []}}
         ]
 
 

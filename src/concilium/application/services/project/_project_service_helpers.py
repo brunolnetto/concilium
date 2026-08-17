@@ -48,8 +48,8 @@ def _try_enrich_cpu_with_prod(cpu: dict[str, Any], prod_lkp: dict[str, Any]) -> 
     if not prod:
         return cpu
     patch: dict[str, Any] = {}
-    if not cpu.get("producao_horaria") and prod.get("valor_horario") is not None:
-        patch["producao_horaria"] = prod["valor_horario"]
+    if not cpu.get("producao_horaria") and prod.get("producao_horaria") is not None:
+        patch["producao_horaria"] = prod["producao_horaria"]
     prod_equipe = prod.get("equipe")
     if not isinstance(prod_equipe, dict):
         prod_equipe = prod.get("composicao_padrao_equipe")

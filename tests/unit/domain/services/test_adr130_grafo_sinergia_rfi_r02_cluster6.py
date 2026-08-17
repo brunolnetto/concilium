@@ -100,17 +100,17 @@ class TestCluster6SchemaEReconciliacao:
         from concilium.domain.services.sinergia_equipe import derivar_producao_horaria
 
         data = json.loads((_PRODUTIVIDADES / filename).read_text(encoding="utf-8"))
-        valor_horario = data["valor_horario"]
+        producao_horaria = data["producao_horaria"]
         composicao = _composicao_de(data)
         grafo = GrafoSinergiaEquipe(**data["grafo_sinergia"])
 
         derivacao = derivar_producao_horaria(grafo, composicao)
         assert derivacao.producao_horaria_derivada is not None, f"{filename}: gargalo não computável"
 
-        divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+        divergencia = abs(derivacao.producao_horaria_derivada - producao_horaria) / producao_horaria
         assert divergencia < 0.15, (
             f"{filename}: derivado={derivacao.producao_horaria_derivada} vs "
-            f"valor_horario={valor_horario} (divergência {divergencia:.1%})"
+            f"producao_horaria={producao_horaria} (divergência {divergencia:.1%})"
         )
 
     @pytest.mark.parametrize("filename", _ALL_FILES)
@@ -136,7 +136,7 @@ class TestCluster6SchemaEReconciliacao:
     def test_rocada_conversao_area_linear_e_consistente(self):
         area = json.loads((_PRODUTIVIDADES / "CPU-TERRA-ATI-006-PROD-001.json").read_text(encoding="utf-8"))
         linear = json.loads((_PRODUTIVIDADES / "CPU-TERRA-ATI-068-PROD-001.json").read_text(encoding="utf-8"))
-        largura_implicita = area["valor_horario"] / linear["valor_horario"]
+        largura_implicita = area["producao_horaria"] / linear["producao_horaria"]
         assert largura_implicita == pytest.approx(10.0, rel=0.01)
 
     @pytest.mark.parametrize("filename", _BOCA_FILES)
@@ -167,7 +167,7 @@ class TestCluster6SchemaEReconciliacao:
     def test_compac_pi_mais_lento_que_pn(self):
         pi = json.loads((_PRODUTIVIDADES / "CPU-TERRA-COMPAC-PI-PROD-001.json").read_text(encoding="utf-8"))
         pn = json.loads((_PRODUTIVIDADES / "CPU-TERRA-COMPAC-PN-PROD-001.json").read_text(encoding="utf-8"))
-        assert pi["valor_horario"] < pn["valor_horario"]
+        assert pi["producao_horaria"] < pn["producao_horaria"]
 
     @pytest.mark.parametrize("filename", _ESCO_3CAT_FILES)
     def test_esco_3cat_escavadeira_e_gargalo_forward(self, filename):

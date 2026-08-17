@@ -117,7 +117,7 @@ def _prod(
         "codigo": codigo,
     }
     if vh is not None:
-        p["valor_horario"] = vh
+        p["producao_horaria"] = vh
     if equipe:
         p["composicao_padrao_equipe"] = equipe
     return p

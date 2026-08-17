@@ -39,8 +39,8 @@ def make_cpu(codigo="CPU-001", producao_id_ref=None, unidade="m3", composicao_it
     }
 
 
-def make_producao(pid="PROD-001", valor_horario=10.0, equipe=None):
-    p = {"id": pid, "valor_horario": valor_horario}
+def make_producao(pid="PROD-001", producao_horaria=10.0, equipe=None):
+    p = {"id": pid, "producao_horaria": producao_horaria}
     if equipe is not None:
         p["composicao_padrao_equipe"] = equipe
     return p
@@ -77,20 +77,20 @@ class TestSimuladorInit:
         assert "INS-A" in sim.insumos
 
     def test_producoes_indexed_by_id(self):
-        prod = make_producao("PROD-X", valor_horario=5.5)
+        prod = make_producao("PROD-X", producao_horaria=5.5)
         sim = SimuladorEngenharia(make_catalogo(producoes=[prod]))
         assert sim.producoes["PROD-X"] == 5.5
 
     def test_producoes_key_producoes_fallback(self):
         """Catalog may use 'producoes' instead of 'produtividades'."""
-        prod = make_producao("PROD-Z", valor_horario=3.0)
+        prod = make_producao("PROD-Z", producao_horaria=3.0)
         catalogo = {"cpus": [], "insumos": [], "producoes": [prod]}
         sim = SimuladorEngenharia(catalogo)
         assert sim.producoes["PROD-Z"] == 3.0
 
     def test_producao_without_id_ignored(self):
         """Entries without an 'id' field should be skipped."""
-        prod_no_id = {"valor_horario": 9.0}
+        prod_no_id = {"producao_horaria": 9.0}
         sim = SimuladorEngenharia(make_catalogo(producoes=[prod_no_id]))
         assert sim.producoes == {}
 
@@ -208,7 +208,7 @@ class TestSimularCpuRegimes:
 
 class TestSimularCpuProducao:
     def test_producao_total_equals_prod_h_times_horas(self):
-        prod = make_producao("PROD-A", valor_horario=5.0)
+        prod = make_producao("PROD-A", producao_horaria=5.0)
         cpu = make_cpu("CPU-A", producao_id_ref="PROD-A")
         sim = SimuladorEngenharia(make_catalogo(cpus=[cpu], producoes=[prod]))
         periodo = 7
@@ -265,7 +265,7 @@ class TestSimularCpuEncargos:
         """A CPU with one funcao paying 100/h."""
         ins = make_insumo("FUNC-A", preco_unitario=100.0, unidade="h")
         equipe = {"funcoes": [{"funcao_id": "FUNC-A", "num_pessoas": 1}], "equipamentos": []}
-        prod = make_producao("PROD-A", valor_horario=1.0, equipe=equipe)
+        prod = make_producao("PROD-A", producao_horaria=1.0, equipe=equipe)
         cpu = make_cpu("CPU-A", producao_id_ref="PROD-A")
         cat = make_catalogo(cpus=[cpu], insumos=[ins], producoes=[prod])
         return SimuladorEngenharia(cat)
@@ -310,7 +310,7 @@ class TestSimularCpuTotalDireto:
         ins_func = make_insumo("FUNC-A", preco_unitario=50.0, unidade="h")
         ins_mat = make_insumo("MAT-A", preco_unitario=10.0, unidade="m3")
         equipe = {"funcoes": [{"funcao_id": "FUNC-A", "num_pessoas": 2}], "equipamentos": []}
-        prod = make_producao("PROD-A", valor_horario=2.0, equipe=equipe)
+        prod = make_producao("PROD-A", producao_horaria=2.0, equipe=equipe)
         cpu = make_cpu(
             "CPU-A",
             producao_id_ref="PROD-A",
@@ -537,7 +537,7 @@ class TestSimCalcMateriais:
 
 class TestSimularCpuMateriais:
     def test_custo_material_computed(self):
-        prod = make_producao("PROD-A", valor_horario=1.0)
+        prod = make_producao("PROD-A", producao_horaria=1.0)
         ins_mat = make_insumo("MAT-A", preco_unitario=3.0)
         cpu = make_cpu(
             "CPU-A",
@@ -550,7 +550,7 @@ class TestSimularCpuMateriais:
         assert r.custo_material == pytest.approx(336.0, abs=0.01)
 
     def test_custo_material_scales_with_producao(self):
-        prod = make_producao("PROD-B", valor_horario=2.0)
+        prod = make_producao("PROD-B", producao_horaria=2.0)
         ins_mat = make_insumo("MAT-A", preco_unitario=1.0)
         cpu = make_cpu(
             "CPU-B",
@@ -588,7 +588,7 @@ class TestSimularCpuFullEquipe:
             "funcoes": [{"funcao_id": "FUNC-A", "num_pessoas": 1}],
             "equipamentos": [{"equip_id": "EQ-A", "num_unidades": 1}],
         }
-        prod = make_producao("PROD-A", valor_horario=5.0, equipe=equipe)
+        prod = make_producao("PROD-A", producao_horaria=5.0, equipe=equipe)
         cpu = make_cpu("CPU-A", producao_id_ref="PROD-A")
         cat = make_catalogo(cpus=[cpu], insumos=[ins_func, ins_equip], producoes=[prod])
         return SimuladorEngenharia(cat)

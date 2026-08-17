@@ -2,7 +2,7 @@
   "id": "PROD-ATI-058",
   "codigo": "ATI-058",
   "descricao": "CBUQ e=3,0 cm (Adotado SICRO)",
-  "valor_horario": 450.0,
+  "producao_horaria": 450.0,
   "unidade": "m2",
   "origem": {
     "tipo": "adotado_sicro",

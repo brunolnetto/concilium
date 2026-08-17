@@ -48,7 +48,7 @@ def _producao_kwargs(**overrides) -> dict:
         "id": "PROD-ESCAV-001",
         "codigo": "ESCAV-COMUM",
         "descricao": "Escavação de material comum",
-        "valor_horario": 120.0,
+        "producao_horaria": 120.0,
         "unidade": "m3",
         "origem": {
             "tipo": "estimado",

@@ -43,8 +43,8 @@ def _enrich_cpu_with_prod(cpu: dict, prod_lookup: dict) -> dict:
     if not prod:
         return cpu
     patch: dict = {}
-    if not cpu.get("producao_horaria") and prod.get("valor_horario") is not None:
-        patch["producao_horaria"] = prod["valor_horario"]
+    if not cpu.get("producao_horaria") and prod.get("producao_horaria") is not None:
+        patch["producao_horaria"] = prod["producao_horaria"]
     prod_equipe = prod.get("equipe")
     if not isinstance(prod_equipe, dict):
         prod_equipe = prod.get("composicao_padrao_equipe")
@@ -231,7 +231,7 @@ def _resolve_producao_horaria(eap_item: dict, cpu_lookup: dict, producao_lookup:
     prod_id = cpu.get("producao_id_ref") or cpu.get("producao_id")
     # Nível 1: tabela de produção (mais específica)
     prod_entry = producao_lookup.get(prod_id) if prod_id else None
-    valor = prod_entry.get("valor_horario") if prod_entry is not None else None
+    valor = prod_entry.get("producao_horaria") if prod_entry is not None else None
     if valor is not None:
         return float(valor)
     # Nível 2: campo direto na CPU

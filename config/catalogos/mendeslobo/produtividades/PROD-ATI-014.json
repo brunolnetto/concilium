@@ -2,7 +2,7 @@
   "id": "PROD-ATI-014",
   "codigo": "ATI-014",
   "descricao": "Esc/carg/transp 2ªcat DMT 2-3km (Adotado SICRO)",
-  "valor_horario": 110.0,
+  "producao_horaria": 110.0,
   "unidade": "m3",
   "origem": {
     "tipo": "adotado_sicro",

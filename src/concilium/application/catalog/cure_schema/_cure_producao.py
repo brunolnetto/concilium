@@ -18,13 +18,13 @@ def _cure_producao_cpu_contamination(changed: dict, pid: object, report: Curatio
 
 
 def _cure_producao_migra_producao_horaria(changed: dict, pid: object, report: CurationReport, apply: bool) -> None:
-    # Migra producao_horaria legado -> valor_horario canônico
-    if "producao_horaria" in changed:
+    # Migra campo legado valor_horario -> producao_horaria canônico
+    if "valor_horario" in changed:
         if apply:
-            if "valor_horario" not in changed and changed.get("producao_horaria") is not None:
-                changed["valor_horario"] = changed.get("producao_horaria")
-            del changed["producao_horaria"]
-        report.add_fixed(f"PRODUCAO {pid}: migrado/removido campo legado producao_horaria")
+            if "producao_horaria" not in changed and changed.get("valor_horario") is not None:
+                changed["producao_horaria"] = changed.get("valor_horario")
+            del changed["valor_horario"]
+        report.add_fixed(f"PRODUCAO {pid}: migrado/removido campo legado valor_horario")
 
 
 def _cure_producao_migra_equipe(changed: dict, pid: object, report: CurationReport, apply: bool) -> None:

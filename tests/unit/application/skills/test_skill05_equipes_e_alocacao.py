@@ -134,7 +134,7 @@ class TestEquipesDiretasEdgeCases:
             "produtividades": [
                 {
                     "id": "PROD-T",
-                    "valor_horario": 50.0,
+                    "producao_horaria": 50.0,
                     "composicao_padrao_equipe": {
                         "funcoes": [{"funcao_id": funcao_id, "num_pessoas": 1}],
                         "equipamentos": [{"equip_id": equip_id, "num_unidades": 1}],

@@ -6,10 +6,10 @@ TDD: testes escritos antes de popular os 7 arquivos reais.
 Dois grupos, ambos sem etapa mecanizada relevante como elemento limitante:
 
   - E0001 (veículo leve de apoio) + papel de mão de obra: capacidade do papel
-    primário = valor_horario / num_pessoas (calibração reversa direta); E0001
+    primário = producao_horaria / num_pessoas (calibração reversa direta); E0001
     entra apenas como fonte="fabricante" não-vinculante (nunca é o gargalo).
   - Serviços terceirizados (sem equipamento na composição): capacidade do
-    papel primário = valor_horario / num_pessoas, sem segundo elemento.
+    papel primário = producao_horaria / num_pessoas, sem segundo elemento.
 """
 
 from __future__ import annotations
@@ -62,17 +62,17 @@ class TestCluster4SchemaEReconciliacao:
         from concilium.domain.services.sinergia_equipe import derivar_producao_horaria
 
         data = json.loads((_PRODUTIVIDADES / filename).read_text(encoding="utf-8"))
-        valor_horario = data["valor_horario"]
+        producao_horaria = data["producao_horaria"]
         composicao = ComposicaoPadraoEquipe(**data["composicao_padrao_equipe"])
         grafo = GrafoSinergiaEquipe(**data["grafo_sinergia"])
 
         derivacao = derivar_producao_horaria(grafo, composicao)
         assert derivacao.producao_horaria_derivada is not None, f"{filename}: gargalo não computável"
 
-        divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+        divergencia = abs(derivacao.producao_horaria_derivada - producao_horaria) / producao_horaria
         assert divergencia < 0.15, (
             f"{filename}: derivado={derivacao.producao_horaria_derivada} vs "
-            f"valor_horario={valor_horario} (divergência {divergencia:.1%})"
+            f"producao_horaria={producao_horaria} (divergência {divergencia:.1%})"
         )
 
     @pytest.mark.parametrize("filename", _ALL_FILES)

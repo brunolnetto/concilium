@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-COMPAC-PI-PROD-001",
   "codigo": "CPU-TERRA-COMPAC-PI",
   "descricao": "Aterro compactado 100% PI",
-  "valor_horario": 132.32,
+  "producao_horaria": 132.32,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_agis_rfi",

@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-045-PROD-001",
   "codigo": "ATI-045",
   "descricao": "Tubo PVC PBA D=100mm — vala 1ªcat",
-  "valor_horario": 12.825,
+  "producao_horaria": 12.825,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

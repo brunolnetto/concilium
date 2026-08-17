@@ -100,8 +100,8 @@ class _CpuResolutionMixin(_Base):
 
     def _apply_producao_fields(self, cpu: dict[str, Any], prod: dict[str, Any]) -> None:
         """Applies producao_horaria/equipe fields from a producao catalog entry into cpu (in-place)."""
-        if cpu.get("producao_horaria") is None and prod.get("valor_horario") is not None:
-            cpu["producao_horaria"] = prod.get("valor_horario")
+        if cpu.get("producao_horaria") is None and prod.get("producao_horaria") is not None:
+            cpu["producao_horaria"] = prod.get("producao_horaria")
         if not cpu.get("equipe"):
             equipe = prod.get("equipe")
             if not isinstance(equipe, dict):

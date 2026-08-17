@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-003-PROD-001",
   "codigo": "CPU-TERRA-ATI-003",
   "descricao": "Desmatamento, destocamento, limpeza",
-  "valor_horario": 738.0,
+  "producao_horaria": 738.0,
   "unidade": "m2",
   "origem": {
     "tipo": "calibrado_agis_rfi",

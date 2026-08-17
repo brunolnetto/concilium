@@ -58,10 +58,10 @@ def validate_insumo_nao_existe(catalog_root: Path, codigo: str) -> None:
         raise CatalogGovernanceError(f"Insumo {codigo} já existe no catálogo mestre.")
 
 
-def validate_and_resolve_producao_file(catalog_root: Path, producao_id: str, valor_horario: float) -> Path:
+def validate_and_resolve_producao_file(catalog_root: Path, producao_id: str, producao_horaria: float) -> Path:
     """Valida escrita de variante de produção e resolve o arquivo no catálogo mestre."""
-    if valor_horario <= 0:
-        raise CatalogGovernanceError("valor_horario deve ser maior que zero.")
+    if producao_horaria <= 0:
+        raise CatalogGovernanceError("producao_horaria deve ser maior que zero.")
     for folder in ("producoes", "produtividades"):
         candidate = catalog_root / folder / f"{producao_id}.json"
         if candidate.exists():

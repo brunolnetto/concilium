@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-007-PROD-001",
   "codigo": "ATI-007",
   "descricao": "Supressão média densidade",
-  "valor_horario": 625.0,
+  "producao_horaria": 625.0,
   "unidade": "m²",
   "origem": {
     "tipo": "planilha_rfi_r02",

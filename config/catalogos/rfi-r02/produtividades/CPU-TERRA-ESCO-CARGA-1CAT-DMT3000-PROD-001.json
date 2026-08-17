@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000-PROD-001",
   "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000",
   "descricao": "Esc/carg/transp 1ªcat DMT 2000-3000m",
-  "valor_horario": 230.91,
+  "producao_horaria": 230.91,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_agis_rfi",

@@ -3,7 +3,7 @@
 Valida o resultado de `scripts/catalog/cure_producao_escavacao_solo_mendeslobo.py`:
 
   - As 6 produtividades de escavação (1CAT/2CAT/3CAT × DMT2000/DMT3000) declaram
-    `materiais_gerados` com `geracao_por_hora` == `valor_horario` (coeficiente 1
+    `materiais_gerados` com `geracao_por_hora` == `producao_horaria` (coeficiente 1
     m³/m³, mesmo padrão já correto de rfi-r02).
   - Idempotência do script.
 """
@@ -32,7 +32,7 @@ class TestProducaoVinculada:
         prod = _load(f"produtividades/{pid}.json")
         (gerado,) = prod["materiais_gerados"]
         assert gerado["insumo_id"] == _ESCAVACOES[pid]
-        assert gerado["geracao_por_hora"] == pytest.approx(prod["valor_horario"])
+        assert gerado["geracao_por_hora"] == pytest.approx(prod["producao_horaria"])
         assert "ADR-139" in gerado["descricao"]
 
 

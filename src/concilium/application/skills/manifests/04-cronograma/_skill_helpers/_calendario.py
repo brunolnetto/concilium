@@ -21,9 +21,9 @@ from concilium.domain.models.canonical import (
 def _week_to_month(semana_key: str) -> str:
     """Converte 'AAAA-Www' para 'MM-YYYY'."""
     year_str, week_str = semana_key.split("-W")
-    week_num = int(week_str)
-    month_num = max(1, min(12, (week_num - 1) // 4 + 1))
-    return f"{month_num:02d}-{year_str}"
+    # Thursday (day 4) define o ano ISO da semana — evita mapear W01 para dezembro
+    d = date.fromisocalendar(int(year_str), int(week_str), 4)
+    return f"{d.month:02d}-{d.year:04d}"
 
 
 def _event_occurs_on_day(evento: dict[str, Any], day: date) -> bool:
@@ -457,16 +457,16 @@ def _resolve_productivity_from_lookup(
         return None
 
     prod_item = producao_lookup[prod_id_ref]
-    valor = prod_item.get("valor_horario")
+    valor = prod_item.get("producao_horaria")
     if valor is None:
-        valor = prod_item.get("producao_horaria")
+        valor = prod_item.get("valor_horario")  # fallback para arquivos antigos
         if valor is not None:
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-PROD-04-PROD-LEGACY",
                     status="AVISO",
                     mensagem=(
-                        f"Produtividade {prod_id_ref} usa campo legado 'producao_horaria'. Migre para 'valor_horario'."
+                        f"Produtividade {prod_id_ref} usa campo legado 'valor_horario'. Migre para 'producao_horaria'."
                     ),
                 )
             )

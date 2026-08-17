@@ -68,7 +68,7 @@ def _canonical(cpu_id: str = "CPU-Y", quantitativo: float = 10.0) -> CanonicalMo
 
 
 def _catalogo(composicao_itens: list[dict], insumos_extra: list[dict] | None = None) -> dict:
-    """Catálogo com Fonte 1 sempre falhando (valor_horario=0) — força Fonte 2."""
+    """Catálogo com Fonte 1 sempre falhando (producao_horaria=0) — força Fonte 2."""
     return {
         "cpus": [
             {
@@ -87,8 +87,8 @@ def _catalogo(composicao_itens: list[dict], insumos_extra: list[dict] | None = N
             {"codigo": "EQ-1", "unidade": "h", "preco_unitario": 20.0},
             *(insumos_extra or []),
         ],
-        # Fonte 1 (bottom-up) deve falhar: valor_horario=0 -> _resolve_producao_valida retorna None.
-        "produtividades": [{"id": "P-Y", "valor_horario": 0.0}],
+        # Fonte 1 (bottom-up) deve falhar: producao_horaria=0 -> _resolve_producao_valida retorna None.
+        "produtividades": [{"id": "P-Y", "producao_horaria": 0.0}],
     }
 
 

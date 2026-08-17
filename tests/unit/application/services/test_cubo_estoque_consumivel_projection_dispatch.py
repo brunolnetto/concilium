@@ -32,7 +32,7 @@ def _canonical():
         return {
             "id": pid,
             "codigo": pid,
-            "valor_horario": 50.0,
+            "producao_horaria": 50.0,
             "composicao_padrao_equipe": {
                 "equipamentos": [{"equip_id": "EQ-X", "num_unidades": 1}],
                 "materiais": [{"insumo_id": insumo_id, "consumo_por_hora": 1.0}],

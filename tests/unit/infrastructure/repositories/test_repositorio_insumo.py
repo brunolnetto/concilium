@@ -184,11 +184,11 @@ class TestRepositorioInsumo:
     def test_obter_producao_found(self):
         from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-        catalogo = {"producoes": [{"id": "CPU-1", "valor_horario": 10.0}]}
+        catalogo = {"producoes": [{"id": "CPU-1", "producao_horaria": 10.0}]}
         repo = RepositorioInsumo(catalogo)
         result = repo.obter_producao("CPU-1")
         assert result is not None
-        assert result["valor_horario"] == 10.0
+        assert result["producao_horaria"] == 10.0
 
     def test_obter_producao_missing(self):
         from concilium.infrastructure.repositories.insumo import RepositorioInsumo
@@ -522,7 +522,7 @@ class TestRepositorioInsumo2:
         assert repo.insumo_existe("MISSING") is False
 
     def test_obter_producao_found(self):
-        repo = self._make_repo(producoes=[{"id": "PROD-1", "valor_horario": 50.0}])
+        repo = self._make_repo(producoes=[{"id": "PROD-1", "producao_horaria": 50.0}])
         result = repo.obter_producao("PROD-1")
         assert result is not None
 

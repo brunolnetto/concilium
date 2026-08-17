@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-COMPAC-PN-PROD-001",
   "codigo": "CPU-TERRA-COMPAC-PN",
   "descricao": "Aterro compactado 100% PN",
-  "valor_horario": 173.01,
+  "producao_horaria": 173.01,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_agis_rfi",

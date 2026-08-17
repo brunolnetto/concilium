@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-071-PROD-001",
   "codigo": "ATI-071",
   "descricao": "Assentamento piso intertravado (terceirizado)",
-  "valor_horario": 25.0,
+  "producao_horaria": 25.0,
   "unidade": "m²",
   "origem": {
     "tipo": "planilha_rfi_r02",

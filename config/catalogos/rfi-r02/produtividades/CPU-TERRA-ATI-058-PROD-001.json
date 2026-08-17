@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-058-PROD-001",
   "codigo": "ATI-058",
   "descricao": "CBUQ E=3,0cm",
-  "valor_horario": 816.67,
+  "producao_horaria": 816.67,
   "unidade": "m²",
   "origem": {
     "tipo": "planilha_rfi_r02",

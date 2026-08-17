@@ -2,7 +2,7 @@
   "id": "PROD-COMPACT-ATERRO-100PN-001",
   "codigo": "COMPACT-ATERRO-100PN-001",
   "descricao": "Compactação de aterros a 100% do Proctor Normal",
-  "valor_horario": 173.197428,
+  "producao_horaria": 173.197428,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_contra_obra_real",

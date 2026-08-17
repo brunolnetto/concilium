@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-070-PROD-001",
   "codigo": "ATI-070",
   "descricao": "Implantação de eixo",
-  "valor_horario": 0.143,
+  "producao_horaria": 0.143,
   "unidade": "km",
   "origem": {
     "tipo": "planilha_rfi_r02",

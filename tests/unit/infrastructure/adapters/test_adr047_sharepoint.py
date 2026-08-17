@@ -1825,10 +1825,10 @@ class TestSharePointBlobStorageLerBlobsBatch:
         storage = _make_storage()
         mock_httpx = MagicMock()
         mock_httpx.Client.return_value = mock_httpx
-        mock_httpx.post.return_value = _batch_response([("0", 200, {"id": "PROD-1", "valor_horario": 10.0})])
+        mock_httpx.post.return_value = _batch_response([("0", 200, {"id": "PROD-1", "producao_horaria": 10.0})])
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             result = storage.ler_blobs_batch(["produtividades/PROD-1.json"])
-        assert json.loads(result["produtividades/PROD-1.json"]) == {"id": "PROD-1", "valor_horario": 10.0}
+        assert json.loads(result["produtividades/PROD-1.json"]) == {"id": "PROD-1", "producao_horaria": 10.0}
 
     def test_decodes_base64_body(self):
         import base64

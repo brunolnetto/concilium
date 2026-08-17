@@ -85,7 +85,7 @@ def _grafo_escavacao(
 
 
 def _producao(
-    valor_horario: float = 100.0,
+    producao_horaria: float = 100.0,
     composicao: ComposicaoPadraoEquipe | None = None,
     grafo: GrafoSinergiaEquipe | None = None,
     tipo_origem: str = "tabela_referencia",
@@ -95,7 +95,7 @@ def _producao(
         id="PROD-ESCO-1",
         codigo="ESCO-CARGA-1CAT",
         descricao="Escavação carga 1ª categoria",
-        valor_horario=valor_horario,
+        producao_horaria=producao_horaria,
         unidade="m3",
         origem=OrigemProducao(
             tipo=tipo_origem,
@@ -350,7 +350,7 @@ class TestDerivacaoD2:
 
 class TestPrecedenciaD3:
     def test_sem_grafo_usa_declarado(self):
-        p = _producao(valor_horario=234.0, grafo=None)
+        p = _producao(producao_horaria=234.0, grafo=None)
         r = resolver_producao_efetiva(p)
         assert r.fonte == "declarado"
         assert r.valor == 234.0
@@ -358,31 +358,31 @@ class TestPrecedenciaD3:
 
     def test_calibrado_vence_derivado_mesmo_com_grafo(self):
         grafo = _grafo_escavacao(capacidade_escavadeira=100.0, capacidade_caminhao_unitario=30.0)
-        p = _producao(valor_horario=234.0, grafo=grafo, tipo_origem="calibrado_contra_obra_real")
+        p = _producao(producao_horaria=234.0, grafo=grafo, tipo_origem="calibrado_contra_obra_real")
         r = resolver_producao_efetiva(p)
         assert r.fonte == "calibrado"
         assert r.valor == 234.0  # valor calibrado preservado, nunca sobrescrito
 
     def test_derivado_vence_declarado_quando_nao_calibrado(self):
         grafo = _grafo_escavacao(capacidade_escavadeira=100.0, capacidade_caminhao_unitario=30.0)
-        p = _producao(valor_horario=234.0, grafo=grafo, tipo_origem="tabela_referencia")
+        p = _producao(producao_horaria=234.0, grafo=grafo, tipo_origem="tabela_referencia")
         r = resolver_producao_efetiva(p)
         assert r.fonte == "derivado"
         assert r.valor == 100.0
         # a Producao original nunca é mutada por esta função consultiva
-        assert p.valor_horario == 234.0
+        assert p.producao_horaria == 234.0
 
     def test_divergencia_alta_emite_val_sinergia_02_e_preserva_declarado(self):
         grafo = _grafo_escavacao(capacidade_escavadeira=100.0, capacidade_caminhao_unitario=30.0)
-        p = _producao(valor_horario=234.0, grafo=grafo)  # diverge > 15% de 100.0
+        p = _producao(producao_horaria=234.0, grafo=grafo)  # diverge > 15% de 100.0
         r = resolver_producao_efetiva(p)
         assert any(v.codigo == "VAL-SINERGIA-02" and v.status == "AVISO" for v in r.validacoes)
-        assert p.valor_horario == 234.0  # preservado
+        assert p.producao_horaria == 234.0  # preservado
 
     def test_divergencia_dentro_do_limiar_nao_emite_val_sinergia_02(self):
         # declarado 105 vs derivado 100 -> 5% < 15%
         grafo = _grafo_escavacao(capacidade_escavadeira=100.0, capacidade_caminhao_unitario=30.0)
-        p = _producao(valor_horario=105.0, grafo=grafo)
+        p = _producao(producao_horaria=105.0, grafo=grafo)
         r = resolver_producao_efetiva(p)
         assert not any(v.codigo == "VAL-SINERGIA-02" for v in r.validacoes)
 
@@ -391,19 +391,19 @@ class TestPrecedenciaD3:
         base = 100.0
         declarado = base * (1 + LIMIAR_DIVERGENCIA_SINERGIA)
         grafo = _grafo_escavacao(capacidade_escavadeira=base, capacidade_caminhao_unitario=30.0)
-        p = _producao(valor_horario=declarado, grafo=grafo)
+        p = _producao(producao_horaria=declarado, grafo=grafo)
         r = resolver_producao_efetiva(p)
         assert not any(v.codigo == "VAL-SINERGIA-02" for v in r.validacoes)
 
     def test_gargalo_declarado_coincide_nao_emite_val_sinergia_03(self):
         grafo = _grafo_escavacao(gargalo_declarado="ESCAV-38T")
-        p = _producao(valor_horario=100.0, grafo=grafo)
+        p = _producao(producao_horaria=100.0, grafo=grafo)
         r = resolver_producao_efetiva(p)
         assert not any(v.codigo == "VAL-SINERGIA-03" for v in r.validacoes)
 
     def test_gargalo_declarado_diverge_emite_val_sinergia_03(self):
         grafo = _grafo_escavacao(gargalo_declarado="CAMINHAO-BASC")
-        p = _producao(valor_horario=100.0, grafo=grafo)
+        p = _producao(producao_horaria=100.0, grafo=grafo)
         r = resolver_producao_efetiva(p)
         assert any(v.codigo == "VAL-SINERGIA-03" and v.status == "AVISO" for v in r.validacoes)
 
@@ -425,7 +425,7 @@ class TestPrecedenciaD3:
             ],
             relacoes=[RelacaoSinergia(tipo="acoplamento", origem="INEXISTENTE", destino="ESCAV-38T")],
         )
-        p = _producao(valor_horario=50.0, grafo=grafo)
+        p = _producao(producao_horaria=50.0, grafo=grafo)
         r = resolver_producao_efetiva(p)
         assert r.fonte == "declarado"
         assert r.valor == 50.0
@@ -515,7 +515,7 @@ class TestCalibracaoF5:
         p2 = atualizar_capacidade_gargalo(p, nova_capacidade_horaria=110.0, fonte="medicao_obra")
 
         assert p2 is not p  # imutabilidade
-        assert p.valor_horario == p2.valor_horario  # valor_horario não é tocado por F5
+        assert p.producao_horaria == p2.producao_horaria  # producao_horaria não é tocado por F5
         cap_escav = next(c for c in p2.grafo_sinergia.capacidades if c.elemento_id == "ESCAV-38T")
         assert cap_escav.capacidade_horaria == 110.0
         assert cap_escav.fonte == "medicao_obra"

@@ -357,7 +357,7 @@ def register(server: FastMCP) -> None:
         producao_id: str,
         variante_id: str,
         nome_variante: str,
-        valor_horario: float,
+        producao_horaria: float,
         equipe_json: str,
         rascunho_id: str | None = None,
         projeto_id: str | None = None,
@@ -367,7 +367,7 @@ def register(server: FastMCP) -> None:
             producao_id,
             variante_id,
             nome_variante,
-            valor_horario,
+            producao_horaria,
             equipe_json,
             rascunho_id,
             projeto_id,
@@ -846,7 +846,7 @@ def register(server: FastMCP) -> None:
                             delta["producao_id"],
                             delta["variante_id"],
                             delta["nome_variante"],
-                            delta["valor_horario"],
+                            delta["producao_horaria"],
                             delta["equipe"],
                         )
                         deltas_aplicados += 1

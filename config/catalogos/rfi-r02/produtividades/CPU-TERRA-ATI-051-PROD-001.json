@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-051-PROD-001",
   "codigo": "ATI-051",
   "descricao": "Tubo PVC DEFOFO D=300mm",
-  "valor_horario": 9.89625,
+  "producao_horaria": 9.89625,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

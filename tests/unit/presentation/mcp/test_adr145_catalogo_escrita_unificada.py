@@ -145,7 +145,7 @@ class TestAprovarMergeCatalogoAplicaDeltas:
                     "producao_id": "PROD-001",
                     "variante_id": "V1",
                     "nome_variante": "Equipe extra",
-                    "valor_horario": 55.0,
+                    "producao_horaria": 55.0,
                     "equipe": {"funcoes": []},
                     "autor": "criador@co.com",
                     "timestamp": "2026-01-01T00:00:00Z",
@@ -181,7 +181,7 @@ class TestAprovarMergeCatalogoAplicaDeltas:
         # D2 — variante de produção aplicada
         prod_data = json.loads((config_dir / "catalogos" / "cat-1" / "producoes" / "PROD-001.json").read_text())
         assert len(prod_data["variantes"]) == 1
-        assert prod_data["variantes"][0]["valor_horario"] == 55.0
+        assert prod_data["variantes"][0]["producao_horaria"] == 55.0
 
         # D3 — CatalogSnapshot persistido, justificativa não é só ecoada na resposta
         snapshots_dir = config_dir / "catalogos" / "cat-1" / "snapshots"

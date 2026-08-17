@@ -140,7 +140,7 @@ def _producao_usinagem_cbuq() -> dict[str, Any]:
             "Usinagem de CBUQ faixa C na usina de asfalto da casa (E0043) — física SICRO 6416078, "
             "equipamentos/insumos do catálogo rfi-r02 onde existem"
         ),
-        "valor_horario": vh,
+        "producao_horaria": vh,
         "unidade": "t",
         "origem": {
             "tipo": "tabela_referencia",
@@ -309,7 +309,7 @@ def run_restore(apply: bool = False) -> dict[str, Any]:
     producao = _load(prod_path) if prod_path.exists() else _producao_usinagem_cbuq()
     if not prod_path.exists():
         stats["producoes_criadas"] += 1
-        print(f"  [PRODUCAO ] PROD-USINAGEM-CBUQ-RFI-001 (vh={producao['valor_horario']} t/h, grafo de sinergia)")
+        print(f"  [PRODUCAO ] PROD-USINAGEM-CBUQ-RFI-001 (vh={producao['producao_horaria']} t/h, grafo de sinergia)")
         if apply:
             prod_path.parent.mkdir(exist_ok=True)
             _write(prod_path, producao)
@@ -340,7 +340,7 @@ def run_restore(apply: bool = False) -> dict[str, Any]:
         for insumo_id, taxa, unidade, just in entradas:
             if any(m.get("insumo_id") == insumo_id for m in materiais):
                 continue
-            consumo = taxa if taxa is not None else data["valor_horario"]
+            consumo = taxa if taxa is not None else data["producao_horaria"]
             stats["bom_entradas"] += 1
             mudou = True
             print(f"  [BOM      ] {pid} ← {insumo_id} @ {consumo}/h ({just[:60]}…)")

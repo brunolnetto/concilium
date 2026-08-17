@@ -82,58 +82,58 @@ class TestCureContextualTemplateEquipe:
         assert report.fixed == []
 
 
-# ── cure_contextual: bloco 1) valor_horario herdado de PROD-* equivalente ────
+# ── cure_contextual: bloco 1) producao_horaria herdado de PROD-* equivalente ────
 
 
 class TestCureContextualValorHorarioHerdado:
     def test_inherits_from_equivalent_prod_apply(self):
         prods = [
-            {"id": "CPU-ABC-XYZ-PROD-001", "valor_horario": None},
-            {"id": "PROD-XYZ-001", "valor_horario": 42.5},
+            {"id": "CPU-ABC-XYZ-PROD-001", "producao_horaria": None},
+            {"id": "PROD-XYZ-001", "producao_horaria": 42.5},
         ]
         report = _report()
         cure_contextual([], prods, [], report, apply=True)
-        assert prods[0]["valor_horario"] == 42.5
-        assert any("valor_horario herdado de PROD-XYZ-001" in m for m in report.fixed)
+        assert prods[0]["producao_horaria"] == 42.5
+        assert any("producao_horaria herdada de PROD-XYZ-001" in m for m in report.fixed)
 
     def test_inherits_dry_run(self):
         prods = [
-            {"id": "CPU-ABC-XYZ-PROD-001", "valor_horario": None},
-            {"id": "PROD-XYZ-001", "valor_horario": 42.5},
+            {"id": "CPU-ABC-XYZ-PROD-001", "producao_horaria": None},
+            {"id": "PROD-XYZ-001", "producao_horaria": 42.5},
         ]
         report = _report()
         cure_contextual([], prods, [], report, apply=False)
-        assert prods[0]["valor_horario"] is None
+        assert prods[0]["producao_horaria"] is None
         assert report.fixed
 
     def test_no_match_when_valor_horario_present(self):
-        prods = [{"id": "CPU-ABC-XYZ-PROD-001", "valor_horario": 10.0}]
+        prods = [{"id": "CPU-ABC-XYZ-PROD-001", "producao_horaria": 10.0}]
         report = _report()
         cure_contextual([], prods, [], report, apply=True)
         assert report.fixed == []
 
     def test_no_match_when_id_does_not_match_pattern(self):
-        prods = [{"id": "PROD-SOMETHING", "valor_horario": None}]
+        prods = [{"id": "PROD-SOMETHING", "producao_horaria": None}]
         report = _report()
         cure_contextual([], prods, [], report, apply=True)
         assert report.fixed == []
 
     def test_no_match_when_candidate_missing(self):
-        prods = [{"id": "CPU-ABC-XYZ-PROD-001", "valor_horario": None}]
+        prods = [{"id": "CPU-ABC-XYZ-PROD-001", "producao_horaria": None}]
         report = _report()
         cure_contextual([], prods, [], report, apply=True)
         assert report.fixed == []
 
     def test_skips_non_dict_and_missing_id(self):
-        prods = ["not-a-dict", {"valor_horario": None}]
+        prods = ["not-a-dict", {"producao_horaria": None}]
         report = _report()
         cure_contextual([], prods, [], report, apply=True)
         assert report.fixed == []
 
     def test_skips_when_candidate_val_none(self):
         prods = [
-            {"id": "CPU-ABC-XYZ-PROD-001", "valor_horario": None},
-            {"id": "PROD-XYZ-001", "valor_horario": None},
+            {"id": "CPU-ABC-XYZ-PROD-001", "producao_horaria": None},
+            {"id": "PROD-XYZ-001", "producao_horaria": None},
         ]
         report = _report()
         cure_contextual([], prods, [], report, apply=True)
@@ -319,7 +319,7 @@ def _outlier_group(prefix: str, categoria: str, unidade: str, valores: list[floa
     prods = []
     for i, v in enumerate(valores):
         pid = f"PROD-{prefix}-{i}"
-        prods.append({"id": pid, "valor_horario": v})
+        prods.append({"id": pid, "producao_horaria": v})
         cpus.append(
             {
                 "codigo": f"CPU-{prefix}-{i}",
@@ -337,15 +337,15 @@ class TestCureContextualOutliers:
         report = _report()
         cure_contextual(cpus, prods, [], report, apply=True)
         outlier_prod = next(p for p in prods if p["id"] == "PROD-HI-7")
-        assert outlier_prod["valor_horario"] == 10.0
-        assert any("valor_horario 100.000000 -> 10.000000" in m for m in report.fixed)
+        assert outlier_prod["producao_horaria"] == 10.0
+        assert any("producao_horaria 100.000000 -> 10.000000" in m for m in report.fixed)
 
     def test_high_extreme_dry_run_not_mutated(self):
         cpus, prods = _outlier_group("HID", "CAT1D", "UN1", [10.0] * 7 + [100.0])
         report = _report()
         cure_contextual(cpus, prods, [], report, apply=False)
         outlier_prod = next(p for p in prods if p["id"] == "PROD-HID-7")
-        assert outlier_prod["valor_horario"] == 100.0
+        assert outlier_prod["producao_horaria"] == 100.0
         assert report.fixed
 
     def test_high_moderate_not_extreme_enough_skipped(self):
@@ -359,7 +359,7 @@ class TestCureContextualOutliers:
         report = _report()
         cure_contextual(cpus, prods, [], report, apply=True)
         outlier_prod = next(p for p in prods if p["id"] == "PROD-LO-7")
-        assert outlier_prod["valor_horario"] == 10.0
+        assert outlier_prod["producao_horaria"] == 10.0
         assert report.fixed
 
     def test_low_moderate_not_extreme_enough_skipped(self):
@@ -398,9 +398,9 @@ class TestCureContextualOutliers:
 
     def test_skips_when_valor_horario_none_or_invalid_or_non_positive(self):
         prods = [
-            {"id": "P1", "valor_horario": None},
-            {"id": "P2", "valor_horario": "not-a-number"},
-            {"id": "P3", "valor_horario": -5.0},
+            {"id": "P1", "producao_horaria": None},
+            {"id": "P2", "producao_horaria": "not-a-number"},
+            {"id": "P3", "producao_horaria": -5.0},
         ]
         cpus = [
             {"codigo": "C1", "producao_id_ref": "P1"},
@@ -431,7 +431,7 @@ class TestCureContextualNoOp:
                 "composicao_itens": [{"insumo_id": "MA-1", "coeficiente": 1, "categoria_custo": "MATERIAL"}],
             }
         ]
-        prods = [{"id": "PROD-1", "valor_horario": 10.0}]
+        prods = [{"id": "PROD-1", "producao_horaria": 10.0}]
         insumos = [{"codigo": "MA-1", "tipo": "MATERIAL"}]
         report = _report()
         cure_contextual(cpus, prods, insumos, report, apply=False)
@@ -564,7 +564,7 @@ class TestRun:
         )
         _write_entity(
             tmp_path / "producoes" / "prod1.json",
-            {"id": "PROD-TEST-001", "codigo": "PROD-TEST-001", "descricao": "Teste", "valor_horario": 50.0},
+            {"id": "PROD-TEST-001", "codigo": "PROD-TEST-001", "descricao": "Teste", "producao_horaria": 50.0},
         )
         _write_entity(
             tmp_path / "cpus" / "cpu1.json",
@@ -627,7 +627,7 @@ class TestRun:
                 "id": "PROD-1",
                 "codigo": "PROD-1",
                 "descricao": "Teste",
-                "valor_horario": 10.0,
+                "producao_horaria": 10.0,
                 "equipe": {"funcoes": [], "equipamentos": []},
             },
         )

@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
   "codigo": "CPU-TERRA-COMPAC-FINAL-ROCHA",
   "descricao": "Compactação de camada final de aterro de rocha",
-  "valor_horario": 100.0,
+  "producao_horaria": 100.0,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_agis_rfi",

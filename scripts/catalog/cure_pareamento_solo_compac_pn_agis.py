@@ -25,7 +25,7 @@ fração entre os dois materiais muda):
 
     fração 1CAT = 444.378,2 / 1.135.635,3 = 39,13%  → consumo_por_hora = 173,01 × 0,3913 = 67,70
     fração 2CAT = 691.257,1 / 1.135.635,3 = 60,87%  → consumo_por_hora = 173,01 × 0,6087 = 105,31
-    soma = 67,70 + 105,31 = 173,01 (== valor_horario original, sem mudança na produtividade)
+    soma = 67,70 + 105,31 = 173,01 (== producao_horaria original, sem mudança na produtividade)
 
 `CPU-TERRA-COMPAC-PI` (29.411,0 m³) NÃO é tocado por este script — seu volume não bate
 com nenhuma soma residual das categorias (não é derivável objetivamente dos dados

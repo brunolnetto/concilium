@@ -35,7 +35,7 @@ class ProductivitySurveyExporter(CatalogExporterExcel):
                     {
                         **base_info,
                         "Variante": "Padrão",
-                        "Produtividade Benchmark (h)": p.get("valor_horario"),
+                        "Produtividade Benchmark (h)": p.get("producao_horaria"),
                         "Equipe Benchmark": f"MO:[{mo_bench}] | EQ:[{eq_bench}]",
                         "PROD REAL (Aferido)": "",
                         "EQUIPE REAL (Aferido)": "",
@@ -57,7 +57,7 @@ class ProductivitySurveyExporter(CatalogExporterExcel):
                         {
                             **base_info,
                             "Variante": v.get("nome", v.get("id")),
-                            "Produtividade Benchmark (h)": v.get("valor_horario"),
+                            "Produtividade Benchmark (h)": v.get("producao_horaria"),
                             "Equipe Benchmark": f"MO:[{mo_bench}] | EQ:[{eq_bench}]",
                             "PROD REAL (Aferido)": "",
                             "EQUIPE REAL (Aferido)": "",

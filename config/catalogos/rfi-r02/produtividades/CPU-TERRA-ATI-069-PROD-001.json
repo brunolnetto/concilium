@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-069-PROD-001",
   "codigo": "ATI-069",
   "descricao": "Instalação de manta geotêxtil (Bidim)",
-  "valor_horario": 327.5,
+  "producao_horaria": 327.5,
   "unidade": "m²",
   "origem": {
     "tipo": "planilha_rfi_r02",

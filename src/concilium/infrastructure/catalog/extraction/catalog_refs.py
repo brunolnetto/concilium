@@ -66,7 +66,7 @@ def extract_cpu_references(slug: str, root: Path | None = None) -> dict[str, Any
             catalog_cpus[cpu_id] = {"status": "ERRO_PRODUTIVIDADE_NAO_ENCONTRADA", "producao_id_ref": producao_id_ref}
             continue
 
-        producao_horaria_final = _safe_float(prod_def.get("valor_horario"))
+        producao_horaria_final = _safe_float(prod_def.get("producao_horaria"))
         producoes[producao_id_ref] = {
             "descricao": prod_def.get("descricao"),
             "producao_horaria": producao_horaria_final,

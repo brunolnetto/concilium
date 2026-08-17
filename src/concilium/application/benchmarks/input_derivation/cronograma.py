@@ -202,7 +202,7 @@ class BenchmarkInputDeriver:
         prod_id = cpu.get("producao_id_ref")
         prod_item = prod_lookup.get(prod_id) if prod_id else None
         if prod_item is not None:
-            value = prod_item.get("valor_horario")
+            value = prod_item.get("producao_horaria")
             if value is None:
                 value = prod_item.get("producao_horaria")
             if isinstance(value, (int, float)):

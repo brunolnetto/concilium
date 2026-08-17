@@ -49,7 +49,7 @@
     ]
   },
   "historico_observacoes": [],
-  "valor_horario": 11.5425,
+  "producao_horaria": 11.5425,
   "grafo_sinergia": {
     "relacoes": [],
     "capacidades": [

@@ -12,13 +12,13 @@ Causa raiz no catálogo: as 6 produtividades de escavação (`CPU-TERRA-ESCO-CAR
 DMT{2000,3000}-PROD-001`) em `config/catalogos/mendeslobo/produtividades/` nunca declaram
 `materiais_gerados` — ao contrário das produtividades equivalentes em `rfi-r02`, que JÁ
 têm esse campo (piloto corte→aterro E2E citado em ADR-139 F4). Confirmação numérica: os
-`valor_horario` do mendeslobo (231.87 / 230.91 / 158.28 / 158.78 / 142.02 / 142.16) batem
+`producao_horaria` do mendeslobo (231.87 / 230.91 / 158.28 / 158.78 / 142.02 / 142.16) batem
 exatos com os `geracao_por_hora` já usados em rfi-r02 — rfi-r02 herdou esses dados de
 mendeslobo (ver ADR-139 F4-quater), mas o campo `materiais_gerados` nunca foi replicado de
 volta para a fonte.
 
 Correção: replica o mesmo padrão já correto de rfi-r02 (coeficiente 1 m³ escavado = 1 m³
-de material, `geracao_por_hora` = `valor_horario`) para as 6 produtividades de escavação
+de material, `geracao_por_hora` = `producao_horaria`) para as 6 produtividades de escavação
 do mendeslobo.
 
 Uso:
@@ -72,7 +72,7 @@ def run_cure(cat_dir: Path = CAT_DIR, apply: bool = False) -> dict[str, int]:
             continue
 
         stats["produtoras_vinculadas"] += 1
-        geracao = data["valor_horario"]
+        geracao = data["producao_horaria"]
         print(f"  [VINCULAR ] {pid} → {insumo_id} @ {geracao} m³/h")
         if apply:
             data["materiais_gerados"] = [

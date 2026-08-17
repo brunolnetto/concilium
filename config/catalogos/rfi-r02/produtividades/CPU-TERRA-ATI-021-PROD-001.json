@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-021-PROD-001",
   "codigo": "ATI-021",
   "descricao": "Rebaixo terreno natural argiloso 20cm",
-  "valor_horario": 157.25,
+  "producao_horaria": 157.25,
   "unidade": "m²",
   "origem": {
     "tipo": "planilha_rfi_r02",

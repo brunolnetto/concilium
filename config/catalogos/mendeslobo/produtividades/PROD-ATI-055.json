@@ -2,7 +2,7 @@
   "id": "PROD-ATI-055",
   "codigo": "ATI-055",
   "descricao": "Base de Brita Graduada Tratada com Cimento - BGTC (Adotado SICRO)",
-  "valor_horario": 150.0,
+  "producao_horaria": 150.0,
   "unidade": "m3",
   "origem": {
     "tipo": "adotado_sicro",

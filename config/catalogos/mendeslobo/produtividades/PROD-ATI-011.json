@@ -2,7 +2,7 @@
   "id": "PROD-ATI-011",
   "codigo": "ATI-011",
   "descricao": "Escavação, carga e transporte — 1ª categoria — DMT <= 2.000 m (Adotado SICRO)",
-  "valor_horario": 159.63,
+  "producao_horaria": 159.63,
   "unidade": "m3",
   "origem": {
     "tipo": "adotado_sicro",

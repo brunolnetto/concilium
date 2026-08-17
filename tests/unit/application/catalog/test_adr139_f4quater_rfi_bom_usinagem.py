@@ -6,7 +6,7 @@ Valida `scripts/catalog/restore_bom_usinagem_rfi_r02.py` e a classificação de 
     externa via planilha_rfi_r02/ANTT + 3 solos gerados); o CBUQ novo é GERACAO_INTERNA.
   - Fim dos órfãos relevantes: todo material consumível de aplicação mapeado no BOM
     tem consumidor; as 24 entradas seguem o mapeamento do script (taxa 1:1 com o
-    valor_horario ou taxa física explícita).
+    producao_horaria ou taxa física explícita).
   - Usinagem CBUQ da casa (E0043): grafo de sinergia deriva a produção (fonte
     "derivado" == declarado) e o preço do MA-CBUQ-FAIXA-C é o concluído bottom-up
     (~R$ 506,92/t com CAP da planilha a R$ 6.091/t).
@@ -74,7 +74,7 @@ class TestBomRestaurado:
         materiais = {m["insumo_id"]: m for m in equipe.get("materiais") or []}
         for insumo_id, taxa, _unidade, _just in _BOM[pid]:
             assert insumo_id in materiais, f"{pid}: falta {insumo_id}"
-            esperado = taxa if taxa is not None else prod["valor_horario"]
+            esperado = taxa if taxa is not None else prod["producao_horaria"]
             assert materiais[insumo_id]["consumo_por_hora"] == pytest.approx(esperado)
             assert materiais[insumo_id]["origem_entrada"] == "bom_convertido"
 
@@ -90,7 +90,7 @@ class TestUsinagemCbuqDaCasa:
         producao = Producao.model_validate(_load("produtividades/PROD-USINAGEM-CBUQ-RFI-001.json"))
         resolucao = resolver_producao_efetiva(producao)
         assert resolucao.fonte == "derivado"
-        assert resolucao.valor == pytest.approx(producao.valor_horario)
+        assert resolucao.valor == pytest.approx(producao.producao_horaria)
         assert resolucao.derivacao.gargalo_derivado == "E0043"
 
     def test_preco_concluido_gravado(self):

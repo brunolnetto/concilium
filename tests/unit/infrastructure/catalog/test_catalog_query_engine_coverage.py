@@ -1179,7 +1179,7 @@ class TestCatalogSessionDeeper:
             "producoes": [
                 {
                     "id": "PROD-ESC",
-                    "valor_horario": 50.0,
+                    "producao_horaria": 50.0,
                     "composicao_padrao_equipe": {
                         "funcoes": [{"funcao_id": "OP", "num_pessoas": 1, "salario_mensal": 3000.0}],
                         "equipamentos": [{"equip_id": "ESC-HIDRA", "num_unidades": 1}],

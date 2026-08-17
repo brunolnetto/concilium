@@ -64,15 +64,15 @@ class TestEnrichHelpers:
     def test_build_prod_lookup_basic(self):
         from concilium.application.services._concilium_service_helpers import _build_prod_lookup
 
-        prods = [{"id": "P1", "valor_horario": 10}, {"id": "P2", "valor_horario": 20}]
+        prods = [{"id": "P1", "producao_horaria": 10}, {"id": "P2", "producao_horaria": 20}]
         lookup = _build_prod_lookup(prods)
-        assert lookup["P1"]["valor_horario"] == 10
+        assert lookup["P1"]["producao_horaria"] == 10
         assert "P2" in lookup
 
     def test_build_prod_lookup_skips_missing_id(self):
         from concilium.application.services._concilium_service_helpers import _build_prod_lookup
 
-        prods = [{"valor_horario": 10}, {"id": "P2"}]
+        prods = [{"producao_horaria": 10}, {"id": "P2"}]
         lookup = _build_prod_lookup(prods)
         assert "P2" in lookup
         assert len(lookup) == 1
@@ -95,7 +95,7 @@ class TestEnrichHelpers:
         from concilium.application.services._concilium_service_helpers import _enrich_cpu_with_prod
 
         cpu = {"codigo": "CPU-1", "producao_id_ref": "P1"}
-        prod_lookup = {"P1": {"valor_horario": 50}}
+        prod_lookup = {"P1": {"producao_horaria": 50}}
         result = _enrich_cpu_with_prod(cpu, prod_lookup)
         assert result["producao_horaria"] == 50
 
@@ -103,7 +103,7 @@ class TestEnrichHelpers:
         from concilium.application.services._concilium_service_helpers import _enrich_cpu_with_prod
 
         cpu = {"codigo": "CPU-1", "producao_id_ref": "P1", "producao_horaria": 99}
-        prod_lookup = {"P1": {"valor_horario": 50}}
+        prod_lookup = {"P1": {"producao_horaria": 50}}
         result = _enrich_cpu_with_prod(cpu, prod_lookup)
         assert result["producao_horaria"] == 99
 
@@ -135,7 +135,7 @@ class TestEnrichHelpers:
         from concilium.application.services._concilium_service_helpers import _enrich_cpus_with_producao
 
         cat = {
-            "produtividades": [{"id": "P1", "valor_horario": 10}],
+            "produtividades": [{"id": "P1", "producao_horaria": 10}],
             "cpus": [{"codigo": "CPU-1", "producao_id_ref": "P1"}],
         }
         result = _enrich_cpus_with_producao(cat)
@@ -145,7 +145,7 @@ class TestEnrichHelpers:
         from concilium.application.services._concilium_service_helpers import _enrich_cpus_with_producao
 
         cat = {
-            "producoes": [{"id": "P1", "valor_horario": 20}],
+            "producoes": [{"id": "P1", "producao_horaria": 20}],
             "cpus": [{"codigo": "CPU-1", "producao_id_ref": "P1"}],
         }
         result = _enrich_cpus_with_producao(cat)
@@ -249,7 +249,7 @@ class TestWmpHelpers:
 
         eap = {"cpu_id": "CPU-1"}
         cpu_lookup = {"CPU-1": {"producao_id_ref": "P1"}}
-        producao_lookup = {"P1": {"valor_horario": 75.0}}
+        producao_lookup = {"P1": {"producao_horaria": 75.0}}
         result = _resolve_producao_horaria(eap, cpu_lookup, producao_lookup)
         assert result == 75.0
 

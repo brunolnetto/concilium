@@ -8,7 +8,7 @@
     "data_calibracao": "2026-08-12T00:00:00+00:00",
     "referencia": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor). NOTA: Planilha lista material auxiliar 'BRITA' (m³, R$120,00) com custo unitário R$0 (referência de preço, não custeado nesta CPU) — não incluído em composicao_itens."
   },
-  "valor_horario": 1936.5,
+  "producao_horaria": 365.05,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -43,5 +43,7 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "unidade_producao": "m3/h",
+  "producao": 365.05
 }

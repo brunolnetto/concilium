@@ -84,7 +84,7 @@ class TestResolveCatalogItemsOverlayMalformado:
         )
 
         proj_overlay = {
-            "PROD-VALIDA": {"id": "PROD-VALIDA", "valor_horario": 100.0},
+            "PROD-VALIDA": {"id": "PROD-VALIDA", "producao_horaria": 100.0},
             "PROD-SUGERIDA": "PROD-SUGERIDA-APROXIMADA",  # malformado: string em vez de dict
         }
         trace = CatalogResolutionTrace()

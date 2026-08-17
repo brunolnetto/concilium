@@ -319,8 +319,8 @@ class TestAuditCatalogReasonability:
         svc, _ = _make_svc(tmp_path)
         fake_cat = {
             "cpus": [],
-            "produtividades": [{"id": "PROD-1", "valor_horario": 10}],
-            "producoes": [{"id": "PROD-2", "valor_horario": 20}],
+            "produtividades": [{"id": "PROD-1", "producao_horaria": 10}],
+            "producoes": [{"id": "PROD-2", "producao_horaria": 20}],
         }
         with (
             patch("concilium.application.services.concilium_service._catalog.Runtime") as MockRT,
@@ -348,7 +348,7 @@ class TestEnrichCpusWithProducaoStatic:
     def test_enriches_matching_producao_id_ref(self):
         cat = {
             "cpus": [{"codigo": "CPU-A", "producao_id_ref": "PROD-1"}],
-            "producoes": [{"id": "PROD-1", "valor_horario": 42.5, "equipe": {"op": 1}}],
+            "producoes": [{"id": "PROD-1", "producao_horaria": 42.5, "equipe": {"op": 1}}],
         }
         result = ConciliumService._enrich_cpus_with_producao(cat)
         assert result[0]["producao_horaria"] == 42.5
@@ -363,8 +363,8 @@ class TestEnrichCpusWithProducaoStatic:
     def test_produtividades_takes_precedence_over_producoes(self):
         cat = {
             "cpus": [{"codigo": "CPU-A", "producao_id_ref": "PROD-1"}],
-            "produtividades": [{"id": "PROD-1", "valor_horario": 100.0}],
-            "producoes": [{"id": "PROD-1", "valor_horario": 999.0}],
+            "produtividades": [{"id": "PROD-1", "producao_horaria": 100.0}],
+            "producoes": [{"id": "PROD-1", "producao_horaria": 999.0}],
         }
         result = ConciliumService._enrich_cpus_with_producao(cat)
         # _enrich_cpus_with_producao uses produtividades OR producoes (first found)
@@ -373,7 +373,7 @@ class TestEnrichCpusWithProducaoStatic:
     def test_cpu_without_ref_unchanged(self):
         cat = {
             "cpus": [{"codigo": "CPU-A"}],
-            "producoes": [{"id": "PROD-1", "valor_horario": 5.0}],
+            "producoes": [{"id": "PROD-1", "producao_horaria": 5.0}],
         }
         result = ConciliumService._enrich_cpus_with_producao(cat)
         assert "producao_horaria" not in result[0]
@@ -605,7 +605,7 @@ class TestEnrichCpuFromProducao:
         project = _make_project_mock(meta={"catalogo_base": "cat1"})
         deps.project_service.list_contexto_versions.return_value = []
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-1"}
-        svc._get_catalog_producao = MagicMock(return_value={"id": "PROD-1", "valor_horario": 88.0})
+        svc._get_catalog_producao = MagicMock(return_value={"id": "PROD-1", "producao_horaria": 88.0})
         result = svc._enrich_cpu_from_producao(project, cpu)
         assert result["producao_horaria"] == 88.0
 
@@ -614,7 +614,7 @@ class TestEnrichCpuFromProducao:
         project = _make_project_mock(meta={"catalogo_base": "cat1"})
         deps.project_service.list_contexto_versions.return_value = []
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-1"}
-        prod = {"id": "PROD-1", "valor_horario": 5.0, "equipe": {"op": 2, "ajudante": 1}}
+        prod = {"id": "PROD-1", "producao_horaria": 5.0, "equipe": {"op": 2, "ajudante": 1}}
         svc._get_catalog_producao = MagicMock(return_value=prod)
         result = svc._enrich_cpu_from_producao(project, cpu)
         assert result["equipe"] == {"op": 2, "ajudante": 1}
@@ -626,7 +626,7 @@ class TestEnrichCpuFromProducao:
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-1"}
         prod = {
             "id": "PROD-1",
-            "valor_horario": 5.0,
+            "producao_horaria": 5.0,
             "equipe": "not-a-dict",  # non-dict triggers fallback
             "composicao_padrao_equipe": {"op": 1},
         }
@@ -652,7 +652,7 @@ class TestEnrichCpuFromProducao:
         project = _make_project_mock(meta={"catalogo_base": "cat1"})
         deps.project_service.list_contexto_versions.return_value = []
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-1", "producao_horaria": 42.0}
-        prod = {"id": "PROD-1", "valor_horario": 88.0, "equipe": {"op": 2}}
+        prod = {"id": "PROD-1", "producao_horaria": 88.0, "equipe": {"op": 2}}
         svc._get_catalog_producao = MagicMock(return_value=prod)
         result = svc._enrich_cpu_from_producao(project, cpu)
         assert result["producao_horaria"] == 42.0  # unchanged
@@ -670,7 +670,7 @@ class TestEnrichCpuFromProducao:
             "producao_id_ref": "PROD-1",
             "equipe": {"existing": True},
         }
-        prod = {"id": "PROD-1", "valor_horario": 88.0, "equipe": {"op": 2}}
+        prod = {"id": "PROD-1", "producao_horaria": 88.0, "equipe": {"op": 2}}
         svc._get_catalog_producao = MagicMock(return_value=prod)
         result = svc._enrich_cpu_from_producao(project, cpu)
         assert result["equipe"] == {"existing": True}  # unchanged
@@ -684,7 +684,7 @@ class TestGetCatalogProducao:
     def test_finds_prod_in_produtividades(self, tmp_path):
         svc, _ = _make_svc(tmp_path)
         fake_cat = {
-            "produtividades": [{"id": "PROD-1", "valor_horario": 10}],
+            "produtividades": [{"id": "PROD-1", "producao_horaria": 10}],
             "producoes": [],
         }
         with patch("concilium.application.services.concilium_service._cpu_resolution.Runtime") as MockRT:
@@ -696,7 +696,7 @@ class TestGetCatalogProducao:
         svc, _ = _make_svc(tmp_path)
         fake_cat = {
             "produtividades": [],
-            "producoes": [{"id": "PROD-2", "valor_horario": 20}],
+            "producoes": [{"id": "PROD-2", "producao_horaria": 20}],
         }
         with patch("concilium.application.services.concilium_service._cpu_resolution.Runtime") as MockRT:
             MockRT.return_value.load_catalogo.return_value = fake_cat
@@ -719,8 +719,8 @@ class TestGetCatalogProducao:
         fake_cat = {
             "produtividades": "not-a-list",
             "producoes": [
-                {"id": "OTHER", "valor_horario": 1},
-                {"id": "PROD-3", "valor_horario": 30},
+                {"id": "OTHER", "producao_horaria": 1},
+                {"id": "PROD-3", "producao_horaria": 30},
             ],
         }
         with patch("concilium.application.services.concilium_service._cpu_resolution.Runtime") as MockRT:

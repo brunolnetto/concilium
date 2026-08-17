@@ -2,7 +2,7 @@
   "id": "PROD-USINAGEM-BGTC-001",
   "codigo": "USINAGEM-BGTC",
   "descricao": "Usinagem de BGTC (brita comercial) em usina de solos 300 t/h — composição SICRO 6416042",
-  "valor_horario": 113.18,
+  "producao_horaria": 113.18,
   "unidade": "m3",
   "origem": {
     "tipo": "tabela_referencia",

@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-022-PROD-001",
   "codigo": "ATI-022",
   "descricao": "Espalhamento e compactação rachão",
-  "valor_horario": 82.03,
+  "producao_horaria": 82.03,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

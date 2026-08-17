@@ -346,7 +346,7 @@ def test_extract_edge_thresholds_com_atividades_auto_derivadas_ff_ss_nao_lanca_k
                 "id": "PROD-01",
                 "codigo": "PROD-01",
                 "descricao": "Prod",
-                "valor_horario": 50.0,
+                "producao_horaria": 50.0,
                 "unidade": "m3",
                 "composicao_padrao_equipe": {},
             }
@@ -481,10 +481,10 @@ class TestResolveProductivity:
         assert is_fallback is True
 
     def test_prod_id_ref_with_legacy_producao_horaria_warns(self):
-        """Lines 1020-1031: prod_item uses legacy 'producao_horaria' field → AVISO."""
+        """prod_item usa campo legado 'valor_horario' → emite VAL-PROD-04-PROD-LEGACY."""
         cpu = {"codigo": "CPU-Y", "producao_id_ref": "PROD-001"}
         producao_lookup = {
-            "PROD-001": {"producao_horaria": 8.0}  # no valor_horario → legacy
+            "PROD-001": {"valor_horario": 8.0}  # campo legado (arquivos antigos)
         }
         validacoes = []
         result, is_fallback = MOD._resolve_productivity(cpu, producao_lookup, validacoes)
@@ -569,7 +569,7 @@ class TestComputeProductiveWeeks:
         projeto_zero = SimpleNamespace(regime_trabalho=regime_zero)
         canonical_zero = SimpleNamespace(projeto=projeto_zero, eap=[eap_item])
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-A"}
-        prod_lookup = {"PROD-A": {"valor_horario": 5.0}}
+        prod_lookup = {"PROD-A": {"producao_horaria": 5.0}}
         result = MOD._compute_productive_weeks("ITEM-A", 1, canonical_zero, {"CPU-A": cpu}, prod_lookup, [])
         assert result is None
 
@@ -579,7 +579,7 @@ class TestComputeProductiveWeeks:
         canonical = self._make_canonical([eap_item])
         # P=2.0, horas=8, dias=5, n=1 → prod_per_week=80 → ceil(80/80)=1
         cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-A"}
-        prod_lookup = {"PROD-A": {"valor_horario": 2.0}}
+        prod_lookup = {"PROD-A": {"producao_horaria": 2.0}}
         result = MOD._compute_productive_weeks("ITEM-A", 1, canonical, {"CPU-A": cpu}, prod_lookup, [])
         assert result == 1
 

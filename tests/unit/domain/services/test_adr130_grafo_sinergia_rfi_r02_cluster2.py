@@ -16,7 +16,7 @@ carga/aterro — apenas analogias fracas (22-100 kg/m³, faixa explicitamente
 marcada como "premissa a validar com calculista estrutural", não dado firme).
 
 Decisão: calibração reversa no elemento crítico (Montador, P0037) —
-capacidade_horaria = valor_horario / num_montadores, fonte="medicao_obra".
+capacidade_horaria = producao_horaria / num_montadores, fonte="medicao_obra".
 Retroescavadeira (E0026), mini escavadeira (E0027) e betoneira (E0002) usam
 estimativas aproximadas (fonte="fabricante") só para confirmar que têm folga
 (não são o gargalo) — não foram derivadas com o mesmo rigor, e a
@@ -35,7 +35,7 @@ _PRODUTIVIDADES = _ROOT / "config" / "catalogos" / "rfi-r02" / "produtividades"
 
 _CLUSTER2_FILES = [
     "CPU-TERRA-ATI-033-PROD-001.json",
-    # ATI-034 removida — Producao duplicata de ATI-033 (mesma composição/valor_horario/
+    # ATI-034 removida — Producao duplicata de ATI-033 (mesma composição/producao_horaria/
     # grafo_sinergia), consolidada via CPU.producao_id_ref (ver
     # test_adr130_producao_consolidacao_duplicatas.py)
     "CPU-TERRA-ATI-035-PROD-001.json",
@@ -73,17 +73,17 @@ class TestCluster2SchemaEReconciliacao:
         from concilium.domain.services.sinergia_equipe import derivar_producao_horaria
 
         data = json.loads((_PRODUTIVIDADES / filename).read_text(encoding="utf-8"))
-        valor_horario = data["valor_horario"]
+        producao_horaria = data["producao_horaria"]
         composicao = ComposicaoPadraoEquipe(**data["composicao_padrao_equipe"])
         grafo = GrafoSinergiaEquipe(**data["grafo_sinergia"])
 
         derivacao = derivar_producao_horaria(grafo, composicao)
         assert derivacao.producao_horaria_derivada is not None, f"{filename}: gargalo não computável"
 
-        divergencia = abs(derivacao.producao_horaria_derivada - valor_horario) / valor_horario
+        divergencia = abs(derivacao.producao_horaria_derivada - producao_horaria) / producao_horaria
         assert divergencia < 0.15, (
             f"{filename}: derivado={derivacao.producao_horaria_derivada} vs "
-            f"valor_horario={valor_horario} (divergência {divergencia:.1%})"
+            f"producao_horaria={producao_horaria} (divergência {divergencia:.1%})"
         )
 
     @pytest.mark.parametrize("filename", _CLUSTER2_FILES)

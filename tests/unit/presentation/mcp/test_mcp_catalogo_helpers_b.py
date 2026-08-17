@@ -621,7 +621,7 @@ class TestImplCalcularPuProducao:
         bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
         bundle = _make_bundle(
             insumos=[],
-            producoes=[{"id": "PROD-OTHER", "valor_horario": 10.0}],
+            producoes=[{"id": "PROD-OTHER", "producao_horaria": 10.0}],
         )
         _write_bundle(bundle_path, bundle)
 
@@ -640,7 +640,7 @@ class TestImplCalcularPuProducao:
             producoes=[
                 {
                     "id": "PROD-001",
-                    "valor_horario": 5.0,
+                    "producao_horaria": 5.0,
                     "composicao_padrao_equipe": {
                         "funcoes": [{"funcao_id": "MO-001", "num_pessoas": 1}],
                         "equipamentos": [],
@@ -666,7 +666,7 @@ class TestImplCalcularPuProducao:
             producoes=[
                 {
                     "codigo": "CPU-001",
-                    "valor_horario": 3.0,
+                    "producao_horaria": 3.0,
                     "composicao_padrao_equipe": {
                         "funcoes": [],
                         "equipamentos": [],
@@ -691,7 +691,7 @@ class TestImplCalcularPuProducao:
             producoes=[
                 {
                     "id": "PROD-001",
-                    "valor_horario": 5.0,
+                    "producao_horaria": 5.0,
                     "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-001", "num_pessoas": 1}]},
                 }
             ],
@@ -712,7 +712,7 @@ class TestImplCalcularPuProducao:
             producoes=[
                 {
                     "id": "PROD-001",
-                    "valor_horario": 5.0,
+                    "producao_horaria": 5.0,
                     "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MO-001", "num_pessoas": 1}]},
                 }
             ],
@@ -732,7 +732,7 @@ class TestImplCalcularPuProducao:
         bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
         bundle = _make_bundle(
             insumos=[],
-            producoes=[{"id": "PROD-001", "valor_horario": 2.0}],
+            producoes=[{"id": "PROD-001", "producao_horaria": 2.0}],
             use_produtividades_key=True,
         )
         _write_bundle(bundle_path, bundle)
@@ -857,7 +857,7 @@ class TestImplVerificarIntegridadeCatalogo:
             "com_composicao": com_composicao,
             "ok": True,
             "total_producoes": 0,
-            "sem_valor_horario": [],
+            "sem_producao_horaria": [],
             "breakdown_por_producao": [],
         }
 
@@ -876,7 +876,7 @@ class TestImplVerificarIntegridadeCatalogo:
         bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
         bundle = _make_bundle(
             insumos=[{"codigo": "INS-001"}],
-            producoes=[{"id": "PROD-001", "valor_horario": 5.0}],
+            producoes=[{"id": "PROD-001", "producao_horaria": 5.0}],
             cpus=[],
         )
         _write_bundle(bundle_path, bundle)

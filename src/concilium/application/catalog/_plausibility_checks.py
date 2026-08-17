@@ -339,7 +339,7 @@ def _pc_check_equipe_refs(pid: str, equipe: dict, insumo_index: dict) -> list[An
 def _pc_check_prod_item(prod: dict, insumo_index: dict) -> list[Anomalia]:
     result = []
     pid = prod.get("id") or prod.get("codigo", "?")
-    vh = prod.get("valor_horario")
+    vh = prod.get("producao_horaria")
     if not vh or float(vh) <= 0:
         result.append(
             Anomalia(
@@ -359,7 +359,7 @@ def _pc_check_prod_item(prod: dict, insumo_index: dict) -> list[Anomalia]:
                 tipo="FISICO",
                 severidade="AVISO",
                 mensagem=f"valor_horario {vh_f} un/h parece excessivo (limite técnico: {VH_MAX})",
-                detalhe={"valor_horario": vh_f},
+                detalhe={"producao_horaria": vh_f},
             )
         )
     equipe = prod.get("composicao_padrao_equipe") or prod.get("equipe") or {}
@@ -371,7 +371,7 @@ def _pc_check_prod_item(prod: dict, insumo_index: dict) -> list[Anomalia]:
                 tipo="INCOMPLETO",
                 severidade="AVISO",
                 mensagem="Sem composição de equipe — PU de equipe não calculável (pode ser material-only)",
-                detalhe={"valor_horario": vh_f, "origem": str(prod.get("origem", ""))[:30]},
+                detalhe={"producao_horaria": vh_f, "origem": str(prod.get("origem", ""))[:30]},
             )
         )
     result.extend(_pc_check_equipe_refs(pid, equipe, insumo_index))
@@ -381,7 +381,7 @@ def _pc_check_prod_item(prod: dict, insumo_index: dict) -> list[Anomalia]:
 def _pc_prod_vhs(producoes: list[dict]) -> list[tuple]:
     result = []
     for prod in producoes:
-        vh = prod.get("valor_horario", 0)
+        vh = prod.get("producao_horaria", 0)
         if vh and float(vh) > 0:
             result.append((prod.get("id") or prod.get("codigo", "?"), float(vh)))
     return result
@@ -405,7 +405,7 @@ def _pc_check_prod_zscore(producoes: list[dict]) -> list[Anomalia]:
                     tipo="ESTATISTICO",
                     severidade="INFO",
                     mensagem=f"valor_horario {vh_f:.1f} un/h muito acima da média (z={z:+.1f}) — revisar unidade",
-                    detalhe={"valor_horario": vh_f, "z": round(z, 2)},
+                    detalhe={"producao_horaria": vh_f, "z": round(z, 2)},
                 )
             )
     return result

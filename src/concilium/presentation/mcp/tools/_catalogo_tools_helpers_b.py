@@ -603,7 +603,7 @@ def _impl_calcular_pu_producao(
 ) -> dict[str, Any]:
     """Calcula o Preço Unitário teórico de uma produção a partir da composição.
 
-    PU = custo_total_horario / producao.valor_horario
+    PU = custo_total_horario / producao.producao_horaria
     Verifica integridade referencial (insumos existem?) e retorna breakdown.
 
     Args:

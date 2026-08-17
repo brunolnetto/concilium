@@ -40,7 +40,7 @@ def _build_cpu_prod_lookup(cat: dict) -> dict[str, float]:
     for _p in cat.get("producoes") or cat.get("produtividades") or []:
         if isinstance(_p, dict):
             pid = _p.get("id") or _p.get("codigo")
-            val = _p.get("valor_horario") or _p.get("producao_horaria")
+            val = _p.get("producao_horaria") or _p.get("producao_horaria")
             if pid and val is not None:
                 lookup[str(pid)] = float(val)
     return lookup

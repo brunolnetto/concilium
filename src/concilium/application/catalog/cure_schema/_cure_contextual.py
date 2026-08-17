@@ -46,19 +46,19 @@ def _cure_contextual_inherit_cap_templates(prods: list[dict], report: CurationRe
 def _cure_contextual_fill_valor_horario_de_prod(
     prod: dict, pid: str, prod_by_id: dict[str, dict], report: CurationReport, apply: bool
 ) -> None:
-    if prod.get("valor_horario") is not None:
+    if prod.get("producao_horaria") is not None:
         return
     m = re.match(r"^CPU-([A-Z0-9]+)-(.+)-PROD-([0-9]+)$", pid)
     if not m:
         return
     candidate_id = f"PROD-{m.group(2)}-{m.group(3)}"
     candidate = prod_by_id.get(candidate_id)
-    candidate_val = (candidate or {}).get("valor_horario") if isinstance(candidate, dict) else None
+    candidate_val = (candidate or {}).get("producao_horaria") if isinstance(candidate, dict) else None
     if candidate_val is None:
         return
     if apply:
-        prod["valor_horario"] = candidate_val
-    report.add_fixed(f"PRODUCAO {pid}: valor_horario herdado de {candidate_id}")
+        prod["producao_horaria"] = candidate_val
+    report.add_fixed(f"PRODUCAO {pid}: producao_horaria herdada de {candidate_id}")
 
 
 def _cure_contextual_fill_valor_horario_equivalente(prods: list[dict], report: CurationReport, apply: bool) -> None:
@@ -187,21 +187,21 @@ def _cure_contextual_valor_horario_row(cpu: dict, prod_by_id: dict[str, dict]) -
     prod = prod_by_id.get(prod_ref)
     if not isinstance(prod, dict):
         return None
-    raw_valor_horario = prod.get("valor_horario")
-    if raw_valor_horario is None:
+    raw_producao_horaria = prod.get("producao_horaria")
+    if raw_producao_horaria is None:
         return None
     try:
-        valor_horario = float(raw_valor_horario)
+        producao_horaria = float(raw_producao_horaria)
     except (TypeError, ValueError):
         return None
-    if valor_horario <= 0:
+    if producao_horaria <= 0:
         return None
     return {
         "cpu_codigo": codigo,
         "categoria": str(categoria or "SEM_CATEGORIA"),
         "unidade": str(unidade or "SEM_UNIDADE"),
         "producao_id_ref": prod_ref,
-        "valor_horario": valor_horario,
+        "producao_horaria": producao_horaria,
     }
 
 
@@ -224,7 +224,7 @@ def _cure_contextual_fix_outlier_group(
     report: CurationReport,
     apply: bool,
 ) -> None:
-    values = [float(r["valor_horario"]) for r in items if float(r["valor_horario"]) > 0]
+    values = [float(r["producao_horaria"]) for r in items if float(r["producao_horaria"]) > 0]
     bounds = _robust_bounds(values, non_negative=True)
     if bounds is None:
         return
@@ -232,7 +232,7 @@ def _cure_contextual_fix_outlier_group(
     low, high = bounds
 
     for item in items:
-        current = float(item["valor_horario"])
+        current = float(item["producao_horaria"])
         if low <= current <= high:
             continue
         # Não há checagem residual `current == med` aqui: `_robust_bounds` garante
@@ -262,10 +262,10 @@ def _cure_contextual_fix_outlier_group(
             # `item` só entra em `rows`/`items` quando `prod_by_id.get(prod_ref)`
             # já foi validado como dict (linhas acima) — prod_by_id não é mutado
             # entre as duas passagens, então o lookup aqui é sempre um dict.
-            prod_by_id[prod_ref]["valor_horario"] = med
+            prod_by_id[prod_ref]["producao_horaria"] = med
         report.add_fixed(
             "PRODUCAO "
-            f"{prod_ref}: valor_horario {current:.6f} -> {med:.6f} "
+            f"{prod_ref}: producao_horaria {current:.6f} -> {med:.6f} "
             f"(CPU {cpu_codigo}, grupo {key[0]}/{key[1]}, IQR {low:.6f}..{high:.6f})"
         )
 

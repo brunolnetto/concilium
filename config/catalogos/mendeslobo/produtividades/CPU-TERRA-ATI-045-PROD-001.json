@@ -8,7 +8,7 @@
     "data_calibracao": "2026-08-12T00:00:00+00:00",
     "referencia": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor)."
   },
-  "valor_horario": 2997.39,
+  "producao_horaria": 666.9,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -63,5 +63,7 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "unidade_producao": "m2/h",
+  "producao": 666.9
 }

@@ -102,7 +102,7 @@ def _catalogo_minimo() -> dict:
             {"codigo": "INS-MO", "unidade": "un", "preco_unitario": 0.0},
             {"codigo": "INS-EQ", "unidade": "un", "preco_unitario": 0.0},
         ],
-        "produtividades": [{"id": "P-1", "valor_horario": 1.0}],
+        "produtividades": [{"id": "P-1", "producao_horaria": 1.0}],
     }
 
 

@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-061-PROD-001",
   "codigo": "ATI-061",
   "descricao": "Recomposição de pavimento asfáltico",
-  "valor_horario": 74.07,
+  "producao_horaria": 74.07,
   "unidade": "m²",
   "origem": {
     "tipo": "planilha_rfi_r02",

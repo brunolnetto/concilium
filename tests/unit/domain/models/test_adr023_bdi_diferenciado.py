@@ -745,7 +745,7 @@ class TestSkill04EquipamentoDecomp:
                     "atributos_especificos": atribs,
                 }
             ],
-            "produtividades": [{"id": "PROD-001", "valor_horario": 10.0}],
+            "produtividades": [{"id": "PROD-001", "producao_horaria": 10.0}],
         }
 
     def _minimal_perfil(self):

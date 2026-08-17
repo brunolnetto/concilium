@@ -164,7 +164,7 @@ class Producao(BaseModel):
         )
     )
 
-    valor_horario: float = Field(gt=0)
+    producao_horaria: float = Field(gt=0)
     unidade: str
 
     origem: OrigemProducao
@@ -213,7 +213,7 @@ class Producao(BaseModel):
 
         producao_ajustada = valor_horario × fator_producao(nova_composicao)
         """
-        return round(self.valor_horario * self.fator_producao(nova_composicao), 4)
+        return round(self.producao_horaria * self.fator_producao(nova_composicao), 4)
 
 
 # ── ADR-011: Productivity as Computable Artifact ──────────────────────────────

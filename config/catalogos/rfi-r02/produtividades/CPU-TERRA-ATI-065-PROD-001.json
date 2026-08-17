@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-065-PROD-001",
   "codigo": "ATI-065",
   "descricao": "Cercamento — mourão de eucalipto",
-  "valor_horario": 37.5,
+  "producao_horaria": 37.5,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

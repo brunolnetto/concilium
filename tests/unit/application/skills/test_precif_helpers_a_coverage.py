@@ -521,17 +521,17 @@ class TestBuildLookups:
         catalogo = {
             "cpus": [],
             "insumos": [],
-            "produtividades": [{"id": "PROD-01", "valor_horario": 5.0}],
+            "produtividades": [{"id": "PROD-01", "producao_horaria": 5.0}],
         }
         _, _, prods = MOD._build_lookups(catalogo)
         assert "PROD-01" in prods
-        assert prods["PROD-01"]["valor_horario"] == 5.0
+        assert prods["PROD-01"]["producao_horaria"] == 5.0
 
     def test_producoes_alias_works(self):
         catalogo = {
             "cpus": [],
             "insumos": [],
-            "producoes": [{"id": "PROD-02", "valor_horario": 8.0}],
+            "producoes": [{"id": "PROD-02", "producao_horaria": 8.0}],
         }
         _, _, prods = MOD._build_lookups(catalogo)
         assert "PROD-02" in prods
@@ -543,13 +543,13 @@ class TestBuildLookups:
             "produtividades": [{"id": "PROD-03", "producao_horaria": 12.0}],
         }
         _, _, prods = MOD._build_lookups(catalogo)
-        assert prods["PROD-03"]["valor_horario"] == 12.0
+        assert prods["PROD-03"]["producao_horaria"] == 12.0
 
     def test_entry_without_id_skipped(self):
         catalogo = {
             "cpus": [],
             "insumos": [],
-            "produtividades": [{"valor_horario": 5.0}],  # no id
+            "produtividades": [{"producao_horaria": 5.0}],  # no id
         }
         _, _, prods = MOD._build_lookups(catalogo)
         assert prods == {}
@@ -901,11 +901,11 @@ class TestComputePrecoFromProduction:
         assert produtividade_catalogo == 0.0
 
     def test_valor_horario_zero_emits_warning_and_returns_none(self):
-        """Lines 276-287: valor_horario=0 → emit VAL-PLAN-PROD-HORARIO and return (None, 0.0)."""
+        """Lines 276-287: producao_horaria=0 → emit VAL-PLAN-PROD-HORARIO and return (None, 0.0)."""
         validacoes = []
         result, produtividade_catalogo = PREC._compute_preco_cat_from_production(
             cpu={"producao_id_ref": "PROD-001", "codigo": "CPU-001"},
-            prod_lookup={"PROD-001": {"valor_horario": 0.0}},
+            prod_lookup={"PROD-001": {"producao_horaria": 0.0}},
             insumo_lookup={},
             preco_diesel=5.0,
             alpha_clt=1.5,
@@ -918,11 +918,11 @@ class TestComputePrecoFromProduction:
         assert "VAL-PLAN-PROD-HORARIO" in codes
 
     def test_valor_horario_none_treated_as_zero(self):
-        """Line 275: valor_horario = float(None or 0.0) = 0.0 → same path."""
+        """Line 275: producao_horaria = float(None or 0.0) = 0.0 → same path."""
         validacoes = []
         result, produtividade_catalogo = PREC._compute_preco_cat_from_production(
             cpu={"producao_id_ref": "PROD-002", "codigo": "CPU-002"},
-            prod_lookup={"PROD-002": {"valor_horario": None}},
+            prod_lookup={"PROD-002": {"producao_horaria": None}},
             insumo_lookup={},
             preco_diesel=5.0,
             alpha_clt=1.5,
@@ -945,7 +945,7 @@ class TestComputePrecoFromProduction:
                     "codigo": "CPU-003",
                     "precos_unitarios_sbdi": {"mo": 40.0},  # triggers line 308-309
                 },
-                prod_lookup={"PROD-003": {"valor_horario": 50.0}},
+                prod_lookup={"PROD-003": {"producao_horaria": 50.0}},
                 insumo_lookup={},
                 preco_diesel=5.0,
                 alpha_clt=1.5,

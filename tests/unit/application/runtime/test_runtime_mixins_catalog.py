@@ -191,7 +191,7 @@ class TestLoadProducoesFromCatDirs:
 
         prod_dir = tmp_path / "producoes"
         prod_dir.mkdir()
-        (prod_dir / "p1.json").write_text(json.dumps({"id": "PROD-1", "valor_horario": 10.0}), encoding="utf-8")
+        (prod_dir / "p1.json").write_text(json.dumps({"id": "PROD-1", "producao_horaria": 10.0}), encoding="utf-8")
         result = CatalogMixin._load_producoes_from_cat_dirs(tmp_path)
         assert any(p.get("id") == "PROD-1" for p in result)
 
@@ -286,7 +286,7 @@ class TestLoadProducoesFromCpus:
         mixin = _make_catalog_mixin(tmp_path)
         prod_dir = tmp_path / "producoes"
         prod_dir.mkdir(parents=True)
-        prod_data = {"id": "prod-Z", "valor_horario": 5.0}
+        prod_data = {"id": "prod-Z", "producao_horaria": 5.0}
         (prod_dir / "prod-Z.json").write_text(json.dumps(prod_data), encoding="utf-8")
         cpus = [{"producao_id_ref": "prod-Z"}]
         result = mixin._load_producoes_from_cpus(cpus, cat_dir=None)
@@ -302,7 +302,7 @@ class TestLoadProducoesFromCpus:
         cat_dir = tmp_path / "catalogos" / "cat1"
         cat_prod_dir = cat_dir / "producoes"
         cat_prod_dir.mkdir(parents=True)
-        prod_data = {"id": "prod-W", "valor_horario": 7.0}
+        prod_data = {"id": "prod-W", "producao_horaria": 7.0}
         (cat_prod_dir / "prod-W.json").write_text(json.dumps(prod_data), encoding="utf-8")
 
         cpus = [{"producao_id_ref": "prod-W"}]

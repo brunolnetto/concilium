@@ -21,7 +21,7 @@ Catálogos deliberadamente EXCLUÍDOS desta migração:
 
   - config/catalogos/samples/ — ACHADO EMPÍRICO (Step 0): ao contrário de
     mendeslobo/rfi-r02, a Fonte 1 FALHA para as 11 CPUs de `samples` (os
-    arquivos em samples/produtividades/*.json têm `valor_horario` mas NÃO têm
+    arquivos em samples/produtividades/*.json têm `producao_horaria` mas NÃO têm
     `composicao_padrao_equipe` — custo da equipe fica 0, sbdi.total <= 0). Isso
     força 100% das CPUs de `samples` pela Fonte 2 hoje, tornando
     composicao_itens (incluindo as linhas EQUIPAMENTO) a fonte real e ativa de

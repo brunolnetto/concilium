@@ -2,7 +2,7 @@
   "id": "PROD-USINAGEM-CBUQ-001",
   "codigo": "USINAGEM-CBUQ-FAIXA-C",
   "descricao": "Usinagem de CBUQ faixa C (agregados comerciais) em usina gravimétrica 100/140 t/h — composição SICRO 6416078",
-  "valor_horario": 99.6,
+  "producao_horaria": 99.6,
   "unidade": "t",
   "origem": {
     "tipo": "tabela_referencia",

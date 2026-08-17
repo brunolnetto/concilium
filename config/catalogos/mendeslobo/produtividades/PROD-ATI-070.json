@@ -2,7 +2,7 @@
   "id": "PROD-ATI-070",
   "codigo": "ATI-070",
   "descricao": "Meio-fio de concreto moldado in loco (Adotado SICRO)",
-  "valor_horario": 45.0,
+  "producao_horaria": 45.0,
   "unidade": "m",
   "origem": {
     "tipo": "adotado_sicro",

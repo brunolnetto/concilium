@@ -1,14 +1,14 @@
 {
   "id": "CPU-TERRA-ATI-041-PROD-001",
   "codigo": "CPU-TERRA-ATI-041-PROD-001",
-  "descricao": "Supressão vegetal de Mata Densa — corte, destocamento, traçamento, baldeio e empilhamento de madeira, DMT até 6 km — equipe: 1× SV-OUV-MO-OPER-PA, 1× SV-OUV-MO-OPER-ESCAV, 3× SV-OUV-MO-MOTOR-BASC, 4× SV-OUV-MO-AJUDANTE, 1× SV-OUV-MO-SINALEIRO, 4× SV-OUV-MO-OPER-TRAT-EST, 2× SV-OUV-MO-OPER-MOTOSSERRA; equipamentos: 1× SV-OUV-EQ-PA-MANDIBULA, 3× SV-OUV-EQ-CAM-BASC-14M3, 4× SV-OUV-EQ-TRAT-EST-20T, 1× SV-OUV-EQ-ESCAV-22T, 2× SV-OUV-EQ-MOTOSSERRA",
+  "descricao": "Supressão vegetal de Mata Densa — corte, destocamento, traçamento, baldeio e empilhamento de madeira, DMT até 6 km — equipe: 1× SV-OUV-MO-OPER-PA, 1× SV-OUV-MO-OPER-ESCAV, 3× SV-OUV-MO-MOTOR-BASC, 4× SV-OUV-MO-AJUDANTE, 1× SV-OUV-MO-SINALEIRO, 3× SV-OUV-MO-OPER-TRAT-EST, 2× SV-OUV-MO-OPER-MOTOSSERRA; equipamentos: 1× SV-OUV-EQ-PA-MANDIBULA, 3× SV-OUV-EQ-CAM-BASC-14M3, 3× SV-OUV-EQ-TRAT-EST-20T, 1× SV-OUV-EQ-ESCAV-22T, 2× SV-OUV-EQ-MOTOSSERRA",
   "origem": {
     "tipo": "tabela_referencia",
     "fonte_id": "CPU-TERRA-ATI-041-PROD-001",
     "data_calibracao": "2026-08-12T00:00:00+00:00",
     "referencia": "Planilha SUPRESSÃO SERRA VERDE / OUVIDOR-GO, agosto/2026 (composição unitária de serviço fornecida pelo cliente/fornecedor)."
   },
-  "valor_horario": 3472.55,
+  "producao_horaria": 500.0,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -33,7 +33,7 @@
       },
       {
         "funcao_id": "SV-OUV-MO-OPER-TRAT-EST",
-        "num_pessoas": 4
+        "num_pessoas": 3
       },
       {
         "funcao_id": "SV-OUV-MO-OPER-MOTOSSERRA",
@@ -51,7 +51,7 @@
       },
       {
         "equip_id": "SV-OUV-EQ-TRAT-EST-20T",
-        "num_unidades": 4
+        "num_unidades": 3
       },
       {
         "equip_id": "SV-OUV-EQ-ESCAV-22T",
@@ -63,5 +63,7 @@
       }
     ]
   },
-  "historico_observacoes": []
+  "historico_observacoes": [],
+  "unidade_producao": "m2/h",
+  "producao": 500.0
 }

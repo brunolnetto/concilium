@@ -2,7 +2,7 @@
   "id": "PROD-ATI-045",
   "codigo": "ATI-045",
   "descricao": "Assentamento de tubo PVC PBA DN 100mm (Adotado SINAPI)",
-  "valor_horario": 8.5,
+  "producao_horaria": 8.5,
   "unidade": "m",
   "origem": {
     "tipo": "adotado_sicro",

@@ -222,7 +222,7 @@ def _synthesize_missing_producoes(cpus: list[dict], seen_prod_ids: set) -> list[
             result.append(
                 {
                     "id": prod_id_ref,
-                    "valor_horario": float(producao_horaria),
+                    "producao_horaria": float(producao_horaria),
                     "composicao_padrao_equipe": cpu.get("composicao_padrao_equipe"),
                 }
             )

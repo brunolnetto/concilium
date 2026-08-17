@@ -145,7 +145,7 @@ def _build_row_for_cpu(cpu: dict[str, Any], prod_lookup: dict[str, dict[str, Any
     codigo = str(cpu.get("codigo") or "")
     producao_id_ref = str(cpu.get("producao_id_ref") or "")
     producao = prod_lookup.get(producao_id_ref)
-    producao_horaria = _safe_float((producao or {}).get("valor_horario"))
+    producao_horaria = _safe_float((producao or {}).get("producao_horaria"))
     funcoes, equipamentos = _resolve_team_from_producao(producao)
 
     total_pessoas = _sum_people(funcoes)

@@ -206,7 +206,7 @@ class TestCatalogoWrappers:
                 producao_id="P1",
                 variante_id="VAR-1",
                 nome_variante="v1",
-                valor_horario=50.0,
+                producao_horaria=50.0,
                 equipe_json='{"op": 1}',
             )
         assert result["variante_id"] == "VAR-1"

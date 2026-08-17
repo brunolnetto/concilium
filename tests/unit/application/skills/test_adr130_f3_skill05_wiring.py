@@ -89,13 +89,13 @@ def _grafo_sinergia_real(
 
 def _prod_dict(
     grafo_sinergia: dict | None = None,
-    valor_horario: float = _VALOR_HORARIO_REAL,
+    producao_horaria: float = _VALOR_HORARIO_REAL,
 ) -> dict:
     d = {
         "id": _PROD_ID,
         "codigo": _CPU_ID,
         "descricao": "Esc/carg/transp 1a cat DMT<=2000m",
-        "valor_horario": valor_horario,
+        "producao_horaria": producao_horaria,
         "unidade": "m3",
         "origem": {
             "tipo": "calibrado_agis_rfi",
@@ -226,7 +226,7 @@ class TestBuildProducaoParaSinergia:
         prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real())
         producao = _build_producao_para_sinergia(prod)
         assert producao is not None
-        assert producao.valor_horario == _VALOR_HORARIO_REAL
+        assert producao.producao_horaria == _VALOR_HORARIO_REAL
         assert producao.grafo_sinergia is not None
         assert {c.elemento_id for c in producao.grafo_sinergia.capacidades} == {"E0016", "E0007"}
 
@@ -240,10 +240,10 @@ class TestBuildProducaoParaSinergia:
         assert {e.equip_id: e.num_unidades for e in equips} == {"E0016": 1, "E0007": 7}
 
     def test_none_quando_valor_horario_invalido(self):
-        """Quando a construção do `Producao` mínimo falha (aqui, `valor_horario`
+        """Quando a construção do `Producao` mínimo falha (aqui, `producao_horaria`
         não-numérico → ValueError em `float(...)`), a função captura a exceção e
         retorna None em vez de propagar — no-op silencioso (ADR-130 F3)."""
-        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real(), valor_horario="nao-numerico")
+        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real(), producao_horaria="nao-numerico")
         assert _build_producao_para_sinergia(prod) is None
 
     def test_producao_construida_quando_origem_e_string_solta(self):
@@ -312,7 +312,7 @@ class TestValidarSinergiaProducao:
 
     def test_val_sinergia_02_emitido_em_divergencia(self):
         """Capacidade da escavadeira reduzida à metade → produção derivada diverge
-        > 15% do valor_horario declarado → VAL-SINERGIA-02 (AVISO)."""
+        > 15% do producao_horaria declarado → VAL-SINERGIA-02 (AVISO)."""
         validacoes: list = []
         grafo = _grafo_sinergia_real(capacidade_escavadeira=_CAP_ESCAVADEIRA_REAL / 2)
         _validar_sinergia_producao(_prod_dict(grafo_sinergia=grafo), validacoes)

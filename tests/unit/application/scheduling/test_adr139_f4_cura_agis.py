@@ -52,7 +52,7 @@ class TestRepointsAplicados:
         prod = _load("produtividades/CPU-PAVIM-ATI-058-PROD-001.json")
         (massa,) = [m for m in _materiais(prod) if m["insumo_id"] == "MA-CBUQ-FAIXA-C"]
         insumo = _load("insumos/material/MA-CBUQ-FAIXA-C.json")
-        material_por_m2 = massa["consumo_por_hora"] * insumo["preco_unitario"] / prod["valor_horario"]
+        material_por_m2 = massa["consumo_por_hora"] * insumo["preco_unitario"] / prod["producao_horaria"]
         # antes da cura: 381,60/m² (massa a preço de CAP puro); pós-consolidação F4-ter
         # (massa re-concluída a 466,30/t na base de cotações da empresa): ~33,57/m².
         assert material_por_m2 == pytest.approx(33.57, rel=1e-2)

@@ -4,7 +4,7 @@ Valida o resultado de `scripts/catalog/cure_pareamento_solo_compac_pn_agis.py`:
 
   - BOM dividido em duas linhas (1CAT + 2CAT), proporcionais à composição real
     1CAT/2CAT da EAP AGIS (444.378,2 + 691.257,1 m³).
-  - Soma das duas taxas preserva o `valor_horario` original (173,01) — a
+  - Soma das duas taxas preserva o `producao_horaria` original (173,01) — a
     produtividade da equipe não muda, só a atribuição do consumo entre materiais.
   - `CPU-TERRA-COMPAC-PI` não é tocado (seu volume não bate com nenhuma soma
     residual das categorias — não é derivável objetivamente).
@@ -43,7 +43,7 @@ class TestBomDivididoProporcional:
     def test_soma_das_taxas_preserva_valor_horario(self):
         prod = _load(f"produtividades/{PRODUTIVIDADE_ID}.json")
         soma = sum(m["consumo_por_hora"] for m in _materiais(prod))
-        assert soma == pytest.approx(prod["valor_horario"])
+        assert soma == pytest.approx(prod["producao_horaria"])
 
     def test_fracao_proporcional_a_producao_real_da_eap(self):
         """444.378,2 (1CAT) + 691.257,1 (2CAT) = 1.135.635,3 m³ == quantitativo do item
@@ -60,7 +60,7 @@ class TestCpuPiNaoTocado:
         prod = _load("produtividades/CPU-TERRA-COMPAC-PI-PROD-001.json")
         (mat,) = _materiais(prod)
         assert mat["insumo_id"] == "MA-SOLO-ESCAVADO-1CAT"
-        assert mat["consumo_por_hora"] == pytest.approx(prod["valor_horario"])
+        assert mat["consumo_por_hora"] == pytest.approx(prod["producao_horaria"])
 
 
 class TestScriptIdempotente:

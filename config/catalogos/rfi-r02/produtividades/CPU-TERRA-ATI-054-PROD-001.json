@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-054-PROD-001",
   "codigo": "ATI-054",
   "descricao": "Sub-base estabilizada granulometricamente",
-  "valor_horario": 55.0,
+  "producao_horaria": 55.0,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

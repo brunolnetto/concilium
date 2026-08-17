@@ -327,7 +327,7 @@ def test_resolve_productivity_uses_valor_horario():
     from concilium.application.benchmarks.input_derivation.cronograma import BenchmarkInputDeriver
 
     cpu = {"producao_id_ref": "PROD-1"}
-    prod_lookup = {"PROD-1": {"valor_horario": 50.0}}
+    prod_lookup = {"PROD-1": {"producao_horaria": 50.0}}
     result = BenchmarkInputDeriver._resolve_productivity(cpu, prod_lookup)
     assert result == 50.0
 
@@ -335,9 +335,9 @@ def test_resolve_productivity_uses_valor_horario():
 def test_resolve_productivity_falls_back_to_producao_horaria():
     from concilium.application.benchmarks.input_derivation.cronograma import BenchmarkInputDeriver
 
-    # valor_horario is None -> fall back to producao_horaria (lines 205-207)
+    # producao_horaria is None -> fall back to producao_horaria (lines 205-207)
     cpu = {"producao_id_ref": "PROD-1"}
-    prod_lookup = {"PROD-1": {"valor_horario": None, "producao_horaria": 30.0}}
+    prod_lookup = {"PROD-1": {"producao_horaria": None, "producao_horaria": 30.0}}
     result = BenchmarkInputDeriver._resolve_productivity(cpu, prod_lookup)
     assert result == 30.0
 
@@ -345,9 +345,9 @@ def test_resolve_productivity_falls_back_to_producao_horaria():
 def test_resolve_productivity_value_not_numeric_returns_one():
     from concilium.application.benchmarks.input_derivation.cronograma import BenchmarkInputDeriver
 
-    # Neither valor_horario nor producao_horaria is numeric
+    # Neither producao_horaria nor producao_horaria is numeric
     cpu = {"producao_id_ref": "PROD-1"}
-    prod_lookup = {"PROD-1": {"valor_horario": "N/A"}}
+    prod_lookup = {"PROD-1": {"producao_horaria": "N/A"}}
     result = BenchmarkInputDeriver._resolve_productivity(cpu, prod_lookup)
     assert result == 1.0
 
@@ -404,7 +404,7 @@ def test_catalog_based_sizing_with_cpu_and_prod():
 
     snapshot = MagicMock()
     snapshot.cpus = [{"codigo": "CPU-1", "producao_id_ref": "PROD-1"}]
-    snapshot.produtividades = [{"id": "PROD-1", "valor_horario": 10.0}]
+    snapshot.produtividades = [{"id": "PROD-1", "producao_horaria": 10.0}]
     items = [{"item_id": "A1", "cpu_id": "CPU-1", "quantitativo": 480}]
     num_equipes: dict = {}
     _catalog_based_sizing(items, ["2026-W01"], 48.0, snapshot, num_equipes)
@@ -417,7 +417,7 @@ def test_catalog_based_sizing_zero_qty_skipped():
 
     snapshot = MagicMock()
     snapshot.cpus = [{"codigo": "CPU-1", "producao_id_ref": "PROD-1"}]
-    snapshot.produtividades = [{"id": "PROD-1", "valor_horario": 10.0}]
+    snapshot.produtividades = [{"id": "PROD-1", "producao_horaria": 10.0}]
     items = [{"item_id": "A1", "cpu_id": "CPU-1", "quantitativo": 0}]
     num_equipes: dict = {}
     _catalog_based_sizing(items, ["2026-W01"], 48.0, snapshot, num_equipes)
@@ -444,7 +444,7 @@ def test_catalog_based_sizing_cpu_without_codigo_key_skipped():
 
     snapshot = MagicMock()
     snapshot.cpus = [{"nome": "sem codigo"}, {"codigo": "CPU-1", "producao_id_ref": "PROD-1"}]
-    snapshot.produtividades = [{"id": "PROD-1", "valor_horario": 10.0}]
+    snapshot.produtividades = [{"id": "PROD-1", "producao_horaria": 10.0}]
     items = [{"item_id": "A1", "cpu_id": "CPU-1", "quantitativo": 480}]
     num_equipes: dict = {}
     _catalog_based_sizing(items, ["2026-W01"], 48.0, snapshot, num_equipes)
@@ -457,7 +457,7 @@ def test_catalog_based_sizing_produtividade_without_id_or_codigo_skipped():
 
     snapshot = MagicMock()
     snapshot.cpus = [{"codigo": "CPU-1", "producao_id_ref": "PROD-1"}]
-    snapshot.produtividades = [{"valor_horario": 99.0}, {"id": "PROD-1", "valor_horario": 10.0}]
+    snapshot.produtividades = [{"producao_horaria": 99.0}, {"id": "PROD-1", "producao_horaria": 10.0}]
     items = [{"item_id": "A1", "cpu_id": "CPU-1", "quantitativo": 480}]
     num_equipes: dict = {}
     _catalog_based_sizing(items, ["2026-W01"], 48.0, snapshot, num_equipes)

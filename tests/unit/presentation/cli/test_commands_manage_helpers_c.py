@@ -37,7 +37,7 @@ class TestManageHelpersCBundleLoader:
 
         catalogo = {
             "insumos": [{"codigo": "I1", "tipo": "MO", "preco_unitario": 100.0}],
-            "producoes": [{"id": "P1", "valor_horario": 50.0}],
+            "producoes": [{"id": "P1", "producao_horaria": 50.0}],
         }
         rt = SimpleNamespace(config_root=tmp_path / "config", load_catalogo=lambda cid: catalogo)
         with patch("concilium.presentation.mcp._context._runtime", return_value=rt):

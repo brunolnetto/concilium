@@ -3,7 +3,7 @@
   "codigo": "POCO-VISITA-PADRAO-PROD-001",
   "descricao": "Produção POCO-VISITA-PADRAO",
   "origem": "PROPRIA",
-  "valor_horario": 0.25,
+  "producao_horaria": 0.25,
   "cpu_ids": [
     "POCO-VISITA-PADRAO"
   ]

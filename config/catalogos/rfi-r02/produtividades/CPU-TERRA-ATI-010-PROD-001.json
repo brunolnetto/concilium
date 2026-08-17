@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-010-PROD-001",
   "codigo": "ATI-010",
   "descricao": "Escavação canaletas",
-  "valor_horario": 37.5,
+  "producao_horaria": 37.5,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

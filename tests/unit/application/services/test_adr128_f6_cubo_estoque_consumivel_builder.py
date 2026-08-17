@@ -29,7 +29,7 @@ def _make_producao(pid: str, materiais=None) -> dict:
     return {
         "id": pid,
         "codigo": pid,
-        "valor_horario": 50.0,
+        "producao_horaria": 50.0,
         "composicao_padrao_equipe": {
             "equipamentos": [{"equip_id": "EQ-X", "num_unidades": 1}],
             "materiais": materiais or [],

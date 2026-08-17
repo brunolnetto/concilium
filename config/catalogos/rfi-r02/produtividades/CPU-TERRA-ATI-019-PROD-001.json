@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-019-PROD-001",
   "codigo": "ATI-019",
   "descricao": "Aterro executado em CCR",
-  "valor_horario": 250.0,
+  "producao_horaria": 250.0,
   "unidade": "m³",
   "origem": {
     "tipo": "planilha_rfi_r02",

@@ -2,7 +2,7 @@
   "id": "PROD-PAV-BASE-BGTC-001",
   "codigo": "PAV-BASE-BGTC-001",
   "descricao": "Base de BGTC — execução e compactação",
-  "valor_horario": 22.0,
+  "producao_horaria": 22.0,
   "unidade": "m3",
   "origem": {
     "tipo": "estimado",

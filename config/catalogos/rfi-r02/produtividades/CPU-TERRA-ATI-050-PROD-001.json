@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-050-PROD-001",
   "codigo": "ATI-050",
   "descricao": "Tubo PVC DEFOFO D=250mm",
-  "valor_horario": 10.4175,
+  "producao_horaria": 10.4175,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

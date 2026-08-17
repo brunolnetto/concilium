@@ -1196,17 +1196,17 @@ def _apply_variante_producao_delta(
     producao_id: str,
     variante_id: str,
     nome_variante: str,
-    valor_horario: float,
+    producao_horaria: float,
     equipe_data: Any,
 ) -> None:
     """Aplica um delta de variante de produção ao catálogo mestre no momento do merge (ADR-145 D2)."""
-    prod_file = validate_and_resolve_producao_file(catalog_root, producao_id, valor_horario)
+    prod_file = validate_and_resolve_producao_file(catalog_root, producao_id, producao_horaria)
     data = json.loads(prod_file.read_text(encoding="utf-8"))
     if "variantes" not in data:
         data["variantes"] = []
     data["variantes"] = [v for v in data["variantes"] if v["id"] != variante_id]
     data["variantes"].append(
-        {"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data}
+        {"id": variante_id, "nome": nome_variante, "producao_horaria": producao_horaria, "equipe": equipe_data}
     )
     prod_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -1217,7 +1217,7 @@ def _avp_handle_projeto_overlay(
     producao_id: str,
     variante_id: str,
     nome_variante: str,
-    valor_horario: float,
+    producao_horaria: float,
     equipe_data: dict[str, Any],
 ) -> dict[str, Any]:
     """Grava variante de produção em overlay de projeto (ADR-066 D1)."""
@@ -1234,7 +1234,7 @@ def _avp_handle_projeto_overlay(
 
     entry = dict(overlay.get(producao_id, {}))
     variantes = [v for v in entry.get("variantes", []) if v.get("id") != variante_id]
-    variantes.append({"id": variante_id, "nome": nome_variante, "valor_horario": valor_horario, "equipe": equipe_data})
+    variantes.append({"id": variante_id, "nome": nome_variante, "producao_horaria": producao_horaria, "equipe": equipe_data})
     entry["variantes"] = variantes
     overlay[producao_id] = entry
     overlay_file.write_text(json.dumps(overlay, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -1257,7 +1257,7 @@ def _impl_adicionar_variante_producao(
     producao_id: str,
     variante_id: str,
     nome_variante: str,
-    valor_horario: float,
+    producao_horaria: float,
     equipe_json: str,
     rascunho_id: str | None = None,
     projeto_id: str | None = None,
@@ -1273,7 +1273,7 @@ def _impl_adicionar_variante_producao(
         producao_id: ID da metodologia.
         variante_id: ID único da variante.
         nome_variante: Nome legível.
-        valor_horario: Produtividade benchmark.
+        producao_horaria: Produtividade benchmark.
         equipe_json: String JSON com a composição.
         rascunho_id: Obrigatório para editar o catálogo mestre. Ignorado se projeto_id
             for informado. Crie um rascunho com criar_rascunho_catalogo antes.
@@ -1288,7 +1288,7 @@ def _impl_adicionar_variante_producao(
 
         if projeto_id:
             return _avp_handle_projeto_overlay(
-                projects_dir, projeto_id, producao_id, variante_id, nome_variante, valor_horario, equipe_data
+                projects_dir, projeto_id, producao_id, variante_id, nome_variante, producao_horaria, equipe_data
             )
 
         if not rascunho_id:
@@ -1303,7 +1303,7 @@ def _impl_adicionar_variante_producao(
             validate_and_resolve_producao_file(
                 _catalog_root(config_dir, ctx.catalogo_id),
                 producao_id,
-                valor_horario,
+                producao_horaria,
             )
         except CatalogGovernanceError as exc:
             return {"erro": str(exc)}
@@ -1315,7 +1315,7 @@ def _impl_adicionar_variante_producao(
             "producao_id": producao_id,
             "variante_id": variante_id,
             "nome_variante": nome_variante,
-            "valor_horario": valor_horario,
+            "producao_horaria": producao_horaria,
             "equipe": equipe_data,
             "autor": get_current_user_id() or "system",
             "timestamp": datetime.now(UTC).isoformat(),

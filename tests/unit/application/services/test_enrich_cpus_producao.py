@@ -1,6 +1,6 @@
 """Tests for _enrich_cpus_with_producao — correctness, complexity, and cache.
 
-ADR-067: The join between CPUs (producao_id_ref) and productions (valor_horario)
+ADR-067: The join between CPUs (producao_id_ref) and productions (producao_horaria)
 must be O(P + C) where P = len(producoes) and C = len(cpus).
 
 Invariants verified:
@@ -25,7 +25,7 @@ from concilium.application.services.concilium_service import ConciliumService
 
 def _make_cat(n_cpus: int, n_prods: int, *, match_all: bool = True) -> dict:
     """Build a synthetic catalog with n_cpus CPUs and n_prods productions."""
-    prods = [{"id": f"PROD-{i:06d}", "valor_horario": float(i + 1)} for i in range(n_prods)]
+    prods = [{"id": f"PROD-{i:06d}", "producao_horaria": float(i + 1)} for i in range(n_prods)]
     cpus = []
     for i in range(n_cpus):
         if match_all:
@@ -51,14 +51,14 @@ class TestEnrichCpusCorrectness:
         cat = _make_cat(5, 5)
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
         assert all(c.get("producao_horaria") is not None for c in enriched)
-        # valor_horario is float(i+1) for PROD-000000..4
+        # producao_horaria is float(i+1) for PROD-000000..4
         assert enriched[0]["producao_horaria"] == 1.0
         assert enriched[4]["producao_horaria"] == 5.0
 
     def test_cpu_with_existing_producao_horaria_unchanged(self):
         cat = {
             "cpus": [{"codigo": "CPU-A", "producao_horaria": 99.0, "producao_id_ref": "PROD-0"}],
-            "producoes": [{"id": "PROD-0", "valor_horario": 1.0}],
+            "producoes": [{"id": "PROD-0", "producao_horaria": 1.0}],
             "insumos": [],
         }
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
@@ -67,7 +67,7 @@ class TestEnrichCpusCorrectness:
     def test_cpu_without_ref_has_no_producao_horaria(self):
         cat = {
             "cpus": [{"codigo": "CPU-A", "unidade": "m3"}],
-            "producoes": [{"id": "PROD-0", "valor_horario": 5.0}],
+            "producoes": [{"id": "PROD-0", "producao_horaria": 5.0}],
             "insumos": [],
         }
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
@@ -76,7 +76,7 @@ class TestEnrichCpusCorrectness:
     def test_unmatched_ref_leaves_field_absent(self):
         cat = {
             "cpus": [{"codigo": "CPU-A", "producao_id_ref": "PROD-GHOST"}],
-            "producoes": [{"id": "PROD-REAL", "valor_horario": 5.0}],
+            "producoes": [{"id": "PROD-REAL", "producao_horaria": 5.0}],
             "insumos": [],
         }
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
@@ -88,7 +88,7 @@ class TestEnrichCpusCorrectness:
     def test_non_dict_cpus_skipped(self):
         cat = {
             "cpus": ["not-a-dict", None, {"codigo": "CPU-A", "producao_id_ref": "P1"}],
-            "producoes": [{"id": "P1", "valor_horario": 7.0}],
+            "producoes": [{"id": "P1", "producao_horaria": 7.0}],
             "insumos": [],
         }
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
@@ -98,7 +98,7 @@ class TestEnrichCpusCorrectness:
     def test_original_dict_not_mutated(self):
         """Enrichment must not mutate the input catalog (creates new dicts)."""
         cpu = {"codigo": "CPU-A", "producao_id_ref": "P1"}
-        cat = {"cpus": [cpu], "producoes": [{"id": "P1", "valor_horario": 3.0}], "insumos": []}
+        cat = {"cpus": [cpu], "producoes": [{"id": "P1", "producao_horaria": 3.0}], "insumos": []}
         ConciliumService._enrich_cpus_with_producao(cat)
         assert "producao_horaria" not in cpu  # original unmodified
 
@@ -109,7 +109,7 @@ class TestEnrichCpusCorrectness:
                 {"codigo": "CPU-A", "producao_id_ref": "PROD-SHARED"},
                 {"codigo": "CPU-B", "producao_id_ref": "PROD-SHARED"},
             ],
-            "producoes": [{"id": "PROD-SHARED", "valor_horario": 42.0}],
+            "producoes": [{"id": "PROD-SHARED", "producao_horaria": 42.0}],
             "insumos": [],
         }
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
@@ -174,7 +174,7 @@ class TestEnrichCpusComplexity:
         """
         cat = {
             "cpus": [{"codigo": f"CPU-{i}", "producao_id_ref": "PROD-0"} for i in range(5_000)],
-            "producoes": [{"id": "PROD-0", "valor_horario": 1.0}],
+            "producoes": [{"id": "PROD-0", "producao_horaria": 1.0}],
             "insumos": [],
         }
         t0 = time.perf_counter()
@@ -228,7 +228,7 @@ class TestEnrichedCpusCache:
             encoding="utf-8",
         )
         (cfg / "catalogos" / "test-cat" / "producoes" / "PROD-001.json").write_text(
-            json.dumps({"id": "PROD-001", "valor_horario": 55.5}), encoding="utf-8"
+            json.dumps({"id": "PROD-001", "producao_horaria": 55.5}), encoding="utf-8"
         )
         prj = tmp_path / "projetos"
         prj.mkdir()

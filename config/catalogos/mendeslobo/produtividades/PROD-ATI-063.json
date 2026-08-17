@@ -2,7 +2,7 @@
   "id": "PROD-ATI-063",
   "codigo": "ATI-063",
   "descricao": "Piso intertravado de concreto e=10cm (Adotado SICRO)",
-  "valor_horario": 15.0,
+  "producao_horaria": 15.0,
   "unidade": "m2",
   "origem": {
     "tipo": "adotado_sicro",

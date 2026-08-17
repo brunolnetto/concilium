@@ -811,7 +811,7 @@ def _report_producoes_sem_composicao(producoes: list[dict], report: CureReport) 
         if not (eq.get("funcoes") or eq.get("equipamentos")):
             pid = prod.get("id", "?")
             report.add_manual(
-                f"PROD {pid}: sem composição de equipe (vh={prod.get('valor_horario')}) — dados de campo necessários"
+                f"PROD {pid}: sem composição de equipe (vh={prod.get('producao_horaria')}) — dados de campo necessários"
             )
 
 

@@ -6,7 +6,7 @@ declarativo do script como fonte única de expectativa:
 
   - Censo por catálogo (rfi-r02: 8 produtoras / 5 consumidoras; mendeslobo: 6 / 7),
     com 3 insumos GERACAO_INTERNA em cada.
-  - Toda entrada do mapeamento presente no dado, com taxa correta (valor_horario ou
+  - Toda entrada do mapeamento presente no dado, com taxa correta (producao_horaria ou
     taxa explícita — ex.: rebaixo 20 cm) e `origem_entrada="bom_convertido"`.
   - Integridade referencial (VAL-PROD-GERACAO-01) e balanço de massas fechado
     (todo material gerado consumido tem produtora no mesmo catálogo).
@@ -106,7 +106,7 @@ class TestCensoEnriquecimento:
             prod = _load(cat, rel)
             gerados = [g for g in prod.get("materiais_gerados") or [] if g["insumo_id"] == insumo_id]
             assert len(gerados) == 1, f"{cat}:{rel}"
-            esperada = taxa if taxa is not None else prod["valor_horario"]
+            esperada = taxa if taxa is not None else prod["producao_horaria"]
             assert gerados[0]["geracao_por_hora"] == pytest.approx(esperada)
             assert "ADR-139" in (gerados[0].get("descricao") or "")
 
@@ -118,7 +118,7 @@ class TestCensoEnriquecimento:
             prod = _load(cat, rel)
             mats = [m for m in _equipe(prod).get("materiais") or [] if m["insumo_id"] == insumo_id]
             assert len(mats) == 1, f"{cat}:{rel}"
-            esperada = taxa if taxa is not None else prod["valor_horario"]
+            esperada = taxa if taxa is not None else prod["producao_horaria"]
             assert mats[0]["consumo_por_hora"] == pytest.approx(esperada)
             assert mats[0]["origem_entrada"] == "bom_convertido"
 

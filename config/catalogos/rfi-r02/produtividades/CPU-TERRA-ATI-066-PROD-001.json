@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-066-PROD-001",
   "codigo": "ATI-066",
   "descricao": "Cercamento — mourão de concreto",
-  "valor_horario": 50.0,
+  "producao_horaria": 50.0,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

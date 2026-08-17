@@ -70,7 +70,7 @@ def _base_producao(**overrides) -> dict:
         "id": "PROD-TEST-1",
         "codigo": "PROD-TEST-1",
         "descricao": "teste",
-        "valor_horario": 1.0,
+        "producao_horaria": 1.0,
         "unidade": "m3/h",
         "categoria": "escavacao",
         "origem": "PROPRIA",

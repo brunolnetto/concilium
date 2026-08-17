@@ -2,7 +2,7 @@
   "id": "CPU-TERRA-ATI-047-PROD-001",
   "codigo": "ATI-047",
   "descricao": "Tubulação água PVC PBA 150mm",
-  "valor_horario": 11.5425,
+  "producao_horaria": 11.5425,
   "unidade": "m",
   "origem": {
     "tipo": "planilha_rfi_r02",

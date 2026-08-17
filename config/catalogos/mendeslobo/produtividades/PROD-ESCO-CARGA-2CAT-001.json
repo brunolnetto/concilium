@@ -2,7 +2,7 @@
   "id": "PROD-ESCO-CARGA-2CAT-001",
   "codigo": "ESCO-CARGA-2CAT-001",
   "descricao": "Escavação, carga, transporte, descarga e espalhamento — 2ª categoria",
-  "valor_horario": 159.108923076923,
+  "producao_horaria": 159.108923076923,
   "unidade": "m3",
   "origem": {
     "tipo": "calibrado_contra_obra_real",

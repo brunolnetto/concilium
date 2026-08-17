@@ -3,12 +3,12 @@
 Ao popular grafo_sinergia nas 75 CPUs do catálogo (ver
 test_adr130_grafo_sinergia_rfi_r02_cluster{1..7}.py), 9 pares de CPUs se
 revelaram duplicatas literais de produtividade: mesma composição de equipe
-(funções+equipamentos+materiais), mesmo valor_horario, mesma unidade e — por
+(funções+equipamentos+materiais), mesmo producao_horaria, mesma unidade e — por
 consequência direta da mesma fórmula de derivação — o mesmo grafo_sinergia
 numérico (capacidades/gargalo_declarado/relacoes), diferindo apenas na
 descrição/código da atividade.
 
-Producao.valor_horario é o dado calibrado real de uma atividade; quando duas
+Producao.producao_horaria é o dado calibrado real de uma atividade; quando duas
 CPUs de fato compartilham esse dado (não apenas equipamentos parecidos, mas o
 número real idêntico), manter 2 arquivos de Producao idênticos é redundância
 sem ganho de fidelidade — CPU.producao_id_ref já suporta N CPUs apontando
@@ -88,9 +88,9 @@ class TestConsolidacaoDuplicatasRfiR02:
 
     @pytest.mark.parametrize(("winner", "loser"), _PARES_CONSOLIDADOS)
     def test_resolucao_via_producao_id_ref_da_o_mesmo_valor_horario_para_as_2_cpus(self, winner, loser):
-        """Simula o join real (CPU.producao_id_ref -> Producao.valor_horario)
+        """Simula o join real (CPU.producao_id_ref -> Producao.producao_horaria)
         usado por _cure_contextual._cure_contextual_valor_horario_row e
-        confirma que ambas as CPUs resolvem para o mesmo valor_horario real —
+        confirma que ambas as CPUs resolvem para o mesmo producao_horaria real —
         a garantia de que a consolidação não perdeu fidelidade de dado."""
         winner_cpu = json.loads((_CPUS / f"CPU-TERRA-{winner}.json").read_text(encoding="utf-8"))
         loser_cpu = json.loads((_CPUS / f"CPU-TERRA-{loser}.json").read_text(encoding="utf-8"))

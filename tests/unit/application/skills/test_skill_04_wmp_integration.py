@@ -58,7 +58,7 @@ def _make_catalogo(cpu_specs: list[dict]) -> dict:
             {
                 "id": prod_id,
                 "descricao": f"Produção {spec['codigo']}",
-                "valor_horario": float(spec.get("producao_horaria", 500.0)),
+                "producao_horaria": float(spec.get("producao_horaria", 500.0)),
                 "cpu_ids": [spec["codigo"]],
             }
         )

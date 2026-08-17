@@ -402,7 +402,7 @@ class TestSkillCronograma:
         cpus_raw = json.loads((config_root / "catalogos" / "test" / "cpus.json").read_text())["cpus"]
         # Produtividades sintetizadas a partir do campo legado producao_horaria de cada CPU
         produtividades = [
-            {"id": c["producao_id_ref"], "valor_horario": c["producao_horaria"]}
+            {"id": c["producao_id_ref"], "producao_horaria": c["producao_horaria"]}
             for c in cpus_raw
             if c.get("producao_id_ref") and c.get("producao_horaria")
         ]

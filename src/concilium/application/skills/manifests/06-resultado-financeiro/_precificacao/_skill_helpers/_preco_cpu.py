@@ -87,14 +87,14 @@ def _resolve_producao_valida(cpu: dict, prod_lookup: dict, validacoes: list) -> 
     if not producao:
         return None
 
-    valor_horario = float(producao.get("valor_horario") or 0.0)
-    if valor_horario <= 0:
+    producao_horaria = float(producao.get("producao_horaria") or 0.0)
+    if producao_horaria <= 0:
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-PLAN-PROD-HORARIO",
                 status="AVISO",
                 mensagem=(
-                    f"CPU '{cpu.get('codigo')}': producao '{prod_id}' tem valor_horario=0; "
+                    f"CPU '{cpu.get('codigo')}': producao '{prod_id}' tem producao_horaria=0; "
                     "precificação bottom-up impossível."
                 ),
             )
@@ -131,21 +131,6 @@ def _resolve_beta_praticabilidade(item_id: str, sched_por_item: dict | None) -> 
     return beta if beta > 0 else 1.0
 
 
-def _avisar_sbdi_legado(cpu: dict, validacoes: list) -> None:
-    """Advertir se CPU ainda tem sbdi hard-coded (campo legado, ignorado)."""
-    if cpu.get("precos_unitarios_sbdi"):
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-PLAN-SBDI-LEGADO",
-                status="INFO",
-                mensagem=(
-                    f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi encontrado mas ignorado — "
-                    "usando precificação bottom-up canônica (NEP-032)."
-                ),
-            )
-        )
-
-
 def _compute_preco_cat_from_production(
     cpu: dict,
     prod_lookup: dict,
@@ -158,7 +143,7 @@ def _compute_preco_cat_from_production(
 ) -> tuple[dict | None, float]:
     """NEP-032 D1: deriva preco_cat da composição da equipe × produtividade (bottom-up canônico).
 
-    Fórmula: PU_categoria = custo_categoria_hora / producao.valor_horario
+    Fórmula: PU_categoria = custo_categoria_hora / producao.producao_horaria
 
     Onde custo_categoria_hora é calculado por pu_calculator.calcular_pu():
       MO:         Σ (salario/horas_mes × α × num_pessoas)
@@ -169,7 +154,7 @@ def _compute_preco_cat_from_production(
     Emite VAL-PLAN-SBDI-LEGADO se o CPU ainda tiver precos_unitarios_sbdi
     hard-coded (campo agora depreciado — não é usado no cálculo).
 
-    Retorna também `producao.valor_horario` (ADR-162 D1: ρ_i, produtividade catalogada
+    Retorna também `producao.producao_horaria` (ADR-162 D1: ρ_i, produtividade catalogada
     usada por causa_dominante em skill-06/_consolidacao) — 0.0 quando não resolvível.
     """
     from concilium.application.catalog.pu_calculator import ParametrosCalculo, derivar_precos_unitarios_sbdi
@@ -190,6 +175,15 @@ def _compute_preco_cat_from_production(
     if not sbdi or float(sbdi.get("total", 0.0) or 0.0) <= 0:
         return None, 0.0
 
+    if cpu.get("precos_unitarios_sbdi"):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PLAN-SBDI-LEGADO",
+                status="INFO",
+                mensagem=f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi é campo depreciado — ignorado (bottom-up via equipe).",
+            )
+        )
+
     preco_cat = {
         "mao_obra": float(sbdi.get("mo", sbdi.get("mao_obra", 0.0)) or 0.0),
         "diesel": float(sbdi.get("diesel", 0.0) or 0.0),
@@ -197,8 +191,6 @@ def _compute_preco_cat_from_production(
         "material": float(sbdi.get("material", 0.0) or 0.0),
     }
 
-    _avisar_sbdi_legado(cpu, validacoes)
-
-    return preco_cat, float(producao.get("valor_horario") or 0.0)
+    return preco_cat, float(producao.get("producao_horaria") or 0.0)
 
 

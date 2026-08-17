@@ -25,7 +25,7 @@ def _make_producao(
     descricao="Escavação",
     unidade="m3",
     categoria="TERRA",
-    valor_horario=10.0,
+    producao_horaria=10.0,
     equipe=None,
     variantes=None,
 ):
@@ -34,7 +34,7 @@ def _make_producao(
         "descricao": descricao,
         "unidade": unidade,
         "categoria": categoria,
-        "valor_horario": valor_horario,
+        "producao_horaria": producao_horaria,
     }
     if equipe is not None:
         p["equipe"] = equipe
@@ -192,7 +192,7 @@ class TestExportFallbackBranch:
             descricao="Terraplanagem",
             unidade="m3",
             categoria="TERRA",
-            valor_horario=15.5,
+            producao_horaria=15.5,
             equipe=_make_equipe(),
         )
         cat = _minimal_catalogo(producoes=[prod])
@@ -316,12 +316,12 @@ class TestExportVariantesBranch:
     def test_two_variantes_produce_two_rows(self):
         v1 = {
             "nome": "DMT-2000",
-            "valor_horario": 8.0,
+            "producao_horaria": 8.0,
             "equipe": _make_equipe(),
         }
         v2 = {
             "nome": "DMT-3000",
-            "valor_horario": 6.0,
+            "producao_horaria": 6.0,
             "equipe": _make_equipe(),
         }
         prod = _make_producao(variantes=[v1, v2])
@@ -335,7 +335,7 @@ class TestExportVariantesBranch:
         assert "DMT-3000" in names
 
     def test_variante_uses_nome_when_present(self):
-        v = {"nome": "Alta Carga", "id": "VAR-01", "equipe": _make_equipe(), "valor_horario": 5.0}
+        v = {"nome": "Alta Carga", "id": "VAR-01", "equipe": _make_equipe(), "producao_horaria": 5.0}
         prod = _make_producao(variantes=[v])
         cat = _minimal_catalogo(producoes=[prod])
         exp = _make_exporter(cat)
@@ -344,7 +344,7 @@ class TestExportVariantesBranch:
         assert df.iloc[0]["Variante"] == "Alta Carga"
 
     def test_variante_falls_back_to_id_when_no_nome(self):
-        v = {"id": "VAR-99", "equipe": _make_equipe(), "valor_horario": 4.0}
+        v = {"id": "VAR-99", "equipe": _make_equipe(), "producao_horaria": 4.0}
         prod = _make_producao(variantes=[v])
         cat = _minimal_catalogo(producoes=[prod])
         exp = _make_exporter(cat)
@@ -357,7 +357,7 @@ class TestExportVariantesBranch:
             funcoes=[_make_funcao("MEC-01", 1)],
             equipamentos=[_make_equipamento("ESC-05", 2)],
         )
-        v = {"nome": "TestVar", "equipe": equipe, "valor_horario": 7.0}
+        v = {"nome": "TestVar", "equipe": equipe, "producao_horaria": 7.0}
         prod = _make_producao(variantes=[v])
         cat = _minimal_catalogo(producoes=[prod])
         exp = _make_exporter(cat)
@@ -368,7 +368,7 @@ class TestExportVariantesBranch:
         assert "ESC-05:2" in bench
 
     def test_variante_valor_horario_mapped(self):
-        v = {"nome": "V1", "valor_horario": 12.34, "equipe": _make_equipe()}
+        v = {"nome": "V1", "producao_horaria": 12.34, "equipe": _make_equipe()}
         prod = _make_producao(variantes=[v])
         cat = _minimal_catalogo(producoes=[prod])
         exp = _make_exporter(cat)
@@ -378,7 +378,7 @@ class TestExportVariantesBranch:
 
     def test_variante_empty_equipe_no_raise(self):
         """A variant with no equipe key should not raise."""
-        v = {"nome": "NoEquipe", "valor_horario": 1.0}  # no "equipe" key
+        v = {"nome": "NoEquipe", "producao_horaria": 1.0}  # no "equipe" key
         prod = _make_producao(variantes=[v])
         cat = _minimal_catalogo(producoes=[prod])
         exp = _make_exporter(cat)
@@ -389,7 +389,7 @@ class TestExportVariantesBranch:
         assert bench == "MO:[] | EQ:[]"
 
     def test_variante_base_info_inherited_from_producao(self):
-        v = {"nome": "V1", "valor_horario": 9.0, "equipe": _make_equipe()}
+        v = {"nome": "V1", "producao_horaria": 9.0, "equipe": _make_equipe()}
         prod = _make_producao(
             pid="PROD-VARTEST",
             descricao="Carga",
@@ -409,9 +409,9 @@ class TestExportVariantesBranch:
 
     def test_multiple_producoes_each_with_variantes(self):
         """Two producoes with variants should yield combined rows."""
-        v1 = {"nome": "A", "valor_horario": 1.0, "equipe": _make_equipe()}
-        v2 = {"nome": "B", "valor_horario": 2.0, "equipe": _make_equipe()}
-        v3 = {"nome": "C", "valor_horario": 3.0, "equipe": _make_equipe()}
+        v1 = {"nome": "A", "producao_horaria": 1.0, "equipe": _make_equipe()}
+        v2 = {"nome": "B", "producao_horaria": 2.0, "equipe": _make_equipe()}
+        v3 = {"nome": "C", "producao_horaria": 3.0, "equipe": _make_equipe()}
         prod1 = _make_producao(pid="P1", variantes=[v1, v2])
         prod2 = _make_producao(pid="P2", variantes=[v3])
         cat = _minimal_catalogo(producoes=[prod1, prod2])
@@ -424,7 +424,7 @@ class TestExportVariantesBranch:
         """One producao without variantes and one with — both should appear."""
         equipe = _make_equipe(funcoes=[_make_funcao()])
         prod_novar = _make_producao(pid="NO-VAR", equipe=equipe)
-        v = {"nome": "Var1", "valor_horario": 5.0, "equipe": _make_equipe()}
+        v = {"nome": "Var1", "producao_horaria": 5.0, "equipe": _make_equipe()}
         prod_var = _make_producao(pid="WITH-VAR", variantes=[v])
         cat = _minimal_catalogo(producoes=[prod_novar, prod_var])
         exp = _make_exporter(cat)
@@ -640,8 +640,8 @@ class TestExportIntegration:
     def test_export_variantes_rows_in_real_file(self, tmp_path):
         import openpyxl
 
-        v1 = {"nome": "DMT-2000", "valor_horario": 8.0, "equipe": _make_equipe()}
-        v2 = {"nome": "DMT-3000", "valor_horario": 6.0, "equipe": _make_equipe()}
+        v1 = {"nome": "DMT-2000", "producao_horaria": 8.0, "equipe": _make_equipe()}
+        v2 = {"nome": "DMT-3000", "producao_horaria": 6.0, "equipe": _make_equipe()}
         prod = _make_producao(variantes=[v1, v2])
         cat = _minimal_catalogo(producoes=[prod])
         exp = _make_exporter(cat)
