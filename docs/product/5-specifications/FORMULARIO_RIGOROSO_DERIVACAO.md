@@ -22,6 +22,49 @@
 
 ---
 
+## Glossário de Notação (normalizado em 2026-08-17)
+
+Este documento cresceu por 30 seções ao longo de várias rodadas; alguns símbolos foram reaproveitados sem aviso para conceitos diferentes. Esta seção é a referência canônica — em caso de dúvida, o símbolo aqui vale sobre qualquer uso anterior no texto corrido.
+
+### Renomeações aplicadas nesta normalização
+
+| Símbolo antigo | Símbolo novo | Motivo | Onde |
+|---|---|---|---|
+| $\gamma^{c}$ / $\gamma^{v}$ | $\gamma^{\text{pool}}$ / $\gamma^{\text{MAT+COMB}}$ | direção de $\varepsilon$ estava invertida (auditoria v5.7) | §26.2, 28, 29 |
+| $\gamma^{\text{mat}}$ (agregado, minúsculo) | $\gamma^{\text{MAT+COMB}}$ | colidia visualmente com $\gamma^{\text{MAT}}$ (categoria crua, só materiais sem combustível) | §26.2, 28, 29 |
+| $\beta_{\text{mat}}$ (minúsculo) | $\beta_{\text{MAT}}$ (maiúsculo) | é literalmente a mesma taxa da categoria MATERIAL (4%), não uma taxa "de agregado" própria | §26–29 |
+| $R^{(c)}$ (componente do vetor BDI) | $\text{Gr}^{(c)}$ (Garantia/Risco) | colidia com $R_i=OC_i/CC_i$ (razão custo/catálogo, §6+) | §20–22, 30 |
+| $\phi_i$ (partição de custo de pool, Euler/Shapley) | $\chi_i$ | colidia com $\phi$ = fator técnico (§1.1) | §17.5 |
+| $C_p$ (cadeia de perpetuação) | $\mathcal{C}_p$ | "C" já denota custo em R\$ em todo o resto do documento | §17.3–17.4 |
+| $\tau_i = 1/\bar\varepsilon_i$ | $\eta_{h,i}$ | duplicava $\eta_h$ (§2.3); citação cruzada apontava para seção errada; colidia com $\tau^{(c)}$ de §30.3 | §27.3 |
+| $\delta_k^*$, $\delta_{\max}$ (gap em **semanas**) | $G_k^*$, $G_{\max}$ | $\delta$ sem qualificador já denota fração $\in[0,1]$ em §28.2 (unidade diferente!) | §17.2 |
+| $r_{\text{MO}}, r_{\text{EQ}}, r_{\text{MAT}}, r_{\text{IND}}$ | $\beta_{\text{MO}}, \beta_{\text{EQ}}, \beta_{\text{MAT}}, \beta_{\text{IND}}$ | §29.4–29.5 provam ser exatamente a mesma taxa; símbolo duplicado sem necessidade | §21.4 |
+| $(i,j)\in E$ (aresta de DAG) | $(u,v)\in E$ | $i,j$ reservados para atividade/semana a partir de §26 ($m_{ij}$, $q_{ij}$) | §13, §16, §17 (gap$_{uv}$) |
+| $\varepsilon_j$ (frente paralela) | $\varepsilon_f$ | mesmo motivo — $j$ é semana a partir de §26 | §10.1 |
+| $\overline{BDI}$ | $\bar\beta_{\text{proj}}$ | mesmo conceito e fórmula de §27.4, macro LaTeX diferente | §24.1 |
+| $m^*$ (margem alvo) | $\mu^*$ | alinhado com $\mu$ = margem financeira realizada (§30.6) | §15.4 |
+| $h_m$ | $h_{\min}$ | mesma constante ($p_{\min}\times h_w$), nome órfão de versão anterior | §1.3 |
+
+### Símbolos que convivem com dois papéis — mantidos, mas com nota no texto
+
+| Símbolo | Papel 1 | Papel 2 | Risco prático |
+|---|---|---|---|
+| $\beta$ (bare) | Fator clima, §1.1 | Raiz de taxa de BDI, §20+ | Baixo — as duas "eras" não aparecem na mesma fórmula (nota em §1.1) |
+| $k$ | Recurso físico $k\in K$, §13–19 | Categoria de custo $k\in\{\text{EQ,MO,MAT,COMB}\}$, §26–28 | Baixo — contexto/sub-superscrito sempre desambigua ($M_k$ vs. $\gamma_i^k$) |
+| $c$ | Custo em R\$ ($c_m$, $c_h$, $c_r$...), §1–19 | Índice de categoria $(c)$ em superscrito, §20–30 | Baixo — índice sempre vem entre parênteses como superscrito, custo nunca |
+| IND (maiúsculo) vs. ind (minúsculo) | $\beta_{\text{IND}}$ = taxa específica do bloco verba+mob | $P^{\text{ind}}$, $C^{\text{ind}}$ = categoria indireta inteira | Baixo, mas não estava documentado — regra: macro=minúsculo, sub-taxa específica=maiúsculo |
+| $p_{\min}$ vs. $s_{\text{mes}}$ | Permanência mínima contratual, §3.1 | Semanas/mês para rateio do indireto, §29.3 | Mesma constante numérica (4,33); nota cruzada adicionada em §29.3 |
+| $\tau^{(c)}$ (§30.3) | Fração de tributo no preço, $=T^{(c)}$ por definição | — | Não confundir com $\tau_i$ de §27.3 (já removido/renomeado) nem com $\tau_i$ de `AXIOMAS_INVARIANTES_CONFORMIDADE.md` (=$R_i$ deste documento, símbolo diferente entre os dois arquivos) |
+
+### Convenções fixas (não mudam ao longo do documento)
+
+- $\tilde{x}$ = "com BDI" ($\tilde C_{ij}$, $\tilde C_{lj}$). $\bar{x}$ = "média/agregado/equivalente" ($\bar\varepsilon_i$, $\bar\beta_i$, $\bar\theta,\bar\lambda,\bar\tau$). $\hat{x}$ não é usado.
+- Categorias de recurso/custo (MO, EQ, MAT, COMB, IND, pool, dir, ind) sempre em `\text{}` no sub/sobrescrito: $\gamma_i^{\text{MO}}$, nunca $\gamma_i^{MO}$.
+- $i$ = atividade/equipe; $j$ = semana (a partir de §26); $u,v$ = nós de uma aresta de DAG (§13–17); $f$ = frente paralela (§10.1); $l$ = categoria indireta (§29); $r$ = recurso físico individual (§13, §26).
+- $(c)$ como superscrito entre parênteses = índice de categoria de BDI (§20–30): $AC^{(c)}$, $P^{(c)}$, $\text{Gr}^{(c)}$.
+
+---
+
 ## Seção 1: Definições de Base e Unidades
 
 ### 1.1 Variáveis Primitivas
@@ -36,6 +79,8 @@
 | **Horas Nominais** | $H_{\text{nom}}$ | horas | Horas para executar $Q$ a $\rho$ nominal |
 | **Horas Reais** | $H_{\text{real}}$ | horas | Horas realmente necessárias (com $\varepsilon < 1$) |
 | **Permanência (meses)** | $M$ | meses | Quantos meses a equipe é contratada |
+
+**Nota — $\beta$ tem dois papéis neste documento:** aqui (§1.1) é o fator clima, adimensional $\in[0,1]$. A partir de §20, $\beta$ vira a raiz genérica de taxa de BDI ($\beta_{\text{pool}}$, $\beta_{\text{MAT}}$, $\beta_{\text{MO}}$...) — conceito totalmente diferente (uma taxa de markup, não um multiplicador de produtividade). As duas "eras" do documento raramente aparecem na mesma fórmula, mas não confunda um pelo outro.
 
 **Relação com a Matriz de Eficiência do código (NEP-035):** o código real decompõe eficiência como $\eta = \eta_s \cdot \eta_p \cdot \eta_w$ — $\eta_s$ = alocação ($n_j/n_{\max}$), $\eta_p$ = praticabilidade (fator clima × calendário), $\eta_w$ = gestão/utilização ($m_{ij}/M_{\max}$). O $\varepsilon=\beta\times\phi$ deste documento **aproxima-se de $\eta_p$** (praticabilidade), mas não é formalmente equivalente ($\phi$ "técnico/complexidade" não tem definição 1:1 com "calendário"), e **não cobre** $\eta_s$ nem $\eta_w$. Isso importa na prática: é $\eta_w$ — não $\varepsilon$ — que aparece multiplicando combustível em parte do código (§26.2). Sempre que "eficiência" aparecer neste documento, é $\varepsilon \approx \eta_p$ que está em jogo, nunca $\eta_s$ ou $\eta_w$.
 
@@ -54,13 +99,13 @@ $$\delta = \text{Proporção de custos que são consumíveis (variáveis com uso
 
 Se considerarmos um "custo composicional horário nominal":
 
-$$c_{\text{comp}} = \frac{c_m}{h_m} + c_h$$
+$$c_{\text{comp}} = \frac{c_m}{h_{\min}} + c_h$$
 
-Onde $h_m = 4.33 \times 44 \approx 190$ horas/mês (aproximação grosseira).
+Onde $h_{\min} = 4{,}33 \times 44 \approx 190$ horas/mês (aproximação grosseira; mesma constante formalizada com rigor em §5.4/§6.2 como $h_{\min}=p_{\min}\times h_w$ — unificado aqui, era "$h_m$" nesta seção).
 
 Então:
 
-$$\delta = \frac{c_h}{c_m/h_m + c_h}$$
+$$\delta = \frac{c_h}{c_m/h_{\min} + c_h}$$
 
 Mas isto depende de como se rateia o mensal. **Deixaremos isto pendente por enquanto.** (Nunca é retomado com este símbolo — §28.2 define um $\delta_i(\varepsilon_i)$ com papel análogo, mas fórmula diferente; não confundir os dois.)
 
@@ -139,7 +184,7 @@ $$OC = \text{(Custo de pool)} + \text{(Custo de material)}$$
 $$\boxed{OC = M \times c_m + H_{\text{nom}} \times c_h}$$
 
 **Primeiro termo:** Você contrata por $M$ meses (calculado a partir de $H_{\text{real}}$, §3.1 — a mobilização segue o tempo real), cada mês custa $c_m$.
-**Segundo termo:** Material é consumido em proporção ao que foi **produzido** ($Q$), não a quantas horas reais foram necessárias para produzir — por isso usa-se $H_{\text{nom}} = Q/\rho$, não $H_{\text{real}}$. O total de material para o mesmo $Q$ não muda com a eficiência: $H_{\text{nom}} \times c_h$ é constante em $\varepsilon$ (confirmado em `_pe_gap_praticabilidade_abs`, NEP-043: "diesel constante em $Q$"; formalizado com rigor em §26.2, onde o mesmo resultado sai da soma de $\varepsilon_i\gamma_i^{\text{mat}}$ ao longo das semanas).
+**Segundo termo:** Material é consumido em proporção ao que foi **produzido** ($Q$), não a quantas horas reais foram necessárias para produzir — por isso usa-se $H_{\text{nom}} = Q/\rho$, não $H_{\text{real}}$. O total de material para o mesmo $Q$ não muda com a eficiência: $H_{\text{nom}} \times c_h$ é constante em $\varepsilon$ (confirmado em `_pe_gap_praticabilidade_abs`, NEP-043: "diesel constante em $Q$"; formalizado com rigor em §26.2, onde o mesmo resultado sai da soma de $\varepsilon_i\gamma_i^{\text{MAT+COMB}}$ ao longo das semanas).
 
 Esta é uma correção em relação a versões anteriores desta seção, que usavam $H_{\text{real}} \times c_h$ — herdando a suposição (incorreta, contrariada por NEP-043) de que material escala com horas reais de operação em vez de com produção.
 
@@ -424,15 +469,15 @@ Para viabilizar, seria necessário:
 
 ### 10.1 "Como R_i se comporta com múltiplas frentes?"
 
-Se você tem $n$ frentes paralelas, cada uma com eficiência $\varepsilon_j$:
+Se você tem $n$ frentes paralelas indexadas por $f$ (não $j$ — reservado para semana a partir de §26, e não $i$ — reservado para atividade), cada uma com eficiência $\varepsilon_f$:
 
-$$H_{\text{real, total}} = \sum_j \frac{Q_j}{\varepsilon_j \rho}$$
+$$H_{\text{real, total}} = \sum_f \frac{Q_f}{\varepsilon_f \rho}$$
 
 $$OC = M \times c_m + H_{\text{real, total}} \times c_h$$
 
 Se todas as frentes compartilham a mesma permanência M (alocadas ao mesmo período):
 
-$$R_i = \frac{M \times c_m + \sum_j H_j c_h}{\sum_j (PU_j Q_j)}$$
+$$R_i = \frac{M \times c_m + \sum_f H_f c_h}{\sum_f (PU_f Q_f)}$$
 
 Isto **não fatora** em um R_i único por frente. Há economia de escala.
 
@@ -551,7 +596,7 @@ A fórmula "elegante" $R_i = 1 + (1-\delta)(1-\eta_h)/\eta_h$ é **aproximação
 Um projeto real é um conjunto de atividades com possíveis dependências entre si. Formalmente:
 
 - $V = \{1, \ldots, n\}$ — conjunto de atividades (nós)
-- $E \subseteq V \times V$ — dependências $(i, j)$ significam "i deve terminar antes de j iniciar"
+- $E \subseteq V \times V$ — dependências $(u, v)$ significam "$u$ deve terminar antes de $v$ iniciar" (índices $u,v$, não $i,j$ — reservamos $i,j$ para atividade/semana a partir de §26)
 - O par $(V, E)$ forma um **grafo dirigido acíclico (DAG)**
 
 Um projeto pode conter **múltiplos DAGs independentes** (componentes não conectados).
@@ -649,9 +694,9 @@ O compartilhamento **não reduz** o custo contratado quando:
 
 ### 14.4 Efeito das Dependências (DAG)
 
-As arestas do DAG determinam o **sequenciamento forçado**. Para uma aresta $(i, j)$:
-- $j$ não pode iniciar antes de $i$ terminar
-- Isto cria uma oportunidade de reusar o recurso de $i$ em $j$
+As arestas do DAG determinam o **sequenciamento forçado**. Para uma aresta $(u, v)$:
+- $v$ não pode iniciar antes de $u$ terminar
+- Isto cria uma oportunidade de reusar o recurso de $u$ em $v$
 
 **Atividades no caminho crítico** têm menos flexibilidade para reutilização. **Atividades com folga** podem ser agendadas para maximizar a economia de pool.
 
@@ -697,9 +742,9 @@ $$\boxed{\text{BDI} > R - 1}$$
 | $\text{BDI} > R - 1$ | Viável — BDI absorve a diferença operacional e gera lucro |
 | $\text{BDI} < R - 1$ | Inviável — mesmo com BDI, custo operacional excede preço |
 
-Para uma margem alvo $m^*$ (ex: 10%):
+Para uma margem alvo $\mu^*$ (ex: 10% — símbolo alinhado com $\mu$, a margem financeira realizada formalizada em §30.6; era "$m^*$" nesta seção):
 
-$$\text{BDI}_{\min} = R - 1 + \frac{m^* \cdot OC_{\text{total}}}{CC_{\text{total}}} = R - 1 + m^* \cdot R = R(1 + m^*) - 1$$
+$$\text{BDI}_{\min} = R - 1 + \frac{\mu^* \cdot OC_{\text{total}}}{CC_{\text{total}}} = R - 1 + \mu^* \cdot R = R(1 + \mu^*) - 1$$
 
 ### 15.5 Estrutura Completa do Modelo
 
@@ -744,7 +789,7 @@ Dado um DAG $(V, E)$ e um conjunto de recursos $K$, como atribuir $a_{ki}$ para 
 Este é um **problema de otimização combinatória** (RCPSP — Resource-Constrained Project Scheduling Problem).
 
 Minimizar: $OC_{\text{total}} = C^c_{\text{pool}} + C^v_{\text{total}}$  
-Sujeito a: restrições de precedência $(i,j) \in E$, capacidade de recursos, janelas de tempo
+Sujeito a: restrições de precedência $(u,v) \in E$, capacidade de recursos, janelas de tempo
 
 ### 16.2 Separação Contratado vs Consumível com Pool
 
@@ -762,7 +807,7 @@ Para atividades sem dependência (DAG desconexo): $R$ pode ser calculado por com
 
 Para atividades com dependência: $R$ do projeto inteiro pode ser menor que a média ponderada dos $R_i$ (economia de pool via sequenciamento).
 
-**Questão:** Existe uma decomposição de $R$ que atribua a cada aresta $(i,j)$ uma "contribuição de economia"?
+**Questão:** Existe uma decomposição de $R$ que atribua a cada aresta $(u,v)$ uma "contribuição de economia"?
 
 ---
 
@@ -786,33 +831,35 @@ Isto é fixo — dado o schedule, o número de instâncias físicas é determina
 
 ### 17.2 Problema de Perpetuação
 
-**Definição.** Uma instância do recurso $k$ pode ser perpetuada de $i$ para $j$ (com $e_i \leq s_j$) se o custo de manter a instância em standby durante o gap é menor que desobilizar e mobilizar novamente:
+**Definição.** Uma instância do recurso $k$ pode ser perpetuada da atividade $u$ para a atividade $v$ (com $e_u \leq s_v$) se o custo de manter a instância em standby durante o gap é menor que desobilizar e mobilizar novamente:
 
-$$\text{gap}_{ij} = s_j - e_i$$
+$$\text{gap}_{uv} = s_v - e_u$$
+
+(Índices $u,v$ — não $i,j$ — para não colidir com $i,j$ como índice de semana usado em §26–29, $m_{ij}$/$q_{ij}$.)
 
 **Critério de perpetuação (baseado em custo, ADR-073):**
 
-$$\underbrace{c_{\text{standby}} \times \text{gap}_{ij}}_{\text{custo de manter}} < \underbrace{c_{\text{mob}} + c_{\text{demob}}}_{\text{custo de rebater}}$$
+$$\underbrace{c_{\text{standby}} \times \text{gap}_{uv}}_{\text{custo de manter}} < \underbrace{c_{\text{mob}} + c_{\text{demob}}}_{\text{custo de rebater}}$$
 
-$$\Leftrightarrow \quad \text{gap}_{ij} < \frac{c_{\text{mob}} + c_{\text{demob}}}{c_{\text{standby}}} \equiv \delta_k^*$$
+$$\Leftrightarrow \quad \text{gap}_{uv} < \frac{c_{\text{mob}} + c_{\text{demob}}}{c_{\text{standby}}} \equiv G_k^*$$
 
-O limiar $\delta_k^*$ é o **gap de indiferença econômica** — o número de semanas de standby que iguala o custo de re-mobilização.
+O limiar $G_k^*$ é o **gap de indiferença econômica** — o número de semanas de standby que iguala o custo de re-mobilização. (Renomeado de "$\delta_k^*$" — mede semanas, não a fração $\delta_i(\varepsilon_i)$ de §28.2; consistente com $G_k^{\text{viável}}$ abaixo.)
 
 **Critério de perpetuação alternativo (baseado em tempo, fallback):**
 
-$$\text{gap}_{ij} \leq \delta_{\max}$$
+$$\text{gap}_{uv} \leq G_{\max}$$
 
-Onde $\delta_{\max}$ é parâmetro de projeto (típico: 2 semanas).
+Onde $G_{\max}$ é parâmetro de projeto (típico: 2 semanas).
 
 **Cap absoluto (ADR-079):**
 
-$$\text{gap}_{ij} > G_r^{\text{viável}} \Rightarrow \text{não perpetuar, independente de custo}$$
+$$\text{gap}_{uv} > G_k^{\text{viável}} \Rightarrow \text{não perpetuar, independente de custo}$$
 
 ### 17.3 Estrutura de Cadeia
 
-Uma **cadeia de perpetuação** $C_p$ é uma sequência de atividades:
+Uma **cadeia de perpetuação** $\mathcal{C}_p$ (script, para não colidir com a família $C$ = custo em R\$ usada no resto do documento) é uma sequência de atividades:
 
-$$C_p = (i_1 \to i_2 \to \ldots \to i_{n_p})$$
+$$\mathcal{C}_p = (i_1 \to i_2 \to \ldots \to i_{n_p})$$
 
 onde cada par consecutivo $(i_k, i_{k+1})$ satisfaz o critério de perpetuação.
 
@@ -821,15 +868,15 @@ onde cada par consecutivo $(i_k, i_{k+1})$ satisfaz o critério de perpetuação
 - 1 desmobilização no fim ($c_{\text{demob}}$)
 - Standby durante os gaps internos: $c_{\text{standby}} \times \text{gap}_{i_k, i_{k+1}}$
 
-**Custo total da cadeia $C_p$:**
+**Custo total da cadeia $\mathcal{C}_p$:**
 
-$$\text{Custo}(C_p) = c_{\text{mob}} + c_{\text{demob}} + c_{\text{standby}} \sum_{k=1}^{n_p - 1} \text{gap}_{i_k, i_{k+1}} + c_{\text{sem}} \sum_{k=1}^{n_p} (e_{i_k} - s_{i_k})$$
+$$\text{Custo}(\mathcal{C}_p) = c_{\text{mob}} + c_{\text{demob}} + c_{\text{standby}} \sum_{k=1}^{n_p - 1} \text{gap}_{i_k, i_{k+1}} + c_{\text{sem}} \sum_{k=1}^{n_p} (e_{i_k} - s_{i_k})$$
 
 ### 17.4 Custo Contratual Total do Pool
 
-O pool $K_r$ de recurso tipo $r$ tem $qt_r$ instâncias, cada uma formando uma cadeia. As cadeias $\{C_1, C_2, \ldots, C_{qt_r}\}$ particionam as atividades que usam o recurso:
+O pool $K_r$ de recurso tipo $r$ tem $qt_r$ instâncias, cada uma formando uma cadeia. As cadeias $\{\mathcal{C}_1, \mathcal{C}_2, \ldots, \mathcal{C}_{qt_r}\}$ particionam as atividades que usam o recurso:
 
-$$C_{\text{pool}}^c = \sum_{p=1}^{qt_r} \text{Custo}(C_p)$$
+$$C_{\text{pool}}^c = \sum_{p=1}^{qt_r} \text{Custo}(\mathcal{C}_p)$$
 
 **Relação com a janela global:**
 
@@ -851,7 +898,9 @@ O código usa **diagrama de Euler** sobre os intervalos $[s_i, e_i]$ dentro de $
 | $[s_{i_0},e_{i_0}] \cap [s_{j_0},e_{j_0}]$ com $n$ ativas | sobreposição | $1/n$ para cada (Shapley simétrico) |
 | $[T_{\min},T_{\max}] \setminus \bigcup_i [s_i,e_i]$ | gap | imputado ao **sucessor crítico** |
 
-**Invariante:** $\sum_i \phi_i = C_{\text{pool}}^c$ (partição exata sem resíduo).
+Seja $\chi_i$ a fatia de $C_{\text{pool}}^c$ atribuída à atividade $i$ pela regra acima (renomeado de "$\phi_i$" — colidia com o fator técnico $\phi$ de §1.1).
+
+**Invariante:** $\sum_i \chi_i = C_{\text{pool}}^c$ (partição exata sem resíduo).
 
 ---
 
@@ -943,7 +992,7 @@ O schedule (RCPSP) determina $\{(s_i, e_i)\}$ e portanto:
 
 - $T_{\min} = \min_i s_i$, $T_{\max} = \max_i e_i$ — janela total
 - $qt_k = \max_t d_k(t)$ — tamanho do pool
-- $\text{gap}_{ij}$ para todos os pares perpetuáveis — custo de perpetuação
+- $\text{gap}_{uv}$ para todos os pares perpetuáveis — custo de perpetuação
 
 **A compressão do schedule reduz $(T_{\max} - T_{\min})$ e portanto $C_{\text{pool}}^c$**, mas pode aumentar $qt_k$ (mais recursos paralelos) e comprometer perpetuação (atividades que antes eram sequenciais tornam-se paralelas).
 
@@ -961,25 +1010,25 @@ Este é o problema de compressão de cronograma com custo mínimo de pool.
 
 Para cada categoria de custo $c \in \{\text{MO, MAT, EQ, IND, DIESEL}\}$, o BDI é definido por um vetor de componentes:
 
-$$\vec{b}^{(c)} = (AC^{(c)},\ DF^{(c)},\ R^{(c)},\ CR^{(c)},\ L^{(c)},\ T^{(c)})$$
+$$\vec{b}^{(c)} = (AC^{(c)},\ DF^{(c)},\ \text{Gr}^{(c)},\ C\text{Gr}^{(c)},\ L^{(c)},\ T^{(c)})$$
 
 onde:
 - $AC$ = Administração Central
 - $DF$ = Despesas Financeiras
-- $R$ = Garantia / Risco / Seguro
+- $\text{Gr}$ = Garantia / Risco / Seguro (renomeado de "$R$" — colidia com a razão $R_i=OC_i/CC_i$ de §6+)
 - $CR$ = Contingência de Risco
 - $L$ = Lucro (margem)
 - $T = T_{\text{COFINS}} + T_{\text{ISS}} + T_{\text{PIS}} + T_{\text{CSSL}} + T_{\text{IR}}$ = tributos totais sobre o preço de venda
 
 ### 20.2 Fórmula TCU Multiplicativa
 
-$$\boxed{\text{BDI}^{(c)} = \frac{(1+AC^{(c)})(1+DF^{(c)})(1+R^{(c)})(1+CR^{(c)})(1+L^{(c)})}{1 - T^{(c)}} - 1}$$
+$$\boxed{\text{BDI}^{(c)} = \frac{(1+AC^{(c)})(1+DF^{(c)})(1+\text{Gr}^{(c)})(1+C\text{Gr}^{(c)})(1+L^{(c)})}{1 - T^{(c)}} - 1}$$
 
-**Nota:** A fórmula TCU usa produto dos fatores de overhead (não soma), o que garante que cada componente opera sobre o preço de venda acumulado. A forma aditiva $(1+AC+DF+R+L)$ subestima o BDI em $\approx 0,9\,\text{pp}$ para os valores típicos de terraplenagem.
+**Nota:** A fórmula TCU usa produto dos fatores de overhead (não soma), o que garante que cada componente opera sobre o preço de venda acumulado. A forma aditiva $(1+AC+DF+\text{Gr}+L)$ subestima o BDI em $\approx 0,9\,\text{pp}$ para os valores típicos de terraplenagem.
 
 ### 20.3 Valores DEFAULT (calibrados contra planilha AGIS / Ferrovia Nova Transnordestina)
 
-| Categoria | $AC$ | $DF$ | $R$ | $L$ | $T_{\text{ISS}}$ | $T_{\text{CSSL}}$ | $T_{\text{IR}}$ | **BDI** |
+| Categoria | $AC$ | $DF$ | $\text{Gr}$ | $L$ | $T_{\text{ISS}}$ | $T_{\text{CSSL}}$ | $T_{\text{IR}}$ | **BDI** |
 |-----------|------|------|-----|-----|---------|--------|------|---------|
 | MÃO DE OBRA | 5% | 1,5% | 1% | 9% | 5% | 1,99% | 2,74% | **≈ 29,97%** |
 | MATERIAL | 0% | 0% | 0% | 4% | 0% | 0% | 0% | **4,00%** |
@@ -989,7 +1038,7 @@ $$\boxed{\text{BDI}^{(c)} = \frac{(1+AC^{(c)})(1+DF^{(c)})(1+R^{(c)})(1+CR^{(c)}
 
 *COFINS e PIS: isentos para obras de infraestrutura ferroviária.*
 
-Os valores de $AC/DF/R/L/T_{\text{ISS}}$ da linha INDIRETO são conferidos contra `DEFAULT_BDI_TABELA.indireto` (`_components.py`): mesmos $AC/DF/R$ de MÃO DE OBRA, diferindo apenas no lucro $L$ (ver §29.4 e §30).
+Os valores de $AC/DF/\text{Gr}/L/T_{\text{ISS}}$ da linha INDIRETO são conferidos contra `DEFAULT_BDI_TABELA.indireto` (`_components.py`): mesmos $AC/DF/\text{Gr}$ de MÃO DE OBRA, diferindo apenas no lucro $L$ (ver §29.4 e §30).
 
 ---
 
@@ -1030,9 +1079,9 @@ onde $C^k = \sum_i C_i^k$ para $k \in \{\text{MO, EQ, MAT}\}$.
 
 ### 21.4 Preço de Venda Indireto
 
-Os custos indiretos têm sub-categorias próprias:
+Os custos indiretos têm sub-categorias próprias, com as **mesmas** taxas de BDI do direto (§29.4/29.5 provam $r_k \equiv \beta_k$ — unificado aqui, sem símbolo $r$ duplicado):
 
-$$P^{\text{ind}} = C_{\text{ind}}^{\text{MO}} \cdot (1 + r_{\text{MO}}) + C_{\text{ind}}^{\text{EQ}} \cdot (1 + r_{\text{EQ}}) + C_{\text{ind}}^{\text{COMB}} \cdot (1 + r_{\text{MAT}}) + (C_{\text{ind}}^{\text{verba}} + C_{\text{ind}}^{\text{mob}}) \cdot (1 + r_{\text{IND}})$$
+$$P^{\text{ind}} = C_{\text{ind}}^{\text{MO}} \cdot (1 + \beta_{\text{MO}}) + C_{\text{ind}}^{\text{EQ}} \cdot (1 + \beta_{\text{EQ}}) + C_{\text{ind}}^{\text{COMB}} \cdot (1 + \beta_{\text{MAT}}) + (C_{\text{ind}}^{\text{verba}} + C_{\text{ind}}^{\text{mob}}) \cdot (1 + \beta_{\text{IND}})$$
 
 **Fallback** (quando sub-custos não disponíveis): $P^{\text{ind}} = C^{\text{ind}} \cdot (1 + BDI^{\text{IND}})$
 
@@ -1064,13 +1113,13 @@ venda_direto_eq = (
 
 Para cada categoria, dado $P^{(c)} = C^{(c)} \cdot (1 + BDI^{(c)})$, a fração de cada componente no preço é:
 
-$$\frac{C^{(c)}}{P^{(c)}} = \frac{1}{1 + BDI^{(c)}} = \frac{1 - T^{(c)}}{(1+AC^{(c)})(1+DF^{(c)})(1+R^{(c)})(1+CR^{(c)})(1+L^{(c)})}$$
+$$\frac{C^{(c)}}{P^{(c)}} = \frac{1}{1 + BDI^{(c)}} = \frac{1 - T^{(c)}}{(1+AC^{(c)})(1+DF^{(c)})(1+\text{Gr}^{(c)})(1+C\text{Gr}^{(c)})(1+L^{(c)})}$$
 
 A decomposição do preço (ADR-056):
 
 $$\frac{P^{(c)}}{P^{(c)}} = \underbrace{\frac{C^{(c)}}{P^{(c)}}}_{\text{custo direto}} + \underbrace{\sum_k \frac{OH_k^{(c)} \cdot C^{(c)}}{P^{(c)}}}_{\text{overhead}} + \underbrace{T^{(c)}}_{\text{tributos}} = 1$$
 
-**Invariante:** A soma de custo direto + overhead (AC+DF+R+CR+L) + tributos = 100% do preço de venda.
+**Invariante:** A soma de custo direto + overhead (AC+DF+Gr+CR+L) + tributos = 100% do preço de venda.
 
 ### 22.2 Exemplo Numérico (MÃO DE OBRA, BDI = 29,97%)
 
@@ -1083,7 +1132,7 @@ $$P^{\text{MO}} = 100{,}000 \times 1{,}2997 = R\$129{,}970$$
 | Custo direto | 76,95% | 99.960 |
 | Overhead AC (5%) | 3,85% | 5.000 |
 | Overhead DF (1,5%) | 1,15% | 1.500 |
-| Overhead R (1%) | 0,77% | 1.000 |
+| Overhead Gr (1%) | 0,77% | 1.000 |
 | Margem L (9%) | 6,92% | 9.000 |
 | Tributo ISS | 5,00% | 6.500 |
 | Tributo CSSL | 1,99% | 2.590 |
@@ -1140,9 +1189,9 @@ tabela, ... = _rbf_resolve_tabela_perfil(inputs, validacoes)        # P3 + fallb
 
 ### 24.1 Relação BDI Agregado vs Razão R
 
-O BDI **não é homogêneo** — cada categoria de custo tem sua própria taxa. O "BDI agregado efetivo" $\overline{BDI}$ é implicitamente definido por:
+O BDI **não é homogêneo** — cada categoria de custo tem sua própria taxa. O "BDI agregado efetivo" $\bar\beta_{\text{proj}}$ (mesmo símbolo formalizado depois em §27.4 — unificado aqui, era "$\overline{BDI}$" nesta seção) é implicitamente definido por:
 
-$$P_{\text{total}} = C_{\text{cat}} \cdot (1 + \overline{BDI}) \quad \text{onde} \quad \overline{BDI} = \frac{P_{\text{total}}}{C_{\text{cat}}} - 1$$
+$$P_{\text{total}} = C_{\text{cat}} \cdot (1 + \bar\beta_{\text{proj}}) \quad \text{onde} \quad \bar\beta_{\text{proj}} = \frac{P_{\text{total}}}{C_{\text{cat}}} - 1$$
 
 e $C_{\text{cat}} = CC_{\text{total}}$ (custo de catálogo PU×Q).
 
@@ -1150,7 +1199,7 @@ e $C_{\text{cat}} = CC_{\text{total}}$ (custo de catálogo PU×Q).
 
 Da Seção 15:
 
-$$\text{Viável} \iff P_{\text{total}} > OC_{\text{total}} \iff \overline{BDI} > R - 1$$
+$$\text{Viável} \iff P_{\text{total}} > OC_{\text{total}} \iff \bar\beta_{\text{proj}} > R - 1$$
 
 Com BDI heterogêneo, a condição se expande em termos de cada categoria:
 
@@ -1160,10 +1209,10 @@ $$\text{Margem} = \frac{P_{\text{total}} - OC_{\text{total}}}{P_{\text{total}}} 
 
 ```
 [Seções 1-12]              [Seções 13-19]             [Seções 20-24]
-Schedule (DAG)    →    Pool (C_pool^c + C_pool^v)  →   BDI heterogêneo
+Schedule (DAG)    →    Pool (\mathcal{C}_pool^c + \mathcal{C}_pool^v)  →   BDI heterogêneo
                                                           ↓
 H_i (horas reais)          M_k (permanência pool)    P = Σ_c C^(c)(1+BDI^(c))
-ε_i (eficiência)    →      C_pool = qt×c×T_pool   →   OC = C_dir + C_ind
+ε_i (eficiência)    →      \mathcal{C}_pool = qt×c×T_pool   →   OC = C_dir + C_ind
 τ_i = 1/ε_i                Φ_i = φ_i (Euler)          Margem = (P-OC)/P
 R_i = OC_i/CC_i            Perpetuação (δ_k)           Viável ↔ BDI > R-1
 ```
@@ -1244,6 +1293,8 @@ Dado isso, os 4 passos prescritos originalmente não descrevem o que falta imple
 
 ### 26.1 Custo de Equipe por Recurso Instancial
 
+**Notação temporal usada de §26 a §29:** $h$ = horas por dia útil, $d$ = dias úteis por semana, com $h\cdot d \equiv h_w$ (horas/semana já definido em §3.1, tipicamente $44$h/semana). $j$ passa a indexar **semana** (não atividade — reservado a partir daqui, distinto do $u,v$ de aresta de DAG em §13–16 e do $f$ de frente paralela em §10.1).
+
 Cada equipe $i$ é composta por um conjunto de recursos $\mathcal{R}_i$. Para cada $r \in \mathcal{R}_i$ com categoria $r.\text{cat} \in \{\text{EQ, MO, MAT}\}$ e quantidade $n_r$:
 
 $$c_r = \begin{cases}
@@ -1271,16 +1322,16 @@ $$\sum_j q_{ij} = \varepsilon_i \rho_i h d \cdot N_i = Q_i \quad\Longrightarrow\
 
 **Partição pool (mobilização) vs material (produção):**
 
-$$\gamma_i^{\text{pool}} = \gamma_i^{\text{EQ}} + \gamma_i^{\text{MO}} \qquad\qquad \gamma_i^{\text{mat}} = \gamma_i^{\text{MAT}} + \gamma_i^{\text{COMB}}$$
+$$\gamma_i^{\text{pool}} = \gamma_i^{\text{EQ}} + \gamma_i^{\text{MO}} \qquad\qquad \gamma_i^{\text{MAT+COMB}} = \gamma_i^{\text{MAT}} + \gamma_i^{\text{COMB}}$$
 
-$$\boxed{C_{ij} = \gamma_i^{\text{pool}} \cdot h \cdot d \cdot m_{ij} \;+\; \varepsilon_i \cdot \gamma_i^{\text{mat}} \cdot h \cdot d \cdot m_{ij}}$$
+$$\boxed{C_{ij} = \gamma_i^{\text{pool}} \cdot h \cdot d \cdot m_{ij} \;+\; \varepsilon_i \cdot \gamma_i^{\text{MAT+COMB}} \cdot h \cdot d \cdot m_{ij}}$$
 
 | Componente | Cobrado por | Escala com $\varepsilon_i$ dentro da semana? | BDI típico |
 |-----------|------|---------------------------|------------|
 | Pool (EQ+MO) | semana mobilizada ($m_{ij}$) | Não — só indiretamente via $N_i$ | $\beta_{\text{pool}} \approx 30\%$ |
-| Material (MAT+COMB) | produção realizada ($\varepsilon_i$ daquela semana) | Sim, diretamente | $\beta_{\text{mat}} = 4\%$ |
+| Material (MAT+COMB) | produção realizada ($\varepsilon_i$ daquela semana) | Sim, diretamente | $\beta_{\text{MAT}} = 4\%$ |
 
-**Interpretação:** pool (EQ+MO) é uma taxa semanal **fixa** — paga por estar mobilizado naquela semana, independente de quanto se produziu; é o custo de disponibilidade, não de produção. Material (MAT+COMB) é consumido em proporção ao que foi de fato produzido naquela semana — por isso escala diretamente com $\varepsilon_i$. Somando as $N_i$ semanas, o total de material é $\varepsilon_i\gamma_i^{\text{mat}}hd N_i = \gamma_i^{\text{mat}} Q_i/\rho_i$ — **independente de $\varepsilon_i$** (mesmo total para o mesmo $Q_i$, confirmando "diesel constante em $Q$", NEP-043), enquanto o total de pool é $\gamma_i^{\text{pool}}hd N_i$, que **cresce com $N_i$** conforme a eficiência piora.
+**Interpretação:** pool (EQ+MO) é uma taxa semanal **fixa** — paga por estar mobilizado naquela semana, independente de quanto se produziu; é o custo de disponibilidade, não de produção. Material (MAT+COMB) é consumido em proporção ao que foi de fato produzido naquela semana — por isso escala diretamente com $\varepsilon_i$. Somando as $N_i$ semanas, o total de material é $\varepsilon_i\gamma_i^{\text{MAT+COMB}}hd N_i = \gamma_i^{\text{MAT+COMB}} Q_i/\rho_i$ — **independente de $\varepsilon_i$** (mesmo total para o mesmo $Q_i$, confirmando "diesel constante em $Q$", NEP-043), enquanto o total de pool é $\gamma_i^{\text{pool}}hd N_i$, que **cresce com $N_i$** conforme a eficiência piora.
 
 **Nota de implementação — dois caminhos de código divergem sobre diesel:**
 
@@ -1352,7 +1403,7 @@ Esta equivalência é **garantida algebricamente por construção** (soma distri
 
 ### 27.1 Definição do BDI Equivalente de Equipe
 
-Análogo à eficiência média $\bar{\varepsilon}$ (Seção 6), definimos o **BDI equivalente** $\bar{\beta}_i$ de uma equipe $i$ como a taxa única que reproduz o preço total quando aplicada ao custo total:
+Análogo à eficiência média $\bar{\varepsilon}_i$ (§27.3), definimos o **BDI equivalente** $\bar{\beta}_i$ de uma equipe $i$ como a taxa única que reproduz o preço total quando aplicada ao custo total:
 
 $$P_i = \gamma_i (1 + \bar{\beta}_i) \quad \implies \quad \boxed{\bar{\beta}_i = \frac{P_i}{\gamma_i} - 1}$$
 
@@ -1390,17 +1441,23 @@ Seja $h_i$ o custo horário de catálogo (sem BDI) da equipe $i$:
 
 $$h_i = \frac{\gamma_i}{H_i} \quad \text{onde } H_i \text{ são as horas nominais de catálogo}$$
 
-O custo horário **operacional** (com prolongamento por ineficiências):
+Eficiência média da atividade $i$ ao longo de suas $N_i$ semanas ativas (§26.2):
 
-$$h_i^{\text{op}} = \frac{\gamma_i^{\text{op}}}{H_i} = h_i \cdot \tau_i \quad \text{onde } \tau_i = \frac{1}{\bar{\varepsilon}_i}$$
+$$\bar{\varepsilon}_i = \frac{\sum_j \varepsilon_j \, m_{ij}}{N_i}$$
+
+O custo horário **operacional** (com prolongamento por ineficiências) usa a inflação de horas $\eta_h$ já definida em §2.3 ($\eta_h=1/\varepsilon$), aqui por atividade:
+
+$$h_i^{\text{op}} = \frac{\gamma_i^{\text{op}}}{H_i} = h_i \cdot \eta_{h,i} \quad \text{onde } \eta_{h,i} = \frac{1}{\bar{\varepsilon}_i}$$
+
+(Esta subseção usava anteriormente o símbolo $\tau_i$ para $\eta_{h,i}$, citando "Seção 6" para a definição de $\bar\varepsilon_i$ — mas Seção 6 não a define, e $\tau_i$ colide com o $\tau^{(c)}$ de tributos em §30.3. Unificado em $\eta_{h,i}$, consistente com $\eta_h$ de §2.3.)
 
 O **preço de venda horário** (operacional + BDI):
 
-$$\boxed{p_i = h_i^{\text{op}} \cdot (1 + \bar{\beta}_i) = h_i \cdot \tau_i \cdot (1 + \bar{\beta}_i)}$$
+$$\boxed{p_i = h_i^{\text{op}} \cdot (1 + \bar{\beta}_i) = h_i \cdot \eta_{h,i} \cdot (1 + \bar{\beta}_i)}$$
 
 **Dual do custo horário:**
-- **Sem BDI:** $h_i$ (catálogo) → $h_i^{\text{op}} = h_i \cdot \tau_i$ (operacional)
-- **Com BDI:** $h_i \cdot (1 + \bar{\beta}_i)$ (catálogo + BDI) → $p_i = h_i \cdot \tau_i \cdot (1 + \bar{\beta}_i)$ (operacional + BDI)
+- **Sem BDI:** $h_i$ (catálogo) → $h_i^{\text{op}} = h_i \cdot \eta_{h,i}$ (operacional)
+- **Com BDI:** $h_i \cdot (1 + \bar{\beta}_i)$ (catálogo + BDI) → $p_i = h_i \cdot \eta_{h,i} \cdot (1 + \bar{\beta}_i)$ (operacional + BDI)
 
 ### 27.4 BDI Equivalente de Escopo (Projeto)
 
@@ -1473,13 +1530,13 @@ onde $\Delta OC_i = OC_i^{\text{real}} - OC_i^{\text{esperado}}$.
 
 ### 28.1 Custo Semanal com e sem BDI
 
-Retomando §26.2 — $\gamma_i^{\text{pool}}$ (EQ+MO, taxa fixa por semana mobilizada) e $\gamma_i^{\text{mat}}$ (MAT+COMB, escala com produção realizada). O custo semanal **sem BDI** da equipe $i$ na semana $j$:
+Retomando §26.2 — $\gamma_i^{\text{pool}}$ (EQ+MO, taxa fixa por semana mobilizada) e $\gamma_i^{\text{MAT+COMB}}$ (MAT+COMB, escala com produção realizada). O custo semanal **sem BDI** da equipe $i$ na semana $j$:
 
-$$C_{ij} = (\gamma_i^{\text{pool}} + \varepsilon_i \cdot \gamma_i^{\text{mat}}) \cdot h \cdot d \cdot m_{ij}$$
+$$C_{ij} = (\gamma_i^{\text{pool}} + \varepsilon_i \cdot \gamma_i^{\text{MAT+COMB}}) \cdot h \cdot d \cdot m_{ij}$$
 
-O custo semanal **com BDI**, aplicando $\beta_{\text{pool}}$ sobre o componente de pool e $\beta_{\text{mat}}$ sobre o material:
+O custo semanal **com BDI**, aplicando $\beta_{\text{pool}}$ sobre o componente de pool e $\beta_{\text{MAT}}$ sobre o material:
 
-$$\tilde{C}_{ij} = (\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \cdot \gamma_i^{\text{mat}}(1+\beta_{\text{mat}})) \cdot h \cdot d \cdot m_{ij}$$
+$$\tilde{C}_{ij} = (\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \cdot \gamma_i^{\text{MAT+COMB}}(1+\beta_{\text{MAT}})) \cdot h \cdot d \cdot m_{ij}$$
 
 ### 28.2 BDI Equivalente da Atividade
 
@@ -1489,24 +1546,24 @@ $$\bar{\beta}_i(\varepsilon_i) = \frac{\sum_j \tilde{C}_{ij}}{\sum_j C_{ij}} - 1
 
 Como $h \cdot d \cdot m_{ij}$ cancela numerador e denominador:
 
-$$\bar{\beta}_i(\varepsilon_i) = \frac{\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \gamma_i^{\text{mat}}(1+\beta_{\text{mat}})}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}} - 1 = \frac{\gamma_i^{\text{pool}} \beta_{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}} \beta_{\text{mat}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}}$$
+$$\bar{\beta}_i(\varepsilon_i) = \frac{\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \gamma_i^{\text{MAT+COMB}}(1+\beta_{\text{MAT}})}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{MAT+COMB}}} - 1 = \frac{\gamma_i^{\text{pool}} \beta_{\text{pool}} + \varepsilon_i \gamma_i^{\text{MAT+COMB}} \beta_{\text{MAT}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{MAT+COMB}}}$$
 
 Definindo a **fração de material efetiva** (fração do custo semanal que é produção, não mobilização):
 
-$$\delta_i(\varepsilon_i) = \frac{\varepsilon_i \gamma_i^{\text{mat}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}}$$
+$$\delta_i(\varepsilon_i) = \frac{\varepsilon_i \gamma_i^{\text{MAT+COMB}}}{\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{MAT+COMB}}}$$
 
 obtemos:
 
-$$\boxed{\bar{\beta}_i(\varepsilon_i) = (1 - \delta_i) \cdot \beta_{\text{pool}} + \delta_i \cdot \beta_{\text{mat}}}$$
+$$\boxed{\bar{\beta}_i(\varepsilon_i) = (1 - \delta_i) \cdot \beta_{\text{pool}} + \delta_i \cdot \beta_{\text{MAT}}}$$
 
-**Propriedade:** $\bar{\beta}_i$ é função **decrescente** de $\varepsilon_i$, pois $\beta_{\text{pool}} > \beta_{\text{mat}}$ ($30\% \gg 4\%$) e $\delta_i$ cresce com $\varepsilon_i$. Quanto mais a equipe produz por semana (maior $\varepsilon_i$), maior a fração do custo semanal em material (BDI baixo) relativa ao pool fixo (BDI alto) — o BDI equivalente da atividade cai.
+**Propriedade:** $\bar{\beta}_i$ é função **decrescente** de $\varepsilon_i$, pois $\beta_{\text{pool}} > \beta_{\text{MAT}}$ ($30\% \gg 4\%$) e $\delta_i$ cresce com $\varepsilon_i$. Quanto mais a equipe produz por semana (maior $\varepsilon_i$), maior a fração do custo semanal em material (BDI baixo) relativa ao pool fixo (BDI alto) — o BDI equivalente da atividade cai.
 
 | $\varepsilon_i$ | $\delta_i$ | $\bar{\beta}_i$ | Interpretação |
 |----------------|-----------|----------------|---------------|
 | $0$ | $0$ | $\beta_{\text{pool}} \approx 30\%$ | Equipe mobilizada, zero produção — custo é 100% pool parado |
-| $0{,}5$ | $\frac{0{,}5\gamma^{\text{mat}}}{\gamma^{\text{pool}} + 0{,}5\gamma^{\text{mat}}}$ | Intermediário | Produção parcial |
-| $1$ | $\frac{\gamma^{\text{mat}}}{\gamma^{\text{pool}}+\gamma^{\text{mat}}} = \delta$ | $(1-\delta)\beta_{\text{pool}} + \delta\beta_{\text{mat}}$ | Catálogo nominal |
-| $\to\infty$ | $\to 1$ | $\to \beta_{\text{mat}} \approx 4\%$ | Produção domina o custo semanal |
+| $0{,}5$ | $\frac{0{,}5\gamma^{\text{MAT+COMB}}}{\gamma^{\text{pool}} + 0{,}5\gamma^{\text{MAT+COMB}}}$ | Intermediário | Produção parcial |
+| $1$ | $\frac{\gamma^{\text{MAT+COMB}}}{\gamma^{\text{pool}}+\gamma^{\text{MAT+COMB}}} = \delta$ | $(1-\delta)\beta_{\text{pool}} + \delta\beta_{\text{MAT}}$ | Catálogo nominal |
+| $\to\infty$ | $\to 1$ | $\to \beta_{\text{MAT}} \approx 4\%$ | Produção domina o custo semanal |
 
 ### 28.3 BDI Equivalente do Pool de Mobilização
 
@@ -1522,25 +1579,25 @@ $$\bar{\beta}_{\text{pool}}^{\text{pool}} = \beta_{\text{pool}}$$
 
 O pool de **material** (MAT+COMB, escala com produção) tem custo total:
 
-$$C_{\text{pool}}^{\text{mat}} = \sum_{i \in V} \varepsilon_i \gamma_i^{\text{mat}} \cdot |\mathcal{T}_i|$$
+$$C_{\text{pool}}^{\text{MAT+COMB}} = \sum_{i \in V} \varepsilon_i \gamma_i^{\text{MAT+COMB}} \cdot |\mathcal{T}_i|$$
 
-Igualmente, como todo material partilha $\beta_{\text{mat}}$:
+Igualmente, como todo material partilha $\beta_{\text{MAT}}$:
 
-$$\bar{\beta}_{\text{pool}}^{\text{mat}} = \beta_{\text{mat}}$$
+$$\bar{\beta}_{\text{pool}}^{\text{MAT+COMB}} = \beta_{\text{MAT}}$$
 
 ### 28.5 BDI Equivalente Agregado do Escopo
 
 O BDI de escopo é a média ponderada dos dois pools:
 
-$$\bar{\beta}_{\text{proj}} = \frac{C_{\text{pool}}^{\text{pool}} \cdot \beta_{\text{pool}} + C_{\text{pool}}^{\text{mat}} \cdot \beta_{\text{mat}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{mat}}} = (1 - \Delta) \cdot \beta_{\text{pool}} + \Delta \cdot \beta_{\text{mat}}$$
+$$\bar{\beta}_{\text{proj}} = \frac{C_{\text{pool}}^{\text{pool}} \cdot \beta_{\text{pool}} + C_{\text{pool}}^{\text{MAT+COMB}} \cdot \beta_{\text{MAT}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{MAT+COMB}}} = (1 - \Delta) \cdot \beta_{\text{pool}} + \Delta \cdot \beta_{\text{MAT}}$$
 
 onde:
 
-$$\Delta = \frac{C_{\text{pool}}^{\text{mat}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{mat}}} = \frac{\sum_i \varepsilon_i \gamma_i^{\text{mat}} |\mathcal{T}_i|}{\sum_i (\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{mat}}) |\mathcal{T}_i|}$$
+$$\Delta = \frac{C_{\text{pool}}^{\text{MAT+COMB}}}{C_{\text{pool}}^{\text{pool}} + C_{\text{pool}}^{\text{MAT+COMB}}} = \frac{\sum_i \varepsilon_i \gamma_i^{\text{MAT+COMB}} |\mathcal{T}_i|}{\sum_i (\gamma_i^{\text{pool}} + \varepsilon_i \gamma_i^{\text{MAT+COMB}}) |\mathcal{T}_i|}$$
 
 **Relação com $\delta_i$:** $\Delta$ é a média temporal-ponderada das frações de material efetivas:
 
-$$\Delta = \frac{\sum_i \delta_i(\varepsilon_i) \cdot \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|}{\sum_i \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|} \qquad \gamma_i^{\text{op}} \equiv \gamma_i^{\text{pool}} + \varepsilon_i\gamma_i^{\text{mat}}$$
+$$\Delta = \frac{\sum_i \delta_i(\varepsilon_i) \cdot \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|}{\sum_i \gamma_i^{\text{op}} \cdot |\mathcal{T}_i|} \qquad \gamma_i^{\text{op}} \equiv \gamma_i^{\text{pool}} + \varepsilon_i\gamma_i^{\text{MAT+COMB}}$$
 
 ### 28.6 Implicação — R_i e BDI Equivalente Se Reforçam (Não Competem)
 
@@ -1564,9 +1621,9 @@ As Seções 26/28 formalizam o custo semanal **direto** com BDI, $\tilde{C}_{ij}
 
 O custo direto semanal com BDI, já estabelecido em §28.1:
 
-$$\boxed{\tilde{C}_{ij}^{\text{dir}} = \Big(\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \cdot \gamma_i^{\text{mat}}(1+\beta_{\text{mat}})\Big) \cdot h \cdot d \cdot m_{ij}}$$
+$$\boxed{\tilde{C}_{ij}^{\text{dir}} = \Big(\gamma_i^{\text{pool}}(1+\beta_{\text{pool}}) + \varepsilon_i \cdot \gamma_i^{\text{MAT+COMB}}(1+\beta_{\text{MAT}})\Big) \cdot h \cdot d \cdot m_{ij}}$$
 
-$\gamma_i^{\text{pool}}$ (EQ+MO) é cobrado por semana mobilizada, sem depender de $\varepsilon_i$ dentro da semana — o efeito da eficiência sobre esse termo é inteiramente indireto, via $N_i = |\{j:m_{ij}=1\}|$ (§26.2). $\gamma_i^{\text{mat}}$ (MAT+COMB) escala diretamente com $\varepsilon_i$ — é consumido em proporção à produção real daquela semana. A seguir, generalizamos a mesma estrutura (custo semanal × indicador de atividade × BDI por sub-categoria) para o indireto, que não tem quantitativo físico associado (§29.2) mas segue o mesmo padrão de soma no tempo.
+$\gamma_i^{\text{pool}}$ (EQ+MO) é cobrado por semana mobilizada, sem depender de $\varepsilon_i$ dentro da semana — o efeito da eficiência sobre esse termo é inteiramente indireto, via $N_i = |\{j:m_{ij}=1\}|$ (§26.2). $\gamma_i^{\text{MAT+COMB}}$ (MAT+COMB) escala diretamente com $\varepsilon_i$ — é consumido em proporção à produção real daquela semana. A seguir, generalizamos a mesma estrutura (custo semanal × indicador de atividade × BDI por sub-categoria) para o indireto, que não tem quantitativo físico associado (§29.2) mas segue o mesmo padrão de soma no tempo.
 
 ### 29.2 Estrutura Temporal do Indireto — o Análogo Categorial de $m_{ij}$
 
@@ -1594,9 +1651,9 @@ Ou seja: overhead de permanência é rateado igualmente por toda semana do proje
 
 ### 29.3 Custo Semanal por Sub-categoria de BDI
 
-Cada categoria indireta $l$ é decomposta nas mesmas quatro sub-categorias de BDI usadas no direto — MO, EQ, COMB (fornecimento, mesma taxa $\beta_{\text{mat}}$ do direto) — mais uma quinta, **VM** (verba + mobilização), que não existe no lado direto:
+Cada categoria indireta $l$ é decomposta nas mesmas quatro sub-categorias de BDI usadas no direto — MO, EQ, COMB (fornecimento, mesma taxa $\beta_{\text{MAT}}$ do direto) — mais uma quinta, **VM** (verba + mobilização), que não existe no lado direto:
 
-**Driver permanência** — rateio do custo mensal por $s_{\text{mes}}$ (semanas/mês, ≈ 4,33):
+**Driver permanência** — rateio do custo mensal por $s_{\text{mes}}$ (semanas/mês, ≈ 4,33 — mesma constante que $p_{\min}$ de §3.1, mas usada aqui como conversão de calendário para o rateio do indireto, não como parâmetro contratual de permanência mínima):
 
 $$\gamma_l^{k,\text{sem}} = \frac{\Gamma_l^{k,\text{mensal}}}{s_{\text{mes}}} \qquad k \in \{\text{MO, EQ, COMB, VM}\}$$
 
@@ -1612,11 +1669,11 @@ $$C_{lj}^{\text{ind}} = \sum_{k \in \{\text{MO,EQ,COMB,VM}\}} \gamma_l^{k,\text{
 
 ### 29.4 Camada BDI sobre o Custo Semanal do Indireto
 
-Aplicando BDI por sub-categoria — **as mesmas taxas $\beta_{\text{MO}}, \beta_{\text{EQ}}, \beta_{\text{mat}}$ do custo direto** (mesmo dicionário `bdi_rates`, construído uma única vez em `_resolve_bdi_full`, `_bdi_resolucao.py:280-305` — não há dessincronia de taxa entre direto e indireto para MO/EQ/MAT) **mais uma taxa própria $\beta_{\text{IND}}$ para o bloco VM**:
+Aplicando BDI por sub-categoria — **as mesmas taxas $\beta_{\text{MO}}, \beta_{\text{EQ}}, \beta_{\text{MAT}}$ do custo direto** (mesmo dicionário `bdi_rates`, construído uma única vez em `_resolve_bdi_full`, `_bdi_resolucao.py:280-305` — não há dessincronia de taxa entre direto e indireto para MO/EQ/MAT) **mais uma taxa própria $\beta_{\text{IND}}$ para o bloco VM**:
 
-$$\boxed{\tilde{C}_{lj}^{\text{ind}} = \Big(\gamma_l^{\text{MO,sem}}(1+\beta_{\text{MO}}) + \gamma_l^{\text{EQ,sem}}(1+\beta_{\text{EQ}}) + \gamma_l^{\text{COMB,sem}}(1+\beta_{\text{mat}}) + \gamma_l^{\text{VM,sem}}(j)\,(1+\beta_{\text{IND}})\Big) \cdot m_l(j)}$$
+$$\boxed{\tilde{C}_{lj}^{\text{ind}} = \Big(\gamma_l^{\text{MO,sem}}(1+\beta_{\text{MO}}) + \gamma_l^{\text{EQ,sem}}(1+\beta_{\text{EQ}}) + \gamma_l^{\text{COMB,sem}}(1+\beta_{\text{MAT}}) + \gamma_l^{\text{VM,sem}}(j)\,(1+\beta_{\text{IND}})\Big) \cdot m_l(j)}$$
 
-$\beta_{\text{IND}} \approx 25{,}21\%$ é uma linha própria da tabela BDI (`DEFAULT_BDI_TABELA.indireto`, `_components.py:151-219`), com a mesma fórmula multiplicativa TCU de §20.2, diferindo de $\beta_{\text{MO}}$ **apenas no lucro** ($L=5\%$ vs $L=9\%$) — não é o mesmo $\beta_{\text{mat}}$ (4%) nem uma média dos outros três.
+$\beta_{\text{IND}} \approx 25{,}21\%$ é uma linha própria da tabela BDI (`DEFAULT_BDI_TABELA.indireto`, `_components.py:151-219`), com a mesma fórmula multiplicativa TCU de §20.2, diferindo de $\beta_{\text{MO}}$ **apenas no lucro** ($L=5\%$ vs $L=9\%$) — não é o mesmo $\beta_{\text{MAT}}$ (4%) nem uma média dos outros três.
 
 **Implementação** (`_calc_venda_com_bdi`, `_venda_custo.py:61-88`):
 
@@ -1631,13 +1688,13 @@ venda_indireto += (
 
 Somando $\tilde{C}_{lj}^{\text{ind}}$ sobre todas as semanas $j$, cada termo colapsa em seu agregado total, pois $\sum_j \gamma_l^{k,\text{sem}} \cdot m_l(j) = \Gamma_l^k$ por construção (rateio mensal × meses totais, ou soma de mob+demob):
 
-$$P_l^{\text{ind}} = \sum_{j=0}^{n-1} \tilde{C}_{lj}^{\text{ind}} = \Gamma_l^{\text{MO}}(1+\beta_{\text{MO}}) + \Gamma_l^{\text{EQ}}(1+\beta_{\text{EQ}}) + \Gamma_l^{\text{COMB}}(1+\beta_{\text{mat}}) + \Gamma_l^{\text{VM}}(1+\beta_{\text{IND}})$$
+$$P_l^{\text{ind}} = \sum_{j=0}^{n-1} \tilde{C}_{lj}^{\text{ind}} = \Gamma_l^{\text{MO}}(1+\beta_{\text{MO}}) + \Gamma_l^{\text{EQ}}(1+\beta_{\text{EQ}}) + \Gamma_l^{\text{COMB}}(1+\beta_{\text{MAT}}) + \Gamma_l^{\text{VM}}(1+\beta_{\text{IND}})$$
 
 Somando sobre todas as categorias $l$ (ADM, TOP, LAB, QSMS, MOB, ...) e definindo $\Gamma^k = \sum_l \Gamma_l^k$:
 
-$$\boxed{P^{\text{ind}} = \sum_{l}\sum_{j} \tilde{C}_{lj}^{\text{ind}} = \Gamma^{\text{MO}}(1+\beta_{\text{MO}}) + \Gamma^{\text{EQ}}(1+\beta_{\text{EQ}}) + \Gamma^{\text{COMB}}(1+\beta_{\text{mat}}) + \Gamma^{\text{VM}}(1+\beta_{\text{IND}})}$$
+$$\boxed{P^{\text{ind}} = \sum_{l}\sum_{j} \tilde{C}_{lj}^{\text{ind}} = \Gamma^{\text{MO}}(1+\beta_{\text{MO}}) + \Gamma^{\text{EQ}}(1+\beta_{\text{EQ}}) + \Gamma^{\text{COMB}}(1+\beta_{\text{MAT}}) + \Gamma^{\text{VM}}(1+\beta_{\text{IND}})}$$
 
-Esta é exatamente a fórmula estática de §21.4 ($P^{\text{ind}} = C_{\text{ind}}^{\text{MO}}(1+r_{\text{MO}}) + C_{\text{ind}}^{\text{EQ}}(1+r_{\text{EQ}}) + C_{\text{ind}}^{\text{COMB}}(1+r_{\text{MAT}}) + (C_{\text{ind}}^{\text{verba}}+C_{\text{ind}}^{\text{mob}})(1+r_{\text{IND}})$), confirmada em código por `_calc_venda_com_bdi` (§29.4). **A fórmula estática já em produção é, por construção, a integral discreta do modelo semanal** — não uma aproximação dela. A mesma prova por distributividade/associatividade de §26.4 se aplica aqui.
+Esta é exatamente a fórmula estática de §21.4 ($P^{\text{ind}} = C_{\text{ind}}^{\text{MO}}(1+\beta_{\text{MO}}) + C_{\text{ind}}^{\text{EQ}}(1+\beta_{\text{EQ}}) + C_{\text{ind}}^{\text{COMB}}(1+\beta_{\text{MAT}}) + (C_{\text{ind}}^{\text{verba}}+C_{\text{ind}}^{\text{mob}})(1+\beta_{\text{IND}})$ — código usa `r_mo`/`r_eq`/`r_mat`/`r_indir`, mesmos valores, ver bloco abaixo), confirmada em código por `_calc_venda_com_bdi` (§29.4). **A fórmula estática já em produção é, por construção, a integral discreta do modelo semanal** — não uma aproximação dela. A mesma prova por distributividade/associatividade de §26.4 se aplica aqui.
 
 ### 29.6 Exemplo Numérico — Categoria ADM (permanência) + MOB (one\_time)
 
@@ -1678,7 +1735,7 @@ O documento usa "margem" em pelo menos dois sentidos incompatíveis. Esta seçã
 ### 30.1 O Problema — Dois "Margem" Diferentes no Mesmo Documento
 
 1. **Lucro contratual** ($L^{(c)}$, §20.1): uma taxa fixa por categoria, definida na tabela de BDI, que não muda com o desempenho do projeto.
-2. **"Margem" financeira realizada** (§15.2, §24.2, §25.2, §27.6): $\text{Margem} = (P - OC)/P$ — o que sobra do preço depois do custo operacional *real*. Essa grandeza **mistura** recuperação de overhead (AC+DF+R+CR), tributos (T), lucro (L) **e** o efeito de ineficiências operacionais não previstas ($\Delta OC$, §25.3).
+2. **"Margem" financeira realizada** (§15.2, §24.2, §25.2, §27.6): $\text{Margem} = (P - OC)/P$ — o que sobra do preço depois do custo operacional *real*. Essa grandeza **mistura** recuperação de overhead (AC+DF+Gr+CR), tributos (T), lucro (L) **e** o efeito de ineficiências operacionais não previstas ($\Delta OC$, §25.3).
 
 Chamar as duas coisas de "margem" sem qualificação é exatamente o risco apontado: alguém lê "$L_{\text{MO}}=9\%$" em §20.3 e "Margem $=(P-OC)/P$" em §15.2 e conclui, errado, que são a mesma taxa. Não são — a segunda **contém** a primeira, mais tributo, mais overhead administrativo, mais/menos desvio operacional.
 
@@ -1686,7 +1743,7 @@ Chamar as duas coisas de "margem" sem qualificação é exatamente o risco apont
 
 A fórmula TCU (§20.2) aplica os componentes **multiplicativamente**, em cascata, sobre o custo direto $C^{(c)}$, e divide por $(1-T^{(c)})$ ao final (gross-up de tributos). A decomposição aditiva **exata** de $P^{(c)} = C^{(c)}(1+BDI^{(c)})$ replica essa mesma cascata, passo a passo:
 
-$$P_0 = C^{(c)} \quad\to\quad P_1 = P_0(1+AC^{(c)}) \quad\to\quad P_2 = P_1(1+DF^{(c)}) \quad\to\quad P_3 = P_2(1+R^{(c)}) \quad\to\quad P_4 = P_3(1+CR^{(c)})$$
+$$P_0 = C^{(c)} \quad\to\quad P_1 = P_0(1+AC^{(c)}) \quad\to\quad P_2 = P_1(1+DF^{(c)}) \quad\to\quad P_3 = P_2(1+\text{Gr}^{(c)}) \quad\to\quad P_4 = P_3(1+C\text{Gr}^{(c)})$$
 $$P_5 = P_4(1+L^{(c)}) \qquad P^{(c)} = P_6 = \frac{P_5}{1-T^{(c)}}$$
 
 Cada passo contribui exatamente a diferença que introduz:
@@ -1722,7 +1779,7 @@ $$\frac{C^{(c)}}{P^{(c)}} + \theta^{(c)} + \lambda^{(c)} + \tau^{(c)} = 1$$
 O código (`_components.py`) tem **dois métodos com bases matemáticas diferentes** para a mesma tabela de BDI:
 
 - `bdi_total` — cascata multiplicativa (§20.2/§30.2), é o que **efetivamente precifica** (`bdi_rates` em `_resolve_bdi_full`, consumido por `_calc_venda_com_bdi`).
-- `decomposicao_no_preco()` — trata overhead como **soma simples** ($OH = AC+DF+R+CR+L$, sem cascata) e calcula $c_{pv} = (1-T)/(1+OH)$. A própria docstring da classe já avisa: *"a forma aditiva... subestima o BDI em ~0,9 pp"*.
+- `decomposicao_no_preco()` — trata overhead como **soma simples** ($OH = AC+DF+r+CR+L$, campo `r` do código = nosso $\text{Gr}$, sem cascata) e calcula $c_{pv} = (1-T)/(1+OH)$. A própria docstring da classe já avisa: *"a forma aditiva... subestima o BDI em ~0,9 pp"*.
 
 O gap medido (cascata − aditivo, sobre `DEFAULT_BDI_TABELA`):
 
@@ -1758,6 +1815,6 @@ $$\boxed{\mu = \bar\theta + \bar\lambda + \bar\tau - \frac{\Delta OC}{P_{\text{t
 
 ---
 
-**Versão:** 5.7 (§1–4 corrigidas: material usa $H_{\text{nom}}$, não $H_{\text{real}}$, no custo operacional — NEP-043; nomenclatura pool/material alinhada desde §1.2; ε reconciliado com a Matriz de Eficiência $\eta_s\cdot\eta_p\cdot\eta_w$, NEP-035. Mantém correções de v5.5–5.6: quantitativo semanal $q_{ij}$, direção de $\varepsilon$ em §26–29, §21.1/§21.4/§25.4/§26.6, Axioma A6)  
+**Versão:** 5.8 (Notação normalizada: glossário canônico adicionado; 12 colisões de símbolo resolvidas por renomeação — $\gamma^{c/v}\to\gamma^{\text{pool/MAT+COMB}}$, $R^{(c)}\to\text{Gr}^{(c)}$, $\phi_i\to\chi_i$, $C_p\to\mathcal{C}_p$, $\tau_i\to\eta_{h,i}$, $\delta_k^*/\delta_{\max}\to G_k^*/G_{\max}$, $r_k\to\beta_k$, $(i,j)_{\text{DAG}}\to(u,v)$, $\varepsilon_j\to\varepsilon_f$, $\overline{BDI}\to\bar\beta_{\text{proj}}$, $m^*\to\mu^*$, $h_m\to h_{\min}$ — e 5 colisões de baixo risco documentadas sem renomear. Mantém v5.7: §1–4 com material em $H_{\text{nom}}$, quantitativo semanal $q_{ij}$, direção de $\varepsilon$ em §26–29)  
 **Data:** 2026-08-17  
-**Status:** Formalização Completa e Auditada contra Código: §1–12 (Fundamentos, parcialmente reconciliados) → §13–19 (Pool) → §20–25 (BDI) → §26–29 (Quantitativo Semanal, Pool/Material, Indireto) → §30 (Margem θ/λ/τ) ✅
+**Status:** Formalização Completa, Auditada contra Código e com Notação Normalizada: §1–12 (Fundamentos) → §13–19 (Pool) → §20–25 (BDI) → §26–29 (Quantitativo Semanal, Pool/Material, Indireto) → §30 (Margem θ/λ/τ) ✅

@@ -443,7 +443,7 @@ make github-secrets  # configura GitHub Secrets
 
 | Documento | Conteúdo | Status |
 |-----------|---------|--------|
-| `docs/product/5-specifications/FORMULARIO_RIGOROSO_DERIVACAO.md` | Derivação matemática: Schedule → Quantitativo Semanal → Pool/Material → BDI → Indireto Semanal → Margem (θ/λ/τ) → Resultado | ✅ Completo e auditado contra código (v5.7) |
+| `docs/product/5-specifications/FORMULARIO_RIGOROSO_DERIVACAO.md` | Derivação matemática: Schedule → Quantitativo Semanal → Pool/Material → BDI → Indireto Semanal → Margem (θ/λ/τ) → Resultado | ✅ Completo, auditado contra código e com notação normalizada (v5.8) |
 | `docs/MAPEAMENTO_TEORIA_CODIGO.md` | Símbolos teóricos ↔ variáveis de código | ✅ Completo |
 | `docs/AXIOMAS_INVARIANTES_CONFORMIDADE.md` | 11 axiomas + invariantes + matriz de conformidade | ✅ Completo |
 | `docs/MAPEAMENTO_FORMULARIO_SKILLS.md` | Estrutura de dados, fórmulas e rastreamento por skill | ✅ Completo |
