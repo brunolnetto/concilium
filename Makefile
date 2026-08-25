@@ -4,7 +4,7 @@
 # Utilitários:                  clean
 # ─────────────────────────────────────────────────────────────────────────────
 
-PYTHON      := python3
+PYTHON      := uv run
 PACKAGE     := concilium
 SRC         := src/$(PACKAGE)
 TESTS_ALL   := tests
@@ -115,7 +115,7 @@ print(f'\n  Total rastreado: {len(files)} arquivos  |  {len(large)} blobs > 500 
 cov:
 	@mkdir -p $(COV_DIR)
 	@rm -f .coverage .coverage.*
-	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) --tb=short \
+	$(TEST_ENV) $(PYTHON) pytest $(TESTS_ALL) --tb=short \
 		--cov=$(SRC) \
 		--cov-branch \
 		--tb=short \
@@ -124,12 +124,12 @@ cov:
 		--cov-report=term-missing:skip-covered \
 		--no-header \
 		--durations=100 -rfsx
-	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"´
+	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"
 	$(MAKE) cov-stats
 
 # ── Codebase stats ────────────────────────────────────────────────────────────
 cov-stats:
-	@$(PYTHON) -c "\
+	@uv run python -c "\
 from codebase_stats import CodebaseStatsReporter; \
 import pathlib, json; \
 rep = '$(TEST_REPORT)'; \
