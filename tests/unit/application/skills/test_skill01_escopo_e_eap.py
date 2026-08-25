@@ -191,7 +191,7 @@ class TestComputeLongestPaths:
         nos = ["A", "B"]
         succ_map = {"A": ["B"]}
         # FF edge from A to B with lag=0
-        pred_map_typed = {"B": [("A", "FF", 0)]}
+        pred_map_typed = {"B": [("A", "FF", 0, 0.0)]}
         ordem_topologica = ["A", "B"]
 
         longest_path_to, start_offset_min = MOD_01._compute_longest_paths(
@@ -205,7 +205,7 @@ class TestComputeLongestPaths:
         """SS edge uses base + lag."""
         nos = ["A", "B"]
         succ_map = {"A": ["B"]}
-        pred_map_typed = {"B": [("A", "SS", 2)]}
+        pred_map_typed = {"B": [("A", "SS", 2, 0.0)]}
         ordem_topologica = ["A", "B"]
 
         _, start_offset_min = MOD_01._compute_longest_paths(nos, succ_map, pred_map_typed, ordem_topologica)
@@ -217,7 +217,7 @@ class TestComputeLongestPaths:
         # A→C, B→C; A comes first so C gets [A,C]; then B's cand [B,C] is same length (not longer)
         nos = ["A", "B", "C"]
         succ_map = {"A": ["C"], "B": ["C"], "C": []}
-        pred_map_typed = {"C": [("A", "FS", 5), ("B", "FS", 0)]}
+        pred_map_typed = {"C": [("A", "FS", 5, 1.0), ("B", "FS", 0, 1.0)]}
         ordem_topologica = ["A", "B", "C"]
 
         longest_path_to, start_offset_min = MOD_01._compute_longest_paths(

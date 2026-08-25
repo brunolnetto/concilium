@@ -14,24 +14,24 @@ def _artifact_files(artifacts_root: Path) -> set[str]:
 
 
 @pytest.mark.slow
-def test_intent_artifacts_match_profile_deliverables(golden_rfi_artifacts, golden_rfp_artifacts):
+def test_intent_artifacts_match_profile_deliverables(golden_artifacts):
     """Cada intent RFX deve materializar ao menos os entregáveis previstos no perfil.
 
     Usa projeto GOLDEN (ADR-114) — sintético mínimo (3 itens EAP) para validar
     invariantes do sistema sem acoplamento a dados de cliente reais.
 
     Performance:
-    - Antes: ~28.65s (re-executava GOLDEN 2× dentro do teste)
-    - Depois: ~15s (usa fixtures session-scoped que executam UMA VEZ)
+    - Antes (golden_rfi_artifacts + golden_rfp_artifacts): ~30s (2× execuções de GOLDEN)
+    - Depois (golden_artifacts consolidado): ~15s (1× execução de GOLDEN com ambos intents)
     """
     # Validar entregáveis para RFI
     profile_rfi = get_pipeline_profile_for_intent("rfi")
-    files_rfi = _artifact_files(golden_rfi_artifacts)
+    files_rfi = _artifact_files(golden_artifacts["rfi"])
     for deliverable in profile_rfi.deliverables:
         assert deliverable in files_rfi, f"Entregável '{deliverable}' ausente para intent='rfi'"
 
     # Validar entregáveis para RFP
     profile_rfp = get_pipeline_profile_for_intent("rfp")
-    files_rfp = _artifact_files(golden_rfp_artifacts)
+    files_rfp = _artifact_files(golden_artifacts["rfp"])
     for deliverable in profile_rfp.deliverables:
         assert deliverable in files_rfp, f"Entregável '{deliverable}' ausente para intent='rfp'"

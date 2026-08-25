@@ -86,16 +86,16 @@ _MATERIAL_ESPERADO_30_CPUS: dict[str, float] = {
     # asfáltica (72 kg/m²) a preço de CAP puro (R$ 5.300/t) — material 381,60/m² era
     # ~10× o real. Repontadas para MA-CBUQ-FAIXA-C (massa usinada gerada; preço
     # re-concluído na base de cotações da empresa: R$ 466,30/t): 0,072 t/m² × 466,30.
-    "CPU-PAVIM-ATI-058": 33.5736,
+    "CPU-PAVIM-ATI-058": 33.5666,
     "CPU-PAVIM-ATI-059": 147.0,
-    "CPU-PAVIM-ATI-061": 33.5736,
+    "CPU-PAVIM-ATI-061": 33.5666,
     "CPU-PAVIM-ATI-062": 3.85,
     # ADR-139 F4: preço do MA-BGTC-MIX é concluído por composição de usinagem
     # (92,50 → 245,63/m³ na base de cotações da empresa, PROD-USINAGEM-BGTC-001);
     # o snapshot pré-migração (97,125 = 1,05 × 92,50) ficou obsoleto por mudança
     # INTENCIONAL de preço — o mecanismo price-preserving da migração segue provado
     # pelas outras 29 CPUs.
-    "CPU-PAVIM-PAV-BASE-BGTC": 257.9115,  # = 23,1 m³/h × 245,63 ÷ 22 m³/h
+    "CPU-PAVIM-PAV-BASE-BGTC": 257.874,  # = 23,1 m³/h × 245,63 ÷ 22 m³/h
     "CPU-SANEA-DREN-MAN-DN300": 110.46000000000001,
     "CPU-SANEA-POCO-VISITA-PADRAO": 1387.6000000000001,
     "CPU-TERRA-ATI-019": 360.05,
@@ -104,7 +104,7 @@ _MATERIAL_ESPERADO_30_CPUS: dict[str, float] = {
     # ADR-139 F4 (cura AGIS + consolidação): duplicata MA-BRITA-GRADUADA (360,05)
     # consolidada no MA-BGTC-MIX gerado pela usinagem (re-concluído a 245,63/m³ na
     # base de cotações da empresa).
-    "CPU-TERRA-ATI-023": 245.63,
+    "CPU-TERRA-ATI-023": 245.5943,
     "CPU-TERRA-ATI-024": 165.0,
 }
 

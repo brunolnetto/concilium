@@ -93,6 +93,15 @@ from concilium.infrastructure.observability.logging_config import configure_logg
 
 configure_logging(level="WARNING", json_format=False)
 
+# Suprime warnings repetitivos do OpenTelemetry SDK relacionados a MetricReaders
+# não registrados em MeterProvider. Vê-se isso quando bibliotecas terceiras
+# (como logfire, langsmith) criam readers sem registrá-los explicitamente.
+# Esses warnings são inócuos em contexto de teste e poluem a saída.
+import logging
+
+_otel_logger = logging.getLogger("opentelemetry.sdk.metrics._internal.export")
+_otel_logger.setLevel(logging.ERROR)  # Suprime WARNING, mantém ERROR e acima
+
 from concilium.application.runtime import Runtime
 from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, OpenMeteoClient
 from concilium.infrastructure.storage.store_factory import build_project_repository
