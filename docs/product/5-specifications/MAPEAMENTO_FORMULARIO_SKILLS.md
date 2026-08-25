@@ -1,7 +1,9 @@
 # Mapeamento do Formulário e Variáveis-Chave — Skills AGIS
 
-**Data**: 2026-08-13  
+**Data**: 2026-08-13 (correções de fórmula/notação em 2026-08-17)  
 **Escopo**: Modelagem de dados do catálogo, variáveis financeiras e distribuição de recursos no pipeline de skills
+
+> A matemática de custo/BDI (PU, R_i/τ_i, categorias de BDI) tem sua fonte autoritativa em `FORMULARIO_RIGOROSO_DERIVACAO.md` §3, §8-15 (auditado contra código). As fórmulas neste documento foram corrigidas para não contradizê-la, mas para a derivação completa, ir lá — aqui o foco é onde cada variável mora no schema/canonical.
 
 ---
 
@@ -46,6 +48,8 @@
 
 **Definição**: Custo para executar 1 unidade do serviço (ex: R$/m², R$/m³)
 
+⚠️ **Correção (2026-08-17):** a "fórmula geral" abaixo (somar tudo — MO+EQ+combustível+material — e dividir por produção horária) é a fórmula de **catálogo nominal** (100% eficiência, FORMULARIO §3.1). Para o PU **operacional** (com eficiência real $\varepsilon\neq1$), MO+EQ (pool) e material/combustível escalam de forma diferente — usar a partição de `FORMULARIO_RIGOROSO_DERIVACAO.md` §11.3-11.4/§12.1, não dividir o total por $\rho\times\beta$.
+
 **Fonte 1 — Bottom-Up (NEP-032, recomendado)**
 ```python
 PU_sem_bdi = Σ[
@@ -62,7 +66,7 @@ PU_sem_bdi = Σ[
     COEF_INSUMO × PRECO_INSUMO
 ] / PRODUCAO_HORARIA
 
-# Fórmula geral
+# Fórmula geral (catálogo nominal, ε=1 — ver correção acima para PU operacional)
 PU_sem_bdi = (CUSTO_TOTAL_EQUIPE_HORA + CUSTO_MATERIAL_HORA) / PRODUCAO_HORARIA
 ```
 
@@ -84,13 +88,15 @@ PU_sem_bdi = Σ(COEF_INSUMO × PRECO_INSUMO)  # apenas composicao_itens da CPU
 | `Producao.producao_horaria` | float | m²/h, m³/h, etc. | Catálogo | Calibrada contra obra real |
 | `Planejamento.produtividade_catalogo` | float | idem | Canonicalizei | Referência estrutural (ρ_i) |
 | `Planejamento.beta_praticabilidade` | float | fator | Skill 04 | Ajuste climático/calendário (β_i) |
-| **Produtividade Efetiva** | ρ_i × β_i | idem | Derivado | Usado em precificação |
+| **Produtividade Efetiva** | ρ_i × β_i | idem | Derivado | Usado no cronograma (quantidade semanal) — **não** para dividir PU inteiro (ver §2.1) |
 
 **Cálculo**:
 ```python
 produtividade_efetiva = producao_horaria × beta_praticabilidade
 produtividade_efetiva = producao_horaria × (fator_clima × fator_calendario)
 ```
+
+Nota: $\beta$ aqui aproxima só $\eta_p$ (praticabilidade) da Matriz de Eficiência real do código ($\eta=\eta_s\cdot\eta_p\cdot\eta_w$) — ver FORMULARIO §1.1 para a decomposição completa.
 
 **Arquivo**: `src/concilium/application/skills/manifests/04-cronograma/_skill_helpers/_calendario.py:441-459`
 
@@ -113,7 +119,7 @@ produtividade_efetiva = producao_horaria × (fator_clima × fator_calendario)
 # Custo horário total (sem BDI)
 custo_horario_total = C_h^MO + C_h^EQ + C_h^COMB + C_h^MAT
 
-# Relação com PU
+# Relação com PU de catálogo (nominal, ε=1 — ver §2.1 para PU operacional)
 PU_sem_bdi = custo_horario_total / producao_horaria
 ```
 
@@ -311,21 +317,22 @@ custo_indireto_ponderado = custo_total × (frentes_ativas_media / frentes_max)
 
 ```python
 class BdiCategorias(BaseModel):
-    material: float      # ex: 0.347 (34.7%)
-    diesel: float        # ex: 0.04 (4%)
-    mao_obra: float      # ex: 0.347 (34.7%)
-    equipamentos: float  # ex: 0.347 (34.7%)
+    material: float      # ex: 0.04 (4%)
+    diesel: float        # ex: 0.04 (4%) — alias de material, ADR-090
+    mao_obra: float      # ex: 0.2997 (≈29,97%)
+    equipamentos: float  # blend locação/manutenção — FORMULARIO §9.2
 ```
 
-**Componentes Típicos (planilha AGIS)**:
+⚠️ **Correção (2026-08-17):** os valores abaixo (0,347 para MO/MATERIAL) estavam desatualizados e — pior — tratavam MATERIAL com a mesma taxa de serviço de MO, contradizendo a própria razão econômica (material é fornecimento de mercadoria, mesma natureza do diesel). Valores calibrados corretos, com a fórmula **multiplicativa** do TCU (não a soma abaixo, que subestima ~0,9pp — ver FORMULARIO §8.2):
 ```
-BDI_MO = (AC + DF + R + CR) + LUCRO + (COFINS + ISS + PIS + CSSL + IR)
-       = 0.04 + 0.01 + 0.01 + 0 + 0.10 + (0.03 + 0.05 + 0.0065 + 0.0199 + 0.0274)
-       ≈ 0.347 (34.7%)
+BDI_MO = (1+AC)(1+DF)(1+Gr)(1+CR)(1+L) / (1-T) - 1
+       = (1,05)(1,015)(1,01)(1)(1,09) / (1-0,0973) - 1
+       ≈ 0,2997 (29,97%)   [AC=5%, DF=1,5%, Gr=1%, L=9%, T=ISS 5%+CSSL 1,99%+IR 2,74%]
 
-BDI_MATERIAL = 0.347 (idem)
-BDI_DIESEL = 0.04 (apenas impostos)
+BDI_MATERIAL = 0,04 (4%)   — mesma taxa de BDI_DIESEL, ambos fornecimento de mercadoria
+BDI_DIESEL = 0,04 (apenas lucro; ADR-090: diesel é alias de material)
 ```
+Ver `FORMULARIO_RIGOROSO_DERIVACAO.md` §8 (fórmula completa, todas as categorias) e `_components.py`/`DEFAULT_BDI_TABELA` no código.
 
 ### 6.2 Aplicação de BDI
 
@@ -486,9 +493,13 @@ gap_praticabilidade = Σ(semanas) [
 # N4 (real cobrado)
 custo_operacional_real = Σ(pools) [ horas_consumidas × taxa_horária ]
 
-# Limitação conhecida (ADR-148, issue #124)
+# Limitação conhecida (NEP-042, issue #124 — corrigido de "ADR-148": aquele ADR
+# trata de ineficiência horária/diária, assunto diferente)
 # gap_praticabilidade diagnosticado em N3, mas NUNCA entra em N4
-# (duração não é estendida por clima, mantém RCPSP computável)
+# (duração RCPSP não é re-estendida por gap descoberto após o cronograma fixado —
+#  mas FORMULARIO §11.3 documenta que a duração JÁ é calculada considerando
+#  eficiência antes do RCPSP rodar; não verificado se as duas afirmações
+#  descrevem o mesmo mecanismo ou coisas diferentes — ver AXIOMAS A10)
 ```
 
 **Arquivo**: `src/concilium/application/skills/manifests/06-resultado-financeiro/_consolidacao/_skill_helpers/_bridge.py`
@@ -502,7 +513,7 @@ custo_operacional_real = Σ(pools) [ horas_consumidas × taxa_horária ]
 | **Produção Horária (ρ)** | Catálogo | `planejamento[].produtividade_catalogo` | `Producao.producao_horaria` |
 | **Fator Climático (β)** | Skill 02 | `planejamento[].beta_praticabilidade` | `fator_clima × fator_calendario` |
 | **Custo Horário (C_h)** | Skill 05 | Implícito em equipes_diretas | ∑(MO + EQ + Comb + Mat) |
-| **PU sem BDI** | Skill 06 | `planejamento[].preco_unitario.total` | `C_h / (ρ × β)` |
+| **PU sem BDI** | Skill 06 | `planejamento[].preco_unitario.total` | Partição pool/material — FORMULARIO §11.3-11.4/§12.1 (⚠️ não `C_h/(ρ×β)`) |
 | **BDI** | Skill 06 | `planejamento[].bdi.*` | Catálogo por categoria |
 | **PU com BDI** | Skill 06 | `planejamento[].preco_unitario_com_bdi.total` | `PU_sem_bdi × (1 + BDI)` |
 | **Subtotal Atividade (sem BDI)** | Skill 06 | `planejamento[].subtotal.sem_bdi` | `PU_sem_bdi × quantitativo` |
@@ -601,28 +612,25 @@ Semanas totais = ceil(169.798,78 / (524,475 × 48 × 2))
 - Combustível: L/h × Preço = R$1.095,31/h
 - **Total: C_h = R$3.472,55/h**
 
-**PU sem BDI**:
+**PU sem BDI** (catálogo nominal, ε=1; PU operacional exigiria a partição pool/material de FORMULARIO §12.1):
 ```
 PU = 3.472,55 / 582,75 = R$ 5,96/m²
 ```
 
-**BDI** (catálogo mendeslobo, categoria TERRAPLENAGEM):
+**BDI** (catálogo mendeslobo, categoria TERRAPLENAGEM — ⚠️ valores corrigidos 2026-08-17, ver §6.1 e FORMULARIO §8.3):
 ```
-BDI_MO = 34,7%
-BDI_EQ = 34,7%
+BDI_MO ≈ 29,97%
+BDI_EQ = blend locação/manutenção (FORMULARIO §9.2) — não recalculado neste exemplo
 BDI_COMB = 4,0%
-BDI_Ponderado ≈ 0,347 (34,7%)
+BDI_Ponderado = média ponderada pela fração de custo de cada categoria (FORMULARIO §13.1), não um número fixo — a "34,7% ponderado" anterior estava errado
 ```
 
-**PU com BDI**:
-```
-PU_com_bdi = 5,96 × (1 + 0,347) = R$ 8,02/m²
-```
+**PU com BDI** — *(número anterior de R\$8,02/m² calculado com BDI 34,7% incorreto; não recalculado aqui — recomputar com as taxas corrigidas acima e o blend real de EQ)*
 
-**Subtotal da Atividade**:
+**Subtotal da Atividade** — *(números de venda abaixo herdam o BDI antigo e são apenas ilustrativos de ordem de grandeza; não usar como referência)*:
 ```
-SEM BDI: 169.798,78 m² × R$ 5,96 = R$ 1.012,143,45
-COM BDI: 169.798,78 m² × R$ 8,02 = R$ 1.361,319,50
+SEM BDI: 169.798,78 m² × R$ 5,96 = R$ 1.012.143,45
+COM BDI: ver nota acima — recalcular
 ```
 
 **Custo Operacional Real** (Skill 05):
@@ -651,7 +659,7 @@ Margem: Negativa (atividade absorve indiretos)
 - [ ] `producao_horaria` preenchido em todos os CPUs (validação: > 0)
 - [ ] Composição de equipe em Producao.composicao_padrao_equipe (MO + EQ)
 - [ ] Encargos de MO aplicados (66% = 30% encargos CLT + 31% provisão + 5% admin)
-- [ ] BDI diferenciado por categoria (MO 34.7%, Combustível 4%, etc.)
+- [ ] BDI diferenciado por categoria (MO ≈29,97%, Material/Combustível 4%, etc. — ver FORMULARIO §8.3)
 - [ ] Quantitativos = somatório de cronograma (∑ qtd_semanal = quantitativo_total)
 - [ ] Margem dentro da faixa aceitável (VERDE: 8-10%, AMARELO: 5-15%)
 - [ ] Custo indireto <= 30% do direto (taxa_overhead <= 0,30)
@@ -670,46 +678,35 @@ Margem: Negativa (atividade absorve indiretos)
 
 ## 14. τ_i: FRENTES NECESSÁRIAS (Fórmula Crítica de Viabilidade)
 
-### 14.1 Definição e Fórmulas
+⚠️ **Seção reescrita em 2026-08-17.** A versão anterior usava notação (`γ_i^c/γ_i^v`) que `FORMULARIO_RIGOROSO_DERIVACAO.md` identificou com a direção de $\varepsilon$ **invertida** (Glossário do FORMULARIO, auditoria v5.7), validava a fórmula contra o caso MATA_DENSA_SIMPLES — **removido** do FORMULARIO por seus números nunca terem sido reconciliados com a convenção corrigida — e linkava dois arquivos (`PROVA_COMPLETA_TAU_431.md`, `ESTRUTURA_ECONOMICA_CONTRATADO_CONSUMIVEL.md`) que **não existem** no repositório.
 
-**Símbolo:** τ_i = `frentes_equivalentes_necessarias`
+### 14.1 Definição — τ_i é o Mesmo Objeto que $R_i$ do FORMULARIO
 
-**Fórmula Direta:**
-$$\tau_i = \frac{\text{custo\_total\_autonomo}}{\text{venda\_sem\_bdi}}$$
+**Símbolo no código:** τ_i = `frentes_equivalentes_necessarias`
 
-**Fórmula Teórica (Reformulação User):**
-$$\tau_i = 1 + (1-\delta_i)\frac{1-\bar{\varepsilon}_i}{\bar{\varepsilon}_i}$$
+**Fórmula direta (implementada, `_ponto_equilibrio.py`):**
+$$\tau_i = \frac{\text{custo\_total\_autonomo}}{\text{venda\_sem\_bdi}} \;=\; \frac{OC_i}{CC_i} \;\equiv\; R_i \text{ (FORMULARIO §7.3)}$$
 
-Onde:
-- $\delta_i = \frac{\gamma_i^v}{\gamma_i^c + \gamma_i^v}$ = fração de custos consumíveis
-- $\bar{\varepsilon}_i = \frac{\sum_j \varepsilon_j m_{ij}}{\sum_j m_{ij}}$ = produtividade média ponderada por frentes
-- $\gamma_i^c$ = custos contratados (MO + EQ + Mob + Overhead)
-- $\gamma_i^v$ = custos consumíveis (Diesel/Combustível)
-- $m_{ij}$ = número de frentes paralelas
+**Fórmula fechada** — não a aproximação antiga desta seção; a forma correta e fechada algebricamente está em `FORMULARIO_RIGOROSO_DERIVACAO.md` §12.2:
 
-**Fórmula do Gap:**
-$$OC_i - CC_i = \gamma_i^c \cdot \sum_j(1-\varepsilon_j)m_{ij}$$
+$$R_{ij} = 1-(1-\varepsilon_j)f_i^{\text{MAT+COMB}}, \qquad R_i = 1-(1-\bar\varepsilon_i)f_i^{\text{MAT+COMB}}$$
+
+onde $f_i^{\text{MAT+COMB}} = \gamma_i^{\text{MAT+COMB}}/\gamma_i$ é a fração de catálogo em material+combustível (constante, $\varepsilon$-independente — **não** confundir com $\delta_i(\varepsilon_i)$, a fração operacional de FORMULARIO §13.4) e $\bar\varepsilon_i$ é a eficiência média ponderada por semana ativa (FORMULARIO §13.2). Não duplicar a derivação aqui — ver FORMULARIO §11-15 para a álgebra completa.
 
 ### 14.2 Interpretação Econômica
 
 - **τ_i < 1.0**: Projeto viável com margem positiva
 - **τ_i = 1.0**: Ponto de equilíbrio (margem zero)
-- **τ_i > 1.0**: Projeto inviável; precisaria de τ_i paralelos para viabilizar
-
-**Exemplo:** τ_i = 4.31 significa "seriam necessárias 4,31 unidades paralelas deste projeto para quebrar a margem"
+- **τ_i > 1.0**: Projeto inviável a esse preço; equivalente a $BDI < R_i-1$ (FORMULARIO §7.3)
 
 ### 14.3 Componentes da Estrutura Econômica
 
-**Custos Contratados (Fixos, não escaláveis com ε):**
-- Mão de Obra (permanência mínima)
-- Equipamentos (aluguel mensal)
-- Mobilização/Desmobilização
-- Overhead Pool (ADM, TOP, QSMS, LAB)
-- **Total ≈ 79% do custo**
+Partição pool (mobilização) vs. material (produção) — nomenclatura corrigida, ver FORMULARIO §11.4:
 
-**Custos Consumíveis (Escaláveis com ε):**
-- Diesel/Combustível (varia com execução real)
-- **Total ≈ 21% do custo**
+- **Pool** (MO+EQ, taxa fixa por semana mobilizada, não escala com $\varepsilon$ dentro da semana): mobilização/desmobilização, overhead ADM/TOP/QSMS/LAB.
+- **Material** (MAT+COMB, escala diretamente com produção; total independente de $\varepsilon$, FORMULARIO §6.2/§11.4).
+
+A fração relativa entre os dois ($f_i^{\text{MAT+COMB}}$ acima) varia por equipe/composição — não é uma constante universal (a versão anterior desta seção citava "≈79%/21%" como se fosse fixa; é específica do caso observado, não um parâmetro do modelo).
 
 ### 14.4 Localização em Código
 
@@ -722,28 +719,9 @@ $$OC_i - CC_i = \gamma_i^c \cdot \sum_j(1-\varepsilon_j)m_{ij}$$
 | Machine-weeks | _ponto_equilibrio.py | 650+ | `machine_weeks_brutas`, `machine_weeks_efetivas` |
 | Modelo de Dados | _financeiro_resultado.py | 95-195 | `PontoEquilibrio` dataclass |
 
-### 14.5 Validação Numérica (MATA_DENSA_SIMPLES)
+Nota: `PontoEquilibrio`/τ_i é hoje só **diagnóstico** — gera avisos (`VAL-FRENTES-NECESSARIAS-ALTA`) mas nunca realimenta o preço calculado por `_calc_venda_com_bdi` (confirmado em auditoria; ver FORMULARIO §7.3).
 
-**Dados Observados:**
-- OC_i = R$ 336.103,34 (custo operacional)
-- CC_i = R$ 78.007,38 (custo catálogo)
-- τ_i = 4.3100 (observado)
-
-**Validação Fórmula Direta:**
-- Cálculo: 336.103 / 78.007 = 4.3086 ✅
-- Diferença vs código: 0.03%
-
-**Validação Fórmula Teórica:**
-- δ_i = 0.207 (20.7% consumível)
-- ε̄_i = 0.230 (23% de produtividade realizada)
-- τ_i = 1 + 0.793 × 3.348 = 3.66
-- Gap residual vs observado: 0.65 (15%)
-- Causa: Overhead tem sensibilidade parcial a ε_j
-
-**Documentação Completa:**
-- [PROVA_COMPLETA_TAU_431.md](PROVA_COMPLETA_TAU_431.md) — Três provas e validação numérica
-- [ESTRUTURA_ECONOMICA_CONTRATADO_CONSUMIVEL.md](ESTRUTURA_ECONOMICA_CONTRATADO_CONSUMIVEL.md) — Categorização de custos
-- [MAPEAMENTO_TEORIA_CODIGO.md](MAPEAMENTO_TEORIA_CODIGO.md) — Símbolos teóricos ↔ variáveis AGIS
+**Documentação:** ver `FORMULARIO_RIGOROSO_DERIVACAO.md` §7.3, §11–15 para a derivação completa e auditada. (`MAPEAMENTO_TEORIA_CODIGO.md`, antes citado aqui como histórico, foi removido do repositório em 2026-08-18 — conteúdo já absorvido pelo FORMULARIO e por esta seção.)
 
 ---
 

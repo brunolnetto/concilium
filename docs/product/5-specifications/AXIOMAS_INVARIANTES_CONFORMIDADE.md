@@ -108,17 +108,24 @@ assert producao_efetiva > 0
 
 ### A4: Preço Unitário (PU) via Bottom-Up (Fonte 1)
 
-**Axioma**: PU padrão é derivado de **C_h dividido pela produtividade efetiva**.
+**Axioma**: PU padrão é derivado do custo horário particionado por pool (MO+EQ) vs. material (MAT+COMB), não de C_h dividido inteiro pela produtividade efetiva.
 
-**Formulação**:
+**Correção (2026-08-18):** a formulação original deste axioma (`PU_sem_bdi = C_h/(ρ×β)`, dividir **todo** o custo horário por ρ×β) é a mesma fórmula já identificada como errada em `EFICIENCIA_PRODUTIVA_CONSOLIDADA.md`, `FLUXO_DADOS_SKILLS.md` e `MAPEAMENTO_FORMULARIO_SKILLS.md` (2026-08-17) — este era o único dos documentos do cluster que ainda não tinha recebido a correção. Só o custo de **pool** (MO+EQ) é efetivamente inflacionado pela baixa eficiência (indiretamente, via mais semanas mobilizadas); **material/diesel não escala com β/ε** — seu total depende só do quantitativo (NEP-043, auditado contra `_pe_gap_praticabilidade_abs`).
+
+**Formulação correta** (`FORMULARIO_RIGOROSO_DERIVACAO.md` §12.1, fórmula fechada):
+
+$$pu_{ij}^{\text{op}} = \frac{1}{\varepsilon_j}\,PU_i - \Big(\frac{1}{\varepsilon_j}-1\Big)PU_i^{\text{MAT+COMB}}$$
+
+onde $PU_i$ é o PU de catálogo nominal (nunca dividido por β/ε) e $PU_i^{\text{MAT+COMB}}$ é só a parcela de material/combustível. A fórmula antiga (`C_h/(ρ×β)`) só é correta no caso degenerado $\varepsilon_j=1$, onde ambas coincidem — coincidência que provavelmente explica por que o erro passou despercebido em exemplos com eficiência próxima de 1.
+
+**Formulação (nominal, ε=1 — catálogo puro, sem ajuste de eficiência):**
 ```
-PU_sem_bdi = C_h_total / (ρ_catálogo × β_praticabilidade)
-           = C_h / ρ_efetiva
+PU_catalogo = C_h_total / ρ_catálogo   (sem β — este é o PU de referência, PU_i acima)
 
 Este PU captura:
-  • Todo o custo de operação (MO + EQ + COMB)
-  • Ajustado pela velocidade real de trabalho
+  • Todo o custo de operação (MO + EQ + COMB) à produtividade ideal
   • Sem BDI (preço puro de custo)
+  • NÃO deve ser dividido por β para obter o PU operacional — usar a fórmula fechada acima
 ```
 
 **Invariante**:
@@ -177,42 +184,44 @@ if producao_invalid:
 
 **Axioma**: BDI (Benefícios, Despesas Indiretas, Lucros) é **sempre aplicado por categoria de custo**, nunca como taxa global.
 
-**Ressalva (auditoria cruzada com `FORMULARIO_RIGOROSO_DERIVACAO.md` §20.4):** este axioma é falso como enunciado para o INDIRETO. `_calc_venda_com_bdi` (`_venda_custo.py:69-87`) tem um fallback que aplica sim uma **taxa global/plana** (`BDI_INDIRETO ≈25,21%` sobre o custo indireto agregado inteiro) quando a soma dos sub-custos por categoria é zero — condição real de disparo, não hipotética (ver `Indireto` com campos `default=0.0`, sem `None`, em `_financeiro_resultado.py:83-106`). Além disso, `_apply_bdi_to_indiretos` (`_resolucao.py:231-284`) **sempre** usa a taxa plana para indireto, incondicionalmente, e alimenta o relatório Excel — nunca decompõe por sub-categoria. O axioma vale estritamente apenas para custo **direto** (MO/EQ/MAT/COMB sempre com taxa por categoria); para indireto, é a exceção, não a regra geral. Recomenda-se reformular o axioma como: "BDI é aplicado por categoria de custo sempre que os sub-custos estão disponíveis (sempre o caso no direto; no indireto, cai para taxa plana quando sub-custos somam zero ou via `_apply_bdi_to_indiretos`)."
+**Ressalva (auditoria cruzada com `FORMULARIO_RIGOROSO_DERIVACAO.md` §9.3):** este axioma é falso como enunciado para o INDIRETO. `_calc_venda_com_bdi` (`_venda_custo.py:69-87`) tem um fallback que aplica sim uma **taxa global/plana** (`BDI_INDIRETO ≈25,21%` sobre o custo indireto agregado inteiro) quando a soma dos sub-custos por categoria é zero — condição real de disparo, não hipotética (ver `Indireto` com campos `default=0.0`, sem `None`, em `_financeiro_resultado.py:83-106`). Além disso, `_apply_bdi_to_indiretos` (`_resolucao.py:231-284`) **sempre** usa a taxa plana para indireto, incondicionalmente, e alimenta o relatório Excel — nunca decompõe por sub-categoria. O axioma vale estritamente apenas para custo **direto** (MO/EQ/MAT/COMB sempre com taxa por categoria); para indireto, é a exceção, não a regra geral. Recomenda-se reformular o axioma como: "BDI é aplicado por categoria de custo sempre que os sub-custos estão disponíveis (sempre o caso no direto; no indireto, cai para taxa plana quando sub-custos somam zero ou via `_apply_bdi_to_indiretos`)."
 
-**Estrutura** (referência ADR-090):
+**Estrutura** (referência ADR-090; valores calibrados conferidos contra `_components.py`/`DEFAULT_BDI_TABELA` e `FORMULARIO_RIGOROSO_DERIVACAO.md` §8.3 — **corrigido em 2026-08-17**: a versão anterior desta seção usava 34,7% para MATERIAL, o que contradizia sua própria justificativa econômica logo abaixo; MATERIAL segue a mesma taxa de COMBUSTÍVEL, não a de MO/serviço):
 ```
-BDI_MATERIAL = 34.7%      (lucro + overhead + tributos em serviços/insumos)
-BDI_EQUIPAMENTO = 34.7%   (aluguel + manutenção = serviço, mesmo BDI)
-BDI_MAO_OBRA = 34.7%      (serviço profissional + encargos)
+BDI_MAO_OBRA ≈ 29.97%     (serviço profissional + encargos)
+BDI_SERVICOS ≈ 29.97%     (mesmo tratamento de MO)
+BDI_EQUIPAMENTO           (blend locação/manutenção — ver FORMULARIO §9.2:
+                           f_loc·4% + (1-f_loc)·29,97%; extremos 4%↔29,97%)
+BDI_INDIRETO ≈ 25.21%     (mesma estrutura, lucro menor: L=5% vs L=9%)
 
-BDI_COMBUSTIVEL = 4.0%    (APENAS fornecimento de mercadoria)
-  └─ ATENÇÃO: combustível é PROPRIEDADE DE MATERIAL, não equipamento
-  └─ Razão econômica: insumo consumível (como concreto, parafusos)
-  └─ Natureza: mercadoria/fornecimento (ICMS/PIS/COFINS), não serviço (ISS)
+BDI_MATERIAL = 4.0%       (fornecimento de mercadoria — concreto, parafusos, insumos)
+BDI_COMBUSTIVEL = 4.0%    (ADR-090: alias de MATERIAL, mesma natureza econômica)
+  └─ Razão econômica: insumo consumível, mercadoria/fornecimento (ICMS/PIS/COFINS),
+     não serviço (ISS) — vale para MATERIAL e COMBUSTÍVEL igualmente
   └─ Referência: ADR-090, TCU Ac.2622/2013, cubo_analitico_builder.py
 
-Fórmula:
+Fórmula (TCU multiplicativa, não aditiva — ver FORMULARIO §8.2):
   Valor_com_bdi = Σ(categorias) [
       Valor_categoria_sem_bdi × (1 + BDI_categoria)
   ]
-  
-  Onde BDI_categoria ∈ {0.347 (MO/EQ/MAT), 0.04 (COMBUSTIVEL)}
+
+  Onde BDI_categoria ∈ {≈0.2997 (MO/SERVIÇOS), ≈0.2521 (INDIRETO), 0.04 (MATERIAL/COMBUSTIVEL)}
 ```
 
 **Crítico** (ADR-090 — Taxonomia de Custos):
 ```
-  Equipamento NÃO inclui combustível na taxa 34.7%
-  
   Decomposição de Custos:
     Mão de Obra
-      └─ Salário + encargos → BDI 34.7% (serviço)
-    
+      └─ Salário + encargos → BDI ≈29,97% (serviço)
+
     Equipamento = 2 propriedades SEPARADAS:
-      ├─ A: Aluguel + Manutenção → BDI 34.7% (serviço de locação)
-      └─ B: COMBUSTÍVEL → BDI 4.0% (mercadoria consumida) ← ADR-090
-    
+      ├─ A: Manutenção → BDI ≈29,97% (serviço)
+      ├─ B: Aluguel/Locação → BDI 4,0% (mercadoria/fornecimento)
+      └─ Taxa efetiva do equipamento = blend ponderado (FORMULARIO §9.2)
+      └─ C: COMBUSTÍVEL → BDI 4.0% (mercadoria consumida) ← ADR-090
+
     Material
-      ├─ Consumíveis diretos (concreto, parafusos) → BDI 34.7%
+      ├─ Consumíveis diretos (concreto, parafusos) → BDI 4,0%
       └─ Combustível → BDI 4.0% (mesma natureza econômica)
 ```
 
@@ -221,16 +230,17 @@ Fórmula:
 # BDI nunca é aplicado 2× (hardening contra double-count)
 for item in planejamento:
     assert not (item.precificacao_via_fallback and item.bdi_aplicado)
-    
-# Soma de componentes com BDI — combustível usa taxa baixa
+
+# Soma de componentes com BDI — material e combustível usam taxa baixa
 total_com_bdi = (
     preco_sem_bdi.material * (1 + bdi.material) +
-    preco_sem_bdi.combustivel * (1 + bdi.combustivel) +  # 4% NOT 34.7%
+    preco_sem_bdi.combustivel * (1 + bdi.combustivel) +  # 4% — mesma taxa de material
     preco_sem_bdi.mao_obra * (1 + bdi.mao_obra) +
     preco_sem_bdi.equipamentos * (1 + bdi.equipamentos)
 )
 assert total_com_bdi >= preco_sem_bdi.total  # nunca diminui
 assert bdi.combustivel == 0.04, "Combustível deve usar BDI 4% (ADR-090)"
+assert bdi.material == 0.04, "Material deve usar BDI 4% (ADR-090) — mesma taxa de combustível"
 ```
 
 **Fonte de BDI**: `config/catalogos/mendeslobo/perfis/*.json`
@@ -239,7 +249,7 @@ assert bdi.combustivel == 0.04, "Combustível deve usar BDI 4% (ADR-090)"
 
 **Arquivo de Implementação**: `src/concilium/application/skills/manifests/06-resultado-financeiro/_consolidacao/_skill_helpers/_bdi_resolucao.py`
 
-**Documentação Adicional**: Ver [ANALISE_COMBUSTIVEL_VS_EQUIPAMENTO.md](ANALISE_COMBUSTIVEL_VS_EQUIPAMENTO.md) para justificativa econômica completa
+**Documentação Adicional**: ver `FORMULARIO_RIGOROSO_DERIVACAO.md` §8–9 para a fórmula TCU multiplicativa completa e a justificativa econômica material vs. serviço. (A referência anterior a `ANALISE_COMBUSTIVEL_VS_EQUIPAMENTO.md` foi removida — o arquivo não existe no repositório.)
 
 ---
 
@@ -351,7 +361,11 @@ assert quantitativo_planejado >= break_even_qty * 1.2  # 20% de margem de segura
 
 ---
 
-### A10: Bridge N1→N4 Sem Extensão de Duração (ADR-148)
+### A10: Bridge N1→N4 Sem Extensão de Duração (NEP-042)
+
+**Correção de citação (2026-08-17):** esta seção citava "ADR-148" como referência do conceito de camadas N1-N4/`gap_praticabilidade` — mas `adr-148-ineficiencia-horaria-diaria.md` trata de um assunto diferente (`horas_improdutivas_dia`/`eta_jornada`, ineficiência intra-dia). A referência correta é **NEP-042** ("Modelo de Três Camadas de Precificação"), que define exatamente N1=catálogo, N2=autônomo, N3=pool, N4=custo_operacional_real, com `N3-N2=gap_praticabilidade`.
+
+**Ressalva sobre a premissa "duração não muda com clima":** `FORMULARIO_RIGOROSO_DERIVACAO.md` §11.3 (auditado contra `_build_activity_distribuicao`, skill-04) documenta que o cronograma **é** estendido quando a eficiência realizada reduz a produção semanal — mais semanas são adicionadas até completar o quantitativo. Não investiguei a fundo se isso contradiz esta seção ou se são conceitos distintos (duração RE-computada durante o RCPSP com o gap já conhecido, vs. gap descoberto *depois* do cronograma fixado) — fica como pendência a verificar antes de tratar este axioma como definitivo.
 
 **Axioma**: Gap climático é **diagnosticado** em N3 (custo estimado) mas **NUNCA cobrado** em N4 (custo real) porque duração não é estendida.
 
@@ -379,7 +393,7 @@ if gap_praticabilidade > 0:
     limitacao_clima = LimitacaoClimaN4(
         gap_praticabilidade_abs=gap_praticabilidade,
         cobrado_no_custo_operacional=False,
-        mensagem="Diagnosticado em N3, nunca entra em N4 (ADR-148)"
+        mensagem="Diagnosticado em N3, nunca entra em N4 (NEP-042)"
     )
     log_info(f"Limitação clima: {gap_praticabilidade:.2f} (não cobrado)")
 ```
@@ -391,6 +405,8 @@ if gap_praticabilidade > 0:
 ### A11: τ_i ≥ 1 — Custo Autônomo Nunca é Menor que Custo de Catálogo
 
 **Axioma**: O custo autônomo de execução $\tilde{C}_i$ é **sempre maior ou igual** ao custo de catálogo $C_i = p_i^{cat} \times Q_i$. O ratio $\tau_i = \tilde{C}_i / C_i$ (`frentes_equivalentes_necessarias`) é invariavelmente ≥ 1.
+
+**Nota de notação:** $\tau_i$ aqui é o mesmo objeto que $R_i$ em `FORMULARIO_RIGOROSO_DERIVACAO.md` §12 — a derivação e a prova abaixo usam $\delta_i^*$ (fração de consumo) e $\gamma_i^{\text{contrato}}/\gamma_i^{\text{consumo}}$, enquanto o FORMULARIO usa $f_i^{\text{MAT+COMB}}$ e $\gamma_i^{\text{pool}}/\gamma_i^{\text{MAT+COMB}}$ para os mesmos conceitos (símbolo diferente entre os dois arquivos, ver Glossário do FORMULARIO). A forma fechada de $R_i$ no FORMULARIO ($R_i=1-(1-\bar\varepsilon_i)f_i^{\text{MAT+COMB}}$) é algebricamente equivalente à decomposição de $\tau_i$ abaixo.
 
 **Origem da Distinção — Custo de Atividade vs Custo de Pool**:
 ```
@@ -572,6 +588,8 @@ for field in COST_FIELDS:
 
 ### I4: Coerência de Preços
 
+**Nota (2026-08-17):** o arquivo de teste citado abaixo (`test_coerencia_precos.py`) **não foi encontrado** no repositório atual — não confirmado se este invariante é de fato testado hoje. Além disso, "Venda SEMPRE ≥ Custo" como enunciado incondicional está em tensão com A9/A11 (que definem status CRÍTICO/AVISO justamente para cenários onde `frentes_equivalentes_necessarias`/$R_i$ indicam que o custo operacional pode superar o preço). Provavelmente os dois asserts abaixo comparam venda contra o **custo de catálogo** (trivialmente ≥, já que $P=CC\times(1+BDI)$ com $BDI>0$), não contra o custo operacional real ($OC$) — mas isso não está explícito no texto. Verificar antes de tratar como definitivo.
+
 **Condição**: Venda SEMPRE ≥ Custo.
 
 ```python
@@ -609,9 +627,13 @@ for planejamento_item in canonical.planejamento:
 
 ## PARTE 3: VERIFICAÇÕES FORMAIS (Testes de Regressão)
 
+**Nota (2026-08-18):** nenhum dos 15 arquivos de teste citados nesta Parte (`test_encargos_mo.py`, `test_custo_horario_agregacao.py`, etc.), o diretório `tests/regression/`, ou `scripts/audit_trail_generator.py` (Parte 6) existem hoje no repositório — verificado por busca exaustiva. As Partes 3, 5 e 6 descrevem uma suíte de regressão/auditoria **aspiracional**, nunca implementada — não tratar a "Matriz de Conformidade" (Parte 5) como refletindo testes que de fato rodam.
+
 ### V1: Teste de Círculo Fechado (Round-Trip)
 
 **Objetivo**: Verificar que transformação → canonicalizei → retorno restaura valores originais.
+
+**Correção (2026-08-18):** o teste abaixo usa a fórmula `PU=C_h/(ρ×β)` que A4 corrigiu — mantido aqui só como registro do teste como foi escrito (nunca implementado de fato, ver nota acima); um round-trip real precisaria da fórmula fechada de A4/`FORMULARIO §12.1`, que exige $PU_i^{\text{MAT+COMB}}$ como entrada adicional (não presente neste exemplo simplificado).
 
 ```python
 def test_round_trip_pu():

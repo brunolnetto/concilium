@@ -375,13 +375,13 @@ O sistema usa OpenTelemetry para traces e métricas:
 
 ## 11. Pontos de Atenção e Trabalho Pendente
 
-### 11.1 Limitação Conhecida (ADR-148)
+### 11.1 Limitação Conhecida (NEP-042)
 
 O **gap climático é diagnosticado em N3 mas nunca cobrado em N4**: a duração do cronograma não é estendida por clima. As equipes compensam clima reduzindo horas produtivas por dia, não estendendo datas. Isso mantém o RCPSP computável mas significa que `gap_praticabilidade` em `_bridge.py` é indicativo, não operacional.
 
 ### 11.2 Fórmula de τ_i — Gap Residual
 
-A fórmula analítica $\tau_i = 1 + (1-\delta_i^*)(1-\bar\varepsilon_i)/\bar\varepsilon_i$ captura ~85% da estrutura observada. O gap residual de ~15% se deve a overhead "semi-contratado" (QSMS, LAB) que tem sensibilidade parcial a $\varepsilon_j$ mas é tratado como totalmente fixo no modelo. Documentado em `MAPEAMENTO_TEORIA_CODIGO.md §2.F`.
+A fórmula analítica $\tau_i = 1 + (1-\delta_i^*)(1-\bar\varepsilon_i)/\bar\varepsilon_i$ (equivalente a $R_i$, formalizado e fechado algebricamente em `FORMULARIO_RIGOROSO_DERIVACAO.md` §31.2 como $R_{ij}=1-(1-\varepsilon_j)f_i^{\text{MAT+COMB}}$) captura ~85% da estrutura observada num caso investigado inicialmente em `MAPEAMENTO_TEORIA_CODIGO.md §2.F` (hoje superado — ver nota no topo daquele arquivo). O gap residual de ~15% se deve a overhead "semi-contratado" (QSMS, LAB) que tem sensibilidade parcial a $\varepsilon_j$ mas é tratado como totalmente fixo no modelo.
 
 ### 11.3 Degradação de Produtividade com Múltiplas Frentes
 
@@ -417,10 +417,11 @@ python benchmarks/run_mata_densa_simples.py
 ### Para Entender o Modelo Financeiro
 
 Ler nesta ordem:
-1. `docs/AXIOMAS_INVARIANTES_CONFORMIDADE.md` — axiomas e invariantes de negócio
-2. `docs/product/5-specifications/FORMULARIO_RIGOROSO_DERIVACAO.md` — derivação matemática completa (35 seções, auditada contra código e com a razão $R_i$ fechada algebricamente, 2026-08-17)
-3. `docs/MAPEAMENTO_TEORIA_CODIGO.md` — como cada símbolo mapeia para o código
-4. `docs/ALGEBRA_POOL_IMPLEMENTACAO.md` — teoria de conjuntos do pool de recursos
+1. `docs/product/5-specifications/AXIOMAS_INVARIANTES_CONFORMIDADE.md` — axiomas e invariantes de negócio (SSOT de teste/regressão)
+2. `docs/product/5-specifications/FORMULARIO_RIGOROSO_DERIVACAO.md` — derivação matemática completa (35 seções, auditada contra código e com a razão $R_i$ fechada algebricamente, 2026-08-17) — inclui Glossário de Notação canônico
+3. `docs/product/5-specifications/ALGEBRA_POOL_IMPLEMENTACAO.md` — teoria de conjuntos do pool de recursos, com trilha código↔fórmula linha a linha (complementa FORMULARIO §16)
+
+(`MAPEAMENTO_TEORIA_CODIGO.md` foi superado pelo FORMULARIO §25–31 em 2026-08-17 — mantido só por valor histórico, não citar como referência ativa.)
 
 ### Para Entender o Pipeline
 
@@ -444,10 +445,12 @@ make github-secrets  # configura GitHub Secrets
 | Documento | Conteúdo | Status |
 |-----------|---------|--------|
 | `docs/product/5-specifications/FORMULARIO_RIGOROSO_DERIVACAO.md` | Derivação matemática: Schedule → Eficiência Decomposta → Quantitativo/Custo Semanal → Pool/Material → BDI → Indireto → Margem (θ/λ/τ) → Cubo Analítico → Resultado | ✅ Completo, auditado contra código, notação normalizada e $R_i$ fechado algebricamente (v6.0) |
-| `docs/MAPEAMENTO_TEORIA_CODIGO.md` | Símbolos teóricos ↔ variáveis de código | ✅ Completo |
-| `docs/AXIOMAS_INVARIANTES_CONFORMIDADE.md` | 11 axiomas + invariantes + matriz de conformidade | ✅ Completo |
-| `docs/MAPEAMENTO_FORMULARIO_SKILLS.md` | Estrutura de dados, fórmulas e rastreamento por skill | ✅ Completo |
-| `docs/FLUXO_DADOS_SKILLS.md` | Fluxo de variáveis N1→N4 com exemplos numéricos | ✅ Completo |
+| `docs/product/5-specifications/MAPEAMENTO_TEORIA_CODIGO.md` | Símbolos teóricos ↔ variáveis de código | ⚠️ Superado pelo FORMULARIO §25–31 — histórico |
+| `docs/product/5-specifications/AXIOMAS_INVARIANTES_CONFORMIDADE.md` | 11 axiomas + invariantes + matriz de conformidade (SSOT de teste/regressão) | ✅ Completo |
+| `docs/product/5-specifications/ALGEBRA_POOL_IMPLEMENTACAO.md` | Teoria de conjuntos do pool de recursos, trilha código↔fórmula (complementa FORMULARIO §16) | ✅ Completo |
+| `docs/product/5-specifications/MAPEAMENTO_FORMULARIO_SKILLS.md` | Estrutura de dados, fórmulas e rastreamento por skill | 🟡 Parcial — seções de fórmula (§2-9,§14) desatualizadas frente ao FORMULARIO |
+| `docs/product/5-specifications/FLUXO_DADOS_SKILLS.md` | Fluxo de variáveis N1→N4 com exemplos numéricos | 🟡 Parcial — fórmula de PU desatualizada frente ao FORMULARIO §25 |
+| `docs/product/5-specifications/EFICIENCIA_PRODUTIVA_CONSOLIDADA.md` | Fluxo de eficiência (ρ, β) por skill, com exemplos e checklist | 🟡 Parcial — §2-3 (PU, cenários) desatualizadas frente ao FORMULARIO §25/§31 |
 | `docs/ALGEBRA_POOL_IMPLEMENTACAO.md` | Teoria de conjuntos do pool (Euler diagrams, perpetuação) | ✅ Completo |
 | `docs/EFICIENCIA_PRODUTIVA_CONSOLIDADA.md` | Como ρ e β fluem pelo pipeline | ✅ Completo |
 | `README.md` | Getting started, stack, skills disponíveis | ✅ Atualizado |

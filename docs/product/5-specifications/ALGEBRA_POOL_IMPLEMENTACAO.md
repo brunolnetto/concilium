@@ -589,9 +589,9 @@ $$\Delta C_{\text{perpetuar}} - \Delta C_{\text{desmobilizar+mobilizar}} < 0$$
 
 ## 10. Referências Cruzadas
 
-- **FORMULARIO_RIGOROSO_DERIVACAO.md:** Seções 13-19 (DAG, Pool, Perpetuação, BDI)
-- **MAPEAMENTO_TEORIA_CODIGO.md:** Seção E/F (Categorização de custos)
-- **PROVA_COMPLETA_TAU_431.md:** Validação numérica do modelo
+- **FORMULARIO_RIGOROSO_DERIVACAO.md:** §4 (DAG/precedência), §5 (Pool, Perpetuação, Euler/Shapley), §6 (Estoque), §7-8 (BDI/viabilidade) — numeração atualizada em 2026-08-18 (reescrita completa, 38→18 seções; era §12-18 na numeração de 2026-08-17)
+- ~~MAPEAMENTO_TEORIA_CODIGO.md~~ — removido do repositório (2026-08-18); estava superado pelo FORMULARIO desde 2026-08-17, mantido só como histórico até então
+- ~~PROVA_COMPLETA_TAU_431.md~~ — arquivo não existe no repositório
 - **ADR-071:** Fundamento de custos de pool
 - **ADR-079:** Gap máximo viável ($G_r^{\text{viável}}$)
 - **ADR-084:** Decomposição causal via Euler diagrams

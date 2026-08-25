@@ -109,7 +109,8 @@
         │ • CPU.preco_unitario (Fonte 2 fallback)  │
         │                                          │
         │ Cálculo (Precificação):                  │
-        │ ├─ PU_sem_bdi = C_h / (ρ × β)            │
+        │ ├─ PU_sem_bdi (partição pool/material,   │
+        │ │  ver FORMULARIO §12.1 — não C_h/ρβ)    │
         │ ├─ BDI por categoria (SBDI)              │
         │ ├─ PU_com_bdi = PU_sem_bdi × (1+BDI)     │
         │ ├─ Subtotal = PU × qtd                   │
@@ -190,9 +191,11 @@ SKILL-05 (Equipes)
 SKILL-06 (Resultado)
 ├─ Lê planejamento[].produtividade_catalogo (ρ original)
 ├─ Lê planejamento[].beta_praticabilidade (β)
-├─ Calcula PU_sem_bdi = C_h / (ρ × β)
+├─ Calcula PU_sem_bdi particionado pool/material (⚠️ não é C_h/(ρ×β) — ver nota abaixo)
 └─ Rastreia em canonical.planejamento[].produtividade_catalogo
 ```
+
+⚠️ **Correção (2026-08-17):** `PU_sem_bdi = C_h/(ρ×β)` (dividir todo o custo horário por ρ×β) foi a fórmula usada nesta seção — mas `FORMULARIO_RIGOROSO_DERIVACAO.md` §2.3/§11.3-11.4/§12 (auditado contra `_pe_gap_praticabilidade_abs`, NEP-043) mostra que só o custo de **pool** (MO+EQ) escala indiretamente com a eficiência (via mais semanas); **material/diesel não escala com β** — seu total é função só do quantitativo. Ver FORMULARIO §12.1 para a fórmula particionada correta.
 
 **Arquivo Central**: `config/catalogos/mendeslobo/produtividades/CPU-TERRA-ATI-04[1-9]-PROD-001.json`
 
@@ -243,7 +246,7 @@ SKILL-05 (Equipes)
 │
 SKILL-06 — PRECIFICAÇÃO (Resultado)
 ├─ Caminho A (Bottom-Up, recomendado)
-│  ├─ PU_sem_bdi = C_h / (ρ × β)
+│  ├─ PU_sem_bdi = partição pool/material (⚠️ não $C_h/(\rho\times\beta)$ — ver FORMULARIO §12.1)
 │  ├─ Lê de: canonical.resultado.custo, planejamento[].produtividade_catalogo
 │  └─ Armazena: planejamento[].preco_unitario
 │
@@ -254,7 +257,8 @@ SKILL-06 — PRECIFICAÇÃO (Resultado)
 │  └─ Armazena: planejamento[].preco_unitario
 │
 ├─ Aplicação de BDI
-│  ├─ BDI_MO = 34.7%, BDI_EQ = 34.7%, BDI_COMB = 4%
+│  ├─ BDI_MO ≈ 29,97%, BDI_EQ = blend locação/manutenção (FORMULARIO §9.2), BDI_MAT = BDI_COMB = 4%
+│  │  (⚠️ valores 34,7%/4% usados antes nesta seção estavam desatualizados — ver FORMULARIO §8.3)
 │  ├─ PU_com_bdi = PU_sem_bdi × (1 + BDI_médio_ponderado)
 │  └─ Armazena: planejamento[].preco_unitario_com_bdi
 │
@@ -465,6 +469,8 @@ Limitação (ADR-148)
 
 ## PIPELINE DE TRANSFORMAÇÃO — EXEMPLO CONCRETO (SV-001)
 
+⚠️ **Nota (2026-08-17):** os números de BDI/venda abaixo (a partir de SKILL-06) foram calculados com `BDI_MO=BDI_EQ=34,7%`, valor hoje sabido incorreto (ver correções acima e FORMULARIO §8.3, ≈29,97%). O fluxo estrutural (que skill lê/escreve o quê) continua válido; os valores numéricos finais de venda/margem deste exemplo são apenas ilustrativos de ordem de grandeza, não recalculados.
+
 ```
 ┌─ ENTRADA (N1)
 │  └─ quantitativo = 169.798,78 m²
@@ -495,20 +501,23 @@ Limitação (ADR-148)
 │  └─ Equipes_diretas[SV-001] = [{...semanas W45-W48, custos}]
 │
 ├─ SKILL-06 (PRECIFICAÇÃO)
-│  ├─ C_h / ρ = 1.770,75 / 582,75 = R$ 3,04/m² (sem BDI)
+│  ├─ C_h / ρ = 1.770,75 / 582,75 = R$ 3,04/m² (PU de catálogo, nominal — sem β;
+│  │  não confundir com PU **operacional**, que precisa da partição pool/material
+│  │  de FORMULARIO §12.1 quando β/ε≠1)
 │  │  [Observação: Valor real pode divergir se composição ajustada]
 │  │
-│  ├─ BDI aplicado por categoria
-│  │  ├─ PU_MO = 0,73 × (1 + 0,347) = R$ 0,98/m²
-│  │  ├─ PU_EQ = 0,69 × (1 + 0,347) = R$ 0,93/m²
+│  ├─ BDI aplicado por categoria (⚠️ valores abaixo corrigidos em 2026-08-17 —
+│  │  eram 0,347 para MO/EQ, que não bate com a calibração real; ver FORMULARIO §8.3)
+│  │  ├─ PU_MO = 0,73 × (1 + 0,2997) = R$ 0,95/m²
+│  │  ├─ PU_EQ = 0,69 × (1 + BDI_EQ_blend) — ver FORMULARIO §9.2 (blend locação/manutenção)
 │  │  ├─ PU_COMB = 1,88 × (1 + 0,04) = R$ 1,95/m²
-│  │  └─ PU_com_bdi = R$ 4,09/m²
+│  │  └─ PU_com_bdi ≈ R$ 3,9–4,1/m² (ordem de grandeza; recalcular com BDI_EQ real)
 │  │
 │  └─ Planejamento[SV-001] = {
 │         preco_unitario: {material: 0.42, diesel: 1.88, mao_obra: 0.73, eq: 0.69},
-│         bdi: {material: 0.347, diesel: 0.04, mao_obra: 0.347, eq: 0.347},
-│         preco_unitario_com_bdi: {total: 4.09},
-│         subtotal: {sem_bdi: 515.698, com_bdi: 694.657}
+│         bdi: {material: 0.04, diesel: 0.04, mao_obra: 0.2997, eq: "blend §9.2"},
+│         preco_unitario_com_bdi: {total: "recalcular"},
+│         subtotal: {sem_bdi: 515.698, com_bdi: "⚠️ 694.657 calculado com BDI 34,7% antigo — recalcular com as taxas corrigidas acima"}
 │     }
 │
 ├─ SKILL-06 (CONSOLIDAÇÃO — agregado 9 atividades)
