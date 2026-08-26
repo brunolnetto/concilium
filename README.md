@@ -435,7 +435,3 @@ Consulte os seguintes recursos para mais informações:
 - **Notas Técnicas de Engenharia:** `docs/engineering/5-technical_notes/`
 
 ---
-
-## 📄 Licença
-
-Este projeto é propriedade de **Mendes Lobo Construção**. Todos os direitos reservados.
