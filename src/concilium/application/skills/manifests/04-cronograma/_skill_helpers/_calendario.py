@@ -315,63 +315,42 @@ def _compute_ramp_profile(
     ramp_params: dict,
     n_pico: int,
 ) -> list[float]:
-    """ADR-074: Derive normalized ramp profile from ramp_params.
+    """Build the normalized formal workforce profile from ramp parameters.
 
     Returns a list of *duration_weeks* floats in [0.0, 1.0] where 1.0 = peak demand.
+    For $N=duration_weeks$ and $\tau \in [0,N)$, the raw workforce is exactly:
 
-    ramp_params keys:
-      n_inicial: int            starting resource count at week 0 (default: 0)
-      taxa_mobilizacao: float   resource units added per week during ramp-up
-                                (default: n_pico → instant ramp = flat at plateau)
-      taxa_desmobilizacao: float resource units removed per week during ramp-down
-                                (default: same as taxa_mobilizacao)
+        m(τ) = min(n_inicial + taxa_mobilizacao·τ,
+                   n_pico,
+                   n_final + taxa_desmobilizacao·(N - 1 - τ))
 
-    The three phases are:
-      Ramp-up:    t in [0, T_up)            → floor(n_inicial + taxa_mob * (t+1)), clamped to n_pico
-      Plateau:    t in [T_up, T_up+T_plat)  → n_pico
-      Ramp-down:  t in [T_up+T_plat, end)   → max(0, n_pico - taxa_demob * (offset+1))
-
-    If T_up + T_down > duration_weeks the plateau is 0 and ramp-down is truncated.
+    ``n_final`` is the strictly positive terminal floor. For legacy inputs that
+    omit it, n_pico preserves the historical no-ramp-down behavior.
     """
     if duration_weeks <= 0 or n_pico <= 0:
         return [0.0] * max(0, duration_weeks)
 
-    n_init = int(ramp_params.get("n_inicial", 0))
-    # Default: ramp up in 1 step (instant = flat at peak)
+    n_init = int(ramp_params.get("n_inicial", n_pico))
     taxa_mob = float(ramp_params.get("taxa_mobilizacao", float(n_pico)))
-    taxa_demob = float(ramp_params.get("taxa_desmobilizacao", taxa_mob))
+    taxa_demob = float(ramp_params.get("taxa_desmobilizacao", 0.0))
+    n_final = int(ramp_params.get("n_final", n_pico))
 
-    # Phase durations
-    if taxa_mob > 0 and n_pico > n_init:
-        t_up = math.ceil((n_pico - n_init) / taxa_mob)
-    else:
-        t_up = 0
-    if taxa_demob > 0:
-        t_down = math.ceil(n_pico / taxa_demob)
-    else:
-        t_down = 0
+    if not 0 <= n_init <= n_pico:
+        raise ValueError("n_inicial must be between 0 and n_pico")
+    if not 1 <= n_final <= n_pico:
+        raise ValueError("n_final must be between 1 and n_pico")
+    if taxa_mob < 0 or taxa_demob < 0:
+        raise ValueError("mobilization and demobilization rates must be non-negative")
 
-    t_plateau = max(0, duration_weeks - t_up - t_down)
-    # If ramp phases exceed duration, truncate ramp-down
-    if t_up + t_down > duration_weeks:
-        t_down = max(0, duration_weeks - t_up)
-        t_plateau = 0
-
-    profile: list[float] = []
-    for t in range(duration_weeks):
-        if t < t_up:
-            # Ramp-up: ceil garante que a semana tem equipes suficientes (ativa antes de plena)
-            val = min(n_pico, math.ceil(n_init + taxa_mob * (t + 1)))
-        elif t < t_up + t_plateau:
-            val = n_pico
-        else:
-            # Ramp-down: floor garante contagem inteira decrescente
-            offset = t - t_up - t_plateau
-            val = max(0, math.floor(n_pico - taxa_demob * (offset + 1)))
-        # Fração exata: val é int → val/n_pico codifica num_equipes sem arredondamento duplo
-        profile.append(val / n_pico)
-
-    return profile
+    return [
+        min(
+            n_init + taxa_mob * offset,
+            n_pico,
+            n_final + taxa_demob * (duration_weeks - 1 - offset),
+        )
+        / n_pico
+        for offset in range(duration_weeks)
+    ]
 
 
 def _mean_praticabilidade(canonical_in: CanonicalModel) -> float:
@@ -457,6 +436,18 @@ def _resolve_productivity_from_lookup(
         return None
 
     prod_item = producao_lookup[prod_id_ref]
+    from concilium.domain.services.sinergia_equipe import (
+        construir_producao_catalogo_para_sinergia,
+        resolver_producao_efetiva,
+    )
+
+    producao_sinergia = construir_producao_catalogo_para_sinergia(prod_item)
+    if producao_sinergia is not None:
+        resolucao = resolver_producao_efetiva(producao_sinergia)
+        validacoes.extend(resolucao.validacoes)
+        if resolucao.fonte == "derivado":
+            return resolucao.valor
+
     valor = prod_item.get("producao_horaria")
     if valor is None:
         valor = prod_item.get("valor_horario")  # fallback para arquivos antigos
