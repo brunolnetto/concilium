@@ -16,34 +16,47 @@ class WorkforcePolicy(BaseModel):
     The execution horizon (number of weeks) is derived from the policy plus
     productivity and quantity by WorkforcePolicySimulator.
 
-    Phase semantics:
-        1. Mobilization: n(t) = min(n_inicial + floor(t × taxa_mobilizacao), n_maximo)
-        2. Plateau:      n(t) = n_maximo  (unlimited if semanas_plateau is None)
-        3. Demobilization (forced only if semanas_plateau is set):
-                         n(t) = max(n_maximo - floor(j × taxa_desmobilizacao), 0)
-                         where j = weeks elapsed since plateau ended
+    For an execution horizon N, the workforce profile is:
+        n(t) = min(
+            n_inicial + taxa_mobilizacao × t,
+            n_maximo,
+            n_final + taxa_desmobilizacao × (N - 1 - t),
+        )
+
+    ``n_final`` is the formal terminal floor. It is strictly positive, so a
+    viable activity cannot demobilize to zero before its exact scope closure.
 
     Assumptions documented explicitly (ADR-054 §7.4):
         - Weekly granularity
         - n(t) is integer (floor applied to ramp)
-        - Demobilization during active production triggers VAL-WMP-03
-        - taxa_desmobilizacao = 0 means no wind-down is modelled
+                - taxa_desmobilizacao = 0 requires n_final = n_maximo
+                - Legacy semanas_plateau is retained only for input compatibility; it
+                    does not alter the formal profile.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    n_inicial: int = Field(ge=1, description="Teams at week 0 of activity (n_0)")
+    n_inicial: int = Field(
+        ge=0,
+        description="Teams at week 0 of activity (n_0). Formalism allows 0 for a start-from-zero mobilization.",
+    )
     n_maximo: int = Field(ge=1, description="Peak team count ceiling (n_max)")
     taxa_mobilizacao: float = Field(
-        gt=0,
+        ge=0,
         description="Teams added per week during ramp-up (c_mob). "
-        "Fractional values allowed: 0.5 = one extra team every 2 weeks.",
+        "Fractional values allowed: 0.5 = one extra team every 2 weeks. "
+        "0 is valid only for the rectangular degenerate case n_inicial == n_maximo.",
     )
     taxa_desmobilizacao: float = Field(
         default=0.0,
         ge=0,
         description="Teams removed per week after plateau (c_desmob). "
         "0 = no demobilization modelled during production horizon.",
+    )
+    n_final: int = Field(
+        default_factory=lambda data: 1 if data["taxa_desmobilizacao"] > 0 else data["n_maximo"],
+        ge=1,
+        description="Teams in the final productive week (m_1). Defaults to 1 with ramp-down and n_maximo otherwise.",
     )
     semanas_plateau: int | None = Field(
         default=None,
@@ -56,17 +69,40 @@ class WorkforcePolicy(BaseModel):
     def _validate_ordering(self) -> WorkforcePolicy:
         if self.n_maximo < self.n_inicial:
             raise ValueError(f"n_maximo ({self.n_maximo}) must be >= n_inicial ({self.n_inicial})")
+        if self.n_final > self.n_maximo:
+            raise ValueError(f"n_final ({self.n_final}) must be <= n_maximo ({self.n_maximo})")
+        if self.taxa_mobilizacao == 0 and self.n_inicial != self.n_maximo:
+            raise ValueError(
+                "taxa_mobilizacao=0 is only valid for the rectangular degenerate case "
+                "where n_inicial == n_maximo."
+            )
+        if self.taxa_desmobilizacao == 0 and self.n_final != self.n_maximo:
+            raise ValueError("taxa_desmobilizacao=0 requires n_final == n_maximo")
         return self
 
     @classmethod
     def imediato(cls, n_maximo: int) -> WorkforcePolicy:
         """Convenience: deploy all teams from week 0 (no ramp)."""
-        return cls(n_inicial=n_maximo, n_maximo=n_maximo, taxa_mobilizacao=n_maximo)
+        return cls(n_inicial=n_maximo, n_maximo=n_maximo, n_final=n_maximo, taxa_mobilizacao=n_maximo)
 
     @classmethod
     def padrao(cls, n_maximo: int, taxa_mobilizacao: float = 1.0) -> WorkforcePolicy:
         """Convenience: start with 1 team, ramp at given rate."""
-        return cls(n_inicial=1, n_maximo=n_maximo, taxa_mobilizacao=taxa_mobilizacao)
+        return cls(n_inicial=1, n_maximo=n_maximo, n_final=n_maximo, taxa_mobilizacao=taxa_mobilizacao)
+
+    def equipes_no_offset(self, duration_weeks: int, offset: int) -> float:
+        """Return the formal workforce count for one offset in a known horizon."""
+        if duration_weeks <= 0 or not 0 <= offset < duration_weeks:
+            raise ValueError("offset must belong to a positive execution horizon")
+        return min(
+            self.n_inicial + self.taxa_mobilizacao * offset,
+            self.n_maximo,
+            self.n_final + self.taxa_desmobilizacao * (duration_weeks - 1 - offset),
+        )
+
+    def build_profile(self, duration_weeks: int) -> list[float]:
+        """Build the exact formal workforce profile for a known horizon."""
+        return [self.equipes_no_offset(duration_weeks, offset) for offset in range(max(0, duration_weeks))]
 
 
 class CurvaForcaSemanal(BaseModel):
@@ -79,7 +115,7 @@ class CurvaForcaSemanal(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     semana_offset: int = Field(ge=0, description="0-indexed week within this activity")
-    num_equipes: int = Field(ge=0)
+    num_equipes: float = Field(ge=0)
     eficiencia: float = Field(ge=0.0, le=1.0, description="Practicability factor p(t)")
     qtd_executada: float = Field(ge=0.0)
     qtd_acumulada: float = Field(ge=0.0)
@@ -128,22 +164,22 @@ class CurvaForca(BaseModel):
         return not self.incompleta and self.delivered >= self.quantitativo_alvo
 
     @property
-    def peak_teams(self) -> int:
+    def peak_teams(self) -> float:
         """Maximum teams deployed in any single week."""
         return max((s.num_equipes for s in self.semanas), default=0)
 
     @property
-    def total_team_weeks(self) -> int:
+    def total_team_weeks(self) -> float:
         """Sum of num_equipes across all weeks — proportional to total labour cost."""
         return sum(s.num_equipes for s in self.semanas)
 
-    def to_num_equipes_por_semana(self) -> dict[str, int]:
+    def to_num_equipes_por_semana(self) -> dict[str, float]:
         """Convert to the historical Skill 04 MANUAL mode input format.
 
         Returns {semana_iso: num_equipes} for all weeks where semana_iso is known.
         Falls back to str(offset) as key when not anchored to calendar.
         """
-        result: dict[str, int] = {}
+        result: dict[str, float] = {}
         for s in self.semanas:
             key = s.semana_iso if s.semana_iso else str(s.semana_offset)
             result[key] = s.num_equipes

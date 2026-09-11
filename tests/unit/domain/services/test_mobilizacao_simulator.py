@@ -39,15 +39,19 @@ def make_policy(
     n_maximo: int = 5,
     taxa_mobilizacao: float = 1.0,
     taxa_desmobilizacao: float = 0.0,
+    n_final: int | None = None,
     semanas_plateau: int | None = None,
 ) -> WorkforcePolicy:
-    return WorkforcePolicy(
-        n_inicial=n_inicial,
-        n_maximo=n_maximo,
-        taxa_mobilizacao=taxa_mobilizacao,
-        taxa_desmobilizacao=taxa_desmobilizacao,
-        semanas_plateau=semanas_plateau,
-    )
+    payload = {
+        "n_inicial": n_inicial,
+        "n_maximo": n_maximo,
+        "taxa_mobilizacao": taxa_mobilizacao,
+        "taxa_desmobilizacao": taxa_desmobilizacao,
+        "semanas_plateau": semanas_plateau,
+    }
+    if n_final is not None:
+        payload["n_final"] = n_final
+    return WorkforcePolicy(**payload)
 
 
 # ---------------------------------------------------------------------------
@@ -75,13 +79,14 @@ class TestMobilizacaoPolicyValidation:
         with pytest.raises(ValueError, match="n_maximo"):
             WorkforcePolicy(n_inicial=5, n_maximo=3, taxa_mobilizacao=1.0)
 
-    def test_n_inicial_zero_raises(self):
-        with pytest.raises(ValidationError):
-            WorkforcePolicy(n_inicial=0, n_maximo=5, taxa_mobilizacao=1.0)
+    def test_n_inicial_zero_is_valid(self):
+        p = WorkforcePolicy(n_inicial=0, n_maximo=5, taxa_mobilizacao=1.0)
+        assert p.n_inicial == 0
+        assert p.n_maximo == 5
 
-    def test_taxa_mobilizacao_zero_raises(self):
-        with pytest.raises(ValidationError):
-            WorkforcePolicy(n_inicial=1, n_maximo=5, taxa_mobilizacao=0.0)
+    def test_taxa_mobilizacao_zero_raises_for_non_rectangular_profile(self):
+        with pytest.raises(ValueError, match="rectangular degenerate"):
+            WorkforcePolicy(n_inicial=0, n_maximo=5, taxa_mobilizacao=0.0)
 
     def test_taxa_desmobilizacao_negative_raises(self):
         with pytest.raises(ValidationError):
@@ -128,6 +133,15 @@ class TestSimulatorNormalCases:
         assert math.isclose(curva.semanas[0].qtd_executada, Q, rel_tol=1e-6)
         assert math.isclose(curva.delivered, Q, rel_tol=1e-6)
 
+    def test_rectangular_profile_with_zero_ramp_is_constant(self, sim: WorkforcePolicySimulator):
+        """Formalismo: when μ+ = μ- = 0, the profile is rectangular and constant at n_maximo."""
+        policy = WorkforcePolicy(n_inicial=4, n_maximo=4, taxa_mobilizacao=0.0)
+        curva = sim.simulate(policy, "act-rectangular", 100_000.0, 250.0, 6, 8)
+
+        assert curva.is_complete
+        assert all(s.num_equipes == 4 for s in curva.semanas)
+        assert all(s.qtd_executada > 0 for s in curva.semanas)
+
     def test_linear_ramp(self, sim: WorkforcePolicySimulator):
         """Ramp from 1 to 5 teams at 1/week. Verify n(t) curve."""
         policy = make_policy(n_inicial=1, n_maximo=5, taxa_mobilizacao=1.0)
@@ -156,9 +170,9 @@ class TestSimulatorNormalCases:
         curva = sim.simulate(policy, "act-frac", Q, P, m, h)
 
         assert curva.is_complete
-        # t=0: floor(1+0*0.5)=1, t=1: floor(1+0.5)=1, t=2: floor(1+1)=2
+        # A fórmula formal preserva a taxa fracionária, sem arredondamento semanal.
         assert curva.semanas[0].num_equipes == 1
-        assert curva.semanas[1].num_equipes == 1
+        assert curva.semanas[1].num_equipes == 1.5
         assert curva.semanas[2].num_equipes == 2
         assert curva.semanas[4].num_equipes == 3
 
@@ -282,45 +296,38 @@ class TestSimulatorEdgeCases:
         assert math.isclose(curva.delivered, Q, rel_tol=1e-6)
 
     @pytest.mark.slow
-    def test_demobilization_before_completion(self, sim: WorkforcePolicySimulator):
-        """If demobilization drives n to 0 before Q, curve is incompleta."""
-        # plateau=2 weeks, desmob=2/week → n drops to 0 after 2+1=3 weeks of plateau
+    def test_terminal_floor_keeps_activity_feasible(self, sim: WorkforcePolicySimulator):
+        """The formal terminal floor prevents premature zero-workforce termination."""
         policy = make_policy(
             n_inicial=4,
             n_maximo=4,
             taxa_mobilizacao=4.0,  # instant ramp
             taxa_desmobilizacao=2.0,
-            semanas_plateau=1,  # only 1 week plateau, then desmob at 2/week
+            semanas_plateau=1,
         )
-        # After plateau (t=0..1), desmob at 2/week → t=2: n=4-2=2, t=3: n=4-4=0
-        # Very large Q that cannot be delivered in 3 active weeks
-        Q = 999_999_999.0
+        Q = 100_000.0
         P = 100.0
         curva = sim.simulate(policy, "act-desmob", Q, P, 6, 8)
 
-        # Eventually n drops to 0 and stays there — production stops
-        # Curve must be incompleta
-        assert curva.incompleta
-        assert not curva.is_complete
-        # Verify n goes to 0 in the later weeks
-        late_weeks = [s for s in curva.semanas if s.num_equipes == 0]
-        assert len(late_weeks) > 0
+        assert curva.is_complete
+        assert curva.semanas[-1].num_equipes >= policy.n_final
 
-    def test_no_demobilization_without_plateau(self, sim: WorkforcePolicySimulator):
-        """taxa_desmobilizacao > 0 but semanas_plateau=None → no desmob during production."""
+    def test_explicit_peak_terminal_floor_disables_demobilization(self, sim: WorkforcePolicySimulator):
+        """n_final=n_maximo keeps a rectangular terminal profile."""
         policy = make_policy(
             n_inicial=2,
             n_maximo=5,
             taxa_mobilizacao=1.0,
             taxa_desmobilizacao=1.0,
+            n_final=5,
             semanas_plateau=None,
         )
         Q = 500_000.0
         curva = sim.simulate(policy, "act-nodesmob", Q, 300.0, 6, 8)
 
-        # All weeks after ramp should have n=5 (no demobilization applied)
+        # All weeks after ramp stay at the declared terminal floor/peak.
         post_ramp = [s for s in curva.semanas if s.num_equipes < 5 and s.semana_offset >= 3]
-        assert len(post_ramp) == 0, "Demobilization should not occur without semanas_plateau"
+        assert len(post_ramp) == 0
         assert curva.is_complete
 
     def test_praticabilidade_extends_duration(self, sim: WorkforcePolicySimulator):
@@ -496,9 +503,9 @@ class TestSkill04Integration:
 
         mapa = curva.to_num_equipes_por_semana()
 
-        # Verify format: {ISO_week: int}
+        # Verify format: {ISO_week: float}
         assert all(isinstance(k, str) and "-W" in k for k in mapa.keys())
-        assert all(isinstance(v, int) and v >= 0 for v in mapa.values())
+        assert all(isinstance(v, (int, float)) and v >= 0 for v in mapa.values())
 
         # Verify the curve is monotone up to n_maximo in the ramp phase
         sorted_weeks = sorted(mapa.items())

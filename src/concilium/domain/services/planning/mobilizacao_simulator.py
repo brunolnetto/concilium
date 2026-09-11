@@ -144,48 +144,37 @@ class WorkforcePolicySimulator:
         prat_semanal: dict[str, float] | None,
         semanas_iso_por_offset: dict[int, str] | None,
     ) -> tuple[list[CurvaForcaSemanal], bool]:
-        semanas: list[CurvaForcaSemanal] = []
-        qtd_acumulada = 0.0
-        incompleta = False
+        if producao_semanal_base <= 0:
+            return [], True
 
-        for t in range(max_weeks):
-            if qtd_acumulada >= quantitativo:
-                break
-
-            n_t = self._compute_n(policy, t)
-            semana_iso = semanas_iso_por_offset.get(t) if semanas_iso_por_offset else None
-            eficiencia = self._lookup_eficiencia(semana_iso, prat_semanal)
-
-            qtd_semana_max = producao_semanal_base * eficiencia * n_t
-            remanescente = quantitativo - qtd_acumulada
-            qtd_semana = min(qtd_semana_max, remanescente)
-            qtd_acumulada = round(qtd_acumulada + qtd_semana, 6)
-
-            semanas.append(
-                CurvaForcaSemanal(
-                    semana_offset=t,
-                    num_equipes=n_t,
-                    eficiencia=round(eficiencia, 6),
-                    qtd_executada=round(qtd_semana, 4),
-                    qtd_acumulada=round(qtd_acumulada, 4),
-                    semana_iso=semana_iso,
+        duration_initial = max(1, math.ceil(quantitativo / (producao_semanal_base * policy.n_maximo)))
+        last_curve: list[CurvaForcaSemanal] = []
+        for duration_weeks in range(duration_initial, max_weeks + 1):
+            semanas: list[CurvaForcaSemanal] = []
+            qtd_acumulada = 0.0
+            for t, n_t in enumerate(policy.build_profile(duration_weeks)):
+                semana_iso = semanas_iso_por_offset.get(t) if semanas_iso_por_offset else None
+                eficiencia = self._lookup_eficiencia(semana_iso, prat_semanal)
+                qtd_semana_max = producao_semanal_base * eficiencia * n_t
+                qtd_semana = min(qtd_semana_max, quantitativo - qtd_acumulada)
+                qtd_acumulada = round(qtd_acumulada + qtd_semana, 6)
+                semanas.append(
+                    CurvaForcaSemanal(
+                        semana_offset=t,
+                        num_equipes=n_t,
+                        eficiencia=round(eficiencia, 6),
+                        qtd_executada=round(qtd_semana, 4),
+                        qtd_acumulada=round(qtd_acumulada, 4),
+                        semana_iso=semana_iso,
+                    )
                 )
-            )
-
-            # Early exit: n dropped to zero and demobilization is finite (semanas_plateau
-            # set). Once past plateau, n is monotonically decreasing — n=0 is permanent.
-            # Record the zero-week above first so the curve includes it, then terminate.
-            if n_t == 0 and policy.semanas_plateau is not None:
-                incompleta = True
-                break
-        else:
-            # for-loop exhausted max_weeks without delivering Q
-            incompleta = True
-
-        return semanas, incompleta
+            if qtd_acumulada >= quantitativo:
+                return semanas, False
+            last_curve = semanas
+        return last_curve, True
 
     def _compute_n(self, policy: WorkforcePolicy, t: int) -> int:
-        """Return the integer team count at week offset t.
+        """Return the legacy unbounded team count at week offset t.
 
         Phase 1 — Mobilization:
             n(t) = min(floor(n_inicial + t × taxa_mobilizacao), n_maximo)
@@ -229,9 +218,11 @@ class WorkforcePolicySimulator:
             semanas_plateau = n - r - d     (onde n = duração total em semanas)
             taxa_desmobilizacao = m_max / d
         """
-        # Week at which n_maximo is first reached. taxa_mobilizacao é sempre > 0
-        # (WorkforcePolicy.taxa_mobilizacao usa Field(gt=0) em modelo frozen),
-        # logo a divisão abaixo nunca ocorre por zero.
+        if policy.taxa_mobilizacao <= 0:
+            # Formalismo: degenerate rectangular profile, μ+ = μ- = 0 => n(t)=n_maximo.
+            return policy.n_maximo
+
+        # Week at which n_maximo is first reached.
         t_ramp = math.ceil((policy.n_maximo - policy.n_inicial) / policy.taxa_mobilizacao)
 
         if t < t_ramp:
