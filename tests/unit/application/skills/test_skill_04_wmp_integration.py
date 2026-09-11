@@ -185,6 +185,28 @@ class TestWMPExpansion:
         late_weeks = [s for s in curva.semanas if s.semana_offset >= 4]
         assert all(s.num_equipes == 5 for s in late_weeks), "Should plateau at n_maximo"
 
+    def test_fractional_ramp_is_preserved_in_weekly_distribution(self):
+        """The formal WMP profile keeps fractional workforce through Skill 04."""
+        canonical = _make_canonical_with_eap([_eap_item(1, quantitativo=500_000.0)])
+        catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 100.0}])
+
+        result = run_cronograma(
+            canonical,
+            {
+                "mobilizacao_policies": {
+                    "eap-01": {"n_inicial": 1, "n_maximo": 3, "taxa_mobilizacao": 0.5},
+                }
+            },
+            catalogo=catalogo,
+        )
+
+        assert not result.has_errors
+        curva = next(c for c in result.canonical.curvas_forca if c.atividade_id == "eap-01")
+        assert curva.semanas[1].num_equipes == 1.5
+        scheduled = next(sa for sa in result.canonical.cronograma.scheduled_activities if sa.activity_id == "eap-01")
+        second_week = curva.semanas[1].semana_iso
+        assert scheduled.distribuicao_semanal[second_week].num_equipes == 1.5
+
     def test_complete_delivery_of_quantitativo(self):
         """WMP curve must fully deliver quantitativo."""
         Q = 30_000.0
@@ -391,19 +413,12 @@ class TestWMPValidationCodes:
         val_codes = [v.codigo for v in result.validacoes]
         assert "VAL-WMP-POOL" in val_codes
 
-    def test_val_wmp_desmob_forced_before_delivery(self):
-        """VAL-WMP-DESMOB emitted when plateau+desmob prevents full delivery.
-
-        Setup: n_maximo=3, plateau=1, desmob=3/week → n drops to 0 at week 2.
-        Max deliverable = week0(3) + week1(3) = 6 × 400 = 2,400 units.
-        Q = 50,000 >> 2,400 → incompleta → VAL-WMP-DESMOB.
-        guard = MAX_MULTIPLIER × ceil(50,000 / (400×6×8×3)) ≈ 10 × 4 = 40 iterations (fast).
-        """
+    def test_terminal_floor_completes_desmobilized_policy(self):
+        """A formal terminal floor keeps the WMP curve productive until exact closure."""
         P = 400.0
         n_max = 3
         m, h = 6, 8
-        max_deliverable = P * m * h * n_max * 2  # only 2 active weeks (plateau=1, then desmob kills)
-        Q = max_deliverable * 10  # comfortably impossible
+        Q = P * m * h * n_max * 20
 
         canonical = _make_canonical_with_eap([_eap_item(1, quantitativo=Q)])
         catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": P}])
@@ -416,8 +431,9 @@ class TestWMPValidationCodes:
                         "n_inicial": n_max,
                         "n_maximo": n_max,
                         "taxa_mobilizacao": float(n_max),  # instant ramp
-                        "taxa_desmobilizacao": float(n_max),  # full desmob in 1 week
-                        "semanas_plateau": 1,  # only 1 week at plateau, then immediate desmob
+                        "taxa_desmobilizacao": float(n_max),
+                        "n_final": 1,
+                        "semanas_plateau": 1,
                     },
                 }
             },
@@ -425,7 +441,10 @@ class TestWMPValidationCodes:
         )
 
         val_codes = [v.codigo for v in result.validacoes]
-        assert "VAL-WMP-DESMOB" in val_codes
+        assert "VAL-WMP-OK" in val_codes
+        curva = next(c for c in result.canonical.curvas_forca if c.atividade_id == "eap-01")
+        assert curva.is_complete
+        assert curva.semanas[-1].num_equipes >= 1
 
     def test_no_wmp_validation_without_policies(self):
         """Skill 04 runs cleanly with no WMP codes when mobilizacao_policies absent."""

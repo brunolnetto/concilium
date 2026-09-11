@@ -258,7 +258,7 @@ def _emm_process_item(
         distribuicao[semana_key] = cell
     erros_completude = []
     pct_completude = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
-    if pct_completude < 0.999:
+    if qtd_acumulada < item.quantitativo:
         erros_completude.append((item.item_id, round(pct_completude, 4)))
     erros_vazios = _emm_find_vazios(item.item_id, distribuicao, semanas_obra)
     return distribuicao, erros_completude, erros_vazios, is_fallback
@@ -266,7 +266,7 @@ def _emm_process_item(
 
 def _execute_manual_mode(
     canonical_in: CanonicalModel,
-    num_equipes_por_item: dict[str, dict[str, int]],
+    num_equipes_por_item: dict[str, dict[str, float]],
     semanas_obra: list[str],
     cpu_lookup: dict[str, dict],
     producao_lookup: dict[str, dict],

@@ -38,6 +38,9 @@ class Activity:
     # Actual demand for resource r at week offset t = max(0, round(required_resources[r] × ramp_profile[t]))
     # None = flat demand (historical behaviour, no change).
     ramp_profile: list[float] | None = None
+    # Formal workforce parameters retained so the profile can be rebuilt after
+    # the real calendar start and duration are known.
+    ramp_params: dict[str, object] | None = None
     # ADR-181 F1: soma de leadtime_aquisicao_semanas + leadtime_mob_semanas (semanas
     # de "resource readiness" — contratação + deslocamento físico — antes que a
     # atividade possa começar). É um FLOOR absoluto a partir de t=0 (max() com o
@@ -177,6 +180,7 @@ class ScheduledActivity:
     assigned_resources: dict[str, int] = field(default_factory=dict)
     # ADR-074: propagated from Activity.ramp_profile for post-scheduling cost computation
     ramp_profile: list[float] | None = None
+    ramp_params: dict[str, object] | None = None
 
 
 @dataclass

@@ -109,6 +109,22 @@ class TestBuildDistCell:
         # identidade: fator_total = η_s × η_p × η_w
         assert abs(cell.fator_total - cell.eta_s * cell.eta_p * cell.eta_w) < 1e-4
 
+    def test_fechamento_preserva_quantitativo_sem_arredondamento_de_exibicao(self):
+        """O fechamento físico mantém casas decimais além do formato monetário."""
+        quantitativo = 100.005
+        cell = _cron._build_dist_cell(
+            producao_semanal_base=200.0,
+            num_eq=1,
+            n_max=1,
+            fator_clima=1.0,
+            fator_calendario=1.0,
+            quantitativo=quantitativo,
+            qtd_acumulada=0.0,
+        )
+
+        assert cell.qtd_executada == quantitativo
+        assert cell.qtd_acumulada == quantitativo
+
     def test_identidade_fator_total_eta_produto(self):
         # fator_total deve ser sempre η_s × η_p × η_w (identidade fundamental)
         for n_eq, n_max, clima, calend in [

@@ -1444,6 +1444,87 @@ class TestConvertScheduleToDistribuicaoUnmapped:
         assert fallback_item_ids == set()
         assert not any(v.codigo == "VAL-CRON-CONVERT" for v in validacoes)
 
+    def test_ss_precedence_is_not_delayed_by_physical_completion_threshold(self):
+        """Only FS applies the physical-quantity threshold during materialization."""
+        from concilium.domain.models.canonical import EapItem, PrecedenciaItem, ScheduledActivityCanonical
+
+        canonical = _make_canonical()
+        predecessor = EapItem(item_id="A", ordem=1, cpu_id="CPU-A", descricao="A", unidade="m", quantitativo=100.0)
+        successor = EapItem(
+            item_id="B",
+            ordem=2,
+            cpu_id="CPU-B",
+            descricao="B",
+            unidade="m",
+            quantitativo=10.0,
+            predecessores=[PrecedenciaItem(item_id="A", tipo="SS", lag=1, completion_threshold_pct=1.0)],
+        )
+        canonical = canonical.model_copy(update={"eap": [predecessor, successor]})
+        predecessor_sa = ScheduledActivityCanonical(activity_id="A", start_week=0, end_week=2, duration_weeks=3)
+        successor_sa = ScheduledActivityCanonical(activity_id="B", start_week=1, end_week=1, duration_weeks=1)
+        weeks = ["2025-W02", "2025-W03", "2025-W04", "2025-W05"]
+
+        distribution, _fallbacks = _convert_schedule_to_distribuicao(
+            SimpleNamespace(scheduled_activities=[predecessor_sa, successor_sa]),
+            canonical,
+            weeks,
+            {
+                "CPU-A": {"codigo": "CPU-A", "producao_id_ref": "P-A"},
+                "CPU-B": {"codigo": "CPU-B", "producao_id_ref": "P-B"},
+            },
+            {
+                "P-A": {"producao_horaria": 2.5},
+                "P-B": {"producao_horaria": 2.5},
+            },
+            SimpleNamespace(horas_dia=8, dias_semana=5, eta_jornada=1.0),
+            {},
+            {},
+            {week: 1.0 for week in weeks},
+            [],
+        )
+
+        assert list(distribution["B"]) == ["2025-W03"]
+
+    def test_fs_successor_is_blocked_when_predecessor_never_reaches_threshold(self):
+        from concilium.domain.models.canonical import EapItem, PrecedenciaItem, ScheduledActivityCanonical
+
+        canonical = _make_canonical()
+        predecessor = EapItem(item_id="A", ordem=1, cpu_id="CPU-A", descricao="A", unidade="m", quantitativo=100.0)
+        successor = EapItem(
+            item_id="B",
+            ordem=2,
+            cpu_id="CPU-B",
+            descricao="B",
+            unidade="m",
+            quantitativo=10.0,
+            predecessores=[PrecedenciaItem(item_id="A", tipo="FS", completion_threshold_pct=1.0)],
+        )
+        canonical = canonical.model_copy(update={"eap": [predecessor, successor]})
+        predecessor_sa = ScheduledActivityCanonical(activity_id="A", start_week=0, end_week=0, duration_weeks=1)
+        successor_sa = ScheduledActivityCanonical(activity_id="B", start_week=1, end_week=1, duration_weeks=1)
+        weeks = ["2025-W02", "2025-W03"]
+        validacoes = []
+
+        distribution, _fallbacks = _convert_schedule_to_distribuicao(
+            SimpleNamespace(scheduled_activities=[predecessor_sa, successor_sa]),
+            canonical,
+            weeks,
+            {
+                "CPU-A": {"codigo": "CPU-A", "producao_id_ref": "P-A"},
+                "CPU-B": {"codigo": "CPU-B", "producao_id_ref": "P-B"},
+            },
+            {"P-A": {"producao_horaria": 2.5}, "P-B": {"producao_horaria": 2.5}},
+            SimpleNamespace(horas_dia=8, dias_semana=5, eta_jornada=1.0),
+            {week: 0.0 for week in weeks},
+            {},
+            {week: 1.0 for week in weeks},
+            validacoes,
+        )
+
+        assert all(cell.qtd_acumulada == 0.0 for cell in distribution["A"].values())
+        assert distribution["B"] == {}
+        assert any(validation.codigo == "VAL-CRON-PRECEDENCIA" and validation.status == "ERRO" for validation in validacoes)
+
 
 # ---------------------------------------------------------------------------
 # _check_wmp_pool — peak demand vs pool branches (1660->1661, 1664->1658)

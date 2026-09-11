@@ -27,6 +27,44 @@ _build_cpu_lookup = _MOD._build_cpu_lookup
 _build_producao_lookup = _MOD._build_producao_lookup
 _build_insumos_lookup = _MOD._build_insumos_lookup
 _custo_hora_equipe = _MOD._custo_hora_equipe
+_resolve_productivity = _MOD._resolve_productivity
+
+
+class TestResolveProductivity:
+    def test_uses_derived_productivity_from_valid_synergy_graph(self):
+        cpu = {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}
+        producao_lookup = {
+            "PROD-01": {
+                "id": "PROD-01",
+                "codigo": "CPU-01",
+                "descricao": "Escavacao mecanizada",
+                "producao_horaria": 100.0,
+                "unidade": "m3",
+                "origem": "PROPRIA",
+                "composicao_padrao_equipe": {
+                    "funcoes": [],
+                    "equipamentos": [
+                        {"equip_id": "ESC-01", "num_unidades": 1},
+                        {"equip_id": "CAM-01", "num_unidades": 2},
+                    ],
+                    "materiais": [],
+                },
+                "grafo_sinergia": {
+                    "relacoes": [],
+                    "capacidades": [
+                        {"elemento_id": "ESC-01", "capacidade_horaria": 60.0, "unidade": "m3"},
+                        {"elemento_id": "CAM-01", "capacidade_horaria": 40.0, "unidade": "m3"},
+                    ],
+                },
+            }
+        }
+        validacoes = []
+
+        valor, is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
+
+        assert valor == 60.0
+        assert is_fallback is False
+        assert any(validacao.codigo == "VAL-SINERGIA-02" for validacao in validacoes)
 
 
 # ===========================================================================
@@ -544,23 +582,24 @@ class TestComputeRampProfile:
         params = {"n_inicial": 0, "taxa_mobilizacao": 4.0, "taxa_desmobilizacao": 0.0}
         result = _compute_ramp_profile(4, params, 4)
         assert len(result) == 4
-        assert all(v == pytest.approx(1.0) for v in result)
+        assert result[0] == pytest.approx(0.0)
+        assert all(v == pytest.approx(1.0) for v in result[1:])
 
     def test_ramp_up_then_plateau(self):
         # n_pico=4, n_inicial=0, taxa_mobilizacao=2 → t_up=2, no ramp_down
         params = {"n_inicial": 0, "taxa_mobilizacao": 2.0, "taxa_desmobilizacao": 0.0}
         result = _compute_ramp_profile(5, params, 4)
         assert len(result) == 5
-        # Week 0: min(4, ceil(0 + 2*1)) = 2 → 2/4 = 0.5
-        assert result[0] == pytest.approx(0.5)
-        # Week 1: min(4, ceil(0 + 2*2)) = 4 → 1.0
-        assert result[1] == pytest.approx(1.0)
+        # Week 0: floor(0 + 2*0) = 0 → 0/4 = 0.0
+        assert result[0] == pytest.approx(0.0)
+        # Week 1: floor(0 + 2*1) = 2 → 2/4 = 0.5
+        assert result[1] == pytest.approx(0.5)
         # Weeks 2-4: plateau → 1.0
         assert all(v == pytest.approx(1.0) for v in result[2:])
 
     def test_ramp_down(self):
         # n_pico=4, instant ramp up, ramp down with taxa=2
-        params = {"n_inicial": 4, "taxa_mobilizacao": 4.0, "taxa_desmobilizacao": 2.0}
+        params = {"n_inicial": 4, "taxa_mobilizacao": 4.0, "taxa_desmobilizacao": 2.0, "n_final": 2}
         result = _compute_ramp_profile(4, params, 4)
         assert len(result) == 4
         # With n_inicial=4=n_pico, t_up=0
@@ -569,10 +608,33 @@ class TestComputeRampProfile:
         # weeks 0,1 → plateau → 1.0
         assert result[0] == pytest.approx(1.0)
         assert result[1] == pytest.approx(1.0)
-        # weeks 2,3 → ramp down: offset=0 → max(0, floor(4-2*1))=2 → 2/4=0.5
-        assert result[2] == pytest.approx(0.5)
-        # offset=1 → max(0, floor(4-2*2))=0 → 0.0
-        assert result[3] == pytest.approx(0.0)
+        # weeks 2,3 → ramp down: offset=0 keeps peak, then decreases
+        assert result[2] == pytest.approx(1.0)
+        assert result[3] == pytest.approx(0.5)
+
+    def test_formal_profile_is_minimum_of_three_lines_with_terminal_floor(self):
+        params = {
+            "n_inicial": 1,
+            "taxa_mobilizacao": 2.0,
+            "taxa_desmobilizacao": 1.0,
+            "n_final": 1,
+        }
+
+        # m(t) = min(1 + 2t, 4, 1 + 1(4 - t)), t = 0..4
+        assert _compute_ramp_profile(5, params, 4) == pytest.approx([0.25, 0.75, 0.75, 0.5, 0.25])
+
+    def test_explicit_plateau_is_respected(self):
+        params = {
+            "n_inicial": 1,
+            "taxa_mobilizacao": 1.0,
+            "taxa_desmobilizacao": 1.0,
+            "semanas_plateau": 2,
+        }
+        result = _compute_ramp_profile(6, params, 4)
+        assert len(result) == 6
+        assert result[:3] == [pytest.approx(0.25), pytest.approx(0.5), pytest.approx(0.75)]
+        assert result[3] == pytest.approx(1.0)
+        assert result[4] == pytest.approx(1.0)
 
     def test_profile_length_matches_duration(self):
         params = {"taxa_mobilizacao": 1.0, "taxa_desmobilizacao": 1.0}

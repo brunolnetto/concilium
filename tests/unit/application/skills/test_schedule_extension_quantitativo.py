@@ -98,11 +98,11 @@ class TestBuildActivityDistribuicaoExtensao:
         assert len(distribuicao) == 3
         assert qtd_acumulada == 30.0
 
-    def test_extends_beyond_duration_weeks_to_complete_quantitativo(self):
-        """η_p real (clima=0.5) reduz a capacidade semanal — loop estende até fechar Q."""
+    def test_searches_longer_duration_within_real_calendar(self):
+        """Clima adverso aumenta N_i, mas apenas dentro do calendário disponível."""
         sa = _sa(start_week=0, duration_weeks=3, num_eq=1)
         item = SimpleNamespace(quantitativo=30.0)
-        semanas_obra = ["2026-W02", "2026-W03", "2026-W04"]
+        semanas_obra = ["2026-W02", "2026-W03", "2026-W04", "2026-W05", "2026-W06", "2026-W07"]
         prat_semanal = {s: 0.5 for s in semanas_obra}
 
         distribuicao, qtd_acumulada = _build_activity_distribuicao(
@@ -119,18 +119,12 @@ class TestBuildActivityDistribuicaoExtensao:
             fator_calendario_semanal={},
         )
 
-        # capacidade semanal = 10 * 1 * 0.5 = 5/sem; para fechar 30, precisa de 6 semanas
-        # (as 3 nominais + 3 extras, além de sa.duration_weeks, sem novo AVISO de teto).
+        # capacidade semanal = 10 * 1 * 0.5 = 5/sem; para fechar 30, N_i=6.
         assert len(distribuicao) == 6
         assert qtd_acumulada == 30.0
-        # As semanas extras (offset 3..5) excedem semanas_obra (len=3) — exercitam o
-        # fallback de _iso_week_key(data_inicio + timedelta(weeks=week_num)).
-        extra_keys = set(distribuicao) - set(semanas_obra)
-        assert len(extra_keys) == 3
 
-    def test_extension_stops_at_safety_cap_and_warns(self, monkeypatch):
-        """Praticabilidade zero: mesmo estendendo, nunca fecha Q — teto de segurança para o loop."""
-        monkeypatch.setattr(_mod_scheduling, "TETO_EXTENSAO_CRONOGRAMA_SEMANAS", 5)
+    def test_reports_infeasibility_when_known_calendar_cannot_close_scope(self):
+        """Praticabilidade nula no calendário disponível não cria semanas fictícias."""
         sa = _sa(start_week=0, duration_weeks=3, num_eq=1)
         item = SimpleNamespace(quantitativo=30.0)
         semanas_obra = ["2026-W02", "2026-W03", "2026-W04"]
@@ -150,7 +144,7 @@ class TestBuildActivityDistribuicaoExtensao:
             fator_calendario_semanal={},
         )
 
-        assert len(distribuicao) == 5  # parou no teto (monkeypatched para 5), não indefinidamente
+        assert distribuicao == {}
         assert qtd_acumulada == 0.0
 
         validacoes = []
@@ -158,14 +152,14 @@ class TestBuildActivityDistribuicaoExtensao:
         assert len(validacoes) == 1
         assert validacoes[0].codigo == "VAL-CRON-01"
         assert validacoes[0].status == "AVISO"
-        assert "teto de segurança" in validacoes[0].mensagem
-        assert "0.0%" in validacoes[0].mensagem
+        assert "calendário disponível" in validacoes[0].mensagem
+        assert "0.0000%" in validacoes[0].mensagem
 
-    def test_no_warning_when_quantitativo_is_fully_delivered(self):
-        """Com a extensão, o caso comum (sub-entrega na janela nominal) não gera mais AVISO."""
+    def test_no_warning_when_real_calendar_closes_scope(self):
+        """A busca de N_i não alerta quando há semanas reais suficientes para fechar Q."""
         sa = _sa(start_week=0, duration_weeks=3, num_eq=1)
         item = SimpleNamespace(quantitativo=30.0)
-        semanas_obra = ["2026-W02", "2026-W03", "2026-W04"]
+        semanas_obra = ["2026-W02", "2026-W03", "2026-W04", "2026-W05", "2026-W06", "2026-W07"]
         prat_semanal = {s: 0.5 for s in semanas_obra}
 
         _distribuicao, qtd_acumulada = _build_activity_distribuicao(
@@ -239,6 +233,28 @@ class TestBuildScheduledActivityForItemDurationRecompute:
         )
 
         assert sa_out.duration_weeks == 3
+
+    def test_persists_effective_ramp_and_final_closure_fraction(self):
+        """The canonical artifact retains W_i and φ_i from the real final week."""
+        item = SimpleNamespace(item_id="eap-01")
+        semanas_obra = ["2026-W02", "2026-W03"]
+        first = _mod_custos._build_dist_cell(10.0, 1, 1, 1.0, 1.0, 15.0, 0.0)
+        final = _mod_custos._build_dist_cell(10.0, 1, 1, 1.0, 1.0, 15.0, first.qtd_acumulada)
+
+        sa_out = _build_scheduled_activity_for_item(
+            item,
+            {"eap-01": {semanas_obra[0]: first, semanas_obra[1]: final}},
+            semanas_obra,
+            _canonical(),
+            assigned_lookup={},
+            duration_lookup={"eap-01": 2},
+            ramp_lookup={"eap-01": [1.0, 1.0]},
+            ramp_params_lookup={"eap-01": {"n_inicial": 1, "n_max": 1, "n_final": 1}},
+        )
+
+        assert sa_out.ramp_params == {"n_inicial": 1, "n_max": 1, "n_final": 1}
+        assert sa_out.ramp_profile == [1.0, 1.0]
+        assert sa_out.fracao_fechamento == pytest.approx(0.5)
 
 
 def _scheduled_activity(end_week: int) -> object:
@@ -356,18 +372,18 @@ class TestRampDownGateOrientadoAEstado:
 
     _RAMP = [1.0, 1.0, 1.0, 0.75, 0.5, 0.25, 0.0]  # taxa extraída = 0.25/semana
 
-    def test_vetoes_premature_rampdown_when_much_work_remains(self):
-        """Muito trabalho restante: gate mantém o pico em vez de seguir o ramp_profile
-        estático (que, na posição do calendário, já estaria descendo)."""
+    def test_rebuilds_the_formal_profile_for_the_converged_duration(self):
+        """O perfil final é a aplicação literal das três retas para N_i=3."""
         sa = _sa(start_week=0, duration_weeks=3, num_eq=4)
-        item = SimpleNamespace(quantitativo=1000.0)
+        sa.ramp_params = {"n_inicial": 4, "n_max": 4, "n_final": 1, "taxa_mobilizacao": 1.0, "taxa_desmobilizacao": 1.0}
+        item = SimpleNamespace(quantitativo=550.0)
         semanas_obra = ["2026-W02", "2026-W03", "2026-W04"]
 
         distribuicao, qtd_acumulada = _build_activity_distribuicao(
             sa,
             item,
             cpu={},
-            ramp=self._RAMP,
+            ramp=None,
             n_max=4,
             producao_semanal_base=100.0,
             semanas_obra=semanas_obra,
@@ -378,21 +394,21 @@ class TestRampDownGateOrientadoAEstado:
         )
 
         equipes = [c.num_equipes for _, c in sorted(distribuicao.items())]
-        assert equipes == [4, 4, 3]  # só reduz na semana em que passa a ser seguro
-        assert qtd_acumulada == 1000.0
+        assert equipes == [3, 2, 1]
+        assert qtd_acumulada == 550.0
 
-    def test_allows_immediate_descent_when_little_work_remains(self):
-        """Pouco trabalho: seguro descer já na primeira semana no pico (regime
-        'triângulo' emergente, sem precisar resolver a equação fechada)."""
+    def test_final_week_uses_nominal_terminal_floor_with_partial_quantity(self):
+        """A última semana mantém m_i(N_i-1), embora execute apenas o residual."""
         sa = _sa(start_week=0, duration_weeks=1, num_eq=4)
+        sa.ramp_params = {"n_inicial": 4, "n_max": 4, "n_final": 1, "taxa_mobilizacao": 1.0, "taxa_desmobilizacao": 1.0}
         item = SimpleNamespace(quantitativo=200.0)
-        semanas_obra = ["2026-W02"]
+        semanas_obra = ["2026-W02", "2026-W03"]
 
         distribuicao, qtd_acumulada = _build_activity_distribuicao(
             sa,
             item,
             cpu={},
-            ramp=self._RAMP,
+            ramp=None,
             n_max=4,
             producao_semanal_base=100.0,
             semanas_obra=semanas_obra,
@@ -403,7 +419,7 @@ class TestRampDownGateOrientadoAEstado:
         )
 
         cell = distribuicao["2026-W02"]
-        assert cell.num_equipes == 3  # já desmobiliza 1 equipe na própria 1ª semana
+        assert cell.num_equipes == 2
         assert qtd_acumulada == 200.0
 
     def test_no_gating_without_a_declared_demobilization_rate(self):
@@ -430,21 +446,19 @@ class TestRampDownGateOrientadoAEstado:
         # todas as semanas (nominais + extensão) seguem no pico — igual ao fallback antigo
         assert all(c.num_equipes == 4 for c in distribuicao.values())
 
-    def test_self_corrects_by_pausing_descent_after_a_bad_week(self):
-        """Já em ramp-down, uma semana de clima ruim atrasa o progresso — o gate
-        PAUSA a redução (mantém o nível atual) em vez de continuar descendo às
-        cegas até esvaziar a equipe com trabalho ainda pendente. Retoma a descida
-        assim que o clima volta e o teste de suficiência passa a valer de novo."""
+    def test_adverse_calendar_is_included_in_the_formal_duration_search(self):
+        """Uma semana nula leva a N_i=6 e mantém o perfil formal sem gate de estado."""
         sa = _sa(start_week=0, duration_weeks=5, num_eq=4)
+        sa.ramp_params = {"n_inicial": 4, "n_max": 4, "n_final": 1, "taxa_mobilizacao": 1.0, "taxa_desmobilizacao": 1.0}
         item = SimpleNamespace(quantitativo=1250.0)
-        semanas_obra = ["2026-W02", "2026-W03", "2026-W04", "2026-W05", "2026-W06"]
+        semanas_obra = ["2026-W02", "2026-W03", "2026-W04", "2026-W05", "2026-W06", "2026-W07"]
         prat_semanal = {"2026-W05": 0.0}  # clima ruim só na semana em que já reduziu 1x
 
         distribuicao, qtd_acumulada = _build_activity_distribuicao(
             sa,
             item,
             cpu={},
-            ramp=self._RAMP,
+            ramp=None,
             n_max=4,
             producao_semanal_base=100.0,
             semanas_obra=semanas_obra,
@@ -455,8 +469,5 @@ class TestRampDownGateOrientadoAEstado:
         )
 
         equipes = [distribuicao[s].num_equipes for s in semanas_obra]
-        # semanas 0-1: veto (falta muito); semana 2: reduz p/ 3 (seguro); semana 3
-        # (clima=0): PAUSA em 3 em vez de continuar p/ 2; semana 4: clima normaliza,
-        # retoma a descida p/ 2 e fecha exatamente Q.
-        assert equipes == [4, 4, 3, 3, 2]
+        assert equipes == [4, 4, 4, 3, 2, 1]
         assert qtd_acumulada == 1250.0

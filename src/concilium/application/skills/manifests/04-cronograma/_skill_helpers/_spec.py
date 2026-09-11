@@ -74,6 +74,19 @@ def _dimensionar_frentes_atividade(
     rp_pre = a.get("ramp_params") or {}
     n_max_spec = int(rp_pre.get("n_max") or 0)
     n_frentes = n_max_spec if n_max_spec > 0 else max(1, math.ceil(dur_1frente / deadline_weeks))
+
+    # Busca formal de N_i quando há perfil de rampa explícito:
+    # Q <= P * horas_semana * Σ_j(n_j), com n_j = n_frentes * ramp_profile[j].
+    if isinstance(rp_pre, dict) and n_max_spec > 0 and P > 0 and horas_semana > 0:
+        duration_min = max(1, math.ceil(dur_1frente / n_frentes))
+        duration_max = max(duration_min, deadline_weeks * 2, duration_min * 4)
+        for n_i in range(duration_min, duration_max + 1):
+            profile = _compute_ramp_profile(n_i, rp_pre, n_frentes)
+            soma_frentes_equivalentes = float(sum(profile)) * n_frentes
+            capacidade = P * horas_semana * soma_frentes_equivalentes
+            if capacidade >= Q:
+                return n_frentes, n_i
+
     duration = max(1, math.ceil(dur_1frente / n_frentes))
     return n_frentes, duration
 
@@ -346,6 +359,7 @@ def _build_activity_from_spec_entry(
         required_resources=dict(a.get("required_resources", {})),
         window_weeks=window_w if productive_w < window_w else None,
         ramp_profile=ramp_profile,
+        ramp_params=dict(a["ramp_params"]) if isinstance(a.get("ramp_params"), dict) else None,
         readiness_weeks=readiness_weeks,
     )
 
@@ -436,6 +450,7 @@ def _to_canonical_candidate(
                 duration_weeks=a.duration_weeks,
                 assigned_resources=dict(a.assigned_resources),
                 ramp_profile=a.ramp_profile,  # ADR-074: propagate for distribuicao_semanal
+                ramp_params=a.ramp_params,
             )
             for a in schedule_output.scheduled_activities
         ],
