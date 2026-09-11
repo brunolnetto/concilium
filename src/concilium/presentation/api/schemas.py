@@ -122,12 +122,21 @@ class RunStartResponse(BaseModel):
 
 
 class MobilizacaoPolicyIn(BaseModel):
-    """API input for a workforce mobilization policy."""
+    """API input for a workforce mobilization policy.
 
-    n_inicial: int = Field(ge=1)
+    Formalism allows n_inicial=0 and taxa_mobilizacao=0 only for the rectangular
+    degenerate case n_inicial == n_maximo; the validation of that combination is
+    enforced by the domain model.
+    """
+
+    n_inicial: int = Field(ge=0)
     n_maximo: int = Field(ge=1)
-    taxa_mobilizacao: float = Field(gt=0)
+    taxa_mobilizacao: float = Field(ge=0)
     taxa_desmobilizacao: float = Field(default=0.0, ge=0)
+    n_final: int = Field(
+        default_factory=lambda data: 1 if data["taxa_desmobilizacao"] > 0 else data["n_maximo"],
+        ge=1,
+    )
     semanas_plateau: int | None = Field(default=None, ge=0)
 
 

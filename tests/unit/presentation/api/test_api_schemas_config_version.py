@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from concilium.presentation.api.schemas import (
     ConfigVersionCreateRequest,
+    MobilizacaoPolicyIn,
     PerfilVersionCreateRequest,
     RangeInput,
 )
@@ -56,3 +57,26 @@ class TestPerfilVersionCreateRequestValidateRanges:
         assert req.faixa_margem_alvo is None
         assert req.faixa_margem_aceitavel is None
         assert req.razao_indireto_direto_alvo is None
+
+
+class TestMobilizacaoPolicyIn:
+    def test_terminal_floor_defaults_from_the_demobilization_rate(self):
+        policy = MobilizacaoPolicyIn(
+            n_inicial=1,
+            n_maximo=4,
+            taxa_mobilizacao=1.0,
+            taxa_desmobilizacao=0.5,
+        )
+
+        assert policy.n_final == 1
+
+    def test_terminal_floor_is_preserved_when_explicit(self):
+        policy = MobilizacaoPolicyIn(
+            n_inicial=1,
+            n_maximo=4,
+            taxa_mobilizacao=1.0,
+            taxa_desmobilizacao=0.5,
+            n_final=2,
+        )
+
+        assert policy.model_dump()["n_final"] == 2

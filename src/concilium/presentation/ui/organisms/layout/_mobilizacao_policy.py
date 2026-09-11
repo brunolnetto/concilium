@@ -17,7 +17,7 @@ def _build_mob_policy_rows(eap_items: list, saved_policies: dict, ramp_up_enable
         item_id = str(item.get("item_id") or item.get("activity_id") or "")
         saved = saved_policies.get(item_id, {})
         n_max_saved = int(saved.get("n_maximo") or 1)
-        n_ini_saved = int(saved.get("n_inicial") or 1) if ramp_up_enabled else n_max_saved
+        n_ini_saved = int(saved.get("n_inicial", 1)) if ramp_up_enabled else n_max_saved
         rows.append(
             {
                 "item_id": item_id,
@@ -28,6 +28,7 @@ def _build_mob_policy_rows(eap_items: list, saved_policies: dict, ramp_up_enable
                 "n_inicial": n_ini_saved,
                 "taxa_mobilizacao": float(saved.get("taxa_mobilizacao") or 1.0),
                 "_taxa_desmobilizacao": float(saved.get("taxa_desmobilizacao") or 0.0),
+                "_n_final": int(saved.get("n_final") or n_max_saved),
                 "_semanas_plateau": saved.get("semanas_plateau"),
             }
         )
@@ -83,7 +84,7 @@ def _render_mob_rampdown_expander(rows: list[dict], project_id: str) -> None:
     with st.expander("⚙️ Controles de desmobilização (ramp-down)", expanded=False):
         st.caption("Taxa de saída de equipes após o plateau e duração do plateau antes do ramp-down.")
         for i, row in enumerate(rows):
-            adv_col1, adv_col2, adv_label = st.columns([2, 2, 4])
+            adv_col1, adv_col2, adv_col3, adv_label = st.columns([2, 2, 2, 2])
             adv_label.caption(f"{row['item_id']} — {row['descricao'][:40]}")
             rows[i]["_taxa_desmobilizacao"] = adv_col1.number_input(
                 "Desmob./sem.",
@@ -92,7 +93,15 @@ def _render_mob_rampdown_expander(rows: list[dict], project_id: str) -> None:
                 value=float(row["_taxa_desmobilizacao"]),
                 key=f"desmob-{project_id}-{row['item_id']}",
             )
-            plateau_val = adv_col2.number_input(
+            rows[i]["_n_final"] = adv_col2.number_input(
+                "Piso final",
+                min_value=1,
+                max_value=max(1, int(row["n_maximo"])),
+                step=1,
+                value=min(max(1, int(row["_n_final"])), int(row["n_maximo"])),
+                key=f"n-final-{project_id}-{row['item_id']}",
+            )
+            plateau_val = adv_col3.number_input(
                 "Plateau (sem.)",
                 min_value=0,
                 step=1,
@@ -149,15 +158,17 @@ def _handle_mob_validate(base_url: str, project_id: str, actor: str) -> None:
 def _build_mob_policy_item(er: dict, adv: dict, ramp_up_enabled: bool, ramp_down_enabled: bool) -> dict:
     """Builds policy_data dict for one mobilizacao item."""
     n_max = max(1, int(er.get("n_maximo") or 1))
-    n_ini = min(max(1, int(er.get("n_inicial") or n_max)) if ramp_up_enabled else n_max, n_max)
-    taxa_mob = max(0.1, float(er.get("taxa_mobilizacao") or 1.0)) if ramp_up_enabled else float(n_max)
+    n_ini = min(max(0, int(er.get("n_inicial", n_max))) if ramp_up_enabled else n_max, n_max)
+    taxa_mob = max(0.0, float(er.get("taxa_mobilizacao", 1.0))) if ramp_up_enabled else float(n_max)
     taxa_desmob = float(adv.get("_taxa_desmobilizacao") or 0.0) if ramp_down_enabled else 0.0
+    n_final = min(max(1, int(adv.get("_n_final") or n_max)), n_max) if ramp_down_enabled else n_max
     semanas_plateau = adv.get("_semanas_plateau") if ramp_down_enabled else None
     return {
         "n_inicial": n_ini,
         "n_maximo": n_max,
         "taxa_mobilizacao": taxa_mob,
         "taxa_desmobilizacao": taxa_desmob,
+        "n_final": n_final,
         "semanas_plateau": semanas_plateau,
     }
 
@@ -224,10 +235,10 @@ def _build_mob_policy_vis_rows(rows: list[dict], ramp_up_enabled: bool) -> tuple
     }
     if ramp_up_enabled:
         col_cfg["n_inicial"] = st.column_config.NumberColumn(
-            "✏️ Inicial", min_value=1, step=1, format="%.0f", width="small"
+            "✏️ Inicial", min_value=0, step=1, format="%.0f", width="small"
         )
         col_cfg["taxa_mobilizacao"] = st.column_config.NumberColumn(
-            "✏️ Mob./sem.", min_value=0.1, step=0.5, format="%.1f", width="small"
+            "✏️ Mob./sem.", min_value=0.0, step=0.5, format="%.1f", width="small"
         )
     vis_keys = ["item_id", "descricao", "cpu_id", "quantitativo", "n_maximo"] + (
         ["n_inicial", "taxa_mobilizacao"] if ramp_up_enabled else []
