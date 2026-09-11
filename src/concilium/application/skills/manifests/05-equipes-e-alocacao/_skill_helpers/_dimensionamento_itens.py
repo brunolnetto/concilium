@@ -22,7 +22,10 @@ from concilium.domain.models.catalog.producao import (
     Producao,
     QualidadeProducao,
 )
-from concilium.domain.services.sinergia_equipe import resolver_producao_efetiva
+from concilium.domain.services.sinergia_equipe import (
+    construir_producao_catalogo_para_sinergia,
+    resolver_producao_efetiva,
+)
 
 from ._dimensionamento_custos import (  # ty: ignore[unresolved-import]
     _best_alias_equip_attrs,
@@ -75,42 +78,7 @@ def _build_producao_para_sinergia(prod: dict) -> Producao | None:
     Retorna None quando `prod` não tem `grafo_sinergia` populado (a vasta maioria do
     catálogo hoje) ou quando os dados não validam — garante no-op silencioso.
     """
-    grafo_raw = prod.get("grafo_sinergia")
-    if not grafo_raw:
-        return None
-    comp_raw = _sanitize_comp_para_sinergia(prod.get("composicao_padrao_equipe") or {})
-    agora = datetime.now(UTC)
-    # ADR-179: 119/169 produções do mendeslobo hoje têm `origem` como string solta
-    # (ex.: "PROPRIA") em vez do dict rico {tipo, fonte_id, ...} — legado de como
-    # foram enriquecidas com grafo_sinergia. `referencia` aceita o texto original
-    # nesse caso (perde o mínimo de informação); dict é lido normalmente.
-    origem_raw = prod.get("origem")
-    referencia = origem_raw.get("referencia", "") if isinstance(origem_raw, dict) else str(origem_raw or "")
-    try:
-        return Producao(
-            id=prod.get("id", ""),
-            codigo=prod.get("codigo", ""),
-            descricao=prod.get("descricao", ""),
-            producao_horaria=float(prod.get("producao_horaria") or 0.0),
-            unidade=prod.get("unidade", ""),
-            origem=OrigemProducao(
-                tipo="tabela_referencia",
-                fonte_id=prod.get("id", ""),
-                data_calibracao=agora,
-                referencia=referencia,
-            ),
-            condicoes_calibracao=CondicoesCalibração(),
-            qualidade=QualidadeProducao(
-                confianca_pct=0, intervalo_confianca=(0.0, 0.0), quantidade_amostras=1, desvio_padrao=0.0
-            ),
-            equipe=ComposicaoPadraoEquipe(**comp_raw),
-            auditoria=AuditoriaProducao(
-                criado_por="", data_criacao=agora, ultima_modificacao=agora, modificado_por="", versao=""
-            ),
-            grafo_sinergia=GrafoSinergiaEquipe(**grafo_raw),
-        )
-    except (ValidationError, TypeError, ValueError, AttributeError):
-        return None
+    return construir_producao_catalogo_para_sinergia(prod)
 
 
 def _validar_sinergia_producao(prod: dict, validacoes: list) -> None:

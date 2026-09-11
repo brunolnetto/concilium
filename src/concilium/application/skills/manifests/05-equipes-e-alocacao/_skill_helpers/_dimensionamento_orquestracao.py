@@ -19,6 +19,7 @@ from concilium.domain.models.canonical import (
 from ._dimensionamento_custos import _RepoCtx, _resolve_preco  # ty: ignore[unresolved-import]
 from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
     _build_comp_para_item,
+    _calc_custo_material_item,
     _calc_custo_cron,
     _calc_custo_mob_desmob_split,
     _calc_custo_mob_janela,
@@ -139,6 +140,7 @@ def _resolve_permanencia_e_custo_total_ajustados(
 def _dimensionar_item_equipe(
     item: Any,
     cpu: dict,
+    producao: dict | None,
     cron: Any,
     comp: dict,
     item_custom: dict,
@@ -147,6 +149,7 @@ def _dimensionar_item_equipe(
     perc_mensalista: float,
     horas_dia: float,
     dias_uteis: float,
+    dias_semana: float,
     preco_diesel: float,
     validacoes: list,
 ) -> EquipeDireta:
@@ -160,9 +163,7 @@ def _dimensionar_item_equipe(
         comp, item.item_id, item_custom, cpu, horas_dia, dias_uteis, preco_diesel, ctx, validacoes
     )
     _validar_materiais_item(comp, cpu, validacoes)
-    # custo_material_mensal é responsabilidade de etapas posteriores (skill-06+).
-    # Skill-05 apenas valida cobertura via VAL-EQUIP-MAT-01/02.
-    custo_mat = 0.0
+    custo_mat = _calc_custo_material_item(comp, cpu, {producao.get("id"): producao} if producao else {}, ctx, horas_dia, dias_uteis)
 
     # Sem calibração por custo_hora_total_referencia (removida): _processar_equipamentos_item
     # já prioriza preco_h_unitario embutido na composição sobre o catálogo geral (ADR-132),
@@ -191,6 +192,20 @@ def _dimensionar_item_equipe(
     _checar_leadtime_mob_ausente(item, custo_total_final, validacoes)
     # NEP-037: custo_fixo_mensal usa custo_mo_base (sem encargos) — encargos ficam em custo_encargos_mensal.
     fixo_mensal_total = round(custo_mo_base + custo_eq + custo_comb_efetivo + custo_mat, 2)
+    horas_semana = horas_dia * dias_semana
+    from concilium.domain.constants import SEMANAS_POR_MES
+    from concilium.domain.services.sinergia_equipe import (
+        construir_producao_catalogo_para_sinergia,
+        resolver_producao_efetiva,
+    )
+
+    producao_tipificada = construir_producao_catalogo_para_sinergia(producao) if isinstance(producao, dict) else None
+    produtividade_horaria = (
+        resolver_producao_efetiva(producao_tipificada).valor
+        if producao_tipificada is not None
+        else float((producao or {}).get("producao_horaria") or 0.0)
+    )
+    fator_hora_catalogo = SEMANAS_POR_MES * horas_semana
 
     return EquipeDireta(
         equipe_id=f"eq-{item.item_id}",
@@ -223,6 +238,13 @@ def _dimensionar_item_equipe(
         # ADR-088: sub-campos de equipamento agregados da equipe
         custo_locacao_mensal=round(sum(e.custo_locacao_mensal * e.num_unidades for e in equips_mod), 2),
         custo_manutencao_mensal=round(sum(e.custo_manutencao_mensal * e.num_unidades for e in equips_mod), 2),
+        produtividade_horaria=produtividade_horaria,
+        horas_dia=horas_dia,
+        dias_semana=dias_semana,
+        gamma_mao_obra_catalogo=custo_mo / fator_hora_catalogo if fator_hora_catalogo > 0 else 0.0,
+        gamma_equipamentos_catalogo=custo_eq / fator_hora_catalogo if fator_hora_catalogo > 0 else 0.0,
+        gamma_material_catalogo=custo_mat / fator_hora_catalogo if fator_hora_catalogo > 0 else 0.0,
+        gamma_combustivel_catalogo=custo_comb_efetivo / fator_hora_catalogo if fator_hora_catalogo > 0 else 0.0,
     )
 
 
@@ -246,11 +268,13 @@ def _build_dimensionamento(
         if not cpu or not cron:
             continue
         comp = _build_comp_para_item(cpu, prod_lookup, validacoes)
+        producao = prod_lookup.get(cpu.get("producao_id_ref") or "")
         item_custom = composicao_customizada.get(item.item_id, {})
         equipes.append(
             _dimensionar_item_equipe(
                 item,
                 cpu,
+            producao if isinstance(producao, dict) else None,
                 cron,
                 comp,
                 item_custom,
@@ -259,6 +283,7 @@ def _build_dimensionamento(
                 perc_mensalista,
                 horas_dia,
                 dias_uteis,
+                canonical_in.projeto.regime_trabalho.dias_semana,
                 preco_diesel,
                 validacoes,
             )
