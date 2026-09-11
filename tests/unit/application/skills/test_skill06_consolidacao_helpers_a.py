@@ -10,6 +10,9 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
+
+import pytest
 
 _ROOT = Path(__file__).resolve().parents[4]
 
@@ -64,6 +67,55 @@ class TestCalcVendaComBdiMissingRate:
         assert vd == 0.0
         assert vi == 0.0
         assert ct == 0.0
+
+    def test_uses_prebuilt_activity_artifacts_without_rebuilding(self):
+        from concilium.domain.models.canonical import AtividadeCustoCompleto
+
+        canonical = self._make_empty_canonical()
+        artifacts = [
+            AtividadeCustoCompleto(
+                atividade_id="EAP-01",
+                semana_inicio=0,
+                semana_fim=0,
+                custo_operacional_direto=100.0,
+                custo_direto_com_bdi=120.0,
+            )
+        ]
+        with patch.object(_cons, "_build_custos_atividades", side_effect=AssertionError("must not rebuild")):
+            venda_direta, _venda_indireta, _custo_indireto = _cons._calc_venda_com_bdi(
+                canonical,
+                {"mao_obra": 0.0, "equipamentos": 0.0, "material": 0.0, "indireto": 0.0},
+                custos_atividades=artifacts,
+            )
+
+        assert venda_direta == 120.0
+
+    def test_prices_activity_mobilization_as_indirect_cost(self):
+        from concilium.domain.models.canonical import AtividadeCustoCompleto, InsumoComponenteAtividade, MobilizacaoAtividade
+
+        canonical = self._make_empty_canonical()
+        artifacts = [
+            AtividadeCustoCompleto(
+                atividade_id="EAP-01",
+                semana_inicio=0,
+                semana_fim=0,
+                mobilizacao=MobilizacaoAtividade(
+                    atividade_id="EAP-01",
+                    fase="both",
+                    equipamentos=InsumoComponenteAtividade(nome="MOB_DEMOB", custo_total=100.0),
+                ),
+            )
+        ]
+
+        venda_direta, venda_indireta, custo_indireto = _cons._calc_venda_com_bdi(
+            canonical,
+            {"mao_obra": 0.0, "equipamentos": 0.0, "material": 0.0, "indireto": 0.25},
+            custos_atividades=artifacts,
+        )
+
+        assert venda_direta == 0.0
+        assert venda_indireta == 125.0
+        assert custo_indireto == 0.0
 
 
 class TestValidateAcAdmSobreposicao:
@@ -178,6 +230,121 @@ class TestBuildCustoAtvFallback:
         result = _cons._build_custos_atividades(canonical)
         assert len(result) == 1
         assert result[0].atividade_id == "EAP-03"
+
+
+class TestBuildActivityDirectCost:
+    def test_weekly_costs_follow_formal_catalog_rates(self):
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=10.0),
+                "2026-W02": SimpleNamespace(num_equipes=2.0, qtd_executada=30.0),
+            }
+        )
+        equipe = SimpleNamespace(
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=2.0,
+            gamma_equipamentos_catalogo=3.0,
+            gamma_material_catalogo=1.0,
+            gamma_combustivel_catalogo=0.5,
+        )
+
+        components, weekly, operational, _direct_bdi, _equivalent_bdi = _cons._build_activity_direct_cost(
+            activity, equipe, {}
+        )
+
+        assert weekly[0].custo_contratual == pytest.approx(200.0)
+        assert weekly[1].custo_contratual == pytest.approx(400.0)
+        assert weekly[0].custo_variavel == pytest.approx(1.5)
+        assert weekly[1].custo_variavel == pytest.approx(4.5)
+        assert operational == pytest.approx(606.0)
+        assert components[0].custo_total_direto == pytest.approx(606.0)
+
+    def test_variable_cost_is_invariant_under_extra_unproductive_team_week(self):
+        equipe = SimpleNamespace(
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=2.0,
+            gamma_equipamentos_catalogo=3.0,
+            gamma_material_catalogo=1.0,
+            gamma_combustivel_catalogo=0.5,
+        )
+        sem_espera = SimpleNamespace(
+            distribuicao_semanal={"2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=10.0)}
+        )
+        com_espera = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=0.0),
+                "2026-W02": SimpleNamespace(num_equipes=1.0, qtd_executada=10.0),
+            }
+        )
+
+        _components_base, weekly_base, _operational_base, _bdi_base, _eq_base = _cons._build_activity_direct_cost(
+            sem_espera, equipe, {}
+        )
+        _components_wait, weekly_wait, _operational_wait, _bdi_wait, _eq_wait = _cons._build_activity_direct_cost(
+            com_espera, equipe, {}
+        )
+
+        assert sum(cost.custo_variavel for cost in weekly_wait) == pytest.approx(
+            sum(cost.custo_variavel for cost in weekly_base)
+        )
+        assert sum(cost.custo_contratual for cost in weekly_wait) == pytest.approx(
+            2 * sum(cost.custo_contratual for cost in weekly_base)
+        )
+
+    def test_weekly_costs_conserve_components_and_activity_bdi(self):
+        """K rateia por frente-semana, V por quantidade, sem perda por arredondamento."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=1.0),
+                "2026-W02": SimpleNamespace(num_equipes=1.0, qtd_executada=1.0),
+                "2026-W03": SimpleNamespace(num_equipes=1.0, qtd_executada=1.0),
+            }
+        )
+        equipe = SimpleNamespace(
+            custo_inst_mo=100.0,
+            custo_inst_eq=50.0,
+            custo_inst_mat=30.0,
+            custo_inst_comb=20.0,
+            custo_inst_mob_demob=0.0,
+        )
+        rates = {"mao_obra": 0.10, "equipamentos": 0.20, "material": 0.05, "diesel": 0.05}
+
+        _components, weekly, operational, direct_bdi, equivalent_bdi = _cons._build_activity_direct_cost(
+            activity, equipe, rates
+        )
+
+        assert sum(cost.custo_mao_obra for cost in weekly) == pytest.approx(100.0)
+        assert sum(cost.custo_equipamentos for cost in weekly) == pytest.approx(50.0)
+        assert sum(cost.custo_material for cost in weekly) == pytest.approx(30.0)
+        assert sum(cost.custo_combustivel for cost in weekly) == pytest.approx(20.0)
+        assert sum(cost.custo_operacional for cost in weekly) == pytest.approx(operational)
+        assert sum(cost.custo_operacional_com_bdi for cost in weekly) == pytest.approx(direct_bdi)
+        assert equivalent_bdi == pytest.approx(direct_bdi / operational - 1)
+
+    def test_mobilization_is_excluded_from_direct_components(self):
+        activity = SimpleNamespace(
+            distribuicao_semanal={"2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=1.0)}
+        )
+        equipe = SimpleNamespace(
+            custo_inst_mo=100.0,
+            custo_inst_eq=50.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            custo_inst_mob_demob=25.0,
+            custo_mob_desmob=25.0,
+        )
+
+        components, weekly, operational, _direct_bdi, _equivalent_bdi = _cons._build_activity_direct_cost(
+            activity, equipe, {}
+        )
+
+        assert components[0].equipamentos.custo_total == 50.0
+        assert operational == 150.0
+        assert weekly[0].custo_operacional == 150.0
 
 
 class TestBuildCustoCategoriaBottomUp:
