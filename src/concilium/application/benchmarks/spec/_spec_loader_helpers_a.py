@@ -164,6 +164,7 @@ def _norm_ref_build_activity_from_eap_item(item: Any, cron_index: dict[str, dict
             "n_max": eq["n_max"],  # necessário para _compute_ramp_profile
             "taxa_mobilizacao": eq.get("taxa_mobilizacao", float(eq["n_max"])),
             "taxa_desmobilizacao": eq.get("taxa_desmobilizacao", float(eq["n_max"])),
+            "n_final": eq.get("n_final", eq["n_max"]),
         }
 
     return act

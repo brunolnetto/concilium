@@ -471,6 +471,7 @@ class TestSpecLoaderHelpersAExtra:
                         "n_max": 3,
                         "taxa_mobilizacao": 1.0,
                         "taxa_desmobilizacao": 1.0,
+                        "n_final": 2,
                     },
                 }
             ],
@@ -479,6 +480,7 @@ class TestSpecLoaderHelpersAExtra:
         assert len(result) == 1
         assert "ramp_params" in result[0]
         assert result[0]["ramp_params"]["n_max"] == 3
+        assert result[0]["ramp_params"]["n_final"] == 2
 
     def test_norm_ref_build_rcpsp_activities_equipes_n_max_zero_no_ramp(self):
         from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_build_rcpsp_activities
