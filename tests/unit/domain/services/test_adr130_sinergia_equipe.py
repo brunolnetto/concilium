@@ -20,6 +20,7 @@ from concilium.domain.models.catalog.catalogo import (
     MaterialEquipe,
 )
 from concilium.domain.models.catalog.producao import (
+    ArestaFluxoSinergia,
     AuditoriaProducao,
     CapacidadeElemento,
     CondicoesCalibração,
@@ -33,6 +34,7 @@ from concilium.domain.services.sinergia_equipe import (
     LIMIAR_DIVERGENCIA_SINERGIA,
     atualizar_capacidade_gargalo,
     derivar_producao_horaria,
+    fator_alocacao_por_frentes,
     resolver_producao_efetiva,
     revalidar_apos_mudanca_composicao,
     validar_referencias_grafo,
@@ -285,6 +287,82 @@ class TestValSinergia01ReferenciaOrfa:
 
 
 class TestDerivacaoD2:
+    def test_topologia_fluxo_em_serie_usa_menor_aresta_do_caminho(self):
+        grafo = GrafoSinergiaEquipe(
+            fonte="entrada",
+            sorvedouro="saida",
+            dominio={"entrada", "escavadeira", "caminhao", "saida"},
+            arestas_fluxo=[
+                ArestaFluxoSinergia(
+                    aresta_id="entrada-escavadeira", origem="entrada", destino="escavadeira", capacidade_horaria=120.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="escavadeira-caminhao", origem="escavadeira", destino="caminhao", capacidade_horaria=80.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="caminhao-saida", origem="caminhao", destino="saida", capacidade_horaria=100.0
+                ),
+            ],
+        )
+
+        derivacao = derivar_producao_horaria(grafo, _composicao_escavacao())
+
+        assert derivacao.producao_horaria_derivada == 80.0
+        assert derivacao.gargalo_derivado == "escavadeira-caminhao"
+
+    def test_topologia_fluxo_paralela_soma_capacidades_independentes(self):
+        grafo = GrafoSinergiaEquipe(
+            fonte="entrada",
+            sorvedouro="saida",
+            dominio={"entrada", "frente-a", "frente-b", "saida"},
+            arestas_fluxo=[
+                ArestaFluxoSinergia(
+                    aresta_id="entrada-a", origem="entrada", destino="frente-a", capacidade_horaria=40.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="a-saida", origem="frente-a", destino="saida", capacidade_horaria=40.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="entrada-b", origem="entrada", destino="frente-b", capacidade_horaria=35.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="b-saida", origem="frente-b", destino="saida", capacidade_horaria=35.0
+                ),
+            ],
+        )
+
+        derivacao = derivar_producao_horaria(grafo, _composicao_escavacao())
+
+        assert derivacao.producao_horaria_derivada == 75.0
+
+    def test_alocacao_de_frente_respeita_gargalo_compartilhado(self):
+        grafo = GrafoSinergiaEquipe(
+            fonte="entrada",
+            sorvedouro="saida",
+            dominio={"entrada", "frente-a", "frente-b", "gargalo", "saida"},
+            arestas_fluxo=[
+                ArestaFluxoSinergia(
+                    aresta_id="entrada-a", origem="entrada", destino="frente-a", capacidade_horaria=50.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="entrada-b", origem="entrada", destino="frente-b", capacidade_horaria=50.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="a-gargalo", origem="frente-a", destino="gargalo", capacidade_horaria=50.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="b-gargalo", origem="frente-b", destino="gargalo", capacidade_horaria=50.0
+                ),
+                ArestaFluxoSinergia(
+                    aresta_id="gargalo-saida", origem="gargalo", destino="saida", capacidade_horaria=60.0
+                ),
+            ],
+        )
+
+        eta_s = fator_alocacao_por_frentes(grafo, num_frentes=1, n_max=2)
+
+        assert eta_s == pytest.approx(50.0 / 60.0)
+
     def test_sem_capacidades_retorna_none(self):
         grafo = GrafoSinergiaEquipe()
         d = derivar_producao_horaria(grafo, _composicao_escavacao())

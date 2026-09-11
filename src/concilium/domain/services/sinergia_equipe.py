@@ -16,17 +16,27 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
+
+from pydantic import ValidationError
 
 from concilium.domain.models.canonical._base import ValidacaoItem
+from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe
+from concilium.domain.models.catalog.producao import (
+    AuditoriaProducao,
+    CondicoesCalibração,
+    GrafoSinergiaEquipe,
+    OrigemProducao,
+    Producao,
+    QualidadeProducao,
+)
 
 if TYPE_CHECKING:
-    from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe
     from concilium.domain.models.catalog.producao import (
+        ArestaFluxoSinergia,
         CapacidadeElemento,
         FonteCapacidade,
-        GrafoSinergiaEquipe,
-        Producao,
         RelacaoSinergia,
     )
 
@@ -51,6 +61,66 @@ class ResolucaoProducao:
     fonte: str  # "calibrado" | "derivado" | "declarado"
     derivacao: DerivacaoSinergia | None
     validacoes: list[ValidacaoItem]
+
+
+def construir_producao_catalogo_para_sinergia(prod: dict[str, Any]) -> Producao | None:
+    """Build typed reference data required by synergy resolution from a raw catalog record."""
+    grafo_raw = prod.get("grafo_sinergia")
+    if not isinstance(grafo_raw, dict) or not grafo_raw:
+        return None
+    composicao_raw = prod.get("composicao_padrao_equipe") or {}
+    composicao = {
+        "funcoes": [
+            {key: value for key, value in item.items() if key in {"funcao_id", "num_pessoas", "horas_extras_pct", "papel"}}
+            for item in composicao_raw.get("funcoes", [])
+            if isinstance(item, dict)
+        ],
+        "equipamentos": [
+            {key: value for key, value in item.items() if key in {"equip_id", "num_unidades", "consumo_litros_hora_estimado"}}
+            for item in composicao_raw.get("equipamentos", [])
+            if isinstance(item, dict)
+        ],
+        "materiais": [
+            {key: value for key, value in item.items() if key in {"insumo_id", "consumo_por_hora", "unidade", "descricao"}}
+            for item in composicao_raw.get("materiais", [])
+            if isinstance(item, dict)
+        ],
+    }
+    origem_raw = prod.get("origem")
+    referencia = origem_raw.get("referencia", "") if isinstance(origem_raw, dict) else str(origem_raw or "")
+    timestamp_placeholder = datetime(1970, 1, 1, tzinfo=UTC)
+    try:
+        return Producao(
+            id=str(prod.get("id") or ""),
+            codigo=str(prod.get("codigo") or ""),
+            descricao=str(prod.get("descricao") or ""),
+            producao_horaria=float(prod.get("producao_horaria") or 0.0),
+            unidade=str(prod.get("unidade") or ""),
+            origem=OrigemProducao(
+                tipo="tabela_referencia",
+                fonte_id=str(prod.get("id") or ""),
+                data_calibracao=timestamp_placeholder,
+                referencia=referencia,
+            ),
+            condicoes_calibracao=CondicoesCalibração(),
+            qualidade=QualidadeProducao(
+                confianca_pct=0,
+                intervalo_confianca=(0.0, 0.0),
+                quantidade_amostras=1,
+                desvio_padrao=0.0,
+            ),
+            equipe=ComposicaoPadraoEquipe(**composicao),
+            auditoria=AuditoriaProducao(
+                criado_por="",
+                data_criacao=timestamp_placeholder,
+                ultima_modificacao=timestamp_placeholder,
+                modificado_por="",
+                versao="",
+            ),
+            grafo_sinergia=GrafoSinergiaEquipe(**grafo_raw),
+        )
+    except (ValidationError, TypeError, ValueError, AttributeError):
+        return None
 
 
 def elementos_validos(composicao: ComposicaoPadraoEquipe) -> set[str]:
@@ -169,6 +239,87 @@ def _dominio_sem_precondicao(efetivas: dict[str, float], relacoes: list[RelacaoS
     return {eid: v for eid, v in efetivas.items() if eid not in excluidos_precondicao}
 
 
+def _fluxo_maximo_edmonds_karp(
+    arestas: list[ArestaFluxoSinergia], fonte: str, sorvedouro: str
+) -> tuple[float, set[str]]:
+    """Calcula max-flow e o lado da fonte do min-corte em ordem determinística."""
+    residual: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for aresta in arestas:
+        residual[aresta.origem][aresta.destino] += aresta.capacidade_horaria
+        residual[aresta.destino]
+
+    fluxo = 0.0
+    while True:
+        predecessores: dict[str, str | None] = {fonte: None}
+        fila = [fonte]
+        for atual in fila:
+            for destino in sorted(residual[atual]):
+                if destino not in predecessores and residual[atual][destino] > 0:
+                    predecessores[destino] = atual
+                    fila.append(destino)
+        if sorvedouro not in predecessores:
+            break
+        caminho: list[tuple[str, str]] = []
+        vertice = sorvedouro
+        while vertice != fonte:
+            origem = predecessores[vertice]
+            assert origem is not None
+            caminho.append((origem, vertice))
+            vertice = origem
+        incremento = min(residual[origem][destino] for origem, destino in caminho)
+        for origem, destino in caminho:
+            residual[origem][destino] -= incremento
+            residual[destino][origem] += incremento
+        fluxo += incremento
+
+    alcancaveis = {fonte}
+    fila = [fonte]
+    for atual in fila:
+        for destino in sorted(residual[atual]):
+            if destino not in alcancaveis and residual[atual][destino] > 0:
+                alcancaveis.add(destino)
+                fila.append(destino)
+    return fluxo, alcancaveis
+
+
+def _derivar_producao_por_fluxo(grafo: GrafoSinergiaEquipe) -> DerivacaoSinergia:
+    assert grafo.fonte is not None
+    assert grafo.sorvedouro is not None
+    fluxo, lado_fonte = _fluxo_maximo_edmonds_karp(grafo.arestas_fluxo, grafo.fonte, grafo.sorvedouro)
+    corte = sorted(
+        aresta.aresta_id
+        for aresta in grafo.arestas_fluxo
+        if aresta.origem in lado_fonte and aresta.destino not in lado_fonte
+    )
+    return DerivacaoSinergia(
+        producao_horaria_derivada=round(fluxo, 6) if fluxo > 0 else None,
+        gargalo_derivado=corte[0] if corte else None,
+        capacidades_efetivas={aresta.aresta_id: aresta.capacidade_horaria for aresta in grafo.arestas_fluxo},
+    )
+
+
+def fator_alocacao_por_frentes(grafo: GrafoSinergiaEquipe | None, num_frentes: float, n_max: float) -> float:
+    """Calcula η_s pela razão de max-flow, com fallback linear para grafos legados."""
+    n_max_safe = max(1.0, n_max)
+    fracao_frentes = min(1.0, max(0.0, num_frentes) / n_max_safe)
+    if grafo is None or not grafo.arestas_fluxo:
+        return fracao_frentes
+
+    assert grafo.fonte is not None
+    assert grafo.sorvedouro is not None
+    fluxo_pleno, _ = _fluxo_maximo_edmonds_karp(grafo.arestas_fluxo, grafo.fonte, grafo.sorvedouro)
+    if fluxo_pleno <= 0:
+        return 0.0
+    arestas_alocadas = [
+        aresta.model_copy(update={"capacidade_horaria": aresta.capacidade_horaria * fracao_frentes})
+        if aresta.origem == grafo.fonte
+        else aresta
+        for aresta in grafo.arestas_fluxo
+    ]
+    fluxo_alocado, _ = _fluxo_maximo_edmonds_karp(arestas_alocadas, grafo.fonte, grafo.sorvedouro)
+    return min(1.0, max(0.0, fluxo_alocado / fluxo_pleno))
+
+
 def derivar_producao_horaria(grafo: GrafoSinergiaEquipe, composicao: ComposicaoPadraoEquipe) -> DerivacaoSinergia:
     """ADR-130 D2 — produtividade derivada do gargalo (min de capacidades efetivas).
 
@@ -183,6 +334,9 @@ def derivar_producao_horaria(grafo: GrafoSinergiaEquipe, composicao: ComposicaoP
     Retorna producao_horaria_derivada=None quando não há nenhuma capacidade declarada
     (ou todas foram excluídas por precondicao) — nesse caso não há gargalo computável.
     """
+    if grafo.arestas_fluxo:
+        return _derivar_producao_por_fluxo(grafo)
+
     capacidades = {c.elemento_id: c for c in grafo.capacidades}
     if not capacidades:
         return DerivacaoSinergia(producao_horaria_derivada=None, gargalo_derivado=None, capacidades_efetivas={})
