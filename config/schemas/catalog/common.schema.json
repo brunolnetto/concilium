@@ -284,6 +284,18 @@
         }
       }
     },
+    "arestaFluxoSinergia": {
+      "description": "Aresta dirigida capacitada do domínio de produção para max-flow.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["aresta_id", "origem", "destino", "capacidade_horaria"],
+      "properties": {
+        "aresta_id": {"type": "string", "minLength": 1},
+        "origem": {"type": "string", "minLength": 1},
+        "destino": {"type": "string", "minLength": 1},
+        "capacidade_horaria": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
     "grafoSinergiaEquipe": {
       "description": "Estrutura de sinergia da equipe: relações + capacidades. Opcional por CPU (ADR-130 D1).",
       "type": "object",
@@ -303,6 +315,20 @@
           "default": []
         },
         "gargalo_declarado": {"type": ["string", "null"]}
+        ,"fonte": {"type": ["string", "null"]}
+        ,"sorvedouro": {"type": ["string", "null"]}
+        ,"dominio": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true,
+          "default": []
+        }
+        ,"arestas_fluxo": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/arestaFluxoSinergia"},
+          "uniqueItems": true,
+          "default": []
+        }
       }
     }
   }
