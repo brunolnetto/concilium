@@ -102,15 +102,36 @@ class AtividadeInsumo(BaseModel):
     mao_de_obra: InsumoComponenteAtividade | None = None
     equipamentos: InsumoComponenteAtividade | None = None
     material: InsumoComponenteAtividade | None = None
+    combustivel: InsumoComponenteAtividade | None = None
 
     @property
     def custo_total_direto(self) -> float:
         return round(
             (self.mao_de_obra.custo_total if self.mao_de_obra else 0.0)
             + (self.equipamentos.custo_total if self.equipamentos else 0.0)
-            + (self.material.custo_total if self.material else 0.0),
+            + (self.material.custo_total if self.material else 0.0)
+            + (self.combustivel.custo_total if self.combustivel else 0.0),
             2,
         )
+
+
+class CustoDiretoSemanalAtividade(BaseModel):
+    """Custo direto operacional de uma atividade em uma semana produtiva."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    semana_iso: str
+    quantitativo: float = Field(ge=0)
+    frentes: float = Field(ge=0)
+    custo_mao_obra: float = Field(default=0.0, ge=0)
+    custo_equipamentos: float = Field(default=0.0, ge=0)
+    custo_material: float = Field(default=0.0, ge=0)
+    custo_combustivel: float = Field(default=0.0, ge=0)
+    custo_contratual: float = Field(default=0.0, ge=0)
+    custo_variavel: float = Field(default=0.0, ge=0)
+    custo_operacional: float = Field(default=0.0, ge=0)
+    custo_operacional_com_bdi: float = Field(default=0.0, ge=0)
+    bdi_equivalente: float = 0.0
 
 
 class IndiretoAlocacao(BaseModel):
@@ -188,6 +209,10 @@ class AtividadeCustoCompleto(BaseModel):
     semana_inicio: int = Field(ge=0)
     semana_fim: int = Field(ge=0)
     custos_diretos: list[AtividadeInsumo] = Field(default_factory=list)
+    custos_diretos_semanais: list[CustoDiretoSemanalAtividade] = Field(default_factory=list)
+    custo_operacional_direto: float = Field(default=0.0, ge=0)
+    custo_direto_com_bdi: float = Field(default=0.0, ge=0)
+    bdi_equivalente_direto: float = 0.0
     indireto_alocacao: IndiretoAlocacao | None = None
     custo_indireto_atribuido: float = Field(default=0.0, ge=0)
     mobilizacao: MobilizacaoAtividade | None = None
@@ -232,6 +257,10 @@ class ScheduledActivityCanonical(BaseModel):
     assigned_resources: dict[str, int] = Field(default_factory=dict)
     # ADR-074: normalized ramp profile propagated from Activity; None = flat demand
     ramp_profile: list[float] | None = None
+    # Parâmetros W_i preservados para reconstruir a rampa com N_i real.
+    ramp_params: dict[str, object] | None = None
+    # φ_i: fração da capacidade efetiva usada na semana terminal de fechamento.
+    fracao_fechamento: float = Field(default=1.0, ge=0.0, le=1.0)
 
     # Distribuição semanal: chave "AAAA-Www" -> {num_equipes, qtd_executada, qtd_acumulada, pct, eficiencia}
     distribuicao_semanal: dict[str, DistribuicaoSemanal] = Field(default_factory=dict)

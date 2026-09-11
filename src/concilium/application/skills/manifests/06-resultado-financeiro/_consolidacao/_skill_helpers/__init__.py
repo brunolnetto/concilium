@@ -88,6 +88,7 @@ from ._resultado import (  # ty: ignore[unresolved-import]
 from ._venda_custo import (  # ty: ignore[unresolved-import]
     _br_append_gap_catalogo_validacao,
     _br_build_venda_custo,
+    _build_activity_direct_cost,
     _build_custos_atividades,
     _bvc_apply_fallback,
     _bvc_totais_planejamento,
@@ -120,6 +121,7 @@ __all__ = [
     "_bpe_process_equipe",
     "_br_append_gap_catalogo_validacao",
     "_br_build_venda_custo",
+    "_build_activity_direct_cost",
     "_bridge_append_clima_n4_validacao",
     "_bridge_append_ok_validacao",
     "_bridge_build_dict",

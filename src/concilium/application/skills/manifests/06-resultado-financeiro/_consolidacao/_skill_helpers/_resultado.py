@@ -16,6 +16,7 @@ from ._categorial import _resolve_custo_deficit_estoque_externo  # ty: ignore[un
 from ._venda_custo import (  # ty: ignore[unresolved-import]
     _br_append_gap_catalogo_validacao,
     _br_build_venda_custo,
+    _build_custos_atividades,
     _calc_venda_com_bdi,
     _validate_ac_adm_sobreposicao,
 )
@@ -47,6 +48,7 @@ def _build_resultado(
     float,
     float,
     float,
+    list,
 ]:
     """Computa resultado financeiro e retorna.
 
@@ -62,10 +64,12 @@ def _build_resultado(
     bdi_indireto_efetivo = inputs.get("bdi_indireto_efetivo")
     if not isinstance(bdi_indireto_efetivo, (int, float)):
         bdi_indireto_efetivo = None
+    custos_atividades = _build_custos_atividades(canonical_in, bdi_rates)
     venda_direto_eq, venda_indireto, custo_indireto_total = _calc_venda_com_bdi(
         canonical_in,
         bdi_rates,
         bdi_indireto_efetivo,
+        custos_atividades,
     )
     custos_indiretos = {ind.categoria: ind.custo_total for ind in canonical_in.indiretos}
 
@@ -158,6 +162,7 @@ def _build_resultado(
         venda_plus,
         custo_operacional_real,
         custo_total_catalogo,
+        custos_atividades,
     )
 
 

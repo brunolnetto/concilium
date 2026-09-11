@@ -65,6 +65,7 @@ def run_consolidacao_financeira(
         venda_plus,
         custo_total,
         custo_total_catalogo,
+        custos_atividades,
     ) = _build_resultado(canonical_in, inputs, validacoes, perfil)
 
     ponto_equilibrio_items = _build_ponto_equilibrio(canonical_in, validacoes, perfil)
@@ -85,7 +86,6 @@ def run_consolidacao_financeira(
         # tipado e com mensagem explicativa (ver LimitacaoClimaN4) — não altera nenhum
         # valor de custo/venda já calculado em `res`.
         res = res.model_copy(update={"limitacao_clima_n4": limitacao_clima_n4})
-    custos_atividades = _build_custos_atividades(canonical_in)
     _diag_pe, _back_pe = _build_diagnostico_pe(
         canonical_in, custos_atividades, ponto_equilibrio_items, validacoes, _bdi_tabela
     )
