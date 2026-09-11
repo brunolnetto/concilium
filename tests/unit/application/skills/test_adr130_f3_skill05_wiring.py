@@ -17,8 +17,10 @@ import sys
 from datetime import UTC, datetime
 
 import concilium.application.skills as _skills_pkg
+import pytest
 from concilium.application.skills import run_cronograma
 from concilium.application.skills import run_equipes_e_alocacao as run_equipes_diretas
+from concilium.domain.constants import SEMANAS_POR_MES
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,
@@ -152,6 +154,15 @@ def _insumos_reais() -> list[dict]:
         _mo("P0032", "Ajudante"),
         _eq("E0016", "Escavadeira hidráulica 22t"),
         _eq("E0007", "Caminhão basculante 14m3"),
+        {
+            "codigo": "MAT-TESTE",
+            "tipo": "MATERIAL",
+            "descricao": "Material de consumo de teste",
+            "unidade": "un",
+            "preco_unitario": 10.0,
+            "fonte_preco": "catalogo",
+            "atributos_especificos": {},
+        },
     ]
 
 
@@ -402,13 +413,27 @@ class TestDimensionamentoComItemMalformado:
 
 
 class TestDimensionamentoEndToEndComGrafoSinergia:
-    def test_custo_equipe_identico_com_e_sem_grafo_sinergia(self):
-        """Wiring do ADR-130 F3 nunca altera o custo/produtividade da equipe usados
-        no dimensionamento — só acrescenta validações informativas."""
+    def test_material_catalogado_persiste_gamma_material_na_base_horaria_semanal(self):
+        prod = _prod_dict(grafo_sinergia=None)
+        prod["composicao_padrao_equipe"]["materiais"] = [
+            {"insumo_id": "MAT-TESTE", "consumo_por_hora": 2.5},
+        ]
+
+        equipe, _ = _run_skill05(prod)
+
+        horas_mes = 8.0 * (30.0 * 5.0 / 7.0)
+        custo_material_esperado = 2.5 * 10.0 * horas_mes
+        fator_hora_catalogo = SEMANAS_POR_MES * 8.0 * 5.0
+
+        assert equipe.custo_material_mensal == pytest.approx(custo_material_esperado)
+        assert equipe.gamma_material_catalogo == pytest.approx(equipe.custo_material_mensal / fator_hora_catalogo)
+
+    def test_custo_mensal_eh_identico_mas_custo_total_segue_cronograma_com_sinergia(self):
+        """A composição preserva o custo mensal; a produtividade derivada altera a duração física."""
         equipe_sem, validacoes_sem = _run_skill05(_prod_dict(grafo_sinergia=None))
         equipe_com, validacoes_com = _run_skill05(_prod_dict(grafo_sinergia=_grafo_sinergia_real()))
 
-        assert equipe_com.custo_total == equipe_sem.custo_total
+        assert equipe_com.custo_total != equipe_sem.custo_total
         assert equipe_com.custo_fixo_mensal == equipe_sem.custo_fixo_mensal
         assert equipe_com.custo_mao_obra_mensal == equipe_sem.custo_mao_obra_mensal
         assert equipe_com.custo_equipamentos_mensal == equipe_sem.custo_equipamentos_mensal
@@ -418,10 +443,10 @@ class TestDimensionamentoEndToEndComGrafoSinergia:
         assert sinergia_sem == []
         assert sinergia_com == []  # dados reais calibrados: sem divergência/gargalo inconsistente
 
-    def test_val_sinergia_02_e_03_surfaced_end_to_end_sem_alterar_custo(self):
+    def test_val_sinergia_02_e_03_surfaced_end_to_end_com_custo_total_derivado(self):
         """Com um grafo divergente (escavadeira sub-dimensionada + gargalo_declarado
-        errado), VAL-SINERGIA-02/03 aparecem na lista de validações da skill-05 real,
-        mas o custo da equipe permanece IDÊNTICO ao caso sem grafo (D3/A3)."""
+        errado), VAL-SINERGIA-02/03 aparecem na lista de validações da skill-05 real
+        e a produtividade derivada altera a duração e o custo total da equipe."""
         equipe_base, _ = _run_skill05(_prod_dict(grafo_sinergia=None))
         grafo_divergente = _grafo_sinergia_real(
             capacidade_escavadeira=_CAP_ESCAVADEIRA_REAL / 2,
@@ -429,7 +454,7 @@ class TestDimensionamentoEndToEndComGrafoSinergia:
         )
         equipe_div, validacoes_div = _run_skill05(_prod_dict(grafo_sinergia=grafo_divergente))
 
-        assert equipe_div.custo_total == equipe_base.custo_total
+        assert equipe_div.custo_total != equipe_base.custo_total
         assert equipe_div.custo_fixo_mensal == equipe_base.custo_fixo_mensal
 
         codigos = {v.codigo for v in validacoes_div}
