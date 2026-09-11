@@ -59,6 +59,7 @@ from ._financeiro_resultado import (
 from ._indiretos_insumos import (
     AtividadeCustoCompleto,
     AtividadeInsumo,
+    CustoDiretoSemanalAtividade,
     Cronograma,
     CustoIndiretoAtividade,
     EstoqueDelayCanonical,
@@ -146,6 +147,7 @@ __all__ = [
     "CronogramaItem",
     "CustomTeamComposition",
     "CustoIndiretoAtividade",
+    "CustoDiretoSemanalAtividade",
     "CustoParticionadoItem",
     "CustoTotal",
     "DimensaoCriticidade",
