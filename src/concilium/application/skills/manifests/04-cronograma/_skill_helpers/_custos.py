@@ -299,7 +299,7 @@ def _lookup_eficiencia(
 
 def _build_dist_cell(
     producao_semanal_base: float,
-    num_eq: int,
+    num_eq: float,
     n_max: int,
     fator_clima: float,
     fator_calendario: float,
@@ -307,6 +307,7 @@ def _build_dist_cell(
     qtd_acumulada: float,
     M_max: float = 1.0,
     fator_jornada: float = 1.0,
+    eta_s_calculada: float | None = None,
 ) -> DistribuicaoSemanal:
     """Monta uma célula semanal com decomposição causal completa (NEP-035).
 
@@ -327,7 +328,8 @@ def _build_dist_cell(
     n_max_safe = max(1, n_max)
     n_eq_safe = max(0, num_eq)
     praticabilidade = fator_clima * fator_calendario * fator_jornada
-    eta_s = min(1.0, n_eq_safe / n_max_safe)
+    eta_s = eta_s_calculada if eta_s_calculada is not None else min(1.0, n_eq_safe / n_max_safe)
+    eta_s = min(1.0, max(0.0, eta_s))
     eta_p = praticabilidade
     q_max = producao_semanal_base * n_max_safe * M_max
     capacidade_real = q_max * eta_s * eta_p
@@ -341,8 +343,8 @@ def _build_dist_cell(
     pct = qtd_acumulada_nova / quantitativo if quantitativo > 0 else 0.0
     return DistribuicaoSemanal(
         num_equipes=n_eq_safe,
-        qtd_executada=round(qtd_executada, 2),
-        qtd_acumulada=round(qtd_acumulada_nova, 2),
+        qtd_executada=qtd_executada,
+        qtd_acumulada=qtd_acumulada_nova,
         pct=round(pct, 4),
         eficiencia=round(eta_w, 4),
         fator_clima=round(fator_clima, 4),

@@ -50,7 +50,7 @@ def _extract_praticabilidade(canonical_in: CanonicalModel) -> tuple[dict, dict]:
 def _determine_mode_and_distribuicao(
     canonical_in: CanonicalModel,
     inputs: dict,
-    num_equipes_por_item: dict[str, dict[str, int]] | None,
+    num_equipes_por_item: dict[str, dict[str, float]] | None,
     semanas_obra: list,
     cpu_lookup: dict,
     producao_lookup: dict,
@@ -184,13 +184,14 @@ def _build_assigned_resources_lookup(schedule_selected: ScheduleCandidateCanonic
 
 def _build_duration_and_ramp_lookup(
     schedule_selected: ScheduleCandidateCanonical | None,
-) -> tuple[dict[str, int], dict[str, list[float] | None]]:
+) -> tuple[dict[str, int], dict[str, list[float] | None], dict[str, dict[str, object] | None]]:
     """Constrói os mapas item_id → duration_weeks/ramp_profile do schedule_selected (ADR-072).
 
     activity_id do scheduler tem formato "item_id-atv-1", need to extract item_id.
     """
     duration_lookup: dict[str, int] = {}
     ramp_lookup: dict[str, list[float] | None] = {}
+    ramp_params_lookup: dict[str, dict[str, object] | None] = {}
     if schedule_selected is not None and getattr(schedule_selected, "scheduled_activities", None):
         for sa in schedule_selected.scheduled_activities:
             activity_id = getattr(sa, "activity_id", None)
@@ -202,7 +203,34 @@ def _build_duration_and_ramp_lookup(
                     item_id = activity_id
                 duration_lookup[item_id] = duration
                 ramp_lookup[item_id] = getattr(sa, "ramp_profile", None)
-    return duration_lookup, ramp_lookup
+                ramp_params = getattr(sa, "ramp_params", None)
+                ramp_params_lookup[item_id] = dict(ramp_params) if isinstance(ramp_params, dict) else None
+    return duration_lookup, ramp_lookup, ramp_params_lookup
+
+
+def _compute_fracao_fechamento(distribuicao_semanal: dict) -> float:
+    """Return φ_i from the final productive cell's unrounded physical capacity."""
+    final_cell = next((cell for cell in reversed(list(distribuicao_semanal.values())) if cell.qtd_executada > 0), None)
+    if final_cell is None:
+        return 1.0
+    capacidade_final = final_cell.q_max_celula * final_cell.eta_s * final_cell.eta_p
+    if capacidade_final <= 0:
+        return 1.0
+    return min(1.0, max(0.0, final_cell.qtd_executada / capacidade_final))
+
+
+def _build_effective_ramp_profile(
+    distribuicao_semanal: dict,
+    ramp_params: dict[str, object] | None,
+    fallback_profile: list[float] | None,
+) -> list[float] | None:
+    """Rebuild the normalized profile from the real materialized calendar horizon."""
+    if not ramp_params:
+        return fallback_profile
+    n_max = float(ramp_params.get("n_max") or 0)
+    if n_max <= 0:
+        return fallback_profile
+    return [cell.num_equipes / n_max for cell in distribuicao_semanal.values()]
 
 
 def _build_scheduled_activity_for_item(
@@ -213,6 +241,7 @@ def _build_scheduled_activity_for_item(
     assigned_lookup: dict[str, dict],
     duration_lookup: dict[str, int],
     ramp_lookup: dict[str, list[float] | None],
+    ramp_params_lookup: dict[str, dict[str, object] | None] | None = None,
     fallback_item_ids: set[str] | None = None,
 ) -> Any:
     """Constrói o ScheduledActivityCanonical de um item da EAP a partir da distribuição semanal."""
@@ -237,6 +266,8 @@ def _build_scheduled_activity_for_item(
     else:
         duration_weeks = duration_from_distribuicao
 
+    ramp_params = (ramp_params_lookup or {}).get(item.item_id)
+
     return ScheduledActivityCanonical(
         activity_id=item.item_id,
         start_week=start_week,
@@ -246,7 +277,9 @@ def _build_scheduled_activity_for_item(
         data_fim=data_fim,
         distribuicao_semanal=distribuicao_semanal,
         assigned_resources=assigned_lookup.get(item.item_id, {}),
-        ramp_profile=ramp_lookup.get(item.item_id),
+        ramp_profile=_build_effective_ramp_profile(distribuicao_semanal, ramp_params, ramp_lookup.get(item.item_id)),
+        ramp_params=ramp_params,
+        fracao_fechamento=_compute_fracao_fechamento(distribuicao_semanal),
         produtividade_fallback_aplicada=item.item_id in (fallback_item_ids or set()),
     )
 
@@ -269,7 +302,7 @@ def _build_scheduled_activities(
     assigned_lookup = _build_assigned_resources_lookup(schedule_selected)
 
     # ADR-072: Preservar duração original do scheduler em vez de recalcular
-    duration_lookup, ramp_lookup = _build_duration_and_ramp_lookup(schedule_selected)
+    duration_lookup, ramp_lookup, ramp_params_lookup = _build_duration_and_ramp_lookup(schedule_selected)
 
     scheduled_activities_out = [
         _build_scheduled_activity_for_item(
@@ -280,6 +313,7 @@ def _build_scheduled_activities(
             assigned_lookup,
             duration_lookup,
             ramp_lookup,
+            ramp_params_lookup,
             fallback_item_ids,
         )
         for item in canonical_in.eap
@@ -376,18 +410,18 @@ def _build_intervalos_and_campanhas(
 def _expand_mobilizacao_policies(
     canonical_in: CanonicalModel,
     policies: dict[str, dict],
-    existing_allocation: dict[str, dict[str, int]] | None,
+    existing_allocation: dict[str, dict[str, float]] | None,
     semanas_obra: list[str],
     cpu_lookup: dict[str, dict],
     producao_lookup: dict[str, dict],
     regime: Any,
     prat_semanal: dict[str, float],
     validacoes: list[ValidacaoItem],
-) -> tuple[dict[str, dict[str, int]], list]:
+) -> tuple[dict[str, dict[str, float]], list]:
     """ADR-054 Phase 3: Convert WMP policies into per-week team allocations for MANUAL mode."""
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
-    result: dict[str, dict[str, int]] = dict(existing_allocation or {})
+    result: dict[str, dict[str, float]] = dict(existing_allocation or {})
     curves: list = []
     semanas_set = set(semanas_obra)
     eap_lookup = {item.item_id: item for item in (canonical_in.eap or [])}
@@ -479,7 +513,7 @@ def _run_cronograma_build_context(
 
 
 def _run_cronograma_validate_num_equipes_formato(num_equipes_por_item: Any, validacoes: list[ValidacaoItem]) -> bool:
-    """Valida que num_equipes_por_item é dict[item_id, dict[semana_iso, int]].
+    """Valida que num_equipes_por_item é dict[item_id, dict[semana_iso, float]].
     Retorna False (e registra VAL-CRON-EQUIPES-FORMATO) se algum valor for plano."""
     if num_equipes_por_item is None or not isinstance(num_equipes_por_item, dict):
         return True
@@ -491,7 +525,7 @@ def _run_cronograma_validate_num_equipes_formato(num_equipes_por_item: Any, vali
             codigo="VAL-CRON-EQUIPES-FORMATO",
             status="ERRO",
             mensagem=(
-                f"num_equipes_por_item: valor deve ser dict[semana_iso, int], não int. "
+                f"num_equipes_por_item: valor deve ser dict[semana_iso, float], não escalar. "
                 f"Itens com formato errado: {flat_items[:3]}. "
                 f'Esperado: {{"item_id": {{"2025-W01": 2, "2025-W02": 3}}}}'
             ),
