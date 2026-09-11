@@ -5,6 +5,7 @@ from __future__ import annotations
 from concilium.domain.models.canonical import (
     AtividadeCustoCompleto,
     AtividadeInsumo,
+    CustoDiretoSemanalAtividade,
     CustoIndiretoAtividade,
     IndiretoAlocacao,
     InsumoComponenteAtividade,
@@ -46,6 +47,13 @@ class TestAtividadeInsumo:
     def test_no_components_zero(self):
         ins = AtividadeInsumo(categoria="Vazio")
         assert ins.custo_total_direto == 0.0
+
+    def test_custo_total_includes_combustivel(self):
+        ins = AtividadeInsumo(
+            categoria="Execução",
+            combustivel=InsumoComponenteAtividade(nome="COMB", custo_total=700.0),
+        )
+        assert ins.custo_total_direto == 700.0
 
 
 class TestIndiretoAlocacao:
@@ -171,3 +179,26 @@ class TestAtividadeCustoCompleto:
             ),
         )
         assert act.custo_total_atividade == 15600.0 + 5000.0 + 6000.0
+
+    def test_stores_weekly_direct_cost_and_bdi_diagnostic(self):
+        weekly = CustoDiretoSemanalAtividade(
+            semana_iso="2026-W10",
+            quantitativo=50.0,
+            frentes=2.0,
+            custo_contratual=800.0,
+            custo_variavel=200.0,
+            custo_operacional=1000.0,
+            custo_operacional_com_bdi=1150.0,
+            bdi_equivalente=0.15,
+        )
+        act = AtividadeCustoCompleto(
+            atividade_id="A",
+            semana_inicio=0,
+            semana_fim=0,
+            custos_diretos_semanais=[weekly],
+            custo_operacional_direto=1000.0,
+            custo_direto_com_bdi=1150.0,
+            bdi_equivalente_direto=0.15,
+        )
+        assert act.custos_diretos_semanais[0].custo_variavel == 200.0
+        assert act.bdi_equivalente_direto == 0.15

@@ -10,7 +10,7 @@ legado, mantido só por robustez) e é referenciada pela CPU via producao_id.
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe, MaterialGerado
 
@@ -126,14 +126,43 @@ class CapacidadeElemento(BaseModel):
     justificativa: str | None = None
 
 
+class ArestaFluxoSinergia(BaseModel):
+    """Aresta capacitada do domínio de produção para derivação por max-flow."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    aresta_id: str
+    origem: str
+    destino: str
+    capacidade_horaria: float = Field(gt=0)
+
+
 class GrafoSinergiaEquipe(BaseModel):
-    """Estrutura de sinergia da equipe: relações + capacidades. Opcional por CPU (ADR-130 D1)."""
+    """Estrutura de sinergia da equipe, com topologia formal opcional de produção."""
 
     model_config = ConfigDict(extra="forbid")
 
     relacoes: list[RelacaoSinergia] = Field(default_factory=list)
     capacidades: list[CapacidadeElemento] = Field(default_factory=list)
     gargalo_declarado: str | None = None  # elemento_id; se None, derivado (ADR-130 D2)
+    fonte: str | None = None
+    sorvedouro: str | None = None
+    dominio: set[str] = Field(default_factory=set)
+    arestas_fluxo: list[ArestaFluxoSinergia] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_flux_topology(self) -> "GrafoSinergiaEquipe":
+        if not self.arestas_fluxo:
+            return self
+        if not self.fonte or not self.sorvedouro or not self.dominio:
+            raise ValueError("arestas_fluxo exige fonte, sorvedouro e dominio não vazios")
+        if self.fonte not in self.dominio or self.sorvedouro not in self.dominio:
+            raise ValueError("fonte e sorvedouro devem pertencer ao dominio")
+        if any(
+            edge.origem not in self.dominio or edge.destino not in self.dominio for edge in self.arestas_fluxo
+        ):
+            raise ValueError("toda aresta_fluxo deve ter origem e destino no dominio")
+        return self
 
 
 def _fator_by_mao_obra(funcoes_calib: list, funcoes_nova: list) -> float:

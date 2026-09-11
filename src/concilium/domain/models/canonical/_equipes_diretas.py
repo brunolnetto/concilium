@@ -78,6 +78,14 @@ class EquipeDireta(BaseModel):
     custo_locacao_mensal: float = 0.0  # Σ equipamentos.custo_locacao_mensal × num_unidades
     custo_manutencao_mensal: float = 0.0  # Σ equipamentos.custo_manutencao_mensal × num_unidades
     # Invariante: custo_equipamentos_mensal ≈ custo_locacao_mensal + custo_manutencao_mensal
+    # Formalismo Parte III: taxas de catálogo por hora e produtividade da equipe.
+    produtividade_horaria: float = 0.0
+    horas_dia: float = 0.0
+    dias_semana: float = 0.0
+    gamma_mao_obra_catalogo: float = 0.0
+    gamma_equipamentos_catalogo: float = 0.0
+    gamma_material_catalogo: float = 0.0
+    gamma_combustivel_catalogo: float = 0.0
     permanencia_meses: float = Field(default=0.0, ge=0)
     # ADR-172: ativos/SEMANAS_POR_MES (contagem de semanas ativas, robusto a rampa) — antes
     # dividia team_weeks/num_equipes_paralelas, que subestimava sob rampa (fix D4).
