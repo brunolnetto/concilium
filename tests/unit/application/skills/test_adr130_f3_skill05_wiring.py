@@ -208,6 +208,17 @@ def _make_canonical(item_id: str = "EAP-01") -> CanonicalModel:
     return CanonicalModel(meta=meta, projeto=proj, eap=eap, praticabilidade=prat)
 
 
+def _physical_capacity_first_week(prod: dict, item_id: str = "EAP-01") -> float:
+    """Read the materialized physical F(m)*H from skill-04, not cost proxies."""
+    can = _make_canonical(item_id=item_id)
+    out = run_cronograma(
+        can, {"num_equipes_por_item": {item_id: {"2026-W23": 1}}}, _catalogo(prod)
+    )
+    assert out.canonical.cronograma is not None
+    dist = out.canonical.cronograma.scheduled_activities[0].distribuicao_semanal
+    return dist["2026-W23"].q_max_celula
+
+
 def _run_skill05(prod: dict, item_id: str = "EAP-01") -> tuple:
     """Roda cronograma + skill-05 end-to-end; retorna (EquipeDireta, validacoes)."""
     can = _make_canonical(item_id=item_id)
@@ -430,11 +441,20 @@ class TestDimensionamentoEndToEndComGrafoSinergia:
         assert equipe.gamma_material_catalogo == pytest.approx(equipe.custo_material_mensal / fator_hora_catalogo)
 
     def test_custo_mensal_eh_identico_mas_custo_total_segue_cronograma_com_sinergia(self):
-        """A composição preserva o custo mensal; a produtividade derivada altera a duração física."""
+        """Composição e presença contratual fixas: F(m) altera capacidade, não tarifa."""
         equipe_sem, validacoes_sem = _run_skill05(_prod_dict(grafo_sinergia=None))
         equipe_com, validacoes_com = _run_skill05(_prod_dict(grafo_sinergia=_grafo_sinergia_real()))
 
-        assert equipe_com.custo_total != equipe_sem.custo_total
+        # In manual mode the SAME contracted front is paid for the SAME
+        # week; altering physical productivity does not retroactively change
+        # that contractual presence or invent an eta_s loss.
+        assert equipe_com.custo_total == equipe_sem.custo_total
+        assert _physical_capacity_first_week(_prod_dict(grafo_sinergia=_grafo_sinergia_real())) == pytest.approx(
+            40 * _CAP_ESCAVADEIRA_REAL
+        )
+        assert _physical_capacity_first_week(_prod_dict(grafo_sinergia=None)) == pytest.approx(
+            40 * _VALOR_HORARIO_REAL
+        )
         assert equipe_com.custo_fixo_mensal == equipe_sem.custo_fixo_mensal
         assert equipe_com.custo_mao_obra_mensal == equipe_sem.custo_mao_obra_mensal
         assert equipe_com.custo_equipamentos_mensal == equipe_sem.custo_equipamentos_mensal
@@ -445,9 +465,8 @@ class TestDimensionamentoEndToEndComGrafoSinergia:
         assert sinergia_com == []  # dados reais calibrados: sem divergência/gargalo inconsistente
 
     def test_val_sinergia_02_e_03_surfaced_end_to_end_com_custo_total_derivado(self):
-        """Com um grafo divergente (escavadeira sub-dimensionada + gargalo_declarado
-        errado), VAL-SINERGIA-02/03 aparecem na lista de validações da skill-05 real
-        e a produtividade derivada altera a duração e o custo total da equipe."""
+        """With a divergent physical bottleneck, diagnostics surface while a
+        fixed manual allocation retains the same contract cost."""
         equipe_base, _ = _run_skill05(_prod_dict(grafo_sinergia=None))
         grafo_divergente = _grafo_sinergia_real(
             capacidade_escavadeira=_CAP_ESCAVADEIRA_REAL / 2,
@@ -455,7 +474,13 @@ class TestDimensionamentoEndToEndComGrafoSinergia:
         )
         equipe_div, validacoes_div = _run_skill05(_prod_dict(grafo_sinergia=grafo_divergente))
 
-        assert equipe_div.custo_total != equipe_base.custo_total
+        # Physical output drops with the bottleneck, but the manually
+        # contracted one-week resource remains billed for the whole week.
+        # A cost difference requires a different feasible allocation/span.
+        assert equipe_div.custo_total == equipe_base.custo_total
+        assert _physical_capacity_first_week(
+            _prod_dict(grafo_sinergia=grafo_divergente)
+        ) == pytest.approx(40 * _CAP_ESCAVADEIRA_REAL / 2)
         assert equipe_div.custo_fixo_mensal == equipe_base.custo_fixo_mensal
 
         codigos = {v.codigo for v in validacoes_div}

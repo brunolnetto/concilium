@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
+import pytest
+
 _ROOT = Path(__file__).parent.parent.parent.parent.parent / "src/concilium/application/skills/manifests"
 
 
@@ -157,7 +159,7 @@ class TestBuildDistCell:
         # q_max_celula = F(m) * H, independent of nonmobilized fronts.
         cell = _cron._build_dist_cell(100.0, 1, 4, 0.8, 0.8, 10_000.0, 0.0)
         assert cell.q_max_celula == 100.0
-        assert cell.perda_fisica == 36.0  # exogenous calendar/climate only
+        assert cell.perda_fisica == pytest.approx(36.0)  # exogenous factors only
 
     def test_eficiencia_nao_e_clima(self):
         # garante que eficiencia (utilização) != clima×calendário (conflação corrigida)
