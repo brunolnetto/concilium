@@ -30,3 +30,12 @@ Never generate expected outputs from production code. Changes to the reviewed
 formalism require explicit provenance and updated hand-checkable vectors.
 
 **Related:** #8, #9–#13, #22.
+
+## Arithmetic invariant (post-review)
+
+All accepted input values are exact decimal strings converted to Python `Fraction`;
+no arithmetic uses the mutable `decimal.getcontext().prec` setting. Rational
+answers with a finite decimal expansion are serialized exactly. Nonterminating
+rational answers fail closed with `ReferenceContractError` until a separately
+versioned rational-output contract is adopted. Golden comparison is rational
+and exact; a 29-digit perturbation is detected rather than rounded away.

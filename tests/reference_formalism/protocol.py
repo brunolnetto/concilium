@@ -1,11 +1,13 @@
-"""Standalone decimal reference protocol. No imports from concilium runtime.
+"""Standalone *exact* rational reference protocol; never imports Concilium.
 
-P22-A verifies the *shape* and independently calculated scalar baseline;
-P22-B/C extend the evaluator after the mathematical spec is corrected.
+P22-A defines a verifiable scalar K/V baseline using decimal-string inputs.
+Internally calculations use Fraction, not mutable Decimal context precision.
+Nonterminating rational outputs are rejected rather than silently rounded.
 """
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
+from fractions import Fraction
 from typing import Any
 
 PROTOCOL_VERSION = "formalism-reference/1"
@@ -21,10 +23,11 @@ OUTPUTS = frozenset({
 
 
 class ReferenceContractError(ValueError):
-    """A reference vector is invalid or disagrees with a hand-checked result."""
+    """A reference vector is invalid or disagrees with exact arithmetic."""
 
 
-def decimal_input(value: Any, name: str) -> Decimal:
+def decimal_input(value: Any, name: str) -> Fraction:
+    """Parse a decimal string as an exact rational (no binary or decimal rounding)."""
     if not isinstance(value, str):
         raise ReferenceContractError(f"{name} must be an exact decimal string")
     try:
@@ -33,11 +36,37 @@ def decimal_input(value: Any, name: str) -> Decimal:
         raise ReferenceContractError(f"{name} is not a decimal value") from exc
     if not result.is_finite():
         raise ReferenceContractError(f"{name} must be finite")
-    return result
+    return Fraction(result)
+
+
+def _finite_decimal(value: Fraction, name: str) -> str:
+    """Render a terminating rational exactly, rejecting nonterminating quotients."""
+    denominator = value.denominator
+    twos = 0
+    fives = 0
+    while denominator % 2 == 0:
+        denominator //= 2
+        twos += 1
+    while denominator % 5 == 0:
+        denominator //= 5
+        fives += 1
+    if denominator != 1:
+        raise ReferenceContractError(
+            f"{name} has a nonterminating decimal expansion; "
+            "reference protocol requires a separate exact rational output policy"
+        )
+    scale = max(twos, fives)
+    unsigned = abs(value.numerator) * 2 ** (scale - twos) * 5 ** (scale - fives)
+    sign = "-" if value < 0 else ""
+    if not scale:
+        return sign + str(unsigned)
+    digits = str(unsigned).zfill(scale + 1)
+    whole, fractional = digits[:-scale], digits[-scale:].rstrip("0")
+    return sign + whole + ("." + fractional if fractional else "")
 
 
 def evaluate_vector(vector: dict[str, Any]) -> dict[str, str]:
-    """Exact scalar K/V baseline only. Not a full production or pricing oracle."""
+    """Exact scalar K/V baseline only; no production-runtime certification."""
     if vector.get("protocol") != PROTOCOL_VERSION:
         raise ReferenceContractError("unsupported reference protocol")
     fields = vector.get("inputs")
@@ -50,7 +79,7 @@ def evaluate_vector(vector: dict[str, Any]) -> dict[str, str]:
     ):
         if p[name] <= 0:
             raise ReferenceContractError(f"{name} must be positive")
-    if p["team_count"] != p["team_count"].to_integral_value():
+    if p["team_count"].denominator != 1:
         raise ReferenceContractError("team_count must be an integer")
     if not 0 <= p["quantity_before_final_week"] < p["scope_total"]:
         raise ReferenceContractError("invalid previously delivered quantity")
@@ -74,7 +103,7 @@ def evaluate_vector(vector: dict[str, Any]) -> dict[str, str]:
             p["variable_rate_per_team_hour"] * p["scope_total"] / p["productivity_per_team_hour"]
         ),
     }
-    return {key: format(value, "f") for key, value in results.items()}
+    return {key: _finite_decimal(value, key) for key, value in results.items()}
 
 
 def verify_golden(vector: dict[str, Any]) -> dict[str, str]:
@@ -83,7 +112,7 @@ def verify_golden(vector: dict[str, Any]) -> dict[str, str]:
         raise ReferenceContractError("golden outputs must match the reference contract")
     actual = evaluate_vector(vector)
     for key in OUTPUTS:
-        if Decimal(actual[key]) != decimal_input(expected[key], key):
+        if decimal_input(actual[key], key) != decimal_input(expected[key], key):
             raise ReferenceContractError(
                 f"{vector.get('case_id', 'unknown')} / {key}: "
                 f"actual={actual[key]}, expected={expected[key]}"

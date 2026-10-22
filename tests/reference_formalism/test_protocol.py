@@ -79,3 +79,36 @@ def test_reference_code_does_not_import_runtime() -> None:
                 assert not any(alias.name.startswith("concilium") for alias in part.names), file
             if isinstance(part, ast.ImportFrom):
                 assert not (part.module or "").startswith("concilium"), file
+
+def test_oracle_rejects_rounded_high_precision_expected_value() -> None:
+    # Regression for Codex P2: context precision 28 incorrectly made
+    # rate 2.0000000000000000000000000001 indistinguishable from 2.
+    vector = deepcopy(cases()[0])
+    vector["inputs"]["variable_rate_per_team_hour"] = "2.0000000000000000000000000001"
+    with pytest.raises(ReferenceContractError, match="variable_total_cost|variable_final_week_cost"):
+        verify_golden(vector)
+    result = evaluate_vector(vector)
+    assert result["variable_total_cost"] == "20.000000000000000000000000001"
+
+
+def test_oracle_is_immune_to_global_decimal_context() -> None:
+    from decimal import localcontext
+
+    vector = deepcopy(cases()[0])
+    vector["inputs"]["variable_rate_per_team_hour"] = "2.0000000000000000000000000001"
+    with localcontext() as ctx:
+        ctx.prec = 3
+        assert evaluate_vector(vector)["variable_total_cost"] == "20.000000000000000000000000001"
+
+
+def test_nonterminating_fraction_fails_closed() -> None:
+    vector = deepcopy(cases()[0])
+    vector["inputs"]["productivity_per_team_hour"] = "3"
+    with pytest.raises(ReferenceContractError, match="nonterminating decimal"):
+        evaluate_vector(vector)
+
+
+def test_exact_finite_fraction_is_serialized_without_rounding() -> None:
+    vector = deepcopy(cases()[0])
+    vector["inputs"]["productivity_per_team_hour"] = "8"
+    assert evaluate_vector(vector)["variable_total_cost"] == "25"
