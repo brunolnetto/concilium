@@ -143,186 +143,97 @@ Os $\beta$ são as taxas de BDI (Benefícios e Despesas Indiretas) associadas a 
 
 ---
 
-## Parte III — Custo Horário de Catálogo ($\gamma$)
+## Parte III — Custo de Catálogo e Composição de Referência
 
-O custo de catálogo é o preço "de tabela" de uma equipe: quanto ela custaria por hora se operasse exatamente como planejado, sem atrasos, perdas de eficiência ou imprevistos de canteiro. É o ponto de partida antes de qualquer ajuste pela realidade da obra — as próximas partes mostram como esse valor se transforma quando a produção real entra em cena.
+O cadastro declara, por recurso \(g\), a taxa de presença contratual \(c_g^{K}\) [R$/h] e/ou preço de consumível \(p_g\) [R$/unidade física]. O custo horário **por frente independente** de cada categoria é \(\gamma_i^k=\sum_{r:\operatorname{cat}(r)=k}c_r n_r\), onde as dimensões devem ser homogêneas.
 
-$$\gamma_i^{EQ} = \sum_{r\in R_i,\,\text{cat}(r)=EQ} c_r n_r \qquad \text{(análogo para } MO, MAT, COMB\text{)}$$
+**Importante:** \(\gamma_i^k\) é da composição **de referência**, não necessariamente da configuração mobilizada \(m_{ij}\). Com \(F_i(m)\) não linear, dividir uma taxa horária por \(\rho_i^{peak}\) só tem significado após especificar qual \(m^{ref}\), quais recursos, qual jornada e quais quantidades físicas estão na base do catálogo.
 
-Somando o custo horário de cada recurso ($c_r$, calculado em §I.3.1) multiplicado por quantos desse recurso existem em uma frente ($n_r$), chega-se ao custo horário de cada categoria.
+Uma referência admissível deve declarar \((m_i^{ref},F_i(m_i^{ref}),a_{ig}(m_i^{ref}),H_i,\text{regime de consumo})\) e calcular seu custo por unidade a partir de **numerador e denominador dessa mesma configuração**. A forma histórica
 
-$$\gamma_i^{\mathrm{K,cat}} \equiv \gamma_i^{EQ}+\gamma_i^{MO} \qquad\text{[contratual: cobrado por semana mobilizada]}$$
-$$\gamma_i^{\mathrm{V,cat}} \equiv \gamma_i^{MAT}+\gamma_i^{COMB} \qquad\text{[consumível: escala com produção]}$$
-$$\gamma_i^{\mathrm{cat}} = \gamma_i^{\mathrm{K,cat}}+\gamma_i^{\mathrm{V,cat}}\qquad\text{[R\$/h]}$$
+$$p_i^{cat}=\frac{\gamma_i^{cat}}{\rho_i^{front}}$$
 
-Agrupando as quatro categorias nos dois blocos de §0, chega-se ao custo horário total "de tabela" da equipe — e à divisão entre a parte que é fixa por semana (K) e a parte que varia com a produção (V).
-
-$$f_i^{\mathrm V} = \gamma_i^{\mathrm{V,cat}}/\gamma_i^{\mathrm{cat}} \qquad\text{[fração consumível do custo de catálogo]}$$
-
-$f_i^{\mathrm V}$ resume, num único número, o "perfil de risco" da equipe: uma equipe com $f_i^{\mathrm V}$ alto é mais sensível ao preço de combustível e material; uma equipe com $f_i^{\mathrm V}$ baixo é mais sensível a quanto tempo permanece mobilizada, independentemente do quanto produz.
-
-$$p_i^{\mathrm{cat}} = \gamma_i^{\mathrm{cat}}/\rho_i \qquad\text{[R\$/un — preço unitário de catálogo]}$$
-
-$$\boxed{C_i^{\mathrm{cat}} \equiv p_i^{\mathrm{cat}}\,Q_i = \frac{\gamma_i^{\mathrm{cat}}\,Q_i}{\rho_i}}\qquad\text{[R\$]}$$
-
-$C_i^{\mathrm{cat}}$ é o custo de catálogo da atividade — base para diagnósticos e para o envelope de catálogo do projeto inteiro (Parte XIII). Dividindo o custo horário pela produção horária ($\rho_i$, §I.3.2), chega-se ao preço de tabela por unidade produzida; multiplicando pelo quantitativo total da atividade, chega-se ao custo de catálogo da atividade inteira — o número contra o qual toda ineficiência real será depois comparada.
+é **caso particular** de composição independente, taxa realmente **por frente** e custos unitários dimensionados nessa mesma base. Para gargalos compartilhados, tarifas de standby ou demanda não linear, não adotar a expressão como identidade universal. Reavaliação completa: #11/#18/#21.
 
 ---
 
 ## Parte IV — Cronograma Semanal
 
-Até aqui, os custos foram tratados como se toda semana fosse igualmente produtiva. Esta seção introduz o calendário real: quantas unidades cada atividade efetivamente produz, semana a semana, considerando quantas frentes estão mobilizadas e quão eficiente é o trabalho naquela semana específica.
+A produção da semana \(j\) é determinada uma única vez pela função física \(F_i(m_{ij})\) (§I.3.2):
 
-A capacidade física semanal exógena é $B_{ij}=F_i(m_{ij})h_id_i\eta_{p,j}\eta_{w,j}$ e o quantitativo entregue é
+$$\boxed{B_{ij}=F_i(m_{ij})H_i\eta_{p,j}\eta_{w,j},\qquad
+q_{ij}=\min\left\{\left(Q_i-\sum_{k<j}q_{ik}\right)_+,B_{ij}\right\}},\quad H_i=h_id_i.$$
 
-$\boxed{q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}}.$
+O fechamento satisfaz \(\sum_jq_{ij}=Q_i\) somente se a capacidade e o calendário disponíveis forem suficientes. Na última semana produtiva \(j_i^1\), com \(B_{i,j_i^1}>0\), seja
 
-Não se multiplica novamente pela quantidade de equipes nem por $\eta_s$ de alocação.
+$$\boxed{\varphi_i=\frac{q_{i,j_i^1}}{B_{i,j_i^1}}\in(0,1].}$$
 
-**Fechamento exato de escopo.** Seja $j_i^1 \equiv j_i^0+N_i-1$ a última semana ativa de $A_i$, obtida pela busca monotônica em $N_i$ (Parte XIV, Fase 1) sobre o perfil nominal $\{m_i(\tau)\}$ de $W_i$. Nas semanas interiores $j<j_i^1$, a produção usa o perfil nominal integralmente. Na última semana, o quantitativo residual fecha exatamente o escopo:
-
-$$q_{i,j_i^1} = Q_i - \sum_{j=j_i^0}^{j_i^1-1} q_{ij}$$
-
-A semana final precisa de capacidade positiva; a fração de fechamento é a quantidade residual dividida pela capacidade física da semana, não uma ineficiência:
-
-$$\boxed{\varphi_i=\frac{q_{i,j_i^1}}{F_i(m_i(N_i-1))h_id_i\eta_{p,j_i^1}\eta_{w,j_i^1}}\in(0,1]}$$
-
-representando a fração da capacidade nominal da última semana efetivamente utilizada para completar o escopo. A frota mobilizada ($m_{ij}$, e portanto o custo contratual $C_{ij}^{\mathrm{K,op}}$, Parte V) permanece no valor nominal do perfil na última semana — recursos contratuais (EQ/MO) são cobrados pela semana mobilizada independentemente da fração de produção efetivamente necessária naquela semana (§0). Apenas o consumível é prorateado pela produção realizada, via $\varphi_i$, garantindo o fecho exato do escopo:
-
-$$\sum_{j=j_i^0}^{j_i^1} q_{ij} = Q_i \qquad\text{(exato, por construção)}$$
-
-Contadores: $M_i \equiv \sum_j m_{ij}$ (frente-semanas totais, ao valor nominal — inclui a última semana integralmente), $N_i = |\{j:m_{ij}>0\}|$ (semanas de calendário ativas).
-
-$$\mathcal{A}_j \coloneqq \{A_i\in\mathcal{A} : j\in[j_i^0,\,j_i^0+N_i-1]\}$$
+\(\varphi_i\) mede a **fração de capacidade usada para encerrar escopo**, não eficiência produtiva perdida. A contratação semanal vigente pode ser cobrada integralmente, mesmo se \(\varphi_i<1\); o consumo físico real deve respeitar seu regime próprio (§V e §X). Recursos pagos mas não demandados são \(s_{gj}\) do pool (§IX).
 
 ---
 
-## Parte V — Custo Direto Semanal (sem BDI)
+## Parte V — Custos Diretos Semanais: Recursos e Consumo Físico
 
-**Nota normativa #11:** as fórmulas históricas abaixo envolvendo $\gamma/\rho$ e invariância absoluta de consumíveis só podem ser aplicadas quando a hipótese de capacidade linear por frente for demonstrada. Na presença de $F_i(m)$ não linear ou fechamento parcial, estão **pendentes de prova** e não autorizam certificação GO. Veja [CAPACIDADE_E_RECURSOS](CAPACIDADE_E_RECURSOS.md).
+Se \(a_{ig}(m_{ij})\) é a demanda de recursos contratados por \(i\), o custo semanal **ativo, por atividade** pode ser diagnosticado a partir das tarifas contratuais compatíveis:
 
-Esta seção converte os quantitativos semanais da Parte IV em valores monetários, separando o que é cobrado independentemente da produção (o bloco contratual, K) do que acompanha exatamente o que foi produzido (o bloco consumível, V) — a mesma distinção introduzida em §0.
+$$C_{ij}^{K,act}=H_i\sum_{g\in K}c_g^{act}\,a_{ig}(m_{ij}),$$
 
-$$C_{ij}^{\mathrm{K,op}} = \gamma_i^{\mathrm{K,cat}}\,h_id_i\,m_{ij}\qquad\text{[R\$] — nominal em toda semana ativa, inclusive a última}$$
+quando \(c_g^{act}\) é em R$/h, sem presumir que a soma por atividades reconstrói contratos compartilhados. **O desembolso contratual autoritativo do projeto** vem do livro de instâncias \(x_{gj}\), incluindo standby (§IX), e não da simples soma de envelopes por atividade.
 
-$C_{ij}^{\mathrm{K,op}}$ é o custo contratual da semana: o valor pago pelas frentes mobilizadas, que depende apenas do regime de jornada e de quantas frentes estão em campo — não de quanto foi produzido. É como alugar um equipamento por semana: o valor é o mesmo, tenha a equipe produzido muito ou pouco naquela semana.
+Para bem consumível \(g\), seja \(U_{gij}\ge0\) a quantidade **física** atribuída à atividade \(i\) na semana \(j\). Seu custo é
 
-$$C_{ij}^{\mathrm{V,op}} = \gamma_i^{\mathrm{V,cat}}\cdot\frac{q_{ij}}{\rho_i}\qquad\text{[R\$]}$$
+$$\boxed{C_{ij}^{V}=\sum_{g\in V}p_g\,U_{gij}.}$$
 
-$C_{ij}^{\mathrm{V,op}}$ é o custo consumível da semana: proporcional ao quanto foi de fato produzido ($q_{ij}$), e por isso já incorpora, de forma implícita, tanto a eficiência da semana quanto o fechamento fracionário da última semana (Parte IV). É como pagar por combustível: quanto mais se produz, mais se consome, e vice-versa.
-
-Nas semanas interiores, $q_{ij}/\rho_i \equiv \varepsilon_{ij}h_id_im_{ij}$ por definição de $q_{ij}$ (Parte IV) — a formulação acima generaliza a forma tempo-a-tempo e permanece exata na semana de fechamento, onde $q_{ij}$ é o residual e não $\varepsilon_{ij}h_id_im_{ij}$ diretamente.
-
-$$C_{ij}^{\mathrm{op}} = C_{ij}^{\mathrm{K,op}}+C_{ij}^{\mathrm{V,op}}\qquad\text{[R\$]}$$
-
-Somando os dois blocos, chega-se ao custo direto daquela semana específica — a peça básica a partir da qual todos os totais das próximas partes são construídos.
+A quantidade \(U_{gij}\) deve decorrer de taxas com unidades verificáveis, tempo efetivo, produção realizada e hipóteses de perda/ociosidade. Sob regra *por unidade produzida* \(U_{gij}=\kappa_{ig}^{out}q_{ij}\); sob regra por **hora real de operação**, a demanda depende dessas horas e pode mudar com \(F_i(m)\) e clima. A identidade antiga \(\gamma_i^{V,cat}\,q_{ij}/\rho_i\) é válida **somente** se a relação consumível/quantidade usada para deduzi-la for comprovadamente constante (#11/#13/#18).
 
 ---
 
-## Parte VI — Custo Direto Total por Atividade (sem BDI)
+## Parte VI — Agregação e Invariância Condicionada
 
-Somando os custos semanais da Parte V ao longo de toda a duração da atividade, chega-se ao seu custo direto total — e a uma das identidades mais úteis deste formulário, detalhada logo abaixo.
+$$C_i^{V}=\sum_j C_{ij}^{V}=\sum_{g,j}p_gU_{gij},\qquad
+C^{cons}=\sum_iC_i^V=\sum_g p_gU_g,\qquad U_g=\sum_{i,j}U_{gij}.$$
 
-$$C_i^{\mathrm{K,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{K,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela contratual, à eficiência nominal}$$
-$$C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela consumível}$$
-$$C_i^{\mathrm{K,op}} = \sum_{j} C_{ij}^{\mathrm{K,op}} = \gamma_i^{\mathrm{K,cat}}\,h_id_i\,M_i\qquad\text{[R\$]}$$
-$$C_i^{\mathrm{V,op}} = \sum_{j} C_{ij}^{\mathrm{V,op}} = \frac{\gamma_i^{\mathrm{V,cat}}}{\rho_i}\sum_j q_{ij}\qquad\text{[R\$]}$$
-$$C_i^{\mathrm{op}} = C_i^{\mathrm{K,op}}+C_i^{\mathrm{V,op}}\qquad\text{[R\$]}$$
-$$p_i^{\mathrm{op}} = C_i^{\mathrm{op}}/Q_i\qquad\text{[R\$/un]}$$
+Se, e **somente se**, \(U_{gij}=\kappa_{ig}^{out}q_{ij}\) (sem perdas nem consumo em standby) e \(p_g,\kappa_{ig}^{out}\) forem constantes, então
 
-**Identidade — invariância do consumível.** Usando o fecho de escopo exato $\sum_jq_{ij}=Q_i$ (Parte IV):
+$$C_i^V=Q_i\sum_gp_g\kappa_{ig}^{out},$$
 
-$$\boxed{C_i^{\mathrm{V,op}} \equiv C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}}\qquad\text{(exato, por construção do fechamento de escopo)}$$
+e o custo variável é **invariante ao cronograma** para escopo fixo. Sob gargalo de throughput com consumo por hora de equipe, material desperdiçado ou combustível parado, a hipótese pode falhar e a invariância não deve ser alegada.
 
-O consumível operacional **é** o consumível de catálogo — não há inflação por ineficiência. O total de material/combustível depende apenas de $Q_i$, nunca de quantas semanas foram necessárias para executar. Esta identidade **não vale** para o contratual: $C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i$ cresce quando a eficiência piora (mais frente-semanas $M_i$ para fechar o mesmo $Q_i$, já que $M_i$ conta a semana de fechamento integralmente, não prorateada).
-
-**Desvio de catálogo por atividade.** Comparando $C_i^{\mathrm{op}}$ com $C_i^{\mathrm{cat}}$ (Parte III), obtém-se uma leitura de quanto a atividade se desviou do plano de catálogo — em termos relativos e absolutos:
-
-$$R_i \equiv \frac{C_i^{\mathrm{op}}}{C_i^{\mathrm{cat}}} \qquad\qquad \boxed{\Delta_i^{\mathrm{cat}} \equiv C_i^{\mathrm{op}}-C_i^{\mathrm{cat}} = (R_i-1)\,C_i^{\mathrm{cat}}}\qquad\text{[R\$]}$$
-
-$\Delta_i^{\mathrm{cat}}>0$ significa que a atividade custou mais do que o catálogo previa; $\Delta_i^{\mathrm{cat}}<0$, que custou menos. $R_i$ é a mesma leitura em forma adimensional, mais direta para comparar o grau de desvio entre atividades de portes diferentes — é o análogo, em nível de atividade, do $R=C^{\mathrm{tot}}/C^{\mathrm{cat}}$ de projeto (Parte XIII). Sua forma fechada, em função da eficiência média realizada, é dada na Parte VIII, logo após $\bar\varepsilon_i$ ser definida com exatidão.
-
-Uma advertência sobre como (não) recalcular esse desvio sob uma produtividade revisada — por exemplo, ao incorporar um $\rho_i$ observado em campo, diferente do calibrado originalmente: a identidade $C_i^{\mathrm{V,op}}\equiv\gamma_i^{\mathrm{V,cat}}Q_i/\rho_i$ (acima) é, por construção, invariante ao cronograma, então substituir $\rho_i$ por um $\rho_i'$ revisado nessa fórmula sozinha ainda produz um número correto. Mas $C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i$ depende de $M_i$, resultado da busca por $N_i$ (Parte XIV, Fase 1) *sob o $\rho_i$ original*. Trocar $\rho_i$ por $\rho_i'$ nas fórmulas de custo sem refazer essa busca deixa $M_i$ preso a um cronograma que, sob a nova produtividade, não fecha mais o escopo $Q_i$ (Parte IV) — o modelo estaria implicitamente descrevendo uma atividade que produz uma quantidade diferente de $Q_i$. Recalcular $\Delta_i^{\mathrm{cat}}$ sob produtividade revisada exige rederivar $N_i$, $\{m_{ij}\}$ e $\varphi_i$ a partir de $\rho_i'$ (Fases 0–3), não apenas substituir $\rho_i$ nas fórmulas de custo mantendo o cronograma antigo.
+O custo contratual do projeto inclui horas ativas e semanas/horas contratadas sem demanda. A soma \(\sum_iC_i^{K,act}\) é apenas diagnóstico, não substitui \(C^{pool}\) nem autoriza contabilizar o mesmo contrato repetidamente. O preço unitário operacional por atividade exige atribuição contábil inequívoca, quando disponível: \(p_i^{op}=C_i^{attrib}/Q_i\) para \(Q_i>0\).
 
 ---
 
-## Parte VII — Razões Operacional/Catálogo (semanais)
+## Parte VII — Razões Operacionais e Referência Comparável
 
-As razões desta seção comparam o que a atividade realmente custou e produziu em uma dada semana com o que o catálogo previa — funcionam como um termômetro semanal de quão perto (ou longe) a operação ficou do planejado.
+Defina \(C_{ij}^{ref}>0\) e \(q_{ij}^{ref}>0\) de **uma mesma configuração física de referência explicitamente documentada**. Com \(q_{ij}>0\) e custo operacional comparável \(C_{ij}^{op}\), definam-se:
 
-Custo semanal de catálogo (pool e consumível à taxa nominal, sem desconto de $\varepsilon_{ij}$):
+$$\zeta_{ij}=\frac{C_{ij}^{op}}{C_{ij}^{ref}},\qquad
+\pi_{ij}=\frac{C_{ij}^{op}/q_{ij}}{C_{ij}^{ref}/q_{ij}^{ref}},\qquad
+\chi_{ij}=\frac{q_{ij}}{q_{ij}^{ref}}.$$
 
-$$C_{ij}^{\mathrm{cat}} = \gamma_i^{\mathrm{cat}}\,h_id_i\,m_{ij}\qquad\text{[R\$]}$$
+A identidade **algébrica exata** é
 
-Preço unitário operacional semanal:
+$$\boxed{\zeta_{ij}=\chi_{ij}\pi_{ij}}.$$
 
-$$p_{ij}^{\mathrm{op}} = C_{ij}^{\mathrm{op}}/q_{ij}\qquad\text{[R\$/un]}$$
-
-Razões:
-
-$$\zeta_{ij} = \frac{C_{ij}^{\mathrm{op}}}{C_{ij}^{\mathrm{cat}}} = \frac{\gamma_i^{\mathrm{K,cat}}+\varepsilon_{ij}\gamma_i^{\mathrm{V,cat}}}{\gamma_i^{\mathrm{cat}}}\qquad[\ ]$$
-
-$$\pi_{ij} = \frac{p_{ij}^{\mathrm{op}}}{p_i^{\mathrm{cat}}} = \frac{\gamma_i^{\mathrm{K,cat}}+\varepsilon_{ij}\gamma_i^{\mathrm{V,cat}}}{\varepsilon_{ij}\,\gamma_i^{\mathrm{cat}}}\qquad[\ ]$$
-
-$$\boxed{\zeta_{ij} = \varepsilon_{ij}\cdot\pi_{ij}}$$
-
-Em palavras simples: $\zeta_{ij}$ compara custos totais — quanto se gastou frente ao previsto —, enquanto $\pi_{ij}$ compara preços unitários — quanto custou cada unidade produzida frente ao preço de tabela. Como uma semana ineficiente ainda paga o custo contratual cheio mas produz menos, $\pi_{ij}$ tende a subir quando $\varepsilon_{ij}$ cai: produzir menos encarece cada unidade entregue.
-
-Usando a fração consumível $f_i^{\mathrm V}$ (Parte III):
-
-$$\zeta_{ij} = 1-(1-\varepsilon_{ij})\,f_i^{\mathrm V}, \qquad \pi_{ij} = \frac{1}{\varepsilon_{ij}}-\left(\frac{1}{\varepsilon_{ij}}-1\right)f_i^{\mathrm V}$$
-
-$\zeta_{ij}$ é diagnóstico local por semana — não deve ser somado ingenuamente para recuperar um "$\zeta_i$" de atividade.
+Não substituir \(\chi_{ij}\) por \(\eta_{p,j}\eta_{w,j}\) sem provar que a composição e o volume de referência tornam essas razões equivalentes; a diferença de equipes, gargalo e a fração \(\varphi_i<1\) impedem essa igualdade em geral. Com \(q_{ij}=0\), \(\pi_{ij}\) é **indefinida**, não zero.
 
 ---
 
-## Parte VIII — Camada BDI (direta, por atividade)
+## Parte VIII — BDI Granular e Frações Financeiras Reais
 
-Esta seção aplica as taxas de BDI da Parte II sobre os custos de catálogo e operacionais já calculados, chegando ao custo de cada atividade como ele efetivamente entra na proposta comercial — e a um BDI equivalente por atividade, que varia semana a semana conforme muda a mistura entre custo contratual e consumível.
+Se \(C^k\ge0\) é o custo de cada categoria **obtido de lançamentos únicos** de recurso/consumível/indireto, o valor com BDI é
 
-$$\gamma_i^{\mathrm{K,cat},\beta} = (1+\beta^{\mathrm{EQ}})\gamma_i^{\mathrm{EQ}}+(1+\beta^{\mathrm{MO}})\gamma_i^{\mathrm{MO}}$$
-$$\gamma_i^{\mathrm{V,cat},\beta} = (1+\beta^{\mathrm{MAT}})\gamma_i^{\mathrm{MAT}}+(1+\beta^{\mathrm{COMB}})\gamma_i^{\mathrm{COMB}}$$
-$$\gamma_i^{\mathrm{cat},\beta} = \gamma_i^{\mathrm{K,cat},\beta}+\gamma_i^{\mathrm{V,cat},\beta}$$
+$$C^{\beta}=\sum_k(1+\beta^k)C^k,\qquad
+\beta^{eq}=\frac{C^\beta}{\sum_kC^k}-1
+=\frac{\sum_k\beta^kC^k}{\sum_kC^k},\quad \sum_kC^k>0.$$
 
-$$C_{ij}^{\mathrm{K,op},\beta} = \gamma_i^{\mathrm{K,cat},\beta}\,h_id_i\,m_{ij}$$
-$$C_{ij}^{\mathrm{V,op},\beta} = \gamma_i^{\mathrm{V,cat},\beta}\cdot\frac{q_{ij}}{\rho_i}$$
-$$C_{ij}^{\mathrm{op},\beta} = C_{ij}^{\mathrm{K,op},\beta}+C_{ij}^{\mathrm{V,op},\beta}$$
+A participação variável efetiva de uma semana, quando os lançamentos da base são reconciliados, é
 
-**Taxas ponderadas por pool.** O BDI equivalente de cada bloco (K e V) é a média de $\beta$ das suas categorias, ponderada pela composição de custo de catálogo da equipe:
+$$\boxed{\delta_{ij}=\frac{C_{ij}^{V}}{C_{ij}^{K}+C_{ij}^{V}}},$$
 
-$$\beta_i^{\mathrm K} \equiv \frac{\gamma_i^{\mathrm{EQ}}\beta^{\mathrm{EQ}}+\gamma_i^{\mathrm{MO}}\beta^{\mathrm{MO}}}{\gamma_i^{\mathrm{K,cat}}}, \qquad \beta_i^{\mathrm V} \equiv \frac{\gamma_i^{\mathrm{MAT}}\beta^{\mathrm{MAT}}+\gamma_i^{\mathrm{COMB}}\beta^{\mathrm{COMB}}}{\gamma_i^{\mathrm{V,cat}}}$$
+não uma função universal de \(\eta_s\) ou de uma eficiência média baseada em número de frentes. Se as taxas médias por bloco \(\beta^K,\beta^V\) são calculadas das **mesmas bases**, \(\beta^{eq}_{ij}=(1-\delta_{ij})\beta^K+\delta_{ij}\beta^V\). Esse resultado depende de **pesos financeiros efetivos**, não de uma hipótese física de produtividade linear.
 
-de modo que, por construção, $\gamma_i^{\mathrm{K,cat},\beta}=\gamma_i^{\mathrm{K,cat}}(1+\beta_i^{\mathrm K})$ e $\gamma_i^{\mathrm{V,cat},\beta}=\gamma_i^{\mathrm{V,cat}}(1+\beta_i^{\mathrm V})$.
-
-Fração consumível efetiva da semana $j$:
-
-$$\delta_{ij} \equiv \frac{\varepsilon_{ij}\,\gamma_i^{\mathrm{V,cat}}}{\gamma_i^{\mathrm{K,cat}}+\varepsilon_{ij}\,\gamma_i^{\mathrm{V,cat}}}$$
-
-$$\boxed{\beta_{ij} = (1-\delta_{ij})\,\beta_i^{\mathrm K} + \delta_{ij}\,\beta_i^{\mathrm V}}$$
-
-Decrescente em $\varepsilon_{ij}$ sempre que $\beta_i^{\mathrm V}<\beta_i^{\mathrm K}$ (caso típico, dado $\beta^{MAT},\beta^{COMB}\ll\beta^{EQ},\beta^{MO}$ nos valores de referência): maior eficiência aloca mais custo ao bloco consumível, de BDI mais baixo, reduzindo o BDI equivalente semanal.
-
-**Totais por atividade:**
-
-$$C_i^{\mathrm{K,op},\beta} = \gamma_i^{\mathrm{K,cat},\beta}\,h_id_i\,M_i \qquad C_i^{\mathrm{V,op},\beta} = \gamma_i^{\mathrm{V,cat},\beta}\cdot\frac{Q_i}{\rho_i}$$
-
-$$C_i^{D,\beta} \equiv C_i^{\mathrm{K,op},\beta}+C_i^{\mathrm{V,op},\beta} \qquad\text{[R\$] — total direto da atividade com BDI}$$
-
-**Eficiência média ponderada por frente-semana** — agrega o efeito de $\varepsilon_{ij}$ ao longo de toda a atividade em um único fator. Definida diretamente a partir do fecho de escopo exato (Parte IV), a agregação vale mesmo com o fechamento fracionário da última semana:
-
-$$\bar\varepsilon_i \equiv \frac{Q_i}{\rho_i\,h_id_i\,M_i}$$
-
-Fora da semana de fechamento, isso equivale à soma $\sum_j\varepsilon_{ij}m_{ij}/M_i$ termo a termo; na semana de fechamento, o termo correspondente entra como $\varphi_i\varepsilon_{i,j_i^1}m_{i,j_i^1}$ em vez de $\varepsilon_{i,j_i^1}m_{i,j_i^1}$ — a fração de fechamento $\varphi_i$ (Parte IV) é exatamente essa correção, de modo que a definição acima já a incorpora, sem tratamento à parte.
-
-$$\delta_i = \frac{\bar\varepsilon_i\,\gamma_i^{\mathrm{V,cat}}}{\gamma_i^{\mathrm{K,cat}}+\bar\varepsilon_i\,\gamma_i^{\mathrm{V,cat}}} \;\left(=\frac{C_i^{\mathrm{V,op}}}{C_i^{\mathrm{op}}}\text{, exato}\right)$$
-
-$$\boxed{\beta_i^{\mathrm{eq}} \equiv \frac{C_i^{D,\beta}}{C_i^{\mathrm{op}}}-1 = (1-\delta_i)\,\beta_i^{\mathrm K}+\delta_i\,\beta_i^{\mathrm V}}$$
-
-Com $\bar\varepsilon_i$ exato, o desvio de catálogo por atividade $R_i\equiv C_i^{\mathrm{op}}/C_i^{\mathrm{cat}}$ (Parte VI) também ganha forma fechada:
-
-$$\boxed{R_i = f_i^{\mathrm V} + \frac{1-f_i^{\mathrm V}}{\bar\varepsilon_i}}$$
-
-$R_i=1$ exatamente quando $\bar\varepsilon_i=1$: todo o desvio de catálogo nasce da diferença entre a eficiência média realizada e a eficiência nominal de catálogo — nunca da composição K/V da equipe isoladamente.
+Permanecem pendentes em #11 os detalhes de rateio de contratos compartilhados, fechamento semanal parcial e comparação com catálogo não linear; não emitir GO utilizando as identidades antigas \(\bar\varepsilon_i=Q_i/(\rho_i H_iM_i)\), \(\delta_i(\bar\varepsilon)\) ou \(R_i=f_i^V+(1-f_i^V)/\bar\varepsilon_i\) como se fossem universais.
 
 ---
 
