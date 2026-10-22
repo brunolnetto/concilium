@@ -7,8 +7,8 @@ CALENDARIO_E_LIBERACAO_FISICA.md, not production RCPSP equivalence.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Mapping
 from fractions import Fraction
-from typing import Mapping
 
 
 @dataclass(frozen=True)
