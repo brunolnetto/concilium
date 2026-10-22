@@ -91,7 +91,11 @@ class TestCalcVendaComBdiMissingRate:
         assert venda_direta == 120.0
 
     def test_prices_activity_mobilization_as_indirect_cost(self):
-        from concilium.domain.models.canonical import AtividadeCustoCompleto, InsumoComponenteAtividade, MobilizacaoAtividade
+        from concilium.domain.models.canonical import (
+            AtividadeCustoCompleto,
+            InsumoComponenteAtividade,
+            MobilizacaoAtividade,
+        )
 
         canonical = self._make_empty_canonical()
         artifacts = [

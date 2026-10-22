@@ -24,7 +24,6 @@ from ._skill_helpers import _bdi_resolucao as _mod_b  # ty: ignore[unresolved-im
 from ._skill_helpers import (  # ty: ignore[unresolved-import]
     _build_abc_analytics,
     _build_bridge_from_pe,
-    _build_custos_atividades,
     _build_diagnostico_pe,
     _build_memorial_bdi,
     _build_ponto_equilibrio,

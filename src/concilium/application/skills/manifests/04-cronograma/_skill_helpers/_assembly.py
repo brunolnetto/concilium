@@ -227,7 +227,8 @@ def _build_effective_ramp_profile(
     """Rebuild the normalized profile from the real materialized calendar horizon."""
     if not ramp_params:
         return fallback_profile
-    n_max = float(ramp_params.get("n_max") or 0)
+    n_max_raw = ramp_params.get("n_max")
+    n_max = float(n_max_raw) if isinstance(n_max_raw, (int, float, str)) else 0.0
     if n_max <= 0:
         return fallback_profile
     return [cell.num_equipes / n_max for cell in distribuicao_semanal.values()]

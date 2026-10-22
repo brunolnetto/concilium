@@ -21,7 +21,6 @@ para determinar quando atividades sequenciais podem ser executadas em paralelo.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -339,44 +338,47 @@ class AnalisadorSobreposicao:
         Returns:
             String formatada com análise completa
         """
+        produtora = resultado.atividade_produtora
+        consumidora = resultado.atividade_consumidora
+        taxa = resultado.taxa_produto_consumidor
         lines = [
             "# Análise de Sobreposição: Dinâmica Produto-Consumidor\n",
             "## 1. Parâmetros",
-            f"- **Atividade Produtora**: {resultado.atividade_produtora.nome} ({resultado.atividade_produtora.atividade_id})",
-            f"  - Quantitativo: {resultado.atividade_produtora.quantitativo_total:,.0f} {resultado.atividade_produtora.unidade}",
-            f"  - Produção: {resultado.atividade_produtora.producao_diaria:,.1f} {resultado.atividade_produtora.unidade}/dia",
-            f"  - Duração: {resultado.atividade_produtora.duracao_semanas:.1f} semanas",
+            f"- **Atividade Produtora**: {produtora.nome} ({produtora.atividade_id})",
+            f"  - Quantitativo: {produtora.quantitativo_total:,.0f} {produtora.unidade}",
+            f"  - Produção: {produtora.producao_diaria:,.1f} {produtora.unidade}/dia",
+            f"  - Duração: {produtora.duracao_semanas:.1f} semanas",
             "",
-            f"- **Atividade Consumidora**: {resultado.atividade_consumidora.nome} ({resultado.atividade_consumidora.atividade_id})",
-            f"  - Quantitativo: {resultado.atividade_consumidora.quantitativo_total:,.0f} {resultado.atividade_consumidora.unidade}",
-            f"  - Consumo: {resultado.atividade_consumidora.producao_diaria:,.1f} {resultado.atividade_consumidora.unidade}/dia",
-            f"  - Duração: {resultado.atividade_consumidora.duracao_semanas:.1f} semanas",
+            f"- **Atividade Consumidora**: {consumidora.nome} ({consumidora.atividade_id})",
+            f"  - Quantitativo: {consumidora.quantitativo_total:,.0f} {consumidora.unidade}",
+            f"  - Consumo: {consumidora.producao_diaria:,.1f} {consumidora.unidade}/dia",
+            f"  - Duração: {consumidora.duracao_semanas:.1f} semanas",
             "",
             "## 2. Taxa Produto-Consumidor",
-            f"- Taxa de Produção: {resultado.taxa_produto_consumidor.taxa_producao:,.1f} {resultado.taxa_produto_consumidor.unidade}/dia",
-            f"- Taxa de Consumo: {resultado.taxa_produto_consumidor.taxa_consumo:,.1f} {resultado.taxa_produto_consumidor.unidade}/dia",
+            f"- Taxa de Produção: {taxa.taxa_producao:,.1f} {taxa.unidade}/dia",
+            f"- Taxa de Consumo: {taxa.taxa_consumo:,.1f} {taxa.unidade}/dia",
             f"- **Razão de Sinergia**: {resultado.razao_sinergia:.2f}x",
-            f"- Superávit Diário: {resultado.taxa_produto_consumidor.superavit_diario:,.1f} {resultado.taxa_produto_consumidor.unidade}/dia",
+            f"- Superávit Diário: {taxa.superavit_diario:,.1f} {taxa.unidade}/dia",
             "",
             "## 3. Cenários de Sobreposição",
-            f"### Sequencial (0% sobreposição)",
+            "### Sequencial (0% sobreposição)",
             f"- Duração: {resultado.duracao_sequencial_semanas:.1f} semanas",
-            f"- Risco: Mínimo",
+            "- Risco: Mínimo",
             "",
-            f"### Conservador (50% - RECOMENDADO)",
-            f"- Início: Ao atingir 50% do produtor",
-            f"- Estoque Inicial: {resultado.ponto_inicio_conservador.estoque_inicial:,.1f} {resultado.taxa_produto_consumidor.unidade}",
+            "### Conservador (50% - RECOMENDADO)",
+            "- Início: Ao atingir 50% do produtor",
+            f"- Estoque Inicial: {resultado.ponto_inicio_conservador.estoque_inicial:,.1f} {taxa.unidade}",
             f"- Buffer: {resultado.ponto_inicio_conservador.buffer_dias:.1f} dias",
             f"- Duração: {resultado.duracao_sequencial_semanas - resultado.economia_cronograma_semanas:.1f} semanas",
             f"- Economia: {resultado.economia_cronograma_semanas:.1f} semanas ({resultado.economia_percentual:.1f}%)",
-            f"- Risco: Baixo",
+            "- Risco: Baixo",
             "",
-            f"### Agressivo (33%)",
-            f"- Início: Ao atingir 33% do produtor",
-            f"- Estoque Inicial: {resultado.ponto_inicio_agressivo.estoque_inicial:,.1f} {resultado.taxa_produto_consumidor.unidade}",
+            "### Agressivo (33%)",
+            "- Início: Ao atingir 33% do produtor",
+            f"- Estoque Inicial: {resultado.ponto_inicio_agressivo.estoque_inicial:,.1f} {taxa.unidade}",
             f"- Buffer: {resultado.ponto_inicio_agressivo.buffer_dias:.1f} dias",
             f"- Economia: {resultado.economia_cronograma_semanas * 1.1:.1f} semanas (~54%)",
-            f"- Risco: Médio",
+            "- Risco: Médio",
             "",
             "## 4. Validações",
         ]

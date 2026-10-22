@@ -34,6 +34,24 @@ jobs:
       - name: Verify exact-decimal reference vectors
         run: python -m pytest --confcutdir=tests/reference_formalism tests/reference_formalism -q
 
+  lockfile:
+    name: Dependency Lock (Docker parity)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv resolver
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.6"
+
+      - name: Verify lockfile matches pyproject and resolves
+        run: uv lock --check
+
+      - name: Verify production dependency install without project
+        run: uv sync --locked --no-install-project --no-dev
+
   changes:
     name: Detect changes
     runs-on: ubuntu-latest

@@ -1234,7 +1234,9 @@ def _avp_handle_projeto_overlay(
 
     entry = dict(overlay.get(producao_id, {}))
     variantes = [v for v in entry.get("variantes", []) if v.get("id") != variante_id]
-    variantes.append({"id": variante_id, "nome": nome_variante, "producao_horaria": producao_horaria, "equipe": equipe_data})
+    variantes.append(
+        {"id": variante_id, "nome": nome_variante, "producao_horaria": producao_horaria, "equipe": equipe_data}
+    )
     entry["variantes"] = variantes
     overlay[producao_id] = entry
     overlay_file.write_text(json.dumps(overlay, indent=2, ensure_ascii=False), encoding="utf-8")
