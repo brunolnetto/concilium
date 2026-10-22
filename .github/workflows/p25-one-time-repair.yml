@@ -1,0 +1,52 @@
+name: P25 Lock Regeneration (one-time validation)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate-and-verify:
+    if: ${{ github.event.pull_request.head.repo.full_name == 'brunolnetto/concilium' && github.head_ref == 'ci/p25-regenerate-lock-with-uv' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ci/p25-regenerate-lock-with-uv
+          persist-credentials: true
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.6"
+
+      - name: Regenerate using actual resolver
+        run: |
+          uv lock
+          uv lock --check
+          uv sync --locked --no-install-project --no-dev
+
+      - name: Publish the lockfile on the existing P25 branch
+        run: |
+          git fetch origin fix/formalism-p25b-ci-accounting-typing-lint
+          git switch -C p25-lock-repair origin/fix/formalism-p25b-ci-accounting-typing-lint
+          uv lock
+          uv lock --check
+          uv sync --locked --no-install-project --no-dev
+          git add uv.lock
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'build(lock): regenerate uv.lock with uv resolver'
+            git push origin HEAD:refs/heads/fix/formalism-p25b-ci-accounting-typing-lint
+          fi
+
+      - name: Upload resolved lockfile for audit / recovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p25-regenerated-uv-lock
+          path: uv.lock
+          if-no-files-found: warn
