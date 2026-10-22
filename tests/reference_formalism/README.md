@@ -3,7 +3,7 @@
 This test package is deliberately independent of `concilium` production
 modules, schedulers, cost helpers, and persisted report fixtures.
 
-**Run:** `python -m pytest tests/reference_formalism -q`
+**Run (isolated from the repository-wide `tests/conftest.py`):** `python -m pytest --confcutdir=tests/reference_formalism tests/reference_formalism -q`
 
 ## Inputs, expected results and provenance
 
