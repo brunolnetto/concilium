@@ -59,6 +59,8 @@ onde:
 
 **MAT legado.** Quando `atributos_especificos.consumo_horario_fisico` e `atributos_especificos.unidade_fisica` estão ausentes no cadastro do bem, trata-se do caso degenerado $\kappa_r = 1\ [\text{unid}_g/\text{h}]$, $p_{g(r)} = c_r\ [\text{R\$}/\text{h}]$ — a fórmula $c_r = \kappa_r \cdot p_{g(r)}$ permanece válida com a unidade física colapsada. Quando os atributos estão presentes, a decomposição é auditável por tipo físico, retrocompatível com catálogos que não distinguem taxa de consumo e preço unitário.
 
+> **Contrato normativo P10-A:** [CAPACIDADE_E_RECURSOS.md](CAPACIDADE_E_RECURSOS.md) substitui a eficiência de alocação η_s por capacidade física F_i(m). As fórmulas históricas de ρ·η_s·m e os custos derivados permanecem **não certificáveis** até #11.
+
 #### I.3.2 Grafo de sinergia e produtividade (§32 da referência)
 
 O **grafo de sinergia** $\mathcal{G}_i = (V_i,\ A_i^{\text{syn}},\ \text{cap})$ é um dígrafo ponderado sobre os recursos da equipe:

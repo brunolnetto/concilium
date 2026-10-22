@@ -22,7 +22,7 @@
 | `m_i^0`, `m_i^1`, `m_i^max`, `m_ij` | frentes (inteiro, adimensional) | `1<=m_i^0,m_i^1<=m_i^max` durante atividade |
 | `mu_i^+`, `mu_i^-` | frentes/semana | inteiros **não negativos**; valor zero é válido |
 | `h_i`, `d_i` | `h/dia`, `dia/semana` | `h_i*d_i` tem dimensão `h/semana` |
-| `eta_s`, `eta_p`, `eta_w`, `epsilon`, `phi`, `theta` | razão adimensional | domínios em `[0,1]`; `phi>0` apenas em fechamento físico válido |
+| `alpha=F/Fmax` (diagnóstico), `eta_p`, `eta_w`, `epsilon_exog`, `phi`, `theta` | razão adimensional | `alpha` é capacidade relativa, **não** perda; `eta_p` e `eta_w` são fatores físicos exógenos; `phi` é fechamento |
 | `kappa_r`, `p_g` | `unidade_g/h_operacional`, `R$/unidade_g` | produto `kappa_r*p_g` tem dimensão `R$/h_operacional` |
 | `V_r^mensal`, `s_mes` | `R$/mês`, `semanas/mês` | `V_r^mensal/(s_mes*d_i*h_i)` tem dimensão `R$/h` |
 | `gamma^K`, `gamma^V`, `gamma^cat` | `R$/h_operacional` | a soma só é válida na mesma base horária |
@@ -83,3 +83,5 @@ Sem a igualdade adicional, o mínimo das três retas dá `min(m_i^0,m_i^max,m_i^
 - #13: standby integral e consumível sem perdas são **hipóteses**, não universais.
 
 P09-B automatizará a consistência entre documentos e essas fronteiras; #22 fornecerá o sinal numérico independente. Este anexo não declara o produto certificado.
+
+**Correção P10-A:** [CAPACIDADE_E_RECURSOS.md](CAPACIDADE_E_RECURSOS.md) distingue frentes mobilizadas, capacidade $F_i(m)$, demanda contratual $d_{gj}$ e standby $s_{gj}$; não há eficiência de alocação multiplicativa.
