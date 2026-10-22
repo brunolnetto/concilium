@@ -38,7 +38,7 @@ jobs:
       active_mcp_revision: ${{ steps.exec.outputs.active_mcp_revision }}
       deployed_mcp_revision: ${{ steps.exec.outputs.deployed_mcp_revision }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Login Azure (OIDC)
         uses: azure/login@v3
