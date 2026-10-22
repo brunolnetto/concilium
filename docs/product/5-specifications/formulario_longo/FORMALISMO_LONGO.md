@@ -73,42 +73,19 @@ onde:
 
 **MAT legado.** Quando `atributos_especificos.consumo_horario_fisico` e `atributos_especificos.unidade_fisica` estão ausentes no cadastro do bem, trata-se do caso degenerado $\kappa_r = 1\ [\text{unid}_g/\text{h}]$, $p_{g(r)} = c_r\ [\text{R\$}/\text{h}]$ — a fórmula $c_r = \kappa_r \cdot p_{g(r)}$ permanece válida com a unidade física colapsada. Quando os atributos estão presentes, a decomposição é auditável por tipo físico, retrocompatível com catálogos que não distinguem taxa de consumo e preço unitário.
 
-#### I.3.2 Grafo de sinergia e produtividade (§32 da referência)
+#### I.3.2 Produtividade como capacidade efetiva do grafo mobilizado
 
-O **grafo de sinergia** $\mathcal{G}_i = (V_i,\ A_i^{\text{syn}},\ \text{cap})$ é um dígrafo ponderado sobre os recursos da equipe:
+**Contrato normativo P10-A:** [Capacidade física, recurso e ociosidade](CAPACIDADE_E_RECURSOS.md). Equipes são a decisão de **capacidade**, não um fator extra de perda.
 
-| Elemento | Descrição |
-|---|---|
-| $V_i \supseteq R_i$ | nós: recursos + etapas intermediárias de produção |
-| $A_i^{\text{syn}} \subseteq V_i \times V_i$ | arestas: dependências de produção (fluxo de insumo para produto) |
-| $\text{cap}: A_i^{\text{syn}} \to \mathbb{R}_{>0}$ | capacidade da aresta [unid$_Q$ / unid$_{\text{tempo}}$] |
-| $D \subseteq V_i$ | **domínio de produção**: subgrafo que efetivamente gera a saída $Q_i$ |
-| $s_i$ | fonte virtual (insumos brutos) |
-| $t_i$ | sorvedouro virtual (produto final na unidade de $Q_i$) |
+$$\boxed{F_i(m)=\max\text{-fluxo}(s_i,t_i;\mathcal G_i^D|_m)\quad[\mathrm{unid}_{Q_i}/h]}.$$
 
-**Produtividade via min-corte sobre $D$** (teorema max-fluxo / min-corte):
+O grafo contém as frentes efetivamente alocadas e preserva gargalos físicos compartilhados. Para frentes independentes pode valer $F_i(m)=m\rho_i^{front}$; para grafos mistos, $F_i(m)$ pode saturar. A capacidade de pico $\rho_i^{peak}=F_i(m_i^{max})$ não pode ser confundida com a produtividade de uma única frente.
 
-$$\boxed{\rho_i = \max\text{-fluxo}(s_i \to t_i,\ \mathcal{G}_i^D) = \min_{C \,\in\, \text{cortes}(s_i,t_i)} \sum_{(u,v)\in C} \text{cap}(u,v) \qquad \text{[unid}_Q\text{/h]}}$$
+$$\boxed{\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j},\qquad B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog}}.$$
 
-**Casos práticos** (topologias típicas de equipes de construção):
+Não se multiplica $B$ por $m$ novamente e não existe um fator $\eta_s$ de perda por número de equipes. A razão opcional $\alpha_i(m)=F_i(m)/F_i(m_i^{max})$ é **diagnóstico de capacidade**, não redutor da produção.
 
-| Topologia | Estrutura de $\mathcal{G}_i^D$ | Fórmula fechada |
-|---|---|---|
-| **Série** (gargalo único) | $r_1 \to r_2 \to \cdots \to r_k$ | $\rho_i = \min_{(u,v)\,\in\,\text{caminho}} \text{cap}(u,v)$ |
-| **Paralelo** (aditivo) | $s_i \rightrightarrows \{r_1,\ldots,r_k\} \rightrightarrows t_i$ | $\rho_i = \sum_{r} \text{cap}(s_i,r)$ |
-| **Misto** | combinação de série e paralelo | algoritmo Ford-Fulkerson sobre $\mathcal{G}_i^D$ |
-
-**Derivação de $\rho_i$.** Quando o grafo de sinergia $\mathcal{G}_i$ está presente no cadastro da equipe, $\rho_i$ é derivado por `producao_from_grafo(G_i)` via min-corte — o campo `producao_horaria` no artefato `Producao` funciona como cache auditável do resultado. Quando ausente, $\rho_i$ é entrada direta, calibrada externamente (ficha técnica). A calibração das capacidades $\text{cap}(\cdot)$ das arestas permanece sempre externa a este formulário; a incerteza do modelo reside nas capacidades unitárias declaradas, não na fórmula de derivação de $\rho_i$ a partir delas.
-
-**Alocação por atividade e semana.** A eficiência que multiplica a produção de cada atividade é indexada por atividade **e** por semana:
-
-$$\varepsilon_{ij} = \eta_{s,ij}\cdot\eta_{p,j}\cdot\eta_{w,j}$$
-
-decompondo um fator de alocação específico da equipe $i$ ($\eta_{s,ij}$) e dois fatores de calendário global — desempenho e clima —, comuns a todas as atividades ativas na semana $j$. O fator de alocação é definido diretamente a partir do grafo de sinergia: é a razão entre a capacidade efetiva de $\mathcal{G}_i$ quando apenas $m_{ij}$ frentes (de $m_i^{\max}$ possíveis) estão mobilizadas na semana $j$, e a capacidade plena do grafo com $m_i^{\max}$ frentes:
-
-$$\boxed{\eta_{s,ij} = \frac{\max\text{-fluxo}(s_i\to t_i,\ \mathcal{G}_i^{D}\!\mid_{m_{ij}})}{\max\text{-fluxo}(s_i\to t_i,\ \mathcal{G}_i^{D}\!\mid_{m_i^{\max}})}}$$
-
-onde $\mathcal{G}_i^D\!\mid_m$ denota o subgrafo de produção com a capacidade das arestas de fonte escalada para $m$ frentes concorrentes. Para topologias paralelas puras (aditivas), $\eta_{s,ij}=m_{ij}/m_i^{\max}$ por linearidade das capacidades; para topologias em série ou mistas, a razão captura a degradação por gargalo interno quando múltiplas frentes disputam etapas intermediárias de capacidade fixa (ex.: uma britagem centralizada alimentando várias frentes de escavação). Quando $\mathcal{G}_i$ não está presente (produtividade calibrada externamente), adota-se $\eta_{s,ij}\equiv m_{ij}/m_i^{\max}$ como aproximação linear padrão.
+A composição de equipes determina simultaneamente a demanda $d_{gj}=\sum_i a_{ig}(m_{ij})$ de recursos físicos. Recurso contratado presente $x_{gj}$ e standby $s_{gj}=x_{gj}-d_{gj}\ge0$ pertencem ao problema de pool, não ao cálculo de eficiência de produção. Veja definições, prova de ótima ausência de standby sob transição gratuita e contraexemplo com perpetuação econômica no contrato P10-A.
 
 ### I.4 Política de mobilização $W_i$
 
@@ -134,7 +111,7 @@ Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$
 
 $$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
 
-**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada: a soma $\sum_j \rho_i\varepsilon_{ij} h_id_i m_{ij}$ depende de $\{m_{ij}\}$, que por sua vez depende de $N_i$. A dependência é monotônica em $N_i$ — sob qualquer calendário viável (que não anule $\varepsilon_{ij}$ indefinidamente), cada semana adicional contribui estritamente mais que zero à produção acumulada —, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1); a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante. Dado $N_i$ convergido, $\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)$ é exato. Restrição de consistência: $r + d \le N_i$.
+**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada: a soma $\sum_j F_i(m_{ij})\varepsilon_{ij}^{exog}h_id_i$ depende de $\{m_{ij}\}$, que por sua vez depende de $N_i$. A dependência é monotônica em $N_i$ — sob qualquer calendário viável (que não anule $\varepsilon_{ij}$ indefinidamente), cada semana adicional contribui estritamente mais que zero à produção acumulada —, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1); a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante. Dado $N_i$ convergido, $\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)$ é exato. Restrição de consistência: $r + d \le N_i$.
 
 ### I.5 Predecessores e completude parcial
 
@@ -175,6 +152,8 @@ $$\beta^{EQ},\ \beta^{MO}\ (\approx29{,}97\%),\ \beta^{MAT},\ \beta^{COMB}\ (\ap
 
 ## Parte III — Custo Horário de Catálogo ($\gamma$)
 
+**Regime de validade restrita — #11:** as identidades históricas de custo que usam $\gamma/\rho$ exigem escala linear de capacidade por frente e consumo unitário efetivo invariável. Elas **não** são normativas para $F_i(m)$ não linear, variação de tarifa por composição ou fechamento parcial até rederivação e teste pelo oráculo; não usar estas relações, isoladamente, para emitir GO.
+
 $$\gamma_i^{EQ} = \sum_{r\in R_i,\,\text{cat}(r)=EQ} c_r n_r \qquad \text{(análogo para } MO, MAT, COMB\text{)}$$
 
 $$\gamma_i^{\mathrm{K,cat}} \equiv \gamma_i^{EQ}+\gamma_i^{MO} \qquad\text{[contratual: cobrado por semana mobilizada]}$$
@@ -191,17 +170,17 @@ $$\boxed{C_i^{\mathrm{cat}} \equiv p_i^{\mathrm{cat}}\,Q_i = \frac{\gamma_i^{\ma
 
 ## Parte IV — Cronograma Semanal
 
-Eficiência semanal por atividade: $\varepsilon_{ij} = \eta_{s,ij}\cdot\eta_{p,j}\cdot\eta_{w,j}\in[0,1]$ (§30 da referência; $\eta_{s,ij}$ conforme §I.3.2).
+Eficiência exógena semanal: $\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j}\in[0,1]$. A capacidade instalada já inclui todas as equipes e gargalos:
 
-$$q_{ij} = \rho_i\,\varepsilon_{ij}\,h_id_i\,m_{ij}\qquad\text{[un] — semanas interiores}$$
+$\boxed{B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog},\qquad q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}}.$
 
 **Fechamento exato de escopo.** Seja $j_i^1 \equiv j_i^0+N_i-1$ a última semana ativa de $A_i$, obtida pela busca monotônica em $N_i$ (Parte XIV, Fase 1) sobre o perfil nominal $\{m_i(\tau)\}$ de $W_i$. Nas semanas interiores $j<j_i^1$, a produção usa o perfil nominal integralmente. Na última semana, o quantitativo residual fecha exatamente o escopo:
 
 $$q_{i,j_i^1} = Q_i - \sum_{j=j_i^0}^{j_i^1-1} q_{ij}$$
 
-Por construção da busca monotônica ($N_i$ é o menor inteiro tal que a produção acumulada nominal atinge $Q_i$, e a semana adicionada mais recentemente é a primeira em que isso ocorre), o residual satisfaz $0 < q_{i,j_i^1} \le \rho_i\varepsilon_{i,j_i^1}h_id_im_i(N_i-1)$ — nunca excede a produção nominal da última semana, e a semana de fechamento sempre tem $\varepsilon_{i,j_i^1}>0$ (uma semana com $\varepsilon=0$ não altera a produção acumulada, de modo que a busca automaticamente avança para a semana seguinte). Define-se a **fração de fechamento**:
+A semana de fechamento precisa possuir capacidade positiva. A fração de fechamento é uma métrica de uso do escopo, não perda física de produtividade:
 
-$$\varphi_i \equiv \frac{q_{i,j_i^1}}{\rho_i\,\varepsilon_{i,j_i^1}\,h_id_i\,m_i(N_i-1)} \in (0,1]$$
+$$\boxed{\varphi_i=\frac{q_{i,j_i^1}}{F_i(m_i(N_i-1))h_id_i\varepsilon_{i,j_i^1}^{exog}}\in(0,1]}$$
 
 representando a fração da capacidade nominal da última semana efetivamente utilizada para completar o escopo. A frota mobilizada ($m_{ij}$, e portanto o custo contratual $C_{ij}^{\mathrm{K,op}}$, Parte V) permanece no valor nominal do perfil na última semana — recursos contratuais (EQ/MO) são cobrados pela semana mobilizada independentemente da fração de produção efetivamente necessária naquela semana (§0). Apenas o consumível é prorateado pela produção realizada, via $\varphi_i$, garantindo o fecho exato do escopo:
 
@@ -214,6 +193,8 @@ $$\mathcal{A}_j \coloneqq \{A_i\in\mathcal{A} : j\in[j_i^0,\,j_i^0+N_i-1]\}$$
 ---
 
 ## Parte V — Custo Direto Semanal (sem BDI)
+
+**Regime de validade restrita — #11:** as identidades históricas de custo que usam $\gamma/\rho$ exigem escala linear de capacidade por frente e consumo unitário efetivo invariável. Elas **não** são normativas para $F_i(m)$ não linear, variação de tarifa por composição ou fechamento parcial até rederivação e teste pelo oráculo; não usar estas relações, isoladamente, para emitir GO.
 
 $$C_{ij}^{\mathrm{K,op}} = \gamma_i^{\mathrm{K,cat}}\,h_id_i\,m_{ij}\qquad\text{[R\$] — nominal em toda semana ativa, inclusive a última}$$
 
@@ -244,6 +225,8 @@ O consumível operacional **é** o consumível de catálogo — não há inflaç
 
 ## Parte VII — Razões Operacional/Catálogo (semanais)
 
+**Regime de validade restrita — #11:** as identidades históricas de custo que usam $\gamma/\rho$ exigem escala linear de capacidade por frente e consumo unitário efetivo invariável. Elas **não** são normativas para $F_i(m)$ não linear, variação de tarifa por composição ou fechamento parcial até rederivação e teste pelo oráculo; não usar estas relações, isoladamente, para emitir GO.
+
 Custo semanal de catálogo (pool e consumível à taxa nominal, sem desconto de $\varepsilon_{ij}$):
 
 $$C_{ij}^{\mathrm{cat}} = \gamma_i^{\mathrm{cat}}\,h_id_i\,m_{ij}\qquad\text{[R\$]}$$
@@ -269,6 +252,8 @@ $\zeta_{ij}$ é diagnóstico local por semana — não deve ser somado ingenuame
 ---
 
 ## Parte VIII — Camada BDI (direta, por atividade)
+
+**Regime de validade restrita — #11:** as identidades históricas de custo que usam $\gamma/\rho$ exigem escala linear de capacidade por frente e consumo unitário efetivo invariável. Elas **não** são normativas para $F_i(m)$ não linear, variação de tarifa por composição ou fechamento parcial até rederivação e teste pelo oráculo; não usar estas relações, isoladamente, para emitir GO.
 
 $$\gamma_i^{\mathrm{K,cat},\beta} = (1+\beta^{\mathrm{EQ}})\gamma_i^{\mathrm{EQ}}+(1+\beta^{\mathrm{MO}})\gamma_i^{\mathrm{MO}}$$
 $$\gamma_i^{\mathrm{V,cat},\beta} = (1+\beta^{\mathrm{MAT}})\gamma_i^{\mathrm{MAT}}+(1+\beta^{\mathrm{COMB}})\gamma_i^{\mathrm{COMB}}$$
@@ -518,8 +503,8 @@ ENTRADA
   Parâmetros globais:
     β^EQ, β^MO, β^MAT, β^COMB, β^IND, s_mes
     {η_{p,j}, η_{w,j}}              — calendário global de desempenho e clima
-    // η_{s,ij} é derivado por atividade a partir de G_i e do perfil {m_ij} (Fase 1)
-    // ε_{ij} = η_{s,ij} · η_{p,j} · η_{w,j}
+    // F_i(m_ij) deriva da composição física mobilizada, sem penalidade η_s
+    // ε_exog_ij = η_{p,j} · η_{w,j}; demanda d_gj deriva do mesmo m_ij
 
   Para cada recurso r:
     c_r^mob, c_r^demob             — custos de mobilização/desmobilização
@@ -530,61 +515,58 @@ ENTRADA
     {(l, driver(l), {Γ_l^{k,mensal}}, c_l^mob, c_l^demob)}_{l ∈ L}
 ```
 
-### XIV.0 — Fase 0: Resolução de Produtividade
+**Status de conformidade:** as fases produtivas devem derivar capacidade via $F_i(m)$ (contrato P10-A); derivadas financeiras da fórmula antiga estão bloqueadas por #11 até certificação.
+
+### XIV.0 — Fase 0: Função de capacidade da composição
 
 ```
-Para cada i ∈ A:
-  Se i.grafo_sinergia está presente:
-    Identificar topologia de G_i:
-      série    → ρ_i = min_{(u,v) ∈ caminho_crítico} cap(u,v)
-      paralelo → ρ_i = Σ_{(s_i,v) ∈ A_i^syn} cap(s_i, v)
-      misto    → ρ_i = max-fluxo(s_i → t_i, G_i^D)  [Ford-Fulkerson]
-    Armazenar ρ_i como producao_horaria  [cache auditável]
-  Senão:
-    ρ_i ← i.producao_horaria             [entrada direta calibrada externamente]
+Para cada i:
+  Se grafo sinergia G_i presente:
+    Para m ∈ {0,...,m_i^max}:
+      F_i(m) ← max-fluxo(G_i^D | m)  // gargalos compartilhados preservados
+  Se há taxa externa certificada rho_i^front POR FRENTE independente:
+    F_i(m) ← m · rho_i^front
+  Se taxa calibrada para configuração inteira m_cal:
+    Exigir modelo explícito que mapeie m→F_i(m), sem extrapolação implícita
 
-  Validar ρ_i > 0  [equipe inviável se algum corte tem capacidade zero]
+  Validar F_i(m)>0 para as configurações com produção requerida.
+  F_i(0) ← 0
+  rho_i^peak ← F_i(m_i^max)  // apenas diagnóstico, não fator multiplicativo
 
-SAÍDA: {ρ_i} ∀i
+SAÍDA: {F_i(m)} por atividade, com fontes/capacidades auditáveis.
 ```
 
 ### XIV.1 — Fase 1: Cronograma (interface com solver RCPSP externo)
 
 ```
-Pré-condição: {ρ_i} disponível ∀i
+Pré-condição: {F_i(m)} e suas fontes disponíveis ∀i
 
 Para cada i em ordem topológica de B_i:
 
-  N_i ← max(1, ⌈Q_i / (ρ_i · h_i · d_i · m_i^max)⌉)   // chute inicial (eficiência plena)
+  N_i ← max(1, ⌈Q_i / (F_i(m_i^max) · h_i · d_i)⌉)   // chute inicial (eficiência plena)
 
   Repetir:
     {m_{ij,t}} ← RampProfile.build(N_i, m_i^0, μ_i^+, m_i^max, μ_i^-, m_i^1)
 
     Para cada j com m_{ij,t} > 0:
-      Se i.grafo_sinergia presente:
-        η_{s,ij} ← max-fluxo(G_i^D | m_{ij,t}) / max-fluxo(G_i^D | m_i^max)
-      Senão:
-        η_{s,ij} ← m_{ij,t} / m_i^max
-      ε_{ij} ← η_{s,ij} · η_{p,j} · η_{w,j}
+      capacidade_i_j ← F_i(m_{ij,t})   // toda mobilização considerada uma única vez
+      ε_exog_ij ← η_{p,j} · η_{w,j}
 
-    prod ← Σ_j ρ_i · ε_{ij} · h_i · d_i · m_{ij,t}
+    prod ← Σ_j capacidade_i_j · ε_exog_ij · h_i · d_i
 
     Se prod ≥ Q_i:
       convergiu; {m_{ij}} ← {m_{ij,t}}
     Senão:
-      Se ε_{ij} = 0 para toda semana j futura alcançável dentro do calendário disponível:
-        Marcar A_i INVIÁVEL; interromper busca (→ Fase 9, NOGO)
+      Se nenhuma semana futura viável possui F_i(m_i,j)>0 e ε_exog_i,j>0:
+        Marcar A_i INVIÁVEL por capacidade/clima/horizonte (→ Fase 9, NOGO)
       Senão:
         N_i ← N_i + 1
-        // cada semana adicional soma ≥ ρ_i · ε_{ij}^min · h_i · d_i · m_i^1 > 0 à produção
-        // acumulada, onde ε_{ij}^min é o mínimo de ε_{ij} nas semanas futuras alcançáveis
-        // dentro do calendário — convergência garantida sempre que o calendário não
-        // anula ε_{ij} indefinidamente
+        // Convergência apenas sob horizonte admissível e capacidade futura suficiente.
 
   // Fechamento exato de escopo — última semana ativa (τ relativo, 0-indexado)
   τ^1 ← N_i − 1
-  q_residual ← Q_i − Σ_{τ=0}^{τ^1-1} ρ_i · ε_{i,τ} · h_i · d_i · m_i(τ)
-  φ_i ← q_residual / (ρ_i · ε_{i,τ^1} · h_i · d_i · m_i(τ^1))
+  q_residual ← Q_i − Σ_{τ=0}^{τ^1-1} F_i(m_i(τ)) · ε_exog_iτ · h_i · d_i
+  φ_i ← q_residual / (F_i(m_i(τ^1)) · ε_exog_iτ^1 · h_i · d_i)
 
   j_i^0 ← max_{b ∈ B_i} min{j : Φ_b(j) ≥ θ_i(b)}  [restrição exata de quantidade]
     com Φ_b(j) = (1/Q_b) · Σ_{j'=j_b^0}^{j} q_{b,j'}
@@ -593,9 +575,9 @@ Para cada i em ordem topológica de B_i:
 
   Verificar: r + d ≤ N_i  [consistência com W_i]
 
-Armazenar (j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i)
+Armazenar (j_i^0, N_i, {m_{ij}}, {F_i(m_{ij})}, {ε_exog_ij}, φ_i)
 
-SAÍDA: {j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i} ∀i
+SAÍDA: {j_i^0, N_i, {m_{ij}}, {F_i(m_{ij})}, {ε_exog_ij}, φ_i} ∀i
 ```
 
 ### XIV.2 — Fase 2: Taxas Horárias de Catálogo
@@ -622,10 +604,12 @@ SAÍDA: {γ_i^k, γ_i^{K,cat}, γ_i^{V,cat}, γ_i^{cat}, f_i^V, p_i^{cat}} ∀i
 
 ### XIV.3 — Fase 3: Quantitativos e Custos Semanais Diretos
 
+**Suspensão de certificação financeira:** as atribuições de custos nesta fase ainda representam a hipótese linear por frente, **não** o caso geral de F(m) com gargalo ou despesa variável por composição. A fase física corrigida é normativa; as contas financeiras dependem de #11/#17/#20 para certificação, como demonstrado no contrato P10-A.
+
 ```
 Para cada i ∈ A, para cada j ∈ [j_i^0, j_i^0 + N_i - 1]:
   Se j < j_i^0 + N_i - 1:
-    q_{ij} ← ρ_i · ε_{ij} · h_i · d_i · m_{ij}          [semana interior]
+    q_{ij} ← F_i(m_{ij}) · ε_exog_ij · h_i · d_i        [semana interior; sem η_s]
   Senão:
     q_{ij} ← q_residual                                  [semana de fechamento, da Fase 1]
 
@@ -661,7 +645,7 @@ SAÍDA: {q_{ij}, C_{ij}^{op}, C_i^{op}, M_i, p_i^{op}, C_i^{cat}} ∀i
 C^{pool} ← 0; C^{pool,β} ← 0; C^{MOB,eq} ← 0; C^{MOB,eq,β} ← 0
 
 Para cada tipo τ ∈ T:
-  n_j(τ) ← Σ_{i: j ∈ [j_i^0, j_i^0+N_i-1]} m_{ij} · n_τ^i   ∀j
+  n_j(τ) ← Σ_{i: j ∈ [j_i^0, j_i^0+N_i-1]} a_iτ(m_ij) ∀j // linear: a_iτ(m)=m·n_τ^i
   n_max(τ) ← max_j n_j(τ)
   G_τ^* ← (c_τ^mob + c_τ^demob) / c_τ^sem
 
@@ -683,6 +667,10 @@ Para cada tipo τ ∈ T:
 
 SAÍDA: C^{pool}, C^{pool,β}, C^{MOB,eq}, C^{MOB,eq,β}
 ```
+
+**Reconciliação:** no regime de tarifas distintas, o livro de instâncias deve publicar tanto $C^{pool}=\sum_{gj}(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$ quanto $C^{pool,\beta}=\sum_{gj}(1+\beta_{cat(g)})(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$, com tarifas normalizadas para a mesma base semanal. $C^{MOB/DEMOB}$ e $C^{MOB/DEMOB,\beta}$ entram somente no livro de indiretos. No regime homogêneo-base, a expressão anterior $\sum_\tau sem_\tau c_\tau^{sem}$ é caso particular.
+
+**Limite de optimalidade:** a minimização de cadeias por nível é exata somente **condicionada ao perfil de equipes e cronograma fixados**. A otimização global de {m, cronograma, pool} permanece questão conjunta (#15/#16). Standby é presença paga não demandada, não eficiência de produção.
 
 ### XIV.5 — Fase 5: Estoque (Consumíveis)
 
