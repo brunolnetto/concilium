@@ -180,7 +180,7 @@ def test_normative_appendix_keeps_symbol_provenance_and_week_intervals() -> None
         "F_i(m)",
         "mu_i^+",
         "mu_i^-",
-        "[j_i^0,j_i^0+N_i)",
+        "[j_i^0, j_i^0+N_i)",
         "UNKNOWN",
         "NOT_EVALUATED",
         "gap=0",
