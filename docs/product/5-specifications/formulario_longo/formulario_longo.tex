@@ -170,7 +170,7 @@ Preenchido por
 \(B_i\) & predecessores + completude parcial (§I.5) & usuário \\
 \(j_i^0\) & semana de início & \textbf{derivado} (schedule, §I.5) \\
 \(N_i\) & duração em semanas & \textbf{derivado} (fecho de escopo exato
-via busca monotônica, Parte IV/XIV) \\
+via busca limitada de durações e verificação do calendário, Parte IV/XIV) \\
 \((h_i, d_i)\) & regime de jornada da equipe & usuário,
 \(d_i\in\{4,5,6\}\), \(h_i\in\{6,8\}\) \\
 \end{longtable}
@@ -379,45 +379,41 @@ parâmetro de frota: frota constante durante toda a atividade.
 
 \[m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}\]
 
-\textbf{Determinação de \(N_i\).} Para perfis não-retangulares, \(N_i\)
-não possui fórmula fechada. A busca que a resolve não é circular: para
-cada duração candidata \(N\), o perfil \(m_i(\tau;N)\) acima é uma
-função de \(\tau\) inteiramente determinada --- nada nela depende de um
-\(N_i\) ainda desconhecido ---, de modo que a produção acumulada
-\(\Pi(N)\equiv\sum_{\tau=0}^{N-1}F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i\)
-pode ser calculada exatamente para qualquer \(N\) testado. O que não se
-conhece de antemão é apenas em qual \(N\) essa soma cruza \(Q_i\) --- a
-mesma situação de qualquer grandeza definida como ``o menor \(N\) tal
-que uma condição monotônica se satisfaz'', sem mistério adicional.
+\textbf{Determinação de \(N_i\) condicionada ao calendário absoluto.}
+Dado o início \(s=j_i^0\), a capacidade nominal da composição
+\(F_i(m_i(\tau;N))\) independe de clima e de datas, mas a capacidade
+semanal disponível vale
+\[
+ B_{i,s+\tau}=F_i(m_i(\tau;N))H_i p_{s+\tau}c_{s+\tau}a_i.
+\]
+O fator \(a_i\) é aplicado apenas se \(H_i\) ainda representa horas
+nominais; clima e calendário jamais geram outra taxa de produtividade.
+Para cada \(N\) candidato a função \(m_i(\tau;N)\) é determinada,
+mas pode ser diferente da rampa para \(N+1\).
+\textbf{Prova de monotonicidade fraca no modelo canônico:}
+para cada \(\tau<N\), a terceira parcela do mínimo que define
+\(m_i(\tau;N+1)\) aumenta em \(\mu_i^-\ge0\), sem diminuir
+as demais. Assim \(m_i(\tau;N+1)\ge m_i(\tau;N)\) e,
+com \(F_i(m)\) não decrescente e disponibilidades não
+negativas, \(\Pi_i(N+1;s)\ge\Pi_i(N;s)\).
+O crescimento estrito não está assegurado (por exemplo,
+\(p_j=0\)). A prova vale para o \textbf{subproblema de capacidade},
+não para viabilidade conjunta RCPSP, que requer enumeração/solver
+e checagem explícita de precedências, recursos e horizonte.
 
-A capacidade de uma configuração fixa \(F_i(m)\) não se reduz
-pela quantidade de frentes não mobilizadas. Com calendário absoluto fixo
-e \(F_i(m)\) não decrescente, a soma \(\Pi(N)\) pode ser
-não decrescente quando o perfil de \(N+1\) não reduz a demanda
-das semanas existentes; contudo \textbf{não há crescimento estrito
-universal}. Semanas adicionais podem ter clima/performance nulos ou
-capacidade compartilhada indisponível. A busca requer horizonte
-finito, diagnóstico de inviabilidade e revalidação do RCPSP sob
-deslocamentos; não inferir convergência apenas de \(N\) crescente (#12/#15).
+A busca enumera durações candidatas dentro de horizonte civil finito,
+com início \(s\) previamente fixado por predecessores físicos. A
+solução candidata somente é aceita após conferir o fechamento de
+\(Q_i\), os limiares de precedência e a demanda por recursos físicos.
+Um deslocamento de início ou duração invalida a avaliação anterior
+e exige revalidação da agenda RCPSP. A condição histórica
+\(r+d\le N_i\) não define suas variáveis e não é gate.
 
-O perfil testado em cada tentativa não precisa estar ``certo'' antes de
-\(N_i\) convergir: ele é, por definição, o perfil correto para aquele
-\(N\) testado, e é descartado assim que falha o teste de limiar --- nada
-é reaproveitado entre tentativas. O perfil que sobra, construído em
-\(N=N_i^\star\), é o único que os cálculos das partes seguintes
-utilizam: \(\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)\) é
-exato, sem resíduo das tentativas rejeitadas. Restrição de consistência:
-\(r + d \le N_i\).
-
-Um detalhe de ordem é necessário para que essa busca sequer possa
-consultar \(\eta_{p,j}, \eta_{w,j}\) (indexados pela semana
-\textbf{absoluta} \(j\)): \(j_i^0\) precisa estar definido antes de a
-busca por \(N_i\) começar. Como \(j_i^0\) (§I.5) depende apenas de
-atividades predecessoras --- já resolvidas pela ordem topológica em que
-as atividades são processadas ---, nunca de \(N_i\) ou \(\{m_{ij}\}\) da
-própria atividade \(i\), ele pode e deve ser calculado primeiro, sem
-gerar dependência circular alguma com a busca que vem a seguir (Parte
-XIV, Fase 1).
+A regra de liberação Q--FS usa \(\Phi_b(j)\) \textbf{ao fim} da
+semana \(j\) e inicia a sucessora em \(j+1+\ell_{b\to i}\).
+A implementação integral do reescalonamento compete a \#15.
+O contrato e os falsificadores são:
+\texttt{CALENDARIO\_E\_LIBERACAO\_FISICA.md}.
 
 \hypertarget{i.5-predecessores-e-completude-parcial}{%
 \subsubsection{I.5 Predecessores e completude
@@ -434,7 +430,16 @@ antes que \(A_i\) possa iniciar.
 
 \textbf{Restrição de início:}
 
-\[\boxed{j_i^0 \;\ge\; \max_{b\in B_i}\ \min\!\{j : \Phi_b(j) \ge \theta_i(b)\}}\]
+\[\boxed{j_i^0 \ge \max_{b\in B_i}
+\left(1+\ell_{b\to i}+\min\{j:\Phi_b(j)\ge\theta_i(b)\}\right)}\]
+
+\noindent\textbf{Contrato físico Q--FS (P12-A).} \(\Phi_b(j)\)
+é observada \textbf{ao fim} da semana \(j\); a sucessora
+começa no mínimo em \(j+1+\ell_{b\to i}\), com
+\(\ell_{b\to i}\ge0\) inteiro. Limiar nunca alcançado
+significa aresta não liberada (INFEASIBLE).
+Tipos SS/FF, lag negativo e relógio intrassemanal exigem outro contrato.
+% CALENDARIO_E_LIBERACAO_FISICA.md
 
 \textbf{Tipo de \(\theta_i(b)\)} --- declarar por aresta, pois a
 semântica difere sob \(\varepsilon_{ij}\) variável:
@@ -588,7 +593,7 @@ Capacidade física e fatores exógenos semanais:
 Não aplicar nenhuma penalização adicional por frentes não mobilizadas.
 
 \textbf{Fechamento exato de escopo.} Seja \(j_i^1 \equiv j_i^0+N_i-1\) a
-última semana ativa de \(A_i\), obtida pela busca monotônica em \(N_i\)
+última semana ativa de \(A_i\), obtida pela busca limitada em \(N_i\) e verificação física
 (Parte XIV, Fase 1) sobre o perfil nominal \(\{m_i(\tau)\}\) de \(W_i\).
 Nas semanas interiores \(j<j_i^1\), a produção usa o perfil nominal
 integralmente. Na última semana, o quantitativo residual fecha
@@ -1458,12 +1463,14 @@ fechamento}\label{xiv.1-fase-1-cronograma-interface-com-solver-rcpsp-externo}}
 
 \begin{verbatim}
 Pré-condição: {F_i(m)} e calendário disponível.
-Para cada i em ordem topológica:
-  Resolver j_i^0 a partir das liberações físicas de predecessores.
-  Para N em durações candidatas dentro do horizonte:
+Para cada i em ordem topológica Q--FS:
+  r_b ← menor j com Σ_{k≤j}q_bk ≥ θ_b·Q_b, para cada pred. b
+  Se r_b inexiste: INFEASIBLE, não liberar sucessora
+  j_i^0 ← max_b(r_b+1+lag_b), lag_b≥0, semanas absolutas
+  Para N=1,...,J_max−j_i^0+1:
     m_i(τ;N) ← RampProfile.build(N,W_i)[τ]
-    B_iτ ← F_i(m_i(τ;N)) · h_i · d_i · η_{p,j_i^0+τ} · η_{w,j_i^0+τ}
-    Se Στ B_iτ ≥ Q_i e recursos/precedências são viáveis:
+    B_iτ ← F_i(m_i(τ;N)) · H_i · p_{j_i^0+τ} · c_{j_i^0+τ} · a_i
+    Se Στ B_iτ ≥ Q_i e RCPSP/precedências são viáveis:
       aceitar N; sair
   Se nenhuma duração é viável: NOGO com causa física/calendário.
 
@@ -1833,7 +1840,7 @@ Significado
 \bottomrule\noalign{}
 \endlastfoot
 \(j_i^0\) & semana de início (derivada dos predecessores) \\
-\(N_i\) & duração em semanas (derivada por busca monotônica) \\
+\(N_i\) & duração em semanas (derivada por busca limitada) \\
 \(m_{ij}\) & número de frentes mobilizadas de \(A_i\) na semana \(j\) \\
 \(\varepsilon_{ij}^{exog}\) & fatores físicos exógenos
 \(\eta_{p,j}\eta_{w,j}\), sem fator por equipes ausentes \\
