@@ -127,30 +127,19 @@ class ActivityDag(BaseModel):
 
 
 class DistribuicaoSemanal(BaseModel):
-    """Distribuição de execução por semana ISO ("AAAA-Www").
+    """Weekly materialization of effective physical capacity F_i(m_ij)*H_i.
 
-    NEP-035 — Decomposição causal da eficiência η = η_s · η_p · η_w:
-      η_s  = n_j / n_max          (alocação: fração da força máxima fielded)
-      η_p  = fator_clima × fator_calendario × fator_jornada  (praticabilidade)
-      η_w  = m_ij / M_max = eficiencia      (gestão; M_max=1.0 até calibração histórica)
-      η    = fator_total = η_s · η_p · η_w  (eficiência total observada)
+    q_max_celula = B_nom = F_i(m_ij)*H_i for actually mobilized fronts.
+    eta_p = climate * calendar * working-day availability.
+    qtd_executada = min(Q_remaining, q_max_celula * eta_p).
+    The final-week closure ratio phi = qtd_executada/(q_max_celula*eta_p)
+    is NOT a productivity loss, and unmobilized fronts generate NO physical
+    loss. perda_fisica measures only lost exogenous productive capacity
+    q_max_celula*(1-eta_p), not missing front teams or scope closure.
 
-    ADR-124 — Separação planejamento vs. controle:
-      Planejamento (aplicável agora):  η_plan = η_clima · δ · η_jornada (= η_p)
-      Controle (fase futura):          η_control = η_s · η_plan · η_w
-      η_s e η_w são fatores de CONTROLE (None em CampoEficiencia no planejamento);
-      mantidos aqui apenas por retrocompatibilidade da NEP-035.
-
-    ADR-148 — fator_jornada = eta_jornada = (horas_dia - horas_improdutivas_dia) / horas_dia:
-      determinístico e estrutural (não estocástico como fator_clima; não calendarizado
-      como fator_calendario) — constante por regime de trabalho, não por semana.
-
-    q_max_celula = P_i · h · n_max · M_max  (capacidade teórica da semana)
-    perda_fisica = q_max_celula · η_s - q_executada  (produção perdida na semana, unidades físicas)
-
-    Agregação multi-semanal correta (Seção 5 do modelo):
-      η_agg = Σ_j(η_j · q_max_celula_j) / Σ_j(q_max_celula_j)  [ponderado por capacidade]
-      ≠ produto de médias por fator (os fatores acoplam via pesos de capacidade).
+    Transitional persisted fields: eta_s=1.0 neutral; eta_w and eficiencia
+    hold phi only for backwards serialisation compatibility; remove them
+    after dependent control analytics have versioned fields (#11/#26).
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -168,15 +157,11 @@ class DistribuicaoSemanal(BaseModel):
     # estrutural (não estocástico como fator_clima; não calendarizado como fator_calendario).
     fator_jornada: float = Field(default=1.0, ge=0.0, le=1.0)
     fator_total: float = Field(default=1.0, ge=0.0, le=1.0)
-    # NEP-035 / ADR-124: decomposição causal η_s · η_p · η_w.
-    # ADR-124 reinterpreta a decomposição separando planejamento de controle.
-    # Retrocompatibilidade: default 1.0 preservado (não 0.0) para não introduzir
-    # regressão silenciosa em cronogramas já materializados.
-    # CONTROLE: n_j/n_max — determinado pelo RCPSP; sem significado diagnóstico no planejamento.
+    # Legacy compatibility field, permanently neutral in new schedules.
     eta_s: float = Field(default=1.0, ge=0.0, le=1.0)
     # PLANEJAMENTO: η_p = fator_clima · fator_calendario = η_clima · δ = η_plan (ADR-124).
     eta_p: float = Field(default=1.0, ge=0.0, le=1.0)
-    # CONTROLE: produção real / capacidade — requer dados de execução (fase de controle).
+    # Legacy serialization: closure fraction phi (not operational inefficiency).
     eta_w: float = Field(default=1.0, ge=0.0, le=1.0)
     q_max_celula: float = Field(default=0.0, ge=0.0)
     perda_fisica: float = Field(default=0.0, ge=0.0)

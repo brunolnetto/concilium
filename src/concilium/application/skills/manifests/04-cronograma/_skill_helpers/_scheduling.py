@@ -15,7 +15,7 @@ from concilium.domain.models.canonical import (
 )
 
 from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[unresolved-import]
-from ._custos import _build_dist_cell, _lookup_eficiencia, _week_offset  # ty: ignore[unresolved-import]
+from ._custos import _build_dist_cell, _capacidade_semanal_por_frentes, _lookup_eficiencia, _week_offset  # ty: ignore[unresolved-import]
 from ._validacao import (  # ty: ignore[unresolved-import]
     _build_activity_item_map,
     _find_item_by_id,
@@ -130,7 +130,7 @@ def _resolve_cpu_for_item(item: Any, cpu_lookup: dict[str, dict], validacoes: li
 
 
 def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
-    """Pré-computa n_max (pico de alocação da atividade) para η_s = n_j/n_max (NEP-035)."""
+    """Computa o pico de frentes para determinar a capacidade F(m) física."""
     # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
     return (
         max(
@@ -143,22 +143,6 @@ def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
         or 1
     )
 
-
-def _compute_eta_s(
-    cpu: dict,
-    producao_lookup: dict[str, dict],
-    num_equipes: float,
-    n_max: int,
-) -> float:
-    """Calcula η_s pelo grafo de fluxo, ou pela razão linear quando ele não existe."""
-    from concilium.domain.services.sinergia_equipe import (
-        construir_producao_catalogo_para_sinergia,
-        fator_alocacao_por_frentes,
-    )
-
-    prod_item = producao_lookup.get(cpu.get("producao_id_ref"))
-    producao = construir_producao_catalogo_para_sinergia(prod_item) if isinstance(prod_item, dict) else None
-    return fator_alocacao_por_frentes(getattr(producao, "grafo_sinergia", None), num_equipes, n_max)
 
 
 def _build_activity_distribuicao(
@@ -178,7 +162,10 @@ def _build_activity_distribuicao(
 ) -> tuple[dict[str, DistribuicaoSemanal], float]:
     """Busca o menor N_i que fecha Q no calendário disponível e o materializa."""
     n_max = max(1, n_max)
-    capacidade_nominal = producao_semanal_base * n_max * fator_jornada
+    prod_item = (producao_lookup or {}).get(cpu.get('producao_id_ref'))
+    capacidade_nominal = _capacidade_semanal_por_frentes(
+        producao_semanal_base, n_max, n_max, prod_item
+    ) * fator_jornada
     duration_initial = max(1, math.ceil(item.quantitativo / capacidade_nominal)) if capacidade_nominal > 0 else 1
     duration_max = len(semanas_obra) - sa.start_week
     ramp_params = getattr(sa, "ramp_params", None)
@@ -195,8 +182,10 @@ def _build_activity_distribuicao(
             fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
             fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
             num_equipes = n_max * fraction
-            eta_s = _compute_eta_s(cpu, producao_lookup or {}, num_equipes, n_max)
-            capacidades.append(producao_semanal_base * n_max * eta_s * fator_clima * fator_calendario * fator_jornada)
+            capacidade = _capacidade_semanal_por_frentes(
+                producao_semanal_base, num_equipes, n_max, prod_item
+            )
+            capacidades.append(capacidade * fator_clima * fator_calendario * fator_jornada)
         if sum(capacidades) < item.quantitativo:
             continue
 
@@ -214,7 +203,9 @@ def _build_activity_distribuicao(
                 item.quantitativo,
                 qtd_acumulada,
                 fator_jornada=fator_jornada,
-                eta_s_calculada=_compute_eta_s(cpu, producao_lookup or {}, num_equipes, n_max),
+                capacidade_fisica_semanal=_capacidade_semanal_por_frentes(
+                    producao_semanal_base, num_equipes, n_max, prod_item
+                ),
             )
             qtd_acumulada = cell.qtd_acumulada
             distribuicao[semana_key] = cell
