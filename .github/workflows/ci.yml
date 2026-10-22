@@ -44,7 +44,7 @@ jobs:
       - name: Install uv resolver
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.9.6"
+          version: "0.13.5"
 
       - name: Verify lockfile matches pyproject and resolves
         run: uv lock --check
