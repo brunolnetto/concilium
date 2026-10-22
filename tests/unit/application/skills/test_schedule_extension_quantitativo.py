@@ -151,7 +151,8 @@ class TestBuildActivityDistribuicaoExtensao:
         _warn_if_activity_underdelivers(item, "eap-01", sa, qtd_acumulada, validacoes)
         assert len(validacoes) == 1
         assert validacoes[0].codigo == "VAL-CRON-01"
-        assert validacoes[0].status == "AVISO"
+        assert validacoes[0].status == "ERRO"
+        assert "residual=30" in validacoes[0].mensagem
         assert "calendário disponível" in validacoes[0].mensagem
         assert "0.0000%" in validacoes[0].mensagem
 
@@ -179,6 +180,58 @@ class TestBuildActivityDistribuicaoExtensao:
         validacoes = []
         _warn_if_activity_underdelivers(item, "eap-01", sa, qtd_acumulada, validacoes)
         assert validacoes == []
+
+
+def test_scope_closure_reports_exact_residual_and_horizon() -> None:
+    closure = _mod_scheduling.assess_scope_closure(
+        "eap-01", 30.0, 12.5, calendar_horizon_weeks=3,
+    )
+    assert closure.status == "FAIL"
+    assert closure.reason == "CALENDAR_OR_CAPACITY_EXHAUSTED"
+    assert closure.required == 30.0
+    assert closure.delivered == 12.5
+    assert closure.residual == 17.5
+    assert closure.absolute_error == 17.5
+    assert closure.calendar_horizon_weeks == 3
+
+
+@pytest.mark.parametrize(
+    ("required", "delivered"),
+    [(30.0, float("nan")), (float("inf"), 30.0), (-5.0, 0.0)],
+)
+def test_scope_closure_rejects_invalid_quantities(required: float, delivered: float) -> None:
+    closure = _mod_scheduling.assess_scope_closure("invalid", required, delivered)
+    assert closure.status == "UNKNOWN"
+    assert closure.reason == "INVALID_QUANTITY"
+
+
+def test_overproduction_never_passes_scope_closure() -> None:
+    closure = _mod_scheduling.assess_scope_closure("excess", 10.0, 11.0)
+    assert closure.status == "FAIL"
+    assert closure.reason == "OVERPRODUCTION"
+    assert closure.residual == -1.0
+
+
+def test_scope_closure_tolerance_is_explicit_and_small() -> None:
+    closed = _mod_scheduling.assess_scope_closure("closed", 30.0, 30.0 - 1e-10)
+    assert closed.status == "PASS"
+    missing = _mod_scheduling.assess_scope_closure("missing", 30.0, 29.9)
+    assert missing.status == "FAIL"
+
+
+def test_calendar_infeasibility_emits_error_not_preview_warning() -> None:
+    validacoes = []
+    _warn_if_activity_underdelivers(
+        SimpleNamespace(quantitativo=30.0),
+        "eap-01",
+        _sa(start_week=0, duration_weeks=3),
+        12.5,
+        validacoes,
+        calendar_horizon_weeks=3,
+    )
+    assert [v.status for v in validacoes] == ["ERRO"]
+    assert "residual=17.5" in validacoes[0].mensagem
+    assert "horizonte_semanas=3" in validacoes[0].mensagem
 
 
 def _dist_semanal(qtd_executada: float) -> object:
