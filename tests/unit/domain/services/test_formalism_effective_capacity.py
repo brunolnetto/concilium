@@ -34,6 +34,7 @@ def test_shared_downstream_graph_saturates() -> None:
         {
             "fonte": "s",
             "sorvedouro": "t",
+            "dominio": ["s", "middle", "t"],
             "arestas_fluxo": [
                 {"aresta_id": "a", "origem": "s", "destino": "middle", "capacidade_horaria": 40},
                 {"aresta_id": "b", "origem": "middle", "destino": "t", "capacidade_horaria": 15},
