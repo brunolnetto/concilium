@@ -30,3 +30,9 @@ def test_v1_lowlevel_request_context_is_available() -> None:
     from mcp.server.lowlevel.server import request_ctx
 
     assert request_ctx is not None
+
+
+def test_declared_yaml_runtime_dependency_is_importable() -> None:
+    import yaml
+
+    assert callable(yaml.safe_load)
