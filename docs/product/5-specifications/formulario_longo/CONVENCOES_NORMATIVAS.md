@@ -17,7 +17,7 @@
 | Símbolo | Dimensão | Observação / restrição |
 |---|---|---|
 | `Q_i`, `q_ij` | unidade física da atividade `u_i` | `Q_i>0` no regime de atividade produtiva; `q_ij>=0`; soma semanal deve fechar Q |
-| `rho_i`, `F_i(m)` | `u_i/h_operacional` | normalização entre produtividade por frente e max-flow pleno **pendente em #10** |
+| `rho_i^front`, `rho_i^peak`, `F_i(m)` | `u_i/(h·frente)`, `u_i/h`, `u_i/h` | `F_i(m)` incorpora as frentes; `rho_i^peak=F_i(m_i^max)`; validade de extrapolação linear é hipótese condicionada em #10 |
 | `j`, `j_i^0`, `N_i`, `tau` | contagem inteira de semanas | `N_i>=1`, `tau=j-j_i^0`, `0<=tau<N_i` |
 | `m_i^0`, `m_i^1`, `m_i^max`, `m_ij` | frentes (inteiro, adimensional) | `1<=m_i^0,m_i^1<=m_i^max` durante atividade |
 | `mu_i^+`, `mu_i^-` | frentes/semana | inteiros **não negativos**; valor zero é válido |
@@ -77,11 +77,15 @@ Sem a igualdade adicional, o mínimo das três retas dá `min(m_i^0,m_i^max,m_i^
 
 ## 7. Pendências explícitas (não converter em verdades por convenção)
 
-- #10: `rho`, max-flow e `eta_s` podem contar a mobilização duas vezes.
+- #10: a documentação **já** substituiu `rho*eta_s*m` por `F_i(m)` (#31); a migração dos consumidores de runtime e a prova diferencial P10-B seguem pendentes.
 - #11: razões e eficiências médias com fechamento fracionário precisam de nova prova.
 - #12: início, calendário absoluto, rampas, precedências e RCPSP estão acoplados.
 - #13: standby integral e consumível sem perdas são **hipóteses**, não universais.
 
-P09-B automatizará a consistência entre documentos e essas fronteiras; #22 fornecerá o sinal numérico independente. Este anexo não declara o produto certificado.
+P09-B acrescenta testes executáveis de paridade entre LONGO/RESUMIDO/TeX e fronteiras exatas, independentes do runtime. #22 mantém o oráculo numérico autônomo. Este anexo não declara o produto certificado.
 
 **Correção P10-A:** [CAPACIDADE_E_RECURSOS.md](CAPACIDADE_E_RECURSOS.md) distingue frentes mobilizadas, capacidade $F_i(m)$, demanda contratual $d_{gj}$ e standby $s_{gj}$; não há eficiência de alocação multiplicativa.
+
+## 9. Unidades separadas de calibragem física (P09-B)
+
+A produtividade **por frente** `rho_i^front` possui unidade `u_i/(h·frente)`; multiplicá-la por `m` [frentes] só é permitido sob hipótese de frentes independentes. A função efetiva `F_i(m)` e a capacidade de pico `rho_i^peak` possuem `u_i/h`, portanto multiplicar novamente por `m` é dimensionalmente incorreto. Para `U_g=κ_g^out·Q_i`, `κ_g^out` tem `unid_g/u_i`, enquanto taxas de consumo horário `κ_g^h` têm `unid_g/h` e requerem horas **reais** de operação. O livro K ativo/idle usa tarifas e semanas na mesma base; o preço `p_g` tem `R$/unid_g`. Os testes [test_normative_boundaries.py](../../../../tests/reference_formalism/test_normative_boundaries.py) executam essa álgebra sem importar módulos de produção.
