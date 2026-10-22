@@ -111,7 +111,7 @@ Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$
 
 $$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
 
-**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada: a soma $\sum_j \rho_i\varepsilon_{ij} h_id_i m_{ij}$ depende de $\{m_{ij}\}$, que por sua vez depende de $N_i$. A dependência é monotônica em $N_i$ — sob qualquer calendário viável (que não anule $\varepsilon_{ij}$ indefinidamente), cada semana adicional contribui estritamente mais que zero à produção acumulada —, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1); a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante. Dado $N_i$ convergido, $\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)$ é exato. Restrição de consistência: $r + d \le N_i$.
+**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada: a soma $\sum_j F_i(m_{ij})\varepsilon_{ij}^{exog}h_id_i$ depende de $\{m_{ij}\}$, que por sua vez depende de $N_i$. A dependência é monotônica em $N_i$ — sob qualquer calendário viável (que não anule $\varepsilon_{ij}$ indefinidamente), cada semana adicional contribui estritamente mais que zero à produção acumulada —, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1); a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante. Dado $N_i$ convergido, $\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)$ é exato. Restrição de consistência: $r + d \le N_i$.
 
 ### I.5 Predecessores e completude parcial
 
@@ -503,8 +503,8 @@ ENTRADA
   Parâmetros globais:
     β^EQ, β^MO, β^MAT, β^COMB, β^IND, s_mes
     {η_{p,j}, η_{w,j}}              — calendário global de desempenho e clima
-    // η_{s,ij} é derivado por atividade a partir de G_i e do perfil {m_ij} (Fase 1)
-    // ε_{ij} = η_{s,ij} · η_{p,j} · η_{w,j}
+    // F_i(m_ij) deriva da composição física mobilizada, sem penalidade η_s
+    // ε_exog_ij = η_{p,j} · η_{w,j}; demanda d_gj deriva do mesmo m_ij
 
   Para cada recurso r:
     c_r^mob, c_r^demob             — custos de mobilização/desmobilização
@@ -517,28 +517,29 @@ ENTRADA
 
 **Status de conformidade:** as fases produtivas devem derivar capacidade via $F_i(m)$ (contrato P10-A); derivadas financeiras da fórmula antiga estão bloqueadas por #11 até certificação.
 
-### XIV.0 — Fase 0: Resolução de Produtividade
+### XIV.0 — Fase 0: Função de capacidade da composição
 
 ```
-Para cada i ∈ A:
-  Se i.grafo_sinergia está presente:
-    Identificar topologia de G_i:
-      série    → ρ_i = min_{(u,v) ∈ caminho_crítico} cap(u,v)
-      paralelo → ρ_i = Σ_{(s_i,v) ∈ A_i^syn} cap(s_i, v)
-      misto    → ρ_i = max-fluxo(s_i → t_i, G_i^D)  [Ford-Fulkerson]
-    Armazenar ρ_i como producao_horaria  [cache auditável]
-  Senão:
-    ρ_i ← i.producao_horaria             [entrada direta calibrada externamente]
+Para cada i:
+  Se grafo sinergia G_i presente:
+    Para m ∈ {0,...,m_i^max}:
+      F_i(m) ← max-fluxo(G_i^D | m)  // gargalos compartilhados preservados
+  Se há taxa externa certificada rho_i^front POR FRENTE independente:
+    F_i(m) ← m · rho_i^front
+  Se taxa calibrada para configuração inteira m_cal:
+    Exigir modelo explícito que mapeie m→F_i(m), sem extrapolação implícita
 
-  Validar ρ_i > 0  [equipe inviável se algum corte tem capacidade zero]
+  Validar F_i(m)>0 para as configurações com produção requerida.
+  F_i(0) ← 0
+  rho_i^peak ← F_i(m_i^max)  // apenas diagnóstico, não fator multiplicativo
 
-SAÍDA: {ρ_i} ∀i
+SAÍDA: {F_i(m)} por atividade, com fontes/capacidades auditáveis.
 ```
 
 ### XIV.1 — Fase 1: Cronograma (interface com solver RCPSP externo)
 
 ```
-Pré-condição: {ρ_i} disponível ∀i
+Pré-condição: {F_i(m)} e suas fontes disponíveis ∀i
 
 Para cada i em ordem topológica de B_i:
 
@@ -556,14 +557,11 @@ Para cada i em ordem topológica de B_i:
     Se prod ≥ Q_i:
       convergiu; {m_{ij}} ← {m_{ij,t}}
     Senão:
-      Se ε_{ij} = 0 para toda semana j futura alcançável dentro do calendário disponível:
-        Marcar A_i INVIÁVEL; interromper busca (→ Fase 9, NOGO)
+      Se nenhuma semana futura viável possui F_i(m_i,j)>0 e ε_exog_i,j>0:
+        Marcar A_i INVIÁVEL por capacidade/clima/horizonte (→ Fase 9, NOGO)
       Senão:
         N_i ← N_i + 1
-        // cada semana adicional soma ≥ ρ_i · ε_{ij}^min · h_i · d_i · m_i^1 > 0 à produção
-        // acumulada, onde ε_{ij}^min é o mínimo de ε_{ij} nas semanas futuras alcançáveis
-        // dentro do calendário — convergência garantida sempre que o calendário não
-        // anula ε_{ij} indefinidamente
+        // Convergência apenas sob horizonte admissível e capacidade futura suficiente.
 
   // Fechamento exato de escopo — última semana ativa (τ relativo, 0-indexado)
   τ^1 ← N_i − 1
@@ -577,9 +575,9 @@ Para cada i em ordem topológica de B_i:
 
   Verificar: r + d ≤ N_i  [consistência com W_i]
 
-Armazenar (j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i)
+Armazenar (j_i^0, N_i, {m_{ij}}, {F_i(m_{ij})}, {ε_exog_ij}, φ_i)
 
-SAÍDA: {j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i} ∀i
+SAÍDA: {j_i^0, N_i, {m_{ij}}, {F_i(m_{ij})}, {ε_exog_ij}, φ_i} ∀i
 ```
 
 ### XIV.2 — Fase 2: Taxas Horárias de Catálogo
@@ -606,10 +604,12 @@ SAÍDA: {γ_i^k, γ_i^{K,cat}, γ_i^{V,cat}, γ_i^{cat}, f_i^V, p_i^{cat}} ∀i
 
 ### XIV.3 — Fase 3: Quantitativos e Custos Semanais Diretos
 
+**Suspensão de certificação financeira:** as atribuições de custos nesta fase ainda representam a hipótese linear por frente, **não** o caso geral de F(m) com gargalo ou despesa variável por composição. A fase física corrigida é normativa; as contas financeiras dependem de #11/#17/#20 para certificação, como demonstrado no contrato P10-A.
+
 ```
 Para cada i ∈ A, para cada j ∈ [j_i^0, j_i^0 + N_i - 1]:
   Se j < j_i^0 + N_i - 1:
-    q_{ij} ← ρ_i · ε_{ij} · h_i · d_i · m_{ij}          [semana interior]
+    q_{ij} ← F_i(m_{ij}) · ε_exog_ij · h_i · d_i        [semana interior; sem η_s]
   Senão:
     q_{ij} ← q_residual                                  [semana de fechamento, da Fase 1]
 
@@ -645,7 +645,7 @@ SAÍDA: {q_{ij}, C_{ij}^{op}, C_i^{op}, M_i, p_i^{op}, C_i^{cat}} ∀i
 C^{pool} ← 0; C^{pool,β} ← 0; C^{MOB,eq} ← 0; C^{MOB,eq,β} ← 0
 
 Para cada tipo τ ∈ T:
-  n_j(τ) ← Σ_{i: j ∈ [j_i^0, j_i^0+N_i-1]} m_{ij} · n_τ^i   ∀j
+  n_j(τ) ← Σ_{i: j ∈ [j_i^0, j_i^0+N_i-1]} a_iτ(m_ij) ∀j // linear: a_iτ(m)=m·n_τ^i
   n_max(τ) ← max_j n_j(τ)
   G_τ^* ← (c_τ^mob + c_τ^demob) / c_τ^sem
 
@@ -667,6 +667,8 @@ Para cada tipo τ ∈ T:
 
 SAÍDA: C^{pool}, C^{pool,β}, C^{MOB,eq}, C^{MOB,eq,β}
 ```
+
+**Limite de optimalidade:** a minimização de cadeias por nível é exata somente **condicionada ao perfil de equipes e cronograma fixados**. A otimização global de {m, cronograma, pool} permanece questão conjunta (#15/#16). Standby é presença paga não demandada, não eficiência de produção.
 
 ### XIV.5 — Fase 5: Estoque (Consumíveis)
 
