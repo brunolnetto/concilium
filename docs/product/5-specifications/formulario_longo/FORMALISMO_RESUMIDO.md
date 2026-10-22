@@ -265,33 +265,22 @@ Para cadeia contratual \(r\), \(T_r^{perm}=T_r^{act}+T_r^{idle}\); a fração \(
 
 Consumíveis passam por três contas diferentes, ligadas por uma cadeia de derivação: quanto custou comprar o material ou combustível efetivamente usado na produção (aquisição, direto), quanto foi fisicamente consumido semana a semana (demanda física, derivada do cronograma) e quanto custa manter estoque parado no canteiro entre a compra e o consumo (posse, indireto) — esta última agora resultado de uma política de reposição ótima, não um dado externo solto, em consistência com o restante do formulário: a Parte IX, por exemplo, não aceita "quantas instâncias de recurso contratual existem" como dado solto — deriva isso de uma condição de perpetuação aplicada sobre a demanda semanal já calculada. O mesmo tratamento vale para consumíveis.
 
-### X.1 Aquisição
+### X.1 Aquisição física
 
-Separável por atividade sem ambiguidade. Por identidade direta $C_i^{\mathrm{V,op}} \equiv C_i^{\mathrm{V,cat}}$ (Parte VI):
+Se \(U_g\) é a quantidade física total adquirida e efetivamente consumida do bem \(g\), e \(p_g\) [R$/unidade] é seu preço, a despesa direta é
 
-$$\boxed{C^{\mathrm{cons}} = \sum_{i\in\mathcal{A}} \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i} = \sum_g c_g^{\mathrm{cons}}\, U_g}\qquad\text{[R\$ — direto, entra em $C^D$]}$$
+$$\boxed{C^{cons}=\sum_g p_g\,U_g,\qquad U_g=\sum_{i,j}U_{gij}.}$$
 
-$$C^{\mathrm{cons},\beta} = \sum_{i\in\mathcal{A}} \gamma_i^{\mathrm{V,cat},\beta}\cdot\frac{Q_i}{\rho_i}$$
+A camada de BDI usa a **categoria real do bem**, aplicada uma vez: \(C^{cons,\beta}=\sum_g(1+\beta^{cat(g)})p_gU_g\). A igualdade anterior \(C^{cons}=\sum_iQ_i\gamma_i^{V,cat}/\rho_i\) **não é universal** para \(F_i(m)\) não linear, consumo em standby ou perdas (#11/#18).
 
-Diferente do contratual, $C^{\mathrm{cons}}$ não requer otimização de cadeias — a soma por atividade é exata, e coincide exatamente com a produção realizada dado o fechamento de escopo da Parte IV. $U_g$ (unidades físicas do bem $g$ usadas no projeto inteiro) é recuperado com exatidão em §X.2, não apenas como total agregado.
+### X.2 Demanda semanal e unidades físicas
 
-### X.2 Demanda física derivada
+Calcular \(U_{gij}\ge0\) a partir do contrato de consumo definido para cada equipamento, material e atividade: quantidade por **unidade produzida** ou por **hora efetiva de operação**, com política explícita de perdas, combustível em idle e composição mobilizada. Não confundir \(\kappa_g\) [unid/h] com \(\kappa^{out}_{ig}\) [unid/unidade da atividade]. Em regime de consumo por produto,
 
-O restante desta parte deriva $U_g$ semana a semana — necessário para qualquer decisão de quando comprar, não apenas quanto. Para cada atividade $i$ e bem físico $g$, a **taxa de consumo agregada** do bem $g$ por hora-equivalente de $i$ soma os recursos consumíveis de $R_i$ que consomem $g$ (§I.3.1) — mesmo dado de cadastro que já alimenta $\gamma_i^{\mathrm{V,cat}}$ (Parte III), nenhum insumo novo:
+$$U_{gij}=\kappa^{out}_{ig}q_{ij},\qquad D_{g,j}=\sum_i U_{gij},\qquad
+\boxed{\sum_jD_{g,j}=U_g}. $$
 
-$$\kappa_i^g \equiv \sum_{r\in R_i\,:\,g(r)=g} n_r\,\kappa_r \qquad [\text{unid}_g/\text{h}]$$
-
-Usando a mesma razão $q_{ij}/\rho_i$ que torna $C_{ij}^{\mathrm{V,op}}$ exata inclusive na semana de fechamento (Parte V) — ela já generaliza corretamente "horas efetivas" nas semanas interiores e no residual —, o consumo físico de $g$ pela atividade $i$ na semana $j$ segue a mesma construção, só trocando a taxa monetária pela taxa física:
-
-$$\boxed{D_{g,ij} = \kappa_i^g\cdot\frac{q_{ij}}{\rho_i}}\qquad[\text{unid}_g] \qquad\qquad \boxed{D_{g,j} = \sum_{i\,\in\,\mathcal{A}_j} D_{g,ij}}\qquad[\text{unid}_g]$$
-
-com $\mathcal{A}_j$ o conjunto de atividades ativas na semana $j$ (Parte IV). Nenhum cálculo novo além de agregação: $q_{ij}$ e $\rho_i$ já são saída da Fase 3.
-
-**Identidade de consistência.** Somando sobre toda a vida do projeto e usando o fecho de escopo exato $\sum_jq_{ij}=Q_i$:
-
-$$\sum_j D_{g,j} = \sum_i\kappa_i^g\cdot\frac{Q_i}{\rho_i} \equiv U_g$$
-
-recuperando exatamente o $U_g$ de §X.1 — a demanda física total já era implicitamente conhecida pelo formulário original; faltava sua distribuição semana a semana.
+Em regime por hora, \(U_{gij}\) depende do tempo efetivo do equipamento e sua taxa física; escrever \(\kappa_i^g q_{ij}/\rho_i\) requer uma **prova de equivalência** da produtividade/calibração e não pode ser um fallback implícito. O estoque da §X.3 e a política de reposição só recebem \(D_{g,j}\) depois desse contrato de consumo estar validado.
 
 ### X.3 Balanço de estoque
 
@@ -321,7 +310,7 @@ $$\boxed{f(b) = \min_{a\,\in\,[j_{\min}^g,\,b]}\big[f(a-1)+\mathrm{Custo}(a,b)\b
 
 O custo ótimo de reposição de $g$ é $f(j_{\max}^g)$; a partição ótima em lotes — logo as semanas de pedido e $X_{g,a-L_g}=\sum_{k=a}^bD_{g,k}$ — é recuperada por backtracking do argumento minimizador em cada passo. Complexidade $O(n^2)$ no número de semanas com demanda; refinamento $O(n\log n)$ existe via teorema do horizonte de planejamento (Wagelmans, Van Hoesel & Kolen, 1992), desnecessário na escala típica de um cronograma de obra. O lead time $L_g$ não altera a estrutura — apenas desloca cada semana de pedido $a$ para $a-L_g$; se isso cai antes do início do cronograma, sinaliza necessidade de pedido de pré-mobilização (verificado em §XIV.9).
 
-Como o preço $p_{g(r)}$ permanece constante (sem desconto por volume, §X.6), o custo de **aquisição** $C^{\mathrm{cons}}$ (§X.1) é inalterado pela política de lotes — depende só de $U_g$, invariante ao cronograma. A política de reposição determina exclusivamente a repartição do custo de **posse** e introduz o custo de **pedido**, nunca o total de material comprado.
+Com preços unitários constantes e demanda física já fixada, a política de lotes não altera $C^{\mathrm{cons}}=\sum_g p_gU_g$; altera somente posse e custos de pedido. A **invariância em relação ao cronograma** é condicional ao regime em que $U_g$ depende apenas do escopo entregue, sem desperdício ou consumo ocioso, não uma propriedade universal de $F_i(m)$.
 
 ### X.5 Custo de posse, custo de pedido e atualização do indireto
 
@@ -338,7 +327,7 @@ Os totais do indireto (Parte XII.6) passam a incluir esse termo:
 $$C^I = \sum_{l\in\mathcal{L}} C_l^{I,o} + C^{MOB,eq,o} + C^{\mathrm{PED}} + C^{\mathrm{inv}}$$
 $$C^{I,\beta} = \sum_{l\in\mathcal{L}} C_l^{I,\beta} + C^{MOB,eq,\beta} + C^{\mathrm{PED},\beta} + C^{\mathrm{inv}}\,(1+\beta^{\mathrm{IND}})$$
 
-Nenhuma outra parte do formulário muda: $C^D$, $C^{\mathrm{cat}}$, $\mathrm{BDI}$, $R$ mantêm suas fórmulas originais (Partes XI e XIII), apenas com $C^I$ recomputado.
+Os totais diretos/indiretos são reconstruídos do diário sem duplicação. Catálogo, BDI e $R$ exigem bases compatíveis e as condições de certificação das Partes VIII e XIII; **não** conservar fórmulas históricas apenas porque a reposição não altera a compra física.
 
 ### X.6 Escopo
 
@@ -470,188 +459,128 @@ ENTRADA
     j^{procure,min}                 — semana mais cedo em que um pedido pode ser colocado (opcional)
 ```
 
-### XIV.0 — Fase 0: Resolução de Produtividade
+### XIV.0 — Fase 0: Capacidade física da composição
 
-Em termos simples: aqui se calcula quanto cada equipe consegue produzir por hora, a partir do grafo de sinergia ou de um valor calibrado externamente.
+O grafo de produção fornece a função inteira \(F_i(m)\), não uma eficiência de alocação.
 
-```
-Para cada i ∈ A:
-  Se i.grafo_sinergia está presente:
-    Identificar topologia de G_i:
-      série    → ρ_i = min_{(u,v) ∈ caminho_crítico} cap(u,v)
-      paralelo → ρ_i = Σ_{(s_i,v) ∈ A_i^syn} cap(s_i, v)
-      misto    → ρ_i = max-fluxo(s_i → t_i, G_i^D)  [Ford-Fulkerson]
-    Armazenar ρ_i como producao_horaria  [cache auditável]
-  Senão:
-    ρ_i ← i.producao_horaria             [entrada direta calibrada externamente]
+```text
+Para cada atividade i:
+  Para cada m em {0, ..., m_i^max}:
+    Se há grafo auditável: F_i(m) ← maxflow(G_i^D | m)
+      // restringir às frentes realmente mobilizadas; preservar gargalos
+    Se há produtividade independente por frente demonstrada:
+      F_i(m) ← m · rho_i^front
+    Senão, se só há taxa calibrada para m_cal:
+      exigir função validada m → F_i(m), nunca extrapolação silenciosa
 
-  Validar ρ_i > 0  [equipe inviável se algum corte tem capacidade zero]
+  F_i(0) ← 0
+  Validar unidades, capacidade e composição física
+  rho_i^peak ← F_i(m_i^max)  // diagnóstico de configuração
 
-SAÍDA: {ρ_i} ∀i
-```
-
-### XIV.1 — Fase 1: Cronograma (interface com solver RCPSP externo)
-
-Em termos simples: aqui se determina quantas semanas cada atividade vai durar e como as frentes de trabalho se distribuem ao longo do tempo, até fechar exatamente o quantitativo contratado.
-
-```
-Pré-condição: {ρ_i} disponível ∀i
-
-Para cada i em ordem topológica de B_i:
-
-  // j_i^0 depende só de predecessores, já resolvidos — calculado antes da busca por N_i,
-  // pois a busca abaixo precisa de semanas absolutas j para consultar η_{p,j}, η_{w,j}
-  j_i^0 ← max_{b ∈ B_i} min{j : Φ_b(j) ≥ θ_i(b)}  [restrição exata de quantidade]
-    com Φ_b(j) = (1/Q_b) · Σ_{j'=j_b^0}^{j} q_{b,j'}
-    // q_{b,j'} vem da DistribuicaoSemanal já calculada dos predecessores b, já com
-    // fechamento fracionário aplicado
-
-  N_i ← max(1, ⌈Q_i / (ρ_i · h_i · d_i · m_i^max)⌉)   // chute inicial (eficiência plena)
-
-  Repetir:
-    {m_i(τ)}_{τ=0}^{N_i-1} ← RampProfile.build(N_i, m_i^0, μ_i^+, m_i^max, μ_i^-, m_i^1)
-    // perfil inteiramente determinado pelo N_i testado — nenhuma incógnita nesta avaliação
-
-    Para τ = 0, ..., N_i-1:
-      j ← j_i^0 + τ                                    // semana absoluta, para consultar o calendário
-      Se i.grafo_sinergia presente:
-        η_{s,iτ} ← max-fluxo(G_i^D | m_i(τ)) / max-fluxo(G_i^D | m_i^max)
-      Senão:
-        η_{s,iτ} ← m_i(τ) / m_i^max
-      ε_{iτ} ← η_{s,iτ} · η_{p,j} · η_{w,j}
-
-    prod ← Σ_τ ρ_i · ε_{iτ} · h_i · d_i · m_i(τ)
-
-    Se prod ≥ Q_i:
-      convergiu; {m_{ij}} ← {m_i(τ)}; {ε_{ij}} ← {ε_{iτ}}
-    Senão:
-      Se ε_{iτ} = 0 para toda semana τ futura alcançável dentro do calendário disponível:
-        Marcar A_i INVIÁVEL; interromper busca (→ Fase 9, NOGO)
-      Senão:
-        N_i ← N_i + 1
-        // Π(N) = prod acumulado é estritamente crescente em N (ver §I.4): a cada
-        // incremento, as semanas já existentes só podem crescer (o piso de ramp-down
-        // relaxa) e a semana nova soma ≥ ρ_i · ε_{i,N-1} · h_i · d_i · m_i^1 > 0 —
-        // convergência garantida sempre que o calendário não anula ε indefinidamente.
-        // Cada tentativa é recalculada do zero a partir da fórmula de m_i(τ;N); nenhum
-        // valor de uma tentativa rejeitada é reaproveitado na seguinte.
-
-  // Fechamento exato de escopo — última semana ativa (τ relativo, 0-indexado)
-  τ^1 ← N_i − 1
-  q_residual ← Q_i − Σ_{τ=0}^{τ^1-1} ρ_i · ε_{i,τ} · h_i · d_i · m_i(τ)
-  φ_i ← q_residual / (ρ_i · ε_{i,τ^1} · h_i · d_i · m_i(τ^1))
-
-  Verificar: r + d ≤ N_i  [consistência com W_i]
-
-Armazenar (j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i)
-
-SAÍDA: {j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i} ∀i
+SAÍDA: {F_i(m)}, fontes e restrições.
 ```
 
-### XIV.2 — Fase 2: Taxas Horárias de Catálogo
+### XIV.1 — Fase 1: Cronograma e fechamento físico
 
-Em termos simples: aqui se traduz o cadastro de cada recurso — aluguel mensal, taxa de consumo, preço de insumo — em um custo por hora, e depois esse custo é agregado por equipe.
+```text
+Pré-condição: F_i(m) validado para cada configuração e calendário disponível
+Para i em ordem topológica:
+  Resolver semana inicial j_i^0 compatível com predecessores
+    // quantidades Φ_b e limiares θ_b, respeitando fronteiras de semana
+  Para durações candidatas N dentro do horizonte admissível:
+    Para τ = 0, ..., N−1:
+      m_iτ ← RampProfile.build(N,W_i)[τ]
+      j ← j_i^0 + τ
+      B_iτ ← F_i(m_iτ) · h_i · d_i · η_p,j · η_w,j
+    Se Στ B_iτ ≥ Q_i e capacidades compartilhadas permitirem:
+      aceitar N e perfil; sair
+  Se nenhuma duração fecha Q_i: INVIÁVEL / NOGO
 
-```
-Para cada i ∈ A:
-  Para cada r ∈ R_i:
-    Se cat(r) ∈ {EQ, MO}:
-      c_r ← V_r^mensal / (s_mes · d_i · h_i)          [R$/h]
-    Se cat(r) ∈ {MAT, COMB}:
-      c_r ← κ_r · p_{g(r)}                             [R$/h_op, agnóstico em unid_g]
+  saldo ← Q_i
+  Para semanas j em ordem:
+    q_ij ← min(saldo, B_ij)
+    saldo ← saldo − q_ij
+  Exigir saldo = 0 e ∑j q_ij = Q_i
+  j_i^1 ← última semana de produção positiva
+  φ_i ← q_i,j_i^1 / B_i,j_i^1, exigindo B_i,j_i^1 > 0
+  Revalidar todas as capacidades e precedências após mudanças em m,N,início
 
-  Para k ∈ {EQ, MO, MAT, COMB}:
-    γ_i^k ← Σ_{r: cat(r)=k} c_r · n_r
-
-  γ_i^{K,cat} ← γ_i^EQ + γ_i^MO
-  γ_i^{V,cat} ← γ_i^MAT + γ_i^COMB
-  γ_i^{cat}   ← γ_i^{K,cat} + γ_i^{V,cat}
-  f_i^V       ← γ_i^{V,cat} / γ_i^{cat}
-  p_i^{cat}   ← γ_i^{cat} / ρ_i                       [R$/un — PU de catálogo]
-
-SAÍDA: {γ_i^k, γ_i^{K,cat}, γ_i^{V,cat}, γ_i^{cat}, f_i^V, p_i^{cat}} ∀i
-```
-
-### XIV.3 — Fase 3: Quantitativos e Custos Semanais Diretos
-
-Em termos simples: aqui se calcula, semana a semana, quanto cada atividade produziu e quanto isso custou — e se confere que a soma bate exatamente com o quantitativo contratado.
-
-```
-Para cada i ∈ A, para cada j ∈ [j_i^0, j_i^0 + N_i - 1]:
-  Se j < j_i^0 + N_i - 1:
-    q_{ij} ← ρ_i · ε_{ij} · h_i · d_i · m_{ij}          [semana interior]
-  Senão:
-    q_{ij} ← q_residual                                  [semana de fechamento, da Fase 1]
-
-  C_{ij}^{K,op}   ← γ_i^{K,cat} · h_i · d_i · m_{ij}       [nominal — não prorateado]
-  C_{ij}^{V,op}   ← γ_i^{V,cat} · q_{ij} / ρ_i             [prorateado exatamente pelo quantitativo]
-  C_{ij}^{op}     ← C_{ij}^{K,op} + C_{ij}^{V,op}
-
-Para cada i:
-  M_i          ← Σ_j m_{ij}
-  C_i^{K,op}  ← γ_i^{K,cat} · h_i · d_i · M_i
-  C_i^{V,op}  ← γ_i^{V,cat} · Q_i / ρ_i           [= Σ_j C_{ij}^{V,op}, exato]
-  C_i^{op}    ← C_i^{K,op} + C_i^{V,op}
-  p_i^{op}    ← C_i^{op} / Q_i                      [R$/un]
-
-Verificação obrigatória:
-  ∀i: Σ_j q_{ij} = Q_i                               [fecho de escopo exato]
-
-C_i^{cat} ← γ_i^{cat} · Q_i / ρ_i
-C^{cat}   ← Σ_i C_i^{cat}                            // envelope de catálogo
-
-SAÍDA: {q_{ij}, C_{ij}^{op}, C_i^{op}, M_i, p_i^{op}, C_i^{cat}} ∀i
-       C^{cat}
+SAÍDA: (j_i^0,N_i,m_ij,F_i(m_ij),B_ij,q_ij,φ_i) e prova de viabilidade
 ```
 
-### XIV.4 — Fase 4: Dimensionamento e Custo do Pool
+**Sem \(\eta_s\)**: as frentes estão contadas somente em \(F_i(m)\). A busca requer horizonte finito e tratamento explícito de inviabilidade; a validação conjunta RCPSP integra #12/#15.
 
-Em termos simples: aqui se decide, para cada tipo de recurso contratual, quantas instâncias contratar e quando vale a pena mantê-las paradas entre duas atividades em vez de desmobilizar e remobilizar.
+### XIV.2 — Fase 2: Contratos e preços físicos
 
+```text
+Ler, para cada recurso contratual, tarifa ativa, idle e custo de movimento
+Ler, para cada bem consumível, unidade física, preço p_g e regime de κ_g
+Ler função a_i,g(m) de quantidade de recurso por composição
+Validar dimensões: R$/h, R$/semana, unidade_g/h, R$/unidade_g
+Definir configuração física de referência para qualquer preço de catálogo
+NÃO calcular γ/ρ como preço unitário sem provar normalização por frente
+
+SAÍDA: tarifas/regimes tipados, demanda física por composição, base catalogal
 ```
-// Decomposição por nível (histograma): para um tipo fungível homogêneo, a alocação
-// ótima decompõe-se em decisões independentes por "fatia" de altura unitária — cada
-// fatia corresponde a uma cadeia de perpetuação da Parte IX. Ref.: SDVSP — Freling,
-// Wagelmans & Paixão (2001).
 
-C^{pool} ← 0; C^{pool,β} ← 0; C^{MOB,eq} ← 0; C^{MOB,eq,β} ← 0
+O catálogo não é automaticamente o custo da composição máxima nem o de uma frente isolada; depende da configuração declarada (#11/#18).
 
-Para cada tipo τ ∈ T:
-  n_j(τ) ← Σ_{i: j ∈ [j_i^0, j_i^0+N_i-1]} m_{ij} · n_τ^i   ∀j
-  n_max(τ) ← max_j n_j(τ)
-  G_τ^* ← (c_τ^mob + c_τ^demob) / c_τ^sem
+### XIV.3 — Fase 3: Quantitativos e consumíveis
 
-  sem_τ ← 0; trips_τ ← 0
+```text
+Para cada atividade i e semana j:
+  q_ij ← quantidade física fechada na Fase 1  // nunca recalcular rho·η_s·m
+  Para cada recurso tipo g:
+    a_i,g(m_ij) ← recursos realmente necessários à composição
+  Para cada bem consumível g:
+    U_gij ← consumo físico declarado do regime (produto, horas, perdas)
+    Validar unidade, fonte, saldo e ausência de fallback financeiro
 
-  Para ℓ = 1, 2, ..., n_max(τ):                       // uma "fatia" por unidade de fleet
-    on_ℓ ← {j : n_j(τ) ≥ ℓ}                             // semanas em que a ℓ-ésima instância é exigida
-    blocos ← intervalos maximais consecutivos de on_ℓ
-    Fundir blocos consecutivos [b_k, b_{k+1}] cujo gap = início(b_{k+1}) − fim(b_k)
-      satisfaça gap ≤ min(G_τ^*, G_τ^viável)            // perpetuação da instância desta fatia
-    Para cada bloco fundido (após a fusão):
-      sem_τ   ← sem_τ + duração(bloco)                  // inclui gaps internos perpetuados
-      trips_τ ← trips_τ + 1                               // um par mob/demob por bloco fundido
+Para cada bem g: D_gj ← Σ_i U_gij
+Validar ∀i Σ_j q_ij = Q_i, ∀g Σ_j D_gj = U_g
+C_ij^V ← Σ_g p_g U_gij
+C_i^V ← Σ_j C_ij^V
 
-  C^{pool}     ← C^{pool}     + sem_τ · c_τ^sem
-  C^{pool,β}   ← C^{pool,β}   + (1 + β_{cat(τ)}) · sem_τ · c_τ^sem
-  C^{MOB,eq}   ← C^{MOB,eq}   + trips_τ · (c_τ^mob + c_τ^demob)
-  C^{MOB,eq,β} ← C^{MOB,eq,β} + (1 + β^IND) · trips_τ · (c_τ^mob + c_τ^demob)
+// Custo contratual real é apurado pelas instâncias na Fase 4, sem
+// duplicar custos ativos por atividade e standby no pool.
 
-SAÍDA: C^{pool}, C^{pool,β}, C^{MOB,eq}, C^{MOB,eq,β}
+SAÍDA: q_ij, U_gij, D_gj e lançamentos físicos/financeiros auditáveis
 ```
+
+A identidade antiga \(C_i^V=\gamma_i^V Q_i/\rho_i\) só vale sob taxa física por unidade comprovadamente constante e sem perdas/idle (#11/#13/#18).
+
+### XIV.4 — Fase 4: Otimização do pool contratual
+
+```text
+Para cada tipo contratual homogêneo g e semana j:
+  d_gj ← Σ_i a_i,g(m_ij)
+  Separar demanda em níveis ℓ=1,...,max_j d_gj
+  Para cada nível, encontrar blocos maximais consecutivos de demanda
+  Para cada gap k entre blocos:
+    manter se k ≤ G_g^viável e k·c_g^idle ≤ c_g^demob+c_g^mob
+    em empate, priorizar menos transições
+  Materializar instâncias com estados active / idle / off por semana
+  Verificar x_gj ≥ d_gj e s_gj = x_gj−d_gj ≥ 0
+  C_pool ← Σ_gj (c_g^act d_gj + c_g^idle s_gj)
+  C_MOBDEMOB ← Σ_eventos (c_mob+c_demob) // classificar uma única vez
+
+SAÍDA: cadeias, instâncias, demanda, presença, standby, custos e prova de ótimo
+```
+
+A decomposição em níveis certifica ótimo do pool **condicionado a \(m\) e cronograma fixos**, apenas no regime fungível homogêneo; não a otimização conjunta global. Standby é custo contratual, não ineficiência de produção.
 
 ### XIV.4b — Fase 4b: Dinâmica de Estoque e Reposição (Wagner–Whitin)
 
 Em termos simples: aqui se decide, para cada bem consumível, quando e quanto comprar, cobrindo exatamente a demanda derivada do cronograma ao menor custo combinado de pedido e posse.
 
 ```
-Pré-condição: {q_ij, ρ_i} disponíveis (Fase 3); {κ_i^g} do cadastro (Fase 2, via R_i)
+Pré-condição: {D_gj} físico e unidades validados na Fase 3; preço e lead time declarados
 
 Para cada bem físico g:
 
-  // Demanda derivada — nenhum novo insumo, só agregação (§X.2)
+  // Demanda física D_gj já reconciliada na Fase 3 (§X.2)
   Para cada j:
-    D_{g,j} ← Σ_{i ∈ A_j} κ_i^g · q_{ij} / ρ_i
+    Verificar D_{g,j} ≥ 0 e fonte física de cada componente
 
   [j_min^g, j_max^g] ← intervalo de semanas com D_{g,j} > 0
 
@@ -686,24 +615,23 @@ C^{PED,β} ← (1 + β^IND) · C^{PED}
 SAÍDA: {D_{g,j}, S_{g,j}, X_{g,j}} ∀g,j ; C^{inv}, C^{PED}, C^{PED,β}
 ```
 
-### XIV.5 — Fase 5: Estoque (Consumíveis)
+### XIV.5 — Fase 5: Consolidação de consumíveis
 
-Em termos simples: aqui se soma o custo de material e combustível efetivamente consumido por todas as atividades do projeto.
+```text
+Para cada bem físico g:
+  U_g ← Σ_j D_gj
+  C_g^cons ← p_g · U_g
+  C_g^(cons,β) ← (1+β^cat(g)) · C_g^cons
 
-```
-C^{cons} ← Σ_i γ_i^{V,cat} · Q_i / ρ_i
-  // Exato por construção: Σ_i γ_i^{V,cat}·Q_i/ρ_i ≡ Σ_i C_i^{V,op} (fecho de escopo, Parte IV)
+C_cons ← Σ_g C_g^cons
+C_(cons,β) ← Σ_g C_g^(cons,β)
+Exigir reconciliação por bem, semana, atividade, preço e unidade
+// Holding e pedidos são indiretos (Fase 4b/7); não duplicar em C_cons
 
-Para cada i:
-  γ_i^{V,cat,β} ← (1+β^MAT) · γ_i^MAT + (1+β^COMB) · γ_i^COMB
-
-C^{cons,β} ← Σ_i γ_i^{V,cat,β} · Q_i / ρ_i
-
-// C^{inv} e C^{PED} já disponíveis da Fase 4b — não recalculados aqui
-
-SAÍDA: C^{cons}, C^{cons,β}
+SAÍDA: C_cons, C_(cons,β) e conciliação física U_g
 ```
 
+A compra física é independente da divisão em lotes **dado** \(U_g\) fixo e preço constante. A invariância a duração/clima é **condicionada** ao regime de consumo, não consequência de \(F_i(m)\).
 
 ### XIV.6 — Fase 6: Custo Direto Total
 
@@ -748,59 +676,52 @@ C^{I,β} ← Σ_l C_l^{I,β} + C^{MOB,eq,β} + C^{PED,β} + C^{inv}·(1+β^IND)
 SAÍDA: C^I, C^{I,β}, β^I
 ```
 
-### XIV.8 — Fase 8: Síntese e Preço Total
+### XIV.8 — Fase 8: Preço e bases comparáveis
 
-Em termos simples: aqui se reúnem todos os blocos de custo em um preço de venda final, e se calcula o BDI agregado resultante.
-
-```
-C^{tot} ← C^D + C^I
-P       ← C^{D,β} + C^{I,β}
-BDI     ← P / C^{cat} − 1                          // taxa agregada derivada, não insumo livre
-R       ← C^{tot} / C^{cat}                          // razão custo real vs catálogo
-β^eq   ← P / C^{tot} − 1
-μ       ← (P − C^{tot}) / P
-
-SAÍDA:
-  C^D, C^I, C^{tot}       — custos sem BDI (base operacional)
-  C^{D,β}, C^{I,β}, P    — preços com BDI (base de venda)
-  BDI, R, β^eq, μ         — indicadores  [verificar BDI ≥ BDI_TCU_min; R = diagnóstico]
-```
-
-### XIV.9 — Fase 9: Validação e Diagnóstico
-
-Em termos simples: aqui se checa se todos os resultados fazem sentido — se o escopo fechou exatamente, se o BDI atinge o piso regulatório, se nenhum recurso ficou parado o tempo todo — antes de aprovar a proposta.
-
-```
-Verificações obrigatórias:
-  [V1] ∀i: Σ_j q_{ij} = Q_i                           — fecho de escopo exato
-  [V2] BDI ≥ BDI_TCU_min                                — cobertura mínima de overhead+lucro+tributos
-  [V3] ∀r: f_standby(r) < 1                             — nenhum recurso 100% standby
-  [V4] P > 0  e  C^{tot} > 0                            — consistência numérica
-  [V5] ∀i: ρ_i > 0                                     — nenhuma equipe com gargalo de capacidade zero
-  [V6] ∀i: busca de N_i convergiu sem sinalização de inviabilidade (Fase 1) — calendário viável
-  [V7] ∀g,j: S_{g,j} ≥ 0                                — nenhuma ruptura de estoque na solução ótima (§X.3)
-  [V8] ∀g: Σ_j D_{g,j} = U_g                            — consistência entre demanda física e consumo total (§X.2)
-  [V9] ∀g, ∀ lote [a,b] ∈ lotes_g: a − L_g ≥ j_min      — viabilidade de prazo de pedido (senão, pré-mobilização)
-
-Diagnósticos opcionais:
-  [D1] taxa_util_τ = Σ_j n_j(τ) / (n · n_max(τ)) por tipo τ
-         → próximo de 1: pool bem dimensionado; baixo: excesso de standby
-  [D2] R_i = C_i^{op} / C_i^{cat} = f_i^V + (1 − f_i^V) · (1/ε̄_i)   [Parte VI/VIII]
-         → razão custo operacional / catálogo por atividade
-  [D2'] Δ_i^{cat} = C_i^{op} − C_i^{cat} = (R_i−1)·C_i^{cat}   [R$, Parte VI]
-         → desvio de catálogo por atividade, em valor monetário
-  [D3] {p_i^{op}} por atividade — custo unitário operacional [R$/un]
-  [D4] Proporção direto/indireto: C^D/C^{tot}
-  [D5] β_i^{eq} = (1−δ_i)·β_i^K + δ_i·β_i^V   — BDI equivalente por equipe
-  [D6] n_g^ped e tamanho médio de lote por bem — fragmentação da política de reposição:
-         muitos pedidos pequenos (custo de pedido domina) vs. poucos grandes (posse domina)
-
-Saída final:
-  GO   se [V1]–[V9] aprovadas
-  NOGO + lista de violações  caso contrário
+```text
+C_tot ← C_D + C_I
+P ← C_(D,β) + C_(I,β)
+Exigir P>0 e C_tot>0 e livro financeiro conciliado
+μ ← (P−C_tot)/P
+Se catálogo C_cat é positivo e sua configuração/base está validada:
+  BDI_impl ← P/C_cat−1
+  R ← C_tot/C_cat
+Senão:
+  BDI_impl,R ← UNKNOWN  // sem fallback para zero ou 100%
+β_eq ← P/C_tot−1
+Verificar margem econômica e piso regulatório em base comparável
+SAÍDA: P,C_tot,μ,BDI_impl,R,β_eq e estados de evidência
 ```
 
----
+BDI acima de um piso **não implica** rentabilidade positiva. Não aprovar precificação com identidades financeiras do regime linear não demonstradas no caso geral (#11/#21).
+
+### XIV.9 — Fase 9: Certificação fail-closed
+
+```text
+[V1] ∀i: Σ_j q_ij = Q_i e q_ij ≤ B_ij, sem período com saldo residual
+[V2] BDI compatível com piso regulatório sobre a MESMA base definida
+[V3] ∀g,j: x_gj ≥ d_gj, standby s_gj = x_gj−d_gj ≥ 0
+[V4] P>0, C_tot>0 e P>C_tot (ou margem contratual aprovada)
+[V5] ∀i com demanda: F_i(m_ij)>0 em semana produtiva
+[V6] cronograma, recursos, precedências e calendário final viáveis
+[V7] ∀g,j: S_gj ≥ 0 e balanço de estoque preservado
+[V8] ∀g: Σ_j D_gj = U_g, com unidades físicas tipadas
+[V9] ∀pedido: recebimento factível após lead time
+[V10] Σ lançamentos K/V/indiretos reconcilia sem duplicidade
+[V11] regime econômico, catálogo e fórmulas de custo certificados
+
+Estados distintos: PASS, FAIL, UNKNOWN, NOT_EVALUATED
+GO somente se todas as verificações aplicáveis forem PASS;
+caso contrário NOGO com evidências e lista de inconformidades.
+
+Diagnósticos: α_i(m)=F_i(m)/F_i(mmax) apenas capacidade relativa;
+φ_i=q_final/B_final apenas fechamento; Σs/Σx mede standby temporal;
+R, β_eq, μ usam bases definidas e livro financeiro efetivo.
+```
+
+A existência de standby fisicamente positivo não é, por si, falha:
+deve ser economicamente justificada pela solução ótima do pool.
+O certificado geral exige o oráculo independente (#22/#23).
 
 ## Convenções de Notação
 
