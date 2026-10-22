@@ -252,11 +252,13 @@ def _warn_if_activity_underdelivers(
     )
     if closure.status == "PASS":
         return
-    percentage = (
-        f"{100 * closure.delivered / closure.required:.4f}%"
-        if math.isfinite(closure.required) and closure.required > 0 and math.isfinite(closure.delivered)
-        else "UNKNOWN"
-    )
+    percentage = "UNKNOWN"
+    if (
+        closure.required > 0
+        and math.isfinite(closure.required)
+        and math.isfinite(closure.delivered)
+    ):
+        percentage = f"{100 * closure.delivered / closure.required:.4f}%"
     validacoes.append(
         ValidacaoItem(
             codigo="VAL-CRON-01",
