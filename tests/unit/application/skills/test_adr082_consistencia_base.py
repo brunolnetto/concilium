@@ -226,9 +226,20 @@ class TestUniqueWeeklyPhysicalProductivity:
     def test_unverified_availability_fails_closed(
         self, physical: float, practicability: float, calendar: float, shift: float
     ) -> None:
+        # Exercise the same validated physical path exposed to Skill 04.
+        # The availability helper is private to _skill_helpers._custos, not
+        # re-exported by the public skill entrypoint.
         with pytest.raises(ValueError):
-            _cron._capacidade_semanal_disponivel(
-                physical, practicability, calendar, shift
+            _cron._build_dist_cell(
+                producao_semanal_base=400.0,
+                num_eq=2,
+                n_max=2,
+                fator_clima=practicability,
+                fator_calendario=calendar,
+                quantitativo=1000.0,
+                qtd_acumulada=0.0,
+                fator_jornada=shift,
+                capacidade_fisica_semanal=physical,
             )
 
 
