@@ -331,7 +331,7 @@ def _capacidade_semanal_por_frentes(
             raise ValueError("invalid synergy graph; physical capacity cannot be certified")
         graph = typed.grafo_sinergia
         if graph.arestas_fluxo:
-            derived = derivar_producao_horaria(graph, typed.composicao_padrao_equipe)
+            derived = derivar_producao_horaria(graph, typed.equipe)
             if derived.producao_horaria_derivada is None:
                 raise ValueError("synergy graph has no productive flow")
             # H inferred from the catalog's declared per-front nominal rate.
