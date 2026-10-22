@@ -222,7 +222,6 @@ class Runtime(ConfigMixin, CatalogMixin, InputsMixin, ExecutionMixin):
         """
         from datetime import UTC, datetime
 
-        from .gates import _GATE_SKILLS
         from .helpers.pipeline import _print_skill_start
 
         skill_inputs = skill_inputs or {}

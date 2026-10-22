@@ -13,7 +13,6 @@ Histórico de problema:
 
 import pytest
 
-
 # ── Benchmark Fixtures (Shared across integration tests) ─────────────────────
 
 
