@@ -24,7 +24,7 @@ $$A_i = (Q_i,\ E_i,\ W_i,\ B_i)$$
 | $W_i$ | política de mobilização (§I.4) | usuário |
 | $B_i$ | predecessores + completude parcial (§I.5) | usuário |
 | $j_i^0$ | semana de início | **derivado** (schedule, §I.5) |
-| $N_i$ | duração em semanas | **derivado** (fecho de escopo exato via busca monotônica, Parte IV/XIV) |
+| $N_i$ | duração em semanas | **derivado** (fecho físico por enumeração limitada de duração e verificação do calendário, Parte IV/XIV) |
 | $(h_i, d_i)$ | regime de jornada da equipe | usuário, $d_i\in\{4,5,6\}$, $h_i\in\{6,8\}$ |
 
 ### I.3 Equipe $E_i = (\mathcal{G}_i, R_i)$

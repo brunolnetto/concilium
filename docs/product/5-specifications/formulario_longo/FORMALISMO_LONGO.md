@@ -38,7 +38,7 @@ $$A_i = (Q_i,\ E_i,\ W_i,\ B_i)$$
 | $W_i$ | política de mobilização (§I.4) | usuário |
 | $B_i$ | predecessores + completude parcial (§I.5) | usuário |
 | $j_i^0$ | semana de início | **derivado** (schedule, §I.5) |
-| $N_i$ | duração em semanas | **derivado** (fecho de escopo exato via busca monotônica, Parte IV/XIV) |
+| $N_i$ | duração em semanas | **derivado** (fecho físico por enumeração limitada de duração e verificação do calendário, Parte IV/XIV) |
 | $(h_i, d_i)$ | regime de jornada da equipe | usuário, $d_i\in\{4,5,6\}$, $h_i\in\{6,8\}$ |
 
 ### I.3 Equipe $E_i = (\mathcal{G}_i, R_i)$
@@ -183,7 +183,7 @@ Eficiência exógena semanal: $\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j}\in[0
 
 $\boxed{B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog},\qquad q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}}.$
 
-**Fechamento exato de escopo.** Seja $j_i^1 \equiv j_i^0+N_i-1$ a última semana ativa de $A_i$, obtida pela busca monotônica em $N_i$ (Parte XIV, Fase 1) sobre o perfil nominal $\{m_i(\tau)\}$ de $W_i$. Nas semanas interiores $j<j_i^1$, a produção usa o perfil nominal integralmente. Na última semana, o quantitativo residual fecha exatamente o escopo:
+**Fechamento exato de escopo.** Seja $j_i^1 \equiv j_i^0+N_i-1$ a última semana ativa de $A_i$, obtida pela busca limitada em $N_i$ e verificação de viabilidade (Parte XIV, Fase 1) sobre o perfil nominal $\{m_i(\tau)\}$ de $W_i$. Nas semanas interiores $j<j_i^1$, a produção usa o perfil nominal integralmente. Na última semana, o quantitativo residual fecha exatamente o escopo:
 
 $$q_{i,j_i^1} = Q_i - \sum_{j=j_i^0}^{j_i^1-1} q_{ij}$$
 

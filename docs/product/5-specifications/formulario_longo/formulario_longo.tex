@@ -170,7 +170,7 @@ Preenchido por
 \(B_i\) & predecessores + completude parcial (§I.5) & usuário \\
 \(j_i^0\) & semana de início & \textbf{derivado} (schedule, §I.5) \\
 \(N_i\) & duração em semanas & \textbf{derivado} (fecho de escopo exato
-via busca monotônica, Parte IV/XIV) \\
+via busca limitada de durações e verificação do calendário, Parte IV/XIV) \\
 \((h_i, d_i)\) & regime de jornada da equipe & usuário,
 \(d_i\in\{4,5,6\}\), \(h_i\in\{6,8\}\) \\
 \end{longtable}
@@ -379,57 +379,34 @@ parâmetro de frota: frota constante durante toda a atividade.
 
 \[m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}\]
 
-\textbf{Determinação de \(N_i\).} Para perfis não-retangulares, \(N_i\)
-não possui fórmula fechada. A busca que a resolve não é circular: para
-cada duração candidata \(N\), o perfil \(m_i(\tau;N)\) acima é uma
-função de \(\tau\) inteiramente determinada --- nada nela depende de um
-\(N_i\) ainda desconhecido ---, de modo que a produção acumulada
-\(\Pi(N)\equiv\sum_{\tau=0}^{N-1}F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i\)
-pode ser calculada exatamente para qualquer \(N\) testado. O que não se
-conhece de antemão é apenas em qual \(N\) essa soma cruza \(Q_i\) --- a
-mesma situação de qualquer grandeza definida como ``o menor \(N\) tal
-que uma condição monotônica se satisfaz'', sem mistério adicional.
+\textbf{Determinação de \(N_i\) condicionada ao calendário absoluto.}
+Dado o início \(s=j_i^0\), a capacidade nominal da composição
+\(F_i(m_i(\tau;N))\) independe de clima e de datas, mas a capacidade
+semanal disponível vale
+\[
+ B_{i,s+\tau}=F_i(m_i(\tau;N))H_i p_{s+\tau}c_{s+\tau}a_i.
+\]
+O fator \(a_i\) é aplicado apenas se \(H_i\) ainda representa horas
+nominais; clima e calendário jamais geram outra taxa de produtividade.
+Para cada \(N\) candidato a função \(m_i(\tau;N)\) é determinada,
+mas pode ser diferente da rampa para \(N+1\).
+\textbf{Não há monotonicidade presumida em \(N\)} e não se admite
+busca binária sem demonstração dessa propriedade para a instância.
+Semanas com \(p_j=0\) ou \(c_j=0\) não aumentam a produção.
 
-A capacidade de uma configuração fixa \(F_i(m)\) não se reduz
-pela quantidade de frentes não mobilizadas. Com calendário absoluto fixo
-e \(F_i(m)\) não decrescente, a soma \(\Pi(N)\) pode ser
-não decrescente quando o perfil de \(N+1\) não reduz a demanda
-das semanas existentes; contudo \textbf{não há crescimento estrito
-universal}. Semanas adicionais podem ter clima/performance nulos ou
-capacidade compartilhada indisponível. A busca requer horizonte
-finito, diagnóstico de inviabilidade e revalidação do RCPSP sob
-deslocamentos; não inferir convergência apenas de \(N\) crescente (#12/#15).
+A busca enumera durações candidatas dentro de horizonte civil finito,
+com início \(s\) previamente fixado por predecessores físicos. A
+solução candidata somente é aceita após conferir o fechamento de
+\(Q_i\), os limiares de precedência e a demanda por recursos físicos.
+Um deslocamento de início ou duração invalida a avaliação anterior
+e exige revalidação da agenda RCPSP. A condição histórica
+\(r+d\le N_i\) não define suas variáveis e não é gate.
 
-\noindent\textbf{P12-A: calendário e duração.}
-Para início absoluto \(s\), a capacidade candidata é
-\(\Pi_i(N;s)=\sum_{\tau=0}^{N-1}F_i(m_i(\tau;N))
-H_i p_{s+\tau}c_{s+\tau}a_i\).
-O fator de jornada \(a_i\) só é aplicado se \(H_i\)
-representar horas nominais. A duração deve ser calculada
-após o início \(s\), dentro de horizonte finito.
-Mesmo monotonicidade fraca não é presumida se \(m_i(\tau;N)\)
-muda com \(N\); busca binária só é válida com prova própria.
-O contrato normativo e os vetores são definidos em
+A regra de liberação Q--FS usa \(\Phi_b(j)\) \textbf{ao fim} da
+semana \(j\) e inicia a sucessora em \(j+1+\ell_{b\to i}\).
+A implementação integral do reescalonamento compete a \#15.
+O contrato e os falsificadores são:
 \texttt{CALENDARIO\_E\_LIBERACAO\_FISICA.md}.
-
-O perfil testado em cada tentativa não precisa estar ``certo'' antes de
-\(N_i\) convergir: ele é, por definição, o perfil correto para aquele
-\(N\) testado, e é descartado assim que falha o teste de limiar --- nada
-é reaproveitado entre tentativas. O perfil que sobra, construído em
-\(N=N_i^\star\), é o único que os cálculos das partes seguintes
-utilizam: \(\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)\) é
-exato, sem resíduo das tentativas rejeitadas. Restrição de consistência:
-\(r + d \le N_i\).
-
-Um detalhe de ordem é necessário para que essa busca sequer possa
-consultar \(\eta_{p,j}, \eta_{w,j}\) (indexados pela semana
-\textbf{absoluta} \(j\)): \(j_i^0\) precisa estar definido antes de a
-busca por \(N_i\) começar. Como \(j_i^0\) (§I.5) depende apenas de
-atividades predecessoras --- já resolvidas pela ordem topológica em que
-as atividades são processadas ---, nunca de \(N_i\) ou \(\{m_{ij}\}\) da
-própria atividade \(i\), ele pode e deve ser calculado primeiro, sem
-gerar dependência circular alguma com a busca que vem a seguir (Parte
-XIV, Fase 1).
 
 \hypertarget{i.5-predecessores-e-completude-parcial}{%
 \subsubsection{I.5 Predecessores e completude
@@ -609,7 +586,7 @@ Capacidade física e fatores exógenos semanais:
 Não aplicar nenhuma penalização adicional por frentes não mobilizadas.
 
 \textbf{Fechamento exato de escopo.} Seja \(j_i^1 \equiv j_i^0+N_i-1\) a
-última semana ativa de \(A_i\), obtida pela busca monotônica em \(N_i\)
+última semana ativa de \(A_i\), obtida pela busca limitada em \(N_i\) e verificação física
 (Parte XIV, Fase 1) sobre o perfil nominal \(\{m_i(\tau)\}\) de \(W_i\).
 Nas semanas interiores \(j<j_i^1\), a produção usa o perfil nominal
 integralmente. Na última semana, o quantitativo residual fecha
@@ -1856,7 +1833,7 @@ Significado
 \bottomrule\noalign{}
 \endlastfoot
 \(j_i^0\) & semana de início (derivada dos predecessores) \\
-\(N_i\) & duração em semanas (derivada por busca monotônica) \\
+\(N_i\) & duração em semanas (derivada por busca limitada) \\
 \(m_{ij}\) & número de frentes mobilizadas de \(A_i\) na semana \(j\) \\
 \(\varepsilon_{ij}^{exog}\) & fatores físicos exógenos
 \(\eta_{p,j}\eta_{w,j}\), sem fator por equipes ausentes \\
