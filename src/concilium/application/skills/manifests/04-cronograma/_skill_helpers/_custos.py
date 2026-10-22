@@ -317,6 +317,7 @@ def _capacidade_semanal_por_frentes(
         capacidade_efetiva_frentes,
         construir_producao_catalogo_para_sinergia,
         derivar_producao_horaria,
+        validar_referencias_grafo,
     )
 
     if producao_semanal_base < 0 or not isfinite(producao_semanal_base):
@@ -334,6 +335,16 @@ def _capacidade_semanal_por_frentes(
         if typed is None or typed.grafo_sinergia is None:
             raise ValueError("invalid synergy graph; physical capacity cannot be certified")
         graph = typed.grafo_sinergia
+        # The flow may contain abstract process vertices, but physical
+        # resources explicitly referenced by capacities, relations, or
+        # declared bottlenecks must be present in the mobilized team.
+        # Never infer phantom equipment via _num_unidades_elemento's
+        # legacy fallback to one unit.
+        violations = validar_referencias_grafo(graph, typed.composicao_padrao_equipe)
+        if violations:
+            raise ValueError(
+                "VAL-SINERGIA-01: graph references resources absent from the team"
+            )
         derived = derivar_producao_horaria(graph, typed.composicao_padrao_equipe)
         if derived.producao_horaria_derivada is None:
             raise ValueError("synergy graph has no productive physical capacity")

@@ -528,3 +528,18 @@ def test_rcpsp_nominal_duration_uses_physical_graph_capacity() -> None:
     # F(4)=15 u/h with shared bottleneck, 40 h/week => 600/wk,
     # thus Q=1,200 takes 2 weeks, not ceil(1,200/(15*40*4))=1.
     assert duration == 2
+
+
+def test_invalid_graph_resource_cannot_generate_phantom_capacity() -> None:
+    """Catalog graph nodes must refer to actual mobilized resources."""
+    mod = _skills_pkg._load_skill_module("04-cronograma")
+    graph = _grafo_sinergia_real()
+    graph["capacidades"][0]["elemento_id"] = "EQUIPAMENTO_INEXISTENTE"
+    with pytest.raises(ValueError, match="VAL-SINERGIA-01"):
+        mod._capacidade_semanal_por_frentes(
+            _VALOR_HORARIO_REAL * 40,
+            num_equipes=1,
+            n_max=1,
+            prod_item=_prod_dict(grafo_sinergia=graph),
+            horas_semana=40,
+        )
