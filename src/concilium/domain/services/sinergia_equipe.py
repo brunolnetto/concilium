@@ -109,7 +109,7 @@ def construir_producao_catalogo_para_sinergia(prod: dict[str, Any]) -> Producao 
                 quantidade_amostras=1,
                 desvio_padrao=0.0,
             ),
-            equipe=ComposicaoPadraoEquipe(**composicao),
+            equipe=ComposicaoPadraoEquipe.model_validate(composicao),
             auditoria=AuditoriaProducao(
                 criado_por="",
                 data_criacao=timestamp_placeholder,

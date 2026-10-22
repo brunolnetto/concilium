@@ -147,7 +147,7 @@ def _formal_activity_cost_rates(equipe: object | None) -> tuple[float, float, fl
     )
     if rho <= 0 or horas_semana <= 0 or not any(gammas):
         return None
-    return rho, horas_semana, *gammas
+    return rho, horas_semana, gammas[0], gammas[1], gammas[2], gammas[3]
 
 
 def _activity_mobilization(equipe: object | None, act: object) -> MobilizacaoAtividade | None:

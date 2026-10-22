@@ -388,8 +388,8 @@ def _cpv_build_usage(
     canonical_in: CanonicalModel,
     cpu_lookup: dict[str, dict],
     distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]],
-) -> dict[str, dict[str, int]]:
-    usage: dict[str, dict[str, int]] = {}
+) -> dict[str, dict[str, float]]:
+    usage: dict[str, dict[str, float]] = {}
     for item in canonical_in.eap or []:
         cpu = cpu_lookup.get(item.cpu_id)
         if not cpu:
@@ -408,7 +408,7 @@ def _cpv_build_usage(
 
 
 def _cpv_process_violations(
-    usage: dict[str, dict[str, int]],
+    usage: dict[str, dict[str, float]],
     pool: dict[str, int],
     validacoes: list[ValidacaoItem],
 ) -> list:
