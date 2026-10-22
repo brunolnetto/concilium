@@ -10,6 +10,7 @@ from concilium.domain.models.canonical import (
     DistribuicaoSemanal,
     ValidacaoItem,
 )
+from concilium.domain.models.canonical._eap import OrigemCapacidade
 
 
 def _iso_week_key(d: date) -> str:
@@ -380,6 +381,26 @@ def _capacidade_semanal_por_frentes(
 
 
 
+def _origem_capacidade(
+    prod_item: dict[str, Any] | None,
+    *,
+    is_fallback: bool = False,
+) -> OrigemCapacidade:
+    """Classify the ONE capacity input without granting certification.
+
+    The no-graph case is explicitly an assumed *per-front* linear rate, not
+    proof of a measured team-level F(m). Version/source evidence is #23.
+    """
+    if prod_item and prod_item.get("grafo_sinergia"):
+        raw_graph = prod_item["grafo_sinergia"]
+        if isinstance(raw_graph, dict) and raw_graph.get("arestas_fluxo"):
+            return "GRAFO_FLUXO"
+        return "GRAFO_ELEMENTOS"
+    if is_fallback:
+        return "FALLBACK_ARBITRARIO"
+    return "TAXA_POR_FRENTE_ASSUMIDA"
+
+
 def _capacidade_semanal_disponivel(
     capacidade_instalada: float,
     praticabilidade: float,
@@ -414,6 +435,9 @@ def _build_dist_cell(
     M_max: float = 1.0,
     fator_jornada: float = 1.0,
     capacidade_fisica_semanal: float | None = None,
+    *,
+    horas_contratuais_semana: float | None = None,
+    origem_produtividade: OrigemCapacidade = "NAO_DECLARADA",
 ) -> DistribuicaoSemanal:
     """Build a weekly physical-capacity cell without allocation penalties.
 
@@ -432,6 +456,10 @@ def _build_dist_cell(
     if not (0.0 <= fator_clima <= 1.0 and 0.0 <= fator_calendario <= 1.0
             and 0.0 <= fator_jornada <= 1.0):
         raise ValueError("exogenous physical factors must lie in [0,1]")
+    if horas_contratuais_semana is not None and (
+        not math.isfinite(horas_contratuais_semana) or horas_contratuais_semana <= 0
+    ):
+        raise ValueError("contractual weekly hours must be positive and finite")
     if not math.isfinite(M_max) or M_max <= 0:
         raise ValueError("calibrated management multiplier must be positive")
     if num_eq < 0 or n_max <= 0:
@@ -469,6 +497,15 @@ def _build_dist_cell(
         fracao_fechamento=fracao_fechamento,
         q_max_celula=q_max,
         perda_fisica=perda_exogena,
+        origem_produtividade=origem_produtividade,
+        horas_contratuais_semana=horas_contratuais_semana,
+        produtividade_fisica_horaria=(
+            q_max / horas_contratuais_semana
+            if horas_contratuais_semana is not None else None
+        ),
+        capacidade_disponivel_semana=capacidade_real,
+        desempenho_observado="NAO_OBSERVADO",
+        estado_calibracao="NAO_CERTIFICADA",
     )
 
 __all__ = [
@@ -477,6 +514,7 @@ __all__ = [
     "_build_dist_cell",
     "_capacidade_semanal_por_frentes",
     "_capacidade_semanal_disponivel",
+    "_origem_capacidade",
     "_build_insumos_lookup",
     "_build_producao_lookup",
     "_custo_hora_combustivel_equip",

@@ -126,6 +126,15 @@ class ActivityDag(BaseModel):
     start_offset_min: dict[str, int] | None = None
 
 
+OrigemCapacidade = Literal[
+    "GRAFO_FLUXO",
+    "GRAFO_ELEMENTOS",
+    "TAXA_POR_FRENTE_ASSUMIDA",
+    "FALLBACK_ARBITRARIO",
+    "NAO_DECLARADA",
+]
+
+
 class DistribuicaoSemanal(BaseModel):
     """Weekly materialization of effective physical capacity F_i(m_ij)*H_i.
 
@@ -167,6 +176,15 @@ class DistribuicaoSemanal(BaseModel):
     fracao_fechamento: float = Field(default=1.0, ge=0.0, le=1.0)
     q_max_celula: float = Field(default=0.0, ge=0.0)
     perda_fisica: float = Field(default=0.0, ge=0.0)
+    # P10/#23: audit metadata, not alternative productivities or new multipliers.
+    # None on older artifacts explicitly means not evaluated, not a zero result.
+    origem_produtividade: OrigemCapacidade = "NAO_DECLARADA"
+    produtividade_fisica_horaria: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    horas_contratuais_semana: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    capacidade_disponivel_semana: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    desempenho_observado: Literal["NAO_OBSERVADO"] = "NAO_OBSERVADO"
+    # Graph-derived capacity is not automatically a certified source/version.
+    estado_calibracao: Literal["NAO_CERTIFICADA"] = "NAO_CERTIFICADA"
 
 
 # Alias retrocompatível
