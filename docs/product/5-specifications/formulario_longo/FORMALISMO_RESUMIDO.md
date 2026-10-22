@@ -4,7 +4,7 @@
 
 ## Parte I — Entrada: Definição das Atividades (formulário)
 
-> **Contrato normativo P09-A:** unidades, domínios de mobilização, intervalos e política numérica são definidos em [CONVENCOES_NORMATIVAS.md](CONVENCOES_NORMATIVAS.md). As equações ainda em revisão permanecem explicitamente sinalizadas nas issues #10–#13.
+> **Contratos normativos:** [CONVENCOES_NORMATIVAS.md](CONVENCOES_NORMATIVAS.md) fixa unidades, intervalos e domínios; [CAPACIDADE_E_RECURSOS.md](CAPACIDADE_E_RECURSOS.md) define (F_i(m)), recursos e standby. A implementação física continua pendente em #10/P10-B, e os regimes financeiros gerais requerem provas em #11/#13/#17/#20/#21. Este resumo **não** concede certificação GO por si só.
 
 
 ### I.1 Conjunto de atividades
@@ -292,13 +292,13 @@ com $S_{g,j_{\min}-1}=S_g^0$ (tipicamente $0$, salvo estoque de mobilização de
 
 ### X.4 Política ótima de reposição (Wagner–Whitin)
 
-$D_{g,j}$ é, por construção, não estacionária (perfis trapezoidais de mobilização, atividades sobrepostas com datas distintas) e inteiramente conhecida de antemão, já determinada na Fase 1 — não é problema de previsão sob incerteza, mas de lot-sizing determinístico, com solução exata por programação dinâmica (Wagner & Whitin, 1958). O problema decompõe por bem $g$, isoladamente — mesma lógica de decomposição do dimensionamento de pool (Parte IX/Fase 4), sem restrição de capital compartilhado:
+$D_{g,j}$ é uma demanda física determinística derivada e validada na Fase 3 (após a definição do regime de consumo, composições mobilizadas e cronograma), possivelmente não estacionária. Somente sob essas premissas a política de reposição é um problema de lot-sizing determinístico, com solução exata por programação dinâmica (Wagner & Whitin, 1958). O problema decompõe por bem $g$, isoladamente — mesma lógica de decomposição do dimensionamento de pool (Parte IX/Fase 4), sem restrição de capital compartilhado:
 
 $$\min_{\{X_{g,j}\ge0\}}\ \sum_j\Big[c_g^{\text{ped}}\cdot\mathbb{1}[X_{g,j}>0]+c_g^{\text{hold}}\,S_{g,j}\Big]\qquad\text{s.a. balanço de §X.3},\ S_{g,j}\ge0$$
 
 onde $c_g^{\text{ped}}$ é o custo fixo de colocar um pedido (frete, mínimo de fatura, administração de compra) — cadastral por bem, análogo em papel a $c_r^{\text{mob}}+c_r^{\text{demob}}$ da Parte IX.
 
-**Propriedade de estoque zero.** Existe solução ótima em que todo pedido chega com estoque zero — nunca é ótimo pedir enquanto ainda há saldo positivo (resultado clássico de Wagner–Whitin). O horizonte de demanda particiona-se em lotes consecutivos $[a,b]$: um único pedido, colocado na semana $a-L_g$, cobre a demanda de $a$ até $b$. O estoque ao final da semana $j\in[a,b]$ é o saldo ainda não consumido dentro do lote, $S_{g,j}=\sum_{k=j+1}^bD_{g,k}$; somando o custo de posse ao longo do lote, cada $D_{g,k}$ contribui $(k-a)$ vezes (uma semana para cada $j<k$ em que ainda estava em estoque):
+**Propriedade de estoque zero (regime-base Wagner–Whitin).** Sob estoque inicial zero, custos de pedido fixos, custo de posse linear não negativo, preços unitários constantes e sem outras restrições acopladas, existe solução ótima com pedidos chegando no início de blocos de demanda, sem receber enquanto há saldo positivo. Estoque inicial, descontos por volume e restrições compartilhadas exigem outra modelagem. O horizonte de demanda particiona-se em lotes consecutivos $[a,b]$: um único pedido, colocado na semana $a-L_g$, cobre a demanda de $a$ até $b$. O estoque ao final da semana $j\in[a,b]$ é o saldo ainda não consumido dentro do lote, $S_{g,j}=\sum_{k=j+1}^bD_{g,k}$; somando o custo de posse ao longo do lote, cada $D_{g,k}$ contribui $(k-a)$ vezes (uma semana para cada $j<k$ em que ainda estava em estoque):
 
 $$\boxed{\mathrm{Custo}(a,b) = c_g^{\text{ped}} + c_g^{\text{hold}}\sum_{k=a+1}^{b}(k-a)\,D_{g,k}}$$
 
@@ -443,8 +443,8 @@ ENTRADA
   Parâmetros globais:
     β^EQ, β^MO, β^MAT, β^COMB, β^IND, s_mes
     {η_{p,j}, η_{w,j}}              — calendário global de desempenho e clima
-    // η_{s,ij} é derivado por atividade a partir de G_i e do perfil {m_ij} (Fase 1)
-    // ε_{ij} = η_{s,ij} · η_{p,j} · η_{w,j}
+    // F_i(m_ij) já inclui toda a composição mobilizada e gargalos
+    // ε_exog_ij = η_p,j · η_w,j; não há perda por m_i^max−m_ij
 
   Para cada recurso r:
     c_r^mob, c_r^demob             — custos de mobilização/desmobilização
