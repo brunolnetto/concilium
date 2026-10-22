@@ -330,7 +330,7 @@ def _capacidade_semanal_por_frentes(
         if typed is None or typed.grafo_sinergia is None:
             raise ValueError("invalid synergy graph; physical capacity cannot be certified")
         graph = typed.grafo_sinergia
-        derived = derivar_producao_horaria(graph, typed.equipe)
+        derived = derivar_producao_horaria(graph, typed.composicao_padrao_equipe)
         if derived.producao_horaria_derivada is None:
             raise ValueError("synergy graph has no productive physical capacity")
         # Work hours are recovered from the original weekly reference,
