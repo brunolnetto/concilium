@@ -97,3 +97,54 @@ def test_mobilization_rejects_nonfinite_capacity_callback() -> None:
             horas_dia=8,
             capacidade_horaria_por_frentes=lambda _: float("nan"),
         )
+
+
+@pytest.mark.parametrize(
+    ("edges", "peak", "active", "expected"),
+    [
+        # Series: the least productive physical stage governs throughput.
+        (
+            [("s", "a", 40), ("a", "b", 25), ("b", "t", 20)],
+            20.0, 1, 10.0,
+        ),
+        # Two independent parallel paths add their capacities.
+        (
+            [("s", "a", 20), ("s", "b", 20), ("a", "t", 20), ("b", "t", 20)],
+            40.0, 2, 20.0,
+        ),
+        # Mixed: branches share a common internal 25 u/h restriction.
+        (
+            [
+                ("s", "hub", 40), ("hub", "fork", 25),
+                ("fork", "a", 20), ("fork", "b", 20),
+                ("a", "t", 20), ("b", "t", 20),
+            ],
+            25.0, 3, 25.0,
+        ),
+    ],
+    ids=["serial-bottleneck", "parallel-branches", "mixed-shared-bottleneck"],
+)
+def test_series_parallel_and_mixed_maxflow_capacity(
+    edges: list[tuple[str, str, float]], peak: float, active: int, expected: float
+) -> None:
+    from concilium.domain.models.catalog.producao import GrafoSinergiaEquipe
+
+    nodes = sorted({node for origin, destination, _ in edges for node in (origin, destination)})
+    graph = GrafoSinergiaEquipe.model_validate(
+        {
+            "fonte": "s",
+            "sorvedouro": "t",
+            "dominio": nodes,
+            "arestas_fluxo": [
+                {
+                    "aresta_id": f"edge_{idx}",
+                    "origem": origin,
+                    "destino": destination,
+                    "capacidade_horaria": capacity,
+                }
+                for idx, (origin, destination, capacity) in enumerate(edges)
+            ],
+        }
+    )
+    assert capacidade_efetiva_frentes(graph, active, 4, peak) == pytest.approx(expected)
+    assert capacidade_efetiva_frentes(graph, 4, 4, peak) == pytest.approx(peak)
