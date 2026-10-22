@@ -16,8 +16,9 @@ from __future__ import annotations
 import sys
 from datetime import UTC, datetime
 
-import concilium.application.skills as _skills_pkg
 import pytest
+
+import concilium.application.skills as _skills_pkg
 from concilium.application.skills import run_cronograma
 from concilium.application.skills import run_equipes_e_alocacao as run_equipes_diretas
 from concilium.domain.constants import SEMANAS_POR_MES

@@ -65,11 +65,20 @@ def _ensure_utf8_io(out=None, in_=None, err=None) -> None:
     in_ = in_ if in_ is not None else sys.stdin
     err = err if err is not None else sys.stderr
     if out.encoding is None or out.encoding.lower() != "utf-8":
-        out.reconfigure(encoding="utf-8", errors="strict")
+        configure_out = getattr(out, "reconfigure", None)
+        if not callable(configure_out):
+            raise RuntimeError("stdout cannot be configured for UTF-8; refusing corrupt MCP I/O")
+        configure_out(encoding="utf-8", errors="strict")
     if in_.encoding is None or in_.encoding.lower() != "utf-8":
-        in_.reconfigure(encoding="utf-8", errors="strict")
+        configure_in = getattr(in_, "reconfigure", None)
+        if not callable(configure_in):
+            raise RuntimeError("stdin cannot be configured for UTF-8; refusing corrupt MCP I/O")
+        configure_in(encoding="utf-8", errors="strict")
     if err.encoding is None or err.encoding.lower() != "utf-8":
-        err.reconfigure(encoding="utf-8", errors="replace")
+        configure_err = getattr(err, "reconfigure", None)
+        if not callable(configure_err):
+            raise RuntimeError("stderr cannot be configured for UTF-8")
+        configure_err(encoding="utf-8", errors="replace")
 
 
 _ensure_utf8_io()

@@ -67,7 +67,7 @@ def _cab_campo_custo(
     fator_semanal: float,
     eficiencia: float,
     consumo_L_100pct: float,
-    n_equipes: int,
+    n_equipes: int | float,
 ) -> tuple[float, float]:
     """Returns (custo_semana_base, valor_fisico) para a propriedade."""
     if propriedade == "combustivel":

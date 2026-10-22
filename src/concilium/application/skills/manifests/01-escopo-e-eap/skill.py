@@ -199,7 +199,9 @@ def _edges_from_eap_predecessores(
                 )
             else:
                 # ADR-081: propaga completion_threshold_pct para ArestaActivityDag
-                arestas_validas.append((pred_activity, suc_activity, prec.tipo, prec.lag, prec.completion_threshold_pct))
+                arestas_validas.append(
+                    (pred_activity, suc_activity, prec.tipo, prec.lag, prec.completion_threshold_pct)
+                )
     return arestas_validas
 
 
@@ -296,7 +298,10 @@ def _build_activity_dag(
     return ActivityDag(
         nos=nos,
         # ADR-081: completion_threshold_pct propagado da EAP para auditabilidade
-        arestas=[ArestaActivityDag(de=d, para=p, tipo=t, lag=ln, completion_threshold_pct=th) for d, p, t, ln, th in arestas_validas],
+        arestas=[
+            ArestaActivityDag(de=d, para=p, tipo=t, lag=ln, completion_threshold_pct=th)
+            for d, p, t, ln, th in arestas_validas
+        ],
         ordem_topologica=ordem_topologica,
         critical_path=max(longest_path_to.values(), key=len) if longest_path_to else [],
         start_offset_min=start_offset_min,
