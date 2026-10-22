@@ -100,6 +100,8 @@ F_i(m_i(\tau;N))\eta_{p,j_i^0+\tau}\eta_{w,j_i^0+\tau}.$$
 
 A duração é o menor \(N\) admissível que fecha \(Q_i\) e satisfaz capacidade, predecessores e horizonte. O calendário absoluto deve ser conhecido **antes** da busca; mudar início ou duração exige revalidar restrições RCPSP. **Não declarar convergência garantida** sem produtividade futura e horizonte suficientes (#12/#15). A condição histórica \(r+d\le N\) está indefinida e não constitui gate.
 
+**Dependência temporal P12-A:** \(N_i\) deve ser determinado **depois** do início absoluto \(j_i^0\), pois \(p_j\) e \(c_j\) dependem de \(j\). Não se garante monotonicidade estrita da produção acumulada com \(N\) quando clima é zero ou a própria rampa muda. A busca finita, precedência de fronteira de semana e invalidação RCPSP são definidas em [CALENDARIO_E_LIBERACAO_FISICA.md](CALENDARIO_E_LIBERACAO_FISICA.md).
+
 ### I.5 Predecessores e completude parcial
 
 $$B_i \subseteq \mathcal{A}\setminus\{A_i\}, \qquad \theta_i : B_i \to (0,1]$$
@@ -112,7 +114,9 @@ $$\Phi_b(j) = \frac{1}{Q_b}\sum_{j'=j_b^0}^{j} q_{b,j'}$$
 
 **Restrição de início:**
 
-$$\boxed{j_i^0 \;\ge\; \max_{b\in B_i}\ \min\!\{j : \Phi_b(j) \ge \theta_i(b)\}}$$
+$\boxed{j_i^0\ge\max_{b\in B_i}\Big(1+\ell_{b\to i}+\min\{j:\Phi_b(j)\ge\theta_i(b)\}\Big)}$
+
+**Fronteira de semana (Q–FS):** \(\Phi_b(j)\) mede a produção **acumulada ao fim** da semana \(j\). O sucessor não pode iniciar na própria semana em que a predecessora atinge o limiar; o primeiro começo admissível é \(j+1+\ell_{b\to i}\), com \(\ell_{b\to i}\in\mathbb N_0\) semanas livres adicionais. Arestas com limiar não atingido são inviáveis. Arestas SS/FF, lags negativos ou execução sub-semanal exigem outra semântica explícita, não esta fórmula. Ver [CALENDARIO_E_LIBERACAO_FISICA.md](CALENDARIO_E_LIBERACAO_FISICA.md).
 
 **Tipo de $\theta_i(b)$** — declarar por aresta, pois a semântica difere sob $\varepsilon_{ij}$ variável:
 
@@ -485,32 +489,25 @@ SAÍDA: {F_i(m)}, fontes e restrições.
 ### XIV.1 — Fase 1: Cronograma e fechamento físico
 
 ```text
-Pré-condição: F_i(m) validado para cada configuração e calendário disponível
-Para i em ordem topológica:
-  Resolver semana inicial j_i^0 compatível com predecessores
-    // quantidades Φ_b e limiares θ_b, respeitando fronteiras de semana
-  Para durações candidatas N dentro do horizonte admissível:
-    Para τ = 0, ..., N−1:
-      m_iτ ← RampProfile.build(N,W_i)[τ]
-      j ← j_i^0 + τ
-      B_iτ ← F_i(m_iτ) · h_i · d_i · η_p,j · η_w,j
-    Se Στ B_iτ ≥ Q_i e capacidades compartilhadas permitirem:
-      aceitar N e perfil; sair
-  Se nenhuma duração fecha Q_i: INVIÁVEL / NOGO
-
-  saldo ← Q_i
-  Para semanas j em ordem:
-    q_ij ← min(saldo, B_ij)
-    saldo ← saldo − q_ij
-  Exigir saldo = 0 e ∑j q_ij = Q_i
-  j_i^1 ← última semana de produção positiva
-  φ_i ← q_i,j_i^1 / B_i,j_i^1, exigindo B_i,j_i^1 > 0
-  Revalidar todas as capacidades e precedências após mudanças em m,N,início
-
-SAÍDA: (j_i^0,N_i,m_ij,F_i(m_ij),B_ij,q_ij,φ_i) e prova de viabilidade
+Para cada i em ordem topológica de Q–FS:
+  Determinar releases físicos dos predecessores:
+    r_b ← menor semana j com Σ_{k≤j}q_bk ≥ θ_bQ_b
+    Se inexistente: INFEASIBLE, não liberar a sucessora
+  j_i^0 ← max_b(r_b+1+lag_b), em semanas absolutas, lag_b≥0
+  Para N=1,...,J_max−j_i^0+1 (enumeração limitada):
+    m_iτ ← RampProfile.build(N,W_i)[τ]
+    B_i,j_i^0+τ ← F_i(m_iτ) H_i p_{j_i^0+τ} c_{j_i^0+τ} a_i
+    Se ΣB≥Q_i e recursos/precedências físicos são viáveis:
+      aceitar N; sair
+  Se nenhuma agenda válida: INFEASIBLE/NOGO
+  q_ij ← min(Q_i−Σ_{k<j}q_ik,B_ij) para semanas em ordem
+  Exigir Σ_jq_ij≈Q_i sem arredondamento prematuro
+  φ_i ← q_i,final/B_i,final, para B_i,final>0
+  Após deslocamentos, revalidar todas as demandas de recursos e predecessores
+SAÍDA: agenda admissível e prova; INFEASIBLE/UNKNOWN se não certificável.
 ```
 
-**Sem \(\eta_s\)**: as frentes estão contadas somente em \(F_i(m)\). A busca requer horizonte finito e tratamento explícito de inviabilidade; a validação conjunta RCPSP integra #12/#15.
+A busca não presume monotonicidade da rampa, nem permite iniciar na semana em que o predecessor atinge o limiar ao **fim** dela. Validação conjunta RCPSP de #15 continua obrigatória.
 
 ### XIV.2 — Fase 2: Contratos e preços físicos
 

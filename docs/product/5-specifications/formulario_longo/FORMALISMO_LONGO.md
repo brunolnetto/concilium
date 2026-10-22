@@ -114,7 +114,11 @@ Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$
 
 $$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
 
-**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada: a soma $\sum_j F_i(m_{ij})\varepsilon_{ij}^{exog}h_id_i$ depende de $\{m_{ij}\}$, que por sua vez depende de $N_i$. A dependência é monotônica em $N_i$ — sob qualquer calendário viável (que não anule $\varepsilon_{ij}$ indefinidamente), cada semana adicional contribui estritamente mais que zero à produção acumulada —, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1); a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante. Dado $N_i$ convergido, $\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)$ é exato. Restrição de consistência: $r + d \le N_i$.
+**Determinação de \(N_i\) condicionada ao início absoluto (P12-A).** Fixado \(s=j_i^0\), a capacidade acumulada de uma duração candidata é \(\Pi_i(N;s)=\sum_{\tau=0}^{N-1}F_i(m_i(\tau;N))H_i p_{s+\tau}c_{s+\tau}a_i\). Os fatores são aplicados uma única vez; se \(H_i\) já representa horas efetivas, usar \(a_i=1\). Alterar o início absoluto altera as disponibilidades das semanas testadas e pode mudar \(N_i\).
+
+**A sequência \(\Pi_i(N;s)\) não precisa crescer estritamente**: semanas com praticabilidade nula entregam zero. Tampouco se presume monotonicidade fraca quando o próprio perfil mobilizado \(m_i(\tau;N)\) muda ao mudar \(N\). Logo, a enumeração de durações deve ser limitada ao horizonte e testar todas as restrições, sem busca binária sem prova de monotonicidade. Rejeitar solução se o horizonte não fecha \(Q_i\), ou se recursos/predecessores são incompatíveis. A antiga condição \(r+d\le N_i\) não define suas variáveis e não constitui gate.
+
+**Contrato e vetores:** [CALENDARIO_E_LIBERACAO_FISICA.md](CALENDARIO_E_LIBERACAO_FISICA.md) (#12/#15).
 
 ### I.5 Predecessores e completude parcial
 
@@ -128,7 +132,9 @@ $$\Phi_b(j) = \frac{1}{Q_b}\sum_{j'=j_b^0}^{j} q_{b,j'}$$
 
 **Restrição de início:**
 
-$$\boxed{j_i^0 \;\ge\; \max_{b\in B_i}\ \min\!\{j : \Phi_b(j) \ge \theta_i(b)\}}$$
+$\boxed{j_i^0\ge\max_{b\in B_i}\Big(1+\ell_{b\to i}+\min\{j:\Phi_b(j)\ge\theta_i(b)\}\Big)}$
+
+**Fronteira de semana (Q–FS):** \(\Phi_b(j)\) mede a produção **acumulada ao fim** da semana \(j\). O sucessor não pode iniciar na própria semana em que a predecessora atinge o limiar; o primeiro começo admissível é \(j+1+\ell_{b\to i}\), com \(\ell_{b\to i}\in\mathbb N_0\) semanas livres adicionais. Arestas com limiar não atingido são inviáveis. Arestas SS/FF, lags negativos ou execução sub-semanal exigem outra semântica explícita, não esta fórmula. Ver [CALENDARIO_E_LIBERACAO_FISICA.md](CALENDARIO_E_LIBERACAO_FISICA.md).
 
 **Tipo de $\theta_i(b)$** — declarar por aresta, pois a semântica difere sob $\varepsilon_{ij}$ variável:
 
@@ -539,49 +545,39 @@ Para cada i:
 SAÍDA: {F_i(m)} por atividade, com fontes/capacidades auditáveis.
 ```
 
-### XIV.1 — Fase 1: Cronograma (interface com solver RCPSP externo)
+### XIV.1 — Fase 1: Início absoluto, produção semanal e calendário
 
+```text
+Pré-condição: F_i(m) e fontes de capacidade, calendário e horizonte J_max.
+Para cada atividade i em ordem topológica de precedências Q–FS:
+  Para cada predecessor b:
+    release_b ← menor semana j em que Σ_{k≤j}q_bk ≥ θ_{b→i}Q_b
+    Se inexistente: INFEASIBLE (não liberar)
+  s_i ← max_b (release_b + 1 + lag_{b→i})  // semana seguinte ao limiar
+  Se sem predecessores: s_i ← primeira semana admissível do horizonte
+
+  Para N em {1, ..., J_max−s_i+1}:  // enumerar, sem binária implícita
+    perfil ← RampProfile.build(N,W_i)
+    Para τ em {0,...,N−1}:
+      j ← s_i+τ
+      B_ij ← F_i(perfil[τ]) H_i p_j c_j a_i
+    Se Σ_j B_ij < Q_i: continuar para N+1
+    Se capacidade RCPSP/conflito/release for inválida: re-solver
+    Senão: aceitar N e perfil; sair
+  Se nenhuma combinação é factível: INFEASIBLE / NOGO
+
+  saldo ← Q_i
+  Para j∈[s_i,s_i+N_i) em ordem:
+    q_ij ← min(saldo,B_ij); saldo ← saldo−q_ij
+  Exigir saldo≈0 dentro da tolerância declarada, sem arredondamento físico
+  j_i^1 ← última semana com produção positiva
+  φ_i ← q_i,j_i^1/B_i,j_i^1, com B_i,j_i^1>0
+  Revalidar recursos compartilhados e liberações APÓS cada deslocamento.
+  Sem solução dentro dos limites ⇒ INFEASIBLE; dado ausente ⇒ UNKNOWN.
+SAÍDA: (s_i,N_i,m_ij,F_i(m_ij),B_ij,q_ij,φ_i) e evidência RCPSP.
 ```
-Pré-condição: {F_i(m)} e suas fontes disponíveis ∀i
 
-Para cada i em ordem topológica de B_i:
-
-  N_i ← max(1, ⌈Q_i / (F_i(m_i^max) · h_i · d_i)⌉)   // chute inicial (eficiência plena)
-
-  Repetir:
-    {m_{ij,t}} ← RampProfile.build(N_i, m_i^0, μ_i^+, m_i^max, μ_i^-, m_i^1)
-
-    Para cada j com m_{ij,t} > 0:
-      capacidade_i_j ← F_i(m_{ij,t})   // toda mobilização considerada uma única vez
-      ε_exog_ij ← η_{p,j} · η_{w,j}
-
-    prod ← Σ_j capacidade_i_j · ε_exog_ij · h_i · d_i
-
-    Se prod ≥ Q_i:
-      convergiu; {m_{ij}} ← {m_{ij,t}}
-    Senão:
-      Se nenhuma semana futura viável possui F_i(m_i,j)>0 e ε_exog_i,j>0:
-        Marcar A_i INVIÁVEL por capacidade/clima/horizonte (→ Fase 9, NOGO)
-      Senão:
-        N_i ← N_i + 1
-        // Convergência apenas sob horizonte admissível e capacidade futura suficiente.
-
-  // Fechamento exato de escopo — última semana ativa (τ relativo, 0-indexado)
-  τ^1 ← N_i − 1
-  q_residual ← Q_i − Σ_{τ=0}^{τ^1-1} F_i(m_i(τ)) · ε_exog_iτ · h_i · d_i
-  φ_i ← q_residual / (F_i(m_i(τ^1)) · ε_exog_iτ^1 · h_i · d_i)
-
-  j_i^0 ← max_{b ∈ B_i} min{j : Φ_b(j) ≥ θ_i(b)}  [restrição exata de quantidade]
-    com Φ_b(j) = (1/Q_b) · Σ_{j'=j_b^0}^{j} q_{b,j'}
-    // q_{b,j'} vem da DistribuicaoSemanal já calculada dos predecessores b, já com
-    // fechamento fracionário aplicado
-
-  Verificar: r + d ≤ N_i  [consistência com W_i]
-
-Armazenar (j_i^0, N_i, {m_{ij}}, {F_i(m_{ij})}, {ε_exog_ij}, φ_i)
-
-SAÍDA: {j_i^0, N_i, {m_{ij}}, {F_i(m_{ij})}, {ε_exog_ij}, φ_i} ∀i
-```
+A execução completa de reescalonamento e prova de todas as restrições compete a #15; este documento define a obrigação e **não certifica que o runtime atual a satisfaz**.
 
 ### XIV.2 — Fase 2: Taxas Horárias de Catálogo
 
