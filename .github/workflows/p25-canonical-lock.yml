@@ -1,0 +1,55 @@
+name: Canonical P25 Lockfile Repair (temporary)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    if: ${{ github.head_ref == 'ci/p25-canonical-lock-rebuild' && github.event.pull_request.head.repo.full_name == 'brunolnetto/concilium' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ci/p25-canonical-lock-rebuild
+          persist-credentials: true
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.6"
+
+      - name: Restore valid base lock and run resolver
+        run: |
+          git fetch origin main
+          git show origin/main:uv.lock > uv.lock
+          uv lock
+          uv lock --check
+          uv sync --locked --no-install-project --no-dev
+
+      - name: Commit regenerated lock on original PR 30 branch
+        run: |
+          git fetch origin fix/formalism-p25b-ci-accounting-typing-lint
+          git switch -C original origin/fix/formalism-p25b-ci-accounting-typing-lint
+          git show origin/main:uv.lock > uv.lock
+          uv lock
+          uv lock --check
+          uv sync --locked --no-install-project --no-dev
+          git add uv.lock
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'build(lock): regenerate uv.lock from valid base with uv'
+            git push origin HEAD:refs/heads/fix/formalism-p25b-ci-accounting-typing-lint
+          fi
+
+      - name: Upload canonical lock for audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p25-uv-lock-canonical
+          path: uv.lock
+          if-no-files-found: warn
