@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 from concilium.domain.constants import SEMANAS_POR_MES
 from concilium.domain.models.canonical import (
     EquipamentoEquipeDireta,
