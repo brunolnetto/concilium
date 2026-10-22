@@ -211,6 +211,26 @@ class TestUniqueWeeklyPhysicalProductivity:
         assert cell.qtd_executada == 0
         assert cell.fracao_fechamento == 0
 
+    @pytest.mark.parametrize(
+        ("physical", "practicability", "calendar", "shift"),
+        [
+            (800.0, 1.01, 1.0, 1.0),
+            (800.0, -0.01, 1.0, 1.0),
+            (800.0, 1.0, 1.1, 1.0),
+            (800.0, 1.0, 1.0, -0.1),
+            (-1.0, 1.0, 1.0, 1.0),
+            (800.0, float("nan"), 1.0, 1.0),
+            (800.0, 1.0, float("inf"), 1.0),
+        ],
+    )
+    def test_unverified_availability_fails_closed(
+        self, physical: float, practicability: float, calendar: float, shift: float
+    ) -> None:
+        with pytest.raises(ValueError):
+            _cron._capacidade_semanal_disponivel(
+                physical, practicability, calendar, shift
+            )
+
 
 # ── VAL-PROD-VS-PU: resíduo = fe_nec × fator_clima_medio ─────────────────────
 

@@ -74,6 +74,8 @@ $$\boxed{F_i(m)=\max\operatorname{fluxo}(s_i,t_i;\mathcal G_i^D|_m)
 $$\boxed{B_{ij}=h_id_i F_i(m_{ij})\eta_{p,j}\eta_{w,j},
 \qquad q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}.}$$
 
+**Unicidade operacional:** \(F_i(m)\) é a única produtividade física [unidades/h]. Praticabilidade \(p_j\), calendário \(c_j\) e jornada disponível \(a_i\) entram apenas na capacidade semanal \(B_{ij}=F_i(m_{ij})H_i p_jc_ja_i\). Os fatores não são taxas independentes de produtividade; quando \(H_i\) já é hora efetiva, \(a_i=1\). A fração final \(\varphi_i\) é utilização do escopo, não perda produtiva.
+
 **Não existe perda multiplicativa de alocação \(\eta_s\).** A escolha \(m_{ij}\) já entra em \(F_i(m_{ij})\); multiplicar por \(m\) outra vez equivale a dupla contagem. A razão \(\alpha_i(m)=F_i(m)/F_i(m_i^{max})\) é diagnóstico de capacidade, nunca penalidade adicional.
 
 As frentes determinam recursos físicos por tipo \(g\): \(d_{gj}=\sum_i a_{ig}(m_{ij})\), onde \(a_{ig}(m)=m a_{ig}^{front}\) apenas em composições independentes. Presença contratual \(x_{gj}\ge d_{gj}\), standby \(s_{gj}=x_{gj}-d_{gj}\) e movimentos pertencem ao problema econômico §IX e **não** reduzem \(F_i(m)\).
