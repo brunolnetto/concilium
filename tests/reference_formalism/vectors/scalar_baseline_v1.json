@@ -1,0 +1,61 @@
+{
+  "protocol": "formalism-reference/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+    "baseline_blob": "8e67c89df4e43147394210ea8acc4094ffbf5384",
+    "clauses": [
+      "IV",
+      "V",
+      "VI"
+    ],
+    "assumptions": [
+      "single team capacity",
+      "baseline no consumption losses",
+      "contractual full last week"
+    ]
+  },
+  "vectors": [
+    {
+      "case_id": "partial_one_week",
+      "protocol": "formalism-reference/1",
+      "inputs": {
+        "scope_total": "100",
+        "quantity_before_final_week": "0",
+        "nominal_final_week_capacity": "400",
+        "hours_per_week": "40",
+        "team_count": "1",
+        "contractual_rate_per_team_hour": "10",
+        "variable_rate_per_team_hour": "2",
+        "productivity_per_team_hour": "10"
+      },
+      "expected": {
+        "final_week_quantity": "100",
+        "scope_residual": "0",
+        "contractual_final_week_cost": "400",
+        "variable_final_week_cost": "20",
+        "variable_total_cost": "20"
+      }
+    },
+    {
+      "case_id": "partial_after_previous_weeks",
+      "protocol": "formalism-reference/1",
+      "inputs": {
+        "scope_total": "380",
+        "quantity_before_final_week": "320",
+        "nominal_final_week_capacity": "96",
+        "hours_per_week": "8",
+        "team_count": "1",
+        "contractual_rate_per_team_hour": "9",
+        "variable_rate_per_team_hour": "3",
+        "productivity_per_team_hour": "12"
+      },
+      "expected": {
+        "final_week_quantity": "60",
+        "scope_residual": "0",
+        "contractual_final_week_cost": "72",
+        "variable_final_week_cost": "15",
+        "variable_total_cost": "95"
+      }
+    }
+  ]
+}
