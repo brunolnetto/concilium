@@ -88,15 +88,15 @@ $$\boxed{\rho_i = \max\text{-fluxo}(s_i \to t_i,\ \mathcal{G}_i^D) = \min_{C \,\
 
 **Derivação de $\rho_i$.** Quando o grafo de sinergia $\mathcal{G}_i$ está presente no cadastro da equipe, $\rho_i$ é derivado por `producao_from_grafo(G_i)` via min-corte — o campo `producao_horaria` no artefato `Producao` funciona como cache auditável do resultado. Quando ausente, $\rho_i$ é entrada direta, calibrada externamente (ficha técnica). A calibração das capacidades $\text{cap}(\cdot)$ das arestas permanece sempre externa a este formulário; a incerteza do modelo reside nas capacidades unitárias declaradas, não na fórmula de derivação de $\rho_i$ a partir delas.
 
-**Alocação por atividade e semana.** A eficiência que multiplica a produção de cada atividade é indexada por atividade **e** por semana:
+**Mobilização e capacidade da composição física.** A quantidade de frentes mobilizadas $m_{ij}$ é decisão sobre os recursos instalados, não um fator de ineficiência:
 
-$$\varepsilon_{ij} = \eta_{s,ij}\cdot\eta_{p,j}\cdot\eta_{w,j}$$
+$$\boxed{F_i(m)=\max\text{-fluxo}(s_i,t_i;\mathcal G_i^D|_m)}$$
 
-decompondo um fator de alocação específico da equipe $i$ ($\eta_{s,ij}$) e dois fatores de calendário global — desempenho e clima —, comuns a todas as atividades ativas na semana $j$. O fator de alocação é definido diretamente a partir do grafo de sinergia: é a razão entre a capacidade efetiva de $\mathcal{G}_i$ quando apenas $m_{ij}$ frentes (de $m_i^{\max}$ possíveis) estão mobilizadas na semana $j$, e a capacidade plena do grafo com $m_i^{\max}$ frentes:
+$$\boxed{\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j},\quad B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog}}.$$
 
-$$\boxed{\eta_{s,ij} = \frac{\max\text{-fluxo}(s_i\to t_i,\ \mathcal{G}_i^{D}\!\mid_{m_{ij}})}{\max\text{-fluxo}(s_i\to t_i,\ \mathcal{G}_i^{D}\!\mid_{m_i^{\max}})}}$$
+$\rho_i^{peak}=F_i(m_i^{max})$ é a capacidade de referência, não taxa por frente. Com composição independente vale $F_i(m)=m\rho_i^{front}$; com gargalo compartilhado, a produção pode saturar. Não se aplica $\eta_s$ como perda. A razão $F_i(m)/F_i(m_i^{max})$ é somente diagnóstico.
 
-onde $\mathcal{G}_i^D\!\mid_m$ denota o subgrafo de produção com a capacidade das arestas de fonte escalada para $m$ frentes concorrentes. Para topologias paralelas puras (aditivas), $\eta_{s,ij}=m_{ij}/m_i^{\max}$ por linearidade das capacidades; para topologias em série ou mistas, a razão captura a degradação por gargalo interno quando múltiplas frentes disputam etapas intermediárias de capacidade fixa (ex.: uma britagem centralizada alimentando várias frentes de escavação). Quando $\mathcal{G}_i$ não está presente (produtividade calibrada externamente), adota-se $\eta_{s,ij}\equiv m_{ij}/m_i^{\max}$ como aproximação linear padrão.
+Demandas de recurso físico $d_{gj}=\sum_i a_{ig}(m_{ij})$ decorrem do mesmo $m$; presenças contratadas $x_{gj}\ge d_{gj}$ e standby $s_{gj}=x_{gj}-d_{gj}$ pertencem ao pool, sem alterar $F_i$. Veja a [prova e contraprovas](CAPACIDADE_E_RECURSOS.md).
 
 ### I.4 Política de mobilização $W_i$
 
@@ -122,9 +122,9 @@ Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$
 
 $$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
 
-**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada. A busca que a resolve não é circular: para cada duração candidata $N$, o perfil $m_i(\tau;N)$ acima é uma função de $\tau$ inteiramente determinada — nada nela depende de um $N_i$ ainda desconhecido —, de modo que a produção acumulada $\Pi(N)\equiv\sum_{\tau=0}^{N-1}\rho_i\varepsilon_{i\tau}(N)h_id_im_i(\tau;N)$ pode ser calculada exatamente para qualquer $N$ testado. O que não se conhece de antemão é apenas em qual $N$ essa soma cruza $Q_i$ — a mesma situação de qualquer grandeza definida como "o menor $N$ tal que uma condição monotônica se satisfaz", sem mistério adicional.
+**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada. A busca que a resolve não é circular: para cada duração candidata $N$, o perfil $m_i(\tau;N)$ acima é uma função de $\tau$ inteiramente determinada — nada nela depende de um $N_i$ ainda desconhecido —, de modo que a produção acumulada $\Pi(N)\equiv\sum_{\tau=0}^{N-1}F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i$ pode ser calculada exatamente para qualquer $N$ testado. O que não se conhece de antemão é apenas em qual $N$ essa soma cruza $Q_i$ — a mesma situação de qualquer grandeza definida como "o menor $N$ tal que uma condição monotônica se satisfaz", sem mistério adicional.
 
-A validade da busca depende de $\Pi$ ser monotônica em $N$ — e essa monotonicidade precisa ser justificada com cuidado, porque $N$ aparece dentro do próprio perfil (no termo de ramp-down), de modo que aumentar $N$ não apenas acrescenta uma semana: redesenha o perfil inteiro. Ainda assim, a conclusão se sustenta. Fixado qualquer $\tau$, apenas o terceiro termo do $\min$ que define $m_i(\tau;N)$ depende de $N$, e depende de forma crescente ($m_i^1+\mu_i^-(N-1-\tau)$ cresce com $N$ quando $\mu_i^->0$); os outros dois termos ficam parados. Um mínimo em que um termo só sobe e os demais são fixos não pode diminuir, logo $m_i(\tau;N)$ é não-decrescente em $N$ para cada $\tau$ fixo — as semanas "antigas" podem crescer ao alongar o horizonte, nunca encolher. Como $\eta_{s,i\tau}$ é um max-fluxo com a capacidade de fonte escalada por $m_i(\tau;N)$ (§I.3.2), e max-fluxo é não-decrescente em qualquer capacidade de aresta, $\varepsilon_{i\tau}(N)$ herda essa monotonicidade, e portanto também cada $q_{i\tau}(N)=\rho_i\varepsilon_{i\tau}(N)h_id_im_i(\tau;N)$. Somando as $N$ semanas "antigas" (que só podem ter crescido) à semana nova — que cai exatamente no piso $m_i^1\ge1$ e contribui $\rho_i\varepsilon_{i,N}h_id_im_i^1>0$, salvo calendário morto —, obtém-se $\Pi(N+1)>\Pi(N)$: $\Pi$ é estritamente crescente a cada passo, inclusive no caso degenerado retangular, onde a semana nova sozinha já garante o aumento. Uma função inteira estritamente monotônica cruza qualquer limiar $Q_i$ em exatamente um ponto, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1) — a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante.
+A validade da busca depende de $\Pi$ ser monotônica em $N$ — e essa monotonicidade precisa ser justificada com cuidado, porque $N$ aparece dentro do próprio perfil (no termo de ramp-down), de modo que aumentar $N$ não apenas acrescenta uma semana: redesenha o perfil inteiro. Ainda assim, a conclusão se sustenta. Fixado qualquer $\tau$, apenas o terceiro termo do $\min$ que define $m_i(\tau;N)$ depende de $N$, e depende de forma crescente ($m_i^1+\mu_i^-(N-1-\tau)$ cresce com $N$ quando $\mu_i^->0$); os outros dois termos ficam parados. Um mínimo em que um termo só sobe e os demais são fixos não pode diminuir, logo $m_i(\tau;N)$ é não-decrescente em $N$ para cada $\tau$ fixo — as semanas "antigas" podem crescer ao alongar o horizonte, nunca encolher. Como $F_i(m_i(\tau;N))$ é um max-fluxo com a capacidade de fonte escalada por $m_i(\tau;N)$ (§I.3.2), e max-fluxo é não-decrescente em qualquer capacidade de aresta, $\varepsilon_{i\tau}(N)$ herda essa monotonicidade, e portanto também cada $q_{i\tau}(N)=F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i$. Somando as $N$ semanas "antigas" (que só podem ter crescido) à semana nova — que cai exatamente no piso $m_i^1\ge1$ e contribui $\rho_i\varepsilon_{i,N}h_id_im_i^1>0$, salvo calendário morto —, obtém-se $\Pi(N+1)>\Pi(N)$: $\Pi$ é estritamente crescente a cada passo, inclusive no caso degenerado retangular, onde a semana nova sozinha já garante o aumento. Uma função inteira estritamente monotônica cruza qualquer limiar $Q_i$ em exatamente um ponto, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1) — a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante.
 
 O perfil testado em cada tentativa não precisa estar "certo" antes de $N_i$ convergir: ele é, por definição, o perfil correto para aquele $N$ testado, e é descartado assim que falha o teste de limiar — nada é reaproveitado entre tentativas. O perfil que sobra, construído em $N=N_i^\star$, é o único que os cálculos das partes seguintes utilizam: $\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)$ é exato, sem resíduo das tentativas rejeitadas. Restrição de consistência: $r + d \le N_i$.
 
@@ -205,17 +205,19 @@ $C_i^{\mathrm{cat}}$ é o custo de catálogo da atividade — base para diagnós
 
 Até aqui, os custos foram tratados como se toda semana fosse igualmente produtiva. Esta seção introduz o calendário real: quantas unidades cada atividade efetivamente produz, semana a semana, considerando quantas frentes estão mobilizadas e quão eficiente é o trabalho naquela semana específica.
 
-Eficiência semanal por atividade: $\varepsilon_{ij} = \eta_{s,ij}\cdot\eta_{p,j}\cdot\eta_{w,j}\in[0,1]$ (§30 da referência; $\eta_{s,ij}$ conforme §I.3.2).
+A capacidade física semanal exógena é $B_{ij}=F_i(m_{ij})h_id_i\eta_{p,j}\eta_{w,j}$ e o quantitativo entregue é
 
-$$q_{ij} = \rho_i\,\varepsilon_{ij}\,h_id_i\,m_{ij}\qquad\text{[un] — semanas interiores}$$
+$\boxed{q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}}.$
+
+Não se multiplica novamente pela quantidade de equipes nem por $\eta_s$ de alocação.
 
 **Fechamento exato de escopo.** Seja $j_i^1 \equiv j_i^0+N_i-1$ a última semana ativa de $A_i$, obtida pela busca monotônica em $N_i$ (Parte XIV, Fase 1) sobre o perfil nominal $\{m_i(\tau)\}$ de $W_i$. Nas semanas interiores $j<j_i^1$, a produção usa o perfil nominal integralmente. Na última semana, o quantitativo residual fecha exatamente o escopo:
 
 $$q_{i,j_i^1} = Q_i - \sum_{j=j_i^0}^{j_i^1-1} q_{ij}$$
 
-Por construção da busca monotônica ($N_i$ é o menor inteiro tal que a produção acumulada nominal atinge $Q_i$, e a semana adicionada mais recentemente é a primeira em que isso ocorre), o residual satisfaz $0 < q_{i,j_i^1} \le \rho_i\varepsilon_{i,j_i^1}h_id_im_i(N_i-1)$ — nunca excede a produção nominal da última semana, e a semana de fechamento sempre tem $\varepsilon_{i,j_i^1}>0$ (uma semana com $\varepsilon=0$ não altera a produção acumulada, de modo que a busca automaticamente avança para a semana seguinte). Define-se a **fração de fechamento**:
+A semana final precisa de capacidade positiva; a fração de fechamento é a quantidade residual dividida pela capacidade física da semana, não uma ineficiência:
 
-$$\varphi_i \equiv \frac{q_{i,j_i^1}}{\rho_i\,\varepsilon_{i,j_i^1}\,h_id_i\,m_i(N_i-1)} \in (0,1]$$
+$$\boxed{\varphi_i=\frac{q_{i,j_i^1}}{F_i(m_i(N_i-1))h_id_i\eta_{p,j_i^1}\eta_{w,j_i^1}}\in(0,1]}$$
 
 representando a fração da capacidade nominal da última semana efetivamente utilizada para completar o escopo. A frota mobilizada ($m_{ij}$, e portanto o custo contratual $C_{ij}^{\mathrm{K,op}}$, Parte V) permanece no valor nominal do perfil na última semana — recursos contratuais (EQ/MO) são cobrados pela semana mobilizada independentemente da fração de produção efetivamente necessária naquela semana (§0). Apenas o consumível é prorateado pela produção realizada, via $\varphi_i$, garantindo o fecho exato do escopo:
 
@@ -228,6 +230,8 @@ $$\mathcal{A}_j \coloneqq \{A_i\in\mathcal{A} : j\in[j_i^0,\,j_i^0+N_i-1]\}$$
 ---
 
 ## Parte V — Custo Direto Semanal (sem BDI)
+
+**Nota normativa #11:** as fórmulas históricas abaixo envolvendo $\gamma/\rho$ e invariância absoluta de consumíveis só podem ser aplicadas quando a hipótese de capacidade linear por frente for demonstrada. Na presença de $F_i(m)$ não linear ou fechamento parcial, estão **pendentes de prova** e não autorizam certificação GO. Veja [CAPACIDADE_E_RECURSOS](CAPACIDADE_E_RECURSOS.md).
 
 Esta seção converte os quantitativos semanais da Parte IV em valores monetários, separando o que é cobrado independentemente da produção (o bloco contratual, K) do que acompanha exatamente o que foi produzido (o bloco consumível, V) — a mesma distinção introduzida em §0.
 

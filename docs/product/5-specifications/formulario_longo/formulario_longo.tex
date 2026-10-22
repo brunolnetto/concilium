@@ -75,6 +75,16 @@
 \date{}
 
 \begin{document}
+
+\noindent\textbf{Controle normativo P10-A.}
+As expressões operacionais de capacidade e demanda são regidas por
+\texttt{CAPACIDADE\_E\_RECURSOS.md}: \(q_{ij}\le
+F_i(m_{ij})h_id_i\eta_{p,j}\eta_{w,j}\), sem fator de ineficiência
+\(\eta_s\). As expressões financeiras históricas baseadas em
+\(\gamma/\rho\) permanecem condicionadas à revisão da issue \#11
+e não podem, isoladamente, sustentar certificação GO.
+
+
 % P10-A NORMATIVE: docs/product/5-specifications/formulario_longo/CAPACIDADE_E_RECURSOS.md
 % q_ij = F_i(m_ij) * h_i * d_i * eta_p,j * eta_w,j (capped by remaining Q).
 % eta_s is NOT an allocation inefficiency. Old rho*eta_s*m and derived
@@ -290,32 +300,20 @@ capacidades \(\text{cap}(\cdot)\) das arestas permanece sempre externa a
 este formulário; a incerteza do modelo reside nas capacidades unitárias
 declaradas, não na fórmula de derivação de \(\rho_i\) a partir delas.
 
-\textbf{Alocação por atividade e semana.} A eficiência que multiplica a
-produção de cada atividade é indexada por atividade \textbf{e} por
-semana:
+\textbf{Mobilização e capacidade física.} O número de frentes
+\(m_{ij}\) determina os recursos realmente necessários, não uma
+eficiência artificial. A função de produção inclui todas as frentes e
+gargalos compartilhados:
 
-\[\varepsilon_{ij} = \eta_{s,ij}\cdot\eta_{p,j}\cdot\eta_{w,j}\]
+\[\boxed{F_i(m)=\max\text{-fluxo}(s_i,t_i;\mathcal G_i^D\mid_m)}\]
+\[\boxed{B_{ij}=F_i(m_{ij})h_id_i\eta_{p,j}\eta_{w,j}}\]
 
-decompondo um fator de alocação específico da equipe \(i\)
-(\(\eta_{s,ij}\)) e dois fatores de calendário global --- desempenho e
-clima ---, comuns a todas as atividades ativas na semana \(j\). O fator
-de alocação é definido diretamente a partir do grafo de sinergia: é a
-razão entre a capacidade efetiva de \(\mathcal{G}_i\) quando apenas
-\(m_{ij}\) frentes (de \(m_i^{\max}\) possíveis) estão mobilizadas na
-semana \(j\), e a capacidade plena do grafo com \(m_i^{\max}\) frentes:
-
-\[\boxed{\eta_{s,ij} = \frac{\max\text{-fluxo}(s_i\to t_i,\ \mathcal{G}_i^{D}\!\mid_{m_{ij}})}{\max\text{-fluxo}(s_i\to t_i,\ \mathcal{G}_i^{D}\!\mid_{m_i^{\max}})}}\]
-
-onde \(\mathcal{G}_i^D\!\mid_m\) denota o subgrafo de produção com a
-capacidade das arestas de fonte escalada para \(m\) frentes
-concorrentes. Para topologias paralelas puras (aditivas),
-\(\eta_{s,ij}=m_{ij}/m_i^{\max}\) por linearidade das capacidades; para
-topologias em série ou mistas, a razão captura a degradação por gargalo
-interno quando múltiplas frentes disputam etapas intermediárias de
-capacidade fixa (ex.: uma britagem centralizada alimentando várias
-frentes de escavação). Quando \(\mathcal{G}_i\) não está presente
-(produtividade calibrada externamente), adota-se
-\(\eta_{s,ij}\equiv m_{ij}/m_i^{\max}\) como aproximação linear padrão.
+A taxa \(\rho_i^{peak}=F_i(m_i^{max})\) não é produtividade de uma
+frente. O eventual quociente \(F_i(m)/F_i(m_i^{max})\) é
+\textbf{diagnóstico de capacidade}, não uma perda que se possa multiplicar
+novamente. Demanda física \(d_{gj}=\sum_i a_{ig}(m_{ij})\), presença
+\(x_{gj}\ge d_{gj}\) e standby \(s_{gj}=x_{gj}-d_{gj}\ge0\) são estados
+separados. A formulação e as contraprovas estão no contrato P10-A.
 
 \hypertarget{i.4-poluxedtica-de-mobilizauxe7uxe3o-w_i}{%
 \subsubsection{\texorpdfstring{I.4 Política de mobilização
@@ -357,7 +355,7 @@ não possui fórmula fechada. A busca que a resolve não é circular: para
 cada duração candidata \(N\), o perfil \(m_i(\tau;N)\) acima é uma
 função de \(\tau\) inteiramente determinada --- nada nela depende de um
 \(N_i\) ainda desconhecido ---, de modo que a produção acumulada
-\(\Pi(N)\equiv\sum_{\tau=0}^{N-1}\rho_i\varepsilon_{i\tau}(N)h_id_im_i(\tau;N)\)
+\(\Pi(N)\equiv\sum_{\tau=0}^{N-1}F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i\)
 pode ser calculada exatamente para qualquer \(N\) testado. O que não se
 conhece de antemão é apenas em qual \(N\) essa soma cruza \(Q_i\) --- a
 mesma situação de qualquer grandeza definida como ``o menor \(N\) tal
@@ -378,7 +376,7 @@ horizonte, nunca encolher. Como \(\eta_{s,i\tau}\) é um max-fluxo com a
 capacidade de fonte escalada por \(m_i(\tau;N)\) (§I.3.2), e max-fluxo é
 não-decrescente em qualquer capacidade de aresta,
 \(\varepsilon_{i\tau}(N)\) herda essa monotonicidade, e portanto também
-cada \(q_{i\tau}(N)=\rho_i\varepsilon_{i\tau}(N)h_id_im_i(\tau;N)\).
+cada \(q_{i\tau}(N)=F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i\).
 Somando as \(N\) semanas ``antigas'' (que só podem ter crescido) à
 semana nova --- que cai exatamente no piso \(m_i^1\ge1\) e contribui
 \(\rho_i\varepsilon_{i,N}h_id_im_i^1>0\), salvo calendário morto ---,
@@ -570,11 +568,12 @@ atividade efetivamente produz, semana a semana, considerando quantas
 frentes estão mobilizadas e quão eficiente é o trabalho naquela semana
 específica.
 
-Eficiência semanal por atividade:
-\(\varepsilon_{ij} = \eta_{s,ij}\cdot\eta_{p,j}\cdot\eta_{w,j}\in[0,1]\)
-(§30 da referência; \(\eta_{s,ij}\) conforme §I.3.2).
+Capacidade física e fatores exógenos semanais:
 
-\[q_{ij} = \rho_i\,\varepsilon_{ij}\,h_id_i\,m_{ij}\qquad\text{[un] — semanas interiores}\]
+\[\boxed{B_{ij}=F_i(m_{ij})h_id_i\eta_{p,j}\eta_{w,j},
+\quad q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}}\]
+
+Não aplicar nenhuma penalização adicional por frentes não mobilizadas.
 
 \textbf{Fechamento exato de escopo.} Seja \(j_i^1 \equiv j_i^0+N_i-1\) a
 última semana ativa de \(A_i\), obtida pela busca monotônica em \(N_i\)
@@ -595,7 +594,7 @@ fechamento sempre tem \(\varepsilon_{i,j_i^1}>0\) (uma semana com
 automaticamente avança para a semana seguinte). Define-se a
 \textbf{fração de fechamento}:
 
-\[\varphi_i \equiv \frac{q_{i,j_i^1}}{\rho_i\,\varepsilon_{i,j_i^1}\,h_id_i\,m_i(N_i-1)} \in (0,1]\]
+\[\varphi_i \equiv \frac{q_{i,j_i^1}}{F_i(m_i(N_i-1))\,h_id_i\,\eta_{p,j_i^1}\eta_{w,j_i^1}} \in (0,1]\]
 
 representando a fração da capacidade nominal da última semana
 efetivamente utilizada para completar o escopo. A frota mobilizada
