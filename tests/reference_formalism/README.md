@@ -39,3 +39,23 @@ answers with a finite decimal expansion are serialized exactly. Nonterminating
 rational answers fail closed with `ReferenceContractError` until a separately
 versioned rational-output contract is adopted. Golden comparison is rational
 and exact; a 29-digit perturbation is detected rather than rounded away.
+
+## P12-B: bounded physical-schedule feasibility oracle
+
+`calendar_rcpsp_oracle.py` is an independent exact-`Fraction` enumerator
+for at most seven activities across at most twelve absolute weeks. It
+implements quantity-based end-of-week Q–FS releases, nonnegative integer
+lags, weekly practicability/calendar/journey, full-week physical-resource
+occupancy even when output is zero, and exhaustive start-time enumeration.
+
+The associated `test_calendar_rcpsp_oracle.py` falsifies a previously unsafe
+post-solver shift: two successors released after a rainy predecessor must
+not simultaneously claim one unit of the same scarce resource. With a
+sufficient horizon, the oracle deterministically moves one successor;
+without enough weeks, it returns infeasible rather than certifying a
+contradictory schedule.
+
+These reference fixtures **do not** establish equivalence of production
+`04-cronograma` or certify #14/#15; those require integration tests against
+the actual scheduler and persisted certificates. The oracle is a
+deterministic independent witness for those future tests.
