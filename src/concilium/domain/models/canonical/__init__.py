@@ -59,8 +59,8 @@ from ._financeiro_resultado import (
 from ._indiretos_insumos import (
     AtividadeCustoCompleto,
     AtividadeInsumo,
-    CustoDiretoSemanalAtividade,
     Cronograma,
+    CustoDiretoSemanalAtividade,
     CustoIndiretoAtividade,
     EstoqueDelayCanonical,
     IndirectoCategoria,

@@ -19,8 +19,8 @@ from concilium.domain.models.canonical import (
 from ._dimensionamento_custos import _RepoCtx, _resolve_preco  # ty: ignore[unresolved-import]
 from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
     _build_comp_para_item,
-    _calc_custo_material_item,
     _calc_custo_cron,
+    _calc_custo_material_item,
     _calc_custo_mob_desmob_split,
     _calc_custo_mob_janela,
     _processar_equipamentos_item,
@@ -163,7 +163,9 @@ def _dimensionar_item_equipe(
         comp, item.item_id, item_custom, cpu, horas_dia, dias_uteis, preco_diesel, ctx, validacoes
     )
     _validar_materiais_item(comp, cpu, validacoes)
-    custo_mat = _calc_custo_material_item(comp, cpu, {producao.get("id"): producao} if producao else {}, ctx, horas_dia, dias_uteis)
+    custo_mat = _calc_custo_material_item(
+        comp, cpu, {producao.get("id"): producao} if producao else {}, ctx, horas_dia, dias_uteis
+    )
 
     # Sem calibração por custo_hora_total_referencia (removida): _processar_equipamentos_item
     # já prioriza preco_h_unitario embutido na composição sobre o catálogo geral (ADR-132),

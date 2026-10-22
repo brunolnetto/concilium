@@ -488,11 +488,7 @@ class TestSkill03Material:
     """ADR-030 D2: skill 03 calcula custo_material_mensal a partir de MaterialEquipe."""
 
     def test_custo_material_calculado_corretamente(self):
-        """Skill 05 não calcula custo_material_mensal — permanece 0.0 (validação via VAL-EQUIP-MAT).
-
-        O cálculo de custo de material é responsabilidade de etapas posteriores;
-        a skill 05 apenas valida consistência de cobertura via VAL-EQUIP-MAT-01/02.
-        """
+        """Skill 05 inclui consumo físico de material na estimativa mensal (ADR-030)."""
         insumo_mat = {
             "codigo": "MAT-BRITA",
             "tipo": "MATERIAL",
@@ -509,8 +505,9 @@ class TestSkill03Material:
             insumos_extra=[insumo_mat],
         )
 
-        # Skill 05 does not compute material costs; custo_material_mensal stays at default 0.0
-        assert equipe.custo_material_mensal == 0.0
+        # 0.8 m³/h * 8 h/dia * (30*5/7) dias/mês * R$ 60/m³ = R$ 8.228,57.
+        horas_mes = 8 * (30.0 * 5 / 7)
+        assert equipe.custo_material_mensal == round(0.8 * horas_mes * 60.0, 2)
 
     def test_custo_material_zero_sem_materiais(self):
         """Sem MaterialEquipe → custo_material_mensal == 0."""
@@ -619,10 +616,10 @@ class TestSkill03ModoEstimativa:
 
 
 class TestSkill03CustoTotalIntegrado:
-    """custo_fixo_mensal e custo_total incluem combustível (mas não material — skill 05 não calcula material)."""
+    """O total mensal inclui combustível e material de forma separada e reconciliável."""
 
     def test_custo_fixo_inclui_combustivel(self):
-        """custo_fixo_mensal = mo + eq_base + comb (material não é calculado na skill 05)."""
+        """A decomposição do custo fixo inclui as quatro categorias sem omitir MAT."""
         insumo_mat = {
             "codigo": "MAT-X",
             "tipo": "MATERIAL",
@@ -644,13 +641,13 @@ class TestSkill03CustoTotalIntegrado:
         result = run_equipes_diretas(can_cron, {"preco_diesel": 6.20}, cat)
         equipe = result.canonical.equipes_diretas[0]
 
-        # Skill 05 does not compute material costs; custo_material_mensal == 0.0
+        # Skill 05 calcula material a partir de taxa física * horas mobilizadas * preço unitário.
         custo_mo = equipe.custo_mao_obra_mensal
         custo_eq_base = equipe.custo_equipamentos_mensal
         custo_comb = equipe.custo_combustivel_total_mensal
         custo_mat = equipe.custo_material_mensal
 
-        assert custo_mat == 0.0
+        assert custo_mat == round(1.0 * 8 * (30.0 * 5 / 7) * 50.0, 2)
         assert equipe.custo_fixo_mensal == round(custo_mo + custo_eq_base + custo_comb + custo_mat, 2)
         # custo_combustivel uses horas_dia * (30.0 * dias_semana / 7) = 8 * 30 * 5/7
         horas = 8 * (30.0 * 5 / 7)

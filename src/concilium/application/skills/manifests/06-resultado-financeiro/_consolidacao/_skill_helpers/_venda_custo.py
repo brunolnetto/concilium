@@ -54,7 +54,9 @@ def _calc_venda_com_bdi(
     # material por natureza (uma compra), à mesma alíquota — sem categoria de BDI
     # dedicada (ver ADR-184 D4).
     custo_deficit_externo = cat.get("deficit_estoque_externo", 0.0)
-    artifacts = custos_atividades if custos_atividades is not None else _build_custos_atividades(canonical_in, bdi_rates)
+    artifacts = (
+        custos_atividades if custos_atividades is not None else _build_custos_atividades(canonical_in, bdi_rates)
+    )
     venda_direto_eq = sum(custo.custo_direto_com_bdi for custo in artifacts)
     venda_direto_eq += custo_deficit_externo * (1 + _bdi("material"))
 
@@ -147,7 +149,7 @@ def _formal_activity_cost_rates(equipe: object | None) -> tuple[float, float, fl
     )
     if rho <= 0 or horas_semana <= 0 or not any(gammas):
         return None
-    return rho, horas_semana, *gammas
+    return rho, horas_semana, gammas[0], gammas[1], gammas[2], gammas[3]
 
 
 def _activity_mobilization(equipe: object | None, act: object) -> MobilizacaoAtividade | None:

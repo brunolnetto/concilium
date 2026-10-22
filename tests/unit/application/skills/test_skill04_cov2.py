@@ -408,7 +408,7 @@ class TestExtractActivitiesWithLookups:
                 "precos_unitarios_sbdi": {"total": 0.0},
             }
         }
-        producao_lookup = {"P1": {"producao_horaria": 10.0, "producao_horaria": 10.0}}
+        producao_lookup = {"P1": {"producao_horaria": 10.0}}
         validacoes = []
         activities = _extract_activities(FakeCanonical(), cpu_lookup, producao_lookup, validacoes)
         assert len(activities) == 1
@@ -428,9 +428,7 @@ class TestResolveProductivityNoValue:
         cpu = {"codigo": "CPU-X", "producao_id_ref": "P1"}
         prod_lookup = {
             "P1": {
-                # producao_horaria is None → check producao_horaria
-                "producao_horaria": None,
-                # producao_horaria also None → skip
+                # Nenhuma produtividade horária utilizável.
                 "producao_horaria": None,
             }
         }
@@ -1523,7 +1521,10 @@ class TestConvertScheduleToDistribuicaoUnmapped:
 
         assert all(cell.qtd_acumulada == 0.0 for cell in distribution["A"].values())
         assert distribution["B"] == {}
-        assert any(validation.codigo == "VAL-CRON-PRECEDENCIA" and validation.status == "ERRO" for validation in validacoes)
+        assert any(
+            validation.codigo == "VAL-CRON-PRECEDENCIA" and validation.status == "ERRO"
+            for validation in validacoes
+        )
 
 
 # ---------------------------------------------------------------------------
