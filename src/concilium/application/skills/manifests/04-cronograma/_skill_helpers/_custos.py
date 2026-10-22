@@ -326,7 +326,7 @@ def _capacidade_semanal_por_frentes(
 
     graph_raw = (prod_item or {}).get("grafo_sinergia")
     if graph_raw:
-        typed = construir_producao_catalogo_para_sinergia(prod_item)
+        typed = construir_producao_catalogo_para_sinergia(prod_item or {})
         if typed is None or typed.grafo_sinergia is None:
             raise ValueError("invalid synergy graph; physical capacity cannot be certified")
         graph = typed.grafo_sinergia
@@ -370,7 +370,7 @@ def _build_dist_cell(
     **actually mobilized**, never an envelope based on m_i^max. The reduced
     physical output is weather/calendar/journey; a partial final week is a
     separately visible closure fraction phi, not a further productivity loss.
-    Legacy eta_s remains 1.0 to prevent downstream double application.
+    Legacy eta_s and eta_w remain 1.0 to prevent downstream double application.
     """
     import math
 
@@ -394,7 +394,7 @@ def _build_dist_cell(
     fracao_fechamento = (qtd_executada / capacidade_real) if capacidade_real > 0 else 0.0
     # An externally calibrated management loss must be its own versioned
     # physical input; M_max does not multiply the capacity again here.
-    eta_total = eta_p * fracao_fechamento
+    eta_total = eta_p  # closure is NOT an efficiency loss
     perda_exogena = max(0.0, q_max - capacidade_real)
     qtd_acumulada_nova = qtd_acumulada + qtd_executada
     pct = qtd_acumulada_nova / quantitativo if quantitativo > 0 else 0.0
@@ -403,16 +403,17 @@ def _build_dist_cell(
         qtd_executada=qtd_executada,
         qtd_acumulada=qtd_acumulada_nova,
         pct=round(pct, 4),
-        eficiencia=round(fracao_fechamento, 4),
+        eficiencia=1.0,  # control efficiency unknown; neutral in a planned schedule
         fator_clima=round(fator_clima, 4),
         fator_calendario=round(fator_calendario, 4),
         fator_jornada=round(fator_jornada, 4),
         fator_total=round(eta_total, 4),
         eta_s=1.0,  # neutral legacy field; not a loss
         eta_p=round(eta_p, 4),
-        eta_w=round(fracao_fechamento, 4),  # deprecated: equals phi, not efficiency
-        q_max_celula=round(q_max, 2),
-        perda_fisica=round(perda_exogena, 2),
+        eta_w=1.0,  # neutral legacy control factor; phi has its own field
+        fracao_fechamento=fracao_fechamento,
+        q_max_celula=q_max,
+        perda_fisica=perda_exogena,
     )
 
 __all__ = [

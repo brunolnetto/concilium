@@ -137,9 +137,9 @@ class DistribuicaoSemanal(BaseModel):
     loss. perda_fisica measures only lost exogenous productive capacity
     q_max_celula*(1-eta_p), not missing front teams or scope closure.
 
-    Transitional persisted fields: eta_s=1.0 neutral; eta_w and eficiencia
-    hold phi only for backwards serialisation compatibility; remove them
-    after dependent control analytics have versioned fields (#11/#26).
+    Transitional persisted fields: eta_s=eta_w=eficiencia=1.0 neutral,
+    while fracao_fechamento stores the exact physical closure independently.
+    Dependent control analytics need versioned migration (#11/#26).
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -148,7 +148,7 @@ class DistribuicaoSemanal(BaseModel):
     qtd_executada: float = Field(ge=0)
     qtd_acumulada: float = Field(ge=0)
     pct: float = Field(ge=0, le=1)
-    # ADR-082-cons: eficiencia = utilização m_ij (≠ praticabilidade; ver fator_total)
+    # Legacy control multiplier, neutral for an unobserved planned schedule
     eficiencia: float = Field(default=1.0, ge=0.0, le=1.0)
     # ADR-068: separacao explícita entre clima e calendario operacional.
     fator_clima: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -161,8 +161,10 @@ class DistribuicaoSemanal(BaseModel):
     eta_s: float = Field(default=1.0, ge=0.0, le=1.0)
     # PLANEJAMENTO: η_p = fator_clima · fator_calendario = η_clima · δ = η_plan (ADR-124).
     eta_p: float = Field(default=1.0, ge=0.0, le=1.0)
-    # Legacy serialization: closure fraction phi (not operational inefficiency).
+    # Legacy control multiplier: neutral until actual measured loss is available.
     eta_w: float = Field(default=1.0, ge=0.0, le=1.0)
+    # Real final-week scope fraction, never a productivity loss.
+    fracao_fechamento: float = Field(default=1.0, ge=0.0, le=1.0)
     q_max_celula: float = Field(default=0.0, ge=0.0)
     perda_fisica: float = Field(default=0.0, ge=0.0)
 
