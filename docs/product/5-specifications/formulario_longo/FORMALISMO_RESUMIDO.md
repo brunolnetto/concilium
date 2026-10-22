@@ -61,74 +61,42 @@ onde:
 
 > **Contrato normativo P10-A:** [CAPACIDADE_E_RECURSOS.md](CAPACIDADE_E_RECURSOS.md) substitui a eficiência de alocação η_s por capacidade física F_i(m). As fórmulas históricas de ρ·η_s·m e os custos derivados permanecem **não certificáveis** até #11.
 
-#### I.3.2 Grafo de sinergia e produtividade (§32 da referência)
+#### I.3.2 Capacidade da composição efetivamente mobilizada
 
-O **grafo de sinergia** $\mathcal{G}_i = (V_i,\ A_i^{\text{syn}},\ \text{cap})$ é um dígrafo ponderado sobre os recursos da equipe:
+O grafo \(\mathcal G_i^D\) representa a transformação de recursos em unidades físicas de \(Q_i\). A capacidade de \(m\) frentes **efetivamente mobilizadas** respeita as restrições compartilhadas e, pelo teorema max-flow/min-cut, vale
 
-| Elemento | Descrição |
-|---|---|
-| $V_i \supseteq R_i$ | nós: recursos + etapas intermediárias de produção |
-| $A_i^{\text{syn}} \subseteq V_i \times V_i$ | arestas: dependências de produção (fluxo de insumo para produto) |
-| $\text{cap}: A_i^{\text{syn}} \to \mathbb{R}_{>0}$ | capacidade da aresta [unid$_Q$ / unid$_{\text{tempo}}$] |
-| $D \subseteq V_i$ | **domínio de produção**: subgrafo que efetivamente gera a saída $Q_i$ |
-| $s_i$ | fonte virtual (insumos brutos) |
-| $t_i$ | sorvedouro virtual (produto final na unidade de $Q_i$) |
+$$\boxed{F_i(m)=\max\operatorname{fluxo}(s_i,t_i;\mathcal G_i^D|_m)
+=\min_{C\text{ corte}}\sum_{e\in C}\operatorname{cap}_m(e)}
+\quad[\mathrm{unid}_{Q_i}/h].$$
 
-**Produtividade via min-corte sobre $D$** (teorema max-fluxo / min-corte):
+\(F_i(0)=0\). Para frentes **independentes**, \(F_i(m)=m\rho_i^{front}\); para processos compartilhados, \(F_i(m)\) pode saturar. A taxa \(\rho_i^{peak}=F_i(m_i^{max})\) é capacidade de pico **da configuração**, não por frente. Produtividade externa calibrada deve declarar a configuração de referência, sem extrapolação linear implícita.
 
-$$\boxed{\rho_i = \max\text{-fluxo}(s_i \to t_i,\ \mathcal{G}_i^D) = \min_{C \,\in\, \text{cortes}(s_i,t_i)} \sum_{(u,v)\in C} \text{cap}(u,v) \qquad \text{[unid}_Q\text{/h]}}$$
+$$\boxed{B_{ij}=h_id_i F_i(m_{ij})\eta_{p,j}\eta_{w,j},
+\qquad q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}.}$$
 
-**Casos práticos** (topologias típicas de equipes de construção):
+**Não existe perda multiplicativa de alocação \(\eta_s\).** A escolha \(m_{ij}\) já entra em \(F_i(m_{ij})\); multiplicar por \(m\) outra vez equivale a dupla contagem. A razão \(\alpha_i(m)=F_i(m)/F_i(m_i^{max})\) é diagnóstico de capacidade, nunca penalidade adicional.
 
-| Topologia | Estrutura de $\mathcal{G}_i^D$ | Fórmula fechada |
-|---|---|---|
-| **Série** (gargalo único) | $r_1 \to r_2 \to \cdots \to r_k$ | $\rho_i = \min_{(u,v)\,\in\,\text{caminho}} \text{cap}(u,v)$ |
-| **Paralelo** (aditivo) | $s_i \rightrightarrows \{r_1,\ldots,r_k\} \rightrightarrows t_i$ | $\rho_i = \sum_{r} \text{cap}(s_i,r)$ |
-| **Misto** | combinação de série e paralelo | algoritmo Ford-Fulkerson sobre $\mathcal{G}_i^D$ |
+As frentes determinam recursos físicos por tipo \(g\): \(d_{gj}=\sum_i a_{ig}(m_{ij})\), onde \(a_{ig}(m)=m a_{ig}^{front}\) apenas em composições independentes. Presença contratual \(x_{gj}\ge d_{gj}\), standby \(s_{gj}=x_{gj}-d_{gj}\) e movimentos pertencem ao problema econômico §IX e **não** reduzem \(F_i(m)\).
 
-**Derivação de $\rho_i$.** Quando o grafo de sinergia $\mathcal{G}_i$ está presente no cadastro da equipe, $\rho_i$ é derivado por `producao_from_grafo(G_i)` via min-corte — o campo `producao_horaria` no artefato `Producao` funciona como cache auditável do resultado. Quando ausente, $\rho_i$ é entrada direta, calibrada externamente (ficha técnica). A calibração das capacidades $\text{cap}(\cdot)$ das arestas permanece sempre externa a este formulário; a incerteza do modelo reside nas capacidades unitárias declaradas, não na fórmula de derivação de $\rho_i$ a partir delas.
+**Contraprovas:** \(F(m)=10m\), \(m=2\), \(h_id_i=40\) => \(q=800\) unidades, mesmo se \(m_i^{max}=4\). Já \(F(m)=\min(10m,15)\) entrega \(600\) un/semana tanto com duas quanto com quatro frentes, mas quatro frentes requerem mais recursos. Ver [CAPACIDADE_E_RECURSOS.md](CAPACIDADE_E_RECURSOS.md) (#10/#16).
 
-**Mobilização e capacidade da composição física.** A quantidade de frentes mobilizadas $m_{ij}$ é decisão sobre os recursos instalados, não um fator de ineficiência:
+### I.4 Política de mobilização \(W_i\)
 
-$$\boxed{F_i(m)=\max\text{-fluxo}(s_i,t_i;\mathcal G_i^D|_m)}$$
+$$W_i=(m_i^0,\mu_i^+,m_i^1,\mu_i^-,m_i^{max})
+\in\mathbb N_{>0}\times\mathbb N_{\ge0}\times\mathbb N_{>0}\times\mathbb N_{\ge0}\times\mathbb N_{>0}.$$
 
-$$\boxed{\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j},\quad B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog}}.$$
+\(m_i^0,m_i^1\le m_i^{max}\), com rampas não negativas. Para \(\tau=j-j_i^0\in\{0,\ldots,N-1\}\):
 
-$\rho_i^{peak}=F_i(m_i^{max})$ é a capacidade de referência, não taxa por frente. Com composição independente vale $F_i(m)=m\rho_i^{front}$; com gargalo compartilhado, a produção pode saturar. Não se aplica $\eta_s$ como perda. A razão $F_i(m)/F_i(m_i^{max})$ é somente diagnóstico.
+$$\boxed{m_i(\tau;N)=\min\{m_i^0+\mu_i^+\tau,\ m_i^{max},\ m_i^1+\mu_i^-(N-1-\tau)\}.}$$
 
-Demandas de recurso físico $d_{gj}=\sum_i a_{ig}(m_{ij})$ decorrem do mesmo $m$; presenças contratadas $x_{gj}\ge d_{gj}$ e standby $s_{gj}=x_{gj}-d_{gj}$ pertencem ao pool, sem alterar $F_i$. Veja a [prova e contraprovas](CAPACIDADE_E_RECURSOS.md).
+O retângulo de \(m_i^{max}\) frentes exige **simultaneamente** \(\mu_i^+=\mu_i^-=0\) e \(m_i^0=m_i^1=m_i^{max}\). Fora da atividade \(m_{ij}=0\) e \(F_i(0)=0\). A ocupação semanal \([j_i^0,j_i^0+N_i)\) é semiaberta.
 
-### I.4 Política de mobilização $W_i$
+Dado o início absoluto \(j_i^0\), a capacidade acumulada de uma duração candidata é
 
-$$W_i = (m_i^0,\ \mu_i^+,\ m_i^1,\ \mu_i^-,\ m_i^{\max}) \in \mathbb{N}_{>0}\times\mathbb{N}_{\ge0}\times\mathbb{N}_{>0}\times\mathbb{N}_{\ge0}\times\mathbb{N}_{>0}$$
+$$\Pi_i(N;j_i^0)=h_id_i\sum_{\tau=0}^{N-1}
+F_i(m_i(\tau;N))\eta_{p,j_i^0+\tau}\eta_{w,j_i^0+\tau}.$$
 
-| Símbolo | Significado |
-|---|---|
-| $m_i^0$ | nº de frentes na semana de início |
-| $\mu_i^+$ | taxa de ramp-up [frentes/semana] |
-| $m_i^{\max}$ | nº máximo de frentes concorrentes (platô) |
-| $\mu_i^-$ | taxa de ramp-down [frentes/semana] |
-| $m_i^1$ | nº de frentes na última semana (piso final, nunca zero) |
-
-**Perfil trapezoidal** — mínimo de três retas, semana relativa $\tau = j - j_i^0 \in \{0,\ldots,N_i-1\}$:
-
-$$\boxed{m_i(\tau) = \min\!\Big(m_i^0 + \mu_i^+\tau,\quad m_i^{\max},\quad m_i^1 + \mu_i^-(N_i-1-\tau)\Big)}$$
-
-**Caso degenerado retangular** — quando $\mu_i^+ = \mu_i^- = 0$:
-
-$$\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max} \quad \forall\,\tau \in \{0,\ldots,N_i-1\}$$
-
-Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$ reduz-se a um único parâmetro de frota, constante durante toda a atividade.
-
-$$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
-
-**Determinação de $N_i$.** Para perfis não-retangulares, $N_i$ não possui fórmula fechada. A busca que a resolve não é circular: para cada duração candidata $N$, o perfil $m_i(\tau;N)$ acima é uma função de $\tau$ inteiramente determinada — nada nela depende de um $N_i$ ainda desconhecido —, de modo que a produção acumulada $\Pi(N)\equiv\sum_{\tau=0}^{N-1}F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i$ pode ser calculada exatamente para qualquer $N$ testado. O que não se conhece de antemão é apenas em qual $N$ essa soma cruza $Q_i$ — a mesma situação de qualquer grandeza definida como "o menor $N$ tal que uma condição monotônica se satisfaz", sem mistério adicional.
-
-A validade da busca depende de $\Pi$ ser monotônica em $N$ — e essa monotonicidade precisa ser justificada com cuidado, porque $N$ aparece dentro do próprio perfil (no termo de ramp-down), de modo que aumentar $N$ não apenas acrescenta uma semana: redesenha o perfil inteiro. Ainda assim, a conclusão se sustenta. Fixado qualquer $\tau$, apenas o terceiro termo do $\min$ que define $m_i(\tau;N)$ depende de $N$, e depende de forma crescente ($m_i^1+\mu_i^-(N-1-\tau)$ cresce com $N$ quando $\mu_i^->0$); os outros dois termos ficam parados. Um mínimo em que um termo só sobe e os demais são fixos não pode diminuir, logo $m_i(\tau;N)$ é não-decrescente em $N$ para cada $\tau$ fixo — as semanas "antigas" podem crescer ao alongar o horizonte, nunca encolher. Como $F_i(m_i(\tau;N))$ é um max-fluxo com a capacidade de fonte escalada por $m_i(\tau;N)$ (§I.3.2), e max-fluxo é não-decrescente em qualquer capacidade de aresta, $\varepsilon_{i\tau}(N)$ herda essa monotonicidade, e portanto também cada $q_{i\tau}(N)=F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i$. Somando as $N$ semanas "antigas" (que só podem ter crescido) à semana nova — que cai exatamente no piso $m_i^1\ge1$ e contribui $\rho_i\varepsilon_{i,N}h_id_im_i^1>0$, salvo calendário morto —, obtém-se $\Pi(N+1)>\Pi(N)$: $\Pi$ é estritamente crescente a cada passo, inclusive no caso degenerado retangular, onde a semana nova sozinha já garante o aumento. Uma função inteira estritamente monotônica cruza qualquer limiar $Q_i$ em exatamente um ponto, o que garante a convergência da busca por incremento simples (Parte XIV, Fase 1) — a busca binária é uma alternativa equivalente quando o custo de reavaliação por semana for relevante.
-
-O perfil testado em cada tentativa não precisa estar "certo" antes de $N_i$ convergir: ele é, por definição, o perfil correto para aquele $N$ testado, e é descartado assim que falha o teste de limiar — nada é reaproveitado entre tentativas. O perfil que sobra, construído em $N=N_i^\star$, é o único que os cálculos das partes seguintes utilizam: $\{m_{ij}\} \leftarrow \text{RampProfile.build}(N_i, W_i)$ é exato, sem resíduo das tentativas rejeitadas. Restrição de consistência: $r + d \le N_i$.
-
-Um detalhe de ordem é necessário para que essa busca sequer possa consultar $\eta_{p,j}, \eta_{w,j}$ (indexados pela semana **absoluta** $j$): $j_i^0$ precisa estar definido antes de a busca por $N_i$ começar. Como $j_i^0$ (§I.5) depende apenas de atividades predecessoras — já resolvidas pela ordem topológica em que as atividades são processadas —, nunca de $N_i$ ou $\{m_{ij}\}$ da própria atividade $i$, ele pode e deve ser calculado primeiro, sem gerar dependência circular alguma com a busca que vem a seguir (Parte XIV, Fase 1).
+A duração é o menor \(N\) admissível que fecha \(Q_i\) e satisfaz capacidade, predecessores e horizonte. O calendário absoluto deve ser conhecido **antes** da busca; mudar início ou duração exige revalidar restrições RCPSP. **Não declarar convergência garantida** sem produtividade futura e horizonte suficientes (#12/#15). A condição histórica \(r+d\le N\) está indefinida e não constitui gate.
 
 ### I.5 Predecessores e completude parcial
 
@@ -360,85 +328,27 @@ $R_i=1$ exatamente quando $\bar\varepsilon_i=1$: todo o desvio de catálogo nasc
 
 ## Parte IX — Pool de Recursos Contratuais (Perpetuação)
 
-Até aqui, cada atividade foi tratada isoladamente. Na prática, porém, o mesmo equipamento ou a mesma equipe frequentemente passa de uma atividade para outra sem ser desmobilizado, evitando o custo e o tempo de tirá-lo do canteiro e trazê-lo de volta depois. Esta seção trata desse aproveitamento entre atividades: quando vale a pena manter um recurso parado por alguns dias esperando a próxima frente de trabalho, e quando é mais barato desmobilizar e remobilizar.
+### IX.1 Presença e ociosidade são grandezas contratuais
 
-### IX.1 Tipos, instâncias e demanda semanal
+Se \(a_{ig}(m)\) indica unidades do tipo \(g\) necessárias para operar \(m\) frentes, sejam
 
-$\mathcal{T}$ = conjunto de tipos de recurso (união de categorias e especificação sobre todos os $R_i$).
+$$\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij}),\
+x_{gj}\ge d_{gj},\ s_{gj}=x_{gj}-d_{gj}\ge0.}$$
 
-**Demanda semanal por tipo:**
+\(d\) é demanda física; \(x\) é presença sob contrato; \(s\) é recurso **pago sem demanda**, não equipe que deixou de ser mobilizada. Frentes independentes obedecem \(a_{ig}(m)=m n_g^i\); infraestrutura compartilhada exige demanda específica.
 
-$$n_j(\tau) = \sum_{i\,:\,j\in[j_i^0,\,j_i^0+N_i-1]} m_{ij}\cdot n_{\tau}^{i}$$
+### IX.2 Custo mínimo de permanência e movimentos
 
-**Pool físico** $\{r\}$: conjunto de instâncias com $\text{type}(r)\in\mathcal{T}$, taxa semanal $c_r^{\text{sem}}$ (igual em semanas ativas e ociosas — §IX.3), e custos $c_r^{\text{mob}}$, $c_r^{\text{demob}}$.
+$$\boxed{\min \sum_{gj}\big(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj}\big)
++\sum_{e\in E}(c_e^{mob}+c_e^{demob})}$$
 
-$$qt_\tau = \max_j n_j(\tau) \qquad\text{[tamanho do pool de tipo }\tau\text{]}$$
+sujeito às restrições de capacidade, cobertura, disponibilidade, permanência e lead time. Cada movimento entra **uma única vez** na função objetivo/diário. No regime-base homogêneo, \(c^{act}=c^{idle}=c^{sem}\), portanto \(C^{pool,o}=\sum_{gj}c_g^{sem}x_{gj}\), separando MOB/DEMOB para contabilização indireta; standby descontado ou off-hire exigem variante tipada (#13).
 
-### IX.2 Problema de minimização e condição de perpetuação
+Entre blocos separados por \(k\) semanas **vazias**, manter é viável se \(k\le G_g^{viável}\) e economicamente preferível quando \(k\,c_g^{idle}\le c_g^{demob}+c_g^{mob}\). No empate, preferir menos movimentos. Exemplo: demanda de um equipamento nas semanas 1 e 3, standby R$100 na semana 2, remobilização R$160 => manter é ótimo, embora fisicamente ocioso. Com transições gratuitas, manter standby de custo positivo não é ótimo.
 
-$$\min_{\{r\},\{[j_r^0,j_r^1]\}} \ \underbrace{\sum_r\sum_{j=j_r^0}^{j_r^1} c_r^{\text{ativo/standby}}(j)}_{\text{permanência}} + \underbrace{\sum_r (c_r^{\text{mob}}+c_r^{\text{demob}})}_{\text{mob/demob}}$$
+### IX.3 Utilização e limite do certificado
 
-$$\text{s.a.}\quad \bigl|\{r:\text{type}(r)=\tau,\ j\in[j_r^0,j_r^1]\}\bigr| \ge n_j(\tau) \quad\forall j,\,\forall\tau$$
-
-Para tipo único fungível (instâncias perfeitamente substituíveis, com custo de permanência e de mob/demob homogêneos), a Parte XIV (Fase 4) apresenta um algoritmo exato por decomposição em níveis do perfil de demanda.
-
-**Condição de perpetuação** (entre duas alocações consecutivas, com gap em semanas):
-
-$$\text{gap}_{uv} < G_r^* \equiv \frac{c_r^{\text{mob}}+c_r^{\text{demob}}}{c_r^{\text{sem}}} \quad\Longleftrightarrow\quad c_r^{\text{mob}}+c_r^{\text{demob}} > c_r^{\text{sem}}\cdot\text{gap}_{uv}\qquad\text{[$c_r^{\text{sem}}$ em R\$/sem]}$$
-
-**Cap absoluto:** $\text{gap}_{uv} > G_r^{\text{viável}} \Rightarrow$ não perpetuar, independente de custo.
-
-**Estrutura de cadeia** $\mathcal{C}_p = (i_1 \to i_2 \to \cdots \to i_{n_p})$: cada par consecutivo $(i_k, i_{k+1})$ satisfaz o critério. Uma cadeia gera **um** par $(c_r^{\text{mob}}, c_r^{\text{demob}})$ mais standby nos gaps internos.
-
-### IX.3 Frações invariantes por recurso
-
-Como o custo dos recursos contratuais é definido a partir do **tempo de permanência** ($c_r^{\text{sem}}$ por semana ativa, $c_r^{\text{standby}}$ por semana de gap), a separação em fração ativa e fração standby é um **invariante temporal** de cada instância — completamente determinado pela cadeia de perpetuação, sem dependência de parâmetros de custo.
-
-Para cada instância $r$ com cadeia $\mathcal{C}_p = (i_1 \to \cdots \to i_{n_p})$:
-
-$$T_r^{\text{ativo}} = \sum_{k=1}^{n_p} N_{i_k} \qquad\text{[semanas produtivas]}$$
-
-$$T_r^{\text{standby}} = \sum_{k=1}^{n_p-1} \text{gap}_{i_k,i_{k+1}} \qquad\text{[semanas de standby interno]}$$
-
-$$T_r^{\text{perm}} = T_r^{\text{ativo}} + T_r^{\text{standby}} \qquad\text{[total de semanas de permanência]}$$
-
-$$\boxed{f_r^{\text{standby}} = \frac{T_r^{\text{standby}}}{T_r^{\text{perm}}} \in [0,1), \qquad f_r^{\text{ativo}} = 1 - f_r^{\text{standby}}}$$
-
-**Propriedade invariante:** dados o schedule $\{(j_i^0, N_i)\}$ e as cadeias de perpetuação, $f_r^{\text{standby}}$ é completamente determinado. Não depende de $c_r^{\text{sem}}$, $c_r^{\text{standby}}$, $c_r^{\text{mob}}$ nem $c_r^{\text{demob}}$ — é uma grandeza puramente temporal, intrínseca ao padrão de implantação do recurso.
-
-**Casos:**
-
-| Situação | $f_r^{\text{standby}}$ |
-|---|---|
-| Cadeia singleton ($n_p=1$, sem perpetuação) | $0$ |
-| Perpetuação com gaps pequenos | $\in(0,1)$, próximo de 0 quando atividades são densas |
-| Recurso em standby quase todo tempo | $\to 1$ (não deve ocorrer: perpetuação só é racional quando gap $< G_r^*$) |
-
-**Taxa efetiva semanal.** A separação pool/estoque implica $c_r^{\text{standby}} = c_r^{\text{sem}}$: EQ (aluguel) e MO (salário + CLT) custam igual em semanas ativas e ociosas — os consumíveis, que escalariam com produção, já foram segregados em $C^{\text{estoque}}$. Portanto:
-
-$$\boxed{\bar{c}_r = c_r^{\text{sem}} \qquad \text{(pool puro: standby = ativo)}}$$
-
-A fração $f_r^{\text{standby}}$ é **diagnóstico temporal** puro — não afeta o custo, quantifica o grau de ociosidade da instância. O benefício da perpetuação é exclusivamente a redução de $C^{MOB,eq,o}$ (mob/demob evitados), ao custo de semanas adicionais de permanência a $c_r^{\text{sem}}$.
-
-### IX.4 Custo do pool
-
-$$\boxed{C^{\text{pool},o} = \sum_r T_r^{\text{perm}} \cdot c_r^{\text{sem}}}$$
-
-$$C^{\text{pool},\beta} = \sum_r (1+\beta_{\text{cat}(r)})\cdot T_r^{\text{perm}}\cdot c_r^{\text{sem}}$$
-
-**Custo indireto de mob/demob do pool** (por cadeia, com $\beta^{IND}$):
-
-$$C^{MOB,eq,o} = \sum_r N_{\text{chains}}^r \cdot (c_r^{\text{mob}}+c_r^{\text{demob}}), \qquad C^{MOB,eq,\beta} = (1+\beta^{IND})\cdot C^{MOB,eq,o}$$
-
-**Reconciliação com a Parte VI:**
-
-$$\boxed{C^{\mathrm{pool}} \;\ge\; \sum_i C_i^{\mathrm{K,op}}}$$
-
-com igualdade apenas se nenhum recurso é perpetuado entre atividades distintas e $f_r^{\text{standby}}=0\ \forall r$: a soma por atividade conta apenas semanas ativas ($M_i$), enquanto $C^{\mathrm{pool}}=\sum_rT_r^{\text{perm}}c_r^{\text{sem}}$ inclui também as semanas de standby interno das cadeias perpetuadas ($T_r^{\text{standby}}$) — custo real de permanência sem contrapartida de produção. $C_i^{\mathrm{K,op}}$ permanece grandeza de diagnóstico por atividade (quanto cada atividade consumiria de recurso contratual se operasse isoladamente); o desembolso contratual real do projeto — incluindo o custo de manter recursos parados entre mobilizações — é $C^{\mathrm{pool}}$.
-
-**Escopo do algoritmo de dimensionamento.** A decomposição por níveis empregada na Parte XIV, Fase 4 é exata para um tipo de recurso fungível homogêneo — instâncias perfeitamente substituíveis entre si, com custo de permanência e de mobilização/desmobilização idênticos. Variantes multi-tipo com recursos não perfeitamente substituíveis (capacidades ou custos heterogêneos dentro do mesmo tipo nominal) constituem um problema de otimização combinatória distinto, de complexidade superior à do caso fungível (cf. Bertossi, Carraresi & Gallo 1987); nesses casos, os tipos devem ser subdivididos em subtipos homogêneos antes de aplicar o algoritmo desta seção.
-
----
+Para cadeia contratual \(r\), \(T_r^{perm}=T_r^{act}+T_r^{idle}\); a fração \(f_r^{idle}=T_r^{idle}/T_r^{perm}\) (se \(T_r^{perm}>0\)) é diagnóstico temporal, **não** perda produtiva. A decomposição em níveis da demanda garante ótimo exato apenas para **pool homogêneo fungível com \(m\) e cronograma fixados**; não prova ótimo global de escolha simultânea \(m+\)cronograma\(+\)pool (#16). O custo real é reconstruído das instâncias/semana, nunca de envelopes individuais contados em duplicidade (#17/#20).
 
 ## Parte X — Consumíveis: Aquisição, Demanda e Reposição
 
@@ -595,39 +505,19 @@ $$\bar\beta^I = C^{I,\beta}/C^I-1$$
 
 ## Parte XIII — Síntese: Preço Total e Viabilidade
 
-Esta seção final reúne tudo que foi calculado: soma-se o custo direto e indireto, com e sem BDI, compara-se o resultado com o envelope de catálogo, e verifica-se se a proposta comercial resultante é viável frente ao piso regulatório.
+Custo efetivo conciliado: \(C^D=C^{pool}+C^{cons}\), \(C^{tot}=C^D+C^I\); standby, MOB/DEMOB, estoque e indiretos são lançados **uma vez**. BDI granular por categoria não é reaplicado sobre a soma:
 
-**Custo de catálogo** (agregado por atividade):
+$$\boxed{P=C^{D,\beta}+C^{I,\beta},\qquad \mu=\frac{P-C^{tot}}P}\quad (P>0).$$
 
-$$C^{\mathrm{cat}} = \sum_{i\in\mathcal{A}} C_i^{\mathrm{cat}} = \sum_{i\in\mathcal{A}} \frac{\gamma_i^{\mathrm{cat}}\,Q_i}{\rho_i}\qquad\text{[R\$ — envelope de catálogo, base de precificação]}$$
+A base de catálogo \(C^{cat}>0\) só é válida após declarar a **composição física e a base contratual de referência** (#11/#21). Quando comparável:
 
-$$C^{\mathrm{tot}} = C^D+C^I \qquad\text{[R\$ — custo operacional total, sem BDI]}$$
+$$R=\frac{C^{tot}}{C^{cat}},\quad
+\mathrm{BDI}^{impl}=\frac P{C^{cat}}-1,\quad
+\beta^{eq}=\frac P{C^{tot}}-1=\frac{1+\mathrm{BDI}^{impl}}R-1.$$
 
-**Preço de venda e BDI implícito.** O preço é a soma dos blocos direto e indireto já com a camada granular de $\beta$ aplicada (Partes VIII e XII):
+**Atingir o piso de BDI não garante rentabilidade.** É necessário testar \(P>C^{tot}\) (ou margem mínima contratual) independentemente: equivale a \(\mathrm{BDI}^{impl}>R-1\), condição que não decorre de \(\mathrm{BDI}^{impl}\ge\mathrm{BDI}_{min}\). O piso regulatório só pode ser comparado à base legal aplicável; base não compatível => \`UNKNOWN\`.
 
-$$P \equiv C^{D,\beta}+C^{I,\beta} \qquad\text{[R\$ — preço de venda]}$$
-
-O BDI não é um segundo parâmetro de markup somado independentemente sobre $C^{\mathrm{cat}}$: é a taxa agregada, **derivada**, resultante de aplicar a camada granular de $\beta$'s — uma por categoria de recurso ($\beta^{EQ},\beta^{MO},\beta^{MAT},\beta^{COMB},\beta^{IND}$) — e agregá-la ao nível do envelope de catálogo:
-
-$$\boxed{\mathrm{BDI} \equiv \frac{P}{C^{\mathrm{cat}}}-1}$$
-
-Não há dupla contagem: existe uma única camada de markup, aplicada item a item nas Partes VIII e XII; o BDI é apenas a leitura agregada dessa mesma camada, útil para comparação com o piso regulatório. Categorias de custo indireto que fisicamente compõem a estrutura clássica de BDI (administração central, canteiro) já estão computadas dentro de $C^{I,\beta}$ com seu próprio $\beta^{IND}$ — não devem ser adicionadas novamente como percentual do BDI agregado; $\mathrm{BDI}_{\mathrm{TCU,min}}$ funciona como **piso de verificação** sobre a taxa agregada resultante, não como um segundo insumo a ser somado.
-
-$$R = C^{\mathrm{tot}}/C^{\mathrm{cat}}, \qquad \beta^{\mathrm{eq}} = P/C^{\mathrm{tot}}-1, \qquad \mu = (P-C^{\mathrm{tot}})/P$$
-
-**Condição de viabilidade:**
-
-$$\boxed{\mathrm{BDI} \;\ge\; \mathrm{BDI}_{\mathrm{TCU,min}}}$$
-
-$\mathrm{BDI}_{\mathrm{TCU,min}}$ é determinado pela fórmula multiplicativa TCU (overhead não capturado nos $\beta$'s granulares, lucro mínimo e tributos) — é o único piso de verificação que este formulário exige.
-
-Poderia parecer que uma segunda verificação também é necessária: garantir que o preço pelo menos cubra o custo realmente incorrido, isto é, $\mathrm{BDI}\ge R-1$ (equivalente a $P\ge C^{\mathrm{tot}}$). Essa condição, porém, não é uma segunda verificação independente — é consequência aritmética automática de $\mathrm{BDI}$ e $R$, ambos já calculados, não um novo insumo a se checar à parte. Substituindo $P=C^{\mathrm{cat}}(1+\mathrm{BDI})$ e $C^{\mathrm{tot}}=R\cdot C^{\mathrm{cat}}$ em $\beta^{\mathrm{eq}}=P/C^{\mathrm{tot}}-1$:
-
-$$\beta^{\mathrm{eq}} = \frac{C^{\mathrm{cat}}(1+\mathrm{BDI})}{R\cdot C^{\mathrm{cat}}}-1 = \frac{1+\mathrm{BDI}}{R}-1$$
-
-logo $\beta^{\mathrm{eq}}>0 \iff 1+\mathrm{BDI}>R \iff \mathrm{BDI}>R-1$ — as duas expressões descrevem exatamente a mesma coisa, apenas escritas de formas diferentes. Verificar $\mathrm{BDI}\ge\mathrm{BDI}_{\mathrm{TCU,min}}$ já é suficiente; não há necessidade de comparar $\mathrm{BDI}$ com $R-1$ à parte. $R$ permanece útil como **diagnóstico**, não como insumo de decisão: evidencia quanto do custo provém de ineficiência prevista, ajudando a explicar por que o BDI resultante ficou alto ou baixo — não substitui nem complementa a verificação regulatória.
-
----
+Certificação GO exige fechamento físico, capacidade/recursos/estoque factíveis, reconciliação financeira, rentabilidade aprovada e conformidade regulatória em bases válidas. Enquanto as identidades lineares por frente de §§III/V–VIII não forem rederivadas para \(F(m)\) não linear (#11), **não emitir GO no regime geral** (#21/#23).
 
 ## Parte XIV — Algoritmo
 
