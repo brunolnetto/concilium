@@ -27,7 +27,8 @@ Partial final week:
 from __future__ import annotations
 
 import math
-from typing import Callable, ClassVar
+from collections.abc import Callable
+from typing import ClassVar
 
 from concilium.domain.models.planning.mobilizacao import (
     CurvaForca,
