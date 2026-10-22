@@ -159,12 +159,14 @@ def _build_activity_distribuicao(
     fator_calendario_semanal: dict[str, float],
     fator_jornada: float = 1.0,
     producao_lookup: dict[str, dict] | None = None,
+    horas_semana: float | None = None,
 ) -> tuple[dict[str, DistribuicaoSemanal], float]:
     """Busca o menor N_i que fecha Q no calendário disponível e o materializa."""
     n_max = max(1, n_max)
     prod_item = (producao_lookup or {}).get(cpu.get('producao_id_ref'))
     capacidade_nominal = _capacidade_semanal_por_frentes(
-        producao_semanal_base, n_max, n_max, prod_item
+        producao_semanal_base, n_max, n_max, prod_item,
+        horas_semana=horas_semana,
     ) * fator_jornada
     duration_initial = max(1, math.ceil(item.quantitativo / capacidade_nominal)) if capacidade_nominal > 0 else 1
     duration_max = len(semanas_obra) - sa.start_week
@@ -183,7 +185,8 @@ def _build_activity_distribuicao(
             fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
             num_equipes = n_max * fraction
             capacidade = _capacidade_semanal_por_frentes(
-                producao_semanal_base, num_equipes, n_max, prod_item
+                producao_semanal_base, num_equipes, n_max, prod_item,
+                horas_semana=horas_semana,
             )
             capacidades.append(capacidade * fator_clima * fator_calendario * fator_jornada)
         if sum(capacidades) < item.quantitativo:
@@ -204,7 +207,8 @@ def _build_activity_distribuicao(
                 qtd_acumulada,
                 fator_jornada=fator_jornada,
                 capacidade_fisica_semanal=_capacidade_semanal_por_frentes(
-                    producao_semanal_base, num_equipes, n_max, prod_item
+                    producao_semanal_base, num_equipes, n_max, prod_item,
+                    horas_semana=horas_semana,
                 ),
             )
             qtd_acumulada = cell.qtd_acumulada
@@ -352,6 +356,7 @@ def _convert_schedule_to_distribuicao(
                 fator_calendario_semanal,
                 fator_jornada=regime.eta_jornada,
                 producao_lookup=producao_lookup,
+                horas_semana=regime.horas_dia * regime.dias_semana,
             )
             _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, validacoes)
             distribuicao_por_item[item_id] = distribuicao

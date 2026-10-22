@@ -303,6 +303,8 @@ def _capacidade_semanal_por_frentes(
     num_equipes: float,
     n_max: float,
     prod_item: dict[str, Any] | None = None,
+    *,
+    horas_semana: float | None = None,
 ) -> float:
     """Physical installed weekly capacity F(m)*H; no team-allocation loss.
 
@@ -319,6 +321,8 @@ def _capacidade_semanal_por_frentes(
 
     if producao_semanal_base < 0 or not isfinite(producao_semanal_base):
         raise ValueError("weekly productivity must be finite and nonnegative")
+    if horas_semana is not None and (not isfinite(horas_semana) or horas_semana <= 0):
+        raise ValueError("contractual weekly hours must be positive and finite")
     if n_max <= 0:
         raise ValueError("maximum number of fronts must be positive")
     if num_equipes == 0:
@@ -333,13 +337,15 @@ def _capacidade_semanal_por_frentes(
         derived = derivar_producao_horaria(graph, typed.composicao_padrao_equipe)
         if derived.producao_horaria_derivada is None:
             raise ValueError("synergy graph has no productive physical capacity")
-        # Work hours are recovered from the original weekly reference,
-        # which is calibrated in its own catalog unit. The derived rate
-        # is authoritative for F(m), including legacy equipment bottlenecks.
-        catalog_rate = float((prod_item or {}).get("producao_horaria") or 0.0)
-        if not isfinite(catalog_rate) or catalog_rate <= 0:
-            raise ValueError("graph capacity requires positive catalog hourly reference")
-        hours = producao_semanal_base / catalog_rate
+        # The hours H in F_i(m) * H are contractual. Never recover H by
+        # dividing weekly P*H by catalog P: the selected CPU productivity
+        # may be independently calibrated or the graph may supply the
+        # authoritative bottleneck, and those hourly rates can differ.
+        # Reconstructing H from mismatched P values silently invents a
+        # shorter workweek and breaks scope closure (P10-B regression).
+        if horas_semana is None:
+            raise ValueError("graph capacity requires explicit contractual weekly hours")
+        hours = horas_semana
         if graph.arestas_fluxo:
             # Explicit flow graph: source supply scales with mobilized
             # fronts, downstream shared resources do not.

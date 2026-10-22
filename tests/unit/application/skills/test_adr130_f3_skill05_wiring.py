@@ -208,11 +208,16 @@ def _make_canonical(item_id: str = "EAP-01") -> CanonicalModel:
     return CanonicalModel(meta=meta, projeto=proj, eap=eap, praticabilidade=prat)
 
 
-def _physical_capacity_first_week(prod: dict, item_id: str = "EAP-01") -> float:
+def _physical_capacity_first_week(
+    prod: dict, item_id: str = "EAP-01", cpu_hourly_override: float | None = None
+) -> float:
     """Read the materialized physical F(m)*H from skill-04, not cost proxies."""
     can = _make_canonical(item_id=item_id)
+    catalog = _catalogo(prod)
+    if cpu_hourly_override is not None:
+        catalog["cpus"][0]["cpu_meta"] = {"producao_horaria": cpu_hourly_override}
     out = run_cronograma(
-        can, {"num_equipes_por_item": {item_id: {"2026-W23": 1}}}, _catalogo(prod)
+        can, {"num_equipes_por_item": {item_id: {"2026-W23": 1}}}, catalog
     )
     assert out.canonical.cronograma is not None
     dist = out.canonical.cronograma.scheduled_activities[0].distribuicao_semanal
@@ -463,6 +468,13 @@ class TestDimensionamentoEndToEndComGrafoSinergia:
         sinergia_com = [v for v in validacoes_com if v.codigo.startswith("VAL-SINERGIA")]
         assert sinergia_sem == []
         assert sinergia_com == []  # dados reais calibrados: sem divergência/gargalo inconsistente
+
+    def test_horas_contratuais_nao_derivam_da_produtividade_do_catalogo(self):
+        """F(m)*40 h: a taxa de CPU pode diferir do catálogo e do grafo."""
+        prod = _prod_dict(grafo_sinergia=_grafo_sinergia_real())
+        assert _physical_capacity_first_week(
+            prod, cpu_hourly_override=100.0
+        ) == pytest.approx(40 * _CAP_ESCAVADEIRA_REAL)
 
     def test_val_sinergia_02_e_03_surfaced_end_to_end_com_custo_total_derivado(self):
         """With a divergent physical bottleneck, diagnostics surface while a

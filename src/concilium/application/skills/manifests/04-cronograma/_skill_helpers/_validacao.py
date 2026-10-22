@@ -256,6 +256,7 @@ def _emm_process_item(
             capacidade_fisica_semanal=_capacidade_semanal_por_frentes(
                 producao_semanal_base, num_eq, n_max,
                 producao_lookup.get(cpu.get("producao_id_ref")),
+                horas_semana=regime.horas_dia * regime.dias_semana,
             ),
         )
         qtd_acumulada = cell.qtd_acumulada
