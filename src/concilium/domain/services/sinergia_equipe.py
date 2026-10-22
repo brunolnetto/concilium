@@ -71,17 +71,29 @@ def construir_producao_catalogo_para_sinergia(prod: dict[str, Any]) -> Producao 
     composicao_raw = prod.get("composicao_padrao_equipe") or {}
     composicao = {
         "funcoes": [
-            {key: value for key, value in item.items() if key in {"funcao_id", "num_pessoas", "horas_extras_pct", "papel"}}
+            {
+                key: value
+                for key, value in item.items()
+                if key in {"funcao_id", "num_pessoas", "horas_extras_pct", "papel"}
+            }
             for item in composicao_raw.get("funcoes", [])
             if isinstance(item, dict)
         ],
         "equipamentos": [
-            {key: value for key, value in item.items() if key in {"equip_id", "num_unidades", "consumo_litros_hora_estimado"}}
+            {
+                key: value
+                for key, value in item.items()
+                if key in {"equip_id", "num_unidades", "consumo_litros_hora_estimado"}
+            }
             for item in composicao_raw.get("equipamentos", [])
             if isinstance(item, dict)
         ],
         "materiais": [
-            {key: value for key, value in item.items() if key in {"insumo_id", "consumo_por_hora", "unidade", "descricao"}}
+            {
+                key: value
+                for key, value in item.items()
+                if key in {"insumo_id", "consumo_por_hora", "unidade", "descricao"}
+            }
             for item in composicao_raw.get("materiais", [])
             if isinstance(item, dict)
         ],

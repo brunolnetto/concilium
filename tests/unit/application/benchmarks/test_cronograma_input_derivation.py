@@ -337,7 +337,7 @@ def test_resolve_productivity_falls_back_to_producao_horaria():
 
     # producao_horaria is None -> fall back to producao_horaria (lines 205-207)
     cpu = {"producao_id_ref": "PROD-1"}
-    prod_lookup = {"PROD-1": {"producao_horaria": None, "producao_horaria": 30.0}}
+    prod_lookup = {"PROD-1": {"producao_horaria": 30.0}}
     result = BenchmarkInputDeriver._resolve_productivity(cpu, prod_lookup)
     assert result == 30.0
 
