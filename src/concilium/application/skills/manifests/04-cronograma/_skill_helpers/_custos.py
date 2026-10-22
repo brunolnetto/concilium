@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from math import isfinite
 from typing import Any
 
 from concilium.domain.models.canonical import (
@@ -297,6 +298,87 @@ def _lookup_eficiencia(
     return 1.0
 
 
+def _capacidade_semanal_por_frentes(
+    producao_semanal_base: float,
+    num_equipes: float,
+    n_max: float,
+    prod_item: dict[str, Any] | None = None,
+    *,
+    horas_semana: float | None = None,
+) -> float:
+    """Physical installed weekly capacity F(m)*H; no team-allocation loss.
+
+    A catalog rate without a flow graph is explicitly interpreted as the
+    rate **per independent front** (P10-B, pending calibration provenance #9).
+    When a flow graph is provided, its capacities are authoritative in units
+    of output per hour; shared bottlenecks are not replicated by m.
+    """
+    from concilium.domain.services.sinergia_equipe import (
+        capacidade_efetiva_frentes,
+        construir_producao_catalogo_para_sinergia,
+        derivar_producao_horaria,
+        validar_referencias_grafo,
+    )
+
+    if producao_semanal_base < 0 or not isfinite(producao_semanal_base):
+        raise ValueError("weekly productivity must be finite and nonnegative")
+    if horas_semana is not None and (not isfinite(horas_semana) or horas_semana <= 0):
+        raise ValueError("contractual weekly hours must be positive and finite")
+    if n_max <= 0:
+        raise ValueError("maximum number of fronts must be positive")
+    if num_equipes == 0:
+        return 0.0
+
+    graph_raw = (prod_item or {}).get("grafo_sinergia")
+    if graph_raw:
+        typed = construir_producao_catalogo_para_sinergia(prod_item or {})
+        if typed is None or typed.grafo_sinergia is None:
+            raise ValueError("invalid synergy graph; physical capacity cannot be certified")
+        graph = typed.grafo_sinergia
+        # The flow may contain abstract process vertices, but physical
+        # resources explicitly referenced by capacities, relations, or
+        # declared bottlenecks must be present in the mobilized team.
+        # Never infer phantom equipment via _num_unidades_elemento's
+        # legacy fallback to one unit.
+        violations = validar_referencias_grafo(graph, typed.composicao_padrao_equipe)
+        if violations:
+            raise ValueError(
+                "VAL-SINERGIA-01: graph references resources absent from the team"
+            )
+        derived = derivar_producao_horaria(graph, typed.composicao_padrao_equipe)
+        if derived.producao_horaria_derivada is None:
+            raise ValueError("synergy graph has no productive physical capacity")
+        # The hours H in F_i(m) * H are contractual. Never recover H by
+        # dividing weekly P*H by catalog P: the selected CPU productivity
+        # may be independently calibrated or the graph may supply the
+        # authoritative bottleneck, and those hourly rates can differ.
+        # Reconstructing H from mismatched P values silently invents a
+        # shorter workweek and breaks scope closure (P10-B regression).
+        if horas_semana is None:
+            raise ValueError("graph capacity requires explicit contractual weekly hours")
+        hours = horas_semana
+        if graph.arestas_fluxo:
+            # Explicit flow graph: source supply scales with mobilized
+            # fronts, downstream shared resources do not.
+            effective = capacidade_efetiva_frentes(
+                graph, num_equipes, n_max, derived.producao_horaria_derivada
+            )
+        else:
+            # Legacy element-capacity graph represents the composition
+            # of ONE front; independently replicated fronts add capacity.
+            # It must not be dropped in favour of an uncalibrated catalog P.
+            effective = capacidade_efetiva_frentes(
+                None, num_equipes, n_max, derived.producao_horaria_derivada * n_max
+            )
+        return hours * effective
+
+    if producao_semanal_base == 0:
+        raise ValueError("active fronts require positive declared productivity")
+    return capacidade_efetiva_frentes(
+        None, num_equipes, n_max, producao_semanal_base * n_max
+    )
+
+
 def _build_dist_cell(
     producao_semanal_base: float,
     num_eq: float,
@@ -307,62 +389,65 @@ def _build_dist_cell(
     qtd_acumulada: float,
     M_max: float = 1.0,
     fator_jornada: float = 1.0,
-    eta_s_calculada: float | None = None,
+    capacidade_fisica_semanal: float | None = None,
 ) -> DistribuicaoSemanal:
-    """Monta uma célula semanal com decomposição causal completa (NEP-035).
+    """Build a weekly physical-capacity cell without allocation penalties.
 
-    Decomposição η = η_s · η_p · η_w onde:
-      η_s  = n_j / n_max                  (alocação — fração da força máxima planejada)
-      η_p  = fator_clima × fator_calendario × fator_jornada (praticabilidade)
-      η_w  = m_ij / M_max                  (gestão; M_max=1.0 até calibração)
-      η    = η_s · η_p · η_w = fator_total
-
-    ADR-148: fator_jornada = eta_jornada = (horas_dia - horas_improdutivas_dia) / horas_dia,
-    determinístico e estrutural — não recalibra custo/PU de catálogo, só a produção operacional.
-
-    q_max_celula = producao_semanal_base × n_max × M_max  (capacidade teórica semanal, nominal)
-    perda_fisica = q_max_celula × η_s - q_executada        (produção perdida em unidades físicas)
-
-    eficiencia = η_w = m_ij/M_max = utilização (≠ praticabilidade; corrige ADR-082-cons)
+    The nominal capacity q_max_celula represents F_i(m_ij)*H for the fronts
+    **actually mobilized**, never an envelope based on m_i^max. The reduced
+    physical output is weather/calendar/journey; a partial final week is a
+    separately visible closure fraction phi, not a further productivity loss.
+    Legacy eta_s and eta_w remain 1.0 to prevent downstream double application.
     """
-    n_max_safe = max(1, n_max)
-    n_eq_safe = max(0, num_eq)
-    praticabilidade = fator_clima * fator_calendario * fator_jornada
-    eta_s = eta_s_calculada if eta_s_calculada is not None else min(1.0, n_eq_safe / n_max_safe)
-    eta_s = min(1.0, max(0.0, eta_s))
-    eta_p = praticabilidade
-    q_max = producao_semanal_base * n_max_safe * M_max
-    capacidade_real = q_max * eta_s * eta_p
+    import math
+
+    if capacidade_fisica_semanal is None:
+        capacidade_fisica_semanal = producao_semanal_base * num_eq
+    if not math.isfinite(capacidade_fisica_semanal) or capacidade_fisica_semanal < 0:
+        raise ValueError("invalid installed weekly capacity")
+    if not (0.0 <= fator_clima <= 1.0 and 0.0 <= fator_calendario <= 1.0
+            and 0.0 <= fator_jornada <= 1.0):
+        raise ValueError("exogenous physical factors must lie in [0,1]")
+    if not math.isfinite(M_max) or M_max <= 0:
+        raise ValueError("calibrated management multiplier must be positive")
+    if num_eq < 0 or n_max <= 0:
+        raise ValueError("invalid number of fronts")
+
+    q_max = capacidade_fisica_semanal
+    eta_p = fator_clima * fator_calendario * fator_jornada
+    capacidade_real = q_max * eta_p
     qtd_remanescente = max(0.0, quantitativo - qtd_acumulada)
     qtd_executada = min(capacidade_real, qtd_remanescente)
-    eta_w = (qtd_executada / (capacidade_real * M_max)) if capacidade_real > 0 else 0.0
-    eta_w = min(1.0, eta_w)
-    eta_total = eta_s * eta_p * eta_w
-    perda = max(0.0, q_max - qtd_executada)
+    fracao_fechamento = (qtd_executada / capacidade_real) if capacidade_real > 0 else 0.0
+    # An externally calibrated management loss must be its own versioned
+    # physical input; M_max does not multiply the capacity again here.
+    eta_total = eta_p  # closure is NOT an efficiency loss
+    perda_exogena = max(0.0, q_max - capacidade_real)
     qtd_acumulada_nova = qtd_acumulada + qtd_executada
     pct = qtd_acumulada_nova / quantitativo if quantitativo > 0 else 0.0
     return DistribuicaoSemanal(
-        num_equipes=n_eq_safe,
+        num_equipes=num_eq,
         qtd_executada=qtd_executada,
         qtd_acumulada=qtd_acumulada_nova,
         pct=round(pct, 4),
-        eficiencia=round(eta_w, 4),
+        eficiencia=1.0,  # control efficiency unknown; neutral in a planned schedule
         fator_clima=round(fator_clima, 4),
         fator_calendario=round(fator_calendario, 4),
         fator_jornada=round(fator_jornada, 4),
         fator_total=round(eta_total, 4),
-        eta_s=round(eta_s, 4),
+        eta_s=1.0,  # neutral legacy field; not a loss
         eta_p=round(eta_p, 4),
-        eta_w=round(eta_w, 4),
-        q_max_celula=round(q_max, 2),
-        perda_fisica=round(perda, 2),
+        eta_w=1.0,  # neutral legacy control factor; phi has its own field
+        fracao_fechamento=fracao_fechamento,
+        q_max_celula=q_max,
+        perda_fisica=perda_exogena,
     )
-
 
 __all__ = [
     "_apply_producao_canonico",
     "_build_cpu_lookup",
     "_build_dist_cell",
+    "_capacidade_semanal_por_frentes",
     "_build_insumos_lookup",
     "_build_producao_lookup",
     "_custo_hora_combustivel_equip",

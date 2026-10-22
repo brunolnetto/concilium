@@ -6,7 +6,8 @@ Production formula (shared with Skill 04, invariant):
     qtd(t) = P × dias_semana × horas_dia × eta_jornada × p(t) × n(t)
 
 Where:
-    P           = producao_horaria (units/hour, from CPU catalog)
+    P           = producao_horaria (units/hour per independent front)
+    F(n)        = optional physical graph capacity function for mobilized teams
     m           = dias_semana (working days/week, from regime)
     h           = horas_dia  (working hours/day, from regime)
     eta_jornada = ADR-148 fração produtiva do dia (structural, not week-varying), defaults to 1.0
@@ -26,6 +27,7 @@ Partial final week:
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import ClassVar
 
 from concilium.domain.models.planning.mobilizacao import (
@@ -67,6 +69,7 @@ class WorkforcePolicySimulator:
         prat_semanal: dict[str, float] | None = None,
         semanas_iso_por_offset: dict[int, str] | None = None,
         eta_jornada: float = 1.0,
+        capacidade_horaria_por_frentes: Callable[[float], float] | None = None,
     ) -> CurvaForca:
         """Simulate the execution of one activity under the given policy.
 
@@ -82,7 +85,9 @@ class WorkforcePolicySimulator:
             semanas_iso_por_offset: Optional map {week_offset: ISO_week_key}.
                           Anchors the simulation to calendar weeks so that
                           prat_semanal lookup works correctly.
-            eta_jornada: ADR-148 — fração produtiva do dia, (horas_dia - horas_improdutivas_dia) /
+            capacidade_horaria_por_frentes: optional F(n) in units/hour; if supplied,
+                          it replaces the per-front P*n assumption everywhere.
+        eta_jornada: ADR-148 — fração produtiva do dia, (horas_dia - horas_improdutivas_dia) /
                           horas_dia. Determinístico/estrutural (não semanal como prat_semanal),
                           por isso dimensiona producao_semanal_base diretamente.
 
@@ -94,7 +99,16 @@ class WorkforcePolicySimulator:
         """
         self._validate_simulate_inputs(quantitativo, producao_horaria)
 
-        producao_semanal_base = producao_horaria * dias_semana * horas_dia * eta_jornada
+        horas_efetivas = dias_semana * horas_dia * eta_jornada
+        if capacidade_horaria_por_frentes is None:
+            peak_hourly = producao_horaria * policy.n_maximo
+        else:
+            peak_hourly = capacidade_horaria_por_frentes(float(policy.n_maximo))
+        if not math.isfinite(peak_hourly) or peak_hourly < 0:
+            raise ValueError("physical peak F(m_max) must be finite and nonnegative")
+        # Nominal guard uses the actual installed peak, never P * m_max
+        # when P is already calibrated to the graph's whole composition.
+        producao_semanal_base = peak_hourly * horas_efetivas / policy.n_maximo
         max_weeks = self._compute_max_weeks(producao_semanal_base, quantitativo, policy)
 
         semanas, incompleta = self._simulate_weeks(
@@ -104,6 +118,8 @@ class WorkforcePolicySimulator:
             max_weeks,
             prat_semanal,
             semanas_iso_por_offset,
+            capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
+            horas_efetivas=horas_efetivas,
         )
 
         return CurvaForca(
@@ -143,6 +159,9 @@ class WorkforcePolicySimulator:
         max_weeks: int,
         prat_semanal: dict[str, float] | None,
         semanas_iso_por_offset: dict[int, str] | None,
+        *,
+        capacidade_horaria_por_frentes: Callable[[float], float] | None = None,
+        horas_efetivas: float = 0.0,
     ) -> tuple[list[CurvaForcaSemanal], bool]:
         if producao_semanal_base <= 0:
             return [], True
@@ -155,7 +174,13 @@ class WorkforcePolicySimulator:
             for t, n_t in enumerate(policy.build_profile(duration_weeks)):
                 semana_iso = semanas_iso_por_offset.get(t) if semanas_iso_por_offset else None
                 eficiencia = self._lookup_eficiencia(semana_iso, prat_semanal)
-                qtd_semana_max = producao_semanal_base * eficiencia * n_t
+                if capacidade_horaria_por_frentes is None:
+                    qtd_semana_max = producao_semanal_base * eficiencia * n_t
+                else:
+                    capacidade_hora = capacidade_horaria_por_frentes(float(n_t))
+                    if not math.isfinite(capacidade_hora) or capacidade_hora < 0:
+                        raise ValueError("physical F(m) must be finite and nonnegative")
+                    qtd_semana_max = capacidade_hora * horas_efetivas * eficiencia
                 qtd_semana = min(qtd_semana_max, quantitativo - qtd_acumulada)
                 qtd_acumulada = round(qtd_acumulada + qtd_semana, 6)
                 semanas.append(

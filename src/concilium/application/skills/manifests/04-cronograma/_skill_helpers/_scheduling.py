@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from concilium.application.scheduling.models import ReplenishableResource
@@ -15,7 +16,7 @@ from concilium.domain.models.canonical import (
 )
 
 from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[unresolved-import]
-from ._custos import _build_dist_cell, _lookup_eficiencia, _week_offset  # ty: ignore[unresolved-import]
+from ._custos import _build_dist_cell, _capacidade_semanal_por_frentes, _lookup_eficiencia, _week_offset  # ty: ignore[unresolved-import]
 from ._validacao import (  # ty: ignore[unresolved-import]
     _build_activity_item_map,
     _find_item_by_id,
@@ -130,7 +131,7 @@ def _resolve_cpu_for_item(item: Any, cpu_lookup: dict[str, dict], validacoes: li
 
 
 def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
-    """Pré-computa n_max (pico de alocação da atividade) para η_s = n_j/n_max (NEP-035)."""
+    """Computa o pico de frentes para determinar a capacidade F(m) física."""
     # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
     return (
         max(
@@ -143,22 +144,6 @@ def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
         or 1
     )
 
-
-def _compute_eta_s(
-    cpu: dict,
-    producao_lookup: dict[str, dict],
-    num_equipes: float,
-    n_max: int,
-) -> float:
-    """Calcula η_s pelo grafo de fluxo, ou pela razão linear quando ele não existe."""
-    from concilium.domain.services.sinergia_equipe import (
-        construir_producao_catalogo_para_sinergia,
-        fator_alocacao_por_frentes,
-    )
-
-    prod_item = producao_lookup.get(cpu.get("producao_id_ref"))
-    producao = construir_producao_catalogo_para_sinergia(prod_item) if isinstance(prod_item, dict) else None
-    return fator_alocacao_por_frentes(getattr(producao, "grafo_sinergia", None), num_equipes, n_max)
 
 
 def _build_activity_distribuicao(
@@ -175,10 +160,15 @@ def _build_activity_distribuicao(
     fator_calendario_semanal: dict[str, float],
     fator_jornada: float = 1.0,
     producao_lookup: dict[str, dict] | None = None,
+    horas_semana: float | None = None,
 ) -> tuple[dict[str, DistribuicaoSemanal], float]:
     """Busca o menor N_i que fecha Q no calendário disponível e o materializa."""
     n_max = max(1, n_max)
-    capacidade_nominal = producao_semanal_base * n_max * fator_jornada
+    prod_item = (producao_lookup or {}).get(cpu.get('producao_id_ref'))
+    capacidade_nominal = _capacidade_semanal_por_frentes(
+        producao_semanal_base, n_max, n_max, prod_item,
+        horas_semana=horas_semana,
+    ) * fator_jornada
     duration_initial = max(1, math.ceil(item.quantitativo / capacidade_nominal)) if capacidade_nominal > 0 else 1
     duration_max = len(semanas_obra) - sa.start_week
     ramp_params = getattr(sa, "ramp_params", None)
@@ -195,8 +185,11 @@ def _build_activity_distribuicao(
             fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
             fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
             num_equipes = n_max * fraction
-            eta_s = _compute_eta_s(cpu, producao_lookup or {}, num_equipes, n_max)
-            capacidades.append(producao_semanal_base * n_max * eta_s * fator_clima * fator_calendario * fator_jornada)
+            capacidade = _capacidade_semanal_por_frentes(
+                producao_semanal_base, num_equipes, n_max, prod_item,
+                horas_semana=horas_semana,
+            )
+            capacidades.append(capacidade * fator_clima * fator_calendario * fator_jornada)
         if sum(capacidades) < item.quantitativo:
             continue
 
@@ -214,7 +207,10 @@ def _build_activity_distribuicao(
                 item.quantitativo,
                 qtd_acumulada,
                 fator_jornada=fator_jornada,
-                eta_s_calculada=_compute_eta_s(cpu, producao_lookup or {}, num_equipes, n_max),
+                capacidade_fisica_semanal=_capacidade_semanal_por_frentes(
+                    producao_semanal_base, num_equipes, n_max, prod_item,
+                    horas_semana=horas_semana,
+                ),
             )
             qtd_acumulada = cell.qtd_acumulada
             distribuicao[semana_key] = cell
@@ -361,6 +357,7 @@ def _convert_schedule_to_distribuicao(
                 fator_calendario_semanal,
                 fator_jornada=regime.eta_jornada,
                 producao_lookup=producao_lookup,
+                horas_semana=regime.horas_dia * regime.dias_semana,
             )
             _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, validacoes)
             distribuicao_por_item[item_id] = distribuicao
@@ -543,6 +540,7 @@ def _run_wmp_simulation(
     prat_semanal: dict,
     semanas_obra: list,
     guard: int,
+    capacidade_horaria_por_frentes: Callable[[float], float] | None = None,
 ) -> CurvaForca:
     semanas_iso = {t: semanas_obra[t] for t in range(min(guard, len(semanas_obra)))}
     return sim.simulate(
@@ -555,6 +553,7 @@ def _run_wmp_simulation(
         prat_semanal=prat_semanal or None,
         semanas_iso_por_offset=semanas_iso,
         eta_jornada=regime.eta_jornada,
+        capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
     )
 
 
@@ -614,13 +613,35 @@ def _process_single_wmp_policy(
         )
         return
 
-    prod_base = P * regime.dias_semana * regime.horas_dia * regime.eta_jornada * policy.n_maximo
+    horas_semana = regime.dias_semana * regime.horas_dia
+    prod_item = producao_lookup.get(cpu.get("producao_id_ref"))
+    capacidade_horaria_por_frentes: Callable[[float], float] | None = None
+    if prod_item and prod_item.get("grafo_sinergia"):
+        def _f_por_frentes(frentes: float) -> float:
+            return _capacidade_semanal_por_frentes(
+                P * horas_semana,
+                frentes,
+                policy.n_maximo,
+                prod_item,
+                horas_semana=horas_semana,
+            ) / horas_semana
+
+        capacidade_horaria_por_frentes = _f_por_frentes
+    pico = (
+        capacidade_horaria_por_frentes(float(policy.n_maximo))
+        if capacidade_horaria_por_frentes is not None
+        else P * policy.n_maximo
+    )
+    prod_base = pico * horas_semana * regime.eta_jornada
     nominal = math.ceil(Q / prod_base) if prod_base > 0 else 1
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
     guard = WorkforcePolicySimulator.MAX_MULTIPLIER * max(1, nominal)
 
-    curva = _run_wmp_simulation(sim, policy, item_id, Q, P, regime, prat_semanal, semanas_obra, guard)
+    curva = _run_wmp_simulation(
+        sim, policy, item_id, Q, P, regime, prat_semanal, semanas_obra, guard,
+        capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
+    )
     _check_wmp_desmob(item_id, curva, policy, Q, P, validacoes)
 
     curves.append(curva)

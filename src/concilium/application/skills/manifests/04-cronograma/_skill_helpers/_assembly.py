@@ -213,10 +213,9 @@ def _compute_fracao_fechamento(distribuicao_semanal: dict) -> float:
     final_cell = next((cell for cell in reversed(list(distribuicao_semanal.values())) if cell.qtd_executada > 0), None)
     if final_cell is None:
         return 1.0
-    capacidade_final = final_cell.q_max_celula * final_cell.eta_s * final_cell.eta_p
-    if capacidade_final <= 0:
-        return 1.0
-    return min(1.0, max(0.0, final_cell.qtd_executada / capacidade_final))
+    # Persisted directly from unrounded quantities: no synthetic productivity
+    # losses and no division by a four-decimal display efficiency.
+    return final_cell.fracao_fechamento
 
 
 def _build_effective_ramp_profile(

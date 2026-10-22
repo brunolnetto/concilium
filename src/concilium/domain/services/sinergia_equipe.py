@@ -310,6 +310,55 @@ def _derivar_producao_por_fluxo(grafo: GrafoSinergiaEquipe) -> DerivacaoSinergia
     )
 
 
+
+def capacidade_efetiva_frentes(
+    grafo: GrafoSinergiaEquipe | None,
+    num_frentes: float,
+    n_max: float,
+    capacidade_pico_hora: float,
+) -> float:
+    """Return effective hourly output of the *mobilized* configuration.
+
+    P10-B: team allocation changes physical capacity F(m), not an extra
+    efficiency. The input hourly reference must represent F(n_max) of the
+    exact same configuration. With a certified flow graph, its source arcs
+    represent scalable team supply and interior arcs remain shared; otherwise
+    the fallback linear assumption applies to independent fronts only.
+
+    A caller MUST separately validate the declared capacity calibration.
+    This function never multiplies the returned F(m) by m or eta_s.
+    """
+    if not all(math.isfinite(v) for v in (num_frentes, n_max, capacidade_pico_hora)):
+        raise ValueError("team counts and calibrated capacity must be finite")
+    if n_max <= 0 or num_frentes < 0 or num_frentes > n_max or capacidade_pico_hora <= 0:
+        raise ValueError("invalid team allocation or peak capacity")
+    if num_frentes == 0:
+        return 0.0
+    if grafo is None or not grafo.arestas_fluxo:
+        # Explicit linear case: F(m) = m * (F(n_max)/n_max).
+        return capacidade_pico_hora * num_frentes / n_max
+
+    if grafo.fonte is None or grafo.sorvedouro is None:
+        raise ValueError("flow graph requires source and sink")
+    full_flow, _ = _fluxo_maximo_edmonds_karp(
+        grafo.arestas_fluxo, grafo.fonte, grafo.sorvedouro
+    )
+    if full_flow <= 0:
+        raise ValueError("nonproductive flow graph is not a valid capacity calibration")
+    share = num_frentes / n_max
+    allocated_arcs = [
+        edge.model_copy(update={"capacidade_horaria": edge.capacidade_horaria * share})
+        if edge.origem == grafo.fonte else edge
+        for edge in grafo.arestas_fluxo
+    ]
+    allocated_flow, _ = _fluxo_maximo_edmonds_karp(
+        allocated_arcs, grafo.fonte, grafo.sorvedouro
+    )
+    # Preserve the calibrated F(n_max) unit, while the flow ratio captures
+    # saturation by shared downstream capacity exactly once.
+    return capacidade_pico_hora * allocated_flow / full_flow
+
+
 def fator_alocacao_por_frentes(grafo: GrafoSinergiaEquipe | None, num_frentes: float, n_max: float) -> float:
     """Calcula η_s pela razão de max-flow, com fallback linear para grafos legados."""
     n_max_safe = max(1.0, n_max)

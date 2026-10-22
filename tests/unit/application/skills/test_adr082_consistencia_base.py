@@ -1,8 +1,9 @@
 """ADR-082-cons / NEP-035: consistência da base de cálculo (produtividade × custo).
 
 Cobre:
-  - _build_dist_cell: η_s (alocação), η_p (praticabilidade), η_w (gestão), q_max, perda_fisica
-  - fator_total = η_s · η_p · η_w  (identidade verificável)
+  - _build_dist_cell: F(m) installed capacity, eta_p exogenous losses,
+    physical losses exclusive of ramp and partial scope closure.
+  - eta_s and eta_w neutral; phi stored in fracao_fechamento.
   - VAL-PROD-VS-PU: divergência de produtividade engine ↔ catálogo isolada do clima
 """
 
@@ -12,6 +13,8 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
+
+import pytest
 
 _ROOT = Path(__file__).parent.parent.parent.parent.parent / "src/concilium/application/skills/manifests"
 
@@ -32,7 +35,7 @@ _cron = sys.modules["_concilium_skillpkg_04_cronograma.skill"]
 _cons = _load("_cons_helpers_082", "06-resultado-financeiro/_consolidacao/_skill_helpers/__init__.py")
 
 
-# ── _build_dist_cell: eficiencia = utilização; fator_total = p_j × m_ij ──────
+# ── _build_dist_cell: effective capacity F(m); losses eta_p only ──────
 
 
 class TestBuildDistCell:
@@ -55,8 +58,8 @@ class TestBuildDistCell:
         assert cell.q_max_celula == 200.0
         assert cell.perda_fisica == 0.0
 
-    def test_subalocacao_captura_eta_s(self):
-        # n_j=1, n_max=2 → η_s=0.5; clima=1, calend=1
+    def test_equipes_nao_mobilizadas_nao_causam_perda(self):
+        # n_j=1 vs n_max=2: one installed front, no efficiency penalty
         cell = _cron._build_dist_cell(
             producao_semanal_base=100.0,
             num_eq=1,
@@ -66,13 +69,13 @@ class TestBuildDistCell:
             quantitativo=10_000.0,
             qtd_acumulada=0.0,
         )
-        assert abs(cell.eta_s - 0.5) < 1e-6
+        assert cell.eta_s == 1.0
         assert cell.eta_p == 1.0
         assert cell.eta_w == 1.0
-        assert abs(cell.fator_total - 0.5) < 1e-6
-        assert cell.qtd_executada == 100.0  # 100 × 0.5
-        assert cell.q_max_celula == 200.0  # referência = pico n_max=2
-        assert abs(cell.perda_fisica - 100.0) < 1e-4  # q_max(200) - q_executada(100)
+        assert cell.fator_total == 1.0
+        assert cell.qtd_executada == 100.0
+        assert cell.q_max_celula == 100.0
+        assert cell.perda_fisica == 0.0
 
     def test_praticabilidade_captura_eta_p(self):
         # n_j=2, n_max=2, clima=0.8, calend=0.9 → η_p=0.72
@@ -105,7 +108,9 @@ class TestBuildDistCell:
         assert cell.qtd_executada == 50.0
         assert cell.eta_s == 1.0
         assert abs(cell.eta_p - 0.72) < 1e-6
-        assert 0.0 < cell.eta_w < 1.0  # fechamento parcial
+        assert cell.eta_w == 1.0  # no observed management inefficiency
+        assert 0.0 < cell.fracao_fechamento < 1.0  # separate scope closure
+        assert cell.fator_total == cell.eta_p
         # identidade: fator_total = η_s × η_p × η_w
         assert abs(cell.fator_total - cell.eta_s * cell.eta_p * cell.eta_w) < 1e-4
 
@@ -126,7 +131,7 @@ class TestBuildDistCell:
         assert cell.qtd_acumulada == quantitativo
 
     def test_identidade_fator_total_eta_produto(self):
-        # fator_total deve ser sempre η_s × η_p × η_w (identidade fundamental)
+        # fator_total is exogenous efficiency, independent of team count or scope closure
         for n_eq, n_max, clima, calend in [
             (1, 2, 0.8, 0.9),
             (2, 2, 1.0, 1.0),
@@ -150,10 +155,11 @@ class TestBuildDistCell:
         cell = _cron._build_dist_cell(100.0, 1, 2, 0.9, 0.8, 10_000.0, 0.0)
         assert abs(cell.eficiencia - cell.eta_w) < 1e-6
 
-    def test_q_max_referencia_n_max(self):
-        # q_max_celula = base × n_max (independente de n_j)
+    def test_q_max_referencia_capacidade_instalada(self):
+        # q_max_celula = F(m) * H, independent of nonmobilized fronts.
         cell = _cron._build_dist_cell(100.0, 1, 4, 0.8, 0.8, 10_000.0, 0.0)
-        assert abs(cell.q_max_celula - 400.0) < 1e-4  # 100 × 4
+        assert cell.q_max_celula == 100.0
+        assert cell.perda_fisica == pytest.approx(36.0)  # exogenous factors only
 
     def test_eficiencia_nao_e_clima(self):
         # garante que eficiencia (utilização) != clima×calendário (conflação corrigida)

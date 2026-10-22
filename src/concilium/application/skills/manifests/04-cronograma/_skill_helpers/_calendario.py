@@ -382,7 +382,7 @@ def _compute_productive_weeks(
     producao_lookup: dict,
     validacoes: list,
 ) -> int | None:
-    """ADR-072 (Direção A): duração produtiva = ceil(Q / (P × h/dia × d/sem × η_jornada × n_resources)).
+    """ADR-072 (Direção A): duration = ceil(Q / [F(n_resources) * H * eta_jornada]).
 
     Nota (ADR-082-cons): a praticabilidade (clima/calendário) NÃO entra aqui — estender a
     duração por clima tornaria o RCPSP inviável sob prazos apertados (decisão de prazo/pool,
@@ -406,10 +406,24 @@ def _compute_productive_weeks(
     if not cpu:
         return None
     P, _is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
-    if not P or P <= 0:
+    if not P or P <= 0 or n_resources <= 0:
         return None
     regime = canonical_in.projeto.regime_trabalho
-    prod_per_week = P * regime.horas_dia * regime.dias_semana * regime.eta_jornada * n_resources
+    horas_semana = regime.horas_dia * regime.dias_semana
+    if horas_semana <= 0:
+        return None
+    from ._custos import _capacidade_semanal_por_frentes  # ty: ignore[unresolved-import]
+
+    # P may already be the full graph flow rather than a per-front rate.
+    # Use exactly the same physical F(m)*H contract as the materialized
+    # MANUAL/AUTO weekly cells; never calculate P*H*n_resources twice.
+    prod_per_week = _capacidade_semanal_por_frentes(
+        P * horas_semana,
+        n_resources,
+        n_resources,
+        producao_lookup.get(cpu.get("producao_id_ref")),
+        horas_semana=horas_semana,
+    ) * regime.eta_jornada
     if prod_per_week <= 0:
         return None
     return max(1, math.ceil(Q / prod_per_week))
