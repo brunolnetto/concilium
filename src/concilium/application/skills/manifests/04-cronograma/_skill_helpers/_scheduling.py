@@ -16,6 +16,7 @@ from concilium.domain.models.canonical import (
 )
 
 from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[unresolved-import]
+from ._closure import assess_scope_closure  # ty: ignore[unresolved-import]
 from ._custos import (  # ty: ignore[unresolved-import]
     _build_dist_cell,
     _capacidade_semanal_disponivel,
@@ -235,30 +236,42 @@ def _warn_if_activity_underdelivers(
     sa: Any,
     qtd_acumulada: float,
     validacoes: list[ValidacaoItem],
+    *,
+    calendar_horizon_weeks: int | None = None,
 ) -> None:
-    """AVISO quando mesmo o teto de extensão (10 anos) não bastou para entregar Q.
+    """Record a typed V1/V5/V6 failure when the real calendar cannot close Q.
 
-    `_build_activity_distribuicao` já estende a janela automaticamente além de
-    `sa.duration_weeks`, repetindo o padrão de alocação/clima das últimas semanas,
-    até Σ q_ij atingir 100% do quantitativo ou até TETO_EXTENSAO_CRONOGRAMA_SEMANAS.
-    Este AVISO só dispara no caso patológico em que nem o teto de 10 anos bastou —
-    sinal de que a praticabilidade da região é baixa demais para a atividade convergir.
+    The historic helper name is kept for existing integrations. Its behavior
+    is fail-closed: missing quantity is never an AVISO or fictional extra week.
     """
-    if item.quantitativo <= 0:
+    closure = assess_scope_closure(
+        item_id,
+        float(item.quantitativo),
+        qtd_acumulada,
+        calendar_horizon_weeks=calendar_horizon_weeks,
+    )
+    if closure.status == "PASS":
         return
-    pct_completude = qtd_acumulada / item.quantitativo
-    if qtd_acumulada < item.quantitativo:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-CRON-01",
-                status="AVISO",
-                mensagem=(
-                    f"Item '{item_id}' não atinge o quantitativo no calendário disponível: "
-                    f"Σ q_ij = {pct_completude * 100:.4f}% de Q. Revise clima, calendário, "
-                    "jornada ou recursos disponíveis."
-                ),
-            )
+    percentage = (
+        f"{100 * closure.delivered / closure.required:.4f}%"
+        if math.isfinite(closure.required) and closure.required > 0 and math.isfinite(closure.delivered)
+        else "UNKNOWN"
+    )
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-CRON-01",
+            status="ERRO",
+            mensagem=(
+                f"Item '{item_id}' não atinge o quantitativo no calendário disponível: "
+                f"Q={closure.required:.9g}, Σq={closure.delivered:.9g}, "
+                f"residual={closure.residual:.9g}, erro_absoluto={closure.absolute_error:.9g}, "
+                f"tolerancia_Q={closure.tolerance:.9g}; "
+                f"completude={percentage}, status={closure.status}, razao={closure.reason}, "
+                f"horizonte_semanas={closure.calendar_horizon_weeks}. "
+                "Plano físico inviável; não autorizar preço ou GO certificado."
+            ),
         )
+    )
 
 
 def _convert_schedule_to_distribuicao(
@@ -369,7 +382,10 @@ def _convert_schedule_to_distribuicao(
                 producao_lookup=producao_lookup,
                 horas_semana=regime.horas_dia * regime.dias_semana,
             )
-            _warn_if_activity_underdelivers(item, item_id, sa, qtd_acumulada, validacoes)
+            _warn_if_activity_underdelivers(
+                item, item_id, sa, qtd_acumulada, validacoes,
+                calendar_horizon_weeks=max(0, len(semanas_obra) - sa.start_week),
+            )
             distribuicao_por_item[item_id] = distribuicao
             pending.remove(item_id)
             progressed = True
