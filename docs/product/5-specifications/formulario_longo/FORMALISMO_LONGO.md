@@ -4,6 +4,9 @@
 
 ## §0 — Convenções de Notação [DERIVADO]
 
+> **Contrato normativo P09-A:** unidades, domínios de mobilização, intervalos e política numérica são definidos em [CONVENCOES_NORMATIVAS.md](CONVENCOES_NORMATIVAS.md). As equações ainda em revisão permanecem explicitamente sinalizadas nas issues #10–#13.
+
+
 **Regra de três slots** no superscrito. Nenhum símbolo carrega dois papéis.
 
 | Slot | Valores | Significado |
@@ -109,7 +112,7 @@ onde $\mathcal{G}_i^D\!\mid_m$ denota o subgrafo de produção com a capacidade 
 
 ### I.4 Política de mobilização $W_i$
 
-$$W_i = (m_i^0,\ \mu_i^+,\ m_i^1,\ \mu_i^-,\ m_i^{\max}) \in \mathbb{N}_{>0}^5$$
+$$W_i = (m_i^0,\ \mu_i^+,\ m_i^1,\ \mu_i^-,\ m_i^{\max}) \in \mathbb{N}_{>0}\times\mathbb{N}_{\ge0}\times\mathbb{N}_{>0}\times\mathbb{N}_{\ge0}\times\mathbb{N}_{>0}$$
 
 | Símbolo | Significado |
 |---|---|
@@ -127,7 +130,7 @@ $$\boxed{m_i(\tau) = \min\!\Big(m_i^0 + \mu_i^+\tau,\quad m_i^{\max},\quad m_i^1
 
 $$\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max} \quad \forall\,\tau \in \{0,\ldots,N_i-1\}$$
 
-com $m_i^0 = m_i^1 = m_i^{\max}$, reduzindo $W_i$ a um único parâmetro de frota: frota constante durante toda a atividade.
+Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$ reduz-se a um único parâmetro de frota, constante durante toda a atividade.
 
 $$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
 
