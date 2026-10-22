@@ -168,6 +168,50 @@ class TestBuildDistCell:
         assert abs(cell.fator_total - 0.25) < 1e-6  # = η_s(1) × η_p(0.25) × η_w(1)
 
 
+
+class TestUniqueWeeklyPhysicalProductivity:
+    """One installed F(m), affected exactly once by feasibility of each week."""
+
+    def test_praticabilidade_and_calendario_change_output_not_installed_rate(self):
+        # 2 independent fronts at 10 units/hour, 40 nominal hours each week.
+        nominal = 20.0 * 40.0
+        cell = _cron._build_dist_cell(
+            producao_semanal_base=400.0,
+            num_eq=2,
+            n_max=2,
+            fator_clima=0.75,
+            fator_calendario=0.8,
+            quantitativo=10_000.0,
+            qtd_acumulada=0.0,
+            capacidade_fisica_semanal=nominal,
+        )
+        assert cell.q_max_celula == pytest.approx(800.0)
+        assert cell.qtd_executada == pytest.approx(480.0)
+        assert cell.fator_total == pytest.approx(0.6)
+        assert cell.eta_s == 1.0
+        assert cell.perda_fisica == pytest.approx(320.0)
+
+    def test_partial_scope_is_not_a_change_in_productivity(self):
+        cell = _cron._build_dist_cell(
+            400.0, 2, 2, 0.75, 0.8, 300.0, 0.0,
+            capacidade_fisica_semanal=800.0,
+        )
+        assert cell.q_max_celula == 800.0
+        assert cell.qtd_executada == 300.0
+        assert cell.fracao_fechamento == pytest.approx(300 / 480)
+        assert cell.fator_total == pytest.approx(0.6)
+        assert cell.perda_fisica == pytest.approx(320.0)
+
+    def test_impossible_week_has_zero_output_without_altering_f(self):
+        cell = _cron._build_dist_cell(
+            400.0, 2, 2, 0.0, 1.0, 1000.0, 0.0,
+            capacidade_fisica_semanal=800.0,
+        )
+        assert cell.q_max_celula == 800.0
+        assert cell.qtd_executada == 0
+        assert cell.fracao_fechamento == 0
+
+
 # ── VAL-PROD-VS-PU: resíduo = fe_nec × fator_clima_medio ─────────────────────
 
 

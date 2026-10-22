@@ -13,12 +13,16 @@ F_i(m)=\operatorname{maxflow}(s_i,t_i;\mathcal G_i^D|_m)\quad [u_i/h],
 
 O grafo considera recursos realmente alocados. Arestas de infraestrutura compartilhada não são multiplicadas por \(m\). \(F_i\) é não decrescente se a mobilização acrescentar recursos sem retirar os anteriores, mas pode saturar por gargalos. Distinguem-se \(\rho_i^{front}\) (capacidade de **uma** frente independente, quando provada) e \(\rho_i^{peak}=F_i(m_i^{max})\), que são parâmetros distintos. Só no caso linear \(F_i(m)=m\rho_i^{front}\).
 
-Para horas \(H_i=h_i d_i\) e perdas físicas exógenas \(\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j}\),
+Há **uma única definição de produtividade física**: \(F_i(m)\) [\(u_i/h\)], estabelecida pela composição de recursos efetivamente mobilizada. Nem a praticabilidade nem o calendário mudam a definição de \(F\); eles limitam as horas/produtividade **disponíveis no período**. Defina \(H_i=h_i d_i\) [h/semana contratual], \(p_j\in[0,1]\) como praticabilidade da semana, \(c_j\in[0,1]\) como disponibilidade de calendário, e \(a_i\in[0,1]\) como fração efetiva de jornada, se ainda não estiver embutida em \(H_i\). Então
 
 \[
-B_{ij}=F_i(m_{ij})H_i\varepsilon_{ij}^{exog},\qquad
-q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}.
+\boxed{B_{ij}=F_i(m_{ij})H_i\,p_j\,c_j\,a_i,\qquad
+q_{ij}=\min\left\{\left(Q_i-\sum_{k<j}q_{ik}\right)_+,B_{ij}\right\}.}
 \]
+
+A convenção anterior \(\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j}\) é **somente abreviação** do produto exógeno \(p_jc_ja_i\); não introduz outra produtividade nem um multiplicador de alocação de equipes. Quando \(H_i\) já é a jornada efetiva, adota-se \(a_i=1\) para não contar a perda de horas duas vezes. Os multiplicadores **não** podem já estar incorporados na taxa calibrada \(F_i(m)\), a menos que haja normalização explícita por condições de referência.
+
+O clima/praticabilidade e o calendário são estados semanais auditáveis; o fechamento \(\varphi_i=q_{i,j_i^1}/B_{i,j_i^1}\) é somente uso do escopo e não reduz \(F_i(m)\) nem os custos de permanência de recursos.
 
 **Não existe perda por alocação de equipes \(\eta_s\)** multiplicando \(q\). A quantidade \(\alpha_i(m)=F_i(m)/F_i(m_i^{max})\) é uma razão de capacidade **diagnóstica**, nunca uma eficiência adicional. A fração \(\varphi_i=q_{i,j_i^1}/B_{i,j_i^1}\in(0,1]\) mede apenas fechamento físico; não é perda de produtividade. \(B=0\) e \(Q_{rest}>0\) => semana improdutiva; horizonte sem capacidade suficiente => inviabilidade, não GO.
 

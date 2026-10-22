@@ -16,7 +16,13 @@ from concilium.domain.models.canonical import (
 )
 
 from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[unresolved-import]
-from ._custos import _build_dist_cell, _capacidade_semanal_por_frentes, _lookup_eficiencia, _week_offset  # ty: ignore[unresolved-import]
+from ._custos import (  # ty: ignore[unresolved-import]
+    _build_dist_cell,
+    _capacidade_semanal_disponivel,
+    _capacidade_semanal_por_frentes,
+    _lookup_eficiencia,
+    _week_offset,
+)
 from ._validacao import (  # ty: ignore[unresolved-import]
     _build_activity_item_map,
     _find_item_by_id,
@@ -189,7 +195,11 @@ def _build_activity_distribuicao(
                 producao_semanal_base, num_equipes, n_max, prod_item,
                 horas_semana=horas_semana,
             )
-            capacidades.append(capacidade * fator_clima * fator_calendario * fator_jornada)
+            capacidades.append(
+                _capacidade_semanal_disponivel(
+                    capacidade, fator_clima, fator_calendario, fator_jornada
+                )
+            )
         if sum(capacidades) < item.quantitativo:
             continue
 
