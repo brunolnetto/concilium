@@ -410,7 +410,7 @@ def _compute_productive_weeks(
         return None
     regime = canonical_in.projeto.regime_trabalho
     horas_semana = regime.horas_dia * regime.dias_semana
-    from ._custos import _capacidade_semanal_por_frentes
+    from ._custos import _capacidade_semanal_por_frentes  # ty: ignore[unresolved-import]
 
     # P may already be the full graph flow rather than a per-front rate.
     # Use exactly the same physical F(m)*H contract as the materialized
