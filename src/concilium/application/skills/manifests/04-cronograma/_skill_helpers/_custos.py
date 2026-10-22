@@ -330,20 +330,30 @@ def _capacidade_semanal_por_frentes(
         if typed is None or typed.grafo_sinergia is None:
             raise ValueError("invalid synergy graph; physical capacity cannot be certified")
         graph = typed.grafo_sinergia
+        derived = derivar_producao_horaria(graph, typed.equipe)
+        if derived.producao_horaria_derivada is None:
+            raise ValueError("synergy graph has no productive physical capacity")
+        # Work hours are recovered from the original weekly reference,
+        # which is calibrated in its own catalog unit. The derived rate
+        # is authoritative for F(m), including legacy equipment bottlenecks.
+        catalog_rate = float((prod_item or {}).get("producao_horaria") or 0.0)
+        if not isfinite(catalog_rate) or catalog_rate <= 0:
+            raise ValueError("graph capacity requires positive catalog hourly reference")
+        hours = producao_semanal_base / catalog_rate
         if graph.arestas_fluxo:
-            derived = derivar_producao_horaria(graph, typed.equipe)
-            if derived.producao_horaria_derivada is None:
-                raise ValueError("synergy graph has no productive flow")
-            # H inferred from the catalog's declared per-front nominal rate.
-            # A graph with explicit capacities is a measured hourly F(mmax);
-            # the weekly hours come from the normal schedule's regime.
-            catalog_rate = float((prod_item or {}).get("producao_horaria") or 0.0)
-            if catalog_rate <= 0:
-                raise ValueError("graph capacity requires positive catalog hourly reference")
-            hours = producao_semanal_base / catalog_rate
-            return hours * capacidade_efetiva_frentes(
+            # Explicit flow graph: source supply scales with mobilized
+            # fronts, downstream shared resources do not.
+            effective = capacidade_efetiva_frentes(
                 graph, num_equipes, n_max, derived.producao_horaria_derivada
             )
+        else:
+            # Legacy element-capacity graph represents the composition
+            # of ONE front; independently replicated fronts add capacity.
+            # It must not be dropped in favour of an uncalibrated catalog P.
+            effective = capacidade_efetiva_frentes(
+                None, num_equipes, n_max, derived.producao_horaria_derivada * n_max
+            )
+        return hours * effective
 
     if producao_semanal_base == 0:
         raise ValueError("active fronts require positive declared productivity")
