@@ -561,10 +561,16 @@ Para cada tipo contratual homogêneo g e semana j:
     em empate, priorizar menos transições
   Materializar instâncias com estados active / idle / off por semana
   Verificar x_gj ≥ d_gj e s_gj = x_gj−d_gj ≥ 0
-  C_pool ← Σ_gj (c_g^act d_gj + c_g^idle s_gj)
-  C_MOBDEMOB ← Σ_eventos (c_mob+c_demob) // classificar uma única vez
+  // c_gj^act e c_gj^idle estão normalizadas na mesma base semanal:
+  // tarifas horárias/mensais requerem conversão contratual explícita
+  C_pool ← Σ_gj (c_gj^act d_gj + c_gj^idle s_gj)
+  C_pool_beta ← Σ_gj (1+β_cat(g))·(c_gj^act d_gj + c_gj^idle s_gj)
+  C_MOBDEMOB ← Σ_eventos (c_mob+c_demob)
+  C_MOBDEMOB_beta ← Σ_eventos (1+β_IND)·(c_mob+c_demob)
+  // MOB/DEMOB é indireto: não incluir de novo em C_pool nem em C_pool_beta
 
-SAÍDA: cadeias, instâncias, demanda, presença, standby, custos e prova de ótimo
+SAÍDA: cadeias, d_gj, x_gj, s_gj, C_pool, C_pool_beta,
+       C_MOBDEMOB, C_MOBDEMOB_beta e prova de ótimo
 ```
 
 A decomposição em níveis certifica ótimo do pool **condicionado a \(m\) e cronograma fixos**, apenas no regime fungível homogêneo; não a otimização conjunta global. Standby é custo contratual, não ineficiência de produção.
@@ -638,9 +644,11 @@ A compra física é independente da divisão em lotes **dado** \(U_g\) fixo e pr
 Em termos simples: aqui se somam os dois blocos calculados nas fases anteriores — pool de recursos e consumíveis — para chegar ao custo direto do projeto inteiro.
 
 ```
-C^D    ← C^{pool} + C^{cons}
-C^{D,β} ← C^{pool,β} + C^{cons,β}
-β^D    ← C^{D,β} / C^D − 1
+C^D    ← C_pool + C_cons
+C^{D,β} ← C_pool_beta + C_cons_beta
+Se C^D > 0: β^D ← C^{D,β}/C^D − 1
+Senão: β^D ← UNKNOWN; não usar denominador fictício
+// C_MOBDEMOB_beta integra C^{I,β} na Fase 7, nunca C^{D,β}
 
 SAÍDA: C^D, C^{D,β}, β^D
 ```

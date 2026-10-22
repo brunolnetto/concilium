@@ -668,6 +668,8 @@ Para cada tipo τ ∈ T:
 SAÍDA: C^{pool}, C^{pool,β}, C^{MOB,eq}, C^{MOB,eq,β}
 ```
 
+**Reconciliação:** no regime de tarifas distintas, o livro de instâncias deve publicar tanto $C^{pool}=\sum_{gj}(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$ quanto $C^{pool,\beta}=\sum_{gj}(1+\beta_{cat(g)})(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$, com tarifas normalizadas para a mesma base semanal. $C^{MOB/DEMOB}$ e $C^{MOB/DEMOB,\beta}$ entram somente no livro de indiretos. No regime homogêneo-base, a expressão anterior $\sum_\tau sem_\tau c_\tau^{sem}$ é caso particular.
+
 **Limite de optimalidade:** a minimização de cadeias por nível é exata somente **condicionada ao perfil de equipes e cronograma fixados**. A otimização global de {m, cronograma, pool} permanece questão conjunta (#15/#16). Standby é presença paga não demandada, não eficiência de produção.
 
 ### XIV.5 — Fase 5: Estoque (Consumíveis)

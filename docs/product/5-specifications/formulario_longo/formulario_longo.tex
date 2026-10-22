@@ -76,6 +76,12 @@
 
 \begin{document}
 
+\noindent\textbf{Reconciliação do pool:}
+No mesmo período-base semanal,
+\(C^{pool,\beta}=\sum_{g,j}(1+\beta_{cat(g)})
+(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})\).
+MOB/DEMOB tem BDI indireto e lançamento único.
+
 \noindent\textbf{Advertência de certificação:} todas as equações
 históricas financeiras de §§III--VIII, custo de catálogo por
 \(\gamma/\rho\), consumível invariante, \(\zeta\), \(\pi\),
@@ -1532,10 +1538,15 @@ Para cada tipo contratual homogêneo g:
   Para cada j:
     x_gj ← instâncias contratadas; exigir x_gj>=d_gj
     s_gj ← x_gj−d_gj; exigir s_gj>=0
-C_pool ← Σ_gj (c_g^act·d_gj + c_g^idle·s_gj)
-C_MOBDEMOB ← Σ_eventos (c_g^mob+c_g^demob) // lançar uma vez
+// Converter tarifas em base semanal compatível antes da soma
+C_pool ← Σ_gj (c_gj^act·d_gj + c_gj^idle·s_gj)
+C_pool_beta ← Σ_gj (1+β_cat(g))·(c_gj^act·d_gj+c_gj^idle·s_gj)
+C_MOBDEMOB ← Σ_eventos (c_g^mob+c_g^demob)
+C_MOBDEMOB_beta ← Σ_eventos (1+β_IND)·(c_g^mob+c_g^demob)
+// MOB/DEMOB só é indireto, jamais duplicar no pool marcado
 Prova de ótimo do pool somente CONDICIONADA a m e schedule fixos.
-SAÍDA: cadeias, demanda, presença, standby e custos reconciliados.
+SAÍDA: cadeias, demanda, presença, standby, C_pool, C_pool_beta,
+       C_MOBDEMOB, C_MOBDEMOB_beta e custos reconciliados.
 \end{verbatim}
 
 \hypertarget{xiv.4b-fase-4b-dinuxe2mica-de-estoque-e-reposiuxe7uxe3o-wagnerwhitin}{%
@@ -1591,9 +1602,11 @@ anteriores --- pool de recursos e consumíveis --- para chegar ao custo
 direto do projeto inteiro.
 
 \begin{verbatim}
-C^D    ← C^{pool} + C^{cons}
-C^{D,β} ← C^{pool,β} + C^{cons,β}
-β^D    ← C^{D,β} / C^D − 1
+C^D ← C_pool + C_cons
+C_D_beta ← C_pool_beta + C_cons_beta
+Se C^D>0: β_D ← C_D_beta/C^D−1
+Senão: β_D ← UNKNOWN (base nula, não dividir por zero)
+// C_MOBDEMOB_beta entra somente nos indiretos da Fase 7.
 
 SAÍDA: C^D, C^{D,β}, β^D
 \end{verbatim}
