@@ -76,6 +76,18 @@
 
 \begin{document}
 
+\noindent\textbf{Advertência de certificação:} todas as equações
+históricas financeiras de §§III--VIII, custo de catálogo por
+\(\gamma/\rho\), consumível invariante, \(\zeta\), \(\pi\),
+\(\bar\varepsilon\), \(\delta\) e \(R\) que dependem de escala
+linear por frente estão \textbf{SUSPENSAS COMO IDENTIDADES GERAIS}.
+O modelo físico correto é \(q\le F_i(m)h_id_i\eta_p\eta_w\).
+Reconstruir custos a partir de demanda física, instâncias
+contratuais e diário financeiro, conforme
+\texttt{FORMALISMO\_RESUMIDO.md}; aguardar \#11/\#17/\#20/\#21
+antes de emitir GO. O trecho histórico abaixo não
+certifica gargalos compartilhados ou standby.
+
 \noindent\textbf{Controle normativo P10-A.}
 As expressões operacionais de capacidade e demanda são regidas por
 \texttt{CAPACIDADE\_E\_RECURSOS.md}: \(q_{ij}\le
@@ -361,32 +373,15 @@ conhece de antemão é apenas em qual \(N\) essa soma cruza \(Q_i\) --- a
 mesma situação de qualquer grandeza definida como ``o menor \(N\) tal
 que uma condição monotônica se satisfaz'', sem mistério adicional.
 
-A validade da busca depende de \(\Pi\) ser monotônica em \(N\) --- e
-essa monotonicidade precisa ser justificada com cuidado, porque \(N\)
-aparece dentro do próprio perfil (no termo de ramp-down), de modo que
-aumentar \(N\) não apenas acrescenta uma semana: redesenha o perfil
-inteiro. Ainda assim, a conclusão se sustenta. Fixado qualquer \(\tau\),
-apenas o terceiro termo do \(\min\) que define \(m_i(\tau;N)\) depende
-de \(N\), e depende de forma crescente (\(m_i^1+\mu_i^-(N-1-\tau)\)
-cresce com \(N\) quando \(\mu_i^->0\)); os outros dois termos ficam
-parados. Um mínimo em que um termo só sobe e os demais são fixos não
-pode diminuir, logo \(m_i(\tau;N)\) é não-decrescente em \(N\) para cada
-\(\tau\) fixo --- as semanas ``antigas'' podem crescer ao alongar o
-horizonte, nunca encolher. Como \(\eta_{s,i\tau}\) é um max-fluxo com a
-capacidade de fonte escalada por \(m_i(\tau;N)\) (§I.3.2), e max-fluxo é
-não-decrescente em qualquer capacidade de aresta,
-\(\varepsilon_{i\tau}(N)\) herda essa monotonicidade, e portanto também
-cada \(q_{i\tau}(N)=F_i(m_i(\tau;N))\varepsilon_{i\tau}^{exog}(N)h_id_i\).
-Somando as \(N\) semanas ``antigas'' (que só podem ter crescido) à
-semana nova --- que cai exatamente no piso \(m_i^1\ge1\) e contribui
-\(\rho_i\varepsilon_{i,N}h_id_im_i^1>0\), salvo calendário morto ---,
-obtém-se \(\Pi(N+1)>\Pi(N)\): \(\Pi\) é estritamente crescente a cada
-passo, inclusive no caso degenerado retangular, onde a semana nova
-sozinha já garante o aumento. Uma função inteira estritamente monotônica
-cruza qualquer limiar \(Q_i\) em exatamente um ponto, o que garante a
-convergência da busca por incremento simples (Parte XIV, Fase 1) --- a
-busca binária é uma alternativa equivalente quando o custo de
-reavaliação por semana for relevante.
+A capacidade de uma configuração fixa \(F_i(m)\) não se reduz
+pela quantidade de frentes não mobilizadas. Com calendário absoluto fixo
+e \(F_i(m)\) não decrescente, a soma \(\Pi(N)\) pode ser
+não decrescente quando o perfil de \(N+1\) não reduz a demanda
+das semanas existentes; contudo \textbf{não há crescimento estrito
+universal}. Semanas adicionais podem ter clima/performance nulos ou
+capacidade compartilhada indisponível. A busca requer horizonte
+finito, diagnóstico de inviabilidade e revalidação do RCPSP sob
+deslocamentos; não inferir convergência apenas de \(N\) crescente (#12/#15).
 
 O perfil testado em cada tentativa não precisa estar ``certo'' antes de
 \(N_i\) convergir: ele é, por definição, o perfil correto para aquele
@@ -584,17 +579,13 @@ exatamente o escopo:
 
 \[q_{i,j_i^1} = Q_i - \sum_{j=j_i^0}^{j_i^1-1} q_{ij}\]
 
-Por construção da busca monotônica (\(N_i\) é o menor inteiro tal que a
-produção acumulada nominal atinge \(Q_i\), e a semana adicionada mais
-recentemente é a primeira em que isso ocorre), o residual satisfaz
-\(0 < q_{i,j_i^1} \le \rho_i\varepsilon_{i,j_i^1}h_id_im_i(N_i-1)\) ---
-nunca excede a produção nominal da última semana, e a semana de
-fechamento sempre tem \(\varepsilon_{i,j_i^1}>0\) (uma semana com
-\(\varepsilon=0\) não altera a produção acumulada, de modo que a busca
-automaticamente avança para a semana seguinte). Define-se a
-\textbf{fração de fechamento}:
+Seja \(B_{ij}=F_i(m_{ij})h_id_i\eta_{p,j}\eta_{w,j}\).
+O fechamento requer \(B_{i,j_i^1}>0\) e
+\(0<q_{i,j_i^1}\le B_{i,j_i^1}\). Se nenhuma semana admissível
+produz o saldo positivo, o cronograma é \textbf{inviável}.
+A fração de fechamento, distinta de uma perda de eficiência, é:
 
-\[\varphi_i \equiv \frac{q_{i,j_i^1}}{F_i(m_i(N_i-1))\,h_id_i\,\eta_{p,j_i^1}\eta_{w,j_i^1}} \in (0,1]\]
+\[\boxed{\varphi_i=\frac{q_{i,j_i^1}}{B_{i,j_i^1}}\in(0,1]}\]
 
 representando a fração da capacidade nominal da última semana
 efetivamente utilizada para completar o escopo. A frota mobilizada
@@ -1403,15 +1394,15 @@ ENTRADA
     Q_i                            — quantitativo total [un]
     G_i = (V_i, A_i^syn, cap)      — grafo de sinergia da equipe
     R_i = {r: (cat_r, n_r, V_r^mensal ou (κ_r, p_{g(r)}))}
-    W_i = (m_i^0, μ_i^+, m_i^max, μ_i^-, m_i^1)
+    W_i = (m_i^0, μ_i^+, m_i^1, μ_i^-, m_i^max)
     B_i, θ_i: B_i → (0,1]
     (h_i, d_i)                     — regime de jornada
 
   Parâmetros globais:
     β^EQ, β^MO, β^MAT, β^COMB, β^IND, s_mes
     {η_{p,j}, η_{w,j}}              — calendário global de desempenho e clima
-    // η_{s,ij} é derivado por atividade a partir de G_i e do perfil {m_ij} (Fase 1)
-    // ε_{ij} = η_{s,ij} · η_{p,j} · η_{w,j}
+    // F_i(m_ij) já inclui todas as frentes e gargalos físicos
+    // ε_exog_ij = η_{p,j} · η_{w,j}, sem penalidade de alocação η_s
 
   Para cada recurso r:
     c_r^mob, c_r^demob             — custos de mobilização/desmobilização
@@ -1427,90 +1418,54 @@ ENTRADA
 \end{verbatim}
 
 \hypertarget{xiv.0-fase-0-resoluuxe7uxe3o-de-produtividade}{%
-\subsubsection{XIV.0 --- Fase 0: Resolução de
-Produtividade}\label{xiv.0-fase-0-resoluuxe7uxe3o-de-produtividade}}
-
-Em termos simples: aqui se calcula quanto cada equipe consegue produzir
-por hora, a partir do grafo de sinergia ou de um valor calibrado
-externamente.
+\subsubsection{XIV.0 --- Fase 0: Capacidade produtiva da
+composição}\label{xiv.0-fase-0-resoluuxe7uxe3o-de-produtividade}}
 
 \begin{verbatim}
-Para cada i ∈ A:
-  Se i.grafo_sinergia está presente:
-    Identificar topologia de G_i:
-      série    → ρ_i = min_{(u,v) ∈ caminho_crítico} cap(u,v)
-      paralelo → ρ_i = Σ_{(s_i,v) ∈ A_i^syn} cap(s_i, v)
-      misto    → ρ_i = max-fluxo(s_i → t_i, G_i^D)  [Ford-Fulkerson]
-    Armazenar ρ_i como producao_horaria  [cache auditável]
-  Senão:
-    ρ_i ← i.producao_horaria             [entrada direta calibrada externamente]
-
-  Validar ρ_i > 0  [equipe inviável se algum corte tem capacidade zero]
-
-SAÍDA: {ρ_i} ∀i
+Para cada atividade i:
+  Para m = 0,...,m_i^max:
+    Se G_i é auditável:
+      F_i(m) ← maxflow(G_i^D | m), preservando gargalos compartilhados
+    Senão se taxa rho_i^front POR FRENTE é demonstrada:
+      F_i(m) ← m · rho_i^front
+    Senão:
+      exigir taxa calibrada por configuração e mapa válido m → F_i(m)
+  F_i(0) ← 0
+  Validar fonte, unidade física e capacidade admissível
+SAÍDA: {F_i(m)} e composição de referência por atividade.
 \end{verbatim}
 
 \hypertarget{xiv.1-fase-1-cronograma-interface-com-solver-rcpsp-externo}{%
-\subsubsection{XIV.1 --- Fase 1: Cronograma (interface com solver RCPSP
-externo)}\label{xiv.1-fase-1-cronograma-interface-com-solver-rcpsp-externo}}
-
-Em termos simples: aqui se determina quantas semanas cada atividade vai
-durar e como as frentes de trabalho se distribuem ao longo do tempo, até
-fechar exatamente o quantitativo contratado.
+\subsubsection{XIV.1 --- Fase 1: Cronograma físico e
+fechamento}\label{xiv.1-fase-1-cronograma-interface-com-solver-rcpsp-externo}}
 
 \begin{verbatim}
-Pré-condição: {ρ_i} disponível ∀i
+Pré-condição: {F_i(m)} e calendário disponível.
+Para cada i em ordem topológica:
+  Resolver j_i^0 a partir das liberações físicas de predecessores.
+  Para N em durações candidatas dentro do horizonte:
+    m_i(τ;N) ← RampProfile.build(N,W_i)[τ]
+    B_iτ ← F_i(m_i(τ;N)) · h_i · d_i · η_{p,j_i^0+τ} · η_{w,j_i^0+τ}
+    Se Στ B_iτ ≥ Q_i e recursos/precedências são viáveis:
+      aceitar N; sair
+  Se nenhuma duração é viável: NOGO com causa física/calendário.
 
-Para cada i em ordem topológica de B_i:
+  saldo ← Q_i
+  Para cada semana j em ordem:
+    q_ij ← min(saldo,B_ij)
+    saldo ← saldo−q_ij
+  Exigir saldo=0 e Σ_j q_ij=Q_i
+  j_i^1 ← última semana de produção positiva
+  φ_i ← q_i,j_i^1 / B_i,j_i^1 ; exigir B_i,j_i^1>0
+  Revalidar capacidades e precedências após alterar m,N ou j_i^0
 
-  // j_i^0 depende só de predecessores, já resolvidos — calculado antes da busca por N_i,
-  // pois a busca abaixo precisa de semanas absolutas j para consultar η_{p,j}, η_{w,j}
-  j_i^0 ← max_{b ∈ B_i} min{j : Φ_b(j) ≥ θ_i(b)}  [restrição exata de quantidade]
-    com Φ_b(j) = (1/Q_b) · Σ_{j'=j_b^0}^{j} q_{b,j'}
-    // q_{b,j'} vem da DistribuicaoSemanal já calculada dos predecessores b, já com
-    // fechamento fracionário aplicado
-
-  N_i ← max(1, ⌈Q_i / (ρ_i · h_i · d_i · m_i^max)⌉)   // chute inicial (eficiência plena)
-
-  Repetir:
-    {m_i(τ)}_{τ=0}^{N_i-1} ← RampProfile.build(N_i, m_i^0, μ_i^+, m_i^max, μ_i^-, m_i^1)
-    // perfil inteiramente determinado pelo N_i testado — nenhuma incógnita nesta avaliação
-
-    Para τ = 0, ..., N_i-1:
-      j ← j_i^0 + τ                                    // semana absoluta, para consultar o calendário
-      Se i.grafo_sinergia presente:
-        η_{s,iτ} ← max-fluxo(G_i^D | m_i(τ)) / max-fluxo(G_i^D | m_i^max)
-      Senão:
-        η_{s,iτ} ← m_i(τ) / m_i^max
-      ε_{iτ} ← η_{s,iτ} · η_{p,j} · η_{w,j}
-
-    prod ← Σ_τ ρ_i · ε_{iτ} · h_i · d_i · m_i(τ)
-
-    Se prod ≥ Q_i:
-      convergiu; {m_{ij}} ← {m_i(τ)}; {ε_{ij}} ← {ε_{iτ}}
-    Senão:
-      Se ε_{iτ} = 0 para toda semana τ futura alcançável dentro do calendário disponível:
-        Marcar A_i INVIÁVEL; interromper busca (→ Fase 9, NOGO)
-      Senão:
-        N_i ← N_i + 1
-        // Π(N) = prod acumulado é estritamente crescente em N (ver §I.4): a cada
-        // incremento, as semanas já existentes só podem crescer (o piso de ramp-down
-        // relaxa) e a semana nova soma ≥ ρ_i · ε_{i,N-1} · h_i · d_i · m_i^1 > 0 —
-        // convergência garantida sempre que o calendário não anula ε indefinidamente.
-        // Cada tentativa é recalculada do zero a partir da fórmula de m_i(τ;N); nenhum
-        // valor de uma tentativa rejeitada é reaproveitado na seguinte.
-
-  // Fechamento exato de escopo — última semana ativa (τ relativo, 0-indexado)
-  τ^1 ← N_i − 1
-  q_residual ← Q_i − Σ_{τ=0}^{τ^1-1} ρ_i · ε_{i,τ} · h_i · d_i · m_i(τ)
-  φ_i ← q_residual / (ρ_i · ε_{i,τ^1} · h_i · d_i · m_i(τ^1))
-
-  Verificar: r + d ≤ N_i  [consistência com W_i]
-
-Armazenar (j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i)
-
-SAÍDA: {j_i^0, N_i, {m_{ij}}, {ε_{ij}}, φ_i} ∀i
+SAÍDA: (j_i^0,N_i,{m_ij},{F_i(m_ij)},{B_ij},{q_ij},φ_i).
 \end{verbatim}
+
+\noindent\textbf{Escopo:} não existe \(\eta_s\) multiplicativo.
+Os custos derivados exigem rederivação em \#11 antes de GO no
+caso de capacidade não linear. A prova de ótimo do pool é condicional
+ao cronograma físico fixado.
 
 \hypertarget{xiv.2-fase-2-taxas-horuxe1rias-de-catuxe1logo}{%
 \subsubsection{XIV.2 --- Fase 2: Taxas Horárias de
@@ -1925,8 +1880,8 @@ Significado
 \(j_i^0\) & semana de início (derivada dos predecessores) \\
 \(N_i\) & duração em semanas (derivada por busca monotônica) \\
 \(m_{ij}\) & número de frentes mobilizadas de \(A_i\) na semana \(j\) \\
-\(\varepsilon_{ij}\) & eficiência semanal da atividade \(i\) na semana
-\(j\) \\
+\(\varepsilon_{ij}^{exog}\) & fatores físicos exógenos
+\(\eta_{p,j}\eta_{w,j}\), sem fator por equipes ausentes \\
 \(\varphi_i\) & fração de fechamento da última semana ativa \\
 \(M_i\) & total de frente-semanas mobilizadas \\
 \(q_{ij}\) & quantitativo produzido por \(A_i\) na semana \(j\) \\
@@ -1963,10 +1918,10 @@ ou \(COMB\)) \\
 \(g(r)\) & tipo físico do bem consumido por \(r\) \\
 \(p_{g(r)}\) & preço de aquisição do bem \(g(r)\) \\
 \(c_r\) & custo horário de catálogo do recurso \(r\) \\
-\(\rho_i\) & produtividade horária da equipe (min-corte de
-\(\mathcal{G}_i\)) \\
-\(\eta_{s,ij}\) & fator de alocação (grau de utilização do grafo de
-sinergia) \\
+\(\rho_i^{peak}=F_i(m_i^{max})\) & capacidade de pico da composição,
+não produtividade por frente \\
+\(F_i(m_{ij})\) & capacidade física horária da composição realmente
+mobilizada, com gargalos preservados \\
 \(\eta_{p,j},\ \eta_{w,j}\) & fatores globais de desempenho e clima do
 calendário \\
 \end{longtable}
