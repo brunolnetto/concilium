@@ -498,3 +498,33 @@ class TestDimensionamentoEndToEndComGrafoSinergia:
         codigos = {v.codigo for v in validacoes_div}
         assert "VAL-SINERGIA-02" in codigos
         assert "VAL-SINERGIA-03" in codigos
+
+
+def test_rcpsp_nominal_duration_uses_physical_graph_capacity() -> None:
+    """A catalog P calibrated for the graph must NOT be multiplied by four teams."""
+    mod = _skills_pkg._load_skill_module("04-cronograma")
+    can = _make_canonical()
+    can = can.model_copy(
+        update={"eap": [can.eap[0].model_copy(update={"quantitativo": 1200.0})]}
+    )
+    graph = {
+        "fonte": "s",
+        "sorvedouro": "t",
+        "dominio": ["s", "mid", "t"],
+        "arestas_fluxo": [
+            {"aresta_id": "supply", "origem": "s", "destino": "mid", "capacidade_horaria": 40},
+            {"aresta_id": "shared", "origem": "mid", "destino": "t", "capacidade_horaria": 15},
+        ],
+    }
+    prod = _prod_dict(grafo_sinergia=graph, producao_horaria=15.0)
+    duration = mod._compute_productive_weeks(
+        "EAP-01",
+        4,
+        can,
+        {_CPU_ID: _cpu_dict()},
+        {_PROD_ID: prod},
+        [],
+    )
+    # F(4)=15 u/h with shared bottleneck, 40 h/week => 600/wk,
+    # thus Q=1,200 takes 2 weeks, not ceil(1,200/(15*40*4))=1.
+    assert duration == 2
