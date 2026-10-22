@@ -43,3 +43,57 @@ def test_shared_downstream_graph_saturates() -> None:
     )
     assert capacidade_efetiva_frentes(graph, 2, 4, 15) == 15
     assert capacidade_efetiva_frentes(graph, 4, 4, 15) == 15
+
+
+def test_mobilization_simulator_uses_graph_capacity_instead_of_double_team_count() -> None:
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
+
+    simulator = WorkforcePolicySimulator()
+    policy = WorkforcePolicy.imediato(4)
+    curve = simulator.simulate(
+        policy=policy,
+        atividade_id="EAP-1",
+        quantitativo=600.0,
+        producao_horaria=15.0,  # calibrated peak F(4), *not* 15 per front
+        dias_semana=5,
+        horas_dia=8,
+        capacidade_horaria_por_frentes=lambda m: min(10.0 * m, 15.0),
+    )
+    assert curve.is_complete
+    assert curve.duration_weeks == 1
+    assert curve.semanas[0].qtd_executada == 600.0
+
+
+def test_mobilization_ramp_uses_bottleneck_from_second_week() -> None:
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
+
+    curve = WorkforcePolicySimulator().simulate(
+        policy=WorkforcePolicy.padrao(4),
+        atividade_id="EAP-ramp",
+        quantitativo=1000.0,
+        producao_horaria=15.0,
+        dias_semana=5,
+        horas_dia=8,
+        capacidade_horaria_por_frentes=lambda m: min(10.0 * m, 15.0),
+    )
+    assert curve.is_complete
+    assert curve.duration_weeks == 2
+    assert [cell.qtd_executada for cell in curve.semanas] == [400.0, 600.0]
+
+
+def test_mobilization_rejects_nonfinite_capacity_callback() -> None:
+    from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
+
+    with pytest.raises(ValueError, match="finite"):
+        WorkforcePolicySimulator().simulate(
+            policy=WorkforcePolicy.imediato(2),
+            atividade_id="EAP-invalid",
+            quantitativo=1000.0,
+            producao_horaria=10.0,
+            dias_semana=5,
+            horas_dia=8,
+            capacidade_horaria_por_frentes=lambda _: float("nan"),
+        )

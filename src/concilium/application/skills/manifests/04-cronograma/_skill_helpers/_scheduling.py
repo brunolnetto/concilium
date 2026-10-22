@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from concilium.application.scheduling.models import ReplenishableResource
 from concilium.domain.models.canonical import (
@@ -539,6 +539,7 @@ def _run_wmp_simulation(
     prat_semanal: dict,
     semanas_obra: list,
     guard: int,
+    capacidade_horaria_por_frentes: Callable[[float], float] | None = None,
 ) -> CurvaForca:
     semanas_iso = {t: semanas_obra[t] for t in range(min(guard, len(semanas_obra)))}
     return sim.simulate(
@@ -551,6 +552,7 @@ def _run_wmp_simulation(
         prat_semanal=prat_semanal or None,
         semanas_iso_por_offset=semanas_iso,
         eta_jornada=regime.eta_jornada,
+        capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
     )
 
 
@@ -610,13 +612,35 @@ def _process_single_wmp_policy(
         )
         return
 
-    prod_base = P * regime.dias_semana * regime.horas_dia * regime.eta_jornada * policy.n_maximo
+    horas_semana = regime.dias_semana * regime.horas_dia
+    prod_item = producao_lookup.get(cpu.get("producao_id_ref"))
+    capacidade_horaria_por_frentes: Callable[[float], float] | None = None
+    if prod_item and prod_item.get("grafo_sinergia"):
+        def _f_por_frentes(frentes: float) -> float:
+            return _capacidade_semanal_por_frentes(
+                P * horas_semana,
+                frentes,
+                policy.n_maximo,
+                prod_item,
+                horas_semana=horas_semana,
+            ) / horas_semana
+
+        capacidade_horaria_por_frentes = _f_por_frentes
+    pico = (
+        capacidade_horaria_por_frentes(float(policy.n_maximo))
+        if capacidade_horaria_por_frentes is not None
+        else P * policy.n_maximo
+    )
+    prod_base = pico * horas_semana * regime.eta_jornada
     nominal = math.ceil(Q / prod_base) if prod_base > 0 else 1
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
     guard = WorkforcePolicySimulator.MAX_MULTIPLIER * max(1, nominal)
 
-    curva = _run_wmp_simulation(sim, policy, item_id, Q, P, regime, prat_semanal, semanas_obra, guard)
+    curva = _run_wmp_simulation(
+        sim, policy, item_id, Q, P, regime, prat_semanal, semanas_obra, guard,
+        capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
+    )
     _check_wmp_desmob(item_id, curva, policy, Q, P, validacoes)
 
     curves.append(curva)
