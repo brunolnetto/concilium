@@ -447,7 +447,10 @@ def cpu_similarity(
     rb = _recursos_canonicos(prod_b, canon_map)
     recipe_sim = _jaccard(set(ra), set(rb))
     qty_sim = _cosseno(ra, rb)
-    vh_sim = _vh_sim(float((prod_a or {}).get("producao_horaria") or 0), float((prod_b or {}).get("producao_horaria") or 0))
+    vh_sim = _vh_sim(
+        float((prod_a or {}).get("producao_horaria") or 0),
+        float((prod_b or {}).get("producao_horaria") or 0),
+    )
     desc_sim = _desc_sim(cpu_a, cpu_b, idf)
     score = _PESO_DESC_CPU * desc_sim + _PESO_RECIPE * recipe_sim + _PESO_QTY * qty_sim + _PESO_VH * vh_sim
     cod_a, cod_b = cpu_a.get("codigo", ""), cpu_b.get("codigo", "")

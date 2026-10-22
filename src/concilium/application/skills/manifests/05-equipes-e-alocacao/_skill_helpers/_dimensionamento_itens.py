@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import ValidationError
 
 from concilium.domain.constants import SEMANAS_POR_MES
 from concilium.domain.models.canonical import (
@@ -13,15 +11,7 @@ from concilium.domain.models.canonical import (
     FuncaoEquipeDireta,
     ValidacaoItem,
 )
-from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe
-from concilium.domain.models.catalog.producao import (
-    AuditoriaProducao,
-    CondicoesCalibração,
-    GrafoSinergiaEquipe,
-    OrigemProducao,
-    Producao,
-    QualidadeProducao,
-)
+from concilium.domain.models.catalog.producao import Producao
 from concilium.domain.services.sinergia_equipe import (
     construir_producao_catalogo_para_sinergia,
     resolver_producao_efetiva,

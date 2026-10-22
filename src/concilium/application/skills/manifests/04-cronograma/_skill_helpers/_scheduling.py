@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from concilium.application.scheduling.models import ReplenishableResource
@@ -16,7 +15,7 @@ from concilium.domain.models.canonical import (
 )
 
 from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[unresolved-import]
-from ._custos import _build_dist_cell, _iso_week_key, _lookup_eficiencia, _week_offset  # ty: ignore[unresolved-import]
+from ._custos import _build_dist_cell, _lookup_eficiencia, _week_offset  # ty: ignore[unresolved-import]
 from ._validacao import (  # ty: ignore[unresolved-import]
     _build_activity_item_map,
     _find_item_by_id,
@@ -295,7 +294,10 @@ def _convert_schedule_to_distribuicao(
                 continue
             _resolved_item_id, item = resolved
             predecessors = getattr(item, "predecessores_tipados", lambda: [])()
-            if any(pred.item_id in scheduled_by_item and pred.item_id not in distribuicao_por_item for pred in predecessors):
+            if any(
+                pred.item_id in scheduled_by_item and pred.item_id not in distribuicao_por_item
+                for pred in predecessors
+            ):
                 continue
 
             physical_start = sa.start_week

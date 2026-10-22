@@ -180,7 +180,10 @@ def _compute_preco_cat_from_production(
             ValidacaoItem(
                 codigo="VAL-PLAN-SBDI-LEGADO",
                 status="INFO",
-                mensagem=f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi é campo depreciado — ignorado (bottom-up via equipe).",
+                mensagem=(
+                    f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi é campo depreciado — "
+                    "ignorado (bottom-up via equipe)."
+                ),
             )
         )
 

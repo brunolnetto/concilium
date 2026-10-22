@@ -54,7 +54,9 @@ def _calc_venda_com_bdi(
     # material por natureza (uma compra), à mesma alíquota — sem categoria de BDI
     # dedicada (ver ADR-184 D4).
     custo_deficit_externo = cat.get("deficit_estoque_externo", 0.0)
-    artifacts = custos_atividades if custos_atividades is not None else _build_custos_atividades(canonical_in, bdi_rates)
+    artifacts = (
+        custos_atividades if custos_atividades is not None else _build_custos_atividades(canonical_in, bdi_rates)
+    )
     venda_direto_eq = sum(custo.custo_direto_com_bdi for custo in artifacts)
     venda_direto_eq += custo_deficit_externo * (1 + _bdi("material"))
 
