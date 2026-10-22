@@ -379,6 +379,30 @@ def _capacidade_semanal_por_frentes(
     )
 
 
+
+def _capacidade_semanal_disponivel(
+    capacidade_instalada: float,
+    praticabilidade: float,
+    calendario: float,
+    jornada: float = 1.0,
+) -> float:
+    """Single availability equation for a physical F_i(m) * H_i baseline.
+
+    Productivity F_i(m) is defined by the mobilized team's resource
+    composition and is *not* separately calibrated for weather or dates.
+    Practical conditions, operational calendar and working-time availability
+    are orthogonal factors applied exactly once. Scope closure is independent.
+    """
+    values = (capacidade_instalada, praticabilidade, calendario, jornada)
+    if not all(isfinite(value) for value in values):
+        raise ValueError("physical capacity and availability must be finite")
+    if capacidade_instalada < 0:
+        raise ValueError("installed physical capacity cannot be negative")
+    if not all(0.0 <= factor <= 1.0 for factor in (praticabilidade, calendario, jornada)):
+        raise ValueError("availability factors must lie in [0,1]")
+    return capacidade_instalada * praticabilidade * calendario * jornada
+
+
 def _build_dist_cell(
     producao_semanal_base: float,
     num_eq: float,
@@ -414,8 +438,12 @@ def _build_dist_cell(
         raise ValueError("invalid number of fronts")
 
     q_max = capacidade_fisica_semanal
+    # One productivity F(m); exogenous practicability/calendar/journey
+    # affect available output once, never the underlying calibrated rate.
     eta_p = fator_clima * fator_calendario * fator_jornada
-    capacidade_real = q_max * eta_p
+    capacidade_real = _capacidade_semanal_disponivel(
+        q_max, fator_clima, fator_calendario, fator_jornada
+    )
     qtd_remanescente = max(0.0, quantitativo - qtd_acumulada)
     qtd_executada = min(capacidade_real, qtd_remanescente)
     fracao_fechamento = (qtd_executada / capacidade_real) if capacidade_real > 0 else 0.0
@@ -448,6 +476,7 @@ __all__ = [
     "_build_cpu_lookup",
     "_build_dist_cell",
     "_capacidade_semanal_por_frentes",
+    "_capacidade_semanal_disponivel",
     "_build_insumos_lookup",
     "_build_producao_lookup",
     "_custo_hora_combustivel_equip",

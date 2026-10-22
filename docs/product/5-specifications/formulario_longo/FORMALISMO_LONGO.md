@@ -81,7 +81,10 @@ $$\boxed{F_i(m)=\max\text{-fluxo}(s_i,t_i;\mathcal G_i^D|_m)\quad[\mathrm{unid}_
 
 O grafo contém as frentes efetivamente alocadas e preserva gargalos físicos compartilhados. Para frentes independentes pode valer $F_i(m)=m\rho_i^{front}$; para grafos mistos, $F_i(m)$ pode saturar. A capacidade de pico $\rho_i^{peak}=F_i(m_i^{max})$ não pode ser confundida com a produtividade de uma única frente.
 
-$$\boxed{\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j},\qquad B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog}}.$$
+$\boxed{\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j},\qquad B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog}}.$
+
+**Definição única de produtividade (P10-B):** somente \(F_i(m)\) [unidades/h] é produtividade física. A praticabilidade \(p_j\), o calendário \(c_j\) e a disponibilidade da jornada \(a_i\) formam um **único fator de disponibilidade** \(\varepsilon_{ij}^{exog}=p_jc_ja_i\); no esquema legado isso corresponde a \(\eta_{p,j}\eta_{w,j}\), com qualquer \(\eta_w\) neutro na ausência de perda operacional realmente observada. Em particular, fatores já incorporados em horas efetivas ou na base da taxa não devem ser reaplicados. Calendário e praticabilidade alteram \(B_{ij}\), **não** o valor de \(F_i(m)\); \(\varphi_i\) não é eficiência.
+
 
 Não se multiplica $B$ por $m$ novamente e não existe um fator $\eta_s$ de perda por número de equipes. A razão opcional $\alpha_i(m)=F_i(m)/F_i(m_i^{max})$ é **diagnóstico de capacidade**, não redutor da produção.
 
