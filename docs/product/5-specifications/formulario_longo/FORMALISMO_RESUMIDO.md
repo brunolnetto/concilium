@@ -116,7 +116,7 @@ $$\boxed{m_i(\tau) = \min\!\Big(m_i^0 + \mu_i^+\tau,\quad m_i^{\max},\quad m_i^1
 
 $$\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max} \quad \forall\,\tau \in \{0,\ldots,N_i-1\}$$
 
-**Somente se** $m_i^0 = m_i^1 = m_i^{\max}$, como exigido pelo contrato normativo,, reduzindo $W_i$ a um único parâmetro de frota: frota constante durante toda a atividade.
+Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$ reduz-se a um único parâmetro de frota, constante durante toda a atividade.
 
 $$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
 
