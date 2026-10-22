@@ -100,7 +100,7 @@ F_i(m_i(\tau;N))\eta_{p,j_i^0+\tau}\eta_{w,j_i^0+\tau}.$$
 
 A duração é o menor \(N\) admissível que fecha \(Q_i\) e satisfaz capacidade, predecessores e horizonte. O calendário absoluto deve ser conhecido **antes** da busca; mudar início ou duração exige revalidar restrições RCPSP. **Não declarar convergência garantida** sem produtividade futura e horizonte suficientes (#12/#15). A condição histórica \(r+d\le N\) está indefinida e não constitui gate.
 
-**Dependência temporal P12-A:** \(N_i\) deve ser determinado **depois** do início absoluto \(j_i^0\), pois \(p_j\) e \(c_j\) dependem de \(j\). Não se garante monotonicidade estrita da produção acumulada com \(N\) quando clima é zero ou a própria rampa muda. A busca finita, precedência de fronteira de semana e invalidação RCPSP são definidas em [CALENDARIO_E_LIBERACAO_FISICA.md](CALENDARIO_E_LIBERACAO_FISICA.md).
+**Dependência temporal P12-A:** \(N_i\) deve ser determinado **depois** do início absoluto \(j_i^0\), pois \(p_j\) e \(c_j\) dependem de \(j\). A rampa canônica com taxas não negativas **garante monotonicidade fraca da capacidade isolada** para início fixo e (F_i(m)) não decrescente, mas não crescimento estrito nem monotonicidade da viabilidade conjunta RCPSP. A busca limitada, a precedência de fronteira de semana e a revalidação são definidas em [CALENDARIO_E_LIBERACAO_FISICA.md](CALENDARIO_E_LIBERACAO_FISICA.md).
 
 ### I.5 Predecessores e completude parcial
 
@@ -507,7 +507,7 @@ Para cada i em ordem topológica de Q–FS:
 SAÍDA: agenda admissível e prova; INFEASIBLE/UNKNOWN se não certificável.
 ```
 
-A busca não presume monotonicidade da rampa, nem permite iniciar na semana em que o predecessor atinge o limiar ao **fim** dela. Validação conjunta RCPSP de #15 continua obrigatória.
+A rampa canônica tem capacidade cumulativa fracamente monótona sob hipóteses explícitas, mas a busca de **agenda RCPSP** não assume viabilidade monótona. Início só ocorre após a semana em que o limiar físico foi alcançado. #15 deve validar as restrições conjuntas.
 
 ### XIV.2 — Fase 2: Contratos e preços físicos
 

@@ -19,7 +19,28 @@ Todos os fatores devem estar versionados; se não houver evidência suficiente p
 
 Para \(s\) fixo e \(N\ge1\), \(\Pi_i(N;s)=\sum_{\tau=0}^{N-1}B_{i,s+\tau}(s,N)\). O teste de fechamento é \(\Pi_i(N;s)\ge Q_i\), limitado a \(s+N-1\le J_{\max}\), precedências, mobilização e recursos.
 
-**É falso** que cada incremento de \(N\) gere produção estritamente positiva: um período pode ter \(p_j=0\) ou \(c_j=0\). E, se o ramp-profile depende de \(N\), nem a monotonicidade fraca de \(\Pi_i(N;s)\) é automática: ao mudar \(N\), \(m_i(\tau;N)\) pode mudar também em semanas anteriores. Por isso não se pode usar busca binária sem uma prova específica da monotonicidade para os parâmetros fixados. A enumeração limitada \(N=1,\ldots,J_{\max}-s+1\) é terminante, mas não dispensa **prova de viabilidade RCPSP**.
+**Monotonicidade fraca do envelope canônico — prova.** A rampa adotada é
+
+\[
+m_i(\tau;N)=\min\{m_i^0+\mu_i^+\tau,\ m_i^{max},\
+m_i^1+\mu_i^-(N-1-\tau)\},\qquad \mu_i^\pm\ge0.
+\]
+
+Para qualquer semana já existente \(\tau<N\), ao substituir \(N\) por \(N+1\), o terceiro argumento do mínimo aumenta \(\mu_i^-\), e os demais permanecem constantes. Portanto,
+
+\[
+m_i(\tau;N+1)\ge m_i(\tau;N).
+\]
+
+Se \(F_i(m)\) é não decrescente na mobilização e \(p_j,c_j,a_i\ge0\) permanecem fixos para o mesmo **início absoluto** \(s\), cada parcela existente não diminui e a nova parcela é não negativa. Logo,
+
+\[
+\boxed{\Pi_i(N+1;s)\ge\Pi_i(N;s).}
+\]
+
+A capacidade agregada sob essa rampa é **fracamente monótona**, não estritamente crescente: semanas indisponíveis \(p_j=0\) ou gargalos já saturados podem gerar igualdade. Essa prova pode justificar busca binária **apenas para o teste isolado** \(\Pi_i(N;s)\ge Q_i\), sob hipóteses certificadas, nunca para declarar viabilidade RCPSP.
+
+O conjunto de **agendas admissíveis** não herda necessariamente monotonicidade: ampliar \(N\) pode alcançar a borda do horizonte, consumir recurso ocupado por outra atividade ou violar outra restrição. Para o **problema conjunto** de duração, precedência e recursos, enumerar candidatos dentro do horizonte ou empregar solver cuja correção seja provada; não substituir a prova de viabilidade por monotonicidade de \(\Pi_i\). Sob outra política de rampa que reduza alocações anteriores quando \(N\) cresce, a propriedade fraca deve ser **redemonstrada**, não presumida.
 
 **Contraprova de início:** capacidade nominal \(F_i(m)H_i=100\,u/semana\), \(Q_i=100\,u\), calendário semanas 1,2,3 com praticabilidade \((0,1,1)\) e demais fatores iguais a 1. Início \(s=1\) exige \(N=2\); início \(s=2\) exige \(N=1\). Uma duração calculada antes de \(s_i\) não é em geral utilizável depois do deslocamento.
 

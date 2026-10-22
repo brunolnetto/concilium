@@ -390,9 +390,16 @@ O fator \(a_i\) é aplicado apenas se \(H_i\) ainda representa horas
 nominais; clima e calendário jamais geram outra taxa de produtividade.
 Para cada \(N\) candidato a função \(m_i(\tau;N)\) é determinada,
 mas pode ser diferente da rampa para \(N+1\).
-\textbf{Não há monotonicidade presumida em \(N\)} e não se admite
-busca binária sem demonstração dessa propriedade para a instância.
-Semanas com \(p_j=0\) ou \(c_j=0\) não aumentam a produção.
+\textbf{Prova de monotonicidade fraca no modelo canônico:}
+para cada \(\tau<N\), a terceira parcela do mínimo que define
+\(m_i(\tau;N+1)\) aumenta em \(\mu_i^-\ge0\), sem diminuir
+as demais. Assim \(m_i(\tau;N+1)\ge m_i(\tau;N)\) e,
+com \(F_i(m)\) não decrescente e disponibilidades não
+negativas, \(\Pi_i(N+1;s)\ge\Pi_i(N;s)\).
+O crescimento estrito não está assegurado (por exemplo,
+\(p_j=0\)). A prova vale para o \textbf{subproblema de capacidade},
+não para viabilidade conjunta RCPSP, que requer enumeração/solver
+e checagem explícita de precedências, recursos e horizonte.
 
 A busca enumera durações candidatas dentro de horizonte civil finito,
 com início \(s\) previamente fixado por predecessores físicos. A

@@ -128,3 +128,34 @@ def test_three_representations_reference_same_contract() -> None:
         assert "CALENDARIO_E_LIBERACAO_FISICA.md" in text, path.name
         assert "j_i^0" in text, path.name
         assert "ell_" in text or r"\ell_" in text, path.name
+
+
+def test_canonical_ramp_weakly_increases_cumulative_capacity() -> None:
+    """For fixed absolute start, mu^->=0 protects all existing mobilizations."""
+    factors = (
+        Fraction(1), Fraction(0), Fraction(1, 2),
+        Fraction(1), Fraction(1), Fraction(0),
+    )
+    values: list[Fraction] = []
+    for n in range(1, len(factors) + 1):
+        teams = [
+            min(1 + t, 4, 1 + 1 * (n - 1 - t))
+            for t in range(n)
+        ]
+        # Nonlinear max-flow: one shared 15 u/h downstream bottleneck.
+        flows = [min(10 * team, 15) for team in teams]
+        values.append(sum(
+            (Fraction(flow) * factor for flow, factor in zip(flows, factors, strict=False)),
+            Fraction(0),
+        ))
+    assert values == sorted(values)
+    # A zero-capacity first week and already saturated shared bottleneck
+    # do not imply strict growth at every candidate duration.
+
+
+def test_extension_can_break_resource_feasibility_even_if_capacity_grows() -> None:
+    nominal_production = (100, 100)
+    assert sum(nominal_production) >= 100
+    assert capacity_feasible((1, 0), (1, 0))
+    # Extending an activity into another resource-owner's week is infeasible.
+    assert not capacity_feasible((1, 1), (1, 0))
