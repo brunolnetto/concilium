@@ -9,7 +9,7 @@ dependencies = [
     "PyJWT[crypto]>=2.8.0",
     # Native MCP SDK v1 API is used throughout presentation/mcp (FastMCP and request_ctx).
     # Do not upgrade to mcp 2.x before migrating the server, tools, tests and auth middleware.
-    "mcp>=1.16,<2",
+    "mcp>=2.3,<3",
     "PyYAML>=6.0,<7",  # config loaders and semantic aliases need yaml at runtime
     "highcharts-gantt>=1.7.0",
     "jsonschema>=4.23.0",
