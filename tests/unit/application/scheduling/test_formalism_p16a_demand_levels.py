@@ -22,10 +22,10 @@ def test_staggered_multilevel_demands_reconstruct_exactly() -> None:
         "ESC": (0, 2, 0, 0),
         "GRUA": (1, 1, 3, 0),
     }
-    assert [(l.level, l.blocks) for l in d.layers if l.resource_type == "GRUA"] == [
+    assert [(layer.level, layer.blocks) for layer in d.layers if layer.resource_type == "GRUA"] == [
         (1, ((0, 3),)), (2, ((2, 3),)), (3, ((2, 3),)),
     ]
-    assert [(l.level, l.blocks) for l in d.layers if l.resource_type == "ESC"] == [
+    assert [(layer.level, layer.blocks) for layer in d.layers if layer.resource_type == "ESC"] == [
         (1, ((1, 2),)), (2, ((1, 2),)),
     ]
 
