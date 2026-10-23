@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from fractions import Fraction
 from typing import TYPE_CHECKING, Any
 
 from concilium.application.scheduling.models import ReplenishableResource
@@ -281,6 +282,58 @@ def _warn_if_activity_underdelivers(
     )
 
 
+
+def _release_fs_after_physical_delivery(
+    predecessor_dist: Mapping[str, DistribuicaoSemanal],
+    *,
+    physical_threshold: float | Fraction,
+    lag_weeks: int,
+    semanas_obra: list[str],
+    data_inicio: Any,
+) -> int | None:
+    """Earliest week boundary justified by delivered physical Q (not cached percent).
+
+    For theta>0 a delivery within week j becomes available only at j+1,
+    then the nonnegative lag applies. Theta=0 has start-to-start semantics
+    and uses the actual first materialized week, with no extra boundary.
+    Recompute from qtd_executada rather than trusting qtd_acumulada; the
+    latter can be stale or falsely increased by an earlier transformation.
+    """
+    if not isinstance(lag_weeks, int) or isinstance(lag_weeks, bool) or lag_weeks < 0:
+        raise ValueError("FS lag must be a nonnegative integer")
+    try:
+        required = Fraction(str(physical_threshold))
+    except (ValueError, ZeroDivisionError) as exc:
+        raise ValueError("physical predecessor threshold must be finite") from exc
+    if required < 0:
+        raise ValueError("physical predecessor threshold cannot be negative")
+    if not predecessor_dist:
+        return None
+
+    ordered = sorted(
+        ((_week_offset(week, semanas_obra, data_inicio), cell) for week, cell in predecessor_dist.items()),
+        key=lambda entry: entry[0],
+    )
+    if required == 0:
+        return ordered[0][0] + lag_weeks
+
+    delivered = Fraction()
+    previous: int | None = None
+    for index, cell in ordered:
+        if previous is not None and index != previous + 1:
+            raise ValueError("materialized physical predecessor has missing ISO weeks")
+        previous = index
+        try:
+            quantity = Fraction(str(cell.qtd_executada))
+        except (ValueError, ZeroDivisionError) as exc:
+            raise ValueError("weekly predecessor delivery must be finite") from exc
+        if quantity < 0:
+            raise ValueError("weekly predecessor delivery cannot be negative")
+        delivered += quantity
+        if delivered >= required:
+            return index + 1 + lag_weeks
+    return None
+
 def _convert_schedule_to_distribuicao(
     schedule_selected: ScheduleCandidateCanonical,
     canonical_in: CanonicalModel,
@@ -335,19 +388,23 @@ def _convert_schedule_to_distribuicao(
                 predecessor_dist = distribuicao_por_item.get(predecessor.item_id, {})
                 if predecessor_item is None:
                     continue
-                threshold = predecessor_item.quantitativo * predecessor.completion_threshold_pct
-                completion_week = next(
-                    (
-                        _week_offset(week, semanas_obra, canonical_in.projeto.data_inicio)
-                        for week, cell in predecessor_dist.items()
-                        if cell.qtd_acumulada >= threshold
-                    ),
-                    None,
+                # Exact physical threshold; avoid a second binary float
+                # rounding from Q * theta before comparing delivered Q.
+                threshold = (
+                    Fraction(str(predecessor_item.quantitativo))
+                    * Fraction(str(predecessor.completion_threshold_pct))
                 )
-                if completion_week is None:
+                release_week = _release_fs_after_physical_delivery(
+                    predecessor_dist,
+                    physical_threshold=threshold,
+                    lag_weeks=predecessor.lag,
+                    semanas_obra=semanas_obra,
+                    data_inicio=canonical_in.projeto.data_inicio,
+                )
+                if release_week is None:
                     blocked_by_predecessor = predecessor.item_id
                     break
-                physical_start = max(physical_start, completion_week + predecessor.lag)
+                physical_start = max(physical_start, release_week)
             if blocked_by_predecessor is not None:
                 distribuicao_por_item[item_id] = {}
                 validacoes.append(
