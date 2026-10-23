@@ -95,8 +95,11 @@ class TestGapMaxEconomico:
     def test_gap_uses_only_empty_weeks_for_inclusive_intervals(self, helpers):
         """Adjacent activities have zero idle; same-week contact is overlap."""
         week = {"A": (1, 10), "B_adj": (11, 20), "B_idle": (13, 23), "B_overlap": (10, 19)}
-        start = lambda item: week[item][0]
-        end = lambda item: week[item][1]
+        def start(item: str) -> int:
+            return week[item][0]
+
+        def end(item: str) -> int:
+            return week[item][1]
         def opportunity(next_id: str):
             return helpers._bppc_par_oportunidade(
                 "A", 2, next_id, 2, "ESC-3CAT", 10,
