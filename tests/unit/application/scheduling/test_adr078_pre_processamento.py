@@ -60,7 +60,7 @@ def helpers():
     return _load_helpers_b()
 
 
-# Custo base: mob=80k, demob=40k, idle=12k → gap_max = ceil(120k/12k)−1 = 9
+# Custo base: mob=80k, demob=40k, idle=12k → gap_max = floor(120k/12k) = 10 (empate incluído)
 C_MOB = 80_000.0
 C_DEMOB = 40_000.0
 C_IDLE = 12_000.0
@@ -86,15 +86,14 @@ class TestGapMaxEconomico:
         assert result == 9999
 
     def test_divisao_exata(self, helpers):
-        """budget = 10 000, c_idle = 2 500 → ceil(4.0)−1 = 3.
-        Gap 3: 3×2500 = 7500 < 10000 ✓
-        Gap 4: 4×2500 = 10000 ≮ 10000 ✗
+        """budget=10 000, idle=2 500: o empate exato na quarta semana mantém.
+        Gap 3: 7500 < 10000; gap 4: 10000 = 10000 (menos movimentos).
         """
         result = helpers._gap_max_economico(8_000.0, 2_000.0, 2_500.0, "dia_cal")
         assert result == 4
 
     def test_divisao_com_fracao(self, helpers):
-        """budget = 10 000, c_idle = 3 000 → ceil(3.33)−1 = 3.
+        """budget=10 000, c_idle=3 000 → floor(10 000/3 000)=3.
         Gap 3: 9000 < 10000 ✓
         Gap 4: 12000 > 10000 ✗
         """
@@ -373,7 +372,7 @@ class TestBuildPreProcessamento:
         assert "VAL-PRE-PROCESSAMENTO-SKIP" in codigos
 
     def test_atividades_sequenciais_gera_oportunidade(self, helpers):
-        """A (W1-10) → B (W15-25) com gap=4 < gap_max=9 → 1 oportunidade viável."""
+        """A (W1-10) → B (W15-25), gap=4 <= gap_max=10 → viável."""
         spec = _make_rcpsp_spec_com_resource_costs()
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (15, 25), "C": (1, 25)})
@@ -384,7 +383,7 @@ class TestBuildPreProcessamento:
         assert len(viaveis) == 1
 
     def test_gap_maior_que_gap_max_eh_inviavel(self, helpers):
-        """A (W1-10) → B (W25-35) com gap=14 > gap_max=9 → inviável."""
+        """A (W1-10) → B (W25-35), gap=14 > gap_max=10 → inviável."""
         spec = _make_rcpsp_spec_com_resource_costs()
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (25, 35), "C": (1, 25)})
@@ -469,6 +468,33 @@ class TestBuildPreProcessamento:
             assert "ESC-3CAT" in relatorio.gap_max_por_tipo
             assert relatorio.gap_max_por_tipo["ESC-3CAT"] == 10
 
+    @pytest.mark.parametrize("unidade", ["dia_cal", "mes"])
+    def test_empate_propagado_ate_contrato_e_oportunidade(self, helpers, unidade):
+        """A cadeia e o relatório concordam no gap de empate (sem economia positiva)."""
+        spec = _make_rcpsp_spec_com_resource_costs()
+        spec["resource_costs"]["ESC-3CAT"] = {
+            "custo_mob_unit": 100.0,
+            "custo_demob_unit": 100.0,
+            "custo_idle_semanal_unit": 100.0,
+            "unidade_faturamento": unidade,
+        }
+        contratos = _make_contratos(["ESC-3CAT"])
+        cron = _make_cron_lookup({"A": (1, 10), "B": (13, 23), "C": (1, 23)})
+        validacoes: list = []
+        relatorio = helpers._build_pre_processamento_compartilhamento(
+            contratos, spec, cron, validacoes
+        )
+        assert relatorio is not None
+        assert relatorio.gap_max_por_tipo["ESC-3CAT"] == 2
+        assert contratos[0].gap_max_economico == 2
+        empates = [
+            op for op in relatorio.oportunidades
+            if op.tipo_id == "ESC-3CAT" and op.gap_semanas == 2
+        ]
+        assert len(empates) == 1
+        assert empates[0].economicamente_viavel
+        assert empates[0].delta_c_pot == pytest.approx(0.0)
+
     def test_lambda0_igual_delta_vezes_omega(self, helpers):
         """λ_0 = ΔC_pot × Ω para cada oportunidade."""
         spec = _make_rcpsp_spec_com_resource_costs()
@@ -494,7 +520,7 @@ class TestBuildPreProcessamento:
         """Gap > gap_max → VAL-OPT-INVIAVEL emitido."""
         spec = _make_rcpsp_spec_com_resource_costs()
         contratos = _make_contratos(["ESC-3CAT"])
-        # gap = 20 > gap_max = 9
+        # gap = 20 > gap_max = 10
         cron = _make_cron_lookup({"A": (1, 10), "B": (31, 41), "C": (1, 20)})
         validacoes: list = []
         helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
