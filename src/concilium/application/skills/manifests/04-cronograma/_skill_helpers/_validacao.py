@@ -30,7 +30,12 @@ from ._calendario import (  # ty: ignore[unresolved-import]
     _week_to_month,
     _weeks_between,
 )
-from ._custos import _build_dist_cell, _capacidade_semanal_por_frentes, _lookup_eficiencia  # ty: ignore[unresolved-import]
+from ._custos import (  # ty: ignore[unresolved-import]
+    _build_dist_cell,
+    _capacidade_semanal_por_frentes,
+    _lookup_eficiencia,
+    _origem_capacidade,
+)
 from ._spec import (  # ty: ignore[unresolved-import]
     _build_producoes_por_atividade,
     _enrich_spec_resources_from_catalog,
@@ -234,7 +239,10 @@ def _emm_process_item(
     `produtividade_fallback_aplicada` no `ScheduledActivityCanonical` final.
     """
     P, is_fallback = _resolve_productivity(cpu, producao_lookup, validacoes)
-    producao_semanal_base = P * regime.horas_dia * regime.dias_semana
+    horas_semana = regime.horas_dia * regime.dias_semana
+    producao_semanal_base = P * horas_semana
+    prod_item = producao_lookup.get(cpu.get("producao_id_ref"))
+    origem_produtividade = _origem_capacidade(prod_item, is_fallback=is_fallback)
     equipes_semanas = num_equipes_por_item.get(item.item_id, {})
     # n_max is the peak number of mobilized fronts, not an efficiency reference.
     n_max = max((max(0, equipes_semanas.get(s, 0)) for s in semanas_obra), default=1) or 1
@@ -255,9 +263,11 @@ def _emm_process_item(
             fator_jornada=regime.eta_jornada,
             capacidade_fisica_semanal=_capacidade_semanal_por_frentes(
                 producao_semanal_base, num_eq, n_max,
-                producao_lookup.get(cpu.get("producao_id_ref")),
-                horas_semana=regime.horas_dia * regime.dias_semana,
+                prod_item,
+                horas_semana=horas_semana,
             ),
+            horas_contratuais_semana=horas_semana,
+            origem_produtividade=origem_produtividade,
         )
         qtd_acumulada = cell.qtd_acumulada
         distribuicao[semana_key] = cell

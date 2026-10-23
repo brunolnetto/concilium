@@ -14,6 +14,7 @@ from concilium.domain.models.canonical import (
     ScheduleCandidateCanonical,
     ValidacaoItem,
 )
+from concilium.domain.models.canonical._eap import OrigemCapacidade
 
 from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[unresolved-import]
 from ._closure import assess_scope_closure  # ty: ignore[unresolved-import]
@@ -22,6 +23,7 @@ from ._custos import (  # ty: ignore[unresolved-import]
     _capacidade_semanal_disponivel,
     _capacidade_semanal_por_frentes,
     _lookup_eficiencia,
+    _origem_capacidade,
     _week_offset,
 )
 from ._validacao import (  # ty: ignore[unresolved-import]
@@ -168,6 +170,7 @@ def _build_activity_distribuicao(
     fator_jornada: float = 1.0,
     producao_lookup: dict[str, dict] | None = None,
     horas_semana: float | None = None,
+    origem_produtividade: OrigemCapacidade = "NAO_DECLARADA",
 ) -> tuple[dict[str, DistribuicaoSemanal], float]:
     """Busca o menor N_i que fecha Q no calendário disponível e o materializa."""
     n_max = max(1, n_max)
@@ -222,6 +225,8 @@ def _build_activity_distribuicao(
                     producao_semanal_base, num_equipes, n_max, prod_item,
                     horas_semana=horas_semana,
                 ),
+                horas_contratuais_semana=horas_semana,
+                origem_produtividade=origem_produtividade,
             )
             qtd_acumulada = cell.qtd_acumulada
             distribuicao[semana_key] = cell
@@ -383,6 +388,10 @@ def _convert_schedule_to_distribuicao(
                 fator_jornada=regime.eta_jornada,
                 producao_lookup=producao_lookup,
                 horas_semana=regime.horas_dia * regime.dias_semana,
+                origem_produtividade=_origem_capacidade(
+                    producao_lookup.get(cpu.get("producao_id_ref")),
+                    is_fallback=is_fallback,
+                ),
             )
             _warn_if_activity_underdelivers(
                 item, item_id, sa, qtd_acumulada, validacoes,

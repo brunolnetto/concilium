@@ -70,3 +70,37 @@ A terceira e quarta linhas têm produção idêntica, mas mobilizar quatro frent
 As expressões anteriores de \(q=\rho\,\eta_s\,H\,m\) e suas deduções para \(C^V\), \(\zeta\), \(\pi\), \(\delta\), BDI equivalente e invariância absoluta de consumíveis são **suspensas** enquanto não houver prova no caso de \(F(m)\) não linear e fechamento \(\varphi<1\). A identidade \(C^V=\gamma^V Q/\rho^{front}\) só decorre, sob hipótese de consumível proporcional ao produto e sem perdas, de uma razão unitária independente de \(m\); se o gargalo satura \(F\) enquanto os custos físicos por hora crescem com \(m\), essa hipótese não vale.
 
 O PR P10-B deverá propagar \(F(m)\), \(m\), \(\eta_p\), \(\eta_w\), \(\varphi\), \(d\), \(x\) e \(s\) como grandezas distintas e testá-las contra este contrato.
+
+
+## Protocolo observável da produtividade física única — #10 / #23
+
+Para cada atividade e semana, a **única produtividade física horária**
+continua sendo \(F_i(m_{ij})\), registrada em
+**produtividade_fisica_horaria** em unidade_i/h, quando as horas
+contratuais \(H_i>0\) são conhecidas. **q_max_celula=F_i(m_{ij})H_i**
+é capacidade instalada. Praticabilidade, calendário e jornada produzem
+uma capacidade distinta, mas **não uma segunda produtividade**:
+
+\[
+\text{capacidade_disponivel_semana} =
+\text{q_max_celula}\ p_jc_ja_i,\qquad
+q_{ij}=\min(\text{saldo},\text{capacidade_disponivel_semana}).
+\]
+
+A fração de fechamento mede o saldo entregue; não é desempenho observado.
+O registro conserva a origem da capacidade com os valores
+GRAFO_FLUXO, GRAFO_ELEMENTOS, TAXA_POR_FRENTE_ASSUMIDA,
+FALLBACK_ARBITRARIO ou NAO_DECLARADA. **Fonte não é certificação:**
+estado_calibracao=NAO_CERTIFICADA até #23 atrelar versão, composição e
+evidência independente. O fallback de preview de 1000 unidades/h
+não é uma calibração e **nunca sustenta GO**.
+
+desempenho_observado=NAO_OBSERVADO distingue planejamento e controle.
+Os campos legados eta_s, eta_w, eficiencia=1.0 continuam neutros por
+compatibilidade: não são medições. Artefatos antigos sem horas contratuais,
+sem F_i(m) horário ou capacidade disponível conservam None/NAO_DECLARADA.
+Não inventar zeros ou produtividades retroativamente.
+
+O certificado #23 exige origem e calibração válidas para GO; a
+factibilidade de escopo, precedência, recursos e calendário continua
+responsabilidade de #14/#15, e a prova diferencial pertence a #22.
