@@ -166,6 +166,26 @@ def run_cronograma(
         return SkillResult(canonical_in, validacoes)
 
     pool_violations = _check_pool_violations(canonical_in, distribuicao_por_item, cpu_lookup, validacoes)
+    if pool_violations:
+        # P15: shifting/extending physical activities after the nominal solver
+        # can overbook a resource. An ERRO diagnostic alone is insufficient if
+        # the stale/invalid schedule and its economic artifacts are published.
+        # Never substitute zero cost or an optimistic GO for unavailable pool.
+        blocked = canonical_in.model_copy(
+            update={
+                "cronograma": None,
+                "intervalos_atividade": [],
+                "resultado": None,
+                "ponto_equilibrio": [],
+                "custos_atividades": [],
+                "constraint_violations": [
+                    *(canonical_in.constraint_violations or []),
+                    *pool_violations,
+                ],
+            }
+        )
+        return SkillResult(blocked, validacoes)
+
     scheduled_activities_out = _build_scheduled_activities(
         canonical_in, distribuicao_por_item, semanas_obra, schedule_selected, fallback_item_ids
     )
