@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import math
-from fractions import Fraction
-
 from concilium.domain.models.canonical import ValidacaoItem
+
+from .pre_metrics import _gap_max_economico
 
 
 def _week_idx(semana: str) -> int:
@@ -282,15 +282,10 @@ def _resolve_gap_max_e_idle_efetivo(
         _c_idle_fallback = round(cus_mo + cus_locacao, 4)
         if _c_idle_fallback > 0.0:
             c_idle = _c_idle_fallback
-    # Inclusive economic boundary: k*c_idle <= c_mob+c_demob.
-    # ceil(ratio)-1 wrongly excludes an exact tie (e.g. 2*100=100+100).
-    # Interpret declared float tariffs as exact decimal values at this
-    # interface, not binary-float approximations to monetary obligations.
-    if c_idle > 0:
-        switch_cost = Fraction(str(c_mob)) + Fraction(str(c_demob))
-        gap_max = int(switch_cost // Fraction(str(c_idle)))
-    else:
-        gap_max = 9999
-    return c_idle, gap_max
+    # Single source of economic gap admissibility, shared with the
+    # downstream opportunity evaluator. Include exact ties deterministically:
+    # k*c_idle <= c_mob+c_demob. The unit passed here only selects the
+    # calendar-billed regime; c_idle has already been resolved for this call.
+    return c_idle, _gap_max_economico(c_mob, c_demob, c_idle, "dia_cal")
 
 
