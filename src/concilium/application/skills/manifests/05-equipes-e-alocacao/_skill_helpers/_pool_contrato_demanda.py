@@ -133,9 +133,11 @@ def _add_tipo_item_demand(
     dist: dict,
     tipo_items: dict,
     tipo_week_demand: dict,
+    *,
+    weekly_counts: dict[str, int] | None = None,
 ) -> None:
     """Use the SAME integer counts for item machine-weeks and pool demand."""
-    counts = {
+    counts = weekly_counts if weekly_counts is not None else {
         w: _demand_from_team_profile(required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo)
         for w in active_weeks
     }
@@ -201,9 +203,19 @@ def _process_item_tipo_map(
         _integral_front_count(getattr(dist[w], "num_equipes", 0), f"{iid}/{w}")
         for w in active_weeks
     )
-    for tipo, required in tipo_map.items():
-        if tipo not in pool:
-            continue
+    # Validate ALL eligible typed resource counts before writing ANY pool
+    # entry: a malformed shared resource cannot leave a half-built contract.
+    eligible = {tipo: required for tipo, required in tipo_map.items() if tipo in pool}
+    counts_by_type = {
+        tipo: {
+            w: _demand_from_team_profile(
+                required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo
+            )
+            for w in active_weeks
+        }
+        for tipo, required in eligible.items()
+    }
+    for tipo, required in eligible.items():
         _add_tipo_item_demand(
             tipo,
             iid,
@@ -214,6 +226,7 @@ def _process_item_tipo_map(
             dist,
             tipo_items,
             tipo_week_demand,
+            weekly_counts=counts_by_type[tipo],
         )
 
 
