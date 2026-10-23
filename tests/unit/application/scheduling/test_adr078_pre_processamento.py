@@ -480,7 +480,9 @@ class TestBuildPreProcessamento:
             "unidade_faturamento": unidade,
         }
         contratos = _make_contratos(["ESC-3CAT"])
-        cron = _make_cron_lookup({"A": (1, 10), "B": (13, 23), "C": (1, 23)})
+        # The pipeline defines gap = start_B - end_A on this indexed
+        # interval representation. 12 - 10 = 2 exact idle weeks.
+        cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 23)})
         validacoes: list = []
         relatorio = helpers._build_pre_processamento_compartilhamento(
             contratos, spec, cron, validacoes
