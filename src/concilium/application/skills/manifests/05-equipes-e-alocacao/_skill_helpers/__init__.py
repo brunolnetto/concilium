@@ -114,6 +114,7 @@ from ._enrich_overhead_ocioso import (  # ty: ignore[unresolved-import]
 from ._perpetuation_chains import _build_perpetuation_chains  # ty: ignore[unresolved-import]
 from ._pool_contrato_construcao import (  # ty: ignore[unresolved-import]
     _accumulate_atribuicao_total,
+    _apply_explicit_weekly_resource_demand,
     _build_contrato_entry,
     _build_contratos_por_tipo,
     _build_contratos_recurso,
@@ -244,6 +245,7 @@ __all__ = [
     "_accum_mob_costs_list",
     "_accum_week_demand",
     "_accumulate_atribuicao_total",
+    "_apply_explicit_weekly_resource_demand",
     "_accumulate_custo_inst_para_part",
     "_add_tipo_item_demand",
     "_aplicar_custo_instancial",
