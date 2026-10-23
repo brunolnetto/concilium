@@ -204,6 +204,7 @@ def _build_instancias_for_tipo(
     # Absence is explicitly unverified, never silently treated as certified.
     exact = getattr(contrato, "demanda_por_item_semanal", None) or None
     front_provenance = getattr(contrato, "frentes_por_item_semanal", None) or None
+    contract_label = getattr(contrato, "contrato_id", tipo_id)
     if exact is not None and front_provenance is None:
         from concilium.domain.models.canonical import ValidacaoItem
 
@@ -212,7 +213,7 @@ def _build_instancias_for_tipo(
                 codigo="VAL-POOL-FRENTES-LEGADO",
                 status="AVISO",
                 mensagem=(
-                    f"Contrato {contrato.contrato_id}: tensor de demanda sem prova da mobilização "
+                    f"Contrato {contract_label}: tensor de demanda sem prova da mobilização "
                     "m_i,j que o gerou; paridade temporal NÃO CERTIFICADA."
                 ),
             )
@@ -225,7 +226,7 @@ def _build_instancias_for_tipo(
                 codigo="VAL-POOL-DEMANDA-LEGADO",
                 status="AVISO",
                 mensagem=(
-                    f"Contrato {contrato.contrato_id}: instâncias sem tensor físico "
+                    f"Contrato {contract_label}: instâncias sem tensor físico "
                     "a_i,g(m_ij) verificável; uso legado NÃO CERTIFICADO."
                 ),
             )
