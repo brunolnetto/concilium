@@ -27,6 +27,10 @@ class PhysicalActivity:
     deliveries: tuple[tuple[int, Fraction], ...]
     # Physical resource reservation in a week, including zero-output weeks.
     demands: tuple[tuple[int, str, Fraction], ...] = ()
+    # Already derived from the ONE weekly capacity law:
+    # B_ij = H_i * F_i(m_ij) * practicability_ij * calendar_j * eta_workday_i.
+    # It is a witness, never a separately inferred productivity.
+    weekly_capacities: tuple[tuple[int, Fraction], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -78,12 +82,18 @@ def validate_materialized_calendar(
     *,
     calendar_horizon_weeks: int,
     pool_capacity: Mapping[str, Fraction] | None = None,
+    require_weekly_capacity: bool = False,
 ) -> PhysicalCalendarAudit:
     """Validate exact physical releases and the shared weekly resource pool.
 
     PASS means this *specific materialized* schedule satisfies the checked
     constraints, not that a joint RCPSP / financial certificate is available.
     Missing pool capacity returns UNKNOWN when resources are demanded.
+    Each provided weekly-capacity witness must bound the materialized q_ij.
+    An incomplete witness returns UNKNOWN rather than claiming physical GO;
+    strict mode also requires a witness for every positive-delivery week.
+    The witness must come from the shared F(m)/calendar law; this validator
+    checks its consistency against q, not the solver or provenance.
     """
     if calendar_horizon_weeks < 0:
         raise ValueError("calendar_horizon_weeks must be nonnegative")
@@ -100,6 +110,19 @@ def validate_materialized_calendar(
             issues.append(PhysicalViolation("V6_OUT_OF_HORIZON", a.item_id, None, "activity outside bounded calendar"))
         if a.scope <= 0:
             issues.append(PhysicalViolation("V1_INVALID_SCOPE", a.item_id, None, "Q must be positive"))
+        capacity_by_week: dict[int, Fraction] = {}
+        for week, capacity in a.weekly_capacities:
+            if (
+                not a.start_week <= week < a.end_week_exclusive
+                or capacity < 0
+                or week in capacity_by_week
+            ):
+                issues.append(PhysicalViolation(
+                    "V1_INVALID_WEEKLY_CAPACITY", a.item_id, week,
+                    "negative, duplicated or out-of-activity weekly capacity witness",
+                ))
+            else:
+                capacity_by_week[week] = capacity
         delivered = Fraction(0)
         last_week: int | None = None
         for week, q in sorted(a.deliveries):
@@ -107,6 +130,21 @@ def validate_materialized_calendar(
                 issues.append(
                     PhysicalViolation("V1_INVALID_DELIVERY", a.item_id, week, "invalid week, quantity or duplicate")
                 )
+            # Only verified capacity from the materialized weekly F(m)
+            # envelope may justify a positive delivery. Never infer
+            # capacity from its already-capped output q.
+            if q > 0 and week not in capacity_by_week and (
+                require_weekly_capacity or bool(a.weekly_capacities)
+            ):
+                issues.append(PhysicalViolation(
+                    "V1_WEEKLY_CAPACITY_UNVERIFIED", a.item_id, week,
+                    "positive delivery has no verified B_ij witness",
+                ))
+            elif week in capacity_by_week and q > capacity_by_week[week]:
+                issues.append(PhysicalViolation(
+                    "V1_WEEKLY_CAPACITY_EXCEEDED", a.item_id, week,
+                    f"q={q}; available_capacity={capacity_by_week[week]}",
+                ))
             delivered += q
             last_week = week
         if delivered != a.scope:
@@ -146,10 +184,8 @@ def validate_materialized_calendar(
                 PhysicalViolation("V6_PREMATURE_FF", edge.successor, succ.end_week_exclusive, "FF lag violated")
             )
 
-    pool_unknown = False
     for (week, resource), demand in sorted(usage.items()):
         if pool_capacity is None or resource not in pool_capacity:
-            pool_unknown = True
             issues.append(PhysicalViolation(
                 "V6_POOL_UNVERIFIED", resource, week, "physical resource capacity not supplied",
             ))
@@ -162,5 +198,6 @@ def validate_materialized_calendar(
                 "V6_POOL_OVERBOOKED", resource, week, f"demand={demand}; capacity={limit}",
             ))
     hard_failure = any(not v.code.endswith("_UNVERIFIED") for v in issues)
-    status: AuditStatus = "FAIL" if hard_failure else "UNKNOWN" if pool_unknown else "PASS"
+    uncertain = any(v.code.endswith("_UNVERIFIED") for v in issues)
+    status: AuditStatus = "FAIL" if hard_failure else "UNKNOWN" if uncertain else "PASS"
     return PhysicalCalendarAudit(status, tuple(issues))
