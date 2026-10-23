@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sys
 from importlib import import_module
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
@@ -99,3 +100,48 @@ def test_invalid_source_or_nonfinite_rate_rejected_by_schema() -> None:
     data["produtividade_fisica_horaria"] = float("inf")
     with pytest.raises(ValidationError):
         DistribuicaoSemanal.model_validate(data)
+
+
+
+def _manual_cell(cpu: dict[str, object]) -> tuple[DistribuicaoSemanal, bool]:
+    validacao = import_module(_costs.__package__ + "._validacao")
+    item = SimpleNamespace(item_id="activity", quantitativo=300.0)
+    regime = SimpleNamespace(horas_dia=8.0, dias_semana=5.0, eta_jornada=1.0)
+    dist, errors, gaps, is_fallback = validacao._emm_process_item(
+        item,
+        cpu,
+        {},
+        regime,
+        {"2026-W01": 0.75},
+        {},
+        {"2026-W01": 0.8},
+        ["2026-W01"],
+        {"activity": {"2026-W01": 2.0}},
+        [],
+    )
+    assert not errors
+    assert not gaps
+    return dist["2026-W01"], is_fallback
+
+
+def test_manual_schedule_persists_single_rate_and_availability_provenance() -> None:
+    cell, is_fallback = _manual_cell(
+        {"codigo": "CPU-1", "cpu_meta": {"producao_horaria": 10.0}}
+    )
+    assert is_fallback is False
+    assert cell.origem_produtividade == "TAXA_POR_FRENTE_ASSUMIDA"
+    assert cell.produtividade_fisica_horaria == pytest.approx(20.0)
+    assert cell.horas_contratuais_semana == pytest.approx(40.0)
+    assert cell.q_max_celula == pytest.approx(800.0)
+    assert cell.capacidade_disponivel_semana == pytest.approx(480.0)
+    assert cell.qtd_executada == pytest.approx(300.0)
+    assert cell.fracao_fechamento == pytest.approx(300 / 480)
+
+
+def test_manual_schedule_identifies_uncalibrated_preview_fallback() -> None:
+    cell, is_fallback = _manual_cell({"codigo": "CPU-MISSING-PROD"})
+    assert is_fallback is True
+    assert cell.origem_produtividade == "FALLBACK_ARBITRARIO"
+    assert cell.estado_calibracao == "NAO_CERTIFICADA"
+    assert cell.produtividade_fisica_horaria == pytest.approx(2000.0)
+    assert cell.desempenho_observado == "NAO_OBSERVADO"
