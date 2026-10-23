@@ -1,4 +1,5 @@
 """P19-B: no inventory holding leaks into MAT/COMB acquisition or K."""
+from dataclasses import replace
 from fractions import Fraction as F
 
 import pytest
@@ -113,4 +114,14 @@ def test_bad_tariff_units_or_numbers_do_not_silently_price_stock() -> None:
         post_exact_weekly_holding(
             ExclusiveCostLedger(()), duplicate, goods,
             {"ORE": HoldingTariff("ORE", F(5), "kg")},
+        )
+
+
+def test_stock_row_unit_mismatch_cannot_change_holding_cost_silently() -> None:
+    goods, projection = _stock()
+    corrupted = StockProjection((replace(projection.rows[0], unit="l"),), (), True)
+    with pytest.raises(ValueError, match="row unit differs"):
+        post_exact_weekly_holding(
+            ExclusiveCostLedger(()), corrupted, goods,
+            {"ORE": HoldingTariff("ORE", F(1), "kg")},
         )
