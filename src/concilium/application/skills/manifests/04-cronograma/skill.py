@@ -157,6 +157,13 @@ def run_cronograma(
     if failed:
         return SkillResult(canonical_in, validacoes)
 
+    # P14-B: never publish an authoritative schedule whose calendar/physical
+    # predecessors failed. SkillResult.has_errors alone cannot protect consumers
+    # if a partial cronograma is still included in the canonical output.
+    blocking_codes = {"VAL-CRON-01", "VAL-CRON-PRECEDENCIA"}
+    if any(v.status == "ERRO" and v.codigo in blocking_codes for v in validacoes):
+        return SkillResult(canonical_in, validacoes)
+
     pool_violations = _check_pool_violations(canonical_in, distribuicao_por_item, cpu_lookup, validacoes)
     scheduled_activities_out = _build_scheduled_activities(
         canonical_in, distribuicao_por_item, semanas_obra, schedule_selected, fallback_item_ids
