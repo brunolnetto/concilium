@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import math
+
 from concilium.domain.models.canonical import ValidacaoItem
 
-from .pre_metrics import _gap_max_economico
+from .pre_metrics import _gap_max_economico  # ty: ignore[unresolved-import]
 
 
 def _week_idx(semana: str) -> int:
