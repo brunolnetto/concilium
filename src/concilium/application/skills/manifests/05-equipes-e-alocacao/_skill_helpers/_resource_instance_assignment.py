@@ -251,6 +251,17 @@ def _collect_items_data_for_tipo(
             # The contract already carries this type's exact a_i,g(m) from
             # the original P16-C evaluation. Never recompute from resource sums.
             if iid not in demand_by_item:
+                # Exact demand is required for every physically mobilized
+                # activity of this type. A self-consistent but incomplete
+                # d_gj aggregate is NOT evidence of full contract coverage.
+                dist = getattr(sa, "distribuicao_semanal", None) or {}
+                if any(
+                    _integral_front_count(getattr(cell, "num_equipes", 0), f"{iid}/{week}") > 0
+                    for week, cell in dist.items()
+                ):
+                    raise ValueError(
+                        f"VAL-POOL-DEMANDA-02: missing mobilized activity {iid}/{tipo_id}"
+                    )
                 continue
             raw = demand_by_item[iid]
             if not isinstance(raw, dict):

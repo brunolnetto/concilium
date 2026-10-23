@@ -133,3 +133,15 @@ def test_missing_mobilization_provenance_is_explicitly_uncertified() -> None:
         v.codigo == "VAL-POOL-FRENTES-LEGADO" and v.status == "AVISO"
         for v in validations
     )
+
+
+def test_missing_active_activity_fails_even_if_existing_aggregate_is_self_consistent() -> None:
+    contract, spec, schedules = _case()
+    spec["activities"].append(
+        {"item_id": "B", "required_resources": {"MAQ": 1}}
+    )
+    schedules["B"] = SimpleNamespace(
+        distribuicao_semanal={"2020-W52": SimpleNamespace(num_equipes=1)}
+    )
+    with pytest.raises(ValueError, match="missing mobilized activity B/MAQ"):
+        builder._build_instancias_recurso([contract], spec, schedules, [])
