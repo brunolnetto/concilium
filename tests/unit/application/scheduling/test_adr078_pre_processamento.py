@@ -394,6 +394,39 @@ class TestBuildPreProcessamento:
         inviavel = next((o for o in relatorio.oportunidades if not o.economicamente_viavel), None)
         assert inviavel is not None
 
+    @pytest.mark.parametrize(
+        ("start_b", "expected_gap"),
+        [
+            (10, None),  # both claim week 10; no sequential sharing
+            (11, 0),     # week 10 then 11: adjacent, no paid idle week
+            (13, 2),     # weeks 11, 12 are the only idle weeks
+        ],
+    )
+    def test_intervalos_inclusivos_compartilhamento(self, helpers, start_b, expected_gap):
+        """Physical interval [1,10] to [start_b, ...] follows [a,b],[c,d] => c-b-1."""
+        spec = _make_rcpsp_spec_com_resource_costs()
+        contratos = _make_contratos(["ESC-3CAT"])
+        cron = _make_cron_lookup({
+            "A": (1, 10),
+            "B": (start_b, start_b + 10),
+            "C": (1, 20),
+        })
+        validacoes: list = []
+        relatorio = helpers._build_pre_processamento_compartilhamento(
+            contratos, spec, cron, validacoes
+        )
+        assert relatorio is not None
+        oportunidades = [
+            o for o in relatorio.oportunidades
+            if o.tipo_id == "ESC-3CAT"
+        ]
+        if expected_gap is None:
+            assert oportunidades == []
+        else:
+            assert len(oportunidades) == 1
+            assert oportunidades[0].gap_semanas == expected_gap
+            assert oportunidades[0].economicamente_viavel
+
     def test_atividades_sobrepostas_nao_geram_oportunidade(self, helpers):
         """Atividades simultâneas (gap < 0) → nenhuma oportunidade."""
         spec = _make_rcpsp_spec_com_resource_costs()
