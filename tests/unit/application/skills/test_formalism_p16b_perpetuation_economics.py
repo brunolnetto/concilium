@@ -105,3 +105,31 @@ def test_inclusive_economic_gap_cap(
     )
     assert result_idle == idle
     assert gap == expected
+
+
+@pytest.mark.parametrize("unit", ["dia_cal", "mes"])
+def test_downstream_sharing_preprocessor_uses_same_inclusive_boundary(unit: str) -> None:
+    from types import SimpleNamespace
+
+    mod = _helpers()
+    costs = {
+        "GUINDASTE": {
+            "custo_mob_unit": 100.0,
+            "custo_demob_unit": 100.0,
+            "custo_idle_semanal_unit": 100.0,
+            "unidade_faturamento": unit,
+        }
+    }
+    assert mod._gap_max_economico(100, 100, 100, unit) == 2
+    gap_by_type = mod._bppc_build_gap_max_lookup(costs)
+    assert gap_by_type["GUINDASTE"] == 2
+    contract = SimpleNamespace(tipo_id="GUINDASTE", gap_max_economico=1)
+    mod._bppc_atualizar_contratos([contract], costs, gap_by_type)
+    assert contract.gap_max_economico == 2
+
+
+def test_downstream_decimal_gap_matches_upstream_contract() -> None:
+    mod = _helpers()
+    assert mod._gap_max_economico(0.1, 0.2, 0.1, "dia_cal") == 3
+    _, upstream = mod._resolve_gap_max_e_idle_efetivo(0.1, 0.2, 0.1, False, 0, 0)
+    assert upstream == 3
