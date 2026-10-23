@@ -23,7 +23,7 @@ def _cell(q: int, cached: int) -> SimpleNamespace:
     return SimpleNamespace(qtd_executada=q, qtd_acumulada=cached)
 
 
-def _release(distribution, threshold: float, lag: int = 0) -> int | None:
+def _release(distribution, threshold: float | Fraction, lag: int = 0) -> int | None:
     return _scheduling()._release_fs_after_physical_delivery(
         distribution,
         physical_threshold=threshold,
