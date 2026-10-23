@@ -7,11 +7,11 @@ No production throughput is recomputed: the only demand comes from U_g,j.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from fractions import Fraction
-import re
 from typing import Literal
 
 from concilium.domain.units import normalize_unidade
