@@ -157,9 +157,9 @@ def _bppc_oportunidades_por_tipo(
         sa = cron_lookup.get(iid)
         if sa is None:
             return 0
-        # semana_fim is the final *occupied* week (inclusive).
-        # All gap arithmetic below uses half-open [start, end) boundaries.
-        return _week_to_idx(getattr(sa, "semana_fim", "S000")) + 1
+        # Return the inclusive final occupied week; _bppc_par_oportunidade
+        # performs exactly one [start,end] -> gap=start-(end+1) conversion.
+        return _week_to_idx(getattr(sa, "semana_fim", "S000"))
 
     atividades_tipo.sort(key=lambda x: _start_idx(x[0]))
 
