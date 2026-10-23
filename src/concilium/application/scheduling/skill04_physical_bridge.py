@@ -9,11 +9,15 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date
 from fractions import Fraction
-from math import isfinite
 
 from concilium.domain.models.canonical import DistribuicaoSemanal
 
-from .physical_validator import PhysicalActivity
+from .physical_validator import (
+    PhysicalActivity,
+    PhysicalCalendarAudit,
+    PhysicalPrecedence,
+    validate_materialized_calendar,
+)
 
 
 def _quantity(value: int | float | str | Fraction, label: str) -> Fraction:
@@ -23,8 +27,6 @@ def _quantity(value: int | float | str | Fraction, label: str) -> Fraction:
         result = Fraction(str(value))
     except (TypeError, ValueError, ZeroDivisionError) as exc:
         raise ValueError(f"{label} must be a finite physical quantity") from exc
-    if not isfinite(float(result)):
-        raise ValueError(f"{label} must be finite")
     return result
 
 
@@ -89,8 +91,12 @@ def materialize_skill04_physical_activity(
         cumulative = _quantity(cell.qtd_acumulada, f"{week}.cumulative")
         if q < 0 or available < 0 or nominal < 0 or q > available or available > nominal:
             raise ValueError(f"{week}: quantity violates the physical F(m)/calendar envelope")
-        if cumulative < last_cumulative or cumulative < q:
-            raise ValueError(f"{week}: cumulative quantity cannot decrease")
+        expected_cumulative = last_cumulative + q
+        if cumulative != expected_cumulative:
+            raise ValueError(
+                f"{week}: cumulative quantity does not reconcile with actual "
+                f"weekly delivery (expected {expected_cumulative}, observed {cumulative})"
+            )
         last_cumulative = cumulative
         deliveries.append((index, q))
         capacities.append((index, available))
@@ -111,4 +117,51 @@ def materialize_skill04_physical_activity(
         item_id=item_id, scope=physical_scope, start_week=start, end_week_exclusive=end,
         deliveries=tuple(deliveries), demands=tuple(demands),
         weekly_capacities=tuple(capacities),
+    )
+
+
+def audit_skill04_skill05_physical_snapshot(
+    *,
+    calendar_weeks: Sequence[str],
+    distributions_by_item: Mapping[str, Mapping[str, DistribuicaoSemanal]],
+    scopes_by_item: Mapping[str, int | float | str | Fraction],
+    demand_by_item: Mapping[
+        str, Mapping[str, Mapping[str, int | float | str | Fraction]]
+    ] | None,
+    precedences: Sequence[PhysicalPrecedence],
+    pool_capacity: Mapping[str, Fraction] | None,
+) -> PhysicalCalendarAudit:
+    """Reconcile real Skill 04 cells against explicit Skill 05 weekly demand.
+
+    This is a local *post-materialization* witness, not an optimizer, cost
+    snapshot or GO certificate. Missing per-item/per-week evidence is an
+    error, not inferred zero resource demand. Supplied capacities are checked
+    together across all activities in each absolute ISO calendar week.
+    The caller must rematerialize both Skill 04 and Skill 05 evidence after
+    any shift of start dates, workforce profiles or activity duration.
+    """
+    ids = set(distributions_by_item)
+    if not ids or not all(isinstance(item, str) and item for item in ids):
+        raise ValueError("physical audit requires nonempty activity identifiers")
+    if set(scopes_by_item) != ids:
+        raise ValueError("physical audit requires the exact scope for every activity")
+    if demand_by_item is None or set(demand_by_item) != ids:
+        raise ValueError("Skill 05 demand provenance is required for every activity")
+
+    activities = tuple(
+        materialize_skill04_physical_activity(
+            item_id=item,
+            scope=scopes_by_item[item],
+            calendar_weeks=calendar_weeks,
+            distribution=distributions_by_item[item],
+            demand_by_week=demand_by_item[item],
+        )
+        for item in sorted(ids)
+    )
+    return validate_materialized_calendar(
+        activities,
+        precedences,
+        calendar_horizon_weeks=len(calendar_weeks),
+        pool_capacity=pool_capacity,
+        require_weekly_capacity=True,
     )
