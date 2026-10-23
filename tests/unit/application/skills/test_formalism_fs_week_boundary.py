@@ -4,7 +4,6 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass, replace
 from datetime import date
-from fractions import Fraction
 from types import SimpleNamespace
 
 import pytest
