@@ -4,14 +4,14 @@ from fractions import Fraction
 import pytest
 
 from concilium.application.scheduling.contractual_cost_ledger import ExclusiveCostLedger
+from concilium.application.scheduling.physical_consumption_journal import (
+    WeeklyConsumptionEvidence,
+    book_weekly_physical_consumption,
+)
 from concilium.application.scheduling.physical_consumption_rates import (
     ConsumptionBasis,
     PhysicalConsumptionRate,
     PhysicallyPricedGood,
-)
-from concilium.application.scheduling.physical_consumption_journal import (
-    WeeklyConsumptionEvidence,
-    book_weekly_physical_consumption,
 )
 
 F = Fraction
