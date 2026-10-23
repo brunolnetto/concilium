@@ -32,9 +32,9 @@ def _measured(week: str, amount: F, source: str) -> AcquisitionEvidenceLine:
 def _stock():
     goods = {"ORE": StockGood("ORE", "kg", F(5))}
     rows = project_exact_weekly_stock(
-        goods, ("W01", "W02"),
-        (_measured("W01", F(3), "physical-1"),
-         _measured("W02", F(1), "physical-2")),
+        goods, ("2026-W01", "2026-W02"),
+        (_measured("2026-W01", F(3), "physical-1"),
+         _measured("2026-W02", F(1), "physical-2")),
     )
     assert rows.feasible
     return goods, rows
@@ -45,7 +45,7 @@ def test_end_week_holding_is_indirect_and_leaves_variable_acquisition_unchanged(
     base = ExclusiveCostLedger((
         CostPosting(
             ("CONSUMABLE", "physical-1"), PostingNature.ACQUISITION,
-            "MAT", F(30), "ORE", "W01",
+            "MAT", F(30), "ORE", "2026-W01",
         ),
     ))
     result = post_exact_weekly_holding(
@@ -57,14 +57,14 @@ def test_end_week_holding_is_indirect_and_leaves_variable_acquisition_unchanged(
     assert result.ledger.indirect == F(15)
     assert result.ledger.total == F(45)
     assert [(r.week, r.closing_in_stock_unit, r.holding_cost) for r in result.charges] == [
-        ("W01", F(2), F(10)), ("W02", F(1), F(5)),
+        ("2026-W01", F(2), F(10)), ("2026-W02", F(1), F(5)),
     ]
     assert result.authority == "HOLDING_PREVIEW_NOT_PROJECT_GO"
 
 
 def test_holding_rate_unit_is_physically_converted_without_rounding() -> None:
     goods = {"ORE": StockGood("ORE", "t", F(2))}
-    stock = project_exact_weekly_stock(goods, ("W01",), ())
+    stock = project_exact_weekly_stock(goods, ("2026-W01",), ())
     result = post_exact_weekly_holding(
         ExclusiveCostLedger(()), stock, goods,
         {"ORE": HoldingTariff("ORE", F(1, 2), "kg")},
@@ -78,7 +78,7 @@ def test_holding_rate_unit_is_physically_converted_without_rounding() -> None:
 def test_shortage_or_missing_tariff_fails_closed() -> None:
     goods = {"ORE": StockGood("ORE", "kg", F(1))}
     shortage = project_exact_weekly_stock(
-        goods, ("W01",), (_measured("W01", F(3), "too-big"),),
+        goods, ("2026-W01",), (_measured("2026-W01", F(3), "too-big"),),
     )
     with pytest.raises(ValueError, match="shortage"):
         post_exact_weekly_holding(
