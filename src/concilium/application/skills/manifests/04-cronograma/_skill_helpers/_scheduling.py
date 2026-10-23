@@ -286,7 +286,7 @@ def _warn_if_activity_underdelivers(
 def _release_fs_after_physical_delivery(
     predecessor_dist: Mapping[str, DistribuicaoSemanal],
     *,
-    physical_threshold: float,
+    physical_threshold: float | Fraction,
     lag_weeks: int,
     semanas_obra: list[str],
     data_inicio: Any,
@@ -388,7 +388,12 @@ def _convert_schedule_to_distribuicao(
                 predecessor_dist = distribuicao_por_item.get(predecessor.item_id, {})
                 if predecessor_item is None:
                     continue
-                threshold = predecessor_item.quantitativo * predecessor.completion_threshold_pct
+                # Exact physical threshold; avoid a second binary float
+                # rounding from Q * theta before comparing delivered Q.
+                threshold = (
+                    Fraction(str(predecessor_item.quantitativo))
+                    * Fraction(str(predecessor.completion_threshold_pct))
+                )
                 release_week = _release_fs_after_physical_delivery(
                     predecessor_dist,
                     physical_threshold=threshold,
