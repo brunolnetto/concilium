@@ -181,7 +181,7 @@ def test_gap_in_required_instance_level_rejected_when_presence_is_forged() -> No
     chain = next(c for c in ledger.chains if c.level == 2)
     # Reassign the required level to a non-demanded level, preserving cost
     # and aggregate presence. This must also be rejected.
-    wrong = replace(chain, level=3)
+    wrong = replace(chain, level=3, active_weeks=0, idle_weeks=1)
     forged = replace(
         valid,
         ledgers=(replace(ledger, chains=tuple(
