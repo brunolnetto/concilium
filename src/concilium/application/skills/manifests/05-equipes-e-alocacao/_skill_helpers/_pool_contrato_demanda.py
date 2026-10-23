@@ -80,6 +80,10 @@ def _integral_front_count(value: object, label: str) -> int:
         if not math.isfinite(value) or value < 0 or value > 2**53:
             raise ValueError(f"VAL-POOL-DEMANDA-01: {label} has invalid team count")
         nearest = round(value)
+        # Zero teams must be exactly zero. A subnormal positive allocation
+        # is fractional physical demand, not an artifact of an integer ramp.
+        if nearest == 0 and value != 0:
+            raise ValueError(f"VAL-POOL-DEMANDA-01: {label} must be a nonnegative integer")
         bound = 2 * max(math.ulp(value), math.ulp(float(nearest)))
         if abs(value - nearest) > bound:
             raise ValueError(f"VAL-POOL-DEMANDA-01: {label} must be a nonnegative integer")

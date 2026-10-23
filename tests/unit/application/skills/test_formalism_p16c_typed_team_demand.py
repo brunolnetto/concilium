@@ -169,7 +169,7 @@ def test_binary_float_ramp_noise_is_not_an_extra_team() -> None:
 
 @pytest.mark.parametrize(
     "bad",
-    [7.00000001, 7.125, 6.5, float("inf"), float("-inf"), float("nan"), float(2**53 + 2)],
+    [7.00000001, 7.125, 6.5, 5e-324, float("inf"), float("-inf"), float("nan"), float(2**53 + 2)],
 )
 def test_ulp_normalization_does_not_accept_real_fractional_or_unsafe_counts(bad: float) -> None:
     with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01"):
