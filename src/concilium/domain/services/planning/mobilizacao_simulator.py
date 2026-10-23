@@ -102,6 +102,10 @@ class WorkforcePolicySimulator:
             ValueError: if quantitativo <= 0 or producao_horaria < 0.
         """
         self._validate_simulate_inputs(quantitativo, producao_horaria)
+        if not math.isfinite(eta_jornada) or not 0.0 <= eta_jornada <= 1.0:
+            raise ValueError("working-time availability eta_jornada must lie in [0,1]")
+        if dias_semana <= 0 or horas_dia <= 0:
+            raise ValueError("weekly days and daily hours must be strictly positive")
 
         horas_efetivas = dias_semana * horas_dia * eta_jornada
         if capacidade_horaria_por_frentes is None:
@@ -144,10 +148,10 @@ class WorkforcePolicySimulator:
 
     @staticmethod
     def _validate_simulate_inputs(quantitativo: float, producao_horaria: float) -> None:
-        if quantitativo <= 0:
-            raise ValueError(f"quantitativo must be > 0, got {quantitativo}")
-        if producao_horaria < 0:
-            raise ValueError(f"producao_horaria must be >= 0, got {producao_horaria}")
+        if not math.isfinite(quantitativo) or quantitativo <= 0:
+            raise ValueError(f"quantitativo must be finite and > 0, got {quantitativo}")
+        if not math.isfinite(producao_horaria) or producao_horaria < 0:
+            raise ValueError(f"producao_horaria must be finite and >= 0, got {producao_horaria}")
 
     def _compute_max_weeks(self, producao_semanal_base: float, quantitativo: float, policy: WorkforcePolicy) -> int:
         """Guard computation: based on peak teams at full efficiency."""
