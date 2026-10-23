@@ -42,8 +42,29 @@ REQUIRED_SOURCES: tuple[SourceName, ...] = (
 )
 
 
+def _reject_unordered(value: Any) -> None:
+    """Do not allow Pydantic JSON conversion to hide sets as unstable lists.
+
+    The *Python-mode* snapshot preserves nested set/frozenset fields, whereas
+    model_dump(mode="json") silently serializes them as lists with potentially
+    process-dependent order. Reject before that lossy conversion.
+    """
+    if isinstance(value, BaseModel):
+        _reject_unordered(value.model_dump(mode="python"))
+    elif isinstance(value, (set, frozenset)):
+        raise TypeError("unordered set/frozenset must be normalized before fingerprinting")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            _reject_unordered(key)
+            _reject_unordered(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _reject_unordered(item)
+
+
 def _canonical_json(value: Any) -> bytes:
-    """Canonical, unambiguous UTF-8 JSON; reject NaN, infinity and unknown types."""
+    """Canonical UTF-8 JSON; reject nonfinite values and unordered inputs."""
+    _reject_unordered(value)
     if isinstance(value, BaseModel):
         value = value.model_dump(mode="json")
     return json.dumps(
