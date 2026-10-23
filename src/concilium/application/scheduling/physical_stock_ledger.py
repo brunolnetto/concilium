@@ -25,7 +25,7 @@ def _nonnegative(value: Fraction, name: str) -> None:
         raise ValueError(f"{name} requires an exact nonnegative Fraction")
 
 
-def _identifier(value: str, name: str) -> None:
+def _identifier(value: object, name: str) -> None:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} requires a nonempty stable identity")
 
@@ -143,6 +143,8 @@ def project_exact_weekly_stock(
         raise ValueError("nonempty calendar with stable week identities required")
     if len(weeks) != len(set(weeks)):
         raise ValueError("calendar weeks cannot repeat")
+    if tuple(sorted(weeks)) != weeks:
+        raise ValueError("calendar weeks must be chronologically ordered")
     week_index = {week: i for i, week in enumerate(weeks)}
 
     if not goods:
@@ -155,6 +157,7 @@ def project_exact_weekly_stock(
     receipts: dict[tuple[str, str], Fraction] = {}
     generation: dict[tuple[str, str], Fraction] = {}
     ids: set[str] = set()
+    measured_kinds: dict[tuple[str, str, str], str] = {}
     planned = False
 
     def register(source_id: str, good_id: str, week: str) -> StockGood:
@@ -173,6 +176,11 @@ def project_exact_weekly_stock(
         _identifier(line.activity_id, "activity_id")
         if line.kind not in ("PLANNED_CLOSED_SCOPE", "OBSERVED_OPERATION"):
             raise ValueError("consumption provenance must distinguish planned and observed")
+        owner = (line.activity_id, good.good_id, line.week)
+        previous_kind = measured_kinds.get(owner)
+        if previous_kind is not None and previous_kind != line.kind:
+            raise ValueError("planned and observed consumption cannot be double booked")
+        measured_kinds[owner] = line.kind
         planned |= line.kind == "PLANNED_CLOSED_SCOPE"
         _nonnegative(line.measure.physical_quantity, "measured physical quantity")
         amount = convert_physical(
