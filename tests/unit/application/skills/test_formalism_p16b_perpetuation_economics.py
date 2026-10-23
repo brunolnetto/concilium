@@ -1,0 +1,107 @@
+"""P16-B: local exact contractual keep-vs-restart witnesses.
+
+This is a boundary contract for homogeneous fungible instances, not yet an
+oracle for global joint (workforce, calendar, pool) optimization.
+"""
+from __future__ import annotations
+
+import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[4]
+HELPERS = (
+    ROOT / "src/concilium/application/skills/manifests"
+    / "05-equipes-e-alocacao/_skill_helpers/__init__.py"
+)
+
+
+def _helpers() -> ModuleType:
+    name = "_formalism_p16b_test_helpers"
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(
+        name, HELPERS, submodule_search_locations=[str(HELPERS.parent)]
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _items(required: int) -> list[dict]:
+    return [
+        {
+            "item_id": item, "required": required,
+            "start_idx": j, "end_idx": j + 1,
+            "semana_inicio": f"2026-W{j:02d}",
+            "semana_fim": f"2026-W{j:02d}",
+            "active_weeks": [f"2026-W{j:02d}"],
+            "machine_weeks": required,
+        }
+        for item, j in (("A", 1), ("B", 3))
+    ]
+
+
+def _chains(
+    required: int,
+    idle: float,
+    *,
+    gap_max: int = 2,
+    mob: float = 80,
+    demob: float = 80,
+):
+    return _helpers()._build_perpetuation_chains(
+        tipo_id="GUINDASTE",
+        items=_items(required),
+        custo_mob_unit=mob,
+        custo_demob_unit=demob,
+        custo_standby_unit=idle,
+        gap_max=gap_max,
+        week_demand={"2026-W01": required, "2026-W03": required},
+    )
+
+
+def test_compare_idle_and_restart_for_the_same_two_instances() -> None:
+    # Gap=1: keep 2*100=200; restart 2*(80+80)=320. Keep.
+    chains = _chains(2, 100)
+    assert len(chains) == 1
+    assert chains[0].semanas_ociosas == 1
+    assert chains[0].custo_standby == pytest.approx(200)
+
+
+def test_exact_economic_tie_prefers_fewer_mobilizations() -> None:
+    # Gap=1: keep 2*160=320 == restart 2*(80+80)=320.
+    assert len(_chains(2, 160)) == 1
+    assert len(_chains(1, 160)) == 1
+
+
+def test_more_expensive_standby_splits_into_distinct_chains() -> None:
+    assert len(_chains(2, 161)) == 2
+
+
+def test_physical_gap_cap_overrides_cheaper_standby() -> None:
+    assert len(_chains(2, 1, gap_max=0)) == 2
+
+
+@pytest.mark.parametrize(
+    ("mob", "demob", "idle", "expected"),
+    [
+        (100, 100, 100, 2),  # exact tie at k=2 is allowed
+        (100, 100, 101, 1),
+        (0, 0, 100, 0),
+        (0.1, 0.2, 0.1, 3),  # decimal 0.1+0.2 has exact ratio 3
+    ],
+)
+def test_inclusive_economic_gap_cap(
+    mob: float, demob: float, idle: float, expected: int
+) -> None:
+    result_idle, gap = _helpers()._resolve_gap_max_e_idle_efetivo(
+        mob, demob, idle, False, 0.0, 0.0
+    )
+    assert result_idle == idle
+    assert gap == expected
