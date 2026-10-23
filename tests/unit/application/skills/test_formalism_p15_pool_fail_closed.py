@@ -28,6 +28,37 @@ def test_pool_violation_blocks_materialization_and_invalidates_stale_outputs(
         custos_atividades=[stale], ponto_equilibrio=[stale],
         intervalos_atividade=[stale],
         constraint_violations=[],
+        # Previous Skill 04/05/06 artifacts from an unrelated feasible plan:
+        recursos_consumiveis=[stale],
+        resumo_estoque_consumiveis=[stale],
+        curvas_forca=[stale],
+        analise_campanhas=stale,
+        contratos_recurso=[stale],
+        cadeias_perpetuacao=[stale],
+        instancias_recurso=[stale],
+        resumo_utilizacao_contratos=[stale],
+        indiretos_semanal=[stale],
+        indiretos_com_bdi=[stale],
+        resultado_reconciliado=stale,
+        memorial_calculo_bdi=stale,
+        tabela_bdi_efetiva=stale,
+        diagnostico_pe=stale,
+        backtracking_pe=stale,
+        bridge_analysis={"old": True},
+        criticality_report={"old": True},
+        cost_criticality_report=stale,
+        replan_suggestions=stale,
+        plan_space_result=stale,
+        cpu_exposure_perfis=[stale],
+        relatorio_criticidade=stale,
+        relatorio_sensibilidade=stale,
+        relatorio_intervencao=stale,
+        s_curve=stale,
+        cubo_analitico=stale,
+        curva_abc_insumo=stale,
+        # Exogenous planning input must *not* be erased by a schedule failure.
+        fator_calendario_semanal={"2026-W01": 0.8},
+        calendario_operacional=[stale],
     )
 
     monkeypatch.setattr(mod, "_validate_preconditions", lambda *_: True)
@@ -69,6 +100,41 @@ def test_pool_violation_blocks_materialization_and_invalidates_stale_outputs(
     assert output.canonical.resultado is None
     assert output.canonical.custos_atividades == []
     assert output.canonical.ponto_equilibrio == []
+    for name in (
+        "recursos_consumiveis",
+        "resumo_estoque_consumiveis",
+        "curvas_forca",
+        "contratos_recurso",
+        "cadeias_perpetuacao",
+        "instancias_recurso",
+        "resumo_utilizacao_contratos",
+        "indiretos_semanal",
+        "indiretos_com_bdi",
+        "cpu_exposure_perfis",
+    ):
+        assert getattr(output.canonical, name) == [], name
+    for name in (
+        "analise_campanhas",
+        "resultado_reconciliado",
+        "memorial_calculo_bdi",
+        "tabela_bdi_efetiva",
+        "diagnostico_pe",
+        "backtracking_pe",
+        "bridge_analysis",
+        "criticality_report",
+        "cost_criticality_report",
+        "replan_suggestions",
+        "plan_space_result",
+        "relatorio_criticidade",
+        "relatorio_sensibilidade",
+        "relatorio_intervencao",
+        "s_curve",
+        "cubo_analitico",
+        "curva_abc_insumo",
+    ):
+        assert getattr(output.canonical, name) is None, name
+    assert output.canonical.fator_calendario_semanal == {"2026-W01": 0.8}
+    assert output.canonical.calendario_operacional == [stale]
     assert len(output.canonical.constraint_violations) == 1
     assert output.canonical.constraint_violations[0].code == "VAL-POOL-01"
     assert any(v.codigo == "VAL-POOL-01" and v.status == "ERRO" for v in output.validacoes)
