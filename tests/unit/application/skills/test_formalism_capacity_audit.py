@@ -1,8 +1,8 @@
 """A single installed F(m) and an independently auditable availability calendar."""
 from __future__ import annotations
 
-from importlib import import_module
 import sys
+from importlib import import_module
 
 import pytest
 from pydantic import ValidationError
