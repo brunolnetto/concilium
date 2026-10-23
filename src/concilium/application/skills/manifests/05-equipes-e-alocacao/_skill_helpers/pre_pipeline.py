@@ -87,15 +87,18 @@ def _bppc_par_oportunidade(
     end_b = end_idx(id_b)
     start_a = start_idx(id_a)
 
-    # Determinar quem termina antes (i = anterior, j = posterior)
-    if end_a <= start_b:
+    # Both scheduled end/start weeks are INCLUSIVE. A gap counts only
+    # the weeks in which neither activity uses the physical resource:
+    # [a,b] then [c,d] -> max(0, c-b-1). Same-week boundaries overlap
+    # physically and must never be presented as a free sharing gap.
+    if end_a < start_b:
         i_id, j_id, q_i, q_j = id_a, id_b, q_a, q_b
-        gap = start_b - end_a
-    elif end_b <= start_a:
+        gap = start_b - end_a - 1
+    elif end_b < start_a:
         i_id, j_id, q_i, q_j = id_b, id_a, q_b, q_a
-        gap = start_a - end_b
+        gap = start_a - end_b - 1
     else:
-        # Sobreposição temporal — não gera oportunidade de perpetuação
+        # Inclusive activity intervals overlap — no sequential reuse.
         return None
 
     eta = _eta_perpetuacao(gap, c_mob, c_demob, c_idle, unidade)
