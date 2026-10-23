@@ -100,6 +100,9 @@ def resolve_bounded_physical_calendar(
             activities, precedences,
             calendar_horizon_weeks=calendar_horizon_weeks,
             pool_capacity=pool_capacity,
+            # A bounded candidate is not physically admissible without
+            # weekly B_ij materialized from the one F(m)/calendar law.
+            require_weekly_capacity=True,
         )
         last_audit = audit
         if audit.status == "PASS":
