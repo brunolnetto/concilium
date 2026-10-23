@@ -92,6 +92,8 @@ def post_exact_weekly_holding(
     charges: list[HoldingWeekCharge] = []
     postings = list(base.postings)
     for row in stock.rows:
+        if row.unit != goods[row.good_id].unit:
+            raise ValueError("stock row unit differs from its physical good registry")
         key = (row.good_id, row.week)
         if key in seen:
             raise ValueError("duplicate stock week would double charge holding")
