@@ -149,3 +149,44 @@ def test_separate_mo_resource_type_does_not_mingle_contracts() -> None:
     assert ledger.contractual_k == F(12)
     assert ledger.total == pool.total
     assert {x.category for x in ledger.postings if x.nature == PostingNature.ACTIVE} == {"MO", "EQ"}
+
+def test_overlapping_instance_level_identity_rejected_even_if_money_balances() -> None:
+    # P2 review: (1,2,1) and two chains with different boundaries.
+    # Mutating the middle-week level 2 into another level 1 preserves
+    # the *aggregate* weekly count and monetary totals, yet bills the
+    # first physical instance twice and never owns the second.
+    data = normalize_weekly_resource_demand(
+        ("W01", "W02", "W03"), {"A": {"CRANE": (1, 2, 1)}}
+    )
+    tariff = ResourceTariff(F(5), F(10), F(20), F(10), 10)
+    valid = optimize_homogeneous_pool(data, {"CRANE": tariff})
+    assert book_exact_pool(valid, {"CRANE": tariff}, {"CRANE": "EQ"}).total == valid.total
+    ledger = valid.ledgers[0]
+    wrong_chains = tuple(
+        replace(chain, level=1) if chain.level == 2 else chain
+        for chain in ledger.chains
+    )
+    forged = replace(valid, ledgers=(replace(ledger, chains=wrong_chains),))
+    with pytest.raises(ValueError, match="overlapping instance-level"):
+        book_exact_pool(forged, {"CRANE": tariff}, {"CRANE": "EQ"})
+
+
+def test_gap_in_required_instance_level_rejected_when_presence_is_forged() -> None:
+    data = normalize_weekly_resource_demand(
+        ("W01", "W02", "W03"), {"A": {"CRANE": (1, 2, 1)}}
+    )
+    tariff = ResourceTariff(F(5), F(10), F(20), F(10), 10)
+    valid = optimize_homogeneous_pool(data, {"CRANE": tariff})
+    ledger = valid.ledgers[0]
+    chain = next(c for c in ledger.chains if c.level == 2)
+    # Reassign the required level to a non-demanded level, preserving cost
+    # and aggregate presence. This must also be rejected.
+    wrong = replace(chain, level=3)
+    forged = replace(
+        valid,
+        ledgers=(replace(ledger, chains=tuple(
+            wrong if c is chain else c for c in ledger.chains
+        )),),
+    )
+    with pytest.raises(ValueError, match="do not cover exact physical demand"):
+        book_exact_pool(forged, {"CRANE": tariff}, {"CRANE": "EQ"})
