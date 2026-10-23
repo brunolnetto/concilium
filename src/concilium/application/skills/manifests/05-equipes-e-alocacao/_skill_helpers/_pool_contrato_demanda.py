@@ -175,7 +175,9 @@ def _add_tipo_item_demand(
 ) -> None:
     """Use the SAME integer counts for item machine-weeks and pool demand."""
     counts = weekly_counts if weekly_counts is not None else {
-        w: _demand_from_team_profile(required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo)
+        w: _demand_from_team_profile(
+            required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo, profile
+        )
         for w in active_weeks
     }
     actual_mw = sum(counts.values())
@@ -205,7 +207,14 @@ def _add_tipo_item_demand(
 def _get_active_weeks(sa) -> list:
     """Returns sorted list of weeks with positive num_equipes from scheduled activity."""
     dist = getattr(sa, "distribuicao_semanal", None) or {}
-    return sorted([w for w, d in dist.items() if (getattr(d, "num_equipes", 0) or 0) > 0], key=_week_idx)
+    return sorted(
+        [
+            w
+            for w, d in dist.items()
+            if _integral_front_count(getattr(d, "num_equipes", 0), str(w)) > 0
+        ],
+        key=_week_idx,
+    )
 
 
 def _process_item_tipo_map(
