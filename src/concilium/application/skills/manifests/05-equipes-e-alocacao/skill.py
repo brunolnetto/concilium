@@ -18,6 +18,7 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     CanonicalModel,
     ConflitoPico,
+    InstanciaRecurso,
     RecursoContrato,
     ValidacaoItem,
 )
@@ -123,8 +124,20 @@ def run_equipes_e_alocacao(
     # não diário financeiro certificado. Nunca converter MAT/COMB monetários
     # em quantidade física comprada nem somar MOB/DEMOB ao K contratual.
     if contratos_recurso or instancias_recurso:
-        ownership_audit = audit_skill05_cost_ownership(contratos_recurso, instancias_recurso)
-        validacoes.extend(ownership_audit.validations)
+        # Strict evidence demands actual canonical models: mocks, informal
+        # dictionaries and legacy objects cannot be upgraded to certified
+        # instance-level money merely because attributes look similar.
+        if all(type(c) is RecursoContrato for c in contratos_recurso) and all(
+            type(inst) is InstanciaRecurso for inst in instancias_recurso
+        ):
+            ownership_audit = audit_skill05_cost_ownership(contratos_recurso, instancias_recurso)
+            validacoes.extend(ownership_audit.validations)
+        else:
+            validacoes.append(ValidacaoItem(
+                codigo="VAL-P17-EVIDENCIA-NAO-TIPADA",
+                status="AVISO",
+                mensagem="Contratos ou instâncias sem esquema canônico: custo não certificado.",
+            ))
 
     # ADR-106 F3: preenche custo_inst_* para equipes sem pool contract (NEP-040 Fase 4 completa)
     _preencher_custo_inst_estagio_f3(equipes)
