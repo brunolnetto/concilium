@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from concilium.application.scheduling.instance_accounting_audit import audit_skill05_cost_ownership
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     CanonicalModel,
@@ -117,6 +118,13 @@ def run_equipes_e_alocacao(
         planejamento_map,
         planejamento_ref_map,
     )
+
+    # P17-B: no legado, classificação K/V/MOB é diagnóstico de evidência,
+    # não diário financeiro certificado. Nunca converter MAT/COMB monetários
+    # em quantidade física comprada nem somar MOB/DEMOB ao K contratual.
+    if contratos_recurso or instancias_recurso:
+        ownership_audit = audit_skill05_cost_ownership(contratos_recurso, instancias_recurso)
+        validacoes.extend(ownership_audit.validations)
 
     # ADR-106 F3: preenche custo_inst_* para equipes sem pool contract (NEP-040 Fase 4 completa)
     _preencher_custo_inst_estagio_f3(equipes)
