@@ -13,6 +13,8 @@ from concilium.application.scheduling.physical_validator import (
     validate_materialized_calendar,
 )
 from concilium.application.scheduling.skill04_physical_bridge import (
+    _quantity,
+    audit_skill04_skill05_physical_snapshot,
     materialize_skill04_physical_activity,
 )
 from concilium.domain.models.canonical import DistribuicaoSemanal
@@ -113,3 +115,103 @@ def test_bridge_produces_local_audit_not_an_automatic_go_certificate() -> None:
     assert audit.status == "PASS"
     # Audit is local V1/V6 only; it does not validate economic/governance GO.
     assert not hasattr(audit, "decision")
+
+
+@pytest.mark.parametrize(
+    ("q_first", "cum_first", "q_second", "cum_second"),
+    [
+        (0, 4, 10, 10),    # fictitious predecessor progress in a no-output week
+        (3, 3, 7, 12),    # fabricated cumulative progress at the end
+        (3, 4, 7, 10),    # later Q closes, but the first week's evidence is forged
+    ],
+)
+def test_bridge_rejects_cumulative_progress_not_backed_by_deliveries(
+    q_first: float, cum_first: float, q_second: float, cum_second: float
+) -> None:
+    with pytest.raises(ValueError, match="cumulative quantity does not reconcile"):
+        materialize_skill04_physical_activity(
+            item_id="A",
+            scope=10,
+            calendar_weeks=WEEKS,
+            distribution={
+                WEEKS[0]: cell(q_first, cum_first, 10),
+                WEEKS[1]: cell(q_second, cum_second, 10),
+            },
+            demand_by_week={WEEKS[0]: {}, WEEKS[1]: {}},
+        )
+
+
+def test_joint_skill04_skill05_audit_fails_shared_resource_collision() -> None:
+    # Two individually admissible Skill 04 schedules have overlapping
+    # *real* Skill 05 resource reservations in the same absolute week.
+    audit = audit_skill04_skill05_physical_snapshot(
+        calendar_weeks=WEEKS,
+        distributions_by_item={
+            "A": {WEEKS[0]: cell(1, 1, 1)},
+            "B": {WEEKS[0]: cell(1, 1, 1)},
+        },
+        scopes_by_item={"A": 1, "B": 1},
+        demand_by_item={
+            "A": {WEEKS[0]: {"crane": 1}},
+            "B": {WEEKS[0]: {"crane": 1}},
+        },
+        precedences=(),
+        pool_capacity={"crane": F(1)},
+    )
+    assert audit.status == "FAIL"
+    assert any(v.code == "V6_POOL_OVERBOOKED" and v.week == 0 for v in audit.violations)
+
+
+def test_joint_skill04_skill05_audit_passes_only_with_recomputed_weekly_demand() -> None:
+    audit = audit_skill04_skill05_physical_snapshot(
+        calendar_weeks=WEEKS,
+        distributions_by_item={
+            "A": {WEEKS[0]: cell(1, 1, 1)},
+            "B": {WEEKS[1]: cell(1, 1, 1)},
+        },
+        scopes_by_item={"A": 1, "B": 1},
+        demand_by_item={
+            "A": {WEEKS[0]: {"crane": 1}},
+            "B": {WEEKS[1]: {"crane": 1}},
+        },
+        precedences=(PhysicalPrecedence("A", "B", "FS", 0, F(1)),),
+        pool_capacity={"crane": F(1)},
+    )
+    assert audit.status == "PASS"
+    assert not audit.violations
+
+
+def test_joint_skill04_skill05_audit_must_not_infer_missing_skill05_data() -> None:
+    kwargs = dict(
+        calendar_weeks=WEEKS,
+        distributions_by_item={"A": {WEEKS[0]: cell(1, 1, 1)}},
+        scopes_by_item={"A": 1},
+        precedences=(),
+        pool_capacity={"crane": F(1)},
+    )
+    with pytest.raises(ValueError, match="demand provenance"):
+        audit_skill04_skill05_physical_snapshot(**kwargs, demand_by_item=None)
+    with pytest.raises(ValueError, match="resource demand must explicitly cover"):
+        audit_skill04_skill05_physical_snapshot(**kwargs, demand_by_item={"A": {}})
+
+
+def test_joint_skill04_skill05_audit_marks_unknown_shared_pool() -> None:
+    audit = audit_skill04_skill05_physical_snapshot(
+        calendar_weeks=WEEKS,
+        distributions_by_item={"A": {WEEKS[0]: cell(1, 1, 1)}},
+        scopes_by_item={"A": 1},
+        demand_by_item={"A": {WEEKS[0]: {"crane": 1}}},
+        precedences=(),
+        pool_capacity=None,
+    )
+    assert audit.status == "UNKNOWN"
+    assert any(v.code == "V6_POOL_UNVERIFIED" for v in audit.violations)
+
+
+def test_exact_quantity_conversion_does_not_round_through_binary_float() -> None:
+    # Crossing a binary float boundary must not turn a finite physical
+    # witness into infinity or truncate very large exact integers.
+    big = 10**400
+    assert _quantity(str(big), "Q") == F(big)
+    with pytest.raises(ValueError, match="finite"):
+        _quantity("Infinity", "Q")
