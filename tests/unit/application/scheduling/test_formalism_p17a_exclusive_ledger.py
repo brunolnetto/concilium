@@ -106,7 +106,7 @@ def test_pool_tampering_cannot_be_laundered_into_financial_totals() -> None:
     fraud = replace(pool.ledgers[0], standby_cost=F(49))
     with pytest.raises(ValueError, match="not reconciled"):
         book_exact_pool(replace(pool, ledgers=(fraud,)), tariffs, {"CRANE": "EQ"})
-    fraud_demand = replace(pool.ledgers[0], presence=(2, 1, 2, 2, 2))
+    fraud_demand = replace(pool.ledgers[0], presence=(2, 1, 2, 2, 2), standby=(0, 1, 1, 2, 0))
     with pytest.raises(ValueError, match="do not reconstruct"):
         book_exact_pool(replace(pool, ledgers=(fraud_demand,)), tariffs, {"CRANE": "EQ"})
 
