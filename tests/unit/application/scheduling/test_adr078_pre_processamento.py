@@ -155,15 +155,16 @@ class TestEtaPerpetuacao:
         eta = helpers._eta_perpetuacao(15, C_MOB, C_DEMOB, C_IDLE, "dia_cal")
         assert eta == pytest.approx(0.0)
 
-    def test_gap_exatamente_em_gap_max_eh_positivo(self, helpers):
-        """gap = gap_max (9 para ESC-3CAT) → η > 0 (ainda viável)."""
-        gap_max = 9
+    def test_gap_exatamente_em_gap_max_tem_economia_zero(self, helpers):
+        """gap=10: custo idle = custo restart. Empate é admissível."""
+        gap_max = helpers._gap_max_economico(C_MOB, C_DEMOB, C_IDLE, "dia_cal")
+        assert gap_max == 10
         eta = helpers._eta_perpetuacao(gap_max, C_MOB, C_DEMOB, C_IDLE, "dia_cal")
-        assert eta > 0.0
+        assert eta == pytest.approx(0.0)
 
     def test_gap_alem_de_gap_max_inviavel(self, helpers):
-        """gap = gap_max + 1 → η <= 0."""
-        eta = helpers._eta_perpetuacao(10, C_MOB, C_DEMOB, C_IDLE, "dia_cal")
+        """gap = 11: custo idle > custo restart, logo nenhuma economia."""
+        eta = helpers._eta_perpetuacao(11, C_MOB, C_DEMOB, C_IDLE, "dia_cal")
         assert eta <= 0.0
 
 
