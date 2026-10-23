@@ -510,12 +510,21 @@ def _build_contratos_recurso(
     if not pool or not activities:
         return [], {}, []
 
+    # Explicit physical resource-composition provenance for nonlinear or
+    # heterogeneous types. The automatically derived EQUIPE-COMP/CPU type
+    # already denotes exactly one complete crew per scheduled front.
+    resource_profiles = {
+        act["item_id"]: act.get("resource_profiles", {})
+        for act in activities
+        if act.get("item_id")
+    }
     tipo_items, tipo_week_demand = _collect_tipo_items_and_demands(
         item_tipo_map,
         equipe_map,
         pool,
         sched_lookup,
         validacoes,
+        resource_profiles,
     )
 
     atribuicao: dict[str, tuple[float, str, float]] = {}
