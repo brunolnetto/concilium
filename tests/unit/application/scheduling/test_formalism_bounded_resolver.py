@@ -26,6 +26,7 @@ def _a(
         end_week_exclusive=week + 1,
         deliveries=((week, F(1)),),
         demands=((week, "crane", F(1)),) if with_resource else (),
+        weekly_capacities=((week, F(1)),),
     )
 
 
@@ -139,3 +140,44 @@ def test_invalid_search_parameters_are_rejected() -> None:
             ("A",), {"B": [0]}, materialize, (),
             calendar_horizon_weeks=3, pool_capacity={},
         )
+
+
+def test_bounded_resolver_rejects_positive_q_without_capacity_witness() -> None:
+    def materialize(item: str, start: int) -> PhysicalActivity:
+        return PhysicalActivity(
+            item_id=item, scope=F(1), start_week=start,
+            end_week_exclusive=start + 1, deliveries=((start, F(1)),),
+        )
+
+    result = resolve_bounded_physical_calendar(
+        ("A",), {"A": [0]}, materialize, (),
+        calendar_horizon_weeks=2, pool_capacity={},
+    )
+    assert result.status == "UNKNOWN"
+    assert not result.locally_admissible
+    assert result.last_audit is not None
+    assert any(
+        violation.code == "V1_WEEKLY_CAPACITY_UNVERIFIED"
+        for violation in result.last_audit.violations
+    )
+
+
+def test_bounded_resolver_rejects_q_above_calendar_limited_capacity() -> None:
+    def materialize(item: str, start: int) -> PhysicalActivity:
+        # Advertises full closure of Q=1 although weather/calendar allow 3/4.
+        return PhysicalActivity(
+            item_id=item, scope=F(1), start_week=start,
+            end_week_exclusive=start + 1, deliveries=((start, F(1)),),
+            weekly_capacities=((start, F(3, 4)),),
+        )
+
+    result = resolve_bounded_physical_calendar(
+        ("A",), {"A": [0]}, materialize, (),
+        calendar_horizon_weeks=2, pool_capacity={},
+    )
+    assert result.status == "FAIL"
+    assert result.last_audit is not None
+    assert any(
+        violation.code == "V1_WEEKLY_CAPACITY_EXCEEDED"
+        for violation in result.last_audit.violations
+    )
