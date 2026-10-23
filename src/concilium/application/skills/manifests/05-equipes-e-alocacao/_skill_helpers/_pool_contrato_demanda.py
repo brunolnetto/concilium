@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from fractions import Fraction
 
 from concilium.domain.models.canonical import ValidacaoItem
