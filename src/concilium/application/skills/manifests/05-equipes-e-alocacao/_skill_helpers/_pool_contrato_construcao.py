@@ -6,11 +6,13 @@ import math
 from hashlib import sha1
 from typing import Any
 
+from concilium.application.scheduling.resource_demand_levels import normalize_weekly_resource_demand
 from concilium.domain.models.canonical import (
     CadeiaPerpetuacao,
     CanonicalModel,
     EquipeDireta,
     RecursoContrato,
+    ValidacaoItem,
 )
 
 from ._causal_cost_partition import particionar_contrato  # ty: ignore[unresolved-import]
@@ -472,6 +474,105 @@ def _accumulate_atribuicao_total(contratos: list[RecursoContrato]) -> dict[str, 
     return atribuicao_total
 
 
+
+def _apply_explicit_weekly_resource_demand(
+    rcpsp_spec: dict,
+    tipo_items: dict[str, list[dict]],
+    tipo_week_demand: dict[str, dict[str, int]],
+    pool: dict[str, int],
+    validacoes: list,
+) -> None:
+    """Wire certified *physical counts* into Skill 05's existing pool pipeline.
+
+    P16-C's opt-in physical_weekly_demand evidence contains:
+      calendar_weeks: complete consecutive week labels (including zero demand)
+      by_activity: {item_id: {type: [a_i,g(m_i,j) for each calendar week]}}
+
+    Without this evidence the existing preview/legacy aggregation is unchanged,
+    and does NOT become a certified physical demand calculation. When explicit
+    evidence is supplied, reject partial/ambiguous inputs rather than silently
+    fall back to a heterogeneous-type ratio or an inferred peak.
+    """
+    if "physical_weekly_demand" not in rcpsp_spec:
+        return
+
+    payload = rcpsp_spec["physical_weekly_demand"]
+    if not isinstance(payload, dict) or set(payload) != {"calendar_weeks", "by_activity"}:
+        raise ValueError("physical_weekly_demand requires calendar_weeks and by_activity")
+
+    normalized = normalize_weekly_resource_demand(
+        payload["calendar_weeks"], payload["by_activity"]
+    )
+    calendar = normalized.calendar_weeks
+    indices = tuple(_week_idx(week) for week in calendar)
+    if any(next_week != week + 1 for week, next_week in zip(indices, indices[1:], strict=False)):
+        raise ValueError("physical weekly calendar must have consecutive absolute week indices")
+
+    expected = {
+        (item["item_id"], tipo)
+        for tipo, items in tipo_items.items()
+        for item in items
+    }
+    provided = {
+        (activity, tipo)
+        for activity, resources in payload["by_activity"].items()
+        for tipo in resources
+    }
+    if expected != provided:
+        raise ValueError(
+            f"physical demand evidence must cover exactly the scheduled item/resource pairs: "
+            f"missing={sorted(expected - provided)} extra={sorted(provided - expected)}"
+        )
+
+    totals = dict(normalized.demand_by_type)
+    if set(totals) != set(tipo_items):
+        raise ValueError("physical demand types must match the contracted fungible types")
+    for tipo, values in normalized.demand_by_type:
+        available = pool.get(tipo)
+        if type(available) is not int or available < 0:
+            raise ValueError(f"{tipo}: explicit physical capacity must be a nonnegative integer")
+        if max(values, default=0) > available:
+            raise ValueError(f"{tipo}: weekly physical demand exceeds declared pool capacity")
+
+    # Stage every mutation so a bad input leaves the original, unverified
+    # preview records untouched. Positive physical use must coincide with the
+    # scheduled active weeks; arbitrary mid-activity off/on requires a separate
+    # lifecycle model and is not silently represented as a continuous run.
+    updates: list[tuple[dict, int, int]] = []
+    for tipo, items in tipo_items.items():
+        for item in items:
+            values = payload["by_activity"][item["item_id"]][tipo]
+            active = set(item["active_weeks"])
+            if not active.issubset(calendar):
+                raise ValueError(f"{item['item_id']}.{tipo}: schedule weeks missing from physical calendar")
+            if any((week in active) != (count > 0) for week, count in zip(calendar, values, strict=True)):
+                raise ValueError(
+                    f"{item['item_id']}.{tipo}: physical presence must exactly match "
+                    "scheduled active weeks for this integration contract"
+                )
+            updates.append((item, sum(values), max(values, default=0)))
+
+    for item, machine_weeks, required in updates:
+        item["machine_weeks"] = machine_weeks
+        item["required"] = required
+    for tipo, values in normalized.demand_by_type:
+        tipo_week_demand[tipo] = {
+            week: count for week, count in zip(calendar, values, strict=True) if count > 0
+        }
+
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-POOL-DEMANDA-FISICA",
+            status="OK",
+            mensagem=(
+                "P16-C: demanda física semanal explícita normalizada e reconstruída "
+                f"para {len(normalized.demand_by_type)} tipo(s), "
+                f"{len(calendar)} semana(s); não certifica ótimo global."
+            ),
+        )
+    )
+
+
 def _build_contratos_recurso(
     equipes: list[EquipeDireta],
     rcpsp_spec: dict,
@@ -516,6 +617,9 @@ def _build_contratos_recurso(
         pool,
         sched_lookup,
         validacoes,
+    )
+    _apply_explicit_weekly_resource_demand(
+        rcpsp_spec, tipo_items, tipo_week_demand, pool, validacoes
     )
 
     atribuicao: dict[str, tuple[float, str, float]] = {}
