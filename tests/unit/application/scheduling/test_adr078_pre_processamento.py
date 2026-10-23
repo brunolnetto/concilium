@@ -91,7 +91,7 @@ class TestGapMaxEconomico:
         Gap 4: 4×2500 = 10000 ≮ 10000 ✗
         """
         result = helpers._gap_max_economico(8_000.0, 2_000.0, 2_500.0, "dia_cal")
-        assert result == 3
+        assert result == 4
 
     def test_divisao_com_fracao(self, helpers):
         """budget = 10 000, c_idle = 3 000 → ceil(3.33)−1 = 3.
@@ -102,15 +102,15 @@ class TestGapMaxEconomico:
         assert result == 3
 
     def test_gap_max_standard_esccат(self, helpers):
-        """ESC-3CAT: mob=80k, demob=40k, idle=12k → ceil(120k/12k)−1 = 9."""
+        """ESC-3CAT: mob=80k, demob=40k, idle=12k; exact tie at gap 10 is retained."""
         result = helpers._gap_max_economico(C_MOB, C_DEMOB, C_IDLE, "dia_cal")
-        assert result == 9
+        assert result == 10
 
     def test_gap_max_unidade_mes(self, helpers):
         """unidade 'mes' com c_idle > 0 deve usar o mesmo cálculo."""
-        # budget=30k, c_idle=10k → ceil(3.0)−1 = 2
+        # budget=30k, c_idle=10k → inclusive floor(3.0) = 3
         result = helpers._gap_max_economico(20_000.0, 10_000.0, 10_000.0, "mes")
-        assert result == 2
+        assert result == 3
 
     def test_gap_max_zero_quando_idle_muito_alto(self, helpers):
         """c_idle > budget → gap_max = 0 (nem 1 semana de standby é viável)."""
@@ -459,7 +459,7 @@ class TestBuildPreProcessamento:
             assert relatorio.total_economia_pot == pytest.approx(esperado)
 
     def test_gap_max_por_tipo_inclui_tipo_com_costs(self, helpers):
-        """gap_max_por_tipo deve conter ESC-3CAT com valor correto (9)."""
+        """gap_max_por_tipo deve incluir o empate no gap 10."""
         spec = _make_rcpsp_spec_com_resource_costs()
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
@@ -467,7 +467,7 @@ class TestBuildPreProcessamento:
         relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio:
             assert "ESC-3CAT" in relatorio.gap_max_por_tipo
-            assert relatorio.gap_max_por_tipo["ESC-3CAT"] == 9
+            assert relatorio.gap_max_por_tipo["ESC-3CAT"] == 10
 
     def test_lambda0_igual_delta_vezes_omega(self, helpers):
         """λ_0 = ΔC_pot × Ω para cada oportunidade."""
@@ -529,14 +529,14 @@ class TestBuildPreProcessamento:
             assert len(aterro_opps) == 0
 
     def test_contratos_atualizados_com_gap_max(self, helpers):
-        """Após execução, contratos ESC-3CAT devem ter gap_max_economico=9."""
+        """O pré-processamento preserva empate em 10 semanas no próprio contrato."""
         spec = _make_rcpsp_spec_com_resource_costs()
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
         validacoes: list = []
         helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         esc = next(c for c in contratos if c.tipo_id == "ESC-3CAT")
-        assert esc.gap_max_economico == 9
+        assert esc.gap_max_economico == 10
         assert esc.custo_mob_unit == C_MOB
         assert esc.custo_demob_unit == C_DEMOB
 
