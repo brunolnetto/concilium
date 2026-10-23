@@ -8,9 +8,10 @@ This is a local verifier, NOT a GO certificate or global optimality proof.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Literal, Mapping, Sequence
+from typing import Literal
 
 Relation = Literal["FS", "SS", "FF"]
 AuditStatus = Literal["PASS", "FAIL", "UNKNOWN"]
@@ -103,7 +104,9 @@ def validate_materialized_calendar(
         last_week: int | None = None
         for week, q in sorted(a.deliveries):
             if not a.start_week <= week < a.end_week_exclusive or q < 0 or week == last_week:
-                issues.append(PhysicalViolation("V1_INVALID_DELIVERY", a.item_id, week, "invalid week, quantity or duplicate"))
+                issues.append(
+                    PhysicalViolation("V1_INVALID_DELIVERY", a.item_id, week, "invalid week, quantity or duplicate")
+                )
             delivered += q
             last_week = week
         if delivered != a.scope:
@@ -121,12 +124,16 @@ def validate_materialized_calendar(
         pred = by_id.get(edge.predecessor)
         succ = by_id.get(edge.successor)
         if pred is None or succ is None:
-            issues.append(PhysicalViolation("V6_UNKNOWN_EDGE_ITEM", edge.successor, None, "predecessor/successor not present"))
+            issues.append(
+                PhysicalViolation("V6_UNKNOWN_EDGE_ITEM", edge.successor, None, "predecessor/successor not present")
+            )
             continue
         if edge.kind == "FS":
             release = _release_after_scope(pred, edge.completion_threshold)
             if release is None:
-                issues.append(PhysicalViolation("V6_UNRELEASED_PREDECESSOR", edge.successor, None, "physical Q threshold unmet"))
+                issues.append(
+                    PhysicalViolation("V6_UNRELEASED_PREDECESSOR", edge.successor, None, "physical Q threshold unmet")
+                )
             elif succ.start_week < release + edge.lag_weeks:
                 issues.append(PhysicalViolation(
                     "V6_PREMATURE_FS", edge.successor, succ.start_week,
@@ -135,7 +142,9 @@ def validate_materialized_calendar(
         elif edge.kind == "SS" and succ.start_week < pred.start_week + edge.lag_weeks:
             issues.append(PhysicalViolation("V6_PREMATURE_SS", edge.successor, succ.start_week, "SS lag violated"))
         elif edge.kind == "FF" and succ.end_week_exclusive < pred.end_week_exclusive + edge.lag_weeks:
-            issues.append(PhysicalViolation("V6_PREMATURE_FF", edge.successor, succ.end_week_exclusive, "FF lag violated"))
+            issues.append(
+                PhysicalViolation("V6_PREMATURE_FF", edge.successor, succ.end_week_exclusive, "FF lag violated")
+            )
 
     pool_unknown = False
     for (week, resource), demand in sorted(usage.items()):
