@@ -181,7 +181,22 @@ def audit_skill05_cost_ownership(
             ))
             continue
         reconstructed = sum((row.reported_total for row in rows), Fraction(0))
-        if abs(reconstructed - reported) > _CENT:
+        # Supported legacy regime: a monolithic contractual total may exist
+        # before compositional rates (especially c_idle) have been supplied.
+        # Empty instance component fields are UNKNOWN, not an observed
+        # financial zero; never turn that lack of evidence into an ERRO.
+        missing_components = any(
+            row.reported_total == 0 and row.reconstructed == 0 for row in rows
+        )
+        if missing_components and reported >= reconstructed:
+            validations.append(ValidacaoItem(
+                codigo="VAL-P17-CUSTO-LEGADO-NAO-INSTANCIADO", status="AVISO",
+                mensagem=(
+                    f"{contract_id}: custo monolítico sem decomposição completa "
+                    "por instância; lançamento não certificado."
+                ),
+            ))
+        elif abs(reconstructed - reported) > _CENT:
             validations.append(ValidacaoItem(
                 codigo="VAL-P17-CONTRATO-NAO-CONCILIADO", status="ERRO",
                 mensagem=f"{contract_id}: total do contrato difere da soma das instâncias.",
