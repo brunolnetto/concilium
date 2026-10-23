@@ -503,8 +503,9 @@ class TestMatchingEconomico:
             self._make_equipe("act-r", 50_000.0),
             self._make_equipe("act-s", 50_000.0),
         ]
-        # gap_max = ceil((80k+40k)/12k) - 1 = ceil(10) - 1 = 9
-        # gap=10 > gap_max=9 → quebra (mesmo que custo-based diria perpetuar)
+        # P16-B: at equality, keep the chain (fewer transitions).
+        # gap_max=floor((80k+40k)/12k)=10, inclusive by normative contract.
+        # gap=10 ⇒ standby=120k == mob+demob=120k ⇒ perpetua.
         rcpsp_spec = {
             "resource_pool": {"T8": 1},
             "activities": [
@@ -520,13 +521,13 @@ class TestMatchingEconomico:
                 }
             },
         }
-        # gap=10 > gap_max=9 → deve quebrar
+        # gap=10 == gap_max: the economically tied chain remains active.
         sched_lookup = {
             "act-r": _make_sched_activity("act-r", _weeks(1, 4), num_equipes=1),
             "act-s": _make_sched_activity("act-s", _weeks(15, 18), num_equipes=1),
         }
         _, _, cadeias = mod._build_contratos_recurso(equipes, rcpsp_spec, sched_lookup, [])
-        assert len(cadeias) == 2
+        assert len(cadeias) == 1
 
 
 class TestBuildContratosRecursoEarlyReturns:
