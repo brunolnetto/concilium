@@ -13,6 +13,7 @@ from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
 from ._resource_instance_assignment import (  # ty: ignore[unresolved-import]
     _STANDBY_THRESHOLD_PCT,
     _assign_instances,
+    _build_week_demand_maps,
     _collect_items_data_for_tipo,
     _compress_to_segments,
     _compute_desmob_antecipada,
@@ -199,7 +200,50 @@ def _build_instancias_for_tipo(
     n = contrato.quantidade_contratada
     if n <= 0:
         return [], [], []
-    items_data = _collect_items_data_for_tipo(tipo_id, item_tipo_required, item_total_peak, sched_lookup)
+    # Lightweight legacy contracts may predate these optional provenance fields.
+    # Absence is explicitly unverified, never silently treated as certified.
+    exact = getattr(contrato, "demanda_por_item_semanal", None) or None
+    front_provenance = getattr(contrato, "frentes_por_item_semanal", None) or None
+    contract_label = getattr(contrato, "contrato_id", tipo_id)
+    if exact is not None and front_provenance is None:
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-POOL-FRENTES-LEGADO",
+                status="AVISO",
+                mensagem=(
+                    f"Contrato {contract_label}: tensor de demanda sem prova da mobilização "
+                    "m_i,j que o gerou; paridade temporal NÃO CERTIFICADA."
+                ),
+            )
+        )
+    if exact is None:
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-POOL-DEMANDA-LEGADO",
+                status="AVISO",
+                mensagem=(
+                    f"Contrato {contract_label}: instâncias sem tensor físico "
+                    "a_i,g(m_ij) verificável; uso legado NÃO CERTIFICADO."
+                ),
+            )
+        )
+    items_data = _collect_items_data_for_tipo(
+        tipo_id, item_tipo_required, item_total_peak, sched_lookup,
+        demand_by_item=exact,
+        fronts_by_item=front_provenance if exact is not None else None,
+    )
+    if exact is not None:
+        rebuilt, _ = _build_week_demand_maps(items_data)
+        expected = {w: d for w, d in contrato.demanda_fisica_semanal.items() if d > 0}
+        if rebuilt != expected:
+            raise ValueError(
+                f"VAL-POOL-DEMANDA-02: contract {contrato.contrato_id} physical "
+                f"weekly demand disagrees with instance inputs: {rebuilt} != {expected}"
+            )
     if not items_data:
         return [], [], []
 
