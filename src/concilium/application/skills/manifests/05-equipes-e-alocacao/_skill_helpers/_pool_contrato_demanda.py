@@ -6,6 +6,8 @@ import math
 
 from concilium.domain.models.canonical import ValidacaoItem
 
+from .pre_metrics import _gap_max_economico  # ty: ignore[unresolved-import]
+
 
 def _week_idx(semana: str) -> int:
     """Converte chave de semana para índice inteiro comparável.
@@ -281,7 +283,10 @@ def _resolve_gap_max_e_idle_efetivo(
         _c_idle_fallback = round(cus_mo + cus_locacao, 4)
         if _c_idle_fallback > 0.0:
             c_idle = _c_idle_fallback
-    gap_max = int(math.ceil((c_mob + c_demob) / c_idle) - 1) if c_idle > 0 else 9999
-    return c_idle, gap_max
+    # Single source of economic gap admissibility, shared with the
+    # downstream opportunity evaluator. Include exact ties deterministically:
+    # k*c_idle <= c_mob+c_demob. The unit passed here only selects the
+    # calendar-billed regime; c_idle has already been resolved for this call.
+    return c_idle, _gap_max_economico(c_mob, c_demob, c_idle, "dia_cal")
 
 

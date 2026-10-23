@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 from concilium.domain.models.canonical import CadeiaPerpetuacao, ValidacaoItem
 
 
@@ -173,8 +175,17 @@ def _build_perpetuation_chains(
             # Cost-based: perpetuate if standby is cheaper than mob+demob
             demand_end = _boundary_required(chain_runs[-1], at_end=True, week_demand=week_demand)
             demand_start = _boundary_required(run, at_end=False, week_demand=week_demand)
-            standby_cost = max(0, gap) * custo_standby_unit * min(demand_end, demand_start)
-            perpetuate = standby_cost < (custo_mob_unit + custo_demob_unit)
+            # Compare like with like: *all* instances retained through the
+            # gap versus moving those same instances out and back. The
+            # per-instance movement prices cannot be compared with an
+            # aggregated multi-instance standby bill. On exact equality,
+            # prefer fewer movements (normative deterministic tie-break).
+            retained = min(demand_end, demand_start)
+            standby_cost = Fraction(gap) * Fraction(str(custo_standby_unit)) * retained
+            restart_cost = (
+                Fraction(str(custo_mob_unit)) + Fraction(str(custo_demob_unit))
+            ) * retained
+            perpetuate = retained > 0 and standby_cost <= restart_cost
         else:
             # Time-based: perpetuate if gap ≤ delta_max
             perpetuate = gap <= delta_max
