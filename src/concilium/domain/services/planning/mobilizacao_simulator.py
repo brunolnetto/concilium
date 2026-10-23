@@ -31,13 +31,12 @@ import math
 from collections.abc import Callable
 from typing import ClassVar
 
-from concilium.domain.services.planning.produtividade import produtividade_realizavel
-
 from concilium.domain.models.planning.mobilizacao import (
     CurvaForca,
     CurvaForcaSemanal,
     WorkforcePolicy,
 )
+from concilium.domain.services.planning.produtividade import produtividade_realizavel
 
 
 class WorkforcePolicySimulator:

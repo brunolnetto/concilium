@@ -6,13 +6,12 @@ from datetime import date, timedelta
 from math import isfinite
 from typing import Any
 
-from concilium.domain.services.planning.produtividade import produtividade_realizavel
-
 from concilium.domain.models.canonical import (
     DistribuicaoSemanal,
     ValidacaoItem,
 )
 from concilium.domain.models.canonical._eap import OrigemCapacidade
+from concilium.domain.services.planning.produtividade import produtividade_realizavel
 
 
 def _iso_week_key(d: date) -> str:
