@@ -135,3 +135,21 @@ def test_inconsistent_declared_peak_is_rejected() -> None:
 def test_auto_derived_composite_team_maps_one_unit_per_front() -> None:
     _, weekly, _ = _run((1, 2), {"EQUIPE-COMP-ABC123": 2})
     assert weekly["EQUIPE-COMP-ABC123"] == {"2020-W52": 1, "2020-W53": 2}
+
+
+def test_peak_resource_count_is_not_silently_rounded_in_activity_spec() -> None:
+    with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01"):
+        mod._build_item_tipo_map(
+            [{"item_id": "A", "required_resources": {"MACHINES": 1.5}}]
+        )
+
+
+def test_nonfinite_scheduled_team_weeks_fail_even_if_other_week_is_valid() -> None:
+    sched, eq = _fixture((1, 2))
+    sched.distribuicao_semanal["2020-W53"] = SimpleNamespace(num_equipes=float("nan"))
+    with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01"):
+        mod._process_item_tipo_map(
+            "A", {"EQUIPE-COMP-ABC123": 2},
+            {"A": eq}, {"EQUIPE-COMP-ABC123": 2},
+            {"A": sched}, {}, {}, [],
+        )
