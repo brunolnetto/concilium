@@ -92,6 +92,21 @@ class TestGapMaxEconomico:
         result = helpers._gap_max_economico(8_000.0, 2_000.0, 2_500.0, "dia_cal")
         assert result == 4
 
+    def test_gap_uses_only_empty_weeks_for_inclusive_intervals(self, helpers):
+        """Adjacent activities have zero idle; same-week contact is overlap."""
+        week = {"A": (1, 10), "B_adj": (11, 20), "B_idle": (13, 23), "B_overlap": (10, 19)}
+        start = lambda item: week[item][0]
+        end = lambda item: week[item][1]
+        def opportunity(next_id: str):
+            return helpers._bppc_par_oportunidade(
+                "A", 2, next_id, 2, "ESC-3CAT", 10,
+                C_MOB, C_DEMOB, C_IDLE, "dia_cal", start, end
+            )
+
+        assert opportunity("B_adj").gap_semanas == 0
+        assert opportunity("B_idle").gap_semanas == 2
+        assert opportunity("B_overlap") is None
+
     def test_divisao_com_fracao(self, helpers):
         """budget=10 000, c_idle=3 000 → floor(10 000/3 000)=3.
         Gap 3: 9000 < 10000 ✓
@@ -513,9 +528,9 @@ class TestBuildPreProcessamento:
             "unidade_faturamento": unidade,
         }
         contratos = _make_contratos(["ESC-3CAT"])
-        # The pipeline defines gap = start_B - end_A on this indexed
-        # interval representation. 12 - 10 = 2 exact idle weeks.
-        cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 23)})
+        # End weeks are inclusive: A ends 10, B begins 13; idle 11 and 12.
+        # The half-open conversion gives gap = 13-(10+1) = 2.
+        cron = _make_cron_lookup({"A": (1, 10), "B": (13, 23), "C": (1, 23)})
         validacoes: list = []
         relatorio = helpers._build_pre_processamento_compartilhamento(
             contratos, spec, cron, validacoes
