@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -95,7 +95,7 @@ class FormalismCertificate(BaseModel):
     oracle_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     source_fingerprints: tuple[SourceFingerprint, ...]
     inputs_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     decision: Literal["NOT_EVALUATED"] = "NOT_EVALUATED"
 
     @model_validator(mode="after")
