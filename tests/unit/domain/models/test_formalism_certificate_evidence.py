@@ -121,3 +121,48 @@ def test_preview_cannot_claim_certified_pricing() -> None:
     assert next(x for x in preview.source_fingerprints if x.name == "pricing").state == "UNAVAILABLE"
     assert next(x for x in preview.source_fingerprints if x.name == "productivity").state == "PRESENT"
     assert matches_current_sources(preview, _sources())
+
+def test_pydantic_model_set_is_rejected_before_json_normalization() -> None:
+    """Prevent a random hash from Python's per-process set iteration order."""
+    from pydantic import BaseModel
+
+    class Graph(BaseModel):
+        dominio: set[str]
+
+    class Activity(BaseModel):
+        graph: Graph
+
+    raw = _sources()
+    raw["canonical"] = Activity(graph=Graph(dominio={"pump", "valve", "tank"}))
+    with pytest.raises(TypeError, match="unordered"):
+        _make(raw)
+
+    # Nested sets in plain dicts and frozensets also fail before hashing.
+    raw["canonical"] = {"graph": {"dominio": frozenset({"pump", "valve"})}}
+    with pytest.raises(TypeError, match="unordered"):
+        _make(raw)
+
+
+def test_unordered_model_source_is_not_a_match_even_if_other_inputs_are_identical() -> None:
+    from pydantic import BaseModel
+
+    class Source(BaseModel):
+        domains: set[str]
+
+    envelope = _make()
+    changed = _sources()
+    changed["canonical"] = Source(domains={"alpha", "omega"})
+    assert not matches_current_sources(envelope, changed)
+
+
+def test_sorted_model_sequence_is_stable_across_payload_reordering() -> None:
+    from pydantic import BaseModel
+
+    class Source(BaseModel):
+        domains: list[str]
+
+    raw = _sources()
+    raw["canonical"] = Source(domains=sorted({"zeta", "alpha"}))
+    first = _make(raw)
+    second = _make(deepcopy(raw))
+    assert first.inputs_sha256 == second.inputs_sha256
