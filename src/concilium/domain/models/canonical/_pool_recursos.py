@@ -137,6 +137,10 @@ class RecursoContrato(BaseModel):
     # Empty maps mean legacy unverified provenance: never certify pool parity.
     demanda_fisica_semanal: dict[str, int] = Field(default_factory=dict)
     demanda_por_item_semanal: dict[str, dict[str, int]] = Field(default_factory=dict)
+    # Exact physical mobilization m_i,j used when evaluating a_i,g(m_i,j).
+    # Do not scale this by weather, calendar or effective throughput.
+    # Missing provenance is an uncertified legacy contract.
+    frentes_por_item_semanal: dict[str, dict[str, int]] = Field(default_factory=dict)
     # ADR-080: semana de mobilização por instância (número → semana ISO).
     # {} = todas as instâncias são mobilizadas desde semana_inicio (comportamento legado).
     mobilizacao_por_instancia: dict[int, str] = Field(default_factory=dict)

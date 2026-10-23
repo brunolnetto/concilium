@@ -228,6 +228,7 @@ def _collect_items_data_for_tipo(
     sched_lookup: dict,
     *,
     demand_by_item: dict[str, dict[str, int]] | None = None,
+    fronts_by_item: dict[str, dict[str, int]] | None = None,
 ) -> list:
     """Build typed items; exact contractual d_i,g,j overrides legacy estimates.
 
@@ -261,6 +262,15 @@ def _collect_items_data_for_tipo(
             }
             if set(raw) != expected_weeks:
                 raise ValueError(f"VAL-POOL-DEMANDA-02: incomplete weeks for {iid}/{tipo_id}")
+            if fronts_by_item is not None:
+                source_fronts = fronts_by_item.get(iid)
+                if not isinstance(source_fronts, dict) or set(source_fronts) != expected_weeks:
+                    raise ValueError(f"VAL-POOL-DEMANDA-02: missing mobilization proof for {iid}/{tipo_id}")
+                for week in expected_weeks:
+                    actual = _integral_front_count(getattr(dist[week], "num_equipes", 0), f"{iid}/{week}")
+                    source = _integral_front_count(source_fronts[week], f"{iid}/{week}/persisted")
+                    if actual != source:
+                        raise ValueError(f"VAL-POOL-DEMANDA-02: stale mobilization for {iid}/{tipo_id}/{week}")
             demand_per_week = {
                 w: _integral_front_count(value, f"{iid}/{tipo_id}/{w}")
                 for w, value in raw.items()

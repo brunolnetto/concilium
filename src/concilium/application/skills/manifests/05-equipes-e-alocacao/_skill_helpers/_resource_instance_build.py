@@ -201,6 +201,20 @@ def _build_instancias_for_tipo(
     if n <= 0:
         return [], [], []
     exact = contrato.demanda_por_item_semanal or None
+    front_provenance = contrato.frentes_por_item_semanal or None
+    if exact is not None and front_provenance is None:
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-POOL-FRENTES-LEGADO",
+                status="AVISO",
+                mensagem=(
+                    f"Contrato {contrato.contrato_id}: tensor de demanda sem prova da mobilização "
+                    "m_i,j que o gerou; paridade temporal NÃO CERTIFICADA."
+                ),
+            )
+        )
     if exact is None:
         from concilium.domain.models.canonical import ValidacaoItem
 
@@ -217,6 +231,7 @@ def _build_instancias_for_tipo(
     items_data = _collect_items_data_for_tipo(
         tipo_id, item_tipo_required, item_total_peak, sched_lookup,
         demand_by_item=exact,
+        fronts_by_item=front_provenance if exact is not None else None,
     )
     if exact is not None:
         rebuilt, _ = _build_week_demand_maps(items_data)

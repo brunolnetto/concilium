@@ -96,6 +96,9 @@ def _build_contrato_entry(
         demanda_por_item_semanal={
             item["item_id"]: dict(item["demand_per_week"]) for item in items
         },
+        frentes_por_item_semanal={
+            item["item_id"]: dict(item["frentes_por_semana"]) for item in items
+        },
         n_cadeias=len(cadeias),
         custo_mob_desmob_contrato=custo_mob_desmob,
         custo_standby_total=round(sum(c.custo_standby for c in cadeias), 2),

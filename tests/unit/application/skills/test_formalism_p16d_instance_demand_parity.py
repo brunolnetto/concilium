@@ -42,6 +42,9 @@ def _case(
         items_cobertos=["A"],
         demanda_fisica_semanal=physical,
         demanda_por_item_semanal={"A": physical},
+        frentes_por_item_semanal={
+            "A": dict(zip(weeks, (1, 2, 3), strict=True))
+        },
     )
     sched = SimpleNamespace(
         distribuicao_semanal={
@@ -99,3 +102,34 @@ def test_contract_schema_retains_exact_physical_provenance() -> None:
     stored = RecursoContrato.model_validate(contract.model_dump())
     assert stored.demanda_fisica_semanal["2020-W53"] == 2
     assert stored.demanda_por_item_semanal["A"]["2021-W01"] == 3
+    assert stored.frentes_por_item_semanal["A"]["2020-W53"] == 2
+
+
+def test_changed_front_count_same_weeks_rejects_stale_contract() -> None:
+    contract, spec, schedules = _case()
+    schedules["A"].distribuicao_semanal["2020-W53"].num_equipes = 3
+    with pytest.raises(ValueError, match="stale mobilization"):
+        builder._build_instancias_recurso([contract], spec, schedules, [])
+
+
+def test_calendar_and_practicability_dont_reduce_physical_resource_demand() -> None:
+    contract, spec, schedules = _case()
+    for week in schedules["A"].distribuicao_semanal.values():
+        week.praticabilidade = 0.25
+        week.calendario = 0.50
+    instances, _compositions, summaries = builder._build_instancias_recurso(
+        [contract], spec, schedules, [],
+    )
+    assert sum(instance.semanas_ativas for instance in instances) == 6
+    assert summaries[0].machine_weeks_usados == 6
+
+
+def test_missing_mobilization_provenance_is_explicitly_uncertified() -> None:
+    contract, spec, schedules = _case()
+    contract.frentes_por_item_semanal = {}
+    validations = []
+    builder._build_instancias_recurso([contract], spec, schedules, validations)
+    assert any(
+        v.codigo == "VAL-POOL-FRENTES-LEGADO" and v.status == "AVISO"
+        for v in validations
+    )
