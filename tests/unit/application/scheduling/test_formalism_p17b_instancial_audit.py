@@ -73,3 +73,27 @@ def test_missing_contract_and_missing_instances_are_not_valid_zero_cost() -> Non
     assert "VAL-P17-CONTRATO-AUSENTE" in _codes(missing)
     empty = audit_skill05_cost_ownership((_contract(),), ())
     assert "VAL-P17-CUSTO-INSTANCIAL-AUSENTE" in _codes(empty)
+
+def test_supported_monolithic_fallback_is_unverified_warning_not_error() -> None:
+    # ADR-085: without compositional idle cost, existing instances are zeroed
+    # while RecursoContrato retains a positive monolithic total.
+    legacy_slot = InstanciaRecurso(
+        instancia_id="CRANE-1", contrato_id="C1", tipo_id="CRANE",
+        numero=1, semana_entrada="2026-W01", semana_saida="2026-W02",
+    )
+    audit = audit_skill05_cost_ownership((_contract(130.0),), (legacy_slot,))
+    assert "VAL-P17-CUSTO-LEGADO-NAO-INSTANCIADO" in _codes(audit)
+    assert "VAL-P17-CONTRATO-NAO-CONCILIADO" not in _codes(audit)
+    assert not any(item.status == "ERRO" for item in audit.validations)
+    assert audit.authority == "PREVIEW_ONLY_LEGACY_MONETARY_COMPONENTS"
+
+
+def test_partial_legacy_instance_evidence_is_not_pretended_fully_reconciled() -> None:
+    complete = _instance()
+    missing = InstanciaRecurso(
+        instancia_id="CRANE-2", contrato_id="C1", tipo_id="CRANE",
+        numero=2, semana_entrada="2026-W01", semana_saida="2026-W02",
+    )
+    audit = audit_skill05_cost_ownership((_contract(140.0),), (complete, missing))
+    assert "VAL-P17-CUSTO-LEGADO-NAO-INSTANCIADO" in _codes(audit)
+    assert "VAL-P17-CONTRATO-NAO-CONCILIADO" not in _codes(audit)
