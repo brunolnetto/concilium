@@ -7,10 +7,10 @@ workforce or the RCPSP schedule and cannot certify project-wide GO.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
-from typing import Mapping
 
 from .resource_demand_levels import WeeklyDemandLevels
 
