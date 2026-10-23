@@ -1093,7 +1093,7 @@ class TestAccumWeekDemand:
         d1 = SimpleNamespace(num_equipes=2)
         d2 = SimpleNamespace(num_equipes=3)
         dist = {"S1": d1, "S2": d2}
-        _accum_week_demand(tipo_week_demand, "TIPO-A", ["S1", "S2"], dist, 3, 3)
+        _accum_week_demand(tipo_week_demand, "TIPO-A", ["S1", "S2"], dist, 3, 3, profile={"per_front": 1})
         assert tipo_week_demand["TIPO-A"] == {"S1": 2, "S2": 3}
 
 
