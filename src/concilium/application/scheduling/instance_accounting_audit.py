@@ -5,10 +5,10 @@ Only a future P17-C/P18-B/P20 journal may authorize finance certificates.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
-from collections.abc import Sequence
 
 from concilium.domain.models.canonical import InstanciaRecurso, RecursoContrato, ValidacaoItem
 
@@ -129,8 +129,10 @@ def audit_skill05_cost_ownership(
             continue
         try:
             ctx = f"{instance.contrato_id}/{instance.instancia_id}"
-            def read(field: str) -> Fraction:
-                return _legacy_money(getattr(instance, field), f"{ctx}.{field}")
+            def read(
+                field: str, *, source: InstanciaRecurso = instance, context: str = ctx
+            ) -> Fraction:
+                return _legacy_money(getattr(source, field), f"{context}.{field}")
             row = InstanceFinancialSlice(
                 contract_id=instance.contrato_id,
                 instance_id=instance.instancia_id,
