@@ -90,7 +90,7 @@ jobs:
           cp "${{ matrix.dist_file }}" "artifact-staging/$(basename '${{ matrix.blob_path }}')"
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: proxy-binary-${{ matrix.os }}
           path: artifact-staging/
@@ -110,7 +110,7 @@ jobs:
       # diretório — exatamente o BIN_DIR que tools/mcp-proxy/mcpb/build.sh
       # espera (concilium-mcp-proxy.exe / -linux / -macos lado a lado).
       - name: Download proxy binaries (Windows/Linux/macOS)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: proxy-binary-*
           path: proxy-bins
