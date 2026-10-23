@@ -3,7 +3,7 @@
 All assumptions are explicit; no global state; no I/O.
 
 Production formula (shared with Skill 04, invariant):
-    qtd(t) = P × dias_semana × horas_dia × eta_jornada × p(t) × n(t)
+    q(t) = min(Q_remaining, F(n(t)) × H × eta_jornada × p(t) × c(t))
 
 Where:
     P           = producao_horaria (units/hour per independent front)
@@ -11,7 +11,8 @@ Where:
     m           = dias_semana (working days/week, from regime)
     h           = horas_dia  (working hours/day, from regime)
     eta_jornada = ADR-148 fração produtiva do dia (structural, not week-varying), defaults to 1.0
-    p(t)        = practicability factor for week t ∈ (0, 1], defaults to 1.0
+    p(t)        = practicability in [0,1], defaults to 1.0
+    c(t)        = operating calendar availability in [0,1], defaults to 1.0
     n(t)        = teams active in week t, derived from WorkforcePolicy
 
 Termination:
@@ -35,6 +36,7 @@ from concilium.domain.models.planning.mobilizacao import (
     CurvaForcaSemanal,
     WorkforcePolicy,
 )
+from concilium.domain.services.planning.produtividade import produtividade_realizavel
 
 
 class WorkforcePolicySimulator:
@@ -70,6 +72,7 @@ class WorkforcePolicySimulator:
         semanas_iso_por_offset: dict[int, str] | None = None,
         eta_jornada: float = 1.0,
         capacidade_horaria_por_frentes: Callable[[float], float] | None = None,
+        calendario_semanal: dict[str, float] | None = None,
     ) -> CurvaForca:
         """Simulate the execution of one activity under the given policy.
 
@@ -85,6 +88,7 @@ class WorkforcePolicySimulator:
             semanas_iso_por_offset: Optional map {week_offset: ISO_week_key}.
                           Anchors the simulation to calendar weeks so that
                           prat_semanal lookup works correctly.
+            calendario_semanal: Optional ISO-week calendar availability (default 1.0).
             capacidade_horaria_por_frentes: optional F(n) in units/hour; if supplied,
                           it replaces the per-front P*n assumption everywhere.
         eta_jornada: ADR-148 — fração produtiva do dia, (horas_dia - horas_improdutivas_dia) /
@@ -120,6 +124,7 @@ class WorkforcePolicySimulator:
             semanas_iso_por_offset,
             capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
             horas_efetivas=horas_efetivas,
+            calendario_semanal=calendario_semanal,
         )
 
         return CurvaForca(
@@ -162,6 +167,7 @@ class WorkforcePolicySimulator:
         *,
         capacidade_horaria_por_frentes: Callable[[float], float] | None = None,
         horas_efetivas: float = 0.0,
+        calendario_semanal: dict[str, float] | None = None,
     ) -> tuple[list[CurvaForcaSemanal], bool]:
         if producao_semanal_base <= 0:
             return [], True
@@ -173,21 +179,31 @@ class WorkforcePolicySimulator:
             qtd_acumulada = 0.0
             for t, n_t in enumerate(policy.build_profile(duration_weeks)):
                 semana_iso = semanas_iso_por_offset.get(t) if semanas_iso_por_offset else None
-                eficiencia = self._lookup_eficiencia(semana_iso, prat_semanal)
+                praticabilidade = self._lookup_eficiencia(semana_iso, prat_semanal)
+                calendario = (
+                    calendario_semanal.get(semana_iso, 1.0)
+                    if calendario_semanal is not None and semana_iso is not None
+                    else 1.0
+                )
                 if capacidade_horaria_por_frentes is None:
-                    qtd_semana_max = producao_semanal_base * eficiencia * n_t
+                    capacidade_instalada = producao_semanal_base * n_t
                 else:
                     capacidade_hora = capacidade_horaria_por_frentes(float(n_t))
                     if not math.isfinite(capacidade_hora) or capacidade_hora < 0:
                         raise ValueError("physical F(m) must be finite and nonnegative")
-                    qtd_semana_max = capacidade_hora * horas_efetivas * eficiencia
+                    capacidade_instalada = capacidade_hora * horas_efetivas
+                # MANUAL/AUTO and WMP share the same availability equation.
+                # H already includes eta_jornada and cannot be multiplied again.
+                qtd_semana_max = produtividade_realizavel(
+                    capacidade_instalada, praticabilidade, calendario
+                )
                 qtd_semana = min(qtd_semana_max, quantitativo - qtd_acumulada)
                 qtd_acumulada = round(qtd_acumulada + qtd_semana, 6)
                 semanas.append(
                     CurvaForcaSemanal(
                         semana_offset=t,
                         num_equipes=n_t,
-                        eficiencia=round(eficiencia, 6),
+                        eficiencia=round(praticabilidade * calendario, 6),
                         qtd_executada=round(qtd_semana, 4),
                         qtd_acumulada=round(qtd_acumulada, 4),
                         semana_iso=semana_iso,
