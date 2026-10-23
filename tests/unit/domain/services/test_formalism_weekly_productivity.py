@@ -81,3 +81,48 @@ def test_wmp_refuses_calendar_outside_unit_interval() -> None:
             semanas_iso_por_offset={0: "2026-W41"},
             calendario_semanal={"2026-W41": 1.2},
         )
+
+
+@pytest.mark.parametrize("jornada", [-0.1, 1.01, float("nan"), float("inf")])
+def test_wmp_fails_closed_on_invalid_jornada(jornada: float) -> None:
+    with pytest.raises(ValueError, match="eta_jornada"):
+        WorkforcePolicySimulator().simulate(
+            policy=WorkforcePolicy.imediato(2),
+            atividade_id="EAP",
+            quantitativo=100,
+            producao_horaria=10,
+            dias_semana=5,
+            horas_dia=8,
+            eta_jornada=jornada,
+        )
+
+
+@pytest.mark.parametrize(
+    ("scope", "rate"),
+    [(float("nan"), 10.0), (float("inf"), 10.0), (100.0, float("nan")), (100.0, float("inf"))],
+)
+def test_wmp_fails_closed_on_nonfinite_scope_or_rate(scope: float, rate: float) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        WorkforcePolicySimulator().simulate(
+            policy=WorkforcePolicy.imediato(2),
+            atividade_id="EAP",
+            quantitativo=scope,
+            producao_horaria=rate,
+            dias_semana=5,
+            horas_dia=8,
+        )
+
+
+@pytest.mark.parametrize(("days", "hours"), [(0, 8), (5, 0), (-1, 8)])
+def test_wmp_fails_closed_on_nonproductive_calendar_dimensions(
+    days: int, hours: int
+) -> None:
+    with pytest.raises(ValueError, match="strictly positive"):
+        WorkforcePolicySimulator().simulate(
+            policy=WorkforcePolicy.imediato(2),
+            atividade_id="EAP",
+            quantitativo=100,
+            producao_horaria=10,
+            dias_semana=days,
+            horas_dia=hours,
+        )
