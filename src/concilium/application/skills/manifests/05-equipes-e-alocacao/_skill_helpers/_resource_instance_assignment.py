@@ -9,7 +9,7 @@ from concilium.domain.models.canonical import (
 from concilium.domain.services.financial.equipe_custo_engine import LifecycleEngine
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
-from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
+from ._pool_contrato_demanda import _integral_front_count, _week_idx  # ty: ignore[unresolved-import]
 
 _STANDBY_THRESHOLD_PCT = 35.0
 
@@ -255,8 +255,6 @@ def _collect_items_data_for_tipo(
             if not isinstance(raw, dict):
                 raise ValueError(f"VAL-POOL-DEMANDA-02: invalid profile for {iid}/{tipo_id}")
             dist = getattr(sa, "distribuicao_semanal", None) or {}
-            from ._pool_contrato_demanda import _integral_front_count
-
             expected_weeks = {
                 w for w, item in dist.items()
                 if _integral_front_count(getattr(item, "num_equipes", 0), f"{iid}/{w}") > 0
