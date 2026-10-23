@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 
 from concilium.domain.models.canonical import ValidacaoItem
 
@@ -69,34 +70,77 @@ def _eq_custo_total_agregado(eq) -> float:
     return float(getattr(eq, "custo_total", 0.0) or 0.0) * n_frentes
 
 
+def _integral_front_count(value: object, label: str) -> int:
+    """Physical team count must be a finite, nonnegative integer."""
+    try:
+        number = Fraction(str(value))
+    except (ValueError, ZeroDivisionError, TypeError) as exc:
+        raise ValueError(f"VAL-POOL-DEMANDA-01: {label} has invalid team count") from exc
+    if number.denominator != 1 or number < 0:
+        raise ValueError(f"VAL-POOL-DEMANDA-01: {label} must be a nonnegative integer")
+    return int(number)
+
+
+def _demand_from_team_profile(required: int, peak_frentes: int, fronts: object, tipo: str) -> int:
+    """Exact a_i,g(m) when a resource has a proven linear composition.
+
+    The declared 'required_resources[tipo]' is the demand at the activity's
+    maximum scheduled team count, NOT the sum of unrelated resource counts.
+    A nonintegral partial-week resource demand cannot be rounded: it means
+    the per-team composition is missing (e.g. one shared machine at two
+    fronts). Such a scenario requires an explicit a_i,g(m) in a later adapter.
+    """
+    m = _integral_front_count(fronts, "m_ij")
+    if not isinstance(required, int) or isinstance(required, bool) or required < 0:
+        raise ValueError(f"VAL-POOL-DEMANDA-01: invalid peak demand of resource {tipo}")
+    if peak_frentes <= 0 or m > peak_frentes:
+        raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} fronts exceed or lack peak calibration")
+    demand = Fraction(required * m, peak_frentes)
+    if demand.denominator != 1:
+        raise ValueError(
+            f"VAL-POOL-DEMANDA-01: {tipo} needs explicit a_i,g(m) for "
+            f"m={m}, peak={peak_frentes}, required={required}; no fractional physical instances"
+        )
+    return int(demand)
+
+
 def _accum_week_demand(
-    tipo_week_demand: dict, tipo: str, active_weeks: list, dist: dict, required: int, total_required_peak: int
+    tipo_week_demand: dict,
+    tipo: str,
+    active_weeks: list,
+    dist: dict,
+    required: int,
+    peak_frentes: int,
+    *,
+    weekly_counts: dict[str, int] | None = None,
 ) -> None:
-    """Accumulates week demand entries into tipo_week_demand[tipo]."""
+    """Accumulate exact weekly demand for one homogeneous resource type."""
+    counts = weekly_counts or {
+        w: _demand_from_team_profile(required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo)
+        for w in active_weeks
+    }
     week_demand = tipo_week_demand.setdefault(tipo, {})
     for w in active_weeks:
-        raw = (getattr(dist[w], "num_equipes", 0) or 0) * required / total_required_peak
-        demand_w = max(0, math.ceil(raw))
-        week_demand[w] = week_demand.get(w, 0) + demand_w
+        week_demand[w] = week_demand.get(w, 0) + counts[w]
 
 
 def _add_tipo_item_demand(
     tipo: str,
     iid: str,
     required: int,
-    total_required_peak: int,
+    peak_frentes: int,
     active_weeks: list,
     eq,
     dist: dict,
     tipo_items: dict,
     tipo_week_demand: dict,
 ) -> None:
-    """Appends item entry and week demand for a single tipo."""
-    actual_mw = sum(
-        max(0, round((getattr(dist[w], "num_equipes", 0) or 0) * required / total_required_peak)) for w in active_weeks
-    )
-    if actual_mw == 0:
-        actual_mw = required * len(active_weeks)
+    """Use the SAME integer counts for item machine-weeks and pool demand."""
+    counts = {
+        w: _demand_from_team_profile(required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo)
+        for w in active_weeks
+    }
+    actual_mw = sum(counts.values())
     comp_mo, comp_eq, comp_comb, comp_mat = _eq_comp_floats(eq)
     tipo_items.setdefault(tipo, []).append(
         {
@@ -115,7 +159,9 @@ def _add_tipo_item_demand(
             "comp_mat": comp_mat,
         }
     )
-    _accum_week_demand(tipo_week_demand, tipo, active_weeks, dist, required, total_required_peak)
+    _accum_week_demand(
+        tipo_week_demand, tipo, active_weeks, dist, required, peak_frentes, weekly_counts=counts
+    )
 
 
 def _get_active_weeks(sa) -> list:
@@ -150,7 +196,12 @@ def _process_item_tipo_map(
     if not active_weeks:
         return
     dist = getattr(sa, "distribuicao_semanal", None) or {}
-    total_required_peak = sum(tipo_map.values()) or 1
+    # Peak is a count of the activity's actual physical fronts, NOT the
+    # dimensionally invalid sum of heterogeneous resource-type quantities.
+    peak_frentes = max(
+        _integral_front_count(getattr(dist[w], "num_equipes", 0), f"{iid}/{w}")
+        for w in active_weeks
+    )
     for tipo, required in tipo_map.items():
         if tipo not in pool:
             continue
@@ -158,7 +209,7 @@ def _process_item_tipo_map(
             tipo,
             iid,
             required,
-            total_required_peak,
+            peak_frentes,
             active_weeks,
             eq,
             dist,
