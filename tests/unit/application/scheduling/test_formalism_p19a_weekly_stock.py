@@ -62,7 +62,9 @@ def test_weekly_stock_mass_balance_matches_physical_consumption_not_purchase_cos
         F(1), F(10), F(3)
     )
     assert projection.authority == "PHYSICAL_INVENTORY_PREVIEW_NOT_FINANCIAL_GO"
-    assert projection.total_shortage == projection.total_overflow == 0
+    assert projection.shortage_by_good["SAND"].quantity == 0
+    assert projection.overflow_by_good["SAND"].quantity == 0
+    assert projection.shortage_by_good["SAND"].unit == "kg"
 
 
 def test_shortage_does_not_fabricate_negative_stock_or_unpaid_delivery() -> None:
@@ -72,7 +74,8 @@ def test_shortage_does_not_fabricate_negative_stock_or_unpaid_delivery() -> None
         (_evidence("2026-W01", F(3), "excess-demand"),),
     )
     assert not ledger.feasible
-    assert ledger.total_shortage == F(2)
+    assert ledger.shortage_by_good["SAND"].quantity == F(2)
+    assert ledger.shortage_by_good["SAND"].unit == "kg"
     assert ledger.rows[0].fulfilled == F(1)
     assert ledger.rows[0].closing == 0
     assert ledger.rows[0].external_receipts == 0
@@ -187,3 +190,33 @@ def test_planned_and_observed_cannot_be_double_booked_for_same_activity() -> Non
             ("2026-W01",),
             (planned, observed),
         )
+
+
+def test_iso_week_identifiers_must_be_real_zero_padded_and_consecutive() -> None:
+    good = {"SAND": StockGood("SAND", "kg", F(0), lead_time_weeks=1)}
+    with pytest.raises(ValueError, match="canonical ISO weeks"):
+        project_exact_weekly_stock(good, ("2026-W10", "2026-W2"), ())
+    with pytest.raises(ValueError, match="consecutive ISO weeks"):
+        project_exact_weekly_stock(good, ("2026-W01", "2026-W03"), ())
+    with pytest.raises(ValueError, match="invalid ISO calendar week"):
+        project_exact_weekly_stock(good, ("2026-W54",), ())
+
+
+def test_multi_good_shortage_cannot_be_summed_across_kg_and_litres() -> None:
+    goods = {
+        "SAND": StockGood("SAND", "kg", F(0)),
+        "FUEL": StockGood("FUEL", "l", F(0)),
+    }
+    sand = _evidence("2026-W01", F(1), "sand-1")
+    fuel = sand.__class__(
+        "fuel-1", "OBSERVED_OPERATION", "A", "2026-W01",
+        sand.measure.__class__("FUEL", F(2), "l", F(2), "l", F(1)),
+    )
+    projection = project_exact_weekly_stock(
+        goods, ("2026-W01",), (sand, fuel),
+    )
+    assert projection.shortage_by_good["SAND"].quantity == F(1)
+    assert projection.shortage_by_good["SAND"].unit == "kg"
+    assert projection.shortage_by_good["FUEL"].quantity == F(2)
+    assert projection.shortage_by_good["FUEL"].unit == "l"
+    assert not hasattr(projection, "total_shortage")
