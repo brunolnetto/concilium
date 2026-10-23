@@ -16,9 +16,15 @@ O grafo considera recursos realmente alocados. Arestas de infraestrutura compart
 Há **uma única definição de produtividade física**: \(F_i(m)\) [\(u_i/h\)], estabelecida pela composição de recursos efetivamente mobilizada. Nem a praticabilidade nem o calendário mudam a definição de \(F\); eles limitam as horas/produtividade **disponíveis no período**. Defina \(H_i=h_i d_i\) [h/semana contratual], \(p_j\in[0,1]\) como praticabilidade da semana, \(c_j\in[0,1]\) como disponibilidade de calendário, e \(a_i\in[0,1]\) como fração efetiva de jornada, se ainda não estiver embutida em \(H_i\). Então
 
 \[
-\boxed{B_{ij}=F_i(m_{ij})H_i\,p_j\,c_j\,a_i,\qquad
+\boxed{\rho_{ij}^{efetiva}=F_i(m_{ij})p_jc_ja_i\ [u_i/h],\qquad
+B_{ij}=H_i\rho_{ij}^{efetiva},\qquad
 q_{ij}=\min\left\{\left(Q_i-\sum_{k<j}q_{ik}\right)_+,B_{ij}\right\}.}
 \]
+
+Esta é a única transformação de produtividade usada em MANUAL, AUTO e WMP.
+A disponibilidade do calendário da semana ISO é transmitida também ao
+WMP. \(\rho^{efetiva}\) depende de \(F(m)\) da composição, praticabilidade e
+calendário; o fechamento por saldo não é uma nova perda de produtividade.
 
 A convenção anterior \(\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j}\) é **somente abreviação** do produto exógeno \(p_jc_ja_i\); não introduz outra produtividade nem um multiplicador de alocação de equipes. Quando \(H_i\) já é a jornada efetiva, adota-se \(a_i=1\) para não contar a perda de horas duas vezes. Os multiplicadores **não** podem já estar incorporados na taxa calibrada \(F_i(m)\), a menos que haja normalização explícita por condições de referência.
 

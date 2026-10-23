@@ -417,6 +417,7 @@ def _expand_mobilizacao_policies(
     regime: Any,
     prat_semanal: dict[str, float],
     validacoes: list[ValidacaoItem],
+    calendario_semanal: dict[str, float] | None = None,
 ) -> tuple[dict[str, dict[str, float]], list]:
     """ADR-054 Phase 3: Convert WMP policies into per-week team allocations for MANUAL mode."""
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
@@ -449,6 +450,7 @@ def _expand_mobilizacao_policies(
             result,
             curves,
             validacoes,
+            calendario_semanal=calendario_semanal,
         )
 
     return result, curves
