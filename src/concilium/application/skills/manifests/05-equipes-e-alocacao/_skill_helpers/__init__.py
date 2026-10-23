@@ -134,6 +134,7 @@ from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
     _accum_week_demand,
     _add_tipo_item_demand,
     _collect_tipo_items_and_demands,
+    _demand_from_team_profile,
     _compute_custo_unit_fracs,
     _compute_fracs_locacao_manut,
     _eq_comp_floats,
