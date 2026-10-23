@@ -106,7 +106,8 @@ def resolve_bounded_physical_calendar(
         )
         last_audit = audit
         if audit.status == "PASS":
-            return PhysicalResolution("PASS", tuple(activities), attempts, complete_search, audit)
+            # A witness proves existence, not that all later candidates were checked.
+            return PhysicalResolution("PASS", tuple(activities), attempts, attempts == state_count, audit)
         if audit.status == "UNKNOWN":
             saw_unknown = True
 

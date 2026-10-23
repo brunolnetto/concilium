@@ -51,6 +51,7 @@ def test_re_materializes_climate_delayed_predecessor_and_fs_release() -> None:
     assert [a.start_week for a in result.activities] == [0, 2]
     assert ("B", 1) in requested and ("B", 2) in requested
     assert result.attempts == 2
+    assert not result.complete_search  # a feasible witness does not exhaust later starts
 
 
 def test_exact_shared_resource_reallocation_in_multi_activity_calendar() -> None:
