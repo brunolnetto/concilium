@@ -200,8 +200,10 @@ def _build_instancias_for_tipo(
     n = contrato.quantidade_contratada
     if n <= 0:
         return [], [], []
-    exact = contrato.demanda_por_item_semanal or None
-    front_provenance = contrato.frentes_por_item_semanal or None
+    # Lightweight legacy contracts may predate these optional provenance fields.
+    # Absence is explicitly unverified, never silently treated as certified.
+    exact = getattr(contrato, "demanda_por_item_semanal", None) or None
+    front_provenance = getattr(contrato, "frentes_por_item_semanal", None) or None
     if exact is not None and front_provenance is None:
         from concilium.domain.models.canonical import ValidacaoItem
 
