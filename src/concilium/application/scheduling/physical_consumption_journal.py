@@ -18,8 +18,8 @@ from .contractual_cost_ledger import (
 )
 from .physical_consumption_rates import (
     ConsumptionBasis,
-    PhysicalPurchaseMeasure,
     PhysicallyPricedGood,
+    PhysicalPurchaseMeasure,
 )
 
 EvidenceKind = Literal["PLANNED_CLOSED_SCOPE", "OBSERVED_OPERATION"]
