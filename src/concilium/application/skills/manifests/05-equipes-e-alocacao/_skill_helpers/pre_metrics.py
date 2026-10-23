@@ -5,7 +5,7 @@ Métricas econômicas puras (gap máximo, eta de perpetuação, sobreposição, 
 
 from __future__ import annotations
 
-import math
+from fractions import Fraction
 
 _UNIDADE_SEM_IDLE: frozenset[str] = frozenset({"hora_prod"})
 
@@ -21,8 +21,11 @@ def _gap_max_economico(
 ) -> int:
     """Retorna o gap máximo (semanas) em que a perpetuação ainda é viável.
 
-    Condição de viabilidade: (c_mob + c_demob) > g × c_idle
-    → g_max = ceil(budget / c_idle) − 1   [strict inequality]
+    Condição de viabilidade: g × c_idle <= (c_mob + c_demob)
+    → g_max = floor((c_mob+c_demob) / c_idle), inclusive on exact ties.
+
+    Tie-breaking keeps the same physical instances contracted and avoids
+    unnecessary movements. This must match the Skill 05 chain builder.
 
     Para `hora_prod` ou c_idle == 0, retorna _GAP_MAX_INFINITO (9999).
 
@@ -42,9 +45,10 @@ def _gap_max_economico(
     if budget <= 0.0:
         return 0
 
-    # gap_max = ceil(budget / c_idle) − 1
-    # Verificação: g_max × c_idle < budget  (strict)
-    return max(0, math.ceil(budget / custo_idle_semanal) - 1)
+    # Same exact inclusive tariff boundary as _resolve_gap_max_e_idle_efetivo.
+    # Avoid float rounding at an integral gap (notably decimal 0.1+0.2).
+    exact_budget = Fraction(str(custo_mob)) + Fraction(str(custo_demob))
+    return max(0, int(exact_budget // Fraction(str(custo_idle_semanal))))
 
 
 def _eta_perpetuacao(
