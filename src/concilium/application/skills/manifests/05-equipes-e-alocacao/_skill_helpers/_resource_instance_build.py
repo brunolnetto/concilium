@@ -13,6 +13,7 @@ from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
 from ._resource_instance_assignment import (  # ty: ignore[unresolved-import]
     _STANDBY_THRESHOLD_PCT,
     _assign_instances,
+    _build_week_demand_maps,
     _collect_items_data_for_tipo,
     _compress_to_segments,
     _compute_desmob_antecipada,
@@ -218,8 +219,6 @@ def _build_instancias_for_tipo(
         demand_by_item=exact,
     )
     if exact is not None:
-        from ._resource_instance_assignment import _build_week_demand_maps
-
         rebuilt, _ = _build_week_demand_maps(items_data)
         expected = {w: d for w, d in contrato.demanda_fisica_semanal.items() if d > 0}
         if rebuilt != expected:
