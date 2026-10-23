@@ -222,18 +222,55 @@ def _item_demand_for_tipo(
 
 
 def _collect_items_data_for_tipo(
-    tipo_id: str, item_tipo_required: dict, item_total_peak: dict, sched_lookup: dict
+    tipo_id: str,
+    item_tipo_required: dict,
+    item_total_peak: dict,
+    sched_lookup: dict,
+    *,
+    demand_by_item: dict[str, dict[str, int]] | None = None,
 ) -> list:
-    """Builds items_data list for a given tipo_id."""
+    """Build typed items; exact contractual d_i,g,j overrides legacy estimates.
+
+    The legacy fallback is retained for standalone consumers but MUST NOT be
+    presented as certified evidence (callers emit VAL-POOL-DEMANDA-LEGADO).
+    """
     items_data = []
     for iid, tipo_map in item_tipo_required.items():
         required = tipo_map.get(tipo_id)
         if required is None:
             continue
-        demand_per_week = _item_demand_for_tipo(iid, tipo_id, tipo_map, item_total_peak, sched_lookup)
+        sa = sched_lookup.get(iid)
+        if sa is None:
+            continue
+        if demand_by_item is None:
+            demand_per_week = _item_demand_for_tipo(
+                iid, tipo_id, tipo_map, item_total_peak, sched_lookup
+            )
+        else:
+            # The contract already carries this type's exact a_i,g(m) from
+            # the original P16-C evaluation. Never recompute from resource sums.
+            if iid not in demand_by_item:
+                continue
+            raw = demand_by_item[iid]
+            if not isinstance(raw, dict):
+                raise ValueError(f"VAL-POOL-DEMANDA-02: invalid profile for {iid}/{tipo_id}")
+            dist = getattr(sa, "distribuicao_semanal", None) or {}
+            from ._pool_contrato_demanda import _integral_front_count
+
+            expected_weeks = {
+                w for w, item in dist.items()
+                if _integral_front_count(getattr(item, "num_equipes", 0), f"{iid}/{w}") > 0
+            }
+            if set(raw) != expected_weeks:
+                raise ValueError(f"VAL-POOL-DEMANDA-02: incomplete weeks for {iid}/{tipo_id}")
+            demand_per_week = {
+                w: _integral_front_count(value, f"{iid}/{tipo_id}/{w}")
+                for w, value in raw.items()
+            }
+            demand_per_week = {w: v for w, v in demand_per_week.items() if v > 0}
         if not demand_per_week:
             continue
-        active_weeks_sorted = sorted(demand_per_week.keys(), key=_week_idx)
+        active_weeks_sorted = sorted(demand_per_week, key=_week_idx)
         items_data.append(
             {
                 "item_id": iid,
@@ -300,6 +337,8 @@ def _assign_instances(items_data: list, n: int, semanas_contrato: int) -> tuple:
     """Runs greedy instance assignment. Returns (instance_active, instance_standby, instance_activities,
     instance_last_active_week, instance_week_map, all_weeks_sorted)."""
     week_demand, week_activity_demand = _build_week_demand_maps(items_data)
+    if any(demand > n for demand in week_demand.values()):
+        raise ValueError("VAL-POOL-DEMANDA-02: physical demand exceeds contracted instance slots")
     all_weeks_sorted = sorted(week_demand.keys(), key=_week_idx)
     span_by_item = {it["item_id"]: it["end_idx"] - it["start_idx"] for it in items_data}
     instance_active, instance_standby, instance_activities, instance_last_active_week, instance_week_map = (

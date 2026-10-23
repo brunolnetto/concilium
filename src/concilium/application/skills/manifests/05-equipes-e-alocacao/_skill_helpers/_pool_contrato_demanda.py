@@ -206,6 +206,7 @@ def _add_tipo_item_demand(
             "active_weeks": active_weeks,
             "custo_total_item": _eq_custo_total_agregado(eq),
             "machine_weeks": actual_mw,
+            "demand_per_week": dict(counts),  # exact physical source for instances
             "start_idx": _week_idx(active_weeks[0]),
             "end_idx": _week_idx(active_weeks[-1]) + 1,
             "semana_inicio": active_weeks[0],

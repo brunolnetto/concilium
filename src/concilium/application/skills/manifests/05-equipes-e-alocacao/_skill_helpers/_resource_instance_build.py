@@ -199,7 +199,34 @@ def _build_instancias_for_tipo(
     n = contrato.quantidade_contratada
     if n <= 0:
         return [], [], []
-    items_data = _collect_items_data_for_tipo(tipo_id, item_tipo_required, item_total_peak, sched_lookup)
+    exact = contrato.demanda_por_item_semanal or None
+    if exact is None:
+        from concilium.domain.models.canonical import ValidacaoItem
+
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-POOL-DEMANDA-LEGADO",
+                status="AVISO",
+                mensagem=(
+                    f"Contrato {contrato.contrato_id}: instâncias sem tensor físico "
+                    "a_i,g(m_ij) verificável; uso legado NÃO CERTIFICADO."
+                ),
+            )
+        )
+    items_data = _collect_items_data_for_tipo(
+        tipo_id, item_tipo_required, item_total_peak, sched_lookup,
+        demand_by_item=exact,
+    )
+    if exact is not None:
+        from ._resource_instance_assignment import _build_week_demand_maps
+
+        rebuilt, _ = _build_week_demand_maps(items_data)
+        expected = {w: d for w, d in contrato.demanda_fisica_semanal.items() if d > 0}
+        if rebuilt != expected:
+            raise ValueError(
+                f"VAL-POOL-DEMANDA-02: contract {contrato.contrato_id} physical "
+                f"weekly demand disagrees with instance inputs: {rebuilt} != {expected}"
+            )
     if not items_data:
         return [], [], []
 
