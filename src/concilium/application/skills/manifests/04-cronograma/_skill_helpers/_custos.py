@@ -6,6 +6,8 @@ from datetime import date, timedelta
 from math import isfinite
 from typing import Any
 
+from concilium.domain.services.planning.produtividade import produtividade_realizavel
+
 from concilium.domain.models.canonical import (
     DistribuicaoSemanal,
     ValidacaoItem,
@@ -393,14 +395,9 @@ def _capacidade_semanal_disponivel(
     Practical conditions, operational calendar and working-time availability
     are orthogonal factors applied exactly once. Scope closure is independent.
     """
-    values = (capacidade_instalada, praticabilidade, calendario, jornada)
-    if not all(isfinite(value) for value in values):
-        raise ValueError("physical capacity and availability must be finite")
-    if capacidade_instalada < 0:
-        raise ValueError("installed physical capacity cannot be negative")
-    if not all(0.0 <= factor <= 1.0 for factor in (praticabilidade, calendario, jornada)):
-        raise ValueError("availability factors must lie in [0,1]")
-    return capacidade_instalada * praticabilidade * calendario * jornada
+    return produtividade_realizavel(
+        capacidade_instalada, praticabilidade, calendario, jornada
+    )
 
 
 def _build_dist_cell(

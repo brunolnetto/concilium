@@ -129,6 +129,7 @@ def run_cronograma(
             regime,
             prat_semanal,
             validacoes,
+            calendario_semanal=fator_calendario_semanal,
         )
 
     (

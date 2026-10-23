@@ -551,6 +551,7 @@ def _run_wmp_simulation(
     semanas_obra: list,
     guard: int,
     capacidade_horaria_por_frentes: Callable[[float], float] | None = None,
+    calendario_semanal: dict[str, float] | None = None,
 ) -> CurvaForca:
     semanas_iso = {t: semanas_obra[t] for t in range(min(guard, len(semanas_obra)))}
     return sim.simulate(
@@ -564,6 +565,7 @@ def _run_wmp_simulation(
         semanas_iso_por_offset=semanas_iso,
         eta_jornada=regime.eta_jornada,
         capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
+        calendario_semanal=calendario_semanal,
     )
 
 
@@ -582,6 +584,7 @@ def _process_single_wmp_policy(
     result: dict,
     curves: list,
     validacoes: list,
+    calendario_semanal: dict[str, float] | None = None,
 ) -> None:
     if item_id in result:
         return
@@ -651,6 +654,7 @@ def _process_single_wmp_policy(
     curva = _run_wmp_simulation(
         sim, policy, item_id, Q, P, regime, prat_semanal, semanas_obra, guard,
         capacidade_horaria_por_frentes=capacidade_horaria_por_frentes,
+        calendario_semanal=calendario_semanal,
     )
     _check_wmp_desmob(item_id, curva, policy, Q, P, validacoes)
 
