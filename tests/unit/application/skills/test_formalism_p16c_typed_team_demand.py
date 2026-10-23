@@ -10,6 +10,8 @@ import concilium.application.skills as skills
 
 _ = skills.run_equipes_e_alocacao
 mod = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
+# The validator is intentionally private to the resource-demand module.
+demand_mod = sys.modules[mod.__name__ + "._pool_contrato_demanda"]
 
 
 def _fixture(fronts: tuple[int, ...], costs: float = 600.0):
@@ -160,7 +162,7 @@ def test_binary_float_ramp_noise_is_not_an_extra_team() -> None:
     # Exactly seven mobilized teams must survive 25 * (7/25).
     encoded = 25 * (7 / 25)
     assert encoded != 7  # confirms a real float representation artifact
-    assert mod._integral_front_count(encoded, "m_ij") == 7
+    assert demand_mod._integral_front_count(encoded, "m_ij") == 7
     _, weekly, _ = _run((encoded, 25), {"EQUIPE-COMP-ABC123": 25})
     assert weekly["EQUIPE-COMP-ABC123"] == {"2020-W52": 7, "2020-W53": 25}
 
@@ -171,10 +173,10 @@ def test_binary_float_ramp_noise_is_not_an_extra_team() -> None:
 )
 def test_ulp_normalization_does_not_accept_real_fractional_or_unsafe_counts(bad: float) -> None:
     with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01"):
-        mod._integral_front_count(bad, "m_ij")
+        demand_mod._integral_front_count(bad, "m_ij")
 
 
 def test_explicit_decimal_fraction_is_not_rounded() -> None:
     # An authored high precision fraction is NOT an artifact of binary math.
     with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01"):
-        mod._integral_front_count("7.000000000000001", "m_ij")
+        demand_mod._integral_front_count("7.000000000000001", "m_ij")
