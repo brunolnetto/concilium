@@ -20,6 +20,7 @@ def _a(
     *,
     q: F | None = None,
     resource: str | None = None,
+    capacities: tuple[tuple[int, F], ...] = (),
 ) -> PhysicalActivity:
     demands = tuple((week, resource, F(1)) for week in range(start, end)) if resource else ()
     return PhysicalActivity(
@@ -29,6 +30,7 @@ def _a(
         scope=q if q is not None else sum((v for _, v in outputs), F()),
         deliveries=outputs,
         demands=demands,
+        weekly_capacities=capacities,
     )
 
 
@@ -134,3 +136,60 @@ def test_missing_predecessor_and_invalid_edge_fail_closed() -> None:
         (a,), (PhysicalPrecedence("A", "A", lag_weeks=-1),), calendar_horizon_weeks=1,
     )
     assert "V6_INVALID_EDGE" in _codes(invalid)
+
+
+def test_calendar_reduced_weekly_capacity_enforces_single_productivity_law() -> None:
+    from concilium.domain.services.planning.produtividade import produtividade_realizavel
+
+    # F(2)=20 u/h; H=40h; practicability=.75; calendar=.80.
+    available = F(str(40 * produtividade_realizavel(20.0, 0.75, 0.8)))
+    assert available == F(480)
+    admissible = _a("A", 0, 1, ((0, F(480)),), capacities=((0, available),))
+    assert validate_materialized_calendar(
+        (admissible,), (), calendar_horizon_weeks=1,
+        require_weekly_capacity=True,
+    ).status == "PASS"
+
+    # Scope closes, but the claimed 481st unit cannot be produced on that calendar.
+    impossible = _a("A", 0, 1, ((0, F(481)),), capacities=((0, available),))
+    audit = validate_materialized_calendar(
+        (impossible,), (), calendar_horizon_weeks=1,
+        require_weekly_capacity=True,
+    )
+    assert audit.status == "FAIL"
+    assert "V1_WEEKLY_CAPACITY_EXCEEDED" in _codes(audit)
+    assert not audit.locally_admissible
+
+
+def test_strict_schedule_without_calendar_capacity_is_unknown() -> None:
+    a = _a("A", 0, 1, ((0, F(1)),))
+    audit = validate_materialized_calendar(
+        (a,), (), calendar_horizon_weeks=1, require_weekly_capacity=True
+    )
+    assert audit.status == "UNKNOWN"
+    assert "V1_WEEKLY_CAPACITY_UNVERIFIED" in _codes(audit)
+
+
+def test_partial_capacity_witness_is_not_accepted_as_full_evidence() -> None:
+    a = _a("A", 0, 2, ((0, F(1)), (1, F(1))), capacities=((0, F(1)),))
+    audit = validate_materialized_calendar((a,), (), calendar_horizon_weeks=2)
+    assert audit.status == "UNKNOWN"
+    assert "V1_WEEKLY_CAPACITY_UNVERIFIED" in _codes(audit)
+
+
+def test_zero_calendar_availability_disallows_positive_output() -> None:
+    a = _a("A", 0, 1, ((0, F(1)),), capacities=((0, F(0)),))
+    audit = validate_materialized_calendar(
+        (a,), (), calendar_horizon_weeks=1, require_weekly_capacity=True
+    )
+    assert audit.status == "FAIL"
+    assert "V1_WEEKLY_CAPACITY_EXCEEDED" in _codes(audit)
+
+
+def test_duplicate_or_out_of_weekly_capacities_fail_closed() -> None:
+    a = _a("A", 0, 1, ((0, F(1)),), capacities=((0, F(2)), (0, F(2))))
+    assert "V1_INVALID_WEEKLY_CAPACITY" in _codes(
+        validate_materialized_calendar((a,), (), calendar_horizon_weeks=1)
+    )
+    b = _a("B", 0, 1, ((0, F(1)),), capacities=((1, F(2)),))
+    assert validate_materialized_calendar((b,), (), calendar_horizon_weeks=2).status == "FAIL"
