@@ -50,3 +50,21 @@ P19-B deverá calcular posse `C_inv` somente sobre uma base temporal
 especificada e P19-C deverá integrar déficit/reabastecimento ADR184 e gates,
 sem duplicar `C_cons` do P18-B. P20 precisará conciliar fontes contratuais,
 consumo, mobilização, estoque e indiretos antes da precificação #21/#23.
+
+
+## Contrato de calendário e totais dimensionais (revisão P1/P2)
+
+O calendário de estoque é uma sequência **consecutiva de semanas ISO reais**
+`YYYY-Www` com dois dígitos, validada por `date.fromisocalendar()`.
+Semanas ambíguas (`W2`), inválidas (`W54`), invertidas e lacunas
+(`W01 → W03` sem `W02`) são rejeitadas. O prazo de entrega compara
+semanas ISO a partir de datas reais, não posições em lista nem ordem
+lexicográfica. A exigência de continuidade também impede deixar de cobrar
+ou apurar estoque numa semana omitida.
+
+Não existe `total_shortage` nem `total_overflow` numérico global:
+somar kg, toneladas e litros não tem significado físico. Os agregados
+`shortage_by_good` e `overflow_by_good` preservam `(quantity, unit)`
+de cada bem; divergência de unidade interna no mesmo bem falha
+explicitamente. A reconciliação financeira futura deverá multiplicar
+somente quantidades de unidade convertível por preços/tarifas compatíveis.

@@ -7,8 +7,10 @@ No production throughput is recomputed: the only demand comes from U_g,j.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date, timedelta
 from fractions import Fraction
 from typing import Literal
 
@@ -18,6 +20,21 @@ from .physical_consumption_journal import AcquisitionEvidenceLine
 from .physical_consumption_rates import convert_physical
 
 StockSource = Literal["EXTERNAL_DELIVERY", "INTERNAL_GENERATION"]
+_ISO_WEEK = re.compile(r"^([0-9]{4})-W([0-9]{2})$")
+
+
+def _iso_week_monday(week: str) -> date:
+    """Validate a real, zero-padded ISO week; reject ambiguous W2 and week 54."""
+    if not isinstance(week, str):
+        raise ValueError("physical calendar requires canonical ISO weeks YYYY-Www")
+    match = _ISO_WEEK.fullmatch(week)
+    if match is None:
+        raise ValueError("physical calendar requires canonical ISO weeks YYYY-Www")
+    year, number = int(match[1]), int(match[2])
+    try:
+        return date.fromisocalendar(year, number, 1)
+    except ValueError as exc:
+        raise ValueError(f"{week}: invalid ISO calendar week") from exc
 
 
 def _nonnegative(value: Fraction, name: str) -> None:
@@ -78,6 +95,7 @@ class StockArrival:
 class StockWeek:
     good_id: str
     week: str
+    unit: str
     opening: Fraction
     external_receipts: Fraction
     internal_generation: Fraction
@@ -88,6 +106,8 @@ class StockWeek:
     closing: Fraction
 
     def __post_init__(self) -> None:
+        if not isinstance(self.unit, str) or not self.unit.strip():
+            raise ValueError("stock row requires the physical unit")
         for field in (
             "opening", "external_receipts", "internal_generation",
             "storage_overflow", "physical_demand", "fulfilled", "shortage", "closing",
@@ -102,6 +122,12 @@ class StockWeek:
 
 
 @dataclass(frozen=True)
+class StockPhysicalTotal:
+    unit: str
+    quantity: Fraction
+
+
+@dataclass(frozen=True)
 class StockProjection:
     rows: tuple[StockWeek, ...]
     evidence_ids: tuple[str, ...]
@@ -112,13 +138,27 @@ class StockProjection:
     def feasible(self) -> bool:
         return all(row.shortage == 0 for row in self.rows)
 
-    @property
-    def total_shortage(self) -> Fraction:
-        return sum((row.shortage for row in self.rows), Fraction(0))
+    def _by_good(self, name: Literal["shortage", "storage_overflow"]) -> dict[str, StockPhysicalTotal]:
+        totals: dict[str, StockPhysicalTotal] = {}
+        for row in self.rows:
+            previous = totals.get(row.good_id)
+            if previous is not None and previous.unit != row.unit:
+                raise ValueError("cannot aggregate inventory with inconsistent physical units")
+            value = getattr(row, name)
+            totals[row.good_id] = StockPhysicalTotal(
+                unit=row.unit,
+                quantity=value + (previous.quantity if previous is not None else Fraction(0)),
+            )
+        return totals
 
     @property
-    def total_overflow(self) -> Fraction:
-        return sum((row.storage_overflow for row in self.rows), Fraction(0))
+    def shortage_by_good(self) -> dict[str, StockPhysicalTotal]:
+        """Physically meaningful shortage totals, never an untyped sum of kg and L."""
+        return self._by_good("shortage")
+
+    @property
+    def overflow_by_good(self) -> dict[str, StockPhysicalTotal]:
+        return self._by_good("storage_overflow")
 
 
 def project_exact_weekly_stock(
@@ -143,9 +183,13 @@ def project_exact_weekly_stock(
         raise ValueError("nonempty calendar with stable week identities required")
     if len(weeks) != len(set(weeks)):
         raise ValueError("calendar weeks cannot repeat")
-    if tuple(sorted(weeks)) != weeks:
+    dates = tuple(_iso_week_monday(w) for w in weeks)
+    if any(b <= a for a, b in zip(dates, dates[1:], strict=False)):
         raise ValueError("calendar weeks must be chronologically ordered")
+    if any(b - a != timedelta(weeks=1) for a, b in zip(dates, dates[1:], strict=False)):
+        raise ValueError("inventory calendar must contain consecutive ISO weeks")
     week_index = {week: i for i, week in enumerate(weeks)}
+    week_dates = dict(zip(weeks, dates, strict=True))
 
     if not goods:
         raise ValueError("physical inventory requires a declared good")
@@ -199,9 +243,10 @@ def project_exact_weekly_stock(
             assert arrival.ordered_week is not None
             if arrival.ordered_week not in week_index:
                 raise ValueError("order week outside declared horizon: use initial stock")
-            if week_index[arrival.arrival_week] - week_index[arrival.ordered_week] < (
-                good.lead_time_weeks
-            ):
+            elapsed_weeks = (
+                week_dates[arrival.arrival_week] - week_dates[arrival.ordered_week]
+            ).days // 7
+            if elapsed_weeks < good.lead_time_weeks:
                 raise ValueError("external delivery violates declared lead time")
             receipts[key] = receipts.get(key, Fraction(0)) + amount
         else:
@@ -224,7 +269,7 @@ def project_exact_weekly_stock(
             shortage = required - fulfilled
             closing = usable - fulfilled
             result.append(StockWeek(
-                good_id, week, stock, delivered, generated, overflow,
+                good_id, week, good.unit, stock, delivered, generated, overflow,
                 required, fulfilled, shortage, closing,
             ))
             stock = closing
