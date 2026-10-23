@@ -165,3 +165,25 @@ def test_definitions_reject_unknown_goods_and_untrusted_numbers() -> None:
             (StockArrival("wrong-good", "MISSING", "2026-W01", F(3), "kg",
                           "INTERNAL_GENERATION"),),
         )
+
+
+def test_calendar_order_is_part_of_physical_evidence() -> None:
+    with pytest.raises(ValueError, match="chronologically ordered"):
+        project_exact_weekly_stock(
+            {"SAND": StockGood("SAND", "kg", F(0))},
+            ("2026-W02", "2026-W01"), (),
+        )
+
+
+def test_planned_and_observed_cannot_be_double_booked_for_same_activity() -> None:
+    planned = _evidence("2026-W01", F(2), "planned")
+    observed = planned.__class__(
+        "observed", "OBSERVED_OPERATION", planned.activity_id,
+        planned.week, planned.measure,
+    )
+    with pytest.raises(ValueError, match="planned and observed"):
+        project_exact_weekly_stock(
+            {"SAND": StockGood("SAND", "kg", F(9))},
+            ("2026-W01",),
+            (planned, observed),
+        )
