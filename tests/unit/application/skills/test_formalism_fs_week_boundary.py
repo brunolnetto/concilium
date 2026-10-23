@@ -4,6 +4,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass, replace
 from datetime import date
+from fractions import Fraction
 from types import SimpleNamespace
 
 import pytest
@@ -59,6 +60,18 @@ def test_zero_threshold_is_start_to_start_without_extra_week() -> None:
 def test_invalid_physical_predecessor_input_fails_closed(q, lag, match) -> None:
     with pytest.raises(ValueError, match=match):
         _release({WEEKS[0]: _cell(q, q)}, 10, lag=lag)
+
+
+
+def test_exact_rational_scope_threshold_does_not_release_one_week_early() -> None:
+    # Q=0.7, theta=0.1 => threshold=0.07 exactly, while the first
+    # week's output is one decimal digit below that physical threshold.
+    threshold = Fraction("0.7") * Fraction("0.1")
+    distribution = {
+        WEEKS[0]: SimpleNamespace(qtd_executada="0.06999999999999999"),
+        WEEKS[1]: SimpleNamespace(qtd_executada="0.00000000000000001"),
+    }
+    assert _release(distribution, threshold) == 2
 
 
 def test_missing_interior_calendar_week_is_rejected() -> None:
