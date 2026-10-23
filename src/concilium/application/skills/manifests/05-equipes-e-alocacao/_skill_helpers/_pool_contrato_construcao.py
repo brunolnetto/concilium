@@ -21,6 +21,7 @@ from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
     _compute_custo_unit_fracs,
     _compute_fracs_locacao_manut,
     _fill_atribuicao,
+    _integral_front_count,
     _resolve_gap_max_e_idle_efetivo,
     _week_idx,
 )
@@ -176,7 +177,7 @@ def _build_item_tipo_map(activities: list) -> dict:
         iid = act.get("item_id")
         rr = act.get("required_resources", {})
         if iid and rr:
-            item_tipo_map[iid] = {k: int(v) for k, v in rr.items()}
+            item_tipo_map[iid] = {k: _integral_front_count(v, f"{iid}/{k}") for k, v in rr.items()}
     return item_tipo_map
 
 
@@ -510,12 +511,21 @@ def _build_contratos_recurso(
     if not pool or not activities:
         return [], {}, []
 
+    # Explicit physical resource-composition provenance for nonlinear or
+    # heterogeneous types. The automatically derived EQUIPE-COMP/CPU type
+    # already denotes exactly one complete crew per scheduled front.
+    resource_profiles = {
+        act["item_id"]: act.get("resource_profiles", {})
+        for act in activities
+        if act.get("item_id")
+    }
     tipo_items, tipo_week_demand = _collect_tipo_items_and_demands(
         item_tipo_map,
         equipe_map,
         pool,
         sched_lookup,
         validacoes,
+        resource_profiles,
     )
 
     atribuicao: dict[str, tuple[float, str, float]] = {}

@@ -1085,17 +1085,16 @@ class TestAccumWeekDemand:
         tipo_week_demand = {}
         d1 = SimpleNamespace(num_equipes=2)
         dist = {"S1": d1}
-        _accum_week_demand(tipo_week_demand, "TIPO-A", ["S1"], dist, 1, 1)
-        assert tipo_week_demand["TIPO-A"]["S1"] >= 1
+        _accum_week_demand(tipo_week_demand, "TIPO-A", ["S1"], dist, 2, 2)
+        assert tipo_week_demand["TIPO-A"]["S1"] == 2
 
     def test_accumulates_across_weeks(self):
         tipo_week_demand = {}
         d1 = SimpleNamespace(num_equipes=2)
         d2 = SimpleNamespace(num_equipes=3)
         dist = {"S1": d1, "S2": d2}
-        _accum_week_demand(tipo_week_demand, "TIPO-A", ["S1", "S2"], dist, 1, 3)
-        assert "S1" in tipo_week_demand["TIPO-A"]
-        assert "S2" in tipo_week_demand["TIPO-A"]
+        _accum_week_demand(tipo_week_demand, "TIPO-A", ["S1", "S2"], dist, 3, 3, profile={"per_front": 1})
+        assert tipo_week_demand["TIPO-A"] == {"S1": 2, "S2": 3}
 
 
 # ===========================================================================
@@ -1172,17 +1171,15 @@ class TestProcessItemTipoMap:
         assert tipo_week_demand == {}
         assert validacoes == []
 
-    def test_actual_mw_zero_falls_back_to_required_times_weeks(self):
-        """Linha 1050: quando a proporção required/total_required_peak arredonda
-        para 0 em todas as semanas ativas (item minoritário no pool), actual_mw
-        cai no fallback `required * len(active_weeks)` em vez de ficar em 0."""
+    def test_type_counts_do_not_share_an_invalid_heterogeneous_denominator(self):
+        """Required values of different resource types cannot be added as fronts."""
         d1 = SimpleNamespace(num_equipes=1)
         sa = SimpleNamespace(distribuicao_semanal={"S1": d1})
         eq = SimpleNamespace(custo_total=100.0, custo_mo=25.0, custo_eq=25.0, custo_comb=25.0, custo_mat=25.0)
         validacoes: list = []
         tipo_items: dict = {}
         tipo_week_demand: dict = {}
-        # tipo_map soma 3 (1 + 2); OPERADOR pede só 1/3 da capacidade → round(1*1/3)=0
+        # OTHER is a separate physical dimension; OPERADOR still requires 1 unit.
         _process_item_tipo_map(
             "ITEM-1",
             {"OPERADOR": 1, "OUTRO": 2},
@@ -1193,7 +1190,8 @@ class TestProcessItemTipoMap:
             tipo_week_demand=tipo_week_demand,
             validacoes=validacoes,
         )
-        assert tipo_items["OPERADOR"][0]["machine_weeks"] == 1  # required(1) * len(active_weeks)(1)
+        assert tipo_items["OPERADOR"][0]["machine_weeks"] == 1
+        assert tipo_week_demand["OPERADOR"] == {"S1": 1}
 
 
 # ===========================================================================
