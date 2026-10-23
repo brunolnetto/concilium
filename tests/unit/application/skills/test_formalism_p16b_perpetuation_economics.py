@@ -133,3 +133,25 @@ def test_downstream_decimal_gap_matches_upstream_contract() -> None:
     assert mod._gap_max_economico(0.1, 0.2, 0.1, "dia_cal") == 3
     _, upstream = mod._resolve_gap_max_e_idle_efetivo(0.1, 0.2, 0.1, False, 0, 0)
     assert upstream == 3
+
+
+@pytest.mark.parametrize(
+    ("mob", "demob", "idle", "expected"),
+    [
+        (80_000.0, 40_000.0, 12_000.0, 10),
+        (100.0, 100.0, 100.0, 2),
+        (0.1, 0.2, 0.1, 3),
+        (-100.0, 0.0, 20.0, 0),
+        (100.0, 0.0, 0.0, 9999),
+    ],
+)
+def test_contract_bound_equals_sharing_preprocessor_bound(
+    mob: float, demob: float, idle: float, expected: int
+) -> None:
+    """The contractual and pre-processing paths must not disagree."""
+    mod = _helpers()
+    _, contract_bound = mod._resolve_gap_max_e_idle_efetivo(
+        mob, demob, idle, False, 0.0, 0.0
+    )
+    assert contract_bound == expected
+    assert mod._gap_max_economico(mob, demob, idle, "dia_cal") == expected
