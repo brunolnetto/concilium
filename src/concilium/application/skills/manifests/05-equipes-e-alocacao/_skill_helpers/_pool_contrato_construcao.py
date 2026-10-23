@@ -21,6 +21,7 @@ from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
     _compute_custo_unit_fracs,
     _compute_fracs_locacao_manut,
     _fill_atribuicao,
+    _integral_front_count,
     _resolve_gap_max_e_idle_efetivo,
     _week_idx,
 )
@@ -176,7 +177,7 @@ def _build_item_tipo_map(activities: list) -> dict:
         iid = act.get("item_id")
         rr = act.get("required_resources", {})
         if iid and rr:
-            item_tipo_map[iid] = {k: int(v) for k, v in rr.items()}
+            item_tipo_map[iid] = {k: _integral_front_count(v, f"{iid}/{k}") for k, v in rr.items()}
     return item_tipo_map
 
 
