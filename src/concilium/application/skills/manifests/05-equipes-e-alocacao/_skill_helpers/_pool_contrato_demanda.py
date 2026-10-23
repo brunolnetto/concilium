@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from fractions import Fraction
 
 from concilium.domain.models.canonical import ValidacaoItem
@@ -71,9 +72,21 @@ def _eq_custo_total_agregado(eq) -> float:
 
 def _integral_front_count(value: object, label: str) -> int:
     """Physical team count must be a finite, nonnegative integer."""
+    # The scheduler stores normalized integer ramps as binary floats:
+    # m_peak * (7 / 25) is 7.000000000000001. Recognize only IEEE-754
+    # roundoff in *computed floats*. Exact strings/Decimal/Fraction with
+    # fractional quantities stay invalid: no arbitrary resource rounding.
+    if isinstance(value, float):
+        if not math.isfinite(value) or value < 0 or value > 2**53:
+            raise ValueError(f"VAL-POOL-DEMANDA-01: {label} has invalid team count")
+        nearest = round(value)
+        bound = 2 * max(math.ulp(value), math.ulp(float(nearest)))
+        if abs(value - nearest) > bound:
+            raise ValueError(f"VAL-POOL-DEMANDA-01: {label} must be a nonnegative integer")
+        return int(nearest)
     try:
         number = Fraction(str(value))
-    except (ValueError, ZeroDivisionError, TypeError) as exc:
+    except (ValueError, ZeroDivisionError, TypeError, OverflowError) as exc:
         raise ValueError(f"VAL-POOL-DEMANDA-01: {label} has invalid team count") from exc
     if number.denominator != 1 or number < 0:
         raise ValueError(f"VAL-POOL-DEMANDA-01: {label} must be a nonnegative integer")

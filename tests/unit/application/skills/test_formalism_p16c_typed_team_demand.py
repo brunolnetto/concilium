@@ -153,3 +153,28 @@ def test_nonfinite_scheduled_team_weeks_fail_even_if_other_week_is_valid() -> No
             {"A": eq}, {"EQUIPE-COMP-ABC123": 2},
             {"A": sched}, {}, {}, [],
         )
+
+
+def test_binary_float_ramp_noise_is_not_an_extra_team() -> None:
+    # P2 regression: scheduler emits fractions and then multiplies by n_max.
+    # Exactly seven mobilized teams must survive 25 * (7/25).
+    encoded = 25 * (7 / 25)
+    assert encoded != 7  # confirms a real float representation artifact
+    assert mod._integral_front_count(encoded, "m_ij") == 7
+    _, weekly, _ = _run((encoded, 25), {"EQUIPE-COMP-ABC123": 25})
+    assert weekly["EQUIPE-COMP-ABC123"] == {"2020-W52": 7, "2020-W53": 25}
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [7.00000001, 7.125, 6.5, float("inf"), float("-inf"), float("nan"), float(2**53 + 2)],
+)
+def test_ulp_normalization_does_not_accept_real_fractional_or_unsafe_counts(bad: float) -> None:
+    with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01"):
+        mod._integral_front_count(bad, "m_ij")
+
+
+def test_explicit_decimal_fraction_is_not_rounded() -> None:
+    # An authored high precision fraction is NOT an artifact of binary math.
+    with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01"):
+        mod._integral_front_count("7.000000000000001", "m_ij")
