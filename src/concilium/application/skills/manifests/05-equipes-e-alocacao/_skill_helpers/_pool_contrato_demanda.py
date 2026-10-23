@@ -80,27 +80,62 @@ def _integral_front_count(value: object, label: str) -> int:
     return int(number)
 
 
-def _demand_from_team_profile(required: int, peak_frentes: int, fronts: object, tipo: str) -> int:
-    """Exact a_i,g(m) when a resource has a proven linear composition.
+def _demand_from_team_profile(
+    required: int,
+    peak_frentes: int,
+    fronts: object,
+    tipo: str,
+    profile: dict | None = None,
+) -> int:
+    """Evaluate the physical a_i,g(m) without inferring an unproved model.
 
-    The declared 'required_resources[tipo]' is the demand at the activity's
-    maximum scheduled team count, NOT the sum of unrelated resource counts.
-    A nonintegral partial-week resource demand cannot be rounded: it means
-    the per-team composition is missing (e.g. one shared machine at two
-    fronts). Such a scenario requires an explicit a_i,g(m) in a later adapter.
+    'required' is the resource count at the scheduled peak. A type with
+    composite-team identity has one fungible team unit per front. Other types
+    require either 'per_front' or a declared 'by_fronts' table whenever a
+    subpeak week is scheduled. Integer divisibility by peak is NOT proof
+    that a shared resource scales linearly with teams.
     """
     m = _integral_front_count(fronts, "m_ij")
     if not isinstance(required, int) or isinstance(required, bool) or required < 0:
         raise ValueError(f"VAL-POOL-DEMANDA-01: invalid peak demand of resource {tipo}")
     if peak_frentes <= 0 or m > peak_frentes:
         raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} fronts exceed or lack peak calibration")
-    demand = Fraction(required * m, peak_frentes)
-    if demand.denominator != 1:
-        raise ValueError(
-            f"VAL-POOL-DEMANDA-01: {tipo} needs explicit a_i,g(m) for "
-            f"m={m}, peak={peak_frentes}, required={required}; no fractional physical instances"
-        )
-    return int(demand)
+    if m == 0:
+        return 0
+
+    if profile is not None:
+        if not isinstance(profile, dict):
+            raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} has invalid composition profile")
+        if "per_front" in profile and "by_fronts" in profile:
+            raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} has ambiguous composition model")
+        if "per_front" in profile:
+            count = _integral_front_count(profile["per_front"], f"{tipo}.per_front")
+            if count * peak_frentes != required:
+                raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} peak disagrees with per-front composition")
+            return count * m
+        if "by_fronts" in profile:
+            table = profile["by_fronts"]
+            if not isinstance(table, dict) or str(m) not in table or str(peak_frentes) not in table:
+                raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} missing a_i,g(m) for demanded fronts")
+            peak_count = _integral_front_count(table[str(peak_frentes)], f"{tipo}.peak")
+            if peak_count != required:
+                raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} peak disagrees with declared table")
+            return _integral_front_count(table[str(m)], f"{tipo}.a(m)")
+        raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} missing a_i,g(m) data")
+
+    if tipo.startswith(("EQUIPE-COMP-", "EQUIPE-CPU-")):
+        if required != peak_frentes:
+            raise ValueError(f"VAL-POOL-DEMANDA-01: {tipo} must represent one composite team per front")
+        return m
+
+    # At peak the declared count is known; away from peak a nonlinear shared
+    # resource is possible even when required/peak is an integer.
+    if m == peak_frentes:
+        return required
+    raise ValueError(
+        f"VAL-POOL-DEMANDA-01: {tipo} needs explicit a_i,g(m) "
+        f"for m={m}, peak={peak_frentes}, required={required}"
+    )
 
 
 def _accum_week_demand(
@@ -112,10 +147,11 @@ def _accum_week_demand(
     peak_frentes: int,
     *,
     weekly_counts: dict[str, int] | None = None,
+    profile: dict | None = None,
 ) -> None:
     """Accumulate exact weekly demand for one homogeneous resource type."""
     counts = weekly_counts or {
-        w: _demand_from_team_profile(required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo)
+        w: _demand_from_team_profile(required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo, profile)
         for w in active_weeks
     }
     week_demand = tipo_week_demand.setdefault(tipo, {})
@@ -135,6 +171,7 @@ def _add_tipo_item_demand(
     tipo_week_demand: dict,
     *,
     weekly_counts: dict[str, int] | None = None,
+    profile: dict | None = None,
 ) -> None:
     """Use the SAME integer counts for item machine-weeks and pool demand."""
     counts = weekly_counts if weekly_counts is not None else {
@@ -161,7 +198,7 @@ def _add_tipo_item_demand(
         }
     )
     _accum_week_demand(
-        tipo_week_demand, tipo, active_weeks, dist, required, peak_frentes, weekly_counts=counts
+        tipo_week_demand, tipo, active_weeks, dist, required, peak_frentes, weekly_counts=counts, profile=profile
     )
 
 
@@ -180,6 +217,7 @@ def _process_item_tipo_map(
     tipo_items: dict,
     tipo_week_demand: dict,
     validacoes: list,
+    profiles_by_type: dict | None = None,
 ) -> None:
     """Processes one iid from item_tipo_map, appending to tipo_items/tipo_week_demand."""
     eq = equipe_map.get(iid)
@@ -206,10 +244,11 @@ def _process_item_tipo_map(
     # Validate ALL eligible typed resource counts before writing ANY pool
     # entry: a malformed shared resource cannot leave a half-built contract.
     eligible = {tipo: required for tipo, required in tipo_map.items() if tipo in pool}
+    profiles = profiles_by_type or {}
     counts_by_type = {
         tipo: {
             w: _demand_from_team_profile(
-                required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo
+                required, peak_frentes, getattr(dist[w], "num_equipes", 0), tipo, profiles.get(tipo)
             )
             for w in active_weeks
         }
@@ -227,6 +266,7 @@ def _process_item_tipo_map(
             tipo_items,
             tipo_week_demand,
             weekly_counts=counts_by_type[tipo],
+            profile=profiles.get(tipo),
         )
 
 
@@ -236,6 +276,7 @@ def _collect_tipo_items_and_demands(
     pool: dict,
     sched_lookup: dict,
     validacoes: list,
+    resource_profiles: dict | None = None,
 ) -> tuple[dict, dict]:
     """Itera items e constrói tipo_items / tipo_week_demand."""
     tipo_items: dict[str, list[dict]] = {}
@@ -250,6 +291,7 @@ def _collect_tipo_items_and_demands(
             tipo_items,
             tipo_week_demand,
             validacoes,
+            (resource_profiles or {}).get(iid),
         )
     return tipo_items, tipo_week_demand
 
