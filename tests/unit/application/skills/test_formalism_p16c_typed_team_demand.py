@@ -13,9 +13,7 @@ mod = sys.modules["_concilium_skillpkg_05_equipes_e_alocacao._skill_helpers"]
 
 
 def _fixture(fronts: tuple[int, ...], costs: float = 600.0):
-    keys = ["2026-W52", "2026-W53", "2027-W01"][: len(fronts)]
-    # ISO week 53 is valid for 2026? For deterministic physical test use
-    # only valid 2020 ISO year with a week 53.
+    # ISO 2020 has a valid week 53; next week is 2021-W01.
     keys = ["2020-W52", "2020-W53", "2021-W01"][: len(fronts)]
     dist = {w: SimpleNamespace(num_equipes=m) for w, m in zip(keys, fronts, strict=True)}
     sched = SimpleNamespace(distribuicao_semanal=dist)
@@ -29,20 +27,23 @@ def _fixture(fronts: tuple[int, ...], costs: float = 600.0):
     return sched, equipe
 
 
-def _run(fronts: tuple[int, ...], resource_map: dict[str, int]):
+def _run(fronts: tuple[int, ...], resource_map: dict[str, int], profiles: dict | None = None):
     sched, equipe = _fixture(fronts)
     pool = {key: max(1, value) for key, value in resource_map.items()}
     items, weekly, validations = {}, {}, []
     mod._process_item_tipo_map(
         "A", resource_map, {"A": equipe}, pool, {"A": sched},
-        items, weekly, validations,
+        items, weekly, validations, profiles,
     )
     return items, weekly, validations
 
 
 def test_heterogeneous_types_are_never_added_to_form_a_team_count() -> None:
     # Peak 3 real teams -> 6 workers and 3 machines; ramp 1, 2, 3.
-    items, weekly, validations = _run((1, 2, 3), {"WORKERS": 6, "MACHINES": 3})
+    items, weekly, validations = _run(
+        (1, 2, 3), {"WORKERS": 6, "MACHINES": 3},
+        {"WORKERS": {"per_front": 2}, "MACHINES": {"per_front": 1}},
+    )
     assert weekly["WORKERS"] == {"2020-W52": 2, "2020-W53": 4, "2021-W01": 6}
     assert weekly["MACHINES"] == {"2020-W52": 1, "2020-W53": 2, "2021-W01": 3}
     assert items["WORKERS"][0]["machine_weeks"] == 12
@@ -54,8 +55,14 @@ def test_heterogeneous_types_are_never_added_to_form_a_team_count() -> None:
 
 
 def test_changing_unrelated_resource_counts_never_changes_machine_demand() -> None:
-    _, initial, _ = _run((1, 2, 3), {"MACHINES": 3, "WORKERS": 6})
-    _, changed, _ = _run((1, 2, 3), {"MACHINES": 3, "WORKERS": 30})
+    _, initial, _ = _run(
+        (1, 2, 3), {"MACHINES": 3, "WORKERS": 6},
+        {"MACHINES": {"per_front": 1}, "WORKERS": {"per_front": 2}},
+    )
+    _, changed, _ = _run(
+        (1, 2, 3), {"MACHINES": 3, "WORKERS": 30},
+        {"MACHINES": {"per_front": 1}, "WORKERS": {"per_front": 10}},
+    )
     assert changed["MACHINES"] == initial["MACHINES"]
 
 
@@ -63,7 +70,7 @@ def test_shared_single_machine_at_peak_requires_explicit_composition_function() 
     # 1 machine at peak of 2 fronts: partial-front demand is NOT 0.5
     # physical machines and may not be guessed as 0 or 1.
     with pytest.raises(ValueError, match="VAL-POOL-DEMANDA-01.*explicit"):
-        _run((1, 2), {"WORKERS": 4, "SHARED_MACHINE": 1})
+        _run((1, 2), {"WORKERS": 4, "SHARED_MACHINE": 1}, {"WORKERS": {"per_front": 2}})
 
 
 def test_failure_does_not_leave_partially_written_heterogeneous_ledger() -> None:
@@ -73,7 +80,7 @@ def test_failure_does_not_leave_partially_written_heterogeneous_ledger() -> None
         mod._process_item_tipo_map(
             "A", {"WORKERS": 4, "SHARED_MACHINE": 1},
             {"A": eq}, {"WORKERS": 4, "SHARED_MACHINE": 1},
-            {"A": sched}, items, weekly, [],
+            {"A": sched}, items, weekly, [], {"WORKERS": {"per_front": 2}},
         )
     assert items == {}
     assert weekly == {}
@@ -99,3 +106,32 @@ def test_resource_demand_is_fully_mobilized_at_peak_without_linear_guessing() ->
     items, weekly, _ = _run((2, 2), {"SHARED": 1})
     assert weekly["SHARED"] == {"2020-W52": 1, "2020-W53": 1}
     assert items["SHARED"][0]["machine_weeks"] == 2
+
+
+def test_explicit_nonlinear_shared_equipment_needs_no_fractional_guess() -> None:
+    items, weekly, _ = _run(
+        (1, 2), {"MACHINES": 1, "WORKERS": 4},
+        {
+            "MACHINES": {"by_fronts": {"1": 1, "2": 1}},
+            "WORKERS": {"per_front": 2},
+        },
+    )
+    assert weekly["MACHINES"] == {"2020-W52": 1, "2020-W53": 1}
+    assert items["MACHINES"][0]["machine_weeks"] == 2
+
+
+def test_integral_ratio_is_not_automatically_proof_of_linear_composition() -> None:
+    # At peak two teams can use two machines, but one team might use
+    # one OR two machines. Do not infer from integer divisibility.
+    with pytest.raises(ValueError, match="needs explicit a_i,g"):
+        _run((1, 2), {"MACHINES": 2})
+
+
+def test_inconsistent_declared_peak_is_rejected() -> None:
+    with pytest.raises(ValueError, match="peak disagrees"):
+        _run((1, 2), {"MACHINES": 1}, {"MACHINES": {"per_front": 1}})
+
+
+def test_auto_derived_composite_team_maps_one_unit_per_front() -> None:
+    _, weekly, _ = _run((1, 2), {"EQUIPE-COMP-ABC123": 2})
+    assert weekly["EQUIPE-COMP-ABC123"] == {"2020-W52": 1, "2020-W53": 2}
