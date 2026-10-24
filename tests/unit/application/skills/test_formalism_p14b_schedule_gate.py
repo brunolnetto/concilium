@@ -341,3 +341,33 @@ def test_p14c_incompatible_hourly_capacity_unit_stays_rejected(capacity_unit: st
     assert outcome.has_errors
     assert any(v.codigo == "VAL-CRON-PROD-UNIT" for v in outcome.validacoes)
     assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_malformed_graph_fails_before_scheduler(intent: str, mode: str) -> None:
+    production = _real_catalog_productivity()
+    production["grafo_sinergia"] = ["invalid", "not-a-mapping"]
+    outcome = _run_with_production(production, intent=intent, mode=mode)
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_p14c_malformed_rate_rejects_before_cost_enrichment(intent: str) -> None:
+    production = _real_catalog_productivity()
+    production["producao_horaria"] = "unparseable-rate"
+    # The CPU also contains a malformed accounting value: preflight must
+    # reject the physical rate before cost-calibration reads this field.
+    outcome = run_cronograma(
+        _canonical(1.0, unidade="t"),
+        {"certification_intent": intent,
+         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {"cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"],
+                   "precos_unitarios_sbdi": {"total": "unparseable-price"}}],
+         "produtividades": [production]},
+    )
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
