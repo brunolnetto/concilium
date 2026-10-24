@@ -81,7 +81,7 @@ def counterfactual(gap: int, tariff: Tariff) -> tuple[F, F, str]:
     elif keep > split:
         verdict = "SPLIT"
     else:
-        verdict = "TIE_NEEDS_VERSIONED_POLICY"
+        verdict = "KEEP"  # normative deterministic tie-break: fewer transitions
     return keep, split, verdict
 
 
@@ -102,9 +102,9 @@ def test_discounted_rate_falsifies_baseline_and_prefers_keep() -> None:
     assert counterfactual(2, rate) == (F(50), F(80), "KEEP")
 
 
-def test_tie_and_infeasible_contract_require_explicit_policy() -> None:
+def test_tie_keeps_when_feasible_and_maximum_gap_rejects_keep() -> None:
     tie = Tariff(Regime.DISCOUNTED_STANDBY, F(100), F(40), F(40), F(40), 2)
-    assert counterfactual(2, tie) == (F(80), F(80), "TIE_NEEDS_VERSIONED_POLICY")
+    assert counterfactual(2, tie) == (F(80), F(80), "KEEP")
     assert counterfactual(3, tie)[-1] == "KEEP_INFEASIBLE"
 
 
