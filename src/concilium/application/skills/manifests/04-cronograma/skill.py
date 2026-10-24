@@ -124,6 +124,26 @@ def _invalidate_derived_costs() -> dict[str, Any]:
     }
 
 
+
+def _normalize_output_quantity_unit(raw: str) -> str:
+    """Canonicalize spelling of an output quantity, never convert dimensions."""
+    return raw.strip().casefold().replace("³", "3").replace(" ", "")
+
+
+def _capacity_output_quantity_unit(raw: str) -> str:
+    """Read a declared hourly capacity as an output quantity per hour.
+
+    CapacidadeElemento stores capacidade_horaria; both the legacy plain
+    quantity ("m3") and explicit hourly rate ("m³/h") represent m3/h.
+    No cross-dimension conversion (e.g. tonnes to cubic metres) is inferred.
+    """
+    unit = _normalize_output_quantity_unit(raw)
+    for suffix in ("/hour", "/hora", "/hr", "/h"):
+        if unit.endswith(suffix):
+            return unit[: -len(suffix)]
+    return unit
+
+
 def _preflight_physical_productivity(
     canonical: CanonicalModel,
     cpu_lookup: dict,
@@ -204,8 +224,8 @@ def _preflight_physical_productivity(
             # well as the output label; relabeling t/h as m3/h proves nothing.
             # Flow edges have no separate unit field in their schema and
             # inherit the output unit by the catalog contract.
-            unit_eap = str(item.unidade or "").strip().casefold().replace("³", "3")
-            unit_producao = str(prod.get("unidade") or "").strip().casefold().replace("³", "3")
+            unit_eap = _normalize_output_quantity_unit(str(item.unidade or ""))
+            unit_producao = _normalize_output_quantity_unit(str(prod.get("unidade") or ""))
             if not unit_eap or unit_eap != unit_producao:
                 invalid = True
                 validacoes.append(
@@ -223,7 +243,7 @@ def _preflight_physical_productivity(
                 mismatched_capacity_ids = [
                     cap.elemento_id
                     for cap in typed.grafo_sinergia.capacidades
-                    if str(cap.unidade).strip().casefold().replace("³", "3") != unit_producao
+                    if not unit_producao or _capacity_output_quantity_unit(cap.unidade) != unit_producao
                 ]
                 if mismatched_capacity_ids:
                     invalid = True
