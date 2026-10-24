@@ -70,10 +70,12 @@ jobs:
             tests/reference_formalism/test_p22c_economic_oracle.py -q
 
       - name: Require normative and golden evidence for economic changes
-        if: github.event_name == 'pull_request'
+        # Also audit direct pushes, since branch protection may be unavailable
+        # for the private repository. A failed main CI is an alert, not a block
+        # on an already accepted direct push.
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           python scripts/formalism_contract_change_gate.py \
             --base "$BASE_SHA" --head "$HEAD_SHA"
