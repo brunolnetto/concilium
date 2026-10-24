@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
+import pytest
+
 from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
     CanonicalModel,
@@ -127,3 +129,63 @@ def test_p14c_preview_with_arbitrary_productivity_is_not_feasible() -> None:
     )
     assert outcome.canonical.cronograma is not None
     assert outcome.canonical.cronograma.is_feasible is False
+
+
+
+def _catalog_productivity(rate: float, *, field: str = "producao_horaria") -> dict:
+    return {
+        "cpus": [{"codigo": "CPU-TEST", "producao_id_ref": "PROD"}],
+        "produtividades": [{"id": "PROD", field: rate}],
+    }
+
+
+@pytest.mark.parametrize("field", ["producao_horaria", "valor_horario"])
+def test_p14c_field_renaming_without_provenance_does_not_certify(field: str) -> None:
+    outcome = run_cronograma(
+        _canonical(1.0),
+        {"certification_intent": "CERTIFIED",
+         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        _catalog_productivity(1000.0, field=field),
+    )
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-CERT" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("rate", [0.0, -1.0, float("nan"), float("inf")])
+def test_p14c_invalid_declared_rate_fails_before_physical_scheduler(rate: float) -> None:
+    outcome = run_cronograma(
+        _canonical(1.0),
+        {"certification_intent": "CERTIFIED",
+         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        _catalog_productivity(rate),
+    )
+    assert outcome.has_errors
+    assert any(
+        v.codigo == "VAL-CRON-PROD-INVALID" and v.status == "ERRO"
+        for v in outcome.validacoes
+    )
+    assert outcome.canonical.cronograma is None
+
+
+def test_p14c_preview_clears_previously_cached_successful_finance() -> None:
+    historical = _canonical(1.0).model_copy(
+        update={
+            "resultado": object(),
+            "resultado_reconciliado": object(),
+            "ponto_equilibrio": [object()],
+            "memorial_calculo_bdi": object(),
+        }
+    )
+    outcome = run_cronograma(
+        historical,
+        {"certification_intent": "PREVIEW",
+         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {},
+    )
+    assert outcome.canonical.cronograma is not None
+    assert outcome.canonical.cronograma.is_feasible is False
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.resultado_reconciliado is None
+    assert outcome.canonical.ponto_equilibrio == []
+    assert outcome.canonical.memorial_calculo_bdi is None
