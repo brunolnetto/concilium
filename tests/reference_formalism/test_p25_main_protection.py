@@ -79,6 +79,21 @@ def test_effective_protection_must_apply_to_admins_and_pull_requests() -> None:
             policy.verify_policy(branch(), response)
 
 
+def test_explicit_pr_bypass_allowances_are_rejected() -> None:
+    for field in ("users", "teams", "apps"):
+        effective = configured_protection()
+        effective["required_pull_request_reviews"]["bypass_pull_request_allowances"] = {
+            "users": [],
+            "teams": [],
+            "apps": [],
+        }
+        effective["required_pull_request_reviews"]["bypass_pull_request_allowances"][field] = [
+            {"login": "exempt"}
+        ]
+        with pytest.raises(policy.ProtectionError, match="pull-request bypass"):
+            policy.verify_policy(branch(), effective)
+
+
 def test_green_main_checks_required_before_any_admin_mutation() -> None:
     policy.verify_checks(baseline_checks())
     bad = baseline_checks()
@@ -129,7 +144,7 @@ def test_apply_requires_private_repo_and_rejects_a_moving_main(monkeypatch) -> N
             return baseline_checks()
         if path.endswith("/branches/main"):
             number = sum(1 for _, name in calls if name.endswith("/branches/main"))
-            return branch("a" * 40 if number == 1 else "b" * 40)
+            return branch("a" * 40 if number == 1 else "b" * 40, protected=False)
         raise AssertionError(path)
     monkeypatch.setattr(policy, "gh_api", fake_api)
     with pytest.raises(policy.ProtectionError, match="main changed"):
