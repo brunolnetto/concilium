@@ -195,7 +195,10 @@ def reconcile_financial_sources(
                 raise ValueError("indirect charge was booked as direct")
             values[2] += row.amount
 
-    weeks = tuple(WeekFinancialBalance(week, *buckets[week]) for week in sorted(buckets))
+    weeks = tuple(
+        WeekFinancialBalance(week, buckets[week][0], buckets[week][1], buckets[week][2])
+        for week in sorted(buckets)
+    )
     if (
         sum((w.contractual_k for w in weeks), Fraction(0)) != final.contractual_k
         or sum((w.consumable_v for w in weeks), Fraction(0)) != final.consumable_v
