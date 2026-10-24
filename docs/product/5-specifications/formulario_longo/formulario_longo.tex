@@ -232,16 +232,19 @@ do bem \(g\) - \textbf{unid\(_g\)} é declarada no cadastro do bem e não
 \(p_g\) {[}R\$/kg{]}; cimento → \(\kappa_r\) {[}kg/h{]}, \(p_g\)
 {[}R\$/kg{]}.
 
-\textbf{MAT legado.} Quando
+\textbf{MAT legado (proxy monetário, não volume físico).} Quando
 \texttt{atributos\_especificos.consumo\_horario\_fisico} e
 \texttt{atributos\_especificos.unidade\_fisica} estão ausentes no
-cadastro do bem, trata-se do caso degenerado
-\(\kappa_r = 1\ [\text{unid}_g/\text{h}]\),
-\(p_{g(r)} = c_r\ [\text{R\$}/\text{h}]\) --- a fórmula
-\(c_r = \kappa_r \cdot p_{g(r)}\) permanece válida com a unidade física
-colapsada. Quando os atributos estão presentes, a decomposição é
-auditável por tipo físico, retrocompatível com catálogos que não
-distinguem taxa de consumo e preço unitário.
+cadastro, a entrada \(c_r\) {[}R\$/h{]} é apenas um
+\textbf{proxy monetário horário}. Não há
+\(\kappa_r\) {[}unid\(_g\)/h{]} ou
+\(p_g\) {[}R\$/unid\(_g\){]} fisicamente verificados. Impor
+\(\kappa_r=1\) e \(p_g=c_r\) {[}R\$/h{]} é
+\textbf{dimensionalmente inválido}; não inferir volume, preço físico
+fictício nem aprovação GO. O proxy permanece \texttt{UNVERIFIED}.
+A identidade \(c_r=\kappa_r p_g\) exige taxa física,
+preço por unidade compatível e procedência declarada (issues
+\#18/\#23).
 
 \hypertarget{i.3.2-grafo-de-sinergia-e-produtividade-32-da-referuxeancia}{%
 \paragraph{I.3.2 Grafo de sinergia e produtividade (§32 da
