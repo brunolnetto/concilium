@@ -73,3 +73,57 @@ def test_incomplete_scope_reports_validation_not_fake_extra_weeks() -> None:
     error = next(v for v in result.validacoes if v.codigo == "VAL-CRON-01")
     assert "Itens não completados" in error.mensagem
     assert result.canonical is canonical
+
+
+
+def test_p14c_unknown_certification_intent_fails_before_schedule() -> None:
+    canonical = _canonical(100.0)
+    outcome = run_cronograma(
+        canonical,
+        {
+            "certification_intent": "AUTO_GO",
+            "num_equipes_por_item": {"i1": {"2026-W23": 1}},
+        },
+        {},
+    )
+    assert outcome.has_errors
+    assert outcome.canonical is canonical
+    assert any(v.codigo == "VAL-CRON-CERT-INTENT" for v in outcome.validacoes)
+
+
+def test_p14c_certified_missing_fm_never_publishes_price_or_schedule() -> None:
+    canonical = _canonical(100.0)
+    outcome = run_cronograma(
+        canonical,
+        {
+            "certification_intent": "CERTIFIED",
+            "num_equipes_por_item": {"i1": {"2026-W23": 1}},
+        },
+        {},
+    )
+    assert outcome.has_errors
+    assert any(
+        v.codigo == "VAL-CRON-PROD-CERT" and v.status == "ERRO"
+        for v in outcome.validacoes
+    )
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.resultado_reconciliado is None
+
+
+def test_p14c_preview_with_arbitrary_productivity_is_not_feasible() -> None:
+    canonical = _canonical(100.0)
+    outcome = run_cronograma(
+        canonical,
+        {
+            "certification_intent": "PREVIEW",
+            "num_equipes_por_item": {"i1": {"2026-W23": 1}},
+        },
+        {},
+    )
+    assert any(
+        v.codigo == "VAL-CRON-PROD-PREVIEW" and v.status == "AVISO"
+        for v in outcome.validacoes
+    )
+    assert outcome.canonical.cronograma is not None
+    assert outcome.canonical.cronograma.is_feasible is False
