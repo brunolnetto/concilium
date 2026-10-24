@@ -108,7 +108,7 @@ $$\boxed{m_i(\tau) = \min\!\Big(m_i^0 + \mu_i^+\tau,\quad m_i^{\max},\quad m_i^1
 
 **Caso degenerado retangular** — somente com rampas nulas **e** extremos iguais ao máximo:
 
-$\bigl(\mu_i^+=\mu_i^-=0\bigr)\land\bigl(m_i^0=m_i^1=m_i^{\max}\bigr)\implies m_i(\tau)=m_i^{\max}\quad\forall\,\tau\in\{0,\ldots,N_i-1\}$
+$$\bigl(\mu_i^+=\mu_i^-=0\bigr)\land\bigl(m_i^0=m_i^1=m_i^{\max}\bigr)\implies m_i(\tau)=m_i^{\max}\quad\forall\,\tau\in\{0,\ldots,N_i-1\}$$
 
 Quando as rampas são nulas mas os extremos não coincidem com o máximo, vale apenas $m_i(\tau)=\min(m_i^0,m_i^1,m_i^{\max})$; por exemplo, $(m_i^0,m_i^1,m_i^{\max})=(1,1,4)$ produz uma frente, **não** quatro. A forma retangular no máximo exige as três igualdades; nessas condições, $W_i$ reduz-se a um único parâmetro de frota, constante durante toda a atividade.
 
