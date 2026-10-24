@@ -189,3 +189,29 @@ def test_p14c_preview_clears_previously_cached_successful_finance() -> None:
     assert outcome.canonical.resultado_reconciliado is None
     assert outcome.canonical.ponto_equilibrio == []
     assert outcome.canonical.memorial_calculo_bdi is None
+
+
+
+def test_p14c_certified_rejection_invalidates_cached_financial_cube() -> None:
+    historical = _canonical(1.0).model_copy(
+        update={
+            "resultado": object(),
+            "resultado_reconciliado": object(),
+            "cubo_analitico": object(),
+            "s_curve": object(),
+            "plan_space_result": object(),
+        }
+    )
+    outcome = run_cronograma(
+        historical,
+        {"certification_intent": "CERTIFIED",
+         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {},
+    )
+    assert outcome.has_errors
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.resultado_reconciliado is None
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.s_curve is None
+    assert outcome.canonical.plan_space_result is None
