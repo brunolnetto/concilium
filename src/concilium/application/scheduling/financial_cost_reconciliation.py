@@ -92,7 +92,21 @@ def _acquisition_expectations(
     result: PhysicalConsumptionJournalResult,
 ) -> dict[EventId, CostPosting]:
     expected: dict[EventId, CostPosting] = {}
+    seen: set[str] = set()
+    kinds: dict[tuple[str, str, str], str] = {}
     for evidence in result.evidence:
+        if not isinstance(evidence.source_id, str) or not evidence.source_id.strip():
+            raise ValueError("stable acquisition evidence identity required")
+        if evidence.source_id in seen:
+            raise ValueError("duplicate acquisition evidence")
+        seen.add(evidence.source_id)
+        if evidence.kind not in ("PLANNED_CLOSED_SCOPE", "OBSERVED_OPERATION"):
+            raise ValueError("physical consumption evidence kind must be explicit")
+        owner = (evidence.activity_id, evidence.measure.good_id, evidence.week)
+        previous_kind = kinds.get(owner)
+        if previous_kind is not None and previous_kind != evidence.kind:
+            raise ValueError("planned and observed physical cost cannot both be booked")
+        kinds[owner] = evidence.kind
         measure = evidence.measure
         if (type(measure.priced_quantity) is not Fraction or measure.priced_quantity < 0
                 or type(measure.exact_cost) is not Fraction or measure.exact_cost < 0):
