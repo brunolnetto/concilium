@@ -292,6 +292,36 @@ def test_baseline_rejects_unclassified_idle_and_missing_price_provenance() -> No
         )
 
 
+
+def test_legacy_canonical_defaults_never_infer_a_commercial_regime() -> None:
+    legacy = canonical(
+        regime_economico_p13=None, origem_regime_p13=None, moeda_regime_p13=None,
+    )
+    snapshot = RecursoContrato.model_validate(legacy.model_dump(mode="json"))
+    assert snapshot.regime_economico_p13 is None
+    assert snapshot.origem_regime_p13 is None
+    assert snapshot.moeda_regime_p13 is None
+    consumable = RecursoConsumivelCanonical(
+        resource_id="DIESEL",
+        disponibilidade=DisponibilidadeConsumivelCanonical(),
+    )
+    restored = RecursoConsumivelCanonical.model_validate(
+        consumable.model_dump(mode="json")
+    )
+    assert restored.regime_consumo_p13 is None
+    assert restored.origem_taxa_consumo_p13 is None
+    assert restored.origem_preco_consumo_p13 is None
+    with pytest.raises(ValueError, match="canonical consumption regime"):
+        witness_consumption_regime(
+            regime=ConsumptionRegime.OUTPUT_PROPORTIONAL,
+            good=output_good(),
+            canonical=restored,
+            rate_source="measure:rate",
+            price_source="invoice:price",
+            delivered=F(100),
+            delivered_unit="m³",
+        )
+
 def test_actual_p16_optimizer_p17_ledger_and_p18_purchase_categories_close() -> None:
     """Do not replace authoritative costs with the non-GO P13 read-only witness."""
     rate = ResourceTariff(F(100), F(25), F(40), F(40), 2)
