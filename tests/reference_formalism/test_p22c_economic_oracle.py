@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from tests.reference_formalism.economic_reference import (
-    _pool,
     evaluate_economic,
     verify_economic,
 )
