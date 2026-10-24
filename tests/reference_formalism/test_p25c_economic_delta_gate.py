@@ -53,6 +53,9 @@ def test_runtime_change_without_production_economics_does_not_trigger() -> None:
     assert is_economic_source(
         "src/concilium/application/scheduling/custo_real_instancia.py"
     )
+    assert is_economic_source(
+        "src/concilium/domain/services/financial/roster_custo_equipamento.py"
+    )
 
 
 def test_spoofing_tests_outside_reference_tree_does_not_satisfy_gate() -> None:
@@ -108,3 +111,10 @@ def test_rename_does_not_erase_the_protected_source_path(
     assert changes["src/concilium/application/scheduling/contractual_cost_ledger.py"] == "D"
     assert changes["src/concilium/application/scheduling/settlement.py"] == "A"
     assert len(validate_paths(changes)) == 3
+
+
+def test_domain_financial_service_rate_change_is_covered() -> None:
+    changed = {
+        "src/concilium/domain/services/financial/roster_custo_equipamento.py": "M",
+    }
+    assert len(validate_paths(changed)) == 3
