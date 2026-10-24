@@ -186,3 +186,20 @@ def test_normative_appendix_keeps_symbol_provenance_and_week_intervals() -> None
         "gap=0",
     ):
         assert token in source, token
+
+
+def test_rectangular_ramp_requires_zero_slopes_and_maximum_endpoints() -> None:
+    """Reject an implication present in the historical LONGO/TeX but false."""
+    long = FILES["LONGO"].read_text(encoding="utf-8")
+    tex = FILES["TEX"].read_text(encoding="utf-8")
+    summarized = FILES["RESUMIDO"].read_text(encoding="utf-8")
+
+    condition = r"\bigl(\mu_i^+=\mu_i^-=0\bigr)\land\bigl(m_i^0=m_i^1=m_i^{\max}\bigr)"
+    invalid = r"\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max}"
+    for name, document in (("LONGO", long), ("TEX", tex)):
+        assert condition in document, name
+        assert invalid not in document, name
+
+    assert "m_i^0=m_i^1=m_i^{max}" in summarized
+    assert ramp(1, 0, 1, 0, 4, 3) == [1, 1, 1]
+    assert ramp(4, 0, 4, 0, 4, 3) == [4, 4, 4]

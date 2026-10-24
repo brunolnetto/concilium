@@ -1,0 +1,1279 @@
+{
+  "schema": "concilium.formalism.equation_inventory.v1",
+  "source": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+  "equation_count": 93,
+  "policy": "Inventory is not dimensional proof. Formula texts are exact; classification distinguishes candidate obligations from equations blocked by independent issues. A candidate is never equivalent to PROJECT_GO.",
+  "rows": [
+    {
+      "id": "FL-001",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "\\mathcal{A} = \\{A_i\\}_{i=1}^{n_{\\text{ativ}}}",
+      "expected_result_dimension": "set/declaration",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-002",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "A_i = (Q_i,\\ E_i,\\ W_i,\\ B_i)",
+      "expected_result_dimension": "typed tuple",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-003",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "c_r = \\begin{cases}\n\\dfrac{V_r^{\\text{mensal}}}{s_{\\text{mes}}\\cdot d_i\\cdot h_i} & \\text{cat}(r)\\in\\{EQ,MO\\}\\quad\\text{(diluição contratual)}\\\\[10pt]\n\\kappa_r \\cdot p_{g(r)} & \\text{cat}(r)\\in\\{MAT,COMB\\}\\quad\\text{(consumo: taxa física × preço unitário)}\n\\end{cases}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-004",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "\\boxed{F_i(m)=\\max\\text{-fluxo}(s_i,t_i;\\mathcal G_i^D|_m)\\quad[\\mathrm{unid}_{Q_i}/h]}.",
+      "expected_result_dimension": "activity-unit/operating-hour",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-005",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "W_i = (m_i^0,\\ \\mu_i^+,\\ m_i^1,\\ \\mu_i^-,\\ m_i^{\\max}) \\in \\mathbb{N}_{>0}\\times\\mathbb{N}_{\\ge0}\\times\\mathbb{N}_{>0}\\times\\mathbb{N}_{\\ge0}\\times\\mathbb{N}_{>0}",
+      "expected_result_dimension": "typed tuple",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-006",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "\\boxed{m_i(\\tau) = \\min\\!\\Big(m_i^0 + \\mu_i^+\\tau,\\quad m_i^{\\max},\\quad m_i^1 + \\mu_i^-(N_i-1-\\tau)\\Big)}",
+      "expected_result_dimension": "physical fronts/resources",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-007",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "\\bigl(\\mu_i^+=\\mu_i^-=0\\bigr)\\land\\bigl(m_i^0=m_i^1=m_i^{\\max}\\bigr)\\implies m_i(\\tau)=m_i^{\\max}\\quad\\forall\\,\\tau\\in\\{0,\\ldots,N_i-1\\}",
+      "expected_result_dimension": "physical fronts/resources",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-008",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "m_{ij} = \\begin{cases} m_i(j-j_i^0) & j\\in[j_i^0,\\,j_i^0+N_i-1] \\\\ 0 & \\text{caso contrário}\\end{cases}",
+      "expected_result_dimension": "physical fronts/resources",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-009",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "B_i \\subseteq \\mathcal{A}\\setminus\\{A_i\\}, \\qquad \\theta_i : B_i \\to (0,1]",
+      "expected_result_dimension": "set/declaration",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-010",
+      "section": "Parte I — Entrada: Definição das Atividades (formulário)",
+      "expression": "\\Phi_b(j) = \\frac{1}{Q_b}\\sum_{j'=j_b^0}^{j} q_{b,j'}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "user-entered activity, team/resource catalog",
+      "output_projection": "activity/front/capacity declarations",
+      "downstream_consumer": "skills 01/03/04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-011",
+      "section": "Parte II — Parâmetros e Constantes Globais",
+      "expression": "s_{\\text{mes}} = \\frac{365\\times3+366}{4\\times12\\times7} = \\frac{1461}{336} \\approx 4{,}3482 \\ \\text{semanas/mês}",
+      "expected_result_dimension": "weeks/month",
+      "input_provenance": "calendar and bid configuration",
+      "output_projection": "global parameters with dimensional origin",
+      "downstream_consumer": "skills 04/05/06",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-012",
+      "section": "Parte II — Parâmetros e Constantes Globais",
+      "expression": "d_i \\in \\{4,5,6\\}\\ \\text{dias úteis/semana}, \\qquad h_i \\in \\{6,8\\}\\ \\text{horas/dia}, \\qquad h_id_i \\equiv \\text{horas/semana da equipe }i",
+      "expected_result_dimension": "hours/week",
+      "input_provenance": "calendar and bid configuration",
+      "output_projection": "global parameters with dimensional origin",
+      "downstream_consumer": "skills 04/05/06",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-013",
+      "section": "Parte II — Parâmetros e Constantes Globais",
+      "expression": "\\beta^{EQ},\\ \\beta^{MO}\\ (\\approx29{,}97\\%),\\ \\beta^{MAT},\\ \\beta^{COMB}\\ (\\approx4\\%),\\ \\beta^{IND}\\ (\\approx25{,}21\\%)",
+      "expected_result_dimension": "dimensionless BDI rate",
+      "input_provenance": "calendar and bid configuration",
+      "output_projection": "global parameters with dimensional origin",
+      "downstream_consumer": "skills 04/05/06",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-014",
+      "section": "Parte III — Custo Horário de Catálogo ($\\gamma$)",
+      "expression": "\\gamma_i^{EQ} = \\sum_{r\\in R_i,\\,\\text{cat}(r)=EQ} c_r n_r \\qquad \\text{(análogo para } MO, MAT, COMB\\text{)}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "physical team/catalog reference",
+      "output_projection": "reference cost valuation",
+      "downstream_consumer": "skills 03/05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-015",
+      "section": "Parte III — Custo Horário de Catálogo ($\\gamma$)",
+      "expression": "\\gamma_i^{\\mathrm{K,cat}} \\equiv \\gamma_i^{EQ}+\\gamma_i^{MO} \\qquad\\text{[contratual: cobrado por semana mobilizada]}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "physical team/catalog reference",
+      "output_projection": "reference cost valuation",
+      "downstream_consumer": "skills 03/05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-016",
+      "section": "Parte III — Custo Horário de Catálogo ($\\gamma$)",
+      "expression": "\\gamma_i^{\\mathrm{V,cat}} \\equiv \\gamma_i^{MAT}+\\gamma_i^{COMB} \\qquad\\text{[consumível: escala com produção]}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "physical team/catalog reference",
+      "output_projection": "reference cost valuation",
+      "downstream_consumer": "skills 03/05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-017",
+      "section": "Parte III — Custo Horário de Catálogo ($\\gamma$)",
+      "expression": "\\gamma_i^{\\mathrm{cat}} = \\gamma_i^{\\mathrm{K,cat}}+\\gamma_i^{\\mathrm{V,cat}}\\qquad\\text{[R\\$/h]}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "physical team/catalog reference",
+      "output_projection": "reference cost valuation",
+      "downstream_consumer": "skills 03/05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-018",
+      "section": "Parte III — Custo Horário de Catálogo ($\\gamma$)",
+      "expression": "f_i^{\\mathrm V} = \\gamma_i^{\\mathrm{V,cat}}/\\gamma_i^{\\mathrm{cat}} \\qquad\\text{[fração consumível do custo de catálogo]}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "physical team/catalog reference",
+      "output_projection": "reference cost valuation",
+      "downstream_consumer": "skills 03/05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-019",
+      "section": "Parte III — Custo Horário de Catálogo ($\\gamma$)",
+      "expression": "p_i^{\\mathrm{cat}} = \\gamma_i^{\\mathrm{cat}}/\\rho_i \\qquad\\text{[R\\$/un — preço unitário de catálogo]}",
+      "expected_result_dimension": "BRL/activity-unit",
+      "input_provenance": "physical team/catalog reference",
+      "output_projection": "reference cost valuation",
+      "downstream_consumer": "skills 03/05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-020",
+      "section": "Parte III — Custo Horário de Catálogo ($\\gamma$)",
+      "expression": "\\boxed{C_i^{\\mathrm{cat}} \\equiv p_i^{\\mathrm{cat}}\\,Q_i = \\frac{\\gamma_i^{\\mathrm{cat}}\\,Q_i}{\\rho_i}} \\qquad\\text{[R\\$ — custo de catálogo da atividade; base para diagnósticos e para o envelope do projeto, Parte XIII]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical team/catalog reference",
+      "output_projection": "reference cost valuation",
+      "downstream_consumer": "skills 03/05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-021",
+      "section": "Parte IV — Cronograma Semanal",
+      "expression": "q_{i,j_i^1} = Q_i - \\sum_{j=j_i^0}^{j_i^1-1} q_{ij}",
+      "expected_result_dimension": "activity-unit",
+      "input_provenance": "physical schedule and F(m)",
+      "output_projection": "weekly delivered quantity and closure",
+      "downstream_consumer": "skill 04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-022",
+      "section": "Parte IV — Cronograma Semanal",
+      "expression": "\\boxed{\\varphi_i=\\frac{q_{i,j_i^1}}{F_i(m_i(N_i-1))h_id_i\\varepsilon_{i,j_i^1}^{exog}}\\in(0,1]}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "physical schedule and F(m)",
+      "output_projection": "weekly delivered quantity and closure",
+      "downstream_consumer": "skill 04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-023",
+      "section": "Parte IV — Cronograma Semanal",
+      "expression": "\\sum_{j=j_i^0}^{j_i^1} q_{ij} = Q_i \\qquad\\text{(exato, por construção)}",
+      "expected_result_dimension": "activity-unit",
+      "input_provenance": "physical schedule and F(m)",
+      "output_projection": "weekly delivered quantity and closure",
+      "downstream_consumer": "skill 04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-024",
+      "section": "Parte IV — Cronograma Semanal",
+      "expression": "\\mathcal{A}_j \\coloneqq \\{A_i\\in\\mathcal{A} : j\\in[j_i^0,\\,j_i^0+N_i-1]\\}",
+      "expected_result_dimension": "set/declaration",
+      "input_provenance": "physical schedule and F(m)",
+      "output_projection": "weekly delivered quantity and closure",
+      "downstream_consumer": "skill 04",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-025",
+      "section": "Parte V — Custo Direto Semanal (sem BDI)",
+      "expression": "C_{ij}^{\\mathrm{K,op}} = \\gamma_i^{\\mathrm{K,cat}}\\,h_id_i\\,m_{ij}\\qquad\\text{[R\\$] — nominal em toda semana ativa, inclusive a última}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "activity schedule, physical resource tariff",
+      "output_projection": "activity-week cost diagnostics",
+      "downstream_consumer": "skills 05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-026",
+      "section": "Parte V — Custo Direto Semanal (sem BDI)",
+      "expression": "C_{ij}^{\\mathrm{V,op}} = \\gamma_i^{\\mathrm{V,cat}}\\cdot\\frac{q_{ij}}{\\rho_i}\\qquad\\text{[R\\$]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "activity schedule, physical resource tariff",
+      "output_projection": "activity-week cost diagnostics",
+      "downstream_consumer": "skills 05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-027",
+      "section": "Parte V — Custo Direto Semanal (sem BDI)",
+      "expression": "C_{ij}^{\\mathrm{op}} = C_{ij}^{\\mathrm{K,op}}+C_{ij}^{\\mathrm{V,op}}\\qquad\\text{[R\\$]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "activity schedule, physical resource tariff",
+      "output_projection": "activity-week cost diagnostics",
+      "downstream_consumer": "skills 05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-028",
+      "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
+      "expression": "C_i^{\\mathrm{K,cat}} = \\frac{Q_i\\,\\gamma_i^{\\mathrm{K,cat}}}{\\rho_i}\\qquad\\text{[R\\$] — catálogo, parcela contratual, à eficiência nominal}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "weekly activity K/V breakdown and Q",
+      "output_projection": "activity totals K/V",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-029",
+      "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
+      "expression": "C_i^{\\mathrm{V,cat}} = \\frac{Q_i\\,\\gamma_i^{\\mathrm{V,cat}}}{\\rho_i}\\qquad\\text{[R\\$] — catálogo, parcela consumível}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "weekly activity K/V breakdown and Q",
+      "output_projection": "activity totals K/V",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-030",
+      "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
+      "expression": "C_i^{\\mathrm{K,op}} = \\sum_{j} C_{ij}^{\\mathrm{K,op}} = \\gamma_i^{\\mathrm{K,cat}}\\,h_id_i\\,M_i\\qquad\\text{[R\\$]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "weekly activity K/V breakdown and Q",
+      "output_projection": "activity totals K/V",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-031",
+      "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
+      "expression": "C_i^{\\mathrm{V,op}} = \\sum_{j} C_{ij}^{\\mathrm{V,op}} = \\frac{\\gamma_i^{\\mathrm{V,cat}}}{\\rho_i}\\sum_j q_{ij}\\qquad\\text{[R\\$]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "weekly activity K/V breakdown and Q",
+      "output_projection": "activity totals K/V",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-032",
+      "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
+      "expression": "C_i^{\\mathrm{op}} = C_i^{\\mathrm{K,op}}+C_i^{\\mathrm{V,op}}\\qquad\\text{[R\\$]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "weekly activity K/V breakdown and Q",
+      "output_projection": "activity totals K/V",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-033",
+      "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
+      "expression": "p_i^{\\mathrm{op}} = C_i^{\\mathrm{op}}/Q_i\\qquad\\text{[R\\$/un]}",
+      "expected_result_dimension": "BRL/activity-unit",
+      "input_provenance": "weekly activity K/V breakdown and Q",
+      "output_projection": "activity totals K/V",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-034",
+      "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
+      "expression": "\\boxed{C_i^{\\mathrm{V,op}} \\equiv C_i^{\\mathrm{V,cat}} = \\frac{Q_i\\,\\gamma_i^{\\mathrm{V,cat}}}{\\rho_i}}\\qquad\\text{(exato, por construção do fechamento de escopo)}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "weekly activity K/V breakdown and Q",
+      "output_projection": "activity totals K/V",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-035",
+      "section": "Parte VII — Razões Operacional/Catálogo (semanais)",
+      "expression": "C_{ij}^{\\mathrm{cat}} = \\gamma_i^{\\mathrm{cat}}\\,h_id_i\\,m_{ij}\\qquad\\text{[R\\$]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "catalog/operational weekly activity bases",
+      "output_projection": "diagnostic price/cost ratios",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-036",
+      "section": "Parte VII — Razões Operacional/Catálogo (semanais)",
+      "expression": "p_{ij}^{\\mathrm{op}} = C_{ij}^{\\mathrm{op}}/q_{ij}\\qquad\\text{[R\\$/un]}",
+      "expected_result_dimension": "BRL/activity-unit",
+      "input_provenance": "catalog/operational weekly activity bases",
+      "output_projection": "diagnostic price/cost ratios",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-037",
+      "section": "Parte VII — Razões Operacional/Catálogo (semanais)",
+      "expression": "\\zeta_{ij} = \\frac{C_{ij}^{\\mathrm{op}}}{C_{ij}^{\\mathrm{cat}}} = \\frac{\\gamma_i^{\\mathrm{K,cat}}+\\varepsilon_{ij}\\gamma_i^{\\mathrm{V,cat}}}{\\gamma_i^{\\mathrm{cat}}}\\qquad[\\ ]",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "catalog/operational weekly activity bases",
+      "output_projection": "diagnostic price/cost ratios",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-038",
+      "section": "Parte VII — Razões Operacional/Catálogo (semanais)",
+      "expression": "\\pi_{ij} = \\frac{p_{ij}^{\\mathrm{op}}}{p_i^{\\mathrm{cat}}} = \\frac{\\gamma_i^{\\mathrm{K,cat}}+\\varepsilon_{ij}\\gamma_i^{\\mathrm{V,cat}}}{\\varepsilon_{ij}\\,\\gamma_i^{\\mathrm{cat}}}\\qquad[\\ ]",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "catalog/operational weekly activity bases",
+      "output_projection": "diagnostic price/cost ratios",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-039",
+      "section": "Parte VII — Razões Operacional/Catálogo (semanais)",
+      "expression": "\\boxed{\\zeta_{ij} = \\varepsilon_{ij}\\cdot\\pi_{ij}}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "catalog/operational weekly activity bases",
+      "output_projection": "diagnostic price/cost ratios",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-040",
+      "section": "Parte VII — Razões Operacional/Catálogo (semanais)",
+      "expression": "\\zeta_{ij} = 1-(1-\\varepsilon_{ij})\\,f_i^{\\mathrm V}, \\qquad \\pi_{ij} = \\frac{1}{\\varepsilon_{ij}}-\\left(\\frac{1}{\\varepsilon_{ij}}-1\\right)f_i^{\\mathrm V}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "catalog/operational weekly activity bases",
+      "output_projection": "diagnostic price/cost ratios",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-041",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\gamma_i^{\\mathrm{K,cat},\\beta} = (1+\\beta^{\\mathrm{EQ}})\\gamma_i^{\\mathrm{EQ}}+(1+\\beta^{\\mathrm{MO}})\\gamma_i^{\\mathrm{MO}}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-042",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\gamma_i^{\\mathrm{V,cat},\\beta} = (1+\\beta^{\\mathrm{MAT}})\\gamma_i^{\\mathrm{MAT}}+(1+\\beta^{\\mathrm{COMB}})\\gamma_i^{\\mathrm{COMB}}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-043",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\gamma_i^{\\mathrm{cat},\\beta} = \\gamma_i^{\\mathrm{K,cat},\\beta}+\\gamma_i^{\\mathrm{V,cat},\\beta}",
+      "expected_result_dimension": "BRL/operating-hour",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-044",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "C_{ij}^{\\mathrm{K,op},\\beta} = \\gamma_i^{\\mathrm{K,cat},\\beta}\\,h_id_i\\,m_{ij}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-045",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "C_{ij}^{\\mathrm{V,op},\\beta} = \\gamma_i^{\\mathrm{V,cat},\\beta}\\cdot\\frac{q_{ij}}{\\rho_i}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-046",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "C_{ij}^{\\mathrm{op},\\beta} = C_{ij}^{\\mathrm{K,op},\\beta}+C_{ij}^{\\mathrm{V,op},\\beta}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-047",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\beta_i^{\\mathrm K} \\equiv \\frac{\\gamma_i^{\\mathrm{EQ}}\\beta^{\\mathrm{EQ}}+\\gamma_i^{\\mathrm{MO}}\\beta^{\\mathrm{MO}}}{\\gamma_i^{\\mathrm{K,cat}}}, \\qquad \\beta_i^{\\mathrm V} \\equiv \\frac{\\gamma_i^{\\mathrm{MAT}}\\beta^{\\mathrm{MAT}}+\\gamma_i^{\\mathrm{COMB}}\\beta^{\\mathrm{COMB}}}{\\gamma_i^{\\mathrm{V,cat}}}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-048",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\delta_{ij} \\equiv \\frac{\\varepsilon_{ij}\\,\\gamma_i^{\\mathrm{V,cat}}}{\\gamma_i^{\\mathrm{K,cat}}+\\varepsilon_{ij}\\,\\gamma_i^{\\mathrm{V,cat}}}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-049",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\boxed{\\beta_{ij} = (1-\\delta_{ij})\\,\\beta_i^{\\mathrm K} + \\delta_{ij}\\,\\beta_i^{\\mathrm V}}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-050",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "C_i^{\\mathrm{K,op},\\beta} = \\gamma_i^{\\mathrm{K,cat},\\beta}\\,h_id_i\\,M_i \\qquad C_i^{\\mathrm{V,op},\\beta} = \\gamma_i^{\\mathrm{V,cat},\\beta}\\cdot\\frac{Q_i}{\\rho_i}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-051",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "C_i^{D,\\beta} \\equiv C_i^{\\mathrm{K,op},\\beta}+C_i^{\\mathrm{V,op},\\beta} \\qquad\\text{[R\\$] — total direto da atividade com BDI}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-052",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\bar\\varepsilon_i \\equiv \\frac{\\sum_j\\varepsilon_{ij}\\,m_{ij}}{M_i}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-053",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\delta_i = \\frac{\\bar\\varepsilon_i\\,\\gamma_i^{\\mathrm{V,cat}}}{\\gamma_i^{\\mathrm{K,cat}}+\\bar\\varepsilon_i\\,\\gamma_i^{\\mathrm{V,cat}}} \\;\\left(=\\frac{C_i^{\\mathrm{V,op}}}{C_i^{\\mathrm{op}}}\\right)",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-054",
+      "section": "Parte VIII — Camada BDI (direta, por atividade)",
+      "expression": "\\boxed{\\beta_i^{\\mathrm{eq}} \\equiv \\frac{C_i^{D,\\beta}}{C_i^{\\mathrm{op}}}-1 = (1-\\delta_i)\\,\\beta_i^{\\mathrm K}+\\delta_i\\,\\beta_i^{\\mathrm V}}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "category BDI configured rates and cost bases",
+      "output_projection": "activity priced cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "id": "FL-055",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "n_j(\\tau) = \\sum_{i\\,:\\,j\\in[j_i^0,\\,j_i^0+N_i-1]} m_{ij}\\cdot n_{\\tau}^{i}",
+      "expected_result_dimension": "physical fronts/resources",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        16
+      ]
+    },
+    {
+      "id": "FL-056",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "qt_\\tau = \\max_j n_j(\\tau) \\qquad\\text{[tamanho do pool de tipo }\\tau\\text{]}",
+      "expected_result_dimension": "physical fronts/resources",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        16
+      ]
+    },
+    {
+      "id": "FL-057",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "\\min_{\\{r\\},\\{[j_r^0,j_r^1]\\}} \\ \\underbrace{\\sum_r\\sum_{j=j_r^0}^{j_r^1} c_r^{\\text{ativo/standby}}(j)}_{\\text{permanência}} + \\underbrace{\\sum_r (c_r^{\\text{mob}}+c_r^{\\text{demob}})}_{\\text{mob/demob}}",
+      "expected_result_dimension": "BRL optimization objective",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        16
+      ]
+    },
+    {
+      "id": "FL-058",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "\\text{s.a.}\\quad \\bigl|\\{r:\\text{type}(r)=\\tau,\\ j\\in[j_r^0,j_r^1]\\}\\bigr| \\ge n_j(\\tau) \\quad\\forall j,\\,\\forall\\tau",
+      "expected_result_dimension": "physical fronts/resources",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        16
+      ]
+    },
+    {
+      "id": "FL-059",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "\\text{gap}_{uv} < G_r^* \\equiv \\frac{c_r^{\\text{mob}}+c_r^{\\text{demob}}}{c_r^{\\text{sem}}} \\quad\\Longleftrightarrow\\quad c_r^{\\text{mob}}+c_r^{\\text{demob}} > c_r^{\\text{sem}}\\cdot\\text{gap}_{uv}\\qquad\\text{[$c_r^{\\text{sem}}$ em R\\$/sem]}",
+      "expected_result_dimension": "weeks or week-constrained threshold",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        13
+      ]
+    },
+    {
+      "id": "FL-060",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "T_r^{\\text{ativo}} = \\sum_{k=1}^{n_p} N_{i_k} \\qquad\\text{[semanas produtivas]}",
+      "expected_result_dimension": "weeks or week-constrained threshold",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        13
+      ]
+    },
+    {
+      "id": "FL-061",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "T_r^{\\text{standby}} = \\sum_{k=1}^{n_p-1} \\text{gap}_{i_k,i_{k+1}} \\qquad\\text{[semanas de standby interno]}",
+      "expected_result_dimension": "weeks or week-constrained threshold",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        13
+      ]
+    },
+    {
+      "id": "FL-062",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "T_r^{\\text{perm}} = T_r^{\\text{ativo}} + T_r^{\\text{standby}} \\qquad\\text{[total de semanas de permanência]}",
+      "expected_result_dimension": "weeks or week-constrained threshold",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        13
+      ]
+    },
+    {
+      "id": "FL-063",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "\\boxed{f_r^{\\text{standby}} = \\frac{T_r^{\\text{standby}}}{T_r^{\\text{perm}}} \\in [0,1), \\qquad f_r^{\\text{ativo}} = 1 - f_r^{\\text{standby}}}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        13
+      ]
+    },
+    {
+      "id": "FL-064",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "\\boxed{\\bar{c}_r = c_r^{\\text{sem}} \\qquad \\text{(pool puro: standby = ativo)}}",
+      "expected_result_dimension": "BRL/week",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        13
+      ]
+    },
+    {
+      "id": "FL-065",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "\\boxed{C^{\\text{pool},o} = \\sum_r T_r^{\\text{perm}} \\cdot c_r^{\\text{sem}}}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        16,
+        17
+      ]
+    },
+    {
+      "id": "FL-066",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "C^{\\text{pool},\\beta} = \\sum_r (1+\\beta_{\\text{cat}(r)})\\cdot T_r^{\\text{perm}}\\cdot c_r^{\\text{sem}}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        16,
+        17
+      ]
+    },
+    {
+      "id": "FL-067",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "C^{MOB,eq,o} = \\sum_r N_{\\text{chains}}^r \\cdot (c_r^{\\text{mob}}+c_r^{\\text{demob}}), \\qquad C^{MOB,eq,\\beta} = (1+\\beta^{IND})\\cdot C^{MOB,eq,o}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-068",
+      "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
+      "expression": "\\boxed{C^{\\mathrm{pool}} \\;\\ge\\; \\sum_i C_i^{\\mathrm{K,op}}}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical demand profiles and instance contracts",
+      "output_projection": "pool K and mobility charges",
+      "downstream_consumer": "skill 05",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        16,
+        17
+      ]
+    },
+    {
+      "id": "FL-069",
+      "section": "Parte X — Consumíveis: Aquisição e Posse",
+      "expression": "\\boxed{C^{\\mathrm{cons}} = \\sum_{i\\in\\mathcal{A}} \\frac{Q_i\\,\\gamma_i^{\\mathrm{V,cat}}}{\\rho_i} = \\sum_g c_g^{\\mathrm{cons}}\\, U_g}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical consumption and stock evidence",
+      "output_projection": "goods purchases and holding charges",
+      "downstream_consumer": "skills 05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11,
+        19
+      ]
+    },
+    {
+      "id": "FL-070",
+      "section": "Parte X — Consumíveis: Aquisição e Posse",
+      "expression": "C^{\\mathrm{cons},\\beta} = \\sum_{i\\in\\mathcal{A}} \\gamma_i^{\\mathrm{V,cat},\\beta}\\cdot\\frac{Q_i}{\\rho_i}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical consumption and stock evidence",
+      "output_projection": "goods purchases and holding charges",
+      "downstream_consumer": "skills 05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11,
+        19
+      ]
+    },
+    {
+      "id": "FL-071",
+      "section": "Parte X — Consumíveis: Aquisição e Posse",
+      "expression": "\\boxed{C^{\\mathrm{inv}} = \\sum_g\\sum_j c_g^{\\mathrm{hold}}\\, S_{g,j}}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "physical consumption and stock evidence",
+      "output_projection": "goods purchases and holding charges",
+      "downstream_consumer": "skills 05/06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        19
+      ]
+    },
+    {
+      "id": "FL-072",
+      "section": "Parte XI — Custo Direto Total do Projeto",
+      "expression": "C^D = C^{\\mathrm{pool}}+C^{\\mathrm{cons}}\\qquad\\text{[R\\$ — sem BDI]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "exclusive pool and acquisition ledger",
+      "output_projection": "project direct cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        17,
+        20
+      ]
+    },
+    {
+      "id": "FL-073",
+      "section": "Parte XI — Custo Direto Total do Projeto",
+      "expression": "C^{D,\\beta} = C^{\\mathrm{pool},\\beta}+C^{\\mathrm{cons},\\beta}\\qquad\\text{[R\\$ — com BDI; nível projeto, distinto de }C_i^{D,\\beta}\\text{ (atividade)}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "exclusive pool and acquisition ledger",
+      "output_projection": "project direct cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        17,
+        20
+      ]
+    },
+    {
+      "id": "FL-074",
+      "section": "Parte XI — Custo Direto Total do Projeto",
+      "expression": "\\beta^D = C^{D,\\beta}/C^D-1",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "exclusive pool and acquisition ledger",
+      "output_projection": "project direct cost",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        17,
+        20
+      ]
+    },
+    {
+      "id": "FL-075",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "\\mathcal{L} = \\{ADM, TOP, LAB, QSMS, MOB^{\\text{site}}, \\ldots\\}\\quad\\text{(conjunto extensível)}",
+      "expected_result_dimension": "set/declaration",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-076",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "\\text{driver}(l)\\in\\{\\texttt{perm},\\ \\texttt{onetime}\\}",
+      "expected_result_dimension": "enumerated driver",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-077",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "l = \\Bigl(\\text{driver}(l),\\ \\{\\Gamma_l^{k,\\text{mensal}}\\}_{k\\in\\{MO,EQ,COMB\\}},\\ (c_l^{\\text{mob}},c_l^{\\text{demob}})\\ \\text{ou}\\ \\Gamma_l^{VM,\\text{mensal}}\\Bigr)",
+      "expected_result_dimension": "typed tuple",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-078",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "\\gamma_l^{k,\\text{sem}} = \\frac{\\Gamma_l^{k,\\text{mensal}}}{s_{\\text{mes}}}, \\qquad m_l(j)=1 \\ \\ \\forall j\\in\\{0,\\ldots,n-1\\}",
+      "expected_result_dimension": "BRL/week",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "NORMATIVE_CANDIDATE",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": []
+    },
+    {
+      "id": "FL-079",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "\\gamma_l^{VM,\\text{sem}}(j) = c_l^{\\text{mob}}\\,\\mathbb{1}[j=j^{\\min}] + c_l^{\\text{demob}}\\,\\mathbb{1}[j=j^{\\max}-1]",
+      "expected_result_dimension": "BRL assigned to a discrete week-cell (not BRL/week)",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-080",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "C_{lj}^{\\text{ind},o} = \\Bigl(\\gamma_l^{MO,\\text{sem}}+\\gamma_l^{EQ,\\text{sem}}+\\gamma_l^{COMB,\\text{sem}}+\\gamma_l^{VM,\\text{sem}}(j)\\Bigr)\\cdot m_l(j)",
+      "expected_result_dimension": "BRL cost for one week-cell; rate-to-amount conversion is pending",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-081",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "\\boxed{C_{lj}^{\\text{ind},\\beta} = \\Bigl[\\gamma_l^{MO,\\text{sem}}(1+\\beta^{MO})+\\gamma_l^{EQ,\\text{sem}}(1+\\beta^{EQ})+\\gamma_l^{COMB,\\text{sem}}(1+\\beta^{COMB})+\\gamma_l^{VM,\\text{sem}}(j)(1+\\beta^{IND})\\Bigr]\\cdot m_l(j)}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-082",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "C_l^{\\text{ind},o} = \\sum_j C_{lj}^{\\text{ind},o}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-083",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "C_l^{\\text{ind},\\beta} = \\Gamma_l^{MO}(1+\\beta^{MO})+\\Gamma_l^{EQ}(1+\\beta^{EQ})+\\Gamma_l^{COMB}(1+\\beta^{COMB})+\\Gamma_l^{VM}(1+\\beta^{IND})",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-084",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "\\boxed{C^{MOB,eq,o} = \\sum_r N_{\\text{chains}}^r\\cdot(c_r^{\\text{mob}}+c_r^{\\text{demob}})}, \\qquad C^{MOB,eq,\\beta} = (1+\\beta^{IND})\\cdot C^{MOB,eq,o}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-085",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "C^{ind} = \\sum_{l\\in\\mathcal{L}} C_l^{\\text{ind},o} + C^{MOB,eq,o} + C^{\\mathrm{inv}}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-086",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "C^{ind,\\beta} = \\sum_{l\\in\\mathcal{L}} C_l^{\\text{ind},\\beta} + C^{MOB,eq,\\beta} + C^{\\mathrm{inv}}\\,(1+\\beta^{\\mathrm{IND}})",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-087",
+      "section": "Parte XII — Custos Indiretos",
+      "expression": "\\bar\\beta^{ind} = C^{ind,\\beta}/C^{ind}-1",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "indirect driver evidence and mobility chains",
+      "output_projection": "indirect cost and BDI",
+      "downstream_consumer": "skill 06",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "id": "FL-088",
+      "section": "Parte XIII — Síntese: Preço Total e Viabilidade",
+      "expression": "C^{\\mathrm{cat}} = \\sum_{i\\in\\mathcal{A}} C_i^{\\mathrm{cat}} = \\sum_{i\\in\\mathcal{A}} \\frac{\\gamma_i^{\\mathrm{cat}}\\,Q_i}{\\rho_i}\\qquad\\text{[R\\$ — envelope de catálogo, base de precificação]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "reconciled project finance and catalog",
+      "output_projection": "quote/margin/BDI gate",
+      "downstream_consumer": "skills 06/07",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        11,
+        21
+      ]
+    },
+    {
+      "id": "FL-089",
+      "section": "Parte XIII — Síntese: Preço Total e Viabilidade",
+      "expression": "C^{\\mathrm{tot}} = C^D+C^{ind} \\qquad\\text{[R\\$ — custo operacional total, sem BDI]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "reconciled project finance and catalog",
+      "output_projection": "quote/margin/BDI gate",
+      "downstream_consumer": "skills 06/07",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20,
+        21
+      ]
+    },
+    {
+      "id": "FL-090",
+      "section": "Parte XIII — Síntese: Preço Total e Viabilidade",
+      "expression": "P \\equiv C^{D,\\beta}+C^{ind,\\beta} \\qquad\\text{[R\\$ — preço de venda]}",
+      "expected_result_dimension": "BRL (monetary amount)",
+      "input_provenance": "reconciled project finance and catalog",
+      "output_projection": "quote/margin/BDI gate",
+      "downstream_consumer": "skills 06/07",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        20,
+        21
+      ]
+    },
+    {
+      "id": "FL-091",
+      "section": "Parte XIII — Síntese: Preço Total e Viabilidade",
+      "expression": "\\boxed{\\mathrm{BDI} \\equiv \\frac{P}{C^{\\mathrm{cat}}}-1}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "reconciled project finance and catalog",
+      "output_projection": "quote/margin/BDI gate",
+      "downstream_consumer": "skills 06/07",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        21
+      ]
+    },
+    {
+      "id": "FL-092",
+      "section": "Parte XIII — Síntese: Preço Total e Viabilidade",
+      "expression": "R = C^{\\mathrm{tot}}/C^{\\mathrm{cat}}, \\qquad \\beta^{\\mathrm{eq}} = P/C^{\\mathrm{tot}}-1, \\qquad \\mu = (P-C^{\\mathrm{tot}})/P",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "reconciled project finance and catalog",
+      "output_projection": "quote/margin/BDI gate",
+      "downstream_consumer": "skills 06/07",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        21
+      ]
+    },
+    {
+      "id": "FL-093",
+      "section": "Parte XIII — Síntese: Preço Total e Viabilidade",
+      "expression": "\\boxed{\\mathrm{BDI} \\;\\ge\\; \\mathrm{BDI}_{\\mathrm{TCU,min}}}",
+      "expected_result_dimension": "dimensionless fraction/ratio",
+      "input_provenance": "reconciled project finance and catalog",
+      "output_projection": "quote/margin/BDI gate",
+      "downstream_consumer": "skills 06/07",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
+      "blocked_by_issues": [
+        21
+      ]
+    }
+  ]
+}

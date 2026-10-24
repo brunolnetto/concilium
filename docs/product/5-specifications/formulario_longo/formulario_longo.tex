@@ -232,16 +232,19 @@ do bem \(g\) - \textbf{unid\(_g\)} é declarada no cadastro do bem e não
 \(p_g\) {[}R\$/kg{]}; cimento → \(\kappa_r\) {[}kg/h{]}, \(p_g\)
 {[}R\$/kg{]}.
 
-\textbf{MAT legado.} Quando
+\textbf{MAT legado (proxy monetário, não volume físico).} Quando
 \texttt{atributos\_especificos.consumo\_horario\_fisico} e
 \texttt{atributos\_especificos.unidade\_fisica} estão ausentes no
-cadastro do bem, trata-se do caso degenerado
-\(\kappa_r = 1\ [\text{unid}_g/\text{h}]\),
-\(p_{g(r)} = c_r\ [\text{R\$}/\text{h}]\) --- a fórmula
-\(c_r = \kappa_r \cdot p_{g(r)}\) permanece válida com a unidade física
-colapsada. Quando os atributos estão presentes, a decomposição é
-auditável por tipo físico, retrocompatível com catálogos que não
-distinguem taxa de consumo e preço unitário.
+cadastro, a entrada \(c_r\) {[}R\$/h{]} é apenas um
+\textbf{proxy monetário horário}. Não há
+\(\kappa_r\ [\mathrm{unid}_g/\mathrm{h}]\) ou
+\(p_g\ [\mathrm{R\$}/\mathrm{unid}_g]\) fisicamente verificados. Impor
+\(\kappa_r=1\) e \(p_g=c_r\) {[}R\$/h{]} é
+\textbf{dimensionalmente inválido}; não inferir volume, preço físico
+fictício nem aprovação GO. O proxy permanece \texttt{UNVERIFIED}.
+A identidade \(c_r=\kappa_r p_g\) exige taxa física,
+preço por unidade compatível e procedência declarada (issues
+\#18/\#23).
 
 \hypertarget{i.3.2-grafo-de-sinergia-e-produtividade-32-da-referuxeancia}{%
 \paragraph{I.3.2 Grafo de sinergia e produtividade (§32 da
@@ -369,12 +372,11 @@ Símbolo & Significado \\
 
 \[\boxed{m_i(\tau) = \min\!\Big(m_i^0 + \mu_i^+\tau,\quad m_i^{\max},\quad m_i^1 + \mu_i^-(N_i-1-\tau)\Big)}\]
 
-\textbf{Caso degenerado retangular} --- quando
-\(\mu_i^+ = \mu_i^- = 0\):
+\textbf{Caso degenerado retangular} --- somente com rampas nulas e extremos iguais ao máximo:
 
-\[\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max} \quad \forall\,\tau \in \{0,\ldots,N_i-1\}\]
+\[\bigl(\mu_i^+=\mu_i^-=0\bigr)\land\bigl(m_i^0=m_i^1=m_i^{\max}\bigr)\implies m_i(\tau)=m_i^{\max}\quad\forall\,\tau\in\{0,\ldots,N_i-1\}\]
 
-com \(m_i^0 = m_i^1 = m_i^{\max}\), reduzindo \(W_i\) a um único
+Para rampas nulas sem a igualdade nos extremos, vale somente \(m_i(\tau)=\min(m_i^0,m_i^1,m_i^{\max})\); o caso \((1,1,4)\) utiliza uma frente, não quatro. Com \(m_i^0=m_i^1=m_i^{\max}\), reduzindo \(W_i\) a um único
 parâmetro de frota: frota constante durante toda a atividade.
 
 \[m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}\]

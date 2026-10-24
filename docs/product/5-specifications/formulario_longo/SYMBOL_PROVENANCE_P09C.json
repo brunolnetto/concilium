@@ -1,0 +1,508 @@
+{
+  "schema": "concilium.formalism.symbol_provenance.v1",
+  "normative_source": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+  "scope": "Curated high-impact symbols from the dimension-critical interface. Does not yet establish exhaustive coverage of all symbols and subscript variants in the 93 equations.",
+  "units_policy": "Amounts are exact internal values; time units and physical units require explicit type/reconciliation; unavailable physical provenance is never replaced by monetary proxies.",
+  "symbols": [
+    {
+      "symbol": "Q_i",
+      "unit": "activity physical units u_i",
+      "source": "user quantitative scope",
+      "output": "canonical activity Q_i",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "q_ij",
+      "unit": "activity physical units u_i/week cell",
+      "source": "Skill04 physically delivered output",
+      "output": "Skill04 weekly distribution",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "m_ij",
+      "unit": "integer physical fronts",
+      "source": "activity front policy W_i; scheduled week",
+      "output": "physical graph G_i^D|m",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "m_i^0",
+      "unit": "integer physical fronts",
+      "source": "user front policy W_i",
+      "output": "initial ramp boundary",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "m_i^1",
+      "unit": "integer physical fronts",
+      "source": "user front policy W_i",
+      "output": "terminal ramp boundary",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "m_i^max",
+      "unit": "integer physical fronts",
+      "source": "resource/composition limit",
+      "output": "front ramp cap",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "mu_i^+",
+      "unit": "fronts/week",
+      "source": "user ramp increment",
+      "output": "m_i(tau)",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "mu_i^-",
+      "unit": "fronts/week",
+      "source": "user ramp decrement",
+      "output": "m_i(tau)",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "tau",
+      "unit": "integer weeks from activity start",
+      "source": "absolute j minus j_i^0",
+      "output": "m_i(tau)",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "j",
+      "unit": "integer ISO/absolute week index",
+      "source": "project calendar chronology",
+      "output": "weekly schedule/ledger index",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "j_i^0",
+      "unit": "absolute week index",
+      "source": "validated schedule start",
+      "output": "calendar-indexed capacity",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "N_i",
+      "unit": "integer active weeks",
+      "source": "bounded scheduling under Q and calendar",
+      "output": "activity interval and contract week count",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "F_i(m)",
+      "unit": "u_i/operating hour",
+      "source": "graph capacities for actually mobilized fronts",
+      "output": "weekly productive capacity",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "rho_i^front",
+      "unit": "u_i/(operating hour·front)",
+      "source": "calibrated independent-front composition",
+      "output": "reference capacity when assumptions hold",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        10
+      ]
+    },
+    {
+      "symbol": "rho_i^peak",
+      "unit": "u_i/operating hour",
+      "source": "F_i(m_i^max)",
+      "output": "peak capacity diagnostic",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "rho_i",
+      "unit": "requires explicit reference capacity basis u_i/hour",
+      "source": "legacy hourly productivity reference",
+      "output": "catalog gamma_i/rho_i",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        11
+      ]
+    },
+    {
+      "symbol": "h_i",
+      "unit": "operating hours/day",
+      "source": "user contractual shift",
+      "output": "H_i and monthly dilution",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "d_i",
+      "unit": "operating days/week",
+      "source": "user contractual shift",
+      "output": "H_i and monthly dilution",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "H_i",
+      "unit": "operating hours/week",
+      "source": "h_i*d_i or declared effective hours",
+      "output": "weekly physical capacity",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "eta_p,j",
+      "unit": "dimensionless fraction",
+      "source": "weekly physical practicability input",
+      "output": "weekly capacity availability",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "eta_w,j",
+      "unit": "dimensionless prior forecast factor",
+      "source": "declared exogenous management performance assumption",
+      "output": "weekly capacity availability (not observed phi)",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        10
+      ]
+    },
+    {
+      "symbol": "phi_i",
+      "unit": "dimensionless partial-last-week fraction",
+      "source": "q_final / B_final",
+      "output": "scope closure diagnostic",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "theta_i(b)",
+      "unit": "dimensionless delivered-Q fraction",
+      "source": "typed physical predecessor edge",
+      "output": "release threshold",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "s_mes",
+      "unit": "weeks/month",
+      "source": "declared normalization 1461/336",
+      "output": "monthly-to-weekly tariff conversion",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "V_r^mensal",
+      "unit": "BRL/month",
+      "source": "catalog contractual resource entry",
+      "output": "resource hourly/weekly tariff",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "n_r",
+      "unit": "resource count per front",
+      "source": "catalog physical composition",
+      "output": "installed per-front resource cost",
+      "classification": "NORMATIVE",
+      "blocked_by_issues": []
+    },
+    {
+      "symbol": "c_r",
+      "unit": "BRL/operating hour when monthly or verified physical rate",
+      "source": "catalog contract or verified kappa×p",
+      "output": "catalog reference hourly cost",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        13,
+        18
+      ]
+    },
+    {
+      "symbol": "kappa_r",
+      "unit": "physical good units/operating hour (typed)",
+      "source": "measured/calibrated consumable rate and good identity",
+      "output": "physical U_g",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        18
+      ]
+    },
+    {
+      "symbol": "kappa_g^out",
+      "unit": "physical good units/activity unit u_i",
+      "source": "per-delivered-unit consumption contract",
+      "output": "physical U_g and V journal",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        18
+      ]
+    },
+    {
+      "symbol": "p_g",
+      "unit": "BRL/physical good unit",
+      "source": "quoted/contracted catalog acquisition price",
+      "output": "goods purchase cost p_g*U_g",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        18
+      ]
+    },
+    {
+      "symbol": "U_g",
+      "unit": "physical good units",
+      "source": "typed weekly consumption and inventory evidence",
+      "output": "goods acquisition journal",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        18
+      ]
+    },
+    {
+      "symbol": "gamma_i^K",
+      "unit": "BRL/operating hour under declared reference composition",
+      "source": "EQ/MO resource hourly rates",
+      "output": "diagnostic K reference",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        11,
+        17
+      ]
+    },
+    {
+      "symbol": "gamma_i^V",
+      "unit": "BRL/operating hour under declared reference consumption",
+      "source": "MAT/COMB rate × physical price",
+      "output": "catalog V reference",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        11,
+        18
+      ]
+    },
+    {
+      "symbol": "C_i^K,op",
+      "unit": "BRL",
+      "source": "contractual active/idle resource-instance ledger",
+      "output": "activity diagnostic, not project additive source",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        11,
+        17
+      ]
+    },
+    {
+      "symbol": "C_i^V,op",
+      "unit": "BRL",
+      "source": "quantity-based goods acquisition ledger",
+      "output": "activity consumable diagnostic",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        11,
+        18
+      ]
+    },
+    {
+      "symbol": "C_pool",
+      "unit": "BRL",
+      "source": "exclusive physical resource chain postings",
+      "output": "project direct K source",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        16,
+        17
+      ]
+    },
+    {
+      "symbol": "C_cons",
+      "unit": "BRL",
+      "source": "typed goods purchase postings",
+      "output": "project direct V source",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        18,
+        20
+      ]
+    },
+    {
+      "symbol": "C_inv",
+      "unit": "BRL",
+      "source": "stock × holding tariff by ISO week",
+      "output": "project indirect holding source",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        19
+      ]
+    },
+    {
+      "symbol": "C_D",
+      "unit": "BRL",
+      "source": "exclusive K and V posting aggregation",
+      "output": "project direct ledger",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        17,
+        20
+      ]
+    },
+    {
+      "symbol": "C_ind",
+      "unit": "BRL",
+      "source": "exclusive mobility/indirect/holding events",
+      "output": "project indirect ledger",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "symbol": "C_tot",
+      "unit": "BRL",
+      "source": "exclusive direct plus indirect cost",
+      "output": "project operational total",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        20
+      ]
+    },
+    {
+      "symbol": "beta^EQ",
+      "unit": "dimensionless markup fraction",
+      "source": "configured equipment markup contract",
+      "output": "BDI-by-category posting",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        20,
+        21
+      ]
+    },
+    {
+      "symbol": "beta^MO",
+      "unit": "dimensionless markup fraction",
+      "source": "configured workforce markup contract",
+      "output": "BDI-by-category posting",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        20,
+        21
+      ]
+    },
+    {
+      "symbol": "beta^MAT",
+      "unit": "dimensionless markup fraction",
+      "source": "configured materials markup contract",
+      "output": "BDI-by-category posting",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        20,
+        21
+      ]
+    },
+    {
+      "symbol": "beta^COMB",
+      "unit": "dimensionless markup fraction",
+      "source": "configured fuel markup contract",
+      "output": "BDI-by-category posting",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        20,
+        21
+      ]
+    },
+    {
+      "symbol": "beta^IND",
+      "unit": "dimensionless markup fraction",
+      "source": "configured indirect markup contract",
+      "output": "BDI-by-category posting",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        20,
+        21
+      ]
+    },
+    {
+      "symbol": "P",
+      "unit": "BRL",
+      "source": "single authoritative direct+indirect BDI cost basis",
+      "output": "project selling price",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        21
+      ]
+    },
+    {
+      "symbol": "C_cat",
+      "unit": "BRL",
+      "source": "declared price reference composition with calibrated F(m_ref)",
+      "output": "catalog envelope",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        11,
+        21
+      ]
+    },
+    {
+      "symbol": "BDI",
+      "unit": "dimensionless ratio, declared comparable base",
+      "source": "P/C_cat−1 or defined regulatory base",
+      "output": "pricing gate",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        21
+      ]
+    },
+    {
+      "symbol": "mu_margin",
+      "unit": "dimensionless ratio",
+      "source": "(P−C_tot)/P",
+      "output": "profitability/economic NOGO gate",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        21
+      ]
+    },
+    {
+      "symbol": "n_j(tau_resource)",
+      "unit": "integer physical instances/resource type",
+      "source": "sum activities typed demand a_ig(m)",
+      "output": "pool optimizer demand",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        16
+      ]
+    },
+    {
+      "symbol": "s_gj",
+      "unit": "integer resources on paid standby",
+      "source": "contract presence x_gj minus demand d_gj",
+      "output": "standby bill and instance evidence",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        13,
+        16
+      ]
+    },
+    {
+      "symbol": "C_MOBDEMOB",
+      "unit": "BRL",
+      "source": "unique resource-chain mobility events",
+      "output": "project indirect mobility ledger",
+      "classification": "CONDITIONAL",
+      "blocked_by_issues": [
+        17,
+        20
+      ]
+    }
+  ]
+}

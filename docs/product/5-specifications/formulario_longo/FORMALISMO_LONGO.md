@@ -71,7 +71,7 @@ onde:
 
 *Exemplos de instâncias da mesma fórmula:* combustível → $\kappa_r$ [L/h], $p_g$ [R\$/L]; agregado → $\kappa_r$ [t/h], $p_g$ [R\$/t]; explosivo → $\kappa_r$ [kg/h], $p_g$ [R\$/kg]; cimento → $\kappa_r$ [kg/h], $p_g$ [R\$/kg].
 
-**MAT legado.** Quando `atributos_especificos.consumo_horario_fisico` e `atributos_especificos.unidade_fisica` estão ausentes no cadastro do bem, trata-se do caso degenerado $\kappa_r = 1\ [\text{unid}_g/\text{h}]$, $p_{g(r)} = c_r\ [\text{R\$}/\text{h}]$ — a fórmula $c_r = \kappa_r \cdot p_{g(r)}$ permanece válida com a unidade física colapsada. Quando os atributos estão presentes, a decomposição é auditável por tipo físico, retrocompatível com catálogos que não distinguem taxa de consumo e preço unitário.
+**MAT legado (proxy monetário, não volume físico).** Na ausência de `atributos_especificos.consumo_horario_fisico` e `atributos_especificos.unidade_fisica`, o catálogo pode fornecer somente `c_r` [R$/h] como **proxy de custo horário**. Não existem `κ_r` [unid_g/h] nem `p_g` [R$/unid_g] verificáveis nessa entrada: atribuir `κ_r=1` e `p_g=c_r` [R$/h] é dimensionalmente inválido. O proxy deve permanecer `UNVERIFIED`, sem volume físico inferido, preço unitário fictício nem autorização de GO. A identidade `c_r=κ_r·p_g` só é aplicável quando ambos os fatores físicos, suas unidades compatíveis e a procedência do preço estiverem declarados (ver #18/#23).
 
 #### I.3.2 Produtividade como capacidade efetiva do grafo mobilizado
 
@@ -106,11 +106,11 @@ $$W_i = (m_i^0,\ \mu_i^+,\ m_i^1,\ \mu_i^-,\ m_i^{\max}) \in \mathbb{N}_{>0}\tim
 
 $$\boxed{m_i(\tau) = \min\!\Big(m_i^0 + \mu_i^+\tau,\quad m_i^{\max},\quad m_i^1 + \mu_i^-(N_i-1-\tau)\Big)}$$
 
-**Caso degenerado retangular** — quando $\mu_i^+ = \mu_i^- = 0$:
+**Caso degenerado retangular** — somente com rampas nulas **e** extremos iguais ao máximo:
 
-$$\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max} \quad \forall\,\tau \in \{0,\ldots,N_i-1\}$$
+$$\bigl(\mu_i^+=\mu_i^-=0\bigr)\land\bigl(m_i^0=m_i^1=m_i^{\max}\bigr)\implies m_i(\tau)=m_i^{\max}\quad\forall\,\tau\in\{0,\ldots,N_i-1\}$$
 
-Essa equivalência exige $m_i^0 = m_i^1 = m_i^{\max}$; nessas condições, $W_i$ reduz-se a um único parâmetro de frota, constante durante toda a atividade.
+Quando as rampas são nulas mas os extremos não coincidem com o máximo, vale apenas $m_i(\tau)=\min(m_i^0,m_i^1,m_i^{\max})$; por exemplo, $(m_i^0,m_i^1,m_i^{\max})=(1,1,4)$ produz uma frente, **não** quatro. A forma retangular no máximo exige as três igualdades; nessas condições, $W_i$ reduz-se a um único parâmetro de frota, constante durante toda a atividade.
 
 $$m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}$$
 
