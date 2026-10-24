@@ -46,19 +46,19 @@ def test_inventory_requires_explicit_provenance_dimension_and_uncertainty() -> N
             "input_provenance",
             "output_projection",
             "downstream_consumer",
-            "classification",
+            "status",
             "dimensional_proof",
             "blocked_by_issues",
         ):
             assert field in row and row[field] is not None, (row["id"], field)
         assert row["expected_result_dimension"] not in ("", "unknown"), row["id"]
         assert row["input_provenance"] != "unclassified", row["id"]
-        assert row["classification"] in (
+        assert row["status"] in (
             "NORMATIVE_CANDIDATE",
             "CONDITIONAL_OR_UNCERTIFIED",
         )
         if row["blocked_by_issues"]:
-            assert row["classification"] == "CONDITIONAL_OR_UNCERTIFIED"
+            assert row["status"] == "CONDITIONAL_OR_UNCERTIFIED"
         # No automatic "all 93 dimensionally certified" claim from a syntax audit.
         assert row["dimensional_proof"] in ("REQUIRES_INDEPENDENT_VERIFICATION", "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION")
 
