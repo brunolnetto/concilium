@@ -25,6 +25,9 @@ ECONOMIC_PATHS = (
     "src/concilium/application/scheduling/physical_consumption_rates.py",
     "src/concilium/application/scheduling/resource_level_contracts.py",
     "src/concilium/application/scheduling/resource_demand_levels.py",
+    "src/concilium/application/scheduling/realized_financial_metrics.py",
+    "src/concilium/application/scheduling/financial_cost_reconciliation.py",
+    "src/concilium/application/scheduling/skill06_realized_consumer.py",
     "src/concilium/domain/models/canonical/_pool_recursos.py",
     "src/concilium/domain/models/canonical/_estoque_consumiveis.py",
 )
@@ -34,6 +37,8 @@ ECONOMIC_SEGMENTS = (
     "/estoque_consumiveis/",
     "/economics/",
     "/finance/",
+    "/06-resultado-financeiro/",
+    "/05-equipes-e-alocacao/",
 )
 EXCLUDED_DOCS = (SPEC + "EQUATION_INVENTORY_P09C.json",)
 
@@ -76,7 +81,7 @@ def git_changed(base: str, head: str) -> set[str]:
     if not base or not head or base == "0" * 40 or head == "0" * 40:
         raise ValueError("A real base and head commit SHA are required")
     output = subprocess.check_output(
-        ["git", "diff", "--name-only", "--diff-filter=ACMRTD", f"{base}...{head}"],
+        ["git", "diff", "--no-renames", "--name-only", "--diff-filter=ACMRTD", f"{base}...{head}"],
         text=True,
         stderr=subprocess.PIPE,
     )
