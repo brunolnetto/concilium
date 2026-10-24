@@ -200,9 +200,10 @@ def _preflight_physical_productivity(
                     )
                 )
 
-            # Quantities cannot close when the numerator is in tonnes but
-            # the throughput denominator was declared in cubic metres/hour.
-            # Do not invent a density or an implicit unit conversion.
+            # Dimensional checks must reach the *internal* rate inputs as
+            # well as the output label; relabeling t/h as m3/h proves nothing.
+            # Flow edges have no separate unit field in their schema and
+            # inherit the output unit by the catalog contract.
             unit_eap = str(item.unidade or "").strip().casefold().replace("³", "3")
             unit_producao = str(prod.get("unidade") or "").strip().casefold().replace("³", "3")
             if not unit_eap or unit_eap != unit_producao:
@@ -218,6 +219,25 @@ def _preflight_physical_productivity(
                         ),
                     )
                 )
+            if typed is not None and typed.grafo_sinergia is not None:
+                mismatched_capacity_ids = [
+                    cap.elemento_id
+                    for cap in typed.grafo_sinergia.capacidades
+                    if str(cap.unidade).strip().casefold().replace("³", "3") != unit_producao
+                ]
+                if mismatched_capacity_ids:
+                    invalid = True
+                    graph_verified = False
+                    validacoes.append(
+                        ValidacaoItem(
+                            codigo="VAL-CRON-PROD-UNIT",
+                            status="ERRO",
+                            mensagem=(
+                                f"Capacidades de F(m) em unidade diferente de {prod.get('unidade')!r} "
+                                f"para {item.item_id}: {sorted(mismatched_capacity_ids)}."
+                            ),
+                        )
+                    )
 
         source_info = prod.get("origem")
         audit_info = prod.get("auditoria")
