@@ -388,3 +388,90 @@ def test_p14c_numeric_overflow_and_boolean_rates_fail_as_validation(
         for v in outcome.validacoes
     )
     assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+@pytest.mark.parametrize("rate", [True, False, 0, -1, float("nan"), float("inf"), 10 ** 400, "1"])
+def test_p14c_raw_capacity_rate_rejected_before_pydantic_coercion(
+    intent: str, mode: str, rate: object,
+) -> None:
+    production = _real_catalog_productivity()
+    production["grafo_sinergia"]["capacidades"][0]["capacidade_horaria"] = rate
+    outcome = _run_with_production(production, intent=intent, mode=mode)
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" and v.status == "ERRO"
+               for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_non_bottleneck_infinite_capacity_rejected(
+    intent: str, mode: str,
+) -> None:
+    production = _real_catalog_productivity()
+    # A finite bottleneck (E0043) does not validate a second physical rate.
+    production["grafo_sinergia"]["capacidades"].append({
+        "elemento_id": "E0053", "capacidade_horaria": float("inf"),
+        "unidade": "t", "fonte": "catalogo",
+    })
+    outcome = _run_with_production(production, intent=intent, mode=mode)
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+@pytest.mark.parametrize("rate", [True, float("inf"), 10 ** 400])
+def test_p14c_flow_edge_rates_rejected_before_maxflow(
+    intent: str, mode: str, rate: object,
+) -> None:
+    production = _real_catalog_productivity()
+    graph = production["grafo_sinergia"]
+    graph.update({
+        "fonte": "SOURCE", "sorvedouro": "SINK", "dominio": ["SOURCE", "SINK"],
+        "arestas_fluxo": [
+            {"aresta_id": "good", "origem": "SOURCE", "destino": "SINK",
+             "capacidade_horaria": 99.6},
+            {"aresta_id": "invalid", "origem": "SOURCE", "destino": "SINK",
+             "capacidade_horaria": rate},
+        ],
+    })
+    outcome = _run_with_production(production, intent=intent, mode=mode)
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_invalid_graph_preserves_no_historical_financial_projection(
+    intent: str, mode: str,
+) -> None:
+    production = _real_catalog_productivity()
+    production["grafo_sinergia"]["capacidades"][0]["capacidade_horaria"] = True
+    canonical = _canonical(1.0, unidade="t").model_copy(
+        update={
+            "resultado": object(), "resultado_reconciliado": object(),
+            "cubo_analitico": object(), "s_curve": object(),
+        }
+    )
+    inputs = {"certification_intent": intent}
+    if mode == "MANUAL":
+        inputs["num_equipes_por_item"] = {"i1": {"2026-W23": 1}}
+    else:
+        inputs["rcpsp_spec"] = {"activities": [{"id": "i1"}]}
+    outcome = run_cronograma(
+        canonical, inputs,
+        {"cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
+         "produtividades": [production]},
+    )
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.resultado_reconciliado is None
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.s_curve is None
