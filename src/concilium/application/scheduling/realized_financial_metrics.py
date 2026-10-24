@@ -117,19 +117,29 @@ def _activity(
         available = _exact(cell.capacidade_disponivel_semana, name="capacity")
         reported = _exact(cell.qtd_executada, name="qtd_executada")
         observed_total = _exact(cell.qtd_acumulada, name="qtd_acumulada")
-        # Skill04's actual _build_dist_cell() persists float addition:
-        # 0.2 + 0.09999999999999998 == 0.3. Accept only either an
-        # exact decimal identity OR precisely that source's binary-float
-        # additive identity. No epsilon, rounding or economic tolerance.
-        if (
-            cumulative + reported != observed_total
-            and producer_float_total + cell.qtd_executada != cell.qtd_acumulada
-        ):
-            raise ValueError("Skill 04 cumulative physical scope does not reconcile")
-        delivered = observed_total - cumulative
-        if delivered < 0 or delivered > available or available > nominal:
+        if available > nominal or reported > available:
             raise ValueError("q > capacity or available capacity > F(m)H")
-        cumulative = observed_total
+        # Skill04 planned (NAO_OBSERVADO) cells use binary floats for BOTH
+        # q=min(available, max(0, scope-cumulative)) and the cumulative sum.
+        # Reproduce those two operations *exactly as that source computes*
+        # them: do not impose a guessed numeric tolerance or accept a
+        # fabricated manual delivery in an unobserved planning schedule.
+        expected_float_q = min(
+            cell.capacidade_disponivel_semana,
+            max(0.0, float(expected_scope) - producer_float_total),
+        )
+        if cell.qtd_executada != expected_float_q:
+            raise ValueError("Skill 04 planned quantity violates the source capacity contract")
+        if producer_float_total + cell.qtd_executada != cell.qtd_acumulada:
+            raise ValueError("Skill 04 cumulative physical scope does not reconcile")
+        # Having verified the actual binary producer, re-evaluate the SAME
+        # planner on exact decimal inputs. This normalizes artifacts like
+        # 0.30000000000000004 at an intermediate week and the tail
+        # 0.09999999999999998 into exact 0.1 cells, without allowing q>R.
+        delivered = min(available, max(ZERO, expected_scope - cumulative))
+        if delivered < 0 or delivered > nominal:
+            raise ValueError("q > calibrated reference capacity")
+        cumulative += delivered
         producer_float_total = cell.qtd_acumulada
         reference_total += nominal
         result.append(RealizedActivityWeek(
