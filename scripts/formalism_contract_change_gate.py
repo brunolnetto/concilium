@@ -77,11 +77,19 @@ def assess_paths(changed: set[str]) -> tuple[bool, str]:
     return True, f"Economic files {impacted} have spec {specifications} and vector {vectors}."
 
 
-def git_changed(base: str, head: str) -> set[str]:
+def git_changed(base: str, head: str, *, mode: str = "pr") -> set[str]:
+    """PR: merge-base diff; push: endpoints diff (including divergent history).
+
+    Using a merge-base for a force-push could hide reverted economic changes.
+    An orphaned prior push tip that was not fetched raises and fails closed.
+    """
     if not base or not head or base == "0" * 40 or head == "0" * 40:
         raise ValueError("A real base and head commit SHA are required")
+    if mode not in ("pr", "push"):
+        raise ValueError("Explicit PR or push comparison mode required")
+    commits = [f"{base}...{head}"] if mode == "pr" else [base, head]
     output = subprocess.check_output(
-        ["git", "diff", "--no-renames", "--name-only", "--diff-filter=ACMRTD", f"{base}...{head}"],
+        ["git", "diff", "--no-renames", "--name-only", "--diff-filter=ACMRTD", *commits],
         text=True,
         stderr=subprocess.PIPE,
     )
@@ -92,9 +100,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", required=True)
     parser.add_argument("--head", required=True)
+    parser.add_argument("--mode", choices=("pr", "push"), required=True)
     args = parser.parse_args(argv)
     try:
-        paths = git_changed(args.base, args.head)
+        paths = git_changed(args.base, args.head, mode=args.mode)
         valid, reason = assess_paths(paths)
     except (ValueError, subprocess.CalledProcessError) as exc:
         print(f"::error::Contract diff unavailable; refusing to pass: {exc}")
