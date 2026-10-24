@@ -168,9 +168,57 @@ def _preflight_physical_productivity(
                         mensagem=f"F(m) inválido em {item.item_id}/{name}; exigir taxa física positiva e finita.",
                     )
                 )
-        # Independently inspect the *chosen* source, not merely the names of
-        # the warnings emitted by the legacy productivity resolver.
+        # An existing graph is not necessarily a usable physical graph.
+        # Validate the *actual* typed capacity, references and output units
+        # before the manual/automatic scheduler can throw or assume capacity.
         has_graph = isinstance(prod.get("grafo_sinergia"), dict) and bool(prod["grafo_sinergia"])
+        graph_verified = False
+        if has_graph:
+            from concilium.domain.services.sinergia_equipe import (
+                construir_producao_catalogo_para_sinergia,
+                resolver_producao_efetiva,
+            )
+
+            typed = construir_producao_catalogo_para_sinergia(prod)
+            if typed is not None:
+                resolution = resolver_producao_efetiva(typed)
+                derived = resolution.derivacao
+                physical_rate = derived.producao_horaria_derivada if derived else None
+                graph_verified = (
+                    not any(v.status == "ERRO" for v in resolution.validacoes)
+                    and physical_rate is not None
+                    and math.isfinite(physical_rate)
+                    and physical_rate > 0
+                )
+            if not graph_verified:
+                invalid = True
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-CRON-PROD-INVALID",
+                        status="ERRO",
+                        mensagem=f"F(m) inválido em {item.item_id}: grafo sem capacidade física validável.",
+                    )
+                )
+
+            # Quantities cannot close when the numerator is in tonnes but
+            # the throughput denominator was declared in cubic metres/hour.
+            # Do not invent a density or an implicit unit conversion.
+            unit_eap = str(item.unidade or "").strip().casefold().replace("³", "3")
+            unit_producao = str(prod.get("unidade") or "").strip().casefold().replace("³", "3")
+            if not unit_eap or unit_eap != unit_producao:
+                invalid = True
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-CRON-PROD-UNIT",
+                        status="ERRO",
+                        mensagem=(
+                            f"Unidade física incompatível em {item.item_id}: "
+                            f"EAP={item.unidade!r}, produtividade={prod.get('unidade')!r}; "
+                            "conversão dimensional não demonstrada."
+                        ),
+                    )
+                )
+
         source_info = prod.get("origem")
         audit_info = prod.get("auditoria")
         source_info = source_info if isinstance(source_info, dict) else {}
@@ -181,7 +229,7 @@ def _preflight_physical_productivity(
         # producao_horaria can be the derived output of a physical graph.
         # cpu_meta.producao_horaria overrides the graph and is not proof.
         source_proved = (
-            bool(prod_id) and has_graph and isinstance(origin, str)
+            bool(prod_id) and graph_verified and isinstance(origin, str)
             and bool(origin.strip()) and isinstance(version, str)
             and bool(version.strip()) and "producao_horaria" not in meta
         )
