@@ -1,0 +1,442 @@
+{
+  "schema": "concilium.formalism.execution_dag.v1",
+  "epic": 8,
+  "policy": {
+    "closure": "all predecessors closed AND all previous waves closed AND packages merged AND all issue acceptance independently evidenced",
+    "historical_merges": "preserved as preparatory evidence; do not authorize out-of-order issue closure",
+    "candidate_is_not_certified": true
+  },
+  "nodes": [
+    {
+      "issue": 9,
+      "wave": 0,
+      "blocked_by": [],
+      "packages": [
+        {
+          "id": "P09-A",
+          "prs": [
+            28
+          ]
+        },
+        {
+          "id": "P09-B",
+          "prs": [
+            43
+          ]
+        },
+        {
+          "id": "P09-C",
+          "prs": [
+            86
+          ]
+        },
+        {
+          "id": "P09-D",
+          "prs": [
+            87
+          ]
+        }
+      ]
+    },
+    {
+      "issue": 10,
+      "wave": 0,
+      "blocked_by": [
+        9
+      ],
+      "packages": [
+        {
+          "id": "P10-A",
+          "prs": [
+            31
+          ]
+        },
+        {
+          "id": "P10-B",
+          "prs": [
+            46,
+            47,
+            51,
+            58,
+            59,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "issue": 12,
+      "wave": 0,
+      "blocked_by": [
+        9
+      ],
+      "packages": [
+        {
+          "id": "P12-A",
+          "prs": [
+            48
+          ]
+        },
+        {
+          "id": "P12-B",
+          "prs": [
+            49,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "issue": 11,
+      "wave": 0,
+      "blocked_by": [
+        9,
+        10,
+        12
+      ],
+      "packages": [
+        {
+          "id": "P11-A",
+          "prs": []
+        },
+        {
+          "id": "P11-B",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 13,
+      "wave": 0,
+      "blocked_by": [
+        11
+      ],
+      "packages": [
+        {
+          "id": "P13-A",
+          "prs": []
+        },
+        {
+          "id": "P13-B",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 22,
+      "wave": 1,
+      "blocked_by": [
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "packages": [
+        {
+          "id": "P22-A",
+          "prs": [
+            29
+          ]
+        },
+        {
+          "id": "P22-B",
+          "prs": []
+        },
+        {
+          "id": "P22-C",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 25,
+      "wave": 1,
+      "blocked_by": [
+        22
+      ],
+      "packages": [
+        {
+          "id": "P25-A",
+          "prs": [
+            30
+          ]
+        },
+        {
+          "id": "P25-B",
+          "prs": [
+            30
+          ]
+        },
+        {
+          "id": "P25-C",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 14,
+      "wave": 2,
+      "blocked_by": [
+        12,
+        22
+      ],
+      "packages": [
+        {
+          "id": "P14-A",
+          "prs": [
+            50
+          ]
+        },
+        {
+          "id": "P14-B",
+          "prs": [
+            52
+          ]
+        }
+      ]
+    },
+    {
+      "issue": 15,
+      "wave": 2,
+      "blocked_by": [
+        14
+      ],
+      "packages": [
+        {
+          "id": "P15-A",
+          "prs": [
+            54
+          ]
+        },
+        {
+          "id": "P15-B",
+          "prs": [
+            61
+          ]
+        },
+        {
+          "id": "P15-C",
+          "prs": [
+            63,
+            64,
+            65,
+            66,
+            67
+          ]
+        }
+      ]
+    },
+    {
+      "issue": 16,
+      "wave": 2,
+      "blocked_by": [
+        15,
+        13
+      ],
+      "packages": [
+        {
+          "id": "P16-A",
+          "prs": [
+            68
+          ]
+        },
+        {
+          "id": "P16-B",
+          "prs": [
+            70,
+            71
+          ]
+        },
+        {
+          "id": "P16-C",
+          "prs": [
+            72,
+            73
+          ]
+        }
+      ]
+    },
+    {
+      "issue": 18,
+      "wave": 2,
+      "blocked_by": [
+        13,
+        22
+      ],
+      "packages": [
+        {
+          "id": "P18-A",
+          "prs": [
+            76
+          ]
+        },
+        {
+          "id": "P18-B",
+          "prs": [
+            79
+          ]
+        }
+      ]
+    },
+    {
+      "issue": 17,
+      "wave": 2,
+      "blocked_by": [
+        16,
+        18
+      ],
+      "packages": [
+        {
+          "id": "P17-A",
+          "prs": [
+            74
+          ]
+        },
+        {
+          "id": "P17-B",
+          "prs": [
+            77
+          ]
+        },
+        {
+          "id": "P17-C",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 19,
+      "wave": 2,
+      "blocked_by": [
+        18
+      ],
+      "packages": [
+        {
+          "id": "P19-A",
+          "prs": [
+            80
+          ]
+        },
+        {
+          "id": "P19-B",
+          "prs": [
+            81
+          ]
+        },
+        {
+          "id": "P19-C",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 20,
+      "wave": 2,
+      "blocked_by": [
+        17,
+        19
+      ],
+      "packages": [
+        {
+          "id": "P20-A",
+          "prs": [
+            84
+          ]
+        },
+        {
+          "id": "P20-B",
+          "prs": []
+        },
+        {
+          "id": "P20-C",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 21,
+      "wave": 2,
+      "blocked_by": [
+        20
+      ],
+      "packages": [
+        {
+          "id": "P21-A",
+          "prs": []
+        },
+        {
+          "id": "P21-B",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 23,
+      "wave": 3,
+      "blocked_by": [
+        21,
+        22,
+        25,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "packages": [
+        {
+          "id": "P23-A",
+          "prs": [
+            55
+          ]
+        },
+        {
+          "id": "P23-B",
+          "prs": []
+        },
+        {
+          "id": "P23-C",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 24,
+      "wave": 3,
+      "blocked_by": [
+        23
+      ],
+      "packages": [
+        {
+          "id": "P24-A",
+          "prs": []
+        },
+        {
+          "id": "P24-B",
+          "prs": []
+        }
+      ]
+    },
+    {
+      "issue": 26,
+      "wave": 3,
+      "blocked_by": [
+        24,
+        25
+      ],
+      "packages": [
+        {
+          "id": "P26-A",
+          "prs": []
+        },
+        {
+          "id": "P26-B",
+          "prs": []
+        }
+      ]
+    }
+  ]
+}
