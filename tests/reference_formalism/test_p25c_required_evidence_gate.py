@@ -99,3 +99,43 @@ def test_git_rename_with_economic_mutation_preserves_source_path(
     assert PRODUCTION in changed, changed
     assert "src/legacy/unprotected.py" in changed, changed
     assert not module.assess_paths(changed)[0]
+
+
+def test_divergent_force_push_does_not_hide_economic_reversion(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """A prior main tip and a divergent replacement have no shared direct diff."""
+    repo = tmp_path / "divergent"
+    repo.mkdir()
+
+    def git(*args: str) -> str:
+        return subprocess.check_output(["git", *args], cwd=repo, text=True).strip()
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.name", "P25-C Fixture")
+    git("config", "user.email", "ci-fixture@example.invalid")
+    economic = repo / PRODUCTION
+    economic.parent.mkdir(parents=True)
+    economic.write_text("cost = 100\n", encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "common root")
+    common = git("rev-parse", "HEAD")
+
+    economic.write_text("cost = 200\n", encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "old main tip changes economic cost")
+    before = git("rev-parse", "HEAD")
+
+    git("switch", "--detach", "-q", common)
+    (repo / "README.md").write_text("replacement tip\n", encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "divergent force push")
+    after = git("rev-parse", "HEAD")
+
+    monkeypatch.chdir(repo)
+    # Wrong PR-style comparison hides the reverted change.
+    assert PRODUCTION not in module.git_changed(before, after, mode="pr")
+    # Push must compare the two endpoints and expose the financial reversion.
+    detected = module.git_changed(before, after, mode="push")
+    assert PRODUCTION in detected, detected
+    assert not module.assess_paths(detected)[0]

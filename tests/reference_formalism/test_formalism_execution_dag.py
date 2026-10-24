@@ -146,8 +146,8 @@ def test_p22c_registered_but_not_merged_cannot_close_w1(spec: dict) -> None:
 
 def test_p25c_evidence_gate_remains_mandatory_after_p22_is_accepted(spec: dict) -> None:
     packages = next(x for x in spec["nodes"] if x["issue"] == 25)["packages"]
-    assert next(x for x in packages if x["id"] == "P25-C")["prs"] == [99]
-    result = report(spec, states(9, 10, 11, 12, 13, 22), all_merged(spec) - {99})
+    assert next(x for x in packages if x["id"] == "P25-C")["prs"] == [99, 100]
+    result = report(spec, states(9, 10, 11, 12, 13, 22), all_merged(spec) - {100})
     row = next(x for x in result["issues"] if x["issue"] == 25)
     assert row["ready_to_execute"]
     assert row["pending_packages"] == ["P25-C"]
