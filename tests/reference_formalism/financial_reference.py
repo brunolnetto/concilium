@@ -178,3 +178,23 @@ def verify_financial(vector: dict[str, Any]) -> dict[str, str]:
         if decimal_input(observed[key], key) != decimal_input(expected[key], key):
             raise ReferenceContractError(f"financial golden mismatch: {key}")
     return observed
+
+
+def compare_financial_output(
+    vector: dict[str, Any], observed: dict[str, Any],
+) -> dict[str, str]:
+    """Compare an external (e.g. production) projection against pure reference.
+
+    Callers explicitly supply the external output; this module does not
+    import the system being tested. There is no fixture mirroring or
+    automatic acceptance of omitted/mutated projection fields.
+    """
+    reference = evaluate_financial(vector)
+    _keys(observed, set(reference), "external financial projection")
+    for key, expected in reference.items():
+        if decimal_input(observed[key], key) != decimal_input(expected, key):
+            raise ReferenceContractError(
+                f"financial production mismatch: {key} "
+                f"expected={expected} observed={observed[key]}"
+            )
+    return reference
