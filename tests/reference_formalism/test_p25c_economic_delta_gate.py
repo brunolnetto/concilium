@@ -1,7 +1,10 @@
 """Fail-closed economic specification delta gate, with synthetic PR file sets."""
 from __future__ import annotations
 
-from scripts.check_economic_spec_delta import is_economic_source, validate_paths
+import subprocess
+from pathlib import Path
+
+from scripts.check_economic_spec_delta import changed_files, is_economic_source, validate_paths
 
 
 def test_unrelated_changes_do_not_require_repricing() -> None:
@@ -35,7 +38,7 @@ def test_proper_normative_golden_and_independent_regression_pass() -> None:
 
 
 def test_runtime_change_without_production_economics_does_not_trigger() -> None:
-    assert not is_economic_source(
+    assert is_economic_source(
         "src/concilium/application/scheduling/resource_demand_levels.py"
     )
     assert is_economic_source(
@@ -43,6 +46,12 @@ def test_runtime_change_without_production_economics_does_not_trigger() -> None:
     )
     assert is_economic_source(
         "src/concilium/application/scheduling/economic_regime_contracts.py"
+    )
+    assert is_economic_source(
+        "src/concilium/application/scheduling/realized_financial_metrics.py"
+    )
+    assert is_economic_source(
+        "src/concilium/application/scheduling/custo_real_instancia.py"
     )
 
 
@@ -54,3 +63,48 @@ def test_spoofing_tests_outside_reference_tree_does_not_satisfy_gate() -> None:
         "tests/unit/test_false_reference.py",
     }
     assert any("oracle regression" in error for error in validate_paths(paths))
+
+
+def test_deleting_the_existing_goldens_is_not_a_valid_update() -> None:
+    changed = {
+        "src/concilium/application/scheduling/custo_real_instancia.py": "M",
+        "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md": "M",
+        "tests/reference_formalism/vectors/economic_reconciliation_v1.json": "D",
+        "tests/reference_formalism/test_p22c_economic_oracle.py": "D",
+    }
+    violations = validate_paths(changed)
+    assert len(violations) == 2
+    assert any("JSON golden" in x for x in violations)
+    assert any("oracle regression" in x for x in violations)
+
+
+def test_rename_does_not_erase_the_protected_source_path(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "config", "user.email", "test@example.invalid"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "config", "user.name", "Reference Oracle"],
+        check=True,
+    )
+    old = tmp_path / "src/concilium/application/scheduling/contractual_cost_ledger.py"
+    old.parent.mkdir(parents=True)
+    old.write_text("price = 100\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "commit", "-qm", "base"], check=True)
+    base = subprocess.check_output(
+        ["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True,
+    ).strip()
+    new = old.with_name("settlement.py")
+    old.rename(new)
+    new.write_text("price = 101\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "commit", "-qm", "rename"], check=True)
+    monkeypatch.chdir(tmp_path)
+    changes = changed_files(base)
+    assert changes["src/concilium/application/scheduling/contractual_cost_ledger.py"] == "D"
+    assert changes["src/concilium/application/scheduling/settlement.py"] == "A"
+    assert len(validate_paths(changes)) == 3
