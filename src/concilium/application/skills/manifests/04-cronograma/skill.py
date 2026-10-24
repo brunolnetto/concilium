@@ -171,13 +171,19 @@ def _preflight_physical_productivity(
         # Independently inspect the *chosen* source, not merely the names of
         # the warnings emitted by the legacy productivity resolver.
         has_graph = isinstance(prod.get("grafo_sinergia"), dict) and bool(prod["grafo_sinergia"])
-        origin = prod.get("source_id") or prod.get("fonte")
-        version = prod.get("source_version") or prod.get("versao")
+        source_info = prod.get("origem")
+        audit_info = prod.get("auditoria")
+        source_info = source_info if isinstance(source_info, dict) else {}
+        audit_info = audit_info if isinstance(audit_info, dict) else {}
+        origin = source_info.get("fonte_id") or prod.get("source_id") or prod.get("fonte")
+        version = audit_info.get("versao") or prod.get("source_version") or prod.get("versao")
+        # The versioned Producao contract stores these under origem/auditoria;
+        # producao_horaria can be the derived output of a physical graph.
+        # cpu_meta.producao_horaria overrides the graph and is not proof.
         source_proved = (
             bool(prod_id) and has_graph and isinstance(origin, str)
             and bool(origin.strip()) and isinstance(version, str)
             and bool(version.strip()) and "producao_horaria" not in meta
-            and "valor_horario" not in prod
         )
         if not source_proved:
             unverified = True
@@ -382,9 +388,9 @@ def run_cronograma(
         mode, schedule_selected, scheduled_activities_out, semanas_obra, distribuicao_mensal, validacoes
     )
     if missing_productivity_evidence:
-        # Preview keeps the exploratory timeline, explicitly NOT a feasibility
-        # certificate. Never treat a legacy fallback as physical F(m) evidence.
-        cronograma_out = cronograma_out.model_copy(update={"is_feasible": False})
+        # Physical feasibility and certification are orthogonal: a schedule
+        # may satisfy all physical constraints yet lack audited F(m) inputs.
+        # Report uncertified status separately, without falsifying the solver.
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-CRON-PROD-PREVIEW",
@@ -416,7 +422,12 @@ def run_cronograma(
         "resumo_estoque_consumiveis": resumo_estoque_out,
     }
     if missing_productivity_evidence:
-        update_dict.update(_invalidate_derived_costs())
+        # Keep newly calculated physical consumables/stock even in preview.
+        # They are exploratory artifacts, not a certified financial ledger.
+        stale_financials = _invalidate_derived_costs()
+        stale_financials.pop("recursos_consumiveis")
+        stale_financials.pop("resumo_estoque_consumiveis")
+        update_dict.update(stale_financials)
     if mob_schedule:
         update_dict["mob_schedule"] = mob_schedule
 
