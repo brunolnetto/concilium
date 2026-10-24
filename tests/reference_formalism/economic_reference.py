@@ -6,8 +6,8 @@ Costs are rational and exact. This is a reference witness, never PROJECT_GO.
 """
 from __future__ import annotations
 
-from itertools import combinations, product
 from fractions import Fraction as F
+from itertools import combinations, product
 from typing import Any
 
 from tests.reference_formalism.protocol import (
@@ -101,7 +101,7 @@ def _pool(demand: tuple[int, ...], contract: dict) -> dict:
                             if instance in labels]
             if not active_weeks:
                 continue
-            gaps = [(a + 1, b) for a, b in zip(active_weeks, active_weeks[1:])]
+            gaps = [(a + 1, b) for a, b in zip(active_weeks, active_weeks[1:], strict=False)]
             variants = []
             for flags in product((False, True), repeat=len(gaps)):
                 occupied = set(active_weeks)
