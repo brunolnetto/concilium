@@ -98,6 +98,19 @@ def run_cronograma(
     validacoes: list[ValidacaoItem] = []
     catalogo = catalogo or {}
 
+    # P14-C: source-backed physical throughput is required to request certification.
+    # The current full-pipeline GO authority remains a separate downstream gate.
+    certification_intent = inputs.get("certification_intent", "PREVIEW")
+    if certification_intent not in ("PREVIEW", "CERTIFIED"):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-CERT-INTENT",
+                status="ERRO",
+                mensagem="certification_intent deve ser PREVIEW ou CERTIFIED; sem inferência de GO.",
+            )
+        )
+        return SkillResult(canonical_in, validacoes)
+
     if not _validate_preconditions(canonical_in, validacoes):
         return SkillResult(canonical_in, validacoes)
 
@@ -155,6 +168,45 @@ def run_cronograma(
         validacoes,
         insumos_lookup,
     )
+    missing_productivity_evidence = bool(fallback_item_ids) or any(
+        v.codigo in ("VAL-PROD-04", "VAL-PROD-04-PROD-LEGACY")
+        for v in validacoes
+    )
+    if certification_intent == "CERTIFIED" and missing_productivity_evidence:
+        # A historical P=1000 u/h placeholder must never become certified F(m).
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-CERT",
+                status="ERRO",
+                mensagem=(
+                    "NOGO: produtividade física sem origem validada. "
+                    "P=1000 e campos legados são apenas PREVIEW; "
+                    f"itens afetados={sorted(fallback_item_ids)}."
+                ),
+            )
+        )
+        blocked = canonical_in.model_copy(
+            update={
+                "cronograma": None,
+                "intervalos_atividade": [],
+                "resultado": None,
+                "ponto_equilibrio": [],
+                "custos_atividades": [],
+                "resultado_reconciliado": None,
+                "diagnostico_pe": None,
+                "backtracking_pe": None,
+                "recursos_consumiveis": [],
+                "resumo_estoque_consumiveis": [],
+                "contratos_recurso": [],
+                "cadeias_perpetuacao": [],
+                "instancias_recurso": [],
+                "indiretos_semanal": [],
+                "indiretos_com_bdi": [],
+                "memorial_calculo_bdi": None,
+                "tabela_bdi_efetiva": None,
+            }
+        )
+        return SkillResult(blocked, validacoes)
     if failed:
         return SkillResult(canonical_in, validacoes)
 
@@ -224,6 +276,17 @@ def run_cronograma(
     cronograma_out = _build_cronograma_out(
         mode, schedule_selected, scheduled_activities_out, semanas_obra, distribuicao_mensal, validacoes
     )
+    if missing_productivity_evidence:
+        # Preview keeps the exploratory timeline, explicitly NOT a feasibility
+        # certificate. Never treat a legacy fallback as physical F(m) evidence.
+        cronograma_out = cronograma_out.model_copy(update={"is_feasible": False})
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-PREVIEW",
+                status="AVISO",
+                mensagem="Cronograma exploratório: produtividade não comprovada; NOT_PROJECT_GO.",
+            )
+        )
     intervalos, analise_campanhas = _build_intervalos_and_campanhas(
         canonical_in, cronograma_out, scheduled_activities_out, validacoes
     )
