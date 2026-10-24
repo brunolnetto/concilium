@@ -5,7 +5,7 @@ This reference suite must not import the optimizer or any production package.
 from __future__ import annotations
 
 from fractions import Fraction as F
-from itertools import product
+from itertools import combinations, product
 from pathlib import Path
 
 import pytest
@@ -135,3 +135,64 @@ def test_output_partition_invariance_is_conditional_and_losses_add_delta() -> No
     measured_idle = F(2)
     measured_waste = F(1)
     assert (hourly_operated + measured_idle + measured_waste) * unit_price == F(165)
+
+
+def _fungible_assignment_minimum(
+    demand: tuple[int, ...], *, instances: int,
+    active: F, idle: F, movement: F, max_idle_gap: int,
+) -> tuple[F, int]:
+    """Exhaustively enumerate labeled physical-instance assignments.
+
+    Unlike the fixed-level oracle, instance identities may exchange middle
+    demand periods while reconstructing exactly the same weekly demand.
+    """
+    if any(d < 0 or d > instances for d in demand):
+        raise ValueError("demand must fit declared physical instances")
+    choices = [
+        tuple(combinations(range(instances), count))
+        for count in demand
+    ]
+    solutions: list[tuple[F, int]] = []
+    for weekly in product(*choices):
+        optimum = F(0)
+        chains_total = 0
+        for inst in range(instances):
+            active_weeks = tuple(j for j, labels in enumerate(weekly) if inst in labels)
+            if not active_weeks:
+                continue
+            gaps = tuple(
+                nxt - prev - 1
+                for prev, nxt in zip(active_weeks, active_weeks[1:], strict=False)
+            )
+            local = [
+                (
+                    F(len(active_weeks)) * active
+                    + F(sum(gap for gap, keep in zip(gaps, flags, strict=True)
+                            if keep)) * idle
+                    + (1 + sum(not keep for keep in flags)) * movement,
+                    1 + sum(not keep for keep in flags),
+                )
+                for flags in product((False, True), repeat=len(gaps))
+                if all((not keep) or gap <= max_idle_gap
+                       for gap, keep in zip(gaps, flags, strict=True))
+            ]
+            best = min(local)
+            optimum += best[0]
+            chains_total += best[1]
+        solutions.append((optimum, chains_total))
+    return min(solutions)
+
+
+def test_fungible_reassignment_falsifies_fixed_layer_global_optimality() -> None:
+    # P16's canonical height-level demand assignment costs 120:
+    # level 1 active 4 weeks = 4*5+30 = 50;
+    # level 2 active weeks 1 and 4, gap 2>1 => 2*5+2*30 = 70.
+    fixed_layers = F(120)
+    # A valid alternative: two labeled instances, active on weeks
+    # (1,2,4) and (1,3,4), each idle once: 3*5+1+30 = 46.
+    true_small_optimum = _fungible_assignment_minimum(
+        (2, 1, 1, 2), instances=2,
+        active=F(5), idle=F(1), movement=F(30), max_idle_gap=1,
+    )
+    assert true_small_optimum == (F(92), 2)
+    assert fixed_layers > true_small_optimum
