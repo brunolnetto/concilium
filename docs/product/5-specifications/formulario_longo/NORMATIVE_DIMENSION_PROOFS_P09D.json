@@ -1,0 +1,155 @@
+{
+  "schema": "concilium.formalism.normative_dimensional_proofs.v1",
+  "source": "docs/product/5-specifications/formulario_longo/EQUATION_INVENTORY_P09C.json",
+  "semantics": "Proofs cover dimensional/type consistency under explicit well-typed inputs; they do not prove runtime parity, universal parameter feasibility, regulatory BDI or financially certified GO.",
+  "explicit_cell_duration": "Δw_j=1 week; physical production quantity in a cell integrates per-week rate over this interval",
+  "proofs": [
+    {
+      "id": "FL-001",
+      "expression": "\\mathcal{A} = \\{A_i\\}_{i=1}^{n_{\\text{ativ}}}",
+      "rule": "activity_set",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-002",
+      "expression": "A_i = (Q_i,\\ E_i,\\ W_i,\\ B_i)",
+      "rule": "activity_tuple",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-003",
+      "expression": "c_r = \\begin{cases}\n\\dfrac{V_r^{\\text{mensal}}}{s_{\\text{mes}}\\cdot d_i\\cdot h_i} & \\text{cat}(r)\\in\\{EQ,MO\\}\\quad\\text{(diluição contratual)}\\\\[10pt]\n\\kappa_r \\cdot p_{g(r)} & \\text{cat}(r)\\in\\{MAT,COMB\\}\\quad\\text{(consumo: taxa física × preço unitário)}\n\\end{cases}",
+      "rule": "hourly_tariff",
+      "expected_dimension": "BRL/hour",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-004",
+      "expression": "\\boxed{F_i(m)=\\max\\text{-fluxo}(s_i,t_i;\\mathcal G_i^D|_m)\\quad[\\mathrm{unid}_{Q_i}/h]}.",
+      "rule": "capacity_flow",
+      "expected_dimension": "output/hour",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-005",
+      "expression": "W_i = (m_i^0,\\ \\mu_i^+,\\ m_i^1,\\ \\mu_i^-,\\ m_i^{\\max}) \\in \\mathbb{N}_{>0}\\times\\mathbb{N}_{\\ge0}\\times\\mathbb{N}_{>0}\\times\\mathbb{N}_{\\ge0}\\times\\mathbb{N}_{>0}",
+      "rule": "front_policy",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-006",
+      "expression": "\\boxed{m_i(\\tau) = \\min\\!\\Big(m_i^0 + \\mu_i^+\\tau,\\quad m_i^{\\max},\\quad m_i^1 + \\mu_i^-(N_i-1-\\tau)\\Big)}",
+      "rule": "ramp",
+      "expected_dimension": "fronts",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-007",
+      "expression": "\\bigl(\\mu_i^+=\\mu_i^-=0\\bigr)\\land\\bigl(m_i^0=m_i^1=m_i^{\\max}\\bigr)\\implies m_i(\\tau)=m_i^{\\max}\\quad\\forall\\,\\tau\\in\\{0,\\ldots,N_i-1\\}",
+      "rule": "rectangular",
+      "expected_dimension": "fronts",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-008",
+      "expression": "m_{ij} = \\begin{cases} m_i(j-j_i^0) & j\\in[j_i^0,\\,j_i^0+N_i-1] \\\\ 0 & \\text{caso contrário}\\end{cases}",
+      "rule": "weekly_front_count",
+      "expected_dimension": "fronts",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-009",
+      "expression": "B_i \\subseteq \\mathcal{A}\\setminus\\{A_i\\}, \\qquad \\theta_i : B_i \\to (0,1]",
+      "rule": "predecessor_map",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-010",
+      "expression": "\\Phi_b(j) = \\frac{1}{Q_b}\\sum_{j'=j_b^0}^{j} q_{b,j'}",
+      "rule": "completion_ratio",
+      "expected_dimension": "dimensionless",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-011",
+      "expression": "s_{\\text{mes}} = \\frac{365\\times3+366}{4\\times12\\times7} = \\frac{1461}{336} \\approx 4{,}3482 \\ \\text{semanas/mês}",
+      "rule": "month_week_conversion",
+      "expected_dimension": "weeks/month",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-012",
+      "expression": "d_i \\in \\{4,5,6\\}\\ \\text{dias úteis/semana}, \\qquad h_i \\in \\{6,8\\}\\ \\text{horas/dia}, \\qquad h_id_i \\equiv \\text{horas/semana da equipe }i",
+      "rule": "hours_per_week",
+      "expected_dimension": "hours/week",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-013",
+      "expression": "\\beta^{EQ},\\ \\beta^{MO}\\ (\\approx29{,}97\\%),\\ \\beta^{MAT},\\ \\beta^{COMB}\\ (\\approx4\\%),\\ \\beta^{IND}\\ (\\approx25{,}21\\%)",
+      "rule": "fractional_bdi",
+      "expected_dimension": "dimensionless",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-021",
+      "expression": "q_{i,j_i^1} = Q_i - \\sum_{j=j_i^0}^{j_i^1-1} q_{ij}",
+      "rule": "last_quantity",
+      "expected_dimension": "output",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-022",
+      "expression": "\\boxed{\\varphi_i=\\frac{q_{i,j_i^1}}{F_i(m_i(N_i-1))h_id_i\\varepsilon_{i,j_i^1}^{exog}}\\in(0,1]}",
+      "rule": "closure_ratio",
+      "expected_dimension": "dimensionless",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-023",
+      "expression": "\\sum_{j=j_i^0}^{j_i^1} q_{ij} = Q_i \\qquad\\text{(exato, por construção)}",
+      "rule": "physical_balance",
+      "expected_dimension": "output",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-024",
+      "expression": "\\mathcal{A}_j \\coloneqq \\{A_i\\in\\mathcal{A} : j\\in[j_i^0,\\,j_i^0+N_i-1]\\}",
+      "rule": "active_set",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-075",
+      "expression": "\\mathcal{L} = \\{ADM, TOP, LAB, QSMS, MOB^{\\text{site}}, \\ldots\\}\\quad\\text{(conjunto extensível)}",
+      "rule": "indirect_set",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-076",
+      "expression": "\\text{driver}(l)\\in\\{\\texttt{perm},\\ \\texttt{onetime}\\}",
+      "rule": "driver_enum",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-077",
+      "expression": "l = \\Bigl(\\text{driver}(l),\\ \\{\\Gamma_l^{k,\\text{mensal}}\\}_{k\\in\\{MO,EQ,COMB\\}},\\ (c_l^{\\text{mob}},c_l^{\\text{demob}})\\ \\text{ou}\\ \\Gamma_l^{VM,\\text{mensal}}\\Bigr)",
+      "rule": "indirect_tuple",
+      "expected_dimension": "typed/declaration",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    },
+    {
+      "id": "FL-078",
+      "expression": "\\gamma_l^{k,\\text{sem}} = \\frac{\\Gamma_l^{k,\\text{mensal}}}{s_{\\text{mes}}}, \\qquad m_l(j)=1 \\ \\ \\forall j\\in\\{0,\\ldots,n-1\\}",
+      "rule": "weekly_indirect_tariff",
+      "expected_dimension": "BRL/week",
+      "proof_status": "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+    }
+  ]
+}
