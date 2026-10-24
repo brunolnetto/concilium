@@ -112,7 +112,7 @@ def test_p09c_is_integrated_but_p09d_blocks_issue_nine_closure(spec: dict) -> No
         ("P09-C", [86]),
         ("P09-D", [87]),
     ]
-    result = report(spec, states(10, 12), all_merged(spec))
+    result = report(spec, states(10, 12), all_merged(spec) - {87})
     row = next(x for x in result["issues"] if x["issue"] == 9)
     assert row["pr_packages_merged"] == 3
     assert row["pr_packages_total"] == 4
