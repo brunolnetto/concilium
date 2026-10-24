@@ -32,7 +32,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     order = validate_dag(spec)
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 46
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 47
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -111,12 +111,13 @@ def test_p09c_is_integrated_but_p09d_blocks_issue_nine_closure(spec: dict) -> No
         ("P09-B", [43]),
         ("P09-C", [86]),
         ("P09-D", [87]),
+        ("P09-E", [88]),
     ]
-    result = report(spec, states(10, 12), all_merged(spec) - {87})
+    result = report(spec, states(10, 12), all_merged(spec) - {87, 88})
     row = next(x for x in result["issues"] if x["issue"] == 9)
     assert row["pr_packages_merged"] == 3
-    assert row["pr_packages_total"] == 4
-    assert row["pending_packages"] == ["P09-D"]
+    assert row["pr_packages_total"] == 5
+    assert row["pending_packages"] == ["P09-D", "P09-E"]
     assert row["ready_to_execute"]
     assert not row["closure_preflight"]
 
@@ -132,4 +133,18 @@ def test_p09c_missing_merge_blocks_closure_even_with_d_proved(spec: dict) -> Non
         if x["issue"] == 9
     )
     assert "P09-C" in row["pending_packages"]
+    assert not row["closure_preflight"]
+
+
+def test_p09e_gate_remains_closed_even_after_p09d_is_merged(spec: dict) -> None:
+    # P09-A/B/C/D may be merged on main, but the newly necessary alias
+    # coverage cannot be bypassed while PR #88 is merely open.
+    row = next(
+        x for x in report(spec, states(10, 12), all_merged(spec) - {88})["issues"]
+        if x["issue"] == 9
+    )
+    assert row["ready_to_execute"]
+    assert row["pending_packages"] == ["P09-E"]
+    assert row["pr_packages_merged"] == 4
+    assert row["pr_packages_total"] == 5
     assert not row["closure_preflight"]
