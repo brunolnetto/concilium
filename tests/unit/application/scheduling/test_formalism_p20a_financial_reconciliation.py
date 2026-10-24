@@ -241,7 +241,7 @@ def test_duplicate_zero_quantity_source_and_empty_week_are_rejected() -> None:
             pool, replace(consumption, evidence=consumption.evidence + (zero, zero))
         )
     bad_pool = ExclusiveCostLedger((
-        CostPosting(("UNKNOWN_WEEK",), PostingNature.INDIRECT,
+        CostPosting(("UNKNOWN_WEEK",), PostingNature.MOBILIZATION,
                     "IND", F(1), "SITE", None),
     ))
     empty = PhysicalConsumptionJournalResult(bad_pool, ())
