@@ -371,3 +371,20 @@ def test_p14c_malformed_rate_rejects_before_cost_enrichment(intent: str) -> None
     assert outcome.has_errors
     assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
     assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("rate", [10 ** 400, True])
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_numeric_overflow_and_boolean_rates_fail_as_validation(
+    rate: object, intent: str, mode: str,
+) -> None:
+    production = _real_catalog_productivity()
+    production["producao_horaria"] = rate
+    outcome = _run_with_production(production, intent=intent, mode=mode)
+    assert outcome.has_errors
+    assert any(
+        v.codigo == "VAL-CRON-PROD-INVALID" and v.status == "ERRO"
+        for v in outcome.validacoes
+    )
+    assert outcome.canonical.cronograma is None
