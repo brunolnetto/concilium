@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from fractions import Fraction as F
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +11,10 @@ from concilium.application.scheduling.contractual_cost_ledger import (
     CostPosting,
     ExclusiveCostLedger,
     PostingNature,
+)
+from concilium.application.scheduling.financial_cost_reconciliation import (
+    ExactFinancialReconciliation,
+    WeekFinancialBalance,
 )
 from concilium.application.scheduling.realized_financial_metrics import (
     project_realized_financials,
@@ -240,10 +246,6 @@ def test_missing_bdi_categories_and_float_rate_are_rejected() -> None:
 
 
 def test_existing_p20_snapshot_projects_real_skill04_without_reposting() -> None:
-    from concilium.application.scheduling.financial_cost_reconciliation import (
-        ExactFinancialReconciliation, WeekFinancialBalance,
-    )
-
     source = ledger(((WEEKS[0], 400, 100, 0),))
     provenance = ExactFinancialReconciliation(
         source, (WeekFinancialBalance(WEEKS[0], F(400), F(100), F(0)),), True
@@ -293,3 +295,73 @@ def test_duplicate_financial_event_is_rejected_by_authoritative_ledger() -> None
     )
     with pytest.raises(ValueError, match="duplicate financial ownership"):
         ExclusiveCostLedger((same, same))
+
+
+def test_fractional_quantities_from_real_skill04_builder_reconcile_exactly() -> None:
+    # Real _build_dist_cell uses Python float arithmetic for remaining Q.
+    # The final produced cell is 0.09999999999999998, not literal 0.1.
+    # Our exact semantic quantity must telescope from cumulative observations.
+    file = (
+        Path(__file__).resolve().parents[4]
+        / "src/concilium/application/skills/manifests/04-cronograma"
+        / "_skill_helpers/_custos.py"
+    )
+    spec = spec_from_file_location("_p11b_source_custos", file)
+    assert spec is not None and spec.loader is not None
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    cells = {}
+    accumulated = 0.0
+    for week in WEEKS[:3]:
+        entry = module._build_dist_cell(
+            producao_semanal_base=0.1,
+            num_eq=1.0,
+            n_max=1,
+            fator_clima=1.0,
+            fator_calendario=1.0,
+            quantitativo=0.3,
+            qtd_acumulada=accumulated,
+        )
+        cells[week] = entry
+        accumulated = entry.qtd_acumulada
+    assert cells[WEEKS[2]].qtd_executada == 0.09999999999999998
+    result = project_realized_financials(
+        distributions_by_activity={"A": cells},
+        scopes_by_activity={"A": F("0.3")},
+        ledger=ledger(tuple((week, 1, 0, 0) for week in WEEKS[:3])),
+        bdi_by_category=BDI,
+    )
+    assert result.activities[0].delivered_output == F("0.3")
+    assert [w.delivered_output for w in result.activities[0].weeks] == [
+        F("0.1"), F("0.1"), F("0.1"),
+    ]
+    assert result.contractual_k == 3
+
+
+def test_p20_projection_allows_weekly_physics_without_financial_postings() -> None:
+    source = ledger((
+        (WEEKS[0], 400, 400, 0),
+        (WEEKS[2], 400, 100, 0),
+    ))
+    # P20 only emits a WeekFinancialBalance for weeks with posted events.
+    snapshot = ExactFinancialReconciliation(
+        source,
+        (
+            WeekFinancialBalance(WEEKS[0], F(400), F(400), F(0)),
+            WeekFinancialBalance(WEEKS[2], F(400), F(100), F(0)),
+        ),
+        False,
+    )
+    output = snapshot.project_skill04_realization(
+        distributions_by_activity={"A": {
+            WEEKS[0]: cell(400, 400),
+            WEEKS[1]: cell(0, 400, available=0),
+            WEEKS[2]: cell(100, 500),
+        }},
+        scopes_by_activity={"A": 500},
+        bdi_by_category=BDI,
+        independent_variable_unit_rate=F(1),
+    )
+    assert output.weeks[1].week == WEEKS[1]
+    assert output.weeks[1].cost_before_bdi == 0
+    assert output.weeks[1].bdi_equivalent is None
