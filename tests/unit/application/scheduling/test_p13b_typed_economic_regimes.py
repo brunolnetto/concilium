@@ -26,6 +26,10 @@ from concilium.application.scheduling.resource_level_contracts import (
     ResourceTariff,
 )
 from concilium.domain.models.canonical._pool_recursos import RecursoContrato
+from concilium.domain.models.canonical._estoque_consumiveis import (
+    DisponibilidadeConsumivelCanonical,
+    RecursoConsumivelCanonical,
+)
 
 
 def canonical(**overrides: object) -> RecursoContrato:
@@ -36,6 +40,7 @@ def canonical(**overrides: object) -> RecursoContrato:
         "custo_total_contrato": 330.0,
         "regime_economico_p13": "DISCOUNTED_STANDBY",
         "origem_regime_p13": "contract:123",
+        "moeda_regime_p13": "BRL",
     }
     data.update(overrides)
     return RecursoContrato.model_validate(data)
@@ -145,6 +150,16 @@ def test_offhire_must_be_declared_and_have_no_presence() -> None:
         replace(declaration, off_hire_weeks=())
 
 
+def consumption_canonical(regime: ConsumptionRegime) -> RecursoConsumivelCanonical:
+    return RecursoConsumivelCanonical(
+        resource_id="DIESEL",
+        disponibilidade=DisponibilidadeConsumivelCanonical(),
+        regime_consumo_p13=regime.value,
+        origem_taxa_consumo_p13="measure:rate",
+        origem_preco_consumo_p13="invoice:price",
+    )
+
+
 def output_good() -> PhysicallyPricedGood:
     return PhysicallyPricedGood(
         PhysicalConsumptionRate("DIESEL", F(2), "l",
@@ -157,17 +172,20 @@ def test_output_baseline_is_invariant_only_with_fixed_physical_rate() -> None:
     good = output_good()
     one = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_PROPORTIONAL,
-        good=good, rate_source="measure:rate", price_source="invoice:price",
+        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
+        rate_source="measure:rate", price_source="invoice:price",
         delivered=F(100), delivered_unit="m³",
     )
     part1 = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_PROPORTIONAL,
-        good=good, rate_source="measure:rate", price_source="invoice:price",
+        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
+        rate_source="measure:rate", price_source="invoice:price",
         delivered=F(40), delivered_unit="m³",
     )
     part2 = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_PROPORTIONAL,
-        good=good, rate_source="measure:rate", price_source="invoice:price",
+        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
+        rate_source="measure:rate", price_source="invoice:price",
         delivered=F(60), delivered_unit="m³",
     )
     assert one.total_quantity == part1.total_quantity + part2.total_quantity == F(200)
@@ -181,7 +199,8 @@ def test_loss_variant_discloses_noninvariant_delta_without_booking_purchases() -
     good = output_good()
     result = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS,
-        good=good, rate_source="measure:rate", price_source="invoice:price",
+        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS),
+        rate_source="measure:rate", price_source="invoice:price",
         delivered=F(100), delivered_unit="m³",
         loss=MeasuredExtra(F(20), "l", "loss:measured"),
     )
@@ -193,7 +212,8 @@ def test_loss_variant_discloses_noninvariant_delta_without_booking_purchases() -
     with pytest.raises(ValueError, match="explicit measured loss"):
         witness_consumption_regime(
             regime=ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS,
-            good=good, rate_source="measure:rate", price_source="invoice:price",
+            good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS),
+        rate_source="measure:rate", price_source="invoice:price",
             delivered=F(100), delivered_unit="m³",
         )
 
@@ -206,7 +226,13 @@ def test_hourly_idle_and_waste_are_independently_measured() -> None:
     )
     kwargs = dict(
         regime=ConsumptionRegime.HOURLY_WITH_MEASURED_IDLE,
-        good=good, rate_source="calibration:3", price_source="invoice:price",
+        good=good, canonical=RecursoConsumivelCanonical(
+            resource_id="DIESEL",
+            disponibilidade=DisponibilidadeConsumivelCanonical(),
+            regime_consumo_p13="HOURLY_WITH_MEASURED_IDLE",
+            origem_taxa_consumo_p13="calibration:3",
+            origem_preco_consumo_p13="invoice:price",
+        ), rate_source="calibration:3", price_source="invoice:price",
         operating_hours=F(10),
         idle=MeasuredExtra(F(2), "l", "idle:fuel"),
         loss=MeasuredExtra(F(1), "l", "waste:fuel"),
@@ -228,6 +254,7 @@ def test_hourly_idle_and_waste_are_independently_measured() -> None:
 def test_baseline_rejects_unclassified_idle_and_missing_price_provenance() -> None:
     kwargs = dict(
         regime=ConsumptionRegime.OUTPUT_PROPORTIONAL, good=output_good(),
+        canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
         rate_source="measure:rate", price_source="invoice:price",
         delivered=F(100), delivered_unit="m³",
     )
