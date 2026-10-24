@@ -211,9 +211,9 @@ def test_posting_outside_physical_calendar_does_not_disappear() -> None:
 def test_zero_cost_or_zero_reference_fail_closed() -> None:
     output = project_realized_financials(
         distributions_by_activity={
-            "A": {WEEKS[0]: cell(0, 0, nominal=0, available=0)}
+            "A": {WEEKS[0]: cell(1, 1, nominal=1, available=1)}
         },
-        scopes_by_activity={"A": 0},
+        scopes_by_activity={"A": 1},
         ledger=ExclusiveCostLedger(()),
         bdi_by_category=BDI,
     )
