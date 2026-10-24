@@ -20,7 +20,7 @@ VERSION = "formalism-economic/1"
 MARKUPS = frozenset({"EQ", "MO", "MAT", "COMB", "IND"})
 UNITS = {"L": ("volume", F(1)), "mL": ("volume", F(1, 1000)),
          "kg": ("mass", F(1)), "g": ("mass", F(1, 1000)),
-         "m3": ("volume3", F(1))}
+         "m3": ("volume", F(1000))}
 
 
 def _keys(value: Any, keys: set[str], context: str) -> dict:
