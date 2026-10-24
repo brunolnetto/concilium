@@ -305,3 +305,26 @@ def verify_economic(vector: dict[str, Any]) -> dict[str, Any]:
     if actual != vector.get("expected"):
         raise ReferenceContractError(f"{vector.get('case_id')}: economic golden mismatch")
     return actual
+
+
+
+def compare_external_pool(vector: dict[str, Any], observed: dict[str, Any]) -> None:
+    """Detect a mutation in a real scheduler ledger without importing production.
+
+    The caller adapts only factual fields. The reference computes its answer
+    from physical inputs, NEVER from the supplied runtime result. It checks
+    both mathematical optimum and ledger K/idle/movement reconstruction.
+    """
+    expected_pool = evaluate_economic(vector)["pool"]
+    keys = (
+        "demand", "presence", "standby", "chains",
+        "active_cost", "idle_cost", "movement_cost",
+    )
+    if not isinstance(observed, dict) or set(observed) != set(keys):
+        raise ReferenceContractError("external pool snapshot requires exact typed fields")
+    for key in keys:
+        if type(observed[key]) is not type(expected_pool[key]) or observed[key] != expected_pool[key]:
+            raise ReferenceContractError(
+                f"external pool mismatch {key}: observed={observed[key]!r}, "
+                f"independent reference={expected_pool[key]!r}"
+            )
