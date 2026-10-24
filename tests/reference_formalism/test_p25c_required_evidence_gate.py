@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts/formalism_contract_change_gate.py"
@@ -46,3 +47,53 @@ def test_empty_or_unresolved_diff_fails_closed() -> None:
 def test_known_physical_contracts_trigger_protection() -> None:
     for file in module.ECONOMIC_PATHS:
         assert module.is_economic(file), file
+
+
+def test_existing_finance_sources_are_economic_without_any_fixtures() -> None:
+    protected = (
+        "src/concilium/application/scheduling/realized_financial_metrics.py",
+        "src/concilium/application/scheduling/financial_cost_reconciliation.py",
+        "src/concilium/application/scheduling/skill06_realized_consumer.py",
+        "src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/pricing.py",
+    )
+    for source in protected:
+        assert module.is_economic(source), source
+        assert not module.assess_paths({source})[0], source
+
+
+def test_git_rename_with_economic_mutation_preserves_source_path(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """A high-similarity rename must not evade the requirement for witnesses."""
+    repo = tmp_path / "git"
+    repo.mkdir()
+    def git(*args: str) -> str:
+        return subprocess.check_output(
+            ["git", *args], cwd=repo, text=True,
+        ).strip()
+    git("init", "-q", "-b", "main")
+    git("config", "user.name", "P25-C Fixture")
+    git("config", "user.email", "ci-fixture@example.invalid")
+    original = repo / PRODUCTION
+    original.parent.mkdir(parents=True)
+    original.write_text(
+        "# Stable economic contract witness\\n" * 80 + "price = 100\\n",
+        encoding="utf-8",
+    )
+    git("add", "-A")
+    git("commit", "-q", "-m", "baseline")
+    base = git("rev-parse", "HEAD")
+    moved = repo / "src/legacy/unprotected.py"
+    moved.parent.mkdir(parents=True)
+    original.rename(moved)
+    moved.write_text(moved.read_text(encoding="utf-8").replace(
+        "price = 100", "price = 200",
+    ), encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "rename and double price")
+    head = git("rev-parse", "HEAD")
+    monkeypatch.chdir(repo)
+    changed = module.git_changed(base, head)
+    assert PRODUCTION in changed, changed
+    assert "src/legacy/unprotected.py" in changed, changed
+    assert not module.assess_paths(changed)[0]
