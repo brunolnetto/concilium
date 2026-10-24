@@ -1,0 +1,800 @@
+{
+  "schema": "concilium.formalism.normative_symbol_coverage.v1",
+  "source": "EQUATION_INVENTORY_P09C.json",
+  "supported_equations": 21,
+  "coverage_policy": "Explicit local aliases from all 21 currently normative candidate equations. Function names, LaTeX punctuation, operator bounds and quantifiers are interpreted as operators not economically certified symbols. This proves typed normative symbol provenance, not correctness or GO of conditional formulas.",
+  "equations": [
+    {
+      "id": "FL-001",
+      "terms": [
+        {
+          "latex": "\\mathcal{A}",
+          "unit": "activity set",
+          "source": "activity parser",
+          "output": "activity enumeration"
+        },
+        {
+          "latex": "A_i",
+          "unit": "typed activity",
+          "source": "activity canonical model",
+          "output": "activity membership"
+        },
+        {
+          "latex": "n_{\\text{ativ}}",
+          "unit": "activity count, nonnegative integer",
+          "source": "activity enumeration",
+          "output": "activity cardinality"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-002",
+      "terms": [
+        {
+          "latex": "A_i",
+          "unit": "typed activity",
+          "source": "activity canonical model",
+          "output": "activity decomposition"
+        },
+        {
+          "latex": "Q_i",
+          "unit": "activity-unit quantity",
+          "source": "user activity scope",
+          "output": "physical closure"
+        },
+        {
+          "latex": "E_i",
+          "unit": "typed team/resource graph",
+          "source": "activity resource configuration",
+          "output": "capacity"
+        },
+        {
+          "latex": "W_i",
+          "unit": "typed mobility policy",
+          "source": "user front policy",
+          "output": "front ramp"
+        },
+        {
+          "latex": "B_i",
+          "unit": "set of predecessor activities",
+          "source": "DAG physical precedences",
+          "output": "release"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-003",
+      "terms": [
+        {
+          "latex": "c_r",
+          "unit": "BRL/operating hour",
+          "source": "resource contract and goods rate",
+          "output": "catalog rate"
+        },
+        {
+          "latex": "V_r^{\\text{mensal}}",
+          "unit": "BRL/month",
+          "source": "resource monthly contract",
+          "output": "hourly contract rate"
+        },
+        {
+          "latex": "s_{\\text{mes}}",
+          "unit": "weeks/month",
+          "source": "versioned calendar convention",
+          "output": "conversion"
+        },
+        {
+          "latex": "d_i",
+          "unit": "days/week",
+          "source": "contract operating schedule",
+          "output": "hourly rate"
+        },
+        {
+          "latex": "h_i",
+          "unit": "hours/day",
+          "source": "contract operating schedule",
+          "output": "hourly rate"
+        },
+        {
+          "latex": "\\kappa_r",
+          "unit": "good-units/operating hour",
+          "source": "verified goods physical rate",
+          "output": "catalog goods rate"
+        },
+        {
+          "latex": "p_{g(r)}",
+          "unit": "BRL/good-unit",
+          "source": "typed goods price and g(r) mapping",
+          "output": "hourly goods rate"
+        },
+        {
+          "latex": "\\text{cat}(r)",
+          "unit": "typed category enum",
+          "source": "resource catalog",
+          "output": "branch selection"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-004",
+      "terms": [
+        {
+          "latex": "F_i(m)",
+          "unit": "activity-units/operating hour",
+          "source": "physical max flow on deployed graph",
+          "output": "capacity"
+        },
+        {
+          "latex": "s_i",
+          "unit": "network source node",
+          "source": "typed physical flow graph",
+          "output": "max flow"
+        },
+        {
+          "latex": "t_i",
+          "unit": "network sink node",
+          "source": "typed physical flow graph",
+          "output": "max flow"
+        },
+        {
+          "latex": "\\mathcal G_i^D",
+          "unit": "capacity graph edges in activity-units/operating hour",
+          "source": "canonical graph calibration",
+          "output": "max flow"
+        },
+        {
+          "latex": "m",
+          "unit": "integer physical fronts",
+          "source": "verified composition decision",
+          "output": "deployed graph"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-005",
+      "terms": [
+        {
+          "latex": "W_i",
+          "unit": "typed front-policy tuple",
+          "source": "activity input",
+          "output": "ramp policy"
+        },
+        {
+          "latex": "m_i^0",
+          "unit": "front count",
+          "source": "activity input",
+          "output": "initial boundary"
+        },
+        {
+          "latex": "\\mu_i^+",
+          "unit": "fronts/weekly transition",
+          "source": "activity input",
+          "output": "ramp slope"
+        },
+        {
+          "latex": "m_i^1",
+          "unit": "front count",
+          "source": "activity input",
+          "output": "terminal boundary"
+        },
+        {
+          "latex": "\\mu_i^-",
+          "unit": "fronts/weekly transition",
+          "source": "activity input",
+          "output": "ramp slope"
+        },
+        {
+          "latex": "m_i^{\\max}",
+          "unit": "front count",
+          "source": "composition cap",
+          "output": "ramp cap"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-006",
+      "terms": [
+        {
+          "latex": "m_i(\\tau)",
+          "unit": "front count",
+          "source": "ramp evaluation",
+          "output": "weekly demand"
+        },
+        {
+          "latex": "\\tau",
+          "unit": "integer activity week offset",
+          "source": "absolute week minus initial week",
+          "output": "ramp index"
+        },
+        {
+          "latex": "N_i",
+          "unit": "positive integer weeks",
+          "source": "calendar and physical solver",
+          "output": "terminal ramp boundary"
+        },
+        {
+          "latex": "m_i^0",
+          "unit": "front count",
+          "source": "activity input",
+          "output": "initial bound"
+        },
+        {
+          "latex": "\\mu_i^+",
+          "unit": "fronts/weekly transition",
+          "source": "activity input",
+          "output": "initial slope"
+        },
+        {
+          "latex": "m_i^{\\max}",
+          "unit": "front count",
+          "source": "composition cap",
+          "output": "ramp limit"
+        },
+        {
+          "latex": "m_i^1",
+          "unit": "front count",
+          "source": "activity input",
+          "output": "terminal bound"
+        },
+        {
+          "latex": "\\mu_i^-",
+          "unit": "fronts/weekly transition",
+          "source": "activity input",
+          "output": "terminal slope"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-007",
+      "terms": [
+        {
+          "latex": "\\mu_i^+",
+          "unit": "fronts/weekly transition",
+          "source": "front-policy input",
+          "output": "degenerate boundary"
+        },
+        {
+          "latex": "\\mu_i^-",
+          "unit": "fronts/weekly transition",
+          "source": "front-policy input",
+          "output": "degenerate boundary"
+        },
+        {
+          "latex": "m_i^0",
+          "unit": "front count",
+          "source": "front-policy input",
+          "output": "degenerate boundary"
+        },
+        {
+          "latex": "m_i^1",
+          "unit": "front count",
+          "source": "front-policy input",
+          "output": "degenerate boundary"
+        },
+        {
+          "latex": "m_i^{\\max}",
+          "unit": "front count",
+          "source": "composition cap",
+          "output": "degenerate boundary"
+        },
+        {
+          "latex": "m_i(\\tau)",
+          "unit": "front count",
+          "source": "ramp evaluation",
+          "output": "constant front count"
+        },
+        {
+          "latex": "\\tau",
+          "unit": "integer week offset",
+          "source": "absolute week minus initial",
+          "output": "ramp index"
+        },
+        {
+          "latex": "N_i",
+          "unit": "positive integer weeks",
+          "source": "bounded duration solver",
+          "output": "degenerate interval"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-008",
+      "terms": [
+        {
+          "latex": "m_{ij}",
+          "unit": "front count",
+          "source": "ramp policy at absolute week",
+          "output": "deployed graph"
+        },
+        {
+          "latex": "m_i(",
+          "unit": "front count",
+          "source": "ramp evaluation",
+          "output": "active front count"
+        },
+        {
+          "latex": "j_i^0",
+          "unit": "integer absolute week",
+          "source": "physical scheduling",
+          "output": "activity start"
+        },
+        {
+          "latex": "j",
+          "unit": "integer absolute week",
+          "source": "project calendar",
+          "output": "weekly sample"
+        },
+        {
+          "latex": "N_i",
+          "unit": "positive integer weeks",
+          "source": "duration solver",
+          "output": "activity interval"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-009",
+      "terms": [
+        {
+          "latex": "B_i",
+          "unit": "set of predecessor activities",
+          "source": "activity precedence input",
+          "output": "release edges"
+        },
+        {
+          "latex": "\\mathcal{A}",
+          "unit": "set of activities",
+          "source": "canonical project",
+          "output": "valid predecessor set"
+        },
+        {
+          "latex": "A_i",
+          "unit": "typed activity",
+          "source": "canonical project",
+          "output": "exclude self"
+        },
+        {
+          "latex": "\\theta_i",
+          "unit": "dimensionless release fraction in (0,1]",
+          "source": "physical dependency input",
+          "output": "release threshold"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-010",
+      "terms": [
+        {
+          "latex": "\\Phi_b(j)",
+          "unit": "dimensionless cumulative completed fraction",
+          "source": "typed physical weekly q",
+          "output": "release predicate"
+        },
+        {
+          "latex": "Q_b",
+          "unit": "activity-unit quantity",
+          "source": "activity b scope",
+          "output": "ratio denominator"
+        },
+        {
+          "latex": "q_{b,j'}",
+          "unit": "activity-unit weekly output",
+          "source": "physical scheduler",
+          "output": "cumulative delivered"
+        },
+        {
+          "latex": "j_b^0",
+          "unit": "integer absolute week",
+          "source": "physical scheduler",
+          "output": "sum lower bound"
+        },
+        {
+          "latex": "j",
+          "unit": "integer absolute week",
+          "source": "project calendar",
+          "output": "sum upper bound"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-011",
+      "terms": [
+        {
+          "latex": "s_{\\text{mes}}",
+          "unit": "weeks/month",
+          "source": "calendar conversion convention 1461/(4*12*7)",
+          "output": "monthly dilution"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-012",
+      "terms": [
+        {
+          "latex": "d_i",
+          "unit": "days/week",
+          "source": "contract schedule",
+          "output": "weekly operational hours"
+        },
+        {
+          "latex": "h_i",
+          "unit": "hours/day",
+          "source": "contract schedule",
+          "output": "weekly operational hours"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-013",
+      "terms": [
+        {
+          "latex": "\\beta^{EQ}",
+          "unit": "dimensionless fraction",
+          "source": "configured equipment markup",
+          "output": "price"
+        },
+        {
+          "latex": "\\beta^{MO}",
+          "unit": "dimensionless fraction",
+          "source": "configured workforce markup",
+          "output": "price"
+        },
+        {
+          "latex": "\\beta^{MAT}",
+          "unit": "dimensionless fraction",
+          "source": "configured materials markup",
+          "output": "price"
+        },
+        {
+          "latex": "\\beta^{COMB}",
+          "unit": "dimensionless fraction",
+          "source": "configured fuel markup",
+          "output": "price"
+        },
+        {
+          "latex": "\\beta^{IND}",
+          "unit": "dimensionless fraction",
+          "source": "configured indirect markup",
+          "output": "price"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-021",
+      "terms": [
+        {
+          "latex": "q_{i,j_i^1}",
+          "unit": "activity-unit output in final week",
+          "source": "physical scheduler",
+          "output": "scope residual"
+        },
+        {
+          "latex": "Q_i",
+          "unit": "activity-unit quantity",
+          "source": "user scope",
+          "output": "final weekly residual"
+        },
+        {
+          "latex": "q_{ij}",
+          "unit": "activity-unit output",
+          "source": "physical scheduler",
+          "output": "cumulative output"
+        },
+        {
+          "latex": "j_i^0",
+          "unit": "integer absolute start week",
+          "source": "physical scheduler",
+          "output": "sum lower bound"
+        },
+        {
+          "latex": "j_i^1",
+          "unit": "integer absolute last week",
+          "source": "physical scheduler",
+          "output": "sum upper bound"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-022",
+      "terms": [
+        {
+          "latex": "\\varphi_i",
+          "unit": "dimensionless ratio",
+          "source": "final produced quantity / final-week capacity",
+          "output": "closure fraction"
+        },
+        {
+          "latex": "q_{i,j_i^1}",
+          "unit": "activity-unit delivered",
+          "source": "physical scheduler",
+          "output": "numerator"
+        },
+        {
+          "latex": "F_i(",
+          "unit": "activity-units/hour",
+          "source": "physical graph",
+          "output": "capacity"
+        },
+        {
+          "latex": "m_i(",
+          "unit": "front count",
+          "source": "ramp evaluator",
+          "output": "capacity argument"
+        },
+        {
+          "latex": "N_i",
+          "unit": "integer positive weeks",
+          "source": "duration solver",
+          "output": "terminal ramp offset"
+        },
+        {
+          "latex": "h_i",
+          "unit": "hours/day",
+          "source": "contract shift",
+          "output": "final-week available hours"
+        },
+        {
+          "latex": "d_i",
+          "unit": "days/week",
+          "source": "contract shift",
+          "output": "final-week available days"
+        },
+        {
+          "latex": "\\varepsilon_{i,j_i^1}^{exog}",
+          "unit": "dimensionless fraction",
+          "source": "independent physical/calendar restriction",
+          "output": "available capacity"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-023",
+      "terms": [
+        {
+          "latex": "q_{ij}",
+          "unit": "activity-unit delivered",
+          "source": "physical scheduler",
+          "output": "scope sum"
+        },
+        {
+          "latex": "Q_i",
+          "unit": "activity-unit quantity",
+          "source": "activity input",
+          "output": "scope equality"
+        },
+        {
+          "latex": "j_i^0",
+          "unit": "integer absolute week",
+          "source": "physical scheduler",
+          "output": "sum lower bound"
+        },
+        {
+          "latex": "j_i^1",
+          "unit": "integer absolute week",
+          "source": "physical scheduler",
+          "output": "sum upper bound"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-024",
+      "terms": [
+        {
+          "latex": "\\mathcal{A}_j",
+          "unit": "set of activities",
+          "source": "calendar occupancy",
+          "output": "active tasks"
+        },
+        {
+          "latex": "A_i",
+          "unit": "typed activity",
+          "source": "canonical activity registry",
+          "output": "activity membership"
+        },
+        {
+          "latex": "\\mathcal{A}",
+          "unit": "set of activities",
+          "source": "project activity registry",
+          "output": "activity universe"
+        },
+        {
+          "latex": "j_i^0",
+          "unit": "integer absolute start week",
+          "source": "physical scheduler",
+          "output": "activity interval"
+        },
+        {
+          "latex": "j",
+          "unit": "integer absolute week",
+          "source": "project calendar",
+          "output": "occupancy test"
+        },
+        {
+          "latex": "N_i",
+          "unit": "positive integer weeks",
+          "source": "duration solver",
+          "output": "interval upper bound"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-075",
+      "terms": [
+        {
+          "latex": "\\mathcal{L}",
+          "unit": "typed set of indirect categories",
+          "source": "indirect categories registry",
+          "output": "indirect driver coverage"
+        },
+        {
+          "latex": "ADM",
+          "unit": "indirect category label",
+          "source": "indirect catalog",
+          "output": "category enum"
+        },
+        {
+          "latex": "TOP",
+          "unit": "indirect category label",
+          "source": "indirect catalog",
+          "output": "category enum"
+        },
+        {
+          "latex": "LAB",
+          "unit": "indirect category label",
+          "source": "indirect catalog",
+          "output": "category enum"
+        },
+        {
+          "latex": "QSMS",
+          "unit": "indirect category label",
+          "source": "indirect catalog",
+          "output": "category enum"
+        },
+        {
+          "latex": "MOB^{\\text{site}}",
+          "unit": "site-mobility category label",
+          "source": "indirect catalog",
+          "output": "category enum"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-076",
+      "terms": [
+        {
+          "latex": "\\text{driver}(l)",
+          "unit": "enum perm/onetime",
+          "source": "indirect driver registry",
+          "output": "indirect posting type"
+        },
+        {
+          "latex": "l",
+          "unit": "typed indirect category",
+          "source": "indirect registry",
+          "output": "driver operand"
+        },
+        {
+          "latex": "\\texttt{perm}",
+          "unit": "enumeration label",
+          "source": "driver contract",
+          "output": "permanence path"
+        },
+        {
+          "latex": "\\texttt{onetime}",
+          "unit": "enumeration label",
+          "source": "driver contract",
+          "output": "one-time path"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-077",
+      "terms": [
+        {
+          "latex": "l",
+          "unit": "typed indirect category tuple",
+          "source": "indirect catalog",
+          "output": "drivers and rates"
+        },
+        {
+          "latex": "\\text{driver}(l)",
+          "unit": "enum perm/onetime",
+          "source": "indirect catalog",
+          "output": "dispatch"
+        },
+        {
+          "latex": "\\Gamma_l^{k,\\text{mensal}}",
+          "unit": "BRL/month",
+          "source": "indirect catalog by category k",
+          "output": "indirect monthly amount"
+        },
+        {
+          "latex": "k",
+          "unit": "MO/EQ/COMB category",
+          "source": "indirect catalog",
+          "output": "category selector"
+        },
+        {
+          "latex": "c_l^{\\text{mob}}",
+          "unit": "BRL/event",
+          "source": "mobilization contract",
+          "output": "one-time posting"
+        },
+        {
+          "latex": "c_l^{\\text{demob}}",
+          "unit": "BRL/event",
+          "source": "demobilization contract",
+          "output": "one-time posting"
+        },
+        {
+          "latex": "\\Gamma_l^{VM,\\text{mensal}}",
+          "unit": "BRL/month under one-time convention (conditional semantics)",
+          "source": "indirect catalog",
+          "output": "monthly amount"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    },
+    {
+      "id": "FL-078",
+      "terms": [
+        {
+          "latex": "\\gamma_l^{k,\\text{sem}}",
+          "unit": "BRL/week",
+          "source": "indirect monthly-rate conversion",
+          "output": "weekly indirect rate"
+        },
+        {
+          "latex": "\\Gamma_l^{k,\\text{mensal}}",
+          "unit": "BRL/month",
+          "source": "indirect catalog",
+          "output": "weekly conversion"
+        },
+        {
+          "latex": "s_{\\text{mes}}",
+          "unit": "weeks/month",
+          "source": "normative time convention",
+          "output": "weekly conversion"
+        },
+        {
+          "latex": "m_l(j)",
+          "unit": "dimensionless presence indicator",
+          "source": "indirect staffing calendar",
+          "output": "active weeks"
+        },
+        {
+          "latex": "j",
+          "unit": "integer absolute week",
+          "source": "calendar",
+          "output": "week index"
+        },
+        {
+          "latex": "n",
+          "unit": "number of project weeks",
+          "source": "derived horizon",
+          "output": "interval upper bound"
+        }
+      ],
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+    }
+  ]
+}
