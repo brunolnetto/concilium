@@ -137,3 +137,19 @@ def test_week_boundary_and_tie_economics_have_independent_counterexamples() -> N
     # In a non-priceable regime, zero denominator must never be a good margin.
     with pytest.raises(ZeroDivisionError):
         _ = BRL.money / 0
+
+
+def test_legacy_consumable_proxy_never_forges_physical_rate_or_price() -> None:
+    sources = {
+        file: (DOCS / file).read_text(encoding="utf-8")
+        for file in ("FORMALISMO_LONGO.md", "FORMALISMO_RESUMIDO.md", "formulario_longo.tex")
+    }
+    for name, content in sources.items():
+        assert "UNVERIFIED" in content, name
+        assert "dimensionalmente inválido" in content, name
+        assert "κ_r = 1" not in content, name
+        assert "kappa_r = 1" not in content, name
+        assert r"\kappa_r = 1" not in content, name
+    # Bad fictional kappa [good/hour] times price [BRL/hour]
+    # gives BRL*good/hour^2, not an hourly monetary price.
+    assert (G / H) * (BRL / H) != BRL / H
