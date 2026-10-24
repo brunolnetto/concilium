@@ -150,6 +150,25 @@ def test_audit_is_read_only_and_requires_actual_server_protection(monkeypatch) -
     assert all(method == "GET" for method, _ in calls)
 
 
+def test_apply_preserves_an_existing_stricter_protection(monkeypatch) -> None:
+    paths: list[tuple[str, str]] = []
+
+    def fake_api(path, *, method="GET", payload=None):
+        paths.append((method, path))
+        if path == f"repos/{policy.REPO}":
+            return {"full_name": policy.REPO, "private": True}
+        if path.endswith("/branches/main"):
+            return branch(protected=True)
+        if path.endswith("/protection"):
+            return configured_protection()
+        raise AssertionError(path)
+
+    monkeypatch.setattr(policy, "gh_api", fake_api)
+    result = policy.apply(policy.CONFIRM)
+    assert result["required_checks"] == len(policy.REQUIRED_CHECKS)
+    assert all(method == "GET" for method, _ in paths)
+
+
 def test_apply_success_requires_readback_from_github(monkeypatch) -> None:
     calls: list[str] = []
     expected = configured_protection()
