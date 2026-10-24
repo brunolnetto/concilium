@@ -57,6 +57,25 @@ jobs:
       - name: Verify deterministic exact golden vectors
         run: python -m pytest --confcutdir=tests/reference_formalism tests/reference_formalism -q
 
+  economic-evidence:
+    name: Economic Specification Evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout all history for fail-closed diff
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Require normative and independent economic fixtures
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python scripts/check_economic_spec_delta.py --base "$BASE_SHA"
+
+      - name: Falsify evidence gate bypass
+        run: |
+          python -m pip install 'pytest>=9.0.3,<10'
+          python -m pytest --confcutdir=tests/reference_formalism tests/reference_formalism/test_p25c_economic_delta_gate.py -q
   lockfile:
     name: Dependency Lock (Docker parity)
     runs-on: ubuntu-latest
