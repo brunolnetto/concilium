@@ -167,6 +167,7 @@ class RecursoContrato(BaseModel):
         "FULL_RATE_STANDBY", "DISCOUNTED_STANDBY", "EXPLICIT_OFF_HIRE"
     ] | None = None
     origem_regime_p13: str | None = None  # independently declared contract provenance
+    moeda_regime_p13: str | None = None  # no implicit BRL/USD fallback
     # ADR-088: sub-decomposição de EQ (locacao | manutencao)
     custo_unit_semanal_locacao: float = 0.0  # taxa aluguel puro (BDI_servicos)
     custo_unit_semanal_manutencao: float = 0.0  # taxa manutenção (BDI_servicos)
