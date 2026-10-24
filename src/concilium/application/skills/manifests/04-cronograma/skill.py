@@ -144,6 +144,17 @@ def _capacity_output_quantity_unit(raw: str) -> str:
     return unit
 
 
+def _positive_finite_rate(raw: Any) -> bool:
+    """Reject invalid/oversized numeric inputs without raising before the gate."""
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return False
+    try:
+        value = float(raw)
+    except (OverflowError, ValueError):
+        return False
+    return math.isfinite(value) and value > 0
+
+
 def _preflight_physical_productivity(
     canonical: CanonicalModel,
     cpu_lookup: dict,
@@ -174,12 +185,7 @@ def _preflight_physical_productivity(
             ("producao_horaria", prod.get("producao_horaria")),
             ("valor_horario", prod.get("valor_horario")),
         ):
-            if raw is not None and (
-                isinstance(raw, bool)
-                or not isinstance(raw, (int, float))
-                or not math.isfinite(float(raw))
-                or float(raw) <= 0
-            ):
+            if raw is not None and not _positive_finite_rate(raw):
                 invalid = True
                 validacoes.append(
                     ValidacaoItem(
