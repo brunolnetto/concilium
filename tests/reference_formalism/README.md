@@ -95,3 +95,30 @@ instances. Results demonstrate a reference feasible/optimal bounded schedule
 for its *declared simplified problem*, not a general RCPSP optimality claim
 for Skill04, a P16 economic pool minimum, or PROJECT_GO. P22-C must add
 physically priced K/V/IND, consumable sources, stock and pricing oracles.
+
+
+## P22-C — Bounded independent finance, inventory and fungible assignment
+
+`financial_reference.py` implements `formalism-financial/1` without importing
+production finance, scheduling, persistence or billing services. Inputs are
+strict exact decimal strings and explicitly proven contract/good identifiers.
+It exhaustively enumerates all labeled weekly physical instance assignments
+(up to three instances and six weeks), then enumerates allowable keep/split
+decisions for each chain. This is intentionally **stronger** than the fixed
+height-layer oracle used by P16: for `d=(2,1,1,2)`, active 5, idle 1,
+movement 30, max idle gap 1, reference cost is **92**, not **120**.
+
+It separately computes active/idle K, physical MAT/COMB acquisitions V, mobility
+events, weekly stock holding, order fees (IND), category-specific single-pass
+BDI, total unmarked cost and realized selling-price margin. All inputs have
+explicitly checked units, price/rate sources and unique purchase event IDs;
+negative inventory, double acquisition IDs, unknown fields and binary floats
+fail closed. Three hand-checkable vectors appear in
+`vectors/financial_cost_v1.json` and tests in `test_p22c_financial_oracle.py`.
+
+**Scope limitation:** The tiny reference is an exact bounded accounting and
+pool-assignment witness for the declared input. It does not establish
+actual procurement, price provenance, legal contract admissibility,
+multi-good stock optimality, cash-flow timing, or production implementation
+parity. A positive margin alone does not establish `PROJECT_GO`. P16's
+optimality falsifier remains open as issue #16.
