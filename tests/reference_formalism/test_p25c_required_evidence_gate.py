@@ -67,17 +67,19 @@ def test_git_rename_with_economic_mutation_preserves_source_path(
     """A high-similarity rename must not evade the requirement for witnesses."""
     repo = tmp_path / "git"
     repo.mkdir()
+
     def git(*args: str) -> str:
         return subprocess.check_output(
             ["git", *args], cwd=repo, text=True,
         ).strip()
+
     git("init", "-q", "-b", "main")
     git("config", "user.name", "P25-C Fixture")
     git("config", "user.email", "ci-fixture@example.invalid")
     original = repo / PRODUCTION
     original.parent.mkdir(parents=True)
     original.write_text(
-        "# Stable economic contract witness\\n" * 80 + "price = 100\\n",
+        "# Stable economic contract witness\n" * 80 + "price = 100\n",
         encoding="utf-8",
     )
     git("add", "-A")
