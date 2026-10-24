@@ -183,11 +183,17 @@ def apply(confirmation: str) -> dict[str, str | int]:
     sha = (branch.get("commit") or {}).get("sha")
     if not isinstance(sha, str) or len(sha) != 40:
         raise ProtectionError("Could not verify current main SHA.")
+    # Never overwrite an existing policy: it may be stricter than our
+    # solo-maintainer baseline. Audit it and require owner reconciliation.
+    if branch.get("protected") is True:
+        return audit()
     verify_checks(gh_api(f"repos/{REPO}/commits/{sha}/check-runs?per_page=100"))
     # Avoid configuring against a moving baseline while CI is being pushed.
     latest = gh_api(f"repos/{REPO}/branches/{BRANCH}")
     if (latest.get("commit") or {}).get("sha") != sha:
         raise ProtectionError("main changed during preflight; retry with current CI.")
+    if latest.get("protected") is True:
+        return audit()
     gh_api(
         f"repos/{REPO}/branches/{BRANCH}/protection",
         method="PUT",
