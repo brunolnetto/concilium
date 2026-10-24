@@ -40,6 +40,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Credential-dependent deployment is isolated from the hermetic CI.
+      # Fail before azure/login with actionable but secret-free diagnostics.
+      - name: Preflight Azure federated identity configuration
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        shell: bash
+        run: |
+          missing=0
+          for key in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [[ -z "${!key}" ]]; then
+              echo "::error title=Azure OIDC not configured::Missing ${key}; repository/environment owner must provision federated credentials."
+              missing=1
+            fi
+          done
+          if (( missing )); then
+            echo '::error::Deploy BLOCKED_CONFIGURATION; offline conformance CI runs independently.'
+            exit 1
+          fi
       - name: Login Azure (OIDC)
         uses: azure/login@v3
         with:
