@@ -19,8 +19,8 @@ from concilium.application.scheduling.resource_level_contracts import (
     ExactPoolResult,
     ResourceTariff,
 )
-from concilium.domain.models.canonical._pool_recursos import RecursoContrato
 from concilium.domain.models.canonical._estoque_consumiveis import RecursoConsumivelCanonical
+from concilium.domain.models.canonical._pool_recursos import RecursoContrato
 
 
 class ContractRegime(StrEnum):
