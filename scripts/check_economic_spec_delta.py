@@ -8,17 +8,16 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from pathlib import Path
+from collections.abc import Mapping
 
+# Conservative protected boundary: physical scheduling changes can affect K, V,
+# booked asset counts and monetary outputs even without a "cost" filename.
 ECONOMIC_PREFIXES = (
     "src/concilium/application/scheduling/",
+    "src/concilium/application/finance",
+    "src/concilium/application/financial",
     "src/concilium/domain/models/canonical/_pool_recursos",
     "src/concilium/domain/models/canonical/_estoque_consumiveis",
-    "src/concilium/application/finance",
-)
-ECONOMIC_FILE_HINTS = (
-    "cost", "finance", "tariff", "consum", "stock", "inventory",
-    "revenue", "pricing", "ledger", "bdi", "contract",
 )
 NORMATIVE_PREFIX = "docs/product/5-specifications/formulario_longo/"
 GOLDEN_PREFIX = "tests/reference_formalism/vectors/"
@@ -26,33 +25,54 @@ REFERENCE_PREFIX = "tests/reference_formalism/test_"
 
 
 def is_economic_source(path: str) -> bool:
-    if path.startswith("src/concilium/application/scheduling/"):
-        return any(term in Path(path).name.lower() for term in ECONOMIC_FILE_HINTS)
-    return any(path.startswith(prefix) for prefix in ECONOMIC_PREFIXES[1:])
+    return any(path.startswith(prefix) for prefix in ECONOMIC_PREFIXES)
 
 
-def validate_paths(paths: set[str]) -> list[str]:
-    touched = sorted(path for path in paths if is_economic_source(path))
+def validate_paths(changes: Mapping[str, str] | set[str]) -> list[str]:
+    """Treat a deletion as a changed source but NEVER as new evidence."""
+    statuses = {name: "M" for name in changes} if isinstance(changes, set) else dict(changes)
+    touched = sorted(path for path in statuses if is_economic_source(path))
     if not touched:
         return []
+    evidence = {p for p, status in statuses.items() if status in {"A", "M", "T"}}
     missing: list[str] = []
-    if not any(p.startswith(NORMATIVE_PREFIX) for p in paths):
+    if not any(p.startswith(NORMATIVE_PREFIX) for p in evidence):
         missing.append(f"normative formalism update under {NORMATIVE_PREFIX}")
-    if not any(p.startswith(GOLDEN_PREFIX) and p.endswith(".json") for p in paths):
+    if not any(p.startswith(GOLDEN_PREFIX) and p.endswith(".json") for p in evidence):
         missing.append(f"independent reviewed JSON golden under {GOLDEN_PREFIX}")
-    if not any(p.startswith(REFERENCE_PREFIX) and p.endswith(".py") for p in paths):
+    if not any(p.startswith(REFERENCE_PREFIX) and p.endswith(".py") for p in evidence):
         missing.append(f"independent oracle regression under {REFERENCE_PREFIX}")
     return missing
 
 
-def changed_files(base: str) -> set[str]:
-    # No shell interpolation; fail rather than silently skip missing/unfetchable SHA.
+def changed_files(base: str) -> dict[str, str]:
+    """Read Git status+path pairs with rename detection explicitly disabled.
+
+    Renames must expose both deleted source and added destination, and a
+    deleted golden/test may not count as a replacement proof.
+    """
     subprocess.run(["git", "cat-file", "-e", f"{base}^{{commit}}"], check=True)
     merge = subprocess.check_output(["git", "merge-base", base, "HEAD"], text=True).strip()
-    diff = subprocess.check_output(
-        ["git", "diff", "--name-only", "-z", merge, "HEAD"],
+    data = subprocess.check_output(
+        ["git", "diff", "--no-renames", "--name-status", "-z", merge, "HEAD"],
     )
-    return {p.decode("utf-8") for p in diff.split(b"\0") if p}
+    parts = data.split(b"\0")
+    if parts[-1] != b"":
+        raise ReferenceDiffError("unterminated status diff")
+    fields = parts[:-1]
+    if len(fields) % 2:
+        raise ReferenceDiffError("invalid status/path pair count")
+    result: dict[str, str] = {}
+    for i in range(0, len(fields), 2):
+        status, path = fields[i].decode("utf-8"), fields[i + 1].decode("utf-8")
+        if status not in {"A", "M", "D", "T"} or not path or path in result:
+            raise ReferenceDiffError(f"unsupported/duplicate git diff entry: {status}")
+        result[path] = status
+    return result
+
+
+class ReferenceDiffError(ValueError):
+    """Source comparison is ambiguous and must fail closed."""
 
 
 def main() -> int:
@@ -61,7 +81,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         paths = changed_files(args.base)
-    except (subprocess.CalledProcessError, UnicodeDecodeError) as exc:
+    except (subprocess.CalledProcessError, UnicodeDecodeError, ReferenceDiffError) as exc:
         print(f"FAIL CLOSED: cannot determine economic delta: {exc}", file=sys.stderr)
         return 2
     omissions = validate_paths(paths)
