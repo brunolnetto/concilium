@@ -100,7 +100,9 @@ def test_no_holding_has_explicitly_incomplete_evidence_not_a_fake_zero() -> None
 def test_source_delta_rejects_missing_and_forged_variable_purchase() -> None:
     pool, consumption, _ = _case()
     missing = replace(consumption, journal=pool)
-    with pytest.raises(ValueError, match="missing, forged"):
+    # The independent acquisition evidence guard rejects the missing posting
+    # before the later set-difference check; both correctly fail closed.
+    with pytest.raises(ValueError, match="differs from measured physical cost"):
         reconcile_financial_sources(pool, missing)
     original = consumption.journal.postings
     invented = CostPosting(
