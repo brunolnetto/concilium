@@ -116,7 +116,7 @@ def _activity(
         nominal = _exact(cell.q_max_celula, name="q_max_celula")
         available = _exact(cell.capacidade_disponivel_semana, name="capacity")
         reported = _exact(cell.qtd_executada, name="qtd_executada")
-        observed_total = _exact(cell.qtd_acumulada, name="qtd_acumulada")
+        _exact(cell.qtd_acumulada, name="qtd_acumulada")
         if available > nominal or reported > available:
             raise ValueError("q > capacity or available capacity > F(m)H")
         # Skill04 planned (NAO_OBSERVADO) cells use binary floats for BOTH
