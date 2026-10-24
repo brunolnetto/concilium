@@ -25,6 +25,18 @@ from concilium.application.scheduling.resource_level_contracts import (
     ResourceContractLedger,
     ResourceTariff,
 )
+from concilium.application.scheduling.contractual_cost_ledger import (
+    PhysicalPurchase,
+    PostingNature,
+    attach_physical_purchases,
+    book_exact_pool,
+)
+from concilium.application.scheduling.resource_demand_levels import (
+    normalize_weekly_resource_demand,
+)
+from concilium.application.scheduling.resource_level_contracts import (
+    optimize_homogeneous_pool,
+)
 from concilium.domain.models.canonical._pool_recursos import RecursoContrato
 from concilium.domain.models.canonical._estoque_consumiveis import (
     DisponibilidadeConsumivelCanonical,
@@ -278,3 +290,42 @@ def test_baseline_rejects_unclassified_idle_and_missing_price_provenance() -> No
                 F(5), "l",
             )})
         )
+
+
+def test_actual_p16_optimizer_p17_ledger_and_p18_purchase_categories_close() -> None:
+    """Do not replace authoritative costs with the non-GO P13 read-only witness."""
+    rate = ResourceTariff(F(100), F(25), F(40), F(40), 2)
+    levels = normalize_weekly_resource_demand(
+        ("S001", "S002", "S003", "S004"),
+        {"A": {"EXC": (1, 0, 0, 1)}},
+    )
+    optimized = optimize_homogeneous_pool(levels, {"EXC": rate})
+    assert (optimized.ledgers[0].presence, optimized.ledgers[0].standby) == (
+        (1, 1, 1, 1), (0, 1, 1, 0),
+    )
+    declaration = ContractRegimeEvidence(
+        "C-01", "EXC", ContractRegime.DISCOUNTED_STANDBY,
+        rate, "contract:123", "BRL",
+    )
+    witness = witness_contract_regime(declaration, optimized, canonical())
+    assert (witness.active_cost, witness.standby_cost, witness.movement_cost) == (
+        F(200), F(50), F(80),
+    )
+    ledger = book_exact_pool(optimized, {"EXC": rate}, {"EXC": "EQ"})
+    purchase = PhysicalPurchase(
+        "invoice:1", "A", "DIESEL", "S004",
+        F(220), "l", F(5), "COMB",
+    )
+    accounted = attach_physical_purchases(ledger, (purchase,))
+    assert (accounted.contractual_k, accounted.consumable_v, accounted.indirect,
+            accounted.total) == (F(250), F(1100), F(80), F(1430))
+    assert len({p.event_id for p in accounted.postings}) == len(accounted.postings)
+    assert {p.category for p in accounted.postings
+            if p.nature in (PostingNature.ACTIVE, PostingNature.IDLE)} == {"EQ"}
+    assert {p.category for p in accounted.postings
+            if p.nature == PostingNature.ACQUISITION} == {"COMB"}
+    assert {p.category for p in accounted.postings
+            if p.nature in (PostingNature.MOBILIZATION,
+                            PostingNature.DEMOBILIZATION)} == {"IND"}
+    with pytest.raises(ValueError, match="duplicate"):
+        attach_physical_purchases(accounted, (purchase,))
