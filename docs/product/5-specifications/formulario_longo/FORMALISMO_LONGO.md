@@ -326,11 +326,11 @@ $$\boxed{\beta_i^{\mathrm{eq}} \equiv \frac{C_i^{D,\beta}}{C_i^{\mathrm{op}}}-1 
 
 $\mathcal{T}$ = conjunto de tipos de recurso (união de categorias e especificação sobre todos os $R_i$).
 
-**Demanda semanal por tipo:**
+**Demanda semanal física por tipo:** \(d_{gj}=\sum_i a_{ig}(m_{ij})\). Somente em frentes independentes \(a_{ig}(m)=m\,n_g^i\); gargalos e recursos compartilhados exigem composição própria.
 
 $$n_j(\tau) = \sum_{i\,:\,j\in[j_i^0,\,j_i^0+N_i-1]} m_{ij}\cdot n_{\tau}^{i}$$
 
-**Pool físico** $\{r\}$: conjunto de instâncias com $\text{type}(r)\in\mathcal{T}$, taxa semanal $c_r^{\text{sem}}$ (igual em semanas ativas e ociosas — §IX.3), e custos $c_r^{\text{mob}}$, $c_r^{\text{demob}}$.
+**Pool físico** \(\{r\}\): instâncias fungíveis por tipo \(g\), tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\). A igualdade entre ativo e idle é exclusiva de \`FULL_RATE_STANDBY\`; sem regime e fonte, custo \`NOT_EVALUATED\`.
 
 $$qt_\tau = \max_j n_j(\tau) \qquad\text{[tamanho do pool de tipo }\tau\text{]}$$
 
@@ -344,15 +344,15 @@ Para tipo único fungível (instâncias perfeitamente substituíveis, com custo 
 
 **Condição de perpetuação** (entre duas alocações consecutivas, com gap em semanas):
 
-$$\text{gap}_{uv} < G_r^* \equiv \frac{c_r^{\text{mob}}+c_r^{\text{demob}}}{c_r^{\text{sem}}} \quad\Longleftrightarrow\quad c_r^{\text{mob}}+c_r^{\text{demob}} > c_r^{\text{sem}}\cdot\text{gap}_{uv}\qquad\text{[$c_r^{\text{sem}}$ em R\$/sem]}$$
+$$\boxed{\mathrm{KEEP}_{uv}\iff k_{uv}\le G_r^{viável}\ \land\ k_{uv}c_r^{idle}\le c_r^{mob}+c_r^{demob}}\quad(k_{uv}=\mathrm{gap}_{uv}).$$
 
-**Cap absoluto:** $\text{gap}_{uv} > G_r^{\text{viável}} \Rightarrow$ não perpetuar, independente de custo.
+**Cap e política:** se \(k_{uv}>G_r^{viável}\), KEEP é inviável, mesmo se barato. Empate viável escolhe KEEP (menos transições). Não dividir por \(c_r^{idle}\), que pode ser zero. Lead time, permanência mínima e off-hire explícito também precisam ser satisfeitos.
 
 **Estrutura de cadeia** $\mathcal{C}_p = (i_1 \to i_2 \to \cdots \to i_{n_p})$: cada par consecutivo $(i_k, i_{k+1})$ satisfaz o critério. Uma cadeia gera **um** par $(c_r^{\text{mob}}, c_r^{\text{demob}})$ mais standby nos gaps internos.
 
 ### IX.3 Frações invariantes por recurso
 
-Como o custo dos recursos contratuais é definido a partir do **tempo de permanência** ($c_r^{\text{sem}}$ por semana ativa, $c_r^{\text{standby}}$ por semana de gap), a separação em fração ativa e fração standby é um **invariante temporal** de cada instância — completamente determinado pela cadeia de perpetuação, sem dependência de parâmetros de custo.
+Para uma **cadeia fixa**, a divisão entre tempo ativo e standby é um invariante físico. Alterar a tarifa pode mudar a **cadeia ótima**, de modo que a fração não é universalmente invariante entre regimes comerciais.
 
 Para cada instância $r$ com cadeia $\mathcal{C}_p = (i_1 \to \cdots \to i_{n_p})$:
 
@@ -364,7 +364,7 @@ $$T_r^{\text{perm}} = T_r^{\text{ativo}} + T_r^{\text{standby}} \qquad\text{[tot
 
 $$\boxed{f_r^{\text{standby}} = \frac{T_r^{\text{standby}}}{T_r^{\text{perm}}} \in [0,1), \qquad f_r^{\text{ativo}} = 1 - f_r^{\text{standby}}}$$
 
-**Propriedade invariante:** dados o schedule $\{(j_i^0, N_i)\}$ e as cadeias de perpetuação, $f_r^{\text{standby}}$ é completamente determinado. Não depende de $c_r^{\text{sem}}$, $c_r^{\text{standby}}$, $c_r^{\text{mob}}$ nem $c_r^{\text{demob}}$ — é uma grandeza puramente temporal, intrínseca ao padrão de implantação do recurso.
+**Invariante condicional:** dado o mesmo cronograma e as mesmas cadeias, \(f_r^{standby}\) não depende de tarifa. Tarifas podem mudar o keep/split ótimo e, assim, a fração calculada. Standby não representa perda produtiva \(\eta_s\).
 
 **Casos:**
 
@@ -374,17 +374,17 @@ $$\boxed{f_r^{\text{standby}} = \frac{T_r^{\text{standby}}}{T_r^{\text{perm}}} \
 | Perpetuação com gaps pequenos | $\in(0,1)$, próximo de 0 quando atividades são densas |
 | Recurso em standby quase todo tempo | $\to 1$ (não deve ocorrer: perpetuação só é racional quando gap $< G_r^*$) |
 
-**Taxa efetiva semanal.** A separação pool/estoque implica $c_r^{\text{standby}} = c_r^{\text{sem}}$: EQ (aluguel) e MO (salário + CLT) custam igual em semanas ativas e ociosas — os consumíveis, que escalariam com produção, já foram segregados em $C^{\text{estoque}}$. Portanto:
+**Taxa efetiva semanal:** somente em \`FULL_RATE_STANDBY\` vale \(c_r^{idle}=c_r^{act}=c_r^{sem}\). A separação de MAT/COMB não implica essa igualdade para todos os contratos. \`DISCOUNTED_STANDBY\` usa tarifa ociosa própria; \`EXPLICIT_OFF_HIRE\` exige cadeia encerrada, presença zero e movimentos reais.
 
-$$\boxed{\bar{c}_r = c_r^{\text{sem}} \qquad \text{(pool puro: standby = ativo)}}$$
+$$\boxed{\bar c_r=\frac{T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle}}{T_r^{perm}}}\quad(T_r^{perm}>0);\qquad \bar c_r=c_r^{sem}\ \text{somente FULL_RATE_STANDBY}.$$
 
-A fração $f_r^{\text{standby}}$ é **diagnóstico temporal** puro — não afeta o custo, quantifica o grau de ociosidade da instância. O benefício da perpetuação é exclusivamente a redução de $C^{MOB,eq,o}$ (mob/demob evitados), ao custo de semanas adicionais de permanência a $c_r^{\text{sem}}$.
+A fração \(f_r^{standby}\) é diagnóstico temporal de uma cadeia específica, não produtividade ou custo por si só. Keep/split compara \(k\,c_r^{idle}\) e \(c_r^{mob}+c_r^{demob}\), condicionados à admissibilidade contratual.
 
 ### IX.4 Custo do pool
 
-$$\boxed{C^{\text{pool},o} = \sum_r T_r^{\text{perm}} \cdot c_r^{\text{sem}}}$$
+$$\boxed{C^{pool,o}=\sum_r(T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle})=\sum_{g,j}(c_g^{act}d_{gj}+c_g^{idle}s_{gj})}$$
 
-$$C^{\text{pool},\beta} = \sum_r (1+\beta_{\text{cat}(r)})\cdot T_r^{\text{perm}}\cdot c_r^{\text{sem}}$$
+$$C^{pool,\beta}=\sum_{g,j}(1+\beta_{\mathrm{cat}(g)})(c_g^{act}d_{gj}+c_g^{idle}s_{gj})$$
 
 **Custo indireto de mob/demob do pool** (por cadeia, com $\beta^{IND}$):
 
@@ -392,9 +392,9 @@ $$C^{MOB,eq,o} = \sum_r N_{\text{chains}}^r \cdot (c_r^{\text{mob}}+c_r^{\text{d
 
 **Reconciliação com a Parte VI:**
 
-$$\boxed{C^{\mathrm{pool}} \;\ge\; \sum_i C_i^{\mathrm{K,op}}}$$
+$$C^{pool,o}\ge\sum_i C_i^{K,act}\quad\text{somente sob bases comparáveis, cobertura física completa e ausência de dupla imputação;}$$
 
-com igualdade apenas se nenhum recurso é perpetuado entre atividades distintas e $f_r^{\text{standby}}=0\ \forall r$: a soma por atividade conta apenas semanas ativas ($M_i$), enquanto $C^{\mathrm{pool}}=\sum_rT_r^{\text{perm}}c_r^{\text{sem}}$ inclui também as semanas de standby interno das cadeias perpetuadas ($T_r^{\text{standby}}$) — custo real de permanência sem contrapartida de produção. $C_i^{\mathrm{K,op}}$ permanece grandeza de diagnóstico por atividade (quanto cada atividade consumiria de recurso contratual se operasse isoladamente); o desembolso contratual real do projeto — incluindo o custo de manter recursos parados entre mobilizações — é $C^{\mathrm{pool}}$.
+a soma por atividade é um **diagnóstico**, não o contrato financeiro autoritativo. No baseline, sem standby positivo e com taxas/demanda comparáveis, a igualdade pode ocorrer. No regime descontado, \(C^{pool,o}=\sum(c^{act}d+c^{idle}s)\), jamais \(\sum T^{perm}c^{sem}\) como identidade geral. MOB/DEMOB pertence exclusivamente a IND; ausência de evidência implica \`NOT_EVALUATED\`.
 
 **Escopo do algoritmo de dimensionamento.** A decomposição por níveis empregada na Parte XIV, Fase 4 é exata para um tipo de recurso fungível homogêneo — instâncias perfeitamente substituíveis entre si, com custo de permanência e de mobilização/desmobilização idênticos. Variantes multi-tipo com recursos não perfeitamente substituíveis (capacidades ou custos heterogêneos dentro do mesmo tipo nominal) constituem um problema de otimização combinatória distinto, de complexidade superior à do caso fungível (cf. Bertossi, Carraresi & Gallo 1987); nesses casos, os tipos devem ser subdivididos em subtipos homogêneos antes de aplicar o algoritmo desta seção.
 
@@ -402,13 +402,13 @@ com igualdade apenas se nenhum recurso é perpetuado entre atividades distintas 
 
 ## Parte X — Consumíveis: Aquisição e Posse
 
-Separável por atividade sem ambiguidade. Por identidade direta $C_i^{\mathrm{V,op}} \equiv C_i^{\mathrm{V,cat}}$ (Parte VI):
+**Aquisição física MAT/COMB:** \(U_g\) exige unidade, taxa, preço e fonte. Apenas \`OUTPUT_PROPORTIONAL\` sem idle ou perdas permite \(U_{gij}=\kappa_{ig}^{out}q_{ij}\) e equivalência com o envelope \(\gamma^{V,cat}Q/\rho\). \`OUTPUT_WITH_MEASURED_LOSS\` e \`HOURLY_WITH_MEASURED_IDLE\` são variantes medidas.
 
 **Custo de aquisição** ($C^{\mathrm{cons}}$) — **direto**, entra em $C^D$:
 
-$$\boxed{C^{\mathrm{cons}} = \sum_{i\in\mathcal{A}} \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i} = \sum_g c_g^{\mathrm{cons}}\, U_g}$$
+$$\boxed{C^{cons}=\sum_g p_g U_g}\qquad\text{[aquisição MAT/COMB; preço e quantidade física comprovados]}$$
 
-$$C^{\mathrm{cons},\beta} = \sum_{i\in\mathcal{A}} \gamma_i^{\mathrm{V,cat},\beta}\cdot\frac{Q_i}{\rho_i}$$
+$$C^{cons,\beta}=\sum_g(1+\beta^{cat(g)})p_g U_g\qquad\text{[markup categorial uma única vez]}$$
 
 **Custo de posse** ($C^{\mathrm{inv}}$) — **indireto**, entra em $C^{ind}$ com $\beta^{\mathrm{IND}}$:
 
@@ -416,7 +416,7 @@ $$\boxed{C^{\mathrm{inv}} = \sum_g\sum_j c_g^{\mathrm{hold}}\, S_{g,j}}$$
 
 Posse de estoque não é consumo produtivo — é infraestrutura de suprimento, análogo ao bloco VM. **Não** entra em $C^D$.
 
-Diferente do contratual, $C^{\mathrm{cons}}$ não requer otimização de cadeias — a soma por atividade é exata, e coincide exatamente com a produção realizada dado o fechamento de escopo da Parte IV.
+O consumo físico total é \(U_g=\sum_{i,j}U_{gij}\), incluindo perda \(L_g\) e idle \(I_g\) medidos quando necessários. \`OUTPUT_PROPORTIONAL\` com taxa/preço fixos garante invariância de \(V(Q)\) à repartição semanal; isso **não** vale universalmente nas variantes. Posse de estoque (\`HOLDING\`) e movimentos (\`MOB/DEMOB\`) são IND e não podem ser duplicados em V.
 
 ---
 
