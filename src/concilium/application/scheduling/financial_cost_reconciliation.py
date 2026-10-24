@@ -92,6 +92,9 @@ def _acquisition_expectations(
     result: PhysicalConsumptionJournalResult,
 ) -> dict[EventId, CostPosting]:
     expected: dict[EventId, CostPosting] = {}
+    # Build the authoritative index once; O(events + evidence), not a linear
+    # scan of all journal rows for every physical consumption measurement.
+    postings = _events(result.journal.postings)
     seen: set[str] = set()
     kinds: dict[tuple[str, str, str], str] = {}
     for evidence in result.evidence:
@@ -120,10 +123,7 @@ def _acquisition_expectations(
             continue
         # MAT versus COMB is declared by the original typed purchase, not guessed
         # from the good name or the physical measurement.
-        actual = next(
-            (p for p in result.journal.postings if p.event_id == event_id),
-            None,
-        )
+        actual = postings.get(event_id)
         if (actual is None or actual.nature != PostingNature.ACQUISITION
                 or actual.category not in ("MAT", "COMB")
                 or actual.source != measure.good_id or actual.week != evidence.week
