@@ -921,6 +921,8 @@ especificação sobre todos os \(R_i\)).
 
 \[\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[demanda física; frentes independentes: }a_{ig}(m)=m\,n_g^i\text{]}\]
 
+Para o algoritmo por níveis, \(n_j(g)\equiv d_{gj}\). O máximo contratual é uma capacidade, não o número de frentes multiplicado por fator fixo quando existem gargalos.
+
 \textbf{Pool físico} \(\{r\}\): instâncias fungíveis por tipo, tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\).
 A igualdade ativa/idle vale somente em \texttt{FULL\_RATE\_STANDBY}; regime ou origem ausente é \texttt{NOT\_EVALUATED}, nunca tarifa zero.
 
@@ -987,7 +989,7 @@ Cadeia singleton (\(n_p=1\), sem perpetuação) & \(0\) \\
 Perpetuação com gaps pequenos & \(\in(0,1)\), próximo de 0 quando
 atividades são densas \\
 Recurso em standby quase todo tempo & \(\to 1\) (não deve ocorrer:
-perpetuação só é racional quando gap \(< G_r^*\)) \\
+perpetuação requer \(k\le G_r^{viavel}\) e \(k c_r^{idle}\le c_r^{mob}+c_r^{demob}\)) \\
 \end{longtable}
 
 \textbf{Taxa efetiva semanal.} Somente em \texttt{FULL\_RATE\_STANDBY} vale \(c_r^{idle}=c_r^{act}=c_r^{sem}\).
@@ -1052,21 +1054,7 @@ Com \texttt{OUTPUT\_WITH\_MEASURED\_LOSS} ou \texttt{HOURLY\_WITH\_MEASURED\_IDL
 \subsubsection{X.2 Demanda física
 derivada}\label{x.2-demanda-fuxedsica-derivada}}
 
-O restante desta parte deriva \(U_g\) semana a semana --- necessário
-para qualquer decisão de quando comprar, não apenas quanto. Para cada
-atividade \(i\) e bem físico \(g\), a \textbf{taxa de consumo agregada}
-do bem \(g\) por hora-equivalente de \(i\) soma os recursos consumíveis
-de \(R_i\) que consomem \(g\) (§I.3.1) --- mesmo dado de cadastro que já
-alimenta \(\gamma_i^{\mathrm{V,cat}}\) (Parte III), nenhum insumo novo:
-
-\[\kappa_i^g \equiv \sum_{r\in R_i\,:\,g(r)=g} n_r\,\kappa_r \qquad [\text{unid}_g/\text{h}]\]
-
-Usando a mesma razão \(q_{ij}/\rho_i\) que torna
-\(C_{ij}^{\mathrm{V,op}}\) exata inclusive na semana de fechamento
-(Parte V) --- ela já generaliza corretamente ``horas efetivas'' nas
-semanas interiores e no residual ---, o consumo físico de \(g\) pela
-atividade \(i\) na semana \(j\) segue a mesma construção, só trocando a
-taxa monetária pela taxa física:
+O consumo total \(U_g\) depende de medidas físicas e do regime contratual declarado. A taxa de catálogo em unidades por hora, quando disponível, não autoriza deduzir horas efetivamente operadas a partir de \(q_{ij}/\rho_i\) sem calibração independente de \(F_i(m)\), composições e perdas. A variante por unidade entregue exige \(\kappa^{out}\) própria; idle, combustível de mobilização, perdas e provisionamento externo exigem evidências físicas independentes. Ausência de qualquer fonte não vira zero.
 
 \textbf{Demanda física por regime:} usar \(U_{gij}\) medido e tipado por unidade entregue ou por hora real, com perdas e consumo idle explícitos. Nenhuma proxy monetária R\$/h estabelece quantidade física.
 \[\boxed{D_{g,j}=\sum_iU_{gij},\qquad U_g=\sum_jD_{g,j}}\]
