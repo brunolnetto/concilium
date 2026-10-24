@@ -704,53 +704,10 @@ identidades mais úteis deste formulário, detalhada logo abaixo.
 \[C_i^{\mathrm{op}} = C_i^{\mathrm{K,op}}+C_i^{\mathrm{V,op}}\qquad\text{[R\$]}\]
 \[p_i^{\mathrm{op}} = C_i^{\mathrm{op}}/Q_i\qquad\text{[R\$/un]}\]
 
-\textbf{Identidade --- invariância do consumível.} Usando o fecho de
-escopo exato \(\sum_jq_{ij}=Q_i\) (Parte IV):
-
-\[\boxed{C_i^{\mathrm{V,op}} \equiv C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}}\qquad\text{(exato, por construção do fechamento de escopo)}\]
-
-O consumível operacional \textbf{é} o consumível de catálogo --- não há
-inflação por ineficiência. O total de material/combustível depende
-apenas de \(Q_i\), nunca de quantas semanas foram necessárias para
-executar. Esta identidade \textbf{não vale} para o contratual:
-\(C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i\) cresce quando
-a eficiência piora (mais frente-semanas \(M_i\) para fechar o mesmo
-\(Q_i\), já que \(M_i\) conta a semana de fechamento integralmente, não
-prorateada).
-
-\textbf{Desvio de catálogo por atividade.} Comparando
-\(C_i^{\mathrm{op}}\) com \(C_i^{\mathrm{cat}}\) (Parte III), obtém-se
-uma leitura de quanto a atividade se desviou do plano de catálogo --- em
-termos relativos e absolutos:
-
-\[R_i \equiv \frac{C_i^{\mathrm{op}}}{C_i^{\mathrm{cat}}} \qquad\qquad \boxed{\Delta_i^{\mathrm{cat}} \equiv C_i^{\mathrm{op}}-C_i^{\mathrm{cat}} = (R_i-1)\,C_i^{\mathrm{cat}}}\qquad\text{[R\$]}\]
-
-\(\Delta_i^{\mathrm{cat}}>0\) significa que a atividade custou mais do
-que o catálogo previa; \(\Delta_i^{\mathrm{cat}}<0\), que custou menos.
-\(R_i\) é a mesma leitura em forma adimensional, mais direta para
-comparar o grau de desvio entre atividades de portes diferentes --- é o
-análogo, em nível de atividade, do
-\(R=C^{\mathrm{tot}}/C^{\mathrm{cat}}\) de projeto (Parte XIII). Sua
-forma fechada, em função da eficiência média realizada, é dada na Parte
-VIII, logo após \(\bar\varepsilon_i\) ser definida com exatidão.
-
-Uma advertência sobre como (não) recalcular esse desvio sob uma
-produtividade revisada --- por exemplo, ao incorporar um \(\rho_i\)
-observado em campo, diferente do calibrado originalmente: a identidade
-\(C_i^{\mathrm{V,op}}\equiv\gamma_i^{\mathrm{V,cat}}Q_i/\rho_i\) (acima)
-é, por construção, invariante ao cronograma, então substituir \(\rho_i\)
-por um \(\rho_i'\) revisado nessa fórmula sozinha ainda produz um número
-correto. Mas \(C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i\)
-depende de \(M_i\), resultado da busca por \(N_i\) (Parte XIV, Fase 1)
-\emph{sob o \(\rho_i\) original}. Trocar \(\rho_i\) por \(\rho_i'\) nas
-fórmulas de custo sem refazer essa busca deixa \(M_i\) preso a um
-cronograma que, sob a nova produtividade, não fecha mais o escopo
-\(Q_i\) (Parte IV) --- o modelo estaria implicitamente descrevendo uma
-atividade que produz uma quantidade diferente de \(Q_i\). Recalcular
-\(\Delta_i^{\mathrm{cat}}\) sob produtividade revisada exige rederivar
-\(N_i\), \(\{m_{ij}\}\) e \(\varphi_i\) a partir de \(\rho_i'\) (Fases
-0--3), não apenas substituir \(\rho_i\) nas fórmulas de custo mantendo o
-cronograma antigo.
+\textbf{Identidade condicional --- baseline \texttt{OUTPUT\_PROPORTIONAL}.}
+Somente sob \(U_{gij}=\kappa_{ig}^{out}q_{ij}\), taxa e preço fixos, sem perdas ou consumo idle, e equivalência dimensional comprovada, o fecho \(\sum_jq_{ij}=Q_i\) permite
+\[\boxed{C_i^{V,op}=C_i^{V,cat}=\frac{Q_i\gamma_i^{V,cat}}{\rho_i}}\qquad\text{[apenas baseline, não universal].}\]
+No caso geral, \(C_i^{V,op}=\sum_{g,j}p_gU_{gij}\) deriva de medida física. \texttt{OUTPUT\_WITH\_MEASURED\_LOSS} e \texttt{HOURLY\_WITH\_MEASURED\_IDLE} exigem perdas, horas, ociosidade, unidades e fonte; fechamento de escopo sozinho não prova invariância de V.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
@@ -938,7 +895,7 @@ especificação sobre todos os \(R_i\)).
 
 \textbf{Demanda semanal por tipo:}
 
-\[n_j(\tau) = \sum_{i\,:\,j\in[j_i^0,\,j_i^0+N_i-1]} m_{ij}\cdot n_{\tau}^{i}\]
+\[\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[demanda física; frentes independentes: }a_{ig}(m)=m\,n_g^i\text{]}\]
 
 \textbf{Pool físico} \(\{r\}\): instâncias fungíveis por tipo, tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\).
 A igualdade ativa/idle vale somente em \texttt{FULL\_RATE\_STANDBY}; regime ou origem ausente é \texttt{NOT\_EVALUATED}, nunca tarifa zero.
@@ -1093,20 +1050,9 @@ semanas interiores e no residual ---, o consumo físico de \(g\) pela
 atividade \(i\) na semana \(j\) segue a mesma construção, só trocando a
 taxa monetária pela taxa física:
 
-\[\boxed{D_{g,ij} = \kappa_i^g\cdot\frac{q_{ij}}{\rho_i}}\qquad[\text{unid}_g] \qquad\qquad \boxed{D_{g,j} = \sum_{i\,\in\,\mathcal{A}_j} D_{g,ij}}\qquad[\text{unid}_g]\]
-
-com \(\mathcal{A}_j\) o conjunto de atividades ativas na semana \(j\)
-(Parte IV). Nenhum cálculo novo além de agregação: \(q_{ij}\) e
-\(\rho_i\) já são saída da Fase 3.
-
-\textbf{Identidade de consistência.} Somando sobre toda a vida do
-projeto e usando o fecho de escopo exato \(\sum_jq_{ij}=Q_i\):
-
-\[\sum_j D_{g,j} = \sum_i\kappa_i^g\cdot\frac{Q_i}{\rho_i} \equiv U_g\]
-
-recuperando exatamente o \(U_g\) de §X.1 --- a demanda física total já
-era implicitamente conhecida pelo formulário original; faltava sua
-distribuição semana a semana.
+\textbf{Demanda física por regime:} usar \(U_{gij}\) medido e tipado por unidade entregue ou por hora real, com perdas e consumo idle explícitos. Nenhuma proxy monetária R\$/h estabelece quantidade física.
+\[\boxed{D_{g,j}=\sum_iU_{gij},\qquad U_g=\sum_jD_{g,j}}\]
+No regime \texttt{OUTPUT\_PROPORTIONAL} com \(\kappa_{ig}^{out}\) fisicamente dimensionado, \(U_{gij}=\kappa_{ig}^{out}q_{ij}\); no modo horário, \(U_{gij}=\kappa_{ig}^hH_{real,ij}+I_{gij}+L_{gij}\), com horas reais e evidências medidas. Sem regime, fonte ou preço não há certificação financeira (\texttt{NOT\_EVALUATED}). O estoque recebe \(D_{g,j}\) somente depois da prova física.
 
 \hypertarget{x.3-balanuxe7o-de-estoque}{%
 \subsubsection{X.3 Balanço de estoque}\label{x.3-balanuxe7o-de-estoque}}
