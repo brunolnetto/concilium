@@ -60,7 +60,7 @@ def test_inventory_requires_explicit_provenance_dimension_and_uncertainty() -> N
         if row["blocked_by_issues"]:
             assert row["classification"] == "CONDITIONAL_OR_UNCERTIFIED"
         # No automatic "all 93 dimensionally certified" claim from a syntax audit.
-        assert row["dimensional_proof"] == "REQUIRES_INDEPENDENT_VERIFICATION"
+        assert row["dimensional_proof"] in ("REQUIRES_INDEPENDENT_VERIFICATION", "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION")
 
 
 def test_finance_and_pricing_relations_are_not_promoted_out_of_dependencies() -> None:
@@ -175,3 +175,16 @@ def test_symbol_unit_provenance_contract_is_unique_and_explicit() -> None:
     assert "BRL/physical good unit" == by_name["p_g"]["unit"]
     assert "BRL" == by_name["C_tot"]["unit"]
     assert 21 in by_name["P"]["blocked_by_issues"]
+
+
+def test_indirect_weekly_rate_requires_time_factor_to_be_money() -> None:
+    # A BRL/week tariff plus a one-time BRL event cannot be added as bare
+    # monetary amounts; the first must be posted over an explicit week cell.
+    assert (BRL / W) * SCALAR == BRL / W
+    assert BRL / W != BRL
+    assert (BRL / W) * W == BRL
+    by_id = {r["id"]: r for r in read_inventory()["rows"]}
+    for id_ in ("FL-079", "FL-080"):
+        assert 20 in by_id[id_]["blocked_by_issues"]
+        assert by_id[id_]["status"] == "CONDITIONAL_OR_UNCERTIFIED"
+        assert by_id[id_]["dimensional_proof"] == "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION"
