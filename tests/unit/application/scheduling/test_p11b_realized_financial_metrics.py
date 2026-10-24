@@ -365,3 +365,44 @@ def test_p20_projection_allows_weekly_physics_without_financial_postings() -> No
     assert output.weeks[1].week == WEEKS[1]
     assert output.weeks[1].cost_before_bdi == 0
     assert output.weeks[1].bdi_equivalent is None
+
+
+def test_intermediate_float_cumulative_above_decimal_capacity_does_not_fail() -> None:
+    # Codex falsifier: Q=0.4, capacity=0.1, real Skill04 producer stores
+    # cumulative 0.30000000000000004 in week three. Exact semantic q must
+    # remain 0.1, never accidentally exceed the true weekly capacity.
+    file = (
+        Path(__file__).resolve().parents[4]
+        / "src/concilium/application/skills/manifests/04-cronograma"
+        / "_skill_helpers/_custos.py"
+    )
+    spec = spec_from_file_location("_p11b_source_custos_four", file)
+    assert spec is not None and spec.loader is not None
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    entries = {}
+    total = 0.0
+    for week in WEEKS:
+        value = module._build_dist_cell(
+            producao_semanal_base=0.1,
+            num_eq=1.0,
+            n_max=1,
+            fator_clima=1.0,
+            fator_calendario=1.0,
+            quantitativo=0.4,
+            qtd_acumulada=total,
+        )
+        entries[week] = value
+        total = value.qtd_acumulada
+    assert entries[WEEKS[2]].qtd_acumulada == 0.30000000000000004
+    projected = project_realized_financials(
+        distributions_by_activity={"A": entries},
+        scopes_by_activity={"A": F("0.4")},
+        ledger=ledger(tuple((week, 1, 0, 0) for week in WEEKS)),
+        bdi_by_category=BDI,
+    )
+    assert projected.activities[0].delivered_output == F("0.4")
+    assert projected.activities[0].realized_efficiency == 1
+    assert [row.delivered_output for row in projected.activities[0].weeks] == [
+        F("0.1"), F("0.1"), F("0.1"), F("0.1"),
+    ]
