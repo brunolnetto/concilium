@@ -214,9 +214,9 @@ $$\mathcal{A}_j \coloneqq \{A_i\in\mathcal{A} : j\in[j_i^0,\,j_i^0+N_i-1]\}$$
 
 $$C_{ij}^{\mathrm{K,op}} = \gamma_i^{\mathrm{K,cat}}\,h_id_i\,m_{ij}\qquad\text{[R\$] — nominal em toda semana ativa, inclusive a última}$$
 
-$$C_{ij}^{\mathrm{V,op}} = \gamma_i^{\mathrm{V,cat}}\cdot\frac{q_{ij}}{\rho_i}\qquad\text{[R\$]}$$
+$C_{ij}^{V,op}=\sum_g p_g U_{gij}\qquad\text{[aquisição física, com taxa, medida, unidade e origem declaradas]}$
 
-Nas semanas interiores, $q_{ij}/\rho_i \equiv \varepsilon_{ij}h_id_im_{ij}$ por definição de $q_{ij}$ (Parte IV) — a formulação acima generaliza a forma tempo-a-tempo e permanece exata na semana de fechamento, onde $q_{ij}$ é o residual e não $\varepsilon_{ij}h_id_im_{ij}$ diretamente.
+Somente sob `OUTPUT_PROPORTIONAL` com taxa física por unidade entregue e preço fixos, o consumo é proporcional a $q_{ij}$. Nas variantes horárias, idle e perdas, $U_{gij}$ exige evidência própria: não substituir por $q_{ij}/\rho_i$ nem pelo tempo inferido de $F_i(m)$. A relação $q_{ij}/\rho_i=\varepsilon_{ij}h_id_im_{ij}$ é um diagnóstico de frentes independentes, não uma lei geral de aquisição.
 
 $$C_{ij}^{\mathrm{op}} = C_{ij}^{\mathrm{K,op}}+C_{ij}^{\mathrm{V,op}}\qquad\text{[R\$]}$$
 
@@ -227,7 +227,7 @@ $$C_{ij}^{\mathrm{op}} = C_{ij}^{\mathrm{K,op}}+C_{ij}^{\mathrm{V,op}}\qquad\tex
 $$C_i^{\mathrm{K,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{K,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela contratual, à eficiência nominal}$$
 $$C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela consumível}$$
 $$C_i^{\mathrm{K,op}} = \sum_{j} C_{ij}^{\mathrm{K,op}} = \gamma_i^{\mathrm{K,cat}}\,h_id_i\,M_i\qquad\text{[R\$]}$$
-$$C_i^{\mathrm{V,op}} = \sum_{j} C_{ij}^{\mathrm{V,op}} = \frac{\gamma_i^{\mathrm{V,cat}}}{\rho_i}\sum_j q_{ij}\qquad\text{[R\$]}$$
+$C_i^{V,op}=\sum_j C_{ij}^{V,op}=\sum_{g,j}p_g U_{gij}\qquad\text{[R\$]}$
 $$C_i^{\mathrm{op}} = C_i^{\mathrm{K,op}}+C_i^{\mathrm{V,op}}\qquad\text{[R\$]}$$
 $$p_i^{\mathrm{op}} = C_i^{\mathrm{op}}/Q_i\qquad\text{[R\$/un]}$$
 
