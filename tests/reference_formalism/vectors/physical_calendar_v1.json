@@ -90,7 +90,8 @@
             "final_week_fraction": "0.5"
           }
         }
-      }
+      },
+      "protocol": "formalism-physical/1"
     },
     {
       "case_id": "shared_bottleneck_capacity_plateau",
@@ -190,7 +191,8 @@
             "final_week_fraction": "0.5"
           }
         }
-      }
+      },
+      "protocol": "formalism-physical/1"
     },
     {
       "case_id": "ramp_trapezoid_and_fractional_last_week",
@@ -277,7 +279,8 @@
             "final_week_fraction": "0.5"
           }
         }
-      }
+      },
+      "protocol": "formalism-physical/1"
     },
     {
       "case_id": "rain_zero_and_end_of_week_quantity_release",
@@ -399,7 +402,8 @@
             "final_week_fraction": "0.5"
           }
         }
-      }
+      },
+      "protocol": "formalism-physical/1"
     },
     {
       "case_id": "scarce_resource_post_release_rescheduling",
@@ -522,7 +526,8 @@
             "final_week_fraction": "0.5"
           }
         }
-      }
+      },
+      "protocol": "formalism-physical/1"
     }
   ]
 }
