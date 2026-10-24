@@ -99,4 +99,4 @@ def test_snapshot_cannot_mark_acceptance_verified(spec: dict) -> None:
 
 def test_incomplete_issue_snapshot_fails_closed(spec: dict) -> None:
     with pytest.raises(ValueError, match="incomplete"):
-        report(spec, states(10, 12) | {9: "closed", 13: "open"} | {26: "unknown"}, set())
+        report(spec, {i: s for i, s in states(10, 12).items() if i != 26}, set())
