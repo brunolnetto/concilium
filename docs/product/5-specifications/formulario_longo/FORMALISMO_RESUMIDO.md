@@ -57,7 +57,7 @@ onde:
 
 *Exemplos de instâncias da mesma fórmula:* combustível → $\kappa_r$ [L/h], $p_g$ [R\$/L]; agregado → $\kappa_r$ [t/h], $p_g$ [R\$/t]; explosivo → $\kappa_r$ [kg/h], $p_g$ [R\$/kg]; cimento → $\kappa_r$ [kg/h], $p_g$ [R\$/kg].
 
-**MAT legado.** Quando `atributos_especificos.consumo_horario_fisico` e `atributos_especificos.unidade_fisica` estão ausentes no cadastro do bem, trata-se do caso degenerado $\kappa_r = 1\ [\text{unid}_g/\text{h}]$, $p_{g(r)} = c_r\ [\text{R\$}/\text{h}]$ — a fórmula $c_r = \kappa_r \cdot p_{g(r)}$ permanece válida com a unidade física colapsada. Quando os atributos estão presentes, a decomposição é auditável por tipo físico, retrocompatível com catálogos que não distinguem taxa de consumo e preço unitário.
+**MAT legado (proxy monetário, não volume físico).** Na ausência de `atributos_especificos.consumo_horario_fisico` e `atributos_especificos.unidade_fisica`, o catálogo pode fornecer somente `c_r` [R$/h] como **proxy de custo horário**. Não existem `κ_r` [unid_g/h] nem `p_g` [R$/unid_g] verificáveis nessa entrada: atribuir `κ_r=1` e `p_g=c_r` [R$/h] é dimensionalmente inválido. O proxy deve permanecer `UNVERIFIED`, sem volume físico inferido, preço unitário fictício nem autorização de GO. A identidade `c_r=κ_r·p_g` só é aplicável quando ambos os fatores físicos, suas unidades compatíveis e a procedência do preço estiverem declarados (ver #18/#23).
 
 > **Contrato normativo P10-A:** [CAPACIDADE_E_RECURSOS.md](CAPACIDADE_E_RECURSOS.md) substitui a eficiência de alocação η_s por capacidade física F_i(m). As fórmulas históricas de ρ·η_s·m e os custos derivados permanecem **não certificáveis** até #11.
 
