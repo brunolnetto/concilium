@@ -214,6 +214,14 @@ O custo contratual do projeto inclui horas ativas e semanas/horas contratadas se
 
 ## Parte VII — Razões Operacionais e Referência Comparável
 
+**Contrato substitutivo P11-C (vigente):** \(R_{ij}=F_i(m_{ij})h_id_i\Delta w_j\) e \(B_{ij}=\eta_{ij}^{nom}R_{ij}\) são referências de capacidade, não volume entregue; a eficiência **realizada** é \(\varepsilon_{ij}^{real}=q_{ij}/R_{ij}\) para \(R_{ij}>0\), e a fração de fechamento \(\varphi=q/B\) requer \(B>0\). Na **mesma composição e mesmo custo de referência**, \(\zeta=C^{op}/C^{ref}\), \(\pi=(C^{op}/q)/(C^{ref}/R)\), portanto **\(\zeta=\varepsilon^{real}\pi\)** quando todos os denominadores são positivos. Para \(q=0\) \(\pi\) é indefinida; para \(R=0\), \(\varepsilon^{real}\) é indefinida. **Proibido** trocar \(\varepsilon^{real}\) por \(\eta^{nom}\) na semana parcial.
+
+A eficiência média é \(\bar\varepsilon_i^{real}=(\sum_jq_{ij})/(\sum_jR_{ij})\); \(\delta_i=V_i/(K_i+V_i)\) e \(\beta_i^{eq}=(\beta_i^KK_i+\beta_i^VV_i)/(K_i+V_i)\) dependem de ledger reconciliado e propriedade exclusiva de K/V. BDI do projeto: \(P=\sum_c(1+\beta_c)C_c\), **uma vez por evento**. K semanal é integral na semana parcial. A constância de \(V(Q)\) exige \(U_{gij}=\kappa_{ig}^{out}q_{ij}\) e custos unitários estáveis; não é universal quando há gargalo e insumo por hora.
+
+As referências antigas \(\varepsilon^{nom}\), \(\gamma/\rho\), \(\bar\varepsilon\) por frente-semana e \(R=f_V+(1-f_V)/\bar\varepsilon\) são **suspensas como contratos normativos**. Provas: [P11-A](P11A_EFICIENCIA_REAL_IDENTIDADES.md) e [P11-B](P11B_PROJECAO_REALIZADA.md). Publicação em Skill06 requer fonte tipada P20; na ausência de prova, métricas \(\zeta,\pi\) ficam **NOT_EVALUATED**, jamais GO.
+
+
+
 **Referência corrigida P11-A:** [derivação matemática e fixtures exatos de eficiência realizada e K/V](P11A_EFICIENCIA_REAL_IDENTIDADES.md). A identidade ζ=ε_real π usa ε_real=q/R e uma única referência coerente (R,C_ref); exógena nominal e fração de fechamento não podem ser confundidas. A execução financeira end-to-end permanece sob P11-B e #20/#21.
 
 

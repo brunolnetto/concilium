@@ -300,11 +300,32 @@ class BalancoControle(BaseModel):
     fonte: Literal["ESTIMADO", "CALCULADO"] = "ESTIMADO"
 
 
+class MetricasRealizadasP11(BaseModel):
+    """Exact, explicit P20×Skill04 diagnostic, NEVER a sale/cost authority.
+
+    Monetary and unitless ratios are canonical fraction strings. They are
+    independently replayable and cannot silently round to legacy floats.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    authority: Literal["P11_B_READ_ONLY_PREVIEW_NOT_PROJECT_GO"]
+    contractual_k: str
+    physically_purchased_v: str
+    indirect: str
+    price_once_bdi: str
+    effective_bdi: str | None
+    activity_efficiencies: dict[str, str | None]
+    zeta: str | None
+    pi: str | None
+    source: Literal["SKILL04_P20_EXCLUSIVE_POSTINGS"] = "SKILL04_P20_EXCLUSIVE_POSTINGS"
+
+
 class Resultado(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     venda: Venda
     custo: CustoTotal
+    metricas_realizadas_p11: MetricasRealizadasP11 | None = None
     resultado_financeiro: float
     margem_pct: float
     status_margem: StatusMargem
