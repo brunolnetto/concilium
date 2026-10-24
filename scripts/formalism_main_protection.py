@@ -144,8 +144,16 @@ def verify_policy(branch: dict[str, Any], protection: dict[str, Any]) -> None:
         raise ProtectionError(f"Effective required checks absent: {sorted(missing)}")
     if protection.get("enforce_admins", {}).get("enabled") is not True:
         raise ProtectionError("Administrators can bypass required checks.")
-    if not isinstance(protection.get("required_pull_request_reviews"), dict):
+    reviews = protection.get("required_pull_request_reviews")
+    if not isinstance(reviews, dict):
         raise ProtectionError("Merges do not require pull requests.")
+    # GitHub offers explicit PR bypass allowances independently of the
+    # administrator-enforcement toggle. Never certify exemption lists.
+    bypass = reviews.get("bypass_pull_request_allowances") or {}
+    if not isinstance(bypass, dict) or any(
+        bypass.get(group) for group in ("users", "teams", "apps")
+    ):
+        raise ProtectionError("Explicit pull-request bypass allowances are present.")
     for name in ("allow_force_pushes", "allow_deletions"):
         item = protection.get(name)
         if not isinstance(item, dict) or item.get("enabled") is not False:
