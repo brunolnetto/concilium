@@ -536,7 +536,7 @@ ENTRADA
   Para cada recurso r:
     c_r^mob, c_r^demob             — custos de mobilização/desmobilização
     G_r^viável                     — gap máximo absoluto [semanas]
-    // c_r^standby ≡ c_r^sem: pool é custo de permanência puro (§IX.3)
+    // P13-C: c_r^idle=c_r^act=c_r^sem SOMENTE FULL_RATE_STANDBY; demais taxas e fonte explícitas.
 
   Categorias indiretas:
     {(l, driver(l), {Γ_l^{k,mensal}}, c_l^mob, c_l^demob)}_{l ∈ L}
@@ -631,13 +631,13 @@ Para cada i ∈ A, para cada j ∈ [j_i^0, j_i^0 + N_i - 1]:
     q_{ij} ← q_residual                                  [semana de fechamento, da Fase 1]
 
   C_{ij}^{K,op}   ← γ_i^{K,cat} · h_i · d_i · m_{ij}       [nominal — não prorateado]
-  C_{ij}^{V,op}   ← γ_i^{V,cat} · q_{ij} / ρ_i             [prorateado exatamente pelo quantitativo]
+  C_{ij}^{V,op}   ← Σ_g p_g*U_{gij} // γ^V*q/ρ apenas baseline comprovado
   C_{ij}^{op}     ← C_{ij}^{K,op} + C_{ij}^{V,op}
 
 Para cada i:
   M_i          ← Σ_j m_{ij}
   C_i^{K,op}  ← γ_i^{K,cat} · h_i · d_i · M_i
-  C_i^{V,op}  ← γ_i^{V,cat} · Q_i / ρ_i           [= Σ_j C_{ij}^{V,op}, exato]
+  C_i^{V,op}  ← Σ_j C_{ij}^{V,op} // requer regime físico e fonte
   C_i^{op}    ← C_i^{K,op} + C_i^{V,op}
   p_i^{op}    ← C_i^{op} / Q_i                      [R$/un]
 
@@ -664,21 +664,23 @@ C^{pool} ← 0; C^{pool,β} ← 0; C^{MOB,eq} ← 0; C^{MOB,eq,β} ← 0
 Para cada tipo τ ∈ T:
   n_j(τ) ← Σ_{i: j ∈ [j_i^0, j_i^0+N_i-1]} a_iτ(m_ij) ∀j // linear: a_iτ(m)=m·n_τ^i
   n_max(τ) ← max_j n_j(τ)
-  G_τ^* ← (c_τ^mob + c_τ^demob) / c_τ^sem
+  // KEEP: gap≤G_τ^viável E gap*c_τ^idle≤c_τ^mob+c_τ^demob; nunca dividir por taxa zero.
 
-  sem_τ ← 0; trips_τ ← 0
+  sem_τ ← 0; act_τ ← 0; idle_τ ← 0; trips_τ ← 0
 
   Para ℓ = 1, 2, ..., n_max(τ):                       // uma "fatia" por unidade de fleet
     on_ℓ ← {j : n_j(τ) ≥ ℓ}                             // semanas em que a ℓ-ésima instância é exigida
     blocos ← intervalos maximais consecutivos de on_ℓ
     Fundir blocos consecutivos [b_k, b_{k+1}] cujo gap = início(b_{k+1}) − fim(b_k)
-      satisfaça gap ≤ min(G_τ^*, G_τ^viável)            // perpetuação da instância desta fatia
+       satisfaça gap ≤ G_τ^viável E gap*c_τ^idle≤c_τ^mob+c_τ^demob // empate KEEP
     Para cada bloco fundido (após a fusão):
-      sem_τ   ← sem_τ + duração(bloco)                  // inclui gaps internos perpetuados
-      trips_τ ← trips_τ + 1                               // um par mob/demob por bloco fundido
+      sem_τ   ← sem_τ + duração(bloco) // presença paga
+      act_τ   ← act_τ + semanas com demanda ativa desta fatia no bloco
+      trips_τ ← trips_τ + 1
 
-  C^{pool}     ← C^{pool}     + sem_τ · c_τ^sem
-  C^{pool,β}   ← C^{pool,β}   + (1 + β_{cat(τ)}) · sem_τ · c_τ^sem
+  idle_τ ← sem_τ - act_τ
+  C^{pool}     ← C^{pool}     + act_τ*c_τ^act + idle_τ*c_τ^idle
+  C^{pool,β}   ← C^{pool,β}   + (1+β_cat(τ))*(act_τ*c_τ^act+idle_τ*c_τ^idle)
   C^{MOB,eq}   ← C^{MOB,eq}   + trips_τ · (c_τ^mob + c_τ^demob)
   C^{MOB,eq,β} ← C^{MOB,eq,β} + (1 + β^IND) · trips_τ · (c_τ^mob + c_τ^demob)
 
@@ -687,18 +689,20 @@ SAÍDA: C^{pool}, C^{pool,β}, C^{MOB,eq}, C^{MOB,eq,β}
 
 **Reconciliação:** no regime de tarifas distintas, o livro de instâncias deve publicar tanto $C^{pool}=\sum_{gj}(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$ quanto $C^{pool,\beta}=\sum_{gj}(1+\beta_{cat(g)})(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$, com tarifas normalizadas para a mesma base semanal. $C^{MOB/DEMOB}$ e $C^{MOB/DEMOB,\beta}$ entram somente no livro de indiretos. No regime homogêneo-base, a expressão anterior $\sum_\tau sem_\tau c_\tau^{sem}$ é caso particular.
 
+**Oráculo de cadeias:** o teste independente `tests/unit/application/scheduling/test_formalism_p16b_exact_level_contracts.py` enumera todas as escolhas viáveis keep/split por camada, prova custo mínimo em horizonte pequeno e desempata pelo menor número de movimentos. Essa prova é condicionada ao perfil físico e ao cronograma fixados; não certifica `PROJECT_GO`.
+
 **Limite de optimalidade:** a minimização de cadeias por nível é exata somente **condicionada ao perfil de equipes e cronograma fixados**. A otimização global de {m, cronograma, pool} permanece questão conjunta (#15/#16). Standby é presença paga não demandada, não eficiência de produção.
 
 ### XIV.5 — Fase 5: Estoque (Consumíveis)
 
 ```
-C^{cons} ← Σ_i γ_i^{V,cat} · Q_i / ρ_i
+C^{cons} ← Σ_g p_g*U_g // U_g medido por OUTPUT_PROPORTIONAL ou H_real/I_g/L_g
   // Exato por construção: Σ_i γ_i^{V,cat}·Q_i/ρ_i ≡ Σ_i C_i^{V,op} (fecho de escopo, Parte IV)
 
 Para cada i:
   γ_i^{V,cat,β} ← (1+β^MAT) · γ_i^MAT + (1+β^COMB) · γ_i^COMB
 
-C^{cons,β} ← Σ_i γ_i^{V,cat,β} · Q_i / ρ_i
+C^{cons,β} ← Σ_g (1+β_cat(g))*p_g*U_g
 
 // C^{inv} calculado na Fase 7 (Indireto) a partir de S_{g,j} disponível após Fase 3
 
