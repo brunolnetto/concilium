@@ -32,7 +32,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     order = validate_dag(spec)
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 44
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 46
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -100,3 +100,36 @@ def test_snapshot_cannot_mark_acceptance_verified(spec: dict) -> None:
 def test_incomplete_issue_snapshot_fails_closed(spec: dict) -> None:
     with pytest.raises(ValueError, match="incomplete"):
         report(spec, {i: s for i, s in states(10, 12).items() if i != 26}, set())
+
+
+def test_p09c_is_integrated_but_p09d_blocks_issue_nine_closure(spec: dict) -> None:
+    # Catch prior false-positive: original 2/2 slots were integrated, yet
+    # P09-C (already merged #86) and P09-D proofs remain material obligations.
+    packages = next(n for n in spec["nodes"] if n["issue"] == 9)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P09-A", [28]),
+        ("P09-B", [43]),
+        ("P09-C", [86]),
+        ("P09-D", []),
+    ]
+    result = report(spec, states(10, 12), all_merged(spec))
+    row = next(x for x in result["issues"] if x["issue"] == 9)
+    assert row["pr_packages_merged"] == 3
+    assert row["pr_packages_total"] == 4
+    assert row["pending_packages"] == ["P09-D"]
+    assert row["ready_to_execute"]
+    assert not row["closure_preflight"]
+
+
+def test_p09c_missing_merge_blocks_closure_even_with_d_proved(spec: dict) -> None:
+    changed = copy.deepcopy(spec)
+    node9 = next(n for n in changed["nodes"] if n["issue"] == 9)
+    next(p for p in node9["packages"] if p["id"] == "P09-D")["prs"] = [87]
+    merged = all_merged(changed)
+    merged.discard(86)
+    row = next(
+        x for x in report(changed, states(10, 12), merged)["issues"]
+        if x["issue"] == 9
+    )
+    assert "P09-C" in row["pending_packages"]
+    assert not row["closure_preflight"]
