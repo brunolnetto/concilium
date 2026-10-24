@@ -99,7 +99,7 @@ def test_p13a_registered_but_not_merged_cannot_close_issue_thirteen(spec: dict) 
     result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {92, 93, 94})
     thirteen = next(x for x in result["issues"] if x["issue"] == 13)
     assert thirteen["ready_to_execute"]
-    assert thirteen["pending_packages"] == ["P13-A", "P13-B"]
+    assert thirteen["pending_packages"] == ["P13-A", "P13-B", "P13-C"]
     assert thirteen["pr_packages_merged"] == 0
     assert not thirteen["closure_preflight"]
 
