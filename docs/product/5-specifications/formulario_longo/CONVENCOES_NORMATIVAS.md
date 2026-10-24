@@ -31,42 +31,9 @@
 
 **Unidades heterogêneas:** `u_i` e `unidade_g` não são intercambiáveis. Conversão depende de fator explícito; nunca inferir que `kg`, `t`, `L` e `m³` são equivalentes. Um proxy monetário de MAT não comprova volume físico (ver #18).
 
-**Integração por célula semanal (P09-D).** A expressão `h_i d_i` tem dimensão `horas/semana` e `F_i(m)` tem `u_i/hora`. Seu produto bruto é `u_i/semana`, **não** o total `u_i`. Na notação de células discretas, `B_ij=F_i(m_ij) h_i d_i ε_ij` abrevia a integração `F_i(m_ij) × (h_i d_i) × Δw_j × ε_ij`, com **`Δw_j = 1 semana`**; o resultado da célula `B_ij` e a quantidade `q_ij` são `u_i`. De maneira análoga, uma tarifa contratual `R$/h` multiplicada por `horas/semana` só produz custo `R# Contrato normativo de notação, unidades e intervalos — P09-A
+**Integração por célula semanal (P09-D).** A expressão `h_i d_i` tem dimensão `horas/semana` e `F_i(m)` tem dimensão `u_i/hora`. Seu produto bruto é `u_i/semana`, **não** o total `u_i`. Na notação de células discretas, `B_ij=F_i(m_ij) h_i d_i ε_ij` abrevia a integração `F_i(m_ij) × (h_i d_i) × Δw_j × ε_ij`, com **`Δw_j = 1 semana`**; o resultado da célula `B_ij` e a quantidade `q_ij` são `u_i`. De maneira análoga, uma tarifa contratual em reais por hora, multiplicada por horas por semana, só produz custo total em reais quando integrada à duração da célula semanal. A fração `φ_i` de fechamento não reduz automaticamente K no regime de contrato semanal integral. Sem duração definida, uma taxa semanal não pode ser interpretada como quantidade da célula.
 
-**Status:** convenções transversais aceitas para revisão; não certifica, por si só, as equações de produtividade, custo ou preço.
-**Escopo:** [FORMALISMO_LONGO.md](FORMALISMO_LONGO.md) (§0, I, II, IX, XIV), espelhado nos documentos [resumido](FORMALISMO_RESUMIDO.md) e [LaTeX](formulario_longo.tex).
-**Base auditada:** main `f8e5b65f7bc708894489fe52a528df6cd34e0b94`.
-**Governança:** issue #9 (P09-A); a paridade automatizada pertence a P09-B. A resolução de equações estruturalmente inconsistentes pertence a #10–#13.
-
-## 1. Classes de enunciados
-
-- **NORMATIVO:** unidade, domínio, significado do índice temporal, identidade de balanço e convenção da interface entre etapas.
-- **HIPÓTESE-BASE:** contrato homogêneo, standby cobrado integralmente, ausência de perdas, consumo proporcional a Q. Deve ser identificada no cálculo; não é lei física universal.
-- **VARIANTE CONTRATUAL:** política de custos e consumo que depende de contrato real (standby descontado, perdas, combustível ocioso). Deve ter parâmetro explícito e saída separada.
-- **PENDENTE:** expressão sem demonstração ou com contraexemplo em #10–#13. Não pode servir como sinal GO/NOGO até corrigida e ensaiada.
-
-## 2. Dicionário dimensional mínimo
-
-| Símbolo | Dimensão | Observação / restrição |
-|---|---|---|
-| `Q_i`, `q_ij` | unidade física da atividade `u_i` | `Q_i>0` no regime de atividade produtiva; `q_ij>=0`; soma semanal deve fechar Q |
-| `rho_i^front`, `rho_i^peak`, `F_i(m)` | `u_i/(h·frente)`, `u_i/h`, `u_i/h` | `F_i(m)` incorpora as frentes; `rho_i^peak=F_i(m_i^max)`; validade de extrapolação linear é hipótese condicionada em #10 |
-| `j`, `j_i^0`, `N_i`, `tau` | contagem inteira de semanas | `N_i>=1`, `tau=j-j_i^0`, `0<=tau<N_i` |
-| `m_i^0`, `m_i^1`, `m_i^max`, `m_ij` | frentes (inteiro, adimensional) | `1<=m_i^0,m_i^1<=m_i^max` durante atividade |
-| `mu_i^+`, `mu_i^-` | frentes/semana | inteiros **não negativos**; valor zero é válido |
-| `h_i`, `d_i` | `h/dia`, `dia/semana` | `h_i*d_i` tem dimensão `h/semana` |
-| `alpha=F/Fmax` (diagnóstico), `eta_p`, `eta_w`, `epsilon_exog`, `phi`, `theta` | razão adimensional | `alpha` é capacidade relativa, **não** perda; `eta_p` e `eta_w` são fatores físicos exógenos; `phi` é fechamento |
-| `kappa_r`, `p_g` | `unidade_g/h_operacional`, `R$/unidade_g` | produto `kappa_r*p_g` tem dimensão `R$/h_operacional` |
-| `V_r^mensal`, `s_mes` | `R$/mês`, `semanas/mês` | `V_r^mensal/(s_mes*d_i*h_i)` tem dimensão `R$/h` |
-| `gamma^K`, `gamma^V`, `gamma^cat` | `R$/h_operacional` | a soma só é válida na mesma base horária |
-| `C`, `P` | `R$` | moedas não podem ser somadas se diferentes |
-| `beta`, `R`, `delta`, `zeta`, `pi`, `mu` (margem) | razão | porcentagens são armazenadas como frações, não pontos percentuais |
-
-**Unidades heterogêneas:** `u_i` e `unidade_g` não são intercambiáveis. Conversão depende de fator explícito; nunca inferir que `kg`, `t`, `L` e `m³` são equivalentes. Um proxy monetário de MAT não comprova volume físico (ver #18).
-
- depois de integrada à semana da célula. `φ_i` mede fechamento de escopo e não encurta a semana contratual K. Sem duração definida, a igualdade entre taxa semanal e quantidade da célula **não** é uma lei dimensional.
-
-
+## 3. Domínio da mobilização e semana retangular
 
 `W_i=(m_i^0,mu_i^+,m_i^1,mu_i^-,m_i^max)` tem domínio
 `N_{>0} × N_{>=0} × N_{>0} × N_{>=0} × N_{>0}`,
