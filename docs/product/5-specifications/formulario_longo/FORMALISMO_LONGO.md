@@ -328,9 +328,11 @@ $\mathcal{T}$ = conjunto de tipos de recurso (união de categorias e especifica�
 
 **Demanda semanal física por tipo:** \(d_{gj}=\sum_i a_{ig}(m_{ij})\). Somente em frentes independentes \(a_{ig}(m)=m\,n_g^i\); gargalos e recursos compartilhados exigem composição própria.
 
-$$\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[físico; }a_{ig}(m)=m\,n_g^i\text{ somente para frentes independentes]}.$$
+$\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[físico; }a_{ig}(m)=m\,n_g^i\text{ somente para frentes independentes]}.$
 
-**Pool físico** \(\{r\}\): instâncias fungíveis por tipo \(g\), tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\). A igualdade entre ativo e idle é exclusiva de \`FULL_RATE_STANDBY\`; sem regime e fonte, custo \`NOT_EVALUATED\`.
+Para compatibilidade com o algoritmo por níveis, (n_j(g)\equiv d_{gj}); o máximo físico é (qt_g=\max_jd_{gj}), sem assumir frentes independentes quando há gargalos.
+
+**Pool físico** \(\{r\}\): instâncias fungíveis por tipo \(g\), tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\). A igualdade entre ativo e idle é exclusiva de `FULL_RATE_STANDBY`; sem regime e fonte, custo `NOT_EVALUATED`.
 
 $$qt_\tau = \max_j n_j(\tau) \qquad\text{[tamanho do pool de tipo }\tau\text{]}$$
 
@@ -372,11 +374,11 @@ $$\boxed{f_r^{\text{standby}} = \frac{T_r^{\text{standby}}}{T_r^{\text{perm}}} \
 |---|---|
 | Cadeia singleton ($n_p=1$, sem perpetuação) | $0$ |
 | Perpetuação com gaps pequenos | $\in(0,1)$, próximo de 0 quando atividades são densas |
-| Recurso em standby quase todo tempo | $\to 1$ (não deve ocorrer: perpetuação só é racional quando gap $< G_r^*$) |
+| Recurso em standby quase todo tempo | $\to1$ (somente se cada gap respeitar limite físico e $k\,c_r^{idle}\le c_r^{mob}+c_r^{demob}$) |
 
-**Taxa efetiva semanal:** somente em \`FULL_RATE_STANDBY\` vale \(c_r^{idle}=c_r^{act}=c_r^{sem}\). A separação de MAT/COMB não implica essa igualdade para todos os contratos. \`DISCOUNTED_STANDBY\` usa tarifa ociosa própria; \`EXPLICIT_OFF_HIRE\` exige cadeia encerrada, presença zero e movimentos reais.
+**Taxa efetiva semanal:** somente em `FULL_RATE_STANDBY` vale \(c_r^{idle}=c_r^{act}=c_r^{sem}\). A separação de MAT/COMB não implica essa igualdade para todos os contratos. `DISCOUNTED_STANDBY` usa tarifa ociosa própria; `EXPLICIT_OFF_HIRE` exige cadeia encerrada, presença zero e movimentos reais.
 
-$$\boxed{\bar c_r=\frac{T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle}}{T_r^{perm}}}\quad(T_r^{perm}>0);\qquad \bar c_r=c_r^{sem}\ \text{somente FULL_RATE_STANDBY}.$$
+$$\boxed{\bar c_r=\frac{T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle}}{T_r^{perm}}}\quad(T_r^{perm}>0);\qquad \bar c_r=c_r^{sem}\ \text{somente no regime-base}.$$
 
 A fração \(f_r^{standby}\) é diagnóstico temporal de uma cadeia específica, não produtividade ou custo por si só. Keep/split compara \(k\,c_r^{idle}\) e \(c_r^{mob}+c_r^{demob}\), condicionados à admissibilidade contratual.
 
@@ -394,7 +396,7 @@ $$C^{MOB,eq,o} = \sum_r N_{\text{chains}}^r \cdot (c_r^{\text{mob}}+c_r^{\text{d
 
 $$C^{pool,o}\ge\sum_i C_i^{K,act}\quad\text{somente sob bases comparáveis, cobertura física completa e ausência de dupla imputação;}$$
 
-a soma por atividade é um **diagnóstico**, não o contrato financeiro autoritativo. No baseline, sem standby positivo e com taxas/demanda comparáveis, a igualdade pode ocorrer. No regime descontado, \(C^{pool,o}=\sum(c^{act}d+c^{idle}s)\), jamais \(\sum T^{perm}c^{sem}\) como identidade geral. MOB/DEMOB pertence exclusivamente a IND; ausência de evidência implica \`NOT_EVALUATED\`.
+a soma por atividade é um **diagnóstico**, não o contrato financeiro autoritativo. No baseline, sem standby positivo e com taxas/demanda comparáveis, a igualdade pode ocorrer. No regime descontado, \(C^{pool,o}=\sum(c^{act}d+c^{idle}s)\), jamais \(\sum T^{perm}c^{sem}\) como identidade geral. MOB/DEMOB pertence exclusivamente a IND; ausência de evidência implica `NOT_EVALUATED`.
 
 **Escopo do algoritmo de dimensionamento.** A decomposição por níveis empregada na Parte XIV, Fase 4 é exata para um tipo de recurso fungível homogêneo — instâncias perfeitamente substituíveis entre si, com custo de permanência e de mobilização/desmobilização idênticos. Variantes multi-tipo com recursos não perfeitamente substituíveis (capacidades ou custos heterogêneos dentro do mesmo tipo nominal) constituem um problema de otimização combinatória distinto, de complexidade superior à do caso fungível (cf. Bertossi, Carraresi & Gallo 1987); nesses casos, os tipos devem ser subdivididos em subtipos homogêneos antes de aplicar o algoritmo desta seção.
 
@@ -402,7 +404,7 @@ a soma por atividade é um **diagnóstico**, não o contrato financeiro autorita
 
 ## Parte X — Consumíveis: Aquisição e Posse
 
-**Aquisição física MAT/COMB:** \(U_g\) exige unidade, taxa, preço e fonte. Apenas \`OUTPUT_PROPORTIONAL\` sem idle ou perdas permite \(U_{gij}=\kappa_{ig}^{out}q_{ij}\) e equivalência com o envelope \(\gamma^{V,cat}Q/\rho\). \`OUTPUT_WITH_MEASURED_LOSS\` e \`HOURLY_WITH_MEASURED_IDLE\` são variantes medidas.
+**Aquisição física MAT/COMB:** \(U_g\) exige unidade, taxa, preço e fonte. Apenas `OUTPUT_PROPORTIONAL` sem idle ou perdas permite \(U_{gij}=\kappa_{ig}^{out}q_{ij}\) e equivalência com o envelope \(\gamma^{V,cat}Q/\rho\). `OUTPUT_WITH_MEASURED_LOSS` e `HOURLY_WITH_MEASURED_IDLE` são variantes medidas.
 
 **Custo de aquisição** ($C^{\mathrm{cons}}$) — **direto**, entra em $C^D$:
 
@@ -416,7 +418,7 @@ $$\boxed{C^{\mathrm{inv}} = \sum_g\sum_j c_g^{\mathrm{hold}}\, S_{g,j}}$$
 
 Posse de estoque não é consumo produtivo — é infraestrutura de suprimento, análogo ao bloco VM. **Não** entra em $C^D$.
 
-O consumo físico total é \(U_g=\sum_{i,j}U_{gij}\), incluindo perda \(L_g\) e idle \(I_g\) medidos quando necessários. \`OUTPUT_PROPORTIONAL\` com taxa/preço fixos garante invariância de \(V(Q)\) à repartição semanal; isso **não** vale universalmente nas variantes. Posse de estoque (\`HOLDING\`) e movimentos (\`MOB/DEMOB\`) são IND e não podem ser duplicados em V.
+O consumo físico total é \(U_g=\sum_{i,j}U_{gij}\), incluindo perda \(L_g\) e idle \(I_g\) medidos quando necessários. `OUTPUT_PROPORTIONAL` com taxa/preço fixos garante invariância de \(V(Q)\) à repartição semanal; isso **não** vale universalmente nas variantes. Posse de estoque (`HOLDING`) e movimentos (`MOB/DEMOB`) são IND e não podem ser duplicados em V.
 
 ---
 
