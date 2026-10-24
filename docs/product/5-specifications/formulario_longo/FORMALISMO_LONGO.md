@@ -237,6 +237,9 @@ O consumível operacional **é** o consumível de catálogo — não há inflaç
 
 ## Parte VII — Razões Operacional/Catálogo (semanais)
 
+**Contrato corrigido P11-A (referência matemática):** [eficiência realizada, fechamento parcial, K/V e BDI](P11A_EFICIENCIA_REAL_IDENTIDADES.md). As identidades ζ=επ só são válidas para ε **realizada** e uma mesma referência física/financeira; a ε exógena nominal isolada falha quando φ<1. Fórmulas históricas desta Parte abaixo permanecem **condicionais/não certificadas** até substituição editorial e adaptação do runtime no P11-B.
+
+
 **Regime de validade restrita — #11:** as identidades históricas de custo que usam $\gamma/\rho$ exigem escala linear de capacidade por frente e consumo unitário efetivo invariável. Elas **não** são normativas para $F_i(m)$ não linear, variação de tarifa por composição ou fechamento parcial até rederivação e teste pelo oráculo; não usar estas relações, isoladamente, para emitir GO.
 
 Custo semanal de catálogo (pool e consumível à taxa nominal, sem desconto de $\varepsilon_{ij}$):

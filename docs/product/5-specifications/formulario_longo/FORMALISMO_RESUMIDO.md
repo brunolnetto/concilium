@@ -214,6 +214,9 @@ O custo contratual do projeto inclui horas ativas e semanas/horas contratadas se
 
 ## Parte VII — Razões Operacionais e Referência Comparável
 
+**Referência corrigida P11-A:** [derivação matemática e fixtures exatos de eficiência realizada e K/V](P11A_EFICIENCIA_REAL_IDENTIDADES.md). A identidade ζ=ε_real π usa ε_real=q/R e uma única referência coerente (R,C_ref); exógena nominal e fração de fechamento não podem ser confundidas. A execução financeira end-to-end permanece sob P11-B e #20/#21.
+
+
 Defina \(C_{ij}^{ref}>0\) e \(q_{ij}^{ref}>0\) de **uma mesma configuração física de referência explicitamente documentada**. Com \(q_{ij}>0\) e custo operacional comparável \(C_{ij}^{op}\), definam-se:
 
 $$\zeta_{ij}=\frac{C_{ij}^{op}}{C_{ij}^{ref}},\qquad
