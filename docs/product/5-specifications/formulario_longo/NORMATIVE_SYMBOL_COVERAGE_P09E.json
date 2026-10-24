@@ -2,7 +2,7 @@
   "schema": "concilium.formalism.normative_symbol_coverage.v1",
   "source": "EQUATION_INVENTORY_P09C.json",
   "supported_equations": 21,
-  "coverage_policy": "Explicit local aliases from all 21 currently normative candidate equations. Function names, LaTeX punctuation, operator bounds and quantifiers are interpreted as operators not economically certified symbols. This proves typed normative symbol provenance, not correctness or GO of conditional formulas.",
+  "coverage_policy": "Explicit local aliases from all 21 currently normative candidate equations. Function names, LaTeX punctuation, operator bounds and quantifiers are interpreted as operators not economically certified symbols. This proves typed normative symbol provenance, not correctness or GO of conditional formulas. Anchors are semantic trace locators, NOT mathematical equivalence proofs by themselves; typed P09-D witnesses and independent adversarial fixtures are mandatory.",
   "equations": [
     {
       "id": "FL-001",
@@ -26,7 +26,15 @@
           "output": "activity cardinality"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\mathcal{A} = \\{A_i\\}"
+        },
+        "tex": {
+          "semantic_anchor": "\\mathcal{A} = \\{A_i\\}"
+        }
+      }
     },
     {
       "id": "FL-002",
@@ -62,7 +70,15 @@
           "output": "release"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "A_i = (Q_i"
+        },
+        "tex": {
+          "semantic_anchor": "A_i = (Q_i"
+        }
+      }
     },
     {
       "id": "FL-003",
@@ -116,7 +132,15 @@
           "output": "branch selection"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\kappa_r \\cdot p_{g(r)}"
+        },
+        "tex": {
+          "semantic_anchor": "\\kappa_r \\cdot p_{g(r)}"
+        }
+      }
     },
     {
       "id": "FL-004",
@@ -152,7 +176,15 @@
           "output": "deployed graph"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "F_i(m)"
+        },
+        "tex": {
+          "semantic_anchor": "F_i(m)"
+        }
+      }
     },
     {
       "id": "FL-005",
@@ -194,7 +226,15 @@
           "output": "ramp cap"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "W_i = ("
+        },
+        "tex": {
+          "semantic_anchor": "W_i = ("
+        }
+      }
     },
     {
       "id": "FL-006",
@@ -248,7 +288,15 @@
           "output": "terminal slope"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "m_i(\\tau;N)"
+        },
+        "tex": {
+          "semantic_anchor": "m_i(\\tau)"
+        }
+      }
     },
     {
       "id": "FL-007",
@@ -302,7 +350,15 @@
           "output": "degenerate interval"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\mu_i^+=\\mu_i^-=0"
+        },
+        "tex": {
+          "semantic_anchor": "\\mu_i^+=\\mu_i^-=0"
+        }
+      }
     },
     {
       "id": "FL-008",
@@ -338,7 +394,15 @@
           "output": "activity interval"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "m_{ij}=0"
+        },
+        "tex": {
+          "semantic_anchor": "m_{ij} = \\begin{cases}"
+        }
+      }
     },
     {
       "id": "FL-009",
@@ -368,7 +432,15 @@
           "output": "release threshold"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "B_i \\subseteq"
+        },
+        "tex": {
+          "semantic_anchor": "B_i \\subseteq"
+        }
+      }
     },
     {
       "id": "FL-010",
@@ -404,7 +476,15 @@
           "output": "sum upper bound"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\Phi_b(j)"
+        },
+        "tex": {
+          "semantic_anchor": "\\Phi_b(j)"
+        }
+      }
     },
     {
       "id": "FL-011",
@@ -416,7 +496,15 @@
           "output": "monthly dilution"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "s_{\\text{mes}}"
+        },
+        "tex": {
+          "semantic_anchor": "s_{\\text{mes}}"
+        }
+      }
     },
     {
       "id": "FL-012",
@@ -434,7 +522,15 @@
           "output": "weekly operational hours"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "d_i \\in \\{4,5,6\\}"
+        },
+        "tex": {
+          "semantic_anchor": "d_i \\in \\{4,5,6\\}"
+        }
+      }
     },
     {
       "id": "FL-013",
@@ -470,7 +566,15 @@
           "output": "price"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\beta^{EQ}"
+        },
+        "tex": {
+          "semantic_anchor": "\\beta^{EQ}"
+        }
+      }
     },
     {
       "id": "FL-021",
@@ -506,7 +610,15 @@
           "output": "sum upper bound"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "q_{ij}=\\min"
+        },
+        "tex": {
+          "semantic_anchor": "q_{i,j_i^1}"
+        }
+      }
     },
     {
       "id": "FL-022",
@@ -560,7 +672,15 @@
           "output": "available capacity"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\varphi_i=\\frac{q_{i,j_i^1}}{B_{i,j_i^1}}"
+        },
+        "tex": {
+          "semantic_anchor": "\\varphi_i"
+        }
+      }
     },
     {
       "id": "FL-023",
@@ -590,7 +710,15 @@
           "output": "sum upper bound"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\sum_jq_{ij}=Q_i"
+        },
+        "tex": {
+          "semantic_anchor": "\\sum_{j=j_i^0}^{j_i^1} q_{ij} = Q_i"
+        }
+      }
     },
     {
       "id": "FL-024",
@@ -632,7 +760,15 @@
           "output": "interval upper bound"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\mathcal A_j"
+        },
+        "tex": {
+          "semantic_anchor": "\\mathcal{A}_j"
+        }
+      }
     },
     {
       "id": "FL-075",
@@ -674,7 +810,15 @@
           "output": "category enum"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\mathcal{L}"
+        },
+        "tex": {
+          "semantic_anchor": "\\mathcal{L}"
+        }
+      }
     },
     {
       "id": "FL-076",
@@ -704,7 +848,15 @@
           "output": "one-time path"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\text{driver}(l)"
+        },
+        "tex": {
+          "semantic_anchor": "\\text{driver}(l)"
+        }
+      }
     },
     {
       "id": "FL-077",
@@ -752,7 +904,15 @@
           "output": "monthly amount"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\Gamma_l^{k,\\text{mensal}}"
+        },
+        "tex": {
+          "semantic_anchor": "\\Gamma_l^{k,\\text{mensal}}"
+        }
+      }
     },
     {
       "id": "FL-078",
@@ -794,7 +954,15 @@
           "output": "interval upper bound"
         }
       ],
-      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified."
+      "evidence_scope": "This declaration accounts for symbols in this candidate's equation only. The semantic proof is in P09-D; downstream conditionals remain uncertified.",
+      "representations": {
+        "resumido": {
+          "semantic_anchor": "\\gamma_l^{k,\\text{sem}}"
+        },
+        "tex": {
+          "semantic_anchor": "\\gamma_l^{k,\\text{sem}}"
+        }
+      }
     }
   ]
 }
