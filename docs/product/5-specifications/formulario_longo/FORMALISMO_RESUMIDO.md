@@ -279,11 +279,11 @@ $$\boxed{\min \sum_{gj}\big(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj}\big)
 
 sujeito às restrições de capacidade, cobertura, disponibilidade, permanência e lead time. Cada movimento entra **uma única vez** na função objetivo/diário. No regime-base homogêneo, \(c^{act}=c^{idle}=c^{sem}\), portanto \(C^{pool,o}=\sum_{gj}c_g^{sem}x_{gj}\), separando MOB/DEMOB para contabilização indireta; standby descontado ou off-hire exigem variante tipada (#13).
 
-Entre blocos separados por \(k\) semanas **vazias**, manter é viável se \(k\le G_g^{viável}\) e economicamente preferível quando \(k\,c_g^{idle}\le c_g^{demob}+c_g^{mob}\). No empate, preferir menos movimentos. Exemplo: demanda de um equipamento nas semanas 1 e 3, standby R$100 na semana 2, remobilização R$160 => manter é ótimo, embora fisicamente ocioso. Com transições gratuitas, manter standby de custo positivo não é ótimo.
+Entre blocos separados por \(k\) semanas **vazias**, manter é viável se \(k\le G_g^{viável}\) e economicamente preferível quando \(k\,c_g^{idle}\le c_g^{demob}+c_g^{mob}\). No empate, preferir menos movimentos (KEEP), conforme o oráculo independente `tests/unit/application/scheduling/test_formalism_p16b_exact_level_contracts.py`; qualquer `gap > max_idle_gap` torna KEEP inviável mesmo se a tarifa ociosa é zero. Exemplo: demanda de um equipamento nas semanas 1 e 3, standby R$100 na semana 2, remobilização R$160 => manter é ótimo, embora fisicamente ocioso. Com transições gratuitas, manter standby de custo positivo não é ótimo.
 
 ### IX.3 Utilização e limite do certificado
 
-Para cadeia contratual \(r\), \(T_r^{perm}=T_r^{act}+T_r^{idle}\); a fração \(f_r^{idle}=T_r^{idle}/T_r^{perm}\) (se \(T_r^{perm}>0\)) é diagnóstico temporal, **não** perda produtiva. A decomposição em níveis da demanda garante ótimo exato apenas para **pool homogêneo fungível com \(m\) e cronograma fixados**; não prova ótimo global de escolha simultânea \(m+\)cronograma\(+\)pool (#16). O custo real é reconstruído das instâncias/semana, nunca de envelopes individuais contados em duplicidade (#17/#20).
+Para cadeia contratual \(r\), \(T_r^{perm}=T_r^{act}+T_r^{idle}\); a fração \(f_r^{idle}=T_r^{idle}/T_r^{perm}\) (se \(T_r^{perm}>0\)) é diagnóstico temporal, **não** perda produtiva. A decomposição em níveis da demanda prova ótimo exato apenas com **camadas de atribuição física fixadas**, além de \(m\) e cronograma fixos. Isso **não** prova ótimo global sobre reatribuições de instâncias fungíveis (#16), nem sobre escolha simultânea \(m+\)cronograma\(+\)pool. O contrafactual `(2,1,1,2)` com tarifas 5/1, movimentos 30 e gap máximo 1 dá 120 por níveis versus 92 por reatribuição viável (oráculo P13-C). O custo real é reconstruído das instâncias/semana, nunca de envelopes individuais contados em duplicidade (#17/#20).
 
 ## Parte X — Consumíveis: Aquisição, Demanda e Reposição
 
@@ -473,7 +473,7 @@ ENTRADA
   Para cada recurso r:
     c_r^mob, c_r^demob             — custos de mobilização/desmobilização
     G_r^viável                     — gap máximo absoluto [semanas]
-    // c_r^standby ≡ c_r^sem: pool é custo de permanência puro (§IX.3)
+    // P13-C: igualdade c_r^idle=c_r^act=c_r^sem SOMENTE FULL_RATE_STANDBY com fonte.
 
   Categorias indiretas:
     {(l, driver(l), {Γ_l^{k,mensal}}, c_l^mob, c_l^demob)}_{l ∈ L}

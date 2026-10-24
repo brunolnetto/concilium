@@ -667,19 +667,9 @@ quantas frentes estão em campo --- não de quanto foi produzido. É como
 alugar um equipamento por semana: o valor é o mesmo, tenha a equipe
 produzido muito ou pouco naquela semana.
 
-\[C_{ij}^{\mathrm{V,op}} = \gamma_i^{\mathrm{V,cat}}\cdot\frac{q_{ij}}{\rho_i}\qquad\text{[R\$]}\]
+\[C_{ij}^{V,op}=\sum_g p_g U_{gij}\qquad\text{[medição física por bem, semana e atividade]}\]
 
-\(C_{ij}^{\mathrm{V,op}}\) é o custo consumível da semana: proporcional
-ao quanto foi de fato produzido (\(q_{ij}\)), e por isso já incorpora,
-de forma implícita, tanto a eficiência da semana quanto o fechamento
-fracionário da última semana (Parte IV). É como pagar por combustível:
-quanto mais se produz, mais se consome, e vice-versa.
-
-Nas semanas interiores,
-\(q_{ij}/\rho_i \equiv \varepsilon_{ij}h_id_im_{ij}\) por definição de
-\(q_{ij}\) (Parte IV) --- a formulação acima generaliza a forma
-tempo-a-tempo e permanece exata na semana de fechamento, onde \(q_{ij}\)
-é o residual e não \(\varepsilon_{ij}h_id_im_{ij}\) diretamente.
+O custo \(C_{ij}^{V,op}\) soma quantidades físicas medidas \(U_{gij}\) vezes seus preços \(p_g\), sem inferir consumo apenas do quantitativo entregue. Somente no baseline \texttt{OUTPUT\_PROPORTIONAL}, com taxa/preço constantes, vale \(U_{gij}=\kappa^{out}_{ig}q_{ij}\) e pode-se usar o antigo quociente \(\gamma_i^{V,cat}q_{ij}/\rho_i\). Horas reais, idle e perdas precisam de origem independente nos outros regimes.
 
 \[C_{ij}^{\mathrm{op}} = C_{ij}^{\mathrm{K,op}}+C_{ij}^{\mathrm{V,op}}\qquad\text{[R\$]}\]
 
@@ -700,23 +690,14 @@ identidades mais úteis deste formulário, detalhada logo abaixo.
 \[C_i^{\mathrm{K,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{K,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela contratual, à eficiência nominal}\]
 \[C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela consumível}\]
 \[C_i^{\mathrm{K,op}} = \sum_{j} C_{ij}^{\mathrm{K,op}} = \gamma_i^{\mathrm{K,cat}}\,h_id_i\,M_i\qquad\text{[R\$]}\]
-\[C_i^{\mathrm{V,op}} = \sum_{j} C_{ij}^{\mathrm{V,op}} = \frac{\gamma_i^{\mathrm{V,cat}}}{\rho_i}\sum_j q_{ij}\qquad\text{[R\$]}\]
+\[C_i^{V,op}=\sum_j C_{ij}^{V,op}=\sum_{g,j}p_g U_{gij}\qquad\text{[R\$]}\]
 \[C_i^{\mathrm{op}} = C_i^{\mathrm{K,op}}+C_i^{\mathrm{V,op}}\qquad\text{[R\$]}\]
 \[p_i^{\mathrm{op}} = C_i^{\mathrm{op}}/Q_i\qquad\text{[R\$/un]}\]
 
-\textbf{Identidade --- invariância do consumível.} Usando o fecho de
-escopo exato \(\sum_jq_{ij}=Q_i\) (Parte IV):
-
-\[\boxed{C_i^{\mathrm{V,op}} \equiv C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}}\qquad\text{(exato, por construção do fechamento de escopo)}\]
-
-O consumível operacional \textbf{é} o consumível de catálogo --- não há
-inflação por ineficiência. O total de material/combustível depende
-apenas de \(Q_i\), nunca de quantas semanas foram necessárias para
-executar. Esta identidade \textbf{não vale} para o contratual:
-\(C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i\) cresce quando
-a eficiência piora (mais frente-semanas \(M_i\) para fechar o mesmo
-\(Q_i\), já que \(M_i\) conta a semana de fechamento integralmente, não
-prorateada).
+\textbf{Identidade condicional --- baseline \texttt{OUTPUT\_PROPORTIONAL}.}
+Somente sob \(U_{gij}=\kappa_{ig}^{out}q_{ij}\), taxa e preço fixos, sem perdas ou consumo idle, e equivalência dimensional comprovada, o fecho \(\sum_jq_{ij}=Q_i\) permite
+\[\boxed{C_i^{V,op}=C_i^{V,cat}=\frac{Q_i\gamma_i^{V,cat}}{\rho_i}}\qquad\text{[apenas baseline, não universal].}\]
+No caso geral, \(C_i^{V,op}=\sum_{g,j}p_gU_{gij}\) deriva de medida física. \texttt{OUTPUT\_WITH\_MEASURED\_LOSS} e \texttt{HOURLY\_WITH\_MEASURED\_IDLE} exigem perdas, horas, ociosidade, unidades e fonte; fechamento de escopo sozinho não prova invariância de V.
 
 \textbf{Desvio de catálogo por atividade.} Comparando
 \(C_i^{\mathrm{op}}\) com \(C_i^{\mathrm{cat}}\) (Parte III), obtém-se
@@ -736,11 +717,11 @@ VIII, logo após \(\bar\varepsilon_i\) ser definida com exatidão.
 
 Uma advertência sobre como (não) recalcular esse desvio sob uma
 produtividade revisada --- por exemplo, ao incorporar um \(\rho_i\)
-observado em campo, diferente do calibrado originalmente: a identidade
-\(C_i^{\mathrm{V,op}}\equiv\gamma_i^{\mathrm{V,cat}}Q_i/\rho_i\) (acima)
-é, por construção, invariante ao cronograma, então substituir \(\rho_i\)
-por um \(\rho_i'\) revisado nessa fórmula sozinha ainda produz um número
-correto. Mas \(C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i\)
+observado em campo, diferente do calibrado originalmente: a identidade \(
+C_i^{\mathrm{V,op}}=\gamma_i^{\mathrm{V,cat}}Q_i/\rho_i
+\) é válida somente no regime físico \texttt{OUTPUT\_PROPORTIONAL} com taxa
+e preço constantes. Revisar \(\rho_i\) sem recomputar as quantidades
+físicas e os contratos não prova custo realizado correto. Mas \(C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i\)
 depende de \(M_i\), resultado da busca por \(N_i\) (Parte XIV, Fase 1)
 \emph{sob o \(\rho_i\) original}. Trocar \(\rho_i\) por \(\rho_i'\) nas
 fórmulas de custo sem refazer essa busca deixa \(M_i\) preso a um
@@ -938,12 +919,12 @@ especificação sobre todos os \(R_i\)).
 
 \textbf{Demanda semanal por tipo:}
 
-\[n_j(\tau) = \sum_{i\,:\,j\in[j_i^0,\,j_i^0+N_i-1]} m_{ij}\cdot n_{\tau}^{i}\]
+\[\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[demanda física; frentes independentes: }a_{ig}(m)=m\,n_g^i\text{]}\]
 
-\textbf{Pool físico} \(\{r\}\): conjunto de instâncias com
-\(\text{type}(r)\in\mathcal{T}\), taxa semanal \(c_r^{\text{sem}}\)
-(igual em semanas ativas e ociosas --- §IX.3), e custos
-\(c_r^{\text{mob}}\), \(c_r^{\text{demob}}\).
+Para o algoritmo por níveis, \(n_j(g)\equiv d_{gj}\). O máximo contratual é uma capacidade, não o número de frentes multiplicado por fator fixo quando existem gargalos.
+
+\textbf{Pool físico} \(\{r\}\): instâncias fungíveis por tipo, tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\).
+A igualdade ativa/idle vale somente em \texttt{FULL\_RATE\_STANDBY}; regime ou origem ausente é \texttt{NOT\_EVALUATED}, nunca tarifa zero.
 
 \[qt_\tau = \max_j n_j(\tau) \qquad\text{[tamanho do pool de tipo }\tau\text{]}\]
 
@@ -955,19 +936,14 @@ perpetuação}\label{ix.2-problema-de-minimizauxe7uxe3o-e-condiuxe7uxe3o-de-perp
 
 \[\text{s.a.}\quad \bigl|\{r:\text{type}(r)=\tau,\ j\in[j_r^0,j_r^1]\}\bigr| \ge n_j(\tau) \quad\forall j,\,\forall\tau\]
 
-Para tipo único fungível (instâncias perfeitamente substituíveis, com
-custo de permanência e de mob/demob homogêneos), a Parte XIV (Fase 4)
-apresenta um algoritmo exato por decomposição em níveis do perfil de
-demanda.
+Para um tipo homogêneo fungível, a Parte XIV (Fase 4) otimiza exatamente keep/split somente com atribuição de instâncias às camadas de nível FIXADA. Não cobre toda reatribuição possível, mesmo com demanda e cronograma fixos (#16).
 
 \textbf{Condição de perpetuação} (entre duas alocações consecutivas, com
 gap em semanas):
 
-\[\text{gap}_{uv} < G_r^* \equiv \frac{c_r^{\text{mob}}+c_r^{\text{demob}}}{c_r^{\text{sem}}} \quad\Longleftrightarrow\quad c_r^{\text{mob}}+c_r^{\text{demob}} > c_r^{\text{sem}}\cdot\text{gap}_{uv}\qquad\text{[$c_r^{\text{sem}}$ em R\$/sem]}\]
+\[\boxed{\mathrm{KEEP}_{uv}\iff k_{uv}\le G_r^{viavel}\ \land\ k_{uv}c_r^{idle}\le c_r^{mob}+c_r^{demob}}\qquad(k_{uv}=\mathrm{gap}_{uv}).\]
 
-\textbf{Cap absoluto:}
-\(\text{gap}_{uv} > G_r^{\text{viável}} \Rightarrow\) não perpetuar,
-independente de custo.
+\textbf{Cap e desempate:} \(k_{uv}>G_r^{viavel}\) torna KEEP inviável. Sob as demais hipóteses de fungibilidade e admissibilidade, custos empatados escolhem KEEP para minimizar movimentos. Não dividir por \(c_r^{idle}\), que pode ser zero. Off-hire representa ausência de contrato, não standby gratuito.
 
 \textbf{Estrutura de cadeia}
 \(\mathcal{C}_p = (i_1 \to i_2 \to \cdots \to i_{n_p})\): cada par
@@ -979,12 +955,7 @@ nos gaps internos.
 \subsubsection{IX.3 Frações invariantes por
 recurso}\label{ix.3-frauxe7uxf5es-invariantes-por-recurso}}
 
-Como o custo dos recursos contratuais é definido a partir do
-\textbf{tempo de permanência} (\(c_r^{\text{sem}}\) por semana ativa,
-\(c_r^{\text{standby}}\) por semana de gap), a separação em fração ativa
-e fração standby é um \textbf{invariante temporal} de cada instância ---
-completamente determinado pela cadeia de perpetuação, sem dependência de
-parâmetros de custo.
+Para uma cadeia \emph{fixa}, as frações de tempo ativo e standby são grandezas físicas; a tarifa não entra no cálculo dessa fração. Mudanças de tarifa podem modificar a cadeia ótima, portanto a fração não é invariante entre contratos distintos.
 
 Para cada instância \(r\) com cadeia
 \(\mathcal{C}_p = (i_1 \to \cdots \to i_{n_p})\):
@@ -997,12 +968,7 @@ Para cada instância \(r\) com cadeia
 
 \[\boxed{f_r^{\text{standby}} = \frac{T_r^{\text{standby}}}{T_r^{\text{perm}}} \in [0,1), \qquad f_r^{\text{ativo}} = 1 - f_r^{\text{standby}}}\]
 
-\textbf{Propriedade invariante:} dados o schedule \(\{(j_i^0, N_i)\}\) e
-as cadeias de perpetuação, \(f_r^{\text{standby}}\) é completamente
-determinado. Não depende de \(c_r^{\text{sem}}\),
-\(c_r^{\text{standby}}\), \(c_r^{\text{mob}}\) nem
-\(c_r^{\text{demob}}\) --- é uma grandeza puramente temporal, intrínseca
-ao padrão de implantação do recurso.
+\textbf{Invariante condicional:} dado o mesmo cronograma e as mesmas cadeias, \(f_r^{standby}\) não depende da tarifa. A seleção de cadeias muda com \(c^{idle}\) e movimentos. Standby não é fator de perda de produtividade \(\eta_s\).
 
 \textbf{Casos:}
 
@@ -1023,29 +989,21 @@ Cadeia singleton (\(n_p=1\), sem perpetuação) & \(0\) \\
 Perpetuação com gaps pequenos & \(\in(0,1)\), próximo de 0 quando
 atividades são densas \\
 Recurso em standby quase todo tempo & \(\to 1\) (não deve ocorrer:
-perpetuação só é racional quando gap \(< G_r^*\)) \\
+perpetuação requer \(k\le G_r^{viavel}\) e \(k c_r^{idle}\le c_r^{mob}+c_r^{demob}\)) \\
 \end{longtable}
 
-\textbf{Taxa efetiva semanal.} A separação pool/estoque implica
-\(c_r^{\text{standby}} = c_r^{\text{sem}}\): EQ (aluguel) e MO (salário
-+ CLT) custam igual em semanas ativas e ociosas --- os consumíveis, que
-escalariam com produção, já foram segregados em \(C^{\text{estoque}}\).
-Portanto:
-
-\[\boxed{\bar{c}_r = c_r^{\text{sem}} \qquad \text{(pool puro: standby = ativo)}}\]
-
-A fração \(f_r^{\text{standby}}\) é \textbf{diagnóstico temporal} puro
---- não afeta o custo, quantifica o grau de ociosidade da instância. O
-benefício da perpetuação é exclusivamente a redução de \(C^{MOB,eq,o}\)
-(mob/demob evitados), ao custo de semanas adicionais de permanência a
-\(c_r^{\text{sem}}\).
+\textbf{Taxa efetiva semanal.} Somente em \texttt{FULL\_RATE\_STANDBY} vale \(c_r^{idle}=c_r^{act}=c_r^{sem}\).
+Em \texttt{DISCOUNTED\_STANDBY} vale \(0\le c_r^{idle}<c_r^{act}\); em \texttt{EXPLICIT\_OFF\_HIRE} a presença cessa e uma nova cadeia requer movimentos demonstrados.
+MAT/COMB são consumos físicos separados de K.
+\[\boxed{\bar c_r=\frac{T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle}}{T_r^{perm}}}\quad(T_r^{perm}>0),\qquad \bar c_r=c_r^{sem}\ \text{somente no baseline}.\]
+A fração \(f_r^{standby}\) é um diagnóstico temporal, não o custo ou a produtividade. O contrafactual de um gap de \(k\) semanas compara \(k c_r^{idle}\) com \(c_r^{mob}+c_r^{demob}\), sujeito a viabilidade.
 
 \hypertarget{ix.4-custo-do-pool}{%
 \subsubsection{IX.4 Custo do pool}\label{ix.4-custo-do-pool}}
 
-\[\boxed{C^{\text{pool},o} = \sum_r T_r^{\text{perm}} \cdot c_r^{\text{sem}}}\]
+\[\boxed{C^{pool,o}=\sum_r(T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle})=\sum_{g,j}(c_g^{act}d_{gj}+c_g^{idle}s_{gj})}\]
 
-\[C^{\text{pool},\beta} = \sum_r (1+\beta_{\text{cat}(r)})\cdot T_r^{\text{perm}}\cdot c_r^{\text{sem}}\]
+\[C^{pool,\beta}=\sum_{g,j}(1+\beta_{\mathrm{cat}(g)})(c_g^{act}d_{gj}+c_g^{idle}s_{gj})\]
 
 \textbf{Custo indireto de mob/demob do pool} (por cadeia, com
 \(\beta^{IND}\)):
@@ -1054,24 +1012,11 @@ benefício da perpetuação é exclusivamente a redução de \(C^{MOB,eq,o}\)
 
 \textbf{Reconciliação com a Parte VI:}
 
-\[\boxed{C^{\mathrm{pool}} \;\ge\; \sum_i C_i^{\mathrm{K,op}}}\]
+\[C^{pool,o}\ge\sum_iC_i^{K,act}\quad\text{somente sob bases comparáveis, cobertura completa e sem dupla imputação.}\]
 
-com igualdade apenas se nenhum recurso é perpetuado entre atividades
-distintas e \(f_r^{\text{standby}}=0\ \forall r\): a soma por atividade
-conta apenas semanas ativas (\(M_i\)), enquanto
-\(C^{\mathrm{pool}}=\sum_rT_r^{\text{perm}}c_r^{\text{sem}}\) inclui
-também as semanas de standby interno das cadeias perpetuadas
-(\(T_r^{\text{standby}}\)) --- custo real de permanência sem
-contrapartida de produção. \(C_i^{\mathrm{K,op}}\) permanece grandeza de
-diagnóstico por atividade (quanto cada atividade consumiria de recurso
-contratual se operasse isoladamente); o desembolso contratual real do
-projeto --- incluindo o custo de manter recursos parados entre
-mobilizações --- é \(C^{\mathrm{pool}}\).
+A soma por atividade é diagnóstico e não substitui o livro contratual de instâncias P16/P17. A igualdade requer base de tarifas equivalente e standby zero; não é uma identidade universal. Em regimes descontados \(C^{pool,o}=\sum(c^{act}d+c^{idle}s)\), e eventos MOB/DEMOB são exclusivos de IND. Ausência de fonte mantém \texttt{NOT\_EVALUATED}.
 
-\textbf{Escopo do algoritmo de dimensionamento.} A decomposição por
-níveis empregada na Parte XIV, Fase 4 é exata para um tipo de recurso
-fungível homogêneo --- instâncias perfeitamente substituíveis entre si,
-com custo de permanência e de mobilização/desmobilização idênticos.
+\textbf{Escopo do algoritmo de dimensionamento.} A decomposição por níveis da Parte XIV, Fase 4 é exata somente com a atribuição física às camadas de nível fixada. Reatribuir instâncias fungíveis pode melhorar a solução mesmo com demanda e cronograma fixos; P16 não prova o mínimo global nessas condições (#16).
 Variantes multi-tipo com recursos não perfeitamente substituíveis
 (capacidades ou custos heterogêneos dentro do mesmo tipo nominal)
 constituem um problema de otimização combinatória distinto, de
@@ -1100,53 +1045,20 @@ mesmo tratamento vale para consumíveis.
 \hypertarget{x.1-aquisiuxe7uxe3o}{%
 \subsubsection{X.1 Aquisição}\label{x.1-aquisiuxe7uxe3o}}
 
-Separável por atividade sem ambiguidade. Por identidade direta
-\(C_i^{\mathrm{V,op}} \equiv C_i^{\mathrm{V,cat}}\) (Parte VI):
-
-\[\boxed{C^{\mathrm{cons}} = \sum_{i\in\mathcal{A}} \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i} = \sum_g c_g^{\mathrm{cons}}\, U_g}\qquad\text{[R\$ — direto, entra em $C^D$]}\]
-
-\[C^{\mathrm{cons},\beta} = \sum_{i\in\mathcal{A}} \gamma_i^{\mathrm{V,cat},\beta}\cdot\frac{Q_i}{\rho_i}\]
-
-Diferente do contratual, \(C^{\mathrm{cons}}\) não requer otimização de
-cadeias --- a soma por atividade é exata, e coincide exatamente com a
-produção realizada dado o fechamento de escopo da Parte IV. \(U_g\)
-(unidades físicas do bem \(g\) usadas no projeto inteiro) é recuperado
-com exatidão em §X.2, não apenas como total agregado.
+O custo MAT/COMB depende de taxa, medida física \(U_g\), unidade, preço e origem compatíveis. Somente o baseline \texttt{OUTPUT\_PROPORTIONAL}, com \(U_{gij}=\kappa_{ig}^{out}q_{ij}\), sem idle ou perdas e com taxa e preço fixos, admite igualdade com o envelope de catálogo \(Q\gamma^{V,cat}/\rho\).
+\[\boxed{C^{cons}=\sum_gp_gU_g}\qquad\text{[aquisição direta MAT/COMB]}\]
+\[C^{cons,\beta}=\sum_g(1+\beta^{cat(g)})p_gU_g.\]
+Com \texttt{OUTPUT\_WITH\_MEASURED\_LOSS} ou \texttt{HOURLY\_WITH\_MEASURED\_IDLE}, \(U_g=\kappa_g^{out}Q+L_g\) ou \(U_g=\kappa_g^hH_{real}+I_g+L_g\), respectivamente; \(I_g,L_g\) são medidas com unidades e fonte explícita. \(V(Q)\) só é invariante no baseline sob hipóteses fixas. Custos de estoque são IND e não se duplicam como compra.
 
 \hypertarget{x.2-demanda-fuxedsica-derivada}{%
 \subsubsection{X.2 Demanda física
 derivada}\label{x.2-demanda-fuxedsica-derivada}}
 
-O restante desta parte deriva \(U_g\) semana a semana --- necessário
-para qualquer decisão de quando comprar, não apenas quanto. Para cada
-atividade \(i\) e bem físico \(g\), a \textbf{taxa de consumo agregada}
-do bem \(g\) por hora-equivalente de \(i\) soma os recursos consumíveis
-de \(R_i\) que consomem \(g\) (§I.3.1) --- mesmo dado de cadastro que já
-alimenta \(\gamma_i^{\mathrm{V,cat}}\) (Parte III), nenhum insumo novo:
+O consumo total \(U_g\) depende de medidas físicas e do regime contratual declarado. A taxa de catálogo em unidades por hora, quando disponível, não autoriza deduzir horas efetivamente operadas a partir de \(q_{ij}/\rho_i\) sem calibração independente de \(F_i(m)\), composições e perdas. A variante por unidade entregue exige \(\kappa^{out}\) própria; idle, combustível de mobilização, perdas e provisionamento externo exigem evidências físicas independentes. Ausência de qualquer fonte não vira zero.
 
-\[\kappa_i^g \equiv \sum_{r\in R_i\,:\,g(r)=g} n_r\,\kappa_r \qquad [\text{unid}_g/\text{h}]\]
-
-Usando a mesma razão \(q_{ij}/\rho_i\) que torna
-\(C_{ij}^{\mathrm{V,op}}\) exata inclusive na semana de fechamento
-(Parte V) --- ela já generaliza corretamente ``horas efetivas'' nas
-semanas interiores e no residual ---, o consumo físico de \(g\) pela
-atividade \(i\) na semana \(j\) segue a mesma construção, só trocando a
-taxa monetária pela taxa física:
-
-\[\boxed{D_{g,ij} = \kappa_i^g\cdot\frac{q_{ij}}{\rho_i}}\qquad[\text{unid}_g] \qquad\qquad \boxed{D_{g,j} = \sum_{i\,\in\,\mathcal{A}_j} D_{g,ij}}\qquad[\text{unid}_g]\]
-
-com \(\mathcal{A}_j\) o conjunto de atividades ativas na semana \(j\)
-(Parte IV). Nenhum cálculo novo além de agregação: \(q_{ij}\) e
-\(\rho_i\) já são saída da Fase 3.
-
-\textbf{Identidade de consistência.} Somando sobre toda a vida do
-projeto e usando o fecho de escopo exato \(\sum_jq_{ij}=Q_i\):
-
-\[\sum_j D_{g,j} = \sum_i\kappa_i^g\cdot\frac{Q_i}{\rho_i} \equiv U_g\]
-
-recuperando exatamente o \(U_g\) de §X.1 --- a demanda física total já
-era implicitamente conhecida pelo formulário original; faltava sua
-distribuição semana a semana.
+\textbf{Demanda física por regime:} usar \(U_{gij}\) medido e tipado por unidade entregue ou por hora real, com perdas e consumo idle explícitos. Nenhuma proxy monetária R\$/h estabelece quantidade física.
+\[\boxed{D_{g,j}=\sum_iU_{gij},\qquad U_g=\sum_jD_{g,j}}\]
+No regime \texttt{OUTPUT\_PROPORTIONAL} com \(\kappa_{ig}^{out}\) fisicamente dimensionado, \(U_{gij}=\kappa_{ig}^{out}q_{ij}\); no modo horário, \(U_{gij}=\kappa_{ig}^hH_{real,ij}+I_{gij}+L_{gij}\), com horas reais e evidências medidas. Sem regime, fonte ou preço não há certificação financeira (\texttt{NOT\_EVALUATED}). O estoque recebe \(D_{g,j}\) somente depois da prova física.
 
 \hypertarget{x.3-balanuxe7o-de-estoque}{%
 \subsubsection{X.3 Balanço de estoque}\label{x.3-balanuxe7o-de-estoque}}
@@ -1492,7 +1404,7 @@ ENTRADA
   Para cada recurso r:
     c_r^mob, c_r^demob             — custos de mobilização/desmobilização
     G_r^viável                     — gap máximo absoluto [semanas]
-    // c_r^standby ≡ c_r^sem: pool é custo de permanência puro (§IX.3)
+    // P13-C: c_r^idle=c_r^act=c_r^sem SOMENTE FULL_RATE_STANDBY; exigir regime e fonte.
 
   Categorias indiretas:
     {(l, driver(l), {Γ_l^{k,mensal}}, c_l^mob, c_l^demob)}_{l ∈ L}
@@ -1551,8 +1463,7 @@ SAÍDA: (j_i^0,N_i,{m_ij},{F_i(m_ij)},{B_ij},{q_ij},φ_i).
 
 \noindent\textbf{Escopo:} não existe \(\eta_s\) multiplicativo.
 Os custos derivados exigem rederivação em \#11 antes de GO no
-caso de capacidade não linear. A prova de ótimo do pool é condicional
-ao cronograma físico fixado.
+caso de capacidade não linear. A prova de ótimo do subproblema P16 exige cronograma físico e atribuição fixa às camadas de nível; a reatribuição fungível permanece não demonstrada.
 
 \hypertarget{xiv.2-fase-2-taxas-horuxe1rias-de-catuxe1logo}{%
 \subsubsection{XIV.2 --- Fase 2: Taxas Horárias de
@@ -1625,7 +1536,9 @@ C_pool_beta ← Σ_gj (1+β_cat(g))·(c_gj^act·d_gj+c_gj^idle·s_gj)
 C_MOBDEMOB ← Σ_eventos (c_g^mob+c_g^demob)
 C_MOBDEMOB_beta ← Σ_eventos (1+β_IND)·(c_g^mob+c_g^demob)
 // MOB/DEMOB só é indireto, jamais duplicar no pool marcado
-Prova de ótimo do pool somente CONDICIONADA a m e schedule fixos.
+Prova de ótimo apenas com m, schedule e atribuição por nível FIXADOS; não implica ótimo entre instâncias fungíveis (#16).
+// Falsificador P13-C: d=(2,1,1,2), c_act=5, c_idle=1, MOB+DEMOB=30, max_gap=1:
+// camadas P16=120; duas instâncias reatribuídas=92.
 SAÍDA: cadeias, demanda, presença, standby, C_pool, C_pool_beta,
        C_MOBDEMOB, C_MOBDEMOB_beta e custos reconciliados.
 \end{verbatim}
