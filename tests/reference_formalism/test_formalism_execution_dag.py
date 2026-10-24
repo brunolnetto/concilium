@@ -85,23 +85,31 @@ def test_wave_unblocks_only_after_every_prior_issue_closed(spec: dict) -> None:
 
 
 def test_missing_package_blocks_closure_even_when_parents_done(spec: dict) -> None:
-    result = report(spec, states(9, 10, 11, 12), all_merged(spec))
+    # P13-A #92 is merged, but P13-B #93 is only registered, not merged.
+    result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {93})
     thirteen = next(x for x in result["issues"] if x["issue"] == 13)
     assert thirteen["ready_to_execute"]
-    # P13-A now has a tracked PR (#92), so the hypothetical all-merged
-    # snapshot still lacks only P13-B, which has no registered PR.
     assert thirteen["pending_packages"] == ["P13-B"]
+    assert thirteen["pr_packages_merged"] == 1
     assert not thirteen["closure_preflight"]
 
 
 def test_p13a_registered_but_not_merged_cannot_close_issue_thirteen(spec: dict) -> None:
-    # Registering #92 in the DAG is not equivalent to merging it.
-    result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {92})
+    # A registered PR does not count as a merged mandatory package.
+    result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {92, 93})
     thirteen = next(x for x in result["issues"] if x["issue"] == 13)
     assert thirteen["ready_to_execute"]
     assert thirteen["pending_packages"] == ["P13-A", "P13-B"]
     assert thirteen["pr_packages_merged"] == 0
     assert not thirteen["closure_preflight"]
+
+
+def test_p13b_registration_does_not_prove_issue_acceptance(spec: dict) -> None:
+    result = report(spec, states(9, 10, 11, 12), all_merged(spec))
+    thirteen = next(x for x in result["issues"] if x["issue"] == 13)
+    assert thirteen["pr_packages_merged"] == 2
+    assert thirteen["closure_preflight"]
+    assert thirteen["acceptance_verified"] is None
 
 
 def test_snapshot_cannot_mark_acceptance_verified(spec: dict) -> None:
