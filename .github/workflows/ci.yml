@@ -76,9 +76,10 @@ jobs:
         env:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          DIFF_MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
         run: |
           python scripts/formalism_contract_change_gate.py \
-            --base "$BASE_SHA" --head "$HEAD_SHA"
+            --base "$BASE_SHA" --head "$HEAD_SHA" --mode "$DIFF_MODE"
 
   formalism-reference:
     name: Formalism Reference (independent)
