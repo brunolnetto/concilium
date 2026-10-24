@@ -34,6 +34,29 @@ jobs:
       - name: Verify exact-decimal reference vectors
         run: python -m pytest --confcutdir=tests/reference_formalism tests/reference_formalism -q
 
+  formalism-reference-cross-version:
+    name: Formalism Reference Py${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+
+      # No production package, scheduler, finance or other runtime imports.
+      - name: Install isolated reference runner
+        run: python -m pip install "pytest>=9.0.3,<10"
+
+      - name: Verify deterministic exact golden vectors
+        run: python -m pytest --confcutdir=tests/reference_formalism tests/reference_formalism -q
+
   lockfile:
     name: Dependency Lock (Docker parity)
     runs-on: ubuntu-latest
