@@ -369,12 +369,11 @@ Símbolo & Significado \\
 
 \[\boxed{m_i(\tau) = \min\!\Big(m_i^0 + \mu_i^+\tau,\quad m_i^{\max},\quad m_i^1 + \mu_i^-(N_i-1-\tau)\Big)}\]
 
-\textbf{Caso degenerado retangular} --- quando
-\(\mu_i^+ = \mu_i^- = 0\):
+\textbf{Caso degenerado retangular} --- somente com rampas nulas e extremos iguais ao máximo:
 
-\[\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max} \quad \forall\,\tau \in \{0,\ldots,N_i-1\}\]
+\[\bigl(\mu_i^+=\mu_i^-=0\bigr)\land\bigl(m_i^0=m_i^1=m_i^{\max}\bigr)\implies m_i(\tau)=m_i^{\max}\quad\forall\,\tau\in\{0,\ldots,N_i-1\}\]
 
-com \(m_i^0 = m_i^1 = m_i^{\max}\), reduzindo \(W_i\) a um único
+Para rampas nulas sem a igualdade nos extremos, vale somente \(m_i(\tau)=\min(m_i^0,m_i^1,m_i^{\max})\); o caso \((1,1,4)\) utiliza uma frente, não quatro. Com \(m_i^0=m_i^1=m_i^{\max}\), reduzindo \(W_i\) a um único
 parâmetro de frota: frota constante durante toda a atividade.
 
 \[m_{ij} = \begin{cases} m_i(j-j_i^0) & j\in[j_i^0,\,j_i^0+N_i-1] \\ 0 & \text{caso contrário}\end{cases}\]
