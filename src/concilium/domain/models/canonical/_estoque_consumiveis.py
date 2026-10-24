@@ -43,6 +43,12 @@ class RecursoConsumivelCanonical(BaseModel):
 
     resource_id: str
     disponibilidade: DisponibilidadeConsumivelCanonical
+    # P13-B: opt-in physical consumption mode; None means NOT_EVALUATED.
+    regime_consumo_p13: Literal[
+        "OUTPUT_PROPORTIONAL", "OUTPUT_WITH_MEASURED_LOSS", "HOURLY_WITH_MEASURED_IDLE"
+    ] | None = None
+    origem_taxa_consumo_p13: str | None = None
+    origem_preco_consumo_p13: str | None = None
     # activity_id -> taxa de consumo/produção projetada por semana ativa
     consumo_por_semana: dict[str, float] = Field(default_factory=dict)
     producao_por_semana: dict[str, float] = Field(default_factory=dict)
