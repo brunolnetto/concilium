@@ -221,3 +221,28 @@ def test_no_conditional_identity_is_misrepresented_as_dimensional_proof() -> Non
                    if r["status"] == "CONDITIONAL_OR_UNCERTIFIED"}
     assert len(conditional) == 72
     assert conditional.isdisjoint({r["id"] for r in PROOF["proofs"]})
+
+
+def test_week_cell_semantics_are_shared_by_long_short_tex_and_conventions() -> None:
+    files = (
+        "CONVENCOES_NORMATIVAS.md",
+        "FORMALISMO_LONGO.md",
+        "FORMALISMO_RESUMIDO.md",
+        "formulario_longo.tex",
+    )
+    for filename in files:
+        content = (DIR / filename).read_text(encoding="utf-8")
+        if filename.endswith(".tex"):
+            assert r"\Delta w_j=1\,\mathrm{semana}" in content
+        else:
+            assert "Δw_j = 1 semana" in content
+        assert "P09-D" in content
+
+
+def test_dimensional_preconditions_do_not_create_financial_or_project_go() -> None:
+    assert "do not prove runtime parity" in PROOF["semantics"]
+    assert all(
+        p["proof_status"] == "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
+        for p in PROOF["proofs"]
+    )
+    assert not any("CERTIFIED" in p["proof_status"] for p in PROOF["proofs"])
