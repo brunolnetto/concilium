@@ -13,6 +13,11 @@ O adaptador `application/scheduling/realized_financial_metrics.py` consome diret
 
 O retorno `RealizedFinancialProjection` contém realizações físicas por atividade, valores financeiros por semana, totais K/V/indiretos, `price_once_bdi`, `effective_bdi`, e as razões `ζ,π,ε_real` somente quando há condições para calculá-las sem dividir por zero.
 
+### Fronteira determinística dos `float` da Skill 04
+
+As células persistidas são `float` provenientes de `_build_dist_cell()`. Para permitir os casos reais `Q=0.3` e `Q=0.4`, a projeção verifica **sem tolerâncias ad hoc** as duas operações binárias daquele construtor:
+`q_j = min(B_j, max(0, Q_float - acumulado_float_anterior))` e `acumulado_float_novo = acumulado_float_anterior + q_j`. Se qualquer igualdade binária for falsa, a célula é rejeitada. Após essa confirmação de origem, o mesmo contrato é recalculado em `Fraction` sobre `B_j` e `Q` decimais canônicos, recuperando quantidades 0.1 da terceira/quarta semanas sem criar produção superior à capacidade. Essa transformação é **restrita às células planejadas pelo Skill04** (`desempenho_observado=NAO_OBSERVADO`), não corrige medições externas não certificadas. O ledger físico V deve conciliar com o quantitativo canônico, sem arredondamento de preço.
+
 ## Distinções obrigatórias
 
 `capacidade_disponivel_semana/q_max_celula` é a disponibilidade **nominal exógena**; `qtd_executada/q_max_celula` é **eficiência realizada**; `qtd_executada/capacidade_disponivel_semana` é a **fração de fechamento**. O campo persistido de controle `eficiencia` e `eta_s` não são utilizados como multiplicadores na projeção. A semana sem produção e com K contratado continua contabilizada. Com capacidade disponível zero, a fração de fechamento é `None`, não zero implícito.
