@@ -1,8 +1,8 @@
 """P14-B end-to-end guard: impossible physical schedule cannot be persisted."""
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
 import json
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
