@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from collections import deque
 from fractions import Fraction as F
-from itertools import product
 from typing import Any
 
 from tests.reference_formalism.protocol import (
