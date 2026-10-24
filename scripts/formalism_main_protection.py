@@ -105,9 +105,23 @@ def verify_checks(check_runs: dict[str, Any]) -> None:
     runs = check_runs.get("check_runs")
     if not isinstance(runs, list):
         raise ProtectionError("Missing main commit check-run collection.")
-    success = {x.get("name") for x in runs if isinstance(x, dict)
-               and x.get("status") == "completed" and x.get("conclusion") == "success"}
-    missing = set(REQUIRED_CHECKS) - success
+    success = {
+        x.get("name") for x in runs
+        if isinstance(x, dict) and x.get("status") == "completed"
+        and x.get("conclusion") == "success"
+    }
+    # MCP Proxy is deliberately conditional on changes to tools/mcp-proxy.
+    # "Detect changes" must itself succeed and is always required.
+    # No other required gate may be skipped.
+    conditional = {
+        x.get("name") for x in runs
+        if isinstance(x, dict) and x.get("status") == "completed"
+        and x.get("conclusion") == "skipped"
+        and x.get("name") == "MCP Proxy (standalone)"
+    }
+    if "Detect changes" not in success:
+        raise ProtectionError("The conditional proxy detector must pass.")
+    missing = set(REQUIRED_CHECKS) - (success | conditional)
     if missing:
         raise ProtectionError(
             f"Main baseline lacks successful required checks: {sorted(missing)}"
