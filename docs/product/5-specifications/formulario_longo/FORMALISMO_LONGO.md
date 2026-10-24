@@ -237,6 +237,14 @@ O consumível operacional **é** o consumível de catálogo — não há inflaç
 
 ## Parte VII — Razões Operacional/Catálogo (semanais)
 
+**Regra normativa substitutiva P11-C (vigente, após provas P11-A e P11-B):** Na célula semanal de atividade com fronteira física e custo de mesma origem, defina \(R_{ij}=F_i(m_{ij})h_id_i\Delta w_j\), \(B_{ij}=\eta_{ij}^{nom}R_{ij}\), \(\varepsilon_{ij}^{real}=q_{ij}/R_{ij}\) para \(R_{ij}>0\), e \(\varphi_{ij}=q_{ij}/B_{ij}\) para \(B_{ij}>0\). A identidade correta é \(\zeta_{ij}=C_{ij}^{op}/C_{ij}^{ref}\), \(\pi_{ij}=(C_{ij}^{op}/q_{ij})/(C_{ij}^{ref}/R_{ij})\) e **\(\zeta_{ij}=\varepsilon_{ij}^{real}\pi_{ij}\)** somente quando \(R_{ij},q_{ij},C_{ij}^{ref}>0\) e o custo usa uma **única referência física/contratual**. Com \(q=0\), \(\pi\) é indefinida; com \(R=0\), \(\varepsilon^{real}\) é indefinida, sem valores favoráveis inventados. A disponibilidade exógena **não** substitui a produção realizada na identidade de fechamento parcial.
+
+**Agregação válida:** \(\bar\varepsilon_i^{real}=\sum_jq_{ij}/\sum_jR_{ij}\) (denominador positivo), \(\delta_i=C_i^V/(C_i^K+C_i^V)\) (base positiva), e \(\beta_i^{eq}=(\beta_i^KC_i^K+\beta_i^VC_i^V)/(C_i^K+C_i^V)\) **somente** se lançamentos por categoria forem exclusivos, conciliados e os custos K/V puderem ser atribuídos sem duplicar o pool compartilhado. \(C^{V}=vQ\) é condicional a compras proporcionais à saída \(U_{gij}=\kappa_{ig}^{out}q_{ij}\), preços constantes e sem consumo em standby. A cobrança K não é prorateada por \(\varphi\) no regime semanal padrão. **BDI once-only:** \(P=\sum_c(1+\beta_c)C_c\), \(\beta^{eq}=P/\sum_cC_c-1\) para base positiva, com o mesmo livro exclusivo.
+
+**Substituição de autoridade:** as identidades históricas exibidas *abaixo* nesta Parte, baseadas em \(\varepsilon^{nom}\), \(\gamma/\rho\) e soma ponderada por frente-semana, estão **revogadas como contratos normativos** e preservadas exclusivamente para auditoria do erro histórico; não podem alimentar Skill06, orçamento ou GO. Referência reproduzível: [P11-A](P11A_EFICIENCIA_REAL_IDENTIDADES.md) e [P11-B](P11B_PROJECAO_REALIZADA.md).
+
+
+
 **Contrato corrigido P11-A (referência matemática):** [eficiência realizada, fechamento parcial, K/V e BDI](P11A_EFICIENCIA_REAL_IDENTIDADES.md). As identidades ζ=επ só são válidas para ε **realizada** e uma mesma referência física/financeira; a ε exógena nominal isolada falha quando φ<1. Fórmulas históricas desta Parte abaixo permanecem **condicionais/não certificadas** até substituição editorial e adaptação do runtime no P11-B.
 
 
