@@ -163,6 +163,35 @@ def test_forged_p16_chain_coverage_cannot_pass_commercial_witness() -> None:
         )
 
 
+def test_tariff_max_idle_gap_must_match_real_instance_chain() -> None:
+    declaration, pool = discounted()
+    # This observed four-week presence is valid for max_idle_gap=2, not zero.
+    impossible = replace(
+        declaration,
+        tariff=ResourceTariff(F(100), F(25), F(40), F(40), 0),
+    )
+    with pytest.raises(ValueError, match="max_idle_gap"):
+        witness_contract_regime(impossible, pool, canonical())
+
+    # Standby before the first delivered unit is not a P16 demand chain.
+    leading_idle = replace(
+        pool.ledgers[0],
+        demand=(0, 0, 0, 1),
+        standby=(1, 1, 1, 0),
+        chains=(InstanceChain("EXC", 1, 0, 4, 1, 3),),
+        active_cost=F(100),
+        standby_cost=F(75),
+    )
+    long_gap = replace(
+        declaration,
+        tariff=ResourceTariff(F(100), F(25), F(40), F(40), 4),
+    )
+    with pytest.raises(ValueError, match="cannot start or end"):
+        witness_contract_regime(
+            long_gap, replace(pool, ledgers=(leading_idle,)), canonical(),
+        )
+
+
 def test_offhire_must_be_declared_and_have_no_presence() -> None:
     rate = ResourceTariff(F(100), F(25), F(40), F(40), 0)
     chains = (
