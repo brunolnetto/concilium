@@ -60,7 +60,10 @@ def test_inventory_requires_explicit_provenance_dimension_and_uncertainty() -> N
         if row["blocked_by_issues"]:
             assert row["status"] == "CONDITIONAL_OR_UNCERTIFIED"
         # No automatic "all 93 dimensionally certified" claim from a syntax audit.
-        assert row["dimensional_proof"] in ("REQUIRES_INDEPENDENT_VERIFICATION", "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION")
+        assert row["dimensional_proof"] in (
+            "REQUIRES_INDEPENDENT_VERIFICATION",
+            "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION",
+        )
 
 
 def test_finance_and_pricing_relations_are_not_promoted_out_of_dependencies() -> None:
