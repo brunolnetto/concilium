@@ -180,6 +180,7 @@ def _preflight_physical_productivity(
         prod = producao_lookup.get(prod_id) if prod_id else None
         if not isinstance(prod, dict):
             prod = {}
+        item_invalid = False
         for name, raw in (
             ("cpu_meta.producao_horaria", meta.get("producao_horaria")),
             ("producao_horaria", prod.get("producao_horaria")),
@@ -187,6 +188,7 @@ def _preflight_physical_productivity(
         ):
             if raw is not None and not _positive_finite_rate(raw):
                 invalid = True
+                item_invalid = True
                 validacoes.append(
                     ValidacaoItem(
                         codigo="VAL-CRON-PROD-INVALID",
@@ -215,18 +217,43 @@ def _preflight_physical_productivity(
                 resolver_producao_efetiva,
             )
 
-            typed = construir_producao_catalogo_para_sinergia(prod)
-            if typed is not None:
-                resolution = resolver_producao_efetiva(typed)
-                derived = resolution.derivacao
-                physical_rate = derived.producao_horaria_derivada if derived else None
-                graph_verified = (
-                    not any(v.status == "ERRO" for v in resolution.validacoes)
-                    and physical_rate is not None
-                    and math.isfinite(physical_rate)
-                    and physical_rate > 0
-                )
-            if not graph_verified:
+            # Pydantic float coercion accepts booleans and can conceal invalid
+            # non-bottleneck capacities. Validate *every* raw physical rate
+            # before graph construction, float conversion or max-flow.
+            for collection in ("capacidades", "arestas_fluxo"):
+                entries = raw_graph.get(collection, [])
+                if not isinstance(entries, list):
+                    entries = [None]
+                for index, entry in enumerate(entries):
+                    raw_rate = entry.get("capacidade_horaria") if isinstance(entry, dict) else None
+                    if not _positive_finite_rate(raw_rate):
+                        item_invalid = True
+                        invalid = True
+                        validacoes.append(
+                            ValidacaoItem(
+                                codigo="VAL-CRON-PROD-INVALID",
+                                status="ERRO",
+                                mensagem=(
+                                    f"F(m) inválido em {item.item_id}/grafo_sinergia."
+                                    f"{collection}[{index}].capacidade_horaria: "
+                                    "exigir número físico positivo, finito e não booleano."
+                                ),
+                            )
+                        )
+            typed = None
+            if not item_invalid:
+                typed = construir_producao_catalogo_para_sinergia(prod)
+                if typed is not None:
+                    resolution = resolver_producao_efetiva(typed)
+                    derived = resolution.derivacao
+                    physical_rate = derived.producao_horaria_derivada if derived else None
+                    graph_verified = (
+                        not any(v.status == "ERRO" for v in resolution.validacoes)
+                        and physical_rate is not None
+                        and math.isfinite(physical_rate)
+                        and physical_rate > 0
+                    )
+            if not graph_verified and not item_invalid:
                 invalid = True
                 validacoes.append(
                     ValidacaoItem(
