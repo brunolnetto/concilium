@@ -156,11 +156,11 @@ def test_wave_zero_issue_eleven_is_next_but_cannot_close_early(spec: dict) -> No
     packages = next(n for n in spec["nodes"] if n["issue"] == 11)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P11-A", [89]),
-        ("P11-B", []),
+        ("P11-B", [90]),
     ]
-    result = report(spec, states(9, 10, 12), all_merged(spec) - {89})
+    result = report(spec, states(9, 10, 12), all_merged(spec) - {90})
     assert result["active_wave"] == 0
     assert result["ready_to_execute"] == [11]
     row = next(r for r in result["issues"] if r["issue"] == 11)
-    assert row["pending_packages"] == ["P11-A", "P11-B"]
+    assert row["pending_packages"] == ["P11-B"]
     assert not row["closure_preflight"]
