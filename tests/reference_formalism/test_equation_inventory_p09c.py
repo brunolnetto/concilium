@@ -153,3 +153,25 @@ def test_legacy_consumable_proxy_never_forges_physical_rate_or_price() -> None:
     # Bad fictional kappa [good/hour] times price [BRL/hour]
     # gives BRL*good/hour^2, not an hourly monetary price.
     assert (G / H) * (BRL / H) != BRL / H
+
+
+def test_symbol_unit_provenance_contract_is_unique_and_explicit() -> None:
+    symbols_path = DOCS / "SYMBOL_PROVENANCE_P09C.json"
+    spec = json.loads(symbols_path.read_text(encoding="utf-8"))
+    assert spec["schema"] == "concilium.formalism.symbol_provenance.v1"
+    rows = spec["symbols"]
+    assert len(rows) >= 50
+    ids = [row["symbol"] for row in rows]
+    assert len(ids) == len(set(ids))
+    for row in rows:
+        for key in ("symbol", "unit", "source", "output", "classification"):
+            assert row[key].strip(), (row["symbol"], key)
+        assert row["classification"] in ("NORMATIVE", "CONDITIONAL")
+        if row["classification"] == "CONDITIONAL":
+            assert row["blocked_by_issues"], row["symbol"]
+    by_name = {r["symbol"]: r for r in rows}
+    assert "physical" in by_name["Q_i"]["unit"]
+    assert "u_i/operating hour" == by_name["F_i(m)"]["unit"]
+    assert "BRL/physical good unit" == by_name["p_g"]["unit"]
+    assert "BRL" == by_name["C_tot"]["unit"]
+    assert 21 in by_name["P"]["blocked_by_issues"]
