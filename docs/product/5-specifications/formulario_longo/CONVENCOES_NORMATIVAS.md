@@ -31,6 +31,8 @@
 
 **Unidades heterogêneas:** `u_i` e `unidade_g` não são intercambiáveis. Conversão depende de fator explícito; nunca inferir que `kg`, `t`, `L` e `m³` são equivalentes. Um proxy monetário de MAT não comprova volume físico (ver #18).
 
+**Integração por célula semanal (P09-D).** A expressão `h_i d_i` tem dimensão `horas/semana` e `F_i(m)` tem dimensão `u_i/hora`. Seu produto bruto é `u_i/semana`, **não** o total `u_i`. Na notação de células discretas, `B_ij=F_i(m_ij) h_i d_i ε_ij` abrevia a integração `F_i(m_ij) × (h_i d_i) × Δw_j × ε_ij`, com **`Δw_j = 1 semana`**; o resultado da célula `B_ij` e a quantidade `q_ij` são `u_i`. De maneira análoga, uma tarifa contratual em reais por hora, multiplicada por horas por semana, só produz custo total em reais quando integrada à duração da célula semanal. A fração `φ_i` de fechamento não reduz automaticamente K no regime de contrato semanal integral. Sem duração definida, uma taxa semanal não pode ser interpretada como quantidade da célula.
+
 ## 3. Domínio da mobilização e semana retangular
 
 `W_i=(m_i^0,mu_i^+,m_i^1,mu_i^-,m_i^max)` tem domínio

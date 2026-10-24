@@ -179,6 +179,9 @@ $$\boxed{C_i^{\mathrm{cat}} \equiv p_i^{\mathrm{cat}}\,Q_i = \frac{\gamma_i^{\ma
 
 ## Parte IV — Cronograma Semanal
 
+**Base dimensional da semana (P09-D).** A notação `F_i(m_ij) h_i d_i ε_ij` é abreviação do integral por célula de uma semana: `F_i(m_ij) [u_i/h] × h_i d_i [h/semana] × Δw_j [semana] × ε_ij`, com **`Δw_j = 1 semana`**, resultando em `B_ij [u_i]` e `q_ij [u_i]`. Não interpretar a taxa `u_i/semana` como quantidade antes de integrar a célula. `φ_i` não multiplica K da semana contratada.
+
+
 Eficiência exógena semanal: $\varepsilon_{ij}^{exog}=\eta_{p,j}\eta_{w,j}\in[0,1]$. A capacidade instalada já inclui todas as equipes e gargalos:
 
 $\boxed{B_{ij}=F_i(m_{ij})h_id_i\varepsilon_{ij}^{exog},\qquad q_{ij}=\min\{(Q_i-\sum_{k<j}q_{ik})_+,B_{ij}\}}.$
