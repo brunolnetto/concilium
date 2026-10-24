@@ -25,11 +25,15 @@ ECONOMIC_PATHS = (
     "src/concilium/application/scheduling/physical_consumption_rates.py",
     "src/concilium/application/scheduling/resource_level_contracts.py",
     "src/concilium/application/scheduling/resource_demand_levels.py",
+    "src/concilium/domain/models/canonical/_pool_recursos.py",
+    "src/concilium/domain/models/canonical/_estoque_consumiveis.py",
 )
 ECONOMIC_SEGMENTS = (
     "/results_financeiros/",
     "/pool_recursos/",
     "/estoque_consumiveis/",
+    "/economics/",
+    "/finance/",
 )
 EXCLUDED_DOCS = (SPEC + "EQUATION_INVENTORY_P09C.json",)
 
@@ -56,7 +60,9 @@ def assess_paths(changed: set[str]) -> tuple[bool, str]:
     # Inventory-only updates cannot substitute for a reviewed normative source.
     specifications = sorted(p for p in changed
                             if p.startswith(SPEC) and p not in EXCLUDED_DOCS)
-    vectors = sorted(p for p in changed if p.startswith(VECTORS) and p.endswith(".json"))
+    vectors = sorted(p for p in changed if p.startswith(VECTORS)
+                     and p.endswith(".json")
+                     and any(token in p for token in ("economic", "reconciliation", "consumption", "pool")))
     if not specifications or not vectors:
         return False, (
             "Economic changes require BOTH a reviewed normative specification "
@@ -70,7 +76,7 @@ def git_changed(base: str, head: str) -> set[str]:
     if not base or not head or base == "0" * 40 or head == "0" * 40:
         raise ValueError("A real base and head commit SHA are required")
     output = subprocess.check_output(
-        ["git", "diff", "--name-only", "--diff-filter=ACMRT", f"{base}...{head}"],
+        ["git", "diff", "--name-only", "--diff-filter=ACMRTD", f"{base}...{head}"],
         text=True,
         stderr=subprocess.PIPE,
     )
