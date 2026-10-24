@@ -17,6 +17,7 @@ DEPRECATION NOTICE (ADR-105):
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from concilium.application.skills.base import SkillResult
@@ -88,6 +89,105 @@ _rasfc_extract_inputs = _mod_validacao._rasfc_extract_inputs
 _rasfc_run_heuristics = _mod_validacao._rasfc_run_heuristics
 
 
+
+def _invalidate_derived_costs() -> dict[str, Any]:
+    """Clear stale economic outputs whenever Skill04 cannot certify provenance."""
+    return {
+        "resultado": None,
+        "resultado_reconciliado": None,
+        "ponto_equilibrio": [],
+        "custos_atividades": [],
+        "diagnostico_pe": None,
+        "backtracking_pe": None,
+        "memorial_calculo_bdi": None,
+        "tabela_bdi_efetiva": None,
+        "contratos_recurso": [],
+        "cadeias_perpetuacao": [],
+        "instancias_recurso": [],
+        "resumo_utilizacao_contratos": [],
+        "recursos_consumiveis": [],
+        "resumo_estoque_consumiveis": [],
+        "indiretos_semanal": [],
+        "indiretos_com_bdi": [],
+        "bridge_analysis": None,
+        "cost_criticality_report": None,
+        "s_curve": None,
+        "cubo_analitico": None,
+    }
+
+
+def _preflight_physical_productivity(
+    canonical: CanonicalModel,
+    cpu_lookup: dict,
+    producao_lookup: dict,
+    *,
+    certified: bool,
+    validacoes: list[ValidacaoItem],
+) -> tuple[bool, bool]:
+    """Validate real physical source and numeric rate before calling a solver.
+
+    An identifier/field spelling is NOT a calibration. In the absence of
+    graph + versioned external source, a rate is an exploratory assumption.
+    The downstream project-wide GO certificate remains outside Skill04.
+    """
+    invalid = False
+    unverified = False
+    for item in canonical.eap or []:
+        cpu = cpu_lookup.get(item.cpu_id) or {}
+        meta = cpu.get("cpu_meta") or {}
+        if not isinstance(meta, dict):
+            meta = {}
+        prod_id = cpu.get("producao_id_ref")
+        prod = producao_lookup.get(prod_id) if prod_id else None
+        if not isinstance(prod, dict):
+            prod = {}
+        for name, raw in (
+            ("cpu_meta.producao_horaria", meta.get("producao_horaria")),
+            ("producao_horaria", prod.get("producao_horaria")),
+            ("valor_horario", prod.get("valor_horario")),
+        ):
+            if raw is not None and (
+                isinstance(raw, bool)
+                or not isinstance(raw, (int, float))
+                or not math.isfinite(float(raw))
+                or float(raw) <= 0
+            ):
+                invalid = True
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-CRON-PROD-INVALID",
+                        status="ERRO",
+                        mensagem=f"F(m) inválido em {item.item_id}/{name}; exigir taxa física positiva e finita.",
+                    )
+                )
+        # Independently inspect the *chosen* source, not merely the names of
+        # the warnings emitted by the legacy productivity resolver.
+        has_graph = isinstance(prod.get("grafo_sinergia"), dict) and bool(prod["grafo_sinergia"])
+        origin = prod.get("source_id") or prod.get("fonte")
+        version = prod.get("source_version") or prod.get("versao")
+        source_proved = (
+            bool(prod_id) and has_graph and isinstance(origin, str)
+            and bool(origin.strip()) and isinstance(version, str)
+            and bool(version.strip()) and "producao_horaria" not in meta
+            and "valor_horario" not in prod
+        )
+        if not source_proved:
+            unverified = True
+            if certified:
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-CRON-PROD-CERT",
+                        status="ERRO",
+                        mensagem=(
+                            f"NOGO: {item.item_id} sem grafo F(m), versão/fonte física "
+                            "documentada ou com taxa legada que substitui o grafo."
+                        ),
+                    )
+                )
+    return invalid, unverified
+
+
+
 def run_cronograma(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
@@ -124,6 +224,20 @@ def run_cronograma(
         calendario_operacional,
     ) = _run_cronograma_build_context(canonical_in, inputs, catalogo, validacoes)
     prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
+
+    invalid_productivity, unverified_productivity = _preflight_physical_productivity(
+        canonical_in, cpu_lookup, producao_lookup,
+        certified=certification_intent == "CERTIFIED",
+        validacoes=validacoes,
+    )
+    if invalid_productivity or (certification_intent == "CERTIFIED" and unverified_productivity):
+        return SkillResult(
+            canonical_in.model_copy(
+                update={"cronograma": None, "intervalos_atividade": [],
+                        **_invalidate_derived_costs()}
+            ),
+            validacoes,
+        )
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
     if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
@@ -168,7 +282,7 @@ def run_cronograma(
         validacoes,
         insumos_lookup,
     )
-    missing_productivity_evidence = bool(fallback_item_ids) or any(
+    missing_productivity_evidence = unverified_productivity or bool(fallback_item_ids) or any(
         v.codigo in ("VAL-PROD-04", "VAL-PROD-04-PROD-LEGACY")
         for v in validacoes
     )
@@ -186,25 +300,8 @@ def run_cronograma(
             )
         )
         blocked = canonical_in.model_copy(
-            update={
-                "cronograma": None,
-                "intervalos_atividade": [],
-                "resultado": None,
-                "ponto_equilibrio": [],
-                "custos_atividades": [],
-                "resultado_reconciliado": None,
-                "diagnostico_pe": None,
-                "backtracking_pe": None,
-                "recursos_consumiveis": [],
-                "resumo_estoque_consumiveis": [],
-                "contratos_recurso": [],
-                "cadeias_perpetuacao": [],
-                "instancias_recurso": [],
-                "indiretos_semanal": [],
-                "indiretos_com_bdi": [],
-                "memorial_calculo_bdi": None,
-                "tabela_bdi_efetiva": None,
-            }
+            update={"cronograma": None, "intervalos_atividade": [],
+                    **_invalidate_derived_costs()}
         )
         return SkillResult(blocked, validacoes)
     if failed:
@@ -310,6 +407,8 @@ def run_cronograma(
         "recursos_consumiveis": recursos_consumiveis_out,
         "resumo_estoque_consumiveis": resumo_estoque_out,
     }
+    if missing_productivity_evidence:
+        update_dict.update(_invalidate_derived_costs())
     if mob_schedule:
         update_dict["mob_schedule"] = mob_schedule
 
