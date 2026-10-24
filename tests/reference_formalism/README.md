@@ -132,3 +132,17 @@ outside its explicit assumptions fail closed instead of inheriting P16/P18
 numeric defaults. The W1 issue #22 can close only after accepted golden
 coverage, code review, CI, and an independently verified production-result
 comparison, not because all three PR numbers are registered.
+
+
+**P22 acceptance: production-output mutation gate.** The independent
+\`compare_external_pool\` accepts a plain, typed dictionary instead of
+importing Concilium. The separate integration test
+\`tests/unit/application/scheduling/test_p22c_external_pool_parity.py\`
+adapts the *actual* P16 \`ResourceContractLedger\` into that dictionary.
+For a discounted-standby baseline, the real output matches K(active)=200,
+K(idle)=50 and MOB/DEMOB=80. An intentional mutation
+\`idle_cost: "50" -> "0"\` raises \`ReferenceContractError\`, proving that
+production outputs cannot silently become their own oracle. The same
+bridge detects the documented fixed-layer P16 discrepancy on the
+\`(2,1,1,2)\` global-fungible counterexample (P16 costs 120, oracle 92).
+This integration **does not** close #16 or certify the wider scheduler.
