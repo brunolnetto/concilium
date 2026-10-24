@@ -53,7 +53,7 @@ def _case() -> tuple[
     ))
     measure = PhysicalPurchaseMeasure("ORE", F(1), "kg", F(1), "kg", F(5, 2))
     physical = AcquisitionEvidenceLine(
-        "c1", "PLANNED_CLOSED_SCOPE", "A", "2026-W01", measure
+        "c1", "PLANNED_CLOSED_SCOPE", "A", "2026-W01", measure, "MAT"
     )
     acquired = CostPosting(
         ("CONSUMABLE", "c1"), PostingNature.ACQUISITION,
@@ -172,7 +172,7 @@ def test_zero_physical_purchase_does_not_create_a_monetary_event() -> None:
     pool, consumption, _ = _case()
     free = AcquisitionEvidenceLine(
         "zero", "PLANNED_CLOSED_SCOPE", "A", "2026-W02",
-        PhysicalPurchaseMeasure("ORE", F(0), "kg", F(0), "kg", F(0)),
+        PhysicalPurchaseMeasure("ORE", F(0), "kg", F(0), "kg", F(0)), "MAT",
     )
     with_zero = replace(consumption, evidence=consumption.evidence + (free,))
     assert reconcile_financial_sources(pool, with_zero).total == F(39, 2)
@@ -236,7 +236,7 @@ def test_duplicate_zero_quantity_source_and_empty_week_are_rejected() -> None:
     pool, consumption, _ = _case()
     zero = AcquisitionEvidenceLine(
         "z", "PLANNED_CLOSED_SCOPE", "A", "2026-W02",
-        PhysicalPurchaseMeasure("ORE", F(0), "kg", F(0), "kg", F(0)),
+        PhysicalPurchaseMeasure("ORE", F(0), "kg", F(0), "kg", F(0)), "MAT",
     )
     with pytest.raises(ValueError, match="duplicate acquisition evidence"):
         reconcile_financial_sources(
@@ -258,3 +258,25 @@ def test_zero_activity_has_exact_zero_balances_without_fabricated_costs() -> Non
     assert not result.weeks
     assert result.direct == result.indirect == result.total == F(0)
     assert not result.holding_evidence_present
+
+
+def test_category_forgery_preserving_total_is_rejected_against_p18() -> None:
+    pool, consumption, _ = _case()
+    acquisition = consumption.journal.postings[-1]
+    falsified = replace(acquisition, category="COMB")
+    fake = replace(
+        consumption,
+        journal=ExclusiveCostLedger(pool.postings + (falsified,)),
+    )
+    assert fake.journal.total == consumption.journal.total
+    with pytest.raises(ValueError, match="differs from measured physical cost"):
+        reconcile_financial_sources(pool, fake)
+
+
+def test_unknown_legacy_purchase_category_is_not_a_financial_certificate() -> None:
+    pool, consumption, _ = _case()
+    legacy = replace(consumption.evidence[0], category=None)
+    with pytest.raises(ValueError, match="lacks declared MAT/COMB category"):
+        reconcile_financial_sources(
+            pool, replace(consumption, evidence=(legacy,))
+        )
