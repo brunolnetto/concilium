@@ -16,6 +16,7 @@ ECONOMIC_PREFIXES = (
     "src/concilium/application/scheduling/",
     "src/concilium/application/finance",
     "src/concilium/application/financial",
+    "src/concilium/domain/services/financial/",
     "src/concilium/domain/models/canonical/_pool_recursos",
     "src/concilium/domain/models/canonical/_estoque_consumiveis",
 )
