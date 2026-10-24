@@ -231,11 +231,11 @@ $$C_i^{\mathrm{V,op}} = \sum_{j} C_{ij}^{\mathrm{V,op}} = \frac{\gamma_i^{\mathr
 $$C_i^{\mathrm{op}} = C_i^{\mathrm{K,op}}+C_i^{\mathrm{V,op}}\qquad\text{[R\$]}$$
 $$p_i^{\mathrm{op}} = C_i^{\mathrm{op}}/Q_i\qquad\text{[R\$/un]}$$
 
-**Identidade — invariância do consumível.** Usando o fecho de escopo exato $\sum_jq_{ij}=Q_i$ (Parte IV):
+**Identidade condicionada ao baseline `OUTPUT_PROPORTIONAL`:** além do fecho de escopo exato $\sum_jq_{ij}=Q_i$ (Parte IV):
 
-$$\boxed{C_i^{\mathrm{V,op}} \equiv C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}}\qquad\text{(exato, por construção do fechamento de escopo)}$$
+$$\boxed{C_i^{V,op}=C_i^{V,cat}=\frac{Q_i\gamma_i^{V,cat}}{\rho_i}}\quad\text{somente se }U_{gij}=\kappa_{ig}^{out}q_{ij}\text{, sem perdas/idle, com taxa/preço fixos e base dimensional compatível}.$$
 
-O consumível operacional **é** o consumível de catálogo — não há inflação por ineficiência. O total de material/combustível depende apenas de $Q_i$, nunca de quantas semanas foram necessárias para executar. Esta identidade **não vale** para o contratual: $C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i$ cresce quando a eficiência piora (mais frente-semanas $M_i$ para fechar o mesmo $Q_i$, já que $M_i$ conta a semana de fechamento integralmente, não prorateada).
+No caso geral, \(C_i^{V,op}=\sum_{g,j}p_gU_{gij}\), podendo incluir consumo por horas efetivas e perdas/idle medidas. Não afirmar que \(V(Q)\) é invariante sem regime físico, fonte e preço fixos. A identidade de catálogo é condicional, não resulta apenas de \(\sum_jq_{ij}=Q_i\). Esta identidade **não vale** para o contratual: $C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i$ cresce quando a eficiência piora (mais frente-semanas $M_i$ para fechar o mesmo $Q_i$, já que $M_i$ conta a semana de fechamento integralmente, não prorateada).
 
 ---
 
@@ -328,7 +328,7 @@ $\mathcal{T}$ = conjunto de tipos de recurso (união de categorias e especifica�
 
 **Demanda semanal física por tipo:** \(d_{gj}=\sum_i a_{ig}(m_{ij})\). Somente em frentes independentes \(a_{ig}(m)=m\,n_g^i\); gargalos e recursos compartilhados exigem composição própria.
 
-$$n_j(\tau) = \sum_{i\,:\,j\in[j_i^0,\,j_i^0+N_i-1]} m_{ij}\cdot n_{\tau}^{i}$$
+$$\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[físico; }a_{ig}(m)=m\,n_g^i\text{ somente para frentes independentes]}.$$
 
 **Pool físico** \(\{r\}\): instâncias fungíveis por tipo \(g\), tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\). A igualdade entre ativo e idle é exclusiva de \`FULL_RATE_STANDBY\`; sem regime e fonte, custo \`NOT_EVALUATED\`.
 
@@ -621,7 +621,7 @@ SAÍDA: {γ_i^k, γ_i^{K,cat}, γ_i^{V,cat}, γ_i^{cat}, f_i^V, p_i^{cat}} ∀i
 
 ### XIV.3 — Fase 3: Quantitativos e Custos Semanais Diretos
 
-**Suspensão de certificação financeira:** as atribuições de custos nesta fase ainda representam a hipótese linear por frente, **não** o caso geral de F(m) com gargalo ou despesa variável por composição. A fase física corrigida é normativa; as contas financeiras dependem de #11/#17/#20 para certificação, como demonstrado no contrato P10-A.
+**Escopo financeiro:** as expressões de catálogo por frente são diagnósticas sob a hipótese linear; o custo realizado canônico requer consumo físico medido por regime P13-B/P18, contratos K de P16 e reconciliação exclusiva P17/P20. A integração P11-A/B/C não autoriza `PROJECT_GO` sem validação das demais fases.
 
 ```
 Para cada i ∈ A, para cada j ∈ [j_i^0, j_i^0 + N_i - 1]:
@@ -697,10 +697,10 @@ SAÍDA: C^{pool}, C^{pool,β}, C^{MOB,eq}, C^{MOB,eq,β}
 
 ```
 C^{cons} ← Σ_g p_g*U_g // U_g medido por OUTPUT_PROPORTIONAL ou H_real/I_g/L_g
-  // Exato por construção: Σ_i γ_i^{V,cat}·Q_i/ρ_i ≡ Σ_i C_i^{V,op} (fecho de escopo, Parte IV)
+  // Equivalência γ^V*Q/ρ apenas se OUTPUT_PROPORTIONAL com κ_out e preço fixos.
 
-Para cada i:
-  γ_i^{V,cat,β} ← (1+β^MAT) · γ_i^MAT + (1+β^COMB) · γ_i^COMB
+Para cada g:
+  Exigir regime_consu_g, κ_g, preço p_g, unidade física e source_id; I_g/L_g quando aplicáveis.
 
 C^{cons,β} ← Σ_g (1+β_cat(g))*p_g*U_g
 
