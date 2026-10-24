@@ -126,8 +126,12 @@ def witness_contract_regime(
             raise ValueError("physical chain identity does not match resource type")
         if not 0 <= chain.start < chain.end <= len(pool.calendar_weeks):
             raise ValueError("physical chain outside the declared calendar")
+        if (ledger.demand[chain.start] < chain.level
+                or ledger.demand[chain.end - 1] < chain.level):
+            raise ValueError("physical chain cannot start or end on standby")
         active = 0
         idle = 0
+        consecutive_idle = 0
         for j in range(chain.start, chain.end):
             level_week = (chain.level, j)
             if level_week in owned_level_weeks:
@@ -137,8 +141,12 @@ def witness_contract_regime(
             if ledger.demand[j] >= chain.level:
                 active_level_weeks.add(level_week)
                 active += 1
+                consecutive_idle = 0
             else:
                 idle += 1
+                consecutive_idle += 1
+                if consecutive_idle > evidence.tariff.max_idle_gap:
+                    raise ValueError("physical standby exceeds declared max_idle_gap")
         if (active, idle) != (chain.active_weeks, chain.idle_weeks):
             raise ValueError("physical chain active/idle count mismatch")
     required_levels = {
