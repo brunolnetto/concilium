@@ -246,3 +246,18 @@ def test_dimensional_preconditions_do_not_create_financial_or_project_go() -> No
         for p in PROOF["proofs"]
     )
     assert not any("CERTIFIED" in p["proof_status"] for p in PROOF["proofs"])
+
+
+def test_normative_documents_are_not_corrupted_by_cell_semantics_insertions() -> None:
+    conventions = (DIR / "CONVENCOES_NORMATIVAS.md").read_text(encoding="utf-8")
+    long = (DIR / "FORMALISMO_LONGO.md").read_text(encoding="utf-8")
+    short = (DIR / "FORMALISMO_RESUMIDO.md").read_text(encoding="utf-8")
+    tex = (DIR / "formulario_longo.tex").read_text(encoding="utf-8")
+    assert conventions.count("# Contrato normativo de notação") == 1
+    assert conventions.count("## 2. Dicionário dimensional mínimo") == 1
+    assert conventions.count("## 3. Domínio da mobilização e semana retangular") == 1
+    assert conventions.count("## 4. Índices e intervalos") == 1
+    assert conventions.count("**Integração por célula semanal (P09-D).**") == 1
+    assert long.count("## Parte IV — Cronograma Semanal") == 1
+    assert short.count("## Parte IV — Cronograma Semanal") == 1
+    assert tex.count(r"\end{document}") == 1
