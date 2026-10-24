@@ -216,7 +216,10 @@ def project_realized_financials(
                     (direct / physical.delivered_output)
                     / (reference / physical.nominal_output)
                 )
-                if physical.realized_efficiency is None or zeta != physical.realized_efficiency * pi:
+                if (
+                    physical.realized_efficiency is None
+                    or zeta != physical.realized_efficiency * pi
+                ):
                     raise ValueError("realized efficiency and zeta/pi do not reconcile")
         financial.append(RealizedFinancialWeek(
             week, k, v, indirect, cost, price,
