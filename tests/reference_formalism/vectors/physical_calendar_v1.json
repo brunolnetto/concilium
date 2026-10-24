@@ -1,0 +1,533 @@
+{
+  "protocol": "formalism-physical/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "sections": [
+      "I.3.2",
+      "I.4",
+      "I.5",
+      "IV",
+      "XIV.0",
+      "XIV.1"
+    ],
+    "rounding": "exact Fraction; finite decimal only; no tolerance",
+    "optimization": "bounded exhaustive makespan and lexicographic starts/durations; no price/GO"
+  },
+  "vectors": [
+    {
+      "case_id": "two_of_four_independent_no_double_efficiency",
+      "inputs": {
+        "horizon_weeks": 3,
+        "weather": [
+          "1",
+          "0.5",
+          "1"
+        ],
+        "performance": [
+          "1",
+          "1",
+          "1"
+        ],
+        "graphs": {
+          "linear": {
+            "nodes": [
+              "s",
+              "t"
+            ],
+            "source": "s",
+            "sink": "t",
+            "edges": [
+              {
+                "from": "s",
+                "to": "t",
+                "capacity": "10",
+                "scaling": "per_front"
+              }
+            ]
+          }
+        },
+        "resource_caps": {},
+        "activities": [
+          {
+            "id": "A",
+            "graph": "linear",
+            "scope_total": "100",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 2,
+              "final": 2,
+              "maximum": 4,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [],
+            "resource_units": {}
+          }
+        ]
+      },
+      "expected": {
+        "makespan_weeks": 2,
+        "activities": {
+          "A": {
+            "start_week": 0,
+            "end_week": 1,
+            "duration_weeks": 2,
+            "front_weeks": 4,
+            "fronts": [
+              2,
+              2
+            ],
+            "capacity": [
+              "80",
+              "40"
+            ],
+            "quantity": [
+              "80",
+              "20"
+            ],
+            "final_week_fraction": "0.5"
+          }
+        }
+      },
+      "protocol": "formalism-physical/1"
+    },
+    {
+      "case_id": "shared_bottleneck_capacity_plateau",
+      "inputs": {
+        "horizon_weeks": 3,
+        "weather": [
+          "1",
+          "1",
+          "1"
+        ],
+        "performance": [
+          "1",
+          "1",
+          "1"
+        ],
+        "graphs": {
+          "linear": {
+            "nodes": [
+              "s",
+              "t"
+            ],
+            "source": "s",
+            "sink": "t",
+            "edges": [
+              {
+                "from": "s",
+                "to": "t",
+                "capacity": "10",
+                "scaling": "per_front"
+              }
+            ]
+          },
+          "bottleneck": {
+            "nodes": [
+              "s",
+              "b",
+              "t"
+            ],
+            "source": "s",
+            "sink": "t",
+            "edges": [
+              {
+                "from": "s",
+                "to": "b",
+                "capacity": "10",
+                "scaling": "per_front"
+              },
+              {
+                "from": "b",
+                "to": "t",
+                "capacity": "15",
+                "scaling": "fixed"
+              }
+            ]
+          }
+        },
+        "resource_caps": {},
+        "activities": [
+          {
+            "id": "A",
+            "graph": "bottleneck",
+            "scope_total": "90",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 2,
+              "final": 2,
+              "maximum": 4,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [],
+            "resource_units": {}
+          }
+        ]
+      },
+      "expected": {
+        "makespan_weeks": 2,
+        "activities": {
+          "A": {
+            "start_week": 0,
+            "end_week": 1,
+            "duration_weeks": 2,
+            "front_weeks": 4,
+            "fronts": [
+              2,
+              2
+            ],
+            "capacity": [
+              "60",
+              "60"
+            ],
+            "quantity": [
+              "60",
+              "30"
+            ],
+            "final_week_fraction": "0.5"
+          }
+        }
+      },
+      "protocol": "formalism-physical/1"
+    },
+    {
+      "case_id": "ramp_trapezoid_and_fractional_last_week",
+      "inputs": {
+        "horizon_weeks": 5,
+        "weather": [
+          "1",
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "performance": [
+          "1",
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "graphs": {
+          "linear": {
+            "nodes": [
+              "s",
+              "t"
+            ],
+            "source": "s",
+            "sink": "t",
+            "edges": [
+              {
+                "from": "s",
+                "to": "t",
+                "capacity": "10",
+                "scaling": "per_front"
+              }
+            ]
+          }
+        },
+        "resource_caps": {},
+        "activities": [
+          {
+            "id": "A",
+            "graph": "linear",
+            "scope_total": "110",
+            "hours_per_week": "2",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 1,
+              "final": 1,
+              "maximum": 3,
+              "up": 1,
+              "down": 1
+            },
+            "predecessors": [],
+            "resource_units": {}
+          }
+        ]
+      },
+      "expected": {
+        "makespan_weeks": 4,
+        "activities": {
+          "A": {
+            "start_week": 0,
+            "end_week": 3,
+            "duration_weeks": 4,
+            "front_weeks": 6,
+            "fronts": [
+              1,
+              2,
+              2,
+              1
+            ],
+            "capacity": [
+              "20",
+              "40",
+              "40",
+              "20"
+            ],
+            "quantity": [
+              "20",
+              "40",
+              "40",
+              "10"
+            ],
+            "final_week_fraction": "0.5"
+          }
+        }
+      },
+      "protocol": "formalism-physical/1"
+    },
+    {
+      "case_id": "rain_zero_and_end_of_week_quantity_release",
+      "inputs": {
+        "horizon_weeks": 5,
+        "weather": [
+          "1",
+          "0",
+          "1",
+          "1",
+          "1"
+        ],
+        "performance": [
+          "1",
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "graphs": {
+          "linear": {
+            "nodes": [
+              "s",
+              "t"
+            ],
+            "source": "s",
+            "sink": "t",
+            "edges": [
+              {
+                "from": "s",
+                "to": "t",
+                "capacity": "10",
+                "scaling": "per_front"
+              }
+            ]
+          }
+        },
+        "resource_caps": {},
+        "activities": [
+          {
+            "id": "A",
+            "graph": "linear",
+            "scope_total": "80",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 1,
+              "final": 1,
+              "maximum": 1,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [],
+            "resource_units": {}
+          },
+          {
+            "id": "B",
+            "graph": "linear",
+            "scope_total": "20",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 1,
+              "final": 1,
+              "maximum": 1,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [
+              {
+                "id": "A",
+                "threshold": "0.75",
+                "lag_weeks": 0
+              }
+            ],
+            "resource_units": {}
+          }
+        ]
+      },
+      "expected": {
+        "makespan_weeks": 4,
+        "activities": {
+          "A": {
+            "start_week": 0,
+            "end_week": 2,
+            "duration_weeks": 3,
+            "front_weeks": 3,
+            "fronts": [
+              1,
+              1,
+              1
+            ],
+            "capacity": [
+              "40",
+              "0",
+              "40"
+            ],
+            "quantity": [
+              "40",
+              "0",
+              "40"
+            ],
+            "final_week_fraction": "1"
+          },
+          "B": {
+            "start_week": 3,
+            "end_week": 3,
+            "duration_weeks": 1,
+            "front_weeks": 1,
+            "fronts": [
+              1
+            ],
+            "capacity": [
+              "40"
+            ],
+            "quantity": [
+              "20"
+            ],
+            "final_week_fraction": "0.5"
+          }
+        }
+      },
+      "protocol": "formalism-physical/1"
+    },
+    {
+      "case_id": "scarce_resource_post_release_rescheduling",
+      "inputs": {
+        "horizon_weeks": 4,
+        "weather": [
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "performance": [
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "graphs": {
+          "linear": {
+            "nodes": [
+              "s",
+              "t"
+            ],
+            "source": "s",
+            "sink": "t",
+            "edges": [
+              {
+                "from": "s",
+                "to": "t",
+                "capacity": "10",
+                "scaling": "per_front"
+              }
+            ]
+          }
+        },
+        "resource_caps": {
+          "CREW": 1
+        },
+        "activities": [
+          {
+            "id": "A",
+            "graph": "linear",
+            "scope_total": "80",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 1,
+              "final": 1,
+              "maximum": 1,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [],
+            "resource_units": {
+              "CREW": 1
+            }
+          },
+          {
+            "id": "B",
+            "graph": "linear",
+            "scope_total": "20",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 1,
+              "final": 1,
+              "maximum": 1,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [
+              {
+                "id": "A",
+                "threshold": "0.5",
+                "lag_weeks": 0
+              }
+            ],
+            "resource_units": {
+              "CREW": 1
+            }
+          }
+        ]
+      },
+      "expected": {
+        "makespan_weeks": 3,
+        "activities": {
+          "A": {
+            "start_week": 0,
+            "end_week": 1,
+            "duration_weeks": 2,
+            "front_weeks": 2,
+            "fronts": [
+              1,
+              1
+            ],
+            "capacity": [
+              "40",
+              "40"
+            ],
+            "quantity": [
+              "40",
+              "40"
+            ],
+            "final_week_fraction": "1"
+          },
+          "B": {
+            "start_week": 2,
+            "end_week": 2,
+            "duration_weeks": 1,
+            "front_weeks": 1,
+            "fronts": [
+              1
+            ],
+            "capacity": [
+              "40"
+            ],
+            "quantity": [
+              "20"
+            ],
+            "final_week_fraction": "0.5"
+          }
+        }
+      },
+      "protocol": "formalism-physical/1"
+    }
+  ]
+}

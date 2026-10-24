@@ -59,3 +59,39 @@ These reference fixtures **do not** establish equivalence of production
 `04-cronograma` or certify #14/#15; those require integration tests against
 the actual scheduler and persisted certificates. The oracle is a
 deterministic independent witness for those future tests.
+
+## P22-B — Independent physical graph/calendar/Q–FS oracle
+
+\`physical_reference.py\` implements an executable reference, separate from
+production runtime and separate from P22-A's scalar costing baseline.
+
+- **Graph:** bounded exact rational directed max flow (Edmonds–Karp);
+  edges declare \`fixed\` bottleneck or \`per_front\` physical capacity.
+  No multiplicative \`eta_s\` based on unused fronts.
+- **Schedule:** absolute-week weather and performance factors; trapezoidal
+  front ramp depending on candidate duration; enumerated starts/durations
+  and cumulative Q–FS end-of-week release with nonnegative lag.
+- **Physical constraints:** full-week resource occupancy even if weather gives
+  zero production, exact scope closure and last productive-week fraction;
+  deterministic minimum makespan and lexicographic tie-break.
+- **Bounds:** up to five activities, ten weeks, 12 nodes/24 edges per graph,
+  and 50,000 search states. Exhausting a bound raises an explicit error,
+  *not* a claim of global infeasibility.
+- **Numerics:** exact Fraction from decimal-string inputs; only terminating
+  decimal output is admitted by the existing reference protocol. Time indices
+  and fleet counts are integers, all capacities/quantities are physical.
+- **Contract:** \`formalism-physical/1\` in
+  \`vectors/physical_calendar_v1.json\`, pinned to the reviewed LONGO blob;
+  five hand-checked cases: 2-of-4 independent fronts, a shared bottleneck,
+  1→2→2→1 ramp/partial final week, rain-delayed 75%-quantity release, and
+  scarce-resource contention after Q–FS release.
+- **Falsification:** wrong front multiplier, premature Q-release, omitted
+  ramp, weather out of range, impossible horizon, resource collisions and
+  graph-flow/cut inconsistency.
+
+No production package, solver, persisted run, finance helper or production
+fixture is imported into the oracle. It is intentionally restricted to tiny
+instances. Results demonstrate a reference feasible/optimal bounded schedule
+for its *declared simplified problem*, not a general RCPSP optimality claim
+for Skill04, a P16 economic pool minimum, or PROJECT_GO. P22-C must add
+physically priced K/V/IND, consumable sources, stock and pricing oracles.

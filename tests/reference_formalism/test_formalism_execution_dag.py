@@ -128,6 +128,31 @@ def test_p13c_is_mandatory_after_p13a_and_p13b_have_merged(spec: dict) -> None:
     assert thirteen["acceptance_verified"] is None
 
 
+def test_p22b_registered_cannot_close_w1_without_p22c(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 22)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P22-A", [29]), ("P22-B", [95]), ("P22-C", []),
+    ]
+    # Even a hypothetical merged P22-B does not certify P22-C.
+    result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec))
+    row = next(x for x in result["issues"] if x["issue"] == 22)
+    assert row["ready_to_execute"]
+    assert row["pending_packages"] == ["P22-C"]
+    assert row["pr_packages_merged"] == 2
+    assert row["pr_packages_total"] == 3
+    assert not row["closure_preflight"]
+    assert row["acceptance_verified"] is None
+
+
+def test_p22b_pr_open_is_not_merged_and_does_not_unblock_p25(spec: dict) -> None:
+    result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec) - {95})
+    row = next(x for x in result["issues"] if x["issue"] == 22)
+    next_issue = next(x for x in result["issues"] if x["issue"] == 25)
+    assert row["pending_packages"] == ["P22-B", "P22-C"]
+    assert not row["closure_preflight"]
+    assert not next_issue["ready_to_execute"]
+
+
 def test_snapshot_cannot_mark_acceptance_verified(spec: dict) -> None:
     result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec))
     assert all(x["acceptance_verified"] is None for x in result["issues"])
