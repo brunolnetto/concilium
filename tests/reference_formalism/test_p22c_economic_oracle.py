@@ -119,6 +119,15 @@ def test_no_double_category_or_duplicate_physical_good() -> None:
         evaluate_economic(case)
 
 
+def test_cubic_metre_and_millilitre_purchases_have_exact_volume_parity() -> None:
+    baseline = deepcopy(goldens()[1])
+    alternate = deepcopy(baseline)
+    # 60,000 mL = 60 L = 0.06 m3, exactly.
+    alternate["inputs"]["goods"][0]["order_unit"] = "m3"
+    alternate["inputs"]["goods"][0]["orders_weekly"] = ["0.06", "0"]
+    assert evaluate_economic(alternate) == verify_economic(baseline)
+
+
 def test_nonzero_starting_inventory_requires_valuation() -> None:
     case = deepcopy(goldens()[0])
     case["inputs"]["goods"][0]["initial_stock"] = "2"
