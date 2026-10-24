@@ -165,6 +165,9 @@ $$p_i^{cat}=\frac{\gamma_i^{cat}}{\rho_i^{front}}$$
 
 ## Parte IV — Cronograma Semanal
 
+**Base dimensional da semana (P09-D).** `F_i(m_ij) [u_i/h] × h_i d_i [h/semana] × Δw_j [semana] × ε_ij`, com **`Δw_j = 1 semana`**, produz `B_ij [u_i]` e `q_ij [u_i]`; a forma abreviada `F_i(m_ij)h_id_iε_ij` integra implicitamente a duração da célula. Sem essa integração, é `u_i/semana`. Não descontar custo K por `φ_i` da semana final.
+
+
 A produção da semana \(j\) é determinada uma única vez pela função física \(F_i(m_{ij})\) (§I.3.2):
 
 $$\boxed{B_{ij}=F_i(m_{ij})H_i\eta_{p,j}\eta_{w,j},\qquad
