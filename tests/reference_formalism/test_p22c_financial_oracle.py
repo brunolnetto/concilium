@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.reference_formalism.financial_reference import (
+    compare_financial_output,
     evaluate_financial,
     verify_financial,
 )
@@ -105,3 +106,16 @@ def test_independent_oracle_forbids_production_imports() -> None:
         mod == "concilium" or mod.startswith("concilium.")
         for mod in imports
     )
+
+
+def test_external_financial_projection_mutation_rejected() -> None:
+    case = deepcopy(cases()[0])
+    external_output = evaluate_financial(case)
+    assert compare_financial_output(case, external_output) == external_output
+    broken = dict(external_output)
+    broken["contractual_k"] = "251"
+    with pytest.raises(ReferenceContractError, match="production mismatch"):
+        compare_financial_output(case, broken)
+    broken.pop("contractual_k")
+    with pytest.raises(ReferenceContractError, match="missing or unknown"):
+        compare_financial_output(case, broken)
