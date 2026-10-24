@@ -20,6 +20,7 @@ from concilium.application.scheduling.resource_level_contracts import (
     ResourceTariff,
 )
 from concilium.domain.models.canonical._pool_recursos import RecursoContrato
+from concilium.domain.models.canonical._estoque_consumiveis import RecursoConsumivelCanonical
 
 
 class ContractRegime(StrEnum):
@@ -101,7 +102,8 @@ def witness_contract_regime(
             or canonical.tipo_id != evidence.resource_type):
         raise ValueError("canonical contract identity does not match evidence")
     if (canonical.regime_economico_p13 != evidence.regime.value
-            or canonical.origem_regime_p13 != evidence.source_id):
+            or canonical.origem_regime_p13 != evidence.source_id
+            or canonical.moeda_regime_p13 != evidence.currency):
         raise ValueError("canonical regime/source missing or inconsistent; NOT_EVALUATED")
     matches = [v for v in pool.ledgers if v.resource_type == evidence.resource_type]
     if len(matches) != 1:
@@ -109,6 +111,11 @@ def witness_contract_regime(
     ledger = matches[0]
     if len(ledger.demand) != len(pool.calendar_weeks) or len(ledger.presence) != len(pool.calendar_weeks):
         raise ValueError("incomplete physical weeks")
+    if (len(ledger.standby) != len(pool.calendar_weeks)
+            or any(d < 0 or p < d or s < 0 or p - d != s
+                   for d, p, s in zip(ledger.demand, ledger.presence,
+                                      ledger.standby, strict=True))):
+        raise ValueError("physical contractual presence/standby identity violated")
     week_presence = dict(zip(pool.calendar_weeks, ledger.presence, strict=True))
     if len(week_presence) != len(pool.calendar_weeks):
         raise ValueError("non-unique calendar week")
@@ -164,6 +171,7 @@ def witness_consumption_regime(
     *,
     regime: ConsumptionRegime,
     good: PhysicallyPricedGood,
+    canonical: RecursoConsumivelCanonical,
     rate_source: str,
     price_source: str,
     delivered: Fraction | None = None,
@@ -177,6 +185,12 @@ def witness_consumption_regime(
         raise ValueError("typed consumption regime and physical priced good required")
     if any(not isinstance(s, str) or not s.strip() for s in (rate_source, price_source)):
         raise ValueError("rate and unit-price provenance required")
+    if (not isinstance(canonical, RecursoConsumivelCanonical)
+            or canonical.resource_id != good.rate.good_id
+            or canonical.regime_consumo_p13 != regime.value
+            or canonical.origem_taxa_consumo_p13 != rate_source
+            or canonical.origem_preco_consumo_p13 != price_source):
+        raise ValueError("canonical consumption regime/provenance missing; NOT_EVALUATED")
     if regime in (ConsumptionRegime.OUTPUT_PROPORTIONAL,
                   ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS):
         if good.rate.basis is not ConsumptionBasis.PER_DELIVERED_UNIT:
