@@ -128,13 +128,13 @@ def test_p13c_is_mandatory_after_p13a_and_p13b_have_merged(spec: dict) -> None:
     assert thirteen["acceptance_verified"] is None
 
 
-def test_p22b_registered_cannot_close_w1_without_p22c(spec: dict) -> None:
+def test_p22c_registered_but_not_merged_cannot_close_w1(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 22)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
-        ("P22-A", [29]), ("P22-B", [95]), ("P22-C", []),
+        ("P22-A", [29]), ("P22-B", [95]), ("P22-C", [96]),
     ]
     # Even a hypothetical merged P22-B does not certify P22-C.
-    result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec))
+    result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec) - {96})
     row = next(x for x in result["issues"] if x["issue"] == 22)
     assert row["ready_to_execute"]
     assert row["pending_packages"] == ["P22-C"]
@@ -145,12 +145,22 @@ def test_p22b_registered_cannot_close_w1_without_p22c(spec: dict) -> None:
 
 
 def test_p22b_pr_open_is_not_merged_and_does_not_unblock_p25(spec: dict) -> None:
-    result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec) - {95})
+    result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec) - {95, 96})
     row = next(x for x in result["issues"] if x["issue"] == 22)
     next_issue = next(x for x in result["issues"] if x["issue"] == 25)
     assert row["pending_packages"] == ["P22-B", "P22-C"]
     assert not row["closure_preflight"]
     assert not next_issue["ready_to_execute"]
+
+
+def test_all_three_p22_prs_merged_still_require_independent_acceptance(spec: dict) -> None:
+    result = report(spec, states(9, 10, 11, 12, 13), all_merged(spec))
+    oracle = next(x for x in result["issues"] if x["issue"] == 22)
+    successor = next(x for x in result["issues"] if x["issue"] == 25)
+    assert oracle["pr_packages_merged"] == 3
+    assert oracle["closure_preflight"]
+    assert oracle["acceptance_verified"] is None
+    assert not successor["ready_to_execute"]
 
 
 def test_snapshot_cannot_mark_acceptance_verified(spec: dict) -> None:

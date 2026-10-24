@@ -95,3 +95,54 @@ instances. Results demonstrate a reference feasible/optimal bounded schedule
 for its *declared simplified problem*, not a general RCPSP optimality claim
 for Skill04, a P16 economic pool minimum, or PROJECT_GO. P22-C must add
 physically priced K/V/IND, consumable sources, stock and pricing oracles.
+
+## P22-C — Independent economic ledger and exhaustive fungible-instance oracle
+
+\`economic_reference.py\` (protocol \`formalism-economic/1\`) completes the
+reference path for tiny fixed demand profiles without importing P16/P17/P18/P19:
+
+- Enumerates **all weekly assignments of physical demand to up to three
+  fungible instances**, and all feasible keep/split bridges, each checked
+  against maximum idle gap and explicit off-hire weeks. Minimizes
+  \(K^{active}+K^{idle}+\mathrm{MOB/DEMOB}\), with fewest transitions as tie-break.
+  This is stronger than the existing P16 fixed-height-layer witness: the
+  independent 4-week case d=(2,1,1,2) costs **92**, while P16's fixed layers
+  cost 120. P16 global optimality remains OPEN at #16.
+- Acquires measured MAT/COMB in physical units under the three named
+  consumption regimes, with separate physical rate, price and loss/idle
+  provenance. Supports exact g↔kg and mL↔L order conversion, and rejects
+  cross-dimension or unpriced stock instead of assuming free inventory.
+- Reconstructs physical inventory from orders plus lead time; checks
+  nonnegative weekly stock, end-to-end quantity reconciliation, holding
+  and ordering expenses. This bounded ledger currently requires zero
+  initial and final stock; valuation of carry-in stock is NOT_EVALUATED.
+- Separates exactly-once K (EQ/MO), V (MAT/COMB) and IND (MOB/DEMOB,
+  inventory holding, orders and weekly indirect) and applies BDI to each
+  category once. Emits deterministic posting IDs and a signed margin,
+  without automatically certifying PROJECT_GO.
+- Four versioned, manually verifiable goldens in
+  \`vectors/economic_reconciliation_v1.json\`: discounted standby with
+  measured fuel losses (K=250,V=1100,IND=80,total=1430), full-rate with
+  60,000 mL converted to 60 L and nonzero holding/BDI,
+  explicit off-hire, and the independent fungible 92-versus-120 falsifier.
+
+The bounded exhaustive reference is not a replacement for the production
+multi-resource RCPSP or a full inventory cost-flow valuation system. Cases
+outside its explicit assumptions fail closed instead of inheriting P16/P18
+numeric defaults. The W1 issue #22 can close only after accepted golden
+coverage, code review, CI, and an independently verified production-result
+comparison, not because all three PR numbers are registered.
+
+
+**P22 acceptance: production-output mutation gate.** The independent
+\`compare_external_pool\` accepts a plain, typed dictionary instead of
+importing Concilium. The separate integration test
+\`tests/unit/application/scheduling/test_p22c_external_pool_parity.py\`
+adapts the *actual* P16 \`ResourceContractLedger\` into that dictionary.
+For a discounted-standby baseline, the real output matches K(active)=200,
+K(idle)=50 and MOB/DEMOB=80. An intentional mutation
+\`idle_cost: "50" -> "0"\` raises \`ReferenceContractError\`, proving that
+production outputs cannot silently become their own oracle. The same
+bridge detects the documented fixed-layer P16 discrepancy on the
+\`(2,1,1,2)\` global-fungible counterexample (P16 costs 120, oracle 92).
+This integration **does not** close #16 or certify the wider scheduler.

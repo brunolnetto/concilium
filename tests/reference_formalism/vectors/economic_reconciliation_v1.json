@@ -1,0 +1,526 @@
+{
+  "protocol": "formalism-economic/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": [
+      "IX",
+      "X",
+      "XII",
+      "XIII",
+      "XIV"
+    ],
+    "scope": "tiny exhaustive fungible-instance assignments, exact physical acquisition and inventory, categorically exclusive BDI",
+    "rounding": "Fraction exact terminating-decimal outputs"
+  },
+  "vectors": [
+    {
+      "case_id": "discounted_pool_measured_loss_and_exclusive_k_v_ind",
+      "inputs": {
+        "demand": [
+          1,
+          0,
+          0,
+          1
+        ],
+        "contract": {
+          "instances": 1,
+          "active": "100",
+          "idle": "25",
+          "movement": "80",
+          "max_idle_gap": 2,
+          "regime": "DISCOUNTED_STANDBY",
+          "category": "EQ",
+          "source": "contract:independent",
+          "currency": "BRL",
+          "off_hire_weeks": []
+        },
+        "goods": [
+          {
+            "id": "diesel",
+            "category": "COMB",
+            "unit": "L",
+            "order_unit": "L",
+            "driver_unit": "m3",
+            "mode": "OUTPUT_WITH_MEASURED_LOSS",
+            "rate": "2",
+            "driver_weekly": [
+              "40",
+              "60",
+              "0",
+              "0"
+            ],
+            "idle_weekly": [
+              "0",
+              "0",
+              "0",
+              "0"
+            ],
+            "loss_weekly": [
+              "0",
+              "20",
+              "0",
+              "0"
+            ],
+            "price": "5",
+            "rate_source": "calibration:diesel",
+            "price_source": "invoice:diesel",
+            "extra_source": "measure:extras",
+            "initial_stock": "0",
+            "orders_weekly": [
+              "220",
+              "0",
+              "0",
+              "0"
+            ],
+            "lead_weeks": 0,
+            "holding_rate": "0",
+            "order_fee": "0"
+          }
+        ],
+        "indirect_weekly": [
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "bdi": {
+          "EQ": "0",
+          "MO": "0",
+          "MAT": "0",
+          "COMB": "0",
+          "IND": "0"
+        },
+        "sale_price": "2000"
+      },
+      "expected": {
+        "pool": {
+          "demand": [
+            1,
+            0,
+            0,
+            1
+          ],
+          "presence": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "standby": [
+            0,
+            1,
+            1,
+            0
+          ],
+          "chains": 1,
+          "active_cost": "200",
+          "idle_cost": "50",
+          "movement_cost": "80",
+          "assignment": [
+            [
+              0
+            ],
+            [],
+            [],
+            [
+              0
+            ]
+          ]
+        },
+        "goods": {
+          "diesel": {
+            "consumed": [
+              "80",
+              "140",
+              "0",
+              "0"
+            ],
+            "quantity": "220",
+            "acquisition": "1100",
+            "holding": "0",
+            "ordering": "0",
+            "closing_stock": "0"
+          }
+        },
+        "totals": {
+          "K": "250",
+          "V": "1100",
+          "IND": "80",
+          "direct": "1350",
+          "indirect": "80",
+          "total": "1430",
+          "quote_with_BDI": "1430",
+          "sale_price": "2000",
+          "margin": "0.285",
+          "margin_positive": true
+        },
+        "categories": {
+          "COMB": "1100",
+          "EQ": "250",
+          "IND": "80",
+          "MAT": "0",
+          "MO": "0"
+        },
+        "posting_ids": [
+          "good:diesel:acquisition:0",
+          "good:diesel:acquisition:1",
+          "good:diesel:holding:0",
+          "good:diesel:order:0",
+          "pool:active:0",
+          "pool:active:3",
+          "pool:idle:1",
+          "pool:idle:2",
+          "pool:movement:0"
+        ]
+      },
+      "protocol": "formalism-economic/1"
+    },
+    {
+      "case_id": "fullrate_holding_unit_conversion_and_once_only_bdi",
+      "inputs": {
+        "demand": [
+          1,
+          1
+        ],
+        "contract": {
+          "instances": 1,
+          "active": "10",
+          "idle": "10",
+          "movement": "5",
+          "max_idle_gap": 1,
+          "regime": "FULL_RATE_STANDBY",
+          "category": "EQ",
+          "source": "contract:independent",
+          "currency": "BRL",
+          "off_hire_weeks": []
+        },
+        "goods": [
+          {
+            "id": "material",
+            "category": "MAT",
+            "unit": "L",
+            "order_unit": "mL",
+            "driver_unit": "m3",
+            "mode": "OUTPUT_PROPORTIONAL",
+            "rate": "2",
+            "driver_weekly": [
+              "10",
+              "20"
+            ],
+            "idle_weekly": [
+              "0",
+              "0"
+            ],
+            "loss_weekly": [
+              "0",
+              "0"
+            ],
+            "price": "3",
+            "rate_source": "calibration:material",
+            "price_source": "invoice:material",
+            "extra_source": null,
+            "initial_stock": "0",
+            "orders_weekly": [
+              "60000",
+              "0"
+            ],
+            "lead_weeks": 0,
+            "holding_rate": "1",
+            "order_fee": "2"
+          }
+        ],
+        "indirect_weekly": [
+          "0",
+          "0"
+        ],
+        "bdi": {
+          "EQ": "0.1",
+          "MO": "0",
+          "MAT": "0.2",
+          "COMB": "0",
+          "IND": "0.25"
+        },
+        "sale_price": "500"
+      },
+      "expected": {
+        "pool": {
+          "demand": [
+            1,
+            1
+          ],
+          "presence": [
+            1,
+            1
+          ],
+          "standby": [
+            0,
+            0
+          ],
+          "chains": 1,
+          "active_cost": "20",
+          "idle_cost": "0",
+          "movement_cost": "5",
+          "assignment": [
+            [
+              0
+            ],
+            [
+              0
+            ]
+          ]
+        },
+        "goods": {
+          "material": {
+            "consumed": [
+              "20",
+              "40"
+            ],
+            "quantity": "60",
+            "acquisition": "180",
+            "holding": "40",
+            "ordering": "2",
+            "closing_stock": "0"
+          }
+        },
+        "totals": {
+          "K": "20",
+          "V": "180",
+          "IND": "47",
+          "direct": "200",
+          "indirect": "47",
+          "total": "247",
+          "quote_with_BDI": "296.75",
+          "sale_price": "500",
+          "margin": "0.506",
+          "margin_positive": true
+        },
+        "categories": {
+          "COMB": "0",
+          "EQ": "20",
+          "IND": "47",
+          "MAT": "180",
+          "MO": "0"
+        },
+        "posting_ids": [
+          "good:material:acquisition:0",
+          "good:material:acquisition:1",
+          "good:material:holding:0",
+          "good:material:order:0",
+          "pool:active:0",
+          "pool:active:1",
+          "pool:movement:0"
+        ]
+      },
+      "protocol": "formalism-economic/1"
+    },
+    {
+      "case_id": "explicit_offhire_enforces_no_contract_in_closed_week",
+      "inputs": {
+        "demand": [
+          1,
+          0,
+          1
+        ],
+        "contract": {
+          "instances": 1,
+          "active": "100",
+          "idle": "0",
+          "movement": "20",
+          "max_idle_gap": 2,
+          "regime": "EXPLICIT_OFF_HIRE",
+          "category": "EQ",
+          "source": "contract:independent",
+          "currency": "BRL",
+          "off_hire_weeks": [
+            1
+          ]
+        },
+        "goods": [],
+        "indirect_weekly": [
+          "0",
+          "0",
+          "0"
+        ],
+        "bdi": {
+          "EQ": "0",
+          "MO": "0",
+          "MAT": "0",
+          "COMB": "0",
+          "IND": "0"
+        },
+        "sale_price": "300"
+      },
+      "expected": {
+        "pool": {
+          "demand": [
+            1,
+            0,
+            1
+          ],
+          "presence": [
+            1,
+            0,
+            1
+          ],
+          "standby": [
+            0,
+            0,
+            0
+          ],
+          "chains": 2,
+          "active_cost": "200",
+          "idle_cost": "0",
+          "movement_cost": "40",
+          "assignment": [
+            [
+              0
+            ],
+            [],
+            [
+              0
+            ]
+          ]
+        },
+        "goods": {},
+        "totals": {
+          "K": "200",
+          "V": "0",
+          "IND": "40",
+          "direct": "200",
+          "indirect": "40",
+          "total": "240",
+          "quote_with_BDI": "240",
+          "sale_price": "300",
+          "margin": "0.2",
+          "margin_positive": true
+        },
+        "categories": {
+          "COMB": "0",
+          "EQ": "200",
+          "IND": "40",
+          "MAT": "0",
+          "MO": "0"
+        },
+        "posting_ids": [
+          "pool:active:0",
+          "pool:active:2",
+          "pool:movement:0",
+          "pool:movement:1"
+        ]
+      },
+      "protocol": "formalism-economic/1"
+    },
+    {
+      "case_id": "fungible_reassignment_92_not_fixed_layers_120",
+      "inputs": {
+        "demand": [
+          2,
+          1,
+          1,
+          2
+        ],
+        "contract": {
+          "instances": 2,
+          "active": "5",
+          "idle": "1",
+          "movement": "30",
+          "max_idle_gap": 1,
+          "regime": "DISCOUNTED_STANDBY",
+          "category": "EQ",
+          "source": "contract:independent",
+          "currency": "BRL",
+          "off_hire_weeks": []
+        },
+        "goods": [],
+        "indirect_weekly": [
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "bdi": {
+          "EQ": "0",
+          "MO": "0",
+          "MAT": "0",
+          "COMB": "0",
+          "IND": "0"
+        },
+        "sale_price": "100"
+      },
+      "expected": {
+        "pool": {
+          "demand": [
+            2,
+            1,
+            1,
+            2
+          ],
+          "presence": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "standby": [
+            0,
+            1,
+            1,
+            0
+          ],
+          "chains": 2,
+          "active_cost": "30",
+          "idle_cost": "2",
+          "movement_cost": "60",
+          "assignment": [
+            [
+              0,
+              1
+            ],
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "goods": {},
+        "totals": {
+          "K": "32",
+          "V": "0",
+          "IND": "60",
+          "direct": "32",
+          "indirect": "60",
+          "total": "92",
+          "quote_with_BDI": "92",
+          "sale_price": "100",
+          "margin": "0.08",
+          "margin_positive": true
+        },
+        "categories": {
+          "COMB": "0",
+          "EQ": "32",
+          "IND": "60",
+          "MAT": "0",
+          "MO": "0"
+        },
+        "posting_ids": [
+          "pool:active:0",
+          "pool:active:1",
+          "pool:active:2",
+          "pool:active:3",
+          "pool:idle:1",
+          "pool:idle:2",
+          "pool:movement:0",
+          "pool:movement:1"
+        ]
+      },
+      "protocol": "formalism-economic/1"
+    }
+  ]
+}
