@@ -237,14 +237,14 @@ def test_unreconciled_or_duplicate_categories_cannot_be_priced() -> None:
 def test_normative_derivation_declares_all_guards_and_conditional_costs() -> None:
     doc = DOC.read_text(encoding="utf-8")
     for phrase in (
-        "ε",
+        r"\varepsilon",
         "UNDEFINED",
         "UNKNOWN",
         "não",
         "uma",
-        "Δw_j",
-        "ζ",
-        "π",
+        r"\Delta w_j",
+        r"\zeta",
+        r"\pi",
         "BDI",
         "F(m)",
     ):
