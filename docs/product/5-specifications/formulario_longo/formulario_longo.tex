@@ -944,10 +944,7 @@ perpetuação}\label{ix.2-problema-de-minimizauxe7uxe3o-e-condiuxe7uxe3o-de-perp
 
 \[\text{s.a.}\quad \bigl|\{r:\text{type}(r)=\tau,\ j\in[j_r^0,j_r^1]\}\bigr| \ge n_j(\tau) \quad\forall j,\,\forall\tau\]
 
-Para tipo único fungível (instâncias perfeitamente substituíveis, com
-custo de permanência e de mob/demob homogêneos), a Parte XIV (Fase 4)
-apresenta um algoritmo exato por decomposição em níveis do perfil de
-demanda.
+Para um tipo homogêneo fungível, a Parte XIV (Fase 4) otimiza exatamente keep/split somente com atribuição de instâncias às camadas de nível FIXADA. Não cobre toda reatribuição possível, mesmo com demanda e cronograma fixos (#16).
 
 \textbf{Condição de perpetuação} (entre duas alocações consecutivas, com
 gap em semanas):
@@ -1027,10 +1024,7 @@ A fração \(f_r^{standby}\) é um diagnóstico temporal, não o custo ou a prod
 
 A soma por atividade é diagnóstico e não substitui o livro contratual de instâncias P16/P17. A igualdade requer base de tarifas equivalente e standby zero; não é uma identidade universal. Em regimes descontados \(C^{pool,o}=\sum(c^{act}d+c^{idle}s)\), e eventos MOB/DEMOB são exclusivos de IND. Ausência de fonte mantém \texttt{NOT\_EVALUATED}.
 
-\textbf{Escopo do algoritmo de dimensionamento.} A decomposição por
-níveis empregada na Parte XIV, Fase 4 é exata para um tipo de recurso
-fungível homogêneo --- instâncias perfeitamente substituíveis entre si,
-com custo de permanência e de mobilização/desmobilização idênticos.
+\textbf{Escopo do algoritmo de dimensionamento.} A decomposição por níveis da Parte XIV, Fase 4 é exata somente com a atribuição física às camadas de nível fixada. Reatribuir instâncias fungíveis pode melhorar a solução mesmo com demanda e cronograma fixos; P16 não prova o mínimo global nessas condições (#16).
 Variantes multi-tipo com recursos não perfeitamente substituíveis
 (capacidades ou custos heterogêneos dentro do mesmo tipo nominal)
 constituem um problema de otimização combinatória distinto, de
@@ -1491,8 +1485,7 @@ SAÍDA: (j_i^0,N_i,{m_ij},{F_i(m_ij)},{B_ij},{q_ij},φ_i).
 
 \noindent\textbf{Escopo:} não existe \(\eta_s\) multiplicativo.
 Os custos derivados exigem rederivação em \#11 antes de GO no
-caso de capacidade não linear. A prova de ótimo do pool é condicional
-ao cronograma físico fixado.
+caso de capacidade não linear. A prova de ótimo do subproblema P16 exige cronograma físico e atribuição fixa às camadas de nível; a reatribuição fungível permanece não demonstrada.
 
 \hypertarget{xiv.2-fase-2-taxas-horuxe1rias-de-catuxe1logo}{%
 \subsubsection{XIV.2 --- Fase 2: Taxas Horárias de
@@ -1565,7 +1558,9 @@ C_pool_beta ← Σ_gj (1+β_cat(g))·(c_gj^act·d_gj+c_gj^idle·s_gj)
 C_MOBDEMOB ← Σ_eventos (c_g^mob+c_g^demob)
 C_MOBDEMOB_beta ← Σ_eventos (1+β_IND)·(c_g^mob+c_g^demob)
 // MOB/DEMOB só é indireto, jamais duplicar no pool marcado
-Prova de ótimo do pool somente CONDICIONADA a m e schedule fixos.
+Prova de ótimo apenas com m, schedule e atribuição por nível FIXADOS; não implica ótimo entre instâncias fungíveis (#16).
+// Falsificador P13-C: d=(2,1,1,2), c_act=5, c_idle=1, MOB+DEMOB=30, max_gap=1:
+// camadas P16=120; duas instâncias reatribuídas=92.
 SAÍDA: cadeias, demanda, presença, standby, C_pool, C_pool_beta,
        C_MOBDEMOB, C_MOBDEMOB_beta e custos reconciliados.
 \end{verbatim}
