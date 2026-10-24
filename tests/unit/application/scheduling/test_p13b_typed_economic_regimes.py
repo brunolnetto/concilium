@@ -133,6 +133,38 @@ def test_regime_rejects_mismatched_tariff_and_unproven_source() -> None:
         )
 
 
+def test_forged_p16_chain_coverage_cannot_pass_commercial_witness() -> None:
+    declaration, valid_pool = discounted()
+    original = valid_pool.ledgers[0]
+    forged = replace(original, chains=(), mobility_cost=F(0))
+    with pytest.raises(ValueError, match="do not cover"):
+        witness_contract_regime(
+            declaration,
+            replace(valid_pool, ledgers=(forged,)),
+            canonical(),
+        )
+
+    # A chain spans an alleged off-hire week while aggregate presence lies.
+    rate = ResourceTariff(F(100), F(25), F(40), F(40), 2)
+    spanning = InstanceChain("EXC", 1, 0, 3, 2, 1)
+    forged_off_hire = ExactPoolResult(
+        ("S001", "S002", "S003"),
+        (ResourceContractLedger(
+            "EXC", (1, 0, 1), (1, 0, 1), (0, 0, 0),
+            (spanning,), F(200), F(0), F(80),
+        ),),
+    )
+    off_hire = ContractRegimeEvidence(
+        "C-01", "EXC", ContractRegime.EXPLICIT_OFF_HIRE,
+        rate, "contract:123", "BRL", ("S002",),
+    )
+    with pytest.raises(ValueError, match="do not reconstruct"):
+        witness_contract_regime(
+            off_hire, forged_off_hire,
+            canonical(regime_economico_p13="EXPLICIT_OFF_HIRE"),
+        )
+
+
 def test_offhire_must_be_declared_and_have_no_presence() -> None:
     rate = ResourceTariff(F(100), F(25), F(40), F(40), 0)
     chains = (
@@ -267,6 +299,10 @@ def test_hourly_idle_and_waste_are_independently_measured() -> None:
         )
     with pytest.raises(ValueError, match="requires explicit idle and loss"):
         witness_consumption_regime(**(kwargs | {"loss": None}))
+    with pytest.raises(ValueError, match="not inferred from delivered output"):
+        witness_consumption_regime(
+            **(kwargs | {"delivered": F(1), "delivered_unit": "m³"})
+        )
 
 
 def test_baseline_rejects_unclassified_idle_and_missing_price_provenance() -> None:
@@ -282,6 +318,8 @@ def test_baseline_rejects_unclassified_idle_and_missing_price_provenance() -> No
         )
     with pytest.raises(ValueError, match="provenance"):
         witness_consumption_regime(**(kwargs | {"price_source": ""}))
+    with pytest.raises(ValueError, match="hourly consumption must be a separate declaration"):
+        witness_consumption_regime(**(kwargs | {"operating_hours": F(1)}))
     with pytest.raises(ValueError, match="requires unit-of-output"):
         witness_consumption_regime(
             **(kwargs | {"good": PhysicallyPricedGood(
