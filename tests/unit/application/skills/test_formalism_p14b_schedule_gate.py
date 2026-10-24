@@ -315,3 +315,29 @@ def test_p14c_graph_capacity_unit_mismatch_fails_even_with_matching_labels(
     assert outcome.has_errors
     assert any(v.codigo == "VAL-CRON-PROD-UNIT" for v in outcome.validacoes)
     assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("capacity_unit", ["t", "t/h", "t / h", "t/hr", "t/hour"])
+def test_p14c_hourly_capacity_unit_aliases_keep_real_catalog_schedule(capacity_unit: str) -> None:
+    production = _real_catalog_productivity()
+    # A CapacidadeElemento is always an hourly rate; "t" and "t/h"
+    # designate the same output quantity here, never a t -> m3 conversion.
+    production["grafo_sinergia"]["capacidades"][0]["unidade"] = capacity_unit
+    result = _run_with_production(production, intent="CERTIFIED", unidade="t")
+    assert not result.has_errors, result.validacoes
+    assert result.canonical.cronograma is not None
+    assert result.canonical.cronograma.is_feasible
+    activity = next(
+        a for a in result.canonical.cronograma.scheduled_activities if a.activity_id == "i1"
+    )
+    assert sum(c.qtd_executada for c in activity.distribuicao_semanal.values()) == pytest.approx(300.0)
+
+
+@pytest.mark.parametrize("capacity_unit", ["m3", "m³/h", "m3/hr"])
+def test_p14c_incompatible_hourly_capacity_unit_stays_rejected(capacity_unit: str) -> None:
+    production = _real_catalog_productivity()
+    production["grafo_sinergia"]["capacidades"][0]["unidade"] = capacity_unit
+    outcome = _run_with_production(production, intent="CERTIFIED", unidade="t")
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-UNIT" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
