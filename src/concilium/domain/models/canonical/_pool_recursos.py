@@ -162,6 +162,11 @@ class RecursoContrato(BaseModel):
     custo_unit_semanal_comb: float = 0.0  # taxa combustível por unidade×semana (apenas ativa)
     custo_unit_semanal_mat: float = 0.0  # taxa material por unidade×semana (apenas ativa)
     rho_idle_eq: float = 1.0  # fração da taxa EQ cobrada em standby (idle/ativa)
+    # P13-B: explicit commercial selector; None is legacy/NOT_EVALUATED, never baseline.
+    regime_economico_p13: Literal[
+        "FULL_RATE_STANDBY", "DISCOUNTED_STANDBY", "EXPLICIT_OFF_HIRE"
+    ] | None = None
+    origem_regime_p13: str | None = None  # independently declared contract provenance
     # ADR-088: sub-decomposição de EQ (locacao | manutencao)
     custo_unit_semanal_locacao: float = 0.0  # taxa aluguel puro (BDI_servicos)
     custo_unit_semanal_manutencao: float = 0.0  # taxa manutenção (BDI_servicos)
