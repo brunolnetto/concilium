@@ -43,7 +43,7 @@ O perfil retangular de `m_i^max` frentes é definido com
 `mu_i^+=mu_i^-=0` **e** `m_i^0=m_i^1=m_i^max`.
 Sem a igualdade adicional, o mínimo das três retas dá `min(m_i^0,m_i^max,m_i^1)`, e não necessariamente `m_i^max`.
 
-**Pendente em #12:** `r+d<=N_i` aparece sem definição de `r,d`. Não confundir `d_i` (dias/semana) com ramp-down. Uma futura condição para exigir platô deve definir ramp-up/down em número de *transições*, inclusive `mu=0`, e distinguir perfis triangulares dos trapezoidais. Não usar a condição indefinida como prova de convergência.
+**Decisão de #12 (encerrada):** a expressão histórica `r+d<=N_i` não tem definição legítima de `r,d` e **não é parte da condição normativa de duração**. A duração resulta da busca com início absoluto, calendário, capacidade física e horizonte válidos; o tempo da rampa decorre de `m_i(τ;N)`. O símbolo `d_i` significa dias/semana, nunca ramp-down. Não usar o critério histórico como prova de convergência.
 
 ## 4. Índices e intervalos
 
@@ -79,9 +79,9 @@ Sem a igualdade adicional, o mínimo das três retas dá `min(m_i^0,m_i^max,m_i^
 
 ## 7. Pendências explícitas (não converter em verdades por convenção)
 
-- #10: a documentação **já** substituiu `rho*eta_s*m` por `F_i(m)` (#31); a migração dos consumidores de runtime e a prova diferencial P10-B seguem pendentes.
+- #10 (**fechada**): a documentação e as provas específicas da capacidade `F_i(m)` incorporaram a composição física e removeram `eta_s` multiplicativo; a certificação E2E da calibração ainda é responsabilidade de #23/#26.
 - #11: razões e eficiências médias com fechamento fracionário precisam de nova prova.
-- #12: início, calendário absoluto, rampas, precedências e RCPSP estão acoplados.
+- #12 (**fechada**): o contrato local de início/calendário/rampa/Q–FS foi aceito; a integração operacional completa do solver RCPSP pertence a #15, e não reabre automaticamente esta decisão local.
 - #13: standby integral e consumível sem perdas são **hipóteses**, não universais.
 
 P09-B acrescenta testes executáveis de paridade entre LONGO/RESUMIDO/TeX e fronteiras exatas, independentes do runtime. #22 mantém o oráculo numérico autônomo. Este anexo não declara o produto certificado.

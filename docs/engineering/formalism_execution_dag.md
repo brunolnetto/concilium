@@ -65,14 +65,14 @@ A visualização é intencionalmente simplificada; o **JSON é a fonte de verdad
 
 | Onda | Abertura | Gate de conclusão | Pacotes a concluir |
 | --- | --- | --- | --- |
-| **0 — formalismo matemático** | imediata | **#9, #10, #11, #12, #13 todas concluídas** | P09-C [#86](https://github.com/brunolnetto/concilium/pull/86) já integrado; P09-D (prova das 21 candidatas normativas e duração da célula semanal) pendente, P11-A → P11-B, P13-A → P13-B |
+| **0 — formalismo matemático** | imediata | **#9, #10, #11, #12, #13 todas concluídas** | P09-C [#86](https://github.com/brunolnetto/concilium/pull/86) já integrado; P09-D [#87](https://github.com/brunolnetto/concilium/pull/87) integrado; P09-E [#88](https://github.com/brunolnetto/concilium/pull/88) exige proveniência de aliases e paridade semântica, P11-A → P11-B, P13-A → P13-B |
 | **1 — oráculo e CI** | somente após W0 | #22 e #25 aceitas | P22-B → P22-C → P25-C; aproveitar P22-A/P25-A/B já integrados |
 | **2 — execução física/econômica** | somente após W1 | todas #14–#21 aceitas | re-resolução #15, paridade #16/#18, P17-C e P19-C → P20-B/C → P21-A/B |
 | **3 — certificado e regressões** | somente após W2 | #23/#24/#26 aceitas | P23-B/C → P24-A/B → P26-A/B; fechar epic apenas sob prova E2E |
 
 ### Definição precisa do próximo vértice
 
-**Agora: #9**. P09-A [#28](https://github.com/brunolnetto/concilium/pull/28), P09-B [#43](https://github.com/brunolnetto/concilium/pull/43) e P09-C [#86](https://github.com/brunolnetto/concilium/pull/86) estão mergeados; P09-D está **pendente e obrigatório** no manifesto. Falta o aceite dimensional *completo*: inventário versionado **símbolo → unidade → fonte → saída**, classificação de equações normativas x hipóteses x pendências, contraprovas e paridade MD/RESUMIDO/TeX. Uma equação ainda inválida deve permanecer explicitamente pendente em #11/#13 e fora do universo declarado como **normativo válido**. Não satisfazer #9 por alterar somente um checklist.
+**Agora: #9**. P09-A [#28](https://github.com/brunolnetto/concilium/pull/28), P09-B [#43](https://github.com/brunolnetto/concilium/pull/43) e P09-C [#86](https://github.com/brunolnetto/concilium/pull/86) estão mergeados; P09-D [#87](https://github.com/brunolnetto/concilium/pull/87) integrado e P09-E [#88](https://github.com/brunolnetto/concilium/pull/88) **pendente e obrigatório** no manifesto. Falta o aceite dimensional *completo*: inventário versionado **símbolo → unidade → fonte → saída**, classificação de equações normativas x hipóteses x pendências, contraprovas e paridade MD/RESUMIDO/TeX. Uma equação ainda inválida deve permanecer explicitamente pendente em #11/#13 e fora do universo declarado como **normativo válido**. Não satisfazer #9 por alterar somente um checklist.
 
 **Depois: #11**. Provar as identidades econômicas e desempenho para semana parcial, múltiplas semanas, custo por presença K e por consumo V; executar falsificadores incluindo `F(m)` saturado e BDI por categoria. Não iniciar P13-B antes de fechar o contrato matemático #11.
 
@@ -86,7 +86,7 @@ GH_TOKEN="$(gh auth token)" python scripts/formalism_wave_dag.py --live
 GH_TOKEN="$(gh auth token)" python scripts/formalism_wave_dag.py --live --require-close 9
 ```
 
-- **Primeira chamada:** valida esquema, 18 nós, 46 pacotes, direção das arestas e aciclicidade sem rede.
+- **Primeira chamada:** valida esquema, 18 nós, 47 pacotes, direção das arestas e aciclicidade sem rede.
 - **Segunda:** consulta as issues e os PRs reais; informa onda ativa, nós executáveis e bloqueios. Requer autenticação para repositório privado. Falha de autenticação/snapshot incompleto não se converte em PASS.
 - **Terceira:** falha se não houver todos os predecessores fechados, ondas anteriores completas e PRs previstos *merged*. Mesmo preflight positivo **não fecha issue automaticamente**: os critérios de aceite, checks do HEAD e revisão têm de ser avaliados por quem integra.
 - Fechamentos antigos #10/#12 ocorridos antes de #9 são marcados como exceções históricas, **sem desfazê-los**. Não autorizam conclusão de W1–W3.
