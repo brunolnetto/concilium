@@ -193,7 +193,7 @@ def test_missing_zero_week_and_undelivered_scope_are_rejected() -> None:
             WEEKS[2]: cell(100, 500),
         }, ledger(((WEEKS[0], 400, 400, 0), (WEEKS[2], 400, 100, 0))), 500)
     with pytest.raises(ValueError, match="does not close"):
-        project({WEEKS[0]: cell(100, 100)},
+        project({WEEKS[0]: cell(100, 100, nominal=100, available=100)},
                 ledger(((WEEKS[0], 400, 100, 0),)), 101)
 
 
