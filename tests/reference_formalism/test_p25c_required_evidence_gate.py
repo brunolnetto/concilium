@@ -28,6 +28,13 @@ def test_economic_change_requires_both_normative_and_golden() -> None:
     assert valid, reason
 
 
+def test_economics_core_model_and_deletion_are_protected() -> None:
+    assert module.is_economic("src/concilium/domain/models/canonical/_pool_recursos.py")
+    assert module.is_economic("src/concilium/domain/models/canonical/_estoque_consumiveis.py")
+    assert not module.assess_paths({PRODUCTION, LONG,
+        "tests/reference_formalism/vectors/physical_calendar_v1.json"})[0]
+
+
 def test_non_economic_refactor_does_not_require_false_evidence() -> None:
     assert module.assess_paths({"src/concilium/api/router.py"})[0]
 
