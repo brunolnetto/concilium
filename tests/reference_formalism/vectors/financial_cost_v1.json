@@ -1,0 +1,176 @@
+{
+  "protocol": "formalism-financial/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+    "sections": [
+      "IX.2",
+      "IX.4",
+      "X.1",
+      "X.3",
+      "XIV.4",
+      "XIV.5",
+      "XIV.7"
+    ],
+    "scope": "tiny bounded independent economic reference, NOT_PROJECT_GO",
+    "rounding": "exact Fraction terminating decimals"
+  },
+  "vectors": [
+    {
+      "case_id": "discounted_keep_stock_and_once_only_bdi",
+      "protocol": "formalism-financial/1",
+      "inputs": {
+        "demand": [
+          1,
+          0,
+          0,
+          1
+        ],
+        "contract": {
+          "active": "100",
+          "idle": "25",
+          "movement": "80",
+          "max_idle_gap": 2,
+          "instances": 1,
+          "category": "EQ",
+          "source": "contract:123"
+        },
+        "goods": [
+          {
+            "event_id": "invoice:1",
+            "good": "DIESEL",
+            "quantity": "220",
+            "price": "5",
+            "category": "COMB",
+            "unit": "L",
+            "rate_source": "meter:1",
+            "price_source": "invoice:1"
+          }
+        ],
+        "stock": [
+          {
+            "good": "DIESEL",
+            "initial": "0",
+            "demand": [
+              "0",
+              "0",
+              "0",
+              "220"
+            ],
+            "receipts": [
+              "220",
+              "0",
+              "0",
+              "0"
+            ],
+            "hold_per_week": "1",
+            "order_events": 1,
+            "order_fee": "20"
+          }
+        ],
+        "bdi": {
+          "EQ": "0.1",
+          "MO": "0",
+          "MAT": "0",
+          "COMB": "0.2",
+          "IND": "0.1"
+        },
+        "selling_price": "2500"
+      },
+      "expected": {
+        "contractual_k": "250",
+        "consumable_v": "1100",
+        "movement_ind": "80",
+        "inventory_holding_ind": "660",
+        "ordering_ind": "20",
+        "indirect_total": "760",
+        "cost_total": "2110",
+        "marked_price": "2431",
+        "realized_margin": "0.156"
+      }
+    },
+    {
+      "case_id": "fungible_reassignment_beats_fixed_level_oracle",
+      "protocol": "formalism-financial/1",
+      "inputs": {
+        "demand": [
+          2,
+          1,
+          1,
+          2
+        ],
+        "contract": {
+          "active": "5",
+          "idle": "1",
+          "movement": "30",
+          "max_idle_gap": 1,
+          "instances": 2,
+          "category": "EQ",
+          "source": "contract:456"
+        },
+        "goods": [],
+        "stock": [],
+        "bdi": {
+          "EQ": "0",
+          "MO": "0",
+          "MAT": "0",
+          "COMB": "0",
+          "IND": "0"
+        },
+        "selling_price": "100"
+      },
+      "expected": {
+        "contractual_k": "32",
+        "consumable_v": "0",
+        "movement_ind": "60",
+        "inventory_holding_ind": "0",
+        "ordering_ind": "0",
+        "indirect_total": "60",
+        "cost_total": "92",
+        "marked_price": "92",
+        "realized_margin": "0.08"
+      }
+    },
+    {
+      "case_id": "full_rate_splits_and_keeps_no_forged_idle",
+      "protocol": "formalism-financial/1",
+      "inputs": {
+        "demand": [
+          1,
+          0,
+          0,
+          1
+        ],
+        "contract": {
+          "active": "100",
+          "idle": "100",
+          "movement": "80",
+          "max_idle_gap": 2,
+          "instances": 1,
+          "category": "MO",
+          "source": "contract:full"
+        },
+        "goods": [],
+        "stock": [],
+        "bdi": {
+          "EQ": "0",
+          "MO": "0",
+          "MAT": "0",
+          "COMB": "0",
+          "IND": "0"
+        },
+        "selling_price": "400"
+      },
+      "expected": {
+        "contractual_k": "200",
+        "consumable_v": "0",
+        "movement_ind": "160",
+        "inventory_holding_ind": "0",
+        "ordering_ind": "0",
+        "indirect_total": "160",
+        "cost_total": "360",
+        "marked_price": "360",
+        "realized_margin": "0.1"
+      }
+    }
+  ]
+}
