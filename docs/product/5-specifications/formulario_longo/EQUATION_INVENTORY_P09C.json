@@ -435,7 +435,7 @@
     {
       "id": "FL-034",
       "section": "Parte VI — Custo Direto Total por Atividade (sem BDI)",
-      "expression": "\\boxed{C_i^{\\mathrm{V,op}} \\equiv C_i^{\\mathrm{V,cat}} = \\frac{Q_i\\,\\gamma_i^{\\mathrm{V,cat}}}{\\rho_i}}\\qquad\\text{(exato, por construção do fechamento de escopo)}",
+      "expression": "\\boxed{C_i^{V,op}=C_i^{V,cat}=\\frac{Q_i\\gamma_i^{V,cat}}{\\rho_i}}\\quad\\text{somente se }U_{gij}=\\kappa_{ig}^{out}q_{ij}\\text{, sem perdas/idle, com taxa/preço fixos e base dimensional compatível}.",
       "expected_result_dimension": "BRL (monetary amount)",
       "input_provenance": "weekly activity K/V breakdown and Q",
       "output_projection": "activity totals K/V",
@@ -729,7 +729,7 @@
     {
       "id": "FL-055",
       "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
-      "expression": "n_j(\\tau) = \\sum_{i\\,:\\,j\\in[j_i^0,\\,j_i^0+N_i-1]} m_{ij}\\cdot n_{\\tau}^{i}",
+      "expression": "\\boxed{d_{gj}=\\sum_{i\\in\\mathcal A_j}a_{ig}(m_{ij})}\\quad\\text{[físico; }a_{ig}(m)=m\\,n_g^i\\text{ somente para frentes independentes]}.",
       "expected_result_dimension": "physical fronts/resources",
       "input_provenance": "physical demand profiles and instance contracts",
       "output_projection": "pool K and mobility charges",
@@ -785,7 +785,7 @@
     {
       "id": "FL-059",
       "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
-      "expression": "\\text{gap}_{uv} < G_r^* \\equiv \\frac{c_r^{\\text{mob}}+c_r^{\\text{demob}}}{c_r^{\\text{sem}}} \\quad\\Longleftrightarrow\\quad c_r^{\\text{mob}}+c_r^{\\text{demob}} > c_r^{\\text{sem}}\\cdot\\text{gap}_{uv}\\qquad\\text{[$c_r^{\\text{sem}}$ em R\\$/sem]}",
+      "expression": "\\boxed{\\mathrm{KEEP}_{uv}\\iff k_{uv}\\le G_r^{viável}\\ \\land\\ k_{uv}c_r^{idle}\\le c_r^{mob}+c_r^{demob}}\\quad(k_{uv}=\\mathrm{gap}_{uv}).",
       "expected_result_dimension": "weeks or week-constrained threshold",
       "input_provenance": "physical demand profiles and instance contracts",
       "output_projection": "pool K and mobility charges",
@@ -855,7 +855,7 @@
     {
       "id": "FL-064",
       "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
-      "expression": "\\boxed{\\bar{c}_r = c_r^{\\text{sem}} \\qquad \\text{(pool puro: standby = ativo)}}",
+      "expression": "\\boxed{\\bar c_r=\\frac{T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle}}{T_r^{perm}}}\\quad(T_r^{perm}>0);\\qquad \\bar c_r=c_r^{sem}\\ \\text{somente no regime-base}.",
       "expected_result_dimension": "BRL/week",
       "input_provenance": "physical demand profiles and instance contracts",
       "output_projection": "pool K and mobility charges",
@@ -869,7 +869,7 @@
     {
       "id": "FL-065",
       "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
-      "expression": "\\boxed{C^{\\text{pool},o} = \\sum_r T_r^{\\text{perm}} \\cdot c_r^{\\text{sem}}}",
+      "expression": "\\boxed{C^{pool,o}=\\sum_r(T_r^{ativo}c_r^{act}+T_r^{standby}c_r^{idle})=\\sum_{g,j}(c_g^{act}d_{gj}+c_g^{idle}s_{gj})}",
       "expected_result_dimension": "BRL (monetary amount)",
       "input_provenance": "physical demand profiles and instance contracts",
       "output_projection": "pool K and mobility charges",
@@ -884,7 +884,7 @@
     {
       "id": "FL-066",
       "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
-      "expression": "C^{\\text{pool},\\beta} = \\sum_r (1+\\beta_{\\text{cat}(r)})\\cdot T_r^{\\text{perm}}\\cdot c_r^{\\text{sem}}",
+      "expression": "C^{pool,\\beta}=\\sum_{g,j}(1+\\beta_{\\mathrm{cat}(g)})(c_g^{act}d_{gj}+c_g^{idle}s_{gj})",
       "expected_result_dimension": "BRL (monetary amount)",
       "input_provenance": "physical demand profiles and instance contracts",
       "output_projection": "pool K and mobility charges",
@@ -913,7 +913,7 @@
     {
       "id": "FL-068",
       "section": "Parte IX — Pool de Recursos Contratuais (Perpetuação)",
-      "expression": "\\boxed{C^{\\mathrm{pool}} \\;\\ge\\; \\sum_i C_i^{\\mathrm{K,op}}}",
+      "expression": "C^{pool,o}\\ge\\sum_i C_i^{K,act}\\quad\\text{somente sob bases comparáveis, cobertura física completa e ausência de dupla imputação;}",
       "expected_result_dimension": "BRL (monetary amount)",
       "input_provenance": "physical demand profiles and instance contracts",
       "output_projection": "pool K and mobility charges",
@@ -928,7 +928,7 @@
     {
       "id": "FL-069",
       "section": "Parte X — Consumíveis: Aquisição e Posse",
-      "expression": "\\boxed{C^{\\mathrm{cons}} = \\sum_{i\\in\\mathcal{A}} \\frac{Q_i\\,\\gamma_i^{\\mathrm{V,cat}}}{\\rho_i} = \\sum_g c_g^{\\mathrm{cons}}\\, U_g}",
+      "expression": "\\boxed{C^{cons}=\\sum_g p_g U_g}\\qquad\\text{[aquisição MAT/COMB; preço e quantidade física comprovados]}",
       "expected_result_dimension": "BRL (monetary amount)",
       "input_provenance": "physical consumption and stock evidence",
       "output_projection": "goods purchases and holding charges",
@@ -943,7 +943,7 @@
     {
       "id": "FL-070",
       "section": "Parte X — Consumíveis: Aquisição e Posse",
-      "expression": "C^{\\mathrm{cons},\\beta} = \\sum_{i\\in\\mathcal{A}} \\gamma_i^{\\mathrm{V,cat},\\beta}\\cdot\\frac{Q_i}{\\rho_i}",
+      "expression": "C^{cons,\\beta}=\\sum_g(1+\\beta^{cat(g)})p_g U_g\\qquad\\text{[markup categorial uma única vez]}",
       "expected_result_dimension": "BRL (monetary amount)",
       "input_provenance": "physical consumption and stock evidence",
       "output_projection": "goods purchases and holding charges",
