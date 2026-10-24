@@ -237,3 +237,59 @@ def test_missing_bdi_categories_and_float_rate_are_rejected() -> None:
             ledger=ledger(((WEEKS[0], 400, 100, 0),)),
             bdi_by_category={**BDI, "MO": 0.3},  # type: ignore[dict-item]
         )
+
+
+def test_existing_p20_snapshot_projects_real_skill04_without_reposting() -> None:
+    from concilium.application.scheduling.financial_cost_reconciliation import (
+        ExactFinancialReconciliation, WeekFinancialBalance,
+    )
+
+    source = ledger(((WEEKS[0], 400, 100, 0),))
+    provenance = ExactFinancialReconciliation(
+        source, (WeekFinancialBalance(WEEKS[0], F(400), F(100), F(0)),), True
+    )
+    before = tuple(source.postings)
+    actual = provenance.project_skill04_realization(
+        distributions_by_activity={"A": {WEEKS[0]: cell(100, 100)}},
+        scopes_by_activity={"A": 100},
+        bdi_by_category=BDI,
+        independent_variable_unit_rate=F(1),
+    )
+    assert actual.activity_zeta == F(5, 8)
+    assert actual.activity_pi == F(5, 2)
+    assert actual.price_once_bdi == F(630)
+    assert tuple(source.postings) == before
+    assert actual.authority == "P11_B_READ_ONLY_PREVIEW_NOT_PROJECT_GO"
+
+    forged = ExactFinancialReconciliation(
+        source, (WeekFinancialBalance(WEEKS[0], F(399), F(101), F(0)),), True
+    )
+    with pytest.raises(ValueError, match="does not reconcile"):
+        forged.project_skill04_realization(
+            distributions_by_activity={"A": {WEEKS[0]: cell(100, 100)}},
+            scopes_by_activity={"A": 100},
+            bdi_by_category=BDI,
+            independent_variable_unit_rate=F(1),
+        )
+
+
+def test_unattributed_posting_does_not_silently_disappear() -> None:
+    output = ledger(((WEEKS[0], 400, 100, 0),))
+    forged = ExclusiveCostLedger((
+        *output.postings,
+        CostPosting(
+            ("MOB", "outsider"), PostingNature.MOBILIZATION, "IND",
+            F(200), "mob:outsider", WEEKS[3]
+        ),
+    ))
+    with pytest.raises(ValueError, match="corresponding physical week"):
+        project({WEEKS[0]: cell(100, 100)}, forged, 100)
+
+
+def test_duplicate_financial_event_is_rejected_by_authoritative_ledger() -> None:
+    same = CostPosting(
+        ("K", WEEKS[0]), PostingNature.ACTIVE, "MO", F(400),
+        "contract:crew", WEEKS[0],
+    )
+    with pytest.raises(ValueError, match="duplicate financial ownership"):
+        ExclusiveCostLedger((same, same))
