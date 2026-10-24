@@ -709,6 +709,40 @@ Somente sob \(U_{gij}=\kappa_{ig}^{out}q_{ij}\), taxa e preço fixos, sem perdas
 \[\boxed{C_i^{V,op}=C_i^{V,cat}=\frac{Q_i\gamma_i^{V,cat}}{\rho_i}}\qquad\text{[apenas baseline, não universal].}\]
 No caso geral, \(C_i^{V,op}=\sum_{g,j}p_gU_{gij}\) deriva de medida física. \texttt{OUTPUT\_WITH\_MEASURED\_LOSS} e \texttt{HOURLY\_WITH\_MEASURED\_IDLE} exigem perdas, horas, ociosidade, unidades e fonte; fechamento de escopo sozinho não prova invariância de V.
 
+\textbf{Desvio de catálogo por atividade.} Comparando
+\(C_i^{\mathrm{op}}\) com \(C_i^{\mathrm{cat}}\) (Parte III), obtém-se
+uma leitura de quanto a atividade se desviou do plano de catálogo --- em
+termos relativos e absolutos:
+
+\[R_i \equiv \frac{C_i^{\mathrm{op}}}{C_i^{\mathrm{cat}}} \qquad\qquad \boxed{\Delta_i^{\mathrm{cat}} \equiv C_i^{\mathrm{op}}-C_i^{\mathrm{cat}} = (R_i-1)\,C_i^{\mathrm{cat}}}\qquad\text{[R\$]}\]
+
+\(\Delta_i^{\mathrm{cat}}>0\) significa que a atividade custou mais do
+que o catálogo previa; \(\Delta_i^{\mathrm{cat}}<0\), que custou menos.
+\(R_i\) é a mesma leitura em forma adimensional, mais direta para
+comparar o grau de desvio entre atividades de portes diferentes --- é o
+análogo, em nível de atividade, do
+\(R=C^{\mathrm{tot}}/C^{\mathrm{cat}}\) de projeto (Parte XIII). Sua
+forma fechada, em função da eficiência média realizada, é dada na Parte
+VIII, logo após \(\bar\varepsilon_i\) ser definida com exatidão.
+
+Uma advertência sobre como (não) recalcular esse desvio sob uma
+produtividade revisada --- por exemplo, ao incorporar um \(\rho_i\)
+observado em campo, diferente do calibrado originalmente: a identidade \(
+C_i^{\mathrm{V,op}}=\gamma_i^{\mathrm{V,cat}}Q_i/\rho_i
+\) é válida somente no regime físico \texttt{OUTPUT\_PROPORTIONAL} com taxa
+e preço constantes. Revisar \(\rho_i\) sem recomputar as quantidades
+físicas e os contratos não prova custo realizado correto. Mas \(C_i^{\mathrm{K,op}}=\gamma_i^{\mathrm{K,cat}}h_id_iM_i\)
+depende de \(M_i\), resultado da busca por \(N_i\) (Parte XIV, Fase 1)
+\emph{sob o \(\rho_i\) original}. Trocar \(\rho_i\) por \(\rho_i'\) nas
+fórmulas de custo sem refazer essa busca deixa \(M_i\) preso a um
+cronograma que, sob a nova produtividade, não fecha mais o escopo
+\(Q_i\) (Parte IV) --- o modelo estaria implicitamente descrevendo uma
+atividade que produz uma quantidade diferente de \(Q_i\). Recalcular
+\(\Delta_i^{\mathrm{cat}}\) sob produtividade revisada exige rederivar
+\(N_i\), \(\{m_{ij}\}\) e \(\varphi_i\) a partir de \(\rho_i'\) (Fases
+0--3), não apenas substituir \(\rho_i\) nas fórmulas de custo mantendo o
+cronograma antigo.
+
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \noindent\textbf{Regra normativa substitutiva P11-C (vigente).}
