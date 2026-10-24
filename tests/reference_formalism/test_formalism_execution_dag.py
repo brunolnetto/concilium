@@ -32,7 +32,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     order = validate_dag(spec)
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 48
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 49
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -85,18 +85,18 @@ def test_wave_unblocks_only_after_every_prior_issue_closed(spec: dict) -> None:
 
 
 def test_missing_package_blocks_closure_even_when_parents_done(spec: dict) -> None:
-    # P13-A #92 is merged, but P13-B #93 is only registered, not merged.
+    # P13-A #92 and P13-C #94 are assumed merged; P13-B #93 is not.
     result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {93})
     thirteen = next(x for x in result["issues"] if x["issue"] == 13)
     assert thirteen["ready_to_execute"]
     assert thirteen["pending_packages"] == ["P13-B"]
-    assert thirteen["pr_packages_merged"] == 1
+    assert thirteen["pr_packages_merged"] == 2
     assert not thirteen["closure_preflight"]
 
 
 def test_p13a_registered_but_not_merged_cannot_close_issue_thirteen(spec: dict) -> None:
     # A registered PR does not count as a merged mandatory package.
-    result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {92, 93})
+    result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {92, 93, 94})
     thirteen = next(x for x in result["issues"] if x["issue"] == 13)
     assert thirteen["ready_to_execute"]
     assert thirteen["pending_packages"] == ["P13-A", "P13-B"]
@@ -107,8 +107,24 @@ def test_p13a_registered_but_not_merged_cannot_close_issue_thirteen(spec: dict) 
 def test_p13b_registration_does_not_prove_issue_acceptance(spec: dict) -> None:
     result = report(spec, states(9, 10, 11, 12), all_merged(spec))
     thirteen = next(x for x in result["issues"] if x["issue"] == 13)
-    assert thirteen["pr_packages_merged"] == 2
+    assert thirteen["pr_packages_merged"] == 3
     assert thirteen["closure_preflight"]
+    assert thirteen["acceptance_verified"] is None
+
+
+def test_p13c_is_mandatory_after_p13a_and_p13b_have_merged(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 13)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P13-A", [92]),
+        ("P13-B", [93]),
+        ("P13-C", [94]),
+    ]
+    result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {94})
+    thirteen = next(x for x in result["issues"] if x["issue"] == 13)
+    assert thirteen["pending_packages"] == ["P13-C"]
+    assert thirteen["pr_packages_total"] == 3
+    assert thirteen["pr_packages_merged"] == 2
+    assert not thirteen["closure_preflight"]
     assert thirteen["acceptance_verified"] is None
 
 
