@@ -194,8 +194,8 @@ def test_rectangular_ramp_requires_zero_slopes_and_maximum_endpoints() -> None:
     tex = FILES["TEX"].read_text(encoding="utf-8")
     summarized = FILES["RESUMIDO"].read_text(encoding="utf-8")
 
-    condition = r"\\bigl(\\mu_i^+=\\mu_i^-=0\\bigr)\\land\\bigl(m_i^0=m_i^1=m_i^{\\max}\\bigr)"
-    invalid = r"\\mu_i^+ = \\mu_i^- = 0 \\implies m_i(\\tau) = m_i^{\\max}"
+    condition = r"\bigl(\mu_i^+=\mu_i^-=0\bigr)\land\bigl(m_i^0=m_i^1=m_i^{\max}\bigr)"
+    invalid = r"\mu_i^+ = \mu_i^- = 0 \implies m_i(\tau) = m_i^{\max}"
     for name, document in (("LONGO", long), ("TEX", tex)):
         assert condition in document, name
         assert invalid not in document, name
