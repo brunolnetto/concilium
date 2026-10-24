@@ -32,7 +32,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     order = validate_dag(spec)
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 49
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 50
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -74,6 +74,19 @@ def test_merged_prs_do_not_override_open_prerequisites(spec: dict) -> None:
     assert issue_14["blocked_by_prior_waves"] == [0, 1]
     assert issue_14["closure_preflight"] is False
     assert issue_14["acceptance_verified"] is None
+
+
+def test_p14c_certification_is_mandatory_even_after_a_b_merge(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 14)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P14-A", [50]), ("P14-B", [52]), ("P14-C", [102]),
+    ]
+    result = report(spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {102})
+    row = next(x for x in result["issues"] if x["issue"] == 14)
+    assert row["pending_packages"] == ["P14-C"]
+    assert row["pr_packages_merged"] == 2
+    assert not row["closure_preflight"]
+    assert row["acceptance_verified"] is None
 
 
 def test_wave_unblocks_only_after_every_prior_issue_closed(spec: dict) -> None:
