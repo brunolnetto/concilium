@@ -157,10 +157,23 @@ def test_wave_zero_issue_eleven_is_next_but_cannot_close_early(spec: dict) -> No
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P11-A", [89]),
         ("P11-B", [90]),
+        ("P11-C", [91]),
     ]
     result = report(spec, states(9, 10, 12), all_merged(spec) - {90})
     assert result["active_wave"] == 0
     assert result["ready_to_execute"] == [11]
     row = next(r for r in result["issues"] if r["issue"] == 11)
     assert row["pending_packages"] == ["P11-B"]
+    assert not row["closure_preflight"]
+
+
+def test_p11c_normative_consumer_prevents_premature_wave_zero_closure(spec: dict) -> None:
+    # P11-A/B were merged, but full Skill06/representation acceptance still
+    # requires P11-C #91. The previous PR count is not an acceptance proof.
+    result = report(spec, states(9, 10, 12), all_merged(spec) - {91})
+    row = next(x for x in result["issues"] if x["issue"] == 11)
+    assert row["ready_to_execute"]
+    assert row["pending_packages"] == ["P11-C"]
+    assert row["pr_packages_merged"] == 2
+    assert row["pr_packages_total"] == 3
     assert not row["closure_preflight"]
