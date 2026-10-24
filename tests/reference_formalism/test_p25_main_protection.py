@@ -87,6 +87,28 @@ def test_green_main_checks_required_before_any_admin_mutation() -> None:
         policy.verify_checks(bad)
 
 
+def test_only_proxy_may_be_conditionally_skipped_when_detector_passes() -> None:
+    skipped_proxy = baseline_checks()
+    proxy = next(x for x in skipped_proxy["check_runs"]
+                 if x["name"] == "MCP Proxy (standalone)")
+    proxy["conclusion"] = "skipped"
+    policy.verify_checks(skipped_proxy)
+
+    required_economics = baseline_checks()
+    economics = next(x for x in required_economics["check_runs"]
+                     if x["name"] == "Economic Contract Evidence (required)")
+    economics["conclusion"] = "skipped"
+    with pytest.raises(policy.ProtectionError, match="Economic Contract"):
+        policy.verify_checks(required_economics)
+
+    missing_detector = baseline_checks()
+    detector = next(x for x in missing_detector["check_runs"]
+                    if x["name"] == "Detect changes")
+    detector["conclusion"] = "skipped"
+    with pytest.raises(policy.ProtectionError, match="proxy detector"):
+        policy.verify_checks(missing_detector)
+
+
 def test_wrong_confirmation_never_contacts_github(monkeypatch) -> None:
     def forbidden(*args, **kwargs):
         raise AssertionError("no network calls permitted before confirmation")
