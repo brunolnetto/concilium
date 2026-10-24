@@ -107,7 +107,7 @@ def test_stage_persists_only_separately_labeled_exact_p11_preview(
     result = Resultado.model_construct()
     supplied = (
         result, {}, None, "", "", False,
-        0.0, 0.0, 0.2, 0.0, "OK", 0.0, 0.0, 0.0, [],
+        0.0, 0.0, 0.2, 0.0, "VERDE", 0.0, 0.0, 0.0, [],
     )
     monkeypatch.setattr(mod, "_build_resultado", lambda *args: supplied)
     monkeypatch.setattr(mod, "_build_ponto_equilibrio", lambda *args: [])
