@@ -172,19 +172,22 @@ def test_output_baseline_is_invariant_only_with_fixed_physical_rate() -> None:
     good = output_good()
     one = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_PROPORTIONAL,
-        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
+        good=good,
+        canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
         rate_source="measure:rate", price_source="invoice:price",
         delivered=F(100), delivered_unit="m³",
     )
     part1 = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_PROPORTIONAL,
-        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
+        good=good,
+        canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
         rate_source="measure:rate", price_source="invoice:price",
         delivered=F(40), delivered_unit="m³",
     )
     part2 = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_PROPORTIONAL,
-        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
+        good=good,
+        canonical=consumption_canonical(ConsumptionRegime.OUTPUT_PROPORTIONAL),
         rate_source="measure:rate", price_source="invoice:price",
         delivered=F(60), delivered_unit="m³",
     )
@@ -199,7 +202,8 @@ def test_loss_variant_discloses_noninvariant_delta_without_booking_purchases() -
     good = output_good()
     result = witness_consumption_regime(
         regime=ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS,
-        good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS),
+        good=good,
+        canonical=consumption_canonical(ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS),
         rate_source="measure:rate", price_source="invoice:price",
         delivered=F(100), delivered_unit="m³",
         loss=MeasuredExtra(F(20), "l", "loss:measured"),
@@ -212,8 +216,9 @@ def test_loss_variant_discloses_noninvariant_delta_without_booking_purchases() -
     with pytest.raises(ValueError, match="explicit measured loss"):
         witness_consumption_regime(
             regime=ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS,
-            good=good, canonical=consumption_canonical(ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS),
-        rate_source="measure:rate", price_source="invoice:price",
+            good=good,
+            canonical=consumption_canonical(ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS),
+            rate_source="measure:rate", price_source="invoice:price",
             delivered=F(100), delivered_unit="m³",
         )
 
@@ -232,7 +237,8 @@ def test_hourly_idle_and_waste_are_independently_measured() -> None:
             regime_consumo_p13="HOURLY_WITH_MEASURED_IDLE",
             origem_taxa_consumo_p13="calibration:3",
             origem_preco_consumo_p13="invoice:price",
-        ), rate_source="calibration:3", price_source="invoice:price",
+        ),
+        rate_source="calibration:3", price_source="invoice:price",
         operating_hours=F(10),
         idle=MeasuredExtra(F(2), "l", "idle:fuel"),
         loss=MeasuredExtra(F(1), "l", "waste:fuel"),
