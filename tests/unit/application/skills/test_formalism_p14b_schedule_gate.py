@@ -249,42 +249,53 @@ def _real_catalog_productivity() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _run_with_production(production: dict, *, intent: str = "CERTIFIED", unidade: str = "t"):
+def _run_with_production(
+    production: dict, *, intent: str = "CERTIFIED", unidade: str = "t",
+    mode: str = "MANUAL",
+):
+    inputs = {"certification_intent": intent}
+    if mode == "AUTO":
+        # Preflight must reject before constructing/solving an RCPSP instance.
+        inputs["rcpsp_spec"] = {"activities": [{"id": "i1"}]}
+    else:
+        inputs["num_equipes_por_item"] = {"i1": {"2026-W23": 1}}
     return run_cronograma(
         _canonical(1.0, unidade=unidade),
-        {"certification_intent": intent,
-         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        inputs,
         {"cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
          "produtividades": [production]},
     )
 
 
 @pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
-def test_p14c_orphan_graph_capacity_fails_before_scheduler(intent: str) -> None:
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_orphan_graph_capacity_fails_before_scheduler(intent: str, mode: str) -> None:
     production = _real_catalog_productivity()
     production["grafo_sinergia"]["capacidades"][0]["elemento_id"] = "NONEXISTENT-EQUIPMENT"
-    outcome = _run_with_production(production, intent=intent)
+    outcome = _run_with_production(production, intent=intent, mode=mode)
     assert outcome.has_errors
     assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
     assert outcome.canonical.cronograma is None
 
 
 @pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
-def test_p14c_graph_without_physical_capacity_fails_before_scheduler(intent: str) -> None:
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_graph_without_physical_capacity_fails_before_scheduler(intent: str, mode: str) -> None:
     production = _real_catalog_productivity()
     production["grafo_sinergia"]["capacidades"] = []
-    outcome = _run_with_production(production, intent=intent)
+    outcome = _run_with_production(production, intent=intent, mode=mode)
     assert outcome.has_errors
     assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
     assert outcome.canonical.cronograma is None
 
 
 @pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
-def test_p14c_mismatched_eap_and_production_units_fail_closed(intent: str) -> None:
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_mismatched_eap_and_production_units_fail_closed(intent: str, mode: str) -> None:
     # The catalog says t/h. A Q expressed in m3 cannot consume that rate
     # without a separately verified density/conversion contract.
     production = _real_catalog_productivity()
-    outcome = _run_with_production(production, intent=intent, unidade="m3")
+    outcome = _run_with_production(production, intent=intent, unidade="m3", mode=mode)
     assert outcome.has_errors
     assert any(v.codigo == "VAL-CRON-PROD-UNIT" for v in outcome.validacoes)
     assert outcome.canonical.cronograma is None
