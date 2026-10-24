@@ -328,9 +328,9 @@ $\mathcal{T}$ = conjunto de tipos de recurso (união de categorias e especifica�
 
 **Demanda semanal física por tipo:** \(d_{gj}=\sum_i a_{ig}(m_{ij})\). Somente em frentes independentes \(a_{ig}(m)=m\,n_g^i\); gargalos e recursos compartilhados exigem composição própria.
 
-$\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[físico; }a_{ig}(m)=m\,n_g^i\text{ somente para frentes independentes]}.$
+$$\boxed{d_{gj}=\sum_{i\in\mathcal A_j}a_{ig}(m_{ij})}\quad\text{[físico; }a_{ig}(m)=m\,n_g^i\text{ somente para frentes independentes]}.$$
 
-Para compatibilidade com o algoritmo por níveis, (n_j(g)\equiv d_{gj}); o máximo físico é (qt_g=\max_jd_{gj}), sem assumir frentes independentes quando há gargalos.
+Para compatibilidade com o algoritmo por níveis, \(n_j(g)\equiv d_{gj}\); o máximo físico é \(qt_g=\max_jd_{gj}\), sem presumir frentes independentes quando há gargalos.
 
 **Pool físico** \(\{r\}\): instâncias fungíveis por tipo \(g\), tarifas semanais declaradas \(c_g^{act},c_g^{idle}\) e movimentos \(c_g^{mob},c_g^{demob}\). A igualdade entre ativo e idle é exclusiva de `FULL_RATE_STANDBY`; sem regime e fonte, custo `NOT_EVALUATED`.
 
