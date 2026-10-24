@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+import json
+from pathlib import Path
 
 import pytest
 
@@ -113,7 +115,7 @@ def test_p14c_certified_missing_fm_never_publishes_price_or_schedule() -> None:
     assert outcome.canonical.resultado_reconciliado is None
 
 
-def test_p14c_preview_with_arbitrary_productivity_is_not_feasible() -> None:
+def test_p14c_preview_preserves_physical_feasibility_without_granting_certificate() -> None:
     canonical = _canonical(1.0)
     outcome = run_cronograma(
         canonical,
@@ -128,7 +130,7 @@ def test_p14c_preview_with_arbitrary_productivity_is_not_feasible() -> None:
         for v in outcome.validacoes
     )
     assert outcome.canonical.cronograma is not None
-    assert outcome.canonical.cronograma.is_feasible is False
+    assert outcome.canonical.cronograma.is_feasible is True
 
 
 
@@ -184,7 +186,7 @@ def test_p14c_preview_clears_previously_cached_successful_finance() -> None:
         {},
     )
     assert outcome.canonical.cronograma is not None
-    assert outcome.canonical.cronograma.is_feasible is False
+    assert outcome.canonical.cronograma.is_feasible is True
     assert outcome.canonical.resultado is None
     assert outcome.canonical.resultado_reconciliado is None
     assert outcome.canonical.ponto_equilibrio == []
@@ -215,3 +217,24 @@ def test_p14c_certified_rejection_invalidates_cached_financial_cube() -> None:
     assert outcome.canonical.cubo_analitico is None
     assert outcome.canonical.s_curve is None
     assert outcome.canonical.plan_space_result is None
+
+
+def test_p14c_nested_origin_and_audit_accept_real_catalog_graph() -> None:
+    """Use the actual RFI catalog schema, not invented top-level aliases."""
+    root = Path(__file__).resolve().parents[4]
+    path = root / "config/catalogos/rfi-r02/produtividades/PROD-USINAGEM-CBUQ-RFI-001.json"
+    production = json.loads(path.read_text(encoding="utf-8"))
+    assert production["origem"]["fonte_id"]
+    assert production["auditoria"]["versao"]
+    assert production["grafo_sinergia"]
+    result = run_cronograma(
+        _canonical(1.0),
+        {"certification_intent": "CERTIFIED",
+         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {"cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
+         "produtividades": [production]},
+    )
+    assert not any(
+        v.codigo in ("VAL-CRON-PROD-CERT", "VAL-CRON-PROD-INVALID")
+        for v in result.validacoes
+    ), result.validacoes
