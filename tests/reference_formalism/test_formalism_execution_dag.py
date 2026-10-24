@@ -88,7 +88,19 @@ def test_missing_package_blocks_closure_even_when_parents_done(spec: dict) -> No
     result = report(spec, states(9, 10, 11, 12), all_merged(spec))
     thirteen = next(x for x in result["issues"] if x["issue"] == 13)
     assert thirteen["ready_to_execute"]
+    # P13-A now has a tracked PR (#92), so the hypothetical all-merged
+    # snapshot still lacks only P13-B, which has no registered PR.
+    assert thirteen["pending_packages"] == ["P13-B"]
+    assert not thirteen["closure_preflight"]
+
+
+def test_p13a_registered_but_not_merged_cannot_close_issue_thirteen(spec: dict) -> None:
+    # Registering #92 in the DAG is not equivalent to merging it.
+    result = report(spec, states(9, 10, 11, 12), all_merged(spec) - {92})
+    thirteen = next(x for x in result["issues"] if x["issue"] == 13)
+    assert thirteen["ready_to_execute"]
     assert thirteen["pending_packages"] == ["P13-A", "P13-B"]
+    assert thirteen["pr_packages_merged"] == 0
     assert not thirteen["closure_preflight"]
 
 
