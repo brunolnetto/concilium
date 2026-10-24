@@ -13,7 +13,11 @@ disponível, pelo custo de posse P19-B. Não existe uma nova origem monetária.
    origem) imutável nos snapshots seguintes.
 2. O delta P18 contém **exatamente** uma linha `CONSUMABLE/evidence_id` para
    cada evidência física precificada com quantidade positiva; o custo bate com
-   `PhysicalPurchaseMeasure.exact_cost`. Quantidade zero não é compra.
+   `PhysicalPurchaseMeasure.exact_cost`. A classificação MAT/COMB vem do
+   **contrato de origem P18**, persistido em `AcquisitionEvidenceLine.category`:
+   nunca usar a categoria do lançamento auditado como sua própria prova.
+   Evidência legada sem categoria explícita **não é certificável em P20**.
+   Quantidade zero não é compra.
 3. Se o snapshot P19 for fornecido, seu delta contém **exatamente** as linhas
    `STOCK_HOLDING/good_id/week` de valor positivo, categoria IND e base
    de inventário física auditada. Uma tarifa não fornecida não equivale
@@ -42,7 +46,7 @@ fontes não estão nesta prova.
 - Exemplo analítico independente: K ativo 10 + idle 4, MOB 3,
   MAT 2,50 e holding 6 → direto 16,50, indireto 9, total 25,50.
 - Deslocar a semana de uma compra mantendo 25,50 **falha**.
-- Trocar a compra MAT por MO de mesmo valor **falha**.
+- Trocar a compra MAT por MO **ou COMB** de mesmo valor **falha**.
 - Omitir MOB, compra, holding, ou forjar uma compra adicional **falha**.
 - P18-B e P19-B reais: K 4 + V 2 + holding 1,50 = 7,50.
 
