@@ -283,7 +283,7 @@ Entre blocos separados por \(k\) semanas **vazias**, manter é viável se \(k\le
 
 ### IX.3 Utilização e limite do certificado
 
-Para cadeia contratual \(r\), \(T_r^{perm}=T_r^{act}+T_r^{idle}\); a fração \(f_r^{idle}=T_r^{idle}/T_r^{perm}\) (se \(T_r^{perm}>0\)) é diagnóstico temporal, **não** perda produtiva. A decomposição em níveis da demanda garante ótimo exato apenas para **pool homogêneo fungível com \(m\) e cronograma fixados**; não prova ótimo global de escolha simultânea \(m+\)cronograma\(+\)pool (#16). O custo real é reconstruído das instâncias/semana, nunca de envelopes individuais contados em duplicidade (#17/#20).
+Para cadeia contratual \(r\), \(T_r^{perm}=T_r^{act}+T_r^{idle}\); a fração \(f_r^{idle}=T_r^{idle}/T_r^{perm}\) (se \(T_r^{perm}>0\)) é diagnóstico temporal, **não** perda produtiva. A decomposição em níveis da demanda prova ótimo exato apenas com **camadas de atribuição física fixadas**, além de \(m\) e cronograma fixos. Isso **não** prova ótimo global sobre reatribuições de instâncias fungíveis (#16), nem sobre escolha simultânea \(m+\)cronograma\(+\)pool. O contrafactual `(2,1,1,2)` com tarifas 5/1, movimentos 30 e gap máximo 1 dá 120 por níveis versus 92 por reatribuição viável (oráculo P13-C). O custo real é reconstruído das instâncias/semana, nunca de envelopes individuais contados em duplicidade (#17/#20).
 
 ## Parte X — Consumíveis: Aquisição, Demanda e Reposição
 
