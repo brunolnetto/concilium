@@ -116,6 +116,40 @@ def witness_contract_regime(
                    for d, p, s in zip(ledger.demand, ledger.presence,
                                       ledger.standby, strict=True))):
         raise ValueError("physical contractual presence/standby identity violated")
+    # P16 dataclasses do not validate their own chain coverage: reject aggregates
+    # that cannot be reconstructed from uniquely owned instance-level weeks.
+    owned_level_weeks: set[tuple[int, int]] = set()
+    active_level_weeks: set[tuple[int, int]] = set()
+    actual_presence = [0] * len(pool.calendar_weeks)
+    for chain in ledger.chains:
+        if chain.resource_type != evidence.resource_type or chain.level < 1:
+            raise ValueError("physical chain identity does not match resource type")
+        if not 0 <= chain.start < chain.end <= len(pool.calendar_weeks):
+            raise ValueError("physical chain outside the declared calendar")
+        active = 0
+        idle = 0
+        for j in range(chain.start, chain.end):
+            level_week = (chain.level, j)
+            if level_week in owned_level_weeks:
+                raise ValueError("duplicate physical chain level-week ownership")
+            owned_level_weeks.add(level_week)
+            actual_presence[j] += 1
+            if ledger.demand[j] >= chain.level:
+                active_level_weeks.add(level_week)
+                active += 1
+            else:
+                idle += 1
+        if (active, idle) != (chain.active_weeks, chain.idle_weeks):
+            raise ValueError("physical chain active/idle count mismatch")
+    required_levels = {
+        (level, j)
+        for j, demand in enumerate(ledger.demand)
+        for level in range(1, demand + 1)
+    }
+    if active_level_weeks != required_levels:
+        raise ValueError("physical chains do not cover required demand levels")
+    if tuple(actual_presence) != ledger.presence:
+        raise ValueError("physical chains do not reconstruct contractual presence")
     week_presence = dict(zip(pool.calendar_weeks, ledger.presence, strict=True))
     if len(week_presence) != len(pool.calendar_weeks):
         raise ValueError("non-unique calendar week")
@@ -195,7 +229,8 @@ def witness_consumption_regime(
                   ConsumptionRegime.OUTPUT_WITH_MEASURED_LOSS):
         if good.rate.basis is not ConsumptionBasis.PER_DELIVERED_UNIT:
             raise ValueError("output regime requires unit-of-output physical consumption rate")
-        base = good.cost(delivered=delivered, delivered_unit=delivered_unit)
+        base = good.cost(delivered=delivered, delivered_unit=delivered_unit,
+                         operating_hours=operating_hours)
         if idle is not None:
             raise ValueError("idle consumption is not output proportional")
         if regime is ConsumptionRegime.OUTPUT_PROPORTIONAL and loss is not None:
@@ -205,7 +240,8 @@ def witness_consumption_regime(
     else:
         if good.rate.basis is not ConsumptionBasis.PER_OPERATING_HOUR:
             raise ValueError("hourly regime requires real operating-hour consumption rate")
-        base = good.cost(operating_hours=operating_hours)
+        base = good.cost(delivered=delivered, delivered_unit=delivered_unit,
+                         operating_hours=operating_hours)
         if idle is None or loss is None:
             raise ValueError("hourly variant requires explicit idle and loss measurements")
     extras = tuple(x for x in (idle, loss) if x is not None)
