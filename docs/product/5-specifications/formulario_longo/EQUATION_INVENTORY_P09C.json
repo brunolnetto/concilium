@@ -1066,25 +1066,29 @@
       "id": "FL-079",
       "section": "Parte XII — Custos Indiretos",
       "expression": "\\gamma_l^{VM,\\text{sem}}(j) = c_l^{\\text{mob}}\\,\\mathbb{1}[j=j^{\\min}] + c_l^{\\text{demob}}\\,\\mathbb{1}[j=j^{\\max}-1]",
-      "expected_result_dimension": "BRL/week",
+      "expected_result_dimension": "BRL assigned to a discrete week-cell (not BRL/week)",
       "input_provenance": "indirect driver evidence and mobility chains",
       "output_projection": "indirect cost and BDI",
       "downstream_consumer": "skill 06",
-      "status": "NORMATIVE_CANDIDATE",
-      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
-      "blocked_by_issues": []
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION",
+      "blocked_by_issues": [
+        20
+      ]
     },
     {
       "id": "FL-080",
       "section": "Parte XII — Custos Indiretos",
       "expression": "C_{lj}^{\\text{ind},o} = \\Bigl(\\gamma_l^{MO,\\text{sem}}+\\gamma_l^{EQ,\\text{sem}}+\\gamma_l^{COMB,\\text{sem}}+\\gamma_l^{VM,\\text{sem}}(j)\\Bigr)\\cdot m_l(j)",
-      "expected_result_dimension": "BRL (monetary amount)",
+      "expected_result_dimension": "BRL cost for one week-cell; rate-to-amount conversion is pending",
       "input_provenance": "indirect driver evidence and mobility chains",
       "output_projection": "indirect cost and BDI",
       "downstream_consumer": "skill 06",
-      "status": "NORMATIVE_CANDIDATE",
-      "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
-      "blocked_by_issues": []
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
+      "dimensional_proof": "REQUIRES_EXPLICIT_WEEK_CELL_CONVERSION",
+      "blocked_by_issues": [
+        20
+      ]
     },
     {
       "id": "FL-081",
@@ -1108,9 +1112,11 @@
       "input_provenance": "indirect driver evidence and mobility chains",
       "output_projection": "indirect cost and BDI",
       "downstream_consumer": "skill 06",
-      "status": "NORMATIVE_CANDIDATE",
+      "status": "CONDITIONAL_OR_UNCERTIFIED",
       "dimensional_proof": "REQUIRES_INDEPENDENT_VERIFICATION",
-      "blocked_by_issues": []
+      "blocked_by_issues": [
+        20
+      ]
     },
     {
       "id": "FL-083",
