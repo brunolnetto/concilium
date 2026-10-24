@@ -195,4 +195,4 @@ def test_fungible_reassignment_falsifies_fixed_layer_global_optimality() -> None
         active=F(5), idle=F(1), movement=F(30), max_idle_gap=1,
     )
     assert true_small_optimum == (F(92), 2)
-    assert fixed_layers > true_small_optimum
+    assert fixed_layers > true_small_optimum[0]
