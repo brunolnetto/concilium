@@ -111,6 +111,8 @@ def _acquisition_expectations(
             raise ValueError("planned and observed physical cost cannot both be booked")
         kinds[owner] = evidence.kind
         measure = evidence.measure
+        if evidence.category not in ("MAT", "COMB"):
+            raise ValueError("acquisition evidence lacks declared MAT/COMB category")
         if (type(measure.priced_quantity) is not Fraction or measure.priced_quantity < 0
                 or type(measure.exact_cost) is not Fraction or measure.exact_cost < 0):
             raise ValueError("physical acquisition requires exact nonnegative evidence")
@@ -121,11 +123,11 @@ def _acquisition_expectations(
             raise ValueError("duplicate acquisition evidence")
         if measure.priced_quantity == 0:
             continue
-        # MAT versus COMB is declared by the original typed purchase, not guessed
-        # from the good name or the physical measurement.
+        # The P18 source carries the declared classification. Never learn the
+        # expected category from the financial row under audit.
         actual = postings.get(event_id)
         if (actual is None or actual.nature != PostingNature.ACQUISITION
-                or actual.category not in ("MAT", "COMB")
+                or actual.category != evidence.category
                 or actual.source != measure.good_id or actual.week != evidence.week
                 or actual.amount != measure.exact_cost):
             raise ValueError("acquisition posting differs from measured physical cost")
