@@ -105,6 +105,7 @@ def _activity(
         raise ValueError(f"{activity_id}: activity weeks must be consecutive, including zero weeks")
     result: list[RealizedActivityWeek] = []
     cumulative = ZERO
+    producer_float_total = 0.0
     reference_total = ZERO
     for week in weeks:
         cell = distribution[week]
@@ -114,14 +115,23 @@ def _activity(
             raise ValueError("exogenous available physical capacity is missing")
         nominal = _exact(cell.q_max_celula, name="q_max_celula")
         available = _exact(cell.capacidade_disponivel_semana, name="capacity")
-        delivered = _exact(cell.qtd_executada, name="qtd_executada")
+        reported = _exact(cell.qtd_executada, name="qtd_executada")
         observed_total = _exact(cell.qtd_acumulada, name="qtd_acumulada")
-        if delivered > available or available > nominal:
-            raise ValueError("q > capacity or available capacity > F(m)H")
-        cumulative += delivered
-        reference_total += nominal
-        if cumulative != observed_total:
+        # Skill04's actual _build_dist_cell() persists float addition:
+        # 0.2 + 0.09999999999999998 == 0.3. Accept only either an
+        # exact decimal identity OR precisely that source's binary-float
+        # additive identity. No epsilon, rounding or economic tolerance.
+        if (
+            cumulative + reported != observed_total
+            and producer_float_total + cell.qtd_executada != cell.qtd_acumulada
+        ):
             raise ValueError("Skill 04 cumulative physical scope does not reconcile")
+        delivered = observed_total - cumulative
+        if delivered < 0 or delivered > available or available > nominal:
+            raise ValueError("q > capacity or available capacity > F(m)H")
+        cumulative = observed_total
+        producer_float_total = cell.qtd_acumulada
+        reference_total += nominal
         result.append(RealizedActivityWeek(
             activity_id, week, nominal, available, delivered,
             available / nominal if nominal else None,
@@ -255,7 +265,7 @@ def project_realized_financials(
                     (total_direct / activity.delivered_output)
                     / (reference / activity.nominal_output)
                 )
-                if overall_zeta != efficiency * overall_pi:
+                if efficiency is None or overall_zeta != efficiency * overall_pi:
                     raise ValueError("aggregated zeta/pi identity failed")
     return RealizedFinancialProjection(
         activities, tuple(financial), total_k, total_v, total_ind, total_price,
