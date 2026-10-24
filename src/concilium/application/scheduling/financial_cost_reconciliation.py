@@ -6,13 +6,18 @@ This is not the Skill 06 financial authority, a BDI engine or a GO decision.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from typing import TYPE_CHECKING
 
 from .contractual_cost_ledger import CostPosting, ExclusiveCostLedger, PostingNature
 from .physical_consumption_journal import PhysicalConsumptionJournalResult
 from .physical_stock_holding import HoldingJournal
+
+if TYPE_CHECKING:
+    from concilium.domain.models.canonical import DistribuicaoSemanal
+    from .realized_financial_metrics import RealizedFinancialProjection
 
 EventId = tuple[str, ...]
 _POOL_NATURES = frozenset({
@@ -57,6 +62,48 @@ class ExactFinancialReconciliation:
     @property
     def total(self) -> Fraction:
         return self.ledger.total
+
+    def project_skill04_realization(
+        self,
+        *,
+        distributions_by_activity: Mapping[str, Mapping[str, DistribuicaoSemanal]],
+        scopes_by_activity: Mapping[str, int | float | str | Fraction],
+        bdi_by_category: Mapping[str, Fraction],
+        independent_variable_unit_rate: Fraction | None = None,
+    ) -> RealizedFinancialProjection:
+        """Attach P11-B read-only metrics to the *real* P20 ledger snapshot.
+
+        No new monetary rows are created. A post-hoc or forged weekly P20
+        balance cannot silently disagree with source event identities. This
+        operation does not issue GO or attribute shared K to individual items.
+        """
+        from .realized_financial_metrics import project_realized_financials
+
+        result = project_realized_financials(
+            distributions_by_activity=distributions_by_activity,
+            scopes_by_activity=scopes_by_activity,
+            ledger=self.ledger,
+            bdi_by_category=bdi_by_category,
+            independent_variable_unit_rate=independent_variable_unit_rate,
+        )
+        projected = {week.week: week for week in result.weeks}
+        existing = {week.week: week for week in self.weeks}
+        if len(existing) != len(self.weeks) or set(projected) != set(existing):
+            raise ValueError("P20 week provenance must match physical/financial projection")
+        if any(
+            (
+                source.contractual_k,
+                source.consumable_v,
+                source.indirect,
+            ) != (
+                projected[week].contractual_k,
+                projected[week].physically_purchased_v,
+                projected[week].indirect,
+            )
+            for week, source in existing.items()
+        ):
+            raise ValueError("P20 weekly financial balance does not reconcile")
+        return result
 
 
 def _events(lines: Iterable[CostPosting]) -> dict[EventId, CostPosting]:
