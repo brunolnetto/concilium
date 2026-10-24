@@ -299,3 +299,19 @@ def test_p14c_mismatched_eap_and_production_units_fail_closed(intent: str, mode:
     assert outcome.has_errors
     assert any(v.codigo == "VAL-CRON-PROD-UNIT" for v in outcome.validacoes)
     assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_graph_capacity_unit_mismatch_fails_even_with_matching_labels(
+    intent: str, mode: str,
+) -> None:
+    production = _real_catalog_productivity()
+    # Rebranding the product from tonnes to cubic metres cannot relabel the
+    # physical capacity E0043=99.6 t/h without a measured conversion.
+    production["unidade"] = "m3"
+    assert production["grafo_sinergia"]["capacidades"][0]["unidade"] == "t"
+    outcome = _run_with_production(production, intent=intent, mode=mode, unidade="m3")
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-UNIT" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
