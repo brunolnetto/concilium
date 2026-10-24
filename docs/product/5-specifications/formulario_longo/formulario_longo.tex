@@ -667,19 +667,9 @@ quantas frentes estão em campo --- não de quanto foi produzido. É como
 alugar um equipamento por semana: o valor é o mesmo, tenha a equipe
 produzido muito ou pouco naquela semana.
 
-\[C_{ij}^{\mathrm{V,op}} = \gamma_i^{\mathrm{V,cat}}\cdot\frac{q_{ij}}{\rho_i}\qquad\text{[R\$]}\]
+\[C_{ij}^{V,op}=\sum_g p_g U_{gij}\qquad\text{[medição física por bem, semana e atividade]}\]
 
-\(C_{ij}^{\mathrm{V,op}}\) é o custo consumível da semana: proporcional
-ao quanto foi de fato produzido (\(q_{ij}\)), e por isso já incorpora,
-de forma implícita, tanto a eficiência da semana quanto o fechamento
-fracionário da última semana (Parte IV). É como pagar por combustível:
-quanto mais se produz, mais se consome, e vice-versa.
-
-Nas semanas interiores,
-\(q_{ij}/\rho_i \equiv \varepsilon_{ij}h_id_im_{ij}\) por definição de
-\(q_{ij}\) (Parte IV) --- a formulação acima generaliza a forma
-tempo-a-tempo e permanece exata na semana de fechamento, onde \(q_{ij}\)
-é o residual e não \(\varepsilon_{ij}h_id_im_{ij}\) diretamente.
+O custo \(C_{ij}^{V,op}\) soma quantidades físicas medidas \(U_{gij}\) vezes seus preços \(p_g\), sem inferir consumo apenas do quantitativo entregue. Somente no baseline \texttt{OUTPUT\_PROPORTIONAL}, com taxa/preço constantes, vale \(U_{gij}=\kappa^{out}_{ig}q_{ij}\) e pode-se usar o antigo quociente \(\gamma_i^{V,cat}q_{ij}/\rho_i\). Horas reais, idle e perdas precisam de origem independente nos outros regimes.
 
 \[C_{ij}^{\mathrm{op}} = C_{ij}^{\mathrm{K,op}}+C_{ij}^{\mathrm{V,op}}\qquad\text{[R\$]}\]
 
@@ -700,7 +690,7 @@ identidades mais úteis deste formulário, detalhada logo abaixo.
 \[C_i^{\mathrm{K,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{K,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela contratual, à eficiência nominal}\]
 \[C_i^{\mathrm{V,cat}} = \frac{Q_i\,\gamma_i^{\mathrm{V,cat}}}{\rho_i}\qquad\text{[R\$] — catálogo, parcela consumível}\]
 \[C_i^{\mathrm{K,op}} = \sum_{j} C_{ij}^{\mathrm{K,op}} = \gamma_i^{\mathrm{K,cat}}\,h_id_i\,M_i\qquad\text{[R\$]}\]
-\[C_i^{\mathrm{V,op}} = \sum_{j} C_{ij}^{\mathrm{V,op}} = \frac{\gamma_i^{\mathrm{V,cat}}}{\rho_i}\sum_j q_{ij}\qquad\text{[R\$]}\]
+\[C_i^{V,op}=\sum_j C_{ij}^{V,op}=\sum_{g,j}p_g U_{gij}\qquad\text{[R\$]}\]
 \[C_i^{\mathrm{op}} = C_i^{\mathrm{K,op}}+C_i^{\mathrm{V,op}}\qquad\text{[R\$]}\]
 \[p_i^{\mathrm{op}} = C_i^{\mathrm{op}}/Q_i\qquad\text{[R\$/un]}\]
 
