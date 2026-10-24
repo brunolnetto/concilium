@@ -32,7 +32,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     order = validate_dag(spec)
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 47
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 48
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -152,7 +152,7 @@ def test_p09e_gate_remains_closed_even_after_p09d_is_merged(spec: dict) -> None:
 
 def test_wave_zero_issue_eleven_is_next_but_cannot_close_early(spec: dict) -> None:
     # #9/#10/#12 are accepted; #11 may execute P11-A, but cannot close
-    # until both required P11-A (#89) and P11-B have actually merged.
+    # until P11-B (#90) and P11-C (#91) are fully integrated.
     packages = next(n for n in spec["nodes"] if n["issue"] == 11)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P11-A", [89]),
