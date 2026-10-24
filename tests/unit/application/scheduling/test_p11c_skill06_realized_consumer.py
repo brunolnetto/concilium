@@ -127,6 +127,7 @@ def test_bdionce_must_use_complete_exact_category_rates() -> None:
 
 def test_consumer_prohibits_relabeling_projection_as_project_go() -> None:
     from pydantic import ValidationError
+
     from concilium.domain.models.canonical._financeiro_resultado import (
         MetricasRealizadasP11,
     )
