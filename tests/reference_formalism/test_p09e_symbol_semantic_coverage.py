@@ -23,6 +23,34 @@ INVENTORY = load("EQUATION_INVENTORY_P09C.json")
 PROOFS = load("NORMATIVE_DIMENSION_PROOFS_P09D.json")
 COVERAGE = load("NORMATIVE_SYMBOL_COVERAGE_P09E.json")
 
+# Independently reviewed expected atom sets from the 21 normative contracts.
+# This witness is intentionally NOT imported from the provenance JSON:
+# deleting an individual symbol from the registry must falsify the gate.
+REQUIRED_NORMATIVE_TERMS = {
+    "FL-001": frozenset(["\\mathcal{A}","A_i","n_{\\text{ativ}}"]),
+    "FL-002": frozenset(["A_i","Q_i","E_i","W_i","B_i"]),
+    "FL-003": frozenset(["c_r","V_r^{\\text{mensal}}","s_{\\text{mes}}","d_i","h_i","\\kappa_r","p_{g(r)}","\\text{cat}(r)"]),
+    "FL-004": frozenset(["F_i(m)","s_i","t_i","\\mathcal G_i^D","m"]),
+    "FL-005": frozenset(["W_i","m_i^0","\\mu_i^+","m_i^1","\\mu_i^-","m_i^{\\max}"]),
+    "FL-006": frozenset(["m_i(\\tau)","\\tau","N_i","m_i^0","\\mu_i^+","m_i^{\\max}","m_i^1","\\mu_i^-"]),
+    "FL-007": frozenset(["\\mu_i^+","\\mu_i^-","m_i^0","m_i^1","m_i^{\\max}","m_i(\\tau)","\\tau","N_i"]),
+    "FL-008": frozenset(["m_{ij}","m_i(","j_i^0","j","N_i"]),
+    "FL-009": frozenset(["B_i","\\mathcal{A}","A_i","\\theta_i"]),
+    "FL-010": frozenset(["\\Phi_b(j)","Q_b","q_{b,j'}","j_b^0","j"]),
+    "FL-011": frozenset(["s_{\\text{mes}}"]),
+    "FL-012": frozenset(["d_i","h_i"]),
+    "FL-013": frozenset(["\\beta^{EQ}","\\beta^{MO}","\\beta^{MAT}","\\beta^{COMB}","\\beta^{IND}"]),
+    "FL-021": frozenset(["q_{i,j_i^1}","Q_i","q_{ij}","j_i^0","j_i^1"]),
+    "FL-022": frozenset(["\\varphi_i","q_{i,j_i^1}","F_i(","m_i(","N_i","h_i","d_i","\\varepsilon_{i,j_i^1}^{exog}"]),
+    "FL-023": frozenset(["q_{ij}","Q_i","j_i^0","j_i^1"]),
+    "FL-024": frozenset(["\\mathcal{A}_j","A_i","\\mathcal{A}","j_i^0","j","N_i"]),
+    "FL-075": frozenset(["\\mathcal{L}","ADM","TOP","LAB","QSMS","MOB^{\\text{site}}"]),
+    "FL-076": frozenset(["\\text{driver}(l)","l","\\texttt{perm}","\\texttt{onetime}"]),
+    "FL-077": frozenset(["l","\\text{driver}(l)","\\Gamma_l^{k,\\text{mensal}}","k","c_l^{\\text{mob}}","c_l^{\\text{demob}}","\\Gamma_l^{VM,\\text{mensal}}"]),
+    "FL-078": frozenset(["\\gamma_l^{k,\\text{sem}}","\\Gamma_l^{k,\\text{mensal}}","s_{\\text{mes}}","m_l(j)","j","n"]),
+}
+
+
 
 def validate_normative_coverage(
     inventory: dict,
@@ -45,6 +73,7 @@ def validate_normative_coverage(
     assert len(normative) == len(evidence) == len(traced) == 21
     assert len(coverage["equations"]) == len(traced)
     assert set(normative) == set(evidence) == set(traced)
+    assert set(normative) == set(REQUIRED_NORMATIVE_TERMS)
     assert conditioned.isdisjoint(traced)
     assert len(conditioned) == 72
     for id_, equation in traced.items():
@@ -52,6 +81,7 @@ def validate_normative_coverage(
         assert evidence[id_]["expression"] == expression
         assert evidence[id_]["proof_status"] == "DIMENSIONAL_UNDER_TYPED_PRECONDITIONS"
         assert equation["terms"], id_
+        assert {t["latex"] for t in equation["terms"]} == REQUIRED_NORMATIVE_TERMS[id_], id_
         keys: set[str] = set()
         for term in equation["terms"]:
             assert set(("latex", "unit", "source", "output")) <= set(term)
@@ -77,6 +107,17 @@ def test_missing_normative_provenance_causes_failure() -> None:
     modified = {**COVERAGE, "equations": COVERAGE["equations"][1:]}
     with pytest.raises(AssertionError):
         validate_normative_coverage(INVENTORY, PROOFS, modified)
+
+
+def test_missing_single_symbol_fails_even_if_equation_counts_are_unchanged() -> None:
+    # Regress reviewer falsifier: deleting h_i from FL-022 left total
+    # counts >110 and still passed older global-count-only checks.
+    cloned = json.loads(json.dumps(COVERAGE))
+    row = next(e for e in cloned["equations"] if e["id"] == "FL-022")
+    row["terms"] = [t for t in row["terms"] if t["latex"] != "h_i"]
+    assert len(row["terms"]) >= 1
+    with pytest.raises(AssertionError):
+        validate_normative_coverage(INVENTORY, PROOFS, cloned)
 
 
 def test_conditional_identity_cannot_be_promoted_to_normative() -> None:
