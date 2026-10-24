@@ -1,3 +1,5 @@
+> **P13-A — regimes econômicos condicionais:** a hipótese de standby com tarifa integral vale somente no baseline `FULL_RATE_STANDBY`. Tarifas descontadas (`DISCOUNTED_STANDBY`) e off-hire (`EXPLICIT_OFF_HIRE`) exigem taxas/eventos explícitos. Não usar a igualdade de tarifa como identidade universal. Ver [P13A_REGIMES_STANDBY.md](P13A_REGIMES_STANDBY.md). O seletor operacional tipado é responsabilidade de P13-B.
+
 # Formulário White-Box — Atividades, Pool de Recursos e Custos Indiretos
 
 ---
