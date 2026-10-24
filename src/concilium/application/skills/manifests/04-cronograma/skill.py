@@ -191,8 +191,18 @@ def _preflight_physical_productivity(
         # An existing graph is not necessarily a usable physical graph.
         # Validate the *actual* typed capacity, references and output units
         # before the manual/automatic scheduler can throw or assume capacity.
-        has_graph = isinstance(prod.get("grafo_sinergia"), dict) and bool(prod["grafo_sinergia"])
+        raw_graph = prod.get("grafo_sinergia")
+        has_graph = isinstance(raw_graph, dict) and bool(raw_graph)
         graph_verified = False
+        if raw_graph is not None and not isinstance(raw_graph, dict):
+            invalid = True
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-CRON-PROD-INVALID",
+                    status="ERRO",
+                    mensagem=f"F(m) inválido em {item.item_id}: grafo físico malformado.",
+                )
+            )
         if has_graph:
             from concilium.domain.services.sinergia_equipe import (
                 construir_producao_catalogo_para_sinergia,
@@ -316,19 +326,13 @@ def run_cronograma(
     if not _validate_preconditions(canonical_in, validacoes):
         return SkillResult(canonical_in, validacoes)
 
-    (
-        regime,
-        semanas_obra,
-        cpu_lookup,
-        producao_lookup,
-        insumos_lookup,
-        fator_calendario_semanal,
-        calendario_operacional,
-    ) = _run_cronograma_build_context(canonical_in, inputs, catalogo, validacoes)
-    prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
-
+    # Validate raw physical inputs before cost enrichment or solver setup.
+    # A malformed numeric rate could otherwise fail inside the canonical
+    # cost-calibration path before the typed rejection is materialized.
+    cpu_preflight = _build_cpu_lookup(catalogo)
+    production_preflight = _build_producao_lookup(catalogo)
     invalid_productivity, unverified_productivity = _preflight_physical_productivity(
-        canonical_in, cpu_lookup, producao_lookup,
+        canonical_in, cpu_preflight, production_preflight,
         certified=certification_intent == "CERTIFIED",
         validacoes=validacoes,
     )
@@ -340,6 +344,17 @@ def run_cronograma(
             ),
             validacoes,
         )
+
+    (
+        regime,
+        semanas_obra,
+        cpu_lookup,
+        producao_lookup,
+        insumos_lookup,
+        fator_calendario_semanal,
+        calendario_operacional,
+    ) = _run_cronograma_build_context(canonical_in, inputs, catalogo, validacoes)
+    prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
     if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
