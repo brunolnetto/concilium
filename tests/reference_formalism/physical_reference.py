@@ -124,11 +124,11 @@ def _validate(payload: dict) -> tuple[dict, list[dict], list[str]]:
     _keys(payload, {"protocol", "case_id", "inputs", "expected"}, "vector")
     if payload["protocol"] != VERSION or not isinstance(payload["case_id"], str):
         raise ReferenceContractError("unsupported physical reference version")
-    data = _keys(
+    data = dict(_keys(
         payload["inputs"],
         {"horizon_weeks", "weather", "performance", "graphs", "resource_caps", "activities"},
         "physical inputs",
-    )
+    ))
     horizon = _integer(data["horizon_weeks"], "horizon_weeks", 1)
     if horizon > LIMIT_WEEKS:
         raise ReferenceContractError("physical reference horizon bound exceeded")
@@ -160,10 +160,10 @@ def _validate(payload: dict) -> tuple[dict, list[dict], list[str]]:
         raise ReferenceContractError("activities out of bounded domain")
     entries = {}
     for raw in activities:
-        a = _keys(raw, {
+        a = dict(_keys(raw, {
             "id", "graph", "scope_total", "hours_per_week", "earliest_start",
             "ramp", "predecessors", "resource_units",
-        }, "activity")
+        }, "activity"))
         name = a["id"]
         if not isinstance(name, str) or not name or name in entries:
             raise ReferenceContractError("activity IDs must be unique")
