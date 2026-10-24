@@ -114,7 +114,7 @@ def test_critical_aliases_carry_consistent_units_and_lineage() -> None:
     # Repeated symbols may have different human descriptions of origin, but
     # the same physical dimensional type. No monetary proxy into unit_g.
     for token, expected in (
-        ("Q_i", "activity-unit"),
+        ("Q_i", "activity-unit quantity"),
         ("F_i(m)", "activity-units/operating hour"),
         ("\\kappa_r", "good-units/operating hour"),
         ("p_{g(r)}", "BRL/good-unit"),
