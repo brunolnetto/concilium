@@ -342,7 +342,7 @@ $$\min_{\{r\},\{[j_r^0,j_r^1]\}} \ \underbrace{\sum_r\sum_{j=j_r^0}^{j_r^1} c_r^
 
 $$\text{s.a.}\quad \bigl|\{r:\text{type}(r)=\tau,\ j\in[j_r^0,j_r^1]\}\bigr| \ge n_j(\tau) \quad\forall j,\,\forall\tau$$
 
-Para tipo único fungível (instâncias perfeitamente substituíveis, com custo de permanência e de mob/demob homogêneos), a Parte XIV (Fase 4) apresenta um algoritmo exato por decomposição em níveis do perfil de demanda.
+Para o tipo fungível homogêneo, a Parte XIV (Fase 4) apresenta otimização exata **condicionada à atribuição fixa das demandas às camadas de nível**. Essa atribuição é apenas uma das possibilidades de alocar instâncias intercambiáveis; a optimalidade global sobre todas as atribuições não decorre da decomposição e permanece pendente em #16.
 
 **Condição de perpetuação** (entre duas alocações consecutivas, com gap em semanas):
 
@@ -398,7 +398,7 @@ $$C^{pool,o}\ge\sum_i C_i^{K,act}\quad\text{somente sob bases comparáveis, cobe
 
 a soma por atividade é um **diagnóstico**, não o contrato financeiro autoritativo. No baseline, sem standby positivo e com taxas/demanda comparáveis, a igualdade pode ocorrer. No regime descontado, \(C^{pool,o}=\sum(c^{act}d+c^{idle}s)\), jamais \(\sum T^{perm}c^{sem}\) como identidade geral. MOB/DEMOB pertence exclusivamente a IND; ausência de evidência implica `NOT_EVALUATED`.
 
-**Escopo do algoritmo de dimensionamento.** A decomposição por níveis empregada na Parte XIV, Fase 4 é exata para um tipo de recurso fungível homogêneo — instâncias perfeitamente substituíveis entre si, com custo de permanência e de mobilização/desmobilização idênticos. Variantes multi-tipo com recursos não perfeitamente substituíveis (capacidades ou custos heterogêneos dentro do mesmo tipo nominal) constituem um problema de otimização combinatória distinto, de complexidade superior à do caso fungível (cf. Bertossi, Carraresi & Gallo 1987); nesses casos, os tipos devem ser subdivididos em subtipos homogêneos antes de aplicar o algoritmo desta seção.
+**Escopo do algoritmo de dimensionamento.** A decomposição por níveis empregada na Parte XIV, Fase 4 é exata **apenas com atribuição de demanda por nível já fixada** — mesmo com tipo homogêneo fungível, uma realocação de instâncias entre semanas pode melhorar a solução sob limites de gap. Portanto, o algoritmo atual **não prova mínimo global** sobre atribuições intercambiáveis, mesmo quando cronograma e demanda física estão fixados. Variantes multi-tipo com recursos não perfeitamente substituíveis (capacidades ou custos heterogêneos dentro do mesmo tipo nominal) constituem um problema de otimização combinatória distinto, de complexidade superior à do caso fungível (cf. Bertossi, Carraresi & Gallo 1987); nesses casos, os tipos devem ser subdivididos em subtipos homogêneos antes de aplicar o algoritmo desta seção.
 
 ---
 
@@ -657,7 +657,7 @@ SAÍDA: {q_{ij}, C_{ij}^{op}, C_i^{op}, M_i, p_i^{op}, C_i^{cat}} ∀i
 
 ```
 // Decomposição por nível (histograma): para um tipo fungível homogêneo, a alocação
-// ótima decompõe-se em decisões independentes por "fatia" de altura unitária — cada
+// solução ótima APENAS entre decisões keep/split dentro de camadas físicas FIXAS; cada
 // fatia corresponde a uma cadeia de perpetuação da Parte IX. Ref.: SDVSP — Freling,
 // Wagelmans & Paixão (2001).
 
@@ -691,9 +691,9 @@ SAÍDA: C^{pool}, C^{pool,β}, C^{MOB,eq}, C^{MOB,eq,β}
 
 **Reconciliação:** no regime de tarifas distintas, o livro de instâncias deve publicar tanto $C^{pool}=\sum_{gj}(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$ quanto $C^{pool,\beta}=\sum_{gj}(1+\beta_{cat(g)})(c_{gj}^{act}d_{gj}+c_{gj}^{idle}s_{gj})$, com tarifas normalizadas para a mesma base semanal. $C^{MOB/DEMOB}$ e $C^{MOB/DEMOB,\beta}$ entram somente no livro de indiretos. No regime homogêneo-base, a expressão anterior $\sum_\tau sem_\tau c_\tau^{sem}$ é caso particular.
 
-**Oráculo de cadeias:** o teste independente `tests/unit/application/scheduling/test_formalism_p16b_exact_level_contracts.py` enumera todas as escolhas viáveis keep/split por camada, prova custo mínimo em horizonte pequeno e desempata pelo menor número de movimentos. Essa prova é condicionada ao perfil físico e ao cronograma fixados; não certifica `PROJECT_GO`.
+**Dois escopos distintos de oráculo:** `test_formalism_p16b_exact_level_contracts.py` enumera keep/split apenas para a **decomposição fixa por níveis**. O falsificador independente `tests/reference_formalism/test_p13c_regime_parity_oracle.py` enumera também a **reatribuição fungível de instâncias**. Com demanda `(2,1,1,2)`, tarifa ativa 5, idle 1, MOB+DEMOB 30, `max_idle_gap=1`, o algoritmo por níveis custa **120**, enquanto duas cadeias atribuídas alternativamente custam **92**. Assim, a optimalidade global com demanda física fixa é **não demonstrada**; bloqueia GO e precisa ser corrigida em #16.
 
-**Limite de optimalidade:** a minimização de cadeias por nível é exata somente **condicionada ao perfil de equipes e cronograma fixados**. A otimização global de {m, cronograma, pool} permanece questão conjunta (#15/#16). Standby é presença paga não demandada, não eficiência de produção.
+**Limite de optimalidade:** o subproblema P16 implementado é exato apenas com **perfil físico, cronograma e atribuição das instâncias às camadas de nível fixados**. Não é prova de ótimo sobre todas as atribuições fungíveis, muito menos sobre `{m, cronograma, pool}` conjuntamente (#15/#16). Standby é presença paga não demandada, não perda produtiva. Certificação financeira pode reconciliar custos de uma solução viável sem afirmar sua optimalidade.
 
 ### XIV.5 — Fase 5: Estoque (Consumíveis)
 
