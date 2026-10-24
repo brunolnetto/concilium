@@ -212,3 +212,47 @@ def test_real_p18_and_p19_adapters_reconcile_without_repricing() -> None:
     assert balanced.ledger.consumable_v == F(2)
     assert balanced.ledger.indirect == F(3, 2)
     assert balanced.total == F(15, 2)
+
+
+def test_mixed_planned_and_observed_acquisition_is_not_booked_twice() -> None:
+    pool, consumption, _ = _case()
+    evidence = consumption.evidence[0]
+    observed = replace(evidence, source_id="observed-2", kind="OBSERVED_OPERATION")
+    extra = CostPosting(
+        ("CONSUMABLE", "observed-2"), PostingNature.ACQUISITION,
+        "MAT", F(5, 2), "ORE", "2026-W01",
+    )
+    fraud = replace(
+        consumption, evidence=consumption.evidence + (observed,),
+        journal=ExclusiveCostLedger(consumption.journal.postings + (extra,)),
+    )
+    with pytest.raises(ValueError, match="planned and observed"):
+        reconcile_financial_sources(pool, fraud)
+
+
+def test_duplicate_zero_quantity_source_and_empty_week_are_rejected() -> None:
+    pool, consumption, _ = _case()
+    zero = AcquisitionEvidenceLine(
+        "z", "PLANNED_CLOSED_SCOPE", "A", "2026-W02",
+        PhysicalPurchaseMeasure("ORE", F(0), "kg", F(0), "kg", F(0)),
+    )
+    with pytest.raises(ValueError, match="duplicate acquisition evidence"):
+        reconcile_financial_sources(
+            pool, replace(consumption, evidence=consumption.evidence + (zero, zero))
+        )
+    bad_pool = ExclusiveCostLedger((
+        CostPosting(("UNKNOWN_WEEK",), PostingNature.INDIRECT,
+                    "IND", F(1), "SITE", None),
+    ))
+    empty = PhysicalConsumptionJournalResult(bad_pool, ())
+    with pytest.raises(ValueError, match="weekly provenance"):
+        reconcile_financial_sources(bad_pool, empty)
+
+
+def test_zero_activity_has_exact_zero_balances_without_fabricated_costs() -> None:
+    pool = ExclusiveCostLedger(())
+    consumption = PhysicalConsumptionJournalResult(pool, ())
+    result = reconcile_financial_sources(pool, consumption)
+    assert not result.weeks
+    assert result.direct == result.indirect == result.total == F(0)
+    assert not result.holding_evidence_present
