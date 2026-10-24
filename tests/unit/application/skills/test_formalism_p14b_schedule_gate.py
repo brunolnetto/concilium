@@ -19,7 +19,7 @@ from concilium.domain.models.canonical import (
 )
 
 
-def _canonical(percent: float) -> CanonicalModel:
+def _canonical(percent: float, *, unidade: str = "m3") -> CanonicalModel:
     return CanonicalModel(
         meta=Meta(gerado_em=datetime.now(UTC), contexto_id="p14b-e2e"),
         projeto=Projeto(
@@ -37,7 +37,7 @@ def _canonical(percent: float) -> CanonicalModel:
         eap=[
             EapItem(
                 item_id="i1", ordem=1, cpu_id="CPU-TEST",
-                descricao="work", unidade="m3", quantitativo=300.0,
+                descricao="work", unidade=unidade, quantitativo=300.0,
             )
         ],
         praticabilidade=Praticabilidade(
@@ -228,13 +228,63 @@ def test_p14c_nested_origin_and_audit_accept_real_catalog_graph() -> None:
     assert production["auditoria"]["versao"]
     assert production["grafo_sinergia"]
     result = run_cronograma(
-        _canonical(1.0),
+        _canonical(1.0, unidade="t"),
         {"certification_intent": "CERTIFIED",
          "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
         {"cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
          "produtividades": [production]},
     )
-    assert not any(
-        v.codigo in ("VAL-CRON-PROD-CERT", "VAL-CRON-PROD-INVALID")
-        for v in result.validacoes
-    ), result.validacoes
+    assert not result.has_errors, result.validacoes
+    schedule = result.canonical.cronograma
+    assert schedule is not None
+    assert schedule.is_feasible
+    activity = next(a for a in schedule.scheduled_activities if a.activity_id == "i1")
+    assert not activity.produtividade_fallback_aplicada
+    assert sum(c.qtd_executada for c in activity.distribuicao_semanal.values()) == pytest.approx(300.0)
+
+
+def _real_catalog_productivity() -> dict:
+    root = Path(__file__).resolve().parents[4]
+    path = root / "config/catalogos/rfi-r02/produtividades/PROD-USINAGEM-CBUQ-RFI-001.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _run_with_production(production: dict, *, intent: str = "CERTIFIED", unidade: str = "t"):
+    return run_cronograma(
+        _canonical(1.0, unidade=unidade),
+        {"certification_intent": intent,
+         "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {"cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
+         "produtividades": [production]},
+    )
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_p14c_orphan_graph_capacity_fails_before_scheduler(intent: str) -> None:
+    production = _real_catalog_productivity()
+    production["grafo_sinergia"]["capacidades"][0]["elemento_id"] = "NONEXISTENT-EQUIPMENT"
+    outcome = _run_with_production(production, intent=intent)
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_p14c_graph_without_physical_capacity_fails_before_scheduler(intent: str) -> None:
+    production = _real_catalog_productivity()
+    production["grafo_sinergia"]["capacidades"] = []
+    outcome = _run_with_production(production, intent=intent)
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-INVALID" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_p14c_mismatched_eap_and_production_units_fail_closed(intent: str) -> None:
+    # The catalog says t/h. A Q expressed in m3 cannot consume that rate
+    # without a separately verified density/conversion contract.
+    production = _real_catalog_productivity()
+    outcome = _run_with_production(production, intent=intent, unidade="m3")
+    assert outcome.has_errors
+    assert any(v.codigo == "VAL-CRON-PROD-UNIT" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
