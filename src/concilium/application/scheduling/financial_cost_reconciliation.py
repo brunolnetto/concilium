@@ -17,6 +17,7 @@ from .physical_stock_holding import HoldingJournal
 
 if TYPE_CHECKING:
     from concilium.domain.models.canonical import DistribuicaoSemanal
+
     from .realized_financial_metrics import RealizedFinancialProjection
 
 EventId = tuple[str, ...]
@@ -88,8 +89,15 @@ class ExactFinancialReconciliation:
         )
         projected = {week.week: week for week in result.weeks}
         existing = {week.week: week for week in self.weeks}
-        if len(existing) != len(self.weeks) or set(projected) != set(existing):
+        if len(existing) != len(self.weeks) or not set(existing).issubset(projected):
             raise ValueError("P20 week provenance must match physical/financial projection")
+        if any(
+            week not in existing and (
+                row.contractual_k or row.physically_purchased_v or row.indirect
+            )
+            for week, row in projected.items()
+        ):
+            raise ValueError("unattributed financial events in physical-only week")
         if any(
             (
                 source.contractual_k,
