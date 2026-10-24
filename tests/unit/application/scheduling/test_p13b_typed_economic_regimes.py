@@ -41,6 +41,7 @@ from concilium.domain.models.canonical._estoque_consumiveis import (
 )
 from concilium.domain.models.canonical._pool_recursos import RecursoContrato
 
+
 def canonical(**overrides: object) -> RecursoContrato:
     data: dict[str, object] = {
         "contrato_id": "C-01", "tipo_id": "EXC", "quantidade_contratada": 1,
