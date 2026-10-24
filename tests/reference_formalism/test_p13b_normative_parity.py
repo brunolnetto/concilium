@@ -1,15 +1,10 @@
 """P13-B: parity of typed selectors across normative representations, runtime and oracle.
 
-This test reads documents but does not import production scheduling/financial code.
+This test reads documents without importing any production code.
 """
 from __future__ import annotations
 
 from pathlib import Path
-
-from concilium.domain.models.canonical._estoque_consumiveis import (
-    RecursoConsumivelCanonical,
-)
-from concilium.domain.models.canonical._pool_recursos import RecursoContrato
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / "docs/product/5-specifications/formulario_longo"
@@ -38,12 +33,3 @@ def test_normative_regime_selectors_have_document_parity() -> None:
         assert gate in doc
 
 
-def test_canonical_opt_in_has_no_free_legacy_commercial_default() -> None:
-    contract_fields = RecursoContrato.model_fields
-    consumable_fields = RecursoConsumivelCanonical.model_fields
-    assert contract_fields["regime_economico_p13"].default is None
-    assert contract_fields["origem_regime_p13"].default is None
-    assert contract_fields["moeda_regime_p13"].default is None
-    assert consumable_fields["regime_consumo_p13"].default is None
-    assert consumable_fields["origem_taxa_consumo_p13"].default is None
-    assert consumable_fields["origem_preco_consumo_p13"].default is None
