@@ -37,7 +37,7 @@ C_{\mathrm{keep}}=k\,c_g^{idle}
 C_{\mathrm{split}}=c_g^{demob}+c_g^{mob},
 \]
 
-desde que \(\mathrm{max\_idle\_gap}\ge k\), desligamento/remobilização admissíveis e não exista mínimo de permanência ou lead time não cumprido. Se \(C_{\mathrm{keep}}<C_{\mathrm{split}}\), manter standby é economicamente ótimo; se maior, separar contratos é melhor; em empate, a política de escolha determinística deve ser declarada. Sob outras condições, o contrafactual pode ser **inviável**, não apenas mais caro. Standby economicamente ótimo não implica perda de produtividade \(\eta_s\).
+desde que \(\mathrm{max\_idle\_gap}\ge k\), desligamento/remobilização admissíveis e não exista mínimo de permanência ou lead time não cumprido. Se \(C_{\mathrm{keep}}<C_{\mathrm{split}}\), manter standby é economicamente ótimo; se maior, separar contratos é melhor; **em empate e com ambas as estratégias viáveis, manter a cadeia (KEEP) é o desempate determinístico canônico**, evitando transições desnecessárias (CONVENCOES_NORMATIVAS.md, §4). Se houver restrições adicionais não verificadas, a escolha é NOT_EVALUATED, nunca um KEEP presumido. Sob outras condições, o contrafactual pode ser **inviável**, não apenas mais caro. Standby economicamente ótimo não implica perda de produtividade \(\eta_s\).
 
 Falsificador: \(k=2\), \(c^{act}=100\), \(c^{idle}=25\), \(c^{mob}=40\), \(c^{demob}=40\). Manter custa 50 e separar custa 80; \(\sum x\,c^{act}\) seria 200 nas duas semanas idle, portanto a igualdade do baseline é **falsa** no regime descontado. No baseline \(c^{idle}=100\), manter custa 200 e separar custa 80, de modo que a decisão ótima pode se inverter.
 
