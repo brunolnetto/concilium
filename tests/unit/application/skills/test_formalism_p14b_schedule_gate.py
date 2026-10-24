@@ -77,7 +77,7 @@ def test_incomplete_scope_reports_validation_not_fake_extra_weeks() -> None:
 
 
 def test_p14c_unknown_certification_intent_fails_before_schedule() -> None:
-    canonical = _canonical(100.0)
+    canonical = _canonical(1.0)
     outcome = run_cronograma(
         canonical,
         {
@@ -92,7 +92,7 @@ def test_p14c_unknown_certification_intent_fails_before_schedule() -> None:
 
 
 def test_p14c_certified_missing_fm_never_publishes_price_or_schedule() -> None:
-    canonical = _canonical(100.0)
+    canonical = _canonical(1.0)
     outcome = run_cronograma(
         canonical,
         {
@@ -112,7 +112,7 @@ def test_p14c_certified_missing_fm_never_publishes_price_or_schedule() -> None:
 
 
 def test_p14c_preview_with_arbitrary_productivity_is_not_feasible() -> None:
-    canonical = _canonical(100.0)
+    canonical = _canonical(1.0)
     outcome = run_cronograma(
         canonical,
         {
