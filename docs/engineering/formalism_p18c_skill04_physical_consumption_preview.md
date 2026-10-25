@@ -1,0 +1,23 @@
+# P18-C1 — Skill 04 weekly consumption preview (Wave 2, issue #18)
+
+## Scope and authority
+
+This is a **preparatory, pure read-only adapter** from the typed final canonical Skill 04 weekly schedule to the already-implemented P18-B physical purchase ledger and P20-A exact financial reconciler. It does **not** edit the canonical financial `resultado`, change Skill 05/06 production behavior, issue invoices, declare inventory cost or authorize PROJECT_GO. It does not substitute for full P18-C Skill 05/06 integration, #17-C or #23.
+
+The entry point `book_skill04_planned_consumption_preview` consumes a typed `CanonicalModel`, a **P17 contractual-only** `ExclusiveCostLedger`, an explicit per-activity `PhysicallyPricedGood`/MAT-or-COMB map, plus typed `OBSERVED_OPERATION` hours for every scheduled hour-rated good/week. Planned Q never implies operating hours or observations; monetary proxies are rejected.
+
+The adapter performs:
+
+1. Refuse missing/infeasible physical schedules, duplicate IDs, fallback productivity, missing EAP activity units, missing or conflicting good mappings, malformed/non-ISO weeks, non-finite weekly Q and non-closing physical scope. Numeric Q is exactly rationalized from the serialized decimal text with explicit `1e-6` unit tolerance for float-origin closure; this is not an independent physical certification.
+2. Generate stable per-(activity,good,week) `PLANNED_CLOSED_SCOPE` evidence **only when Q > 0** for physically declared output-scaled goods, preserving each week's unit from EAP.
+3. For hourly goods, require an explicit independent `OBSERVED_OPERATION` evidence on **every** scheduled week, even a week with zero delivered Q. No `Q/F(m)` or `F(m)*hours` assumption is made.
+4. Book `U_g,j p_g` once into the P18-B `ExclusiveCostLedger` and independently reconcile exact P17→P18 event identities using P20-A; extra or mutated MAT/COMB source lines fail closed. No pricing performed twice.
+
+The return authorities `P18C_SKILL04_PLANNED_PREVIEW_NOT_PROJECT_GO`, `PHYSICAL_CONSUMPTION_EVIDENCE_NOT_PROJECT_GO`, and `FINANCIAL_SOURCES_RECONCILED_PREVIEW_NOT_PROJECT_GO` remain distinct. **No stage emits a certificate or asserts that a planned acquisition is an observed purchase.**
+
+## Deliberate limits / next packages
+
+- The pricing map is a typed explicit dependency **supplied by the caller**; there is **no automatic source-backed RFI/CPU catalog extraction** in this package. Provenance beyond P18-B type/identity checks remains a separate prerequisite.
+- Full Skill 05 ownership and Skill 06 publication/margin integration, delivery/receipt timing, stock holding, actual operating-hour capture, contract financial fingerprints and independent numerical oracles are future P18-C2 / P17-C / P19-C / P20 / P23 gates.
+- Tests in `tests/unit/application/scheduling/test_formalism_p18c_skill04_consumption_preview.py` include partial-week 2-activity MAT+COMB exact arithmetic, non-mutation, scope closure, zero Q, duplicate hours, wrong weeks, fallback, prior MAT/COMB, dimension mismatch, price conflict and legacy monetary proxy.
+- The package is prepared on a separate Wave 2 **draft** and is not eligible for merge until the formal DAG wave closure constraints are satisfied. GitHub Actions currently fails at runner startup due to billing; local tests must be executed for this new HEAD before claiming green results.
