@@ -26,7 +26,8 @@ from .physical_consumption_rates import ConsumptionBasis, PhysicallyPricedGood
 
 PricedCategory = Literal["MAT", "COMB"]
 ActivityGoods = Mapping[str, Mapping[str, tuple[PhysicallyPricedGood, PricedCategory]]]
-_SCOPE_TOLERANCE = Fraction(1, 1_000_000)
+_ABS_SCOPE_TOLERANCE = Fraction(1, 1_000_000)
+_REL_SCOPE_TOLERANCE = Fraction(1, 1_000_000_000)
 
 
 @dataclass(frozen=True)
@@ -158,7 +159,10 @@ def book_skill04_planned_consumption_preview(
                 else:
                     # Hours remain a separate observation, even on a zero-Q week.
                     hourly_requirements.add((activity_id, good_id, week))
-        if abs(weekly_q - expected_q) > _SCOPE_TOLERANCE:
+        # A fixed absolute epsilon alone could certify an entirely missing
+        # micro-activity. Require both bounded absolute and relative error.
+        tolerance = min(_ABS_SCOPE_TOLERANCE, expected_q * _REL_SCOPE_TOLERANCE)
+        if abs(weekly_q - expected_q) > tolerance:
             raise ValueError("Skill04 weekly physical Q does not close activity scope")
 
     observed_keys: set[tuple[str, str, str]] = set()
