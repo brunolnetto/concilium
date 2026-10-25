@@ -8,7 +8,7 @@ The entry point `book_skill04_planned_consumption_preview` consumes a typed `Can
 
 The adapter performs:
 
-1. Refuse missing/infeasible physical schedules, duplicate IDs, fallback productivity, missing EAP activity units, missing or conflicting good mappings, malformed/non-ISO weeks, non-finite weekly Q and non-closing physical scope. Numeric Q is exactly rationalized from the serialized decimal text with explicit `1e-6` unit tolerance for float-origin closure; this is not an independent physical certification.
+1. Refuse missing/infeasible physical schedules, duplicate IDs, fallback productivity, missing EAP activity units, missing or conflicting good mappings, malformed/non-ISO weeks, non-finite weekly Q and non-closing physical scope. Numeric Q is exactly rationalized from the serialized decimal text with the **stricter** of an absolute `1e-6` unit tolerance and a relative `1e-9 * Q` tolerance for float-origin closure; this is not an independent physical certification.
 2. Generate stable per-(activity,good,week) `PLANNED_CLOSED_SCOPE` evidence **only when Q > 0** for physically declared output-scaled goods, preserving each week's unit from EAP.
 3. For hourly goods, require an explicit independent `OBSERVED_OPERATION` evidence on **every** scheduled week, even a week with zero delivered Q. No `Q/F(m)` or `F(m)*hours` assumption is made.
 4. Book `U_g,j p_g` once into the P18-B `ExclusiveCostLedger` and independently reconcile exact P17→P18 event identities using P20-A; extra or mutated MAT/COMB source lines fail closed. No pricing performed twice.
@@ -19,5 +19,5 @@ The return authorities `P18C_SKILL04_PLANNED_PREVIEW_NOT_PROJECT_GO`, `PHYSICAL_
 
 - The pricing map is a typed explicit dependency **supplied by the caller**; there is **no automatic source-backed RFI/CPU catalog extraction** in this package. Provenance beyond P18-B type/identity checks remains a separate prerequisite.
 - Full Skill 05 ownership and Skill 06 publication/margin integration, delivery/receipt timing, stock holding, actual operating-hour capture, contract financial fingerprints and independent numerical oracles are future P18-C2 / P17-C / P19-C / P20 / P23 gates.
-- Tests in `tests/unit/application/scheduling/test_formalism_p18c_skill04_consumption_preview.py` include partial-week 2-activity MAT+COMB exact arithmetic, non-mutation, scope closure, zero Q, duplicate hours, wrong weeks, fallback, prior MAT/COMB, dimension mismatch, price conflict and legacy monetary proxy.
+- Tests in `tests/unit/application/scheduling/test_formalism_p18c_skill04_consumption_preview.py` include partial-week 2-activity MAT+COMB exact arithmetic, non-mutation, scope closure, zero Q, duplicate hours, wrong weeks, fallback, prior MAT/COMB, dimension mismatch, price conflict, EAP subactivity mapping, non-finite output, missing micro-activity output and legacy monetary proxy.
 - The package is prepared on a separate Wave 2 **draft** and is not eligible for merge until the formal DAG wave closure constraints are satisfied. GitHub Actions currently fails at runner startup due to billing; local tests must be executed for this new HEAD before claiming green results.
