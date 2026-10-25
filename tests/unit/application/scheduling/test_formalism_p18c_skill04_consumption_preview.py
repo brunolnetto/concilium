@@ -18,7 +18,7 @@ from concilium.application.scheduling.skill04_consumption_preview import (
     book_skill04_planned_consumption_preview,
 )
 from concilium.domain.models.canonical import (
-    CanonicalModel, Coordenadas, Cronograma, DistribuicaoSemanal, EapItem,
+    Atividade, CanonicalModel, Coordenadas, Cronograma, DistribuicaoSemanal, EapItem,
     Meta, Projeto, RegimeTrabalho, ScheduledActivityCanonical,
 )
 
@@ -205,5 +205,49 @@ def test_legacy_monetary_proxy_is_not_a_physical_catalog_declaration() -> None:
     with pytest.raises(ValueError, match="physical catalog"):
         book_skill04_planned_consumption_preview(
             _canonical(), _pool(), goods,
+            observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+        )
+
+
+def test_micro_scope_cannot_disappear_under_absolute_rounding_tolerance() -> None:
+    canonical = _canonical()
+    canonical.eap[0].quantitativo = 0.00000001
+    week = canonical.cronograma.scheduled_activities[0].distribuicao_semanal["2026-W19"]
+    week.qtd_executada = 0.0
+    with pytest.raises(ValueError, match="does not close"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
+            observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+        )
+
+
+def test_subactivity_to_eap_unit_mapping_is_explicit() -> None:
+    canonical = _canonical()
+    canonical.eap[0].item_id = "EAP-X"
+    canonical.eap[1].item_id = "EAP-Y"
+    canonical.atividades = [
+        Atividade(
+            atividade_id="A", eap_item_id="EAP-X", descricao="activity A",
+            fracao_quantitativo=1, quantitativo_atividade=400, cpu_id="CPU-A",
+        ),
+        Atividade(
+            atividade_id="B", eap_item_id="EAP-Y", descricao="activity B",
+            fracao_quantitativo=1, quantitativo_atividade=100, cpu_id="CPU-B",
+        ),
+    ]
+    result = book_skill04_planned_consumption_preview(
+        canonical, _pool(), _declared(),
+        observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+    )
+    assert result.consumption.variable_cost == F(25000) + F(12, 5)
+
+
+def test_nonfinite_weekly_scope_never_enters_financial_ledger() -> None:
+    canonical = _canonical()
+    row = canonical.cronograma.scheduled_activities[0].distribuicao_semanal["2026-W19"]
+    row.qtd_executada = float("nan")
+    with pytest.raises(ValueError, match="finite nonnegative"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
             observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
         )
