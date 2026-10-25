@@ -243,6 +243,46 @@ def test_p14c_nested_origin_and_audit_accept_real_catalog_graph() -> None:
     assert sum(c.qtd_executada for c in activity.distribuicao_semanal.values()) == pytest.approx(300.0)
 
 
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_p14c_valid_new_schedule_invalidates_old_financial_projections(intent: str) -> None:
+    """A valid F(m) does not make a financial cube from an old timeline current."""
+    production = _real_catalog_productivity()
+    historical = _canonical(1.0, unidade="t").model_copy(
+        update={
+            "resultado": object(),
+            "resultado_reconciliado": object(),
+            "ponto_equilibrio": [object()],
+            "cubo_analitico": object(),
+            "s_curve": object(),
+            "plan_space_result": object(),
+            "memorial_calculo_bdi": object(),
+            # This run has no replenishable-resource schedule, so old stock
+            # must also be replaced by the newly computed *physical* output.
+            "recursos_consumiveis": [object()],
+            "resumo_estoque_consumiveis": [object()],
+        }
+    )
+    outcome = run_cronograma(
+        historical,
+        {"certification_intent": intent, "num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {"cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
+         "produtividades": [production]},
+    )
+    assert not outcome.has_errors, outcome.validacoes
+    schedule = outcome.canonical.cronograma
+    assert schedule is not None and schedule.is_feasible
+    assert not any(v.codigo == "VAL-CRON-PROD-PREVIEW" for v in outcome.validacoes)
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.resultado_reconciliado is None
+    assert outcome.canonical.ponto_equilibrio == []
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.s_curve is None
+    assert outcome.canonical.plan_space_result is None
+    assert outcome.canonical.memorial_calculo_bdi is None
+    assert outcome.canonical.recursos_consumiveis == []
+    assert outcome.canonical.resumo_estoque_consumiveis == []
+
+
 def _real_catalog_productivity() -> dict:
     root = Path(__file__).resolve().parents[4]
     path = root / "config/catalogos/rfi-r02/produtividades/PROD-USINAGEM-CBUQ-RFI-001.json"
