@@ -358,8 +358,9 @@ def test_week_calendar_iso_rollover_and_gaps() -> None:
         ),
     }
     # ISO 2026 has 53 weeks: B must be in W53, not 2027-W01.
+    # Do not reuse a contractual pool line from W19 on a W52-only project.
     result = book_skill04_planned_consumption_preview(
-        canonical, _pool(), _declared(),
+        canonical, ExclusiveCostLedger(()), _declared(),
         observed_hours=(_hours("A", "2026-W52"), _hours("B", "2026-W53")),
     )
     assert result.consumption.variable_cost == F(25000) + F(12, 5)
