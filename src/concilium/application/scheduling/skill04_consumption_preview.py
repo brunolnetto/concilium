@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from fractions import Fraction
 from math import isfinite
 from typing import Literal
@@ -43,30 +43,70 @@ def _exact_q(value: float) -> Fraction:
     return Fraction(str(value))
 
 
+def _scope_tolerance(expected: Fraction) -> Fraction:
+    """A relative cap prevents tiny quantities from being erased by epsilon."""
+    return min(_ABS_SCOPE_TOLERANCE, expected * _REL_SCOPE_TOLERANCE)
+
+
 def _activity_scope_units(canonical: CanonicalModel) -> dict[str, tuple[Fraction, str]]:
+    """Skill04's *final* activity IDs are EAP item_ids, not Skill01 subactivity IDs.
+
+    Skill01 subdivisions must still reconcile to each parent EAP item, even
+    though Skill04 currently schedules and distributes each parent in aggregate.
+    """
     eap = {item.item_id: item for item in canonical.eap}
     if len(eap) != len(canonical.eap):
         raise ValueError("duplicate EAP item identity")
-    activities = canonical.atividades
-    if activities:
-        result: dict[str, tuple[Fraction, str]] = {}
-        for activity in activities:
-            if activity.atividade_id in result or activity.eap_item_id not in eap:
-                raise ValueError("duplicate activity or missing EAP mapping")
-            item = eap[activity.eap_item_id]
-            if not item.unidade:
-                raise ValueError("physical EAP unit is required")
-            result[activity.atividade_id] = (
-                _exact_q(activity.quantitativo_atividade), item.unidade
-            )
-        return result
-    # Legacy Skill04 may schedule EAP items directly, without canonical subactivities.
-    if any(not item.unidade for item in eap.values()):
+    if not eap or any(not item.unidade for item in eap.values()):
         raise ValueError("physical EAP unit is required")
-    return {
+    scopes = {
         item_id: (_exact_q(item.quantitativo), item.unidade or "")
         for item_id, item in eap.items()
     }
+    if canonical.atividades:
+        totals: dict[str, Fraction] = {item_id: Fraction(0) for item_id in eap}
+        fractions: dict[str, Fraction] = {item_id: Fraction(0) for item_id in eap}
+        seen: set[str] = set()
+        for activity in canonical.atividades:
+            if (
+                activity.atividade_id in seen
+                or activity.eap_item_id not in eap
+                or activity.cpu_id != eap[activity.eap_item_id].cpu_id
+            ):
+                raise ValueError("duplicate subactivity, missing EAP mapping or CPU mismatch")
+            seen.add(activity.atividade_id)
+            parent = activity.eap_item_id
+            totals[parent] += _exact_q(activity.quantitativo_atividade)
+            fractions[parent] += _exact_q(activity.fracao_quantitativo)
+        for item_id, (scope, _) in scopes.items():
+            if (
+                not totals[item_id]
+                or abs(totals[item_id] - scope) > _scope_tolerance(scope)
+                or abs(fractions[item_id] - 1) > _REL_SCOPE_TOLERANCE
+            ):
+                raise ValueError("Skill01 subactivity scope/fractions do not close parent EAP")
+    return scopes
+
+
+def _scheduled_week_keys(canonical: CanonicalModel, start: int, end: int, duration: int) -> set[str]:
+    """Rebuild exact ISO coverage from the same project-start offset as Skill04.
+
+    Require zero-output weeks within the materialized interval, since hourly
+    costs/observations cannot be dropped by removing a zero-Q dictionary key.
+    """
+    if (
+        type(start) is not int or type(end) is not int or type(duration) is not int
+        or start < 0 or end < start or duration < end - start + 1
+        or end - start > 5200
+    ):
+        raise ValueError("invalid Skill04 scheduled week interval")
+    base_date = canonical.projeto.data_inicio
+    monday = base_date - timedelta(days=base_date.weekday())
+    weeks: set[str] = set()
+    for offset in range(start, end + 1):
+        year, week, _ = (monday + timedelta(weeks=offset)).isocalendar()
+        weeks.add(f"{year}-W{week:02d}")
+    return weeks
 
 
 def _iso_week(week: str) -> None:
@@ -141,6 +181,13 @@ def book_skill04_planned_consumption_preview(
         weekly_q = Fraction(0)
         if not activity.distribuicao_semanal:
             raise ValueError("Skill04 requires a nonempty physical weekly distribution")
+        expected_weeks = _scheduled_week_keys(
+            canonical, activity.start_week, activity.end_week, activity.duration_weeks
+        )
+        for week in activity.distribuicao_semanal:
+            _iso_week(week)
+        if set(activity.distribuicao_semanal) != expected_weeks:
+            raise ValueError("Skill04 weekly distribution does not cover scheduled interval")
         for week, row in sorted(activity.distribuicao_semanal.items()):
             _iso_week(week)
             scheduled_weeks.add((activity_id, week))
@@ -161,7 +208,7 @@ def book_skill04_planned_consumption_preview(
                     hourly_requirements.add((activity_id, good_id, week))
         # A fixed absolute epsilon alone could certify an entirely missing
         # micro-activity. Require both bounded absolute and relative error.
-        tolerance = min(_ABS_SCOPE_TOLERANCE, expected_q * _REL_SCOPE_TOLERANCE)
+        tolerance = _scope_tolerance(expected_q)
         if abs(weekly_q - expected_q) > tolerance:
             raise ValueError("Skill04 weekly physical Q does not close activity scope")
 
