@@ -8,18 +8,30 @@ from fractions import Fraction as F
 import pytest
 
 from concilium.application.scheduling.contractual_cost_ledger import (
-    CostPosting, ExclusiveCostLedger, PostingNature,
+    CostPosting,
+    ExclusiveCostLedger,
+    PostingNature,
 )
 from concilium.application.scheduling.physical_consumption_journal import WeeklyConsumptionEvidence
 from concilium.application.scheduling.physical_consumption_rates import (
-    ConsumptionBasis, PhysicalConsumptionRate, PhysicallyPricedGood,
+    ConsumptionBasis,
+    PhysicalConsumptionRate,
+    PhysicallyPricedGood,
 )
 from concilium.application.scheduling.skill04_consumption_preview import (
     book_skill04_planned_consumption_preview,
 )
 from concilium.domain.models.canonical import (
-    Atividade, CanonicalModel, Coordenadas, Cronograma, DistribuicaoSemanal, EapItem,
-    Meta, Projeto, RegimeTrabalho, ScheduledActivityCanonical,
+    Atividade,
+    CanonicalModel,
+    Coordenadas,
+    Cronograma,
+    DistribuicaoSemanal,
+    EapItem,
+    Meta,
+    Projeto,
+    RegimeTrabalho,
+    ScheduledActivityCanonical,
 )
 
 
