@@ -26,13 +26,13 @@ from concilium.domain.models.canonical import (
 def _canonical() -> CanonicalModel:
     activities = [
         ScheduledActivityCanonical(
-            activity_id="A", start_week=0, end_week=1, duration_weeks=1,
+            activity_id="A", start_week=0, end_week=0, duration_weeks=1,
             distribuicao_semanal={"2026-W19": DistribuicaoSemanal(
                 num_equipes=1, qtd_executada=400, qtd_acumulada=400, pct=1,
             )},
         ),
         ScheduledActivityCanonical(
-            activity_id="B", start_week=1, end_week=2, duration_weeks=1,
+            activity_id="B", start_week=1, end_week=1, duration_weeks=1,
             distribuicao_semanal={"2026-W20": DistribuicaoSemanal(
                 num_equipes=1, qtd_executada=100, qtd_acumulada=100, pct=1,
             )},
@@ -177,26 +177,65 @@ def test_fail_closed_adversarial_cases(change: str, error: str) -> None:
         )
 
 
-def test_zero_output_week_posts_no_material_and_requires_observed_hours() -> None:
+def test_zero_output_middle_week_posts_no_material_but_requires_observed_hours() -> None:
     canonical = _canonical()
     activity = canonical.cronograma.scheduled_activities[0]
-    activity.distribuicao_semanal["2026-W18"] = DistribuicaoSemanal(
-        num_equipes=1, qtd_executada=0, qtd_acumulada=0, pct=0,
+    activity.end_week = 2
+    activity.duration_weeks = 3
+    activity.distribuicao_semanal["2026-W19"].qtd_executada = 200
+    activity.distribuicao_semanal["2026-W20"] = DistribuicaoSemanal(
+        num_equipes=1, qtd_executada=0, qtd_acumulada=200, pct=0.5,
+    )
+    activity.distribuicao_semanal["2026-W21"] = DistribuicaoSemanal(
+        num_equipes=1, qtd_executada=200, qtd_acumulada=400, pct=1,
+    )
+    observed = (
+        _hours("A", "2026-W19"),
+        _hours("A", "2026-W20", F(0)),
+        _hours("A", "2026-W21", F(0)),
+        _hours("B", "2026-W20"),
     )
     result = book_skill04_planned_consumption_preview(
-        canonical, _pool(), _declared(),
-        observed_hours=(
-            _hours("A", "2026-W18", F(0)),
-            _hours("A", "2026-W19"),
-            _hours("B", "2026-W20"),
-        ),
+        canonical, _pool(), _declared(), observed_hours=observed,
     )
-    assert len(result.consumption.evidence) == 5
+    assert len(result.consumption.evidence) == 7
     assert not any(
-        x.source_id == "P18C:Q:A:AGGREGATE:2026-W18"
+        x.source_id == "P18C:Q:A:AGGREGATE:2026-W20"
         for x in result.consumption.evidence
     )
     assert result.reconciliation.ledger.consumable_v == F(25000) + F(12, 5)
+
+    # Removing the zero-Q intermediate week also removes its hourly requirement
+    # in the former implementation. Both source loss and hour loss must fail.
+    activity.distribuicao_semanal.pop("2026-W20")
+    with pytest.raises(ValueError, match="does not cover scheduled interval"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
+            observed_hours=tuple(x for x in observed if x.week != "2026-W20" or x.activity_id == "B"),
+        )
+
+
+def test_hourly_evidence_missing_for_zero_q_interior_week_fails_closed() -> None:
+    canonical = _canonical()
+    activity = canonical.cronograma.scheduled_activities[0]
+    activity.end_week = 2
+    activity.duration_weeks = 3
+    activity.distribuicao_semanal["2026-W19"].qtd_executada = 200
+    activity.distribuicao_semanal["2026-W20"] = DistribuicaoSemanal(
+        num_equipes=1, qtd_executada=0, qtd_acumulada=200, pct=0.5,
+    )
+    activity.distribuicao_semanal["2026-W21"] = DistribuicaoSemanal(
+        num_equipes=1, qtd_executada=200, qtd_acumulada=400, pct=1,
+    )
+    with pytest.raises(ValueError, match="explicit operating-hour evidence"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
+            observed_hours=(
+                _hours("A", "2026-W19"),
+                _hours("A", "2026-W21"),
+                _hours("B", "2026-W20"),
+            ),
+        )
 
 
 def test_legacy_monetary_proxy_is_not_a_physical_catalog_declaration() -> None:
@@ -221,23 +260,95 @@ def test_micro_scope_cannot_disappear_under_absolute_rounding_tolerance() -> Non
         )
 
 
-def test_subactivity_to_eap_unit_mapping_is_explicit() -> None:
+def _subdivided() -> CanonicalModel:
+    """Real Skill01 identities: subactivities A-atv-1/B-atv-1, final Skill04 A/B."""
     canonical = _canonical()
-    canonical.eap[0].item_id = "EAP-X"
-    canonical.eap[1].item_id = "EAP-Y"
     canonical.atividades = [
         Atividade(
-            atividade_id="A", eap_item_id="EAP-X", descricao="activity A",
+            atividade_id="A-atv-1", eap_item_id="A", descricao="activity A",
             fracao_quantitativo=1, quantitativo_atividade=400, cpu_id="CPU-A",
         ),
         Atividade(
-            atividade_id="B", eap_item_id="EAP-Y", descricao="activity B",
+            atividade_id="B-atv-1", eap_item_id="B", descricao="activity B",
             fracao_quantitativo=1, quantitativo_atividade=100, cpu_id="CPU-B",
         ),
+    ]
+    return canonical
+
+
+def test_real_skill01_subactivity_ids_resolve_to_final_skill04_eap_ids() -> None:
+    canonical = _subdivided()
+    assert {a.atividade_id for a in canonical.atividades} == {"A-atv-1", "B-atv-1"}
+    assert {sa.activity_id for sa in canonical.cronograma.scheduled_activities} == {"A", "B"}
+    result = book_skill04_planned_consumption_preview(
+        canonical, _pool(), _declared(),
+        observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+    )
+    assert result.consumption.variable_cost == F(25000) + F(12, 5)
+
+
+def test_two_subactivities_reconcile_one_eap_schedule_scope() -> None:
+    canonical = _subdivided()
+    canonical.atividades = [
+        Atividade(
+            atividade_id="A-atv-1", eap_item_id="A", descricao="first half",
+            fracao_quantitativo=0.5, quantitativo_atividade=200, cpu_id="CPU-A",
+        ),
+        Atividade(
+            atividade_id="A-atv-2", eap_item_id="A", descricao="second half",
+            fracao_quantitativo=0.5, quantitativo_atividade=200, cpu_id="CPU-A",
+        ),
+        canonical.atividades[1],
     ]
     result = book_skill04_planned_consumption_preview(
         canonical, _pool(), _declared(),
         observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+    )
+    assert result.consumption.variable_cost == F(25000) + F(12, 5)
+
+
+@pytest.mark.parametrize("kind", [
+    "missing_eap", "incomplete_q", "incomplete_fraction", "duplicate_subactivity",
+    "orphan_parent", "cpu_mismatch",
+])
+def test_incomplete_or_forged_subactivity_decomposition_rejected(kind: str) -> None:
+    canonical = _subdivided()
+    if kind == "missing_eap":
+        canonical.atividades = canonical.atividades[:1]
+    elif kind == "incomplete_q":
+        canonical.atividades[0].quantitativo_atividade = 200
+    elif kind == "incomplete_fraction":
+        canonical.atividades[0].fracao_quantitativo = 0.5
+    elif kind == "duplicate_subactivity":
+        canonical.atividades = canonical.atividades + [canonical.atividades[0]]
+    elif kind == "orphan_parent":
+        canonical.atividades[0].eap_item_id = "MISSING"
+    elif kind == "cpu_mismatch":
+        canonical.atividades[0].cpu_id = "WRONG"
+    with pytest.raises(ValueError, match="EAP|subactivity|CPU"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
+            observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+        )
+
+
+def test_week_calendar_iso_rollover_and_gaps() -> None:
+    canonical = _canonical()
+    canonical.projeto.data_inicio = date(2026, 12, 21)  # ISO W52
+    canonical.cronograma.scheduled_activities[0].distribuicao_semanal = {
+        "2026-W52": DistribuicaoSemanal(
+            num_equipes=1, qtd_executada=400, qtd_acumulada=400, pct=1,
+        ),
+    }
+    canonical.cronograma.scheduled_activities[1].distribuicao_semanal = {
+        "2026-W53": DistribuicaoSemanal(
+            num_equipes=1, qtd_executada=100, qtd_acumulada=100, pct=1,
+        ),
+    }
+    # ISO 2026 has 53 weeks: B must be in W53, not 2027-W01.
+    result = book_skill04_planned_consumption_preview(
+        canonical, _pool(), _declared(),
+        observed_hours=(_hours("A", "2026-W52"), _hours("B", "2026-W53")),
     )
     assert result.consumption.variable_cost == F(25000) + F(12, 5)
 
