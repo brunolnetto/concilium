@@ -546,7 +546,16 @@ def run_cronograma(
         replenishable_resources, cronograma_out.scheduled_activities, cronograma_out.estoque_delays
     )
 
+    # Any newly materialized schedule invalidates projections from its previous
+    # execution, even when the NEW productivity source is verified. Provenance
+    # of F(m) does not prove that an old financial cube matches the new timeline.
+    # Preserve only physical artifacts computed *in this run* (stock and
+    # consumables), plus the exogenous calendar and validated physical schedule.
+    stale_financials = _invalidate_derived_costs()
+    stale_financials.pop("recursos_consumiveis")
+    stale_financials.pop("resumo_estoque_consumiveis")
     update_dict = {
+        **stale_financials,
         "cronograma": cronograma_out,
         "intervalos_atividade": intervalos,
         "fator_calendario_semanal": fator_calendario_semanal,
@@ -557,13 +566,6 @@ def run_cronograma(
         "recursos_consumiveis": recursos_consumiveis_out,
         "resumo_estoque_consumiveis": resumo_estoque_out,
     }
-    if missing_productivity_evidence:
-        # Keep newly calculated physical consumables/stock even in preview.
-        # They are exploratory artifacts, not a certified financial ledger.
-        stale_financials = _invalidate_derived_costs()
-        stale_financials.pop("recursos_consumiveis")
-        stale_financials.pop("resumo_estoque_consumiveis")
-        update_dict.update(stale_financials)
     if mob_schedule:
         update_dict["mob_schedule"] = mob_schedule
 
