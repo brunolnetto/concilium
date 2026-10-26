@@ -326,8 +326,8 @@ class TestBuildActivityDirectCost:
             produtividade_horaria=10.0,
             horas_dia=8.0,
             dias_semana=5.0,
-            gamma_mao_obra_catalogo=1.25,  # 100 per front per week
-            gamma_equipamentos_catalogo=1.25,
+            gamma_mao_obra_catalogo=2.5,  # 100 per front per 40h week
+            gamma_equipamentos_catalogo=2.5,
             gamma_material_catalogo=0.0,
             gamma_combustivel_catalogo=0.0,
         )
