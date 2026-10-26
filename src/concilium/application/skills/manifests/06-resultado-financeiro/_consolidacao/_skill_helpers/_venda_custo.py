@@ -178,10 +178,11 @@ def _build_activity_direct_cost(
 ) -> tuple[list[AtividadeInsumo], list[CustoDiretoSemanalAtividade], float, float, float]:
     mo, eq, mat, comb = _activity_cost_components(equipe)
     distribution = getattr(act, "distribuicao_semanal", None) or {}
-    # F3 fills all four custo_inst_* fields for *non-pool* teams, but closes
-    # those fields against custo_total of ONE reference front. On a multi-front
-    # schedule this is not an aggregate posting. Pool-backed instancial costs,
-    # in contrast, already represent the contracted aggregate.
+    # F3 fills all four custo_inst_* fields for *non-pool* teams and closes
+    # against custo_total, normally ONE reference front. A planning override
+    # can change custo_total to an AGGREGATE subtotal *before* F3; that
+    # provenance must be honoured. Pool-backed instancial components are
+    # already measured aggregates regardless of front count.
     has_instancial_breakdown = equipe is not None and all(
         getattr(equipe, name, None) is not None
         for name in ("custo_inst_mo", "custo_inst_eq", "custo_inst_mat", "custo_inst_comb")
@@ -191,6 +192,10 @@ def _build_activity_direct_cost(
     one_front_f3 = (
         has_instancial_breakdown
         and not getattr(equipe, "contrato_tipo_id", "")
+        # F3 is one-front ONLY before planning cost reconciliation. Skill05
+        # explicitly records the aggregate source when its planning override
+        # has replaced custo_total and custo_operacional_agregado.
+        and not getattr(equipe, "custo_reconciliado_planejamento", False)
         and any(
             float(cell.num_equipes) > 0 and abs(float(cell.num_equipes) - 1.0) > 1e-9
             for cell in distribution.values()
