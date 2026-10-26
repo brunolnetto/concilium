@@ -191,9 +191,12 @@ def _build_activity_direct_cost(
     one_front_f3 = (
         has_instancial_breakdown
         and not getattr(equipe, "contrato_tipo_id", "")
-        and team_weeks > active_weeks + 1e-9
+        and any(
+            float(cell.num_equipes) > 0 and abs(float(cell.num_equipes) - 1.0) > 1e-9
+            for cell in distribution.values()
+        )
     )
-    # For non-pool F3 + multiple fronts, reconstruct K/V over the actual
+    # For non-pool F3 with any non-unit effective fronts, reconstruct K/V over the actual
     # schedule from rates and physical quantities. This also retains consumed
     # materials excluded from custo_operacional_agregado. Do NOT use catalog
     # gamma for pool-backed measured postings (the original GOLDEN defect).
