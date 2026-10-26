@@ -99,7 +99,7 @@ class TestAlgebraicInvariants:
 
 
 @pytest.fixture(scope="module")
-def golden_benchmark(config_root):
+def golden_benchmark(config_root, tmp_path_factory):
     """Executa o pipeline GOLDEN e retorna o canonical + report.
 
     Usa reset=True para garantir execução fresca (não usa cache).
@@ -110,6 +110,10 @@ def golden_benchmark(config_root):
 
     root = config_root.parent
     facade = BenchmarkFacade.from_root(root)
+    # This fixture intentionally uses OLTP (not the shared OLAP golden_benchmark).
+    # Every reset=True benchmark must own its project store to avoid run-order
+    # contamination from RFI/RFP and ADR-104 integration fixtures.
+    facade.projects_root = tmp_path_factory.mktemp("golden_regression_oltp")
     facade.run_single("GOLDEN", reset=True, mode=PipelineMode.OLTP)
 
     from concilium.infrastructure.storage.store_factory import build_local_project_repository
