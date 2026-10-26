@@ -270,22 +270,47 @@ class TestExcelComDadosSICRO:
 class TestExcelEdgeCases:
     """Testes de cases extremos: projetos grandes, valores extremos, datasets vazios."""
 
-    def test_excel_renderiza_sem_erros_mesmo_com_dados_incompletos(self, _session_edge_case_sk09):
-        """Excel é gerado com sucesso mesmo em cenários com dados incompletos.
+    def test_cronograma_sem_cobertura_nao_pode_produzir_excel_certificado(
+        self, _session_edge_case_sk09
+    ):
+        """Do not mask an infeasible physical plan as an incomplete Excel report.
 
-        Reutiliza a fixture session-scoped _session_edge_case_sk09 (01→09, cron mínimo)
-        para eliminar a execução de 6 skills no corpo do teste.
+        This old fixture schedules one EAP item for one week but omits two
+        other mandatory EAP items; it is a negative scheduling test, not a
+        valid but partially populated financial-report test.
         """
+        proj = _session_edge_case_sk09
+        canonical = proj.load_canonical()
+        assert canonical is not None
+        assert canonical.resultado is None, (
+            "Edge fixture became financially feasible: diagnose Excel generation "
+            "instead of treating it as an intentionally invalid schedule."
+        )
+        version = proj.current_version()
+        assert proj.load_output_file(version, "resultado_planejamento.xlsx") is None
+
+    def test_excel_com_planejamento_opcional_vazio(
+        self, _session_pipeline_sk09
+    ):
+        """An already feasible, fully priced plan can omit optional report rows."""
         from io import BytesIO
 
         from openpyxl import load_workbook
 
-        proj = _session_edge_case_sk09
-        version = proj.current_version()
-        excel_bytes = proj.load_output_file(version, "resultado_planejamento.xlsx")
-        assert excel_bytes is not None, "Excel deve ser gerado mesmo com dados incompletos"
+        from concilium.application.skills.manifests import load_skill
 
-        wb = load_workbook(BytesIO(excel_bytes))
+        project, _ = _session_pipeline_sk09
+        canonical = project.load_canonical()
+        assert canonical is not None and canonical.resultado is not None
+        partial = canonical.model_copy(update={"planejamento": []})
+        # Exercise the same public Skill09 adapter without overwriting a
+        # session-shared project or demanding a certified report from an
+        # infeasible physical plan.
+        from concilium.application.skills.manifests import load_skill
+        adapter = load_skill("09-relatorio-e-artefatos")
+        report = adapter(partial, {"gerar_excel": True})
+        assert report.excel_bytes is not None
+        wb = load_workbook(BytesIO(report.excel_bytes), read_only=True)
         assert "PLANEJAMENTO" in wb.sheetnames
 
     def test_excel_tamanho_razoavel(self, _session_pipeline_sk09):
