@@ -178,28 +178,37 @@ def _build_activity_direct_cost(
 ) -> tuple[list[AtividadeInsumo], list[CustoDiretoSemanalAtividade], float, float, float]:
     mo, eq, mat, comb = _activity_cost_components(equipe)
     distribution = getattr(act, "distribuicao_semanal", None) or {}
-    # P&L must price the ACTUAL operational ledger, not catalog gamma rates.
-    # When Skill05 already materialized nonzero instancial costs (K + V),
-    # distribute those costs by team-weeks/physical Q. Catalog gamma is a
-    # reference-only fallback when there are no operational cost postings.
-    # Using gamma despite real costs can inflate operational sale and margin
-    # without changing custo.total (GOLDEN pricing regression).
+    # F3 fills all four custo_inst_* fields for *non-pool* teams, but closes
+    # those fields against custo_total of ONE reference front. On a multi-front
+    # schedule this is not an aggregate posting. Pool-backed instancial costs,
+    # in contrast, already represent the contracted aggregate.
     has_instancial_breakdown = equipe is not None and all(
         getattr(equipe, name, None) is not None
         for name in ("custo_inst_mo", "custo_inst_eq", "custo_inst_mat", "custo_inst_comb")
     )
-    # A positive heuristic split of monthly costs is NOT a measured K/V
-    # breakdown. In particular non-pool teams may have a partial aggregate
-    # without consumed materials. Use the explicit formal gamma fallback when
-    # there is no complete Skill05 instancial breakdown, even if the heuristic
-    # computes a non-zero monetary amount.
+    active_weeks = sum(1 for cell in distribution.values() if float(cell.num_equipes) > 0)
+    team_weeks = sum(float(cell.num_equipes) for cell in distribution.values())
+    one_front_f3 = (
+        has_instancial_breakdown
+        and not getattr(equipe, "contrato_tipo_id", "")
+        and team_weeks > active_weeks + 1e-9
+    )
+    # For non-pool F3 + multiple fronts, reconstruct K/V over the actual
+    # schedule from rates and physical quantities. This also retains consumed
+    # materials excluded from custo_operacional_agregado. Do NOT use catalog
+    # gamma for pool-backed measured postings (the original GOLDEN defect).
     formal_rates = (
         _formal_activity_cost_rates(equipe)
-        if distribution and not has_instancial_breakdown
+        if distribution and (not has_instancial_breakdown or one_front_f3)
         else None
     )
+    if one_front_f3 and formal_rates is None and active_weeks:
+        # Older / incomplete records may not have persisted formal gamma.
+        # F3 is per active week of ONE front, so expand the reference K/V
+        # components by actual team-weeks, without silently selling one front.
+        factor = team_weeks / active_weeks
+        mo, eq, mat, comb = (value * factor for value in (mo, eq, mat, comb))
     quantity_total = sum(float(cell.qtd_executada) for cell in distribution.values())
-    team_weeks = sum(float(cell.num_equipes) for cell in distribution.values())
     weekly: list[CustoDiretoSemanalAtividade] = []
     for week, cell in distribution.items():
         if formal_rates is not None:
