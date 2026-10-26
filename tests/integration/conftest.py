@@ -11,13 +11,15 @@ Histórico de problema:
 - Depois: Consolidado aqui → única execução compartilhada por todos os testes
 """
 
+from pathlib import Path
+
 import pytest
 
 # ── Benchmark Fixtures (Shared across integration tests) ─────────────────────
 
 
 @pytest.fixture(scope="session")
-def golden_artifacts(config_root) -> dict[str, str]:
+def golden_artifacts(config_root, tmp_path_factory) -> dict[str, Path]:
     """Fixture session-scoped que executa GOLDEN com ambos os intents (RFI + RFP).
 
     RFI e RFP usam modos diferentes de pipeline:
@@ -36,23 +38,20 @@ def golden_artifacts(config_root) -> dict[str, str]:
     from concilium.application.benchmarks.execution.facade import BenchmarkFacade
 
     root = config_root.parent
-    facade = BenchmarkFacade.from_root(root)
-
-    # RFI: OLTP mode (skills 01-06)
-    facade.run_single("GOLDEN", reset=True, procurement_intent="rfi")
-
-    # RFP: OLAP mode (skills 01-11) — reset=True necessário para execução OLAP completa
-    facade.run_single("GOLDEN", reset=True, procurement_intent="rfp")
-
-    base_path = root / "benchmarks" / "projetos" / "GOLDEN"
-    return {
-        "rfi": base_path / "artifacts",
-        "rfp": base_path / "artifacts",
-    }
+    # RFI/RFP have independent output roots: the former must not be silently
+    # overwritten by the latter's reset=True run. Neither may overwrite the
+    # GOLDEN benchmark used by other integration fixtures.
+    artifacts: dict[str, Path] = {}
+    for intent in ("rfi", "rfp"):
+        facade = BenchmarkFacade.from_root(root)
+        facade.projects_root = tmp_path_factory.mktemp(f"golden_{intent}_projects")
+        facade.run_single("GOLDEN", reset=True, procurement_intent=intent)
+        artifacts[intent] = facade.projects_root / "GOLDEN" / "artifacts"
+    return artifacts
 
 
 @pytest.fixture(scope="session")
-def golden_benchmark(config_root):
+def golden_benchmark(config_root, tmp_path_factory):
     """Fixture que retorna o canonical model do benchmark GOLDEN (sintético, rápido).
 
     Executa o pipeline do GOLDEN (projeto sintético mínimo com 3 itens EAP)
@@ -67,6 +66,9 @@ def golden_benchmark(config_root):
 
     root = config_root.parent
     facade = BenchmarkFacade.from_root(root)
+    # Isolate canonical and report from RFI/RFP artifact fixtures, and from
+    # other pytest sessions/xdist workers executing reset=True.
+    facade.projects_root = tmp_path_factory.mktemp("golden_benchmark_projects")
 
     # Executar benchmark GOLDEN (projeto sintético)
     facade.run_single("GOLDEN", reset=True)
