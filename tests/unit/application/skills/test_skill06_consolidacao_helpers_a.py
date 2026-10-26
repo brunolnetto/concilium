@@ -375,6 +375,37 @@ class TestBuildActivityDirectCost:
         assert weekly[0].custo_contratual == pytest.approx(60.0)
         assert weekly[1].custo_contratual == pytest.approx(180.0)
 
+    def test_nonpool_f3_fractional_front_uses_fractional_schedule(self):
+        """F3 one-front postings cannot charge a full front for 0.5 effective fronts."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=0.5, qtd_executada=5.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="",
+            custo_inst_mo=100.0,
+            custo_inst_eq=100.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=2.5,
+            gamma_equipamentos_catalogo=2.5,
+            gamma_material_catalogo=0.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        _components, weekly, cost, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert cost == pytest.approx(100.0)
+        assert sale == pytest.approx(100.0)
+        assert weekly[0].frentes == pytest.approx(0.5)
+
     def test_heuristic_nonpool_cost_does_not_suppress_material_gamma(self):
         """Incomplete non-pool aggregate is not complete physical K/V evidence."""
         activity = SimpleNamespace(
