@@ -375,3 +375,102 @@ def test_nonfinite_weekly_scope_never_enters_financial_ledger() -> None:
             canonical, _pool(), _declared(),
             observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
         )
+
+
+
+def test_skill01_explicit_six_decimal_rounding_is_not_missing_parent_scope() -> None:
+    canonical = _subdivided()
+    # Explicit Skill01 splits use round(frac * parent_Q, 6); two 0.5 child
+    # rows may sum to 1.0 despite their parent declaring 1.000001 units.
+    canonical.eap[0].quantitativo = 1.000001
+    canonical.atividades = [
+        Atividade(
+            atividade_id="A-atv-1", eap_item_id="A", descricao="half one",
+            fracao_quantitativo=0.5,
+            quantitativo_atividade=round(0.5 * 1.000001, 6), cpu_id="CPU-A",
+        ),
+        Atividade(
+            atividade_id="A-atv-2", eap_item_id="A", descricao="half two",
+            fracao_quantitativo=0.5,
+            quantitativo_atividade=round(0.5 * 1.000001, 6), cpu_id="CPU-A",
+        ),
+        canonical.atividades[1],
+    ]
+    row = canonical.cronograma.scheduled_activities[0].distribuicao_semanal["2026-W19"]
+    row.qtd_executada = 1.000001
+    result = book_skill04_planned_consumption_preview(
+        canonical, _pool(), _declared(),
+        observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+    )
+    assert result.consumption.variable_cost == F("1.000001") * F(50) + F(5000) + F(12, 5)
+
+
+def test_skill01_unrelated_six_decimal_forgery_is_not_tolerated() -> None:
+    canonical = _subdivided()
+    canonical.atividades[0].quantitativo_atividade = 399.999999
+    with pytest.raises(ValueError, match="rounding"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
+            observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+        )
+
+
+def test_skill04_retained_outer_zero_weeks_require_hourly_evidence() -> None:
+    canonical = _canonical()
+    activity = canonical.cronograma.scheduled_activities[0]
+    activity.start_week = 1
+    activity.end_week = 1
+    activity.duration_weeks = 1
+    activity.distribuicao_semanal = {
+        "2026-W19": DistribuicaoSemanal(
+            num_equipes=0, qtd_executada=0, qtd_acumulada=0, pct=0,
+        ),
+        "2026-W20": DistribuicaoSemanal(
+            num_equipes=1, qtd_executada=400, qtd_acumulada=400, pct=1,
+        ),
+        "2026-W21": DistribuicaoSemanal(
+            num_equipes=0, qtd_executada=0, qtd_acumulada=400, pct=1,
+        ),
+    }
+    hours = (
+        _hours("A", "2026-W19", F(0)),
+        _hours("A", "2026-W20"),
+        _hours("A", "2026-W21", F(0)),
+        _hours("B", "2026-W20"),
+    )
+    result = book_skill04_planned_consumption_preview(
+        canonical, _pool(), _declared(), observed_hours=hours,
+    )
+    assert result.consumption.variable_cost == F(25000) + F(12, 5)
+    assert {("A", x.week) for x in result.consumption.evidence
+            if x.activity_id == "A" and x.measure.good_id == "DIESEL"} == {
+        ("A", "2026-W19"), ("A", "2026-W20"), ("A", "2026-W21"),
+    }
+    with pytest.raises(ValueError, match="explicit operating-hour evidence"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
+            observed_hours=tuple(x for x in hours if x.week != "2026-W19"),
+        )
+
+
+def test_extra_production_outside_declared_skill04_bounds_is_rejected() -> None:
+    canonical = _canonical()
+    activity = canonical.cronograma.scheduled_activities[0]
+    activity.start_week = 1
+    activity.end_week = 1
+    activity.distribuicao_semanal = {
+        "2026-W19": DistribuicaoSemanal(
+            num_equipes=1, qtd_executada=1, qtd_acumulada=1, pct=0.0025,
+        ),
+        "2026-W20": DistribuicaoSemanal(
+            num_equipes=1, qtd_executada=399, qtd_acumulada=400, pct=1,
+        ),
+    }
+    with pytest.raises(ValueError, match="productive bounds"):
+        book_skill04_planned_consumption_preview(
+            canonical, _pool(), _declared(),
+            observed_hours=(
+                _hours("A", "2026-W19"), _hours("A", "2026-W20"),
+                _hours("B", "2026-W20"),
+            ),
+        )
