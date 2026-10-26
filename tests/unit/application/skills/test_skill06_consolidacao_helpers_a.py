@@ -265,6 +265,47 @@ class TestBuildActivityDirectCost:
         assert operational == pytest.approx(606.0)
         assert components[0].custo_total_direto == pytest.approx(606.0)
 
+    def test_operational_pricing_uses_instancial_costs_not_catalog_gamma(self):
+        """Catalogue gamma must not inflate actual sale with real Skill05 costs."""
+        act = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=10.0),
+                "2026-W02": SimpleNamespace(num_equipes=2.0, qtd_executada=30.0),
+            }
+        )
+        equipe = SimpleNamespace(
+            custo_inst_mo=100.0,
+            custo_inst_eq=50.0,
+            custo_inst_mat=30.0,
+            custo_inst_comb=20.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            # Materially different catalog rates; they are only a reference
+            # and cannot be charged as the *operational* sale base.
+            gamma_mao_obra_catalogo=10000.0,
+            gamma_equipamentos_catalogo=25000.0,
+            gamma_material_catalogo=1000.0,
+            gamma_combustivel_catalogo=1000.0,
+        )
+        rates = {
+            "mao_obra": 0.10,
+            "equipamentos": 0.20,
+            "material": 0.05,
+            "diesel": 0.04,
+        }
+        _components, weeks, cost, price, _bdi = _cons._build_activity_direct_cost(
+            act, equipe, rates
+        )
+        expected_price = 100 * 1.10 + 50 * 1.20 + 30 * 1.05 + 20 * 1.04
+        assert cost == pytest.approx(200.0)
+        assert price == pytest.approx(expected_price)
+        assert sum(w.custo_operacional for w in weeks) == pytest.approx(cost)
+        assert sum(w.custo_operacional_com_bdi for w in weeks) == pytest.approx(price)
+        assert sum(w.custo_variavel for w in weeks) == pytest.approx(50.0)
+        assert weeks[0].custo_contratual == pytest.approx(50.0)
+        assert weeks[1].custo_contratual == pytest.approx(100.0)
+
     def test_variable_cost_is_invariant_under_extra_unproductive_team_week(self):
         equipe = SimpleNamespace(
             produtividade_horaria=10.0,
