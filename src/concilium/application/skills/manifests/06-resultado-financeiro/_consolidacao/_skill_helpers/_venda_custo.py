@@ -184,10 +184,18 @@ def _build_activity_direct_cost(
     # reference-only fallback when there are no operational cost postings.
     # Using gamma despite real costs can inflate operational sale and margin
     # without changing custo.total (GOLDEN pricing regression).
-    has_operational_costs = mo + eq + mat + comb > 0
+    has_instancial_breakdown = equipe is not None and all(
+        getattr(equipe, name, None) is not None
+        for name in ("custo_inst_mo", "custo_inst_eq", "custo_inst_mat", "custo_inst_comb")
+    )
+    # A positive heuristic split of monthly costs is NOT a measured K/V
+    # breakdown. In particular non-pool teams may have a partial aggregate
+    # without consumed materials. Use the explicit formal gamma fallback when
+    # there is no complete Skill05 instancial breakdown, even if the heuristic
+    # computes a non-zero monetary amount.
     formal_rates = (
         _formal_activity_cost_rates(equipe)
-        if distribution and not has_operational_costs
+        if distribution and not has_instancial_breakdown
         else None
     )
     quantity_total = sum(float(cell.qtd_executada) for cell in distribution.values())
