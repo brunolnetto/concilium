@@ -38,6 +38,17 @@ def golden_ref() -> dict:
 class TestAlgebraicInvariants:
     """Verifica Q×PU=subtotal e consistência do referencia.json sem rodar o pipeline."""
 
+    def test_snapshot_operational_margin_closes_against_price_and_cost(
+        self, golden_ref
+    ):
+        """A calibrated regression snapshot cannot disagree with its own P&L."""
+        expected = golden_ref["resultado"]
+        venda = expected["venda"]["total_custo_plus"]
+        custo = expected["custo"]["total"]
+        assert venda > 0
+        margem = (venda - custo) / venda
+        assert abs(expected["margem_pct"] - margem) <= 1e-10
+
     def test_golden_ref_file_exists(self):
         assert _GOLDEN_REF.exists(), f"Golden reference não encontrada: {_GOLDEN_REF}"
 
@@ -209,6 +220,9 @@ class TestGoldenRegression:
             ("custo.direto_equipes", r.custo.direto_equipes, expected["custo"]["direto_equipes"]),
             ("custo.total", r.custo.total, expected["custo"]["total"]),
             ("venda.total_com_bdi", r.venda.total_com_bdi, expected["venda"]["total_com_bdi"]),
+            # Check operational sale explicitly, *before* its derived margin.
+            # Recalibrating margem_pct alone would hide a changed BDI/pricing basis.
+            ("venda.total_custo_plus", r.venda.total_custo_plus, expected["venda"]["total_custo_plus"]),
             ("margem_pct", r.margem_pct, expected["margem_pct"]),
         ]
         for nome, atual, esperado in checks:
@@ -217,8 +231,13 @@ class TestGoldenRegression:
             desvio = abs(atual - esperado) / abs(esperado)
             assert desvio <= _REG_TOL, (
                 f"Regressão em {nome}: atual={atual:,.4f} vs calibrado={esperado:,.4f} "
-                f"(desvio={desvio:.2%} > {_REG_TOL:.1%}). Se intencional, recalibrar com "
-                f"commit 'golden(update): <razão>'."
+                f"(desvio={desvio:.2%} > {_REG_TOL:.1%}). "
+                f"Auditoria operacional: custo.total={r.custo.total:,.2f}, "
+                f"venda.total_custo_plus={r.venda.total_custo_plus:,.2f}, "
+                f"margem_pct={r.margem_pct:.6f}; snapshot: "
+                f"custo.total={expected['custo']['total']:,.2f}, "
+                f"venda.total_custo_plus={expected['venda']['total_custo_plus']:,.2f}. "
+                "Não recalibrar preço/margem sem causa raiz e validação do BDI."
             )
 
 
