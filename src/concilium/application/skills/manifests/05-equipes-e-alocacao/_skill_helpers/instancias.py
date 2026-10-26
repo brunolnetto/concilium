@@ -5,7 +5,6 @@ Instâncias de recurso e mapa de utilização (ADR-077).
 
 from __future__ import annotations
 
-from math import floor
 from typing import Any
 
 from concilium.domain.models.canonical import (
@@ -72,13 +71,17 @@ def _reconciliar_decomposicao_apos_teto_benchmark(eq: Any, capped: float) -> Non
         return
 
     cents_total = int(round(float(capped) * 100))
-    exact_cents = [cents_total * value / total for value in values]
-    allocations = [floor(value) for value in exact_cents]
+    component_cents = [int(round(value * 100)) for value in values]
+    denominator = sum(component_cents)
+    if denominator <= 0:
+        return
+    # All operations are in integer cents to avoid float drift in the
+    # apportionment. A positive cap produces exactly its monetary cents.
+    products = [cents_total * cents for cents in component_cents]
+    allocations = [product // denominator for product in products]
     remaining = cents_total - sum(allocations)
-    # Largest-remainder apportionment, stable by component order. Never
-    # create negative final components at very small benchmark caps.
     by_remainder = sorted(
-        range(len(names)), key=lambda i: (-(exact_cents[i] - allocations[i]), i)
+        range(len(names)), key=lambda i: (-(products[i] % denominator), i)
     )
     for i in by_remainder[:remaining]:
         allocations[i] += 1
