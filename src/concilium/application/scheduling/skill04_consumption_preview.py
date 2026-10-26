@@ -28,6 +28,8 @@ PricedCategory = Literal["MAT", "COMB"]
 ActivityGoods = Mapping[str, Mapping[str, tuple[PhysicallyPricedGood, PricedCategory]]]
 _ABS_SCOPE_TOLERANCE = Fraction(1, 1_000_000)
 _REL_SCOPE_TOLERANCE = Fraction(1, 1_000_000_000)
+# Skill01 explicitly uses round(fracao * Q, 6) for split children.
+_CHILD_ROUNDING_ERROR = Fraction(1, 2_000_000)
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,7 @@ def _activity_scope_units(canonical: CanonicalModel) -> dict[str, tuple[Fraction
     if canonical.atividades:
         totals: dict[str, Fraction] = {item_id: Fraction(0) for item_id in eap}
         fractions: dict[str, Fraction] = {item_id: Fraction(0) for item_id in eap}
+        children: dict[str, int] = {item_id: 0 for item_id in eap}
         seen: set[str] = set()
         for activity in canonical.atividades:
             if (
@@ -76,12 +79,33 @@ def _activity_scope_units(canonical: CanonicalModel) -> dict[str, tuple[Fraction
                 raise ValueError("duplicate subactivity, missing EAP mapping or CPU mismatch")
             seen.add(activity.atividade_id)
             parent = activity.eap_item_id
-            totals[parent] += _exact_q(activity.quantitativo_atividade)
-            fractions[parent] += _exact_q(activity.fracao_quantitativo)
+            scope, _ = scopes[parent]
+            fraction = _exact_q(activity.fracao_quantitativo)
+            actual_q = _exact_q(activity.quantitativo_atividade)
+            # Skill01's explicit decomposition rounds each child to 6 decimal
+            # places. Its default single child instead copies the full Q.
+            # Accept only actual Skill01 producer output or an exact fraction
+            # calculation; never widen the parent weekly-physical-Q tolerance.
+            producer_q = Fraction(str(round(
+                activity.fracao_quantitativo * eap[parent].quantitativo, 6
+            )))
+            exact_q = scope * fraction
+            if (
+                abs(actual_q - producer_q) > _scope_tolerance(scope)
+                and abs(actual_q - exact_q) > _scope_tolerance(scope)
+            ):
+                raise ValueError("Skill01 subactivity quantity violates producer rounding")
+            totals[parent] += actual_q
+            fractions[parent] += fraction
+            children[parent] += 1
         for item_id, (scope, _) in scopes.items():
+            # Independent per-child checks make the sum-of-rounding tolerance
+            # safe: an arbitrary missing/forged quantity cannot exploit it.
+            producer_tolerance = children[item_id] * _CHILD_ROUNDING_ERROR
             if (
                 not totals[item_id]
-                or abs(totals[item_id] - scope) > _scope_tolerance(scope)
+                or abs(totals[item_id] - scope)
+                > producer_tolerance + _scope_tolerance(scope)
                 or abs(fractions[item_id] - 1) > _REL_SCOPE_TOLERANCE
             ):
                 raise ValueError("Skill01 subactivity scope/fractions do not close parent EAP")
@@ -181,15 +205,42 @@ def book_skill04_planned_consumption_preview(
         weekly_q = Fraction(0)
         if not activity.distribuicao_semanal:
             raise ValueError("Skill04 requires a nonempty physical weekly distribution")
-        expected_weeks = _scheduled_week_keys(
+        productive_weeks = _scheduled_week_keys(
             canonical, activity.start_week, activity.end_week, activity.duration_weeks
         )
+        # The final assembler bounds start/end by *positive* production, but
+        # MANUAL Skill04 retains project-wide zero-output leading/trailing
+        # weeks. Allow these only when the entire materialized weekly interval
+        # is contiguous. Keep their explicit hourly observations mandatory.
+        base_date = canonical.projeto.data_inicio
+        project_monday = base_date - timedelta(days=base_date.weekday())
+        week_offsets: dict[str, int] = {}
         for week in activity.distribuicao_semanal:
             _iso_week(week)
-        if set(activity.distribuicao_semanal) != expected_weeks:
+            monday = date.fromisocalendar(int(week[:4]), int(week[6:]), 1)
+            offset = (monday - project_monday).days // 7
+            if offset < 0 or offset > 5200:
+                raise ValueError("Skill04 physical week is outside project calendar")
+            week_offsets[week] = offset
+        complete_weeks = _scheduled_week_keys(
+            canonical, min(week_offsets.values()), max(week_offsets.values()),
+            max(week_offsets.values()) - min(week_offsets.values()) + 1,
+        )
+        if (
+            not productive_weeks.issubset(complete_weeks)
+            or set(activity.distribuicao_semanal) != complete_weeks
+        ):
             raise ValueError("Skill04 weekly distribution does not cover scheduled interval")
+        positive_weeks = [
+            week for week, row in activity.distribuicao_semanal.items()
+            if _exact_q(row.qtd_executada) > 0
+        ]
+        if positive_weeks and (
+            min(week_offsets[w] for w in positive_weeks) != activity.start_week
+            or max(week_offsets[w] for w in positive_weeks) != activity.end_week
+        ):
+            raise ValueError("Skill04 productive bounds disagree with weekly physical Q")
         for week, row in sorted(activity.distribuicao_semanal.items()):
-            _iso_week(week)
             scheduled_weeks.add((activity_id, week))
             q = _exact_q(row.qtd_executada)
             weekly_q += q
