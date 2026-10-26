@@ -306,6 +306,45 @@ class TestBuildActivityDirectCost:
         assert weeks[0].custo_contratual == pytest.approx(50.0)
         assert weeks[1].custo_contratual == pytest.approx(100.0)
 
+    def test_heuristic_nonpool_cost_does_not_suppress_material_gamma(self):
+        """Incomplete non-pool aggregate is not complete physical K/V evidence."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=1.0),
+            }
+        )
+        equipe = SimpleNamespace(
+            custo_inst_mo=None,
+            custo_total=200.0,
+            custo_operacional_agregado=200.0,
+            custo_mao_obra_mensal=100.0,
+            custo_encargos_mensal=0.0,
+            custo_equipamentos_mensal=100.0,
+            custo_material_mensal=100.0,
+            custo_combustivel_total_mensal=0.0,
+            produtividade_horaria=1.0,
+            horas_dia=2.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=10.0,
+            gamma_equipamentos_catalogo=10.0,
+            gamma_material_catalogo=100.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        # Heuristic proportions would incorrectly scale 100/100/100 into
+        # 66.67/66.67/66.67 to fit the aggregate 200, dropping material.
+        # Explicit gamma computes K=200 + V=100 until a complete
+        # instancial breakdown becomes available.
+        components, weeks, operational, price, _ = _cons._build_activity_direct_cost(
+            activity, equipe, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert operational == pytest.approx(300.0)
+        assert price == pytest.approx(300.0)
+        assert weeks[0].custo_material == pytest.approx(100.0)
+        assert components[0].custo_total_direto == pytest.approx(300.0)
+
     def test_variable_cost_is_invariant_under_extra_unproductive_team_week(self):
         equipe = SimpleNamespace(
             produtividade_horaria=10.0,
