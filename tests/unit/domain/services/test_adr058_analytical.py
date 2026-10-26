@@ -364,6 +364,54 @@ class TestSCurveBuilder:
             assert agr.n_equipamentos_unicos >= 0
             assert agr.custo_direto_semana >= 0
 
+    def test_resource_occupancy_serializes_without_int_float_warnings(self):
+        """Reproduce ADR-104 golden warning via the real analytical builder."""
+        from pydantic import TypeAdapter
+
+        canonical = _make_canonical(with_schedule=True)
+        scurve = SCurveBuilder().build(canonical)
+        active = [row for row in scurve.agregacao_semanal if row.n_equipes_totais > 0]
+        assert active
+        assert any(
+            type(units) is float
+            for row in active
+            for units in row.equipamentos_ativos.values()
+        )
+        assert all(type(row.n_equipes_totais) is float for row in active)
+        assert all(type(row.n_equipamentos_unicos) is int for row in active)
+
+        # Unlike suppressing UserWarning, warnings="error" fails immediately
+        # if a nested dataclass field violates its declared serialization type.
+        TypeAdapter(SCurve).dump_json(scurve, warnings="error")
+        canonical.model_copy(update={"s_curve": scurve}).model_dump_json(
+            warnings="error"
+        )
+
+    def test_fractional_resource_occupancy_is_not_silently_truncated(self):
+        """The schedule permits weighted fronts; do not pretend 0.5 is 0."""
+        from pydantic import TypeAdapter
+
+        canonical = _make_canonical(with_schedule=True)
+        canonical.cronograma.scheduled_activities[0].distribuicao_semanal[
+            "2026-W24"
+        ].num_equipes = 0.5
+        scurve = SCurveBuilder().build(canonical)
+        row = next(row for row in scurve.agregacao_semanal if row.semana_iso == "2026-W24")
+        assert row.n_equipes_totais == 0.5
+        assert row.equipamentos_ativos["EQ-ESCAV-38T"] == 0.5
+        assert row.n_equipamentos_unicos == 1
+
+        payload = TypeAdapter(SCurve).dump_python(
+            scurve, mode="json", warnings="error"
+        )
+        bucket = next(
+            item for item in payload["agregacao_semanal"]
+            if item["semana_iso"] == "2026-W24"
+        )
+        assert bucket["n_equipes_totais"] == 0.5
+        assert bucket["equipamentos_ativos"]["EQ-ESCAV-38T"] == 0.5
+
+
     def test_total_matches_sum_of_weekly(self):
         canonical = _make_canonical(with_schedule=True)
         sc = SCurveBuilder().build(canonical)
