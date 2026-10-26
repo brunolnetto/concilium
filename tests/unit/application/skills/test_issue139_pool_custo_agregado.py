@@ -272,7 +272,28 @@ class TestAplicarReconciliacaoPlanejamentoSincronizaAgregado:
         )
         assert eq.custo_total == pytest.approx(246_000.0)
         assert eq.custo_operacional_agregado == pytest.approx(246_000.0)
+        assert eq.custo_reconciliado_planejamento is True
         assert any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in validacoes)
+
+
+    def test_provenance_survives_canonical_json_roundtrip(self):
+        """Persist explicit aggregate evidence between Skill05 and Skill06."""
+        from concilium.domain.models.canonical import EquipeDireta
+
+        plan = SimpleNamespace(custo_sem_bdi=400.0, subtotal=None)
+        eq = EquipeDireta(
+            item_id="eap-01",
+            custo_total=200.0,
+            custo_operacional_agregado=400.0,
+        )
+        MOD._aplicar_reconciliacao_planejamento(
+            [eq], planejamento_map={"eap-01": plan},
+            planejamento_ref_map={}, validacoes=[],
+        )
+        restored = EquipeDireta.model_validate_json(eq.model_dump_json(warnings="error"))
+        assert restored.custo_reconciliado_planejamento is True
+        assert restored.custo_total == pytest.approx(400.0)
+        assert restored.custo_operacional_agregado == pytest.approx(400.0)
 
     def test_sem_desvio_significativo_nao_altera_nada(self):
         plan = SimpleNamespace(custo_sem_bdi=246_000.0, subtotal=None)
@@ -283,4 +304,5 @@ class TestAplicarReconciliacaoPlanejamentoSincronizaAgregado:
         )
         assert eq.custo_total == pytest.approx(246_000.5)
         assert eq.custo_operacional_agregado == pytest.approx(246_000.5)
+        assert not getattr(eq, "custo_reconciliado_planejamento", False)
         assert validacoes == []
