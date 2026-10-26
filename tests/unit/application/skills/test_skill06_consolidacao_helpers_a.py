@@ -406,6 +406,47 @@ class TestBuildActivityDirectCost:
         assert sale == pytest.approx(100.0)
         assert weekly[0].frentes == pytest.approx(0.5)
 
+    @pytest.mark.parametrize("has_catalog_rates", [False, True])
+    def test_planning_reconciled_f3_is_aggregate_even_with_two_fronts(
+        self, has_catalog_rates
+    ):
+        """P2: F3 after Skill05 planning override must never multiply costs twice."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=2.0, qtd_executada=20.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="",
+            custo_reconciliado_planejamento=True,
+            num_equipes_base=2,
+            custo_total=400.0,
+            custo_operacional_agregado=400.0,
+            # Skill05 F3 allocated an already reconciled, aggregate P&L
+            # subtotal, not the default one-front cost.
+            custo_inst_mo=200.0,
+            custo_inst_eq=200.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=30.0 if has_catalog_rates else 0.0,
+            gamma_equipamentos_catalogo=30.0 if has_catalog_rates else 0.0,
+            gamma_material_catalogo=0.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        _components, weeks, direct_cost, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert direct_cost == pytest.approx(400.0)
+        assert sale == pytest.approx(400.0)
+        assert weeks[0].custo_operacional == pytest.approx(400.0)
+        assert weeks[0].frentes == pytest.approx(2.0)
+
     def test_heuristic_nonpool_cost_does_not_suppress_material_gamma(self):
         """Incomplete non-pool aggregate is not complete physical K/V evidence."""
         activity = SimpleNamespace(
