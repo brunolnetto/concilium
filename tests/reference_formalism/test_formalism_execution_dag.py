@@ -32,7 +32,8 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     order = validate_dag(spec)
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 49
+    # Includes the preparatory P18-C1 package in PR #103; do not omit it.
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 50
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -126,6 +127,27 @@ def test_p13c_is_mandatory_after_p13a_and_p13b_have_merged(spec: dict) -> None:
     assert thirteen["pr_packages_merged"] == 2
     assert not thirteen["closure_preflight"]
     assert thirteen["acceptance_verified"] is None
+
+
+def test_p18c1_draft_registration_cannot_close_issue_eighteen(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P18-A", [76]),
+        ("P18-B", [79]),
+        ("P18-C1", [103]),
+    ]
+    # Even in a hypothetical world where waves 0 and 1 have closed, an
+    # unmerged draft #103 prevents formal closure of the P18 package.
+    result = report(
+        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {103}
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 18)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == 3
+    assert issue["pr_packages_merged"] == 2
+    assert issue["pending_packages"] == ["P18-C1"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
 
 
 def test_p22c_registered_but_not_merged_cannot_close_w1(spec: dict) -> None:
