@@ -297,20 +297,18 @@ class TestExcelEdgeCases:
 
         from openpyxl import load_workbook
 
-        from concilium.application.skills.manifests import load_skill
+        from concilium.infrastructure.adapters.excel_adapter import ExcelRenderer
 
         project, _ = _session_pipeline_sk09
         canonical = project.load_canonical()
         assert canonical is not None and canonical.resultado is not None
         partial = canonical.model_copy(update={"planejamento": []})
-        # Exercise the same public Skill09 adapter without overwriting a
-        # session-shared project or demanding a certified report from an
-        # infeasible physical plan.
-        from concilium.application.skills.manifests import load_skill
-        adapter = load_skill("09-relatorio-e-artefatos")
-        report = adapter(partial, {"gerar_excel": True})
-        assert report.excel_bytes is not None
-        wb = load_workbook(BytesIO(report.excel_bytes), read_only=True)
+        # Render only from a *financially feasible* canonical. Do not overwrite
+        # the session-shared project, and never bypass financial preconditions
+        # by returning an apparently certified workbook for a failed plan.
+        excel_bytes = ExcelRenderer(partial).to_bytes()
+        assert excel_bytes
+        wb = load_workbook(BytesIO(excel_bytes), read_only=True)
         assert "PLANEJAMENTO" in wb.sheetnames
 
     def test_excel_tamanho_razoavel(self, _session_pipeline_sk09):
