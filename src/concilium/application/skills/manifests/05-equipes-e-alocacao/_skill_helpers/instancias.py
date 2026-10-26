@@ -85,7 +85,7 @@ def _reconciliar_decomposicao_apos_teto_benchmark(eq: Any, capped: float) -> Non
     )
     for i in by_remainder[:remaining]:
         allocations[i] += 1
-    for name, cents in zip(names, allocations):
+    for name, cents in zip(names, allocations, strict=True):
         setattr(eq, name, cents / 100)
 
     mob = getattr(eq, "custo_inst_mob_demob", None)
