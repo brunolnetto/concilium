@@ -178,7 +178,18 @@ def _build_activity_direct_cost(
 ) -> tuple[list[AtividadeInsumo], list[CustoDiretoSemanalAtividade], float, float, float]:
     mo, eq, mat, comb = _activity_cost_components(equipe)
     distribution = getattr(act, "distribuicao_semanal", None) or {}
-    formal_rates = _formal_activity_cost_rates(equipe) if distribution else None
+    # P&L must price the ACTUAL operational ledger, not catalog gamma rates.
+    # When Skill05 already materialized nonzero instancial costs (K + V),
+    # distribute those costs by team-weeks/physical Q. Catalog gamma is a
+    # reference-only fallback when there are no operational cost postings.
+    # Using gamma despite real costs can inflate operational sale and margin
+    # without changing custo.total (GOLDEN pricing regression).
+    has_operational_costs = mo + eq + mat + comb > 0
+    formal_rates = (
+        _formal_activity_cost_rates(equipe)
+        if distribution and not has_operational_costs
+        else None
+    )
     quantity_total = sum(float(cell.qtd_executada) for cell in distribution.values())
     team_weeks = sum(float(cell.num_equipes) for cell in distribution.values())
     weekly: list[CustoDiretoSemanalAtividade] = []
