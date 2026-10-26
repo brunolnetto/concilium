@@ -109,9 +109,12 @@ class AgregacaoSemanalEquipamentos:
 
     semana_iso: str  # "2026-W23"
     semana_offset: int  # 0-indexed offset from project start
-    equipamentos_ativos: dict[str, int]  # {equip_id: n_unidades}
+    # SCurveBuilder uses weekly num_equipes: float (ramp/weighted fronts).
+    # These are equivalent resource occupancies; truncating them to int would
+    # silently change the analytical result. Count of distinct types stays int.
+    equipamentos_ativos: dict[str, float]  # {equip_id: unidades equivalentes}
     n_equipamentos_unicos: int
-    n_equipes_totais: int  # sum de num_equipes across all activities this week
+    n_equipes_totais: float  # soma de num_equipes efetivas na semana
     custo_direto_semana: float
     custo_indireto_semana: float
     custo_total_semana: float
