@@ -69,6 +69,37 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
             raise ValueError(f"{row['id']}: no distinct PR branch")
 
 
+    # A PR may have a single Git base, but prerequisite issues may form
+    # a join. Require graph *reachability* to every still-unimplemented
+    # package of each issue predecessor, not just to the chosen base.
+    nodes_by_issue = {node["issue"]: node for node in dag["nodes"]}
+    def ancestors(package_id: str) -> set[str]:
+        seen: set[str] = set()
+        pending = list(by_id[package_id]["depends_on_plans"])
+        while pending:
+            parent = pending.pop()
+            if parent not in seen:
+                seen.add(parent)
+                pending.extend(by_id[parent]["depends_on_plans"])
+        return seen
+
+    for row in rows:
+        required = {
+            p["id"] for parent_issue in nodes_by_issue[row["issue"]]["blocked_by"]
+            for p in rows if p["issue"] == parent_issue
+        }
+        required.update(
+            p["id"] for p in rows
+            if p["issue"] == row["issue"]
+            and p["topological_index"] < row["topological_index"]
+        )
+        missing = required - ancestors(row["id"])
+        if missing:
+            raise ValueError(
+                f"{row['id']}: missing mandatory predecessor plan paths: {sorted(missing)}"
+            )
+
+
 def audit_snapshot(
     dag: dict[str, Any], registry: dict[str, Any], snapshot: dict[str, Any]
 ) -> dict[str, Any]:
