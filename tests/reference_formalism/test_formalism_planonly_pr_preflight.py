@@ -94,6 +94,25 @@ def test_same_issue_predecessor_plan_blocks_implementation_readiness(state) -> N
     assert p21b["ready_to_implement"] is False
 
 
+def test_planonly_pr_cannot_be_promoted_as_canonical_implementation(state) -> None:
+    dag, registry, snapshot = state
+    # Adversarial mutation: copy P17-C's still-draft planning PR into the
+    # canonical slot and remove its PLAN_ONLY registry row.
+    package = next(
+        package for node in dag["nodes"] for package in node["packages"]
+        if package["id"] == "P17-C"
+    )
+    package["prs"] = [108]
+    registry["packages"] = [
+        row for row in registry["packages"] if row["id"] != "P17-C"
+    ]
+    for index, row in enumerate(registry["packages"]):
+        row["topological_index"] = index
+
+    with pytest.raises(ValueError, match="canonical PR #108 is not a merged implementation"):
+        audit_snapshot(dag, registry, snapshot)
+
+
 def test_closed_issue_cannot_retain_planonly_package(state) -> None:
     dag, registry, snapshot = state
     next(issue for issue in snapshot["issues"] if issue["number"] == 17)["state"] = "closed"
