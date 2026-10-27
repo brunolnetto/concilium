@@ -110,12 +110,25 @@ def _activity_cost_components(equipe: object | None) -> tuple[float, float, floa
     if equipe is None:
         return 0.0, 0.0, 0.0, 0.0
     if getattr(equipe, "custo_inst_mo", None) is not None:
-        return (
+        components = (
             float(getattr(equipe, "custo_inst_mo", 0.0) or 0.0),
             float(getattr(equipe, "custo_inst_eq", 0.0) or 0.0),
             float(getattr(equipe, "custo_inst_mat", 0.0) or 0.0),
             float(getattr(equipe, "custo_inst_comb", 0.0) or 0.0),
         )
+        if getattr(equipe, "custo_reconciliado_planejamento", False):
+            # Planning reconciliation is an aggregate direct-cost authority.
+            # F3's decomposition closes custo_total including its mob/demob
+            # partition, while Skill06 prices mob/demob separately. Normalize
+            # only the four direct components to the reconciled operational
+            # aggregate, otherwise the mob share is silently subtracted from
+            # direct K/V and never recovered in the weekly direct sale.
+            target = float(getattr(equipe, "custo_operacional_agregado", 0.0) or 0.0)
+            total = sum(components)
+            if target > 0 and total > 0:
+                factor = target / total
+                components = tuple(value * factor for value in components)
+        return components
 
     total = _resolve_custo_equipe_agregado(equipe)
     mo = float(getattr(equipe, "custo_mao_obra_mensal", 0.0) or 0.0) + float(
