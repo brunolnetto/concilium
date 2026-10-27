@@ -9,12 +9,19 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from scripts.formalism_wave_dag import MANIFEST, REPO, validate_dag
+# A direct `python scripts/<tool>.py` invocation puts scripts/, not the
+# repository root, on sys.path. Also allow running as a module or from pytest.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.formalism_wave_dag import MANIFEST, REPO, validate_dag  # noqa: E402
 
 REGISTRY = MANIFEST.with_name("formalism_planonly_pr_registry.json")
 
