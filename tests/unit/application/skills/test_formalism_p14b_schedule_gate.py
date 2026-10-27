@@ -86,7 +86,7 @@ def test_p14c_failed_reschedule_clears_stale_schedule_projections(monkeypatch) -
     """A failed replacement attempt must not leave last run's schedule/finance looking current."""
     canonical = _canonical(1.0).model_copy(
         update={
-            "cronograma": Cronograma(is_feasible=True),
+            "cronograma": Cronograma(scheduled_activities=[], is_feasible=True),
             "intervalos_atividade": ["stale-interval"],
             "curvas_forca": ["stale-force"],
             "analise_campanhas": {"stale": True},
