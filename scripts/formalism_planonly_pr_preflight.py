@@ -61,7 +61,17 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
         for node in dag["nodes"] for package in node["packages"]
     }
     ids = [row["planning_pr"] for row in rows]
-    if len(ids) != len(set(ids)) or recorded_prs.intersection(ids):
+    reserved = registry.get("reserved_planning_prs")
+    if (
+        not isinstance(reserved, list)
+        or any(type(pr) is not int or pr <= 0 for pr in reserved)
+        or len(reserved) != len(set(reserved))
+    ):
+        raise ValueError("invalid reserved planning PR history")
+    reserved_set = set(reserved)
+    if not set(ids).issubset(reserved_set):
+        raise ValueError("reserved planning PR history omits an active planning PR")
+    if len(ids) != len(set(ids)) or recorded_prs.intersection(reserved_set):
         raise ValueError("plan-only PR reused or registered as implementation")
     for index, row in enumerate(rows):
         if row["status"] != "PLAN_ONLY" or row["topological_index"] != index:
@@ -278,7 +288,7 @@ def main() -> int:
     choice.add_argument("--snapshot", type=Path)
     parser.add_argument(
         "--require-merge-ready", action="store_true",
-        help="fail if any package is still PLAN_ONLY (always fail until promotion)",
+        help="require a valid GitHub snapshot with zero remaining PLAN_ONLY packages",
     )
     args = parser.parse_args()
     try:
@@ -302,7 +312,7 @@ def main() -> int:
             snapshot = json.loads(args.snapshot.read_text(encoding="utf-8"))
         report = audit_snapshot(dag, registry, snapshot)
         print(json.dumps(report, indent=2, ensure_ascii=False))
-        return 1 if args.require_merge_ready else 0
+        return 1 if args.require_merge_ready and report["planning_prs_audited"] > 0 else 0
     except (ValueError, KeyError, TypeError, HTTPError, URLError, OSError) as exc:
         print(f"FAIL CLOSED: {exc}")
         return 2
