@@ -368,10 +368,10 @@ def run_cronograma(
                 mensagem="certification_intent deve ser PREVIEW ou CERTIFIED; sem inferência de GO.",
             )
         )
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     if not _validate_preconditions(canonical_in, validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     # Validate raw physical inputs before cost enrichment or solver setup.
     # A malformed numeric rate could otherwise fail inside the canonical
