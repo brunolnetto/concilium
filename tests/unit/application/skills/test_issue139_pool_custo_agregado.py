@@ -306,3 +306,64 @@ class TestAplicarReconciliacaoPlanejamentoSincronizaAgregado:
         assert eq.custo_operacional_agregado == pytest.approx(246_000.5)
         assert not getattr(eq, "custo_reconciliado_planejamento", False)
         assert validacoes == []
+
+    def test_reconciled_f3_direct_cost_excludes_mobilization_share(self):
+        """Real Skill05 reconciliation -> F3 -> Skill06 keeps direct K/V at plan aggregate."""
+        from concilium.domain.models.canonical import (
+            DistribuicaoSemanal,
+            EquipeDireta,
+        )
+        from concilium.domain.services.financial.equipe_custo_engine import _fill_custo_inst_sem_pool
+
+        eq = EquipeDireta(
+            item_id="eap-mob",
+            custo_total=200.0,
+            custo_operacional_agregado=200.0,
+            custo_mao_obra_mensal=1_000.0,
+            custo_equipamentos_mensal=1_000.0,
+            custo_combustivel_total_mensal=0.0,
+            custo_material_mensal=0.0,
+            permanencia_efetiva_meses=1.0,
+            custo_mobilizacao_mensal=50.0,
+            custo_desmobilizacao_mensal=50.0,
+            custo_mob_desmob=100.0,
+        )
+        MOD._aplicar_reconciliacao_planejamento(
+            [eq],
+            planejamento_map={"eap-mob": SimpleNamespace(custo_sem_bdi=400.0, subtotal=None)},
+            planejamento_ref_map={},
+            validacoes=[],
+        )
+        assert eq.custo_reconciliado_planejamento is True
+
+        # Production F3 scales its four direct components together with the
+        # mob/demob partition to close custo_total=400; the latter is priced
+        # separately by Skill06, so its share must not reduce the direct basis.
+        _fill_custo_inst_sem_pool([eq])
+        assert sum(
+            float(getattr(eq, name) or 0.0)
+            for name in ("custo_inst_mo", "custo_inst_eq", "custo_inst_mat", "custo_inst_comb")
+        ) < 400.0
+
+        activity = SimpleNamespace(
+            activity_id="eap-mob",
+            distribuicao_semanal={
+                "2026-W01": DistribuicaoSemanal(
+                    num_equipes=2.0,
+                    qtd_executada=10.0,
+                    qtd_acumulada=10.0,
+                    pct=1.0,
+                    eficiencia=1.0,
+                    fator_clima=1.0,
+                    fator_calendario=1.0,
+                )
+            },
+        )
+        _components, weekly, operational, _with_bdi, _equivalent_bdi = (
+            CONSOLID._build_activity_direct_cost(
+                activity, eq,
+                {"mao_obra": 0.0, "equipamentos": 0.0, "material": 0.0, "diesel": 0.0},
+            )
+        )
+        assert operational == pytest.approx(400.0)
+        assert sum(row.custo_operacional for row in weekly) == pytest.approx(400.0)
