@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import copy
+import json
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -100,3 +104,29 @@ def test_preflight_rejects_bypassing_both_parents_of_financial_join(state) -> No
     row["depends_on_plans"] = ["P19-C"]  # silently discard independent P17-C
     with pytest.raises(ValueError, match="missing mandatory predecessor plan paths"):
         validate_registry(dag, changed)
+
+
+def test_direct_cli_verifies_registry_without_github_access() -> None:
+    root = Path(__file__).resolve().parents[2]
+    script = root / "scripts/formalism_planonly_pr_preflight.py"
+    proc = subprocess.run(
+        [sys.executable, str(script)],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    data = json.loads(proc.stdout)
+    assert data == {
+        "valid": True, "planning_prs": 12,
+        "all_status": "PLAN_ONLY", "merge_ready": False,
+    }
+
+
+def test_direct_cli_denies_merge_readiness_for_documents() -> None:
+    root = Path(__file__).resolve().parents[2]
+    script = root / "scripts/formalism_planonly_pr_preflight.py"
+    proc = subprocess.run(
+        [sys.executable, str(script), "--require-merge-ready"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    assert proc.returncode == 1
+    assert json.loads(proc.stdout)["merge_ready"] is False
