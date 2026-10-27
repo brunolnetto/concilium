@@ -54,6 +54,12 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
     by_id = {row["id"]: row for row in rows}
     if len(by_id) != len(rows):
         raise ValueError("duplicate planning package ID")
+    dag_packages = {
+        package["id"]: {
+            "issue": node["issue"], "wave": node["wave"], "prs": package["prs"]
+        }
+        for node in dag["nodes"] for package in node["packages"]
+    }
     ids = [row["planning_pr"] for row in rows]
     if len(ids) != len(set(ids)) or recorded_prs.intersection(ids):
         raise ValueError("plan-only PR reused or registered as implementation")
@@ -65,7 +71,14 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
         parent_branches = set()
         for parent_id in row["depends_on_plans"]:
             parent = by_id.get(parent_id)
-            if parent is None or parent["topological_index"] >= index:
+            if parent is None:
+                completed = dag_packages.get(parent_id)
+                if completed is None or not completed["prs"]:
+                    raise ValueError(f"{row['id']}: invalid PR dependency {parent_id}")
+                # A predecessor promoted into the canonical DAG is satisfied;
+                # its old planning row must disappear from this registry.
+                continue
+            if parent["topological_index"] >= index:
                 raise ValueError(f"{row['id']}: invalid PR dependency {parent_id}")
             if parent["wave"] > row["wave"]:
                 raise ValueError(f"{row['id']}: backwards PR-wave dependency")
@@ -85,11 +98,19 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
         pending = list(by_id[package_id]["depends_on_plans"])
         while pending:
             parent = pending.pop()
-            if parent not in seen:
-                seen.add(parent)
+            if parent in seen:
+                continue
+            seen.add(parent)
+            if parent in by_id:
                 pending.extend(by_id[parent]["depends_on_plans"])
+            elif parent not in dag_package_ids or not dag_package_ids[parent]["prs"]:
+                raise ValueError(f"{package_id}: dependency {parent} is neither planned nor implemented")
         return seen
 
+    dag_package_ids = {
+        package["id"]: package
+        for node in dag["nodes"] for package in node["packages"]
+    }
     for row in rows:
         required = {
             p["id"] for parent_issue in nodes_by_issue[row["issue"]]["blocked_by"]
@@ -121,6 +142,11 @@ def audit_snapshot(
         raise ValueError("incomplete GitHub issue snapshot")
     if any(value not in {"open", "closed"} for value in issues.values()):
         raise ValueError("invalid issue state in snapshot")
+    for row in registry["packages"]:
+        if issues[row["issue"]] == "closed":
+            raise ValueError(
+                f"issue #{row['issue']} is closed while package {row['id']} remains PLAN_ONLY"
+            )
 
     # Live gates must include the transitive closure of issue dependencies.
     # Otherwise closing/reopening an intermediate issue can accidentally make
@@ -142,6 +168,22 @@ def audit_snapshot(
         return seen
 
     pulls = {p["number"]: p for p in snapshot["pulls"]}
+    plans_by_id = {row["id"]: row for row in registry["packages"]}
+
+    def pending_plan_ancestors(package_id: str) -> set[str]:
+        pending = list(plans_by_id[package_id]["depends_on_plans"])
+        seen: set[str] = set()
+        while pending:
+            parent = pending.pop()
+            if parent in seen:
+                continue
+            seen.add(parent)
+            if parent in plans_by_id:
+                pending.extend(plans_by_id[parent]["depends_on_plans"])
+            # If absent from the planning registry, validate_registry has
+            # already proved that the package is implemented in the canonical DAG.
+        return seen.intersection(plans_by_id)
+
     results = []
     for row in registry["packages"]:
         pr = pulls.get(row["planning_pr"])
@@ -169,10 +211,12 @@ def audit_snapshot(
             blocked_issues.update(issue_ancestors(gate))
         blocked_issues.discard(row["issue"])
         pending = sorted(i for i in blocked_issues if issues[i] != "closed")
+        pending_plans = sorted(pending_plan_ancestors(row["id"]))
         results.append({
             "id": row["id"], "pr": row["planning_pr"], "wave": row["wave"],
             "state": "PLAN_ONLY", "pending_issue_gates": pending,
-            "ready_to_implement": not pending,
+            "pending_predecessor_plans": pending_plans,
+            "ready_to_implement": not pending and not pending_plans,
             "ready_to_merge": False,  # Plans never count as product.
         })
     return {
