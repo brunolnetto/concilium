@@ -447,6 +447,43 @@ class TestBuildActivityDirectCost:
         assert weeks[0].custo_operacional == pytest.approx(400.0)
         assert weeks[0].frentes == pytest.approx(2.0)
 
+    def test_pool_backed_reconciled_flag_does_not_rescale_measured_components(self):
+        """Pool postings remain authoritative if a prior planning flag survives allocation."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=2.0, qtd_executada=20.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="POOL-RESOURCES",
+            custo_reconciliado_planejamento=True,
+            num_equipes_base=2,
+            custo_total=200.0,
+            # The planning subtotal is stale after pool allocation. The four
+            # instancial fields are now measured pool postings and sum to 200.
+            custo_operacional_agregado=400.0,
+            custo_inst_mo=100.0,
+            custo_inst_eq=100.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=30.0,
+            gamma_equipamentos_catalogo=30.0,
+            gamma_material_catalogo=0.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        _components, weeks, direct_cost, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert direct_cost == pytest.approx(200.0)
+        assert sale == pytest.approx(200.0)
+        assert weeks[0].custo_operacional == pytest.approx(200.0)
+
     def test_heuristic_nonpool_cost_does_not_suppress_material_gamma(self):
         """Incomplete non-pool aggregate is not complete physical K/V evidence."""
         activity = SimpleNamespace(
