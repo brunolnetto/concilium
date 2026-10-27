@@ -121,6 +121,26 @@ def audit_snapshot(
         raise ValueError("incomplete GitHub issue snapshot")
     if any(value not in {"open", "closed"} for value in issues.values()):
         raise ValueError("invalid issue state in snapshot")
+
+    # Live gates must include the transitive closure of issue dependencies.
+    # Otherwise closing/reopening an intermediate issue can accidentally make
+    # a downstream package appear implementable while an ancestor is open.
+    def issue_ancestors(issue_number: int) -> set[int]:
+        seen: set[int] = set()
+        pending = list(nodes[issue_number]["blocked_by"])
+        while pending:
+            parent_issue = pending.pop()
+            if parent_issue in seen:
+                continue
+            seen.add(parent_issue)
+            parent_node = nodes.get(parent_issue)
+            if parent_node is None:
+                raise ValueError(
+                    f"issue #{issue_number}: dependency #{parent_issue} is absent from DAG"
+                )
+            pending.extend(parent_node["blocked_by"])
+        return seen
+
     pulls = {p["number"]: p for p in snapshot["pulls"]}
     results = []
     for row in registry["packages"]:
@@ -134,15 +154,21 @@ def audit_snapshot(
         if pr["state"] != "open" or not pr.get("draft") or pr.get("merged_at"):
             raise ValueError(f"{row['id']}: PLAN_ONLY must remain an open draft")
         node = nodes[row["issue"]]
-        blocked_issues = sorted({
+        direct_gates = {
             *row["blocks_on_issues"],
             *node["blocked_by"],
             *(
                 earlier["issue"] for earlier in dag["nodes"]
                 if earlier["wave"] < row["wave"]
             ),
-        } - {row["issue"]})
-        pending = [i for i in blocked_issues if issues[i] != "closed"]
+        } - {row["issue"]}
+        blocked_issues = set(direct_gates)
+        for gate in direct_gates:
+            if gate not in nodes:
+                raise ValueError(f"{row['id']}: issue gate #{gate} is absent from DAG")
+            blocked_issues.update(issue_ancestors(gate))
+        blocked_issues.discard(row["issue"])
+        pending = sorted(i for i in blocked_issues if issues[i] != "closed")
         results.append({
             "id": row["id"], "pr": row["planning_pr"], "wave": row["wave"],
             "state": "PLAN_ONLY", "pending_issue_gates": pending,
