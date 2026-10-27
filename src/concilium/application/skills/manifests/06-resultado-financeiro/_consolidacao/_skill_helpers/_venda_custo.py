@@ -116,13 +116,16 @@ def _activity_cost_components(equipe: object | None) -> tuple[float, float, floa
             float(getattr(equipe, "custo_inst_mat", 0.0) or 0.0),
             float(getattr(equipe, "custo_inst_comb", 0.0) or 0.0),
         )
-        if getattr(equipe, "custo_reconciliado_planejamento", False):
-            # Planning reconciliation is an aggregate direct-cost authority.
-            # F3's decomposition closes custo_total including its mob/demob
-            # partition, while Skill06 prices mob/demob separately. Normalize
-            # only the four direct components to the reconciled operational
-            # aggregate, otherwise the mob share is silently subtracted from
-            # direct K/V and never recovered in the weekly direct sale.
+        if (
+            getattr(equipe, "custo_reconciliado_planejamento", False)
+            and not getattr(equipe, "contrato_tipo_id", "")
+        ):
+            # Non-pool planning reconciliation is an aggregate direct-cost
+            # authority. F3's decomposition closes custo_total including its
+            # mob/demob partition, while Skill06 prices mob/demob separately.
+            # Pool-backed instancial components are measured postings and must
+            # remain authoritative even if the planning provenance flag remains
+            # set from before pool allocation.
             target = float(getattr(equipe, "custo_operacional_agregado", 0.0) or 0.0)
             total = sum(components)
             if target > 0 and total > 0:
