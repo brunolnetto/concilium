@@ -188,8 +188,8 @@ def test_p14c_malformed_team_allocation_clears_stale_schedule_and_finance() -> N
     assert outcome.canonical.mob_schedule is None
 
 
-def test_p14c_unknown_certification_intent_fails_before_schedule() -> None:
-    canonical = _canonical(1.0)
+def test_p14c_unknown_certification_intent_clears_stale_outputs() -> None:
+    canonical = _with_stale_schedule(_canonical(1.0))
     outcome = run_cronograma(
         canonical,
         {
@@ -199,8 +199,40 @@ def test_p14c_unknown_certification_intent_fails_before_schedule() -> None:
         {},
     )
     assert outcome.has_errors
-    assert outcome.canonical is canonical
-    assert any(v.codigo == "VAL-CRON-CERT-INTENT" for v in outcome.validacoes)
+    assert any(
+        v.codigo == "VAL-CRON-CERT-INTENT" and v.status == "ERRO"
+        for v in outcome.validacoes
+    )
+    assert canonical.cronograma is not None
+    assert outcome.canonical is not canonical
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.intervalos_atividade == []
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.s_curve is None
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.mob_schedule is None
+
+
+def test_p14c_empty_eap_precondition_clears_stale_outputs() -> None:
+    canonical = _with_stale_schedule(_canonical(1.0).model_copy(update={"eap": []}))
+    outcome = run_cronograma(
+        canonical,
+        {"certification_intent": "PREVIEW"},
+        {},
+    )
+    assert outcome.has_errors
+    assert any(
+        v.codigo == "VAL-CRON-PRECONDICAO" and v.status == "ERRO"
+        for v in outcome.validacoes
+    )
+    assert canonical.cronograma is not None
+    assert outcome.canonical is not canonical
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.intervalos_atividade == []
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.s_curve is None
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.mob_schedule is None
 
 
 def test_p14c_certified_missing_fm_never_publishes_price_or_schedule() -> None:
