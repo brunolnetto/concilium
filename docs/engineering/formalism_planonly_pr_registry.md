@@ -35,6 +35,8 @@ Além dessas arestas entre drafts, **todas** as dependências por issue permanec
 
 As branches `plan/formalism-*` guardam apenas um documento de contrato por pacote e pertencem a PRs **draft**. Trechos lineares usam base do predecessor, p.ex. #111 base branch #110; o fork/join de #110 usa #109 como base e declara #108 como segunda dependência obrigatória. O GitHub suporta **uma única branch base**; o vínculo com a segunda é lógico e precisa ser exigido por revisão, oráculo e status check, não por mera ordenação na lista de PRs.
 
+**Atenção ao CI de branches empilhadas:** `.github/workflows/ci.yml` atualmente dispara `pull_request` apenas quando a **branch base é `main`**. Portanto #110–#119 (base `plan/formalism-*`) não terão execução normal desse workflow enquanto empilhados. Após integrar/aceitar o predecessor, retargetar o sucessor para `main`, confirmar diff somente do pacote, disparar CI no SHA atual e exigir os jobs mandatórios. Nunca usar ausência de workflow como PASS.
+
 Quando a Onda 1 for aceita, para cada pacote, adicionar código real, falsificadores e oráculos, atualizar no DAG canônico apenas depois do PR virar implementação validável e revalidar os bloqueios. O teste [test_formalism_planonly_pr_registry.py](../../tests/reference_formalism/test_formalism_planonly_pr_registry.py) falha se os PRs de planejamento forem indevidamente contabilizados como implementações no DAG.
 
 ## Ações prévias ao merge
