@@ -49,6 +49,45 @@ def test_cross_branch_join_requires_both_independent_issues(state) -> None:
     assert {17, 19, 25}.issubset(row["pending_issue_gates"])
 
 
+def test_same_issue_predecessor_plan_blocks_implementation_readiness(state) -> None:
+    dag, registry, snapshot = state
+    completed = {"P17-C": 201, "P19-C": 202, "P20-B": 203, "P20-C": 204}
+    for node in dag["nodes"]:
+        for package in node["packages"]:
+            if package["id"] in completed:
+                package["prs"] = [completed[package["id"]]]
+    registry["packages"] = [
+        row for row in registry["packages"] if row["id"] not in completed
+    ]
+    for index, row in enumerate(registry["packages"]):
+        row["topological_index"] = index
+    p21a = next(row for row in registry["packages"] if row["id"] == "P21-A")
+    p21a["base_branch"] = "main"
+
+    # Simulate completed predecessors and closed issue gates, while P21-A/B
+    # remain unimplemented packages in the same open issue #21.
+    for issue in snapshot["issues"]:
+        issue["state"] = "open" if issue["number"] in {21, 23, 24, 26} else "closed"
+    snapshot["pulls"] = [
+        pull for pull in snapshot["pulls"]
+        if pull["number"] not in {108, 109, 110, 111}
+    ]
+    next(pull for pull in snapshot["pulls"] if pull["number"] == 112)["base"]["ref"] = "main"
+
+    report = audit_snapshot(dag, registry, snapshot)
+    p21b = next(item for item in report["plans"] if item["id"] == "P21-B")
+    assert p21b["pending_issue_gates"] == []
+    assert p21b["pending_predecessor_plans"] == ["P21-A"]
+    assert p21b["ready_to_implement"] is False
+
+
+def test_closed_issue_cannot_retain_planonly_package(state) -> None:
+    dag, registry, snapshot = state
+    next(issue for issue in snapshot["issues"] if issue["number"] == 17)["state"] = "closed"
+    with pytest.raises(ValueError, match="closed while package P17-C remains PLAN_ONLY"):
+        audit_snapshot(dag, registry, snapshot)
+
+
 def test_reopened_transitive_issue_gate_blocks_downstream_package(state) -> None:
     dag, registry, snapshot = state
     changed = copy.deepcopy(snapshot)
