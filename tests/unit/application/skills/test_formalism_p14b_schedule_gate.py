@@ -61,6 +61,7 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
             "s_curve": object(),
             "cubo_analitico": object(),
             "mob_schedule": object(),
+            "indiretos": [{"stale": True}],
         }
     )
 
@@ -233,6 +234,51 @@ def test_p14c_empty_eap_precondition_clears_stale_outputs() -> None:
     assert outcome.canonical.s_curve is None
     assert outcome.canonical.cubo_analitico is None
     assert outcome.canonical.mob_schedule is None
+
+
+def test_p14c_pool_violation_invalidates_stale_mobilization_and_indirect_costs(monkeypatch) -> None:
+    """Pool rejection must clear every old schedule-derived input to Skill 06."""
+    canonical = _with_stale_schedule(_canonical(1.0))
+
+    monkeypatch.setitem(
+        run_cronograma.__globals__,
+        "_determine_mode_and_distribuicao",
+        lambda *args, **kwargs: ("MANUAL", {}, [], None, False, [], set()),
+    )
+
+    def _force_pool_violation(*args, **kwargs):
+        validacoes = args[3]
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-POOL",
+                status="ERRO",
+                mensagem="forced pool violation for stale-state regression",
+            )
+        )
+        return [{"code": "forced-pool-violation"}]
+
+    monkeypatch.setitem(
+        run_cronograma.__globals__, "_check_pool_violations", _force_pool_violation
+    )
+    outcome = run_cronograma(
+        canonical,
+        {"num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {},
+    )
+
+    assert outcome.has_errors
+    assert outcome.canonical is not canonical
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.mob_schedule is None
+    assert outcome.canonical.indiretos == []
+    assert outcome.canonical.indiretos_semanal == []
+    assert outcome.canonical.indiretos_com_bdi == []
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.s_curve is None
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.constraint_violations[-1] == {
+        "code": "forced-pool-violation"
+    }
 
 
 def test_p14c_certified_missing_fm_never_publishes_price_or_schedule() -> None:
