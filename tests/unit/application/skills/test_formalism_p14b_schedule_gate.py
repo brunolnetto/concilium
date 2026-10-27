@@ -153,6 +153,41 @@ def test_p14c_failed_reschedule_clears_stale_schedule_projections(monkeypatch) -
     assert outcome.canonical.mob_schedule is None
 
 
+def test_p14c_malformed_team_allocation_clears_stale_schedule_and_finance() -> None:
+    canonical = _canonical(1.0).model_copy(
+        update={
+            "cronograma": Cronograma(scheduled_activities=[], is_feasible=True),
+            "intervalos_atividade": ["stale-interval"],
+            "resultado": {"stale": True},
+            "resultado_reconciliado": {"stale": True},
+            "s_curve": {"stale": True},
+            "cubo_analitico": {"stale": True},
+            "mob_schedule": {"stale": True},
+        }
+    )
+    outcome = run_cronograma(
+        canonical,
+        {"num_equipes_por_item": {"i1": 2}},
+        {},
+    )
+
+    assert outcome.has_errors
+    assert any(
+        v.codigo == "VAL-CRON-EQUIPES-FORMATO" and v.status == "ERRO"
+        for v in outcome.validacoes
+    )
+    assert canonical.cronograma is not None
+    assert canonical.resultado is not None
+    assert outcome.canonical is not canonical
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.intervalos_atividade == []
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.resultado_reconciliado is None
+    assert outcome.canonical.s_curve is None
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.mob_schedule is None
+
+
 def test_p14c_unknown_certification_intent_fails_before_schedule() -> None:
     canonical = _canonical(1.0)
     outcome = run_cronograma(
