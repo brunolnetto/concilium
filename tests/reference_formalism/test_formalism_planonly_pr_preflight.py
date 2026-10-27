@@ -49,6 +49,32 @@ def test_cross_branch_join_requires_both_independent_issues(state) -> None:
     assert {17, 19, 25}.issubset(row["pending_issue_gates"])
 
 
+def test_reopened_transitive_issue_gate_blocks_downstream_package(state) -> None:
+    dag, registry, snapshot = state
+    changed = copy.deepcopy(snapshot)
+    for issue in changed["issues"]:
+        issue["state"] = "closed"
+    next(issue for issue in changed["issues"] if issue["number"] == 17)["state"] = "open"
+
+    plans = audit_snapshot(dag, registry, changed)["plans"]
+    p21a = next(item for item in plans if item["id"] == "P21-A")
+    assert 17 in p21a["pending_issue_gates"]
+    assert p21a["ready_to_implement"] is False
+
+
+def test_open_issue_23_blocks_p26a_even_if_issue_24_is_closed(state) -> None:
+    dag, registry, snapshot = state
+    changed = copy.deepcopy(snapshot)
+    for issue in changed["issues"]:
+        issue["state"] = "closed"
+    next(issue for issue in changed["issues"] if issue["number"] == 23)["state"] = "open"
+
+    plans = audit_snapshot(dag, registry, changed)["plans"]
+    p26a = next(item for item in plans if item["id"] == "P26-A")
+    assert 23 in p26a["pending_issue_gates"]
+    assert p26a["ready_to_implement"] is False
+
+
 @pytest.mark.parametrize("field", ["draft", "state", "merged_at"])
 def test_preflight_rejects_any_planonly_promotion_or_merge(state, field) -> None:
     dag, registry, snapshot = state
