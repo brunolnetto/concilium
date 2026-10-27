@@ -100,7 +100,7 @@ def test_p14c_failed_reschedule_clears_stale_schedule_projections(monkeypatch) -
         run_cronograma.__globals__,
         "_determine_mode_and_distribuicao",
         lambda *args, **kwargs: (
-            args[10].append(ValidacaoItem(
+            args[11].append(ValidacaoItem(
                 codigo="VAL-CRON-01",
                 status="ERRO",
                 mensagem="forced schedule failure for stale-projection regression",
