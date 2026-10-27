@@ -11,13 +11,13 @@ from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,
-    ValidacaoItem,
     Cronograma,
     EapItem,
     Meta,
     Praticabilidade,
     Projeto,
     RegimeTrabalho,
+    ValidacaoItem,
 )
 
 
