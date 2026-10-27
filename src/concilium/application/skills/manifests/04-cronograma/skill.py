@@ -90,6 +90,20 @@ _rasfc_run_heuristics = _mod_validacao._rasfc_run_heuristics
 
 
 
+def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
+    """Remove stale schedule-derived outputs after a rejected schedule attempt."""
+    return canonical.model_copy(
+        update={
+            **_invalidate_derived_costs(),
+            "cronograma": None,
+            "intervalos_atividade": [],
+            "curvas_forca": [],
+            "analise_campanhas": None,
+            "mob_schedule": None,
+        }
+    )
+
+
 def _invalidate_derived_costs() -> dict[str, Any]:
     """Clear stale economic outputs whenever Skill04 cannot certify provenance."""
     return {
@@ -370,13 +384,7 @@ def run_cronograma(
         validacoes=validacoes,
     )
     if invalid_productivity or (certification_intent == "CERTIFIED" and unverified_productivity):
-        return SkillResult(
-            canonical_in.model_copy(
-                update={"cronograma": None, "intervalos_atividade": [],
-                        **_invalidate_derived_costs()}
-            ),
-            validacoes,
-        )
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     (
         regime,
@@ -449,20 +457,16 @@ def run_cronograma(
                 ),
             )
         )
-        blocked = canonical_in.model_copy(
-            update={"cronograma": None, "intervalos_atividade": [],
-                    **_invalidate_derived_costs()}
-        )
-        return SkillResult(blocked, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
     if failed:
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     # P14-B: never publish an authoritative schedule whose calendar/physical
     # predecessors failed. SkillResult.has_errors alone cannot protect consumers
     # if a partial cronograma is still included in the canonical output.
     blocking_codes = {"VAL-CRON-01", "VAL-CRON-PRECEDENCIA"}
     if any(v.status == "ERRO" and v.codigo in blocking_codes for v in validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     pool_violations = _check_pool_violations(canonical_in, distribuicao_por_item, cpu_lookup, validacoes)
     if pool_violations:
