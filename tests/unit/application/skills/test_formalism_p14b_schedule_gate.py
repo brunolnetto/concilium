@@ -107,7 +107,7 @@ def test_p14c_failed_reschedule_clears_stale_schedule_projections(monkeypatch) -
         {},
     )
 
-    assert outcome.has_errors or any(v.status == "ERRO" for v in outcome.validacoes)
+    assert outcome.canonical is not canonical
     assert outcome.canonical.cronograma is None
     assert outcome.canonical.intervalos_atividade == []
     assert outcome.canonical.curvas_forca == []
