@@ -11,6 +11,7 @@ from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,
+    Cronograma,
     EapItem,
     Meta,
     Praticabilidade,
@@ -78,6 +79,43 @@ def test_incomplete_scope_reports_validation_not_fake_extra_weeks() -> None:
     assert "Itens não completados" in error.mensagem
     assert result.canonical is canonical
 
+
+
+def test_p14c_failed_reschedule_clears_stale_schedule_projections(monkeypatch) -> None:
+    """A failed replacement attempt must not leave last run's schedule/finance looking current."""
+    canonical = _canonical(1.0).model_copy(
+        update={
+            "cronograma": Cronograma(is_feasible=True),
+            "intervalos_atividade": ["stale-interval"],
+            "curvas_forca": ["stale-force"],
+            "analise_campanhas": {"stale": True},
+            "resultado": {"stale": True},
+            "s_curve": {"stale": True},
+            "cubo_analitico": {"stale": True},
+            "mob_schedule": {"stale": True},
+        }
+    )
+    monkeypatch.setitem(
+        run_cronograma.__globals__,
+        "_determine_mode_and_distribuicao",
+        lambda *args, **kwargs: ("MANUAL", {}, [], None, True, [], set()),
+    )
+
+    outcome = run_cronograma(
+        canonical,
+        {"num_equipes_por_item": {"i1": {"2026-W23": 1}}},
+        {},
+    )
+
+    assert outcome.has_errors or any(v.status == "ERRO" for v in outcome.validacoes)
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.intervalos_atividade == []
+    assert outcome.canonical.curvas_forca == []
+    assert outcome.canonical.analise_campanhas is None
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.s_curve is None
+    assert outcome.canonical.cubo_analitico is None
+    assert outcome.canonical.mob_schedule is None
 
 
 def test_p14c_unknown_certification_intent_fails_before_schedule() -> None:
