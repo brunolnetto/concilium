@@ -168,6 +168,27 @@ def audit_snapshot(
         return seen
 
     pulls = {p["number"]: p for p in snapshot["pulls"]}
+
+    # Canonical DAG slots represent completed implementation, never a draft
+    # planning PR. A nonempty PR list alone is not proof of promotion.
+    for node in dag["nodes"]:
+        for package in node["packages"]:
+            for pr_number in package["prs"]:
+                implementation_pr = pulls.get(pr_number)
+                if implementation_pr is None:
+                    raise ValueError(
+                        f"{package['id']}: canonical implementation PR #{pr_number} "
+                        "is absent from GitHub snapshot"
+                    )
+                if (
+                    implementation_pr.get("state") != "closed"
+                    or not implementation_pr.get("merged_at")
+                    or implementation_pr.get("draft")
+                ):
+                    raise ValueError(
+                        f"{package['id']}: canonical PR #{pr_number} is not a merged implementation"
+                    )
+
     plans_by_id = {row["id"]: row for row in registry["packages"]}
 
     def pending_plan_ancestors(package_id: str) -> set[str]:
