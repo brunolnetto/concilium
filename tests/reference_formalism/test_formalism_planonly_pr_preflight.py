@@ -98,11 +98,5 @@ def test_preflight_rejects_bypassing_both_parents_of_financial_join(state) -> No
     changed = copy.deepcopy(registry)
     row = next(x for x in changed["packages"] if x["id"] == "P20-B")
     row["depends_on_plans"] = ["P19-C"]  # silently discard independent P17-C
-    # Extra non-base edges must not disappear on a graph edit.
-    assert {r["id"] for r in registry["packages"]} >= {"P17-C", "P19-C"}
-    # This guard is an explicit contract of the canonical PR plan:
-    assert "P17-C" not in row["depends_on_plans"]
-    # Validate this independently of GitHub's one-base API.
-    assert set(next(x for x in registry["packages"] if x["id"] == "P20-B")[
-        "depends_on_plans"
-    ]) == {"P17-C", "P19-C"}
+    with pytest.raises(ValueError, match="missing mandatory predecessor plan paths"):
+        validate_registry(dag, changed)
