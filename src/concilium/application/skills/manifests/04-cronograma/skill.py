@@ -121,6 +121,7 @@ def _invalidate_derived_costs() -> dict[str, Any]:
         "resumo_utilizacao_contratos": [],
         "recursos_consumiveis": [],
         "resumo_estoque_consumiveis": [],
+        "indiretos": [],
         "indiretos_semanal": [],
         "indiretos_com_bdi": [],
         "bridge_analysis": None,
@@ -474,44 +475,8 @@ def run_cronograma(
         # can overbook a resource. An ERRO diagnostic alone is insufficient if
         # the stale/invalid schedule and its economic artifacts are published.
         # Never substitute zero cost or an optimistic GO for unavailable pool.
-        blocked = canonical_in.model_copy(
+        blocked = _invalidate_rejected_schedule(canonical_in).model_copy(
             update={
-                "cronograma": None,
-                "intervalos_atividade": [],
-                "resultado": None,
-                "ponto_equilibrio": [],
-                "custos_atividades": [],
-                # These are *derived* from the rejected schedule, not exogenous
-                # calendar/practicability or physical resource definitions.
-                # Never publish previous inventory/costs as if they were
-                # outcomes of a physically impossible new allocation.
-                "recursos_consumiveis": [],
-                "resumo_estoque_consumiveis": [],
-                "curvas_forca": [],
-                "analise_campanhas": None,
-                "contratos_recurso": [],
-                "cadeias_perpetuacao": [],
-                "instancias_recurso": [],
-                "resumo_utilizacao_contratos": [],
-                "indiretos_semanal": [],
-                "indiretos_com_bdi": [],
-                "resultado_reconciliado": None,
-                "memorial_calculo_bdi": None,
-                "tabela_bdi_efetiva": None,
-                "diagnostico_pe": None,
-                "backtracking_pe": None,
-                "bridge_analysis": None,
-                "criticality_report": None,
-                "cost_criticality_report": None,
-                "replan_suggestions": None,
-                "plan_space_result": None,
-                "cpu_exposure_perfis": [],
-                "relatorio_criticidade": None,
-                "relatorio_sensibilidade": None,
-                "relatorio_intervencao": None,
-                "s_curve": None,
-                "cubo_analitico": None,
-                "curva_abc_insumo": None,
                 "constraint_violations": [
                     *(canonical_in.constraint_violations or []),
                     *pool_violations,
