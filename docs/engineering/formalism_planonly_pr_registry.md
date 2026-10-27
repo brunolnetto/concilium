@@ -39,6 +39,8 @@ As branches `plan/formalism-*` guardam apenas um documento de contrato por pacot
 
 Quando a Onda 1 for aceita, para cada pacote, adicionar código real, falsificadores e oráculos, atualizar no DAG canônico apenas depois do PR virar implementação validável e revalidar os bloqueios. O teste [test_formalism_planonly_pr_registry.py](../../tests/reference_formalism/test_formalism_planonly_pr_registry.py) falha se os PRs de planejamento forem indevidamente contabilizados como implementações no DAG.
 
+O preflight de snapshot só marca `ready_to_implement=true` quando **todos os gates de issue estão fechados e todos os pacotes predecessores já saíram do registro PLAN_ONLY por promoção explícita no DAG canônico**. Fechar uma issue enquanto ainda há pacote PLAN_ONLY nela é inconsistência e falha fechado. Quando um predecessor for implementado, remova sua linha de planejamento, preencha o slot canônico com o PR de implementação e retargete o sucessor empilhado para `main`; o preflight reconhece esse predecessor como concluído, mas não confunde o draft de planejamento com implementação.
+
 ## Ações prévias ao merge
 
 1. Proprietário resolver #25 (branch protection e execução hospedada).
