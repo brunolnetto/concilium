@@ -474,3 +474,10 @@ def test_extra_production_outside_declared_skill04_bounds_is_rejected() -> None:
                 _hours("B", "2026-W20"),
             ),
         )
+
+
+def test_exact_quantity_rejects_integer_overflow_as_domain_validation() -> None:
+    from concilium.application.scheduling.skill04_consumption_preview import _exact_q
+
+    with pytest.raises(ValueError, match="finite nonnegative"):
+        _exact_q(10 ** 400)
