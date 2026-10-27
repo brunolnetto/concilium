@@ -94,10 +94,13 @@ def test_same_issue_predecessor_plan_blocks_implementation_readiness(state) -> N
     assert p21b["ready_to_implement"] is False
 
 
-def test_planonly_pr_cannot_be_promoted_as_canonical_implementation(state) -> None:
+@pytest.mark.parametrize("promoted_state", ["open_draft", "merged"])
+def test_planonly_pr_cannot_be_promoted_as_canonical_implementation(
+    state, promoted_state,
+) -> None:
     dag, registry, snapshot = state
-    # Adversarial mutation: copy P17-C's still-draft planning PR into the
-    # canonical slot and remove its PLAN_ONLY registry row.
+    # Adversarial mutation: copy P17-C's planning PR into the canonical slot
+    # and remove its PLAN_ONLY row. It remains forbidden even if merged.
     package = next(
         package for node in dag["nodes"] for package in node["packages"]
         if package["id"] == "P17-C"
@@ -108,8 +111,13 @@ def test_planonly_pr_cannot_be_promoted_as_canonical_implementation(state) -> No
     ]
     for index, row in enumerate(registry["packages"]):
         row["topological_index"] = index
+    if promoted_state == "merged":
+        planning_pr = next(pull for pull in snapshot["pulls"] if pull["number"] == 108)
+        planning_pr.update(
+            state="closed", draft=False, merged_at="2026-10-27T00:00:00Z"
+        )
 
-    with pytest.raises(ValueError, match="canonical PR #108 is not a merged implementation"):
+    with pytest.raises(ValueError, match="plan-only PR reused or registered as implementation"):
         audit_snapshot(dag, registry, snapshot)
 
 
@@ -233,3 +241,41 @@ def test_direct_cli_denies_merge_readiness_for_documents() -> None:
     )
     assert proc.returncode == 1
     assert json.loads(proc.stdout)["merge_ready"] is False
+
+
+def test_require_merge_ready_succeeds_when_all_packages_are_promoted(
+    state, monkeypatch, tmp_path, capsys,
+) -> None:
+    import scripts.formalism_planonly_pr_preflight as preflight
+
+    dag, registry, snapshot = state
+    registry["packages"] = []
+    next_pr = 2000
+    for node in dag["nodes"]:
+        for package in node["packages"]:
+            if not package["prs"]:
+                package["prs"] = [next_pr]
+                snapshot["pulls"].append({
+                    "number": next_pr,
+                    "state": "closed",
+                    "draft": False,
+                    "merged_at": "2026-10-27T00:00:00Z",
+                })
+                next_pr += 1
+    for issue in snapshot["issues"]:
+        issue["state"] = "closed"
+
+    snapshot_path = tmp_path / "promoted-snapshot.json"
+    snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+    monkeypatch.setattr(preflight, "load_registry", lambda: (dag, registry))
+    monkeypatch.setattr(
+        preflight.sys,
+        "argv",
+        ["formalism_planonly_pr_preflight.py", "--snapshot", str(snapshot_path),
+         "--require-merge-ready"],
+    )
+
+    assert preflight.main() == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["planning_prs_audited"] == 0
+    assert report["plans"] == []
