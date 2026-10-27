@@ -51,17 +51,38 @@ def _canonical(percent: float, *, unidade: str = "m3") -> CanonicalModel:
     )
 
 
+def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
+    """Seed prior-run projections so a rejected schedule must invalidate them."""
+    return canonical.model_copy(
+        update={
+            "cronograma": Cronograma(scheduled_activities=[], is_feasible=True),
+            "intervalos_atividade": ["stale-interval"],
+            "resultado": object(),
+            "s_curve": object(),
+            "cubo_analitico": object(),
+            "mob_schedule": object(),
+        }
+    )
+
+
 def test_zero_practicability_blocks_canonical_schedule_and_price() -> None:
     """A genuine Skill 04 run must fail closed, not publish partial cronograma."""
-    canonical = _canonical(0.0)
+    canonical = _with_stale_schedule(_canonical(0.0))
     result = run_cronograma(
         canonical,
         {"num_equipes_por_item": {"i1": {"2026-W23": 1}}},
         {},
     )
     assert result.has_errors
-    assert result.canonical is canonical
+    # Preserve the caller's input; return a sanitized canonical snapshot.
+    assert canonical.cronograma is not None
+    assert canonical.resultado is not None
     assert result.canonical.cronograma is None
+    assert result.canonical.intervalos_atividade == []
+    assert result.canonical.resultado is None
+    assert result.canonical.s_curve is None
+    assert result.canonical.cubo_analitico is None
+    assert result.canonical.mob_schedule is None
     assert any(
         v.codigo == "VAL-CRON-01" and v.status == "ERRO"
         for v in result.validacoes
@@ -70,7 +91,7 @@ def test_zero_practicability_blocks_canonical_schedule_and_price() -> None:
 
 def test_incomplete_scope_reports_validation_not_fake_extra_weeks() -> None:
     """Negative physical availability is never repaired with invented weeks."""
-    canonical = _canonical(0.0)
+    canonical = _with_stale_schedule(_canonical(0.0))
     result = run_cronograma(
         canonical,
         {"num_equipes_por_item": {"i1": {"2026-W23": 1}}},
@@ -78,7 +99,14 @@ def test_incomplete_scope_reports_validation_not_fake_extra_weeks() -> None:
     )
     error = next(v for v in result.validacoes if v.codigo == "VAL-CRON-01")
     assert "Itens não completados" in error.mensagem
-    assert result.canonical is canonical
+    assert canonical.cronograma is not None
+    assert canonical.resultado is not None
+    assert result.canonical.cronograma is None
+    assert result.canonical.intervalos_atividade == []
+    assert result.canonical.resultado is None
+    assert result.canonical.s_curve is None
+    assert result.canonical.cubo_analitico is None
+    assert result.canonical.mob_schedule is None
 
 
 
