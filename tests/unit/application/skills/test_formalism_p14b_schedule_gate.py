@@ -66,6 +66,11 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
             "equipes_diretas": [
                 EquipeDireta(equipe_id="stale-team", custo_total=1234.5, permanencia_meses=2.0)
             ],
+            "composicao_equipes_atividade": [object()],
+            "relatorio_oportunidades": object(),
+            "requisitos": [object()],
+            "alocacoes": [object()],
+            "conflitos_pico": [object()],
         }
     )
 
@@ -276,6 +281,11 @@ def test_p14c_pool_violation_invalidates_stale_mobilization_and_indirect_costs(m
     assert outcome.canonical.mob_schedule is None
     assert outcome.canonical.indiretos == []
     assert outcome.canonical.equipes_diretas == []
+    assert outcome.canonical.composicao_equipes_atividade == []
+    assert outcome.canonical.relatorio_oportunidades is None
+    assert outcome.canonical.requisitos == []
+    assert outcome.canonical.alocacoes == []
+    assert outcome.canonical.conflitos_pico == []
     assert outcome.canonical.indiretos_semanal == []
     assert outcome.canonical.indiretos_com_bdi == []
     assert outcome.canonical.resultado is None
