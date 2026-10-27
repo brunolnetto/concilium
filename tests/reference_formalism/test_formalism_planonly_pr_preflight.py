@@ -123,8 +123,9 @@ def test_closed_issue_cannot_retain_planonly_package(state) -> None:
 def test_reopened_transitive_issue_gate_blocks_downstream_package(state) -> None:
     dag, registry, snapshot = state
     changed = copy.deepcopy(snapshot)
+    planned_issues = {row["issue"] for row in registry["packages"]}
     for issue in changed["issues"]:
-        issue["state"] = "closed"
+        issue["state"] = "open" if issue["number"] in planned_issues else "closed"
     next(issue for issue in changed["issues"] if issue["number"] == 17)["state"] = "open"
 
     plans = audit_snapshot(dag, registry, changed)["plans"]
@@ -136,8 +137,9 @@ def test_reopened_transitive_issue_gate_blocks_downstream_package(state) -> None
 def test_open_issue_23_blocks_p26a_even_if_issue_24_is_closed(state) -> None:
     dag, registry, snapshot = state
     changed = copy.deepcopy(snapshot)
+    planned_issues = {row["issue"] for row in registry["packages"]}
     for issue in changed["issues"]:
-        issue["state"] = "closed"
+        issue["state"] = "open" if issue["number"] in planned_issues else "closed"
     next(issue for issue in changed["issues"] if issue["number"] == 23)["state"] = "open"
 
     plans = audit_snapshot(dag, registry, changed)["plans"]
@@ -172,7 +174,11 @@ def test_preflight_rejects_branch_or_stack_retarget(state, field) -> None:
 def test_preflight_rejects_missing_pr_instead_of_guessing(state) -> None:
     dag, registry, snapshot = state
     changed = copy.deepcopy(snapshot)
-    changed["pulls"].pop()
+    missing_planning_pr = registry["packages"][0]["planning_pr"]
+    changed["pulls"] = [
+        pull for pull in changed["pulls"]
+        if pull["number"] != missing_planning_pr
+    ]
     with pytest.raises(ValueError, match="missing GitHub PR"):
         audit_snapshot(dag, registry, changed)
 
