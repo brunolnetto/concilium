@@ -107,6 +107,7 @@ def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
 def _invalidate_derived_costs() -> dict[str, Any]:
     """Clear stale economic outputs whenever Skill04 cannot certify provenance."""
     return {
+        "equipes_diretas": [],
         "resultado": None,
         "resultado_reconciliado": None,
         "ponto_equilibrio": [],
