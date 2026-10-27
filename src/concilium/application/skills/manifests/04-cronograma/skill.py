@@ -399,7 +399,7 @@ def run_cronograma(
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
     if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     wmp_curves: list = []
     mobilizacao_policies = inputs.get("mobilizacao_policies")
