@@ -22,6 +22,8 @@
    - `Tests`
 
    O job `MCP Proxy (standalone)` é condicional a mudanças; não exigir indiscriminadamente um job que pode ficar `skipped`. Avaliar a matriz `Formalism Reference Py...` e jobs adicionais conforme política efetiva. Selecionar os status **existentes e publicados** pelo GitHub depois de um workflow real.
+**Dependências empilhadas:** o evento `pull_request` de `.github/workflows/ci.yml` filtra apenas `main`; PRs com base `plan/formalism-*` não terão checks normais durante a preparação. Retargetar cada PR para `main` **após** integração do predecessor, revisar o diff e executar CI no novo contexto antes de torná-lo mergeável. Ausência de checks no stack não é verde.
+
 4. Criar PR de teste **deliberadamente inválido** em branch isolado, alterando custo/economia sem atualizar especificação/golden obrigatórios, para demonstrar que `Economic Contract Evidence (required)` falha **e a proteção impede merge**. Reverter/descartar a mutação e provar PR válido com todos os checks exigidos verdes. Não confundir o teste unitário do gate com esta prova de branch protection.
 5. Registrar na issue #25: screenshots/configuração versionada da proteção, SHA da branch protegida, IDs de workflow, status checks obrigatórios, PR bloqueado do teste negativo, e evidência do CI positivo. Só então avaliar fechamento de #25, sempre com aceite manual.
 
