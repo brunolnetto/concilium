@@ -31,6 +31,15 @@ def state() -> tuple[dict, dict, dict]:
         "head": {"ref": row["head_branch"]},
         "base": {"ref": row["base_branch"]},
     } for row in registry["packages"]]
+    # Canonical package PRs are completed implementations, not planning drafts.
+    implemented_prs = {
+        pr for node in dag["nodes"] for package in node["packages"]
+        for pr in package["prs"]
+    }
+    pr_rows.extend({
+        "number": number, "state": "closed", "draft": False,
+        "merged_at": "2026-01-01T00:00:00Z",
+    } for number in sorted(implemented_prs))
     return dag, registry, {"issues": issue_rows, "pulls": pr_rows}
 
 
@@ -72,6 +81,10 @@ def test_same_issue_predecessor_plan_blocks_implementation_readiness(state) -> N
         pull for pull in snapshot["pulls"]
         if pull["number"] not in {108, 109, 110, 111}
     ]
+    snapshot["pulls"].extend({
+        "number": number, "state": "closed", "draft": False,
+        "merged_at": "2026-10-27T00:00:00Z",
+    } for number in completed.values())
     next(pull for pull in snapshot["pulls"] if pull["number"] == 112)["base"]["ref"] = "main"
 
     report = audit_snapshot(dag, registry, snapshot)
