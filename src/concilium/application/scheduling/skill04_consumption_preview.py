@@ -40,7 +40,15 @@ class P18CConsumptionPreview:
 
 
 def _exact_q(value: float) -> Fraction:
-    if type(value) not in (float, int) or not isfinite(value) or value < 0:
+    if type(value) not in (float, int) or value < 0:
+        raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
+    # math.isfinite converts integers to float; an adversarially large int can
+    # overflow during that conversion instead of failing closed with ValueError.
+    try:
+        finite = isfinite(value)
+    except OverflowError:
+        finite = False
+    if not finite:
         raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
     return Fraction(str(value))
 
