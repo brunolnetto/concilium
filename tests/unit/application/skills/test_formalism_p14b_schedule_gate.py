@@ -11,6 +11,7 @@ from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,
+    ValidacaoItem,
     Cronograma,
     EapItem,
     Meta,
@@ -98,7 +99,13 @@ def test_p14c_failed_reschedule_clears_stale_schedule_projections(monkeypatch) -
     monkeypatch.setitem(
         run_cronograma.__globals__,
         "_determine_mode_and_distribuicao",
-        lambda *args, **kwargs: ("MANUAL", {}, [], None, True, [], set()),
+        lambda *args, **kwargs: (
+            args[10].append(ValidacaoItem(
+                codigo="VAL-CRON-01",
+                status="ERRO",
+                mensagem="forced schedule failure for stale-projection regression",
+            )) or ("MANUAL", {}, [], None, True, [], set())
+        ),
     )
 
     outcome = run_cronograma(
