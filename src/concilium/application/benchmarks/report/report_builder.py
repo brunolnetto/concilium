@@ -58,7 +58,12 @@ def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProject
 
 def _is_finite_number(value: Any) -> bool:
     """Accept finite JSON-style numeric values, excluding bool and nonnumeric data."""
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return isfinite(value)
+    except (OverflowError, TypeError, ValueError):
+        return False
 
 
 def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, Any]) -> dict[str, Any]:
@@ -413,7 +418,10 @@ class BenchmarkReportBuilder:
         return composicao or None
 
     def _finalize_confronto(self, confronto: dict[str, Any], ref: dict[str, Any] | None) -> None:
-        if isinstance(confronto.get("referencia"), dict) and isinstance(confronto.get("ferramenta"), dict):
+        if (
+            isinstance(confronto.get("referencia"), dict)
+            and isinstance(confronto.get("ferramenta"), dict)
+        ):
             confronto["deltas"] = _build_deltas_from_confronto(confronto["referencia"], confronto["ferramenta"])
             composicao_final = self._build_composicao_final(confronto.get("referencia"), confronto.get("ferramenta"))
             if composicao_final is not None:
