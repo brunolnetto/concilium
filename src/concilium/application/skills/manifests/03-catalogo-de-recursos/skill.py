@@ -194,8 +194,20 @@ def run_catalogo_de_recursos(
     templates: dict[str, list[dict]] = inputs.get("templates_recursos", {})
     pool_inicial: list[dict] = inputs.get("pool_inicial", [])
 
+    legacy_inferred_type_ids = {
+        pool.tipo_id
+        for pool in (canonical_in.recurso_pool or [])
+        if pool.proveniencia == "DERIVADO_SKILL05"
+        and pool.tipo_id.startswith(("FUNC-", "EQUIP-"))
+    }
     tipos: dict[str, TipoRecurso] = {
-        t.id: t for t in canonical_in.tipos_recurso if t.proveniencia != "DERIVADO_SKILL05"
+        t.id: t
+        for t in canonical_in.tipos_recurso
+        if t.proveniencia != "DERIVADO_SKILL05"
+        and not (
+            t.id in legacy_inferred_type_ids
+            and "proveniencia" not in t.model_fields_set
+        )
     }
 
     _process_tipos_in(tipos_in, tipos, repo, jurisdicao_id, overrides, data_base, validacoes)
