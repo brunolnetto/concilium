@@ -1,9 +1,21 @@
 """Camada 4 — Modelo canônico do orçamento (parte extraída de canonical.py)."""
 
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+def _finite_numeric_equals(value: object, expected: int) -> bool:
+    """Compare a pre-coercion JSON quantity without trusting Pydantic defaults."""
+    if isinstance(value, bool):
+        return False
+    try:
+        numeric = Decimal(str(value).strip())
+    except (InvalidOperation, TypeError, ValueError):
+        return False
+    return numeric.is_finite() and numeric == Decimal(expected)
 
 CategoriaRecurso = Literal["EQUIPAMENTO", "MAQUINARIO", "EQUIPE", "MATERIAL"]
 CriticidadeRecurso = Literal["CRITICA", "NORMAL", "OPCIONAL"]
@@ -49,9 +61,9 @@ class RecursoPool(BaseModel):
             if (
                 isinstance(tipo_id, str)
                 and tipo_id.startswith(("FUNC-", "EQUIP-"))
-                and value.get("quantidade_total") == 1000
-                and value.get("quantidade_disponivel") == 1000
-                and value.get("custo_aquisicao_total", 0) == 0
+                and _finite_numeric_equals(value.get("quantidade_total"), 1000)
+                and _finite_numeric_equals(value.get("quantidade_disponivel"), 1000)
+                and _finite_numeric_equals(value.get("custo_aquisicao_total", 0), 0)
             ):
                 return {**value, "proveniencia": "LEGACY_UNVERIFIED"}
         return value
