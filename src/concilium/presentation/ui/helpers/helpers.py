@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+from numbers import Integral, Real
 from typing import Any
 
 
@@ -52,13 +54,31 @@ def stringify_table_value(value: object) -> object:
     return value
 
 
+def _require_integral_team_count(value: object, field: str) -> int:
+    """Accept only finite, nonnegative integer-valued physical team counts."""
+    if isinstance(value, bool):
+        raise ValueError(f"{field} must be a nonnegative integer team count")
+    if isinstance(value, Integral):
+        count = int(value)
+    elif isinstance(value, Real) and math.isfinite(float(value)) and float(value).is_integer():
+        count = int(value)
+    else:
+        raise ValueError(f"{field} must be a nonnegative integer team count")
+    if count < 0:
+        raise ValueError(f"{field} must be a nonnegative integer team count")
+    return count
+
+
 def build_team_adjustment_rows(reference: dict) -> list[dict[str, object]]:
     """Build team adjustment rows from cronograma reference."""
     activities = (reference.get("cronograma") or {}).get("atividades", []) if isinstance(reference, dict) else []
     rows: list[dict[str, object]] = []
     for activity in activities:
         semanas = activity.get("semanas", {}) or {}
-        num_equipes = [int((semana or {}).get("num_equipes", 0) or 0) for semana in semanas.values()]
+        num_equipes = [
+            _require_integral_team_count((semana or {}).get("num_equipes", 0) or 0, f"{activity.get('item_id') or activity.get('activity_id')}/{week}")
+            for week, semana in semanas.items()
+        ]
         base_avg = round(sum(num_equipes) / len(num_equipes), 2) if num_equipes else 0.0
         rows.append(
             {
@@ -90,10 +110,13 @@ def _bneo_get_rows(edited_rows: object) -> list[dict]:
 
 
 def _bneo_build_week_map(semanas: dict, target: int) -> dict[str, int]:
+    count = _require_integral_team_count(target, "num_equipes_maximo")
     return {
-        week_key: target
+        week_key: count
         for week_key, week_data in semanas.items()
-        if int((week_data or {}).get("num_equipes", 0) or 0) > 0
+        if _require_integral_team_count(
+            (week_data or {}).get("num_equipes", 0) or 0, f"num_equipes[{week_key}]"
+        ) > 0
     }
 
 
@@ -101,9 +124,8 @@ def _bneo_process_row(row: dict, activity_lookup: dict) -> tuple[str, dict[str, 
     item_id = str(row.get("item_id") or "").strip()
     if not item_id or item_id not in activity_lookup:
         return None
-    target = max(1, int(round(float(row.get("num_equipes_maximo") or 0.0))))
-    if target <= 0:
-        return None
+    raw_target = row.get("num_equipes_maximo", 0)
+    target = max(1, _require_integral_team_count(raw_target, "num_equipes_maximo"))
     week_map = _bneo_build_week_map(activity_lookup[item_id].get("semanas") or {}, target)
     return (item_id, week_map) if week_map else None
 
@@ -127,15 +149,16 @@ def state_team_rows_key(project_id: str) -> str:
 
 def apply_global_team_adjustment(rows: list[dict[str, object]], pct: float) -> list[dict[str, object]]:
     """Apply global percentage adjustment to team rows."""
-    fator = 1.0 + (pct / 100.0)
+    if isinstance(pct, bool) or not isinstance(pct, Real) or not math.isfinite(float(pct)):
+        raise ValueError("team adjustment percentage must be finite")
+    fator = 1.0 + (float(pct) / 100.0)
     adjusted: list[dict[str, object]] = []
     for row in rows:
         new_row = dict(row)
-        raw_base = new_row.get("num_equipes_maximo", new_row.get("num_equipes_base"))
-        base_value = float(raw_base) if isinstance(raw_base, (int, float)) else 0.0
-        # The UI edits a physical team ceiling, not an average occupancy. Keep
-        # its state integral after percentage adjustments; build_num_equipes_override
-        # must not be the first place where a fractional count is rounded.
+        raw_base = new_row.get("num_equipes_maximo", new_row.get("num_equipes_base", 0))
+        base_value = _require_integral_team_count(raw_base, "num_equipes_maximo")
+        # Percentage changes are a policy operation; the deployed ceiling is
+        # rounded to the nearest integer here and remains integral in UI state.
         new_row["num_equipes_maximo"] = max(0, int(round(base_value * fator)))
         adjusted.append(new_row)
     return adjusted
