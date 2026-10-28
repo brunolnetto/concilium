@@ -20,6 +20,8 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
 
+from ._closure import SCOPE_TOLERANCE_VERSION, assess_scope_closure
+
 from ._calendario import (  # ty: ignore[unresolved-import]
     _build_item_to_activity_map,
     _extract_activities,
@@ -271,9 +273,25 @@ def _emm_process_item(
         )
         qtd_acumulada = cell.qtd_acumulada
         distribuicao[semana_key] = cell
+    # Recompute closure from materialized weekly q, never trust a cumulative field
+    # as an independent source of delivered quantity.
+    try:
+        delivered = sum(float(cell.qtd_executada) for cell in distribuicao.values())
+    except (TypeError, ValueError, OverflowError):
+        delivered = float("nan")
+    closure = assess_scope_closure(
+        item.item_id,
+        float(item.quantitativo),
+        delivered,
+        calendar_horizon_weeks=len(semanas_obra),
+    )
     erros_completude = []
-    pct_completude = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
-    if qtd_acumulada < item.quantitativo:
+    pct_completude = (
+        delivered / item.quantitativo
+        if item.quantitativo > 0 and delivered == delivered and abs(delivered) != float("inf")
+        else 0.0
+    )
+    if closure.status != "PASS":
         erros_completude.append((item.item_id, round(pct_completude, 4)))
     erros_vazios = _emm_find_vazios(item.item_id, distribuicao, semanas_obra)
     return distribuicao, erros_completude, erros_vazios, is_fallback
@@ -343,11 +361,35 @@ def _execute_manual_mode(
         erros_vazios_all.extend(erros_v)
 
     if erros_completude_all:
-        msg = "; ".join([f"{iid}={pct * 100:.1f}%" for iid, pct in erros_completude_all])
-        # ADR-082: Incomplete items are warnings, not errors. Climate/schedule constraints
-        # may reduce capacity below project requirements. Decision to extend schedule or add
-        # teams is a business decision (ADR-091), not a technical blocker.
-        validacoes.append(ValidacaoItem(codigo="VAL-CRON-01", status="ERRO", mensagem=f"Itens não completados: {msg}"))
+        items_by_id = {item.item_id: item for item in canonical_in.eap}
+        diagnostics: list[str] = []
+        for item_id, _pct in erros_completude_all:
+            item = items_by_id.get(item_id)
+            weekly = distribuicao_por_item.get(item_id, {})
+            try:
+                delivered = sum(float(cell.qtd_executada) for cell in weekly.values())
+                required = float(item.quantitativo) if item is not None else float("nan")
+            except (TypeError, ValueError, OverflowError):
+                delivered, required = float("nan"), float("nan")
+            closure = assess_scope_closure(
+                item_id, required, delivered,
+                calendar_horizon_weeks=len(semanas_obra),
+            )
+            diagnostics.append(
+                f"{item_id}: Q={closure.required!r}; Σq={closure.delivered!r}; "
+                f"resíduo={closure.residual!r}; erro_abs={closure.absolute_error!r}; "
+                f"tolerância={closure.tolerance!r}; horizonte_semanas={closure.calendar_horizon_weeks}; "
+                f"status={closure.status}; motivo={closure.reason}; contrato={SCOPE_TOLERANCE_VERSION}"
+            )
+        # Incomplete, overproduced, or numerically unknown scope blocks publication.
+        # Preview can report this state; it cannot make the incomplete calendar feasible.
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-01",
+                status="ERRO",
+                mensagem="Fechamento físico de escopo não comprovado: " + "; ".join(diagnostics),
+            )
+        )
     if erros_vazios_all:
         # ADR-082: Scheduling gaps are warnings, not errors. May indicate suboptimal
         # allocation but don't prevent schedule execution.
