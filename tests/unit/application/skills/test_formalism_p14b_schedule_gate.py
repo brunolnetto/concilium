@@ -54,8 +54,10 @@ def test_zero_practicability_blocks_canonical_schedule_and_price() -> None:
         {},
     )
     assert result.has_errors
-    assert result.canonical is canonical
+    assert result.canonical is not canonical
     assert result.canonical.cronograma is None
+    assert result.canonical.resultado is None
+    assert result.canonical.resultado_reconciliado is None
     assert any(
         v.codigo == "VAL-CRON-01" and v.status == "ERRO"
         for v in result.validacoes
@@ -71,5 +73,13 @@ def test_incomplete_scope_reports_validation_not_fake_extra_weeks() -> None:
         {},
     )
     error = next(v for v in result.validacoes if v.codigo == "VAL-CRON-01")
-    assert "Itens não completados" in error.mensagem
-    assert result.canonical is canonical
+    assert "Fechamento físico de escopo não comprovado" in error.mensagem
+    assert "Q=300.0" in error.mensagem
+    assert "Σq=0.0" in error.mensagem
+    assert "resíduo=300.0" in error.mensagem
+    assert "tolerância=" in error.mensagem
+    assert "horizonte_semanas=" in error.mensagem
+    assert "CALENDAR_OR_CAPACITY_EXHAUSTED" in error.mensagem
+    assert result.canonical is not canonical
+    assert result.canonical.cronograma is None
+    assert result.canonical.resultado is None
