@@ -106,6 +106,10 @@ def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
 
 def _invalidate_derived_costs() -> dict[str, Any]:
     """Clear stale economic outputs whenever Skill04 cannot certify provenance."""
+    # Intentionally preserve tipos_recurso/recurso_pool: Skill 03 declares
+    # project configuration, while Skill 05 can augment both with inferred
+    # types and default pools. Neither model currently records that provenance,
+    # so filtering these mixed fields here could silently delete valid inputs.
     return {
         "equipes_diretas": [],
         "resultado": None,
