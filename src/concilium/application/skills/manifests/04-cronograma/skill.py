@@ -22,6 +22,11 @@ from typing import Any
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
+from ._skill_helpers._p14_productivity import (
+    _invalidate_rejected_schedule,
+    _preflight_physical_productivity,
+)
+
 from ._skill_helpers import _assembly as _mod_assembly  # ty: ignore[unresolved-import]  # noqa: F401 — test compat
 from ._skill_helpers import _calendario as _mod_calendario  # ty: ignore[unresolved-import]
 from ._skill_helpers import _custos as _mod_custos  # ty: ignore[unresolved-import]
@@ -98,8 +103,38 @@ def run_cronograma(
     validacoes: list[ValidacaoItem] = []
     catalogo = catalogo or {}
 
+    certification_intent = inputs.get("certification_intent", "PREVIEW")
+    if certification_intent not in ("PREVIEW", "CERTIFIED"):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-CERT-INTENT",
+                status="ERRO",
+                mensagem="certification_intent deve ser PREVIEW ou CERTIFIED; sem inferência de GO.",
+            )
+        )
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+
     if not _validate_preconditions(canonical_in, validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+
+    # Validate raw catalog rates before typed graph construction / solver setup.
+    cpu_preflight = _build_cpu_lookup(catalogo)
+    production_preflight = _build_producao_lookup(catalogo)
+    invalid_productivity, unverified_productivity = _preflight_physical_productivity(
+        canonical_in, cpu_preflight, production_preflight,
+        certified=certification_intent == "CERTIFIED",
+        validacoes=validacoes,
+    )
+    if invalid_productivity or (certification_intent == "CERTIFIED" and unverified_productivity):
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+    if unverified_productivity and not any(v.codigo == "VAL-CRON-PROD-PREVIEW" for v in validacoes):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-PREVIEW",
+                status="AVISO",
+                mensagem="PREVIEW: produtividade sem proveniência física versionada; cronograma não é certificado.",
+            )
+        )
 
     (
         regime,
@@ -114,7 +149,7 @@ def run_cronograma(
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
     if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     wmp_curves: list = []
     mobilizacao_policies = inputs.get("mobilizacao_policies")
@@ -155,15 +190,45 @@ def run_cronograma(
         validacoes,
         insumos_lookup,
     )
+    missing_productivity_evidence = unverified_productivity or bool(fallback_item_ids) or any(
+        v.codigo in ("VAL-PROD-04", "VAL-PROD-04-PROD-LEGACY")
+        for v in validacoes
+    )
+    if certification_intent == "CERTIFIED" and missing_productivity_evidence:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-CERT",
+                status="ERRO",
+                mensagem=(
+                    "NOGO: produtividade física sem origem validada. "
+                    "P=1000 e campos legados são apenas PREVIEW; "
+                    f"itens afetados={sorted(fallback_item_ids)}."
+                ),
+            )
+        )
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+    if certification_intent == "PREVIEW" and missing_productivity_evidence and not any(
+        v.codigo == "VAL-CRON-PROD-PREVIEW" for v in validacoes
+    ):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-PREVIEW",
+                status="AVISO",
+                mensagem=(
+                    "PREVIEW: produtividade por fallback/campo legado ou sem fonte versionada; "
+                    "o cronograma não constitui certificado GO."
+                ),
+            )
+        )
     if failed:
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     # P14-B: never publish an authoritative schedule whose calendar/physical
     # predecessors failed. SkillResult.has_errors alone cannot protect consumers
     # if a partial cronograma is still included in the canonical output.
     blocking_codes = {"VAL-CRON-01", "VAL-CRON-PRECEDENCIA"}
     if any(v.status == "ERRO" and v.codigo in blocking_codes for v in validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     pool_violations = _check_pool_violations(canonical_in, distribuicao_por_item, cpu_lookup, validacoes)
     if pool_violations:
