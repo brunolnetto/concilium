@@ -186,6 +186,8 @@ def test_real_rfi_bom_maps_to_exact_physical_purchase_from_delivered_q() -> None
     assert evidence.kind == "PLANNED_CLOSED_SCOPE"
     assert evidence.measure.physical_quantity == F("7.38")
     assert evidence.measure.exact_cost == F("42.804")
+    assert evidence.price_source == "ANTT_2026_Nordeste"
+    assert evidence.price_reference_date == "2026-05-08"
     assert result.consumption.variable_cost == F("42.804")
     assert result.authority.endswith("NOT_PROJECT_GO")
 
