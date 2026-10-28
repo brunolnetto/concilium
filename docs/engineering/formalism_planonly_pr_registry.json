@@ -1,6 +1,6 @@
 {
   "schema": "concilium.formalism.planonly_pr_registry.v1",
-  "as_of": "2026-10-27",
+  "as_of": "2026-10-28",
   "epic": 8,
   "canonical_dag": "docs/engineering/formalism_execution_dag.json",
   "policy": {
@@ -11,9 +11,25 @@
     "first_gate_issue": 25,
     "owner_action_required": "Configure/enforce mandatory main-branch checks; Github Actions billing startup_failure does not qualify.",
     "merge_rule": "All prior waves accepted; issue predecessors accepted; real implementation and falsifiers plus current-HEAD CI/review before merge; merge(PR) != acceptance(issue) != certification(project).",
-    "join_rule": "A GitHub PR has only one base branch; every depends_on_plans edge, including non-base parents, is independently mandatory."
+    "join_rule": "A GitHub PR has only one base branch; every depends_on_plans edge, including non-base parents, is independently mandatory.",
+    "planning_pr_lifecycle": "OPEN_DRAFT_OR_SUPERSEDED_CLOSED_UNMERGED",
+    "retirement_marker": "Superseded by the durable plan-only registry in PR #120; package remains PLAN_ONLY (not implemented, not accepted, no PROJECT_GO).",
+    "retirement_rule": "After this registry and its preflight are merged, a plan-only PR may be closed unmerged only after its full package contract is mirrored here and the exact retirement_marker is appended to its body. Retirement changes PR lifecycle only: the DAG slot stays empty, the package stays PLAN_ONLY, and the issue stays open until implementation and independent acceptance."
   },
-  "reserved_planning_prs": [108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119],
+  "reserved_planning_prs": [
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119
+  ],
   "packages": [
     {
       "id": "P17-C",

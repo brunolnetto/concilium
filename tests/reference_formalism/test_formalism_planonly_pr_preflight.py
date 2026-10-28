@@ -28,6 +28,7 @@ def state() -> tuple[dict, dict, dict]:
         "state": "open",
         "draft": True,
         "merged_at": None,
+        "body": "",
         "head": {"ref": row["head_branch"]},
         "base": {"ref": row["base_branch"]},
     } for row in registry["packages"]]
@@ -121,6 +122,49 @@ def test_planonly_pr_cannot_be_promoted_as_canonical_implementation(
         audit_snapshot(dag, registry, snapshot)
 
 
+
+
+def test_preflight_accepts_closed_unmerged_superseded_pr_without_promoting_package(state) -> None:
+    dag, registry, snapshot = state
+    changed = copy.deepcopy(snapshot)
+    row = next(item for item in registry["packages"] if item["planning_pr"] == 108)
+    pull = next(item for item in changed["pulls"] if item["number"] == 108)
+    marker = registry["policy"]["retirement_marker"]
+    pull.update(state="closed", draft=True, merged_at=None, body=f"Original plan body\\n\\n{marker}")
+
+    report = audit_snapshot(dag, registry, changed)
+    result = next(item for item in report["plans"] if item["id"] == row["id"])
+    assert result["state"] == "PLAN_ONLY"
+    assert result["pr_lifecycle"] == "RETIRED_SUPERSEDED"
+    assert result["ready_to_merge"] is False
+    assert result["ready_to_implement"] is False
+    assert 108 in registry["reserved_planning_prs"]
+    assert 108 not in {
+        pr for node in dag["nodes"] for package in node["packages"] for pr in package["prs"]
+    }
+
+
+def test_preflight_rejects_closed_plan_pr_without_registry_marker(state) -> None:
+    dag, registry, snapshot = state
+    changed = copy.deepcopy(snapshot)
+    pull = next(item for item in changed["pulls"] if item["number"] == 108)
+    pull.update(state="closed", draft=True, merged_at=None, body="Closed without migration marker")
+    with pytest.raises(ValueError, match="closed planning PR lacks registry supersession marker"):
+        audit_snapshot(dag, registry, changed)
+
+
+def test_preflight_rejects_merged_plan_pr_even_with_registry_marker(state) -> None:
+    dag, registry, snapshot = state
+    changed = copy.deepcopy(snapshot)
+    pull = next(item for item in changed["pulls"] if item["number"] == 108)
+    pull.update(
+        state="closed",
+        merged_at="2026-10-28T12:00:00Z",
+        body=registry["policy"]["retirement_marker"],
+    )
+    with pytest.raises(ValueError, match="planning PR must not be merged"):
+        audit_snapshot(dag, registry, changed)
+
 def test_closed_issue_cannot_retain_planonly_package(state) -> None:
     dag, registry, snapshot = state
     next(issue for issue in snapshot["issues"] if issue["number"] == 17)["state"] = "closed"
@@ -166,7 +210,12 @@ def test_preflight_rejects_any_planonly_promotion_or_merge(state, field) -> None
         changed["pulls"][0]["state"] = "closed"
     else:
         changed["pulls"][0]["merged_at"] = "2026-10-27T13:00:00Z"
-    with pytest.raises(ValueError, match="must remain an open draft"):
+    expected = {
+        "draft": "must remain an open draft or be closed unmerged with registry marker",
+        "state": "closed planning PR lacks registry supersession marker",
+        "merged_at": "planning PR must not be merged",
+    }[field]
+    with pytest.raises(ValueError, match=expected):
         audit_snapshot(dag, registry, changed)
 
 

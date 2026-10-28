@@ -4,7 +4,7 @@
 
 ## Matriz de cobertura
 
-| Issue | Onda | Issue | Predecessoras canônicas | PRs de pacote registrados no DAG | Drafts PLAN ONLY abertos |
+| Issue | Onda | Issue | Predecessoras canônicas | PRs de pacote registrados no DAG | Registro PLAN_ONLY / PR de origem |
 | --- | ---: | --- | --- | --- | --- |
 | [#22](https://github.com/brunolnetto/concilium/issues/22) | 1 | CLOSED | #9, #10, #11, #12, #13 | `P22-A`: #29; `P22-B`: #95; `P22-C`: #96 | — |
 | [#25](https://github.com/brunolnetto/concilium/issues/25) | 1 | OPEN | #22 | `P25-A`: #30; `P25-B`: #30; `P25-C`: #99+#100 | — |
@@ -20,7 +20,7 @@
 | [#24](https://github.com/brunolnetto/concilium/issues/24) | 3 | OPEN | #23 | `P24-A`: —; `P24-B`: — | `P24-A` [#116](https://github.com/brunolnetto/concilium/pull/116), `P24-B` [#117](https://github.com/brunolnetto/concilium/pull/117) |
 | [#26](https://github.com/brunolnetto/concilium/issues/26) | 3 | OPEN | #24, #25 | `P26-A`: —; `P26-B`: — | `P26-A` [#118](https://github.com/brunolnetto/concilium/pull/118), `P26-B` [#119](https://github.com/brunolnetto/concilium/pull/119) |
 
-O campo **“PRs registrados”** reproduz literalmente `packages[].prs` do manifesto; pode incluir vários PRs por pacote e **não** informa se foram integrados nem se a issue foi aceita. O campo “Drafts PLAN ONLY” é deliberadamente separado: são documentos iniciais que **não** preenchem `packages[].prs`.
+O campo **“PRs registrados”** reproduz literalmente `packages[].prs` do manifesto; pode incluir vários PRs por pacote e **não** informa se foram integrados nem se a issue foi aceita. O campo “Registro PLAN_ONLY / PR de origem” identifica o contrato de planejamento e seu PR histórico; o PR pode ser aberto como draft ou aposentado fechado sem merge. O pacote continua fora de `packages[].prs` até uma implementação real.
 
 ## Arestas e fila de integração
 
@@ -34,6 +34,6 @@ O campo **“PRs registrados”** reproduz literalmente `packages[].prs` do mani
 - PR [#102](https://github.com/brunolnetto/concilium/pull/102): código P14-C em draft, **além** dos slots P14-A/B do DAG; deve ter revisão de governança antes de contá-lo.
 - PR [#103](https://github.com/brunolnetto/concilium/pull/103): código P18-C1 em draft, **além** de P18-A/B; não substitui integralmente #18.
 - PRs [#105](https://github.com/brunolnetto/concilium/pull/105) → [#106](https://github.com/brunolnetto/concilium/pull/106) têm relação técnica real de base/ancestralidade, mas não equivalem aos slots P20-B/C ou P21-A/B.
-- O PR [#120](https://github.com/brunolnetto/concilium/pull/120) guarda este índice em revisão; sem checks/review, ele também não satisfaz gate de onda.
+- O PR [#120](https://github.com/brunolnetto/concilium/pull/120) guarda este índice e o fluxo de aposentadoria em revisão; seu merge não satisfaz gate de onda.
 
 **Não usar `Closes` em nenhum draft PLAN ONLY.** Converter em implementação exige alteração real de código, testes adversariais, oráculo independente, rebase/integração dos predecessores e CI do HEAD com branch protection.

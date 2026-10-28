@@ -43,6 +43,12 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
         for package in node["packages"]
         if not package["prs"]
     }
+    policy = registry.get("policy", {})
+    if policy.get("planning_pr_lifecycle") != "OPEN_DRAFT_OR_SUPERSEDED_CLOSED_UNMERGED":
+        raise ValueError("invalid planning PR lifecycle policy")
+    marker = policy.get("retirement_marker")
+    if not isinstance(marker, str) or not marker.strip():
+        raise ValueError("invalid planning PR retirement marker")
     rows = registry["packages"]
     registered = {(row["issue"], row["wave"], row["id"]) for row in rows}
     if registered != unregistered or len(rows) != len(registered):
@@ -224,8 +230,18 @@ def audit_snapshot(
             raise ValueError(f"{row['id']}: head branch drift")
         if pr["base"]["ref"] != row["base_branch"]:
             raise ValueError(f"{row['id']}: base branch drift")
-        if pr["state"] != "open" or not pr.get("draft") or pr.get("merged_at"):
-            raise ValueError(f"{row['id']}: PLAN_ONLY must remain an open draft")
+        if pr.get("merged_at"):
+            raise ValueError(f"{row['id']}: planning PR must not be merged")
+        if pr["state"] == "open" and pr.get("draft"):
+            pr_lifecycle = "OPEN_DRAFT"
+        elif pr["state"] == "closed":
+            if marker not in str(pr.get("body") or ""):
+                raise ValueError(f"{row['id']}: closed planning PR lacks registry supersession marker")
+            pr_lifecycle = "RETIRED_SUPERSEDED"
+        else:
+            raise ValueError(
+                f"{row['id']}: must remain an open draft or be closed unmerged with registry marker"
+            )
         node = nodes[row["issue"]]
         direct_gates = {
             *row["blocks_on_issues"],
@@ -245,7 +261,8 @@ def audit_snapshot(
         pending_plans = sorted(pending_plan_ancestors(row["id"]))
         results.append({
             "id": row["id"], "pr": row["planning_pr"], "wave": row["wave"],
-            "state": "PLAN_ONLY", "pending_issue_gates": pending,
+            "state": "PLAN_ONLY", "pr_lifecycle": pr_lifecycle,
+            "pending_issue_gates": pending,
             "pending_predecessor_plans": pending_plans,
             "ready_to_implement": not pending and not pending_plans,
             "ready_to_merge": False,  # Plans never count as product.
