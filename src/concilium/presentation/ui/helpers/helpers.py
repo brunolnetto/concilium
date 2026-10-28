@@ -75,8 +75,12 @@ def build_team_adjustment_rows(reference: dict) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for activity in activities:
         semanas = activity.get("semanas", {}) or {}
+        item_label = activity.get("item_id") or activity.get("activity_id")
         num_equipes = [
-            _require_integral_team_count((semana or {}).get("num_equipes", 0) or 0, f"{activity.get('item_id') or activity.get('activity_id')}/{week}")
+            _require_integral_team_count(
+                (semana or {}).get("num_equipes", 0) or 0,
+                f"{item_label}/{week}",
+            )
             for week, semana in semanas.items()
         ]
         base_avg = round(sum(num_equipes) / len(num_equipes), 2) if num_equipes else 0.0
