@@ -29,7 +29,9 @@ def test_plan_registry_matches_all_and_only_unimplemented_packages(sources) -> N
     assert registry["policy"]["must_never_count_as_merged_package"] is True
     assert registry["policy"]["never_auto_close_issue"] is True
     assert registry["policy"]["planning_pr_lifecycle"] == "OPEN_DRAFT_OR_SUPERSEDED_CLOSED_UNMERGED"
-    assert registry["policy"]["retirement_marker"].startswith("Superseded by the durable plan-only registry in PR #120;")
+    assert registry["policy"]["retirement_marker"].startswith(
+        "Superseded by the durable plan-only registry in PR #120;"
+    )
     absent = {
         (node["issue"], node["wave"], package["id"])
         for node in dag["nodes"] for package in node["packages"]
