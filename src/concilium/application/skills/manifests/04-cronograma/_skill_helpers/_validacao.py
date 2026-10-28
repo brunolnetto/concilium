@@ -30,6 +30,7 @@ from ._calendario import (  # ty: ignore[unresolved-import]
     _week_to_month,
     _weeks_between,
 )
+from ._closure import assess_scope_closure  # ty: ignore[unresolved-import]
 from ._custos import (  # ty: ignore[unresolved-import]
     _build_dist_cell,
     _capacidade_semanal_por_frentes,
@@ -343,11 +344,48 @@ def _execute_manual_mode(
         erros_vazios_all.extend(erros_v)
 
     if erros_completude_all:
-        msg = "; ".join([f"{iid}={pct * 100:.1f}%" for iid, pct in erros_completude_all])
-        # ADR-082: Incomplete items are warnings, not errors. Climate/schedule constraints
-        # may reduce capacity below project requirements. Decision to extend schedule or add
-        # teams is a business decision (ADR-091), not a technical blocker.
-        validacoes.append(ValidacaoItem(codigo="VAL-CRON-01", status="ERRO", mensagem=f"Itens não completados: {msg}"))
+        item_by_id = {item.item_id: item for item in canonical_in.eap}
+        detail_messages = []
+        for item_id, percentage in erros_completude_all:
+            item = item_by_id.get(item_id)
+            if item is None:
+                detail_messages.append(f"{item_id}={percentage * 100:.1f}%")
+                continue
+
+            delivered = sum(
+                cell.qtd_executada
+                for cell in distribuicao_por_item.get(item_id, {}).values()
+            )
+            closure = assess_scope_closure(
+                item_id,
+                float(item.quantitativo),
+                float(delivered),
+                calendar_horizon_weeks=len(semanas_obra),
+            )
+            detail_messages.append(
+                f"{item_id}={percentage * 100:.1f}% "
+                f"(Q={closure.required:.9g}, Σq={closure.delivered:.9g}, "
+                f"residual={closure.residual:.9g}, erro_absoluto={closure.absolute_error:.9g}, "
+                f"tolerancia_Q={closure.tolerance:.9g}, "
+                f"horizonte_semanas={closure.calendar_horizon_weeks}, "
+                f"status={closure.status}, razao={closure.reason})"
+            )
+
+        msg = "; ".join(detail_messages)
+        # P14-A: an incomplete manual allocation is a hard physical failure for
+        # this execution. Extending the calendar or adding crews requires a new
+        # explicit plan; never publish this result as a feasible certified schedule.
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-01",
+                status="ERRO",
+                mensagem=(
+                    f"Itens não completados: {msg}. "
+                    "Fechamento físico não atingido dentro do calendário disponível; "
+                    "não autorizar preço ou GO certificado."
+                ),
+            )
+        )
     if erros_vazios_all:
         # ADR-082: Scheduling gaps are warnings, not errors. May indicate suboptimal
         # allocation but don't prevent schedule execution.
