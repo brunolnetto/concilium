@@ -192,7 +192,7 @@ class TestWMPExpansion:
 
     @pytest.mark.parametrize(
         "invalid_count",
-        [1.5, True, -1, float("nan"), float("inf")],
+        [1.5, 1.0000000000000002, True, -1, float("nan"), float("inf")],
     )
     def test_manual_schedule_rejects_invalid_team_counts_before_execution(self, invalid_count):
         canonical = _make_canonical_with_eap([_eap_item(1)])
