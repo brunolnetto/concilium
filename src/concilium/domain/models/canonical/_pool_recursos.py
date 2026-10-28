@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 CategoriaRecurso = Literal["EQUIPAMENTO", "MAQUINARIO", "EQUIPE", "MATERIAL"]
 CriticidadeRecurso = Literal["CRITICA", "NORMAL", "OPCIONAL"]
@@ -18,6 +18,17 @@ class TipoRecurso(BaseModel):
     categoria: CategoriaRecurso
     custo_unitario_dia: float = Field(ge=0)
     especificacoes: dict = Field(default_factory=dict)
+    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05"] = "CONFIGURADO"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _classify_legacy_skill05_type(cls, value):
+        """Migrate pre-provenance Skill 05 type IDs without reclassifying Skill 03 inputs."""
+        if isinstance(value, dict) and "proveniencia" not in value:
+            tipo_id = value.get("id")
+            if isinstance(tipo_id, str) and tipo_id.startswith(("FUNC-", "EQUIP-")):
+                return {**value, "proveniencia": "DERIVADO_SKILL05"}
+        return value
 
 
 class RecursoPool(BaseModel):
@@ -32,6 +43,23 @@ class RecursoPool(BaseModel):
     quantidade_disponivel: int = Field(ge=0)
     data_aquisicao: date | None = None
     custo_aquisicao_total: float = Field(ge=0, default=0.0)
+    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05"] = "CONFIGURADO"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _classify_legacy_skill05_pool(cls, value):
+        """Recognize the old synthetic Skill 05 pool (1000/1000) after persisted reload."""
+        if isinstance(value, dict) and "proveniencia" not in value:
+            tipo_id = value.get("tipo_id")
+            if (
+                isinstance(tipo_id, str)
+                and tipo_id.startswith(("FUNC-", "EQUIP-"))
+                and value.get("quantidade_total") == 1000
+                and value.get("quantidade_disponivel") == 1000
+                and value.get("custo_aquisicao_total", 0) == 0
+            ):
+                return {**value, "proveniencia": "DERIVADO_SKILL05"}
+        return value
 
 
 class CustoParticionadoItem(BaseModel):
