@@ -542,7 +542,12 @@ def _check_pool_violations(
     validacoes: list[ValidacaoItem],
 ):
     """Verifica violações de pool de recursos. Retorna lista de ConstraintViolation."""
-    pool = {r.tipo_id: r.quantidade_total for r in (canonical_in.recurso_pool or [])}
+    # Synthetic/default pools are not evidence of physical capacity.
+    pool = {
+        r.tipo_id: r.quantidade_total
+        for r in (canonical_in.recurso_pool or [])
+        if r.proveniencia == "CONFIGURADO"
+    }
     if not pool:
         return []
     usage = _cpv_build_usage(canonical_in, cpu_lookup, distribuicao_por_item)
