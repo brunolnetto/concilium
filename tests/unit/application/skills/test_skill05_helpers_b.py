@@ -394,7 +394,7 @@ class TestBuildAlocacoesPool:
     def test_pool_auto_created_for_new_tipo(self):
         canonical = _make_canonical()
         tid = "FUNC-F99"
-        tipos = {tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE", custo_unitario_dia=100.0)}
+        tipos = {tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE", custo_unitario_dia=100.0, proveniencia="DERIVADO_SKILL05")}
         requisitos = [self._make_requisito(tid)]
 
         alocacoes, pool_dict = _build_alocacoes_pool(requisitos, canonical, tipos)
@@ -408,7 +408,7 @@ class TestBuildAlocacoesPool:
     def test_alocacao_fields_are_correct(self):
         canonical = _make_canonical()
         tid = "EQUIP-E99"
-        tipos = {tid: TipoRecurso(id=tid, nome="Trator", categoria="EQUIPAMENTO", custo_unitario_dia=500.0)}
+        tipos = {tid: TipoRecurso(id=tid, nome="Trator", categoria="EQUIPAMENTO", custo_unitario_dia=500.0, proveniencia="DERIVADO_SKILL05")}
         req = self._make_requisito(tid, atividade_id="atv-42", quantidade=3.0)
         alocacoes, pool_dict = _build_alocacoes_pool([req], canonical, tipos)
 
@@ -452,7 +452,7 @@ class TestBuildAlocacoesPool:
     def test_multiple_requisitos_sorted_by_data_inicio(self):
         canonical = _make_canonical()
         tid = "FUNC-F20"
-        tipos = {tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE", custo_unitario_dia=150.0)}
+        tipos = {tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE", custo_unitario_dia=150.0, proveniencia="DERIVADO_SKILL05")}
         req_late = RequisitoRecurso(
             requisito_id=str(uuid.uuid4()),
             atividade_id="atv-late",
