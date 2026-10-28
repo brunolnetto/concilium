@@ -752,6 +752,7 @@ class TestPrint:
         out = capsys.readouterr().out
         assert "Min" in out
 
+
 def test_not_evaluated_gate_prints_reason_without_fake_s0(capsys):
     printer = BenchmarkReportPrinter()
     report = {
