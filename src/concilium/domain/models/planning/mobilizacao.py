@@ -6,6 +6,8 @@ Simulation logic lives in domain.services.mobilizacao_simulator.
 
 from __future__ import annotations
 
+from math import floor
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -90,18 +92,22 @@ class WorkforcePolicy(BaseModel):
         """Convenience: start with 1 team, ramp at given rate."""
         return cls(n_inicial=1, n_maximo=n_maximo, n_final=n_maximo, taxa_mobilizacao=taxa_mobilizacao)
 
-    def equipes_no_offset(self, duration_weeks: int, offset: int) -> float:
-        """Return the formal workforce count for one offset in a known horizon."""
+    def equipes_no_offset(self, duration_weeks: int, offset: int) -> int:
+        """Return an integer workforce count, flooring fractional ramp expressions."""
         if duration_weeks <= 0 or not 0 <= offset < duration_weeks:
             raise ValueError("offset must belong to a positive execution horizon")
-        return min(
+        raw_count = min(
             self.n_inicial + self.taxa_mobilizacao * offset,
             self.n_maximo,
             self.n_final + self.taxa_desmobilizacao * (duration_weeks - 1 - offset),
         )
+        # Mobilization/demobilization rates may be fractional teams/week;
+        # the deployed team count is indivisible. ADR-054 mandates conservative
+        # floor semantics for the count produced by the ramp.
+        return floor(raw_count)
 
-    def build_profile(self, duration_weeks: int) -> list[float]:
-        """Build the exact formal workforce profile for a known horizon."""
+    def build_profile(self, duration_weeks: int) -> list[int]:
+        """Build an integer-valued workforce profile for a known horizon."""
         return [self.equipes_no_offset(duration_weeks, offset) for offset in range(max(0, duration_weeks))]
 
 
@@ -115,7 +121,7 @@ class CurvaForcaSemanal(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     semana_offset: int = Field(ge=0, description="0-indexed week within this activity")
-    num_equipes: float = Field(ge=0)
+    num_equipes: int = Field(ge=0)
     eficiencia: float = Field(ge=0.0, le=1.0, description="Practicability factor p(t)")
     qtd_executada: float = Field(ge=0.0)
     qtd_acumulada: float = Field(ge=0.0)
@@ -164,22 +170,22 @@ class CurvaForca(BaseModel):
         return not self.incompleta and self.delivered >= self.quantitativo_alvo
 
     @property
-    def peak_teams(self) -> float:
-        """Maximum teams deployed in any single week."""
+    def peak_teams(self) -> int:
+        """Maximum integer team count deployed in any single week."""
         return max((s.num_equipes for s in self.semanas), default=0)
 
     @property
-    def total_team_weeks(self) -> float:
-        """Sum of num_equipes across all weeks — proportional to total labour cost."""
+    def total_team_weeks(self) -> int:
+        """Sum of integer team counts across weeks — proportional to labour cost."""
         return sum(s.num_equipes for s in self.semanas)
 
-    def to_num_equipes_por_semana(self) -> dict[str, float]:
+    def to_num_equipes_por_semana(self) -> dict[str, int]:
         """Convert to the historical Skill 04 MANUAL mode input format.
 
         Returns {semana_iso: num_equipes} for all weeks where semana_iso is known.
         Falls back to str(offset) as key when not anchored to calendar.
         """
-        result: dict[str, float] = {}
+        result: dict[str, int] = {}
         for s in self.semanas:
             key = s.semana_iso if s.semana_iso else str(s.semana_offset)
             result[key] = s.num_equipes
