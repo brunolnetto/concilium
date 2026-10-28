@@ -81,13 +81,13 @@ def build_team_adjustment_rows(reference: dict) -> list[dict[str, object]]:
     for activity in activities:
         semanas = activity.get("semanas", {}) or {}
         item_label = activity.get("item_id") or activity.get("activity_id")
-        num_equipes = [
-            _require_integral_team_count(
-                (semana or {}).get("num_equipes", 0) or 0,
-                f"{item_label}/{week}",
+        num_equipes = []
+        for week, semana in semanas.items():
+            raw_count = (semana or {}).get("num_equipes", 0)
+            raw_count = 0 if raw_count is None else raw_count
+            num_equipes.append(
+                _require_integral_team_count(raw_count, f"{item_label}/{week}")
             )
-            for week, semana in semanas.items()
-        ]
         base_avg = round(sum(num_equipes) / len(num_equipes), 2) if num_equipes else 0.0
         rows.append(
             {
@@ -120,13 +120,13 @@ def _bneo_get_rows(edited_rows: object) -> list[dict]:
 
 def _bneo_build_week_map(semanas: dict, target: int) -> dict[str, int]:
     count = _require_integral_team_count(target, "num_equipes_maximo")
-    return {
-        week_key: count
-        for week_key, week_data in semanas.items()
-        if _require_integral_team_count(
-            (week_data or {}).get("num_equipes", 0) or 0, f"num_equipes[{week_key}]"
-        ) > 0
-    }
+    result: dict[str, int] = {}
+    for week_key, week_data in semanas.items():
+        raw_count = (week_data or {}).get("num_equipes", 0)
+        raw_count = 0 if raw_count is None else raw_count
+        if _require_integral_team_count(raw_count, f"num_equipes[{week_key}]") > 0:
+            result[week_key] = count
+    return result
 
 
 def _bneo_process_row(row: dict, activity_lookup: dict) -> tuple[str, dict[str, int]] | None:
