@@ -14,6 +14,7 @@ from math import isfinite
 from typing import Literal
 
 from concilium.domain.models.canonical import CanonicalModel
+from concilium.domain.units import normalize_unidade
 
 from .contractual_cost_ledger import ExclusiveCostLedger
 from .financial_cost_reconciliation import ExactFinancialReconciliation, reconcile_financial_sources
@@ -22,7 +23,12 @@ from .physical_consumption_journal import (
     WeeklyConsumptionEvidence,
     book_weekly_physical_consumption,
 )
-from .physical_consumption_rates import ConsumptionBasis, PhysicallyPricedGood
+from .physical_consumption_rates import (
+    ConsumptionBasis,
+    PhysicalConsumptionRate,
+    PhysicallyPricedGood,
+    convert_physical,
+)
 
 PricedCategory = Literal["MAT", "COMB"]
 ActivityGoods = Mapping[str, Mapping[str, tuple[PhysicallyPricedGood, PricedCategory]]]
@@ -118,6 +124,150 @@ def _activity_scope_units(canonical: CanonicalModel) -> dict[str, tuple[Fraction
             ):
                 raise ValueError("Skill01 subactivity scope/fractions do not close parent EAP")
     return scopes
+
+
+
+def build_activity_goods_from_catalog(
+    canonical: CanonicalModel,
+    catalogo: Mapping[str, object],
+) -> ActivityGoods:
+    """Build a fail-closed P18 physical BOM mapping from the real catalog.
+
+    Only CPU.composicao_itens MATERIAL/DIESEL/COMBUSTIVEL rows are treated as
+    per-delivered-unit physical consumption. The good's unit/price/source come
+    from the matching Insumo. Hourly MaterialEquipe or equipment fuel estimates
+    are deliberately not converted into purchases here: they need matched
+    observed operating-hour evidence. Internally generated materials likewise
+    require a producer-consumer transfer, not an acquisition posting.
+    """
+    if not isinstance(canonical, CanonicalModel) or not isinstance(catalogo, Mapping):
+        raise ValueError("typed canonical and catalog mapping are required")
+    scopes = _activity_scope_units(canonical)
+    schedule = canonical.cronograma
+    if schedule is None or not schedule.is_feasible or not schedule.scheduled_activities:
+        raise ValueError("a feasible, nonempty Skill04 schedule is required")
+
+    activity_ids = [activity.activity_id for activity in schedule.scheduled_activities]
+    if len(set(activity_ids)) != len(activity_ids) or set(activity_ids) != set(scopes):
+        raise ValueError("Skill04 schedule and EAP activity identities must agree")
+
+    raw_cpus = catalogo.get("cpus")
+    raw_insumos = catalogo.get("insumos")
+    if (
+        not isinstance(raw_cpus, Sequence)
+        or isinstance(raw_cpus, (str, bytes))
+        or not isinstance(raw_insumos, Sequence)
+        or isinstance(raw_insumos, (str, bytes))
+    ):
+        raise ValueError("catalog CPUs and insumos must be explicit sequences")
+
+    def _index(rows: Sequence[object], key: str, label: str) -> dict[str, Mapping[str, object]]:
+        indexed: dict[str, Mapping[str, object]] = {}
+        for raw in rows:
+            if not isinstance(raw, Mapping):
+                raise ValueError(f"{label} catalog row must be a mapping")
+            identity = raw.get(key)
+            if not isinstance(identity, str) or not identity.strip() or identity in indexed:
+                raise ValueError(f"{label} catalog identity is missing or duplicated")
+            indexed[identity] = raw
+        return indexed
+
+    cpus = _index(raw_cpus, "codigo", "CPU")
+    insumos = _index(raw_insumos, "codigo", "Insumo")
+    eap = {item.item_id: item for item in canonical.eap}
+    goods_by_activity: dict[str, dict[str, tuple[PhysicallyPricedGood, PricedCategory]]] = {}
+
+    for activity_id in activity_ids:
+        item = eap[activity_id]
+        cpu = cpus.get(item.cpu_id)
+        if cpu is None:
+            raise ValueError(f"{activity_id}: missing CPU catalog source {item.cpu_id!r}")
+        cpu_unit_raw = cpu.get("unidade")
+        if not isinstance(cpu_unit_raw, str) or not cpu_unit_raw.strip():
+            raise ValueError(f"{activity_id}: CPU output unit is missing")
+        try:
+            cpu_unit = normalize_unidade(cpu_unit_raw)
+            eap_unit = normalize_unidade(item.unidade or "")
+            # The coefficient is per CPU output unit. A dimension-changing
+            # CPU/EAP match would corrupt the calculated physical consumption.
+            convert_physical(Fraction(1), eap_unit, cpu_unit)
+        except ValueError as exc:
+            raise ValueError(f"{activity_id}: incompatible or missing CPU/EAP unit") from exc
+
+        composition = cpu.get("composicao_itens")
+        if not isinstance(composition, Sequence) or isinstance(composition, (str, bytes)):
+            raise ValueError(f"{activity_id}: explicit CPU.composicao_itens is required")
+
+        activity_goods: dict[str, tuple[PhysicallyPricedGood, PricedCategory]] = {}
+        for line in composition:
+            if not isinstance(line, Mapping):
+                raise ValueError(f"{activity_id}: malformed CPU composition row")
+            category_raw = line.get("categoria_custo")
+            if category_raw in ("MAO_OBRA", "EQUIPAMENTO"):
+                continue
+            if category_raw not in ("MATERIAL", "DIESEL", "COMBUSTIVEL"):
+                raise ValueError(f"{activity_id}: unsupported composition category {category_raw!r}")
+
+            good_id = line.get("insumo_id")
+            if not isinstance(good_id, str) or not good_id.strip():
+                raise ValueError(f"{activity_id}: consumable row has no insumo_id")
+            if good_id in activity_goods:
+                raise ValueError(f"{activity_id}/{good_id}: duplicate physical BOM good")
+            insumo = insumos.get(good_id)
+            if insumo is None:
+                raise ValueError(f"{activity_id}/{good_id}: missing physical Insumo catalog record")
+            if insumo.get("tipo") != "MATERIAL":
+                raise ValueError(f"{activity_id}/{good_id}: consumable Insumo type must be MATERIAL")
+            if insumo.get("origem_material") == "GERACAO_INTERNA":
+                raise ValueError(
+                    f"{activity_id}/{good_id}: internally generated material requires "
+                    "producer-consumer transfer evidence, not an acquisition posting"
+                )
+            if insumo.get("origem_material") != "AQUISICAO_EXTERNA":
+                raise ValueError(f"{activity_id}/{good_id}: acquisition provenance is missing")
+            price_source = insumo.get("fonte_preco")
+            if not isinstance(price_source, str) or not price_source.strip():
+                raise ValueError(f"{activity_id}/{good_id}: unit-price provenance is missing")
+
+            good_unit_raw = insumo.get("unidade")
+            if not isinstance(good_unit_raw, str) or not good_unit_raw.strip():
+                raise ValueError(f"{activity_id}/{good_id}: physical good unit is missing")
+            try:
+                good_unit = normalize_unidade(good_unit_raw)
+                declared_line_unit = line.get("unidade")
+                if declared_line_unit is not None:
+                    if not isinstance(declared_line_unit, str):
+                        raise ValueError("composition unit must be text")
+                    if normalize_unidade(declared_line_unit) != good_unit:
+                        raise ValueError("composition unit differs from Insumo physical unit")
+                coefficient = _exact_q(line.get("coeficiente"))
+                price = _exact_q(insumo.get("preco_unitario"))
+            except ValueError as exc:
+                raise ValueError(f"{activity_id}/{good_id}: invalid physical rate/price/unit") from exc
+            if coefficient <= 0:
+                raise ValueError(f"{activity_id}/{good_id}: physical BOM coefficient must be positive")
+
+            basis = PhysicalConsumptionRate(
+                good_id=good_id,
+                physical_rate=coefficient,
+                good_unit=good_unit,
+                basis=ConsumptionBasis.PER_DELIVERED_UNIT,
+                activity_unit=cpu_unit,
+            )
+            category: PricedCategory = "MAT" if category_raw == "MATERIAL" else "COMB"
+            activity_goods[good_id] = (
+                PhysicallyPricedGood(basis, price, good_unit),
+                category,
+            )
+
+        if not activity_goods:
+            raise ValueError(
+                f"{activity_id}: no explicit physical per-delivered-unit consumable BOM; "
+                "hourly rates require separate observed operating-hour evidence"
+            )
+        goods_by_activity[activity_id] = activity_goods
+
+    return goods_by_activity
 
 
 def _scheduled_week_keys(canonical: CanonicalModel, start: int, end: int, duration: int) -> set[str]:
