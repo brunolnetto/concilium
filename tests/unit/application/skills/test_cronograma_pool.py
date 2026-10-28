@@ -191,3 +191,14 @@ def test_skill05_inferred_pool_is_not_physical_capacity():
     )
     assert violations == []
     assert not any(v.codigo == "VAL-POOL-01" for v in validations)
+
+
+def test_legacy_skill05_default_pool_is_classified_as_inferred():
+    pool = RecursoPool(
+        id="legacy-skill05-pool",
+        tipo_id="EQUIP-ESCAV",
+        projeto_id="p1",
+        quantidade_total=1000,
+        quantidade_disponivel=1000,
+    )
+    assert pool.proveniencia == "DERIVADO_SKILL05"
