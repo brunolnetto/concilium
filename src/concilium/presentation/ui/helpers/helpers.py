@@ -65,8 +65,10 @@ def build_team_adjustment_rows(reference: dict) -> list[dict[str, object]]:
                 "item_id": activity.get("item_id") or activity.get("activity_id"),
                 "descricao": activity.get("descricao", ""),
                 "cpu_id": activity.get("cpu_id", ""),
+                # Average occupancy is an analytic statistic; the editable
+                # physical team ceiling must be the observed integer peak.
                 "num_equipes_base": base_avg,
-                "num_equipes_maximo": base_avg,
+                "num_equipes_maximo": max(num_equipes, default=0),
                 "start_week": activity.get("start_week"),
                 "end_week": activity.get("end_week"),
                 "duration_weeks": activity.get("duration_weeks"),
@@ -129,9 +131,12 @@ def apply_global_team_adjustment(rows: list[dict[str, object]], pct: float) -> l
     adjusted: list[dict[str, object]] = []
     for row in rows:
         new_row = dict(row)
-        raw_base = new_row.get("num_equipes_base")
+        raw_base = new_row.get("num_equipes_maximo", new_row.get("num_equipes_base"))
         base_value = float(raw_base) if isinstance(raw_base, (int, float)) else 0.0
-        new_row["num_equipes_maximo"] = round(max(0.0, base_value * fator), 2)
+        # The UI edits a physical team ceiling, not an average occupancy. Keep
+        # its state integral after percentage adjustments; build_num_equipes_override
+        # must not be the first place where a fractional count is rounded.
+        new_row["num_equipes_maximo"] = max(0, int(round(base_value * fator)))
         adjusted.append(new_row)
     return adjusted
 
