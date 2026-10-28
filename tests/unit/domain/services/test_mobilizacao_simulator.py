@@ -60,6 +60,21 @@ def make_policy(
 
 
 class TestMobilizacaoPolicyValidation:
+    @pytest.mark.parametrize("rate", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_mobilization_rate_is_rejected(self, rate: float):
+        with pytest.raises(ValidationError):
+            WorkforcePolicy(n_inicial=1, n_maximo=5, taxa_mobilizacao=rate)
+
+    @pytest.mark.parametrize("rate", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_demobilization_rate_is_rejected(self, rate: float):
+        with pytest.raises(ValidationError):
+            WorkforcePolicy(
+                n_inicial=1,
+                n_maximo=5,
+                taxa_mobilizacao=1.0,
+                taxa_desmobilizacao=rate,
+            )
+
     def test_valid_policy_minimal(self):
         p = WorkforcePolicy(n_inicial=1, n_maximo=1, taxa_mobilizacao=1.0)
         assert p.n_inicial == 1
@@ -174,6 +189,11 @@ class TestSimulatorNormalCases:
         assert all(type(week.num_equipes) is int for week in curva.semanas)
         assert type(curva.peak_teams) is int
         assert type(curva.total_team_weeks) is int
+
+    def test_decimal_rate_floor_is_not_affected_by_binary_float_drift(self):
+        """1 + 0.58*50 is exactly 30 in the declared decimal-rate model."""
+        policy = make_policy(n_inicial=1, n_maximo=100, taxa_mobilizacao=0.58)
+        assert policy.equipes_no_offset(duration_weeks=101, offset=50) == 30
 
     def test_production_formula_correctness(self, sim: WorkforcePolicySimulator):
         """Verify qtd_executada = P × m × h × p(t) × n(t)."""
