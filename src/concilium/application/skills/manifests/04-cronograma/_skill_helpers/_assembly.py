@@ -51,7 +51,7 @@ def _extract_praticabilidade(canonical_in: CanonicalModel) -> tuple[dict, dict]:
 def _determine_mode_and_distribuicao(
     canonical_in: CanonicalModel,
     inputs: dict,
-    num_equipes_por_item: dict[str, dict[str, float]] | None,
+    num_equipes_por_item: dict[str, dict[str, int]] | None,
     semanas_obra: list,
     cpu_lookup: dict,
     producao_lookup: dict,
