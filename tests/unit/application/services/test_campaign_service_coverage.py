@@ -989,8 +989,8 @@ class TestRunCampaignTask:
         # cleanup também deve encontrar via variante upper e remover
         assert not proj_dir.parent.exists()
 
-    def test_no_canonical_found_defaults_bloqueado_decision(self, tmp_path):
-        """Nenhum canonical.json existe → decision default 'BLOQUEADO' (via_map)."""
+    def test_missing_quality_gate_decision_defaults_not_evaluated(self, tmp_path):
+        """Ausência de uma decisão do benchmark não é aprovação nem NOGO comprovado."""
         from unittest.mock import MagicMock, patch
 
         from concilium.application.services.campaign.campaign_service import _run_campaign_task
@@ -1017,7 +1017,42 @@ class TestRunCampaignTask:
         ):
             result = _run_campaign_task(task)
 
-        assert result.viabilidade == "BLOQUEADO"
+        assert result.viabilidade == "NAO_AVALIADO"
+        assert result.motivo_nao_avaliado == "Benchmark quality gate did not evaluate this scenario."
+        assert result.erro is None
+
+    def test_not_evaluated_gate_reason_is_preserved(self, tmp_path):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.services.campaign.campaign_service import _run_campaign_task
+
+        task = self._make_task(tmp_path)
+        spec_obj = MagicMock()
+        spec_obj.slug = "myproj-abc123"
+        reason = "Benchmark fidelity was not evaluated: reference projection is unavailable."
+        runner_instance = MagicMock()
+        runner_instance.run.return_value = {
+            "quality_gates": {"decision": "NOT_EVALUATED", "reason": reason}
+        }
+
+        with (
+            patch(
+                "concilium.application.benchmarks.spec.spec_loader.load_spec_from_dict",
+                return_value=spec_obj,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.runner.BenchmarkRunner",
+                return_value=runner_instance,
+            ),
+            patch(
+                "concilium.application.services.campaign.campaign_service._task._apply_post_load_overrides",
+            ),
+        ):
+            result = _run_campaign_task(task)
+
+        assert result.viabilidade == "NAO_AVALIADO"
+        assert result.motivo_nao_avaliado == reason
+        assert result.erro is None
 
     def test_exception_path_produces_erro_cenario(self, tmp_path):
         """Lines 769-778: exceção durante load_spec_from_dict → CenarioAvaliado com erro."""
@@ -1084,3 +1119,32 @@ class TestSugerirLeversCpuAlternativo:
         spec = {"eap": [{"item_id": "", "cpu_id": "CPU1"}, {"item_id": "I1", "cpu_id": ""}]}
         result = sugerir_levers_cpu_alternativo(spec, config_root="/tmp")
         assert result == []
+
+
+def test_campaign_with_only_not_evaluated_scenarios_is_inconclusive():
+    from unittest.mock import patch
+
+    from concilium.application.services.campaign.campaign_service import executar_campanha
+
+    bundle = GoResearchCampaignBundle(
+        base_spec={"slug": "test-spec", "id": "test-spec"},
+        sweep=[ParametroSweep(campo="meta.prazo", valores=[40])],
+        perfil_expectativas=PerfilExpectativas(),
+        top_k=1,
+    )
+    scenario = _make_cenario("not-evaluated", viabilidade="NAO_AVALIADO")
+    scenario.motivo_nao_avaliado = "reference projection is unavailable"
+
+    with patch(
+        "concilium.application.services.campaign.campaign_service._runner._run_campaign_task",
+        return_value=scenario,
+    ):
+        output = executar_campanha(bundle, config_root="/tmp", projects_root="/tmp", num_workers=1)
+
+    assert output.n_cenarios_avaliados == 1
+    assert output.n_cenarios_viaveis == 0
+    assert output.n_falhas == 0
+    assert output.status == "INCONCLUSO"
+    assert output.shortlist == []
+    assert output.cenarios[0].viabilidade == "NAO_AVALIADO"
+    assert output.cenarios[0].motivo_nao_avaliado == "reference projection is unavailable"

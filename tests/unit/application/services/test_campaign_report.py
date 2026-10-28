@@ -250,6 +250,7 @@ class TestSerializeCampaignReport:
         for key in [
             "cenario_id",
             "viabilidade",
+            "motivo_nao_avaliado",
             "classificacao_O",
             "classificacao_EF",
             "pareto_O",
@@ -261,6 +262,18 @@ class TestSerializeCampaignReport:
             "parametros_variados",
         ]:
             assert key in c, f"cenario missing: {key}"
+
+    def test_non_evaluated_reason_is_preserved_in_serialized_scenario(self):
+        reason = "Reference projection is unavailable."
+        scenario = _make_cenario("missing-reference", viabilidade="NAO_AVALIADO")
+        scenario.motivo_nao_avaliado = reason
+        bundle = _make_bundle([scenario], [])
+
+        report = serialize_campaign_report(bundle, _make_cube())
+
+        serialized = report["cenarios"][0]
+        assert serialized["viabilidade"] == "NAO_AVALIADO"
+        assert serialized["motivo_nao_avaliado"] == reason
 
     def test_vetor_O_fields(self):
         report = _make_report()

@@ -16,6 +16,7 @@ Used by: ETL pipeline reporting, NEP-041 stakeholder dashboards.
 from __future__ import annotations
 
 import importlib
+from math import isfinite
 from typing import Any
 
 from ..spec.spec_loader import ProjectSpec
@@ -55,6 +56,16 @@ def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProject
         confronto["actionable_insights"] = projection.actionable_insights
 
 
+def _is_finite_number(value: Any) -> bool:
+    """Accept finite JSON-style numeric values, excluding bool and nonnumeric data."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return isfinite(value)
+    except (OverflowError, TypeError, ValueError):
+        return False
+
+
 def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, Any]) -> dict[str, Any]:
     """Compute delta (absolute, percentual) for key metrics: custo_direto, indireto, preco_venda.
 
@@ -65,7 +76,7 @@ def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, A
     for key in ("custo_direto", "custo_indireto", "preco_venda"):
         ref_v = ref_vals.get(key)
         tool_v = fer_vals.get(key)
-        if ref_v is not None and tool_v is not None:
+        if _is_finite_number(ref_v) and _is_finite_number(tool_v):
             entry: dict[str, Any] = {
                 "absoluto": round(tool_v - ref_v, 2),
                 "percentual": round((tool_v - ref_v) / ref_v * 100, 2) if ref_v != 0 else None,
@@ -236,7 +247,7 @@ def _build_composicao_item(ref_value, tool_value) -> dict | None:
         return None
     delta_abs = None
     delta_pct = None
-    if ref_value is not None and tool_value is not None:
+    if _is_finite_number(ref_value) and _is_finite_number(tool_value):
         delta_abs = round(tool_value - ref_value, 2)
         delta_pct = round((tool_value - ref_value) / ref_value * 100, 2) if ref_value != 0 else None
     return {
@@ -274,6 +285,7 @@ class BenchmarkReportBuilder:
     }
 
     _CRITICAL_METRICS = {"custo_direto", "custo_total", "preco_venda", "margem_pct", "bdi_efetivo"}
+    _REQUIRED_COMPARABLE_METRICS = ("custo_direto", "custo_indireto", "preco_venda")
 
     @staticmethod
     def _classify_delta(delta_pct: float | None) -> tuple[str, str]:
@@ -301,10 +313,19 @@ class BenchmarkReportBuilder:
         )
 
     def _build_quality_gates(self, confronto: dict[str, Any]) -> dict[str, Any]:
-        deltas = confronto.get("deltas") or {}
+        raw_deltas = confronto.get("deltas")
+        deltas = raw_deltas if isinstance(raw_deltas, dict) else {}
         gate_items: list[dict] = []
         for metric, delta in deltas.items():
-            classe, severity = self._classify_delta(delta.get("percentual"))
+            if not isinstance(delta, dict):
+                continue
+            percentual = delta.get("percentual")
+            absoluto = delta.get("absoluto")
+            # A missing/undefined percentage cannot pass a percentage-based
+            # comparison. This includes a zero reference denominator.
+            if not _is_finite_number(percentual) or not _is_finite_number(absoluto):
+                continue
+            classe, severity = self._classify_delta(percentual)
             phase = self._format_phase(metric)
             action, owner = self._recommend_action(metric, severity)
             gate_items.append(
@@ -320,8 +341,54 @@ class BenchmarkReportBuilder:
                     owner,
                 )
             )
-        worst = _bq_compute_worst(gate_items)
-        has_critical = _bq_check_critical_over_10(gate_items, self._CRITICAL_METRICS)
+
+        comparable_metrics = {item["metric"] for item in gate_items}
+        missing_metrics = [
+            metric for metric in self._REQUIRED_COMPARABLE_METRICS
+            if metric not in comparable_metrics
+        ]
+        reference = confronto.get("referencia")
+        tool = confronto.get("ferramenta")
+        if not isinstance(reference, dict):
+            reason_code = "REFERENCE_PROJECTION_UNAVAILABLE"
+            reason = (
+                "Benchmark fidelity was not evaluated: reference projection is unavailable."
+            )
+        elif not isinstance(tool, dict):
+            reason_code = "TOOL_PROJECTION_UNAVAILABLE"
+            reason = (
+                "Benchmark fidelity was not evaluated: calculated projection is unavailable."
+            )
+        elif missing_metrics:
+            reason_code = "INSUFFICIENT_COMPARABLE_METRICS"
+            reason = (
+                "Benchmark fidelity was not evaluated: required comparable metrics are "
+                f"missing or invalid ({', '.join(missing_metrics)})."
+            )
+        else:
+            reason_code = None
+            reason = None
+
+        worst = _bq_compute_worst(gate_items) if gate_items else None
+        has_critical = (
+            _bq_check_critical_over_10(gate_items, self._CRITICAL_METRICS)
+            if gate_items else None
+        )
+        if reason_code is not None:
+            return {
+                "decision": "NOT_EVALUATED",
+                "reason_code": reason_code,
+                "reason": reason,
+                "missing_metrics": missing_metrics,
+                "worst_severity": worst,
+                "critical_metric_over_10pct": has_critical,
+                "items": gate_items,
+            }
+
+        # Only a complete, usable comparison may produce an approval-like
+        # benchmark gate result. Partial metrics remain diagnostic evidence.
+        assert worst is not None
+        assert has_critical is not None
         return {
             "decision": _bq_get_decision(worst, has_critical),
             "worst_severity": worst,
@@ -351,7 +418,10 @@ class BenchmarkReportBuilder:
         return composicao or None
 
     def _finalize_confronto(self, confronto: dict[str, Any], ref: dict[str, Any] | None) -> None:
-        if "referencia" in confronto and "ferramenta" in confronto:
+        if (
+            isinstance(confronto.get("referencia"), dict)
+            and isinstance(confronto.get("ferramenta"), dict)
+        ):
             confronto["deltas"] = _build_deltas_from_confronto(confronto["referencia"], confronto["ferramenta"])
             composicao_final = self._build_composicao_final(confronto.get("referencia"), confronto.get("ferramenta"))
             if composicao_final is not None:

@@ -66,6 +66,7 @@ def _map_viabilidade_decision(decision: str) -> ViabilidadeStatus:
         "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
         "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
         "BLOQUEADO": "BLOQUEADO",
+        "NOT_EVALUATED": "NAO_AVALIADO",
     }
     return via_map.get(decision, "ERRO")
 
@@ -132,8 +133,14 @@ def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
 
             v_O = extrair_vetor_O(canonical, task.prazo_contratual)
             v_EF = extrair_vetor_EF(canonical, report)
-            decision = (report.get("quality_gates") or {}).get("decision") or "BLOQUEADO"
+            quality_gates = report.get("quality_gates") or {}
+            decision = quality_gates.get("decision") or "NOT_EVALUATED"
             viabilidade = _map_viabilidade_decision(decision)
+            motivo_nao_avaliado = None
+            if viabilidade == "NAO_AVALIADO":
+                motivo_nao_avaliado = quality_gates.get("reason") or (
+                    "Benchmark quality gate did not evaluate this scenario."
+                )
             result = CenarioAvaliado(
                 cenario_id=cid,
                 parametros_variados=task.variados,
@@ -142,6 +149,7 @@ def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
                 vetor_EF=v_EF,
                 classificacao_O=classificar_O(v_O, task.perfil),
                 classificacao_EF=classificar_EF(v_EF, task.perfil),
+                motivo_nao_avaliado=motivo_nao_avaliado,
             )
         except Exception as exc:
             result = CenarioAvaliado(

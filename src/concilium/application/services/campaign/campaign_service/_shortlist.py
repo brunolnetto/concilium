@@ -121,6 +121,8 @@ def curar_shortlist(
 
 
 def _status_bundle_sem_viaveis(cenarios: list[CenarioAvaliado], falhas: list[CenarioAvaliado]) -> CampaignStatus:
+    if any(c.viabilidade == "NAO_AVALIADO" for c in cenarios):
+        return "INCONCLUSO"
     return "ABORTADO" if len(falhas) == len(cenarios) else "INFEASIBLE"
 
 
@@ -141,6 +143,10 @@ def _status_bundle_com_viaveis(viaveis: list[CenarioAvaliado]) -> CampaignStatus
 
 def classificar_bundle(cenarios: list[CenarioAvaliado]) -> CampaignStatus:
     viaveis = [c for c in cenarios if c.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"}]
+    # A campaign with unassessed scenarios is only partially evaluated even
+    # if other scenarios are viable; do not advertise a complete search.
+    if any(c.viabilidade == "NAO_AVALIADO" for c in cenarios):
+        return "INCONCLUSO"
     if not viaveis:
         falhas = [c for c in cenarios if c.erro]
         return _status_bundle_sem_viaveis(cenarios, falhas)

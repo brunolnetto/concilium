@@ -263,6 +263,69 @@ def test_bs_aggregate_gates_nao_disponivel():
     assert status_counts["NAO_DISPONIVEL"] == 1
 
 
+def test_bs_aggregate_gates_keeps_unevaluated_severity_unknown():
+    rows = [
+        {
+            "quality_gates": {
+                "status_final": "NOT_EVALUATED",
+                "worst_severity": None,
+                "critical_metric_over_10pct": None,
+            }
+        },
+        {
+            "quality_gates": {
+                "status_final": "NOT_EVALUATED",
+                "decision": "NOT_EVALUATED",
+                # Partial metric diagnostics must not be counted as an
+                # overall S0 while the required comparison remains incomplete.
+                "worst_severity": "S0",
+                "critical_metric_over_10pct": None,
+            }
+        },
+    ]
+
+    status_counts, severity_counts, gates_missing, crit_over_10, _ = _bs_aggregate_gates(rows)
+
+    assert status_counts["NOT_EVALUATED"] == 2
+    assert severity_counts["NAO_AVALIADA"] == 2
+    assert "S0" not in severity_counts
+    assert gates_missing == 0
+    assert crit_over_10 == 0
+
+
+def test_load_gate_report_keeps_severity_unknown_when_overall_status_overrides_gate(
+    tmp_path: Path,
+):
+    _write_json(
+        tmp_path / "benchmark_not-evaluated.json",
+        {
+            "status_final": "INVIAVEL",
+            "quality_gates": {
+                "decision": "NOT_EVALUATED",
+                "worst_severity": "S0",
+                "critical_metric_over_10pct": None,
+            },
+            "action_report": [],
+        },
+    )
+
+    gates = _load_gate_report_for_slug("not-evaluated", tmp_path)
+
+    assert gates["status_final"] == "INVIAVEL"
+    assert gates["decision"] == "NOT_EVALUATED"
+    assert gates["worst_severity"] is None
+
+    status_counts, severity_counts, gates_missing, crit_over_10, _ = _bs_aggregate_gates(
+        [{"quality_gates": gates}]
+    )
+
+    assert status_counts == {"INVIAVEL": 1}
+    assert severity_counts == {"NAO_AVALIADA": 1}
+    assert "S0" not in severity_counts
+    assert gates_missing == 0
+    assert crit_over_10 == 0
+
+
 def test_bs_aggregate_gates_critical_metric():
     rows = [
         {

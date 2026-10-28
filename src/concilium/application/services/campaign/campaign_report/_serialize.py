@@ -51,6 +51,7 @@ def serialize_campaign_report(
             {
                 "cenario_id": c.cenario_id,
                 "viabilidade": c.viabilidade,
+                "motivo_nao_avaliado": c.motivo_nao_avaliado,
                 "classificacao_O": c.classificacao_O,
                 "classificacao_EF": c.classificacao_EF,
                 "pareto_O": c.pareto_O,

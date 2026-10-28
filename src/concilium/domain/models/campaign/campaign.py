@@ -16,6 +16,7 @@ ViabilidadeStatus = Literal[
     "BLOQUEADO_COM_INVESTIGACAO",
     "BLOQUEADO",
     "ERRO",
+    "NAO_AVALIADO",
 ]
 CampaignStatus = Literal[
     "SUCESSO",
@@ -143,6 +144,7 @@ class CenarioAvaliado:
     pareto_intersecao: bool = False
     rank_final: int | None = None
     erro: str | None = None
+    motivo_nao_avaliado: str | None = None
 
 
 @dataclass
