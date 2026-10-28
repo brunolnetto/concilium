@@ -281,7 +281,7 @@ def _emm_process_item(
 
 def _execute_manual_mode(
     canonical_in: CanonicalModel,
-    num_equipes_por_item: dict[str, dict[str, float]],
+    num_equipes_por_item: dict[str, dict[str, int]],
     semanas_obra: list[str],
     cpu_lookup: dict[str, dict],
     producao_lookup: dict[str, dict],
