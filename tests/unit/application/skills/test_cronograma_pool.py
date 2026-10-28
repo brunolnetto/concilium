@@ -143,7 +143,20 @@ def test_ambiguous_legacy_pool_is_preserved_but_not_physical_capacity():
     )
     assert pool.proveniencia == "LEGACY_UNVERIFIED"
 
-    canonical = CanonicalModel(recurso_pool=[pool])
+    meta = Meta(gerado_em=datetime.now(UTC), contexto_id="test-legacy-pool")
+    projeto = Projeto(
+        id="p1",
+        nome="proj",
+        tipo_obra="terraplenagem",
+        localizacao="x",
+        coordenadas=Coordenadas(lat=0.0, lng=0.0),
+        regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+        data_inicio=date(2026, 6, 1),
+        data_termino=date(2026, 7, 31),
+        snapshot_catalogo_id="s",
+        snapshot_perfil_id="s",
+    )
+    canonical = CanonicalModel(meta=meta, projeto=projeto, recurso_pool=[pool])
     extract_pool = import_module(
         "concilium.application.skills.manifests.04-cronograma._skill_helpers._calendario"
     )._extract_pool
@@ -211,7 +224,7 @@ def test_skill05_inferred_pool_is_not_physical_capacity():
     assert not any(v.codigo == "VAL-POOL-01" for v in validations)
 
 
-def test_legacy_skill05_default_pool_is_classified_as_inferred():
+def test_legacy_skill05_default_pool_is_unverified_without_origin_evidence():
     pool = RecursoPool(
         id="legacy-skill05-pool",
         tipo_id="EQUIP-ESCAV",
@@ -219,4 +232,4 @@ def test_legacy_skill05_default_pool_is_classified_as_inferred():
         quantidade_total=1000,
         quantidade_disponivel=1000,
     )
-    assert pool.proveniencia == "DERIVADO_SKILL05"
+    assert pool.proveniencia == "LEGACY_UNVERIFIED"
