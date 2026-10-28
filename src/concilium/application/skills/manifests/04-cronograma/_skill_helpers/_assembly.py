@@ -411,7 +411,7 @@ def _build_intervalos_and_campanhas(
 def _expand_mobilizacao_policies(
     canonical_in: CanonicalModel,
     policies: dict[str, dict],
-    existing_allocation: dict[str, dict[str, float]] | None,
+    existing_allocation: dict[str, dict[str, int]] | None,
     semanas_obra: list[str],
     cpu_lookup: dict[str, dict],
     producao_lookup: dict[str, dict],
@@ -419,11 +419,11 @@ def _expand_mobilizacao_policies(
     prat_semanal: dict[str, float],
     validacoes: list[ValidacaoItem],
     calendario_semanal: dict[str, float] | None = None,
-) -> tuple[dict[str, dict[str, float]], list]:
+) -> tuple[dict[str, dict[str, int]], list]:
     """ADR-054 Phase 3: Convert WMP policies into per-week team allocations for MANUAL mode."""
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
-    result: dict[str, dict[str, float]] = dict(existing_allocation or {})
+    result: dict[str, dict[str, int]] = dict(existing_allocation or {})
     curves: list = []
     semanas_set = set(semanas_obra)
     eap_lookup = {item.item_id: item for item in (canonical_in.eap or [])}
