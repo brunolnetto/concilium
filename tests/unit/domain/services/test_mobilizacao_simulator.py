@@ -184,6 +184,8 @@ class TestSimulatorNormalCases:
         m, h = 6, 8
         curva = sim.simulate(policy, "act-frac", Q, P, m, h)
 
+        assert policy.build_profile(5) == [1, 1, 2, 2, 3]
+        assert all(type(count) is int for count in policy.build_profile(5))
         assert curva.is_complete
         assert [week.num_equipes for week in curva.semanas[:5]] == [1, 1, 2, 2, 3]
         assert all(type(week.num_equipes) is int for week in curva.semanas)
