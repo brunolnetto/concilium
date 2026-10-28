@@ -142,7 +142,7 @@ def _build_alocacoes_pool(
     pool_dict = {
         p.tipo_id: p.model_copy()
         for p in canonical_in.recurso_pool
-        if p.proveniencia != "DERIVADO_SKILL05"
+        if p.proveniencia == "CONFIGURADO"
     }
     for tid, tipo in tipos.items():
         # Only Skill 05-inferred types get a synthetic allocation pool. A declared
