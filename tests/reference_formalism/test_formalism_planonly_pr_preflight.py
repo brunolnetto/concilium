@@ -131,6 +131,11 @@ def test_preflight_accepts_closed_unmerged_superseded_pr_without_promoting_packa
     pull = next(item for item in changed["pulls"] if item["number"] == 108)
     marker = registry["policy"]["retirement_marker"]
     pull.update(state="closed", draft=True, merged_at=None, body=f"Original plan body\\n\\n{marker}")
+    changed["pulls"].append({
+        "number": registry["policy"]["retirement_governance_pr"],
+        "state": "closed", "draft": False,
+        "merged_at": "2026-10-28T12:00:00Z", "merged": True,
+    })
 
     report = audit_snapshot(dag, registry, changed)
     result = next(item for item in report["plans"] if item["id"] == row["id"])
@@ -142,6 +147,30 @@ def test_preflight_accepts_closed_unmerged_superseded_pr_without_promoting_packa
     assert 108 not in {
         pr for node in dag["nodes"] for package in node["packages"] for pr in package["prs"]
     }
+
+
+def test_preflight_rejects_retirement_before_governance_registry_is_merged(state) -> None:
+    dag, registry, snapshot = state
+    changed = copy.deepcopy(snapshot)
+    pull = next(item for item in changed["pulls"] if item["number"] == 108)
+    pull.update(
+        state="closed", draft=True, merged_at=None,
+        body=registry["policy"]["retirement_marker"],
+    )
+    with pytest.raises(ValueError, match="requires merged governance registry PR #120"):
+        audit_snapshot(dag, registry, changed)
+
+
+def test_preflight_rejects_merged_flag_without_timestamp(state) -> None:
+    dag, registry, snapshot = state
+    changed = copy.deepcopy(snapshot)
+    pull = next(item for item in changed["pulls"] if item["number"] == 108)
+    pull.update(
+        state="closed", merged_at=None, merged=True,
+        body=registry["policy"]["retirement_marker"],
+    )
+    with pytest.raises(ValueError, match="planning PR must not be merged"):
+        audit_snapshot(dag, registry, changed)
 
 
 def test_preflight_rejects_closed_plan_pr_without_registry_marker(state) -> None:
