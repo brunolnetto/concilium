@@ -70,10 +70,15 @@ def _load_gate_report_for_slug(slug: str | None, root: Path) -> dict[str, Any]:
     action_report = report.get("action_report") or []
     by_severity, abertos = _lgrs_sum_action_report(action_report)
 
+    decision = report.get("status_final") or quality_gates.get("decision") or "NAO_DISPONIVEL"
+    worst_severity = quality_gates.get("worst_severity")
+    if worst_severity is None and decision != "NOT_EVALUATED":
+        worst_severity = "S0"
+
     return {
-        "status_final": report.get("status_final") or quality_gates.get("decision") or "NAO_DISPONIVEL",
-        "worst_severity": quality_gates.get("worst_severity") or "S0",
-        "critical_metric_over_10pct": bool(quality_gates.get("critical_metric_over_10pct")),
+        "status_final": decision,
+        "worst_severity": worst_severity,
+        "critical_metric_over_10pct": quality_gates.get("critical_metric_over_10pct"),
         "action_report_total": len(action_report),
         "action_report_abertas": abertos,
         "action_report_por_severidade": by_severity,
@@ -116,7 +121,11 @@ def _bs_aggregate_gates(rows: list) -> tuple:
     for row in rows:
         gates = row.get("quality_gates") or {}
         status = str(gates.get("status_final") or "NAO_DISPONIVEL")
-        sev = str(gates.get("worst_severity") or "S0")
+        raw_severity = gates.get("worst_severity")
+        if raw_severity is None:
+            sev = "NAO_AVALIADA" if status == "NOT_EVALUATED" else "S0"
+        else:
+            sev = str(raw_severity)
         status_counts[status] = status_counts.get(status, 0) + 1
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
         if status == "NAO_DISPONIVEL":
