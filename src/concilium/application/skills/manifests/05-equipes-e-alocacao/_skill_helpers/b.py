@@ -132,8 +132,10 @@ def _build_alocacoes_pool(
         for p in canonical_in.recurso_pool
         if p.proveniencia != "DERIVADO_SKILL05"
     }
-    for tid in tipos:
-        if tid not in pool_dict:
+    for tid, tipo in tipos.items():
+        # Only Skill 05-inferred types get a synthetic allocation pool. A declared
+        # type without an explicit physical pool must not receive fake capacity.
+        if tid not in pool_dict and tipo.proveniencia == "DERIVADO_SKILL05":
             pool_dict[tid] = RecursoPool(
                 id=str(uuid.uuid4()),
                 tipo_id=tid,
