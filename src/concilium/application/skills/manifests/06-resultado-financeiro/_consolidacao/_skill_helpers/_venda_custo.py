@@ -110,12 +110,28 @@ def _activity_cost_components(equipe: object | None) -> tuple[float, float, floa
     if equipe is None:
         return 0.0, 0.0, 0.0, 0.0
     if getattr(equipe, "custo_inst_mo", None) is not None:
-        return (
+        components = (
             float(getattr(equipe, "custo_inst_mo", 0.0) or 0.0),
             float(getattr(equipe, "custo_inst_eq", 0.0) or 0.0),
             float(getattr(equipe, "custo_inst_mat", 0.0) or 0.0),
             float(getattr(equipe, "custo_inst_comb", 0.0) or 0.0),
         )
+        if (
+            getattr(equipe, "custo_reconciliado_planejamento", False)
+            and not getattr(equipe, "contrato_tipo_id", "")
+        ):
+            # Non-pool planning reconciliation is an aggregate direct-cost
+            # authority. F3's decomposition closes custo_total including its
+            # mob/demob partition, while Skill06 prices mob/demob separately.
+            # Pool-backed instancial components are measured postings and must
+            # remain authoritative even if the planning provenance flag remains
+            # set from before pool allocation.
+            target = float(getattr(equipe, "custo_operacional_agregado", 0.0) or 0.0)
+            total = sum(components)
+            if target > 0 and total > 0:
+                factor = target / total
+                components = tuple(value * factor for value in components)
+        return components
 
     total = _resolve_custo_equipe_agregado(equipe)
     mo = float(getattr(equipe, "custo_mao_obra_mensal", 0.0) or 0.0) + float(
@@ -178,9 +194,45 @@ def _build_activity_direct_cost(
 ) -> tuple[list[AtividadeInsumo], list[CustoDiretoSemanalAtividade], float, float, float]:
     mo, eq, mat, comb = _activity_cost_components(equipe)
     distribution = getattr(act, "distribuicao_semanal", None) or {}
-    formal_rates = _formal_activity_cost_rates(equipe) if distribution else None
-    quantity_total = sum(float(cell.qtd_executada) for cell in distribution.values())
+    # F3 fills all four custo_inst_* fields for *non-pool* teams and closes
+    # against custo_total, normally ONE reference front. A planning override
+    # can change custo_total to an AGGREGATE subtotal *before* F3; that
+    # provenance must be honoured. Pool-backed instancial components are
+    # already measured aggregates regardless of front count.
+    has_instancial_breakdown = equipe is not None and all(
+        getattr(equipe, name, None) is not None
+        for name in ("custo_inst_mo", "custo_inst_eq", "custo_inst_mat", "custo_inst_comb")
+    )
+    active_weeks = sum(1 for cell in distribution.values() if float(cell.num_equipes) > 0)
     team_weeks = sum(float(cell.num_equipes) for cell in distribution.values())
+    one_front_f3 = (
+        has_instancial_breakdown
+        and not getattr(equipe, "contrato_tipo_id", "")
+        # F3 is one-front ONLY before planning cost reconciliation. Skill05
+        # explicitly records the aggregate source when its planning override
+        # has replaced custo_total and custo_operacional_agregado.
+        and not getattr(equipe, "custo_reconciliado_planejamento", False)
+        and any(
+            float(cell.num_equipes) > 0 and abs(float(cell.num_equipes) - 1.0) > 1e-9
+            for cell in distribution.values()
+        )
+    )
+    # For non-pool F3 with any non-unit effective fronts, reconstruct K/V over the actual
+    # schedule from rates and physical quantities. This also retains consumed
+    # materials excluded from custo_operacional_agregado. Do NOT use catalog
+    # gamma for pool-backed measured postings (the original GOLDEN defect).
+    formal_rates = (
+        _formal_activity_cost_rates(equipe)
+        if distribution and (not has_instancial_breakdown or one_front_f3)
+        else None
+    )
+    if one_front_f3 and formal_rates is None and active_weeks:
+        # Older / incomplete records may not have persisted formal gamma.
+        # F3 is per active week of ONE front, so expand the reference K/V
+        # components by actual team-weeks, without silently selling one front.
+        factor = team_weeks / active_weeks
+        mo, eq, mat, comb = (value * factor for value in (mo, eq, mat, comb))
+    quantity_total = sum(float(cell.qtd_executada) for cell in distribution.values())
     weekly: list[CustoDiretoSemanalAtividade] = []
     for week, cell in distribution.items():
         if formal_rates is not None:

@@ -126,5 +126,9 @@ def _aplicar_reconciliacao_planejamento(
             )
             eq.custo_total = round(custo_ref, 2)
             eq.custo_operacional_agregado = round(custo_ref, 2)
+            # Preserve explicit source provenance for the downstream F3
+            # breakdown: once cost_total is replaced by the *aggregate*
+            # planning subtotal, F3's cost components are aggregate too.
+            eq.custo_reconciliado_planejamento = True
 
 

@@ -52,6 +52,49 @@ def _validar_instancia_recurso_ok(
     )
 
 
+def _reconciliar_decomposicao_apos_teto_benchmark(eq: Any, capped: float) -> None:
+    """Allocate benchmark-capped instancial K/V cents without losing a cent.
+
+    Only pool-backed teams enter this cap stage; non-pool F3 components are
+    populated later. Mob/demob is an *informational subcomponent* of the pool
+    decomposition, not a fifth direct cost to count again.
+    """
+    names = ("custo_inst_mo", "custo_inst_eq", "custo_inst_mat", "custo_inst_comb")
+    amounts = [getattr(eq, name, None) for name in names]
+    if any(amount is None for amount in amounts):
+        return
+    values = [float(amount) for amount in amounts]
+    total = sum(values)
+    if total <= 0 or any(value < 0 for value in values):
+        # Keep incomplete evidence visible, rather than manufacturing a new
+        # itemized operational cost out of an unallocated benchmark limit.
+        return
+
+    cents_total = int(round(float(capped) * 100))
+    component_cents = [int(round(value * 100)) for value in values]
+    denominator = sum(component_cents)
+    if denominator <= 0:
+        return
+    # All operations are in integer cents to avoid float drift in the
+    # apportionment. A positive cap produces exactly its monetary cents.
+    products = [cents_total * cents for cents in component_cents]
+    allocations = [product // denominator for product in products]
+    remaining = cents_total - sum(allocations)
+    by_remainder = sorted(
+        range(len(names)), key=lambda i: (-(products[i] % denominator), i)
+    )
+    for i in by_remainder[:remaining]:
+        allocations[i] += 1
+    for name, cents in zip(names, allocations, strict=True):
+        setattr(eq, name, cents / 100)
+
+    mob = getattr(eq, "custo_inst_mob_demob", None)
+    if mob is not None:
+        # Mob/demob was included in the original instancial partition and
+        # should not continue displaying an unadjusted pre-cap amount.
+        eq.custo_inst_mob_demob = round(float(mob) * capped / total, 2)
+
+
 def _limitar_custo_por_planejamento_benchmark(
     equipes: list,
     benchmark_mode: bool,
@@ -69,7 +112,14 @@ def _limitar_custo_por_planejamento_benchmark(
         elif eq.item_id in planejamento_ref_map:
             custo_ref = planejamento_ref_map[eq.item_id]
         if custo_ref > 0:
-            eq.custo_total = min(eq.custo_total, round(custo_ref, 2))
+            capped = min(eq.custo_total, round(custo_ref, 2))
+            if capped < eq.custo_total:
+                # The instancial breakdown was populated *before* this
+                # benchmark-only cap. It must be adjusted together with the
+                # authoritative total; otherwise Skill06 bills the uncapped
+                # components against an expense that has been capped.
+                _reconciliar_decomposicao_apos_teto_benchmark(eq, capped)
+                eq.custo_total = capped
 
 
 def _validar_estagio4_inst_missing(

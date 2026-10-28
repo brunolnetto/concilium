@@ -97,6 +97,11 @@ class EquipeDireta(BaseModel):
     # de Equilíbrio para comparar contra custo_venda_total (também agregado). 0.0 quando não
     # resolvível (fallback para custo_operacional_real × n_frentes em _build_pe_for_equipe).
     custo_operacional_agregado: float = 0.0
+    # ADR-107: Provenance, not an inferred equality of monetary values.
+    # True only when planning replaced the operational team cost with the
+    # aggregate subtotal for ALL fronts. F3 breakdown then represents that
+    # aggregate; Skill06 must not multiply it by the number of fronts again.
+    custo_reconciliado_planejamento: bool = False
     modo_estimativa: Literal["inicial", "refinado"] = "refinado"  # ADR-030 D4
     # NEP-031 L2: custo de aluguel de equipamentos ociosos dentro da janela de mobilização (§6.3)
     custo_ocioso_equipamentos: float = 0.0
