@@ -764,6 +764,41 @@ def test_p14c_flow_edge_rates_rejected_before_maxflow(
 
 @pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
 @pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
+def test_p14c_zero_maxflow_rejected_before_scheduler(intent: str, mode: str) -> None:
+    """Positive individual rates do not validate a graph with no source→sink path."""
+    production = _real_catalog_productivity()
+    graph = production["grafo_sinergia"]
+    graph.update(
+        {
+            "fonte": "SOURCE",
+            "sorvedouro": "SINK",
+            "dominio": ["SOURCE", "SINK", "DEAD-END"],
+            "arestas_fluxo": [
+                {
+                    "aresta_id": "disconnected-positive-capacity",
+                    "origem": "SOURCE",
+                    "destino": "DEAD-END",
+                    "capacidade_horaria": 99.6,
+                }
+            ],
+        }
+    )
+
+    outcome = _run_with_production(production, intent=intent, mode=mode)
+
+    assert outcome.has_errors
+    assert any(
+        validation.codigo == "VAL-CRON-PROD-INVALID"
+        and validation.status == "ERRO"
+        for validation in outcome.validacoes
+    )
+    assert outcome.canonical.cronograma is None
+    assert outcome.canonical.resultado is None
+    assert outcome.canonical.resultado_reconciliado is None
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+@pytest.mark.parametrize("mode", ["MANUAL", "AUTO"])
 def test_p14c_invalid_graph_preserves_no_historical_financial_projection(
     intent: str, mode: str,
 ) -> None:
