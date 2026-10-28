@@ -36,6 +36,7 @@ def _processar_funcoes_requisitos(eq, d_ini, d_fim, atvs_por_item: dict, tipos: 
                 nome=f.descricao,
                 categoria="EQUIPE",
                 custo_unitario_dia=round(f.custo_mensal_unitario / 26, 2),
+                proveniencia="DERIVADO_SKILL05",
             )
         for atv in atvs_por_item[eq.item_id]:
             requisitos.append(
@@ -61,6 +62,7 @@ def _processar_equipamentos_requisitos(eq, d_ini, d_fim, atvs_por_item: dict, ti
                 nome=e.descricao,
                 categoria="EQUIPAMENTO",
                 custo_unitario_dia=round(e.custo_mensal / 26, 2),
+                proveniencia="DERIVADO_SKILL05",
             )
         for atv in atvs_por_item[eq.item_id]:
             requisitos.append(
@@ -86,7 +88,9 @@ def _build_requisitos_e_tipos(
     from collections import defaultdict as _defaultdict
     from datetime import date as _date
 
-    tipos: dict[str, TipoRecurso] = {t.id: t for t in canonical_in.tipos_recurso}
+    tipos: dict[str, TipoRecurso] = {
+        t.id: t for t in canonical_in.tipos_recurso if t.proveniencia != "DERIVADO_SKILL05"
+    }
     requisitos: list[RequisitoRecurso] = []
     atvs_por_item: dict = _defaultdict(list)
     for atv in canonical_in.atividades or []:
@@ -123,7 +127,11 @@ def _build_alocacoes_pool(
     tipos: dict,
 ) -> tuple:
     """Seção 3 (Antiga 03B): Aloca requisitos no pool de recursos."""
-    pool_dict = {p.tipo_id: p.model_copy() for p in canonical_in.recurso_pool}
+    pool_dict = {
+        p.tipo_id: p.model_copy()
+        for p in canonical_in.recurso_pool
+        if p.proveniencia != "DERIVADO_SKILL05"
+    }
     for tid in tipos:
         if tid not in pool_dict:
             pool_dict[tid] = RecursoPool(
@@ -132,6 +140,7 @@ def _build_alocacoes_pool(
                 projeto_id=str(canonical_in.projeto.id),
                 quantidade_total=1000,
                 quantidade_disponivel=1000,
+                proveniencia="DERIVADO_SKILL05",
             )
     alocacoes: list[Alocacao] = []
     for req in sorted(requisitos, key=lambda r: r.data_inicio):
