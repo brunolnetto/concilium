@@ -157,6 +157,10 @@ def test_preflight_rejects_retirement_before_governance_registry_is_merged(state
         state="closed", draft=True, merged_at=None,
         body=registry["policy"]["retirement_marker"],
     )
+    changed["pulls"].append({
+        "number": registry["policy"]["retirement_governance_pr"],
+        "state": "open", "draft": True, "merged_at": None, "merged": False,
+    })
     with pytest.raises(ValueError, match="requires merged governance registry PR #120"):
         audit_snapshot(dag, registry, changed)
 
