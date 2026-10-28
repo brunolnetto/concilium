@@ -364,70 +364,54 @@ class TestSCurveBuilder:
             assert agr.n_equipamentos_unicos >= 0
             assert agr.custo_direto_semana >= 0
 
-    def test_resource_occupancy_serializes_without_int_float_warnings(self):
-        """Reproduce ADR-104 golden warning via the real analytical builder."""
+    def test_resource_counts_serialize_without_int_float_warnings(self):
+        """Real SCurveBuilder output respects the integer physical-count contract."""
         from pydantic import TypeAdapter
 
         canonical = _make_canonical(with_schedule=True)
         scurve = SCurveBuilder().build(canonical)
         active = [row for row in scurve.agregacao_semanal if row.n_equipes_totais > 0]
         assert active
-        assert any(
-            type(units) is float
-            for row in active
-            for units in row.equipamentos_ativos.values()
-        )
-        assert all(type(row.n_equipes_totais) is float for row in active)
+        assert all(type(row.n_equipes_totais) is int for row in active)
+        assert all(type(units) is int for row in active for units in row.equipamentos_ativos.values())
         assert all(type(row.n_equipamentos_unicos) is int for row in active)
 
-        # Unlike suppressing UserWarning, warnings="error" fails immediately
-        # if a nested dataclass field violates its declared serialization type.
+        # Unlike suppressing warnings, warnings="error" fails immediately if
+        # any nested field violates its declared physical integer schema.
         TypeAdapter(SCurve).dump_json(scurve, warnings="error")
         canonical.model_copy(update={"s_curve": scurve}).model_dump_json(
             warnings="error"
         )
 
-    def test_fractional_resource_occupancy_is_not_silently_truncated(self):
-        """The schedule permits weighted fronts; do not pretend 0.5 is 0."""
+    def test_integer_resource_counts_survive_canonical_roundtrip(self):
         from pydantic import TypeAdapter
 
         canonical = _make_canonical(with_schedule=True)
         canonical.cronograma.scheduled_activities[0].distribuicao_semanal[
             "2026-W24"
-        ].num_equipes = 0.5
+        ].num_equipes = 2
         scurve = SCurveBuilder().build(canonical)
         row = next(row for row in scurve.agregacao_semanal if row.semana_iso == "2026-W24")
-        assert row.n_equipes_totais == 0.5
-        assert row.equipamentos_ativos["EQ-ESCAV-38T"] == 0.5
+        assert type(row.n_equipes_totais) is int
+        assert row.n_equipes_totais == 2
+        assert row.equipamentos_ativos["EQ-ESCAV-38T"] == 2
         assert row.n_equipamentos_unicos == 1
 
-        payload = TypeAdapter(SCurve).dump_python(
-            scurve, mode="json", warnings="error"
+        TypeAdapter(SCurve).dump_python(scurve, mode="json", warnings="error")
+        serialized = canonical.model_copy(update={"s_curve": scurve}).model_dump_json(
+            warnings="error"
         )
-        bucket = next(
-            item for item in payload["agregacao_semanal"]
-            if item["semana_iso"] == "2026-W24"
-        )
-        assert bucket["n_equipes_totais"] == 0.5
-        assert bucket["equipamentos_ativos"]["EQ-ESCAV-38T"] == 0.5
-
-        # Exercise the complete nested CanonicalModel JSON round-trip, not
-        # only TypeAdapter output for the dataclass in isolation.
-        canonical_with_scurve = canonical.model_copy(update={"s_curve": scurve})
-        serialized = canonical_with_scurve.model_dump_json(warnings="error")
-        restored = type(canonical_with_scurve).model_validate_json(serialized)
+        restored = type(canonical).model_validate_json(serialized)
         restored_row = next(
-            row
-            for row in restored.s_curve.agregacao_semanal
-            if row.semana_iso == "2026-W24"
+            item for item in restored.s_curve.agregacao_semanal
+            if item.semana_iso == "2026-W24"
         )
-        assert type(restored_row.n_equipes_totais) is float
-        assert restored_row.n_equipes_totais == 0.5
-        assert type(restored_row.equipamentos_ativos["EQ-ESCAV-38T"]) is float
-        assert restored_row.equipamentos_ativos["EQ-ESCAV-38T"] == 0.5
+        assert type(restored_row.n_equipes_totais) is int
+        assert restored_row.n_equipes_totais == 2
+        assert type(restored_row.equipamentos_ativos["EQ-ESCAV-38T"]) is int
+        assert restored_row.equipamentos_ativos["EQ-ESCAV-38T"] == 2
         assert type(restored_row.n_equipamentos_unicos) is int
         assert restored_row.n_equipamentos_unicos == 1
-
 
     def test_total_matches_sum_of_weekly(self):
         canonical = _make_canonical(with_schedule=True)
