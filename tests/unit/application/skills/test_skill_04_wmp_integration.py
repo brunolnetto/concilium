@@ -23,6 +23,7 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
+from concilium.application.services.analytics.cube_projection_views import resolve_recursos_ativos_rows
 from concilium.application.skills import run_catalogo_de_recursos, run_cronograma, run_escopo_e_eap
 from concilium.domain.models.canonical import (
     Atividade,
@@ -190,6 +191,28 @@ class TestWMPExpansion:
         late_weeks = [s for s in curva.semanas if s.semana_offset >= 4]
         assert all(s.num_equipes == 5 for s in late_weeks), "Should plateau at n_maximo"
 
+    @pytest.mark.parametrize(
+        "invalid_count",
+        [1.5, 1.0000000000000002, True, -1, float("nan"), float("inf")],
+    )
+    def test_manual_schedule_rejects_invalid_team_counts_before_execution(self, invalid_count):
+        canonical = _make_canonical_with_eap([_eap_item(1)])
+        catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 100.0}])
+
+        result = run_cronograma(
+            canonical,
+            {"num_equipes_por_item": {"eap-01": {"2026-W23": invalid_count}}},
+            catalogo=catalogo,
+        )
+
+        invalid = next(
+            validation for validation in result.validacoes
+            if validation.codigo == "VAL-CRON-EQUIPES-INTEIRO"
+        )
+        assert invalid.status == "ERRO"
+        assert result.canonical is canonical
+        assert canonical.cronograma is None
+
     def test_fractional_mobilization_rate_keeps_weekly_headcount_integral(self):
         """A fractional teams/week rate must never emit a fractional team."""
         canonical = _make_canonical_with_eap([_eap_item(1, quantitativo=500_000.0)])
@@ -213,6 +236,17 @@ class TestWMPExpansion:
         second_week = curva.semanas[1].semana_iso
         assert type(scheduled.distribuicao_semanal[second_week].num_equipes) is int
         assert scheduled.distribuicao_semanal[second_week].num_equipes == 1
+
+        # Exercise the production S-curve -> analytics cube path with the
+        # integer WMP schedule, not only a hand-built aggregate fixture.
+        rows, columns, _, unit_type, _ = resolve_recursos_ativos_rows(
+            result.canonical, "semana", top_n=200
+        )
+        assert rows
+        assert unit_type == "count"
+        assert all(type(row["n_equipes_totais"]) is int for row in rows)
+        dtypes = {column["id"]: column["dtype"] for column in columns}
+        assert dtypes["n_equipes_totais"] == "int"
 
     def test_weekly_count_models_reject_fractional_team_counts(self):
         with pytest.raises(ValidationError):

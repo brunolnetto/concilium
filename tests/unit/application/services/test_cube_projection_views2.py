@@ -806,7 +806,7 @@ class TestResolveSCurveRows:
 
 class TestResolveRecursosAtivosRows:
     def _make_agg(
-        self, semana_iso: str, n_equipes: float = 5.0, n_equip_unicos: float = 3.0, equip_ativos: dict | None = None
+        self, semana_iso: str, n_equipes: int = 5, n_equip_unicos: int = 3, equip_ativos: dict | None = None
     ):
         return SimpleNamespace(
             semana_iso=semana_iso,
@@ -852,8 +852,8 @@ class TestResolveRecursosAtivosRows:
 
     def test_n_equipamentos_unicos_is_max_per_bucket(self):
         """When multiple weeks fold to same bucket, n_equipamentos_unicos = max."""
-        agg1 = self._make_agg("2026-W10", n_equip_unicos=3.0)
-        agg2 = self._make_agg("2026-W11", n_equip_unicos=7.0)
+        agg1 = self._make_agg("2026-W10", n_equip_unicos=3)
+        agg2 = self._make_agg("2026-W11", n_equip_unicos=7)
         sc = SimpleNamespace(
             semanas_iso=["2026-W10", "2026-W11"],
             custo_semanal=[0.0, 0.0],
@@ -864,6 +864,87 @@ class TestResolveRecursosAtivosRows:
             MockSC.return_value.build.return_value = sc
             rows, _, _, _, _ = resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
         assert rows[0]["n_equipamentos_unicos"] == 7
+
+    def test_integer_team_and_equipment_counts_survive_cube_projection(self):
+        """The cube aggregates physical team/equipment counts as integers."""
+        agg1 = self._make_agg(
+            "2026-W10",
+            n_equipes=2,
+            n_equip_unicos=2,
+            equip_ativos={"EQ-01": 2},
+        )
+        agg2 = self._make_agg(
+            "2026-W11",
+            n_equipes=3,
+            n_equip_unicos=3,
+            equip_ativos={"EQ-01": 3},
+        )
+        sc = SimpleNamespace(
+            semanas_iso=["2026-W10", "2026-W11"],
+            custo_semanal=[0.0, 0.0],
+            total_projeto=0.0,
+            agregacao_semanal=[agg1, agg2],
+        )
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
+            MockSC.return_value.build.return_value = sc
+            rows, columns, _, _, _ = resolve_recursos_ativos_rows(
+                SimpleNamespace(), "mes", top_n=200
+            )
+
+        assert len(rows) == 1  # Both weeks belong to the same month bucket.
+        row = rows[0]
+        assert row["n_equipes_totais"] == 5
+        assert row["equipamentos_unidades_ativas"] == 5
+        assert row["n_equipamentos_unicos"] == 3
+        assert all(type(row[key]) is int for key in (
+            "n_equipes_totais",
+            "n_equipamentos_unicos",
+            "equipamentos_unidades_ativas",
+        ))
+        dtypes = {column["id"]: column["dtype"] for column in columns}
+        assert dtypes["n_equipes_totais"] == "int"
+        assert dtypes["equipamentos_unidades_ativas"] == "int"
+        assert dtypes["n_equipamentos_unicos"] == "int"
+
+    @pytest.mark.parametrize(
+        "invalid_count",
+        [1.5, True, -1, float("nan"), float("inf")],
+    )
+    def test_invalid_team_count_is_rejected_in_cube_projection(self, invalid_count):
+        agg = self._make_agg(
+            "2026-W10", n_equipes=invalid_count, equip_ativos={"EQ-01": 1}
+        )
+        sc = SimpleNamespace(
+            semanas_iso=["2026-W10"], custo_semanal=[0.0],
+            total_projeto=0.0, agregacao_semanal=[agg],
+        )
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
+            MockSC.return_value.build.return_value = sc
+            with pytest.raises(
+                ValueError,
+                match="n_equipes_totais must be a nonnegative integer count",
+            ):
+                resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
+
+    @pytest.mark.parametrize(
+        "invalid_count",
+        [1.5, True, -1, float("nan"), float("inf")],
+    )
+    def test_invalid_equipment_count_is_rejected_in_cube_projection(self, invalid_count):
+        agg = self._make_agg(
+            "2026-W10", n_equipes=1, equip_ativos={"EQ-01": invalid_count}
+        )
+        sc = SimpleNamespace(
+            semanas_iso=["2026-W10"], custo_semanal=[0.0],
+            total_projeto=0.0, agregacao_semanal=[agg],
+        )
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
+            MockSC.return_value.build.return_value = sc
+            with pytest.raises(
+                ValueError,
+                match="equipamentos_ativos.*nonnegative integer count",
+            ):
+                resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
 
     def test_top_n_limits_rows(self):
         with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
