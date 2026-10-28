@@ -6,6 +6,7 @@ Simulation logic lives in domain.services.mobilizacao_simulator.
 
 from __future__ import annotations
 
+from fractions import Fraction
 from math import floor
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -47,6 +48,7 @@ class WorkforcePolicy(BaseModel):
     n_maximo: int = Field(ge=1, description="Peak team count ceiling (n_max)")
     taxa_mobilizacao: float = Field(
         ge=0,
+        allow_inf_nan=False,
         description="Teams added per week during ramp-up (c_mob). "
         "Fractional values allowed: 0.5 = one extra team every 2 weeks. "
         "0 is valid only for the rectangular degenerate case n_inicial == n_maximo.",
@@ -54,6 +56,7 @@ class WorkforcePolicy(BaseModel):
     taxa_desmobilizacao: float = Field(
         default=0.0,
         ge=0,
+        allow_inf_nan=False,
         description="Teams removed per week after plateau (c_desmob). "
         "0 = no demobilization modelled during production horizon.",
     )
@@ -98,14 +101,18 @@ class WorkforcePolicy(BaseModel):
         """Return an integer workforce count, flooring fractional ramp expressions."""
         if duration_weeks <= 0 or not 0 <= offset < duration_weeks:
             raise ValueError("offset must belong to a positive execution horizon")
+        # Convert the decimal spellings of rate inputs to exact rational
+        # values before flooring. A binary-float artifact such as 1 + 0.58*50
+        # may otherwise become 29.999999999999996 and lose a physical team.
+        mobilization_rate = Fraction(str(self.taxa_mobilizacao))
+        demobilization_rate = Fraction(str(self.taxa_desmobilizacao))
         raw_count = min(
-            self.n_inicial + self.taxa_mobilizacao * offset,
-            self.n_maximo,
-            self.n_final + self.taxa_desmobilizacao * (duration_weeks - 1 - offset),
+            self.n_inicial + mobilization_rate * offset,
+            Fraction(self.n_maximo),
+            self.n_final + demobilization_rate * (duration_weeks - 1 - offset),
         )
-        # Mobilization/demobilization rates may be fractional teams/week;
-        # the deployed team count is indivisible. ADR-054 mandates conservative
-        # floor semantics for the count produced by the ramp.
+        # Rates may be fractional teams/week; the deployed count is indivisible.
+        # ADR-054 mandates floor semantics for the exact decimal ramp expression.
         return floor(raw_count)
 
     def build_profile(self, duration_weeks: int) -> list[int]:
