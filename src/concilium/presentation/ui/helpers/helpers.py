@@ -60,7 +60,12 @@ def _require_integral_team_count(value: object, field: str) -> int:
         raise ValueError(f"{field} must be a nonnegative integer team count")
     if isinstance(value, Integral):
         count = int(value)
-    elif isinstance(value, Real) and math.isfinite(float(value)) and float(value).is_integer():
+    elif (
+        isinstance(value, Real)
+        and math.isfinite(float(value))
+        and abs(float(value)) <= 2**53
+        and float(value).is_integer()
+    ):
         count = int(value)
     else:
         raise ValueError(f"{field} must be a nonnegative integer team count")
