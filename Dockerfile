@@ -7,7 +7,7 @@
 # ─────────────────────────────────────────────────────────────
 # Stage 1: builder (resolve deps + build wheel)
 # ─────────────────────────────────────────────────────────────
-FROM python:3.13-slim-bookworm AS builder
+FROM python:3.15-slim-bookworm AS builder
 
 RUN pip install --no-cache-dir uv
 
@@ -33,7 +33,7 @@ RUN uv build
 # ─────────────────────────────────────────────────────────────
 # Stage 2: runtime (clean + deterministic)
 # ─────────────────────────────────────────────────────────────
-FROM python:3.13-slim-bookworm
+FROM python:3.15-slim-bookworm
 
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot

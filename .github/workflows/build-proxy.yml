@@ -39,7 +39,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.15"
           cache: "pip"
           cache-dependency-path: |
             pyproject.toml
@@ -125,7 +125,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       # Instalação separada — só para o `concilium ops blob put-versioned`
       # abaixo, não entra no pacote .mcpb.
