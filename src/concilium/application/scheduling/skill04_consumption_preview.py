@@ -228,6 +228,11 @@ def build_activity_goods_from_catalog(
             price_source = insumo.get("fonte_preco")
             if not isinstance(price_source, str) or not price_source.strip():
                 raise ValueError(f"{activity_id}/{good_id}: unit-price provenance is missing")
+            price_reference_date = insumo.get("data_referencia_preco")
+            if price_reference_date is not None and (
+                not isinstance(price_reference_date, str) or not price_reference_date.strip()
+            ):
+                raise ValueError(f"{activity_id}/{good_id}: invalid price reference date")
 
             good_unit_raw = insumo.get("unidade")
             if not isinstance(good_unit_raw, str) or not good_unit_raw.strip():
@@ -256,7 +261,13 @@ def build_activity_goods_from_catalog(
             )
             category: PricedCategory = "MAT" if category_raw == "MATERIAL" else "COMB"
             activity_goods[good_id] = (
-                PhysicallyPricedGood(basis, price, good_unit),
+                PhysicallyPricedGood(
+                    basis,
+                    price,
+                    good_unit,
+                    price_source=price_source,
+                    price_reference_date=price_reference_date,
+                ),
                 category,
             )
 
@@ -336,7 +347,7 @@ def book_skill04_planned_consumption_preview(
     # same catalog good; e.g. each CPU may declare a different L/h of diesel.
     # Prices/category remain shared and must agree for a given good identity.
     goods: dict[tuple[str, str], tuple[PhysicallyPricedGood, PricedCategory]] = {}
-    shared_good_prices: dict[str, tuple[Fraction, str, PricedCategory]] = {}
+    shared_good_prices: dict[str, tuple[Fraction, str, PricedCategory, str | None, str | None]] = {}
     evidenced: list[WeeklyConsumptionEvidence] = []
     scheduled_weeks: set[tuple[str, str]] = set()
     hourly_requirements: set[tuple[str, str, str]] = set()
@@ -360,7 +371,13 @@ def book_skill04_planned_consumption_preview(
                 raise ValueError("physical catalog good identity mismatch")
             if category not in ("MAT", "COMB"):
                 raise ValueError("MAT/COMB physical category is required")
-            price_identity = (priced.price_per_unit, priced.price_unit, category)
+            price_identity = (
+                priced.price_per_unit,
+                priced.price_unit,
+                category,
+                priced.price_source,
+                priced.price_reference_date,
+            )
             previous_price = shared_good_prices.get(good_id)
             if previous_price is not None and previous_price != price_identity:
                 raise ValueError("conflicting physical price/category for shared good")
