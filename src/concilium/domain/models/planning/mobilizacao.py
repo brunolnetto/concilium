@@ -18,22 +18,24 @@ class WorkforcePolicy(BaseModel):
     The execution horizon (number of weeks) is derived from the policy plus
     productivity and quantity by WorkforcePolicySimulator.
 
-    For an execution horizon N, the workforce profile is:
-        n(t) = min(
+    For an execution horizon N, the deployed workforce profile is:
+        n(t) = floor(min(
             n_inicial + taxa_mobilizacao × t,
             n_maximo,
             n_final + taxa_desmobilizacao × (N - 1 - t),
-        )
+        ))
 
-    ``n_final`` is the formal terminal floor. It is strictly positive, so a
-    viable activity cannot demobilize to zero before its exact scope closure.
+    Mobilization/demobilization rates may be fractional teams per week, but
+    n(t) is always a nonnegative integer number of physical teams. ``n_final``
+    is the formal terminal floor. It is strictly positive, so a viable activity
+    cannot demobilize to zero before its exact scope closure.
 
     Assumptions documented explicitly (ADR-054 §7.4):
-        - Weekly granularity
-        - n(t) is integer (floor applied to ramp)
-                - taxa_desmobilizacao = 0 requires n_final = n_maximo
-                - Legacy semanas_plateau is retained only for input compatibility; it
-                    does not alter the formal profile.
+        - Weekly granularity.
+        - n(t) is integer; the resulting ramp expression is floored.
+        - taxa_desmobilizacao = 0 requires n_final = n_maximo.
+        - Legacy semanas_plateau is retained only for input compatibility; it
+          does not alter the formal profile.
     """
 
     model_config = ConfigDict(frozen=True)
