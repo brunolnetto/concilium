@@ -34,7 +34,18 @@ class BenchmarkReportPrinter:
         print(f"  {'-' * 60}")
         if status_final:
             print(f"\n  [GATE] Status final      : {status_final}")
-            print(f"  [GATE] Pior severidade   : {quality_gates.get('worst_severity') or 'S0'}")
+            if quality_gates.get("decision") == "NOT_EVALUATED":
+                print("  [GATE] Comparacao        : NOT_EVALUATED")
+                reason = quality_gates.get("reason")
+                if reason:
+                    print(f"  [GATE] Motivo             : {reason}")
+                missing = quality_gates.get("missing_metrics") or []
+                if missing:
+                    print(f"  [GATE] Metricas ausentes  : {', '.join(missing)}")
+                return
+            worst = quality_gates.get("worst_severity")
+            if worst is not None:
+                print(f"  [GATE] Pior severidade   : {worst}")
             if quality_gates.get("critical_metric_over_10pct"):
                 print("  [GATE] Regra 10% criticos: BLOQUEIO de aprovacao automatica ativa")
 
