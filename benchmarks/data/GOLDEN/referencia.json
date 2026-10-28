@@ -4,7 +4,7 @@
     "versao": "1.3.0",
     "data_calibracao": "2026-07-29",
     "proposito": "Referência matemática do sistema. Use para onboarding e validação de invariantes.",
-    "$changelog": "1.3.0 (golden update): recalibrado após ADR-165/166/167/168/169/170/171 — indiretos ADM/TOP/QSMS/MOB/LAB deixaram de usar verbas lump hardcoded e passaram a ser calculados bottom-up a partir de catálogo real (EPI/treinamento/exame/benefício, Coordenador/Topógrafo por funcao_id, Alojamento por número de casas, LAB condicional a terraplenagem/pavimentação); catálogo `samples` (usado pelo GOLDEN) enriquecido com esses itens na ADR-171 para se beneficiar das mesmas melhorias já aplicadas em mendeslobo/rfi-r02. custo.total subiu de R$618.759,49 para R$780.810,75 — mudança intencional, não regressão (custo.direto_equipes permanece idêntico, confirmando que só os indiretos mudaram). 1.2.0 (golden update): PU do eap-03 alinhado ao CPU de catálogo REGULARIZACAO-SUBLEITO (4,60→1,3684). O PU hand-set anterior inventava componentes material/mão_obra inexistentes no CPU (composição só equipamento+diesel), divergindo 3,36× do catálogo e disparando VAL-FRENTES-NECESSARIAS-ALTA (ERRO/S0) na skill 06 — o que tornava o GOLDEN INVIAVEL no caminho OLAP e impedia a geração de relatórios. Agora o OLAP completa (APROVADO) e o GOLDEN serve de referência de testes RFX.",
+    "$changelog": "1.3.1 (consistência interna do snapshot, não recalibração do pipeline): margem_pct foi corrigida de 0.1537 para 0.152766913078 conforme venda.total_custo_plus=921600.87 e custo.total=780810.75 já registrados. Margem atual de runtime 0.5872 permanece não certificada e sujeita a investigação de pricing. 1.3.0 (golden update): recalibrado após ADR-165/166/167/168/169/170/171 — indiretos ADM/TOP/QSMS/MOB/LAB deixaram de usar verbas lump hardcoded e passaram a ser calculados bottom-up a partir de catálogo real (EPI/treinamento/exame/benefício, Coordenador/Topógrafo por funcao_id, Alojamento por número de casas, LAB condicional a terraplenagem/pavimentação); catálogo `samples` (usado pelo GOLDEN) enriquecido com esses itens na ADR-171 para se beneficiar das mesmas melhorias já aplicadas em mendeslobo/rfi-r02. custo.total subiu de R$618.759,49 para R$780.810,75 — mudança intencional, não regressão (custo.direto_equipes permanece idêntico, confirmando que só os indiretos mudaram). 1.2.0 (golden update): PU do eap-03 alinhado ao CPU de catálogo REGULARIZACAO-SUBLEITO (4,60→1,3684). O PU hand-set anterior inventava componentes material/mão_obra inexistentes no CPU (composição só equipamento+diesel), divergindo 3,36× do catálogo e disparando VAL-FRENTES-NECESSARIAS-ALTA (ERRO/S0) na skill 06 — o que tornava o GOLDEN INVIAVEL no caminho OLAP e impedia a geração de relatórios. Agora o OLAP completa (APROVADO) e o GOLDEN serve de referência de testes RFX.",
     "invariantes": {
       "1_PU_check": "subtotal_sem_bdi[i] = round(quantitativo[i] * preco_unitario[i].total, 2)",
       "2_PU_componentes": "PU.material + PU.diesel + PU.mao_obra + PU.equipamentos = PU.total",
@@ -115,7 +115,7 @@
       "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
       "quantitativo": 40000,
       "preco_unitario": {
-        "material": 0.0,
+        "material": 0,
         "diesel": 1.25,
         "mao_obra": 0.4,
         "equipamentos": 4.5,
@@ -123,10 +123,10 @@
       },
       "subtotal": {
         "sem_bdi": {
-          "total": 246000.0
+          "total": 246000
         },
         "com_bdi": {
-          "total": 246000.0
+          "total": 246000
         }
       }
     },
@@ -135,18 +135,18 @@
       "cpu_id": "COMPACT-ATERRO-100PN",
       "quantitativo": 30000,
       "preco_unitario": {
-        "material": 0.0,
-        "diesel": 1.0,
+        "material": 0,
+        "diesel": 1,
         "mao_obra": 0.5,
         "equipamentos": 4.5,
-        "total": 6.0
+        "total": 6
       },
       "subtotal": {
         "sem_bdi": {
-          "total": 180000.0
+          "total": 180000
         },
         "com_bdi": {
-          "total": 180000.0
+          "total": 180000
         }
       }
     },
@@ -155,9 +155,9 @@
       "cpu_id": "REGULARIZACAO-SUBLEITO",
       "quantitativo": 10000,
       "preco_unitario": {
-        "material": 0.0,
+        "material": 0,
         "diesel": 0.5068,
-        "mao_obra": 0.0,
+        "mao_obra": 0,
         "equipamentos": 0.8616,
         "total": 1.3684
       },
@@ -174,15 +174,15 @@
   "indiretos": [
     {
       "categoria": "ADM",
-      "custo_total": 60000.0
+      "custo_total": 60000
     },
     {
       "categoria": "TOP",
-      "custo_total": 40000.0
+      "custo_total": 40000
     }
   ],
   "resultado": {
-    "$nota": "Parcialmente recalibrado em 2026-08-14: total_com_bdi agora é preço catálogo PU×Q×BDI (ADR-110 F7), não preço operacional. Atualizar com commit \"golden(update): razão\" quando mudança arquitetural alterar os números.",
+    "$nota": "Parcialmente recalibrado em 2026-08-14: total_com_bdi agora é preço catálogo PU×Q×BDI (ADR-110 F7), não preço operacional. Atualizar com commit \"golden(update): razão\" quando mudança arquitetural alterar os números. Correção puramente algébrica em 2026-10-26: margem_pct no snapshot é derivada de (venda.total_custo_plus - custo.total)/venda.total_custo_plus, sem aprovar a margem atual do pipeline.",
     "venda": {
       "total_sem_bdi": 456781.08,
       "total_com_bdi": 70211103.04,
@@ -193,7 +193,7 @@
       "total": 780810.75
     },
     "resultado_financeiro": 140790.12,
-    "margem_pct": 0.1537,
+    "margem_pct": 0.152766913078,
     "status_margem": "AMARELO",
     "makespan_weeks": 8,
     "$calibrado": true

@@ -265,6 +265,264 @@ class TestBuildActivityDirectCost:
         assert operational == pytest.approx(606.0)
         assert components[0].custo_total_direto == pytest.approx(606.0)
 
+    def test_operational_pricing_uses_instancial_costs_not_catalog_gamma(self):
+        """Catalogue gamma must not inflate actual sale with real Skill05 costs."""
+        act = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=10.0),
+                "2026-W02": SimpleNamespace(num_equipes=2.0, qtd_executada=30.0),
+            }
+        )
+        equipe = SimpleNamespace(
+            custo_inst_mo=100.0,
+            custo_inst_eq=50.0,
+            custo_inst_mat=30.0,
+            custo_inst_comb=20.0,
+            contrato_tipo_id="POOL-RESOURCES",  # aggregate measured pool postings
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            # Materially different catalog rates; they are only a reference
+            # and cannot be charged as the *operational* sale base.
+            gamma_mao_obra_catalogo=10000.0,
+            gamma_equipamentos_catalogo=25000.0,
+            gamma_material_catalogo=1000.0,
+            gamma_combustivel_catalogo=1000.0,
+        )
+        rates = {
+            "mao_obra": 0.10,
+            "equipamentos": 0.20,
+            "material": 0.05,
+            "diesel": 0.04,
+        }
+        _components, weeks, cost, price, _bdi = _cons._build_activity_direct_cost(
+            act, equipe, rates
+        )
+        expected_price = 100 * 1.10 + 50 * 1.20 + 30 * 1.05 + 20 * 1.04
+        assert cost == pytest.approx(200.0)
+        assert price == pytest.approx(expected_price)
+        assert sum(w.custo_operacional for w in weeks) == pytest.approx(cost)
+        assert sum(w.custo_operacional_com_bdi for w in weeks) == pytest.approx(price)
+        assert sum(w.custo_variavel for w in weeks) == pytest.approx(50.0)
+        assert weeks[0].custo_contratual == pytest.approx(50.0)
+        assert weeks[1].custo_contratual == pytest.approx(100.0)
+
+    def test_completed_f3_without_pool_multifront_uses_aggregate_schedule(self):
+        """F3 components are one-front, even when all four fields are populated."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=2.0, qtd_executada=20.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="",
+            num_equipes_base=2,
+            custo_total=200.0,  # one-front F3 reference
+            custo_operacional_agregado=400.0,  # two actual fronts
+            custo_inst_mo=100.0,
+            custo_inst_eq=100.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=2.5,  # 100 per front per 40h week
+            gamma_equipamentos_catalogo=2.5,
+            gamma_material_catalogo=0.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        components, weekly, total, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert total == pytest.approx(team.custo_operacional_agregado)
+        assert sale == pytest.approx(400.0)
+        assert weekly[0].custo_mao_obra == pytest.approx(200.0)
+        assert weekly[0].custo_equipamentos == pytest.approx(200.0)
+        assert components[0].custo_total_direto == pytest.approx(400.0)
+
+    def test_completed_f3_nonpool_multifront_without_gamma_scales_active_week_reference(self):
+        """Fallback without catalog rates must not silently sell one front."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=10.0),
+                "2026-W02": SimpleNamespace(num_equipes=3.0, qtd_executada=30.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="",
+            custo_inst_mo=80.0,
+            custo_inst_eq=40.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=0.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+        )
+        _components, weekly, total, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        # One-front F3 sum=120 across two active weeks; four team-weeks
+        # require twice the amount across the same two calendar weeks.
+        assert total == pytest.approx(240.0)
+        assert sale == pytest.approx(240.0)
+        assert sum(w.custo_operacional for w in weekly) == pytest.approx(total)
+        assert weekly[0].custo_contratual == pytest.approx(60.0)
+        assert weekly[1].custo_contratual == pytest.approx(180.0)
+
+    def test_nonpool_f3_fractional_front_uses_fractional_schedule(self):
+        """F3 one-front postings cannot charge a full front for 0.5 effective fronts."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=0.5, qtd_executada=5.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="",
+            custo_inst_mo=100.0,
+            custo_inst_eq=100.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=2.5,
+            gamma_equipamentos_catalogo=2.5,
+            gamma_material_catalogo=0.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        _components, weekly, cost, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert cost == pytest.approx(100.0)
+        assert sale == pytest.approx(100.0)
+        assert weekly[0].frentes == pytest.approx(0.5)
+
+    @pytest.mark.parametrize("has_catalog_rates", [False, True])
+    def test_planning_reconciled_f3_is_aggregate_even_with_two_fronts(
+        self, has_catalog_rates
+    ):
+        """P2: F3 after Skill05 planning override must never multiply costs twice."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=2.0, qtd_executada=20.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="",
+            custo_reconciliado_planejamento=True,
+            num_equipes_base=2,
+            custo_total=400.0,
+            custo_operacional_agregado=400.0,
+            # Skill05 F3 allocated an already reconciled, aggregate P&L
+            # subtotal, not the default one-front cost.
+            custo_inst_mo=200.0,
+            custo_inst_eq=200.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=30.0 if has_catalog_rates else 0.0,
+            gamma_equipamentos_catalogo=30.0 if has_catalog_rates else 0.0,
+            gamma_material_catalogo=0.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        _components, weeks, direct_cost, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert direct_cost == pytest.approx(400.0)
+        assert sale == pytest.approx(400.0)
+        assert weeks[0].custo_operacional == pytest.approx(400.0)
+        assert weeks[0].frentes == pytest.approx(2.0)
+
+    def test_pool_backed_reconciled_flag_does_not_rescale_measured_components(self):
+        """Pool postings remain authoritative if a prior planning flag survives allocation."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=2.0, qtd_executada=20.0),
+            }
+        )
+        team = SimpleNamespace(
+            contrato_tipo_id="POOL-RESOURCES",
+            custo_reconciliado_planejamento=True,
+            num_equipes_base=2,
+            custo_total=200.0,
+            # The planning subtotal is stale after pool allocation. The four
+            # instancial fields are now measured pool postings and sum to 200.
+            custo_operacional_agregado=400.0,
+            custo_inst_mo=100.0,
+            custo_inst_eq=100.0,
+            custo_inst_mat=0.0,
+            custo_inst_comb=0.0,
+            produtividade_horaria=10.0,
+            horas_dia=8.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=30.0,
+            gamma_equipamentos_catalogo=30.0,
+            gamma_material_catalogo=0.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        _components, weeks, direct_cost, sale, _ = _cons._build_activity_direct_cost(
+            activity, team, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert direct_cost == pytest.approx(200.0)
+        assert sale == pytest.approx(200.0)
+        assert weeks[0].custo_operacional == pytest.approx(200.0)
+
+    def test_heuristic_nonpool_cost_does_not_suppress_material_gamma(self):
+        """Incomplete non-pool aggregate is not complete physical K/V evidence."""
+        activity = SimpleNamespace(
+            distribuicao_semanal={
+                "2026-W01": SimpleNamespace(num_equipes=1.0, qtd_executada=1.0),
+            }
+        )
+        equipe = SimpleNamespace(
+            custo_inst_mo=None,
+            custo_total=200.0,
+            custo_operacional_agregado=200.0,
+            custo_mao_obra_mensal=100.0,
+            custo_encargos_mensal=0.0,
+            custo_equipamentos_mensal=100.0,
+            custo_material_mensal=100.0,
+            custo_combustivel_total_mensal=0.0,
+            produtividade_horaria=1.0,
+            horas_dia=2.0,
+            dias_semana=5.0,
+            gamma_mao_obra_catalogo=10.0,
+            gamma_equipamentos_catalogo=10.0,
+            gamma_material_catalogo=100.0,
+            gamma_combustivel_catalogo=0.0,
+        )
+        # Heuristic proportions would incorrectly scale 100/100/100 into
+        # 66.67/66.67/66.67 to fit the aggregate 200, dropping material.
+        # Explicit gamma computes K=200 + V=100 until a complete
+        # instancial breakdown becomes available.
+        components, weeks, operational, price, _ = _cons._build_activity_direct_cost(
+            activity, equipe, {
+                "mao_obra": 0.0, "equipamentos": 0.0,
+                "material": 0.0, "diesel": 0.0,
+            }
+        )
+        assert operational == pytest.approx(300.0)
+        assert price == pytest.approx(300.0)
+        assert weeks[0].custo_material == pytest.approx(100.0)
+        assert components[0].custo_total_direto == pytest.approx(300.0)
+
     def test_variable_cost_is_invariant_under_extra_unproductive_team_week(self):
         equipe = SimpleNamespace(
             produtividade_horaria=10.0,

@@ -38,6 +38,17 @@ def golden_ref() -> dict:
 class TestAlgebraicInvariants:
     """Verifica Q×PU=subtotal e consistência do referencia.json sem rodar o pipeline."""
 
+    def test_snapshot_operational_margin_closes_against_price_and_cost(
+        self, golden_ref
+    ):
+        """A calibrated regression snapshot cannot disagree with its own P&L."""
+        expected = golden_ref["resultado"]
+        venda = expected["venda"]["total_custo_plus"]
+        custo = expected["custo"]["total"]
+        assert venda > 0
+        margem = (venda - custo) / venda
+        assert abs(expected["margem_pct"] - margem) <= 1e-10
+
     def test_golden_ref_file_exists(self):
         assert _GOLDEN_REF.exists(), f"Golden reference não encontrada: {_GOLDEN_REF}"
 
@@ -99,7 +110,7 @@ class TestAlgebraicInvariants:
 
 
 @pytest.fixture(scope="module")
-def golden_benchmark(config_root):
+def golden_benchmark(config_root, tmp_path_factory):
     """Executa o pipeline GOLDEN e retorna o canonical + report.
 
     Usa reset=True para garantir execução fresca (não usa cache).
@@ -110,6 +121,10 @@ def golden_benchmark(config_root):
 
     root = config_root.parent
     facade = BenchmarkFacade.from_root(root)
+    # This fixture intentionally uses OLTP (not the shared OLAP golden_benchmark).
+    # Every reset=True benchmark must own its project store to avoid run-order
+    # contamination from RFI/RFP and ADR-104 integration fixtures.
+    facade.projects_root = tmp_path_factory.mktemp("golden_regression_oltp")
     facade.run_single("GOLDEN", reset=True, mode=PipelineMode.OLTP)
 
     from concilium.infrastructure.storage.store_factory import build_local_project_repository
@@ -192,7 +207,7 @@ class TestGoldenRegression:
 
     @pytest.mark.slow
     def test_regression_against_calibrated_values(self, golden_benchmark):
-        """Regressão: valores do pipeline batem com resultado calibrado no referencia.json (tol 0.5%)."""
+        """Compara custos e receitas (0,5% relativo); margem deve fechar exatamente pela fórmula."""
         ref = json.loads(_GOLDEN_REF.read_text(encoding="utf-8"))
         expected = ref.get("resultado", {})
         if not expected.get("$calibrado"):
@@ -205,7 +220,9 @@ class TestGoldenRegression:
             ("custo.direto_equipes", r.custo.direto_equipes, expected["custo"]["direto_equipes"]),
             ("custo.total", r.custo.total, expected["custo"]["total"]),
             ("venda.total_com_bdi", r.venda.total_com_bdi, expected["venda"]["total_com_bdi"]),
-            ("margem_pct", r.margem_pct, expected["margem_pct"]),
+            # Check operational sale explicitly, *before* its derived margin.
+            # Recalibrating margem_pct alone would hide a changed BDI/pricing basis.
+            ("venda.total_custo_plus", r.venda.total_custo_plus, expected["venda"]["total_custo_plus"]),
         ]
         for nome, atual, esperado in checks:
             if esperado in (None, 0):
@@ -213,9 +230,34 @@ class TestGoldenRegression:
             desvio = abs(atual - esperado) / abs(esperado)
             assert desvio <= _REG_TOL, (
                 f"Regressão em {nome}: atual={atual:,.4f} vs calibrado={esperado:,.4f} "
-                f"(desvio={desvio:.2%} > {_REG_TOL:.1%}). Se intencional, recalibrar com "
-                f"commit 'golden(update): <razão>'."
+                f"(desvio={desvio:.2%} > {_REG_TOL:.1%}). "
+                f"Auditoria operacional: custo.total={r.custo.total:,.2f}, "
+                f"venda.total_custo_plus={r.venda.total_custo_plus:,.2f}, "
+                f"margem_pct={r.margem_pct:.6f}; snapshot: "
+                f"custo.total={expected['custo']['total']:,.2f}, "
+                f"venda.total_custo_plus={expected['venda']['total_custo_plus']:,.2f}. "
+                "Não recalibrar preço/margem sem causa raiz e validação do BDI."
             )
+
+        # Margin is not an independent price input: m = 1 - C / P.
+        # The cost AND operational sale above already have strict 0.5%
+        # relative regression gates. Reusing a 0.5% *relative* tolerance
+        # on their derived margin creates false negatives: a ~0.1% sale
+        # drift changes a ~15% margin by ~0.6% relative, while the
+        # underlying independent monetary values remain in tolerance.
+        # Instead require actual margin to close algebraically against
+        # current measured sale and cost to the separate 0.01 pp precision
+        # of the canonical invariant. The reference itself is checked
+        # algebraically by TestAlgebraicInvariants.
+        assert r.venda.total_custo_plus > 0
+        margin_derived = (
+            r.venda.total_custo_plus - r.custo.total
+        ) / r.venda.total_custo_plus
+        assert abs(r.margem_pct - margin_derived) <= _ABS_TOL, (
+            f"Margem não fecha com receita/custo: declarada={r.margem_pct:.6f}, "
+            f"derivada={margin_derived:.6f}. "
+            "Não recalibrar margem independentemente de venda/custo."
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

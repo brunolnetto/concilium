@@ -26,6 +26,7 @@ class TestCostDecompositionInvariant:
         assert eq.custo_inst_mo is None  # Default deve ser None
         assert eq.custo_inst_eq is None
 
+    @pytest.mark.slow
     def test_cost_decomposition_closes_with_pool_contracts(self, golden_benchmark):
         """Valida que custo_total == soma(custo_inst_*) após ADR-085.
 
@@ -58,6 +59,7 @@ class TestCostDecompositionInvariant:
             "Nenhum item com decomposição instancial preenchida — ADR-085 não foi executado?"
         )
 
+    @pytest.mark.slow
     def test_projection_breakdown_sums_correctly(self, golden_benchmark):
         """Valida que breakdown em report (MO+EQ+COMB+MAT) == total.
         
@@ -93,6 +95,7 @@ class TestCostDecompositionInvariant:
 class TestADR104Checkpoints:
     """Testa os 3 checkpoints de validação em skill.py."""
 
+    @pytest.mark.slow
     def test_stage1_checkpoint_none_values(self, golden_benchmark):
         """Checkpoint 1: Após Estágio 1, custo_inst_* deve ser None.
         
@@ -108,6 +111,7 @@ class TestADR104Checkpoints:
             if validacao.codigo == "VAL-ESTAG1-INST-NONE":
                 pytest.fail(f"Checkpoint 1 falhou: {validacao.mensagem}")
 
+    @pytest.mark.slow
     def test_stage4_checkpoint_filled_values(self, golden_benchmark):
         """Checkpoint 3: Após Estágio 4, custo_inst_* deve estar preenchido para items em contratos.
         
@@ -122,6 +126,7 @@ class TestADR104Checkpoints:
             if validacao.codigo == "VAL-ESTAG4-INST-MISSING":
                 pytest.fail(f"Checkpoint 3 falhou: {validacao.mensagem}")
 
+    @pytest.mark.slow
     def test_decomposition_invariant_validation(self, golden_benchmark):
         """Teste de Invariante: desvio deve estar dentro de tolerância.
         
