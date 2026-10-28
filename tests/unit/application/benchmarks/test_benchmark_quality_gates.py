@@ -134,8 +134,6 @@ class TestBenchmarkQualityGates:
 
         assert report["confronto"]["referencia"] == inference_pack.reference_projection
 
-
-
 def test_report_without_reference_is_not_evaluated(monkeypatch):
     builder = BenchmarkReportBuilder()
     spec = ProjectSpec(nome="Projeto Teste", slug="proj-teste", contexto_id="ctx")
