@@ -69,6 +69,7 @@ def _make_tipo_recurso(
         categoria=spec.get("categoria", "EQUIPAMENTO"),
         custo_unitario_dia=custo_unit,
         especificacoes=spec.get("especificacoes", {}),
+        proveniencia="CONFIGURADO",
     )
 
 
@@ -155,6 +156,7 @@ def _build_pool_from_specs(
                 quantidade_total=qtd,
                 quantidade_disponivel=qtd,
                 custo_aquisicao_total=float(spec.get("custo_aquisicao_total", 0)),
+                proveniencia="CONFIGURADO",
             )
         )
     if not pool:
@@ -169,6 +171,7 @@ def _build_pool_from_specs(
                         projeto_id=projeto_id,
                         quantidade_total=1,
                         quantidade_disponivel=1,
+                        proveniencia="DERIVADO_SKILL03",
                     )
                 )
     return pool
