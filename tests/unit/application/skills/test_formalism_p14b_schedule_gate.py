@@ -74,7 +74,15 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
                     nome="Trator declarado",
                     categoria="EQUIPAMENTO",
                     custo_unitario_dia=123.0,
-                )
+                    proveniencia="CONFIGURADO",
+                ),
+                TipoRecurso(
+                    id="EQUIP-ESCAV",
+                    nome="Escavadeira inferida",
+                    categoria="EQUIPAMENTO",
+                    custo_unitario_dia=0.0,
+                    proveniencia="DERIVADO_SKILL05",
+                ),
             ],
             "recurso_pool": [
                 RecursoPool(
@@ -84,7 +92,16 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
                     quantidade_total=3,
                     quantidade_disponivel=2,
                     custo_aquisicao_total=456.0,
-                )
+                    proveniencia="CONFIGURADO",
+                ),
+                RecursoPool(
+                    id="pool-skill05-1",
+                    tipo_id="EQUIP-ESCAV",
+                    projeto_id="p14b",
+                    quantidade_total=1000,
+                    quantidade_disponivel=1000,
+                    proveniencia="DERIVADO_SKILL05",
+                ),
             ],
             "equipes_diretas": [
                 EquipeDireta(equipe_id="stale-team", custo_total=1234.5, permanencia_meses=2.0)
@@ -310,10 +327,11 @@ def test_p14c_pool_violation_invalidates_stale_mobilization_and_indirect_costs(m
     assert outcome.canonical.alocacoes == []
     assert outcome.canonical.conflitos_pico == []
     assert outcome.canonical.indiretos_semanal == []
-    # Preserve explicit catalog/inventory configuration; provenance is mixed
-    # with Skill 05's generated additions and cannot be filtered safely here.
-    assert outcome.canonical.tipos_recurso == canonical.tipos_recurso
-    assert outcome.canonical.recurso_pool == canonical.recurso_pool
+    # Preserve declared Skill 03 configuration but remove Skill 05-inferred state.
+    assert [item.id for item in outcome.canonical.tipos_recurso] == ["CFG-TRATOR"]
+    assert [item.id for item in outcome.canonical.recurso_pool] == ["pool-config-1"]
+    assert outcome.canonical.tipos_recurso[0] == canonical.tipos_recurso[0]
+    assert outcome.canonical.recurso_pool[0] == canonical.recurso_pool[0]
     assert outcome.canonical.indiretos_com_bdi == []
     assert outcome.canonical.resultado is None
     assert outcome.canonical.s_curve is None
