@@ -49,6 +49,9 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
     marker = policy.get("retirement_marker")
     if not isinstance(marker, str) or not marker.strip():
         raise ValueError("invalid planning PR retirement marker")
+    retirement_governance_pr = policy.get("retirement_governance_pr")
+    if type(retirement_governance_pr) is not int or retirement_governance_pr <= 0:
+        raise ValueError("invalid retirement governance PR")
     rows = registry["packages"]
     registered = {(row["issue"], row["wave"], row["id"]) for row in rows}
     if registered != unregistered or len(rows) != len(registered):
@@ -185,6 +188,8 @@ def audit_snapshot(
         return seen
 
     pulls = {p["number"]: p for p in snapshot["pulls"]}
+    retirement_governance_pr = registry["policy"]["retirement_governance_pr"]
+    retired_planning_prs: list[int] = []
 
     # Canonical DAG slots represent completed implementation, never a draft
     # planning PR. A nonempty PR list alone is not proof of promotion.
@@ -231,7 +236,7 @@ def audit_snapshot(
             raise ValueError(f"{row['id']}: head branch drift")
         if pr["base"]["ref"] != row["base_branch"]:
             raise ValueError(f"{row['id']}: base branch drift")
-        if pr.get("merged_at"):
+        if pr.get("merged_at") or pr.get("merged") is True:
             raise ValueError(f"{row['id']}: planning PR must not be merged")
         if pr["state"] == "open" and pr.get("draft"):
             pr_lifecycle = "OPEN_DRAFT"
@@ -239,6 +244,7 @@ def audit_snapshot(
             if marker not in str(pr.get("body") or ""):
                 raise ValueError(f"{row['id']}: closed planning PR lacks registry supersession marker")
             pr_lifecycle = "RETIRED_SUPERSEDED"
+            retired_planning_prs.append(row["planning_pr"])
         else:
             raise ValueError(
                 f"{row['id']}: must remain an open draft or be closed unmerged with registry marker"
@@ -268,6 +274,20 @@ def audit_snapshot(
             "ready_to_implement": not pending and not pending_plans,
             "ready_to_merge": False,  # Plans never count as product.
         })
+    if retired_planning_prs:
+        governance_pr = pulls.get(retirement_governance_pr)
+        if (
+            governance_pr is None
+            or governance_pr.get("state") != "closed"
+            or not governance_pr.get("merged_at")
+            or governance_pr.get("merged") is False
+            or governance_pr.get("draft")
+        ):
+            raise ValueError(
+                "retiring a planning PR requires merged governance registry PR "
+                f"#{retirement_governance_pr}"
+            )
+
     return {
         "valid": True,
         "wave_1_blocked": issues[25] != "closed",
