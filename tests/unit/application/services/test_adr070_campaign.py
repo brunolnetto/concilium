@@ -1204,3 +1204,18 @@ def test_campaign_gate_fidelity_is_unknown_when_not_evaluated():
     vector = extrair_vetor_EF(canonical, report)
 
     assert vector.fidelidade_gates is None
+
+
+
+def test_campaign_with_unassessed_scenario_is_inconclusive_and_excludes_it_from_shortlist():
+    approved = _make_cenario("approved")
+    not_evaluated = _make_cenario("not-evaluated", viabilidade="NAO_AVALIADO")
+    not_evaluated.motivo_nao_avaliado = "reference projection unavailable"
+
+    assert classificar_bundle([approved, not_evaluated]) == "INCONCLUSO"
+
+    shortlist = curar_shortlist([approved, not_evaluated], top_k=2, perfil=PERFIL)
+
+    assert len(shortlist) == 1
+    assert shortlist[0].cenario.cenario_id == "approved"
+    assert all(item.cenario.viabilidade != "NAO_AVALIADO" for item in shortlist)
