@@ -233,3 +233,17 @@ def test_legacy_skill05_default_pool_is_unverified_without_origin_evidence():
         quantidade_disponivel=1000,
     )
     assert pool.proveniencia == "LEGACY_UNVERIFIED"
+
+def test_ambiguous_legacy_pool_string_quantities_are_quarantined_before_coercion():
+    pool = RecursoPool(
+        id="pool-legacy-string-ambiguous",
+        tipo_id="EQUIP-DECLARED",
+        projeto_id="p1",
+        quantidade_total="1000",
+        quantidade_disponivel="1000",
+    )
+    # Pydantic coerces these values to ints; provenance must be classified
+    # from the original values before that coercion hides the legacy shape.
+    assert pool.quantidade_total == 1000
+    assert pool.quantidade_disponivel == 1000
+    assert pool.proveniencia == "LEGACY_UNVERIFIED"
