@@ -242,8 +242,6 @@ def test_complete_comparable_metrics_preserve_approval_decision(monkeypatch):
     assert report["quality_gates"]["decision"] == "APROVADO"
     assert report["status_final"] == "APROVADO"
 
-
-
 def test_zero_reference_denominator_is_not_evaluated(monkeypatch):
     builder = BenchmarkReportBuilder()
     spec = ProjectSpec(nome="Projeto Teste", slug="proj-teste", contexto_id="ctx")
