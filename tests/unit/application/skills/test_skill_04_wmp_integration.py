@@ -23,6 +23,7 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
+from concilium.application.services.analytics.cube_projection_views import resolve_recursos_ativos_rows
 from concilium.application.skills import run_catalogo_de_recursos, run_cronograma, run_escopo_e_eap
 from concilium.domain.models.canonical import (
     Atividade,
@@ -235,6 +236,17 @@ class TestWMPExpansion:
         second_week = curva.semanas[1].semana_iso
         assert type(scheduled.distribuicao_semanal[second_week].num_equipes) is int
         assert scheduled.distribuicao_semanal[second_week].num_equipes == 1
+
+        # Exercise the production S-curve -> analytics cube path with the
+        # integer WMP schedule, not only a hand-built aggregate fixture.
+        rows, columns, _, unit_type, _ = resolve_recursos_ativos_rows(
+            result.canonical, "semana", top_n=200
+        )
+        assert rows
+        assert unit_type == "count"
+        assert all(type(row["n_equipes_totais"]) is int for row in rows)
+        dtypes = {column["id"]: column["dtype"] for column in columns}
+        assert dtypes["n_equipes_totais"] == "int"
 
     def test_weekly_count_models_reject_fractional_team_counts(self):
         with pytest.raises(ValidationError):
