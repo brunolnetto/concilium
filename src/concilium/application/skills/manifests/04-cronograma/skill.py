@@ -106,12 +106,24 @@ def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
 
 def _invalidate_derived_costs(canonical: CanonicalModel) -> dict[str, Any]:
     """Clear stale economic outputs while retaining declared resource configuration."""
-    # Skill 05 now tags inferred types/default pools explicitly. Preserve Skill 03
-    # configuration and remove only the resource state that Skill 05 synthesized.
+    # Skill 05 now tags inferred types/default pools explicitly. For old persisted
+    # snapshots, classify a missing-provenance FUNC-/EQUIP- type as inferred only
+    # when its matching legacy synthetic pool (1000/1000, zero acquisition cost)
+    # was recognized above. Explicit Skill 03 configuration is always preserved.
+    legacy_inferred_type_ids = {
+        pool.tipo_id
+        for pool in (canonical.recurso_pool or [])
+        if pool.proveniencia == "DERIVADO_SKILL05"
+        and pool.tipo_id.startswith(("FUNC-", "EQUIP-"))
+    }
     return {
         "tipos_recurso": [
             item for item in (canonical.tipos_recurso or [])
             if item.proveniencia != "DERIVADO_SKILL05"
+            and not (
+                item.id in legacy_inferred_type_ids
+                and "proveniencia" not in item.model_fields_set
+            )
         ],
         "recurso_pool": [
             item for item in (canonical.recurso_pool or [])
