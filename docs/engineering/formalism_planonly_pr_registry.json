@@ -13,8 +13,9 @@
     "merge_rule": "All prior waves accepted; issue predecessors accepted; real implementation and falsifiers plus current-HEAD CI/review before merge; merge(PR) != acceptance(issue) != certification(project).",
     "join_rule": "A GitHub PR has only one base branch; every depends_on_plans edge, including non-base parents, is independently mandatory.",
     "planning_pr_lifecycle": "OPEN_DRAFT_OR_SUPERSEDED_CLOSED_UNMERGED",
+    "retirement_governance_pr": 120,
     "retirement_marker": "Superseded by the durable plan-only registry in PR #120; package remains PLAN_ONLY (not implemented, not accepted, no PROJECT_GO).",
-    "retirement_rule": "After this registry and its preflight are merged, a plan-only PR may be closed unmerged only after its full package contract is mirrored here and the exact retirement_marker is appended to its body. Retirement changes PR lifecycle only: the DAG slot stays empty, the package stays PLAN_ONLY, and the issue stays open until implementation and independent acceptance."
+    "retirement_rule": "After this registry and its preflight are merged through PR #120, a plan-only PR may be closed unmerged only after its full package contract is mirrored here and the exact retirement_marker is appended to its body. The preflight rejects retirement until PR #120 is actually merged. Retirement changes PR lifecycle only: the DAG slot stays empty, the package stays PLAN_ONLY, and the issue stays open until implementation and independent acceptance."
   },
   "reserved_planning_prs": [
     108,
