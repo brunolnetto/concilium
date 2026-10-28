@@ -1196,3 +1196,13 @@ def test_campaign_bundle_cardinality_breakdown_and_post_init():
 
     explicit = GoResearchCampaignBundle(base_spec={"x": 1}, sweep=[], campaign_id="campaign-fixed")
     assert explicit.campaign_id == "campaign-fixed"
+
+
+
+def test_campaign_gate_fidelity_is_unknown_when_not_evaluated():
+    canonical = {"resultado": {"margem_pct": 0.12}}
+    report = {"quality_gates": {"decision": "NOT_EVALUATED"}}
+
+    vector = extrair_vetor_EF(canonical, report)
+
+    assert vector.fidelidade_gates is None
