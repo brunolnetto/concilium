@@ -161,8 +161,8 @@ class TestSimulatorNormalCases:
         if len(curva.semanas) > 5:
             assert curva.semanas[5].num_equipes == 5
 
-    def test_fractional_mobilization_rate(self, sim: WorkforcePolicySimulator):
-        """taxa_mobilizacao=0.5 → one extra team every 2 weeks."""
+    def test_fractional_mobilization_rate_produces_integer_headcount(self, sim: WorkforcePolicySimulator):
+        """A fractional team/week rate advances the integer headcount by floor."""
         policy = make_policy(n_inicial=1, n_maximo=4, taxa_mobilizacao=0.5)
         Q = 500_000.0
         P = 1_000.0
@@ -170,11 +170,10 @@ class TestSimulatorNormalCases:
         curva = sim.simulate(policy, "act-frac", Q, P, m, h)
 
         assert curva.is_complete
-        # A fórmula formal preserva a taxa fracionária, sem arredondamento semanal.
-        assert curva.semanas[0].num_equipes == 1
-        assert curva.semanas[1].num_equipes == 1.5
-        assert curva.semanas[2].num_equipes == 2
-        assert curva.semanas[4].num_equipes == 3
+        assert [week.num_equipes for week in curva.semanas[:5]] == [1, 1, 2, 2, 3]
+        assert all(type(week.num_equipes) is int for week in curva.semanas)
+        assert type(curva.peak_teams) is int
+        assert type(curva.total_team_weeks) is int
 
     def test_production_formula_correctness(self, sim: WorkforcePolicySimulator):
         """Verify qtd_executada = P × m × h × p(t) × n(t)."""
@@ -503,9 +502,9 @@ class TestSkill04Integration:
 
         mapa = curva.to_num_equipes_por_semana()
 
-        # Verify format: {ISO_week: float}
+        # The bridge carries integer team counts, not fractional headcount.
         assert all(isinstance(k, str) and "-W" in k for k in mapa.keys())
-        assert all(isinstance(v, (int, float)) and v >= 0 for v in mapa.values())
+        assert all(type(v) is int and v >= 0 for v in mapa.values())
 
         # Verify the curve is monotone up to n_maximo in the ramp phase
         sorted_weeks = sorted(mapa.items())
