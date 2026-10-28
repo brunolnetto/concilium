@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -514,26 +515,59 @@ def _run_cronograma_build_context(
     )
 
 
-def _run_cronograma_validate_num_equipes_formato(num_equipes_por_item: Any, validacoes: list[ValidacaoItem]) -> bool:
-    """Valida que num_equipes_por_item é dict[item_id, dict[semana_iso, int]].
-    Retorna False (e registra VAL-CRON-EQUIPES-FORMATO) se algum valor for plano."""
+def _run_cronograma_validate_num_equipes_formato(
+    num_equipes_por_item: Any, validacoes: list[ValidacaoItem]
+) -> bool:
+    """Validate weekly team counts as finite, nonnegative integers."""
     if num_equipes_por_item is None or not isinstance(num_equipes_por_item, dict):
         return True
-    flat_items = [k for k, v in num_equipes_por_item.items() if not isinstance(v, dict)]
-    if not flat_items:
-        return True
-    validacoes.append(
-        ValidacaoItem(
-            codigo="VAL-CRON-EQUIPES-FORMATO",
-            status="ERRO",
-            mensagem=(
-                f"num_equipes_por_item: valor deve ser dict[semana_iso, int], não escalar. "
-                f"Itens com formato errado: {flat_items[:3]}. "
-                f'Esperado: {{"item_id": {{"2025-W01": 2, "2025-W02": 3}}}}'
-            ),
+    flat_items = [key for key, value in num_equipes_por_item.items() if not isinstance(value, dict)]
+    if flat_items:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-EQUIPES-FORMATO",
+                status="ERRO",
+                mensagem=(
+                    f"num_equipes_por_item must be dict[item_id, dict[semana_iso, int]], not scalar. "
+                    f"Items with invalid shape: {flat_items[:3]}. "
+                    'Expected: {"item_id": {"2025-W01": 2, "2025-W02": 3}}'
+                ),
+            )
         )
-    )
-    return False
+        return False
+
+    invalid: list[str] = []
+    for item_id, weekly in num_equipes_por_item.items():
+        for week, value in weekly.items():
+            if isinstance(value, bool):
+                valid = False
+            elif isinstance(value, int):
+                valid = value >= 0
+            elif isinstance(value, float) and math.isfinite(value) and 0 <= value <= 2**53:
+                nearest = round(value)
+                tolerance = 2 * max(math.ulp(value), math.ulp(float(nearest)))
+                valid = abs(value - nearest) <= tolerance
+            else:
+                valid = False
+            if not valid:
+                invalid.append(f"{item_id}/{week}={value!r}")
+                if len(invalid) == 3:
+                    break
+        if len(invalid) == 3:
+            break
+    if invalid:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-EQUIPES-INTEIRO",
+                status="ERRO",
+                mensagem=(
+                    "Weekly physical team counts must be finite nonnegative integers; "
+                    f"invalid values: {invalid}."
+                ),
+            )
+        )
+        return False
+    return True
 
 
 def _run_cronograma_infer_mob_schedule(canonical_in: CanonicalModel, validacoes: list[ValidacaoItem]) -> Any:

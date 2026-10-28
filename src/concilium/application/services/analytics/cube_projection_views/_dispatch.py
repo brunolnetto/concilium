@@ -5,6 +5,7 @@ Dispatch de faces e montagem do payload.
 
 from __future__ import annotations
 
+import math
 from collections import defaultdict
 from typing import Any, Literal
 
@@ -16,6 +17,21 @@ from ._tempo_natureza_componente import _resolve_tempo_componente_rows, _resolve
 from ._temporal_categoria import _resolve_direto_temporal_categoria_rows, _resolve_indireto_temporal_categoria_rows
 
 FaceGranularity = Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"]
+
+
+def _require_integral_count(value: object, field: str) -> int:
+    """Reject fractional headcount/equipment counts rather than silently truncating."""
+    if isinstance(value, bool):
+        raise ValueError(f"{field} must be a nonnegative integer count")
+    if isinstance(value, int):
+        count = value
+    elif isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        count = int(value)
+    else:
+        raise ValueError(f"{field} must be a nonnegative integer count")
+    if count < 0:
+        raise ValueError(f"{field} must be a nonnegative integer count")
+    return count
 
 
 def resolve_cubo_projection_rows(
@@ -147,26 +163,34 @@ def resolve_recursos_ativos_rows(
     from concilium.domain.services.analytics.s_curve_builder import SCurveBuilder
 
     s_curve = SCurveBuilder().build(canonical)
-    grouped: dict[str, dict[str, float]] = defaultdict(
+    grouped: dict[str, dict[str, int]] = defaultdict(
         lambda: {
-            "n_equipes_totais": 0.0,
-            "n_equipamentos_unicos": 0.0,
-            "equipamentos_unidades_ativas": 0.0,
+            "n_equipes_totais": 0,
+            "n_equipamentos_unicos": 0,
+            "equipamentos_unidades_ativas": 0,
         }
     )
     for agg in s_curve.agregacao_semanal:
         bucket = bucket_from_week_iso(str(agg.semana_iso), granularidade)
-        grouped[bucket]["n_equipes_totais"] += float(agg.n_equipes_totais)
-        grouped[bucket]["n_equipamentos_unicos"] = max(
-            grouped[bucket]["n_equipamentos_unicos"], float(agg.n_equipamentos_unicos)
+        n_equipes = _require_integral_count(agg.n_equipes_totais, "n_equipes_totais")
+        n_equipamentos_unicos = _require_integral_count(
+            agg.n_equipamentos_unicos, "n_equipamentos_unicos"
         )
-        grouped[bucket]["equipamentos_unidades_ativas"] += float(sum(agg.equipamentos_ativos.values()))
+        unidades_ativas = sum(
+            _require_integral_count(units, f"equipamentos_ativos[{equip_id!r}]")
+            for equip_id, units in agg.equipamentos_ativos.items()
+        )
+        grouped[bucket]["n_equipes_totais"] += n_equipes
+        grouped[bucket]["n_equipamentos_unicos"] = max(
+            grouped[bucket]["n_equipamentos_unicos"], n_equipamentos_unicos
+        )
+        grouped[bucket]["equipamentos_unidades_ativas"] += unidades_ativas
     rows = [
         {
             "periodo": bucket,
-            "n_equipes_totais": int(vals["n_equipes_totais"]),
-            "n_equipamentos_unicos": int(vals["n_equipamentos_unicos"]),
-            "equipamentos_unidades_ativas": int(vals["equipamentos_unidades_ativas"]),
+            "n_equipes_totais": vals["n_equipes_totais"],
+            "n_equipamentos_unicos": vals["n_equipamentos_unicos"],
+            "equipamentos_unidades_ativas": vals["equipamentos_unidades_ativas"],
         }
         for bucket, vals in sorted(grouped.items())
     ]
