@@ -88,8 +88,20 @@ def _build_requisitos_e_tipos(
     from collections import defaultdict as _defaultdict
     from datetime import date as _date
 
+    legacy_inferred_type_ids = {
+        pool.tipo_id
+        for pool in (canonical_in.recurso_pool or [])
+        if pool.proveniencia == "DERIVADO_SKILL05"
+        and pool.tipo_id.startswith(("FUNC-", "EQUIP-"))
+    }
     tipos: dict[str, TipoRecurso] = {
-        t.id: t for t in canonical_in.tipos_recurso if t.proveniencia != "DERIVADO_SKILL05"
+        t.id: t
+        for t in canonical_in.tipos_recurso
+        if t.proveniencia != "DERIVADO_SKILL05"
+        and not (
+            t.id in legacy_inferred_type_ids
+            and "proveniencia" not in t.model_fields_set
+        )
     }
     requisitos: list[RequisitoRecurso] = []
     atvs_por_item: dict = _defaultdict(list)
