@@ -173,6 +173,17 @@ def test_incomplete_scope_reports_validation_not_fake_extra_weeks() -> None:
     )
     error = next(v for v in result.validacoes if v.codigo == "VAL-CRON-01")
     assert "Itens não completados" in error.mensagem
+    # This is the real manual Skill 04 path, so the gate must expose the
+    # same quantity-closure evidence as the physical resolver, not just 0%.
+    assert "Q=300" in error.mensagem
+    assert "Σq=0" in error.mensagem
+    assert "residual=300" in error.mensagem
+    assert "erro_absoluto=300" in error.mensagem
+    assert "tolerancia_Q=" in error.mensagem
+    assert "horizonte_semanas=" in error.mensagem
+    assert "status=FAIL" in error.mensagem
+    assert "razao=CALENDAR_OR_CAPACITY_EXHAUSTED" in error.mensagem
+    assert "não autorizar preço ou GO certificado" in error.mensagem
     assert canonical.cronograma is not None
     assert canonical.resultado is not None
     assert result.canonical.cronograma is None
