@@ -18,6 +18,8 @@ from concilium.domain.models.canonical import (
     Praticabilidade,
     Projeto,
     RegimeTrabalho,
+    RecursoPool,
+    TipoRecurso,
     ValidacaoItem,
 )
 
@@ -63,6 +65,27 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
             "cubo_analitico": object(),
             "mob_schedule": object(),
             "indiretos": [{"stale": True}],
+            # These are legitimate Skill 03 resource configuration. Skill 05
+            # also augments the same fields, so schedule invalidation must not
+            # erase them without explicit provenance.
+            "tipos_recurso": [
+                TipoRecurso(
+                    id="CFG-TRATOR",
+                    nome="Trator declarado",
+                    categoria="EQUIPAMENTO",
+                    custo_unitario_dia=123.0,
+                )
+            ],
+            "recurso_pool": [
+                RecursoPool(
+                    id="pool-config-1",
+                    tipo_id="CFG-TRATOR",
+                    projeto_id="p14b",
+                    quantidade_total=3,
+                    quantidade_disponivel=2,
+                    custo_aquisicao_total=456.0,
+                )
+            ],
             "equipes_diretas": [
                 EquipeDireta(equipe_id="stale-team", custo_total=1234.5, permanencia_meses=2.0)
             ],
@@ -287,6 +310,10 @@ def test_p14c_pool_violation_invalidates_stale_mobilization_and_indirect_costs(m
     assert outcome.canonical.alocacoes == []
     assert outcome.canonical.conflitos_pico == []
     assert outcome.canonical.indiretos_semanal == []
+    # Preserve explicit catalog/inventory configuration; provenance is mixed
+    # with Skill 05's generated additions and cannot be filtered safely here.
+    assert outcome.canonical.tipos_recurso == canonical.tipos_recurso
+    assert outcome.canonical.recurso_pool == canonical.recurso_pool
     assert outcome.canonical.indiretos_com_bdi == []
     assert outcome.canonical.resultado is None
     assert outcome.canonical.s_curve is None
