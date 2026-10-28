@@ -20,16 +20,6 @@ class TipoRecurso(BaseModel):
     especificacoes: dict = Field(default_factory=dict)
     proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05"] = "CONFIGURADO"
 
-    @model_validator(mode="before")
-    @classmethod
-    def _classify_legacy_skill05_type(cls, value):
-        """Migrate pre-provenance Skill 05 type IDs without reclassifying Skill 03 inputs."""
-        if isinstance(value, dict) and "proveniencia" not in value:
-            tipo_id = value.get("id")
-            if isinstance(tipo_id, str) and tipo_id.startswith(("FUNC-", "EQUIP-")):
-                return {**value, "proveniencia": "DERIVADO_SKILL05"}
-        return value
-
 
 class RecursoPool(BaseModel):
     """Pool de recursos disponíveis para o projeto (não double-counted)."""
