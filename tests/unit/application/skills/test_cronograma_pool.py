@@ -133,6 +133,24 @@ def test_manual_mode_marca_fallback_produtividade_para_cpu_fora_do_catalogo():
     assert sa.produtividade_fallback_aplicada is True
 
 
+def test_ambiguous_legacy_pool_is_preserved_but_not_physical_capacity():
+    pool = RecursoPool(
+        id="pool-legacy-ambiguous",
+        tipo_id="EQUIP-DECLARED",
+        projeto_id="p1",
+        quantidade_total=1000,
+        quantidade_disponivel=1000,
+    )
+    assert pool.proveniencia == "LEGACY_UNVERIFIED"
+
+    canonical = CanonicalModel(recurso_pool=[pool])
+    extract_pool = import_module(
+        "concilium.application.skills.manifests.04-cronograma._skill_helpers._calendario"
+    )._extract_pool
+    assert extract_pool(canonical).resources == {}
+    assert canonical.recurso_pool[0].id == "pool-legacy-ambiguous"
+
+
 def test_skill05_inferred_pool_is_not_physical_capacity():
     meta = Meta(gerado_em=datetime.now(UTC), contexto_id="test-inferred-pool")
     proj = Projeto(
