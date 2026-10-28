@@ -411,6 +411,23 @@ class TestSCurveBuilder:
         assert bucket["n_equipes_totais"] == 0.5
         assert bucket["equipamentos_ativos"]["EQ-ESCAV-38T"] == 0.5
 
+        # Exercise the complete nested CanonicalModel JSON round-trip, not
+        # only TypeAdapter output for the dataclass in isolation.
+        canonical_with_scurve = canonical.model_copy(update={"s_curve": scurve})
+        serialized = canonical_with_scurve.model_dump_json(warnings="error")
+        restored = type(canonical_with_scurve).model_validate_json(serialized)
+        restored_row = next(
+            row
+            for row in restored.s_curve.agregacao_semanal
+            if row.semana_iso == "2026-W24"
+        )
+        assert type(restored_row.n_equipes_totais) is float
+        assert restored_row.n_equipes_totais == 0.5
+        assert type(restored_row.equipamentos_ativos["EQ-ESCAV-38T"]) is float
+        assert restored_row.equipamentos_ativos["EQ-ESCAV-38T"] == 0.5
+        assert type(restored_row.n_equipamentos_unicos) is int
+        assert restored_row.n_equipamentos_unicos == 1
+
 
     def test_total_matches_sum_of_weekly(self):
         canonical = _make_canonical(with_schedule=True)
