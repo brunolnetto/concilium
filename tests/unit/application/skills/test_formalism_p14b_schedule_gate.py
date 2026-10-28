@@ -351,11 +351,18 @@ def test_p14c_pool_violation_invalidates_stale_mobilization_and_indirect_costs(m
     assert outcome.canonical.alocacoes == []
     assert outcome.canonical.conflitos_pico == []
     assert outcome.canonical.indiretos_semanal == []
-    # Preserve declared Skill 03 configuration but remove Skill 05-inferred state.
-    assert [item.id for item in outcome.canonical.tipos_recurso] == ["CFG-TRATOR"]
-    assert [item.id for item in outcome.canonical.recurso_pool] == ["pool-config-1"]
+    # Remove explicitly inferred Skill 05 state, but retain ambiguous legacy records.
+    assert [item.id for item in outcome.canonical.tipos_recurso] == [
+        "CFG-TRATOR",
+        "EQUIP-LEGACY",
+    ]
+    assert [item.id for item in outcome.canonical.recurso_pool] == [
+        "pool-config-1",
+        "pool-legacy-skill05",
+    ]
     assert outcome.canonical.tipos_recurso[0] == canonical.tipos_recurso[0]
     assert outcome.canonical.recurso_pool[0] == canonical.recurso_pool[0]
+    assert outcome.canonical.recurso_pool[1].proveniencia == "LEGACY_UNVERIFIED"
     assert outcome.canonical.indiretos_com_bdi == []
     assert outcome.canonical.resultado is None
     assert outcome.canonical.s_curve is None
