@@ -865,6 +865,45 @@ class TestResolveRecursosAtivosRows:
             rows, _, _, _, _ = resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
         assert rows[0]["n_equipamentos_unicos"] == 7
 
+    def test_fractional_occupancy_survives_cube_projection(self):
+        """Weighted occupancy must survive bucket aggregation without int truncation."""
+        agg1 = self._make_agg(
+            "2026-W10",
+            n_equipes=0.5,
+            n_equip_unicos=2,
+            equip_ativos={"EQ-01": 0.5},
+        )
+        agg2 = self._make_agg(
+            "2026-W11",
+            n_equipes=0.25,
+            n_equip_unicos=3,
+            equip_ativos={"EQ-01": 0.25},
+        )
+        sc = SimpleNamespace(
+            semanas_iso=["2026-W10", "2026-W11"],
+            custo_semanal=[0.0, 0.0],
+            total_projeto=0.0,
+            agregacao_semanal=[agg1, agg2],
+        )
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
+            MockSC.return_value.build.return_value = sc
+            rows, columns, _, _, _ = resolve_recursos_ativos_rows(
+                SimpleNamespace(), "mes", top_n=200
+            )
+
+        assert len(rows) == 1  # Both weeks belong to the same month bucket.
+        row = rows[0]
+        assert row["n_equipes_totais"] == pytest.approx(0.75)
+        assert row["equipamentos_unidades_ativas"] == pytest.approx(0.75)
+        assert type(row["n_equipes_totais"]) is float
+        assert type(row["equipamentos_unidades_ativas"]) is float
+        assert row["n_equipamentos_unicos"] == 3
+        assert type(row["n_equipamentos_unicos"]) is int
+        dtypes = {column["id"]: column["dtype"] for column in columns}
+        assert dtypes["n_equipes_totais"] == "float"
+        assert dtypes["equipamentos_unidades_ativas"] == "float"
+        assert dtypes["n_equipamentos_unicos"] == "int"
+
     def test_top_n_limits_rows(self):
         with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve(n_weeks=6)
