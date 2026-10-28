@@ -48,6 +48,13 @@ def test_team_adjustment_rows_reject_fractional_physical_counts() -> None:
         )
 
 
+def test_team_adjustment_rows_reject_non_finite_physical_counts() -> None:
+    with pytest.raises(ValueError, match="nonnegative integer team count"):
+        build_team_adjustment_rows(
+            _reference_with_weekly_counts({"2026-W01": float("inf")})
+        )
+
+
 def test_manual_team_override_emits_integer_count_only_on_active_weeks() -> None:
     reference = _reference_with_weekly_counts(
         {"2026-W01": 1, "2026-W02": 0, "2026-W03": 3}
