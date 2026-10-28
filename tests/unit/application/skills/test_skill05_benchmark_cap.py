@@ -28,9 +28,11 @@ def _equipe(*, total: float = 200.0, components=(100.0, 50.0, 30.0, 20.0)):
     )
 
 
-def _apply_cap(equipe, cap: float, benchmark_mode: bool = True) -> None:
+def _apply_cap(
+    equipe, cap: float, benchmark_mode: bool = True, validacoes: list | None = None
+) -> None:
     _instancias._limitar_custo_por_planejamento_benchmark(
-        [equipe], benchmark_mode, {}, {"eap-A": cap}
+        [equipe], benchmark_mode, {}, {"eap-A": cap}, validacoes
     )
 
 
@@ -53,6 +55,30 @@ def test_cent_level_caps_never_invent_negative_component():
     assert sum(values) == pytest.approx(0.01)
     assert all(value >= 0 for value in values)
     assert values == (0.01, 0.0, 0.0, 0.0)
+
+
+@pytest.mark.parametrize("invalid_component", [float("nan"), float("inf"), -1.0])
+def test_invalid_complete_breakdown_blocks_benchmark_cap(invalid_component):
+    eq = _equipe(components=(invalid_component, 50.0, 30.0, 20.0))
+    validacoes = []
+
+    _apply_cap(eq, 100.0, validacoes=validacoes)
+
+    # Leave the original cost and decomposition untouched rather than applying
+    # a cap against component data that cannot be reconciled safely.
+    assert eq.custo_total == 200.0
+    assert eq.custo_inst_eq == 50.0
+    assert any(v.codigo == "VAL-BENCHMARK-CAP-DECOMPOSICAO" and v.status == "ERRO" for v in validacoes)
+
+
+def test_zero_complete_breakdown_blocks_benchmark_cap():
+    eq = _equipe(components=(0.0, 0.0, 0.0, 0.0))
+    validacoes = []
+
+    _apply_cap(eq, 100.0, validacoes=validacoes)
+
+    assert eq.custo_total == 200.0
+    assert any(v.codigo == "VAL-BENCHMARK-CAP-DECOMPOSICAO" and v.status == "ERRO" for v in validacoes)
 
 
 def test_non_benchmark_does_not_redistribute_or_cap_costs():

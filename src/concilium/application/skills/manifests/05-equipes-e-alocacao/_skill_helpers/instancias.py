@@ -5,6 +5,7 @@ Instâncias de recurso e mapa de utilização (ADR-077).
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from concilium.domain.models.canonical import (
@@ -52,34 +53,47 @@ def _validar_instancia_recurso_ok(
     )
 
 
-def _reconciliar_decomposicao_apos_teto_benchmark(eq: Any, capped: float) -> None:
-    """Allocate benchmark-capped instancial K/V cents without losing a cent.
+def _reconciliar_decomposicao_apos_teto_benchmark(eq: Any, capped: float) -> bool | None:
+    """Reconcile a complete instancial K/V breakdown to the benchmark cap.
 
-    Only pool-backed teams enter this cap stage; non-pool F3 components are
-    populated later. Mob/demob is an *informational subcomponent* of the pool
-    decomposition, not a fifth direct cost to count again.
+    Returns True when a complete decomposition was reconciled, False when a
+    complete but invalid decomposition prevents applying the cap, and None
+    when the decomposition is absent/partial and must remain available for the
+    downstream formal-rate fallback.
     """
     names = ("custo_inst_mo", "custo_inst_eq", "custo_inst_mat", "custo_inst_comb")
     amounts = [getattr(eq, name, None) for name in names]
     if any(amount is None for amount in amounts):
-        return
+        return None
+
     values = [float(amount) for amount in amounts]
+    mob = getattr(eq, "custo_inst_mob_demob", None)
+    mob_value = float(mob) if mob is not None else None
+    if (
+        not math.isfinite(float(capped))
+        or float(capped) < 0
+        or any(not math.isfinite(value) or value < 0 for value in values)
+        or (mob_value is not None and (not math.isfinite(mob_value) or mob_value < 0))
+    ):
+        return False
+
     total = sum(values)
-    if total <= 0 or any(value < 0 for value in values):
-        # Keep incomplete evidence visible, rather than manufacturing a new
-        # itemized operational cost out of an unallocated benchmark limit.
-        return
+    if not math.isfinite(total) or total <= 0:
+        return False
 
     cents_total = int(round(float(capped) * 100))
     component_cents = [int(round(value * 100)) for value in values]
     denominator = sum(component_cents)
     if denominator <= 0:
-        return
-    # All operations are in integer cents to avoid float drift in the
-    # apportionment. A positive cap produces exactly its monetary cents.
+        return False
+
+    # Largest-remainder apportionment in integer cents is deterministic and
+    # conserves the final capped total exactly.
     products = [cents_total * cents for cents in component_cents]
     allocations = [product // denominator for product in products]
     remaining = cents_total - sum(allocations)
+    if remaining < 0 or remaining >= len(names):
+        return False
     by_remainder = sorted(
         range(len(names)), key=lambda i: (-(products[i] % denominator), i)
     )
@@ -88,11 +102,11 @@ def _reconciliar_decomposicao_apos_teto_benchmark(eq: Any, capped: float) -> Non
     for name, cents in zip(names, allocations, strict=True):
         setattr(eq, name, cents / 100)
 
-    mob = getattr(eq, "custo_inst_mob_demob", None)
-    if mob is not None:
-        # Mob/demob was included in the original instancial partition and
-        # should not continue displaying an unadjusted pre-cap amount.
-        eq.custo_inst_mob_demob = round(float(mob) * capped / total, 2)
+    if mob_value is not None:
+        # Mob/demob is an informational subcomponent, not a fifth direct K/V
+        # posting. Scale it proportionally but never use it in the K/V divisor.
+        eq.custo_inst_mob_demob = round(mob_value * float(capped) / total, 2)
+    return True
 
 
 def _limitar_custo_por_planejamento_benchmark(
@@ -100,6 +114,7 @@ def _limitar_custo_por_planejamento_benchmark(
     benchmark_mode: bool,
     planejamento_map: dict[str, Any],
     planejamento_ref_map: dict[str, float],
+    validacoes: list[ValidacaoItem] | None = None,
 ) -> None:
     """Em benchmark, limita custo_total instancial ao custo de referência do planejamento."""
     if not (benchmark_mode and (planejamento_map or planejamento_ref_map)):
@@ -118,7 +133,21 @@ def _limitar_custo_por_planejamento_benchmark(
                 # benchmark-only cap. It must be adjusted together with the
                 # authoritative total; otherwise Skill06 bills the uncapped
                 # components against an expense that has been capped.
-                _reconciliar_decomposicao_apos_teto_benchmark(eq, capped)
+                reconciled = _reconciliar_decomposicao_apos_teto_benchmark(eq, capped)
+                if reconciled is False:
+                    if validacoes is not None:
+                        validacoes.append(
+                            ValidacaoItem(
+                                codigo="VAL-BENCHMARK-CAP-DECOMPOSICAO",
+                                status="ERRO",
+                                mensagem=(
+                                    f"Item {eq.item_id}: teto de benchmark não aplicado; "
+                                    "decomposição instancial completa contém valores inválidos "
+                                    "ou não pode ser reconciliada com segurança."
+                                ),
+                            )
+                        )
+                    continue
                 eq.custo_total = capped
 
 
@@ -172,7 +201,9 @@ def _processar_instancias_recurso(
     if instancias_recurso:
         _aplicar_custo_instancial(contratos_recurso, instancias_recurso, equipes, validacoes)
         _enrich_equipes_com_decomposicao_instancial(equipes, contratos_recurso, validacoes)
-        _limitar_custo_por_planejamento_benchmark(equipes, benchmark_mode, planejamento_map, planejamento_ref_map)
+        _limitar_custo_por_planejamento_benchmark(
+            equipes, benchmark_mode, planejamento_map, planejamento_ref_map, validacoes
+        )
         _validar_estagio4_inst_missing(equipes, contratos_recurso, validacoes)
 
     return instancias_recurso, composicao_equipes_atividade, resumo_utilizacao_contratos
