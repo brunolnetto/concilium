@@ -28,7 +28,7 @@ def _reference_with_weekly_counts(counts: dict[str, int | float]) -> dict:
     }
 
 
-def test_team_adjustment_rows_keep_average_analytic_and_peak_integral() -> None:
+def test_team_adjustment_rows_keep_average_analytic_and_editable_count_integral() -> None:
     rows = build_team_adjustment_rows(
         _reference_with_weekly_counts(
             {"2026-W01": 1, "2026-W02": 2, "2026-W03": 3}
@@ -37,7 +37,7 @@ def test_team_adjustment_rows_keep_average_analytic_and_peak_integral() -> None:
 
     assert len(rows) == 1
     assert rows[0]["num_equipes_base"] == 2.0
-    assert rows[0]["num_equipes_maximo"] == 3
+    assert rows[0]["num_equipes_maximo"] == 2
     assert type(rows[0]["num_equipes_maximo"]) is int
 
 
@@ -84,13 +84,13 @@ def test_manual_team_override_rejects_fractional_ceiling() -> None:
         )
 
 
-def test_global_adjustment_rounds_the_integral_peak_not_the_average() -> None:
+def test_global_adjustment_preserves_base_semantics_and_integral_output() -> None:
     rows = [{"num_equipes_base": 1.5, "num_equipes_maximo": 3}]
 
     adjusted = apply_global_team_adjustment(rows, 40.0)
 
     assert adjusted[0]["num_equipes_base"] == 1.5
-    assert adjusted[0]["num_equipes_maximo"] == 4
+    assert adjusted[0]["num_equipes_maximo"] == 2
     assert type(adjusted[0]["num_equipes_maximo"]) is int
 
 
