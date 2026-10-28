@@ -228,6 +228,24 @@ class TestWMPExpansion:
                 qtd_acumulada=0,
             )
 
+    def test_manual_schedule_rejects_fractional_team_count_before_execution(self):
+        canonical = _make_canonical_with_eap([_eap_item(1)])
+        catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 100.0}])
+
+        result = run_cronograma(
+            canonical,
+            {"num_equipes_por_item": {"eap-01": {"2026-W23": 1.5}}},
+            catalogo=catalogo,
+        )
+
+        invalid = next(
+            validation for validation in result.validacoes
+            if validation.codigo == "VAL-CRON-EQUIPES-INTEIRO"
+        )
+        assert invalid.status == "ERRO"
+        assert result.canonical is canonical
+        assert canonical.cronograma is None
+
     def test_complete_delivery_of_quantitativo(self):
         """WMP curve must fully deliver quantitativo."""
         Q = 30_000.0
