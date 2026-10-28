@@ -17,8 +17,8 @@ from concilium.domain.models.canonical import (
     Meta,
     Praticabilidade,
     Projeto,
-    RegimeTrabalho,
     RecursoPool,
+    RegimeTrabalho,
     TipoRecurso,
     ValidacaoItem,
 )
