@@ -36,6 +36,7 @@ def _processar_funcoes_requisitos(eq, d_ini, d_fim, atvs_por_item: dict, tipos: 
                 nome=f.descricao,
                 categoria="EQUIPE",
                 custo_unitario_dia=round(f.custo_mensal_unitario / 26, 2),
+                proveniencia="DERIVADO_SKILL05",
             )
         for atv in atvs_por_item[eq.item_id]:
             requisitos.append(
@@ -61,6 +62,7 @@ def _processar_equipamentos_requisitos(eq, d_ini, d_fim, atvs_por_item: dict, ti
                 nome=e.descricao,
                 categoria="EQUIPAMENTO",
                 custo_unitario_dia=round(e.custo_mensal / 26, 2),
+                proveniencia="DERIVADO_SKILL05",
             )
         for atv in atvs_por_item[eq.item_id]:
             requisitos.append(
@@ -132,6 +134,7 @@ def _build_alocacoes_pool(
                 projeto_id=str(canonical_in.projeto.id),
                 quantidade_total=1000,
                 quantidade_disponivel=1000,
+                proveniencia="DERIVADO_SKILL05",
             )
     alocacoes: list[Alocacao] = []
     for req in sorted(requisitos, key=lambda r: r.data_inicio):
