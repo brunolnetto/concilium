@@ -751,3 +751,27 @@ class TestPrint:
         self.printer.print(report)
         out = capsys.readouterr().out
         assert "Min" in out
+
+
+
+def test_not_evaluated_gate_prints_reason_without_fake_s0(capsys):
+    printer = BenchmarkReportPrinter()
+    report = {
+        "projeto": "P",
+        "status_final": "NOT_EVALUATED",
+        "quality_gates": {
+            "decision": "NOT_EVALUATED",
+            "reason": "Benchmark fidelity was not evaluated: reference projection is unavailable.",
+            "reason_code": "REFERENCE_PROJECTION_UNAVAILABLE",
+            "missing_metrics": ["custo_direto", "custo_indireto", "preco_venda"],
+            "worst_severity": None,
+        },
+    }
+
+    printer._print_header(report)
+
+    out = capsys.readouterr().out
+    assert "NOT_EVALUATED" in out
+    assert "reference projection is unavailable" in out
+    assert "custo_direto" in out
+    assert "Pior severidade" not in out
