@@ -1120,8 +1120,6 @@ class TestSugerirLeversCpuAlternativo:
         result = sugerir_levers_cpu_alternativo(spec, config_root="/tmp")
         assert result == []
 
-
-
 def test_campaign_with_only_not_evaluated_scenarios_is_inconclusive():
     from unittest.mock import patch
 
