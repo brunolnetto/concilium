@@ -302,8 +302,8 @@ def _lookup_eficiencia(
 
 def _capacidade_semanal_por_frentes(
     producao_semanal_base: float,
-    num_equipes: float,
-    n_max: float,
+    num_equipes: int,
+    n_max: int,
     prod_item: dict[str, Any] | None = None,
     *,
     horas_semana: float | None = None,
@@ -422,7 +422,7 @@ def _capacidade_semanal_disponivel(
 
 def _build_dist_cell(
     producao_semanal_base: float,
-    num_eq: float,
+    num_eq: int,
     n_max: int,
     fator_clima: float,
     fator_calendario: float,

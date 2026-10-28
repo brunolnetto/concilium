@@ -50,7 +50,7 @@ def _extract_praticabilidade(canonical_in: CanonicalModel) -> tuple[dict, dict]:
 def _determine_mode_and_distribuicao(
     canonical_in: CanonicalModel,
     inputs: dict,
-    num_equipes_por_item: dict[str, dict[str, float]] | None,
+    num_equipes_por_item: dict[str, dict[str, int]] | None,
     semanas_obra: list,
     cpu_lookup: dict,
     producao_lookup: dict,
@@ -410,7 +410,7 @@ def _build_intervalos_and_campanhas(
 def _expand_mobilizacao_policies(
     canonical_in: CanonicalModel,
     policies: dict[str, dict],
-    existing_allocation: dict[str, dict[str, float]] | None,
+    existing_allocation: dict[str, dict[str, int]] | None,
     semanas_obra: list[str],
     cpu_lookup: dict[str, dict],
     producao_lookup: dict[str, dict],
@@ -418,11 +418,11 @@ def _expand_mobilizacao_policies(
     prat_semanal: dict[str, float],
     validacoes: list[ValidacaoItem],
     calendario_semanal: dict[str, float] | None = None,
-) -> tuple[dict[str, dict[str, float]], list]:
+) -> tuple[dict[str, dict[str, int]], list]:
     """ADR-054 Phase 3: Convert WMP policies into per-week team allocations for MANUAL mode."""
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
-    result: dict[str, dict[str, float]] = dict(existing_allocation or {})
+    result: dict[str, dict[str, int]] = dict(existing_allocation or {})
     curves: list = []
     semanas_set = set(semanas_obra)
     eap_lookup = {item.item_id: item for item in (canonical_in.eap or [])}
@@ -515,7 +515,7 @@ def _run_cronograma_build_context(
 
 
 def _run_cronograma_validate_num_equipes_formato(num_equipes_por_item: Any, validacoes: list[ValidacaoItem]) -> bool:
-    """Valida que num_equipes_por_item é dict[item_id, dict[semana_iso, float]].
+    """Valida que num_equipes_por_item é dict[item_id, dict[semana_iso, int]].
     Retorna False (e registra VAL-CRON-EQUIPES-FORMATO) se algum valor for plano."""
     if num_equipes_por_item is None or not isinstance(num_equipes_por_item, dict):
         return True
@@ -527,7 +527,7 @@ def _run_cronograma_validate_num_equipes_formato(num_equipes_por_item: Any, vali
             codigo="VAL-CRON-EQUIPES-FORMATO",
             status="ERRO",
             mensagem=(
-                f"num_equipes_por_item: valor deve ser dict[semana_iso, float], não escalar. "
+                f"num_equipes_por_item: valor deve ser dict[semana_iso, int], não escalar. "
                 f"Itens com formato errado: {flat_items[:3]}. "
                 f'Esperado: {{"item_id": {{"2025-W01": 2, "2025-W02": 3}}}}'
             ),

@@ -109,9 +109,11 @@ class AgregacaoSemanalEquipamentos:
 
     semana_iso: str  # "2026-W23"
     semana_offset: int  # 0-indexed offset from project start
-    equipamentos_ativos: dict[str, int]  # {equip_id: n_unidades}
+    # Workforce and equipment counts are physical integer quantities.
+    # Mobilization rates may be fractional; the deployed weekly counts are not.
+    equipamentos_ativos: dict[str, int]  # {equip_id: unidades físicas}
     n_equipamentos_unicos: int
-    n_equipes_totais: int  # sum de num_equipes across all activities this week
+    n_equipes_totais: int  # total de equipes físicas na semana
     custo_direto_semana: float
     custo_indireto_semana: float
     custo_total_semana: float

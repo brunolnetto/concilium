@@ -364,6 +364,55 @@ class TestSCurveBuilder:
             assert agr.n_equipamentos_unicos >= 0
             assert agr.custo_direto_semana >= 0
 
+    def test_resource_counts_serialize_without_int_float_warnings(self):
+        """Real SCurveBuilder output respects the integer physical-count contract."""
+        from pydantic import TypeAdapter
+
+        canonical = _make_canonical(with_schedule=True)
+        scurve = SCurveBuilder().build(canonical)
+        active = [row for row in scurve.agregacao_semanal if row.n_equipes_totais > 0]
+        assert active
+        assert all(type(row.n_equipes_totais) is int for row in active)
+        assert all(type(units) is int for row in active for units in row.equipamentos_ativos.values())
+        assert all(type(row.n_equipamentos_unicos) is int for row in active)
+
+        # Unlike suppressing warnings, warnings="error" fails immediately if
+        # any nested field violates its declared physical integer schema.
+        TypeAdapter(SCurve).dump_json(scurve, warnings="error")
+        canonical.model_copy(update={"s_curve": scurve}).model_dump_json(
+            warnings="error"
+        )
+
+    def test_integer_resource_counts_survive_canonical_roundtrip(self):
+        from pydantic import TypeAdapter
+
+        canonical = _make_canonical(with_schedule=True)
+        canonical.cronograma.scheduled_activities[0].distribuicao_semanal[
+            "2026-W24"
+        ].num_equipes = 2
+        scurve = SCurveBuilder().build(canonical)
+        row = next(row for row in scurve.agregacao_semanal if row.semana_iso == "2026-W24")
+        assert type(row.n_equipes_totais) is int
+        assert row.n_equipes_totais == 2
+        assert row.equipamentos_ativos["EQ-ESCAV-38T"] == 2
+        assert row.n_equipamentos_unicos == 1
+
+        TypeAdapter(SCurve).dump_python(scurve, mode="json", warnings="error")
+        serialized = canonical.model_copy(update={"s_curve": scurve}).model_dump_json(
+            warnings="error"
+        )
+        restored = type(canonical).model_validate_json(serialized)
+        restored_row = next(
+            item for item in restored.s_curve.agregacao_semanal
+            if item.semana_iso == "2026-W24"
+        )
+        assert type(restored_row.n_equipes_totais) is int
+        assert restored_row.n_equipes_totais == 2
+        assert type(restored_row.equipamentos_ativos["EQ-ESCAV-38T"]) is int
+        assert restored_row.equipamentos_ativos["EQ-ESCAV-38T"] == 2
+        assert type(restored_row.n_equipamentos_unicos) is int
+        assert restored_row.n_equipamentos_unicos == 1
+
     def test_total_matches_sum_of_weekly(self):
         canonical = _make_canonical(with_schedule=True)
         sc = SCurveBuilder().build(canonical)

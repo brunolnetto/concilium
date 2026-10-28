@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+from numbers import Integral, Real
 from typing import Any
 
 
@@ -52,21 +54,50 @@ def stringify_table_value(value: object) -> object:
     return value
 
 
+def _require_integral_team_count(value: object, field: str) -> int:
+    """Accept only finite, nonnegative integer-valued physical team counts."""
+    if isinstance(value, bool):
+        raise ValueError(f"{field} must be a nonnegative integer team count")
+    if isinstance(value, Integral):
+        count = int(value)
+    elif (
+        isinstance(value, Real)
+        and math.isfinite(float(value))
+        and abs(float(value)) <= 2**53
+        and float(value).is_integer()
+    ):
+        count = int(value)
+    else:
+        raise ValueError(f"{field} must be a nonnegative integer team count")
+    if count < 0:
+        raise ValueError(f"{field} must be a nonnegative integer team count")
+    return count
+
+
 def build_team_adjustment_rows(reference: dict) -> list[dict[str, object]]:
     """Build team adjustment rows from cronograma reference."""
     activities = (reference.get("cronograma") or {}).get("atividades", []) if isinstance(reference, dict) else []
     rows: list[dict[str, object]] = []
     for activity in activities:
         semanas = activity.get("semanas", {}) or {}
-        num_equipes = [int((semana or {}).get("num_equipes", 0) or 0) for semana in semanas.values()]
+        item_label = activity.get("item_id") or activity.get("activity_id")
+        num_equipes = []
+        for week, semana in semanas.items():
+            raw_count = (semana or {}).get("num_equipes", 0)
+            raw_count = 0 if raw_count is None else raw_count
+            num_equipes.append(
+                _require_integral_team_count(raw_count, f"{item_label}/{week}")
+            )
         base_avg = round(sum(num_equipes) / len(num_equipes), 2) if num_equipes else 0.0
         rows.append(
             {
                 "item_id": activity.get("item_id") or activity.get("activity_id"),
                 "descricao": activity.get("descricao", ""),
                 "cpu_id": activity.get("cpu_id", ""),
+                # Average occupancy is an analytic statistic. The editable
+                # count is seeded from that baseline but kept integral.
                 "num_equipes_base": base_avg,
-                "num_equipes_maximo": base_avg,
+                "num_equipes_maximo": max(0, int(round(base_avg))),
                 "start_week": activity.get("start_week"),
                 "end_week": activity.get("end_week"),
                 "duration_weeks": activity.get("duration_weeks"),
@@ -88,20 +119,22 @@ def _bneo_get_rows(edited_rows: object) -> list[dict]:
 
 
 def _bneo_build_week_map(semanas: dict, target: int) -> dict[str, int]:
-    return {
-        week_key: target
-        for week_key, week_data in semanas.items()
-        if int((week_data or {}).get("num_equipes", 0) or 0) > 0
-    }
+    count = _require_integral_team_count(target, "num_equipes_maximo")
+    result: dict[str, int] = {}
+    for week_key, week_data in semanas.items():
+        raw_count = (week_data or {}).get("num_equipes", 0)
+        raw_count = 0 if raw_count is None else raw_count
+        if _require_integral_team_count(raw_count, f"num_equipes[{week_key}]") > 0:
+            result[week_key] = count
+    return result
 
 
 def _bneo_process_row(row: dict, activity_lookup: dict) -> tuple[str, dict[str, int]] | None:
     item_id = str(row.get("item_id") or "").strip()
     if not item_id or item_id not in activity_lookup:
         return None
-    target = max(1, int(round(float(row.get("num_equipes_maximo") or 0.0))))
-    if target <= 0:
-        return None
+    raw_target = row.get("num_equipes_maximo", 0)
+    target = max(1, _require_integral_team_count(raw_target, "num_equipes_maximo"))
     week_map = _bneo_build_week_map(activity_lookup[item_id].get("semanas") or {}, target)
     return (item_id, week_map) if week_map else None
 
@@ -125,13 +158,22 @@ def state_team_rows_key(project_id: str) -> str:
 
 def apply_global_team_adjustment(rows: list[dict[str, object]], pct: float) -> list[dict[str, object]]:
     """Apply global percentage adjustment to team rows."""
-    fator = 1.0 + (pct / 100.0)
+    if isinstance(pct, bool) or not isinstance(pct, Real) or not math.isfinite(float(pct)):
+        raise ValueError("team adjustment percentage must be finite")
+    fator = 1.0 + (float(pct) / 100.0)
     adjusted: list[dict[str, object]] = []
     for row in rows:
         new_row = dict(row)
         raw_base = new_row.get("num_equipes_base")
-        base_value = float(raw_base) if isinstance(raw_base, (int, float)) else 0.0
-        new_row["num_equipes_maximo"] = round(max(0.0, base_value * fator), 2)
+        if isinstance(raw_base, bool) or not isinstance(raw_base, Real):
+            base_value = 0.0
+        else:
+            base_value = float(raw_base)
+        if not math.isfinite(base_value):
+            raise ValueError("base team occupancy must be finite")
+        # Preserve the established non-compounding adjustment from the analytic
+        # average; only the editable physical ceiling is rounded to an integer.
+        new_row["num_equipes_maximo"] = max(0, int(round(base_value * fator)))
         adjusted.append(new_row)
     return adjusted
 

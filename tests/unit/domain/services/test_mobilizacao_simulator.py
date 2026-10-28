@@ -60,6 +60,21 @@ def make_policy(
 
 
 class TestMobilizacaoPolicyValidation:
+    @pytest.mark.parametrize("rate", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_mobilization_rate_is_rejected(self, rate: float):
+        with pytest.raises(ValidationError):
+            WorkforcePolicy(n_inicial=1, n_maximo=5, taxa_mobilizacao=rate)
+
+    @pytest.mark.parametrize("rate", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_demobilization_rate_is_rejected(self, rate: float):
+        with pytest.raises(ValidationError):
+            WorkforcePolicy(
+                n_inicial=1,
+                n_maximo=5,
+                taxa_mobilizacao=1.0,
+                taxa_desmobilizacao=rate,
+            )
+
     def test_valid_policy_minimal(self):
         p = WorkforcePolicy(n_inicial=1, n_maximo=1, taxa_mobilizacao=1.0)
         assert p.n_inicial == 1
@@ -161,20 +176,26 @@ class TestSimulatorNormalCases:
         if len(curva.semanas) > 5:
             assert curva.semanas[5].num_equipes == 5
 
-    def test_fractional_mobilization_rate(self, sim: WorkforcePolicySimulator):
-        """taxa_mobilizacao=0.5 → one extra team every 2 weeks."""
+    def test_fractional_mobilization_rate_produces_integer_headcount(self, sim: WorkforcePolicySimulator):
+        """A fractional teams/week rate advances integer headcount by floor."""
         policy = make_policy(n_inicial=1, n_maximo=4, taxa_mobilizacao=0.5)
         Q = 500_000.0
         P = 1_000.0
         m, h = 6, 8
         curva = sim.simulate(policy, "act-frac", Q, P, m, h)
 
+        assert policy.build_profile(5) == [1, 1, 2, 2, 3]
+        assert all(type(count) is int for count in policy.build_profile(5))
         assert curva.is_complete
-        # A fórmula formal preserva a taxa fracionária, sem arredondamento semanal.
-        assert curva.semanas[0].num_equipes == 1
-        assert curva.semanas[1].num_equipes == 1.5
-        assert curva.semanas[2].num_equipes == 2
-        assert curva.semanas[4].num_equipes == 3
+        assert [week.num_equipes for week in curva.semanas[:5]] == [1, 1, 2, 2, 3]
+        assert all(type(week.num_equipes) is int for week in curva.semanas)
+        assert type(curva.peak_teams) is int
+        assert type(curva.total_team_weeks) is int
+
+    def test_decimal_rate_floor_is_not_affected_by_binary_float_drift(self):
+        """1 + 0.58*50 is exactly 30 in the declared decimal-rate model."""
+        policy = make_policy(n_inicial=1, n_maximo=100, taxa_mobilizacao=0.58)
+        assert policy.equipes_no_offset(duration_weeks=101, offset=50) == 30
 
     def test_production_formula_correctness(self, sim: WorkforcePolicySimulator):
         """Verify qtd_executada = P × m × h × p(t) × n(t)."""
@@ -503,9 +524,9 @@ class TestSkill04Integration:
 
         mapa = curva.to_num_equipes_por_semana()
 
-        # Verify format: {ISO_week: float}
+        # The bridge carries physical integer team counts.
         assert all(isinstance(k, str) and "-W" in k for k in mapa.keys())
-        assert all(isinstance(v, (int, float)) and v >= 0 for v in mapa.values())
+        assert all(type(v) is int and v >= 0 for v in mapa.values())
 
         # Verify the curve is monotone up to n_maximo in the ramp phase
         sorted_weeks = sorted(mapa.items())
