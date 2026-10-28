@@ -18,7 +18,7 @@ class TipoRecurso(BaseModel):
     categoria: CategoriaRecurso
     custo_unitario_dia: float = Field(ge=0)
     especificacoes: dict = Field(default_factory=dict)
-    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05"] = "CONFIGURADO"
+    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05", "LEGACY_UNVERIFIED"] = "CONFIGURADO"
 
 
 class RecursoPool(BaseModel):
@@ -37,8 +37,13 @@ class RecursoPool(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _classify_legacy_skill05_pool(cls, value):
-        """Recognize the old synthetic Skill 05 pool (1000/1000) after persisted reload."""
+    def _classify_ambiguous_legacy_pool(cls, value):
+        """Quarantine a legacy pool that resembles Skill 05's synthetic default.
+
+        Its ID and quantities are not proof of origin: a declared pool can share
+        these values. Preserve the record, but do not treat ambiguous legacy
+        provenance as physical capacity or delete it as generated state.
+        """
         if isinstance(value, dict) and "proveniencia" not in value:
             tipo_id = value.get("tipo_id")
             if (
@@ -48,7 +53,7 @@ class RecursoPool(BaseModel):
                 and value.get("quantidade_disponivel") == 1000
                 and value.get("custo_aquisicao_total", 0) == 0
             ):
-                return {**value, "proveniencia": "DERIVADO_SKILL05"}
+                return {**value, "proveniencia": "LEGACY_UNVERIFIED"}
         return value
 
 
