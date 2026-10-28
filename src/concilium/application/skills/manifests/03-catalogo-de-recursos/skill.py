@@ -69,6 +69,7 @@ def _make_tipo_recurso(
         categoria=spec.get("categoria", "EQUIPAMENTO"),
         custo_unitario_dia=custo_unit,
         especificacoes=spec.get("especificacoes", {}),
+        proveniencia="CONFIGURADO",
     )
 
 
@@ -155,6 +156,7 @@ def _build_pool_from_specs(
                 quantidade_total=qtd,
                 quantidade_disponivel=qtd,
                 custo_aquisicao_total=float(spec.get("custo_aquisicao_total", 0)),
+                proveniencia="CONFIGURADO",
             )
         )
     if not pool:
@@ -169,6 +171,7 @@ def _build_pool_from_specs(
                         projeto_id=projeto_id,
                         quantidade_total=1,
                         quantidade_disponivel=1,
+                        proveniencia="DERIVADO_SKILL03",
                     )
                 )
     return pool
@@ -191,14 +194,18 @@ def run_catalogo_de_recursos(
     templates: dict[str, list[dict]] = inputs.get("templates_recursos", {})
     pool_inicial: list[dict] = inputs.get("pool_inicial", [])
 
-    tipos: dict[str, TipoRecurso] = {t.id: t for t in canonical_in.tipos_recurso}
+    tipos: dict[str, TipoRecurso] = {
+        t.id: t for t in canonical_in.tipos_recurso if t.proveniencia != "DERIVADO_SKILL05"
+    }
 
     _process_tipos_in(tipos_in, tipos, repo, jurisdicao_id, overrides, data_base, validacoes)
     _process_templates(templates, tipos, repo, jurisdicao_id, overrides, data_base)
 
     tipos_list = list(tipos.values())
     tipos_por_id = {t.id: t for t in tipos_list}
-    pools_existentes = {p.id: p for p in canonical_in.recurso_pool}
+    pools_existentes = {
+        p.id: p for p in canonical_in.recurso_pool if p.proveniencia != "DERIVADO_SKILL05"
+    }
     projeto_id = str(canonical_in.projeto.id)
 
     pool = _build_pool_from_specs(pool_inicial, tipos_por_id, pools_existentes, projeto_id, validacoes)
