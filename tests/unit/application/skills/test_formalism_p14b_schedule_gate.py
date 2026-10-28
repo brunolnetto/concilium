@@ -83,6 +83,14 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
                     custo_unitario_dia=0.0,
                     proveniencia="DERIVADO_SKILL05",
                 ),
+                # Legacy persisted type without provenance: remove it only when
+                # its matching synthetic pool proves it came from Skill 05.
+                TipoRecurso(
+                    id="EQUIP-LEGACY",
+                    nome="Equipamento inferido legado",
+                    categoria="EQUIPAMENTO",
+                    custo_unitario_dia=0.0,
+                ),
             ],
             "recurso_pool": [
                 RecursoPool(
@@ -101,6 +109,13 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
                     quantidade_total=1000,
                     quantidade_disponivel=1000,
                     proveniencia="DERIVADO_SKILL05",
+                ),
+                RecursoPool(
+                    id="pool-legacy-skill05",
+                    tipo_id="EQUIP-LEGACY",
+                    projeto_id="p14b",
+                    quantidade_total=1000,
+                    quantidade_disponivel=1000,
                 ),
             ],
             "equipes_diretas": [
