@@ -544,9 +544,10 @@ def _run_cronograma_validate_num_equipes_formato(
             elif isinstance(value, int):
                 valid = value >= 0
             elif isinstance(value, float) and math.isfinite(value) and 0 <= value <= 2**53:
-                nearest = round(value)
-                tolerance = 2 * max(math.ulp(value), math.ulp(float(nearest)))
-                valid = abs(value - nearest) <= tolerance
+                # Physical counts must be exactly integral. An ULP tolerance
+                # would admit values such as 1.0000000000000002 and silently
+                # normalize malformed manual input into a valid team count.
+                valid = value.is_integer()
             else:
                 valid = False
             if not valid:
