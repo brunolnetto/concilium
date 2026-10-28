@@ -548,7 +548,7 @@ def run_cronograma(
     # of F(m) does not prove that an old financial cube matches the new timeline.
     # Preserve only physical artifacts computed *in this run* (stock and
     # consumables), plus the exogenous calendar and validated physical schedule.
-    stale_financials = _invalidate_derived_costs()
+    stale_financials = _invalidate_derived_costs(canonical_in)
     stale_financials.pop("recursos_consumiveis")
     stale_financials.pop("resumo_estoque_consumiveis")
     update_dict = {
