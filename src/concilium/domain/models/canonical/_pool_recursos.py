@@ -18,7 +18,7 @@ class TipoRecurso(BaseModel):
     categoria: CategoriaRecurso
     custo_unitario_dia: float = Field(ge=0)
     especificacoes: dict = Field(default_factory=dict)
-    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05", "LEGACY_UNVERIFIED"] = "CONFIGURADO"
+    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05"] = "CONFIGURADO"
 
 
 class RecursoPool(BaseModel):
@@ -33,7 +33,7 @@ class RecursoPool(BaseModel):
     quantidade_disponivel: int = Field(ge=0)
     data_aquisicao: date | None = None
     custo_aquisicao_total: float = Field(ge=0, default=0.0)
-    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05"] = "CONFIGURADO"
+    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05", "LEGACY_UNVERIFIED"] = "CONFIGURADO"
 
     @model_validator(mode="before")
     @classmethod
