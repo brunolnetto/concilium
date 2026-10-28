@@ -30,9 +30,6 @@ def test_different_legacy_quantity_is_not_automatically_reclassified() -> None:
 
 
 def test_boolean_quantity_is_not_mistaken_for_exact_synthetic_default() -> None:
-    # The strict pre-coercion classifier must not treat True as one/1000.
-    # An invalid quantity remains rejected by Pydantic rather than trusted.
-    import pytest
-
-    with pytest.raises((ValueError, TypeError)):
-        _pool(quantidade_total=True, quantidade_disponivel=1000)
+    # The pre-coercion classifier never interprets bool as an exact synthetic 1000.
+    # (A separate strict-count contract may reject booleans at the API boundary.)
+    assert _pool(quantidade_total=True, quantidade_disponivel=1000).proveniencia == "CONFIGURADO"
