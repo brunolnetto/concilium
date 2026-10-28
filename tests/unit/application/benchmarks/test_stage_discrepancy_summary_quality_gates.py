@@ -271,13 +271,23 @@ def test_bs_aggregate_gates_keeps_unevaluated_severity_unknown():
                 "worst_severity": None,
                 "critical_metric_over_10pct": None,
             }
-        }
+        },
+        {
+            "quality_gates": {
+                "status_final": "NOT_EVALUATED",
+                "decision": "NOT_EVALUATED",
+                # Partial metric diagnostics must not be counted as an
+                # overall S0 while the required comparison remains incomplete.
+                "worst_severity": "S0",
+                "critical_metric_over_10pct": None,
+            }
+        },
     ]
 
     status_counts, severity_counts, gates_missing, crit_over_10, _ = _bs_aggregate_gates(rows)
 
-    assert status_counts["NOT_EVALUATED"] == 1
-    assert severity_counts["NAO_AVALIADA"] == 1
+    assert status_counts["NOT_EVALUATED"] == 2
+    assert severity_counts["NAO_AVALIADA"] == 2
     assert "S0" not in severity_counts
     assert gates_missing == 0
     assert crit_over_10 == 0
@@ -292,7 +302,7 @@ def test_load_gate_report_keeps_severity_unknown_when_overall_status_overrides_g
             "status_final": "INVIAVEL",
             "quality_gates": {
                 "decision": "NOT_EVALUATED",
-                "worst_severity": None,
+                "worst_severity": "S0",
                 "critical_metric_over_10pct": None,
             },
             "action_report": [],
