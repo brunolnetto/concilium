@@ -94,7 +94,7 @@ def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
     """Remove stale schedule-derived outputs after a rejected schedule attempt."""
     return canonical.model_copy(
         update={
-            **_invalidate_derived_costs(),
+            **_invalidate_derived_costs(canonical),
             "cronograma": None,
             "intervalos_atividade": [],
             "curvas_forca": [],
@@ -104,13 +104,19 @@ def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
     )
 
 
-def _invalidate_derived_costs() -> dict[str, Any]:
-    """Clear stale economic outputs whenever Skill04 cannot certify provenance."""
-    # Intentionally preserve tipos_recurso/recurso_pool: Skill 03 declares
-    # project configuration, while Skill 05 can augment both with inferred
-    # types and default pools. Neither model currently records that provenance,
-    # so filtering these mixed fields here could silently delete valid inputs.
+def _invalidate_derived_costs(canonical: CanonicalModel) -> dict[str, Any]:
+    """Clear stale economic outputs while retaining declared resource configuration."""
+    # Skill 05 now tags inferred types/default pools explicitly. Preserve Skill 03
+    # configuration and remove only the resource state that Skill 05 synthesized.
     return {
+        "tipos_recurso": [
+            item for item in (canonical.tipos_recurso or [])
+            if item.proveniencia != "DERIVADO_SKILL05"
+        ],
+        "recurso_pool": [
+            item for item in (canonical.recurso_pool or [])
+            if item.proveniencia != "DERIVADO_SKILL05"
+        ],
         "equipes_diretas": [],
         "resultado": None,
         "resultado_reconciliado": None,
