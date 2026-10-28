@@ -153,7 +153,7 @@ class DistribuicaoSemanal(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    num_equipes: int = Field(ge=0)
+    num_equipes: float = Field(ge=0)
     qtd_executada: float = Field(ge=0)
     qtd_acumulada: float = Field(ge=0)
     pct: float = Field(ge=0, le=1)
@@ -209,7 +209,7 @@ class AtividadeIntervalo(BaseModel):
         pattern=r"^\d{4}-W(0[1-9]|[1-4][0-9]|5[0-3])$",
         description="Semana ISO no formato AAAA-Www, ex: 2026-W23",
     )
-    num_equipes: int = Field(ge=0)
+    num_equipes: float = Field(ge=0)
     qtd_planejada: float = Field(ge=0)
     qtd_acumulada: float = Field(ge=0)
     eficiencia: float = Field(default=1.0, ge=0.0, le=1.0)
