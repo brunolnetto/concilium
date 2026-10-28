@@ -126,6 +126,45 @@ def test_two_activity_partial_week_p18_p20_exact_totals_and_non_go() -> None:
     }
 
 
+def test_shared_good_uses_activity_specific_consumption_rate() -> None:
+    canonical = _canonical()
+    goods = _declared()
+    diesel_b, category = goods["B"]["DIESEL"]
+    goods["B"] = {
+        **goods["B"],
+        "DIESEL": (
+            replace(
+                diesel_b,
+                rate=replace(diesel_b.rate, physical_rate=F(5)),
+            ),
+            category,
+        ),
+    }
+
+    result = book_skill04_planned_consumption_preview(
+        canonical,
+        _pool(),
+        goods,
+        observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
+    )
+
+    # Shared MA-DIESEL-S10 has one unit price, but the CPUs declare different
+    # rates: A consumes 3 L/h and B consumes 5 L/h. Two operation-hours each
+    # produce 6 L + 10 L at R$0.20/L = R$3.20, without aliasing the rates.
+    diesel = {
+        line.activity_id: line.measure
+        for line in result.consumption.evidence
+        if line.measure.good_id == "DIESEL"
+    }
+    assert diesel["A"].physical_quantity == F(6)
+    assert diesel["B"].physical_quantity == F(10)
+    assert diesel["A"].exact_cost == F(6, 5)
+    assert diesel["B"].exact_cost == F(2)
+    assert result.consumption.variable_cost == F(25000) + F(16, 5)
+
+
+
+
 @pytest.mark.parametrize("change, error", [
     ("missing_activity", "mapping must agree"),
     ("no_hour_evidence", "operating-hour evidence"),
@@ -137,7 +176,7 @@ def test_two_activity_partial_week_p18_p20_exact_totals_and_non_go() -> None:
     ("nonfeasible", "feasible"),
     ("already_purchased", "P17 pool input cannot already"),
     ("unit_mismatch", "incompatible physical dimensions"),
-    ("same_good_conflicting_price", "conflicting physical rate"),
+    ("same_good_conflicting_price", "conflicting physical price/category"),
     ("invalid_week", "invalid ISO week"),
 ])
 def test_fail_closed_adversarial_cases(change: str, error: str) -> None:
