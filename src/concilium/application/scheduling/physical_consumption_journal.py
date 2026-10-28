@@ -69,6 +69,10 @@ class AcquisitionEvidenceLine:
     # Optional only for existing external stock-evidence constructors. P20
     # reconciliation fails closed unless P18 supplies the declared category.
     category: Literal["MAT", "COMB"] | None = None
+    # Catalog source/date travel with the evidence row; totals alone aren't enough
+    # to audit which unit price was applied.
+    price_source: str | None = None
+    price_reference_date: str | None = None
 
 
 @dataclass(frozen=True)
@@ -125,8 +129,14 @@ def book_weekly_physical_consumption(
             assert item.operating_hours is not None
             measured = priced.cost(operating_hours=item.operating_hours)
         measurements.append(AcquisitionEvidenceLine(
-            item.evidence_id, item.kind, item.activity_id, item.week, measured,
+            item.evidence_id,
+            item.kind,
+            item.activity_id,
+            item.week,
+            measured,
             category,
+            priced.price_source,
+            priced.price_reference_date,
         ))
         if measured.priced_quantity > 0:
             purchases.append(PhysicalPurchase(
