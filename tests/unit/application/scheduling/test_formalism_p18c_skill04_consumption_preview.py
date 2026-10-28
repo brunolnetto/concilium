@@ -1,8 +1,10 @@
 """P18-C1: real canonical Skill04 weeks -> P18 exact V -> P20 preview."""
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from pathlib import Path
 from fractions import Fraction as F
 
 import pytest
@@ -20,6 +22,7 @@ from concilium.application.scheduling.physical_consumption_rates import (
 )
 from concilium.application.scheduling.skill04_consumption_preview import (
     book_skill04_planned_consumption_preview,
+    build_activity_goods_from_catalog,
 )
 from concilium.domain.models.canonical import (
     Atividade,
@@ -126,6 +129,98 @@ def test_two_activity_partial_week_p18_p20_exact_totals_and_non_go() -> None:
     }
 
 
+def _real_rfi_catalog_record(relative_path: str) -> dict:
+    root = Path(__file__).resolve().parents[4]
+    return json.loads((root / relative_path).read_text(encoding="utf-8"))
+
+
+def _one_activity_for_catalog_cpu(cpu: dict) -> CanonicalModel:
+    canonical = _canonical()
+    canonical.eap = [
+        canonical.eap[0].model_copy(update={
+            "cpu_id": cpu["codigo"],
+            "unidade": cpu["unidade"],
+            "quantitativo": 100.0,
+        })
+    ]
+    distribution = {
+        "2026-W19": DistribuicaoSemanal(
+            num_equipes=1, qtd_executada=100.0, qtd_acumulada=100.0, pct=1.0,
+        )
+    }
+    activity = canonical.cronograma.scheduled_activities[0].model_copy(update={
+        "activity_id": "A",
+        "start_week": 0,
+        "end_week": 0,
+        "duration_weeks": 1,
+        "distribuicao_semanal": distribution,
+    })
+    canonical.cronograma = canonical.cronograma.model_copy(update={
+        "scheduled_activities": [activity],
+        "is_feasible": True,
+    })
+    return canonical
+
+
+def test_real_rfi_bom_maps_to_exact_physical_purchase_from_delivered_q() -> None:
+    cpu = _real_rfi_catalog_record(
+        "config/catalogos/rfi-r02/cpus/CPU-TERRA-ATI-003.json"
+    )
+    diesel = _real_rfi_catalog_record(
+        "config/catalogos/rfi-r02/insumos/material/MA-DIESEL-S10.json"
+    )
+    canonical = _one_activity_for_catalog_cpu(cpu)
+
+    goods = build_activity_goods_from_catalog(
+        canonical, {"cpus": [cpu], "insumos": [diesel]},
+    )
+    good, category = goods["A"]["MA-DIESEL-S10"]
+    assert category == "COMB"
+    assert good.rate.physical_rate == F("0.0738")
+    assert good.rate.good_unit == "l"
+    assert good.rate.activity_unit == "m²"
+    assert good.price_per_unit == F("5.8")
+
+    result = book_skill04_planned_consumption_preview(canonical, _pool(), goods)
+    evidence = result.consumption.evidence[0]
+    assert evidence.kind == "PLANNED_CLOSED_SCOPE"
+    assert evidence.measure.physical_quantity == F("7.38")
+    assert evidence.measure.exact_cost == F("42.804")
+    assert result.consumption.variable_cost == F("42.804")
+    assert result.authority.endswith("NOT_PROJECT_GO")
+
+
+@pytest.mark.parametrize(
+    "change, error",
+    [
+        ("missing_origin", "acquisition provenance is missing"),
+        ("internal_generation", "producer-consumer transfer evidence"),
+        ("missing_price_source", "unit-price provenance is missing"),
+    ],
+)
+def test_real_catalog_mapper_rejects_unsupported_acquisition_evidence(
+    change: str, error: str,
+) -> None:
+    cpu = _real_rfi_catalog_record(
+        "config/catalogos/rfi-r02/cpus/CPU-TERRA-ATI-003.json"
+    )
+    diesel = _real_rfi_catalog_record(
+        "config/catalogos/rfi-r02/insumos/material/MA-DIESEL-S10.json"
+    )
+    if change == "missing_origin":
+        diesel.pop("origem_material")
+    elif change == "internal_generation":
+        diesel["origem_material"] = "GERACAO_INTERNA"
+    elif change == "missing_price_source":
+        diesel.pop("fonte_preco")
+    canonical = _one_activity_for_catalog_cpu(cpu)
+
+    with pytest.raises(ValueError, match=error):
+        build_activity_goods_from_catalog(
+            canonical, {"cpus": [cpu], "insumos": [diesel]},
+        )
+
+
 def test_shared_good_uses_activity_specific_consumption_rate() -> None:
     canonical = _canonical()
     goods = _declared()
@@ -148,7 +243,7 @@ def test_shared_good_uses_activity_specific_consumption_rate() -> None:
         observed_hours=(_hours("A", "2026-W19"), _hours("B", "2026-W20")),
     )
 
-    # Shared MA-DIESEL-S10 has one unit price, but the CPUs declare different
+    # Shared good DIESEL has one unit price, but the CPUs declare different
     # rates: A consumes 3 L/h and B consumes 5 L/h. Two operation-hours each
     # produce 6 L + 10 L at R$0.20/L = R$3.20, without aliasing the rates.
     diesel = {
