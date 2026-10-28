@@ -164,20 +164,22 @@ def resolve_recursos_ativos_rows(
     rows = [
         {
             "periodo": bucket,
-            "n_equipes_totais": int(vals["n_equipes_totais"]),
+            # Effective occupancy is weighted and may be fractional; only
+            # the number of distinct equipment types is an integer count.
+            "n_equipes_totais": float(vals["n_equipes_totais"]),
             "n_equipamentos_unicos": int(vals["n_equipamentos_unicos"]),
-            "equipamentos_unidades_ativas": int(vals["equipamentos_unidades_ativas"]),
+            "equipamentos_unidades_ativas": float(vals["equipamentos_unidades_ativas"]),
         }
         for bucket, vals in sorted(grouped.items())
     ]
     columns = [
         {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
-        {"id": "n_equipes_totais", "label": "Nº Equipes", "dtype": "int", "role": "value"},
+        {"id": "n_equipes_totais", "label": "Equipes efetivas", "dtype": "float", "role": "value"},
         {"id": "n_equipamentos_unicos", "label": "Equipamentos Únicos", "dtype": "int", "role": "value"},
         {
             "id": "equipamentos_unidades_ativas",
-            "label": "Unidades de Equipamento Ativas",
-            "dtype": "int",
+            "label": "Unidades equivalentes de equipamento ativas",
+            "dtype": "float",
             "role": "value",
         },
     ]
