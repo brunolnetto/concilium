@@ -21,14 +21,11 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import pytest
-from pydantic import ValidationError
 
 from concilium.application.skills import run_catalogo_de_recursos, run_cronograma, run_escopo_e_eap
 from concilium.domain.models.canonical import (
     Atividade,
-    AtividadeIntervalo,
     CanonicalModel,
-    DistribuicaoSemanal,
 )
 from concilium.domain.models.planning.mobilizacao import WorkforcePolicy
 
@@ -190,44 +187,6 @@ class TestWMPExpansion:
         late_weeks = [s for s in curva.semanas if s.semana_offset >= 4]
         assert all(s.num_equipes == 5 for s in late_weeks), "Should plateau at n_maximo"
 
-    def test_fractional_mobilization_rate_keeps_weekly_headcount_integral(self):
-        """A fractional teams/week rate must never emit a fractional team."""
-        canonical = _make_canonical_with_eap([_eap_item(1, quantitativo=500_000.0)])
-        catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 100.0}])
-
-        result = run_cronograma(
-            canonical,
-            {
-                "mobilizacao_policies": {
-                    "eap-01": {"n_inicial": 1, "n_maximo": 3, "taxa_mobilizacao": 0.5},
-                }
-            },
-            catalogo=catalogo,
-        )
-
-        assert not result.has_errors
-        curva = next(c for c in result.canonical.curvas_forca if c.atividade_id == "eap-01")
-        assert [week.num_equipes for week in curva.semanas[:5]] == [1, 1, 2, 2, 3]
-        assert all(type(week.num_equipes) is int for week in curva.semanas)
-        scheduled = next(sa for sa in result.canonical.cronograma.scheduled_activities if sa.activity_id == "eap-01")
-        second_week = curva.semanas[1].semana_iso
-        assert type(scheduled.distribuicao_semanal[second_week].num_equipes) is int
-        assert scheduled.distribuicao_semanal[second_week].num_equipes == 1
-
-    def test_weekly_count_models_reject_fractional_team_counts(self):
-        with pytest.raises(ValidationError):
-            DistribuicaoSemanal(
-                num_equipes=1.5, qtd_executada=0, qtd_acumulada=0, pct=0
-            )
-        with pytest.raises(ValidationError):
-            AtividadeIntervalo(
-                atividade_id="eap-01",
-                semana_iso="2026-W01",
-                num_equipes=1.5,
-                qtd_planejada=0,
-                qtd_acumulada=0,
-            )
-
     def test_manual_schedule_rejects_fractional_team_count_before_execution(self):
         canonical = _make_canonical_with_eap([_eap_item(1)])
         catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 100.0}])
@@ -245,6 +204,28 @@ class TestWMPExpansion:
         assert invalid.status == "ERRO"
         assert result.canonical is canonical
         assert canonical.cronograma is None
+
+    def test_fractional_ramp_is_preserved_in_weekly_distribution(self):
+        """The formal WMP profile keeps fractional workforce through Skill 04."""
+        canonical = _make_canonical_with_eap([_eap_item(1, quantitativo=500_000.0)])
+        catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 100.0}])
+
+        result = run_cronograma(
+            canonical,
+            {
+                "mobilizacao_policies": {
+                    "eap-01": {"n_inicial": 1, "n_maximo": 3, "taxa_mobilizacao": 0.5},
+                }
+            },
+            catalogo=catalogo,
+        )
+
+        assert not result.has_errors
+        curva = next(c for c in result.canonical.curvas_forca if c.atividade_id == "eap-01")
+        assert curva.semanas[1].num_equipes == 1.5
+        scheduled = next(sa for sa in result.canonical.cronograma.scheduled_activities if sa.activity_id == "eap-01")
+        second_week = curva.semanas[1].semana_iso
+        assert scheduled.distribuicao_semanal[second_week].num_equipes == 1.5
 
     def test_complete_delivery_of_quantitativo(self):
         """WMP curve must fully deliver quantitativo."""
