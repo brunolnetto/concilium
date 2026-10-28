@@ -76,7 +76,7 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
         raise ValueError("invalid reserved planning PR history")
     reserved_set = set(reserved)
     if not set(ids).issubset(reserved_set):
-        raise ValueError("reserved planning PR history omits an active planning PR")
+        raise ValueError("reserved planning PR history omits a registered planning PR")
     if len(ids) != len(set(ids)) or recorded_prs.intersection(reserved_set):
         raise ValueError("plan-only PR reused or registered as implementation")
     for index, row in enumerate(rows):
