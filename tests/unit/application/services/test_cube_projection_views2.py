@@ -906,9 +906,13 @@ class TestResolveRecursosAtivosRows:
         assert dtypes["equipamentos_unidades_ativas"] == "int"
         assert dtypes["n_equipamentos_unicos"] == "int"
 
-    def test_fractional_team_count_is_rejected_in_cube_projection(self):
+    @pytest.mark.parametrize(
+        "invalid_count",
+        [1.5, True, -1, float("nan"), float("inf")],
+    )
+    def test_invalid_team_count_is_rejected_in_cube_projection(self, invalid_count):
         agg = self._make_agg(
-            "2026-W10", n_equipes=1.5, equip_ativos={"EQ-01": 1}
+            "2026-W10", n_equipes=invalid_count, equip_ativos={"EQ-01": 1}
         )
         sc = SimpleNamespace(
             semanas_iso=["2026-W10"], custo_semanal=[0.0],
@@ -916,12 +920,19 @@ class TestResolveRecursosAtivosRows:
         )
         with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = sc
-            with pytest.raises(ValueError, match="n_equipes_totais must be a nonnegative integer count"):
+            with pytest.raises(
+                ValueError,
+                match="n_equipes_totais must be a nonnegative integer count",
+            ):
                 resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
 
-    def test_fractional_equipment_count_is_rejected_in_cube_projection(self):
+    @pytest.mark.parametrize(
+        "invalid_count",
+        [1.5, True, -1, float("nan"), float("inf")],
+    )
+    def test_invalid_equipment_count_is_rejected_in_cube_projection(self, invalid_count):
         agg = self._make_agg(
-            "2026-W10", n_equipes=1, equip_ativos={"EQ-01": 1.5}
+            "2026-W10", n_equipes=1, equip_ativos={"EQ-01": invalid_count}
         )
         sc = SimpleNamespace(
             semanas_iso=["2026-W10"], custo_semanal=[0.0],
@@ -929,7 +940,10 @@ class TestResolveRecursosAtivosRows:
         )
         with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = sc
-            with pytest.raises(ValueError, match="equipamentos_ativos.*nonnegative integer count"):
+            with pytest.raises(
+                ValueError,
+                match="equipamentos_ativos.*nonnegative integer count",
+            ):
                 resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
 
     def test_top_n_limits_rows(self):
