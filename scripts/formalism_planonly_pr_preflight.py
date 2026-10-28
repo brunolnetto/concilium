@@ -149,6 +149,7 @@ def audit_snapshot(
 ) -> dict[str, Any]:
     """Check actual pull metadata and independent issue release gates, not code."""
     validate_registry(dag, registry)
+    marker = registry["policy"]["retirement_marker"]
     issues = {
         obj["number"]: obj["state"] for obj in snapshot["issues"]
         if not obj.get("pull_request") and 9 <= obj["number"] <= 26
