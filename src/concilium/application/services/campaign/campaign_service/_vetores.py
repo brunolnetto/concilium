@@ -194,7 +194,9 @@ def _ratio_pool_vs_cat(custo_pool: float | None, pu_q: float | None) -> float | 
 def _fidelidade_gates(report: dict) -> bool | None:
     gates = (report.get("quality_gates") or {}) if report else {}
     decision = gates.get("decision")
-    return decision in {"APROVADO", "APROVADO_COM_RESSALVAS"} if decision else None
+    if not decision or decision == "NOT_EVALUATED":
+        return None
+    return decision in {"APROVADO", "APROVADO_COM_RESSALVAS"}
 
 
 def _montar_vetor_EF(
