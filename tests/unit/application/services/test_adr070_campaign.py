@@ -1205,8 +1205,6 @@ def test_campaign_gate_fidelity_is_unknown_when_not_evaluated():
 
     assert vector.fidelidade_gates is None
 
-
-
 def test_campaign_with_unassessed_scenario_is_inconclusive_and_excludes_it_from_shortlist():
     approved = _make_cenario("approved")
     not_evaluated = _make_cenario("not-evaluated", viabilidade="NAO_AVALIADO")
