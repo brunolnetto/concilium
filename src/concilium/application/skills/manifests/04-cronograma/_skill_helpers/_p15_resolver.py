@@ -193,12 +193,27 @@ def resolve_skill04_physical_schedule(
             "UNKNOWN", schedule_selected, distribution_by_item,
             fallback_item_ids, 0, f"scheduled items lack EAP scope: {missing}",
         )
+    eap_item_ids = {item.item_id for item in canonical.eap or []}
+    if set(item_ids) != eap_item_ids:
+        missing = sorted(eap_item_ids - set(item_ids))
+        extra = sorted(set(item_ids) - eap_item_ids)
+        return Skill04PhysicalResolution(
+            "UNKNOWN", schedule_selected, distribution_by_item,
+            fallback_item_ids, 0,
+            f"AUTO candidate does not cover the exact EAP scope; missing={missing}, extra={extra}",
+        )
 
     # An explicit pool is a complete inventory. A missing resource key therefore
     # has capacity zero, not an optimistic/unbounded capacity.
-    for assignment in assigned_by_item.values():
-        for resource in assignment:
-            pool_capacity.setdefault(resource, Fraction(0))
+    pool_capacity = {
+        **pool_capacity,
+        **{
+            resource: Fraction(0)
+            for assignment in assigned_by_item.values()
+            for resource in assignment
+            if resource not in pool_capacity
+        },
+    }
 
     max_states = inputs.get("physical_rcpsp_max_states", 10_000)
     if isinstance(max_states, bool) or not isinstance(max_states, int) or max_states <= 0:
@@ -339,7 +354,7 @@ def resolve_skill04_physical_schedule(
     )
     new_errors = [
         v for v in validacoes[prior_validation_count:]
-        if v.status == "ERRO" and v.codigo in {"VAL-CRON-01", "VAL-CRON-PRECEDENCIA"}
+        if v.status == "ERRO"
     ]
     if new_errors or set(rematerialized) != set(item_ids) or any(not rematerialized.get(i) for i in item_ids):
         return Skill04PhysicalResolution(
@@ -431,9 +446,14 @@ def resolve_skill04_physical_schedule(
                 "distribuicao_semanal": rematerialized[item_id],
             })
         )
+    final_makespan = max(
+        weeks.index(week) + 1
+        for distribution in rematerialized.values()
+        for week in distribution
+    )
     selected = selected.model_copy(update={
         "scheduled_activities": final_scheduled,
-        "makespan": max(weeks.index(max(d)) + 1 for d in rematerialized.values() if d),
+        "makespan": max(1, final_makespan),
     })
     return Skill04PhysicalResolution(
         "PASS", selected, rematerialized, rematerialized_fallback,
