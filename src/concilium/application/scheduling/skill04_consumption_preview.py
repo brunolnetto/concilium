@@ -182,7 +182,11 @@ def book_skill04_planned_consumption_preview(
     if len(set(ids)) != len(ids) or set(ids) != set(scopes) or set(ids) != set(goods_by_activity):
         raise ValueError("Skill04 schedule, EAP scope and physical catalog mapping must agree")
 
-    goods: dict[str, tuple[PhysicallyPricedGood, PricedCategory]] = {}
+    # Rates are activity-specific even when several activities consume the
+    # same catalog good; e.g. each CPU may declare a different L/h of diesel.
+    # Prices/category remain shared and must agree for a given good identity.
+    goods: dict[tuple[str, str], tuple[PhysicallyPricedGood, PricedCategory]] = {}
+    shared_good_prices: dict[str, tuple[Fraction, str, PricedCategory]] = {}
     evidenced: list[WeeklyConsumptionEvidence] = []
     scheduled_weeks: set[tuple[str, str]] = set()
     hourly_requirements: set[tuple[str, str, str]] = set()
@@ -206,9 +210,12 @@ def book_skill04_planned_consumption_preview(
                 raise ValueError("physical catalog good identity mismatch")
             if category not in ("MAT", "COMB"):
                 raise ValueError("MAT/COMB physical category is required")
-            if good_id in goods and goods[good_id] != declaration:
-                raise ValueError("conflicting physical rate/price for shared good")
-            goods[good_id] = declaration
+            price_identity = (priced.price_per_unit, priced.price_unit, category)
+            previous_price = shared_good_prices.get(good_id)
+            if previous_price is not None and previous_price != price_identity:
+                raise ValueError("conflicting physical price/category for shared good")
+            shared_good_prices[good_id] = price_identity
+            goods[(activity_id, good_id)] = declaration
 
         weekly_q = Fraction(0)
         if not activity.distribuicao_semanal:
