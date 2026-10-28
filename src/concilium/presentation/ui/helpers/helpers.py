@@ -94,10 +94,10 @@ def build_team_adjustment_rows(reference: dict) -> list[dict[str, object]]:
                 "item_id": activity.get("item_id") or activity.get("activity_id"),
                 "descricao": activity.get("descricao", ""),
                 "cpu_id": activity.get("cpu_id", ""),
-                # Average occupancy is an analytic statistic; the editable
-                # physical team ceiling must be the observed integer peak.
+                # Average occupancy is an analytic statistic. The editable
+                # count is seeded from that baseline but kept integral.
                 "num_equipes_base": base_avg,
-                "num_equipes_maximo": max(num_equipes, default=0),
+                "num_equipes_maximo": max(0, int(round(base_avg))),
                 "start_week": activity.get("start_week"),
                 "end_week": activity.get("end_week"),
                 "duration_weeks": activity.get("duration_weeks"),
@@ -164,10 +164,15 @@ def apply_global_team_adjustment(rows: list[dict[str, object]], pct: float) -> l
     adjusted: list[dict[str, object]] = []
     for row in rows:
         new_row = dict(row)
-        raw_base = new_row.get("num_equipes_maximo", new_row.get("num_equipes_base", 0))
-        base_value = _require_integral_team_count(raw_base, "num_equipes_maximo")
-        # Percentage changes are a policy operation; the deployed ceiling is
-        # rounded to the nearest integer here and remains integral in UI state.
+        raw_base = new_row.get("num_equipes_base")
+        if isinstance(raw_base, bool) or not isinstance(raw_base, Real):
+            base_value = 0.0
+        else:
+            base_value = float(raw_base)
+        if not math.isfinite(base_value):
+            raise ValueError("base team occupancy must be finite")
+        # Preserve the established non-compounding adjustment from the analytic
+        # average; only the editable physical ceiling is rounded to an integer.
         new_row["num_equipes_maximo"] = max(0, int(round(base_value * fator)))
         adjusted.append(new_row)
     return adjusted
