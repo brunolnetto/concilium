@@ -1,4 +1,6 @@
 from datetime import UTC, date, datetime
+from importlib import import_module
+from types import SimpleNamespace
 
 from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
@@ -129,3 +131,63 @@ def test_manual_mode_marca_fallback_produtividade_para_cpu_fora_do_catalogo():
     assert any(v.codigo == "VAL-PROD-04" and v.status == "AVISO" for v in result.validacoes)
     sa = next(s for s in result.canonical.cronograma.scheduled_activities if s.activity_id == "eap-1")
     assert sa.produtividade_fallback_aplicada is True
+
+
+def test_skill05_inferred_pool_is_not_physical_capacity():
+    meta = Meta(gerado_em=datetime.now(UTC), contexto_id="test-inferred-pool")
+    proj = Projeto(
+        id="p1",
+        nome="proj",
+        tipo_obra="terraplenagem",
+        localizacao="x",
+        coordenadas=Coordenadas(lat=0.0, lng=0.0),
+        regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+        data_inicio=date(2026, 6, 1),
+        data_termino=date(2026, 7, 31),
+        snapshot_catalogo_id="s",
+        snapshot_perfil_id="s",
+    )
+    canonical = CanonicalModel(
+        meta=meta,
+        projeto=proj,
+        eap=[
+            EapItem(
+                item_id="eap-1",
+                ordem=1,
+                cpu_id="CPU-01",
+                descricao="",
+                unidade="m",
+                quantitativo=100.0,
+            )
+        ],
+        recurso_pool=[
+            RecursoPool(
+                id="pool-skill05",
+                tipo_id="TRATOR",
+                projeto_id="p1",
+                quantidade_total=1000,
+                quantidade_disponivel=1000,
+                proveniencia="DERIVADO_SKILL05",
+            )
+        ],
+    )
+
+    extract_pool = import_module(
+        "concilium.application.skills.manifests.04-cronograma._skill_helpers._calendario"
+    )._extract_pool
+    assert extract_pool(canonical).resources == {}
+
+    check_pool = run_cronograma.__globals__["_check_pool_violations"]
+    validations = []
+    violations = check_pool(
+        canonical,
+        {"eap-1": {"2026-W23": SimpleNamespace(num_equipes=2)}},
+        {
+            "CPU-01": {
+                "equipe": {"equipamentos": [{"equip_id": "TRATOR", "num_unidades": 1}]}
+            }
+        },
+        validations,
+    )
+    assert violations == []
+    assert not any(v.codigo == "VAL-POOL-01" for v in validations)
