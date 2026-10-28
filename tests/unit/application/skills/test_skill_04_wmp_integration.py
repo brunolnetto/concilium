@@ -20,8 +20,6 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-import pytest
-
 from concilium.application.skills import run_catalogo_de_recursos, run_cronograma, run_escopo_e_eap
 from concilium.domain.models.canonical import (
     Atividade,
