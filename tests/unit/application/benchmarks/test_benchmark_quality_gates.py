@@ -241,3 +241,70 @@ def test_complete_comparable_metrics_preserve_approval_decision(monkeypatch):
     assert set(report["confronto"]["deltas"]) == {"custo_direto", "custo_indireto", "preco_venda"}
     assert report["quality_gates"]["decision"] == "APROVADO"
     assert report["status_final"] == "APROVADO"
+
+
+
+def test_zero_reference_denominator_is_not_evaluated(monkeypatch):
+    builder = BenchmarkReportBuilder()
+    spec = ProjectSpec(nome="Projeto Teste", slug="proj-teste", contexto_id="ctx")
+    reference = {
+        "custo_direto": 0.0,
+        "custo_indireto": 20.0,
+        "preco_venda": 130.0,
+    }
+    projection = _fake_projection(
+        ferramenta={
+            "custo_direto": 15.0,
+            "custo_indireto": 20.0,
+            "preco_venda": 130.0,
+        }
+    )
+    monkeypatch.setattr(
+        "concilium.application.benchmarks.report.report_builder.BenchmarkProjection.from_canonical",
+        lambda canonical: projection,
+    )
+    monkeypatch.setattr(
+        "concilium.application.benchmarks.report.report_builder.BenchmarkReportBuilder._extract_referencia_confronto",
+        staticmethod(lambda _ref: reference),
+    )
+
+    report = builder.build(
+        spec=spec, version="v1", results_log=[], ref={"source": "reference"}, canonical=object()
+    )
+
+    assert report["quality_gates"]["decision"] == "NOT_EVALUATED"
+    assert report["quality_gates"]["reason_code"] == "INSUFFICIENT_COMPARABLE_METRICS"
+    assert report["quality_gates"]["missing_metrics"] == ["custo_direto"]
+
+
+def test_non_finite_reference_metric_is_not_evaluated(monkeypatch):
+    builder = BenchmarkReportBuilder()
+    spec = ProjectSpec(nome="Projeto Teste", slug="proj-teste", contexto_id="ctx")
+    reference = {
+        "custo_direto": float("nan"),
+        "custo_indireto": 20.0,
+        "preco_venda": 130.0,
+    }
+    projection = _fake_projection(
+        ferramenta={
+            "custo_direto": 100.0,
+            "custo_indireto": 20.0,
+            "preco_venda": 130.0,
+        }
+    )
+    monkeypatch.setattr(
+        "concilium.application.benchmarks.report.report_builder.BenchmarkProjection.from_canonical",
+        lambda canonical: projection,
+    )
+    monkeypatch.setattr(
+        "concilium.application.benchmarks.report.report_builder.BenchmarkReportBuilder._extract_referencia_confronto",
+        staticmethod(lambda _ref: reference),
+    )
+
+    report = builder.build(
+        spec=spec, version="v1", results_log=[], ref={"source": "reference"}, canonical=object()
+    )
+
+    assert "custo_direto" not in report["confronto"]["deltas"]
+    assert report["quality_gates"]["decision"] == "NOT_EVALUATED"
+    assert report["quality_gates"]["missing_metrics"] == ["custo_direto"]
