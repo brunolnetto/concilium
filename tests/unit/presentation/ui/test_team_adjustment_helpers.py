@@ -55,6 +55,13 @@ def test_team_adjustment_rows_reject_non_finite_physical_counts() -> None:
         )
 
 
+def test_team_adjustment_rows_reject_boolean_physical_counts() -> None:
+    with pytest.raises(ValueError, match="nonnegative integer team count"):
+        build_team_adjustment_rows(
+            _reference_with_weekly_counts({"2026-W01": False})
+        )
+
+
 def test_manual_team_override_emits_integer_count_only_on_active_weeks() -> None:
     reference = _reference_with_weekly_counts(
         {"2026-W01": 1, "2026-W02": 0, "2026-W03": 3}
@@ -81,6 +88,15 @@ def test_manual_team_override_rejects_fractional_ceiling() -> None:
         build_num_equipes_override(
             reference,
             [{"item_id": "eap-01", "num_equipes_maximo": 1.5}],
+        )
+
+
+def test_manual_team_override_rejects_boolean_weekly_counts() -> None:
+    reference = _reference_with_weekly_counts({"2026-W01": False})
+    with pytest.raises(ValueError, match="nonnegative integer team count"):
+        build_num_equipes_override(
+            reference,
+            [{"item_id": "eap-01", "num_equipes_maximo": 2}],
         )
 
 
