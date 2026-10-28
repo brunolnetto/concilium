@@ -185,13 +185,17 @@ class TestWMPExpansion:
         late_weeks = [s for s in curva.semanas if s.semana_offset >= 4]
         assert all(s.num_equipes == 5 for s in late_weeks), "Should plateau at n_maximo"
 
-    def test_manual_schedule_rejects_fractional_team_count_before_execution(self):
+    @pytest.mark.parametrize(
+        "invalid_count",
+        [1.5, True, -1, float("nan"), float("inf")],
+    )
+    def test_manual_schedule_rejects_invalid_team_counts_before_execution(self, invalid_count):
         canonical = _make_canonical_with_eap([_eap_item(1)])
         catalogo = _make_catalogo([{"codigo": "CPU-01", "producao_horaria": 100.0}])
 
         result = run_cronograma(
             canonical,
-            {"num_equipes_por_item": {"eap-01": {"2026-W23": 1.5}}},
+            {"num_equipes_por_item": {"eap-01": {"2026-W23": invalid_count}}},
             catalogo=catalogo,
         )
 
