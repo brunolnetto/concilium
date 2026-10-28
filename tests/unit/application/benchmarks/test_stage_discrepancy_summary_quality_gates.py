@@ -263,6 +263,26 @@ def test_bs_aggregate_gates_nao_disponivel():
     assert status_counts["NAO_DISPONIVEL"] == 1
 
 
+def test_bs_aggregate_gates_keeps_unevaluated_severity_unknown():
+    rows = [
+        {
+            "quality_gates": {
+                "status_final": "NOT_EVALUATED",
+                "worst_severity": None,
+                "critical_metric_over_10pct": None,
+            }
+        }
+    ]
+
+    status_counts, severity_counts, gates_missing, crit_over_10, _ = _bs_aggregate_gates(rows)
+
+    assert status_counts["NOT_EVALUATED"] == 1
+    assert severity_counts["NAO_AVALIADA"] == 1
+    assert "S0" not in severity_counts
+    assert gates_missing == 0
+    assert crit_over_10 == 0
+
+
 def test_bs_aggregate_gates_critical_metric():
     rows = [
         {
