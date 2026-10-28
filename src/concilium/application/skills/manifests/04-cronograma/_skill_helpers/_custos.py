@@ -422,7 +422,7 @@ def _capacidade_semanal_disponivel(
 
 def _build_dist_cell(
     producao_semanal_base: float,
-    num_eq: float,
+    num_eq: int,
     n_max: int,
     fator_clima: float,
     fator_calendario: float,
