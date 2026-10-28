@@ -301,7 +301,14 @@ def run_cronograma(
         replenishable_resources, cronograma_out.scheduled_activities, cronograma_out.estoque_delays
     )
 
+    # A new schedule invalidates every historical finance/analysis projection:
+    # verified productivity is evidence about F(m), not evidence that an old BDI,
+    # break-even point, stock report or cube matches this new timeline.
+    stale_financials = _invalidate_derived_costs(canonical_in)
+    stale_financials.pop("recursos_consumiveis")
+    stale_financials.pop("resumo_estoque_consumiveis")
     update_dict = {
+        **stale_financials,
         "cronograma": cronograma_out,
         "intervalos_atividade": intervalos,
         "fator_calendario_semanal": fator_calendario_semanal,
