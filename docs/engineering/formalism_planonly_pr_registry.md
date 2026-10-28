@@ -79,7 +79,7 @@ O estado do pacote e o estado da PR são eixos distintos:
 - `OPEN_DRAFT`: a PR existe como rascunho de planejamento.
 - `RETIRED_SUPERSEDED`: a PR documental foi fechada **sem merge** após o contrato acima ser incorporado ao registry versionado e conter o marcador literal definido em `formalism_planonly_pr_registry.json`.
 
-O preflight aceita apenas `OPEN_DRAFT` ou `RETIRED_SUPERSEDED`. Para aposentadoria, a PR tem que estar `closed`, sem `merged_at`, sem evidência de merge e com o marcador literal no body. PR inexistente, PR merged, PR fechada sem marcador, base/head alterados ou snapshot incompleto falham fechado.
+O preflight aceita apenas `OPEN_DRAFT` ou `RETIRED_SUPERSEDED`. Para aposentadoria, a PR tem que estar `closed`, sem `merged_at`, sem evidência de merge e com o marcador literal no body. Além disso, o preflight exige que a própria PR de governança #120 esteja efetivamente merged antes de aceitar qualquer PR de planejamento aposentada; isso impede perder o contrato durável ao fechar drafts antes da integração do registro. PR inexistente, PR merged, PR fechada sem marcador, aposentadoria prévia ao merge de #120, base/head alterados ou snapshot incompleto falham fechado.
 
 A aposentadoria **não** remove a linha do registry, não reutiliza o número, não preenche `packages[].prs` no DAG, não fecha a issue e não torna um sucessor pronto: o pacote permanece pendente até implementação real e aceite. Os IDs #108–#119 ficam reservados para sempre como histórico. Após esta governança ser integrada ao branch padrão e os gates aplicáveis estarem satisfeitos, o proprietário pode acrescentar o marcador e fechar os 12 drafts em lotes; executar `--live` depois de cada lote para verificar a migração. Não feche nenhum deles antes disso.
 
