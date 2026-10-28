@@ -73,7 +73,11 @@ def _load_gate_report_for_slug(slug: str | None, root: Path) -> dict[str, Any]:
     decision = report.get("status_final") or quality_gates.get("decision") or "NAO_DISPONIVEL"
     gate_decision = quality_gates.get("decision") or decision
     worst_severity = quality_gates.get("worst_severity")
-    if worst_severity is None and gate_decision != "NOT_EVALUATED":
+    if gate_decision == "NOT_EVALUATED":
+        # A partial comparison may have diagnostic item severities, but no
+        # aggregate worst severity is valid until every required metric exists.
+        worst_severity = None
+    elif worst_severity is None:
         worst_severity = "S0"
 
     return {
@@ -125,8 +129,10 @@ def _bs_aggregate_gates(rows: list) -> tuple:
         status = str(gates.get("status_final") or "NAO_DISPONIVEL")
         gate_decision = str(gates.get("decision") or status)
         raw_severity = gates.get("worst_severity")
-        if raw_severity is None:
-            sev = "NAO_AVALIADA" if gate_decision == "NOT_EVALUATED" else "S0"
+        if gate_decision == "NOT_EVALUATED":
+            sev = "NAO_AVALIADA"
+        elif raw_severity is None:
+            sev = "S0"
         else:
             sev = str(raw_severity)
         status_counts[status] = status_counts.get(status, 0) + 1
