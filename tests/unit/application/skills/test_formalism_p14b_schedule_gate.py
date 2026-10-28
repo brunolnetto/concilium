@@ -83,8 +83,8 @@ def _with_stale_schedule(canonical: CanonicalModel) -> CanonicalModel:
                     custo_unitario_dia=0.0,
                     proveniencia="DERIVADO_SKILL05",
                 ),
-                # Legacy persisted type without provenance: remove it only when
-                # its matching synthetic pool proves it came from Skill 05.
+                # Legacy persisted type without provenance: keep it when the
+                # matching pool's origin cannot be proven.
                 TipoRecurso(
                     id="EQUIP-LEGACY",
                     nome="Equipamento inferido legado",
@@ -148,6 +148,15 @@ def test_zero_practicability_blocks_canonical_schedule_and_price() -> None:
     assert result.canonical.s_curve is None
     assert result.canonical.cubo_analitico is None
     assert result.canonical.mob_schedule is None
+    # An ambiguous legacy pool is retained for audit, but its capacity is not trusted.
+    assert {item.id for item in result.canonical.tipos_recurso} >= {
+        "CFG-TRATOR",
+        "EQUIP-LEGACY",
+    }
+    legacy_pool = next(
+        pool for pool in result.canonical.recurso_pool if pool.id == "pool-legacy-skill05"
+    )
+    assert legacy_pool.proveniencia == "LEGACY_UNVERIFIED"
     assert any(
         v.codigo == "VAL-CRON-01" and v.status == "ERRO"
         for v in result.validacoes
