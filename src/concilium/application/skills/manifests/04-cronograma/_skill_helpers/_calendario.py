@@ -284,11 +284,15 @@ def _extract_dag(
 
 
 def _extract_pool(canonical: CanonicalModel) -> ResourcePool:
-    """Extrai pool de recursos."""
-    if not canonical.recurso_pool:
+    """Extrai somente capacidade física declarada; pool inferido não é evidência."""
+    pools = [
+        item for item in (canonical.recurso_pool or [])
+        if item.proveniencia == "CONFIGURADO"
+    ]
+    if not pools:
         return ResourcePool(resources={})
     resources: dict[str, int] = {}
-    for item in canonical.recurso_pool:
+    for item in pools:
         resources[item.tipo_id] = resources.get(item.tipo_id, 0) + int(item.quantidade_total)
     return ResourcePool(resources=resources)
 
