@@ -70,8 +70,7 @@ def test_p21a_all_diagnostics_reconstruct_from_one_exact_ledger() -> None:
         _reconciliation(),
         bdi_by_category=_rates(),
         catalog=_catalog(),
-        operational_currency="BRL",
-        currency_source="catalog_metadata.json",
+        catalog_metadata={"currency": "BRL", "currency_source": "catalog_metadata.json"},
         operational_basis_fingerprint="scope-v1",
     )
 
@@ -142,8 +141,7 @@ def test_p21a_missing_currency_provenance_is_not_accepted() -> None:
             _reconciliation(),
             bdi_by_category=_rates(),
             catalog=_catalog(),
-            operational_currency="BRL",
-            currency_source="user-input",
+            catalog_metadata={"currency": "BRL", "currency_source": "user-input"},
             operational_basis_fingerprint="scope-v1",
         )
 
