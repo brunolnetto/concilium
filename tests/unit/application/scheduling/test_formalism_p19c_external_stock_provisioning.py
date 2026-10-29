@@ -205,7 +205,9 @@ def test_currency_codes_must_be_ascii_three_letter_codes() -> None:
     with pytest.raises(ValueError, match="uppercase 3-letter code"):
         _purchase(currency="ÅBC")
     goods, base, arrivals = _base()
-    with pytest.raises(ValueError, match="financial currency must be an explicit uppercase 3-letter code"):
+    with pytest.raises(
+        ValueError, match="catalog currency must be an uppercase ASCII 3-letter code"
+    ):
         book_external_stock_provisioning(
             base, goods, WEEKS, (_purchase(),),
             catalog_metadata={"currency": "ÅBC", "currency_source": CURRENCY_SOURCE},
@@ -321,6 +323,18 @@ def test_p20_rejects_forged_external_cost_or_stock_projection() -> None:
             ExclusiveCostLedger(()),
             result.base_consumption,
             stock_provisioning=forged_cost,
+        )
+
+    unpriced_receipt = StockArrival(
+        "unpriced-extra", "ORE", "2026-W01", F(1), "kg",
+        "EXTERNAL_DELIVERY", "2026-W01",
+    )
+    forged_receipts = replace(result, arrivals=result.arrivals + (unpriced_receipt,))
+    with pytest.raises(ValueError, match="lacks matched priced purchase evidence"):
+        reconcile_financial_sources(
+            ExclusiveCostLedger(()),
+            result.base_consumption,
+            stock_provisioning=forged_receipts,
         )
 
     forged_stock = replace(result.stock, evidence_ids=("forged-source",))
