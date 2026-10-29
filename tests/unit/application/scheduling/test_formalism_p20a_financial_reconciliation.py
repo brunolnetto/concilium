@@ -128,13 +128,11 @@ def test_p20b_activity_view_only_attributes_explicit_p18_consumables() -> None:
         event for event in result.event_attribution
         if event.owner_scope == "GOOD"
     ]
-    acquisition_owner = next(
-        event.owner_id for event in goods if event.nature == PostingNature.ACQUISITION
-    )
-    holding_owner = next(
-        event.owner_id for event in goods if event.nature == PostingNature.HOLDING
-    )
-    assert acquisition_owner == holding_owner == ("ORE",)
+    # P18 consumption is activity-attributable; this fixture has no P19 external
+    # acquisition, so only the holding row belongs to the GOOD scope.
+    assert len(goods) == 1
+    assert goods[0].nature == PostingNature.HOLDING
+    assert goods[0].owner_id == ("ORE",)
     assert all(
         event.owner_scope == "INSTANCE"
         for event in result.event_attribution
