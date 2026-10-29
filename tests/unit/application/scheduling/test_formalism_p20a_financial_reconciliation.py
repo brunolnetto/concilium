@@ -90,6 +90,66 @@ def test_exact_reconciliation_by_week_and_category_is_hand_calculated() -> None:
     assert result.authority.endswith("NOT_PROJECT_GO")
 
 
+def test_p20b_event_trace_and_weekly_categories_conserve_the_project_ledger() -> None:
+    pool, consumption, holding = _case()
+    result = reconcile_financial_sources(pool, consumption, holding)
+
+    assert sum((event.amount for event in result.event_attribution), F(0)) == result.total
+    assert sum((balance.amount for balance in result.category_balances), F(0)) == result.total
+    assert [(row.week, row.category, row.amount) for row in result.category_balances] == [
+        ("2026-W01", "EQ", F(10)),
+        ("2026-W01", "IND", F(3)),
+        ("2026-W01", "MAT", F(5, 2)),
+        ("2026-W02", "EQ", F(4)),
+        ("2026-W02", "IND", F(6)),
+    ]
+
+
+def test_p20b_activity_view_only_attributes_explicit_p18_consumables() -> None:
+    pool, consumption, holding = _case()
+    result = reconcile_financial_sources(pool, consumption, holding)
+
+    assert result.activity_attributable_consumables == (
+        # The source evidence explicitly binds this acquisition to activity A.
+        result.activity_attributable_consumables[0],
+    )
+    attributed = result.activity_attributable_consumables[0]
+    assert (attributed.activity_id, attributed.week, attributed.category, attributed.amount) == (
+        "A", "2026-W01", "MAT", F(5, 2),
+    )
+    assert all(
+        event.activity_id is None
+        for event in result.event_attribution
+        if event.nature in (
+            PostingNature.ACTIVE, PostingNature.IDLE,
+            PostingNature.MOBILIZATION, PostingNature.DEMOBILIZATION,
+            PostingNature.HOLDING,
+        )
+    )
+    assert all(
+        event.owner_scope == "INSTANCE"
+        for event in result.event_attribution
+        if event.nature in (
+            PostingNature.ACTIVE, PostingNature.IDLE,
+            PostingNature.MOBILIZATION, PostingNature.DEMOBILIZATION,
+        )
+    )
+    assert sum((row.amount for row in result.activity_attributable_consumables), F(0)) == F(5, 2)
+    assert result.total == F(51, 2)
+
+
+def test_p20b_category_and_activity_views_do_not_apply_bdi_or_rebook_costs() -> None:
+    pool, consumption, holding = _case()
+    result = reconcile_financial_sources(pool, consumption, holding)
+
+    assert result.direct == F(33, 2)
+    assert result.indirect == F(9)
+    assert result.total == F(51, 2)
+    assert all(type(row.amount) is F for row in result.category_balances)
+    assert all(type(row.amount) is F for row in result.activity_attributable_consumables)
+    assert len(result.event_attribution) == len(result.ledger.postings)
+
+
 def test_no_holding_has_explicitly_incomplete_evidence_not_a_fake_zero() -> None:
     pool, consumption, _ = _case()
     result = reconcile_financial_sources(pool, consumption)
