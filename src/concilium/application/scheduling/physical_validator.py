@@ -60,36 +60,18 @@ class PhysicalCalendarAudit:
         return self.status == "PASS"
 
 
-# The Skill 04 runtime stores floating-point weekly cells; the bridge converts
-# them to decimal Fractions. Keep exact Fraction oracle inputs exact, but tolerate
-# only the same versioned physical scope error used by P14 when crossing that API.
-SCOPE_ABS_TOLERANCE = Fraction(1, 10**9)
-SCOPE_REL_TOLERANCE = Fraction(1, 10**12)
-
-
-def scope_tolerance(required: Fraction) -> Fraction:
-    return max(SCOPE_ABS_TOLERANCE, abs(required) * SCOPE_REL_TOLERANCE)
-
-
-def scope_is_closed(required: Fraction, delivered: Fraction) -> bool:
-    return abs(required - delivered) <= scope_tolerance(required)
-
-
 def _release_after_scope(activity: PhysicalActivity, theta: Fraction) -> int | None:
     """Earliest exclusive week boundary satisfying Q*theta.
 
     theta=0 is start-to-start (no end-of-week delivery required).
     For theta>0, even if delivery occurs during week j, release is j+1.
-    A sub-tolerance float representation error uses the same versioned Q
-    closure tolerance as the physical scope gate, never percentage rounding.
     """
     if theta == 0:
         return activity.start_week
-    required = theta * activity.scope
     cumulative = Fraction(0)
     for week, quantity in sorted(activity.deliveries):
         cumulative += quantity
-        if cumulative >= required or required - cumulative <= scope_tolerance(required):
+        if cumulative >= theta * activity.scope:
             return week + 1
     return None
 
@@ -165,12 +147,8 @@ def validate_materialized_calendar(
                 ))
             delivered += q
             last_week = week
-        if not scope_is_closed(a.scope, delivered):
-            issues.append(PhysicalViolation(
-                "V1_SCOPE_UNCLOSED", a.item_id, None,
-                f"Q={a.scope}; sum_q={delivered}; absolute_error={abs(a.scope-delivered)}; "
-                f"tolerance={scope_tolerance(a.scope)}",
-            ))
+        if delivered != a.scope:
+            issues.append(PhysicalViolation("V1_SCOPE_UNCLOSED", a.item_id, None, f"Q={a.scope}; sum_q={delivered}"))
         for week, resource, demand in a.demands:
             if not a.start_week <= week < a.end_week_exclusive or not resource or demand < 0:
                 issues.append(PhysicalViolation("V6_INVALID_DEMAND", a.item_id, week, "invalid resource reservation"))
