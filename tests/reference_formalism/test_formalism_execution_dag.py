@@ -389,17 +389,39 @@ def test_p21a_operational_pricing_diagnostics_are_mandatory_before_issue_twenty_
     packages = next(n for n in spec["nodes"] if n["issue"] == 21)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P21-A", [153]),
-        ("P21-B", []),
+        ("P21-B", [154]),
     ]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 17, 18, 19, 20, 22, 25),
-        all_merged(spec) - {153},
+        all_merged(spec) - {153, 154},
     )
     issue = next(x for x in result["issues"] if x["issue"] == 21)
     assert issue["ready_to_execute"]
     assert issue["pending_packages"] == ["P21-A", "P21-B"]
     assert issue["pr_packages_total"] == 2
     assert issue["pr_packages_merged"] == 0
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p21b_regulatory_and_profitability_gates_are_mandatory_before_issue_closure(
+    spec: dict,
+) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 21)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P21-A", [153]),
+        ("P21-B", [154]),
+    ]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 17, 18, 19, 20, 22, 25),
+        all_merged(spec) - {154},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 21)
+    assert issue["ready_to_execute"]
+    assert issue["pending_packages"] == ["P21-B"]
+    assert issue["pr_packages_total"] == 2
+    assert issue["pr_packages_merged"] == 1
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
