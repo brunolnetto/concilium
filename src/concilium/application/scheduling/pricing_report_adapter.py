@@ -10,12 +10,12 @@ from fractions import Fraction
 
 from concilium.domain.models.canonical import Resultado, ValidacaoItem
 
+from .financial_cost_reconciliation import ExactFinancialReconciliation
 from .operational_pricing_diagnostics import (
     CatalogPriceBenchmark,
     project_operational_pricing,
 )
 from .pricing_gates import RegulatoryBdiBasis, evaluate_pricing_gates
-from .financial_cost_reconciliation import ExactFinancialReconciliation
 
 
 def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> None:
@@ -33,7 +33,7 @@ def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> 
             codigo="VAL-P21-PRICE-EVIDENCE",
             status=status,
             mensagem=(
-                "Preço não certificado: " if intent == "CERTIFIED" else
+                "Preço não certificado: " if intent != "PREVIEW" else
                 "Diagnóstico de preço indisponível: "
             ) + reason,
         )
