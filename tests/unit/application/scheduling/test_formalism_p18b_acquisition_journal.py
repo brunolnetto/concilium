@@ -186,3 +186,13 @@ def test_no_waste_identity_closes_activity_cost_and_aggregate_good_ledger_exactl
     assert result.journal.indirect == 0
     assert len(result.journal.postings) == 2
     assert len({posting.event_id for posting in result.journal.postings}) == 2
+
+
+def test_unsupported_physical_unit_fails_with_domain_error_not_keyerror() -> None:
+    from concilium.application.scheduling.physical_consumption_rates import convert_physical
+
+    with pytest.raises(ValueError, match="unsupported physical unit: dia"):
+        convert_physical(F(1), "dia", "h")
+
+    with pytest.raises(ValueError, match="unsupported physical unit: dia"):
+        convert_physical(F(1), "kg", "dia")
