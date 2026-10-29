@@ -23,8 +23,11 @@ import types
 from pathlib import Path
 from typing import Any
 
+from concilium.application.scheduling.skill06_p18c_consumption_preview import (
+    build_p18_skill06_preview,
+)
 from concilium.application.skills.base import SkillResult
-from concilium.domain.models.canonical import CanonicalModel
+from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
 _HERE = Path(__file__).resolve().parent
 
@@ -84,10 +87,22 @@ def run_resultado_financeiro(
     """
     catalogo = catalogo or {}
     perfil = perfil or {}
+    inputs = inputs or {}
     validacoes: list = []
 
+    # P18-C3 is explicitly opt-in. Always invalidate a stale preview before
+    # running any downstream stage; legacy finance remains the default path.
+    enabled = inputs.get("p18_consumption_preview_enabled", False)
+    canonical_start = canonical_in.model_copy(update={"p18_consumption_preview": None})
+    if type(enabled) is not bool:
+        return SkillResult(canonical_start, [ValidacaoItem(
+            codigo="VAL-P18-CONSUMPTION-PREVIEW",
+            status="ERRO",
+            mensagem="p18_consumption_preview_enabled must be an explicit boolean.",
+        )])
+
     # Estágio 1 — Precificação unitária (gate: sem planejamento não há receita)
-    res_pre = _run_precificacao(canonical_in, inputs, catalogo, perfil, catalog_session)
+    res_pre = _run_precificacao(canonical_start, inputs, catalogo, perfil, catalog_session)
     validacoes.extend(res_pre.validacoes)
     if res_pre.has_errors:
         # Falha de gate: aborta antes de consolidar (preserva semântica ADR-022)
@@ -98,6 +113,37 @@ def run_resultado_financeiro(
     res_ind = _run_indiretos(canonical, inputs, catalogo, perfil)
     validacoes.extend(res_ind.validacoes)
     canonical = res_ind.canonical
+
+    # Optional P18-C3 projection is a separate sidecar. It only consumes the
+    # exact Skill05 P16 witness + final Skill04 schedule + resolved catalog.
+    # A missing/forged source blocks this opt-in request, never falling back to
+    # legacy MAT/COMB estimates and never materializing a financial GO.
+    if enabled:
+        try:
+            preview_record = build_p18_skill06_preview(
+                canonical,
+                catalogo,
+                inputs.get("p18_catalog_price_currency"),
+            )
+        except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
+            validacoes.append(ValidacaoItem(
+                codigo="VAL-P18-CONSUMPTION-PREVIEW",
+                status="ERRO",
+                mensagem=f"Physical consumption preview failed closed: {exc}",
+            ))
+            return SkillResult(
+                canonical.model_copy(update={"p18_consumption_preview": None}),
+                validacoes,
+            )
+        canonical = canonical.model_copy(update={"p18_consumption_preview": preview_record})
+        validacoes.append(ValidacaoItem(
+            codigo="VAL-P18-CONSUMPTION-PREVIEW",
+            status="AVISO",
+            mensagem=(
+                "P18 source-backed physical-consumption preview recorded separately; "
+                "legacy price/margin was not overridden and this is not PROJECT_GO."
+            ),
+        ))
 
     # Estágio 3 — Consolidação financeira
     res_con = _run_consolidacao(canonical, inputs, perfil)
