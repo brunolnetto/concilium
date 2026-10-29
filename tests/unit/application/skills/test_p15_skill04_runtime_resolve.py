@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import date
 from types import SimpleNamespace
 
+import pytest
+
 from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
     CanonicalModel,
@@ -212,7 +214,48 @@ def test_auto_physical_resolver_returns_unknown_when_pool_is_unproven(monkeypatc
     assert "no explicit physical resource pool" in result.reason
 
 
-def test_skill04_blocks_auto_schedule_when_physical_resolver_exhausts_calendar(monkeypatch) -> None:
+def test_auto_physical_resolver_rejects_unsupported_precedence_as_unknown(monkeypatch) -> None:
+    helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
+    _patch_skill04_materializer(monkeypatch)
+    predecessor = Predecessor("A")
+    predecessor.tipo = "SF"  # unsupported by the physical witness contract
+    items = (Item("A"), Item("B"))
+    items[1]._predecessors = (predecessor,)
+    canonical, regime = _runtime_inputs(items=items)
+    candidate = _candidate(item_ids=("A", "B"))
+    result = helper(
+        canonical=canonical,
+        inputs={"rcpsp_spec": {"resource_pool": {"crane": 1}}},
+        mode="AUTO_SCHEDULE",
+        schedule_selected=candidate,
+        distribution_by_item={},
+        fallback_item_ids=set(),
+        weeks=list(WEEKS),
+        cpu_lookup={
+            "CPU-A": {"codigo": "CPU-A", "producao_id_ref": "prod"},
+            "CPU-B": {"codigo": "CPU-B", "producao_id_ref": "prod"},
+        },
+        production_lookup={"prod": {}},
+        regime=regime,
+        practicability_weekly={week: 1.0 for week in WEEKS},
+        practicability_monthly={},
+        calendar_factor_weekly={week: 1.0 for week in WEEKS},
+        validacoes=[],
+    )
+    assert result.status == "UNKNOWN"
+    assert "unsupported physical predecessor relation" in result.reason
+
+
+@pytest.mark.parametrize(
+    ("resolution_status", "expected_code"),
+    [
+        ("FAIL", "VAL-RCPSP-RESOLVE"),
+        ("UNKNOWN", "VAL-RCPSP-RESOLVE-UNKNOWN"),
+    ],
+)
+def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
+    monkeypatch, resolution_status: str, expected_code: str
+) -> None:
     module = run_cronograma.__globals__
     stale = object()
     canonical = CanonicalModel.model_construct(
@@ -253,7 +296,7 @@ def test_skill04_blocks_auto_schedule_when_physical_resolver_exhausts_calendar(m
         module,
         "resolve_skill04_physical_schedule",
         lambda **_: SimpleNamespace(
-            status="FAIL",
+            status=resolution_status,
             schedule_selected=candidate,
             distribution_by_item={},
             fallback_item_ids=set(),
@@ -275,5 +318,6 @@ def test_skill04_blocks_auto_schedule_when_physical_resolver_exhausts_calendar(m
     assert outcome.has_errors
     assert outcome.canonical.cronograma is None
     assert outcome.canonical.resultado is None
-    assert any(v.codigo == "VAL-RCPSP-RESOLVE" and v.status == "ERRO" for v in outcome.validacoes)
-    assert any(v.codigo == "VAL-RCPSP-RESOLVE-DETAIL" for v in outcome.validacoes)
+    assert any(v.codigo == expected_code and v.status == "ERRO" for v in outcome.validacoes)
+    if resolution_status == "FAIL":
+        assert any(v.codigo == "VAL-RCPSP-RESOLVE-DETAIL" for v in outcome.validacoes)
