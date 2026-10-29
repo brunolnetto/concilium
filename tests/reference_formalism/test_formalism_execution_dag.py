@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2 are both registered in draft PR #142; unmerged packages stay mandatory.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 54
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 55
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -260,23 +260,23 @@ def test_p11c_normative_consumer_prevents_premature_wave_zero_closure(spec: dict
     assert row["pr_packages_total"] == 3
     assert not row["closure_preflight"]
 
-def test_p18c1_c2_draft_registration_cannot_close_issue_eighteen(spec: dict) -> None:
+def test_p18c1_c2_c3_draft_registration_cannot_close_issue_eighteen(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P18-A", [76]),
         ("P18-B", [79]),
         ("P18-C1", [142]),
         ("P18-C2", [142]),
+        ("P18-C3", [143]),
     ]
-    # Even with earlier issues hypothetically accepted, draft #142 is not in
-    # the merged set and cannot satisfy either package or close issue #18.
+    # Neither draft can satisfy C1/C2/C3, and opening C3 doesn't close #18.
     result = report(
-        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {142}
+        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {142, 143}
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 4
+    assert issue["pr_packages_total"] == 5
     assert issue["pr_packages_merged"] == 2
-    assert issue["pending_packages"] == ["P18-C1", "P18-C2"]
+    assert issue["pending_packages"] == ["P18-C1", "P18-C2", "P18-C3"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
