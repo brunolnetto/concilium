@@ -89,7 +89,7 @@ dev = [
     "ruff>=0.14.2",
     "pytest-json-report>=1.5.0",
     "import-linter>=2.11",
-    "ty==0.0.94",
+    "ty==0.0.95",
 ]
 
 [tool.pytest.ini_options]
