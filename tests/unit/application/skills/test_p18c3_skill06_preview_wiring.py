@@ -68,11 +68,8 @@ def test_opt_in_publishes_sidecar_and_only_warns(monkeypatch, skill_module):
     monkeypatch.setattr(skill_module, "build_p18_skill06_preview", lambda *_args: expected)
     result = skill_module.run_resultado_financeiro(
         _canonical(),
-        {
-            "p18_consumption_preview_enabled": True,
-            "p18_catalog_price_currency": "BRL",
-        },
-        {"cpus": [], "insumos": []},
+        {"p18_consumption_preview_enabled": True},
+        {"currency": "BRL", "cpus": [], "insumos": []},
         {},
     )
     assert result.canonical.p18_consumption_preview == expected
