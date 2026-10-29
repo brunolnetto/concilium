@@ -334,11 +334,12 @@ def test_p15e_exact_residual_bridge_remains_mandatory(spec: dict) -> None:
     assert ("P15-E", [156]) in [(p["id"], p["prs"]) for p in packages]
     result = report(
         spec,
-        states(9, 10, 11, 12, 13, 22, 25),
-        all_merged(spec) - {134, 156},
+        states(9, 10, 11, 12, 13, 14, 22, 25),
+        all_merged(spec) - {156},
     )
     issue = next(x for x in result["issues"] if x["issue"] == 15)
+    assert issue["ready_to_execute"]
     assert issue["pr_packages_total"] == len(packages)
-    assert "P15-E" in issue["pending_packages"]
+    assert issue["pending_packages"] == ["P15-E"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
