@@ -61,7 +61,7 @@ class ExternalStockPurchase:
     price_source: str | None
     price_reference_date: str | None
     currency: str | None
-    category: StockCategory = "MAT"
+    category: StockCategory
 
     def __post_init__(self) -> None:
         for name in ("source_id", "good_id", "ordered_week", "arrival_week"):
@@ -166,6 +166,23 @@ def book_external_stock_provisioning(
         purchase_ids.add(purchase.source_id)
         if purchase.currency != financial_currency:
             raise ValueError("external purchase currency differs from verified financial currency")
+        # P18's usage-priced V and P19's inventory-acquisition V must not own
+        # the same good at once without a source allocation between them. This
+        # adapter handles only explicit incremental provisioning, never a
+        # second charge for already-priced consumption.
+        for line in base.evidence:
+            if line.measure.good_id != purchase.good_id:
+                continue
+            if (
+                type(line.measure.exact_cost) is not Fraction
+                or line.measure.exact_cost < 0
+            ):
+                raise ValueError("existing P18 cost evidence must be exact and nonnegative")
+            if line.measure.exact_cost > 0:
+                raise ValueError(
+                    "P18 already owns priced consumption for this good; "
+                    "external inventory purchase would double count"
+                )
 
         evidence_id = f"EXTERNAL_PROVISION:{purchase.source_id}"
         arrival_id = f"EXTERNAL_RECEIPT:{purchase.source_id}"
