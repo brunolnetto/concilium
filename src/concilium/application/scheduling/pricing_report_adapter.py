@@ -19,7 +19,7 @@ from .financial_cost_reconciliation import ExactFinancialReconciliation
 
 
 def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> None:
-    status = "ERRO" if intent == "CERTIFIED" else "AVISO"
+    status = "AVISO" if intent == "PREVIEW" else "ERRO"
     result.pricing_diagnostics = {"status": "UNKNOWN", "reason": reason}
     result.pricing_gates = {
         "status": "UNKNOWN",
@@ -145,7 +145,7 @@ def apply_pricing_report_evidence(
     }
     result.pricing_authority = gates.authority
     if gates.status != "PASS":
-        status = "ERRO" if intent == "CERTIFIED" else "AVISO"
+        status = "AVISO" if intent == "PREVIEW" else "ERRO"
         validations.append(
             ValidacaoItem(
                 codigo="VAL-P21-PRICE-GATES",
