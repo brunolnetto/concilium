@@ -23,6 +23,7 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
 from ._skill_helpers._p14_productivity import (
+    _invalidate_derived_costs,
     _invalidate_rejected_schedule,
     _preflight_physical_productivity,
 )
@@ -238,6 +239,10 @@ def run_cronograma(
         # Never substitute zero cost or an optimistic GO for unavailable pool.
         blocked = canonical_in.model_copy(
             update={
+                # Pool rejection is a schedule rejection too: clear every
+                # dependent projection and Skill 05-derived resource artifact.
+                **_invalidate_derived_costs(canonical_in),
+                "mob_schedule": None,
                 "cronograma": None,
                 "intervalos_atividade": [],
                 "resultado": None,
