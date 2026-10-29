@@ -838,3 +838,77 @@ def test_p14c_invalid_graph_preserves_no_historical_financial_projection(
     assert outcome.canonical.resultado_reconciliado is None
     assert outcome.canonical.cubo_analitico is None
     assert outcome.canonical.s_curve is None
+
+def test_p14d_certified_scope_extension_closes_exactly_with_partial_final_week() -> None:
+    """Run real Skill04 CERTIFIED path: extension closes Q and final week is partial."""
+    production = _real_catalog_productivity()
+    base = _canonical(0.5, unidade="t")
+    canonical = base.model_copy(update={
+        "eap": [item.model_copy(update={"quantitativo": 9000.0}) for item in base.eap],
+    })
+    outcome = run_cronograma(
+        canonical,
+        {
+            "certification_intent": "CERTIFIED",
+            "num_equipes_por_item": {"i1": {"2026-W23": 1}},
+        },
+        {
+            "cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
+            "produtividades": [production],
+        },
+    )
+    assert not outcome.has_errors, outcome.validacoes
+    schedule = outcome.canonical.cronograma
+    assert schedule is not None and schedule.is_feasible
+    activity = next(item for item in schedule.scheduled_activities if item.activity_id == "i1")
+    positive = [
+        (week, row.qtd_executada)
+        for week, row in sorted(activity.distribuicao_semanal.items())
+        if row.qtd_executada > 0
+    ]
+    # Nominal capacity is 99.6 t/h × 40 h/week = 3,984 t/week, i.e. 3 weeks
+    # without the declared 0.5 practicability. The physical calendar must extend
+    # the duration, preserve the full Q and make the final week partial.
+    assert len(positive) > 3
+    assert sum(quantity for _, quantity in positive) == pytest.approx(9000.0, abs=1e-9)
+    assert 0 < positive[-1][1] < positive[-2][1]
+    assert not any(
+        item.codigo == "VAL-CRON-01" and item.status == "ERRO"
+        for item in outcome.validacoes
+    )
+
+
+def test_p14d_certified_finite_calendar_shortfall_is_nogo_with_exact_residual() -> None:
+    """Positive F(m) cannot hide a finite horizon that is too short for Q."""
+    production = _real_catalog_productivity()
+    base = _canonical(1.0, unidade="t")
+    short_project = base.projeto.model_copy(update={"data_termino": date(2026, 6, 7)})
+    canonical = base.model_copy(update={
+        "projeto": short_project,
+        "eap": [item.model_copy(update={"quantitativo": 9000.0}) for item in base.eap],
+    })
+    outcome = run_cronograma(
+        canonical,
+        {
+            "certification_intent": "CERTIFIED",
+            "num_equipes_por_item": {"i1": {"2026-W23": 1}},
+        },
+        {
+            "cpus": [{"codigo": "CPU-TEST", "producao_id_ref": production["id"]}],
+            "produtividades": [production],
+        },
+    )
+    assert outcome.has_errors
+    assert outcome.canonical.cronograma is None
+    error = next(
+        item for item in outcome.validacoes
+        if item.codigo == "VAL-CRON-01" and item.status == "ERRO"
+    )
+    assert "Q=9000.0" in error.mensagem
+    assert "horizonte_semanas=1" in error.mensagem
+    assert "motivo=CALENDAR_OR_CAPACITY_EXHAUSTED" in error.mensagem
+    delivered = float(error.mensagem.split("Σq=", 1)[1].split(",", 1)[0])
+    residual = float(error.mensagem.split("resíduo=", 1)[1].split(",", 1)[0])
+    assert delivered >= 0
+    assert residual > 0
+    assert 9000.0 - delivered == pytest.approx(residual, abs=1e-9)
