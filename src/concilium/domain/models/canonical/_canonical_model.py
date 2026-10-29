@@ -127,6 +127,8 @@ class CanonicalModel(BaseModel):
     # exact Skill05 pool witness. This sidecar never overrides legacy finance
     # or authorizes PROJECT_GO.
     p18_consumption_preview: dict[str, object] | None = None
+    # P17-C: exact read-only Skill05 pool vs Skill06 activity-cost reconciliation.
+    p17_cost_reconciliation: dict[str, object] | None = None
 
     # ADR-021: Espaço combinatorial de planos (repair + otimização de VERDE)
     plan_space_result: "PlanSpaceResult | None" = None

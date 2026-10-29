@@ -26,6 +26,9 @@ from typing import Any
 from concilium.application.scheduling.skill06_p18c_consumption_preview import (
     build_p18_skill06_preview,
 )
+from concilium.application.scheduling.skill06_p17_cost_reconciliation import (
+    build_skill06_p17_reconciliation,
+)
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
@@ -93,7 +96,10 @@ def run_resultado_financeiro(
     # P18-C3 is explicitly opt-in. Always invalidate a stale preview before
     # running any downstream stage; legacy finance remains the default path.
     enabled = inputs.get("p18_consumption_preview_enabled", False)
-    canonical_start = canonical_in.model_copy(update={"p18_consumption_preview": None})
+    canonical_start = canonical_in.model_copy(update={
+        "p18_consumption_preview": None,
+        "p17_cost_reconciliation": None,
+    })
     if type(enabled) is not bool:
         return SkillResult(canonical_start, [ValidacaoItem(
             codigo="VAL-P18-CONSUMPTION-PREVIEW",
@@ -145,5 +151,32 @@ def run_resultado_financeiro(
     res_con = _run_consolidacao(canonical, inputs, perfil)
     validacoes.extend(res_con.validacoes)
     canonical = res_con.canonical
+
+    # P17-C audits activity K against the exact pool K/V ledger. It never
+    # rewrites the legacy financial result or creates a GO certificate.
+    if enabled and not res_con.has_errors and canonical.p18_consumption_preview is not None:
+        try:
+            reconciliation = build_skill06_p17_reconciliation(canonical)
+        except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
+            canonical = canonical.model_copy(update={"p17_cost_reconciliation": None})
+            validacoes.append(ValidacaoItem(
+                codigo="VAL-P17-SKILL06-RECONCILIATION",
+                status="ERRO",
+                mensagem=f"Skill06 K/V reconciliation failed closed: {exc}",
+            ))
+        else:
+            canonical = canonical.model_copy(update={"p17_cost_reconciliation": reconciliation})
+            if reconciliation["status"] != "RECONCILED":
+                validacoes.append(ValidacaoItem(
+                    codigo="VAL-P17-SKILL06-RECONCILIATION",
+                    status="ERRO",
+                    mensagem="Skill06 activity K does not reconcile to the exact P16/P17 pool ledger.",
+                ))
+            else:
+                validacoes.append(ValidacaoItem(
+                    codigo="VAL-P17-SKILL06-RECONCILIATION",
+                    status="AVISO",
+                    mensagem="P17 K/V reconciliation preview recorded; this is not PROJECT_GO.",
+                ))
 
     return SkillResult(canonical, validacoes)
