@@ -1,6 +1,6 @@
 # P21-C — propagate pricing diagnostics through the canonical result
 
-Issue: #21. Package PR: #162.
+Issue: #21. Package PR: #163.
 
 P21-A and P21-B calculations must not remain detached utilities. Skill 06 now attaches their exact diagnostic fields and independent gate statuses to the canonical `Resultado` model. REST, MCP, UI, RFI and RFP paths that serialize the canonical result therefore expose the same fields instead of recomputing a separate margin or regulatory outcome.
 
