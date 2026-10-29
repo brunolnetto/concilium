@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import streamlit as st
 
@@ -103,7 +103,7 @@ def _render_cube_heatmap_chart(df: Any) -> None:
 
     if {"categoria", "componente_bdi", "valor_rs"}.issubset(df.columns):
         heatmap = (
-            alt.Chart(df)
+            cast(Any, alt.Chart(df))
             .mark_rect()
             .encode(
                 x=alt.X("componente_bdi:N", title="Componente BDI"),
@@ -117,7 +117,7 @@ def _render_cube_heatmap_chart(df: Any) -> None:
 
     if {"atividade_id", "componente_bdi", "valor_rs"}.issubset(df.columns):
         heatmap = (
-            alt.Chart(df)
+            cast(Any, alt.Chart(df))
             .mark_rect()
             .encode(
                 x=alt.X("componente_bdi:N", title="Componente BDI"),

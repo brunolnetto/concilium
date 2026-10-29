@@ -295,7 +295,7 @@ def _build_explicacao_natureza_periodo(
             for hint in [itens.get(item.atividade_id, {})]
             if hint
         ),
-        key=lambda entry: float(entry.get("gap_rs", 0.0)),
+        key=lambda entry: float(entry.get("gap_rs") or 0.0),
         reverse=True,
     )[:5]
 

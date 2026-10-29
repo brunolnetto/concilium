@@ -33,10 +33,17 @@ class EscopoGeoLike(Protocol):
     `data_inicio`, etc. — irrelevantes para a resolução de preço de diesel).
     """
 
-    raio_cotacao_km: float | None
-    coordenadas_lat: float
-    coordenadas_lng: float
-    jurisdicao_id: str | None
+    @property
+    def raio_cotacao_km(self) -> float | None: ...
+
+    @property
+    def coordenadas_lat(self) -> float: ...
+
+    @property
+    def coordenadas_lng(self) -> float: ...
+
+    @property
+    def jurisdicao_id(self) -> str | None: ...
 
 
 @dataclass(frozen=True)
