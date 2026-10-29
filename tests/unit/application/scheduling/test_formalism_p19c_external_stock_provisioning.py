@@ -1,6 +1,7 @@
 """P19-C: fail-closed external stock provisioning and exact acquisition ownership."""
 from __future__ import annotations
 
+from dataclasses import replace
 from fractions import Fraction as F
 from typing import Literal
 
@@ -133,14 +134,16 @@ def test_external_receipt_and_priced_acquisition_are_separate_and_reconcile() ->
     assert result.arrivals[-1].source_id == "EXTERNAL_RECEIPT:quote-17"
 
     holding = post_exact_weekly_holding(
-        result.consumption.journal,
+        result.ledger,
         result.stock,
         goods,
         {"ORE": HoldingTariff("ORE", F(2), "kg")},
     )
     reconciled = reconcile_financial_sources(
-        ExclusiveCostLedger(()), result.consumption, holding,
+        ExclusiveCostLedger(()), result.base_consumption, holding,
+        stock_provisioning=result,
     )
+    assert tuple(line.source_id for line in result.base_consumption.evidence) == ("demand-1",)
     assert reconciled.ledger.consumable_v == F(15)
     assert reconciled.indirect == F(4)
     assert reconciled.total == F(19)
@@ -265,6 +268,30 @@ def test_external_provisioning_does_not_double_charge_priced_consumption() -> No
             other_arrivals=arrivals,
         )
 
+def test_p20_rejects_forged_external_cost_or_stock_projection() -> None:
+    goods, result = _book()
+    original = result.ledger.postings[-1]
+    forged_ledger = ExclusiveCostLedger(
+        result.ledger.postings[:-1] + (replace(original, amount=F(14)),)
+    )
+    forged_cost = replace(result, ledger=forged_ledger)
+    with pytest.raises(ValueError, match="P19 external stock acquisition: missing, forged"):
+        reconcile_financial_sources(
+            ExclusiveCostLedger(()),
+            result.base_consumption,
+            stock_provisioning=forged_cost,
+        )
+
+    forged_stock = replace(result.stock, evidence_ids=("forged-source",))
+    forged_projection = replace(result, stock=forged_stock)
+    with pytest.raises(ValueError, match="stock projection does not reconcile"):
+        reconcile_financial_sources(
+            ExclusiveCostLedger(()),
+            result.base_consumption,
+            stock_provisioning=forged_projection,
+        )
+
+
 def test_explicit_zero_price_is_not_the_same_as_missing_price() -> None:
     goods, base, arrivals = _base()
     free_but_evidenced = _purchase(unit_price=F(0), price_source="written-zero-price")
@@ -274,4 +301,5 @@ def test_explicit_zero_price_is_not_the_same_as_missing_price() -> None:
     )
     assert result.external_cost == 0
     assert result.purchase_evidence[0].price_source == "written-zero-price"
-    assert result.consumption.journal.consumable_v == 0
+    assert result.ledger.consumable_v == 0
+    assert tuple(line.source_id for line in result.base_consumption.evidence) == ("demand-1",)
