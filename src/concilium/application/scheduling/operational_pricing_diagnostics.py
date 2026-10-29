@@ -1,9 +1,11 @@
 """P21-A: derive operational pricing diagnostics from the reconciled P20 ledger."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from fractions import Fraction
+from hashlib import sha256
 from typing import Literal
 
 from .financial_cost_reconciliation import ExactFinancialReconciliation
