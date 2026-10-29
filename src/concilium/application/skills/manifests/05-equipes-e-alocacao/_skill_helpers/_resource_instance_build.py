@@ -596,6 +596,7 @@ def _build_instancias_recurso(
     all_instancias: list[InstanciaRecurso] = []
     all_composicoes: list[ComposicaoEquipeAtividade] = []
     all_resumos: list[ResumoUtilizacaoContrato] = []
+    validation_count_before_p16 = len(validacoes)
     previous_contract_state = [
         (
             contrato,
@@ -620,6 +621,7 @@ def _build_instancias_recurso(
         for contrato, prior_witness, prior_mobilizations in previous_contract_state:
             contrato.p16_global_assignment = prior_witness
             contrato.mobilizacao_por_instancia = prior_mobilizations
+        del validacoes[validation_count_before_p16:]
         raise
 
     return all_instancias, all_composicoes, all_resumos
