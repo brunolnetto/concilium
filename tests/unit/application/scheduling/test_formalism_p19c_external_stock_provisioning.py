@@ -198,6 +198,18 @@ def test_missing_price_unit_source_date_or_currency_fails_closed(
         ExternalStockPurchase(**values)  # type: ignore[arg-type]
 
 
+def test_currency_codes_must_be_ascii_three_letter_codes() -> None:
+    with pytest.raises(ValueError, match="uppercase 3-letter code"):
+        _purchase(currency="ÅBC")
+    goods, base, arrivals = _base()
+    with pytest.raises(ValueError, match="financial currency must be an explicit uppercase 3-letter code"):
+        book_external_stock_provisioning(
+            base, goods, WEEKS, (_purchase(),),
+            financial_currency="ÅBC", currency_source=CURRENCY_SOURCE,
+            other_arrivals=arrivals,
+        )
+
+
 def test_missing_catalog_currency_provenance_and_currency_mismatch_fail() -> None:
     goods, base, arrivals = _base()
     with pytest.raises(ValueError, match="catalog_metadata.json"):
