@@ -8,6 +8,7 @@ from fractions import Fraction
 from concilium.domain.models.canonical import ValidacaoItem
 
 from .pre_metrics import _gap_max_economico  # ty: ignore[unresolved-import]
+from .week_index import iso_week_index  # ty: ignore[unresolved-import]
 
 
 def _week_idx(semana: str) -> int:
@@ -23,16 +24,7 @@ def _week_idx(semana: str) -> int:
         return int(s[1:])
     # Formato ISO: "2026-W48" ou "2026-W08"
     if "-W" in s:
-        try:
-            import datetime
-
-            parts = s.split("-W")
-            year, week = int(parts[0]), int(parts[1])
-            monday = datetime.datetime.strptime(f"{year}-W{week:02d}-1", "%G-W%V-%u")
-            epoch = datetime.datetime(2000, 1, 3)  # segunda-feira da semana 1 de 2000
-            return (monday - epoch).days // 7
-        except Exception:
-            return 0
+        return iso_week_index(s)
     # Fallback: tenta int direto
     try:
         return int(s.lstrip("0") or "0")
