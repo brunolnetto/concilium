@@ -176,8 +176,17 @@ def test_tampered_cost_component_fails_even_when_pool_total_is_unchanged() -> No
 def test_catalog_currency_must_be_explicit_and_match_pool_currency() -> None:
     contract = _contract_and_witness()
     canonical = _canonical(contract)
-    with pytest.raises(ValueError, match="catalog price currency"):
-        _validate_catalog_currency(canonical, {})
+    with pytest.raises(ValueError, match="p18_catalog_price_currency"):
+        _validate_catalog_currency(canonical, None)
     with pytest.raises(ValueError, match="differs from the exact Skill05 pool currency"):
-        _validate_catalog_currency(canonical, {"moeda": "USD"})
-    assert _validate_catalog_currency(canonical, {"moeda": "BRL"}) == "BRL"
+        _validate_catalog_currency(canonical, "USD")
+    assert _validate_catalog_currency(canonical, "BRL") == "BRL"
+
+
+def test_activity_week_assignment_must_match_p16_per_activity_demand() -> None:
+    contract = _contract_and_witness()
+    witness = dict(contract.p16_global_assignment or {})
+    witness["demand_by_activity"] = {"A": [1, 0], "B": [0, 1]}
+    contract = contract.model_copy(update={"p16_global_assignment": witness})
+    with pytest.raises(ValueError, match="do not reconstruct per-activity demand"):
+        build_skill05_exact_pool_ledger(_canonical(contract))

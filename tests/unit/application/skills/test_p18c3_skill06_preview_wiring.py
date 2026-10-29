@@ -61,11 +61,19 @@ def test_opt_in_publishes_sidecar_and_only_warns(monkeypatch, skill_module):
         "schema": "concilium.p18.skill06-preview.v1",
         "authority": "P18_SKILL06_READ_ONLY_PREVIEW_NOT_PROJECT_GO",
         "project_go_authorized": False,
+        "currency": "BRL",
+        "currency_source": "EXPLICIT_RUNTIME_DECLARATION_CATALOG_SCHEMA_HAS_NO_CURRENCY_FIELD",
         "totals": {"contractual_k": "10", "consumable_v": "3", "indirect": "2", "direct": "13", "total": "15"},
     }
     monkeypatch.setattr(skill_module, "build_p18_skill06_preview", lambda *_args: expected)
     result = skill_module.run_resultado_financeiro(
-        _canonical(), {"p18_consumption_preview_enabled": True}, {"cpus": [], "insumos": []}, {},
+        _canonical(),
+        {
+            "p18_consumption_preview_enabled": True,
+            "p18_catalog_price_currency": "BRL",
+        },
+        {"cpus": [], "insumos": []},
+        {},
     )
     assert result.canonical.p18_consumption_preview == expected
     assert seen["final_input"] == expected

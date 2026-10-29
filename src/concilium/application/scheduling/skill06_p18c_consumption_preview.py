@@ -185,6 +185,9 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
     if not isinstance(raw_chains, list):
         raise ValueError(f"{resource_type}: P16 chains must be a list")
     chains: list[InstanceChain] = []
+    assigned_by_activity = {
+        activity_id: [0] * horizon for activity_id in activity_demand
+    }
     levels: set[int] = set()
     for raw_chain in raw_chains:
         row = _mapping(raw_chain, "P16 instance chain")
@@ -220,6 +223,13 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
             for activity in activity_by_week.values()
         ):
             raise ValueError(f"{resource_type}: activity assignment does not cover exact active weeks")
+        for index in active_indices:
+            activity_id = activity_by_week[weeks[index]]
+            if activity_id not in assigned_by_activity:
+                raise ValueError(
+                    f"{resource_type}: chain assigns a week to an activity absent from P16 demand"
+                )
+            assigned_by_activity[activity_id][index] += 1
         chains.append(InstanceChain(
             resource_type=resource_type,
             level=level,
@@ -229,6 +239,14 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
             idle_weeks=idle,
             active_week_indices=active_indices,
         ))
+
+    if any(
+        tuple(assigned_by_activity[activity_id]) != series
+        for activity_id, series in activity_demand.items()
+    ):
+        raise ValueError(
+            f"{resource_type}: instance-chain activity assignments do not reconstruct per-activity demand"
+        )
 
     raw_costs = _mapping(witness.get("costs"), "P16 costs")
     active_cost = _nonnegative_fraction(raw_costs.get("active"), "active cost")
@@ -330,11 +348,15 @@ def build_skill05_exact_pool_ledger(canonical: CanonicalModel) -> ExclusiveCostL
 
 def _validate_catalog_currency(
     canonical: CanonicalModel,
-    catalogo: Mapping[str, object],
+    declared_currency: object,
 ) -> str:
-    """Require explicit currency agreement before combining pool K and catalog V."""
-    raw_currency = catalogo.get("moeda", catalogo.get("currency"))
-    currency = _text(raw_currency, "catalog price currency")
+    """Require an explicit run-level declaration for catalog price currency.
+
+    The current Insumo schema has no currency field, so this declaration is not
+    represented as catalog provenance. The caller must supply the currency of
+    the resolved catalog; the declaration is recorded in the preview output.
+    """
+    currency = _text(declared_currency, "p18_catalog_price_currency")
     if currency != currency.upper() or len(currency) != 3 or not currency.isalpha():
         raise ValueError("catalog price currency must be an explicit uppercase three-letter code")
     witness_currencies: set[str] = set()
@@ -401,6 +423,7 @@ def _preview_record(
         "project_go_authorized": False,
         "catalog_snapshot_id": canonical.projeto.snapshot_catalogo_id,
         "currency": currency,
+        "currency_source": "EXPLICIT_RUNTIME_DECLARATION_CATALOG_SCHEMA_HAS_NO_CURRENCY_FIELD",
         "pool_witnesses": pool_witnesses,
         "consumption_authority": preview.consumption.authority,
         "reconciliation_authority": reconciliation.authority,
@@ -431,12 +454,13 @@ def _preview_record(
 def build_p18_skill06_preview(
     canonical: CanonicalModel,
     catalogo: Mapping[str, object],
+    catalog_price_currency: object,
 ) -> dict[str, object]:
     """Build the opt-in P18 sidecar from final schedule, catalog and exact pool witness."""
     if not isinstance(catalogo, Mapping):
         raise ValueError("resolved catalog must be an explicit mapping")
     pool = build_skill05_exact_pool_ledger(canonical)
-    currency = _validate_catalog_currency(canonical, catalogo)
+    currency = _validate_catalog_currency(canonical, catalog_price_currency)
     goods = build_activity_goods_from_catalog(canonical, catalogo)
     preview = book_skill04_planned_consumption_preview(canonical, pool, goods)
     return _preview_record(preview, goods, canonical, currency)
