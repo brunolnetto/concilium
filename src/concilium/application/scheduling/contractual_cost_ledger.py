@@ -193,7 +193,7 @@ def book_exact_pool(
                     raise ValueError(f"{resource}: explicit chain active/standby metadata mismatch")
                 if any(
                     following - previous - 1 > tariff.max_idle_gap
-                    for previous, following in zip(active_indices, active_indices[1:])
+                    for previous, following in zip(active_indices[:-1], active_indices[1:], strict=True)
                 ):
                     raise ValueError(f"{resource}: explicit instance exceeds maximum idle gap")
                 active_index_set = set(active_indices)
