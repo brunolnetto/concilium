@@ -220,6 +220,43 @@ class CatalogMixin:
         global_prods = self._load_producoes_from_cpus(cpus, cat_dir)
         return self._merge_global_producoes(producoes, global_prods)
 
+    @staticmethod
+    def _read_catalog_metadata(cat_dir: Path) -> dict[str, Any]:
+        """Load explicit catalog-level provenance that must survive bundle rebuilds."""
+        metadata_path = cat_dir / "catalog_metadata.json"
+        if not metadata_path.exists():
+            return {}
+        try:
+            payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeDomainError(f"Metadados de catálogo inválidos em {metadata_path}") from exc
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema") != "concilium.catalog-metadata.v1"
+        ):
+            raise RuntimeDomainError(f"Schema de metadados de catálogo inválido em {metadata_path}")
+        currency = payload.get("currency")
+        if (
+            not isinstance(currency, str)
+            or len(currency) != 3
+            or not currency.isascii()
+            or not currency.isalpha()
+            or currency != currency.upper()
+        ):
+            raise RuntimeDomainError(f"Moeda do catálogo ausente ou inválida em {metadata_path}")
+        return {"currency": currency}
+
+    def _attach_catalog_metadata(self, catalogo: dict[str, Any], cat_dir: Path) -> dict[str, Any]:
+        metadata = self._read_catalog_metadata(cat_dir)
+        declared = metadata.get("currency")
+        existing = catalogo.get("currency")
+        if declared is not None and existing is not None and existing != declared:
+            raise RuntimeDomainError(
+                f"Moeda do bundle ({existing}) diverge dos metadados do catálogo ({declared})"
+            )
+        catalogo.update(metadata)
+        return catalogo
+
     def _load_catalogo_from_disk(self, catalogo_id: str) -> dict[str, Any]:
         cat_dir = self.config_root / "catalogos" / catalogo_id
         if not cat_dir.exists():
@@ -228,7 +265,12 @@ class CatalogMixin:
         bundle_path = cat_dir / ".catalog_bundle.json"
         if self._catalog_bundle_valid(cat_dir, bundle_path):
             try:
-                return json.loads(bundle_path.read_text(encoding="utf-8"))
+                bundled = json.loads(bundle_path.read_text(encoding="utf-8"))
+                if not isinstance(bundled, dict):
+                    raise ValueError("catalog bundle must be a JSON object")
+                return self._attach_catalog_metadata(bundled, cat_dir)
+            except RuntimeDomainError:
+                raise
             except Exception:
                 pass
 
@@ -255,6 +297,7 @@ class CatalogMixin:
             catalogo["estruturas_indiretas"] = data.get("estruturas_indiretas", []) if isinstance(data, dict) else []
 
         catalogo["producoes"] = self._load_and_synthesize_producoes(catalogo["cpus"], cat_dir)
+        catalogo = self._attach_catalog_metadata(catalogo, cat_dir)
 
         try:
             bundle_path.write_text(json.dumps(catalogo, ensure_ascii=False), encoding="utf-8")
