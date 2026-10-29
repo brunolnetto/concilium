@@ -164,12 +164,13 @@ def _week_to_idx(week_str: str) -> int:
     """Convert legacy S-index or ISO week to a comparable absolute index."""
     s = week_str.strip()
     if s.upper().startswith("S"):
-        try:
+        if s[1:].isdigit():
             return int(s[1:])
-        except ValueError:
-            pass
+        raise ValueError(f"invalid legacy week index: {week_str!r}")
     if "-W" in s:
         return iso_week_index(s)
-    return 0
+    if s.isdigit():
+        return int(s)
+    raise ValueError(f"unsupported week index: {week_str!r}")
 
 
