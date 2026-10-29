@@ -179,7 +179,9 @@ def test_catalog_currency_must_be_explicit_and_match_pool_currency() -> None:
     with pytest.raises(ValueError, match="catalog price currency"):
         _validate_catalog_currency(canonical, {})
     with pytest.raises(ValueError, match="differs from the exact Skill05 pool currency"):
-        _validate_catalog_currency(canonical, {"currency": "USD"})
+        _validate_catalog_currency(
+            canonical, {"currency": "USD", "currency_source": "catalog_metadata.json"}
+        )
     assert _validate_catalog_currency(
         canonical,
         {"currency": "BRL", "currency_source": "catalog_metadata.json"},

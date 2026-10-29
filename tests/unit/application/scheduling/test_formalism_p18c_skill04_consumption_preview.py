@@ -4,8 +4,8 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from datetime import UTC, date, datetime
-from pathlib import Path
 from fractions import Fraction as F
+from pathlib import Path
 
 import pytest
 
@@ -200,6 +200,8 @@ def test_real_rfi_bom_maps_to_exact_physical_purchase_from_delivered_q() -> None
         ("missing_price_source", "unit-price provenance is missing"),
     ],
 )
+
+
 def test_real_catalog_mapper_rejects_unsupported_acquisition_evidence(
     change: str, error: str,
 ) -> None:
@@ -276,6 +278,8 @@ def test_shared_good_uses_activity_specific_consumption_rate() -> None:
     ("same_good_conflicting_price", "conflicting physical price/category"),
     ("invalid_week", "invalid ISO week"),
 ])
+
+
 def test_fail_closed_adversarial_cases(change: str, error: str) -> None:
     canonical = _canonical()
     goods = _declared()
@@ -459,6 +463,8 @@ def test_two_subactivities_reconcile_one_eap_schedule_scope() -> None:
     "missing_eap", "incomplete_q", "incomplete_fraction", "duplicate_subactivity",
     "orphan_parent", "cpu_mismatch",
 ])
+
+
 def test_incomplete_or_forged_subactivity_decomposition_rejected(kind: str) -> None:
     canonical = _subdivided()
     if kind == "missing_eap":

@@ -56,7 +56,6 @@ def test_filesystem_loader_attaches_currency_on_valid_bundle(tmp_path: Path, mon
 
     assert loaded["currency"] == "BRL"
     assert loaded["currency_source"] == "catalog_metadata.json"
-    assert loaded["currency_source"] == "catalog_metadata.json"
 
 
 def test_filesystem_loader_preserves_currency_when_rebuilding_bundle(tmp_path: Path) -> None:
@@ -69,8 +68,8 @@ def test_filesystem_loader_preserves_currency_when_rebuilding_bundle(tmp_path: P
 
     assert loaded["currency"] == "BRL"
     assert loaded["currency_source"] == "catalog_metadata.json"
-    assert loaded["currency_source"] == "catalog_metadata.json"
     assert rebuilt["currency"] == "BRL"
+    assert loaded["currency_source"] == rebuilt["currency_source"] == "catalog_metadata.json"
     assert rebuilt["currency_source"] == "catalog_metadata.json"
 
 
@@ -94,7 +93,6 @@ def test_remote_storage_loader_attaches_currency(tmp_path: Path) -> None:
             loaded = cs.load_catalogo_via_storage(tmp_path, "cat1", force_refresh=True)
 
     assert loaded["currency"] == "BRL"
-    assert loaded["currency_source"] == "catalog_metadata.json"
     assert loaded["currency_source"] == "catalog_metadata.json"
 
 
