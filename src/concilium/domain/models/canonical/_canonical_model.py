@@ -123,6 +123,10 @@ class CanonicalModel(BaseModel):
     # ADR-019: Reconciliação de custos de aquisição e sugestões de re-planejamento
     resultado_reconciliado: "ResultadoReconciliado | None" = None
     replan_suggestions: "ReplanSuggestions | None" = None
+    # P18-C3: opt-in, read-only physical-consumption preview from Skill04 + the
+    # exact Skill05 pool witness. This sidecar never overrides legacy finance
+    # or authorizes PROJECT_GO.
+    p18_consumption_preview: dict[str, object] | None = None
 
     # ADR-021: Espaço combinatorial de planos (repair + otimização de VERDE)
     plan_space_result: "PlanSpaceResult | None" = None
