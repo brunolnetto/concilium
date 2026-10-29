@@ -340,6 +340,30 @@ def _storage_load_and_synthesize_producoes(
     return _merge_global_producoes(producoes, global_prods)
 
 
+def _storage_load_catalog_metadata(storage: BlobStoragePort, base: str) -> dict[str, str]:
+    """Load explicit catalog currency through the selected storage backend."""
+    try:
+        raw = storage.ler_blob(f"{base}/catalog_metadata.json")
+    except FileNotFoundError:
+        return {}
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid catalog metadata at {base}/catalog_metadata.json") from exc
+    if not isinstance(payload, dict) or payload.get("schema") != "concilium.catalog-metadata.v1":
+        raise ValueError(f"invalid catalog metadata schema at {base}/catalog_metadata.json")
+    currency = payload.get("currency")
+    if (
+        not isinstance(currency, str)
+        or len(currency) != 3
+        or not currency.isascii()
+        or not currency.isalpha()
+        or currency != currency.upper()
+    ):
+        raise ValueError(f"missing or invalid catalog currency at {base}/catalog_metadata.json")
+    return {"currency": currency}
+
+
 def _storage_load_templates(storage: BlobStoragePort, base: str) -> tuple[dict, list]:
     try:
         raw = storage.ler_blob(f"{base}/templates.json")
@@ -423,6 +447,7 @@ def load_catalogo_via_storage(config_root: Path, catalogo_id: str, *, force_refr
             catalogo["producoes"] = _storage_load_and_synthesize_producoes(
                 storage, catalogo["cpus"], base, global_prefix
             )
+            catalogo.update(_storage_load_catalog_metadata(storage, base))
         finally:
             # Libera o pool de conexões (SharePointBlobStorage.close(), ver
             # sharepoint.py) — best-effort e via duck-typing: backends que não
