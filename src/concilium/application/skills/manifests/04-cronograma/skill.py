@@ -222,7 +222,7 @@ def run_cronograma(
             )
         )
     if not failed and mode and mode.startswith("AUTO") and schedule_selected is not None:
-        prior_validation_count = len(validacoes)
+        original_selected_candidate = schedule_selected
         physical_resolution = resolve_skill04_physical_schedule(
             canonical=canonical_in,
             inputs=inputs,
@@ -243,8 +243,10 @@ def run_cronograma(
             schedule_selected = physical_resolution.schedule_selected
             distribuicao_por_item = physical_resolution.distribution_by_item
             fallback_item_ids = physical_resolution.fallback_item_ids
+            # Replace only the chosen candidate, not every candidate that
+            # happens to use the same heuristic family.
             schedule_candidates = [
-                schedule_selected if candidate.heuristic == schedule_selected.heuristic else candidate
+                schedule_selected if candidate is original_selected_candidate else candidate
                 for candidate in schedule_candidates
             ]
         elif physical_resolution.status == "UNKNOWN":
