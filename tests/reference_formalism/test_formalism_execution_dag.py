@@ -260,6 +260,22 @@ def test_p11c_normative_consumer_prevents_premature_wave_zero_closure(spec: dict
     assert row["pr_packages_total"] == 3
     assert not row["closure_preflight"]
 
+def test_p17c_is_registered_as_mandatory_skill06_reconciliation_package(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 17)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P17-A", [74]),
+        ("P17-B", [77]),
+        ("P17-C", [144]),
+    ]
+    result = report(spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {144})
+    row = next(x for x in result["issues"] if x["issue"] == 17)
+    assert row["pending_packages"] == ["P17-C"]
+    assert row["pr_packages_total"] == 3
+    assert row["pr_packages_merged"] == 2
+    assert not row["closure_preflight"]
+    assert row["acceptance_verified"] is None
+
+
 def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
@@ -299,19 +315,3 @@ def test_p14d_acceptance_package_must_be_merged_before_issue_fourteen_closes(spe
     assert issue["pending_packages"] == ["P14-D"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
-
-
-def test_p17c_is_registered_as_mandatory_skill06_reconciliation_package(spec: dict) -> None:
-    packages = next(n for n in spec["nodes"] if n["issue"] == 17)["packages"]
-    assert [(p["id"], p["prs"]) for p in packages] == [
-        ("P17-A", [74]),
-        ("P17-B", [77]),
-        ("P17-C", [144]),
-    ]
-    result = report(spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {144})
-    row = next(x for x in result["issues"] if x["issue"] == 17)
-    assert row["pending_packages"] == ["P17-C"]
-    assert row["pr_packages_total"] == 3
-    assert row["pr_packages_merged"] == 2
-    assert not row["closure_preflight"]
-    assert row["acceptance_verified"] is None
