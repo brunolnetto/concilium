@@ -148,6 +148,8 @@ class ExactFinancialReconciliation:
     def project_price_once_bdi(
         self,
         bdi_by_category: Mapping[str, Fraction],
+        *,
+        require_event_attribution: bool = True,
     ) -> FinancialPriceProjection:
         """Apply each explicitly declared category BDI exactly once.
 
@@ -167,15 +169,19 @@ class ExactFinancialReconciliation:
         }
         if len(expected) != len(self.ledger.postings):
             raise ValueError("P20 BDI source ledger has duplicate event identity")
-        actual: dict[EventId, tuple[PostingNature, str, Fraction, str, str | None]] = {}
-        for row in self.event_attribution:
-            if row.event_id in actual:
-                raise ValueError("P20 BDI attribution contains duplicate event identity")
-            actual[row.event_id] = (
-                row.nature, row.category, row.amount, row.source, row.week,
-            )
-        if actual != expected:
-            raise ValueError("P20 BDI attribution does not match the authoritative ledger")
+        if not self.event_attribution:
+            if require_event_attribution:
+                raise ValueError("P20 BDI direct pricing requires an event-attribution trace")
+        else:
+            actual: dict[EventId, tuple[PostingNature, str, Fraction, str, str | None]] = {}
+            for row in self.event_attribution:
+                if row.event_id in actual:
+                    raise ValueError("P20 BDI attribution contains duplicate event identity")
+                actual[row.event_id] = (
+                    row.nature, row.category, row.amount, row.source, row.week,
+                )
+            if actual != expected:
+                raise ValueError("P20 BDI attribution does not match the authoritative ledger")
 
         weekly_base: dict[tuple[str, str], Fraction] = {}
         category_base = {category: Fraction(0) for category in categories}
@@ -243,7 +249,13 @@ class ExactFinancialReconciliation:
             bdi_by_category=bdi_by_category,
             independent_variable_unit_rate=independent_variable_unit_rate,
         )
-        priced = self.project_price_once_bdi(bdi_by_category)
+        # Older P11 preview callers may construct this immutable snapshot
+        # directly. Preserve that read-only path when no P20-B trace was
+        # supplied; if a trace exists, it must reconcile exactly.
+        priced = self.project_price_once_bdi(
+            bdi_by_category,
+            require_event_attribution=bool(self.event_attribution),
+        )
         if result.price_once_bdi != priced.price_once_bdi:
             raise ValueError("Skill04 realization price differs from the P20 category BDI ledger")
         expected_week_prices: dict[str, Fraction] = {}
