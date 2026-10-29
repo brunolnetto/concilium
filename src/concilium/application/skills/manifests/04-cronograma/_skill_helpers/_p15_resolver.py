@@ -147,7 +147,10 @@ def resolve_skill04_physical_schedule(
             fallback_item_ids, 0, pool_error or "physical pool is unknown",
         )
 
-    activity_to_item = _build_item_to_activity_map(canonical)
+    item_to_activity = _build_item_to_activity_map(canonical)
+    # Skill 04 scheduler IDs are activity IDs, while the physical validator
+    # and EAP precedence edges are keyed by item IDs.
+    activity_to_item = {activity_id: item_id for item_id, activity_id in item_to_activity.items()}
     eap_by_id = {item.item_id: item for item in canonical.eap or []}
     selected_by_item: dict[str, Any] = {}
     assigned_by_item: dict[str, dict[str, int]] = {}
