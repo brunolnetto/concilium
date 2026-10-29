@@ -6,6 +6,7 @@ from typing import Any
 
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
+
 def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
     """Remove stale schedule-derived outputs after a rejected schedule attempt."""
     return canonical.model_copy(
