@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fractions import Fraction as F
+from typing import Literal
 
 import pytest
 
@@ -35,13 +36,16 @@ WEEKS = ("2026-W01", "2026-W02")
 CURRENCY_SOURCE = "catalog_metadata.json"
 
 
-def _base(goods: dict[str, StockGood] | None = None):
+def _base(
+    goods: dict[str, StockGood] | None = None,
+    consumption_unit_price: F = F(0),
+):
     stock_goods = goods or {"ORE": StockGood("ORE", "kg", F(0))}
     internal_rate = PhysicallyPricedGood(
         PhysicalConsumptionRate(
             "ORE", F(1), "kg", ConsumptionBasis.PER_DELIVERED_UNIT, "unid",
         ),
-        F(0),
+        consumption_unit_price,
         "kg",
         price_source="internal-generation-policy",
         price_reference_date="2026-10-29",
@@ -74,6 +78,7 @@ def _purchase(
     price_source: str | None = "supplier-quote-Q17",
     price_reference_date: str | None = "2026-10-29",
     currency: str | None = "BRL",
+    category: Literal["MAT", "COMB"] = "MAT",
 ) -> ExternalStockPurchase:
     return ExternalStockPurchase(
         source_id=source_id,
@@ -87,6 +92,7 @@ def _purchase(
         price_source=price_source,
         price_reference_date=price_reference_date,
         currency=currency,
+        category=category,
     )
 
 
@@ -165,6 +171,7 @@ def test_unit_conversion_is_exact_for_external_purchase() -> None:
         ("price_source", None, "price source"),
         ("price_reference_date", None, "price reference date"),
         ("currency", None, "currency"),
+        ("category", None, "MAT or COMB"),
     ],
 )
 def test_missing_price_unit_source_date_or_currency_fails_closed(
@@ -243,6 +250,20 @@ def test_duplicate_purchase_identity_cannot_double_book_arrival_or_cost() -> Non
             currency_source=CURRENCY_SOURCE, other_arrivals=arrivals + (collision,),
         )
 
+
+
+def test_external_provisioning_does_not_double_charge_priced_consumption() -> None:
+    goods, base, arrivals = _base(consumption_unit_price=F(4))
+    with pytest.raises(ValueError, match="would double count"):
+        book_external_stock_provisioning(
+            base,
+            goods,
+            WEEKS,
+            (_purchase(),),
+            financial_currency="BRL",
+            currency_source=CURRENCY_SOURCE,
+            other_arrivals=arrivals,
+        )
 
 def test_explicit_zero_price_is_not_the_same_as_missing_price() -> None:
     goods, base, arrivals = _base()
