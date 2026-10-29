@@ -120,11 +120,7 @@ def run_resultado_financeiro(
     # legacy MAT/COMB estimates and never materializing a financial GO.
     if enabled:
         try:
-            preview_record = build_p18_skill06_preview(
-                canonical,
-                catalogo,
-                inputs.get("p18_catalog_price_currency"),
-            )
+            preview_record = build_p18_skill06_preview(canonical, catalogo)
         except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
             validacoes.append(ValidacaoItem(
                 codigo="VAL-P18-CONSUMPTION-PREVIEW",
