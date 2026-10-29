@@ -285,8 +285,9 @@ def test_auto_physical_resolver_rejects_unsupported_precedence_as_unknown(monkey
         ("UNKNOWN", "VAL-RCPSP-RESOLVE-UNKNOWN"),
     ],
 )
+@pytest.mark.parametrize("certification_intent", ["PREVIEW", "CERTIFIED"])
 def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
-    monkeypatch, resolution_status: str, expected_code: str
+    monkeypatch, resolution_status: str, expected_code: str, certification_intent: str
 ) -> None:
     module = run_cronograma.__globals__
     stale = object()
@@ -346,7 +347,7 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
         ),
     )
 
-    outcome = run_cronograma(canonical, {"certification_intent": "PREVIEW"})
+    outcome = run_cronograma(canonical, {"certification_intent": certification_intent})
     assert outcome.has_errors
     assert outcome.canonical.cronograma is None
     assert outcome.canonical.resultado is None
