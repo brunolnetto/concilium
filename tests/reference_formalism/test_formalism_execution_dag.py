@@ -337,3 +337,24 @@ def test_p19c_external_stock_provisioning_is_registered_as_mandatory_package(
     assert row["pr_packages_merged"] == 2
     assert not row["closure_preflight"]
     assert row["acceptance_verified"] is None
+
+
+def test_p20b_event_attribution_is_mandatory_before_issue_twenty_closes(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 20)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P20-A", [84]),
+        ("P20-B", [151]),
+        ("P20-C", []),
+    ]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 17, 18, 19, 22, 25),
+        all_merged(spec) - {151},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 20)
+    assert issue["ready_to_execute"]
+    assert issue["pending_packages"] == ["P20-B", "P20-C"]
+    assert issue["pr_packages_total"] == 2
+    assert issue["pr_packages_merged"] == 1
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
