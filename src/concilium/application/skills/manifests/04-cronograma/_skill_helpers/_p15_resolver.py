@@ -5,7 +5,10 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, Literal
 
-from concilium.application.scheduling.physical_resolver import resolve_bounded_physical_calendar
+from concilium.application.scheduling.physical_resolver import (
+    MAX_PHYSICAL_RCPSP_STATES,
+    resolve_bounded_physical_calendar,
+)
 from concilium.application.scheduling.physical_validator import (
     PhysicalActivity,
     PhysicalPrecedence,
@@ -222,10 +225,12 @@ def resolve_skill04_physical_schedule(
     }
 
     max_states = inputs.get("physical_rcpsp_max_states", 10_000)
-    if isinstance(max_states, bool) or not isinstance(max_states, int) or max_states <= 0:
+    if type(max_states) is not int or not 1 <= max_states <= MAX_PHYSICAL_RCPSP_STATES:
         return Skill04PhysicalResolution(
             "FAIL", schedule_selected, distribution_by_item,
-            fallback_item_ids, 0, "physical_rcpsp_max_states must be a positive integer",
+            fallback_item_ids, 0,
+            "physical_rcpsp_max_states must be an integer between "
+            f"1 and {MAX_PHYSICAL_RCPSP_STATES}",
         )
 
     hours_week = float(regime.horas_dia) * float(regime.dias_semana)
