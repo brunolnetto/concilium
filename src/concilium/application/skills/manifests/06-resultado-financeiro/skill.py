@@ -155,7 +155,7 @@ def run_resultado_financeiro(
     if (
         enabled
         and isinstance(p21_context, dict)
-        and p21_context.get("inventory_evidence_complete") is True
+        and p21_context.get("inventory_scope") is not None
         and p21_context.get("reconciliation") is None
         and p21_context.get("pool_ledger") is None
         and p21_context.get("consumption_journal") is None
