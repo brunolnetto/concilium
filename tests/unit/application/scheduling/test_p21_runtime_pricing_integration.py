@@ -23,6 +23,7 @@ from concilium.application.scheduling.physical_consumption_rates import (
 )
 from concilium.application.scheduling.pricing_gates import RegulatoryBdiBasis
 from concilium.application.scheduling.pricing_report_adapter import (
+    InventoryEvidenceScope,
     apply_pricing_report_evidence,
 )
 from concilium.domain.models.canonical import Resultado
@@ -131,7 +132,12 @@ def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() ->
         "currency_source": "catalog_metadata.json",
     }
     context = {
-        "inventory_evidence_complete": True,
+        "inventory_scope": InventoryEvidenceScope(
+            status="NO_INVENTORY",
+            source="test-fixture",
+            reference_id="no-inventory-fixture",
+            fingerprint="inventory-scope-fingerprint",
+        ),
         "pool_ledger": pool,
         "consumption_journal": consumption,
         "bdi_by_category": {
