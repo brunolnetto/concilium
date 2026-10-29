@@ -61,6 +61,12 @@ def apply_pricing_report_evidence(
             "missing p21_pricing_evidence with authoritative P20 ledger and explicit bases",
         )
         return
+    if context.get("inventory_evidence_complete") is not True:
+        _unknown(
+            result, validations, intent,
+            "explicit complete P19 inventory/holding evidence is required before pricing",
+        )
+        return
 
     reconciliation = context.get("reconciliation")
     if not isinstance(reconciliation, ExactFinancialReconciliation):
