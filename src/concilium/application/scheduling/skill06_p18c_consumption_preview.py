@@ -328,10 +328,38 @@ def build_skill05_exact_pool_ledger(canonical: CanonicalModel) -> ExclusiveCostL
     return combined
 
 
+def _validate_catalog_currency(
+    canonical: CanonicalModel,
+    catalogo: Mapping[str, object],
+) -> str:
+    """Require explicit currency agreement before combining pool K and catalog V."""
+    raw_currency = catalogo.get("moeda", catalogo.get("currency"))
+    currency = _text(raw_currency, "catalog price currency")
+    if currency != currency.upper() or len(currency) != 3 or not currency.isalpha():
+        raise ValueError("catalog price currency must be an explicit uppercase three-letter code")
+    witness_currencies: set[str] = set()
+    for contract in canonical.contratos_recurso:
+        witness = _mapping(contract.p16_global_assignment, f"{contract.tipo_id}: exact P16 witness")
+        witness_currency = _text(witness.get("currency"), "P16 currency")
+        if (
+            witness_currency != witness_currency.upper()
+            or len(witness_currency) != 3
+            or not witness_currency.isalpha()
+        ):
+            raise ValueError(f"{contract.tipo_id}: invalid P16 witness currency")
+        witness_currencies.add(witness_currency)
+    if len(witness_currencies) > 1:
+        raise ValueError("cannot reconcile pool contracts with different currencies")
+    if witness_currencies and currency not in witness_currencies:
+        raise ValueError("catalog price currency differs from the exact Skill05 pool currency")
+    return currency
+
+
 def _preview_record(
     preview: P18CConsumptionPreview,
     goods: ActivityGoods,
     canonical: CanonicalModel,
+    currency: str,
 ) -> dict[str, object]:
     reconciliation = preview.reconciliation
     evidence_rows: list[dict[str, object]] = []
@@ -372,6 +400,7 @@ def _preview_record(
         "authority": "P18_SKILL06_READ_ONLY_PREVIEW_NOT_PROJECT_GO",
         "project_go_authorized": False,
         "catalog_snapshot_id": canonical.projeto.snapshot_catalogo_id,
+        "currency": currency,
         "pool_witnesses": pool_witnesses,
         "consumption_authority": preview.consumption.authority,
         "reconciliation_authority": reconciliation.authority,
@@ -407,6 +436,7 @@ def build_p18_skill06_preview(
     if not isinstance(catalogo, Mapping):
         raise ValueError("resolved catalog must be an explicit mapping")
     pool = build_skill05_exact_pool_ledger(canonical)
+    currency = _validate_catalog_currency(canonical, catalogo)
     goods = build_activity_goods_from_catalog(canonical, catalogo)
     preview = book_skill04_planned_consumption_preview(canonical, pool, goods)
-    return _preview_record(preview, goods, canonical)
+    return _preview_record(preview, goods, canonical, currency)

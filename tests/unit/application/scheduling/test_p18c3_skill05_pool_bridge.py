@@ -13,6 +13,7 @@ from concilium.application.scheduling.resource_level_contracts import (
     ResourceTariff,
 )
 from concilium.application.scheduling.skill06_p18c_consumption_preview import (
+    _validate_catalog_currency,
     build_skill05_exact_pool_ledger,
 )
 from concilium.domain.models.canonical import CanonicalModel, RecursoContrato
@@ -171,3 +172,12 @@ def test_tampered_cost_component_fails_even_when_pool_total_is_unchanged() -> No
     contract = contract.model_copy(update={"p16_global_assignment": witness})
     with pytest.raises(ValueError, match="cost components differ"):
         build_skill05_exact_pool_ledger(_canonical(contract))
+
+def test_catalog_currency_must_be_explicit_and_match_pool_currency() -> None:
+    contract = _contract_and_witness()
+    canonical = _canonical(contract)
+    with pytest.raises(ValueError, match="catalog price currency"):
+        _validate_catalog_currency(canonical, {})
+    with pytest.raises(ValueError, match="differs from the exact Skill05 pool currency"):
+        _validate_catalog_currency(canonical, {"moeda": "USD"})
+    assert _validate_catalog_currency(canonical, {"moeda": "BRL"}) == "BRL"
