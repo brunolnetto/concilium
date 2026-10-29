@@ -58,6 +58,7 @@ def _case(*, tariff_overrides: dict | None = None):
                 "mobilize": "20",
                 "demobilize": "10",
                 "max_idle_gap": 1,
+                "gap_max_viavel": 1,
                 "source_id": "contract:CRANE:2026",
                 "currency": "BRL",
                 "category": "EQ",
@@ -96,6 +97,8 @@ def test_skill05_persists_global_p16_witness_and_reconciles_exact_ledger() -> No
     assert witness["demand"] == [2, 1, 1, 2]
     assert witness["presence"] == [2, 2, 2, 2]
     assert witness["standby"] == [0, 1, 1, 0]
+    assert witness["tariff"]["gap_max_viavel"] == 1
+    assert witness["tariff"]["max_idle_gap_effective"] == 1
     assert witness["costs"] == {
         "active": "30", "standby": "2", "mobility": "60", "pool_total": "92",
     }
@@ -148,3 +151,25 @@ def test_p16_tariff_cannot_name_a_resource_without_a_physical_contract() -> None
     spec["p16_exact_tariffs"]["UNUSED"] = spec["p16_exact_tariffs"]["CRANE"]
     with pytest.raises(ValueError, match="without a physical contract"):
         builder._build_instancias_recurso([contract], spec, schedules, [])
+
+
+
+def test_p16_enforces_explicit_viability_cap_instead_of_legacy_economic_gap() -> None:
+    contract, spec, schedules = _case({
+        "max_idle_gap": 2,
+        "gap_max_viavel": 0,
+    })
+    contract.gap_max_economico = 9999
+    builder._build_instancias_recurso([contract], spec, schedules, [])
+
+    witness = contract.p16_global_assignment
+    assert witness is not None
+    assert witness["tariff"]["max_idle_gap_declared"] == 2
+    assert witness["tariff"]["gap_max_viavel"] == 0
+    assert witness["tariff"]["gap_max_economico_legado"] == 9999
+    assert witness["tariff"]["max_idle_gap_effective"] == 0
+    assert all(
+        following - preceding == 1
+        for chain in witness["chains"]
+        for preceding, following in zip(chain["active_week_indices"], chain["active_week_indices"][1:])
+    )
