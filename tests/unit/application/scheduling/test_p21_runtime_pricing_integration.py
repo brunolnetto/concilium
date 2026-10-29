@@ -131,6 +131,7 @@ def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() ->
         "currency_source": "catalog_metadata.json",
     }
     context = {
+        "inventory_evidence_complete": True,
         "pool_ledger": pool,
         "consumption_journal": consumption,
         "bdi_by_category": {
