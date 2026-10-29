@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from .contractual_cost_ledger import CostPosting, ExclusiveCostLedger, PostingNature
 from .physical_consumption_journal import (
@@ -53,6 +53,40 @@ class WeekFinancialBalance:
 
 
 @dataclass(frozen=True)
+class FinancialEventAttribution:
+    """One existing posting with explicit ownership scope; never a new cost."""
+
+    event_id: EventId
+    nature: PostingNature
+    category: str
+    amount: Fraction
+    source: str
+    week: str
+    owner_scope: Literal["ACTIVITY", "INSTANCE", "GOOD", "SOURCE"]
+    owner_id: tuple[str, ...]
+    activity_id: str | None = None
+
+
+@dataclass(frozen=True)
+class WeeklyCategoryBalance:
+    """Exact pre-BDI project cost by ISO week and exclusive ledger category."""
+
+    week: str
+    category: str
+    amount: Fraction
+
+
+@dataclass(frozen=True)
+class ActivityAttributableConsumableCost:
+    """Only P18 consumables with explicit activity evidence; never allocated K."""
+
+    activity_id: str
+    week: str
+    category: str
+    amount: Fraction
+
+
+@dataclass(frozen=True)
 class ExactFinancialReconciliation:
     """Immutable projection of one authoritative event set, never new costs."""
 
@@ -60,6 +94,9 @@ class ExactFinancialReconciliation:
     weeks: tuple[WeekFinancialBalance, ...]
     holding_evidence_present: bool
     authority: str = "FINANCIAL_SOURCES_RECONCILED_PREVIEW_NOT_PROJECT_GO"
+    event_attribution: tuple[FinancialEventAttribution, ...] = ()
+    category_balances: tuple[WeeklyCategoryBalance, ...] = ()
+    activity_attributable_consumables: tuple[ActivityAttributableConsumableCost, ...] = ()
 
     @property
     def direct(self) -> Fraction:
@@ -334,6 +371,77 @@ def _external_stock_expectations(
     return expected
 
 
+def _ownership_projection(
+    ledger: ExclusiveCostLedger,
+    consumption: PhysicalConsumptionJournalResult,
+) -> tuple[
+    tuple[FinancialEventAttribution, ...],
+    tuple[WeeklyCategoryBalance, ...],
+    tuple[ActivityAttributableConsumableCost, ...],
+]:
+    """Expose source ownership without distributing shared costs by guess."""
+    activity_by_event = {
+        ("CONSUMABLE", evidence.source_id): evidence.activity_id
+        for evidence in consumption.evidence
+        if evidence.measure.priced_quantity > 0
+    }
+    trace: list[FinancialEventAttribution] = []
+    category_amounts: dict[tuple[str, str], Fraction] = {}
+    activity_amounts: dict[tuple[str, str, str], Fraction] = {}
+    for row in ledger.postings:
+        if not isinstance(row.week, str) or not row.week.strip():
+            raise ValueError("financial attribution requires explicit weekly provenance")
+        activity_id = activity_by_event.get(row.event_id)
+        if activity_id is not None:
+            scope: Literal["ACTIVITY", "INSTANCE", "GOOD", "SOURCE"] = "ACTIVITY"
+            owner_id = (activity_id,)
+            if row.nature != PostingNature.ACQUISITION or row.category not in ("MAT", "COMB"):
+                raise ValueError("activity ownership is only valid for typed P18 consumable acquisition")
+            key = (activity_id, row.week, row.category)
+            activity_amounts[key] = activity_amounts.get(key, Fraction(0)) + row.amount
+        elif row.nature in (
+            PostingNature.ACTIVE, PostingNature.IDLE,
+            PostingNature.MOBILIZATION, PostingNature.DEMOBILIZATION,
+        ):
+            scope = "INSTANCE"
+            owner_id = row.event_id[1:5] if row.event_id[:1] == ("POOL",) else (row.source,)
+        elif row.nature in (PostingNature.ACQUISITION, PostingNature.HOLDING):
+            scope = "GOOD"
+            owner_id = (row.source,)
+        else:
+            scope = "SOURCE"
+            owner_id = (row.source,)
+        trace.append(FinancialEventAttribution(
+            event_id=row.event_id,
+            nature=row.nature,
+            category=row.category,
+            amount=row.amount,
+            source=row.source,
+            week=row.week,
+            owner_scope=scope,
+            owner_id=owner_id,
+            activity_id=activity_id,
+        ))
+        category_key = (row.week, row.category)
+        category_amounts[category_key] = category_amounts.get(category_key, Fraction(0)) + row.amount
+
+    if sum((line.amount for line in trace), Fraction(0)) != ledger.total:
+        raise ValueError("P20 event attribution does not conserve the project ledger")
+    category_balances = tuple(
+        WeeklyCategoryBalance(week, category, amount)
+        for (week, category), amount in sorted(category_amounts.items())
+    )
+    if sum((line.amount for line in category_balances), Fraction(0)) != ledger.total:
+        raise ValueError("P20 category balance does not conserve the project ledger")
+    activity_costs = tuple(
+        ActivityAttributableConsumableCost(activity, week, category, amount)
+        for (activity, week, category), amount in sorted(activity_amounts.items())
+    )
+    if sum((line.amount for line in activity_costs), Fraction(0)) > ledger.consumable_v:
+        raise ValueError("P20 activity-attributable consumables exceed project acquisitions")
+    return tuple(trace), category_balances, activity_costs
+
+
 def reconcile_financial_sources(
     pool: ExclusiveCostLedger,
     consumption: PhysicalConsumptionJournalResult,
@@ -406,4 +514,14 @@ def reconcile_financial_sources(
         or sum((w.total for w in weeks), Fraction(0)) != final.total
     ):
         raise ValueError("P20 financial cost-account identity failed")
-    return ExactFinancialReconciliation(final, weeks, holding is not None)
+    event_attribution, category_balances, activity_costs = _ownership_projection(
+        final, consumption,
+    )
+    return ExactFinancialReconciliation(
+        final,
+        weeks,
+        holding is not None,
+        event_attribution=event_attribution,
+        category_balances=category_balances,
+        activity_attributable_consumables=activity_costs,
+    )
