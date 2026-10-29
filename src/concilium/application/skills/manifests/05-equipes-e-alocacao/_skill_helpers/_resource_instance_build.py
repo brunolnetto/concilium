@@ -251,10 +251,11 @@ def _build_p16_global_assignment_witness(
     declared_max_gap = tariff_spec.get("max_idle_gap")
     if type(declared_max_gap) is not int or declared_max_gap < 0:
         raise ValueError(f"P16-E {tipo_id}: max_idle_gap must be a nonnegative integer")
-    gap_cap = getattr(contrato, "gap_max_economico", None)
-    if type(gap_cap) is not int or gap_cap < 0:
-        raise ValueError(f"P16-E {tipo_id}: invalid G_viável feasibility cap")
-    effective_max_gap = min(declared_max_gap, gap_cap)
+    gap_viavel = tariff_spec.get("gap_max_viavel")
+    if type(gap_viavel) is not int or gap_viavel < 0:
+        raise ValueError(f"P16-E {tipo_id}: gap_max_viavel must be a nonnegative integer")
+    economic_gap_limit = getattr(contrato, "gap_max_economico", None)
+    effective_max_gap = min(declared_max_gap, gap_viavel)
     tariff = ResourceTariff(
         active_week=exact_money(rates["active_week"]),
         idle_week=exact_money(rates["idle_week"]),
@@ -379,7 +380,8 @@ def _build_p16_global_assignment_witness(
         "tariff": {
             **rates,
             "max_idle_gap_declared": declared_max_gap,
-            "gap_max_viavel": gap_cap,
+            "gap_max_viavel": gap_viavel,
+            "gap_max_economico_legado": economic_gap_limit,
             "max_idle_gap_effective": effective_max_gap,
         },
         "calendar_weeks": list(weeks),
