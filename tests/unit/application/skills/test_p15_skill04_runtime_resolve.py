@@ -214,6 +214,38 @@ def test_auto_physical_resolver_returns_unknown_when_pool_is_unproven(monkeypatc
     assert "no explicit physical resource pool" in result.reason
 
 
+def test_auto_physical_resolver_rejects_search_budget_above_hard_limit(monkeypatch) -> None:
+    helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
+    _patch_skill04_materializer(monkeypatch)
+    canonical, regime = _runtime_inputs()
+    candidate = _candidate()
+    result = helper(
+        canonical=canonical,
+        inputs={
+            "rcpsp_spec": {"resource_pool": {"crane": 1}},
+            "physical_rcpsp_max_states": 100_001,
+        },
+        mode="AUTO_SCHEDULE",
+        schedule_selected=candidate,
+        distribution_by_item={},
+        fallback_item_ids=set(),
+        weeks=list(WEEKS),
+        cpu_lookup={
+            "CPU-A": {"codigo": "CPU-A", "producao_id_ref": "prod"},
+            "CPU-B": {"codigo": "CPU-B", "producao_id_ref": "prod"},
+        },
+        production_lookup={"prod": {}},
+        regime=regime,
+        practicability_weekly={week: 1.0 for week in WEEKS},
+        practicability_monthly={},
+        calendar_factor_weekly={week: 1.0 for week in WEEKS},
+        validacoes=[],
+    )
+    assert result.status == "FAIL"
+    assert result.attempts == 0
+    assert "between 1 and 100000" in result.reason
+
+
 def test_auto_physical_resolver_rejects_unsupported_precedence_as_unknown(monkeypatch) -> None:
     helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
     _patch_skill04_materializer(monkeypatch)
