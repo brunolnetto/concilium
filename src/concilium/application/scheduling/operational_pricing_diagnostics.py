@@ -29,15 +29,27 @@ def _required_text(value: object, field: str) -> str:
     return value
 
 
-def _verified_catalog_currency(metadata: Mapping[str, object]) -> tuple[str, str]:
-    """Read currency and source from the resolved metadata object together."""
+def _verified_catalog_currency(metadata: Mapping[str, object]) -> tuple[str, str, str]:
+    """Read currency/source and fingerprint the same resolved metadata object."""
     if not isinstance(metadata, Mapping):
         raise ValueError("resolved catalog currency metadata is required")
+    if any(not isinstance(key, str) for key in metadata):
+        raise ValueError("catalog metadata keys must be strings")
     currency = metadata.get("currency")
     source = metadata.get("currency_source")
     if source != _CURRENCY_SOURCE:
         raise ValueError("operational currency must use catalog_metadata.json provenance")
-    return _currency(currency, "operational currency"), _CURRENCY_SOURCE
+    try:
+        canonical = json.dumps(
+            dict(metadata), sort_keys=True, separators=(",", ":"),
+            ensure_ascii=True, allow_nan=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("catalog currency metadata must be canonical JSON data") from exc
+    fingerprint = sha256(
+        b"concilium.catalog-currency-metadata.v1\\0" + canonical.encode("utf-8")
+    ).hexdigest()
+    return _currency(currency, "operational currency"), _CURRENCY_SOURCE, fingerprint
 
 
 @dataclass(frozen=True)
@@ -77,6 +89,7 @@ class OperationalPricingDiagnostics:
     comparison_reason: str | None
     operational_currency: str
     currency_source: str
+    currency_metadata_fingerprint: str
     catalog_currency: str
     operational_basis_fingerprint: str
     catalog_basis_fingerprint: str
@@ -102,7 +115,9 @@ def project_operational_pricing(
         raise ValueError("P20 exact financial reconciliation is required")
     if not isinstance(catalog, CatalogPriceBenchmark):
         raise ValueError("typed catalog price benchmark is required")
-    operational_currency, currency_source = _verified_catalog_currency(catalog_metadata)
+    operational_currency, currency_source, currency_fingerprint = (
+        _verified_catalog_currency(catalog_metadata)
+    )
     operational_basis_fingerprint = _required_text(
         operational_basis_fingerprint, "operational basis fingerprint",
     )
@@ -138,6 +153,7 @@ def project_operational_pricing(
         comparison_reason="; ".join(reasons) if reasons else None,
         operational_currency=operational_currency,
         currency_source=currency_source,
+        currency_metadata_fingerprint=currency_fingerprint,
         catalog_currency=catalog.currency,
         operational_basis_fingerprint=operational_basis_fingerprint,
         catalog_basis_fingerprint=catalog.basis_fingerprint,
