@@ -13,14 +13,10 @@ from fractions import Fraction
 from typing import Any
 
 from concilium.application.scheduling.contractual_cost_ledger import (
+    ContractCategory,
     ExclusiveCostLedger,
+    PostingNature,
     book_exact_pool,
-)
-from concilium.application.scheduling.skill04_consumption_preview import (
-    ActivityGoods,
-    P18CConsumptionPreview,
-    book_skill04_planned_consumption_preview,
-    build_activity_goods_from_catalog,
 )
 from concilium.application.scheduling.resource_level_contracts import (
     ExactPoolResult,
@@ -28,6 +24,12 @@ from concilium.application.scheduling.resource_level_contracts import (
     ResourceContractLedger,
     ResourceTariff,
     exact_money,
+)
+from concilium.application.scheduling.skill04_consumption_preview import (
+    ActivityGoods,
+    P18CConsumptionPreview,
+    book_skill04_planned_consumption_preview,
+    build_activity_goods_from_catalog,
 )
 from concilium.domain.models.canonical import CanonicalModel, RecursoContrato
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
@@ -127,8 +129,12 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
     contract_id = _text(witness.get("contract_id"), "P16 contract_id")
     source_id = _text(witness.get("source_id"), "P16 tariff source_id")
     currency = _text(witness.get("currency"), "P16 currency")
-    category = witness.get("category")
-    if category not in ("MO", "EQ"):
+    raw_category = witness.get("category")
+    if raw_category == "MO":
+        category: ContractCategory = "MO"
+    elif raw_category == "EQ":
+        category = "EQ"
+    else:
         raise ValueError(f"{resource_type}: exact pool requires homogeneous MO/EQ category")
     if (
         resource_type != contract.tipo_id
@@ -247,13 +253,24 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
     booked = book_exact_pool(pool, {resource_type: tariff}, {resource_type: category})
     if pool.total != pool_total:
         raise ValueError(f"{resource_type}: persisted P16 pool total differs from exact components")
-    rebuilt_active = sum((post.amount for post in booked.postings if post.nature.value == "CONTRACTUAL_ACTIVE"), start=Fraction(0))
-    rebuilt_standby = sum((post.amount for post in booked.postings if post.nature.value == "CONTRACTUAL_IDLE"), start=Fraction(0))
-    rebuilt_mobility = sum((
-        post.amount for post in booked.postings
-        if post.nature.value in {"MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT"}
-    ), start=Fraction(0))
-    if (active_cost, standby_cost, mobility_cost) != (rebuilt_active, rebuilt_standby, rebuilt_mobility):
+    rebuilt_active = sum(
+        (post.amount for post in booked.postings if post.nature == PostingNature.ACTIVE),
+        start=Fraction(0),
+    )
+    rebuilt_standby = sum(
+        (post.amount for post in booked.postings if post.nature == PostingNature.IDLE),
+        start=Fraction(0),
+    )
+    rebuilt_mobility = sum(
+        (
+            post.amount for post in booked.postings
+            if post.nature in (PostingNature.MOBILIZATION, PostingNature.DEMOBILIZATION)
+        ),
+        start=Fraction(0),
+    )
+    if (active_cost, standby_cost, mobility_cost) != (
+        rebuilt_active, rebuilt_standby, rebuilt_mobility
+    ):
         raise ValueError(f"{resource_type}: stored P16 cost components differ from reconstructed postings")
 
     raw_ledger = _mapping(witness.get("exclusive_ledger"), "P16 exclusive ledger")
