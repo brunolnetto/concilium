@@ -74,19 +74,12 @@ def test_intentional_mutation_in_real_production_output_is_rejected() -> None:
         compare_external_pool(case, damaged)
 
 
-def test_actual_p16_fixed_levels_do_not_pass_global_fungible_oracle() -> None:
+def test_actual_p16_global_instance_assignment_matches_fungible_oracle() -> None:
     case = reference_case("fungible_reassignment_92_not_fixed_layers_120")
     production = _actual_pool(case)
-    # This is a documented finding, not certification of P16's current
-    # fixed-level algorithm. If P16 is corrected, this test may be replaced
-    # with direct parity and issue #16 must independently pass its gates.
-    independent_cost = F(case["expected"]["totals"]["total"])
-    actual_cost = sum(
-        (F(production[key]) for key in
-         ("active_cost", "idle_cost", "movement_cost")),
-        F(0),
-    )
-    assert actual_cost >= independent_cost
-    if actual_cost != independent_cost:
-        with pytest.raises(ReferenceContractError, match="external pool mismatch"):
-            compare_external_pool(case, production)
+    compare_external_pool(case, production)
+    assert (production["active_cost"], production["idle_cost"],
+            production["movement_cost"]) == ("30", "2", "60")
+    assert production["chains"] == 2
+    assert production["presence"] == [2, 2, 2, 2]
+    assert production["standby"] == [0, 1, 1, 0]

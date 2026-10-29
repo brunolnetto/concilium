@@ -163,9 +163,14 @@ def book_exact_pool(
             raise ValueError(f"{resource}: contractual presence violates physical demand")
 
         actual_presence = [0] * len(pool.calendar_weeks)
-        # Aggregate presence alone cannot establish *which* instance level
-        # owns a resource-week: overlapping level identities would duplicate
-        # its active/idle cost while losing a different required level.
+        actual_active = [0] * len(pool.calendar_weeks)
+        # P16-E explicit assignment paths and legacy fixed-level chains have
+        # different semantics. Never silently mix them: explicit paths use
+        # active_week_indices, while legacy chains infer active state from level.
+        explicit_modes = {bool(chain.active_week_indices) for chain in physical.chains}
+        if len(explicit_modes) > 1:
+            raise ValueError(f"{resource}: mixed explicit-instance and fixed-level chain encodings")
+        explicit_assignment = explicit_modes == {True}
         owned_level_weeks: set[tuple[int, int]] = set()
         active_level_weeks: set[tuple[int, int]] = set()
         for chain in physical.chains:
@@ -173,6 +178,28 @@ def book_exact_pool(
                 raise ValueError(f"{resource}: invalid instance-chain identity")
             if not 0 <= chain.start < chain.end <= len(pool.calendar_weeks):
                 raise ValueError(f"{resource}: contract outside physical horizon")
+            active_indices = tuple(chain.active_week_indices)
+            if explicit_assignment:
+                if (
+                    any(type(j) is not int or not chain.start <= j < chain.end for j in active_indices)
+                    or not active_indices
+                    or tuple(sorted(set(active_indices))) != active_indices
+                    or active_indices[0] != chain.start
+                    or active_indices[-1] != chain.end - 1
+                ):
+                    raise ValueError(f"{resource}: invalid explicit active-week instance assignment")
+                expected_idle = chain.end - chain.start - len(active_indices)
+                if len(active_indices) != chain.active_weeks or expected_idle != chain.idle_weeks:
+                    raise ValueError(f"{resource}: explicit chain active/standby metadata mismatch")
+                if any(
+                    following - previous - 1 > tariff.max_idle_gap
+                    for previous, following in zip(active_indices[:-1], active_indices[1:], strict=True)
+                ):
+                    raise ValueError(f"{resource}: explicit instance exceeds maximum idle gap")
+                active_index_set = set(active_indices)
+            else:
+                active_index_set = set()
+
             origin = ("POOL", resource, str(chain.level), str(chain.start), str(chain.end))
             active_weeks = 0
             idle_weeks = 0
@@ -182,9 +209,10 @@ def book_exact_pool(
                     raise ValueError(f"{resource}: overlapping instance-level contract ownership")
                 owned_level_weeks.add(level_week)
                 actual_presence[j] += 1
-                is_active = physical.demand[j] >= chain.level
+                is_active = j in active_index_set if explicit_assignment else physical.demand[j] >= chain.level
                 if is_active:
                     active_level_weeks.add(level_week)
+                    actual_active[j] += 1
                 active_weeks += int(is_active)
                 idle_weeks += int(not is_active)
                 nature = PostingNature.ACTIVE if is_active else PostingNature.IDLE
@@ -201,13 +229,16 @@ def book_exact_pool(
             ))
         if tuple(actual_presence) != physical.presence:
             raise ValueError(f"{resource}: instance chains do not reconstruct presence")
-        required_levels = {
-            (level, j)
-            for j, demand in enumerate(physical.demand)
-            for level in range(1, demand + 1)
-        }
-        if active_level_weeks != required_levels:
-            raise ValueError(f"{resource}: instance levels do not cover exact physical demand")
+        if tuple(actual_active) != physical.demand:
+            raise ValueError(f"{resource}: active instance chains do not reconstruct exact physical demand")
+        if not explicit_assignment:
+            required_levels = {
+                (level, j)
+                for j, demand in enumerate(physical.demand)
+                for level in range(1, demand + 1)
+            }
+            if active_level_weeks != required_levels:
+                raise ValueError(f"{resource}: instance levels do not cover exact physical demand")
         contract_active = sum((x.amount for x in lines if x.source == resource and
                                x.nature == PostingNature.ACTIVE), start=Fraction(0))
         contract_idle = sum((x.amount for x in lines if x.source == resource and

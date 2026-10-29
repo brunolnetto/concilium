@@ -116,19 +116,46 @@ def witness_contract_regime(
                    for d, p, s in zip(ledger.demand, ledger.presence,
                                       ledger.standby, strict=True))):
         raise ValueError("physical contractual presence/standby identity violated")
-    # P16 dataclasses do not validate their own chain coverage: reject aggregates
-    # that cannot be reconstructed from uniquely owned instance-level weeks.
+    # P16-E may encode explicit global instance paths; legacy P16-B/C outputs
+    # use demand-height levels. Validate one representation per resource only.
+    chain_modes = {bool(chain.active_week_indices) for chain in ledger.chains}
+    if len(chain_modes) > 1:
+        raise ValueError("mixed explicit-instance and fixed-level physical chains")
+    explicit_assignment = chain_modes == {True}
     owned_level_weeks: set[tuple[int, int]] = set()
     active_level_weeks: set[tuple[int, int]] = set()
     actual_presence = [0] * len(pool.calendar_weeks)
+    actual_active = [0] * len(pool.calendar_weeks)
     for chain in ledger.chains:
         if chain.resource_type != evidence.resource_type or chain.level < 1:
             raise ValueError("physical chain identity does not match resource type")
         if not 0 <= chain.start < chain.end <= len(pool.calendar_weeks):
             raise ValueError("physical chain outside the declared calendar")
-        if (ledger.demand[chain.start] < chain.level
-                or ledger.demand[chain.end - 1] < chain.level):
-            raise ValueError("physical chain cannot start or end on standby")
+        active_indices = tuple(chain.active_week_indices)
+        if explicit_assignment:
+            if (
+                not active_indices
+                or any(type(j) is not int or not chain.start <= j < chain.end for j in active_indices)
+                or tuple(sorted(set(active_indices))) != active_indices
+                or active_indices[0] != chain.start
+                or active_indices[-1] != chain.end - 1
+            ):
+                raise ValueError("invalid explicit physical instance assignment")
+            idle_expected = chain.end - chain.start - len(active_indices)
+            if len(active_indices) != chain.active_weeks or idle_expected != chain.idle_weeks:
+                raise ValueError("physical chain active/idle count mismatch")
+            if any(
+                following - previous - 1 > evidence.tariff.max_idle_gap
+                for previous, following in zip(active_indices[:-1], active_indices[1:], strict=True)
+            ):
+                raise ValueError("physical standby exceeds declared max_idle_gap")
+            active_index_set = set(active_indices)
+        else:
+            if (ledger.demand[chain.start] < chain.level
+                    or ledger.demand[chain.end - 1] < chain.level):
+                raise ValueError("physical chain cannot start or end on standby")
+            active_index_set = set()
+
         active = 0
         idle = 0
         consecutive_idle = 0
@@ -138,24 +165,29 @@ def witness_contract_regime(
                 raise ValueError("duplicate physical chain level-week ownership")
             owned_level_weeks.add(level_week)
             actual_presence[j] += 1
-            if ledger.demand[j] >= chain.level:
+            is_active = j in active_index_set if explicit_assignment else ledger.demand[j] >= chain.level
+            if is_active:
                 active_level_weeks.add(level_week)
+                actual_active[j] += 1
                 active += 1
                 consecutive_idle = 0
             else:
                 idle += 1
                 consecutive_idle += 1
-                if consecutive_idle > evidence.tariff.max_idle_gap:
+                if not explicit_assignment and consecutive_idle > evidence.tariff.max_idle_gap:
                     raise ValueError("physical standby exceeds declared max_idle_gap")
         if (active, idle) != (chain.active_weeks, chain.idle_weeks):
             raise ValueError("physical chain active/idle count mismatch")
-    required_levels = {
-        (level, j)
-        for j, demand in enumerate(ledger.demand)
-        for level in range(1, demand + 1)
-    }
-    if active_level_weeks != required_levels:
-        raise ValueError("physical chains do not cover required demand levels")
+    if not explicit_assignment:
+        required_levels = {
+            (level, j)
+            for j, demand in enumerate(ledger.demand)
+            for level in range(1, demand + 1)
+        }
+        if active_level_weeks != required_levels:
+            raise ValueError("physical chains do not cover required demand levels")
+    if tuple(actual_active) != ledger.demand:
+        raise ValueError("physical instance chains do not reconstruct exact demand")
     if tuple(actual_presence) != ledger.presence:
         raise ValueError("physical chains do not reconstruct contractual presence")
     week_presence = dict(zip(pool.calendar_weeks, ledger.presence, strict=True))
