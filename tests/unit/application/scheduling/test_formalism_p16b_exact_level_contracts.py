@@ -177,7 +177,7 @@ def _independent_global_instance_minimum(
             )
             if any(
                 following - previous - 1 > tariff.max_idle_gap
-                for previous, following in zip(active, active[1:])
+                for previous, following in zip(active[:-1], active[1:], strict=True)
             ):
                 continue
             reduced = list(remaining)
@@ -185,7 +185,7 @@ def _independent_global_instance_minimum(
                 reduced[week] -= 1
             idle_weeks = sum(
                 following - previous - 1
-                for previous, following in zip(active, active[1:])
+                for previous, following in zip(active[:-1], active[1:], strict=True)
             )
             chain_cost = (
                 Fraction(len(active)) * tariff.active_week
