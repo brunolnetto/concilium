@@ -212,10 +212,13 @@ def _activity_lifecycle_allocations(
             raise ValueError(
                 f"{contract.tipo_id}: standby/MOB/DEMOB costs cannot be allocated without positive partitions"
             )
-        witness_total = _rational(costs.get("pool_total"), f"{contract.tipo_id}: P16 pool total")
-        if abs(partition_total - witness_total) > _CENT:
+        contract_total = _legacy_money(
+            getattr(contract, "custo_total_contrato", None),
+            f"{contract.tipo_id}.custo_total_contrato",
+        )
+        if abs(partition_total - contract_total) > _CENT:
             raise ValueError(
-                f"{contract.tipo_id}: activity partitions do not reconcile to exact P16 pool total"
+                f"{contract.tipo_id}: activity partitions do not reconcile to persisted contract total"
             )
         for activity_id, weight in weights.items():
             if weight > 0:
