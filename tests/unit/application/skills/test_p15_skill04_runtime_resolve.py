@@ -353,7 +353,11 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
     assert outcome.canonical.resultado is None
     assert any(v.codigo == expected_code and v.status == "ERRO" for v in outcome.validacoes)
     if resolution_status == "FAIL":
-        assert any(v.codigo == "VAL-RCPSP-RESOLVE-DETAIL" for v in outcome.validacoes)
+        assert any(
+            v.codigo == "VAL-RCPSP-RESOLVE-DETAIL"
+            and v.mensagem == "V1_SCOPE_UNCLOSED:A:Q=1;sum_q=0"
+            for v in outcome.validacoes
+        )
 
 
 def test_auto_runtime_preserves_best_real_calendar_residual(monkeypatch) -> None:
