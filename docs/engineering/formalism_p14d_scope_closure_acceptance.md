@@ -1,6 +1,6 @@
 # P14-D — end-to-end Skill 04 scope-closure acceptance
 
-Issue: #14. Stack position: follows merged P14-A/P14-B/P14-C; PR #144 registers P14-D in the formal execution DAG.
+Issue: #14. Stack position: follows merged P14-A/P14-B/P14-C; PR #145 registers P14-D in the formal execution DAG.
 
 ## Acceptance gaps covered
 

@@ -287,7 +287,7 @@ def test_p14d_acceptance_package_must_be_merged_before_issue_fourteen_closes(spe
         ("P14-A", [50]),
         ("P14-B", [52]),
         ("P14-C", [129]),
-        ("P14-D", [144]),
+        ("P14-D", [145]),
     ]
     result = report(
         spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {144}
