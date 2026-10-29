@@ -144,7 +144,10 @@ class TestBuildActivityDistribuicaoExtensao:
             fator_calendario_semanal={},
         )
 
-        assert distribuicao == {}
+        # Zero productivity is still a real-calendar witness: preserve each
+        # available week with q=0 so the residual is auditable, not implicit.
+        assert list(distribuicao) == semanas_obra
+        assert [cell.qtd_executada for cell in distribuicao.values()] == [0.0, 0.0, 0.0]
         assert qtd_acumulada == 0.0
 
         validacoes = []
