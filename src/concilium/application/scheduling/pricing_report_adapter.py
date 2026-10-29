@@ -10,7 +10,10 @@ from fractions import Fraction
 
 from concilium.domain.models.canonical import Resultado, ValidacaoItem
 
-from .financial_cost_reconciliation import ExactFinancialReconciliation
+from .financial_cost_reconciliation import (
+    ExactFinancialReconciliation,
+    reconcile_financial_sources,
+)
 from .operational_pricing_diagnostics import (
     CatalogPriceBenchmark,
     project_operational_pricing,
@@ -51,7 +54,7 @@ def apply_pricing_report_evidence(
     RFP see the same status. A missing P20 ledger is UNKNOWN, never PASS.
     """
     intent = str(inputs.get("certification_intent", "PREVIEW")).upper()
-    context = inputs.get("p21_pricing_evidence")
+    context = inputs.get("p21_pricing_evidence", inputs.get("p20_financial_sources"))
     if not isinstance(context, Mapping):
         _unknown(
             result, validations, intent,
@@ -60,6 +63,20 @@ def apply_pricing_report_evidence(
         return
 
     reconciliation = context.get("reconciliation")
+    if not isinstance(reconciliation, ExactFinancialReconciliation):
+        pool_ledger = context.get("pool_ledger")
+        consumption_journal = context.get("consumption_journal")
+        if pool_ledger is not None and consumption_journal is not None:
+            try:
+                reconciliation = reconcile_financial_sources(
+                    pool_ledger,
+                    consumption_journal,
+                    context.get("holding_journal"),
+                    context.get("stock_provisioning_journal"),
+                )
+            except (TypeError, ValueError) as exc:
+                _unknown(result, validations, intent, str(exc))
+                return
     bdi_by_category = context.get("bdi_by_category")
     catalog = context.get("catalog")
     catalog_metadata = context.get("catalog_metadata")
