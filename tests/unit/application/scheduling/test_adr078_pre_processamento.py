@@ -1071,3 +1071,11 @@ class TestIsoWeekIndexConsistency:
             helpers._week_to_idx("2021-W53")
         with pytest.raises(ValueError, match="invalid ISO week"):
             helpers._week_idx("2021-W53")
+
+
+    def test_unknown_week_formats_are_rejected_in_both_paths(self, helpers):
+        for value in ("", "nonsense", "Sx", "2021-W53"):
+            with pytest.raises(ValueError):
+                helpers._week_to_idx(value)
+            with pytest.raises(ValueError):
+                helpers._week_idx(value)
