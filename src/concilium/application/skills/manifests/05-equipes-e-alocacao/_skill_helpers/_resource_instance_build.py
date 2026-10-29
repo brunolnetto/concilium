@@ -596,15 +596,31 @@ def _build_instancias_recurso(
     all_instancias: list[InstanciaRecurso] = []
     all_composicoes: list[ComposicaoEquipeAtividade] = []
     all_resumos: list[ResumoUtilizacaoContrato] = []
-
-    for tipo_id, contrato in contrato_map.items():
-        insts, comps, resumos = _build_instancias_for_tipo(
-            tipo_id, contrato, item_tipo_required, item_total_peak, sched_lookup, validacoes,
-            p16_tariff_spec=p16_tariffs.get(tipo_id),
+    previous_contract_state = [
+        (
+            contrato,
+            contrato.p16_global_assignment,
+            dict(contrato.mobilizacao_por_instancia),
         )
-        all_instancias.extend(insts)
-        all_composicoes.extend(comps)
-        all_resumos.extend(resumos)
+        for contrato in contrato_map.values()
+    ]
+
+    try:
+        for tipo_id, contrato in contrato_map.items():
+            insts, comps, resumos = _build_instancias_for_tipo(
+                tipo_id, contrato, item_tipo_required, item_total_peak, sched_lookup, validacoes,
+                p16_tariff_spec=p16_tariffs.get(tipo_id),
+            )
+            all_instancias.extend(insts)
+            all_composicoes.extend(comps)
+            all_resumos.extend(resumos)
+    except Exception:
+        # A multi-type P16 call is atomic: failure of one resource must not
+        # persist a partial global witness or lifecycle projection for another.
+        for contrato, prior_witness, prior_mobilizations in previous_contract_state:
+            contrato.p16_global_assignment = prior_witness
+            contrato.mobilizacao_por_instancia = prior_mobilizations
+        raise
 
     return all_instancias, all_composicoes, all_resumos
 
