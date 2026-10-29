@@ -407,7 +407,14 @@ def _ownership_projection(
             owner_id = row.event_id[1:5] if row.event_id[:1] == ("POOL",) else (row.source,)
         elif row.nature in (PostingNature.ACQUISITION, PostingNature.HOLDING):
             scope = "GOOD"
-            owner_id = (row.source,)
+            good_id = (
+                row.source.removeprefix("PHYSICAL_STOCK:")
+                if row.nature == PostingNature.HOLDING
+                else row.source
+            )
+            if not good_id.strip():
+                raise ValueError("P20 stock ownership requires an explicit good ID")
+            owner_id = (good_id,)
         else:
             scope = "SOURCE"
             owner_id = (row.source,)
