@@ -907,8 +907,8 @@ def test_p14d_certified_finite_calendar_shortfall_is_nogo_with_exact_residual() 
     assert "Q=9000.0" in error.mensagem
     assert "horizonte_semanas=1" in error.mensagem
     assert "motivo=CALENDAR_OR_CAPACITY_EXHAUSTED" in error.mensagem
-    delivered = float(error.mensagem.split("Σq=", 1)[1].split(",", 1)[0])
-    residual = float(error.mensagem.split("resíduo=", 1)[1].split(",", 1)[0])
+    delivered = float(error.mensagem.split("Σq=", 1)[1].split(";", 1)[0])
+    residual = float(error.mensagem.split("resíduo=", 1)[1].split(";", 1)[0])
     assert delivered >= 0
     assert residual > 0
     assert 9000.0 - delivered == pytest.approx(residual, abs=1e-9)
