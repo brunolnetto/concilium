@@ -284,15 +284,16 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
         ("P18-C1", [142]),
         ("P18-C2", [142]),
         ("P18-C3", [143]),
+        ("P18-D", [158]),
     ]
-    # Simulate a state where the three merged package IDs are absent from the integrated set.
+    # C1/C2/C3 remain pending even if P18-D is hypothetically integrated.
     result = report(
         spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {142, 143}
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 5
-    assert issue["pr_packages_merged"] == 2
+    assert issue["pr_packages_total"] == 6
+    assert issue["pr_packages_merged"] == 3
     assert issue["pending_packages"] == ["P18-C1", "P18-C2", "P18-C3"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
