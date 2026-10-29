@@ -72,7 +72,7 @@ class AlgorithmComparisonReport:
         """Return the feasible entry with the highest quality_score."""
         feasible: list[tuple[AlgorithmComparisonEntry, float]] = []
         for entry in self.entries:
-            if entry is None or not entry.is_feasible:
+            if not entry.is_feasible:
                 continue
             score = entry.quality_score
             if score is not None:
