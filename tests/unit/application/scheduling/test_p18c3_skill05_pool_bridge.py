@@ -176,11 +176,11 @@ def test_tampered_cost_component_fails_even_when_pool_total_is_unchanged() -> No
 def test_catalog_currency_must_be_explicit_and_match_pool_currency() -> None:
     contract = _contract_and_witness()
     canonical = _canonical(contract)
-    with pytest.raises(ValueError, match="p18_catalog_price_currency"):
-        _validate_catalog_currency(canonical, None)
+    with pytest.raises(ValueError, match="catalog price currency"):
+        _validate_catalog_currency(canonical, {})
     with pytest.raises(ValueError, match="differs from the exact Skill05 pool currency"):
-        _validate_catalog_currency(canonical, "USD")
-    assert _validate_catalog_currency(canonical, "BRL") == "BRL"
+        _validate_catalog_currency(canonical, {"currency": "USD"})
+    assert _validate_catalog_currency(canonical, {"currency": "BRL"}) == "BRL"
 
 
 def test_activity_week_assignment_must_match_p16_per_activity_demand() -> None:
