@@ -19,7 +19,6 @@ from concilium.application.scheduling.skill04_physical_bridge import (
     materialize_skill04_physical_activity,
 )
 from concilium.domain.models.canonical import CanonicalModel, ScheduleCandidateCanonical, ValidacaoItem
-
 from ._calendario import _build_item_to_activity_map, _resolve_productivity  # ty: ignore[unresolved-import]
 from ._custos import _origem_capacidade  # ty: ignore[unresolved-import]
 from ._scheduling import (  # ty: ignore[unresolved-import]
@@ -27,7 +26,6 @@ from ._scheduling import (  # ty: ignore[unresolved-import]
     _compute_activity_n_max,
     _convert_schedule_to_distribuicao,
 )
-
 
 ResolveRuntimeStatus = Literal["NOT_APPLICABLE", "PASS", "FAIL", "UNKNOWN"]
 
