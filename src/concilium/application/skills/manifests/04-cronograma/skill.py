@@ -271,7 +271,7 @@ def run_cronograma(
                     mensagem=(
                         f"P15: nenhum calendário físico admissível após {physical_resolution.attempts} "
                         f"tentativas (motivo={physical_resolution.reason}; "
-                        f"busca_completa=verifique o resultado do solver). "
+                        f"busca_completa={physical_resolution.complete_search!r}). "
                         "O cronograma anterior não será publicado como autoridade."
                     ),
                 )
