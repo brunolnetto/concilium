@@ -237,5 +237,5 @@ def test_exact_residual_from_exhausted_skill04_calendar_fails_independent_physic
     failure = next(v for v in audit.violations if v.code == "V1_SCOPE_UNCLOSED")
     assert failure.item_id == "A"
     assert "Q=50" in failure.reason
-    assert "sum_q=30" in failure.detail
-    assert "absolute_error=20" in failure.detail
+    assert "sum_q=30" in failure.reason
+    assert "absolute_error=20" in failure.reason
