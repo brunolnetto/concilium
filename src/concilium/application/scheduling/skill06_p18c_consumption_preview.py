@@ -358,7 +358,15 @@ def _validate_catalog_currency(
 ) -> str:
     """Read explicit price currency from the resolved catalog metadata."""
     currency = _text(catalogo.get("currency"), "catalog price currency")
-    if currency != currency.upper() or len(currency) != 3 or not currency.isalpha():
+    source = _text(catalogo.get("currency_source"), "catalog price currency source")
+    if source != "catalog_metadata.json":
+        raise ValueError("catalog currency must be sourced from catalog_metadata.json")
+    if (
+        currency != currency.upper()
+        or len(currency) != 3
+        or not currency.isascii()
+        or not currency.isalpha()
+    ):
         raise ValueError("catalog price currency must be an explicit uppercase three-letter code")
     witness_currencies: set[str] = set()
     for contract in canonical.contratos_recurso:
@@ -367,6 +375,7 @@ def _validate_catalog_currency(
         if (
             witness_currency != witness_currency.upper()
             or len(witness_currency) != 3
+            or not witness_currency.isascii()
             or not witness_currency.isalpha()
         ):
             raise ValueError(f"{contract.tipo_id}: invalid P16 witness currency")
@@ -424,7 +433,7 @@ def _preview_record(
         "project_go_authorized": False,
         "catalog_snapshot_id": canonical.projeto.snapshot_catalogo_id,
         "currency": currency,
-        "currency_source": "EXPLICIT_RUNTIME_DECLARATION_CATALOG_SCHEMA_HAS_NO_CURRENCY_FIELD",
+        "currency_source": "catalog_metadata.json",
         "pool_witnesses": pool_witnesses,
         "consumption_authority": preview.consumption.authority,
         "reconciliation_authority": reconciliation.authority,
