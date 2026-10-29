@@ -105,8 +105,7 @@ def test_p21a_incomparable_catalog_keeps_operational_metrics_but_undefines_ratio
         _reconciliation(),
         bdi_by_category=_rates(),
         catalog=_catalog(currency=currency, basis=basis),
-        operational_currency="BRL",
-        currency_source="catalog_metadata.json",
+        catalog_metadata={"currency": "BRL", "currency_source": "catalog_metadata.json"},
         operational_basis_fingerprint="scope-v1",
     )
 
@@ -125,8 +124,7 @@ def test_p21a_zero_catalog_benchmark_does_not_divide_by_zero() -> None:
         _reconciliation(),
         bdi_by_category=_rates(),
         catalog=_catalog(amount=F(0)),
-        operational_currency="BRL",
-        currency_source="catalog_metadata.json",
+        catalog_metadata={"currency": "BRL", "currency_source": "catalog_metadata.json"},
         operational_basis_fingerprint="scope-v1",
     )
     assert result.catalog_comparison == "UNDEFINED"
