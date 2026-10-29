@@ -1,7 +1,7 @@
 """P20-A: reconcile exclusive P17/P18/P19 snapshots without reposting costs.
 
 A later snapshot must be the unchanged earlier ledger plus precisely the
-events justified by independent physical consumption / holding evidence.
+events justified by physical consumption, external-stock purchase, and holding evidence.
 This is not the Skill 06 financial authority, a BDI engine or a GO decision.
 """
 from __future__ import annotations
@@ -253,6 +253,18 @@ def _external_stock_expectations(
             raise ValueError("P19 external purchase currency differs from journal currency")
         if purchase.good_id not in goods:
             raise ValueError("P19 external purchase references an unknown stock good")
+        for line in consumption.evidence:
+            if line.measure.good_id == purchase.good_id:
+                if (
+                    type(line.measure.exact_cost) is not Fraction
+                    or line.measure.exact_cost < 0
+                ):
+                    raise ValueError("P18 cost evidence must be exact and nonnegative")
+                if line.measure.exact_cost > 0:
+                    raise ValueError(
+                        "P18 already owns priced consumption for this good; "
+                        "P19 external acquisition would double count"
+                    )
         if type(purchase.unit_price) is not Fraction or not isinstance(purchase.price_unit, str):
             raise ValueError("P19 external purchase price is incomplete")
 
@@ -321,7 +333,7 @@ def reconcile_financial_sources(
     holding: HoldingJournal | None = None,
     stock_provisioning: ExternalStockProvisioningJournal | None = None,
 ) -> ExactFinancialReconciliation:
-    """Reconcile incremental P17 pool → P18 purchases → P19 holding.
+    """Reconcile P17 pool → P18 usage → optional P19 external purchases/holding.
 
     Evidence is checked by source identity and exact value, making equal
     aggregate totals insufficient to conceal omitted, shifted or forged costs.
