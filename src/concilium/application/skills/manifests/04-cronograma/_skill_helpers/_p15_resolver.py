@@ -37,6 +37,7 @@ class Skill04PhysicalResolution:
     attempts: int
     reason: str
     violation_details: tuple[str, ...] = ()
+    complete_search: bool | None = None
 
 
 def _explicit_physical_pool(
@@ -147,7 +148,10 @@ def resolve_skill04_physical_schedule(
             fallback_item_ids, 0, pool_error or "physical pool is unknown",
         )
 
-    activity_to_item = _build_item_to_activity_map(canonical)
+    item_to_activity = _build_item_to_activity_map(canonical)
+    # Skill 04 scheduler IDs are activity IDs, while the physical validator
+    # and EAP precedence edges are keyed by item IDs.
+    activity_to_item = {activity_id: item_id for item_id, activity_id in item_to_activity.items()}
     eap_by_id = {item.item_id: item for item in canonical.eap or []}
     selected_by_item: dict[str, Any] = {}
     assigned_by_item: dict[str, dict[str, int]] = {}
@@ -193,12 +197,27 @@ def resolve_skill04_physical_schedule(
             "UNKNOWN", schedule_selected, distribution_by_item,
             fallback_item_ids, 0, f"scheduled items lack EAP scope: {missing}",
         )
+    eap_item_ids = {item.item_id for item in canonical.eap or []}
+    if set(item_ids) != eap_item_ids:
+        missing = sorted(eap_item_ids - set(item_ids))
+        extra = sorted(set(item_ids) - eap_item_ids)
+        return Skill04PhysicalResolution(
+            "UNKNOWN", schedule_selected, distribution_by_item,
+            fallback_item_ids, 0,
+            f"AUTO candidate does not cover the exact EAP scope; missing={missing}, extra={extra}",
+        )
 
     # An explicit pool is a complete inventory. A missing resource key therefore
     # has capacity zero, not an optimistic/unbounded capacity.
-    for assignment in assigned_by_item.values():
-        for resource in assignment:
-            pool_capacity.setdefault(resource, Fraction(0))
+    pool_capacity = {
+        **pool_capacity,
+        **{
+            resource: Fraction(0)
+            for assignment in assigned_by_item.values()
+            for resource in assignment
+            if resource not in pool_capacity
+        },
+    }
 
     max_states = inputs.get("physical_rcpsp_max_states", 10_000)
     if isinstance(max_states, bool) or not isinstance(max_states, int) or max_states <= 0:
@@ -303,6 +322,7 @@ def resolve_skill04_physical_schedule(
             "no admissible fully materialized physical calendar"
             if not violations else "physical calendar rejected: " + "; ".join(violations[:8]),
             violations,
+            resolution.complete_search,
         )
 
     physical_by_item = {activity.item_id: activity for activity in resolution.activities}
@@ -339,7 +359,7 @@ def resolve_skill04_physical_schedule(
     )
     new_errors = [
         v for v in validacoes[prior_validation_count:]
-        if v.status == "ERRO" and v.codigo in {"VAL-CRON-01", "VAL-CRON-PRECEDENCIA"}
+        if v.status == "ERRO"
     ]
     if new_errors or set(rematerialized) != set(item_ids) or any(not rematerialized.get(i) for i in item_ids):
         return Skill04PhysicalResolution(
@@ -347,6 +367,7 @@ def resolve_skill04_physical_schedule(
             resolution.attempts,
             "Skill 04 failed to materialize the selected physical witness after RCPSP resolution",
             tuple(f"{v.codigo}:{v.mensagem}" for v in new_errors),
+            resolution.complete_search,
         )
 
     actual_activities: list[PhysicalActivity] = []
@@ -375,6 +396,7 @@ def resolve_skill04_physical_schedule(
         return Skill04PhysicalResolution(
             "FAIL", selected, rematerialized, rematerialized_fallback,
             resolution.attempts, f"post-rematerialization physical audit failed: {exc}",
+            (), resolution.complete_search,
         )
 
     if audit.status != "PASS":
@@ -386,6 +408,7 @@ def resolve_skill04_physical_schedule(
             selected, rematerialized, rematerialized_fallback,
             resolution.attempts, "post-rematerialization Skill 04/05 audit did not PASS",
             violations,
+            resolution.complete_search,
         )
 
     # The initial AUTO pass may have reported an under-delivery or Q-precedence
@@ -431,12 +454,18 @@ def resolve_skill04_physical_schedule(
                 "distribuicao_semanal": rematerialized[item_id],
             })
         )
+    final_makespan = max(
+        weeks.index(week) + 1
+        for distribution in rematerialized.values()
+        for week in distribution
+    )
     selected = selected.model_copy(update={
         "scheduled_activities": final_scheduled,
-        "makespan": max(weeks.index(max(d)) + 1 for d in rematerialized.values() if d),
+        "makespan": max(1, final_makespan),
     })
     return Skill04PhysicalResolution(
         "PASS", selected, rematerialized, rematerialized_fallback,
         resolution.attempts,
         "bounded exact physical feasibility witness",
+        (), resolution.complete_search,
     )
