@@ -113,7 +113,9 @@ class ExternalStockPurchase:
             or not self.currency.isascii()
             or self.currency != self.currency.upper()
         ):
-            raise ValueError("external purchase currency must be an explicit uppercase 3-letter code")
+            raise ValueError(
+                "external purchase currency must be an explicit uppercase 3-letter code"
+            )
         if self.category not in ("MAT", "COMB"):
             raise ValueError("external stock acquisition must be categorized as MAT or COMB")
 
