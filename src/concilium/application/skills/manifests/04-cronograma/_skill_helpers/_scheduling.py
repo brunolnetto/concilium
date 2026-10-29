@@ -214,7 +214,16 @@ def _build_activity_distribuicao(
                 )
             )
         total_capacity = sum(capacidades)
-        if total_capacity > best_capacity:
+        if (
+            total_capacity > best_capacity
+            or (
+                total_capacity == best_capacity
+                and best_profile is not None
+                and len(profile) > len(best_profile)
+            )
+        ):
+            # On an all-zero-capacity horizon, prefer the longest real profile
+            # among equal-capacity witnesses so every remaining week is audited.
             best_profile = profile
             best_capacity = total_capacity
         if total_capacity >= item.quantitativo:
