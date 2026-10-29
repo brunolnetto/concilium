@@ -67,6 +67,9 @@ def apply_pricing_report_evidence(
             "explicit complete P19 inventory/holding evidence is required before pricing",
         )
         return
+    if isinstance(context.get("source_build_error"), str):
+        _unknown(result, validations, intent, context["source_build_error"])
+        return
 
     reconciliation = context.get("reconciliation")
     if not isinstance(reconciliation, ExactFinancialReconciliation):
