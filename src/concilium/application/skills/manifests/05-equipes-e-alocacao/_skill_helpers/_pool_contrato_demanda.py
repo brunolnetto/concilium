@@ -20,16 +20,15 @@ def _week_idx(semana: str) -> int:
     """
     s = str(semana).strip()
     # Formato S-index: "S001", "S052", etc.
-    if s.startswith("S") and s[1:].isdigit():
-        return int(s[1:])
-    # Formato ISO: "2026-W48" ou "2026-W08"
+    if s.upper().startswith("S"):
+        if s[1:].isdigit():
+            return int(s[1:])
+        raise ValueError(f"invalid legacy week index: {semana!r}")
     if "-W" in s:
         return iso_week_index(s)
-    # Fallback: tenta int direto
-    try:
-        return int(s.lstrip("0") or "0")
-    except ValueError:
-        return 0
+    if s.isdigit():
+        return int(s)
+    raise ValueError(f"unsupported week index: {semana!r}")
 
 
 def _eq_comp_floats(eq) -> tuple:
