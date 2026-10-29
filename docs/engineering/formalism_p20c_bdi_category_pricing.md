@@ -21,7 +21,7 @@ No category is recursively marked up. MOB/DEMOB and inventory holding remain in 
 
 ## Reconciliation with Skill 04
 
-`ExactFinancialReconciliation.project_skill04_realization` compares the existing P11-B realized projection's total and weekly `price_once_bdi` against the independent P20 category calculation. The event-attribution trace must match the authoritative ledger exactly before pricing. A forged trace, missing rate, unclassified event, or weekly discrepancy fails closed.
+`ExactFinancialReconciliation.project_skill04_realization` compares the existing P11-B realized projection's total and weekly `price_once_bdi` against the independent P20 category calculation. If a P20-B event-attribution trace is present, it must match the authoritative ledger exactly before pricing. Direct P20-C pricing requires that trace by default; the legacy P11 Skill04 preview path may still price an explicitly supplied immutable ledger without a trace, but makes no ownership claim and remains preview-only. A forged trace, missing rate, unclassified event, or weekly discrepancy fails closed.
 
 ## Limits
 
