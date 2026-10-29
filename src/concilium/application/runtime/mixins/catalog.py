@@ -244,16 +244,19 @@ class CatalogMixin:
             or currency != currency.upper()
         ):
             raise RuntimeDomainError(f"Moeda do catálogo ausente ou inválida em {metadata_path}")
-        return {"currency": currency}
+        return {
+            "currency": currency,
+            "currency_source": "catalog_metadata.json",
+        }
 
     def _attach_catalog_metadata(self, catalogo: dict[str, Any], cat_dir: Path) -> dict[str, Any]:
         metadata = self._read_catalog_metadata(cat_dir)
-        declared = metadata.get("currency")
-        existing = catalogo.get("currency")
-        if declared is not None and existing is not None and existing != declared:
-            raise RuntimeDomainError(
-                f"Moeda do bundle ({existing}) diverge dos metadados do catálogo ({declared})"
-            )
+        for key, declared in metadata.items():
+            existing = catalogo.get(key)
+            if existing is not None and existing != declared:
+                raise RuntimeDomainError(
+                    f"Valor do bundle para {key} ({existing}) diverge dos metadados ({declared})"
+                )
         catalogo.update(metadata)
         return catalogo
 
