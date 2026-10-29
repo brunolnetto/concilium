@@ -315,3 +315,25 @@ def test_p14d_acceptance_package_must_be_merged_before_issue_fourteen_closes(spe
     assert issue["pending_packages"] == ["P14-D"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
+
+
+def test_p19c_external_stock_provisioning_is_registered_as_mandatory_package(
+    spec: dict,
+) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 19)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P19-A", [80]),
+        ("P19-B", [81]),
+        ("P19-C", [150]),
+    ]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {150},
+    )
+    row = next(x for x in result["issues"] if x["issue"] == 19)
+    assert row["pending_packages"] == ["P19-C"]
+    assert row["pr_packages_total"] == 3
+    assert row["pr_packages_merged"] == 2
+    assert not row["closure_preflight"]
+    assert row["acceptance_verified"] is None
