@@ -3,22 +3,22 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import cast
 
-from concilium.application.scheduling.contractual_cost_ledger import book_exact_pool
+from concilium.application.scheduling.contractual_cost_ledger import ContractCategory, book_exact_pool
 from concilium.application.scheduling.resource_demand_levels import normalize_weekly_resource_demand
 from concilium.application.scheduling.resource_level_contracts import (
     ResourceTariff,
     exact_money,
     optimize_homogeneous_pool,
 )
-from concilium.domain.services.planning.week_sequence import enumerar_semanas
-
 from concilium.domain.models.canonical import (
     ComposicaoEquipeAtividade,
     InstanciaRecurso,
     RecursoContrato,
     ResumoUtilizacaoContrato,
 )
+from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
 from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
 from ._resource_instance_assignment import (  # ty: ignore[unresolved-import]
@@ -239,6 +239,7 @@ def _build_p16_global_assignment_witness(
         raise ValueError(f"P16-E {tipo_id}: currency must be an explicit uppercase three-letter code")
     if not isinstance(category, str) or category not in {"MO", "EQ"}:
         raise ValueError(f"P16-E {tipo_id}: homogeneous resource category must be MO or EQ")
+    category = cast(ContractCategory, category)
 
     rates: dict[str, str] = {}
     for name in ("active_week", "idle_week", "mobilize", "demobilize"):
