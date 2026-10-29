@@ -92,19 +92,11 @@ def materialize_skill04_physical_activity(
         if q < 0 or available < 0 or nominal < 0 or q > available or available > nominal:
             raise ValueError(f"{week}: quantity violates the physical F(m)/calendar envelope")
         expected_cumulative = last_cumulative + q
-        cumulative_error = abs(cumulative - expected_cumulative)
-        cumulative_tolerance = max(
-            Fraction(1, 10**9), abs(expected_cumulative) * Fraction(1, 10**12)
-        )
-        if cumulative_error > cumulative_tolerance:
+        if cumulative != expected_cumulative:
             raise ValueError(
                 f"{week}: cumulative quantity does not reconcile with actual "
-                f"weekly delivery (expected {expected_cumulative}, observed {cumulative}, "
-                f"absolute_error={cumulative_error}, tolerance={cumulative_tolerance})"
+                f"weekly delivery (expected {expected_cumulative}, observed {cumulative})"
             )
-        # Continue from the canonical stored cumulative cell to measure the next
-        # recurrence exactly as Skill 04 emitted it; the final scope check uses
-        # the same P14 tolerance in the physical validator.
         last_cumulative = cumulative
         deliveries.append((index, q))
         capacities.append((index, available))
