@@ -111,6 +111,8 @@ def test_invalid_evidence_aborts_stage3_without_falling_back(monkeypatch, skill_
         for item in result.validacoes
     )
 
+
+
 def test_p17_reconciliation_runs_after_successful_consolidation(monkeypatch, skill_module):
     seen = _stub_stages(monkeypatch, skill_module)
     p18 = {

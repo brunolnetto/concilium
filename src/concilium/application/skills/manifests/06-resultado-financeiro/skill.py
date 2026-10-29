@@ -23,11 +23,11 @@ import types
 from pathlib import Path
 from typing import Any
 
-from concilium.application.scheduling.skill06_p18c_consumption_preview import (
-    build_p18_skill06_preview,
-)
 from concilium.application.scheduling.skill06_p17_cost_reconciliation import (
     build_skill06_p17_reconciliation,
+)
+from concilium.application.scheduling.skill06_p18c_consumption_preview import (
+    build_p18_skill06_preview,
 )
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
