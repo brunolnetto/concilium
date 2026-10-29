@@ -37,6 +37,7 @@ class Skill04PhysicalResolution:
     attempts: int
     reason: str
     violation_details: tuple[str, ...] = ()
+    complete_search: bool | None = None
 
 
 def _explicit_physical_pool(
@@ -321,6 +322,7 @@ def resolve_skill04_physical_schedule(
             "no admissible fully materialized physical calendar"
             if not violations else "physical calendar rejected: " + "; ".join(violations[:8]),
             violations,
+            resolution.complete_search,
         )
 
     physical_by_item = {activity.item_id: activity for activity in resolution.activities}
