@@ -181,3 +181,25 @@ def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() ->
     assert result.pricing_gates["status"] == "FAIL"
     assert validations[-1].codigo == "VAL-P21-PRICE-GATES"
     assert validations[-1].status == "AVISO"
+
+
+def test_complete_inventory_scope_without_a_p19_journal_is_unknown() -> None:
+    result = _result()
+    validations: list = []
+    apply_pricing_report_evidence(
+        result,
+        {
+            "certification_intent": "PREVIEW",
+            "p21_pricing_evidence": {
+                "inventory_scope": InventoryEvidenceScope(
+                    status="COMPLETE",
+                    source="test-fixture",
+                    reference_id="inventory-complete-fixture",
+                    fingerprint="inventory-complete-fingerprint",
+                ),
+            },
+        },
+        validations,
+    )
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert "requires an explicit holding or provisioning journal" in result.pricing_gates["reason"]
