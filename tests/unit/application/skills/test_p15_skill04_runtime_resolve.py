@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import date
-from fractions import Fraction as F
 from types import SimpleNamespace
 
 from concilium.application.skills import run_cronograma
@@ -93,12 +92,12 @@ def _patch_skill04_materializer(monkeypatch) -> object:
     monkeypatch.setattr(p15, "_resolve_productivity", lambda *_: (1.0, False))
     monkeypatch.setattr(p15, "_compute_activity_n_max", lambda *_: 1)
     monkeypatch.setattr(p15, "_origem_capacidade", lambda *_args, **_kwargs: "TAXA_POR_FRENTE_ASSUMIDA")
-    return p15
+    return None
 
 
 def test_auto_runtime_re_resolves_resource_collision_and_audits_final_skill04_cells(monkeypatch) -> None:
     helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
-    p15 = _patch_skill04_materializer(monkeypatch)
+    _patch_skill04_materializer(monkeypatch)
     canonical, regime = _runtime_inputs()
     candidate = _candidate()
 
