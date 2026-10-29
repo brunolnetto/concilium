@@ -32,7 +32,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     order = validate_dag(spec)
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
-    # P18-C1/C2/C3 are merged; P17-C #144 is a pending implementation package.
+    # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
     assert sum(len(n["packages"]) for n in spec["nodes"]) == 56
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
@@ -260,7 +260,7 @@ def test_p11c_normative_consumer_prevents_premature_wave_zero_closure(spec: dict
     assert row["pr_packages_total"] == 3
     assert not row["closure_preflight"]
 
-def test_p18c1_c2_c3_packages_do_not_close_issue_eighteen(spec: dict) -> None:
+def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P18-A", [76]),
@@ -269,7 +269,7 @@ def test_p18c1_c2_c3_packages_do_not_close_issue_eighteen(spec: dict) -> None:
         ("P18-C2", [142]),
         ("P18-C3", [143]),
     ]
-    # Package registration is not independent acceptance; issue #18 stays open.
+    # Simulate a state where the three merged package IDs are absent from the integrated set.
     result = report(
         spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {142, 143}
     )
@@ -281,6 +281,24 @@ def test_p18c1_c2_c3_packages_do_not_close_issue_eighteen(spec: dict) -> None:
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
 
+def test_p14d_acceptance_package_must_be_merged_before_issue_fourteen_closes(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 14)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P14-A", [50]),
+        ("P14-B", [52]),
+        ("P14-C", [129]),
+        ("P14-D", [145]),
+    ]
+    result = report(
+        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {145}
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 14)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == 4
+    assert issue["pr_packages_merged"] == 3
+    assert issue["pending_packages"] == ["P14-D"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
 
 
 def test_p17c_is_registered_as_mandatory_skill06_reconciliation_package(spec: dict) -> None:
