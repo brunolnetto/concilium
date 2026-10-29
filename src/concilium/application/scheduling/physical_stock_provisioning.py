@@ -91,6 +91,7 @@ class ExternalStockPurchase:
             not isinstance(self.currency, str)
             or len(self.currency) != 3
             or not self.currency.isalpha()
+            or not self.currency.isascii()
             or self.currency != self.currency.upper()
         ):
             raise ValueError("external purchase currency must be an explicit uppercase 3-letter code")
@@ -148,6 +149,7 @@ def book_external_stock_provisioning(
         not isinstance(financial_currency, str)
         or len(financial_currency) != 3
         or not financial_currency.isalpha()
+        or not financial_currency.isascii()
         or financial_currency != financial_currency.upper()
     ):
         raise ValueError("financial currency must be an explicit uppercase 3-letter code")
