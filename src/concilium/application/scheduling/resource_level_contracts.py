@@ -313,18 +313,18 @@ def _global_instance_chains(
     for first in events:
         if first in predecessor:
             continue
-        path: list[tuple[int, int]] = []
+        current_path: list[tuple[int, int]] = []
         current = first
         while current not in visited:
             visited.add(current)
-            path.append(current)
+            current_path.append(current)
             following = successor.get(current)
             if following is None:
                 break
             current = following
         else:
             raise AssertionError("instance assignment contains a path merge/cycle")
-        paths.append(tuple(path))
+        paths.append(tuple(current_path))
     if visited != set(events):
         raise AssertionError("some physical demand events are absent from instance chains")
 
@@ -336,14 +336,14 @@ def _global_instance_chains(
         )
     )
     chains: list[InstanceChain] = []
-    for identity, path in enumerate(paths, start=1):
-        active_weeks = tuple(week for week, _slot in path)
+    for identity, event_path in enumerate(paths, start=1):
+        active_weeks = tuple(week for week, _slot in event_path)
         start = active_weeks[0]
         end_exclusive = active_weeks[-1] + 1
         idle_weeks = end_exclusive - start - len(active_weeks)
         if any(
             following - previous - 1 > tariff.max_idle_gap
-            for previous, following in zip(active_weeks, active_weeks[1:])
+            for previous, following in zip(active_weeks[:-1], active_weeks[1:], strict=True)
         ):
             raise AssertionError("optimizer produced a chain beyond the allowed idle gap")
         chains.append(
