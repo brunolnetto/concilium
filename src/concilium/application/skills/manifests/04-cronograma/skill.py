@@ -42,7 +42,7 @@ from ._skill_helpers._assembly import (  # ty: ignore[unresolved-import]
 from ._skill_helpers._estoque_consumivel import (  # ty: ignore[unresolved-import]
     build_estoque_consumivel_canonical,
 )
-from ._skill_helpers._p14_productivity import (  # ty: ignore[unresolved-import]
+from ._skill_helpers._p14_productivity import (
     _invalidate_derived_costs,
     _invalidate_rejected_schedule,
     _preflight_physical_productivity,
