@@ -341,7 +341,7 @@ def _global_instance_chains(
         idle_weeks = end_exclusive - start - len(active_weeks)
         if any(
             following - previous - 1 > tariff.max_idle_gap
-            for previous, following in zip(active_weeks, active_weeks[1:], strict=True)
+            for previous, following in zip(active_weeks, active_weeks[1:])
         ):
             raise AssertionError("optimizer produced a chain beyond the allowed idle gap")
         chains.append(
