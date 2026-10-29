@@ -267,13 +267,6 @@
   ],
   "existing_out_of_manifest": [
     {
-      "pr": 102,
-      "issue": 14,
-      "provisional_package": "P14-C",
-      "status": "CODE_DRAFT_BLOCKED_WAVE1",
-      "note": "Already open code PR but absent from canonical P14 package slots; requires explicit DAG governance decision."
-    },
-    {
       "pr": 103,
       "issue": 18,
       "provisional_package": "P18-C1",
@@ -294,6 +287,15 @@
       "depends_on_prs": [
         105
       ]
+    }
+  ],
+  "superseded_implementation_prs": [
+    {
+      "pr": 102,
+      "issue": 14,
+      "superseded_by_pr": 129,
+      "status": "CLOSED_UNMERGED",
+      "reason": "Stale branch replaced by current-main P14-C in canonical DAG package slot."
     }
   ]
 }

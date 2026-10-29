@@ -42,6 +42,11 @@ from ._skill_helpers._assembly import (  # ty: ignore[unresolved-import]
 from ._skill_helpers._estoque_consumivel import (  # ty: ignore[unresolved-import]
     build_estoque_consumivel_canonical,
 )
+from ._skill_helpers._p14_productivity import (
+    _invalidate_derived_costs,
+    _invalidate_rejected_schedule,
+    _preflight_physical_productivity,
+)
 from ._skill_helpers._scheduling import (  # ty: ignore[unresolved-import]
     _check_pool_violations,
 )
@@ -98,8 +103,38 @@ def run_cronograma(
     validacoes: list[ValidacaoItem] = []
     catalogo = catalogo or {}
 
+    certification_intent = inputs.get("certification_intent", "PREVIEW")
+    if certification_intent not in ("PREVIEW", "CERTIFIED"):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-CERT-INTENT",
+                status="ERRO",
+                mensagem="certification_intent deve ser PREVIEW ou CERTIFIED; sem inferência de GO.",
+            )
+        )
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+
     if not _validate_preconditions(canonical_in, validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+
+    # Validate raw catalog rates before typed graph construction / solver setup.
+    cpu_preflight = _build_cpu_lookup(catalogo)
+    production_preflight = _build_producao_lookup(catalogo)
+    invalid_productivity, unverified_productivity = _preflight_physical_productivity(
+        canonical_in, cpu_preflight, production_preflight,
+        certified=certification_intent == "CERTIFIED",
+        validacoes=validacoes,
+    )
+    if invalid_productivity or (certification_intent == "CERTIFIED" and unverified_productivity):
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+    if unverified_productivity and not any(v.codigo == "VAL-CRON-PROD-PREVIEW" for v in validacoes):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-PREVIEW",
+                status="AVISO",
+                mensagem="PREVIEW: produtividade sem proveniência física versionada; cronograma não é certificado.",
+            )
+        )
 
     (
         regime,
@@ -114,7 +149,7 @@ def run_cronograma(
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
     if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     wmp_curves: list = []
     mobilizacao_policies = inputs.get("mobilizacao_policies")
@@ -155,15 +190,45 @@ def run_cronograma(
         validacoes,
         insumos_lookup,
     )
+    missing_productivity_evidence = unverified_productivity or bool(fallback_item_ids) or any(
+        v.codigo in ("VAL-PROD-04", "VAL-PROD-04-PROD-LEGACY")
+        for v in validacoes
+    )
+    if certification_intent == "CERTIFIED" and missing_productivity_evidence:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-CERT",
+                status="ERRO",
+                mensagem=(
+                    "NOGO: produtividade física sem origem validada. "
+                    "P=1000 e campos legados são apenas PREVIEW; "
+                    f"itens afetados={sorted(fallback_item_ids)}."
+                ),
+            )
+        )
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+    if certification_intent == "PREVIEW" and missing_productivity_evidence and not any(
+        v.codigo == "VAL-CRON-PROD-PREVIEW" for v in validacoes
+    ):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-PROD-PREVIEW",
+                status="AVISO",
+                mensagem=(
+                    "PREVIEW: produtividade por fallback/campo legado ou sem fonte versionada; "
+                    "o cronograma não constitui certificado GO."
+                ),
+            )
+        )
     if failed:
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     # P14-B: never publish an authoritative schedule whose calendar/physical
     # predecessors failed. SkillResult.has_errors alone cannot protect consumers
     # if a partial cronograma is still included in the canonical output.
     blocking_codes = {"VAL-CRON-01", "VAL-CRON-PRECEDENCIA"}
     if any(v.status == "ERRO" and v.codigo in blocking_codes for v in validacoes):
-        return SkillResult(canonical_in, validacoes)
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     pool_violations = _check_pool_violations(canonical_in, distribuicao_por_item, cpu_lookup, validacoes)
     if pool_violations:
@@ -173,6 +238,10 @@ def run_cronograma(
         # Never substitute zero cost or an optimistic GO for unavailable pool.
         blocked = canonical_in.model_copy(
             update={
+                # Pool rejection is a schedule rejection too: clear every
+                # dependent projection and Skill 05-derived resource artifact.
+                **_invalidate_derived_costs(canonical_in),
+                "mob_schedule": None,
                 "cronograma": None,
                 "intervalos_atividade": [],
                 "resultado": None,
@@ -236,7 +305,14 @@ def run_cronograma(
         replenishable_resources, cronograma_out.scheduled_activities, cronograma_out.estoque_delays
     )
 
+    # A new schedule invalidates every historical finance/analysis projection:
+    # verified productivity is evidence about F(m), not evidence that an old BDI,
+    # break-even point, stock report or cube matches this new timeline.
+    stale_financials = _invalidate_derived_costs(canonical_in)
+    stale_financials.pop("recursos_consumiveis")
+    stale_financials.pop("resumo_estoque_consumiveis")
     update_dict = {
+        **stale_financials,
         "cronograma": cronograma_out,
         "intervalos_atividade": intervalos,
         "fator_calendario_semanal": fator_calendario_semanal,

@@ -1,9 +1,21 @@
 """Camada 4 — Modelo canônico do orçamento (parte extraída de canonical.py)."""
 
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+def _finite_numeric_equals(value: object, expected: int) -> bool:
+    """Compare a pre-coercion legacy value without bool/float coercion."""
+    if isinstance(value, bool):
+        return False
+    try:
+        numeric = Decimal(str(value).strip())
+    except (InvalidOperation, TypeError, ValueError):
+        return False
+    return numeric.is_finite() and numeric == Decimal(expected)
 
 CategoriaRecurso = Literal["EQUIPAMENTO", "MAQUINARIO", "EQUIPE", "MATERIAL"]
 CriticidadeRecurso = Literal["CRITICA", "NORMAL", "OPCIONAL"]
@@ -18,6 +30,7 @@ class TipoRecurso(BaseModel):
     categoria: CategoriaRecurso
     custo_unitario_dia: float = Field(ge=0)
     especificacoes: dict = Field(default_factory=dict)
+    proveniencia: Literal["CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05"] = "CONFIGURADO"
 
 
 class RecursoPool(BaseModel):
@@ -32,6 +45,29 @@ class RecursoPool(BaseModel):
     quantidade_disponivel: int = Field(ge=0)
     data_aquisicao: date | None = None
     custo_aquisicao_total: float = Field(ge=0, default=0.0)
+    proveniencia: Literal[
+        "CONFIGURADO", "DERIVADO_SKILL03", "DERIVADO_SKILL05", "LEGACY_UNVERIFIED"
+    ] = "CONFIGURADO"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _classify_ambiguous_legacy_pool(cls, value):
+        """Quarantine a synthetic-looking legacy pool only when provenance is absent.
+
+        A matching identifier and quantity are not sufficient proof of origin:
+        preserve ambiguous state but do not treat it as physical capacity.
+        """
+        if isinstance(value, dict) and "proveniencia" not in value:
+            tipo_id = value.get("tipo_id")
+            if (
+                isinstance(tipo_id, str)
+                and tipo_id.startswith(("FUNC-", "EQUIP-"))
+                and _finite_numeric_equals(value.get("quantidade_total"), 1000)
+                and _finite_numeric_equals(value.get("quantidade_disponivel"), 1000)
+                and _finite_numeric_equals(value.get("custo_aquisicao_total", 0), 0)
+            ):
+                return {**value, "proveniencia": "LEGACY_UNVERIFIED"}
+        return value
 
 
 class CustoParticionadoItem(BaseModel):
