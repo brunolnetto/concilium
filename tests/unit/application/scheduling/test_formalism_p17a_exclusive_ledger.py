@@ -171,22 +171,28 @@ def test_overlapping_instance_level_identity_rejected_even_if_money_balances() -
         book_exact_pool(forged, {"CRANE": tariff}, {"CRANE": "EQ"})
 
 
-def test_gap_in_required_instance_level_rejected_when_presence_is_forged() -> None:
+def test_missing_active_instance_event_fails_exact_demand_reconstruction() -> None:
     data = normalize_weekly_resource_demand(
         ("W01", "W02", "W03"), {"A": {"CRANE": (1, 2, 1)}}
     )
     tariff = ResourceTariff(F(5), F(10), F(20), F(10), 10)
     valid = optimize_homogeneous_pool(data, {"CRANE": tariff})
     ledger = valid.ledgers[0]
-    chain = next(c for c in ledger.chains if c.level == 2)
-    # Reassign the required level to a non-demanded level, preserving cost
-    # and aggregate presence. This must also be rejected.
-    wrong = replace(chain, level=3, active_weeks=0, idle_weeks=1)
+    # Keep the instance's [0, 2] presence but forge week 2 as idle. The
+    # declared physical active series then loses one required unit in week 2.
+    chain = next(c for c in ledger.chains if c.start == 0)
+    forged_chain = replace(
+        chain,
+        active_week_indices=(0, 2),
+        active_weeks=2,
+        idle_weeks=1,
+    )
     forged = replace(
         valid,
-        ledgers=(replace(ledger, chains=tuple(
-            wrong if c is chain else c for c in ledger.chains
-        )),),
+        ledgers=(replace(
+            ledger,
+            chains=tuple(forged_chain if c is chain else c for c in ledger.chains),
+        ),),
     )
-    with pytest.raises(ValueError, match="do not cover exact physical demand"):
+    with pytest.raises(ValueError, match="do not reconstruct exact physical demand"):
         book_exact_pool(forged, {"CRANE": tariff}, {"CRANE": "EQ"})
