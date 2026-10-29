@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from concilium.application.scheduling.pricing_report_adapter import (
+    apply_pricing_report_evidence,
+)
 from concilium.domain.models.canonical import (
     CanonicalModel,
     CustoTotal,
     Resultado,
     ValidacaoItem,
     Venda,
-)
-from concilium.application.scheduling.pricing_report_adapter import (
-    apply_pricing_report_evidence,
 )
 
 from ._categorial import _resolve_custo_deficit_estoque_externo  # ty: ignore[unresolved-import]
