@@ -28,6 +28,7 @@ from concilium.application.scheduling.skill06_p17_cost_reconciliation import (
 )
 from concilium.application.scheduling.skill06_p18c_consumption_preview import (
     build_p18_skill06_preview,
+    build_p20_runtime_reconciliation,
 )
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
@@ -146,6 +147,31 @@ def run_resultado_financeiro(
                 "legacy price/margin was not overridden and this is not PROJECT_GO."
             ),
         ))
+
+    # P21-C: when explicit catalog/regulatory pricing context is supplied, compose
+    # the exact P20 ledger from the physical P17/P18 witnesses plus declared P19
+    # journals. An incomplete inventory declaration never becomes a zero-cost default.
+    p21_context = inputs.get("p21_pricing_evidence")
+    if (
+        enabled
+        and isinstance(p21_context, dict)
+        and p21_context.get("inventory_evidence_complete") is True
+        and p21_context.get("reconciliation") is None
+        and p21_context.get("pool_ledger") is None
+        and p21_context.get("consumption_journal") is None
+    ):
+        try:
+            reconciliation = build_p20_runtime_reconciliation(
+                canonical,
+                catalogo,
+                holding_journal=p21_context.get("holding_journal"),
+                stock_provisioning_journal=p21_context.get("stock_provisioning_journal"),
+            )
+        except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
+            p21_context = {**p21_context, "source_build_error": str(exc)}
+        else:
+            p21_context = {**p21_context, "reconciliation": reconciliation}
+        inputs = {**inputs, "p21_pricing_evidence": p21_context}
 
     # Estágio 3 — Consolidação financeira
     res_con = _run_consolidacao(canonical, inputs, perfil)
