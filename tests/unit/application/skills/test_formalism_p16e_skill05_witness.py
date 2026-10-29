@@ -171,7 +171,11 @@ def test_p16_enforces_explicit_viability_cap_instead_of_legacy_economic_gap() ->
     assert all(
         following - preceding == 1
         for chain in witness["chains"]
-        for preceding, following in zip(chain["active_week_indices"][:-1], chain["active_week_indices"][1:], strict=True)
+        for preceding, following in zip(
+            chain["active_week_indices"][:-1],
+            chain["active_week_indices"][1:],
+            strict=True,
+        )
     )
 
 
