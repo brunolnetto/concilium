@@ -260,6 +260,7 @@ def test_p11c_normative_consumer_prevents_premature_wave_zero_closure(spec: dict
     assert row["pr_packages_total"] == 3
     assert not row["closure_preflight"]
 
+
 def test_p18c1_c2_draft_registration_cannot_close_issue_eighteen(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [

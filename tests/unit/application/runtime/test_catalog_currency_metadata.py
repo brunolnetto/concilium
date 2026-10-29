@@ -71,6 +71,7 @@ def test_filesystem_loader_preserves_currency_when_rebuilding_bundle(tmp_path: P
     assert loaded["currency_source"] == "catalog_metadata.json"
     assert loaded["currency_source"] == "catalog_metadata.json"
     assert rebuilt["currency"] == "BRL"
+    assert loaded["currency_source"] == rebuilt["currency_source"] == "catalog_metadata.json"
     assert rebuilt["currency_source"] == "catalog_metadata.json"
 
 
