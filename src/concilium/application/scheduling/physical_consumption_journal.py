@@ -69,6 +69,10 @@ class AcquisitionEvidenceLine:
     # Optional only for existing external stock-evidence constructors. P20
     # reconciliation fails closed unless P18 supplies the declared category.
     category: Literal["MAT", "COMB"] | None = None
+    # Catalog source/date travel with the evidence row; totals alone aren't enough
+    # to audit which unit price was applied.
+    price_source: str | None = None
+    price_reference_date: str | None = None
 
 
 @dataclass(frozen=True)
@@ -84,7 +88,7 @@ class PhysicalConsumptionJournalResult:
 
 def book_weekly_physical_consumption(
     base_ledger: ExclusiveCostLedger,
-    goods: Mapping[str, tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]]],
+    goods: Mapping[str | tuple[str, str], tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]]],
     evidence: Sequence[WeeklyConsumptionEvidence],
 ) -> PhysicalConsumptionJournalResult:
     """Apply explicit U_g,j * p_g, maintaining identical ownership in P17-A.
@@ -101,9 +105,17 @@ def book_weekly_physical_consumption(
         if item.evidence_id in ids:
             raise ValueError("duplicate physical evidence identity")
         ids.add(item.evidence_id)
-        if item.good_id not in goods:
-            raise ValueError(f"{item.good_id}: missing priced physical good")
-        priced, category = goods[item.good_id]
+        # Activity-specific rates are allowed for a shared catalog good:
+        # the same diesel can have different L/h per CPU. Preserve the old
+        # good_id-only contract for callers that already provide one shared rate.
+        declaration = goods.get((item.activity_id, item.good_id))
+        if declaration is None:
+            declaration = goods.get(item.good_id)
+        if declaration is None:
+            raise ValueError(
+                f"{item.activity_id}/{item.good_id}: missing priced physical good"
+            )
+        priced, category = declaration
         if not isinstance(priced, PhysicallyPricedGood) or category not in ("MAT", "COMB"):
             raise ValueError("physical good requires explicit MAT/COMB price category")
         if priced.rate.good_id != item.good_id or priced.rate.basis != item.basis:
@@ -117,8 +129,14 @@ def book_weekly_physical_consumption(
             assert item.operating_hours is not None
             measured = priced.cost(operating_hours=item.operating_hours)
         measurements.append(AcquisitionEvidenceLine(
-            item.evidence_id, item.kind, item.activity_id, item.week, measured,
+            item.evidence_id,
+            item.kind,
+            item.activity_id,
+            item.week,
+            measured,
             category,
+            priced.price_source,
+            priced.price_reference_date,
         ))
         if measured.priced_quantity > 0:
             purchases.append(PhysicalPurchase(

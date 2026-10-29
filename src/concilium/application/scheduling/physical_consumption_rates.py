@@ -85,12 +85,24 @@ class PhysicallyPricedGood:
     rate: PhysicalConsumptionRate
     price_per_unit: Fraction
     price_unit: str
+    # Catalog adapters carry provenance into the acquisition evidence; pure
+    # mathematical callers may omit it, but certification gates may not.
+    price_source: str | None = None
+    price_reference_date: str | None = None
 
     def __post_init__(self) -> None:
         if type(self.price_per_unit) is not Fraction or self.price_per_unit < 0:
             raise ValueError("price per physical unit must be an exact nonnegative Fraction")
         unit = normalize_unidade(self.price_unit)
         convert_physical(Fraction(1), self.rate.good_unit, unit)
+        if self.price_source is not None and (
+            not isinstance(self.price_source, str) or not self.price_source.strip()
+        ):
+            raise ValueError("price source must be nonempty text when provided")
+        if self.price_reference_date is not None and (
+            not isinstance(self.price_reference_date, str) or not self.price_reference_date.strip()
+        ):
+            raise ValueError("price reference date must be nonempty text when provided")
         object.__setattr__(self, "price_unit", unit)
 
     def cost(

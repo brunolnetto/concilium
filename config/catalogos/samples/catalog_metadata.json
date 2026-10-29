@@ -1,0 +1,5 @@
+{
+  "schema": "concilium.catalog-metadata.v1",
+  "currency": "BRL",
+  "currency_basis": "catalog-wide denomination declared for this dataset; no FX conversion implied"
+}
