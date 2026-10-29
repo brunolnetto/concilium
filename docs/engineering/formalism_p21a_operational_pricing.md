@@ -27,7 +27,7 @@ All values are exact `Fraction` objects; there is no hidden percentage, rounding
 
 The catalog BDI and cost ratio are **diagnostics**, not regulatory BDI values. They remain `None` when currencies differ, the catalog and operational physical-scope fingerprints differ, or the catalog denominator is zero. The result records the reason and preserves operational cost, price, profit, margin, and equivalent markup independently.
 
-Currency must be read from the resolved catalog metadata object, including its `catalog_metadata.json` provenance marker, and must be an uppercase ASCII three-letter code. Independent currency/source scalar arguments are not accepted. No FX conversion is attempted. A matching fingerprint is caller-supplied evidence of equivalent physical scope; this module does not invent or infer it.
+Currency must be read from the resolved catalog metadata object, including its `catalog_metadata.json` provenance marker, and must be an uppercase ASCII three-letter code. A deterministic SHA-256 fingerprint binds the diagnostics to that canonical JSON metadata snapshot; independent currency/source scalar arguments are not accepted. No FX conversion is attempted. A matching fingerprint is caller-supplied evidence of equivalent physical scope; this module does not invent or infer it.
 
 ## Boundary with P21-B
 
