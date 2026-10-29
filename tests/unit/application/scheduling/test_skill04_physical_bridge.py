@@ -215,3 +215,42 @@ def test_exact_quantity_conversion_does_not_round_through_binary_float() -> None
     assert _quantity(str(big), "Q") == F(big)
     with pytest.raises(ValueError, match="finite"):
         _quantity("Infinity", "Q")
+
+
+def test_bridge_uses_versioned_tolerance_for_float_backed_scope_roundtrip() -> None:
+    # Skill 04 stores weekly q in floats; converting the same cell to an exact
+    # decimal Fraction can leave a sub-nanounit residual. The declared P14
+    # tolerance accepts only this bounded representation error.
+    q = 0.9999999995
+    week = WEEKS[0]
+    activity = materialize_skill04_physical_activity(
+        item_id="A",
+        scope=1,
+        calendar_weeks=WEEKS,
+        distribution={week: cell(q, q, 1.0)},
+        demand_by_week={week: {}},
+    )
+    audit = validate_materialized_calendar(
+        (activity,), (), calendar_horizon_weeks=len(WEEKS),
+        pool_capacity={}, require_weekly_capacity=True,
+    )
+    assert audit.status == "PASS"
+    assert not any(v.code == "V1_SCOPE_UNCLOSED" for v in audit.violations)
+
+
+def test_bridge_tolerance_does_not_hide_material_scope_shortfall() -> None:
+    q = 0.999999
+    week = WEEKS[0]
+    activity = materialize_skill04_physical_activity(
+        item_id="A",
+        scope=1,
+        calendar_weeks=WEEKS,
+        distribution={week: cell(q, q, 1.0)},
+        demand_by_week={week: {}},
+    )
+    audit = validate_materialized_calendar(
+        (activity,), (), calendar_horizon_weeks=len(WEEKS),
+        pool_capacity={}, require_weekly_capacity=True,
+    )
+    assert audit.status == "FAIL"
+    assert any(v.code == "V1_SCOPE_UNCLOSED" for v in audit.violations)
