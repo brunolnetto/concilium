@@ -167,8 +167,64 @@ def _activity_witness_costs(canonical: CanonicalModel) -> dict[str, Fraction]:
     return result
 
 
+def _activity_lifecycle_allocations(
+    canonical: CanonicalModel,
+) -> tuple[dict[str, Fraction], Fraction]:
+    """Allocate non-active P16 costs using Skill05's persisted item partitions.
+
+    Skill06's legacy MO+EQ diagnostic is built from persisted instancial cost
+    partitions. Those partitions include standby MO/EQ and MOB/DEMOB (folded into
+    EQ by the existing ADR-085 adapter). Subtract their exact P16 amounts, allocated
+    by the same persisted partition weights, before comparing activity diagnostics
+    to the active-only K witness. This is read-only and does not rewrite legacy finance.
+    """
+    allocated: dict[str, Fraction] = {}
+    nonactive_total = Fraction(0)
+    for contract in canonical.contratos_recurso:
+        witness = _mapping(
+            contract.p16_global_assignment,
+            f"{contract.tipo_id}: missing exact P16 witness",
+        )
+        costs = _mapping(witness.get("costs"), f"{contract.tipo_id}: P16 costs")
+        standby = _rational(costs.get("standby"), f"{contract.tipo_id}: P16 standby cost")
+        mobility = _rational(costs.get("mobility"), f"{contract.tipo_id}: P16 mobility cost")
+        nonactive = standby + mobility
+        nonactive_total += nonactive
+
+        partitions = getattr(contract, "particao_por_item", None)
+        if not isinstance(partitions, list):
+            raise ValueError(f"{contract.tipo_id}: persisted activity cost partitions are missing")
+        weights: dict[str, Fraction] = {}
+        for part in partitions:
+            activity_id = getattr(part, "item_id", None)
+            if not isinstance(activity_id, str) or not activity_id.strip():
+                raise ValueError(f"{contract.tipo_id}: invalid activity partition identity")
+            if activity_id in weights:
+                raise ValueError(f"{contract.tipo_id}/{activity_id}: duplicate activity cost partition")
+            weights[activity_id] = _legacy_money(
+                getattr(part, "custo_total_particionado", None),
+                f"{contract.tipo_id}/{activity_id}.custo_total_particionado",
+            )
+        partition_total = sum(weights.values(), Fraction(0))
+        if nonactive == 0:
+            continue
+        if partition_total <= 0:
+            raise ValueError(
+                f"{contract.tipo_id}: standby/MOB/DEMOB costs cannot be allocated without positive partitions"
+            )
+        witness_total = _rational(costs.get("pool_total"), f"{contract.tipo_id}: P16 pool total")
+        if abs(partition_total - witness_total) > _CENT:
+            raise ValueError(
+                f"{contract.tipo_id}: activity partitions do not reconcile to exact P16 pool total"
+            )
+        for activity_id, weight in weights.items():
+            if weight > 0:
+                allocated[activity_id] = allocated.get(activity_id, Fraction(0)) + nonactive * weight / partition_total
+    return allocated, nonactive_total
+
+
 def _activity_diagnostic_costs(canonical: CanonicalModel) -> dict[str, Fraction]:
-    """Sum weekly pre-BDI K diagnostics without counting V or MOB/DEMOB."""
+    """Sum weekly pre-BDI MO+EQ diagnostics; lifecycle costs may still be folded in."""
     if not canonical.custos_atividades:
         raise ValueError("Skill06 has no activity-cost diagnostics to reconcile")
     result: dict[str, Fraction] = {}
@@ -191,7 +247,7 @@ def _activity_diagnostic_costs(canonical: CanonicalModel) -> dict[str, Fraction]
                 + _legacy_money(row.custo_equipamentos, f"{activity_id}/{week}.custo_equipamentos")
             )
             if abs(contractual - components) > _CENT:
-                raise ValueError(f"{activity_id}/{week}: K does not equal MO + EQ components")
+                raise ValueError(f"{activity_id}/{week}: MO+EQ diagnostic does not equal its components")
             amount += contractual
         result[activity_id] = amount
     return result
@@ -224,47 +280,65 @@ def build_skill06_p17_reconciliation(canonical: CanonicalModel) -> dict[str, obj
         raise ValueError("P18 preview MOB/DEMOB ledger differs from reconstructed Skill05 pool")
 
     witness_costs = _activity_witness_costs(canonical)
+    lifecycle_allocations, lifecycle_total = _activity_lifecycle_allocations(canonical)
     diagnostic_costs = _activity_diagnostic_costs(canonical)
-    expected_ids = {activity_id for activity_id, amount in witness_costs.items() if amount > 0}
+    expected_ids = set(witness_costs) | set(lifecycle_allocations)
     missing = sorted(expected_ids - diagnostic_costs.keys())
     unowned = sorted(
         activity_id for activity_id, amount in diagnostic_costs.items()
-        if amount > 0 and activity_id not in witness_costs
+        if amount > 0 and activity_id not in expected_ids
     )
     activity_rows = []
     reasons: list[str] = []
     if missing:
         reasons.append("missing Skill06 activity-cost rows: " + ", ".join(missing))
     if unowned:
-        reasons.append("activity K diagnostics absent from the P16 witness: " + ", ".join(unowned))
-    for activity_id in sorted(set(witness_costs) | set(diagnostic_costs)):
-        witness_amount = witness_costs.get(activity_id, Fraction(0))
-        diagnostic_amount = diagnostic_costs.get(activity_id, Fraction(0))
-        delta = diagnostic_amount - witness_amount
+        reasons.append("activity MO+EQ diagnostics absent from the P16 witness/partitions: " + ", ".join(unowned))
+    for activity_id in sorted(set(witness_costs) | set(lifecycle_allocations) | set(diagnostic_costs)):
+        active_witness = witness_costs.get(activity_id, Fraction(0))
+        allocated_nonactive = lifecycle_allocations.get(activity_id, Fraction(0))
+        diagnostic_mo_eq = diagnostic_costs.get(activity_id, Fraction(0))
+        active_diagnostic = diagnostic_mo_eq - allocated_nonactive
+        delta = active_diagnostic - active_witness
+        if active_diagnostic < -_CENT:
+            reasons.append(
+                f"{activity_id}: allocated standby/MOB/DEMOB exceeds the Skill06 MO+EQ diagnostic"
+            )
         if abs(delta) > _CENT:
-            reasons.append(f"{activity_id}: activity K differs from exact P16 assignment by {delta}")
+            reasons.append(
+                f"{activity_id}: active MO+EQ diagnostic after lifecycle allocation differs from exact P16 active K by {delta}"
+            )
         activity_rows.append({
             "activity_id": activity_id,
-            "exact_p16_active_k": str(witness_amount),
-            "skill06_diagnostic_k": str(diagnostic_amount),
-            "delta_diagnostic_minus_p16": str(delta),
+            "exact_p16_active_k": str(active_witness),
+            "allocated_p16_standby_and_mobility": str(allocated_nonactive),
+            "skill06_diagnostic_mo_eq": str(diagnostic_mo_eq),
+            "skill06_active_k_diagnostic": str(active_diagnostic),
+            "delta_active_diagnostic_minus_p16": str(delta),
         })
 
     active_k = pool.sum_natures(PostingNature.ACTIVE)
     idle_k = pool.sum_natures(PostingNature.IDLE)
     pool_k = pool.contractual_k
-    activity_diagnostic_k = sum(diagnostic_costs.values(), Fraction(0))
-    if sum(witness_costs.values(), Fraction(0)) != active_k:
+    activity_diagnostic_mo_eq = sum(diagnostic_costs.values(), Fraction(0))
+    activity_active_diagnostic = activity_diagnostic_mo_eq - lifecycle_total
+    p16_activity_active_k = sum(witness_costs.values(), Fraction(0))
+    lifecycle_allocation_closes = sum(lifecycle_allocations.values(), Fraction(0)) == lifecycle_total
+    if p16_activity_active_k != active_k:
         reasons.append("per-activity P16 active K does not close to active pool K")
-    if activity_diagnostic_k > pool_k + _CENT:
-        reasons.append("activity operational K exceeds contractual pool K")
+    if not lifecycle_allocation_closes:
+        reasons.append("allocated standby/MOB/DEMOB does not close to exact P16 lifecycle costs")
+    if activity_active_diagnostic > pool_k + _CENT:
+        reasons.append("activity active-K diagnostic exceeds contractual pool K after lifecycle allocation")
     totals = {
         "pool_active_k": str(active_k),
         "pool_idle_k": str(idle_k),
         "pool_contractual_k": str(pool_k),
-        "p16_activity_active_k": str(sum(witness_costs.values(), Fraction(0))),
-        "skill06_activity_diagnostic_k": str(activity_diagnostic_k),
-        "pool_k_minus_activity_diagnostic_k": str(pool_k - activity_diagnostic_k),
+        "p16_activity_active_k": str(p16_activity_active_k),
+        "allocated_standby_and_mobility": str(lifecycle_total),
+        "skill06_activity_diagnostic_mo_eq": str(activity_diagnostic_mo_eq),
+        "skill06_active_k_diagnostic": str(activity_active_diagnostic),
+        "pool_k_minus_activity_active_k_diagnostic": str(pool_k - activity_active_diagnostic),
         "physical_consumable_v": str(preview_ledger.consumable_v),
         "indirect_mob_demob": str(preview_ledger.indirect),
         "direct_k_plus_v": str(preview_ledger.direct),
@@ -281,17 +355,22 @@ def build_skill06_p17_reconciliation(canonical: CanonicalModel) -> dict[str, obj
         "reasons": reasons,
         "invariants": {
             "activity_assignment_closes_to_active_pool": (
-                sum(witness_costs.values(), Fraction(0)) == active_k
+                p16_activity_active_k == active_k
             ),
-            "activity_diagnostics_match_p16": (
+            "lifecycle_allocation_closes": lifecycle_allocation_closes,
+            "activity_diagnostics_match_p16_active_k": (
                 not missing
                 and not unowned
-                and not any(
-                    abs(diagnostic_costs.get(activity_id, Fraction(0)) - amount) > _CENT
-                    for activity_id, amount in witness_costs.items()
+                and all(
+                    abs(
+                        diagnostic_costs.get(activity_id, Fraction(0))
+                        - lifecycle_allocations.get(activity_id, Fraction(0))
+                        - witness_costs.get(activity_id, Fraction(0))
+                    ) <= _CENT
+                    for activity_id in expected_ids
                 )
             ),
-            "pool_covers_activity_k": activity_diagnostic_k <= pool_k + _CENT,
+            "pool_covers_activity_k": activity_active_diagnostic <= pool_k + _CENT,
             "consumables_are_separate_from_k": all(
                 posting.nature == PostingNature.ACQUISITION
                 or posting.category not in ("MAT", "COMB")
