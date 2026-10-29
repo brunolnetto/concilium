@@ -160,3 +160,14 @@ def test_tampered_per_activity_demand_fails_closed() -> None:
     contract = contract.model_copy(update={"p16_global_assignment": witness})
     with pytest.raises(ValueError, match="per-activity demand"):
         build_skill05_exact_pool_ledger(_canonical(contract))
+
+def test_tampered_cost_component_fails_even_when_pool_total_is_unchanged() -> None:
+    contract = _contract_and_witness()
+    witness = dict(contract.p16_global_assignment or {})
+    costs = dict(witness["costs"])
+    costs["active"] = "9"
+    costs["mobility"] = "61"
+    witness["costs"] = costs
+    contract = contract.model_copy(update={"p16_global_assignment": witness})
+    with pytest.raises(ValueError, match="cost components differ"):
+        build_skill05_exact_pool_ledger(_canonical(contract))

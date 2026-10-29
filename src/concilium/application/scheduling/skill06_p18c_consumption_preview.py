@@ -17,6 +17,7 @@ from concilium.application.scheduling.contractual_cost_ledger import (
     book_exact_pool,
 )
 from concilium.application.scheduling.skill04_consumption_preview import (
+    ActivityGoods,
     P18CConsumptionPreview,
     book_skill04_planned_consumption_preview,
     build_activity_goods_from_catalog,
@@ -246,6 +247,14 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
     booked = book_exact_pool(pool, {resource_type: tariff}, {resource_type: category})
     if pool.total != pool_total:
         raise ValueError(f"{resource_type}: persisted P16 pool total differs from exact components")
+    rebuilt_active = sum((post.amount for post in booked.postings if post.nature.value == "CONTRACTUAL_ACTIVE"), start=Fraction(0))
+    rebuilt_standby = sum((post.amount for post in booked.postings if post.nature.value == "CONTRACTUAL_IDLE"), start=Fraction(0))
+    rebuilt_mobility = sum((
+        post.amount for post in booked.postings
+        if post.nature.value in {"MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT"}
+    ), start=Fraction(0))
+    if (active_cost, standby_cost, mobility_cost) != (rebuilt_active, rebuilt_standby, rebuilt_mobility):
+        raise ValueError(f"{resource_type}: stored P16 cost components differ from reconstructed postings")
 
     raw_ledger = _mapping(witness.get("exclusive_ledger"), "P16 exclusive ledger")
     expected_totals = {
@@ -302,7 +311,11 @@ def build_skill05_exact_pool_ledger(canonical: CanonicalModel) -> ExclusiveCostL
     return combined
 
 
-def _preview_record(preview: P18CConsumptionPreview, goods: Mapping[str, Mapping[str, tuple]]) -> dict[str, object]:
+def _preview_record(
+    preview: P18CConsumptionPreview,
+    goods: ActivityGoods,
+    canonical: CanonicalModel,
+) -> dict[str, object]:
     reconciliation = preview.reconciliation
     evidence_rows: list[dict[str, object]] = []
     for item in preview.consumption.evidence:
@@ -326,10 +339,23 @@ def _preview_record(preview: P18CConsumptionPreview, goods: Mapping[str, Mapping
             "price_source": item.price_source,
             "price_reference_date": item.price_reference_date,
         })
+    pool_witnesses = []
+    for contract in canonical.contratos_recurso:
+        witness = _mapping(contract.p16_global_assignment, f"{contract.tipo_id}: exact P16 witness")
+        pool_witnesses.append({
+            "resource_type": contract.tipo_id,
+            "contract_id": contract.contrato_id,
+            "source_id": _text(witness.get("source_id"), "P16 tariff source_id"),
+            "currency": _text(witness.get("currency"), "P16 currency"),
+            "proof_scope": witness.get("proof_scope"),
+            "status": witness.get("status"),
+        })
     return {
         "schema": "concilium.p18.skill06-preview.v1",
         "authority": "P18_SKILL06_READ_ONLY_PREVIEW_NOT_PROJECT_GO",
         "project_go_authorized": False,
+        "catalog_snapshot_id": canonical.projeto.snapshot_catalogo_id,
+        "pool_witnesses": pool_witnesses,
         "consumption_authority": preview.consumption.authority,
         "reconciliation_authority": reconciliation.authority,
         "holding_evidence_present": reconciliation.holding_evidence_present,
@@ -366,4 +392,4 @@ def build_p18_skill06_preview(
     pool = build_skill05_exact_pool_ledger(canonical)
     goods = build_activity_goods_from_catalog(canonical, catalogo)
     preview = book_skill04_planned_consumption_preview(canonical, pool, goods)
-    return _preview_record(preview, goods)
+    return _preview_record(preview, goods, canonical)
