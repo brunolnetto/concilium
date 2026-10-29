@@ -83,7 +83,9 @@ def _physical_precedences(canonical: CanonicalModel) -> tuple[PhysicalPrecedence
         for predecessor in successor.predecessores_tipados():
             kind = str(getattr(predecessor, "tipo", "FS") or "FS").upper()
             if kind not in ("FS", "SS", "FF"):
-                continue
+                raise ValueError(
+                    f"{successor.item_id}: unsupported physical predecessor relation {kind!r}"
+                )
             lag = getattr(predecessor, "lag", 0) or 0
             threshold = getattr(predecessor, "completion_threshold_pct", 1)
             if isinstance(lag, bool) or not isinstance(lag, int) or lag < 0:
