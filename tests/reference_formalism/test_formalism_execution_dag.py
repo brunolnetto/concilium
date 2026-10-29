@@ -249,6 +249,22 @@ def test_wave_zero_issue_eleven_is_next_but_cannot_close_early(spec: dict) -> No
     assert not row["closure_preflight"]
 
 
+def test_p17c_is_registered_as_mandatory_skill06_reconciliation_package(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 17)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P17-A", [74]),
+        ("P17-B", [77]),
+        ("P17-C", [144]),
+    ]
+    result = report(spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {144})
+    row = next(x for x in result["issues"] if x["issue"] == 17)
+    assert row["pending_packages"] == ["P17-C"]
+    assert row["pr_packages_total"] == 3
+    assert row["pr_packages_merged"] == 2
+    assert not row["closure_preflight"]
+    assert row["acceptance_verified"] is None
+
+
 def test_p11c_normative_consumer_prevents_premature_wave_zero_closure(spec: dict) -> None:
     # P11-A/B were merged, but full Skill06/representation acceptance still
     # requires P11-C #91. The previous PR count is not an acceptance proof.
