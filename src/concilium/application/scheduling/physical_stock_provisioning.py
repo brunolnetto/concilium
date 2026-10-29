@@ -40,6 +40,25 @@ def _required_text(value: object, name: str) -> None:
         raise ValueError(f"{name} requires explicit nonempty provenance")
 
 
+def _verified_catalog_currency(metadata: Mapping[str, object]) -> tuple[str, str]:
+    """Read currency and provenance together, never from independent scalars."""
+    if not isinstance(metadata, Mapping):
+        raise ValueError("verified catalog currency metadata is required")
+    currency = metadata.get("currency")
+    source = metadata.get("currency_source")
+    if source != _PRICE_CURRENCY_SOURCE:
+        raise ValueError("currency must be sourced from verified catalog_metadata.json")
+    if (
+        not isinstance(currency, str)
+        or len(currency) != 3
+        or not currency.isalpha()
+        or not currency.isascii()
+        or currency != currency.upper()
+    ):
+        raise ValueError("catalog currency must be an uppercase ASCII 3-letter code")
+    return currency, _PRICE_CURRENCY_SOURCE
+
+
 @dataclass(frozen=True)
 class ExternalStockPurchase:
     """One independently identified, dimensioned and priced external purchase.
@@ -129,8 +148,7 @@ def book_external_stock_provisioning(
     calendar_weeks: Sequence[str],
     purchases: Sequence[ExternalStockPurchase],
     *,
-    financial_currency: str,
-    currency_source: str,
+    catalog_metadata: Mapping[str, object],
     other_arrivals: Sequence[StockArrival] = (),
 ) -> ExternalStockProvisioningJournal:
     """Validate and post explicit external provisioning without fabricating stock.
@@ -145,18 +163,17 @@ def book_external_stock_provisioning(
         raise ValueError("typed P18 physical consumption evidence is required")
     if not isinstance(base.journal, ExclusiveCostLedger):
         raise ValueError("exclusive P17/P18 financial ledger is required")
-    if (
-        not isinstance(financial_currency, str)
-        or len(financial_currency) != 3
-        or not financial_currency.isalpha()
-        or not financial_currency.isascii()
-        or financial_currency != financial_currency.upper()
-    ):
-        raise ValueError("financial currency must be an explicit uppercase 3-letter code")
-    if currency_source != _PRICE_CURRENCY_SOURCE:
-        raise ValueError("currency must be sourced from verified catalog_metadata.json")
+    financial_currency, currency_source = _verified_catalog_currency(catalog_metadata)
     if not purchases:
         raise ValueError("at least one explicit external stock purchase is required")
+
+    for arrival in other_arrivals:
+        if not isinstance(arrival, StockArrival):
+            raise ValueError("typed physical arrival required")
+        if arrival.source != "INTERNAL_GENERATION":
+            raise ValueError(
+                "external delivery requires a typed and priced ExternalStockPurchase record"
+            )
 
     existing_ids = {line.source_id for line in base.evidence}
     purchase_ids: set[str] = set()
@@ -248,11 +265,12 @@ def book_external_stock_provisioning(
     updated_ledger = attach_physical_purchases(base.journal, physical_purchases)
     all_arrivals = tuple(other_arrivals) + tuple(external_arrivals)
     canonical_weeks = tuple(calendar_weeks)
+    canonical_goods = tuple(sorted(goods.items()))
 
     # Demand uses only the unchanged P18 evidence. External purchase rows are
     # kept in a separate P19 journal and cannot be mistaken for physical demand.
     stock = project_exact_weekly_stock(
-        goods, canonical_weeks, base.evidence, all_arrivals,
+        dict(canonical_goods), canonical_weeks, base.evidence, all_arrivals,
     )
     if not stock.feasible:
         raise ValueError("external provisioning leaves an unresolved physical stockout")
@@ -261,7 +279,7 @@ def book_external_stock_provisioning(
         base_consumption=base,
         ledger=updated_ledger,
         stock=stock,
-        goods=tuple(sorted(goods.items())),
+        goods=canonical_goods,
         calendar_weeks=canonical_weeks,
         arrivals=all_arrivals,
         purchases=tuple(purchases),
