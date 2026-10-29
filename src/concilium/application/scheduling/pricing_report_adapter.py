@@ -6,7 +6,9 @@ never reconstructs a financial ledger from rounded legacy display fields.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from fractions import Fraction
+from typing import Literal
 
 from concilium.domain.models.canonical import Resultado, ValidacaoItem
 
@@ -19,6 +21,24 @@ from .operational_pricing_diagnostics import (
     project_operational_pricing,
 )
 from .pricing_gates import RegulatoryBdiBasis, evaluate_pricing_gates
+
+
+@dataclass(frozen=True)
+class InventoryEvidenceScope:
+    """Provenance-bearing declaration that inventory/holding coverage is complete."""
+
+    status: Literal["NO_INVENTORY", "COMPLETE"]
+    source: str
+    reference_id: str
+    fingerprint: str
+
+    def __post_init__(self) -> None:
+        if self.status not in ("NO_INVENTORY", "COMPLETE"):
+            raise ValueError("inventory evidence scope must be NO_INVENTORY or COMPLETE")
+        if any(not isinstance(value, str) or not value.strip() for value in (
+            self.source, self.reference_id, self.fingerprint,
+        )):
+            raise ValueError("inventory evidence scope requires source, reference and fingerprint")
 
 
 def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> None:
@@ -61,10 +81,20 @@ def apply_pricing_report_evidence(
             "missing p21_pricing_evidence with authoritative P20 ledger and explicit bases",
         )
         return
-    if context.get("inventory_evidence_complete") is not True:
+    inventory_scope = context.get("inventory_scope")
+    if not isinstance(inventory_scope, InventoryEvidenceScope):
         _unknown(
             result, validations, intent,
-            "explicit complete P19 inventory/holding evidence is required before pricing",
+            "typed, provenance-bearing P19 inventory scope is required before pricing",
+        )
+        return
+    if inventory_scope.status == "NO_INVENTORY" and (
+        context.get("holding_journal") is not None
+        or context.get("stock_provisioning_journal") is not None
+    ):
+        _unknown(
+            result, validations, intent,
+            "NO_INVENTORY scope conflicts with supplied P19 journals",
         )
         return
     if isinstance(context.get("source_build_error"), str):
