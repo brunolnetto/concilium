@@ -6,6 +6,7 @@ from fractions import Fraction as F
 import pytest
 
 from concilium.application.scheduling.physical_resolver import (
+    PhysicalEvidenceUnknown,
     resolve_bounded_physical_calendar,
 )
 from concilium.application.scheduling.physical_validator import (
@@ -136,6 +137,11 @@ def test_invalid_search_parameters_are_rejected() -> None:
             ("A",), {"A": [0]}, materialize, (),
             calendar_horizon_weeks=3, pool_capacity={}, max_states=0,
         )
+    with pytest.raises(ValueError, match="max_states"):
+        resolve_bounded_physical_calendar(
+            ("A",), {"A": [0]}, materialize, (),
+            calendar_horizon_weeks=3, pool_capacity={}, max_states=100_001,
+        )
     with pytest.raises(ValueError):
         resolve_bounded_physical_calendar(
             ("A",), {"B": [0]}, materialize, (),
@@ -182,3 +188,20 @@ def test_bounded_resolver_rejects_q_above_calendar_limited_capacity() -> None:
         violation.code == "V1_WEEKLY_CAPACITY_EXCEEDED"
         for violation in result.last_audit.violations
     )
+
+
+def test_missing_candidate_evidence_is_unknown_not_proved_infeasibility() -> None:
+    def materialize(item: str, start: int) -> PhysicalActivity | None:
+        if start == 0:
+            return None  # This candidate is explicitly known to be infeasible.
+        raise PhysicalEvidenceUnknown("missing weekly capacity evidence")
+
+    result = resolve_bounded_physical_calendar(
+        ("A",), {"A": (0, 1)}, materialize, (),
+        calendar_horizon_weeks=2, pool_capacity={}, max_states=10,
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.activities is None
+    assert result.complete_search
+    assert result.attempts == 2

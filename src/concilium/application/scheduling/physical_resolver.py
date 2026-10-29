@@ -27,6 +27,15 @@ from .physical_validator import (
 ResolveStatus = Literal["PASS", "FAIL", "UNKNOWN"]
 
 
+class PhysicalEvidenceUnknown(RuntimeError):
+    """A candidate could not be assessed because required physical evidence is invalid or missing."""
+
+
+# Absolute cap prevents hostile or accidental configuration from turning a
+# bounded calendar search into effectively unbounded work.
+MAX_PHYSICAL_RCPSP_STATES = 100_000
+
+
 @dataclass(frozen=True)
 class PhysicalResolution:
     status: ResolveStatus
@@ -60,8 +69,12 @@ def resolve_bounded_physical_calendar(
     and must never be interpreted as a feasible schedule. FAIL means all of
     the explicitly supplied finite candidate starts were checked and failed.
     """
-    if calendar_horizon_weeks <= 0 or max_states <= 0:
-        raise ValueError("horizon and max_states must be positive")
+    if type(calendar_horizon_weeks) is not int or calendar_horizon_weeks <= 0:
+        raise ValueError("calendar_horizon_weeks must be a positive integer")
+    if type(max_states) is not int or not 1 <= max_states <= MAX_PHYSICAL_RCPSP_STATES:
+        raise ValueError(
+            f"max_states must be an integer between 1 and {MAX_PHYSICAL_RCPSP_STATES}"
+        )
     ids = tuple(sorted(item_ids))
     if len(ids) != len(set(ids)) or not ids or any(not name for name in ids):
         raise ValueError("item IDs must be nonempty and unique")
@@ -88,7 +101,12 @@ def resolve_bounded_physical_calendar(
         attempts += 1
         activities: list[PhysicalActivity] = []
         for item, start in zip(ids, combination, strict=True):
-            physical = materialize(item, start)
+            try:
+                physical = materialize(item, start)
+            except PhysicalEvidenceUnknown:
+                # Missing/malformed evidence is not a proof of physical infeasibility.
+                saw_unknown = True
+                break
             if physical is None:
                 break
             if physical.item_id != item or physical.start_week != start:
