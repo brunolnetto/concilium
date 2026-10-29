@@ -25,6 +25,10 @@ from concilium.application.scheduling.resource_level_contracts import (
     ResourceTariff,
     exact_money,
 )
+from concilium.application.scheduling.financial_cost_reconciliation import (
+    ExactFinancialReconciliation,
+    reconcile_financial_sources,
+)
 from concilium.application.scheduling.skill04_consumption_preview import (
     ActivityGoods,
     P18CConsumptionPreview,
@@ -484,3 +488,30 @@ def build_p18_skill06_preview(
     goods = build_activity_goods_from_catalog(canonical, catalogo)
     preview = book_skill04_planned_consumption_preview(canonical, pool, goods)
     return _preview_record(preview, goods, canonical, currency)
+
+
+def build_p20_runtime_reconciliation(
+    canonical: CanonicalModel,
+    catalogo: Mapping[str, object],
+    *,
+    holding_journal: object | None = None,
+    stock_provisioning_journal: object | None = None,
+) -> ExactFinancialReconciliation:
+    """Compose P17/P18 and explicit P19 journals into one exact runtime ledger.
+
+    Inventory/holding evidence is never inferred from legacy totals. Callers
+    must explicitly declare the inventory evidence complete before invoking
+    this function; typed journals are checked by reconcile_financial_sources.
+    """
+    if not isinstance(catalogo, Mapping):
+        raise ValueError("resolved catalog must be an explicit mapping")
+    pool = build_skill05_exact_pool_ledger(canonical)
+    _validate_catalog_currency(canonical, catalogo)
+    goods = build_activity_goods_from_catalog(canonical, catalogo)
+    preview = book_skill04_planned_consumption_preview(canonical, pool, goods)
+    return reconcile_financial_sources(
+        pool,
+        preview.consumption,
+        holding_journal,  # type: ignore[arg-type]
+        stock_provisioning_journal,  # type: ignore[arg-type]
+    )
