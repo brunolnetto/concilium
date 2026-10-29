@@ -1,8 +1,10 @@
-"""Exact per-demand-level contractual pool under a *fixed* physical schedule.
+"""Globally optimal fungible-instance contracts for a fixed physical demand tensor.
 
-P16-B (#16): physical weekly resource counts come from P16-A, not from
-workforce/productivity ratios. This implementation does NOT optimize the
-workforce or the RCPSP schedule and cannot certify project-wide GO.
+P16-E solves the assignment of physical demand events to homogeneous instance
+chains exactly under linear weekly active/idle tariffs, fixed MOB/DEMOB rates,
+and a declared maximum idle gap. Demand itself comes from P16-A's physical
+tensor; this optimizer does not re-solve workforce/calendar feasibility or
+certify project-wide financial GO.
 """
 
 from __future__ import annotations
@@ -92,7 +94,7 @@ class ResourceContractLedger:
 class ExactPoolResult:
     calendar_weeks: tuple[str, ...]
     ledgers: tuple[ResourceContractLedger, ...]
-    proof_scope: str = "EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
+    proof_scope: str = "NOT_CERTIFIED_MANUAL_OR_LEGACY_POOL"
 
     @property
     def total(self) -> Fraction:
@@ -441,4 +443,8 @@ def optimize_homogeneous_pool(
         ))
         if ledgers[-1].total != expected_total:
             raise AssertionError("global pool financial reconstruction failed")
-    return ExactPoolResult(weeks, tuple(ledgers))
+    return ExactPoolResult(
+        weeks,
+        tuple(ledgers),
+        proof_scope="EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND",
+    )
