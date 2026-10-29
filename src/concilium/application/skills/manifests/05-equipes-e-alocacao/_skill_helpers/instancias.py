@@ -66,7 +66,7 @@ def _reconciliar_decomposicao_apos_teto_benchmark(eq: Any, capped: float) -> boo
     if any(amount is None for amount in amounts):
         return None
 
-    values = [float(amount) for amount in amounts]
+    values = [float(amount) for amount in amounts if amount is not None]
     mob = getattr(eq, "custo_inst_mob_demob", None)
     mob_value = float(mob) if mob is not None else None
     if (
