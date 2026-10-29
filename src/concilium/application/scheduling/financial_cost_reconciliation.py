@@ -1,4 +1,4 @@
-"""P20-A: reconcile exclusive P17/P18/P19 snapshots without reposting costs.
+"""P20-A/B/C: reconcile and project exclusive P17/P18/P19 financial evidence.
 
 A later snapshot must be the unchanged earlier ledger plus precisely the
 events justified by physical consumption, external-stock purchase, and holding evidence.
@@ -87,6 +87,41 @@ class ActivityAttributableConsumableCost:
 
 
 @dataclass(frozen=True)
+class FinancialPriceCategory:
+    """Exact project cost and single BDI markup for one exclusive category."""
+
+    category: str
+    cost_before_bdi: Fraction
+    bdi_rate: Fraction
+    bdi_amount: Fraction
+    price_once_bdi: Fraction
+
+
+@dataclass(frozen=True)
+class WeeklyFinancialPrice:
+    """Exact single-markup total for one ISO week and category."""
+
+    week: str
+    category: str
+    cost_before_bdi: Fraction
+    bdi_rate: Fraction
+    bdi_amount: Fraction
+    price_once_bdi: Fraction
+
+
+@dataclass(frozen=True)
+class FinancialPriceProjection:
+    """Category-specific exact BDI preview; never a certified proposal price."""
+
+    weekly: tuple[WeeklyFinancialPrice, ...]
+    categories: tuple[FinancialPriceCategory, ...]
+    cost_before_bdi: Fraction
+    bdi_amount: Fraction
+    price_once_bdi: Fraction
+    authority: str = "P20_C_CATEGORY_BDI_PREVIEW_NOT_PROJECT_GO"
+
+
+@dataclass(frozen=True)
 class ExactFinancialReconciliation:
     """Immutable projection of one authoritative event set, never new costs."""
 
@@ -109,6 +144,87 @@ class ExactFinancialReconciliation:
     @property
     def total(self) -> Fraction:
         return self.ledger.total
+
+    def project_price_once_bdi(
+        self,
+        bdi_by_category: Mapping[str, Fraction],
+        *,
+        require_event_attribution: bool = True,
+    ) -> FinancialPriceProjection:
+        """Apply each explicitly declared category BDI exactly once.
+
+        No category defaults, compounding, or cent rounding are introduced.
+        The source trace must still match the immutable ledger before pricing.
+        """
+        categories = frozenset({"MO", "EQ", "MAT", "COMB", "IND"})
+        if set(bdi_by_category) != categories or any(
+            type(rate) is not Fraction or rate < 0
+            for rate in bdi_by_category.values()
+        ):
+            raise ValueError("explicit exact nonnegative BDI rates for all categories required")
+
+        expected = {
+            row.event_id: (row.nature, row.category, row.amount, row.source, row.week)
+            for row in self.ledger.postings
+        }
+        if len(expected) != len(self.ledger.postings):
+            raise ValueError("P20 BDI source ledger has duplicate event identity")
+        if not self.event_attribution:
+            if require_event_attribution:
+                raise ValueError("P20 BDI direct pricing requires an event-attribution trace")
+        else:
+            actual: dict[EventId, tuple[PostingNature, str, Fraction, str, str | None]] = {}
+            for row in self.event_attribution:
+                if row.event_id in actual:
+                    raise ValueError("P20 BDI attribution contains duplicate event identity")
+                actual[row.event_id] = (
+                    row.nature, row.category, row.amount, row.source, row.week,
+                )
+            if actual != expected:
+                raise ValueError("P20 BDI attribution does not match the authoritative ledger")
+
+        weekly_base: dict[tuple[str, str], Fraction] = {}
+        category_base = {category: Fraction(0) for category in categories}
+        for row in self.ledger.postings:
+            if not isinstance(row.week, str) or not row.week.strip():
+                raise ValueError("P20 BDI requires explicit weekly cost provenance")
+            if row.category not in categories:
+                raise ValueError("P20 BDI cannot price an unclassified category")
+            key = (row.week, row.category)
+            weekly_base[key] = weekly_base.get(key, Fraction(0)) + row.amount
+            category_base[row.category] += row.amount
+
+        weekly: list[WeeklyFinancialPrice] = []
+        for (week, category), base in sorted(weekly_base.items()):
+            rate = bdi_by_category[category]
+            markup = base * rate
+            weekly.append(WeeklyFinancialPrice(
+                week, category, base, rate, markup, base + markup,
+            ))
+        category_prices = tuple(
+            FinancialPriceCategory(
+                category=category,
+                cost_before_bdi=base,
+                bdi_rate=bdi_by_category[category],
+                bdi_amount=base * bdi_by_category[category],
+                price_once_bdi=base * (1 + bdi_by_category[category]),
+            )
+            for category, base in sorted(category_base.items())
+        )
+        cost = sum((row.cost_before_bdi for row in category_prices), Fraction(0))
+        markup = sum((row.bdi_amount for row in category_prices), Fraction(0))
+        price = sum((row.price_once_bdi for row in category_prices), Fraction(0))
+        if cost != self.ledger.total or price != cost + markup:
+            raise ValueError("P20 category BDI conservation identity failed")
+        if (
+            sum((row.cost_before_bdi for row in weekly), Fraction(0)) != cost
+            or sum((row.bdi_amount for row in weekly), Fraction(0)) != markup
+            or sum((row.price_once_bdi for row in weekly), Fraction(0)) != price
+        ):
+            raise ValueError("P20 weekly BDI projection does not conserve category totals")
+        return FinancialPriceProjection(
+            tuple(weekly), category_prices, cost, markup, price,
+        )
 
     def project_skill04_realization(
         self,
@@ -133,6 +249,25 @@ class ExactFinancialReconciliation:
             bdi_by_category=bdi_by_category,
             independent_variable_unit_rate=independent_variable_unit_rate,
         )
+        # Older P11 preview callers may construct this immutable snapshot
+        # directly. Preserve that read-only path when no P20-B trace was
+        # supplied; if a trace exists, it must reconcile exactly.
+        priced = self.project_price_once_bdi(
+            bdi_by_category,
+            require_event_attribution=bool(self.event_attribution),
+        )
+        if result.price_once_bdi != priced.price_once_bdi:
+            raise ValueError("Skill04 realization price differs from the P20 category BDI ledger")
+        expected_week_prices: dict[str, Fraction] = {}
+        for line in priced.weekly:
+            expected_week_prices[line.week] = (
+                expected_week_prices.get(line.week, Fraction(0)) + line.price_once_bdi
+            )
+        if any(
+            row.price_once_bdi != expected_week_prices.get(row.week, Fraction(0))
+            for row in result.weeks
+        ):
+            raise ValueError("Skill04 weekly price differs from the P20 category BDI ledger")
         projected = {week.week: week for week in result.weeks}
         existing = {week.week: week for week in self.weeks}
         if len(existing) != len(self.weeks) or not set(existing).issubset(projected):
@@ -396,7 +531,9 @@ def _ownership_projection(
             scope: Literal["ACTIVITY", "INSTANCE", "GOOD", "SOURCE"] = "ACTIVITY"
             owner_id = (activity_id,)
             if row.nature != PostingNature.ACQUISITION or row.category not in ("MAT", "COMB"):
-                raise ValueError("activity ownership is only valid for typed P18 consumable acquisition")
+                raise ValueError(
+                    "activity ownership is only valid for typed P18 consumable acquisition"
+                )
             key = (activity_id, row.week, row.category)
             activity_amounts[key] = activity_amounts.get(key, Fraction(0)) + row.amount
         elif row.nature in (
@@ -430,7 +567,9 @@ def _ownership_projection(
             activity_id=activity_id,
         ))
         category_key = (row.week, row.category)
-        category_amounts[category_key] = category_amounts.get(category_key, Fraction(0)) + row.amount
+        category_amounts[category_key] = (
+            category_amounts.get(category_key, Fraction(0)) + row.amount
+        )
 
     if sum((line.amount for line in trace), Fraction(0)) != ledger.total:
         raise ValueError("P20 event attribution does not conserve the project ledger")
