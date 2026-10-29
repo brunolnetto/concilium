@@ -266,3 +266,37 @@ def test_global_optimizer_matches_independent_instance_path_oracle(
         sum(j in chain.active_week_indices for chain in ledger.chains)
         for j in range(len(demand))
     ) == demand
+
+
+def test_global_optimizer_exhaustively_matches_instance_path_oracle_for_small_demands() -> None:
+    """Exhaust all 4-week demand tensors with counts 0..2 against an independent oracle."""
+    tariffs = (
+        # Canonical counterexample; profitable links and a strict idle-gap cap.
+        ResourceTariff(exact_money("5"), exact_money("1"), exact_money("20"), exact_money("10"), 1),
+        # Exact decimal tie between keeping one idle week and mobilizing again.
+        ResourceTariff(exact_money("3"), exact_money("0.3"), exact_money("0.1"), exact_money("0.2"), 1),
+        # Wider admissible gap and asymmetric mobilization/demobilization.
+        ResourceTariff(exact_money("7"), exact_money("2"), exact_money("11"), exact_money("13"), 2),
+        # Zero-gap contract: only adjacent active weeks may share an instance.
+        ResourceTariff(exact_money("4"), exact_money("2"), exact_money("3"), exact_money("5"), 0),
+        # Free standby and movement exercise deterministic tie-breaking.
+        ResourceTariff(exact_money("5"), exact_money("0"), exact_money("0"), exact_money("0"), 3),
+    )
+
+    # 3**4 = 81 distinct weekly demand profiles × five tariff regimes.
+    # The oracle enumerates labeled instance paths and is independent of min-cost flow.
+    for demand in product(range(3), repeat=4):
+        normalized = _data({"R": demand})
+        for tariff in tariffs:
+            result = optimize_homogeneous_pool(normalized, {"R": tariff})
+            ledger = result.ledgers[0]
+            expected_cost, expected_chains = _independent_global_instance_minimum(demand, tariff)
+            assert (result.total, len(ledger.chains)) == (expected_cost, expected_chains), (
+                f"demand={demand}, tariff={tariff}"
+            )
+            reconstructed = tuple(
+                sum(week in chain.active_week_indices for chain in ledger.chains)
+                for week in range(len(demand))
+            )
+            assert reconstructed == demand, f"demand reconstruction failed for {demand}"
+
