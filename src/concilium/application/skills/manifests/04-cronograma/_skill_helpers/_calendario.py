@@ -319,7 +319,7 @@ def _compute_ramp_profile(
     ramp_params: dict,
     n_pico: int,
 ) -> list[float]:
-    """Build the normalized formal workforce profile from ramp parameters.
+    r"""Build the normalized formal workforce profile from ramp parameters.
 
     Returns a list of *duration_weeks* floats in [0.0, 1.0] where 1.0 = peak demand.
     For $N=duration_weeks$ and $\tau \in [0,N)$, the raw workforce is exactly:
