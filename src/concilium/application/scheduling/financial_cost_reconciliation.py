@@ -1,7 +1,7 @@
 """P20-A: reconcile exclusive P17/P18/P19 snapshots without reposting costs.
 
 A later snapshot must be the unchanged earlier ledger plus precisely the
-events justified by independent physical consumption / holding evidence.
+events justified by physical consumption, external-stock purchase, and holding evidence.
 This is not the Skill 06 financial authority, a BDI engine or a GO decision.
 """
 from __future__ import annotations
@@ -12,8 +12,17 @@ from fractions import Fraction
 from typing import TYPE_CHECKING
 
 from .contractual_cost_ledger import CostPosting, ExclusiveCostLedger, PostingNature
-from .physical_consumption_journal import PhysicalConsumptionJournalResult
+from .physical_consumption_journal import (
+    AcquisitionEvidenceLine,
+    PhysicalConsumptionJournalResult,
+)
+from .physical_consumption_rates import PhysicalPurchaseMeasure, convert_physical
 from .physical_stock_holding import HoldingJournal
+from .physical_stock_ledger import StockArrival, project_exact_weekly_stock
+from .physical_stock_provisioning import (
+    ExternalStockProvisioningJournal,
+    ExternalStockPurchase,
+)
 
 if TYPE_CHECKING:
     from concilium.domain.models.canonical import DistribuicaoSemanal
@@ -207,12 +216,131 @@ def _holding_expectations(result: HoldingJournal) -> dict[EventId, CostPosting]:
     return expected
 
 
+def _external_stock_expectations(
+    provisioning: ExternalStockProvisioningJournal,
+    consumption: PhysicalConsumptionJournalResult,
+) -> dict[EventId, CostPosting]:
+    """Rebuild P19 acquisition expectations and independently replay its stock proof."""
+    if provisioning.base_consumption != consumption:
+        raise ValueError("P19 external provisioning base differs from P18 consumption evidence")
+    if provisioning.currency_source != "catalog_metadata.json":
+        raise ValueError("P19 external provisioning currency source is not catalog metadata")
+    if (
+        not isinstance(provisioning.currency, str)
+        or len(provisioning.currency) != 3
+        or not provisioning.currency.isalpha()
+        or not provisioning.currency.isascii()
+        or provisioning.currency != provisioning.currency.upper()
+    ):
+        raise ValueError("P19 external provisioning currency is invalid")
+
+    goods = dict(provisioning.goods)
+    if len(goods) != len(provisioning.goods):
+        raise ValueError("P19 stock-good registry contains duplicate identities")
+    if len(provisioning.purchases) != len(provisioning.purchase_evidence):
+        raise ValueError("P19 purchase and price-evidence counts differ")
+
+    expected: dict[EventId, CostPosting] = {}
+    seen: set[str] = set()
+    expected_receipts: list[StockArrival] = []
+    for purchase, evidence in zip(
+        provisioning.purchases, provisioning.purchase_evidence, strict=True,
+    ):
+        if not isinstance(purchase, ExternalStockPurchase):
+            raise ValueError("P19 requires typed external purchase evidence")
+        if purchase.source_id in seen:
+            raise ValueError("P19 duplicate external purchase source identity")
+        seen.add(purchase.source_id)
+        if purchase.currency != provisioning.currency:
+            raise ValueError("P19 external purchase currency differs from journal currency")
+        if purchase.good_id not in goods:
+            raise ValueError("P19 external purchase references an unknown stock good")
+        for line in consumption.evidence:
+            if line.measure.good_id == purchase.good_id:
+                if (
+                    type(line.measure.exact_cost) is not Fraction
+                    or line.measure.exact_cost < 0
+                ):
+                    raise ValueError("P18 cost evidence must be exact and nonnegative")
+                if line.measure.exact_cost > 0:
+                    raise ValueError(
+                        "P18 already owns priced consumption for this good; "
+                        "P19 external acquisition would double count"
+                    )
+        if type(purchase.unit_price) is not Fraction or not isinstance(purchase.price_unit, str):
+            raise ValueError("P19 external purchase price is incomplete")
+
+        priced_quantity = convert_physical(
+            purchase.quantity, purchase.physical_unit, purchase.price_unit,
+        )
+        amount = priced_quantity * purchase.unit_price
+        event_id = ("CONSUMABLE", f"EXTERNAL_PROVISION:{purchase.source_id}")
+        expected_evidence = AcquisitionEvidenceLine(
+            source_id=event_id[1],
+            kind="PLANNED_CLOSED_SCOPE",
+            activity_id=f"EXTERNAL_STOCK_PROVISION:{purchase.source_id}",
+            week=purchase.arrival_week,
+            measure=PhysicalPurchaseMeasure(
+                good_id=purchase.good_id,
+                physical_quantity=purchase.quantity,
+                physical_unit=purchase.physical_unit,
+                priced_quantity=priced_quantity,
+                price_unit=purchase.price_unit,
+                exact_cost=amount,
+            ),
+            category=purchase.category,
+            price_source=purchase.price_source,
+            price_reference_date=purchase.price_reference_date,
+        )
+        if evidence != expected_evidence:
+            raise ValueError("P19 external purchase evidence differs from declared purchase")
+        if event_id in expected:
+            raise ValueError("P19 duplicate external acquisition identity")
+        expected[event_id] = CostPosting(
+            event_id,
+            PostingNature.ACQUISITION,
+            purchase.category,
+            amount,
+            purchase.good_id,
+            purchase.arrival_week,
+        )
+        expected_receipts.append(StockArrival(
+            source_id=f"EXTERNAL_RECEIPT:{purchase.source_id}",
+            good_id=purchase.good_id,
+            arrival_week=purchase.arrival_week,
+            quantity=purchase.quantity,
+            unit=purchase.physical_unit,
+            source="EXTERNAL_DELIVERY",
+            ordered_week=purchase.ordered_week,
+        ))
+
+    if any(receipt not in provisioning.arrivals for receipt in expected_receipts):
+        raise ValueError("P19 external stock receipt does not match purchase provenance")
+    if any(
+        arrival.source == "EXTERNAL_DELIVERY" and arrival not in expected_receipts
+        for arrival in provisioning.arrivals
+    ):
+        raise ValueError("P19 external delivery lacks matched priced purchase evidence")
+    replayed_stock = project_exact_weekly_stock(
+        goods,
+        provisioning.calendar_weeks,
+        consumption.evidence,
+        provisioning.arrivals,
+    )
+    if not replayed_stock.feasible:
+        raise ValueError("P19 external provisioning contains unresolved physical stockout")
+    if replayed_stock != provisioning.stock:
+        raise ValueError("P19 external stock projection does not reconcile to its inputs")
+    return expected
+
+
 def reconcile_financial_sources(
     pool: ExclusiveCostLedger,
     consumption: PhysicalConsumptionJournalResult,
     holding: HoldingJournal | None = None,
+    stock_provisioning: ExternalStockProvisioningJournal | None = None,
 ) -> ExactFinancialReconciliation:
-    """Reconcile incremental P17 pool → P18 purchases → P19 holding.
+    """Reconcile P17 pool → P18 usage → optional P19 external purchases/holding.
 
     Evidence is checked by source identity and exact value, making equal
     aggregate totals insufficient to conceal omitted, shifted or forged costs.
@@ -224,12 +352,27 @@ def reconcile_financial_sources(
         raise ValueError("P18 typed consumption journal required")
     if holding is not None and not isinstance(holding, HoldingJournal):
         raise ValueError("P19 typed holding journal required")
+    if stock_provisioning is not None and not isinstance(
+        stock_provisioning, ExternalStockProvisioningJournal
+    ):
+        raise ValueError("P19 typed external stock provisioning journal required")
     if any(row.nature not in _POOL_NATURES for row in pool.postings):
         raise ValueError("P17 pool input cannot already contain variable or holding costs")
 
     acquired = _acquisition_expectations(consumption)
     _delta(pool, consumption.journal, acquired, "P18 acquisitions")
     final = consumption.journal
+    if stock_provisioning is not None:
+        external_acquisitions = _external_stock_expectations(
+            stock_provisioning, consumption,
+        )
+        _delta(
+            final,
+            stock_provisioning.ledger,
+            external_acquisitions,
+            "P19 external stock acquisition",
+        )
+        final = stock_provisioning.ledger
     if holding is not None:
         _delta(final, holding.ledger, _holding_expectations(holding), "P19 holding")
         final = holding.ledger
