@@ -180,7 +180,15 @@ def test_catalog_currency_must_be_explicit_and_match_pool_currency() -> None:
         _validate_catalog_currency(canonical, {})
     with pytest.raises(ValueError, match="differs from the exact Skill05 pool currency"):
         _validate_catalog_currency(canonical, {"currency": "USD"})
-    assert _validate_catalog_currency(canonical, {"currency": "BRL"}) == "BRL"
+    assert _validate_catalog_currency(
+        canonical,
+        {"currency": "BRL", "currency_source": "catalog_metadata.json"},
+    ) == "BRL"
+    with pytest.raises(ValueError, match="catalog currency must be sourced"):
+        _validate_catalog_currency(
+            canonical,
+            {"currency": "BRL", "currency_source": "runtime_input"},
+        )
 
 
 def test_activity_week_assignment_must_match_p16_per_activity_demand() -> None:
