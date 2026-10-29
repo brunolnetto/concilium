@@ -361,7 +361,7 @@ def _storage_load_catalog_metadata(storage: BlobStoragePort, base: str) -> dict[
         or currency != currency.upper()
     ):
         raise ValueError(f"missing or invalid catalog currency at {base}/catalog_metadata.json")
-    return {"currency": currency}
+    return {"currency": currency, "currency_source": "catalog_metadata.json"}
 
 
 def _storage_load_templates(storage: BlobStoragePort, base: str) -> tuple[dict, list]:
