@@ -136,6 +136,11 @@ def test_invalid_search_parameters_are_rejected() -> None:
             ("A",), {"A": [0]}, materialize, (),
             calendar_horizon_weeks=3, pool_capacity={}, max_states=0,
         )
+    with pytest.raises(ValueError, match="max_states"):
+        resolve_bounded_physical_calendar(
+            ("A",), {"A": [0]}, materialize, (),
+            calendar_horizon_weeks=3, pool_capacity={}, max_states=100_001,
+        )
     with pytest.raises(ValueError):
         resolve_bounded_physical_calendar(
             ("A",), {"B": [0]}, materialize, (),
