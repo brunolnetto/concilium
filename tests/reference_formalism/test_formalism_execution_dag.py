@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 61
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 62
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -285,6 +285,7 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
         ("P18-C2", [142]),
         ("P18-C3", [143]),
         ("P18-D", [158]),
+        ("P18-E", [159]),
     ]
     # Simulate a state where the three merged package IDs are absent from the integrated set.
     result = report(
@@ -292,8 +293,8 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 6
-    assert issue["pr_packages_merged"] == 3
+    assert issue["pr_packages_total"] == 7
+    assert issue["pr_packages_merged"] == 4
     assert issue["pending_packages"] == ["P18-C1", "P18-C2", "P18-C3"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
@@ -403,5 +404,19 @@ def test_p18d_no_waste_identity_package_is_mandatory(spec: dict) -> None:
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["pending_packages"] == ["P18-D"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p18e_unsupported_units_are_fail_closed_before_issue_closure(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
+    assert ("P18-E", [159]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {158, 159},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 18)
+    assert issue["pending_packages"] == ["P18-D", "P18-E"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
