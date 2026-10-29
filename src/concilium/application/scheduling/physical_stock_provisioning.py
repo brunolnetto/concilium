@@ -102,9 +102,13 @@ class ExternalStockPurchase:
 class ExternalStockProvisioningJournal:
     """The priced acquisition journal and the independent physical stock proof."""
 
-    consumption: PhysicalConsumptionJournalResult
+    base_consumption: PhysicalConsumptionJournalResult
+    ledger: ExclusiveCostLedger
     stock: StockProjection
+    goods: tuple[tuple[str, StockGood], ...]
+    calendar_weeks: tuple[str, ...]
     arrivals: tuple[StockArrival, ...]
+    purchases: tuple[ExternalStockPurchase, ...]
     purchase_evidence: tuple[AcquisitionEvidenceLine, ...]
     currency: str
     currency_source: str
@@ -240,24 +244,25 @@ def book_external_stock_provisioning(
         ))
 
     updated_ledger = attach_physical_purchases(base.journal, physical_purchases)
-    updated_consumption = PhysicalConsumptionJournalResult(
-        journal=updated_ledger,
-        evidence=base.evidence + tuple(additional_evidence),
-    )
     all_arrivals = tuple(other_arrivals) + tuple(external_arrivals)
+    canonical_weeks = tuple(calendar_weeks)
 
-    # Demand uses only the pre-existing physical evidence. Added purchase rows
-    # are receipts, not a second copy of physical demand.
+    # Demand uses only the unchanged P18 evidence. External purchase rows are
+    # kept in a separate P19 journal and cannot be mistaken for physical demand.
     stock = project_exact_weekly_stock(
-        goods, calendar_weeks, base.evidence, all_arrivals,
+        goods, canonical_weeks, base.evidence, all_arrivals,
     )
     if not stock.feasible:
         raise ValueError("external provisioning leaves an unresolved physical stockout")
 
     return ExternalStockProvisioningJournal(
-        consumption=updated_consumption,
+        base_consumption=base,
+        ledger=updated_ledger,
         stock=stock,
+        goods=tuple(sorted(goods.items())),
+        calendar_weeks=canonical_weeks,
         arrivals=all_arrivals,
+        purchases=tuple(purchases),
         purchase_evidence=tuple(additional_evidence),
         currency=financial_currency,
         currency_source=currency_source,
