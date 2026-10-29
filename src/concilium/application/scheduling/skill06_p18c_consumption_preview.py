@@ -274,7 +274,18 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
         ledgers=(physical,),
         proof_scope=_EXPECTED_PROOF_SCOPE,
     )
-    booked = book_exact_pool(pool, {resource_type: tariff}, {resource_type: category})
+    try:
+        booked = book_exact_pool(pool, {resource_type: tariff}, {resource_type: category})
+    except ValueError as exc:
+        # book_exact_pool validates the independent tariff-derived postings before
+        # the later witness comparisons run. Surface a stable witness-integrity
+        # diagnostic when persisted components reconcile to the same pool total
+        # but disagree with those reconstructed postings; do not bypass the check.
+        if "monetary ledger not reconciled to P16 exact pool" in str(exc):
+            raise ValueError(
+                f"{resource_type}: stored P16 cost components differ from reconstructed postings"
+            ) from exc
+        raise
     if pool.total != pool_total:
         raise ValueError(f"{resource_type}: persisted P16 pool total differs from exact components")
     rebuilt_active = sum(
