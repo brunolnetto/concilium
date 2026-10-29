@@ -110,3 +110,61 @@ def test_invalid_evidence_aborts_stage3_without_falling_back(monkeypatch, skill_
         item.codigo == "VAL-P18-CONSUMPTION-PREVIEW" and item.status == "ERRO"
         for item in result.validacoes
     )
+
+def test_p17_reconciliation_runs_after_successful_consolidation(monkeypatch, skill_module):
+    seen = _stub_stages(monkeypatch, skill_module)
+    p18 = {
+        "schema": "concilium.p18.skill06-preview.v1",
+        "authority": "P18_SKILL06_READ_ONLY_PREVIEW_NOT_PROJECT_GO",
+        "project_go_authorized": False,
+    }
+    p17 = {
+        "schema": "concilium.p17.skill06-reconciliation.v1",
+        "authority": "P17_SKILL06_READ_ONLY_RECONCILIATION_NOT_PROJECT_GO",
+        "project_go_authorized": False,
+        "status": "RECONCILED",
+    }
+    monkeypatch.setattr(skill_module, "build_p18_skill06_preview", lambda *_args: p18)
+
+    def reconcile(canonical):
+        assert seen["stage3_calls"] == 1
+        assert canonical.p18_consumption_preview == p18
+        return p17
+
+    monkeypatch.setattr(skill_module, "build_skill06_p17_reconciliation", reconcile)
+    result = skill_module.run_resultado_financeiro(
+        _canonical(),
+        {"p18_consumption_preview_enabled": True},
+        {"currency": "BRL", "currency_source": "catalog_metadata.json", "cpus": [], "insumos": []},
+        {},
+    )
+    assert result.canonical.p17_cost_reconciliation == p17
+    assert any(
+        item.codigo == "VAL-P17-SKILL06-RECONCILIATION" and item.status == "AVISO"
+        for item in result.validacoes
+    )
+
+
+def test_p17_reconciliation_failure_does_not_publish_a_stale_sidecar(monkeypatch, skill_module):
+    seen = _stub_stages(monkeypatch, skill_module)
+    monkeypatch.setattr(
+        skill_module, "build_p18_skill06_preview",
+        lambda *_args: {"schema": "concilium.p18.skill06-preview.v1"},
+    )
+
+    def fail_closed(_canonical):
+        raise ValueError("forged pool ledger")
+
+    monkeypatch.setattr(skill_module, "build_skill06_p17_reconciliation", fail_closed)
+    result = skill_module.run_resultado_financeiro(
+        _canonical(),
+        {"p18_consumption_preview_enabled": True},
+        {"currency": "BRL", "currency_source": "catalog_metadata.json", "cpus": [], "insumos": []},
+        {},
+    )
+    assert result.canonical.p17_cost_reconciliation is None
+    assert seen["stage3_calls"] == 1
+    assert any(
+        item.codigo == "VAL-P17-SKILL06-RECONCILIATION" and item.status == "ERRO"
+        for item in result.validacoes
+    )

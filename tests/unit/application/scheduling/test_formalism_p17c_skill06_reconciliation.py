@@ -27,9 +27,9 @@ def _pool() -> ExclusiveCostLedger:
                     PostingNature.ACTIVE, "EQ", F(5), "CRANE", "2026-W01"),
         CostPosting(("POOL", "CRANE", "1", "0", "2", "CONTRACTUAL_ACTIVE", "1"),
                     PostingNature.ACTIVE, "EQ", F(5), "CRANE", "2026-W02"),
-        CostPosting(("POOL", "CRANE", "1", "0", "2", "MOBILIZATION_EVENT"),
+        CostPosting(("POOL", "CRANE", "1", "0", "2", "MOB"),
                     PostingNature.MOBILIZATION, "IND", F(30), "CRANE", "2026-W01"),
-        CostPosting(("POOL", "CRANE", "1", "0", "2", "DEMOBILIZATION_EVENT"),
+        CostPosting(("POOL", "CRANE", "1", "0", "2", "DEMOB"),
                     PostingNature.DEMOBILIZATION, "IND", F(30), "CRANE", "2026-W02"),
     ))
 

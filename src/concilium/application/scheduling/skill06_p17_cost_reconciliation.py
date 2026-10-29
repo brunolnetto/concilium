@@ -206,6 +206,14 @@ def build_skill06_p17_reconciliation(canonical: CanonicalModel) -> dict[str, obj
     pool = build_skill05_exact_pool_ledger(canonical)
     if not canonical.contratos_recurso:
         raise ValueError("P17-C requires exact Skill05 pool contracts")
+    preview_currency = preview.get("currency")
+    for contract in canonical.contratos_recurso:
+        witness = _mapping(
+            contract.p16_global_assignment,
+            f"{contract.tipo_id}: missing exact P16 witness",
+        )
+        if witness.get("currency") != preview_currency:
+            raise ValueError(f"{contract.tipo_id}: P18 preview currency differs from exact P16 witness")
     pool_ids = {posting.event_id: posting for posting in pool.postings}
     preview_ids = {posting.event_id: posting for posting in preview_ledger.postings}
     if any(preview_ids.get(event_id) != posting for event_id, posting in pool_ids.items()):
