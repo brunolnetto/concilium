@@ -97,7 +97,6 @@ def _patch_skill04_materializer(monkeypatch) -> object:
 
 
 def test_auto_runtime_re_resolves_resource_collision_and_audits_final_skill04_cells(monkeypatch) -> None:
-    from concilium.application.skills.manifests import _unused  # noqa: F401
     helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
     p15 = _patch_skill04_materializer(monkeypatch)
     canonical, regime = _runtime_inputs()
@@ -131,16 +130,6 @@ def test_auto_runtime_re_resolves_resource_collision_and_audits_final_skill04_ce
     assert positions == {"A": 0, "B": 1}
     assert result.distribution_by_item["A"][WEEKS[0]].qtd_executada == 1.0
     assert result.distribution_by_item["B"][WEEKS[1]].qtd_executada == 1.0
-    assert any(v.codigo == "VAL-RCPSP-RESOLVED" for v in result_validations(result))
-
-
-def result_validations(result):
-    # The Skill04 resolver result intentionally does not own the issue-level
-    # validation list. This helper keeps assertions about its finite witness
-    # focused on the returned schedule/audit state.
-    return []
-
-
 def test_auto_physical_resolver_returns_unknown_when_pool_or_assignment_is_unproven(monkeypatch) -> None:
     helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
     _patch_skill04_materializer(monkeypatch)
