@@ -224,7 +224,9 @@ def _build_activity_distribuicao(
     # Prefer the shortest profile that closes Q. If the calendar is exhausted,
     # materialize the best real-calendar attempt instead of returning zero and
     # overstating the unmet quantity. The caller's closure gate will reject it.
-    profile = selected_profile or (best_profile if best_capacity > 0 else None)
+    # Even zero deliverable capacity is real evidence: materialize zero-q cells
+    # over the actual horizon so closure reports Q/sum_q, not a generic empty plan.
+    profile = selected_profile or best_profile
     if profile is None:
         return {}, 0.0
 
