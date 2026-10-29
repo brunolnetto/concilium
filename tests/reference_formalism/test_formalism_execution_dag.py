@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 62
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 63
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -418,5 +418,28 @@ def test_p18e_unsupported_units_are_fail_closed_before_issue_closure(spec: dict)
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["pending_packages"] == ["P18-D", "P18-E"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p19c_external_stock_provisioning_is_registered_as_mandatory_package(
+    spec: dict,
+) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 19)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P19-A", [80]),
+        ("P19-B", [81]),
+        ("P19-C", [150]),
+    ]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {150},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 19)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == 3
+    assert issue["pr_packages_merged"] == 2
+    assert issue["pending_packages"] == ["P19-C"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
