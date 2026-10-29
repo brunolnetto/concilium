@@ -568,21 +568,31 @@ def _build_instancias_recurso(
     (instancias, composicoes, resumos) — um por slot, por atividade×tipo, por contrato
     """
     activities = rcpsp_spec.get("activities", [])
-    if not contratos or not activities:
-        return [], [], []
-
-    item_tipo_required, item_total_peak = _build_item_resource_maps(activities)
-
-    contrato_map = {c.tipo_id: c for c in contratos}
     raw_p16_tariffs = rcpsp_spec.get("p16_exact_tariffs")
     if raw_p16_tariffs is not None and not isinstance(raw_p16_tariffs, dict):
         raise ValueError("P16-E p16_exact_tariffs must be a resource-type mapping")
     p16_tariffs = raw_p16_tariffs or {}
     if any(not isinstance(resource, str) or not resource for resource in p16_tariffs):
         raise ValueError("P16-E tariff resource identifiers must be nonempty strings")
+
+    contract_types = [contract.tipo_id for contract in contratos]
+    contrato_map = {contract.tipo_id: contract for contract in contratos}
     unknown_p16_types = set(p16_tariffs) - set(contrato_map)
     if unknown_p16_types:
         raise ValueError(f"P16-E tariffs reference resources without a physical contract: {sorted(unknown_p16_types)}")
+    duplicate_p16_types = set(p16_tariffs).intersection(
+        tipo_id for tipo_id in contract_types if contract_types.count(tipo_id) > 1
+    )
+    if duplicate_p16_types:
+        raise ValueError(
+            f"P16-E requires one homogeneous contract per tariffed resource type: {sorted(duplicate_p16_types)}"
+        )
+    if p16_tariffs and not activities:
+        raise ValueError("P16-E tariffs require an explicit nonempty activity schedule")
+    if not contratos or not activities:
+        return [], [], []
+
+    item_tipo_required, item_total_peak = _build_item_resource_maps(activities)
     all_instancias: list[InstanciaRecurso] = []
     all_composicoes: list[ComposicaoEquipeAtividade] = []
     all_resumos: list[ResumoUtilizacaoContrato] = []
