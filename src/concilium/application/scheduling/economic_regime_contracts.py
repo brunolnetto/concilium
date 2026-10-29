@@ -178,8 +178,6 @@ def witness_contract_regime(
                     raise ValueError("physical standby exceeds declared max_idle_gap")
         if (active, idle) != (chain.active_weeks, chain.idle_weeks):
             raise ValueError("physical chain active/idle count mismatch")
-    if tuple(actual_active) != ledger.demand:
-        raise ValueError("physical instance chains do not reconstruct exact demand")
     if not explicit_assignment:
         required_levels = {
             (level, j)
@@ -188,6 +186,8 @@ def witness_contract_regime(
         }
         if active_level_weeks != required_levels:
             raise ValueError("physical chains do not cover required demand levels")
+    if tuple(actual_active) != ledger.demand:
+        raise ValueError("physical instance chains do not reconstruct exact demand")
     if tuple(actual_presence) != ledger.presence:
         raise ValueError("physical chains do not reconstruct contractual presence")
     week_presence = dict(zip(pool.calendar_weeks, ledger.presence, strict=True))
