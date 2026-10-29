@@ -61,10 +61,9 @@ class ConciliumService(
 ):
     def __init__(self, dependencies: ConciliumDependencies) -> None:
         self._dependencies = dependencies
+        # Mixins declare config_root as writable state; snapshot the path exposed
+        # by the input builder once when the service is assembled.
+        self.config_root: Path = dependencies.input_builder._config_root  # type: ignore[attr-defined]
         # Cache: catalog_id → (bundle_mtime_ns, enriched_cpus)
         # Invalidada automaticamente quando o bundle é substituído (ADR-067 bust).
         self._enriched_cache: dict[str, tuple[int, list[dict[str, Any]]]] = {}
-
-    @property
-    def config_root(self) -> Path:
-        return self._dependencies.input_builder._config_root  # type: ignore[attr-defined]
