@@ -20,8 +20,6 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.models.catalog.disponibilidade_consumivel import DisponibilidadeConsumivel
 
-from ._closure import SCOPE_TOLERANCE_VERSION, assess_scope_closure  # ty: ignore[unresolved-import]
-
 from ._calendario import (  # ty: ignore[unresolved-import]
     _build_item_to_activity_map,
     _extract_activities,
@@ -32,6 +30,7 @@ from ._calendario import (  # ty: ignore[unresolved-import]
     _week_to_month,
     _weeks_between,
 )
+from ._closure import SCOPE_TOLERANCE_VERSION, assess_scope_closure  # ty: ignore[unresolved-import]
 from ._custos import (  # ty: ignore[unresolved-import]
     _build_dist_cell,
     _capacidade_semanal_por_frentes,
