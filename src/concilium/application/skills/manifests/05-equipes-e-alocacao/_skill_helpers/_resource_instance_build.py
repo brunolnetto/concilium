@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from concilium.application.scheduling.contractual_cost_ledger import ContractCategory, book_exact_pool
+from concilium.application.scheduling.contractual_cost_ledger import book_exact_pool
 from concilium.application.scheduling.resource_demand_levels import normalize_weekly_resource_demand
 from concilium.application.scheduling.resource_level_contracts import (
     ResourceTariff,
