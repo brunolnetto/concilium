@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 60
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 61
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -284,6 +284,7 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
         ("P18-C1", [142]),
         ("P18-C2", [142]),
         ("P18-C3", [143]),
+        ("P18-D", [158]),
     ]
     # Simulate a state where the three merged package IDs are absent from the integrated set.
     result = report(
@@ -388,5 +389,19 @@ def test_p16f_iso_week_consistency_is_mandatory_before_issue_closure(spec: dict)
     )
     issue = next(x for x in result["issues"] if x["issue"] == 16)
     assert "P16-F" in issue["pending_packages"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p18d_no_waste_identity_package_is_mandatory(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
+    assert ("P18-D", [158]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {158},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 18)
+    assert issue["pending_packages"] == ["P18-D"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
