@@ -11,6 +11,9 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
     Venda,
 )
+from concilium.application.scheduling.pricing_report_adapter import (
+    apply_pricing_report_evidence,
+)
 
 from ._categorial import _resolve_custo_deficit_estoque_externo  # ty: ignore[unresolved-import]
 from ._venda_custo import (  # ty: ignore[unresolved-import]
@@ -147,6 +150,7 @@ def _build_resultado(
         status_margem=status_margem,
         validacoes=[],
     )
+    apply_pricing_report_evidence(res, inputs, validacoes)
     return (
         res,
         bdi_rates,
