@@ -56,6 +56,7 @@ def test_filesystem_loader_attaches_currency_on_valid_bundle(tmp_path: Path, mon
 
     assert loaded["currency"] == "BRL"
     assert loaded["currency_source"] == "catalog_metadata.json"
+    assert loaded["currency_source"] == "catalog_metadata.json"
 
 
 def test_filesystem_loader_preserves_currency_when_rebuilding_bundle(tmp_path: Path) -> None:
@@ -68,7 +69,9 @@ def test_filesystem_loader_preserves_currency_when_rebuilding_bundle(tmp_path: P
 
     assert loaded["currency"] == "BRL"
     assert loaded["currency_source"] == "catalog_metadata.json"
+    assert loaded["currency_source"] == "catalog_metadata.json"
     assert rebuilt["currency"] == "BRL"
+    assert rebuilt["currency_source"] == "catalog_metadata.json"
 
 
 def test_filesystem_loader_rejects_invalid_currency_metadata(tmp_path: Path) -> None:
@@ -92,6 +95,7 @@ def test_remote_storage_loader_attaches_currency(tmp_path: Path) -> None:
 
     assert loaded["currency"] == "BRL"
     assert loaded["currency_source"] == "catalog_metadata.json"
+    assert loaded["currency_source"] == "catalog_metadata.json"
 
 
 def test_remote_storage_loader_keeps_missing_metadata_unverified(tmp_path: Path) -> None:
@@ -104,3 +108,4 @@ def test_remote_storage_loader_keeps_missing_metadata_unverified(tmp_path: Path)
             loaded = cs.load_catalogo_via_storage(tmp_path, "cat1", force_refresh=True)
 
     assert "currency" not in loaded
+    assert "currency_source" not in loaded
