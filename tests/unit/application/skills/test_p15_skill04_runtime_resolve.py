@@ -407,7 +407,9 @@ def test_auto_runtime_preserves_best_real_calendar_residual(monkeypatch) -> None
 
     assert result.status == "FAIL"
     assert result.complete_search is True
-    assert any("V1_SCOPE_UNCLOSED:A:None:Q=50; sum_q=30; absolute_error=20" in value
-               for value in result.violation_details)
+    assert any(
+        "V1_SCOPE_UNCLOSED:A:None:Q=50; sum_q=30; absolute_error=20" in value
+        for value in result.violation_details
+    )
     assert "sum_q=30" in result.reason
     assert "absolute_error=20" in result.reason
