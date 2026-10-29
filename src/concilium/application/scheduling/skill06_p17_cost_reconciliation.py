@@ -283,9 +283,13 @@ def build_skill06_p17_reconciliation(canonical: CanonicalModel) -> dict[str, obj
             "activity_assignment_closes_to_active_pool": (
                 sum(witness_costs.values(), Fraction(0)) == active_k
             ),
-            "activity_diagnostics_match_p16": not any(
-                abs(diagnostic_costs.get(activity_id, Fraction(0)) - amount) > _CENT
-                for activity_id, amount in witness_costs.items()
+            "activity_diagnostics_match_p16": (
+                not missing
+                and not unowned
+                and not any(
+                    abs(diagnostic_costs.get(activity_id, Fraction(0)) - amount) > _CENT
+                    for activity_id, amount in witness_costs.items()
+                )
             ),
             "pool_covers_activity_k": activity_diagnostic_k <= pool_k + _CENT,
             "consumables_are_separate_from_k": all(
