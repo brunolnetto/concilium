@@ -22,13 +22,6 @@ from typing import Any
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
-from ._skill_helpers._p14_productivity import (
-    _invalidate_derived_costs,
-    _invalidate_rejected_schedule,
-    _preflight_physical_productivity,
-)
-from ._skill_helpers._p15_resolver import resolve_skill04_physical_schedule
-
 from ._skill_helpers import _assembly as _mod_assembly  # ty: ignore[unresolved-import]  # noqa: F401 — test compat
 from ._skill_helpers import _calendario as _mod_calendario  # ty: ignore[unresolved-import]
 from ._skill_helpers import _custos as _mod_custos  # ty: ignore[unresolved-import]
@@ -49,6 +42,12 @@ from ._skill_helpers._assembly import (  # ty: ignore[unresolved-import]
 from ._skill_helpers._estoque_consumivel import (  # ty: ignore[unresolved-import]
     build_estoque_consumivel_canonical,
 )
+from ._skill_helpers._p14_productivity import (  # ty: ignore[unresolved-import]
+    _invalidate_derived_costs,
+    _invalidate_rejected_schedule,
+    _preflight_physical_productivity,
+)
+from ._skill_helpers._p15_resolver import resolve_skill04_physical_schedule
 from ._skill_helpers._scheduling import (  # ty: ignore[unresolved-import]
     _check_pool_violations,
 )
