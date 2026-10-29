@@ -228,6 +228,7 @@ def _external_stock_expectations(
     if (
         not isinstance(provisioning.currency, str)
         or len(provisioning.currency) != 3
+        or not provisioning.currency.isascii()
         or provisioning.currency != provisioning.currency.upper()
     ):
         raise ValueError("P19 external provisioning currency is invalid")
