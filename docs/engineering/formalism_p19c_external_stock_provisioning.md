@@ -19,9 +19,9 @@ Price reference dates use canonical YYYY-MM-DD. Physical and priced units must h
 
 ## Inventory and financial reconciliation
 
-book_external_stock_provisioning projects the original P18 physical demand plus any explicitly supplied internal-generation arrivals and the external receipts. It rejects duplicate source IDs, unknown goods, delivery before the configured lead time, and unresolved stockout. New stock-purchase evidence is not re-used as another unit of demand.
+book_external_stock_provisioning projects the original P18 physical demand plus any explicitly supplied internal-generation arrivals and external receipts. It rejects duplicate source IDs, unknown goods, delivery before the configured lead time, and unresolved stockout. New purchase evidence is held in a separate P19-C journal and is never appended to P18 demand. If P18 has already priced use of the same good, P19-C rejects the extra acquisition until a source allocation can prove it is not a duplicate charge.
 
-The returned PhysicalConsumptionJournalResult carries the exact priced acquisition as a unique financial posting and its price provenance. This lets P20-A verify acquisition amounts, category, week, good, and event identity against the same journal. The physical stock projection can feed P19-B's post_exact_weekly_holding; P20-A can then reconcile K, V and holding IND without rewriting either source. Inventory holding is not folded into V, K, or purchase quantity.
+The original PhysicalConsumptionJournalResult remains unchanged and continues to represent P18 usage evidence only. P19-C returns a separate ledger plus its paired purchase/receipt evidence. P20-A accepts this journal through an optional stock_provisioning argument, verifies that its base is exactly the supplied P18 result, rebuilds each acquisition posting, and independently replays the P19-A inventory projection. The resulting ledger can feed P19-B's post_exact_weekly_holding; P20-A then reconciles K, V and holding IND without rewriting either source. Inventory holding is not folded into V, K, or physical demand.
 
 ## Authority boundary
 
