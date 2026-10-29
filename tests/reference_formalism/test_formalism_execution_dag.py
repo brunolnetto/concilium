@@ -342,10 +342,10 @@ def test_p18e_unsupported_units_are_fail_closed_before_issue_closure(spec: dict)
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 22, 25),
-        all_merged(spec) - {158, 159},
+        all_merged(spec) - {158, 159, 162},
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
-    assert issue["pending_packages"] == ["P18-D", "P18-E", "P18-F"]
+    assert issue["pending_packages"] == ["P18-D", "P18-E"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
 
