@@ -109,10 +109,8 @@ def test_p20b_activity_view_only_attributes_explicit_p18_consumables() -> None:
     pool, consumption, holding = _case()
     result = reconcile_financial_sources(pool, consumption, holding)
 
-    assert result.activity_attributable_consumables == (
-        # The source evidence explicitly binds this acquisition to activity A.
-        result.activity_attributable_consumables[0],
-    )
+    # The source evidence explicitly binds this acquisition to activity A.
+    assert len(result.activity_attributable_consumables) == 1
     attributed = result.activity_attributable_consumables[0]
     assert (attributed.activity_id, attributed.week, attributed.category, attributed.amount) == (
         "A", "2026-W01", "MAT", F(5, 2),
