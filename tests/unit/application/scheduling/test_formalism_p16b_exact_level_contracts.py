@@ -9,6 +9,7 @@ import pytest
 from concilium.application.scheduling.resource_demand_levels import (
     normalize_weekly_resource_demand,
 )
+from concilium.application.scheduling.contractual_cost_ledger import book_exact_pool
 from concilium.application.scheduling.resource_level_contracts import (
     ResourceTariff,
     exact_money,
@@ -68,7 +69,7 @@ def test_reconstruct_and_optimize_two_resource_levels_with_exact_tie() -> None:
     normalized = _data({"CRANE": (2, 0, 1, 0, 2)})
     result = optimize_homogeneous_pool(normalized, {"CRANE": _tariff("10")})
     ledger = result.ledgers[0]
-    assert result.proof_scope == "EXACT_POOL_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
+    assert result.proof_scope == "EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
     assert ledger.demand == (2, 0, 1, 0, 2)
     assert ledger.presence == (2, 2, 2, 2, 2)
     assert ledger.standby == (0, 2, 1, 2, 0)
@@ -155,3 +156,113 @@ def test_exact_fraction_arithmetic_handles_decimal_boundaries() -> None:
     assert (ledger.total, len(ledger.chains)) == _independent_brute_force_minimum(
         normalized, "CRANE", tariff
     )
+
+
+def _independent_global_instance_minimum(
+    demand: tuple[int, ...], tariff: ResourceTariff
+) -> tuple[Fraction, int]:
+    """Exhaustive labeled-instance path oracle for tiny horizons, no production calls."""
+    from functools import lru_cache
+
+    @lru_cache(maxsize=None)
+    def solve(remaining: tuple[int, ...]) -> tuple[Fraction, int]:
+        if not any(remaining):
+            return Fraction(0), 0
+        first = next(j for j, quantity in enumerate(remaining) if quantity > 0)
+        later = [j for j in range(first + 1, len(remaining)) if remaining[j] > 0]
+        alternatives = []
+        for mask in range(1 << len(later)):
+            active = (first,) + tuple(
+                week for index, week in enumerate(later) if mask & (1 << index)
+            )
+            if any(
+                following - previous - 1 > tariff.max_idle_gap
+                for previous, following in zip(active, active[1:])
+            ):
+                continue
+            reduced = list(remaining)
+            for week in active:
+                reduced[week] -= 1
+            idle_weeks = sum(
+                following - previous - 1
+                for previous, following in zip(active, active[1:])
+            )
+            chain_cost = (
+                Fraction(len(active)) * tariff.active_week
+                + Fraction(idle_weeks) * tariff.idle_week
+                + tariff.movement
+            )
+            tail_cost, tail_chains = solve(tuple(reduced))
+            alternatives.append((chain_cost + tail_cost, 1 + tail_chains))
+        return min(alternatives)
+
+    return solve(demand)
+
+
+def test_global_instance_assignment_falsifier_costs_92_not_120() -> None:
+    normalized = _data({"CRANE": (2, 1, 1, 2)})
+    tariff = ResourceTariff(
+        active_week=exact_money("5"),
+        idle_week=exact_money("1"),
+        mobilize=exact_money("20"),
+        demobilize=exact_money("10"),
+        max_idle_gap=1,
+    )
+    result = optimize_homogeneous_pool(normalized, {"CRANE": tariff})
+    ledger = result.ledgers[0]
+
+    assert result.total == 92
+    assert ledger.active_cost == 30
+    assert ledger.standby_cost == 2
+    assert ledger.mobility_cost == 60
+    assert ledger.presence == (2, 2, 2, 2)
+    assert ledger.standby == (0, 1, 1, 0)
+    assert {
+        chain.active_week_indices for chain in ledger.chains
+    } == {(0, 1, 3), (0, 2, 3)}
+    assert (result.total, len(ledger.chains)) == _independent_global_instance_minimum(
+        ledger.demand, tariff
+    )
+
+    # Downstream financial booking must honor the physical instance assignment,
+    # not reinterpret globally assigned chains as permanent vertical demand levels.
+    booked = book_exact_pool(result, {"CRANE": tariff}, {"CRANE": "EQ"})
+    assert booked.contractual_k == 32
+    assert booked.indirect == 60
+    assert booked.total == 92
+
+
+@pytest.mark.parametrize(
+    ("demand", "active", "idle", "mobilize", "demobilize", "max_gap"),
+    [
+        ((2, 1, 1, 2), "5", "1", "20", "10", 1),
+        ((1, 0, 1), "3", "0.3", "0.1", "0.2", 1),
+        ((0, 2, 1, 2), "7", "2", "11", "13", 2),
+        ((2, 0, 1, 0, 2), "5", "10", "20", "10", 2),
+        ((1, 1, 0, 1), "4", "2", "3", "5", 0),
+    ],
+)
+def test_global_optimizer_matches_independent_instance_path_oracle(
+    demand: tuple[int, ...],
+    active: str,
+    idle: str,
+    mobilize: str,
+    demobilize: str,
+    max_gap: int,
+) -> None:
+    normalized = _data({"R": demand})
+    tariff = ResourceTariff(
+        active_week=exact_money(active),
+        idle_week=exact_money(idle),
+        mobilize=exact_money(mobilize),
+        demobilize=exact_money(demobilize),
+        max_idle_gap=max_gap,
+    )
+    result = optimize_homogeneous_pool(normalized, {"R": tariff})
+    ledger = result.ledgers[0]
+    expected = _independent_global_instance_minimum(demand, tariff)
+    assert (result.total, len(ledger.chains)) == expected
+    assert tuple(
+        sum(j in chain.active_week_indices for chain in ledger.chains)
+        for j in range(len(demand))
+    ) == demand
