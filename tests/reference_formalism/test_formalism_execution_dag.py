@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 64
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 65
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -450,17 +450,31 @@ def test_p20b_event_attribution_is_mandatory_before_issue_twenty_closes(spec: di
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P20-A", [84]),
         ("P20-B", [151]),
-        ("P20-C", []),
+        ("P20-C", [152]),
     ]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 17, 18, 19, 22, 25),
-        all_merged(spec) - {151},
+        all_merged(spec) - {151, 152},
     )
     issue = next(x for x in result["issues"] if x["issue"] == 20)
     assert issue["ready_to_execute"]
     assert issue["pr_packages_total"] == 3
     assert issue["pr_packages_merged"] == 1
+    assert issue["pending_packages"] == ["P20-B", "P20-C"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p20c_category_bdi_is_mandatory_before_issue_twenty_closes(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 20)["packages"]
+    assert ("P20-C", [152]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 17, 18, 19, 22, 25),
+        all_merged(spec) - {151, 152},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 20)
     assert issue["pending_packages"] == ["P20-B", "P20-C"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
