@@ -13,13 +13,13 @@ The receipt ID (EXTERNAL_RECEIPT:<source>) and financial event ID (CONSUMABLE / 
 
 ## Currency and price evidence
 
-The caller must supply the financial currency and the fixed provenance marker catalog_metadata.json from the verified P18-C3 metadata contract. Each purchase must declare the same currency. The current contract does not perform FX conversion.
+The caller must supply the resolved catalog metadata object from the P18-C3 metadata contract, including both currency and the catalog_metadata.json provenance marker. Each purchase must declare the same currency. Independent currency/source scalar arguments are not accepted, and the current contract does not perform FX conversion.
 
 Price reference dates use canonical YYYY-MM-DD. Physical and priced units must have matching dimensions; conversions are exact. An explicit zero unit price may be recorded with a source and date, but a missing price is an error and is never turned into zero. The adapter labels all provisioned purchase rows PLANNED_CLOSED_SCOPE: the record is not an invoice and does not claim an observed purchase or delivery.
 
 ## Inventory and financial reconciliation
 
-book_external_stock_provisioning projects the original P18 physical demand plus any explicitly supplied internal-generation arrivals and external receipts. It rejects duplicate source IDs, unknown goods, delivery before the configured lead time, and unresolved stockout. New purchase evidence is held in a separate P19-C journal and is never appended to P18 demand. If P18 has already priced use of the same good, P19-C rejects the extra acquisition until a source allocation can prove it is not a duplicate charge.
+book_external_stock_provisioning projects the original P18 physical demand plus any explicitly supplied internal-generation arrivals and external receipts. It rejects duplicate source IDs, unknown goods, delivery before the configured lead time, and unresolved stockout. New purchase evidence is held in a separate P19-C journal and is never appended to P18 demand. Unpriced external deliveries cannot be passed through the internal-arrival input; every external receipt must have a matching explicit priced purchase. If P18 has already priced use of the same good, P19-C rejects the extra acquisition until a source allocation can prove it is not a duplicate charge.
 
 The original PhysicalConsumptionJournalResult remains unchanged and continues to represent P18 usage evidence only. P19-C returns a separate ledger plus its paired purchase/receipt evidence. P20-A accepts this journal through an optional stock_provisioning argument, verifies that its base is exactly the supplied P18 result, rebuilds each acquisition posting, rejects overlap with already-priced P18 consumption, and independently replays the P19-A inventory projection. The resulting ledger can feed P19-B's post_exact_weekly_holding; P20-A then reconciles K, V and holding IND without rewriting either source. Inventory holding is not folded into V, K, or physical demand.
 
