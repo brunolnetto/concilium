@@ -26,6 +26,7 @@ from ._skill_helpers._p14_productivity import (
     _invalidate_rejected_schedule,
     _preflight_physical_productivity,
 )
+from ._skill_helpers._p15_resolver import resolve_skill04_physical_schedule
 
 from ._skill_helpers import _assembly as _mod_assembly  # ty: ignore[unresolved-import]  # noqa: F401 — test compat
 from ._skill_helpers import _calendario as _mod_calendario  # ty: ignore[unresolved-import]
@@ -220,6 +221,70 @@ def run_cronograma(
                 ),
             )
         )
+    if not failed and mode and mode.startswith("AUTO") and schedule_selected is not None:
+        original_selected_candidate = schedule_selected
+        physical_resolution = resolve_skill04_physical_schedule(
+            canonical=canonical_in,
+            inputs=inputs,
+            mode=mode,
+            schedule_selected=schedule_selected,
+            distribution_by_item=distribuicao_por_item,
+            fallback_item_ids=fallback_item_ids,
+            weeks=semanas_obra,
+            cpu_lookup=cpu_lookup,
+            production_lookup=producao_lookup,
+            regime=regime,
+            practicability_weekly=prat_semanal,
+            practicability_monthly=prat_mensal,
+            calendar_factor_weekly=fator_calendario_semanal,
+            validacoes=validacoes,
+        )
+        if physical_resolution.status == "PASS":
+            schedule_selected = physical_resolution.schedule_selected
+            distribuicao_por_item = physical_resolution.distribution_by_item
+            fallback_item_ids = physical_resolution.fallback_item_ids
+            # Replace only the chosen candidate, not every candidate that
+            # happens to use the same heuristic family.
+            schedule_candidates = [
+                schedule_selected if candidate is original_selected_candidate else candidate
+                for candidate in schedule_candidates
+            ]
+        elif physical_resolution.status == "UNKNOWN":
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-RCPSP-RESOLVE-UNKNOWN",
+                    status="ERRO",
+                    mensagem=(
+                        f"P15: re-resolução física sem evidência suficiente: {physical_resolution.reason}. "
+                        "Sem testemunho físico verificável, nenhum modo pode publicar o cronograma como viável."
+                    ),
+                )
+            )
+            return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+        elif physical_resolution.status == "FAIL":
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-RCPSP-RESOLVE",
+                    status="ERRO",
+                    mensagem=(
+                        f"P15: nenhum calendário físico admissível após {physical_resolution.attempts} "
+                        f"tentativas (motivo={physical_resolution.reason}; "
+                        f"busca_completa={physical_resolution.complete_search!r}). "
+                        "O cronograma anterior não será publicado como autoridade."
+                    ),
+                )
+            )
+            for detail in physical_resolution.violation_details[:8]:
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-RCPSP-RESOLVE-DETAIL",
+                        status="ERRO",
+                        mensagem=detail,
+                    )
+                )
+            return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+
+
     if failed:
         return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
