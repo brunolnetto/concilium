@@ -250,19 +250,17 @@ def run_cronograma(
                 for candidate in schedule_candidates
             ]
         elif physical_resolution.status == "UNKNOWN":
-            severity = "ERRO" if certification_intent == "CERTIFIED" else "AVISO"
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-RCPSP-RESOLVE-UNKNOWN",
-                    status=severity,
+                    status="ERRO",
                     mensagem=(
                         f"P15: re-resolução física sem evidência suficiente: {physical_resolution.reason}. "
-                        "PREVIEW não é certificado GO; CERTIFIED bloqueia a publicação."
+                        "Sem testemunho físico verificável, nenhum modo pode publicar o cronograma como viável."
                     ),
                 )
             )
-            if certification_intent == "CERTIFIED":
-                return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+            return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
         elif physical_resolution.status == "FAIL":
             validacoes.append(
                 ValidacaoItem(
