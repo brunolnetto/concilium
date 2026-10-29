@@ -354,3 +354,60 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
     assert any(v.codigo == expected_code and v.status == "ERRO" for v in outcome.validacoes)
     if resolution_status == "FAIL":
         assert any(v.codigo == "VAL-RCPSP-RESOLVE-DETAIL" for v in outcome.validacoes)
+
+
+def test_auto_runtime_preserves_best_real_calendar_residual(monkeypatch) -> None:
+    """A failed AUTO re-solve must expose the best attainable Q/sum_q, not hide it."""
+    from sys import modules
+
+    helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
+    _patch_skill04_materializer(monkeypatch)
+    p15 = modules[helper.__module__]
+    item = Item("A")
+    item.quantitativo = 50.0
+    canonical, regime = _runtime_inputs(
+        resource_capacities={"crane": 1},
+        items=(item,),
+    )
+    candidate = _candidate({"A": {"crane": 1}}, ("A",))
+
+    def partial_distribution(sa, _item, *_args, **_kwargs):
+        cumulative = 0.0
+        distribution = {}
+        for week in WEEKS[:3][sa.start_week:]:
+            cumulative += 10.0
+            distribution[week] = DistribuicaoSemanal(
+                num_equipes=1,
+                qtd_executada=10.0,
+                qtd_acumulada=cumulative,
+                pct=cumulative / 50.0,
+                q_max_celula=10.0,
+                capacidade_disponivel_semana=10.0,
+            )
+        return distribution, cumulative
+
+    monkeypatch.setattr(p15, "_build_activity_distribuicao", partial_distribution)
+    validations = []
+    result = helper(
+        canonical=canonical,
+        inputs={"rcpsp_spec": {"resource_pool": {"crane": 1}}},
+        mode="AUTO_SCHEDULE",
+        schedule_selected=candidate,
+        distribution_by_item={},
+        fallback_item_ids=set(),
+        weeks=list(WEEKS[:3]),
+        cpu_lookup={"CPU-A": {"codigo": "CPU-A", "producao_id_ref": "prod"}},
+        production_lookup={"prod": {}},
+        regime=regime,
+        practicability_weekly={week: 1.0 for week in WEEKS[:3]},
+        practicability_monthly={},
+        calendar_factor_weekly={week: 1.0 for week in WEEKS[:3]},
+        validacoes=validations,
+    )
+
+    assert result.status == "FAIL"
+    assert result.complete_search is True
+    assert any("V1_SCOPE_UNCLOSED:A:None:Q=50; sum_q=30; absolute_error=20" in value
+               for value in result.violation_details)
+    assert "sum_q=30" in result.reason
+    assert "absolute_error=20" in result.reason
