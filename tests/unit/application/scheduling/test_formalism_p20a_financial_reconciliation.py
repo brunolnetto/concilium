@@ -124,6 +124,17 @@ def test_p20b_activity_view_only_attributes_explicit_p18_consumables() -> None:
             PostingNature.HOLDING,
         )
     )
+    goods = [
+        event for event in result.event_attribution
+        if event.owner_scope == "GOOD"
+    ]
+    acquisition_owner = next(
+        event.owner_id for event in goods if event.nature == PostingNature.ACQUISITION
+    )
+    holding_owner = next(
+        event.owner_id for event in goods if event.nature == PostingNature.HOLDING
+    )
+    assert acquisition_owner == holding_owner == ("ORE",)
     assert all(
         event.owner_scope == "INSTANCE"
         for event in result.event_attribution
