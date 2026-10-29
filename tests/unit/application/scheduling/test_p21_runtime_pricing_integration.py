@@ -61,3 +61,22 @@ def test_rfi_and_rfp_keep_the_same_canonical_pricing_gate_shape() -> None:
         payload = result.model_dump()
         assert payload["pricing_gates"]["status"] == "UNKNOWN"
         assert payload["pricing_diagnostics"]["status"] == "UNKNOWN"
+
+
+def test_invalid_typed_financial_sources_fail_closed_in_auto_go() -> None:
+    result = _result()
+    validations: list = []
+    apply_pricing_report_evidence(
+        result,
+        {
+            "certification_intent": "AUTO_GO",
+            "p20_financial_sources": {
+                "pool_ledger": object(),
+                "consumption_journal": object(),
+            },
+        },
+        validations,
+    )
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert validations[-1].codigo == "VAL-P21-PRICE-EVIDENCE"
+    assert validations[-1].status == "ERRO"
