@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import importlib
 from math import isfinite
-from typing import Any
+from typing import Any, TypeGuard
 
 from ..spec.spec_loader import ProjectSpec
 from .projection import BenchmarkProjection
@@ -56,7 +56,7 @@ def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProject
         confronto["actionable_insights"] = projection.actionable_insights
 
 
-def _is_finite_number(value: Any) -> bool:
+def _is_finite_number(value: Any) -> TypeGuard[int | float]:
     """Accept finite JSON-style numeric values, excluding bool and nonnumeric data."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
