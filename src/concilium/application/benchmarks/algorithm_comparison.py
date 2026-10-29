@@ -70,14 +70,26 @@ class AlgorithmComparisonReport:
     @property
     def best_by_quality(self) -> AlgorithmComparisonEntry | None:
         """Return the feasible entry with the highest quality_score."""
-        feasible = [e for e in self.entries if e.is_feasible and e.quality_score is not None]
-        return max(feasible, key=lambda e: e.quality_score, default=None)  # type: ignore[arg-type]
+        feasible: list[tuple[AlgorithmComparisonEntry, float]] = []
+        for entry in self.entries:
+            if entry is None or not entry.is_feasible:
+                continue
+            score = entry.quality_score
+            if score is not None:
+                feasible.append((entry, score))
+        return max(feasible, key=lambda candidate: candidate[1])[0] if feasible else None
 
     @property
     def best_by_makespan(self) -> AlgorithmComparisonEntry | None:
         """Return the feasible entry with the shortest makespan."""
-        feasible = [e for e in self.entries if e.is_feasible and e.makespan_weeks is not None]
-        return min(feasible, key=lambda e: e.makespan_weeks, default=None)  # type: ignore[arg-type]
+        feasible: list[tuple[AlgorithmComparisonEntry, int]] = []
+        for entry in self.entries:
+            if entry is None or not entry.is_feasible:
+                continue
+            makespan = entry.makespan_weeks
+            if makespan is not None:
+                feasible.append((entry, makespan))
+        return min(feasible, key=lambda candidate: candidate[1])[0] if feasible else None
 
     # ── reporting ──────────────────────────────────────────────────────────
 
