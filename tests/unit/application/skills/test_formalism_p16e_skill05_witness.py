@@ -133,7 +133,7 @@ def test_skill05_persists_global_p16_witness_and_reconciles_exact_ledger() -> No
 
 
 def test_declared_p16_tariff_rejects_float_rate_instead_of_rounding_it() -> None:
-    contract, spec, schedules = _case({"active_week": 5.0})
+    contract, spec, schedules = _case(tariff_overrides={"active_week": 5.0})
     with pytest.raises(ValueError, match="active_week must be an exact decimal string"):
         builder._build_instancias_recurso([contract], spec, schedules, [])
     assert contract.p16_global_assignment is None
@@ -155,7 +155,7 @@ def test_p16_tariff_cannot_name_a_resource_without_a_physical_contract() -> None
 
 
 def test_p16_enforces_explicit_viability_cap_instead_of_legacy_economic_gap() -> None:
-    contract, spec, schedules = _case({
+    contract, spec, schedules = _case(tariff_overrides={
         "max_idle_gap": 2,
         "gap_max_viavel": 0,
     })
