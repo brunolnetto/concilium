@@ -290,7 +290,7 @@ def test_p14d_acceptance_package_must_be_merged_before_issue_fourteen_closes(spe
         ("P14-D", [145]),
     ]
     result = report(
-        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {144}
+        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {145}
     )
     issue = next(x for x in result["issues"] if x["issue"] == 14)
     assert issue["ready_to_execute"]

@@ -308,6 +308,7 @@ def _execute_manual_mode(
     fator_calendario_semanal: dict[str, float],
     catalogo: dict[str, Any],
     validacoes: list[ValidacaoItem],
+    certified_scope_extension: bool = False,
 ) -> tuple[dict[str, dict[str, DistribuicaoSemanal]], set[str]]:
     """Executa lógica Skill 04 (modo manual).
 
@@ -341,6 +342,7 @@ def _execute_manual_mode(
                 "descricao": f"CPU sintética para {item.item_id}",
                 "producao_id_ref": None,  # Will trigger default productivity of 100.0
             }
+        validation_mark = len(validacoes)
         dist, erros_c, erros_v, is_fallback = _emm_process_item(
             item,
             cpu,
@@ -353,6 +355,42 @@ def _execute_manual_mode(
             num_equipes_por_item,
             validacoes,
         )
+        # In CERTIFIED mode, an under-closed manual allocation is extended only
+        # across weeks already present in the finite project calendar. Missing
+        # weeks after the first positive allocation inherit the last declared
+        # team count; explicit weekly entries remain authoritative. Stop at the
+        # first exact closure so no crews are left allocated after Q is complete.
+        # PREVIEW keeps the original sparse allocation semantics.
+        if certified_scope_extension and erros_c:
+            declared = num_equipes_por_item.get(item.item_id, {})
+            extended = dict(declared)
+            last_positive = 0
+            for week in semanas_obra:
+                if week in declared:
+                    count = declared[week]
+                    if isinstance(count, int) and count > 0:
+                        last_positive = count
+                    continue
+                if last_positive <= 0:
+                    continue
+                extended[week] = last_positive
+                del validacoes[validation_mark:]
+                expanded_allocations = dict(num_equipes_por_item)
+                expanded_allocations[item.item_id] = extended
+                dist, erros_c, erros_v, is_fallback = _emm_process_item(
+                    item,
+                    cpu,
+                    producao_lookup,
+                    regime,
+                    prat_semanal,
+                    prat_mensal,
+                    fator_calendario_semanal,
+                    semanas_obra,
+                    expanded_allocations,
+                    validacoes,
+                )
+                if not erros_c:
+                    break
         distribuicao_por_item[item.item_id] = dist
         if is_fallback:
             fallback_item_ids.add(item.item_id)

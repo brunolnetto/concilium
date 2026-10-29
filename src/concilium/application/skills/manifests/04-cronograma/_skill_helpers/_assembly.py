@@ -62,6 +62,7 @@ def _determine_mode_and_distribuicao(
     catalogo: dict,
     validacoes: list,
     insumos_lookup: dict | None = None,
+    certified_scope_extension: bool = False,
 ) -> tuple[str | None, dict, list, ScheduleCandidateCanonical | None, bool, list[ReplenishableResource], set[str]]:
     """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed,
     replenishable_resources, fallback_item_ids) — o 6º elemento (ADR-128 F6) é vazio em
@@ -121,6 +122,7 @@ def _determine_mode_and_distribuicao(
             fator_calendario_semanal,
             catalogo,
             validacoes,
+            certified_scope_extension=certified_scope_extension,
         )
         return mode, distribuicao_por_item, [], None, False, [], fallback_item_ids
 

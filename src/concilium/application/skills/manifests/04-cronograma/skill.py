@@ -190,6 +190,7 @@ def run_cronograma(
         catalogo,
         validacoes,
         insumos_lookup,
+        certified_scope_extension=certification_intent == "CERTIFIED",
     )
     missing_productivity_evidence = unverified_productivity or bool(fallback_item_ids) or any(
         v.codigo in ("VAL-PROD-04", "VAL-PROD-04-PROD-LEGACY")
