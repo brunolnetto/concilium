@@ -19,6 +19,7 @@ from concilium.application.scheduling.skill04_physical_bridge import (
     materialize_skill04_physical_activity,
 )
 from concilium.domain.models.canonical import CanonicalModel, ScheduleCandidateCanonical, ValidacaoItem
+
 from ._calendario import _build_item_to_activity_map, _resolve_productivity
 from ._custos import _origem_capacidade
 from ._scheduling import (
