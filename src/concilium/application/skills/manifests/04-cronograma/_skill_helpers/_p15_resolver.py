@@ -367,6 +367,7 @@ def resolve_skill04_physical_schedule(
             resolution.attempts,
             "Skill 04 failed to materialize the selected physical witness after RCPSP resolution",
             tuple(f"{v.codigo}:{v.mensagem}" for v in new_errors),
+            resolution.complete_search,
         )
 
     actual_activities: list[PhysicalActivity] = []
@@ -395,6 +396,7 @@ def resolve_skill04_physical_schedule(
         return Skill04PhysicalResolution(
             "FAIL", selected, rematerialized, rematerialized_fallback,
             resolution.attempts, f"post-rematerialization physical audit failed: {exc}",
+            (), resolution.complete_search,
         )
 
     if audit.status != "PASS":
@@ -406,6 +408,7 @@ def resolve_skill04_physical_schedule(
             selected, rematerialized, rematerialized_fallback,
             resolution.attempts, "post-rematerialization Skill 04/05 audit did not PASS",
             violations,
+            resolution.complete_search,
         )
 
     # The initial AUTO pass may have reported an under-delivery or Q-precedence
@@ -464,4 +467,5 @@ def resolve_skill04_physical_schedule(
         "PASS", selected, rematerialized, rematerialized_fallback,
         resolution.attempts,
         "bounded exact physical feasibility witness",
+        (), resolution.complete_search,
     )
