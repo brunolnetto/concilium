@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from concilium.application.scheduling.physical_resolver import (
     MAX_PHYSICAL_RCPSP_STATES,
+    PhysicalEvidenceUnknown,
     resolve_bounded_physical_calendar,
 )
 from concilium.application.scheduling.physical_validator import (
@@ -298,8 +299,11 @@ def resolve_skill04_physical_schedule(
                 distribution=distribution,
                 demand_by_week=demand_by_week,
             )
-        except (KeyError, TypeError, ValueError, OverflowError, ZeroDivisionError):
-            return None
+        except (KeyError, TypeError, ValueError, OverflowError, ZeroDivisionError) as exc:
+            # The start was not proven infeasible: the physical witness itself was invalid.
+            raise PhysicalEvidenceUnknown(
+                f"{item_id}@{start}: physical materialization evidence invalid: {exc}"
+            ) from exc
 
     try:
         precedences = _physical_precedences(canonical)

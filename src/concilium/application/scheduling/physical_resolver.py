@@ -26,6 +26,11 @@ from .physical_validator import (
 
 ResolveStatus = Literal["PASS", "FAIL", "UNKNOWN"]
 
+
+class PhysicalEvidenceUnknown(RuntimeError):
+    """A candidate could not be assessed because required physical evidence is invalid or missing."""
+
+
 # Absolute cap prevents hostile or accidental configuration from turning a
 # bounded calendar search into effectively unbounded work.
 MAX_PHYSICAL_RCPSP_STATES = 100_000
@@ -96,7 +101,12 @@ def resolve_bounded_physical_calendar(
         attempts += 1
         activities: list[PhysicalActivity] = []
         for item, start in zip(ids, combination, strict=True):
-            physical = materialize(item, start)
+            try:
+                physical = materialize(item, start)
+            except PhysicalEvidenceUnknown:
+                # Missing/malformed evidence is not a proof of physical infeasibility.
+                saw_unknown = True
+                break
             if physical is None:
                 break
             if physical.item_id != item or physical.start_week != start:
