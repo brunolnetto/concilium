@@ -510,6 +510,7 @@ def test_p21b_regulatory_and_profitability_gates_are_mandatory_before_issue_clos
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P21-A", [153]),
         ("P21-B", [154]),
+        ("P21-C", [162]),
     ]
     result = report(
         spec,
