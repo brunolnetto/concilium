@@ -354,15 +354,10 @@ def build_skill05_exact_pool_ledger(canonical: CanonicalModel) -> ExclusiveCostL
 
 def _validate_catalog_currency(
     canonical: CanonicalModel,
-    declared_currency: object,
+    catalogo: Mapping[str, object],
 ) -> str:
-    """Require an explicit run-level declaration for catalog price currency.
-
-    The current Insumo schema has no currency field, so this declaration is not
-    represented as catalog provenance. The caller must supply the currency of
-    the resolved catalog; the declaration is recorded in the preview output.
-    """
-    currency = _text(declared_currency, "p18_catalog_price_currency")
+    """Read explicit price currency from the resolved catalog metadata."""
+    currency = _text(catalogo.get("currency"), "catalog price currency")
     if currency != currency.upper() or len(currency) != 3 or not currency.isalpha():
         raise ValueError("catalog price currency must be an explicit uppercase three-letter code")
     witness_currencies: set[str] = set()
@@ -460,13 +455,12 @@ def _preview_record(
 def build_p18_skill06_preview(
     canonical: CanonicalModel,
     catalogo: Mapping[str, object],
-    catalog_price_currency: object,
 ) -> dict[str, object]:
     """Build the opt-in P18 sidecar from final schedule, catalog and exact pool witness."""
     if not isinstance(catalogo, Mapping):
         raise ValueError("resolved catalog must be an explicit mapping")
     pool = build_skill05_exact_pool_ledger(canonical)
-    currency = _validate_catalog_currency(canonical, catalog_price_currency)
+    currency = _validate_catalog_currency(canonical, catalogo)
     goods = build_activity_goods_from_catalog(canonical, catalogo)
     preview = book_skill04_planned_consumption_preview(canonical, pool, goods)
     return _preview_record(preview, goods, canonical, currency)
