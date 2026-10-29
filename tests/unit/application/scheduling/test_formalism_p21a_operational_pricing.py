@@ -86,6 +86,8 @@ def test_p21a_all_diagnostics_reconstruct_from_one_exact_ledger() -> None:
     assert result.equivalent_markup == F(21, 85)
     assert result.catalog_comparison == "COMPARABLE"
     assert result.comparison_reason is None
+    assert result.currency_source == "catalog_metadata.json"
+    assert len(result.currency_metadata_fingerprint) == 64
     assert result.authority == "P21_A_PRICING_DIAGNOSTICS_PREVIEW_NOT_PROJECT_GO"
 
 
