@@ -24,6 +24,9 @@ def test_preview_without_exact_ledger_is_unknown_and_visible() -> None:
     assert result.pricing_authority == "P21_C_PRICING_GATES_UNKNOWN_NOT_PROJECT_GO"
     assert validations[-1].codigo == "VAL-P21-PRICE-EVIDENCE"
     assert validations[-1].status == "AVISO"
+    payload = result.model_dump()
+    assert payload["pricing_gates"]["status"] == "UNKNOWN"
+    assert payload["pricing_authority"] == result.pricing_authority
 
 
 def test_certified_mode_without_exact_ledger_fails_closed() -> None:
@@ -44,3 +47,17 @@ def test_auto_go_without_exact_ledger_fails_closed() -> None:
     assert result.pricing_gates["status"] == "UNKNOWN"
     assert validations[-1].codigo == "VAL-P21-PRICE-EVIDENCE"
     assert validations[-1].status == "ERRO"
+
+
+def test_rfi_and_rfp_keep_the_same_canonical_pricing_gate_shape() -> None:
+    for mode in ("RFI", "RFP"):
+        result = _result()
+        validations: list = []
+        apply_pricing_report_evidence(
+            result,
+            {"certification_intent": "PREVIEW", "proposal_mode": mode},
+            validations,
+        )
+        payload = result.model_dump()
+        assert payload["pricing_gates"]["status"] == "UNKNOWN"
+        assert payload["pricing_diagnostics"]["status"] == "UNKNOWN"
