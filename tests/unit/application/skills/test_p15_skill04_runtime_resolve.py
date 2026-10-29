@@ -73,7 +73,7 @@ def _runtime_inputs(
     resource_capacities: dict[str, int] | None = None,
     items: tuple[Item, ...] | None = None,
 ):
-    resources = resource_capacities or {"crane": 1}
+    resources = {"crane": 1} if resource_capacities is None else resource_capacities
     canonical = SimpleNamespace(
         eap=list(items or (Item("A"), Item("B"))),
         atividades=[],
