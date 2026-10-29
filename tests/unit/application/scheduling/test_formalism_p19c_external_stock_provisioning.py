@@ -156,7 +156,12 @@ def test_unit_conversion_is_exact_for_external_purchase() -> None:
         quantity=F(3, 1000), physical_unit="t", unit_price=F(5), price_unit="kg",
     )
     result = book_external_stock_provisioning(
-        base, goods, WEEKS, (purchase,), catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE}, other_arrivals=arrivals,
+        base,
+        goods,
+        WEEKS,
+        (purchase,),
+        catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE},
+        other_arrivals=arrivals,
     )
     assert result.purchase_evidence[0].measure.physical_quantity == F(3, 1000)
     assert result.purchase_evidence[0].measure.priced_quantity == F(3)
@@ -224,6 +229,12 @@ def test_unpriced_external_arrival_cannot_bypass_purchase_evidence() -> None:
 
 def test_missing_catalog_currency_provenance_and_currency_mismatch_fail() -> None:
     goods, base, arrivals = _base()
+    with pytest.raises(ValueError, match="catalog currency must be an uppercase ASCII"):
+        book_external_stock_provisioning(
+            base, goods, WEEKS, (_purchase(),),
+            catalog_metadata={"currency_source": CURRENCY_SOURCE},
+            other_arrivals=arrivals,
+        )
     with pytest.raises(ValueError, match="catalog_metadata.json"):
         book_external_stock_provisioning(
             base, goods, WEEKS, (_purchase(),),
@@ -264,7 +275,12 @@ def test_duplicate_purchase_identity_cannot_double_book_arrival_or_cost() -> Non
     repeated = _purchase()
     with pytest.raises(ValueError, match="duplicate external purchase source identity"):
         book_external_stock_provisioning(
-            base, goods, WEEKS, (repeated, repeated), catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE}, other_arrivals=arrivals,
+            base,
+            goods,
+            WEEKS,
+            (repeated, repeated),
+            catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE},
+            other_arrivals=arrivals,
         )
     collision = StockArrival(
         "EXTERNAL_RECEIPT:quote-17", "ORE", "2026-W01", F(1), "kg",
@@ -272,9 +288,13 @@ def test_duplicate_purchase_identity_cannot_double_book_arrival_or_cost() -> Non
     )
     with pytest.raises(ValueError, match="duplicate physical stock source"):
         book_external_stock_provisioning(
-            base, goods, WEEKS, (repeated,), catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE}, other_arrivals=arrivals + (collision,),
+            base,
+            goods,
+            WEEKS,
+            (repeated,),
+            catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE},
+            other_arrivals=arrivals + (collision,),
         )
-
 
 
 def test_external_provisioning_does_not_double_charge_priced_consumption() -> None:
@@ -290,7 +310,7 @@ def test_external_provisioning_does_not_double_charge_priced_consumption() -> No
         )
 
 def test_p20_rejects_forged_external_cost_or_stock_projection() -> None:
-    goods, result = _book()
+    _, result = _book()
     original = result.ledger.postings[-1]
     forged_ledger = ExclusiveCostLedger(
         result.ledger.postings[:-1] + (replace(original, amount=F(14)),)
@@ -317,7 +337,12 @@ def test_explicit_zero_price_is_not_the_same_as_missing_price() -> None:
     goods, base, arrivals = _base()
     free_but_evidenced = _purchase(unit_price=F(0), price_source="written-zero-price")
     result = book_external_stock_provisioning(
-        base, goods, WEEKS, (free_but_evidenced,), catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE}, other_arrivals=arrivals,
+        base,
+        goods,
+        WEEKS,
+        (free_but_evidenced,),
+        catalog_metadata={"currency": "BRL", "currency_source": CURRENCY_SOURCE},
+        other_arrivals=arrivals,
     )
     assert result.external_cost == 0
     assert result.purchase_evidence[0].price_source == "written-zero-price"
