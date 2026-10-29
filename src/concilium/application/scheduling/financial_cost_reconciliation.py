@@ -316,6 +316,11 @@ def _external_stock_expectations(
 
     if any(receipt not in provisioning.arrivals for receipt in expected_receipts):
         raise ValueError("P19 external stock receipt does not match purchase provenance")
+    if any(
+        arrival.source == "EXTERNAL_DELIVERY" and arrival not in expected_receipts
+        for arrival in provisioning.arrivals
+    ):
+        raise ValueError("P19 external delivery lacks matched priced purchase evidence")
     replayed_stock = project_exact_weekly_stock(
         goods,
         provisioning.calendar_weeks,
