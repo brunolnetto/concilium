@@ -129,3 +129,60 @@ def test_mass_price_conversion_uses_purchased_unit_not_raw_output_unit() -> None
     assert result.evidence[0].measure.priced_quantity == F(2)
     assert result.variable_cost == F(400)
     assert result.journal.postings[0].amount == F(400)
+
+
+def test_no_waste_identity_closes_activity_cost_and_aggregate_good_ledger_exactly() -> None:
+    """Two activities share one good; activity-specific rates still conserve V exactly."""
+    goods = {
+        ("A", "AGGREGATE"): (
+            PhysicallyPricedGood(
+                PhysicalConsumptionRate(
+                    "AGGREGATE", F(500), "kg",
+                    ConsumptionBasis.PER_DELIVERED_UNIT, "m³",
+                ),
+                F(200), "t",
+            ),
+            "MAT",
+        ),
+        ("B", "AGGREGATE"): (
+            PhysicallyPricedGood(
+                PhysicalConsumptionRate(
+                    "AGGREGATE", F(250), "kg",
+                    ConsumptionBasis.PER_DELIVERED_UNIT, "m²",
+                ),
+                F(200), "t",
+            ),
+            "MAT",
+        ),
+    }
+    evidence = (
+        WeeklyConsumptionEvidence(
+            "A-Q", "A", "AGGREGATE", "2026-W20",
+            ConsumptionBasis.PER_DELIVERED_UNIT, "PLANNED_CLOSED_SCOPE",
+            delivered_quantity=F(4), delivered_unit="m³",
+        ),
+        WeeklyConsumptionEvidence(
+            "B-Q", "B", "AGGREGATE", "2026-W20",
+            ConsumptionBasis.PER_DELIVERED_UNIT, "PLANNED_CLOSED_SCOPE",
+            delivered_quantity=F(8), delivered_unit="m²",
+        ),
+    )
+
+    result = book_weekly_physical_consumption(ExclusiveCostLedger(()), goods, evidence)
+
+    # No-waste physical balance: 4*500 kg + 8*250 kg = 4,000 kg = 4 t.
+    total_kg = sum((row.measure.physical_quantity for row in result.evidence), F(0))
+    total_t = sum((row.measure.priced_quantity for row in result.evidence), F(0))
+    assert total_kg == F(4000)
+    assert total_t == F(4)
+    # Aggregate-good valuation equals the independent activity decomposition:
+    # p_t * U_t = 200*4 = (4*100) + (8*50) = R$800.
+    aggregate_good_cost = F(200) * total_t
+    activity_cost = F(4) * F(100) + F(8) * F(50)
+    assert aggregate_good_cost == activity_cost == F(800)
+    assert result.variable_cost == aggregate_good_cost
+    assert result.journal.total == F(800)
+    assert result.journal.contractual_k == 0
+    assert result.journal.indirect == 0
+    assert len(result.journal.postings) == 2
+    assert len({posting.event_id for posting in result.journal.postings}) == 2
