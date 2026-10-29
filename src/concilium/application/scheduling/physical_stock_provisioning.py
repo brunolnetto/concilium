@@ -153,8 +153,8 @@ def book_external_stock_provisioning(
 ) -> ExternalStockProvisioningJournal:
     """Validate and post explicit external provisioning without fabricating stock.
 
-    The declared currency must come from P18-C3's verified catalog metadata
-    contract. Each purchase must declare that currency. Each row creates a
+    The supplied currency must come from P18-C3's resolved catalog metadata
+    object. Each purchase must declare that same currency. Each row creates a
     unique priced MAT/COMB acquisition and a separately identified receipt.
     Stockout, incompatible units, late deliveries, duplicate identities, and
     incomplete price provenance fail closed. Evidence remains a preview.
