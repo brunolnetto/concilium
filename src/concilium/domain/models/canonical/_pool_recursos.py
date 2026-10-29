@@ -177,6 +177,9 @@ class RecursoContrato(BaseModel):
     # Do not scale this by weather, calendar or effective throughput.
     # Missing provenance is an uncertified legacy contract.
     frentes_por_item_semanal: dict[str, dict[str, int]] = Field(default_factory=dict)
+    # P16-E opt-in witness: exact assignment for fixed, verified physical demand.
+    # It is deliberately separate from legacy cost projections and is not PROJECT_GO.
+    p16_global_assignment: dict[str, object] | None = None
     # ADR-080: semana de mobilização por instância (número → semana ISO).
     # {} = todas as instâncias são mobilizadas desde semana_inicio (comportamento legado).
     mobilizacao_por_instancia: dict[int, str] = Field(default_factory=dict)
