@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from fractions import Fraction
 
+from .week_index import iso_week_index  # ty: ignore[unresolved-import]
+
 _UNIDADE_SEM_IDLE: frozenset[str] = frozenset({"hora_prod"})
 
 
@@ -159,18 +161,15 @@ def _delta_c_pot(
 
 
 def _week_to_idx(week_str: str) -> int:
-    """Converte "S001" → 1, "S042" → 42, "2026-W48" → 48, etc."""
+    """Convert legacy S-index or ISO week to a comparable absolute index."""
     s = week_str.strip()
     if s.upper().startswith("S"):
         try:
             return int(s[1:])
         except ValueError:
             pass
-    if "W" in s:
-        try:
-            return int(s.split("W")[-1])
-        except ValueError:
-            pass
+    if "-W" in s:
+        return iso_week_index(s)
     return 0
 
 
