@@ -173,3 +173,46 @@ def test_p16_enforces_explicit_viability_cap_instead_of_legacy_economic_gap() ->
         for chain in witness["chains"]
         for preceding, following in zip(chain["active_week_indices"], chain["active_week_indices"][1:])
     )
+
+
+
+def test_p16_tariff_fails_when_no_contracts_exist() -> None:
+    _contract, spec, schedules = _case()
+    with pytest.raises(ValueError, match="without a physical contract"):
+        builder._build_instancias_recurso([], spec, schedules, [])
+
+
+def test_p16_tariff_rejects_duplicate_homogeneous_contracts() -> None:
+    contract, spec, schedules = _case()
+    duplicate = contract.model_copy(update={"contrato_id": "contract-crane-duplicate"})
+    with pytest.raises(ValueError, match="one homogeneous contract per tariffed resource type"):
+        builder._build_instancias_recurso([contract, duplicate], spec, schedules, [])
+
+
+def test_failed_multitype_p16_call_does_not_leave_partial_witnesses() -> None:
+    contract, spec, schedules = _case()
+    invalid_second = contract.model_copy(update={
+        "contrato_id": "contract-exc",
+        "tipo_id": "EXC",
+        "frentes_por_item_semanal": {},
+    })
+    spec["activities"] = [
+        {
+            **activity,
+            "required_resources": {**activity["required_resources"], "EXC": 1},
+        }
+        for activity in spec["activities"]
+    ]
+    spec["p16_exact_tariffs"]["EXC"] = dict(spec["p16_exact_tariffs"]["CRANE"])
+    validations = []
+
+    with pytest.raises(ValueError, match="source mobilization m_i,j is required"):
+        builder._build_instancias_recurso(
+            [contract, invalid_second], spec, schedules, validations,
+        )
+
+    assert contract.p16_global_assignment is None
+    assert invalid_second.p16_global_assignment is None
+    assert contract.mobilizacao_por_instancia == {}
+    assert invalid_second.mobilizacao_por_instancia == {}
+    assert validations == []
