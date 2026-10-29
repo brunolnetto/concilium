@@ -97,6 +97,15 @@ def apply_pricing_report_evidence(
             "NO_INVENTORY scope conflicts with supplied P19 journals",
         )
         return
+    if inventory_scope.status == "COMPLETE" and (
+        context.get("holding_journal") is None
+        and context.get("stock_provisioning_journal") is None
+    ):
+        _unknown(
+            result, validations, intent,
+            "COMPLETE inventory scope requires an explicit holding or provisioning journal",
+        )
+        return
     if isinstance(context.get("source_build_error"), str):
         _unknown(result, validations, intent, context["source_build_error"])
         return
