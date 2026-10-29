@@ -130,7 +130,12 @@ def _activity_cost_components(equipe: object | None) -> tuple[float, float, floa
             total = sum(components)
             if target > 0 and total > 0:
                 factor = target / total
-                components = tuple(value * factor for value in components)
+                components = (
+                    components[0] * factor,
+                    components[1] * factor,
+                    components[2] * factor,
+                    components[3] * factor,
+                )
         return components
 
     total = _resolve_custo_equipe_agregado(equipe)
