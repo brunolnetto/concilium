@@ -196,8 +196,14 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
         end = _integer(row.get("end_exclusive_index"), "end_exclusive_index", minimum=1)
         active = _integer(row.get("active_weeks"), "active_weeks", minimum=1)
         idle = _integer(row.get("idle_weeks"), "idle_weeks")
-        if level in levels or not 0 <= start < end <= horizon:
-            raise ValueError(f"{resource_type}: duplicate or out-of-horizon instance chain")
+        if (
+            level in levels
+            or level > contract.quantidade_contratada
+            or not 0 <= start < end <= horizon
+        ):
+            raise ValueError(
+                f"{resource_type}: duplicate, over-contracted or out-of-horizon instance chain"
+            )
         levels.add(level)
         if row.get("start_week") != weeks[start] or row.get("end_week") != weeks[end - 1]:
             raise ValueError(f"{resource_type}: instance-chain week boundaries are forged")

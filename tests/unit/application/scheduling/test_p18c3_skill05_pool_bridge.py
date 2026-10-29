@@ -190,3 +190,13 @@ def test_activity_week_assignment_must_match_p16_per_activity_demand() -> None:
     contract = contract.model_copy(update={"p16_global_assignment": witness})
     with pytest.raises(ValueError, match="do not reconstruct per-activity demand"):
         build_skill05_exact_pool_ledger(_canonical(contract))
+
+def test_witness_cannot_assign_more_instance_ids_than_contract_capacity() -> None:
+    contract = _contract_and_witness()
+    witness = dict(contract.p16_global_assignment or {})
+    rows = [dict(row) for row in witness["chains"]]
+    rows[0]["instance_id"] = contract.quantidade_contratada + 1
+    witness["chains"] = rows
+    contract = contract.model_copy(update={"p16_global_assignment": witness})
+    with pytest.raises(ValueError, match="over-contracted"):
+        build_skill05_exact_pool_ledger(_canonical(contract))
