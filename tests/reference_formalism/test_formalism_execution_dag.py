@@ -297,21 +297,33 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
 
-def test_p14d_acceptance_package_must_be_merged_before_issue_fourteen_closes(spec: dict) -> None:
+def test_p14d_and_p14e_packages_must_be_merged_before_issue_fourteen_closes(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 14)["packages"]
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P14-A", [50]),
         ("P14-B", [52]),
         ("P14-C", [129]),
         ("P14-D", [145]),
+        ("P14-E", [155]),
     ]
     result = report(
-        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {145}
+        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {145, 155}
     )
     issue = next(x for x in result["issues"] if x["issue"] == 14)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 4
+    assert issue["pr_packages_total"] == 5
     assert issue["pr_packages_merged"] == 3
-    assert issue["pending_packages"] == ["P14-D"]
+    assert issue["pending_packages"] == ["P14-D", "P14-E"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+    # Merging P14-D alone still leaves the exact-residual package mandatory.
+    result = report(
+        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {155}
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 14)
+    assert issue["pr_packages_total"] == 5
+    assert issue["pr_packages_merged"] == 4
+    assert issue["pending_packages"] == ["P14-E"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
