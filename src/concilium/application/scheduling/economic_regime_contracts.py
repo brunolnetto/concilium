@@ -146,7 +146,7 @@ def witness_contract_regime(
                 raise ValueError("physical chain active/idle count mismatch")
             if any(
                 following - previous - 1 > evidence.tariff.max_idle_gap
-                for previous, following in zip(active_indices, active_indices[1:])
+                for previous, following in zip(active_indices[:-1], active_indices[1:], strict=True)
             ):
                 raise ValueError("physical standby exceeds declared max_idle_gap")
             active_index_set = set(active_indices)
