@@ -358,8 +358,9 @@ def _execute_manual_mode(
         # In CERTIFIED mode, an under-closed manual allocation is extended only
         # across weeks already present in the finite project calendar. Missing
         # weeks after the first positive allocation inherit the last declared
-        # team count; explicit weekly entries remain authoritative. PREVIEW keeps
-        # the original sparse allocation semantics.
+        # team count; explicit weekly entries remain authoritative. Stop at the
+        # first exact closure so no crews are left allocated after Q is complete.
+        # PREVIEW keeps the original sparse allocation semantics.
         if certified_scope_extension and erros_c:
             declared = num_equipes_por_item.get(item.item_id, {})
             extended = dict(declared)
@@ -369,9 +370,10 @@ def _execute_manual_mode(
                     count = declared[week]
                     if isinstance(count, int) and count > 0:
                         last_positive = count
-                elif last_positive > 0:
-                    extended[week] = last_positive
-            if extended != declared:
+                    continue
+                if last_positive <= 0:
+                    continue
+                extended[week] = last_positive
                 del validacoes[validation_mark:]
                 expanded_allocations = dict(num_equipes_por_item)
                 expanded_allocations[item.item_id] = extended
@@ -387,6 +389,8 @@ def _execute_manual_mode(
                     expanded_allocations,
                     validacoes,
                 )
+                if not erros_c:
+                    break
         distribuicao_por_item[item.item_id] = dist
         if is_fallback:
             fallback_item_ids.add(item.item_id)
