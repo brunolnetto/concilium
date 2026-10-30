@@ -438,8 +438,14 @@ def build_pricing_report_evidence_context(
 
 def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> None:
     status = "AVISO" if intent == "PREVIEW" else "ERRO"
-    result.pricing_diagnostics = {"status": "UNKNOWN", "reason": reason}
+    result.pricing_diagnostics = {
+        "schema": "concilium.p21.pricing-diagnostics.v1",
+        "status": "UNKNOWN",
+        "reason": reason,
+    }
     result.pricing_gates = {
+        "schema": "concilium.p21.pricing-gates.v1",
+        "certification_intent": intent,
         "status": "UNKNOWN",
         "regulatory_status": "UNKNOWN",
         "profitability_status": "UNKNOWN",
