@@ -105,9 +105,13 @@ def resolve_bounded_physical_calendar(
         for item, start in zip(ids, combination, strict=True):
             try:
                 physical = materialize(item, start)
-            except PhysicalEvidenceUnknown:
+            except PhysicalEvidenceUnknown as exc:
                 # Missing/malformed evidence is not a proof of physical infeasibility.
+                # Preserve the first diagnostic so the runtime can identify which
+                # evidence contract prevented a physical witness.
                 saw_unknown = True
+                if unknown_reason is None:
+                    unknown_reason = str(exc) or "physical materialization evidence is unknown"
                 break
             if physical is None:
                 break
