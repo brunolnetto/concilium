@@ -45,18 +45,27 @@ class P18CConsumptionPreview:
     authority: str = "P18C_SKILL04_PLANNED_PREVIEW_NOT_PROJECT_GO"
 
 
-def _exact_q(value: float) -> Fraction:
-    if type(value) not in (float, int) or value < 0:
+def _exact_q(value: object) -> Fraction:
+    # Catalog rows are Mapping[str, object]. Narrow explicitly to exact built-in
+    # numeric types; bool, Decimal, strings and numeric proxy objects are not
+    # accepted as physical measurements.
+    if type(value) is int:
+        numeric: int | float = value
+    elif type(value) is float:
+        numeric = value
+    else:
+        raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
+    if numeric < 0:
         raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
     # math.isfinite converts integers to float; an adversarially large int can
     # overflow during that conversion instead of failing closed with ValueError.
     try:
-        finite = isfinite(value)
+        finite = isfinite(numeric)
     except OverflowError:
         finite = False
     if not finite:
         raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
-    return Fraction(str(value))
+    return Fraction(str(numeric))
 
 
 def _scope_tolerance(expected: Fraction) -> Fraction:
