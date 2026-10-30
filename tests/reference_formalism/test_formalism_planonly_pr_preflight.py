@@ -286,7 +286,7 @@ def test_preflight_rejects_dag_pr_registration_of_document_only_work(state) -> N
     changed = copy.deepcopy(dag)
     target = next(x for x in changed["nodes"] if x["issue"] == 17)
     target["packages"][-1]["prs"] = [108]
-    with pytest.raises(ValueError, match="planning registry and unimplemented DAG slots differ"):
+    with pytest.raises(ValueError, match="plan-only PR reused or registered as implementation"):
         validate_registry(changed, registry)
 
 
