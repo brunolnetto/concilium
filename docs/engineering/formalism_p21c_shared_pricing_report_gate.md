@@ -51,6 +51,27 @@ provenance, invalid units, stockouts, delivery timing errors, and duplicate
 ownership fail closed to `UNKNOWN`; `PREVIEW` surfaces a warning and
 `AUTO_GO`/`CERTIFIED` surface an error.
 
+## Persisted canonical result
+
+The canonical \`Resultado\` keeps flat string-valued fields so REST/MCP/UI/RFI/RFP
+serialization remains stable:
+
+- \`pricing_diagnostics\` uses schema
+  \`concilium.p21.pricing-diagnostics.v1\`. It stores P20 authority, inventory
+  scope source/reference/fingerprint, operational and catalog basis
+  fingerprints, catalog source/reference/currency, exact numeric diagnostics,
+  currency-metadata fingerprint, and each category's declared BDI rate.
+- \`pricing_gates\` uses schema \`concilium.p21.pricing-gates.v1\`. It stores the
+  certification intent, independent gate statuses, regulatory basis amount,
+  currency, source, reference, fingerprint and minimum rate, plus realized and
+  minimum profit margins.
+- \`UNKNOWN\` responses keep both schema identifiers and the failure reason;
+  missing evidence does not produce a partial or implied PASS.
+
+Every rational value is serialized as an exact string. The \`schema\` value is a
+versioned serialization contract, not a regulatory certificate.
+
+
 Example (illustrative values, not a project quote):
 
 ```json
