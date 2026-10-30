@@ -252,7 +252,7 @@ def build_activity_goods_from_catalog(
                 raise ValueError(f"{activity_id}/{good_id}: physical good unit is missing")
             try:
                 good_unit = normalize_unidade(good_unit_raw)
-                declared_line_unit = line.get("unidade")
+                declared_line_unit = row.get("unidade")
                 if declared_line_unit is not None:
                     if not isinstance(declared_line_unit, str):
                         raise ValueError("composition unit must be text")
