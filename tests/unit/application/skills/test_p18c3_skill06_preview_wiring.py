@@ -27,15 +27,15 @@ def _stub_stages(monkeypatch, skill_module, *, final=None):
     seen = {"final_input": None, "stage3_calls": 0}
 
     def pre(canonical, *_args):
-        return skill_result(canonical, [])
+        return SkillResult(canonical, [])
 
     def indirect(canonical, *_args):
-        return skill_result(canonical, [])
+        return SkillResult(canonical, [])
 
     def consolidate(canonical, *_args):
         seen["stage3_calls"] += 1
         seen["final_input"] = canonical.p18_consumption_preview
-        return skill_result(canonical, [])
+        return SkillResult(canonical, [])
 
     monkeypatch.setattr(skill_module, "_run_precificacao", pre)
     monkeypatch.setattr(skill_module, "_run_indiretos", indirect)
