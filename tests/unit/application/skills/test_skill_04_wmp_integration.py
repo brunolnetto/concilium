@@ -210,7 +210,10 @@ class TestWMPExpansion:
             if validation.codigo == "VAL-CRON-EQUIPES-INTEIRO"
         )
         assert invalid.status == "ERRO"
-        assert result.canonical is canonical
+        # Rejection returns a sanitized copy; it must preserve declared EAP
+        # configuration and leave the caller-owned input untouched.
+        assert result.canonical.eap == canonical.eap
+        assert result.canonical.cronograma is None
         assert canonical.cronograma is None
 
     def test_fractional_mobilization_rate_keeps_weekly_headcount_integral(self):
