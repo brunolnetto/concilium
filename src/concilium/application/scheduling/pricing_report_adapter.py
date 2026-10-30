@@ -33,6 +33,7 @@ from .physical_stock_provisioning import (
     ExternalStockPurchase,
     book_external_stock_provisioning,
 )
+from .pricing_gates import RegulatoryBdiBasis, evaluate_pricing_gates
 from .skill04_consumption_preview import (
     book_skill04_planned_consumption_preview,
     build_activity_goods_from_catalog,
@@ -41,7 +42,6 @@ from .skill06_p18c_consumption_preview import (
     _validate_catalog_currency,
     build_skill05_exact_pool_ledger,
 )
-from .pricing_gates import RegulatoryBdiBasis, evaluate_pricing_gates
 
 
 @dataclass(frozen=True)
@@ -157,6 +157,9 @@ def _parse_external_purchases(raw: object) -> tuple[ExternalStockPurchase, ...]:
     purchases: list[ExternalStockPurchase] = []
     for index, value in enumerate(_json_list(raw, "inventory.purchases")):
         row = _json_mapping(value, f"inventory.purchases[{index}]")
+        category = _json_text(row.get("category"), "purchase category")
+        if category not in ("MAT", "COMB"):
+            raise ValueError("external purchase category must be MAT or COMB")
         purchases.append(ExternalStockPurchase(
             source_id=_json_text(row.get("source_id"), "purchase source_id"),
             good_id=_json_text(row.get("good_id"), "purchase good_id"),
@@ -171,7 +174,7 @@ def _parse_external_purchases(raw: object) -> tuple[ExternalStockPurchase, ...]:
                 row.get("price_reference_date"), "purchase price_reference_date",
             ),
             currency=_json_text(row.get("currency"), "purchase currency"),
-            category=_json_text(row.get("category"), "purchase category"),  # validated by the domain model
+            category=cast(Literal["MAT", "COMB"], category),
         ))
     return tuple(purchases)
 
@@ -488,7 +491,8 @@ def apply_pricing_report_evidence(
         )
         return
     if inventory_scope.status == "COMPLETE" and (
-        context.get("holding_journal") is None
+        not isinstance(context.get("reconciliation"), ExactFinancialReconciliation)
+        and context.get("holding_journal") is None
         and context.get("stock_provisioning_journal") is None
     ):
         _unknown(
