@@ -8,9 +8,6 @@ from concilium.application.scheduling.contractual_cost_ledger import (
     ExclusiveCostLedger,
     PostingNature,
 )
-from concilium.application.scheduling.financial_cost_reconciliation import (
-    reconcile_financial_sources,
-)
 from concilium.application.scheduling.operational_pricing_diagnostics import (
     CatalogPriceBenchmark,
 )
