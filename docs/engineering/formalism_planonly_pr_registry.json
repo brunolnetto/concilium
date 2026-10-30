@@ -1,6 +1,6 @@
 {
   "schema": "concilium.formalism.planonly_pr_registry.v1",
-  "as_of": "2026-10-28",
+  "as_of": "2026-10-30",
   "epic": 8,
   "canonical_dag": "docs/engineering/formalism_execution_dag.json",
   "policy": {
@@ -265,15 +265,7 @@
       "topological_index": 11
     }
   ],
-  "existing_out_of_manifest": [
-    {
-      "pr": 103,
-      "issue": 18,
-      "provisional_package": "P18-C1",
-      "status": "CODE_DRAFT_BLOCKED_WAVE1",
-      "note": "Already open P18-C1 code PR, currently not a canonical P18-A/B slot. Do not silently count it."
-    }
-  ],
+  "existing_out_of_manifest": [],
   "cross_cutting_not_package_slots": [
     {
       "pr": 105,
@@ -296,6 +288,17 @@
       "superseded_by_pr": 129,
       "status": "CLOSED_UNMERGED",
       "reason": "Stale branch replaced by current-main P14-C in canonical DAG package slot."
+    },
+    {
+      "pr": 103,
+      "issue": 18,
+      "superseded_by_pr": 142,
+      "superseded_package_ids": [
+        "P18-C1",
+        "P18-C2"
+      ],
+      "status": "CLOSED_UNMERGED",
+      "reason": "Legacy out-of-manifest P18-C1/C2 code draft was superseded by merged canonical implementation PR #142; both package slots remain explicitly registered in the execution DAG."
     }
   ]
 }

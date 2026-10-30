@@ -23,7 +23,7 @@ def sources() -> tuple[dict, dict]:
     return dag, registry
 
 
-def test_plan_registry_matches_all_and_only_unimplemented_packages(sources) -> None:
+def test_plan_registry_covers_unimplemented_packages_and_preserves_history(sources) -> None:
     dag, registry = sources
     assert registry["schema"] == "concilium.formalism.planonly_pr_registry.v1"
     assert registry["policy"]["must_never_count_as_merged_package"] is True
@@ -33,7 +33,11 @@ def test_plan_registry_matches_all_and_only_unimplemented_packages(sources) -> N
     assert registry["policy"]["retirement_marker"].startswith(
         "Superseded by the durable plan-only registry in PR #120;"
     )
-    absent = {
+    package_slots = {
+        (node["issue"], node["wave"], package["id"])
+        for node in dag["nodes"] for package in node["packages"]
+    }
+    unimplemented = {
         (node["issue"], node["wave"], package["id"])
         for node in dag["nodes"] for package in node["packages"]
         if not package["prs"]
@@ -42,7 +46,10 @@ def test_plan_registry_matches_all_and_only_unimplemented_packages(sources) -> N
         (plan["issue"], plan["wave"], plan["id"])
         for plan in registry["packages"]
     }
-    assert registered == absent
+    # Every still-empty DAG slot needs a plan, but historical PLAN_ONLY PR
+    # records remain auditable after a canonical implementation PR is assigned.
+    assert registered.issubset(package_slots)
+    assert unimplemented.issubset(registered)
     assert len(registered) == len(registry["packages"])
 
 
@@ -88,7 +95,7 @@ def test_cross_issue_join_requires_all_predecessor_plans(sources) -> None:
     assert set(by_id["P26-B"]["depends_on_plans"]) == {"P26-A"}
 
 
-def test_legacy_out_of_manifest_code_drafts_are_not_silently_reclassified(sources) -> None:
+def test_legacy_code_drafts_are_classified_as_out_of_manifest_or_superseded(sources) -> None:
     dag, registry = sources
     slots = {
         (node["issue"], package["id"])
@@ -97,5 +104,31 @@ def test_legacy_out_of_manifest_code_drafts_are_not_silently_reclassified(source
     for item in registry["existing_out_of_manifest"]:
         assert (item["issue"], item["provisional_package"]) not in slots
         assert item["status"] == "CODE_DRAFT_BLOCKED_WAVE1"
+
+    by_id = {
+        package["id"]: package
+        for node in dag["nodes"] for package in node["packages"]
+    }
+    canonical_prs = {
+        pr for node in dag["nodes"] for package in node["packages"]
+        for pr in package["prs"]
+    }
+    superseded = {
+        item["pr"]: item
+        for item in registry["superseded_implementation_prs"]
+    }
+    assert set(superseded) == {102, 103}
+    assert all(pr not in canonical_prs for pr in superseded)
+    assert all(
+        item["superseded_by_pr"] in canonical_prs
+        for item in superseded.values()
+    )
+    assert superseded[103]["superseded_by_pr"] == 142
+    assert set(superseded[103]["superseded_package_ids"]) == {"P18-C1", "P18-C2"}
+    assert all(
+        142 in by_id[package_id]["prs"]
+        for package_id in superseded[103]["superseded_package_ids"]
+    )
+
     cross = {item["pr"]: item for item in registry["cross_cutting_not_package_slots"]}
     assert cross[106]["depends_on_prs"] == [105]
