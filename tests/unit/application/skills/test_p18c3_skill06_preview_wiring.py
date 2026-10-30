@@ -7,24 +7,24 @@ _SKILL_ID = "06-resultado-financeiro"
 
 @pytest.fixture
 def skill_module():
-    skills_package = __import__("concilium.application.skills", fromlist=["_load"])
-    skills_package._load(_SKILL_ID, "run_resultado_financeiro")
-    return __import__("sys").modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
+    import sys
+
+    from concilium.application.skills import _load
+
+    _load(_SKILL_ID, "run_resultado_financeiro")
+    return sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
 
 
 def _canonical():
-    canonical_model = __import__(
-        "concilium.domain.models.canonical", fromlist=["CanonicalModel"]
-    ).CanonicalModel
-    return canonical_model.model_construct(p18_consumption_preview={"stale": True})
+    from concilium.domain.models.canonical import CanonicalModel
+
+    return CanonicalModel.model_construct(p18_consumption_preview={"stale": True})
 
 
 def _stub_stages(monkeypatch, skill_module, *, final=None):
-    seen = {"final_input": None, "stage3_calls": 0}
+    from concilium.application.skills.base import SkillResult
 
-    skill_result = __import__(
-        "concilium.application.skills.base", fromlist=["SkillResult"]
-    ).SkillResult
+    seen = {"final_input": None, "stage3_calls": 0}
 
     def pre(canonical, *_args):
         return skill_result(canonical, [])
