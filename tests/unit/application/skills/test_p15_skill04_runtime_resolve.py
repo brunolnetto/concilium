@@ -7,6 +7,11 @@ from types import SimpleNamespace
 import pytest
 
 from concilium.application.skills import run_cronograma
+from concilium.application.scheduling.physical_resolver import (
+    PhysicalEvidenceUnknown,
+    resolve_bounded_physical_calendar,
+)
+from concilium.application.scheduling.physical_validator import PhysicalActivity
 from concilium.domain.models.canonical import (
     CanonicalModel,
     DistribuicaoSemanal,
@@ -392,3 +397,20 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
     assert any(v.codigo == expected_code and v.status == "ERRO" for v in outcome.validacoes)
     if resolution_status == "FAIL":
         assert any(v.codigo == "VAL-RCPSP-RESOLVE-DETAIL" for v in outcome.validacoes)
+
+
+def test_p15_resolution_exposes_materialization_unknown_reason() -> None:
+    def missing_evidence(_item: str, _start: int) -> PhysicalActivity:
+        raise PhysicalEvidenceUnknown("missing F(m) weekly capacity witness")
+
+    resolution = resolve_bounded_physical_calendar(
+        ("A",),
+        {"A": (0,)},
+        missing_evidence,
+        (),
+        calendar_horizon_weeks=1,
+        pool_capacity={},
+    )
+
+    assert resolution.status == "UNKNOWN"
+    assert resolution.unknown_reason == "missing F(m) weekly capacity witness"
