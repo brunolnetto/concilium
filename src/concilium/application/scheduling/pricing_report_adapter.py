@@ -239,12 +239,6 @@ def _build_p19_journals(
     )
     purchases = _parse_external_purchases(inventory.get("purchases", []))
     tariffs = _parse_holding_tariffs(inventory.get("holding_tariffs", []))
-    if not purchases and not tariffs:
-        raise ValueError(
-            "COMPLETE inventory scope requires at least one explicit P19 purchase "
-            "or END_OF_WEEK holding tariff"
-        )
-
     provisioning: ExternalStockProvisioningJournal | None = None
     if purchases:
         provisioning = book_external_stock_provisioning(
@@ -264,6 +258,8 @@ def _build_p19_journals(
             consumption.evidence,
             internal_arrivals,
         )
+        if not stock.feasible:
+            raise ValueError("COMPLETE inventory evidence leaves an unresolved physical stockout")
         holding_base = consumption.journal
 
     holding: HoldingJournal | None = None
