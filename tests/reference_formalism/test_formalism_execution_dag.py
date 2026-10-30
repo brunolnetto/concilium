@@ -492,7 +492,7 @@ def test_p21a_operational_pricing_diagnostics_are_mandatory_before_issue_twenty_
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 17, 18, 19, 20, 22, 25),
-        all_merged(spec) - {153, 154, 162},
+        all_merged(spec) - {153, 154, 163},
     )
     issue = next(x for x in result["issues"] if x["issue"] == 21)
     assert issue["ready_to_execute"]
