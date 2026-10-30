@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date
 from fractions import Fraction
-from typing import Any
+from typing import Any, cast
 
 from concilium.application.scheduling.contractual_cost_ledger import (
     book_exact_pool,
