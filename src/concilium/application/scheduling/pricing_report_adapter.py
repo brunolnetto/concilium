@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Literal
+from typing import Literal, cast
 
 from concilium.domain.models.canonical import Resultado, ValidacaoItem
 
