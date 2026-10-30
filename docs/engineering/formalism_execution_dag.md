@@ -86,7 +86,7 @@ GH_TOKEN="$(gh auth token)" python scripts/formalism_wave_dag.py --live
 GH_TOKEN="$(gh auth token)" python scripts/formalism_wave_dag.py --live --require-close 9
 ```
 
-- **Primeira chamada:** valida esquema, 18 nós, 47 pacotes, direção das arestas e aciclicidade sem rede.
+- **Primeira chamada:** valida esquema, 18 nós, 65 pacotes, direção das arestas e aciclicidade sem rede.
 - **Segunda:** consulta as issues e os PRs reais; informa onda ativa, nós executáveis e bloqueios. Requer autenticação para repositório privado. Falha de autenticação/snapshot incompleto não se converte em PASS.
 - **Terceira:** falha se não houver todos os predecessores fechados, ondas anteriores completas e PRs previstos *merged*. Mesmo preflight positivo **não fecha issue automaticamente**: os critérios de aceite, checks do HEAD e revisão têm de ser avaliados por quem integra.
 - Fechamentos antigos #10/#12 ocorridos antes de #9 são marcados como exceções históricas, **sem desfazê-los**. Não autorizam conclusão de W1–W3.
