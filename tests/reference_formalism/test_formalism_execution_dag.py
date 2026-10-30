@@ -563,24 +563,34 @@ def test_cumulative_branch_stack_requires_main_integration_pr151(spec: dict) -> 
     # These package PRs were merged into predecessor feature branches. PR #151
     # is the cumulative integration that actually landed the complete stack on main.
     required = {
-        14: ("P14-F", [160, 151]),
-        15: ("P15-E", [156, 151]),
-        16: ("P16-F", [161, 151]),
-        18: ("P18-D", [158, 151]),
-        19: ("P19-C", [150, 151]),
+        14: {"P14-D": [145, 146], "P14-F": [160, 151]},
+        15: {"P15-E": [156, 151], "P15-F": [157, 151]},
+        16: {"P16-F": [161, 151]},
+        18: {
+            "P18-C3": [143, 147],
+            "P18-D": [158, 151],
+            "P18-E": [159, 151],
+        },
+        19: {"P19-C": [150, 151]},
     }
-    for issue_id, (package_id, expected_prs) in required.items():
-        package = next(
-            p for p in next(n for n in spec["nodes"] if n["issue"] == issue_id)["packages"]
-            if p["id"] == package_id
-        )
-        assert package["prs"] == expected_prs
+    for issue_id, packages in required.items():
+        issue_packages = next(
+            n for n in spec["nodes"] if n["issue"] == issue_id
+        )["packages"]
+        for package_id, expected_prs in packages.items():
+            package = next(p for p in issue_packages if p["id"] == package_id)
+            assert package["prs"] == expected_prs
 
     merged_without_integrator = all_merged(spec) - {151}
     snapshot = states(*range(9, 27))
-    for issue_id, (package_id, _) in required.items():
+    for issue_id, packages in required.items():
+        cumulative_packages = [
+            package_id
+            for package_id, expected_prs in packages.items()
+            if 151 in expected_prs
+        ]
         row = next(
             x for x in report(spec, snapshot, merged_without_integrator)["issues"]
             if x["issue"] == issue_id
         )
-        assert package_id in row["pending_packages"]
+        assert all(package_id in row["pending_packages"] for package_id in cumulative_packages)
