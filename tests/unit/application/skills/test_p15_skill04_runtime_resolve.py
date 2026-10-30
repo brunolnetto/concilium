@@ -361,7 +361,7 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
     monkeypatch.setitem(
         module,
         "_determine_mode_and_distribuicao",
-        lambda *_: ("AUTO_SCHEDULE", {}, [candidate], candidate, False, [], set()),
+        lambda *_args, **_kwargs: ("AUTO_SCHEDULE", {}, [candidate], candidate, False, [], set()),
     )
     monkeypatch.setitem(
         module,
