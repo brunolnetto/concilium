@@ -107,7 +107,7 @@ Example (illustrative values, not a project quote):
     "calendar_weeks": ["2026-W18", "2026-W19"],
     "goods": [
       {
-        "good_id": "DIESEL",
+        "good_id": "MA-DIESEL-S10",
         "unit": "L",
         "initial_quantity": "10",
         "capacity": null,
