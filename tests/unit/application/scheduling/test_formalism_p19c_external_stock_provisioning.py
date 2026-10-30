@@ -195,6 +195,7 @@ def test_missing_price_unit_source_date_or_currency_fails_closed(
         "price_source": "supplier-quote-Q17",
         "price_reference_date": "2026-10-29",
         "currency": "BRL",
+        "category": "MAT",
     }
     values[field] = value
     with pytest.raises(ValueError, match=message):
