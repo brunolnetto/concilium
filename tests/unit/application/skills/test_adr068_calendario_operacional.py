@@ -15,6 +15,7 @@ from concilium.domain.services.analytics.backtracking_pe_builder import Backtrac
 from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 from concilium.infrastructure.adapters.excel_adapter import ExcelRenderer
 
+
 def _stub_p15_pass_for_precedence_test(monkeypatch) -> None:
     """Keep these AUTO tests focused on EAP→DAG/CP-SAT precedence mapping."""
     from types import SimpleNamespace
