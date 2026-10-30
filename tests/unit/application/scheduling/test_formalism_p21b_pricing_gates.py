@@ -185,7 +185,7 @@ def test_p21b_inconsistent_diagnostics_and_implicit_currency_fail_closed() -> No
             catalog_metadata={"currency": "BRL", "currency_source": "catalog_metadata.json"},
         )
     forged_provenance = replace(original, currency_source="user-input")
-    with pytest.raises(ValueError, match="catalog_metadata.json provenance"):
+    with pytest.raises(ValueError, match="currency metadata fingerprint"):
         evaluate_pricing_gates(
             forged_provenance,
             regulatory_basis=_regulatory(),
