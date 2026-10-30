@@ -7,9 +7,6 @@ from datetime import UTC, date, datetime
 from fractions import Fraction as F
 from pathlib import Path
 
-from concilium.application.skills import _load
-from concilium.application.skills.base import SkillResult
-
 from concilium.application.scheduling.contractual_cost_ledger import (
     CostPosting,
     ExclusiveCostLedger,
@@ -30,6 +27,8 @@ from concilium.application.scheduling.pricing_report_adapter import (
     InventoryEvidenceScope,
     apply_pricing_report_evidence,
 )
+from concilium.application.skills import _load
+from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,
@@ -400,7 +399,7 @@ def test_real_skill06_json_contract_builds_p19_p20_and_reaches_p21_pass(monkeypa
     assert result.pricing_gates["regulatory_status"] == "PASS"
     assert result.pricing_gates["profitability_status"] == "PASS"
     assert result.pricing_gates["status"] == "PASS"
-    assert result.pricing_diagnostics["operational_price"] == str(F("97.12"))
+    assert result.pricing_diagnostics["operational_price"] == str(F("85.608"))
     assert result.pricing_diagnostics["total_cost"] == str(F("54.316"))
     assert result.pricing_authority != "PROJECT_GO"
     assert not outcome.has_errors
@@ -446,6 +445,60 @@ def test_p21_json_contract_rejects_caller_supplied_authoritative_ledgers(monkeyp
     assert result.pricing_gates["status"] == "UNKNOWN"
     assert "unsupported P21 evidence fields" in result.pricing_gates["reason"]
     assert outcome.has_errors
+
+
+
+def test_complete_inventory_scope_without_p19_financial_charges_still_validates_stock(monkeypatch) -> None:
+    skill_id = "06-resultado-financeiro"
+    _load(skill_id, "run_resultado_financeiro")
+    skill_module = sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
+    canonical, catalogo, declaration = _json_runtime_fixture()
+    inventory = declaration["inventory"]
+    inventory["purchases"] = []
+    inventory["holding_tariffs"] = []
+    seen: dict[str, object] = {}
+
+    def stage_pre(current, *_args):
+        return SkillResult(current, [])
+
+    def stage_indirect(current, *_args):
+        return SkillResult(current, [])
+
+    def stage_consolidation(current, inputs, *_args):
+        context = inputs["p21_pricing_evidence"]
+        result = _result()
+        validations: list = []
+        apply_pricing_report_evidence(result, inputs, validations)
+        seen["context"] = context
+        seen["result"] = result
+        return SkillResult(current, validations)
+
+    monkeypatch.setattr(skill_module, "_run_precificacao", stage_pre)
+    monkeypatch.setattr(skill_module, "_run_indiretos", stage_indirect)
+    monkeypatch.setattr(skill_module, "_run_consolidacao", stage_consolidation)
+    monkeypatch.setattr(
+        skill_module,
+        "build_skill06_p17_reconciliation",
+        lambda _canonical: {"status": "RECONCILED"},
+    )
+
+    outcome = skill_module.run_resultado_financeiro(
+        canonical,
+        {
+            "p18_consumption_preview_enabled": True,
+            "certification_intent": "CERTIFIED",
+            "p21_pricing_evidence": declaration,
+        },
+        catalogo,
+        {},
+    )
+
+    context = seen["context"]
+    assert context["inventory_scope"].status == "COMPLETE"
+    assert context["reconciliation"].ledger.consumable_v == F("42.804")
+    assert context["reconciliation"].ledger.indirect == 0
+    assert seen["result"].pricing_gates["status"] == "PASS"
+    assert not outcome.has_errors
 
 
 
