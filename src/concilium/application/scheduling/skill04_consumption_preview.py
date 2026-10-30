@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from fractions import Fraction
 from math import isfinite
-from typing import Literal
+from typing import Literal, cast
 
 from concilium.domain.models.canonical import CanonicalModel
 from concilium.domain.units import normalize_unidade
@@ -175,10 +175,13 @@ def build_activity_goods_from_catalog(
         for raw in rows:
             if not isinstance(raw, Mapping):
                 raise ValueError(f"{label} catalog row must be a mapping")
-            identity = raw.get(key)
+            # The runtime guard proves mapping shape; the cast supplies the
+            # declared string-keyed catalog contract to static type checkers.
+            row = cast(Mapping[str, object], raw)
+            identity = row.get(key)
             if not isinstance(identity, str) or not identity.strip() or identity in indexed:
                 raise ValueError(f"{label} catalog identity is missing or duplicated")
-            indexed[identity] = raw
+            indexed[identity] = row
         return indexed
 
     cpus = _index(raw_cpus, "codigo", "CPU")
