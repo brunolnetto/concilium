@@ -624,6 +624,7 @@ def test_exact_quantity_rejects_integer_overflow_as_domain_validation() -> None:
     with pytest.raises(ValueError, match="finite nonnegative"):
         _exact_q(10 ** 400)
 
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
