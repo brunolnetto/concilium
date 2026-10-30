@@ -344,11 +344,17 @@ def resolve_skill04_physical_schedule(
             f"{v.code}:{v.item_id}:{v.week}:{v.reason}"
             for v in (resolution.last_audit.violations if resolution.last_audit else ())
         )
+        details = list(violations)
+        if resolution.unknown_reason:
+            details.insert(0, "materialization UNKNOWN: " + resolution.unknown_reason)
+        reason = (
+            "no admissible fully materialized physical calendar"
+            if not details else "; ".join(details[:8])
+        )
         return Skill04PhysicalResolution(
             resolution.status, schedule_selected, distribution_by_item,
             fallback_item_ids, resolution.attempts,
-            "no admissible fully materialized physical calendar"
-            if not violations else "physical calendar rejected: " + "; ".join(violations[:8]),
+            reason,
             violations,
             resolution.complete_search,
         )
