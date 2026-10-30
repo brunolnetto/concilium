@@ -196,3 +196,22 @@ def test_unsupported_physical_unit_fails_with_domain_error_not_keyerror() -> Non
 
     with pytest.raises(ValueError, match="unsupported physical unit: dia"):
         convert_physical(F(1), "kg", "dia")
+
+
+def test_unsupported_units_fail_closed_at_rate_and_price_model_boundaries() -> None:
+    with pytest.raises(ValueError, match="unsupported physical unit: dia"):
+        PhysicalConsumptionRate(
+            "BAD_GOOD", F(1), "dia", ConsumptionBasis.PER_OPERATING_HOUR
+        )
+
+    with pytest.raises(ValueError, match="unsupported physical unit: dia"):
+        PhysicalConsumptionRate(
+            "BAD_ACTIVITY", F(1), "kg",
+            ConsumptionBasis.PER_DELIVERED_UNIT, "dia",
+        )
+
+    rate = PhysicalConsumptionRate(
+        "GOOD", F(1), "kg", ConsumptionBasis.PER_OPERATING_HOUR
+    )
+    with pytest.raises(ValueError, match="unsupported physical unit: dia"):
+        PhysicallyPricedGood(rate, F(1), "dia")
