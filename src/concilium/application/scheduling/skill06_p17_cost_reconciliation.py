@@ -311,7 +311,8 @@ def build_skill06_p17_reconciliation(canonical: CanonicalModel) -> dict[str, obj
             )
         if abs(delta) > _CENT:
             reasons.append(
-                f"{activity_id}: active MO+EQ diagnostic after lifecycle allocation differs from exact P16 active K by {delta}"
+                f"{activity_id}: active MO+EQ diagnostic after lifecycle allocation "
+                f"differs from exact P16 active K by {delta}"
             )
         activity_rows.append({
             "activity_id": activity_id,
