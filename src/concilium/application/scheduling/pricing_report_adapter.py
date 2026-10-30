@@ -12,6 +12,10 @@ from typing import Literal
 
 from concilium.domain.models.canonical import Resultado, ValidacaoItem
 
+from .contractual_cost_ledger import ExclusiveCostLedger
+from .physical_consumption_journal import PhysicalConsumptionJournalResult
+from .physical_stock_holding import HoldingJournal
+from .physical_stock_provisioning import ExternalStockProvisioningJournal
 from .financial_cost_reconciliation import (
     ExactFinancialReconciliation,
     reconcile_financial_sources,
@@ -114,13 +118,31 @@ def apply_pricing_report_evidence(
     if not isinstance(reconciliation, ExactFinancialReconciliation):
         pool_ledger = context.get("pool_ledger")
         consumption_journal = context.get("consumption_journal")
+        holding_journal = context.get("holding_journal")
+        stock_provisioning_journal = context.get("stock_provisioning_journal")
         if pool_ledger is not None and consumption_journal is not None:
+            if (
+                not isinstance(pool_ledger, ExclusiveCostLedger)
+                or not isinstance(consumption_journal, PhysicalConsumptionJournalResult)
+                or (holding_journal is not None and not isinstance(holding_journal, HoldingJournal))
+                or (
+                    stock_provisioning_journal is not None
+                    and not isinstance(stock_provisioning_journal, ExternalStockProvisioningJournal)
+                )
+            ):
+                _unknown(
+                    result,
+                    validations,
+                    intent,
+                    "P20/P19 reconciliation requires typed P17 ledger and P18/P19 journals",
+                )
+                return
             try:
                 reconciliation = reconcile_financial_sources(
                     pool_ledger,
                     consumption_journal,
-                    context.get("holding_journal"),
-                    context.get("stock_provisioning_journal"),
+                    holding_journal,
+                    stock_provisioning_journal,
                 )
             except (TypeError, ValueError) as exc:
                 _unknown(result, validations, intent, str(exc))
