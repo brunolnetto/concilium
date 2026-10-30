@@ -104,7 +104,7 @@ class TestZeroRegressao:
         catalogo = _catalogo(consumo_por_hora=1.0)  # sem disponibilidade de catálogo
         result = run_cronograma(canonical, {"rcpsp_spec": dict(_RCPSP_SPEC)}, catalogo=catalogo)
 
-        assert result.canonical.cronograma is not None, "\\n".join(
+        assert result.canonical.cronograma is not None, "\n".join(
             f"{v.codigo} [{v.status}]: {v.mensagem}" for v in result.validacoes
         )
         assert not any(v.codigo.startswith("VAL-ESTOQUE") for v in result.validacoes)
@@ -124,7 +124,7 @@ class TestZeroRegressao:
         )
         result = run_cronograma(canonical, {"rcpsp_spec": dict(_RCPSP_SPEC)}, catalogo=catalogo)
 
-        assert result.canonical.cronograma is not None, "\\n".join(
+        assert result.canonical.cronograma is not None, "\n".join(
             f"{v.codigo} [{v.status}]: {v.mensagem}" for v in result.validacoes
         )
         # Estoque de catálogo é suficiente — nenhum atraso, mas o path do motor foi
@@ -147,7 +147,7 @@ class TestAtrasoCausal:
         }
         result = run_cronograma(canonical, inputs, catalogo=catalogo)
 
-        assert result.canonical.cronograma is not None, "\\n".join(
+        assert result.canonical.cronograma is not None, "\n".join(
             f"{v.codigo} [{v.status}]: {v.mensagem}" for v in result.validacoes
         )
         assert result.canonical.cronograma.is_feasible is True
