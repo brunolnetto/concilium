@@ -97,6 +97,9 @@ class TestPersistenciaZeroRegressao:
         catalogo = _catalogo(consumo_por_hora=1.0, disponibilidade={"estoque_inicial": 100000.0})
         result = run_cronograma(canonical, {"rcpsp_spec": dict(_RCPSP_SPEC)}, catalogo=catalogo)
 
+        assert result.canonical.cronograma is not None, "\n".join(
+            f"{v.codigo} [{v.status}]: {v.mensagem}" for v in result.validacoes
+        )
         assert len(result.canonical.recursos_consumiveis) == 1
         recurso = result.canonical.recursos_consumiveis[0]
         assert recurso.resource_id == _INSUMO_DIESEL
@@ -123,6 +126,9 @@ class TestPersistenciaAtrasoCausal:
         }
         result = run_cronograma(canonical, inputs, catalogo=catalogo)
 
+        assert result.canonical.cronograma is not None, "\n".join(
+            f"{v.codigo} [{v.status}]: {v.mensagem}" for v in result.validacoes
+        )
         assert len(result.canonical.resumo_estoque_consumiveis) == 1
         resumo = result.canonical.resumo_estoque_consumiveis[0]
         assert resumo.status_estoque == "AVISO"

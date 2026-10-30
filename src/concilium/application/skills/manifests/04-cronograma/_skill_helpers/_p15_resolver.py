@@ -128,12 +128,12 @@ def resolve_skill04_physical_schedule(
 ) -> Skill04PhysicalResolution:
     """Resolve AUTO candidates by re-materializing real Skill 04 weekly cells.
 
-    Candidate starts are every absolute week in the declared project horizon.
-    Each trial recomputes throughput using that week's climate/calendar and the
-    existing F(m) law; it never moves an old Q series unchanged. Resource
-    reservations come from the actual selected RCPSP assignments and a declared
-    pool. PASS establishes one feasible witness only, not global optimality or
-    financial GO.
+    Candidate starts are bounded below by the selected RCPSP week and may
+    move only later within the declared project horizon. Each trial recomputes
+    throughput using that week's climate/calendar and the existing F(m) law; it
+    never moves an old Q series unchanged. Resource reservations come from the
+    actual selected RCPSP assignments and a declared pool. PASS establishes one
+    feasible witness only, not global optimality or financial GO.
     """
     if not mode or not mode.startswith("AUTO") or schedule_selected is None:
         return Skill04PhysicalResolution(
@@ -212,6 +212,24 @@ def resolve_skill04_physical_schedule(
             f"AUTO candidate does not cover the exact EAP scope; missing={missing}, extra={extra}",
         )
 
+    # P15 re-resolves the selected RCPSP candidate; it is not allowed to erase
+    # hard lower bounds already imposed by the scheduler (e.g. replenishment
+    # delays). Physical evidence may push an activity later, never earlier.
+    allowed_starts: dict[str, tuple[int, ...]] = {}
+    for item_id in item_ids:
+        selected_start = getattr(selected_by_item[item_id], "start_week", None)
+        if (
+            isinstance(selected_start, bool)
+            or not isinstance(selected_start, int)
+            or not 0 <= selected_start < len(weeks)
+        ):
+            return Skill04PhysicalResolution(
+                "UNKNOWN", schedule_selected, distribution_by_item,
+                fallback_item_ids, 0,
+                f"{item_id}: selected scheduler start week is outside the declared calendar",
+            )
+        allowed_starts[item_id] = tuple(range(selected_start, len(weeks)))
+
     # An explicit pool is a complete inventory. A missing resource key therefore
     # has capacity zero, not an optimistic/unbounded capacity.
     pool_capacity = {
@@ -273,7 +291,7 @@ def resolve_skill04_physical_schedule(
                 practicability_weekly,
                 practicability_monthly,
                 calendar_factor_weekly,
-                factor_jornada=float(regime.eta_jornada),
+                fator_jornada=float(regime.eta_jornada),
                 producao_lookup=production_lookup,
                 horas_semana=hours_week,
                 origem_produtividade=_origem_capacidade(
@@ -308,7 +326,7 @@ def resolve_skill04_physical_schedule(
         precedences = _physical_precedences(canonical)
         resolution = resolve_bounded_physical_calendar(
             item_ids,
-            {item_id: tuple(range(len(weeks))) for item_id in item_ids},
+            allowed_starts,
             materialize,
             precedences,
             calendar_horizon_weeks=len(weeks),
@@ -326,11 +344,17 @@ def resolve_skill04_physical_schedule(
             f"{v.code}:{v.item_id}:{v.week}:{v.reason}"
             for v in (resolution.last_audit.violations if resolution.last_audit else ())
         )
+        details = list(violations)
+        if resolution.unknown_reason:
+            details.insert(0, "materialization UNKNOWN: " + resolution.unknown_reason)
+        reason = (
+            "no admissible fully materialized physical calendar"
+            if not details else "; ".join(details[:8])
+        )
         return Skill04PhysicalResolution(
             resolution.status, schedule_selected, distribution_by_item,
             fallback_item_ids, resolution.attempts,
-            "no admissible fully materialized physical calendar"
-            if not violations else "physical calendar rejected: " + "; ".join(violations[:8]),
+            reason,
             violations,
             resolution.complete_search,
         )

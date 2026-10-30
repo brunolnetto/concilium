@@ -205,3 +205,4 @@ def test_missing_candidate_evidence_is_unknown_not_proved_infeasibility() -> Non
     assert result.activities is None
     assert result.complete_search
     assert result.attempts == 2
+    assert result.unknown_reason == "missing weekly capacity evidence"

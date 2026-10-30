@@ -43,6 +43,7 @@ class PhysicalResolution:
     attempts: int
     complete_search: bool
     last_audit: PhysicalCalendarAudit | None
+    unknown_reason: str | None = None
 
     @property
     def locally_admissible(self) -> bool:
@@ -95,6 +96,7 @@ def resolve_bounded_physical_calendar(
     complete_search = state_count <= max_states
     attempts = 0
     saw_unknown = False
+    unknown_reason: str | None = None
     # Keep the most informative failed audit, not merely the final (often latest-start)
     # candidate. This preserves the smallest physical scope residual found in the horizon.
     best_audit: PhysicalCalendarAudit | None = None
@@ -106,9 +108,13 @@ def resolve_bounded_physical_calendar(
         for item, start in zip(ids, combination, strict=True):
             try:
                 physical = materialize(item, start)
-            except PhysicalEvidenceUnknown:
+            except PhysicalEvidenceUnknown as exc:
                 # Missing/malformed evidence is not a proof of physical infeasibility.
+                # Preserve the first diagnostic so the runtime can identify which
+                # evidence contract prevented a physical witness.
                 saw_unknown = True
+                if unknown_reason is None:
+                    unknown_reason = str(exc) or "physical materialization evidence is unknown"
                 break
             if physical is None:
                 break
@@ -142,4 +148,4 @@ def resolve_bounded_physical_calendar(
             saw_unknown = True
 
     status: ResolveStatus = "UNKNOWN" if saw_unknown or not complete_search else "FAIL"
-    return PhysicalResolution(status, None, attempts, complete_search, best_audit)
+    return PhysicalResolution(status, None, attempts, complete_search, best_audit, unknown_reason)
