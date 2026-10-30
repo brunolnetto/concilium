@@ -6,6 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
+from concilium.application.scheduling.physical_resolver import (
+    PhysicalEvidenceUnknown,
+    resolve_bounded_physical_calendar,
+)
+from concilium.application.scheduling.physical_validator import PhysicalActivity
+
 from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
     CanonicalModel,
@@ -183,6 +189,44 @@ def test_auto_runtime_resolves_climate_delayed_precedence_and_shared_resource_co
     assert result.distribution_by_item["B"][WEEKS[2]].qtd_executada == 1.0
     assert result.distribution_by_item["C"][WEEKS[3]].qtd_executada == 1.0
     assert any(value.codigo == "VAL-RCPSP-RESOLVED" for value in validations)
+
+
+def test_auto_physical_resolution_never_moves_before_selected_scheduler_start(monkeypatch) -> None:
+    helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
+    _patch_skill04_materializer(monkeypatch)
+    canonical, regime = _runtime_inputs(
+        resource_capacities={"crane": 1},
+        items=(Item("A"),),
+    )
+    initial = _candidate({"A": {"crane": 1}}, ("A",))
+    delayed_activity = initial.scheduled_activities[0].model_copy(
+        update={"start_week": 2}
+    )
+    candidate = initial.model_copy(
+        update={"scheduled_activities": [delayed_activity], "makespan": 3}
+    )
+
+    result = helper(
+        canonical=canonical,
+        inputs={"rcpsp_spec": {"resource_pool": {"crane": 1}}},
+        mode="AUTO_SCHEDULE",
+        schedule_selected=candidate,
+        distribution_by_item={},
+        fallback_item_ids=set(),
+        weeks=list(WEEKS),
+        cpu_lookup={"CPU-A": {"codigo": "CPU-A", "producao_id_ref": "prod"}},
+        production_lookup={"prod": {}},
+        regime=regime,
+        practicability_weekly={week: 1.0 for week in WEEKS},
+        practicability_monthly={},
+        calendar_factor_weekly={week: 1.0 for week in WEEKS},
+        validacoes=[],
+    )
+
+    assert result.status == "PASS", result.reason
+    resolved = result.schedule_selected.scheduled_activities[0]
+    assert resolved.start_week >= 2
+    assert resolved.start_week == 2
 
 
 def test_auto_physical_resolver_returns_unknown_when_pool_is_unproven(monkeypatch) -> None:
@@ -417,3 +461,20 @@ def test_auto_runtime_preserves_best_real_calendar_residual(monkeypatch) -> None
     )
     assert "sum_q=30" in result.reason
     assert "absolute_error=20" in result.reason
+
+
+def test_p15_resolution_exposes_materialization_unknown_reason() -> None:
+    def missing_evidence(_item: str, _start: int) -> PhysicalActivity:
+        raise PhysicalEvidenceUnknown("missing F(m) weekly capacity witness")
+
+    resolution = resolve_bounded_physical_calendar(
+        ("A",),
+        {"A": (0,)},
+        missing_evidence,
+        (),
+        calendar_horizon_weeks=1,
+        pool_capacity={},
+    )
+
+    assert resolution.status == "UNKNOWN"
+    assert resolution.unknown_reason == "missing F(m) weekly capacity witness"
