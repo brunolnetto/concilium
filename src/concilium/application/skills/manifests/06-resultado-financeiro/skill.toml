@@ -16,7 +16,7 @@ validations = ["VAL-POL-BDI", "VAL-CONSOL-OK"]
 
 [inputs]
 required = []
-optional = ["bdi_aplicado", "composicoes_indireto", "dados_mobilizacao", "perc_encargos", "tabela_bdi"]
+optional = ["bdi_aplicado", "certification_intent", "composicoes_indireto", "dados_mobilizacao", "perc_encargos", "tabela_bdi", "p18_consumption_preview_enabled", "p21_pricing_evidence"]
 
 [snapshots]
 consumed = ["catalogo", "perfil"]

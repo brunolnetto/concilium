@@ -23,6 +23,9 @@ import types
 from pathlib import Path
 from typing import Any
 
+from concilium.application.scheduling.pricing_report_adapter import (
+    build_pricing_report_evidence_context,
+)
 from concilium.application.scheduling.skill06_p17_cost_reconciliation import (
     build_skill06_p17_reconciliation,
 )
@@ -146,6 +149,32 @@ def run_resultado_financeiro(
                 "legacy price/margin was not overridden and this is not PROJECT_GO."
             ),
         ))
+
+    # P21-C accepts declarative JSON only. Rebuild typed P17/P18/P19/P20
+    # evidence from this canonical schedule and the server-resolved catalog;
+    # never trust serialized ledgers or caller-supplied dataclass-shaped objects.
+    p21_declaration = inputs.get("p21_pricing_evidence")
+    if p21_declaration is not None:
+        if not enabled:
+            p21_context: dict[str, object] = {
+                "source_build_error": (
+                    "P21 pricing evidence requires p18_consumption_preview_enabled=true"
+                ),
+            }
+        elif not isinstance(p21_declaration, dict):
+            p21_context = {
+                "source_build_error": "p21_pricing_evidence must be a JSON object",
+            }
+        else:
+            try:
+                p21_context = build_pricing_report_evidence_context(
+                    canonical,
+                    catalogo,
+                    p21_declaration,
+                )
+            except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
+                p21_context = {"source_build_error": str(exc)}
+        inputs = {**inputs, "p21_pricing_evidence": p21_context}
 
     # Estágio 3 — Consolidação financeira
     res_con = _run_consolidacao(canonical, inputs, perfil)
