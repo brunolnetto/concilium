@@ -56,7 +56,10 @@ def test_preview_without_exact_ledger_is_unknown_and_visible() -> None:
     validations: list = []
     apply_pricing_report_evidence(result, {"certification_intent": "PREVIEW"}, validations)
 
+    assert result.pricing_gates["schema"] == "concilium.p21.pricing-gates.v1"
+    assert result.pricing_gates["certification_intent"] == "PREVIEW"
     assert result.pricing_gates["status"] == "UNKNOWN"
+    assert result.pricing_diagnostics["schema"] == "concilium.p21.pricing-diagnostics.v1"
     assert result.pricing_authority == "P21_C_PRICING_GATES_UNKNOWN_NOT_PROJECT_GO"
     assert validations[-1].codigo == "VAL-P21-PRICE-EVIDENCE"
     assert validations[-1].status == "AVISO"
