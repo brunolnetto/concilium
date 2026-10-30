@@ -13,9 +13,6 @@ from typing import Literal, cast
 from concilium.domain.models.canonical import Resultado, ValidacaoItem
 
 from .contractual_cost_ledger import ExclusiveCostLedger
-from .physical_consumption_journal import PhysicalConsumptionJournalResult
-from .physical_stock_holding import HoldingJournal
-from .physical_stock_provisioning import ExternalStockProvisioningJournal
 from .financial_cost_reconciliation import (
     ExactFinancialReconciliation,
     reconcile_financial_sources,
@@ -24,6 +21,9 @@ from .operational_pricing_diagnostics import (
     CatalogPriceBenchmark,
     project_operational_pricing,
 )
+from .physical_consumption_journal import PhysicalConsumptionJournalResult
+from .physical_stock_holding import HoldingJournal
+from .physical_stock_provisioning import ExternalStockProvisioningJournal
 from .pricing_gates import RegulatoryBdiBasis, evaluate_pricing_gates
 
 
