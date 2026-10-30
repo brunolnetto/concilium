@@ -214,7 +214,8 @@ def build_activity_goods_from_catalog(
         for line in composition:
             if not isinstance(line, Mapping):
                 raise ValueError(f"{activity_id}: malformed CPU composition row")
-            category_raw = line.get("categoria_custo")
+            row = cast(Mapping[str, object], line)
+            category_raw = row.get("categoria_custo")
             if category_raw in ("MAO_OBRA", "EQUIPAMENTO"):
                 continue
             if category_raw not in ("MATERIAL", "DIESEL", "COMBUSTIVEL"):
