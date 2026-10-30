@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date
 from fractions import Fraction
-from typing import Any
+from typing import Any, cast
 
 from concilium.application.scheduling.contractual_cost_ledger import (
     ContractCategory,
@@ -47,9 +47,11 @@ _EXPECTED_STATUS = "EXACT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
 
 
 def _mapping(value: object, label: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
-        raise ValueError(f"{label} must be an explicit mapping")
-    return value
+    if not isinstance(value, Mapping) or not all(
+        isinstance(key, str) for key in value
+    ):
+        raise ValueError(f"{label} must be an explicit string-keyed mapping")
+    return cast(Mapping[str, Any], value)
 
 
 def _text(value: object, label: str) -> str:
