@@ -476,6 +476,13 @@ def book_skill04_planned_consumption_preview(
     if observed_keys != hourly_requirements:
         raise ValueError("hourly physical goods require explicit operating-hour evidence")
 
-    result = book_weekly_physical_consumption(pool, goods, evidenced)
+    goods_by_key = cast(
+        Mapping[
+            tuple[str, str],
+            tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]],
+        ],
+        goods,
+    )
+    result = book_weekly_physical_consumption(pool, goods_by_key, evidenced)
     reconciled = reconcile_financial_sources(pool, result)
     return P18CConsumptionPreview(result, reconciled)
