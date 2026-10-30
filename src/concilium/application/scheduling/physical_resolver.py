@@ -96,6 +96,7 @@ def resolve_bounded_physical_calendar(
     complete_search = state_count <= max_states
     attempts = 0
     saw_unknown = False
+    unknown_reason: str | None = None
     last_audit: PhysicalCalendarAudit | None = None
 
     for combination in islice(product(*starts), max_states):
