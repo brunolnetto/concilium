@@ -301,11 +301,15 @@ def build_pricing_report_evidence_context(
     scope_allowed = {"status", "source", "reference_id", "fingerprint"}
     if set(scope_raw) - scope_allowed:
         raise ValueError("inventory_scope contains unsupported fields")
-    scope_status = _json_text(scope_raw.get("status"), "inventory_scope.status")
-    if scope_status not in ("NO_INVENTORY", "COMPLETE"):
+    scope_status_raw = _json_text(scope_raw.get("status"), "inventory_scope.status")
+    if scope_status_raw == "NO_INVENTORY":
+        scope_status: Literal["NO_INVENTORY", "COMPLETE"] = "NO_INVENTORY"
+    elif scope_status_raw == "COMPLETE":
+        scope_status = "COMPLETE"
+    else:
         raise ValueError("inventory_scope.status must be NO_INVENTORY or COMPLETE")
     inventory_scope = InventoryEvidenceScope(
-        status=scope_status,  # type: ignore[arg-type]
+        status=scope_status,
         source=_json_text(scope_raw.get("source"), "inventory_scope.source"),
         reference_id=_json_text(
             scope_raw.get("reference_id"), "inventory_scope.reference_id",
