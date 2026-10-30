@@ -291,7 +291,7 @@ def resolve_skill04_physical_schedule(
                 practicability_weekly,
                 practicability_monthly,
                 calendar_factor_weekly,
-                factor_jornada=float(regime.eta_jornada),
+                fator_jornada=float(regime.eta_jornada),
                 producao_lookup=production_lookup,
                 horas_semana=hours_week,
                 origem_produtividade=_origem_capacidade(
