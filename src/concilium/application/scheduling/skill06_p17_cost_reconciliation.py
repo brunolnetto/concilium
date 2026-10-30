@@ -29,9 +29,7 @@ _CENT = Fraction(1, 100)
 
 
 def _mapping(value: object, label: str) -> Mapping[str, object]:
-    if not isinstance(value, Mapping) or not all(
-        isinstance(key, str) for key in value
-    ):
+    if not isinstance(value, Mapping) or not all(isinstance(key, str) for key in value):
         raise ValueError(f"{label} must be an explicit string-keyed mapping")
     return cast(Mapping[str, object], value)
 
@@ -104,8 +102,9 @@ def _ledger_from_preview(preview: Mapping[str, object]) -> ExclusiveCostLedger:
             raise ValueError(f"preview posting {index} has no source identity")
         if week is not None and not isinstance(week, str):
             raise ValueError(f"preview posting {index} has invalid week")
+        event_id = tuple(cast(str, segment) for segment in raw_event)
         postings.append(CostPosting(
-            event_id=tuple(cast(str, segment) for segment in raw_event),
+            event_id=event_id,
             nature=nature,
             category=cast(Literal["MO", "EQ", "MAT", "COMB", "IND"], category),
             amount=_rational(row.get("amount"), f"preview posting {index} amount"),
