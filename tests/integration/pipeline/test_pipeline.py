@@ -271,8 +271,8 @@ class TestPipelineCompleto:
                     "item_id": "eap-01",
                     "ordem": 1,
                     "cpu_id": "CPU-DREN-BOCA-BDCAP-100",
-                    "descricao": "Coletor DN300",
-                    "unidade": "m",
+                    "descricao": "Boca de bueiro BDCAP 1,00 x 1,00 m",
+                    "unidade": "un",
                     "quantitativo": 4500,
                 }
             ],
