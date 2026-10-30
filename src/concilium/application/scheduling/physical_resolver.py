@@ -95,7 +95,10 @@ def resolve_bounded_physical_calendar(
     complete_search = state_count <= max_states
     attempts = 0
     saw_unknown = False
-    last_audit: PhysicalCalendarAudit | None = None
+    # Keep the most informative failed audit, not merely the final (often latest-start)
+    # candidate. This preserves the smallest physical scope residual found in the horizon.
+    best_audit: PhysicalCalendarAudit | None = None
+    best_audit_score: tuple[int, Fraction, int] | None = None
 
     for combination in islice(product(*starts), max_states):
         attempts += 1
@@ -122,7 +125,16 @@ def resolve_bounded_physical_calendar(
             # weekly B_ij materialized from the one F(m)/calendar law.
             require_weekly_capacity=True,
         )
-        last_audit = audit
+        scope_residual = sum(
+            (abs(activity.scope - sum((q for _, q in activity.deliveries), Fraction()))
+             for activity in activities),
+            Fraction(),
+        )
+        scope_failures = sum(v.code == "V1_SCOPE_UNCLOSED" for v in audit.violations)
+        audit_score = (scope_failures, scope_residual, len(audit.violations))
+        if best_audit_score is None or audit_score < best_audit_score:
+            best_audit = audit
+            best_audit_score = audit_score
         if audit.status == "PASS":
             # A witness proves existence, not that all later candidates were checked.
             return PhysicalResolution("PASS", tuple(activities), attempts, attempts == state_count, audit)
@@ -130,4 +142,4 @@ def resolve_bounded_physical_calendar(
             saw_unknown = True
 
     status: ResolveStatus = "UNKNOWN" if saw_unknown or not complete_search else "FAIL"
-    return PhysicalResolution(status, None, attempts, complete_search, last_audit)
+    return PhysicalResolution(status, None, attempts, complete_search, best_audit)

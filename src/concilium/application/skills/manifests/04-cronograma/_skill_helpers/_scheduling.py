@@ -214,7 +214,16 @@ def _build_activity_distribuicao(
                 )
             )
         total_capacity = sum(capacidades)
-        if total_capacity > best_capacity:
+        if (
+            total_capacity > best_capacity
+            or (
+                total_capacity == best_capacity
+                and best_profile is not None
+                and len(profile) > len(best_profile)
+            )
+        ):
+            # On an all-zero-capacity horizon, prefer the longest real profile
+            # among equal-capacity witnesses so every remaining week is audited.
             best_profile = profile
             best_capacity = total_capacity
         if total_capacity >= item.quantitativo:
@@ -224,7 +233,9 @@ def _build_activity_distribuicao(
     # Prefer the shortest profile that closes Q. If the calendar is exhausted,
     # materialize the best real-calendar attempt instead of returning zero and
     # overstating the unmet quantity. The caller's closure gate will reject it.
-    profile = selected_profile or (best_profile if best_capacity > 0 else None)
+    # Even zero deliverable capacity is real evidence: materialize zero-q cells
+    # over the actual horizon so closure reports Q/sum_q, not a generic empty plan.
+    profile = selected_profile or best_profile
     if profile is None:
         return {}, 0.0
 

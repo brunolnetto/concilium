@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 56
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 63
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -284,6 +284,8 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
         ("P18-C1", [142]),
         ("P18-C2", [142]),
         ("P18-C3", [143]),
+        ("P18-D", [158]),
+        ("P18-E", [159]),
     ]
     # Simulate a state where the three merged package IDs are absent from the integrated set.
     result = report(
@@ -291,8 +293,8 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 5
-    assert issue["pr_packages_merged"] == 2
+    assert issue["pr_packages_total"] == 7
+    assert issue["pr_packages_merged"] == 4
     assert issue["pending_packages"] == ["P18-C1", "P18-C2", "P18-C3"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
@@ -305,15 +307,18 @@ def test_p14d_and_p14e_packages_must_be_merged_before_issue_fourteen_closes(spec
         ("P14-C", [129]),
         ("P14-D", [145]),
         ("P14-E", [155]),
+        ("P14-F", [160]),
     ]
     result = report(
-        spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {145, 155}
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {145, 155, 160},
     )
     issue = next(x for x in result["issues"] if x["issue"] == 14)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 5
+    assert issue["pr_packages_total"] == 6
     assert issue["pr_packages_merged"] == 3
-    assert issue["pending_packages"] == ["P14-D", "P14-E"]
+    assert issue["pending_packages"] == ["P14-D", "P14-E", "P14-F"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
 
@@ -322,8 +327,140 @@ def test_p14d_and_p14e_packages_must_be_merged_before_issue_fourteen_closes(spec
         spec, states(9, 10, 11, 12, 13, 22, 25), all_merged(spec) - {155}
     )
     issue = next(x for x in result["issues"] if x["issue"] == 14)
-    assert issue["pr_packages_total"] == 5
-    assert issue["pr_packages_merged"] == 4
+    assert issue["pr_packages_total"] == 6
+    assert issue["pr_packages_merged"] == 5
     assert issue["pending_packages"] == ["P14-E"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p15e_exact_residual_bridge_remains_mandatory(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 15)["packages"]
+    assert ("P15-E", [156]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 14, 22, 25),
+        all_merged(spec) - {156},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 15)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == len(packages)
+    assert issue["pending_packages"] == ["P15-E"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p15f_runtime_residual_preservation_is_mandatory(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 15)["packages"]
+    assert ("P15-F", [157]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 14, 22, 25),
+        all_merged(spec) - {157},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 15)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == len(packages)
+    assert issue["pending_packages"] == ["P15-F"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p14f_zero_capacity_residual_package_is_mandatory(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 14)["packages"]
+    assert ("P14-F", [160]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {155, 160},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 14)
+    assert issue["pending_packages"] == ["P14-E", "P14-F"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p16f_iso_week_consistency_is_mandatory_before_issue_closure(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 16)["packages"]
+    assert ("P16-F", [161]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {138, 161},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 16)
+    assert "P16-F" in issue["pending_packages"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p18d_no_waste_identity_package_is_mandatory(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
+    assert ("P18-D", [158]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {158},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 18)
+    assert issue["pending_packages"] == ["P18-D"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p18e_unsupported_units_are_fail_closed_before_issue_closure(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
+    assert ("P18-E", [159]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {158, 159},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 18)
+    assert issue["pending_packages"] == ["P18-D", "P18-E"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p19c_external_stock_provisioning_is_registered_as_mandatory_package(
+    spec: dict,
+) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 19)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P19-A", [80]),
+        ("P19-B", [81]),
+        ("P19-C", [150]),
+    ]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {150},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 19)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == 3
+    assert issue["pr_packages_merged"] == 2
+    assert issue["pending_packages"] == ["P19-C"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p20b_event_attribution_is_mandatory_before_issue_twenty_closes(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 20)["packages"]
+    assert [(p["id"], p["prs"]) for p in packages] == [
+        ("P20-A", [84]),
+        ("P20-B", [151]),
+        ("P20-C", []),
+    ]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 17, 18, 19, 22, 25),
+        all_merged(spec) - {151},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 20)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == 3
+    assert issue["pr_packages_merged"] == 1
+    assert issue["pending_packages"] == ["P20-B", "P20-C"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
