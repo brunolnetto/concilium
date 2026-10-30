@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date
 from fractions import Fraction
-from typing import Any
+from typing import Any, cast
 
 from concilium.application.scheduling.contractual_cost_ledger import (
     ContractCategory,
@@ -34,15 +34,14 @@ from concilium.application.scheduling.skill04_consumption_preview import (
 from concilium.domain.models.canonical import CanonicalModel, RecursoContrato
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
-
 _EXPECTED_PROOF_SCOPE = "EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
 _EXPECTED_STATUS = "EXACT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
 
 
 def _mapping(value: object, label: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
-        raise ValueError(f"{label} must be an explicit mapping")
-    return value
+    if not isinstance(value, Mapping) or not all(isinstance(key, str) for key in value):
+        raise ValueError(f"{label} must be an explicit string-keyed mapping")
+    return cast(Mapping[str, Any], value)
 
 
 def _text(value: object, label: str) -> str:
@@ -127,7 +126,9 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
 
     resource_type = _text(witness.get("resource_type"), "P16 resource_type")
     contract_id = _text(witness.get("contract_id"), "P16 contract_id")
-    source_id = _text(witness.get("source_id"), "P16 tariff source_id")
+    # Validate tariff provenance here; the canonical sidecar serializes this
+    # stable source_id separately from the reconstructed posting ledger.
+    _text(witness.get("source_id"), "P16 tariff source_id")
     currency = _text(witness.get("currency"), "P16 currency")
     raw_category = witness.get("category")
     if raw_category == "MO":

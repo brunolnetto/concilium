@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Literal
+from typing import Literal, TypeVar, cast
 
 from .contractual_cost_ledger import (
     ExclusiveCostLedger,
@@ -23,6 +23,8 @@ from .physical_consumption_rates import (
 )
 
 EvidenceKind = Literal["PLANNED_CLOSED_SCOPE", "OBSERVED_OPERATION"]
+_GoodsKey = TypeVar("_GoodsKey", str, tuple[str, str])
+_PricedDeclaration = tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]]
 
 
 @dataclass(frozen=True)
@@ -88,7 +90,7 @@ class PhysicalConsumptionJournalResult:
 
 def book_weekly_physical_consumption(
     base_ledger: ExclusiveCostLedger,
-    goods: Mapping[str | tuple[str, str], tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]]],
+    goods: Mapping[_GoodsKey, _PricedDeclaration],
     evidence: Sequence[WeeklyConsumptionEvidence],
 ) -> PhysicalConsumptionJournalResult:
     """Apply explicit U_g,j * p_g, maintaining identical ownership in P17-A.
@@ -96,6 +98,11 @@ def book_weekly_physical_consumption(
     Does not certify a physical schedule, acquisition invoice, or overall
     financial GO: P17-C/P20/P23 remain independent gates.
     """
+    # The public contract accepts either legacy good-id keys or
+    # activity-qualified (activity_id, good_id) keys. A single invocation
+    # uses one homogeneous key family; widen only this read-only lookup view so
+    # the fallback lookup remains type-safe without weakening the caller API.
+    goods_by_key = cast(Mapping[object, _PricedDeclaration], goods)
     ids: set[str] = set()
     measurements: list[AcquisitionEvidenceLine] = []
     purchases: list[PhysicalPurchase] = []
@@ -108,9 +115,9 @@ def book_weekly_physical_consumption(
         # Activity-specific rates are allowed for a shared catalog good:
         # the same diesel can have different L/h per CPU. Preserve the old
         # good_id-only contract for callers that already provide one shared rate.
-        declaration = goods.get((item.activity_id, item.good_id))
+        declaration = goods_by_key.get((item.activity_id, item.good_id))
         if declaration is None:
-            declaration = goods.get(item.good_id)
+            declaration = goods_by_key.get(item.good_id)
         if declaration is None:
             raise ValueError(
                 f"{item.activity_id}/{item.good_id}: missing priced physical good"

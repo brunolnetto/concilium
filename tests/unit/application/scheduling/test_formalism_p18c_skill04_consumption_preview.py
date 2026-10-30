@@ -623,3 +623,24 @@ def test_exact_quantity_rejects_integer_overflow_as_domain_validation() -> None:
 
     with pytest.raises(ValueError, match="finite nonnegative"):
         _exact_q(10 ** 400)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (7, F(7)),
+        (0.125, F(1, 8)),
+    ],
+)
+def test_exact_quantity_accepts_builtin_int_and_float(value: object, expected: F) -> None:
+    from concilium.application.scheduling.skill04_consumption_preview import _exact_q
+
+    assert _exact_q(value) == expected
+
+
+@pytest.mark.parametrize("value", [True, False, "1", None, F(1)])
+def test_exact_quantity_rejects_non_builtin_numeric_objects(value: object) -> None:
+    from concilium.application.scheduling.skill04_consumption_preview import _exact_q
+
+    with pytest.raises(ValueError, match="finite nonnegative"):
+        _exact_q(value)
