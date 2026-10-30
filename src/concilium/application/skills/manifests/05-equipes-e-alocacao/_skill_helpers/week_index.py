@@ -1,8 +1,8 @@
 """Shared ISO-8601 week indexing for Skill 05 scheduling and pool economics."""
 from __future__ import annotations
 
-from datetime import date
 import re
+from datetime import date
 
 
 _ISO_WEEK = re.compile(r"^(\d{4})-W(\d{2})$")
