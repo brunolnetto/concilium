@@ -185,6 +185,44 @@ def test_auto_runtime_resolves_climate_delayed_precedence_and_shared_resource_co
     assert any(value.codigo == "VAL-RCPSP-RESOLVED" for value in validations)
 
 
+def test_auto_physical_resolution_never_moves_before_selected_scheduler_start(monkeypatch) -> None:
+    helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
+    _patch_skill04_materializer(monkeypatch)
+    canonical, regime = _runtime_inputs(
+        resource_capacities={"crane": 1},
+        items=(Item("A"),),
+    )
+    initial = _candidate({"A": {"crane": 1}}, ("A",))
+    delayed_activity = initial.scheduled_activities[0].model_copy(
+        update={"start_week": 2}
+    )
+    candidate = initial.model_copy(
+        update={"scheduled_activities": [delayed_activity], "makespan": 3}
+    )
+
+    result = helper(
+        canonical=canonical,
+        inputs={"rcpsp_spec": {"resource_pool": {"crane": 1}}},
+        mode="AUTO_SCHEDULE",
+        schedule_selected=candidate,
+        distribution_by_item={},
+        fallback_item_ids=set(),
+        weeks=list(WEEKS),
+        cpu_lookup={"CPU-A": {"codigo": "CPU-A", "producao_id_ref": "prod"}},
+        production_lookup={"prod": {}},
+        regime=regime,
+        practicability_weekly={week: 1.0 for week in WEEKS},
+        practicability_monthly={},
+        calendar_factor_weekly={week: 1.0 for week in WEEKS},
+        validacoes=[],
+    )
+
+    assert result.status == "PASS", result.reason
+    resolved = result.schedule_selected.scheduled_activities[0]
+    assert resolved.start_week >= 2
+    assert resolved.start_week == 2
+
+
 def test_auto_physical_resolver_returns_unknown_when_pool_is_unproven(monkeypatch) -> None:
     helper = run_cronograma.__globals__["resolve_skill04_physical_schedule"]
     _patch_skill04_materializer(monkeypatch)
