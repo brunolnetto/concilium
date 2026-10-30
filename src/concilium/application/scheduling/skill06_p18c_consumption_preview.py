@@ -40,9 +40,9 @@ _EXPECTED_STATUS = "EXACT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
 
 
 def _mapping(value: object, label: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
-        raise ValueError(f"{label} must be an explicit mapping")
-    return value
+    if not isinstance(value, Mapping) or not all(isinstance(key, str) for key in value):
+        raise ValueError(f"{label} must be an explicit string-keyed mapping")
+    return cast(Mapping[str, Any], value)
 
 
 def _text(value: object, label: str) -> str:
