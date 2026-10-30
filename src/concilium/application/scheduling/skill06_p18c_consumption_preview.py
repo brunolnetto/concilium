@@ -136,6 +136,8 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
 
     resource_type = _text(witness.get("resource_type"), "P16 resource_type")
     contract_id = _text(witness.get("contract_id"), "P16 contract_id")
+    # Validate tariff provenance here; the canonical sidecar serializes this
+    # stable source_id separately from the reconstructed posting ledger.
     _text(witness.get("source_id"), "P16 tariff source_id")
     currency = _text(witness.get("currency"), "P16 currency")
     raw_category = witness.get("category")
