@@ -5,8 +5,8 @@ import sys
 
 import pytest
 
-from concilium.application.skills import _load
 from concilium.application.skills.base import SkillResult
+from concilium.application.skills import _load
 from concilium.domain.models.canonical import CanonicalModel
 
 
