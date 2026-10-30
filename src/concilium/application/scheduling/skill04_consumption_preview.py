@@ -46,9 +46,9 @@ class P18CConsumptionPreview:
 
 
 def _exact_q(value: object) -> Fraction:
-    # Catalog rows cross a Mapping[str, object] boundary. Narrow to exact
-    # built-in numeric types; bool, Decimal, strings and numeric proxies are
-    # not accepted as physical measurements.
+    # Catalog rows are Mapping[str, object]. Narrow explicitly to exact built-in
+    # numeric types; bool, Decimal, strings and numeric proxy objects are not
+    # accepted as physical measurements.
     if type(value) is int:
         numeric: int | float = value
     elif type(value) is float:
