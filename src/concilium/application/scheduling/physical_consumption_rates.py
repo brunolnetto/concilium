@@ -36,10 +36,20 @@ def convert_physical(quantity: Fraction, from_unit: str, to_unit: str) -> Fracti
         raise ValueError("physical quantity must be an exact Fraction")
     if not isinstance(from_unit, str) or not isinstance(to_unit, str):
         raise ValueError("physical units must be explicitly declared")
-    source = normalize_unidade(from_unit)
-    target = normalize_unidade(to_unit)
-    dim1, scale1 = _DIMENSION[source]
-    dim2, scale2 = _DIMENSION[target]
+    try:
+        source = normalize_unidade(from_unit)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported physical unit: {from_unit}") from exc
+    try:
+        target = normalize_unidade(to_unit)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported physical unit: {to_unit}") from exc
+    try:
+        dim1, scale1 = _DIMENSION[source]
+        dim2, scale2 = _DIMENSION[target]
+    except KeyError as exc:
+        unsupported = exc.args[0]
+        raise ValueError(f"unsupported physical unit: {unsupported}") from exc
     if dim1 != dim2:
         raise ValueError(f"incompatible physical dimensions: {source} vs {target}")
     return quantity * scale1 / scale2
