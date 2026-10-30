@@ -87,6 +87,9 @@ def apply_pricing_report_evidence(
         return
     # Mapping's runtime check proves shape only; narrow its generic parameters
     # before reading string-keyed evidence fields.
+    if not all(isinstance(key, str) for key in context):
+        _unknown(result, validations, intent, "pricing evidence keys must be strings")
+        return
     context = cast(Mapping[str, object], context)
     inventory_scope = context.get("inventory_scope")
     if not isinstance(inventory_scope, InventoryEvidenceScope):
@@ -113,8 +116,9 @@ def apply_pricing_report_evidence(
             "COMPLETE inventory scope requires an explicit holding or provisioning journal",
         )
         return
-    if isinstance(context.get("source_build_error"), str):
-        _unknown(result, validations, intent, context["source_build_error"])
+    source_build_error = context.get("source_build_error")
+    if isinstance(source_build_error, str):
+        _unknown(result, validations, intent, source_build_error)
         return
 
     reconciliation = context.get("reconciliation")
@@ -150,17 +154,22 @@ def apply_pricing_report_evidence(
             except (TypeError, ValueError) as exc:
                 _unknown(result, validations, intent, str(exc))
                 return
-    bdi_by_category = context.get("bdi_by_category")
+    bdi_by_category_raw = context.get("bdi_by_category")
     catalog = context.get("catalog")
-    catalog_metadata = context.get("catalog_metadata")
+    catalog_metadata_raw = context.get("catalog_metadata")
     operational_basis_fingerprint = context.get("operational_basis_fingerprint")
     regulatory_basis = context.get("regulatory_basis")
     minimum_profit_margin = context.get("minimum_profit_margin")
     if (
         not isinstance(reconciliation, ExactFinancialReconciliation)
-        or not isinstance(bdi_by_category, Mapping)
+        or not isinstance(bdi_by_category_raw, Mapping)
+        or not all(
+            isinstance(category, str) and isinstance(rate, Fraction)
+            for category, rate in bdi_by_category_raw.items()
+        )
         or not isinstance(catalog, CatalogPriceBenchmark)
-        or not isinstance(catalog_metadata, Mapping)
+        or not isinstance(catalog_metadata_raw, Mapping)
+        or not all(isinstance(key, str) for key in catalog_metadata_raw)
         or not isinstance(operational_basis_fingerprint, str)
         or (regulatory_basis is not None and not isinstance(regulatory_basis, RegulatoryBdiBasis))
         or (
@@ -173,6 +182,8 @@ def apply_pricing_report_evidence(
             "pricing evidence has missing or invalid exact ledger, catalog, currency, or regulatory inputs",
         )
         return
+    bdi_by_category = cast(Mapping[str, Fraction], bdi_by_category_raw)
+    catalog_metadata = cast(Mapping[str, object], catalog_metadata_raw)
 
     try:
         diagnostics = project_operational_pricing(
