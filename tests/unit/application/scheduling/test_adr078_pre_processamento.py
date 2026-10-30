@@ -1055,3 +1055,27 @@ class TestDetectarOportunidadesParaleloMissingBranches:
             sched, dag, pool, costs, 0.0, limite_producao_por_tipo={"ESC": "equipamento"}
         )
         assert isinstance(result, list)
+
+
+class TestIsoWeekIndexConsistency:
+    def test_iso_week_index_is_absolute_and_contiguous_across_iso_year_rollover(self, helpers):
+        # 2020-W53 is followed immediately by 2021-W01.
+        assert helpers._week_to_idx("2021-W01") == helpers._week_to_idx("2020-W53") + 1
+        assert helpers._week_idx("2021-W01") == helpers._week_idx("2020-W53") + 1
+        # The economic preprocessor and pool contract must use the same epoch.
+        assert helpers._week_to_idx("2020-W53") == helpers._week_idx("2020-W53")
+        assert helpers._week_to_idx("2021-W01") == helpers._week_idx("2021-W01")
+
+    def test_invalid_iso_week_is_rejected_in_both_paths(self, helpers):
+        with pytest.raises(ValueError, match="invalid ISO week"):
+            helpers._week_to_idx("2021-W53")
+        with pytest.raises(ValueError, match="invalid ISO week"):
+            helpers._week_idx("2021-W53")
+
+
+    def test_unknown_week_formats_are_rejected_in_both_paths(self, helpers):
+        for value in ("", "nonsense", "Sx", "2021-W53"):
+            with pytest.raises(ValueError):
+                helpers._week_to_idx(value)
+            with pytest.raises(ValueError):
+                helpers._week_idx(value)

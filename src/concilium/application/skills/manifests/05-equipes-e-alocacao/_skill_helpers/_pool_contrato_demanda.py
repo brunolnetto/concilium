@@ -8,6 +8,7 @@ from fractions import Fraction
 from concilium.domain.models.canonical import ValidacaoItem
 
 from .pre_metrics import _gap_max_economico  # ty: ignore[unresolved-import]
+from .week_index import iso_week_index  # ty: ignore[unresolved-import]
 
 
 def _week_idx(semana: str) -> int:
@@ -19,25 +20,15 @@ def _week_idx(semana: str) -> int:
     """
     s = str(semana).strip()
     # Formato S-index: "S001", "S052", etc.
-    if s.startswith("S") and s[1:].isdigit():
-        return int(s[1:])
-    # Formato ISO: "2026-W48" ou "2026-W08"
+    if s.upper().startswith("S"):
+        if s[1:].isdigit():
+            return int(s[1:])
+        raise ValueError(f"invalid legacy week index: {semana!r}")
     if "-W" in s:
-        try:
-            import datetime
-
-            parts = s.split("-W")
-            year, week = int(parts[0]), int(parts[1])
-            monday = datetime.datetime.strptime(f"{year}-W{week:02d}-1", "%G-W%V-%u")
-            epoch = datetime.datetime(2000, 1, 3)  # segunda-feira da semana 1 de 2000
-            return (monday - epoch).days // 7
-        except Exception:
-            return 0
-    # Fallback: tenta int direto
-    try:
-        return int(s.lstrip("0") or "0")
-    except ValueError:
-        return 0
+        return iso_week_index(s)
+    if s.isdigit():
+        return int(s)
+    raise ValueError(f"unsupported week index: {semana!r}")
 
 
 def _eq_comp_floats(eq) -> tuple:
