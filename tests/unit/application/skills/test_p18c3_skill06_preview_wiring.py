@@ -1,47 +1,41 @@
 """P18-C3 opt-in Skill06 sidecar wiring; no legacy-finance override."""
-from __future__ import annotations
-
-import importlib
-import sys
-
 import pytest
 
-
-_skill_base = importlib.import_module("concilium.application.skills.base")
-_canonical_models = importlib.import_module("concilium.domain.models.canonical")
-_SKILL_RESULT_ATTR = "SkillResult"
-_CANONICAL_MODEL_ATTR = "CanonicalModel"
-_LOAD_ATTR = "_load"
-SkillResult = getattr(_skill_base, _SKILL_RESULT_ATTR)
-CanonicalModel = getattr(_canonical_models, _CANONICAL_MODEL_ATTR)
 
 _SKILL_ID = "06-resultado-financeiro"
 
 
 @pytest.fixture
 def skill_module():
-    skills_package = importlib.import_module("concilium.application.skills")
-    getattr(skills_package, _LOAD_ATTR)(_SKILL_ID, "run_resultado_financeiro")
-    return sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
+    skills_package = __import__("concilium.application.skills", fromlist=["_load"])
+    skills_package._load(_SKILL_ID, "run_resultado_financeiro")
+    return __import__("sys").modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
 
 
-def _canonical() -> CanonicalModel:
-    return CanonicalModel.model_construct(p18_consumption_preview={"stale": True})
+def _canonical():
+    canonical_model = __import__(
+        "concilium.domain.models.canonical", fromlist=["CanonicalModel"]
+    ).CanonicalModel
+    return canonical_model.model_construct(p18_consumption_preview={"stale": True})
 
 
 def _stub_stages(monkeypatch, skill_module, *, final=None):
     seen = {"final_input": None, "stage3_calls": 0}
 
+    skill_result = __import__(
+        "concilium.application.skills.base", fromlist=["SkillResult"]
+    ).SkillResult
+
     def pre(canonical, *_args):
-        return SkillResult(canonical, [])
+        return skill_result(canonical, [])
 
     def indirect(canonical, *_args):
-        return SkillResult(canonical, [])
+        return skill_result(canonical, [])
 
     def consolidate(canonical, *_args):
         seen["stage3_calls"] += 1
         seen["final_input"] = canonical.p18_consumption_preview
-        return SkillResult(canonical, [])
+        return skill_result(canonical, [])
 
     monkeypatch.setattr(skill_module, "_run_precificacao", pre)
     monkeypatch.setattr(skill_module, "_run_indiretos", indirect)
