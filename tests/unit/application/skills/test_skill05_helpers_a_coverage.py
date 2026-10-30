@@ -1038,9 +1038,10 @@ class TestWeekIdx:
     def test_numeric_string(self):
         assert _week_idx("10") == 10
 
-    def test_invalid_string_returns_zero(self):
-        """Lines 995-996: ValueError → 0."""
-        assert _week_idx("abc") == 0
+    def test_invalid_string_raises(self):
+        """Unsupported week labels must not silently alias week zero."""
+        with pytest.raises(ValueError, match="unsupported week index"):
+            _week_idx("abc")
 
     def test_s_leading_zeros(self):
         assert _week_idx("S007") == 7
