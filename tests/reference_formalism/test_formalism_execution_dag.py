@@ -343,3 +343,19 @@ def test_p15e_exact_residual_bridge_remains_mandatory(spec: dict) -> None:
     assert issue["pending_packages"] == ["P15-E"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
+
+
+def test_p15f_runtime_residual_preservation_is_mandatory(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 15)["packages"]
+    assert ("P15-F", [157]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 14, 22, 25),
+        all_merged(spec) - {157},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 15)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == len(packages)
+    assert issue["pending_packages"] == ["P15-F"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None

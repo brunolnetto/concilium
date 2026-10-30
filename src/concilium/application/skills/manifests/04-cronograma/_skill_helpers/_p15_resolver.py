@@ -261,7 +261,7 @@ def resolve_skill04_physical_schedule(
         item = eap_by_id[item_id]
         candidate = scheduled.model_copy(update={"start_week": start})
         try:
-            distribution, delivered = _build_activity_distribuicao(
+            distribution, _delivered = _build_activity_distribuicao(
                 candidate,
                 item,
                 cpu,
@@ -283,10 +283,10 @@ def resolve_skill04_physical_schedule(
             )
             if not distribution:
                 return None
-            if abs(float(item.quantitativo) - float(delivered)) > max(
-                1e-9, abs(float(item.quantitativo)) * 1e-12
-            ):
-                return None
+            # Preserve partial real-calendar delivery as diagnostic evidence.
+            # The independent physical validator must reject the unclosed scope
+            # and retain its exact residual; dropping this candidate here would
+            # turn a known Q/sum_q mismatch into a generic "no admissible schedule".
             demand_by_week = {
                 week: assigned_by_item[item_id]
                 for week in distribution
