@@ -478,7 +478,7 @@ def book_skill04_planned_consumption_preview(
 
     goods_by_key = cast(
         Mapping[
-            str | tuple[str, str],
+            tuple[str, str],
             tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]],
         ],
         goods,
