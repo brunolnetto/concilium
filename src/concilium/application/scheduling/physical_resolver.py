@@ -43,6 +43,7 @@ class PhysicalResolution:
     attempts: int
     complete_search: bool
     last_audit: PhysicalCalendarAudit | None
+    unknown_reason: str | None = None
 
     @property
     def locally_admissible(self) -> bool:
