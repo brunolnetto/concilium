@@ -176,18 +176,48 @@ def _build_activity_distribuicao(
     """Busca o menor N_i que fecha Q no calendário disponível e o materializa."""
     n_max = max(1, n_max)
     prod_item = (producao_lookup or {}).get(cpu.get('producao_id_ref'))
+    duration_max = len(semanas_obra) - sa.start_week
+    if duration_max <= 0:
+        return {}, 0.0
+    ramp_params = getattr(sa, "ramp_params", None)
+
+    # A zero catalog rate without a synergy graph means zero installed physical
+    # capacity, not missing evidence. Materialize the actual remaining calendar
+    # with zero delivery so the independent scope-closure gate can report the
+    # exact Q residual and reject certification. A declared graph remains
+    # authoritative and follows the normal graph-capacity path below.
+    if producao_semanal_base == 0 and not (prod_item or {}).get("grafo_sinergia"):
+        profile = (
+            _compute_ramp_profile(duration_max, ramp_params, n_max)
+            if isinstance(ramp_params, dict)
+            else [1.0] * duration_max
+        )
+        distribuicao: dict[str, DistribuicaoSemanal] = {}
+        for offset, fraction in enumerate(profile):
+            semana_key = semanas_obra[sa.start_week + offset]
+            distribuicao[semana_key] = _build_dist_cell(
+                producao_semanal_base,
+                n_max * fraction,
+                n_max,
+                _lookup_eficiencia(semana_key, prat_semanal, prat_mensal),
+                fator_calendario_semanal.get(semana_key, 1.0),
+                item.quantitativo,
+                0.0,
+                fator_jornada=fator_jornada,
+                capacidade_fisica_semanal=0.0,
+                horas_contratuais_semana=horas_semana,
+                origem_produtividade=origem_produtividade,
+            )
+        return distribuicao, 0.0
+
     capacidade_nominal = _capacidade_semanal_por_frentes(
         producao_semanal_base, n_max, n_max, prod_item,
         horas_semana=horas_semana,
     ) * fator_jornada
     duration_initial = max(1, math.ceil(item.quantitativo / capacidade_nominal)) if capacidade_nominal > 0 else 1
-    duration_max = len(semanas_obra) - sa.start_week
-    if duration_max <= 0:
-        return {}, 0.0
     # If nominal duration already exceeds the remaining calendar, still evaluate
     # the real horizon so the failure reports the maximum physically deliverable Q.
     duration_initial = min(duration_initial, duration_max)
-    ramp_params = getattr(sa, "ramp_params", None)
     best_profile: list[float] | None = None
     best_capacity = -1.0
     selected_profile: list[float] | None = None
