@@ -51,6 +51,19 @@ provenance, invalid units, stockouts, delivery timing errors, and duplicate
 ownership fail closed to `UNKNOWN`; `PREVIEW` surfaces a warning and
 `AUTO_GO`/`CERTIFIED` surface an error.
 
+**Trust boundary:** the benchmark amount, category BDI rates, operational-scope
+fingerprint, regulatory denominator/floor, and the associated source/reference/
+fingerprint strings are caller declarations in this version of the contract.
+They are validated for shape, exactness, and internal consistency, but their
+documents are not fetched, signed, or authenticated by the runtime. The stock
+replay validates the declared physical quantities against reconstructed P18
+demand; it does not independently attest that a stocktake is exhaustive or
+that its source record is genuine. Accordingly, a P21 `PASS` means the gates
+pass **for the supplied declarations**. It is not proof of source authenticity,
+legal compliance, or PROJECT_GO. Any workflow that uses P21 as a certification
+gate must first resolve these declarations against trusted server-side
+catalog/regulatory/stock records (or another authenticated evidence provider).
+
 ## Persisted canonical result
 
 The canonical \`Resultado\` keeps flat string-valued fields so REST/MCP/UI/RFI/RFP
