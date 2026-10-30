@@ -26,9 +26,11 @@ from typing import Any
 from concilium.application.scheduling.skill06_p17_cost_reconciliation import (
     build_skill06_p17_reconciliation,
 )
+from concilium.application.scheduling.pricing_report_adapter import (
+    build_pricing_report_evidence_context,
+)
 from concilium.application.scheduling.skill06_p18c_consumption_preview import (
     build_p18_skill06_preview,
-    build_p20_runtime_reconciliation,
 )
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
@@ -148,29 +150,30 @@ def run_resultado_financeiro(
             ),
         ))
 
-    # P21-C: when explicit catalog/regulatory pricing context is supplied, compose
-    # the exact P20 ledger from the physical P17/P18 witnesses plus declared P19
-    # journals. An incomplete inventory declaration never becomes a zero-cost default.
-    p21_context = inputs.get("p21_pricing_evidence")
-    if (
-        enabled
-        and isinstance(p21_context, dict)
-        and p21_context.get("inventory_scope") is not None
-        and p21_context.get("reconciliation") is None
-        and p21_context.get("pool_ledger") is None
-        and p21_context.get("consumption_journal") is None
-    ):
-        try:
-            reconciliation = build_p20_runtime_reconciliation(
-                canonical,
-                catalogo,
-                holding_journal=p21_context.get("holding_journal"),
-                stock_provisioning_journal=p21_context.get("stock_provisioning_journal"),
-            )
-        except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
-            p21_context = {**p21_context, "source_build_error": str(exc)}
+    # P21-C accepts declarative JSON only. Rebuild typed P17/P18/P19/P20
+    # evidence from this canonical schedule and the server-resolved catalog;
+    # never trust serialized ledgers or caller-supplied dataclass-shaped objects.
+    p21_declaration = inputs.get("p21_pricing_evidence")
+    if p21_declaration is not None:
+        if not enabled:
+            p21_context: dict[str, object] = {
+                "source_build_error": (
+                    "P21 pricing evidence requires p18_consumption_preview_enabled=true"
+                ),
+            }
+        elif not isinstance(p21_declaration, dict):
+            p21_context = {
+                "source_build_error": "p21_pricing_evidence must be a JSON object",
+            }
         else:
-            p21_context = {**p21_context, "reconciliation": reconciliation}
+            try:
+                p21_context = build_pricing_report_evidence_context(
+                    canonical,
+                    catalogo,
+                    p21_declaration,
+                )
+            except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
+                p21_context = {"source_build_error": str(exc)}
         inputs = {**inputs, "p21_pricing_evidence": p21_context}
 
     # Estágio 3 — Consolidação financeira
