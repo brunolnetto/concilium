@@ -1,11 +1,11 @@
 """P18-C3 opt-in Skill06 sidecar wiring; no legacy-finance override."""
 from __future__ import annotations
 
+import importlib
 import sys
 
 import pytest
 
-import concilium.application.skills as skills
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel
 
@@ -15,7 +15,9 @@ _SKILL_ID = "06-resultado-financeiro"
 
 @pytest.fixture
 def skill_module():
-    skills._load(_SKILL_ID, "run_resultado_financeiro")
+    getattr(importlib.import_module("concilium.application.skills"), "_load")(
+        _SKILL_ID, "run_resultado_financeiro"
+    )
     return sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
 
 
