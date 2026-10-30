@@ -93,3 +93,20 @@ GH_TOKEN="$(gh auth token)" python scripts/formalism_wave_dag.py --live --requir
 - A DAG **não** substitui o validador numérico nem um certificado GO; esses dependem de #22/#23. A integração obrigatória deste verificador em branch protection requer política de CI apropriada, a ser completada em #25/#26.
 
 Mudanças posteriores na matriz exigem PR de governança, teste de aciclicidade e atualização simultânea da epic.
+
+
+## Cumulative PR integration and branch ancestry
+
+A package's `packages[].prs` may include both its implementation PR and a cumulative
+integration PR when the implementation was merged into a predecessor feature branch
+rather than directly into `main`. For the 29–30 October stack, PR #151 is the
+required main-branch integration for P14-F, P15-E/F, P16-F, P18-D/E and P19-C.
+The source PRs remain listed as historical package evidence; PR #151 prevents a
+feature-branch merge from being mistaken for delivery on `main`. P14-D also
+requires its merged manual-scope correction PR #146, and P18-C3 requires merged
+hardening PR #147.
+
+The retired plan-only PRs #108–#119 remain historical planning records only.
+They must not be reopened or reused as implementation PRs; empty P23-B/C,
+P24-A/B and P26-A/B slots remain empty until actual implementation PRs are
+created and merged.
