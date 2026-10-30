@@ -596,12 +596,28 @@ def apply_pricing_report_evidence(
         return
 
     result.pricing_diagnostics = {
+        "schema": "concilium.p21.pricing-diagnostics.v1",
+        "p20_authority": reconciliation.authority,
+        "inventory_scope_status": inventory_scope.status,
+        "inventory_scope_source": inventory_scope.source,
+        "inventory_scope_reference_id": inventory_scope.reference_id,
+        "inventory_scope_fingerprint": inventory_scope.fingerprint,
         "operational_price": str(diagnostics.operational_price),
         "catalog_benchmark": str(diagnostics.catalog_benchmark),
+        "catalog_source": catalog.source,
+        "catalog_reference_id": catalog.reference_id,
+        "catalog_basis_fingerprint": catalog.basis_fingerprint,
+        "catalog_currency": diagnostics.catalog_currency,
+        "operational_basis_fingerprint": diagnostics.operational_basis_fingerprint,
         "direct_cost": str(diagnostics.direct_cost),
         "indirect_cost": str(diagnostics.indirect_cost),
         "total_cost": str(diagnostics.total_cost),
         "profit_amount": str(diagnostics.profit_amount),
+        "bdi_rate_mo": str(bdi_by_category["MO"]),
+        "bdi_rate_eq": str(bdi_by_category["EQ"]),
+        "bdi_rate_mat": str(bdi_by_category["MAT"]),
+        "bdi_rate_comb": str(bdi_by_category["COMB"]),
+        "bdi_rate_ind": str(bdi_by_category["IND"]),
         "implied_bdi_on_catalog": (
             str(diagnostics.implied_bdi_on_catalog)
             if diagnostics.implied_bdi_on_catalog is not None else None
@@ -625,15 +641,32 @@ def apply_pricing_report_evidence(
         "currency_metadata_fingerprint": diagnostics.currency_metadata_fingerprint,
     }
     result.pricing_gates = {
+        "schema": "concilium.p21.pricing-gates.v1",
+        "certification_intent": intent,
         "status": gates.status,
         "regulatory_status": gates.regulatory_status,
         "profitability_status": gates.profitability_status,
+        "regulatory_basis_amount": (
+            str(regulatory_basis.amount) if regulatory_basis is not None else None
+        ),
+        "regulatory_basis_currency": (
+            regulatory_basis.currency if regulatory_basis is not None else None
+        ),
+        "regulatory_basis_fingerprint": (
+            regulatory_basis.basis_fingerprint if regulatory_basis is not None else None
+        ),
+        "regulatory_basis_source": (
+            regulatory_basis.source if regulatory_basis is not None else None
+        ),
         "regulatory_bdi_rate": str(gates.regulatory_bdi_rate) if gates.regulatory_bdi_rate is not None else None,
         "regulatory_bdi_floor": str(gates.regulatory_bdi_floor) if gates.regulatory_bdi_floor is not None else None,
         "profit_amount": str(gates.profit_amount),
         "realized_margin": str(gates.realized_margin) if gates.realized_margin is not None else None,
         "minimum_profit_margin": str(gates.minimum_profit_margin) if gates.minimum_profit_margin is not None else None,
         "regulatory_basis_reference": gates.regulatory_basis_reference,
+        "regulatory_basis_minimum_rate": (
+            str(regulatory_basis.minimum_rate) if regulatory_basis is not None else None
+        ),
         "reasons": "; ".join(gates.reasons),
     }
     result.pricing_authority = gates.authority
