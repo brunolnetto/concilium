@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
+
+import pytest
 
 from concilium.application.skills import run_catalogo_de_recursos, run_cronograma, run_escopo_e_eap
 from concilium.domain.models.canonical import (
@@ -15,6 +18,31 @@ from concilium.domain.models.canonical import (
 )
 
 run_escopo_e_eap = run_escopo_e_eap
+
+
+@pytest.fixture(autouse=True)
+def _p15_pass_for_scheduler_unit_tests(monkeypatch):
+    """Isolate scheduler/assembly assertions from the separately tested P15 audit.
+
+    These tests intentionally use synthetic pools and incomplete physical evidence.
+    The dedicated P15 runtime suite exercises the real resolver and its fail-closed
+    UNKNOWN/FAIL behavior; here we supply only the resolver PASS boundary so the
+    legacy Skill02 scheduler contract remains testable.
+    """
+    def pass_physical_resolution(**kwargs):
+        return SimpleNamespace(
+            status="PASS",
+            schedule_selected=kwargs["schedule_selected"],
+            distribution_by_item=kwargs["distribution_by_item"],
+            fallback_item_ids=kwargs["fallback_item_ids"],
+            reason="scheduler unit test: P15 boundary isolated",
+        )
+
+    monkeypatch.setitem(
+        run_cronograma.__globals__,
+        "resolve_skill04_physical_schedule",
+        pass_physical_resolution,
+    )
 
 
 # Skills atividades/sequenciamento foram fundidas em escopo_consolidado.
