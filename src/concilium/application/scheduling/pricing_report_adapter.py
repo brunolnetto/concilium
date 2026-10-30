@@ -106,6 +106,8 @@ def _parse_stock_goods(raw: object) -> dict[str, StockGood]:
     goods: dict[str, StockGood] = {}
     for index, value in enumerate(_json_list(raw, "inventory.goods")):
         row = _json_mapping(value, f"inventory.goods[{index}]")
+        if set(row) - {"good_id", "unit", "initial_quantity", "capacity", "lead_time_weeks"}:
+            raise ValueError("stock good contains unsupported fields")
         good_id = _json_text(row.get("good_id"), "stock good_id")
         if good_id in goods:
             raise ValueError(f"duplicate stock good identity: {good_id}")
@@ -134,6 +136,8 @@ def _parse_internal_arrivals(raw: object) -> tuple[StockArrival, ...]:
     arrivals: list[StockArrival] = []
     for index, value in enumerate(_json_list(raw, "inventory.internal_arrivals")):
         row = _json_mapping(value, f"inventory.internal_arrivals[{index}]")
+        if set(row) - {"source_id", "good_id", "arrival_week", "quantity", "unit", "source", "ordered_week"}:
+            raise ValueError("internal arrival contains unsupported fields")
         source = _json_text(row.get("source"), "internal arrival source")
         if source != "INTERNAL_GENERATION":
             raise ValueError(
@@ -157,6 +161,12 @@ def _parse_external_purchases(raw: object) -> tuple[ExternalStockPurchase, ...]:
     purchases: list[ExternalStockPurchase] = []
     for index, value in enumerate(_json_list(raw, "inventory.purchases")):
         row = _json_mapping(value, f"inventory.purchases[{index}]")
+        if set(row) - {
+            "source_id", "good_id", "ordered_week", "arrival_week", "quantity",
+            "physical_unit", "unit_price", "price_unit", "price_source",
+            "price_reference_date", "currency", "category",
+        }:
+            raise ValueError("external purchase contains unsupported fields")
         category = _json_text(row.get("category"), "purchase category")
         if category not in ("MAT", "COMB"):
             raise ValueError("external purchase category must be MAT or COMB")
@@ -183,6 +193,8 @@ def _parse_holding_tariffs(raw: object) -> dict[str, HoldingTariff]:
     tariffs: dict[str, HoldingTariff] = {}
     for index, value in enumerate(_json_list(raw, "inventory.holding_tariffs")):
         row = _json_mapping(value, f"inventory.holding_tariffs[{index}]")
+        if set(row) - {"good_id", "amount_per_unit_week", "physical_unit", "basis"}:
+            raise ValueError("holding tariff contains unsupported fields")
         good_id = _json_text(row.get("good_id"), "holding good_id")
         if good_id in tariffs:
             raise ValueError(f"duplicate holding tariff for {good_id}")
