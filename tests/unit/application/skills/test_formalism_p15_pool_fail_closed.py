@@ -70,7 +70,7 @@ def test_pool_violation_blocks_materialization_and_invalidates_stale_outputs(
     monkeypatch.setattr(mod, "_run_cronograma_validate_num_equipes_formato", lambda *_: True)
     monkeypatch.setattr(
         mod, "_determine_mode_and_distribuicao",
-        lambda *_: ("MANUAL_ALLOCATION", {"A": {}}, [], None, False, [], set()),
+        lambda *args, **kwargs: ("MANUAL_ALLOCATION", {"A": {}}, [], None, False, [], set()),
     )
     collision = ConstraintViolation(
         code="VAL-POOL-01", status="ERRO", magnitude=1,
