@@ -29,9 +29,9 @@ _CENT = Fraction(1, 100)
 
 
 def _mapping(value: object, label: str) -> Mapping[str, object]:
-    if not isinstance(value, Mapping):
-        raise ValueError(f"{label} must be an explicit mapping")
-    return value
+    if not isinstance(value, Mapping) or not all(isinstance(key, str) for key in value):
+        raise ValueError(f"{label} must be an explicit string-keyed mapping")
+    return cast(Mapping[str, object], value)
 
 
 def _rational(value: object, label: str) -> Fraction:
