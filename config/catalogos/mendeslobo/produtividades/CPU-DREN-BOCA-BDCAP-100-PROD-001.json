@@ -9,6 +9,7 @@
     "referencia": "PROPRIA"
   },
   "producao_horaria": 0.041667,
+  "unidade": "un",
   "composicao_padrao_equipe": {
     "funcoes": [
       {
