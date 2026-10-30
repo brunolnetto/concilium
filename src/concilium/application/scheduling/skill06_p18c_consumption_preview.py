@@ -18,13 +18,6 @@ from concilium.application.scheduling.contractual_cost_ledger import (
     PostingNature,
     book_exact_pool,
 )
-from concilium.application.scheduling.resource_level_contracts import (
-    ExactPoolResult,
-    InstanceChain,
-    ResourceContractLedger,
-    ResourceTariff,
-    exact_money,
-)
 from concilium.application.scheduling.financial_cost_reconciliation import (
     ExactFinancialReconciliation,
     reconcile_financial_sources,
@@ -32,6 +25,13 @@ from concilium.application.scheduling.financial_cost_reconciliation import (
 from concilium.application.scheduling.physical_stock_holding import HoldingJournal
 from concilium.application.scheduling.physical_stock_provisioning import (
     ExternalStockProvisioningJournal,
+)
+from concilium.application.scheduling.resource_level_contracts import (
+    ExactPoolResult,
+    InstanceChain,
+    ResourceContractLedger,
+    ResourceTariff,
+    exact_money,
 )
 from concilium.application.scheduling.skill04_consumption_preview import (
     ActivityGoods,
