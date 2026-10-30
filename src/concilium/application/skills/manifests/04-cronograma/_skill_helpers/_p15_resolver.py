@@ -212,6 +212,24 @@ def resolve_skill04_physical_schedule(
             f"AUTO candidate does not cover the exact EAP scope; missing={missing}, extra={extra}",
         )
 
+    # P15 re-resolves the selected RCPSP candidate; it is not allowed to erase
+    # hard lower bounds already imposed by the scheduler (e.g. replenishment
+    # delays). Physical evidence may push an activity later, never earlier.
+    allowed_starts: dict[str, tuple[int, ...]] = {}
+    for item_id in item_ids:
+        selected_start = getattr(selected_by_item[item_id], "start_week", None)
+        if (
+            isinstance(selected_start, bool)
+            or not isinstance(selected_start, int)
+            or not 0 <= selected_start < len(weeks)
+        ):
+            return Skill04PhysicalResolution(
+                "UNKNOWN", schedule_selected, distribution_by_item,
+                fallback_item_ids, 0,
+                f"{item_id}: selected scheduler start week is outside the declared calendar",
+            )
+        allowed_starts[item_id] = tuple(range(selected_start, len(weeks)))
+
     # An explicit pool is a complete inventory. A missing resource key therefore
     # has capacity zero, not an optimistic/unbounded capacity.
     pool_capacity = {
@@ -308,7 +326,7 @@ def resolve_skill04_physical_schedule(
         precedences = _physical_precedences(canonical)
         resolution = resolve_bounded_physical_calendar(
             item_ids,
-            {item_id: tuple(range(len(weeks))) for item_id in item_ids},
+            allowed_starts,
             materialize,
             precedences,
             calendar_horizon_weeks=len(weeks),
