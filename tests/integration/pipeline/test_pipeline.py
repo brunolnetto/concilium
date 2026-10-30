@@ -271,8 +271,8 @@ class TestPipelineCompleto:
                     "item_id": "eap-01",
                     "ordem": 1,
                     "cpu_id": "CPU-DREN-BOCA-BDCAP-100",
-                    "descricao": "Coletor DN300",
-                    "unidade": "m",
+                    "descricao": "Boca de bueiro BDCAP 1,00 x 1,00 m",
+                    "unidade": "un",
                     "quantitativo": 4500,
                 }
             ],
@@ -298,7 +298,11 @@ class TestPipelineCompleto:
         r = runtime.run_skill("04-cronograma", project, inputs=cron_inputs)
         assert r.has_errors
         erros_cron = [v for v in r.validacoes if v.codigo == "VAL-CRON-01" and v.status == "ERRO"]
-        assert erros_cron, "Esperado VAL-CRON-01 ERRO"
+        assert erros_cron, (
+            "Esperado VAL-CRON-01 ERRO; validações=" + repr([
+                (v.codigo, v.status, v.mensagem) for v in r.validacoes
+            ])
+        )
 
         # Canônico NÃO deve ter resultado (pipeline parou no cron)
         canonical = project.load_canonical()
