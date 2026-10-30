@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from fractions import Fraction
 from math import isfinite
-from typing import Literal
+from typing import Literal, cast
 
 from concilium.domain.models.canonical import CanonicalModel
 from concilium.domain.units import normalize_unidade
@@ -45,18 +45,27 @@ class P18CConsumptionPreview:
     authority: str = "P18C_SKILL04_PLANNED_PREVIEW_NOT_PROJECT_GO"
 
 
-def _exact_q(value: float) -> Fraction:
-    if type(value) not in (float, int) or value < 0:
+def _exact_q(value: object) -> Fraction:
+    # Catalog rows cross a Mapping[str, object] boundary. Narrow to exact
+    # built-in numeric types; bool, Decimal, strings and numeric proxies are
+    # not accepted as physical measurements.
+    if type(value) is int:
+        numeric: int | float = value
+    elif type(value) is float:
+        numeric = value
+    else:
+        raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
+    if numeric < 0:
         raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
     # math.isfinite converts integers to float; an adversarially large int can
     # overflow during that conversion instead of failing closed with ValueError.
     try:
-        finite = isfinite(value)
+        finite = isfinite(numeric)
     except OverflowError:
         finite = False
     if not finite:
         raise ValueError("Skill04 weekly quantity requires a finite nonnegative number")
-    return Fraction(str(value))
+    return Fraction(str(numeric))
 
 
 def _scope_tolerance(expected: Fraction) -> Fraction:
@@ -164,12 +173,15 @@ def build_activity_goods_from_catalog(
     def _index(rows: Sequence[object], key: str, label: str) -> dict[str, Mapping[str, object]]:
         indexed: dict[str, Mapping[str, object]] = {}
         for raw in rows:
-            if not isinstance(raw, Mapping):
-                raise ValueError(f"{label} catalog row must be a mapping")
-            identity = raw.get(key)
+            if not isinstance(raw, Mapping) or not all(
+                isinstance(raw_key, str) for raw_key in raw
+            ):
+                raise ValueError(f"{label} catalog row must be a string-keyed mapping")
+            row = cast(Mapping[str, object], raw)
+            identity = row.get(key)
             if not isinstance(identity, str) or not identity.strip() or identity in indexed:
                 raise ValueError(f"{label} catalog identity is missing or duplicated")
-            indexed[identity] = raw
+            indexed[identity] = row
         return indexed
 
     cpus = _index(raw_cpus, "codigo", "CPU")
@@ -200,15 +212,18 @@ def build_activity_goods_from_catalog(
 
         activity_goods: dict[str, tuple[PhysicallyPricedGood, PricedCategory]] = {}
         for line in composition:
-            if not isinstance(line, Mapping):
+            if not isinstance(line, Mapping) or not all(
+                isinstance(line_key, str) for line_key in line
+            ):
                 raise ValueError(f"{activity_id}: malformed CPU composition row")
-            category_raw = line.get("categoria_custo")
+            row = cast(Mapping[str, object], line)
+            category_raw = row.get("categoria_custo")
             if category_raw in ("MAO_OBRA", "EQUIPAMENTO"):
                 continue
             if category_raw not in ("MATERIAL", "DIESEL", "COMBUSTIVEL"):
                 raise ValueError(f"{activity_id}: unsupported composition category {category_raw!r}")
 
-            good_id = line.get("insumo_id")
+            good_id = row.get("insumo_id")
             if not isinstance(good_id, str) or not good_id.strip():
                 raise ValueError(f"{activity_id}: consumable row has no insumo_id")
             if good_id in activity_goods:
@@ -239,13 +254,13 @@ def build_activity_goods_from_catalog(
                 raise ValueError(f"{activity_id}/{good_id}: physical good unit is missing")
             try:
                 good_unit = normalize_unidade(good_unit_raw)
-                declared_line_unit = line.get("unidade")
+                declared_line_unit = row.get("unidade")
                 if declared_line_unit is not None:
                     if not isinstance(declared_line_unit, str):
                         raise ValueError("composition unit must be text")
                     if normalize_unidade(declared_line_unit) != good_unit:
                         raise ValueError("composition unit differs from Insumo physical unit")
-                coefficient = _exact_q(line.get("coeficiente"))
+                coefficient = _exact_q(row.get("coeficiente"))
                 price = _exact_q(insumo.get("preco_unitario"))
             except ValueError as exc:
                 raise ValueError(f"{activity_id}/{good_id}: invalid physical rate/price/unit") from exc
@@ -463,6 +478,13 @@ def book_skill04_planned_consumption_preview(
     if observed_keys != hourly_requirements:
         raise ValueError("hourly physical goods require explicit operating-hour evidence")
 
-    result = book_weekly_physical_consumption(pool, goods, evidenced)
+    goods_by_key = cast(
+        Mapping[
+            tuple[str, str],
+            tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]],
+        ],
+        goods,
+    )
+    result = book_weekly_physical_consumption(pool, goods_by_key, evidenced)
     reconciled = reconcile_financial_sources(pool, result)
     return P18CConsumptionPreview(result, reconciled)
