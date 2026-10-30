@@ -13,23 +13,23 @@ from fractions import Fraction
 from typing import Any
 
 from concilium.application.scheduling.contractual_cost_ledger import (
+    book_exact_pool,
     ContractCategory,
     ExclusiveCostLedger,
     PostingNature,
-    book_exact_pool,
 )
 from concilium.application.scheduling.resource_level_contracts import (
+    exact_money,
     ExactPoolResult,
     InstanceChain,
     ResourceContractLedger,
     ResourceTariff,
-    exact_money,
 )
 from concilium.application.scheduling.skill04_consumption_preview import (
     ActivityGoods,
-    P18CConsumptionPreview,
     book_skill04_planned_consumption_preview,
     build_activity_goods_from_catalog,
+    P18CConsumptionPreview,
 )
 from concilium.domain.models.canonical import CanonicalModel, RecursoContrato
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
