@@ -221,7 +221,7 @@ def build_activity_goods_from_catalog(
             if category_raw not in ("MATERIAL", "DIESEL", "COMBUSTIVEL"):
                 raise ValueError(f"{activity_id}: unsupported composition category {category_raw!r}")
 
-            good_id = line.get("insumo_id")
+            good_id = row.get("insumo_id")
             if not isinstance(good_id, str) or not good_id.strip():
                 raise ValueError(f"{activity_id}: consumable row has no insumo_id")
             if good_id in activity_goods:
