@@ -29,6 +29,10 @@ from concilium.application.scheduling.financial_cost_reconciliation import (
     ExactFinancialReconciliation,
     reconcile_financial_sources,
 )
+from concilium.application.scheduling.physical_stock_holding import HoldingJournal
+from concilium.application.scheduling.physical_stock_provisioning import (
+    ExternalStockProvisioningJournal,
+)
 from concilium.application.scheduling.skill04_consumption_preview import (
     ActivityGoods,
     P18CConsumptionPreview,
@@ -494,8 +498,8 @@ def build_p20_runtime_reconciliation(
     canonical: CanonicalModel,
     catalogo: Mapping[str, object],
     *,
-    holding_journal: object | None = None,
-    stock_provisioning_journal: object | None = None,
+    holding_journal: HoldingJournal | None = None,
+    stock_provisioning_journal: ExternalStockProvisioningJournal | None = None,
 ) -> ExactFinancialReconciliation:
     """Compose P17/P18 and explicit P19 journals into one exact runtime ledger.
 
@@ -512,6 +516,6 @@ def build_p20_runtime_reconciliation(
     return reconcile_financial_sources(
         pool,
         preview.consumption,
-        holding_journal,  # type: ignore[arg-type]
-        stock_provisioning_journal,  # type: ignore[arg-type]
+        holding_journal,
+        stock_provisioning_journal
     )
