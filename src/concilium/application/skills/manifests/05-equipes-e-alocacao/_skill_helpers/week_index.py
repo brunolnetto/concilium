@@ -1,9 +1,8 @@
 """Shared ISO-8601 week indexing for Skill 05 scheduling and pool economics."""
 from __future__ import annotations
 
+import datetime
 import re
-from datetime import date
-
 
 _ISO_WEEK = re.compile(r"^(\d{4})-W(\d{2})$")
 
@@ -21,8 +20,8 @@ def iso_week_index(value: str) -> int:
         raise ValueError(f"invalid ISO week format: {value!r}")
     year, week = (int(part) for part in match.groups())
     try:
-        monday = date.fromisocalendar(year, week, 1)
+        monday = datetime.date.fromisocalendar(year, week, 1)
     except ValueError as exc:
         raise ValueError(f"invalid ISO week: {value!r}") from exc
-    epoch = date.fromisocalendar(2000, 1, 1)
+    epoch = datetime.date.fromisocalendar(2000, 1, 1)
     return (monday - epoch).days // 7
