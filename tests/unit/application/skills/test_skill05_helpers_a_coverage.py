@@ -1030,10 +1030,10 @@ class TestWeekIdx:
         assert isinstance(idx, int)
         assert idx > 0
 
-    def test_invalid_iso_returns_zero(self):
-        """Lines 993-996: bad ISO → 0."""
-        idx = _week_idx("2026-WINVALID")
-        assert idx == 0
+    def test_invalid_iso_raises_value_error(self):
+        """Malformed ISO week keys must not silently map to week zero."""
+        with pytest.raises(ValueError, match="invalid ISO week"):
+            _week_idx("2026-WINVALID")
 
     def test_numeric_string(self):
         assert _week_idx("10") == 10
