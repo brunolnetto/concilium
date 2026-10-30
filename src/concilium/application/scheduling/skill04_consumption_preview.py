@@ -258,7 +258,7 @@ def build_activity_goods_from_catalog(
                         raise ValueError("composition unit must be text")
                     if normalize_unidade(declared_line_unit) != good_unit:
                         raise ValueError("composition unit differs from Insumo physical unit")
-                coefficient = _exact_q(line.get("coeficiente"))
+                coefficient = _exact_q(row.get("coeficiente"))
                 price = _exact_q(insumo.get("preco_unitario"))
             except ValueError as exc:
                 raise ValueError(f"{activity_id}/{good_id}: invalid physical rate/price/unit") from exc
