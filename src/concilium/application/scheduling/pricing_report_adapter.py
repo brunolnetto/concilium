@@ -184,7 +184,7 @@ def _parse_external_purchases(raw: object) -> tuple[ExternalStockPurchase, ...]:
                 row.get("price_reference_date"), "purchase price_reference_date",
             ),
             currency=_json_text(row.get("currency"), "purchase currency"),
-            category=cast(Literal["MAT", "COMB"], category),
+            category=category,
         ))
     return tuple(purchases)
 
