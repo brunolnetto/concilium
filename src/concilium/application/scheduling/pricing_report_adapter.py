@@ -85,6 +85,9 @@ def apply_pricing_report_evidence(
             "missing p21_pricing_evidence with authoritative P20 ledger and explicit bases",
         )
         return
+    # Mapping's runtime check proves shape only; narrow its generic parameters
+    # before reading string-keyed evidence fields.
+    context = cast(Mapping[str, object], context)
     inventory_scope = context.get("inventory_scope")
     if not isinstance(inventory_scope, InventoryEvidenceScope):
         _unknown(
