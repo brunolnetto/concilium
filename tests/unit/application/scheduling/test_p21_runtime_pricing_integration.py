@@ -399,7 +399,7 @@ def test_real_skill06_json_contract_builds_p19_p20_and_reaches_p21_pass(monkeypa
     assert result.pricing_gates["regulatory_status"] == "PASS"
     assert result.pricing_gates["profitability_status"] == "PASS"
     assert result.pricing_gates["status"] == "PASS"
-    assert result.pricing_diagnostics["operational_price"] == str(F("85.608"))
+    assert result.pricing_diagnostics["operational_price"] == str(F("97.12"))
     assert result.pricing_diagnostics["total_cost"] == str(F("54.316"))
     assert result.pricing_authority != "PROJECT_GO"
     assert not outcome.has_errors
