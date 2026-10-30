@@ -433,7 +433,9 @@ def test_p19c_external_stock_provisioning_is_registered_as_mandatory_package(
     ]
     result = report(
         spec,
-        states(9, 10, 11, 12, 13, 22, 25),
+        # Issue 19 is blocked by issue 18; make every declared prerequisite
+        # closed so this test isolates the pending P19-C package.
+        states(9, 10, 11, 12, 13, 18, 22, 25),
         all_merged(spec) - {150},
     )
     issue = next(x for x in result["issues"] if x["issue"] == 19)
