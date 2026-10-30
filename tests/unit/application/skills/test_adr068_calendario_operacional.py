@@ -15,6 +15,26 @@ from concilium.domain.services.analytics.backtracking_pe_builder import Backtrac
 from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 from concilium.infrastructure.adapters.excel_adapter import ExcelRenderer
 
+def _stub_p15_pass_for_precedence_test(monkeypatch) -> None:
+    """Keep these AUTO tests focused on EAP→DAG/CP-SAT precedence mapping."""
+    from types import SimpleNamespace
+
+    def pass_physical_resolution(**kwargs):
+        return SimpleNamespace(
+            status="PASS",
+            schedule_selected=kwargs["schedule_selected"],
+            distribution_by_item=kwargs["distribution_by_item"],
+            fallback_item_ids=kwargs["fallback_item_ids"],
+            reason="ADR068 precedence test: P15 boundary isolated",
+        )
+
+    monkeypatch.setitem(
+        run_cronograma.__globals__,
+        "resolve_skill04_physical_schedule",
+        pass_physical_resolution,
+    )
+
+
 
 def _build_minimal_canonical():
     canonical = run_escopo_e_eap(
@@ -238,7 +258,7 @@ def test_f7_excel_renderiza_aba_calendario_operacional():
     assert "CALENDARIO.OP" in wb.sheetnames
 
 
-def test_extract_edge_thresholds_com_multiplos_predecessores_tipados_mistos():
+def test_extract_edge_thresholds_com_multiplos_predecessores_tipados_mistos(monkeypatch):
     """ADR-081/NEP-031: um item com 2+ predecessores tipados na mesma lista
     (FF seguido de FS) exercita o laço interno de `_extract_edge_thresholds_from_eap`
     continuando para o próximo predecessor após tratar um tipo FF — cobre o caminho
@@ -287,6 +307,7 @@ def test_extract_edge_thresholds_com_multiplos_predecessores_tipados_mistos():
         ),
     ]
     canonical = CanonicalModel(meta=meta, projeto=projeto, eap=eap)
+    _stub_p15_pass_for_precedence_test(monkeypatch)
 
     # AUTO_SCHEDULE via canônico puro (sem rcpsp_spec, sem num_equipes_por_item) —
     # exercita _rasfc_extract_from_canonical -> _extract_dag -> _extract_edge_thresholds_from_eap.
@@ -298,7 +319,7 @@ def test_extract_edge_thresholds_com_multiplos_predecessores_tipados_mistos():
     assert scheduled_ids == {"eap-01", "eap-02", "eap-03"}
 
 
-def test_extract_edge_thresholds_com_atividades_auto_derivadas_ff_ss_nao_lanca_keyerror():
+def test_extract_edge_thresholds_com_atividades_auto_derivadas_ff_ss_nao_lanca_keyerror(monkeypatch):
     """Regressão: quando `canonical.atividades` está populado (caminho normal
     `run_escopo_e_eap` -> `run_cronograma`, sem `rcpsp_spec`), `_extract_activities`
     usa `atividade_id` (sufixo "-atv-1") como activity_id em vez do `item_id` puro.
@@ -355,6 +376,7 @@ def test_extract_edge_thresholds_com_atividades_auto_derivadas_ff_ss_nao_lanca_k
     }
     canonical = run_escopo_e_eap(None, inputs, catalogo=catalogo).canonical
     assert canonical.atividades, "pré-condição: run_escopo_e_eap deve auto-derivar atividades"
+    _stub_p15_pass_for_precedence_test(monkeypatch)
 
     result = run_cronograma(canonical, {}, catalogo=catalogo)
 
