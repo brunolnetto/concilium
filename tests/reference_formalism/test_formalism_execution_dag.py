@@ -286,6 +286,7 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
         ("P18-C3", [143]),
         ("P18-D", [158]),
         ("P18-E", [159]),
+        ("P18-F", [162]),
     ]
     # Simulate a state where the three merged package IDs are absent from the integrated set.
     result = report(
@@ -293,8 +294,8 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 7
-    assert issue["pr_packages_merged"] == 4
+    assert issue["pr_packages_total"] == 8
+    assert issue["pr_packages_merged"] == 5
     assert issue["pending_packages"] == ["P18-C1", "P18-C2", "P18-C3"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
@@ -540,5 +541,19 @@ def test_p21c_shared_report_gate_is_mandatory_before_issue_closure(spec: dict) -
     assert issue["pending_packages"] == ["P21-C"]
     assert issue["pr_packages_total"] == 3
     assert issue["pr_packages_merged"] == 2
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p18f_model_boundaries_reject_unsupported_units_before_issue_closure(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
+    assert ("P18-F", [162]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 22, 25),
+        all_merged(spec) - {162},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 18)
+    assert issue["pending_packages"] == ["P18-F"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None

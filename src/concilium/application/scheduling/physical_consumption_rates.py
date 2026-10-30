@@ -30,26 +30,27 @@ _DIMENSION: dict[str, tuple[str, Fraction]] = {
 }
 
 
+def _normalize_physical_unit(unit: str) -> str:
+    """Normalize and validate a unit at every public model boundary."""
+    if not isinstance(unit, str):
+        raise ValueError("physical units must be explicitly declared")
+    try:
+        normalized = normalize_unidade(unit)
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"unsupported physical unit: {unit}") from exc
+    if normalized not in _DIMENSION:
+        raise ValueError(f"unsupported physical unit: {unit}")
+    return normalized
+
+
 def convert_physical(quantity: Fraction, from_unit: str, to_unit: str) -> Fraction:
     """Convert matching engineering dimensions, never mass↔volume by guess."""
     if type(quantity) is not Fraction:
         raise ValueError("physical quantity must be an exact Fraction")
-    if not isinstance(from_unit, str) or not isinstance(to_unit, str):
-        raise ValueError("physical units must be explicitly declared")
-    try:
-        source = normalize_unidade(from_unit)
-    except (KeyError, ValueError) as exc:
-        raise ValueError(f"unsupported physical unit: {from_unit}") from exc
-    try:
-        target = normalize_unidade(to_unit)
-    except (KeyError, ValueError) as exc:
-        raise ValueError(f"unsupported physical unit: {to_unit}") from exc
-    try:
-        dim1, scale1 = _DIMENSION[source]
-        dim2, scale2 = _DIMENSION[target]
-    except KeyError as exc:
-        unsupported = exc.args[0]
-        raise ValueError(f"unsupported physical unit: {unsupported}") from exc
+    source = _normalize_physical_unit(from_unit)
+    target = _normalize_physical_unit(to_unit)
+    dim1, scale1 = _DIMENSION[source]
+    dim2, scale2 = _DIMENSION[target]
     if dim1 != dim2:
         raise ValueError(f"incompatible physical dimensions: {source} vs {target}")
     return quantity * scale1 / scale2
@@ -75,14 +76,14 @@ class PhysicalConsumptionRate:
             raise ValueError("physical good identity is required")
         if type(self.physical_rate) is not Fraction or self.physical_rate < 0:
             raise ValueError("physical rate must be a nonnegative exact Fraction")
-        unit = normalize_unidade(self.good_unit)
+        unit = _normalize_physical_unit(self.good_unit)
         object.__setattr__(self, "good_unit", unit)
         if not isinstance(self.basis, ConsumptionBasis):
             raise ValueError("consumption basis must be explicit")
         if self.basis == ConsumptionBasis.PER_DELIVERED_UNIT:
             if not self.activity_unit:
                 raise ValueError("delivered activity unit must be declared")
-            activity_unit = normalize_unidade(self.activity_unit)
+            activity_unit = _normalize_physical_unit(self.activity_unit)
             if activity_unit in {"h", "mes"}:
                 raise ValueError("hourly rates require PER_OPERATING_HOUR")
             object.__setattr__(self, "activity_unit", activity_unit)
@@ -103,7 +104,7 @@ class PhysicallyPricedGood:
     def __post_init__(self) -> None:
         if type(self.price_per_unit) is not Fraction or self.price_per_unit < 0:
             raise ValueError("price per physical unit must be an exact nonnegative Fraction")
-        unit = normalize_unidade(self.price_unit)
+        unit = _normalize_physical_unit(self.price_unit)
         convert_physical(Fraction(1), self.rate.good_unit, unit)
         if self.price_source is not None and (
             not isinstance(self.price_source, str) or not self.price_source.strip()
