@@ -42,7 +42,6 @@ from concilium.application.scheduling.skill04_consumption_preview import (
 from concilium.domain.models.canonical import CanonicalModel, RecursoContrato
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
-
 _EXPECTED_PROOF_SCOPE = "EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
 _EXPECTED_STATUS = "EXACT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
 
