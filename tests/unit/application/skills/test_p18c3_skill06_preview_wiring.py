@@ -5,8 +5,8 @@ import sys
 
 import pytest
 
+import concilium.application.skills as skills
 from concilium.application.skills.base import SkillResult
-from concilium.application.skills import _load
 from concilium.domain.models.canonical import CanonicalModel
 
 
@@ -15,7 +15,7 @@ _SKILL_ID = "06-resultado-financeiro"
 
 @pytest.fixture
 def skill_module():
-    _load(_SKILL_ID, "run_resultado_financeiro")
+    skills._load(_SKILL_ID, "run_resultado_financeiro")
     return sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
 
 
