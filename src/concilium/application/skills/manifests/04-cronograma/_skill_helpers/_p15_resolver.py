@@ -128,12 +128,12 @@ def resolve_skill04_physical_schedule(
 ) -> Skill04PhysicalResolution:
     """Resolve AUTO candidates by re-materializing real Skill 04 weekly cells.
 
-    Candidate starts are every absolute week in the declared project horizon.
-    Each trial recomputes throughput using that week's climate/calendar and the
-    existing F(m) law; it never moves an old Q series unchanged. Resource
-    reservations come from the actual selected RCPSP assignments and a declared
-    pool. PASS establishes one feasible witness only, not global optimality or
-    financial GO.
+    Candidate starts are bounded below by the selected RCPSP week and may
+    move only later within the declared project horizon. Each trial recomputes
+    throughput using that week's climate/calendar and the existing F(m) law; it
+    never moves an old Q series unchanged. Resource reservations come from the
+    actual selected RCPSP assignments and a declared pool. PASS establishes one
+    feasible witness only, not global optimality or financial GO.
     """
     if not mode or not mode.startswith("AUTO") or schedule_selected is None:
         return Skill04PhysicalResolution(
