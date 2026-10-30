@@ -9,8 +9,11 @@ import pytest
 
 _skill_base = importlib.import_module("concilium.application.skills.base")
 _canonical_models = importlib.import_module("concilium.domain.models.canonical")
-SkillResult = _skill_base.SkillResult
-CanonicalModel = _canonical_models.CanonicalModel
+_SKILL_RESULT_ATTR = "SkillResult"
+_CANONICAL_MODEL_ATTR = "CanonicalModel"
+_LOAD_ATTR = "_load"
+SkillResult = getattr(_skill_base, _SKILL_RESULT_ATTR)
+CanonicalModel = getattr(_canonical_models, _CANONICAL_MODEL_ATTR)
 
 _SKILL_ID = "06-resultado-financeiro"
 
@@ -18,7 +21,7 @@ _SKILL_ID = "06-resultado-financeiro"
 @pytest.fixture
 def skill_module():
     skills_package = importlib.import_module("concilium.application.skills")
-    skills_package._load(_SKILL_ID, "run_resultado_financeiro")
+    getattr(skills_package, _LOAD_ATTR)(_SKILL_ID, "run_resultado_financeiro")
     return sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
 
 
