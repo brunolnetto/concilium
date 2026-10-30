@@ -176,6 +176,45 @@ def _build_activity_distribuicao(
     """Busca o menor N_i que fecha Q no calendário disponível e o materializa."""
     n_max = max(1, n_max)
     prod_item = (producao_lookup or {}).get(cpu.get('producao_id_ref'))
+
+    # A zero catalog productivity without an authoritative synergy graph is
+    # a known zero-capacity case, not a malformed positive-capacity request.
+    # Do not call _capacidade_semanal_por_frentes here: its normal active-front
+    # contract deliberately rejects zero declared productivity. Skill04 must
+    # nevertheless preserve the real scheduled weeks as zero-delivery evidence.
+    has_authoritative_graph = bool((prod_item or {}).get("grafo_sinergia"))
+    if producao_semanal_base == 0 and not has_authoritative_graph:
+        duration_max = len(semanas_obra) - sa.start_week
+        if duration_max <= 0:
+            return {}, 0.0
+        duration_weeks = min(max(1, sa.duration_weeks), duration_max)
+        zero_profile = (
+            _compute_ramp_profile(duration_weeks, getattr(sa, "ramp_params", None), n_max)
+            if isinstance(getattr(sa, "ramp_params", None), dict)
+            else [1.0] * duration_weeks
+        )
+        distribution: dict[str, DistribuicaoSemanal] = {}
+        delivered = 0.0
+        for offset, fraction in enumerate(zero_profile):
+            week = semanas_obra[sa.start_week + offset]
+            num_teams = n_max * fraction
+            cell = _build_dist_cell(
+                producao_semanal_base,
+                num_teams,
+                n_max,
+                _lookup_eficiencia(week, prat_semanal, prat_mensal),
+                fator_calendario_semanal.get(week, 1.0),
+                item.quantitativo,
+                delivered,
+                fator_jornada=fator_jornada,
+                capacidade_fisica_semanal=0.0,
+                horas_contratuais_semana=horas_semana,
+                origem_produtividade=origem_produtividade,
+            )
+            delivered = cell.qtd_acumulada
+            distribution[week] = cell
+        return distribution, delivered
+
     capacidade_nominal = _capacidade_semanal_por_frentes(
         producao_semanal_base, n_max, n_max, prod_item,
         horas_semana=horas_semana,
@@ -214,7 +253,16 @@ def _build_activity_distribuicao(
                 )
             )
         total_capacity = sum(capacidades)
-        if total_capacity > best_capacity:
+        if (
+            total_capacity > best_capacity
+            or (
+                total_capacity == best_capacity
+                and best_profile is not None
+                and len(profile) > len(best_profile)
+            )
+        ):
+            # On an all-zero-capacity horizon, prefer the longest real profile
+            # among equal-capacity witnesses so every remaining week is audited.
             best_profile = profile
             best_capacity = total_capacity
         if total_capacity >= item.quantitativo:
@@ -224,7 +272,9 @@ def _build_activity_distribuicao(
     # Prefer the shortest profile that closes Q. If the calendar is exhausted,
     # materialize the best real-calendar attempt instead of returning zero and
     # overstating the unmet quantity. The caller's closure gate will reject it.
-    profile = selected_profile or (best_profile if best_capacity > 0 else None)
+    # Even zero deliverable capacity is real evidence: materialize zero-q cells
+    # over the actual horizon so closure reports Q/sum_q, not a generic empty plan.
+    profile = selected_profile or best_profile
     if profile is None:
         return {}, 0.0
 

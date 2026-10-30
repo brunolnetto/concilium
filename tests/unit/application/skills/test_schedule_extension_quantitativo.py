@@ -144,7 +144,10 @@ class TestBuildActivityDistribuicaoExtensao:
             fator_calendario_semanal={},
         )
 
-        assert distribuicao == {}
+        # Zero productivity is still a real-calendar witness: preserve each
+        # available week with q=0 so the residual is auditable, not implicit.
+        assert list(distribuicao) == semanas_obra
+        assert [cell.qtd_executada for cell in distribuicao.values()] == [0.0, 0.0, 0.0]
         assert qtd_acumulada == 0.0
 
         validacoes = []
@@ -586,3 +589,36 @@ def test_exhausted_calendar_reports_maximum_real_delivery_and_exact_residual() -
     assert "Σq=30" in validacoes[0].mensagem
     assert "residual=20" in validacoes[0].mensagem
     assert "horizonte_semanas=3" in validacoes[0].mensagem
+
+
+def test_zero_productivity_preserves_zero_delivery_and_exact_scope_residual() -> None:
+    sa = _sa(start_week=0, duration_weeks=3, num_eq=1)
+    item = SimpleNamespace(quantitativo=50.0)
+    weeks = ["2026-W02", "2026-W03", "2026-W04"]
+
+    distribution, delivered = _build_activity_distribuicao(
+        sa,
+        item,
+        cpu={},
+        ramp=None,
+        n_max=1,
+        producao_semanal_base=0.0,
+        semanas_obra=weeks,
+        canonical_in=_canonical(),
+        prat_semanal={},
+        prat_mensal={},
+        fator_calendario_semanal={},
+    )
+
+    assert list(distribution) == weeks
+    assert [cell.qtd_executada for cell in distribution.values()] == [0.0, 0.0, 0.0]
+    assert delivered == 0.0
+    validacoes = []
+    _warn_if_activity_underdelivers(
+        item, "eap-zero", sa, delivered, validacoes, calendar_horizon_weeks=len(weeks)
+    )
+    assert len(validacoes) == 1
+    assert validacoes[0].status == "ERRO"
+    assert "Q=50" in validacoes[0].mensagem
+    assert "Σq=0" in validacoes[0].mensagem
+    assert "residual=50" in validacoes[0].mensagem
