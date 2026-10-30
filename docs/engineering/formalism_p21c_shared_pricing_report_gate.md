@@ -1,0 +1,147 @@
+# P21-C — propagate pricing diagnostics through the canonical result
+
+Issue: #21. Package PR: #163.
+
+P21-A and P21-B calculations must not remain detached utilities. Skill 06 now attaches their exact diagnostic fields and independent gate statuses to the canonical `Resultado` model. REST, MCP, UI, RFI and RFP paths that serialize the canonical result therefore expose the same fields instead of recomputing a separate margin or regulatory outcome.
+
+The adapter consumes an explicit `p21_pricing_evidence` context containing the authoritative P20 reconciliation, exact category BDI rates, typed catalog benchmark and currency metadata, physical-scope fingerprint, regulatory basis, optional minimum profit margin, and a provenance-bearing `InventoryEvidenceScope` declaring either `NO_INVENTORY` or `COMPLETE`. When the typed reconciliation is absent, Skill 06 can compose it from the exact P17/P18 witnesses plus the declared P19 holding/provisioning journals. It never reconstructs the authoritative ledger from rounded legacy display fields.
+
+If the context is missing or invalid, both gates are UNKNOWN. PREVIEW reports a warning; AUTO_GO and CERTIFIED produce an error. Even a PASS is pricing eligibility evidence only, not PROJECT_GO or a substitute for certificate #23.
+
+Exact-head WSL validation passed at `6eb99f5dfb99465fa957cc2729183048e5c0fe73`: 88 focused P21/P18/P19/Skill 06 tests, Ruff, and `ty check src`. GitHub Actions remains disabled by maintainer decision.
+
+## Runtime JSON contract
+
+The production Skill 06 boundary accepts a versioned JSON declaration under
+`inputs.p21_pricing_evidence`. The client does **not** send Python dataclasses,
+a serialized `ExactFinancialReconciliation`, P17 ledgers, P18 journals, or P19
+journals. Skill 06 rebuilds those authoritative objects from the current
+canonical P16/P18 witnesses and the server-resolved catalog.
+
+The contract schema is `concilium.p21.pricing-evidence.v1`:
+
+- `inventory_scope`: `status` (`NO_INVENTORY` or `COMPLETE`), `source`,
+  `reference_id`, and `fingerprint`.
+- `bdi_by_category`: exact rational strings for all five categories
+  (`MO`, `EQ`, `MAT`, `COMB`, `IND`).
+- `catalog`: benchmark `amount`, `currency`, `source`, `reference_id`, and
+  `basis_fingerprint`. Its currency must match the server-resolved catalog.
+- `operational_basis_fingerprint`: explicit physical-scope identity.
+- `regulatory_basis`: optional `amount`, `currency`, `basis_fingerprint`,
+  `minimum_rate`, `source`, and `reference_id`.
+- `minimum_profit_margin`: optional exact rational string.
+- `inventory`: required only for `COMPLETE` scope. It declares
+  `calendar_weeks`, `goods`, optional `internal_arrivals`, optional `purchases`,
+  and optional `holding_tariffs`. Goods and calendar are required for a
+  physical stock replay; purchases and holding tariffs are optional financial
+  extensions. A `COMPLETE` scope with no P19 purchase or holding charge still
+  validates physical stock feasibility without inventing a monetary posting.
+
+All financial and physical quantities/rates cross the JSON boundary as strings
+and are parsed to `Fraction`; floats and JSON numbers are not accepted for
+fractional values. `lead_time_weeks` is an integer. Holding tariffs must declare
+`END_OF_WEEK`. External receipts can only be created by a paired, priced
+purchase; `internal_arrivals` accepts only `INTERNAL_GENERATION`.
+
+The only currency metadata used for P19/P21 is reconstructed from the resolved
+catalog loaded by the runtime (`currency` and `currency_source` from
+`catalog_metadata.json`). A caller cannot override it. P17/P18 ledgers and
+journals are rebuilt internally. Unknown fields, unsupported schemas, missing
+provenance, invalid units, stockouts, delivery timing errors, and duplicate
+ownership fail closed to `UNKNOWN`; `PREVIEW` surfaces a warning and
+`AUTO_GO`/`CERTIFIED` surface an error.
+
+**Trust boundary:** the benchmark amount, category BDI rates, operational-scope
+fingerprint, regulatory denominator/floor, and the associated source/reference/
+fingerprint strings are caller declarations in this version of the contract.
+They are validated for shape, exactness, and internal consistency, but their
+documents are not fetched, signed, or authenticated by the runtime. The stock
+replay validates the declared physical quantities against reconstructed P18
+demand; it does not independently attest that a stocktake is exhaustive or
+that its source record is genuine. Accordingly, a P21 `PASS` means the gates
+pass **for the supplied declarations**. It is not proof of source authenticity,
+legal compliance, or PROJECT_GO. Any workflow that uses P21 as a certification
+gate must first resolve these declarations against trusted server-side
+catalog/regulatory/stock records (or another authenticated evidence provider).
+
+## Persisted canonical result
+
+The canonical \`Resultado\` keeps flat string-valued fields so REST/MCP/UI/RFI/RFP
+serialization remains stable:
+
+- \`pricing_diagnostics\` uses schema
+  \`concilium.p21.pricing-diagnostics.v1\`. It stores P20 authority, inventory
+  scope source/reference/fingerprint, operational and catalog basis
+  fingerprints, catalog source/reference/currency, exact numeric diagnostics,
+  currency-metadata fingerprint, and each category's declared BDI rate.
+- \`pricing_gates\` uses schema \`concilium.p21.pricing-gates.v1\`. It stores the
+  certification intent, independent gate statuses, regulatory basis amount,
+  currency, source, reference, fingerprint and minimum rate, plus realized and
+  minimum profit margins.
+- \`UNKNOWN\` responses keep both schema identifiers and the failure reason;
+  missing evidence does not produce a partial or implied PASS.
+
+Every rational value is serialized as an exact string. The \`schema\` value is a
+versioned serialization contract, not a regulatory certificate.
+
+
+Example (illustrative values, not a project quote):
+
+```json
+{
+  "schema": "concilium.p21.pricing-evidence.v1",
+  "inventory_scope": {
+    "status": "COMPLETE",
+    "source": "physical-inventory-count",
+    "reference_id": "stocktake-2026-10-01",
+    "fingerprint": "inventory-scope-v1"
+  },
+  "bdi_by_category": {
+    "MO": "0", "EQ": "0", "MAT": "0", "COMB": "1", "IND": "0"
+  },
+  "catalog": {
+    "amount": "100",
+    "currency": "BRL",
+    "source": "resolved-project-catalog",
+    "reference_id": "catalog-price-2026-10",
+    "basis_fingerprint": "physical-scope-v1"
+  },
+  "operational_basis_fingerprint": "physical-scope-v1",
+  "regulatory_basis": {
+    "amount": "40",
+    "currency": "BRL",
+    "basis_fingerprint": "physical-scope-v1",
+    "minimum_rate": "1/10",
+    "source": "regulatory-basis",
+    "reference_id": "regulatory-2026-v1"
+  },
+  "minimum_profit_margin": "1/5",
+  "inventory": {
+    "calendar_weeks": ["2026-W18", "2026-W19"],
+    "goods": [
+      {
+        "good_id": "MA-DIESEL-S10",
+        "unit": "L",
+        "initial_quantity": "10",
+        "capacity": null,
+        "lead_time_weeks": 0
+      }
+    ],
+    "internal_arrivals": [],
+    "purchases": [],
+    "holding_tariffs": [
+      {
+        "good_id": "DIESEL",
+        "amount_per_unit_week": "1/10",
+        "physical_unit": "L",
+        "basis": "END_OF_WEEK"
+      }
+    ]
+  }
+}
+```
+
+The integration test exercises this JSON boundary through `run_resultado_financeiro`,
+builds the P19-C purchase and P19-B holding journals, reconciles P20, and checks
+the canonical P21 gates. This is a pricing-eligibility preview only; it does not
+authorize PROJECT_GO.

@@ -173,10 +173,10 @@ def build_activity_goods_from_catalog(
     def _index(rows: Sequence[object], key: str, label: str) -> dict[str, Mapping[str, object]]:
         indexed: dict[str, Mapping[str, object]] = {}
         for raw in rows:
-            if not isinstance(raw, Mapping):
-                raise ValueError(f"{label} catalog row must be a mapping")
-            # The runtime guard proves mapping shape; the cast supplies the
-            # declared string-keyed catalog contract to static type checkers.
+            if not isinstance(raw, Mapping) or not all(
+                isinstance(raw_key, str) for raw_key in raw
+            ):
+                raise ValueError(f"{label} catalog row must be a string-keyed mapping")
             row = cast(Mapping[str, object], raw)
             identity = row.get(key)
             if not isinstance(identity, str) or not identity.strip() or identity in indexed:
@@ -212,7 +212,9 @@ def build_activity_goods_from_catalog(
 
         activity_goods: dict[str, tuple[PhysicallyPricedGood, PricedCategory]] = {}
         for line in composition:
-            if not isinstance(line, Mapping):
+            if not isinstance(line, Mapping) or not all(
+                isinstance(line_key, str) for line_key in line
+            ):
                 raise ValueError(f"{activity_id}: malformed CPU composition row")
             row = cast(Mapping[str, object], line)
             category_raw = row.get("categoria_custo")
@@ -478,7 +480,7 @@ def book_skill04_planned_consumption_preview(
 
     goods_by_key = cast(
         Mapping[
-            tuple[str, str],
+            str | tuple[str, str],
             tuple[PhysicallyPricedGood, Literal["MAT", "COMB"]],
         ],
         goods,

@@ -335,6 +335,10 @@ class Resultado(BaseModel):
     # Issue #124: limitação conhecida — gap climático diagnosticado na bridge (N3) mas
     # nunca cobrado no custo operacional real (N4). Ver LimitacaoClimaN4.
     limitacao_clima_n4: "LimitacaoClimaN4 | None" = None
+    # P21-C: same pricing evidence is serialized by REST/MCP/UI and RFI/RFP paths.
+    pricing_diagnostics: dict[str, str | None] = Field(default_factory=dict)
+    pricing_gates: dict[str, str | None] = Field(default_factory=dict)
+    pricing_authority: str = "P21_C_PRICING_GATES_NOT_EVALUATED"
 
 
 # ── Fase 2: Resource Binding ──────────────────────────────────────────────

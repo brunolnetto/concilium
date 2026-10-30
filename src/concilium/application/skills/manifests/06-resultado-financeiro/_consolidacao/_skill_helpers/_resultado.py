@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from concilium.application.scheduling.pricing_report_adapter import (
+    apply_pricing_report_evidence,
+)
 from concilium.domain.models.canonical import (
     CanonicalModel,
     CustoTotal,
@@ -147,6 +150,7 @@ def _build_resultado(
         status_margem=status_margem,
         validacoes=[],
     )
+    apply_pricing_report_evidence(res, inputs, validacoes)
     return (
         res,
         bdi_rates,
