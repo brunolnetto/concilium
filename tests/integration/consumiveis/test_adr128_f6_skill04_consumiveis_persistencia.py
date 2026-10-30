@@ -126,6 +126,9 @@ class TestPersistenciaAtrasoCausal:
         }
         result = run_cronograma(canonical, inputs, catalogo=catalogo)
 
+        assert result.canonical.cronograma is not None, [
+            (v.codigo, v.status, v.mensagem) for v in result.validacoes
+        ]
         assert len(result.canonical.resumo_estoque_consumiveis) == 1
         resumo = result.canonical.resumo_estoque_consumiveis[0]
         assert resumo.status_estoque == "AVISO"
