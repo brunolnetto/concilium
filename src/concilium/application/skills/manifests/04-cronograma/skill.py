@@ -118,6 +118,13 @@ def run_cronograma(
     if not _validate_preconditions(canonical_in, validacoes):
         return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
+    # Validate caller-supplied weekly team counts before catalog or solver work.
+    # Invalid manual input must not be masked by an unrelated productivity
+    # preflight failure, and no physical schedule may be materialized from it.
+    num_equipes_por_item = inputs.get("num_equipes_por_item")
+    if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
+        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+
     # Validate raw catalog rates before typed graph construction / solver setup.
     cpu_preflight = _build_cpu_lookup(catalogo)
     production_preflight = _build_producao_lookup(catalogo)
@@ -147,10 +154,6 @@ def run_cronograma(
         calendario_operacional,
     ) = _run_cronograma_build_context(canonical_in, inputs, catalogo, validacoes)
     prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
-
-    num_equipes_por_item = inputs.get("num_equipes_por_item")
-    if not _run_cronograma_validate_num_equipes_formato(num_equipes_por_item, validacoes):
-        return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
 
     wmp_curves: list = []
     mobilizacao_policies = inputs.get("mobilizacao_policies")
