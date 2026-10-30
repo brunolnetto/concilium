@@ -8,7 +8,7 @@ The adapter consumes an explicit `p21_pricing_evidence` context containing the a
 
 If the context is missing or invalid, both gates are UNKNOWN. PREVIEW reports a warning; AUTO_GO and CERTIFIED produce an error. Even a PASS is pricing eligibility evidence only, not PROJECT_GO or a substitute for certificate #23.
 
-The new JSON-to-Skill-06 integration tests are pending exact-head WSL execution. GitHub Actions remains disabled by maintainer decision.
+Exact-head WSL validation passed at `6eb99f5dfb99465fa957cc2729183048e5c0fe73`: 88 focused P21/P18/P19/Skill 06 tests, Ruff, and `ty check src`. GitHub Actions remains disabled by maintainer decision.
 
 ## Runtime JSON contract
 
