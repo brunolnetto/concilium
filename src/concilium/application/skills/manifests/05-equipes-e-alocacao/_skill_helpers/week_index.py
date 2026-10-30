@@ -4,7 +4,6 @@ from __future__ import annotations
 import datetime
 import re
 
-
 _ISO_WEEK = re.compile(r"^(\d{4})-W(\d{2})$")
 
 
