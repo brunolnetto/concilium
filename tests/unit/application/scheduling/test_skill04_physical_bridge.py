@@ -215,3 +215,27 @@ def test_exact_quantity_conversion_does_not_round_through_binary_float() -> None
     assert _quantity(str(big), "Q") == F(big)
     with pytest.raises(ValueError, match="finite"):
         _quantity("Infinity", "Q")
+
+
+def test_exact_residual_from_exhausted_skill04_calendar_fails_independent_physical_audit() -> None:
+    """P14's best real-calendar delivery must remain infeasible in P15's bridge."""
+    weeks = WEEKS[:3]
+    distribution = {
+        weeks[0]: cell(10, 10, 10),
+        weeks[1]: cell(10, 20, 10),
+        weeks[2]: cell(10, 30, 10),
+    }
+    audit = audit_skill04_skill05_physical_snapshot(
+        calendar_weeks=weeks,
+        distributions_by_item={"A": distribution},
+        scopes_by_item={"A": 50},
+        demand_by_item={"A": {week: {} for week in weeks}},
+        precedences=(),
+        pool_capacity={},
+    )
+    assert audit.status == "FAIL"
+    failure = next(v for v in audit.violations if v.code == "V1_SCOPE_UNCLOSED")
+    assert failure.item_id == "A"
+    assert "Q=50" in failure.reason
+    assert "sum_q=30" in failure.reason
+    assert "absolute_error=20" in failure.reason

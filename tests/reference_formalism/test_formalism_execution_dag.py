@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 56
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 58
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -291,7 +291,7 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
     )
     issue = next(x for x in result["issues"] if x["issue"] == 18)
     assert issue["ready_to_execute"]
-    assert issue["pr_packages_total"] == 5
+    assert issue["pr_packages_total"] == 6
     assert issue["pr_packages_merged"] == 2
     assert issue["pending_packages"] == ["P18-C1", "P18-C2", "P18-C3"]
     assert not issue["closure_preflight"]
@@ -325,5 +325,21 @@ def test_p14d_and_p14e_packages_must_be_merged_before_issue_fourteen_closes(spec
     assert issue["pr_packages_total"] == 5
     assert issue["pr_packages_merged"] == 4
     assert issue["pending_packages"] == ["P14-E"]
+    assert not issue["closure_preflight"]
+    assert issue["acceptance_verified"] is None
+
+
+def test_p15e_exact_residual_bridge_remains_mandatory(spec: dict) -> None:
+    packages = next(n for n in spec["nodes"] if n["issue"] == 15)["packages"]
+    assert ("P15-E", [156]) in [(p["id"], p["prs"]) for p in packages]
+    result = report(
+        spec,
+        states(9, 10, 11, 12, 13, 14, 22, 25),
+        all_merged(spec) - {156},
+    )
+    issue = next(x for x in result["issues"] if x["issue"] == 15)
+    assert issue["ready_to_execute"]
+    assert issue["pr_packages_total"] == len(packages)
+    assert issue["pending_packages"] == ["P15-E"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
