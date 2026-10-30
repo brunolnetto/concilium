@@ -54,8 +54,20 @@ def validate_registry(dag: dict[str, Any], registry: dict[str, Any]) -> None:
         raise ValueError("invalid retirement governance PR")
     rows = registry["packages"]
     registered = {(row["issue"], row["wave"], row["id"]) for row in rows}
-    if registered != unregistered or len(rows) != len(registered):
-        raise ValueError("planning registry and unimplemented DAG slots differ")
+    package_slots = {
+        (node["issue"], node["wave"], package["id"])
+        for node in dag["nodes"]
+        for package in node["packages"]
+    }
+    if (
+        not registered.issubset(package_slots)
+        or not unregistered.issubset(registered)
+        or len(rows) != len(registered)
+    ):
+        raise ValueError(
+            "planning registry must cover every unimplemented DAG slot "
+            "and reference only canonical package slots"
+        )
     recorded_prs = {
         pr for node in dag["nodes"] for package in node["packages"]
         for pr in package["prs"]
