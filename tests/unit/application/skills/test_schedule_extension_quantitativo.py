@@ -524,3 +524,65 @@ class TestRampDownGateOrientadoAEstado:
         equipes = [distribuicao[s].num_equipes for s in semanas_obra]
         assert equipes == [4, 4, 4, 3, 2, 1]
         assert qtd_acumulada == 1250.0
+
+
+def test_partial_final_week_closes_exact_scope_without_counting_unused_capacity() -> None:
+    sa = _sa(start_week=0, duration_weeks=3, num_eq=1)
+    item = SimpleNamespace(quantitativo=25.0)
+    weeks = ["2026-W02", "2026-W03", "2026-W04"]
+
+    distribution, delivered = _build_activity_distribuicao(
+        sa,
+        item,
+        cpu={},
+        ramp=None,
+        n_max=1,
+        producao_semanal_base=10.0,
+        semanas_obra=weeks,
+        canonical_in=_canonical(),
+        prat_semanal={},
+        prat_mensal={},
+        fator_calendario_semanal={},
+    )
+
+    quantities = [cell.qtd_executada for cell in distribution.values()]
+    assert quantities == [10.0, 10.0, 5.0]
+    assert sum(quantities) == 25.0
+    assert delivered == 25.0
+    assert distribution[weeks[-1]].fracao_fechamento == pytest.approx(0.5)
+    assert _mod_scheduling.assess_scope_closure("eap-01", 25.0, sum(quantities)).status == "PASS"
+
+
+def test_exhausted_calendar_reports_maximum_real_delivery_and_exact_residual() -> None:
+    sa = _sa(start_week=0, duration_weeks=5, num_eq=1)
+    item = SimpleNamespace(quantitativo=50.0)
+    weeks = ["2026-W02", "2026-W03", "2026-W04"]
+
+    distribution, delivered = _build_activity_distribuicao(
+        sa,
+        item,
+        cpu={},
+        ramp=None,
+        n_max=1,
+        producao_semanal_base=10.0,
+        semanas_obra=weeks,
+        canonical_in=_canonical(),
+        prat_semanal={},
+        prat_mensal={},
+        fator_calendario_semanal={},
+    )
+
+    assert list(distribution) == weeks
+    assert [cell.qtd_executada for cell in distribution.values()] == [10.0, 10.0, 10.0]
+    assert delivered == 30.0
+
+    validacoes = []
+    _warn_if_activity_underdelivers(
+        item, "eap-01", sa, delivered, validacoes, calendar_horizon_weeks=len(weeks)
+    )
+    assert len(validacoes) == 1
+    assert validacoes[0].status == "ERRO"
+    assert "Q=50" in validacoes[0].mensagem
+    assert "Σq=30" in validacoes[0].mensagem
+    assert "residual=20" in validacoes[0].mensagem
+    assert "horizonte_semanas=3" in validacoes[0].mensagem
