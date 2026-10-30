@@ -399,8 +399,21 @@ def test_real_skill06_json_contract_builds_p19_p20_and_reaches_p21_pass(monkeypa
     assert result.pricing_gates["regulatory_status"] == "PASS"
     assert result.pricing_gates["profitability_status"] == "PASS"
     assert result.pricing_gates["status"] == "PASS"
+    assert result.pricing_diagnostics["schema"] == "concilium.p21.pricing-diagnostics.v1"
+    assert result.pricing_diagnostics["p20_authority"].endswith("NOT_PROJECT_GO")
+    assert result.pricing_diagnostics["catalog_source"] == "resolved-project-catalog"
+    assert result.pricing_diagnostics["catalog_reference_id"] == "catalog-price-2026-10"
+    assert result.pricing_diagnostics["operational_basis_fingerprint"] == "physical-scope-2026-v1"
+    assert result.pricing_diagnostics["inventory_scope_reference_id"] == "stocktake-2026-10-01"
+    assert result.pricing_diagnostics["bdi_rate_comb"] == "1"
     assert result.pricing_diagnostics["operational_price"] == str(F("97.12"))
     assert result.pricing_diagnostics["total_cost"] == str(F("54.316"))
+    assert result.pricing_gates["schema"] == "concilium.p21.pricing-gates.v1"
+    assert result.pricing_gates["certification_intent"] == "CERTIFIED"
+    assert result.pricing_gates["regulatory_basis_source"] == "regulatory-basis"
+    assert result.pricing_gates["regulatory_basis_reference"] == "regulatory-2026-v1"
+    assert result.pricing_gates["regulatory_basis_amount"] == "40"
+    assert result.pricing_gates["regulatory_basis_minimum_rate"] == "1/10"
     assert result.pricing_authority != "PROJECT_GO"
     assert not outcome.has_errors
 
