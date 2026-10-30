@@ -136,4 +136,6 @@ def resolve_bounded_physical_calendar(
             saw_unknown = True
 
     status: ResolveStatus = "UNKNOWN" if saw_unknown or not complete_search else "FAIL"
-    return PhysicalResolution(status, None, attempts, complete_search, last_audit)
+    return PhysicalResolution(
+        status, None, attempts, complete_search, last_audit, unknown_reason
+    )
