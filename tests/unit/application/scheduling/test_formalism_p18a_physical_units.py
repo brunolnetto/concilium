@@ -58,7 +58,7 @@ def test_normalized_length_and_volume_are_exact_but_mass_volume_not_equivalent()
 
 
 def test_missing_unit_and_hourly_money_proxy_do_not_become_measured_quantity() -> None:
-    with pytest.raises(ValueError, match="Unidade desconhecida"):
+    with pytest.raises(ValueError, match=r"unsupported physical unit: R\$/h"):
         PhysicalConsumptionRate("SAND", F(1), "R$/h",
                                 ConsumptionBasis.PER_OPERATING_HOUR)
     rate = PhysicalConsumptionRate("DIESEL", F(2), "l",
