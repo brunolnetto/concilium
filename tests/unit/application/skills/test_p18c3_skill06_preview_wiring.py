@@ -2,7 +2,6 @@
 
 import pytest
 
-
 _SKILL_ID = "06-resultado-financeiro"
 
 
