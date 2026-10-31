@@ -1,4 +1,5 @@
 """P18-C3 opt-in Skill06 sidecar wiring; no legacy-finance override."""
+
 import pytest
 
 
