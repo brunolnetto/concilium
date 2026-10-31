@@ -1,29 +1,29 @@
 """P18-C3 opt-in Skill06 sidecar wiring; no legacy-finance override."""
-from __future__ import annotations
-
-import sys
 
 import pytest
-
-from concilium.application.skills import _load
-from concilium.application.skills.base import SkillResult
-from concilium.domain.models.canonical import CanonicalModel
-
 
 _SKILL_ID = "06-resultado-financeiro"
 
 
 @pytest.fixture
 def skill_module():
+    import sys
+
+    from concilium.application.skills import _load
+
     _load(_SKILL_ID, "run_resultado_financeiro")
     return sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
 
 
-def _canonical() -> CanonicalModel:
+def _canonical():
+    from concilium.domain.models.canonical import CanonicalModel
+
     return CanonicalModel.model_construct(p18_consumption_preview={"stale": True})
 
 
 def _stub_stages(monkeypatch, skill_module, *, final=None):
+    from concilium.application.skills.base import SkillResult
+
     seen = {"final_input": None, "stage3_calls": 0}
 
     def pre(canonical, *_args):

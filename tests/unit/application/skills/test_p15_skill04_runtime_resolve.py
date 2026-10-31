@@ -11,7 +11,6 @@ from concilium.application.scheduling.physical_resolver import (
     resolve_bounded_physical_calendar,
 )
 from concilium.application.scheduling.physical_validator import PhysicalActivity
-
 from concilium.application.skills import run_cronograma
 from concilium.domain.models.canonical import (
     CanonicalModel,

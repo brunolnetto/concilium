@@ -33,7 +33,7 @@ def test_exact_portfolio_and_valid_topological_order(spec: dict) -> None:
     assert len(order) == 18
     assert set(order) == set(range(9, 27))
     # P18-C1/C2/C3 are merged; package registration remains independent of issue acceptance.
-    assert sum(len(n["packages"]) for n in spec["nodes"]) == 64
+    assert sum(len(n["packages"]) for n in spec["nodes"]) == 65
     for n in spec["nodes"]:
         assert all(order.index(p) < order.index(n["issue"]) for p in n["blocked_by"])
 
@@ -283,9 +283,9 @@ def test_p18c1_c2_c3_unmerged_package_simulation_cannot_close_issue_eighteen(spe
         ("P18-B", [79]),
         ("P18-C1", [142]),
         ("P18-C2", [142]),
-        ("P18-C3", [143]),
-        ("P18-D", [158]),
-        ("P18-E", [159]),
+        ("P18-C3", [143, 147]),
+        ("P18-D", [158, 151]),
+        ("P18-E", [159, 151]),
         ("P18-F", [162]),
     ]
     # Simulate a state where the three merged package IDs are absent from the integrated set.
@@ -306,9 +306,9 @@ def test_p14d_and_p14e_packages_must_be_merged_before_issue_fourteen_closes(spec
         ("P14-A", [50]),
         ("P14-B", [52]),
         ("P14-C", [129]),
-        ("P14-D", [145]),
+        ("P14-D", [145, 146]),
         ("P14-E", [155]),
-        ("P14-F", [160]),
+        ("P14-F", [160, 151]),
     ]
     result = report(
         spec,
@@ -337,7 +337,7 @@ def test_p14d_and_p14e_packages_must_be_merged_before_issue_fourteen_closes(spec
 
 def test_p15e_exact_residual_bridge_remains_mandatory(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 15)["packages"]
-    assert ("P15-E", [156]) in [(p["id"], p["prs"]) for p in packages]
+    assert ("P15-E", [156, 151]) in [(p["id"], p["prs"]) for p in packages]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 14, 22, 25),
@@ -353,7 +353,7 @@ def test_p15e_exact_residual_bridge_remains_mandatory(spec: dict) -> None:
 
 def test_p15f_runtime_residual_preservation_is_mandatory(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 15)["packages"]
-    assert ("P15-F", [157]) in [(p["id"], p["prs"]) for p in packages]
+    assert ("P15-F", [157, 151]) in [(p["id"], p["prs"]) for p in packages]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 14, 22, 25),
@@ -369,7 +369,7 @@ def test_p15f_runtime_residual_preservation_is_mandatory(spec: dict) -> None:
 
 def test_p14f_zero_capacity_residual_package_is_mandatory(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 14)["packages"]
-    assert ("P14-F", [160]) in [(p["id"], p["prs"]) for p in packages]
+    assert ("P14-F", [160, 151]) in [(p["id"], p["prs"]) for p in packages]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 22, 25),
@@ -383,7 +383,7 @@ def test_p14f_zero_capacity_residual_package_is_mandatory(spec: dict) -> None:
 
 def test_p16f_iso_week_consistency_is_mandatory_before_issue_closure(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 16)["packages"]
-    assert ("P16-F", [161]) in [(p["id"], p["prs"]) for p in packages]
+    assert ("P16-F", [161, 151]) in [(p["id"], p["prs"]) for p in packages]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 22, 25),
@@ -397,7 +397,7 @@ def test_p16f_iso_week_consistency_is_mandatory_before_issue_closure(spec: dict)
 
 def test_p18d_no_waste_identity_package_is_mandatory(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
-    assert ("P18-D", [158]) in [(p["id"], p["prs"]) for p in packages]
+    assert ("P18-D", [158, 151]) in [(p["id"], p["prs"]) for p in packages]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 22, 25),
@@ -411,7 +411,7 @@ def test_p18d_no_waste_identity_package_is_mandatory(spec: dict) -> None:
 
 def test_p18e_unsupported_units_are_fail_closed_before_issue_closure(spec: dict) -> None:
     packages = next(n for n in spec["nodes"] if n["issue"] == 18)["packages"]
-    assert ("P18-E", [159]) in [(p["id"], p["prs"]) for p in packages]
+    assert ("P18-E", [159, 151]) in [(p["id"], p["prs"]) for p in packages]
     result = report(
         spec,
         states(9, 10, 11, 12, 13, 22, 25),
@@ -430,7 +430,7 @@ def test_p19c_external_stock_provisioning_is_registered_as_mandatory_package(
     assert [(p["id"], p["prs"]) for p in packages] == [
         ("P19-A", [80]),
         ("P19-B", [81]),
-        ("P19-C", [150]),
+        ("P19-C", [150, 151]),
     ]
     result = report(
         spec,
@@ -557,3 +557,40 @@ def test_p18f_model_boundaries_reject_unsupported_units_before_issue_closure(spe
     assert issue["pending_packages"] == ["P18-F"]
     assert not issue["closure_preflight"]
     assert issue["acceptance_verified"] is None
+
+
+def test_cumulative_branch_stack_requires_main_integration_pr151(spec: dict) -> None:
+    # These package PRs were merged into predecessor feature branches. PR #151
+    # is the cumulative integration that actually landed the complete stack on main.
+    required = {
+        14: {"P14-D": [145, 146], "P14-F": [160, 151]},
+        15: {"P15-E": [156, 151], "P15-F": [157, 151]},
+        16: {"P16-F": [161, 151]},
+        18: {
+            "P18-C3": [143, 147],
+            "P18-D": [158, 151],
+            "P18-E": [159, 151],
+        },
+        19: {"P19-C": [150, 151]},
+    }
+    for issue_id, packages in required.items():
+        issue_packages = next(
+            n for n in spec["nodes"] if n["issue"] == issue_id
+        )["packages"]
+        for package_id, expected_prs in packages.items():
+            package = next(p for p in issue_packages if p["id"] == package_id)
+            assert package["prs"] == expected_prs
+
+    merged_without_integrator = all_merged(spec) - {151}
+    snapshot = states(*range(9, 27))
+    for issue_id, packages in required.items():
+        cumulative_packages = [
+            package_id
+            for package_id, expected_prs in packages.items()
+            if 151 in expected_prs
+        ]
+        row = next(
+            x for x in report(spec, snapshot, merged_without_integrator)["issues"]
+            if x["issue"] == issue_id
+        )
+        assert all(package_id in row["pending_packages"] for package_id in cumulative_packages)
