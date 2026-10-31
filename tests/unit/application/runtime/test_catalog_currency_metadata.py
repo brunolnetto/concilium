@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 import pytest
 
+from concilium.application.runtime.exceptions import RuntimeDomainError
 from concilium.application.runtime.mixins import _catalog_storage as cs
 from concilium.application.runtime.mixins.catalog import CatalogMixin
-from concilium.application.runtime.exceptions import RuntimeDomainError
 from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
 

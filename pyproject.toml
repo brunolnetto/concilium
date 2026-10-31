@@ -114,6 +114,9 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["B008"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["concilium"]
+
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
 "tests/conftest.py" = ["E402"]
