@@ -191,7 +191,7 @@ def register(server: FastMCP) -> None:
             canonical = project.load_canonical(version)
             if canonical is None:
                 raise ValueError("run canonical snapshot is missing")
-            resolved_catalog = load_resolved_catalog_snapshot(project, version)
+            resolved_catalog = load_resolved_catalog_snapshot(project, version, run_id)
             productivity_witnesses = build_productivity_rate_witnesses(
                 canonical, resolved_catalog,
             )
