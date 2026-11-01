@@ -73,6 +73,7 @@ The historical decision remains in the immutable record for audit, but an invali
 The common `certificate_presentation_payload` / `certificate_summary` projections report `project_go=true` only for a persisted certificate whose current source fingerprints validate and whose effective decision is GO.
 
 - REST: `PipelineService.get_run` includes `formalism_certificate` and revalidates the immutable run record before returning it; `RunProjectResponse` exposes that field.
+- CLI: `concilium run certificate --project <project> <run_id>` reloads the current record and prints the same gate/source summary; it never treats a historical decision as current without revalidation.
 - MCP: the read-only `consultar_certificado_formalismo(project_id, run_id)` tool uses the same service functions and the same pinned run catalog.
 - UI: dashboard-level presentation of the gate matrix is still pending. UI must consume this same projection; it must not independently infer GO from legacy status or price color.
 
