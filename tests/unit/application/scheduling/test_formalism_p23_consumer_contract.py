@@ -5,7 +5,13 @@ from concilium.application.scheduling.formalism_evaluator import (
     evaluate_formalism_certificate,
     gate_evidence_from_status,
 )
-from concilium.application.scheduling.formalism_certification_service import certificate_summary
+from pydantic import BaseModel
+
+from concilium.application.scheduling.formalism_certification_service import (
+    _dump,
+    build_pool_summaries,
+    certificate_summary,
+)
 from concilium.domain.models.formalism_certificate import (
     REQUIRED_SOURCES,
     build_provisional_certificate,
@@ -132,3 +138,48 @@ def test_p26_traceability_consumer_gets_gate_source_fingerprint_and_artifact_cha
             for source in row["source_fingerprints"]
         )
     assert presentation["record_sha256"] == loaded.record_sha256
+
+
+
+class _SetBackedSource(BaseModel):
+    source_nodes: set[str]
+
+
+def test_source_snapshot_serializer_sorts_sets_before_fingerprinting() -> None:
+    left = _dump(_SetBackedSource(source_nodes={"gamma", "alpha", "beta"}))
+    right = _dump(_SetBackedSource(source_nodes={"beta", "gamma", "alpha"}))
+    assert left == right
+    assert left["source_nodes"] == ["alpha", "beta", "gamma"]
+
+
+def test_application_boundary_binds_each_pool_summary_to_its_exact_p16_contract() -> None:
+    witness = {
+        "schema": "p16-global-instance-assignment/v1",
+        "contract_id": "contract-1",
+        "demand": [1, 0],
+    }
+    contract = type("Contract", (), {
+        "contrato_id": "contract-1",
+        "p16_global_assignment": witness,
+    })()
+    summary = type("Summary", (), {
+        "contrato_id": "contract-1",
+        "tipo_id": "EQ-1",
+        "machine_weeks_disponiveis": 2,
+        "machine_weeks_usados": 1,
+        "machine_weeks_standby": 0,
+        "__dict__": {
+            "contrato_id": "contract-1",
+            "tipo_id": "EQ-1",
+            "machine_weeks_disponiveis": 2,
+            "machine_weeks_usados": 1,
+            "machine_weeks_standby": 0,
+        },
+    })()
+    canonical = type("Canonical", (), {
+        "contratos_recurso": [contract],
+        "resumo_utilizacao_contratos": [summary],
+    })()
+    result = build_pool_summaries(canonical)
+    assert result[0]["p16_global_assignment"] == _dump(witness)
+    assert result[0]["contrato_id"] == "contract-1"
