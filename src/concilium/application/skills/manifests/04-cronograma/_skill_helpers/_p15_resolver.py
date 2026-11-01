@@ -41,6 +41,7 @@ class Skill04PhysicalResolution:
     reason: str
     violation_details: tuple[str, ...] = ()
     complete_search: bool | None = None
+    audit_status: Literal["PASS", "FAIL", "UNKNOWN"] | None = None
 
 
 def _explicit_physical_pool(
