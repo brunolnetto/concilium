@@ -150,4 +150,142 @@ class FormalismEvaluation(BaseModel):
         expected = _evaluation_fingerprint(
             project_id=self.project_id, run_id=self.run_id, scope=self.scope,
             inputs_sha256=self.inputs_sha256, decision=self.decision,
-            
+            gate_evidence=self.gate_evidence, reasons=self.reasons,
+        )
+        if expected != self.evaluation_sha256:
+            raise ValueError("evaluation fingerprint does not match its immutable content")
+        return self
+
+
+def _evidence_from_envelope(envelope: FormalismCertificate, gate_id: GateId) -> tuple[SourceFingerprint, ...]:
+    required = set(GATE_SOURCES[gate_id])
+    return tuple(item for item in envelope.source_fingerprints if item.name in required)
+
+
+def _artifact_refs(envelope: FormalismCertificate, gate_id: GateId) -> tuple[str, ...]:
+    """Stable content references; never use filenames or mutable display labels."""
+    refs = []
+    for item in _evidence_from_envelope(envelope, gate_id):
+        if item.sha256:
+            refs.append(f"{item.name}:sha256:{item.sha256}")
+    return tuple(refs)
+
+
+def gate_evidence_from_status(
+    envelope: FormalismCertificate,
+    gate_id: GateId,
+    status: GateStatus,
+    *,
+    artifact_refs: tuple[str, ...] | None = None,
+    observed: dict[str, Any] | None = None,
+    expected: dict[str, Any] | None = None,
+    tolerance: str | None = None,
+    reason: str | None = None,
+) -> GateEvidence:
+    """Bind a verifier status to exact source digests from the envelope."""
+    return GateEvidence(
+        gate_id=gate_id,
+        status=status,
+        source_fingerprints=_evidence_from_envelope(envelope, gate_id),
+        artifact_refs=artifact_refs if artifact_refs is not None else _artifact_refs(envelope, gate_id),
+        observed=observed or {}, expected=expected or {}, tolerance=tolerance, reason=reason,
+    )
+
+
+def _audit_status(audit: Any | None, prefix: str) -> tuple[GateStatus, tuple[str, ...], str | None]:
+    if audit is None or not hasattr(audit, "violations"):
+        return "UNKNOWN", (), "independent P15 physical audit is unavailable"
+    rows = [v for v in audit.violations if str(getattr(v, "code", "")).startswith(prefix)]
+    failed = [v for v in rows if not str(getattr(v, "code", "")).endswith("_UNVERIFIED")]
+    unknown = [v for v in rows if str(getattr(v, "code", "")).endswith("_UNVERIFIED")]
+    details = tuple(
+        f"{getattr(v, 'code', 'UNKNOWN')}:{getattr(v, 'item_id', '')}:"
+        f"{getattr(v, 'week', None)}:{getattr(v, 'reason', '')}"
+        for v in rows
+    )
+    if failed:
+        return "FAIL", details, "; ".join(details)
+    if unknown:
+        return "UNKNOWN", details, "; ".join(details)
+    if getattr(audit, "status", None) == "PASS":
+        return "PASS", details, None
+    if getattr(audit, "status", None) == "FAIL":
+        # A different V1/V6 family can fail while this family independently
+        # passes. Unknown validator codes must not be treated as a clean result.
+        known_other_family = all(
+            str(getattr(v, "code", "")).startswith(("V1_", "V6_"))
+            for v in audit.violations
+        )
+        if rows == [] and known_other_family and audit.violations:
+            return "PASS", details, None
+        return "UNKNOWN", details, f"physical audit failed without a conclusive {prefix} result"
+    return "UNKNOWN", details, "physical audit did not produce PASS"
+
+
+def _read(value: Any, key: str, default: Any = None) -> Any:
+    if isinstance(value, Mapping):
+        return value.get(key, default)
+    return getattr(value, key, default)
+
+
+def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStatus, dict[str, Any], str | None]:
+    if not pool_summaries:
+        return "UNKNOWN", {}, "P16 pool utilization summaries are missing"
+    observed: dict[str, Any] = {}
+    violations: list[str] = []
+    for row in pool_summaries:
+        contract_id = _read(row, "contrato_id")
+        available = _read(row, "machine_weeks_disponiveis")
+        standby = _read(row, "machine_weeks_standby")
+        if not isinstance(contract_id, str) or not contract_id:
+            return "UNKNOWN", observed, "pool summary has no stable contract identity"
+        if type(available) is not int or type(standby) is not int or available <= 0 or standby < 0:
+            return "UNKNOWN", observed, f"{contract_id}: invalid or absent machine-week denominator"
+        observed[contract_id] = {"available": available, "standby": standby}
+        if standby >= available:
+            violations.append(f"{contract_id}: standby={standby}/{available} (100% standby or greater)")
+    if violations:
+        return "FAIL", observed, "; ".join(violations)
+    return "PASS", observed, None
+
+
+def _productivity_status(
+    witnesses: Sequence[ProductivityRateWitness] | None,
+    expected_activity_ids: Sequence[str] | None,
+) -> tuple[GateStatus, dict[str, Any], str | None]:
+    if not witnesses:
+        return "UNKNOWN", {}, "no per-activity productivity witnesses were supplied"
+    indexed = {row.activity_id: row for row in witnesses}
+    if len(indexed) != len(witnesses):
+        return "FAIL", {}, "duplicate activity productivity witness identity"
+    expected = set(expected_activity_ids or ())
+    if expected and set(indexed) != expected:
+        missing = sorted(expected - set(indexed))
+        extra = sorted(set(indexed) - expected)
+        return "UNKNOWN", {"missing": missing, "extra": extra}, "productivity witness does not cover the full EAP activity set"
+    failures: list[str] = []
+    unknowns: list[str] = []
+    observed: dict[str, Any] = {}
+    for activity_id, row in sorted(indexed.items()):
+        rate = Fraction(row.hourly_rate)
+        observed[activity_id] = {
+            "hourly_rate": row.hourly_rate, "origin": row.origin,
+            "source_reference": row.source_reference,
+            "calibration_reference": row.calibration_reference,
+        }
+        if row.origin in {"FALLBACK_ARBITRARIO", "TAXA_POR_FRENTE_ASSUMIDA"}:
+            failures.append(f"{activity_id}: fallback/assumed productivity is not certifiable")
+        elif row.origin == "NAO_DECLARADA" or not row.source_reference:
+            unknowns.append(f"{activity_id}: productivity origin/source is not declared")
+        elif rate <= 0:
+            failures.append(f"{activity_id}: hourly productivity must be > 0 (observed {row.hourly_rate})")
+        elif not row.calibration_reference:
+            unknowns.append(f"{activity_id}: no versioned calibration/source reference")
+    if failures:
+        return "FAIL", observed, "; ".join(failures + unknowns)
+    if unknowns:
+        return "UNKNOWN", observed, "; ".join(unknowns)
+    return "PASS", observed, None
+
+
+def _as_fraction(value: Any, label: str) -> 
