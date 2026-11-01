@@ -75,6 +75,139 @@ _run_indiretos = _load_estagio("_indiretos", "run_custos_indiretos")
 _run_consolidacao = _load_estagio("_consolidacao", "run_consolidacao_financeira")
 
 
+def _p23_fraction(value: object) -> str:
+    """Serialize exact physical/financial values without float conversion."""
+    from fractions import Fraction
+
+    if type(value) is Fraction:
+        return str(value)
+    if type(value) is int:
+        return str(value)
+    raise ValueError("P23 inventory evidence requires exact rational values")
+
+
+def _p23_inventory_snapshot(context: dict[str, object]) -> dict[str, object]:
+    """Convert typed P18/P19 evidence into a stable, replayable JSON witness."""
+    scope = context.get("inventory_scope")
+    if scope is None:
+        return {
+            "schema": "concilium.p23.inventory-evidence.v1",
+            "status": "UNKNOWN",
+            "reason": str(context.get("source_build_error") or "inventory scope unavailable"),
+        }
+
+    consumption = context.get("consumption_journal")
+    evidence_rows: list[dict[str, object]] = []
+    if consumption is not None:
+        for line in getattr(consumption, "evidence", ()):
+            measure = line.measure
+            evidence_rows.append({
+                "source_id": line.source_id,
+                "kind": line.kind,
+                "activity_id": line.activity_id,
+                "week": line.week,
+                "good_id": measure.good_id,
+                "physical_quantity": _p23_fraction(measure.physical_quantity),
+                "physical_unit": measure.physical_unit,
+                "priced_quantity": _p23_fraction(measure.priced_quantity),
+                "price_unit": measure.price_unit,
+                "exact_cost": _p23_fraction(measure.exact_cost),
+                "category": line.category,
+            })
+
+    stock = context.get("stock_projection")
+    stock_rows: list[dict[str, object]] = []
+    if stock is not None:
+        for row in getattr(stock, "rows", ()):
+            stock_rows.append({
+                "good_id": row.good_id,
+                "week": row.week,
+                "unit": row.unit,
+                "opening": _p23_fraction(row.opening),
+                "external_receipts": _p23_fraction(row.external_receipts),
+                "internal_generation": _p23_fraction(row.internal_generation),
+                "storage_overflow": _p23_fraction(row.storage_overflow),
+                "physical_demand": _p23_fraction(row.physical_demand),
+                "fulfilled": _p23_fraction(row.fulfilled),
+                "shortage": _p23_fraction(row.shortage),
+                "closing": _p23_fraction(row.closing),
+            })
+
+    provisioning = context.get("stock_provisioning_journal")
+    goods: list[dict[str, object]] = []
+    arrivals: list[dict[str, object]] = []
+    purchases: list[dict[str, object]] = []
+    calendar_weeks: list[str] = []
+    currency: str | None = None
+    if provisioning is not None:
+        calendar_weeks = list(provisioning.calendar_weeks)
+        currency = provisioning.currency
+        for good_id, good in provisioning.goods:
+            goods.append({
+                "good_id": good_id,
+                "unit": good.unit,
+                "initial_quantity": _p23_fraction(good.initial_quantity),
+                "capacity": (
+                    _p23_fraction(good.capacity) if good.capacity is not None else None
+                ),
+                "lead_time_weeks": good.lead_time_weeks,
+            })
+        for arrival in provisioning.arrivals:
+            arrivals.append({
+                "source_id": arrival.source_id,
+                "good_id": arrival.good_id,
+                "arrival_week": arrival.arrival_week,
+                "quantity": _p23_fraction(arrival.quantity),
+                "unit": arrival.unit,
+                "source": arrival.source,
+                "ordered_week": arrival.ordered_week,
+            })
+        for purchase in provisioning.purchases:
+            purchases.append({
+                "source_id": purchase.source_id,
+                "good_id": purchase.good_id,
+                "ordered_week": purchase.ordered_week,
+                "arrival_week": purchase.arrival_week,
+                "quantity": _p23_fraction(purchase.quantity),
+                "physical_unit": purchase.physical_unit,
+                "unit_price": _p23_fraction(purchase.unit_price),
+                "price_unit": purchase.price_unit,
+                "price_source": purchase.price_source,
+                "price_reference_date": purchase.price_reference_date,
+                "currency": purchase.currency,
+                "category": purchase.category,
+            })
+
+    holding = context.get("holding_journal")
+    holding_rows: list[dict[str, object]] = []
+    if holding is not None:
+        for charge in holding.charges:
+            holding_rows.append({
+                "good_id": charge.good_id,
+                "week": charge.week,
+                "closing_in_stock_unit": _p23_fraction(charge.closing_in_stock_unit),
+                "billable_stock": _p23_fraction(charge.billable_stock),
+                "billable_unit": charge.billable_unit,
+                "holding_cost": _p23_fraction(charge.holding_cost),
+            })
+
+    return {
+        "schema": "concilium.p23.inventory-evidence.v1",
+        "status": scope.status,
+        "source": scope.source,
+        "reference_id": scope.reference_id,
+        "fingerprint": scope.fingerprint,
+        "consumption_evidence": evidence_rows,
+        "calendar_weeks": calendar_weeks,
+        "goods": goods,
+        "stock_rows": stock_rows,
+        "arrivals": arrivals,
+        "purchases": purchases,
+        "currency": currency,
+        "holding_charges": holding_rows,
+    }
+
+
 def run_resultado_financeiro(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
@@ -102,6 +235,7 @@ def run_resultado_financeiro(
     canonical_start = canonical_in.model_copy(update={
         "p18_consumption_preview": None,
         "p17_cost_reconciliation": None,
+        "p23_inventory_evidence": None,
     })
     if type(enabled) is not bool:
         return SkillResult(canonical_start, [ValidacaoItem(
@@ -153,6 +287,7 @@ def run_resultado_financeiro(
     # P21-C accepts declarative JSON only. Rebuild typed P17/P18/P19/P20
     # evidence from this canonical schedule and the server-resolved catalog;
     # never trust serialized ledgers or caller-supplied dataclass-shaped objects.
+    p23_inventory_evidence: dict[str, object] | None = None
     p21_declaration = inputs.get("p21_pricing_evidence")
     if p21_declaration is not None:
         if not enabled:
@@ -175,6 +310,14 @@ def run_resultado_financeiro(
             except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
                 p21_context = {"source_build_error": str(exc)}
         inputs = {**inputs, "p21_pricing_evidence": p21_context}
+        try:
+            p23_inventory_evidence = _p23_inventory_snapshot(p21_context)
+        except (AttributeError, KeyError, TypeError, ValueError, OverflowError) as exc:
+            p23_inventory_evidence = {
+                "schema": "concilium.p23.inventory-evidence.v1",
+                "status": "UNKNOWN",
+                "reason": f"typed P18/P19 evidence serialization failed: {exc}",
+            }
 
     # Estágio 3 — Consolidação financeira
     res_con = _run_consolidacao(canonical, inputs, perfil)
@@ -208,4 +351,8 @@ def run_resultado_financeiro(
                     mensagem="P17 K/V reconciliation preview recorded; this is not PROJECT_GO.",
                 ))
 
+    if p23_inventory_evidence is not None:
+        canonical = canonical.model_copy(update={
+            "p23_inventory_evidence": p23_inventory_evidence,
+        })
     return SkillResult(canonical, validacoes)
