@@ -53,12 +53,13 @@ def _cell(
     cumulative: float,
     capacity: float,
     teams: int,
+    pct: float,
 ) -> DistribuicaoSemanal:
     return DistribuicaoSemanal(
         num_equipes=teams,
         qtd_executada=q,
         qtd_acumulada=cumulative,
-        pct=cumulative / 2,
+        pct=pct,
         q_max_celula=capacity,
         capacidade_disponivel_semana=capacity,
     )
@@ -99,8 +100,8 @@ def _patch_skill04_materializer(monkeypatch: pytest.MonkeyPatch) -> None:
                 return {}, 0.0
             # A is physically idle in W01; Q is delivered only in W02.
             return {
-                WEEKS[start]: _cell(0.0, 0.0, 0.0, 1),
-                WEEKS[start + 1]: _cell(1.0, 1.0, 1.0, 1),
+                WEEKS[start]: _cell(0.0, 0.0, 0.0, 1, 0.0),
+                WEEKS[start + 1]: _cell(1.0, 1.0, 1.0, 1, 1.0),
             }, 1.0
 
         if start + 1 >= len(WEEKS):
@@ -108,8 +109,8 @@ def _patch_skill04_materializer(monkeypatch: pytest.MonkeyPatch) -> None:
         # B's resolved Skill 04 workforce profile ramps from one to two
         # fronts; Skill 05 must derive the matching [1, 2] weekly demand.
         return {
-            WEEKS[start]: _cell(1.0, 1.0, 1.0, 1),
-            WEEKS[start + 1]: _cell(1.0, 2.0, 2.0, 2),
+            WEEKS[start]: _cell(1.0, 1.0, 1.0, 1, 0.5),
+            WEEKS[start + 1]: _cell(1.0, 2.0, 2.0, 2, 1.0),
         }, 2.0
 
     def build_distribution(scheduled, item, *_args, **_kwargs):
