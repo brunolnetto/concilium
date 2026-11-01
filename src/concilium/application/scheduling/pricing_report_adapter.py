@@ -464,8 +464,6 @@ def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> 
     )
 
 
-
-
 def _serialize_p20_reconciliation(reconciliation: ExactFinancialReconciliation) -> dict[str, object]:
     """Persist the exact P20 posting/attribution witness used by P21.
 
