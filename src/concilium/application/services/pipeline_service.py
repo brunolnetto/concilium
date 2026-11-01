@@ -209,7 +209,7 @@ class PipelineService:
             canonical = project.load_canonical(version)
             if canonical is None:
                 raise ValueError("run canonical snapshot is missing")
-            resolved_catalog = load_resolved_catalog_snapshot(project, version)
+            resolved_catalog = load_resolved_catalog_snapshot(project, version, str(run.get("run_id") or ""))
             productivity_witnesses = build_productivity_rate_witnesses(
                 canonical, resolved_catalog,
             )
