@@ -132,6 +132,8 @@ class CanonicalModel(BaseModel):
     # P15/P23: immutable physical calendar witness from the final Skill04 AUTO
     # rematerialization. A PASS here is local schedule evidence, not PROJECT_GO.
     physical_calendar_evidence: dict[str, object] | None = None
+    # P23: replayable typed P18/P19 physical-consumption and inventory evidence.
+    p23_inventory_evidence: dict[str, object] | None = None
 
     # ADR-021: Espaço combinatorial de planos (repair + otimização de VERDE)
     plan_space_result: "PlanSpaceResult | None" = None
