@@ -22,7 +22,7 @@ A run is evaluated against eleven mandatory gates:
 
 - V1 — exact physical scope closure and weekly delivery/capacity evidence.
 - V2 — explicit, comparable regulatory BDI basis and floor.
-- V3 — exact P16 weekly demand/presence/standby reconciliation: `presence = demand + standby`, `presence <= contracted units`, activity-demand tensor closes to aggregate demand, and active/standby machine-weeks close to Skill 05 summaries. Positive standby is allowed; unused capacity is not itself a violation.
+- V3 — exact P16 weekly demand/presence/standby reconciliation: `presence = demand + standby`, `presence <= contracted units`, the activity-demand tensor closes to aggregate demand, and active/standby machine-weeks close to Skill 05 summaries. The summary denominator, contract duration and resource type must also match the typed canonical `RecursoContrato` bound to that P16 witness. Positive standby is allowed; unused capacity is not itself a violation.
 - V4 — positive operational price and positive reconciled total cost.
 - V5 — positive exact productivity rates with declared source and calibration provenance.
 - V6 — physical precedence/pool feasibility plus a bounded search whose entire declared start domain has been exhausted.
