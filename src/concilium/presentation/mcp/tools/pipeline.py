@@ -128,6 +128,98 @@ def register(server: FastMCP) -> None:
             result["estatisticas"] = service.obter_estatisticas().model_dump()
         return _wrap_response(result)
 
+    # ── P23. Consultar certificado persistido do run ─────────────────────
+    @server.tool()
+    @permission("project:read")
+    @mcp_rate_limit()
+    def consultar_certificado_formalismo(
+        project_id: str,
+        run_id: str,
+    ) -> dict[str, Any]:
+        """Retorna a decisão P23 e seus gates; GO é revalidado contra os fingerprints atuais."""
+        from concilium.application.scheduling.formalism_certification_service import (
+            FORMALISM_SHA256,
+            ORACLE_SHA256,
+            build_productivity_rate_witnesses,
+            build_solver_context,
+            certificate_summary,
+            load_resolved_catalog_snapshot,
+            read_current_project_certificate,
+        )
+        from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
+        try:
+            project = _project_repository().get_project(project_id)
+            runs = project.read_json(DEFAULT_PROJECT_FILES.runs, [])
+            if not isinstance(runs, list):
+                return _wrap_response({
+                    "status": "NOT_FOUND",
+                    "effective_decision": "NOT_CERTIFIABLE",
+                    "project_go": False,
+                    "reason": "project run registry is unavailable",
+                })
+            run = next(
+                (item for item in runs if isinstance(item, dict) and item.get("run_id") == run_id),
+                None,
+            )
+            if run is None:
+                return _wrap_response({
+                    "status": "NOT_FOUND",
+                    "effective_decision": "NOT_CERTIFIABLE",
+                    "project_go": False,
+                    "reason": f"run {run_id!r} was not found",
+                })
+            version = run.get("version")
+            certificate = run.get("formalism_certificate")
+            evaluation_sha256 = (
+                certificate.get("evaluation_sha256")
+                if isinstance(certificate, dict) else None
+            )
+            if not isinstance(version, str) or not isinstance(evaluation_sha256, str):
+                return _wrap_response({
+                    "status": "NOT_EVALUATED",
+                    "recorded_decision": None,
+                    "effective_decision": "NOT_CERTIFIABLE",
+                    "project_go": False,
+                    "scope": None,
+                    "reasons": ["this run has no persisted formalism evaluation"],
+                    "gates": [],
+                    "invalidated_sources": [],
+                })
+
+            canonical = project.load_canonical(version)
+            if canonical is None:
+                raise ValueError("run canonical snapshot is missing")
+            resolved_catalog = load_resolved_catalog_snapshot(project, version)
+            productivity_witnesses = build_productivity_rate_witnesses(
+                canonical, resolved_catalog,
+            )
+            solver_context = build_solver_context(run, version, canonical)
+            result = read_current_project_certificate(
+                project,
+                run_id=run_id,
+                evaluation_sha256=evaluation_sha256,
+                canonical=canonical,
+                resolved_catalog=resolved_catalog,
+                productivity_witnesses=productivity_witnesses,
+                solver_context=solver_context,
+                current_formalism_sha256=FORMALISM_SHA256,
+                current_oracle_sha256=ORACLE_SHA256,
+            )
+            return _wrap_response(certificate_summary(result))
+        except Exception as exc:
+            # A storage/read/revalidation error must never reuse the recorded GO.
+            return _wrap_response({
+                "status": "INVALIDATED",
+                "recorded_decision": None,
+                "effective_decision": "NOT_CERTIFIABLE",
+                "project_go": False,
+                "scope": None,
+                "reasons": [f"certificate read/revalidation failed closed: {exc}"],
+                "gates": [],
+                "invalidated_sources": ["read_validation"],
+            })
+
     # ── 4b. Cancelar job de pipeline ─────────────────────────────────────────
     @server.tool(
         description=(
