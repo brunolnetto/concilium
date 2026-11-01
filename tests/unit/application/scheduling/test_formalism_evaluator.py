@@ -224,12 +224,30 @@ def test_runtime_adapter_rejects_stale_p15_schedule_and_arbitrary_productivity()
     assert any("PRODUCTIVITY_PROVENANCE" in reason for reason in result.reasons)
 
 
-def test_runtime_adapter_maps_zero_standby_use_missing_bdi_and_negative_profit_to_nogo() -> None:
+def test_positive_standby_is_not_a_v3_failure_but_missing_bdi_and_negative_profit_are_nogo() -> None:
     envelope = _envelope()
     inputs = _runtime_evidence(envelope)
+    # P16 exact ledger: 4 active MW + 6 standby MW = 10 deployed MW;
+    # declared contractual availability is 20 MW. Positive standby is lawful.
+    witness = {
+        "schema": "p16-global-instance-assignment/v1",
+        "proof_scope": "EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND",
+        "status": "EXACT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND",
+        "is_project_go_certificate": False,
+        "legacy_financial_projection_overridden": False,
+        "resource_type": "EQ-1",
+        "contract_id": "contract-1",
+        "calendar_weeks": ["2026-W01", "2026-W02"],
+        "demand": [2, 2],
+        "presence": [5, 5],
+        "standby": [3, 3],
+        "demand_by_activity": {"A": [2, 2]},
+    }
     inputs["pool_summaries"] = [SimpleNamespace(
-        contrato_id="contract-1", machine_weeks_disponiveis=10,
-        machine_weeks_standby=10,
+        contrato_id="contract-1", tipo_id="EQ-1",
+        quantidade_contratada=10, semanas_contrato=2,
+        machine_weeks_disponiveis=20, machine_weeks_usados=4,
+        machine_weeks_standby=6, p16_global_assignment=witness,
     )]
     inputs["pricing_gates"] = _pricing_gates(
         regulatory="UNKNOWN", profitability="FAIL",
@@ -237,9 +255,50 @@ def test_runtime_adapter_maps_zero_standby_use_missing_bdi_and_negative_profit_t
     )
     result = evaluate_project_evidence(envelope, **inputs)
     assert result.decision == "NOGO"
-    assert any("V3" in reason for reason in result.reasons)
-    assert any("REGULATORY_BDI_BASIS" in reason for reason in result.reasons)
-    assert any("PROFITABILITY" in reason for reason in result.reasons)
+    gates = {row.gate_id: row for row in result.gate_evidence}
+    assert gates["V3"].status == "PASS"
+    assert gates["REGULATORY_BDI_BASIS"].status == "FAIL"
+    assert gates["PROFITABILITY"].status == "FAIL"
+
+
+def test_v3_rejects_forged_weekly_standby_identity_and_missing_p16_witness() -> None:
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    witness = {
+        "schema": "p16-global-instance-assignment/v1",
+        "proof_scope": "EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND",
+        "status": "EXACT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND",
+        "is_project_go_certificate": False,
+        "legacy_financial_projection_overridden": False,
+        "resource_type": "EQ-1",
+        "contract_id": "contract-1",
+        "calendar_weeks": ["2026-W01", "2026-W02"],
+        "demand": [2, 2],
+        "presence": [5, 5],
+        "standby": [3, 2],
+        "demand_by_activity": {"A": [2, 2]},
+    }
+    inputs["pool_summaries"] = [SimpleNamespace(
+        contrato_id="contract-1", tipo_id="EQ-1",
+        quantidade_contratada=10, semanas_contrato=2,
+        machine_weeks_disponiveis=20, machine_weeks_usados=4,
+        machine_weeks_standby=5, p16_global_assignment=witness,
+    )]
+    result = evaluate_project_evidence(envelope, **inputs)
+    v3 = next(row for row in result.gate_evidence if row.gate_id == "V3")
+    assert v3.status == "FAIL"
+    assert "presence" in (v3.reason or "")
+
+    inputs["pool_summaries"] = [SimpleNamespace(
+        contrato_id="contract-1", tipo_id="EQ-1",
+        quantidade_contratada=10, semanas_contrato=2,
+        machine_weeks_disponiveis=20, machine_weeks_usados=4,
+        machine_weeks_standby=6,
+    )]
+    result = evaluate_project_evidence(envelope, **inputs)
+    v3 = next(row for row in result.gate_evidence if row.gate_id == "V3")
+    assert v3.status == "UNKNOWN"
+    assert "witness" in (v3.reason or "")
 
 
 def test_runtime_adapter_fails_duplicate_event_ownership() -> None:
