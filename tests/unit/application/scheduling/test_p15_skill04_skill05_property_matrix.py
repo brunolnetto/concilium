@@ -213,10 +213,7 @@ def test_auto_q_precedence_never_releases_from_a_zero_production_week(
     assert predecessor.distribuicao_semanal[WEEKS[1]].qtd_executada == 1.0
     # A finishes Q in W02. FS release is the following boundary, W03.
     assert successor.start_week == 2
-    assert successor.distribuicao_semanal == {
-        WEEKS[2]: successor.distribuicao_semanal[WEEKS[2]],
-        WEEKS[3]: successor.distribuicao_semanal[WEEKS[3]],
-    }
+    assert tuple(successor.distribuicao_semanal) == WEEKS[2:4]
 
 
 @pytest.mark.parametrize(
