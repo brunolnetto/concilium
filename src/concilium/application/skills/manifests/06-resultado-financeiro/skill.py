@@ -191,6 +191,63 @@ def _p23_inventory_snapshot(context: dict[str, object]) -> dict[str, object]:
                 "holding_cost": _p23_fraction(charge.holding_cost),
             })
 
+    reconciliation = context.get("reconciliation")
+    finance_postings: list[dict[str, object]] = []
+    finance_attribution: list[dict[str, object]] = []
+    finance_totals: dict[str, str] = {}
+    if reconciliation is not None:
+        for posting in reconciliation.ledger.postings:
+            finance_postings.append({
+                "event_id": list(posting.event_id),
+                "nature": posting.nature.value,
+                "category": posting.category,
+                "amount": _p23_fraction(posting.amount),
+                "source": posting.source,
+                "week": posting.week,
+            })
+        for attribution in reconciliation.event_attribution:
+            finance_attribution.append({
+                "event_id": list(attribution.event_id),
+                "owner_scope": attribution.owner_scope,
+                "owner_id": list(attribution.owner_id),
+                "activity_id": attribution.activity_id,
+            })
+        finance_totals = {
+            "direct": _p23_fraction(reconciliation.direct),
+            "indirect": _p23_fraction(reconciliation.indirect),
+            "total": _p23_fraction(reconciliation.total),
+        }
+
+    catalog_metadata = context.get("catalog_metadata")
+    if not isinstance(catalog_metadata, dict):
+        catalog_metadata = {}
+    catalog = context.get("catalog")
+    catalog_data: dict[str, object] = {}
+    if catalog is not None:
+        catalog_data = {
+            "amount": _p23_fraction(catalog.amount),
+            "currency": catalog.currency,
+            "source": catalog.source,
+            "reference_id": catalog.reference_id,
+            "basis_fingerprint": catalog.basis_fingerprint,
+        }
+    regulatory = context.get("regulatory_basis")
+    regulatory_data: dict[str, object] | None = None
+    if regulatory is not None:
+        regulatory_data = {
+            "amount": _p23_fraction(regulatory.amount),
+            "currency": regulatory.currency,
+            "basis_fingerprint": regulatory.basis_fingerprint,
+            "minimum_rate": _p23_fraction(regulatory.minimum_rate),
+            "source": regulatory.source,
+            "reference_id": regulatory.reference_id,
+        }
+    bdi_rates = context.get("bdi_by_category")
+    bdi_data = {
+        key: _p23_fraction(value)
+        for key, value in bdi_rates.items()
+    } if isinstance(bdi_rates, dict) else {}
+
     return {
         "schema": "concilium.p23.inventory-evidence.v1",
         "status": scope.status,
@@ -205,6 +262,18 @@ def _p23_inventory_snapshot(context: dict[str, object]) -> dict[str, object]:
         "purchases": purchases,
         "currency": currency,
         "holding_charges": holding_rows,
+        "financial_postings": finance_postings,
+        "financial_event_attribution": finance_attribution,
+        "financial_totals": finance_totals,
+        "catalog_metadata": dict(catalog_metadata),
+        "catalog_benchmark": catalog_data,
+        "regulatory_basis": regulatory_data,
+        "bdi_by_category": bdi_data,
+        "operational_basis_fingerprint": context.get("operational_basis_fingerprint"),
+        "minimum_profit_margin": (
+            _p23_fraction(context["minimum_profit_margin"])
+            if context.get("minimum_profit_margin") is not None else None
+        ),
     }
 
 
