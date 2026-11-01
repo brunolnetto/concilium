@@ -333,3 +333,39 @@ def test_persisted_p20_duplicate_or_modified_financial_source_is_nogo():
     assert result.decision == "NOGO"
     gate = next(x for x in result.gate_evidence if x.gate_id == "FINANCIAL_COST_RECONCILIATION")
     assert gate.status == "FAIL"
+
+
+def test_infeasible_bounded_search_is_v6_nogo_without_falsely_failing_v1():
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    inputs["physical_resolution"] = {
+        **inputs["physical_resolution"],
+        "status": "FAIL",
+        "audit_status": "FAIL",
+        "complete_search": True,
+        "violation_details": [],
+        "reason": "all declared candidate starts exhausted without a feasible calendar",
+    }
+    result = evaluate_project_evidence(envelope, **inputs)
+    assert result.decision == "NOGO"
+    gates = {row.gate_id: row for row in result.gate_evidence}
+    assert gates["V1"].status == "UNKNOWN"
+    assert gates["V6"].status == "FAIL"
+
+
+def test_post_materialization_pool_conflict_is_attributed_to_v6_only():
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    inputs["physical_resolution"] = {
+        **inputs["physical_resolution"],
+        "status": "FAIL",
+        "audit_status": "FAIL",
+        "complete_search": True,
+        "violation_details": ["V6_POOL_OVERBOOKED:VAL-POOL-01:resource exceeds capacity"],
+        "reason": "post-materialization resource pool violation",
+    }
+    result = evaluate_project_evidence(envelope, **inputs)
+    assert result.decision == "NOGO"
+    gates = {row.gate_id: row for row in result.gate_evidence}
+    assert gates["V1"].status == "PASS"
+    assert gates["V6"].status == "FAIL"
