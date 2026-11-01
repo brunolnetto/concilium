@@ -63,6 +63,9 @@ class ProductivityRateWitness(BaseModel):
 
     activity_id: str = Field(min_length=1)
     hourly_rate: str
+    # Exact rate by productive ISO week. The scalar remains a compact summary,
+    # but cannot hide a zero/invalid F_i(m_ij) in one of the actual active weeks.
+    weekly_rates: dict[str, str] = Field(default_factory=dict)
     origin: Literal[
         "GRAFO_FLUXO", "GRAFO_ELEMENTOS", "TAXA_POR_FRENTE_ASSUMIDA",
         "FALLBACK_ARBITRARIO", "NAO_DECLARADA",
@@ -78,6 +81,15 @@ class ProductivityRateWitness(BaseModel):
             raise ValueError("hourly_rate must be an exact rational string") from exc
         if rate < 0:
             raise ValueError("hourly_rate cannot be negative")
+        for week, raw_rate in self.weekly_rates.items():
+            if not isinstance(week, str) or not week.strip():
+                raise ValueError("weekly productivity keys must be stable week identities")
+            try:
+                weekly_rate = Fraction(raw_rate)
+            except (ValueError, ZeroDivisionError) as exc:
+                raise ValueError(f"weekly rate for {week} must be an exact rational string") from exc
+            if weekly_rate < 0:
+                raise ValueError(f"weekly productivity for {week} cannot be negative")
         for name in ("source_reference", "calibration_reference"):
             value = getattr(self, name)
             if value is not None and not value.strip():
@@ -421,13 +433,23 @@ def _productivity_status(
     observed: dict[str, Any] = {}
     for activity_id, row in sorted(indexed.items()):
         rate = Fraction(row.hourly_rate)
+        weekly_rates = {
+            week: Fraction(raw_rate)
+            for week, raw_rate in row.weekly_rates.items()
+        }
         observed[activity_id] = {
-            "hourly_rate": row.hourly_rate, "origin": row.origin,
+            "hourly_rate": row.hourly_rate,
+            "weekly_rates": {week: str(value) for week, value in sorted(weekly_rates.items())},
+            "origin": row.origin,
             "source_reference": row.source_reference,
             "calibration_reference": row.calibration_reference,
         }
-        if rate <= 0:
+        if weekly_rates and any(value <= 0 for value in weekly_rates.values()):
+            failures.append(f"{activity_id}: every productive-week F_i(m_ij) must be > 0")
+        elif rate <= 0 and (row.source_reference or row.origin != "NAO_DECLARADA"):
             failures.append(f"{activity_id}: hourly productivity must be > 0 (observed {row.hourly_rate})")
+        elif rate <= 0:
+            unknowns.append(f"{activity_id}: hourly productivity value is unavailable")
         elif row.origin == "FALLBACK_ARBITRARIO":
             failures.append(f"{activity_id}: arbitrary preview fallback is never certifiable")
         elif row.origin == "TAXA_POR_FRENTE_ASSUMIDA":
