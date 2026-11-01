@@ -129,6 +129,8 @@ class CanonicalModel(BaseModel):
     p18_consumption_preview: dict[str, object] | None = None
     # P17-C: exact read-only Skill05 pool vs Skill06 activity-cost reconciliation.
     p17_cost_reconciliation: dict[str, object] | None = None
+    # P23-B: structured P15 physical-resolution witness bound to the exact schedule digest.
+    p15_physical_resolution: dict[str, object] | None = None
 
     # ADR-021: Espaço combinatorial de planos (repair + otimização de VERDE)
     plan_space_result: "PlanSpaceResult | None" = None
