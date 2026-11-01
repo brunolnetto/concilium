@@ -358,6 +358,27 @@ def build_formalism_source_snapshot(
     }
 
 
+def build_pool_summaries(canonical: CanonicalModel) -> tuple[dict[str, Any], ...]:
+    """Bind each utilization summary to the exact P16 witness for that contract."""
+    contracts = {
+        contract.contrato_id: contract
+        for contract in (canonical.contratos_recurso or [])
+    }
+    if len(contracts) != len(canonical.contratos_recurso or []):
+        return ()
+    summaries: list[dict[str, Any]] = []
+    for summary in canonical.resumo_utilizacao_contratos or []:
+        row = summary.model_dump(mode="json") if hasattr(summary, "model_dump") else dict(summary)
+        contract_id = row.get("contrato_id")
+        contract = contracts.get(contract_id)
+        if contract is None:
+            row["p16_global_assignment"] = None
+        else:
+            row["p16_global_assignment"] = _dump(contract.p16_global_assignment)
+        summaries.append(row)
+    return tuple(summaries)
+
+
 def evaluate_and_persist_project_certificate(
     project: Any,
     canonical: CanonicalModel,
@@ -392,7 +413,7 @@ def evaluate_and_persist_project_certificate(
     evaluation = evaluate_project_evidence(
         envelope,
         physical_resolution=canonical.p15_physical_resolution,
-        pool_summaries=canonical.resumo_utilizacao_contratos,
+        pool_summaries=build_pool_summaries(canonical),
         productivity_witnesses=productivity_witnesses,
         expected_activity_ids=[item.item_id for item in canonical.eap],
         financial_reconciliation=reconciliation,
