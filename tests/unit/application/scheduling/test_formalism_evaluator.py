@@ -91,8 +91,11 @@ def test_unknown_missing_gate_unavailable_source_and_rfi_never_become_go() -> No
         project_id="project-1", run_id="run-002", scope="RFP",
         formalism_sha256="a" * 64, oracle_sha256="b" * 64, sources=missing,
     )
-    with pytest.raises(ValueError, match="UNAVAILABLE"):
-        gate_evidence_from_status(unavailable_envelope, "V6", "PASS", artifact_refs=("solver",))
+    unavailable_gate = gate_evidence_from_status(
+        unavailable_envelope, "V6", "PASS", artifact_refs=("solver",)
+    )
+    assert unavailable_gate.status == "UNKNOWN"
+    assert "solver" in (unavailable_gate.reason or "")
 
     rfi = _envelope("RFI")
     assert evaluate_formalism_certificate(rfi, _all_pass(rfi)).decision == "NOT_CERTIFIABLE"
