@@ -369,3 +369,17 @@ def test_post_materialization_pool_conflict_is_attributed_to_v6_only():
     gates = {row.gate_id: row for row in result.gate_evidence}
     assert gates["V1"].status == "PASS"
     assert gates["V6"].status == "FAIL"
+
+
+def test_assumed_per_front_productivity_without_independent_calibration_is_unknown():
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    inputs["productivity_witnesses"] = [ProductivityRateWitness(
+        activity_id="A", hourly_rate="12", origin="TAXA_POR_FRENTE_ASSUMIDA",
+        source_reference="declared-assumption", calibration_reference="unverified-calibration-id",
+    )]
+    result = evaluate_project_evidence(envelope, **inputs)
+    assert result.decision == "NOT_CERTIFIABLE"
+    gates = {row.gate_id: row for row in result.gate_evidence}
+    assert gates["V5"].status == "UNKNOWN"
+    assert gates["PRODUCTIVITY_PROVENANCE"].status == "UNKNOWN"
