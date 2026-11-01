@@ -163,6 +163,9 @@ def test_application_boundary_binds_each_pool_summary_to_its_exact_p16_contract(
     }
     contract = SimpleNamespace(
         contrato_id="contract-1",
+        tipo_id="EQ-1",
+        quantidade_contratada=4,
+        semanas_contrato=2,
         p16_global_assignment=witness,
     )
     summary = SimpleNamespace(
@@ -179,3 +182,6 @@ def test_application_boundary_binds_each_pool_summary_to_its_exact_p16_contract(
     result = build_pool_summaries(canonical)
     assert result[0]["p16_global_assignment"] == _dump(witness)
     assert result[0]["contrato_id"] == "contract-1"
+    assert result[0]["p16_contract_quantity"] == 4
+    assert result[0]["p16_contract_weeks"] == 2
+    assert result[0]["p16_resource_type"] == "EQ-1"
