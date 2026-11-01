@@ -286,7 +286,18 @@ def _dump(value: Any) -> Any:
     if value is None:
         return None
     if hasattr(value, "model_dump"):
-        return _dump(value.model_dump(mode="json"))
+        # Python mode preserves sets until this boundary, where they are sorted
+        # explicitly. JSON mode would silently turn them into nondeterministic lists.
+        return _dump(value.model_dump(mode="python"))
+    if isinstance(value, (set, frozenset)):
+        normalized = [_dump(item) for item in value]
+        return sorted(
+            normalized,
+            key=lambda item: json.dumps(
+                item, sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False, allow_nan=False,
+            ),
+        )
     if isinstance(value, Enum):
         return _dump(value.value)
     if isinstance(value, (Fraction, Decimal)):
