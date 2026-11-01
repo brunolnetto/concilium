@@ -71,13 +71,21 @@ def _catalog_items(resolved_catalog: Mapping[str, Any] | None) -> dict[str, list
     return normalized
 
 
-def load_resolved_catalog_snapshot(project: Any, version: str) -> dict[str, Any] | None:
-    """Read only the run-pinned resolved_catalog.json snapshot."""
+def load_resolved_catalog_snapshot(
+    project: Any,
+    version: str,
+    run_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Read only the exact run-pinned resolved_catalog.json snapshot."""
     try:
         payload = project.read_json(f"{version}/resolved_catalog.json", None)
     except Exception:
         return None
     if not isinstance(payload, Mapping):
+        return None
+    if payload.get("version") != version:
+        return None
+    if run_id is not None and payload.get("run_id") != run_id:
         return None
     normalized = _catalog_items(payload)
     if normalized is None:
