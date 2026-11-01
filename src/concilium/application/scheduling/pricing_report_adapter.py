@@ -464,6 +464,77 @@ def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> 
     )
 
 
+
+
+def _serialize_p20_reconciliation(reconciliation: ExactFinancialReconciliation) -> dict[str, object]:
+    """Persist the exact P20 posting/attribution witness used by P21.
+
+    Decimal display totals are intentionally excluded. Every monetary amount
+    remains a rational string, and the source identity/category/week survive
+    a process restart so P23 can independently reconstruct the ledger.
+    """
+    ledger = reconciliation.ledger
+
+    def nature_value(value: object) -> str:
+        return str(getattr(value, "value", value))
+
+    postings = [
+        {
+            "event_id": list(row.event_id),
+            "nature": nature_value(row.nature),
+            "category": row.category,
+            "amount": str(row.amount),
+            "source": row.source,
+            "week": row.week,
+        }
+        for row in ledger.postings
+    ]
+    attribution = [
+        {
+            "event_id": list(row.event_id),
+            "nature": nature_value(row.nature),
+            "category": row.category,
+            "amount": str(row.amount),
+            "source": row.source,
+            "week": row.week,
+            "owner_scope": row.owner_scope,
+            "owner_id": list(row.owner_id),
+            "activity_id": row.activity_id,
+        }
+        for row in reconciliation.event_attribution
+    ]
+    weeks = [
+        {
+            "week": row.week,
+            "contractual_k": str(row.contractual_k),
+            "consumable_v": str(row.consumable_v),
+            "indirect": str(row.indirect),
+        }
+        for row in reconciliation.weeks
+    ]
+    categories = [
+        {"week": row.week, "category": row.category, "amount": str(row.amount)}
+        for row in reconciliation.category_balances
+    ]
+    return {
+        "schema": "concilium.p20.financial-reconciliation.v1",
+        "authority": reconciliation.authority,
+        "contract_scope": ledger.contract_scope,
+        "holding_evidence_present": reconciliation.holding_evidence_present,
+        "postings": postings,
+        "event_attribution": attribution,
+        "weekly_balances": weeks,
+        "weekly_category_balances": categories,
+        "totals": {
+            "contractual_k": str(ledger.contractual_k),
+            "consumable_v": str(ledger.consumable_v),
+            "direct": str(ledger.direct),
+            "indirect": str(ledger.indirect),
+            "total": str(ledger.total),
+        },
+    }
+
+
 def apply_pricing_report_evidence(
     result: Resultado,
     inputs: Mapping[str, object],
@@ -675,6 +746,7 @@ def apply_pricing_report_evidence(
         ),
         "reasons": "; ".join(gates.reasons),
     }
+    result.p20_financial_reconciliation = _serialize_p20_reconciliation(reconciliation)
     result.pricing_authority = gates.authority
     if gates.status != "PASS":
         status = "AVISO" if intent == "PREVIEW" else "ERRO"
