@@ -12,6 +12,7 @@ from concilium.presentation.mcp._context import (
     ConciliumRuntimeError,
     _get_or_create_trace_id,
     _lifecycle_coordinator,
+    _project,
     _wrap_response,
 )
 from concilium.presentation.mcp.rate_limit import mcp_rate_limit
@@ -149,7 +150,7 @@ def register(server: FastMCP) -> None:
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
 
         try:
-            project = _project_repository().get_project(project_id)
+            project = _project(project_id)
             runs = project.read_json(DEFAULT_PROJECT_FILES.runs, [])
             if not isinstance(runs, list):
                 return _wrap_response({
