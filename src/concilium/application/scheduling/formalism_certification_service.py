@@ -98,7 +98,7 @@ def _finite_rate_text(value: object) -> str | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
     try:
-        if not math.isfinite(float(value)) or value <= 0:
+        if not math.isfinite(float(value)) or value < 0:
             return None
     except (OverflowError, ValueError):
         return None
