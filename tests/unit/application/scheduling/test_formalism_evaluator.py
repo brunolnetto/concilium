@@ -321,6 +321,17 @@ def test_v3_rejects_forged_weekly_standby_identity_and_missing_p16_witness() -> 
     assert "witness" in (v3.reason or "")
 
 
+def test_v3_rejects_utilization_denominator_that_differs_from_typed_contract() -> None:
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    summary = inputs["pool_summaries"][0]
+    summary.p16_contract_quantity = 1
+    result = evaluate_project_evidence(envelope, **inputs)
+    v3 = next(row for row in result.gate_evidence if row.gate_id == "V3")
+    assert v3.status == "FAIL"
+    assert "canonical RecursoContrato" in (v3.reason or "")
+
+
 def test_runtime_adapter_fails_duplicate_event_ownership() -> None:
     envelope = _envelope()
     inputs = _runtime_evidence(envelope)
