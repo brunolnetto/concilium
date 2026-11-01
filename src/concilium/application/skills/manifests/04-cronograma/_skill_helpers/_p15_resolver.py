@@ -41,6 +41,7 @@ class Skill04PhysicalResolution:
     reason: str
     violation_details: tuple[str, ...] = ()
     complete_search: bool | None = None
+    physical_evidence: dict[str, object] | None = None
 
 
 def _explicit_physical_pool(
@@ -497,9 +498,47 @@ def resolve_skill04_physical_schedule(
         "scheduled_activities": final_scheduled,
         "makespan": max(1, final_makespan),
     })
+    # Persist the exact, independently re-playable physical witness. P23
+    # re-runs the validator from this payload instead of trusting a status bit.
+    physical_evidence: dict[str, object] = {
+        "schema": "concilium.p15.physical-calendar-witness.v1",
+        "audit_status": audit.status,
+        "calendar_horizon_weeks": len(weeks),
+        "require_weekly_capacity": True,
+        "resolver_status": resolution.status,
+        "resolver_attempts": resolution.attempts,
+        "complete_search": resolution.complete_search,
+        "activities": [
+            {
+                "item_id": activity.item_id,
+                "scope": str(activity.scope),
+                "start_week": activity.start_week,
+                "end_week_exclusive": activity.end_week_exclusive,
+                "deliveries": [[week, str(quantity)] for week, quantity in activity.deliveries],
+                "demands": [[week, resource, str(quantity)] for week, resource, quantity in activity.demands],
+                "weekly_capacities": [[week, str(quantity)] for week, quantity in activity.weekly_capacities],
+            }
+            for activity in actual_activities
+        ],
+        "precedences": [
+            {
+                "predecessor": edge.predecessor,
+                "successor": edge.successor,
+                "kind": edge.kind,
+                "lag_weeks": edge.lag_weeks,
+                "completion_threshold": str(edge.completion_threshold),
+            }
+            for edge in precedences
+        ],
+        "pool_capacity": {resource: str(capacity) for resource, capacity in sorted(pool_capacity.items())},
+        "violations": [
+            {"code": row.code, "item_id": row.item_id, "week": row.week, "reason": row.reason}
+            for row in audit.violations
+        ],
+    }
     return Skill04PhysicalResolution(
         "PASS", selected, rematerialized, rematerialized_fallback,
         resolution.attempts,
         "bounded exact physical feasibility witness",
-        (), resolution.complete_search,
+        (), resolution.complete_search, physical_evidence,
     )
