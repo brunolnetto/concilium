@@ -129,6 +129,9 @@ class CanonicalModel(BaseModel):
     p18_consumption_preview: dict[str, object] | None = None
     # P17-C: exact read-only Skill05 pool vs Skill06 activity-cost reconciliation.
     p17_cost_reconciliation: dict[str, object] | None = None
+    # P15/P23: immutable physical calendar witness from the final Skill04 AUTO
+    # rematerialization. A PASS here is local schedule evidence, not PROJECT_GO.
+    physical_calendar_evidence: dict[str, object] | None = None
 
     # ADR-021: Espaço combinatorial de planos (repair + otimização de VERDE)
     plan_space_result: "PlanSpaceResult | None" = None
