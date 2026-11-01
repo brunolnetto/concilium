@@ -597,3 +597,133 @@ def _evaluation_fingerprint(
         "reasons": list(reasons),
     }
     return hashlib.sha256(b"concilium-formalism-evaluation/v1\n" + _canonical_json(manifest)).hexdigest()
+did not reconcile"),
+                }
+            if reconciled_total is not None and total_cost != reconciled_total:
+                return {
+                    "PRICE_PRESENT": ("FAIL", {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)}, "P21 total cost differs from P20 exclusive ledger"),
+                    "V4": ("FAIL", {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)}, "P21 price is not based on reconciled P20 cost"),
+                    "REGULATORY_BDI_BASIS": ("UNKNOWN", {}, "P21/P20 monetary sources do not reconcile"),
+                    "PROFITABILITY": ("FAIL", {}, "P21/P20 monetary sources do not reconcile"),
+                    "V2": ("UNKNOWN", {}, "P21/P20 monetary sources do not reconcile"),
+                }
+
+    if pricing_gates is None:
+        regulatory = ("FAIL", {}, "mandatory regulatory BDI basis/gate is missing for an RFP")
+        profitability = ("UNKNOWN", {}, "P21 profitability gate is missing")
+    else:
+        regulatory_raw = _read(pricing_gates, "regulatory_status", "UNKNOWN")
+        regulatory_reasons_raw = _read(pricing_gates, "reasons", ())
+        regulatory_reasons = (
+            tuple(regulatory_reasons_raw) if isinstance(regulatory_reasons_raw, (list, tuple))
+            else tuple([regulatory_reasons_raw]) if isinstance(regulatory_reasons_raw, str) and regulatory_reasons_raw
+            else ()
+        )
+        regulatory_status: GateStatus = regulatory_raw if regulatory_raw in {"PASS", "FAIL", "UNKNOWN"} else "UNKNOWN"
+        if regulatory_status == "UNKNOWN":
+            regulatory_status = "FAIL"  # RFP requires a comparable regulatory basis.
+        regulatory = (
+            regulatory_status,
+            {
+                "regulatory_bdi_rate": str(_read(pricing_gates, "regulatory_bdi_rate")),
+                "floor": str(_read(pricing_gates, "regulatory_bdi_floor")),
+                "reference": _read(pricing_gates, "regulatory_basis_reference"),
+            },
+            None if regulatory_status == "PASS" else "; ".join(str(x) for x in regulatory_reasons) or "regulatory BDI basis is missing or incomparable",
+        )
+        profit_raw = _read(pricing_gates, "profitability_status", "UNKNOWN")
+        profit_status: GateStatus = profit_raw if profit_raw in {"PASS", "FAIL", "UNKNOWN"} else "UNKNOWN"
+        profitability = (
+            profit_status,
+            {"profit": str(_read(pricing_gates, "profit_amount")), "margin": str(_read(pricing_gates, "realized_margin"))},
+            None if profit_status == "PASS" else "; ".join(str(x) for x in regulatory_reasons) or "P21 profitability gate did not PASS",
+        )
+        if profit is not None and profit <= 0:
+            profitability = ("FAIL", {"profit": str(profit)}, "operational price does not exceed total cost")
+    return {
+        "PRICE_PRESENT": price,
+        "V4": v4,
+        "REGULATORY_BDI_BASIS": regulatory,
+        "PROFITABILITY": profitability,
+        "V2": regulatory,
+    }
+
+
+def _evaluation_fingerprint(
+    *, project_id: str, run_id: str, scope: str, inputs_sha256: str,
+    decision: str, gate_evidence: tuple[GateEvidence, ...], reasons: tuple[str, ...],
+) -> str:
+    manifest = {
+        "schema_version": "1.0.0", "project_id": project_id, "run_id": run_id,
+        "scope": scope, "inputs_sha256": inputs_sha256, "decision": decision,
+        "gate_evidence": [item.model_dump(mode="json") for item in gate_evidence],
+        "reasons": list(reasons),
+    }
+    return hashlib.sha256(b"concilium-formalism-evaluation/v1\n" + _canonical_json(manifest)).hexdigest()
+
+
+def evaluate_formalism_certificate(
+    envelope: FormalismCertificate,
+    evidence: Sequence[GateEvidence],
+) -> FormalismEvaluation:
+    """Issue GO only for a complete RFP with every physical/financial gate PASS.
+
+    A FAIL in any gate yields NOGO. UNKNOWN/NOT_EVALUATED, missing gates,
+    unavailable sources, PREVIEW and RFI are never silently promoted to GO.
+    """
+    if not isinstance(envelope, FormalismCertificate):
+        raise TypeError("an immutable FormalismCertificate evidence envelope is required")
+    supplied: dict[str, GateEvidence] = {}
+    for item in evidence:
+        if not isinstance(item, GateEvidence):
+            raise TypeError("all gate inputs must be typed GateEvidence objects")
+        if item.gate_id in supplied:
+            raise ValueError(f"duplicate gate evidence: {item.gate_id}")
+        expected_sources = _evidence_from_envelope(envelope, item.gate_id)
+        if item.source_fingerprints != expected_sources:
+            raise ValueError(f"{item.gate_id} evidence is bound to different source fingerprints")
+        supplied[item.gate_id] = item
+
+    normalized: list[GateEvidence] = []
+    for gate_id in REQUIRED_GATES:
+        item = supplied.get(gate_id)
+        if item is None:
+            item = GateEvidence(
+                gate_id=gate_id, status="NOT_EVALUATED",
+                source_fingerprints=_evidence_from_envelope(envelope, gate_id),
+                reason="mandatory gate has no independently produced evidence",
+            )
+        normalized.append(item)
+
+    failed = [item for item in normalized if item.status == "FAIL"]
+    all_pass = all(item.status == "PASS" for item in normalized)
+    all_sources_present = all(item.state == "PRESENT" for item in envelope.source_fingerprints)
+    reasons: list[str] = []
+    for item in normalized:
+        if item.status != "PASS":
+            reasons.append(f"{item.gate_id}: {item.reason}")
+    if envelope.scope != "RFP":
+        reasons.append(f"scope {envelope.scope} is not a complete RFP certification scope")
+    if not all_sources_present:
+        unavailable = [item.name for item in envelope.source_fingerprints if item.state != "PRESENT"]
+        reasons.append("required RFP sources unavailable: " + ", ".join(unavailable))
+
+    if failed:
+        decision: Decision = "NOGO"
+    elif all_pass and all_sources_present and envelope.scope == "RFP":
+        decision = "GO"
+    else:
+        decision = "NOT_CERTIFIABLE"
+
+    unique_reasons = tuple(dict.fromkeys(reasons))
+    gates = tuple(normalized)
+    digest = _evaluation_fingerprint(
+        project_id=envelope.project_id, run_id=envelope.run_id, scope=envelope.scope,
+        inputs_sha256=envelope.inputs_sha256, decision=decision,
+        gate_evidence=gates, reasons=unique_reasons,
+    )
+    return FormalismEvaluation(
+        project_id=envelope.project_id, run_id=envelope.run_id, scope=envelope.scope,
+        inputs_sha256=envelope.inputs_sha256, decision=decision, gate_evidence=gates,
+        reasons=unique_reasons, evaluation_sha256=digest,
+    )
