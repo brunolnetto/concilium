@@ -7,6 +7,11 @@ catalog, productivity calibration, solver or financial evidence as a success.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
+from fractions import Fraction
+from pathlib import Path
 from typing import Any
 
 from concilium.application.scheduling.formalism_evaluator import (
@@ -30,10 +35,19 @@ from concilium.infrastructure.storage.formalism_certificate_store import (
 
 
 def _dump(value: Any) -> Any:
+    """Convert source snapshots to deterministic JSON-safe primitives."""
     if value is None:
         return None
     if hasattr(value, "model_dump"):
-        return value.model_dump(mode="json")
+        return _dump(value.model_dump(mode="json"))
+    if isinstance(value, Enum):
+        return _dump(value.value)
+    if isinstance(value, (Fraction, Decimal)):
+        return str(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Path):
+        return str(value)
     if isinstance(value, Mapping):
         return {str(key): _dump(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
