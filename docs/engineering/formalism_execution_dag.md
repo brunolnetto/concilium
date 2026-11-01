@@ -11,7 +11,7 @@ A execução foi paralelizada incorretamente: muitos PRs de ondas 1–3 foram in
 Existem três relações diferentes:
 
 - **Dependência de código**: pode permitir que infraestrutura preliminar de outra onda seja construída antecipadamente, mas ela não autoriza certificação.
-- **Dependência de aceite**: uma issue só pode ser concluída se seus predecessores na DAG e todas as ondas anteriores estiverem fechados com evidência suficiente.
+- **Contexto de sequenciamento**: predecessores e ondas anteriores são sinais de ordem/relação técnica. Não são pré-condições administrativas para executar ou fechar outra issue. Se uma dependência técnica concreta afetar o critério local, ela deve aparecer como critério/teste da própria issue.
 - **Dependência de PR**: o pacote indicado é trabalho necessário, mas não suficiente. Os PRs precisam estar **merged** na branch canônica com testes e revisão; seus critérios de aceite são conferidos separadamente, manualmente.
 
 Assim, `merged(PR) != accepted(issue) != certified(project)`. O indicador de PRs preparados **não** é percentual de certificação.
@@ -66,17 +66,17 @@ A visualização é intencionalmente simplificada; o **JSON é a fonte de verdad
 | Onda | Abertura | Gate de conclusão | Pacotes a concluir |
 | --- | --- | --- | --- |
 | **0 — formalismo matemático** | imediata | **#9, #10, #11, #12, #13 todas concluídas** | P09-C [#86](https://github.com/brunolnetto/concilium/pull/86) já integrado; P09-D [#87](https://github.com/brunolnetto/concilium/pull/87) integrado; P09-E [#88](https://github.com/brunolnetto/concilium/pull/88) exige proveniência de aliases e paridade semântica, P11-A → P11-B, P13-A → P13-B |
-| **1 — oráculo e CI** | somente após W0 | #22 e #25 aceitas | P22-B → P22-C → P25-C; aproveitar P22-A/P25-A/B já integrados |
-| **2 — execução física/econômica** | somente após W1 | todas #14–#21 aceitas | re-resolução #15, paridade #16/#18, P17-C e P19-C → P20-B/C → P21-A/B |
-| **3 — certificado e regressões** | somente após W2 | #23/#24/#26 aceitas | P23-B/C → P24-A/B → P26-A/B; fechar epic apenas sob prova E2E |
+| **1 — oráculo e CI** | paralela | #22 e #25 avaliadas localmente | P22-B → P22-C → P25-C; #25 não congela outras issues |
+| **2 — execução física/econômica** | paralela, respeitando dependências técnicas reais nos testes | aceite independente de cada #14–#21 | re-resolução #15, paridade #16/#18, P17-C e P19-C → P20-B/C → P21-A/B |
+| **3 — certificado e regressões** | paralela quando houver insumos suficientes | #23/#24/#26 aceitas localmente; certificado global somente em #23 | P23-B/C → P24-A/B → P26-A/B; fechar epic sob prova E2E |
 
 ### Definição precisa do próximo vértice
 
-**Agora: #9**. P09-A [#28](https://github.com/brunolnetto/concilium/pull/28), P09-B [#43](https://github.com/brunolnetto/concilium/pull/43) e P09-C [#86](https://github.com/brunolnetto/concilium/pull/86) estão mergeados; P09-D [#87](https://github.com/brunolnetto/concilium/pull/87) integrado e P09-E [#88](https://github.com/brunolnetto/concilium/pull/88) **pendente e obrigatório** no manifesto. Falta o aceite dimensional *completo*: inventário versionado **símbolo → unidade → fonte → saída**, classificação de equações normativas x hipóteses x pendências, contraprovas e paridade MD/RESUMIDO/TeX. Uma equação ainda inválida deve permanecer explicitamente pendente em #11/#13 e fora do universo declarado como **normativo válido**. Não satisfazer #9 por alterar somente um checklist.
+**Fila sugerida (não exclusiva): #15**. #15 [#28](https://github.com/brunolnetto/concilium/pull/28), P09-B [#43](https://github.com/brunolnetto/concilium/pull/43) e P09-C [#86](https://github.com/brunolnetto/concilium/pull/86) estão mergeados; P09-D [#87](https://github.com/brunolnetto/concilium/pull/87) integrado e P09-E [#88](https://github.com/brunolnetto/concilium/pull/88) **pendente e obrigatório** no manifesto. Falta o aceite dimensional *completo*: inventário versionado **símbolo → unidade → fonte → saída**, classificação de equações normativas x hipóteses x pendências, contraprovas e paridade MD/RESUMIDO/TeX. Uma equação ainda inválida deve permanecer explicitamente pendente em #11/#13 e fora do universo declarado como **normativo válido**. Não satisfazer #9 por alterar somente um checklist.
 
-**Depois: #11**. Provar as identidades econômicas e desempenho para semana parcial, múltiplas semanas, custo por presença K e por consumo V; executar falsificadores incluindo `F(m)` saturado e BDI por categoria. Não iniciar P13-B antes de fechar o contrato matemático #11.
+**Outras frentes podem avançar em paralelo.** #11: provar as identidades econômicas e desempenho para semana parcial, múltiplas semanas, custo por presença K e por consumo V; executar falsificadores incluindo `F(m)` saturado e BDI por categoria. Não iniciar P13-B antes de fechar o contrato matemático #11.
 
-**Por fim: #13**. Separar baseline de standby integral, variante idle/off com tarifa e variante de consumo ocioso/desperdício, selecionadas explicitamente; ausência/incompatibilidade não implica custo zero. Fechar W0 só com os três critérios localmente demonstrados e #10/#12 já concluídas.
+#13: separar baseline de standby integral, variante idle/off com tarifa e variante de consumo ocioso/desperdício, selecionadas explicitamente; ausência/incompatibilidade não implica custo zero. Fechar W0 só com os três critérios localmente demonstrados e #10/#12 já concluídas.
 
 ## Uso do validador e limites
 
@@ -88,9 +88,9 @@ GH_TOKEN="$(gh auth token)" python scripts/formalism_wave_dag.py --live --requir
 
 - **Primeira chamada:** valida esquema, 18 nós, 65 pacotes, direção das arestas e aciclicidade sem rede.
 - **Segunda:** consulta as issues e os PRs reais; informa onda ativa, nós executáveis e bloqueios. Requer autenticação para repositório privado. Falha de autenticação/snapshot incompleto não se converte em PASS.
-- **Terceira:** falha se não houver todos os predecessores fechados, ondas anteriores completas e PRs previstos *merged*. Mesmo preflight positivo **não fecha issue automaticamente**: os critérios de aceite, checks do HEAD e revisão têm de ser avaliados por quem integra.
-- Fechamentos antigos #10/#12 ocorridos antes de #9 são marcados como exceções históricas, **sem desfazê-los**. Não autorizam conclusão de W1–W3.
-- A DAG **não** substitui o validador numérico nem um certificado GO; esses dependem de #22/#23. A integração obrigatória deste verificador em branch protection requer política de CI apropriada, a ser completada em #25/#26.
+- **Terceira:** falha se os pacotes obrigatórios da issue não estiverem *merged*. Predecessores e ondas anteriores são reportados como contexto, nunca como bloqueio. Mesmo preflight positivo **não fecha issue automaticamente**: os critérios de aceite, checks do HEAD e revisão têm de ser avaliados por quem integra.
+- Fechamentos em qualquer ordem são preservados. A ordem histórica é informativa e não cria bloqueio retroativo.
+- A DAG **não** substitui o validador numérico nem um certificado GO; esses dependem de #22/#23. #25/#26 seguem como tarefas de governança independentes; indisponibilidade de CI hospedado ou credenciais externas não congela o trabalho local validável.
 
 Mudanças posteriores na matriz exigem PR de governança, teste de aciclicidade e atualização simultânea da epic.
 
@@ -110,3 +110,16 @@ The retired plan-only PRs #108–#119 remain historical planning records only.
 They must not be reopened or reused as implementation PRs; empty P23-B/C,
 P24-A/B and P26-A/B slots remain empty until actual implementation PRs are
 created and merged.
+
+
+## Política vigente — execução sem bloqueios rígidos (2026-10-31)
+
+Esta seção prevalece sobre qualquer texto histórico acima que condicione uma onda ao fechamento de outra.
+
+1. `blocked_by` registra relação técnica/sequenciamento e produz avisos; não impede iniciar, validar ou fechar issue.
+2. O fechamento local exige: critérios da própria issue demonstrados; pacotes de implementação obrigatórios integrados à branch canônica; testes pertinentes e revisão satisfatórios; evidência registrada na issue.
+3. Um preflight positivo confirma somente que os pacotes registrados estão integrados. Não substitui aceite humano nem prova numérica.
+4. #25 permanece aberta até cumprir seu próprio contrato. CI hospedado indisponível por billing e deployment dependente de identidade externa não congelam outras issues.
+5. #23 é o contrato separado para certificado global V1–V6. Fechar #14–#21 individualmente não declara PROJECT_GO.
+
+O validador reporta predecessores/ondas abertas como contexto consultivo. `ready_to_execute` considera toda issue aberta executável; `closure_preflight` verifica apenas a integração dos pacotes da própria issue. A aceitação permanece deliberadamente `null` no relatório automático e exige revisão independente.

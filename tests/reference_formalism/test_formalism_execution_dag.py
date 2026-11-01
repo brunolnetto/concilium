@@ -59,21 +59,25 @@ def test_dag_rejects_missing_node(spec: dict) -> None:
         validate_dag(changed)
 
 
-def test_only_issue_nine_ready_while_wave_zero_incomplete(spec: dict) -> None:
+def test_open_issues_remain_executable_while_wave_zero_is_incomplete(spec: dict) -> None:
     result = report(spec, states(10, 12), all_merged(spec))
     assert result["active_wave"] == 0
-    assert result["ready_to_execute"] == [9]
+    assert result["ready_to_execute"] == [9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26]
     assert result["waves_closed"][0] is False
-    assert not any(x["closure_preflight"] for x in result["issues"] if x["wave"] > 0)
-    assert any(x["historical_out_of_order"] for x in result["issues"] if x["issue"] == 10)
+    issue_14 = next(x for x in result["issues"] if x["issue"] == 14)
+    assert issue_14["closure_preflight"]
+    assert issue_14["sequencing_advisory"]
+    assert issue_14["open_predecessor_context"] == [22]
+    assert issue_14["open_prior_waves_context"] == [0, 1]
 
 
-def test_merged_prs_do_not_override_open_prerequisites(spec: dict) -> None:
+def test_open_predecessors_are_advisory_when_packages_are_merged(spec: dict) -> None:
     r = report(spec, states(10, 12), all_merged(spec))
     issue_14 = next(x for x in r["issues"] if x["issue"] == 14)
     assert issue_14["pr_packages_merged"] == issue_14["pr_packages_total"]
-    assert issue_14["blocked_by_prior_waves"] == [0, 1]
-    assert issue_14["closure_preflight"] is False
+    assert issue_14["open_prior_waves_context"] == [0, 1]
+    assert issue_14["sequencing_advisory"] is True
+    assert issue_14["closure_preflight"] is True
     assert issue_14["acceptance_verified"] is None
 
 
@@ -82,7 +86,8 @@ def test_wave_unblocks_only_after_every_prior_issue_closed(spec: dict) -> None:
     result = report(spec, w0, all_merged(spec))
     assert result["waves_closed"][0] is True
     assert result["active_wave"] == 1
-    assert result["ready_to_execute"] == [22]
+    assert 22 in result["ready_to_execute"]
+    assert 25 in result["ready_to_execute"]
 
 
 def test_missing_package_blocks_closure_even_when_parents_done(spec: dict) -> None:
@@ -161,7 +166,8 @@ def test_p22b_pr_open_is_not_merged_and_does_not_unblock_p25(spec: dict) -> None
     next_issue = next(x for x in result["issues"] if x["issue"] == 25)
     assert row["pending_packages"] == ["P22-B", "P22-C"]
     assert not row["closure_preflight"]
-    assert not next_issue["ready_to_execute"]
+    assert next_issue["ready_to_execute"]
+    assert next_issue["sequencing_advisory"]
 
 
 def test_all_three_p22_prs_merged_still_require_independent_acceptance(spec: dict) -> None:
@@ -171,7 +177,8 @@ def test_all_three_p22_prs_merged_still_require_independent_acceptance(spec: dic
     assert oracle["pr_packages_merged"] == 3
     assert oracle["closure_preflight"]
     assert oracle["acceptance_verified"] is None
-    assert not successor["ready_to_execute"]
+    assert successor["ready_to_execute"]
+    assert successor["sequencing_advisory"]
 
 
 def test_snapshot_cannot_mark_acceptance_verified(spec: dict) -> None:

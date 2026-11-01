@@ -74,7 +74,12 @@ def report(
     issue_state: dict[int, str],
     merged_prs: set[int],
 ) -> dict[str, Any]:
-    """Determine implementation readiness, not whether acceptance is proven."""
+    """Report implementation packages and advisory sequencing context.
+
+    Predecessor and prior-wave state are deliberately non-blocking. Issue
+    closure still requires merged mandatory packages plus independent human
+    acceptance evidence; this preflight never supplies that evidence.
+    """
     validate_dag(spec)
     ids = {n["issue"] for n in spec["nodes"]}
     if set(issue_state) != ids:
@@ -108,17 +113,13 @@ def report(
             "pr_packages_merged": len(n["packages"]) - len(missing_packages),
             "pr_packages_total": len(n["packages"]),
             "pending_packages": missing_packages,
-            "blocked_by_open_issues": parents_open,
-            "blocked_by_prior_waves": prior_waves_open,
-            "ready_to_execute": (
-                issue_state[issue] == "open" and not parents_open and not prior_waves_open
-            ),
-            "closure_preflight": (
-                issue_state[issue] == "open" and not parents_open
-                and not prior_waves_open and not missing_packages
-            ),
+            "open_predecessor_context": parents_open,
+            "open_prior_waves_context": prior_waves_open,
+            "sequencing_advisory": bool(parents_open or prior_waves_open),
+            "ready_to_execute": issue_state[issue] == "open",
+            "closure_preflight": issue_state[issue] == "open" and not missing_packages,
             "acceptance_verified": None,  # MUST be independently reviewed
-            "historical_out_of_order": (
+            "closed_with_open_sequence_context": (
                 issue_state[issue] == "closed" and bool(parents_open or prior_waves_open)
             ),
         })
@@ -126,7 +127,7 @@ def report(
         "active_wave": active_wave,
         "waves_closed": waves_closed,
         "ready_to_execute": [x["issue"] for x in entries if x["ready_to_execute"]],
-        "note": "PR merge alone never satisfies issue acceptance or project GO",
+        "note": "predecessor and wave state are advisory only; merged packages plus independently reviewed local acceptance are required; PR merge alone never satisfies acceptance or project GO",
         "issues": sorted(entries, key=lambda x: (x["wave"], x["issue"])),
     }
 
