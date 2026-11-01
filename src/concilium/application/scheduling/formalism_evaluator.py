@@ -288,4 +288,144 @@ def _productivity_status(
     return "PASS", observed, None
 
 
-def _as_fraction(value: Any, label: str) -> 
+def _as_fraction(value: Any, label: str) -> > Fraction:
+    if type(value) is Fraction:
+        return value
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be an exact rational string")
+    try:
+        return Fraction(value)
+    except (ValueError, ZeroDivisionError, OverflowError) as exc:
+        raise ValueError(f"{label} must be an exact rational string") from exc
+
+
+def _nature(value: Any) -> str:
+    return str(getattr(value, "value", value))
+
+
+def _financial_reconciliation_status(reconciliation: Any | None) -> tuple[GateStatus, dict[str, Any], str | None]:
+    """Replay persisted P20 JSON or the in-memory typed reconciliation exactly."""
+    if reconciliation is None:
+        return "UNKNOWN", {}, "P20 exact financial reconciliation is missing"
+
+    if isinstance(reconciliation, Mapping):
+        if reconciliation.get("schema") != "concilium.p20.financial-reconciliation.v1":
+            return "UNKNOWN", {}, "unsupported P20 persisted reconciliation schema"
+        postings = reconciliation.get("postings")
+        attribution = reconciliation.get("event_attribution")
+        weekly = reconciliation.get("weekly_balances")
+        weekly_categories = reconciliation.get("weekly_category_balances")
+        totals = reconciliation.get("totals")
+        if not all(isinstance(x, list) for x in (postings, attribution, weekly, weekly_categories)) or not isinstance(totals, Mapping):
+            return "UNKNOWN", {}, "P20 persisted reconciliation is missing postings, attribution or weekly evidence"
+        expected_rows: dict[tuple[str, ...], tuple[str, str, Fraction, str, str]] = {}
+        grouped: dict[tuple[str, str], Fraction] = {}
+        category_grouped: dict[tuple[str, str], Fraction] = {}
+        k = v = indirect = Fraction(0)
+        for index, raw in enumerate(postings):
+            if not isinstance(raw, Mapping):
+                return "FAIL", {}, f"P20 posting {index} is not an object"
+            raw_id = raw.get("event_id")
+            if not isinstance(raw_id, list) or not raw_id or any(not isinstance(x, str) or not x for x in raw_id):
+                return "FAIL", {}, f"P20 posting {index} has missing/invalid event identity"
+            event_id = tuple(raw_id)
+            if event_id in expected_rows:
+                return "FAIL", {}, "duplicate P20 financial event ownership"
+            nature = raw.get("nature")
+            category = raw.get("category")
+            source = raw.get("source")
+            week = raw.get("week")
+            if nature not in {"CONTRACTUAL_ACTIVE", "CONTRACTUAL_IDLE", "MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT", "CONSUMABLE_ACQUISITION", "INDIRECT", "INVENTORY_HOLDING"}:
+                return "FAIL", {}, f"P20 posting {index} has invalid nature"
+            if category not in {"MO", "EQ", "MAT", "COMB", "IND"}:
+                return "FAIL", {}, f"P20 posting {index} has invalid category"
+            if not isinstance(source, str) or not source.strip() or not isinstance(week, str) or not week.strip():
+                return "UNKNOWN", {}, f"P20 posting {index} lacks source/week provenance"
+            try:
+                amount = _as_fraction(raw.get("amount"), f"P20 posting {index} amount")
+            except ValueError as exc:
+                return "UNKNOWN", {}, str(exc)
+            if amount < 0:
+                return "FAIL", {}, f"P20 posting {index} has a negative amount"
+            expected_rows[event_id] = (nature, category, amount, source, week)
+            grouped[(week, nature)] = grouped.get((week, nature), Fraction(0)) + amount
+            category_grouped[(week, category)] = category_grouped.get((week, category), Fraction(0)) + amount
+            if nature in {"CONTRACTUAL_ACTIVE", "CONTRACTUAL_IDLE"}:
+                k += amount
+            elif nature == "CONSUMABLE_ACQUISITION":
+                v += amount
+            else:
+                indirect += amount
+
+        expected_totals = {
+            "contractual_k": k, "consumable_v": v, "direct": k + v,
+            "indirect": indirect, "total": k + v + indirect,
+        }
+        try:
+            observed_totals = {name: _as_fraction(totals.get(name), f"P20 total {name}") for name in expected_totals}
+        except ValueError as exc:
+            return "UNKNOWN", {}, str(exc)
+        if observed_totals != expected_totals:
+            return "FAIL", {k: str(v) for k, v in expected_totals.items()}, "P20 aggregate totals do not reconstruct from exclusive postings"
+
+        actual_rows: dict[tuple[str, ...], tuple[str, str, Fraction, str, str]] = {}
+        for index, raw in enumerate(attribution):
+            if not isinstance(raw, Mapping):
+                return "FAIL", {}, f"P20 event attribution {index} is not an object"
+            raw_id = raw.get("event_id")
+            if not isinstance(raw_id, list) or not raw_id or any(not isinstance(x, str) or not x for x in raw_id):
+                return "FAIL", {}, f"P20 event attribution {index} has invalid identity"
+            event_id = tuple(raw_id)
+            if event_id in actual_rows:
+                return "FAIL", {}, "duplicate P20 event attribution identity"
+            owner_scope = raw.get("owner_scope")
+            owner_id = raw.get("owner_id")
+            if owner_scope not in {"ACTIVITY", "INSTANCE", "GOOD", "SOURCE"} or not isinstance(owner_id, list) or not owner_id or any(not isinstance(x, str) or not x for x in owner_id):
+                return "UNKNOWN", {}, f"P20 event {event_id} has no valid owner attribution"
+            try:
+                amount = _as_fraction(raw.get("amount"), f"P20 attribution {index} amount")
+            except ValueError as exc:
+                return "UNKNOWN", {}, str(exc)
+            actual_rows[event_id] = (
+                str(raw.get("nature")), str(raw.get("category")), amount,
+                str(raw.get("source")), str(raw.get("week")),
+            )
+        if actual_rows != expected_rows:
+            return "FAIL", {"posting_count": len(expected_rows), "attribution_count": len(actual_rows)}, "P20 event attribution differs from exclusive postings"
+
+        weekly_seen: dict[str, tuple[Fraction, Fraction, Fraction]] = {}
+        for index, row in enumerate(weekly):
+            if not isinstance(row, Mapping) or not isinstance(row.get("week"), str):
+                return "FAIL", {}, f"P20 weekly balance {index} has no ISO week"
+            week = row["week"]
+            try:
+                values = tuple(_as_fraction(row.get(key), f"P20 weekly {week}/{key}") for key in ("contractual_k", "consumable_v", "indirect"))
+            except ValueError as exc:
+                return "UNKNOWN", {}, str(exc)
+            if week in weekly_seen:
+                return "FAIL", {}, f"duplicate P20 weekly balance {week}"
+            weekly_seen[week] = values
+        recomputed_weeks: dict[str, tuple[Fraction, Fraction, Fraction]] = {}
+        for week, _nature in grouped:
+            active = grouped.get((week, "CONTRACTUAL_ACTIVE"), Fraction(0))
+            idle = grouped.get((week, "CONTRACTUAL_IDLE"), Fraction(0))
+            consumables = grouped.get((week, "CONSUMABLE_ACQUISITION"), Fraction(0))
+            other = sum((grouped.get((week, nature), Fraction(0)) for nature in ("MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT", "INDIRECT", "INVENTORY_HOLDING")), Fraction(0))
+            recomputed_weeks[week] = (active + idle, consumables, other)
+        if weekly_seen != recomputed_weeks:
+            return "FAIL", {"observed_weeks": len(weekly_seen), "recomputed_weeks": len(recomputed_weeks)}, "P20 weekly balances do not reconstruct from postings"
+
+        weekly_category_seen: dict[tuple[str, str], Fraction] = {}
+        for index, row in enumerate(weekly_categories):
+            if not isinstance(row, Mapping) or not isinstance(row.get("week"), str) or not isinstance(row.get("category"), str):
+                return "FAIL", {}, f"P20 weekly category balance {index} is invalid"
+            key = (row["week"], row["category"])
+            if key in weekly_category_seen:
+                return "FAIL", {}, "duplicate P20 weekly category balance"
+            try:
+                weekly_category_seen[key] = _as_fraction(row.get("amount"), f"P20 weekly category {key}")
+            except ValueError as exc:
+                return "UNKNOWN", {}, str(exc)
+        if weekly_category_seen != category_grouped:
+            return "FAIL", {}, "P20 weekly category ledger does not reconstruct from postings"
+        return "PASS", {k: str(v) for k, v in expected_totals.items()} | {"posting_count": len(postings)}, None
