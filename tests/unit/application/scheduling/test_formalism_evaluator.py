@@ -184,6 +184,7 @@ def _runtime_evidence(envelope):
         "pool_summaries": [SimpleNamespace(
             contrato_id="contract-1", tipo_id="EQ-1",
             quantidade_contratada=2, semanas_contrato=5,
+            p16_contract_quantity=2, p16_contract_weeks=5, p16_resource_type="EQ-1",
             machine_weeks_disponiveis=10, machine_weeks_usados=2,
             machine_weeks_standby=2,
             p16_global_assignment={
@@ -262,6 +263,7 @@ def test_positive_standby_is_not_a_v3_failure_but_missing_bdi_and_negative_profi
     inputs["pool_summaries"] = [SimpleNamespace(
         contrato_id="contract-1", tipo_id="EQ-1",
         quantidade_contratada=10, semanas_contrato=2,
+        p16_contract_quantity=10, p16_contract_weeks=2, p16_resource_type="EQ-1",
         machine_weeks_disponiveis=20, machine_weeks_usados=4,
         machine_weeks_standby=6, p16_global_assignment=witness,
     )]
