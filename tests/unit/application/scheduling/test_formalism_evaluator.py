@@ -165,7 +165,10 @@ def _financial_reconciliation():
         postings=(line,), direct=F("60"), indirect=F("20"), total=F("80"),
     )
     week = SimpleNamespace(total=F("80"))
-    return SimpleNamespace(ledger=ledger, event_attribution=(attribution,), weeks=(week,))
+    return SimpleNamespace(
+        ledger=ledger, event_attribution=(attribution,), weeks=(week,),
+        holding_evidence_present=True,
+    )
 
 
 def _runtime_evidence(envelope):
@@ -188,7 +191,13 @@ def _runtime_evidence(envelope):
         )],
         "expected_activity_ids": ["A"],
         "financial_reconciliation": _financial_reconciliation(),
-        "pricing_diagnostics": SimpleNamespace(operational_price=F("100"), total_cost=F("80"), profit_amount=F("20")),
+        "pricing_diagnostics": SimpleNamespace(
+            operational_price=F("100"), total_cost=F("80"), profit_amount=F("20"),
+            inventory_scope_status="COMPLETE",
+            inventory_scope_source="inventory-fixture",
+            inventory_scope_reference_id="inventory-v1",
+            inventory_scope_fingerprint="d" * 64,
+        ),
         "pricing_gates": _pricing_gates(),
     }
 
@@ -286,6 +295,10 @@ def _persisted_pricing():
         "schema": "concilium.p21.pricing-diagnostics.v1",
         "operational_price": "100", "total_cost": "80", "profit_amount": "20",
         "operational_basis_fingerprint": "c" * 64,
+        "inventory_scope_status": "COMPLETE",
+        "inventory_scope_source": "inventory-fixture",
+        "inventory_scope_reference_id": "inventory-v1",
+        "inventory_scope_fingerprint": "d" * 64,
     }
 
 
@@ -383,3 +396,25 @@ def test_assumed_per_front_productivity_without_independent_calibration_is_unkno
     gates = {row.gate_id: row for row in result.gate_evidence}
     assert gates["V5"].status == "UNKNOWN"
     assert gates["PRODUCTIVITY_PROVENANCE"].status == "UNKNOWN"
+
+
+def test_missing_inventory_scope_prevents_financial_go():
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    inputs["pricing_diagnostics"] = SimpleNamespace(
+        operational_price=F("100"), total_cost=F("80"), profit_amount=F("20"),
+    )
+    result = evaluate_project_evidence(envelope, **inputs)
+    assert result.decision == "NOT_CERTIFIABLE"
+    gate = next(x for x in result.gate_evidence if x.gate_id == "FINANCIAL_COST_RECONCILIATION")
+    assert gate.status == "UNKNOWN"
+    assert "inventory scope" in (gate.reason or "")
+
+
+def test_explicit_no_inventory_scope_is_valid_without_p19_holding_journal():
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    inputs["financial_reconciliation"].holding_evidence_present = False
+    inputs["pricing_diagnostics"].inventory_scope_status = "NO_INVENTORY"
+    result = evaluate_project_evidence(envelope, **inputs)
+    assert result.decision == "GO"
