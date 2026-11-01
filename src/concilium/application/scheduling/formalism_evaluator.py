@@ -319,8 +319,44 @@ def _nature(value: Any) -> str:
     return str(getattr(value, "value", value))
 
 
-def _financial_reconciliation_status(reconciliation: Any | None) -> tuple[GateStatus, dict[str, Any], str | None]:
-    """Replay persisted P20 JSON or the in-memory typed reconciliation exactly."""
+def _inventory_scope_state(
+    inventory_scope: Mapping[str, Any] | None,
+    holding_evidence_present: bool | None,
+    posting_natures: Sequence[str],
+) -> tuple[GateStatus, dict[str, Any], str | None]:
+    if not isinstance(inventory_scope, Mapping):
+        return "UNKNOWN", {}, "P21 inventory scope declaration is missing"
+    status = inventory_scope.get("status")
+    source = inventory_scope.get("source")
+    reference = inventory_scope.get("reference_id")
+    fingerprint = inventory_scope.get("fingerprint")
+    observed = {
+        "status": status, "source": source,
+        "reference_id": reference, "fingerprint": fingerprint,
+        "holding_evidence_present": holding_evidence_present,
+    }
+    if status not in {"NO_INVENTORY", "COMPLETE"}:
+        return "UNKNOWN", observed, "inventory scope must explicitly be NO_INVENTORY or COMPLETE"
+    if any(not isinstance(value, str) or not value.strip() for value in (source, reference, fingerprint)):
+        return "UNKNOWN", observed, "inventory scope requires source, reference and fingerprint"
+    if type(holding_evidence_present) is not bool:
+        return "UNKNOWN", observed, "P20 did not record whether P19 holding evidence was supplied"
+    if status == "COMPLETE" and not holding_evidence_present:
+        return "UNKNOWN", observed, "COMPLETE inventory scope has no P19 holding journal witness"
+    if status == "NO_INVENTORY" and "INVENTORY_HOLDING" in posting_natures:
+        return "FAIL", observed, "NO_INVENTORY scope conflicts with P19 holding postings"
+    return "PASS", observed, None
+
+
+def _financial_reconciliation_status(
+    reconciliation: Any | None,
+    inventory_scope: Mapping[str, Any] | None,
+) -> tuple[GateStatus, dict[str, Any], str | None]:
+    """Replay persisted P20 JSON and inventory coverage exactly.
+
+    P20's PREVIEW_NOT_PROJECT_GO authority is not a certificate. P23 may consume
+    its journal only after exact replay and an explicit P21 inventory-scope contract.
+    """
     if reconciliation is None:
         return "UNKNOWN", {}, "P20 exact financial reconciliation is missing"
 
@@ -474,7 +510,17 @@ k}/{key}") for key in ("contractual_k", "consumable_v", "indirect"))
                 return "UNKNOWN", {}, str(exc)
         if weekly_category_seen != category_grouped:
             return "FAIL", {}, "P20 weekly category ledger does not reconstruct from postings"
-        return "PASS", {k: str(v) for k, v in expected_totals.items()} | {"posting_count": len(postings)}, None
+        inventory_status, inventory_observed, inventory_reason = _inventory_scope_state(
+            inventory_scope,
+            reconciliation.get("holding_evidence_present"),
+            [str(row.get("nature")) for row in postings if isinstance(row, Mapping)],
+        )
+        totals_observed = {k: str(v) for k, v in expected_totals.items()} | {
+            "posting_count": len(postings),
+        } | {"inventory_scope": inventory_observed}
+        if inventory_status != "PASS":
+            return inventory_status, totals_observed, inventory_reason
+        return "PASS", totals_observed, None
 
     ledger = getattr(reconciliation, "ledger", None)
     postings = getattr(ledger, "postings", None)
@@ -513,7 +559,19 @@ k}/{key}") for key in ("contractual_k", "consumable_v", "indirect"))
         weekly_total = sum((getattr(row, "total", Fraction(-1)) for row in weekly), Fraction())
         if weekly_total != total:
             return "FAIL", {"weekly_total": str(weekly_total), "ledger_total": str(total)}, "weekly P20 totals do not reconcile to the project ledger"
-    return "PASS", {"posting_count": len(postings), "direct": str(direct), "indirect": str(indirect), "total": str(total)}, None
+    inventory_status, inventory_observed, inventory_reason = _inventory_scope_state(
+        inventory_scope,
+        getattr(reconciliation, "holding_evidence_present", None),
+        [_nature(getattr(row, "nature", "")) for row in postings],
+    )
+    observed = {
+        "posting_count": len(postings), "direct": str(direct),
+        "indirect": str(indirect), "total": str(total),
+        "inventory_scope": inventory_observed,
+    }
+    if inventory_status != "PASS":
+        return inventory_status, observed, inventory_reason
+    return "PASS", observed, None
 
 
 def _pricing_status(
@@ -849,7 +907,15 @@ def build_formalism_gate_evidence(
     productivity_status, productivity_observed, productivity_reason = _productivity_status(
         productivity_witnesses, expected_activity_ids,
     )
-    finance_status, finance_observed, finance_reason = _financial_reconciliation_status(financial_reconciliation)
+    inventory_scope = {
+        "status": _read(pricing_diagnostics, "inventory_scope_status"),
+        "source": _read(pricing_diagnostics, "inventory_scope_source"),
+        "reference_id": _read(pricing_diagnostics, "inventory_scope_reference_id"),
+        "fingerprint": _read(pricing_diagnostics, "inventory_scope_fingerprint"),
+    }
+    finance_status, finance_observed, finance_reason = _financial_reconciliation_status(
+        financial_reconciliation, inventory_scope,
+    )
     finance_total = None
     if finance_status == "PASS":
         try:
