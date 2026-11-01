@@ -272,8 +272,8 @@ def formalism_certificate(
         )
         summary = certificate_summary(current)
 
-    rprint("[bold]Certificado formal — P23[/bold]")
-    rprint(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
+    typer.echo("Certificado formal — P23")
+    typer.echo(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
 
 
 def approve(
