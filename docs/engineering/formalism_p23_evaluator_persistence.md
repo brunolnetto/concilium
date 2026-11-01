@@ -22,7 +22,7 @@ A run is evaluated against eleven mandatory gates:
 
 - V1 — exact physical scope closure and weekly delivery/capacity evidence.
 - V2 — explicit, comparable regulatory BDI basis and floor.
-- V3 — standby machine-weeks strictly below available machine-weeks.
+- V3 — exact P16 weekly demand/presence/standby reconciliation: `presence = demand + standby`, `presence <= contracted units`, activity-demand tensor closes to aggregate demand, and active/standby machine-weeks close to Skill 05 summaries. Positive standby is allowed; unused capacity is not itself a violation.
 - V4 — positive operational price and positive reconciled total cost.
 - V5 — positive exact productivity rates with declared source and calibration provenance.
 - V6 — physical precedence/pool feasibility plus a bounded search whose entire declared start domain has been exhausted.
@@ -70,11 +70,15 @@ The historical decision remains in the immutable record for audit, but an invali
 
 ## Consumers
 
-The service exposes one shared certificate_presentation_payload projection for REST/MCP/UI adapters. It reports project_go=true only when a stored certificate is CURRENT and the effective decision is GO. Wiring every existing API/MCP/UI presentation route to this projection remains a P23 acceptance item; this implementation package supplies the common contract but does not claim that all existing routes have been migrated.
+The common `certificate_presentation_payload` / `certificate_summary` projections report `project_go=true` only for a persisted certificate whose current source fingerprints validate and whose effective decision is GO.
 
-P24 golden and adversarial E2E tests must consume the persisted P23 evaluation and its fingerprints, and report first failing phase without inventing a second project GO oracle.
+- REST: `PipelineService.get_run` includes `formalism_certificate` and revalidates the immutable run record before returning it; `RunProjectResponse` exposes that field.
+- MCP: the read-only `consultar_certificado_formalismo(project_id, run_id)` tool uses the same service functions and the same pinned run catalog.
+- UI: dashboard-level presentation of the gate matrix is still pending. UI must consume this same projection; it must not independently infer GO from legacy status or price color.
 
-P26 traceability rows and dashboards must link each normative clause/gate to the P23 gate ID, source fingerprints, artifact reference, and current persisted evaluation state. Only a CURRENT P23 GO can count as certified; missing/invalidated records remain uncertified.
+P24's consumer-contract tests now reload a persisted RFP GO, verify the same projection after restart, and prove that a post-issuance schedule mutation changes the effective result to INVALIDATED / NOT_CERTIFIABLE. These are contract tests, not yet the full multi-skill golden E2E scenarios or numeric differential oracle suite required to close #24.
+
+P26's consumer-contract test verifies that each gate row carries its immutable source fingerprints and artifact reference plus the persisted record fingerprint. The full clause/equation-to-code/test inventory, semantic drift checks, and dashboard coverage remain open work for #26. Only a CURRENT P23 GO can count as certified; missing/invalidated records remain uncertified.
 
 ## Validation status and limitations
 
@@ -85,6 +89,6 @@ The implementation currently has local tests for:
 - P20 exact event attribution, duplicate ownership and P21/P20 cost identity;
 - persistence/reload after restart, idempotent writes, record checksum tampering, source mutation, source omission, and formalism/oracle hash mutation.
 
-Local execution on the development snapshot: **32 passed**; Python compileall passed. This is not the exact PR-head WSL validation. Ruff/ty and the full project suite have not yet been run for this branch. The PR must remain unmerged until exact-head WSL validation is recorded.
+Local execution on the earlier development snapshot: **32 passed**; Python compileall passed. The additional P23 consumer-contract and deterministic-set-serialization tests have not yet been run on the exact current PR head. Exact-head WSL validation, Ruff, ty and the full relevant suite remain pending. The latest hosted CI run completed with failure conclusions but exposed zero steps for each failed job and no downloadable logs; that is insufficient to attribute the failure to either code or runner/account infrastructure. Do not merge until exact-head validation is recorded.
 
-P23 issue acceptance remains open. In particular, a complete project-level golden RFP with authoritative productivity/calibration and full search completeness, plus wiring of the shared presentation projection to every API/MCP/UI surface, remain to be demonstrated. P24 and P26 remain consumers of this contract, not substitutes for it. P25 CI/branch-protection governance remains an independent issue and is not a prerequisite to local evaluation.
+P23 issue acceptance remains open. The pipeline now issues and persists a record after run completion; REST run reads and the explicit MCP certificate tool revalidate the current source fingerprints. UI presentation, a complete project-level golden RFP with authoritative productivity/calibration and exhausted bounded-search evidence, and the full end-to-end validation remain to be demonstrated. P24 and P26 have contract-consumer tests but still own their full E2E and traceability/anti-drift acceptance. P25 CI/branch-protection governance remains independent and is not a hard prerequisite.
