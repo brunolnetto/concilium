@@ -398,8 +398,14 @@ def build_pool_summaries(canonical: CanonicalModel) -> tuple[dict[str, Any], ...
         contract = contracts.get(contract_id)
         if contract is None:
             row["p16_global_assignment"] = None
+            row["p16_contract_quantity"] = None
+            row["p16_contract_weeks"] = None
+            row["p16_resource_type"] = None
         else:
             row["p16_global_assignment"] = _dump(contract.p16_global_assignment)
+            row["p16_contract_quantity"] = contract.quantidade_contratada
+            row["p16_contract_weeks"] = contract.semanas_contrato
+            row["p16_resource_type"] = contract.tipo_id
         summaries.append(row)
     return tuple(summaries)
 
