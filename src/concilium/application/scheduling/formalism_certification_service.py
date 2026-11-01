@@ -34,6 +34,241 @@ from concilium.infrastructure.storage.formalism_certificate_store import (
 )
 
 
+# Pinned content identities of the normative specifications and independent
+# reference implementations/vectors. #26 owns the drift check.
+_FORMALISM_REFERENCE = (
+    "long:f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5;"
+    "resumido:7cc825e9af2de9d84af7fa2c2036f164db834cf5"
+)
+_ORACLE_REFERENCE = (
+    "physical-reference:570e73eef9ef3e74f2249d263e9b652035966a98;"
+    "economic-reference:c3fd324ba86c89ef849b9dd6b0f07aa1814a3eed;"
+    "physical-vector:dda8e8117de996856a14ffa47e848344370d8b06;"
+    "economic-vector:cef850620b8d2267228e8321cbbf923593e9f891;"
+    "calendar-oracle:31fd9174ec88968da2130e1a0ceb93351df65ff5"
+)
+FORMALISM_SHA256 = hashlib.sha256(_FORMALISM_REFERENCE.encode("ascii")).hexdigest()
+ORACLE_SHA256 = hashlib.sha256(_ORACLE_REFERENCE.encode("ascii")).hexdigest()
+
+
+def _catalog_items(resolved_catalog: Mapping[str, Any] | None) -> dict[str, list[dict[str, Any]]] | None:
+    """Normalize the immutable per-run catalog payload; never fall back to master."""
+    if not isinstance(resolved_catalog, Mapping):
+        return None
+    items = resolved_catalog.get("items", resolved_catalog)
+    if not isinstance(items, Mapping):
+        return None
+    normalized: dict[str, list[dict[str, Any]]] = {}
+    for key in ("cpus", "insumos", "producoes"):
+        value = items.get(key)
+        if not isinstance(value, list) or any(not isinstance(row, Mapping) for row in value):
+            return None
+        normalized[key] = [dict(row) for row in value]
+    return normalized
+
+
+def load_resolved_catalog_snapshot(project: Any, version: str) -> dict[str, Any] | None:
+    """Read only the run-pinned resolved_catalog.json snapshot."""
+    try:
+        payload = project.read_json(f"{version}/resolved_catalog.json", None)
+    except Exception:
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    normalized = _catalog_items(payload)
+    if normalized is None:
+        return None
+    return {
+        **normalized,
+        "catalogo_base_origem": payload.get("catalogo_base_origem"),
+        "catalogo_base_hash": payload.get("catalogo_base_hash"),
+        "resolution_trace": payload.get("resolution_trace"),
+        "catalogo_id": payload.get("catalogo_id"),
+        "jurisdicao_id": payload.get("jurisdicao_id"),
+        "run_id": payload.get("run_id"),
+        "version": payload.get("version"),
+    }
+
+
+def _finite_rate_text(value: object) -> str | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        if not math.isfinite(float(value)) or value <= 0:
+            return None
+    except (OverflowError, ValueError):
+        return None
+    return str(value)
+
+
+def build_productivity_rate_witnesses(
+    canonical: CanonicalModel,
+    resolved_catalog: Mapping[str, Any] | None,
+) -> tuple[ProductivityRateWitness, ...] | None:
+    """Bind each EAP item to final weekly F(m) cells and its versioned source.
+
+    A calibration reference is emitted only for graph-backed, versioned production
+    records with an explicit origin type and quality sample record. Legacy,
+    estimated, assumed and fallback rates remain unverified.
+    """
+    catalog = _catalog_items(resolved_catalog)
+    schedule = canonical.cronograma
+    if catalog is None or schedule is None or not schedule.scheduled_activities:
+        return None
+
+    cpu_by_id = {
+        row.get("codigo"): row for row in catalog["cpus"]
+        if isinstance(row.get("codigo"), str) and row.get("codigo")
+    }
+    production_by_id = {
+        row.get("id"): row for row in catalog["producoes"]
+        if isinstance(row.get("id"), str) and row.get("id")
+    }
+    scheduled_by_item = {row.activity_id: row for row in schedule.scheduled_activities}
+    if len(scheduled_by_item) != len(schedule.scheduled_activities):
+        return None
+    if set(scheduled_by_item) != {item.item_id for item in canonical.eap}:
+        return None
+
+    witnesses: list[ProductivityRateWitness] = []
+    for item in canonical.eap:
+        scheduled = scheduled_by_item[item.item_id]
+        cells = getattr(scheduled, "distribuicao_semanal", None) or {}
+        active = {
+            week: cell for week, cell in cells.items()
+            if cell.num_equipes > 0
+            and cell.fator_clima * cell.fator_calendario * cell.fator_jornada > 0
+        }
+        if not active:
+            return None
+
+        weekly_rates: dict[str, str] = {}
+        origins: set[str] = set()
+        for week, cell in sorted(active.items()):
+            rate = _finite_rate_text(cell.produtividade_fisica_horaria)
+            if rate is None:
+                return None
+            weekly_rates[week] = rate
+            origins.add(str(cell.origem_produtividade))
+        origin = next(iter(origins)) if len(origins) == 1 else "NAO_DECLARADA"
+        if origin not in {
+            "GRAFO_FLUXO", "GRAFO_ELEMENTOS",
+            "TAXA_POR_FRENTE_ASSUMIDA", "FALLBACK_ARBITRARIO", "NAO_DECLARADA",
+        }:
+            origin = "NAO_DECLARADA"
+
+        cpu = cpu_by_id.get(item.cpu_id)
+        production_id = cpu.get("producao_id_ref") if isinstance(cpu, Mapping) else None
+        production = production_by_id.get(production_id)
+        source_reference: str | None = None
+        calibration_reference: str | None = None
+        if isinstance(production, Mapping):
+            origin_data = production.get("origem")
+            audit_data = production.get("auditoria")
+            quality = production.get("qualidade")
+            graph = production.get("grafo_sinergia")
+            if isinstance(origin_data, Mapping):
+                source_id = origin_data.get("fonte_id")
+                source_type = origin_data.get("tipo")
+                source_date = origin_data.get("data_calibracao")
+                source_ref = origin_data.get("referencia")
+                if all(isinstance(value, str) and value.strip() for value in (
+                    source_id, source_type, source_date, source_ref,
+                )):
+                    source_reference = f"{source_id}|{source_type}|{source_date}|{source_ref}"
+            if (
+                origin in {"GRAFO_FLUXO", "GRAFO_ELEMENTOS"}
+                and isinstance(graph, Mapping) and bool(graph)
+                and isinstance(audit_data, Mapping)
+                and isinstance(audit_data.get("versao"), str)
+                and audit_data.get("versao", "").strip()
+                and isinstance(quality, Mapping)
+                and type(quality.get("quantidade_amostras")) is int
+                and quality.get("quantidade_amostras", 0) > 0
+                and type(quality.get("confianca_pct")) is int
+                and quality.get("confianca_pct", 0) > 0
+                and isinstance(origin_data, Mapping)
+                and origin_data.get("tipo") in {"calibrado_contra_obra_real", "tabela_referencia"}
+                and source_reference
+            ):
+                calibration_payload = {
+                    "production_id": production_id,
+                    "version": audit_data["versao"],
+                    "production": dict(production),
+                }
+                calibration_bytes = json.dumps(
+                    _dump(calibration_payload), sort_keys=True,
+                    separators=(",", ":"), ensure_ascii=False, allow_nan=False,
+                ).encode("utf-8")
+                calibration_reference = (
+                    f"production:{production_id}:version:{audit_data['versao']}:"
+                    f"sha256:{hashlib.sha256(calibration_bytes).hexdigest()}"
+                )
+
+        witnesses.append(ProductivityRateWitness(
+            activity_id=item.item_id,
+            hourly_rate=min(weekly_rates.values(), key=lambda value: Fraction(value)),
+            weekly_rates=weekly_rates,
+            origin=origin,
+            source_reference=source_reference,
+            calibration_reference=calibration_reference,
+        ))
+    return tuple(witnesses)
+
+
+def build_solver_context(
+    run: Mapping[str, Any],
+    version: str,
+    canonical: CanonicalModel,
+) -> dict[str, Any] | None:
+    """Return exact run-scoped inputs and P15 search proof."""
+    if not version or not isinstance(run.get("run_id"), str):
+        return None
+    overrides = run.get("skill_inputs_override")
+    if not isinstance(overrides, Mapping):
+        return None
+    return {
+        "run_id": run.get("run_id"),
+        "version": version,
+        "base_version": run.get("base_version"),
+        "procurement_intent": run.get("procurement_intent"),
+        "catalogo_base_origem": run.get("catalogo_base_origem"),
+        "catalogo_base_hash": run.get("catalogo_base_hash"),
+        "use_strict_catalog_baseline": run.get("use_strict_catalog_baseline"),
+        "use_mobilizacao_policy": run.get("use_mobilizacao_policy"),
+        "skill_inputs_override": dict(overrides),
+        "cronograma_algorithm": (
+            canonical.cronograma.algorithm if canonical.cronograma is not None else None
+        ),
+        "physical_resolution": _dump(canonical.p15_physical_resolution),
+        "pipeline_integrity": canonical.pipeline_integridade,
+        "pipeline_blocked_from": list(canonical.pipeline_blocked_from),
+    }
+
+
+def certificate_scope_for_run(run: Mapping[str, Any]) -> ExecutionScope:
+    intent = str(run.get("procurement_intent") or "rfi").strip().upper()
+    return "RFP" if intent == "RFP" else "RFI" if intent == "RFI" else "PREVIEW"
+
+
+def certificate_summary(result: CertificateReadResult | None) -> dict[str, Any]:
+    """Expose current/historical decision plus per-gate evidence to all consumers."""
+    payload = certificate_presentation_payload(result)
+    if result is None:
+        return {
+            **payload,
+            "scope": None,
+            "reasons": ["formalism certificate has not been evaluated for this run"],
+            "gates": [],
+        }
+    return {
+        **payload,
+        "scope": result.evaluation.scope,
+        "reasons": list(result.evaluation.reasons),
+        "gates": [gate.model_dump(mode="json") for gate in result.evaluation.gate_evidence],
+    }
+
+
 def _dump(value: Any) -> Any:
     """Convert source snapshots to deterministic JSON-safe primitives."""
     if value is None:
