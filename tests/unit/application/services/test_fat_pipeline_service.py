@@ -341,6 +341,109 @@ class TestGetRun:
         assert result["status"] == "OK"
         assert len(progress_called) == 1
 
+    def test_get_run_exposes_shared_revalidated_formalism_certificate(self):
+        svc, project, audit, runtime = _make_svc()
+        run_data = {
+            "run_id": "r-p23",
+            "status": "OK",
+            "version": "v9",
+            "formalism_certificate": {
+                "evaluation_sha256": "a" * 64,
+                "recorded_decision": "GO",
+            },
+            "invocation_line_offset": 0,
+            "skills_log": [],
+            "output_files": [],
+            "summary": {},
+        }
+        project.read_json.return_value = [run_data]
+        project.read_lines.return_value = []
+        canonical = MagicMock()
+        project.load_canonical.return_value = canonical
+        expected_summary = {
+            "status": "CURRENT",
+            "recorded_decision": "GO",
+            "effective_decision": "GO",
+            "project_go": True,
+            "invalidated_sources": [],
+            "gates": [],
+        }
+
+        with (
+            patch(
+                "concilium.application.services.pipeline_service.load_resolved_catalog_snapshot",
+                return_value={"cpus": [], "insumos": [], "producoes": []},
+            ) as load_catalog,
+            patch(
+                "concilium.application.services.pipeline_service.build_productivity_rate_witnesses",
+                return_value=(),
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.build_solver_context",
+                return_value={"run_id": "r-p23", "version": "v9"},
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.read_current_project_certificate",
+                return_value=MagicMock(),
+            ) as read_certificate,
+            patch(
+                "concilium.application.services.pipeline_service.certificate_summary",
+                return_value=expected_summary,
+            ),
+        ):
+            result = svc.get_run("proj-test", "r-p23")
+
+        assert result["formalism_certificate"] == expected_summary
+        load_catalog.assert_called_once_with(project, "v9", "r-p23")
+        read_certificate.assert_called_once()
+
+    def test_get_run_never_returns_historical_go_when_revalidation_fails(self):
+        svc, project, audit, runtime = _make_svc()
+        run_data = {
+            "run_id": "r-stale",
+            "status": "OK",
+            "version": "v3",
+            "formalism_certificate": {
+                "evaluation_sha256": "b" * 64,
+                "recorded_decision": "GO",
+                "scope": "RFP",
+            },
+            "invocation_line_offset": 0,
+            "skills_log": [],
+            "output_files": [],
+            "summary": {},
+        }
+        project.read_json.return_value = [run_data]
+        project.read_lines.return_value = []
+        project.load_canonical.return_value = MagicMock()
+
+        with (
+            patch(
+                "concilium.application.services.pipeline_service.load_resolved_catalog_snapshot",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.build_productivity_rate_witnesses",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.build_solver_context",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.read_current_project_certificate",
+                side_effect=ValueError("source fingerprint changed"),
+            ),
+        ):
+            result = svc.get_run("proj-test", "r-stale")
+
+        certificate = result["formalism_certificate"]
+        assert certificate["status"] == "INVALIDATED"
+        assert certificate["recorded_decision"] == "GO"
+        assert certificate["effective_decision"] == "NOT_CERTIFIABLE"
+        assert certificate["project_go"] is False
+        assert certificate["invalidated_sources"] == ["read_validation"]
+
     def test_get_run_returns_all_expected_fields(self):
         svc, project, audit, runtime = _make_svc()
         run_data = {

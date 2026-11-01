@@ -41,6 +41,7 @@ class Skill04PhysicalResolution:
     reason: str
     violation_details: tuple[str, ...] = ()
     complete_search: bool | None = None
+    audit_status: Literal["PASS", "FAIL", "UNKNOWN"] | None = None
 
 
 def _explicit_physical_pool(
@@ -357,6 +358,7 @@ def resolve_skill04_physical_schedule(
             reason,
             violations,
             resolution.complete_search,
+            audit_status=resolution.last_audit.status if resolution.last_audit else None,
         )
 
     physical_by_item = {activity.item_id: activity for activity in resolution.activities}
@@ -430,7 +432,7 @@ def resolve_skill04_physical_schedule(
         return Skill04PhysicalResolution(
             "FAIL", selected, rematerialized, rematerialized_fallback,
             resolution.attempts, f"post-rematerialization physical audit failed: {exc}",
-            (), resolution.complete_search,
+            (), resolution.complete_search, audit_status="FAIL",
         )
 
     if audit.status != "PASS":
@@ -443,6 +445,7 @@ def resolve_skill04_physical_schedule(
             resolution.attempts, "post-rematerialization Skill 04/05 audit did not PASS",
             violations,
             resolution.complete_search,
+            audit_status=audit.status,
         )
 
     # The initial AUTO pass may have reported an under-delivery or Q-precedence
@@ -501,5 +504,5 @@ def resolve_skill04_physical_schedule(
         "PASS", selected, rematerialized, rematerialized_fallback,
         resolution.attempts,
         "bounded exact physical feasibility witness",
-        (), resolution.complete_search,
+        (), resolution.complete_search, audit_status=audit.status,
     )

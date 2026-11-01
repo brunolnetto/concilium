@@ -21,6 +21,7 @@ from typing import Any
 
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
+from concilium.domain.models.formalism_certificate import fingerprint_source
 
 from ._skill_helpers import _assembly as _mod_assembly  # ty: ignore[unresolved-import]  # noqa: F401 — test compat
 from ._skill_helpers import _calendario as _mod_calendario  # ty: ignore[unresolved-import]
@@ -102,6 +103,7 @@ def run_cronograma(
 ) -> SkillResult:
     """Gera cronograma semanal unificado com agregacao mensal. Modo: manual ou automatico."""
     validacoes: list[ValidacaoItem] = []
+    p15_physical_resolution: dict[str, Any] | None = None
     catalogo = catalogo or {}
 
     certification_intent = inputs.get("certification_intent", "PREVIEW")
@@ -243,6 +245,16 @@ def run_cronograma(
             calendar_factor_weekly=fator_calendario_semanal,
             validacoes=validacoes,
         )
+        p15_physical_resolution = {
+            "schema": "concilium.p15.physical-resolution.v1",
+            "status": physical_resolution.status,
+            "audit_status": physical_resolution.audit_status,
+            "attempts": physical_resolution.attempts,
+            "complete_search": physical_resolution.complete_search,
+            "reason": physical_resolution.reason,
+            "violation_details": list(physical_resolution.violation_details),
+            "schedule_sha256": None,
+        }
         if physical_resolution.status == "PASS":
             schedule_selected = physical_resolution.schedule_selected
             distribuicao_por_item = physical_resolution.distribution_by_item
@@ -264,7 +276,10 @@ def run_cronograma(
                     ),
                 )
             )
-            return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+            rejected = _invalidate_rejected_schedule(canonical_in).model_copy(
+                update={"p15_physical_resolution": p15_physical_resolution}
+            )
+            return SkillResult(rejected, validacoes)
         elif physical_resolution.status == "FAIL":
             validacoes.append(
                 ValidacaoItem(
@@ -286,7 +301,10 @@ def run_cronograma(
                         mensagem=detail,
                     )
                 )
-            return SkillResult(_invalidate_rejected_schedule(canonical_in), validacoes)
+            rejected = _invalidate_rejected_schedule(canonical_in).model_copy(
+                update={"p15_physical_resolution": p15_physical_resolution}
+            )
+            return SkillResult(rejected, validacoes)
 
 
     if failed:
@@ -351,6 +369,19 @@ def run_cronograma(
                     *(canonical_in.constraint_violations or []),
                     *pool_violations,
                 ],
+                "p15_physical_resolution": {
+                    "schema": "concilium.p15.physical-resolution.v1",
+                    "status": "FAIL",
+                    "audit_status": "FAIL",
+                    "attempts": (p15_physical_resolution or {}).get("attempts", 0),
+                    "complete_search": (p15_physical_resolution or {}).get("complete_search"),
+                    "reason": "post-materialization resource-pool violation",
+                    "violation_details": [
+                        f"V6_POOL_OVERBOOKED:{item.codigo}:{item.mensagem}"
+                        for item in pool_violations
+                    ],
+                    "schedule_sha256": None,
+                },
             }
         )
         return SkillResult(blocked, validacoes)
@@ -365,6 +396,13 @@ def run_cronograma(
     intervalos, analise_campanhas = _build_intervalos_and_campanhas(
         canonical_in, cronograma_out, scheduled_activities_out, validacoes
     )
+    if p15_physical_resolution and p15_physical_resolution.get("status") == "PASS":
+        p15_physical_resolution = {
+            **p15_physical_resolution,
+            "schedule_sha256": fingerprint_source(
+                "schedule", {"cronograma": cronograma_out.model_dump(mode="json")}
+            ),
+        }
 
     mob_schedule = _run_cronograma_infer_mob_schedule(canonical_in, validacoes)
 
@@ -384,6 +422,7 @@ def run_cronograma(
         **stale_financials,
         "cronograma": cronograma_out,
         "intervalos_atividade": intervalos,
+        "p15_physical_resolution": p15_physical_resolution,
         "fator_calendario_semanal": fator_calendario_semanal,
         "calendario_operacional": calendario_operacional,
         "constraint_violations": pool_violations if pool_violations else canonical_in.constraint_violations,

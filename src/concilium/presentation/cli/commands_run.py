@@ -199,6 +199,83 @@ def _approve_execute_and_log(
 
 
 @app.command()
+@app.command("certificate")
+def formalism_certificate(
+    run_id: str = typer.Argument(..., help="ID do run retornado por run project."),
+    projeto: str = typer.Option(..., "--project", "-p", help="Nome ou UUID do projeto."),
+) -> None:
+    """Consulta o certificado GO/NOGO persistido e revalida os fingerprints atuais."""
+    from concilium.application.scheduling.formalism_certification_service import (
+        FORMALISM_SHA256,
+        ORACLE_SHA256,
+        build_productivity_rate_witnesses,
+        build_solver_context,
+        certificate_summary,
+        load_resolved_catalog_snapshot,
+        read_current_project_certificate,
+    )
+    from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
+    project = resolve_project(projeto)
+    runs = project.read_json(DEFAULT_PROJECT_FILES.runs, [])
+    if not isinstance(runs, list):
+        rprint("[yellow]Registro de runs indisponível.[/yellow]")
+        raise typer.Exit(1)
+    run_record = next(
+        (
+            row for row in runs
+            if isinstance(row, dict) and row.get("run_id") == run_id
+        ),
+        None,
+    )
+    if run_record is None:
+        rprint(f"[red]Run '{run_id}' não encontrado.[/red]")
+        raise typer.Exit(1)
+
+    version = run_record.get("version")
+    certificate = run_record.get("formalism_certificate")
+    evaluation_sha256 = (
+        certificate.get("evaluation_sha256")
+        if isinstance(certificate, dict) else None
+    )
+    if not isinstance(version, str) or not isinstance(evaluation_sha256, str):
+        summary = {
+            "status": "NOT_EVALUATED",
+            "recorded_decision": None,
+            "effective_decision": "NOT_CERTIFIABLE",
+            "project_go": False,
+            "scope": None,
+            "reasons": ["este run ainda não possui avaliação formal persistida"],
+            "gates": [],
+            "invalidated_sources": [],
+        }
+    else:
+        canonical = project.load_canonical(version)
+        if canonical is None:
+            rprint(f"[red]Canônico da versão '{version}' não encontrado.[/red]")
+            raise typer.Exit(1)
+        resolved_catalog = load_resolved_catalog_snapshot(project, version, run_id)
+        productivity_witnesses = build_productivity_rate_witnesses(
+            canonical, resolved_catalog,
+        )
+        solver_context = build_solver_context(run_record, version, canonical)
+        current = read_current_project_certificate(
+            project,
+            run_id=run_id,
+            evaluation_sha256=evaluation_sha256,
+            canonical=canonical,
+            resolved_catalog=resolved_catalog,
+            productivity_witnesses=productivity_witnesses,
+            solver_context=solver_context,
+            current_formalism_sha256=FORMALISM_SHA256,
+            current_oracle_sha256=ORACLE_SHA256,
+        )
+        summary = certificate_summary(current)
+
+    typer.echo("Certificado formal — P23")
+    typer.echo(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
+
+
 def approve(
     arg: str = typer.Argument(..., help="projeto ou projeto@vN"),
     papel: str = typer.Option(..., "--as", help="Papel do aprovador (ex.: eng_senior, diretor)."),
