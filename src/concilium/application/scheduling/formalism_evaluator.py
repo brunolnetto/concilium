@@ -285,12 +285,16 @@ def _productivity_status(
             "source_reference": row.source_reference,
             "calibration_reference": row.calibration_reference,
         }
-        if row.origin in {"FALLBACK_ARBITRARIO", "TAXA_POR_FRENTE_ASSUMIDA"}:
-            failures.append(f"{activity_id}: fallback/assumed productivity is not certifiable")
+        if rate <= 0:
+            failures.append(f"{activity_id}: hourly productivity must be > 0 (observed {row.hourly_rate})")
+        elif row.origin == "FALLBACK_ARBITRARIO":
+            failures.append(f"{activity_id}: arbitrary preview fallback is never certifiable")
+        elif row.origin == "TAXA_POR_FRENTE_ASSUMIDA":
+            unknowns.append(
+                f"{activity_id}: assumed per-front rate has no independently verified calibration artifact"
+            )
         elif row.origin == "NAO_DECLARADA" or not row.source_reference:
             unknowns.append(f"{activity_id}: productivity origin/source is not declared")
-        elif rate <= 0:
-            failures.append(f"{activity_id}: hourly productivity must be > 0 (observed {row.hourly_rate})")
         elif not row.calibration_reference:
             unknowns.append(f"{activity_id}: no versioned calibration/source reference")
     if failures:
