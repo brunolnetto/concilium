@@ -299,6 +299,7 @@ def test_v3_rejects_forged_weekly_standby_identity_and_missing_p16_witness() -> 
     inputs["pool_summaries"] = [SimpleNamespace(
         contrato_id="contract-1", tipo_id="EQ-1",
         quantidade_contratada=10, semanas_contrato=2,
+        p16_contract_quantity=10, p16_contract_weeks=2, p16_resource_type="EQ-1",
         machine_weeks_disponiveis=20, machine_weeks_usados=4,
         machine_weeks_standby=5, p16_global_assignment=witness,
     )]
@@ -310,6 +311,7 @@ def test_v3_rejects_forged_weekly_standby_identity_and_missing_p16_witness() -> 
     inputs["pool_summaries"] = [SimpleNamespace(
         contrato_id="contract-1", tipo_id="EQ-1",
         quantidade_contratada=10, semanas_contrato=2,
+        p16_contract_quantity=10, p16_contract_weeks=2, p16_resource_type="EQ-1",
         machine_weeks_disponiveis=20, machine_weeks_usados=4,
         machine_weeks_standby=6,
     )]
