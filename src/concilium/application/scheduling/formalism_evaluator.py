@@ -275,6 +275,9 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
         summary_standby = _read(row, "machine_weeks_standby")
         contracted = _read(row, "quantidade_contratada")
         contract_weeks = _read(row, "semanas_contrato")
+        p16_quantity = _read(row, "p16_contract_quantity")
+        p16_weeks = _read(row, "p16_contract_weeks")
+        p16_resource_type = _read(row, "p16_resource_type")
         witness = _read(row, "p16_global_assignment")
 
         if not isinstance(contract_id, str) or not contract_id.strip() or contract_id in seen_contracts:
@@ -284,6 +287,19 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
             return "UNKNOWN", observed, f"{contract_id}: resource type identity is missing"
         if any(type(value) is not int or value <= 0 for value in (available, contracted, contract_weeks)):
             return "UNKNOWN", observed, f"{contract_id}: invalid or absent contractual machine-week denominator"
+        if type(p16_quantity) is not int or type(p16_weeks) is not int or not isinstance(p16_resource_type, str):
+            unknowns.append(f"{contract_id}: typed canonical P16 contract metadata is unavailable")
+            continue
+        if (
+            contracted != p16_quantity
+            or contract_weeks != p16_weeks
+            or resource_type != p16_resource_type
+        ):
+            violations.append(
+                f"{contract_id}: utilization summary quantity/weeks/resource type differs "
+                "from the canonical RecursoContrato"
+            )
+            continue
         if available != contracted * contract_weeks:
             violations.append(
                 f"{contract_id}: available machine-weeks {available} != "
@@ -322,9 +338,10 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
             or len(demand) != len(weeks)
             or len(presence) != len(weeks)
             or len(standby) != len(weeks)
+            or len(weeks) != p16_weeks
             or not isinstance(demand_by_activity, Mapping) or not demand_by_activity
         ):
-            unknowns.append(f"{contract_id}: P16 witness lacks complete weekly demand/presence/standby vectors")
+            unknowns.append(f"{contract_id}: P16 witness lacks complete weekly demand/presence/standby vectors or disagrees with canonical contract duration")
             continue
 
         vectors_valid = True
