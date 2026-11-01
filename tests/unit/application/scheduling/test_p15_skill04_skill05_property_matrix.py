@@ -20,6 +20,7 @@ WEEKS = (
     "2026-W03",
     "2026-W04",
     "2026-W05",
+    "2026-W06",
 )
 SKILL05_TEAM_RESOURCE = "EQUIPE-COMP-P15-MATRIX"
 
@@ -96,12 +97,14 @@ def _patch_skill04_materializer(monkeypatch: pytest.MonkeyPatch) -> None:
     def distribution_for(scheduled, item):
         start = scheduled.start_week
         if item.item_id == "A":
-            if start + 1 >= len(WEEKS):
+            if start + 2 >= len(WEEKS):
                 return {}, 0.0
-            # A is physically idle in W01; Q is delivered only in W02.
+            # A is physically idle in W01, reaches theta=0.5 in W02,
+            # and closes Q only in W03.
             return {
                 WEEKS[start]: _cell(0.0, 0.0, 0.0, 1, 0.0),
-                WEEKS[start + 1]: _cell(1.0, 1.0, 1.0, 1, 1.0),
+                WEEKS[start + 1]: _cell(0.5, 0.5, 0.5, 1, 0.5),
+                WEEKS[start + 2]: _cell(0.5, 1.0, 0.5, 1, 1.0),
             }, 1.0
 
         if start + 1 >= len(WEEKS):
@@ -211,18 +214,19 @@ def test_auto_q_precedence_never_releases_from_a_zero_production_week(
     successor = _scheduled_by_item(result, "B")
     assert predecessor.distribuicao_semanal[WEEKS[0]].qtd_executada == 0.0
     assert predecessor.distribuicao_semanal[WEEKS[0]].qtd_acumulada == 0.0
-    assert predecessor.distribuicao_semanal[WEEKS[1]].qtd_executada == 1.0
-    # A finishes Q in W02. FS release is the following boundary, W03.
-    assert successor.start_week == 2
-    assert tuple(successor.distribuicao_semanal) == WEEKS[2:4]
+    assert predecessor.distribuicao_semanal[WEEKS[1]].qtd_executada == 0.5
+    assert predecessor.distribuicao_semanal[WEEKS[2]].qtd_executada == 0.5
+    # theta=1 is reached only in W03; FS release is the W04 boundary.
+    assert successor.start_week == 3
+    assert tuple(successor.distribuicao_semanal) == WEEKS[3:5]
 
 
 @pytest.mark.parametrize(
     ("threshold", "lag", "expected_start"),
     [
         (0.5, 0, 2),
-        (1.0, 0, 2),
-        (1.0, 1, 3),
+        (1.0, 0, 3),
+        (1.0, 1, 4),
     ],
 )
 def test_resolved_skill04_calendar_drives_skill05_weekly_pool_demand(
