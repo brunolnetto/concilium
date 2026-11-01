@@ -182,11 +182,23 @@ def gate_evidence_from_status(
     tolerance: str | None = None,
     reason: str | None = None,
 ) -> GateEvidence:
-    """Bind a verifier status to exact source digests from the envelope."""
+    """Bind a verifier status to exact source digests from the envelope.
+
+    A positive verifier result is automatically downgraded when one of its
+    required source objects was unavailable in the immutable envelope. That is
+    NOT_CERTIFIABLE, not an exception and certainly not a pass.
+    """
+    source_fingerprints = _evidence_from_envelope(envelope, gate_id)
+    if status == "PASS":
+        unavailable = [item.name for item in source_fingerprints if item.state != "PRESENT"]
+        if unavailable:
+            status = "UNKNOWN"
+            reason = "required gate sources unavailable: " + ", ".join(unavailable)
+            artifact_refs = ()
     return GateEvidence(
         gate_id=gate_id,
         status=status,
-        source_fingerprints=_evidence_from_envelope(envelope, gate_id),
+        source_fingerprints=source_fingerprints,
         artifact_refs=artifact_refs if artifact_refs is not None else _artifact_refs(envelope, gate_id),
         observed=observed or {}, expected=expected or {}, tolerance=tolerance, reason=reason,
     )
