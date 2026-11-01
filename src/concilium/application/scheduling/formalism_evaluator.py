@@ -727,3 +727,117 @@ def evaluate_formalism_certificate(
         inputs_sha256=envelope.inputs_sha256, decision=decision, gate_evidence=gates,
         reasons=unique_reasons, evaluation_sha256=digest,
     )
+pe.scope,
+        inputs_sha256=envelope.inputs_sha256, decision=decision, gate_evidence=gates,
+        reasons=unique_reasons, evaluation_sha256=digest,
+    )
+
+
+def _physical_family_status(
+    physical_resolution: Mapping[str, Any] | None,
+    prefix: str,
+) -> tuple[GateStatus, tuple[str, ...], str | None]:
+    if physical_resolution is None or physical_resolution.get("schema") != "concilium.p15.physical-resolution.v1":
+        return "UNKNOWN", (), "structured P15 physical-resolution witness is missing or unsupported"
+    raw_status = physical_resolution.get("status")
+    audit_status = physical_resolution.get("audit_status")
+    details_raw = physical_resolution.get("violation_details")
+    details = tuple(str(x) for x in details_raw) if isinstance(details_raw, list) else ()
+    rows = tuple(x for x in details if x.split(":", 1)[0].startswith(prefix))
+    if rows:
+        if any("_UNVERIFIED" in x.split(":", 1)[0] for x in rows):
+            return "UNKNOWN", rows, "; ".join(rows)
+        return "FAIL", rows, "; ".join(rows)
+    other_rows = tuple(x for x in details if x.split(":", 1)[0].startswith(("V1_", "V6_")))
+    if audit_status == "PASS" and raw_status == "PASS":
+        return "PASS", (), None
+    if audit_status == "FAIL" and other_rows and all(x.split(":", 1)[0].startswith("V1_" if prefix == "V6_" else "V6_") for x in other_rows):
+        return "PASS", (), None
+    if raw_status == "FAIL" and physical_resolution.get("complete_search") is True:
+        return "FAIL", details, str(physical_resolution.get("reason") or "bounded physical resolution proved no feasible schedule")
+    return "UNKNOWN", details, str(physical_resolution.get("reason") or "physical family has no independent PASS/FAIL witness")
+
+
+def build_formalism_gate_evidence(
+    envelope: FormalismCertificate,
+    *,
+    physical_audit: Any | None = None,
+    physical_resolution: Mapping[str, Any] | None,
+    pool_summaries: Sequence[Any] | None,
+    productivity_witnesses: Sequence[ProductivityRateWitness] | None,
+    expected_activity_ids: Sequence[str] | None,
+    financial_reconciliation: Any | None,
+    pricing_diagnostics: Any | None,
+    pricing_gates: Any | None,
+) -> tuple[GateEvidence, ...]:
+    """Adapt P15/P16/P20/P21 persisted witnesses into independently fingerprinted gates."""
+    # A live validator may add detail. After restart the structured P15 witness
+    # remains sufficient because it carries family-coded violations and the final
+    # schedule fingerprint; never substitute an untyped success string.
+    v1_status, v1_rows, v1_reason = _physical_family_status(physical_resolution, "V1_")
+    v6_status, v6_rows, v6_reason = _physical_family_status(physical_resolution, "V6_")
+
+    if physical_audit is not None:
+        live_v1, live_v1_rows, live_v1_reason = _audit_status(physical_audit, "V1_")
+        live_v6, live_v6_rows, live_v6_reason = _audit_status(physical_audit, "V6_")
+        if live_v1 == "FAIL" or live_v1 == "UNKNOWN":
+            v1_status, v1_rows, v1_reason = live_v1, live_v1_rows, live_v1_reason
+        if live_v6 == "FAIL" or live_v6 == "UNKNOWN":
+            v6_status, v6_rows, v6_reason = live_v6, live_v6_rows, live_v6_reason
+
+    resolution_status: GateStatus = "UNKNOWN"
+    resolution_reason = "structured P15 physical-resolution witness is missing"
+    resolution_observed: dict[str, Any] = {}
+    if physical_resolution is not None and physical_resolution.get("schema") == "concilium.p15.physical-resolution.v1":
+        raw = physical_resolution.get("status")
+        audit = physical_resolution.get("audit_status")
+        attempts = physical_resolution.get("attempts")
+        complete = physical_resolution.get("complete_search")
+        resolution_observed = {
+            "status": raw, "audit_status": audit, "attempts": attempts,
+            "complete_search": complete,
+            "schedule_sha256": physical_resolution.get("schedule_sha256"),
+        }
+        schedule_fp = next(x for x in envelope.source_fingerprints if x.name == "schedule")
+        if raw == "FAIL" and complete is True:
+            resolution_status = "FAIL"
+            resolution_reason = str(physical_resolution.get("reason") or "P15 proved no feasible bounded schedule")
+        elif raw == "FAIL":
+            resolution_status = "UNKNOWN"
+            resolution_reason = str(physical_resolution.get("reason") or "P15 search was inconclusive")
+        elif raw == "PASS" and audit == "PASS" and type(attempts) is int and attempts > 0 and complete is True:
+            if schedule_fp.state == "PRESENT" and physical_resolution.get("schedule_sha256") == schedule_fp.sha256:
+                resolution_status = "PASS"
+                resolution_reason = ""
+            else:
+                resolution_status = "UNKNOWN"
+                resolution_reason = "P15 witness is not bound to the current canonical schedule fingerprint"
+        elif raw == "PASS" and complete is not True:
+            resolution_status = "UNKNOWN"
+            resolution_reason = "P15 found a feasible witness but did not prove the declared search domain complete"
+        else:
+            resolution_status = "UNKNOWN"
+            resolution_reason = str(physical_resolution.get("reason") or "P15 did not produce a complete physical witness")
+
+    if v1_status == "UNKNOWN" and resolution_status == "FAIL":
+        v1_reason = v1_reason or resolution_reason
+    if v6_status == "UNKNOWN" and resolution_status == "FAIL":
+        v6_status, v6_reason = "FAIL", resolution_reason
+    elif resolution_status != "PASS" and v6_status == "PASS":
+        v6_status, v6_reason = "UNKNOWN", resolution_reason
+
+    pool_status, pool_observed, pool_reason = _pool_standby_status(pool_summaries)
+    productivity_status, productivity_observed, productivity_reason = _productivity_status(
+        productivity_witnesses, expected_activity_ids,
+    )
+    finance_status, finance_observed, finance_reason = _financial_reconciliation_status(financial_reconciliation)
+    finance_total = None
+    if finance_status == "PASS":
+        try:
+            finance_total = _as_fraction(finance_observed.get("total"), "P20 total")
+        except ValueError:
+            finance_status, finance_reason = "UNKNOWN", "P20 total is not available as an exact amount"
+    price_map = _pricing_status(pricing_diagnostics, pricing_gates, reconciled_total=finance_total)
+
+    return (
+        gate_evidence_from_status(envelope, "V1", v1_status, observed={"violations": v1_rows}, reason=v1_reason),
