@@ -227,8 +227,6 @@ class TestRunCommand:
 
 class TestFormalismCertificateCommand:
     def _run(self, project, run_record):
-        from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
-
         project.read_json.return_value = [run_record]
         with patch(
             "concilium.presentation.cli.commands_run.resolve_project",
@@ -248,8 +246,6 @@ class TestFormalismCertificateCommand:
         assert "NOT_CERTIFIABLE" in result.stdout
 
     def test_current_certificate_uses_shared_read_projection(self):
-        from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
-
         project = MagicMock()
         project.load_canonical.return_value = MagicMock()
         run = {
