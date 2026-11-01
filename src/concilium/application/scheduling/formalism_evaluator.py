@@ -841,3 +841,19 @@ def build_formalism_gate_evidence(
 
     return (
         gate_evidence_from_status(envelope, "V1", v1_status, observed={"violations": v1_rows}, reason=v1_reason),
+on),
+        gate_evidence_from_status(envelope, "V2", price_map["V2"][0], observed=price_map["V2"][1], reason=price_map["V2"][2]),
+        gate_evidence_from_status(envelope, "V3", pool_status, observed=pool_observed, reason=pool_reason),
+        gate_evidence_from_status(envelope, "V4", price_map["V4"][0], observed=price_map["V4"][1], reason=price_map["V4"][2]),
+        gate_evidence_from_status(envelope, "V5", productivity_status, observed=productivity_observed, reason=productivity_reason),
+        gate_evidence_from_status(envelope, "V6", v6_status, observed={"audit_violations": v6_rows, "resolution": resolution_observed}, reason=v6_reason),
+        gate_evidence_from_status(envelope, "FINANCIAL_COST_RECONCILIATION", finance_status, observed=finance_observed, reason=finance_reason),
+        gate_evidence_from_status(envelope, "PRICE_PRESENT", price_map["PRICE_PRESENT"][0], observed=price_map["PRICE_PRESENT"][1], reason=price_map["PRICE_PRESENT"][2]),
+        gate_evidence_from_status(envelope, "REGULATORY_BDI_BASIS", price_map["REGULATORY_BDI_BASIS"][0], observed=price_map["REGULATORY_BDI_BASIS"][1], reason=price_map["REGULATORY_BDI_BASIS"][2]),
+        gate_evidence_from_status(envelope, "PROFITABILITY", price_map["PROFITABILITY"][0], observed=price_map["PROFITABILITY"][1], reason=price_map["PROFITABILITY"][2]),
+        gate_evidence_from_status(envelope, "PRODUCTIVITY_PROVENANCE", productivity_status, observed=productivity_observed, reason=productivity_reason),
+    )
+
+
+def evaluate_project_evidence(envelope: FormalismCertificate, **evidence: Any) -> FormalismEvaluation:
+    return evaluate_formalism_certificate(envelope, build_formalism_gate_evidence(envelope, **evidence))
