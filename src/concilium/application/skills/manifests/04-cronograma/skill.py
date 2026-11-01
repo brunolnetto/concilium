@@ -377,7 +377,7 @@ def run_cronograma(
                     "complete_search": (p15_physical_resolution or {}).get("complete_search"),
                     "reason": "post-materialization resource-pool violation",
                     "violation_details": [
-                        f"{item.codigo}:{item.mensagem}"
+                        f"V6_POOL_OVERBOOKED:{item.codigo}:{item.mensagem}"
                         for item in pool_violations
                     ],
                     "schedule_sha256": None,
