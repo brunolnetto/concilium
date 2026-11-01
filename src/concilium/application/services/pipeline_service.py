@@ -418,7 +418,7 @@ class PipelineService:
             formalism_certificate: dict[str, Any]
             try:
                 current_run = self._find_run(project, run_id) or run
-                resolved_catalog = load_resolved_catalog_snapshot(project, version)
+                resolved_catalog = load_resolved_catalog_snapshot(project, version, run_id)
                 productivity_witnesses = build_productivity_rate_witnesses(
                     canonical, resolved_catalog,
                 )
