@@ -241,23 +241,164 @@ def _read(value: Any, key: str, default: Any = None) -> Any:
 
 
 def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStatus, dict[str, Any], str | None]:
+    """Verify V3 from the exact P16 fixed-demand assignment, not utilization heuristics.
+
+    V3 is x_gj >= d_gj with s_gj = x_gj - d_gj >= 0. Positive standby is
+    not itself a violation: spare capacity is permitted. What must reconcile
+    is each week's typed demand/presence/standby vector and its aggregate
+    machine-week totals against the persisted P16 witness and contract size.
+    """
     if not pool_summaries:
         return "UNKNOWN", {}, "P16 pool utilization summaries are missing"
     observed: dict[str, Any] = {}
     violations: list[str] = []
+    unknowns: list[str] = []
+    seen_contracts: set[str] = set()
+
     for row in pool_summaries:
         contract_id = _read(row, "contrato_id")
+        resource_type = _read(row, "tipo_id")
         available = _read(row, "machine_weeks_disponiveis")
-        standby = _read(row, "machine_weeks_standby")
-        if not isinstance(contract_id, str) or not contract_id:
-            return "UNKNOWN", observed, "pool summary has no stable contract identity"
-        if type(available) is not int or type(standby) is not int or available <= 0 or standby < 0:
-            return "UNKNOWN", observed, f"{contract_id}: invalid or absent machine-week denominator"
-        observed[contract_id] = {"available": available, "standby": standby}
-        if standby >= available:
-            violations.append(f"{contract_id}: standby={standby}/{available} (100% standby or greater)")
+        used = _read(row, "machine_weeks_usados")
+        summary_standby = _read(row, "machine_weeks_standby")
+        contracted = _read(row, "quantidade_contratada")
+        contract_weeks = _read(row, "semanas_contrato")
+        witness = _read(row, "p16_global_assignment")
+
+        if not isinstance(contract_id, str) or not contract_id.strip() or contract_id in seen_contracts:
+            return "UNKNOWN", observed, "pool summary has missing or duplicate contract identity"
+        seen_contracts.add(contract_id)
+        if not isinstance(resource_type, str) or not resource_type.strip():
+            return "UNKNOWN", observed, f"{contract_id}: resource type identity is missing"
+        if any(type(value) is not int or value <= 0 for value in (available, contracted, contract_weeks)):
+            return "UNKNOWN", observed, f"{contract_id}: invalid or absent contractual machine-week denominator"
+        if available != contracted * contract_weeks:
+            violations.append(
+                f"{contract_id}: available machine-weeks {available} != "
+                f"contracted units {contracted} × contract weeks {contract_weeks}"
+            )
+            continue
+        if type(used) is not int or used < 0 or type(summary_standby) is not int or summary_standby < 0:
+            return "UNKNOWN", observed, f"{contract_id}: active/standby machine-week totals are missing or invalid"
+
+        if not isinstance(witness, Mapping):
+            unknowns.append(f"{contract_id}: exact P16 global-instance assignment witness is missing")
+            continue
+        if (
+            witness.get("schema") != "p16-global-instance-assignment/v1"
+            or witness.get("proof_scope") != "EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
+            or witness.get("status") != "EXACT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND"
+            or witness.get("is_project_go_certificate") is not False
+            or witness.get("legacy_financial_projection_overridden") is not False
+        ):
+            violations.append(f"{contract_id}: P16 witness schema/proof scope/authority is invalid")
+            continue
+        if witness.get("contract_id") != contract_id or witness.get("resource_type") != resource_type:
+            violations.append(f"{contract_id}: P16 witness identity differs from the canonical contract")
+            continue
+
+        weeks = witness.get("calendar_weeks")
+        demand = witness.get("demand")
+        presence = witness.get("presence")
+        standby = witness.get("standby")
+        demand_by_activity = witness.get("demand_by_activity")
+        if (
+            not isinstance(weeks, list) or not weeks
+            or any(not isinstance(week, str) or not week.strip() for week in weeks)
+            or len(set(weeks)) != len(weeks)
+            or not all(isinstance(series, list) for series in (demand, presence, standby))
+            or len(demand) != len(weeks)
+            or len(presence) != len(weeks)
+            or len(standby) != len(weeks)
+            or not isinstance(demand_by_activity, Mapping) or not demand_by_activity
+        ):
+            unknowns.append(f"{contract_id}: P16 witness lacks complete weekly demand/presence/standby vectors")
+            continue
+
+        vectors_valid = True
+        for index, (demand_count, presence_count, standby_count) in enumerate(
+            zip(demand, presence, standby, strict=True)
+        ):
+            if any(type(value) is not int or value < 0 for value in (
+                demand_count, presence_count, standby_count,
+            )):
+                unknowns.append(f"{contract_id}/{weeks[index]}: P16 counts must be exact nonnegative integers")
+                vectors_valid = False
+                break
+            if presence_count != demand_count + standby_count:
+                violations.append(
+                    f"{contract_id}/{weeks[index]}: presence {presence_count} != "
+                    f"demand {demand_count} + standby {standby_count}"
+                )
+                vectors_valid = False
+                break
+            if demand_count > presence_count:
+                violations.append(f"{contract_id}/{weeks[index]}: physical demand exceeds presence")
+                vectors_valid = False
+                break
+            if presence_count > contracted:
+                violations.append(
+                    f"{contract_id}/{weeks[index]}: physical presence {presence_count} "
+                    f"exceeds contracted capacity {contracted}"
+                )
+                vectors_valid = False
+                break
+        if not vectors_valid:
+            continue
+
+        reconstructed_demand = [0] * len(weeks)
+        activity_ids: set[str] = set()
+        for activity_id, series in demand_by_activity.items():
+            if (
+                not isinstance(activity_id, str) or not activity_id.strip()
+                or activity_id in activity_ids
+                or not isinstance(series, list) or len(series) != len(weeks)
+                or any(type(value) is not int or value < 0 for value in series)
+            ):
+                unknowns.append(f"{contract_id}: malformed P16 per-activity demand tensor")
+                vectors_valid = False
+                break
+            activity_ids.add(activity_id)
+            for index, value in enumerate(series):
+                reconstructed_demand[index] += value
+        if not vectors_valid:
+            continue
+        if reconstructed_demand != demand:
+            violations.append(f"{contract_id}: aggregate P16 demand does not reconstruct from per-activity demand")
+            continue
+
+        active_machine_weeks = sum(demand)
+        standby_machine_weeks = sum(standby)
+        if active_machine_weeks != used:
+            violations.append(
+                f"{contract_id}: P16 active demand machine-weeks {active_machine_weeks} "
+                f"!= Skill05 used machine-weeks {used}"
+            )
+        if standby_machine_weeks != summary_standby:
+            violations.append(
+                f"{contract_id}: P16 standby machine-weeks {standby_machine_weeks} "
+                f"!= Skill05 standby machine-weeks {summary_standby}"
+            )
+        if active_machine_weeks + standby_machine_weeks > available:
+            violations.append(
+                f"{contract_id}: active + standby machine-weeks exceed declared availability"
+            )
+        observed[contract_id] = {
+            "resource_type": resource_type,
+            "available": available,
+            "active": active_machine_weeks,
+            "standby": standby_machine_weeks,
+            "weeks": len(weeks),
+            "weekly_demand": demand,
+            "weekly_presence": presence,
+            "weekly_standby": standby,
+            "p16_witness": witness,
+        }
+
     if violations:
         return "FAIL", observed, "; ".join(violations)
+    if unknowns:
+        return "UNKNOWN", observed, "; ".join(unknowns)
     return "PASS", observed, None
 
 
