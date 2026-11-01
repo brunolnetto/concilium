@@ -14,6 +14,7 @@ def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
             **_invalidate_derived_costs(canonical),
             "cronograma": None,
             "intervalos_atividade": [],
+            "physical_calendar_evidence": None,
             "curvas_forca": [],
             "analise_campanhas": None,
             "mob_schedule": None,
