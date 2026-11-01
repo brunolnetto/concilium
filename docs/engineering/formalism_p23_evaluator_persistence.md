@@ -85,6 +85,6 @@ The implementation currently has local tests for:
 - P20 exact event attribution, duplicate ownership and P21/P20 cost identity;
 - persistence/reload after restart, idempotent writes, record checksum tampering, source mutation, source omission, and formalism/oracle hash mutation.
 
-Local execution on the development snapshot: **29 passed**; Python compileall passed. This is not the exact PR-head WSL validation. Ruff/ty and the full project suite have not yet been run for this branch. The PR must remain unmerged until exact-head WSL validation is recorded.
+Local execution on the development snapshot: **32 passed**; Python compileall passed. This is not the exact PR-head WSL validation. Ruff/ty and the full project suite have not yet been run for this branch. The PR must remain unmerged until exact-head WSL validation is recorded.
 
 P23 issue acceptance remains open. In particular, a complete project-level golden RFP with authoritative productivity/calibration and full search completeness, plus wiring of the shared presentation projection to every API/MCP/UI surface, remain to be demonstrated. P24 and P26 remain consumers of this contract, not substitutes for it. P25 CI/branch-protection governance remains an independent issue and is not a prerequisite to local evaluation.
