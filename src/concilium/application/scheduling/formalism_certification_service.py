@@ -376,7 +376,14 @@ def build_pool_summaries(canonical: CanonicalModel) -> tuple[dict[str, Any], ...
         return ()
     summaries: list[dict[str, Any]] = []
     for summary in canonical.resumo_utilizacao_contratos or []:
-        row = summary.model_dump(mode="json") if hasattr(summary, "model_dump") else dict(summary)
+        if hasattr(summary, "model_dump"):
+            row = summary.model_dump(mode="json")
+        elif isinstance(summary, Mapping):
+            row = dict(summary)
+        elif hasattr(summary, "__dict__"):
+            row = dict(vars(summary))
+        else:
+            return ()
         contract_id = row.get("contrato_id")
         contract = contracts.get(contract_id)
         if contract is None:
