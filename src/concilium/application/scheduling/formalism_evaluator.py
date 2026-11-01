@@ -766,7 +766,10 @@ def _physical_family_status(
     if audit_status == "FAIL" and other_rows and all(x.split(":", 1)[0].startswith("V1_" if prefix == "V6_" else "V6_") for x in other_rows):
         return "PASS", (), None
     if raw_status == "FAIL" and physical_resolution.get("complete_search") is True:
-        return "FAIL", details, str(physical_resolution.get("reason") or "bounded physical resolution proved no feasible schedule")
+        reason = str(physical_resolution.get("reason") or "bounded physical resolution proved no feasible schedule")
+        if prefix == "V6_":
+            return "FAIL", details, reason
+        return "UNKNOWN", details, "bounded physical search was infeasible, but no independent V1 scope-closure violation was identified"
     return "UNKNOWN", details, str(physical_resolution.get("reason") or "physical family has no independent PASS/FAIL witness")
 
 
