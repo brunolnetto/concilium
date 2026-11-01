@@ -27,7 +27,7 @@ from .physical_stock_holding import (
     HoldingTariff,
     post_exact_weekly_holding,
 )
-from .physical_stock_ledger import StockArrival, StockGood, project_exact_weekly_stock
+from .physical_stock_ledger import StockArrival, StockGood, StockProjection, project_exact_weekly_stock
 from .physical_stock_provisioning import (
     ExternalStockProvisioningJournal,
     ExternalStockPurchase,
@@ -217,7 +217,7 @@ def _build_p19_journals(
     *,
     consumption: PhysicalConsumptionJournalResult,
     catalog_metadata: Mapping[str, object],
-) -> tuple[HoldingJournal | None, ExternalStockProvisioningJournal | None]:
+) -> tuple[HoldingJournal | None, ExternalStockProvisioningJournal | None, StockProjection]:
     inventory = _json_mapping(raw_inventory, "p21_pricing_evidence.inventory")
     allowed = {
         "calendar_weeks", "goods", "internal_arrivals",
@@ -270,7 +270,7 @@ def _build_p19_journals(
             goods,
             tariffs,
         )
-    return holding, provisioning
+    return holding, provisioning, stock
 
 
 def build_pricing_report_evidence_context(
@@ -403,6 +403,7 @@ def build_pricing_report_evidence_context(
     )
     holding: HoldingJournal | None = None
     provisioning: ExternalStockProvisioningJournal | None = None
+    stock_projection: StockProjection | None = None
     if inventory_scope.status == "NO_INVENTORY":
         if raw.get("inventory") is not None:
             raise ValueError("NO_INVENTORY scope cannot contain inventory declarations")
@@ -413,7 +414,7 @@ def build_pricing_report_evidence_context(
     else:
         if raw.get("inventory") is None:
             raise ValueError("COMPLETE inventory scope requires explicit P19 inventory declarations")
-        holding, provisioning = _build_p19_journals(
+        holding, provisioning, stock_projection = _build_p19_journals(
             raw["inventory"],
             consumption=p18.consumption,
             catalog_metadata=catalog_metadata,
@@ -428,6 +429,7 @@ def build_pricing_report_evidence_context(
     return {
         "inventory_scope": inventory_scope,
         "consumption_journal": p18.consumption,
+        "stock_projection": stock_projection,
         "holding_journal": holding,
         "stock_provisioning_journal": provisioning,
         "reconciliation": reconciliation,
