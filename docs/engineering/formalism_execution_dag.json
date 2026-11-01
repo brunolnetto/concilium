@@ -2,9 +2,12 @@
   "schema": "concilium.formalism.execution_dag.v1",
   "epic": 8,
   "policy": {
-    "closure": "all predecessors closed AND all previous waves closed AND packages merged AND all issue acceptance independently evidenced",
-    "historical_merges": "preserved as preparatory evidence; do not authorize out-of-order issue closure",
-    "candidate_is_not_certified": true
+    "closure": "issue-local acceptance criteria independently evidenced AND all mandatory implementation packages merged AND relevant tests/review satisfactory; predecessor and prior-wave states are advisory sequencing context, never hard closure blockers",
+    "sequencing": "blocked_by edges express technical/contextual sequencing recommendations; open predecessors and incomplete prior waves must be reported but must not prevent execution or issue closure when local acceptance is independently proven",
+    "historical_merges": "preserved as implementation evidence; issue acceptance is assessed independently regardless of merge order",
+    "candidate_is_not_certified": true,
+    "project_certification": "project-wide GO requires the separate authoritative certificate and evidence defined by issue #23; closing a local issue never implies project certification",
+    "ci_governance": "#25 remains active governance work; incomplete CI enforcement or external deployment credentials do not freeze unrelated issue execution or local acceptance"
   },
   "nodes": [
     {
