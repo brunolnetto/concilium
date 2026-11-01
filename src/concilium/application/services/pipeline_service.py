@@ -7,7 +7,6 @@ from typing import Any
 from uuid import uuid4
 
 from concilium.application.pipeline_strategy import get_pipeline_strategy
-from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent, normalize_procurement_intent
 from concilium.application.scheduling.formalism_certification_service import (
     FORMALISM_SHA256,
     ORACLE_SHA256,
@@ -19,6 +18,7 @@ from concilium.application.scheduling.formalism_certification_service import (
     load_resolved_catalog_snapshot,
     read_current_project_certificate,
 )
+from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent, normalize_procurement_intent
 
 from .project.audit_service import AuditService
 from .project.project_files import DEFAULT_PROJECT_FILES, ProjectFiles
