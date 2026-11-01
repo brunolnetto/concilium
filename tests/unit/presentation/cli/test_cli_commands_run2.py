@@ -222,3 +222,129 @@ class TestRunCommand:
         ):
             r = runner.invoke(app, ["run", "01-escopo-e-eap", "--project", "my-proj"])
         assert r.exit_code not in (0,)
+
+
+
+class TestFormalismCertificateCommand:
+    def _run(self, project, run_record):
+        from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
+        project.read_json.return_value = [run_record]
+        with patch(
+            "concilium.presentation.cli.commands_run.resolve_project",
+            return_value=project,
+        ):
+            return runner.invoke(
+                app,
+                ["certificate", run_record["run_id"], "--project", "my-proj"],
+            )
+
+    def test_missing_certificate_is_reported_as_not_certifiable(self):
+        project = MagicMock()
+        run = {"run_id": "run-no-cert", "version": "v1"}
+        result = self._run(project, run)
+        assert result.exit_code == 0
+        assert "NOT_EVALUATED" in result.stdout
+        assert "NOT_CERTIFIABLE" in result.stdout
+
+    def test_current_certificate_uses_shared_read_projection(self):
+        from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
+        project = MagicMock()
+        project.load_canonical.return_value = MagicMock()
+        run = {
+            "run_id": "run-current",
+            "version": "v2",
+            "skill_inputs_override": {},
+            "formalism_certificate": {"evaluation_sha256": "a" * 64},
+        }
+        expected = {
+            "status": "CURRENT",
+            "recorded_decision": "GO",
+            "effective_decision": "GO",
+            "project_go": True,
+            "gates": [],
+        }
+        with (
+            patch("concilium.presentation.cli.commands_run.resolve_project", return_value=project),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.load_resolved_catalog_snapshot",
+                return_value={"cpus": [], "insumos": [], "producoes": []},
+            ) as load_catalog,
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.build_productivity_rate_witnesses",
+                return_value=(),
+            ),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.build_solver_context",
+                return_value={"run_id": "run-current"},
+            ),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.read_current_project_certificate",
+                return_value=MagicMock(),
+            ) as read_certificate,
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.certificate_summary",
+                return_value=expected,
+            ),
+        ):
+            project.read_json.return_value = [run]
+            result = runner.invoke(
+                app,
+                ["certificate", "run-current", "--project", "my-proj"],
+            )
+        assert result.exit_code == 0
+        assert '"effective_decision": "GO"' in result.stdout
+        assert '"project_go": true' in result.stdout
+        load_catalog.assert_called_once_with(project, "v2", "run-current")
+        read_certificate.assert_called_once()
+
+    def test_invalidated_historical_go_is_not_presented_as_project_go(self):
+        project = MagicMock()
+        project.load_canonical.return_value = MagicMock()
+        run = {
+            "run_id": "run-stale",
+            "version": "v3",
+            "skill_inputs_override": {},
+            "formalism_certificate": {"evaluation_sha256": "b" * 64},
+        }
+        expected = {
+            "status": "INVALIDATED",
+            "recorded_decision": "GO",
+            "effective_decision": "NOT_CERTIFIABLE",
+            "project_go": False,
+            "invalidated_sources": ["schedule"],
+            "gates": [],
+        }
+        with (
+            patch("concilium.presentation.cli.commands_run.resolve_project", return_value=project),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.load_resolved_catalog_snapshot",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.build_productivity_rate_witnesses",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.build_solver_context",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.read_current_project_certificate",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "concilium.application.scheduling.formalism_certification_service.certificate_summary",
+                return_value=expected,
+            ),
+        ):
+            project.read_json.return_value = [run]
+            result = runner.invoke(
+                app,
+                ["certificate", "run-stale", "--project", "my-proj"],
+            )
+        assert result.exit_code == 0
+        assert '"recorded_decision": "GO"' in result.stdout
+        assert '"effective_decision": "NOT_CERTIFIABLE"' in result.stdout
+        assert '"project_go": false' in result.stdout
