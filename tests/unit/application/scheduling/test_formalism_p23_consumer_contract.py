@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from concilium.application.scheduling.formalism_evaluator import (
     REQUIRED_GATES,
     evaluate_formalism_certificate,
@@ -158,28 +160,21 @@ def test_application_boundary_binds_each_pool_summary_to_its_exact_p16_contract(
         "contract_id": "contract-1",
         "demand": [1, 0],
     }
-    contract = type("Contract", (), {
-        "contrato_id": "contract-1",
-        "p16_global_assignment": witness,
-    })()
-    summary = type("Summary", (), {
-        "contrato_id": "contract-1",
-        "tipo_id": "EQ-1",
-        "machine_weeks_disponiveis": 2,
-        "machine_weeks_usados": 1,
-        "machine_weeks_standby": 0,
-        "__dict__": {
-            "contrato_id": "contract-1",
-            "tipo_id": "EQ-1",
-            "machine_weeks_disponiveis": 2,
-            "machine_weeks_usados": 1,
-            "machine_weeks_standby": 0,
-        },
-    })()
-    canonical = type("Canonical", (), {
-        "contratos_recurso": [contract],
-        "resumo_utilizacao_contratos": [summary],
-    })()
+    contract = SimpleNamespace(
+        contrato_id="contract-1",
+        p16_global_assignment=witness,
+    )
+    summary = SimpleNamespace(
+        contrato_id="contract-1",
+        tipo_id="EQ-1",
+        machine_weeks_disponiveis=2,
+        machine_weeks_usados=1,
+        machine_weeks_standby=0,
+    )
+    canonical = SimpleNamespace(
+        contratos_recurso=[contract],
+        resumo_utilizacao_contratos=[summary],
+    )
     result = build_pool_summaries(canonical)
     assert result[0]["p16_global_assignment"] == _dump(witness)
     assert result[0]["contrato_id"] == "contract-1"
