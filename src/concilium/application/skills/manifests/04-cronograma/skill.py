@@ -225,6 +225,7 @@ def run_cronograma(
                 ),
             )
         )
+    physical_calendar_evidence: dict[str, object] | None = None
     if not failed and mode and mode.startswith("AUTO") and schedule_selected is not None:
         original_selected_candidate = schedule_selected
         physical_resolution = resolve_skill04_physical_schedule(
@@ -244,6 +245,7 @@ def run_cronograma(
             validacoes=validacoes,
         )
         if physical_resolution.status == "PASS":
+            physical_calendar_evidence = physical_resolution.physical_evidence
             schedule_selected = physical_resolution.schedule_selected
             distribuicao_por_item = physical_resolution.distribution_by_item
             fallback_item_ids = physical_resolution.fallback_item_ids
@@ -313,6 +315,7 @@ def run_cronograma(
                 "mob_schedule": None,
                 "cronograma": None,
                 "intervalos_atividade": [],
+                "physical_calendar_evidence": None,
                 "resultado": None,
                 "ponto_equilibrio": [],
                 "custos_atividades": [],
@@ -384,6 +387,7 @@ def run_cronograma(
         **stale_financials,
         "cronograma": cronograma_out,
         "intervalos_atividade": intervalos,
+        "physical_calendar_evidence": physical_calendar_evidence,
         "fator_calendario_semanal": fator_calendario_semanal,
         "calendario_operacional": calendario_operacional,
         "constraint_violations": pool_violations if pool_violations else canonical_in.constraint_violations,
