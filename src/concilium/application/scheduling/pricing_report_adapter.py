@@ -401,6 +401,8 @@ def build_pricing_report_evidence_context(
         pool_ledger,
         activity_goods,
     )
+    holding: HoldingJournal | None = None
+    provisioning: ExternalStockProvisioningJournal | None = None
     if inventory_scope.status == "NO_INVENTORY":
         if raw.get("inventory") is not None:
             raise ValueError("NO_INVENTORY scope cannot contain inventory declarations")
@@ -425,6 +427,9 @@ def build_pricing_report_evidence_context(
 
     return {
         "inventory_scope": inventory_scope,
+        "consumption_journal": p18.consumption,
+        "holding_journal": holding,
+        "stock_provisioning_journal": provisioning,
         "reconciliation": reconciliation,
         "bdi_by_category": bdi_by_category,
         "catalog": catalog,
