@@ -17,6 +17,7 @@ def _invalidate_rejected_schedule(canonical: CanonicalModel) -> CanonicalModel:
             "curvas_forca": [],
             "analise_campanhas": None,
             "mob_schedule": None,
+            "p15_physical_resolution": None,
         }
     )
 
