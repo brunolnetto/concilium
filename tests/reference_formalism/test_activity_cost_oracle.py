@@ -13,7 +13,7 @@ from tests.reference_formalism.activity_cost_reference import (
     evaluate_activity_costs,
 )
 
-PATH = Path(__file__).parent / "vectors" / "activity_cost_v1.json"
+PATH = Path(__file__).parent / "vectors" / "activity_cost_reconciliation_v1.json"
 
 
 def goldens() -> list[dict]:

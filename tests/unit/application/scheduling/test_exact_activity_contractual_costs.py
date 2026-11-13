@@ -199,11 +199,13 @@ def test_exact_ratio_only_for_fully_covered_activities_with_p18_evidence() -> No
 
 
 def test_production_activity_cost_matches_the_oracle_vector() -> None:
-    """exact_activity_contractual_costs reproduces activity_cost_v1 exactly."""
+    """exact_activity_contractual_costs reproduces activity_cost_reconciliation_v1 exactly."""
     from pathlib import Path
 
     vector = json.loads(
-        (Path(__file__).resolve().parents[3] / "reference_formalism/vectors/activity_cost_v1.json").read_text()
+        (
+            Path(__file__).resolve().parents[3] / "reference_formalism/vectors/activity_cost_reconciliation_v1.json"
+        ).read_text()
     )["vectors"][0]
     weeks = ["2026-W01", "2026-W02", "2026-W03"]
     contracts = []
