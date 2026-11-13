@@ -16,7 +16,7 @@ from concilium.domain.services.sinergia_equipe import (
     resolver_producao_efetiva,
 )
 
-from ._dimensionamento_custos import (  # ty: ignore[unresolved-import]
+from ._dimensionamento_custos import (  # ty: ignore[import-not-found]
     _best_alias_equip_attrs,
     _calcular_custo_equipamento,
     _calcular_custo_funcao,

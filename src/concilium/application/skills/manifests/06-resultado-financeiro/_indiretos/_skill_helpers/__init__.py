@@ -18,14 +18,14 @@ Inputs (no dict 'inputs'):
     tabela_bdi:           TabelaBdi serializada — para bdi_indireto (ADR-023 §D4); opcional
 """
 
-from ._breakdown import (  # ty: ignore[unresolved-import]
+from ._breakdown import (  # ty: ignore[import-not-found]
     _breakdown_mob,
     _breakdown_permanencia_default,
     _breakdown_permanencia_override,
     _build_semanal_breakdown,
 )
-from ._categoria import _as_categoria_indireto, _build_categoria_from_dict  # ty: ignore[unresolved-import]
-from ._dimensionamento import (  # ty: ignore[unresolved-import]
+from ._categoria import _as_categoria_indireto, _build_categoria_from_dict  # ty: ignore[import-not-found]
+from ._dimensionamento import (  # ty: ignore[import-not-found]
     _bcfd_enrich_mo_itens,
     _composicao_default_por_categoria,
     _composicao_qsms_bottom_up,
@@ -34,7 +34,7 @@ from ._dimensionamento import (  # ty: ignore[unresolved-import]
     _parse_component,
     _semanas_projeto,
 )
-from ._mob import (  # ty: ignore[unresolved-import]
+from ._mob import (  # ty: ignore[import-not-found]
     MobBreakdown,
     _accrue_desmobilizacao_fase,
     _accrue_mobilizacao_fase,
@@ -52,7 +52,7 @@ from ._mob import (  # ty: ignore[unresolved-import]
     _process_mob_categoria,
     _transporte_ja_contabilizado_direto,
 )
-from ._resolucao import (  # ty: ignore[unresolved-import]
+from ._resolucao import (  # ty: ignore[import-not-found]
     _apply_bdi_to_indiretos,
     _apply_dv4_scale_to_categoria,
     _build_indireto_from_cat_obj,

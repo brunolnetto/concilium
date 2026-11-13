@@ -17,7 +17,7 @@ from typing import Any
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
-from ._skill_helpers import (  # ty: ignore[unresolved-import]
+from ._skill_helpers import (  # ty: ignore[import-not-found]
     _add_criticidade_validacoes,
     _build_equipe_rows,
     _build_graficos_section,

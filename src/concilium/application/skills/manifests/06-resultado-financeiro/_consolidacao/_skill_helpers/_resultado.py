@@ -15,8 +15,8 @@ from concilium.domain.models.canonical import (
     Venda,
 )
 
-from ._categorial import _resolve_custo_deficit_estoque_externo  # ty: ignore[unresolved-import]
-from ._venda_custo import (  # ty: ignore[unresolved-import]
+from ._categorial import _resolve_custo_deficit_estoque_externo  # ty: ignore[import-not-found]
+from ._venda_custo import (  # ty: ignore[import-not-found]
     _br_append_gap_catalogo_validacao,
     _br_build_venda_custo,
     _build_custos_atividades,
@@ -27,7 +27,7 @@ from ._venda_custo import (  # ty: ignore[unresolved-import]
 if TYPE_CHECKING:
     from concilium.domain.models.financial.bdi import TabelaBdi
 
-from ._bdi_resolucao import (  # ty: ignore[unresolved-import]
+from ._bdi_resolucao import (  # ty: ignore[import-not-found]
     _classificar_margem,
     _frac_locacao_equipamentos,
     _resolve_bdi_full,

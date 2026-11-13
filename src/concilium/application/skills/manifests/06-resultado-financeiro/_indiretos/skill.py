@@ -32,7 +32,7 @@ from concilium.domain.models.canonical import (
 from concilium.domain.services.financial.roster_custo_mo import parse_roster_mo
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-from ._skill_helpers import (  # ty: ignore[unresolved-import]
+from ._skill_helpers import (  # ty: ignore[import-not-found]
     _apply_bdi_to_indiretos,
     _apply_dv4_scale_to_categoria,
     _build_indireto_from_cat_obj,
@@ -47,7 +47,7 @@ from ._skill_helpers import (  # ty: ignore[unresolved-import]
     _validate_dv4_policy,
     _validate_razao_indireto_direto,
 )
-from ._skill_helpers import _dimensionamento as _mod_a  # ty: ignore[unresolved-import]
+from ._skill_helpers import _dimensionamento as _mod_a  # ty: ignore[import-not-found]
 
 # Re-exports abaixo são consumidos apenas por testes de cobertura que acessam
 # funções internas dos helpers via este módulo (não usadas por run_custos_indiretos).

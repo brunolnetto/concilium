@@ -19,9 +19,9 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
-from ._custo_exato_p16 import resumo_alinhado_a_testemunha_p16  # ty: ignore[unresolved-import]
-from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
-from ._resource_instance_assignment import (  # ty: ignore[unresolved-import]
+from ._custo_exato_p16 import resumo_alinhado_a_testemunha_p16  # ty: ignore[import-not-found]
+from ._pool_contrato_demanda import _week_idx  # ty: ignore[import-not-found]
+from ._resource_instance_assignment import (  # ty: ignore[import-not-found]
     _STANDBY_THRESHOLD_PCT,
     _assign_instances,
     _build_week_demand_maps,

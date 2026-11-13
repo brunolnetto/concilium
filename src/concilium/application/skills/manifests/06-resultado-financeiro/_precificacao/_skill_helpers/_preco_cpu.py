@@ -12,8 +12,8 @@ from concilium.domain.models.canonical import (
 )
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-from ._cpu_helpers import _CATEGORIA_MAP, _resolve_insumo_preco  # ty: ignore[unresolved-import]
-from ._planejamento_entry import _apply_equip_decomp  # ty: ignore[unresolved-import]
+from ._cpu_helpers import _CATEGORIA_MAP, _resolve_insumo_preco  # ty: ignore[import-not-found]
+from ._planejamento_entry import _apply_equip_decomp  # ty: ignore[import-not-found]
 
 
 def _compute_preco_cat_from_cpu(

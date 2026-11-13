@@ -82,8 +82,8 @@ def _read_from_key_vault(secret_name: str) -> bytes | None:
     if not kv_url:
         return None
     try:
-        from azure.identity import DefaultAzureCredential  # ty: ignore[unresolved-import]
-        from azure.keyvault.secrets import SecretClient  # ty: ignore[unresolved-import]
+        from azure.identity import DefaultAzureCredential  # ty: ignore[import-not-found]
+        from azure.keyvault.secrets import SecretClient  # ty: ignore[import-not-found]
 
         client = SecretClient(vault_url=kv_url, credential=DefaultAzureCredential())
         value = client.get_secret(secret_name).value or ""

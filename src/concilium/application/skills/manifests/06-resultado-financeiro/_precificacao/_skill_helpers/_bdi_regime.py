@@ -25,7 +25,7 @@ from concilium.domain.models.financial.bdi import (
     resolver_bdi_cbs_ibs,
 )
 
-from ._lookups import _get_bdi_value  # ty: ignore[unresolved-import]
+from ._lookups import _get_bdi_value  # ty: ignore[import-not-found]
 
 
 def _rb_try_tax_scenario(inputs: dict, validacoes: list) -> dict | None:

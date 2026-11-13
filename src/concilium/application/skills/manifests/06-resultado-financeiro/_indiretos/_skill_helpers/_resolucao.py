@@ -17,8 +17,8 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 
-from ._categoria import _as_categoria_indireto, _build_categoria_from_dict  # ty: ignore[unresolved-import]
-from ._dimensionamento import (  # ty: ignore[unresolved-import]
+from ._categoria import _as_categoria_indireto, _build_categoria_from_dict  # ty: ignore[import-not-found]
+from ._dimensionamento import (  # ty: ignore[import-not-found]
     _categorias_cpu_do_projeto,
     _composicao_default_por_categoria,
     _composicao_qsms_bottom_up,

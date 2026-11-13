@@ -3,12 +3,12 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from ._compressao_cronograma import (  # ty: ignore[unresolved-import]
+from ._compressao_cronograma import (  # ty: ignore[import-not-found]
     _rra_build_compressao_cronograma,
     _rra_build_decomposicao_pool,
 )
-from ._planejamento import _build_tres_camadas_rows  # ty: ignore[unresolved-import]
-from ._relatorio_pe import _rra_build_pe_rows  # ty: ignore[unresolved-import]
+from ._planejamento import _build_tres_camadas_rows  # ty: ignore[import-not-found]
+from ._relatorio_pe import _rra_build_pe_rows  # ty: ignore[import-not-found]
 
 
 def _rrs_num(value: Any) -> float | None:

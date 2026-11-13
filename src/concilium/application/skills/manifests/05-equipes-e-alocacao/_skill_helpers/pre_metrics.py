@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from .week_index import iso_week_index  # ty: ignore[unresolved-import]
+from .week_index import iso_week_index  # ty: ignore[import-not-found]
 
 _UNIDADE_SEM_IDLE: frozenset[str] = frozenset({"hora_prod"})
 

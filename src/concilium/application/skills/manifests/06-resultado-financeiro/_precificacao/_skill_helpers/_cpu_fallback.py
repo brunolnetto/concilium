@@ -12,8 +12,8 @@ from concilium.domain.models.canonical import (
 )
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-from ._cpu_helpers import _create_synthetic_cpu  # ty: ignore[unresolved-import]
-from ._preco_cpu import _compute_preco_cat_from_cpu  # ty: ignore[unresolved-import]
+from ._cpu_helpers import _create_synthetic_cpu  # ty: ignore[import-not-found]
+from ._preco_cpu import _compute_preco_cat_from_cpu  # ty: ignore[import-not-found]
 
 
 def _resolve_cpu_com_fallback(item: Any, cpu_lookup: dict, validacoes: list, erros_eap: list) -> dict | None:

@@ -65,8 +65,8 @@ class GoogleDriveBlobStorage(BlobStoragePort):
         if self._svc is not None:
             return self._svc
         try:
-            from google.oauth2 import service_account  # ty: ignore[unresolved-import]
-            from googleapiclient.discovery import build  # ty: ignore[unresolved-import]
+            from google.oauth2 import service_account  # ty: ignore[import-not-found]
+            from googleapiclient.discovery import build  # ty: ignore[import-not-found]
         except ImportError as exc:
             raise ImportError(
                 "Os pacotes 'google-api-python-client' e 'google-auth' são necessários para o "
@@ -77,7 +77,7 @@ class GoogleDriveBlobStorage(BlobStoragePort):
         if self._sa_json:
             creds = service_account.Credentials.from_service_account_file(self._sa_json, scopes=scopes)
         else:
-            from google.auth import default as google_default  # ty: ignore[unresolved-import]
+            from google.auth import default as google_default  # ty: ignore[import-not-found]
 
             creds, _ = google_default(scopes=scopes)
         self._svc = build("drive", "v3", credentials=creds, cache_discovery=False)
@@ -147,7 +147,7 @@ class GoogleDriveBlobStorage(BlobStoragePort):
 
     def ler_blob(self, path: str) -> bytes:
         try:
-            from googleapiclient.http import MediaIoBaseDownload  # ty: ignore[unresolved-import]
+            from googleapiclient.http import MediaIoBaseDownload  # ty: ignore[import-not-found]
         except ImportError as exc:
             raise ImportError(
                 "Os pacotes 'google-api-python-client' e 'google-auth' são necessários para o "
@@ -167,7 +167,7 @@ class GoogleDriveBlobStorage(BlobStoragePort):
 
     def gravar_blob(self, path: str, content: bytes) -> None:
         try:
-            from googleapiclient.http import MediaIoBaseUpload  # ty: ignore[unresolved-import]
+            from googleapiclient.http import MediaIoBaseUpload  # ty: ignore[import-not-found]
         except ImportError as exc:
             raise ImportError(
                 "Os pacotes 'google-api-python-client' e 'google-auth' são necessários para o "

@@ -23,13 +23,13 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 from concilium.domain.models.formalism_certificate import fingerprint_source
 
-from ._skill_helpers import _assembly as _mod_assembly  # ty: ignore[unresolved-import]  # noqa: F401 — test compat
-from ._skill_helpers import _calendario as _mod_calendario  # ty: ignore[unresolved-import]
-from ._skill_helpers import _custos as _mod_custos  # ty: ignore[unresolved-import]
-from ._skill_helpers import _scheduling as _mod_scheduling  # ty: ignore[unresolved-import]
-from ._skill_helpers import _spec as _mod_spec  # ty: ignore[unresolved-import]
-from ._skill_helpers import _validacao as _mod_validacao  # ty: ignore[unresolved-import]
-from ._skill_helpers._assembly import (  # ty: ignore[unresolved-import]
+from ._skill_helpers import _assembly as _mod_assembly  # ty: ignore[import-not-found]  # noqa: F401 — test compat
+from ._skill_helpers import _calendario as _mod_calendario  # ty: ignore[import-not-found]
+from ._skill_helpers import _custos as _mod_custos  # ty: ignore[import-not-found]
+from ._skill_helpers import _scheduling as _mod_scheduling  # ty: ignore[import-not-found]
+from ._skill_helpers import _spec as _mod_spec  # ty: ignore[import-not-found]
+from ._skill_helpers import _validacao as _mod_validacao  # ty: ignore[import-not-found]
+from ._skill_helpers._assembly import (  # ty: ignore[import-not-found]
     _build_cronograma_out,
     _build_intervalos_and_campanhas,
     _build_scheduled_activities,
@@ -40,19 +40,19 @@ from ._skill_helpers._assembly import (  # ty: ignore[unresolved-import]
     _run_cronograma_infer_mob_schedule,
     _run_cronograma_validate_num_equipes_formato,
 )
-from ._skill_helpers._estoque_consumivel import (  # ty: ignore[unresolved-import]
+from ._skill_helpers._estoque_consumivel import (  # ty: ignore[import-not-found]
     build_estoque_consumivel_canonical,
 )
-from ._skill_helpers._p14_productivity import (  # ty: ignore[unresolved-import]
+from ._skill_helpers._p14_productivity import (  # ty: ignore[import-not-found]
     _invalidate_derived_costs,
     _invalidate_rejected_schedule,
     _preflight_physical_productivity,
 )
-from ._skill_helpers._p15_resolver import resolve_skill04_physical_schedule  # ty: ignore[unresolved-import]
-from ._skill_helpers._scheduling import (  # ty: ignore[unresolved-import]
+from ._skill_helpers._p15_resolver import resolve_skill04_physical_schedule  # ty: ignore[import-not-found]
+from ._skill_helpers._scheduling import (  # ty: ignore[import-not-found]
     _check_pool_violations,
 )
-from ._skill_helpers._validacao import (  # ty: ignore[unresolved-import]
+from ._skill_helpers._validacao import (  # ty: ignore[import-not-found]
     _aggregate_to_monthly,
     _validate_preconditions,
 )

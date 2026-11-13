@@ -7,8 +7,8 @@ from fractions import Fraction
 
 from concilium.domain.models.canonical import ValidacaoItem
 
-from .pre_metrics import _gap_max_economico  # ty: ignore[unresolved-import]
-from .week_index import iso_week_index  # ty: ignore[unresolved-import]
+from .pre_metrics import _gap_max_economico  # ty: ignore[import-not-found]
+from .week_index import iso_week_index  # ty: ignore[import-not-found]
 
 
 def _week_idx(semana: str) -> int:

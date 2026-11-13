@@ -7,7 +7,7 @@ from typing import Any
 
 from concilium.domain.models.canonical import CanonicalModel
 
-from ._cash_flow import _cash_flow_rows  # ty: ignore[unresolved-import]
+from ._cash_flow import _cash_flow_rows  # ty: ignore[import-not-found]
 
 
 def _bgs_get_equipe(act, equipes_diretas: list):
@@ -136,7 +136,7 @@ def _bgs_add_financeiro(graficos: dict, canonical_in, project_months: list) -> N
     não a distribuição uniforme (_cash_flow_rows local).
     """
     try:
-        from ._b import (  # ty: ignore[unresolved-import]  # runtime-only: sibling loaded via importlib in skill.py
+        from ._b import (  # ty: ignore[import-not-found]  # runtime-only: sibling loaded via importlib in skill.py
             _cash_flow_rows as _cash_flow_rows_proportional,
         )
 

@@ -23,8 +23,8 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._skill_helpers import _bdi_resolucao as _mod_b  # ty: ignore[unresolved-import]
-from ._skill_helpers import (  # ty: ignore[unresolved-import]
+from ._skill_helpers import _bdi_resolucao as _mod_b  # ty: ignore[import-not-found]
+from ._skill_helpers import (  # ty: ignore[import-not-found]
     _build_abc_analytics,
     _build_bridge_from_pe,
     _build_diagnostico_pe,

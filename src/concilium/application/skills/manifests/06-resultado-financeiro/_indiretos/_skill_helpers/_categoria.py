@@ -11,7 +11,7 @@ from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # AD
 from concilium.domain.models.canonical import IndirectoCategoria
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-from ._dimensionamento import (  # ty: ignore[unresolved-import]
+from ._dimensionamento import (  # ty: ignore[import-not-found]
     _bcfd_enrich_mo_itens,
     _parse_component,
 )

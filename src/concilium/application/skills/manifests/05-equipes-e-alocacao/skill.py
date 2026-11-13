@@ -27,8 +27,8 @@ from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 # --- Utils de Dimensionamento (da Skill 05) ---
 # Import helper modules for test compatibility
-from . import _skill_helpers  # ty: ignore[unresolved-import]
-from ._skill_helpers import (  # ty: ignore[unresolved-import]
+from . import _skill_helpers  # ty: ignore[import-not-found]
+from ._skill_helpers import (  # ty: ignore[import-not-found]
     _aplicar_reconciliacao_planejamento,
     _build_alocacoes_pool,
     _build_dimensionamento,
@@ -47,7 +47,7 @@ from ._skill_helpers import (  # ty: ignore[unresolved-import]
     aplicar_roster_a_contratos,
     enriquecer_composicao_por_tipo,
 )
-from ._skill_helpers._custo_exato_p16 import (  # ty: ignore[unresolved-import]
+from ._skill_helpers._custo_exato_p16 import (  # ty: ignore[import-not-found]
     aplicar_custo_exato_p16,
     resumo_alinhado_a_testemunha_p16,  # noqa: F401  (re-exported for the instance builder and tests)
 )

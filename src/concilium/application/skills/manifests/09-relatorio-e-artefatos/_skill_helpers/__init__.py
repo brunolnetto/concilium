@@ -12,13 +12,13 @@ Estrutura Excel gerada:
   - RESULTADO: resultado financeiro consolidado
 """
 
-from ._artefatos_bytes import (  # ty: ignore[unresolved-import]
+from ._artefatos_bytes import (  # ty: ignore[import-not-found]
     _gerar_excel_bytes,
     _gerar_live_model,
     _gerar_memorial_json_bytes,
 )
-from ._cash_flow import _cash_flow_rows, _fmt_mes, _next_month, _week_to_month  # ty: ignore[unresolved-import]
-from ._compressao_cronograma import (  # ty: ignore[unresolved-import]
+from ._cash_flow import _cash_flow_rows, _fmt_mes, _next_month, _week_to_month  # ty: ignore[import-not-found]
+from ._compressao_cronograma import (  # ty: ignore[import-not-found]
     _rcc_add_predecessor,
     _rcc_build_contratos_dict,
     _rcc_build_dag,
@@ -33,7 +33,7 @@ from ._compressao_cronograma import (  # ty: ignore[unresolved-import]
     _rra_build_compressao_cronograma,
     _rra_build_decomposicao_pool,
 )
-from ._equipes_indiretos import (  # ty: ignore[unresolved-import]
+from ._equipes_indiretos import (  # ty: ignore[import-not-found]
     _ber_acao_sugerida,
     _ber_build_rows,
     _ber_componente_dominante,
@@ -42,8 +42,8 @@ from ._equipes_indiretos import (  # ty: ignore[unresolved-import]
     _build_equipe_rows,
     _build_indireto_rows,
 )
-from ._executivo import build_relatorio_executivo  # ty: ignore[unresolved-import]
-from ._graficos import (  # ty: ignore[unresolved-import]
+from ._executivo import build_relatorio_executivo  # ty: ignore[import-not-found]
+from ._graficos import (  # ty: ignore[import-not-found]
     _bgs_accumulate_equip_by_id,
     _bgs_accumulate_mo_by_funcao,
     _bgs_accumulate_week,
@@ -63,7 +63,7 @@ from ._graficos import (  # ty: ignore[unresolved-import]
     _mbec_is_minimal,
     _minimal_break_even_combinations,
 )
-from ._planejamento import (  # ty: ignore[unresolved-import]
+from ._planejamento import (  # ty: ignore[import-not-found]
     _MESES_PT,
     _add_criticidade_validacoes,
     _build_planejamento_row,
@@ -72,7 +72,7 @@ from ._planejamento import (  # ty: ignore[unresolved-import]
     _build_tres_camadas_rows,
     _pe_field,
 )
-from ._relatorio_pe import (  # ty: ignore[unresolved-import]
+from ._relatorio_pe import (  # ty: ignore[import-not-found]
     _rra_build_criticidade_lookup,
     _rra_build_pe_row,
     _rra_build_pe_rows,
@@ -81,7 +81,7 @@ from ._relatorio_pe import (  # ty: ignore[unresolved-import]
     _rra_safe_float,
     _rra_totais_globais,
 )
-from ._relatorio_resultado import (  # ty: ignore[unresolved-import]
+from ._relatorio_resultado import (  # ty: ignore[import-not-found]
     _rra_build_actionable_insights,
     _rra_build_relatorio,
     _rra_build_resultado_section,
