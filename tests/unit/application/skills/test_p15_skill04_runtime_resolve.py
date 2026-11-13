@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from sys import modules
 from types import SimpleNamespace
 
 import pytest
@@ -344,6 +345,7 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
         cubo_analitico=stale,
     )
     candidate = _candidate()
+    resolution_type = modules[module["resolve_skill04_physical_schedule"].__module__].Skill04PhysicalResolution
     monkeypatch.setitem(module, "_validate_preconditions", lambda *_: True)
     monkeypatch.setitem(module, "_build_cpu_lookup", lambda *_: {})
     monkeypatch.setitem(module, "_build_producao_lookup", lambda *_: {})
@@ -371,7 +373,7 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
     monkeypatch.setitem(
         module,
         "resolve_skill04_physical_schedule",
-        lambda **_: SimpleNamespace(
+        lambda **_: resolution_type(
             status=resolution_status,
             schedule_selected=candidate,
             distribution_by_item={},
@@ -380,6 +382,7 @@ def test_skill04_blocks_auto_schedule_when_physical_resolution_is_not_pass(
             reason="bounded physical calendar exhausted",
             violation_details=("V1_SCOPE_UNCLOSED:A:Q=1;sum_q=0",),
             complete_search=True,
+            audit_status="FAIL" if resolution_status == "FAIL" else "UNKNOWN",
         ),
     )
     monkeypatch.setitem(

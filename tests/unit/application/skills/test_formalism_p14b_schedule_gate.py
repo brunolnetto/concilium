@@ -22,6 +22,7 @@ from concilium.domain.models.canonical import (
     TipoRecurso,
     ValidacaoItem,
 )
+from concilium.domain.models.project.constraint_violation import ConstraintViolation
 
 
 def _canonical(percent: float, *, unidade: str = "m3") -> CanonicalModel:
@@ -339,7 +340,7 @@ def test_p14c_pool_violation_invalidates_stale_mobilization_and_indirect_costs(m
                 mensagem="forced pool violation for stale-state regression",
             )
         )
-        return [{"code": "forced-pool-violation"}]
+        return [ConstraintViolation(code="forced-pool-violation", status="ERRO")]
 
     monkeypatch.setitem(
         run_cronograma.__globals__, "_check_pool_violations", _force_pool_violation
@@ -378,9 +379,10 @@ def test_p14c_pool_violation_invalidates_stale_mobilization_and_indirect_costs(m
     assert outcome.canonical.resultado is None
     assert outcome.canonical.s_curve is None
     assert outcome.canonical.cubo_analitico is None
-    assert outcome.canonical.constraint_violations[-1] == {
-        "code": "forced-pool-violation"
-    }
+    assert outcome.canonical.constraint_violations[-1].code == "forced-pool-violation"
+    witness = outcome.canonical.p15_physical_resolution
+    assert witness is not None and witness["status"] == "FAIL"
+    assert witness["violation_details"] == ["V6_POOL_OVERBOOKED:forced-pool-violation:"]
 
 
 def test_p14c_certified_missing_fm_never_publishes_price_or_schedule() -> None:
