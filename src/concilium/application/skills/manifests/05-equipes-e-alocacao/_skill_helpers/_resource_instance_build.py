@@ -524,7 +524,7 @@ def _build_instancias_for_tipo(
     resumo = _build_resumo_e_validacoes(
         tipo_id, contrato, n, instance_active, instance_standby, custo_standby_rate, validacoes
     )
-    if contrato.p16_global_assignment:
+    if type(contrato) is RecursoContrato and contrato.p16_global_assignment:
         # V3 audits this summary against the exact witness: report what P16 charges.
         resumo = resumo_alinhado_a_testemunha_p16(resumo, contrato.p16_global_assignment)
     return instancias, composicoes, [resumo]

@@ -120,7 +120,8 @@ def _team_rows(team: Mapping[str, object], field: str, count: str) -> list[tuple
 
 
 def derive_catalog_cost_envelope(canonical: CanonicalModel, catalogo: Mapping[str, object]) -> CatalogCostEnvelope:
-    regime = canonical.projeto.regime_trabalho if canonical.projeto is not None else None
+    projeto = getattr(canonical, "projeto", None)
+    regime = getattr(projeto, "regime_trabalho", None)
     if regime is None:
         raise ValueError("C^cat requires the project work regime (d, h)")
     hours_per_week = Fraction(regime.dias_semana) * Fraction(regime.horas_dia)

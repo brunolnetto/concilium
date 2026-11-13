@@ -29,7 +29,9 @@ def aplicar_custo_exato_p16(
     contratos: Sequence[RecursoContrato],
     validacoes: list[ValidacaoItem],
 ) -> None:
-    witnessed = [c for c in contratos if c.p16_global_assignment]
+    # Strict evidence demands canonical contracts (same rule as the P17-B audit):
+    # mocks or informal objects never switch an activity to the exact path.
+    witnessed = [c for c in contratos if type(c) is RecursoContrato and c.p16_global_assignment]
     if not witnessed:
         return
     try:

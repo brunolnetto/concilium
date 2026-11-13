@@ -279,6 +279,8 @@ def exactly_covered_activities(
     """
     covered_types: dict[str, set[str]] = {}
     for contract in contracts:
+        if type(contract) is not RecursoContrato:
+            continue  # strict evidence: only canonical contracts can cover a team
         witness = contract.p16_global_assignment or {}
         demand = witness.get("demand_by_activity")
         if isinstance(demand, Mapping):
@@ -315,7 +317,7 @@ def exact_operational_to_catalog_ratio(
     if not isinstance(preview, Mapping) or not canonical.contratos_recurso:
         return {}
     covered, _missing = exactly_covered_activities(canonical.equipes_diretas, canonical.contratos_recurso)
-    witnessed = [c for c in canonical.contratos_recurso if c.p16_global_assignment]
+    witnessed = [c for c in canonical.contratos_recurso if type(c) is RecursoContrato and c.p16_global_assignment]
     contractual = exact_activity_contractual_costs(witnessed)
     consumption: dict[str, Fraction] = {}
     evidence = preview.get("evidence")
