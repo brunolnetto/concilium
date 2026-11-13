@@ -84,7 +84,16 @@ def test_planning_loop_detects_pool_violation():
     can, feasible, violations = adjust_schedule(canonical, dv, catalogo, perfil={"categorias_indireto": []})
 
     assert not feasible
-    assert any(v.code == "VAL-POOL-01" or v.code == "VAL-POOL-01" for v in violations)
+    assert any(v.code == "VAL-POOL-01" for v in violations)
+    # P23: a post-materialization pool conflict must leave a structured V6
+    # witness (not crash, not keep a stale PASS) for the certificate.
+    witness = can.p15_physical_resolution
+    assert witness is not None
+    assert witness["status"] == "FAIL"
+    assert witness["schedule_sha256"] is None
+    assert witness["violation_details"]
+    assert all(d.startswith("V6_POOL_OVERBOOKED:VAL-POOL-01:") for d in witness["violation_details"])
+    assert any("TRATOR" in d for d in witness["violation_details"])
 
     # Line 85 false branch: explicit (non-None) extra_inputs must be honored as-is,
     # skipping the `extra_inputs = {}` default-init.
