@@ -201,25 +201,27 @@ def test_activity_week_assignment_must_match_p16_per_activity_demand() -> None:
     with pytest.raises(ValueError, match="do not reconstruct per-activity demand"):
         build_skill05_exact_pool_ledger(_canonical(contract))
 
-def test_witness_cannot_assign_more_instance_ids_than_contract_capacity() -> None:
+def test_witness_cannot_hold_more_simultaneous_units_than_contracted() -> None:
+    """P16 ids are hires, not units (a remobilised unit gets a new id); the contract
+    bounds the units present at the same time."""
     contract = _contract_and_witness()
     witness = dict(contract.p16_global_assignment or {})
     rows = [dict(row) for row in witness["chains"]]
-    rows[0]["instance_id"] = contract.quantidade_contratada + 1
+    rows.append({**rows[0], "instance_id": 2})
     witness["chains"] = rows
     contract = contract.model_copy(update={"p16_global_assignment": witness})
     with pytest.raises(ValueError, match="over-contracted"):
         build_skill05_exact_pool_ledger(_canonical(contract))
 
 
-def _remobilized_contract() -> RecursoContrato:
+def _remobilized_contract(second_hire_id: int = 1) -> RecursoContrato:
     """One instance demobilised over a 2-week gap (max idle gap 1) and remobilised:
     two chains of the SAME instance, [0, 1) and [3, 4)."""
     weeks = tuple(enumerar_semanas("2026-W01", "2026-W04"))
     tariff = ResourceTariff(F(5), F(1), F(30), F(30), 1)
     chains = (
         InstanceChain("CRANE", 1, 0, 1, 1, 0, (0,)),
-        InstanceChain("CRANE", 1, 3, 4, 1, 0, (3,)),
+        InstanceChain("CRANE", second_hire_id, 3, 4, 1, 0, (3,)),
     )
     physical = ResourceContractLedger(
         resource_type="CRANE", demand=(1, 0, 0, 1), presence=(1, 0, 0, 1), standby=(0, 0, 0, 0),
@@ -261,6 +263,13 @@ def _remobilized_contract() -> RecursoContrato:
         "semana_inicio": weeks[0], "semana_fim": weeks[-1], "semanas_contrato": 4,
         "custo_total_contrato": 130, "p16_global_assignment": witness,
     })
+
+
+def test_remobilised_unit_with_a_new_hire_id_is_accepted() -> None:
+    """P16 gives a remobilised unit a new hire id (3, 4 for 2 contracted loaders)."""
+    # The contract has 1 unit; ids 1 and 2 are two successive hires of it.
+    ledger = build_skill05_exact_pool_ledger(_canonical(_remobilized_contract(second_hire_id=2)))
+    assert ledger.indirect == F(120)
 
 
 def test_remobilised_instance_with_two_disjoint_chains_is_accepted() -> None:
