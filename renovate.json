@@ -2,5 +2,13 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "The Python runtime is capped by binary-wheel availability of native dependencies (ortools has no cp315 wheels). PR #3 raised it to 3.15 without CI and broke install. Bumps need manual approval and a green install/test run; keep .python-version, CI and Dockerfiles in sync (tests/unit/repo_scripts/test_python_runtime_pins.py).",
+      "matchPackageNames": ["python"],
+      "allowedVersions": "<=3.14",
+      "dependencyDashboardApproval": true
+    }
   ]
 }

@@ -26,7 +26,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version: "3.14"
 
       - name: Run negative mutation-contract tests
         run: |
@@ -91,7 +91,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version: "3.14"
 
       # Deliberately do not install concilium, the MCP SDK, or any runtime
       # dependencies: golden reference evidence must be independently runnable.
@@ -190,7 +190,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version: "3.14"
           cache: "pip"
           cache-dependency-path: |
             pyproject.toml
@@ -226,7 +226,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version: "3.14"
           cache: "pip"
           cache-dependency-path: |
             pyproject.toml
@@ -237,7 +237,7 @@ jobs:
           pip install -e .
           pip install \
             ruff \
-            'ty==0.0.56' \
+            'ty==0.0.95' \
             pytest \
             pytest-json-report \
             pytest-asyncio \
@@ -265,7 +265,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version: "3.14"
           cache: "pip"
           cache-dependency-path: |
             pyproject.toml
@@ -311,7 +311,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.15"
+          python-version: "3.14"
           cache: "pip"
           cache-dependency-path: |
             tools/mcp-proxy/pyproject.toml
@@ -325,7 +325,7 @@ jobs:
         working-directory: tools/mcp-proxy
         run: |
           python -m pip install --upgrade pip
-          pip install -e . pytest pytest-asyncio ruff 'ty==0.0.56'
+          pip install -e . pytest pytest-asyncio ruff 'ty==0.0.95'
 
       - name: Ruff check
         working-directory: tools/mcp-proxy

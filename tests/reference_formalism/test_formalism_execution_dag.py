@@ -62,7 +62,11 @@ def test_dag_rejects_missing_node(spec: dict) -> None:
 def test_open_issues_remain_executable_while_wave_zero_is_incomplete(spec: dict) -> None:
     result = report(spec, states(10, 12), all_merged(spec))
     assert result["active_wave"] == 0
-    assert result["ready_to_execute"] == [9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26]
+    # Advisory sequencing: every open issue, including #22/#25 of wave 1,
+    # is executable; only closure remains gated by packages + acceptance.
+    assert sorted(result["ready_to_execute"]) == [
+        9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26
+    ]
     assert result["waves_closed"][0] is False
     issue_14 = next(x for x in result["issues"] if x["issue"] == 14)
     assert issue_14["closure_preflight"]
@@ -250,8 +254,9 @@ def test_wave_zero_issue_eleven_is_next_but_cannot_close_early(spec: dict) -> No
     ]
     result = report(spec, states(9, 10, 12), all_merged(spec) - {90})
     assert result["active_wave"] == 0
-    assert result["ready_to_execute"] == [11]
+    assert 11 in result["ready_to_execute"]
     row = next(r for r in result["issues"] if r["issue"] == 11)
+    assert row["sequencing_advisory"] is False  # #9/#10/#12 closed
     assert row["pending_packages"] == ["P11-B"]
     assert not row["closure_preflight"]
 
