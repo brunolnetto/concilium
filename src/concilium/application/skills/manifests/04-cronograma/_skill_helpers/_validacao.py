@@ -118,8 +118,16 @@ def _infer_teams_from_resources(
     week_offset: int,
     total_weeks: int,
     ramp_profile: list[float] | None = None,
+    per_front: dict[str, int] | None = None,
 ) -> int:
     """Infere num_equipes a partir de assigned_resources.
+
+    Com a composição de UMA frente conhecida (``per_front``: recurso → unidades por
+    frente, da equipe padrão da produção), CAPACIDADE_E_RECURSOS dá
+    a_ig(m) = m·a_ig^front, logo m = min_g ⌊x_g / a_g^front⌋ sobre os recursos da
+    equipe presentes na alocação. Somar unidades heterogêneas (1 usina + 2
+    carregadeiras + ... = 7) programaria a vazão de sete usinas sobre uma contratada.
+    Sem composição conhecida mantém-se o legado ADR-046 (tipos-equipe somados).
 
     ADR-046: assigned_resources é demanda por semana (unidades/semana),
     não total acumulado. Retorna a soma direta das unidades de recurso
@@ -134,7 +142,15 @@ def _infer_teams_from_resources(
     """
     if not assigned_resources:
         return 1
-    peak = int(sum(assigned_resources.values()))
+    team = {
+        resource: units
+        for resource, units in (per_front or {}).items()
+        if resource in assigned_resources and isinstance(units, int) and units > 0
+    }
+    if team:
+        peak = min(int(assigned_resources[resource]) // units for resource, units in team.items())
+    else:
+        peak = int(sum(assigned_resources.values()))
     if ramp_profile is not None and week_offset < len(ramp_profile):
         # ramp_profile[t] = val/n_pico onde val é int → peak * (val/n_pico) = int exato
         # quando peak == n_pico. int() é seguro aqui; round() como fallback para floats

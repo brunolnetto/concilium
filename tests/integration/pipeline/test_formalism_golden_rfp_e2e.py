@@ -179,6 +179,36 @@ def test_golden_rfp_is_a_clean_current_go(golden) -> None:
     assert [(g["gate_id"], g["status"]) for g in certificate["gates"]] == [(g, "PASS") for g in GATES]
 
 
+def test_golden_fronts_never_exceed_contracted_resources(golden) -> None:
+    """No fictitious capacity (#24): for every activity, resource and week the
+    scheduled fronts times the team's units per front equal the P16 demand
+    (a_ig(m) = m a_ig^front; d_gj = sum_i a_ig(m_ij)). Regression for fronts once
+    being the SUM of heterogeneous units (7 and 10 'fronts' on one plant)."""
+    run, service = golden
+    project = service._dependencies.repository.get_project(run["project_id"])
+    canonical = project.load_canonical(run["version"])
+    catalog = _catalog(SPEC)
+    cpus = {c["codigo"]: c for c in catalog["cpus"]}
+    productions = {p["id"]: p for p in catalog["producoes"]}
+    eap = {item.item_id: item for item in canonical.eap}
+    expected: dict[tuple[str, str], int] = {}
+    for activity in canonical.cronograma.scheduled_activities:
+        production = productions[cpus[eap[activity.activity_id].cpu_id]["producao_id_ref"]]
+        team = production["composicao_padrao_equipe"]
+        per_front = {r["equip_id"]: r["num_unidades"] for r in team["equipamentos"]}
+        per_front |= {r["funcao_id"]: r["num_pessoas"] for r in team["funcoes"]}
+        for week, cell in activity.distribuicao_semanal.items():
+            assert cell.num_equipes >= 1 and cell.qtd_executada >= 0
+            for resource, units in per_front.items():
+                expected[(resource, week)] = expected.get((resource, week), 0) + cell.num_equipes * units
+    observed: dict[tuple[str, str], int] = {}
+    for contract in canonical.contratos_recurso:
+        witness = contract.p16_global_assignment
+        for week, demand in zip(witness["calendar_weeks"], witness["demand"], strict=True):
+            observed[(contract.tipo_id, week)] = observed.get((contract.tipo_id, week), 0) + demand
+    assert {k: v for k, v in expected.items() if v} == {k: v for k, v in observed.items() if v}
+
+
 def test_golden_go_is_invalidated_by_a_post_issuance_source_mutation(golden) -> None:
     run, service = golden
     deps = service._dependencies

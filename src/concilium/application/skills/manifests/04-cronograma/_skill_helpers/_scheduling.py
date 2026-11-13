@@ -140,13 +140,29 @@ def _resolve_cpu_for_item(item: Any, cpu_lookup: dict[str, dict], validacoes: li
     return cpu
 
 
-def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any) -> int:
+def _team_units_per_front(production: dict | None, cpu: dict) -> dict[str, int]:
+    """Unidades de cada recurso em UMA frente (equipe padrão da produção, ADR-053)."""
+    team = (production or {}).get("composicao_padrao_equipe") or cpu.get("composicao_padrao_equipe") or {}
+    units: dict[str, int] = {}
+    for row in team.get("equipamentos") or []:
+        if isinstance(row, dict) and row.get("equip_id") and isinstance(row.get("num_unidades"), int):
+            units[row["equip_id"]] = units.get(row["equip_id"], 0) + row["num_unidades"]
+    for row in team.get("funcoes") or []:
+        if isinstance(row, dict) and row.get("funcao_id") and isinstance(row.get("num_pessoas"), int):
+            units[row["funcao_id"]] = units.get(row["funcao_id"], 0) + row["num_pessoas"]
+    return units
+
+
+def _compute_activity_n_max(sa: Any, cpu: dict, ramp: Any, production: dict | None = None) -> int:
     """Computa o pico de frentes para determinar a capacidade F(m) física."""
     # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
+    per_front = _team_units_per_front(production, cpu)
     return (
         max(
             (
-                _infer_teams_from_resources(sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp)
+                _infer_teams_from_resources(
+                    sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp, per_front=per_front
+                )
                 for off in range(sa.duration_weeks)
             ),
             default=1,
@@ -488,7 +504,9 @@ def _convert_schedule_to_distribuicao(
                 fallback_item_ids.add(item_id)
             producao_semanal_base = P * regime.horas_dia * regime.dias_semana
             ramp = getattr(sa, "ramp_profile", None)
-            n_max = _compute_activity_n_max(sa, cpu, ramp)
+            n_max = _compute_activity_n_max(
+                sa, cpu, ramp, (producao_lookup or {}).get(cpu.get("producao_id_ref") or "")
+            )
             distribuicao, qtd_acumulada = _build_activity_distribuicao(
                 sa,
                 item,

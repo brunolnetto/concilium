@@ -269,7 +269,9 @@ def resolve_skill04_physical_schedule(
                 "UNKNOWN", schedule_selected, distribution_by_item,
                 fallback_item_ids, 0, f"{item_id}: productivity cannot be materialized",
             )
-        n_max = _compute_activity_n_max(scheduled, cpu, scheduled.ramp_profile)
+        n_max = _compute_activity_n_max(
+            scheduled, cpu, scheduled.ramp_profile, production_lookup.get(cpu.get("producao_id_ref"))
+        )
         item_cache[item_id] = (
             scheduled, cpu, float(productivity), is_fallback,
             production_lookup.get(cpu.get("producao_id_ref")) or {}, max(1, n_max),
