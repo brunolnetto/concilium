@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from fractions import Fraction
 
@@ -195,3 +196,29 @@ def test_exact_ratio_only_for_fully_covered_activities_with_p18_evidence() -> No
     ratios = exact_operational_to_catalog_ratio(canonical, {"A": Fraction(100), "B": Fraction(50)})
     # A: (EQ 36 + MO 7 + V 57) / 100 = 1; B lacks HELPER coverage -> legacy.
     assert ratios == {"A": Fraction(1)}
+
+
+def test_production_activity_cost_matches_the_oracle_vector() -> None:
+    """exact_activity_contractual_costs reproduces activity_cost_v1 exactly."""
+    from pathlib import Path
+
+    vector = json.loads(
+        (Path(__file__).resolve().parents[3] / "reference_formalism/vectors/activity_cost_v1.json").read_text()
+    )["vectors"][0]
+    weeks = ["2026-W01", "2026-W02", "2026-W03"]
+    contracts = []
+    for spec in vector["inputs"]["contracts"]:
+        owners = spec["active_week_owner"]
+        demand = {aid: [1 if owners.get(w) == aid else 0 for w in weeks] for aid in sorted(set(owners.values()))}
+        contracts.append(
+            _contract(
+                spec["tipo_id"], spec["category"], demand, owners,
+                [{"item_id": k, "custo_total_particionado": float(Fraction(v))} for k, v in spec["partitions"].items()],
+                active=spec["active_week"], standby=spec["standby"], mobility=spec["mobility"],
+            )
+        )
+    observed = {
+        aid: {c: str(v) for c, v in sorted(row.items())}
+        for aid, row in sorted(exact_activity_contractual_costs(contracts).items())
+    }
+    assert observed == vector["expected"]
