@@ -4,6 +4,7 @@ This service deliberately consumes the already materialized P15/P16/P20/P21
 witnesses. It does not recalculate domain formulas and never treats absent
 catalog, productivity calibration, solver or financial evidence as a success.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -36,13 +37,9 @@ from concilium.infrastructure.storage.formalism_certificate_store import (
     read_formalism_evaluation,
 )
 
-
 # Pinned content identities of the normative specifications and independent
 # reference implementations/vectors. #26 owns the drift check.
-_FORMALISM_REFERENCE = (
-    "long:f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5;"
-    "resumido:7cc825e9af2de9d84af7fa2c2036f164db834cf5"
-)
+_FORMALISM_REFERENCE = "long:f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5;resumido:7cc825e9af2de9d84af7fa2c2036f164db834cf5"
 _ORACLE_REFERENCE = (
     "physical-reference:570e73eef9ef3e74f2249d263e9b652035966a98;"
     "economic-reference:c3fd324ba86c89ef849b9dd6b0f07aa1814a3eed;"
@@ -128,12 +125,10 @@ def build_productivity_rate_witnesses(
         return None
 
     cpu_by_id = {
-        row.get("codigo"): row for row in catalog["cpus"]
-        if isinstance(row.get("codigo"), str) and row.get("codigo")
+        row.get("codigo"): row for row in catalog["cpus"] if isinstance(row.get("codigo"), str) and row.get("codigo")
     }
     production_by_id = {
-        row.get("id"): row for row in catalog["producoes"]
-        if isinstance(row.get("id"), str) and row.get("id")
+        row.get("id"): row for row in catalog["producoes"] if isinstance(row.get("id"), str) and row.get("id")
     }
     scheduled_by_item = {row.activity_id: row for row in schedule.scheduled_activities}
     if len(scheduled_by_item) != len(schedule.scheduled_activities):
@@ -146,9 +141,9 @@ def build_productivity_rate_witnesses(
         scheduled = scheduled_by_item[item.item_id]
         cells = getattr(scheduled, "distribuicao_semanal", None) or {}
         active = {
-            week: cell for week, cell in cells.items()
-            if cell.num_equipes > 0
-            and cell.fator_clima * cell.fator_calendario * cell.fator_jornada > 0
+            week: cell
+            for week, cell in cells.items()
+            if cell.num_equipes > 0 and cell.fator_clima * cell.fator_calendario * cell.fator_jornada > 0
         }
         if not active:
             return None
@@ -163,8 +158,11 @@ def build_productivity_rate_witnesses(
             origins.add(str(cell.origem_produtividade))
         origin = next(iter(origins)) if len(origins) == 1 else "NAO_DECLARADA"
         if origin not in {
-            "GRAFO_FLUXO", "GRAFO_ELEMENTOS",
-            "TAXA_POR_FRENTE_ASSUMIDA", "FALLBACK_ARBITRARIO", "NAO_DECLARADA",
+            "GRAFO_FLUXO",
+            "GRAFO_ELEMENTOS",
+            "TAXA_POR_FRENTE_ASSUMIDA",
+            "FALLBACK_ARBITRARIO",
+            "NAO_DECLARADA",
         }:
             origin = "NAO_DECLARADA"
 
@@ -183,13 +181,20 @@ def build_productivity_rate_witnesses(
                 source_type = origin_data.get("tipo")
                 source_date = origin_data.get("data_calibracao")
                 source_ref = origin_data.get("referencia")
-                if all(isinstance(value, str) and value.strip() for value in (
-                    source_id, source_type, source_date, source_ref,
-                )):
+                if all(
+                    isinstance(value, str) and value.strip()
+                    for value in (
+                        source_id,
+                        source_type,
+                        source_date,
+                        source_ref,
+                    )
+                ):
                     source_reference = f"{source_id}|{source_type}|{source_date}|{source_ref}"
             if (
                 origin in {"GRAFO_FLUXO", "GRAFO_ELEMENTOS"}
-                and isinstance(graph, Mapping) and bool(graph)
+                and isinstance(graph, Mapping)
+                and bool(graph)
                 and isinstance(audit_data, Mapping)
                 and isinstance(audit_data.get("versao"), str)
                 and audit_data.get("versao", "").strip()
@@ -208,22 +213,27 @@ def build_productivity_rate_witnesses(
                     "production": dict(production),
                 }
                 calibration_bytes = json.dumps(
-                    _dump(calibration_payload), sort_keys=True,
-                    separators=(",", ":"), ensure_ascii=False, allow_nan=False,
+                    _dump(calibration_payload),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                    allow_nan=False,
                 ).encode("utf-8")
                 calibration_reference = (
                     f"production:{production_id}:version:{audit_data['versao']}:"
                     f"sha256:{hashlib.sha256(calibration_bytes).hexdigest()}"
                 )
 
-        witnesses.append(ProductivityRateWitness(
-            activity_id=item.item_id,
-            hourly_rate=min(weekly_rates.values(), key=lambda value: Fraction(value)),
-            weekly_rates=weekly_rates,
-            origin=origin,
-            source_reference=source_reference,
-            calibration_reference=calibration_reference,
-        ))
+        witnesses.append(
+            ProductivityRateWitness(
+                activity_id=item.item_id,
+                hourly_rate=min(weekly_rates.values(), key=lambda value: Fraction(value)),
+                weekly_rates=weekly_rates,
+                origin=origin,
+                source_reference=source_reference,
+                calibration_reference=calibration_reference,
+            )
+        )
     return tuple(witnesses)
 
 
@@ -248,9 +258,7 @@ def build_solver_context(
         "use_strict_catalog_baseline": run.get("use_strict_catalog_baseline"),
         "use_mobilizacao_policy": run.get("use_mobilizacao_policy"),
         "skill_inputs_override": dict(overrides),
-        "cronograma_algorithm": (
-            canonical.cronograma.algorithm if canonical.cronograma is not None else None
-        ),
+        "cronograma_algorithm": (canonical.cronograma.algorithm if canonical.cronograma is not None else None),
         "physical_resolution": _dump(canonical.p15_physical_resolution),
         "pipeline_integrity": canonical.pipeline_integridade,
         "pipeline_blocked_from": list(canonical.pipeline_blocked_from),
@@ -293,8 +301,11 @@ def _dump(value: Any) -> Any:
         return sorted(
             normalized,
             key=lambda item: json.dumps(
-                item, sort_keys=True, separators=(",", ":"),
-                ensure_ascii=False, allow_nan=False,
+                item,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+                allow_nan=False,
             ),
         )
     if isinstance(value, Enum):
@@ -327,10 +338,14 @@ def build_formalism_source_snapshot(
     """
     result = canonical.resultado
     cronograma = _dump(canonical.cronograma)
-    pricing = None if result is None else {
-        "diagnostics": _dump(result.pricing_diagnostics),
-        "gates": _dump(result.pricing_gates),
-    }
+    pricing = (
+        None
+        if result is None
+        else {
+            "diagnostics": _dump(result.pricing_diagnostics),
+            "gates": _dump(result.pricing_gates),
+        }
+    )
     ledger = None if result is None else _dump(result.p20_financial_reconciliation)
     pool = {
         "recurso_pool": _dump(canonical.recurso_pool),
@@ -344,8 +359,10 @@ def build_formalism_source_snapshot(
         inventory_scope = {
             key: result.pricing_diagnostics.get(key)
             for key in (
-                "inventory_scope_status", "inventory_scope_source",
-                "inventory_scope_reference_id", "inventory_scope_fingerprint",
+                "inventory_scope_status",
+                "inventory_scope_source",
+                "inventory_scope_reference_id",
+                "inventory_scope_fingerprint",
             )
         }
     inventory = {
@@ -354,9 +371,11 @@ def build_formalism_source_snapshot(
         "p18_consumption_preview": _dump(canonical.p18_consumption_preview),
         "inventory_scope": inventory_scope,
     }
-    productivity_value = None if productivity_witnesses is None else [
-        witness.model_dump(mode="json") for witness in productivity_witnesses
-    ]
+    productivity_value = (
+        None
+        if productivity_witnesses is None
+        else [witness.model_dump(mode="json") for witness in productivity_witnesses]
+    )
     solver_value = None if solver_context is None else _dump(solver_context)
     return {
         "canonical": _dump(canonical),
@@ -369,7 +388,9 @@ def build_formalism_source_snapshot(
         # Must match fingerprint_source("schedule", {"cronograma": ...}) in Skill 04.
         "schedule": None if cronograma is None else {"cronograma": cronograma},
         "pool": pool if canonical.contratos_recurso or canonical.resumo_utilizacao_contratos else None,
-        "inventory": inventory if canonical.recursos_consumiveis or canonical.resumo_estoque_consumiveis or inventory_scope else None,
+        "inventory": inventory
+        if canonical.recursos_consumiveis or canonical.resumo_estoque_consumiveis or inventory_scope
+        else None,
         "ledger": ledger,
         "pricing": pricing,
         "solver": solver_value,
@@ -378,10 +399,7 @@ def build_formalism_source_snapshot(
 
 def build_pool_summaries(canonical: CanonicalModel) -> tuple[dict[str, Any], ...]:
     """Bind each utilization summary to the exact P16 witness for that contract."""
-    contracts = {
-        contract.contrato_id: contract
-        for contract in (canonical.contratos_recurso or [])
-    }
+    contracts = {contract.contrato_id: contract for contract in (canonical.contratos_recurso or [])}
     if len(contracts) != len(canonical.contratos_recurso or []):
         return ()
     summaries: list[dict[str, Any]] = []

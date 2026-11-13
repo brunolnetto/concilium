@@ -5,6 +5,7 @@ production, pool allocation, stock, the P17-P20 journals, or BDI formulas. Those
 remain owned by the corresponding domain validators. A GO is possible only for
 an RFP with a complete source envelope and PASS evidence for every gate.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -23,17 +24,33 @@ from concilium.domain.models.formalism_certificate import (
 )
 
 GateId = Literal[
-    "V1", "V2", "V3", "V4", "V5", "V6",
-    "FINANCIAL_COST_RECONCILIATION", "PRICE_PRESENT",
-    "REGULATORY_BDI_BASIS", "PROFITABILITY", "PRODUCTIVITY_PROVENANCE",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "FINANCIAL_COST_RECONCILIATION",
+    "PRICE_PRESENT",
+    "REGULATORY_BDI_BASIS",
+    "PROFITABILITY",
+    "PRODUCTIVITY_PROVENANCE",
 ]
 GateStatus = Literal["PASS", "FAIL", "UNKNOWN", "NOT_EVALUATED"]
 Decision = Literal["GO", "NOGO", "NOT_CERTIFIABLE"]
 
 REQUIRED_GATES: tuple[GateId, ...] = (
-    "V1", "V2", "V3", "V4", "V5", "V6",
-    "FINANCIAL_COST_RECONCILIATION", "PRICE_PRESENT",
-    "REGULATORY_BDI_BASIS", "PROFITABILITY", "PRODUCTIVITY_PROVENANCE",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "FINANCIAL_COST_RECONCILIATION",
+    "PRICE_PRESENT",
+    "REGULATORY_BDI_BASIS",
+    "PROFITABILITY",
+    "PRODUCTIVITY_PROVENANCE",
 )
 
 GATE_SOURCES: dict[GateId, tuple[str, ...]] = {
@@ -67,8 +84,11 @@ class ProductivityRateWitness(BaseModel):
     # but cannot hide a zero/invalid F_i(m_ij) in one of the actual active weeks.
     weekly_rates: dict[str, str] = Field(default_factory=dict)
     origin: Literal[
-        "GRAFO_FLUXO", "GRAFO_ELEMENTOS", "TAXA_POR_FRENTE_ASSUMIDA",
-        "FALLBACK_ARBITRARIO", "NAO_DECLARADA",
+        "GRAFO_FLUXO",
+        "GRAFO_ELEMENTOS",
+        "TAXA_POR_FRENTE_ASSUMIDA",
+        "FALLBACK_ARBITRARIO",
+        "NAO_DECLARADA",
     ]
     source_reference: str | None = None
     calibration_reference: str | None = None
@@ -160,9 +180,13 @@ class FormalismEvaluation(BaseModel):
         if len(set(self.reasons)) != len(self.reasons):
             raise ValueError("evaluation reasons must be unique")
         expected = _evaluation_fingerprint(
-            project_id=self.project_id, run_id=self.run_id, scope=self.scope,
-            inputs_sha256=self.inputs_sha256, decision=self.decision,
-            gate_evidence=self.gate_evidence, reasons=self.reasons,
+            project_id=self.project_id,
+            run_id=self.run_id,
+            scope=self.scope,
+            inputs_sha256=self.inputs_sha256,
+            decision=self.decision,
+            gate_evidence=self.gate_evidence,
+            reasons=self.reasons,
         )
         if expected != self.evaluation_sha256:
             raise ValueError("evaluation fingerprint does not match its immutable content")
@@ -212,7 +236,10 @@ def gate_evidence_from_status(
         status=status,
         source_fingerprints=source_fingerprints,
         artifact_refs=artifact_refs if artifact_refs is not None else _artifact_refs(envelope, gate_id),
-        observed=observed or {}, expected=expected or {}, tolerance=tolerance, reason=reason,
+        observed=observed or {},
+        expected=expected or {},
+        tolerance=tolerance,
+        reason=reason,
     )
 
 
@@ -236,10 +263,7 @@ def _audit_status(audit: Any | None, prefix: str) -> tuple[GateStatus, tuple[str
     if getattr(audit, "status", None) == "FAIL":
         # A different V1/V6 family can fail while this family independently
         # passes. Unknown validator codes must not be treated as a clean result.
-        known_other_family = all(
-            str(getattr(v, "code", "")).startswith(("V1_", "V6_"))
-            for v in audit.violations
-        )
+        known_other_family = all(str(getattr(v, "code", "")).startswith(("V1_", "V6_")) for v in audit.violations)
         if rows == [] and known_other_family and audit.violations:
             return "PASS", details, None
         return "UNKNOWN", details, f"physical audit failed without a conclusive {prefix} result"
@@ -290,11 +314,7 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
         if type(p16_quantity) is not int or type(p16_weeks) is not int or not isinstance(p16_resource_type, str):
             unknowns.append(f"{contract_id}: typed canonical P16 contract metadata is unavailable")
             continue
-        if (
-            contracted != p16_quantity
-            or contract_weeks != p16_weeks
-            or resource_type != p16_resource_type
-        ):
+        if contracted != p16_quantity or contract_weeks != p16_weeks or resource_type != p16_resource_type:
             violations.append(
                 f"{contract_id}: utilization summary quantity/weeks/resource type differs "
                 "from the canonical RecursoContrato"
@@ -331,7 +351,8 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
         standby = witness.get("standby")
         demand_by_activity = witness.get("demand_by_activity")
         if (
-            not isinstance(weeks, list) or not weeks
+            not isinstance(weeks, list)
+            or not weeks
             or any(not isinstance(week, str) or not week.strip() for week in weeks)
             or len(set(weeks)) != len(weeks)
             or not all(isinstance(series, list) for series in (demand, presence, standby))
@@ -339,18 +360,27 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
             or len(presence) != len(weeks)
             or len(standby) != len(weeks)
             or len(weeks) != p16_weeks
-            or not isinstance(demand_by_activity, Mapping) or not demand_by_activity
+            or not isinstance(demand_by_activity, Mapping)
+            or not demand_by_activity
         ):
-            unknowns.append(f"{contract_id}: P16 witness lacks complete weekly demand/presence/standby vectors or disagrees with canonical contract duration")
+            unknowns.append(
+                f"{contract_id}: P16 witness lacks complete weekly demand/presence/standby vectors "
+                "or disagrees with canonical contract duration"
+            )
             continue
 
         vectors_valid = True
         for index, (demand_count, presence_count, standby_count) in enumerate(
             zip(demand, presence, standby, strict=True)
         ):
-            if any(type(value) is not int or value < 0 for value in (
-                demand_count, presence_count, standby_count,
-            )):
+            if any(
+                type(value) is not int or value < 0
+                for value in (
+                    demand_count,
+                    presence_count,
+                    standby_count,
+                )
+            ):
                 unknowns.append(f"{contract_id}/{weeks[index]}: P16 counts must be exact nonnegative integers")
                 vectors_valid = False
                 break
@@ -379,9 +409,11 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
         activity_ids: set[str] = set()
         for activity_id, series in demand_by_activity.items():
             if (
-                not isinstance(activity_id, str) or not activity_id.strip()
+                not isinstance(activity_id, str)
+                or not activity_id.strip()
                 or activity_id in activity_ids
-                or not isinstance(series, list) or len(series) != len(weeks)
+                or not isinstance(series, list)
+                or len(series) != len(weeks)
                 or any(type(value) is not int or value < 0 for value in series)
             ):
                 unknowns.append(f"{contract_id}: malformed P16 per-activity demand tensor")
@@ -409,9 +441,7 @@ def _pool_standby_status(pool_summaries: Sequence[Any] | None) -> tuple[GateStat
                 f"!= Skill05 standby machine-weeks {summary_standby}"
             )
         if active_machine_weeks + standby_machine_weeks > available:
-            violations.append(
-                f"{contract_id}: active + standby machine-weeks exceed declared availability"
-            )
+            violations.append(f"{contract_id}: active + standby machine-weeks exceed declared availability")
         observed[contract_id] = {
             "resource_type": resource_type,
             "available": available,
@@ -444,16 +474,17 @@ def _productivity_status(
     if expected and set(indexed) != expected:
         missing = sorted(expected - set(indexed))
         extra = sorted(set(indexed) - expected)
-        return "UNKNOWN", {"missing": missing, "extra": extra}, "productivity witness does not cover the full EAP activity set"
+        return (
+            "UNKNOWN",
+            {"missing": missing, "extra": extra},
+            "productivity witness does not cover the full EAP activity set",
+        )
     failures: list[str] = []
     unknowns: list[str] = []
     observed: dict[str, Any] = {}
     for activity_id, row in sorted(indexed.items()):
         rate = Fraction(row.hourly_rate)
-        weekly_rates = {
-            week: Fraction(raw_rate)
-            for week, raw_rate in row.weekly_rates.items()
-        }
+        weekly_rates = {week: Fraction(raw_rate) for week, raw_rate in row.weekly_rates.items()}
         observed[activity_id] = {
             "hourly_rate": row.hourly_rate,
             "weekly_rates": {week: str(value) for week, value in sorted(weekly_rates.items())},
@@ -470,9 +501,7 @@ def _productivity_status(
         elif row.origin == "FALLBACK_ARBITRARIO":
             failures.append(f"{activity_id}: arbitrary preview fallback is never certifiable")
         elif row.origin == "TAXA_POR_FRENTE_ASSUMIDA":
-            unknowns.append(
-                f"{activity_id}: assumed per-front rate has no independently verified calibration artifact"
-            )
+            unknowns.append(f"{activity_id}: assumed per-front rate has no independently verified calibration artifact")
         elif row.origin == "NAO_DECLARADA" or not row.source_reference:
             unknowns.append(f"{activity_id}: productivity origin/source is not declared")
         elif not row.calibration_reference:
@@ -484,7 +513,7 @@ def _productivity_status(
     return "PASS", observed, None
 
 
-def _as_fraction(value: Any, label: str) -> > Fraction:
+def _as_fraction(value: Any, label: str) -> Fraction:
     if type(value) is Fraction:
         return value
     if not isinstance(value, str) or not value.strip():
@@ -511,8 +540,10 @@ def _inventory_scope_state(
     reference = inventory_scope.get("reference_id")
     fingerprint = inventory_scope.get("fingerprint")
     observed = {
-        "status": status, "source": source,
-        "reference_id": reference, "fingerprint": fingerprint,
+        "status": status,
+        "source": source,
+        "reference_id": reference,
+        "fingerprint": fingerprint,
         "holding_evidence_present": holding_evidence_present,
     }
     if status not in {"NO_INVENTORY", "COMPLETE"}:
@@ -548,7 +579,9 @@ def _financial_reconciliation_status(
         weekly = reconciliation.get("weekly_balances")
         weekly_categories = reconciliation.get("weekly_category_balances")
         totals = reconciliation.get("totals")
-        if not all(isinstance(x, list) for x in (postings, attribution, weekly, weekly_categories)) or not isinstance(totals, Mapping):
+        if not all(isinstance(x, list) for x in (postings, attribution, weekly, weekly_categories)) or not isinstance(
+            totals, Mapping
+        ):
             return "UNKNOWN", {}, "P20 persisted reconciliation is missing postings, attribution or weekly evidence"
         expected_rows: dict[tuple[str, ...], tuple[str, str, Fraction, str, str]] = {}
         grouped: dict[tuple[str, str], Fraction] = {}
@@ -567,7 +600,15 @@ def _financial_reconciliation_status(
             category = raw.get("category")
             source = raw.get("source")
             week = raw.get("week")
-            if nature not in {"CONTRACTUAL_ACTIVE", "CONTRACTUAL_IDLE", "MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT", "CONSUMABLE_ACQUISITION", "INDIRECT", "INVENTORY_HOLDING"}:
+            if nature not in {
+                "CONTRACTUAL_ACTIVE",
+                "CONTRACTUAL_IDLE",
+                "MOBILIZATION_EVENT",
+                "DEMOBILIZATION_EVENT",
+                "CONSUMABLE_ACQUISITION",
+                "INDIRECT",
+                "INVENTORY_HOLDING",
+            }:
                 return "FAIL", {}, f"P20 posting {index} has invalid nature"
             if category not in {"MO", "EQ", "MAT", "COMB", "IND"}:
                 return "FAIL", {}, f"P20 posting {index} has invalid category"
@@ -590,15 +631,22 @@ def _financial_reconciliation_status(
                 indirect += amount
 
         expected_totals = {
-            "contractual_k": k, "consumable_v": v, "direct": k + v,
-            "indirect": indirect, "total": k + v + indirect,
+            "contractual_k": k,
+            "consumable_v": v,
+            "direct": k + v,
+            "indirect": indirect,
+            "total": k + v + indirect,
         }
         try:
             observed_totals = {name: _as_fraction(totals.get(name), f"P20 total {name}") for name in expected_totals}
         except ValueError as exc:
             return "UNKNOWN", {}, str(exc)
         if observed_totals != expected_totals:
-            return "FAIL", {k: str(v) for k, v in expected_totals.items()}, "P20 aggregate totals do not reconstruct from exclusive postings"
+            return (
+                "FAIL",
+                {k: str(v) for k, v in expected_totals.items()},
+                "P20 aggregate totals do not reconstruct from exclusive postings",
+            )
 
         actual_rows: dict[tuple[str, ...], tuple[str, str, Fraction, str, str]] = {}
         for index, raw in enumerate(attribution):
@@ -612,18 +660,30 @@ def _financial_reconciliation_status(
                 return "FAIL", {}, "duplicate P20 event attribution identity"
             owner_scope = raw.get("owner_scope")
             owner_id = raw.get("owner_id")
-            if owner_scope not in {"ACTIVITY", "INSTANCE", "GOOD", "SOURCE"} or not isinstance(owner_id, list) or not owner_id or any(not isinstance(x, str) or not x for x in owner_id):
+            if (
+                owner_scope not in {"ACTIVITY", "INSTANCE", "GOOD", "SOURCE"}
+                or not isinstance(owner_id, list)
+                or not owner_id
+                or any(not isinstance(x, str) or not x for x in owner_id)
+            ):
                 return "UNKNOWN", {}, f"P20 event {event_id} has no valid owner attribution"
             try:
                 amount = _as_fraction(raw.get("amount"), f"P20 attribution {index} amount")
             except ValueError as exc:
                 return "UNKNOWN", {}, str(exc)
             actual_rows[event_id] = (
-                str(raw.get("nature")), str(raw.get("category")), amount,
-                str(raw.get("source")), str(raw.get("week")),
+                str(raw.get("nature")),
+                str(raw.get("category")),
+                amount,
+                str(raw.get("source")),
+                str(raw.get("week")),
             )
         if actual_rows != expected_rows:
-            return "FAIL", {"posting_count": len(expected_rows), "attribution_count": len(actual_rows)}, "P20 event attribution differs from exclusive postings"
+            return (
+                "FAIL",
+                {"posting_count": len(expected_rows), "attribution_count": len(actual_rows)},
+                "P20 event attribution differs from exclusive postings",
+            )
 
         weekly_seen: dict[str, tuple[Fraction, Fraction, Fraction]] = {}
         for index, row in enumerate(weekly):
@@ -631,55 +691,43 @@ def _financial_reconciliation_status(
                 return "FAIL", {}, f"P20 weekly balance {index} has no ISO week"
             week = row["week"]
             try:
-                values = tuple(_as_fraction(row.get(key), f"P20 weekly {week}/{key}") for key in ("contractual_k", "consumable_v", "indirect"))
+                values = (
+                    _as_fraction(row.get("contractual_k"), f"P20 weekly {week}/contractual_k"),
+                    _as_fraction(row.get("consumable_v"), f"P20 weekly {week}/consumable_v"),
+                    _as_fraction(row.get("indirect"), f"P20 weekly {week}/indirect"),
+                )
             except ValueError as exc:
                 return "UNKNOWN", {}, str(exc)
             if week in weekly_seen:
                 return "FAIL", {}, f"duplicate P20 weekly balance {week}"
             weekly_seen[week] = values
         recomputed_weeks: dict[str, tuple[Fraction, Fraction, Fraction]] = {}
-        for week, _nature in grouped:
+        for week, _posting_nature in grouped:
             active = grouped.get((week, "CONTRACTUAL_ACTIVE"), Fraction(0))
             idle = grouped.get((week, "CONTRACTUAL_IDLE"), Fraction(0))
             consumables = grouped.get((week, "CONSUMABLE_ACQUISITION"), Fraction(0))
-            other = sum((grouped.get((week, nature), Fraction(0)) for nature in ("MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT", "INDIRECT", "INVENTORY_HOLDING")), Fraction(0))
+            other = sum(
+                (
+                    grouped.get((week, nature), Fraction(0))
+                    for nature in ("MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT", "INDIRECT", "INVENTORY_HOLDING")
+                ),
+                Fraction(0),
+            )
             recomputed_weeks[week] = (active + idle, consumables, other)
         if weekly_seen != recomputed_weeks:
-            return "FAIL", {"observed_weeks": len(weekly_seen), "recomputed_weeks": len(recomputed_weeks)}, "P20 weekly balances do not reconstruct from postings"
+            return (
+                "FAIL",
+                {"observed_weeks": len(weekly_seen), "recomputed_weeks": len(recomputed_weeks)},
+                "P20 weekly balances do not reconstruct from postings",
+            )
 
         weekly_category_seen: dict[tuple[str, str], Fraction] = {}
         for index, row in enumerate(weekly_categories):
-            if not isinstance(row, Mapping) or not isinstance(row.get("week"), str) or not isinstance(row.get("category"), str):
-                return "FAIL", {}, f"P20 weekly category balance {index} is invalid"
-            key = (row["week"], row["category"])
-            if key in weekly_category_seen:
-                return "FAIL", {}, "duplicate P20 weekly category balance"
-            try:
-                weekly_category_seen[key] = _as_fraction(row.get("amount"), f"P20 weekly category {key}")
-            except ValueError as exc:
-                return "UNKNOWN", {}, str(exc)
-        if weekly_category_seen != category_grouped:
-            return "FAIL", {}, "P20 weekly category ledger does not reconstruct from postings"
-        return "PASS", {k: str(v) for k, v in expected_totals.items()} | {"posting_count": len(postings)}, None
-k}/{key}") for key in ("contractual_k", "consumable_v", "indirect"))
-            except ValueError as exc:
-                return "UNKNOWN", {}, str(exc)
-            if week in weekly_seen:
-                return "FAIL", {}, f"duplicate P20 weekly balance {week}"
-            weekly_seen[week] = values
-        recomputed_weeks: dict[str, tuple[Fraction, Fraction, Fraction]] = {}
-        for week, _nature in grouped:
-            active = grouped.get((week, "CONTRACTUAL_ACTIVE"), Fraction(0))
-            idle = grouped.get((week, "CONTRACTUAL_IDLE"), Fraction(0))
-            consumables = grouped.get((week, "CONSUMABLE_ACQUISITION"), Fraction(0))
-            other = sum((grouped.get((week, nature), Fraction(0)) for nature in ("MOBILIZATION_EVENT", "DEMOBILIZATION_EVENT", "INDIRECT", "INVENTORY_HOLDING")), Fraction(0))
-            recomputed_weeks[week] = (active + idle, consumables, other)
-        if weekly_seen != recomputed_weeks:
-            return "FAIL", {"observed_weeks": len(weekly_seen), "recomputed_weeks": len(recomputed_weeks)}, "P20 weekly balances do not reconstruct from postings"
-
-        weekly_category_seen: dict[tuple[str, str], Fraction] = {}
-        for index, row in enumerate(weekly_categories):
-            if not isinstance(row, Mapping) or not isinstance(row.get("week"), str) or not isinstance(row.get("category"), str):
+            if (
+                not isinstance(row, Mapping)
+                or not isinstance(row.get("week"), str)
+                or not isinstance(row.get("category"), str)
+            ):
                 return "FAIL", {}, f"P20 weekly category balance {index} is invalid"
             key = (row["week"], row["category"])
             if key in weekly_category_seen:
@@ -695,9 +743,13 @@ k}/{key}") for key in ("contractual_k", "consumable_v", "indirect"))
             reconciliation.get("holding_evidence_present"),
             [str(row.get("nature")) for row in postings if isinstance(row, Mapping)],
         )
-        totals_observed = {k: str(v) for k, v in expected_totals.items()} | {
-            "posting_count": len(postings),
-        } | {"inventory_scope": inventory_observed}
+        totals_observed = (
+            {k: str(v) for k, v in expected_totals.items()}
+            | {
+                "posting_count": len(postings),
+            }
+            | {"inventory_scope": inventory_observed}
+        )
         if inventory_status != "PASS":
             return inventory_status, totals_observed, inventory_reason
         return "PASS", totals_observed, None
@@ -712,41 +764,62 @@ k}/{key}") for key in ("contractual_k", "consumable_v", "indirect"))
     direct = getattr(ledger, "direct", None)
     indirect = getattr(ledger, "indirect", None)
     total = getattr(ledger, "total", None)
-    if any(type(value) is not Fraction for value in (direct, indirect, total)):
+    # isinstance narrows for the type checker; the exact-type check keeps
+    # Fraction subclasses out, as the original exact-replay contract requires.
+    if (
+        not isinstance(direct, Fraction)
+        or not isinstance(indirect, Fraction)
+        or not isinstance(total, Fraction)
+        or {type(direct), type(indirect), type(total)} != {Fraction}
+    ):
         return "UNKNOWN", {}, "P20 ledger totals are not exact Fraction values"
     if direct < 0 or indirect < 0 or total <= 0 or direct + indirect != total:
-        return "FAIL", {"direct": str(direct), "indirect": str(indirect), "total": str(total)}, "P20 identity C_total = C_direct + C_indirect failed"
+        return (
+            "FAIL",
+            {"direct": str(direct), "indirect": str(indirect), "total": str(total)},
+            "P20 identity C_total = C_direct + C_indirect failed",
+        )
     attribution = getattr(reconciliation, "event_attribution", ())
     if not attribution:
         return "UNKNOWN", {"posting_count": len(postings)}, "P20 event-level attribution is missing"
-    expected = {
-        line.event_id: (line.nature, line.category, line.amount, line.source, line.week)
-        for line in postings
-    }
+    expected = {line.event_id: (line.nature, line.category, line.amount, line.source, line.week) for line in postings}
     actual: dict[Any, tuple[Any, ...]] = {}
     for row in attribution:
         event_id = getattr(row, "event_id", None)
         if event_id in actual:
             return "FAIL", {}, "duplicate P20 event attribution identity"
         actual[event_id] = (
-            getattr(row, "nature", None), getattr(row, "category", None),
-            getattr(row, "amount", None), getattr(row, "source", None), getattr(row, "week", None),
+            getattr(row, "nature", None),
+            getattr(row, "category", None),
+            getattr(row, "amount", None),
+            getattr(row, "source", None),
+            getattr(row, "week", None),
         )
     if actual != expected:
-        return "FAIL", {"posting_count": len(postings), "attribution_count": len(attribution)}, "P20 event attribution differs from the exclusive ledger"
+        return (
+            "FAIL",
+            {"posting_count": len(postings), "attribution_count": len(attribution)},
+            "P20 event attribution differs from the exclusive ledger",
+        )
     weekly = getattr(reconciliation, "weeks", ())
     if weekly:
         weekly_total = sum((getattr(row, "total", Fraction(-1)) for row in weekly), Fraction())
         if weekly_total != total:
-            return "FAIL", {"weekly_total": str(weekly_total), "ledger_total": str(total)}, "weekly P20 totals do not reconcile to the project ledger"
+            return (
+                "FAIL",
+                {"weekly_total": str(weekly_total), "ledger_total": str(total)},
+                "weekly P20 totals do not reconcile to the project ledger",
+            )
     inventory_status, inventory_observed, inventory_reason = _inventory_scope_state(
         inventory_scope,
         getattr(reconciliation, "holding_evidence_present", None),
         [_nature(getattr(row, "nature", "")) for row in postings],
     )
     observed = {
-        "posting_count": len(postings), "direct": str(direct),
-        "indirect": str(indirect), "total": str(total),
+        "posting_count": len(postings),
+        "direct": str(direct),
+        "indirect": str(indirect),
+        "total": str(total),
         "inventory_scope": inventory_observed,
     }
     if inventory_status != "PASS":
@@ -770,7 +843,11 @@ def _pricing_status(
             total_cost = _as_fraction(_read(pricing, "total_cost"), "P21 total_cost")
             profit = _as_fraction(_read(pricing, "profit_amount"), "P21 profit_amount")
         except ValueError as exc:
-            price = ("FAIL", {}, "required operational price/cost evidence is absent or invalid") if _read(pricing, "operational_price") is None else ("UNKNOWN", {}, str(exc))
+            price = (
+                ("FAIL", {}, "required operational price/cost evidence is absent or invalid")
+                if _read(pricing, "operational_price") is None
+                else ("UNKNOWN", {}, str(exc))
+            )
             v4 = ("UNKNOWN", {}, str(exc))
             p = total_cost = profit = None
         else:
@@ -784,7 +861,11 @@ def _pricing_status(
                 v4 = ("FAIL", {"P": str(p), "C_tot": str(total_cost)}, "V4 requires P > 0 and C_total > 0")
             if profit != p - total_cost:
                 return {
-                    "PRICE_PRESENT": ("FAIL", {"P": str(p), "C_tot": str(total_cost), "profit": str(profit)}, "P21 profit does not reconstruct as P - C_total"),
+                    "PRICE_PRESENT": (
+                        "FAIL",
+                        {"P": str(p), "C_tot": str(total_cost), "profit": str(profit)},
+                        "P21 profit does not reconstruct as P - C_total",
+                    ),
                     "V4": v4,
                     "REGULATORY_BDI_BASIS": ("UNKNOWN", {}, "financial diagnostics did not reconcile"),
                     "PROFITABILITY": ("FAIL", {}, "financial diagnostics did not reconcile"),
@@ -792,8 +873,16 @@ def _pricing_status(
                 }
             if reconciled_total is not None and total_cost != reconciled_total:
                 return {
-                    "PRICE_PRESENT": ("FAIL", {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)}, "P21 total cost differs from P20 exclusive ledger"),
-                    "V4": ("FAIL", {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)}, "P21 price is not based on reconciled P20 cost"),
+                    "PRICE_PRESENT": (
+                        "FAIL",
+                        {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)},
+                        "P21 total cost differs from P20 exclusive ledger",
+                    ),
+                    "V4": (
+                        "FAIL",
+                        {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)},
+                        "P21 price is not based on reconciled P20 cost",
+                    ),
                     "REGULATORY_BDI_BASIS": ("UNKNOWN", {}, "P21/P20 monetary sources do not reconcile"),
                     "PROFITABILITY": ("FAIL", {}, "P21/P20 monetary sources do not reconcile"),
                     "V2": ("UNKNOWN", {}, "P21/P20 monetary sources do not reconcile"),
@@ -806,8 +895,10 @@ def _pricing_status(
         regulatory_raw = _read(pricing_gates, "regulatory_status", "UNKNOWN")
         regulatory_reasons_raw = _read(pricing_gates, "reasons", ())
         regulatory_reasons = (
-            tuple(regulatory_reasons_raw) if isinstance(regulatory_reasons_raw, (list, tuple))
-            else tuple([regulatory_reasons_raw]) if isinstance(regulatory_reasons_raw, str) and regulatory_reasons_raw
+            tuple(regulatory_reasons_raw)
+            if isinstance(regulatory_reasons_raw, (list, tuple))
+            else tuple([regulatory_reasons_raw])
+            if isinstance(regulatory_reasons_raw, str) and regulatory_reasons_raw
             else ()
         )
         regulatory_status: GateStatus = regulatory_raw if regulatory_raw in {"PASS", "FAIL", "UNKNOWN"} else "UNKNOWN"
@@ -820,14 +911,21 @@ def _pricing_status(
                 "floor": str(_read(pricing_gates, "regulatory_bdi_floor")),
                 "reference": _read(pricing_gates, "regulatory_basis_reference"),
             },
-            None if regulatory_status == "PASS" else "; ".join(str(x) for x in regulatory_reasons) or "regulatory BDI basis is missing or incomparable",
+            None
+            if regulatory_status == "PASS"
+            else "; ".join(str(x) for x in regulatory_reasons) or "regulatory BDI basis is missing or incomparable",
         )
         profit_raw = _read(pricing_gates, "profitability_status", "UNKNOWN")
         profit_status: GateStatus = profit_raw if profit_raw in {"PASS", "FAIL", "UNKNOWN"} else "UNKNOWN"
         profitability = (
             profit_status,
-            {"profit": str(_read(pricing_gates, "profit_amount")), "margin": str(_read(pricing_gates, "realized_margin"))},
-            None if profit_status == "PASS" else "; ".join(str(x) for x in regulatory_reasons) or "P21 profitability gate did not PASS",
+            {
+                "profit": str(_read(pricing_gates, "profit_amount")),
+                "margin": str(_read(pricing_gates, "realized_margin")),
+            },
+            None
+            if profit_status == "PASS"
+            else "; ".join(str(x) for x in regulatory_reasons) or "P21 profitability gate did not PASS",
         )
         if profit is not None and profit <= 0:
             profitability = ("FAIL", {"profit": str(profit)}, "operational price does not exceed total cost")
@@ -841,75 +939,22 @@ def _pricing_status(
 
 
 def _evaluation_fingerprint(
-    *, project_id: str, run_id: str, scope: str, inputs_sha256: str,
-    decision: str, gate_evidence: tuple[GateEvidence, ...], reasons: tuple[str, ...],
+    *,
+    project_id: str,
+    run_id: str,
+    scope: str,
+    inputs_sha256: str,
+    decision: str,
+    gate_evidence: tuple[GateEvidence, ...],
+    reasons: tuple[str, ...],
 ) -> str:
     manifest = {
-        "schema_version": "1.0.0", "project_id": project_id, "run_id": run_id,
-        "scope": scope, "inputs_sha256": inputs_sha256, "decision": decision,
-        "gate_evidence": [item.model_dump(mode="json") for item in gate_evidence],
-        "reasons": list(reasons),
-    }
-    return hashlib.sha256(b"concilium-formalism-evaluation/v1\n" + _canonical_json(manifest)).hexdigest()
-did not reconcile"),
-                }
-            if reconciled_total is not None and total_cost != reconciled_total:
-                return {
-                    "PRICE_PRESENT": ("FAIL", {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)}, "P21 total cost differs from P20 exclusive ledger"),
-                    "V4": ("FAIL", {"P": str(p), "C_tot": str(total_cost), "P20_total": str(reconciled_total)}, "P21 price is not based on reconciled P20 cost"),
-                    "REGULATORY_BDI_BASIS": ("UNKNOWN", {}, "P21/P20 monetary sources do not reconcile"),
-                    "PROFITABILITY": ("FAIL", {}, "P21/P20 monetary sources do not reconcile"),
-                    "V2": ("UNKNOWN", {}, "P21/P20 monetary sources do not reconcile"),
-                }
-
-    if pricing_gates is None:
-        regulatory = ("FAIL", {}, "mandatory regulatory BDI basis/gate is missing for an RFP")
-        profitability = ("UNKNOWN", {}, "P21 profitability gate is missing")
-    else:
-        regulatory_raw = _read(pricing_gates, "regulatory_status", "UNKNOWN")
-        regulatory_reasons_raw = _read(pricing_gates, "reasons", ())
-        regulatory_reasons = (
-            tuple(regulatory_reasons_raw) if isinstance(regulatory_reasons_raw, (list, tuple))
-            else tuple([regulatory_reasons_raw]) if isinstance(regulatory_reasons_raw, str) and regulatory_reasons_raw
-            else ()
-        )
-        regulatory_status: GateStatus = regulatory_raw if regulatory_raw in {"PASS", "FAIL", "UNKNOWN"} else "UNKNOWN"
-        if regulatory_status == "UNKNOWN":
-            regulatory_status = "FAIL"  # RFP requires a comparable regulatory basis.
-        regulatory = (
-            regulatory_status,
-            {
-                "regulatory_bdi_rate": str(_read(pricing_gates, "regulatory_bdi_rate")),
-                "floor": str(_read(pricing_gates, "regulatory_bdi_floor")),
-                "reference": _read(pricing_gates, "regulatory_basis_reference"),
-            },
-            None if regulatory_status == "PASS" else "; ".join(str(x) for x in regulatory_reasons) or "regulatory BDI basis is missing or incomparable",
-        )
-        profit_raw = _read(pricing_gates, "profitability_status", "UNKNOWN")
-        profit_status: GateStatus = profit_raw if profit_raw in {"PASS", "FAIL", "UNKNOWN"} else "UNKNOWN"
-        profitability = (
-            profit_status,
-            {"profit": str(_read(pricing_gates, "profit_amount")), "margin": str(_read(pricing_gates, "realized_margin"))},
-            None if profit_status == "PASS" else "; ".join(str(x) for x in regulatory_reasons) or "P21 profitability gate did not PASS",
-        )
-        if profit is not None and profit <= 0:
-            profitability = ("FAIL", {"profit": str(profit)}, "operational price does not exceed total cost")
-    return {
-        "PRICE_PRESENT": price,
-        "V4": v4,
-        "REGULATORY_BDI_BASIS": regulatory,
-        "PROFITABILITY": profitability,
-        "V2": regulatory,
-    }
-
-
-def _evaluation_fingerprint(
-    *, project_id: str, run_id: str, scope: str, inputs_sha256: str,
-    decision: str, gate_evidence: tuple[GateEvidence, ...], reasons: tuple[str, ...],
-) -> str:
-    manifest = {
-        "schema_version": "1.0.0", "project_id": project_id, "run_id": run_id,
-        "scope": scope, "inputs_sha256": inputs_sha256, "decision": decision,
+        "schema_version": "1.0.0",
+        "project_id": project_id,
+        "run_id": run_id,
+        "scope": scope,
+        "inputs_sha256": inputs_sha256,
+        "decision": decision,
         "gate_evidence": [item.model_dump(mode="json") for item in gate_evidence],
         "reasons": list(reasons),
     }
@@ -943,7 +988,8 @@ def evaluate_formalism_certificate(
         item = supplied.get(gate_id)
         if item is None:
             item = GateEvidence(
-                gate_id=gate_id, status="NOT_EVALUATED",
+                gate_id=gate_id,
+                status="NOT_EVALUATED",
                 source_fingerprints=_evidence_from_envelope(envelope, gate_id),
                 reason="mandatory gate has no independently produced evidence",
             )
@@ -972,18 +1018,23 @@ def evaluate_formalism_certificate(
     unique_reasons = tuple(dict.fromkeys(reasons))
     gates = tuple(normalized)
     digest = _evaluation_fingerprint(
-        project_id=envelope.project_id, run_id=envelope.run_id, scope=envelope.scope,
-        inputs_sha256=envelope.inputs_sha256, decision=decision,
-        gate_evidence=gates, reasons=unique_reasons,
+        project_id=envelope.project_id,
+        run_id=envelope.run_id,
+        scope=envelope.scope,
+        inputs_sha256=envelope.inputs_sha256,
+        decision=decision,
+        gate_evidence=gates,
+        reasons=unique_reasons,
     )
     return FormalismEvaluation(
-        project_id=envelope.project_id, run_id=envelope.run_id, scope=envelope.scope,
-        inputs_sha256=envelope.inputs_sha256, decision=decision, gate_evidence=gates,
-        reasons=unique_reasons, evaluation_sha256=digest,
-    )
-pe.scope,
-        inputs_sha256=envelope.inputs_sha256, decision=decision, gate_evidence=gates,
-        reasons=unique_reasons, evaluation_sha256=digest,
+        project_id=envelope.project_id,
+        run_id=envelope.run_id,
+        scope=envelope.scope,
+        inputs_sha256=envelope.inputs_sha256,
+        decision=decision,
+        gate_evidence=gates,
+        reasons=unique_reasons,
+        evaluation_sha256=digest,
     )
 
 
@@ -1005,14 +1056,26 @@ def _physical_family_status(
     other_rows = tuple(x for x in details if x.split(":", 1)[0].startswith(("V1_", "V6_")))
     if audit_status == "PASS" and raw_status == "PASS":
         return "PASS", (), None
-    if audit_status == "FAIL" and other_rows and all(x.split(":", 1)[0].startswith("V1_" if prefix == "V6_" else "V6_") for x in other_rows):
+    if (
+        audit_status == "FAIL"
+        and other_rows
+        and all(x.split(":", 1)[0].startswith("V1_" if prefix == "V6_" else "V6_") for x in other_rows)
+    ):
         return "PASS", (), None
     if raw_status == "FAIL" and physical_resolution.get("complete_search") is True:
         reason = str(physical_resolution.get("reason") or "bounded physical resolution proved no feasible schedule")
         if prefix == "V6_":
             return "FAIL", details, reason
-        return "UNKNOWN", details, "bounded physical search was infeasible, but no independent V1 scope-closure violation was identified"
-    return "UNKNOWN", details, str(physical_resolution.get("reason") or "physical family has no independent PASS/FAIL witness")
+        return (
+            "UNKNOWN",
+            details,
+            "bounded physical search was infeasible, but no independent V1 scope-closure violation was identified",
+        )
+    return (
+        "UNKNOWN",
+        details,
+        str(physical_resolution.get("reason") or "physical family has no independent PASS/FAIL witness"),
+    )
 
 
 def build_formalism_gate_evidence(
@@ -1051,7 +1114,9 @@ def build_formalism_gate_evidence(
         attempts = physical_resolution.get("attempts")
         complete = physical_resolution.get("complete_search")
         resolution_observed = {
-            "status": raw, "audit_status": audit, "attempts": attempts,
+            "status": raw,
+            "audit_status": audit,
+            "attempts": attempts,
             "complete_search": complete,
             "schedule_sha256": physical_resolution.get("schedule_sha256"),
         }
@@ -1074,7 +1139,9 @@ def build_formalism_gate_evidence(
             resolution_reason = "P15 found a feasible witness but did not prove the declared search domain complete"
         else:
             resolution_status = "UNKNOWN"
-            resolution_reason = str(physical_resolution.get("reason") or "P15 did not produce a complete physical witness")
+            resolution_reason = str(
+                physical_resolution.get("reason") or "P15 did not produce a complete physical witness"
+            )
 
     if v1_status == "UNKNOWN" and resolution_status == "FAIL":
         v1_reason = v1_reason or resolution_reason
@@ -1085,7 +1152,8 @@ def build_formalism_gate_evidence(
 
     pool_status, pool_observed, pool_reason = _pool_standby_status(pool_summaries)
     productivity_status, productivity_observed, productivity_reason = _productivity_status(
-        productivity_witnesses, expected_activity_ids,
+        productivity_witnesses,
+        expected_activity_ids,
     )
     inventory_scope = {
         "status": _read(pricing_diagnostics, "inventory_scope_status"),
@@ -1094,7 +1162,8 @@ def build_formalism_gate_evidence(
         "fingerprint": _read(pricing_diagnostics, "inventory_scope_fingerprint"),
     }
     finance_status, finance_observed, finance_reason = _financial_reconciliation_status(
-        financial_reconciliation, inventory_scope,
+        financial_reconciliation,
+        inventory_scope,
     )
     finance_total = None
     if finance_status == "PASS":
@@ -1106,17 +1175,54 @@ def build_formalism_gate_evidence(
 
     return (
         gate_evidence_from_status(envelope, "V1", v1_status, observed={"violations": v1_rows}, reason=v1_reason),
-on),
-        gate_evidence_from_status(envelope, "V2", price_map["V2"][0], observed=price_map["V2"][1], reason=price_map["V2"][2]),
+        gate_evidence_from_status(
+            envelope, "V2", price_map["V2"][0], observed=price_map["V2"][1], reason=price_map["V2"][2]
+        ),
         gate_evidence_from_status(envelope, "V3", pool_status, observed=pool_observed, reason=pool_reason),
-        gate_evidence_from_status(envelope, "V4", price_map["V4"][0], observed=price_map["V4"][1], reason=price_map["V4"][2]),
-        gate_evidence_from_status(envelope, "V5", productivity_status, observed=productivity_observed, reason=productivity_reason),
-        gate_evidence_from_status(envelope, "V6", v6_status, observed={"audit_violations": v6_rows, "resolution": resolution_observed}, reason=v6_reason),
-        gate_evidence_from_status(envelope, "FINANCIAL_COST_RECONCILIATION", finance_status, observed=finance_observed, reason=finance_reason),
-        gate_evidence_from_status(envelope, "PRICE_PRESENT", price_map["PRICE_PRESENT"][0], observed=price_map["PRICE_PRESENT"][1], reason=price_map["PRICE_PRESENT"][2]),
-        gate_evidence_from_status(envelope, "REGULATORY_BDI_BASIS", price_map["REGULATORY_BDI_BASIS"][0], observed=price_map["REGULATORY_BDI_BASIS"][1], reason=price_map["REGULATORY_BDI_BASIS"][2]),
-        gate_evidence_from_status(envelope, "PROFITABILITY", price_map["PROFITABILITY"][0], observed=price_map["PROFITABILITY"][1], reason=price_map["PROFITABILITY"][2]),
-        gate_evidence_from_status(envelope, "PRODUCTIVITY_PROVENANCE", productivity_status, observed=productivity_observed, reason=productivity_reason),
+        gate_evidence_from_status(
+            envelope, "V4", price_map["V4"][0], observed=price_map["V4"][1], reason=price_map["V4"][2]
+        ),
+        gate_evidence_from_status(
+            envelope, "V5", productivity_status, observed=productivity_observed, reason=productivity_reason
+        ),
+        gate_evidence_from_status(
+            envelope,
+            "V6",
+            v6_status,
+            observed={"audit_violations": v6_rows, "resolution": resolution_observed},
+            reason=v6_reason,
+        ),
+        gate_evidence_from_status(
+            envelope, "FINANCIAL_COST_RECONCILIATION", finance_status, observed=finance_observed, reason=finance_reason
+        ),
+        gate_evidence_from_status(
+            envelope,
+            "PRICE_PRESENT",
+            price_map["PRICE_PRESENT"][0],
+            observed=price_map["PRICE_PRESENT"][1],
+            reason=price_map["PRICE_PRESENT"][2],
+        ),
+        gate_evidence_from_status(
+            envelope,
+            "REGULATORY_BDI_BASIS",
+            price_map["REGULATORY_BDI_BASIS"][0],
+            observed=price_map["REGULATORY_BDI_BASIS"][1],
+            reason=price_map["REGULATORY_BDI_BASIS"][2],
+        ),
+        gate_evidence_from_status(
+            envelope,
+            "PROFITABILITY",
+            price_map["PROFITABILITY"][0],
+            observed=price_map["PROFITABILITY"][1],
+            reason=price_map["PROFITABILITY"][2],
+        ),
+        gate_evidence_from_status(
+            envelope,
+            "PRODUCTIVITY_PROVENANCE",
+            productivity_status,
+            observed=productivity_observed,
+            reason=productivity_reason,
+        ),
     )
 
 

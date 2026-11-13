@@ -4,16 +4,15 @@ from types import SimpleNamespace
 
 from pydantic import BaseModel
 
-from concilium.application.scheduling.formalism_evaluator import (
-    REQUIRED_GATES,
-    evaluate_formalism_certificate,
-    gate_evidence_from_status,
-)
-
 from concilium.application.scheduling.formalism_certification_service import (
     _dump,
     build_pool_summaries,
     certificate_summary,
+)
+from concilium.application.scheduling.formalism_evaluator import (
+    REQUIRED_GATES,
+    evaluate_formalism_certificate,
+    gate_evidence_from_status,
 )
 from concilium.domain.models.formalism_certificate import (
     REQUIRED_SOURCES,
