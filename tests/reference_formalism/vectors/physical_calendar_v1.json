@@ -528,6 +528,126 @@
         }
       },
       "protocol": "formalism-physical/1"
+    },
+    {
+      "case_id": "per_front_team_units_scale_with_fronts",
+      "inputs": {
+        "horizon_weeks": 4,
+        "weather": [
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "performance": [
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "graphs": {
+          "linear": {
+            "nodes": [
+              "s",
+              "t"
+            ],
+            "source": "s",
+            "sink": "t",
+            "edges": [
+              {
+                "from": "s",
+                "to": "t",
+                "capacity": "10",
+                "scaling": "per_front"
+              }
+            ]
+          }
+        },
+        "resource_caps": {
+          "loader": 2
+        },
+        "activities": [
+          {
+            "id": "A",
+            "graph": "linear",
+            "scope_total": "160",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 2,
+              "final": 2,
+              "maximum": 2,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [],
+            "resource_units": {},
+            "resource_units_per_front": {
+              "loader": 1
+            }
+          },
+          {
+            "id": "B",
+            "graph": "linear",
+            "scope_total": "40",
+            "hours_per_week": "4",
+            "earliest_start": 0,
+            "ramp": {
+              "initial": 1,
+              "final": 1,
+              "maximum": 1,
+              "up": 0,
+              "down": 0
+            },
+            "predecessors": [],
+            "resource_units": {},
+            "resource_units_per_front": {
+              "loader": 1
+            }
+          }
+        ]
+      },
+      "expected": {
+        "makespan_weeks": 3,
+        "activities": {
+          "A": {
+            "start_week": 0,
+            "end_week": 1,
+            "duration_weeks": 2,
+            "front_weeks": 4,
+            "fronts": [
+              2,
+              2
+            ],
+            "capacity": [
+              "80",
+              "80"
+            ],
+            "quantity": [
+              "80",
+              "80"
+            ],
+            "final_week_fraction": "1"
+          },
+          "B": {
+            "start_week": 2,
+            "end_week": 2,
+            "duration_weeks": 1,
+            "front_weeks": 1,
+            "fronts": [
+              1
+            ],
+            "capacity": [
+              "40"
+            ],
+            "quantity": [
+              "40"
+            ],
+            "final_week_fraction": "1"
+          }
+        }
+      },
+      "protocol": "formalism-physical/1"
     }
   ]
 }

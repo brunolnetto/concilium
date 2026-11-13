@@ -152,3 +152,20 @@ def test_calendar_search_deterministic_over_stable_goldens() -> None:
     for case in goldens():
         observations = [evaluate_physical(deepcopy(case)) for _ in range(3)]
         assert observations[0] == observations[1] == observations[2]
+
+
+def test_per_front_team_units_scale_with_fronts_hand_check() -> None:
+    """Hand check of vector `per_front_team_units_scale_with_fronts`
+    (CAPACIDADE_E_RECURSOS a_ig(m) = m a_ig^front): loader cap 2. A runs 2 fronts
+    x 1 loader/front = 2 loaders, 2 x 10/h x 4 h = 80/week, Q 160 -> weeks 0-1.
+    B (1 front, 1 loader, 40/week) cannot overlap and runs in week 2; makespan 3.
+    With static per-activity units B would have overlapped A."""
+    doc = json.loads(PATH.read_text(encoding="utf-8"))
+    case = next(v for v in doc["vectors"] if v["case_id"] == "per_front_team_units_scale_with_fronts")
+    result = evaluate_physical(deepcopy(case))
+    assert result["makespan_weeks"] == 3
+    assert result["activities"]["B"]["start_week"] == 2
+    static = deepcopy(case)
+    for activity in static["inputs"]["activities"]:
+        activity["resource_units"] = activity.pop("resource_units_per_front")
+    assert evaluate_physical(static)["activities"]["B"]["start_week"] == 0

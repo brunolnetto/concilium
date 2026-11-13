@@ -159,10 +159,19 @@ def _validate(payload: dict) -> tuple[dict, list[dict], list[str]]:
         raise ReferenceContractError("activities out of bounded domain")
     entries = {}
     for raw in activities:
-        a = dict(_keys(raw, {
-            "id", "graph", "scope_total", "hours_per_week", "earliest_start",
-            "ramp", "predecessors", "resource_units",
-        }, "activity"))
+        # resource_units: fixed per activity (shared infrastructure); optional
+        # resource_units_per_front: a_ig^front, occupied m * a_ig^front in each
+        # week (CAPACIDADE_E_RECURSOS: a_ig(m) = m a_ig^front for independent fronts).
+        base = {"id", "graph", "scope_total", "hours_per_week", "earliest_start",
+                "ramp", "predecessors", "resource_units"}
+        optional = {"resource_units_per_front"} & set(raw) if isinstance(raw, dict) else set()
+        a = dict(_keys(raw, base | optional, "activity"))
+        per_front = a.get("resource_units_per_front", {})
+        if not isinstance(per_front, dict) or not all(key in data["resource_caps"] for key in per_front):
+            raise ReferenceContractError("unknown per-front physical resource")
+        a["resource_units_per_front"] = {
+            k: _integer(v, "per-front resource units", 1) for k, v in per_front.items()
+        }
         name = a["id"]
         if not isinstance(name, str) or not name or name in entries:
             raise ReferenceContractError("activity IDs must be unique")
@@ -265,14 +274,21 @@ def evaluate_physical(vector: dict[str, Any]) -> dict[str, Any]:
                     remaining -= qty
                 if remaining != 0 or not amounts[-1] or not capacities[-1]:
                     continue  # Reject phantom extra contracted weeks.
-                if any(any(
-                    occupancy[key][week] + count > caps[key]
-                    for week in range(start, start + duration)
-                ) for key, count in activity["resource_units"].items()):
-                    continue
+                need = {key: [0] * duration for key in caps}
                 for key, count in activity["resource_units"].items():
-                    for week in range(start, start + duration):
-                        occupancy[key][week] += count
+                    for ix in range(duration):
+                        need[key][ix] += count
+                for key, count in activity["resource_units_per_front"].items():
+                    for ix, fronts_ix in enumerate(fronts):
+                        need[key][ix] += count * fronts_ix
+                if any(
+                    occupancy[key][start + ix] + need[key][ix] > caps[key]
+                    for key in caps for ix in range(duration)
+                ):
+                    continue
+                for key in caps:
+                    for ix in range(duration):
+                        occupancy[key][start + ix] += need[key][ix]
                 solved[activity["id"]] = {
                     "start_week": start,
                     "end_week": start + duration - 1,
@@ -286,9 +302,9 @@ def evaluate_physical(vector: dict[str, Any]) -> dict[str, Any]:
                 }
                 search(index + 1)
                 del solved[activity["id"]]
-                for key, count in activity["resource_units"].items():
-                    for week in range(start, start + duration):
-                        occupancy[key][week] -= count
+                for key in caps:
+                    for ix in range(duration):
+                        occupancy[key][start + ix] -= need[key][ix]
     search(0)
     if best is None:
         raise ReferenceContractError("INFEASIBLE within bounded reference horizon")

@@ -201,12 +201,90 @@ def test_activity_week_assignment_must_match_p16_per_activity_demand() -> None:
     with pytest.raises(ValueError, match="do not reconstruct per-activity demand"):
         build_skill05_exact_pool_ledger(_canonical(contract))
 
-def test_witness_cannot_assign_more_instance_ids_than_contract_capacity() -> None:
+def test_witness_cannot_hold_more_simultaneous_units_than_contracted() -> None:
+    """P16 ids are hires, not units (a remobilised unit gets a new id); the contract
+    bounds the units present at the same time."""
     contract = _contract_and_witness()
     witness = dict(contract.p16_global_assignment or {})
     rows = [dict(row) for row in witness["chains"]]
-    rows[0]["instance_id"] = contract.quantidade_contratada + 1
+    rows.append({**rows[0], "instance_id": 2})
     witness["chains"] = rows
     contract = contract.model_copy(update={"p16_global_assignment": witness})
     with pytest.raises(ValueError, match="over-contracted"):
         build_skill05_exact_pool_ledger(_canonical(contract))
+
+
+def _remobilized_contract(second_hire_id: int = 1) -> RecursoContrato:
+    """One instance demobilised over a 2-week gap (max idle gap 1) and remobilised:
+    two chains of the SAME instance, [0, 1) and [3, 4)."""
+    weeks = tuple(enumerar_semanas("2026-W01", "2026-W04"))
+    tariff = ResourceTariff(F(5), F(1), F(30), F(30), 1)
+    chains = (
+        InstanceChain("CRANE", 1, 0, 1, 1, 0, (0,)),
+        InstanceChain("CRANE", second_hire_id, 3, 4, 1, 0, (3,)),
+    )
+    physical = ResourceContractLedger(
+        resource_type="CRANE", demand=(1, 0, 0, 1), presence=(1, 0, 0, 1), standby=(0, 0, 0, 0),
+        chains=chains, active_cost=F(10), standby_cost=F(0), mobility_cost=F(120),
+    )
+    pool = ExactPoolResult(
+        calendar_weeks=weeks, ledgers=(physical,),
+        proof_scope="EXACT_GLOBAL_INSTANCE_ASSIGNMENT_CONDITIONAL_ON_FIXED_PHYSICAL_DEMAND",
+    )
+    booked = book_exact_pool(pool, {"CRANE": tariff}, {"CRANE": "EQ"})
+    base = _contract_and_witness().p16_global_assignment
+    witness = {
+        **base,
+        "calendar_weeks": list(weeks),
+        "demand_by_activity": {"A": [1, 0, 0, 1]},
+        "demand": [1, 0, 0, 1], "presence": [1, 0, 0, 1], "standby": [0, 0, 0, 0],
+        "chains": [
+            {
+                "instance_id": c.level, "start_index": c.start, "end_exclusive_index": c.end,
+                "start_week": weeks[c.start], "end_week": weeks[c.end - 1],
+                "active_week_indices": list(c.active_week_indices), "active_weeks": c.active_weeks,
+                "idle_weeks": c.idle_weeks, "active_weeks_iso": [weeks[i] for i in c.active_week_indices],
+                "activity_by_week": {weeks[i]: "A" for i in c.active_week_indices},
+            }
+            for c in chains
+        ],
+        "costs": {"active": "10", "standby": "0", "mobility": "120", "pool_total": "130"},
+        "exclusive_ledger": {
+            "contractual_k": str(booked.contractual_k), "consumable_v": str(booked.consumable_v),
+            "indirect": str(booked.indirect), "direct": str(booked.direct), "total": str(booked.total),
+            "postings": [
+                {"event_id": list(p.event_id), "nature": p.nature.value, "category": p.category,
+                 "amount": str(p.amount), "source": p.source, "week": p.week}
+                for p in booked.postings
+            ],
+        },
+    }
+    return _contract_and_witness().model_copy(update={
+        "semana_inicio": weeks[0], "semana_fim": weeks[-1], "semanas_contrato": 4,
+        "custo_total_contrato": 130, "p16_global_assignment": witness,
+    })
+
+
+def test_remobilised_unit_with_a_new_hire_id_is_accepted() -> None:
+    """P16 gives a remobilised unit a new hire id (3, 4 for 2 contracted loaders)."""
+    # The contract has 1 unit; ids 1 and 2 are two successive hires of it.
+    ledger = build_skill05_exact_pool_ledger(_canonical(_remobilized_contract(second_hire_id=2)))
+    assert ledger.indirect == F(120)
+
+
+def test_remobilised_instance_with_two_disjoint_chains_is_accepted() -> None:
+    """#24 golden scenario 2: loaders released over a gap and remobilised have two
+    chains of the same instance; they were rejected as 'duplicate'."""
+    ledger = build_skill05_exact_pool_ledger(_canonical(_remobilized_contract()))
+    assert ledger.contractual_k == F(10)
+    assert ledger.indirect == F(120)
+
+
+def test_overlapping_chains_of_one_instance_are_rejected() -> None:
+    contract = _remobilized_contract()
+    witness = dict(contract.p16_global_assignment or {})
+    rows = [dict(row) for row in witness["chains"]]
+    rows[1].update(start_index=0, end_exclusive_index=1, active_week_indices=[0])
+    witness["chains"] = rows
+    with pytest.raises(ValueError, match="overlapping"):
+        build_skill05_exact_pool_ledger(_canonical(contract.model_copy(update={"p16_global_assignment": witness})))

@@ -198,7 +198,10 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
     assigned_by_activity = {
         activity_id: [0] * horizon for activity_id in activity_demand
     }
-    levels: set[int] = set()
+    # An instance may be demobilised over a gap and remobilised: several chains of
+    # the same instance are valid as long as they never overlap in time.
+    occupied: dict[int, list[tuple[int, int]]] = {}
+    presence_by_week = [0] * horizon
     for raw_chain in raw_chains:
         row = _mapping(raw_chain, "P16 instance chain")
         level = _integer(row.get("instance_id"), "instance_id", minimum=1)
@@ -206,15 +209,21 @@ def _contract_witness_ledger(contract: RecursoContrato) -> tuple[ExclusiveCostLe
         end = _integer(row.get("end_exclusive_index"), "end_exclusive_index", minimum=1)
         active = _integer(row.get("active_weeks"), "active_weeks", minimum=1)
         idle = _integer(row.get("idle_weeks"), "idle_weeks")
-        if (
-            level in levels
-            or level > contract.quantidade_contratada
-            or not 0 <= start < end <= horizon
-        ):
-            raise ValueError(
-                f"{resource_type}: duplicate, over-contracted or out-of-horizon instance chain"
-            )
-        levels.add(level)
+        if any(start < other_end and other_start < end for other_start, other_end in occupied.get(level, [])):
+            raise ValueError(f"{resource_type}: overlapping chains for instance {level}")
+        if not 0 <= start < end <= horizon:
+            raise ValueError(f"{resource_type}: out-of-horizon instance chain")
+        occupied.setdefault(level, []).append((start, end))
+        # P16 numbers every hire (mobilisation -> demobilisation) as its own
+        # identity, so a remobilised unit has a new id. The contract bounds the
+        # units present at the same time, checked per week below.
+        for week in range(start, end):
+            presence_by_week[week] += 1
+            if presence_by_week[week] > contract.quantidade_contratada:
+                raise ValueError(
+                    f"{resource_type}: over-contracted presence in {weeks[week]} "
+                    f"({presence_by_week[week]} > {contract.quantidade_contratada})"
+                )
         if row.get("start_week") != weeks[start] or row.get("end_week") != weeks[end - 1]:
             raise ValueError(f"{resource_type}: instance-chain week boundaries are forged")
         raw_active = row.get("active_week_indices")

@@ -44,9 +44,9 @@ from concilium.infrastructure.storage.formalism_certificate_store import (
 # reference implementations/vectors. #26 owns the drift check.
 _FORMALISM_REFERENCE = "long:f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5;resumido:7cc825e9af2de9d84af7fa2c2036f164db834cf5"
 _ORACLE_REFERENCE = (
-    "physical-reference:570e73eef9ef3e74f2249d263e9b652035966a98;"
+    "physical-reference:23620d8a3de491233d36ad26bba346bab5c14e11;"
     "economic-reference:c3fd324ba86c89ef849b9dd6b0f07aa1814a3eed;"
-    "physical-vector:dda8e8117de996856a14ffa47e848344370d8b06;"
+    "physical-vector:914ba4b45c30eb4fd5b2f0248566832bbf2f9c33;"
     "economic-vector:cef850620b8d2267228e8321cbbf923593e9f891;"
     "calendar-oracle:31fd9174ec88968da2130e1a0ceb93351df65ff5;"
     "catalog-envelope-oracle:6e8d934c5793a8fc12c4d5d9bb2198415e1c4049;"

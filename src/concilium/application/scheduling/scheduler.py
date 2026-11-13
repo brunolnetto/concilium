@@ -181,7 +181,7 @@ class SerialScheduler:
             default=0,
         )
         t = max(earliest_start[aid], pred_finish)
-        t = self._find_start(a, t, resource_usage, pool, deadline_weeks)
+        t = self._find_start(a, t, resource_usage, pool, deadline_weeks, release=pred_finish)
         end = t + a.duration_weeks
         scheduled[aid] = ScheduledActivity(
             activity_id=aid,
@@ -265,19 +265,20 @@ class SerialScheduler:
         resource_usage: dict[int, dict[str, int]],
         pool: ResourcePool,
         deadline_weeks: int,
+        release: int = 0,
     ) -> int:
         """Find the earliest week >= earliest where resources are free for `duration_weeks`.
 
-        ADR-072: When ``activity.window_weeks`` is set the activity must
-        finish by ``window_weeks`` (relative to t=0), so the latest allowed
-        start is ``window_weeks - duration_weeks``.
+        ADR-072 (owner decision 2026-11-13): ``window_weeks`` is the corridor span
+        counted from ``release`` — the start bound imposed by the (already placed)
+        predecessors, 0 for an activity without predecessors. The activity must
+        finish by ``release + window_weeks``; readiness (ADR-181) is a start floor,
+        not part of the release, so a root activity keeps the former absolute bound.
         """
         t = earliest
-        # ADR-072: enforce per-activity corridor window constraint
+        max_start = deadline_weeks - activity.duration_weeks
         if activity.window_weeks is not None:
-            max_start = min(deadline_weeks, activity.window_weeks) - activity.duration_weeks
-        else:
-            max_start = deadline_weeks - activity.duration_weeks
+            max_start = min(max_start, release + activity.window_weeks - activity.duration_weeks)
         while t <= max_start:
             if self._can_schedule(activity, t, resource_usage, pool):
                 return t

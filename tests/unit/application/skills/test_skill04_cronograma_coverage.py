@@ -506,6 +506,28 @@ class TestInferTeamsFromResources:
         result = _infer_teams_from_resources({"EQUIPE-A": 2, "EQUIPE-B": 1}, {}, 0, 10)
         assert result == 3
 
+    def test_multi_resource_team_counts_complete_fronts_not_units(self):
+        """CAPACIDADE_E_RECURSOS: a_ig(m) = m * a_ig^front, so m = min_g floor(x_g / a_g^front).
+        Summing heterogeneous units (1 plant + 2 loaders + 1 generator + 3 workers = 7)
+        scheduled seven plants' throughput on one contracted plant."""
+        per_front = {"USINA": 1, "CARREG": 2, "GERADOR": 1, "SERVENTE": 3}
+        assigned = {"USINA": 1, "CARREG": 2, "GERADOR": 1, "SERVENTE": 3}
+        assert _infer_teams_from_resources(assigned, {}, 0, 10, per_front=per_front) == 1
+        doubled = {k: 2 * v for k, v in assigned.items()}
+        assert _infer_teams_from_resources(doubled, {}, 0, 10, per_front=per_front) == 2
+
+    def test_bottleneck_resource_limits_fronts(self):
+        per_front = {"USINA": 1, "CARREG": 2}
+        assert _infer_teams_from_resources({"USINA": 3, "CARREG": 2}, {}, 0, 10, per_front=per_front) == 1
+
+    def test_insufficient_resource_for_one_front_gives_zero(self):
+        per_front = {"USINA": 1, "CARREG": 2}
+        assert _infer_teams_from_resources({"USINA": 1, "CARREG": 1}, {}, 0, 10, per_front=per_front) == 0
+
+    def test_resources_outside_the_team_do_not_change_fronts(self):
+        per_front = {"USINA": 1}
+        assert _infer_teams_from_resources({"USINA": 2, "CAMINHAO-APOIO": 5}, {}, 0, 10, per_front=per_front) == 2
+
     def test_ramp_profile_scales_peak(self):
         # ramp_profile[0] = 0.5 → 4 * 0.5 = 2
         result = _infer_teams_from_resources({"EQUIPE-A": 4}, {}, 0, 10, ramp_profile=[0.5, 1.0])
