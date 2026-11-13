@@ -141,7 +141,12 @@ def derive_catalog_cost_envelope(canonical: CanonicalModel, catalogo: Mapping[st
         if production is None:
             raise ValueError(f"{label}: CPU has no resolvable production record for rho_i")
         unit = normalize_unidade(str(cpu.get("unidade") or ""))
-        if normalize_unidade(str(production.get("unidade") or "")) != unit:
+        production_unit = production.get("unidade")
+        if not isinstance(production_unit, str) or not production_unit.strip():
+            # ADR-053: the unit belongs to the production record (it may serve several
+            # CPUs); assuming the CPU's unit could silently scale rho_i (e.g. m3 vs t).
+            raise ValueError(f"{label}: production record has no unidade; rho_i cannot be checked against the CPU")
+        if normalize_unidade(production_unit) != unit:
             raise ValueError(f"{label}: production unit differs from CPU unit")
         if item.unidade and normalize_unidade(item.unidade) != unit:
             raise ValueError(f"{label}: EAP unit differs from CPU unit")
