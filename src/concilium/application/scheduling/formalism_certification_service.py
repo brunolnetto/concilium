@@ -48,7 +48,11 @@ _ORACLE_REFERENCE = (
     "economic-reference:c3fd324ba86c89ef849b9dd6b0f07aa1814a3eed;"
     "physical-vector:dda8e8117de996856a14ffa47e848344370d8b06;"
     "economic-vector:cef850620b8d2267228e8321cbbf923593e9f891;"
-    "calendar-oracle:31fd9174ec88968da2130e1a0ceb93351df65ff5"
+    "calendar-oracle:31fd9174ec88968da2130e1a0ceb93351df65ff5;"
+    "catalog-envelope-oracle:6e8d934c5793a8fc12c4d5d9bb2198415e1c4049;"
+    "catalog-envelope-vector:1e1fdaf8d1dcbd213aa8c90af9f73012108707c4;"
+    "activity-cost-oracle:486cea83a17db499038c4753e1ce5987113fe43c;"
+    "activity-cost-vector:76c36e75653171281ce6af8741f2394310807142"
 )
 FORMALISM_SHA256 = hashlib.sha256(_FORMALISM_REFERENCE.encode("ascii")).hexdigest()
 ORACLE_SHA256 = hashlib.sha256(_ORACLE_REFERENCE.encode("ascii")).hexdigest()

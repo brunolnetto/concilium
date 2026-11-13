@@ -1,0 +1,27 @@
+{
+  "protocol": "formalism-activity-cost/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["IX", "X", "XIV.9"],
+    "scope": "exact contractual cost per activity and BDI category from P16 witnesses: owned active weeks x tariff + non-active cost by partition weight",
+    "rounding": "Fraction exact"
+  },
+  "vectors": [
+    {
+      "case_id": "shared_crane_with_lifecycle_plus_dedicated_operator",
+      "hand_check": "CRANE (EQ): A owns W01, B owns W03 at 5 -> A 5, B 5; standby 2 + mob 60 = 62 split 36:36 -> 31 each; A EQ 36, B EQ 36. OPER (MO): A owns W01 at 7, no lifecycle -> A MO 7. B MO 0.",
+      "inputs": {
+        "contracts": [
+          {"tipo_id": "CRANE", "category": "EQ", "active_week": "5",
+           "active_week_owner": {"2026-W01": "A", "2026-W03": "B"},
+           "standby": "2", "mobility": "60", "partitions": {"A": "36", "B": "36"}},
+          {"tipo_id": "OPER", "category": "MO", "active_week": "7",
+           "active_week_owner": {"2026-W01": "A"},
+           "standby": "0", "mobility": "0", "partitions": {"A": "7"}}
+        ]
+      },
+      "expected": {"A": {"EQ": "36", "MO": "7"}, "B": {"EQ": "36", "MO": "0"}}
+    }
+  ]
+}

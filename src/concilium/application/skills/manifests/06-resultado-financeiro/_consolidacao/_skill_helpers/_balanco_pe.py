@@ -35,6 +35,7 @@ def _bpe_process_equipe(
     pool_total_por_item: dict | None = None,
     regime: Any = None,
     teto_rs: float | None = None,
+    exact_ratio_por_item: dict | None = None,
 ) -> PontoEquilibrio | None:
     """Builds and validates PE for a single equipe; returns None if skipped."""
     if not equipe.item_id:
@@ -55,7 +56,7 @@ def _bpe_process_equipe(
     _validate_pe_duplo_risco(pe, validacoes)
     if pe.custo_operacional_real > 0:
         _validate_pe_particao(pe, validacoes)
-    _validate_frentes_necessarias(pe, validacoes)
+    _validate_frentes_necessarias(pe, validacoes, (exact_ratio_por_item or {}).get(equipe.item_id))
     _validate_prod_vs_pu(pe, validacoes)
     _validate_prod_pu_fallback_desync(equipe.item_id, sched_por_item, planejamento_por_item, validacoes)
     _validate_pe_teto(pe, teto_rs, validacoes)
@@ -131,6 +132,7 @@ def _bpe_collect_pe_items(
     idle_por_item: dict,
     pool_total_por_item: dict,
     teto_rs: float | None = None,
+    exact_ratio_por_item: dict | None = None,
 ) -> list[PontoEquilibrio]:
     # ADR-162: RegimeTrabalho (horas_dia/dias_semana) — usado por causa_dominante (D1) e
     # horas_reais_min/max (D3) para converter machine_weeks_brutas em H_i (horas reais).
@@ -149,6 +151,7 @@ def _bpe_collect_pe_items(
             pool_total_por_item,
             regime,
             teto_rs,
+            exact_ratio_por_item,
         )
         if pe is not None:
             pe_items.append(pe)
@@ -184,7 +187,10 @@ def enrich_pe_bdi_equivalente(
 
 
 def _build_ponto_equilibrio(
-    canonical_in: CanonicalModel, validacoes: list, perfil: dict | None = None
+    canonical_in: CanonicalModel,
+    validacoes: list,
+    perfil: dict | None = None,
+    exact_ratio_por_item: dict | None = None,
 ) -> list[PontoEquilibrio]:
     """Calcula ponto de equilíbrio para todas as equipes diretas.
 
@@ -208,6 +214,7 @@ def _build_ponto_equilibrio(
         idle_por_item,
         pool_total_por_item,
         teto_rs,
+        exact_ratio_por_item,
     )
     if pe_items:
         validacoes.append(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import Any, Literal
 
 from concilium.domain.models.canonical import (
@@ -902,12 +903,34 @@ def _validate_prod_pu_fallback_desync(
     )
 
 
-def _validate_frentes_necessarias(pe: PontoEquilibrio, validacoes: list) -> None:
+def _validate_frentes_necessarias(
+    pe: PontoEquilibrio, validacoes: list, exact_ratio: Fraction | None = None
+) -> None:
     """VAL-FRENTES-NECESSARIAS-ALTA (ADR-076): execução autônoma supera o PU de catálogo.
 
     Threshold: OK ≤ 1.25, AVISO ≤ 1.5, CRITICO > 1.5.
     Emite AVISO ou ERRO dependendo do grau de desvio.
+
+    ``exact_ratio`` is [D2] R_i = C_i^op / C_i^cat from the exact P16+P18
+    ledgers (FORMALISMO_LONGO §XIV.9). When the activity's whole team is
+    covered by exact witnesses it replaces the legacy autonomous estimate,
+    which is not what the project is charged.
     """
+    if exact_ratio is not None:
+        ratio = float(exact_ratio)
+        if ratio <= 1.25:
+            return
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-FRENTES-NECESSARIAS-ALTA",
+                status="ERRO" if ratio > 1.5 else "AVISO",
+                mensagem=(
+                    f"Item '{pe.item_id}': custo operacional exato (P16+P18) {(ratio - 1) * 100:.1f}% "
+                    f"acima do custo de catálogo C^cat (R_i = {ratio:.2f})."
+                ),
+            )
+        )
+        return
     if pe.frentes_equivalentes_necessarias <= 1.25:
         return
     status_val = "ERRO" if pe.frentes_equivalentes_necessarias > 1.5 else "AVISO"

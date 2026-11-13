@@ -23,11 +23,13 @@ import types
 from pathlib import Path
 from typing import Any
 
+from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
 from concilium.application.scheduling.pricing_report_adapter import (
     build_pricing_report_evidence_context,
 )
 from concilium.application.scheduling.skill06_p17_cost_reconciliation import (
     build_skill06_p17_reconciliation,
+    exact_operational_to_catalog_ratio,
 )
 from concilium.application.scheduling.skill06_p18c_consumption_preview import (
     build_p18_skill06_preview,
@@ -149,6 +151,17 @@ def run_resultado_financeiro(
                 "legacy price/margin was not overridden and this is not PROJECT_GO."
             ),
         ))
+        # [D2] R_i from exact P16+P18 ledgers over derived C^cat, for activities
+        # whose whole team is P16-covered; the legacy autonomous estimate stays
+        # in force for the rest (and whenever C^cat cannot be derived).
+        try:
+            envelope = derive_catalog_cost_envelope(canonical, catalogo)
+            exact_ratios = exact_operational_to_catalog_ratio(
+                canonical, {a.activity_id: a.total for a in envelope.activities}
+            )
+        except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError):
+            exact_ratios = {}
+        inputs = {**inputs, "_p17_exact_operational_to_catalog_ratio": exact_ratios}
 
     # P21-C accepts declarative JSON only. Rebuild typed P17/P18/P19/P20
     # evidence from this canonical schedule and the server-resolved catalog;

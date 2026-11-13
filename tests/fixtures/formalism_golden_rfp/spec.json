@@ -1,0 +1,469 @@
+{
+ "$comment": "P23 golden RFP fixture (#23 criterion 1). Real pipeline via PipelineService, procurement_intent=rfp. Catalog = resolved 'mendeslobo' master + fixture_cpus bound to the only calibrated productions (PROD-USINAGEM-BGTC-001 / PROD-USINAGEM-CBUQ-001, SICRO 6416078); composicao_itens = SICRO per-unit coefficients taken from each material's own description. P16 tariffs: SICRO monthly price / s_mes (1461/336), cents, idle = active, mob/demob 0 (absent from catalog); labour hourly x 48 h. P21 catalog/regulatory basis = derived C^cat (recomputed by the independent oracle in the test). Regulatory floor 1/5 is a fixture value, not a TCU citation.",
+ "nome": "golden-rfp-fixture",
+ "contexto_id": "mendeslobo",
+ "dates": {
+  "data_inicio": "2026-05-04",
+  "data_termino": "2027-01-31",
+  "dias_semana": 6,
+  "horas_dia": 8,
+  "horas_improdutivas_dia": 0.0,
+  "coordenadas_lat": -23.55,
+  "coordenadas_lng": -46.63,
+  "localizacao": "São Paulo, SP"
+ },
+ "eap": [
+  {
+   "item_id": "eap-01",
+   "cpu_id": "CPU-FIXT-USINAGEM-BGTC",
+   "descricao": "Usinagem de BGTC",
+   "unidade": "m3",
+   "quantitativo": 65000,
+   "ordem": 1
+  },
+  {
+   "item_id": "eap-02",
+   "cpu_id": "CPU-FIXT-USINAGEM-CBUQ",
+   "descricao": "Usinagem de CBUQ faixa C",
+   "unidade": "t",
+   "quantitativo": 57000,
+   "ordem": 2,
+   "predecessores": [
+    "eap-01"
+   ]
+  }
+ ],
+ "fixture_cpus": [
+  {
+   "codigo": "CPU-FIXT-USINAGEM-BGTC",
+   "descricao": "Fixture P23: usinagem BGTC (produção calibrada SICRO)",
+   "unidade": "m3",
+   "origem": "PROPRIA",
+   "categoria": "PAVIMENTACAO",
+   "composicao_itens": [
+    {
+     "insumo_id": "MA-BRITA-0-PEDRISCO",
+     "coeficiente": 0.24933,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-BRITA-1",
+     "coeficiente": 0.44733,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-BRITA-2",
+     "coeficiente": 0.14667,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-BRITA-3",
+     "coeficiente": 0.07333,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-PO-DE-PEDRA",
+     "coeficiente": 0.49134,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-CIMENTO-GRANEL-CPII",
+     "coeficiente": 88.0,
+     "categoria_custo": "MATERIAL",
+     "unidade": "kg"
+    }
+   ],
+   "producao_id_ref": "PROD-USINAGEM-BGTC-001"
+  },
+  {
+   "codigo": "CPU-FIXT-USINAGEM-CBUQ",
+   "descricao": "Fixture P23: usinagem CBUQ faixa C (produção calibrada SICRO)",
+   "unidade": "t",
+   "origem": "PROPRIA",
+   "categoria": "PAVIMENTACAO",
+   "composicao_itens": [
+    {
+     "insumo_id": "MA-AREIA-MEDIA",
+     "coeficiente": 0.02701,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-BRITA-0-PEDRISCO",
+     "coeficiente": 0.1479,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-BRITA-1",
+     "coeficiente": 0.12218,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-PO-DE-PEDRA",
+     "coeficiente": 0.33631,
+     "categoria_custo": "MATERIAL",
+     "unidade": "m3"
+    },
+    {
+     "insumo_id": "MA-CAL-HIDRATADA-GRANEL",
+     "coeficiente": 14.4636,
+     "categoria_custo": "MATERIAL",
+     "unidade": "kg"
+    },
+    {
+     "insumo_id": "MA-CAP-50-70",
+     "coeficiente": 0.05545,
+     "categoria_custo": "MATERIAL",
+     "unidade": "t"
+    },
+    {
+     "insumo_id": "MA-OLEO-COMBUSTIVEL-A1",
+     "coeficiente": 8.0,
+     "categoria_custo": "MATERIAL",
+     "unidade": "l"
+    }
+   ],
+   "producao_id_ref": "PROD-USINAGEM-CBUQ-001"
+  }
+ ],
+ "skill_inputs": {
+  "03-catalogo-de-recursos": {
+   "tipos_recurso": [
+    {
+     "id": "EQ-USINA-SOLOS-300TH",
+     "nome": "EQ-USINA-SOLOS-300TH",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "EQ-CARREG-PNEUS-340M3",
+     "nome": "EQ-CARREG-PNEUS-340M3",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "EQ-GERADOR-113KVA",
+     "nome": "EQ-GERADOR-113KVA",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "EQ-USINA-ASFALTO-GRAV-120TH",
+     "nome": "EQ-USINA-ASFALTO-GRAV-120TH",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "EQ-GERADOR-456KVA",
+     "nome": "EQ-GERADOR-456KVA",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "EQ-CARREG-PNEUS-172M3",
+     "nome": "EQ-CARREG-PNEUS-172M3",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "EQ-TANQUE-ASFALTO-30000L",
+     "nome": "EQ-TANQUE-ASFALTO-30000L",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "EQ-AQUECEDOR-FLUIDO-12KW",
+     "nome": "EQ-AQUECEDOR-FLUIDO-12KW",
+     "categoria": "EQUIPAMENTO",
+     "custo_unitario_dia": 0
+    },
+    {
+     "id": "MO-SERVENTE-USINA-H",
+     "nome": "MO-SERVENTE-USINA-H",
+     "categoria": "EQUIPE",
+     "custo_unitario_dia": 0
+    }
+   ],
+   "pool_inicial": [
+    {
+     "tipo_id": "EQ-USINA-SOLOS-300TH",
+     "quantidade_total": 1
+    },
+    {
+     "tipo_id": "EQ-CARREG-PNEUS-340M3",
+     "quantidade_total": 2
+    },
+    {
+     "tipo_id": "EQ-GERADOR-113KVA",
+     "quantidade_total": 1
+    },
+    {
+     "tipo_id": "EQ-USINA-ASFALTO-GRAV-120TH",
+     "quantidade_total": 1
+    },
+    {
+     "tipo_id": "EQ-GERADOR-456KVA",
+     "quantidade_total": 1
+    },
+    {
+     "tipo_id": "EQ-CARREG-PNEUS-172M3",
+     "quantidade_total": 1
+    },
+    {
+     "tipo_id": "EQ-TANQUE-ASFALTO-30000L",
+     "quantidade_total": 2
+    },
+    {
+     "tipo_id": "EQ-AQUECEDOR-FLUIDO-12KW",
+     "quantidade_total": 1
+    },
+    {
+     "tipo_id": "MO-SERVENTE-USINA-H",
+     "quantidade_total": 4
+    }
+   ]
+  },
+  "04-cronograma": {
+   "rcpsp_spec": {
+    "activities": [
+     {
+      "item_id": "eap-01",
+      "descricao": "Usinagem BGTC",
+      "duration_weeks": 12,
+      "required_resources": {
+       "EQ-USINA-SOLOS-300TH": 1,
+       "EQ-CARREG-PNEUS-340M3": 2,
+       "EQ-GERADOR-113KVA": 1,
+       "MO-SERVENTE-USINA-H": 3
+      }
+     },
+     {
+      "item_id": "eap-02",
+      "descricao": "Usinagem CBUQ",
+      "duration_weeks": 12,
+      "required_resources": {
+       "EQ-USINA-ASFALTO-GRAV-120TH": 1,
+       "EQ-GERADOR-456KVA": 1,
+       "EQ-CARREG-PNEUS-172M3": 1,
+       "EQ-TANQUE-ASFALTO-30000L": 2,
+       "EQ-AQUECEDOR-FLUIDO-12KW": 1,
+       "MO-SERVENTE-USINA-H": 4
+      }
+     }
+    ],
+    "resource_pool": {
+     "EQ-USINA-SOLOS-300TH": 1,
+     "EQ-CARREG-PNEUS-340M3": 2,
+     "EQ-GERADOR-113KVA": 1,
+     "EQ-USINA-ASFALTO-GRAV-120TH": 1,
+     "EQ-GERADOR-456KVA": 1,
+     "EQ-CARREG-PNEUS-172M3": 1,
+     "EQ-TANQUE-ASFALTO-30000L": 2,
+     "EQ-AQUECEDOR-FLUIDO-12KW": 1,
+     "MO-SERVENTE-USINA-H": 4
+    },
+    "precedence": [
+     [
+      "eap-01",
+      "eap-02",
+      1.0
+     ]
+    ],
+    "deadline_weeks": 38
+   }
+  },
+  "05-equipes-e-alocacao": {
+   "rcpsp_spec": {
+    "activities": [
+     {
+      "item_id": "eap-01",
+      "descricao": "Usinagem BGTC",
+      "duration_weeks": 12,
+      "required_resources": {
+       "EQ-USINA-SOLOS-300TH": 1,
+       "EQ-CARREG-PNEUS-340M3": 2,
+       "EQ-GERADOR-113KVA": 1,
+       "MO-SERVENTE-USINA-H": 3
+      }
+     },
+     {
+      "item_id": "eap-02",
+      "descricao": "Usinagem CBUQ",
+      "duration_weeks": 12,
+      "required_resources": {
+       "EQ-USINA-ASFALTO-GRAV-120TH": 1,
+       "EQ-GERADOR-456KVA": 1,
+       "EQ-CARREG-PNEUS-172M3": 1,
+       "EQ-TANQUE-ASFALTO-30000L": 2,
+       "EQ-AQUECEDOR-FLUIDO-12KW": 1,
+       "MO-SERVENTE-USINA-H": 4
+      }
+     }
+    ],
+    "resource_pool": {
+     "EQ-USINA-SOLOS-300TH": 1,
+     "EQ-CARREG-PNEUS-340M3": 2,
+     "EQ-GERADOR-113KVA": 1,
+     "EQ-USINA-ASFALTO-GRAV-120TH": 1,
+     "EQ-GERADOR-456KVA": 1,
+     "EQ-CARREG-PNEUS-172M3": 1,
+     "EQ-TANQUE-ASFALTO-30000L": 2,
+     "EQ-AQUECEDOR-FLUIDO-12KW": 1,
+     "MO-SERVENTE-USINA-H": 4
+    },
+    "precedence": [
+     [
+      "eap-01",
+      "eap-02",
+      1.0
+     ]
+    ],
+    "deadline_weeks": 38,
+    "p16_exact_tariffs": {
+     "EQ-USINA-SOLOS-300TH": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9615 EQ-USINA-SOLOS-300TH: monthly 78205.92 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "17985.76",
+      "idle_week": "17985.76",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "EQ-CARREG-PNEUS-340M3": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9511 EQ-CARREG-PNEUS-340M3: monthly 87692.8 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "20167.54",
+      "idle_week": "20167.54",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "EQ-GERADOR-113KVA": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9779 EQ-GERADOR-113KVA: monthly 26418.08 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "6075.62",
+      "idle_week": "6075.62",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "EQ-USINA-ASFALTO-GRAV-120TH": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9689 EQ-USINA-ASFALTO-GRAV-120TH: monthly 398039.2 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "91540.84",
+      "idle_week": "91540.84",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "EQ-GERADOR-456KVA": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9021 EQ-GERADOR-456KVA: monthly 102523.2 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "23578.23",
+      "idle_week": "23578.23",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "EQ-CARREG-PNEUS-172M3": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9584 EQ-CARREG-PNEUS-172M3: monthly 41535.52 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "9552.32",
+      "idle_week": "9552.32",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "EQ-TANQUE-ASFALTO-30000L": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9558 EQ-TANQUE-ASFALTO-30000L: monthly 19928.48 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "4583.14",
+      "idle_week": "4583.14",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "EQ-AQUECEDOR-FLUIDO-12KW": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) E9559 EQ-AQUECEDOR-FLUIDO-12KW: monthly 34962.72 / s_mes (1461/336 wk/month, FORMALISMO_LONGO Part II), cents ROUND_HALF_EVEN; idle=active (integral standby baseline); mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "EQ",
+      "active_week": "8040.71",
+      "idle_week": "8040.71",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     },
+     "MO-SERVENTE-USINA-H": {
+      "source_id": "SICRO 202604-SP (4ª ed. v1.1) P9824 MO-SERVENTE-USINA-H: hourly 30.62 x 48 h/week (6 d x 8 h); idle=active; mob/demob absent from catalog",
+      "currency": "BRL",
+      "category": "MO",
+      "active_week": "1469.76",
+      "idle_week": "1469.76",
+      "mobilize": "0.00",
+      "demobilize": "0.00",
+      "max_idle_gap": 2,
+      "gap_max_viavel": 2
+     }
+    }
+   }
+  },
+  "06-resultado-financeiro": {
+   "p18_consumption_preview_enabled": true,
+   "p21_pricing_evidence": {
+    "schema": "concilium.p21.pricing-evidence.v1",
+    "inventory_scope": {
+     "status": "NO_INVENTORY",
+     "source": "fixture-declaration",
+     "reference_id": "golden-rfp-no-stock",
+     "fingerprint": "golden-rfp-inventory-v1"
+    },
+    "bdi_by_category": {
+     "MO": "3/10",
+     "EQ": "3/10",
+     "MAT": "3/10",
+     "COMB": "3/10",
+     "IND": "3/10"
+    },
+    "catalog": {
+     "amount": "14595095171066909197/343113658500",
+     "currency": "BRL",
+     "source": "derived C^cat from resolved project catalog (catalog_cost_envelope)",
+     "reference_id": "golden-rfp-catalog",
+     "basis_fingerprint": "golden-rfp-scope-v1"
+    },
+    "operational_basis_fingerprint": "golden-rfp-scope-v1",
+    "regulatory_basis": {
+     "amount": "14595095171066909197/343113658500",
+     "currency": "BRL",
+     "basis_fingerprint": "golden-rfp-scope-v1",
+     "minimum_rate": "1/5",
+     "source": "fixture regulatory floor (not a TCU citation)",
+     "reference_id": "golden-rfp-reg-v1"
+    },
+    "minimum_profit_margin": "1/20"
+   }
+  }
+ }
+}

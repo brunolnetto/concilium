@@ -7,7 +7,7 @@ authorizes PROJECT_GO.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
 from typing import Literal, cast
@@ -20,7 +20,7 @@ from concilium.application.scheduling.contractual_cost_ledger import (
 from concilium.application.scheduling.skill06_p18c_consumption_preview import (
     build_skill05_exact_pool_ledger,
 )
-from concilium.domain.models.canonical import CanonicalModel
+from concilium.domain.models.canonical import CanonicalModel, RecursoContrato
 
 _CURRENCY_SOURCE = "catalog_metadata.json"
 _SCHEMA = "concilium.p18.skill06-preview.v1"
@@ -128,8 +128,12 @@ def _ledger_from_preview(preview: Mapping[str, object]) -> ExclusiveCostLedger:
 
 def _activity_witness_costs(canonical: CanonicalModel) -> dict[str, Fraction]:
     """Allocate exact active K to the activity owning each active resource-week."""
+    return _contracts_activity_witness_costs(canonical.contratos_recurso)
+
+
+def _contracts_activity_witness_costs(contracts: Sequence[RecursoContrato]) -> dict[str, Fraction]:
     result: dict[str, Fraction] = {}
-    for contract in canonical.contratos_recurso:
+    for contract in contracts:
         witness = _mapping(
             contract.p16_global_assignment,
             f"{contract.tipo_id}: missing exact P16 witness",
@@ -179,9 +183,15 @@ def _activity_lifecycle_allocations(
     by the same persisted partition weights, before comparing activity diagnostics
     to the active-only K witness. This is read-only and does not rewrite legacy finance.
     """
+    return _contracts_activity_lifecycle_allocations(canonical.contratos_recurso)
+
+
+def _contracts_activity_lifecycle_allocations(
+    contracts: Sequence[RecursoContrato],
+) -> tuple[dict[str, Fraction], Fraction]:
     allocated: dict[str, Fraction] = {}
     nonactive_total = Fraction(0)
-    for contract in canonical.contratos_recurso:
+    for contract in contracts:
         witness = _mapping(
             contract.p16_global_assignment,
             f"{contract.tipo_id}: missing exact P16 witness",
@@ -225,6 +235,105 @@ def _activity_lifecycle_allocations(
             if weight > 0:
                 allocated[activity_id] = allocated.get(activity_id, Fraction(0)) + nonactive * weight / partition_total
     return allocated, nonactive_total
+
+
+def exact_activity_contractual_costs(
+    contracts: Sequence[RecursoContrato],
+) -> dict[str, dict[Literal["MO", "EQ"], Fraction]]:
+    """Exact MO/EQ cost per activity from the P16 witnesses of ``contracts``.
+
+    Each contract contributes its active K for the weeks an activity owns plus
+    its standby/MOB/DEMOB allocated by the persisted item partitions, i.e. the
+    same quantities P17-C reconciles against. Raises ValueError when any
+    contract lacks an exact witness or a valid MO/EQ category.
+    """
+    result: dict[str, dict[Literal["MO", "EQ"], Fraction]] = {}
+    for contract in contracts:
+        witness = _mapping(
+            getattr(contract, "p16_global_assignment", None),
+            f"{getattr(contract, 'tipo_id', '?')}: missing exact P16 witness",
+        )
+        category = witness.get("category")
+        if category not in ("MO", "EQ"):
+            raise ValueError(f"{getattr(contract, 'tipo_id', '?')}: P16 witness category must be MO or EQ")
+        bucket = cast(Literal["MO", "EQ"], category)
+        active = _contracts_activity_witness_costs([contract])
+        lifecycle, _total = _contracts_activity_lifecycle_allocations([contract])
+        for activity_id in set(active) | set(lifecycle):
+            amount = active.get(activity_id, Fraction(0)) + lifecycle.get(activity_id, Fraction(0))
+            row = result.setdefault(activity_id, {"MO": Fraction(0), "EQ": Fraction(0)})
+            row[bucket] += amount
+    return result
+
+
+def exactly_covered_activities(
+    equipes: Sequence[object],
+    contracts: Sequence[RecursoContrato],
+) -> tuple[set[str], dict[str, list[str]]]:
+    """Activities whose whole standard team has P16-witnessed contracts.
+
+    Returns ``(covered, missing_by_activity)``. A team is the activity's
+    ``equipamentos[].equip_id`` and ``funcoes[].funcao_id``; an empty team is
+    never covered. Only these activities may take their MO/EQ cost (and cost
+    ratios) from the exact ledgers.
+    """
+    covered_types: dict[str, set[str]] = {}
+    for contract in contracts:
+        if type(contract) is not RecursoContrato:
+            continue  # strict evidence: only canonical contracts can cover a team
+        witness = contract.p16_global_assignment or {}
+        demand = witness.get("demand_by_activity")
+        if isinstance(demand, Mapping):
+            for activity_id in demand:
+                covered_types.setdefault(str(activity_id), set()).add(contract.tipo_id)
+    covered: set[str] = set()
+    missing: dict[str, list[str]] = {}
+    for equipe in equipes:
+        activity_id = getattr(equipe, "item_id", "")
+        if not activity_id or activity_id not in covered_types:
+            continue
+        team = {e.equip_id for e in getattr(equipe, "equipamentos", []) if e.equip_id}
+        team |= {f.funcao_id for f in getattr(equipe, "funcoes", []) if f.funcao_id}
+        absent = sorted(team - covered_types[activity_id])
+        if team and not absent:
+            covered.add(activity_id)
+        else:
+            missing[activity_id] = absent or ["composição não declarada"]
+    return covered, missing
+
+
+def exact_operational_to_catalog_ratio(
+    canonical: CanonicalModel,
+    catalog_costs: Mapping[str, Fraction],
+) -> dict[str, Fraction]:
+    """[D2] R_i = C_i^op / C_i^cat from exact ledgers, for fully covered activities.
+
+    C_i^op = exact P16 MO+EQ (active + allocated lifecycle) + exact P18
+    consumption cost of the activity; ``catalog_costs`` maps activity → C_i^cat.
+    Activities without full P16 coverage, P18 evidence or a positive C_i^cat are
+    omitted (their legacy diagnostic stays in force).
+    """
+    preview = canonical.p18_consumption_preview
+    if not isinstance(preview, Mapping) or not canonical.contratos_recurso:
+        return {}
+    covered, _missing = exactly_covered_activities(canonical.equipes_diretas, canonical.contratos_recurso)
+    witnessed = [c for c in canonical.contratos_recurso if type(c) is RecursoContrato and c.p16_global_assignment]
+    contractual = exact_activity_contractual_costs(witnessed)
+    consumption: dict[str, Fraction] = {}
+    evidence = preview.get("evidence")
+    for row in evidence if isinstance(evidence, list) else []:
+        if isinstance(row, Mapping) and isinstance(row.get("activity_id"), str):
+            consumption[row["activity_id"]] = consumption.get(row["activity_id"], Fraction(0)) + _rational(
+                row.get("exact_cost"), f"{row['activity_id']}: P18 exact cost"
+            )
+    ratios: dict[str, Fraction] = {}
+    for activity_id in covered:
+        catalog = catalog_costs.get(activity_id)
+        if catalog is None or catalog <= 0 or activity_id not in consumption or activity_id not in contractual:
+            continue
+        k = contractual[activity_id]["MO"] + contractual[activity_id]["EQ"]
+        ratios[activity_id] = (k + consumption[activity_id]) / catalog
+    return ratios
 
 
 def _activity_diagnostic_costs(canonical: CanonicalModel) -> dict[str, Fraction]:
