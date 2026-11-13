@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Literal, cast
 
+from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
 from concilium.domain.models.canonical import CanonicalModel, Resultado, ValidacaoItem
 
 from .contractual_cost_ledger import ExclusiveCostLedger
@@ -384,6 +385,19 @@ def build_pricing_report_evidence_context(
             reference_id=_json_text(
                 regulatory.get("reference_id"), "regulatory reference_id",
             ),
+        )
+
+    # FORMALISMO_LONGO §XIV.8: BDI = P / C^cat − 1 is a derived rate. Both the
+    # catalog benchmark and the regulatory basis must equal C^cat as derived
+    # from this resolved catalog; a free-form declared amount is rejected.
+    envelope = derive_catalog_cost_envelope(canonical, catalogo)
+    if catalog.amount != envelope.total:
+        raise ValueError(
+            f"catalog benchmark amount {catalog.amount} differs from derived C^cat {envelope.total}"
+        )
+    if regulatory_basis is not None and regulatory_basis.amount != envelope.total:
+        raise ValueError(
+            f"regulatory basis amount {regulatory_basis.amount} differs from derived C^cat {envelope.total}"
         )
 
     minimum_raw = raw.get("minimum_profit_margin")
