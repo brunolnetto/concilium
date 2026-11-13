@@ -26,6 +26,32 @@ from .project.project_repository import ProjectHandle, ProjectRepository
 from .service_support import build_summary, deep_merge
 
 
+def _without_unrevalidated_certificate(run: dict[str, Any]) -> dict[str, Any]:
+    """Strip the issuance-time GO claim from a run listed without revalidation.
+
+    runs.json stores the projection as it was when issued (status CURRENT,
+    project_go True). Listing does not re-fingerprint sources, so it exposes
+    only the immutable pointer; get_run returns the revalidated certificate.
+    """
+    certificate = run.get("formalism_certificate")
+    if not isinstance(certificate, dict):
+        return run
+    return {
+        **run,
+        "formalism_certificate": {
+            "status": "NOT_REVALIDATED",
+            "recorded_decision": certificate.get("recorded_decision"),
+            "effective_decision": "NOT_CERTIFIABLE",
+            "project_go": False,
+            "scope": certificate.get("scope"),
+            "evaluation_sha256": certificate.get("evaluation_sha256"),
+            "reasons": [
+                "run listing does not revalidate source fingerprints; read the run for the current certificate"
+            ],
+        },
+    }
+
+
 class PipelineService:
     def __init__(
         self,
@@ -144,7 +170,9 @@ class PipelineService:
         raw_runs = project.read_json(self._files.runs, [])
         if not isinstance(raw_runs, list):
             return []
-        runs: list[dict[str, Any]] = [r for r in raw_runs if isinstance(r, dict)]
+        runs: list[dict[str, Any]] = [
+            _without_unrevalidated_certificate(r) for r in raw_runs if isinstance(r, dict)
+        ]
         return sorted(runs, key=lambda item: item.get("requested_at", ""), reverse=True)
 
     def get_run(self, project_id: str, run_id: str) -> dict[str, Any]:

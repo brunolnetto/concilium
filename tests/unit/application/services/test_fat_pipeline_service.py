@@ -282,6 +282,47 @@ class TestListRuns:
 
         assert result == []
 
+    def test_list_never_presents_stored_go_as_current(self):
+        """runs.json keeps the issuance-time projection (status CURRENT,
+        project_go True). The listing does not revalidate fingerprints, so it
+        must not echo that claim: a later source mutation would otherwise be
+        shown as a current GO (#23 acceptance: no provisional-as-certified)."""
+        svc, project, audit, runtime = _make_svc()
+        stored = {
+            "status": "CURRENT",
+            "recorded_decision": "GO",
+            "effective_decision": "GO",
+            "project_go": True,
+            "scope": "RFP",
+            "evaluation_sha256": "a" * 64,
+            "record_sha256": "b" * 64,
+            "reasons": [],
+            "gates": [{"gate_id": "V1", "status": "PASS"}],
+            "invalidated_sources": [],
+        }
+        runs = [{"run_id": "r1", "requested_at": "2024-01-01", "formalism_certificate": stored}]
+        project.read_json.return_value = runs
+
+        [row] = svc.list_runs("proj-test")
+
+        cert = row["formalism_certificate"]
+        assert cert["project_go"] is False
+        assert cert["effective_decision"] == "NOT_CERTIFIABLE"
+        assert cert["status"] == "NOT_REVALIDATED"
+        assert cert["recorded_decision"] == "GO"
+        assert cert["evaluation_sha256"] == "a" * 64
+        assert "gates" not in cert
+        # The persisted registry itself is not mutated by a read.
+        assert runs[0]["formalism_certificate"]["project_go"] is True
+
+    def test_list_keeps_runs_without_certificate_unchanged(self):
+        svc, project, audit, runtime = _make_svc()
+        project.read_json.return_value = [{"run_id": "r1", "requested_at": "2024-01-01"}]
+
+        [row] = svc.list_runs("proj-test")
+
+        assert "formalism_certificate" not in row
+
 
 # ─── TestGetRun ──────────────────────────────────────────────────────────────
 
