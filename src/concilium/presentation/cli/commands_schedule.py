@@ -37,8 +37,9 @@ def _pool_from_spec(spec: dict):
 
 def _dag_from_spec(spec: dict, activities):
     from concilium.application.scheduling import ActivityDAG
+    from concilium.application.scheduling.rcpsp_precedence import parse_rcpsp_precedence
 
-    precedence = [(str(p[0]), str(p[1])) for p in spec.get("precedence", [])]
+    precedence = [(edge.pred, edge.succ) for edge in parse_rcpsp_precedence(spec.get("precedence"))]
     return ActivityDAG(activities=activities, precedence=precedence)
 
 

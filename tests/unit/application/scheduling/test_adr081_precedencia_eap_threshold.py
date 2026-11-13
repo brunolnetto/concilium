@@ -596,18 +596,15 @@ class TestSSFFPrecedenceTypes:
         assert len(ff_entries) == 1
         assert ff_entries[0].lag == 3
 
-    def test_short_precedence_entry_is_skipped(self):
-        """Line 62: precedence entries with len < 2 are ignored without error."""
+    def test_short_precedence_entry_is_rejected_not_dropped(self):
+        """A malformed declared precedence must not be silently dropped: the DAG
+        would differ from the user's. It raises a located error instead."""
         extract_dag_from_spec_or_eap = _load_extract_dag_from_spec_or_eap()
 
         acts = [
             Activity(activity_id="X", description="X", duration_weeks=5),
             Activity(activity_id="Y", description="Y", duration_weeks=3),
         ]
-        # Include an entry with only 1 element (should be skipped by the guard)
         spec = {"precedence": [["X"], ["X", "Y"]]}
-        dag = extract_dag_from_spec_or_eap(spec, acts, eap_items=None)
-        # Only the valid 2-element entry should create an edge
-        assert ("X", "Y") in dag.precedence
-        # The single-element entry should be silently ignored (no crash)
-        assert len(dag.precedence) == 1
+        with pytest.raises(ValueError, match=r"precedence\[0\]"):
+            extract_dag_from_spec_or_eap(spec, acts, eap_items=None)
