@@ -46,6 +46,10 @@ from ._skill_helpers import (  # ty: ignore[unresolved-import]
     aplicar_roster_a_contratos,
     enriquecer_composicao_por_tipo,
 )
+from ._skill_helpers._custo_exato_p16 import (  # ty: ignore[unresolved-import]
+    aplicar_custo_exato_p16,
+    resumo_alinhado_a_testemunha_p16,  # noqa: F401  (re-exported for the instance builder and tests)
+)
 
 _mod_compartilhamento = _skill_helpers.compartilhamento
 _mod_instancias = _skill_helpers.instancias
@@ -141,6 +145,10 @@ def run_equipes_e_alocacao(
 
     # ADR-106 F3: preenche custo_inst_* para equipes sem pool contract (NEP-040 Fase 4 completa)
     _preencher_custo_inst_estagio_f3(equipes)
+
+    # P17/P23: com equipe integralmente coberta por testemunhas P16 exatas, o custo
+    # MO/EQ da atividade é o do ledger exato (não o legado reescalado).
+    aplicar_custo_exato_p16(equipes, contratos_recurso, validacoes)
 
     # ADR-078: pré-processamento estrutural de compartilhamento
     relatorio_oportunidades = None

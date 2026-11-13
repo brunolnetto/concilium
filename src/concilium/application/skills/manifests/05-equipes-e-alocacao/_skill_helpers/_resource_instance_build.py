@@ -19,6 +19,7 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
+from ._custo_exato_p16 import resumo_alinhado_a_testemunha_p16  # ty: ignore[unresolved-import]
 from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
 from ._resource_instance_assignment import (  # ty: ignore[unresolved-import]
     _STANDBY_THRESHOLD_PCT,
@@ -523,6 +524,9 @@ def _build_instancias_for_tipo(
     resumo = _build_resumo_e_validacoes(
         tipo_id, contrato, n, instance_active, instance_standby, custo_standby_rate, validacoes
     )
+    if contrato.p16_global_assignment:
+        # V3 audits this summary against the exact witness: report what P16 charges.
+        resumo = resumo_alinhado_a_testemunha_p16(resumo, contrato.p16_global_assignment)
     return instancias, composicoes, [resumo]
 
 

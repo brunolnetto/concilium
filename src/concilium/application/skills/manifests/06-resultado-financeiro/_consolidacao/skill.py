@@ -109,7 +109,10 @@ def run_consolidacao_financeira(
         # the old sale/cost/margin fields with a potentially incomplete journal.
         res = res.model_copy(update={"metricas_realizadas_p11": preview})
 
-    ponto_equilibrio_items = _build_ponto_equilibrio(canonical_in, validacoes, perfil)
+    exact_ratios = inputs.get("_p17_exact_operational_to_catalog_ratio")
+    ponto_equilibrio_items = _build_ponto_equilibrio(
+        canonical_in, validacoes, perfil, exact_ratios if isinstance(exact_ratios, dict) else None
+    )
     enrich_pe_bdi_equivalente(ponto_equilibrio_items, canonical_in.equipes_diretas, bdi_rates)
     recon = ResultadoReconciliado(
         itens_aquisicao=[],
