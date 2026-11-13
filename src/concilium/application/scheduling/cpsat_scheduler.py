@@ -6,7 +6,7 @@ Implements CpSatScheduler using OR-Tools CP-SAT:
     - One IntervalVar per activity: [start, start+dur, start+dur]
     - AddCumulative per resource: sum of demands <= capacity at every week
     - Precedence constraints: FS / SS / FF with optional lag
-    - window_weeks: hard deadline → start + duration <= window_weeks
+    - window_weeks: corridor span from release → end <= release + window_weeks
     - Objective: minimise makespan (= max finish across all activities)
 
   Extended Precedences (ExtendedPrecedence):
@@ -124,7 +124,11 @@ class CpSatScheduler:
     horizon_weeks: int = _DEFAULT_HORIZON
 
     def _add_activity_variables(
-        self, model: cp_model.CpModel, dag: ActivityDAG, horizon: int
+        self,
+        model: cp_model.CpModel,
+        dag: ActivityDAG,
+        horizon: int,
+        extended_precedences: list[ExtendedPrecedence] | None = None,
     ) -> tuple[dict[str, cp_model.IntVar], dict[str, cp_model.IntVar], dict[str, cp_model.IntervalVar]]:
         """Cria as variáveis de decisão (start/end/interval) por atividade, com janela de deadline.
 
@@ -137,10 +141,15 @@ class CpSatScheduler:
         ends: dict[str, cp_model.IntVar] = {}
         intervals: dict[str, cp_model.IntervalVar] = {}
 
+        with_predecessors = self._activities_with_predecessors(dag, extended_precedences)
         for a in dag.activities:
             dur = a.duration_weeks
-            # Enforce window constraint: start + duration <= window_weeks
-            max_start = (a.window_weeks - dur) if a.window_weeks else horizon - dur
+            # ADR-072: for an activity without predecessors the release is 0, so the
+            # window is the absolute bound start + duration <= window_weeks (kept in
+            # the domain so an incompatible readiness still fails loudly, ADR-181).
+            # With predecessors it is relative and added in _add_window_constraints.
+            has_predecessor = a.activity_id in with_predecessors
+            max_start = (a.window_weeks - dur) if a.window_weeks and not has_predecessor else horizon - dur
             max_start = max(0, min(max_start, horizon - dur))
             min_start = a.readiness_weeks
             if min_start > max_start:
@@ -201,6 +210,57 @@ class CpSatScheduler:
                 model.add(ends[succ_id] >= ends[pred_id] + lag)
             else:
                 _log.warning("Unknown precedence type %s; skipping", ep.tipo)
+
+    @staticmethod
+    def _activities_with_predecessors(
+        dag: ActivityDAG, extended_precedences: list[ExtendedPrecedence] | None = None
+    ) -> set[str]:
+        succs = {succ for _pred, succ in dag.precedence}
+        for ep in [*(getattr(dag, "extended_precedences", None) or []), *(extended_precedences or [])]:
+            if ep.tipo in ("FS", "SS"):
+                succs.add(ep.succ)
+        return succs
+
+    def _add_window_constraints(
+        self,
+        model: cp_model.CpModel,
+        dag: ActivityDAG,
+        acts: dict[str, Activity],
+        extended_precedences: list[ExtendedPrecedence] | None,
+        starts: dict[str, cp_model.IntVar],
+        ends: dict[str, cp_model.IntVar],
+        horizon: int,
+    ) -> None:
+        """ADR-072 (owner decision 2026-11-13): finish <= release + window_weeks.
+
+        release = max(0, every start bound the predecessors impose: FS end, FS with
+        completion threshold, FS+lag, SS+lag). Readiness (ADR-181) is a start floor,
+        not part of the release. Activities without predecessors keep the former
+        absolute bound (see _add_activity_variables).
+        """
+        bounds: dict[str, list] = {a.activity_id: [0] for a in dag.activities}
+        for pred_id, succ_id in dag.precedence:
+            if pred_id not in acts or succ_id not in acts:
+                continue
+            theta = dag.get_threshold(pred_id, succ_id)
+            if theta >= 1.0:
+                bounds[succ_id].append(ends[pred_id])
+            else:
+                bounds[succ_id].append(starts[pred_id] + math.ceil(theta * acts[pred_id].duration_weeks))
+        for ep in [*(getattr(dag, "extended_precedences", None) or []), *(extended_precedences or [])]:
+            if ep.succ not in bounds or ep.pred not in starts:
+                continue
+            if ep.tipo == "FS":
+                bounds[ep.succ].append(ends[ep.pred] + ep.lag)
+            elif ep.tipo == "SS":
+                bounds[ep.succ].append(starts[ep.pred] + ep.lag)
+        with_predecessors = self._activities_with_predecessors(dag, extended_precedences)
+        for a in dag.activities:
+            if not a.window_weeks or a.activity_id not in with_predecessors:
+                continue  # roots: absolute bound already in the start domain
+            release = model.new_int_var(0, horizon, f"release_{a.activity_id}")
+            model.add_max_equality(release, bounds[a.activity_id])
+            model.add(ends[a.activity_id] <= release + a.window_weeks)
 
     def _add_resource_constraints(
         self,
@@ -362,9 +422,10 @@ class CpSatScheduler:
         """Monta o modelo CP-SAT completo: variáveis de decisão, precedências FS e
         estendidas, restrições de capacidade e o objetivo de minimizar o makespan."""
         model = cp_model.CpModel()
-        starts, ends, intervals = self._add_activity_variables(model, dag, horizon)
+        starts, ends, intervals = self._add_activity_variables(model, dag, horizon, extended_precedences)
         self._add_fs_precedence_constraints(model, dag, acts, starts, ends)
         self._add_extended_precedence_constraints(model, dag, extended_precedences, starts, ends)
+        self._add_window_constraints(model, dag, acts, extended_precedences, starts, ends, horizon)
         self._add_resource_constraints(model, dag, pool, intervals)
 
         makespan = model.new_int_var(0, horizon, "makespan")

@@ -129,3 +129,11 @@ Rejeitado em favor de derivação automática a partir de Q/P.
 | `src/concilium/application/scheduling/scheduler.py` | `_find_start` respeita `window_weeks` |
 | `src/concilium/application/scheduling/milp.py` | `_build_decision_vars` respeita `window_weeks` |
 | `src/concilium/application/skills/manifests/04-cronograma/skill.py` | `_compute_productive_weeks` + `_extract_activities_from_spec` estendidos; threading de `cpu_lookup`/`producao_lookup` |
+
+---
+
+## Emenda (2026-11-13) — janela contada a partir da liberação
+
+Decisão do proprietário (#24). D2 descreve `window_weeks` como **span calendário** do corredor, mas D3 a aplicava como prazo absoluto a partir de t = 0 (`fim ≤ window_weeks`). Para atividades encadeadas isso transformava uma duração em prazo impossível (3 atividades de 2 semanas em cadeia ficavam INFEASIBLE mesmo com deadline de 30 semanas).
+
+Semântica vigente (SGS e CP-SAT): `fim ≤ liberação + window_weeks`, onde a **liberação** é o limite de início imposto pelos predecessores (FS no término, FS com limiar θ, FS+lag, SS+lag). Atividades **sem** predecessores têm liberação 0 e mantêm exatamente o comportamento anterior (inclusive o erro de ADR-181 quando `readiness_weeks` não cabe na janela). `readiness_weeks` permanece piso de início, não faz parte da liberação. Testes: `tests/unit/application/scheduling/test_adr072_window_relative_to_release.py`.
