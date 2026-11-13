@@ -444,6 +444,16 @@ class AtributosCategoriaCPU(BaseModel):
     dmt_referencia_m: float | None = Field(default=None, ge=0)
 
 
+class ConsumiveisDeclarados(BaseModel):
+    """CPU declara que não consome material/combustível por unidade entregue (P18)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["NENHUM"]
+    justificativa: str = Field(min_length=10)
+    fonte: str = Field(min_length=3)
+
+
 class CPU(BaseModel):
     """Composição de Preço Unitário — dimensão de insumos e custos (ADR-053 Fase 3).
 
@@ -483,6 +493,9 @@ class CPU(BaseModel):
     producao_id_ref: str
     categoria: CategoriaCPU
     composicao_itens: list[ComposicaoItem] = Field(default_factory=list)
+    # P18: declaração explícita de "nenhum consumível" (status NENHUM + justificativa + fonte).
+    # Sem ela, CPU sem BOM por unidade entregue não é certificável (fail closed).
+    consumiveis_declarados: ConsumiveisDeclarados | None = None
     # composicao_padrao_equipe REMOVIDO em ADR-053 Fase 3 — leia de Produtividade via producao_id_ref.
     atributos_categoria: AtributosCategoriaCPU = Field(default_factory=AtributosCategoriaCPU)
 

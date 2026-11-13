@@ -644,3 +644,78 @@ def test_exact_quantity_rejects_non_builtin_numeric_objects(value: object) -> No
 
     with pytest.raises(ValueError, match="finite nonnegative"):
         _exact_q(value)
+
+
+_DECLARED_NONE = {
+    "status": "NENHUM",
+    "justificativa": "Serviço manual sem combustível nem material consumido por unidade.",
+    "fonte": "levantamento de campo 2026-11",
+}
+
+
+def _no_consumables_cpu(**extra) -> dict:
+    cpu = _real_rfi_catalog_record("config/catalogos/rfi-r02/cpus/CPU-TERRA-ATI-003.json")
+    cpu["composicao_itens"] = []
+    cpu.update(extra)
+    return cpu
+
+
+def test_explicit_no_consumables_declaration_books_zero_v() -> None:
+    from concilium.application.scheduling.skill04_consumption_preview import NO_CONSUMABLES_DECLARED
+
+    cpu = _no_consumables_cpu(consumiveis_declarados=_DECLARED_NONE)
+    canonical = _one_activity_for_catalog_cpu(cpu)
+    goods = build_activity_goods_from_catalog(canonical, {"cpus": [cpu], "insumos": []})
+    assert goods["A"] is NO_CONSUMABLES_DECLARED
+
+    result = book_skill04_planned_consumption_preview(canonical, _pool(), goods)
+    assert result.consumption.variable_cost == 0
+    assert result.consumption.evidence == ()
+
+
+def test_missing_declaration_still_fails_closed_and_names_the_field() -> None:
+    cpu = _no_consumables_cpu()
+    with pytest.raises(ValueError, match="consumiveis_declarados"):
+        build_activity_goods_from_catalog(_one_activity_for_catalog_cpu(cpu), {"cpus": [cpu], "insumos": []})
+
+
+@pytest.mark.parametrize(
+    ("declaration", "message"),
+    [
+        ({**_DECLARED_NONE, "justificativa": "  "}, "justificativa"),
+        ({**_DECLARED_NONE, "fonte": ""}, "fonte"),
+        ({**_DECLARED_NONE, "status": "ALGUNS"}, "NENHUM"),
+    ],
+)
+def test_incomplete_declaration_is_rejected(declaration, message: str) -> None:
+    cpu = _no_consumables_cpu(consumiveis_declarados=declaration)
+    with pytest.raises(ValueError, match=message):
+        build_activity_goods_from_catalog(_one_activity_for_catalog_cpu(cpu), {"cpus": [cpu], "insumos": []})
+
+
+def test_declaration_contradicted_by_bom_rows_is_rejected() -> None:
+    cpu = _real_rfi_catalog_record("config/catalogos/rfi-r02/cpus/CPU-TERRA-ATI-003.json")
+    diesel = _real_rfi_catalog_record("config/catalogos/rfi-r02/insumos/material/MA-DIESEL-S10.json")
+    cpu["consumiveis_declarados"] = _DECLARED_NONE
+    with pytest.raises(ValueError, match="contradicts"):
+        build_activity_goods_from_catalog(_one_activity_for_catalog_cpu(cpu), {"cpus": [cpu], "insumos": [diesel]})
+
+
+def test_declaration_contradicted_by_hourly_team_consumption_is_rejected() -> None:
+    cpu = _no_consumables_cpu(consumiveis_declarados=_DECLARED_NONE, producao_id_ref="P-HOURLY")
+    production = {
+        "id": "P-HOURLY",
+        "composicao_padrao_equipe": {
+            "equipamentos": [{"equip_id": "E1", "num_unidades": 1, "consumo_litros_hora": 12.0}]
+        },
+    }
+    with pytest.raises(ValueError, match="contradicts"):
+        build_activity_goods_from_catalog(
+            _one_activity_for_catalog_cpu(cpu), {"cpus": [cpu], "insumos": [], "producoes": [production]}
+        )
+
+
+def test_an_empty_goods_mapping_not_built_from_a_declaration_still_fails() -> None:
+    canonical = _one_activity_for_catalog_cpu(_no_consumables_cpu())
+    with pytest.raises(ValueError, match="explicit physical goods mapping"):
+        book_skill04_planned_consumption_preview(canonical, _pool(), {"A": {}})

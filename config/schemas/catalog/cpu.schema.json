@@ -44,6 +44,29 @@
       "items": { "$ref": "common.schema.json#/$defs/composicaoItem" },
       "uniqueItems": true
     },
+    "consumiveis_declarados": {
+      "type": "object",
+      "description": "Declaração explícita de que a CPU não consome material/combustível por unidade entregue (P18). Exige justificativa e fonte; contradições com composicao_itens ou com consumo horário da equipe são rejeitadas.",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "justificativa",
+        "fonte"
+      ],
+      "properties": {
+        "status": {
+          "const": "NENHUM"
+        },
+        "justificativa": {
+          "type": "string",
+          "minLength": 10
+        },
+        "fonte": {
+          "type": "string",
+          "minLength": 3
+        }
+      }
+    },
     "atributos_categoria": {
       "type": "object",
       "additionalProperties": true,
