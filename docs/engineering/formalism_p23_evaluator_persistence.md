@@ -25,7 +25,7 @@ A run is evaluated against eleven mandatory gates:
 - V3 — exact P16 weekly demand/presence/standby reconciliation: `presence = demand + standby`, `presence <= contracted units`, the activity-demand tensor closes to aggregate demand, and active/standby machine-weeks close to Skill 05 summaries. The summary denominator, contract duration and resource type must also match the typed canonical `RecursoContrato` bound to that P16 witness. Positive standby is allowed; unused capacity is not itself a violation.
 - V4 — positive operational price and positive reconciled total cost.
 - V5 — positive exact productivity rates with declared source and calibration provenance.
-- V6 — physical precedence/pool feasibility plus a bounded search whose entire declared start domain has been exhausted.
+- V6 — a feasible physical calendar (FORMALISMO_LONGO §XIV.9): an audited P15 witness (status and audit PASS, at least one attempt) bound to the current schedule fingerprint. Exhausting the declared start domain is required only to turn an infeasible search into a FAIL.
 - Financial reconciliation — exclusive P20 event journal, ownership, weekly totals and category totals reconstruct exactly.
 - Price present — operational selling price is present and exact.
 - Regulatory BDI basis — P21 regulatory comparison is PASS.
@@ -40,7 +40,7 @@ Decision rules are deterministic:
 | Every gate PASS, every required source PRESENT, scope RFP | GO |
 | Any UNKNOWN/NOT_EVALUATED, unavailable source, PREVIEW or RFI | NOT_CERTIFIABLE |
 
-GO is deliberately stricter than a feasible physical witness. P15's bounded resolver returns complete_search=False when it stops after finding one feasible candidate without enumerating the complete caller-declared search domain. P23 therefore treats that witness as UNKNOWN for V6, not GO. This prevents a locally admissible calendar from being misrepresented as global search convergence.
+V6 follows the normative text: "the N_i search converged with no infeasibility signal — feasible calendar". P15's bounded resolver stops at the first audited feasible calendar and reports complete_search=True only when that candidate was the last one, so requiring completeness for PASS would make V6 unsatisfiable for any feasible project (decision recorded 2026-11-13). Completeness still governs the negative side: an infeasible incomplete search is UNKNOWN, an infeasible exhausted search is FAIL, and a witness not bound to the current schedule fingerprint is UNKNOWN.
 
 A missing regulatory BDI basis in an RFP is not a zero-rate pass. A fallback/assumed productivity rate is not certifiable. A duplicated or unowned P20 event is a financial FAIL. No legacy rounded report value is used to reconstruct the authoritative P20 ledger.
 

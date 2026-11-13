@@ -519,15 +519,54 @@ def test_persisted_p20_and_p21_json_are_replayed_without_domain_objects():
     assert result.decision == "GO"
 
 
-def test_p15_feasible_but_incomplete_search_cannot_certify_go():
+def test_p15_feasible_witness_satisfies_v6_without_exhausting_the_domain():
+    """FORMALISMO_LONGO §XIV.9 [V6]: the N_i search converged with no
+    infeasibility signal, i.e. a feasible calendar. One audited witness bound
+    to the current schedule proves feasibility; enumerating the remaining start
+    combinations is not required (the resolver stops at the first PASS)."""
     envelope = _envelope()
     inputs = _runtime_evidence(envelope)
     inputs["physical_resolution"] = {
         **inputs["physical_resolution"],
         "complete_search": False,
     }
+    inputs["financial_reconciliation"] = _persisted_financial_reconciliation()
+    inputs["pricing_diagnostics"] = _persisted_pricing()
+    inputs["pricing_gates"] = _persisted_pricing_gates()
     result = evaluate_project_evidence(envelope, **inputs)
-    assert result.decision == "NOT_CERTIFIABLE"
+    gate = next(x for x in result.gate_evidence if x.gate_id == "V6")
+    assert gate.status == "PASS"
+    assert result.decision == "GO"
+
+
+def test_p15_infeasibility_requires_an_exhausted_domain():
+    """Exhaustiveness is what makes a FAIL a proof: an incomplete search that
+    found nothing is UNKNOWN, a complete one is FAIL."""
+    envelope = _envelope()
+    for complete, expected in ((False, "UNKNOWN"), (True, "FAIL")):
+        inputs = _runtime_evidence(envelope)
+        inputs["physical_resolution"] = {
+            **inputs["physical_resolution"],
+            "status": "FAIL",
+            "audit_status": "FAIL",
+            "complete_search": complete,
+            "schedule_sha256": None,
+            "reason": "no admissible fully materialized physical calendar",
+        }
+        result = evaluate_project_evidence(envelope, **inputs)
+        gate = next(x for x in result.gate_evidence if x.gate_id == "V6")
+        assert gate.status == expected, complete
+
+
+def test_p15_feasible_witness_not_bound_to_current_schedule_is_unknown():
+    envelope = _envelope()
+    inputs = _runtime_evidence(envelope)
+    inputs["physical_resolution"] = {
+        **inputs["physical_resolution"],
+        "complete_search": False,
+        "schedule_sha256": "0" * 64,
+    }
+    result = evaluate_project_evidence(envelope, **inputs)
     gate = next(x for x in result.gate_evidence if x.gate_id == "V6")
     assert gate.status == "UNKNOWN"
 

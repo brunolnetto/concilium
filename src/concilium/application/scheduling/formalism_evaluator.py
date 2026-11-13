@@ -1127,16 +1127,16 @@ def build_formalism_gate_evidence(
         elif raw == "FAIL":
             resolution_status = "UNKNOWN"
             resolution_reason = str(physical_resolution.get("reason") or "P15 search was inconclusive")
-        elif raw == "PASS" and audit == "PASS" and type(attempts) is int and attempts > 0 and complete is True:
+        elif raw == "PASS" and audit == "PASS" and type(attempts) is int and attempts > 0:
+            # FORMALISMO_LONGO §XIV.9 [V6]: a feasible calendar. One audited
+            # witness bound to the current schedule proves feasibility; domain
+            # exhaustion (complete_search) is only needed to prove a FAIL.
             if schedule_fp.state == "PRESENT" and physical_resolution.get("schedule_sha256") == schedule_fp.sha256:
                 resolution_status = "PASS"
                 resolution_reason = ""
             else:
                 resolution_status = "UNKNOWN"
                 resolution_reason = "P15 witness is not bound to the current canonical schedule fingerprint"
-        elif raw == "PASS" and complete is not True:
-            resolution_status = "UNKNOWN"
-            resolution_reason = "P15 found a feasible witness but did not prove the declared search domain complete"
         else:
             resolution_status = "UNKNOWN"
             resolution_reason = str(
