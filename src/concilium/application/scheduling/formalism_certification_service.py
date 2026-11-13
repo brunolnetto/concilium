@@ -11,12 +11,13 @@ import hashlib
 import json
 import math
 from collections.abc import Mapping, Sequence
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from enum import Enum
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from concilium.application.scheduling.formalism_evaluator import (
     FormalismEvaluation,
@@ -312,15 +313,23 @@ def _dump(value: Any) -> Any:
         return _dump(value.value)
     if isinstance(value, (Fraction, Decimal)):
         return str(value)
-    if isinstance(value, (datetime, date)):
+    if isinstance(value, (datetime, date, time)):
         return value.isoformat()
-    if isinstance(value, Path):
+    if isinstance(value, (Path, UUID)):
         return str(value)
     if isinstance(value, Mapping):
         return {str(key): _dump(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [_dump(item) for item in value]
-    return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("source snapshots must contain only finite floats")
+        return value
+    if isinstance(value, (str, int)):  # bool is an int subclass
+        return value
+    # Fail with the offending type instead of a late json.dumps error, so a
+    # NOT_EVALUATED certificate names what the snapshot could not fingerprint.
+    raise TypeError(f"unsupported source snapshot value of type {type(value).__name__!r}")
 
 
 def build_formalism_source_snapshot(

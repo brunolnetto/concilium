@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
+from datetime import time
 from types import SimpleNamespace
+from uuid import UUID
 
+import pytest
 from pydantic import BaseModel
 
 from concilium.application.scheduling.formalism_certification_service import (
@@ -152,6 +156,27 @@ def test_source_snapshot_serializer_sorts_sets_before_fingerprinting() -> None:
     right = _dump(_SetBackedSource(source_nodes={"beta", "gamma", "alpha"}))
     assert left == right
     assert left["source_nodes"] == ["alpha", "beta", "gamma"]
+
+
+class _UuidBackedSource(BaseModel):
+    project_uuid: UUID
+    at: time
+
+
+def test_source_snapshot_serializer_handles_uuid_and_time() -> None:
+    """Real canonical models carry UUIDs: a GOLDEN RFP run failed with
+    'Object of type UUID is not JSON serializable' and was never evaluated."""
+    ident = UUID("12345678-1234-5678-1234-567812345678")
+    dumped = _dump(_UuidBackedSource(project_uuid=ident, at=time(7, 30)))
+    assert dumped == {"project_uuid": str(ident), "at": "07:30:00"}
+    json.dumps(dumped, allow_nan=False)
+
+
+def test_source_snapshot_serializer_rejects_unknown_types_explicitly() -> None:
+    with pytest.raises(TypeError, match="object"):
+        _dump({"opaque": object()})
+    with pytest.raises(ValueError, match="finite"):
+        _dump({"x": float("nan")})
 
 
 def test_application_boundary_binds_each_pool_summary_to_its_exact_p16_contract() -> None:
