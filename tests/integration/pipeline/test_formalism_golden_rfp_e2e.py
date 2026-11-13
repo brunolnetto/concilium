@@ -1,4 +1,4 @@
-"""#23 criterion 1: a golden RFP reaches a traceable GO through the real pipeline.
+"""#23/#24: golden RFPs reach a traceable GO through the real pipeline and match independent oracles.
 
 The project is run end to end by PipelineService (skills 01–09, RFP) on the
 fixture in tests/fixtures/formalism_golden_rfp/spec.json. The GO test runs in
@@ -29,7 +29,12 @@ from tests.support.golden_differential import PHASES, differential_report
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG = ROOT / "config"
-SPEC = json.loads((ROOT / "tests/fixtures/formalism_golden_rfp/spec.json").read_text(encoding="utf-8"))
+FIXTURES = ROOT / "tests/fixtures/formalism_golden_rfp"
+SCENARIOS = {
+    "single_plant_sequence": json.loads((FIXTURES / "spec.json").read_text(encoding="utf-8")),
+    "sharing_theta_standby_remob": json.loads((FIXTURES / "spec_sharing.json").read_text(encoding="utf-8")),
+}
+SPEC = SCENARIOS["single_plant_sequence"]
 GATES = (
     "V1",
     "V2",
@@ -153,20 +158,24 @@ def _oracle_c_cat(spec: dict) -> str:
     return evaluate_catalog_envelope(case)["total"]
 
 
-@pytest.fixture(scope="module")
-def golden(tmp_path_factory: pytest.TempPathFactory) -> tuple[dict, ConciliumService]:
-    return _run(tmp_path_factory.mktemp("golden"), SPEC)
+@pytest.fixture(scope="module", params=sorted(SCENARIOS))
+def golden(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory):
+    spec = SCENARIOS[request.param]
+    run, service = _run(tmp_path_factory.mktemp(request.param), spec)
+    return run, service, spec
 
 
-def test_declared_bdi_basis_is_the_oracle_catalog_envelope() -> None:
-    evidence = SPEC["skill_inputs"]["06-resultado-financeiro"]["p21_pricing_evidence"]
-    expected = _oracle_c_cat(SPEC)
+@pytest.mark.parametrize("scenario", sorted(SCENARIOS))
+def test_declared_bdi_basis_is_the_oracle_catalog_envelope(scenario: str) -> None:
+    spec = SCENARIOS[scenario]
+    evidence = spec["skill_inputs"]["06-resultado-financeiro"]["p21_pricing_evidence"]
+    expected = _oracle_c_cat(spec)
     assert evidence["catalog"]["amount"] == expected
     assert evidence["regulatory_basis"]["amount"] == expected
 
 
 def test_golden_rfp_is_a_clean_current_go(golden) -> None:
-    run, _service = golden
+    run, _service, _spec = golden
     assert run["status"] == "OK", run.get("error")
     assert all(s["status"] == "OK" for s in run["skills_log"]), run["skills_log"]
     certificate = run["formalism_certificate"]
@@ -185,10 +194,10 @@ def _first_cell(canonical):
 
 
 def _differential(golden):
-    run, service = golden
+    run, service, spec = golden
     project = service._dependencies.repository.get_project(run["project_id"])
     canonical = project.load_canonical(run["version"])
-    return canonical, differential_report(canonical, _catalog(SPEC), run["formalism_certificate"])
+    return canonical, differential_report(canonical, _catalog(spec), run["formalism_certificate"])
 
 
 def test_golden_fronts_never_exceed_contracted_resources(golden) -> None:
@@ -222,14 +231,14 @@ def test_differential_reports_the_first_divergent_phase(golden, phase: str, corr
     canonical, _report = _differential(golden)
     tampered = canonical.model_copy(deep=True)
     corrupt(tampered)
-    report = differential_report(tampered, _catalog(SPEC), golden[0]["formalism_certificate"])
+    report = differential_report(tampered, _catalog(golden[2]), golden[0]["formalism_certificate"])
     first = report["first_divergence"]
     assert first is not None and first.phase == phase, first
     assert first.pipeline != first.oracle
 
 
 def test_golden_go_is_invalidated_by_a_post_issuance_source_mutation(golden) -> None:
-    run, service = golden
+    run, service, _spec = golden
     deps = service._dependencies
     project = deps.repository.get_project(run["project_id"])
     version = run["version"]

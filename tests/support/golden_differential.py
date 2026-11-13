@@ -24,6 +24,7 @@ Expected values are never rewritten to match the pipeline.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal, localcontext
 from fractions import Fraction
 from typing import Any
 
@@ -38,6 +39,14 @@ PHASES = ("PHYSICAL", "POOL", "CONSUMPTION", "CATALOG", "PRICE", "CERTIFICATE")
 
 def q(value: object) -> Fraction:
     return Fraction(str(value))
+
+
+def decimal_text(value: Fraction) -> str | None:
+    """Exact terminating-decimal text for the reference protocol, else None."""
+    with localcontext() as ctx:
+        ctx.prec = 60
+        text = str(Decimal(value.numerator) / Decimal(value.denominator))
+    return text if Fraction(text) == value else None
 
 
 @dataclass(frozen=True)
@@ -226,13 +235,26 @@ def pool_checks(canonical: Any) -> list[Check]:
             )
             continue
         regime = "FULL_RATE_STANDBY" if idle == active else "DISCOUNTED_STANDBY"
+        rates = [decimal_text(x) for x in (active, idle, movement)]
+        if None in rates:
+            checks.append(
+                Check(
+                    "POOL",
+                    f"{label} K",
+                    "UNVERIFIED",
+                    str(q(costs.get("pool_total", 0))),
+                    "-",
+                    "tariff is not a terminating decimal for the reference protocol",
+                )
+            )
+            continue
         record = exhaustive_pool(
             tuple(window),
             {
                 "instances": instances,
-                "active": str(active),
-                "idle": str(idle),
-                "movement": str(movement),
+                "active": rates[0],
+                "idle": rates[1],
+                "movement": rates[2],
                 "max_idle_gap": int(tariff.get("max_idle_gap_effective", tariff.get("max_idle_gap_declared", 0))),
                 "regime": regime,
                 "off_hire_weeks": [],
