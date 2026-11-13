@@ -339,6 +339,8 @@ class Resultado(BaseModel):
     pricing_diagnostics: dict[str, str | None] = Field(default_factory=dict)
     pricing_gates: dict[str, str | None] = Field(default_factory=dict)
     pricing_authority: str = "P21_C_PRICING_GATES_NOT_EVALUATED"
+    # P23-B: exact P20 source journal used to produce the pricing result.
+    p20_financial_reconciliation: dict[str, object] | None = None
 
 
 # ── Fase 2: Resource Binding ──────────────────────────────────────────────

@@ -1,0 +1,44 @@
+{
+  "protocol": "formalism-catalog-envelope/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["II", "III", "XIII", "XIV.8"],
+    "scope": "catalog envelope C^cat = sum_i Q_i gamma_i^cat / rho_i, monthly contractual dilution by s_mes d h, consumables per delivered unit",
+    "rounding": "Fraction exact"
+  },
+  "vectors": [
+    {
+      "case_id": "monthly_and_hourly_contractual_plus_per_unit_consumables",
+      "hand_check": "A: E1 1461/mes -> 1461/(1461/336*48)=7/h x2=14; M1 5/h x3=15; gammaK=29; CK=100*29/10=290; CV=100*(1/2*4)=200; A=490. B: E2 2922/mes -> 14/h x1; CK=50*14/25=28; CV=50*(2*3/2)=150; B=178. Total 668.",
+      "inputs": {
+        "regime": {"d": 6, "h": 8},
+        "s_mes": "1461/336",
+        "activities": [
+          {
+            "id": "A", "Q": "100", "rho": "10", "unit": "m3",
+            "contractual": [
+              {"id": "E1", "cat": "EQ", "price": "1461", "price_unit": "mes", "n": 2},
+              {"id": "M1", "cat": "MO", "price": "5", "price_unit": "h", "n": 3}
+            ],
+            "consumables": [{"id": "G1", "coef": "1/2", "price": "4", "unit": "kg"}]
+          },
+          {
+            "id": "B", "Q": "50", "rho": "25", "unit": "t",
+            "contractual": [
+              {"id": "E2", "cat": "EQ", "price": "2922", "price_unit": "mes", "n": 1}
+            ],
+            "consumables": [{"id": "G2", "coef": "2", "price": "3/2", "unit": "L"}]
+          }
+        ]
+      },
+      "expected": {
+        "activities": {
+          "A": {"K": "290", "V": "200", "total": "490"},
+          "B": {"K": "28", "V": "150", "total": "178"}
+        },
+        "total": "668"
+      }
+    }
+  ]
+}

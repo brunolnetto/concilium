@@ -14,26 +14,12 @@ from concilium.domain.models.canonical import (
 from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
 from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 from concilium.infrastructure.adapters.excel_adapter import ExcelRenderer
+from tests.support.p15_stubs import install_p15_pass_stub
 
 
 def _stub_p15_pass_for_precedence_test(monkeypatch) -> None:
     """Keep these AUTO tests focused on EAP→DAG/CP-SAT precedence mapping."""
-    from types import SimpleNamespace
-
-    def pass_physical_resolution(**kwargs):
-        return SimpleNamespace(
-            status="PASS",
-            schedule_selected=kwargs["schedule_selected"],
-            distribution_by_item=kwargs["distribution_by_item"],
-            fallback_item_ids=kwargs["fallback_item_ids"],
-            reason="ADR068 precedence test: P15 boundary isolated",
-        )
-
-    monkeypatch.setitem(
-        run_cronograma.__globals__,
-        "resolve_skill04_physical_schedule",
-        pass_physical_resolution,
-    )
+    install_p15_pass_stub(monkeypatch, "ADR068 precedence test: P15 boundary isolated")
 
 
 

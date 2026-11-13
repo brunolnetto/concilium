@@ -282,6 +282,47 @@ class TestListRuns:
 
         assert result == []
 
+    def test_list_never_presents_stored_go_as_current(self):
+        """runs.json keeps the issuance-time projection (status CURRENT,
+        project_go True). The listing does not revalidate fingerprints, so it
+        must not echo that claim: a later source mutation would otherwise be
+        shown as a current GO (#23 acceptance: no provisional-as-certified)."""
+        svc, project, audit, runtime = _make_svc()
+        stored = {
+            "status": "CURRENT",
+            "recorded_decision": "GO",
+            "effective_decision": "GO",
+            "project_go": True,
+            "scope": "RFP",
+            "evaluation_sha256": "a" * 64,
+            "record_sha256": "b" * 64,
+            "reasons": [],
+            "gates": [{"gate_id": "V1", "status": "PASS"}],
+            "invalidated_sources": [],
+        }
+        runs = [{"run_id": "r1", "requested_at": "2024-01-01", "formalism_certificate": stored}]
+        project.read_json.return_value = runs
+
+        [row] = svc.list_runs("proj-test")
+
+        cert = row["formalism_certificate"]
+        assert cert["project_go"] is False
+        assert cert["effective_decision"] == "NOT_CERTIFIABLE"
+        assert cert["status"] == "NOT_REVALIDATED"
+        assert cert["recorded_decision"] == "GO"
+        assert cert["evaluation_sha256"] == "a" * 64
+        assert "gates" not in cert
+        # The persisted registry itself is not mutated by a read.
+        assert runs[0]["formalism_certificate"]["project_go"] is True
+
+    def test_list_keeps_runs_without_certificate_unchanged(self):
+        svc, project, audit, runtime = _make_svc()
+        project.read_json.return_value = [{"run_id": "r1", "requested_at": "2024-01-01"}]
+
+        [row] = svc.list_runs("proj-test")
+
+        assert "formalism_certificate" not in row
+
 
 # ─── TestGetRun ──────────────────────────────────────────────────────────────
 
@@ -340,6 +381,109 @@ class TestGetRun:
         assert result["run_id"] == "r1"
         assert result["status"] == "OK"
         assert len(progress_called) == 1
+
+    def test_get_run_exposes_shared_revalidated_formalism_certificate(self):
+        svc, project, audit, runtime = _make_svc()
+        run_data = {
+            "run_id": "r-p23",
+            "status": "OK",
+            "version": "v9",
+            "formalism_certificate": {
+                "evaluation_sha256": "a" * 64,
+                "recorded_decision": "GO",
+            },
+            "invocation_line_offset": 0,
+            "skills_log": [],
+            "output_files": [],
+            "summary": {},
+        }
+        project.read_json.return_value = [run_data]
+        project.read_lines.return_value = []
+        canonical = MagicMock()
+        project.load_canonical.return_value = canonical
+        expected_summary = {
+            "status": "CURRENT",
+            "recorded_decision": "GO",
+            "effective_decision": "GO",
+            "project_go": True,
+            "invalidated_sources": [],
+            "gates": [],
+        }
+
+        with (
+            patch(
+                "concilium.application.services.pipeline_service.load_resolved_catalog_snapshot",
+                return_value={"cpus": [], "insumos": [], "producoes": []},
+            ) as load_catalog,
+            patch(
+                "concilium.application.services.pipeline_service.build_productivity_rate_witnesses",
+                return_value=(),
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.build_solver_context",
+                return_value={"run_id": "r-p23", "version": "v9"},
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.read_current_project_certificate",
+                return_value=MagicMock(),
+            ) as read_certificate,
+            patch(
+                "concilium.application.services.pipeline_service.certificate_summary",
+                return_value=expected_summary,
+            ),
+        ):
+            result = svc.get_run("proj-test", "r-p23")
+
+        assert result["formalism_certificate"] == expected_summary
+        load_catalog.assert_called_once_with(project, "v9", "r-p23")
+        read_certificate.assert_called_once()
+
+    def test_get_run_never_returns_historical_go_when_revalidation_fails(self):
+        svc, project, audit, runtime = _make_svc()
+        run_data = {
+            "run_id": "r-stale",
+            "status": "OK",
+            "version": "v3",
+            "formalism_certificate": {
+                "evaluation_sha256": "b" * 64,
+                "recorded_decision": "GO",
+                "scope": "RFP",
+            },
+            "invocation_line_offset": 0,
+            "skills_log": [],
+            "output_files": [],
+            "summary": {},
+        }
+        project.read_json.return_value = [run_data]
+        project.read_lines.return_value = []
+        project.load_canonical.return_value = MagicMock()
+
+        with (
+            patch(
+                "concilium.application.services.pipeline_service.load_resolved_catalog_snapshot",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.build_productivity_rate_witnesses",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.build_solver_context",
+                return_value=None,
+            ),
+            patch(
+                "concilium.application.services.pipeline_service.read_current_project_certificate",
+                side_effect=ValueError("source fingerprint changed"),
+            ),
+        ):
+            result = svc.get_run("proj-test", "r-stale")
+
+        certificate = result["formalism_certificate"]
+        assert certificate["status"] == "INVALIDATED"
+        assert certificate["recorded_decision"] == "GO"
+        assert certificate["effective_decision"] == "NOT_CERTIFIABLE"
+        assert certificate["project_go"] is False
+        assert certificate["invalidated_sources"] == ["read_validation"]
 
     def test_get_run_returns_all_expected_fields(self):
         svc, project, audit, runtime = _make_svc()
@@ -627,6 +771,51 @@ class TestExecuteRun:
 
         last_run = next(r for r in write_store["data"] if r["run_id"] == run_id)
         assert last_run["status"] == "ERRO"
+
+    def test_skill_errors_are_passed_to_the_certificate_evaluation(self, tmp_path):
+        """Owner decision 2026-11-13: GO requires a run without ERRO, so the
+        run's skill errors must reach the P23 evaluation (and its record)."""
+        svc, project, audit, runtime = _make_svc(tmp_path=tmp_path)
+        run_id = "run_err02"
+        run_data = {
+            "run_id": run_id,
+            "status": "PENDING",
+            "base_version": None,
+            "fork_version": False,
+            "use_saved_overrides": False,
+            "use_mobilizacao_policy": False,
+            "use_strict_catalog_baseline": False,
+            "skill_inputs_override": {},
+            "invocation_line_offset": 0,
+        }
+        self._setup_runs(project, run_data)
+        project.current_version.return_value = "v1"
+        project.read_lines.return_value = []
+        runtime.run_pipeline.return_value = [
+            {"skill": "05", "status": "OK"},
+            {"skill": "06", "status": "ERRO", "erros": ["custo autônomo 72.9% acima do PU"]},
+            {"skill_id": "07", "status": "EXCEPTION", "erro": "boom"},
+            {"skill": "08", "status": "ERRO"},
+        ]
+        (tmp_path / "project" / "v1").mkdir(parents=True, exist_ok=True)
+        module = "concilium.application.services.pipeline_service"
+        with (
+            patch("concilium.application.pipeline_strategy.get_pipeline_strategy") as mock_strategy,
+            patch("concilium.application.services.service_support.build_summary", return_value={}),
+            patch(f"{module}.load_resolved_catalog_snapshot", return_value={}),
+            patch(f"{module}.build_productivity_rate_witnesses", return_value=None),
+            patch(f"{module}.build_solver_context", return_value={}),
+            patch(f"{module}.evaluate_and_persist_project_certificate") as evaluate,
+        ):
+            mock_strategy.return_value = MagicMock()
+            evaluate.side_effect = RuntimeError("stop after capturing arguments")
+            svc._execute_run(project, run_id)
+
+        assert evaluate.call_args.kwargs["run_errors"] == (
+            "06: custo autônomo 72.9% acima do PU",
+            "07: boom",
+            "08: status ERRO",
+        )
 
     def test_exception_in_pipeline_sets_status_exception(self, tmp_path):
         svc, project, audit, runtime = _make_svc(tmp_path=tmp_path)

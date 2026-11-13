@@ -7,6 +7,8 @@ from datetime import UTC, date, datetime
 from fractions import Fraction as F
 from pathlib import Path
 
+import pytest
+
 from concilium.application.scheduling.contractual_cost_ledger import (
     CostPosting,
     ExclusiveCostLedger,
@@ -26,6 +28,7 @@ from concilium.application.scheduling.pricing_gates import RegulatoryBdiBasis
 from concilium.application.scheduling.pricing_report_adapter import (
     InventoryEvidenceScope,
     apply_pricing_report_evidence,
+    build_pricing_report_evidence_context,
 )
 from concilium.application.skills import _load
 from concilium.application.skills.base import SkillResult
@@ -200,6 +203,9 @@ def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() ->
     assert validations[-1].status == "AVISO"
 
 
+C_CAT_FIXTURE = "6462935383/44925750"
+
+
 def _json_runtime_fixture() -> tuple[CanonicalModel, dict[str, object], dict[str, object]]:
     root = Path(__file__).resolve().parents[4]
     cpu = json.loads(
@@ -257,9 +263,23 @@ def _json_runtime_fixture() -> tuple[CanonicalModel, dict[str, object], dict[str
             is_feasible=True,
         ),
     )
+    # C^cat (FORMALISMO_LONGO §XIV.8) is derived from the production team, so
+    # the fixture carries the real production record and its team insumos.
+    production = json.loads(
+        (root / "config/catalogos/rfi-r02/produtividades/CPU-TERRA-ATI-003-PROD-001.json").read_text(
+            encoding="utf-8",
+        )
+    )
+    team = production["composicao_padrao_equipe"]
+    team_ids = [r["equip_id"] for r in team["equipamentos"]] + [r["funcao_id"] for r in team["funcoes"]]
+    team_insumos = [
+        json.loads(next((root / "config/catalogos/rfi-r02/insumos").rglob(f"{ident}.json")).read_text(encoding="utf-8"))
+        for ident in team_ids
+    ]
     catalogo: dict[str, object] = {
         "cpus": [cpu],
-        "insumos": [diesel],
+        "producoes": [production],
+        "insumos": [diesel, *team_insumos],
         "currency": "BRL",
         "currency_source": "catalog_metadata.json",
     }
@@ -275,11 +295,16 @@ def _json_runtime_fixture() -> tuple[CanonicalModel, dict[str, object], dict[str
             "MO": "0",
             "EQ": "0",
             "MAT": "0",
-            "COMB": "1",
+            # Hand check: the fixture ledger carries only diesel (no P16 pool),
+            # while C^cat counts the full production team (~143.858). With
+            # COMB markup 3: P = diesel 42.804*4 + ORE 10 (MAT, 0) + IND 1.512
+            # = 182.728 -> BDI over C^cat ~27.0% >= 10% floor, margin ~70.3% >= 20%.
+            "COMB": "3",
             "IND": "0",
         },
         "catalog": {
-            "amount": "100",
+            # Independent oracle (tests/reference_formalism/catalog_envelope_reference.py).
+            "amount": C_CAT_FIXTURE,
             "currency": "BRL",
             "source": "resolved-project-catalog",
             "reference_id": "catalog-price-2026-10",
@@ -287,7 +312,7 @@ def _json_runtime_fixture() -> tuple[CanonicalModel, dict[str, object], dict[str
         },
         "operational_basis_fingerprint": "physical-scope-2026-v1",
         "regulatory_basis": {
-            "amount": "40",
+            "amount": C_CAT_FIXTURE,
             "currency": "BRL",
             "basis_fingerprint": "physical-scope-2026-v1",
             "minimum_rate": "1/10",
@@ -408,14 +433,14 @@ def test_real_skill06_json_contract_builds_p19_p20_and_reaches_p21_pass(monkeypa
     assert result.pricing_diagnostics["catalog_reference_id"] == "catalog-price-2026-10"
     assert result.pricing_diagnostics["operational_basis_fingerprint"] == "physical-scope-2026-v1"
     assert result.pricing_diagnostics["inventory_scope_reference_id"] == "stocktake-2026-10-01"
-    assert result.pricing_diagnostics["bdi_rate_comb"] == "1"
-    assert result.pricing_diagnostics["operational_price"] == str(F("97.12"))
+    assert result.pricing_diagnostics["bdi_rate_comb"] == "3"
+    assert result.pricing_diagnostics["operational_price"] == str(F("182.728"))
     assert result.pricing_diagnostics["total_cost"] == str(F("54.316"))
     assert result.pricing_gates["schema"] == "concilium.p21.pricing-gates.v1"
     assert result.pricing_gates["certification_intent"] == "CERTIFIED"
     assert result.pricing_gates["regulatory_basis_source"] == "regulatory-basis"
     assert result.pricing_gates["regulatory_basis_reference"] == "regulatory-2026-v1"
-    assert result.pricing_gates["regulatory_basis_amount"] == "40"
+    assert result.pricing_gates["regulatory_basis_amount"] == C_CAT_FIXTURE
     assert result.pricing_gates["regulatory_basis_minimum_rate"] == "1/10"
     assert result.pricing_authority != "PROJECT_GO"
     assert not outcome.has_errors
@@ -538,3 +563,14 @@ def test_complete_inventory_scope_without_a_p19_journal_is_unknown() -> None:
     )
     assert result.pricing_gates["status"] == "UNKNOWN"
     assert "requires an explicit holding or provisioning journal" in result.pricing_gates["reason"]
+
+
+@pytest.mark.parametrize("field", ["catalog", "regulatory_basis"])
+def test_declared_bdi_basis_must_equal_derived_catalog_envelope(field: str) -> None:
+    """FORMALISMO_LONGO §XIV.8: BDI = P / C^cat - 1 is derived, not a free input.
+    A declared basis that differs from C^cat (here a placeholder "1", which
+    previously made V2 pass trivially) is rejected and the evidence fails closed."""
+    canonical, catalogo, declaration = _json_runtime_fixture()
+    declaration[field]["amount"] = "1"
+    with pytest.raises(ValueError, match="differs from derived C\\^cat"):
+        build_pricing_report_evidence_context(canonical, catalogo, declaration)

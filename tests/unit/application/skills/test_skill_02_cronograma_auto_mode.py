@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -16,6 +15,7 @@ from concilium.domain.models.canonical import (
     CanonicalModel,
     ScheduledActivityCanonical,
 )
+from tests.support.p15_stubs import install_p15_pass_stub
 
 run_escopo_e_eap = run_escopo_e_eap
 
@@ -29,20 +29,7 @@ def _p15_pass_for_scheduler_unit_tests(monkeypatch):
     UNKNOWN/FAIL behavior; here we supply only the resolver PASS boundary so the
     legacy Skill02 scheduler contract remains testable.
     """
-    def pass_physical_resolution(**kwargs):
-        return SimpleNamespace(
-            status="PASS",
-            schedule_selected=kwargs["schedule_selected"],
-            distribution_by_item=kwargs["distribution_by_item"],
-            fallback_item_ids=kwargs["fallback_item_ids"],
-            reason="scheduler unit test: P15 boundary isolated",
-        )
-
-    monkeypatch.setitem(
-        run_cronograma.__globals__,
-        "resolve_skill04_physical_schedule",
-        pass_physical_resolution,
-    )
+    install_p15_pass_stub(monkeypatch, "scheduler unit test: P15 boundary isolated")
 
 
 # Skills atividades/sequenciamento foram fundidas em escopo_consolidado.

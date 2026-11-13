@@ -107,6 +107,9 @@ class RunProjectResponse(BaseModel):
     summary: dict[str, Any]
     output_files: list[str]
     error: str | None = None
+    # P23: persisted, source-bound GO/NOGO certificate state. Effective GO is
+    # exposed only after read-time fingerprint validation returns CURRENT.
+    formalism_certificate: dict[str, Any] | None = None
 
 
 class RunStartResponse(BaseModel):

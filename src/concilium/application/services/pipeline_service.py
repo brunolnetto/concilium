@@ -7,12 +7,66 @@ from typing import Any
 from uuid import uuid4
 
 from concilium.application.pipeline_strategy import get_pipeline_strategy
+from concilium.application.scheduling.formalism_certification_service import (
+    FORMALISM_SHA256,
+    ORACLE_SHA256,
+    build_productivity_rate_witnesses,
+    build_solver_context,
+    certificate_scope_for_run,
+    certificate_summary,
+    evaluate_and_persist_project_certificate,
+    load_resolved_catalog_snapshot,
+    read_current_project_certificate,
+)
 from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent, normalize_procurement_intent
 
 from .project.audit_service import AuditService
 from .project.project_files import DEFAULT_PROJECT_FILES, ProjectFiles
 from .project.project_repository import ProjectHandle, ProjectRepository
 from .service_support import build_summary, deep_merge
+
+
+def _run_errors_from_skills_log(skills_log: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Skill errors of a run, as fed to P23 (GO requires a run without ERRO)."""
+    errors: list[str] = []
+    for item in skills_log:
+        status = item.get("status")
+        if status not in ("ERRO", "EXCEPTION"):
+            continue
+        skill = str(item.get("skill") or item.get("skill_id") or "?")
+        messages = [str(m) for m in (item.get("erros") or []) if str(m).strip()]
+        if not messages and str(item.get("erro") or "").strip():
+            messages = [str(item["erro"])]
+        if not messages:
+            messages = [f"status {status}"]
+        errors.extend(f"{skill}: {message}" for message in messages)
+    return tuple(errors)
+
+
+def _without_unrevalidated_certificate(run: dict[str, Any]) -> dict[str, Any]:
+    """Strip the issuance-time GO claim from a run listed without revalidation.
+
+    runs.json stores the projection as it was when issued (status CURRENT,
+    project_go True). Listing does not re-fingerprint sources, so it exposes
+    only the immutable pointer; get_run returns the revalidated certificate.
+    """
+    certificate = run.get("formalism_certificate")
+    if not isinstance(certificate, dict):
+        return run
+    return {
+        **run,
+        "formalism_certificate": {
+            "status": "NOT_REVALIDATED",
+            "recorded_decision": certificate.get("recorded_decision"),
+            "effective_decision": "NOT_CERTIFIABLE",
+            "project_go": False,
+            "scope": certificate.get("scope"),
+            "evaluation_sha256": certificate.get("evaluation_sha256"),
+            "reasons": [
+                "run listing does not revalidate source fingerprints; read the run for the current certificate"
+            ],
+        },
+    }
 
 
 class PipelineService:
@@ -133,7 +187,9 @@ class PipelineService:
         raw_runs = project.read_json(self._files.runs, [])
         if not isinstance(raw_runs, list):
             return []
-        runs: list[dict[str, Any]] = [r for r in raw_runs if isinstance(r, dict)]
+        runs: list[dict[str, Any]] = [
+            _without_unrevalidated_certificate(r) for r in raw_runs if isinstance(r, dict)
+        ]
         return sorted(runs, key=lambda item: item.get("requested_at", ""), reverse=True)
 
     def get_run(self, project_id: str, run_id: str) -> dict[str, Any]:
@@ -147,6 +203,7 @@ class PipelineService:
             raise FileNotFoundError(f"Run '{run_id}' nao encontrado.")
 
         progress = self._read_run_progress(project, run)
+        formalism_certificate = self._read_current_formalism_certificate(project, run)
         return {
             "project_id": project_id,
             "run_id": run_id,
@@ -167,7 +224,68 @@ class PipelineService:
             "summary": run.get("summary", {}),
             "output_files": run.get("output_files", []),
             "error": run.get("error"),
+            "formalism_certificate": formalism_certificate,
         }
+
+    def _read_current_formalism_certificate(
+        self,
+        project: ProjectHandle,
+        run: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Re-fingerprint a persisted run certificate before every presentation."""
+        version = run.get("version")
+        certificate = run.get("formalism_certificate")
+        evaluation_sha256 = (
+            certificate.get("evaluation_sha256")
+            if isinstance(certificate, dict) else None
+        )
+        if not isinstance(version, str) or not isinstance(evaluation_sha256, str):
+            return {
+                "status": "NOT_EVALUATED",
+                "recorded_decision": None,
+                "effective_decision": "NOT_CERTIFIABLE",
+                "project_go": False,
+                "scope": None,
+                "reasons": ["this run has no persisted formalism evaluation"],
+                "gates": [],
+                "invalidated_sources": [],
+            }
+        try:
+            canonical = project.load_canonical(version)
+            if canonical is None:
+                raise ValueError("run canonical snapshot is missing")
+            resolved_catalog = load_resolved_catalog_snapshot(project, version, str(run.get("run_id") or ""))
+            productivity_witnesses = build_productivity_rate_witnesses(
+                canonical, resolved_catalog,
+            )
+            solver_context = build_solver_context(run, version, canonical)
+            current = read_current_project_certificate(
+                project,
+                run_id=str(run.get("run_id") or ""),
+                evaluation_sha256=evaluation_sha256,
+                canonical=canonical,
+                resolved_catalog=resolved_catalog,
+                productivity_witnesses=productivity_witnesses,
+                solver_context=solver_context,
+                current_formalism_sha256=FORMALISM_SHA256,
+                current_oracle_sha256=ORACLE_SHA256,
+            )
+            return certificate_summary(current)
+        except Exception as exc:
+            # Read-time failures must never leak a previously recorded GO.
+            return {
+                "status": "INVALIDATED",
+                "recorded_decision": (
+                    certificate.get("recorded_decision")
+                    if isinstance(certificate, dict) else None
+                ),
+                "effective_decision": "NOT_CERTIFIABLE",
+                "project_go": False,
+                "scope": certificate.get("scope") if isinstance(certificate, dict) else None,
+                "reasons": [f"certificate revalidation failed: {exc}"],
+                "gates": [],
+                "invalidated_sources": ["read_validation"],
+            }
 
     def _create_run(
         self,
@@ -339,6 +457,57 @@ class PipelineService:
             # ADR-066 §F4: persist compact resolved catalog for run immutability
             self._persist_resolved_catalog(project, version, run_id, runtime)
 
+            # P23: evaluate the finished run from the exact pinned catalog and
+            # persisted P15/P16/P20/P21 evidence. A certificate failure must not
+            # rewrite the planning run's operational status; it can only deny GO.
+            formalism_certificate: dict[str, Any]
+            try:
+                current_run = self._find_run(project, run_id) or run
+                resolved_catalog = load_resolved_catalog_snapshot(project, version, run_id)
+                productivity_witnesses = build_productivity_rate_witnesses(
+                    canonical, resolved_catalog,
+                )
+                solver_context = build_solver_context(current_run, version, canonical)
+                _envelope, evaluation, persisted = evaluate_and_persist_project_certificate(
+                    project,
+                    canonical,
+                    project_id=str(current_run.get("project_id") or project.meta.get("id") or project.root.name),
+                    run_id=run_id,
+                    scope=certificate_scope_for_run(current_run),
+                    formalism_sha256=FORMALISM_SHA256,
+                    oracle_sha256=ORACLE_SHA256,
+                    resolved_catalog=resolved_catalog,
+                    productivity_witnesses=productivity_witnesses,
+                    solver_context=solver_context,
+                    run_errors=_run_errors_from_skills_log(skills_log),
+                )
+                formalism_certificate = {
+                    "status": "CURRENT",
+                    "recorded_decision": evaluation.decision,
+                    "effective_decision": evaluation.decision,
+                    "project_go": evaluation.decision == "GO",
+                    "scope": evaluation.scope,
+                    "evaluation_sha256": evaluation.evaluation_sha256,
+                    "record_sha256": persisted.record_sha256,
+                    "reasons": list(evaluation.reasons),
+                    "gates": [
+                        gate.model_dump(mode="json")
+                        for gate in evaluation.gate_evidence
+                    ],
+                    "invalidated_sources": [],
+                }
+            except Exception as exc:
+                formalism_certificate = {
+                    "status": "NOT_EVALUATED",
+                    "recorded_decision": None,
+                    "effective_decision": "NOT_CERTIFIABLE",
+                    "project_go": False,
+                    "scope": certificate_scope_for_run(run),
+                    "reasons": [f"P23 evaluation/persistence failed closed: {exc}"],
+                    "gates": [],
+                    "invalidated_sources": [],
+                }
+
             self._update_run(
                 project,
                 run_id,
@@ -349,6 +518,7 @@ class PipelineService:
                     "path_name": profile.path_name,
                     "summary": build_summary(canonical),
                     "output_files": project.list_output_files(version),
+                    "formalism_certificate": formalism_certificate,
                     "error": None,
                 },
             )

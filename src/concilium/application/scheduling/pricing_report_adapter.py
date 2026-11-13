@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Literal, cast
 
+from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
 from concilium.domain.models.canonical import CanonicalModel, Resultado, ValidacaoItem
 
 from .contractual_cost_ledger import ExclusiveCostLedger
@@ -386,6 +387,19 @@ def build_pricing_report_evidence_context(
             ),
         )
 
+    # FORMALISMO_LONGO §XIV.8: BDI = P / C^cat − 1 is a derived rate. Both the
+    # catalog benchmark and the regulatory basis must equal C^cat as derived
+    # from this resolved catalog; a free-form declared amount is rejected.
+    envelope = derive_catalog_cost_envelope(canonical, catalogo)
+    if catalog.amount != envelope.total:
+        raise ValueError(
+            f"catalog benchmark amount {catalog.amount} differs from derived C^cat {envelope.total}"
+        )
+    if regulatory_basis is not None and regulatory_basis.amount != envelope.total:
+        raise ValueError(
+            f"regulatory basis amount {regulatory_basis.amount} differs from derived C^cat {envelope.total}"
+        )
+
     minimum_raw = raw.get("minimum_profit_margin")
     minimum_profit_margin = (
         None if minimum_raw is None
@@ -462,6 +476,75 @@ def _unknown(result: Resultado, validations: list, intent: str, reason: str) -> 
             ) + reason,
         )
     )
+
+
+def _serialize_p20_reconciliation(reconciliation: ExactFinancialReconciliation) -> dict[str, object]:
+    """Persist the exact P20 posting/attribution witness used by P21.
+
+    Decimal display totals are intentionally excluded. Every monetary amount
+    remains a rational string, and the source identity/category/week survive
+    a process restart so P23 can independently reconstruct the ledger.
+    """
+    ledger = reconciliation.ledger
+
+    def nature_value(value: object) -> str:
+        return str(getattr(value, "value", value))
+
+    postings = [
+        {
+            "event_id": list(row.event_id),
+            "nature": nature_value(row.nature),
+            "category": row.category,
+            "amount": str(row.amount),
+            "source": row.source,
+            "week": row.week,
+        }
+        for row in ledger.postings
+    ]
+    attribution = [
+        {
+            "event_id": list(row.event_id),
+            "nature": nature_value(row.nature),
+            "category": row.category,
+            "amount": str(row.amount),
+            "source": row.source,
+            "week": row.week,
+            "owner_scope": row.owner_scope,
+            "owner_id": list(row.owner_id),
+            "activity_id": row.activity_id,
+        }
+        for row in reconciliation.event_attribution
+    ]
+    weeks = [
+        {
+            "week": row.week,
+            "contractual_k": str(row.contractual_k),
+            "consumable_v": str(row.consumable_v),
+            "indirect": str(row.indirect),
+        }
+        for row in reconciliation.weeks
+    ]
+    categories = [
+        {"week": row.week, "category": row.category, "amount": str(row.amount)}
+        for row in reconciliation.category_balances
+    ]
+    return {
+        "schema": "concilium.p20.financial-reconciliation.v1",
+        "authority": reconciliation.authority,
+        "contract_scope": ledger.contract_scope,
+        "holding_evidence_present": reconciliation.holding_evidence_present,
+        "postings": postings,
+        "event_attribution": attribution,
+        "weekly_balances": weeks,
+        "weekly_category_balances": categories,
+        "totals": {
+            "contractual_k": str(ledger.contractual_k),
+            "consumable_v": str(ledger.consumable_v),
+            "direct": str(ledger.direct),
+            "indirect": str(ledger.indirect),
+            "total": str(ledger.total),
+        },
+    }
 
 
 def apply_pricing_report_evidence(
@@ -675,6 +758,7 @@ def apply_pricing_report_evidence(
         ),
         "reasons": "; ".join(gates.reasons),
     }
+    result.p20_financial_reconciliation = _serialize_p20_reconciliation(reconciliation)
     result.pricing_authority = gates.authority
     if gates.status != "PASS":
         status = "AVISO" if intent == "PREVIEW" else "ERRO"

@@ -14,6 +14,8 @@ A typed `RegulatoryBdiBasis` carries an exact positive denominator, currency, ph
 
 The catalog BDI diagnostic from P21-A is not substituted for this regulatory basis.
 
+**Basis binding (2026-11-13, owner decision).** FORMALISMO_LONGO §XIV.8 defines BDI = P / C^cat − 1 as a derived rate. The declared `regulatory_basis.amount` and `catalog.amount` must both equal C^cat derived by `catalog_cost_envelope.derive_catalog_cost_envelope` from the resolved catalog (production team for the contractual part, monthly prices diluted by s_mes·d·h with s_mes = 1461/336; CPU per-delivered-unit consumables for the variable part; ρ_i = production `producao_horaria`). Any difference raises and the pricing evidence fails closed. Previously any declared amount was accepted, so a placeholder basis made V2 pass. The independent oracle is `tests/reference_formalism/catalog_envelope_reference.py` with vector `catalog_envelope_v1.json`; the minimum rate stays an explicit, sourced input.
+
 ## Economic viability
 
 Profitability is an independent gate. It requires (P>C_{tot}); if an explicit minimum margin is supplied, (mu=(P-C_{tot})/P) must also meet that threshold. A regulatory BDI pass cannot override a loss or a failed margin floor. Conversely, profitability cannot override a failed regulatory BDI floor.
