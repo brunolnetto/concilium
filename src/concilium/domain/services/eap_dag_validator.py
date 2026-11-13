@@ -12,6 +12,14 @@ class CicloPredecessaoError(ValueError):
     """Lançado quando o grafo de predecessão tem ciclo."""
 
 
+def _pred_ids(item: object) -> list[str]:
+    """Predecessor ids for legacy str and typed (NEP-031 PrecedenciaItem) entries."""
+    typed = getattr(item, "predecessores_tipados", None)
+    if callable(typed):
+        return [pred.item_id for pred in typed()]
+    return [str(p) for p in getattr(item, "predecessores", [])]
+
+
 def _dag_build_id_set(eap: list) -> set:
     ids = set()
     for item in eap:
@@ -21,7 +29,7 @@ def _dag_build_id_set(eap: list) -> set:
 
 def _dag_validate_refs(eap: list, ids: set) -> None:
     for item in eap:
-        desconhecidos = [p for p in item.predecessores if p not in ids]
+        desconhecidos = [p for p in _pred_ids(item) if p not in ids]
         if desconhecidos:
             raise ValueError(f"Item '{item.item_id}' referencia predecessores inexistentes: {desconhecidos}")
 
@@ -29,7 +37,7 @@ def _dag_validate_refs(eap: list, ids: set) -> None:
 def _dag_build_indegree(eap: list) -> dict:
     in_degree: dict[str, int] = {}
     for item in eap:
-        in_degree[item.item_id] = len(item.predecessores)
+        in_degree[item.item_id] = len(set(_pred_ids(item)))
     return in_degree
 
 
@@ -47,7 +55,7 @@ def _dag_kahn_traverse(eap: list, queue: list, in_degree: dict) -> int:
         node = queue.pop(0)
         visited += 1
         for item in eap:
-            if node in item.predecessores:
+            if node in set(_pred_ids(item)):
                 in_degree[item.item_id] -= 1
                 if in_degree[item.item_id] == 0:
                     queue.append(item.item_id)
