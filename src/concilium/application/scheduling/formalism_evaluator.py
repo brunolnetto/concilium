@@ -964,12 +964,18 @@ def _evaluation_fingerprint(
 def evaluate_formalism_certificate(
     envelope: FormalismCertificate,
     evidence: Sequence[GateEvidence],
+    *,
+    run_errors: Sequence[str] = (),
 ) -> FormalismEvaluation:
     """Issue GO only for a complete RFP with every physical/financial gate PASS.
 
     A FAIL in any gate yields NOGO. UNKNOWN/NOT_EVALUATED, missing gates,
     unavailable sources, PREVIEW and RFI are never silently promoted to GO.
+    Skill errors of the evaluated run (``run_errors``) also block GO: they are
+    not proofs of a formal violation, so the result is NOT_CERTIFIABLE.
     """
+    if isinstance(run_errors, str) or any(not isinstance(e, str) or not e.strip() for e in run_errors):
+        raise TypeError("run_errors must be a sequence of nonempty strings")
     if not isinstance(envelope, FormalismCertificate):
         raise TypeError("an immutable FormalismCertificate evidence envelope is required")
     supplied: dict[str, GateEvidence] = {}
@@ -1007,10 +1013,12 @@ def evaluate_formalism_certificate(
     if not all_sources_present:
         unavailable = [item.name for item in envelope.source_fingerprints if item.state != "PRESENT"]
         reasons.append("required RFP sources unavailable: " + ", ".join(unavailable))
+    if run_errors:
+        reasons.append("run has skill errors: " + "; ".join(run_errors))
 
     if failed:
         decision: Decision = "NOGO"
-    elif all_pass and all_sources_present and envelope.scope == "RFP":
+    elif all_pass and all_sources_present and envelope.scope == "RFP" and not run_errors:
         decision = "GO"
     else:
         decision = "NOT_CERTIFIABLE"
@@ -1226,5 +1234,12 @@ def build_formalism_gate_evidence(
     )
 
 
-def evaluate_project_evidence(envelope: FormalismCertificate, **evidence: Any) -> FormalismEvaluation:
-    return evaluate_formalism_certificate(envelope, build_formalism_gate_evidence(envelope, **evidence))
+def evaluate_project_evidence(
+    envelope: FormalismCertificate,
+    *,
+    run_errors: Sequence[str] = (),
+    **evidence: Any,
+) -> FormalismEvaluation:
+    return evaluate_formalism_certificate(
+        envelope, build_formalism_gate_evidence(envelope, **evidence), run_errors=run_errors
+    )

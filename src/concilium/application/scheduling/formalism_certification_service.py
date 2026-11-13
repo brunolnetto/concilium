@@ -451,8 +451,12 @@ def evaluate_and_persist_project_certificate(
     resolved_catalog: Mapping[str, Any] | None,
     productivity_witnesses: Sequence[ProductivityRateWitness] | None,
     solver_context: Mapping[str, Any] | None,
+    run_errors: Sequence[str] = (),
 ) -> tuple[FormalismCertificate, FormalismEvaluation, PersistedFormalismEvaluation]:
-    """Evaluate and persist an immutable certificate record under ProjectHandle JSON storage."""
+    """Evaluate and persist an immutable certificate record under ProjectHandle JSON storage.
+
+    ``run_errors`` are the run's skill errors; any of them blocks GO.
+    """
     sources = build_formalism_source_snapshot(
         canonical,
         resolved_catalog=resolved_catalog,
@@ -479,6 +483,7 @@ def evaluate_and_persist_project_certificate(
         financial_reconciliation=reconciliation,
         pricing_diagnostics=pricing_diagnostics,
         pricing_gates=pricing_gates,
+        run_errors=run_errors,
     )
     persisted = persist_formalism_evaluation(project, envelope, evaluation)
     return envelope, evaluation, persisted

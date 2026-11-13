@@ -26,6 +26,23 @@ from .project.project_repository import ProjectHandle, ProjectRepository
 from .service_support import build_summary, deep_merge
 
 
+def _run_errors_from_skills_log(skills_log: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Skill errors of a run, as fed to P23 (GO requires a run without ERRO)."""
+    errors: list[str] = []
+    for item in skills_log:
+        status = item.get("status")
+        if status not in ("ERRO", "EXCEPTION"):
+            continue
+        skill = str(item.get("skill") or item.get("skill_id") or "?")
+        messages = [str(m) for m in (item.get("erros") or []) if str(m).strip()]
+        if not messages and str(item.get("erro") or "").strip():
+            messages = [str(item["erro"])]
+        if not messages:
+            messages = [f"status {status}"]
+        errors.extend(f"{skill}: {message}" for message in messages)
+    return tuple(errors)
+
+
 def _without_unrevalidated_certificate(run: dict[str, Any]) -> dict[str, Any]:
     """Strip the issuance-time GO claim from a run listed without revalidation.
 
@@ -462,6 +479,7 @@ class PipelineService:
                     resolved_catalog=resolved_catalog,
                     productivity_witnesses=productivity_witnesses,
                     solver_context=solver_context,
+                    run_errors=_run_errors_from_skills_log(skills_log),
                 )
                 formalism_certificate = {
                     "status": "CURRENT",

@@ -662,3 +662,37 @@ def test_explicit_no_inventory_scope_is_valid_without_p19_holding_journal():
     inputs["pricing_diagnostics"].inventory_scope_status = "NO_INVENTORY"
     result = evaluate_project_evidence(envelope, **inputs)
     assert result.decision == "GO"
+
+
+def _all_pass_inputs(envelope):
+    inputs = _runtime_evidence(envelope)
+    inputs["financial_reconciliation"] = _persisted_financial_reconciliation()
+    inputs["pricing_diagnostics"] = _persisted_pricing()
+    inputs["pricing_gates"] = _persisted_pricing_gates()
+    return inputs
+
+
+def test_run_errors_block_go_as_not_certifiable():
+    """Owner decision 2026-11-13: GO requires a run without ERRO. A skill error
+    is not a proof of a formal violation, so the result is NOT_CERTIFIABLE (not
+    NOGO), and the errors are part of the fingerprinted reasons."""
+    envelope = _envelope()
+    clean = evaluate_project_evidence(envelope, **_all_pass_inputs(envelope))
+    assert clean.decision == "GO"
+    blocked = evaluate_project_evidence(
+        envelope,
+        **_all_pass_inputs(envelope),
+        run_errors=("06-resultado-financeiro: custo autônomo 72.9% acima do PU de catálogo",),
+    )
+    assert blocked.decision == "NOT_CERTIFIABLE"
+    assert any(r.startswith("run has skill errors:") and "72.9%" in r for r in blocked.reasons)
+    assert blocked.evaluation_sha256 != clean.evaluation_sha256
+    assert all(g.status == "PASS" for g in blocked.gate_evidence)
+
+
+def test_run_errors_do_not_soften_a_proven_failure():
+    envelope = _envelope()
+    inputs = _all_pass_inputs(envelope)
+    inputs["pricing_gates"] = {**inputs["pricing_gates"], "regulatory_status": "FAIL"}
+    result = evaluate_project_evidence(envelope, **inputs, run_errors=("skill error",))
+    assert result.decision == "NOGO"

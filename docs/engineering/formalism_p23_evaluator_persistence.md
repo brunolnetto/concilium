@@ -37,8 +37,9 @@ Decision rules are deterministic:
 | Condition | Decision |
 |---|---|
 | Any independently proven FAIL | NOGO |
-| Every gate PASS, every required source PRESENT, scope RFP | GO |
+| Every gate PASS, every required source PRESENT, scope RFP, and the run has no skill ERRO/EXCEPTION | GO |
 | Any UNKNOWN/NOT_EVALUATED, unavailable source, PREVIEW or RFI | NOT_CERTIFIABLE |
+| Every gate PASS but the run has skill errors (owner decision 2026-11-13; the errors are fingerprinted reasons) | NOT_CERTIFIABLE |
 
 V6 follows the normative text: "the N_i search converged with no infeasibility signal — feasible calendar". P15's bounded resolver stops at the first audited feasible calendar and reports complete_search=True only when that candidate was the last one, so requiring completeness for PASS would make V6 unsatisfiable for any feasible project (decision recorded 2026-11-13). Completeness still governs the negative side: an infeasible incomplete search is UNKNOWN, an infeasible exhausted search is FAIL, and a witness not bound to the current schedule fingerprint is UNKNOWN.
 

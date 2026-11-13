@@ -772,6 +772,51 @@ class TestExecuteRun:
         last_run = next(r for r in write_store["data"] if r["run_id"] == run_id)
         assert last_run["status"] == "ERRO"
 
+    def test_skill_errors_are_passed_to_the_certificate_evaluation(self, tmp_path):
+        """Owner decision 2026-11-13: GO requires a run without ERRO, so the
+        run's skill errors must reach the P23 evaluation (and its record)."""
+        svc, project, audit, runtime = _make_svc(tmp_path=tmp_path)
+        run_id = "run_err02"
+        run_data = {
+            "run_id": run_id,
+            "status": "PENDING",
+            "base_version": None,
+            "fork_version": False,
+            "use_saved_overrides": False,
+            "use_mobilizacao_policy": False,
+            "use_strict_catalog_baseline": False,
+            "skill_inputs_override": {},
+            "invocation_line_offset": 0,
+        }
+        self._setup_runs(project, run_data)
+        project.current_version.return_value = "v1"
+        project.read_lines.return_value = []
+        runtime.run_pipeline.return_value = [
+            {"skill": "05", "status": "OK"},
+            {"skill": "06", "status": "ERRO", "erros": ["custo autônomo 72.9% acima do PU"]},
+            {"skill_id": "07", "status": "EXCEPTION", "erro": "boom"},
+            {"skill": "08", "status": "ERRO"},
+        ]
+        (tmp_path / "project" / "v1").mkdir(parents=True, exist_ok=True)
+        module = "concilium.application.services.pipeline_service"
+        with (
+            patch("concilium.application.pipeline_strategy.get_pipeline_strategy") as mock_strategy,
+            patch("concilium.application.services.service_support.build_summary", return_value={}),
+            patch(f"{module}.load_resolved_catalog_snapshot", return_value={}),
+            patch(f"{module}.build_productivity_rate_witnesses", return_value=None),
+            patch(f"{module}.build_solver_context", return_value={}),
+            patch(f"{module}.evaluate_and_persist_project_certificate") as evaluate,
+        ):
+            mock_strategy.return_value = MagicMock()
+            evaluate.side_effect = RuntimeError("stop after capturing arguments")
+            svc._execute_run(project, run_id)
+
+        assert evaluate.call_args.kwargs["run_errors"] == (
+            "06: custo autônomo 72.9% acima do PU",
+            "07: boom",
+            "08: status ERRO",
+        )
+
     def test_exception_in_pipeline_sets_status_exception(self, tmp_path):
         svc, project, audit, runtime = _make_svc(tmp_path=tmp_path)
         run_id = "run_exc01"
