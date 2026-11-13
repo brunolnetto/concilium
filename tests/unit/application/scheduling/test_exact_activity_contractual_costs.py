@@ -224,3 +224,22 @@ def test_production_activity_cost_matches_the_oracle_vector() -> None:
         for aid, row in sorted(exact_activity_contractual_costs(contracts).items())
     }
     assert observed == vector["expected"]
+
+
+def test_exact_ratio_uses_zero_v_only_for_declared_no_consumables() -> None:
+    from concilium.application.scheduling.skill06_p17_cost_reconciliation import exact_operational_to_catalog_ratio
+    from concilium.domain.models.canonical import CanonicalModel
+
+    def ratios(preview: dict) -> dict:
+        canonical = CanonicalModel.model_construct(
+            contratos_recurso=[_shared_crane(), _operator()],
+            equipes_diretas=[_team("A", ["CRANE"], ["OPER"]), _team("B", ["CRANE"], [])],
+            p18_consumption_preview=preview,
+        )
+        return exact_operational_to_catalog_ratio(canonical, {"A": Fraction(100), "B": Fraction(72)})
+
+    evidence = [{"activity_id": "A", "exact_cost": "57"}]
+    # B has no evidence rows: without a declaration its R_i is unknown (legacy stays).
+    assert ratios({"evidence": evidence}) == {"A": Fraction(1)}
+    # With the explicit declaration, V_B = 0 and R_B = K_B / C_B^cat = 36 / 72.
+    assert ratios({"evidence": evidence, "declared_no_consumables": ["B"]}) == {"A": Fraction(1), "B": Fraction(1, 2)}

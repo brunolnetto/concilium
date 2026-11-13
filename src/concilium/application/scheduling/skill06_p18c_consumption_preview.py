@@ -34,6 +34,7 @@ from concilium.application.scheduling.resource_level_contracts import (
     exact_money,
 )
 from concilium.application.scheduling.skill04_consumption_preview import (
+    NO_CONSUMABLES_DECLARED,
     ActivityGoods,
     P18CConsumptionPreview,
     book_skill04_planned_consumption_preview,
@@ -477,6 +478,12 @@ def _preview_record(
             for balance in reconciliation.weeks
         ],
         "evidence": evidence_rows,
+        # Activities whose CPU explicitly declares no consumables (V = 0 by
+        # declaration, with justification/source in the catalog), as opposed to
+        # activities with evidence rows.
+        "declared_no_consumables": sorted(
+            activity_id for activity_id, activity_goods in goods.items() if activity_goods is NO_CONSUMABLES_DECLARED
+        ),
         "exclusive_postings": _serialized_postings(reconciliation.ledger),
     }
 

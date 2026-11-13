@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from concilium.application.scheduling.mob_scheduling import infer_mob_windows
 from concilium.application.scheduling.models import ReplenishableResource
+from concilium.application.scheduling.rcpsp_precedence import parse_rcpsp_precedence
 from concilium.domain.models.canonical import (
     AtividadeIntervalo,
     CanonicalModel,
@@ -79,6 +80,11 @@ def _determine_mode_and_distribuicao(
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
         mode = "AUTO_SCHEDULE (rcpsp_spec)"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO (rcpsp_spec)."))
+        try:
+            parse_rcpsp_precedence(rcpsp_spec.get("precedence"))
+        except ValueError as exc:
+            validacoes.append(ValidacaoItem(codigo="VAL-RCPSP-PRECEDENCE", status="ERRO", mensagem=str(exc)))
+            return mode, {}, [], None, True, [], set()
         # ADR-072: pass lookups for productive-duration derivation
         schedule_candidates, schedule_selected, replenishable_resources = _run_auto_schedule_fallback_chain(
             canonical_in, inputs, validacoes, cpu_lookup, producao_lookup, insumos_lookup

@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any
 
 from concilium.application.scheduling.instance_accounting_audit import audit_skill05_cost_ownership
+from concilium.application.scheduling.rcpsp_precedence import parse_rcpsp_precedence
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     CanonicalModel,
@@ -94,6 +95,13 @@ def run_equipes_e_alocacao(
     contratos_recurso: list[RecursoContrato] = []
     cadeias_perpetuacao: list = []
     rcpsp_spec, rcpsp_derivado = _resolve_rcpsp_spec(inputs, canonical_in, catalogo)
+    if rcpsp_spec:
+        try:
+            parse_rcpsp_precedence(rcpsp_spec.get("precedence"))
+        except ValueError as exc:
+            # Never build pool contracts on a DAG different from the declared one.
+            validacoes.append(ValidacaoItem(codigo="VAL-RCPSP-PRECEDENCE", status="ERRO", mensagem=str(exc)))
+            rcpsp_spec = None
     if rcpsp_spec:
         contratos_recurso, cadeias_perpetuacao = _processar_pool_contratos(
             equipes,

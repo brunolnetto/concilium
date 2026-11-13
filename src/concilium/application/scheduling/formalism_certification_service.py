@@ -52,7 +52,9 @@ _ORACLE_REFERENCE = (
     "catalog-envelope-oracle:6e8d934c5793a8fc12c4d5d9bb2198415e1c4049;"
     "catalog-envelope-vector:1e1fdaf8d1dcbd213aa8c90af9f73012108707c4;"
     "activity-cost-oracle:486cea83a17db499038c4753e1ce5987113fe43c;"
-    "activity-cost-vector:76c36e75653171281ce6af8741f2394310807142"
+    "activity-cost-vector:76c36e75653171281ce6af8741f2394310807142;"
+    "consumption-declaration-oracle:c3dbd30f5be5e9e2350b890c0d46604e86014b0b;"
+    "consumption-declaration-vector:f14c14a5b3201369f78b0529b607c2d25ac4de10"
 )
 FORMALISM_SHA256 = hashlib.sha256(_FORMALISM_REFERENCE.encode("ascii")).hexdigest()
 ORACLE_SHA256 = hashlib.sha256(_ORACLE_REFERENCE.encode("ascii")).hexdigest()
@@ -114,6 +116,45 @@ def _finite_rate_text(value: object) -> str | None:
     except (OverflowError, ValueError):
         return None
     return str(value)
+
+
+CALIBRATION_SOURCE_TYPES = frozenset({"calibrado_contra_obra_real", "tabela_referencia"})
+
+
+def production_calibration_gaps(production: Mapping[str, Any] | None) -> list[str]:
+    """Catalog-side reasons a production cannot back a V5 calibration reference.
+
+    Empty list = the record carries everything the certificate needs: a synergy
+    graph, an accepted calibration source type with id/date/reference, an
+    audit version and a positive sample count and confidence. The runtime
+    origin (GRAFO_FLUXO/GRAFO_ELEMENTOS per weekly cell) is checked separately.
+    """
+    if not isinstance(production, Mapping):
+        return ["registro de produção inexistente"]
+    gaps: list[str] = []
+    graph = production.get("grafo_sinergia")
+    if not isinstance(graph, Mapping) or not graph:
+        gaps.append("grafo_sinergia ausente")
+    origin = production.get("origem")
+    if not isinstance(origin, Mapping):
+        gaps.append("origem não estruturada (objeto com tipo/fonte_id/data_calibracao/referencia)")
+    else:
+        if origin.get("tipo") not in CALIBRATION_SOURCE_TYPES:
+            gaps.append(f"origem.tipo={origin.get('tipo')!r} não aceito (aceitos: {sorted(CALIBRATION_SOURCE_TYPES)})")
+        for field in ("fonte_id", "data_calibracao", "referencia"):
+            value = origin.get(field)
+            if not isinstance(value, str) or not value.strip():
+                gaps.append(f"origem.{field} ausente")
+    audit = production.get("auditoria")
+    version = audit.get("versao") if isinstance(audit, Mapping) else None
+    if not isinstance(version, str) or not version.strip():
+        gaps.append("auditoria.versao ausente")
+    quality = production.get("qualidade")
+    for field in ("quantidade_amostras", "confianca_pct"):
+        value = quality.get(field) if isinstance(quality, Mapping) else None
+        if type(value) is not int or value <= 0:
+            gaps.append(f"qualidade.{field} ausente (inteiro > 0)")
+    return gaps
 
 
 def build_productivity_rate_witnesses(
@@ -181,8 +222,6 @@ def build_productivity_rate_witnesses(
         if isinstance(production, Mapping):
             origin_data = production.get("origem")
             audit_data = production.get("auditoria")
-            quality = production.get("qualidade")
-            graph = production.get("grafo_sinergia")
             if isinstance(origin_data, Mapping):
                 source_id = origin_data.get("fonte_id")
                 source_type = origin_data.get("tipo")
@@ -200,19 +239,8 @@ def build_productivity_rate_witnesses(
                     source_reference = f"{source_id}|{source_type}|{source_date}|{source_ref}"
             if (
                 origin in {"GRAFO_FLUXO", "GRAFO_ELEMENTOS"}
-                and isinstance(graph, Mapping)
-                and bool(graph)
+                and not production_calibration_gaps(production)
                 and isinstance(audit_data, Mapping)
-                and isinstance(audit_data.get("versao"), str)
-                and audit_data.get("versao", "").strip()
-                and isinstance(quality, Mapping)
-                and type(quality.get("quantidade_amostras")) is int
-                and quality.get("quantidade_amostras", 0) > 0
-                and type(quality.get("confianca_pct")) is int
-                and quality.get("confianca_pct", 0) > 0
-                and isinstance(origin_data, Mapping)
-                and origin_data.get("tipo") in {"calibrado_contra_obra_real", "tabela_referencia"}
-                and source_reference
             ):
                 calibration_payload = {
                     "production_id": production_id,

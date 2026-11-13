@@ -130,3 +130,10 @@ def test_ambiguous_or_incomplete_catalog_fails_closed(mutate, message: str) -> N
     mutate(catalog)
     with pytest.raises(ValueError, match=message):
         derive_catalog_cost_envelope(canonical, catalog)
+
+
+def test_missing_production_unit_is_a_named_data_gap() -> None:
+    catalog, canonical = _to_catalog_and_canonical(_case())
+    catalog["producoes"][0].pop("unidade")
+    with pytest.raises(ValueError, match="production record has no unidade"):
+        derive_catalog_cost_envelope(canonical, catalog)

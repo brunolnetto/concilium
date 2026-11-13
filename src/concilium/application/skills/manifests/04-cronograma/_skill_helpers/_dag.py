@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from concilium.application.scheduling.rcpsp_precedence import parse_rcpsp_precedence
+
 if TYPE_CHECKING:
     from concilium.application.scheduling.cpsat_scheduler import ExtendedPrecedence
     from concilium.domain.models.canonical import EapItem
@@ -47,15 +49,8 @@ def _derive_edges_from_eap_items(
 
 def _apply_precedence_overrides(spec: dict, edge_thresholds: dict[tuple[str, str], float]) -> None:
     """Aplica overrides de rcpsp_spec.precedence (apenas FS legado) em edge_thresholds."""
-    for p in spec.get("precedence", []):
-        if len(p) < 2:
-            continue
-        pred_id = str(p[0])
-        succ_id = str(p[1])
-        theta = float(p[2]) if len(p) > 2 else 1.0
-        theta = max(0.0, min(1.0, theta))
-        key = (pred_id, succ_id)
-        edge_thresholds[key] = theta
+    for edge in parse_rcpsp_precedence(spec.get("precedence")):
+        edge_thresholds[(edge.pred, edge.succ)] = edge.theta
 
 
 def extract_dag_from_spec_or_eap(

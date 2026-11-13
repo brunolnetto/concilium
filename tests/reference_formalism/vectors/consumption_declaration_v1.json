@@ -1,0 +1,34 @@
+{
+  "protocol": "formalism-consumption-declaration/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["IX", "N6"],
+    "scope": "exact variable cost per activity: per-delivered-unit BOM, explicit NENHUM declaration (V = 0), and the non-certifiable cases",
+    "rounding": "Fraction exact"
+  },
+  "vectors": [
+    {
+      "case_id": "real_rfi_diesel_bom",
+      "hand_check": "CPU-TERRA-ATI-003 (rfi-r02): Q 100 m2 x 0.0738 L/m2 x R$ 5.8/L = 42.804",
+      "activity": {"Q": "100", "bom": [{"good": "MA-DIESEL-S10", "coef": "0.0738", "price": "5.8"}]},
+      "expected": "42.804"
+    },
+    {
+      "case_id": "declared_none_is_zero",
+      "hand_check": "no consumable rows, no hourly consumption, NENHUM with justification and source -> 0",
+      "activity": {"Q": "100", "bom": [], "declaration": {"status": "NENHUM", "justificativa": "servico manual sem consumo", "fonte": "campo 2026-11"}},
+      "expected": "0"
+    },
+    {
+      "case_id": "missing_bom_without_declaration",
+      "activity": {"Q": "100", "bom": []},
+      "expected_error": "no BOM and no declaration"
+    },
+    {
+      "case_id": "declaration_contradicted_by_hourly_fuel",
+      "activity": {"Q": "100", "bom": [], "hourly_consumption": true, "declaration": {"status": "NENHUM", "justificativa": "servico manual sem consumo", "fonte": "campo 2026-11"}},
+      "expected_error": "declaration contradicted"
+    }
+  ]
+}

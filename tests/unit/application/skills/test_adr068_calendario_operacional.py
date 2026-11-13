@@ -687,17 +687,17 @@ class TestCronogramaSkillHelpers:
         dag = extract_dag_from_spec_or_eap(spec, activities)
         assert dag is not None
 
-    def test_extract_dag_short_precedence_skipped(self, tmp_path):
+    def test_extract_dag_short_precedence_is_rejected(self, tmp_path):
         extract_dag_from_spec_or_eap = _load_skill04_dag_helpers().extract_dag_from_spec_or_eap
 
-        # precedence entry with len < 2 → skipped (line 62)
+        # A malformed declared edge is a located error, never silently dropped.
         spec = {"precedence": [["A1"], ["A1", "A2"]]}
         activities = [
             MagicMock(activity_id="A1", duration_weeks=2),
             MagicMock(activity_id="A2", duration_weeks=2),
         ]
-        dag = extract_dag_from_spec_or_eap(spec, activities)
-        assert dag is not None
+        with pytest.raises(ValueError, match=r"precedence\[0\]"):
+            extract_dag_from_spec_or_eap(spec, activities)
 
 
 

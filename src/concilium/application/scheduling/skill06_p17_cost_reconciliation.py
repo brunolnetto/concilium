@@ -326,6 +326,10 @@ def exact_operational_to_catalog_ratio(
             consumption[row["activity_id"]] = consumption.get(row["activity_id"], Fraction(0)) + _rational(
                 row.get("exact_cost"), f"{row['activity_id']}: P18 exact cost"
             )
+    declared_none = preview.get("declared_no_consumables")
+    for activity_id in declared_none if isinstance(declared_none, list) else []:
+        if isinstance(activity_id, str) and activity_id not in consumption:
+            consumption[activity_id] = Fraction(0)  # V = 0 by explicit catalog declaration
     ratios: dict[str, Fraction] = {}
     for activity_id in covered:
         catalog = catalog_costs.get(activity_id)

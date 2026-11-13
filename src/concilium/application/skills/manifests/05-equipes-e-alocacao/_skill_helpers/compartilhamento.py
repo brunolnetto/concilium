@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from concilium.application.scheduling.rcpsp_precedence import parse_rcpsp_precedence
 from concilium.domain.models.canonical import (
     CanonicalModel,
     RecursoContrato,
@@ -72,11 +73,7 @@ def _build_activity_dag_110(rcpsp_spec: dict) -> Any:
                 required_resources=rr_a,
             )
         )
-    prec = [
-        (str(e[0]), str(e[1]))
-        for e in _or_chain(rcpsp_spec.get("precedence"), [])
-        if isinstance(e, (list, tuple)) and len(e) >= 2
-    ]
+    prec = [(edge.pred, edge.succ) for edge in parse_rcpsp_precedence(rcpsp_spec.get("precedence"))]
     return ActivityDAG(activities=act, precedence=prec)
 
 

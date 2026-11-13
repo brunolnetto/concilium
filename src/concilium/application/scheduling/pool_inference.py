@@ -35,6 +35,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from concilium.application.scheduling.rcpsp_precedence import parse_rcpsp_precedence
+
 from .models import Activity, ActivityDAG, ResourcePool, ScheduleError
 from .scheduler import SerialScheduler
 
@@ -264,18 +266,11 @@ def _dag_from_spec(spec: dict[str, Any], activities: list[Activity]) -> Activity
     valid_ids = {a.activity_id for a in activities}
     precedence: list[tuple[str, str]] = []
     thresholds: dict[tuple[str, str], float] = {}
-    for edge in spec.get("precedence", []) or []:
-        if not isinstance(edge, (list, tuple)) or len(edge) < 2:
-            continue
-        pred, succ = str(edge[0]), str(edge[1])
-        if pred not in valid_ids or succ not in valid_ids:
-            continue
-        precedence.append((pred, succ))
-        if len(edge) >= 3:
-            try:
-                thresholds[(pred, succ)] = float(edge[2])
-            except (TypeError, ValueError):
-                pass
+    for edge in parse_rcpsp_precedence(spec.get("precedence")):
+        if edge.pred not in valid_ids or edge.succ not in valid_ids:
+            continue  # dangling ids are a scheduling-scope concern, not a format error
+        precedence.append((edge.pred, edge.succ))
+        thresholds[(edge.pred, edge.succ)] = edge.theta
     return ActivityDAG(activities=activities, precedence=precedence, thresholds=thresholds)
 
 

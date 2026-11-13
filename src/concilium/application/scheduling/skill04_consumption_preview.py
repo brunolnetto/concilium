@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from fractions import Fraction
 from math import isfinite
+from types import MappingProxyType
 from typing import Literal, cast
 
 from concilium.domain.models.canonical import CanonicalModel
@@ -32,6 +33,42 @@ from .physical_consumption_rates import (
 
 PricedCategory = Literal["MAT", "COMB"]
 ActivityGoods = Mapping[str, Mapping[str, tuple[PhysicallyPricedGood, PricedCategory]]]
+# Identity sentinel: an activity whose CPU explicitly declares, with
+# justification and source, that it consumes nothing. Only the catalog builder
+# emits it; an empty mapping from anywhere else still fails closed.
+NO_CONSUMABLES_DECLARED: Mapping[str, tuple[PhysicallyPricedGood, PricedCategory]] = MappingProxyType({})
+
+
+def _declared_no_consumables(
+    activity_id: str,
+    cpu: Mapping[str, object],
+    productions: Mapping[str, Mapping[str, object]],
+) -> bool:
+    """Validate ``CPU.consumiveis_declarados``; True only for a sound NENHUM declaration."""
+    declaration = cpu.get("consumiveis_declarados")
+    if declaration is None:
+        return False
+    if not isinstance(declaration, Mapping):
+        raise ValueError(f"{activity_id}: consumiveis_declarados must be an object")
+    if declaration.get("status") != "NENHUM":
+        raise ValueError(f"{activity_id}: consumiveis_declarados.status must be NENHUM")
+    for field in ("justificativa", "fonte"):
+        value = declaration.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{activity_id}: consumiveis_declarados.{field} is required")
+    production = productions.get(str(cpu.get("producao_id_ref") or ""))
+    team = production.get("composicao_padrao_equipe") if isinstance(production, Mapping) else None
+    if isinstance(team, Mapping):
+        hourly = any(
+            isinstance(row, Mapping) and row.get("consumo_litros_hora")
+            for row in team.get("equipamentos") or []
+        )
+        if hourly or team.get("materiais"):
+            raise ValueError(
+                f"{activity_id}: consumiveis_declarados=NENHUM contradicts the production team "
+                "(hourly fuel or materials are declared there)"
+            )
+    return True
 _ABS_SCOPE_TOLERANCE = Fraction(1, 1_000_000)
 _REL_SCOPE_TOLERANCE = Fraction(1, 1_000_000_000)
 # Skill01 explicitly uses round(fracao * Q, 6) for split children.
@@ -186,8 +223,14 @@ def build_activity_goods_from_catalog(
 
     cpus = _index(raw_cpus, "codigo", "CPU")
     insumos = _index(raw_insumos, "codigo", "Insumo")
+    raw_productions = catalogo.get("producoes") or []
+    productions = {
+        str(row["id"]): row
+        for row in raw_productions
+        if isinstance(row, Mapping) and isinstance(row.get("id"), str)
+    } if isinstance(raw_productions, Sequence) else {}
     eap = {item.item_id: item for item in canonical.eap}
-    goods_by_activity: dict[str, dict[str, tuple[PhysicallyPricedGood, PricedCategory]]] = {}
+    goods_by_activity: dict[str, Mapping[str, tuple[PhysicallyPricedGood, PricedCategory]]] = {}
 
     for activity_id in activity_ids:
         item = eap[activity_id]
@@ -286,10 +329,18 @@ def build_activity_goods_from_catalog(
                 category,
             )
 
+        declared_none = _declared_no_consumables(activity_id, cpu, productions)
+        if declared_none and activity_goods:
+            raise ValueError(f"{activity_id}: consumiveis_declarados=NENHUM contradicts the CPU consumable rows")
+        if declared_none:
+            goods_by_activity[activity_id] = NO_CONSUMABLES_DECLARED
+            continue
         if not activity_goods:
             raise ValueError(
                 f"{activity_id}: no explicit physical per-delivered-unit consumable BOM; "
-                "hourly rates require separate observed operating-hour evidence"
+                "hourly rates require separate observed operating-hour evidence; an activity that "
+                "truly consumes nothing must declare CPU.consumiveis_declarados (status NENHUM, "
+                "justificativa, fonte)"
             )
         goods_by_activity[activity_id] = activity_goods
 
@@ -373,7 +424,9 @@ def book_skill04_planned_consumption_preview(
         activity_id = activity.activity_id
         expected_q, unit = scopes[activity_id]
         activity_goods = goods_by_activity[activity_id]
-        if not isinstance(activity_goods, Mapping) or not activity_goods:
+        if activity_goods is not NO_CONSUMABLES_DECLARED and (
+            not isinstance(activity_goods, Mapping) or not activity_goods
+        ):
             raise ValueError("each scheduled activity requires an explicit physical goods mapping")
         for good_id, declaration in activity_goods.items():
             if (

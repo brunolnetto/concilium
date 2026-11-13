@@ -7,6 +7,8 @@ restrições de mercado, idempotência do wrapper de spec e backward compat
 
 from types import SimpleNamespace
 
+import pytest
+
 from concilium.application.scheduling import (
     Activity,
     ActivityDAG,
@@ -346,8 +348,8 @@ class TestActivitiesFromSpecEdgeCases:
 class TestDagFromSpecEdgeCases:
     """Lines 238-248: _dag_from_spec handles invalid edges and threshold parse errors."""
 
-    def test_short_edge_skipped(self):
-        """Line 238: edge with fewer than 2 elements is skipped."""
+    def test_short_edge_is_rejected_not_dropped(self):
+        """A malformed declared edge is a located error (shared parser), never dropped."""
         from concilium.application.scheduling.pool_inference import (
             _activities_from_spec,
             _dag_from_spec,
@@ -358,15 +360,9 @@ class TestDagFromSpecEdgeCases:
             {"item_id": "B", "duration_weeks": 2, "required_resources": {"EQ": 1}},
         ]
         acts = _activities_from_spec({"activities": spec_acts})
-        spec = {
-            "precedence": [
-                ["A"],  # only 1 element — skipped
-                ("A", "B"),  # valid
-                [],  # 0 elements — skipped
-            ]
-        }
-        dag = _dag_from_spec(spec, acts)
-        assert ("A", "B") in dag.precedence
+        spec = {"precedence": [["A"], ("A", "B"), []]}
+        with pytest.raises(ValueError, match=r"precedence\[0\]"):
+            _dag_from_spec(spec, acts)
 
     def test_edge_with_unknown_activity_skipped(self):
         """Line 241-242: edge referencing unknown activity ID is skipped."""
@@ -383,8 +379,8 @@ class TestDagFromSpecEdgeCases:
         dag = _dag_from_spec(spec, acts)
         assert dag.precedence == []
 
-    def test_threshold_parse_error_skipped(self):
-        """Lines 245-248: invalid threshold value (non-numeric) is silently skipped."""
+    def test_non_numeric_threshold_is_rejected(self):
+        """A non-numeric theta is a located error, not a silently ignored threshold."""
         from concilium.application.scheduling.pool_inference import (
             _activities_from_spec,
             _dag_from_spec,
@@ -396,13 +392,11 @@ class TestDagFromSpecEdgeCases:
         ]
         acts = _activities_from_spec({"activities": spec_acts})
         spec = {"precedence": [("A", "B", "not-a-float")]}
-        dag = _dag_from_spec(spec, acts)
-        # Edge is added but threshold parse fails → no entry in thresholds
-        assert ("A", "B") in dag.precedence
-        assert ("A", "B") not in dag.thresholds
+        with pytest.raises(ValueError, match="theta must be a number"):
+            _dag_from_spec(spec, acts)
 
-    def test_threshold_none_skipped(self):
-        """Line 246-248: threshold=None raises TypeError → silently skipped."""
+    def test_none_threshold_is_rejected(self):
+        """theta=None is a located error; omit the third element for theta = 1."""
         from concilium.application.scheduling.pool_inference import (
             _activities_from_spec,
             _dag_from_spec,
@@ -414,9 +408,8 @@ class TestDagFromSpecEdgeCases:
         ]
         acts = _activities_from_spec({"activities": spec_acts})
         spec = {"precedence": [("A", "B", None)]}
-        dag = _dag_from_spec(spec, acts)
-        assert ("A", "B") in dag.precedence
-        assert ("A", "B") not in dag.thresholds
+        with pytest.raises(ValueError, match="theta must be a number"):
+            _dag_from_spec(spec, acts)
 
 
 class TestDerivarRequiredResourcesEdgeCases:
