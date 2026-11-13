@@ -52,7 +52,9 @@ _ORACLE_REFERENCE = (
     "catalog-envelope-oracle:6e8d934c5793a8fc12c4d5d9bb2198415e1c4049;"
     "catalog-envelope-vector:1e1fdaf8d1dcbd213aa8c90af9f73012108707c4;"
     "activity-cost-oracle:486cea83a17db499038c4753e1ce5987113fe43c;"
-    "activity-cost-vector:76c36e75653171281ce6af8741f2394310807142"
+    "activity-cost-vector:76c36e75653171281ce6af8741f2394310807142;"
+    "consumption-declaration-oracle:c3dbd30f5be5e9e2350b890c0d46604e86014b0b;"
+    "consumption-declaration-vector:f14c14a5b3201369f78b0529b607c2d25ac4de10"
 )
 FORMALISM_SHA256 = hashlib.sha256(_FORMALISM_REFERENCE.encode("ascii")).hexdigest()
 ORACLE_SHA256 = hashlib.sha256(_ORACLE_REFERENCE.encode("ascii")).hexdigest()

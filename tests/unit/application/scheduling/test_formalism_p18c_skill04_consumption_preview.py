@@ -719,3 +719,29 @@ def test_an_empty_goods_mapping_not_built_from_a_declaration_still_fails() -> No
     canonical = _one_activity_for_catalog_cpu(_no_consumables_cpu())
     with pytest.raises(ValueError, match="explicit physical goods mapping"):
         book_skill04_planned_consumption_preview(canonical, _pool(), {"A": {}})
+
+
+def test_production_p18_matches_the_consumption_declaration_vector() -> None:
+    """N6 evidence: the P18 builder + booking reproduce consumption_declaration_v1."""
+    vectors = {
+        v["case_id"]: v
+        for v in json.loads(
+            (
+                Path(__file__).resolve().parents[3] / "reference_formalism/vectors/consumption_declaration_v1.json"
+            ).read_text(encoding="utf-8")
+        )["vectors"]
+    }
+    cpu = _real_rfi_catalog_record("config/catalogos/rfi-r02/cpus/CPU-TERRA-ATI-003.json")
+    diesel = _real_rfi_catalog_record("config/catalogos/rfi-r02/insumos/material/MA-DIESEL-S10.json")
+    canonical = _one_activity_for_catalog_cpu(cpu)
+    bom = book_skill04_planned_consumption_preview(
+        canonical, _pool(), build_activity_goods_from_catalog(canonical, {"cpus": [cpu], "insumos": [diesel]})
+    )
+    assert bom.consumption.variable_cost == F(vectors["real_rfi_diesel_bom"]["expected"])
+
+    declared = _no_consumables_cpu(consumiveis_declarados=vectors["declared_none_is_zero"]["activity"]["declaration"])
+    canonical = _one_activity_for_catalog_cpu(declared)
+    none = book_skill04_planned_consumption_preview(
+        canonical, _pool(), build_activity_goods_from_catalog(canonical, {"cpus": [declared], "insumos": []})
+    )
+    assert none.consumption.variable_cost == F(vectors["declared_none_is_zero"]["expected"])

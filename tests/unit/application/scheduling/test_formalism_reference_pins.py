@@ -27,6 +27,8 @@ PATHS = {
     "catalog-envelope-vector": "tests/reference_formalism/vectors/catalog_envelope_v1.json",
     "activity-cost-oracle": "tests/reference_formalism/activity_cost_reference.py",
     "activity-cost-vector": "tests/reference_formalism/vectors/activity_cost_reconciliation_v1.json",
+    "consumption-declaration-oracle": "tests/reference_formalism/consumption_declaration_reference.py",
+    "consumption-declaration-vector": "tests/reference_formalism/vectors/consumption_declaration_v1.json",
 }
 
 
