@@ -920,6 +920,44 @@ class TestPrepareSkillInputs:
         assert result["01-escopo"]["area"] == 200
         assert result["01-escopo"]["extra"] is True
 
+    def _project_type_inputs(self, tipo: str, eap_items: list, override: dict | None = None):
+        svc, project, audit, runtime = _make_svc()
+        project.meta = {"tipo_projeto": tipo}
+        base = {"01-escopo-e-eap": {"nome": "P", "eap": [{"item_id": "A", "cpu_id": "OLD", "quantitativo": 1}]}}
+
+        def read_json(path, default=None):
+            if path == DEFAULT_PROJECT_FILES.skill_inputs:
+                return {k: dict(v) for k, v in base.items()}
+            if path == DEFAULT_PROJECT_FILES.eap_items:
+                return list(eap_items)
+            return default if default is not None else {}
+
+        project.read_json.side_effect = read_json
+        run = {"use_saved_overrides": False, "skill_inputs_override": override or {}, "use_mobilizacao_policy": False}
+        return svc._prepare_skill_inputs(project, run)
+
+    def test_project_type_runs_on_the_composed_eap(self):
+        """ADR-063 D3: a `project` runs on the EAP composed via upsert_eap (with typed
+        predecessors), not on the EAP frozen at creation."""
+        composed = [
+            {"item_id": "A", "cpu_id": "NEW", "quantitativo": 5},
+            {"item_id": "B", "cpu_id": "NEW", "quantitativo": 2,
+             "predecessores": [{"item_id": "A", "tipo": "FS", "lag": 0, "completion_threshold_pct": 0.5}]},
+        ]
+        result = self._project_type_inputs("project", composed)
+        assert result["01-escopo-e-eap"]["eap"] == composed
+        assert result["01-escopo-e-eap"]["nome"] == "P"
+
+    def test_explicit_run_override_still_wins_over_the_composed_eap(self):
+        override = {"01-escopo-e-eap": {"eap": [{"item_id": "Z", "cpu_id": "X", "quantitativo": 1}]}}
+        result = self._project_type_inputs("project", [{"item_id": "A", "cpu_id": "NEW", "quantitativo": 5}], override)
+        assert result["01-escopo-e-eap"]["eap"][0]["item_id"] == "Z"
+
+    def test_hot_project_and_empty_composition_keep_creation_inputs(self):
+        assert self._project_type_inputs("hot_project", [{"item_id": "A", "cpu_id": "NEW", "quantitativo": 5}])[
+            "01-escopo-e-eap"]["eap"][0]["cpu_id"] == "OLD"
+        assert self._project_type_inputs("project", [])["01-escopo-e-eap"]["eap"][0]["cpu_id"] == "OLD"
+
     def test_use_mobilizacao_policy_true_injects_when_absent(self):
         svc, project, audit, runtime = _make_svc()
 

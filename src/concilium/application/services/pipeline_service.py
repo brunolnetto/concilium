@@ -23,6 +23,7 @@ from concilium.application.skills.phase_classifier import get_pipeline_profile_f
 from .project.audit_service import AuditService
 from .project.project_files import DEFAULT_PROJECT_FILES, ProjectFiles
 from .project.project_repository import ProjectHandle, ProjectRepository
+from .project.project_service._shared import _resolve_project_type
 from .service_support import build_summary, deep_merge
 
 
@@ -337,6 +338,13 @@ class PipelineService:
 
     def _prepare_skill_inputs(self, project, run: dict) -> dict:
         skill_inputs = project.read_json(self._files.skill_inputs, {})
+        # ADR-063 D3: a `project` runs on the EAP composed via upsert_eap (the one
+        # whose RASCUNHO_PRONTO status gates the run, typed predecessors included),
+        # not on the EAP frozen at creation. Explicit run overrides still win.
+        if _resolve_project_type(project.meta if isinstance(project.meta, dict) else {}) == "project":
+            composed = project.read_json(self._files.eap_items, [])
+            if isinstance(composed, list) and composed:
+                skill_inputs = deep_merge(skill_inputs, {"01-escopo-e-eap": {"eap": composed}})
         if run.get("use_saved_overrides"):
             saved_overrides = project.read_json(self._files.overrides, {})
             skill_inputs = deep_merge(skill_inputs, saved_overrides)
