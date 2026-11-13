@@ -179,6 +179,16 @@ def test_source_snapshot_serializer_rejects_unknown_types_explicitly() -> None:
         _dump({"x": float("nan")})
 
 
+def test_source_snapshot_serializer_does_not_duck_type_model_dump() -> None:
+    """A MagicMock canonical made _dump recurse through endless model_dump()
+    mocks until RecursionError (pipeline tests went from ~10 s to >250 s).
+    Only real pydantic models are expanded; anything else fails fast."""
+    from unittest.mock import MagicMock
+
+    with pytest.raises(TypeError, match="MagicMock"):
+        _dump(MagicMock())
+
+
 def test_application_boundary_binds_each_pool_summary_to_its_exact_p16_contract() -> None:
     witness = {
         "schema": "p16-global-instance-assignment/v1",

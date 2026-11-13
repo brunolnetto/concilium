@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from pydantic import BaseModel
+
 from concilium.application.scheduling.formalism_evaluator import (
     FormalismEvaluation,
     ProductivityRateWitness,
@@ -293,7 +295,7 @@ def _dump(value: Any) -> Any:
     """Convert source snapshots to deterministic JSON-safe primitives."""
     if value is None:
         return None
-    if hasattr(value, "model_dump"):
+    if isinstance(value, BaseModel):
         # Python mode preserves sets until this boundary, where they are sorted
         # explicitly. JSON mode would silently turn them into nondeterministic lists.
         return _dump(value.model_dump(mode="python"))
