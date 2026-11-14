@@ -1,0 +1,63 @@
+{
+  "protocol": "formalism-pool-demand/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["N7"],
+    "scope": "P16 pool demand d_gj = sum_i m_ij a_ig^front from scheduled fronts and per-front team composition; fronts are never the sum of heterogeneous units",
+    "rounding": "integer units"
+  },
+  "vectors": [
+    {
+      "case_id": "golden_bgtc_one_front_is_not_seven",
+      "hand_check": "BGTC team per front: plant 1, loaders 2, generator 1, workers 3. One front for 2 weeks -> plant 1, loaders 2, generator 1, workers 3 each week. The unit sum (7) is not a front count: 7 fronts would demand 7 plants.",
+      "case": {
+        "horizon_weeks": 2,
+        "activities": [
+          {"id": "eap-01", "fronts": [1, 1],
+           "composition": {"EQ-USINA-SOLOS-300TH": 1, "EQ-CARREG-PNEUS-340M3": 2, "EQ-GERADOR-113KVA": 1, "MO-SERVENTE-USINA-H": 3}}
+        ]
+      },
+      "expected": {
+        "EQ-USINA-SOLOS-300TH": [1, 1],
+        "EQ-CARREG-PNEUS-340M3": [2, 2],
+        "EQ-GERADOR-113KVA": [1, 1],
+        "MO-SERVENTE-USINA-H": [3, 3]
+      }
+    },
+    {
+      "case_id": "two_fronts_scale_every_type_by_its_own_units",
+      "hand_check": "Same team at m = 2: plant 2, loaders 4, generator 2, workers 6 (each a_g x 2), not 2 x 7 = 14 of every type.",
+      "case": {
+        "horizon_weeks": 1,
+        "activities": [
+          {"id": "A", "fronts": [2],
+           "composition": {"PLANT": 1, "LOADER": 2, "GENERATOR": 1, "WORKER": 3}}
+        ]
+      },
+      "expected": {"PLANT": [2], "LOADER": [4], "GENERATOR": [2], "WORKER": [6]}
+    },
+    {
+      "case_id": "overlapping_activities_add_shared_labour",
+      "hand_check": "Scenario-2 overlap week: BGTC (3 workers/front) and CBUQ (4 workers/front) at one front each share workers: 3, 3+4 = 7, 4. Plants are distinct types.",
+      "case": {
+        "horizon_weeks": 3,
+        "activities": [
+          {"id": "eap-01", "fronts": [1, 1, 0], "composition": {"EQ-USINA-SOLOS-300TH": 1, "MO-SERVENTE-USINA-H": 3}},
+          {"id": "eap-02", "fronts": [0, 1, 1], "composition": {"EQ-USINA-ASFALTO-GRAV-120TH": 1, "MO-SERVENTE-USINA-H": 4}}
+        ]
+      },
+      "expected": {
+        "EQ-USINA-SOLOS-300TH": [1, 1, 0],
+        "MO-SERVENTE-USINA-H": [3, 7, 4],
+        "EQ-USINA-ASFALTO-GRAV-120TH": [0, 1, 1]
+      }
+    },
+    {
+      "case_id": "fractional_fronts_rejected",
+      "hand_check": "Fronts are integer counts of team copies; a fraction has no physical meaning in d_gj.",
+      "case": {"horizon_weeks": 1, "activities": [{"id": "A", "fronts": [1.5], "composition": {"PLANT": 1}}]},
+      "expected_error": "nonnegative integer"
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from concilium.domain.constants import (
@@ -90,23 +91,19 @@ def _checar_leadtime_mob_ausente(item: Any, custo_total_final: float, validacoes
 
 
 def _resolve_num_equipes_paralelas(cron: Any) -> int:
-    """ADR-091: infere o número de equipes paralelas alocadas para evitar duplicação de custos.
+    """Peak parallel fronts m_ij of the activity in the Skill04 schedule (N7).
 
-    assigned_resources é propagado por skill-04 em modo AUTO; em MANUAL_ALLOCATION fica vazio,
-    caso em que deduzimos do max(num_equipes) na distribuição semanal do cronograma.
+    Skill04 materialises m_ij = min_g floor(x_g / a_g^front) per week
+    (CAPACIDADE_E_RECURSOS N7); ramp weeks carry n_max * fraction, so the
+    peak rounds up to n_max. ``assigned_resources`` holds units of
+    heterogeneous resource types (plant, loaders, workers...): their sum is not
+    a front count and once reported 7-10 "fronts" for a one-front team (#206).
     """
-    assigned_resources = getattr(cron, "assigned_resources", None) or {}
-    num_equipes_paralelas = sum(assigned_resources.values()) if assigned_resources else 1
-
-    if not num_equipes_paralelas or num_equipes_paralelas == 1:
-        dist_semanal = getattr(cron, "distribuicao_semanal", {}) or {}
-        if dist_semanal and isinstance(dist_semanal, dict):
-            values_list = list(dist_semanal.values())
-            max_num_eq = max((getattr(d, "num_equipes", 0) for d in values_list), default=1)
-            if max_num_eq > 1:
-                num_equipes_paralelas = max_num_eq
-
-    return num_equipes_paralelas
+    dist_semanal = getattr(cron, "distribuicao_semanal", {}) or {}
+    if not isinstance(dist_semanal, dict):
+        return 1
+    peak = max((float(getattr(d, "num_equipes", 0) or 0) for d in dist_semanal.values()), default=0.0)
+    return max(1, math.ceil(peak - 1e-9))
 
 
 def _resolve_permanencia_e_custo_total_ajustados(

@@ -2139,22 +2139,42 @@ class TestBuildDimensionamentoNumEquipesParalelas:
             ],
         }
 
-    def test_assigned_resources_sum_gt1_skips_dist_fallback(self):
-        """ADR-091: assigned_resources com soma > 1 já define num_equipes_paralelas
-        > 1 — o bloco de dedução via distribuicao_semanal é pulado (branch False
-        de `if not num_equipes_paralelas or num_equipes_paralelas == 1`)."""
-        from concilium.application.skills import run_cronograma, run_equipes_e_alocacao
+    def _scheduled(self, item_id="EAP-01", fronts: float = 1.0):
+        from concilium.application.skills import run_cronograma
 
-        item_id = "EAP-01"
         can = self._make_canonical(item_id=item_id)
         cat = self._catalogo()
         cron_inputs = {"num_equipes_por_item": {item_id: {"2026-W23": 1}}}
         can_cron = run_cronograma(can, cron_inputs, cat).canonical
         sa = can_cron.cronograma.scheduled_activities[0]
-        sa.assigned_resources = {"EQ-01": 3}
+        for cell in sa.distribuicao_semanal.values():
+            cell.num_equipes = fronts
+        return can_cron, sa, cat
+
+    def test_fronts_come_from_the_schedule_peak(self):
+        """N7: the schedule's m_ij is the front count (3 fronts -> 3)."""
+        from concilium.application.skills import run_equipes_e_alocacao
+
+        can_cron, _sa, cat = self._scheduled(fronts=3.0)
         result = run_equipes_e_alocacao(can_cron, {"preco_diesel": 6.20}, cat)
-        eq = result.canonical.equipes_diretas[0]
-        assert eq.num_equipes_base == 3
+        assert result.canonical.equipes_diretas[0].num_equipes_base == 3
+
+    def test_heterogeneous_assigned_units_are_not_summed_into_fronts(self):
+        """#206: plant 1 + loaders 2 + generator 1 + workers 3 assigned to a
+        one-front team used to report 7 fronts (sum of units)."""
+        from concilium.application.skills import run_equipes_e_alocacao
+
+        can_cron, sa, cat = self._scheduled(fronts=1.0)
+        sa.assigned_resources = {"PLANT": 1, "LOADER": 2, "GENERATOR": 1, "WORKER": 3}
+        result = run_equipes_e_alocacao(can_cron, {"preco_diesel": 6.20}, cat)
+        assert result.canonical.equipes_diretas[0].num_equipes_base == 1
+
+    def test_ramp_week_fraction_rounds_up_to_the_front_count(self):
+        from concilium.application.skills import run_equipes_e_alocacao
+
+        can_cron, _sa, cat = self._scheduled(fronts=1.5)
+        result = run_equipes_e_alocacao(can_cron, {"preco_diesel": 6.20}, cat)
+        assert result.canonical.equipes_diretas[0].num_equipes_base == 2
 
     def test_dist_semanal_vazia_mantem_num_equipes_paralelas_1(self):
         """assigned_resources vazio (sum=1 default) e distribuicao_semanal vazia
