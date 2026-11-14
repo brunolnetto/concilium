@@ -74,5 +74,95 @@
       "codigo": "MOB",
       "descricao": "Mobilizacao e desmobilizacao"
     }
-  ]
+  ],
+  "precificacao_exata": {
+    "schema": "concilium.perfil.precificacao-exata.v1",
+    "formula_bdi": "TCU_ACORDAO_2622_2013",
+    "tabela_bdi": {
+      "fonte": "Parâmetros comerciais Mendes Lobo calibrados em março/2026 (planilha AGIS); antes constante DEFAULT_BDI_TABELA no código, declarados neste perfil por decisão do proprietário em 2026-11-14 (#206).",
+      "linhas": {
+        "mao_obra": {
+          "ac": "0.05",
+          "r": "0.01",
+          "cr": "0",
+          "df": "0.015",
+          "l": "0.09",
+          "cofins": "0",
+          "iss": "0.05",
+          "pis": "0",
+          "cssl": "0.0199",
+          "ir": "0.0274"
+        },
+        "servicos": {
+          "ac": "0.05",
+          "r": "0.01",
+          "cr": "0",
+          "df": "0.015",
+          "l": "0.09",
+          "cofins": "0",
+          "iss": "0.05",
+          "pis": "0",
+          "cssl": "0.0199",
+          "ir": "0.0274"
+        },
+        "material": {
+          "ac": "0",
+          "r": "0",
+          "cr": "0",
+          "df": "0",
+          "l": "0.04",
+          "cofins": "0",
+          "iss": "0",
+          "pis": "0",
+          "cssl": "0",
+          "ir": "0"
+        },
+        "diesel": {
+          "ac": "0",
+          "r": "0",
+          "cr": "0",
+          "df": "0",
+          "l": "0.04",
+          "cofins": "0",
+          "iss": "0",
+          "pis": "0",
+          "cssl": "0",
+          "ir": "0"
+        },
+        "indireto": {
+          "ac": "0.05",
+          "r": "0.01",
+          "cr": "0",
+          "df": "0.015",
+          "l": "0.05",
+          "cofins": "0",
+          "iss": "0.05",
+          "pis": "0",
+          "cssl": "0.0199",
+          "ir": "0.0274"
+        }
+      }
+    },
+    "piso_bdi_regulatorio": {
+      "fonte": "TCU, Acórdão 2622/2013-Plenário, Tabela 2 (valores do BDI por tipo de obra), 1º quartil — adotado como piso por política da empresa; o acórdão define faixas referenciais, não um mínimo legal.",
+      "por_tipo_obra": {
+        "terraplenagem": {
+          "taxa": "0.1960",
+          "referencia": "Construção de rodovias e ferrovias, 1º quartil 19,60%"
+        },
+        "pavimentacao": {
+          "taxa": "0.1960",
+          "referencia": "Construção de rodovias e ferrovias, 1º quartil 19,60%"
+        },
+        "saneamento": {
+          "taxa": "0.2076",
+          "referencia": "Construção de redes de abastecimento de água, coleta de esgoto e construções correlatas, 1º quartil 20,76%"
+        }
+      }
+    },
+    "escopo_estoque": {
+      "status": "NO_INVENTORY",
+      "fonte": "Perfil Mendes Lobo: material orçado como consumido nas composições, sem estoque modelado; sobreponível por projeto."
+    }
+  }
 }

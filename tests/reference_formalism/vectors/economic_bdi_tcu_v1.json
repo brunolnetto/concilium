@@ -1,0 +1,42 @@
+{
+  "protocol": "formalism-bdi-tcu/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["VIII", "N9"],
+    "scope": "category BDI markup from declared components by the TCU formula (Acórdão 2622/2013-Plenário): (1+(AC+R+S+G))(1+DF)(1+L)/(1-T)-1",
+    "rounding": "Fraction exact"
+  },
+  "vectors": [
+    {
+      "case_id": "labour_and_services_row",
+      "hand_check": "AC 5%, R+S+G 1%, DF 1.5%, L 9%, T = ISS 5% + CSLL 1.99% + IR 2.74% = 9.73%. (1.06)(1.015)(1.09) = 1.172731; / 0.9027 = 1.299137...; BDI = 0.270031/0.9027 = 270031/902700 (29.9137%).",
+      "case": {"AC": "0.05", "RSG": "0.01", "DF": "0.015", "L": "0.09", "T": "0.0973"},
+      "expected": "270031/902700"
+    },
+    {
+      "case_id": "supply_row_profit_only",
+      "hand_check": "Material/diesel row: only L 4%, no taxes on the sale price -> 1.04 - 1 = 1/25.",
+      "case": {"AC": "0", "RSG": "0", "DF": "0", "L": "0.04", "T": "0"},
+      "expected": "1/25"
+    },
+    {
+      "case_id": "indirect_row",
+      "hand_check": "As labour with L 5%: (1.06)(1.015)(1.05) = 1.129695; (1.129695 - 0.9027)/0.9027 = 226995/902700 = 15133/60180 (25.1462%).",
+      "case": {"AC": "0.05", "RSG": "0.01", "DF": "0.015", "L": "0.05", "T": "0.0973"},
+      "expected": "15133/60180"
+    },
+    {
+      "case_id": "risk_is_added_to_central_administration_not_multiplied",
+      "hand_check": "AC 10%, R+S+G 10%, nothing else: TCU gives 1 + 0.20 = 1.20 -> 1/5. Multiplying (1.10)(1.10) would give 0.21.",
+      "case": {"AC": "0.10", "RSG": "0.10", "DF": "0", "L": "0", "T": "0"},
+      "expected": "1/5"
+    },
+    {
+      "case_id": "taxes_at_or_above_100_percent_are_undefined",
+      "hand_check": "1 - T <= 0 has no price.",
+      "case": {"AC": "0", "RSG": "0", "DF": "0", "L": "0", "T": "1"},
+      "expected_error": "below 100%"
+    }
+  ]
+}

@@ -97,3 +97,40 @@ def test_without_declared_contract_terms_nothing_is_estimated(tmp_path: Path) ->
     assert {c.tipo_id for c in canonical.contratos_recurso} == set(declared)  # per-resource contracts, unpriced
     warnings = " ".join(str(a) for skill in result["skills_log"] for a in (skill.get("avisos") or []))
     assert "UNKNOWN_CONTRACT" in warnings
+
+
+def test_profile_prices_the_exact_ledger_with_nothing_hand_written(tmp_path: Path) -> None:
+    """No rcpsp_spec, no P18 flag, no P21 evidence: contract terms + the profile's
+    declared pricing terms (N9) carry the project to an exact, attributable decision.
+
+    With the Mendes Lobo table (materials/diesel at 4%) this materials-heavy scope
+    prices below the declared floor and margin: NOGO by V2 and PROFITABILITY only —
+    an exact consequence of the declared terms, never a legacy estimate."""
+    spec, _declared = _without_hand_written_spec(
+        lambda t: {k: t[k] for k in ("mobilize", "demobilize", "max_idle_gap")}
+    )
+    spec["skill_inputs"]["06-resultado-financeiro"] = {}
+    result, service = run(tmp_path, spec)
+    certificate = result["formalism_certificate"]
+    assert result["status"] == "OK"
+    assert (certificate["effective_decision"], certificate["project_go"]) == ("NOGO", False)
+    gates = {g["gate_id"]: g["status"] for g in certificate["gates"]}
+    failing = {gate for gate, status in gates.items() if status != "PASS"}
+    assert failing == {"V2", "REGULATORY_BDI_BASIS", "PROFITABILITY"}, gates
+
+    canonical = load_canonical(result, service)
+    diagnostics, pricing_gates = canonical.resultado.pricing_diagnostics, canonical.resultado.pricing_gates
+    # Markups are the TCU formula over the profile's declared rows (EQ = services rate).
+    assert {c: Fraction(diagnostics[f"bdi_rate_{c.lower()}"]) for c in ("MO", "EQ", "MAT", "COMB", "IND")} == {
+        "MO": Fraction(270031, 902700),
+        "EQ": Fraction(270031, 902700),
+        "MAT": Fraction(1, 25),
+        "COMB": Fraction(1, 25),
+        "IND": Fraction(15133, 60180),
+    }
+    assert Fraction(pricing_gates["regulatory_bdi_floor"]) == Fraction("0.1960")  # TCU 1st quartile, roads
+    assert Fraction(pricing_gates["regulatory_bdi_rate"]) < Fraction("0.1960")
+    assert Fraction(pricing_gates["realized_margin"]) < Fraction(3, 50)
+    # The independent oracles recompute cost, price and BDI from the same ledgers.
+    report = differential_report(canonical, catalog(spec), certificate)
+    assert report["first_divergence"] is None

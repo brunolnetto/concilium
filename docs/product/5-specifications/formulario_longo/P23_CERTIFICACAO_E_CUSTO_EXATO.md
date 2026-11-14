@@ -64,3 +64,21 @@ Evidência: oráculo independente `contract_tariff_reference.py` e vetor `pool_c
 **N8.1 — `rcpsp_spec` por recurso derivado dos dados do projeto (#206).** Quando o chamador não fornece `rcpsp_spec` (nem contagens manuais de equipes), os Skills 04 e 05 derivam a especificação por tipo de recurso do que o projeto já declara: `required_resources` de cada atividade = equipe padrão da produção por frente (\(a_{ig}^{front}\), N7); `duration_weeks` = duração nominal de uma frente \(\lceil Q_i/(\rho_i\,d\,h)\rceil\); `resource_pool` = disponibilidade física **explicitamente configurada** (Skill03), restrita aos tipos usados, que deve cobrir ao menos uma frente de cada atividade. As precedências vêm da EAP. As tarifas P16 dessa especificação são as de N8 (taxa de catálogo + `contract_terms` declarados do projeto). Nada é inferido: CPU, produção, composição, taxa ou cobertura de pool ausentes impedem a derivação (motivos reportados em `VAL-RCPSP-NAO-DERIVAVEL`); tipos sem termos contratuais completos ficam sem tarifa (`VAL-P16-CONTRATO-DESCONHECIDO`) e o custo não é avaliado. Enquanto o caminho legado existir, a derivação por "família de equipe" só permanece quando a derivação por recurso não é possível.
 
 Evidência: oráculo `pool_spec_reference.py` e vetor `pool_spec_from_project_v1.json` com paridade de produção; a especificação derivada é idêntica à escrita à mão nos dois projetos ouro (equipe por frente, durações, pool); E2E `test_formalism_golden_derived_inputs.py`: com os termos declarados o projeto ouro certifica GO sem `rcpsp_spec` escrito à mão e com todas as fases conferidas pelos oráculos; com tarifas só derivadas certifica com racionais exatos; sem termos declarados nada é estimado.
+
+## N9 — preço exato de todo projeto: termos de precificação declarados no perfil (#206)
+
+O P21 precifica o livro exato P20 apenas com entradas declaradas. Quando o projeto não fornece `p21_pricing_evidence`, a declaração vem do bloco `precificacao_exata` do perfil da construtora (padrão do projeto), e do envelope de catálogo derivado:
+
+- **Markup por categoria** \(\beta^k\): cada linha da `tabela_bdi` declara as parcelas \(AC, R{+}S{+}G, DF, L\) e os tributos \(T\) como decimais exatos, e \(\beta\) é a fórmula do Acórdão TCU 2622/2013-Plenário em racionais exatos,
+\[
+\beta=\frac{\big(1+(AC+R+S+G)\big)(1+DF)(1+L)}{1-T}-1 ,
+\]
+com \(R{+}S{+}G\) **somado** a \(AC\) (não multiplicado) e \(T<1\). Linhas: MO ← `mao_obra`; EQ ← `servicos` (equipamento operando dentro de um serviço recebe o BDI do serviço; BDI reduzido só para mero fornecimento, Súmula TCU 253 — não há mistura locação/manutenção); MAT ← `material`; COMB ← `diesel`; IND ← `indireto`.
+- **Piso de BDI do gate V2**: `piso_bdi_regulatorio.por_tipo_obra[tipo_obra]`, com fonte. No perfil Mendes Lobo, o 1º quartil da Tabela 2 do Acórdão 2622/2013 (rodovias e ferrovias 19,60%; saneamento 20,76%) — política da empresa que referencia o TCU; o acórdão define faixas referenciais, não mínimo legal.
+- **Margem mínima**: `faixa_margem_aceitavel.min` do perfil.
+- **Escopo de estoque**: `escopo_estoque` (`NO_INVENTORY` no perfil Mendes Lobo: material orçado como consumido).
+- **Base de catálogo e base regulatória**: \(C^{cat}\) derivado (N2), com a impressão digital do envelope como base comum.
+
+O livro de consumo exato (P18) roda sempre que todo contrato do pool tem testemunha P16 (um booleano explícito do chamador é respeitado). **Falha fechada:** bloco ausente, linha ou campo faltando, número em ponto flutuante, tipo de obra sem piso declarado, tributos ≥ 100% ou \(C^{cat}\) não derivável ⇒ nenhuma declaração é produzida e o preço fica não avaliado (`VAL-P21-NAO-AVALIADO`), nunca estimado. Não há tabela padrão no código para o caminho exato.
+
+Evidência: oráculo `bdi_tcu_reference.py` e vetor `economic_bdi_tcu_v1.json` (inclui o caso que distingue soma de produto); paridade de produção; E2E `test_profile_prices_the_exact_ledger_with_nothing_hand_written`: o projeto ouro sem `rcpsp_spec`, sem evidência P21 e sem flag P18 chega a uma decisão exata e atribuível (com a tabela declarada — material e diesel a 4% — o escopo, dominado por material, fica abaixo do piso e da margem: NOGO só por V2 e PROFITABILITY, com custo, preço e BDI conferidos pelos oráculos).
