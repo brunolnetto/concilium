@@ -229,11 +229,13 @@ def _field_origins(overridden: set[str]) -> dict[str, object]:
     }
 
 
-def profile_pricing_terms(perfil: object, tipo_obra: str, project_bdi: object = None) -> dict[str, Any]:
-    """Category markups, minimum margin, regulatory floor and inventory scope.
+def profile_effective_layers(perfil: object, project_bdi: object = None) -> dict[str, Any]:
+    """Effective markup layers per category: the profile rows merged with the
+    project's exact declaration (N9.1), with the origin of every field.
 
-    ``project_bdi`` is the project's exact declaration (N9.1), merged over the
-    profile rows before the layers are derived.
+    This is the part of the price's declaration that does not depend on the
+    work type; :func:`profile_pricing_terms` builds on it, and the interfaces
+    that show a project's BDI use it so that they display what the price uses.
     """
     if not isinstance(perfil, Mapping) or not isinstance(perfil.get("precificacao_exata"), Mapping):
         raise PricingDeclarationError("profile declares no precificacao_exata block")
@@ -257,7 +259,28 @@ def profile_pricing_terms(perfil: object, tipo_obra: str, project_bdi: object = 
         )
         for category, row in CATEGORY_ROWS.items()
     }
-    natures = {category: rows[row]["natureza"] for category, row in CATEGORY_ROWS.items()}
+    return {
+        "rows": rows,
+        "layers": layers,
+        "natures": {category: rows[row]["natureza"] for category, row in CATEGORY_ROWS.items()},
+        "table_source": table["fonte"],
+        "project_reference": project_reference,
+        "layer_origins": {category: _field_origins(overridden[row]) for category, row in CATEGORY_ROWS.items()},
+    }
+
+
+def profile_pricing_terms(perfil: object, tipo_obra: str, project_bdi: object = None) -> dict[str, Any]:
+    """Category markups, minimum margin, regulatory floor and inventory scope.
+
+    ``project_bdi`` is the project's exact declaration (N9.1), merged over the
+    profile rows before the layers are derived.
+    """
+    if not isinstance(perfil, Mapping):
+        raise PricingDeclarationError("profile declares no precificacao_exata block")
+    effective = profile_effective_layers(perfil, project_bdi)
+    block = perfil["precificacao_exata"]
+    layers = effective["layers"]
+    natures = effective["natures"]
 
     floor = block.get("piso_bdi_regulatorio")
     if not isinstance(floor, Mapping) or not isinstance(floor.get("fonte"), str) or not floor["fonte"].strip():
@@ -291,9 +314,9 @@ def profile_pricing_terms(perfil: object, tipo_obra: str, project_bdi: object = 
         "layers": layers,
         "bdi_by_category": {category: rates.beta for category, rates in layers.items()},
         "bdi_floor_by_category": floors,
-        "table_source": table["fonte"],
-        "project_reference": project_reference,
-        "layer_origins": {category: _field_origins(overridden[row]) for category, row in CATEGORY_ROWS.items()},
+        "table_source": effective["table_source"],
+        "project_reference": effective["project_reference"],
+        "layer_origins": effective["layer_origins"],
         "minimum_profit_margin": _rate(str(band["min"]), "faixa_margem_aceitavel.min"),
         "regulatory_source": f"{floor['fonte']} — {'; '.join(references)}",
         "inventory_status": scope["status"],

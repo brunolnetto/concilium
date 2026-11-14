@@ -82,6 +82,14 @@ class OverrideUpsertRequest(BaseModel):
     inputs: dict[str, Any]
 
 
+class ProjectBdiExatoSaveRequest(BaseModel):
+    """N9.1: declaração exata de BDI do projeto. Números sempre como strings exatas."""
+
+    declaracao: dict[str, Any]
+    confirmado_por: str
+    motivo_revisao: str | None = None
+
+
 class CompareRequest(BaseModel):
     left_version: str
     right_version: str

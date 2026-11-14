@@ -550,7 +550,12 @@ def _render_bdi_cbs_ibs(
 
 
 def render_bdi_editor(base_url: str, project_id: str, actor: str, reference: dict) -> None:
-    """Editor de BDI — Modo Legado (PRE_REFORMA) ou CBS/IBS (ADR-055)."""
+    """Editor LEGADO de BDI em ponto flutuante — Modo PRE_REFORMA ou CBS/IBS (ADR-055).
+
+    Grava só overrides do Skill 06 (`bdi_aplicado`, `tabela_bdi`, `tax_scenario`) para o
+    estágio legado. Não é lido pelo preço exato; a declaração exata do projeto é editada
+    em `_bdi_exato_editor.render_bdi_exato` (N9.1, #206).
+    """
     from concilium.domain.models.financial.bdi import (
         CENARIOS_TRIBUTARIOS,
         DEFAULT_BDI_TABELA,
