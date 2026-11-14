@@ -23,13 +23,14 @@ def _cell(q: int, cached: int) -> SimpleNamespace:
     return SimpleNamespace(qtd_executada=q, qtd_acumulada=cached)
 
 
-def _release(distribution, threshold: float | Fraction, lag: int = 0) -> int | None:
+def _release(distribution, threshold: float | Fraction, lag: int = 0, scope=None) -> int | None:
     return _scheduling()._release_fs_after_physical_delivery(
         distribution,
         physical_threshold=threshold,
         lag_weeks=lag,
         semanas_obra=WEEKS,
         data_inicio=date(2026, 1, 1),
+        scope_quantity=scope,
     )
 
 
@@ -140,3 +141,29 @@ def test_runtime_conversion_moves_successor_after_physical_week_not_same_week(
     )
     assert observed == {"A": 0, "B": 2}
     assert WEEKS[2] in result["B"]
+
+
+def _float_cell(q: float) -> SimpleNamespace:
+    return SimpleNamespace(qtd_executada=q, qtd_acumulada=q)
+
+
+def test_full_threshold_releases_when_float_rounding_alone_leaves_a_residual() -> None:
+    """#24 P24-B: 9000 t at 6/7 climate materialises as float cells whose exact
+    sum is 9000 - 1e-12. V1 closes that scope (scope-closure/v1 tolerance), so the
+    100% FS successor must be released too; it used to stay blocked forever."""
+    cells = [4285.714285714286, 4285.714285714286, 428.57142857142753]
+    assert sum(Fraction(str(c)) for c in cells) < 9000
+    distribution = {week: _float_cell(q) for week, q in zip(WEEKS, cells, strict=False)}
+    assert _release(distribution, Fraction(9000), scope=9000) == 3
+    assert _release(distribution, Fraction(9000), lag=1, scope=9000) == 4
+
+
+def test_material_shortfall_beyond_scope_tolerance_still_blocks() -> None:
+    distribution = {WEEKS[0]: _float_cell(4500.0), WEEKS[1]: _float_cell(4499.999)}
+    assert _release(distribution, Fraction(9000), scope=9000) is None
+
+
+def test_partial_threshold_stays_exact_even_with_scope_known() -> None:
+    """theta < 1 keeps the exact comparison: no early release by rounding."""
+    distribution = {WEEKS[0]: _float_cell(4499.999999999999), WEEKS[1]: _float_cell(4500.0)}
+    assert _release(distribution, Fraction(4500), scope=9000) == 2

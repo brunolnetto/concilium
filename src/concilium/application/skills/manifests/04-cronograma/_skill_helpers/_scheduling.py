@@ -365,6 +365,7 @@ def _release_fs_after_physical_delivery(
     lag_weeks: int,
     semanas_obra: list[str],
     data_inicio: Any,
+    scope_quantity: float | Fraction | None = None,
 ) -> int | None:
     """Earliest week boundary justified by delivered physical Q (not cached percent).
 
@@ -407,6 +408,17 @@ def _release_fs_after_physical_delivery(
         delivered += quantity
         if delivered >= required:
             return index + 1 + lag_weeks
+    # Full-scope threshold (theta = 1): weekly deliveries are floats whose exact
+    # sum can fall short of Q by rounding alone, and no later week exists to make
+    # it up. If V1's versioned scope closure accepts the predecessor as closed,
+    # the successor is released after its last week. Partial thresholds stay
+    # exact: a rounding shortfall only defers them to a later delivery.
+    if (
+        scope_quantity is not None
+        and required == Fraction(str(scope_quantity))
+        and assess_scope_closure("fs-predecessor", float(required), float(delivered)).is_closed
+    ):
+        return ordered[-1][0] + 1 + lag_weeks
     return None
 
 def _convert_schedule_to_distribuicao(
@@ -475,6 +487,7 @@ def _convert_schedule_to_distribuicao(
                     lag_weeks=predecessor.lag,
                     semanas_obra=semanas_obra,
                     data_inicio=canonical_in.projeto.data_inicio,
+                    scope_quantity=predecessor_item.quantitativo,
                 )
                 if release_week is None:
                     blocked_by_predecessor = predecessor.item_id
