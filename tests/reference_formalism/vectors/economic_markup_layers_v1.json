@@ -7,7 +7,7 @@
       "VIII",
       "N9"
     ],
-    "scope": "exact decomposition of the sale price into markup layers (overhead, profit, taxes) per category and in aggregate; profit-layer share; composition-weighted aggregate BDI floor",
+    "scope": "exact decomposition of the sale price into markup layers (overhead, profit, taxes) per category and in aggregate; profit-layer share; composition-weighted aggregate BDI floor; layers mandatory (no flat declaration)",
     "rounding": "Fraction exact"
   },
   "vectors": [
@@ -172,6 +172,226 @@
         }
       },
       "expected_error": "below 100%"
+    },
+    {
+      "case_id": "golden_fixture_layers_markup_three_tenths",
+      "hand_check": "Fixture layer set of the golden RFP specs (fixture assumptions, not company data): every category AC 10%, R+S+G 0, DF 0, L 2/11, no taxes. (1 + 1/10)(1 + 2/11) = 11/10 * 13/11 = 13/10 -> markup 3/10 exactly. Per cost C: overhead C/10, profit 11C/10 * 2/11 = C/5, price 13C/10. Costs 100, 200, 300, 50, 10 (total 660): overhead 66, profit 132, price 858; profit share 132/858 = 2/13 (>= 1/20), while (P - C)/P = 198/858 = 3/13.",
+      "case": {
+        "costs": {
+          "MO": "100",
+          "EQ": "200",
+          "MAT": "300",
+          "COMB": "50",
+          "IND": "10"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0.10",
+            "rsg": "0",
+            "df": "0",
+            "l": "2/11",
+            "taxes": {}
+          },
+          "EQ": {
+            "ac": "0.10",
+            "rsg": "0",
+            "df": "0",
+            "l": "2/11",
+            "taxes": {}
+          },
+          "MAT": {
+            "ac": "0.10",
+            "rsg": "0",
+            "df": "0",
+            "l": "2/11",
+            "taxes": {}
+          },
+          "COMB": {
+            "ac": "0.10",
+            "rsg": "0",
+            "df": "0",
+            "l": "2/11",
+            "taxes": {}
+          },
+          "IND": {
+            "ac": "0.10",
+            "rsg": "0",
+            "df": "0",
+            "l": "2/11",
+            "taxes": {}
+          }
+        }
+      },
+      "expected": {
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "10",
+            "profit": "20",
+            "taxes": "0",
+            "price": "130"
+          },
+          "EQ": {
+            "cost": "200",
+            "overhead": "20",
+            "profit": "40",
+            "taxes": "0",
+            "price": "260"
+          },
+          "MAT": {
+            "cost": "300",
+            "overhead": "30",
+            "profit": "60",
+            "taxes": "0",
+            "price": "390"
+          },
+          "COMB": {
+            "cost": "50",
+            "overhead": "5",
+            "profit": "10",
+            "taxes": "0",
+            "price": "65"
+          },
+          "IND": {
+            "cost": "10",
+            "overhead": "1",
+            "profit": "2",
+            "taxes": "0",
+            "price": "13"
+          }
+        },
+        "total": {
+          "cost": "660",
+          "overhead": "66",
+          "profit": "132",
+          "taxes": "0",
+          "price": "858"
+        },
+        "profit_layer_share": "2/13"
+      }
+    },
+    {
+      "case_id": "same_markup_thin_profit_fails_only_the_profit_criterion",
+      "hand_check": "AC 25%, L 4%, no taxes: 5/4 * 26/25 = 13/10 -> the same markup 3/10 (same price, same BDI over the catalog). C 100: overhead 25, profit 125 * 4% = 5, price 130; profit share 5/130 = 1/26 < 1/20, although (P - C)/P = 30/130 = 3/13 >= 1/20. The minimum is a criterion on the profit layer only.",
+      "case": {
+        "costs": {
+          "MO": "100"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0.25",
+            "rsg": "0",
+            "df": "0",
+            "l": "0.04",
+            "taxes": {}
+          }
+        }
+      },
+      "expected": {
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "25",
+            "profit": "5",
+            "taxes": "0",
+            "price": "130"
+          }
+        },
+        "total": {
+          "cost": "100",
+          "overhead": "25",
+          "profit": "5",
+          "taxes": "0",
+          "price": "130"
+        },
+        "profit_layer_share": "1/26"
+      }
+    },
+    {
+      "case_id": "profit_only_markup_one_tenth",
+      "hand_check": "No overhead, L 1/10, no taxes: markup 1/10. C 100: profit 10, price 110; profit share 10/110 = 1/11 (>= 1/20). A markup of 1/10 is below a 1/5 regulatory floor without failing the profit criterion.",
+      "case": {
+        "costs": {
+          "MO": "100"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0",
+            "rsg": "0",
+            "df": "0",
+            "l": "1/10",
+            "taxes": {}
+          }
+        }
+      },
+      "expected": {
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "0",
+            "profit": "10",
+            "taxes": "0",
+            "price": "110"
+          }
+        },
+        "total": {
+          "cost": "100",
+          "overhead": "0",
+          "profit": "10",
+          "taxes": "0",
+          "price": "110"
+        },
+        "profit_layer_share": "1/11"
+      }
+    },
+    {
+      "case_id": "cost_without_declared_layers_has_no_price",
+      "hand_check": "Layers are mandatory (N9): IND carries cost 10 but declares no layers. There is no flat or default rate, so nothing is priced.",
+      "case": {
+        "costs": {
+          "MO": "100",
+          "IND": "10"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0.10",
+            "rsg": "0",
+            "df": "0",
+            "l": "2/11",
+            "taxes": {}
+          }
+        }
+      },
+      "expected_error": "no declared markup layers"
+    },
+    {
+      "case_id": "no_layers_at_all_has_no_price",
+      "hand_check": "A declaration with costs and no layers (the rejected flat declaration) has no price.",
+      "case": {
+        "costs": {
+          "MO": "100"
+        }
+      },
+      "expected_error": "no declared markup layers"
+    },
+    {
+      "case_id": "negative_layer_rate_has_no_price",
+      "hand_check": "L = -1 would make the price 0 <= cost; a negative layer rate is refused.",
+      "case": {
+        "costs": {
+          "MO": "100"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0.10",
+            "rsg": "0",
+            "df": "0",
+            "l": "-1",
+            "taxes": {}
+          }
+        }
+      },
+      "expected_error": "nonnegative"
     }
   ]
 }

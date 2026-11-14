@@ -455,20 +455,22 @@ def build_pricing_report_evidence_context(
     if any(rate < 0 for rate in bdi_by_category.values()):
         raise ValueError("BDI category rates must be nonnegative")
 
-    # N9: declared markup layers (overhead, profit, taxes per category). The
-    # category BDI must be exactly the layers' own markup — the layers are the
-    # declaration, the rate is their consequence.
-    markup_layers = None
-    if raw.get("markup_layers") is not None:
-        markup_layers = parse_markup_layers(raw["markup_layers"])
-        mismatched = sorted(c for c in _P21_CATEGORIES if markup_layers[c].beta != bdi_by_category[c])
-        if mismatched:
-            raise ValueError(f"bdi_by_category differs from the declared markup layers for {', '.join(mismatched)}")
+    # N9: declared markup layers (overhead, profit, taxes per category) are
+    # mandatory. The category BDI must be exactly the layers' own markup — the
+    # layers are the declaration, the rate is their consequence. A flat rate
+    # without layers is not a price declaration.
+    if raw.get("markup_layers") is None:
+        raise ValueError(
+            "p21_pricing_evidence.markup_layers is required: a flat bdi_by_category "
+            "without declared overhead, profit and tax layers is not priced"
+        )
+    markup_layers = parse_markup_layers(raw["markup_layers"])
+    mismatched = sorted(c for c in _P21_CATEGORIES if markup_layers[c].beta != bdi_by_category[c])
+    if mismatched:
+        raise ValueError(f"bdi_by_category differs from the declared markup layers for {', '.join(mismatched)}")
     # N9.1: which layer fields came from the project and which from the profile.
     markup_layers_provenance = None
     if raw.get("markup_layers_provenance") is not None:
-        if markup_layers is None:
-            raise ValueError("markup_layers_provenance requires declared markup_layers")
         markup_layers_provenance = parse_layer_provenance(raw["markup_layers_provenance"], markup_layers)
     bdi_floor_by_category = None
     if raw.get("bdi_floor_by_category") is not None:
@@ -878,8 +880,26 @@ def apply_pricing_report_evidence(
     bdi_by_category = cast(Mapping[str, Fraction], bdi_by_category_raw)
     catalog_metadata = cast(Mapping[str, object], catalog_metadata_raw)
 
-    markup_layers = context.get("markup_layers")
-    layered_by_category = layered_total = None
+    # N9: the price exists only as declared markup layers; there is no flat path.
+    markup_layers_raw = context.get("markup_layers")
+    if (
+        not isinstance(markup_layers_raw, Mapping)
+        or set(markup_layers_raw) != _P21_CATEGORIES
+        or not all(isinstance(rates, LayerRates) for rates in markup_layers_raw.values())
+    ):
+        _unknown(
+            result, validations, intent,
+            "pricing evidence must declare markup layers (overhead, profit, taxes) for MO, EQ, MAT, COMB and IND",
+        )
+        return
+    markup_layers = cast(Mapping[str, LayerRates], markup_layers_raw)
+    mismatched = sorted(c for c in _P21_CATEGORIES if markup_layers[c].beta != bdi_by_category.get(c))
+    if mismatched:
+        _unknown(
+            result, validations, intent,
+            f"bdi_by_category differs from the declared markup layers for {', '.join(mismatched)}",
+        )
+        return
     try:
         diagnostics = project_operational_pricing(
             reconciliation,
@@ -888,19 +908,18 @@ def apply_pricing_report_evidence(
             catalog_metadata=catalog_metadata,
             operational_basis_fingerprint=operational_basis_fingerprint,
         )
-        if markup_layers is not None:
-            layered_by_category, layered_total = decompose_by_category(
-                ((row.category, row.amount) for row in reconciliation.ledger.postings),
-                cast(Mapping[str, LayerRates], markup_layers),
-            )
-            if layered_total.price != diagnostics.operational_price or layered_total.cost != diagnostics.total_cost:
-                raise ValueError("markup layers do not reconstruct the P20 cost and the operational price")
+        layered_by_category, layered_total = decompose_by_category(
+            ((row.category, row.amount) for row in reconciliation.ledger.postings),
+            markup_layers,
+        )
+        if layered_total.price != diagnostics.operational_price or layered_total.cost != diagnostics.total_cost:
+            raise ValueError("markup layers do not reconstruct the P20 cost and the operational price")
         gates = evaluate_pricing_gates(
             diagnostics,
             regulatory_basis=regulatory_basis,
             catalog_metadata=catalog_metadata,
             minimum_profit_margin=minimum_profit_margin,
-            profit_layer_amount=layered_total.profit if layered_total is not None else None,
+            profit_layer_amount=layered_total.profit,
         )
     except (TypeError, ValueError) as exc:
         _unknown(result, validations, intent, str(exc))
@@ -964,24 +983,20 @@ def apply_pricing_report_evidence(
         "site_indirects_reference_id": site.declaration.reference_id if site is not None else None,
     })
     floors = context.get("bdi_floor_by_category")
-    if layered_by_category is not None and layered_total is not None:
-        rates = cast(Mapping[str, LayerRates], markup_layers)
-        result.markup_layers = {
-            "schema": "concilium.p21.markup-layers.v1",
-            "formula": MARKUP_FORMULA,
-            "rates": {c: rates[c].as_json() for c in sorted(_P21_CATEGORIES)},
-            "provenance": context.get("markup_layers_provenance"),
-            "by_category": {c: layered_by_category[c].as_json() for c in sorted(_P21_CATEGORIES)},
-            "total": layered_total.as_json(),
-            "bdi_floor_by_category": (
-                {c: str(floors[c]) for c in sorted(floors)} if isinstance(floors, Mapping) else None
-            ),
-            "bdi_below_category_floor": (
-                sorted(c for c in floors if bdi_by_category[c] < floors[c]) if isinstance(floors, Mapping) else None
-            ),
-        }
-    else:
-        result.markup_layers = None
+    result.markup_layers = {
+        "schema": "concilium.p21.markup-layers.v1",
+        "formula": MARKUP_FORMULA,
+        "rates": {c: markup_layers[c].as_json() for c in sorted(_P21_CATEGORIES)},
+        "provenance": context.get("markup_layers_provenance"),
+        "by_category": {c: layered_by_category[c].as_json() for c in sorted(_P21_CATEGORIES)},
+        "total": layered_total.as_json(),
+        "bdi_floor_by_category": (
+            {c: str(floors[c]) for c in sorted(floors)} if isinstance(floors, Mapping) else None
+        ),
+        "bdi_below_category_floor": (
+            sorted(c for c in floors if bdi_by_category[c] < floors[c]) if isinstance(floors, Mapping) else None
+        ),
+    }
     result.pricing_gates = {
         "schema": "concilium.p21.pricing-gates.v1",
         "certification_intent": intent,
@@ -1004,9 +1019,7 @@ def apply_pricing_report_evidence(
         "regulatory_bdi_floor": str(gates.regulatory_bdi_floor) if gates.regulatory_bdi_floor is not None else None,
         "profit_amount": str(gates.profit_amount),
         "realized_margin": str(gates.realized_margin) if gates.realized_margin is not None else None,
-        "profit_layer_amount": (
-            str(gates.profit_layer_amount) if gates.profit_layer_amount is not None else None
-        ),
+        "profit_layer_amount": str(gates.profit_layer_amount),
         "profit_layer_share": (
             str(gates.profit_layer_share) if gates.profit_layer_share is not None else None
         ),

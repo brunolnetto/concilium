@@ -5,7 +5,8 @@ TCU formula builds it: overhead (C*AC, C*RSG, then DF on the loaded cost),
 profit (L on cost + overhead), taxes (each a share of the price). The layers
 add up to the price, are linear in the cost, and aggregate by plain addition.
 Also: the profit layer's share of the price, and the aggregate BDI floor as
-the per-category floors weighted by the catalog composition.
+the per-category floors weighted by the catalog composition. Layers are
+mandatory: a cost whose category declares no layers has no price.
 Stdlib only; written from the rule, not from production code.
 """
 
@@ -45,8 +46,13 @@ def _layers(cost: F, rates: dict[str, Any]) -> dict[str, F]:
 def evaluate_markup_layers(case: dict[str, Any]) -> dict[str, Any]:
     totals = {key: F(0) for key in ("cost", "overhead", "profit", "taxes", "price")}
     by_category: dict[str, dict[str, str]] = {}
+    declared = case.get("rates")
     for category, cost in case["costs"].items():
-        layers = _layers(F(cost), case["rates"][category])
+        # Layers are mandatory: a cost with no declared layers has no price
+        # (there is no flat or default rate to fall back on).
+        if not isinstance(declared, dict) or not isinstance(declared.get(category), dict):
+            raise MarkupLayersError(f"category {category} has no declared markup layers: no price")
+        layers = _layers(F(cost), declared[category])
         if layers["cost"] + layers["overhead"] + layers["profit"] + layers["taxes"] != layers["price"]:
             raise MarkupLayersError("layers do not add up to the price")
         by_category[category] = {key: str(value) for key, value in layers.items()}

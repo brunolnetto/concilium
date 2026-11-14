@@ -1,5 +1,5 @@
 {
- "$comment": "P24 golden RFP scenario 2 (#24): Q-FS release at theta 0.5 (eap-02 after half of eap-01), shared BGTC equipment across two lots with a 1-week gap (plant kept on standby: high fixture mob/demob; loaders released and remobilised: low fixture mob/demob), labour pool 7 shared by overlapping activities, nonzero MOB/DEMOB (IND). Same calibrated SICRO productions and per-unit BOM as spec.json. Mob/demob values are fixture assumptions (absent from the catalog). C^cat basis recomputed by the independent oracle in the test; the P16 decisions are checked by the exhaustive P22-C oracle.",
+ "$comment": "P24 golden RFP scenario 2 (#24): Q-FS release at theta 0.5 (eap-02 after half of eap-01), shared BGTC equipment across two lots with a 1-week gap (plant kept on standby: high fixture mob/demob; loaders released and remobilised: low fixture mob/demob), labour pool 7 shared by overlapping activities, nonzero MOB/DEMOB (IND). Same calibrated SICRO productions and per-unit BOM as spec.json. Mob/demob values are fixture assumptions (absent from the catalog). C^cat basis recomputed by the independent oracle in the test; the P16 decisions are checked by the exhaustive P22-C oracle. P21 markup layers are fixture assumptions, not company data: every category declares AC 10%, R+S+G 0, DF 0, profit L = 2/11 and no taxes on the price, so (1 + 1/10)(1 + 2/11) = 13/10 and bdi_by_category = 3/10 is exactly the layers' markup; the profit layer is (11/10 * 2/11)/(13/10) = 2/13 of the price (>= minimum 1/20).",
  "nome": "golden-rfp-sharing-fixture",
  "contexto_id": "mendeslobo",
  "dates": {
@@ -481,6 +481,43 @@
      "MAT": "3/10",
      "COMB": "3/10",
      "IND": "3/10"
+    },
+    "markup_layers": {
+     "MO": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "EQ": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "MAT": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "COMB": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "IND": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     }
     },
     "catalog": {
      "amount": "3124980799425652789/343113658500",

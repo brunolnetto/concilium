@@ -22,14 +22,20 @@ The contract schema is `concilium.p21.pricing-evidence.v1`:
 
 - `inventory_scope`: `status` (`NO_INVENTORY` or `COMPLETE`), `source`,
   `reference_id`, and `fingerprint`.
-- `bdi_by_category`: exact rational strings for all five categories
-  (`MO`, `EQ`, `MAT`, `COMB`, `IND`).
+- `markup_layers`: **mandatory** (P23 N9). For each of the five categories
+  (`MO`, `EQ`, `MAT`, `COMB`, `IND`): `ac`, `rsg`, `df`, `l` and `taxes`
+  (`{name: rate}`), exact nonnegative strings. A declaration without layers is
+  not priced.
+- `bdi_by_category`: exact rational strings for all five categories. It is the
+  declared consequence of the layers and must equal their markup exactly,
+  `(1 + ac + rsg)(1 + df)(1 + l)/(1 - Σ taxes) - 1`.
 - `catalog`: benchmark `amount`, `currency`, `source`, `reference_id`, and
   `basis_fingerprint`. Its currency must match the server-resolved catalog.
 - `operational_basis_fingerprint`: explicit physical-scope identity.
 - `regulatory_basis`: optional `amount`, `currency`, `basis_fingerprint`,
   `minimum_rate`, `source`, and `reference_id`.
-- `minimum_profit_margin`: optional exact rational string.
+- `minimum_profit_margin`: optional exact rational string. It is compared to the
+  profit layer's share of the price, never to `(P - C)/P`.
 - `inventory`: required only for `COMPLETE` scope. It declares
   `calendar_weeks`, `goods`, optional `internal_arrivals`, optional `purchases`,
   and optional `holding_tariffs`. Goods and calendar are required for a
@@ -98,6 +104,13 @@ Example (illustrative values, not a project quote):
   },
   "bdi_by_category": {
     "MO": "0", "EQ": "0", "MAT": "0", "COMB": "1", "IND": "0"
+  },
+  "markup_layers": {
+    "MO": {"ac": "0", "rsg": "0", "df": "0", "l": "0", "taxes": {}},
+    "EQ": {"ac": "0", "rsg": "0", "df": "0", "l": "0", "taxes": {}},
+    "MAT": {"ac": "0", "rsg": "0", "df": "0", "l": "0", "taxes": {}},
+    "COMB": {"ac": "1/4", "rsg": "0", "df": "0", "l": "3/5", "taxes": {}},
+    "IND": {"ac": "0", "rsg": "0", "df": "0", "l": "0", "taxes": {}}
   },
   "catalog": {
     "amount": "100",
