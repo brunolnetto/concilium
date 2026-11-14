@@ -5,8 +5,10 @@ Stdlib-only; designed to run without production dependencies or Azure credential
 from __future__ import annotations
 
 import argparse
+import io
 import subprocess
 import sys
+import tokenize
 from pathlib import PurePosixPath
 
 SPEC = "docs/product/5-specifications/formulario_longo/"
@@ -56,11 +58,38 @@ def is_evidence(path: str) -> bool:
     return any(normalized.startswith(prefix) for prefix in (SPEC, VECTORS)) or normalized in EVIDENCE
 
 
-def assess_paths(changed: set[str]) -> tuple[bool, str]:
+def code_tokens(source: bytes) -> tuple[tuple[int, str], ...]:
+    """Python token stream without comments and comment-only line breaks.
+
+    Docstrings, indentation and the source encoding stay significant.
+    Raises tokenize.TokenError / SyntaxError on unparseable input.
+    """
+    ignored = {tokenize.COMMENT, tokenize.NL}
+    return tuple(
+        (tok.type, tok.string)
+        for tok in tokenize.tokenize(io.BytesIO(source).readline)
+        if tok.type not in ignored
+    )
+
+
+def is_comment_only_change(before: bytes, after: bytes) -> bool:
+    """True only when two Python sources differ in comments alone; else fail closed."""
+    try:
+        return code_tokens(before) == code_tokens(after)
+    except (tokenize.TokenError, SyntaxError, UnicodeDecodeError):
+        return False
+
+
+def assess_paths(changed: set[str], comment_only: set[str] = frozenset()) -> tuple[bool, str]:
+    """`comment_only`: economic paths proven to change only comments (see
+    comment_only_changes); they need no spec/vector evidence."""
     if not changed:
         return False, "Cannot certify an empty/unknown diff."
-    impacted = sorted(p for p in changed if is_economic(p))
+    exempt = sorted(p for p in changed if is_economic(p) and p in comment_only)
+    impacted = sorted(p for p in changed if is_economic(p) and p not in comment_only)
     if not impacted:
+        if exempt:
+            return True, f"Economic files changed only in comments (code tokens identical): {exempt}."
         return True, "No production economic contract files changed."
     # Inventory-only updates cannot substitute for a reviewed normative source.
     specifications = sorted(p for p in changed
@@ -96,6 +125,32 @@ def git_changed(base: str, head: str, *, mode: str = "pr") -> set[str]:
     return {p.strip() for p in output.splitlines() if p.strip()}
 
 
+def _blob(rev: str, path: str) -> bytes | None:
+    result = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True)
+    return result.stdout if result.returncode == 0 else None
+
+
+def comment_only_changes(base: str, head: str, paths: set[str], *, mode: str = "pr") -> set[str]:
+    """Economic .py paths whose code token stream is identical on both sides.
+
+    Uses the same comparison points as git_changed (merge-base for PRs, the
+    endpoints for pushes). Added, deleted, non-Python or unparseable files are
+    never exempt.
+    """
+    if mode == "pr":
+        before = subprocess.check_output(["git", "merge-base", base, head], text=True).strip()
+    else:
+        before = base
+    exempt: set[str] = set()
+    for path in paths:
+        if not (is_economic(path) and path.endswith(".py")):
+            continue
+        old, new = _blob(before, path), _blob(head, path)
+        if old is not None and new is not None and is_comment_only_change(old, new):
+            exempt.add(path)
+    return exempt
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", required=True)
@@ -104,7 +159,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         paths = git_changed(args.base, args.head, mode=args.mode)
-        valid, reason = assess_paths(paths)
+        exempt = comment_only_changes(args.base, args.head, paths, mode=args.mode)
+        valid, reason = assess_paths(paths, exempt)
     except (ValueError, subprocess.CalledProcessError) as exc:
         print(f"::error::Contract diff unavailable; refusing to pass: {exc}")
         return 1
