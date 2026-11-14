@@ -1,0 +1,54 @@
+{
+  "protocol": "formalism-activity-cost/2",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/FORMALISMO_LONGO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["IX", "X", "XIV.9", "P23-N4"],
+    "scope": "exact contractual cost per activity and BDI category from P16 chains: owned active weeks x tariff + each chain's lifecycle (idle + MOB + DEMOB) pro rata to the active weeks it worked per activity; no persisted cost partitions (#206)",
+    "rounding": "Fraction exact"
+  },
+  "vectors": [
+    {
+      "case_id": "shared_crane_one_hire_bridges_idle_week",
+      "hand_check": "CRANE (EQ) one hire: A owns W01, W02 idle, B owns W03 at 5. Lifecycle = idle 1 x 2 + MOB 30 + DEMOB 30 = 62, worked 1:1 -> 31 each; A EQ 5+31 = 36, B EQ 36. OPER (MO): A owns W01 at 7, no lifecycle.",
+      "inputs": {
+        "contracts": [
+          {"tipo_id": "CRANE", "category": "EQ", "active_week": "5", "idle_week": "2", "mobilize": "30", "demobilize": "30",
+           "standby": "2", "mobility": "60",
+           "chains": [{"active_week_owner": {"2026-W01": "A", "2026-W03": "B"}, "idle_weeks": 1}]},
+          {"tipo_id": "OPER", "category": "MO", "active_week": "7", "idle_week": "0", "mobilize": "0", "demobilize": "0",
+           "standby": "0", "mobility": "0",
+           "chains": [{"active_week_owner": {"2026-W01": "A"}, "idle_weeks": 0}]}
+        ]
+      },
+      "expected": {"A": {"EQ": "36", "MO": "7"}, "B": {"EQ": "36", "MO": "0"}}
+    },
+    {
+      "case_id": "lifecycle_follows_worked_weeks_not_cost_partitions",
+      "hand_check": "One hire: A owns W01, W02; W03 idle; B owns W04; active 5, idle 2, MOB 30 + DEMOB 30. Lifecycle 62 split 2:1 -> A 124/3, B 62/3. A EQ 10 + 124/3 = 154/3, B EQ 5 + 62/3 = 77/3; sum 77 = 3 active weeks x 5 + 62 (the pool total). A legacy 50/50 cost partition would give A 41, B 36.",
+      "inputs": {
+        "contracts": [
+          {"tipo_id": "CRANE", "category": "EQ", "active_week": "5", "idle_week": "2", "mobilize": "30", "demobilize": "30",
+           "standby": "2", "mobility": "60",
+           "chains": [{"active_week_owner": {"2026-W01": "A", "2026-W02": "A", "2026-W04": "B"}, "idle_weeks": 1}]}
+        ]
+      },
+      "expected": {"A": {"EQ": "154/3", "MO": "0"}, "B": {"EQ": "77/3", "MO": "0"}}
+    },
+    {
+      "case_id": "remobilised_unit_each_hire_owns_its_movement",
+      "hand_check": "Released and remobilised: hire 1 serves A in W01, hire 2 serves B in W04, no idle. Each hire carries its own MOB 30 + DEMOB 30 = 60: A EQ 5 + 60 = 65, B EQ 65; witness mobility 120.",
+      "inputs": {
+        "contracts": [
+          {"tipo_id": "LOADER", "category": "EQ", "active_week": "5", "idle_week": "5", "mobilize": "30", "demobilize": "30",
+           "standby": "0", "mobility": "120",
+           "chains": [
+             {"active_week_owner": {"2026-W01": "A"}, "idle_weeks": 0},
+             {"active_week_owner": {"2026-W04": "B"}, "idle_weeks": 0}
+           ]}
+        ]
+      },
+      "expected": {"A": {"EQ": "65", "MO": "0"}, "B": {"EQ": "65", "MO": "0"}}
+    }
+  ]
+}

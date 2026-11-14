@@ -72,10 +72,11 @@ def _canonical(*, diagnostic_mo_eq: float = 36.0) -> CanonicalModel:
     witness = {
         "resource_type": "CRANE", "contract_id": "C1", "currency": "BRL",
         "calendar_weeks": ["2026-W01", "2026-W02", "2026-W03"],
-        "tariff": {"active_week": "5"},
+        "tariff": {"active_week": "5", "idle_week": "2", "mobilize": "30", "demobilize": "30"},
         "demand_by_activity": {"A": [1, 0, 1]},
         "chains": [{
             "active_week_indices": [0, 2],
+            "idle_weeks": 1,
             "activity_by_week": {"2026-W01": "A", "2026-W03": "A"},
         }],
         "costs": {"active": "10", "standby": "2", "mobility": "60", "pool_total": "72"},
@@ -113,10 +114,11 @@ def _canonical_shared_machine_partial_final_week() -> CanonicalModel:
     witness = {
         "resource_type": "CRANE", "contract_id": "C1", "currency": "BRL",
         "calendar_weeks": ["2026-W01", "2026-W02", "2026-W03"],
-        "tariff": {"active_week": "5"},
+        "tariff": {"active_week": "5", "idle_week": "2", "mobilize": "30", "demobilize": "30"},
         "demand_by_activity": {"A": [1, 0, 0], "B": [0, 0, 1]},
         "chains": [{
             "active_week_indices": [0, 2],
+            "idle_weeks": 1,
             "activity_by_week": {"2026-W01": "A", "2026-W03": "B"},
         }],
         "costs": {"active": "10", "standby": "2", "mobility": "60", "pool_total": "72"},

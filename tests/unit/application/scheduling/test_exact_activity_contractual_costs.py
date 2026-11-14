@@ -18,40 +18,73 @@ from concilium.domain.models.canonical import (
 )
 
 
-def _contract(tipo_id: str, category: str, demand: dict, owners: dict, partitions: list, *, active="5",
-              standby="2", mobility="60") -> RecursoContrato:
+def _contract(
+    tipo_id: str, category: str, demand: dict, owners: dict, partitions: list, *, active="5", standby="2", mobility="60"
+) -> RecursoContrato:
     weeks = ["2026-W01", "2026-W02", "2026-W03"]
     active_idx = [weeks.index(w) for w in owners]
     total = Fraction(active) * len(active_idx) + Fraction(standby) + Fraction(mobility)
+    # One chain (one hire) spanning its active weeks; the idle weeks inside it
+    # and its single MOB + DEMOB reproduce the witness standby/mobility totals.
+    idle_weeks = (max(active_idx) - min(active_idx) + 1) - len(active_idx)
+    idle_rate = Fraction(standby) / idle_weeks if idle_weeks else Fraction(0)
+    half_move = Fraction(mobility) / 2
     witness = {
-        "resource_type": tipo_id, "contract_id": f"C-{tipo_id}", "currency": "BRL", "category": category,
+        "resource_type": tipo_id,
+        "contract_id": f"C-{tipo_id}",
+        "currency": "BRL",
+        "category": category,
         "calendar_weeks": weeks,
-        "tariff": {"active_week": active},
+        "tariff": {
+            "active_week": active,
+            "idle_week": str(idle_rate),
+            "mobilize": str(half_move),
+            "demobilize": str(half_move),
+        },
         "demand_by_activity": demand,
-        "chains": [{"active_week_indices": active_idx, "activity_by_week": owners}],
-        "costs": {"active": str(Fraction(active) * len(active_idx)), "standby": standby, "mobility": mobility,
-                  "pool_total": str(total)},
+        "chains": [{"active_week_indices": active_idx, "activity_by_week": owners, "idle_weeks": idle_weeks}],
+        "costs": {
+            "active": str(Fraction(active) * len(active_idx)),
+            "standby": standby,
+            "mobility": mobility,
+            "pool_total": str(total),
+        },
     }
     return RecursoContrato(
-        contrato_id=f"C-{tipo_id}", tipo_id=tipo_id, quantidade_contratada=1,
-        semana_inicio="2026-W01", semana_fim="2026-W03", semanas_contrato=3,
-        custo_unit_semanal=float(active), custo_total_contrato=float(total),
-        p16_global_assignment=witness, particao_por_item=partitions,
+        contrato_id=f"C-{tipo_id}",
+        tipo_id=tipo_id,
+        quantidade_contratada=1,
+        semana_inicio="2026-W01",
+        semana_fim="2026-W03",
+        semanas_contrato=3,
+        custo_unit_semanal=float(active),
+        custo_total_contrato=float(total),
+        p16_global_assignment=witness,
+        particao_por_item=partitions,
     )
 
 
 def _shared_crane() -> RecursoContrato:
     # A owns W01, B owns W03; standby 2 + mobility 60 split 50/50 by partitions.
     return _contract(
-        "CRANE", "EQ", {"A": [1, 0, 0], "B": [0, 0, 1]}, {"2026-W01": "A", "2026-W03": "B"},
+        "CRANE",
+        "EQ",
+        {"A": [1, 0, 0], "B": [0, 0, 1]},
+        {"2026-W01": "A", "2026-W03": "B"},
         [{"item_id": "A", "custo_total_particionado": 36.0}, {"item_id": "B", "custo_total_particionado": 36.0}],
     )
 
 
 def _operator() -> RecursoContrato:
     return _contract(
-        "OPER", "MO", {"A": [1, 0, 0]}, {"2026-W01": "A"},
-        [{"item_id": "A", "custo_total_particionado": 7.0}], active="7", standby="0", mobility="0",
+        "OPER",
+        "MO",
+        {"A": [1, 0, 0]},
+        {"2026-W01": "A"},
+        [{"item_id": "A", "custo_total_particionado": 7.0}],
+        active="7",
+        standby="0",
+        mobility="0",
     )
 
 
@@ -84,7 +117,11 @@ def _team(item: str, equipment: list[str], functions: list[str]) -> EquipeDireta
         item_id=item,
         equipamentos=[EquipamentoEquipeDireta(equip_id=e) for e in equipment],
         funcoes=[FuncaoEquipeDireta(funcao_id=f) for f in functions],
-        custo_inst_mo=999.0, custo_inst_eq=999.0, custo_inst_comb=3.0, custo_inst_mat=4.0, custo_total=2005.0,
+        custo_inst_mo=999.0,
+        custo_inst_eq=999.0,
+        custo_inst_comb=3.0,
+        custo_inst_mat=4.0,
+        custo_total=2005.0,
     )
 
 
@@ -122,9 +159,15 @@ def test_utilization_summary_standby_follows_the_p16_witness() -> None:
     module = sys.modules[run_equipes_e_alocacao.__module__]
     align = module.__dict__["resumo_alinhado_a_testemunha_p16"]
     legacy = ResumoUtilizacaoContrato(
-        contrato_id="C-OPER", tipo_id="OPER", quantidade_contratada=4, semanas_contrato=3,
-        machine_weeks_disponiveis=12, machine_weeks_usados=10, machine_weeks_standby=2,
-        taxa_utilizacao_pct=83.3, custo_standby_total=14.0,
+        contrato_id="C-OPER",
+        tipo_id="OPER",
+        quantidade_contratada=4,
+        semanas_contrato=3,
+        machine_weeks_disponiveis=12,
+        machine_weeks_usados=10,
+        machine_weeks_standby=2,
+        taxa_utilizacao_pct=83.3,
+        custo_standby_total=14.0,
     )
     witness = {"demand": [3, 3, 4], "standby": [0, 0, 0], "costs": {"standby": "0"}}
     aligned = align(legacy, witness)
@@ -140,8 +183,13 @@ def _pe(*, frentes: float):
     from concilium.domain.models.canonical import PontoEquilibrio
 
     return PontoEquilibrio(
-        item_id="A", custo_fixo_equipe=1.0, custo_venda_cpu=1.0, delta=0.0, delta_pct=0.0,
-        status_validacao="OK", frentes_equivalentes_necessarias=frentes,
+        item_id="A",
+        custo_fixo_equipe=1.0,
+        custo_venda_cpu=1.0,
+        delta=0.0,
+        delta_pct=0.0,
+        status_validacao="OK",
+        frentes_equivalentes_necessarias=frentes,
     )
 
 
@@ -198,32 +246,78 @@ def test_exact_ratio_only_for_fully_covered_activities_with_p18_evidence() -> No
     assert ratios == {"A": Fraction(1)}
 
 
-def test_production_activity_cost_matches_the_oracle_vector() -> None:
-    """exact_activity_contractual_costs reproduces activity_cost_reconciliation_v1 exactly."""
+def _contract_from_vector(spec: dict) -> RecursoContrato:
+    weeks = ["2026-W01", "2026-W02", "2026-W03", "2026-W04"]
+    activities = sorted({a for chain in spec["chains"] for a in chain["active_week_owner"].values()})
+    demand = {a: [0] * len(weeks) for a in activities}
+    chains = []
+    for chain in spec["chains"]:
+        owners = chain["active_week_owner"]
+        for week, activity in owners.items():
+            demand[activity][weeks.index(week)] += 1
+        chains.append(
+            {
+                "active_week_indices": sorted(weeks.index(w) for w in owners),
+                "activity_by_week": owners,
+                "idle_weeks": chain["idle_weeks"],
+            }
+        )
+    active_weeks = sum(len(chain["active_week_owner"]) for chain in spec["chains"])
+    active = Fraction(spec["active_week"]) * active_weeks
+    total = active + Fraction(spec["standby"]) + Fraction(spec["mobility"])
+    witness = {
+        "resource_type": spec["tipo_id"],
+        "contract_id": f"C-{spec['tipo_id']}",
+        "currency": "BRL",
+        "category": spec["category"],
+        "calendar_weeks": weeks,
+        "tariff": {k: spec[k] for k in ("active_week", "idle_week", "mobilize", "demobilize")},
+        "demand_by_activity": demand,
+        "chains": chains,
+        "costs": {
+            "active": str(active),
+            "standby": spec["standby"],
+            "mobility": spec["mobility"],
+            "pool_total": str(total),
+        },
+    }
+    return RecursoContrato(
+        contrato_id=f"C-{spec['tipo_id']}",
+        tipo_id=spec["tipo_id"],
+        quantidade_contratada=len(chains),
+        semana_inicio=weeks[0],
+        semana_fim=weeks[-1],
+        semanas_contrato=len(weeks),
+        custo_unit_semanal=float(spec["active_week"]),
+        custo_total_contrato=float(total),
+        p16_global_assignment=witness,
+        particao_por_item=[],
+    )
+
+
+def _vector_cases() -> list[dict]:
     from pathlib import Path
 
-    vector = json.loads(
-        (
-            Path(__file__).resolve().parents[3] / "reference_formalism/vectors/activity_cost_reconciliation_v1.json"
-        ).read_text()
-    )["vectors"][0]
-    weeks = ["2026-W01", "2026-W02", "2026-W03"]
-    contracts = []
-    for spec in vector["inputs"]["contracts"]:
-        owners = spec["active_week_owner"]
-        demand = {aid: [1 if owners.get(w) == aid else 0 for w in weeks] for aid in sorted(set(owners.values()))}
-        contracts.append(
-            _contract(
-                spec["tipo_id"], spec["category"], demand, owners,
-                [{"item_id": k, "custo_total_particionado": float(Fraction(v))} for k, v in spec["partitions"].items()],
-                active=spec["active_week"], standby=spec["standby"], mobility=spec["mobility"],
-            )
-        )
+    path = Path(__file__).resolve().parents[3] / "reference_formalism/vectors/activity_cost_reconciliation_v2.json"
+    return json.loads(path.read_text())["vectors"]
+
+
+@pytest.mark.parametrize("case", _vector_cases(), ids=lambda c: c["case_id"])
+def test_production_activity_cost_matches_the_oracle_vector(case: dict) -> None:
+    """exact_activity_contractual_costs reproduces activity_cost_reconciliation_v2 exactly,
+    with no persisted cost partitions (particao_por_item is empty)."""
+    contracts = [_contract_from_vector(spec) for spec in case["inputs"]["contracts"]]
     observed = {
         aid: {c: str(v) for c, v in sorted(row.items())}
         for aid, row in sorted(exact_activity_contractual_costs(contracts).items())
     }
-    assert observed == vector["expected"]
+    assert observed == case["expected"]
+
+
+def test_chains_that_do_not_reproduce_the_witness_fail_closed() -> None:
+    spec = dict(_vector_cases()[0]["inputs"]["contracts"][0], standby="3")
+    with pytest.raises(ValueError, match="reproduce"):
+        exact_activity_contractual_costs([_contract_from_vector(spec)])
 
 
 def test_exact_ratio_uses_zero_v_only_for_declared_no_consumables() -> None:

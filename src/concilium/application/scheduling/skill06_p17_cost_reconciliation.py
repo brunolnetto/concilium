@@ -177,11 +177,10 @@ def _activity_lifecycle_allocations(
 ) -> tuple[dict[str, Fraction], Fraction]:
     """Allocate non-active P16 costs using Skill05's persisted item partitions.
 
-    Skill06's legacy MO+EQ diagnostic is built from persisted instancial cost
-    partitions. Those partitions include standby MO/EQ and MOB/DEMOB (folded into
-    EQ by the existing ADR-085 adapter). Subtract their exact P16 amounts, allocated
-    by the same persisted partition weights, before comparing activity diagnostics
-    to the active-only K witness. This is read-only and does not rewrite legacy finance.
+    The activity diagnostic includes standby MO/EQ and MOB/DEMOB. Subtract their
+    exact P16 amounts, allocated by chain ownership (N4, the same rule used by
+    exact_activity_contractual_costs), before comparing to the active-only K
+    witness. Read-only.
     """
     return _contracts_activity_lifecycle_allocations(canonical.contratos_recurso)
 
@@ -189,6 +188,14 @@ def _activity_lifecycle_allocations(
 def _contracts_activity_lifecycle_allocations(
     contracts: Sequence[RecursoContrato],
 ) -> tuple[dict[str, Fraction], Fraction]:
+    """N4: standby and MOB/DEMOB per activity by P16 chain ownership.
+
+    Each chain is one hire of one unit. Its lifecycle cost (idle weeks x idle
+    tariff + MOB + DEMOB) is allocated to the activities the chain served, pro
+    rata to the active weeks it worked for each (``activity_by_week``) — typed
+    instance/activity evidence (P11B), no persisted cost partitions (#206).
+    The chains must reproduce the witness standby and mobility totals exactly.
+    """
     allocated: dict[str, Fraction] = {}
     nonactive_total = Fraction(0)
     for contract in contracts:
@@ -199,41 +206,42 @@ def _contracts_activity_lifecycle_allocations(
         costs = _mapping(witness.get("costs"), f"{contract.tipo_id}: P16 costs")
         standby = _rational(costs.get("standby"), f"{contract.tipo_id}: P16 standby cost")
         mobility = _rational(costs.get("mobility"), f"{contract.tipo_id}: P16 mobility cost")
-        nonactive = standby + mobility
-        nonactive_total += nonactive
-
-        partitions = getattr(contract, "particao_por_item", None)
-        if not isinstance(partitions, list):
-            raise ValueError(f"{contract.tipo_id}: persisted activity cost partitions are missing")
-        weights: dict[str, Fraction] = {}
-        for part in partitions:
-            activity_id = getattr(part, "item_id", None)
-            if not isinstance(activity_id, str) or not activity_id.strip():
-                raise ValueError(f"{contract.tipo_id}: invalid activity partition identity")
-            if activity_id in weights:
-                raise ValueError(f"{contract.tipo_id}/{activity_id}: duplicate activity cost partition")
-            weights[activity_id] = _legacy_money(
-                getattr(part, "custo_total_particionado", None),
-                f"{contract.tipo_id}/{activity_id}.custo_total_particionado",
-            )
-        partition_total = sum(weights.values(), Fraction(0))
-        if nonactive == 0:
+        nonactive_total += standby + mobility
+        if standby + mobility == 0:
             continue
-        if partition_total <= 0:
-            raise ValueError(
-                f"{contract.tipo_id}: standby/MOB/DEMOB costs cannot be allocated without positive partitions"
-            )
-        contract_total = _legacy_money(
-            getattr(contract, "custo_total_contrato", None),
-            f"{contract.tipo_id}.custo_total_contrato",
+        tariff = _mapping(witness.get("tariff"), f"{contract.tipo_id}: P16 tariff")
+        idle_rate = _rational(tariff.get("idle_week"), f"{contract.tipo_id}: idle tariff")
+        movement = _rational(tariff.get("mobilize"), f"{contract.tipo_id}: mobilize") + _rational(
+            tariff.get("demobilize"), f"{contract.tipo_id}: demobilize"
         )
-        if abs(partition_total - contract_total) > _CENT:
+        chains = witness.get("chains")
+        if not isinstance(chains, list) or not chains:
+            raise ValueError(f"{contract.tipo_id}: P16 chains are missing")
+        chain_standby = Fraction(0)
+        chain_mobility = Fraction(0)
+        for chain in chains:
+            row = _mapping(chain, f"{contract.tipo_id}: P16 chain")
+            owners = _mapping(row.get("activity_by_week"), "P16 activity-by-week assignment")
+            idle_weeks = row.get("idle_weeks")
+            if type(idle_weeks) is not int or idle_weeks < 0:
+                raise ValueError(f"{contract.tipo_id}: chain idle weeks must be a nonnegative integer")
+            worked: dict[str, int] = {}
+            for activity_id in owners.values():
+                if not isinstance(activity_id, str) or not activity_id.strip():
+                    raise ValueError(f"{contract.tipo_id}: invalid chain activity identity")
+                worked[activity_id] = worked.get(activity_id, 0) + 1
+            if not worked:
+                raise ValueError(f"{contract.tipo_id}: chain without active weeks cannot own lifecycle cost")
+            lifecycle = idle_rate * idle_weeks + movement
+            chain_standby += idle_rate * idle_weeks
+            chain_mobility += movement
+            weeks = sum(worked.values())
+            for activity_id, count in worked.items():
+                allocated[activity_id] = allocated.get(activity_id, Fraction(0)) + lifecycle * count / weeks
+        if chain_standby != standby or chain_mobility != mobility:
             raise ValueError(
-                f"{contract.tipo_id}: activity partitions do not reconcile to persisted contract total"
+                f"{contract.tipo_id}: P16 chains do not reproduce the witness standby/mobility totals"
             )
-        for activity_id, weight in weights.items():
-            if weight > 0:
-                allocated[activity_id] = allocated.get(activity_id, Fraction(0)) + nonactive * weight / partition_total
     return allocated, nonactive_total
 
 
@@ -243,8 +251,8 @@ def exact_activity_contractual_costs(
     """Exact MO/EQ cost per activity from the P16 witnesses of ``contracts``.
 
     Each contract contributes its active K for the weeks an activity owns plus
-    its standby/MOB/DEMOB allocated by the persisted item partitions, i.e. the
-    same quantities P17-C reconciles against. Raises ValueError when any
+    its standby/MOB/DEMOB allocated by chain ownership (N4), i.e. the same
+    quantities P17-C reconciles against. Raises ValueError when any
     contract lacks an exact witness or a valid MO/EQ category.
     """
     result: dict[str, dict[Literal["MO", "EQ"], Fraction]] = {}
