@@ -1,9 +1,10 @@
-"""Independent goldens for exact per-activity contractual cost (P17-C basis)."""
+"""Independent goldens for exact per-activity contractual cost (N4, P17-C basis)."""
 
 from __future__ import annotations
 
 import json
 from copy import deepcopy
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
@@ -13,12 +14,12 @@ from tests.reference_formalism.activity_cost_reference import (
     evaluate_activity_costs,
 )
 
-PATH = Path(__file__).parent / "vectors" / "activity_cost_reconciliation_v1.json"
+PATH = Path(__file__).parent / "vectors" / "activity_cost_reconciliation_v2.json"
 
 
 def goldens() -> list[dict]:
     doc = json.loads(PATH.read_text(encoding="utf-8"))
-    assert doc["protocol"] == "formalism-activity-cost/1"
+    assert doc["protocol"] == "formalism-activity-cost/2"
     assert doc["formalism"]["baseline_blob"] == "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5"
     return doc["vectors"]
 
@@ -34,8 +35,30 @@ def test_corrupted_activity_cost_golden_is_detected() -> None:
     assert evaluate_activity_costs(deepcopy(case)) != case["expected"]
 
 
-def test_lifecycle_cost_without_partitions_is_rejected() -> None:
+def test_activity_totals_conserve_the_pool_cost() -> None:
+    """Allocation moves money between activities, never creates or drops it."""
+    for case in goldens():
+        total = sum(Fraction(v) for row in case["expected"].values() for v in row.values())
+        pool = Fraction(0)
+        for contract in case["inputs"]["contracts"]:
+            weeks = sum(len(chain["active_week_owner"]) for chain in contract["chains"])
+            pool += (
+                Fraction(contract["active_week"]) * weeks
+                + Fraction(contract["standby"])
+                + Fraction(contract["mobility"])
+            )
+        assert total == pool, case["case_id"]
+
+
+def test_chains_that_do_not_reproduce_the_witness_are_rejected() -> None:
     case = deepcopy(goldens()[0])
-    case["inputs"]["contracts"][0]["partitions"] = {"A": "0", "B": "0"}
-    with pytest.raises(ActivityCostContractError, match="partitions"):
+    case["inputs"]["contracts"][0]["standby"] = "3"
+    with pytest.raises(ActivityCostContractError, match="reproduce"):
+        evaluate_activity_costs(case)
+
+
+def test_chain_without_active_weeks_is_rejected() -> None:
+    case = deepcopy(goldens()[0])
+    case["inputs"]["contracts"][0]["chains"].append({"active_week_owner": {}, "idle_weeks": 0})
+    with pytest.raises(ActivityCostContractError, match="without active weeks"):
         evaluate_activity_costs(case)

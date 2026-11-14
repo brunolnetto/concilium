@@ -28,10 +28,10 @@ Um certificado só é GO se, além de todos os gates PASS e fontes presentes em 
 Quando **toda** a equipe padrão de uma atividade (equipamentos e funções) está coberta por contratos com testemunha P16 exata, o custo contratual da atividade por categoria \(k\in\{MO,EQ\}\) é
 
 \[
-C_i^{K,k}=\sum_{c:\,cat(c)=k}\Big(\tau_c^{ativo}\cdot\big|\{j:\ \text{semana ativa de }c\text{ possuída por }i\}\big|\;+\;(S_c+M_c)\,\frac{w_{ci}}{\sum_{i'}w_{ci'}}\Big),
+C_i^{K,k}=\sum_{c:\,cat(c)=k}\Big(\tau_c^{ativo}\cdot\big|\{j:\ \text{semana ativa de }c\text{ possuída por }i\}\big|\;+\;\sum_{h\in H_c}L_h\,\frac{n_{hi}}{\sum_{i'}n_{hi'}}\Big),\qquad L_h=\tau_c^{ocioso}\,s_h+c_c^{mob}+c_c^{demob},
 \]
 
-onde \(\tau_c^{ativo}\) é a tarifa semanal ativa, \(S_c\) e \(M_c\) os custos de standby e de mobilização/desmobilização da testemunha e \(w_{ci}\) a partição persistida do contrato. É a grandeza reconciliada pelo P17-C. O resumo de utilização do contrato reporta as semanas-máquina ativas e de standby e o custo de standby da testemunha (auditados por [V3]). Cobertura parcial **não** é completada nem zerada: a atividade mantém o modelo legado e o P17-C permanece NOGO.
+onde \(\tau_c^{ativo}\) e \(\tau_c^{ocioso}\) são as tarifas semanais ativa e ociosa, \(H_c\) as cadeias da testemunha P16 (cada cadeia = uma contratação de uma unidade), \(s_h\) as semanas ociosas da cadeia, \(n_{hi}\) as semanas ativas que a cadeia trabalhou para \(i\) (`activity_by_week`) e \(L_h\) o custo de ciclo de vida da cadeia. **Propriedade por cadeia (#206):** o standby e a mobilização/desmobilização de cada contratação vão às atividades que ela serviu, na proporção das semanas trabalhadas — evidência tipada instância/atividade (P11B), sem partições de custo persistidas. As cadeias devem reproduzir exatamente \(S_c=\sum_h\tau_c^{ocioso}s_h\) e \(M_c=|H_c|(c^{mob}+c^{demob})\) da testemunha; caso contrário a atividade não é avaliável. A alocação conserva o total do pool (\(\sum_i C_i^{K}=C^{pool}\)). Evidência: oráculo `activity_cost_reference.py` (protocolo `formalism-activity-cost/2`) e vetor `activity_cost_reconciliation_v2.json`, com paridade de produção. É a grandeza reconciliada pelo P17-C. O resumo de utilização do contrato reporta as semanas-máquina ativas e de standby e o custo de standby da testemunha (auditados por [V3]). Cobertura parcial **não** é completada nem zerada: a atividade mantém o modelo legado e o P17-C permanece NOGO.
 
 ## N5 — diagnóstico [D2] sobre razões exatas
 

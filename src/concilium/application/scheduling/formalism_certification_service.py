@@ -51,8 +51,8 @@ _ORACLE_REFERENCE = (
     "calendar-oracle:31fd9174ec88968da2130e1a0ceb93351df65ff5;"
     "catalog-envelope-oracle:6e8d934c5793a8fc12c4d5d9bb2198415e1c4049;"
     "catalog-envelope-vector:1e1fdaf8d1dcbd213aa8c90af9f73012108707c4;"
-    "activity-cost-oracle:486cea83a17db499038c4753e1ce5987113fe43c;"
-    "activity-cost-vector:76c36e75653171281ce6af8741f2394310807142;"
+    "activity-cost-oracle:5fbd561962537fd621bc4817345243afd7e35967;"
+    "activity-cost-vector:19e0cd013d39f84d36273331b828d7026781b3ab;"
     "consumption-declaration-oracle:c3dbd30f5be5e9e2350b890c0d46604e86014b0b;"
     "consumption-declaration-vector:f14c14a5b3201369f78b0529b607c2d25ac4de10"
 )
