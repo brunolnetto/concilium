@@ -155,6 +155,11 @@ def test_profile_prices_the_exact_ledger_with_nothing_hand_written(tmp_path: Pat
     # The minimum is a criterion on the profit layer's share of the price, not on (P - C)/P.
     share = Fraction(total["profit"]) / price
     assert Fraction(pricing_gates["profit_layer_share"]) == share < Fraction(3, 50)
+    # The certificate shows the criterion it applied: the profit layer's share against the minimum.
+    evidence = next(g for g in certificate["gates"] if g["gate_id"] == "PROFITABILITY")["observed"]
+    assert Fraction(evidence["profit_layer_share"]) == share
+    assert Fraction(evidence["minimum"]) == Fraction(3, 50)
+    assert Fraction(evidence["profit_layer"]) == Fraction(total["profit"])
     assert share < Fraction(pricing_gates["realized_margin"])  # (P - C)/P also holds overhead and taxes
     # Floors per category by nature (TCU 1st quartile: services 19.60%, mere supply 11.10%);
     # the V2 floor is their average weighted by the catalog composition.
