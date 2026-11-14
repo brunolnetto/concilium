@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from concilium.application.scheduling.project_bdi_exact_store import inject_exact_project_bdi
+
 if TYPE_CHECKING:
     from ._host_protocol import RuntimeHost
 
@@ -153,6 +155,12 @@ class InputsMixin(_Base):
 
         if skill_id == "06-resultado-financeiro" and "aliquotas_bdi_jurisdicao" not in normalized:
             self._apply_defaults_tributos_bdi(contexto, normalized)
+
+        if skill_id == "06-resultado-financeiro":
+            # N9.1: the project's saved exact BDI declaration reaches the exact price
+            # without the caller passing it; an explicit run input wins. A project with
+            # only the float profile gets a reason, never a conversion.
+            inject_exact_project_bdi(project, normalized)
 
         if skill_id == "04-cronograma" and "calendario_operacional" not in normalized:
             self._apply_defaults_cronograma(project, contexto, normalized)

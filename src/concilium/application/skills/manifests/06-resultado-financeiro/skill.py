@@ -40,6 +40,7 @@ from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
 _HERE = Path(__file__).resolve().parent
 PROJECT_BDI_INPUT = "bdi_projeto_exato"
+PROJECT_BDI_UNAVAILABLE_INPUT = "bdi_projeto_exato_indisponivel"
 
 
 def _load_estagio(subdir: str, func_name: str):
@@ -185,6 +186,7 @@ def run_resultado_financeiro(
     # converted: a project that carries one without the exact declaration has
     # project-specific terms the exact path cannot read, so nothing is priced.
     project_bdi = inputs.get(PROJECT_BDI_INPUT)
+    project_bdi_unavailable = inputs.get(PROJECT_BDI_UNAVAILABLE_INPUT)
     legacy_project_bdi = next((k for k in ("bdi_perfil", "perfil_bdi") if inputs.get(k) is not None), None)
     p21_project_gap: str | None = None
     if project_bdi is not None and p21_declaration is not None:
@@ -199,6 +201,10 @@ def run_resultado_financeiro(
             f"inputs.{legacy_project_bdi} declares project tax/profit terms in floating point; the exact price "
             f"needs them as exact strings in {PROJECT_BDI_INPUT} (nothing is converted)"
         )
+    elif project_bdi is None and project_bdi_unavailable is not None and p21_declaration is None and enabled:
+        # The runtime found project BDI terms it could not hand over as an exact
+        # declaration (only the float profile is saved, or the exact file is damaged).
+        p21_project_gap = str(project_bdi_unavailable)
     if p21_project_gap is not None:
         validacoes.append(ValidacaoItem(
             codigo="VAL-P21-NAO-AVALIADO",

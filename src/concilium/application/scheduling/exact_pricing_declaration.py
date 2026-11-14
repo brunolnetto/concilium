@@ -185,10 +185,37 @@ def merge_project_rows(
                 row[tax] = _project_tax_rate(entry, f"{row_label}.tributos.{tax}")
                 overridden[row_name].add(tax)
         merged[row_name] = row
-    fingerprint = hashlib.sha256(
+    reference = {
+        "schema": PROJECT_SCHEMA,
+        "source": project["fonte"],
+        "fingerprint": project_declaration_fingerprint(project),
+    }
+    return merged, overridden, reference
+
+
+def project_declaration_fingerprint(project: object) -> str:
+    """SHA-256 of the declaration's canonical JSON (sorted keys, no whitespace)."""
+    return hashlib.sha256(
         json.dumps(project, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-    return merged, overridden, {"schema": PROJECT_SCHEMA, "source": project["fonte"], "fingerprint": fingerprint}
+
+
+def validate_project_declaration(project: object, rows: Mapping[str, object] | None = None) -> None:
+    """Raise unless ``project`` is a valid exact declaration (N9.1).
+
+    With the profile's ``tabela_bdi.linhas`` the check is the one the price
+    runs: merge, then derive every row's layers. Without them it is structural
+    and exact — known rows and taxes, exact strings, declared taxes below 100%
+    — and the merge against the profile still happens when the price is built.
+    """
+    if project is None:
+        raise PricingDeclarationError("project BDI declaration is required")
+    if rows is None:
+        blank = {**dict.fromkeys((*_OVERHEAD, *_TAXES), "0"), "natureza": NATURES[0]}
+        rows = {row: dict(blank) for row in CATEGORY_ROWS.values()}
+    merged, _overridden, _reference = merge_project_rows(rows, project)
+    for row in CATEGORY_ROWS.values():
+        profile_row_layers(merged.get(row), f"tabela_bdi.{row} merged with the project BDI declaration")
 
 
 def _field_origins(overridden: set[str]) -> dict[str, object]:
