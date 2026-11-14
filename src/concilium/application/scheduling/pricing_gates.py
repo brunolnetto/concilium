@@ -69,6 +69,11 @@ class PricingGateEvaluation:
     regulatory_basis_reference: str | None
     reasons: tuple[str, ...]
     authority: str = "P21_B_PRICING_GATES_PREVIEW_NOT_PROJECT_GO"
+    # N9: when the price is built from declared markup layers, the minimum is a
+    # criterion on the profit layer's share of the sale price, not on (P - C)/P
+    # (which also contains overhead and taxes).
+    profit_layer_amount: Fraction | None = None
+    profit_layer_share: Fraction | None = None
 
 
 def _validate_diagnostics(diagnostics: OperationalPricingDiagnostics) -> None:
@@ -112,16 +117,26 @@ def evaluate_pricing_gates(
     regulatory_basis: RegulatoryBdiBasis | None,
     catalog_metadata: Mapping[str, object],
     minimum_profit_margin: Fraction | None = None,
+    profit_layer_amount: Fraction | None = None,
 ) -> PricingGateEvaluation:
     """Evaluate regulatory BDI floor and economic viability as separate gates.
 
     Incomparable or missing regulatory evidence yields UNKNOWN, never PASS.
     Economic viability independently requires P > C_tot and, when supplied,
-    the explicit minimum realized-margin threshold. This is not certification.
+    the explicit minimum threshold. With ``profit_layer_amount`` (price built
+    from declared markup layers, N9) the threshold applies to the profit
+    layer's share of the price; otherwise to the realized margin (P - C)/P of
+    a flat category-BDI declaration. This is not certification.
     """
     if not isinstance(diagnostics, OperationalPricingDiagnostics):
         raise ValueError("P21-A operational pricing diagnostics are required")
     _validate_diagnostics(diagnostics)
+    if profit_layer_amount is not None and (
+        type(profit_layer_amount) is not Fraction
+        or profit_layer_amount < 0
+        or profit_layer_amount > diagnostics.profit_amount
+    ):
+        raise ValueError("profit layer must be an exact amount between 0 and P - C_tot")
     metadata_currency, metadata_source, metadata_fingerprint = (
         _verified_catalog_currency(catalog_metadata)
     )
@@ -171,13 +186,13 @@ def evaluate_pricing_gates(
                 reasons.append("operational BDI on the regulatory basis is below its floor")
 
     profitable = diagnostics.operational_price > diagnostics.total_cost
-    margin_ok = (
-        minimum_profit_margin is None
-        or (
-            diagnostics.realized_margin is not None
-            and diagnostics.realized_margin >= minimum_profit_margin
-        )
+    profit_layer_share = (
+        profit_layer_amount / diagnostics.operational_price
+        if profit_layer_amount is not None and diagnostics.operational_price > 0
+        else None
     )
+    measured = profit_layer_share if profit_layer_amount is not None else diagnostics.realized_margin
+    margin_ok = minimum_profit_margin is None or (measured is not None and measured >= minimum_profit_margin)
     if profitable and margin_ok:
         profitability_status: GateStatus = "PASS"
     else:
@@ -185,7 +200,11 @@ def evaluate_pricing_gates(
         if not profitable:
             reasons.append("operational price does not exceed total cost")
         if not margin_ok:
-            reasons.append("realized margin is below the explicit minimum")
+            reasons.append(
+                "profit-layer share of the price is below the explicit minimum"
+                if profit_layer_amount is not None
+                else "realized margin is below the explicit minimum"
+            )
 
     statuses = (regulatory_status, profitability_status)
     status: GateStatus = (
@@ -204,4 +223,6 @@ def evaluate_pricing_gates(
         minimum_profit_margin,
         regulatory_reference,
         tuple(reasons),
+        profit_layer_amount=profit_layer_amount,
+        profit_layer_share=profit_layer_share,
     )

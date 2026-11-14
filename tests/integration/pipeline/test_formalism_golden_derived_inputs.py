@@ -103,9 +103,10 @@ def test_profile_prices_the_exact_ledger_with_nothing_hand_written(tmp_path: Pat
     """No rcpsp_spec, no P18 flag, no P21 evidence: contract terms + the profile's
     declared pricing terms (N9) carry the project to an exact, attributable decision.
 
-    With the Mendes Lobo table (materials/diesel at 4%) this materials-heavy scope
-    prices below the declared floor and margin: NOGO by V2 and PROFITABILITY only —
-    an exact consequence of the declared terms, never a legacy estimate."""
+    With the Mendes Lobo layers (materials/diesel: 4% profit only) this materials-heavy
+    scope prices below its composition-weighted floor and its profit layer is below the
+    minimum: NOGO by V2 and PROFITABILITY only — an exact, layer-by-layer consequence of
+    the declared terms, never a legacy estimate."""
     spec, _declared = _without_hand_written_spec(
         lambda t: {k: t[k] for k in ("mobilize", "demobilize", "max_idle_gap")}
     )
@@ -128,9 +129,34 @@ def test_profile_prices_the_exact_ledger_with_nothing_hand_written(tmp_path: Pat
         "COMB": Fraction(1, 25),
         "IND": Fraction(15133, 60180),
     }
-    assert Fraction(pricing_gates["regulatory_bdi_floor"]) == Fraction("0.1960")  # TCU 1st quartile, roads
-    assert Fraction(pricing_gates["regulatory_bdi_rate"]) < Fraction("0.1960")
-    assert Fraction(pricing_gates["realized_margin"]) < Fraction(3, 50)
+    # Layers: the price is exactly cost + overhead + profit + taxes, per category and in total.
+    layers = canonical.resultado.markup_layers
+    total = layers["total"]
+    price = Fraction(total["price"])
+    assert price == Fraction(diagnostics["operational_price"])
+    assert Fraction(total["cost"]) == Fraction(diagnostics["total_cost"])
+    assert sum(Fraction(total[k]) for k in ("cost", "overhead", "profit", "tax_total")) == price
+    for amounts in layers["by_category"].values():
+        assert sum(Fraction(amounts[k]) for k in ("cost", "overhead", "profit", "tax_total")) == Fraction(
+            amounts["price"]
+        )
+    # The minimum is a criterion on the profit layer's share of the price, not on (P - C)/P.
+    share = Fraction(total["profit"]) / price
+    assert Fraction(pricing_gates["profit_layer_share"]) == share < Fraction(3, 50)
+    assert share < Fraction(pricing_gates["realized_margin"])  # (P - C)/P also holds overhead and taxes
+    # Floors per category by nature (TCU 1st quartile: services 19.60%, mere supply 11.10%);
+    # the V2 floor is their average weighted by the catalog composition.
+    assert layers["bdi_floor_by_category"] == {
+        "COMB": "111/1000",
+        "EQ": "49/250",
+        "IND": "49/250",
+        "MAT": "111/1000",
+        "MO": "49/250",
+    }
+    assert layers["bdi_below_category_floor"] == ["COMB", "MAT"]
+    floor = Fraction(pricing_gates["regulatory_bdi_floor"])
+    assert Fraction("0.1110") < floor < Fraction("0.1960")
+    assert Fraction(pricing_gates["regulatory_bdi_rate"]) < floor
     # The independent oracles recompute cost, price and BDI from the same ledgers.
     report = differential_report(canonical, catalog(spec), certificate)
     assert report["first_divergence"] is None

@@ -91,7 +91,8 @@
           "iss": "0.05",
           "pis": "0",
           "cssl": "0.0199",
-          "ir": "0.0274"
+          "ir": "0.0274",
+          "natureza": "servico"
         },
         "servicos": {
           "ac": "0.05",
@@ -103,7 +104,8 @@
           "iss": "0.05",
           "pis": "0",
           "cssl": "0.0199",
-          "ir": "0.0274"
+          "ir": "0.0274",
+          "natureza": "servico"
         },
         "material": {
           "ac": "0",
@@ -115,7 +117,8 @@
           "iss": "0",
           "pis": "0",
           "cssl": "0",
-          "ir": "0"
+          "ir": "0",
+          "natureza": "fornecimento"
         },
         "diesel": {
           "ac": "0",
@@ -127,7 +130,8 @@
           "iss": "0",
           "pis": "0",
           "cssl": "0",
-          "ir": "0"
+          "ir": "0",
+          "natureza": "fornecimento"
         },
         "indireto": {
           "ac": "0.05",
@@ -139,25 +143,32 @@
           "iss": "0.05",
           "pis": "0",
           "cssl": "0.0199",
-          "ir": "0.0274"
+          "ir": "0.0274",
+          "natureza": "servico"
         }
       }
     },
     "piso_bdi_regulatorio": {
-      "fonte": "TCU, Acórdão 2622/2013-Plenário, Tabela 2 (valores do BDI por tipo de obra), 1º quartil — adotado como piso por política da empresa; o acórdão define faixas referenciais, não um mínimo legal.",
-      "por_tipo_obra": {
-        "terraplenagem": {
-          "taxa": "0.1960",
-          "referencia": "Construção de rodovias e ferrovias, 1º quartil 19,60%"
-        },
-        "pavimentacao": {
-          "taxa": "0.1960",
-          "referencia": "Construção de rodovias e ferrovias, 1º quartil 19,60%"
-        },
-        "saneamento": {
-          "taxa": "0.2076",
-          "referencia": "Construção de redes de abastecimento de água, coleta de esgoto e construções correlatas, 1º quartil 20,76%"
+      "fonte": "TCU, Acórdão 2622/2013-Plenário, Tabela 2 (valores do BDI por tipo de obra), 1º quartil — adotado como piso por política da empresa; o acórdão define faixas referenciais, não um mínimo legal. Piso por categoria conforme a natureza da linha; o piso agregado é ponderado pela composição de catálogo.",
+      "servico": {
+        "por_tipo_obra": {
+          "terraplenagem": {
+            "taxa": "0.1960",
+            "referencia": "Construção de rodovias e ferrovias, 1º quartil 19,60%"
+          },
+          "pavimentacao": {
+            "taxa": "0.1960",
+            "referencia": "Construção de rodovias e ferrovias, 1º quartil 19,60%"
+          },
+          "saneamento": {
+            "taxa": "0.2076",
+            "referencia": "Construção de redes de abastecimento de água, coleta de esgoto e construções correlatas, 1º quartil 20,76%"
+          }
         }
+      },
+      "fornecimento": {
+        "taxa": "0.1110",
+        "referencia": "Itens de mero fornecimento de materiais e equipamentos, 1º quartil 11,10%"
       }
     },
     "escopo_estoque": {

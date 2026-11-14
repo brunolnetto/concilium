@@ -2,22 +2,27 @@
 
 P21 prices the exact P20 ledger with declared inputs only. For a project that
 does not hand-write ``p21_pricing_evidence`` they come from the construction
-profile's ``precificacao_exata`` block — the project-level default declaration:
+profile's ``precificacao_exata`` block — the project-level default declaration.
 
-- ``tabela_bdi``: BDI components per row; each category markup is the TCU
-  formula (Acórdão 2622/2013-Plenário) in exact rationals,
-  ``(1 + (AC + R + S + G)) (1 + DF) (1 + L) / (1 - T) - 1``, with MO from
-  ``mao_obra``, EQ from ``servicos`` (equipment working inside a service takes
-  the service BDI; reduced BDI is only for mere supply, Súmula TCU 253), MAT
-  from ``material``, COMB from ``diesel`` and IND from ``indireto``;
-- ``piso_bdi_regulatorio``: the BDI floor for the project's work type, with
-  its source;
-- ``escopo_estoque``: the declared inventory scope;
-- the minimum profit margin is the profile's ``faixa_margem_aceitavel.min``.
+The declaration is made of **markup layers**, not of a flat rate: each row of
+``tabela_bdi`` declares its overhead (AC, R+S+G, DF), its profit (L) and its
+taxes on the sale price, plus its ``natureza`` (``servico`` or
+``fornecimento``). The category markup is the layers' consequence by the TCU
+formula (Acórdão 2622/2013-Plenário); MO comes from ``mao_obra``, EQ from
+``servicos`` (equipment working inside a service takes the service layers;
+there is no rental/maintenance blend), MAT from ``material``, COMB from
+``diesel`` and IND from ``indireto``.
 
-The catalog benchmark and the regulatory basis amount are the derived catalog
-envelope C^cat. Nothing is defaulted: a missing or inexact field returns the
-reason and no declaration, so the price is not evaluated.
+- The BDI floor is declared per nature and applies **per category**; the
+  aggregate floor of the V2 gate is their average weighted by the catalog
+  composition (contractual K at the MO/EQ floor, consumable V at the MAT/COMB
+  floor).
+- The minimum margin (``faixa_margem_aceitavel.min``) is a criterion on the
+  profit layer's share of the sale price.
+- ``escopo_estoque`` declares the inventory scope.
+
+Nothing is defaulted: a missing or inexact field returns the reason and no
+declaration, so the price is not evaluated.
 """
 
 from __future__ import annotations
@@ -27,6 +32,7 @@ from fractions import Fraction
 from typing import Any
 
 from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
+from concilium.application.scheduling.markup_layers import LayerRates
 
 P21_INPUT_SCHEMA = "concilium.p21.pricing-evidence.v1"
 PROFILE_SCHEMA = "concilium.perfil.precificacao-exata.v1"
@@ -34,6 +40,7 @@ FORMULA = "TCU_ACORDAO_2622_2013"
 CATEGORY_ROWS = {"MO": "mao_obra", "EQ": "servicos", "MAT": "material", "COMB": "diesel", "IND": "indireto"}
 _OVERHEAD = ("ac", "r", "cr", "df", "l")
 _TAXES = ("cofins", "iss", "pis", "cssl", "ir")
+NATURES = ("servico", "fornecimento")
 
 
 class PricingDeclarationError(ValueError):
@@ -52,28 +59,38 @@ def _rate(value: object, label: str) -> Fraction:
     return rate
 
 
-def tcu_bdi_rate(row: object, label: str = "BDI row") -> Fraction:
-    """``(1 + (AC + R + S + G)) (1 + DF) (1 + L) / (1 - T) - 1`` in exact rationals.
-
-    ``r`` carries risk/insurance/guarantee and ``cr`` the risk contingency
-    (together R + S + G); ``T`` is the sum of the taxes on the sale price.
-    """
+def profile_row_layers(row: object, label: str = "BDI row") -> LayerRates:
+    """Layer rates of one profile row. ``r`` (risk/insurance/guarantee) and ``cr``
+    (risk contingency) together are R + S + G; every tax is kept by name."""
     if not isinstance(row, Mapping):
         raise PricingDeclarationError(f"{label} must be a mapping of BDI components")
-    unknown = set(row) - set(_OVERHEAD) - set(_TAXES)
-    missing = [name for name in (*_OVERHEAD, *_TAXES) if name not in row]
+    fields = (*_OVERHEAD, *_TAXES, "natureza")
+    unknown = set(row) - set(fields)
+    missing = [name for name in fields if name not in row]
     if unknown or missing:
         raise PricingDeclarationError(
-            f"{label} must declare exactly {', '.join((*_OVERHEAD, *_TAXES))}"
+            f"{label} must declare exactly {', '.join(fields)}"
             + (f"; missing {missing}" if missing else "")
             + (f"; unknown {sorted(unknown)}" if unknown else "")
         )
+    if row["natureza"] not in NATURES:
+        raise PricingDeclarationError(f"{label}.natureza must be one of {', '.join(NATURES)}")
     parts = {name: _rate(row[name], f"{label}.{name}") for name in (*_OVERHEAD, *_TAXES)}
-    taxes = sum((parts[name] for name in _TAXES), Fraction(0))
-    if taxes >= 1:
-        raise PricingDeclarationError(f"{label}: taxes on the sale price must be below 100%")
-    numerator = (1 + parts["ac"] + parts["r"] + parts["cr"]) * (1 + parts["df"]) * (1 + parts["l"])
-    return numerator / (1 - taxes) - 1
+    try:
+        return LayerRates(
+            ac=parts["ac"],
+            rsg=parts["r"] + parts["cr"],
+            df=parts["df"],
+            profit=parts["l"],
+            taxes=tuple((name, parts[name]) for name in _TAXES),
+        )
+    except ValueError as exc:
+        raise PricingDeclarationError(f"{label}: {exc}") from exc
+
+
+def tcu_bdi_rate(row: object, label: str = "BDI row") -> Fraction:
+    """``(1 + (AC + R + S + G)) (1 + DF) (1 + L) / (1 - T) - 1`` in exact rationals."""
+    return profile_row_layers(row, label).beta
 
 
 def profile_pricing_terms(perfil: object, tipo_obra: str) -> dict[str, Any]:
@@ -90,17 +107,26 @@ def profile_pricing_terms(perfil: object, tipo_obra: str) -> dict[str, Any]:
     rows = table.get("linhas")
     if not isinstance(rows, Mapping):
         raise PricingDeclarationError("precificacao_exata.tabela_bdi.linhas is required")
-    bdi = {category: tcu_bdi_rate(rows.get(row), f"tabela_bdi.{row}") for category, row in CATEGORY_ROWS.items()}
+    layers = {
+        category: profile_row_layers(rows.get(row), f"tabela_bdi.{row}") for category, row in CATEGORY_ROWS.items()
+    }
+    natures = {category: rows[row]["natureza"] for category, row in CATEGORY_ROWS.items()}
 
     floor = block.get("piso_bdi_regulatorio")
     if not isinstance(floor, Mapping) or not isinstance(floor.get("fonte"), str) or not floor["fonte"].strip():
         raise PricingDeclarationError("precificacao_exata.piso_bdi_regulatorio with its fonte is required")
-    by_type = floor.get("por_tipo_obra")
+    service = floor.get("servico")
+    by_type = service.get("por_tipo_obra") if isinstance(service, Mapping) else None
     if not isinstance(by_type, Mapping) or tipo_obra not in by_type:
         raise PricingDeclarationError(f"no regulatory BDI floor declared for work type {tipo_obra!r}")
-    entry = by_type[tipo_obra]
-    if not isinstance(entry, Mapping) or not isinstance(entry.get("referencia"), str):
-        raise PricingDeclarationError(f"regulatory BDI floor for {tipo_obra!r} must declare taxa and referencia")
+    floors_by_nature: dict[str, Fraction] = {}
+    references: list[str] = []
+    for nature, entry in (("servico", by_type[tipo_obra]), ("fornecimento", floor.get("fornecimento"))):
+        if not isinstance(entry, Mapping) or not isinstance(entry.get("referencia"), str):
+            raise PricingDeclarationError(f"regulatory BDI floor for {nature!r} must declare taxa and referencia")
+        floors_by_nature[nature] = _rate(entry.get("taxa"), f"piso_bdi_regulatorio.{nature}.taxa")
+        references.append(f"{nature}: {entry['referencia']}")
+    floors = {category: floors_by_nature[natures[category]] for category in CATEGORY_ROWS}
 
     scope = block.get("escopo_estoque")
     if (
@@ -115,11 +141,12 @@ def profile_pricing_terms(perfil: object, tipo_obra: str) -> dict[str, Any]:
     if not isinstance(band, Mapping) or isinstance(band.get("min"), bool) or band.get("min") is None:
         raise PricingDeclarationError("profile declares no faixa_margem_aceitavel.min")
     return {
-        "bdi_by_category": bdi,
+        "layers": layers,
+        "bdi_by_category": {category: rates.beta for category, rates in layers.items()},
+        "bdi_floor_by_category": floors,
         "table_source": table["fonte"],
         "minimum_profit_margin": _rate(str(band["min"]), "faixa_margem_aceitavel.min"),
-        "regulatory_floor": _rate(entry.get("taxa"), f"piso_bdi_regulatorio.{tipo_obra}.taxa"),
-        "regulatory_source": f"{floor['fonte']} — {entry['referencia']}",
+        "regulatory_source": f"{floor['fonte']} — {'; '.join(references)}",
         "inventory_status": scope["status"],
         "inventory_source": scope["fonte"],
     }
@@ -144,6 +171,18 @@ def build_p21_declaration(
         envelope = derive_catalog_cost_envelope(canonical, catalogo)
     except (ValueError, TypeError, KeyError, ZeroDivisionError) as exc:
         return None, [f"catalog envelope C^cat is not derivable: {exc}"]
+    floors = terms["bdi_floor_by_category"]
+    if floors["MO"] != floors["EQ"] or floors["MAT"] != floors["COMB"]:
+        return None, [
+            "aggregate BDI floor needs one floor for the contractual block (MO, EQ) and one for the "
+            "consumable block (MAT, COMB): the catalog envelope does not split them further"
+        ]
+    contractual = sum((a.contractual for a in envelope.activities), Fraction(0))
+    consumable = sum((a.consumable for a in envelope.activities), Fraction(0))
+    if envelope.total <= 0:
+        return None, ["catalog envelope C^cat must be positive"]
+    # Aggregate floor of the V2 gate: per-category floors weighted by the catalog composition.
+    aggregate_floor = (contractual * floors["MO"] + consumable * floors["MAT"]) / envelope.total
     basis = envelope.fingerprint()
     profile_id = str(perfil.get("id")) if isinstance(perfil, Mapping) else "perfil"
     amount = str(envelope.total)
@@ -156,6 +195,8 @@ def build_p21_declaration(
             "fingerprint": f"perfil:{profile_id}:{terms['inventory_status']}",
         },
         "bdi_by_category": {category: str(rate) for category, rate in terms["bdi_by_category"].items()},
+        "markup_layers": {category: rates.as_json() for category, rates in terms["layers"].items()},
+        "bdi_floor_by_category": {category: str(rate) for category, rate in floors.items()},
         "catalog": {
             "amount": amount,
             "currency": currency,
@@ -168,8 +209,11 @@ def build_p21_declaration(
             "amount": amount,
             "currency": currency,
             "basis_fingerprint": basis,
-            "minimum_rate": str(terms["regulatory_floor"]),
-            "source": terms["regulatory_source"],
+            "minimum_rate": str(aggregate_floor),
+            "source": (
+                f"{terms['regulatory_source']} — agregado ponderado pela composição de catálogo "
+                f"(K {contractual} ao piso de MO/EQ, V {consumable} ao piso de MAT/COMB)"
+            ),
             "reference_id": f"perfil:{profile_id}:piso_bdi:{tipo_obra}",
         },
         "minimum_profit_margin": str(terms["minimum_profit_margin"]),

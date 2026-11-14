@@ -35,6 +35,7 @@ def _row(case: dict) -> dict:
         "pis": "0",
         "cssl": "0",
         "ir": "0",
+        "natureza": "servico",
     }
 
 
@@ -57,9 +58,26 @@ def test_mendeslobo_profile_declares_complete_exact_pricing_terms() -> None:
         "IND": "15133/60180",
     }
     assert terms["minimum_profit_margin"] == Fraction(3, 50)
-    assert terms["regulatory_floor"] == Fraction("0.1960")
+    # Floors are per category, by the nature of the row: services vs mere supply.
+    assert {k: str(v) for k, v in terms["bdi_floor_by_category"].items()} == {
+        "MO": "49/250",
+        "EQ": "49/250",
+        "MAT": "111/1000",
+        "COMB": "111/1000",
+        "IND": "49/250",
+    }
     assert "2622/2013" in terms["regulatory_source"] and terms["inventory_status"] == "NO_INVENTORY"
-    assert profile_pricing_terms(PROFILE, "saneamento")["regulatory_floor"] == Fraction("0.2076")
+    assert profile_pricing_terms(PROFILE, "saneamento")["bdi_floor_by_category"]["MO"] == Fraction("0.2076")
+    # Each category keeps its three layers, not a flat rate.
+    labour = terms["layers"]["MO"]
+    assert (labour.ac, labour.rsg, labour.df, labour.profit, labour.tax_total) == (
+        Fraction("0.05"),
+        Fraction("0.01"),
+        Fraction("0.015"),
+        Fraction("0.09"),
+        Fraction("0.0973"),
+    )
+    assert terms["layers"]["MAT"].tax_total == 0 and terms["layers"]["MAT"].profit == Fraction("0.04")
 
 
 def _without(path: list[str]) -> dict:
@@ -78,6 +96,12 @@ def _without(path: list[str]) -> dict:
         (_without(["precificacao_exata", "tabela_bdi", "linhas", "servicos"]), "terraplenagem", "tabela_bdi.servicos"),
         (_without(["precificacao_exata", "tabela_bdi", "fonte"]), "terraplenagem", "fonte"),
         (_without(["precificacao_exata", "piso_bdi_regulatorio"]), "terraplenagem", "piso_bdi_regulatorio"),
+        (_without(["precificacao_exata", "piso_bdi_regulatorio", "fornecimento"]), "terraplenagem", "fornecimento"),
+        (
+            _without(["precificacao_exata", "tabela_bdi", "linhas", "material", "natureza"]),
+            "terraplenagem",
+            "natureza",
+        ),
         (_without(["precificacao_exata", "escopo_estoque"]), "terraplenagem", "escopo_estoque"),
         (_without(["faixa_margem_aceitavel"]), "terraplenagem", "faixa_margem_aceitavel"),
         (PROFILE, "edificacao", "no regulatory BDI floor declared for work type"),
