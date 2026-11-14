@@ -5,8 +5,11 @@ Pool setup, rcpsp spec e pool contracts (ADR-071/073).
 
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import Any
 
+from concilium.application.scheduling.exact_rcpsp_derivation import derive_exact_rcpsp_spec
+from concilium.application.scheduling.p16_tariff_derivation import derive_p16_tariffs
 from concilium.domain.models.canonical import (
     CanonicalModel,
     RecursoContrato,
@@ -46,15 +49,55 @@ def _build_pool_setup(canonical_in: CanonicalModel, catalogo: dict[str, Any]) ->
 
 
 def _resolve_rcpsp_spec(
-    inputs: dict[str, Any], canonical_in: CanonicalModel, catalogo: dict[str, Any]
+    inputs: dict[str, Any],
+    canonical_in: CanonicalModel,
+    catalogo: dict[str, Any],
+    validacoes: list[ValidacaoItem] | None = None,
 ) -> tuple[dict | None, bool]:
-    """Resolve o rcpsp_spec explícito ou o deriva automaticamente do canônico."""
+    """Resolve o rcpsp_spec explícito ou o deriva automaticamente do canônico.
+
+    #206: without a caller-supplied spec, the per-resource spec is derived from
+    the project's own data and its P16 tariffs come from the catalog rate plus
+    the project's declared ``contract_terms`` (N8). Resources without complete
+    declared terms get no tariff (UNKNOWN_CONTRACT, reported) — never an
+    estimate. Only when the per-resource spec cannot be derived does the
+    legacy team-family derivation remain (to be removed with the legacy path).
+    """
     rcpsp_spec = inputs.get("rcpsp_spec") if isinstance(inputs.get("rcpsp_spec"), dict) else None
-    rcpsp_derivado = False
-    if rcpsp_spec is None:
-        rcpsp_spec = _derive_rcpsp_from_canonical(canonical_in, catalogo)
-        rcpsp_derivado = rcpsp_spec is not None
-    return rcpsp_spec, rcpsp_derivado
+    if rcpsp_spec is not None:
+        return rcpsp_spec, False
+
+    exact_spec, _gaps = derive_exact_rcpsp_spec(canonical_in, catalogo)
+    if exact_spec is not None:
+        regime = canonical_in.projeto.regime_trabalho
+        currency = catalogo.get("currency")
+        tariffs, unknown = derive_p16_tariffs(
+            exact_spec["resource_pool"],
+            catalogo,
+            dias_semana=int(regime.dias_semana),
+            horas_dia=Fraction(str(regime.horas_dia)),
+            declarations=inputs.get("contract_terms"),
+            currency=currency if isinstance(currency, str) else "",
+            catalog_reference=str(canonical_in.projeto.snapshot_catalogo_id or "catalog"),
+        )
+        if tariffs:
+            exact_spec["p16_exact_tariffs"] = tariffs
+        if unknown and validacoes is not None:
+            sample = "; ".join(f"{k}: {v}" for k, v in list(sorted(unknown.items()))[:4])
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-P16-CONTRATO-DESCONHECIDO",
+                    status="AVISO",
+                    mensagem=(
+                        f"{len(unknown)} tipo(s) de recurso sem termos contratuais completos "
+                        f"(UNKNOWN_CONTRACT): custo não avaliado, sem estimativa. {sample}"
+                    ),
+                )
+            )
+        return exact_spec, False
+
+    rcpsp_spec = _derive_rcpsp_from_canonical(canonical_in, catalogo)
+    return rcpsp_spec, rcpsp_spec is not None
 
 
 def _atualizar_custo_via_atribuicao(equipes: list, atribuicao: dict, benchmark_mode: bool) -> None:

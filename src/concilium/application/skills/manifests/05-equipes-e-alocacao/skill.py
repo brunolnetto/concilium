@@ -94,7 +94,7 @@ def run_equipes_e_alocacao(
     # ADR-071/073: Pool Contract Model + Perpetuation Chains
     contratos_recurso: list[RecursoContrato] = []
     cadeias_perpetuacao: list = []
-    rcpsp_spec, rcpsp_derivado = _resolve_rcpsp_spec(inputs, canonical_in, catalogo)
+    rcpsp_spec, rcpsp_derivado = _resolve_rcpsp_spec(inputs, canonical_in, catalogo, validacoes)
     if rcpsp_spec:
         try:
             parse_rcpsp_precedence(rcpsp_spec.get("precedence"))

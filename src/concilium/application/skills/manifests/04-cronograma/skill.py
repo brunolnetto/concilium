@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from concilium.application.scheduling.exact_rcpsp_derivation import derive_exact_rcpsp_spec
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 from concilium.domain.models.formalism_certificate import fingerprint_source
@@ -172,6 +173,34 @@ def run_cronograma(
             validacoes,
             calendario_semanal=fator_calendario_semanal,
         )
+
+    # #206: with no caller-supplied rcpsp_spec and no manual team counts, the
+    # per-resource spec is derived from the project's own data (standard team per
+    # front, nominal duration, configured pool) instead of scheduling activities
+    # with no resource witness. Nothing is inferred: the reasons are reported and
+    # the run stays on its previous (non-certifiable) path when data is missing.
+    if not isinstance(inputs.get("rcpsp_spec"), dict) and not num_equipes_por_item:
+        derived_spec, derivation_gaps = derive_exact_rcpsp_spec(canonical_in, catalogo)
+        if derived_spec is not None:
+            inputs = {**inputs, "rcpsp_spec": derived_spec}
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-RCPSP-DERIVADO",
+                    status="INFO",
+                    mensagem=(
+                        "rcpsp_spec derivado dos dados do projeto: equipe padrão por frente, "
+                        f"duração nominal e pool configurado ({len(derived_spec['activities'])} atividades)."
+                    ),
+                )
+            )
+        else:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-RCPSP-NAO-DERIVAVEL",
+                    status="INFO",
+                    mensagem="rcpsp_spec não derivável dos dados do projeto: " + "; ".join(derivation_gaps[:6]),
+                )
+            )
 
     (
         mode,

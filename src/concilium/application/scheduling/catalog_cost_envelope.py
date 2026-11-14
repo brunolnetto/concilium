@@ -93,7 +93,7 @@ def _index(rows: object, key: str, label: str) -> dict[str, Mapping[str, object]
     return index
 
 
-def _hourly_contractual_rate(insumo: Mapping[str, object], hours_per_week: Fraction, label: str) -> Fraction:
+def hourly_contractual_rate(insumo: Mapping[str, object], hours_per_week: Fraction, label: str) -> Fraction:
     price = _exact(insumo.get("preco_unitario"), f"{label} price")
     unit = insumo.get("unidade")
     if unit in ("mes", "mês"):
@@ -164,7 +164,7 @@ def derive_catalog_cost_envelope(canonical: CanonicalModel, catalogo: Mapping[st
                 insumo = insumos.get(ident)
                 if insumo is None or insumo.get("tipo") not in _CONTRACTUAL_TYPES:
                     raise ValueError(f"{label}/{ident}: contractual resource must be an EQUIPAMENTO/MAO_OBRA insumo")
-                gamma_k += _hourly_contractual_rate(insumo, hours_per_week, f"{label}/{ident}") * n
+                gamma_k += hourly_contractual_rate(insumo, hours_per_week, f"{label}/{ident}") * n
 
         consumable_per_unit = Fraction(0)
         composition = cpu.get("composicao_itens")
