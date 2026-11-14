@@ -1,0 +1,177 @@
+{
+  "protocol": "formalism-markup-layers/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": [
+      "VIII",
+      "N9"
+    ],
+    "scope": "exact decomposition of the sale price into markup layers (overhead, profit, taxes) per category and in aggregate; profit-layer share; composition-weighted aggregate BDI floor",
+    "rounding": "Fraction exact"
+  },
+  "vectors": [
+    {
+      "case_id": "labour_layers_of_100",
+      "hand_check": "C 100, AC 5%, R+S+G 1%, DF 1.5%, L 9%, T 9.73%. AC 5, RSG 1 (overhead on cost 6); loaded 106, DF 1.59 -> overhead 7.59; profit 9% of 107.59 = 9.6831; net 117.2731; price 117.2731/0.9027 = 1172731/9027 (129.9137...); taxes = price - net. 100 + 7.59 + 9.6831 + taxes = price.",
+      "case": {
+        "costs": {
+          "MO": "100"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "iss": "0.05",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        }
+      },
+      "expected": {
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "759/100",
+            "profit": "96831/10000",
+            "taxes": "1141067263/90270000",
+            "price": "1172731/9027"
+          }
+        },
+        "total": {
+          "cost": "100",
+          "overhead": "759/100",
+          "profit": "96831/10000",
+          "taxes": "1141067263/90270000",
+          "price": "1172731/9027"
+        },
+        "profit_layer_share": "81243/1090000"
+      }
+    },
+    {
+      "case_id": "supply_layer_is_profit_only",
+      "hand_check": "C 1000 at L 4%, no overhead, no taxes on the price: profit 40, price 1040; profit share 40/1040 = 1/26.",
+      "case": {
+        "costs": {
+          "MAT": "1000"
+        },
+        "rates": {
+          "MAT": {
+            "ac": "0",
+            "rsg": "0",
+            "df": "0",
+            "l": "0.04",
+            "taxes": {}
+          }
+        }
+      },
+      "expected": {
+        "by_category": {
+          "MAT": {
+            "cost": "1000",
+            "overhead": "0",
+            "profit": "40",
+            "taxes": "0",
+            "price": "1040"
+          }
+        },
+        "total": {
+          "cost": "1000",
+          "overhead": "0",
+          "profit": "40",
+          "taxes": "0",
+          "price": "1040"
+        },
+        "profit_layer_share": "1/26"
+      }
+    },
+    {
+      "case_id": "aggregate_adds_layers_and_weights_the_floor",
+      "hand_check": "MO 100 (labour layers) + MAT 900 (supply): layers add category by category. Aggregate floor with catalog K 100 at 19.60% and V 900 at 11.10%: (19.6 + 99.9)/1000 = 11.95% = 239/2000.",
+      "case": {
+        "costs": {
+          "MO": "100",
+          "MAT": "900"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "iss": "0.05",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          },
+          "MAT": {
+            "ac": "0",
+            "rsg": "0",
+            "df": "0",
+            "l": "0.04",
+            "taxes": {}
+          }
+        },
+        "floor": {
+          "contractual": "100",
+          "consumable": "900",
+          "floor_contractual": "0.1960",
+          "floor_consumable": "0.1110"
+        }
+      },
+      "expected": {
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "759/100",
+            "profit": "96831/10000",
+            "taxes": "1141067263/90270000",
+            "price": "1172731/9027"
+          },
+          "MAT": {
+            "cost": "900",
+            "overhead": "0",
+            "profit": "36",
+            "taxes": "0",
+            "price": "936"
+          }
+        },
+        "total": {
+          "cost": "1000",
+          "overhead": "759/100",
+          "profit": "456831/10000",
+          "taxes": "1141067263/90270000",
+          "price": "9622003/9027"
+        },
+        "profit_layer_share": "4123813437/96220030000",
+        "aggregate_floor": "239/2000"
+      }
+    },
+    {
+      "case_id": "taxes_at_100_percent_have_no_price",
+      "hand_check": "1 - T = 0.",
+      "case": {
+        "costs": {
+          "MO": "1"
+        },
+        "rates": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "iss": "1"
+            }
+          }
+        }
+      },
+      "expected_error": "below 100%"
+    }
+  ]
+}

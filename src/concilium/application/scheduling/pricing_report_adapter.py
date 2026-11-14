@@ -11,6 +11,8 @@ from fractions import Fraction
 from typing import Literal, cast
 
 from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
+from concilium.application.scheduling.markup_layers import FORMULA as MARKUP_FORMULA
+from concilium.application.scheduling.markup_layers import LayerRates, decompose_by_category, parse_markup_layers
 from concilium.domain.models.canonical import CanonicalModel, Resultado, ValidacaoItem
 
 from .contractual_cost_ledger import ExclusiveCostLedger
@@ -291,6 +293,7 @@ def build_pricing_report_evidence_context(
         "schema", "inventory_scope", "bdi_by_category", "catalog",
         "operational_basis_fingerprint", "regulatory_basis",
         "minimum_profit_margin", "inventory",
+        "markup_layers", "bdi_floor_by_category",
     }
     unknown = set(raw) - allowed
     if unknown:
@@ -338,6 +341,27 @@ def build_pricing_report_evidence_context(
     }
     if any(rate < 0 for rate in bdi_by_category.values()):
         raise ValueError("BDI category rates must be nonnegative")
+
+    # N9: declared markup layers (overhead, profit, taxes per category). The
+    # category BDI must be exactly the layers' own markup — the layers are the
+    # declaration, the rate is their consequence.
+    markup_layers = None
+    if raw.get("markup_layers") is not None:
+        markup_layers = parse_markup_layers(raw["markup_layers"])
+        mismatched = sorted(c for c in _P21_CATEGORIES if markup_layers[c].beta != bdi_by_category[c])
+        if mismatched:
+            raise ValueError(f"bdi_by_category differs from the declared markup layers for {', '.join(mismatched)}")
+    bdi_floor_by_category = None
+    if raw.get("bdi_floor_by_category") is not None:
+        floors_raw = _json_mapping(raw["bdi_floor_by_category"], "bdi_floor_by_category")
+        if set(floors_raw) != _P21_CATEGORIES:
+            raise ValueError("bdi_floor_by_category must declare exactly MO, EQ, MAT, COMB and IND")
+        bdi_floor_by_category = {
+            category: _json_fraction(floors_raw[category], f"BDI floor {category}")
+            for category in sorted(_P21_CATEGORIES)
+        }
+        if any(rate < 0 for rate in bdi_floor_by_category.values()):
+            raise ValueError("BDI category floors must be nonnegative")
 
     catalog_raw = _json_mapping(raw.get("catalog"), "catalog benchmark")
     if set(catalog_raw) - {
@@ -441,6 +465,8 @@ def build_pricing_report_evidence_context(
         "inventory_scope": inventory_scope,
         "reconciliation": reconciliation,
         "bdi_by_category": bdi_by_category,
+        "markup_layers": markup_layers,
+        "bdi_floor_by_category": bdi_floor_by_category,
         "catalog": catalog,
         "catalog_metadata": catalog_metadata,
         "operational_basis_fingerprint": operational_basis_fingerprint,
@@ -666,6 +692,8 @@ def apply_pricing_report_evidence(
     bdi_by_category = cast(Mapping[str, Fraction], bdi_by_category_raw)
     catalog_metadata = cast(Mapping[str, object], catalog_metadata_raw)
 
+    markup_layers = context.get("markup_layers")
+    layered_by_category = layered_total = None
     try:
         diagnostics = project_operational_pricing(
             reconciliation,
@@ -674,11 +702,19 @@ def apply_pricing_report_evidence(
             catalog_metadata=catalog_metadata,
             operational_basis_fingerprint=operational_basis_fingerprint,
         )
+        if markup_layers is not None:
+            layered_by_category, layered_total = decompose_by_category(
+                ((row.category, row.amount) for row in reconciliation.ledger.postings),
+                cast(Mapping[str, LayerRates], markup_layers),
+            )
+            if layered_total.price != diagnostics.operational_price or layered_total.cost != diagnostics.total_cost:
+                raise ValueError("markup layers do not reconstruct the P20 cost and the operational price")
         gates = evaluate_pricing_gates(
             diagnostics,
             regulatory_basis=regulatory_basis,
             catalog_metadata=catalog_metadata,
             minimum_profit_margin=minimum_profit_margin,
+            profit_layer_amount=layered_total.profit if layered_total is not None else None,
         )
     except (TypeError, ValueError) as exc:
         _unknown(result, validations, intent, str(exc))
@@ -729,6 +765,24 @@ def apply_pricing_report_evidence(
         "currency_source": diagnostics.currency_source,
         "currency_metadata_fingerprint": diagnostics.currency_metadata_fingerprint,
     }
+    floors = context.get("bdi_floor_by_category")
+    if layered_by_category is not None and layered_total is not None:
+        rates = cast(Mapping[str, LayerRates], markup_layers)
+        result.markup_layers = {
+            "schema": "concilium.p21.markup-layers.v1",
+            "formula": MARKUP_FORMULA,
+            "rates": {c: rates[c].as_json() for c in sorted(_P21_CATEGORIES)},
+            "by_category": {c: layered_by_category[c].as_json() for c in sorted(_P21_CATEGORIES)},
+            "total": layered_total.as_json(),
+            "bdi_floor_by_category": (
+                {c: str(floors[c]) for c in sorted(floors)} if isinstance(floors, Mapping) else None
+            ),
+            "bdi_below_category_floor": (
+                sorted(c for c in floors if bdi_by_category[c] < floors[c]) if isinstance(floors, Mapping) else None
+            ),
+        }
+    else:
+        result.markup_layers = None
     result.pricing_gates = {
         "schema": "concilium.p21.pricing-gates.v1",
         "certification_intent": intent,
@@ -751,6 +805,12 @@ def apply_pricing_report_evidence(
         "regulatory_bdi_floor": str(gates.regulatory_bdi_floor) if gates.regulatory_bdi_floor is not None else None,
         "profit_amount": str(gates.profit_amount),
         "realized_margin": str(gates.realized_margin) if gates.realized_margin is not None else None,
+        "profit_layer_amount": (
+            str(gates.profit_layer_amount) if gates.profit_layer_amount is not None else None
+        ),
+        "profit_layer_share": (
+            str(gates.profit_layer_share) if gates.profit_layer_share is not None else None
+        ),
         "minimum_profit_margin": str(gates.minimum_profit_margin) if gates.minimum_profit_margin is not None else None,
         "regulatory_basis_reference": gates.regulatory_basis_reference,
         "regulatory_basis_minimum_rate": (

@@ -1,6 +1,6 @@
 """Camada 4 — Modelo canônico do orçamento (parte extraída de canonical.py)."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -338,6 +338,11 @@ class Resultado(BaseModel):
     # P21-C: same pricing evidence is serialized by REST/MCP/UI and RFI/RFP paths.
     pricing_diagnostics: dict[str, str | None] = Field(default_factory=dict)
     pricing_gates: dict[str, str | None] = Field(default_factory=dict)
+    # N9 (#206): exact decomposition of the P21 price into its markup layers
+    # (cost, overhead, profit, taxes) per category and in total, with the
+    # declared layer rates and the per-category BDI floors. None when the
+    # price was not built from declared layers.
+    markup_layers: dict[str, Any] | None = None
     pricing_authority: str = "P21_C_PRICING_GATES_NOT_EVALUATED"
     # P23-B: exact P20 source journal used to produce the pricing result.
     p20_financial_reconciliation: dict[str, object] | None = None

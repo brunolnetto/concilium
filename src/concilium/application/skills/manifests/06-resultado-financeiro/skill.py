@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
+from concilium.application.scheduling.exact_pricing_declaration import build_p21_declaration
 from concilium.application.scheduling.pricing_report_adapter import (
     build_pricing_report_evidence_context,
 )
@@ -77,6 +78,14 @@ _run_indiretos = _load_estagio("_indiretos", "run_custos_indiretos")
 _run_consolidacao = _load_estagio("_consolidacao", "run_consolidacao_financeira")
 
 
+def _exact_pool_available(canonical: CanonicalModel) -> bool:
+    """Every pool contract carries an exact P16 witness (and there is at least one)."""
+    contracts = list(canonical.contratos_recurso or [])
+    return bool(contracts) and all(
+        isinstance(getattr(c, "p16_global_assignment", None), dict) and c.p16_global_assignment for c in contracts
+    )
+
+
 def run_resultado_financeiro(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
@@ -100,7 +109,10 @@ def run_resultado_financeiro(
 
     # P18-C3 is explicitly opt-in. Always invalidate a stale preview before
     # running any downstream stage; legacy finance remains the default path.
-    enabled = inputs.get("p18_consumption_preview_enabled", False)
+    # #206: when the caller does not say, the exact consumption ledger runs
+    # whenever Skill05 produced an exact P16 witness for every pool contract.
+    # An explicit boolean is always respected.
+    enabled = inputs.get("p18_consumption_preview_enabled", _exact_pool_available(canonical_in))
     canonical_start = canonical_in.model_copy(update={
         "p18_consumption_preview": None,
         "p17_cost_reconciliation": None,
@@ -167,6 +179,17 @@ def run_resultado_financeiro(
     # evidence from this canonical schedule and the server-resolved catalog;
     # never trust serialized ledgers or caller-supplied dataclass-shaped objects.
     p21_declaration = inputs.get("p21_pricing_evidence")
+    if p21_declaration is None and enabled:
+        # #206 / N9: no hand-written evidence — the declaration comes from the
+        # profile's precificacao_exata block and the derived C^cat. A profile
+        # without complete exact pricing terms leaves the price not evaluated.
+        p21_declaration, p21_gaps = build_p21_declaration(perfil, canonical, catalogo)
+        if p21_declaration is None:
+            validacoes.append(ValidacaoItem(
+                codigo="VAL-P21-NAO-AVALIADO",
+                status="AVISO",
+                mensagem="Preço exato não avaliado (sem estimativa): " + "; ".join(p21_gaps),
+            ))
     if p21_declaration is not None:
         if not enabled:
             p21_context: dict[str, object] = {

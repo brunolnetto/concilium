@@ -64,3 +64,34 @@ Evidência: oráculo independente `contract_tariff_reference.py` e vetor `pool_c
 **N8.1 — `rcpsp_spec` por recurso derivado dos dados do projeto (#206).** Quando o chamador não fornece `rcpsp_spec` (nem contagens manuais de equipes), os Skills 04 e 05 derivam a especificação por tipo de recurso do que o projeto já declara: `required_resources` de cada atividade = equipe padrão da produção por frente (\(a_{ig}^{front}\), N7); `duration_weeks` = duração nominal de uma frente \(\lceil Q_i/(\rho_i\,d\,h)\rceil\); `resource_pool` = disponibilidade física **explicitamente configurada** (Skill03), restrita aos tipos usados, que deve cobrir ao menos uma frente de cada atividade. As precedências vêm da EAP. As tarifas P16 dessa especificação são as de N8 (taxa de catálogo + `contract_terms` declarados do projeto). Nada é inferido: CPU, produção, composição, taxa ou cobertura de pool ausentes impedem a derivação (motivos reportados em `VAL-RCPSP-NAO-DERIVAVEL`); tipos sem termos contratuais completos ficam sem tarifa (`VAL-P16-CONTRATO-DESCONHECIDO`) e o custo não é avaliado. Enquanto o caminho legado existir, a derivação por "família de equipe" só permanece quando a derivação por recurso não é possível.
 
 Evidência: oráculo `pool_spec_reference.py` e vetor `pool_spec_from_project_v1.json` com paridade de produção; a especificação derivada é idêntica à escrita à mão nos dois projetos ouro (equipe por frente, durações, pool); E2E `test_formalism_golden_derived_inputs.py`: com os termos declarados o projeto ouro certifica GO sem `rcpsp_spec` escrito à mão e com todas as fases conferidas pelos oráculos; com tarifas só derivadas certifica com racionais exatos; sem termos declarados nada é estimado.
+
+## N9 — preço exato de todo projeto: camadas de markup declaradas no perfil (#206)
+
+O P21 precifica o livro exato P20 apenas com entradas declaradas. Quando o projeto não fornece `p21_pricing_evidence`, a declaração vem do bloco `precificacao_exata` do perfil da construtora (padrão do projeto) e do envelope de catálogo derivado.
+
+**Camadas, não uma taxa.** Cada linha da `tabela_bdi` declara, em decimais exatos, as três camadas do markup da sua categoria e a sua `natureza` (`servico` ou `fornecimento`): *overhead* (\(AC\), \(R{+}S{+}G\), \(DF\)), *lucro* (\(L\)) e *tributos* sobre o preço (\(t_x\), \(T=\sum_x t_x<1\)). O preço de um custo \(C\) segue a estrutura do Acórdão TCU 2622/2013-Plenário,
+\[
+P=\frac{C\,\big(1+(AC+R{+}S{+}G)\big)(1+DF)(1+L)}{1-T},
+\]
+e decompõe-se exatamente, na ordem em que a fórmula o constrói:
+\[
+O^{AC}=C\,AC,\quad O^{RSG}=C\,(R{+}S{+}G),\quad O^{DF}=C\,(1+AC+R{+}S{+}G)\,DF,\quad
+\Lambda=C\,(1+AC+R{+}S{+}G)(1+DF)\,L,\quad \Theta_x=t_x\,P,
+\]
+com a identidade \(C+O^{AC}+O^{RSG}+O^{DF}+\Lambda+\sum_x\Theta_x=P\). O markup da categoria é consequência das camadas, \(\beta=P/C-1\); `bdi_by_category` deve coincidir exatamente com ele. Linhas: MO ← `mao_obra`; EQ ← `servicos` (equipamento operando dentro de um serviço recebe as camadas do serviço — não há mistura locação/manutenção; BDI reduzido só para mero fornecimento, Súmula TCU 253); MAT ← `material`; COMB ← `diesel`; IND ← `indireto`.
+
+**Instancial e agregado.** Todas as parcelas são lineares em \(C\): as mesmas taxas decompõem um lançamento do livro P20 (nível instancial) ou qualquer agregado de lançamentos — contrato, atividade, semana, categoria, projeto — por simples soma. O resultado traz a decomposição por categoria e total em `resultado.markup_layers`, e ela deve reconstruir o custo P20 e o preço P21.
+
+**Margem mínima como critério construtivo.** \(P-C\) contém overhead, tributos e lucro; compará-lo a uma margem mínima mistura camadas. Com as camadas identificadas, o mínimo do perfil (`faixa_margem_aceitavel.min`) é um critério sobre a **contribuição da camada de lucro ao preço**, \(\Lambda^{tot}/P\ge m_{min}\), com \(\Lambda^{tot}\) somado sobre o custo operacional direto e indireto. O gate PROFITABILITY usa essa razão sempre que o preço é construído por camadas; uma declaração plana (sem camadas) continua avaliada por \((P-C)/P\) enquanto existir.
+
+**Piso de BDI por categoria e agregado ponderado.** O perfil declara o piso por natureza, com fonte — no perfil Mendes Lobo, o 1º quartil da Tabela 2 do Acórdão 2622/2013: serviços por tipo de obra (rodovias e ferrovias 19,60%; saneamento 20,76%) e mero fornecimento 11,10% — política da empresa que referencia o TCU; o acórdão define faixas referenciais, não mínimo legal. Cada categoria é comparada ao piso da sua natureza (categorias abaixo do piso são reportadas em `bdi_below_category_floor`), e o piso agregado do gate V2 é a média ponderada pela composição de catálogo,
+\[
+\underline{\beta}=\frac{K^{cat}\,\underline{\beta}^{MO/EQ}+V^{cat}\,\underline{\beta}^{MAT/COMB}}{C^{cat}},
+\]
+com \(K^{cat}\) e \(V^{cat}\) os blocos contratual e consumível do envelope (N2); MO/EQ e MAT/COMB devem partilhar o piso, pois o envelope não os separa.
+
+**Demais termos.** Escopo de estoque: `escopo_estoque` (`NO_INVENTORY` no perfil Mendes Lobo: material orçado como consumido). Base de catálogo e base regulatória: \(C^{cat}\) derivado, com a impressão digital do envelope como base comum. O livro de consumo exato (P18) roda sempre que todo contrato do pool tem testemunha P16 (um booleano explícito do chamador é respeitado).
+
+**Falha fechada.** Bloco ausente, linha, camada ou natureza faltando, número em ponto flutuante, tipo de obra sem piso declarado, \(T\ge1\), markup diferente do das camadas, camadas que não reconstroem custo e preço, ou \(C^{cat}\) não derivável ⇒ o preço fica não avaliado (`VAL-P21-NAO-AVALIADO`), nunca estimado. Não há tabela padrão no código para o caminho exato.
+
+Evidência: oráculos `bdi_tcu_reference.py` / `economic_bdi_tcu_v1.json` (fórmula, incluindo o caso que distingue soma de produto) e `markup_layers_reference.py` / `economic_markup_layers_v1.json` (decomposição, participação do lucro, piso ponderado), com paridade de produção e a prova de linearidade (instancial = agregado); testes do gate para o critério da camada de lucro; E2E `test_profile_prices_the_exact_ledger_with_nothing_hand_written`: o projeto ouro sem nada escrito à mão chega a uma decisão exata e atribuível por camada — com as camadas declaradas (material e diesel: só 4% de lucro) o preço é 94,23% custo, 0,62% overhead, 4,14% lucro e 1,02% tributos; MAT e COMB ficam abaixo do piso de fornecimento, o BDI (9,35%) abaixo do piso ponderado (≈11,6%) e a camada de lucro abaixo de 6%: NOGO só por V2 e PROFITABILITY.

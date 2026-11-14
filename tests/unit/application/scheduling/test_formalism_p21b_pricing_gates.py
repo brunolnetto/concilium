@@ -198,3 +198,37 @@ def test_p21b_regulatory_basis_requires_exact_positive_denominator_and_floor() -
         RegulatoryBdiBasis(F(0), "BRL", "scope-v1", F(1, 20), "source", "ref")
     with pytest.raises(ValueError, match="exact nonnegative Fraction"):
         RegulatoryBdiBasis(F(30), "BRL", "scope-v1", -F(1, 20), "source", "ref")
+
+
+def _gates(**kwargs):
+    return evaluate_pricing_gates(
+        _diagnostics(),
+        regulatory_basis=_regulatory(),
+        catalog_metadata={"currency": "BRL", "currency_source": "catalog_metadata.json"},
+        **kwargs,
+    )
+
+
+def test_n9_minimum_applies_to_the_profit_layer_not_to_the_gross_result() -> None:
+    """With declared markup layers, (P - C)/P also contains overhead and taxes; the
+    minimum is a criterion on the profit layer's share of the price."""
+    diagnostics = _diagnostics()
+    gross = diagnostics.profit_amount
+    flat = _gates(minimum_profit_margin=diagnostics.realized_margin)
+    assert flat.profitability_status == "PASS" and flat.profit_layer_share is None
+
+    half = gross / 2  # half of P - C is overhead and taxes
+    layered = _gates(minimum_profit_margin=diagnostics.realized_margin, profit_layer_amount=half)
+    assert layered.profit_layer_share == half / diagnostics.operational_price
+    assert layered.profitability_status == "FAIL"
+    assert "profit-layer share of the price is below the explicit minimum" in layered.reasons
+
+    passing = _gates(minimum_profit_margin=half / diagnostics.operational_price, profit_layer_amount=half)
+    assert passing.profitability_status == "PASS"
+
+
+def test_n9_profit_layer_cannot_exceed_the_gross_result_or_be_inexact() -> None:
+    gross = _diagnostics().profit_amount
+    for bad in (gross + 1, F(-1), 1.0):
+        with pytest.raises(ValueError, match="profit layer"):
+            _gates(profit_layer_amount=bad)
