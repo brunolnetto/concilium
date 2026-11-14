@@ -251,6 +251,10 @@ def _runtime_evidence(envelope):
             inventory_scope_source="inventory-fixture",
             inventory_scope_reference_id="inventory-v1",
             inventory_scope_fingerprint="d" * 64,
+            site_indirects_scope_status="NO_SITE_INDIRECTS",
+            site_indirects_scope_source="site-fixture",
+            site_indirects_scope_reference_id="site-v1",
+            site_indirects_scope_fingerprint="e" * 64,
         ),
         "pricing_gates": _pricing_gates(),
     }
@@ -491,6 +495,10 @@ def _persisted_pricing():
         "inventory_scope_source": "inventory-fixture",
         "inventory_scope_reference_id": "inventory-v1",
         "inventory_scope_fingerprint": "d" * 64,
+        "site_indirects_scope_status": "NO_SITE_INDIRECTS",
+        "site_indirects_scope_source": "site-fixture",
+        "site_indirects_scope_reference_id": "site-v1",
+        "site_indirects_scope_fingerprint": "e" * 64,
     }
 
 
@@ -653,6 +661,55 @@ def test_missing_inventory_scope_prevents_financial_go():
     gate = next(x for x in result.gate_evidence if x.gate_id == "FINANCIAL_COST_RECONCILIATION")
     assert gate.status == "UNKNOWN"
     assert "inventory scope" in (gate.reason or "")
+
+
+@pytest.mark.parametrize("persisted", [False, True])
+@pytest.mark.parametrize(
+    ("change", "status", "reason"),
+    [
+        ({"site_indirects_scope_status": None}, "UNKNOWN", "DECLARED or NO_SITE_INDIRECTS"),
+        ({"site_indirects_scope_status": "ASSUMED_NONE"}, "UNKNOWN", "DECLARED or NO_SITE_INDIRECTS"),
+        ({"site_indirects_scope_source": " "}, "UNKNOWN", "source, reference and fingerprint"),
+        ({"site_indirects_scope_fingerprint": None}, "UNKNOWN", "source, reference and fingerprint"),
+        ({"site_indirects_scope_status": "DECLARED"}, "UNKNOWN", "no site-indirects journal witness"),
+    ],
+)
+def test_missing_or_invalid_site_indirects_scope_prevents_financial_go(persisted, change, status, reason):
+    """N10: like the inventory scope, the site-indirects scope is never assumed."""
+    envelope = _envelope()
+    inputs = _all_pass_inputs(envelope) if persisted else _runtime_evidence(envelope)
+    for key, value in change.items():
+        if persisted:
+            inputs["pricing_diagnostics"][key] = value
+        else:
+            setattr(inputs["pricing_diagnostics"], key, value)
+    result = evaluate_project_evidence(envelope, **inputs)
+    assert result.decision != "GO"
+    gate = next(x for x in result.gate_evidence if x.gate_id == "FINANCIAL_COST_RECONCILIATION")
+    assert gate.status == status
+    assert reason in (gate.reason or "")
+
+
+def test_no_site_indirects_scope_conflicts_with_site_postings():
+    envelope = _envelope()
+    inputs = _all_pass_inputs(envelope)
+    ledger = inputs["financial_reconciliation"]
+    site = {
+        "event_id": ["SITE_INDIRECT", "ADM", "MO", "2026-W01"],
+        "nature": "INDIRECT",
+        "category": "MO",
+        "amount": "0",
+        "source": "SITE_INDIRECT:ADM",
+        "week": ledger["postings"][0]["week"],
+    }
+    ledger["postings"].append(site)
+    ledger["event_attribution"].append({**site, "owner_scope": "SOURCE", "owner_id": ["SITE_INDIRECT:ADM"]})
+    ledger["weekly_category_balances"].append({"week": site["week"], "category": "MO", "amount": "0"})
+    result = evaluate_project_evidence(envelope, **inputs)
+    gate = next(x for x in result.gate_evidence if x.gate_id == "FINANCIAL_COST_RECONCILIATION")
+    assert gate.status == "FAIL"
+    assert "NO_SITE_INDIRECTS scope conflicts" in (gate.reason or "")
+    assert result.decision != "GO"
 
 
 def test_explicit_no_inventory_scope_is_valid_without_p19_holding_journal():

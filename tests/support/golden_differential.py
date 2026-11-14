@@ -31,6 +31,7 @@ from typing import Any
 from tests.reference_formalism.catalog_envelope_reference import evaluate_catalog_envelope
 from tests.reference_formalism.economic_reference import _pool as exhaustive_pool
 from tests.reference_formalism.physical_reference import _max_flow
+from tests.reference_formalism.site_indirects_reference import evaluate_site_indirects
 
 ABS_SCOPE_TOLERANCE = Fraction(1, 1_000_000)
 REL_SCOPE_TOLERANCE = Fraction(1, 1_000_000_000)
@@ -386,6 +387,51 @@ def price_checks(canonical: Any) -> list[Check]:
     ]
 
 
+def site_indirect_checks(canonical: Any, site_indirects: dict | None) -> list[Check]:
+    """N10: site-indirect postings of the P20 ledger against the declaration alone.
+
+    `site_indirects` is the project's declared block (None when the project declares
+    NO_SITE_INDIRECTS). The oracle recomputes every posting from it; the pipeline side
+    is read from the persisted ledger rows, never from the pipeline's own journal summary.
+    """
+    diagnostics = canonical.resultado.pricing_diagnostics
+    scope = diagnostics.get("site_indirects_scope_status")
+    pipeline: dict[str, list[str]] = {}
+    for row in canonical.resultado.p20_financial_reconciliation["postings"]:
+        if row["event_id"][0] == "SITE_INDIRECT":
+            if row["nature"] != "INDIRECT":
+                return [Check("PRICE", "site indirects", "DIVERGE", row["nature"], "INDIRECT", "N10 nature")]
+            pipeline["/".join(row["event_id"][1:])] = [row["week"], row["category"], str(q(row["amount"]))]
+    cost = sum((q(row[2]) for row in pipeline.values()), Fraction(0))
+    if site_indirects is None:
+        if scope != "NO_SITE_INDIRECTS":
+            reason = "declaration not given to the oracle"
+            return [Check("PRICE", "site indirects", "UNVERIFIED", str(scope), "", reason)]
+        return [_cmp("PRICE", "site indirects cost", cost, Fraction(0), "NO_SITE_INDIRECTS: no posting")]
+    oracle = evaluate_site_indirects(
+        {"mobilised_weeks": site_indirects["mobilised_weeks"], "lines": site_indirects["lines"]}
+    )
+    same = scope == "DECLARED" and pipeline == oracle["postings"]
+    return [
+        Check(
+            "PRICE",
+            "site indirect postings",
+            "MATCH" if same else "DIVERGE",
+            f"{scope}: {len(pipeline)} postings",
+            f"DECLARED: {len(oracle['postings'])} postings",
+            "site-indirects oracle (Part XII, N10)",
+        ),
+        _cmp("PRICE", "site indirects cost", cost, q(oracle["cost"]), "site-indirects oracle (Part XII, N10)"),
+        _cmp(
+            "PRICE",
+            "site indirects cost (diagnostics)",
+            q(diagnostics["site_indirects_cost"] or 0),
+            q(oracle["cost"]),
+            "site-indirects oracle (Part XII, N10)",
+        ),
+    ]
+
+
 def certificate_checks(certificate: dict) -> list[Check]:
     fingerprints = f"evaluation={certificate.get('evaluation_sha256')} record={certificate.get('record_sha256')}"
     return [
@@ -400,7 +446,9 @@ def certificate_checks(certificate: dict) -> list[Check]:
     ]
 
 
-def differential_report(canonical: Any, catalog: dict, certificate: dict) -> dict[str, Any]:
+def differential_report(
+    canonical: Any, catalog: dict, certificate: dict, site_indirects: dict | None = None
+) -> dict[str, Any]:
     checks = [
         *physical_checks(canonical, catalog),
         *resource_demand_checks(canonical, catalog),
@@ -408,6 +456,7 @@ def differential_report(canonical: Any, catalog: dict, certificate: dict) -> dic
         *consumption_checks(canonical, catalog),
         *catalog_checks(canonical, catalog),
         *price_checks(canonical),
+        *site_indirect_checks(canonical, site_indirects),
         *certificate_checks(certificate),
     ]
     first = next((c for c in checks if c.status == "DIVERGE"), None)

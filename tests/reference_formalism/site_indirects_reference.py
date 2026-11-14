@@ -5,8 +5,12 @@ sub-category divided by ``s_mes = 1461/336``; MO, EQ and COMB keep their own
 markup category and VM takes IND. A ``onetime`` line charges its mobilisation
 in the first mobilised week and its demobilisation in the last one, both IND.
 With the category markups, the price is the sum of each category's cost times
-``1 + beta`` (XII.4). Stdlib only; written from the rule, not from production
-code.
+``1 + beta`` (XII.4).
+
+The scope is mandatory (N10): a declaration either says DECLARED and carries the
+lines, or says NO_SITE_INDIRECTS and carries none, always with source,
+reference and fingerprint. Anything else is not evaluated.
+Stdlib only; written from the rule, not from production code.
 """
 
 from __future__ import annotations
@@ -111,3 +115,25 @@ def evaluate_site_indirects(case: dict[str, Any]) -> dict[str, Any]:
             sum((cost * (1 + _exact(markups[category], category)) for category, cost in by_category.items()), F(0))
         )
     return result
+
+
+def evaluate_site_indirects_scope(declaration: dict[str, Any]) -> dict[str, Any]:
+    """Scope of a pricing declaration: which status holds and whether lines are posted."""
+    scope = declaration.get("site_indirects_scope")
+    if scope is None:
+        raise SiteIndirectsError("scope missing: site indirects are never assumed")
+    if not isinstance(scope, dict) or set(scope) - {"status", "source", "reference_id", "fingerprint"}:
+        raise SiteIndirectsError("scope must be an object of status, source, reference_id and fingerprint")
+    if scope.get("status") not in ("DECLARED", "NO_SITE_INDIRECTS"):
+        raise SiteIndirectsError("scope status must be DECLARED or NO_SITE_INDIRECTS")
+    for field in ("source", "reference_id", "fingerprint"):
+        if not isinstance(scope.get(field), str) or not scope[field].strip():
+            raise SiteIndirectsError(f"scope {field} required")
+    has_lines = "site_indirects" in declaration
+    if scope["status"] == "DECLARED" and not has_lines:
+        raise SiteIndirectsError("DECLARED scope without the declared lines")
+    if scope["status"] == "NO_SITE_INDIRECTS" and has_lines:
+        raise SiteIndirectsError("NO_SITE_INDIRECTS scope with declared lines")
+    # A NO_SITE_INDIRECTS project has no site cost figure at all: null, not a computed zero.
+    cost = evaluate_site_indirects(declaration["site_indirects"])["cost"] if has_lines else None
+    return {"status": scope["status"], "site_indirects_cost": cost}

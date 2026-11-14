@@ -8,9 +8,37 @@ from pathlib import Path
 
 import pytest
 
-from tests.reference_formalism.site_indirects_reference import SiteIndirectsError, evaluate_site_indirects
+from tests.reference_formalism.site_indirects_reference import (
+    SiteIndirectsError,
+    evaluate_site_indirects,
+    evaluate_site_indirects_scope,
+)
 
 PATH = Path(__file__).parent / "vectors" / "economic_site_indirects_v1.json"
+
+
+def scope_goldens() -> list[dict]:
+    return json.loads(PATH.read_text(encoding="utf-8"))["scope_vectors"]
+
+
+@pytest.mark.parametrize("case", scope_goldens(), ids=lambda c: c["case_id"])
+def test_site_indirects_scope_goldens(case: dict) -> None:
+    if "expected_error" in case:
+        with pytest.raises(SiteIndirectsError, match=case["expected_error"]):
+            evaluate_site_indirects_scope(case["declaration"])
+    else:
+        assert evaluate_site_indirects_scope(case["declaration"]) == case["expected"]
+
+
+def test_scope_hand_checked_values_are_pinned() -> None:
+    by_id = {c["case_id"]: c for c in scope_goldens()}
+    assert by_id["declared_scope_with_lines"]["expected"] == {"status": "DECLARED", "site_indirects_cost": "57792"}
+    assert by_id["no_site_indirects_is_explicit"]["expected"] == {
+        "status": "NO_SITE_INDIRECTS",
+        "site_indirects_cost": None,
+    }
+    # Every other scope case is a refusal: absence or inconsistency is never evaluated.
+    assert sum("expected_error" in c for c in by_id.values()) == len(by_id) - 2 == 7
 
 
 def goldens() -> list[dict]:

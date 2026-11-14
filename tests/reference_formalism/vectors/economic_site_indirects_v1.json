@@ -10,7 +10,7 @@
    "XII.4",
    "N10"
   ],
-  "scope": "exact weekly postings of declared site indirects (perm monthly cost by sub-category over the mobilised weeks, onetime mobilisation/demobilisation), their totals by line, category and week, and the price by category markup",
+  "scope": "exact weekly postings of declared site indirects (perm monthly cost by sub-category over the mobilised weeks, onetime mobilisation/demobilisation), their totals by line, category and week, and the price by category markup; mandatory site-indirects scope (DECLARED with lines, NO_SITE_INDIRECTS without, never assumed)",
   "rounding": "Fraction exact"
  },
  "vectors": [
@@ -754,6 +754,174 @@
     "lines": []
    },
    "expected_error": "at least one declared line"
+  }
+ ],
+ "scope_vectors": [
+  {
+   "case_id": "declared_scope_with_lines",
+   "hand_check": "DECLARED with the ADM line of perm_four_weeks_by_subcategory: the site cost is 57792.",
+   "declaration": {
+    "site_indirects_scope": {
+     "status": "DECLARED",
+     "source": "fixture: project scope statement",
+     "reference_id": "scope-v1",
+     "fingerprint": "scope-fp-v1"
+    },
+    "site_indirects": {
+     "mobilised_weeks": {
+      "first": "2026-W19",
+      "last": "2026-W22"
+     },
+     "lines": [
+      {
+       "line_id": "ADM",
+       "driver": "perm",
+       "source": "fixture",
+       "monthly": {
+        "MO": "43830",
+        "EQ": "14610",
+        "COMB": "1461",
+        "VM": "2922"
+       }
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "DECLARED",
+    "site_indirects_cost": "57792"
+   }
+  },
+  {
+   "case_id": "no_site_indirects_is_explicit",
+   "hand_check": "NO_SITE_INDIRECTS with its source and no lines: evaluated, and the site cost is null (no figure), not a computed zero.",
+   "declaration": {
+    "site_indirects_scope": {
+     "status": "NO_SITE_INDIRECTS",
+     "source": "fixture: project scope statement",
+     "reference_id": "scope-v1",
+     "fingerprint": "scope-fp-v1"
+    }
+   },
+   "expected": {
+    "status": "NO_SITE_INDIRECTS",
+    "site_indirects_cost": null
+   }
+  },
+  {
+   "case_id": "scope_absent_is_not_evaluated",
+   "hand_check": "No scope: the project never said whether it has site indirects; nothing is assumed.",
+   "declaration": {},
+   "expected_error": "scope missing"
+  },
+  {
+   "case_id": "lines_without_a_scope_are_not_evaluated",
+   "hand_check": "Lines alone do not replace the scope declaration.",
+   "declaration": {
+    "site_indirects": {
+     "mobilised_weeks": {
+      "first": "2026-W19",
+      "last": "2026-W22"
+     },
+     "lines": [
+      {
+       "line_id": "ADM",
+       "driver": "perm",
+       "source": "fixture",
+       "monthly": {
+        "MO": "43830",
+        "EQ": "14610",
+        "COMB": "1461",
+        "VM": "2922"
+       }
+      }
+     ]
+    }
+   },
+   "expected_error": "scope missing"
+  },
+  {
+   "case_id": "declared_without_lines_is_rejected",
+   "hand_check": "DECLARED promises lines that are not there.",
+   "declaration": {
+    "site_indirects_scope": {
+     "status": "DECLARED",
+     "source": "fixture: project scope statement",
+     "reference_id": "scope-v1",
+     "fingerprint": "scope-fp-v1"
+    }
+   },
+   "expected_error": "DECLARED scope without the declared lines"
+  },
+  {
+   "case_id": "no_site_indirects_with_lines_is_rejected",
+   "hand_check": "The scope denies what the declaration carries.",
+   "declaration": {
+    "site_indirects_scope": {
+     "status": "NO_SITE_INDIRECTS",
+     "source": "fixture: project scope statement",
+     "reference_id": "scope-v1",
+     "fingerprint": "scope-fp-v1"
+    },
+    "site_indirects": {
+     "mobilised_weeks": {
+      "first": "2026-W19",
+      "last": "2026-W22"
+     },
+     "lines": [
+      {
+       "line_id": "ADM",
+       "driver": "perm",
+       "source": "fixture",
+       "monthly": {
+        "MO": "43830",
+        "EQ": "14610",
+        "COMB": "1461",
+        "VM": "2922"
+       }
+      }
+     ]
+    }
+   },
+   "expected_error": "NO_SITE_INDIRECTS scope with declared lines"
+  },
+  {
+   "case_id": "unknown_status_is_rejected",
+   "hand_check": "Only the two statuses exist; 'assumed none' is not a declaration.",
+   "declaration": {
+    "site_indirects_scope": {
+     "status": "ASSUMED_NONE",
+     "source": "fixture: project scope statement",
+     "reference_id": "scope-v1",
+     "fingerprint": "scope-fp-v1"
+    }
+   },
+   "expected_error": "status must be DECLARED or NO_SITE_INDIRECTS"
+  },
+  {
+   "case_id": "scope_without_source_is_rejected",
+   "hand_check": "A scope without provenance is not a declaration.",
+   "declaration": {
+    "site_indirects_scope": {
+     "status": "NO_SITE_INDIRECTS",
+     "source": " ",
+     "reference_id": "scope-v1",
+     "fingerprint": "scope-fp-v1"
+    }
+   },
+   "expected_error": "scope source required"
+  },
+  {
+   "case_id": "scope_without_fingerprint_is_rejected",
+   "hand_check": "Same field convention as the inventory scope: source, reference and fingerprint.",
+   "declaration": {
+    "site_indirects_scope": {
+     "status": "NO_SITE_INDIRECTS",
+     "source": "fixture: project scope statement",
+     "reference_id": "scope-v1"
+    }
+   },
+   "expected_error": "scope fingerprint required"
   }
  ]
 }

@@ -21,6 +21,7 @@ from concilium.application.scheduling.physical_consumption_journal import (
     PhysicalConsumptionJournalResult,
 )
 from concilium.application.scheduling.physical_consumption_rates import PhysicalPurchaseMeasure
+from concilium.application.scheduling.pricing_report_adapter import parse_site_indirects_scope
 from concilium.application.scheduling.site_indirect_journal import (
     SCHEMA,
     SiteIndirectDeclarationError,
@@ -31,11 +32,13 @@ from concilium.application.scheduling.site_indirect_journal import (
 )
 from tests.reference_formalism.site_indirects_reference import evaluate_site_indirects
 
-VECTORS = json.loads(
+_DOC = json.loads(
     (Path(__file__).resolve().parents[3] / "reference_formalism/vectors/economic_site_indirects_v1.json").read_text(
         encoding="utf-8"
     )
-)["vectors"]
+)
+VECTORS = _DOC["vectors"]
+SCOPE_VECTORS = _DOC["scope_vectors"]
 
 
 def _declaration(case: dict) -> dict:
@@ -86,6 +89,24 @@ def test_production_matches_the_independent_oracle(vector: dict) -> None:
             _production(vector["case"])
         return
     assert _production(vector["case"]) == vector["expected"] == evaluate_site_indirects(vector["case"])
+
+
+@pytest.mark.parametrize("vector", SCOPE_VECTORS, ids=lambda v: v["case_id"])
+def test_production_scope_matches_the_independent_oracle(vector: dict) -> None:
+    """N10 scope rule: production accepts and refuses exactly what the oracle does."""
+    declaration = dict(vector["declaration"])
+    if "site_indirects" in declaration:
+        declaration["site_indirects"] = _declaration(declaration["site_indirects"])
+    if "expected_error" in vector:
+        with pytest.raises(ValueError):
+            parse_site_indirects_scope(declaration)
+        return
+    scope = parse_site_indirects_scope(declaration)
+    cost = None
+    if "site_indirects" in declaration:
+        parsed = parse_site_indirects_declaration(declaration["site_indirects"])
+        cost = str(post_exact_site_indirects(ExclusiveCostLedger(()), parsed).cost)
+    assert {"status": scope.status, "site_indirects_cost": cost} == vector["expected"]
 
 
 ADM = {

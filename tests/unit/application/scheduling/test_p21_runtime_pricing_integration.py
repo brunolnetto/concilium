@@ -27,6 +27,7 @@ from concilium.application.scheduling.physical_consumption_rates import (
 from concilium.application.scheduling.pricing_gates import RegulatoryBdiBasis
 from concilium.application.scheduling.pricing_report_adapter import (
     InventoryEvidenceScope,
+    SiteIndirectsScope,
     apply_pricing_report_evidence,
     build_pricing_report_evidence_context,
 )
@@ -51,6 +52,24 @@ def _result() -> Resultado:
         pricing_diagnostics={},
         pricing_gates={},
         pricing_authority="",
+    )
+
+
+_NO_SITE_SCOPE_JSON: dict[str, object] = {
+    "status": "NO_SITE_INDIRECTS",
+    "source": "fixture: no site administration modelled",
+    "reference_id": "no-site-indirects-fixture",
+    "fingerprint": "site-indirects-scope-fixture-v1",
+}
+_DECLARED_SITE_SCOPE_JSON: dict[str, object] = {**_NO_SITE_SCOPE_JSON, "status": "DECLARED"}
+
+
+def _no_site_scope() -> SiteIndirectsScope:
+    return SiteIndirectsScope(
+        status="NO_SITE_INDIRECTS",
+        source="test-fixture",
+        reference_id="no-site-indirects-fixture",
+        fingerprint="site-indirects-scope-fingerprint",
     )
 
 
@@ -158,6 +177,7 @@ def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() ->
             reference_id="no-inventory-fixture",
             fingerprint="inventory-scope-fingerprint",
         ),
+        "site_indirects_scope": _no_site_scope(),
         "pool_ledger": pool,
         "consumption_journal": consumption,
         "bdi_by_category": {
@@ -291,6 +311,7 @@ def _json_runtime_fixture() -> tuple[CanonicalModel, dict[str, object], dict[str
             "reference_id": "stocktake-2026-10-01",
             "fingerprint": "inventory-scope-2026-v1",
         },
+        "site_indirects_scope": dict(_NO_SITE_SCOPE_JSON),
         "bdi_by_category": {
             "MO": "0",
             "EQ": "0",
@@ -576,7 +597,7 @@ def test_declared_bdi_basis_must_equal_derived_catalog_envelope(field: str) -> N
         build_pricing_report_evidence_context(canonical, catalogo, declaration)
 
 
-# --- N10: declared site indirects through the real Skill 06 JSON boundary ---
+# --- N10: site-indirects scope and declared lines through the real Skill 06 JSON boundary ---
 
 _SITE_INDIRECTS: dict[str, object] = {
     "schema": "concilium.n10.site-indirects.v1",
@@ -598,10 +619,16 @@ _SITE_INDIRECTS: dict[str, object] = {
 }
 
 
-def _run_skill06_with(monkeypatch, inputs: dict[str, object]):
+def _run_skill06_with(monkeypatch, evidence: dict[str, object] | None = None, **skill_inputs: object):
+    """Run the real Skill 06 over the fixture; ``evidence`` overrides/removes (None) declaration keys."""
     _load("06-resultado-financeiro", "run_resultado_financeiro")
     skill_module = sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
     canonical, catalogo, declaration = _json_runtime_fixture()
+    for key, value in (evidence or {}).items():
+        if value is None:
+            declaration.pop(key, None)
+        else:
+            declaration[key] = value
     seen: dict[str, object] = {}
 
     def stage_consolidation(current, stage_inputs, *_args):
@@ -616,19 +643,29 @@ def _run_skill06_with(monkeypatch, inputs: dict[str, object]):
     monkeypatch.setattr(skill_module, "_run_indiretos", lambda current, *_a: SkillResult(current, []))
     monkeypatch.setattr(skill_module, "_run_consolidacao", stage_consolidation)
     monkeypatch.setattr(skill_module, "build_skill06_p17_reconciliation", lambda _c: {"status": "RECONCILED"})
-    base_inputs: dict[str, object] = {
+    inputs: dict[str, object] = {
         "p18_consumption_preview_enabled": True,
         "certification_intent": "PREVIEW",
         "p21_pricing_evidence": declaration,
+        **skill_inputs,
     }
-    outcome = skill_module.run_resultado_financeiro(canonical, {**base_inputs, **inputs}, catalogo, {})
+    outcome = skill_module.run_resultado_financeiro(canonical, inputs, catalogo, {})
     return outcome, seen
+
+
+def _scopes(diagnostics: dict) -> tuple[dict, dict]:
+    return tuple(  # type: ignore[return-value]
+        {field: diagnostics[f"{scope}_scope_{field}"] for field in ("status", "source", "reference_id", "fingerprint")}
+        for scope in ("inventory", "site_indirects")
+    )
 
 
 def test_declared_site_indirects_enter_p20_and_are_replayed_by_p23(monkeypatch) -> None:
     from concilium.application.scheduling.formalism_evaluator import _financial_reconciliation_status
 
-    outcome, seen = _run_skill06_with(monkeypatch, {"site_indirects": _SITE_INDIRECTS})
+    outcome, seen = _run_skill06_with(
+        monkeypatch, {"site_indirects_scope": _DECLARED_SITE_SCOPE_JSON, "site_indirects": _SITE_INDIRECTS}
+    )
     result = seen["result"]
     reconciliation = seen["context"]["reconciliation"]
     # Site: ADM 2 weeks x (336 + 3.36) = 678.72; MOB_SITE 7 + 3 = 10.
@@ -636,11 +673,12 @@ def test_declared_site_indirects_enter_p20_and_are_replayed_by_p23(monkeypatch) 
     assert reconciliation.site_indirects.cost == site_cost
     assert reconciliation.ledger.consumable_v == F("52.804")  # direct cost untouched
     assert reconciliation.ledger.indirect == F("1.512") + site_cost
-    assert result.pricing_diagnostics["site_indirects_status"] == "DECLARED"
+    assert result.pricing_diagnostics["site_indirects_scope_status"] == "DECLARED"
+    assert result.pricing_diagnostics["site_indirects_scope_reference_id"] == "no-site-indirects-fixture"
     assert result.pricing_diagnostics["site_indirects_cost"] == str(site_cost)
     assert result.pricing_diagnostics["site_indirects_reference_id"] == "adm-local-2026-v1"
     assert result.pricing_diagnostics["total_cost"] == str(F("54.316") + site_cost)
-    assert "VAL-N10-INDIRETOS-CANTEIRO-NAO-DECLARADOS" not in {v.codigo for v in outcome.validacoes}
+    assert not outcome.has_errors
 
     persisted = result.p20_financial_reconciliation
     witness = persisted["site_indirects"]
@@ -650,29 +688,66 @@ def test_declared_site_indirects_enter_p20_and_are_replayed_by_p23(monkeypatch) 
     site_rows = [row for row in persisted["postings"] if row["event_id"][0] == "SITE_INDIRECT"]
     assert {(row["nature"], row["category"]) for row in site_rows} == {("INDIRECT", "MO"), ("INDIRECT", "IND")}
     # P23 replays the persisted ledger, including INDIRECT postings in the MO markup category.
-    status, observed, reason = _financial_reconciliation_status(
-        json.loads(json.dumps(persisted)),
-        {
-            "status": result.pricing_diagnostics["inventory_scope_status"],
-            "source": result.pricing_diagnostics["inventory_scope_source"],
-            "reference_id": result.pricing_diagnostics["inventory_scope_reference_id"],
-            "fingerprint": result.pricing_diagnostics["inventory_scope_fingerprint"],
-        },
-    )
+    inventory_scope, site_scope = _scopes(result.pricing_diagnostics)
+    replayed = json.loads(json.dumps(persisted))
+    status, observed, reason = _financial_reconciliation_status(replayed, inventory_scope, site_scope)
     assert (status, reason) == ("PASS", None)
     assert observed["indirect"] == str(F("1.512") + site_cost)
+    assert observed["site_indirects_scope"]["status"] == "DECLARED"
+    # The same ledger under a scope that denies it, or with no scope, never passes.
+    denied, _, why = _financial_reconciliation_status(
+        replayed, inventory_scope, {**site_scope, "status": "NO_SITE_INDIRECTS"}
+    )
+    assert denied == "FAIL" and "conflicts with site-indirect postings" in why
+    assert _financial_reconciliation_status(replayed, inventory_scope)[0] == "UNKNOWN"
 
 
-def test_missing_site_indirects_are_reported_never_filled(monkeypatch) -> None:
-    outcome, seen = _run_skill06_with(monkeypatch, {})
+def test_no_site_indirects_scope_is_an_explicit_declaration(monkeypatch) -> None:
+    from concilium.application.scheduling.formalism_evaluator import _financial_reconciliation_status
+
+    outcome, seen = _run_skill06_with(monkeypatch)
     result = seen["result"]
     assert seen["context"]["reconciliation"].site_indirects is None
-    assert result.pricing_diagnostics["site_indirects_status"] == "NOT_DECLARED"
-    assert result.pricing_diagnostics["site_indirects_cost"] is None  # not "0"
+    assert result.pricing_diagnostics["site_indirects_scope_status"] == "NO_SITE_INDIRECTS"
+    assert result.pricing_diagnostics["site_indirects_scope_source"] == "fixture: no site administration modelled"
+    assert result.pricing_diagnostics["site_indirects_cost"] is None  # not a computed "0"
     assert result.pricing_diagnostics["total_cost"] == str(F("54.316"))
     assert result.p20_financial_reconciliation["site_indirects"] is None
-    warning = next(v for v in outcome.validacoes if v.codigo == "VAL-N10-INDIRETOS-CANTEIRO-NAO-DECLARADOS")
-    assert warning.status == "AVISO"
+    assert not outcome.has_errors
+    status, _observed, reason = _financial_reconciliation_status(
+        result.p20_financial_reconciliation, *_scopes(result.pricing_diagnostics)
+    )
+    assert (status, reason) == ("PASS", None)
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_without_a_site_indirects_scope_the_price_is_not_evaluated(monkeypatch, intent: str) -> None:
+    outcome, seen = _run_skill06_with(monkeypatch, {"site_indirects_scope": None}, certification_intent=intent)
+    result = seen["result"]
+    assert "site_indirects_scope is required" in seen["context"]["source_build_error"]
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert result.pricing_diagnostics["status"] == "UNKNOWN"
+    assert "total_cost" not in result.pricing_diagnostics and "operational_price" not in result.pricing_diagnostics
+    assert outcome.has_errors is (intent == "CERTIFIED")
+
+
+@pytest.mark.parametrize(
+    ("evidence", "reason"),
+    [
+        ({"site_indirects_scope": _DECLARED_SITE_SCOPE_JSON}, "requires the site_indirects declaration"),
+        ({"site_indirects": _SITE_INDIRECTS}, "NO_SITE_INDIRECTS scope conflicts"),
+        ({"site_indirects_scope": {**_NO_SITE_SCOPE_JSON, "status": "NONE_ASSUMED"}}, "must be DECLARED or NO_SITE"),
+        ({"site_indirects_scope": {**_NO_SITE_SCOPE_JSON, "source": " "}}, "source must be nonempty"),
+        ({"site_indirects_scope": {**_NO_SITE_SCOPE_JSON, "estimated": True}}, "unsupported fields"),
+        ({"site_indirects_scope": {k: v for k, v in _NO_SITE_SCOPE_JSON.items() if k != "fingerprint"}},
+         "fingerprint must be nonempty"),
+        ({"site_indirects_scope": "NO_SITE_INDIRECTS"}, "must be a JSON object"),
+    ],
+)
+def test_inconsistent_site_indirects_scope_is_rejected(monkeypatch, evidence: dict, reason: str) -> None:
+    _outcome, seen = _run_skill06_with(monkeypatch, evidence)
+    assert reason in seen["context"]["source_build_error"]
+    assert seen["result"].pricing_gates["status"] == "UNKNOWN"
 
 
 @pytest.mark.parametrize(
@@ -685,29 +760,71 @@ def test_missing_site_indirects_are_reported_never_filled(monkeypatch) -> None:
     ],
 )
 def test_invalid_site_indirects_leave_the_price_not_evaluated(monkeypatch, change: dict, reason: str) -> None:
-    _outcome, seen = _run_skill06_with(monkeypatch, {"site_indirects": {**_SITE_INDIRECTS, **change}})
+    _outcome, seen = _run_skill06_with(
+        monkeypatch,
+        {"site_indirects_scope": _DECLARED_SITE_SCOPE_JSON, "site_indirects": {**_SITE_INDIRECTS, **change}},
+    )
     result = seen["result"]
     assert reason in seen["context"]["source_build_error"]
     assert result.pricing_gates["status"] == "UNKNOWN"
     assert "total_cost" not in result.pricing_diagnostics
 
 
-def test_site_indirects_cannot_be_declared_in_two_places(monkeypatch) -> None:
-    _canonical, _catalogo, declaration = _json_runtime_fixture()
+def test_skill06_inputs_carry_the_scope_and_the_lines(monkeypatch) -> None:
+    """Project-level inputs are merged into a declaration that does not carry them itself."""
     _outcome, seen = _run_skill06_with(
         monkeypatch,
-        {
-            "p21_pricing_evidence": {**declaration, "site_indirects": _SITE_INDIRECTS},
-            "site_indirects": _SITE_INDIRECTS,
-        },
+        {"site_indirects_scope": None},
+        site_indirects_scope=_DECLARED_SITE_SCOPE_JSON,
+        site_indirects=_SITE_INDIRECTS,
     )
+    assert seen["result"].pricing_diagnostics["site_indirects_scope_status"] == "DECLARED"
+    assert seen["context"]["reconciliation"].site_indirects.cost == F("688.72")
+
+
+@pytest.mark.parametrize("key", ["site_indirects_scope", "site_indirects"])
+def test_site_indirects_cannot_be_declared_in_two_places(monkeypatch, key: str) -> None:
+    both = {"site_indirects_scope": _DECLARED_SITE_SCOPE_JSON, "site_indirects": _SITE_INDIRECTS}
+    _outcome, seen = _run_skill06_with(monkeypatch, both, **{key: both[key]})
     assert "declared both" in seen["context"]["source_build_error"]
     assert seen["result"].pricing_gates["status"] == "UNKNOWN"
 
 
-def test_site_indirects_inside_hand_written_evidence_are_accepted(monkeypatch) -> None:
-    _canonical, _catalogo, declaration = _json_runtime_fixture()
-    _outcome, seen = _run_skill06_with(
-        monkeypatch, {"p21_pricing_evidence": {**declaration, "site_indirects": _SITE_INDIRECTS}}
+def test_typed_context_without_a_site_indirects_scope_is_unknown() -> None:
+    result = _result()
+    validations: list = []
+    scope = InventoryEvidenceScope(status="NO_INVENTORY", source="s", reference_id="r", fingerprint="f")
+    apply_pricing_report_evidence(
+        result, {"certification_intent": "AUTO_GO", "p21_pricing_evidence": {"inventory_scope": scope}}, validations
     )
-    assert seen["result"].pricing_diagnostics["site_indirects_status"] == "DECLARED"
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert "site-indirects scope" in result.pricing_gates["reason"]
+    assert validations[-1].status == "ERRO"
+
+
+def test_typed_context_scope_must_agree_with_the_journal() -> None:
+    from concilium.application.scheduling.financial_cost_reconciliation import reconcile_financial_sources
+
+    pool = ExclusiveCostLedger((
+        CostPosting(("POOL", "R", "ACTIVE"), PostingNature.ACTIVE, "EQ", F(14), "R", "2026-W01"),
+    ))
+    reconciliation = reconcile_financial_sources(pool, PhysicalConsumptionJournalResult(pool, ()))
+    result = _result()
+    validations: list = []
+    apply_pricing_report_evidence(
+        result,
+        {
+            "p21_pricing_evidence": {
+                "inventory_scope": InventoryEvidenceScope(
+                    status="NO_INVENTORY", source="s", reference_id="r", fingerprint="f"
+                ),
+                "site_indirects_scope": SiteIndirectsScope(
+                    status="DECLARED", source="s", reference_id="r", fingerprint="f"
+                ),
+                "reconciliation": reconciliation,
+            },
+        },
+        validations,
+    )
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert "requires the site_indirects declaration" in result.pricing_gates["reason"]

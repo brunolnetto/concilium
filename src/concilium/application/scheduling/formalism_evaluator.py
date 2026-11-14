@@ -559,9 +559,44 @@ def _inventory_scope_state(
     return "PASS", observed, None
 
 
+def _site_indirects_scope_state(
+    scope: Mapping[str, Any] | None,
+    journal_present: bool,
+    site_postings_present: bool,
+) -> tuple[GateStatus, dict[str, Any], str | None]:
+    """N10: the same contract as the inventory scope, for declared site indirects."""
+    if not isinstance(scope, Mapping):
+        return "UNKNOWN", {}, "P21 site-indirects scope declaration is missing"
+    status = scope.get("status")
+    source = scope.get("source")
+    reference = scope.get("reference_id")
+    fingerprint = scope.get("fingerprint")
+    observed = {
+        "status": status,
+        "source": source,
+        "reference_id": reference,
+        "fingerprint": fingerprint,
+        "site_indirects_journal_present": journal_present,
+    }
+    if status not in {"DECLARED", "NO_SITE_INDIRECTS"}:
+        return "UNKNOWN", observed, "site-indirects scope must explicitly be DECLARED or NO_SITE_INDIRECTS"
+    if any(not isinstance(value, str) or not value.strip() for value in (source, reference, fingerprint)):
+        return "UNKNOWN", observed, "site-indirects scope requires source, reference and fingerprint"
+    if status == "DECLARED" and not journal_present:
+        return "UNKNOWN", observed, "DECLARED site-indirects scope has no site-indirects journal witness"
+    if status == "NO_SITE_INDIRECTS" and (journal_present or site_postings_present):
+        return "FAIL", observed, "NO_SITE_INDIRECTS scope conflicts with site-indirect postings"
+    return "PASS", observed, None
+
+
+def _is_site_posting(event_id: Any) -> bool:
+    return isinstance(event_id, (list, tuple)) and bool(event_id) and event_id[0] == "SITE_INDIRECT"
+
+
 def _financial_reconciliation_status(
     reconciliation: Any | None,
     inventory_scope: Mapping[str, Any] | None,
+    site_indirects_scope: Mapping[str, Any] | None = None,
 ) -> tuple[GateStatus, dict[str, Any], str | None]:
     """Replay persisted P20 JSON and inventory coverage exactly.
 
@@ -752,6 +787,14 @@ def _financial_reconciliation_status(
         )
         if inventory_status != "PASS":
             return inventory_status, totals_observed, inventory_reason
+        site_status, site_observed, site_reason = _site_indirects_scope_state(
+            site_indirects_scope,
+            isinstance(reconciliation.get("site_indirects"), Mapping),
+            any(_is_site_posting(row.get("event_id")) for row in postings if isinstance(row, Mapping)),
+        )
+        totals_observed = totals_observed | {"site_indirects_scope": site_observed}
+        if site_status != "PASS":
+            return site_status, totals_observed, site_reason
         return "PASS", totals_observed, None
 
     ledger = getattr(reconciliation, "ledger", None)
@@ -824,6 +867,14 @@ def _financial_reconciliation_status(
     }
     if inventory_status != "PASS":
         return inventory_status, observed, inventory_reason
+    site_status, site_observed, site_reason = _site_indirects_scope_state(
+        site_indirects_scope,
+        getattr(reconciliation, "site_indirects", None) is not None,
+        any(_is_site_posting(getattr(row, "event_id", None)) for row in postings),
+    )
+    observed["site_indirects_scope"] = site_observed
+    if site_status != "PASS":
+        return site_status, observed, site_reason
     return "PASS", observed, None
 
 
@@ -1169,9 +1220,16 @@ def build_formalism_gate_evidence(
         "reference_id": _read(pricing_diagnostics, "inventory_scope_reference_id"),
         "fingerprint": _read(pricing_diagnostics, "inventory_scope_fingerprint"),
     }
+    site_indirects_scope = {
+        "status": _read(pricing_diagnostics, "site_indirects_scope_status"),
+        "source": _read(pricing_diagnostics, "site_indirects_scope_source"),
+        "reference_id": _read(pricing_diagnostics, "site_indirects_scope_reference_id"),
+        "fingerprint": _read(pricing_diagnostics, "site_indirects_scope_fingerprint"),
+    }
     finance_status, finance_observed, finance_reason = _financial_reconciliation_status(
         financial_reconciliation,
         inventory_scope,
+        site_indirects_scope,
     )
     finance_total = None
     if finance_status == "PASS":

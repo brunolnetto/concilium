@@ -252,6 +252,24 @@ FALSIFIERS = [
         "NOGO",
         (),
     ),
+    # N10: the site-indirects scope is never assumed. Without it Skill06 builds no
+    # exact ledger, so nothing is priced and the financial gates cannot pass.
+    (
+        "FINANCIAL_COST_RECONCILIATION: site-indirects scope withheld",
+        "single_plant_sequence",
+        lambda s: _p21(s).pop("site_indirects_scope"),
+        "FINANCIAL_COST_RECONCILIATION",
+        None,
+        ("V1", "V3", "V5", "V6"),
+    ),
+    (
+        "FINANCIAL_COST_RECONCILIATION: DECLARED site-indirects scope without lines",
+        "single_plant_sequence",
+        lambda s: _p21(s)["site_indirects_scope"].update(status="DECLARED"),
+        "FINANCIAL_COST_RECONCILIATION",
+        None,
+        ("V1", "V3", "V5", "V6"),
+    ),
     (
         "PROFITABILITY: BDI above the floor but margin below the minimum",
         "sharing_theta_standby_remob",
