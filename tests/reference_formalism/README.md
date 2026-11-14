@@ -108,6 +108,13 @@ reference path for tiny fixed demand profiles without importing P16/P17/P18/P19:
   This is stronger than the existing P16 fixed-height-layer witness: the
   independent 4-week case d=(2,1,1,2) costs **92**, while P16's fixed layers
   cost 120. P16 global optimality remains OPEN at #16.
+- Pool tariffs (`active`, `idle`, `movement`) accept a terminating decimal or an
+  exact nonnegative rational `a/b` (`protocol.rational_input`; digits only,
+  nonzero denominator, never a float), because a catalog monthly price over
+  \(s_{mes}=1461/336\) is not a terminating decimal and must not be rounded
+  (N8). Every other input stays decimal-only, and the decimal ledger still
+  rejects nonterminating totals. Hand-checked rational goldens and rejections:
+  `vectors/pool_exact_rational_tariff_v1.json`.
 - Acquires measured MAT/COMB in physical units under the three named
   consumption regimes, with separate physical rate, price and loss/idle
   provenance. Supports exact g↔kg and mL↔L order conversion, and rejects

@@ -8,8 +8,8 @@ import the production module that produced it:
   shift); Σ_j q_ij = Q_i within the documented scope tolerance;
 * POOL — P16 contractual K per contract: closed form when no mobilisation
   cost is declared (never bridging is optimal: presence = demand, K = tariff *
-  Σ demand), the exhaustive P22-C pool oracle inside its bounds, else
-  UNVERIFIED;
+  Σ demand), the exhaustive P22-C pool oracle inside its bounds (tariffs passed
+  as exact rationals, never rounded), else UNVERIFIED;
 * CONSUMPTION — P18 V per activity = Σ_j q_ij * coef * price (consumption
   oracle form) and the N6 declaration;
 * CATALOG — C^cat by the catalog-envelope oracle;
@@ -24,7 +24,6 @@ Expected values are never rewritten to match the pipeline.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, localcontext
 from fractions import Fraction
 from typing import Any
 
@@ -40,14 +39,6 @@ PHASES = ("PHYSICAL", "POOL", "CONSUMPTION", "CATALOG", "PRICE", "CERTIFICATE")
 
 def q(value: object) -> Fraction:
     return Fraction(str(value))
-
-
-def decimal_text(value: Fraction) -> str | None:
-    """Exact terminating-decimal text for the reference protocol, else None."""
-    with localcontext() as ctx:
-        ctx.prec = 60
-        text = str(Decimal(value.numerator) / Decimal(value.denominator))
-    return text if Fraction(text) == value else None
 
 
 @dataclass(frozen=True)
@@ -236,19 +227,8 @@ def pool_checks(canonical: Any) -> list[Check]:
             )
             continue
         regime = "FULL_RATE_STANDBY" if idle == active else "DISCOUNTED_STANDBY"
-        rates = [decimal_text(x) for x in (active, idle, movement)]
-        if None in rates:
-            checks.append(
-                Check(
-                    "POOL",
-                    f"{label} K",
-                    "UNVERIFIED",
-                    str(q(costs.get("pool_total", 0))),
-                    "-",
-                    "tariff is not a terminating decimal for the reference protocol",
-                )
-            )
-            continue
+        # Exact rationals ("a" or "a/b"): catalog-derived tariffs are never rounded (N8).
+        rates = [str(x) for x in (active, idle, movement)]
         record = exhaustive_pool(
             tuple(window),
             {

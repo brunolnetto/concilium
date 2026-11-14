@@ -14,6 +14,7 @@ from tests.reference_formalism.protocol import (
     ReferenceContractError,
     _finite_decimal,
     decimal_input,
+    rational_input,
 )
 
 VERSION = "formalism-economic/1"
@@ -42,6 +43,14 @@ def _money(value: Any, label: str, minimum: F = F(0)) -> F:
     return number
 
 
+def _tariff(value: Any, label: str) -> F:
+    """Pool tariff: terminating decimal or exact rational a/b (N8), never rounded."""
+    number = rational_input(value, label)
+    if number < 0:
+        raise ReferenceContractError(f"{label}: invalid nonnegative value")
+    return number
+
+
 def _series(values: Any, weeks: int, label: str) -> tuple[F, ...]:
     if not isinstance(values, list) or len(values) != weeks:
         raise ReferenceContractError(f"{label}: expected {weeks} week-cells")
@@ -61,9 +70,9 @@ def _pool(demand: tuple[int, ...], contract: dict) -> dict:
         raise ReferenceContractError("bounded pool enumeration exceeded")
     if max(demand) > limit:
         raise ReferenceContractError("contracted instance capacity below physical demand")
-    active = _money(contract["active"], "contract.active")
-    idle = _money(contract["idle"], "contract.idle")
-    movement = _money(contract["movement"], "contract.movement")
+    active = _tariff(contract["active"], "contract.active")
+    idle = _tariff(contract["idle"], "contract.idle")
+    movement = _tariff(contract["movement"], "contract.movement")
     regime = contract["regime"]
     if regime not in ("FULL_RATE_STANDBY", "DISCOUNTED_STANDBY", "EXPLICIT_OFF_HIRE"):
         raise ReferenceContractError("unknown commercial regime")

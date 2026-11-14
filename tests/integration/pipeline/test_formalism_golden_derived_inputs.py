@@ -88,10 +88,7 @@ def test_catalog_derived_tariffs_certify_with_exact_rationals(tmp_path: Path) ->
     canonical = load_canonical(result, service)
     report = differential_report(canonical, catalog(spec), certificate)
     assert report["first_divergence"] is None
-    # The exhaustive reference oracle takes terminating decimals only (follow-up).
-    assert {u.provenance for u in report["unverified"]} <= {
-        "tariff is not a terminating decimal for the reference protocol"
-    }
+    assert report["unverified"] == [], report["unverified"]
     plant = _witnesses(canonical)["EQ-USINA-SOLOS-300TH"]["tariff"]["active_week"]
     assert Fraction(plant) == Fraction("78205.92") / Fraction(1461, 336)
     assert Fraction(plant) != Fraction(declared["EQ-USINA-SOLOS-300TH"]["active_week"])  # not the cent rounding
@@ -268,9 +265,7 @@ def test_declared_site_indirects_enter_the_exact_ledger_and_the_price(tmp_path: 
 
     report = differential_report(canonical, catalog(spec), certificate, site_indirects)
     assert report["first_divergence"] is None, report["first_divergence"]
-    assert {u.provenance for u in report["unverified"]} <= {
-        "tariff is not a terminating decimal for the reference protocol"
-    }
+    assert report["unverified"] == [], report["unverified"]
     site_checks = [c for c in report["checks"] if c.check.startswith("site indirect")]
     assert len(site_checks) == 3 and all(c.status == "MATCH" for c in site_checks), site_checks
     # Without the declaration the differential cannot vouch for a DECLARED run.
