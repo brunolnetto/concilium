@@ -139,3 +139,89 @@ def test_divergent_force_push_does_not_hide_economic_reversion(
     detected = module.git_changed(before, after, mode="push")
     assert PRODUCTION in detected, detected
     assert not module.assess_paths(detected)[0]
+
+
+# --- Comment-only changes (owner decision 2026-11-13, option A) ---------------
+
+_BASE_SRC = b'''"""Economic contract."""
+price = 100  # ty: ignore[unresolved-import]
+
+
+def total(q):
+    # unit price times quantity
+    return price * q
+'''
+
+
+def test_comment_only_edit_is_recognised() -> None:
+    after = _BASE_SRC.replace(b"unresolved-import", b"import-not-found").replace(
+        b"# unit price times quantity", b"# new wording\n    # spanning two lines"
+    )
+    assert module.is_comment_only_change(_BASE_SRC, after)
+
+
+def test_code_docstring_or_indentation_changes_are_not_comment_only() -> None:
+    for after in (
+        _BASE_SRC.replace(b"price = 100", b"price = 200"),
+        _BASE_SRC.replace(b'"""Economic contract."""', b'"""Changed contract."""'),
+        _BASE_SRC.replace(b"price * q", b"price * q  # noqa\n    pass"),
+        _BASE_SRC.replace(b"    return", b"        return"),
+        _BASE_SRC.replace(b"price = 100  #", b'price = "100 #"  #'),
+    ):
+        assert not module.is_comment_only_change(_BASE_SRC, after), after
+
+
+def test_unparseable_source_fails_closed() -> None:
+    assert not module.is_comment_only_change(_BASE_SRC, b"def broken(:\n    '''")
+
+
+def test_comment_only_economic_paths_need_no_evidence_but_others_still_do() -> None:
+    valid, reason = module.assess_paths({PRODUCTION}, {PRODUCTION})
+    assert valid and "only in comments" in reason
+    other = "src/concilium/domain/models/canonical/_pool_recursos.py"
+    assert not module.assess_paths({PRODUCTION, other}, {PRODUCTION})[0]
+
+
+def _repo_with(tmp_path: Path, monkeypatch, before: str, after: str | None):
+    repo = tmp_path / "git"
+    repo.mkdir()
+
+    def git(*args: str) -> str:
+        return subprocess.check_output(["git", *args], cwd=repo, text=True).strip()
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.name", "P25-C Fixture")
+    git("config", "user.email", "ci-fixture@example.invalid")
+    target = repo / PRODUCTION
+    target.parent.mkdir(parents=True)
+    target.write_text(before, encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "baseline")
+    base = git("rev-parse", "HEAD")
+    if after is None:
+        target.unlink()
+    else:
+        target.write_text(after, encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "-m", "change")
+    monkeypatch.chdir(repo)
+    return base, git("rev-parse", "HEAD")
+
+
+def test_git_comment_only_change_passes_end_to_end(tmp_path: Path, monkeypatch, capsys) -> None:
+    src = _BASE_SRC.decode()
+    base, head = _repo_with(tmp_path, monkeypatch, src, src.replace("unresolved-import", "import-not-found"))
+    assert module.main(["--base", base, "--head", head, "--mode", "pr"]) == 0
+    assert "only in comments" in capsys.readouterr().out
+
+
+def test_git_code_change_hidden_beside_a_comment_edit_still_fails(tmp_path: Path, monkeypatch) -> None:
+    src = _BASE_SRC.decode()
+    after = src.replace("unresolved-import", "import-not-found").replace("price = 100", "price = 101")
+    base, head = _repo_with(tmp_path, monkeypatch, src, after)
+    assert module.main(["--base", base, "--head", head, "--mode", "push"]) == 1
+
+
+def test_git_deleted_economic_file_is_never_comment_only(tmp_path: Path, monkeypatch) -> None:
+    base, head = _repo_with(tmp_path, monkeypatch, _BASE_SRC.decode(), None)
+    assert module.main(["--base", base, "--head", head, "--mode", "pr"]) == 1
