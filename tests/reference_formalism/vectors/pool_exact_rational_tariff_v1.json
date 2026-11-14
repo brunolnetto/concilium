@@ -1,0 +1,80 @@
+{
+  "protocol": "formalism-pool-rational-tariff/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["XII", "XIV.2", "N8"],
+    "scope": "exhaustive P22-C fungible pool (economic_reference._pool) with tariffs given as terminating decimals or exact nonnegative rationals a/b; K is reported as an exact rational, never rounded",
+    "rounding": "Fraction exact; outputs are 'a' or reduced 'a/b' (no cent rounding before aggregation)"
+  },
+  "vectors": [
+    {
+      "case_id": "catalog_monthly_plant_bridges_two_idle_weeks",
+      "hand_check": "tau = 78205.92 x 336/1461 = 2627718912/146100 = 218976576/12175 (~17985.7557). FULL_RATE_STANDBY: idle = tau. Movement per chain = MOB 120000 + DEMOB 80000 = 200000. d = (1,0,0,1), 1 instance, gap 2 <= 3. Keep: active 2 tau + idle 2 tau + 1 x 200000. Split: active 2 tau + 2 x 200000. Keep - Split = 2 tau - 200000 ~ 35971.51 - 200000 < 0, so keep. active = idle = 2 x 218976576/12175 = 437953152/12175; K = 4 x 218976576/12175 + 200000 = 875906304/12175 + 2435000000/12175 = 3310906304/12175 (12175 = 5^2 x 487; the numerator ends in 4 and 875906304 = 487 x 1798575 + 279, so the fraction is reduced). The cent-rounded 17985.76 would give 271943.04 != K.",
+      "demand": [1, 0, 0, 1],
+      "contract": {
+        "instances": 1, "active": "218976576/12175", "idle": "218976576/12175", "movement": "200000",
+        "max_idle_gap": 3, "regime": "FULL_RATE_STANDBY", "off_hire_weeks": []
+      },
+      "expected": {
+        "demand": [1, 0, 0, 1], "presence": [1, 1, 1, 1], "standby": [0, 1, 1, 0], "chains": 1,
+        "active_cost": "437953152/12175", "idle_cost": "437953152/12175", "movement_cost": "200000",
+        "assignment": [[0], [], [], [0]], "K": "3310906304/12175"
+      }
+    },
+    {
+      "case_id": "discounted_thirds_split_is_cheaper",
+      "hand_check": "active 100/3, idle 50/3, movement 10, d = (1,0,1), 1 instance, gap 1. Keep: 2 x 100/3 + 1 x 50/3 + 10 = 250/3 + 30/3 = 280/3. Split: 2 x 100/3 + 2 x 10 = 200/3 + 60/3 = 260/3 < 280/3, so split: 2 chains, no standby, K = 260/3.",
+      "demand": [1, 0, 1],
+      "contract": {
+        "instances": 1, "active": "100/3", "idle": "50/3", "movement": "10",
+        "max_idle_gap": 1, "regime": "DISCOUNTED_STANDBY", "off_hire_weeks": []
+      },
+      "expected": {
+        "demand": [1, 0, 1], "presence": [1, 0, 1], "standby": [0, 0, 0], "chains": 2,
+        "active_cost": "200/3", "idle_cost": "0", "movement_cost": "20",
+        "assignment": [[0], [], [0]], "K": "260/3"
+      }
+    },
+    {
+      "case_id": "exact_tie_in_thirds_keeps_fewest_chains",
+      "hand_check": "active 7/3, idle 1/3, movement 1/3, d = (1,0,1), 1 instance, gap 1. Keep: 14/3 + 1/3 + 1/3 = 16/3. Split: 14/3 + 2 x 1/3 = 16/3. Exact tie -> fewest transitions: keep (1 chain, one standby week), K = 16/3. Any cent rounding of 1/3 that differs between idle and movement would break the tie.",
+      "demand": [1, 0, 1],
+      "contract": {
+        "instances": 1, "active": "7/3", "idle": "1/3", "movement": "1/3",
+        "max_idle_gap": 1, "regime": "DISCOUNTED_STANDBY", "off_hire_weeks": []
+      },
+      "expected": {
+        "demand": [1, 0, 1], "presence": [1, 1, 1], "standby": [0, 1, 0], "chains": 1,
+        "active_cost": "14/3", "idle_cost": "1/3", "movement_cost": "1/3",
+        "assignment": [[0], [], [0]], "K": "16/3"
+      }
+    },
+    {
+      "case_id": "decimal_and_rational_spellings_agree",
+      "hand_check": "active 1/2 = 0.5, idle 0.25 = 1/4, movement 3/1 = 3, d = (2,1,2), 2 instances, gap 1. Instance A works all 3 weeks: 3 x 1/2 + 3 = 9/2. Instance B works weeks 0 and 2: keep 2 x 1/2 + 1/4 + 3 = 17/4 < split 1 + 6 = 7. active = 5 x 1/2 = 5/2, idle = 1/4, movement = 2 x 3 = 6, K = 10/4 + 1/4 + 24/4 = 35/4.",
+      "demand": [2, 1, 2],
+      "contract": {
+        "instances": 2, "active": "1/2", "idle": "0.25", "movement": "3/1",
+        "max_idle_gap": 1, "regime": "DISCOUNTED_STANDBY", "off_hire_weeks": []
+      },
+      "expected": {
+        "demand": [2, 1, 2], "presence": [2, 2, 2], "standby": [0, 1, 0], "chains": 2,
+        "active_cost": "5/2", "idle_cost": "1/4", "movement_cost": "6",
+        "assignment": [[0, 1], [0], [0, 1]], "K": "35/4"
+      }
+    },
+    {"case_id": "reject_zero_denominator", "tariff": "1/0", "expected_error": "zero denominator"},
+    {"case_id": "reject_negative_rational", "tariff": "-1/2", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_decimal_numerator", "tariff": "1.5/2", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_letters", "tariff": "a/b", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_json_float", "tariff": 0.5, "expected_error": "exact decimal string"},
+    {"case_id": "reject_exponent_numerator", "tariff": "1e3/2", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_nested_rational", "tariff": "1/2/3", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_whitespace", "tariff": "1 / 2", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_missing_denominator", "tariff": "1/", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_explicit_plus_sign", "tariff": "+1/2", "expected_error": "nonnegative rational a/b"},
+    {"case_id": "reject_negative_decimal", "tariff": "-0.5", "expected_error": "invalid nonnegative value"},
+    {"case_id": "reject_nan", "tariff": "NaN", "expected_error": "must be finite"}
+  ]
+}

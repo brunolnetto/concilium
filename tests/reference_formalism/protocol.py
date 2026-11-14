@@ -39,6 +39,23 @@ def decimal_input(value: Any, name: str) -> Fraction:
     return Fraction(result)
 
 
+def rational_input(value: Any, name: str) -> Fraction:
+    """Parse a terminating decimal or an exact nonnegative rational ``a/b``.
+
+    The ``a/b`` form is ASCII digits only on both sides with a nonzero
+    denominator: no sign, exponent, decimal point, whitespace or float. Every
+    other string keeps the exact ``decimal_input`` behaviour.
+    """
+    if isinstance(value, str) and "/" in value:
+        numerator, _, denominator = value.partition("/")
+        if not all(part.isascii() and part.isdigit() for part in (numerator, denominator)):
+            raise ReferenceContractError(f"{name} is not a decimal or a nonnegative rational a/b")
+        if int(denominator) == 0:
+            raise ReferenceContractError(f"{name} has a zero denominator")
+        return Fraction(int(numerator), int(denominator))
+    return decimal_input(value, name)
+
+
 def _finite_decimal(value: Fraction, name: str) -> str:
     """Render a terminating rational exactly, rejecting nonterminating quotients."""
     denominator = value.denominator
