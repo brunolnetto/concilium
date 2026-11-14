@@ -12,6 +12,7 @@
   "coordenadas_lng": -46.63,
   "localizacao": "São Paulo, SP"
  },
+ "climate_snapshot": "climate_sao_paulo_2025.json",
  "eap": [
   {
    "item_id": "eap-01",
@@ -134,6 +135,9 @@
   }
  ],
  "skill_inputs": {
+  "02-produtividade-climatica": {
+   "ano_referencia": 2025
+  },
   "03-catalogo-de-recursos": {
    "tipos_recurso": [
     {
