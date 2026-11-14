@@ -36,7 +36,7 @@ from concilium.domain.models.canonical import (
 from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-from ._skill_helpers import (  # ty: ignore[unresolved-import]
+from ._skill_helpers import (  # ty: ignore[import-not-found]
     _build_equipe_lookup,
     _build_lookups,
     _build_sched_por_item,
@@ -190,7 +190,7 @@ def _resolve_bdi(
     # ADR-055: path CBS/IBS. Estava implementado em _bdi_regime.py mas nunca
     # importado/chamado aqui — o estágio de precificação nunca honrava
     # inputs["tax_scenario"], só o de consolidação (_bdi_resolucao.py) o fazia.
-    from ._skill_helpers._bdi_regime import _rb_try_tax_scenario  # ty: ignore[unresolved-import]
+    from ._skill_helpers._bdi_regime import _rb_try_tax_scenario  # ty: ignore[import-not-found]
 
     tax_scenario_result = _rb_try_tax_scenario(inputs, validacoes)
     if tax_scenario_result is not None:

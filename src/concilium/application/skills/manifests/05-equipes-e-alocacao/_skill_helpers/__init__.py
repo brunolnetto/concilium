@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._causal_cost_partition import (  # ty: ignore[unresolved-import]
+from ._causal_cost_partition import (  # ty: ignore[import-not-found]
     _EULE_AVAILABLE,
     _build_particionado_item,
     _build_predecessor_map,
@@ -16,20 +16,20 @@ from ._causal_cost_partition import (  # ty: ignore[unresolved-import]
     _sucessor_critico_id,
     particionar_contrato,
 )
-from ._composicao_por_tipo import (  # ty: ignore[unresolved-import]
+from ._composicao_por_tipo import (  # ty: ignore[import-not-found]
     enriquecer_composicao_por_tipo,
 )
-from ._custo_diferenciado_permanencia import (  # ty: ignore[unresolved-import]
+from ._custo_diferenciado_permanencia import (  # ty: ignore[import-not-found]
     calcular_custo_contrato_por_instancia,
 )
-from ._custo_instancial_composicional import (  # ty: ignore[unresolved-import]
+from ._custo_instancial_composicional import (  # ty: ignore[import-not-found]
     _aplicar_custo_instancial,
     _apply_instancial_to_contrato,
     _reescalar_particao,
     _scale_part_entry,
     _sum_inst_categories,
 )
-from ._dimensionamento_custos import (  # ty: ignore[unresolved-import]
+from ._dimensionamento_custos import (  # ty: ignore[import-not-found]
     _best_alias_equip_attrs,
     _calcular_custo_equipamento,
     _calcular_custo_funcao,
@@ -55,7 +55,7 @@ from ._dimensionamento_custos import (  # ty: ignore[unresolved-import]
     _to_positive_float_or_none,
     _validar_comp_vazia,
 )
-from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
+from ._dimensionamento_itens import (  # ty: ignore[import-not-found]
     _accum_mob_costs_list,
     _build_comb_validacao,
     _build_comp_para_item,
@@ -87,7 +87,7 @@ from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
     _validar_materiais_item,
     _validar_sinergia_producao,
 )
-from ._dimensionamento_orquestracao import (  # ty: ignore[unresolved-import]
+from ._dimensionamento_orquestracao import (  # ty: ignore[import-not-found]
     _build_dimensionamento,
     _checar_leadtime_mob_ausente,
     _dimensionar_item_equipe,
@@ -97,7 +97,7 @@ from ._dimensionamento_orquestracao import (  # ty: ignore[unresolved-import]
     _resolve_prod_lookup,
     _setup_dimensionamento_context,
 )
-from ._enrich_equipe_decomposicao import (  # ty: ignore[unresolved-import]
+from ._enrich_equipe_decomposicao import (  # ty: ignore[import-not-found]
     _accumulate_custo_inst_para_part,
     _append_invariante_falha_validacao,
     _append_reescala_validacao,
@@ -105,14 +105,14 @@ from ._enrich_equipe_decomposicao import (  # ty: ignore[unresolved-import]
     _reescalar_custo_inst_se_necessario,
     _reset_custo_inst_para_items,
 )
-from ._enrich_overhead_ocioso import (  # ty: ignore[unresolved-import]
+from ._enrich_overhead_ocioso import (  # ty: ignore[import-not-found]
     _compute_gap_for_inst,
     _enrich_particao_overhead,
     _first_week_idx_for_act,
     _last_week_idx_for_act,
 )
-from ._perpetuation_chains import _build_perpetuation_chains  # ty: ignore[unresolved-import]
-from ._pool_contrato_construcao import (  # ty: ignore[unresolved-import]
+from ._perpetuation_chains import _build_perpetuation_chains  # ty: ignore[import-not-found]
+from ._pool_contrato_construcao import (  # ty: ignore[import-not-found]
     _accumulate_atribuicao_total,
     _build_contrato_entry,
     _build_contratos_por_tipo,
@@ -130,7 +130,7 @@ from ._pool_contrato_construcao import (  # ty: ignore[unresolved-import]
     _setup_contratos_context,
     _tipo_recurso_fungivel,
 )
-from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
+from ._pool_contrato_demanda import (  # ty: ignore[import-not-found]
     _accum_week_demand,
     _add_tipo_item_demand,
     _collect_tipo_items_and_demands,
@@ -145,7 +145,7 @@ from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
     _resolve_gap_max_e_idle_efetivo,
     _week_idx,
 )
-from ._resource_instance_assignment import (  # ty: ignore[unresolved-import]
+from ._resource_instance_assignment import (  # ty: ignore[import-not-found]
     _STANDBY_THRESHOLD_PCT,
     _assign_instances,
     _assign_week,
@@ -160,7 +160,7 @@ from ._resource_instance_assignment import (  # ty: ignore[unresolved-import]
     _init_instance_slots,
     _item_demand_for_tipo,
 )
-from ._resource_instance_build import (  # ty: ignore[unresolved-import]
+from ._resource_instance_build import (  # ty: ignore[import-not-found]
     _build_composicao_entry,
     _build_instancia_slot,
     _build_instancias_for_tipo,
@@ -168,16 +168,16 @@ from ._resource_instance_build import (  # ty: ignore[unresolved-import]
     _build_item_resource_maps,
     _build_resumo_e_validacoes,
 )
-from ._roster_wiring import (  # ty: ignore[unresolved-import]
+from ._roster_wiring import (  # ty: ignore[import-not-found]
     aplicar_roster_a_contratos,
 )
-from .b import (  # ty: ignore[unresolved-import]
+from .b import (  # ty: ignore[import-not-found]
     _build_alocacoes_pool,
     _build_requisitos_e_tipos,
     _processar_equipamentos_requisitos,
     _processar_funcoes_requisitos,
 )
-from .compartilhamento import (  # ty: ignore[unresolved-import]
+from .compartilhamento import (  # ty: ignore[import-not-found]
     _aplicar_oportunidades_paralelo,
     _build_activity_dag_110,
     _build_resource_pool_110,
@@ -187,14 +187,14 @@ from .compartilhamento import (  # ty: ignore[unresolved-import]
     _deve_processar_compartilhamento,
     _processar_oportunidades_paralelo,
 )
-from .instancias import (  # ty: ignore[unresolved-import]
+from .instancias import (  # ty: ignore[import-not-found]
     _limitar_custo_por_planejamento_benchmark,
     _preencher_custo_inst_estagio_f3,
     _processar_instancias_recurso,
     _validar_estagio4_inst_missing,
     _validar_instancia_recurso_ok,
 )
-from .planejamento import (  # ty: ignore[unresolved-import]
+from .planejamento import (  # ty: ignore[import-not-found]
     _aplicar_reconciliacao_planejamento,
     _extract_planejamento_ref_map,
     _or_chain,
@@ -203,7 +203,7 @@ from .planejamento import (  # ty: ignore[unresolved-import]
     _plan_subtotal_obj_total,
     _resolve_planejamento_maps,
 )
-from .pool import (  # ty: ignore[unresolved-import]
+from .pool import (  # ty: ignore[import-not-found]
     _atualizar_custo_via_atribuicao,
     _build_pool_setup,
     _processar_pool_contratos,
@@ -212,8 +212,8 @@ from .pool import (  # ty: ignore[unresolved-import]
     _validar_estagio3_inst_none,
     _validar_pool_contrato_ok,
 )
-from .pre_cpm import _cpm_early_start, _cpm_late_finish, _gap_coberto_por_recurso  # ty: ignore[unresolved-import]
-from .pre_deteccao_paralelo import (  # ty: ignore[unresolved-import]
+from .pre_cpm import _cpm_early_start, _cpm_late_finish, _gap_coberto_por_recurso  # ty: ignore[import-not-found]
+from .pre_deteccao_paralelo import (  # ty: ignore[import-not-found]
     _detectar_oportunidades_paralelo,
     _dop_avaliar_par,
     _dop_contexto_tipo,
@@ -221,14 +221,14 @@ from .pre_deteccao_paralelo import (  # ty: ignore[unresolved-import]
     _dop_oportunidades_para_tipo,
     _dop_ordem_temporal,
 )
-from .pre_metrics import (  # ty: ignore[unresolved-import]
+from .pre_metrics import (  # ty: ignore[import-not-found]
     _delta_c_pot,
     _eta_perpetuacao,
     _gap_max_economico,
     _sobreposicao_bundle,
     _week_to_idx,
 )
-from .pre_pipeline import (  # ty: ignore[unresolved-import]
+from .pre_pipeline import (  # ty: ignore[import-not-found]
     _bppc_append_validacoes,
     _bppc_atualizar_contratos,
     _bppc_build_activity_resources,

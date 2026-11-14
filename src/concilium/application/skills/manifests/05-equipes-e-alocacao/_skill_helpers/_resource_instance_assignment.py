@@ -9,7 +9,7 @@ from concilium.domain.models.canonical import (
 from concilium.domain.services.financial.equipe_custo_engine import LifecycleEngine
 from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
-from ._pool_contrato_demanda import _integral_front_count, _week_idx  # ty: ignore[unresolved-import]
+from ._pool_contrato_demanda import _integral_front_count, _week_idx  # ty: ignore[import-not-found]
 
 _STANDBY_THRESHOLD_PCT = 35.0
 

@@ -13,7 +13,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from .pre_metrics import (  # ty: ignore[unresolved-import]
+from .pre_metrics import (  # ty: ignore[import-not-found]
     _delta_c_pot,
     _eta_perpetuacao,
     _gap_max_economico,

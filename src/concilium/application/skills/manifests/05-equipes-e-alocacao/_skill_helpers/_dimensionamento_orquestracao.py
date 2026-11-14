@@ -16,8 +16,8 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._dimensionamento_custos import _RepoCtx, _resolve_preco  # ty: ignore[unresolved-import]
-from ._dimensionamento_itens import (  # ty: ignore[unresolved-import]
+from ._dimensionamento_custos import _RepoCtx, _resolve_preco  # ty: ignore[import-not-found]
+from ._dimensionamento_itens import (  # ty: ignore[import-not-found]
     _build_comp_para_item,
     _calc_custo_cron,
     _calc_custo_material_item,

@@ -14,7 +14,7 @@ from typing import Any
 
 from concilium.domain.models.canonical import RecursoContrato
 
-from ._pool_contrato_construcao import (  # ty: ignore[unresolved-import]
+from ._pool_contrato_construcao import (  # ty: ignore[import-not-found]
     _positive_qty,
     _safe_str_field,
     _tipo_recurso_fungivel,

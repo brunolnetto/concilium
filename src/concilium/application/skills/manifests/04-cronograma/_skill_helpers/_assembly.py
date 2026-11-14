@@ -19,11 +19,11 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._calendario import (  # ty: ignore[unresolved-import]
+from ._calendario import (  # ty: ignore[import-not-found]
     OBSERVAR_PONTOS_FACULTATIVOS_DEFAULT,
     _build_fator_calendario_semanal,
 )
-from ._custos import (  # ty: ignore[unresolved-import]
+from ._custos import (  # ty: ignore[import-not-found]
     _build_cpu_lookup,
     _build_insumos_lookup,
     _build_producao_lookup,
@@ -31,12 +31,12 @@ from ._custos import (  # ty: ignore[unresolved-import]
     _semanas_entre,
     _week_offset,
 )
-from ._scheduling import (  # ty: ignore[unresolved-import]
+from ._scheduling import (  # ty: ignore[import-not-found]
     _convert_schedule_to_distribuicao,
     _process_single_wmp_policy,
     _run_auto_schedule_fallback_chain,
 )
-from ._validacao import _can_extract_dag, _execute_manual_mode  # ty: ignore[unresolved-import]
+from ._validacao import _can_extract_dag, _execute_manual_mode  # ty: ignore[import-not-found]
 
 if TYPE_CHECKING:
     pass

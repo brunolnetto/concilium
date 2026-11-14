@@ -13,19 +13,19 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._custo_instancial_composicional import (  # ty: ignore[unresolved-import]
+from ._custo_instancial_composicional import (  # ty: ignore[import-not-found]
     _aplicar_custo_instancial,
 )
-from ._enrich_equipe_decomposicao import (  # ty: ignore[unresolved-import]
+from ._enrich_equipe_decomposicao import (  # ty: ignore[import-not-found]
     _enrich_equipes_com_decomposicao_instancial,
 )
-from ._enrich_overhead_ocioso import (  # ty: ignore[unresolved-import]
+from ._enrich_overhead_ocioso import (  # ty: ignore[import-not-found]
     _enrich_particao_overhead,
 )
-from ._resource_instance_build import (  # ty: ignore[unresolved-import]
+from ._resource_instance_build import (  # ty: ignore[import-not-found]
     _build_instancias_recurso,
 )
-from .planejamento import _plan_custo_sem_bdi_total  # ty: ignore[unresolved-import]
+from .planejamento import _plan_custo_sem_bdi_total  # ty: ignore[import-not-found]
 
 
 def _validar_instancia_recurso_ok(

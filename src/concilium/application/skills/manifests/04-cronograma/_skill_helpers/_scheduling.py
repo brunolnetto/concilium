@@ -17,9 +17,9 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.models.canonical._eap import OrigemCapacidade
 
-from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[unresolved-import]
-from ._closure import assess_scope_closure  # ty: ignore[unresolved-import]
-from ._custos import (  # ty: ignore[unresolved-import]
+from ._calendario import _compute_ramp_profile, _resolve_productivity  # ty: ignore[import-not-found]
+from ._closure import assess_scope_closure  # ty: ignore[import-not-found]
+from ._custos import (  # ty: ignore[import-not-found]
     _build_dist_cell,
     _capacidade_semanal_disponivel,
     _capacidade_semanal_por_frentes,
@@ -27,7 +27,7 @@ from ._custos import (  # ty: ignore[unresolved-import]
     _origem_capacidade,
     _week_offset,
 )
-from ._validacao import (  # ty: ignore[unresolved-import]
+from ._validacao import (  # ty: ignore[import-not-found]
     _build_activity_item_map,
     _find_item_by_id,
     _infer_teams_from_resources,

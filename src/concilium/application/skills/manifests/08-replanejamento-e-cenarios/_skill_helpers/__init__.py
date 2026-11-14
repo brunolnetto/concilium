@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ._assessor import run_assessor_replanejamento  # ty: ignore[unresolved-import]
-from ._explorador import run_explorador_cenarios  # ty: ignore[unresolved-import]
+from ._assessor import run_assessor_replanejamento  # ty: ignore[import-not-found]
+from ._explorador import run_explorador_cenarios  # ty: ignore[import-not-found]
 
 __all__ = [
     "run_assessor_replanejamento",

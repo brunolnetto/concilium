@@ -11,9 +11,9 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._categorial import _resolve_custo_equipe_agregado  # ty: ignore[unresolved-import]
-from ._resultado import _build_diagnostico_lesao, _lesao_from_sched  # ty: ignore[unresolved-import]
-from ._venda_custo import _cpu_familia  # ty: ignore[unresolved-import]
+from ._categorial import _resolve_custo_equipe_agregado  # ty: ignore[import-not-found]
+from ._resultado import _build_diagnostico_lesao, _lesao_from_sched  # ty: ignore[import-not-found]
+from ._venda_custo import _cpu_familia  # ty: ignore[import-not-found]
 
 
 def _pe_custo_autonomo_e_gap_pool(

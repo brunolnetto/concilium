@@ -14,7 +14,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._categorial import (  # ty: ignore[unresolved-import]
+from ._categorial import (  # ty: ignore[import-not-found]
     _build_custo_categorial_bottom_up,
     _resolve_custo_equipe_agregado,
 )

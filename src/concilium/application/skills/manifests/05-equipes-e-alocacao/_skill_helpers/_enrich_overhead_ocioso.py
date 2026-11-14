@@ -8,7 +8,7 @@ from concilium.domain.models.canonical import (
     RecursoContrato,
 )
 
-from ._pool_contrato_demanda import _week_idx  # ty: ignore[unresolved-import]
+from ._pool_contrato_demanda import _week_idx  # ty: ignore[import-not-found]
 
 
 def _last_week_idx_for_act(segmentos: list, activity_id: str) -> int | None:

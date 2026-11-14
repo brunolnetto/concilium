@@ -13,7 +13,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._pool_contrato_construcao import (  # ty: ignore[unresolved-import]
+from ._pool_contrato_construcao import (  # ty: ignore[import-not-found]
     _build_contratos_recurso,
     _derive_rcpsp_from_canonical,
 )

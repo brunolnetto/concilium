@@ -33,7 +33,7 @@ from concilium.domain.services.financial.roster_custo_mo_substituicao import (
     cobertura_funcao_suficiente as _cobertura_funcao_suficiente,
 )
 
-from ._breakdown import _build_semanal_breakdown  # ty: ignore[unresolved-import]
+from ._breakdown import _build_semanal_breakdown  # ty: ignore[import-not-found]
 
 logger = logging.getLogger(__name__)
 

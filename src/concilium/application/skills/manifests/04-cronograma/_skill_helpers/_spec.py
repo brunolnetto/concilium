@@ -19,7 +19,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._calendario import _compute_productive_weeks, _compute_ramp_profile  # ty: ignore[unresolved-import]
+from ._calendario import _compute_productive_weeks, _compute_ramp_profile  # ty: ignore[import-not-found]
 
 
 def _funcao_tokens_composicao(funcs: list) -> list[str]:
@@ -428,7 +428,7 @@ def _extract_dag_from_spec(
       - [pred_id, succ_id]            → θ=1.0 (FS clássico)
       - [pred_id, succ_id, theta]     → θ=float fornecido
     """
-    from ._dag import extract_dag_from_spec_or_eap  # ty: ignore[unresolved-import]
+    from ._dag import extract_dag_from_spec_or_eap  # ty: ignore[import-not-found]
 
     return extract_dag_from_spec_or_eap(spec, activities, eap_items)
 

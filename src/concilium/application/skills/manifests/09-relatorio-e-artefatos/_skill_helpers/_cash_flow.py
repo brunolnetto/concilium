@@ -4,7 +4,7 @@ from datetime import date
 
 from concilium.domain.models.canonical import CanonicalModel
 
-from ._planejamento import _MESES_PT  # ty: ignore[unresolved-import]
+from ._planejamento import _MESES_PT  # ty: ignore[import-not-found]
 
 
 def _cash_flow_rows(canonical_in: CanonicalModel, project_months: list[tuple[int, int]]) -> list[dict]:

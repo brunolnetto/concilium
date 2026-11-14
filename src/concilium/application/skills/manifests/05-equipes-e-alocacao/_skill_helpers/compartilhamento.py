@@ -14,7 +14,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from .planejamento import _or_chain  # ty: ignore[unresolved-import]
+from .planejamento import _or_chain  # ty: ignore[import-not-found]
 
 
 def _deve_processar_compartilhamento(contratos_recurso: list[RecursoContrato], rcpsp_spec: dict | None) -> bool:
@@ -137,7 +137,7 @@ def _processar_oportunidades_paralelo(
     try:
         from concilium.application.scheduling.models import ScheduleMetrics, ScheduleOutput
 
-        from .pre_deteccao_paralelo import (  # ty: ignore[unresolved-import]  # runtime-only: sibling loaded via importlib above
+        from .pre_deteccao_paralelo import (  # ty: ignore[import-not-found]  # runtime-only: sibling loaded via importlib above
             _detectar_oportunidades_paralelo,
         )
 

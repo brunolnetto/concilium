@@ -12,17 +12,17 @@ from concilium.domain.models.canonical import (
 )
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-from ._cpu_fallback import (  # ty: ignore[unresolved-import]
+from ._cpu_fallback import (  # ty: ignore[import-not-found]
     _preco_cat_fallback_composicao,
     _resolve_cpu_com_fallback,
     _validar_producao_id_ref,
 )
-from ._planejamento_entry import _build_planejamento_entry, _try_early_override  # ty: ignore[unresolved-import]
-from ._preco_cpu import (  # ty: ignore[unresolved-import]
+from ._planejamento_entry import _build_planejamento_entry, _try_early_override  # ty: ignore[import-not-found]
+from ._preco_cpu import (  # ty: ignore[import-not-found]
     _compute_preco_cat_from_production,
     _resolve_beta_praticabilidade,
 )
-from ._validacao import (  # ty: ignore[unresolved-import]
+from ._validacao import (  # ty: ignore[import-not-found]
     _apply_com_bdi_override,
     _apply_sem_bdi_override,
     _validate_encargos_separacao,

@@ -5,7 +5,7 @@ completo para compatibilidade retroativa (imports diretos e testes que fazem
 introspecção via importlib).
 """
 
-from ._balanco_pe import (  # ty: ignore[unresolved-import]
+from ._balanco_pe import (  # ty: ignore[import-not-found]
     _bpe_build_idle_por_item,
     _bpe_build_lookup_maps,
     _bpe_build_particao_por_item,
@@ -16,7 +16,7 @@ from ._balanco_pe import (  # ty: ignore[unresolved-import]
     _build_ponto_equilibrio,
     enrich_pe_bdi_equivalente,
 )
-from ._bdi_resolucao import (  # ty: ignore[unresolved-import]
+from ._bdi_resolucao import (  # ty: ignore[import-not-found]
     _build_abc_analytics,
     _build_memorial_bdi,
     _classificar_margem,
@@ -24,7 +24,7 @@ from ._bdi_resolucao import (  # ty: ignore[unresolved-import]
     _resolve_bdi_full,
     _resolve_bdi_rates,
 )
-from ._bridge import (  # ty: ignore[unresolved-import]
+from ._bridge import (  # ty: ignore[import-not-found]
     _as_bool,
     _bridge_append_clima_n4_validacao,
     _bridge_append_ok_validacao,
@@ -37,7 +37,7 @@ from ._bridge import (  # ty: ignore[unresolved-import]
     _build_cubo_pool_face,
     _build_diagnostico_pe,
 )
-from ._categorial import (  # ty: ignore[unresolved-import]
+from ._categorial import (  # ty: ignore[import-not-found]
     _build_custo_categorial_bottom_up,
     _cat_accumulate_equipe_heuristica,
     _cat_accumulate_equipe_inst,
@@ -47,7 +47,7 @@ from ._categorial import (  # ty: ignore[unresolved-import]
     _resolve_custo_deficit_estoque_externo,
     _resolve_custo_equipe_agregado,
 )
-from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
+from ._ponto_equilibrio import (  # ty: ignore[import-not-found]
     _apm_build_familia_rows,
     _apm_process_familia,
     _apply_pe_mitigacao,
@@ -79,13 +79,13 @@ from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
     _validate_prod_pu_fallback_desync,
     _validate_prod_vs_pu,
 )
-from ._resultado import (  # ty: ignore[unresolved-import]
+from ._resultado import (  # ty: ignore[import-not-found]
     _build_diagnostico_lesao,
     _build_resultado,
     _lesao_aggregates,
     _lesao_from_sched,
 )
-from ._venda_custo import (  # ty: ignore[unresolved-import]
+from ._venda_custo import (  # ty: ignore[import-not-found]
     _br_append_gap_catalogo_validacao,
     _br_build_venda_custo,
     _build_activity_direct_cost,

@@ -20,8 +20,8 @@ from concilium.domain.models.canonical import CanonicalModel
 
 # Hyphenated manifest dir: ty cannot resolve these relative imports statically
 # (only work at runtime via the synthetic package set up in skills/__init__.py).
-from ._skill_helpers._assessor import run_assessor_replanejamento  # ty: ignore[unresolved-import]
-from ._skill_helpers._explorador import run_explorador_cenarios  # ty: ignore[unresolved-import]
+from ._skill_helpers._assessor import run_assessor_replanejamento  # ty: ignore[import-not-found]
+from ._skill_helpers._explorador import run_explorador_cenarios  # ty: ignore[import-not-found]
 
 
 def run_replanejamento_e_cenarios(

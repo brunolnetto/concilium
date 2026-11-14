@@ -16,7 +16,7 @@ import math
 
 from concilium.domain.models.canonical import CanonicalModel
 
-from ._cash_flow import _fmt_mes, _week_to_month  # ty: ignore[unresolved-import]
+from ._cash_flow import _fmt_mes, _week_to_month  # ty: ignore[import-not-found]
 
 
 def _getstr(obj, attr: str, default: str = "") -> str:

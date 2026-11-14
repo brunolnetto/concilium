@@ -237,7 +237,7 @@ jobs:
           pip install -e .
           pip install \
             ruff \
-            'ty==0.0.95' \
+            'ty==0.0.103' \
             pytest \
             pytest-json-report \
             pytest-asyncio \
@@ -325,7 +325,7 @@ jobs:
         working-directory: tools/mcp-proxy
         run: |
           python -m pip install --upgrade pip
-          pip install -e . pytest pytest-asyncio ruff 'ty==0.0.95'
+          pip install -e . pytest pytest-asyncio ruff 'ty==0.0.103'
 
       - name: Ruff check
         working-directory: tools/mcp-proxy

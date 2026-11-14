@@ -11,7 +11,7 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-from ._ponto_equilibrio import (  # ty: ignore[unresolved-import]
+from ._ponto_equilibrio import (  # ty: ignore[import-not-found]
     _apply_pe_mitigacao,
     _build_pe_for_equipe,
     _validate_frentes_necessarias,

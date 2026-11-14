@@ -13,10 +13,10 @@ from concilium.domain.models.canonical import (
     RecursoContrato,
 )
 
-from ._causal_cost_partition import particionar_contrato  # ty: ignore[unresolved-import]
-from ._dimensionamento_itens import _accum_mob_costs_list  # ty: ignore[unresolved-import]
-from ._perpetuation_chains import _build_perpetuation_chains  # ty: ignore[unresolved-import]
-from ._pool_contrato_demanda import (  # ty: ignore[unresolved-import]
+from ._causal_cost_partition import particionar_contrato  # ty: ignore[import-not-found]
+from ._dimensionamento_itens import _accum_mob_costs_list  # ty: ignore[import-not-found]
+from ._perpetuation_chains import _build_perpetuation_chains  # ty: ignore[import-not-found]
+from ._pool_contrato_demanda import (  # ty: ignore[import-not-found]
     _collect_tipo_items_and_demands,
     _compute_custo_unit_fracs,
     _compute_fracs_locacao_manut,

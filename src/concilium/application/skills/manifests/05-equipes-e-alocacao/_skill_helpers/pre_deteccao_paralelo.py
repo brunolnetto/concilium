@@ -11,7 +11,7 @@ from concilium.domain.models.canonical import (
     OportunidadeCompartilhamentoParalelo,
 )
 
-from .pre_cpm import _cpm_early_start, _cpm_late_finish, _gap_coberto_por_recurso  # ty: ignore[unresolved-import]
+from .pre_cpm import _cpm_early_start, _cpm_late_finish, _gap_coberto_por_recurso  # ty: ignore[import-not-found]
 
 
 def _dop_ordem_temporal(id_x: str, id_y: str, sa_map: dict[str, Any]) -> tuple[str, str] | None:

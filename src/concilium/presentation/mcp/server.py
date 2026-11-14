@@ -99,10 +99,10 @@ class _AuthenticatedFastMCP(FastMCP):
     """
 
     def streamable_http_app(self) -> Starlette:
-        return McpAuthMiddleware(super().streamable_http_app())  # ty: ignore[invalid-return-type]
+        return McpAuthMiddleware(super().streamable_http_app())  # ty: ignore[invalid-explicit-return]
 
     def sse_app(self, mount_path: str | None = None) -> Starlette:
-        return McpAuthMiddleware(super().sse_app(mount_path))  # ty: ignore[invalid-return-type]
+        return McpAuthMiddleware(super().sse_app(mount_path))  # ty: ignore[invalid-explicit-return]
 
 
 def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
