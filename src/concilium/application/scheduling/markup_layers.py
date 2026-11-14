@@ -26,6 +26,8 @@ from fractions import Fraction
 
 CATEGORIES = ("MO", "EQ", "MAT", "COMB", "IND")
 FORMULA = "TCU_ACORDAO_2622_2013"
+PROVENANCE_SCHEMA = "concilium.p21.markup-layers-provenance.v1"
+ORIGINS = ("profile", "project")
 
 
 def _rate(value: object, label: str) -> Fraction:
@@ -162,6 +164,56 @@ def parse_markup_layers(raw: object) -> dict[str, LayerRates]:
     if not isinstance(raw, Mapping) or set(raw) != set(CATEGORIES):
         raise ValueError("markup_layers must declare exactly MO, EQ, MAT, COMB and IND")
     return {category: parse_layer_rates(raw[category], f"markup_layers.{category}") for category in CATEGORIES}
+
+
+def parse_layer_provenance(raw: object, layers: Mapping[str, LayerRates]) -> dict[str, object]:
+    """Origin (``profile`` or ``project``) of every declared layer field (N9.1).
+
+    The provenance must cover exactly the declared layers: every category, every
+    layer field and every tax. A field attributed to the project needs a project
+    reference, and a project reference needs at least one field it declared.
+    """
+    if not isinstance(raw, Mapping) or set(raw) != {"schema", "profile", "project", "fields"}:
+        raise ValueError("markup_layers_provenance must declare exactly schema, profile, project and fields")
+    if raw["schema"] != PROVENANCE_SCHEMA:
+        raise ValueError(f"markup_layers_provenance.schema must be {PROVENANCE_SCHEMA}")
+
+    def reference(value: object, label: str, keys: set[str]) -> dict[str, str]:
+        if (
+            not isinstance(value, Mapping)
+            or set(value) != keys
+            or any(not isinstance(text, str) or not text.strip() for text in value.values())
+        ):
+            raise ValueError(f"markup_layers_provenance.{label} must declare {', '.join(sorted(keys))} as text")
+        return {str(key): str(text) for key, text in value.items()}
+
+    profile = reference(raw["profile"], "profile", {"reference_id", "source"})
+    project = (
+        None if raw["project"] is None else reference(raw["project"], "project", {"schema", "source", "fingerprint"})
+    )
+    fields = raw["fields"]
+    if not isinstance(fields, Mapping) or set(fields) != set(layers):
+        raise ValueError("markup_layers_provenance.fields must cover exactly the declared categories")
+    origins: dict[str, object] = {}
+    seen: set[str] = set()
+    for category, rates in layers.items():
+        entry = fields[category]
+        if not isinstance(entry, Mapping) or set(entry) != {"ac", "rsg", "df", "l", "taxes"}:
+            raise ValueError(f"markup_layers_provenance.fields.{category} must cover ac, rsg, df, l and taxes")
+        taxes = entry["taxes"]
+        if not isinstance(taxes, Mapping) or set(taxes) != {name for name, _rate in rates.taxes}:
+            raise ValueError(f"markup_layers_provenance.fields.{category}.taxes must cover exactly the declared taxes")
+        flat = [entry[name] for name in ("ac", "rsg", "df", "l")] + list(taxes.values())
+        if any(origin not in ORIGINS for origin in flat):
+            raise ValueError(f"markup_layers_provenance origins must be one of {', '.join(ORIGINS)}")
+        seen.update(flat)
+        origins[category] = {
+            **{name: entry[name] for name in ("ac", "rsg", "df", "l")},
+            "taxes": {name: taxes[name] for name in sorted(taxes)},
+        }
+    if ("project" in seen) != (project is not None):
+        raise ValueError("markup_layers_provenance: project fields and the project reference must come together")
+    return {"schema": PROVENANCE_SCHEMA, "profile": profile, "project": project, "fields": origins}
 
 
 def decompose_by_category(

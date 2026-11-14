@@ -12,7 +12,12 @@ from typing import Literal, cast
 
 from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
 from concilium.application.scheduling.markup_layers import FORMULA as MARKUP_FORMULA
-from concilium.application.scheduling.markup_layers import LayerRates, decompose_by_category, parse_markup_layers
+from concilium.application.scheduling.markup_layers import (
+    LayerRates,
+    decompose_by_category,
+    parse_layer_provenance,
+    parse_markup_layers,
+)
 from concilium.domain.models.canonical import CanonicalModel, Resultado, ValidacaoItem
 
 from .contractual_cost_ledger import ExclusiveCostLedger
@@ -293,7 +298,7 @@ def build_pricing_report_evidence_context(
         "schema", "inventory_scope", "bdi_by_category", "catalog",
         "operational_basis_fingerprint", "regulatory_basis",
         "minimum_profit_margin", "inventory",
-        "markup_layers", "bdi_floor_by_category",
+        "markup_layers", "bdi_floor_by_category", "markup_layers_provenance",
     }
     unknown = set(raw) - allowed
     if unknown:
@@ -351,6 +356,12 @@ def build_pricing_report_evidence_context(
         mismatched = sorted(c for c in _P21_CATEGORIES if markup_layers[c].beta != bdi_by_category[c])
         if mismatched:
             raise ValueError(f"bdi_by_category differs from the declared markup layers for {', '.join(mismatched)}")
+    # N9.1: which layer fields came from the project and which from the profile.
+    markup_layers_provenance = None
+    if raw.get("markup_layers_provenance") is not None:
+        if markup_layers is None:
+            raise ValueError("markup_layers_provenance requires declared markup_layers")
+        markup_layers_provenance = parse_layer_provenance(raw["markup_layers_provenance"], markup_layers)
     bdi_floor_by_category = None
     if raw.get("bdi_floor_by_category") is not None:
         floors_raw = _json_mapping(raw["bdi_floor_by_category"], "bdi_floor_by_category")
@@ -466,6 +477,7 @@ def build_pricing_report_evidence_context(
         "reconciliation": reconciliation,
         "bdi_by_category": bdi_by_category,
         "markup_layers": markup_layers,
+        "markup_layers_provenance": markup_layers_provenance,
         "bdi_floor_by_category": bdi_floor_by_category,
         "catalog": catalog,
         "catalog_metadata": catalog_metadata,
@@ -772,6 +784,7 @@ def apply_pricing_report_evidence(
             "schema": "concilium.p21.markup-layers.v1",
             "formula": MARKUP_FORMULA,
             "rates": {c: rates[c].as_json() for c in sorted(_P21_CATEGORIES)},
+            "provenance": context.get("markup_layers_provenance"),
             "by_category": {c: layered_by_category[c].as_json() for c in sorted(_P21_CATEGORIES)},
             "total": layered_total.as_json(),
             "bdi_floor_by_category": (

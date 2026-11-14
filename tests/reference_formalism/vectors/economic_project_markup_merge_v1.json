@@ -1,0 +1,830 @@
+{
+  "protocol": "formalism-project-markup-merge/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": [
+      "VIII",
+      "N9",
+      "N9.1"
+    ],
+    "scope": "field-by-field merge of a project's exact tax/profit declaration over the profile's markup layers per category; origin of every field; resulting category markup and layered price",
+    "rounding": "Fraction exact"
+  },
+  "vectors": [
+    {
+      "case_id": "iss_negotiated_from_5_to_2_percent",
+      "hand_check": "MO, C 100, profile AC 5%, R+S+G 1%, DF 1.5%, L 9%, ISS 5%, CSSL 1.99%, IR 2.74%. Project declares ISS applicable at 2%; nothing else. Effective T = 0.02 + 0.0199 + 0.0274 = 0.0673 (profile: 0.0973). Cost-side layers are the profile's: loaded 106, DF 1.59, overhead 7.59, profit 9% of 107.59 = 9.6831, net 117.2731. Price = 117.2731 / 0.9327 = 1172731/9327 (125.7350...; with the profile's ISS it was 1172731/9027 = 129.9137...). beta = 1172731/932700 - 1 = 240031/932700. Taxes = price - net = 1172731*673/93270000 = 789247963/93270000. Only taxes.iss is 'project'.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "iss": {
+                "applicable": true,
+                "rate": "0.02"
+              }
+            }
+          }
+        },
+        "costs": {
+          "MO": "100"
+        }
+      },
+      "expected": {
+        "rates": {
+          "MO": {
+            "ac": "1/20",
+            "rsg": "1/100",
+            "df": "3/200",
+            "l": "9/100",
+            "taxes": {
+              "cofins": "0",
+              "iss": "1/50",
+              "pis": "0",
+              "cssl": "199/10000",
+              "ir": "137/5000"
+            }
+          }
+        },
+        "origin": {
+          "MO": {
+            "ac": "profile",
+            "rsg": "profile",
+            "df": "profile",
+            "l": "profile",
+            "taxes": {
+              "cofins": "profile",
+              "iss": "project",
+              "pis": "profile",
+              "cssl": "profile",
+              "ir": "profile"
+            }
+          }
+        },
+        "beta": {
+          "MO": "240031/932700"
+        },
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "759/100",
+            "profit": "96831/10000",
+            "taxes": "789247963/93270000",
+            "price": "1172731/9327"
+          }
+        },
+        "total": {
+          "cost": "100",
+          "overhead": "759/100",
+          "profit": "96831/10000",
+          "taxes": "789247963/93270000",
+          "price": "1172731/9327"
+        }
+      }
+    },
+    {
+      "case_id": "profit_negotiated_and_iss_not_applicable",
+      "hand_check": "IND, C 200, profile L 5%. Project declares L 3% and ISS not applicable (rate 0). Loaded 212, DF 3.18 -> 215.18, overhead 12 + 3.18 = 15.18; profit 3% of 215.18 = 6.4554; net 221.6354; T = 0.0199 + 0.0274 = 0.0473; price = 221.6354/0.9527 = 2216354/9527 = 316622/1361 (232.6392...). beta = 316622/272200 - 1 = 22211/136100. l and taxes.iss are 'project'.",
+      "case": {
+        "base": {
+          "IND": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.05",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "IND": {
+            "l": "0.03",
+            "taxes": {
+              "iss": {
+                "applicable": false
+              }
+            }
+          }
+        },
+        "costs": {
+          "IND": "200"
+        }
+      },
+      "expected": {
+        "rates": {
+          "IND": {
+            "ac": "1/20",
+            "rsg": "1/100",
+            "df": "3/200",
+            "l": "3/100",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0",
+              "pis": "0",
+              "cssl": "199/10000",
+              "ir": "137/5000"
+            }
+          }
+        },
+        "origin": {
+          "IND": {
+            "ac": "profile",
+            "rsg": "profile",
+            "df": "profile",
+            "l": "project",
+            "taxes": {
+              "cofins": "profile",
+              "iss": "project",
+              "pis": "profile",
+              "cssl": "profile",
+              "ir": "profile"
+            }
+          }
+        },
+        "beta": {
+          "IND": "22211/136100"
+        },
+        "by_category": {
+          "IND": {
+            "cost": "200",
+            "overhead": "759/50",
+            "profit": "32277/5000",
+            "taxes": "74881103/6805000",
+            "price": "316622/1361"
+          }
+        },
+        "total": {
+          "cost": "200",
+          "overhead": "759/50",
+          "profit": "32277/5000",
+          "taxes": "74881103/6805000",
+          "price": "316622/1361"
+        }
+      }
+    },
+    {
+      "case_id": "supply_row_gains_taxes_declared_by_the_project",
+      "hand_check": "MAT, C 1000, profile L 4%, every tax 0. Project declares COFINS 3% and PIS 0.65% applicable. Net 1040; T = 0.0365; price = 1040/0.9635 = 2080000/1927 (1079.3980...); taxes = price - 1040 = 75920/1927; beta = 2080/1927 - 1 = 153/1927 (7.94%, against the profile's 4%).",
+      "case": {
+        "base": {
+          "MAT": {
+            "ac": "0",
+            "rsg": "0",
+            "df": "0",
+            "l": "0.04",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0",
+              "pis": "0",
+              "cssl": "0",
+              "ir": "0"
+            }
+          }
+        },
+        "project": {
+          "MAT": {
+            "taxes": {
+              "cofins": {
+                "applicable": true,
+                "rate": "0.03"
+              },
+              "pis": {
+                "applicable": true,
+                "rate": "0.0065"
+              }
+            }
+          }
+        },
+        "costs": {
+          "MAT": "1000"
+        }
+      },
+      "expected": {
+        "rates": {
+          "MAT": {
+            "ac": "0",
+            "rsg": "0",
+            "df": "0",
+            "l": "1/25",
+            "taxes": {
+              "cofins": "3/100",
+              "iss": "0",
+              "pis": "13/2000",
+              "cssl": "0",
+              "ir": "0"
+            }
+          }
+        },
+        "origin": {
+          "MAT": {
+            "ac": "profile",
+            "rsg": "profile",
+            "df": "profile",
+            "l": "profile",
+            "taxes": {
+              "cofins": "project",
+              "iss": "profile",
+              "pis": "project",
+              "cssl": "profile",
+              "ir": "profile"
+            }
+          }
+        },
+        "beta": {
+          "MAT": "153/1927"
+        },
+        "by_category": {
+          "MAT": {
+            "cost": "1000",
+            "overhead": "0",
+            "profit": "40",
+            "taxes": "75920/1927",
+            "price": "2080000/1927"
+          }
+        },
+        "total": {
+          "cost": "1000",
+          "overhead": "0",
+          "profit": "40",
+          "taxes": "75920/1927",
+          "price": "2080000/1927"
+        }
+      }
+    },
+    {
+      "case_id": "no_project_declaration_is_exactly_the_profile",
+      "hand_check": "No project declaration: every field is 'profile' and the result is N9's: MO beta = 1.172731/0.9027 - 1 = 270031/902700, price of 100 = 1172731/9027.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "costs": {
+          "MO": "100"
+        }
+      },
+      "expected": {
+        "rates": {
+          "MO": {
+            "ac": "1/20",
+            "rsg": "1/100",
+            "df": "3/200",
+            "l": "9/100",
+            "taxes": {
+              "cofins": "0",
+              "iss": "1/20",
+              "pis": "0",
+              "cssl": "199/10000",
+              "ir": "137/5000"
+            }
+          }
+        },
+        "origin": {
+          "MO": {
+            "ac": "profile",
+            "rsg": "profile",
+            "df": "profile",
+            "l": "profile",
+            "taxes": {
+              "cofins": "profile",
+              "iss": "profile",
+              "pis": "profile",
+              "cssl": "profile",
+              "ir": "profile"
+            }
+          }
+        },
+        "beta": {
+          "MO": "270031/902700"
+        },
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "759/100",
+            "profit": "96831/10000",
+            "taxes": "1141067263/90270000",
+            "price": "1172731/9027"
+          }
+        },
+        "total": {
+          "cost": "100",
+          "overhead": "759/100",
+          "profit": "96831/10000",
+          "taxes": "1141067263/90270000",
+          "price": "1172731/9027"
+        }
+      }
+    },
+    {
+      "case_id": "merge_is_per_category_and_aggregates_by_addition",
+      "hand_check": "MO 100 with ISS declared at 2% (price 1172731/9327) and MAT 1000 untouched by the project (L 4%: price 1040). Total cost 1100, overhead 7.59, profit 9.6831 + 40 = 49.6831, price 1172731/9327 + 1040 = 10872811/9327. MAT stays all 'profile'.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          },
+          "MAT": {
+            "ac": "0",
+            "rsg": "0",
+            "df": "0",
+            "l": "0.04",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0",
+              "pis": "0",
+              "cssl": "0",
+              "ir": "0"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "iss": {
+                "applicable": true,
+                "rate": "0.02"
+              }
+            }
+          }
+        },
+        "costs": {
+          "MO": "100",
+          "MAT": "1000"
+        }
+      },
+      "expected": {
+        "rates": {
+          "MO": {
+            "ac": "1/20",
+            "rsg": "1/100",
+            "df": "3/200",
+            "l": "9/100",
+            "taxes": {
+              "cofins": "0",
+              "iss": "1/50",
+              "pis": "0",
+              "cssl": "199/10000",
+              "ir": "137/5000"
+            }
+          },
+          "MAT": {
+            "ac": "0",
+            "rsg": "0",
+            "df": "0",
+            "l": "1/25",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0",
+              "pis": "0",
+              "cssl": "0",
+              "ir": "0"
+            }
+          }
+        },
+        "origin": {
+          "MO": {
+            "ac": "profile",
+            "rsg": "profile",
+            "df": "profile",
+            "l": "profile",
+            "taxes": {
+              "cofins": "profile",
+              "iss": "project",
+              "pis": "profile",
+              "cssl": "profile",
+              "ir": "profile"
+            }
+          },
+          "MAT": {
+            "ac": "profile",
+            "rsg": "profile",
+            "df": "profile",
+            "l": "profile",
+            "taxes": {
+              "cofins": "profile",
+              "iss": "profile",
+              "pis": "profile",
+              "cssl": "profile",
+              "ir": "profile"
+            }
+          }
+        },
+        "beta": {
+          "MO": "240031/932700",
+          "MAT": "1/25"
+        },
+        "by_category": {
+          "MO": {
+            "cost": "100",
+            "overhead": "759/100",
+            "profit": "96831/10000",
+            "taxes": "789247963/93270000",
+            "price": "1172731/9327"
+          },
+          "MAT": {
+            "cost": "1000",
+            "overhead": "0",
+            "profit": "40",
+            "taxes": "0",
+            "price": "1040"
+          }
+        },
+        "total": {
+          "cost": "1100",
+          "overhead": "759/100",
+          "profit": "496831/10000",
+          "taxes": "789247963/93270000",
+          "price": "10872811/9327"
+        }
+      }
+    },
+    {
+      "case_id": "unknown_category_is_rejected",
+      "hand_check": "The project names a category the profile does not declare.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "XX": {
+            "l": "0.05"
+          }
+        }
+      },
+      "expected_error": "unknown category"
+    },
+    {
+      "case_id": "unknown_tax_is_rejected",
+      "hand_check": "The project names a tax (icms) the profile row does not have.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "icms": {
+                "applicable": true,
+                "rate": "0.18"
+              }
+            }
+          }
+        }
+      },
+      "expected_error": "unknown tax"
+    },
+    {
+      "case_id": "overhead_is_not_a_project_field",
+      "hand_check": "AC is company-level overhead: a project declares only l and taxes.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "ac": "0.03"
+          }
+        }
+      },
+      "expected_error": "only l and taxes"
+    },
+    {
+      "case_id": "binary_float_rate_is_rejected",
+      "hand_check": "A JSON number (0.02) is a binary float, not an exact declaration.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "iss": {
+                "applicable": true,
+                "rate": 0.02
+              }
+            }
+          }
+        }
+      },
+      "expected_error": "exact string"
+    },
+    {
+      "case_id": "binary_float_profit_is_rejected",
+      "hand_check": "Profit as a JSON number.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "l": 0.08
+          }
+        }
+      },
+      "expected_error": "exact string"
+    },
+    {
+      "case_id": "applicable_tax_needs_its_rate",
+      "hand_check": "Applicable without a rate: nothing is defaulted to the profile's rate.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "iss": {
+                "applicable": true
+              }
+            }
+          }
+        }
+      },
+      "expected_error": "exactly when the tax applies"
+    },
+    {
+      "case_id": "non_applicable_tax_carries_no_rate",
+      "hand_check": "Not applicable but with a rate: the rate would be silently ignored.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "iss": {
+                "applicable": false,
+                "rate": "0.05"
+              }
+            }
+          }
+        }
+      },
+      "expected_error": "exactly when the tax applies"
+    },
+    {
+      "case_id": "applicability_must_be_boolean",
+      "hand_check": "applicable given as text.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "iss": {
+                "applicable": "sim",
+                "rate": "0.05"
+              }
+            }
+          }
+        }
+      },
+      "expected_error": "explicit boolean"
+    },
+    {
+      "case_id": "taxes_reach_100_percent_after_the_merge",
+      "hand_check": "ISS 95.27% + CSSL 1.99% + IR 2.74% = 100%: the price is undefined.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "taxes": {
+              "iss": {
+                "applicable": true,
+                "rate": "0.9527"
+              }
+            }
+          }
+        }
+      },
+      "expected_error": "below 100%"
+    },
+    {
+      "case_id": "negative_profit_is_rejected",
+      "hand_check": "Negative project profit.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {
+            "l": "-0.01"
+          }
+        }
+      },
+      "expected_error": "nonnegative"
+    },
+    {
+      "case_id": "empty_category_override_is_rejected",
+      "hand_check": "A category entry that declares nothing.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {
+          "MO": {}
+        }
+      },
+      "expected_error": "at least one"
+    },
+    {
+      "case_id": "empty_project_declaration_is_rejected",
+      "hand_check": "A project declaration without categories.",
+      "case": {
+        "base": {
+          "MO": {
+            "ac": "0.05",
+            "rsg": "0.01",
+            "df": "0.015",
+            "l": "0.09",
+            "taxes": {
+              "cofins": "0",
+              "iss": "0.05",
+              "pis": "0",
+              "cssl": "0.0199",
+              "ir": "0.0274"
+            }
+          }
+        },
+        "project": {}
+      },
+      "expected_error": "at least one category"
+    }
+  ]
+}
