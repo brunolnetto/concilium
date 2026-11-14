@@ -18,6 +18,16 @@ from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
+from concilium.application.scheduling.exact_pricing_declaration import (
+    PROJECT_SCHEMA,
+    PricingDeclarationError,
+    validate_project_declaration,
+)
+from concilium.application.scheduling.project_bdi_exact_store import (
+    ProjectBdiExactError,
+    save_exact_project_bdi,
+    version_path,
+)
 from concilium.domain.models.financial.bdi import BdiPerfilDiff, PerfilBdiProjeto, PerfilTributarioProjeto
 from concilium.presentation.cli.shared import resolve_project
 
@@ -161,6 +171,45 @@ def _bu_persist_bdi_diff(
         pass  # Diff opcional; n\u00e3o interrompe o fluxo principal
 
 
+def _bu_update_exato(
+    projeto: str, declaracao: dict[str, Any], confirmado_por: str, motivo: str | None, yes: bool
+) -> None:
+    """Valida e salva a declaração exata do projeto (N9.1) em `bdi/perfil_bdi_exato*.json`."""
+    try:
+        validate_project_declaration(declaracao)
+    except PricingDeclarationError as e:
+        rprint(f"[red]Declaração exata inválida: {e}[/red]")
+        raise typer.Exit(1) from None
+
+    project = resolve_project(projeto)
+    rprint(f"\n[bold]Declaração exata de BDI do projeto[/bold] — fonte: {declaracao['fonte']}")
+    for linha, campos in declaracao["linhas"].items():
+        if "l" in campos:
+            rprint(f"  {linha}.l = {campos['l']}")
+        for tributo, entrada in campos.get("tributos", {}).items():
+            valor = entrada["aliquota"] if entrada["aplicavel"] else "não aplicável"
+            rprint(f"  {linha}.{tributo} = {valor}")
+    if not yes and not typer.confirm(f"\nConfirmar declaração exata de BDI para '{projeto}'?", default=False):
+        rprint("[yellow]Operação cancelada.[/yellow]")
+        raise typer.Exit(0)
+    try:
+        salvo = save_exact_project_bdi(
+            project,
+            str(project.meta["id"]),
+            declaracao,
+            confirmado_por=confirmado_por,
+            motivo_revisao=motivo,
+        )
+    except ProjectBdiExactError as e:
+        rprint(f"[red]Declaração exata não salva: {e}[/red]")
+        raise typer.Exit(1) from None
+    rprint(f"\n[green][OK][/green] Declaração exata de BDI v{salvo['versao']} salva.")
+    rprint(f"  Hash: {salvo['content_hash']}")
+    rprint(f"  Path: {version_path(salvo['versao'])}")
+    for campo in (salvo.get("diff") or {}).get("campos_alterados", []):
+        rprint(f"  [yellow]alterado[/yellow]: {campo}")
+
+
 @app.command("update")
 def bdi_update(
     projeto: str = typer.Argument(..., help="Nome ou UUID do projeto."),
@@ -168,7 +217,7 @@ def bdi_update(
         ...,
         "--from-file",
         "-f",
-        help="Caminho para JSON com novo perfil BDI (tributario + lucro).",
+        help="JSON com o perfil BDI: declaração exata (schema concilium.projeto.bdi-exato.v1) ou tributario + lucro.",
         exists=True,
         readable=True,
     ),
@@ -206,6 +255,12 @@ def bdi_update(
     except Exception as e:
         rprint(f"[red]Falha ao ler arquivo: {e}[/red]")
         raise typer.Exit(1) from None
+
+    # N9.1: um arquivo com o schema da declaração exata segue o caminho exato —
+    # é o único que o preço exato lê; o perfil em ponto flutuante nunca é convertido.
+    if isinstance(novo_raw, dict) and novo_raw.get("schema") == PROJECT_SCHEMA:
+        _bu_update_exato(projeto, novo_raw, confirmado_por, motivo, yes)
+        return
 
     try:
         trib_model = PerfilTributarioProjeto.model_validate(novo_raw.get("tributario", {}))

@@ -489,15 +489,23 @@ def register(server: FastMCP) -> None:
     @permission("project:run")
     def salvar_perfil_bdi(
         project_id: str,
-        tributario: dict[str, Any],
-        lucro: dict[str, Any],
-        confirmado_por: str,
+        tributario: dict[str, Any] | None = None,
+        lucro: dict[str, Any] | None = None,
+        confirmado_por: str = "",
         motivo_revisao: str | None = None,
+        declaracao_exata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Persiste um snapshot imutável do perfil BDI do projeto (ADR-023 §D6).
 
         Na criação, salva versão 1.  Em revisões posteriores, incrementa a versão
         e emite um BdiPerfilDiff para rastreabilidade.
+
+        O preço exato (P21, N9.1) só lê `declaracao_exata`: a declaração em
+        decimais exatos (strings) salva em `bdi/perfil_bdi_exato*.json` e injetada
+        automaticamente no Skill06. `tributario`/`lucro` (ponto flutuante) servem
+        apenas ao estágio legado e nunca são convertidos: um projeto que só tem o
+        perfil em ponto flutuante fica com o preço exato não avaliado até que o
+        perfil seja salvo de novo em forma exata.
 
         Args:
             project_id:    ID do projeto.
@@ -508,19 +516,65 @@ def register(server: FastMCP) -> None:
                            (mao_obra, material, servicos, indireto, diesel — frações 0–1).
             confirmado_por: Nome do engenheiro responsável pela confirmação.
             motivo_revisao: Texto livre obrigatório em versões > 1.
+            declaracao_exata: `{"schema": "concilium.projeto.bdi-exato.v1", "fonte": "...",
+                           "linhas": {"mao_obra": {"l": "0.08", "tributos": {"iss":
+                           {"aplicavel": true, "aliquota": "0.02"}, "cofins": {"aplicavel": false}}}}}`
+                           — só os campos declarados substituem os do perfil da construtora;
+                           números sempre como strings exatas.
 
         Returns:
-            perfil_id, versao, content_hash, diff (se versão > 1).
+            perfil_id, versao, content_hash, diff (se versão > 1) do perfil legado
+            quando `tributario`/`lucro` são informados; `exato` (versao, content_hash,
+            diff) quando `declaracao_exata` é informada.
         """
         import hashlib
         from datetime import datetime
 
+        from concilium.application.scheduling.exact_pricing_declaration import (
+            PricingDeclarationError,
+            validate_project_declaration,
+        )
+        from concilium.application.scheduling.project_bdi_exact_store import (
+            ProjectBdiExactError,
+            save_exact_project_bdi,
+        )
         from concilium.domain.models.financial.bdi import (
             BdiPerfilDiff,
             PerfilBdiProjeto,
             PerfilLucroProjeto,
             PerfilTributarioProjeto,
         )
+
+        if not confirmado_por.strip():
+            return {"erro": "confirmado_por é obrigatório."}
+        legado = tributario is not None or lucro is not None
+        if not legado and declaracao_exata is None:
+            return {"erro": "Informe declaracao_exata (preço exato) e/ou tributario + lucro (estágio legado)."}
+        # A declaração exata é validada antes de qualquer gravação: inválida, nada é salvo.
+        if declaracao_exata is not None:
+            try:
+                validate_project_declaration(declaracao_exata)
+            except PricingDeclarationError as e:
+                return {"erro": f"Declaração exata inválida: {e}"}
+
+        def _salvar_exato() -> dict[str, Any]:
+            try:
+                salvo = save_exact_project_bdi(
+                    _project(project_id),
+                    project_id,
+                    declaracao_exata,
+                    confirmado_por=confirmado_por,
+                    motivo_revisao=motivo_revisao,
+                )
+            except ProjectBdiExactError as e:
+                return {"erro": f"Declaração exata não salva: {e}"}
+            return {key: salvo[key] for key in ("versao", "content_hash", "confirmado_em", "diff") if key in salvo}
+
+        if not legado:
+            exato = _salvar_exato()
+            if "erro" in exato:
+                return exato
+            return {"project_id": project_id, "confirmado_por": confirmado_por, "exato": exato}
 
         # Valida entradas via modelos Pydantic
         try:
@@ -553,6 +607,14 @@ def register(server: FastMCP) -> None:
                     f"motivo_revisao é obrigatório ao atualizar um perfil BDI existente (versão atual: {versao - 1})."
                 )
             }
+
+        # A declaração exata é salva primeiro: se ela não puder ser gravada, o
+        # perfil legado também não muda (as duas formas não divergem em silêncio).
+        exato: dict[str, Any] | None = None
+        if declaracao_exata is not None:
+            exato = _salvar_exato()
+            if "erro" in exato:
+                return exato
 
         # Computa hash antes de criar o modelo (hash is required field)
         hash_payload = {
@@ -618,6 +680,8 @@ def register(server: FastMCP) -> None:
         }
         if diff:
             result["diff"] = diff
+        if exato is not None:
+            result["exato"] = exato
         return result
 
     # ADR-101: _meta.ui para MCP Apps (Fase 1)

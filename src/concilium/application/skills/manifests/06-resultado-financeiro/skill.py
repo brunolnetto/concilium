@@ -39,6 +39,8 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
 _HERE = Path(__file__).resolve().parent
+PROJECT_BDI_INPUT = "bdi_projeto_exato"
+PROJECT_BDI_UNAVAILABLE_INPUT = "bdi_projeto_exato_indisponivel"
 
 
 def _load_estagio(subdir: str, func_name: str):
@@ -179,11 +181,41 @@ def run_resultado_financeiro(
     # evidence from this canonical schedule and the server-resolved catalog;
     # never trust serialized ledgers or caller-supplied dataclass-shaped objects.
     p21_declaration = inputs.get("p21_pricing_evidence")
-    if p21_declaration is None and enabled:
+    # N9.1: the project's exact tax/profit declaration, merged field by field
+    # over the profile rows. The legacy float PerfilBdiProjeto is never
+    # converted: a project that carries one without the exact declaration has
+    # project-specific terms the exact path cannot read, so nothing is priced.
+    project_bdi = inputs.get(PROJECT_BDI_INPUT)
+    project_bdi_unavailable = inputs.get(PROJECT_BDI_UNAVAILABLE_INPUT)
+    legacy_project_bdi = next((k for k in ("bdi_perfil", "perfil_bdi") if inputs.get(k) is not None), None)
+    p21_project_gap: str | None = None
+    if project_bdi is not None and p21_declaration is not None:
+        p21_project_gap = (
+            f"{PROJECT_BDI_INPUT} and p21_pricing_evidence are mutually exclusive: a hand-written "
+            "declaration already states its markup layers"
+        )
+    elif project_bdi is not None and not enabled:
+        p21_project_gap = f"{PROJECT_BDI_INPUT} requires the exact ledgers (p18_consumption_preview_enabled=true)"
+    elif project_bdi is None and legacy_project_bdi is not None and p21_declaration is None and enabled:
+        p21_project_gap = (
+            f"inputs.{legacy_project_bdi} declares project tax/profit terms in floating point; the exact price "
+            f"needs them as exact strings in {PROJECT_BDI_INPUT} (nothing is converted)"
+        )
+    elif project_bdi is None and project_bdi_unavailable is not None and p21_declaration is None and enabled:
+        # The runtime found project BDI terms it could not hand over as an exact
+        # declaration (only the float profile is saved, or the exact file is damaged).
+        p21_project_gap = str(project_bdi_unavailable)
+    if p21_project_gap is not None:
+        validacoes.append(ValidacaoItem(
+            codigo="VAL-P21-NAO-AVALIADO",
+            status="AVISO",
+            mensagem="Preço exato não avaliado (sem estimativa): " + p21_project_gap,
+        ))
+    elif p21_declaration is None and enabled:
         # #206 / N9: no hand-written evidence — the declaration comes from the
         # profile's precificacao_exata block and the derived C^cat. A profile
         # without complete exact pricing terms leaves the price not evaluated.
-        p21_declaration, p21_gaps = build_p21_declaration(perfil, canonical, catalogo)
+        p21_declaration, p21_gaps = build_p21_declaration(perfil, canonical, catalogo, project_bdi)
         if p21_declaration is None:
             validacoes.append(ValidacaoItem(
                 codigo="VAL-P21-NAO-AVALIADO",
@@ -191,8 +223,10 @@ def run_resultado_financeiro(
                 mensagem="Preço exato não avaliado (sem estimativa): " + "; ".join(p21_gaps),
             ))
     if p21_declaration is not None:
-        if not enabled:
-            p21_context: dict[str, object] = {
+        if p21_project_gap is not None:
+            p21_context: dict[str, object] = {"source_build_error": p21_project_gap}
+        elif not enabled:
+            p21_context = {
                 "source_build_error": (
                     "P21 pricing evidence requires p18_consumption_preview_enabled=true"
                 ),

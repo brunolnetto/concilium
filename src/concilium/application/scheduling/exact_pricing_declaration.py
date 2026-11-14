@@ -21,18 +21,30 @@ there is no rental/maintenance blend), MAT from ``material``, COMB from
   profit layer's share of the sale price.
 - ``escopo_estoque`` declares the inventory scope.
 
+**Project declaration (N9.1).** Tax incidence and profit are project-specific
+(ADR-023 §D6–D7): a project may declare, in exact strings, the profit ``l`` and
+the applicability/rate of individual taxes of a row. The declaration is merged
+over the profile's row **field by field** — a declared field replaces the
+profile's, every other field stays the profile's — and the layers, the category
+markup and the floors are then derived from the merged rows exactly as in N9.
+Overhead (``ac``, ``r``, ``cr``, ``df``) and ``natureza`` are company-level and
+cannot be overridden per project. The origin of every layer field (``profile``
+or ``project``) is recorded in the declaration.
+
 Nothing is defaulted: a missing or inexact field returns the reason and no
 declaration, so the price is not evaluated.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping
 from fractions import Fraction
 from typing import Any
 
 from concilium.application.scheduling.catalog_cost_envelope import derive_catalog_cost_envelope
-from concilium.application.scheduling.markup_layers import LayerRates
+from concilium.application.scheduling.markup_layers import PROVENANCE_SCHEMA, LayerRates
 
 P21_INPUT_SCHEMA = "concilium.p21.pricing-evidence.v1"
 PROFILE_SCHEMA = "concilium.perfil.precificacao-exata.v1"
@@ -41,6 +53,8 @@ CATEGORY_ROWS = {"MO": "mao_obra", "EQ": "servicos", "MAT": "material", "COMB": 
 _OVERHEAD = ("ac", "r", "cr", "df", "l")
 _TAXES = ("cofins", "iss", "pis", "cssl", "ir")
 NATURES = ("servico", "fornecimento")
+PROJECT_SCHEMA = "concilium.projeto.bdi-exato.v1"
+_PROJECT_ROW_FIELDS = ("l", "tributos")
 
 
 class PricingDeclarationError(ValueError):
@@ -93,8 +107,134 @@ def tcu_bdi_rate(row: object, label: str = "BDI row") -> Fraction:
     return profile_row_layers(row, label).beta
 
 
-def profile_pricing_terms(perfil: object, tipo_obra: str) -> dict[str, Any]:
-    """Category markups, minimum margin, regulatory floor and inventory scope."""
+def _project_tax_rate(entry: object, label: str) -> str:
+    """Effective rate string of ``{"aplicavel": bool, "aliquota": exact}``: a tax
+    that is not applicable is zero and must not carry a rate."""
+    if not isinstance(entry, Mapping) or type(entry.get("aplicavel")) is not bool:
+        raise PricingDeclarationError(f"{label} must declare aplicavel as an explicit boolean")
+    unknown = set(entry) - {"aplicavel", "aliquota"}
+    if unknown:
+        raise PricingDeclarationError(f"{label} declares unknown fields {sorted(map(str, unknown))}")
+    if not entry["aplicavel"]:
+        if "aliquota" in entry:
+            raise PricingDeclarationError(f"{label} is not applicable and must not declare aliquota")
+        return "0"
+    if "aliquota" not in entry:
+        raise PricingDeclarationError(f"{label} is applicable and must declare aliquota")
+    _rate(entry["aliquota"], f"{label}.aliquota")
+    return str(entry["aliquota"])
+
+
+def merge_project_rows(
+    rows: Mapping[str, object], project: object
+) -> tuple[dict[str, object], dict[str, set[str]], dict[str, str] | None]:
+    """N9.1: profile rows with the project's declared fields replaced, field by field.
+
+    Returns ``(merged rows, {row: fields that came from the project}, project
+    reference)``. ``project`` is ``None`` (no project declaration: the rows are
+    the profile's) or ``{"schema", "fonte", "linhas": {row: {"l": exact,
+    "tributos": {tax: {"aplicavel": bool, "aliquota": exact}}}}}``.
+    """
+    merged: dict[str, object] = dict(rows)
+    overridden: dict[str, set[str]] = {row: set() for row in CATEGORY_ROWS.values()}
+    if project is None:
+        return merged, overridden, None
+    label = "project BDI declaration"
+    if not isinstance(project, Mapping) or set(project) != {"schema", "fonte", "linhas"}:
+        raise PricingDeclarationError(f"{label} must declare exactly schema, fonte and linhas")
+    if project["schema"] != PROJECT_SCHEMA:
+        raise PricingDeclarationError(f"{label} must declare schema {PROJECT_SCHEMA}")
+    if not isinstance(project["fonte"], str) or not project["fonte"].strip():
+        raise PricingDeclarationError(f"{label} must declare its fonte")
+    lines = project["linhas"]
+    if not isinstance(lines, Mapping) or not lines:
+        raise PricingDeclarationError(f"{label}.linhas must override at least one row")
+    for row_name, override in lines.items():
+        row_label = f"{label}.linhas.{row_name}"
+        if row_name not in overridden:
+            raise PricingDeclarationError(
+                f"{row_label}: unknown row; rows are {', '.join(CATEGORY_ROWS.values())}"
+            )
+        base = rows.get(row_name)
+        if not isinstance(base, Mapping):
+            raise PricingDeclarationError(f"{row_label}: the profile declares no such row to override")
+        if not isinstance(override, Mapping) or not override:
+            raise PricingDeclarationError(f"{row_label} must override at least one field")
+        unknown = sorted(str(name) for name in set(override) - set(_PROJECT_ROW_FIELDS))
+        if unknown:
+            raise PricingDeclarationError(
+                f"{row_label} declares {unknown}; a project overrides only l and tributos "
+                "(overhead and natureza are declared by the profile)"
+            )
+        row = dict(base)
+        if "l" in override:
+            if "l" not in base:
+                raise PricingDeclarationError(f"{row_label}.l: the profile row has no such field")
+            _rate(override["l"], f"{row_label}.l")
+            row["l"] = override["l"]
+            overridden[row_name].add("l")
+        if "tributos" in override:
+            taxes = override["tributos"]
+            if not isinstance(taxes, Mapping) or not taxes:
+                raise PricingDeclarationError(f"{row_label}.tributos must override at least one tax")
+            for tax, entry in taxes.items():
+                if tax not in _TAXES or tax not in base:
+                    raise PricingDeclarationError(
+                        f"{row_label}.tributos.{tax}: the profile row has no such tax; taxes are {', '.join(_TAXES)}"
+                    )
+                row[tax] = _project_tax_rate(entry, f"{row_label}.tributos.{tax}")
+                overridden[row_name].add(tax)
+        merged[row_name] = row
+    reference = {
+        "schema": PROJECT_SCHEMA,
+        "source": project["fonte"],
+        "fingerprint": project_declaration_fingerprint(project),
+    }
+    return merged, overridden, reference
+
+
+def project_declaration_fingerprint(project: object) -> str:
+    """SHA-256 of the declaration's canonical JSON (sorted keys, no whitespace)."""
+    return hashlib.sha256(
+        json.dumps(project, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def validate_project_declaration(project: object, rows: Mapping[str, object] | None = None) -> None:
+    """Raise unless ``project`` is a valid exact declaration (N9.1).
+
+    With the profile's ``tabela_bdi.linhas`` the check is the one the price
+    runs: merge, then derive every row's layers. Without them it is structural
+    and exact — known rows and taxes, exact strings, declared taxes below 100%
+    — and the merge against the profile still happens when the price is built.
+    """
+    if project is None:
+        raise PricingDeclarationError("project BDI declaration is required")
+    if rows is None:
+        blank = {**dict.fromkeys((*_OVERHEAD, *_TAXES), "0"), "natureza": NATURES[0]}
+        rows = {row: dict(blank) for row in CATEGORY_ROWS.values()}
+    merged, _overridden, _reference = merge_project_rows(rows, project)
+    for row in CATEGORY_ROWS.values():
+        profile_row_layers(merged.get(row), f"tabela_bdi.{row} merged with the project BDI declaration")
+
+
+def _field_origins(overridden: set[str]) -> dict[str, object]:
+    """Origin of each layer field of one category, in the shape of ``LayerRates.as_json``."""
+    return {
+        "ac": "profile",
+        "rsg": "profile",
+        "df": "profile",
+        "l": "project" if "l" in overridden else "profile",
+        "taxes": {tax: "project" if tax in overridden else "profile" for tax in _TAXES},
+    }
+
+
+def profile_pricing_terms(perfil: object, tipo_obra: str, project_bdi: object = None) -> dict[str, Any]:
+    """Category markups, minimum margin, regulatory floor and inventory scope.
+
+    ``project_bdi`` is the project's exact declaration (N9.1), merged over the
+    profile rows before the layers are derived.
+    """
     if not isinstance(perfil, Mapping) or not isinstance(perfil.get("precificacao_exata"), Mapping):
         raise PricingDeclarationError("profile declares no precificacao_exata block")
     block = perfil["precificacao_exata"]
@@ -107,8 +247,15 @@ def profile_pricing_terms(perfil: object, tipo_obra: str) -> dict[str, Any]:
     rows = table.get("linhas")
     if not isinstance(rows, Mapping):
         raise PricingDeclarationError("precificacao_exata.tabela_bdi.linhas is required")
+    # The profile must be complete on its own: the project replaces fields, it does not fill gaps.
+    for row in CATEGORY_ROWS.values():
+        profile_row_layers(rows.get(row), f"tabela_bdi.{row}")
+    merged, overridden, project_reference = merge_project_rows(rows, project_bdi)
     layers = {
-        category: profile_row_layers(rows.get(row), f"tabela_bdi.{row}") for category, row in CATEGORY_ROWS.items()
+        category: profile_row_layers(
+            merged[row], f"tabela_bdi.{row}" + (" merged with the project BDI declaration" if overridden[row] else "")
+        )
+        for category, row in CATEGORY_ROWS.items()
     }
     natures = {category: rows[row]["natureza"] for category, row in CATEGORY_ROWS.items()}
 
@@ -145,6 +292,8 @@ def profile_pricing_terms(perfil: object, tipo_obra: str) -> dict[str, Any]:
         "bdi_by_category": {category: rates.beta for category, rates in layers.items()},
         "bdi_floor_by_category": floors,
         "table_source": table["fonte"],
+        "project_reference": project_reference,
+        "layer_origins": {category: _field_origins(overridden[row]) for category, row in CATEGORY_ROWS.items()},
         "minimum_profit_margin": _rate(str(band["min"]), "faixa_margem_aceitavel.min"),
         "regulatory_source": f"{floor['fonte']} — {'; '.join(references)}",
         "inventory_status": scope["status"],
@@ -153,15 +302,19 @@ def profile_pricing_terms(perfil: object, tipo_obra: str) -> dict[str, Any]:
 
 
 def build_p21_declaration(
-    perfil: object, canonical: Any, catalogo: Mapping[str, object]
+    perfil: object, canonical: Any, catalogo: Mapping[str, object], project_bdi: object = None
 ) -> tuple[dict[str, Any] | None, list[str]]:
-    """``(declaration, reasons)``: the ``p21_pricing_evidence`` JSON, or why not."""
+    """``(declaration, reasons)``: the ``p21_pricing_evidence`` JSON, or why not.
+
+    ``project_bdi`` (N9.1) is the project's exact tax/profit declaration; when
+    given it must be valid, otherwise there is no declaration at all.
+    """
     projeto = getattr(canonical, "projeto", None)
     tipo_obra = getattr(projeto, "tipo_obra", None)
     if not isinstance(tipo_obra, str) or not tipo_obra:
         return None, ["project work type (tipo_obra) is not declared"]
     try:
-        terms = profile_pricing_terms(perfil, tipo_obra)
+        terms = profile_pricing_terms(perfil, tipo_obra, project_bdi)
     except PricingDeclarationError as exc:
         return None, [str(exc)]
     currency = catalogo.get("currency")
@@ -196,6 +349,12 @@ def build_p21_declaration(
         },
         "bdi_by_category": {category: str(rate) for category, rate in terms["bdi_by_category"].items()},
         "markup_layers": {category: rates.as_json() for category, rates in terms["layers"].items()},
+        "markup_layers_provenance": {
+            "schema": PROVENANCE_SCHEMA,
+            "profile": {"reference_id": f"perfil:{profile_id}:tabela_bdi", "source": terms["table_source"]},
+            "project": terms["project_reference"],
+            "fields": terms["layer_origins"],
+        },
         "bdi_floor_by_category": {category: str(rate) for category, rate in floors.items()},
         "catalog": {
             "amount": amount,
