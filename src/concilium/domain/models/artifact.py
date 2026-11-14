@@ -120,12 +120,15 @@ class ArtifactEnvelope(BaseModel, Generic[T]):
         parent_refs: list[ArtifactRef] | None = None,
         version: str = "1.0.0",
     ) -> ArtifactEnvelope[T]:
-        if hasattr(payload, "model_dump_json"):
-            payload_json = payload.model_dump_json()
-        else:
-            import json
-
-            payload_json = json.dumps(payload, default=str, ensure_ascii=False)
+        # T is bound to BaseModel: any other payload (e.g. a dict) would be
+        # validated into a bare BaseModel() and silently lose its content,
+        # while content_hash still described the original (#203).
+        if not isinstance(payload, BaseModel):
+            raise TypeError(
+                f"ArtifactEnvelope payload must be a typed pydantic model (ADR-018 §D1), "
+                f"got {type(payload).__name__} for schema {schema_name!r}"
+            )
+        payload_json = payload.model_dump_json()
         content_hash = sha256(payload_json.encode()).hexdigest()
         meta = ArtifactMeta(
             kind=kind,

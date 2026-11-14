@@ -187,6 +187,42 @@ class TestRreHelpers:
         assert artifact is not None
         # AMARELO → AVISO (status_bridge not VERDE or SEM_DADOS)
         assert validacao.status == "AVISO"
+        # #203: the payload content survives the envelope (it used to be
+        # coerced into a bare BaseModel and lost).
+        payload = artifact.payload.model_dump(mode="json")
+        assert payload["niveis"] == {
+            "N1_catalogo_base": 1_000_000,
+            "N2_catalogo_escalado": 1_050_000,
+            "N3_catalogo_normalizado": 1_020_000,
+            "N4_operacional_real": 1_040_000,
+        }
+        assert payload["desvios"]["delta_real_abs"] == 20_000
+        assert payload["status_alerta"] == "AMARELO"
+        # Absent climate limitation is persisted explicitly as null.
+        assert payload == {**mod._rre_build_bridge_waterfall(bridge), "limitacao_clima_n4": None}
+
+    def test_rre_bridge_artifact_is_persisted_with_its_content(self):
+        """#203: _persist_typed_artifacts writes the BridgeWaterfall payload."""
+        from types import SimpleNamespace
+
+        from concilium.application.runtime.deliverables.side_effects import _persist_typed_artifacts
+
+        mod = self._load()
+        bridge = {
+            "nivel_1_catalogo_base": 10.0,
+            "nivel_2_catalogo_escalado": 11.0,
+            "nivel_3_catalogo_normalizado": 12.0,
+            "nivel_4_operacional": None,
+            "status_alerta": "SEM_DADOS",
+        }
+        artifact, _validacao = mod._rre_build_bridge(bridge, _make_proj(), _NOW)
+        project = MagicMock()
+        _persist_typed_artifacts(SimpleNamespace(artifacts=[artifact]), project, "v1")
+        written = {call.args[0]: call.args[1] for call in project.write_json.call_args_list}
+        artifact_id = artifact.meta.artifact_id
+        expected = {**mod._rre_build_bridge_waterfall(bridge), "limitacao_clima_n4": None}
+        assert written[f"v1/artifacts/{artifact_id}.json"] == expected
+        assert written[f"v1/artifacts/{artifact_id}.meta.json"]["schema_name"] == "BridgeWaterfall"
 
     def test_rre_oport_eixo(self):
         mod = self._load()
@@ -234,6 +270,8 @@ class TestRreHelpers:
             mensagem="Custo climático diagnosticado mas não cobrado (ADR-148/ADR-082-cons, issue #124).",
         )
         waterfall = mod._rre_build_bridge_waterfall(bridge, limitacao)
+        artifact, _validacao = mod._rre_build_bridge(bridge, _make_proj(), _NOW, limitacao)
+        assert artifact.payload.model_dump(mode="json")["limitacao_clima_n4"] == waterfall["limitacao_clima_n4"]
         nota = waterfall["limitacao_clima_n4"]
         assert nota["gap_praticabilidade_abs"] == 7_000.0
         assert nota["cobrado_no_custo_operacional"] is False

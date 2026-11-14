@@ -152,6 +152,57 @@ class RelatorioIntervencao(BaseModel):
     recomendacao_primaria: EixoIntervencao | None = None
 
 
+class BridgeNiveis(BaseModel):
+    """ADR-039 The Bridge: N1..N4 levels of the executive waterfall."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    N1_catalogo_base: float
+    N2_catalogo_escalado: float
+    N3_catalogo_normalizado: float
+    N4_operacional_real: float | None = None
+
+
+class BridgeDesvios(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    desvio_escala_abs: float | None = None
+    desvio_clima_abs: float | None = None
+    delta_estrutural_abs: float | None = None
+    delta_real_abs: float | None = None
+    delta_real_pct: float | None = None
+
+
+class BridgeFatores(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fator_quantizacao: float | None = None
+    fator_praticabilidade: float | None = None
+
+
+class BridgeLimitacaoClimaN4(BaseModel):
+    """Issue #124: the diagnosed climate gap (N3) is never charged in N4."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    gap_praticabilidade_abs: float
+    cobrado_no_custo_operacional: bool
+    mensagem: str
+
+
+class BridgeWaterfall(BaseModel):
+    """Executive BridgeWaterfall artifact payload (ADR-039, ADR-018 §D1 typed payload, #203)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    nota_metodologica: str
+    niveis: BridgeNiveis
+    desvios: BridgeDesvios
+    fatores: BridgeFatores
+    status_alerta: str
+    limitacao_clima_n4: BridgeLimitacaoClimaN4 | None = None
+
+
 # ── Resolução de referências circulares (ADR-027) ─────────────────────────
 # VetorExposuraCpu vive em canonical.py, que importa reports.py no seu final.
 # O import abaixo é tardio (E402) mas seguro: canonical.py define VetorExposuraCpu

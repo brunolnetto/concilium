@@ -13,6 +13,7 @@ from typing import Any
 from concilium.domain.models.artifact import ArtifactEnvelope, ArtifactKind
 from concilium.domain.models.canonical import Resultado, StatusMargem, ValidacaoItem
 from concilium.domain.models.reports import (
+    BridgeWaterfall,
     EixoIntervencao,
     ItemCriticidadeRelatorio,
     ItemSensibilidade,
@@ -297,7 +298,7 @@ def _rre_build_bridge(bridge_analysis, proj, now, limitacao_clima_n4: Any = None
         mensagem=(f"Bridge {status_bridge}: N1={n1:,.0f} → N2={n2:,.0f} → N3={n3:,.0f}{n4_str}{delta_str}"),
     )
     artifact = ArtifactEnvelope.create(
-        payload=waterfall,
+        payload=BridgeWaterfall.model_validate(waterfall),
         kind=ArtifactKind.RELATORIO_EXECUTIVO,
         schema_name="BridgeWaterfall",
         schema_version="1.0.0",
