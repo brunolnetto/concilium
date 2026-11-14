@@ -525,12 +525,14 @@ def test_artifact_registry_validate_success_and_create_fallback_json_branch():
     assert isinstance(validated, _TmpModel)
     assert validated.x == 7
 
-    # Fallback path for payloads without model_dump_json (line 126-128).
-    env = ArtifactEnvelope.create(
-        payload={"k": "v"},
-        kind=ArtifactKind.RESULTADO,
-        schema_name="dict_payload",
-        schema_version="1",
-        created_by="test",
-    )
-    assert env.meta.content_hash
+    # #203: an untyped payload used to be coerced into a bare BaseModel,
+    # silently dropping its content while the hash described the dict.
+    for untyped in ({"k": "v"}, ["k", "v"], "k"):
+        with pytest.raises(TypeError, match="typed pydantic model"):
+            ArtifactEnvelope.create(
+                payload=untyped,
+                kind=ArtifactKind.RESULTADO,
+                schema_name="dict_payload",
+                schema_version="1",
+                created_by="test",
+            )
