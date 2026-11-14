@@ -18,9 +18,21 @@ from .resource_demand_levels import WeeklyDemandLevels
 
 
 def exact_money(value: str) -> Fraction:
-    """Parse a finite decimal tariff without ever passing through binary float."""
+    """Parse an exact tariff — a finite decimal or a rational ``a/b`` — without
+    ever passing through binary float.
+
+    Rationals carry catalog-derived rates (a monthly price over ``s_mes``) at
+    full precision; rounding them to cents before aggregation is forbidden
+    (CONVENCOES_NORMATIVAS §5, N8).
+    """
     if not isinstance(value, str):
         raise ValueError("tariff must be an exact decimal string")
+    text = value.strip()
+    if "/" in text:
+        numerator, _, denominator = text.partition("/")
+        if not (numerator.isdigit() and denominator.isdigit()) or int(denominator) == 0:
+            raise ValueError("tariff must be a valid decimal or a nonnegative rational a/b")
+        return Fraction(int(numerator), int(denominator))
     try:
         parsed = Decimal(value)
     except InvalidOperation as exc:

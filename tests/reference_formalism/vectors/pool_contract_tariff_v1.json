@@ -1,0 +1,73 @@
+{
+  "protocol": "formalism-contract-tariff/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["XIV.2", "P13-A", "N8"],
+    "scope": "weekly P16 pool tariff per resource type: exact catalog rate (monthly / s_mes, hourly x d x h) plus declared contract terms (project default + override); unknown contract when terms are missing",
+    "rounding": "Fraction exact (no cent rounding before aggregation)"
+  },
+  "vectors": [
+    {
+      "case_id": "monthly_plant_full_rate_standby",
+      "hand_check": "EQ-USINA-SOLOS-300TH catalog 78205.92 R$/month; s_mes = 1461/336 -> 78205.92 x 336/1461 = 26277189.12/1461 = 218976576/12175 (= 17985.7557...; the golden fixture's 17985.76 is its cent rounding). Full-rate standby: idle = active. Default terms: MOB 120000, DEMOB 80000, gap 3.",
+      "case": {
+        "price": "78205.92", "price_unit": "mes", "dias_semana": 6, "horas_dia": "8",
+        "default": {"regime": "FULL_RATE_STANDBY", "mobilize": "120000", "demobilize": "80000", "max_idle_gap": 3, "source": "fixture"}
+      },
+      "expected": {"active_week": "218976576/12175", "idle_week": "218976576/12175", "mobilize": "120000", "demobilize": "80000", "max_idle_gap": "3"}
+    },
+    {
+      "case_id": "hourly_labour_six_by_eight",
+      "hand_check": "MO-SERVENTE-USINA-H 30.62 R$/h x 6 d x 8 h = 1469.76 = 36744/25 per week; no movement cost declared (explicit 0), gap 0.",
+      "case": {
+        "price": "30.62", "price_unit": "h", "dias_semana": 6, "horas_dia": "8",
+        "default": {"regime": "FULL_RATE_STANDBY", "mobilize": "0", "demobilize": "0", "max_idle_gap": 0, "source": "fixture"}
+      },
+      "expected": {"active_week": "36744/25", "idle_week": "36744/25", "mobilize": "0", "demobilize": "0", "max_idle_gap": "0"}
+    },
+    {
+      "case_id": "override_replaces_default_field_by_field",
+      "hand_check": "Project default: full-rate, MOB/DEMOB 0, gap 2. Loader override: MOB 2500, DEMOB 2500 only -> regime and gap from the default. 87692.8 x 336/1461 = 29464780.8/1461 = 49107968/2435 (= 20167.5433...).",
+      "case": {
+        "price": "87692.8", "price_unit": "mes", "dias_semana": 6, "horas_dia": "8",
+        "default": {"regime": "FULL_RATE_STANDBY", "mobilize": "0", "demobilize": "0", "max_idle_gap": 2, "source": "project default"},
+        "override": {"mobilize": "2500", "demobilize": "2500"}
+      },
+      "expected": {"active_week": "49107968/2435", "idle_week": "49107968/2435", "mobilize": "2500", "demobilize": "2500", "max_idle_gap": "2"}
+    },
+    {
+      "case_id": "discounted_standby_uses_declared_idle",
+      "hand_check": "Hourly 10 x 5 d x 8 h = 400 active; declared idle 100 < 400.",
+      "case": {
+        "price": "10", "price_unit": "h", "dias_semana": 5, "horas_dia": "8",
+        "default": {"regime": "DISCOUNTED_STANDBY", "idle_week": "100", "mobilize": "40", "demobilize": "40", "max_idle_gap": 1, "source": "contract C-1"}
+      },
+      "expected": {"active_week": "400", "idle_week": "100", "mobilize": "40", "demobilize": "40", "max_idle_gap": "1"}
+    },
+    {
+      "case_id": "no_declared_terms_is_unknown_contract",
+      "hand_check": "The catalog price alone never yields a tariff: regime, MOB/DEMOB and gap are not inferable (P13-A).",
+      "case": {"price": "78205.92", "price_unit": "mes", "dias_semana": 6, "horas_dia": "8"},
+      "expected_error": "not declared"
+    },
+    {
+      "case_id": "mobilisation_missing_is_not_zero",
+      "hand_check": "A default without mobilize/demobilize does not mean free movement.",
+      "case": {
+        "price": "10", "price_unit": "h", "dias_semana": 5, "horas_dia": "8",
+        "default": {"regime": "FULL_RATE_STANDBY", "max_idle_gap": 1, "source": "x"}
+      },
+      "expected_error": "not declared: mobilize"
+    },
+    {
+      "case_id": "discounted_without_idle_is_unknown",
+      "hand_check": "Discounted standby without a declared idle tariff cannot be priced.",
+      "case": {
+        "price": "10", "price_unit": "h", "dias_semana": 5, "horas_dia": "8",
+        "default": {"regime": "DISCOUNTED_STANDBY", "mobilize": "0", "demobilize": "0", "max_idle_gap": 1, "source": "x"}
+      },
+      "expected_error": "idle tariff"
+    }
+  ]
+}
