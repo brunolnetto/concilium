@@ -45,7 +45,8 @@ jobs:
           python -m pytest -q --tb=short -m slow --durations=25 \
             --junitxml=.golden-e2e.xml \
             tests/integration/pipeline/test_formalism_golden_rfp_e2e.py \
-            tests/integration/pipeline/test_formalism_golden_metamorphic.py
+            tests/integration/pipeline/test_formalism_golden_metamorphic.py \
+            tests/integration/pipeline/test_formalism_golden_derived_inputs.py
 
       - name: Enforce time budget
         if: always()

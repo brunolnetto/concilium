@@ -1,0 +1,67 @@
+{
+  "protocol": "formalism-pool-spec/1",
+  "formalism": {
+    "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+    "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+    "clauses": ["N7", "N8.1"],
+    "scope": "per-resource rcpsp_spec derived from project data: standard team per front, nominal duration ceil(Q/(rho d h)), configured pool restricted to used types; no inference when data is missing",
+    "rounding": "integer weeks (ceiling), integer units"
+  },
+  "vectors": [
+    {
+      "case_id": "golden_bgtc_then_cbuq",
+      "hand_check": "6 d x 8 h = 48 h/week. BGTC rho 113.18 m3/h: 65000/(113.18 x 48) = 11.96 -> 12 weeks. CBUQ rho 99.05 t/h: 57000/(99.05 x 48) = 11.99 -> 12 weeks. Pool keeps only the used types; the unused crane is dropped.",
+      "case": {
+        "dias_semana": 6, "horas_dia": "8",
+        "configured_pool": {"PLANT-A": 1, "LOADER": 2, "PLANT-B": 1, "WORKER": 7, "CRANE": 3},
+        "activities": [
+          {"id": "eap-01", "Q": "65000", "rho": "113.18", "team": {"PLANT-A": 1, "LOADER": 2, "WORKER": 3}},
+          {"id": "eap-02", "Q": "57000", "rho": "99.05", "team": {"PLANT-B": 1, "WORKER": 4}}
+        ]
+      },
+      "expected": {
+        "activities": {
+          "eap-01": {"duration_weeks": 12, "required_resources": {"LOADER": 2, "PLANT-A": 1, "WORKER": 3}},
+          "eap-02": {"duration_weeks": 12, "required_resources": {"PLANT-B": 1, "WORKER": 4}}
+        },
+        "resource_pool": {"LOADER": 2, "PLANT-A": 1, "PLANT-B": 1, "WORKER": 7}
+      }
+    },
+    {
+      "case_id": "exact_multiple_of_a_week_is_not_rounded_up",
+      "hand_check": "Q 960 at rho 10 with 5 d x 8 h = 40 h/week -> 960/400 = 2.4 -> 3 weeks; Q 800 -> exactly 2 weeks (no extra week).",
+      "case": {
+        "dias_semana": 5, "horas_dia": "8", "configured_pool": {"X": 1},
+        "activities": [
+          {"id": "a", "Q": "960", "rho": "10", "team": {"X": 1}},
+          {"id": "b", "Q": "800", "rho": "10", "team": {"X": 1}}
+        ]
+      },
+      "expected": {
+        "activities": {
+          "a": {"duration_weeks": 3, "required_resources": {"X": 1}},
+          "b": {"duration_weeks": 2, "required_resources": {"X": 1}}
+        },
+        "resource_pool": {"X": 1}
+      }
+    },
+    {
+      "case_id": "pool_short_of_one_front_is_not_derivable",
+      "hand_check": "The team needs 2 loaders per front; a pool of 1 cannot field a single front.",
+      "case": {
+        "dias_semana": 6, "horas_dia": "8", "configured_pool": {"PLANT-A": 1, "LOADER": 1},
+        "activities": [{"id": "a", "Q": "100", "rho": "10", "team": {"PLANT-A": 1, "LOADER": 2}}]
+      },
+      "expected_error": "does not cover one front"
+    },
+    {
+      "case_id": "no_configured_pool_is_not_derivable",
+      "hand_check": "Team composition alone is not physical availability.",
+      "case": {
+        "dias_semana": 6, "horas_dia": "8",
+        "activities": [{"id": "a", "Q": "100", "rho": "10", "team": {"PLANT-A": 1}}]
+      },
+      "expected_error": "no configured physical pool"
+    }
+  ]
+}

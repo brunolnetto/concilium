@@ -73,7 +73,7 @@ Every transformed run must itself be a clean GO with no DIVERGE in the different
 | Profile | Where | Content | Measured (8-core dev box) | Budget |
 |---|---|---|---|---|
 | fast | required `Tests` job | 2 golden runs + differential, corruptions, fronts guard, invalidation | ~3 min | inside the job |
-| slow | `formalism-e2e-nightly.yml` (cron + manual) | 10 falsifier runs + 6 metamorphic runs | ~13 min, slowest test 142 s | 360 s per test, 2700 s total (`scripts/check_test_budget.py` on the JUnit report), job timeout 60 min |
+| slow | `formalism-e2e-nightly.yml` (cron + manual) | 10 falsifier runs + 6 metamorphic runs + 3 derived-input runs (#206: no hand-written `rcpsp_spec`) | ~13 min, slowest test 142 s | 360 s per test, 2700 s total (`scripts/check_test_budget.py` on the JUnit report), job timeout 60 min |
 
 ## Defects found (fixed in the P24 packages)
 
