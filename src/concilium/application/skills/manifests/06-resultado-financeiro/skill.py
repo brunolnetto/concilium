@@ -222,9 +222,21 @@ def run_resultado_financeiro(
                 status="AVISO",
                 mensagem="Preço exato não avaliado (sem estimativa): " + "; ".join(p21_gaps),
             ))
+    # N10: the project may declare its site indirects beside the profile-built
+    # pricing declaration; hand-written evidence carries them inside itself.
+    site_indirects_conflict = False
+    if inputs.get("site_indirects") is not None and isinstance(p21_declaration, dict):
+        site_indirects_conflict = "site_indirects" in p21_declaration
+        p21_declaration = {**p21_declaration, "site_indirects": inputs["site_indirects"]}
     if p21_declaration is not None:
         if p21_project_gap is not None:
             p21_context: dict[str, object] = {"source_build_error": p21_project_gap}
+        elif site_indirects_conflict:
+            p21_context = {
+                "source_build_error": (
+                    "site_indirects declared both as a Skill06 input and inside p21_pricing_evidence"
+                ),
+            }
         elif not enabled:
             p21_context = {
                 "source_build_error": (

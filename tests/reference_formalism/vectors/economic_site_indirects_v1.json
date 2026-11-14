@@ -1,0 +1,759 @@
+{
+ "protocol": "formalism-site-indirects/1",
+ "formalism": {
+  "path": "docs/product/5-specifications/formulario_longo/P23_CERTIFICACAO_E_CUSTO_EXATO.md",
+  "baseline_blob": "f83d37c03b3dbcebc0cbb446cc6d4333fa05cdd5",
+  "clauses": [
+   "XII.1",
+   "XII.2",
+   "XII.3",
+   "XII.4",
+   "N10"
+  ],
+  "scope": "exact weekly postings of declared site indirects (perm monthly cost by sub-category over the mobilised weeks, onetime mobilisation/demobilisation), their totals by line, category and week, and the price by category markup",
+  "rounding": "Fraction exact"
+ },
+ "vectors": [
+  {
+   "case_id": "perm_four_weeks_by_subcategory",
+   "hand_check": "s_mes = 1461/336, so weekly = monthly * 336/1461. MO 43830/1461 = 30 -> 10080/week; EQ 14610/1461 = 10 -> 3360; COMB 1461 -> 336; VM 2922 -> 672 (posted as IND). Four mobilised weeks W19..W22: MO 40320, EQ 13440, COMB 1344, IND 2688; each week 14448; total 57792.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W22"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "planilha de administração local (fixture)",
+      "monthly": {
+       "MO": "43830",
+       "EQ": "14610",
+       "COMB": "1461",
+       "VM": "2922"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "weeks": [
+     "2026-W19",
+     "2026-W20",
+     "2026-W21",
+     "2026-W22"
+    ],
+    "postings": {
+     "ADM/MO/2026-W19": [
+      "2026-W19",
+      "MO",
+      "10080"
+     ],
+     "ADM/MO/2026-W20": [
+      "2026-W20",
+      "MO",
+      "10080"
+     ],
+     "ADM/MO/2026-W21": [
+      "2026-W21",
+      "MO",
+      "10080"
+     ],
+     "ADM/MO/2026-W22": [
+      "2026-W22",
+      "MO",
+      "10080"
+     ],
+     "ADM/EQ/2026-W19": [
+      "2026-W19",
+      "EQ",
+      "3360"
+     ],
+     "ADM/EQ/2026-W20": [
+      "2026-W20",
+      "EQ",
+      "3360"
+     ],
+     "ADM/EQ/2026-W21": [
+      "2026-W21",
+      "EQ",
+      "3360"
+     ],
+     "ADM/EQ/2026-W22": [
+      "2026-W22",
+      "EQ",
+      "3360"
+     ],
+     "ADM/COMB/2026-W19": [
+      "2026-W19",
+      "COMB",
+      "336"
+     ],
+     "ADM/COMB/2026-W20": [
+      "2026-W20",
+      "COMB",
+      "336"
+     ],
+     "ADM/COMB/2026-W21": [
+      "2026-W21",
+      "COMB",
+      "336"
+     ],
+     "ADM/COMB/2026-W22": [
+      "2026-W22",
+      "COMB",
+      "336"
+     ],
+     "ADM/VM/2026-W19": [
+      "2026-W19",
+      "IND",
+      "672"
+     ],
+     "ADM/VM/2026-W20": [
+      "2026-W20",
+      "IND",
+      "672"
+     ],
+     "ADM/VM/2026-W21": [
+      "2026-W21",
+      "IND",
+      "672"
+     ],
+     "ADM/VM/2026-W22": [
+      "2026-W22",
+      "IND",
+      "672"
+     ]
+    },
+    "by_line": {
+     "ADM": {
+      "COMB": "1344",
+      "EQ": "13440",
+      "IND": "2688",
+      "MO": "40320"
+     }
+    },
+    "by_category": {
+     "COMB": "1344",
+     "EQ": "13440",
+     "IND": "2688",
+     "MO": "40320"
+    },
+    "by_week": {
+     "2026-W19": "14448",
+     "2026-W20": "14448",
+     "2026-W21": "14448",
+     "2026-W22": "14448"
+    },
+    "cost": "57792"
+   }
+  },
+  {
+   "case_id": "weekly_rate_stays_rational",
+   "hand_check": "Monthly MO 10000: weekly = 10000 * 336/1461 = 3360000/1461 = 1120000/487 (1461 = 3 * 487), not rounded to cents. Three weeks: 3360000/487 (6899.38...).",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W21"
+    },
+    "lines": [
+     {
+      "line_id": "TOP",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "10000",
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "weeks": [
+     "2026-W19",
+     "2026-W20",
+     "2026-W21"
+    ],
+    "postings": {
+     "TOP/MO/2026-W19": [
+      "2026-W19",
+      "MO",
+      "1120000/487"
+     ],
+     "TOP/MO/2026-W20": [
+      "2026-W20",
+      "MO",
+      "1120000/487"
+     ],
+     "TOP/MO/2026-W21": [
+      "2026-W21",
+      "MO",
+      "1120000/487"
+     ]
+    },
+    "by_line": {
+     "TOP": {
+      "MO": "3360000/487"
+     }
+    },
+    "by_category": {
+     "MO": "3360000/487"
+    },
+    "by_week": {
+     "2026-W19": "1120000/487",
+     "2026-W20": "1120000/487",
+     "2026-W21": "1120000/487"
+    },
+    "cost": "3360000/487"
+   }
+  },
+  {
+   "case_id": "onetime_first_and_last_week",
+   "hand_check": "Mobilisation 80000 in the first mobilised week (W19), demobilisation 30000 in the last (W22), both IND; nothing in W20/W21. Total 110000.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W22"
+    },
+    "lines": [
+     {
+      "line_id": "MOB_SITE",
+      "driver": "onetime",
+      "source": "orçamento de canteiro (fixture)",
+      "mobilize": "80000",
+      "demobilize": "30000"
+     }
+    ]
+   },
+   "expected": {
+    "weeks": [
+     "2026-W19",
+     "2026-W20",
+     "2026-W21",
+     "2026-W22"
+    ],
+    "postings": {
+     "MOB_SITE/MOB": [
+      "2026-W19",
+      "IND",
+      "80000"
+     ],
+     "MOB_SITE/DEMOB": [
+      "2026-W22",
+      "IND",
+      "30000"
+     ]
+    },
+    "by_line": {
+     "MOB_SITE": {
+      "IND": "110000"
+     }
+    },
+    "by_category": {
+     "IND": "110000"
+    },
+    "by_week": {
+     "2026-W19": "80000",
+     "2026-W22": "30000"
+    },
+    "cost": "110000"
+   }
+  },
+  {
+   "case_id": "onetime_single_week_adds_up",
+   "hand_check": "n = 1: mobilisation and demobilisation fall in the same week as two separate events; the week carries 80000 + 30000 = 110000.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W19"
+    },
+    "lines": [
+     {
+      "line_id": "MOB_SITE",
+      "driver": "onetime",
+      "source": "orçamento de canteiro (fixture)",
+      "mobilize": "80000",
+      "demobilize": "30000"
+     }
+    ]
+   },
+   "expected": {
+    "weeks": [
+     "2026-W19"
+    ],
+    "postings": {
+     "MOB_SITE/MOB": [
+      "2026-W19",
+      "IND",
+      "80000"
+     ],
+     "MOB_SITE/DEMOB": [
+      "2026-W19",
+      "IND",
+      "30000"
+     ]
+    },
+    "by_line": {
+     "MOB_SITE": {
+      "IND": "110000"
+     }
+    },
+    "by_category": {
+     "IND": "110000"
+    },
+    "by_week": {
+     "2026-W19": "110000"
+    },
+    "cost": "110000"
+   }
+  },
+  {
+   "case_id": "window_crosses_a_53_week_year",
+   "hand_check": "2026 starts on a Thursday, so it has ISO week 53: W52, W53, 2027-W01, 2027-W02 are four contiguous weeks. Monthly MO 1461 -> 336/week -> 1344.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W52",
+     "last": "2027-W02"
+    },
+    "lines": [
+     {
+      "line_id": "LAB",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "1461",
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "weeks": [
+     "2026-W52",
+     "2026-W53",
+     "2027-W01",
+     "2027-W02"
+    ],
+    "postings": {
+     "LAB/MO/2026-W52": [
+      "2026-W52",
+      "MO",
+      "336"
+     ],
+     "LAB/MO/2026-W53": [
+      "2026-W53",
+      "MO",
+      "336"
+     ],
+     "LAB/MO/2027-W01": [
+      "2027-W01",
+      "MO",
+      "336"
+     ],
+     "LAB/MO/2027-W02": [
+      "2027-W02",
+      "MO",
+      "336"
+     ]
+    },
+    "by_line": {
+     "LAB": {
+      "MO": "1344"
+     }
+    },
+    "by_category": {
+     "MO": "1344"
+    },
+    "by_week": {
+     "2026-W52": "336",
+     "2026-W53": "336",
+     "2027-W01": "336",
+     "2027-W02": "336"
+    },
+    "cost": "1344"
+   }
+  },
+  {
+   "case_id": "price_applies_each_category_markup",
+   "hand_check": "ADM (four weeks) + site mobilisation: MO 40320, EQ 13440, COMB 1344, IND 2688 + 110000 = 112688; cost 167792. XII.4 with beta MO 1/4, EQ 1/5, COMB 1/10, IND 1/2: 50400 + 16128 + 1478.4 + 169032 = 237038.4 = 1185192/5.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W22"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "planilha de administração local (fixture)",
+      "monthly": {
+       "MO": "43830",
+       "EQ": "14610",
+       "COMB": "1461",
+       "VM": "2922"
+      }
+     },
+     {
+      "line_id": "MOB_SITE",
+      "driver": "onetime",
+      "source": "orçamento de canteiro (fixture)",
+      "mobilize": "80000",
+      "demobilize": "30000"
+     }
+    ],
+    "markup_by_category": {
+     "MO": "1/4",
+     "EQ": "1/5",
+     "COMB": "1/10",
+     "IND": "1/2"
+    }
+   },
+   "expected": {
+    "weeks": [
+     "2026-W19",
+     "2026-W20",
+     "2026-W21",
+     "2026-W22"
+    ],
+    "postings": {
+     "ADM/MO/2026-W19": [
+      "2026-W19",
+      "MO",
+      "10080"
+     ],
+     "ADM/MO/2026-W20": [
+      "2026-W20",
+      "MO",
+      "10080"
+     ],
+     "ADM/MO/2026-W21": [
+      "2026-W21",
+      "MO",
+      "10080"
+     ],
+     "ADM/MO/2026-W22": [
+      "2026-W22",
+      "MO",
+      "10080"
+     ],
+     "ADM/EQ/2026-W19": [
+      "2026-W19",
+      "EQ",
+      "3360"
+     ],
+     "ADM/EQ/2026-W20": [
+      "2026-W20",
+      "EQ",
+      "3360"
+     ],
+     "ADM/EQ/2026-W21": [
+      "2026-W21",
+      "EQ",
+      "3360"
+     ],
+     "ADM/EQ/2026-W22": [
+      "2026-W22",
+      "EQ",
+      "3360"
+     ],
+     "ADM/COMB/2026-W19": [
+      "2026-W19",
+      "COMB",
+      "336"
+     ],
+     "ADM/COMB/2026-W20": [
+      "2026-W20",
+      "COMB",
+      "336"
+     ],
+     "ADM/COMB/2026-W21": [
+      "2026-W21",
+      "COMB",
+      "336"
+     ],
+     "ADM/COMB/2026-W22": [
+      "2026-W22",
+      "COMB",
+      "336"
+     ],
+     "ADM/VM/2026-W19": [
+      "2026-W19",
+      "IND",
+      "672"
+     ],
+     "ADM/VM/2026-W20": [
+      "2026-W20",
+      "IND",
+      "672"
+     ],
+     "ADM/VM/2026-W21": [
+      "2026-W21",
+      "IND",
+      "672"
+     ],
+     "ADM/VM/2026-W22": [
+      "2026-W22",
+      "IND",
+      "672"
+     ],
+     "MOB_SITE/MOB": [
+      "2026-W19",
+      "IND",
+      "80000"
+     ],
+     "MOB_SITE/DEMOB": [
+      "2026-W22",
+      "IND",
+      "30000"
+     ]
+    },
+    "by_line": {
+     "ADM": {
+      "COMB": "1344",
+      "EQ": "13440",
+      "IND": "2688",
+      "MO": "40320"
+     },
+     "MOB_SITE": {
+      "IND": "110000"
+     }
+    },
+    "by_category": {
+     "COMB": "1344",
+     "EQ": "13440",
+     "IND": "112688",
+     "MO": "40320"
+    },
+    "by_week": {
+     "2026-W19": "94448",
+     "2026-W20": "14448",
+     "2026-W21": "14448",
+     "2026-W22": "44448"
+    },
+    "cost": "167792",
+    "price": "1185192/5"
+   }
+  },
+  {
+   "case_id": "declared_zero_posts_nothing",
+   "hand_check": "A line whose every amount is a declared zero is a valid declaration with no posting and cost 0.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": [
+     {
+      "line_id": "QSMS",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "0",
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "weeks": [
+     "2026-W19",
+     "2026-W20"
+    ],
+    "postings": {},
+    "by_line": {
+     "QSMS": {}
+    },
+    "by_category": {},
+    "by_week": {},
+    "cost": "0"
+   }
+  },
+  {
+   "case_id": "perm_missing_subcategory",
+   "hand_check": "Zero must be declared: a perm line without VM is rejected.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "1",
+       "EQ": "0",
+       "COMB": "0"
+      }
+     }
+    ]
+   },
+   "expected_error": "MO, EQ, COMB and VM"
+  },
+  {
+   "case_id": "float_amount_is_rejected",
+   "hand_check": "A JSON number is not an exact declaration.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": 5000.0,
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      }
+     }
+    ]
+   },
+   "expected_error": "exact string required"
+  },
+  {
+   "case_id": "negative_amount_is_rejected",
+   "hand_check": "Costs are nonnegative.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": [
+     {
+      "line_id": "MOB_SITE",
+      "driver": "onetime",
+      "source": "fixture",
+      "mobilize": "-1",
+      "demobilize": "0"
+     }
+    ]
+   },
+   "expected_error": "nonnegative"
+  },
+  {
+   "case_id": "duplicate_line_is_rejected",
+   "hand_check": "One line per identity.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "1",
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      }
+     },
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "2",
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      }
+     }
+    ]
+   },
+   "expected_error": "duplicate line"
+  },
+  {
+   "case_id": "window_must_not_be_reversed",
+   "hand_check": "The last mobilised week cannot precede the first.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W20",
+     "last": "2026-W19"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "1",
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      }
+     }
+    ]
+   },
+   "expected_error": "ends before it starts"
+  },
+  {
+   "case_id": "unknown_driver_is_rejected",
+   "hand_check": "Only perm and onetime exist (XII.1).",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "magnitude_financeira",
+      "source": "fixture"
+     }
+    ]
+   },
+   "expected_error": "driver must be perm or onetime"
+  },
+  {
+   "case_id": "perm_line_has_no_one_off_events",
+   "hand_check": "A line has exactly one driver.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": [
+     {
+      "line_id": "ADM",
+      "driver": "perm",
+      "source": "fixture",
+      "monthly": {
+       "MO": "1",
+       "EQ": "0",
+       "COMB": "0",
+       "VM": "0"
+      },
+      "mobilize": "10"
+     }
+    ]
+   },
+   "expected_error": "MO, EQ, COMB and VM only"
+  },
+  {
+   "case_id": "no_lines_is_not_a_declaration",
+   "hand_check": "An empty declaration is rejected; absence is reported, not encoded as an empty list.",
+   "case": {
+    "mobilised_weeks": {
+     "first": "2026-W19",
+     "last": "2026-W20"
+    },
+    "lines": []
+   },
+   "expected_error": "at least one declared line"
+  }
+ ]
+}

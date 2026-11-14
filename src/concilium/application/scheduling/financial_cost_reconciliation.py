@@ -23,6 +23,7 @@ from .physical_stock_provisioning import (
     ExternalStockProvisioningJournal,
     ExternalStockPurchase,
 )
+from .site_indirect_journal import SiteIndirectJournal, site_indirect_postings
 
 if TYPE_CHECKING:
     from concilium.domain.models.canonical import DistribuicaoSemanal
@@ -132,6 +133,8 @@ class ExactFinancialReconciliation:
     event_attribution: tuple[FinancialEventAttribution, ...] = ()
     category_balances: tuple[WeeklyCategoryBalance, ...] = ()
     activity_attributable_consumables: tuple[ActivityAttributableConsumableCost, ...] = ()
+    # N10: the declared site-indirects journal, or None when nothing was declared.
+    site_indirects: SiteIndirectJournal | None = None
 
     @property
     def direct(self) -> Fraction:
@@ -388,6 +391,11 @@ def _holding_expectations(result: HoldingJournal) -> dict[EventId, CostPosting]:
     return expected
 
 
+def _site_indirect_expectations(journal: SiteIndirectJournal) -> dict[EventId, CostPosting]:
+    """Rebuild the N10 postings from the declaration alone, never from the ledger."""
+    return _events(site_indirect_postings(journal.declaration))
+
+
 def _external_stock_expectations(
     provisioning: ExternalStockProvisioningJournal,
     consumption: PhysicalConsumptionJournalResult,
@@ -593,8 +601,9 @@ def reconcile_financial_sources(
     consumption: PhysicalConsumptionJournalResult,
     holding: HoldingJournal | None = None,
     stock_provisioning: ExternalStockProvisioningJournal | None = None,
+    site_indirects: SiteIndirectJournal | None = None,
 ) -> ExactFinancialReconciliation:
-    """Reconcile P17 pool → P18 usage → optional P19 external purchases/holding.
+    """Reconcile P17 pool → P18 usage → optional P19 purchases/holding → N10 site indirects.
 
     Evidence is checked by source identity and exact value, making equal
     aggregate totals insufficient to conceal omitted, shifted or forged costs.
@@ -610,6 +619,8 @@ def reconcile_financial_sources(
         stock_provisioning, ExternalStockProvisioningJournal
     ):
         raise ValueError("P19 typed external stock provisioning journal required")
+    if site_indirects is not None and not isinstance(site_indirects, SiteIndirectJournal):
+        raise ValueError("N10 typed site-indirects journal required")
     if any(row.nature not in _POOL_NATURES for row in pool.postings):
         raise ValueError("P17 pool input cannot already contain variable or holding costs")
 
@@ -630,6 +641,14 @@ def reconcile_financial_sources(
     if holding is not None:
         _delta(final, holding.ledger, _holding_expectations(holding), "P19 holding")
         final = holding.ledger
+    if site_indirects is not None:
+        _delta(
+            final,
+            site_indirects.ledger,
+            _site_indirect_expectations(site_indirects),
+            "N10 site indirects",
+        )
+        final = site_indirects.ledger
 
     buckets: dict[str, list[Fraction]] = {}
     for row in final.postings:
@@ -644,6 +663,11 @@ def reconcile_financial_sources(
             if row.category not in ("MAT", "COMB"):
                 raise ValueError("physical V was misclassified")
             values[1] += row.amount
+        elif row.nature == PostingNature.INDIRECT:
+            # N10: indirect by nature; MO/EQ/COMB only select the markup layer.
+            if row.category not in ("MO", "EQ", "COMB", "IND"):
+                raise ValueError("indirect charge has no valid markup category")
+            values[2] += row.amount
         else:
             if row.category != "IND":
                 raise ValueError("indirect charge was booked as direct")
@@ -670,4 +694,5 @@ def reconcile_financial_sources(
         event_attribution=event_attribution,
         category_balances=category_balances,
         activity_attributable_consumables=activity_costs,
+        site_indirects=site_indirects,
     )

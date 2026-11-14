@@ -574,3 +574,140 @@ def test_declared_bdi_basis_must_equal_derived_catalog_envelope(field: str) -> N
     declaration[field]["amount"] = "1"
     with pytest.raises(ValueError, match="differs from derived C\\^cat"):
         build_pricing_report_evidence_context(canonical, catalogo, declaration)
+
+
+# --- N10: declared site indirects through the real Skill 06 JSON boundary ---
+
+_SITE_INDIRECTS: dict[str, object] = {
+    "schema": "concilium.n10.site-indirects.v1",
+    "currency": "BRL",
+    "source": "planilha de administração local do projeto",
+    "reference_id": "adm-local-2026-v1",
+    # The only scheduled activity runs in 2026-W19; the site opens one week earlier.
+    "mobilised_weeks": {"first": "2026-W18", "last": "2026-W19"},
+    "lines": [
+        {
+            "line_id": "ADM",
+            "driver": "perm",
+            "source": "folha ADM 2026-05",
+            # 1461/1461 = 1 -> 336/week of MO; VM 14.61 -> 3.36/week.
+            "monthly": {"MO": "1461", "EQ": "0", "COMB": "0", "VM": "14.61"},
+        },
+        {"line_id": "MOB_SITE", "driver": "onetime", "source": "orçamento", "mobilize": "7", "demobilize": "3"},
+    ],
+}
+
+
+def _run_skill06_with(monkeypatch, inputs: dict[str, object]):
+    _load("06-resultado-financeiro", "run_resultado_financeiro")
+    skill_module = sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
+    canonical, catalogo, declaration = _json_runtime_fixture()
+    seen: dict[str, object] = {}
+
+    def stage_consolidation(current, stage_inputs, *_args):
+        result = _result()
+        validations: list = []
+        apply_pricing_report_evidence(result, stage_inputs, validations)
+        seen["context"] = stage_inputs["p21_pricing_evidence"]
+        seen["result"] = result
+        return SkillResult(current, validations)
+
+    monkeypatch.setattr(skill_module, "_run_precificacao", lambda current, *_a: SkillResult(current, []))
+    monkeypatch.setattr(skill_module, "_run_indiretos", lambda current, *_a: SkillResult(current, []))
+    monkeypatch.setattr(skill_module, "_run_consolidacao", stage_consolidation)
+    monkeypatch.setattr(skill_module, "build_skill06_p17_reconciliation", lambda _c: {"status": "RECONCILED"})
+    base_inputs: dict[str, object] = {
+        "p18_consumption_preview_enabled": True,
+        "certification_intent": "PREVIEW",
+        "p21_pricing_evidence": declaration,
+    }
+    outcome = skill_module.run_resultado_financeiro(canonical, {**base_inputs, **inputs}, catalogo, {})
+    return outcome, seen
+
+
+def test_declared_site_indirects_enter_p20_and_are_replayed_by_p23(monkeypatch) -> None:
+    from concilium.application.scheduling.formalism_evaluator import _financial_reconciliation_status
+
+    outcome, seen = _run_skill06_with(monkeypatch, {"site_indirects": _SITE_INDIRECTS})
+    result = seen["result"]
+    reconciliation = seen["context"]["reconciliation"]
+    # Site: ADM 2 weeks x (336 + 3.36) = 678.72; MOB_SITE 7 + 3 = 10.
+    site_cost = F("688.72")
+    assert reconciliation.site_indirects.cost == site_cost
+    assert reconciliation.ledger.consumable_v == F("52.804")  # direct cost untouched
+    assert reconciliation.ledger.indirect == F("1.512") + site_cost
+    assert result.pricing_diagnostics["site_indirects_status"] == "DECLARED"
+    assert result.pricing_diagnostics["site_indirects_cost"] == str(site_cost)
+    assert result.pricing_diagnostics["site_indirects_reference_id"] == "adm-local-2026-v1"
+    assert result.pricing_diagnostics["total_cost"] == str(F("54.316") + site_cost)
+    assert "VAL-N10-INDIRETOS-CANTEIRO-NAO-DECLARADOS" not in {v.codigo for v in outcome.validacoes}
+
+    persisted = result.p20_financial_reconciliation
+    witness = persisted["site_indirects"]
+    assert witness["mobilised_weeks"] == ["2026-W18", "2026-W19"]
+    assert witness["lines"][0]["cost_by_category"] == {"IND": "168/25", "MO": "672"}
+    assert witness["lines"][1]["cost"] == "10"
+    site_rows = [row for row in persisted["postings"] if row["event_id"][0] == "SITE_INDIRECT"]
+    assert {(row["nature"], row["category"]) for row in site_rows} == {("INDIRECT", "MO"), ("INDIRECT", "IND")}
+    # P23 replays the persisted ledger, including INDIRECT postings in the MO markup category.
+    status, observed, reason = _financial_reconciliation_status(
+        json.loads(json.dumps(persisted)),
+        {
+            "status": result.pricing_diagnostics["inventory_scope_status"],
+            "source": result.pricing_diagnostics["inventory_scope_source"],
+            "reference_id": result.pricing_diagnostics["inventory_scope_reference_id"],
+            "fingerprint": result.pricing_diagnostics["inventory_scope_fingerprint"],
+        },
+    )
+    assert (status, reason) == ("PASS", None)
+    assert observed["indirect"] == str(F("1.512") + site_cost)
+
+
+def test_missing_site_indirects_are_reported_never_filled(monkeypatch) -> None:
+    outcome, seen = _run_skill06_with(monkeypatch, {})
+    result = seen["result"]
+    assert seen["context"]["reconciliation"].site_indirects is None
+    assert result.pricing_diagnostics["site_indirects_status"] == "NOT_DECLARED"
+    assert result.pricing_diagnostics["site_indirects_cost"] is None  # not "0"
+    assert result.pricing_diagnostics["total_cost"] == str(F("54.316"))
+    assert result.p20_financial_reconciliation["site_indirects"] is None
+    warning = next(v for v in outcome.validacoes if v.codigo == "VAL-N10-INDIRETOS-CANTEIRO-NAO-DECLARADOS")
+    assert warning.status == "AVISO"
+
+
+@pytest.mark.parametrize(
+    ("change", "reason"),
+    [
+        ({"mobilised_weeks": {"first": "2026-W18", "last": "2026-W18"}}, "does not cover every week"),
+        ({"currency": "USD"}, "currency differs"),
+        ({"lines": []}, "at least one line"),
+        ({"source": ""}, "source must be nonempty"),
+    ],
+)
+def test_invalid_site_indirects_leave_the_price_not_evaluated(monkeypatch, change: dict, reason: str) -> None:
+    _outcome, seen = _run_skill06_with(monkeypatch, {"site_indirects": {**_SITE_INDIRECTS, **change}})
+    result = seen["result"]
+    assert reason in seen["context"]["source_build_error"]
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert "total_cost" not in result.pricing_diagnostics
+
+
+def test_site_indirects_cannot_be_declared_in_two_places(monkeypatch) -> None:
+    _canonical, _catalogo, declaration = _json_runtime_fixture()
+    _outcome, seen = _run_skill06_with(
+        monkeypatch,
+        {
+            "p21_pricing_evidence": {**declaration, "site_indirects": _SITE_INDIRECTS},
+            "site_indirects": _SITE_INDIRECTS,
+        },
+    )
+    assert "declared both" in seen["context"]["source_build_error"]
+    assert seen["result"].pricing_gates["status"] == "UNKNOWN"
+
+
+def test_site_indirects_inside_hand_written_evidence_are_accepted(monkeypatch) -> None:
+    _canonical, _catalogo, declaration = _json_runtime_fixture()
+    _outcome, seen = _run_skill06_with(
+        monkeypatch, {"p21_pricing_evidence": {**declaration, "site_indirects": _SITE_INDIRECTS}}
+    )
+    assert seen["result"].pricing_diagnostics["site_indirects_status"] == "DECLARED"

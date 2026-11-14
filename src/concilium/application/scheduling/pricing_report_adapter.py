@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import timedelta
 from fractions import Fraction
 from typing import Literal, cast
 
@@ -42,6 +43,12 @@ from .physical_stock_provisioning import (
     book_external_stock_provisioning,
 )
 from .pricing_gates import RegulatoryBdiBasis, evaluate_pricing_gates
+from .site_indirect_journal import (
+    SiteIndirectJournal,
+    parse_site_indirects_declaration,
+    post_exact_site_indirects,
+    weeks_cover,
+)
 from .skill04_consumption_preview import (
     book_skill04_planned_consumption_preview,
     build_activity_goods_from_catalog,
@@ -281,6 +288,47 @@ def _build_p19_journals(
     return holding, provisioning
 
 
+def _scheduled_span_weeks(canonical: CanonicalModel) -> tuple[str, ...]:
+    """ISO weeks from the first scheduled start to the last scheduled end.
+
+    Under any reading of the project makespan (FORMALISMO_LONGO XII.1) the site
+    is mobilised at least while an activity is scheduled; this is a lower bound
+    for the declared mobilised window, never its source.
+    """
+    schedule = canonical.cronograma
+    if schedule is None or not schedule.is_feasible or not schedule.scheduled_activities:
+        raise ValueError("site indirects require a feasible, nonempty Skill04 schedule")
+    starts = [activity.start_week for activity in schedule.scheduled_activities]
+    ends = [activity.end_week for activity in schedule.scheduled_activities]
+    if any(type(week) is not int or week < 0 for week in (*starts, *ends)) or max(ends) < min(starts):
+        raise ValueError("site indirects require valid scheduled week offsets")
+    base_date = canonical.projeto.data_inicio
+    monday = base_date - timedelta(days=base_date.weekday())
+    weeks: list[str] = []
+    for offset in range(min(starts), max(ends) + 1):
+        year, week, _ = (monday + timedelta(weeks=offset)).isocalendar()
+        weeks.append(f"{year}-W{week:02d}")
+    return tuple(weeks)
+
+
+def _build_site_indirect_journal(
+    raw_site_indirects: object,
+    *,
+    base: ExclusiveCostLedger,
+    canonical: CanonicalModel,
+    currency: str,
+) -> SiteIndirectJournal:
+    """N10: typed journal of the declared site indirects over the final P18/P19 ledger."""
+    declaration = parse_site_indirects_declaration(raw_site_indirects)
+    if declaration.currency != currency:
+        raise ValueError("site_indirects currency differs from resolved catalog metadata")
+    if not weeks_cover(declaration.calendar_weeks, _scheduled_span_weeks(canonical)):
+        raise ValueError(
+            "site_indirects.mobilised_weeks does not cover every week with a scheduled activity"
+        )
+    return post_exact_site_indirects(base, declaration)
+
+
 def build_pricing_report_evidence_context(
     canonical: CanonicalModel,
     catalogo: Mapping[str, object],
@@ -299,6 +347,7 @@ def build_pricing_report_evidence_context(
         "operational_basis_fingerprint", "regulatory_basis",
         "minimum_profit_margin", "inventory",
         "markup_layers", "bdi_floor_by_category", "markup_layers_provenance",
+        "site_indirects",
     }
     unknown = set(raw) - allowed
     if unknown:
@@ -453,10 +502,7 @@ def build_pricing_report_evidence_context(
     if inventory_scope.status == "NO_INVENTORY":
         if raw.get("inventory") is not None:
             raise ValueError("NO_INVENTORY scope cannot contain inventory declarations")
-        reconciliation = reconcile_financial_sources(
-            pool_ledger,
-            p18.consumption,
-        )
+        holding = provisioning = None
     else:
         if raw.get("inventory") is None:
             raise ValueError("COMPLETE inventory scope requires explicit P19 inventory declarations")
@@ -465,12 +511,29 @@ def build_pricing_report_evidence_context(
             consumption=p18.consumption,
             catalog_metadata=catalog_metadata,
         )
-        reconciliation = reconcile_financial_sources(
-            pool_ledger,
-            p18.consumption,
-            holding,
-            provisioning,
+    # N10: site indirects exist in the exact ledger only when declared. A
+    # declared but invalid block raises (price not evaluated); an absent block
+    # is reported downstream as NOT_DECLARED, never filled with an estimate.
+    site_indirects: SiteIndirectJournal | None = None
+    if "site_indirects" in raw:
+        site_base = p18.consumption.journal
+        if provisioning is not None:
+            site_base = provisioning.ledger
+        if holding is not None:
+            site_base = holding.ledger
+        site_indirects = _build_site_indirect_journal(
+            raw["site_indirects"],
+            base=site_base,
+            canonical=canonical,
+            currency=currency,
         )
+    reconciliation = reconcile_financial_sources(
+        pool_ledger,
+        p18.consumption,
+        holding,
+        provisioning,
+        site_indirects,
+    )
 
     return {
         "inventory_scope": inventory_scope,
@@ -566,11 +629,42 @@ def _serialize_p20_reconciliation(reconciliation: ExactFinancialReconciliation) 
         {"week": row.week, "category": row.category, "amount": str(row.amount)}
         for row in reconciliation.category_balances
     ]
+    site = reconciliation.site_indirects
+    site_witness: dict[str, object] | None = None
+    if site is not None:
+        declaration = site.declaration
+        by_line = site.cost_by_line()
+        site_witness = {
+            "schema": "concilium.n10.site-indirects-journal.v1",
+            "authority": site.authority,
+            "currency": declaration.currency,
+            "source": declaration.source,
+            "reference_id": declaration.reference_id,
+            "mobilised_weeks": list(declaration.calendar_weeks),
+            "s_mes": "1461/336",
+            "lines": [
+                {
+                    "line_id": line.line_id,
+                    "driver": line.driver,
+                    "source": line.source,
+                    "monthly": {sub: str(amount) for sub, amount in line.monthly} or None,
+                    "mobilize": None if line.mobilize is None else str(line.mobilize),
+                    "demobilize": None if line.demobilize is None else str(line.demobilize),
+                    "cost_by_category": {
+                        category: str(amount) for category, amount in sorted(by_line[line.line_id].items())
+                    },
+                    "cost": str(sum(by_line[line.line_id].values(), Fraction(0))),
+                }
+                for line in declaration.lines
+            ],
+            "cost": str(site.cost),
+        }
     return {
         "schema": "concilium.p20.financial-reconciliation.v1",
         "authority": reconciliation.authority,
         "contract_scope": ledger.contract_scope,
         "holding_evidence_present": reconciliation.holding_evidence_present,
+        "site_indirects": site_witness,
         "postings": postings,
         "event_attribution": attribution,
         "weekly_balances": weeks,
@@ -646,6 +740,7 @@ def apply_pricing_report_evidence(
         consumption_journal = context.get("consumption_journal")
         holding_journal = context.get("holding_journal")
         stock_provisioning_journal = context.get("stock_provisioning_journal")
+        site_indirect_journal = context.get("site_indirect_journal")
         if pool_ledger is not None and consumption_journal is not None:
             if (
                 not isinstance(pool_ledger, ExclusiveCostLedger)
@@ -655,12 +750,16 @@ def apply_pricing_report_evidence(
                     stock_provisioning_journal is not None
                     and not isinstance(stock_provisioning_journal, ExternalStockProvisioningJournal)
                 )
+                or (
+                    site_indirect_journal is not None
+                    and not isinstance(site_indirect_journal, SiteIndirectJournal)
+                )
             ):
                 _unknown(
                     result,
                     validations,
                     intent,
-                    "P20/P19 reconciliation requires typed P17 ledger and P18/P19 journals",
+                    "P20/P19 reconciliation requires typed P17 ledger and P18/P19/N10 journals",
                 )
                 return
             try:
@@ -669,6 +768,7 @@ def apply_pricing_report_evidence(
                     consumption_journal,
                     holding_journal,
                     stock_provisioning_journal,
+                    site_indirect_journal,
                 )
             except (TypeError, ValueError) as exc:
                 _unknown(result, validations, intent, str(exc))
@@ -777,6 +877,27 @@ def apply_pricing_report_evidence(
         "currency_source": diagnostics.currency_source,
         "currency_metadata_fingerprint": diagnostics.currency_metadata_fingerprint,
     }
+    # N10: the exact cost says explicitly whether declared site indirects are in
+    # it. NOT_DECLARED means the total omits them — it is not a zero.
+    site = reconciliation.site_indirects
+    result.pricing_diagnostics.update({
+        "site_indirects_status": "DECLARED" if site is not None else "NOT_DECLARED",
+        "site_indirects_cost": str(site.cost) if site is not None else None,
+        "site_indirects_source": site.declaration.source if site is not None else None,
+        "site_indirects_reference_id": site.declaration.reference_id if site is not None else None,
+    })
+    if site is None:
+        validations.append(
+            ValidacaoItem(
+                codigo="VAL-N10-INDIRETOS-CANTEIRO-NAO-DECLARADOS",
+                status="AVISO",
+                mensagem=(
+                    "Custo exato sem indiretos de canteiro (ADM, TOP, LAB, QSMS, mobilização de canteiro): "
+                    "nenhuma declaração site_indirects foi fornecida; nada é estimado e o custo total "
+                    "e o preço não os incluem."
+                ),
+            )
+        )
     floors = context.get("bdi_floor_by_category")
     if layered_by_category is not None and layered_total is not None:
         rates = cast(Mapping[str, LayerRates], markup_layers)
