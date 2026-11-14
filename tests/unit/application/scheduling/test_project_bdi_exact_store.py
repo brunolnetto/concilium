@@ -288,7 +288,19 @@ def _run_skill06(monkeypatch, project: FakeProject) -> tuple[Any, Any]:
     monkeypatch.setattr(skill, "_run_consolidacao", consolidation)
     monkeypatch.setattr(skill, "build_skill06_p17_reconciliation", lambda _canonical: {"status": "RECONCILED"})
     inputs = _Runtime()._apply_runtime_defaults(
-        "06-resultado-financeiro", project, _Contexto(), {"p18_consumption_preview_enabled": True}
+        "06-resultado-financeiro",
+        project,
+        _Contexto(),
+        {
+            "p18_consumption_preview_enabled": True,
+            # N10: the project states its site-indirects scope; this fixture models none.
+            "site_indirects_scope": {
+                "status": "NO_SITE_INDIRECTS",
+                "source": "unit fixture: fuel ledger only, no site administration modelled",
+                "reference_id": "unit-no-site-indirects",
+                "fingerprint": "unit-site-indirects-v1",
+            },
+        },
     )
     outcome = skill.run_resultado_financeiro(canonical, inputs, catalogo, PROFILE)
     return outcome, seen["result"]

@@ -58,8 +58,14 @@ class CostPosting:
         elif self.nature == PostingNature.ACQUISITION:
             if self.category not in {"MAT", "COMB"} or not self.week:
                 raise ValueError("acquisition needs MAT/COMB category and week")
+        elif self.nature == PostingNature.INDIRECT:
+            # N10 / FORMALISMO_LONGO XII.4: a declared site indirect keeps its
+            # sub-category (MO, EQ, COMB) as markup category; it is indirect by
+            # nature and never contractual K or acquired V.
+            if self.category not in {"MO", "EQ", "COMB", "IND"} or not self.week:
+                raise ValueError("indirect cost needs MO/EQ/COMB/IND markup category and week")
         elif self.nature in (PostingNature.MOBILIZATION, PostingNature.DEMOBILIZATION,
-                             PostingNature.INDIRECT, PostingNature.HOLDING):
+                             PostingNature.HOLDING):
             if self.category != "IND":
                 raise ValueError("mobility and indirect costs are not contractual K or V")
 

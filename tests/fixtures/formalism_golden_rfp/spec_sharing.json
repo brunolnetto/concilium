@@ -469,6 +469,12 @@
      "reference_id": "golden-rfp-no-stock",
      "fingerprint": "golden-rfp-inventory-v1"
     },
+    "site_indirects_scope": {
+     "status": "NO_SITE_INDIRECTS",
+     "source": "golden fixture: scope limited to plant operation; no site administration modelled",
+     "reference_id": "golden-rfp-no-site-indirects",
+     "fingerprint": "golden-rfp-site-indirects-v1"
+    },
     "bdi_by_category": {
      "MO": "3/10",
      "EQ": "3/10",
