@@ -77,11 +77,19 @@ Derivados apenas do que o canônico registra, em ordem determinística:
 
 O texto registrado pelo P21 é sempre preservado em `detail`; a classificação só acrescenta a norma e a ação corretiva.
 
-**Lacuna conhecida.** As mensagens `VAL-P21-NAO-AVALIADO` (termos faltantes de
-`precificacao_exata`, perfil de BDI do projeto só em float — N9.1) e
-`VAL-P16-CONTRATO-DESCONHECIDO` existem apenas como validações da execução do
-Skill; o canônico registra só o motivo genérico. Nesses casos a visão diz
-"motivo não registrado" e aponta para a validação, em vez de adivinhar.
+**Causa persistida.** Quando a Skill 06 não consegue montar a declaração de preço
+(termos faltantes de `precificacao_exata`, perfil de BDI do projeto só em ponto
+flutuante, declaração de projeto indisponível), a causa é gravada em
+`pricing_diagnostics.reason` — não apenas como aviso da execução — e a vista a
+mostra literalmente com a ação corretiva (`TERMOS_DE_PRECO_DO_PERFIL`,
+`BDI_PROJETO_NAO_EXATO`). Quando a Skill 06 falha fechada por falta de testemunha
+P16 e não registra resultado, a vista lista primeiro os contratos sem testemunha
+(`CONTRATO_SEM_TESTEMUNHA_P16`) e depois o resultado ausente.
+
+**Lacuna conhecida.** `VAL-P16-CONTRATO-DESCONHECIDO` (qual termo contratual faltou
+ou estava inexato em cada tipo de recurso) não é persistido: a vista diz quais
+contratos não têm testemunha e que os termos contratuais devem ser declarados
+(N8), mas o campo específico só aparece nos avisos da execução.
 
 ## Resumo de execução/versão — `build_summary(canonical)`
 

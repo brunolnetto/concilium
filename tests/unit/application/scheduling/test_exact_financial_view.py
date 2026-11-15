@@ -372,3 +372,22 @@ def test_display_helpers_only_accept_exact_strings() -> None:
     assert efv.display_float(25.5) is None and efv.display_float("abc") is None and efv.display_float(None) is None
     assert efv.format_money("2469/2") == "1.234,50" and efv.format_money(1234.5) == "—"
     assert efv.format_percent("57/424") == "13,44%" and efv.format_percent(None) == "—"
+
+
+def test_missing_result_names_the_unwitnessed_contracts_first() -> None:
+    """Skill 06 fails closed without a P16 witness and records no result: the view must
+    lead with the actionable cause, not only with 'run the pipeline'."""
+    canonical = {
+        "resultado": None,
+        "contratos_recurso": [
+            {"contrato_id": "contrato-eq-a", "tipo_id": "EQ-A", "p16_global_assignment": None},
+            {"contrato_id": "contrato-eq-b", "tipo_id": "EQ-B", "p16_global_assignment": {"costs": {}}},
+        ],
+    }
+    view = build_exact_financial_view(canonical)
+    assert view["status"] == "NAO_AVALIADO"
+    assert [reason["code"] for reason in view["reasons"]] == ["CONTRATO_SEM_TESTEMUNHA_P16", "RESULTADO_AUSENTE"]
+    assert "Corrija a causa acima" in view["reasons"][1]["action"]
+    # Without contracts at all (pipeline not run that far) only the missing result is reported.
+    plain = build_exact_financial_view({"resultado": None, "contratos_recurso": []})
+    assert [reason["code"] for reason in plain["reasons"]] == ["RESULTADO_AUSENTE"]

@@ -73,6 +73,14 @@ _RECORDED_REASON_HINTS: tuple[tuple[tuple[str, ...], str, str, str], ...] = (
         "`declaracao_exata`, ou `concilium bdi update --from-file`). Valores em ponto flutuante não são convertidos.",
     ),
     (
+        ("precificacao_exata", "tabela_bdi", "piso_bdi_regulatorio", "escopo_estoque", "faixa_margem_aceitavel",
+         "regulatory BDI floor", "work type"),
+        "TERMOS_DE_PRECO_DO_PERFIL",
+        "O perfil da construtora não declara termos de precificação exata completos para este projeto (N9).",
+        "Complete o bloco `precificacao_exata` do perfil: tabela de BDI em camadas com natureza por linha, piso de "
+        "BDI por natureza e tipo de obra, escopo de estoque e a margem mínima. Nada é assumido por padrão.",
+    ),
+    (
         ("markup layers", "markup_layers"),
         "CAMADAS_MARKUP_NAO_DECLARADAS",
         "As camadas de markup (overhead, lucro, tributos) não foram declaradas de forma consistente (N9).",
@@ -304,12 +312,18 @@ def _build(canonical: Any) -> dict[str, Any]:
         ])
     result = _read(canonical, "resultado")
     if result is None:
+        # Skill 06 fails closed (and records no result) when the pool has no exact
+        # witness: name that cause first, the missing result is its consequence.
+        unwitnessed = [r for r in _contract_reasons(canonical) if r["code"] == "CONTRATO_SEM_TESTEMUNHA_P16"]
         return _not_evaluated([
+            *unwitnessed,
             _reason(
                 "RESULTADO_AUSENTE",
-                "O resultado financeiro (Skill 06) ainda não foi produzido nesta versão.",
-                "Execute o pipeline até a Skill 06.",
-            )
+                "O resultado financeiro (Skill 06) não foi produzido nesta versão.",
+                "Corrija a causa acima e execute o pipeline até a Skill 06."
+                if unwitnessed
+                else "Execute o pipeline até a Skill 06.",
+            ),
         ])
 
     diagnostics = _mapping(_read(result, "pricing_diagnostics"))

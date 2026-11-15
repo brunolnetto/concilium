@@ -320,7 +320,8 @@ def test_skill06_passes_the_project_declaration_to_the_builder(monkeypatch) -> N
     )
     assert seen["project_bdi"] == project
     assert _not_evaluated(outcome) == ["Preço exato não avaliado (sem estimativa): stub"]
-    assert seen["context"] is None
+    # No declaration is built, and the cause travels with the result (not only as a run warning).
+    assert seen["context"] == {"source_build_error": "stub"}
 
 
 def test_skill06_does_not_mix_project_declaration_with_hand_written_evidence(monkeypatch) -> None:
@@ -350,7 +351,10 @@ def test_skill06_never_converts_the_legacy_float_project_profile(monkeypatch) ->
         catalogo,
         PROFILE,
     )
-    assert "project_bdi" not in seen and seen["context"] is None
+    # Never converted, never priced: the only thing passed on is the reason, which is persisted.
+    assert "project_bdi" not in seen
+    assert set(seen["context"]) == {"source_build_error"}
+    assert seen["context"]["source_build_error"] in _not_evaluated(outcome)[0]
     assert "floating point" in _not_evaluated(outcome)[0] and "bdi_projeto_exato" in _not_evaluated(outcome)[0]
 
 
@@ -360,5 +364,8 @@ def test_skill06_reports_a_project_declaration_it_cannot_use(monkeypatch) -> Non
     outcome = skill.run_resultado_financeiro(
         canonical, {"p18_consumption_preview_enabled": False, "bdi_projeto_exato": _project(ISS_2)}, catalogo, PROFILE
     )
-    assert "project_bdi" not in seen and seen["context"] is None
+    # Never converted, never priced: the only thing passed on is the reason, which is persisted.
+    assert "project_bdi" not in seen
+    assert set(seen["context"]) == {"source_build_error"}
+    assert seen["context"]["source_build_error"] in _not_evaluated(outcome)[0]
     assert "requires the exact ledgers" in _not_evaluated(outcome)[0]
